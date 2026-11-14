@@ -1,0 +1,260 @@
+table 0x8ab4c8 extent 128
+== file_load @ 0x2cc3b0 insns=650
+   blocks 143 open 1
+   site 0x2cc40e idx=27 operand=0x5cee6c(%rip)        # 89b280 <_DYNAMIC+0xfd0>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2cc414 idx=28 operand=0x5d22f6(%rip)        # 89e710 <ERR_set_mark@@OPENSSL_3.0.0+0x416be0>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2cc421 idx=31 operand=0x5d2519(%rip)        # 89e940 <OSSL_DECODER_from_bio@@OPENSSL_3.0.0+0x5f5c80>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2cc435 idx=37 operand=0x5ce35d(%rip)        # 89a798 <BIO_ctrl@@OPENSSL_3.0.0+0x3d2838>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2cc443 idx=40 operand=0x5d1807(%rip)        # 89dc50 <ERR_peek_last_error@@OPENSSL_3.0.0+0x4177d0>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2cc459 idx=44 operand=0x5d0e11(%rip)        # 89d270 <ERR_pop_to_mark@@OPENSSL_3.0.0+0x416950>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2cc4d4 idx=64 operand=0x5cf94e(%rip)        # 89be28 <OSSL_PARAM_construct_utf8_string@@OPENSSL_3.0.0+0x5bdca8>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2cc55a idx=90 operand=%r12
+     old roots: None
+     proto roots: None
+       def idx=89 0x2cc553 mov    0x5cede6(%rip),%r12        # 89b340 <strlen@GLIBC_2.2.5>
+   site 0x2cc664 idx=161 operand=%r12
+     old roots: None
+     proto roots: None
+       def idx=89 0x2cc553 mov    0x5cede6(%rip),%r12        # 89b340 <strlen@GLIBC_2.2.5>
+       def idx=157 0x2cc650 mov    0x5cece9(%rip),%r12        # 89b340 <strlen@GLIBC_2.2.5>
+   site 0x2cc6b6 idx=180 operand=0x5cec84(%rip)        # 89b340 <strlen@GLIBC_2.2.5>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2cc6d8 idx=189 operand=0x5cfa0a(%rip)        # 89c0e8 <CRYPTO_zalloc@@OPENSSL_3.0.0+0x3981b8>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2cc6fb idx=197 operand=%rbp
+     old roots: None
+     proto roots: None
+       def idx=196 0x2cc6f4 mov    0x5ce32d(%rip),%rbp        # 89aa28 <OPENSSL_strlcat@@OPENSSL_3.0.0+0x3cb118>
+   site 0x2cc706 idx=201 operand=%rbp
+     old roots: None
+     proto roots: None
+       def idx=196 0x2cc6f4 mov    0x5ce32d(%rip),%rbp        # 89aa28 <OPENSSL_strlcat@@OPENSSL_3.0.0+0x3cb118>
+   site 0x2cc711 idx=205 operand=%rbp
+     old roots: None
+     proto roots: None
+       def idx=196 0x2cc6f4 mov    0x5ce32d(%rip),%rbp        # 89aa28 <OPENSSL_strlcat@@OPENSSL_3.0.0+0x3cb118>
+   site 0x2cc747 idx=215 operand=0x5cfdfb(%rip)        # 89c548 <OPENSSL_DIR_read@@OPENSSL_3.0.0+0x6b3e48>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2cc751 idx=217 operand=0x5cde91(%rip)        # 89a5e8 <__errno_location@GLIBC_2.2.5>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2cc7b2 idx=240 operand=0x5d15b0(%rip)        # 89dd68 <_DYNAMIC+0x3ab8>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2cc7d0 idx=246 operand=0x5ceb6a(%rip)        # 89b340 <strlen@GLIBC_2.2.5>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2cc7f2 idx=253 operand=%rax
+     old roots: None
+     proto roots: None
+       . slot -248 ambiguous esc=0 stores=3
+       def idx=248 0x2cc7de mov    0x20(%rsp),%rax
+   site 0x2cc7fe idx=257 operand=0x5cddf4(%rip)        # 89a5f8 <ERR_clear_last_mark@@OPENSSL_3.0.0+0x415218>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2cc834 idx=272 operand=0x5d152e(%rip)        # 89dd68 <_DYNAMIC+0x3ab8>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2cc84a idx=279 operand=0x5cf898(%rip)        # 89c0e8 <CRYPTO_zalloc@@OPENSSL_3.0.0+0x3981b8>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2cc9aa idx=361 operand=%rax
+     old roots: None
+     proto roots: None
+       def idx=357 0x2cc999 mov    0x30(%r14),%rax
+   site 0x2cc9e0 idx=375 operand=0x5cf442(%rip)        # 89be28 <OSSL_PARAM_construct_utf8_string@@OPENSSL_3.0.0+0x5bdca8>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2cca08 idx=383 operand=%r13
+     old roots: None
+     proto roots: None
+       def idx=368 0x2cc9c4 mov    0x50(%r14),%r13
+   site 0x2cca19 idx=388 operand=0x5d1dc9(%rip)        # 89e7e8 <_DYNAMIC+0x4538>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2cca8d idx=417 operand=%rax
+     old roots: None
+     proto roots: None
+       def idx=414 0x2cca85 cmove  %rcx,%rax
+   site 0x2ccab9 idx=427 operand=%rax
+     old roots: None
+     proto roots: None
+       def idx=424 0x2ccaa9 cmove  %rcx,%rax
+   site 0x2ccadf idx=437 operand=%rax
+     old roots: None
+     proto roots: None
+       def idx=433 0x2ccad4 cmove  %rcx,%rax
+   site 0x2ccb53 idx=472 operand=0x5ce9f7(%rip)        # 89b550 <OPENSSL_sk_new_null@@OPENSSL_3.0.0+0x4100d0>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2ccb6f idx=479 operand=0x5ce253(%rip)        # 89adc8 <OPENSSL_sk_insert@@OPENSSL_3.0.0+0x40fc38>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2ccc40 idx=535 operand=0x5ced0a(%rip)        # 89b950 <_DYNAMIC+0x16a0>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2ccc62 idx=543 operand=%rax
+     old roots: None
+     proto roots: None
+       def idx=539 0x2ccc57 cmove  %rcx,%rax
+   site 0x2ccc76 idx=548 operand=0x5cf9f4(%rip)        # 89c670 <OSSL_DECODER_CTX_add_extra@@OPENSSL_3.0.0+0x5f43e0>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2ccd86 idx=602 operand=%rax
+     old roots: None
+     proto roots: None
+       def idx=598 0x2ccd7a mov    0x38(%r14),%rax
+   site 0x2ccd8b idx=604 operand=0x5cd9df(%rip)        # 89a770 <OSSL_DECODER_free@@OPENSSL_3.0.0+0x5bcaf0>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2ccdb9 idx=613 operand=0x5ceb91(%rip)        # 89b950 <_DYNAMIC+0x16a0>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2ccddb idx=621 operand=%rcx
+     old roots: None
+     proto roots: None
+       def idx=617 0x2ccdd0 cmovne %rax,%rcx
+   site 0x2ccdfb idx=628 operand=0x5cf4f7(%rip)        # 89c2f8 <_DYNAMIC+0x2048>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x2cce69 nopl   0x0(%rax)
+   site 0x2cce09 idx=632 operand=0x5cf991(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+     old roots: None
+     proto roots: None
+       . TOP 632:0x5cf991(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+   site 0x2cce0f idx=633 operand=0x5cf98b(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+     old roots: None
+     proto roots: None
+       . TOP 633:0x5cf98b(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+   site 0x2cce15 idx=634 operand=0x5cf985(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+     old roots: None
+     proto roots: None
+       . TOP 634:0x5cf985(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+   site 0x2cce1b idx=635 operand=0x5cf97f(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+     old roots: None
+     proto roots: None
+       . TOP 635:0x5cf97f(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+   site 0x2cce21 idx=636 operand=0x5cf979(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+     old roots: None
+     proto roots: None
+       . TOP 636:0x5cf979(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+   site 0x2cce27 idx=637 operand=0x5cf973(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+     old roots: None
+     proto roots: None
+       . TOP 637:0x5cf973(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+   site 0x2cce2d idx=638 operand=0x5cf96d(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+     old roots: None
+     proto roots: None
+       . TOP 638:0x5cf96d(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+   site 0x2cce33 idx=639 operand=0x5cf967(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+     old roots: None
+     proto roots: None
+       . TOP 639:0x5cf967(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+   site 0x2cce39 idx=640 operand=0x5cf961(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+     old roots: None
+     proto roots: None
+       . TOP 640:0x5cf961(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+   site 0x2cce3f idx=641 operand=0x5cf95b(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+     old roots: None
+     proto roots: None
+       . TOP 641:0x5cf95b(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+   site 0x2cce45 idx=642 operand=0x5cf955(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+     old roots: None
+     proto roots: None
+       . TOP 642:0x5cf955(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+   site 0x2cce52 idx=645 operand=0x5cf948(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+     old roots: None
+     proto roots: None
+       . TOP 645:0x5cf948(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+   site 0x2cce5d idx=647 operand=0x5d0f05(%rip)        # 89dd68 <_DYNAMIC+0x3ab8>
+     old roots: None
+     proto roots: None
+       . TOP 647:0x5d0f05(%rip)        # 89dd68 <_DYNAMIC+0x3ab8>
+   site 0x2cce63 idx=648 operand=0x5cf937(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+     old roots: None
+     proto roots: None
+       . TOP 648:0x5cf937(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+== X509V3_EXT_REQ_add_conf @ 0x49a820 insns=141
+   blocks 32 open 0
+   site 0x49a841 idx=14 operand=0x401ff9(%rip)        # 89c840 <NCONF_new_ex@@OPENSSL_3.0.0+0x5f48e0>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x49aa1e xchg   %ax,%ax
+   site 0x49a879 idx=27 operand=%rax
+     old roots: None
+     proto roots: None
+       def idx=23 0x49a86d mov    0x10(%rax),%rax
+   site 0x49a896 idx=34 operand=0x3fff44(%rip)        # 89a7e0 <X509V3_EXT_add_nconf_sk@@OPENSSL_3.0.0+0x3ffb90>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x49aa1e xchg   %ax,%ax
+   site 0x49a8dc idx=55 operand=%rax
+     old roots: None
+     proto roots: None
+       def idx=51 0x49a8d0 mov    0x10(%rax),%rax
+       def idx=134 0x49a9fc mov    0x10(%rax),%rax
+   site 0x49a8f5 idx=62 operand=%rax
+     old roots: None
+     proto roots: None
+       def idx=58 0x49a8e9 mov    0x18(%rax),%rax
+   site 0x49a914 idx=75 operand=0x400b16(%rip)        # 89b430 <X509_REQ_add_extensions_nid@@OPENSSL_3.0.0+0x65dea0>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x49aa1e xchg   %ax,%ax
+   site 0x49a965 idx=98 operand=%r13
+     old roots: None
+     proto roots: None
+       def idx=82 0x49a930 mov    0x20(%r15),%r13
+   site 0x49a9bb idx=122 operand=0x400e37(%rip)        # 89b7f8 <_DYNAMIC+0x1548>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x49aa1e xchg   %ax,%ax
+   site 0x49a9ce idx=126 operand=0x400e24(%rip)        # 89b7f8 <_DYNAMIC+0x1548>
+     old roots: None
+     proto roots: None
+       def idx=-1 0x49aa1e xchg   %ax,%ax
+   site 0x49aa0e idx=138 operand=0x401d8c(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>
+     old roots: None
+     proto roots: None
+       . TOP 138:0x401d8c(%rip)        # 89c7a0 <_DYNAMIC+0x24f0>

@@ -1,0 +1,68 @@
+{
+ "candidate": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+ "controls": [
+  {
+   "id": "C1-pristine-span",
+   "purpose": "resolve sha1::copyctx in the candidate blob",
+   "expected": "672-682",
+   "observed": "672-682",
+   "pass": true
+  },
+  {
+   "id": "C2-doc-only-edit",
+   "purpose": "a /// line above the fn must not move the span hash",
+   "expected": "identical hash",
+   "observed": "identical",
+   "pass": true
+  },
+  {
+   "id": "C3-code-edit",
+   "purpose": "a code line inside the span must change the hash",
+   "expected": "different hash",
+   "observed": "different",
+   "pass": true
+  },
+  {
+   "id": "C4-unqualified-identity",
+   "purpose": "bare `copyctx` must not select a definition",
+   "expected": "ambiguous-identity",
+   "observed": "ambiguous-identity",
+   "pass": true
+  },
+  {
+   "id": "C5-absent-item",
+   "purpose": "the retired x509_free_void thunk must not resolve",
+   "expected": "span-unparsable",
+   "observed": "span-unparsable",
+   "pass": true
+  },
+  {
+   "id": "C6-disposition-gate",
+   "purpose": "only a SAFETY_DISCHARGED prefix discharges",
+   "expected": "accept / reject / reject",
+   "observed": "matched",
+   "pass": true
+  },
+  {
+   "id": "C7-covers-site",
+   "purpose": "every accepted row's declared range covers its current census line, and the superseded line is outside it",
+   "expected": "0 uncovered, 0 stale-covered",
+   "observed": "0 uncovered [], 0 stale",
+   "pass": true
+  },
+  {
+   "id": "C7b-exact-range",
+   "purpose": "an accepted row declares the current line and no other range (no digit in the note is parsed as coverage)",
+   "expected": "0 inexact",
+   "observed": "0 inexact []",
+   "pass": true
+  },
+  {
+   "id": "C8-hash-binding",
+   "purpose": "each accepted row's span_sha256 reproduces at S",
+   "expected": "0 mismatches",
+   "observed": "0 mismatches []",
+   "pass": true
+  }
+ ]
+}

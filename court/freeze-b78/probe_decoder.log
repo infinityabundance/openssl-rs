@@ -1,0 +1,13 @@
+graph=1.3s precision=721.9s
+file_load 0x2cc3b0
+ctor addrs ['0x2e8c90']
+table 0x8ab4c8
+table size 128
+ctor call at 0x2cc988 idx 353
+  prev: ['lea    0x3a8481(%rip),%r12        # 674e02 <anon.0d951325ef5424bcf253a906d746d231.49.llvm.15788532953229148370+0x3c5>', 'xor    %edi,%edi', 'mov    %r13,%rsi', 'xor    %edx,%edx']
+  reaching defs %rsi: [351]
+  roots %rsi: None
+    def 0x2cc983 mov    %r13,%rsi
+    reaching defs %r13 at def: [334, 345, 483]
+r13 defs: [('0x2cc66c', 'xor    %r13d,%r13d'), ('0x2cc675', 'setne  %r13b'), ('0x2cc68f', 'add    %rax,%r13'), ('0x2cc699', 'mov    $0x1,%r13d'), ('0x2cc6aa', 'add    %rax,%r13'), ('0x2cc6e7', 'mov    %rax,%r13'), ('0x2cc81c', 'mov    0x8(%rax),%r13'), ('0x2cc83e', 'xor    %r13d,%r13d'), ('0x2cc8b7', 'pop    %r13'), ('0x2cc92b', 'lea    0x5deb96(%rip),%r13        # 8ab4c8 <ossl_any_to_obj_algorithm>'), ('0x2cc961', 'lea    0x5deb60(%rip),%r13        # 8ab4c8 <ossl_any_to_obj_algorithm>'), ('0x2cc9c4', 'mov    0x50(%r14),%r13'), ('0x2ccae4', 'mov    0x10(%rsp),%r13'), ('0x2ccb82', 'lea    0x20(%r13),%r13')]
+open_reach blocks: 0 blocks: 143

@@ -1,0 +1,26 @@
+{
+ "openssh-v1i-sites.json": {
+  "receipt": "openssh-v1i",
+  "boundaries": 92,
+  "counts": {
+   "ACCEPT": 56,
+   "NOT_REVIEWED_IN_B78": 31,
+   "ABSENT": 5,
+   "already-retained": 0
+  },
+  "sha256": "6c6449a7bb2ba2b8c32a15cf8d5f0eab618672fa160ae54beb092fdec980649a",
+  "bytes": 310566
+ },
+ "openssh-v1l-sites.json": {
+  "receipt": "openssh-v1l-sites",
+  "boundaries": 24,
+  "counts": {
+   "ACCEPT": 9,
+   "NOT_REVIEWED_IN_B78": 15,
+   "ABSENT": 0,
+   "already-retained": 0
+  },
+  "sha256": "5abcfb9ec5cee1044e0cf64e812ec4ba553278ff26036d8aeba036b1acb8b9e3",
+  "bytes": 66549
+ }
+}

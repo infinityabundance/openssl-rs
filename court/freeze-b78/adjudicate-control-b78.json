@@ -1,0 +1,43 @@
+{
+ "candidate": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+ "cohort": 65,
+ "discharged": 65,
+ "not_discharged": [],
+ "withdrawn_control": [
+  {
+   "boundary": "OSSH-V1I-066",
+   "status": "BLOCKED",
+   "reason": "scoped discharge refused: boundary OSSH-V1I-066 is listed in a scoped discharge row, but its disposition 'RETAINED (BLOC"
+  },
+  {
+   "boundary": "OSSH-V1I-080",
+   "status": "BLOCKED",
+   "reason": "scoped discharge refused: boundary OSSH-V1I-080 is listed in a scoped discharge row, but its disposition 'RETAINED (BLOC"
+  },
+  {
+   "boundary": "OSSH-V1L-001",
+   "status": "BLOCKED",
+   "reason": "scoped discharge refused: boundary OSSH-V1L-001 is listed in a scoped discharge row, but its disposition 'RETAINED (BLOC"
+  },
+  {
+   "boundary": "OSSH-V1L-008",
+   "status": "BLOCKED",
+   "reason": "scoped discharge refused: boundary OSSH-V1L-008 is listed in a scoped discharge row, but its disposition 'RETAINED (BLOC"
+  }
+ ],
+ "absent_control": [
+  {
+   "boundary": "OSSH-V1I-055",
+   "disposition": "RETAINED (BLOCKED) \u2014 the item no longer exists at this candidate; a retired definition dis",
+   "declared_span_hash_present": false,
+   "verdict": "ABSENT"
+  },
+  {
+   "boundary": "OSSH-V1I-062",
+   "disposition": "RETAINED (BLOCKED) \u2014 the item no longer exists at this candidate; a retired definition dis",
+   "declared_span_hash_present": false,
+   "verdict": "ABSENT"
+  }
+ ],
+ "pass": true
+}

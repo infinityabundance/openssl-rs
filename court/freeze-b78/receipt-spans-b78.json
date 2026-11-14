@@ -1,0 +1,3796 @@
+{
+ "heads": {
+  "b76": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+  "b77": "ada7df257e157964f3baade5ec40b66e9a9cbf35",
+  "b78": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac"
+ },
+ "receipts": {
+  "openssh-v1i": [
+   {
+    "id": "OSSH-V1I-001",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha1::dupctx",
+    "recorded_line": 647,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:647 \u2014 sha1::dupctx; contract and callers recorded in this receipt",
+    "migration_sha256": "47267c002ee9f12d6c20efa3c2e1648e60243868c4ae4caa72d8de04e7a4ed4b",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "47267c002ee9f12d6c20efa3c2e1648e60243868c4ae4caa72d8de04e7a4ed4b",
+     "start": 647,
+     "end": 656,
+     "def": 647,
+     "qual": "sha1::dupctx"
+    },
+    "b77": {
+     "sha256": "47267c002ee9f12d6c20efa3c2e1648e60243868c4ae4caa72d8de04e7a4ed4b",
+     "start": 653,
+     "end": 662,
+     "def": 653,
+     "qual": "sha1::dupctx"
+    },
+    "b78": {
+     "sha256": "47267c002ee9f12d6c20efa3c2e1648e60243868c4ae4caa72d8de04e7a4ed4b",
+     "start": 653,
+     "end": 662,
+     "def": 653,
+     "qual": "sha1::dupctx"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-002",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha1::copyctx",
+    "recorded_line": 658,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:658 \u2014 sha1::copyctx; contract and callers recorded in this receipt",
+    "migration_sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+     "start": 658,
+     "end": 668,
+     "def": 658,
+     "qual": "sha1::copyctx"
+    },
+    "b77": {
+     "sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+     "start": 672,
+     "end": 682,
+     "def": 672,
+     "qual": "sha1::copyctx"
+    },
+    "b78": {
+     "sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+     "start": 672,
+     "end": 682,
+     "def": 672,
+     "qual": "sha1::copyctx"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-003",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha1::internal_init",
+    "recorded_line": 670,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:670 \u2014 sha1::internal_init; contract and callers recorded in this receipt",
+    "migration_sha256": "c7b85a166cc4e3bff7d13ced64679b7e203bc262469d6d90875f1635dae22db2",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "c7b85a166cc4e3bff7d13ced64679b7e203bc262469d6d90875f1635dae22db2",
+     "start": 670,
+     "end": 680,
+     "def": 670,
+     "qual": "sha1::internal_init"
+    },
+    "b77": {
+     "sha256": "c7b85a166cc4e3bff7d13ced64679b7e203bc262469d6d90875f1635dae22db2",
+     "start": 684,
+     "end": 694,
+     "def": 684,
+     "qual": "sha1::internal_init"
+    },
+    "b78": {
+     "sha256": "c7b85a166cc4e3bff7d13ced64679b7e203bc262469d6d90875f1635dae22db2",
+     "start": 684,
+     "end": 694,
+     "def": 684,
+     "qual": "sha1::internal_init"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-004",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha1::internal_final",
+    "recorded_line": 682,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:682 \u2014 sha1::internal_final; contract and callers recorded in this receipt",
+    "migration_sha256": "706d55a5f726daa1f0a36024e15b79ceca8f8cfc39fbf0d2346e25df17c70810",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "706d55a5f726daa1f0a36024e15b79ceca8f8cfc39fbf0d2346e25df17c70810",
+     "start": 682,
+     "end": 698,
+     "def": 682,
+     "qual": "sha1::internal_final"
+    },
+    "b77": {
+     "sha256": "706d55a5f726daa1f0a36024e15b79ceca8f8cfc39fbf0d2346e25df17c70810",
+     "start": 696,
+     "end": 712,
+     "def": 696,
+     "qual": "sha1::internal_final"
+    },
+    "b78": {
+     "sha256": "706d55a5f726daa1f0a36024e15b79ceca8f8cfc39fbf0d2346e25df17c70810",
+     "start": 696,
+     "end": 712,
+     "def": 696,
+     "qual": "sha1::internal_final"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-005",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha1::update",
+    "recorded_line": 700,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:700 \u2014 sha1::update; contract and callers recorded in this receipt",
+    "migration_sha256": "ca9ddbfb4c86d18614a55dcce33d1a6dcfb9afe9bd258d0dd710854aaadf52a9",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "ca9ddbfb4c86d18614a55dcce33d1a6dcfb9afe9bd258d0dd710854aaadf52a9",
+     "start": 700,
+     "end": 703,
+     "def": 700,
+     "qual": "sha1::update"
+    },
+    "b77": {
+     "sha256": "ca9ddbfb4c86d18614a55dcce33d1a6dcfb9afe9bd258d0dd710854aaadf52a9",
+     "start": 714,
+     "end": 717,
+     "def": 714,
+     "qual": "sha1::update"
+    },
+    "b78": {
+     "sha256": "ca9ddbfb4c86d18614a55dcce33d1a6dcfb9afe9bd258d0dd710854aaadf52a9",
+     "start": 714,
+     "end": 717,
+     "def": 714,
+     "qual": "sha1::update"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-006",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha1::get_params",
+    "recorded_line": 705,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:705 \u2014 sha1::get_params; contract and callers recorded in this receipt",
+    "migration_sha256": "c38a239cac91d9e03c6cb408054b92f07c6dd3e46e35acfaba4fed39aff389a4",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "c38a239cac91d9e03c6cb408054b92f07c6dd3e46e35acfaba4fed39aff389a4",
+     "start": 705,
+     "end": 708,
+     "def": 705,
+     "qual": "sha1::get_params"
+    },
+    "b77": {
+     "sha256": "c38a239cac91d9e03c6cb408054b92f07c6dd3e46e35acfaba4fed39aff389a4",
+     "start": 719,
+     "end": 722,
+     "def": 719,
+     "qual": "sha1::get_params"
+    },
+    "b78": {
+     "sha256": "c38a239cac91d9e03c6cb408054b92f07c6dd3e46e35acfaba4fed39aff389a4",
+     "start": 719,
+     "end": 722,
+     "def": 719,
+     "qual": "sha1::get_params"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-007",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "nullmd::dupctx",
+    "recorded_line": 959,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:959 \u2014 nullmd::dupctx; contract and callers recorded in this receipt",
+    "migration_sha256": "efa8d5556346e659c5c3ec2b40667be32a4ab8af95db8fc0978652e4fe1bcf76",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "efa8d5556346e659c5c3ec2b40667be32a4ab8af95db8fc0978652e4fe1bcf76",
+     "start": 959,
+     "end": 968,
+     "def": 959,
+     "qual": "nullmd::dupctx"
+    },
+    "b77": {
+     "sha256": "efa8d5556346e659c5c3ec2b40667be32a4ab8af95db8fc0978652e4fe1bcf76",
+     "start": 973,
+     "end": 982,
+     "def": 973,
+     "qual": "nullmd::dupctx"
+    },
+    "b78": {
+     "sha256": "efa8d5556346e659c5c3ec2b40667be32a4ab8af95db8fc0978652e4fe1bcf76",
+     "start": 973,
+     "end": 982,
+     "def": 973,
+     "qual": "nullmd::dupctx"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-008",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "nullmd::copyctx",
+    "recorded_line": 970,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:970 \u2014 nullmd::copyctx; contract and callers recorded in this receipt",
+    "migration_sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+     "start": 970,
+     "end": 980,
+     "def": 970,
+     "qual": "nullmd::copyctx"
+    },
+    "b77": {
+     "sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+     "start": 992,
+     "end": 1002,
+     "def": 992,
+     "qual": "nullmd::copyctx"
+    },
+    "b78": {
+     "sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+     "start": 992,
+     "end": 1002,
+     "def": 992,
+     "qual": "nullmd::copyctx"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-009",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "nullmd::get_params",
+    "recorded_line": 1019,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1019 \u2014 nullmd::get_params; contract and callers recorded in this receipt",
+    "migration_sha256": "2199cf3f0f33b514c39a501341adc229123f07f09938086d69498e11b2e1cd67",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "2199cf3f0f33b514c39a501341adc229123f07f09938086d69498e11b2e1cd67",
+     "start": 1019,
+     "end": 1022,
+     "def": 1019,
+     "qual": "nullmd::get_params"
+    },
+    "b77": {
+     "sha256": "2199cf3f0f33b514c39a501341adc229123f07f09938086d69498e11b2e1cd67",
+     "start": 1041,
+     "end": 1044,
+     "def": 1041,
+     "qual": "nullmd::get_params"
+    },
+    "b78": {
+     "sha256": "2199cf3f0f33b514c39a501341adc229123f07f09938086d69498e11b2e1cd67",
+     "start": 1041,
+     "end": 1044,
+     "def": 1041,
+     "qual": "nullmd::get_params"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-010",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "md5_sha1::dupctx",
+    "recorded_line": 1154,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1154 \u2014 md5_sha1::dupctx; contract and callers recorded in this receipt",
+    "migration_sha256": "b231a39825d54dbcbf3929591232d8ecec78eb3af835e81648961b56fda9ae56",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "b231a39825d54dbcbf3929591232d8ecec78eb3af835e81648961b56fda9ae56",
+     "start": 1154,
+     "end": 1163,
+     "def": 1154,
+     "qual": "md5_sha1::dupctx"
+    },
+    "b77": {
+     "sha256": "b231a39825d54dbcbf3929591232d8ecec78eb3af835e81648961b56fda9ae56",
+     "start": 1176,
+     "end": 1185,
+     "def": 1176,
+     "qual": "md5_sha1::dupctx"
+    },
+    "b78": {
+     "sha256": "b231a39825d54dbcbf3929591232d8ecec78eb3af835e81648961b56fda9ae56",
+     "start": 1176,
+     "end": 1185,
+     "def": 1176,
+     "qual": "md5_sha1::dupctx"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-011",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "md5_sha1::copyctx",
+    "recorded_line": 1165,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1165 \u2014 md5_sha1::copyctx; contract and callers recorded in this receipt",
+    "migration_sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+     "start": 1165,
+     "end": 1175,
+     "def": 1165,
+     "qual": "md5_sha1::copyctx"
+    },
+    "b77": {
+     "sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+     "start": 1195,
+     "end": 1205,
+     "def": 1195,
+     "qual": "md5_sha1::copyctx"
+    },
+    "b78": {
+     "sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+     "start": 1195,
+     "end": 1205,
+     "def": 1195,
+     "qual": "md5_sha1::copyctx"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-012",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "md5_sha1::internal_init",
+    "recorded_line": 1177,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1177 \u2014 md5_sha1::internal_init; contract and callers recorded in this receipt",
+    "migration_sha256": "e4aa2d6a01d52aa3a29570f0aedbacffee391cbd6b31101759ed0c95f2944ef6",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "e4aa2d6a01d52aa3a29570f0aedbacffee391cbd6b31101759ed0c95f2944ef6",
+     "start": 1177,
+     "end": 1187,
+     "def": 1177,
+     "qual": "md5_sha1::internal_init"
+    },
+    "b77": {
+     "sha256": "e4aa2d6a01d52aa3a29570f0aedbacffee391cbd6b31101759ed0c95f2944ef6",
+     "start": 1207,
+     "end": 1217,
+     "def": 1207,
+     "qual": "md5_sha1::internal_init"
+    },
+    "b78": {
+     "sha256": "e4aa2d6a01d52aa3a29570f0aedbacffee391cbd6b31101759ed0c95f2944ef6",
+     "start": 1207,
+     "end": 1217,
+     "def": 1207,
+     "qual": "md5_sha1::internal_init"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-013",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "md5_sha1::internal_final",
+    "recorded_line": 1189,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1189 \u2014 md5_sha1::internal_final; contract and callers recorded in this receipt",
+    "migration_sha256": "b6bd52cc12ae7b9162932a23105ca375bcd8379af47d529661cfe7080c1f1c6e",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "b6bd52cc12ae7b9162932a23105ca375bcd8379af47d529661cfe7080c1f1c6e",
+     "start": 1189,
+     "end": 1205,
+     "def": 1189,
+     "qual": "md5_sha1::internal_final"
+    },
+    "b77": {
+     "sha256": "b6bd52cc12ae7b9162932a23105ca375bcd8379af47d529661cfe7080c1f1c6e",
+     "start": 1219,
+     "end": 1235,
+     "def": 1219,
+     "qual": "md5_sha1::internal_final"
+    },
+    "b78": {
+     "sha256": "b6bd52cc12ae7b9162932a23105ca375bcd8379af47d529661cfe7080c1f1c6e",
+     "start": 1219,
+     "end": 1235,
+     "def": 1219,
+     "qual": "md5_sha1::internal_final"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-014",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "md5_sha1::update",
+    "recorded_line": 1207,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1207 \u2014 md5_sha1::update; contract and callers recorded in this receipt",
+    "migration_sha256": "7b4f8b48a05be1501edacfb34ac83e9d84f3f9118ae26e51fd774f480d00063e",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "7b4f8b48a05be1501edacfb34ac83e9d84f3f9118ae26e51fd774f480d00063e",
+     "start": 1207,
+     "end": 1212,
+     "def": 1207,
+     "qual": "md5_sha1::update"
+    },
+    "b77": {
+     "sha256": "7b4f8b48a05be1501edacfb34ac83e9d84f3f9118ae26e51fd774f480d00063e",
+     "start": 1237,
+     "end": 1242,
+     "def": 1237,
+     "qual": "md5_sha1::update"
+    },
+    "b78": {
+     "sha256": "7b4f8b48a05be1501edacfb34ac83e9d84f3f9118ae26e51fd774f480d00063e",
+     "start": 1237,
+     "end": 1242,
+     "def": 1237,
+     "qual": "md5_sha1::update"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-015",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "md5_sha1::get_params",
+    "recorded_line": 1214,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1214 \u2014 md5_sha1::get_params; contract and callers recorded in this receipt",
+    "migration_sha256": "d3ae32259e9e51e3d73c311e547c5283a21db88e69975bcef8bf8889a02e72c9",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "d3ae32259e9e51e3d73c311e547c5283a21db88e69975bcef8bf8889a02e72c9",
+     "start": 1214,
+     "end": 1219,
+     "def": 1214,
+     "qual": "md5_sha1::get_params"
+    },
+    "b77": {
+     "sha256": "d3ae32259e9e51e3d73c311e547c5283a21db88e69975bcef8bf8889a02e72c9",
+     "start": 1244,
+     "end": 1249,
+     "def": 1244,
+     "qual": "md5_sha1::get_params"
+    },
+    "b78": {
+     "sha256": "d3ae32259e9e51e3d73c311e547c5283a21db88e69975bcef8bf8889a02e72c9",
+     "start": 1244,
+     "end": 1249,
+     "def": 1244,
+     "qual": "md5_sha1::get_params"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-016",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha3::dupctx",
+    "recorded_line": 1337,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1337 \u2014 sha3::dupctx; contract and callers recorded in this receipt",
+    "migration_sha256": "940d10c6f3f0e190d607f5cd93d4cd114526d28004462ac668b5ec5344716e91",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "940d10c6f3f0e190d607f5cd93d4cd114526d28004462ac668b5ec5344716e91",
+     "start": 1337,
+     "end": 1346,
+     "def": 1337,
+     "qual": "sha3::dupctx"
+    },
+    "b77": {
+     "sha256": "940d10c6f3f0e190d607f5cd93d4cd114526d28004462ac668b5ec5344716e91",
+     "start": 1367,
+     "end": 1376,
+     "def": 1367,
+     "qual": "sha3::dupctx"
+    },
+    "b78": {
+     "sha256": "940d10c6f3f0e190d607f5cd93d4cd114526d28004462ac668b5ec5344716e91",
+     "start": 1367,
+     "end": 1376,
+     "def": 1367,
+     "qual": "sha3::dupctx"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-017",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha3::copyctx",
+    "recorded_line": 1348,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1348 \u2014 sha3::copyctx; contract and callers recorded in this receipt",
+    "migration_sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+     "start": 1348,
+     "end": 1358,
+     "def": 1348,
+     "qual": "sha3::copyctx"
+    },
+    "b77": {
+     "sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+     "start": 1386,
+     "end": 1396,
+     "def": 1386,
+     "qual": "sha3::copyctx"
+    },
+    "b78": {
+     "sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+     "start": 1386,
+     "end": 1396,
+     "def": 1386,
+     "qual": "sha3::copyctx"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-018",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha3::init",
+    "recorded_line": 1360,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1360 \u2014 sha3::init; contract and callers recorded in this receipt",
+    "migration_sha256": "0080323c6082771dc21b3350d885ebf8bbd551ebbaaff0e95abf8cf6c120735a",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "0080323c6082771dc21b3350d885ebf8bbd551ebbaaff0e95abf8cf6c120735a",
+     "start": 1360,
+     "end": 1369,
+     "def": 1360,
+     "qual": "sha3::init"
+    },
+    "b77": {
+     "sha256": "0080323c6082771dc21b3350d885ebf8bbd551ebbaaff0e95abf8cf6c120735a",
+     "start": 1398,
+     "end": 1407,
+     "def": 1398,
+     "qual": "sha3::init"
+    },
+    "b78": {
+     "sha256": "0080323c6082771dc21b3350d885ebf8bbd551ebbaaff0e95abf8cf6c120735a",
+     "start": 1398,
+     "end": 1407,
+     "def": 1398,
+     "qual": "sha3::init"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-019",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha3::update",
+    "recorded_line": 1371,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1371 \u2014 sha3::update; contract and callers recorded in this receipt",
+    "migration_sha256": "043324d93993c9aed5be3f4eb57a53a7d0ff3b9fc3c096c4bca4f91df739059d",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "043324d93993c9aed5be3f4eb57a53a7d0ff3b9fc3c096c4bca4f91df739059d",
+     "start": 1371,
+     "end": 1374,
+     "def": 1371,
+     "qual": "sha3::update"
+    },
+    "b77": {
+     "sha256": "043324d93993c9aed5be3f4eb57a53a7d0ff3b9fc3c096c4bca4f91df739059d",
+     "start": 1409,
+     "end": 1412,
+     "def": 1409,
+     "qual": "sha3::update"
+    },
+    "b78": {
+     "sha256": "043324d93993c9aed5be3f4eb57a53a7d0ff3b9fc3c096c4bca4f91df739059d",
+     "start": 1409,
+     "end": 1412,
+     "def": 1409,
+     "qual": "sha3::update"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-020",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha3::keccak_final",
+    "recorded_line": 1377,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1377 \u2014 sha3::keccak_final; contract and callers recorded in this receipt",
+    "migration_sha256": "dd7adaeecec1cd4cc5e2c5d7c06e337da6968c1bdd83a3afcc847b1591b48813",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "dd7adaeecec1cd4cc5e2c5d7c06e337da6968c1bdd83a3afcc847b1591b48813",
+     "start": 1377,
+     "end": 1400,
+     "def": 1377,
+     "qual": "sha3::keccak_final"
+    },
+    "b77": {
+     "sha256": "4dbe9bbde6e9ad0867b7bdb0dd0a7518ae00189ff07aa0407b7bcb5f72c112b2",
+     "start": 1415,
+     "end": 1449,
+     "def": 1415,
+     "qual": "sha3::keccak_final"
+    },
+    "b78": {
+     "sha256": "4dbe9bbde6e9ad0867b7bdb0dd0a7518ae00189ff07aa0407b7bcb5f72c112b2",
+     "start": 1415,
+     "end": 1449,
+     "def": 1415,
+     "qual": "sha3::keccak_final"
+    },
+    "drift_since_b76": "changed",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1I-021",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha3::shake_squeeze",
+    "recorded_line": 1403,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1403 \u2014 sha3::shake_squeeze; contract and callers recorded in this receipt",
+    "migration_sha256": "dbdba48f28b197d6a6693746d95497e2a8579f88687d906dd807c935fb8ed4ba",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "dbdba48f28b197d6a6693746d95497e2a8579f88687d906dd807c935fb8ed4ba",
+     "start": 1403,
+     "end": 1421,
+     "def": 1403,
+     "qual": "sha3::shake_squeeze"
+    },
+    "b77": {
+     "sha256": "dbdba48f28b197d6a6693746d95497e2a8579f88687d906dd807c935fb8ed4ba",
+     "start": 1452,
+     "end": 1470,
+     "def": 1452,
+     "qual": "sha3::shake_squeeze"
+    },
+    "b78": {
+     "sha256": "dbdba48f28b197d6a6693746d95497e2a8579f88687d906dd807c935fb8ed4ba",
+     "start": 1452,
+     "end": 1470,
+     "def": 1452,
+     "qual": "sha3::shake_squeeze"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-022",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha3::shake_get_ctx_params",
+    "recorded_line": 1481,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1481 \u2014 sha3::shake_get_ctx_params; contract and callers recorded in this receipt",
+    "migration_sha256": "e09736f8f56e5df114a14c6150d105193ba970d4db06170296a6f005b5d4acc8",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "e09736f8f56e5df114a14c6150d105193ba970d4db06170296a6f005b5d4acc8",
+     "start": 1481,
+     "end": 1509,
+     "def": 1481,
+     "qual": "sha3::shake_get_ctx_params"
+    },
+    "b77": {
+     "sha256": "e09736f8f56e5df114a14c6150d105193ba970d4db06170296a6f005b5d4acc8",
+     "start": 1530,
+     "end": 1558,
+     "def": 1530,
+     "qual": "sha3::shake_get_ctx_params"
+    },
+    "b78": {
+     "sha256": "e09736f8f56e5df114a14c6150d105193ba970d4db06170296a6f005b5d4acc8",
+     "start": 1530,
+     "end": 1558,
+     "def": 1530,
+     "qual": "sha3::shake_get_ctx_params"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-023",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "blake2b/blake2s::dupctx",
+    "recorded_line": 1885,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1885 \u2014 blake2b/blake2s::dupctx; contract and callers recorded in this receipt",
+    "migration_sha256": "861f2634e5e0f84a5ec54bbe1cdb51518e75fd9a67cd689fa7cdf47f93ffe528",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "861f2634e5e0f84a5ec54bbe1cdb51518e75fd9a67cd689fa7cdf47f93ffe528",
+     "start": 1885,
+     "end": 1896,
+     "def": 1885,
+     "qual": "blake2::blake_row::dupctx"
+    },
+    "b77": {
+     "sha256": "861f2634e5e0f84a5ec54bbe1cdb51518e75fd9a67cd689fa7cdf47f93ffe528",
+     "start": 1934,
+     "end": 1945,
+     "def": 1934,
+     "qual": "blake2::blake_row::dupctx"
+    },
+    "b78": {
+     "sha256": "861f2634e5e0f84a5ec54bbe1cdb51518e75fd9a67cd689fa7cdf47f93ffe528",
+     "start": 1934,
+     "end": 1945,
+     "def": 1934,
+     "qual": "blake2::blake_row::dupctx"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-024",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "blake2b/blake2s::copyctx",
+    "recorded_line": 1898,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1898 \u2014 blake2b/blake2s::copyctx; contract and callers recorded in this receipt",
+    "migration_sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+     "start": 1898,
+     "end": 1908,
+     "def": 1898,
+     "qual": "blake2::blake_row::copyctx"
+    },
+    "b77": {
+     "sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+     "start": 1956,
+     "end": 1966,
+     "def": 1956,
+     "qual": "blake2::blake_row::copyctx"
+    },
+    "b78": {
+     "sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+     "start": 1956,
+     "end": 1966,
+     "def": 1956,
+     "qual": "blake2::blake_row::copyctx"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-025",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "blake2b/blake2s::set_ctx_params",
+    "recorded_line": 1912,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1912 \u2014 blake2b/blake2s::set_ctx_params; contract and callers recorded in this receipt",
+    "migration_sha256": "d84cc9a808b86bd3d0e619cce378beba49795dd037ba8a364fa09c7240ed0b26",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "d84cc9a808b86bd3d0e619cce378beba49795dd037ba8a364fa09c7240ed0b26",
+     "start": 1912,
+     "end": 1945,
+     "def": 1912,
+     "qual": "blake2::blake_row::set_ctx_params"
+    },
+    "b77": {
+     "sha256": "d84cc9a808b86bd3d0e619cce378beba49795dd037ba8a364fa09c7240ed0b26",
+     "start": 1970,
+     "end": 2003,
+     "def": 1970,
+     "qual": "blake2::blake_row::set_ctx_params"
+    },
+    "b78": {
+     "sha256": "d84cc9a808b86bd3d0e619cce378beba49795dd037ba8a364fa09c7240ed0b26",
+     "start": 1970,
+     "end": 2003,
+     "def": 1970,
+     "qual": "blake2::blake_row::set_ctx_params"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-026",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "blake2b/blake2s::get_ctx_params",
+    "recorded_line": 1948,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1948 \u2014 blake2b/blake2s::get_ctx_params; contract and callers recorded in this receipt",
+    "migration_sha256": "40d977b16e4c560fc744074a5e4c15134777f98d0f7e4756b245cf09fdf37608",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "40d977b16e4c560fc744074a5e4c15134777f98d0f7e4756b245cf09fdf37608",
+     "start": 1948,
+     "end": 1971,
+     "def": 1948,
+     "qual": "blake2::blake_row::get_ctx_params"
+    },
+    "b77": {
+     "sha256": "40d977b16e4c560fc744074a5e4c15134777f98d0f7e4756b245cf09fdf37608",
+     "start": 2006,
+     "end": 2029,
+     "def": 2006,
+     "qual": "blake2::blake_row::get_ctx_params"
+    },
+    "b78": {
+     "sha256": "40d977b16e4c560fc744074a5e4c15134777f98d0f7e4756b245cf09fdf37608",
+     "start": 2006,
+     "end": 2029,
+     "def": 2006,
+     "qual": "blake2::blake_row::get_ctx_params"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-027",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "blake2b/blake2s::internal_init",
+    "recorded_line": 1975,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:1975 \u2014 blake2b/blake2s::internal_init; contract and callers recorded in this receipt",
+    "migration_sha256": "20f58a3a5891c863475da16bd61d04ac19dc62a6ff16e261e10d60fee711e391",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "20f58a3a5891c863475da16bd61d04ac19dc62a6ff16e261e10d60fee711e391",
+     "start": 1975,
+     "end": 1998,
+     "def": 1975,
+     "qual": "blake2::blake_row::internal_init"
+    },
+    "b77": {
+     "sha256": "20f58a3a5891c863475da16bd61d04ac19dc62a6ff16e261e10d60fee711e391",
+     "start": 2033,
+     "end": 2056,
+     "def": 2033,
+     "qual": "blake2::blake_row::internal_init"
+    },
+    "b78": {
+     "sha256": "20f58a3a5891c863475da16bd61d04ac19dc62a6ff16e261e10d60fee711e391",
+     "start": 2033,
+     "end": 2056,
+     "def": 2033,
+     "qual": "blake2::blake_row::internal_init"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-028",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "blake2b/blake2s::update",
+    "recorded_line": 2000,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:2000 \u2014 blake2b/blake2s::update; contract and callers recorded in this receipt",
+    "migration_sha256": "48c2be05cf5cf82b15fec5d0215cad8b4ca2f060a7420c8cefcc9d36b22241dd",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "48c2be05cf5cf82b15fec5d0215cad8b4ca2f060a7420c8cefcc9d36b22241dd",
+     "start": 2000,
+     "end": 2010,
+     "def": 2000,
+     "qual": "blake2::blake_row::update"
+    },
+    "b77": {
+     "sha256": "48c2be05cf5cf82b15fec5d0215cad8b4ca2f060a7420c8cefcc9d36b22241dd",
+     "start": 2058,
+     "end": 2068,
+     "def": 2058,
+     "qual": "blake2::blake_row::update"
+    },
+    "b78": {
+     "sha256": "48c2be05cf5cf82b15fec5d0215cad8b4ca2f060a7420c8cefcc9d36b22241dd",
+     "start": 2058,
+     "end": 2068,
+     "def": 2058,
+     "qual": "blake2::blake_row::update"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-029",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "blake2b/blake2s::internal_final",
+    "recorded_line": 2013,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:2013 \u2014 blake2b/blake2s::internal_final; contract and callers recorded in this receipt",
+    "migration_sha256": "5170938e1038eef4d3d4ecaeb914ff1ebafbbd6ebee937e95828c8bbf22c5334",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "5170938e1038eef4d3d4ecaeb914ff1ebafbbd6ebee937e95828c8bbf22c5334",
+     "start": 2013,
+     "end": 2037,
+     "def": 2013,
+     "qual": "blake2::blake_row::internal_final"
+    },
+    "b77": {
+     "sha256": "5170938e1038eef4d3d4ecaeb914ff1ebafbbd6ebee937e95828c8bbf22c5334",
+     "start": 2071,
+     "end": 2095,
+     "def": 2071,
+     "qual": "blake2::blake_row::internal_final"
+    },
+    "b78": {
+     "sha256": "5170938e1038eef4d3d4ecaeb914ff1ebafbbd6ebee937e95828c8bbf22c5334",
+     "start": 2071,
+     "end": 2095,
+     "def": 2071,
+     "qual": "blake2::blake_row::internal_final"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-030",
+    "file": "src/provider/digest.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "blake2b/blake2s::get_params",
+    "recorded_line": 2039,
+    "disposition": "SAFETY_DISCHARGED: src/provider/digest.rs:2039 \u2014 blake2b/blake2s::get_params; contract and callers recorded in this receipt",
+    "migration_sha256": "16841d3c3a78ac3729dd2d4304cebe2118363a960c194e69e30b047100b48437",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "16841d3c3a78ac3729dd2d4304cebe2118363a960c194e69e30b047100b48437",
+     "start": 2039,
+     "end": 2042,
+     "def": 2039,
+     "qual": "blake2::blake_row::get_params"
+    },
+    "b77": {
+     "sha256": "16841d3c3a78ac3729dd2d4304cebe2118363a960c194e69e30b047100b48437",
+     "start": 2097,
+     "end": 2100,
+     "def": 2097,
+     "qual": "blake2::blake_row::get_params"
+    },
+    "b78": {
+     "sha256": "16841d3c3a78ac3729dd2d4304cebe2118363a960c194e69e30b047100b48437",
+     "start": 2097,
+     "end": 2100,
+     "def": 2097,
+     "qual": "blake2::blake_row::get_params"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-031",
+    "file": "src/evp/legacy_sha.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha1_update",
+    "recorded_line": 262,
+    "disposition": "BLOCKED: src/evp/legacy_sha.rs:262 \u2014 sha1_update does not establish the writable md_data its body requires",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "460d7ad8966f89199b9df70df3c9d5ba56a71064bd11f72944baf06b21d80242",
+     "start": 310,
+     "end": 329,
+     "def": 310,
+     "qual": "sha1_update"
+    },
+    "b77": {
+     "sha256": "460d7ad8966f89199b9df70df3c9d5ba56a71064bd11f72944baf06b21d80242",
+     "start": 310,
+     "end": 329,
+     "def": 310,
+     "qual": "sha1_update"
+    },
+    "b78": {
+     "sha256": "460d7ad8966f89199b9df70df3c9d5ba56a71064bd11f72944baf06b21d80242",
+     "start": 310,
+     "end": 329,
+     "def": 310,
+     "qual": "sha1_update"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-032",
+    "file": "src/evp/legacy_sha.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha1_final",
+    "recorded_line": 269,
+    "disposition": "BLOCKED: src/evp/legacy_sha.rs:269 \u2014 sha1_final does not establish the writable md_data its body requires",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "1219cfb6ecf6558fc0bd8d780a7189c74ccac89747b4376e644e052756e5723f",
+     "start": 346,
+     "end": 360,
+     "def": 346,
+     "qual": "sha1_final"
+    },
+    "b77": {
+     "sha256": "1219cfb6ecf6558fc0bd8d780a7189c74ccac89747b4376e644e052756e5723f",
+     "start": 346,
+     "end": 360,
+     "def": 346,
+     "qual": "sha1_final"
+    },
+    "b78": {
+     "sha256": "1219cfb6ecf6558fc0bd8d780a7189c74ccac89747b4376e644e052756e5723f",
+     "start": 346,
+     "end": 360,
+     "def": 346,
+     "qual": "sha1_final"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-033",
+    "file": "src/evp/legacy_sha.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha1_int_ctrl",
+    "recorded_line": 277,
+    "disposition": "BLOCKED: src/evp/legacy_sha.rs:277 \u2014 sha1_int_ctrl does not establish the writable md_data its non-NULL arm requires",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "bccaff366a6b76866501b518d120bae2c00cf29d76b6d30ed98dd0068f27bb78",
+     "start": 384,
+     "end": 414,
+     "def": 384,
+     "qual": "sha1_int_ctrl"
+    },
+    "b77": {
+     "sha256": "bccaff366a6b76866501b518d120bae2c00cf29d76b6d30ed98dd0068f27bb78",
+     "start": 384,
+     "end": 414,
+     "def": 384,
+     "qual": "sha1_int_ctrl"
+    },
+    "b78": {
+     "sha256": "bccaff366a6b76866501b518d120bae2c00cf29d76b6d30ed98dd0068f27bb78",
+     "start": 384,
+     "end": 414,
+     "def": 384,
+     "qual": "sha1_int_ctrl"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-034",
+    "file": "src/evp/legacy_sha.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha224_update",
+    "recorded_line": 324,
+    "disposition": "BLOCKED: src/evp/legacy_sha.rs:324 \u2014 sha224_update does not establish the writable md_data its body requires",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "1cd42f1cdd15e534dabe9108afb2c23d096d6cb56ec3ead1898045d942adbb59",
+     "start": 460,
+     "end": 479,
+     "def": 460,
+     "qual": "sha224_update"
+    },
+    "b77": {
+     "sha256": "1cd42f1cdd15e534dabe9108afb2c23d096d6cb56ec3ead1898045d942adbb59",
+     "start": 460,
+     "end": 479,
+     "def": 460,
+     "qual": "sha224_update"
+    },
+    "b78": {
+     "sha256": "1cd42f1cdd15e534dabe9108afb2c23d096d6cb56ec3ead1898045d942adbb59",
+     "start": 460,
+     "end": 479,
+     "def": 460,
+     "qual": "sha224_update"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-035",
+    "file": "src/evp/legacy_sha.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha224_final",
+    "recorded_line": 330,
+    "disposition": "BLOCKED: src/evp/legacy_sha.rs:330 \u2014 sha224_final does not establish the writable md_data its body requires",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "0899c0b723ef2f8ee57a087a18f4d987728a3ad9a10497c62562261a04a74fff",
+     "start": 493,
+     "end": 507,
+     "def": 493,
+     "qual": "sha224_final"
+    },
+    "b77": {
+     "sha256": "0899c0b723ef2f8ee57a087a18f4d987728a3ad9a10497c62562261a04a74fff",
+     "start": 493,
+     "end": 507,
+     "def": 493,
+     "qual": "sha224_final"
+    },
+    "b78": {
+     "sha256": "0899c0b723ef2f8ee57a087a18f4d987728a3ad9a10497c62562261a04a74fff",
+     "start": 493,
+     "end": 507,
+     "def": 493,
+     "qual": "sha224_final"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-036",
+    "file": "src/evp/legacy_sha.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha256_init",
+    "recorded_line": 336,
+    "disposition": "BLOCKED: src/evp/legacy_sha.rs:336 \u2014 sha256_init does not establish the writable md_data its body requires",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "64452500e522c9f4ba1a5f9b66e0c80d367fe6df87fcb8ba446f6740d235ffed",
+     "start": 523,
+     "end": 537,
+     "def": 523,
+     "qual": "sha256_init"
+    },
+    "b77": {
+     "sha256": "64452500e522c9f4ba1a5f9b66e0c80d367fe6df87fcb8ba446f6740d235ffed",
+     "start": 523,
+     "end": 537,
+     "def": 523,
+     "qual": "sha256_init"
+    },
+    "b78": {
+     "sha256": "64452500e522c9f4ba1a5f9b66e0c80d367fe6df87fcb8ba446f6740d235ffed",
+     "start": 523,
+     "end": 537,
+     "def": 523,
+     "qual": "sha256_init"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-037",
+    "file": "src/evp/legacy_sha.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha256_update",
+    "recorded_line": 342,
+    "disposition": "BLOCKED: src/evp/legacy_sha.rs:342 \u2014 sha256_update does not establish the writable md_data its body requires",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "7a50ba228c71b9f9a796df57e84e00aee9ea60c31966d022a372242e3bafc31d",
+     "start": 552,
+     "end": 571,
+     "def": 552,
+     "qual": "sha256_update"
+    },
+    "b77": {
+     "sha256": "7a50ba228c71b9f9a796df57e84e00aee9ea60c31966d022a372242e3bafc31d",
+     "start": 552,
+     "end": 571,
+     "def": 552,
+     "qual": "sha256_update"
+    },
+    "b78": {
+     "sha256": "7a50ba228c71b9f9a796df57e84e00aee9ea60c31966d022a372242e3bafc31d",
+     "start": 552,
+     "end": 571,
+     "def": 552,
+     "qual": "sha256_update"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-038",
+    "file": "src/evp/legacy_sha.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha256_final",
+    "recorded_line": 348,
+    "disposition": "BLOCKED: src/evp/legacy_sha.rs:348 \u2014 sha256_final does not establish the writable md_data its body requires",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "9ca09735c2b7a61492c9e3d6ea2d56b13e01f61a09df492a3b47cb34bd72896c",
+     "start": 585,
+     "end": 599,
+     "def": 585,
+     "qual": "sha256_final"
+    },
+    "b77": {
+     "sha256": "9ca09735c2b7a61492c9e3d6ea2d56b13e01f61a09df492a3b47cb34bd72896c",
+     "start": 585,
+     "end": 599,
+     "def": 585,
+     "qual": "sha256_final"
+    },
+    "b78": {
+     "sha256": "9ca09735c2b7a61492c9e3d6ea2d56b13e01f61a09df492a3b47cb34bd72896c",
+     "start": 585,
+     "end": 599,
+     "def": 585,
+     "qual": "sha256_final"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-039",
+    "file": "src/evp/legacy_sha.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha384_init",
+    "recorded_line": 354,
+    "disposition": "BLOCKED: src/evp/legacy_sha.rs:354 \u2014 sha384_init does not establish the writable md_data its body requires",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "e953dd7d57d4d767a41b7acec68a6a39e4dccd5a4a1f400c051f305c378403ba",
+     "start": 615,
+     "end": 629,
+     "def": 615,
+     "qual": "sha384_init"
+    },
+    "b77": {
+     "sha256": "e953dd7d57d4d767a41b7acec68a6a39e4dccd5a4a1f400c051f305c378403ba",
+     "start": 615,
+     "end": 629,
+     "def": 615,
+     "qual": "sha384_init"
+    },
+    "b78": {
+     "sha256": "e953dd7d57d4d767a41b7acec68a6a39e4dccd5a4a1f400c051f305c378403ba",
+     "start": 615,
+     "end": 629,
+     "def": 615,
+     "qual": "sha384_init"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-040",
+    "file": "src/evp/legacy_sha.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha384_update",
+    "recorded_line": 360,
+    "disposition": "BLOCKED: src/evp/legacy_sha.rs:360 \u2014 sha384_update does not establish the writable md_data its body requires",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "7fc4b9411875973dc6f39181b7d4f404717d7095e4ec73668a4d828c80b40040",
+     "start": 646,
+     "end": 670,
+     "def": 646,
+     "qual": "sha384_update"
+    },
+    "b77": {
+     "sha256": "7fc4b9411875973dc6f39181b7d4f404717d7095e4ec73668a4d828c80b40040",
+     "start": 646,
+     "end": 670,
+     "def": 646,
+     "qual": "sha384_update"
+    },
+    "b78": {
+     "sha256": "7fc4b9411875973dc6f39181b7d4f404717d7095e4ec73668a4d828c80b40040",
+     "start": 646,
+     "end": 670,
+     "def": 646,
+     "qual": "sha384_update"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-041",
+    "file": "src/evp/legacy_sha.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha384_final",
+    "recorded_line": 366,
+    "disposition": "BLOCKED: src/evp/legacy_sha.rs:366 \u2014 sha384_final does not establish the writable md_data its body requires",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "1d5bba90006127de5d929a52f2a1e8dc782b0b38e4d6352a34ed1753140d180d",
+     "start": 684,
+     "end": 698,
+     "def": 684,
+     "qual": "sha384_final"
+    },
+    "b77": {
+     "sha256": "1d5bba90006127de5d929a52f2a1e8dc782b0b38e4d6352a34ed1753140d180d",
+     "start": 684,
+     "end": 698,
+     "def": 684,
+     "qual": "sha384_final"
+    },
+    "b78": {
+     "sha256": "1d5bba90006127de5d929a52f2a1e8dc782b0b38e4d6352a34ed1753140d180d",
+     "start": 684,
+     "end": 698,
+     "def": 684,
+     "qual": "sha384_final"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-042",
+    "file": "src/evp/legacy_sha.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha512_init",
+    "recorded_line": 372,
+    "disposition": "BLOCKED: src/evp/legacy_sha.rs:372 \u2014 sha512_init does not establish the writable md_data its body requires",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "6d41392f4fc061c6b6bb328e3dcff9a45126e4c1ebdef5fe7881c2da05a983be",
+     "start": 714,
+     "end": 728,
+     "def": 714,
+     "qual": "sha512_init"
+    },
+    "b77": {
+     "sha256": "6d41392f4fc061c6b6bb328e3dcff9a45126e4c1ebdef5fe7881c2da05a983be",
+     "start": 714,
+     "end": 728,
+     "def": 714,
+     "qual": "sha512_init"
+    },
+    "b78": {
+     "sha256": "6d41392f4fc061c6b6bb328e3dcff9a45126e4c1ebdef5fe7881c2da05a983be",
+     "start": 714,
+     "end": 728,
+     "def": 714,
+     "qual": "sha512_init"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-043",
+    "file": "src/evp/legacy_sha.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha512_update",
+    "recorded_line": 378,
+    "disposition": "BLOCKED: src/evp/legacy_sha.rs:378 \u2014 sha512_update does not establish the writable md_data its body requires",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "d2a2fdb53a31f2796993191cf4371ba04fe758181cfd6f18ab13f6584457ca24",
+     "start": 743,
+     "end": 762,
+     "def": 743,
+     "qual": "sha512_update"
+    },
+    "b77": {
+     "sha256": "d2a2fdb53a31f2796993191cf4371ba04fe758181cfd6f18ab13f6584457ca24",
+     "start": 743,
+     "end": 762,
+     "def": 743,
+     "qual": "sha512_update"
+    },
+    "b78": {
+     "sha256": "d2a2fdb53a31f2796993191cf4371ba04fe758181cfd6f18ab13f6584457ca24",
+     "start": 743,
+     "end": 762,
+     "def": 743,
+     "qual": "sha512_update"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-044",
+    "file": "src/evp/legacy_sha.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha512_final",
+    "recorded_line": 384,
+    "disposition": "BLOCKED: src/evp/legacy_sha.rs:384 \u2014 sha512_final does not establish the writable md_data its body requires",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "c47047f63e41a7efbebb39faea81d36f14dd5c6d6eb0cc7a546eb69dce5bd88f",
+     "start": 776,
+     "end": 790,
+     "def": 776,
+     "qual": "sha512_final"
+    },
+    "b77": {
+     "sha256": "c47047f63e41a7efbebb39faea81d36f14dd5c6d6eb0cc7a546eb69dce5bd88f",
+     "start": 776,
+     "end": 790,
+     "def": 776,
+     "qual": "sha512_final"
+    },
+    "b78": {
+     "sha256": "c47047f63e41a7efbebb39faea81d36f14dd5c6d6eb0cc7a546eb69dce5bd88f",
+     "start": 776,
+     "end": 790,
+     "def": 776,
+     "qual": "sha512_final"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-045",
+    "file": "src/evp/legacy_sha.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha512_224_int_init",
+    "recorded_line": 393,
+    "disposition": "BLOCKED: src/evp/legacy_sha.rs:393 \u2014 sha512_224_int_init does not establish the writable md_data its body requires",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "8163db07501c5f2c5c18ee61c2f17c760a0cd0a26eb2d236a54c0fbc4855a2ee",
+     "start": 809,
+     "end": 823,
+     "def": 809,
+     "qual": "sha512_224_int_init"
+    },
+    "b77": {
+     "sha256": "8163db07501c5f2c5c18ee61c2f17c760a0cd0a26eb2d236a54c0fbc4855a2ee",
+     "start": 809,
+     "end": 823,
+     "def": 809,
+     "qual": "sha512_224_int_init"
+    },
+    "b78": {
+     "sha256": "8163db07501c5f2c5c18ee61c2f17c760a0cd0a26eb2d236a54c0fbc4855a2ee",
+     "start": 809,
+     "end": 823,
+     "def": 809,
+     "qual": "sha512_224_int_init"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-046",
+    "file": "src/evp/legacy_sha.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha512_224_int_final",
+    "recorded_line": 399,
+    "disposition": "BLOCKED: src/evp/legacy_sha.rs:399 \u2014 sha512_224_int_final does not establish the writable md_data its body requires",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "b303a49f195d99e2d9da94bbfaa62ab2e49eb4db1ec2f7f472074c75dcd9fdab",
+     "start": 837,
+     "end": 851,
+     "def": 837,
+     "qual": "sha512_224_int_final"
+    },
+    "b77": {
+     "sha256": "b303a49f195d99e2d9da94bbfaa62ab2e49eb4db1ec2f7f472074c75dcd9fdab",
+     "start": 837,
+     "end": 851,
+     "def": 837,
+     "qual": "sha512_224_int_final"
+    },
+    "b78": {
+     "sha256": "b303a49f195d99e2d9da94bbfaa62ab2e49eb4db1ec2f7f472074c75dcd9fdab",
+     "start": 837,
+     "end": 851,
+     "def": 837,
+     "qual": "sha512_224_int_final"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-047",
+    "file": "src/evp/legacy_sha.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha512_256_int_init",
+    "recorded_line": 405,
+    "disposition": "BLOCKED: src/evp/legacy_sha.rs:405 \u2014 sha512_256_int_init does not establish the writable md_data its body requires",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "87e0dfec456cbc1f9da7bc41b4c0f625ff2a30243da96c2e31c0df043bc51eb0",
+     "start": 867,
+     "end": 881,
+     "def": 867,
+     "qual": "sha512_256_int_init"
+    },
+    "b77": {
+     "sha256": "87e0dfec456cbc1f9da7bc41b4c0f625ff2a30243da96c2e31c0df043bc51eb0",
+     "start": 867,
+     "end": 881,
+     "def": 867,
+     "qual": "sha512_256_int_init"
+    },
+    "b78": {
+     "sha256": "87e0dfec456cbc1f9da7bc41b4c0f625ff2a30243da96c2e31c0df043bc51eb0",
+     "start": 867,
+     "end": 881,
+     "def": 867,
+     "qual": "sha512_256_int_init"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-048",
+    "file": "src/evp/legacy_sha.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "sha512_256_int_final",
+    "recorded_line": 411,
+    "disposition": "BLOCKED: src/evp/legacy_sha.rs:411 \u2014 sha512_256_int_final does not establish the writable md_data its body requires",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "07ffa718ebee0bc974ec23c4d1785086e0b1b54d9829ed3d378a2859d2200396",
+     "start": 895,
+     "end": 909,
+     "def": 895,
+     "qual": "sha512_256_int_final"
+    },
+    "b77": {
+     "sha256": "07ffa718ebee0bc974ec23c4d1785086e0b1b54d9829ed3d378a2859d2200396",
+     "start": 895,
+     "end": 909,
+     "def": 895,
+     "qual": "sha512_256_int_final"
+    },
+    "b78": {
+     "sha256": "07ffa718ebee0bc974ec23c4d1785086e0b1b54d9829ed3d378a2859d2200396",
+     "start": 895,
+     "end": 909,
+     "def": 895,
+     "qual": "sha512_256_int_final"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-049",
+    "file": "src/cmp/cmp_ctx.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "x509_name_dup_void",
+    "recorded_line": 350,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:350 \u2014 x509_name_dup_void; contract and callers recorded in this receipt",
+    "migration_sha256": "13028da9d8492f824d5761e48a7c2f0c44392f914ac4cd0227e8d6bec0048488",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "13028da9d8492f824d5761e48a7c2f0c44392f914ac4cd0227e8d6bec0048488",
+     "start": 350,
+     "end": 353,
+     "def": 350,
+     "qual": "x509_name_dup_void"
+    },
+    "b77": {
+     "sha256": "13028da9d8492f824d5761e48a7c2f0c44392f914ac4cd0227e8d6bec0048488",
+     "start": 350,
+     "end": 353,
+     "def": 350,
+     "qual": "x509_name_dup_void"
+    },
+    "b78": {
+     "sha256": "13028da9d8492f824d5761e48a7c2f0c44392f914ac4cd0227e8d6bec0048488",
+     "start": 350,
+     "end": 353,
+     "def": 350,
+     "qual": "x509_name_dup_void"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-050",
+    "file": "src/cmp/cmp_ctx.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "x509_name_free_void",
+    "recorded_line": 354,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:354 \u2014 x509_name_free_void; contract and callers recorded in this receipt",
+    "migration_sha256": "fbb8bfad2d75d2799d95893538c24c5ffa1359fd25eef77ae77f91a81cca6ef3",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "fbb8bfad2d75d2799d95893538c24c5ffa1359fd25eef77ae77f91a81cca6ef3",
+     "start": 354,
+     "end": 357,
+     "def": 354,
+     "qual": "x509_name_free_void"
+    },
+    "b77": {
+     "sha256": "fbb8bfad2d75d2799d95893538c24c5ffa1359fd25eef77ae77f91a81cca6ef3",
+     "start": 354,
+     "end": 357,
+     "def": 354,
+     "qual": "x509_name_free_void"
+    },
+    "b78": {
+     "sha256": "fbb8bfad2d75d2799d95893538c24c5ffa1359fd25eef77ae77f91a81cca6ef3",
+     "start": 354,
+     "end": 357,
+     "def": 354,
+     "qual": "x509_name_free_void"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-051",
+    "file": "src/cmp/cmp_ctx.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "asn1_integer_dup_void",
+    "recorded_line": 358,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:358 \u2014 asn1_integer_dup_void; contract and callers recorded in this receipt",
+    "migration_sha256": "879ea7d76ffb4d0fd368a9c5a3056ed4184537401d6d6511515d16d0e22ea8df",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "879ea7d76ffb4d0fd368a9c5a3056ed4184537401d6d6511515d16d0e22ea8df",
+     "start": 358,
+     "end": 361,
+     "def": 358,
+     "qual": "asn1_integer_dup_void"
+    },
+    "b77": {
+     "sha256": "879ea7d76ffb4d0fd368a9c5a3056ed4184537401d6d6511515d16d0e22ea8df",
+     "start": 358,
+     "end": 361,
+     "def": 358,
+     "qual": "asn1_integer_dup_void"
+    },
+    "b78": {
+     "sha256": "879ea7d76ffb4d0fd368a9c5a3056ed4184537401d6d6511515d16d0e22ea8df",
+     "start": 358,
+     "end": 361,
+     "def": 358,
+     "qual": "asn1_integer_dup_void"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-052",
+    "file": "src/cmp/cmp_ctx.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "asn1_integer_free_void",
+    "recorded_line": 362,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:362 \u2014 asn1_integer_free_void; contract and callers recorded in this receipt",
+    "migration_sha256": "09ce335f71b364fa86cc7d60748551ff5226e2f5d2b5bb9b6a9efcfb1f7e0d68",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "09ce335f71b364fa86cc7d60748551ff5226e2f5d2b5bb9b6a9efcfb1f7e0d68",
+     "start": 362,
+     "end": 365,
+     "def": 362,
+     "qual": "asn1_integer_free_void"
+    },
+    "b77": {
+     "sha256": "09ce335f71b364fa86cc7d60748551ff5226e2f5d2b5bb9b6a9efcfb1f7e0d68",
+     "start": 362,
+     "end": 365,
+     "def": 362,
+     "qual": "asn1_integer_free_void"
+    },
+    "b78": {
+     "sha256": "09ce335f71b364fa86cc7d60748551ff5226e2f5d2b5bb9b6a9efcfb1f7e0d68",
+     "start": 362,
+     "end": 365,
+     "def": 362,
+     "qual": "asn1_integer_free_void"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-053",
+    "file": "src/cmp/cmp_ctx.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "x509_req_dup_void",
+    "recorded_line": 366,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:366 \u2014 x509_req_dup_void; contract and callers recorded in this receipt",
+    "migration_sha256": "ef04cda1695dd610a3eddd0ac37dec5ce3367663a427207648483393923e6cce",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "ef04cda1695dd610a3eddd0ac37dec5ce3367663a427207648483393923e6cce",
+     "start": 366,
+     "end": 369,
+     "def": 366,
+     "qual": "x509_req_dup_void"
+    },
+    "b77": {
+     "sha256": "ef04cda1695dd610a3eddd0ac37dec5ce3367663a427207648483393923e6cce",
+     "start": 366,
+     "end": 369,
+     "def": 366,
+     "qual": "x509_req_dup_void"
+    },
+    "b78": {
+     "sha256": "ef04cda1695dd610a3eddd0ac37dec5ce3367663a427207648483393923e6cce",
+     "start": 366,
+     "end": 369,
+     "def": 366,
+     "qual": "x509_req_dup_void"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-054",
+    "file": "src/cmp/cmp_ctx.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "x509_req_free_void",
+    "recorded_line": 370,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:370 \u2014 x509_req_free_void; contract and callers recorded in this receipt",
+    "migration_sha256": "31048346d3df8aa9a52bc4b18fd813722a65de998b0fb6819f7858fd82c8ecd1",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "31048346d3df8aa9a52bc4b18fd813722a65de998b0fb6819f7858fd82c8ecd1",
+     "start": 370,
+     "end": 373,
+     "def": 370,
+     "qual": "x509_req_free_void"
+    },
+    "b77": {
+     "sha256": "31048346d3df8aa9a52bc4b18fd813722a65de998b0fb6819f7858fd82c8ecd1",
+     "start": 370,
+     "end": 373,
+     "def": 370,
+     "qual": "x509_req_free_void"
+    },
+    "b78": {
+     "sha256": "31048346d3df8aa9a52bc4b18fd813722a65de998b0fb6819f7858fd82c8ecd1",
+     "start": 370,
+     "end": 373,
+     "def": 370,
+     "qual": "x509_req_free_void"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-055",
+    "file": "src/cmp/cmp_ctx.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "x509_free_void",
+    "recorded_line": 376,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:376 \u2014 x509_free_void; contract and callers recorded in this receipt",
+    "migration_sha256": "d9f8e7b4e9d3a6b6713a8be64ad1a3f7282b4518b336ccf6e5d93d7e58b7feb9",
+    "migration_candidate": null,
+    "b76": {
+     "error": "span-unparsable",
+     "detail": "no brace-delimited definition of 'x509_free_void' in src/cmp/cmp_ctx.rs"
+    },
+    "b77": {
+     "error": "span-unparsable",
+     "detail": "no brace-delimited definition of 'x509_free_void' in src/cmp/cmp_ctx.rs"
+    },
+    "b78": {
+     "error": "span-unparsable",
+     "detail": "no brace-delimited definition of 'x509_free_void' in src/cmp/cmp_ctx.rs"
+    },
+    "drift_since_b76": "unresolved",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1I-056",
+    "file": "src/cmp/cmp_ctx.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "evp_pkey_free_void",
+    "recorded_line": 380,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:380 \u2014 evp_pkey_free_void; contract and callers recorded in this receipt",
+    "migration_sha256": "da72f669354e8228bb08e90d9ef42fe297b2d68b637aa60125bf49a0d1dce558",
+    "migration_candidate": null,
+    "b76": {
+     "error": "span-unparsable",
+     "detail": "no brace-delimited definition of 'evp_pkey_free_void' in src/cmp/cmp_ctx.rs"
+    },
+    "b77": {
+     "error": "span-unparsable",
+     "detail": "no brace-delimited definition of 'evp_pkey_free_void' in src/cmp/cmp_ctx.rs"
+    },
+    "b78": {
+     "error": "span-unparsable",
+     "detail": "no brace-delimited definition of 'evp_pkey_free_void' in src/cmp/cmp_ctx.rs"
+    },
+    "drift_since_b76": "unresolved",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1I-057",
+    "file": "src/cmp/cmp_ctx.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "evp_md_free_void",
+    "recorded_line": 384,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:384 \u2014 evp_md_free_void; contract and callers recorded in this receipt",
+    "migration_sha256": "2150b580fd014ff06abe66905655afd9de621ce2baca48e220d06778faf8e5a9",
+    "migration_candidate": null,
+    "b76": {
+     "error": "span-unparsable",
+     "detail": "no brace-delimited definition of 'evp_md_free_void' in src/cmp/cmp_ctx.rs"
+    },
+    "b77": {
+     "error": "span-unparsable",
+     "detail": "no brace-delimited definition of 'evp_md_free_void' in src/cmp/cmp_ctx.rs"
+    },
+    "b78": {
+     "error": "span-unparsable",
+     "detail": "no brace-delimited definition of 'evp_md_free_void' in src/cmp/cmp_ctx.rs"
+    },
+    "drift_since_b76": "unresolved",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1I-058",
+    "file": "src/cmp/cmp_ctx.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "octet_string_free_void",
+    "recorded_line": 388,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:388 \u2014 octet_string_free_void; contract and callers recorded in this receipt",
+    "migration_sha256": "6a1b7ed75dafb5191bd3fb4d05e0ae84f1815c8571ff30f0834c86a51e68e672",
+    "migration_candidate": null,
+    "b76": {
+     "error": "span-unparsable",
+     "detail": "no brace-delimited definition of 'octet_string_free_void' in src/cmp/cmp_ctx.rs"
+    },
+    "b77": {
+     "error": "span-unparsable",
+     "detail": "no brace-delimited definition of 'octet_string_free_void' in src/cmp/cmp_ctx.rs"
+    },
+    "b78": {
+     "error": "span-unparsable",
+     "detail": "no brace-delimited definition of 'octet_string_free_void' in src/cmp/cmp_ctx.rs"
+    },
+    "drift_since_b76": "unresolved",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1I-059",
+    "file": "src/cmp/cmp_ctx.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "general_name_free_void",
+    "recorded_line": 392,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:392 \u2014 general_name_free_void; contract and callers recorded in this receipt",
+    "migration_sha256": "f2c430ef6d2510ea8fb9bb46892deea51afcac75eefbe5a03d3883541845911b",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "f2c430ef6d2510ea8fb9bb46892deea51afcac75eefbe5a03d3883541845911b",
+     "start": 376,
+     "end": 379,
+     "def": 376,
+     "qual": "general_name_free_void"
+    },
+    "b77": {
+     "sha256": "f2c430ef6d2510ea8fb9bb46892deea51afcac75eefbe5a03d3883541845911b",
+     "start": 376,
+     "end": 379,
+     "def": 376,
+     "qual": "general_name_free_void"
+    },
+    "b78": {
+     "sha256": "f2c430ef6d2510ea8fb9bb46892deea51afcac75eefbe5a03d3883541845911b",
+     "start": 376,
+     "end": 379,
+     "def": 376,
+     "qual": "general_name_free_void"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-060",
+    "file": "src/cmp/cmp_ctx.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "x509_extension_free_void",
+    "recorded_line": 396,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:396 \u2014 x509_extension_free_void; contract and callers recorded in this receipt",
+    "migration_sha256": "c55cd1b80bb171807ebc723f6a3a8b0faab9a0c8a24c3400c8b5e89e27bfd8e8",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "c55cd1b80bb171807ebc723f6a3a8b0faab9a0c8a24c3400c8b5e89e27bfd8e8",
+     "start": 380,
+     "end": 383,
+     "def": 380,
+     "qual": "x509_extension_free_void"
+    },
+    "b77": {
+     "sha256": "c55cd1b80bb171807ebc723f6a3a8b0faab9a0c8a24c3400c8b5e89e27bfd8e8",
+     "start": 380,
+     "end": 383,
+     "def": 380,
+     "qual": "x509_extension_free_void"
+    },
+    "b78": {
+     "sha256": "c55cd1b80bb171807ebc723f6a3a8b0faab9a0c8a24c3400c8b5e89e27bfd8e8",
+     "start": 380,
+     "end": 383,
+     "def": 380,
+     "qual": "x509_extension_free_void"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-061",
+    "file": "src/cmp/cmp_ctx.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "utf8_string_free_void",
+    "recorded_line": 400,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:400 \u2014 utf8_string_free_void; contract and callers recorded in this receipt",
+    "migration_sha256": "78aab3c63127b04993c0447596fe2b4167e5e8b683967ff17420b540718870ba",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "78aab3c63127b04993c0447596fe2b4167e5e8b683967ff17420b540718870ba",
+     "start": 384,
+     "end": 387,
+     "def": 384,
+     "qual": "utf8_string_free_void"
+    },
+    "b77": {
+     "sha256": "78aab3c63127b04993c0447596fe2b4167e5e8b683967ff17420b540718870ba",
+     "start": 384,
+     "end": 387,
+     "def": 384,
+     "qual": "utf8_string_free_void"
+    },
+    "b78": {
+     "sha256": "78aab3c63127b04993c0447596fe2b4167e5e8b683967ff17420b540718870ba",
+     "start": 384,
+     "end": 387,
+     "def": 384,
+     "qual": "utf8_string_free_void"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-062",
+    "file": "src/cmp/cmp_ctx.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "x509_store_free_void",
+    "recorded_line": 404,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:404 \u2014 x509_store_free_void; contract and callers recorded in this receipt",
+    "migration_sha256": "72423060b42b5b9bd24f350bf93f0bd9d7797a52f7ea9a4e5be3818255e32d16",
+    "migration_candidate": null,
+    "b76": {
+     "error": "span-unparsable",
+     "detail": "no brace-delimited definition of 'x509_store_free_void' in src/cmp/cmp_ctx.rs"
+    },
+    "b77": {
+     "error": "span-unparsable",
+     "detail": "no brace-delimited definition of 'x509_store_free_void' in src/cmp/cmp_ctx.rs"
+    },
+    "b78": {
+     "error": "span-unparsable",
+     "detail": "no brace-delimited definition of 'x509_store_free_void' in src/cmp/cmp_ctx.rs"
+    },
+    "drift_since_b76": "unresolved",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1I-063",
+    "file": "src/cmp/cmp_ctx.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "itav_free_void",
+    "recorded_line": 408,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:408 \u2014 itav_free_void; contract and callers recorded in this receipt",
+    "migration_sha256": "716df8e4158a82f709333ef8f8e10d11b49a3640c3b50cb83e87c063093a024e",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "716df8e4158a82f709333ef8f8e10d11b49a3640c3b50cb83e87c063093a024e",
+     "start": 388,
+     "end": 391,
+     "def": 388,
+     "qual": "itav_free_void"
+    },
+    "b77": {
+     "sha256": "716df8e4158a82f709333ef8f8e10d11b49a3640c3b50cb83e87c063093a024e",
+     "start": 388,
+     "end": 391,
+     "def": 388,
+     "qual": "itav_free_void"
+    },
+    "b78": {
+     "sha256": "716df8e4158a82f709333ef8f8e10d11b49a3640c3b50cb83e87c063093a024e",
+     "start": 388,
+     "end": 391,
+     "def": 388,
+     "qual": "itav_free_void"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-064",
+    "file": "src/cmp/cmp_ctx.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "policy_free_void",
+    "recorded_line": 412,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:412 \u2014 policy_free_void; contract and callers recorded in this receipt",
+    "migration_sha256": "462670b49e5deac6bb89a6bde03865bb4962f69860b469eda9889301e6e74b42",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "462670b49e5deac6bb89a6bde03865bb4962f69860b469eda9889301e6e74b42",
+     "start": 392,
+     "end": 395,
+     "def": 392,
+     "qual": "policy_free_void"
+    },
+    "b77": {
+     "sha256": "462670b49e5deac6bb89a6bde03865bb4962f69860b469eda9889301e6e74b42",
+     "start": 392,
+     "end": 395,
+     "def": 392,
+     "qual": "policy_free_void"
+    },
+    "b78": {
+     "sha256": "462670b49e5deac6bb89a6bde03865bb4962f69860b469eda9889301e6e74b42",
+     "start": 392,
+     "end": 395,
+     "def": 392,
+     "qual": "policy_free_void"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-065",
+    "file": "src/cmp/cmp_ctx.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "cmp_ctx_set_md",
+    "recorded_line": 427,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:427 \u2014 cmp_ctx_set_md; contract and callers recorded in this receipt",
+    "migration_sha256": "cd466dc13eee90d9e36e0601ccf6308e32c096b476d0982caf893b37c6f37ef8",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "cd466dc13eee90d9e36e0601ccf6308e32c096b476d0982caf893b37c6f37ef8",
+     "start": 407,
+     "end": 421,
+     "def": 407,
+     "qual": "cmp_ctx_set_md"
+    },
+    "b77": {
+     "sha256": "cd466dc13eee90d9e36e0601ccf6308e32c096b476d0982caf893b37c6f37ef8",
+     "start": 407,
+     "end": 421,
+     "def": 407,
+     "qual": "cmp_ctx_set_md"
+    },
+    "b78": {
+     "sha256": "cd466dc13eee90d9e36e0601ccf6308e32c096b476d0982caf893b37c6f37ef8",
+     "start": 407,
+     "end": 421,
+     "def": 407,
+     "qual": "cmp_ctx_set_md"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-066",
+    "file": "src/cmp/cmp_asn.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "itav_new",
+    "recorded_line": 1691,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1691 \u2014 itav_new; contract and callers recorded in this receipt",
+    "migration_sha256": "4297f94bb4c0eab961e97e6826d87ad14bbd506ffcf3f832396e5e2e1636f613",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "92619701afb2a760a17a59b64a49244e19f36fed145864ebd18c008bb57fd46f",
+     "start": 1696,
+     "end": 1700,
+     "def": 1696,
+     "qual": "itav_new"
+    },
+    "b77": {
+     "sha256": "92619701afb2a760a17a59b64a49244e19f36fed145864ebd18c008bb57fd46f",
+     "start": 1696,
+     "end": 1700,
+     "def": 1696,
+     "qual": "itav_new"
+    },
+    "b78": {
+     "sha256": "92619701afb2a760a17a59b64a49244e19f36fed145864ebd18c008bb57fd46f",
+     "start": 1696,
+     "end": 1700,
+     "def": 1696,
+     "qual": "itav_new"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1I-067",
+    "file": "src/cmp/cmp_asn.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "itav_free",
+    "recorded_line": 1697,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1697 \u2014 itav_free; contract and callers recorded in this receipt",
+    "migration_sha256": "5b0450b583d888ad1fa516a1db92cfd5493f24343bb7f8ac4e98943f7a46dfd5",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "5b0450b583d888ad1fa516a1db92cfd5493f24343bb7f8ac4e98943f7a46dfd5",
+     "start": 1706,
+     "end": 1709,
+     "def": 1706,
+     "qual": "itav_free"
+    },
+    "b77": {
+     "sha256": "5b0450b583d888ad1fa516a1db92cfd5493f24343bb7f8ac4e98943f7a46dfd5",
+     "start": 1706,
+     "end": 1709,
+     "def": 1706,
+     "qual": "itav_free"
+    },
+    "b78": {
+     "sha256": "5b0450b583d888ad1fa516a1db92cfd5493f24343bb7f8ac4e98943f7a46dfd5",
+     "start": 1706,
+     "end": 1709,
+     "def": 1706,
+     "qual": "itav_free"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-068",
+    "file": "src/cmp/cmp_asn.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "rootcakeyupdate_new",
+    "recorded_line": 1703,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1703 \u2014 rootcakeyupdate_new; contract and callers recorded in this receipt",
+    "migration_sha256": "712297b8fa570343479dddf7f549f8dbf391868981bee4205320b8b6aa81335f",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "ff13d4ec56139c98a4d8001b69fd99c70d22e64615f013bb2a9eedd5623c3805",
+     "start": 1712,
+     "end": 1716,
+     "def": 1712,
+     "qual": "rootcakeyupdate_new"
+    },
+    "b77": {
+     "sha256": "ff13d4ec56139c98a4d8001b69fd99c70d22e64615f013bb2a9eedd5623c3805",
+     "start": 1712,
+     "end": 1716,
+     "def": 1712,
+     "qual": "rootcakeyupdate_new"
+    },
+    "b78": {
+     "sha256": "ff13d4ec56139c98a4d8001b69fd99c70d22e64615f013bb2a9eedd5623c3805",
+     "start": 1712,
+     "end": 1716,
+     "def": 1712,
+     "qual": "rootcakeyupdate_new"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1I-069",
+    "file": "src/cmp/cmp_asn.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "rootcakeyupdate_free",
+    "recorded_line": 1709,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1709 \u2014 rootcakeyupdate_free; contract and callers recorded in this receipt",
+    "migration_sha256": "ab84f3d5975c0d0dde5598293da723073efe4e6cba97b983cd2c52483fa236ed",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "ab84f3d5975c0d0dde5598293da723073efe4e6cba97b983cd2c52483fa236ed",
+     "start": 1722,
+     "end": 1725,
+     "def": 1722,
+     "qual": "rootcakeyupdate_free"
+    },
+    "b77": {
+     "sha256": "ab84f3d5975c0d0dde5598293da723073efe4e6cba97b983cd2c52483fa236ed",
+     "start": 1722,
+     "end": 1725,
+     "def": 1722,
+     "qual": "rootcakeyupdate_free"
+    },
+    "b78": {
+     "sha256": "ab84f3d5975c0d0dde5598293da723073efe4e6cba97b983cd2c52483fa236ed",
+     "start": 1722,
+     "end": 1725,
+     "def": 1722,
+     "qual": "rootcakeyupdate_free"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-070",
+    "file": "src/cmp/cmp_asn.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "certreqtemplate_new",
+    "recorded_line": 1715,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1715 \u2014 certreqtemplate_new; contract and callers recorded in this receipt",
+    "migration_sha256": "a9486f3d23e7f58a9c37e06229adee229839ab641b4dbf1164d0b3047fe9cb60",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "b00a7b338092f8bb75c27ba97cafc3d28d4be0028c05b493ffbfe601e2000354",
+     "start": 1728,
+     "end": 1732,
+     "def": 1728,
+     "qual": "certreqtemplate_new"
+    },
+    "b77": {
+     "sha256": "b00a7b338092f8bb75c27ba97cafc3d28d4be0028c05b493ffbfe601e2000354",
+     "start": 1728,
+     "end": 1732,
+     "def": 1728,
+     "qual": "certreqtemplate_new"
+    },
+    "b78": {
+     "sha256": "b00a7b338092f8bb75c27ba97cafc3d28d4be0028c05b493ffbfe601e2000354",
+     "start": 1728,
+     "end": 1732,
+     "def": 1728,
+     "qual": "certreqtemplate_new"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1I-071",
+    "file": "src/cmp/cmp_asn.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "crlstatus_new",
+    "recorded_line": 1721,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1721 \u2014 crlstatus_new; contract and callers recorded in this receipt",
+    "migration_sha256": "21aefa5df289fbd26d746b53ac1b84d0d14ac0139e6a9887b3778340d1497230",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "ef2dc1ae0f4a53ee7de7c4635dea9f48043380c1171cad732b7eb9ebed3e4c71",
+     "start": 1738,
+     "end": 1742,
+     "def": 1738,
+     "qual": "crlstatus_new"
+    },
+    "b77": {
+     "sha256": "ef2dc1ae0f4a53ee7de7c4635dea9f48043380c1171cad732b7eb9ebed3e4c71",
+     "start": 1738,
+     "end": 1742,
+     "def": 1738,
+     "qual": "crlstatus_new"
+    },
+    "b78": {
+     "sha256": "ef2dc1ae0f4a53ee7de7c4635dea9f48043380c1171cad732b7eb9ebed3e4c71",
+     "start": 1738,
+     "end": 1742,
+     "def": 1738,
+     "qual": "crlstatus_new"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1I-072",
+    "file": "src/cmp/cmp_asn.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "OSSL_CMP_CERTREPMESSAGE_new",
+    "recorded_line": 1742,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1742 \u2014 OSSL_CMP_CERTREPMESSAGE_new; contract and callers recorded in this receipt",
+    "migration_sha256": "3125f469910ead06f08c2cd6de231c664e83a2436362809a57c4a2e9c927b865",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "589f07a183098fbcff73a9175f4a5c0655f0d4d579dd1d7ce06dab7988f9078f",
+     "start": 1763,
+     "end": 1767,
+     "def": 1763,
+     "qual": "OSSL_CMP_CERTREPMESSAGE_new"
+    },
+    "b77": {
+     "sha256": "589f07a183098fbcff73a9175f4a5c0655f0d4d579dd1d7ce06dab7988f9078f",
+     "start": 1763,
+     "end": 1767,
+     "def": 1763,
+     "qual": "OSSL_CMP_CERTREPMESSAGE_new"
+    },
+    "b78": {
+     "sha256": "589f07a183098fbcff73a9175f4a5c0655f0d4d579dd1d7ce06dab7988f9078f",
+     "start": 1763,
+     "end": 1767,
+     "def": 1763,
+     "qual": "OSSL_CMP_CERTREPMESSAGE_new"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1I-073",
+    "file": "src/cmp/cmp_asn.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "OSSL_CMP_REVREPCONTENT_new",
+    "recorded_line": 1748,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1748 \u2014 OSSL_CMP_REVREPCONTENT_new; contract and callers recorded in this receipt",
+    "migration_sha256": "cf492f3fca57dc20c78bef61fd56da24557206e258cd48452b8f6870c8b07c25",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "a03995d02878437e7872fbbfbb9cbfdd493a7c8ad2fdde4fe0e20ab4675654c8",
+     "start": 1773,
+     "end": 1777,
+     "def": 1773,
+     "qual": "OSSL_CMP_REVREPCONTENT_new"
+    },
+    "b77": {
+     "sha256": "a03995d02878437e7872fbbfbb9cbfdd493a7c8ad2fdde4fe0e20ab4675654c8",
+     "start": 1773,
+     "end": 1777,
+     "def": 1773,
+     "qual": "OSSL_CMP_REVREPCONTENT_new"
+    },
+    "b78": {
+     "sha256": "a03995d02878437e7872fbbfbb9cbfdd493a7c8ad2fdde4fe0e20ab4675654c8",
+     "start": 1773,
+     "end": 1777,
+     "def": 1773,
+     "qual": "OSSL_CMP_REVREPCONTENT_new"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1I-074",
+    "file": "src/cmp/cmp_asn.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "OSSL_CMP_ERRORMSGCONTENT_new",
+    "recorded_line": 1754,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1754 \u2014 OSSL_CMP_ERRORMSGCONTENT_new; contract and callers recorded in this receipt",
+    "migration_sha256": "e2ae1e951fcf69a8b7cf7587c643a0d7093d5a766b43704308fba42219444d83",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "93df69931c9908e855044b8d4f8ebfc99453d53199dc2a42c130436e97737186",
+     "start": 1783,
+     "end": 1787,
+     "def": 1783,
+     "qual": "OSSL_CMP_ERRORMSGCONTENT_new"
+    },
+    "b77": {
+     "sha256": "93df69931c9908e855044b8d4f8ebfc99453d53199dc2a42c130436e97737186",
+     "start": 1783,
+     "end": 1787,
+     "def": 1783,
+     "qual": "OSSL_CMP_ERRORMSGCONTENT_new"
+    },
+    "b78": {
+     "sha256": "93df69931c9908e855044b8d4f8ebfc99453d53199dc2a42c130436e97737186",
+     "start": 1783,
+     "end": 1787,
+     "def": 1783,
+     "qual": "OSSL_CMP_ERRORMSGCONTENT_new"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1I-075",
+    "file": "src/cmp/cmp_asn.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "OSSL_CMP_CERTIFIEDKEYPAIR_new",
+    "recorded_line": 1760,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1760 \u2014 OSSL_CMP_CERTIFIEDKEYPAIR_new; contract and callers recorded in this receipt",
+    "migration_sha256": "b49d4591a832584e2bce2973764df1e050955c2b498ad3578c801a284f86abeb",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "45cae2da6c5d7956aff69064eebea2f75aae2bee7d9011f2ba8d497cbc509931",
+     "start": 1793,
+     "end": 1797,
+     "def": 1793,
+     "qual": "OSSL_CMP_CERTIFIEDKEYPAIR_new"
+    },
+    "b77": {
+     "sha256": "45cae2da6c5d7956aff69064eebea2f75aae2bee7d9011f2ba8d497cbc509931",
+     "start": 1793,
+     "end": 1797,
+     "def": 1793,
+     "qual": "OSSL_CMP_CERTIFIEDKEYPAIR_new"
+    },
+    "b78": {
+     "sha256": "45cae2da6c5d7956aff69064eebea2f75aae2bee7d9011f2ba8d497cbc509931",
+     "start": 1793,
+     "end": 1797,
+     "def": 1793,
+     "qual": "OSSL_CMP_CERTIFIEDKEYPAIR_new"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1I-076",
+    "file": "src/cmp/cmp_asn.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "OSSL_CMP_REVDETAILS_new",
+    "recorded_line": 1766,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1766 \u2014 OSSL_CMP_REVDETAILS_new; contract and callers recorded in this receipt",
+    "migration_sha256": "5f0b763fdff90a348a6267518cbe6e0d87acbf2d03e05aebb1fa152bfc2ff84c",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "e18cdaed4397b20607a2c362a028817bc8fe643e0236f4f3223ab735564aecbc",
+     "start": 1803,
+     "end": 1807,
+     "def": 1803,
+     "qual": "OSSL_CMP_REVDETAILS_new"
+    },
+    "b77": {
+     "sha256": "e18cdaed4397b20607a2c362a028817bc8fe643e0236f4f3223ab735564aecbc",
+     "start": 1803,
+     "end": 1807,
+     "def": 1803,
+     "qual": "OSSL_CMP_REVDETAILS_new"
+    },
+    "b78": {
+     "sha256": "e18cdaed4397b20607a2c362a028817bc8fe643e0236f4f3223ab735564aecbc",
+     "start": 1803,
+     "end": 1807,
+     "def": 1803,
+     "qual": "OSSL_CMP_REVDETAILS_new"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1I-077",
+    "file": "src/cmp/cmp_asn.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "OSSL_CMP_CERTSTATUS_new",
+    "recorded_line": 1781,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1781 \u2014 OSSL_CMP_CERTSTATUS_new; contract and callers recorded in this receipt",
+    "migration_sha256": "875c1ffbdc7ecce1e5a9e073943b0de8b045ab6a0468116a38ac7eb49d21b974",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "92b5c61fc0b6b9fe37acf60bc0403fb798cf5af19c2e6090e6391cb6e69646d9",
+     "start": 1822,
+     "end": 1826,
+     "def": 1822,
+     "qual": "OSSL_CMP_CERTSTATUS_new"
+    },
+    "b77": {
+     "sha256": "92b5c61fc0b6b9fe37acf60bc0403fb798cf5af19c2e6090e6391cb6e69646d9",
+     "start": 1822,
+     "end": 1826,
+     "def": 1822,
+     "qual": "OSSL_CMP_CERTSTATUS_new"
+    },
+    "b78": {
+     "sha256": "92b5c61fc0b6b9fe37acf60bc0403fb798cf5af19c2e6090e6391cb6e69646d9",
+     "start": 1822,
+     "end": 1826,
+     "def": 1822,
+     "qual": "OSSL_CMP_CERTSTATUS_new"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1I-078",
+    "file": "src/cmp/cmp_asn.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "OSSL_CMP_CERTRESPONSE_new",
+    "recorded_line": 1796,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1796 \u2014 OSSL_CMP_CERTRESPONSE_new; contract and callers recorded in this receipt",
+    "migration_sha256": "a86b1287ed2d22fa82e732510aabf49456d6f39eb9026183cbb67a58e09c555e",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "23989b5efd8186f5510b000aa8b112ebceda315f11c44a867fe0004946326cb7",
+     "start": 1841,
+     "end": 1845,
+     "def": 1841,
+     "qual": "OSSL_CMP_CERTRESPONSE_new"
+    },
+    "b77": {
+     "sha256": "23989b5efd8186f5510b000aa8b112ebceda315f11c44a867fe0004946326cb7",
+     "start": 1841,
+     "end": 1845,
+     "def": 1841,
+     "qual": "OSSL_CMP_CERTRESPONSE_new"
+    },
+    "b78": {
+     "sha256": "23989b5efd8186f5510b000aa8b112ebceda315f11c44a867fe0004946326cb7",
+     "start": 1841,
+     "end": 1845,
+     "def": 1841,
+     "qual": "OSSL_CMP_CERTRESPONSE_new"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1I-079",
+    "file": "src/cmp/cmp_asn.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "OSSL_CMP_POLLREQ_new",
+    "recorded_line": 1811,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1811 \u2014 OSSL_CMP_POLLREQ_new; contract and callers recorded in this receipt",
+    "migration_sha256": "c23efe796f98e2231acf204fcfc148fbe640da4237d4146f97d916f8f2a98b21",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "6201c087923002b05a425968325e66d606481da8ed0574e924a55bf925344167",
+     "start": 1860,
+     "end": 1864,
+     "def": 1860,
+     "qual": "OSSL_CMP_POLLREQ_new"
+    },
+    "b77": {
+     "sha256": "6201c087923002b05a425968325e66d606481da8ed0574e924a55bf925344167",
+     "start": 1860,
+     "end": 1864,
+     "def": 1860,
+     "qual": "OSSL_CMP_POLLREQ_new"
+    },
+    "b78": {
+     "sha256": "6201c087923002b05a425968325e66d606481da8ed0574e924a55bf925344167",
+     "start": 1860,
+     "end": 1864,
+     "def": 1860,
+     "qual": "OSSL_CMP_POLLREQ_new"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1I-080",
+    "file": "src/cmp/cmp_asn.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "OSSL_CMP_POLLREP_new",
+    "recorded_line": 1826,
+    "disposition": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1826 \u2014 OSSL_CMP_POLLREP_new; contract and callers recorded in this receipt",
+    "migration_sha256": "66c222268078008ef8675269d123b40a757240a0001527a11ef0a3f3280c6968",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "30ef2a86341a386ecd97c84cb999cb4870d844a815f167229f035bb26cb10d3c",
+     "start": 1879,
+     "end": 1883,
+     "def": 1879,
+     "qual": "OSSL_CMP_POLLREP_new"
+    },
+    "b77": {
+     "sha256": "30ef2a86341a386ecd97c84cb999cb4870d844a815f167229f035bb26cb10d3c",
+     "start": 1879,
+     "end": 1883,
+     "def": 1879,
+     "qual": "OSSL_CMP_POLLREP_new"
+    },
+    "b78": {
+     "sha256": "30ef2a86341a386ecd97c84cb999cb4870d844a815f167229f035bb26cb10d3c",
+     "start": 1879,
+     "end": 1883,
+     "def": 1879,
+     "qual": "OSSL_CMP_POLLREP_new"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1I-081",
+    "file": "src/provider/legacyprov.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "legacy_digest_impl::dupctx",
+    "recorded_line": 323,
+    "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:323 \u2014 legacy_digest_impl::dupctx; contract and callers recorded in this receipt",
+    "migration_sha256": "9ef8e6d4c1a012f2c0d7fd75a274970080e36b74d915370f47d9876445f96e00",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "9ef8e6d4c1a012f2c0d7fd75a274970080e36b74d915370f47d9876445f96e00",
+     "start": 323,
+     "end": 334,
+     "def": 323,
+     "qual": "legacy_digest_impl::dupctx"
+    },
+    "b77": {
+     "sha256": "9ef8e6d4c1a012f2c0d7fd75a274970080e36b74d915370f47d9876445f96e00",
+     "start": 323,
+     "end": 334,
+     "def": 323,
+     "qual": "legacy_digest_impl::dupctx"
+    },
+    "b78": {
+     "sha256": "9ef8e6d4c1a012f2c0d7fd75a274970080e36b74d915370f47d9876445f96e00",
+     "start": 323,
+     "end": 334,
+     "def": 323,
+     "qual": "legacy_digest_impl::dupctx"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-082",
+    "file": "src/provider/legacyprov.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "legacy_digest_impl::copyctx",
+    "recorded_line": 336,
+    "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:336 \u2014 legacy_digest_impl::copyctx; contract and callers recorded in this receipt",
+    "migration_sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+     "start": 336,
+     "end": 347,
+     "def": 336,
+     "qual": "legacy_digest_impl::copyctx"
+    },
+    "b77": {
+     "sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+     "start": 345,
+     "end": 356,
+     "def": 345,
+     "qual": "legacy_digest_impl::copyctx"
+    },
+    "b78": {
+     "sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+     "start": 345,
+     "end": 356,
+     "def": 345,
+     "qual": "legacy_digest_impl::copyctx"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-083",
+    "file": "src/provider/legacyprov.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "legacy_digest_impl::internal_init",
+    "recorded_line": 349,
+    "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:349 \u2014 legacy_digest_impl::internal_init; contract and callers recorded in this receipt",
+    "migration_sha256": "74cf175e7a97e56fb5549878470a8921e59d504e5b23a8492fc5abc91eeda37c",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "74cf175e7a97e56fb5549878470a8921e59d504e5b23a8492fc5abc91eeda37c",
+     "start": 349,
+     "end": 358,
+     "def": 349,
+     "qual": "legacy_digest_impl::internal_init"
+    },
+    "b77": {
+     "sha256": "74cf175e7a97e56fb5549878470a8921e59d504e5b23a8492fc5abc91eeda37c",
+     "start": 358,
+     "end": 367,
+     "def": 358,
+     "qual": "legacy_digest_impl::internal_init"
+    },
+    "b78": {
+     "sha256": "74cf175e7a97e56fb5549878470a8921e59d504e5b23a8492fc5abc91eeda37c",
+     "start": 358,
+     "end": 367,
+     "def": 358,
+     "qual": "legacy_digest_impl::internal_init"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-084",
+    "file": "src/provider/legacyprov.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "legacy_digest_impl::internal_final",
+    "recorded_line": 360,
+    "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:360 \u2014 legacy_digest_impl::internal_final; contract and callers recorded in this receipt",
+    "migration_sha256": "76998f9e1ef14b7e47aeb3be9e2535ebaedd5020f4d92a0d3b1852401ac72434",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "76998f9e1ef14b7e47aeb3be9e2535ebaedd5020f4d92a0d3b1852401ac72434",
+     "start": 360,
+     "end": 376,
+     "def": 360,
+     "qual": "legacy_digest_impl::internal_final"
+    },
+    "b77": {
+     "sha256": "76998f9e1ef14b7e47aeb3be9e2535ebaedd5020f4d92a0d3b1852401ac72434",
+     "start": 369,
+     "end": 385,
+     "def": 369,
+     "qual": "legacy_digest_impl::internal_final"
+    },
+    "b78": {
+     "sha256": "76998f9e1ef14b7e47aeb3be9e2535ebaedd5020f4d92a0d3b1852401ac72434",
+     "start": 369,
+     "end": 385,
+     "def": 369,
+     "qual": "legacy_digest_impl::internal_final"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-085",
+    "file": "src/provider/legacyprov.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "legacy_digest_impl::update",
+    "recorded_line": 378,
+    "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:378 \u2014 legacy_digest_impl::update; contract and callers recorded in this receipt",
+    "migration_sha256": "55723f2723d0a7302746d4abaf85ec8e9598b5e7df2a71a3128cbabd2ad41d3b",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "55723f2723d0a7302746d4abaf85ec8e9598b5e7df2a71a3128cbabd2ad41d3b",
+     "start": 378,
+     "end": 385,
+     "def": 378,
+     "qual": "legacy_digest_impl::update"
+    },
+    "b77": {
+     "sha256": "55723f2723d0a7302746d4abaf85ec8e9598b5e7df2a71a3128cbabd2ad41d3b",
+     "start": 387,
+     "end": 394,
+     "def": 387,
+     "qual": "legacy_digest_impl::update"
+    },
+    "b78": {
+     "sha256": "55723f2723d0a7302746d4abaf85ec8e9598b5e7df2a71a3128cbabd2ad41d3b",
+     "start": 387,
+     "end": 394,
+     "def": 387,
+     "qual": "legacy_digest_impl::update"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-086",
+    "file": "src/provider/legacyprov.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "legacy_digest_impl::get_params",
+    "recorded_line": 387,
+    "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:387 \u2014 legacy_digest_impl::get_params; contract and callers recorded in this receipt",
+    "migration_sha256": "60741d24cb50535f7dae2865b4c85204eb7a5e2bbbcc72791949cb16e52fb0bf",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "60741d24cb50535f7dae2865b4c85204eb7a5e2bbbcc72791949cb16e52fb0bf",
+     "start": 387,
+     "end": 390,
+     "def": 387,
+     "qual": "legacy_digest_impl::get_params"
+    },
+    "b77": {
+     "sha256": "60741d24cb50535f7dae2865b4c85204eb7a5e2bbbcc72791949cb16e52fb0bf",
+     "start": 396,
+     "end": 399,
+     "def": 396,
+     "qual": "legacy_digest_impl::get_params"
+    },
+    "b78": {
+     "sha256": "60741d24cb50535f7dae2865b4c85204eb7a5e2bbbcc72791949cb16e52fb0bf",
+     "start": 396,
+     "end": 399,
+     "def": 396,
+     "qual": "legacy_digest_impl::get_params"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-087",
+    "file": "src/provider/legacyprov.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "mdc2::dupctx",
+    "recorded_line": 531,
+    "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:531 \u2014 mdc2::dupctx; contract and callers recorded in this receipt",
+    "migration_sha256": "53914997e52cd69c0d3439049d1fb36d2adb8412167764c00008bd55c11c460d",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "53914997e52cd69c0d3439049d1fb36d2adb8412167764c00008bd55c11c460d",
+     "start": 531,
+     "end": 542,
+     "def": 531,
+     "qual": "mdc2::dupctx"
+    },
+    "b77": {
+     "sha256": "53914997e52cd69c0d3439049d1fb36d2adb8412167764c00008bd55c11c460d",
+     "start": 540,
+     "end": 551,
+     "def": 540,
+     "qual": "mdc2::dupctx"
+    },
+    "b78": {
+     "sha256": "53914997e52cd69c0d3439049d1fb36d2adb8412167764c00008bd55c11c460d",
+     "start": 540,
+     "end": 551,
+     "def": 540,
+     "qual": "mdc2::dupctx"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-088",
+    "file": "src/provider/legacyprov.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "mdc2::copyctx",
+    "recorded_line": 544,
+    "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:544 \u2014 mdc2::copyctx; contract and callers recorded in this receipt",
+    "migration_sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+     "start": 544,
+     "end": 554,
+     "def": 544,
+     "qual": "mdc2::copyctx"
+    },
+    "b77": {
+     "sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+     "start": 561,
+     "end": 571,
+     "def": 561,
+     "qual": "mdc2::copyctx"
+    },
+    "b78": {
+     "sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+     "start": 561,
+     "end": 571,
+     "def": 561,
+     "qual": "mdc2::copyctx"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-089",
+    "file": "src/provider/legacyprov.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "mdc2::internal_init",
+    "recorded_line": 556,
+    "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:556 \u2014 mdc2::internal_init; contract and callers recorded in this receipt",
+    "migration_sha256": "45d0d3fadf62b85b1414683847040529b0bd4a06afe87fa7b818ad234a357325",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "45d0d3fadf62b85b1414683847040529b0bd4a06afe87fa7b818ad234a357325",
+     "start": 556,
+     "end": 562,
+     "def": 556,
+     "qual": "mdc2::internal_init"
+    },
+    "b77": {
+     "sha256": "45d0d3fadf62b85b1414683847040529b0bd4a06afe87fa7b818ad234a357325",
+     "start": 573,
+     "end": 579,
+     "def": 573,
+     "qual": "mdc2::internal_init"
+    },
+    "b78": {
+     "sha256": "45d0d3fadf62b85b1414683847040529b0bd4a06afe87fa7b818ad234a357325",
+     "start": 573,
+     "end": 579,
+     "def": 573,
+     "qual": "mdc2::internal_init"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-090",
+    "file": "src/provider/legacyprov.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "mdc2::internal_final",
+    "recorded_line": 564,
+    "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:564 \u2014 mdc2::internal_final; contract and callers recorded in this receipt",
+    "migration_sha256": "1620b0c9aff1ffa574db1c8ec58f0f8ba6269aa7d05adb4a698b369c79df71e1",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "1620b0c9aff1ffa574db1c8ec58f0f8ba6269aa7d05adb4a698b369c79df71e1",
+     "start": 564,
+     "end": 580,
+     "def": 564,
+     "qual": "mdc2::internal_final"
+    },
+    "b77": {
+     "sha256": "1620b0c9aff1ffa574db1c8ec58f0f8ba6269aa7d05adb4a698b369c79df71e1",
+     "start": 581,
+     "end": 597,
+     "def": 581,
+     "qual": "mdc2::internal_final"
+    },
+    "b78": {
+     "sha256": "1620b0c9aff1ffa574db1c8ec58f0f8ba6269aa7d05adb4a698b369c79df71e1",
+     "start": 581,
+     "end": 597,
+     "def": 581,
+     "qual": "mdc2::internal_final"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-091",
+    "file": "src/provider/legacyprov.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "mdc2::update",
+    "recorded_line": 582,
+    "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:582 \u2014 mdc2::update; contract and callers recorded in this receipt",
+    "migration_sha256": "834f662737d593c62ef6cbae4f9c7bd3d806bfcf7dd84ff8aca5ca633c378f90",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "834f662737d593c62ef6cbae4f9c7bd3d806bfcf7dd84ff8aca5ca633c378f90",
+     "start": 582,
+     "end": 585,
+     "def": 582,
+     "qual": "mdc2::update"
+    },
+    "b77": {
+     "sha256": "834f662737d593c62ef6cbae4f9c7bd3d806bfcf7dd84ff8aca5ca633c378f90",
+     "start": 599,
+     "end": 602,
+     "def": 599,
+     "qual": "mdc2::update"
+    },
+    "b78": {
+     "sha256": "834f662737d593c62ef6cbae4f9c7bd3d806bfcf7dd84ff8aca5ca633c378f90",
+     "start": 599,
+     "end": 602,
+     "def": 599,
+     "qual": "mdc2::update"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1I-092",
+    "file": "src/provider/legacyprov.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "mdc2::get_params",
+    "recorded_line": 587,
+    "disposition": "SAFETY_DISCHARGED: src/provider/legacyprov.rs:587 \u2014 mdc2::get_params; contract and callers recorded in this receipt",
+    "migration_sha256": "1cec3bc72bf7542388aa512f39a1046a5e65e3a2f13db27cbb3cbe4eb0e4371d",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "1cec3bc72bf7542388aa512f39a1046a5e65e3a2f13db27cbb3cbe4eb0e4371d",
+     "start": 587,
+     "end": 590,
+     "def": 587,
+     "qual": "mdc2::get_params"
+    },
+    "b77": {
+     "sha256": "1cec3bc72bf7542388aa512f39a1046a5e65e3a2f13db27cbb3cbe4eb0e4371d",
+     "start": 604,
+     "end": 607,
+     "def": 604,
+     "qual": "mdc2::get_params"
+    },
+    "b78": {
+     "sha256": "1cec3bc72bf7542388aa512f39a1046a5e65e3a2f13db27cbb3cbe4eb0e4371d",
+     "start": 604,
+     "end": 607,
+     "def": 604,
+     "qual": "mdc2::get_params"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   }
+  ],
+  "openssh-v1l-sites": [
+   {
+    "id": "OSSH-V1L-001",
+    "file": "src/apps/ciphers.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "dummy_psk",
+    "recorded_line": 93,
+    "disposition": "SAFETY_DISCHARGED: src/apps/ciphers.rs:93",
+    "migration_sha256": "9c5001e276be2e1c3f6c7953defd89907d7afe50558fcbb57b6bab07e52c8e18",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "5c25597b259354f2992bf3d1e9392c058a050b58c3ab20421d1914f2e0f6c911",
+     "start": 93,
+     "end": 102,
+     "def": 93,
+     "qual": "dummy_psk"
+    },
+    "b77": {
+     "sha256": "5c25597b259354f2992bf3d1e9392c058a050b58c3ab20421d1914f2e0f6c911",
+     "start": 93,
+     "end": 102,
+     "def": 93,
+     "qual": "dummy_psk"
+    },
+    "b78": {
+     "sha256": "5c25597b259354f2992bf3d1e9392c058a050b58c3ab20421d1914f2e0f6c911",
+     "start": 93,
+     "end": 102,
+     "def": 93,
+     "qual": "dummy_psk"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1L-002",
+    "file": "src/runtime/conf/lib.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "default_is_number",
+    "recorded_line": 698,
+    "disposition": "SAFETY_DISCHARGED: src/runtime/conf/lib.rs:698",
+    "migration_sha256": "b628c2e1abe6bfc227edf16347a64b8386038b7e50c644ce1e49cd1b545fe03d",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "28e918605aa8dafa7443f0c266d2e3ae39ff081169b5a1a38009aed9006f70a4",
+     "start": 698,
+     "end": 700,
+     "def": 698,
+     "qual": "default_is_number"
+    },
+    "b77": {
+     "sha256": "28e918605aa8dafa7443f0c266d2e3ae39ff081169b5a1a38009aed9006f70a4",
+     "start": 698,
+     "end": 700,
+     "def": 698,
+     "qual": "default_is_number"
+    },
+    "b78": {
+     "sha256": "28e918605aa8dafa7443f0c266d2e3ae39ff081169b5a1a38009aed9006f70a4",
+     "start": 698,
+     "end": 700,
+     "def": 698,
+     "qual": "default_is_number"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1L-003",
+    "file": "src/runtime/conf/lib.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "default_to_int",
+    "recorded_line": 703,
+    "disposition": "SAFETY_DISCHARGED: src/runtime/conf/lib.rs:703",
+    "migration_sha256": "8531dfb2333c39eb08c8e75a6d83f141c73d95c7c76972c51a952d79d3edbac2",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "9a0ab96e733776fd4af51054f4d0b3c28f972b4598a6c1114801d91cd415a3e0",
+     "start": 708,
+     "end": 710,
+     "def": 708,
+     "qual": "default_to_int"
+    },
+    "b77": {
+     "sha256": "9a0ab96e733776fd4af51054f4d0b3c28f972b4598a6c1114801d91cd415a3e0",
+     "start": 708,
+     "end": 710,
+     "def": 708,
+     "qual": "default_to_int"
+    },
+    "b78": {
+     "sha256": "9a0ab96e733776fd4af51054f4d0b3c28f972b4598a6c1114801d91cd415a3e0",
+     "start": 708,
+     "end": 710,
+     "def": 708,
+     "qual": "default_to_int"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1L-004",
+    "file": "src/runtime/confmod/asn1.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "oid_module_finish",
+    "recorded_line": 255,
+    "disposition": "SAFETY_DISCHARGED: src/runtime/confmod/asn1.rs:255",
+    "migration_sha256": "8c3fada3f48c0b083c8f6ac5d2d81b31b932e79409aa5d9b6305bba7b31b202c",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "2aa612790a83a00e33dc5b751c3d6e5e6495f5aea657690239eaa46c5b6878b9",
+     "start": 255,
+     "end": 258,
+     "def": 255,
+     "qual": "oid_module_finish"
+    },
+    "b77": {
+     "sha256": "2aa612790a83a00e33dc5b751c3d6e5e6495f5aea657690239eaa46c5b6878b9",
+     "start": 255,
+     "end": 258,
+     "def": 255,
+     "qual": "oid_module_finish"
+    },
+    "b78": {
+     "sha256": "2aa612790a83a00e33dc5b751c3d6e5e6495f5aea657690239eaa46c5b6878b9",
+     "start": 255,
+     "end": 258,
+     "def": 255,
+     "qual": "oid_module_finish"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1L-005",
+    "file": "src/asn1/asn_mstbl.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "stbl_module_finish",
+    "recorded_line": 261,
+    "disposition": "SAFETY_DISCHARGED: src/asn1/asn_mstbl.rs:261",
+    "migration_sha256": "a60635ba8da558841a20cca7084fee1b60f44adcb488f27da26cbb6a7a0980c8",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "c2314cb381fea90facb152fe1122a34829b85b55445bb110a3c47ceeb752984f",
+     "start": 261,
+     "end": 263,
+     "def": 261,
+     "qual": "stbl_module_finish"
+    },
+    "b77": {
+     "sha256": "c2314cb381fea90facb152fe1122a34829b85b55445bb110a3c47ceeb752984f",
+     "start": 261,
+     "end": 263,
+     "def": 261,
+     "qual": "stbl_module_finish"
+    },
+    "b78": {
+     "sha256": "c2314cb381fea90facb152fe1122a34829b85b55445bb110a3c47ceeb752984f",
+     "start": 261,
+     "end": 263,
+     "def": 261,
+     "qual": "stbl_module_finish"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1L-006",
+    "file": "src/runtime/confmod/mod.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "module_free_thunk",
+    "recorded_line": 397,
+    "disposition": "SAFETY_DISCHARGED: src/runtime/confmod/mod.rs:397",
+    "migration_sha256": "a5b60056c9ddbcf6bd883eecd26fbb5a0eccc600eab2245ce5689a4ab0ebbaae",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "a5b60056c9ddbcf6bd883eecd26fbb5a0eccc600eab2245ce5689a4ab0ebbaae",
+     "start": 397,
+     "end": 401,
+     "def": 397,
+     "qual": "module_free_thunk"
+    },
+    "b77": {
+     "sha256": "a5b60056c9ddbcf6bd883eecd26fbb5a0eccc600eab2245ce5689a4ab0ebbaae",
+     "start": 397,
+     "end": 401,
+     "def": 397,
+     "qual": "module_free_thunk"
+    },
+    "b78": {
+     "sha256": "a5b60056c9ddbcf6bd883eecd26fbb5a0eccc600eab2245ce5689a4ab0ebbaae",
+     "start": 397,
+     "end": 401,
+     "def": 397,
+     "qual": "module_free_thunk"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1L-007",
+    "file": "src/ui/ui_util.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "ui_free_method_data",
+    "recorded_line": 197,
+    "disposition": "SAFETY_DISCHARGED: src/ui/ui_util.rs:197",
+    "migration_sha256": "9da4f85c2504a0b7baebbd33c8b6fb7e9b58f5ce2ae0c2abd95a6161cb1ac3fd",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "9da4f85c2504a0b7baebbd33c8b6fb7e9b58f5ce2ae0c2abd95a6161cb1ac3fd",
+     "start": 197,
+     "end": 209,
+     "def": 197,
+     "qual": "ui_free_method_data"
+    },
+    "b77": {
+     "sha256": "9da4f85c2504a0b7baebbd33c8b6fb7e9b58f5ce2ae0c2abd95a6161cb1ac3fd",
+     "start": 197,
+     "end": 209,
+     "def": 197,
+     "qual": "ui_free_method_data"
+    },
+    "b78": {
+     "sha256": "9da4f85c2504a0b7baebbd33c8b6fb7e9b58f5ce2ae0c2abd95a6161cb1ac3fd",
+     "start": 197,
+     "end": 209,
+     "def": 197,
+     "qual": "ui_free_method_data"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1L-008",
+    "file": "src/ui/ui_util.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "ui_method_data_index_init",
+    "recorded_line": 217,
+    "disposition": "SAFETY_DISCHARGED: src/ui/ui_util.rs:217",
+    "migration_sha256": "61bad922ff6bdd10b9e0ea208e4b3f8427e335b19aad79480c7f903ddec805c2",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "e57cbdad7ff06b1efa3fba81eed2972aec75a3b70d8fe1e2cf1cf51812514fe5",
+     "start": 217,
+     "end": 228,
+     "def": 217,
+     "qual": "ui_method_data_index_init"
+    },
+    "b77": {
+     "sha256": "e57cbdad7ff06b1efa3fba81eed2972aec75a3b70d8fe1e2cf1cf51812514fe5",
+     "start": 217,
+     "end": 228,
+     "def": 217,
+     "qual": "ui_method_data_index_init"
+    },
+    "b78": {
+     "sha256": "e57cbdad7ff06b1efa3fba81eed2972aec75a3b70d8fe1e2cf1cf51812514fe5",
+     "start": 217,
+     "end": 228,
+     "def": 217,
+     "qual": "ui_method_data_index_init"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": false
+   },
+   {
+    "id": "OSSH-V1L-009",
+    "file": "src/engine/eng_fat.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "push_cstr_or_null",
+    "recorded_line": 197,
+    "disposition": "SAFETY_DISCHARGED: src/engine/eng_fat.rs:197",
+    "migration_sha256": "3809a13b0285ce51cb28a2a84f1b2ebbc40b9e5e1adaab112b6b2ce1b0f861e6",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "3809a13b0285ce51cb28a2a84f1b2ebbc40b9e5e1adaab112b6b2ce1b0f861e6",
+     "start": 197,
+     "end": 204,
+     "def": 197,
+     "qual": "push_cstr_or_null"
+    },
+    "b77": {
+     "sha256": "3809a13b0285ce51cb28a2a84f1b2ebbc40b9e5e1adaab112b6b2ce1b0f861e6",
+     "start": 201,
+     "end": 208,
+     "def": 201,
+     "qual": "push_cstr_or_null"
+    },
+    "b78": {
+     "sha256": "3809a13b0285ce51cb28a2a84f1b2ebbc40b9e5e1adaab112b6b2ce1b0f861e6",
+     "start": 201,
+     "end": 208,
+     "def": 201,
+     "qual": "push_cstr_or_null"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1L-010",
+    "file": "src/decoder_lib.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "decoder_free_thunk",
+    "recorded_line": 1080,
+    "disposition": "SAFETY_DISCHARGED: src/decoder_lib.rs:1080",
+    "migration_sha256": "ae3aa2602055af8784dc853c1737cb09bc0cd6ad5d9ccbc53da8cea97a94610c",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "ae3aa2602055af8784dc853c1737cb09bc0cd6ad5d9ccbc53da8cea97a94610c",
+     "start": 1080,
+     "end": 1083,
+     "def": 1080,
+     "qual": "decoder_free_thunk"
+    },
+    "b77": {
+     "sha256": "ae3aa2602055af8784dc853c1737cb09bc0cd6ad5d9ccbc53da8cea97a94610c",
+     "start": 1080,
+     "end": 1083,
+     "def": 1080,
+     "qual": "decoder_free_thunk"
+    },
+    "b78": {
+     "sha256": "ae3aa2602055af8784dc853c1737cb09bc0cd6ad5d9ccbc53da8cea97a94610c",
+     "start": 1080,
+     "end": 1083,
+     "def": 1080,
+     "qual": "decoder_free_thunk"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1L-011",
+    "file": "src/x509/v3_akid.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "akid_i2v",
+    "recorded_line": 182,
+    "disposition": "SAFETY_DISCHARGED: src/x509/v3_akid.rs:182",
+    "migration_sha256": "6f51a4906e3cf43beb25bbdfc03dbe93ff93a2a097b7d1a49622af20502c4fc4",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "6f51a4906e3cf43beb25bbdfc03dbe93ff93a2a097b7d1a49622af20502c4fc4",
+     "start": 182,
+     "end": 190,
+     "def": 182,
+     "qual": "akid_i2v"
+    },
+    "b77": {
+     "sha256": "6f51a4906e3cf43beb25bbdfc03dbe93ff93a2a097b7d1a49622af20502c4fc4",
+     "start": 182,
+     "end": 190,
+     "def": 182,
+     "qual": "akid_i2v"
+    },
+    "b78": {
+     "sha256": "6f51a4906e3cf43beb25bbdfc03dbe93ff93a2a097b7d1a49622af20502c4fc4",
+     "start": 182,
+     "end": 190,
+     "def": 182,
+     "qual": "akid_i2v"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1L-012",
+    "file": "src/x509/v3_akid.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "akid_v2i",
+    "recorded_line": 193,
+    "disposition": "SAFETY_DISCHARGED: src/x509/v3_akid.rs:193",
+    "migration_sha256": "59082f4cd416d5a12fd09babe46787b33ca10fec66e677bdb3de88b2940a0ea1",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "59082f4cd416d5a12fd09babe46787b33ca10fec66e677bdb3de88b2940a0ea1",
+     "start": 193,
+     "end": 201,
+     "def": 193,
+     "qual": "akid_v2i"
+    },
+    "b77": {
+     "sha256": "59082f4cd416d5a12fd09babe46787b33ca10fec66e677bdb3de88b2940a0ea1",
+     "start": 193,
+     "end": 201,
+     "def": 193,
+     "qual": "akid_v2i"
+    },
+    "b78": {
+     "sha256": "59082f4cd416d5a12fd09babe46787b33ca10fec66e677bdb3de88b2940a0ea1",
+     "start": 193,
+     "end": 201,
+     "def": 193,
+     "qual": "akid_v2i"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1L-013",
+    "file": "src/x509/v3_san.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "san_i2v",
+    "recorded_line": 1163,
+    "disposition": "SAFETY_DISCHARGED: src/x509/v3_san.rs:1163",
+    "migration_sha256": "f81a3cfcc6695c7396e2c60945d7b3ad5c67408e3f9f5c5d59fd42317753ce42",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "f81a3cfcc6695c7396e2c60945d7b3ad5c67408e3f9f5c5d59fd42317753ce42",
+     "start": 1176,
+     "end": 1184,
+     "def": 1176,
+     "qual": "san_i2v"
+    },
+    "b77": {
+     "sha256": "f81a3cfcc6695c7396e2c60945d7b3ad5c67408e3f9f5c5d59fd42317753ce42",
+     "start": 1176,
+     "end": 1184,
+     "def": 1176,
+     "qual": "san_i2v"
+    },
+    "b78": {
+     "sha256": "f81a3cfcc6695c7396e2c60945d7b3ad5c67408e3f9f5c5d59fd42317753ce42",
+     "start": 1176,
+     "end": 1184,
+     "def": 1176,
+     "qual": "san_i2v"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1L-014",
+    "file": "src/x509/v3_san.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "san_v2i",
+    "recorded_line": 1174,
+    "disposition": "SAFETY_DISCHARGED: src/x509/v3_san.rs:1174",
+    "migration_sha256": "c52f72419f84dcb95253bd7eec68f54e9f472ba7e0a3bebf4f1eda6470634ce7",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "c52f72419f84dcb95253bd7eec68f54e9f472ba7e0a3bebf4f1eda6470634ce7",
+     "start": 1187,
+     "end": 1194,
+     "def": 1187,
+     "qual": "san_v2i"
+    },
+    "b77": {
+     "sha256": "c52f72419f84dcb95253bd7eec68f54e9f472ba7e0a3bebf4f1eda6470634ce7",
+     "start": 1187,
+     "end": 1194,
+     "def": 1187,
+     "qual": "san_v2i"
+    },
+    "b78": {
+     "sha256": "c52f72419f84dcb95253bd7eec68f54e9f472ba7e0a3bebf4f1eda6470634ce7",
+     "start": 1187,
+     "end": 1194,
+     "def": 1187,
+     "qual": "san_v2i"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "OSSH-V1L-015",
+    "file": "src/x509/v3_san.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "san_v2i_issuer",
+    "recorded_line": 1184,
+    "disposition": "SAFETY_DISCHARGED: src/x509/v3_san.rs:1184",
+    "migration_sha256": "d46b6cbd67b40adc15b2334b7b4b9226697413a7fbe301fd967de73902aa3bf6",
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "d46b6cbd67b40adc15b2334b7b4b9226697413a7fbe301fd967de73902aa3bf6",
+     "start": 1197,
+     "end": 1204,
+     "def": 1197,
+     "qual": "san_v2i_issuer"
+    },
+    "b77": {
+     "sha256": "d46b6cbd67b40adc15b2334b7b4b9226697413a7fbe301fd967de73902aa3bf6",
+     "start": 1197,
+     "end": 1204,
+     "def": 1197,
+     "qual": "san_v2i_issuer"
+    },
+    "b78": {
+     "sha256": "d46b6cbd67b40adc15b2334b7b4b9226697413a7fbe301fd967de73902aa3bf6",
+     "start": 1197,
+     "end": 1204,
+     "def": 1197,
+     "qual": "san_v2i_issuer"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "B52SITE::src/x509/v3_akid.rs::UNSAFE_FN_DEF::i2v_AUTHORITY_KEYID",
+    "file": "src/x509/v3_akid.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "i2v_AUTHORITY_KEYID",
+    "recorded_line": 231,
+    "disposition": "RETAINED (BLOCKED) \u2014 enumerated, not discharged",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "46f6b2d0d3b02331edaf57c2362ba42ca5bb8710600a899e6ef760e05c447b21",
+     "start": 231,
+     "end": 324,
+     "def": 231,
+     "qual": "i2v_AUTHORITY_KEYID"
+    },
+    "b77": {
+     "sha256": "46f6b2d0d3b02331edaf57c2362ba42ca5bb8710600a899e6ef760e05c447b21",
+     "start": 231,
+     "end": 324,
+     "def": 231,
+     "qual": "i2v_AUTHORITY_KEYID"
+    },
+    "b78": {
+     "sha256": "46f6b2d0d3b02331edaf57c2362ba42ca5bb8710600a899e6ef760e05c447b21",
+     "start": 231,
+     "end": 324,
+     "def": 231,
+     "qual": "i2v_AUTHORITY_KEYID"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "B52SITE::src/x509/v3_akid.rs::UNSAFE_FN_DEF::v2i_AUTHORITY_KEYID",
+    "file": "src/x509/v3_akid.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "v2i_AUTHORITY_KEYID",
+    "recorded_line": 359,
+    "disposition": "RETAINED (BLOCKED) \u2014 enumerated, not discharged",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "005ce1d3cccf675f26b4d49bd8617358e746678cd1a0a651780bf5d01a003cce",
+     "start": 359,
+     "end": 567,
+     "def": 359,
+     "qual": "v2i_AUTHORITY_KEYID"
+    },
+    "b77": {
+     "sha256": "005ce1d3cccf675f26b4d49bd8617358e746678cd1a0a651780bf5d01a003cce",
+     "start": 359,
+     "end": 567,
+     "def": 359,
+     "qual": "v2i_AUTHORITY_KEYID"
+    },
+    "b78": {
+     "sha256": "005ce1d3cccf675f26b4d49bd8617358e746678cd1a0a651780bf5d01a003cce",
+     "start": 359,
+     "end": 567,
+     "def": 359,
+     "qual": "v2i_AUTHORITY_KEYID"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "B52SITE::src/x509/v3_san.rs::UNSAFE_FN_DEF::i2v_GENERAL_NAMES",
+    "file": "src/x509/v3_san.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "i2v_GENERAL_NAMES",
+    "recorded_line": 317,
+    "disposition": "RETAINED (BLOCKED) \u2014 enumerated, not discharged",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "4e1d2a03cb3d1798e441f68920587ae39d4f342115b006e5c0cc38ee31623326",
+     "start": 316,
+     "end": 346,
+     "def": 317,
+     "qual": "i2v_GENERAL_NAMES"
+    },
+    "b77": {
+     "sha256": "4e1d2a03cb3d1798e441f68920587ae39d4f342115b006e5c0cc38ee31623326",
+     "start": 316,
+     "end": 346,
+     "def": 317,
+     "qual": "i2v_GENERAL_NAMES"
+    },
+    "b78": {
+     "sha256": "4e1d2a03cb3d1798e441f68920587ae39d4f342115b006e5c0cc38ee31623326",
+     "start": 316,
+     "end": 346,
+     "def": 317,
+     "qual": "i2v_GENERAL_NAMES"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "B52SITE::src/x509/v3_san.rs::UNSAFE_FN_DEF::i2v_GENERAL_NAME",
+    "file": "src/x509/v3_san.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "i2v_GENERAL_NAME",
+    "recorded_line": 356,
+    "disposition": "RETAINED (BLOCKED) \u2014 enumerated, not discharged",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "1a27c17918064681ae2750b6c684068543110eff87bf57138d61c63577f7a2a8",
+     "start": 355,
+     "end": 629,
+     "def": 356,
+     "qual": "i2v_GENERAL_NAME"
+    },
+    "b77": {
+     "sha256": "1a27c17918064681ae2750b6c684068543110eff87bf57138d61c63577f7a2a8",
+     "start": 355,
+     "end": 629,
+     "def": 356,
+     "qual": "i2v_GENERAL_NAME"
+    },
+    "b78": {
+     "sha256": "1a27c17918064681ae2750b6c684068543110eff87bf57138d61c63577f7a2a8",
+     "start": 355,
+     "end": 629,
+     "def": 356,
+     "qual": "i2v_GENERAL_NAME"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "B52SITE::src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_GENERAL_NAME_ex",
+    "file": "src/x509/v3_san.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "v2i_GENERAL_NAME_ex",
+    "recorded_line": 1058,
+    "disposition": "RETAINED (BLOCKED) \u2014 enumerated, not discharged",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "095944c0642818b97a0966b145481cc2ff2a2358098dc856f899d274e4af576e",
+     "start": 1068,
+     "end": 1117,
+     "def": 1069,
+     "qual": "v2i_GENERAL_NAME_ex"
+    },
+    "b77": {
+     "sha256": "095944c0642818b97a0966b145481cc2ff2a2358098dc856f899d274e4af576e",
+     "start": 1068,
+     "end": 1117,
+     "def": 1069,
+     "qual": "v2i_GENERAL_NAME_ex"
+    },
+    "b78": {
+     "sha256": "095944c0642818b97a0966b145481cc2ff2a2358098dc856f899d274e4af576e",
+     "start": 1068,
+     "end": 1117,
+     "def": 1069,
+     "qual": "v2i_GENERAL_NAME_ex"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "B52SITE::src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_GENERAL_NAME",
+    "file": "src/x509/v3_san.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "v2i_GENERAL_NAME",
+    "recorded_line": 1115,
+    "disposition": "RETAINED (BLOCKED) \u2014 enumerated, not discharged",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "cfea39b622d6844b4eaeb0042e003cc8e908a6797a1b58ceb7f5de939da585a9",
+     "start": 1126,
+     "end": 1134,
+     "def": 1127,
+     "qual": "v2i_GENERAL_NAME"
+    },
+    "b77": {
+     "sha256": "cfea39b622d6844b4eaeb0042e003cc8e908a6797a1b58ceb7f5de939da585a9",
+     "start": 1126,
+     "end": 1134,
+     "def": 1127,
+     "qual": "v2i_GENERAL_NAME"
+    },
+    "b78": {
+     "sha256": "cfea39b622d6844b4eaeb0042e003cc8e908a6797a1b58ceb7f5de939da585a9",
+     "start": 1126,
+     "end": 1134,
+     "def": 1127,
+     "qual": "v2i_GENERAL_NAME"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "B52SITE::src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_GENERAL_NAMES",
+    "file": "src/x509/v3_san.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "v2i_GENERAL_NAMES",
+    "recorded_line": 1131,
+    "disposition": "RETAINED (BLOCKED) \u2014 enumerated, not discharged",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "4bc959090092b15cff8cc6124692b516dbab9d418ed7c10342672ab3d1842e86",
+     "start": 1143,
+     "end": 1173,
+     "def": 1144,
+     "qual": "v2i_GENERAL_NAMES"
+    },
+    "b77": {
+     "sha256": "4bc959090092b15cff8cc6124692b516dbab9d418ed7c10342672ab3d1842e86",
+     "start": 1143,
+     "end": 1173,
+     "def": 1144,
+     "qual": "v2i_GENERAL_NAMES"
+    },
+    "b78": {
+     "sha256": "4bc959090092b15cff8cc6124692b516dbab9d418ed7c10342672ab3d1842e86",
+     "start": 1143,
+     "end": 1173,
+     "def": 1144,
+     "qual": "v2i_GENERAL_NAMES"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "B52SITE::src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_issuer_alt",
+    "file": "src/x509/v3_san.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "v2i_issuer_alt",
+    "recorded_line": 1231,
+    "disposition": "RETAINED (BLOCKED) \u2014 enumerated, not discharged",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "91c9c2fe9bdbcc2076b7185af047abf78ccc060e2659550185401d18c3fc8581",
+     "start": 1246,
+     "end": 1296,
+     "def": 1246,
+     "qual": "v2i_issuer_alt"
+    },
+    "b77": {
+     "sha256": "91c9c2fe9bdbcc2076b7185af047abf78ccc060e2659550185401d18c3fc8581",
+     "start": 1246,
+     "end": 1296,
+     "def": 1246,
+     "qual": "v2i_issuer_alt"
+    },
+    "b78": {
+     "sha256": "91c9c2fe9bdbcc2076b7185af047abf78ccc060e2659550185401d18c3fc8581",
+     "start": 1246,
+     "end": 1296,
+     "def": 1246,
+     "qual": "v2i_issuer_alt"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   },
+   {
+    "id": "B52SITE::src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_subject_alt",
+    "file": "src/x509/v3_san.rs",
+    "kind": "UNSAFE_FN_DEF",
+    "operation": "v2i_subject_alt",
+    "recorded_line": 1355,
+    "disposition": "RETAINED (BLOCKED) \u2014 enumerated, not discharged",
+    "migration_sha256": null,
+    "migration_candidate": null,
+    "b76": {
+     "sha256": "dcb9f32ccf1f285910f21d4e07c2e87e1970ccfd88eeec809095b3288e40ffd9",
+     "start": 1372,
+     "end": 1429,
+     "def": 1372,
+     "qual": "v2i_subject_alt"
+    },
+    "b77": {
+     "sha256": "dcb9f32ccf1f285910f21d4e07c2e87e1970ccfd88eeec809095b3288e40ffd9",
+     "start": 1372,
+     "end": 1429,
+     "def": 1372,
+     "qual": "v2i_subject_alt"
+    },
+    "b78": {
+     "sha256": "dcb9f32ccf1f285910f21d4e07c2e87e1970ccfd88eeec809095b3288e40ffd9",
+     "start": 1372,
+     "end": 1429,
+     "def": 1372,
+     "qual": "v2i_subject_alt"
+    },
+    "drift_since_b76": "same",
+    "migration_matches_b78": true
+   }
+  ]
+ }
+}
