@@ -3594,4 +3594,35 @@
    "required_resolution": "Fix the template walk so a boolean field is read and written through its declared width rather than an aligned pointer cast; new candidate S-prime, load-bearing test, re-adjudication."
   }
  ]
+,
+ "b78": {
+ "adjudication": "evidence/b78-assurance-adjudication.json",
+ "adjudication_sha256": "004d9087aca60b7fd10146b0ce18d08e731a7886eed42dd3795649ffb6984a1b",
+ "candidate_tag": "b78",
+ "generated_utc": "2026-11-14T13:20:00Z",
+ "verdict": "NOT ESTABLISHED",
+ "families": {
+  "ssh": "SAFE_COMPATIBLE not established",
+  "sshd": "SAFE_COMPATIBLE not established"
+ },
+ "reproduced": {
+  "artefact_digests": "9/9 exact",
+  "closures": "ACCEPTED 290/290 DISCHARGED, 0 BLOCKED, 0 UNKNOWN",
+  "element7": "PASS (0 target-bounded, 153 contract-bounded)",
+  "gates": "fmt/clippy/2309 pass in gates-b78.log; not rerun by adjudicator",
+  "l7": "4 workloads PASS; 10 keyformat NOT_RUN",
+  "span_sample": "30/30 recomputed"
+ },
+ "blockers": [
+  "closures, freeze and b78 review record safe_compatible=false or not established",
+  "AGENTS.md section 7 criterion 3 (no safe-Rust caller can cause UB) is not established by a reachability closure",
+  "campaign safe_compatible_blockers 225/98/0/0 with B45 C5 OPEN and review_grade_gap v1i 74 / v1l 15",
+  "R-BLOCKLEVEL-CONTRACT OPEN-DOCUMENTATION for 57 of 65 sites",
+  "instrument identity split: review/receipts facb2a97 vs freeze/closure f31816b1",
+  "freeze records L7 NOT_RUN; evidence/b78-l7-replay.json is post-freeze",
+  "gates ran below the section 6.1 24 GiB floor",
+  "SEAL, BOUNDARY adjudication, ASan/Miri/Loom, dudect/Wycheproof NOT_RUN"
+ ],
+ "note": "additive post-freeze adjudication block; no existing key removed. This edit changes this file sha256 away from the freeze-recorded 65fe71bb...; that staleness is recorded in the adjudication."
+}
 }
