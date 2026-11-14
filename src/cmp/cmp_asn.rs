@@ -1703,8 +1703,14 @@ fn itav_new() -> *mut CmpItav {
 const _: fn() -> *mut CmpItav = itav_new;
 
 /// `OSSL_CMP_ITAV_free` — the item free.
+///
+/// # Safety
+/// `itav` is NULL or a whole `CmpItav` value this module allocated (`itav_new`, a dup,
+/// or a `d2i` result) and no other owner releases; it is correctly aligned for
+/// `CmpItav` and no reference into it stays live across the call. The body releases the
+/// value exactly once, together with every member it owns; NULL is a no-op.
 unsafe fn itav_free(itav: *mut CmpItav) {
-    // SAFETY: `itav` is NULL or a live item value.
+    // SAFETY: `itav` is NULL or a live, exclusively owned item value per the contract.
     unsafe { ASN1_item_free(itav.cast(), cmp_itav_it()) };
 }
 
@@ -1719,8 +1725,14 @@ fn rootcakeyupdate_new() -> *mut CmpRootCaKeyUpdate {
 const _: fn() -> *mut CmpRootCaKeyUpdate = rootcakeyupdate_new;
 
 /// `OSSL_CMP_ROOTCAKEYUPDATE_free` — internal.
+///
+/// # Safety
+/// `p` is NULL or a whole `CmpRootCaKeyUpdate` value this module allocated
+/// (`rootcakeyupdate_new`, a dup, or a `d2i` result) and no other owner releases; it is
+/// correctly aligned and no reference into it stays live across the call. The body
+/// releases the value exactly once with its owned members; NULL is a no-op.
 unsafe fn rootcakeyupdate_free(p: *mut CmpRootCaKeyUpdate) {
-    // SAFETY: `p` is NULL or a live item value.
+    // SAFETY: `p` is NULL or a live, exclusively owned item value per the contract.
     unsafe { ASN1_item_free(p.cast(), cmp_rootcakeyupdate_it()) };
 }
 

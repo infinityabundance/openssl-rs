@@ -194,6 +194,14 @@ unsafe extern "C" fn ui_dup_method_data(
 ///
 /// The `CRYPTO_EX_free` callback. `OPENSSL_free` and not a clear-free: the data holds a function
 /// pointer and an `int`, not a passphrase.
+///
+/// # Safety
+/// `data` is the value stored at this index of a live `UI_METHOD`'s ex-data for
+/// `CRYPTO_EX_INDEX_UI_METHOD`: NULL, or the block `ui_dup_method_data` allocated (a
+/// `PemPasswordCbData` from this unit's allocator seam) that this callback is its single
+/// release for. `_parent` (the `UI_METHOD`), `_ad` (its `CRYPTO_EX_DATA`), `_idx` and
+/// `_argl`/`_argp` are the ex-data callback's own arguments and are unread. The body does
+/// not cleanse: the record holds no secret material.
 unsafe extern "C" fn ui_free_method_data(
     _parent: *mut c_void,
     data: *mut c_void,

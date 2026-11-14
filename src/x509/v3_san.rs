@@ -1173,6 +1173,15 @@ pub unsafe extern "C" fn v2i_GENERAL_NAMES(
 }
 
 /// The `i2v` slot for `i2v_GENERAL_NAMES`.
+///
+/// # Safety
+/// `meth` is the live `X509V3_EXT_METHOD` row the extension machinery is dispatching (this
+/// module's static `ossl_v3_alt` row; it is process-lifetime and only read). `value` is
+/// the `GENERAL_NAMES` stack the slot holds: NULL or a live `OpenSSLStack` of
+/// NULL-or-live `GENERAL_NAME` values, exclusively read for the call. `out` is NULL or a
+/// live target stack the caller owns; any strings the body builds are added to it, so
+/// ownership of them transfers to that stack's owner. The returned stack is `out` (or a
+/// new one the implementation creates), borrowed by the caller.
 unsafe extern "C" fn san_i2v(
     meth: *const X509V3ExtMethod,
     value: *mut c_void,
@@ -1184,6 +1193,15 @@ unsafe extern "C" fn san_i2v(
 }
 
 /// The `v2i` slots for the `ossl_v3_alt` rows (`v2i_subject_alt`, `v2i_issuer_alt`).
+///
+/// # Safety
+/// `meth` is the live row the machinery is dispatching (this module's static table row,
+/// read only). `ctx` is the live `X509V3_CTX` the extension machinery passes under its
+/// `void *` spelling; it must be aligned for `X509V3Ctx` and valid for the call. `out`
+/// is NULL or a live `OpenSSLStack` of `GENERAL_NAME` values that the body may append
+/// to, transferring ownership of each appended node to that stack's owner. The answer
+/// is the newly built node (`v2i_*` already transferred ownership of it to the caller
+/// on success) or NULL on failure.
 unsafe extern "C" fn san_v2i(
     meth: *const X509V3ExtMethod,
     ctx: *mut c_void,
@@ -1194,6 +1212,12 @@ unsafe extern "C" fn san_v2i(
 }
 
 /// The `v2i` slot for the issuer-alt arm.
+///
+/// # Safety
+/// Exactly as for [`san_v2i`]: `meth` is the live static row, `ctx` is a live, aligned
+/// `X509V3_CTX` valid for the call, and `out` is NULL or a live `OpenSSLStack` that may
+/// take ownership of the node the issuer-arm constructor appends. The returned node is
+/// owned by the caller, or NULL on failure.
 unsafe extern "C" fn san_v2i_issuer(
     meth: *const X509V3ExtMethod,
     ctx: *mut c_void,

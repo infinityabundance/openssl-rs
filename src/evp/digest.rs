@@ -487,8 +487,8 @@ pub(crate) fn evp_md_new() -> *mut EvpMd {
 /// `name` must be NUL-terminated and `vlegacy_nid` a writable `c_int`.
 unsafe extern "C" fn set_legacy_nid(name: *const c_char, vlegacy_nid: *mut c_void) {
     let legacy_nid = vlegacy_nid.cast::<c_int>();
-    // SAFETY: `name` is NUL-terminated per the contract.
-    let legacy_method = OBJ_NAME_get(name, OBJ_NAME_TYPE_MD_METH);
+    // SAFETY: `name` is NUL-terminated and valid for the call per the contract.
+    let legacy_method = unsafe { OBJ_NAME_get(name, OBJ_NAME_TYPE_MD_METH) };
     // SAFETY: `legacy_nid` is writable per the contract.
     if unsafe { *legacy_nid } == -1 {
         return;

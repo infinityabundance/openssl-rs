@@ -320,6 +320,15 @@ macro_rules! legacy_digest_impl {
                 unsafe { drop(OwnedCtx::<$ctx>::from_raw(vctx.cast())) };
             }
 
+            /// `OSSL_FUNC_digest_dupctx_fn` for this legacy row.
+            ///
+            /// # Safety
+            /// `ctx` is NULL, or a whole `$ctx` block this row's `newctx`/`dupctx`
+            /// produced with `OwnedCtx::<$ctx>` and the core has not released; it is
+            /// aligned and readable for `size_of::<$ctx>()` for the whole call and not
+            /// concurrently mutated. The block copy preserves validity because `$ctx` is
+            /// a plain `#[repr(C)]` chaining record. A non-NULL result is a fresh block
+            /// owned by the caller; NULL means a NULL input or allocation failure.
             unsafe extern "C" fn dupctx(ctx: *mut c_void) -> *mut c_void {
                 if ossl_prov_is_running() == 0 || ctx.is_null() {
                     return ptr::null_mut();
@@ -355,6 +364,13 @@ macro_rules! legacy_digest_impl {
                 }
             }
 
+            /// `OSSL_FUNC_digest_init_fn` for this legacy row.
+            ///
+            /// # Safety
+            /// `ctx` is a whole `$ctx` block this row's `newctx`/`dupctx` produced,
+            /// aligned and writable for `size_of::<$ctx>()` bytes, exclusively owned for
+            /// the call. `_params` is unread: this row's `set_ctx_params` arm does not
+            /// exist, so only the chaining state is initialised and nothing is retained.
             unsafe extern "C" fn internal_init(
                 ctx: *mut c_void,
                 _params: *const OsslParam,
@@ -366,6 +382,13 @@ macro_rules! legacy_digest_impl {
                 c_int::from(unsafe { $init(ctx.cast::<$ctx>()) } != 0)
             }
 
+            /// `OSSL_FUNC_digest_final_fn` for this legacy row.
+            ///
+            /// # Safety
+            /// `ctx` is a live, aligned `$ctx` this row allocated; `out` is writable for
+            /// `outsz` bytes (`outsz >= $dgstsz`, checked below); `outl` is a writable
+            /// `usize` slot. The body writes exactly `$dgstsz` bytes and records that
+            /// length; it never writes past the checked extent.
             unsafe extern "C" fn internal_final(
                 ctx: *mut c_void,
                 out: *mut u8,
@@ -384,6 +407,12 @@ macro_rules! legacy_digest_impl {
                 0
             }
 
+            /// `OSSL_FUNC_digest_update_fn` for this legacy row.
+            ///
+            /// # Safety
+            /// `ctx` is a live, aligned `$ctx` this row allocated; `in_` is readable for
+            /// `inl` bytes when `inl != 0` (a zero length carries no readable extent).
+            /// The bytes are only read.
             unsafe extern "C" fn update(
                 ctx: *mut c_void,
                 in_: *const c_uchar,
@@ -393,6 +422,13 @@ macro_rules! legacy_digest_impl {
                 c_int::from(unsafe { $update(ctx.cast::<$ctx>(), in_.cast(), inl) } != 0)
             }
 
+            /// `OSSL_FUNC_digest_get_params_fn` for this legacy row.
+            ///
+            /// # Safety
+            /// `params` is NULL or a key-terminated `OSSL_PARAM` array whose keys are
+            /// readable NUL-terminated strings and whose located entries are writable for
+            /// their `data_size`; the default implementation writes the block size,
+            /// digest size and flags through them.
             unsafe extern "C" fn get_params(params: *mut OsslParam) -> c_int {
                 // SAFETY: the caller's contract is `ossl_digest_default_get_params`'s.
                 unsafe { ossl_digest_default_get_params(params, $blksz, $dgstsz, 0) }
@@ -537,6 +573,15 @@ mod mdc2 {
         unsafe { drop(OwnedCtx::<Mdc2Ctx>::from_raw(vctx.cast())) };
     }
 
+    /// `OSSL_FUNC_digest_dupctx_fn` for the MDC-2 row.
+    ///
+    /// # Safety
+    /// `ctx` is NULL, or a whole `Mdc2Ctx` block this row's `newctx`/`dupctx` produced
+    /// and the core has not released; it is aligned and readable for
+    /// `size_of::<Mdc2Ctx>()` for the whole call and not concurrently mutated. The block
+    /// copy preserves validity because `Mdc2Ctx` is a plain `#[repr(C)]` record. A
+    /// non-NULL result is a fresh block owned by the caller; NULL means a NULL input or
+    /// an allocation failure.
     unsafe extern "C" fn dupctx(ctx: *mut c_void) -> *mut c_void {
         if ossl_prov_is_running() == 0 || ctx.is_null() {
             return ptr::null_mut();
@@ -570,6 +615,13 @@ mod mdc2 {
         }
     }
 
+    /// `OSSL_FUNC_digest_init_fn` for the MDC-2 row.
+    ///
+    /// # Safety
+    /// `ctx` is a whole `Mdc2Ctx` block this row's `newctx`/`dupctx` produced, aligned
+    /// and writable for `size_of::<Mdc2Ctx>()` bytes, exclusively owned for the call;
+    /// `_params` is unread because this row installs no `set_ctx_params`. Only the
+    /// chaining state is initialised, and nothing is retained.
     unsafe extern "C" fn internal_init(ctx: *mut c_void, _params: *const OsslParam) -> c_int {
         if ossl_prov_is_running() == 0 {
             return 0;
@@ -578,6 +630,13 @@ mod mdc2 {
         c_int::from(unsafe { MDC2_Init(ctx.cast::<Mdc2Ctx>()) } != 0)
     }
 
+    /// `OSSL_FUNC_digest_final_fn` for the MDC-2 row.
+    ///
+    /// # Safety
+    /// `ctx` is a live, aligned `Mdc2Ctx` this row allocated; `out` is writable for
+    /// `outsz` bytes (`outsz >= MDC2_DIGEST_LENGTH`, checked below); `outl` is a
+    /// writable `usize` slot. The body writes exactly `MDC2_DIGEST_LENGTH` bytes and
+    /// records that length; it never writes past the checked extent.
     unsafe extern "C" fn internal_final(
         ctx: *mut c_void,
         out: *mut u8,
@@ -596,11 +655,24 @@ mod mdc2 {
         0
     }
 
+    /// `OSSL_FUNC_digest_update_fn` for the MDC-2 row.
+    ///
+    /// # Safety
+    /// `ctx` is a live, aligned `Mdc2Ctx` this row allocated; `in_` is readable for `inl`
+    /// bytes when `inl != 0` (a zero length carries no readable extent). The bytes are
+    /// only read.
     unsafe extern "C" fn update(ctx: *mut c_void, in_: *const c_uchar, inl: usize) -> c_int {
         // SAFETY: `ctx` is this construction's and `in_` is readable for `inl` bytes.
         c_int::from(unsafe { MDC2_Update(ctx.cast::<Mdc2Ctx>(), in_, inl) } != 0)
     }
 
+    /// `OSSL_FUNC_digest_get_params_fn` for the MDC-2 row.
+    ///
+    /// # Safety
+    /// `params` is NULL or a key-terminated `OSSL_PARAM` array whose keys are readable
+    /// NUL-terminated strings and whose located entries are writable for their
+    /// `data_size`; the default implementation writes the block size, digest size and
+    /// flags through them.
     unsafe extern "C" fn get_params(params: *mut OsslParam) -> c_int {
         // SAFETY: the caller's contract is `ossl_digest_default_get_params`'s.
         unsafe { ossl_digest_default_get_params(params, MDC2_BLOCK, MDC2_DIGEST_LENGTH, 0) }
