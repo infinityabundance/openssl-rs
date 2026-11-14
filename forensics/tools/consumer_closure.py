@@ -30827,8 +30827,12 @@ def _digest_pinned_json_uncached(repo, rel_path, expected_sha):
         return None
     root = Path(repo)
     path = Path(rel_path)
-    if not path.is_absolute():
-        path = root / path
+    # O7: a carry pin is evidence only if it names a repository-relative file.
+    # An absolute path selects an input outside the repository, so the pin
+    # would authenticate whatever that path happened to contain.
+    if path.is_absolute():
+        return None
+    path = root / path
     try:
         raw = path.read_bytes()
     except OSError:
@@ -30841,33 +30845,150 @@ def _digest_pinned_json_uncached(repo, rel_path, expected_sha):
         return None
 
 
+def _git_committed_bytes(root: Path, commit: str, rel_path: str) -> bytes | None:
+    """The committed bytes of ``rel_path`` at ``commit``; never the worktree.
+
+    Absent path, absent commit, or an absolute path yield None (fail closed).
+    """
+    if not commit or not rel_path:
+        return None
+    if Path(rel_path).is_absolute():
+        return None
+    try:
+        return subprocess.check_output(
+            ["git", "-C", str(root), "cat-file", "blob",
+             f"{commit}:{rel_path}"],
+            stderr=subprocess.DEVNULL)
+    except (subprocess.CalledProcessError, OSError):
+        return None
+
+
+def _git_is_ancestor(root: Path, ancestor: str, descendant: str) -> bool:
+    """O2: does ``ancestor`` reach ``descendant`` (equal commits count)?"""
+    if not ancestor or not descendant:
+        return False
+    try:
+        return subprocess.run(
+            ["git", "-C", str(root), "merge-base", "--is-ancestor",
+             ancestor, descendant],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL).returncode == 0
+    except OSError:
+        return False
+
+
+def _repository_anchor_commit(root: Path) -> str | None:
+    """O3: the repository HEAD -- an anchor external to the working tree."""
+    try:
+        return subprocess.check_output(
+            ["git", "-C", str(root), "rev-parse", "--verify", "HEAD"],
+            stderr=subprocess.DEVNULL).decode().strip() or None
+    except (subprocess.CalledProcessError, OSError, UnicodeDecodeError):
+        return None
+
+
+def _digest_pinned_committed_json(repo, rel_path, expected_sha, anchor_commit):
+    """Parse a hop receipt only from its committed blob at ``anchor_commit``.
+
+    O3: the recorded pin must equal the sha256 of a blob that is *committed in
+    the repository*.  A pin recomputed from an uncommitted or modified file has
+    no committed anchor, so it establishes nothing and the chain stops.
+    """
+    if not rel_path or not expected_sha or not anchor_commit:
+        return None
+    if Path(rel_path).is_absolute():
+        return None
+    raw = _git_committed_bytes(Path(repo), anchor_commit, rel_path)
+    if raw is None:
+        return None
+    if hashlib.sha256(raw).hexdigest() != expected_sha:
+        return None
+    try:
+        return json.loads(raw)
+    except Exception:  # noqa: BLE001 -- an unreadable receipt establishes nothing
+        return None
+
+
 def _carried_forward_coordinates(repo, obligation):
-    """``(head, line, receipt)`` coordinates the carry-forward chain records.
+    """``(hops, refusals)``: the chain coordinates the carry-forward records.
 
     Each hop yields the *ancestor* receipt's own inventory source head and the
     coordinate that receipt carried for this operation.  Both are read from
-    evidence, not inferred: the receipt path is digest-pinned by the hop that
-    names it, and the head is the head that receipt declares for its own
-    inventory.  A hop whose receipt is missing or whose digest does not match
-    ends the walk -- an unverifiable link establishes nothing.
+    committed evidence, not inferred:
+
+    * O7 -- the receipt path must be repository-relative;
+    * O3 -- the receipt's bytes must be a blob committed at the repository HEAD
+      whose sha256 equals the recorded pin (an uncommitted or modified receipt
+      has no anchor and ends the walk);
+    * O4 -- the receipt must name the source commit it was produced at.
+
+    A hop whose receipt is missing, unanchored or does not name a source commit
+    ends the walk and records the reason: an unverifiable link establishes
+    nothing, and later hops are not used to repair it.
     """
     out = []
+    refusals = []
     seen = set()
     record = obligation.get("carried_forward_from") or {}
     depth = 0
+    root = Path(repo)
+    anchor = _repository_anchor_commit(root)
     while record and depth < MIGRATION_CHAIN_LIMIT:
         receipt = record.get("receipt")
+        pin = record.get("receipt_sha256")
         if not receipt or receipt in seen:
+            refusals.append({"receipt": receipt,
+                             "reason": "receipt-missing-or-repeated"})
+            break
+        if Path(str(receipt)).is_absolute():
+            refusals.append({"receipt": receipt,
+                             "reason": "receipt-path-absolute"})
+            break
+        if not pin:
+            refusals.append({"receipt": receipt,
+                             "reason": "receipt-pin-missing"})
+            break
+        if not anchor:
+            refusals.append({"receipt": receipt,
+                             "reason": "no-committed-anchor"})
+            break
+        committed = _git_committed_bytes(root, anchor, str(receipt))
+        if committed is None:
+            refusals.append({"receipt": receipt,
+                             "reason": "receipt-not-committed",
+                             "anchor": anchor})
+            break
+        committed_sha = hashlib.sha256(committed).hexdigest()
+        if committed_sha != pin:
+            refusals.append({"receipt": receipt,
+                             "reason": "receipt-pin-not-anchored",
+                             "anchor": anchor,
+                             "committed_sha256": committed_sha,
+                             "recorded_pin": pin})
+            break
+        # Parse the committed blob, never the working tree: a modified or
+        # uncommitted receipt cannot steer the chain even when the caller
+        # recomputed the pin from that file.
+        try:
+            doc = json.loads(committed)
+        except Exception:  # noqa: BLE001
+            refusals.append({"receipt": receipt,
+                             "reason": "receipt-unparsable"})
             break
         seen.add(receipt)
-        doc = _digest_pinned_json(repo, receipt, record.get("receipt_sha256"))
-        if doc is None:
-            break
         ident = doc.get("source_identity") or {}
         head = ident.get("span_source_commit") or ident.get("inventory_source_head")
         line = record.get("previous_line")
-        if head and isinstance(line, int) and not isinstance(line, bool):
-            out.append({"receipt": receipt, "head": head, "line": line})
+        if not head:
+            refusals.append({"receipt": receipt,
+                             "reason": "hop-source-commit-missing"})
+            break
+        if not isinstance(line, int) or isinstance(line, bool):
+            refusals.append({"receipt": receipt,
+                             "reason": "hop-coordinate-missing"})
+            break
+        out.append({"receipt": receipt, "head": head, "line": line,
+                    "receipt_sha256": pin, "anchor": anchor})
         previous_id = record.get("previous_id")
         row = next((o for o in doc.get("obligations") or []
                     if o.get("id") == previous_id), None)
@@ -30880,7 +31001,7 @@ def _carried_forward_coordinates(repo, obligation):
                                                line)), None)
         record = (row or {}).get("carried_forward_from")
         depth += 1
-    return out
+    return out, refusals
 
 
 def _census_operation_index(contracts):
@@ -30907,7 +31028,7 @@ def _census_operation_index(contracts):
 
 
 def migration_witness(repo, obligation, boundary, source_commit,
-                      allow_worktree=False, census_ops=None):
+                      allow_worktree=False, census_ops=None, refusals=None):
     """Prove the boundary's declared span *is* the recorded coordinate's body.
 
     Returns a witness dict or None.  Every condition is required:
@@ -30915,106 +31036,204 @@ def migration_witness(repo, obligation, boundary, source_commit,
     1. the boundary's recorded span hash is a valid digest (a boundary with no
        recorded hash can never migrate: a coordinate cannot establish a
        content identity);
-    2. the current inventory attributes an operation of the obligation's
+    2. O4 -- the candidate source commit is known and resolvable (otherwise the
+       "same head" guard and the ancestry/qualified-identity comparisons have
+       nothing to compare against);
+    3. the boundary's operation resolves at the candidate and its qualified
+       context is derivable;
+    4. the current inventory attributes an operation of the obligation's
        (file, kind, item) to the boundary's resolved definition line -- the
        boundary must declare a span the census itself attributes the operation
        to, not merely a span of the same item;
-    3. some ancestor coordinate in the digest-pinned carry-forward chain is the
-       *definition line* of the item at that ancestor's own inventory head, and
+    5. some ancestor coordinate in the committed carry-forward chain is the
+       *definition line* of the item at that ancestor's own inventory head,
+       O2 -- that head is an ancestor of the candidate source commit,
+       O1 -- that definition has the *same qualified context* as the candidate
+       definition (a sibling with the same last component is a different
+       operation even when the body is byte-identical), and
        the normalised text there hashes to the boundary's recorded span hash.
 
     Two coordinates that resolve to different bodies are inconsistent evidence:
-    the stronger witness is refused, never picked between.
+    the stronger witness is refused, never picked between.  O5: every refusal is
+    appended to ``refusals`` as ``{reason, ...detail}`` so the receipt can record
+    why a hop did not bind.
     """
+    def refuse(reason, **detail):
+        if refusals is not None:
+            refusals.append(dict(detail, reason=reason))
+        return None
+
     recorded = boundary.get("span_sha256")
     if not isinstance(recorded, str) or not re.fullmatch(r"[0-9a-f]{64}", recorded):
-        return None
+        return refuse("boundary-span-hash-invalid")
     if census_ops is None:
-        return None
+        return refuse("census-unavailable")
     item = obligation.get("item")
     if not item:
-        return None
-    chain = _carried_forward_coordinates(repo, obligation)
+        return refuse("item-missing")
+    if not source_commit:
+        return refuse("candidate-source-commit-missing")
+    root = Path(repo)
+    if not _git_commit_exists(root, source_commit):
+        return refuse("candidate-source-commit-unresolvable",
+                      candidate=source_commit)
+
+    # (3) the candidate definition: the boundary's operation must select exactly
+    # one definition and its qualified context must be derivable.
+    try:
+        resolved = resolve_operation_span(
+            root, obligation["file"], boundary.get("operation"), item,
+            source_commit=source_commit, allow_worktree=allow_worktree)
+    except SpanResolutionError as exc:
+        return refuse("candidate-operation-unresolvable",
+                      classification=exc.classification, detail=exc.detail)
+    candidate_identity = resolved.get("qualified_identity")
+    if not candidate_identity:
+        return refuse("candidate-qualified-context-underivable")
+
+    chain, chain_refusals = _carried_forward_coordinates(root, obligation)
+    if refusals is not None:
+        refusals.extend(chain_refusals)
     if not chain:
-        return None
+        return refuse("carry-forward-chain-empty")
     # The row's own recorded coordinate must be one the chain names; a row that
     # claims a coordinate its evidence never carried is inconsistent, and an
     # inconsistent provenance cannot establish a content identity.
     row_line = obligation.get("line")
     if isinstance(row_line, int) and row_line not in {h["line"] for h in chain}:
-        return None
+        return refuse("row-coordinate-not-in-chain",
+                      previous_coordinate=row_line)
     hits = []
     for hop in chain:
         head = hop["head"]
-        if source_commit and head == source_commit:
+        if head == source_commit:
+            # Not a refusal: the hop *is* the candidate, where this coordinate
+            # is known not to be a definition (that is why migration is being
+            # considered at all).  Recorded so the trail names every hop.
+            if refusals is not None:
+                refusals.append({
+                    "receipt": hop["receipt"], "head": head,
+                    "line": hop["line"], "reason": "hop-at-candidate-head"})
             continue
-        root = Path(repo)
-        if not _git_commit_exists(root, head):
+        if not _git_is_ancestor(root, head, source_commit):
+            if refusals is not None:
+                refusals.append({
+                    "receipt": hop["receipt"], "head": head,
+                    "line": hop["line"], "reason": "hop-not-an-ancestor",
+                    "candidate": source_commit})
             continue
         try:
             span = resolve_operation_at_line(
                 root, obligation["file"], item, hop["line"],
                 source_commit=head, allow_worktree=allow_worktree)
-        except SpanResolutionError:
+        except SpanResolutionError as exc:
+            if refusals is not None:
+                refusals.append({
+                    "receipt": hop["receipt"], "head": head,
+                    "line": hop["line"],
+                    "reason": "hop-coordinate-not-a-definition",
+                    "classification": exc.classification})
             continue
         # The coordinate must be this operation's *definition line* at that
         # head -- not merely a line inside some definition of the same item
         # (which is what makes a stale coordinate bind to the wrong function).
         if span.get("def_line") != hop["line"]:
+            if refusals is not None:
+                refusals.append({
+                    "receipt": hop["receipt"], "head": head,
+                    "line": hop["line"],
+                    "reason": "hop-coordinate-not-the-definition-line",
+                    "def_line": span.get("def_line")})
+            continue
+        # O1: the ancestor definition must have the same qualified context as
+        # the candidate's.  Scope identity is the whole qualified path, never
+        # the last component: `m1::copyctx` and `m2::copyctx` are different
+        # operations even when their bodies are byte-identical.
+        hop_identity = span.get("qualified_identity")
+        if not hop_identity:
+            if refusals is not None:
+                refusals.append({
+                    "receipt": hop["receipt"], "head": head,
+                    "line": hop["line"],
+                    "reason": "hop-qualified-context-underivable"})
+            continue
+        if hop_identity != candidate_identity:
+            if refusals is not None:
+                refusals.append({
+                    "receipt": hop["receipt"], "head": head,
+                    "line": hop["line"],
+                    "reason": "hop-qualified-context-mismatch",
+                    "ancestor_qualified_identity": hop_identity,
+                    "candidate_qualified_identity": candidate_identity})
             continue
         hits.append({
             "receipt": hop["receipt"], "head": head, "line": hop["line"],
+            "anchor": hop["anchor"],
             "def_line": span["def_line"],
             "resolution": span.get("resolution"),
+            "qualified_identity": hop_identity,
             "span_sha256": span["sha256"],
             "span_lines": [span["start_line"], span["end_line"]],
         })
     matching = [h for h in hits if h["span_sha256"] == recorded]
     if len({h["span_sha256"] for h in hits}) > 1:
-        return None
+        return refuse("inconsistent-ancestor-bodies",
+                      observed=sorted({h["span_sha256"] for h in hits}),
+                      recorded_span_sha256=recorded)
     if not matching:
-        return None
+        return refuse("ancestor-body-hash-mismatch",
+                      recorded_span_sha256=recorded,
+                      observed_span_sha256=sorted({h["span_sha256"] for h in hits}),
+                      hop_coordinates=[{"receipt": h["receipt"],
+                                        "head": h["head"],
+                                        "line": h["line"]} for h in hits])
 
-    # (2) the candidate must attribute the operation to exactly the line the
+    # (4) the candidate must attribute the operation to exactly the line the
     # boundary resolves.  ``census_ops`` is this inventory's enumeration.
-    try:
-        resolved = resolve_operation_span(
-            Path(repo), obligation["file"], boundary.get("operation"), item,
-            source_commit=source_commit, allow_worktree=allow_worktree)
-    except SpanResolutionError:
-        return None
     attributed = census_ops.get(
         (obligation["file"], obligation.get("kind"), item), set())
     if resolved["def_line"] not in attributed:
-        return None
+        return refuse("candidate-census-absent",
+                      candidate_def_line=resolved["def_line"],
+                      attributed_lines=sorted(attributed))
 
     return {
         "rule": "content-migrated-coordinate",
         "recorded_span_sha256": recorded,
         "candidate_def_line": resolved["def_line"],
         "candidate_span_lines": [resolved["start_line"], resolved["end_line"]],
+        "candidate_qualified_identity": candidate_identity,
         "candidate_census_attributed": True,
         "ancestor": matching[0],
         "ancestor_candidates": hits,
         "basis": (
             "the obligation's recorded coordinate is not a definition line at "
             "the candidate, but it was the definition line of the same "
-            "operation at the inventory head the carry-forward chain names, and "
-            "that definition's normalised text hashes to the span the boundary "
-            "declares; the candidate inventory attributes the operation to the "
-            "boundary's resolved definition line"),
+            "qualified operation at the inventory head the committed "
+            "carry-forward chain names, and that definition's normalised text "
+            "hashes to the span the boundary declares; the candidate inventory "
+            "attributes the operation to the boundary's resolved definition "
+            "line"),
     }
 
 
 def migration_bindings(repo, obligation, boundaries, source_commit,
                        allow_worktree=False, census_ops=None):
-    """The migration witnesses for this obligation, keyed by boundary id.
+    """``(witnesses, refusals)`` for this obligation, keyed by boundary id.
 
-    Uniqueness is part of the proof: the caller binds only when this map has
-    exactly one entry.  Two boundaries whose declared hashes both match the
-    recorded coordinate's body are indistinguishable and must be refused.
+    O6 -- uniqueness is part of the proof and is scoped to the identity tuple
+    ``(file, kind, item, qualified context, body hash)``: exactly one boundary
+    may own a given tuple.  Two boundaries whose declared hashes both match the
+    recorded coordinate's body -- or whose qualified contexts collide -- are
+    indistinguishable and are all refused, never picked between.
+
+    ``refusals`` maps a boundary id to the per-hop refusal reasons recorded by
+    :func:`migration_witness`, so a refused hop reports *why* it did not bind
+    rather than a generic span-unparsable.
     """
     out = {}
+    refusals = {}
+    owners = collections.defaultdict(list)
     for b in boundaries:
         if b.get("file") != obligation["file"]:
             continue
@@ -31024,12 +31243,30 @@ def migration_bindings(repo, obligation, boundaries, source_commit,
             continue
         if b.get("declared_spans"):
             continue
+        refusals.setdefault(b["id"], [])
         witness = migration_witness(
             repo, obligation, b, source_commit,
-            allow_worktree=allow_worktree, census_ops=census_ops)
-        if witness is not None:
-            out[b["id"]] = witness
-    return out
+            allow_worktree=allow_worktree, census_ops=census_ops,
+            refusals=refusals[b["id"]])
+        if witness is None:
+            continue
+        key = (obligation["file"], obligation.get("kind"),
+               obligation.get("item"),
+               witness.get("candidate_qualified_identity"),
+               witness["recorded_span_sha256"])
+        owners[key].append(b["id"])
+        out[b["id"]] = witness
+    for key, ids in owners.items():
+        if len(ids) > 1:
+            for bid in ids:
+                refusals.setdefault(bid, []).append({
+                    "reason": "non-unique-owner",
+                    "identity_key": {
+                        "file": key[0], "kind": key[1], "item": key[2],
+                        "qualified_context": key[3], "body_sha256": key[4]},
+                    "owners": sorted(ids)})
+                out.pop(bid, None)
+    return out, refusals
 
 
 NON_DISCHARGING_DISPOSITIONS = ("BLOCKED", "ELIMINATED", "CONTRACTED",
@@ -31195,6 +31432,7 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
     disposition_rejections = []
     conflict_rejections = []
     migration_map = None
+    migration_refusals = {}
     current_line = (obligation.get("current_census_line")
                     if isinstance(obligation.get("current_census_line"), int)
                     else obligation["line"])
@@ -31307,7 +31545,7 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
                         # bytes (see migration_witness), and only when exactly
                         # one boundary in this file satisfies it.
                         if migration_map is None:
-                            migration_map = migration_bindings(
+                            migration_map, migration_refusals = migration_bindings(
                                 repo, obligation, boundaries, source_commit,
                                 allow_worktree=allow_worktree_span,
                                 census_ops=census_ops)
@@ -31554,6 +31792,15 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
             })
     if scoped_attempt:
         obligation["scoped_discharge_attempts"] = scoped_attempt
+    # O5: only a row that did *not* bind carries per-hop refusal reasons.  A
+    # discharged row must never inherit the refusals of a sibling boundary it
+    # was not bound to; that would read as a refused discharge in the receipt.
+    if migration_refusals and obligation.get("status") is None:
+        reasons = [dict(r, boundary=bid)
+                   for bid, per_hop in migration_refusals.items()
+                   for r in per_hop]
+        if reasons:
+            obligation["migration_refusals"] = reasons
     if span_rejections:
         obligation["span_discharge_rejections"] = span_rejections
     if stale_rejections:
@@ -32440,6 +32687,28 @@ def build_receipt(args) -> dict:
                 "The operation is documented (an attached # Safety/SAFETY contract) "
                 "but remains enrolled; the attached contract alone does not "
                 "discharge it.")
+
+    # O5: per-hop migration refusal reasons are enrollment evidence.  They are
+    # recorded under documented_enrollment.carry_forward so a BLOCKED row carries
+    # *why* its coordinate did not bind (receipt, head, coordinate and cause).
+    migration_refusal_records = [
+        {
+            "id": o["id"],
+            "file": o.get("file"),
+            "kind": o.get("kind"),
+            "item": o.get("item"),
+            "line": o.get("line"),
+            "carried_forward_from": (o.get("carried_forward_from") or {}).get(
+                "receipt"),
+            "reasons": o.get("migration_refusals"),
+        }
+        for o in obligations if o.get("migration_refusals")
+    ]
+    if migration_refusal_records:
+        enrollment.setdefault("carry_forward", {}).update({
+            "migration_refusals": migration_refusal_records,
+            "migration_refusal_count": len(migration_refusal_records),
+        })
 
     suppressed = (enrollment.get("carry_forward") or {}).get("suppressed") or []
     if suppressed:
@@ -35694,8 +35963,18 @@ def self_test() -> int:
     def _mig_fixture(candidate_body, *, boundary_operation="m1::copyctx",
                      census_lines=(5, 10), boundary_hash=None,
                      two_boundaries=False, tamper_receipt=False,
-                     row_line=2, recorded_from_ancestor=False):
-        """A two-commit repo: `m1::copyctx` / `m2::copyctx`, moved by an edit."""
+                     repin_uncommitted=False, absolute_receipt=False,
+                     disposition="SAFETY_DISCHARGED (scope: src/ssl/mig.rs:1-20)",
+                     row_line=2, previous_line=2,
+                     recorded_from_ancestor=False, without_source_commit=False):
+        """Two commits: an ancestor, then the candidate plus its carry receipt.
+
+        The receipt is *committed*, so its recorded pin has an external anchor
+        (O3).  ``repin_uncommitted`` instead modifies the working-tree receipt
+        after that commit and recomputes the recorded pin from the modified
+        bytes -- the pre-repair arm accepted exactly that, and the repaired one
+        must refuse because HEAD still holds the original blob.
+        """
         td = tempfile.TemporaryDirectory()
         fixture_dirs.append(td)
         d = Path(td.name)
@@ -35705,13 +35984,11 @@ def self_test() -> int:
         ancestor = (
             "mod m1 {\n"
             "    pub unsafe fn copyctx(a: *mut u8) {\n"
-            "        // one\n"
             "        core::ptr::read_volatile(a);\n"
             "    }\n"
             "}\n"
             "mod m2 {\n"
             "    pub unsafe fn copyctx(a: *mut u8) {\n"
-            "        // two\n"
             "        core::ptr::read_volatile(a);\n"
             "    }\n"
             "}\n")
@@ -35736,9 +36013,14 @@ def self_test() -> int:
         }
         ev_rel = "evidence/closure-test-anc.json"
         (d / ev_rel).write_text(json.dumps(evidence))
+        _git(d, "add", "-A")
+        _git(d, "commit", "-qm", "candidate")
+        candidate_head = subprocess.check_output(
+            ["git", "-C", str(d), "rev-parse", "HEAD"], text=True).strip()
         digest = hashlib.sha256((d / ev_rel).read_bytes()).hexdigest()
         if tamper_receipt:
             digest = "0" * 64
+        receipt_ref = str(d / ev_rel) if absolute_receipt else ev_rel
         clear_span_cache()
         if recorded_from_ancestor:
             # the receipt recorded the body it reviewed, at the head it read
@@ -35751,8 +36033,9 @@ def self_test() -> int:
         bounds = [{
             "id": "D-MIG", "receipt": "sweep-mig", "file": "src/ssl/mig.rs",
             "kind": "UNSAFE_FN_DEF", "operation": boundary_operation,
-            "disposition": "SAFETY_DISCHARGED (scope: src/ssl/mig.rs:1-20)",
-            "disposition_discharges": True, "superseded_ids": [],
+            "disposition": disposition,
+            "disposition_discharges": boundary_disposition_is_discharge(
+                disposition), "superseded_ids": [],
             "span_sha256": recorded, "line": 5, "inventory_line": 2}]
         if two_boundaries:
             bounds.append(dict(bounds[0], id="D-MIG-2"))
@@ -35762,28 +36045,37 @@ def self_test() -> int:
             "mechanism": "SSL_SESSION", "status": None,
             "discharge_receipt": None, "status_reason": None,
             "carried_forward_from": {
-                "receipt": ev_rel, "receipt_sha256": digest,
+                "receipt": receipt_ref, "receipt_sha256": digest,
                 "previous_id": "V1:src/ssl/mig.rs:2:UNSAFE_FN_DEF",
-                "previous_line": 2},
+                "previous_line": previous_line},
         }
+        if repin_uncommitted:
+            tampered = dict(evidence, note="modified after the commit")
+            (d / ev_rel).write_text(json.dumps(tampered))
+            obn["carried_forward_from"]["receipt_sha256"] = (
+                hashlib.sha256((d / ev_rel).read_bytes()).hexdigest())
         census = {("src/ssl/mig.rs", "UNSAFE_FN_DEF", "copyctx"):
                   set(census_lines)}
         plane = {"mechanism_discharges": {},
                  "scoped_boundary_discharges": {
                      b["id"]: {"receipt": "sweep-mig"} for b in bounds},
                  "err_scope": {}}
-        return adjudicate(obn, mechs, bounds, plane, repo=d,
-                          allow_worktree_span=True, census_ops=census)
+        previous_source = _EVIDENCE_ENV.get("source_commit")
+        _EVIDENCE_ENV["source_commit"] = (
+            None if without_source_commit else candidate_head)
+        try:
+            return adjudicate(obn, mechs, bounds, plane, repo=d,
+                              allow_worktree_span=True, census_ops=census)
+        finally:
+            _EVIDENCE_ENV["source_commit"] = previous_source
 
     cand = ("mod m1 {\n"
             "    pub unsafe fn copyctx(a: *mut u8) {\n"
-            "        // one\n"
             "        core::ptr::read_volatile(a);\n"
             "    }\n"
             "}\n"
             "mod m2 {\n"
             "    pub unsafe fn copyctx(a: *mut u8) {\n"
-            "        // two\n"
             "        core::ptr::read_volatile(a);\n"
             "    }\n"
             "}\n")
@@ -35801,7 +36093,8 @@ def self_test() -> int:
     # ancestor coordinate's body, but the candidate body was edited, so the
     # content-addressed check refuses even though the migration matched.
     edited = _mig_fixture(
-        cand.replace("// one", "// one, edited at the candidate"),
+        cand.replace("core::ptr::read_volatile(a);",
+                     "core::ptr::read_volatile(a); // edited", 1),
         recorded_from_ancestor=True)
     check("migration does not repair a stale boundary hash",
           (edited["status"],
@@ -35811,12 +36104,53 @@ def self_test() -> int:
     check("migration refuses a sibling operation's boundary",
           _mig_fixture(cand, boundary_operation="m2::copyctx")["status"],
           "BLOCKED")
+    sibling = _mig_fixture(cand, boundary_operation="m2::copyctx")
+    check("the sibling refusal names the qualified-context mismatch",
+          any(r.get("reason") == "hop-qualified-context-mismatch"
+              for r in sibling.get("migration_refusals") or []), True)
     check("two boundaries with the same body are not a unique owner",
           _mig_fixture(cand, two_boundaries=True)["status"], "BLOCKED")
+    duplicate = _mig_fixture(cand, two_boundaries=True)
+    check("the duplicate refusal names the non-unique owner",
+          any(r.get("reason") == "non-unique-owner"
+              for r in duplicate.get("migration_refusals") or []), True)
+    check("a hop coordinate inside a definition is not the definition line",
+          _mig_fixture(cand, previous_line=3, row_line=3)["status"],
+          "BLOCKED")
+    inside = _mig_fixture(cand, previous_line=3, row_line=3)
+    check("the inside-definition refusal names the cause",
+          any(r.get("reason") == "hop-coordinate-not-the-definition-line"
+              for r in inside.get("migration_refusals") or []), True)
     check("a tampered carry-forward receipt establishes nothing",
           _mig_fixture(cand, tamper_receipt=True)["status"], "BLOCKED")
+    tampered = _mig_fixture(cand, tamper_receipt=True)
+    check("the tampered receipt refusal names the missing anchor",
+          any(r.get("reason") == "receipt-pin-not-anchored"
+              for r in tampered.get("migration_refusals") or []), True)
+    # (f2) the review's false accept: the receipt is modified *after* it was
+    # committed and the pin is recomputed from the modified file.  The working
+    # tree matches the pin; the committed blob does not, so there is no anchor.
+    check("an uncommitted receipt re-pinned from the worktree establishes nothing",
+          _mig_fixture(cand, repin_uncommitted=True)["status"], "BLOCKED")
+    repinned = _mig_fixture(cand, repin_uncommitted=True)
+    check("the re-pinned receipt refusal names the missing anchor",
+          any(r.get("reason") == "receipt-pin-not-anchored"
+              for r in repinned.get("migration_refusals") or []), True)
+    check("an absolute receipt path is not evidence",
+          _mig_fixture(cand, absolute_receipt=True)["status"], "BLOCKED")
+    absolute = _mig_fixture(cand, absolute_receipt=True)
+    check("the absolute-path refusal names the path",
+          any(r.get("reason") == "receipt-path-absolute"
+              for r in absolute.get("migration_refusals") or []), True)
+    check("a RETAINED disposition cannot migrate",
+          _mig_fixture(cand, disposition="RETAINED (BLOCKED)")["status"],
+          "BLOCKED")
     check("a row coordinate the chain does not name establishes nothing",
           _mig_fixture(cand, row_line=99)["status"], "BLOCKED")
+    # no migration binding when the candidate head is unknown (O4).
+    check("migration is refused when no source commit is bound",
+          _mig_fixture(cand, without_source_commit=True)["status"],
+          "BLOCKED")
     # restore control: the unmutated fixture still binds after the refusals
     check("restore: the base fixture still binds",
           _mig_fixture(cand)["status"], "DISCHARGED")
