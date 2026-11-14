@@ -347,50 +347,109 @@ macro_rules! ctx_set1_dup {
 
 // --- void-typed free/dup thunks for the macro-generated setters ---
 
+/// `X509_NAME_dup` in the `void *` shape the generic setter macro takes.
+///
+/// # Safety
+/// `p` is NULL or a live `X509_NAME` the caller owns (the value currently stored in a
+/// `OSSL_CMP_CTX` member the setter manages). The body takes no ownership of `p`: it
+/// returns a new reference-counted copy on success, or NULL on failure, and the copy's
+/// ownership transfers to the caller.
 unsafe extern "C" fn x509_name_dup_void(p: *const c_void) -> *mut c_void {
-    // SAFETY: per this function's contract.
+    // SAFETY: `p` is NULL or a live `X509_NAME` per this function's contract.
     unsafe { X509_NAME_dup(p.cast()) }.cast()
 }
+/// `X509_NAME_free` in the `void *` shape.
+///
+/// # Safety
+/// `p` is NULL or a live `X509_NAME` reference this context owns and no other handle
+/// releases: the call gives up exactly one reference (a NULL is the authority's no-op).
 unsafe extern "C" fn x509_name_free_void(p: *mut c_void) {
-    // SAFETY: per this function's contract.
+    // SAFETY: `p` is NULL or a live, owned reference per this function's contract.
     unsafe { X509_NAME_free(p.cast()) };
 }
+/// `ASN1_item_dup(ASN1_INTEGER_it(), ...)` in the `void *` shape.
+///
+/// # Safety
+/// `p` is NULL or a live, decoded `ASN1_INTEGER` item value owned by the caller. The
+/// body reads it to build a deep copy; ownership of the original is unchanged and the
+/// copy (or NULL on failure) is handed back to the caller.
 unsafe extern "C" fn asn1_integer_dup_void(p: *const c_void) -> *mut c_void {
-    // SAFETY: per this function's contract.
+    // SAFETY: `p` is NULL or a live item value per this function's contract.
     unsafe { ASN1_item_dup(ASN1_INTEGER_it(), p) }.cast()
 }
+/// `ASN1_INTEGER_free` in the `void *` shape.
+///
+/// # Safety
+/// `p` is NULL or a live `ASN1_INTEGER` this context owns and no other handle releases;
+/// the whole value (its allocated content included) is released exactly once here.
 unsafe extern "C" fn asn1_integer_free_void(p: *mut c_void) {
-    // SAFETY: per this function's contract.
+    // SAFETY: `p` is NULL or a live, owned `ASN1_INTEGER` per this function's contract.
     unsafe { ASN1_INTEGER_free(p.cast()) };
 }
+/// `X509_REQ_dup` in the `void *` shape.
+///
+/// # Safety
+/// `p` is NULL or a live `X509_REQ` the caller owns; the body takes no ownership of it
+/// and returns a new reference-counted copy (or NULL on failure) whose ownership
+/// transfers to the caller.
 unsafe extern "C" fn x509_req_dup_void(p: *const c_void) -> *mut c_void {
-    // SAFETY: per this function's contract.
+    // SAFETY: `p` is NULL or a live `X509_REQ` per this function's contract.
     unsafe { X509_REQ_dup(p.cast()) }.cast()
 }
+/// `X509_REQ_free` in the `void *` shape.
+///
+/// # Safety
+/// `p` is NULL or a live `X509_REQ` reference this context owns and no other handle
+/// releases: exactly one reference is given up (NULL is a no-op).
 unsafe extern "C" fn x509_req_free_void(p: *mut c_void) {
-    // SAFETY: per this function's contract.
+    // SAFETY: `p` is NULL or a live, owned reference per this function's contract.
     unsafe { X509_REQ_free(p.cast()) };
 }
 
-/// `TYPE _free(...)` thunks for `OSSL_CMP_CTX_free`.
+// `TYPE _free(...)` thunks for `OSSL_CMP_CTX_free`. Each takes the `void *` spelling
+// the release macro uses and carries the same obligation, stated on each definition.
+
+/// Releases the context's stored `GENERAL_NAME`.
+///
+/// # Safety
+/// `p` is NULL or a live object of the thunk's own type (`GENERAL_NAME`,
+/// `X509_EXTENSION`, `ASN1_UTF8STRING`, `OSSL_CMP_ITAV`, `POLICYINFO`) that this
+/// context owns and no other handle releases. The call releases that object exactly
+/// once, including its allocated content; NULL is a no-op.
 unsafe extern "C" fn general_name_free_void(p: *mut c_void) {
-    // SAFETY: per this function's contract.
+    // SAFETY: `p` is NULL or a live, owned `GENERAL_NAME` per this thunk's contract.
     unsafe { GENERAL_NAME_free(p.cast()) };
 }
+/// Releases the context's stored `X509_EXTENSION`.
+///
+/// # Safety
+/// `p` is NULL or a live, owned `X509_EXTENSION`.
 unsafe extern "C" fn x509_extension_free_void(p: *mut c_void) {
-    // SAFETY: per this function's contract.
+    // SAFETY: `p` is NULL or a live, owned `X509_EXTENSION`.
     unsafe { X509_EXTENSION_free(p.cast()) };
 }
+/// Releases the context's stored `ASN1_UTF8STRING`.
+///
+/// # Safety
+/// `p` is NULL or a live, owned `ASN1_UTF8STRING`.
 unsafe extern "C" fn utf8_string_free_void(p: *mut c_void) {
-    // SAFETY: per this function's contract.
+    // SAFETY: `p` is NULL or a live, owned `ASN1_UTF8STRING`.
     unsafe { crate::asn1::string::ASN1_UTF8STRING_free(p.cast()) };
 }
+/// Releases the context's stored `OSSL_CMP_ITAV`.
+///
+/// # Safety
+/// `p` is NULL or a live, owned `OSSL_CMP_ITAV`.
 unsafe extern "C" fn itav_free_void(p: *mut c_void) {
-    // SAFETY: per this function's contract.
+    // SAFETY: `p` is NULL or a live, owned `OSSL_CMP_ITAV`.
     unsafe { OSSL_CMP_ITAV_free(p.cast()) };
 }
+/// Releases the context's stored `POLICYINFO`.
+///
+/// # Safety
+/// `p` is NULL or a live, owned `POLICYINFO`.
 unsafe extern "C" fn policy_free_void(p: *mut c_void) {
-    // SAFETY: per this function's contract.
+    // SAFETY: `p` is NULL or a live, owned `POLICYINFO`.
     unsafe { POLICYINFO_free(p.cast()) };
 }
 
@@ -404,6 +463,16 @@ unsafe fn itavs_free(sk: *mut OpenSslStack) {
 }
 
 /// `static int cmp_ctx_set_md(OSSL_CMP_CTX *ctx, EVP_MD **pmd, int nid)` — `cmp_ctx.c:82-94`.
+///
+/// # Safety
+/// `ctx` is a live, aligned `OsslCmpCtx` whose `libctx`/`propq` fields are the values
+/// its constructor installed; `pmd` is a live, writable `*mut EvpMd` slot that is a
+/// member of that same context and currently holds NULL or the method this context
+/// owns. On success the body releases the incumbent through `EVP_MD_free` and stores
+/// the newly fetched method in `*pmd`, transferring that reference to the context; on
+/// failure it raises an error, returns 0 and leaves `*pmd` untouched. `nid` is a plain
+/// value, but a NID the object table does not know makes `OBJ_nid2sn` answer NULL,
+/// which the fetch refuses without a dereference.
 unsafe fn cmp_ctx_set_md(ctx: *mut OsslCmpCtx, pmd: *mut *mut EvpMd, nid: c_int) -> c_int {
     // SAFETY: `ctx` is live; the object table answers a name for a known NID.
     let md = unsafe { EVP_MD_fetch((*ctx).libctx, OBJ_nid2sn(nid), (*ctx).propq.cast_const()) };
@@ -412,7 +481,8 @@ unsafe fn cmp_ctx_set_md(ctx: *mut OsslCmpCtx, pmd: *mut *mut EvpMd, nid: c_int)
         unsafe { raise_ctx(136) };
         return 0;
     }
-    // SAFETY: `pmd` is a live out-pointer.
+    // SAFETY: `pmd` is a live out-pointer to the context's own method slot, holding the
+    // reference this context owns per the contract.
     unsafe {
         EVP_MD_free(*pmd);
         *pmd = md;

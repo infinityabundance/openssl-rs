@@ -4846,24 +4846,34 @@ pub unsafe extern "C" fn SSL_ctrl(
             SSL_CTRL_SET_MIN_PROTO_VERSION => {
                 // SAFETY: `sc` is live; `defltmeth` is the connection's method pointer.
                 let method_version = unsafe { (*sc.defltmeth).version };
+                // SAFETY: `sc` is the live connection being controlled, so
+                // `&mut sc.min_proto_version` is an aligned, exclusively borrowed, writable
+                // slot for the call.
                 let ok = ssl_check_allowed_versions(larg as c_int, sc.max_proto_version)
-                    && ssl_set_version_bound(
-                        method_version,
-                        larg as c_int,
-                        &mut sc.min_proto_version,
-                    );
+                    && unsafe {
+                        ssl_set_version_bound(
+                            method_version,
+                            larg as c_int,
+                            &mut sc.min_proto_version,
+                        )
+                    };
                 c_long::from(ok)
             }
             SSL_CTRL_GET_MIN_PROTO_VERSION => sc.min_proto_version as c_long,
             SSL_CTRL_SET_MAX_PROTO_VERSION => {
                 // SAFETY: `sc` is live; `defltmeth` is the connection's method pointer.
                 let method_version = unsafe { (*sc.defltmeth).version };
+                // SAFETY: `sc` is the live connection being controlled, so
+                // `&mut sc.max_proto_version` is an aligned, exclusively borrowed, writable
+                // slot for the call.
                 let ok = ssl_check_allowed_versions(sc.min_proto_version, larg as c_int)
-                    && ssl_set_version_bound(
-                        method_version,
-                        larg as c_int,
-                        &mut sc.max_proto_version,
-                    );
+                    && unsafe {
+                        ssl_set_version_bound(
+                            method_version,
+                            larg as c_int,
+                            &mut sc.max_proto_version,
+                        )
+                    };
                 c_long::from(ok)
             }
             SSL_CTRL_GET_MAX_PROTO_VERSION => sc.max_proto_version as c_long,
@@ -5056,24 +5066,34 @@ pub unsafe extern "C" fn SSL_CTX_ctrl(
             SSL_CTRL_SET_MIN_PROTO_VERSION => {
                 // SAFETY: `c` is live; `method` is the context's method pointer.
                 let method_version = unsafe { (*c.method).version };
+                // SAFETY: `c` is the live context being controlled, so
+                // `&mut c.min_proto_version` is an aligned, exclusively borrowed, writable
+                // slot for the call.
                 let ok = ssl_check_allowed_versions(larg as c_int, c.max_proto_version)
-                    && ssl_set_version_bound(
-                        method_version,
-                        larg as c_int,
-                        &mut c.min_proto_version,
-                    );
+                    && unsafe {
+                        ssl_set_version_bound(
+                            method_version,
+                            larg as c_int,
+                            &mut c.min_proto_version,
+                        )
+                    };
                 c_long::from(ok)
             }
             SSL_CTRL_GET_MIN_PROTO_VERSION => c.min_proto_version as c_long,
             SSL_CTRL_SET_MAX_PROTO_VERSION => {
                 // SAFETY: `c` is live; `method` is the context's method pointer.
                 let method_version = unsafe { (*c.method).version };
+                // SAFETY: `c` is the live context being controlled, so
+                // `&mut c.max_proto_version` is an aligned, exclusively borrowed, writable
+                // slot for the call.
                 let ok = ssl_check_allowed_versions(c.min_proto_version, larg as c_int)
-                    && ssl_set_version_bound(
-                        method_version,
-                        larg as c_int,
-                        &mut c.max_proto_version,
-                    );
+                    && unsafe {
+                        ssl_set_version_bound(
+                            method_version,
+                            larg as c_int,
+                            &mut c.max_proto_version,
+                        )
+                    };
                 c_long::from(ok)
             }
             SSL_CTRL_GET_MAX_PROTO_VERSION => c.max_proto_version as c_long,
@@ -11230,7 +11250,13 @@ pub unsafe extern "C" fn SSL_CTX_get_ciphers(ctx: *const SslCtx) -> *mut OpenSsl
 /// `int SSL_CTX_set_cipher_list(SSL_CTX *ctx, const char *str)` — `ssl/ssl_lib.c:3367-3388`.
 ///
 /// # Safety
-/// `ctx` must be NULL or live; `str` NULL or NUL-terminated.
+/// `ctx` must be NULL or live; `str` NULL or NUL-terminated. For a non-NULL `ctx` this
+/// call has **exclusive access to the context's cipher slots** for its whole duration:
+/// the TLS 1.2 list is rebuilt and `cipher_list`/`cipher_list_by_id` are replaced, with
+/// the stacks they previously held released by `update_cipher_list_by_id`. No other
+/// reference to those stacks — in particular a pointer previously returned by
+/// `SSL_CTX_get_ciphers` — and no concurrent reader or writer of the same context may
+/// be live across the call. The `str` bytes are read only for the call.
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CTX_set_cipher_list(ctx: *mut SslCtx, str_: *const c_char) -> c_int {
     guard_ffi(0, || {
@@ -11270,7 +11296,13 @@ pub unsafe extern "C" fn SSL_CTX_set_cipher_list(ctx: *mut SslCtx, str_: *const 
 /// `int SSL_set_cipher_list(SSL *s, const char *str)` — `ssl/ssl_lib.c:3391-3412`.
 ///
 /// # Safety
-/// `s` must be NULL or live; `str` NULL or NUL-terminated.
+/// `s` must be NULL or live; `str` NULL or NUL-terminated. For a non-NULL `s` this call
+/// has **exclusive access to the connection's cipher slots** for its whole duration: it
+/// replaces `cipher_list`/`cipher_list_by_id` and releases the stacks they held, so no
+/// other reference to those stacks and no concurrent reader or writer of `s` may be
+/// live across the call. `s->ctx`, which is only read for its disabled-cipher masks,
+/// must be live and not concurrently mutated while the call runs. The `str` bytes are
+/// read only for the call.
 #[no_mangle]
 pub unsafe extern "C" fn SSL_set_cipher_list(s: *mut Ssl, str_: *const c_char) -> c_int {
     guard_ffi(0, || {

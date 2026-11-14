@@ -179,6 +179,13 @@ unsafe extern "C" fn conf_value_free_thunk(p: *mut c_void) {
 
 /// The `i2v` slot for `i2v_AUTHORITY_KEYID`: the slot passes `*const X509V3ExtMethod` and
 /// `*mut c_void`; the implementation takes `*mut` and a typed value pointer.
+///
+/// # Safety
+/// `meth` is the live `X509V3_EXT_METHOD` row the machinery is dispatching (this file's
+/// static `ossl_v3_akey_id` row; process-lifetime, only read). `value` is the
+/// `AuthorityKeyid` the slot holds: NULL or a live, aligned value owned by the caller
+/// and read only for the call. `out` is NULL or a live target stack that takes ownership
+/// of any strings the body builds; the returned stack is borrowed by the caller.
 unsafe extern "C" fn akid_i2v(
     meth: *const X509V3ExtMethod,
     value: *mut c_void,
@@ -190,6 +197,13 @@ unsafe extern "C" fn akid_i2v(
 }
 
 /// The `v2i` slot for `v2i_AUTHORITY_KEYID`.
+///
+/// # Safety
+/// `meth` is the live static table row, read only. `ctx` is the live `X509V3_CTX` the
+/// machinery passes under its `void *` spelling: aligned for `X509V3Ctx` and valid for
+/// the call. `out` is NULL or a live stack the machinery provides. On success the body
+/// returns a freshly allocated `AuthorityKeyid` and transfers its ownership to the
+/// caller; on failure it returns NULL and transfers nothing.
 unsafe extern "C" fn akid_v2i(
     meth: *const X509V3ExtMethod,
     ctx: *mut c_void,
