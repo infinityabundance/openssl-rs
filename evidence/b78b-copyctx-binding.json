@@ -1,0 +1,101 @@
+{
+  "schema": "openssl-rs/safe-c33/copyctx-binding/v1",
+  "subphase": "b78b",
+  "purpose": "Settle and repair Blocker 1: the seven carried-forward `copyctx` obligations whose census coordinate was neither a definition of `copyctx` nor inside the boundary's resolved span (`span-unparsable`).",
+  "candidate": {
+    "source_head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "src_content_sha256": "c0bd61c94f5a8da2e08c105724d14750403fbfd53aa8d4b722672f9b11b0bd38",
+    "image_libcrypto_sha256": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
+    "census": "court/freeze-b78/census-b78.json",
+    "closure_rows": [
+      "evidence/closure-ssh-b78.json",
+      "evidence/closure-sshd-b78.json"
+    ]
+  },
+  "finding": {
+    "question": "Is the recorded coordinate the `unsafe fn copyctx` inside the `digest_impl!` macro body (one obligation for the macro template), while the boundary span is an expanded instantiation?",
+    "answer": "No.  The offered hypothesis is false for all seven rows.  Two different facts explain the numbers, and neither is a macro-expansion mismatch.",
+    "fact_1_the_macro_template_is_a_different_obligation": {
+      "digest.rs": "`digest_impl!` starts at src/provider/digest.rs:401 and its own copyctx is at 455 (UNSAFE_FN_DEF) / 459 (UNSAFE_BLOCK).  That is the macro template's single obligation, and it is not one of the seven rows.",
+      "legacyprov.rs": "`legacy_digest_impl!` starts at src/provider/legacyprov.rs:295 and its own copyctx is at 345-356 -- which IS boundary OSSH-V1I-082's resolved span.  The recorded coordinate 336 is the doc-comment line `/// OSSL_FUNC_digest_copyctx_fn for this construction.`"
+    },
+    "fact_2_the_recorded_coordinates_are_stale_coordinates_of_the_same_definitions": {
+      "rule": "At the review/inventory head 0238c6e4adbc7ed85a42be68b6fb965e139bd93e (the head recorded in evidence/closure-ssh-b76c.json), every one of the seven recorded coordinates is exactly the definition line of `copyctx`, and the normalised text there hashes to the boundary's declared span_sha256.  A b77 documentation edit moved the definitions (+14/+22/+30/+38/+58 in digest.rs, +9/+17 in legacyprov.rs) without editing their bodies.",
+      "rows": [
+        {"boundary": "OSSH-V1I-002", "operation": "sha1::copyctx", "file": "src/provider/digest.rs", "recorded": 658, "candidate_def_line": 672, "candidate_span": "672-682", "recorded_span_sha256_prefix": "c639719ffc5bdf36", "ancestor_def_line": 658, "ancestor_span": "658-668", "ancestor_hash_matches": true},
+        {"boundary": "OSSH-V1I-008", "operation": "nullmd::copyctx", "file": "src/provider/digest.rs", "recorded": 970, "candidate_def_line": 992, "candidate_span": "992-1002", "recorded_span_sha256_prefix": "eb7c56b35b421449", "ancestor_def_line": 970, "ancestor_span": "970-980", "ancestor_hash_matches": true},
+        {"boundary": "OSSH-V1I-011", "operation": "md5_sha1::copyctx", "file": "src/provider/digest.rs", "recorded": 1165, "candidate_def_line": 1195, "candidate_span": "1195-1205", "recorded_span_sha256_prefix": "83c63a8466b002da", "ancestor_def_line": 1165, "ancestor_span": "1165-1175", "ancestor_hash_matches": true},
+        {"boundary": "OSSH-V1I-017", "operation": "sha3::copyctx", "file": "src/provider/digest.rs", "recorded": 1348, "candidate_def_line": 1386, "candidate_span": "1386-1396", "recorded_span_sha256_prefix": "5ee519b92ebadba0", "ancestor_def_line": 1348, "ancestor_span": "1348-1358", "ancestor_hash_matches": true},
+        {"boundary": "OSSH-V1I-024", "operation": "blake2b/blake2s::copyctx", "file": "src/provider/digest.rs", "recorded": 1898, "candidate_def_line": 1956, "candidate_span": "1956-1966", "recorded_span_sha256_prefix": "24a520793ee135f3", "ancestor_def_line": 1898, "ancestor_span": "1898-1908", "ancestor_hash_matches": true},
+        {"boundary": "OSSH-V1I-082", "operation": "legacy_digest_impl::copyctx", "file": "src/provider/legacyprov.rs", "recorded": 336, "candidate_def_line": 345, "candidate_span": "345-356", "recorded_span_sha256_prefix": "ed889f926c379313", "ancestor_def_line": 336, "ancestor_span": "336-347", "ancestor_hash_matches": true},
+        {"boundary": "OSSH-V1I-088", "operation": "mdc2::copyctx", "file": "src/provider/legacyprov.rs", "recorded": 544, "candidate_def_line": 561, "candidate_span": "561-571", "recorded_span_sha256_prefix": "88b18bf1a3f3666f", "ancestor_def_line": 544, "ancestor_span": "544-554", "ancestor_hash_matches": true}
+      ]
+    },
+    "fact_3_what_the_stale_coordinates_are_now": [
+      {"file": "src/provider/digest.rs", "line": 658, "census": "UNSAFE_BLOCK item=dupctx", "source": "let Some(ret) = (unsafe { OwnedCtx::<ShaCtx>::dup(ctx.cast()) })"},
+      {"file": "src/provider/digest.rs", "line": 970, "census": "UNSAFE_BLOCK item=freectx", "source": "unsafe { drop(OwnedCtx::<NullMdCtx>::from_raw(vctx.cast())) }"},
+      {"file": "src/provider/digest.rs", "line": 1165, "census": "no census record", "source": "ctx.into_raw().cast()"},
+      {"file": "src/provider/digest.rs", "line": 1348, "census": "no census record", "source": "Some(m) => {"},
+      {"file": "src/provider/digest.rs", "line": 1898, "census": "no census record", "source": "END,"},
+      {"file": "src/provider/legacyprov.rs", "line": 336, "census": "no census record", "source": "/// `OSSL_FUNC_digest_copyctx_fn` for this construction."},
+      {"file": "src/provider/legacyprov.rs", "line": 544, "census": "no census record", "source": "// `*ret = *in` is a copy of `sizeof(*ctx)` bytes; both sides are that size."}
+    ],
+    "why_this_matters": "Binding by containment would have bound nothing here, and binding by 'walk to the enclosing item at the current coordinate' would have walked line 658 to `dupctx` and line 336 to a doc-comment line -- i.e. it would have produced the wrong operation, not merely a missing one.  That is why the repair uses content identity at a documented ancestor head rather than a coordinate walk."
+  },
+  "repair": {
+    "function": "forensics/tools/consumer_closure.py::migration_witness / migration_bindings",
+    "rule": "content-migrated-coordinate",
+    "conditions": [
+      "the boundary's recorded span_sha256 is a valid digest (a hashless boundary can never migrate)",
+      "the row's recorded coordinate is one the digest-pinned carry-forward chain names",
+      "some hop of that chain resolves, at the inventory head the hop's own receipt declares, to the DEFINITION LINE of the item, and the normalised text there hashes to the boundary's recorded span_sha256",
+      "every chain hop that resolves to a body must agree; two different bodies refuse rather than being picked between",
+      "the current census attributes an operation of (file, kind, item) to the boundary's resolved definition line",
+      "exactly one boundary in the file satisfies all of the above (uniqueness is part of the proof)"
+    ],
+    "unchanged": [
+      "the boundary keeps its declared span and span_sha256; no span was widened and no coordinate was hand-edited",
+      "the existing content-addressed check (recorded hash == live span hash at the candidate) still runs and still refuses a stale boundary hash",
+      "boundary receipts (atlas-refresh/openssh-v1i-sites.json, openssh-v1l-sites.json) were NOT edited"
+    ],
+    "census_cross_check": "the boundary must declare a span the current inventory itself attributes the operation to (contracts.contracted_operations / contracts.blockers index)."
+  },
+  "result": {
+    "rows_bound": 7,
+    "rows_still_blocked": 0,
+    "per_family": "identical for ssh and sshd (14 obligations, 7 distinct sites)",
+    "boundaries": {
+      "src/provider/digest.rs:658": "OSSH-V1I-002 via closure-ssh-b76c.json:658 @ 0238c6e4ad",
+      "src/provider/digest.rs:970": "OSSH-V1I-008 via closure-ssh-b76c.json:970 @ 0238c6e4ad",
+      "src/provider/digest.rs:1165": "OSSH-V1I-011 via closure-ssh-b76c.json:1165 @ 0238c6e4ad",
+      "src/provider/digest.rs:1348": "OSSH-V1I-017 via closure-ssh-b76c.json:1348 @ 0238c6e4ad",
+      "src/provider/digest.rs:1898": "OSSH-V1I-024 via closure-ssh-b76c.json:1898 @ 0238c6e4ad",
+      "src/provider/legacyprov.rs:336": "OSSH-V1I-082 via closure-ssh-b76c.json:336 @ 0238c6e4ad",
+      "src/provider/legacyprov.rs:544": "OSSH-V1I-088 via closure-ssh-b76c.json:544 @ 0238c6e4ad"
+    },
+    "verification_probe": "court/freeze-b78/probe_copyctx_rows.py re-runs the real adjudicate() on the seven rows x two families with the production boundary set, discharge plane, mechanism state and census; all 14 adjudications return DISCHARGED with a content-migrated-coordinate witness.",
+    "verification_premise_probe": "court/freeze-b78/probe_migration_chain.py independently recomputes the ancestor-head span hashes with the tool's normalisation rule; all seven match."
+  },
+  "controls": {
+    "location": "forensics/tools/consumer_closure.py::self_test (carry-forward coordinate migration block)",
+    "positive": "a stale coordinate binds when the chain's ancestor body hashes to the boundary's declared span",
+    "census_absent": "removing the census attribution refuses",
+    "stale_boundary_hash": "the receipt recorded the ancestor body but the candidate body was edited -> span-hash-mismatch, so migration never repairs a stale hash",
+    "sibling_operation": "binding a sibling operation's boundary refuses (its recorded hash is not the ancestor coordinate's body)",
+    "two_owners": "two boundaries whose declared hashes both match the ancestor coordinate refuse (no unique owner)",
+    "tampered_receipt": "a carry-forward receipt whose digest does not match its recorded pin establishes nothing",
+    "row_coordinate_not_in_chain": "a row whose coordinate the chain never names refuses",
+    "restore": "the unmutated fixture still binds after every refusal control"
+  },
+  "does_not_prove": [
+    "the rule proves same-bytes identity for the operation body only.  It does not re-review the operation's contract; the discharge still rests on the boundary receipt's SAFETY_DISCHARGED disposition and the reviewed span hash, both unchanged.",
+    "a chain hop whose receipt is absent or whose digest does not match is skipped, not assumed; if no hop resolves, the row stays BLOCKED.  No row here depended on a skipped hop.",
+    "the rule does not make a coordinate an identity: a future edit that changes the operation's body still invalidates the binding through the span hash.",
+    "this file is not a closure receipt.  The b78 closure receipts remain FAIL/BLOCKED until a new closure is produced with the repaired tool, and that closure is out of scope for this batch."
+  ],
+  "non_claims": [
+    "no verdict was changed by editing a boundary receipt",
+    "the seven rows are bound, not re-graduated: the underlying SAFETY_DISCHARGED disposition is the one the earlier review recorded",
+    "the b78 closure counts (283/7/0) are unchanged by this file"
+  ]
+}

@@ -1,0 +1,157 @@
+{
+  "schema": "openssl-rs/safe-c33/e7-repin/v1",
+  "subphase": "b78",
+  "purpose": "Re-prove the four element-7 target-bounded sites at the b78 candidate after the b77 register-closure witnesses stopped re-deriving.  One row is resolved by a derived table-cursor proof; one is left target-bounded with the facts that would be needed to bound it.",
+  "candidate": {
+    "source_head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "src_content_sha256": "c0bd61c94f5a8da2e08c105724d14750403fbfd53aa8d4b722672f9b11b0bd38",
+    "image_libcrypto_sha256": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
+    "consumer_artifact": "court/tmp/openssh-closure/client-b78/openssh-9.9p1/ssh",
+    "consumer_artifact_sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
+    "census": "court/freeze-b78/census-b78.json"
+  },
+  "tool": {
+    "path": "forensics/tools/consumer_closure.py",
+    "sha256_before": "d3d01dfe9127610c77b965491b08c61dde08098d3fc9f1a398fd8cbff0daee91",
+    "sha256_after": "81f9e5fac1e8b29173fe3067ca5410adc5dd38601ef0be533278783b35147fa0"
+  },
+  "element_7": {
+    "before": {
+      "target_bounded": 4,
+      "contract_bounded": 149,
+      "unclassified": 0,
+      "decoder_method_object_class_present": false
+    },
+    "after": {
+      "target_bounded": 1,
+      "contract_bounded": 152,
+      "unclassified": 0,
+      "decoder_method_object_class_present": true,
+      "receipt": "court/freeze-b78/e7-b78-repaired.json"
+    },
+    "status": "FAIL",
+    "residual_site": "0x49a8dc"
+  },
+  "rows": [
+    {
+      "site": "0x2cc9aa",
+      "symbol": "openssl_rs::provider::file_store::file_load",
+      "symbol_offset": "0x5fa",
+      "slot": "newctx",
+      "read_offset": "0x30",
+      "dispatch_id": 1,
+      "decision": "b",
+      "decision_basis": "the b77 witness was over-fitted to b77 codegen.  It required the constructor's %rsi to close to exactly `ossl_any_to_obj_algorithm`; at b78 the row pointer is spilled to 0x10(%rsp), reloaded after a clobber, and advanced by `lea 0x20(%r13),%r13`, so the exact-base closure has roots=[] even though the only possible origin of the argument is still the named table.",
+      "new_proof": {
+        "rule": "decoder table-cursor derivation + terminator guard",
+        "roots": [
+          "0x8ab4c8"
+        ],
+        "table_symbol": "ossl_any_to_obj_algorithm",
+        "table_extent": "0x80",
+        "row_stride": "0x20",
+        "cursor_reg": "%r13",
+        "derivation": [
+          {"kind": "table", "address": "0x2cc961", "root": "0x8ab4c8"},
+          {"kind": "advance", "address": "0x2ccb82", "stride": "0x20"},
+          {"kind": "reload", "address": "0x2ccae4", "slot": -264, "store_address": "0x2cc9b8"},
+          {"kind": "copy", "address": "0x2cc983", "from": "%r13"}
+        ],
+        "terminator_guard": {
+          "test": "0x2cc932",
+          "text": "cmpq $0x0,0x0(%r13)",
+          "branch": "0x2cc937",
+          "conditional": "jne"
+        },
+        "uniqueness": "the row's slot read (+0x30) is performed by exactly one indirect transfer in file_load, and the register derivation admits exactly one root"
+      },
+      "result": "ABI_CONTRACT_DECODER_METHOD_OBJECT",
+      "census_row": "DECODER_METHOD_SITES 0x24dfed re-derives through the in-symbol witness search (no-candidate-transfer-is-accepted-by-the-witness before the repair)"
+    },
+    {
+      "site": "0x2cca08",
+      "symbol": "openssl_rs::provider::file_store::file_load",
+      "symbol_offset": "0x658",
+      "slot": "set_ctx_params",
+      "read_offset": "0x50",
+      "dispatch_id": 5,
+      "decision": "b",
+      "decision_basis": "same over-fit as 0x2cc9aa: the argument is the loop-carried row pointer, not the literal table base.",
+      "new_proof": {
+        "rule": "decoder table-cursor derivation + terminator guard",
+        "roots": [
+          "0x8ab4c8"
+        ],
+        "row_stride": "0x20",
+        "cursor_reg": "%r13",
+        "terminator_guard": {
+          "test": "0x2cc932",
+          "branch": "0x2cc937"
+        },
+        "uniqueness": "the row's slot read (+0x50) is performed by exactly one indirect transfer in file_load"
+      },
+      "result": "ABI_CONTRACT_DECODER_METHOD_OBJECT"
+    },
+    {
+      "site": "0x2ccd86",
+      "symbol": "openssl_rs::provider::file_store::file_load",
+      "symbol_offset": "0x9d6",
+      "slot": "freectx",
+      "read_offset": "0x38",
+      "dispatch_id": 2,
+      "decision": "b",
+      "decision_basis": "same over-fit as 0x2cc9aa: the argument is the loop-carried row pointer, not the literal table base.",
+      "new_proof": {
+        "rule": "decoder table-cursor derivation + terminator guard",
+        "roots": [
+          "0x8ab4c8"
+        ],
+        "row_stride": "0x20",
+        "cursor_reg": "%r13",
+        "terminator_guard": {
+          "test": "0x2cc932",
+          "branch": "0x2cc937"
+        },
+        "uniqueness": "the row's slot read (+0x38) is performed by exactly one indirect transfer in file_load"
+      },
+      "result": "ABI_CONTRACT_DECODER_METHOD_OBJECT"
+    },
+    {
+      "site": "0x49a8dc",
+      "symbol": "X509V3_EXT_REQ_add_conf",
+      "symbol_offset": "0xbc",
+      "decision": "c",
+      "decision_basis": "the code shape is a CONF-method dispatch, not a store-loader close guard: the operand is `DEFAULT_CONF_METHOD.0->destroy` (load from the static slot 0x8ac1e0 followed by +0x10) inside the inlined `NCONF_free` tail of X509V3_EXT_REQ_add_conf, and the receiver is the CONF built by `NCONF_new_ex` at 0x49a841.  The earlier b78 note describing this row as a store-loader closefn polarity arm is wrong: the store-loader legacy rows are contract-bounded at this candidate (ABI_CONTRACT_STORE_LOADER = 3).",
+      "why_not_bounded": "no admitted witness owns an out-of-module CONF-method dispatch.  `conf_module_witness` is pinned to CONF_SITES inside the CONF module's own functions and requires the `%r15`/`%rax` operand with a `%r12` base; this site is in another symbol, reads the method from the default-method global, and passes its receiver in `%rbx`.",
+      "what_a_sound_witness_needs": [
+        "pin the site by (symbol leaf X509V3_EXT_REQ_add_conf, offset 0xbc) and refuse a moved row unless exactly one transfer in the symbol is accepted",
+        "prove the operand load is +0x10 of the method object and that offset is the `destroy` member of the source CONF_METHOD layout (the existing CONF_OWNER layout machinery would need a CONF_METHOD layout owner)",
+        "prove the method object is the process default CONF method, whose writer set includes the public CONF_set_default_method (0x29b3d0) -- i.e. the callback is application-supplied by a documented ABI, which is what makes the class contract-bounded",
+        "record that DEFAULT_CONF_METHOD.0 also carries defensive self-writes (mov %rax,0x8ac1e0) and one initialiser store (0x8295d0), so a 'closed static table' claim would be wrong for this slot"
+      ],
+      "result": "target-bounded (unchanged)"
+    }
+  ],
+  "controls": {
+    "location": "forensics/tools/consumer_closure.py::_e7decoder_cursor_controls_body (run by --self-test)",
+    "positive": "the admitted image's constructor argument derives from ossl_any_to_obj_algorithm with a 0x20 row stride and a terminator guard",
+    "stride_mutation": "an extent that is not a whole multiple of the observed advance (extent + 5) refuses",
+    "root_mutation": "moving the table root in the instruction stream makes the derivation stop matching the enumerated table",
+    "constructor_mutation": "DECODER_METHOD_CONSTRUCTOR replaced by a leaf that names no function start refuses (constructor-not-enumerated)",
+    "slot_mutation": "perturbing one row's read offset by +8 refuses (read-field-not-enumerated)",
+    "restore": "after every mutation all three rows are accepted again",
+    "pre_existing_repin_controls": "the b77 pin/search controls still run; three pre-existing self-test failures remain (see does_not_prove[2])"
+  },
+  "does_not_prove": [
+    "the table-cursor derivation does not prove the walk terminates inside the table's four rows.  It proves the argument is derived only from `ossl_any_to_obj_algorithm` by whole-row advances, and requires the loop's continuation to be a zero test of a row field (the table's own terminator).  A source-level proof that the loop cannot over-run the terminated table is NOT established by this witness.",
+    "the derivation does not prove that the table rows' function pointers are the only writers of the OsslDecoder slots by itself; it relies on the existing writer gate (`_led_source_gate`, types.OsslDecoder == PASS), which is unchanged.",
+    "pre-existing self-test failures at this candidate are NOT fixed or newly caused by this change.  Baseline (tool d3d01dfe) failed with 7 entries; this change leaves 6 of them and removes 'e7repin: 3 pinned row(s) neither re-derive by offset nor resolve by witness search'.  The six that remain are the e7repin-search guard/polarity controls (2 of them disable-the-search negatives), the e7core default-context NOT_RUN, and the e7store guard mutation controls (2).  None is in the touched rules, and none was fixed here.",
+    "the residual site 0x49a8dc is not bounded, so element 7 remains FAIL at this candidate and no closure receipt may be produced from this run.",
+    "the decoder rows are bounded as ABI_CONTRACT_DECODER_METHOD_OBJECT for the *argument provenance* property only; that is one of element 7's contract classes, not a family discharge (AGENTS.md section 7 SAFE_COMPATIBLE)."
+  ],
+  "non_claims": [
+    "this file is not a closure receipt and does not change any obligation's state",
+    "no boundary receipt was edited to make a row bind",
+    "the b78 closure receipts (evidence/closure-{ssh,sshd}-b78.json) are superseded only by a future accepted closure produced with the repaired tool"
+  ]
+}
