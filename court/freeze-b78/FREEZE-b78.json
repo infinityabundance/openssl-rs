@@ -1,0 +1,1360 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/freeze/v1",
+ "candidate_tag": "b78",
+ "generated_utc": "2026-11-14T11:36:37Z",
+ "freeze_kind": "source-and-artefact freeze (S) with per-artefact ledger rebind",
+ "freeze_reason": "b78 freezes the OCSP/element-7 candidate: the two b78b consumer closures are ACCEPTED 290/290 with element 7 PASS (0 target-bounded / 153 contract-bounded), the install and OpenSSH closure binaries are measured, the CONF-method witness closes the last target-bounded site, and the per-artefact ledger rebinds bind both ssh and sshd to the freeze.",
+ "identity": {
+  "rule": "Two identities, never conflated (AGENTS.md section 22). S is the frozen source+instrument identity this evidence describes: production source bb7d5206acfb..., instrument f31816b1... and the b78b closures. E is the evidence commit that carries this freeze and the ledger receipts. Committing E moves HEAD; it does not change S, its artefacts or their digests.",
+  "production_source_head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "production_source_head_note": "census identity.source_head: the source tree the census and the b78b closures analyse",
+  "instrument_head": "bd518a2149699ee41ee4ba00a40fae6e573b30a6",
+  "instrument_head_note": "git HEAD when this freeze was generated; it is the commit that records the b78b closure and carries instrument f31816b1feec. The closures record their own repository_head (see closures.*.source_identity.repository_head).",
+  "evidence_commit": "E",
+  "evidence_commit_note": "E is the commit that carries this freeze and the rebind receipts; at generation it has not been created, so HEAD is the instrument/closure-record commit named above.",
+  "closure_repository_heads": {
+   "ssh": "6cdf98598577e292003248503ca11ff9e1d4e8b0",
+   "sshd": "6cdf98598577e292003248503ca11ff9e1d4e8b0"
+  }
+ },
+ "source": {
+  "head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "head_subject": "digest: refuse the failed-init state at every params entry point",
+  "branch": "stage/p25/b75-ocsp",
+  "src_rs_files": 878,
+  "src_rs_files_census": 878,
+  "crate_version": "0.0.46",
+  "src_content_sha256": "c0bd61c94f5a8da2e08c105724d14750403fbfd53aa8d4b722672f9b11b0bd38",
+  "src_content_sha256_census": "c0bd61c94f5a8da2e08c105724d14750403fbfd53aa8d4b722672f9b11b0bd38",
+  "src_content_sha256_matches_census": true,
+  "src_content_hash_rule": "sha256('openssl-rs/src-rs/v1\\0' + sorted relpath\\0bytes\\0)",
+  "census_working_tree_clean": false,
+  "census_tracked_working_tree_clean": false,
+  "source_tree_digest": {
+   "count": 888,
+   "sha256": "388cf14ef409531455dd445eb0ed855aa45a64ff341d03070f9799f21d30435e",
+   "rule": "sha256 over canonical JSON of sorted [relpath,size,sha256] for src/, Cargo.toml, Cargo.lock, build.rs (forensics/tools/phase7_courts.py::_source_tree_digest)"
+  },
+  "working_tree": {
+   "repository_head": "bd518a2149699ee41ee4ba00a40fae6e573b30a6",
+   "branch": "stage/p25/b75-ocsp",
+   "tracked_dirty": false,
+   "modified_tracked_paths": [],
+   "untracked_paths": [
+    "evidence/closure-sshd-b76.json",
+    "evidence/ssh-artifact-ledger-b78-rebind.json",
+    "evidence/ssh-artifact-ledger-b78.json",
+    "evidence/sshd-artifact-ledger-b78-rebind.json",
+    "evidence/sshd-artifact-ledger-b78.json"
+   ]
+  },
+  "git_verification": {
+   "production_source_head_is_ancestor_of_evidence_head": true,
+   "src_diff_vs_production_source_head": null
+  }
+ },
+ "candidate_identity": {
+  "source_head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "instrument_head": "bd518a2149699ee41ee4ba00a40fae6e573b30a6",
+  "tool_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+  "census_sha256": "b4babdf7d341d1407aa7787c1f3388b207943923787e3cc158e0a27296c08ea0",
+  "libcrypto_so_3_sha256": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
+  "libssl_so_3_sha256": "4ad53379bbe44219d9514ded5b973a3ac40891e0a1598b8f0dcb8b51316a4d1b",
+  "ssh_sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
+  "sshd_sha256": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe",
+  "rule": "source head + instrument sha + census sha + measured artefact digests; a change to any one of them is a new candidate"
+ },
+ "tool": {
+  "path": "forensics/tools/consumer_closure.py",
+  "sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+  "version": 6,
+  "closure_bound_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+  "sshd_closure_bound_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+  "changed_since_closures": false,
+  "self_test": {
+   "command": "python3 forensics/tools/consumer_closure.py --self-test",
+   "returncode": 1,
+   "failure_count": 1,
+   "failures": [
+    "e7core default-context control DID NOT RUN: no admitted site's witness evidence records an inlined default-context accessor at this candidate.  Reported as NOT_RUN, never as a pass"
+   ],
+   "classification": "NOT_RUN",
+   "classification_note": "the single failure entry is a control that DID NOT RUN: no admitted site carries an inlined default-context accessor at this candidate, so the subject does not exist here. It is recorded NOT_RUN, never as a pass; it is not a failure of a performed check.",
+   "not_run_mentions": [
+    "[consumer-closure] e7core controls: the recorded cohort is 24 function(s); this image resolves 26 site(s) across 24 function(s); the offset, libctx-index, writer-id, second-source-store, header-id, default-context and NULL-guard mutation controls are each exercised (a control this candidate cannot exercise is reported above as NOT_RUN, never as a pass); the provider-init rule refuses a store-offset and an extra-writer mutation and is restored; the store-loader close guard refuses an inverted fetched-loader polarity branch and is restored; the loader-fetch retarget refuses (the wrapper-source arm is NOT_RUN at this candidate because the wrapper is inlined); the register-agnostic PEM witness refuses a wrong-default-symbol and a wrong-copy-source mutation and is restored",
+    "- e7core default-context control DID NOT RUN: no admitted site's witness evidence records an inlined default-context accessor at this candidate.  Reported as NOT_RUN, never as a pass"
+   ],
+   "additional_not_run_subject": "the e7core loader-fetch wrapper-source arm is also NOT_RUN because the wrapper is inlined; this is recorded inside the e7core controls line and is not a separate failure entry",
+   "ok_marker_present": false,
+   "summary": "[consumer-closure] SELF-TEST FAILED",
+   "log": "court/freeze-b78/gates-b78.log (=== TOOL self-test ===)"
+  },
+  "python_syntax": "py_compile of the instrument: OK",
+  "inputs": {
+   "census": {
+    "path": "court/freeze-b78/census-b78.json",
+    "sha256": "b4babdf7d341d1407aa7787c1f3388b207943923787e3cc158e0a27296c08ea0",
+    "size": 13423425
+   },
+   "state": {
+    "path": "forensics/memory-safety/campaign/safe-c33/state.json",
+    "sha256": "508095bcb91f439fc126cf964d31a4f0f656f997587234d5bfbb07ec0cbc8273",
+    "size": 53598
+   },
+   "campaign_status": {
+    "path": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+    "sha256": "65fe71bb3d9d18f69034a2b176d96ac429a90e7cd0853f10d1ee17f6fc70b009",
+    "size": 248747
+   },
+   "enrolment_blockers": {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json",
+    "sha256": "46d1e5fcd00a0a96c4346f01302f938b74e12cd3e92986ee7743e007d232c652",
+    "size": 71165
+   }
+  }
+ },
+ "artefacts": {
+  "install_prefix": "artifacts/phase2/install",
+  "files": {
+   "libcrypto.so.3": {
+    "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+    "sha256": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
+    "size": 16870752
+   },
+   "libssl.so.3": {
+    "path": "artifacts/phase2/install/lib/libssl.so.3",
+    "sha256": "4ad53379bbe44219d9514ded5b973a3ac40891e0a1598b8f0dcb8b51316a4d1b",
+    "size": 16583824
+   },
+   "libcrypto.a": {
+    "path": "artifacts/phase2/install/lib/libcrypto.a",
+    "sha256": "1c060258f0e88452aa766dd377c34a0eeda10498697e5f758ef6794ecf92f703",
+    "size": 44402334
+   },
+   "libssl.a": {
+    "path": "artifacts/phase2/install/lib/libssl.a",
+    "sha256": "96ad5349c24659f9dcb4531947156aa6d25a791a22bb3bf4c9d7f2b0c2cb1dae",
+    "size": 44402886
+   },
+   "legacy.so": {
+    "path": "artifacts/phase2/install/lib/ossl-modules/legacy.so",
+    "sha256": "e74ba2135ef0370bb0eaf03925c46f47356a5bb8f90041b505174202b2988208",
+    "size": 16546728
+   },
+   "openssl": {
+    "path": "artifacts/phase2/install/bin/openssl",
+    "sha256": "abb828a049106a62412b3ff771fc634ab2013bcb33f8f64ef3f963bc723b6df0",
+    "size": 12390680
+   },
+   "ssh": {
+    "path": "court/tmp/openssh-closure/client-b78/openssh-9.9p1/ssh",
+    "sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
+    "size": 3401744
+   },
+   "sshd": {
+    "path": "court/tmp/openssh-closure/server-b78/openssh-9.9p1/sshd",
+    "sha256": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe",
+    "size": 1763248
+   },
+   "sshd_session": {
+    "path": "court/tmp/openssh-closure/server-b78/openssh-9.9p1/sshd-session",
+    "sha256": "f5ad1a233b03d6f9aa9b8e79cf477efaa70e59f7cbac1d88e4dd2945ad04c3c9",
+    "size": 3594840
+   }
+  },
+  "install_matches_census": {
+   "libcrypto.so.3": {
+    "census_sha256": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
+    "freeze_sha256": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
+    "match": true
+   },
+   "libssl.so.3": {
+    "census_sha256": "4ad53379bbe44219d9514ded5b973a3ac40891e0a1598b8f0dcb8b51316a4d1b",
+    "freeze_sha256": "4ad53379bbe44219d9514ded5b973a3ac40891e0a1598b8f0dcb8b51316a4d1b",
+    "match": true
+   },
+   "legacy.so": {
+    "census_sha256": "e74ba2135ef0370bb0eaf03925c46f47356a5bb8f90041b505174202b2988208",
+    "freeze_sha256": "e74ba2135ef0370bb0eaf03925c46f47356a5bb8f90041b505174202b2988208",
+    "match": true
+   },
+   "openssl": {
+    "census_sha256": "abb828a049106a62412b3ff771fc634ab2013bcb33f8f64ef3f963bc723b6df0",
+    "freeze_sha256": "abb828a049106a62412b3ff771fc634ab2013bcb33f8f64ef3f963bc723b6df0",
+    "match": true
+   }
+  },
+  "all_install_artefacts_match_census": true,
+  "compared_names": [
+   "legacy.so",
+   "libcrypto.so.3",
+   "libssl.so.3",
+   "openssl"
+  ],
+  "resolved_libcrypto_sha256": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
+  "build_receipt_sizes": {
+   "source": "court/build-phase2-b78.log",
+   "checks": {
+    "libcrypto.so.3": {
+     "measured_size": 16870752,
+     "build_receipt_size": 16870752,
+     "match": true
+    },
+    "libssl.so.3": {
+     "measured_size": 16583824,
+     "build_receipt_size": 16583824,
+     "match": true
+    },
+    "libcrypto.a": {
+     "measured_size": 44402334,
+     "build_receipt_size": 44402334,
+     "match": true
+    },
+    "libssl.a": {
+     "measured_size": 44402886,
+     "build_receipt_size": 44402886,
+     "match": true
+    },
+    "legacy.so": {
+     "measured_size": 16546728,
+     "build_receipt_size": 16546728,
+     "match": true
+    },
+    "openssl": {
+     "measured_size": 12390680,
+     "build_receipt_size": 12390680,
+     "match": true
+    }
+   },
+   "all_match": true
+  },
+  "consumer_source": "OpenSSH 9.9p1 in the closure trees court/tmp/openssh-closure/{client,server}-b78/openssh-9.9p1",
+  "note": "each digest and size is recomputed from the file named in this working tree; the census comparison is per name"
+ },
+ "census": {
+  "path": "court/freeze-b78/census-b78.json",
+  "sha256": "b4babdf7d341d1407aa7787c1f3388b207943923787e3cc158e0a27296c08ea0",
+  "bytes": 13423425,
+  "source_head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "delta_vs": {
+   "path": "court/freeze-b77/census-b77.json",
+   "source_head": "ada7df257e157964f3baade5ec40b66e9a9cbf35",
+   "src_content_sha256": "88cd806799dd0866bcd4f05970b813157be200eb0316292e07f39572e8745757",
+   "libcrypto_so_3_sha256": "b9cfb9e5de325c1ffb6bb5fb678122a05b0eb8be21619a251ee3254d92e4b1c1",
+   "census_carried_forward": false,
+   "census_basis": "the previous document's census was generated at its source head",
+   "previous_rebind": null
+  },
+  "operation_counts": {
+   "production_blockers": 68,
+   "test_only_blockers": 216,
+   "allocator_seam_blockers": 0,
+   "total_blockers": 284
+  },
+  "gates": {
+   "v1_clippy_all_targets": null,
+   "note": "No pass/fail gate was recorded for this census run: the compiler JSON is a census input, not a gate result, and this run did not execute the -D warnings gate.  A null gate is NOT a PASS."
+  }
+ },
+ "closures": {
+  "ssh": {
+   "receipt": "evidence/closure-ssh-b78b.json",
+   "sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
+   "bytes": 13344288,
+   "artifact": "court/tmp/openssh-closure/client-b78/openssh-9.9p1/ssh",
+   "artifact_sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
+   "artifact_dynamic": {
+    "soname": null,
+    "needed": [
+     "libcrypto.so.3",
+     "libz.so.1",
+     "libc.so.6"
+    ],
+    "runpath": [
+     "/work/artifacts/phase2/install/lib"
+    ],
+    "rpath": []
+   },
+   "closure_bound_tool_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+   "tool_version": 6,
+   "counts": {
+    "reachable_files": 630,
+    "reachable_production_obligations": 290,
+    "DISCHARGED": 290,
+    "BLOCKED": 0,
+    "UNKNOWN": 0,
+    "v1_production_operations_total": 68,
+    "v1_uncontracted_operations_total": 284,
+    "carried_forward": 220,
+    "carried_forward_removed": 3,
+    "stale_discharge_rejections": 0
+   },
+   "by_mechanism": {
+    "BIO": 2,
+    "C_ABI_CONTRACT": 5,
+    "EVP_PKEY_PROVIDER": 116,
+    "RAND_CMS_STORE_KEYFMT": 27,
+    "RUNTIME_CONCURRENCY": 4,
+    "SSL_SESSION": 14,
+    "X509_VERIFY_POLICY": 122
+   },
+   "verdict": {
+    "state": "ACCEPTED",
+    "safe_compatible": false,
+    "reason": "no refusal condition fired"
+   },
+   "refusals": [],
+   "element_7": {
+    "established": true,
+    "status": "PASS (contract-bounded)",
+    "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract",
+    "reachable_unresolved_sites": 153,
+    "target_bounded_unresolved_sites": 0,
+    "contract_bounded_sites": 153,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_CONF_DEFAULT_METHOD": 1,
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_CORE_DISPATCH": 26,
+     "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+     "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 16,
+     "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+     "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+     "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    },
+    "unclassified_reachable_sites": 0,
+    "target_sets_remain_unbounded": true,
+    "why": "every reachable unresolved site is contract-bounded by a public OpenSSL ABI contract (section 7 criterion 2); no target-bounded unresolved site and no unclassified site remains"
+   },
+   "source_identity": {
+    "repository_head": "6cdf98598577e292003248503ca11ff9e1d4e8b0",
+    "branch": "stage/p25/b75-ocsp",
+    "tracked_tree_dirty": true,
+    "inventory_path": "court/freeze-b78/census-b78.json",
+    "inventory_source_head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "span_source_commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "span_source_binding": "git-blob",
+    "inventory_is_ancestor_or_equal": true,
+    "note": "the admitted install is the V1 frozen candidate; the working tree may be a descendant, so obligations are joined to the inventory at the inventory's own source head, not the working tree"
+   },
+   "discharge_receipt_grouping": {
+    "total": 290,
+    "openssh-v1i": 56,
+    "openssh-v1l": 9,
+    "boundary_sweep_total": 211,
+    "by_receipt": {
+     "boundary-sweep-B48": 36,
+     "boundary-sweep-B49": 16,
+     "boundary-sweep-B50": 5,
+     "boundary-sweep-B51": 10,
+     "boundary-sweep-B52": 3,
+     "boundary-sweep-B53": 30,
+     "boundary-sweep-B54": 72,
+     "boundary-sweep-B55": 9,
+     "boundary-sweep-B56": 19,
+     "boundary-sweep-B57": 2,
+     "boundary-sweep-B60": 2,
+     "boundary-sweep-B67": 2,
+     "boundary-sweep-B69": 3,
+     "boundary-sweep-B70": 2,
+     "openssh-v1i": 56,
+     "openssh-v1l": 9,
+     "sslconf-exclusivity-2026-11-10": 14
+    }
+   },
+   "obligations_recorded": 290,
+   "ledger_record": {
+    "run_id": "run:build-link:candidate:openssh",
+    "level": "L4-linked",
+    "outcome": "reached",
+    "recipe_id": "recipe:openssh:9.9p1",
+    "source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+    "source_root_hash": "4a5abaf399ac1ee4ba977c30f73c748b7dcaf5c168eb26b1ff65cedefe28906f",
+    "source_root_hash_rule": null,
+    "source_tree_domain_hash": null,
+    "artifact_rel": "ssh",
+    "artifact_sha256_recorded": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57",
+    "recorded_candidate_install": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
+    "artifact_matches_this_build": false
+   },
+   "carry_chain": {
+    "immediate_source": {
+     "receipt": "evidence/closure-ssh-b78.json",
+     "sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+     "DISCHARGED": 283,
+     "BLOCKED": 7,
+     "UNKNOWN": 0,
+     "verdict": "ACCEPTED",
+     "artifact_sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
+     "carried_forward_removed": 3
+    },
+    "target": "evidence/closure-ssh-b78b.json",
+    "carried_forward_removed": 3,
+    "links": [
+     {
+      "receipt": "evidence/closure-ssh-b76c.json",
+      "sha256": "a5b55b88b926e24a6324f8b939b466e2bf940fc142cafcdea2f719b10ae426d6",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "verdict": "ACCEPTED",
+      "artifact_sha256": "0384f983b392b450a135b960c7b8f991636d509bf9ef5ff841e3d3b7367545d4",
+      "carried_forward_removed": 3
+     },
+     {
+      "receipt": "evidence/closure-ssh-b77.json",
+      "sha256": "bb139da0f8a5d7cc1ea4b53cf644f36e5dde2508bbaf34444495409e29eab81b",
+      "DISCHARGED": 282,
+      "BLOCKED": 8,
+      "UNKNOWN": 0,
+      "verdict": "ACCEPTED",
+      "artifact_sha256": "b7c356681dd15e1ba146aaf51d8f8adbfd9da201d29966d664adbe122f84d2a4",
+      "carried_forward_removed": 3
+     },
+     {
+      "receipt": "evidence/closure-ssh-b78.json",
+      "sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+      "DISCHARGED": 283,
+      "BLOCKED": 7,
+      "UNKNOWN": 0,
+      "verdict": "ACCEPTED",
+      "artifact_sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
+      "carried_forward_removed": 3
+     },
+     {
+      "receipt": "evidence/closure-ssh-b78b.json",
+      "sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "verdict": "ACCEPTED",
+      "artifact_sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
+      "carried_forward_removed": 3
+     }
+    ],
+    "note": "the b78b run carries from evidence/closure-ssh-b78.json, which is ACCEPTED at 283 discharged / 7 blocked; the b78b repair re-attributes the seven stale `copyctx` coordinates to their definition spans and the count becomes 290/290. No refused carry is used (unlike b76)."
+   }
+  },
+  "sshd": {
+   "receipt": "evidence/closure-sshd-b78b.json",
+   "sha256": "4f0ca02f31ed4efa4901636ccd42402fe1562649cd532bbadcc1a3f95355e863",
+   "bytes": 13190868,
+   "artifact": "court/tmp/openssh-closure/server-b78/openssh-9.9p1/sshd",
+   "artifact_sha256": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe",
+   "artifact_dynamic": {
+    "soname": null,
+    "needed": [
+     "libcrypto.so.3",
+     "libc.so.6"
+    ],
+    "runpath": [
+     "/work/artifacts/phase2/install/lib"
+    ],
+    "rpath": []
+   },
+   "closure_bound_tool_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+   "tool_version": 6,
+   "counts": {
+    "reachable_files": 629,
+    "reachable_production_obligations": 290,
+    "DISCHARGED": 290,
+    "BLOCKED": 0,
+    "UNKNOWN": 0,
+    "v1_production_operations_total": 68,
+    "v1_uncontracted_operations_total": 284,
+    "carried_forward": 220,
+    "carried_forward_removed": 3,
+    "stale_discharge_rejections": 0
+   },
+   "by_mechanism": {
+    "BIO": 2,
+    "C_ABI_CONTRACT": 5,
+    "EVP_PKEY_PROVIDER": 116,
+    "RAND_CMS_STORE_KEYFMT": 27,
+    "RUNTIME_CONCURRENCY": 4,
+    "SSL_SESSION": 14,
+    "X509_VERIFY_POLICY": 122
+   },
+   "verdict": {
+    "state": "ACCEPTED",
+    "safe_compatible": false,
+    "reason": "no refusal condition fired"
+   },
+   "refusals": [],
+   "element_7": {
+    "established": true,
+    "status": "PASS (contract-bounded)",
+    "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract",
+    "reachable_unresolved_sites": 153,
+    "target_bounded_unresolved_sites": 0,
+    "contract_bounded_sites": 153,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_CONF_DEFAULT_METHOD": 1,
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_CORE_DISPATCH": 26,
+     "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+     "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 16,
+     "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+     "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+     "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    },
+    "unclassified_reachable_sites": 0,
+    "target_sets_remain_unbounded": true,
+    "why": "every reachable unresolved site is contract-bounded by a public OpenSSL ABI contract (section 7 criterion 2); no target-bounded unresolved site and no unclassified site remains"
+   },
+   "source_identity": {
+    "repository_head": "6cdf98598577e292003248503ca11ff9e1d4e8b0",
+    "branch": "stage/p25/b75-ocsp",
+    "tracked_tree_dirty": true,
+    "inventory_path": "court/freeze-b78/census-b78.json",
+    "inventory_source_head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "span_source_commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "span_source_binding": "git-blob",
+    "inventory_is_ancestor_or_equal": true,
+    "note": "the admitted install is the V1 frozen candidate; the working tree may be a descendant, so obligations are joined to the inventory at the inventory's own source head, not the working tree"
+   },
+   "discharge_receipt_grouping": {
+    "total": 290,
+    "openssh-v1i": 56,
+    "openssh-v1l": 9,
+    "boundary_sweep_total": 211,
+    "by_receipt": {
+     "boundary-sweep-B48": 36,
+     "boundary-sweep-B49": 16,
+     "boundary-sweep-B50": 5,
+     "boundary-sweep-B51": 10,
+     "boundary-sweep-B52": 3,
+     "boundary-sweep-B53": 30,
+     "boundary-sweep-B54": 72,
+     "boundary-sweep-B55": 9,
+     "boundary-sweep-B56": 19,
+     "boundary-sweep-B57": 2,
+     "boundary-sweep-B60": 2,
+     "boundary-sweep-B67": 2,
+     "boundary-sweep-B69": 3,
+     "boundary-sweep-B70": 2,
+     "openssh-v1i": 56,
+     "openssh-v1l": 9,
+     "sslconf-exclusivity-2026-11-10": 14
+    }
+   },
+   "obligations_recorded": 290,
+   "ledger_record": {
+    "run_id": "run:build-link:candidate:openssh",
+    "level": "L4-linked",
+    "outcome": "reached",
+    "recipe_id": "recipe:openssh:9.9p1",
+    "source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+    "source_root_hash": "4a5abaf399ac1ee4ba977c30f73c748b7dcaf5c168eb26b1ff65cedefe28906f",
+    "source_root_hash_rule": null,
+    "source_tree_domain_hash": null,
+    "artifact_rel": "ssh",
+    "artifact_sha256_recorded": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57",
+    "recorded_candidate_install": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
+    "artifact_matches_this_build": false
+   },
+   "carry_chain": {
+    "immediate_source": {
+     "receipt": "evidence/closure-sshd-b78.json",
+     "sha256": "dd8430916dc4ebd559b0c5bfda4415b4b2174e7d19e7e654f7f66d952407ee43",
+     "DISCHARGED": 283,
+     "BLOCKED": 7,
+     "UNKNOWN": 0,
+     "verdict": "ACCEPTED",
+     "artifact_sha256": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe",
+     "carried_forward_removed": 3
+    },
+    "target": "evidence/closure-sshd-b78b.json",
+    "carried_forward_removed": 3,
+    "links": [
+     {
+      "receipt": "evidence/closure-sshd-b76c.json",
+      "sha256": "5e7d9acfb9d28bb622a4215b82375fc2eda4bf923fbbce56f1a32b076ced60f1",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "verdict": "ACCEPTED",
+      "artifact_sha256": "547c0d14d0fed0b38f0165af1f9c65cd86309a572cdbd30abbc1d8b7c89d2a1d",
+      "carried_forward_removed": 36
+     },
+     {
+      "receipt": "evidence/closure-sshd-b77.json",
+      "sha256": "021617660576a2ebae3706496f63d4cdaf02798f1cce59c94677e538d049e170",
+      "DISCHARGED": 282,
+      "BLOCKED": 8,
+      "UNKNOWN": 0,
+      "verdict": "ACCEPTED",
+      "artifact_sha256": "d84d83ac98a8dae7c09f7023c8e792ce963a462095ebd487a68a90466273242a",
+      "carried_forward_removed": 3
+     },
+     {
+      "receipt": "evidence/closure-sshd-b78.json",
+      "sha256": "dd8430916dc4ebd559b0c5bfda4415b4b2174e7d19e7e654f7f66d952407ee43",
+      "DISCHARGED": 283,
+      "BLOCKED": 7,
+      "UNKNOWN": 0,
+      "verdict": "ACCEPTED",
+      "artifact_sha256": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe",
+      "carried_forward_removed": 3
+     },
+     {
+      "receipt": "evidence/closure-sshd-b78b.json",
+      "sha256": "4f0ca02f31ed4efa4901636ccd42402fe1562649cd532bbadcc1a3f95355e863",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "verdict": "ACCEPTED",
+      "artifact_sha256": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe",
+      "carried_forward_removed": 3
+     }
+    ],
+    "note": "the b78b run carries from evidence/closure-sshd-b78.json, which is ACCEPTED at 283 discharged / 7 blocked; the b78b repair re-attributes the seven stale `copyctx` coordinates to their definition spans and the count becomes 290/290. No refused carry is used (unlike b76)."
+   }
+  },
+  "copyctx_repair": {
+   "path": "evidence/b78b-copyctx-binding.json",
+   "sha256": "0dcf1757d48c246f9d36271da94cb8647b765c190d4a8747bed76e63d898cfed",
+   "subphase": "b78b",
+   "purpose": "Settle and repair Blocker 1: the seven carried-forward `copyctx` obligations whose census coordinate was neither a definition of `copyctx` nor inside the boundary's resolved span (`span-unparsable`).",
+   "finding_answer": "No.  The offered hypothesis is false for all seven rows.  Two different facts explain the numbers, and neither is a macro-expansion mismatch.",
+   "rows": 7,
+   "result": {
+    "rows_bound": 7,
+    "rows_still_blocked": 0,
+    "per_family": "identical for ssh and sshd (14 obligations, 7 distinct sites)",
+    "boundaries": {
+     "src/provider/digest.rs:658": "OSSH-V1I-002 via closure-ssh-b76c.json:658 @ 0238c6e4ad",
+     "src/provider/digest.rs:970": "OSSH-V1I-008 via closure-ssh-b76c.json:970 @ 0238c6e4ad",
+     "src/provider/digest.rs:1165": "OSSH-V1I-011 via closure-ssh-b76c.json:1165 @ 0238c6e4ad",
+     "src/provider/digest.rs:1348": "OSSH-V1I-017 via closure-ssh-b76c.json:1348 @ 0238c6e4ad",
+     "src/provider/digest.rs:1898": "OSSH-V1I-024 via closure-ssh-b76c.json:1898 @ 0238c6e4ad",
+     "src/provider/legacyprov.rs:336": "OSSH-V1I-082 via closure-ssh-b76c.json:336 @ 0238c6e4ad",
+     "src/provider/legacyprov.rs:544": "OSSH-V1I-088 via closure-ssh-b76c.json:544 @ 0238c6e4ad"
+    },
+    "verification_probe": "court/freeze-b78/probe_copyctx_rows.py re-runs the real adjudicate() on the seven rows x two families with the production boundary set, discharge plane, mechanism state and census; all 14 adjudications return DISCHARGED with a content-migrated-coordinate witness.",
+    "verification_premise_probe": "court/freeze-b78/probe_migration_chain.py independently recomputes the ancestor-head span hashes with the tool's normalisation rule; all seven match."
+   },
+   "non_claims": [
+    "no verdict was changed by editing a boundary receipt",
+    "the seven rows are bound, not re-graduated: the underlying SAFETY_DISCHARGED disposition is the one the earlier review recorded",
+    "the b78 closure counts (283/7/0) are unchanged by this file"
+   ]
+  },
+  "safe_compatible": false
+ },
+ "element7": {
+  "measured_by_closures": {
+   "ssh": {
+    "status": "PASS (contract-bounded)",
+    "target_bounded_unresolved_sites": 0,
+    "contract_bounded_sites": 153,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_CONF_DEFAULT_METHOD": 1,
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_CORE_DISPATCH": 26,
+     "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+     "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 16,
+     "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+     "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+     "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    }
+   },
+   "sshd": {
+    "status": "PASS (contract-bounded)",
+    "target_bounded_unresolved_sites": 0,
+    "contract_bounded_sites": 153,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_CONF_DEFAULT_METHOD": 1,
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_CORE_DISPATCH": 26,
+     "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+     "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 16,
+     "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+     "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+     "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    }
+   }
+  },
+  "repin_records": [
+   {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/e7-b76-repin.json",
+    "sha256": "0501344ed5387776664451904aff31020cf973224631b4471230a2f3c66ed30e",
+    "bytes": 32198,
+    "schema": "openssl-rs/campaign/safe-c33/e7-repin/v1",
+    "candidate_tag": "b76",
+    "tool_sha256": "2fcf9247008abf5057beeed5f5beb2819c962547bd93d923289fe0279c8ad431",
+    "closure": {
+     "path": "evidence/closure-ssh-b76b.json",
+     "artifact_sha256": "0384f983b392b450a135b960c7b8f991636d509bf9ef5ff841e3d3b7367545d4",
+     "target_bounded_sites": 48
+    },
+    "rows": 45,
+    "row_decisions": {
+     "None": 45
+    },
+    "controls": [
+     "e7repin-symbol-control",
+     "e7repin-offset-control",
+     "e7repin-instruction-control",
+     "e7repin-moved-row-uniqueness"
+    ]
+   },
+   {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/e7-b77-repin.json",
+    "sha256": "9d5ec7918b937d4648ab453a025c2ad07669739c2b02c5e1d3ef1cab00f993fc",
+    "bytes": 25383,
+    "schema": "openssl-rs/consumer-closure/e7-repin/v1",
+    "candidate_tag": "b77 (stage/p25/b75-ocsp)",
+    "tool_sha256": "facb2a97586493a8cf8fb6a073266046dfc1dd8138110f6c18c575b613e45426",
+    "tool_sha256_before": null,
+    "tool_sha256_after": null,
+    "rows": 5,
+    "row_decisions": {
+     "None": 5
+    },
+    "verification": {
+     "self_test": {
+      "mode": "--self-test",
+      "exit_code": 1,
+      "failure_count": 9,
+      "failures": [
+       "8 x e7pbe: the _pbe_outparam_self_test fixture pins are stale (pinned artefact sha 8f188717..., observed b9cfb9e5...); pre-existing, self-classified, reported not suppressed",
+       "1 x e7core default-context control NOT_RUN: no admitted site's witness evidence records an inlined default-context accessor at b77, so that control's subject does not exist here"
+      ],
+      "passing_groups": "e7repin, e7repin-search (22 named checks), e7abi (8 sites + 6 counterexample triplets), e7core positive cohort + mutations"
+     },
+     "element7_only": {
+      "mode": "--element7-only (FAST probe, not a closure receipt)",
+      "receipt": "court/tmp/e7only-ssh-b77.json",
+      "receipt_sha256": "36a9f5dbcbfaed3d25c05c27733cb3a776a8f433474589993abc1da04d3970f8",
+      "status": "PASS (contract-bounded)",
+      "reachable_unresolved": 155,
+      "target_bounded": 0,
+      "contract_bounded": 155,
+      "unclassified": 0,
+      "by_class": {
+       "ABI_CONTRACT_CONF_MODULE": 2,
+       "ABI_CONTRACT_CORE_DISPATCH": 26,
+       "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+       "ABI_CONTRACT_EXPORT_CALLBACK": 69,
+       "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+       "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+       "ABI_CONTRACT_PBE_REGISTRY": 1,
+       "ABI_CONTRACT_PROVIDER": 16,
+       "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+       "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+       "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+       "ABI_CONTRACT_STORE_LOADER": 3
+      },
+      "note": "the full closure was NOT run for this batch; the ACCEPTED/BLOCKED counts of the previous candidate do not carry forward to this tool identity"
+     }
+    }
+   },
+   {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/e7-b78-repin.json",
+    "sha256": "192ef6eb7d8f426f16baa1c1a06703201b9ecf1fbff9dd32241babd2bd89a5b3",
+    "bytes": 9873,
+    "schema": "openssl-rs/safe-c33/e7-repin/v1",
+    "candidate_tag": "b78",
+    "tool_sha256": null,
+    "tool_sha256_before": "d3d01dfe9127610c77b965491b08c61dde08098d3fc9f1a398fd8cbff0daee91",
+    "tool_sha256_after": "81f9e5fac1e8b29173fe3067ca5410adc5dd38601ef0be533278783b35147fa0",
+    "element7": {
+     "before": {
+      "target_bounded": 4,
+      "contract_bounded": 149,
+      "unclassified": 0,
+      "decoder_method_object_class_present": false
+     },
+     "after": {
+      "target_bounded": 1,
+      "contract_bounded": 152,
+      "unclassified": 0,
+      "decoder_method_object_class_present": true,
+      "receipt": "court/freeze-b78/e7-b78-repaired.json"
+     },
+     "status": "FAIL",
+     "residual_site": "0x49a8dc"
+    },
+    "rows": 4,
+    "row_decisions": {
+     "b": 3,
+     "c": 1
+    },
+    "controls": {
+     "location": "forensics/tools/consumer_closure.py::_e7decoder_cursor_controls_body (run by --self-test)",
+     "positive": "the admitted image's constructor argument derives from ossl_any_to_obj_algorithm with a 0x20 row stride and a terminator guard",
+     "stride_mutation": "an extent that is not a whole multiple of the observed advance (extent + 5) refuses",
+     "root_mutation": "moving the table root in the instruction stream makes the derivation stop matching the enumerated table",
+     "constructor_mutation": "DECODER_METHOD_CONSTRUCTOR replaced by a leaf that names no function start refuses (constructor-not-enumerated)",
+     "slot_mutation": "perturbing one row's read offset by +8 refuses (read-field-not-enumerated)",
+     "restore": "after every mutation all three rows are accepted again",
+     "pre_existing_repin_controls": "the b77 pin/search controls still run; three pre-existing self-test failures remain (see does_not_prove[2])"
+    }
+   },
+   {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b76c-three-sites.json",
+    "sha256": "93fe18cd17fec82dd16d4a09405800593aa5adcb2ab3941250961297496cb28d",
+    "bytes": 12798,
+    "schema": "openssl-rs/campaign/safe-c33/per-call-site-witness/v1",
+    "candidate_tag": null,
+    "tool_sha256": null,
+    "closure": {
+     "status": "COMPLETED",
+     "command": "python3 forensics/tools/consumer_closure.py --family openssh --artifact court/tmp/openssh-closure/client-b76/openssh-9.9p1/ssh --install artifacts/phase2/install --inventory court/freeze-b76/census-b76.json --enrolment-blockers forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json --carry-forward-closure evidence/closure-ssh-b76b.json --enforce-disposition-conflicts --workdir court/tmp/closure-b76c-ssh --output evidence/closure-ssh-b76c.json",
+     "receipt": "evidence/closure-ssh-b76c.json",
+     "receipt_sha256": "a5b55b88b926e24a6324f8b939b466e2bf940fc142cafcdea2f719b10ae426d6",
+     "verdict": {
+      "state": "ACCEPTED",
+      "safe_compatible": false,
+      "reason": "no refusal condition fired"
+     },
+     "refusals": 0,
+     "counts": {
+      "reachable_files": 631,
+      "reachable_production_obligations": 290,
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "carried_forward": 213,
+      "carried_forward_removed": 3
+     },
+     "element7": {
+      "status": "PASS (contract-bounded)",
+      "target_bounded_unresolved_sites": 0,
+      "contract_bounded_sites": 155,
+      "unclassified_reachable_sites": 0
+     }
+    },
+    "element7": {
+     "before": {
+      "target_bounded_unresolved_sites": 3,
+      "contract_bounded_sites": 152,
+      "unclassified_reachable_sites": 0,
+      "resolved_sites": 51835,
+      "by_class": {
+       "ABI_CONTRACT_CORE_DISPATCH": 25,
+       "ABI_CONTRACT_PROVIDER": 15,
+       "ABI_CONTRACT_STORE_LOADER": 2
+      }
+     },
+     "after": {
+      "target_bounded_unresolved_sites": 0,
+      "contract_bounded_sites": 155,
+      "unclassified_reachable_sites": 0,
+      "resolved_sites": 51835,
+      "by_class": {
+       "ABI_CONTRACT_CORE_DISPATCH": 26,
+       "ABI_CONTRACT_PROVIDER": 16,
+       "ABI_CONTRACT_STORE_LOADER": 3
+      },
+      "status": "PASS (contract-bounded)",
+      "receipt": "court/freeze-b76/e7-b76c-after.json",
+      "tool_sha256": "74e3953b36233b1071b9b720e1a0551e866801fa41db5e31b5f878fdabd46161"
+     }
+    },
+    "mutation_controls": [
+     {
+      "control": "e7core default-context offset",
+      "mutation": "0x47ca85 mov 0x78(%rax),%rcx -> mov 0x70(%rax),%rcx",
+      "expected": "core_dispatch_witness refuses (slot base is no longer a documented slot-18 field)",
+      "observed": "refused; restored"
+     },
+     {
+      "control": "e7store close guard target",
+      "mutation": "0x455ff2 je 0x4561e7 -> je 0x455ff8",
+      "expected": "p_close-guard-is-not-the-enumerated-pair and closefn-guard-is-not-the-enumerated-pair",
+      "observed": "both refused; restored"
+     },
+     {
+      "control": "e7store fetch provenance",
+      "mutation": "the call to inner_loader_fetch is retargeted to ossl_store_get0_loader_int",
+      "expected": "wrong-base-constructor",
+      "observed": "refused; restored"
+     },
+     {
+      "control": "e7repin pin conditions",
+      "mutation": "unknown symbol leaf; non-call offset; non-call instruction",
+      "expected": "each refuses; no moved row accepted by two rows",
+      "observed": "all refuse (pre-existing control, still passing after the re-pin)"
+     }
+    ],
+    "self_test": {
+     "result": "PASS",
+     "log": "court/freeze-b76/selftest-b76c.log",
+     "note": "e7abi, e7repin, e7pbe, e7core, e7store, e7pemreg and the store guard/fetch controls pass"
+    },
+    "source_identity": {
+     "branch": "stage/p25/b75-ocsp",
+     "head": "ab075cdc3",
+     "install_prefix": "artifacts/phase2/install",
+     "libcrypto_so_3_sha256": "8f18871713a80cc58babcd2f539f273fe9a88807acfa15bb165fb4c8fc1f4aef",
+     "consumer": {
+      "path": "court/tmp/openssh-closure/client-b76/openssh-9.9p1/ssh",
+      "sha256": "0384f983b392b450a135b960c7b8f991636d509bf9ef5ff841e3d3b7367545d4"
+     },
+     "tool": {
+      "path": "forensics/tools/consumer_closure.py",
+      "sha256_before": "2fcf9247008abf5057beeed5f5beb2819c962547bd93d923289fe0279c8ad431",
+      "sha256_after": "74e3953b36233b1071b9b720e1a0551e866801fa41db5e31b5f878fdabd46161"
+     }
+    }
+   }
+  ],
+  "conf_method_witness": {
+   "class": "ABI_CONTRACT_CONF_DEFAULT_METHOD",
+   "resolution_kind": "contract-bounded (target set unbounded)",
+   "contract": "the `conf_method_st.init` callback of the method table installed in the process-global `default_CONF_method` cell by the exported `CONF_set_default_method(CONF_METHOD *)`, or the built-in `NCONF_default()` table when the cell is NULL",
+   "provider_obligation": "the application supplies a live `CONF_METHOD` whose `init` matches `conf_init_func`; `CONF_set_default_method` publishes it to every subsequent `CONF_set_nconf`, and the library calls it with a live `CONF *` it allocated itself",
+   "covers": "the enumerated call site, the `default_CONF_method` cell, its two writer classes (the exported setter's parameter, and the built-in NULL fallback whose value is the table `NCONF_default()` returns), and the `ConfMethod.init` field at offset 0x10",
+   "does_not_cover": [
+    "which method table an application installs; the setter is public and the target set is unbounded",
+    "the behaviour or lifetime of the installed `init` callback, or the application's own table contents",
+    "any field other than `init` at 0x10: a dispatch on `create` (0x8), `destroy` (0x18) or `destroy_data` (0x20) is a different contract and the witness refuses it",
+    "a writer of the cell outside the exported setter and the built-in fallback; the whole-image store scan refuses one",
+    "a runtime store to a `ConfMethod` `init` field anywhere under `src/`; the source scan refuses one (the only writers are the two link-time table literals)"
+   ],
+   "citation": [
+    "include/openssl/conf.h -- struct conf_method_st lists `int (*init)(CONF *conf)`; CONF_set_default_method(CONF_METHOD *meth) is the documented public setter; NCONF_default(void) publishes the built-in table",
+    "src/runtime/conf/types.rs:59-86 -- `#[repr(C)] ConfMethod` with `init` at offset 0x10 and type `Option<ConfInitFn>`",
+    "src/runtime/conf/lib.rs:54-55 -- `static DEFAULT_CONF_METHOD: AtomicPtr<ConfMethod>`; lib.rs:75-79 -- `CONF_set_nconf` installs `NCONF_default()` when the cell is NULL, then dispatches `(*meth).init`; lib.rs:96-107 -- the exported setter stores its `meth` parameter unchanged",
+    "src/runtime/conf/def.rs:808-834 -- the only two `ConfMethod` table literals (`DEFAULT_METHOD` -> def_init_default, `WIN32_METHOD` -> def_init_win32); no runtime store writes `init`",
+    "src/x509/v3_conf.rs:1629-1649 -- `X509V3_EXT_REQ_add_conf` calls `CONF_set_nconf(ctmp, NULL)` on its own `NCONF_new(NULL)` result, which the compiler inlines (the enumerated site)"
+   ],
+   "site": {
+    "function_name": "X509V3_EXT_REQ_add_conf",
+    "function_start": "0x49a820",
+    "call_site": "0x49a8dc",
+    "instruction": "call   *%rax",
+    "reason": "external ABI contract witness: default_CONF_method cell (0x8ac1e0) -> conf_method_st.init (offset 0x10)",
+    "targets_enumerated": 958
+   },
+   "witness": {
+    "slot": "default_CONF_method cell -> conf_method_st.init (offset 0x10)",
+    "writer": "CONF_set_default_method stores its `meth` parameter unchanged; the NULL fallback installs the table NCONF_default() publishes",
+    "interface": "CONF_set_default_method(CONF_METHOD *) (exported) and struct conf_method_st.init = int (*)(CONF *)",
+    "writer_set": "CONF_set_default_method(%rdi) x1 + built-in NULL fallback",
+    "target_set_unbounded": "the exported setter admits any application CONF_METHOD"
+   },
+   "source_evidence": {
+    "record": "court/freeze-b78/e7-b78-confmethod.json",
+    "sha256": "49893aaf24f0a523a81e5581338adfd153766f565d2979182c1e4da471e1e271",
+    "bytes": 1701391,
+    "tool_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+    "element_7": {
+     "established": true,
+     "status": "PASS (contract-bounded)",
+     "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract",
+     "reachable_unresolved_sites": 153,
+     "target_bounded_unresolved_sites": 0,
+     "contract_bounded_sites": 153,
+     "contract_bounded_by_class": {
+      "ABI_CONTRACT_CONF_DEFAULT_METHOD": 1,
+      "ABI_CONTRACT_CONF_MODULE": 2,
+      "ABI_CONTRACT_CORE_DISPATCH": 26,
+      "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+      "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+      "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+      "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+      "ABI_CONTRACT_PBE_REGISTRY": 1,
+      "ABI_CONTRACT_PROVIDER": 16,
+      "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+      "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+      "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+      "ABI_CONTRACT_STORE_LOADER": 3
+     },
+     "unclassified_reachable_sites": 0,
+     "target_sets_remain_unbounded": true,
+     "why": "every reachable unresolved site is contract-bounded by a public OpenSSL ABI contract (section 7 criterion 2); no target-bounded unresolved site and no unclassified site remains"
+    },
+    "residual_site_class_count": 1,
+    "generated_utc": "2026-11-14T09:18:24Z"
+   },
+   "witness_source_lines": {
+    "witness_function": {
+     "line": 18996,
+     "text": "def conf_default_method_witness(...)"
+    },
+    "controls_function": {
+     "line": 34602,
+     "text": "def _conf_default_method_self_test(...)"
+    }
+   },
+   "mutation_controls": [
+    {
+     "control": "wrong-slot-offset",
+     "mutation": "the dispatched field load 0x10(base) -> 0x18(base)",
+     "expected_refusal": "operand-load-is-not-the-init-slot"
+    },
+    {
+     "control": "non-parameter-setter",
+     "mutation": "the cell writer in CONF_set_default_method stores %rsi instead of its %rdi parameter",
+     "expected_refusal": "unaccounted-writer-of-the-default-method-cell"
+    },
+    {
+     "control": "non-builtin-fallback",
+     "mutation": "the built-in fallback store writes %rcx instead of the NCONF_default() table value in %rax",
+     "expected_refusal": "unaccounted-writer-of-the-default-method-cell"
+    },
+    {
+     "control": "wrong-declared-field",
+     "mutation": "the witness is asked for the neighbouring `destroy` field instead of the dispatched `init` field",
+     "expected_refusal": "declared-init-field-is-not-at-the-dispatched-offset"
+    },
+    {
+     "control": "restore",
+     "mutation": "none (the admitted image)",
+     "expected_refusal": null,
+     "observed": "accepted again; the witness is byte-identical to the positive witness"
+    }
+   ],
+   "self_test_record": {
+    "conf_method_controls_line": "[consumer-closure] conf-method controls: the enumerated `default_CONF_method` -> `CONF_METHOD.init` dispatch is contract-bounded by the exported `CONF_set_default_method`; a wrong slot offset, a setter store that is not its parameter, a fallback store that is not the built-in table and a wrong declared field each refuse and restore",
+    "e7core_controls_line": "[consumer-closure] e7core controls: the recorded cohort is 24 function(s); this image resolves 26 site(s) across 24 function(s); the offset, libctx-index, writer-id, second-source-store, header-id, default-context and NULL-guard mutation controls are each exercised (a control this candidate cannot exercise is reported above as NOT_RUN, never as a pass); the provider-init rule refuses a store-offset and an extra-writer mutation and is restored; the store-loader close guard refuses an inverted fetched-loader polarity branch and is restored; the loader-fetch retarget refuses (the wrapper-source arm is NOT_RUN at this candidate because the wrapper is inlined); the register-agnostic PEM witness refuses a wrong-default-symbol and a wrong-copy-source mutation and is restored"
+   },
+   "statement": "the enumerated `default_CONF_method` -> `CONF_METHOD.init` dispatch is contract-bounded by the exported CONF_set_default_method and the documented conf_method_st.init field; four mutation controls (wrong slot, non-parameter setter, non-builtin fallback, wrong declared field) each refuse with the named reason and the admitted image is restored.  The target set is intentionally unbounded because the setter is public."
+  },
+  "statement": "the 153 contract-bounded sites are intentionally unbounded: each is resolved to a declared external ABI contract (AGENTS.md section 7 criterion 2), not left as an unproven target. None is counted as target-bounded, and no site is unclassified. The b78 re-pin record is an intermediate FAIL at 1 target-bounded site (0x49a8dc); the CONF-method witness record resolves that site and the b78b closures measure 0/153 PASS."
+ },
+ "ledger_binding": {
+  "source": "forensics/downstream/build-link-atlas.json",
+  "atlas_sha256": "7d2a55a8c88a615b67e0ace7826399bbdfbc8141fabce168ef96eee73374cfa8",
+  "atlas_bytes": 5514864,
+  "body_hash": "69365ce58864b9d0a130b43c002cf98c61c6bc3989b6788884dd94cb296d6c11",
+  "body_hash_rule": "sha256 of canonical JSON of body (atlas_common.content_hash)",
+  "body_hash_reproduces": true,
+  "lookup": "body.runs[run_id='run:build-link:candidate:openssh']",
+  "run_id": "run:build-link:candidate:openssh",
+  "recipe_id": "recipe:openssh:9.9p1",
+  "recorded_artifact_rel": "ssh",
+  "recorded_artifact_sha256": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57",
+  "recorded_candidate_install_libcrypto_sha256": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
+  "recorded_install_matches_freeze_install": true,
+  "freeze_proven_ssh_sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
+  "freeze_proven_sshd_sha256": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe",
+  "freeze_proven_sshd_session_sha256": "f5ad1a233b03d6f9aa9b8e79cf477efaa70e59f7cbac1d88e4dd2945ad04c3c9",
+  "ssh_receipt_artifact_sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
+  "sshd_receipt_artifact_sha256": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe",
+  "artifact_matches_this_build_reported_by_receipt": false,
+  "artifact_matches_this_build": false,
+  "artifact_matches_this_build_statement": "artifact_matches_this_build is false because the atlas row is its own build of ssh: its configure argv ([\"configure\", \"--with-ssl-dir={prefix}\", \"--without-openssl-header-check\", \"--without-pam\", \"--without-selinux\", \"--without-libedit\", \"--without-ldns\", \"--silent\"]) differs from the closure build's configure argv ([\"--prefix=\\\"$PREFIX\\\"\", \"--sysconfdir=\\\"$PREFIX/etc\\\"\", \"--with-ssl-dir=\\\"$CANDIDATE\\\"\", \"--with-privsep-user=sshd\", \"--with-privsep-path=\\\"$PREFIX/var/empty\\\"\"]) and it runs `make -j8 ssh`, while the closures analyse the full builds under court/tmp/openssh-closure/{client,server}-b78. Its recorded digest c8723f3494a2 is not either analysed binary; the row's recorded candidate install does match the freeze-proven install, but that does not make the row's ssh binary the analysed ssh. The field is not the per-artefact binding. Per-artefact binding is carried by the rebind receipts in evidence/{ssh,sshd}-artifact-ledger-b78-rebind.json and by the freeze digests recorded here.",
+  "atlas_row_configure_argv": [
+   "configure",
+   "--with-ssl-dir={prefix}",
+   "--without-openssl-header-check",
+   "--without-pam",
+   "--without-selinux",
+   "--without-libedit",
+   "--without-ldns",
+   "--silent"
+  ],
+  "closure_build_configure_argv": [
+   "--prefix=\"$PREFIX\"",
+   "--sysconfdir=\"$PREFIX/etc\"",
+   "--with-ssl-dir=\"$CANDIDATE\"",
+   "--with-privsep-user=sshd",
+   "--with-privsep-path=\"$PREFIX/var/empty\""
+  ],
+  "closure_build_script": {
+   "path": "forensics/tools/build_openssh_closure.sh",
+   "sha256": "a046975a61b87be5dc1cf325cdaf823d69cfb6e1cc66927afeab48f64e8cb20c",
+   "size": 3563
+  },
+  "atlas_row_steps": [
+   {
+    "name": "extract",
+    "argv": [
+     "tar",
+     "xf",
+     "{scratch}/openssh/source.tar.gz",
+     "-C",
+     "{scratch}/openssh/candidate/src"
+    ],
+    "exit_code": 0
+   },
+   {
+    "name": "configure",
+    "argv": [
+     "configure",
+     "--with-ssl-dir={prefix}",
+     "--without-openssl-header-check",
+     "--without-pam",
+     "--without-selinux",
+     "--without-libedit",
+     "--without-ldns",
+     "--silent"
+    ],
+    "exit_code": 0
+   },
+   {
+    "name": "make",
+    "argv": [
+     "make",
+     "-j8",
+     "ssh"
+    ],
+    "exit_code": 0
+   }
+  ],
+  "per_artefact_rebind": {
+   "ssh": {
+    "receipt": "evidence/ssh-artifact-ledger-b78-rebind.json",
+    "sha256": "772aa33fd6d83242cdd6c87c3df43eb34aa7ca8ed47d43d9f2048ec12fd3b8e9",
+    "bytes": 11221534,
+    "verdict": "ACCEPTED (all checks passed; not a closure run)",
+    "artifact_rel": "ssh",
+    "artifact_sha256_recorded": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
+    "artifact_matches_this_build": true,
+    "ledger": "evidence/ssh-artifact-ledger-b78.json",
+    "freeze_from_ledger": "court/freeze-b78/FREEZE-b78.json",
+    "checks": {
+     "artifact_sha256_matches": true,
+     "family_matches": true,
+     "artifact_rel_matches": true,
+     "freeze_artifact_matches": true,
+     "freeze_libcrypto_matches": true,
+     "freeze_source_matches": true,
+     "recipe_id_matches": true,
+     "source_sha256_matches": true
+    },
+    "not_a_closure_run": true,
+    "witness": "the same OpenSSH 9.9p1 recipe/source row that built sshd also built the analysed ssh: FREEZE-b78 records artefacts.files.ssh.sha256 = 3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251, the exact binary the b78b receipt analysed at court/tmp/openssh-closure/client-b78/openssh-9.9p1/ssh, whose runpath resolves libcrypto.so.3 to the freeze-proven install a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507. The atlas row records artifact_rel='ssh' artifact_sha256=c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57, which is its own build (a different configure argv, then `make -j8 ssh`), so this ledger is the per-artefact join for the closure build; it does not claim the atlas row measured the analysed binary."
+   },
+   "sshd": {
+    "receipt": "evidence/sshd-artifact-ledger-b78-rebind.json",
+    "sha256": "223addad8c24ca16941005f553356aa1931988abf8e5a4107cd735793aac83b7",
+    "bytes": 11090999,
+    "verdict": "ACCEPTED (all checks passed; not a closure run)",
+    "artifact_rel": "sshd",
+    "artifact_sha256_recorded": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe",
+    "artifact_matches_this_build": true,
+    "ledger": "evidence/sshd-artifact-ledger-b78.json",
+    "freeze_from_ledger": "court/freeze-b78/FREEZE-b78.json",
+    "checks": {
+     "artifact_sha256_matches": true,
+     "family_matches": true,
+     "artifact_rel_matches": true,
+     "freeze_artifact_matches": true,
+     "freeze_libcrypto_matches": true,
+     "freeze_source_matches": true,
+     "recipe_id_matches": true,
+     "source_sha256_matches": true
+    },
+    "not_a_closure_run": true,
+    "witness": "the same OpenSSH 9.9p1 recipe/source row that built ssh also built the analysed sshd: FREEZE-b78 records artefacts.files.sshd.sha256 = 9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe, the exact binary the b78b receipt analysed at court/tmp/openssh-closure/server-b78/openssh-9.9p1/sshd, whose runpath resolves libcrypto.so.3 to the freeze-proven install a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507. The atlas row records artifact_rel='ssh' artifact_sha256=c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57, its own ssh build (a different configure argv), not sshd; this ledger is therefore the per-artefact join for sshd, and the ssh closure is bound by the freeze-proven ssh digest 3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251 instead."
+   }
+  },
+  "ledgers": {
+   "ssh": "evidence/ssh-artifact-ledger-b78.json",
+   "sshd": "evidence/sshd-artifact-ledger-b78.json"
+  }
+ },
+ "gates": {
+  "fmt": {
+   "command": "cargo fmt --all -- --check",
+   "returncode": 0
+  },
+  "clippy": {
+   "command": "cargo clippy --all-targets -- -D warnings",
+   "returncode": 0
+  },
+  "lib_tests_parallel": {
+   "command": "cargo test --lib -- --test-threads=4",
+   "returncode": 0,
+   "test_result": {
+    "state": "ok",
+    "passed": 2309,
+    "failed": 0,
+    "ignored": 54,
+    "measured": 0,
+    "filtered_out": 0
+   },
+   "failed_tests": []
+  },
+  "diagnostic_raised_rlimit_data": {
+   "command": null,
+   "returncode": null,
+   "test_result": null,
+   "not_a_gate": true,
+   "present": false
+  },
+  "log": "court/freeze-b78/gates-b78.log",
+  "log_sha256": "b11f35bd2ad3bfa5a06f2c4bac5dac44201b2c202ed1b3f4045c4f035db99f81",
+  "verdict": "fmt PASS (exit 0), clippy PASS (exit 0), library tests PASS at --test-threads=4 (2309 passed, 0 failed, 54 ignored; exit 0). The secure-heap tests did not fail under the court's default 4 GiB per-process RLIMIT_DATA, so the OPENSSL_RS_COURT_DATA=8388608 diagnostic was not needed.",
+  "failure_class": "NONE"
+ },
+ "memory": {
+  "deviation": "AGENTS.md section 6.1 requires host `available` >= 24 GiB before a build and a cap of min(8g, available-16g) with a 2g floor. Measured host available was 14-15 GiB throughout, so that formula yields less than 2g and the literal procedure refuses to run. This work instead ran inside the existing docker court whose cgroup hard cap is 8 GiB (memory.max=8589934592) with no swap (memory.swap.max=0), so host exposure is bounded by that cgroup. The deviation is recorded here rather than claimed as compliance.",
+  "host_readings": [
+   {
+    "mem_total_kib": 32785520,
+    "mem_available_kib": 14886244,
+    "mem_free_kib": 7253764,
+    "when": "gate1_fmt"
+   },
+   {
+    "mem_total_kib": 32785520,
+    "mem_available_kib": 14722484,
+    "mem_free_kib": 6854308,
+    "when": "gate2_clippy"
+   },
+   {
+    "mem_total_kib": 32785520,
+    "mem_available_kib": 15587492,
+    "mem_free_kib": 14380552,
+    "when": "gate3_lib_tests_parallel"
+   },
+   {
+    "mem_total_kib": 32785520,
+    "mem_available_kib": 15569396,
+    "mem_free_kib": 14095684,
+    "when": "tool_self_test"
+   }
+  ],
+  "host_available_gib_at_generation": 14.2,
+  "host_total_gib_at_generation": 31.3,
+  "cgroup": {
+   "memory_max_bytes": "8589934592",
+   "memory_current_bytes": "1618784256",
+   "memory_peak_bytes": "8589934592",
+   "memory_swap_max_bytes": "0",
+   "memory_swap_current_bytes": "0",
+   "memory_events": {
+    "low": "0",
+    "high": "0",
+    "max": "20500",
+    "oom": "1",
+    "oom_kill": "1",
+    "oom_group_kill": "0",
+    "sock_throttled": "0"
+   },
+   "pids_max": "2048"
+  },
+  "gate_memory_peak_before": [
+   8589934592
+  ],
+  "gate_memory_peak_after": [
+   8589934592
+  ],
+  "peak_note": "memory.peak is the cgroup's historical high-water and already equalled the cap; it did not move across the four gate sections. memory.events records oom=1 / oom_kill=1 from that earlier event, not from these gates; swap.max is 0, so the container cannot grow by swapping.",
+  "rlimit_data_kib": 4194304,
+  "parallel_test_outcome": "the --test-threads=4 library gate passed; no RLIMIT_DATA diagnostic rerun was required"
+ },
+ "safe_compatible": {
+  "value": false,
+  "reason": "consumer_closure.py never promotes: verdict.safe_compatible is a hard-coded False in the instrument. AGENTS.md section 7 additionally requires every mechanism in the conservative dependency closure to be SAFETY_DISCHARGED with its callers' obligations discharged, and compatibility confirmed against the exact converted implementation. The closures measure the queue at this candidate, not a promotion.",
+  "measured": {
+   "ssh": {
+    "DISCHARGED": 290,
+    "reachable_production_obligations": 290,
+    "BLOCKED": 0,
+    "UNKNOWN": 0,
+    "element_7_status": "PASS (contract-bounded)",
+    "target_bounded": 0,
+    "contract_bounded": 153
+   },
+   "sshd": {
+    "DISCHARGED": 290,
+    "reachable_production_obligations": 290,
+    "BLOCKED": 0,
+    "UNKNOWN": 0,
+    "element_7_status": "PASS (contract-bounded)",
+    "target_bounded": 0,
+    "contract_bounded": 153
+   }
+  },
+  "l7_replay": {
+   "status": "NOT_RUN",
+   "note": "L7 functional replay of the consumers at this candidate was not run by this freeze; it remains a SEAL/BOUNDARY-stage obligation."
+  },
+  "outstanding": [
+   "L7 functional replay of the consumers at this candidate (NOT_RUN)",
+   "65 REVIEW_REQUIRED discharges (CAMPAIGN-STATUS current_applied_state.safe_compatible_blockers.projected_after_recensus.REVIEW_REQUIRED); the closure already records 56 openssh-v1i + 9 openssh-v1l discharges, but the campaign status requires a rebuild and re-census before the applied count changes",
+   "BOUNDARY adjudication of the remaining contract-bounded boundaries",
+   "SEAL (release build, complete probe suite, full forensic regeneration)"
+  ],
+  "review_required": {
+   "count": 65,
+   "source": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+   "json_pointer": "current_applied_state.safe_compatible_blockers.projected_after_recensus.REVIEW_REQUIRED",
+   "source_sha256": "65fe71bb3d9d18f69034a2b176d96ac429a90e7cd0853f10d1ee17f6fc70b009"
+  }
+ },
+ "residuals": [
+  {
+   "kind": "venue/memory",
+   "statement": "AGENTS.md section 6.1 requires host `available` >= 24 GiB before a build and a cap of min(8g, available-16g) with a 2g floor. Measured host available was 14-15 GiB throughout, so that formula yields less than 2g and the literal procedure refuses to run. This work instead ran inside the existing docker court whose cgroup hard cap is 8 GiB (memory.max=8589934592) with no swap (memory.swap.max=0), so host exposure is bounded by that cgroup. The deviation is recorded here rather than claimed as compliance."
+  },
+  {
+   "kind": "gate/parallel-lib-tests",
+   "statement": "fmt PASS (exit 0), clippy PASS (exit 0), library tests PASS at --test-threads=4 (2309 passed, 0 failed, 54 ignored; exit 0). The secure-heap tests did not fail under the court's default 4 GiB per-process RLIMIT_DATA, so the OPENSSL_RS_COURT_DATA=8388608 diagnostic was not needed."
+  },
+  {
+   "kind": "instrument/self-test-not-run",
+   "statement": "the instrument self-test exits 1 with 1 failure entry: the e7core default-context control DID NOT RUN (no admitted site carries the inlined accessor). It is classified NOT_RUN, not a pass, and is not evidence that the missing control holds."
+  },
+  {
+   "kind": "element7/contract-bounded",
+   "statement": "153 contract-bounded sites remain target-unbounded by design: the application supplies the targets through public ABI contracts (exported callbacks, provider tables, the global CONF_METHOD cell). They are discharged under AGENTS.md section 7 criterion 2, not proven safe by this freeze."
+  },
+  {
+   "kind": "ledger-binding",
+   "statement": "artifact_matches_this_build is false because the atlas row is its own build of ssh: its configure argv ([\"configure\", \"--with-ssl-dir={prefix}\", \"--without-openssl-header-check\", \"--without-pam\", \"--without-selinux\", \"--without-libedit\", \"--without-ldns\", \"--silent\"]) differs from the closure build's configure argv ([\"--prefix=\\\"$PREFIX\\\"\", \"--sysconfdir=\\\"$PREFIX/etc\\\"\", \"--with-ssl-dir=\\\"$CANDIDATE\\\"\", \"--with-privsep-user=sshd\", \"--with-privsep-path=\\\"$PREFIX/var/empty\\\"\"]) and it runs `make -j8 ssh`, while the closures analyse the full builds under court/tmp/openssh-closure/{client,server}-b78. Its recorded digest c8723f3494a2 is not either analysed binary; the row's recorded candidate install does match the freeze-proven install, but that does not make the row's ssh binary the analysed ssh. The field is not the per-artefact binding. Per-artefact binding is carried by the rebind receipts in evidence/{ssh,sshd}-artifact-ledger-b78-rebind.json and by the freeze digests recorded here."
+  },
+  {
+   "kind": "instrument-drift",
+   "statement": "the e7-b78 re-pin record names tool d3d01dfe9127 -> 81f9e5fac1e8; the final CONF witness and the b78b closures bind f31816b1feec. The re-pin record is retained as an intermediate: its status is FAIL because the CONF site was still target-bounded, and the later CONF witness record is the evidence that closes it."
+  },
+  {
+   "kind": "carry-chain/sshd",
+   "statement": "sshd: evidence/closure-sshd-b78.json (ACCEPTED, 283 discharged / 7 blocked) -> evidence/closure-sshd-b78b.json; 3 carried-forward obligations removed"
+  },
+  {
+   "kind": "carry-chain/ssh",
+   "statement": "ssh: evidence/closure-ssh-b78.json (ACCEPTED, 283 discharged / 7 blocked) -> evidence/closure-ssh-b78b.json; 3 carried-forward obligations removed"
+  },
+  {
+   "kind": "copyctx-repair",
+   "statement": "the seven b78 `copyctx` coordinates were stale coordinates of the same definitions; evidence/b78b-copyctx-binding.json proves each recorded coordinate is the definition line at the b76c ancestor head and that the normalised body hashes to the declared span. The b78b run re-attributes them and reaches 290/290."
+  },
+  {
+   "kind": "not-run",
+   "statement": "SEAL, BOUNDARY adjudication, L7 functional replay, ASan/Miri, dudect/Wycheproof and forensic regeneration are NOT_RUN at this candidate; they are scheduled at their gates, not implied by this freeze."
+  }
+ ],
+ "not_run": [
+  "L7 functional replay of the consumers at this candidate",
+  "BOUNDARY adjudication of the remaining contract-bounded boundaries",
+  "SEAL (release build, full probe suite, full forensic regeneration)",
+  "ASan/Miri/Loom and dudect/Wycheproof for this candidate",
+  "the e7core default-context control (NOT_RUN: no inlined accessor)",
+  "the 65 REVIEW_REQUIRED discharges (campaign status requires a rebuild and re-census)"
+ ],
+ "non_claims": [
+  "the closures named here are measurements of the candidate at S with the closure-bound instrument; they are not re-measured by this generator",
+  "0 BLOCKED / 0 UNKNOWN (ssh) and 0 BLOCKED / 0 UNKNOWN (sshd) is a statement about the instrument's queue at this candidate, not a SAFE_COMPATIBLE promotion",
+  "a green differential/closure result is not a safety or cryptographic result (AGENTS.md section 8)",
+  "the per-artefact rebind is not a closure run and changes no count, verdict or refusal",
+  "the instrument self-test's single failure is a NOT_RUN control; it is not a pass and does not certify the missing accessor",
+  "L7 functional replay was not run at this candidate"
+ ]
+}
