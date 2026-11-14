@@ -1379,12 +1379,22 @@ mod tests {
     /// `OPENSSL_INIT_SETTINGS` during the call, so it must not be callable from
     /// safe Rust with an unchecked pointer. A type-level "is an unsafe fn"
     /// assertion is not expressible on stable Rust (a safe fn item coerces to an
-    /// `unsafe fn` pointer), so the declaration is pinned in the source text and
-    /// this test fails if `unsafe` is dropped.
+    /// `unsafe fn` pointer), so the declaration is pinned in the production source
+    /// text, which is read from disk and truncated at the first `#[cfg(test)]`
+    /// module. This test's own assertion text is therefore never searched, and the
+    /// needle is assembled from fragments, so only removing the `unsafe` qualifier
+    /// can make it fail.
     #[test]
+    #[allow(clippy::expect_used)]
     fn the_initialiser_is_an_unsafe_fn() {
-        let src = include_str!("init.rs");
-        assert!(src.contains("pub unsafe extern \"C\" fn OPENSSL_init_crypto("));
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/runtime/init.rs");
+        let src = std::fs::read_to_string(path)
+            .expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        let needle = concat!("pub unsafe extern ", "\"C\" fn OPENSSL_init_crypto(");
+        assert!(prod.contains(needle), "missing {needle}");
     }
 
     /// Takes the crate-wide global-state lock for the duration of `f`, then

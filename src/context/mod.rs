@@ -1727,12 +1727,26 @@ mod unsafe_contract_controls {
     /// Qualifier control: the three context lock helpers dereference the caller's
     /// context, so they must not be callable from safe Rust with an unchecked
     /// pointer. A type-level "is an unsafe fn" assertion is not expressible on
-    /// stable Rust, so the declarations are pinned in the source text.
+    /// stable Rust, so the declarations are pinned in the production source text,
+    /// which is read from disk and truncated at the first `#[cfg(test)]` module.
+    /// This test's own assertion text is therefore never searched, and each needle
+    /// is assembled from fragments, so only removing an `unsafe` qualifier can make
+    /// it fail.
     #[test]
+    #[allow(clippy::expect_used)]
     fn the_context_lock_helpers_are_unsafe_fns() {
-        let src = include_str!("mod.rs");
-        assert!(src.contains("pub(crate) unsafe fn lib_ctx_write_lock("));
-        assert!(src.contains("pub(crate) unsafe fn lib_ctx_read_lock("));
-        assert!(src.contains("pub(crate) unsafe fn lib_ctx_unlock("));
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/context/mod.rs");
+        let src = std::fs::read_to_string(path)
+            .expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        for needle in [
+            concat!("pub(crate) unsafe fn ", "lib_ctx_write_lock("),
+            concat!("pub(crate) unsafe fn ", "lib_ctx_read_lock("),
+            concat!("pub(crate) unsafe fn ", "lib_ctx_unlock("),
+        ] {
+            assert!(prod.contains(needle), "missing {needle}");
+        }
     }
 }

@@ -2176,12 +2176,21 @@ mod tests {
     use super::*;
 
     /// Qualifier control for F-SSL-2: a safe fn item coerces to an `unsafe fn` pointer,
-    /// so no const assertion can require the qualifier; this source-text test fails if
+    /// so no const assertion can require the qualifier; this test instead reads the
+    /// production source from disk, truncates it at the first `#[cfg(test)]` module and
+    /// assembles the needle from fragments, so it cannot satisfy itself and fails if
     /// `unsafe` is dropped from `ssl_set_version_bound`.
     #[test]
+    #[allow(clippy::expect_used)]
     fn ssl_set_version_bound_is_an_unsafe_fn() {
-        let src = include_str!("ssl_conf.rs");
-        assert!(src.contains("pub(crate) unsafe fn ssl_set_version_bound("));
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/ssl/ssl_conf.rs");
+        let src = std::fs::read_to_string(path)
+            .expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        let needle = concat!("pub(crate) unsafe fn ", "ssl_set_version_bound(");
+        assert!(prod.contains(needle), "missing {needle}");
     }
     use crate::runtime::mem::free_probe;
     use crate::ssl::methods::TLS_method;

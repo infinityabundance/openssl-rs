@@ -3371,10 +3371,21 @@ mod unsafe_contract_controls {
     /// Qualifier control: `ErrState::set_data` adopts a caller pointer (or borrows
     /// it) with an extent, so it must not be callable from safe Rust with an
     /// unchecked pointer. A type-level "is an unsafe fn" assertion is not
-    /// expressible on stable Rust, so the declaration is pinned in the source text.
+    /// expressible on stable Rust, so the declaration is pinned in the production
+    /// source text, which is read from disk and truncated at the first
+    /// `#[cfg(test)]` module. This test's own assertion text is therefore never
+    /// searched, and the needle is assembled from fragments, so only removing the
+    /// `unsafe` qualifier can make it fail.
     #[test]
+    #[allow(clippy::expect_used)]
     fn set_data_is_an_unsafe_fn() {
-        let src = include_str!("err.rs");
-        assert!(src.contains("pub(crate) unsafe fn set_data("));
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/runtime/err.rs");
+        let src = std::fs::read_to_string(path)
+            .expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        let needle = concat!("pub(crate) unsafe fn ", "set_data(");
+        assert!(prod.contains(needle), "missing {needle}");
     }
 }
