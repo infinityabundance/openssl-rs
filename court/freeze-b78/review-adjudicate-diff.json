@@ -1,0 +1,91 @@
+{
+  "schema": "openssl-rs/review/adjudicate-diff/v1",
+  "generated_utc": "2026-11-14T16:14:42Z",
+  "reviewer": "independent adversarial reviewer (AGENTS.md sections 1-7, 15, 21, 22)",
+  "venue": {
+    "court": "docker/openssl-rs-court.sh (container openssl-rs-court:1, cgroup 8g, docker OOMKilled history true, memory.events oom=1 oom_kill=1)",
+    "host_free_g": "total 31, used 18, free 5, buff/cache 7, available 12; swap 28 of 31 used",
+    "compiles": "none (read-only review; no cargo/rustc, no closure run)"
+  },
+  "identities": {
+    "repository_head": "d01596f8280b0ef85fcdd247a775754a39a57d06",
+    "branch": "stage/p25/b75-ocsp",
+    "review_tool": {
+      "sha256": "facb2a97586493a8cf8fb6a073266046dfc1dd8138110f6c18c575b613e45426",
+      "head_at_review": "75add65c11b175bc53569dc0f24c4d767126d85b",
+      "reproduced": "git cat-file -p 75add65c1:forensics/tools/consumer_closure.py | sha256sum"
+    },
+    "closure_tool": {
+      "sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+      "current_worktree": true,
+      "commit": "bd518a2149699ee41ee4ba00a40fae6e573b30a6"
+    }
+  },
+  "diff": {
+    "command": "git diff 75add65c11b175bc53569dc0f24c4d767126d85b bd518a2149699ee41ee4ba00a40fae6e573b30a6 -- forensics/tools/consumer_closure.py",
+    "stat": "1782 insertions, 204 deletions, 1 file",
+    "changed_top_level_functions": [
+      {"name": "_carried_forward_coordinates", "new": true, "verdict_impact": "yes: supplies the ancestor (head, line, receipt) hops the migration arm consumes"},
+      {"name": "_census_operation_index", "new": true, "verdict_impact": "yes: supplies the (file, kind, item) -> line attribution index; without it migration refuses"},
+      {"name": "_digest_pinned_json", "new": true, "verdict_impact": "yes: integrity gate for each carry-chain receipt"},
+      {"name": "_digest_pinned_json_uncached", "new": true, "verdict_impact": "yes: same gate; sha256 compare of the receipt bytes"},
+      {"name": "migration_witness", "new": true, "verdict_impact": "yes: the content-migration proof; returns the witness that enables DISCHARGED"},
+      {"name": "migration_bindings", "new": true, "verdict_impact": "yes: uniqueness map; caller binds only when len == 1"},
+      {"name": "adjudicate", "modified": true, "verdict_impact": "yes: new census_ops parameter and the 31-line migration arm at new lines 31303-31333; the other adjudicate hunks are the migration witness plumbing (migration_map, migration variable, span_discharge.migration, status_reason suffix)"},
+      {"name": "build_receipt", "modified": true, "verdict_impact": "verdict-enabling plumbing plus an unrelated element-7 class: _census_operation_index(contracts) and census_ops=censused (lines 32376/32408) enable migration; ABI_CONTRACT_CONF_DEFAULT_METHOD added to two element-7 class sets (33219/33241) can change indirect-site/element-7 classification, not a scoped discharge"},
+      {"name": "self_test", "modified": true, "verdict_impact": "no production verdict; changes the control instrument (adds the migration fixture/controls)"},
+      {"name": "_pbe_outparam_self_test", "modified": true, "verdict_impact": "no production verdict; unrelated PBE self-test expansion"},
+      {"name": "_e7repin_search_self_test", "modified": true, "verdict_impact": "no production verdict; element-7 self-test"},
+      {"name": "_e7core_self_test", "modified": true, "verdict_impact": "no production verdict; element-7 self-test"},
+      {"name": "decoder_method_object_witness", "modified": true, "verdict_impact": "element-7 witness resolution only; not a scoped-discharge verdict"},
+      {"name": "_external_abi_index", "modified": true, "verdict_impact": "external ABI witness index; element-7/edge admission, not a scoped discharge"},
+      {"name": "e7repin_controls", "modified": true, "verdict_impact": "element-7 control construction only"},
+      {"name": "new E7/ABI/conf helpers", "new": true, "verdict_impact": "element-7 and indirect-site admission (ABI_CONTRACT_CONF_*, _led_table_cursor, _led_table_terminator_guard, _slot_reaching_stores, _polarity_selectors_for_site, _conf_method_* , conf_default_method_witness, _e7decoder_cursor_controls_body, _conf_default_method_self_test); they can change element-7 PASS/FAIL or contract-bounded counts, not an obligation's DISCHARGED status"}
+    ],
+    "verdict_changing_hunk": "adjudicate old 30260,9 -> new 31303,31 (the content-migration branch), with _census_operation_index/_carried_forward_coordinates/migration_witness/migration_bindings and the build_receipt plumbing. Evidence/b78-instrument-reconciliation.json names the same hunk.",
+    "observed_movement": "evidence/closure-ssh-b78.json (tool d3d01dfe): 283 DISCHARGED / 7 BLOCKED / 0 UNKNOWN. evidence/closure-ssh-b78b.json (tool f31816b1): 290 / 0 / 0. The 7-row delta is exactly the seven rows re-established by content in evidence/b78-review-migrated-rows.json."
+  },
+  "migration_arm_preconditions": {
+    "digest_pinned_chain": {
+      "implemented": "each hop receipt file is sha256-compared to record.receipt_sha256 by _digest_pinned_json_uncached; later hops come only from the pinned parent receipt's obligations[].carried_forward_from; a missing receipt, digest mismatch, or cycle ends the walk",
+      "sound": "partially: tamper after the pin is recorded is caught, but there is no independent anchor. resolve_carry_forward computes receipt_sha256 = sha256_file(path) from the file it selects, so a modified ACCEPTED closure is self-pinned on a fresh run (control f2 accepted one). The b78b chain root is evidence/closure-ssh-b78.json (pin c255b86a..., which we reproduced); its hop to evidence/closure-ssh-b76c.json is pinned inside that receipt. Both anchors are computed at run time, not checked against a committed manifest"
+    },
+    "ancestor_is_definition_line": {
+      "implemented": "resolve_operation_at_line at the hop head; span.def_line != hop.line -> skip",
+      "sound": "yes for the coordinate-vs-definition requirement (control c refused)"
+    },
+    "ancestor_body_equals_boundary_hash": {
+      "implemented": "hits filtered to span_sha256 == boundary.span_sha256; all resolving hops must agree (len(set(hash)) > 1 -> None); the unchanged candidate check recorded != boundary_span.sha256 still runs",
+      "sound": "yes as a content check (control d refused span-hash-mismatch); it is only as trustworthy as the boundary's recorded hash, which load_boundaries reads from an unpinned receipt"
+    },
+    "uniqueness_exactly_one_boundary": {
+      "implemented": "migration_bindings over boundaries_by_file; adjudicate binds only when len(map) == 1; two ids matching -> refuse (control b)",
+      "sound": "yes for owner uniqueness; it counts non-discharging and superseded boundaries too (over-refusal only), and keys by id so same-id duplicates collapse rather than count twice (no false discharge found)"
+    },
+    "different_operation_same_name": {
+      "implemented": "qualification is used by resolve_operation_span (an unqualified name with several definitions refuses), and scope_item is only the last component for the obligation/boundary filter",
+      "sound": "no: no check compares the ancestor hit's qualified identity with the boundary's resolved qualified identity. Control a bound a row whose ancestor coordinate was m1::copyctx's definition line to a boundary for m2::copyctx because the bodies were byte-identical. The seven real rows are not affected because all copyctx bodies in src/provider/digest.rs and src/provider/legacyprov.rs have distinct hashes at the candidate (we recomputed all 6 + 2), but the mechanism has no contract that establishes this"
+    },
+    "prior_refusal": {
+      "implemented": "no persistent refusal state; adjudicate recomputes from receipts. The arm is reached only for the span-unparsable class (candidate coordinate names no definition), and the disposition/conflict/hash/identity gates still run after it",
+      "sound": "it intentionally re-admits the coordinate refusal class (the seven rows), but cannot re-admit a RETAINED/withdrawn disposition (control e), a current-hash mismatch (d), a tampered pin (f1), or a coordinate the chain does not name. It inherits the pre-existing diagnostic-only conflict gate: a boundary withdrawn only by a same-operation BLOCKED disposition in another receipt still discharges unless --enforce-disposition-conflicts is set"
+    }
+  },
+  "control_method": "temporary git fixture (two copyctx definitions m1/m2, candidate adds three documentation lines), real consumer_closure.adjudicate()/migration_witness()/migration_bindings(), real ancestor resolution via git, scratch repo under /tmp inside the court; no closure run",
+  "controls": [
+    {"id": "base", "mutation": "unmodified fixture", "expected": "DISCHARGED", "observed": "DISCHARGED content-migrated-coordinate"},
+    {"id": "a", "mutation": "boundary operation m2::copyctx, ancestor coordinate is m1::copyctx's definition line, bodies byte-identical", "expected": "BLOCKED", "observed": "DISCHARGED content-migrated-coordinate (ancestor line 2, candidate line 11)"},
+    {"id": "b", "mutation": "second boundary with the identical body", "expected": "BLOCKED", "observed": "BLOCKED span-unparsable (migration map had 2 owners)"},
+    {"id": "c", "mutation": "chain coordinate is inside the definition, not the definition line", "expected": "BLOCKED", "observed": "BLOCKED span-unparsable"},
+    {"id": "d", "mutation": "recorded hash is the ancestor body, candidate body edited", "expected": "BLOCKED", "observed": "BLOCKED span-hash-mismatch"},
+    {"id": "e", "mutation": "boundary disposition RETAINED (BLOCKED) (withdrawn/rejected)", "expected": "BLOCKED", "observed": "BLOCKED disposition-is-not-safety-discharged"},
+    {"id": "f1", "mutation": "modified carry receipt, stale recorded pin", "expected": "BLOCKED", "observed": "BLOCKED span-unparsable (empty chain; no migration-specific reason recorded)"},
+    {"id": "f2", "mutation": "same modified receipt with the pin recomputed by the production selector rule", "expected": "BLOCKED (a sound chain would need an independent anchor)", "observed": "DISCHARGED content-migrated-coordinate"}
+  ],
+  "conclusion": {
+    "mechanism_sound_enough_for_discharge": false,
+    "realized_rows": "the seven b78 bindings are content-identical to the ancestor definitions and the candidate hashes reproduce (verified row 658: ancestor def_line 658 hash c639719f..., candidate def_line 672 hash c639719f...); the body hashes of all eight copyctx definitions in the two files are distinct, so control a's collision did not occur in the realized rows",
+    "but": "the mechanism is not a sound general proof: it lacks qualified-operation agreement, an ancestor/candidate ancestry check, and an independent input-digest anchor; control a is a reproduced false bind",
+    "file": "evidence/b78-adjudicate-diff-review.json carries the full precondition analysis, control table and verdict"
+  }
+}
