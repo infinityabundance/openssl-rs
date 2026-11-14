@@ -1,0 +1,457 @@
+{
+  "artifact": "b79-reconversion-review",
+  "kind": "independent source-level review of the safe->unsafe reconversion commits (no compile, no runtime, no discharge)",
+  "generated": "2026-11-14",
+  "campaign": "safe-c33 / stage/p25/b75-ocsp",
+  "path_taken": "FALLBACK",
+  "path_reason": "MAIN PATH refused under AGENTS.md 6.1.2 / 6.1.6: no memory cap can be established, so no heavy command was run.",
+
+  "venue_gate": {
+    "free_g": { "total": 31, "used": 23, "free": 5, "buff_cache": 2, "available": 7 },
+    "free_m": { "total": 32017, "used": 24195, "free": 5847, "buff_cache": 2427, "available": 7821 },
+    "swap_g": { "total": 31, "used": 31, "free_gib": 0.03, "exhausted": true },
+    "swap_m_free": 32,
+    "foreign_containers": ["openssl-rs-court (Up 20 hours)"],
+    "io_pressure": "some avg300=0.11 full avg300=0.11",
+    "required_by_6_1_2": "available >= 24 GiB",
+    "cap_formula": "min(8g, available - 16g) with floor 2g, requires available >= 18 GiB",
+    "observed_available_gib": 7,
+    "cap_established": false,
+    "verdict": "REFUSED",
+    "commands_not_run": [
+      "bash docker/openssl-rs-court.sh exec bash forensics/tools/build_phase2.sh",
+      "forensics/tools/build_openssh_closure.sh client-b79 / server-b79",
+      "cargo clippy --lib --tests ...",
+      "v1_census.py", 
+      "openssh closure resolver (ssh/sshd)",
+      "cargo test --lib"
+    ],
+    "note": "This is a refusal, not a failed run. It does not change any gate state."
+  },
+
+  "source_identity": {
+    "branch": "stage/p25/b75-ocsp",
+    "requested_head": "97a1240e7",
+    "actual_head": "9be31d4beb1faf955e72fb55b1cc8a3e33ff3f4c",
+    "head_ahead_by": 1,
+    "head_extra_commit": {
+      "sha": "9be31d4be",
+      "subject": "venue: refuse the b79 rebuild rather than run unprotected",
+      "src_files_touched": 0,
+      "files": ["evidence/b79-venue-refusal.json"],
+      "effect": "source identity of the review equals 97a1240e7; the reviewed code is unchanged"
+    },
+    "reviewed_commits": ["688c27cb8", "97a1240e7"],
+    "pre_conversion_base": "50aaeb6f9"
+  },
+
+  "scope_and_count": {
+    "brief_expected_converted_functions": 23,
+    "observed_converted_declarations": 24,
+    "per_commit": { "688c27cb8": 7, "97a1240e7": 17 },
+    "discrepancy": "24 fn declarations gained `unsafe` (7+17). The brief says 23 and commit 688c27cb8's message says 'nine'. No ninth declaration conversion exists in that commit: beyond the 7 declarations it adds 6 `const _: unsafe extern \"C\" fn(...)` ABI-shape assertions and comment/contract edits only. Count is to be reconciled before the delta queue is authored; the 7+17 partition below is exact.",
+    "method": "git diff -U0 50aaeb6f9..97a1240e7 over src/, classifying `-fn` -> `+unsafe fn` declaration pairs"
+  },
+
+  "functions": [
+    {
+      "name": "lib_ctx_write_lock", "file": "src/context/mod.rs", "line": 1558, "commit": "97a1240e7",
+      "declaration": "pub(crate) unsafe fn lib_ctx_write_lock(ctx: *mut c_void) -> c_int",
+      "safety_doc": "ctx is NULL (which answers 0) or a live context whose lock was created by context_init and is not concurrently released.",
+      "contract_covers": {"provenance": true, "alignment": true, "validity_init": true, "lifetime": true, "ownership": "not taken; stated"},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "Body null-checks, then dereferences (*ctx).lock. Lock liveness is exactly the stated precondition."
+    },
+    {
+      "name": "lib_ctx_read_lock", "file": "src/context/mod.rs", "line": 1573, "commit": "97a1240e7",
+      "declaration": "pub(crate) unsafe fn lib_ctx_read_lock(ctx: *mut c_void) -> c_int",
+      "safety_doc": "As lib_ctx_write_lock for the same context.",
+      "contract_covers": {"provenance": true, "alignment": true, "validity_init": true, "lifetime": true, "ownership": "not taken; stated"},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "Inherited contract is adequate; same body shape."
+    },
+    {
+      "name": "lib_ctx_unlock", "file": "src/context/mod.rs", "line": 1588, "commit": "97a1240e7",
+      "declaration": "pub(crate) unsafe fn lib_ctx_unlock(ctx: *mut c_void) -> c_int",
+      "safety_doc": "ctx is NULL or a live context whose lock this thread currently holds; the release must match the helper that acquired it.",
+      "contract_covers": {"provenance": true, "alignment": true, "validity_init": true, "lifetime": true, "ownership": "not taken; mutual-exclusion obligation stated"},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "Adds the hold/exclusive-acquire obligation the other two do not need. Good."
+    },
+    {
+      "name": "ossl_namemap_empty", "file": "src/context/namemap.rs", "line": 548, "commit": "97a1240e7",
+      "declaration": "pub(crate) unsafe fn ossl_namemap_empty(namemap: *mut OsslNamemap) -> c_int",
+      "safety_doc": "namemap is NULL (which answers 1) or a live OSSL_NAMEMAP that is not concurrently freed; its lock was created by the map's constructor.",
+      "contract_covers": {"provenance": true, "alignment": true, "validity_init": true, "lifetime": true, "ownership": "not taken; stated"},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "Also documents the data-race history (tf-tsan-parallel-gate-parallel) that motivates the read lock."
+    },
+    {
+      "name": "store_word", "file": "src/digest/md32.rs", "line": 254, "commit": "97a1240e7",
+      "declaration": "pub(crate) unsafe fn store_word(c: *mut u8, l: u32, little_endian: bool)",
+      "safety_doc": "c must point to four writable bytes, valid for the duration of the call.",
+      "contract_covers": {"provenance": "not stated; not needed (no release)", "alignment": true, "validity_init": true, "lifetime": true, "ownership": "not taken"},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "copy_nonoverlapping of exactly 4 bytes; extent and writability are the contract."
+    },
+    {
+      "name": "pkcs7_type_is_data", "file": "src/pkcs7/pk7_lib.rs", "line": 75, "commit": "97a1240e7",
+      "declaration": "pub(crate) unsafe fn pkcs7_type_is_data(p7: *const Pkcs7) -> bool",
+      "safety_doc": "p7 is NULL (which answers false) or a live PKCS7.",
+      "contract_covers": {"provenance": "not stated; not needed", "alignment": "implied by live", "validity_init": true, "lifetime": true, "ownership": "not taken"},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "Propagates the already-unsafe obj_nid_of; the conversion is a genuine narrowing."
+    },
+    {
+      "name": "pkcs7_type_is_signed", "file": "src/pkcs7/pk7_lib.rs", "line": 84, "commit": "97a1240e7",
+      "declaration": "pub(crate) unsafe fn pkcs7_type_is_signed(p7: *const Pkcs7) -> bool",
+      "safety_doc": "p7 is NULL (which answers false) or a live PKCS7.",
+      "contract_covers": {"provenance": "not stated; not needed", "alignment": "implied by live", "validity_init": true, "lifetime": true, "ownership": "not taken"},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "As above."
+    },
+    {
+      "name": "pkcs7_type_is_enveloped", "file": "src/pkcs7/pk7_lib.rs", "line": 93, "commit": "97a1240e7",
+      "declaration": "pub(crate) unsafe fn pkcs7_type_is_enveloped(p7: *const Pkcs7) -> bool",
+      "safety_doc": "p7 is NULL (which answers false) or a live PKCS7.",
+      "contract_covers": {"provenance": "not stated; not needed", "alignment": "implied by live", "validity_init": true, "lifetime": true, "ownership": "not taken"},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "As above."
+    },
+    {
+      "name": "pkcs7_type_is_signed_and_enveloped", "file": "src/pkcs7/pk7_lib.rs", "line": 102, "commit": "97a1240e7",
+      "declaration": "pub(crate) unsafe fn pkcs7_type_is_signed_and_enveloped(p7: *const Pkcs7) -> bool",
+      "safety_doc": "p7 is NULL (which answers false) or a live PKCS7.",
+      "contract_covers": {"provenance": "not stated; not needed", "alignment": "implied by live", "validity_init": true, "lifetime": true, "ownership": "not taken"},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "As above."
+    },
+    {
+      "name": "pkcs7_type_is_digest", "file": "src/pkcs7/pk7_lib.rs", "line": 111, "commit": "97a1240e7",
+      "declaration": "pub(crate) unsafe fn pkcs7_type_is_digest(p7: *const Pkcs7) -> bool",
+      "safety_doc": "p7 is NULL (which answers false) or a live PKCS7.",
+      "contract_covers": {"provenance": "not stated; not needed", "alignment": "implied by live", "validity_init": true, "lifetime": true, "ownership": "not taken"},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "As above."
+    },
+    {
+      "name": "pkcs7_get_detached", "file": "src/pkcs7/pk7_lib.rs", "line": 132, "commit": "97a1240e7",
+      "declaration": "pub(crate) unsafe fn pkcs7_get_detached(p7: *mut Pkcs7) -> bool",
+      "safety_doc": "p7 is live.",
+      "contract_covers": {"provenance": "not stated; not needed", "alignment": "implied by live", "validity_init": true, "lifetime": true, "ownership": "not taken; exclusivity not stated"},
+      "body_requires_matches_contract": "partial",
+      "verdict": "SOUND-WITH-NOTE",
+      "notes": "Takes *mut and forwards to PKCS7_ctrl, whose own contract is 'p7 is live; parg unused'. For command 2 the body only reads, so the missing aliasing sentence is not a soundness gap today; state 'read-only for this command' to keep it true if PKCS7_ctrl grows."
+    },
+    {
+      "name": "pkcs7_is_detached", "file": "src/pkcs7/pk7_lib.rs", "line": 141, "commit": "97a1240e7",
+      "declaration": "pub(crate) unsafe fn pkcs7_is_detached(p7: *mut Pkcs7) -> bool",
+      "safety_doc": "p7 is live.",
+      "contract_covers": {"provenance": "not stated; not needed", "alignment": "implied by live", "validity_init": true, "lifetime": true, "ownership": "not taken"},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "Composes two converted predicates; contract is exactly their union."
+    },
+    {
+      "name": "COMP_get_type", "file": "src/runtime/bio/comp.rs", "line": 239, "commit": "688c27cb8",
+      "declaration": "pub unsafe extern \"C\" fn COMP_get_type(meth: *const CompMethod) -> c_int",
+      "safety_doc": "meth must be NULL or point to a live CompMethod, properly aligned, fully initialised, valid for the call; provenance is the caller's; NC ownership taken.",
+      "contract_covers": {"provenance": true, "alignment": true, "validity_init": true, "lifetime": true, "ownership": true},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "Exemplary: names provenance, alignment, init, lifetime and states that the NULL test does not retroactively make a dangling pointer safe."
+    },
+    {
+      "name": "COMP_get_name", "file": "src/runtime/bio/comp.rs", "line": 262, "commit": "688c27cb8",
+      "declaration": "pub unsafe extern \"C\" fn COMP_get_name(meth: *const CompMethod) -> *const c_char",
+      "safety_doc": "As COMP_get_type; the returned pointer is borrowed from the method, may be NULL, valid only while the method is, and must not be released through the seam.",
+      "contract_covers": {"provenance": true, "alignment": true, "validity_init": true, "lifetime": true, "ownership": true},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "Return-lifetime and non-release obligations are stated explicitly."
+    },
+    {
+      "name": "CONF_set_default_method", "file": "src/runtime/conf/lib.rs", "line": 119, "commit": "97a1240e7",
+      "declaration": "pub unsafe extern \"C\" fn CONF_set_default_method(meth: *mut ConfMethod) -> c_int",
+      "safety_doc": "meth is NULL or a live, aligned CONF_METHOD table that stays live and unmodified until replaced or process end; stored borrowed and dereferenced later; init/create fields valid; no ownership; caller publishes for cross-thread observation.",
+      "contract_covers": {"provenance": true, "alignment": true, "validity_init": true, "lifetime": true, "ownership": true},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "Correctly treats the global borrow as outliving the call - the key hazard for this function."
+    },
+    {
+      "name": "set_data", "file": "src/runtime/err.rs", "line": 448, "commit": "97a1240e7",
+      "declaration": "pub(crate) unsafe fn set_data(&mut self, i: usize, data: *mut c_char, size: usize, flags: c_int)",
+      "safety_doc": "i is a live slot index; MALLOCED data is one whole seam block of >= size bytes, exclusively owned, single release by this state, not stack/interior/literal; unflaged data is borrowed and stays readable for size bytes; NULL is total.",
+      "contract_covers": {"provenance": true, "alignment": true, "validity_init": true, "lifetime": true, "ownership": true},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "The &mut self already establishes exclusivity. Contract is the strongest of the batch."
+    },
+    {
+      "name": "OPENSSL_init_crypto", "file": "src/runtime/init.rs", "line": 733, "commit": "97a1240e7",
+      "declaration": "pub unsafe extern \"C\" fn OPENSSL_init_crypto(opts: u64, settings: *const OpenSslInitSettings) -> c_int",
+      "safety_doc": "NULL settings is total; non-NULL must be live, aligned, with filename/appname NULL or NUL-terminated C strings valid for the whole call, not moved/freed/concurrently written; published to CONF_SETTINGS for the duration of the configuration only; no ownership.",
+      "contract_covers": {"provenance": true, "alignment": true, "validity_init": true, "lifetime": true, "ownership": true},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "Vacuously satisfied by the ~20 NULL-settings call sites; the two non-NULL callers are analysed below."
+    },
+    {
+      "name": "OBJ_NAME_get", "file": "src/runtime/obj.rs", "line": 2181, "commit": "688c27cb8",
+      "declaration": "pub unsafe extern \"C\" fn OBJ_NAME_get(name: *const c_char, type_: c_int) -> *const c_char",
+      "safety_doc": "name NULL or NUL-terminated, aligned, readable through the terminator, valid for the call; comparator contract applies; returned data is borrowed, valid only while installed; alias entries' data must be a live NUL-terminated name.",
+      "contract_covers": {"provenance": true, "alignment": true, "validity_init": true, "lifetime": true, "ownership": true},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "Also states the alias-chain consequence for the return value."
+    },
+    {
+      "name": "OBJ_NAME_add", "file": "src/runtime/obj.rs", "line": 2234, "commit": "688c27cb8",
+      "declaration": "pub unsafe extern \"C\" fn OBJ_NAME_add(name: *const c_char, type_: c_int, data: *const c_char) -> c_int",
+      "safety_doc": "name NUL-terminated and live for as long as the entry is installed; data is the opaque stored value, dereferenced only for ALIAS entries; per-type hash/cmp/free contract; no ownership taken; NULL name is the no-op.",
+      "contract_covers": {"provenance": true, "alignment": true, "validity_init": true, "lifetime": true, "ownership": true},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "The registry outlives the call, and the contract says so rather than only 'valid for the call'."
+    },
+    {
+      "name": "OBJ_NAME_remove", "file": "src/runtime/obj.rs", "line": 2298, "commit": "688c27cb8",
+      "declaration": "pub unsafe extern \"C\" fn OBJ_NAME_remove(name: *const c_char, type_: c_int) -> c_int",
+      "safety_doc": "name NULL or NUL-terminated and valid for the call; removal runs the type's destructor over the stored name/data, so those must still satisfy the OBJ_NAME_add contract; NULL is the no-op.",
+      "contract_covers": {"provenance": true, "alignment": true, "validity_init": true, "lifetime": true, "ownership": true},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "Correctly names the destructor-on-stored-pointers hazard."
+    },
+    {
+      "name": "SSL_COMP_get_name", "file": "src/ssl/ssl_ciph.rs", "line": 1822, "commit": "688c27cb8",
+      "declaration": "pub unsafe extern \"C\" fn SSL_COMP_get_name(comp: *const CompMethod) -> *const c_char",
+      "safety_doc": "comp NULL or live CompMethod, aligned, fully initialised, valid for the call; returned pointer borrowed from the method, may be NULL; NULL test does not make a dangling non-NULL pointer safe.",
+      "contract_covers": {"provenance": true, "alignment": true, "validity_init": true, "lifetime": true, "ownership": true},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "Forwards to COMP_get_name under exactly its precondition."
+    },
+    {
+      "name": "ssl_set_version_bound", "file": "src/ssl/ssl_conf.rs", "line": 578, "commit": "688c27cb8",
+      "declaration": "pub(crate) unsafe fn ssl_set_version_bound(method_version: c_int, version: c_int, bound: *mut c_int) -> bool",
+      "safety_doc": "bound is a valid, aligned, writable *mut c_int for the whole call; provenance is the caller's (the min/max_proto_version field of a live SslCtx/Ssl); exclusively borrowed; must not alias another live reference; the two integer parameters carry no precondition.",
+      "contract_covers": {"provenance": true, "alignment": true, "validity_init": true, "lifetime": true, "ownership": true},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "Store sites match the contract exactly (version==0 arm and the two committing arms); the non-matching method family returns without writing, as documented."
+    },
+    {
+      "name": "send_certificate_request", "file": "src/ssl/statem/statem_srvr.rs", "line": 286, "commit": "97a1240e7",
+      "declaration": "pub(crate) unsafe fn send_certificate_request(s: *mut Ssl) -> bool",
+      "safety_doc": "s is a live connection and is exclusively borrowed by the caller for this call; its pending_cipher field is NULL or a live cipher table.",
+      "contract_covers": {"provenance": true, "alignment": true, "validity_init": true, "lifetime": true, "ownership": "exclusivity stated (stronger than the body needs)"},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND-WITH-NOTE",
+      "notes": "Body reads only; the exclusivity sentence is stronger than required, so callers must establish something they do not document (see caller_analysis.weak_sites). Not a soundness gap."
+    },
+    {
+      "name": "send_server_key_exchange", "file": "src/ssl/statem/statem_srvr.rs", "line": 318, "commit": "97a1240e7",
+      "declaration": "pub(crate) unsafe fn send_server_key_exchange(s: *mut Ssl) -> bool",
+      "safety_doc": "s is a live connection; its pending_cipher field is NULL or a live cipher table.",
+      "contract_covers": {"provenance": true, "alignment": true, "validity_init": true, "lifetime": true, "ownership": "not taken; read-only"},
+      "body_requires_matches_contract": true,
+      "verdict": "SOUND",
+      "notes": "Null-tests pending_cipher before dereference; matches the contract exactly."
+    }
+  ],
+
+  "function_summary": {
+    "total": 24,
+    "sound": 22,
+    "sound_with_note": 2,
+    "contract_weaker_than_body": 0,
+    "missing_safety_doc": 0,
+    "verdict_counts_note": "No function's contract is weaker than what its body requires. Two notes are wording/strength issues (pkcs7_get_detached aliasing; send_certificate_request over-specification), neither a soundness gap."
+  },
+
+  "caller_analysis": {
+    "method": "grep every in-crate call site; read the enclosing unsafe block and its SAFETY comment; test whether the comment names an established precondition or restates the callee contract",
+    "call_site_counts": {
+      "lib_ctx_write_lock": 1, "lib_ctx_read_lock": 1, "lib_ctx_unlock": 3,
+      "ossl_namemap_empty": 1, "store_word": 24,
+      "pkcs7_type_is_*": "internal only (pkcs7_is_detached)",
+      "COMP_get_type": 1, "COMP_get_name": 1,
+      "CONF_set_default_method": 0, "SSL_COMP_get_name": 0,
+      "set_data": 7, "OPENSSL_init_crypto": 36,
+      "OBJ_NAME_get": 22, "OBJ_NAME_add": 14, "OBJ_NAME_remove": 6,
+      "ssl_set_version_bound": 5, "send_certificate_request": 7, "send_server_key_exchange": 6
+    },
+    "all_call_sites_have_unsafe_block": true,
+    "all_call_sites_have_safety_comment": true,
+    "established_precondition_verdicts": [
+      {"sites": "property/defn_cache.rs:254,318,269,381,395", "verdict": "PASS", "why": "comment names 'ctx is NULL or live per this function's contract, so it has a lock', which is the callee precondition; the enclosing function establishes its own ctx contract"},
+      {"sites": "context/namemap.rs:239", "verdict": "PASS-WITH-NOTE", "why": "names 'NULL or the live map lib_ctx_get_data resolved from a liveness-checked context' - established. The immediately preceding SAFETY comment is a stale duplicate belonging to prepopulate_legacy_names."},
+      {"sites": "digest/md32.rs:222,224,227,229; md4.rs:157-160; md5.rs:160-163; ripemd/sha1/sha2/sm3", "verdict": "PASS", "why": "each site states the four-writable-bytes extent derived from the staging buffer arithmetic directly above it"},
+      {"sites": "ssl/ssl_ciph.rs:1783 (COMP_get_type), 1830 (COMP_get_name)", "verdict": "PASS", "why": "both sit under SSL_COMP_add_compression_method / SSL_COMP_get_name contracts that require a live CompMethod"},
+      {"sites": "runtime/err.rs:1255,1294,1365,1530,1647,1709; err_state.rs:328", "verdict": "PASS", "why": "each names the fresh seam block and the ownership transfer; the two C-ABI arms (1530, 1709) cite ERR_set_error_data's documented ownership C contract"},
+      {"sites": "evp/legacy_evp.rs:119,125,154,160,172,178,212,231,258,322,507,512,540,572,580", "verdict": "PASS", "why": "comments separate the static object-table names from the caller's live method and state that the borrowed pointers outlive the entry - the actual precondition"},
+      {"sites": "evp/c_allc.rs:108, c_alld.rs:58", "verdict": "PASS", "why": "both alias/adder sites state that the strings are statics the object table owns and live for the process"},
+      {"sites": "cms/cms_enc.rs:1021,1022", "verdict": "PASS", "why": "test helper; the two names are statics the object table owns"},
+      {"sites": "ssl/ssl_lib.rs:4853,4870,5073,5090; ssl_conf.rs:648", "verdict": "PASS", "why": "each states that the passed field is an aligned, exclusively borrowed, writable slot of the live connection/context - the exact precondition"},
+      {"sites": "ssl/statem/statem_srvr.rs:581,704,721,733,741,3464; ssl_lib.rs:8207", "verdict": "PASS-WITH-NOTE (weak_sites)", "why": "all sit in blocks whose comment is 's is live'. That establishes liveness but not the second half of the callee contract (pending_cipher NULL-or-live) nor the stated exclusivity."},
+      {"sites": "ssl/statem/statem_clnt.rs:3638,3699", "verdict": "PASS-WITH-NOTE", "why": "same 's is live' block comment; callee reads only, so the pending_cipher obligation is the only one not individually cited"}
+    ],
+    "caller_passes_unestablishable_value": [
+      {
+        "site": "src/ssl/ssl_init.rs:62",
+        "callee": "OPENSSL_init_crypto",
+        "defect": "the exported OPENSSL_init_ssl contract (line 46) says only 'settings must be NULL or a live OPENSSL_INIT_SETTINGS', while the callee additionally requires filename/appname to be NUL-terminated and valid for the whole call and the object not to be concurrently written. The SAFETY comment says 'per this function's own contract', so it establishes strictly less than the callee needs.",
+        "severity": "contract weakening at an exported boundary (not UB in current in-crate use; reachable from C)",
+        "fix": "widen OPENSSL_init_ssl's # Safety to restate the settings field/lifetime obligations, and make the call-site comment cite field validity rather than 'this function's own contract'."
+      }
+    ],
+    "weak_sites": [
+      {
+        "sites": "statem_srvr.rs:581/704/721/733/741/3464, ssl_lib.rs:8207, statem_clnt.rs:3638/3699",
+        "issue": "block-level SAFETY comments cite only connection liveness; pending_cipher NULL-or-live is a connection invariant (set by cipher selection) that is never named at the site",
+        "risk": "low - the callee NULL-tests the field and a non-NULL value is a live published cipher table by construction; no safe caller can violate it",
+        "fix": "extend the block comment with 'pending_cipher is NULL or a published cipher table' or cite the invariant's owner"
+      }
+    ]
+  },
+
+  "qualifier_controls": {
+    "brief_expected": 8,
+    "observed": 12,
+    "per_commit": {"688c27cb8": 4, "97a1240e7": 8},
+    "would_fail_on_removal": {
+      "genuine": 1,
+      "vacuous": 11,
+      "detail": [
+        {"test": "the_type_predicates_and_detached_queries_are_unsafe_fns", "file": "src/pkcs7/pk7_lib.rs", "line": 1420, "genuine": true,
+         "why": "builds the needle with format!(\"pub(crate) unsafe fn {name}(\"), so the concatenated text does not occur literally in the file and the assertion really depends on the declaration"},
+        {"tests": [
+          "the_context_lock_helpers_are_unsafe_fns (context/mod.rs:1732)",
+          "namemap_empty_is_an_unsafe_fn (context/namemap.rs:1425)",
+          "store_word_is_an_unsafe_fn (digest/md32.rs:287)",
+          "the_two_exported_accessors_are_unsafe_fns (runtime/bio/comp.rs:457)",
+          "the_default_method_setter_is_an_unsafe_fn (runtime/conf/lib.rs:865)",
+          "set_data_is_an_unsafe_fn (runtime/err.rs:3376)",
+          "the_initialiser_is_an_unsafe_fn (runtime/init.rs:1385)",
+          "the_three_registry_entry_points_are_unsafe_fns (runtime/obj.rs:2600)",
+          "ssl_comp_get_name_is_an_unsafe_fn (ssl/ssl_ciph.rs:1872)",
+          "ssl_set_version_bound_is_an_unsafe_fn (ssl/ssl_conf.rs:2182)",
+          "the_server_predicates_are_unsafe_fns (ssl/statem/statem_srvr.rs:10225)"
+        ], "genuine": false,
+         "why": "each does include_str!(file) then src.contains(\"<literal>\") where the literal is present verbatim in that same test's own assert line. include_str! is the raw file including the #[cfg(test)] module, so the assertion is satisfied by itself and passes after the `unsafe` qualifier is removed. This is a vacuous control, not a regression detector."}
+      ]
+    },
+    "abi_shape_consts": {
+      "present": ["COMP_get_type", "COMP_get_name", "CONF_set_default_method", "OPENSSL_init_crypto", "OBJ_NAME_get", "OBJ_NAME_add", "OBJ_NAME_remove", "SSL_COMP_get_name"],
+      "controls_qualifier": false,
+      "why": "a safe fn item coerces to an `unsafe fn` pointer, which the comments in runtime/bio/comp.rs:271-277, runtime/obj.rs:2322-2326, runtime/conf/lib.rs, runtime/init.rs and pk7_lib.rs state correctly. They pin parameter/return types only.",
+      "contradicting_comment": "src/ssl/ssl_ciph.rs:1834-1835 claims the opposite ('a safe extern \"C\" fn item does not coerce ... removing the qualifier stops this compiling'). Under the Rust coercion rules that comment is wrong, so the const at :1836 is not a qualifier control either. Same-text comment contradicts the sibling in runtime/bio/comp.rs."
+    },
+    "net": "After removing this defect class, 1 of 12 controls would actually fail on qualifier removal. Until fixed, the qualifier of 23 of the 24 converted functions is unguarded by any test."
+  },
+
+  "abi_invariants": {
+    "method": "git grep counts and a normalised declaration-name digest at 50aaeb6f9 and 97a1240e7 (and 9be31d4be)",
+    "no_mangle_attribute_count": {"before": 6558, "after": 6558},
+    "repr_attribute_count": {"before": 855, "after": 855},
+    "no_mangle_declaration_name_set_sha256": {
+      "before": "abb194965de3eb98966ee924366ea3094ab0c67aaaf4883fb6d58474e9f54ce6",
+      "after": "abb194965de3eb98966ee924366ea3094ab0c67aaaf4883fb6d58474e9f54ce6",
+      "identical": true
+    },
+    "calling_convention": "unchanged: every converted extern declaration keeps `extern \"C\"`; only the `unsafe` qualifier was added",
+    "signature_types": "unchanged: parameter and return types are textually identical at every converted declaration (three were re-wrapped onto multiple lines only)",
+    "raw_text_count_deltas_explained": {
+      "#[repr(C)] occurrences (comments included) 1024 -> 1029": "five new doc-comment mentions of `#[repr(C)]` in md32/sha1/cipher contracts; no attribute added",
+      "extern \"C\" fn occurrences 11150 -> 11163": "the 7 new const ABI-shape assertions plus comment mentions; no calling convention changed"
+    },
+    "verdict": "NO ABI CHANGE OBSERVED at source level"
+  },
+
+  "defects": [
+    {
+      "id": "D1",
+      "severity": "high (control effectiveness, not soundness)",
+      "file_lines": "src/context/mod.rs:1734-1736; src/context/namemap.rs:1427; src/digest/md32.rs:289; src/runtime/bio/comp.rs:459-460; src/runtime/conf/lib.rs:867; src/runtime/err.rs:3378; src/runtime/init.rs:1387; src/runtime/obj.rs:2602-2604; src/ssl/ssl_ciph.rs:1874; src/ssl/ssl_conf.rs:2184; src/ssl/statem/statem_srvr.rs:10227-10228",
+      "what": "11 of the 12 qualifier-control tests are self-satisfying: include_str! includes the test module, and the needle literal appears in the assert itself.",
+      "impact": "Removing `unsafe` from 23 of the 24 converted declarations would not fail any test.",
+      "fix": "Follow pk7_lib.rs:1420: build the needle with format!/concat! so it does not occur literally (e.g. format!(\"pub(crate) unsafe fn {name}(\")), or truncate src at the first \"#[cfg(test)]\". Re-run the FAST gate."
+    },
+    {
+      "id": "D2",
+      "severity": "medium (documentation, control claim)",
+      "file_lines": "src/ssl/ssl_ciph.rs:1834-1836",
+      "what": "Comment claims a safe extern \"C\" fn item does not coerce to an unsafe extern \"C\" fn pointer, so the const assertion is called a compile-time qualifier control.",
+      "impact": "The claim is wrong (safe fn pointer is a subtype of unsafe fn pointer, as runtime/bio/comp.rs:271-277 states). The const pins only the signature, so SSL_COMP_get_name has no effective qualifier control.",
+      "fix": "Correct the comment to match comp.rs; rely on the (fixed) source-text test."
+    },
+    {
+      "id": "D3",
+      "severity": "low (comment hygiene)",
+      "file_lines": "src/context/namemap.rs:234-239",
+      "what": "Two SAFETY comments precede one statement; the first describes the pre-population, not ossl_namemap_empty.",
+      "fix": "Delete the stale first comment; keep the one that names NULL-or-live."
+    },
+    {
+      "id": "D4",
+      "severity": "low (contract strength / caller documentation)",
+      "file_lines": "src/ssl/statem/statem_srvr.rs:286-288 vs call sites 581/704/721/733/741/3464, src/ssl/ssl_lib.rs:8207, src/ssl/statem/statem_clnt.rs:3638/3699",
+      "what": "send_certificate_request's contract requires exclusive borrowing; every caller's SAFETY comment cites only 's is live'. The pending_cipher NULL-or-live obligation is likewise unnamed at the sites.",
+      "impact": "No reachable UB (the body reads only and the field is a published cipher table), but the caller comments do not establish the stated contract.",
+      "fix": "Either drop 'exclusively borrowed' (the body does not need it) or extend the call-site comments to name exclusivity and pending_cipher."
+    },
+    {
+      "id": "D5",
+      "severity": "medium (exported-boundary contract weakening)",
+      "file_lines": "src/ssl/ssl_init.rs:46 and 60-62",
+      "what": "OPENSSL_init_ssl documents settings as only 'NULL or a live OPENSSL_INIT_SETTINGS' and forwards it to OPENSSL_init_crypto, whose contract also requires NUL-terminated fields valid for the call and no concurrent writes.",
+      "impact": "A C caller satisfying the stated OPENSSL_init_ssl contract can still drive UB inside the callee; the crate's own SAFETY comment claims 'per this function's own contract'.",
+      "fix": "Restate the settings obligations in OPENSSL_init_ssl's # Safety; cite field validity at the call."
+    }
+  ],
+
+  "release_notes_what_a_rebuild_must_remeasure": [
+    "Venue: rerun the memory gate; a cap needs available >= 18 GiB (and >= 24 GiB for a build per 6.1.2) with non-exhausted swap. The 2026-11-14 reading (7 GiB available, 32 MiB swap free) was a refusal, so nothing in b79 has been compiled.",
+    "Fix D1 (and D2) before the rebuild, otherwise the b79 gate cannot demonstrably detect a lost `unsafe` qualifier.",
+    "Expect 24 new UNSAFE_FN_DEF obligations, not 23, unless the count discrepancy is resolved first (7 from 688c27cb8 + 17 from 97a1240e7).",
+    "The 57 contract edits (span hash moves) still need their own delta accounting; this review covers the declarations and their direct call sites only.",
+    "Exported symbol set should be bit-identical to b78: no_mangle attribute count and the normalised declaration-name digest are unchanged; verify with nm on the rebuilt .so rather than by source inspection.",
+    "ldd/ssh -V/tarball check and both closure runs (ssh, sshd) remain NOT_RUN; carry forward closure-ssh-b78c.json / closure-sshd-b78c.json as the comparison bases.",
+    "Full cargo test --lib (floor 1962, 0 failed, 42 ignored at a8676158f), clippy -D warnings and fmt --check remain NOT_RUN for b79.",
+    "Security-sensitive re-check: nothing in these 24 functions performs arithmetic on secret data; the reconversion changed only visibility of the unsafe obligation, so no new constant-time or cryptographic court is triggered by this batch alone."
+  ],
+
+  "does_not_prove": [
+    "Does not prove the crate compiles: no rustc/cargo invocation was permitted at this venue state.",
+    "Does not prove the 12 qualifier-control tests pass or fail: their behaviour is inferred from their source text. The D1 vacuity argument is textual (include_str! includes the test module) and should be confirmed by the rebuild with one negative control (temporarily strip a qualifier and confirm the test fails).",
+    "The D2 language-rule claim (safe fn pointer coerces to unsafe fn pointer) is asserted from the Rust coercion/subtyping rules, not measured here; the repo's own comp.rs comment agrees with it.",
+    "Does not prove any behaviour, memory-safety property or cryptographic property at runtime: no build, no test, no sanitizer, no Miri, no dudect.",
+    "Does not discharge any obligation and does not change any graduation state: this artefact is review evidence only (no SAFETY_DISCHARGED, no SAFE_COMPATIBLE).",
+    "Does not review the remaining contract-edit hunks in the two commits (the 57 edits: callback-type annotations, added unsafe blocks, comment rewrites) beyond confirming they do not alter exported symbols, #[repr] attributes or calling conventions.",
+    "Does not audit call sites in files outside the crate (consumers ssh/sshd) - the closure runs that would do that were refused.",
+    "Does not verify the authority differential for any of these functions."
+  ],
+
+  "receipt": {
+    "mechanism": "safe interfaces that dereference caller pointers, reconverted to unsafe fn",
+    "unsafe_eliminated": 0,
+    "unsafe_relocated": 24,
+    "unsafe_introduced": 24,
+    "hidden_obligations_found": 0,
+    "new_obligations_introduced": "24 caller-side pointer-validity obligations, all with # Safety text; 1 exported boundary (OPENSSL_init_ssl) under-specifies its forward (D5)",
+    "boundary_size": "24 declarations across 12 files; 1 defect blocks the qualifier guarantee (D1), 1 documentation contradiction (D2), 1 boundary weakening (D5), 2 low-severity comment issues (D3, D4)",
+    "verdict": "REVIEWED, NOT DISCHARGED"
+  }
+}
