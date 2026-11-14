@@ -1,0 +1,211 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/court-limits/v1",
+  "kind": "court-limits",
+  "receipt": "b79-court-limits-16g-16cpu",
+  "date": "2026-11-14T21:33Z",
+  "candidate": {
+    "source_head": "7c9d16d042da7125da1fd54f80bd777523d5fc0b",
+    "branch": "stage/p25/b75-ocsp",
+    "uncompiled_commits_under_test": ["688c27cb8", "97a1240e7", "5595a1f5e"]
+  },
+  "user_directive": {
+    "instruction": "Keep the court container at 16 GiB memory / 16 CPUs across the reboot; start the existing container rather than recreating it, and report host readings, applied limits and observed peak.",
+    "authority": "explicit user authorization, relayed by the orchestrator",
+    "scope": "memory and CPU limits of the existing openssl-rs-court container only",
+    "still_required": [
+      "report the host readings and the observed peak",
+      "never retry a command that is OOM-killed at the same size"
+    ]
+  },
+  "cap": {
+    "old": {
+      "requested": "8g (default OPENSSL_RS_COURT_MEM)",
+      "docker_host_config_memory_bytes": 8589934592,
+      "memory_swap_bytes": 8589934592,
+      "memory_reservation_bytes": 8589934592,
+      "cgroup_memory_max_bytes": 8589934592,
+      "recorded_before_raise_in": "evidence/b79-court-cap-16g.json",
+      "recorded_oom_before_raise": "memory.events oom=1 oom_kill=1; docker OOMKilled=true"
+    },
+    "new": {
+      "requested": "16g memory / 16 cpus (container created and the limits applied by the user)",
+      "docker_host_config_memory_bytes": 17179869184,
+      "memory_swap_bytes": 17179869184,
+      "memory_reservation_bytes": 17179869184,
+      "nanocpus": 16000000000,
+      "cgroup_memory_max_bytes": 17179869184,
+      "cgroup_memory_swap_max_bytes": 0,
+      "cgroup_cpu_max": "1600000 100000",
+      "cgroup_cpu_max_equivalent_cores": 16,
+      "verified_via": "docker inspect HostConfig.Memory/MemoryReservation/MemorySwap/NanoCpus and /sys/fs/cgroup/memory.max and cpu.max inside the container"
+    }
+  },
+  "why_the_container_was_stopped": {
+    "not_an_oom": true,
+    "docker_state_at_discovery": {
+      "status": "exited",
+      "exit_code": 255,
+      "error": "",
+      "oom_killed": false,
+      "started_at": "2026-11-14T20:57:04Z",
+      "finished_at": "2026-11-14T21:29:04Z",
+      "logs": "empty (docker logs --tail 60 produced no output)"
+    },
+    "host_boot_history": [
+      "boot -1: 2026-11-14 15:52:17 EST .. 16:04:41 EST (the court ran 15:57:04 .. ; interrupted)",
+      "boot  0: 2026-11-14 16:26:42 EST .. (current)"
+    ],
+    "explanation": "The court was started at 15:57 EST during the short pre-reboot uptime and was still running when that uptime ended at 16:04:41 EST. The container is --restart=no, so the host reboot ended it. dockerd itself did not come back after the reboot because docker.service is unit-file 'disabled' (preset: disabled) and nothing had connected to the socket-activation unit, so it stayed inactive until this session started docker.socket. On daemon restore dockerd stamped the prior run with ExitCode=255 ('Restoring containers' could not recover a state that was never cleanly stopped) and logged 'error unmounting container ... layer not mounted' for the restored container. 255 here is the restart/restore code, not an OOM (OOMKilled=false, memory.events oom=0) and not an application exit.",
+    "gate_log_torn_by_the_same_reboot": "court/freeze-b79/gates.log (15:45-15:58) ends mid `cargo test --lib` with no '=== exit=' line, and court/freeze-b79/clippy.time records 'sh: /usr/bin/time: No such file or directory'. The previous gate run therefore produced no usable result and was re-run from scratch in this session; the torn log is preserved as court/freeze-b79/gates-b79-interrupted.log."
+  },
+  "start_actions": {
+    "step_1_wrapper_up": {
+      "command": "bash docker/openssl-rs-court.sh up",
+      "exit": 2,
+      "output": "court container 'openssl-rs-court' already exists; run 'down' first",
+      "note": "do_up() is documented as creating a container and refuses when one exists; it is not idempotent for an existing container and it cannot apply --memory to an existing container anyway (limits are set at create time). No docker/ file was modified."
+    },
+    "step_2_docker_start": {
+      "command": "docker start openssl-rs-court",
+      "exit": 0,
+      "output": "openssl-rs-court",
+      "container_recreated": false,
+      "limits_preserved": true
+    },
+    "prerequisite_daemon_start": {
+      "problem": "docker.service inactive and /run/docker.sock absent after the reboot",
+      "action": "systemctl start docker.socket (socket activation; no root needed for this unit in this image), then the first client connection started docker.service",
+      "result": "docker.service active, docker version 29.9.3, /run/docker.sock present root:docker 0660"
+    }
+  },
+  "applied_limits_verified_now": {
+    "docker_inspect_hostconfig_memory_bytes": 17179869184,
+    "docker_inspect_hostconfig_memory_reservation_bytes": 17179869184,
+    "docker_inspect_hostconfig_memory_swap_bytes": 17179869184,
+    "docker_inspect_hostconfig_nanocpus": 16000000000,
+    "docker_inspect_pids_limit": 2048,
+    "docker_inspect_oom_score_adj": 500,
+    "docker_inspect_restart_policy": "no",
+    "cgroup_memory_max_bytes": 17179869184,
+    "cgroup_memory_swap_max_bytes": 0,
+    "cgroup_cpu_max": "1600000 100000",
+    "cgroup_cpu_max_equivalent_cores": 16,
+    "cgroup_nproc_reported_in_container": 30,
+    "cgroup_nproc_note": "nproc reports the host CPU count visible to the container (30 after the reboot, 32 before it); cpu.max (16 cores) is the binding quota in both cases",
+    "cgroup_pids_max": 2048,
+    "cgroup_memory_current_at_verification_bytes": 394080256,
+    "cgroup_memory_events_at_verification": "low 0 high 0 max 0 oom 0 oom_kill 0 oom_group_kill 0",
+    "docker_state_status": "running",
+    "in_container_openssl_cli": "absent (entrypoint guard satisfied)"
+  },
+  "host_at_session_start": {
+    "timestamp_utc": "2026-11-14T21:30Z",
+    "uptime": "up 2 min",
+    "free_g": {
+      "mem_total_gib": 45,
+      "mem_used_gib": 4,
+      "mem_free_gib": 39,
+      "mem_buff_cache_gib": 2,
+      "mem_available_gib": 41,
+      "swap_total_gib": 45,
+      "swap_used_gib": 0
+    },
+    "proc_meminfo": {
+      "MemTotal_kb": 48085060,
+      "MemAvailable_kb": 43414184,
+      "SwapTotal_kb": 48084988,
+      "SwapFree_kb": 48083572
+    },
+    "nproc_host": 30,
+    "io_pressure": "some avg10=0.02 avg60=0.14 avg300=0.11; full avg10=0.02 avg60=0.14 avg300=0.11 (idle)",
+    "docker_ps": "openssl-rs-court only (one heavy command at a time holds: no sibling venue is running)"
+  },
+  "compliance_statement": {
+    "section_6_1_formula": "OPENSSL_RS_COURT_MEM = min(8g, available - 16g), floor 2g",
+    "formula_result_at_observed_availability": "min(8g, 41g - 16g) = 8g",
+    "applied_cap": "16g",
+    "status": "USER-AUTHORIZED DEVIATION from AGENTS.md section 6.1 rule 2",
+    "statement": "The applied 16 GiB cap is twice the 8g ceiling that section 6.1's min(8g, available-16g) formula yields at this host's 41 GiB availability. It is applied because the user explicitly authorized it, and it is recorded here as a deviation to be reviewed, never as compliance. The 16 CPU quota likewise exceeds the wrapper's default --cpus=8.",
+    "why_the_risk_is_bounded": "The host has 41 GiB available and 45 GiB of unused swap, the container's swap allowance is pinned to 0 (memory.swap.max=0) so exceeding 16 GiB produces an in-container OOM kill instead of host-wide pressure, oom_score_adj=500 makes the disposable court the kernel's preferred victim, and one heavy command runs at a time with CARGO_BUILD_JOBS=8 / --test-threads=4.",
+    "mitigations_still_applied": [
+      "CARGO_BUILD_JOBS=8 (bounded parallelism)",
+      "cargo test --lib -- --test-threads=4",
+      "one heavy command at a time; docker ps and /proc/pressure/io checked before starting",
+      "free -g read before each heavy step and reported in court/freeze-b79/gates.log",
+      "an OOM-killed command is recorded and never retried at the same size"
+    ]
+  },
+  "gate_results_b79": {
+    "log": "court/freeze-b79/gates.log (this session, 2026-11-14T21:30Z onward); the reboot-torn pre-session log is court/freeze-b79/gates-b79-interrupted.log",
+    "steps": [
+      {
+        "step": "fmt",
+        "command": "cargo fmt --all -- --check",
+        "exit": 1,
+        "verdict": "FAIL",
+        "detail": "11 diffs, all the identical rustfmt join: 'let src = std::fs::read_to_string(path)' + '.expect(...)' must be one line. All 11 sites are the qualifier-control tests added by 5595a1f5e; that commit introduces exactly the 11 wrapped occurrences and the tree contains 0 already-joined ones, so the drift is attributable to that commit and to no other.",
+        "files": [
+          "src/context/mod.rs:1736",
+          "src/context/namemap.rs:1425",
+          "src/digest/md32.rs:291",
+          "src/runtime/bio/comp.rs:460",
+          "src/runtime/conf/lib.rs:868",
+          "src/runtime/err.rs:3380",
+          "src/runtime/init.rs:1388",
+          "src/runtime/obj.rs:2602",
+          "src/ssl/ssl_ciph.rs:1877",
+          "src/ssl/ssl_conf.rs:2184",
+          "src/ssl/statem/statem_srvr.rs:10233"
+        ]
+      },
+      {
+        "step": "clippy",
+        "command": "CARGO_BUILD_JOBS=8 cargo clippy --all-targets -- -D warnings",
+        "exit": 0,
+        "verdict": "PASS",
+        "detail": "cargo reported 'Finished dev profile in 0.06s': fingerprints from the pre-reboot run matched, so no crate was recompiled. No warning was emitted."
+      },
+      {
+        "step": "test-lib-4",
+        "command": "CARGO_BUILD_JOBS=8 OPENSSL_RS_COURT_DATA=12582912 cargo test --lib -- --test-threads=4",
+        "exit": 0,
+        "verdict": "PASS",
+        "counts": {"passed": 2321, "failed": 0, "ignored": 54, "measured": 0},
+        "duration_seconds": 124.66,
+        "baseline_b78": {"passed": 2309, "failed": 0, "ignored": 54},
+        "ignored_delta": 0
+      },
+      {
+        "step": "unsafe-fn",
+        "command": "CARGO_BUILD_JOBS=8 OPENSSL_RS_COURT_DATA=12582912 cargo test --lib -- unsafe_fn",
+        "exit": 0,
+        "verdict": "PASS",
+        "counts": {"passed": 12, "failed": 0, "ignored": 0},
+        "detail": "The eleven qualifier controls plus pkcs7::pk7_lib::tests::the_type_predicates_and_detached_queries_are_unsafe_fns, which also matches the 'unsafe_fn' filter. All pass."
+      }
+    ],
+    "conclusion": "Three of four gates pass; cargo fmt --all -- --check fails, so the candidate at 7c9d16d04 cannot be frozen as-is. Per the orchestrator's instruction the run stopped before STEP 3 (build_phase2 and the openssh closures), so no b79 artifact, census-b79 or closure-b79 evidence exists for this candidate."
+  },
+  "observed_peak": {
+    "cgroup_memory_peak_bytes_since_container_start": 974950400,
+    "cgroup_memory_peak_gib": 0.91,
+    "cgroup_memory_current_at_measurement_bytes": 553275392,
+    "oom_events_total": 0,
+    "oom_kill_events_total": 0,
+    "headroom_note": "The heaviest measured step (the full library suite, 2321 tests, 4 threads) peaked under 1 GiB of the applied 16 GiB, so this evidence does NOT establish that the pending build/closures needed more than the previous 8 GiB cap; it establishes that the gates fit comfortably.",
+    "build_and_closure_peak": "NOT_RUN (stopped at the fmt gate)"
+  },
+  "authority_prerequisite": {
+    "path": "forensics/authorities/prefix/openssl-3.6.4-production",
+    "present_after_reboot": true,
+    "rebuild_required": false,
+    "rebuild_run": false,
+    "contents_seen": ["bin/openssl", "bin/c_rehash", "lib/libcrypto.so.3", "lib/libssl.so.3", "lib/ossl-modules", "include"],
+    "build_records_sha256": "921ce360ba59cb4e0c39e3adf27c35c0e8256e37a039b50a7f51b953560232b0"
+  },
+  "non_claims": [
+    "This receipt is not a safety, compatibility or cryptographic measurement.",
+    "It records a venue configuration and the user's authorization; it does not make 16 GiB or 16 CPUs a section 6.1 compliant cap.",
+    "Exit code 255 is the docker restore code for a run interrupted by the reboot; it is not evidence about the candidate."
+  ]
+}

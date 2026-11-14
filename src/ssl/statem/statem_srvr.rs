@@ -10233,8 +10233,7 @@ mod unsafe_contract_controls {
     #[allow(clippy::expect_used)]
     fn the_server_predicates_are_unsafe_fns() {
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/ssl/statem/statem_srvr.rs");
-        let src = std::fs::read_to_string(path)
-            .expect("production source must be readable");
+        let src = std::fs::read_to_string(path).expect("production source must be readable");
         let prod = src
             .split_once("\n#[cfg(test)]")
             .map_or(src.as_str(), |(prod, _)| prod);

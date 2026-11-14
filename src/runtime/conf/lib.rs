@@ -868,8 +868,7 @@ mod tests {
     #[allow(clippy::expect_used)]
     fn the_default_method_setter_is_an_unsafe_fn() {
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/runtime/conf/lib.rs");
-        let src = std::fs::read_to_string(path)
-            .expect("production source must be readable");
+        let src = std::fs::read_to_string(path).expect("production source must be readable");
         let prod = src
             .split_once("\n#[cfg(test)]")
             .map_or(src.as_str(), |(prod, _)| prod);

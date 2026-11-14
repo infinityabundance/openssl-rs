@@ -460,8 +460,7 @@ mod comp_api_tests {
     #[allow(clippy::expect_used)]
     fn the_two_exported_accessors_are_unsafe_fns() {
         let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/runtime/bio/comp.rs");
-        let src = std::fs::read_to_string(path)
-            .expect("production source must be readable");
+        let src = std::fs::read_to_string(path).expect("production source must be readable");
         let prod = src
             .split_once("\n#[cfg(test)]")
             .map_or(src.as_str(), |(prod, _)| prod);
