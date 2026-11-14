@@ -1,20 +1,20 @@
 {
  "schema": "openssl-rs/campaign/safe-c33/freeze/v1",
  "candidate_tag": "b78",
- "generated_utc": "2026-11-14T15:54:33Z",
+ "generated_utc": "2026-11-14T19:24:46Z",
  "freeze_kind": "source-and-artefact freeze (S) with per-artefact ledger rebind",
- "freeze_reason": "b78 freezes the OCSP/element-7 candidate: the two b78b consumer closures are ACCEPTED 290/290 with element 7 PASS (0 target-bounded / 153 contract-bounded), the install and OpenSSH closure binaries are measured, the CONF-method witness closes the last target-bounded site, and the per-artefact ledger rebinds bind both ssh and sshd to the freeze. It also records, measured from their files, the L7 functional replay (including the authority-linked OpenSSH key-format differential) and the independent adjudication. The adjudication verdict is NOT ESTABLISHED, so this freeze states plainly that the candidate is NOT graduated.",
+ "freeze_reason": "b78 freezes the OCSP/element-7 candidate: the two b78c consumer closures are ACCEPTED 290/290 with element 7 PASS (0 target-bounded / 153 contract-bounded) under the repaired instrument 6e9cd261, the install and OpenSSH closure binaries are measured, the CONF-method witness closes the last target-bounded site, and the per-artefact ledger rebinds bind both ssh and sshd to the freeze. It also records, measured from their files, the L7 functional replay (including the authority-linked OpenSSH key-format differential), the independent adjudication, and the section-7 criterion-3 safety argument. The adjudication verdict and the safety argument are NOT ESTABLISHED, so this freeze states plainly that the candidate is NOT graduated.",
  "identity": {
-  "rule": "Two identities, never conflated (AGENTS.md section 22). S is the frozen source+instrument identity this evidence describes: production source bb7d5206acfb..., instrument f31816b1... and the b78b closures. E is the evidence commit that carries this freeze and the ledger receipts. Committing E moves HEAD; it does not change S, its artefacts or their digests.",
+  "rule": "Two identities, never conflated (AGENTS.md section 22). S is the frozen source+instrument identity this evidence describes: production source bb7d5206acfb..., instrument 6e9cd261... and the b78c closures. E is the evidence commit that carries this freeze and the ledger receipts. Committing E moves HEAD; it does not change S, its artefacts or their digests.",
   "production_source_head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
-  "production_source_head_note": "census identity.source_head: the source tree the census and the b78b closures analyse",
-  "instrument_head": "5590faa435aca1475aee2dee6a20a5e5b68ad700",
-  "instrument_head_note": "git HEAD when this freeze was generated; it is the commit that records the b78b closure and carries instrument f31816b1feec. The closures record their own repository_head (see closures.*.source_identity.repository_head).",
+  "production_source_head_note": "census identity.source_head: the source tree the census and the b78c closures analyse",
+  "instrument_head": "281c2110386dbc676262fcfa7390bb593d3cc360",
+  "instrument_head_note": "git HEAD when this freeze was generated; it is the commit that records the b78c closure and carries instrument 6e9cd261c396. The closures record their own repository_head (see closures.*.source_identity.repository_head).",
   "evidence_commit": "E",
   "evidence_commit_note": "E is the commit that carries this freeze and the rebind receipts; at generation it has not been created, so HEAD is the instrument/closure-record commit named above.",
   "closure_repository_heads": {
-   "ssh": "6cdf98598577e292003248503ca11ff9e1d4e8b0",
-   "sshd": "6cdf98598577e292003248503ca11ff9e1d4e8b0"
+   "ssh": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
+   "sshd": "b94602921976fbcdff8f626aa0de27a253b9fd5f"
   }
  },
  "source": {
@@ -36,15 +36,17 @@
    "rule": "sha256 over canonical JSON of sorted [relpath,size,sha256] for src/, Cargo.toml, Cargo.lock, build.rs (forensics/tools/phase7_courts.py::_source_tree_digest)"
   },
   "working_tree": {
-   "repository_head": "5590faa435aca1475aee2dee6a20a5e5b68ad700",
+   "repository_head": "281c2110386dbc676262fcfa7390bb593d3cc360",
    "branch": "stage/p25/b75-ocsp",
    "tracked_dirty": true,
    "modified_tracked_paths": [
+    "court/freeze-b78/FREEZE-b78.json",
     "court/freeze-b78/make_freeze_b78.py",
-    "evidence/b78-l7-replay.json"
+    "evidence/ssh-artifact-ledger-b78-rebind.json",
+    "evidence/sshd-artifact-ledger-b78-rebind.json"
    ],
    "untracked_paths": [
-    "evidence/closure-sshd-b76.json"
+    "evidence/b78-safety-argument.json"
    ]
   },
   "git_verification": {
@@ -54,8 +56,8 @@
  },
  "candidate_identity": {
   "source_head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
-  "instrument_head": "5590faa435aca1475aee2dee6a20a5e5b68ad700",
-  "tool_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+  "instrument_head": "281c2110386dbc676262fcfa7390bb593d3cc360",
+  "tool_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8",
   "census_sha256": "b4babdf7d341d1407aa7787c1f3388b207943923787e3cc158e0a27296c08ea0",
   "libcrypto_so_3_sha256": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
   "libssl_so_3_sha256": "4ad53379bbe44219d9514ded5b973a3ac40891e0a1598b8f0dcb8b51316a4d1b",
@@ -65,10 +67,10 @@
  },
  "tool": {
   "path": "forensics/tools/consumer_closure.py",
-  "sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+  "sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8",
   "version": 6,
-  "closure_bound_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
-  "sshd_closure_bound_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+  "closure_bound_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8",
+  "sshd_closure_bound_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8",
   "changed_since_closures": false,
   "self_test": {
    "command": "python3 forensics/tools/consumer_closure.py --self-test",
@@ -102,8 +104,8 @@
    },
    "campaign_status": {
     "path": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
-    "sha256": "e62413f04e393be6ce923a76c1d1d5caa19b3776f36204c75a67f762b68d12fe",
-    "size": 250346
+    "sha256": "0fe2834da0188e138421e692af81817f61d93655b3d2ac22616d4cb2789bc8b0",
+    "size": 255495
    },
    "enrolment_blockers": {
     "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json",
@@ -111,6 +113,714 @@
     "size": 71165
    }
   }
+ },
+ "tool_repair": {
+  "repair_record": {
+   "path": "court/freeze-b78/b78c-verifier-repair.json",
+   "sha256": "1b64a2d31004d937f81c6b7dc43535a10f1fa7374cb65038f05fb6a44cb08dd7",
+   "bytes": 9075,
+   "kind": "carry-forward-migration-arm-repair",
+   "candidate_source": {
+    "source_commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "inventory": "court/freeze-b78/census-b78.json",
+    "working_head": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
+    "branch": "stage/p25/b75-ocsp",
+    "tracked_tree_dirty": true
+   },
+   "tool": {
+    "path": "forensics/tools/consumer_closure.py",
+    "sha256_before": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+    "sha256_after": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8",
+    "reviewed_at": "d01596f8280b0ef85fcdd247a775754a39a57d06"
+   },
+   "controls_result": "10/10 behaved as expected",
+   "gates": {
+    "cargo_fmt_check": "PASS",
+    "cargo_clippy_all_targets_deny_warnings": "PASS",
+    "cargo_test_lib_test_threads_4": "2309 passed, 0 failed, 54 ignored",
+    "consumer_closure_self_test": "only pre-existing e7core default-context NOT_RUN (same as b78d baseline); migration controls pass",
+    "rust_source_changed": false
+   },
+   "residuals": [
+    "the closure receipts were produced with tracked_tree_dirty=true at repository_head b9460292; the operative candidate identity is the source-content digest at span_source_commit bb7d5206",
+    "the migration witness records only the chosen ancestor and the anchors; rejected hops are recorded on refusals, not in the success witness",
+    "the repository-HEAD anchor authenticates receipts committed at HEAD; a receipt committed as part of a doctored commit is outside this tool's threat model",
+    "the consumer-closure self-test's pre-existing e7core default-context NOT_RUN is unchanged and not a pass"
+   ]
+  },
+  "migration_controls": {
+   "path": "court/freeze-b78/controls-migration-b78c.json",
+   "sha256": "305448ccb41833dd9825c3c64c3cc57fa503faeef07f151f8ace2af82e690464",
+   "bytes": 8146,
+   "result": "10/10 behaved as expected",
+   "all_pass": true,
+   "controls": [
+    {
+     "id": "base",
+     "description": "positive: stale coordinate, committed content proof",
+     "old": "DISCHARGED",
+     "new": "DISCHARGED",
+     "expected_old": "DISCHARGED",
+     "expected_new": "DISCHARGED",
+     "new_reason": "-",
+     "pass": true
+    },
+    {
+     "id": "a",
+     "description": "same body under a different qualified context",
+     "old": "DISCHARGED",
+     "new": "BLOCKED",
+     "expected_old": "DISCHARGED",
+     "expected_new": "BLOCKED",
+     "new_reason": "ancestor-body-hash-mismatch,hop-qualified-context-mismatch",
+     "pass": true
+    },
+    {
+     "id": "b",
+     "description": "two boundaries with the identical body",
+     "old": "BLOCKED",
+     "new": "BLOCKED",
+     "expected_old": "BLOCKED",
+     "expected_new": "BLOCKED",
+     "new_reason": "non-unique-owner",
+     "pass": true
+    },
+    {
+     "id": "c",
+     "description": "ancestor coordinate inside a definition, not its def line",
+     "old": "BLOCKED",
+     "new": "BLOCKED",
+     "expected_old": "BLOCKED",
+     "expected_new": "BLOCKED",
+     "new_reason": "ancestor-body-hash-mismatch,hop-coordinate-not-the-definition-line",
+     "pass": true
+    },
+    {
+     "id": "d",
+     "description": "recorded ancestor hash != candidate body",
+     "old": "BLOCKED",
+     "new": "BLOCKED",
+     "expected_old": "BLOCKED",
+     "expected_new": "BLOCKED",
+     "new_reason": "span-hash-mismatch",
+     "pass": true
+    },
+    {
+     "id": "e",
+     "description": "previously RETAINED disposition",
+     "old": "BLOCKED",
+     "new": "BLOCKED",
+     "expected_old": "BLOCKED",
+     "expected_new": "BLOCKED",
+     "new_reason": "disposition-is-not-safety-discharged",
+     "pass": true
+    },
+    {
+     "id": "f1",
+     "description": "modified receipt, original pin retained",
+     "old": "BLOCKED",
+     "new": "BLOCKED",
+     "expected_old": "BLOCKED",
+     "expected_new": "BLOCKED",
+     "new_reason": "carry-forward-chain-empty,receipt-pin-not-anchored",
+     "pass": true
+    },
+    {
+     "id": "f2",
+     "description": "modified receipt, pin recomputed from the file",
+     "old": "DISCHARGED",
+     "new": "BLOCKED",
+     "expected_old": "DISCHARGED",
+     "expected_new": "BLOCKED",
+     "new_reason": "carry-forward-chain-empty,receipt-pin-not-anchored",
+     "pass": true
+    },
+    {
+     "id": "g",
+     "description": "absolute receipt path",
+     "old": "DISCHARGED",
+     "new": "BLOCKED",
+     "expected_old": "DISCHARGED",
+     "expected_new": "BLOCKED",
+     "new_reason": "carry-forward-chain-empty,receipt-path-absolute",
+     "pass": true
+    },
+    {
+     "id": "o4",
+     "description": "no candidate source commit bound",
+     "old": "DISCHARGED",
+     "new": "BLOCKED",
+     "expected_old": "DISCHARGED",
+     "expected_new": "BLOCKED",
+     "new_reason": "candidate-source-commit-missing",
+     "pass": true
+    }
+   ],
+   "failures": 0,
+   "real_seven_rows": [
+    {
+     "family": "ssh",
+     "id": "V1:src/provider/digest.rs:658:UNSAFE_FN_DEF",
+     "status": "DISCHARGED",
+     "binding": "content-migrated-coordinate",
+     "reason": "boundary OSSH-V1I-002 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by content-migrated-coordinate (src/provider/digest.rs, UNSAFE_FN"
+    },
+    {
+     "family": "ssh",
+     "id": "V1:src/provider/digest.rs:970:UNSAFE_FN_DEF",
+     "status": "DISCHARGED",
+     "binding": "content-migrated-coordinate",
+     "reason": "boundary OSSH-V1I-008 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by content-migrated-coordinate (src/provider/digest.rs, UNSAFE_FN"
+    },
+    {
+     "family": "ssh",
+     "id": "V1:src/provider/digest.rs:1165:UNSAFE_FN_DEF",
+     "status": "DISCHARGED",
+     "binding": "content-migrated-coordinate",
+     "reason": "boundary OSSH-V1I-011 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by content-migrated-coordinate (src/provider/digest.rs, UNSAFE_FN"
+    },
+    {
+     "family": "ssh",
+     "id": "V1:src/provider/digest.rs:1348:UNSAFE_FN_DEF",
+     "status": "DISCHARGED",
+     "binding": "content-migrated-coordinate",
+     "reason": "boundary OSSH-V1I-017 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by content-migrated-coordinate (src/provider/digest.rs, UNSAFE_FN"
+    },
+    {
+     "family": "ssh",
+     "id": "V1:src/provider/digest.rs:1898:UNSAFE_FN_DEF",
+     "status": "DISCHARGED",
+     "binding": "content-migrated-coordinate",
+     "reason": "boundary OSSH-V1I-024 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by content-migrated-coordinate (src/provider/digest.rs, UNSAFE_FN"
+    },
+    {
+     "family": "ssh",
+     "id": "V1:src/provider/legacyprov.rs:336:UNSAFE_FN_DEF",
+     "status": "DISCHARGED",
+     "binding": "content-migrated-coordinate",
+     "reason": "boundary OSSH-V1I-082 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by content-migrated-coordinate (src/provider/legacyprov.rs, UNSAF"
+    },
+    {
+     "family": "ssh",
+     "id": "V1:src/provider/legacyprov.rs:544:UNSAFE_FN_DEF",
+     "status": "DISCHARGED",
+     "binding": "content-migrated-coordinate",
+     "reason": "boundary OSSH-V1I-088 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by content-migrated-coordinate (src/provider/legacyprov.rs, UNSAF"
+    },
+    {
+     "family": "sshd",
+     "id": "V1:src/provider/digest.rs:658:UNSAFE_FN_DEF",
+     "status": "DISCHARGED",
+     "binding": "content-migrated-coordinate",
+     "reason": "boundary OSSH-V1I-002 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by content-migrated-coordinate (src/provider/digest.rs, UNSAFE_FN"
+    },
+    {
+     "family": "sshd",
+     "id": "V1:src/provider/digest.rs:970:UNSAFE_FN_DEF",
+     "status": "DISCHARGED",
+     "binding": "content-migrated-coordinate",
+     "reason": "boundary OSSH-V1I-008 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by content-migrated-coordinate (src/provider/digest.rs, UNSAFE_FN"
+    },
+    {
+     "family": "sshd",
+     "id": "V1:src/provider/digest.rs:1165:UNSAFE_FN_DEF",
+     "status": "DISCHARGED",
+     "binding": "content-migrated-coordinate",
+     "reason": "boundary OSSH-V1I-011 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by content-migrated-coordinate (src/provider/digest.rs, UNSAFE_FN"
+    },
+    {
+     "family": "sshd",
+     "id": "V1:src/provider/digest.rs:1348:UNSAFE_FN_DEF",
+     "status": "DISCHARGED",
+     "binding": "content-migrated-coordinate",
+     "reason": "boundary OSSH-V1I-017 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by content-migrated-coordinate (src/provider/digest.rs, UNSAFE_FN"
+    },
+    {
+     "family": "sshd",
+     "id": "V1:src/provider/digest.rs:1898:UNSAFE_FN_DEF",
+     "status": "DISCHARGED",
+     "binding": "content-migrated-coordinate",
+     "reason": "boundary OSSH-V1I-024 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by content-migrated-coordinate (src/provider/digest.rs, UNSAFE_FN"
+    },
+    {
+     "family": "sshd",
+     "id": "V1:src/provider/legacyprov.rs:336:UNSAFE_FN_DEF",
+     "status": "DISCHARGED",
+     "binding": "content-migrated-coordinate",
+     "reason": "boundary OSSH-V1I-082 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by content-migrated-coordinate (src/provider/legacyprov.rs, UNSAF"
+    },
+    {
+     "family": "sshd",
+     "id": "V1:src/provider/legacyprov.rs:544:UNSAFE_FN_DEF",
+     "status": "DISCHARGED",
+     "binding": "content-migrated-coordinate",
+     "reason": "boundary OSSH-V1I-088 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by content-migrated-coordinate (src/provider/legacyprov.rs, UNSAF"
+    }
+   ],
+   "old_tool": "git HEAD:forensics/tools/consumer_closure.py",
+   "new_tool": "/work/forensics/tools/consumer_closure.py"
+  },
+  "migrated_rows_review": {
+   "path": "evidence/b78-review-migrated-rows.json",
+   "sha256": "5d8e376f7b08b6b0a0d6b058ed19ce37180ebb739650708e554dc9d0017778a7",
+   "bytes": 19609,
+   "result": {
+    "rows_reviewed": 7,
+    "accept": 7,
+    "returned_to_blocked": 0,
+    "rows_with_documentation_residual": 2,
+    "hashes_independently_recomputed_at_candidate": 7,
+    "hashes_independently_recomputed_at_ancestor_head": 7,
+    "verdict_basis": "body content + contract + establishing caller at b78, not the migration binding",
+    "migration_binding_not_relied_on": true
+   },
+   "rows": 7,
+   "what_this_does_not_establish": [
+    "No runtime/ASan/Miri evidence: nothing was compiled or executed in this session.",
+    "No proof of absence of UB by a safe Rust caller across the whole closure; this is seven sites.",
+    "The two documentation residuals are recorded, not repaired (no receipt edits in this task).",
+    "A hash match proves text identity, not that the text is safe; the verdict rests on the caller/ABI argument above."
+   ]
+  },
+  "instrument_review": {
+   "path": "evidence/b78-adjudicate-diff-review.json",
+   "sha256": "f5a0a1040a475c8bd10df349c77a110b298775cd3465fbfa8e8ac870ea4f1faf",
+   "bytes": 16724,
+   "verdict": {
+    "mechanism_state": "OWNERSHIP_RECONSTRUCTED / CONTRACTED, not SAFETY_DISCHARGED",
+    "mechanism_sound_enough_to_justify_the_seven_discharges": false,
+    "seven_rows": "On the migration mechanism's evidence the seven must return to BLOCKED: the mechanism has a reproduced false bind (control a), no independent input anchor (f2) and an unchecked qualification assumption. They may remain DISCHARGED only if the closure explicitly cites the independent per-row content proof in evidence/b78-review-migrated-rows.json (which recomputed ancestor and candidate hashes and re-read the callers) and records that the migration binding itself is not the discharge evidence; the review's migration_binding_not_relied_on=true is exactly that separation. As currently produced, evidence/closure-ssh-b78b.json and evidence/closure-sshd-b78b.json present the 290/290 as tool output, so for closure purposes the seven are BLOCKED until the tool is repaired or the closure is re-issued with the per-row evidence binding",
+    "why_not_documentation": "the missing qualified-identity comparison is a hidden obligation discovered by an adversarial control, not a documentation gap. Section 7 criterion 1 and the section 6 STOP condition (new hidden obligation) apply",
+    "what_the_seven_rows_do_establish": "for each of the seven, the recorded coordinate was the definition line of the same qualified operation at ancestor head 0238c6e4ad; the normalised body there hashes to the boundary's recorded span; the candidate definition has the same hash; the candidate census attributes the operation to the resolved definition line; the caller/contract was re-read at b78 (evidence/b78-review-migrated-rows.json). That is a content proof. It is not a proof that the instrument's migration path is sound"
+   },
+   "required_additional_obligations": [
+    "O1 qualified-operation agreement: require the ancestor hit's qualified_identity to equal the candidate resolved qualified_identity (and the boundary's qualified operation), or refuse the migration; scope_item alone is insufficient",
+    "O2 ancestry: require the hop head to be an ancestor of (or equal to) the candidate span_source_commit (git merge-base --is-ancestor), not merely to exist in the object database",
+    "O3 evidence-input integrity: bind the boundary receipts' digests (the source of span_sha256) and the carry-forward closure's digest to a committed manifest or freeze and check that manifest in the tool; do not compute the only pin from the file selected at run time",
+    "O4 fail closed when source_commit is unset: a migration bind must not be available when the candidate head is unknown, because the 'skip the candidate head' guard is then disabled",
+    "O5 per-hop refusal reasons: record receipt-missing / pin-mismatch / not-the-definition-line / body-hash-mismatch / census-absent / non-unique-owner on the obligation; today f1 and c both surface only span-unparsable",
+    "O6 uniqueness scope: decide and document whether non-discharging siblings may block an owner (currently they do), and key the map by (receipt, id) or boundary object rather than id alone",
+    "O7 path confinement: _digest_pinned_json should reject an absolute receipt path; a carry pin is evidence only if it names a repository-relative evidence file"
+   ],
+   "residual_risks": [
+    "the b78b closures were produced with tracked_tree_dirty=true at repository_head 6cdf9859 while joining obligations at span_source_commit bb7d5206; the operative identity is the source-content digest, not the commit",
+    "the carry-forward source for b78b is the same-artifact closure evidence/closure-ssh-b78.json (sha 3b282f43 for both runs). The discovery path would have skipped a same-sha closure; only an explicit --carry-forward-closure selects it, and that selection is process evidence, not a property the tool enforces",
+    "the default ENFORCE_DISPOSITION_CONFLICTS=False means a boundary withdrawn only by a conflicting BLOCKED disposition can still discharge; migration does not strengthen this and does not consult supersession on admission",
+    "the self-test for f31816b1 is NOT_RUN (no stored log after commit bd518a214); this review's controls are direct function-level evidence, not a self-test pass",
+    "the seven-row content proof is source-level: no build, Miri, ASan or runtime control ran at this candidate (section 6.1 floor not met; available 12 GiB)",
+    "the migration witness records only the chosen ancestor, not the rejected hops; a future edit to the ancestor or to the candidate body is still caught by the span hash, but the reasoning trail is thinner than the uniqueness check implies"
+   ]
+  },
+  "instrument_reconciliation": {
+   "path": "evidence/b78-instrument-reconciliation.json",
+   "sha256": "bb931d5bbb0a2494adcfc4811f5f4bcbb6c52b07f4fd1bd3464bc7e11360f9e7",
+   "bytes": 14776,
+   "conclusion": {
+    "instrument_split_invalidates_review": false,
+    "instrument_split_invalidates_closure_counts": "no, but it binds them to f31816b1 and makes the seven-row movement attributable to the named migration hunk",
+    "verdict_changing_hunk_present": true,
+    "verdict_changing_hunk": "adjudicate b 31303-31333 plus the census_ops plumbing (class B). It is not an element-7 or self-test hunk.",
+    "unexplained_verdict_change": "none: the movement is 7 rows, matches b78b-copyctx-binding.json exactly, and each row was independently re-established at b78 in evidence/b78-review-migrated-rows.json",
+    "still_residual": [
+     "no stored --self-test log for the final instrument f31816b1; the four stored logs predate commit bd518a214 and are not evidence about it",
+     "the self-test was NOT_RUN in this session because the section 6.1 memory floor is not met"
+    ]
+   },
+   "answer": {
+    "review_verdicts": "NOT invalidated. Every ACCEPT/REJECT is the reviewer's source-level judgment; the instrument supplied span resolution, span hashes and negative controls, never the judgment.",
+    "cohort": "NOT invalidated. The 65 boundaries are enumerated by id in the regenerated receipts; the instrument locates and hashes them, it does not decide membership.",
+    "closure_counts": "TOOL-BOUND to f31816b1 and must be cited that way. One changed hunk on the adjudication path can and did move 7 rows from BLOCKED to DISCHARGED between closure-ssh-b78 (tool d3d01dfe) and closure-ssh-b78b (tool f31816b1). That hunk is named below and its seven affected rows are re-reviewed in evidence/b78-review-migrated-rows.json.",
+    "silent_verdict_change": false
+   }
+  },
+  "statement": "the final instrument is 6e9cd261 (the anchored migration arm); the repair record names f31816b1 -> 6e9cd261 and the ten-control table records 10/10 behaved as expected (controls a/b/c now refuse where the old arm discharged). The seven rows moved by the earlier migration hunk are independently re-established at b78 in evidence/b78-review-migrated-rows.json (7/7 accept; migration binding not relied on). The instrument review requires O1-O4 (qualified-operation agreement, ancestry, evidence-input integrity, fail closed); the repaired arm's controls exercise them. The b78c closures bind 6e9cd261."
+ },
+ "safety_argument": {
+  "path": "evidence/b78-safety-argument.json",
+  "sha256": "521970d2a00e970706f6458d2e1393289e138de6ee2a21e1cad2bb1ed248e3dc",
+  "bytes": 27054,
+  "schema": "openssl-rs/campaign/safe-c33/safety-argument/v1",
+  "criterion": "no safe-Rust caller can cause undefined behaviour through the safe interfaces, within the declared and established contract scope",
+  "verdict_totals": {
+   "SAFETY_DISCHARGED": 0,
+   "OWNERSHIP_RECONSTRUCTED": 0,
+   "NOT_ESTABLISHED": 7,
+   "mechanisms": 7
+  },
+  "per_mechanism": {
+   "EVP_PKEY_PROVIDER": "NOT_ESTABLISHED",
+   "X509_VERIFY_POLICY": "NOT_ESTABLISHED",
+   "RAND_CMS_STORE_KEYFMT": "NOT_ESTABLISHED",
+   "SSL_SESSION": "NOT_ESTABLISHED",
+   "C_ABI_CONTRACT": "NOT_ESTABLISHED",
+   "RUNTIME_CONCURRENCY": "NOT_ESTABLISHED",
+   "BIO": "NOT_ESTABLISHED"
+  },
+  "mechanisms": [
+   {
+    "id": "EVP_PKEY_PROVIDER",
+    "obligations": 116,
+    "reviewed_at_b78": 43,
+    "outside_b78_cohort": 73,
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 80,
+     "operation_level_safety_only": 36,
+     "cabi_contract_record": 0,
+     "no_contract": 0
+    },
+    "verdict": "NOT_ESTABLISHED",
+    "residual": "73/116 caller closures not re-established at bb7d5206a; 36/116 contracts exist only as an operation-level SAFETY block with no fn-level # Safety; the digest_impl! macro body carries 5 unsafe extern C fns (dupctx, internal_init, internal_final, update, get_params) without # Safety that are outside the 65-site reviewed cohort; no Miri/ASan/TSan."
+   },
+   {
+    "id": "X509_VERIFY_POLICY",
+    "obligations": 122,
+    "reviewed_at_b78": 5,
+    "outside_b78_cohort": 117,
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 114,
+     "operation_level_safety_only": 5,
+     "cabi_contract_record": 1,
+     "no_contract": 2
+    },
+    "verdict": "NOT_ESTABLISHED",
+    "residual": "117/122 caller closures not re-established at bb7d5206a; 5/122 operation-level SAFETY only; 2 admission-record sites have no per-site inventory record and rest on the admission reason; BOUNDARY adjudication of the remaining contract-bounded boundaries is NOT_RUN; no Miri/ASan."
+   },
+   {
+    "id": "RAND_CMS_STORE_KEYFMT",
+    "obligations": 27,
+    "reviewed_at_b78": 14,
+    "outside_b78_cohort": 13,
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 8,
+     "operation_level_safety_only": 19,
+     "cabi_contract_record": 0,
+     "no_contract": 0
+    },
+    "verdict": "NOT_ESTABLISHED",
+    "residual": "13/27 caller closures not re-established at bb7d5206a; 19/27 operation-level SAFETY only; B69 retains ossl_rand_cleanup_int as BLOCKED (uncalled/unexported) outside its scope; no secret-memory cleansing audit; no Miri/ASan."
+   },
+   {
+    "id": "SSL_SESSION",
+    "obligations": 14,
+    "reviewed_at_b78": 0,
+    "outside_b78_cohort": 14,
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 14,
+     "operation_level_safety_only": 0,
+     "cabi_contract_record": 0,
+     "no_contract": 0
+    },
+    "verdict": "NOT_ESTABLISHED",
+    "residual": "0/14 re-reviewed at b78; external serialisation for a second concurrent free and an entry point racing release is retained, not discharged; no TSan/Loom/runtime concurrency evidence."
+   },
+   {
+    "id": "C_ABI_CONTRACT",
+    "obligations": 5,
+    "reviewed_at_b78": 3,
+    "outside_b78_cohort": 2,
+    "ownership_state": "UNSAFE_OPEN",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 0,
+     "operation_level_safety_only": 2,
+     "cabi_contract_record": 3,
+     "no_contract": 0
+    },
+    "verdict": "NOT_ESTABLISHED",
+    "residual": "mechanism_state UNSAFE_OPEN; 2/5 operation-level SAFETY only; 3/5 rest on an inventory contract record that is not a discharge; v1l hidden obligation F09 retained; no fn-level # Safety on the C ABI hooks."
+   },
+   {
+    "id": "RUNTIME_CONCURRENCY",
+    "obligations": 4,
+    "reviewed_at_b78": 0,
+    "outside_b78_cohort": 4,
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 4,
+     "operation_level_safety_only": 0,
+     "cabi_contract_record": 0,
+     "no_contract": 0
+    },
+    "verdict": "NOT_ESTABLISHED",
+    "residual": "0/4 re-reviewed at b78; B60 independent-reviewer condition not met (reviewer is the orchestrating agent); no thread/TSan/Loom evidence; caller closure not re-established at bb7d5206a."
+   },
+   {
+    "id": "BIO",
+    "obligations": 2,
+    "reviewed_at_b78": 0,
+    "outside_b78_cohort": 2,
+    "ownership_state": "UNSAFE_OPEN",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 0,
+     "operation_level_safety_only": 0,
+     "cabi_contract_record": 0,
+     "no_contract": 2
+    },
+    "verdict": "NOT_ESTABLISHED",
+    "residual": "mechanism_state UNSAFE_OPEN; no fn-level # Safety (the unsafe marker is vestigial); only 2 of the mechanism's production operations are in the closure; the site argument is not a mechanism-wide discharge."
+   }
+  ],
+  "statement": "The \u00a77 criterion-3 whole-closure safety argument is NOT ESTABLISHED at b78c. The b78c closures are ACCEPTED and discharge 290/290 obligations at the tool's site level, but only 65 of the 290 obligations were independently re-read at b78; the remaining 225 are bound by an operation-span content hash whose own claim_scope excludes caller closures. 57 sites carry only an operation-level SAFETY block and no fn-level # Safety. The two mechanisms with UNSAFE_OPEN state (C_ABI_CONTRACT, BIO) are not mechanism-wide. No Miri/ASan/TSan/Loom/dudect run supports any mechanism. This verdict is consistent with evidence/b78-assurance-adjudication.json (NOT ESTABLISHED) and CAMPAIGN-STATUS ('no mechanism is discharged mechanism-wide').",
+  "residuals": [
+   {
+    "id": "SA-01",
+    "kind": "criterion-3/whole-closure",
+    "statement": "The argument is not established: 225/290 obligations rest on caller closures not re-established at bb7d5206a, and the closure's span hash explicitly excludes caller closures."
+   },
+   {
+    "id": "SA-02",
+    "kind": "contract-location",
+    "statement": "57 sites in the b78 review cohort have only an operation-level SAFETY block and no fn-level # Safety (R-BLOCKLEVEL-CONTRACT); the census classifies them uncontracted."
+   },
+   {
+    "id": "SA-03",
+    "kind": "instrument-review",
+    "statement": "No Miri (Stacked/Tree Borrows), ASan, TSan, Loom, dudect or ctgrind run supports the candidate; every review verdict is source-and-static-control."
+   },
+   {
+    "id": "SA-04",
+    "kind": "mechanism-state",
+    "statement": "C_ABI_CONTRACT and BIO are UNSAFE_OPEN mechanism-wide; SSL_SESSION retains external serialisation; RUNTIME_CONCURRENCY's B60 adjudication is by the orchestrating agent, not an independent reviewer."
+   },
+   {
+    "id": "SA-05",
+    "kind": "cross-cutting/secret-and-panic",
+    "statement": "No secret-cleansing audit and no panic-safety/failure-atomicity evidence for the stateful contexts; both are \u00a75/\u00a74 obligations, not documentation items."
+   },
+   {
+    "id": "SA-06",
+    "kind": "scoping-observation",
+    "statement": "The digest_impl! macro body contains 5 unsafe extern C fns without # Safety (dupctx, internal_init, internal_final, update, get_params) that are not in the 65-site reviewed cohort; whether the inventory's macro attribution accounts for them is not established by this argument."
+   }
+  ],
+  "review_final": {
+   "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b78-review-final.json",
+   "sha256": "2e377d556dbd9ee3a3e77362e91a04b41c4f2f55d8e2eb36bff7c1297f4d7f51",
+   "bytes": 71748,
+   "final_tally": {
+    "cohort": 65,
+    "ACCEPT": 65,
+    "REJECT": 0,
+    "ABSENT": 0
+   },
+   "residuals": [
+    {
+     "id": "R-PARAMS",
+     "state": "CLOSED-AT-SOURCE-NOT-RUNTIME",
+     "statement": "The b77 review's R-PARAMS (set_params / settable_params / get_params / gettable_params / get_size_ex forwarding a NULL algctx to provider callbacks) is closed at this candidate: all four parameter entry points now test `evp_md_ctx_algctx_is_missing` before the provider call and `EVP_MD_CTX_get_size_ex` refuses (-1) before either callback, and the divergence record and tests were extended.  Not re-measured at runtime here (no build)."
+    },
+    {
+     "id": "R-BLOCKLEVEL-CONTRACT",
+     "state": "OPEN-DOCUMENTATION",
+     "statement": "57 of the 65 sites have an explicit validity contract only as an operation-level `// SAFETY:` block comment plus the OSSL_FUNC callback ABI; they carry no `# Safety` section on the `unsafe extern \"C\" fn` interface.  This is the same class the b76 review accepted for its provider-callback sites, and it is not reclassified as a discharge; it is recorded so a future caller audit knows the contract is at the body, not the signature.",
+     "sites": [
+      "OSSH-V1I-067",
+      "OSSH-V1I-069",
+      "OSSH-V1I-051",
+      "OSSH-V1I-052",
+      "OSSH-V1I-065",
+      "OSSH-V1I-059",
+      "OSSH-V1I-063",
+      "OSSH-V1I-064",
+      "OSSH-V1I-061",
+      "OSSH-V1I-060",
+      "OSSH-V1I-049",
+      "OSSH-V1I-050",
+      "OSSH-V1I-053",
+      "OSSH-V1I-054",
+      "OSSH-V1L-010",
+      "OSSH-V1I-001",
+      "OSSH-V1I-007",
+      "OSSH-V1I-010",
+      "OSSH-V1I-016",
+      "OSSH-V1I-023",
+      "OSSH-V1I-026",
+      "OSSH-V1I-006",
+      "OSSH-V1I-009",
+      "OSSH-V1I-015",
+      "OSSH-V1I-030",
+      "OSSH-V1I-018",
+      "OSSH-V1I-004",
+      "OSSH-V1I-013",
+      "OSSH-V1I-029",
+      "OSSH-V1I-003",
+      "OSSH-V1I-012",
+      "OSSH-V1I-027",
+      "OSSH-V1I-020",
+      "OSSH-V1I-025",
+      "OSSH-V1I-022",
+      "OSSH-V1I-021",
+      "OSSH-V1I-005",
+      "OSSH-V1I-014",
+      "OSSH-V1I-019",
+      "OSSH-V1I-028",
+      "OSSH-V1I-081",
+      "OSSH-V1I-087",
+      "OSSH-V1I-086",
+      "OSSH-V1I-092",
+      "OSSH-V1I-084",
+      "OSSH-V1I-090",
+      "OSSH-V1I-083",
+      "OSSH-V1I-089",
+      "OSSH-V1I-085",
+      "OSSH-V1I-091",
+      "OSSH-V1L-006",
+      "OSSH-V1L-007",
+      "OSSH-V1L-011",
+      "OSSH-V1L-012",
+      "OSSH-V1L-013",
+      "OSSH-V1L-014",
+      "OSSH-V1L-015"
+     ]
+    },
+    {
+     "id": "R-REPAIR-RECEIPT-FIELD",
+     "state": "OPEN-EVIDENCE-SHAPE",
+     "statement": "b77-review-v1i-repaired.json records `span_sha256_reviewed` for sha3::keccak_final as dd7adaee\u2026 (the pre-repair body) while the body it accepted at the repair head hashes to 4dbe9bbd\u2026.  The verdict is sound (its `evidence` quotes the repaired body), but the field name does not mean what a reader would assume.  I re-read the body rather than rely on the field."
+    },
+    {
+     "id": "R-WITHDRAWN-NONCOHORT",
+     "state": "OPEN-STATUS-DOC",
+     "statement": "13 v1i and 6 v1l boundaries that were SAFETY_DISCHARGED in the prior receipts are outside this review's 65-site cohort; none was re-established at this candidate, so the regenerated receipts mark them RETAINED and they cannot discharge.  A further 5 v1i boundaries name items that no longer exist (retired thunks) and are recorded ABSENT.  The remaining 18 v1i and 9 v1l non-cohort boundaries were already non-discharging and keep their original text.  CAMPAIGN-STATUS.json still lists the 19 withdrawn boundaries in scoped_boundary_discharges; that status document was not edited in this batch and must be updated by the orchestrator, or the conflict is detect-only.  No obligation in either b77 closure depended on any of them."
+    },
+    {
+     "id": "R-CARRYFORWARD-COORDINATE",
+     "state": "OPEN-CLOSURE-INPUT",
+     "statement": "The b78 closure will carry obligations from closure-ssh-b77.json at their old lines (e.g. digest.rs copyctx 658).  The regenerated receipt declares 672.  The receipt's boundaries are also enrolled by the ledger path only where state.json carries a matching obligation_mechanisms record; where they are not, the carried old coordinate remains and must be re-resolved by the closure's current-census-line path.  This is a closure-run property, not a receipt defect, and it is why C9 supplies the resolved line."
+    },
+    {
+     "id": "R-NO-RUNTIME",
+     "state": "OPEN",
+     "statement": "No build, test, sanitizer, Miri or timing run was permitted at 12 GiB available (\u00a76.1).  Every verdict is a source-and-static-control verdict."
+    }
+   ],
+   "does_not_prove": [
+    "It does not establish SAFE_COMPATIBLE for any consumer family; a site receipt is not a family graduation.",
+    "It does not establish a boundary-level SAFETY_DISCHARGED for D-DIGEST-NULL-ALGCTX-1 or D-SHA3-FINAL-OUTLEN-1.",
+    "It does not prove that the b78 consumer closure discharges anything: the closure was not re-measured here.",
+    "It does not prove absence of UB at runtime; no dynamic instrument ran.",
+    "It does not establish the NUL-termination of an arbitrary external C caller's ENGINE default-algorithm string."
+   ],
+   "controls": {
+    "span_rule": [
+     {
+      "id": "C1-pristine-span",
+      "purpose": "resolve sha1::copyctx in the candidate blob",
+      "expected": "672-682",
+      "observed": "672-682",
+      "pass": true
+     },
+     {
+      "id": "C2-doc-only-edit",
+      "purpose": "a /// line above the fn must not move the span hash",
+      "expected": "identical hash",
+      "observed": "identical",
+      "pass": true
+     },
+     {
+      "id": "C3-code-edit",
+      "purpose": "a code line inside the span must change the hash",
+      "expected": "different hash",
+      "observed": "different",
+      "pass": true
+     },
+     {
+      "id": "C4-unqualified-identity",
+      "purpose": "bare `copyctx` must not select a definition",
+      "expected": "ambiguous-identity",
+      "observed": "ambiguous-identity",
+      "pass": true
+     },
+     {
+      "id": "C5-absent-item",
+      "purpose": "the retired x509_free_void thunk must not resolve",
+      "expected": "span-unparsable",
+      "observed": "span-unparsable",
+      "pass": true
+     },
+     {
+      "id": "C6-disposition-gate",
+      "purpose": "only a SAFETY_DISCHARGED prefix discharges",
+      "expected": "accept / reject / reject",
+      "observed": "matched",
+      "pass": true
+     },
+     {
+      "id": "C7-covers-site",
+      "purpose": "every accepted row's declared range covers its current census line, and the superseded line is outside it",
+      "expected": "0 uncovered, 0 stale-covered",
+      "observed": "0 uncovered [], 0 stale",
+      "pass": true
+     },
+     {
+      "id": "C7b-exact-range",
+      "purpose": "an accepted row declares the current line and no other range (no digit in the note is parsed as coverage)",
+      "expected": "0 inexact",
+      "observed": "0 inexact []",
+      "pass": true
+     },
+     {
+      "id": "C8-hash-binding",
+      "purpose": "each accepted row's span_sha256 reproduces at S",
+      "expected": "0 mismatches",
+      "observed": "0 mismatches []",
+      "pass": true
+     }
+    ],
+    "end_to_end_adjudication": {
+     "input": "the closure's own load_boundaries + adjudicate, with a synthetic plane that lists EVERY boundary id as scoped-discharged (the strongest possible input)",
+     "cohort_discharged": 65,
+     "cohort_not_discharged": [],
+     "withdrawn_boundaries_refused": [
+      {
+       "boundary": "OSSH-V1I-066",
+       "status": "BLOCKED",
+       "reason": "scoped discharge refused: boundary OSSH-V1I-066 is listed in a scoped discharge row, but its disposition 'RETAINED (BLOC"
+      },
+      {
+       "boundary": "OSSH-V1I-080",
+       "status": "BLOCKED",
+       "reason": "scoped discharge refused: boundary OSSH-V1I-080 is listed in a scoped discharge row, but its disposition 'RETAINED (BLOC"
+      },
+      {
+       "boundary": "OSSH-V1L-001",
+       "status": "BLOCKED",
+       "reason": "scoped discharge refused: boundary OSSH-V1L-001 is listed in a scoped discharge row, but its disposition 'RETAINED (BLOC"
+      },
+      {
+       "boundary": "OSSH-V1L-008",
+       "status": "BLOCKED",
+       "reason": "scoped discharge refused: boundary OSSH-V1L-008 is listed in a scoped discharge row, but its disposition 'RETAINED (BLOC"
+      }
+     ],
+     "absent_boundaries": [
+      {
+       "boundary": "OSSH-V1I-055",
+       "disposition": "RETAINED (BLOCKED) \u2014 the item no longer exists at this candidate; a retired definition dis",
+       "declared_span_hash_present": false,
+       "verdict": "ABSENT"
+      },
+      {
+       "boundary": "OSSH-V1I-062",
+       "disposition": "RETAINED (BLOCKED) \u2014 the item no longer exists at this candidate; a retired definition dis",
+       "declared_span_hash_present": false,
+       "verdict": "ABSENT"
+      }
+     ],
+     "pass": true
+    },
+    "not_run": [
+     "any compilation, library test, clippy or fmt (\u00a76.1 memory floor)",
+     "any runtime negative-control binary",
+     "a fresh b78 consumer closure (the receipts are inputs to it; the closure must be re-measured by the orchestrator)"
+    ]
+   }
+  },
+  "not_established": true,
+  "note": "this receipt closes the earlier 'no section-7 criterion-3 argument' residual by recording the argument and its verdict; the verdict is NOT ESTABLISHED for all seven mechanisms, so it does not promote the candidate and safe_compatible remains false."
  },
  "artefacts": {
   "install_prefix": "artifacts/phase2/install",
@@ -257,9 +967,9 @@
  },
  "closures": {
   "ssh": {
-   "receipt": "evidence/closure-ssh-b78b.json",
-   "sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
-   "bytes": 13344288,
+   "receipt": "evidence/closure-ssh-b78c.json",
+   "sha256": "45c39735f2f10e2b4c1137207b1565b3a945c325c356db8011f29a7311510964",
+   "bytes": 13351568,
    "artifact": "court/tmp/openssh-closure/client-b78/openssh-9.9p1/ssh",
    "artifact_sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
    "artifact_dynamic": {
@@ -274,7 +984,7 @@
     ],
     "rpath": []
    },
-   "closure_bound_tool_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+   "closure_bound_tool_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8",
    "tool_version": 6,
    "counts": {
     "reachable_files": 630,
@@ -330,7 +1040,7 @@
     "why": "every reachable unresolved site is contract-bounded by a public OpenSSL ABI contract (section 7 criterion 2); no target-bounded unresolved site and no unclassified site remains"
    },
    "source_identity": {
-    "repository_head": "6cdf98598577e292003248503ca11ff9e1d4e8b0",
+    "repository_head": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
     "branch": "stage/p25/b75-ocsp",
     "tracked_tree_dirty": true,
     "inventory_path": "court/freeze-b78/census-b78.json",
@@ -382,16 +1092,17 @@
    },
    "carry_chain": {
     "immediate_source": {
-     "receipt": "evidence/closure-ssh-b78.json",
-     "sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
-     "DISCHARGED": 283,
-     "BLOCKED": 7,
+     "receipt": "evidence/closure-ssh-b78b.json",
+     "sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
+     "DISCHARGED": 290,
+     "BLOCKED": 0,
      "UNKNOWN": 0,
      "verdict": "ACCEPTED",
      "artifact_sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
+     "tool_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
      "carried_forward_removed": 3
     },
-    "target": "evidence/closure-ssh-b78b.json",
+    "target": "evidence/closure-ssh-b78c.json",
     "carried_forward_removed": 3,
     "links": [
      {
@@ -402,6 +1113,7 @@
       "UNKNOWN": 0,
       "verdict": "ACCEPTED",
       "artifact_sha256": "0384f983b392b450a135b960c7b8f991636d509bf9ef5ff841e3d3b7367545d4",
+      "tool_sha256": "74e3953b36233b1071b9b720e1a0551e866801fa41db5e31b5f878fdabd46161",
       "carried_forward_removed": 3
      },
      {
@@ -412,6 +1124,7 @@
       "UNKNOWN": 0,
       "verdict": "ACCEPTED",
       "artifact_sha256": "b7c356681dd15e1ba146aaf51d8f8adbfd9da201d29966d664adbe122f84d2a4",
+      "tool_sha256": "74e3953b36233b1071b9b720e1a0551e866801fa41db5e31b5f878fdabd46161",
       "carried_forward_removed": 3
      },
      {
@@ -422,6 +1135,7 @@
       "UNKNOWN": 0,
       "verdict": "ACCEPTED",
       "artifact_sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
+      "tool_sha256": "d3d01dfe9127610c77b965491b08c61dde08098d3fc9f1a398fd8cbff0daee91",
       "carried_forward_removed": 3
      },
      {
@@ -432,16 +1146,28 @@
       "UNKNOWN": 0,
       "verdict": "ACCEPTED",
       "artifact_sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
+      "tool_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+      "carried_forward_removed": 3
+     },
+     {
+      "receipt": "evidence/closure-ssh-b78c.json",
+      "sha256": "45c39735f2f10e2b4c1137207b1565b3a945c325c356db8011f29a7311510964",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "verdict": "ACCEPTED",
+      "artifact_sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
+      "tool_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8",
       "carried_forward_removed": 3
      }
     ],
-    "note": "the b78b run carries from evidence/closure-ssh-b78.json, which is ACCEPTED at 283 discharged / 7 blocked; the b78b repair re-attributes the seven stale `copyctx` coordinates to their definition spans and the count becomes 290/290. No refused carry is used (unlike b76)."
+    "note": "the b78c run carries from evidence/closure-ssh-b78b.json, which is ACCEPTED at 290 discharged / 0 blocked, and re-runs the adjudication with the repaired instrument 6e9cd261 (anchored migration arm); the b78c closures are 290/290 at the same candidate source head. The b78b repair re-attributed the seven stale `copyctx` coordinates to their definition spans; the b78c run repeats the full queue with the repaired migration path and every seven row is independently re-established in evidence/b78-review-migrated-rows.json. No refused carry is used (unlike b76)."
    }
   },
   "sshd": {
-   "receipt": "evidence/closure-sshd-b78b.json",
-   "sha256": "4f0ca02f31ed4efa4901636ccd42402fe1562649cd532bbadcc1a3f95355e863",
-   "bytes": 13190868,
+   "receipt": "evidence/closure-sshd-b78c.json",
+   "sha256": "dd3c1fd7bf351303f7faf1e16268bcfc79f2bbf1a9fbb82db24821193a7993c2",
+   "bytes": 13198148,
    "artifact": "court/tmp/openssh-closure/server-b78/openssh-9.9p1/sshd",
    "artifact_sha256": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe",
    "artifact_dynamic": {
@@ -455,7 +1181,7 @@
     ],
     "rpath": []
    },
-   "closure_bound_tool_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+   "closure_bound_tool_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8",
    "tool_version": 6,
    "counts": {
     "reachable_files": 629,
@@ -511,7 +1237,7 @@
     "why": "every reachable unresolved site is contract-bounded by a public OpenSSL ABI contract (section 7 criterion 2); no target-bounded unresolved site and no unclassified site remains"
    },
    "source_identity": {
-    "repository_head": "6cdf98598577e292003248503ca11ff9e1d4e8b0",
+    "repository_head": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
     "branch": "stage/p25/b75-ocsp",
     "tracked_tree_dirty": true,
     "inventory_path": "court/freeze-b78/census-b78.json",
@@ -563,16 +1289,17 @@
    },
    "carry_chain": {
     "immediate_source": {
-     "receipt": "evidence/closure-sshd-b78.json",
-     "sha256": "dd8430916dc4ebd559b0c5bfda4415b4b2174e7d19e7e654f7f66d952407ee43",
-     "DISCHARGED": 283,
-     "BLOCKED": 7,
+     "receipt": "evidence/closure-sshd-b78b.json",
+     "sha256": "4f0ca02f31ed4efa4901636ccd42402fe1562649cd532bbadcc1a3f95355e863",
+     "DISCHARGED": 290,
+     "BLOCKED": 0,
      "UNKNOWN": 0,
      "verdict": "ACCEPTED",
      "artifact_sha256": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe",
+     "tool_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
      "carried_forward_removed": 3
     },
-    "target": "evidence/closure-sshd-b78b.json",
+    "target": "evidence/closure-sshd-b78c.json",
     "carried_forward_removed": 3,
     "links": [
      {
@@ -583,6 +1310,7 @@
       "UNKNOWN": 0,
       "verdict": "ACCEPTED",
       "artifact_sha256": "547c0d14d0fed0b38f0165af1f9c65cd86309a572cdbd30abbc1d8b7c89d2a1d",
+      "tool_sha256": "74e3953b36233b1071b9b720e1a0551e866801fa41db5e31b5f878fdabd46161",
       "carried_forward_removed": 36
      },
      {
@@ -593,6 +1321,7 @@
       "UNKNOWN": 0,
       "verdict": "ACCEPTED",
       "artifact_sha256": "d84d83ac98a8dae7c09f7023c8e792ce963a462095ebd487a68a90466273242a",
+      "tool_sha256": "74e3953b36233b1071b9b720e1a0551e866801fa41db5e31b5f878fdabd46161",
       "carried_forward_removed": 3
      },
      {
@@ -603,6 +1332,7 @@
       "UNKNOWN": 0,
       "verdict": "ACCEPTED",
       "artifact_sha256": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe",
+      "tool_sha256": "d3d01dfe9127610c77b965491b08c61dde08098d3fc9f1a398fd8cbff0daee91",
       "carried_forward_removed": 3
      },
      {
@@ -613,10 +1343,22 @@
       "UNKNOWN": 0,
       "verdict": "ACCEPTED",
       "artifact_sha256": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe",
+      "tool_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+      "carried_forward_removed": 3
+     },
+     {
+      "receipt": "evidence/closure-sshd-b78c.json",
+      "sha256": "dd3c1fd7bf351303f7faf1e16268bcfc79f2bbf1a9fbb82db24821193a7993c2",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "verdict": "ACCEPTED",
+      "artifact_sha256": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe",
+      "tool_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8",
       "carried_forward_removed": 3
      }
     ],
-    "note": "the b78b run carries from evidence/closure-sshd-b78.json, which is ACCEPTED at 283 discharged / 7 blocked; the b78b repair re-attributes the seven stale `copyctx` coordinates to their definition spans and the count becomes 290/290. No refused carry is used (unlike b76)."
+    "note": "the b78c run carries from evidence/closure-sshd-b78b.json, which is ACCEPTED at 290 discharged / 0 blocked, and re-runs the adjudication with the repaired instrument 6e9cd261 (anchored migration arm); the b78c closures are 290/290 at the same candidate source head. The b78b repair re-attributed the seven stale `copyctx` coordinates to their definition spans; the b78c run repeats the full queue with the repaired migration path and every seven row is independently re-established in evidence/b78-review-migrated-rows.json. No refused carry is used (unlike b76)."
    }
   },
   "copyctx_repair": {
@@ -994,7 +1736,7 @@
      "text": "def conf_default_method_witness(...)"
     },
     "controls_function": {
-     "line": 34602,
+     "line": 34871,
      "text": "def _conf_default_method_self_test(...)"
     }
    },
@@ -1032,7 +1774,7 @@
    },
    "statement": "the enumerated `default_CONF_method` -> `CONF_METHOD.init` dispatch is contract-bounded by the exported CONF_set_default_method and the documented conf_method_st.init field; four mutation controls (wrong slot, non-parameter setter, non-builtin fallback, wrong declared field) each refuse with the named reason and the admitted image is restored.  The target set is intentionally unbounded because the setter is public."
   },
-  "statement": "the 153 contract-bounded sites are intentionally unbounded: each is resolved to a declared external ABI contract (AGENTS.md section 7 criterion 2), not left as an unproven target. None is counted as target-bounded, and no site is unclassified. The b78 re-pin record is an intermediate FAIL at 1 target-bounded site (0x49a8dc); the CONF-method witness record resolves that site and the b78b closures measure 0/153 PASS."
+  "statement": "the 153 contract-bounded sites are intentionally unbounded: each is resolved to a declared external ABI contract (AGENTS.md section 7 criterion 2), not left as an unproven target. None is counted as target-bounded, and no site is unclassified. The b78 re-pin record is an intermediate FAIL at 1 target-bounded site (0x49a8dc); the CONF-method witness record resolves that site and the b78c closures measure 0/153 PASS."
  },
  "ledger_binding": {
   "source": "forensics/downstream/build-link-atlas.json",
@@ -1117,8 +1859,8 @@
   "per_artefact_rebind": {
    "ssh": {
     "receipt": "evidence/ssh-artifact-ledger-b78-rebind.json",
-    "sha256": "772aa33fd6d83242cdd6c87c3df43eb34aa7ca8ed47d43d9f2048ec12fd3b8e9",
-    "bytes": 11221534,
+    "sha256": "cfb98cc58d8354a1c323b6360c43afdd638cd71196475c61e9cdd8e08e122568",
+    "bytes": 11228163,
     "verdict": "ACCEPTED (all checks passed; not a closure run)",
     "artifact_rel": "ssh",
     "artifact_sha256_recorded": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
@@ -1140,8 +1882,8 @@
    },
    "sshd": {
     "receipt": "evidence/sshd-artifact-ledger-b78-rebind.json",
-    "sha256": "223addad8c24ca16941005f553356aa1931988abf8e5a4107cd735793aac83b7",
-    "bytes": 11090999,
+    "sha256": "185b5d183a4e00b581660aae60ef40c2af4f87d00c1c3794930c928d578f6c82",
+    "bytes": 11097628,
     "verdict": "ACCEPTED (all checks passed; not a closure run)",
     "artifact_rel": "sshd",
     "artifact_sha256_recorded": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe",
@@ -1366,11 +2108,11 @@
     "when": "tool_self_test"
    }
   ],
-  "host_available_gib_at_generation": 12.7,
+  "host_available_gib_at_generation": 8.1,
   "host_total_gib_at_generation": 31.3,
   "cgroup": {
    "memory_max_bytes": "8589934592",
-   "memory_current_bytes": "1783193600",
+   "memory_current_bytes": "1983365120",
    "memory_peak_bytes": "8589934592",
    "memory_swap_max_bytes": "0",
    "memory_swap_current_bytes": "0",
@@ -1436,6 +2178,7 @@
   },
   "outstanding": [
    "SAFE_COMPATIBLE is NOT established: independent adjudication verdict 'NOT ESTABLISHED' (see adjudication)",
+   "the section-7 criterion-3 safety argument is recorded in evidence/b78-safety-argument.json and its verdict is NOT_ESTABLISHED for all seven mechanisms (0 SAFETY_DISCHARGED / 0 OWNERSHIP_RECONSTRUCTED / 7 NOT_ESTABLISHED); 225/290 obligations rest on caller closures not re-established at bb7d5206a",
    "65 REVIEW_REQUIRED discharges (CAMPAIGN-STATUS current_applied_state.safe_compatible_blockers.projected_after_recensus.REVIEW_REQUIRED); the closure already records 56 openssh-v1i + 9 openssh-v1l discharges, but the campaign status requires a rebuild and re-census before the applied count changes",
    "BOUNDARY adjudication of the remaining contract-bounded boundaries",
    "SEAL (release build, complete probe suite, full forensic regeneration)"
@@ -1444,7 +2187,7 @@
    "count": 65,
    "source": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
    "json_pointer": "current_applied_state.safe_compatible_blockers.projected_after_recensus.REVIEW_REQUIRED",
-   "source_sha256": "e62413f04e393be6ce923a76c1d1d5caa19b3776f36204c75a67f762b68d12fe"
+   "source_sha256": "0fe2834da0188e138421e692af81817f61d93655b3d2ac22616d4cb2789bc8b0"
   }
  },
  "adjudication": {
@@ -1485,6 +2228,14 @@
  },
  "residuals": [
   {
+   "kind": "criterion3/safety-argument",
+   "statement": "evidence/b78-safety-argument.json is the section-7 criterion-3 whole-closure argument. Its verdict is NOT_ESTABLISHED for all seven mechanisms (0 SAFETY_DISCHARGED / 0 OWNERSHIP_RECONSTRUCTED / 7 NOT_ESTABLISHED), because only 65/290 obligations were independently re-read at b78 and the operation-span content hash explicitly excludes caller closures; 57 sites carry only an operation-level SAFETY block; C_ABI_CONTRACT and BIO are UNSAFE_OPEN. Recording the argument closes the earlier 'no argument' gap as an artifact, not as a safety result."
+  },
+  {
+   "kind": "tool/migration-repair",
+   "statement": "the b78c closures were run with 6e9cd261 (the anchored migration arm), not the f31816b1 that produced b78b. The ten-control table is 10/10 behaved as expected; controls a/b/c refuse where the old arm discharged. The seven rows moved by the migration hunk are independently re-established at b78 in evidence/b78-review-migrated-rows.json (7/7 accept; migration binding not relied on). The instrument review's O1-O4 requirements are exercised by the repaired arm's controls."
+  },
+  {
    "kind": "venue/memory",
    "statement": "AGENTS.md section 6.1 requires host `available` >= 24 GiB before a build and a cap of min(8g, available-16g) with a 2g floor. Measured host available was 14-15 GiB throughout, so that formula yields less than 2g and the literal procedure refuses to run. This work instead ran inside the existing docker court whose cgroup hard cap is 8 GiB (memory.max=8589934592) with no swap (memory.swap.max=0), so host exposure is bounded by that cgroup. The deviation is recorded here rather than claimed as compliance."
   },
@@ -1506,19 +2257,19 @@
   },
   {
    "kind": "instrument-drift",
-   "statement": "the e7-b78 re-pin record names tool d3d01dfe9127 -> 81f9e5fac1e8; the final CONF witness and the b78b closures bind f31816b1feec. The re-pin record is retained as an intermediate: its status is FAIL because the CONF site was still target-bounded, and the later CONF witness record is the evidence that closes it."
+   "statement": "the e7-b78 re-pin record names tool d3d01dfe9127 -> 81f9e5fac1e8; the final instrument is 6e9cd261c396 (6e9cd261, the anchored migration arm) and the b78c closures bind it. The e7-b78 re-pin record is retained as an intermediate: its status is FAIL because the CONF site was still target-bounded, and the later CONF witness record is the evidence that closes it."
   },
   {
    "kind": "carry-chain/sshd",
-   "statement": "sshd: evidence/closure-sshd-b78.json (ACCEPTED, 283 discharged / 7 blocked) -> evidence/closure-sshd-b78b.json; 3 carried-forward obligations removed"
+   "statement": "sshd: evidence/closure-sshd-b78b.json (ACCEPTED, 290 discharged / 0 blocked) -> evidence/closure-sshd-b78c.json; 3 carried-forward obligations removed; the b78c run repeats the full queue with the repaired instrument"
   },
   {
    "kind": "carry-chain/ssh",
-   "statement": "ssh: evidence/closure-ssh-b78.json (ACCEPTED, 283 discharged / 7 blocked) -> evidence/closure-ssh-b78b.json; 3 carried-forward obligations removed"
+   "statement": "ssh: evidence/closure-ssh-b78b.json (ACCEPTED, 290 discharged / 0 blocked) -> evidence/closure-ssh-b78c.json; 3 carried-forward obligations removed; the b78c run repeats the full queue with the repaired instrument"
   },
   {
    "kind": "copyctx-repair",
-   "statement": "the seven b78 `copyctx` coordinates were stale coordinates of the same definitions; evidence/b78b-copyctx-binding.json proves each recorded coordinate is the definition line at the b76c ancestor head and that the normalised body hashes to the declared span. The b78b run re-attributes them and reaches 290/290."
+   "statement": "the seven b78 `copyctx` coordinates were stale coordinates of the same definitions; evidence/b78b-copyctx-binding.json proves each recorded coordinate is the definition line at the b76c ancestor head and that the normalised body hashes to the declared span. The b78b run re-attributes them; the b78c run repeats the full queue with the repaired migration arm and reaches 290/290."
   },
   {
    "kind": "not-run",
@@ -1531,6 +2282,7 @@
  ],
  "not_run": [
   "SAFE_COMPATIBLE promotion (independent adjudication verdict 'NOT ESTABLISHED'; the frozen candidate is NOT graduated)",
+  "the section-7 criterion-3 argument's mechanisms are NOT_ESTABLISHED (0 SAFETY_DISCHARGED / 0 OWNERSHIP_RECONSTRUCTED / 7 NOT_ESTABLISHED; see safety_argument)",
   "BOUNDARY adjudication of the remaining contract-bounded boundaries",
   "SEAL (release build, full probe suite, full forensic regeneration)",
   "ASan/Miri/Loom and dudect/Wycheproof for this candidate",
@@ -1543,6 +2295,8 @@
   "a green differential/closure result is not a safety or cryptographic result (AGENTS.md section 8)",
   "the per-artefact rebind is not a closure run and changes no count, verdict or refusal",
   "the instrument self-test's single failure is a NOT_RUN control; it is not a pass and does not certify the missing accessor",
-  "L7 functional replay was run (w1-w5 PASS, including the authority key-format differential) but a green replay is not SAFE_COMPATIBLE graduation: the independent adjudication verdict is 'NOT ESTABLISHED' and the frozen candidate is NOT graduated"
+  "L7 functional replay was run (w1-w5 PASS, including the authority key-format differential) but a green replay is not SAFE_COMPATIBLE graduation: the independent adjudication verdict is 'NOT ESTABLISHED' and the frozen candidate is NOT graduated",
+  "the section-7 safety argument is an argument artifact, not a promotion: its verdict is NOT_ESTABLISHED for all seven mechanisms and it changes no closure count, verdict or refusal",
+  "the instrument repair and the ten-control table are instrument evidence, not a new closure measurement of any obligation"
  ]
 }
