@@ -1,0 +1,1632 @@
+{
+ "schema": "safe-c33/b79-review/x509-span-bound-batch2/v1",
+ "kind": "independent source-level review (venue refused; no compilation)",
+ "generated_utc": "2026-11-14T20:39:14Z",
+ "reviewer": {
+  "role": "measurement subagent; independent of the conversions and of the b78 discharge author",
+  "independence": "Only source read during this review and the new source-level control are used; no receipt's `established`/`tests` claim is accepted as evidence. No tracked file was modified."
+ },
+ "venue": {
+  "path": "FALLBACK (main path refused)",
+  "free_g_available_gib": 6,
+  "free_m_available_mib": 6037,
+  "swap_total_gib": 31,
+  "swap_used_gib": 31,
+  "swap_free_gib": 0,
+  "refusal": "AGENTS.md 6.1: available < 24 GiB, so min(8g, available-16g) is below the 2g floor and swap is effectively exhausted (88 MiB free). No cap could be established; no compile, test, clippy, fmt, build, census or closure was run.",
+  "compilation": false
+ },
+ "candidate_identity": {
+  "source_head": "fddd75190699a33d5de2f95f6666fa49d7c89dfc",
+  "branch": "stage/p25/b75-ocsp",
+  "b78_candidate_span_source": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "b78_closure_receipt": "evidence/closure-ssh-b78c.json",
+  "src_unchanged_scope": "Only the 25 reviewed spans were re-derived; the rest of each file and the tree are not claimed unchanged by this review."
+ },
+ "cohort": {
+  "mechanism": "X509_VERIFY_POLICY",
+  "span_bound_only_outside_b78_cohort": 117,
+  "batch_size": 25,
+  "selection": "ascending stable_id; indices 20..44, i.e. immediately after the batch-1 set (indices 0..19); discharge_receipt != openssh-v1l",
+  "reviewed_ids": [
+   "src/x509/v3_admis.rs::UNSAFE_FN_DEF::i2r_ADMISSION_SYNTAX",
+   "src/x509/v3_admis.rs::UNSAFE_FN_DEF::i2r_NAMING_AUTHORITY",
+   "src/x509/v3_akid.rs::UNSAFE_FN_DEF::i2v_AUTHORITY_KEYID",
+   "src/x509/v3_akid.rs::UNSAFE_FN_DEF::v2i_AUTHORITY_KEYID",
+   "src/x509/v3_asid.rs::UNSAFE_FN_DEF::as_identifier_choice_canonize",
+   "src/x509/v3_asid.rs::UNSAFE_FN_DEF::i2r_ASIdentifierChoice",
+   "src/x509/v3_asid.rs::UNSAFE_FN_DEF::i2r_ASIdentifiers",
+   "src/x509/v3_asid.rs::UNSAFE_FN_DEF::v2i_ASIdentifiers",
+   "src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_HASH",
+   "src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_INFO_SYNTAX_POINTER",
+   "src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_ATTRIBUTE_DESCRIPTOR",
+   "src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_INFO_SYNTAX",
+   "src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_PRIVILEGE_POLICY_ID",
+   "src/x509/v3_attrmap.rs::UNSAFE_FN_DEF::i2r_ATTRIBUTE_MAPPING",
+   "src/x509/v3_attrmap.rs::UNSAFE_FN_DEF::i2r_ATTRIBUTE_MAPPINGS",
+   "src/x509/v3_audit_id.rs::UNSAFE_FN_DEF::audit_i2s",
+   "src/x509/v3_audit_id.rs::UNSAFE_FN_DEF::audit_s2i",
+   "src/x509/v3_authattid.rs::UNSAFE_FN_DEF::i2r_ISSUER_SERIAL",
+   "src/x509/v3_authattid.rs::UNSAFE_FN_DEF::i2r_auth_attr_id",
+   "src/x509/v3_battcons.rs::UNSAFE_FN_DEF::i2v_OSSL_BASIC_ATTR_CONSTRAINTS",
+   "src/x509/v3_battcons.rs::UNSAFE_FN_DEF::v2i_OSSL_BASIC_ATTR_CONSTRAINTS",
+   "src/x509/v3_bcons.rs::UNSAFE_FN_DEF::i2v_BASIC_CONSTRAINTS",
+   "src/x509/v3_bcons.rs::UNSAFE_FN_DEF::v2i_BASIC_CONSTRAINTS",
+   "src/x509/v3_bitst.rs::UNSAFE_FN_DEF::bitst_i2v",
+   "src/x509/v3_bitst.rs::UNSAFE_FN_DEF::bitst_v2i"
+  ],
+  "remaining_in_mechanism": 72,
+  "other_mechanisms_not_reviewed": {
+   "EVP_PKEY_PROVIDER": 73,
+   "RAND_CMS_STORE_KEYFMT": 13,
+   "RUNTIME_CONCURRENCY": 4
+  }
+ },
+ "transfer_identity_statement": {
+  "claim": "All 25 spans recompute byte-identically at HEAD against the b78 receipt's recorded `span_discharge.sha256` (25/25), using `consumer_closure.resolve_operation_span` with `source_commit=HEAD` and the tool's own span rule.",
+  "what_transfers": "The span contents the b78 receipt bound are unchanged at HEAD, so the site-level review of those contents transfers to HEAD.",
+  "what_does_not_transfer": "The b78 caller-closure claim; the span hash does not cover dispatchers, shared guards, macros or caller closures (tool `claim_scope`).",
+  "line_shift_note": "Two `v3_akid` spans (`i2v_AUTHORITY_KEYID`, `v2i_AUTHORITY_KEYID`) are recorded at starts 231/359 and now start at 245/373 (+14) with identical content hashes; identity is the hash, not the line.",
+  "kind_check": "25/25 resolve as `UNSAFE_FN_DEF` at the resolved span, matching the recorded kind; no stale-kind site in batch 2.",
+  "instrument": {
+   "path": "court/freeze-b79/review/ctrl_x509_batch2.py",
+   "sha256": "66e07a9c6df8b5716e99bb026515138c2fb58b0f4e593e0bdc8a7ab351aa52b5",
+   "output": "court/freeze-b79/review/controls-b79-x509-batch2.json",
+   "output_sha256": "31ec22bd2fbb9e2fbc52f7aa55c7f40b0c4d4f735cb892e7b6b21d0a26a14f7a",
+   "result": "PASS"
+  },
+  "canaries": {
+   "M1-remove-print-prologue": {
+    "fired": true,
+    "observation": "prologue refusal removed; prn_prologue_null_refusal fails"
+   },
+   "M2-remove-decode-null-refusal": {
+    "fired": true,
+    "observation": "decode NULL refusal removed; prn_decode_null_refusal_before_dispatch fails"
+   },
+   "M3-swap-row-i2r": {
+    "fired": true,
+    "observation": "ossl_v3_asid i2r removed; row check fails (missing=i2r)"
+   },
+   "M4-dispatch-drops-values": {
+    "fired": true,
+    "observation": "v2i dispatch no longer passes nval; conf_dispatch_uses_decoded_values fails"
+   },
+   "M5-kind-detector-sensitivity": {
+    "fired": true,
+    "observation": "baseline kind UNSAFE_FN_DEF; with `unsafe` removed EXTERN_C_FN_DEF"
+   },
+   "M6-span-hash-sensitive": {
+    "fired": true,
+    "observation": "one extra space inside the i2r_HASH span changes the hash"
+   },
+   "M7-swap-row-item": {
+    "fired": true,
+    "observation": "ossl_v3_audit_identity it swapped; row check fails (missing=it)"
+   },
+   "M8-poison-disposition-sensitivity": {
+    "fired": true,
+    "observation": "adding `unsafe` makes i2s_poison UNSAFE_FN_DEF; the EXTERN_C_FN_DEF disposition check would fail"
+   }
+  },
+  "dispatch_checks_pass": true,
+  "pairing_checks_pass": true,
+  "poison_checks_pass": true
+ },
+ "batch1_stale_kind_disposition": {
+  "note": "The two batch-1 REJECTs are evidential identity defects, not memory-safety findings. This review re-read both definitions at HEAD and states the required correction without changing any recorded kind.",
+  "sites": [
+   {
+    "stable_id": "src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::i2s_poison",
+    "kind_recorded": "UNSAFE_FN_DEF",
+    "kind_current": "EXTERN_C_FN_DEF",
+    "current_signature": "extern \"C\" fn i2s_poison(_method: *const X509V3ExtMethod, _val: *mut c_void) -> *mut c_char",
+    "unsafe_operation_now_inside_callee": "CRYPTO_strdup(c\"NULL\".as_ptr(), ptr::null(), 0)",
+    "disposition": "RE_ADMIT_AS_EXTERN_C_FN_DEF",
+    "required_correction": "Re-admit the site with kind EXTERN_C_FN_DEF and recompute its span hash at the EXTERN_C_FN_DEF coordinate; do NOT retire it. The definition is safe (no caller obligation) but still performs the unsafe `CRYPTO_strdup` internally, which is retained and guarded by its own SAFETY comment."
+   },
+   {
+    "stable_id": "src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::s2i_poison",
+    "kind_recorded": "UNSAFE_FN_DEF",
+    "kind_current": "EXTERN_C_FN_DEF",
+    "current_signature": "extern \"C\" fn s2i_poison(_method: *const X509V3ExtMethod, _ctx: *mut c_void, _str: *const c_char) -> *mut c_void",
+    "unsafe_operation_now_inside_callee": "ASN1_NULL_new().cast::<c_void>()",
+    "disposition": "RE_ADMIT_AS_EXTERN_C_FN_DEF",
+    "required_correction": "Re-admit the site with kind EXTERN_C_FN_DEF and recompute its span hash at the EXTERN_C_FN_DEF coordinate; do NOT retire it. The definition is safe; the allocation is reached through a safe wrapper and imposes no caller obligation."
+   }
+  ],
+  "governing_rule": "The current definition kind is authoritative for admission; the recorded kind is not edited by this review."
+ },
+ "obligations": [
+  {
+   "stable_id": "src/x509/v3_admis.rs::UNSAFE_FN_DEF::i2r_ADMISSION_SYNTAX",
+   "id": "V1:src/x509/v3_admis.rs:640:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_admis.rs:640",
+   "boundary_receipt": "boundary-sweep-B54",
+   "boundary_ids": [
+    "src/x509/v3_admis.rs:557",
+    "src/x509/v3_admis.rs:640",
+    "B52GAP::src/x509/v3_admis.rs::UNSAFE_FN_DEF::i2r_NAMING_AUTHORITY",
+    "B52GAP::src/x509/v3_admis.rs::UNSAFE_FN_DEF::i2r_ADMISSION_SYNTAX"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_admis.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn i2r_ADMISSION_SYNTAX(",
+   "line_recorded_closure": 640,
+   "line_current_census": 640,
+   "line_current_def": 640,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_admis.rs :: UNSAFE_FN_DEF :: i2r_ADMISSION_SYNTAX @ def line 640",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    640,
+    825
+   ],
+   "span_sha256_b78": "8c8f883bc5ee600241a7cf5c9583c9fda8f2e57af4d140dd377c441bd462c735",
+   "span_sha256_current": "8c8f883bc5ee600241a7cf5c9583c9fda8f2e57af4d140dd377c441bd462c735",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 29,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_admis.rs:632-639`); the `i2r` slot contract on `X509V3ExtMethod` (`src/x509/v3_lib.rs`); SAFETY comments at each unsafe operation.",
+   "recorded_contract_summary": "`method` is a live row; `bp` is a live BIO; `in_` is a live `ADMISSION_SYNTAX` whose `admissionAuthority`, `contentsOfAdmissions`, per-entry `namingAuthority`/`professionInfos` and per-info `professionItems`/`professionOIDs` are the decoder's own live values.",
+   "unsafe_operations_read": [
+    "`(*admission).admissionAuthority` and the stack/element reads",
+    "`OPENSSL_sk_num`/`OPENSSL_sk_value` over `contentsOfAdmissions`, `professionInfos`, `professionItems`, `professionOIDs`",
+    "`GENERAL_NAME_print`, `ASN1_STRING_print`, `OBJ_obj2nid`/`OBJ_obj2txt` on live objects",
+    "delegation to `i2r_NAMING_AUTHORITY`"
+   ],
+   "safety_comment_quoted": "`admission` is live per the contract.",
+   "callers_enumerated": [
+    "row `ossl_v3_ext_admission.i2r` (`src/x509/v3_admis.rs:1301`)",
+    "`X509V3_EXT_print` `i2r` arm (`src/x509/v3_prn.rs:362-366`), which reaches it only after `ASN1_item_d2i` through `ADMISSION_SYNTAX_it` returned non-NULL and with the caller's live BIO"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. It is a private `unsafe extern \"C\" fn`; a safe Rust caller needs `unsafe`, and the only source caller is the registry row reached by the dispatcher after a non-NULL decode.",
+    "b_all_unsafe_covered": "Yes. The `in_`-live precondition is established by the dispatcher's non-NULL decode; every nested pointer read is guarded by the decoder's own required fields or by a NULL check (`adm_authority`, `entry_authority`, `entry_na`, `pinfo_na`, `reg`, `items`, `oids`); `OPENSSL_sk_num(NULL)` is -1 so an absent stack iterates zero times.",
+    "c_hidden_obligation": "None found. The decoded `ADMISSION_SYNTAX` required fields and the element types of its stacks are decoder obligations fixed by the row's declared `it`; they are named in the contract rather than assumed silently.",
+    "d_load_bearing_control": "Yes. `ctrl_x509_batch2.py` checks the print prologue, the decode-NULL refusal before dispatch, the i2r dispatch call, the same-item release and the registry read hold; canaries M1, M2 and M3 fire. Runtime controls were not re-executed (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "The precondition (a live decoded `ADMISSION_SYNTAX` and a live BIO) is established by `X509V3_EXT_print` at its non-NULL-decode gate; every nested dereference has a NULL check or a decoder-guaranteed required field; no hidden obligation and no safe-Rust path to the unsafe reads."
+  },
+  {
+   "stable_id": "src/x509/v3_admis.rs::UNSAFE_FN_DEF::i2r_NAMING_AUTHORITY",
+   "id": "V1:src/x509/v3_admis.rs:557:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_admis.rs:557",
+   "boundary_receipt": "boundary-sweep-B54",
+   "boundary_ids": [
+    "src/x509/v3_admis.rs:557",
+    "src/x509/v3_admis.rs:640",
+    "B52GAP::src/x509/v3_admis.rs::UNSAFE_FN_DEF::i2r_NAMING_AUTHORITY",
+    "B52GAP::src/x509/v3_admis.rs::UNSAFE_FN_DEF::i2r_ADMISSION_SYNTAX"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_admis.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn i2r_NAMING_AUTHORITY(",
+   "line_recorded_closure": 557,
+   "line_current_census": 557,
+   "line_current_def": 557,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_admis.rs :: UNSAFE_FN_DEF :: i2r_NAMING_AUTHORITY @ def line 557",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    557,
+    630
+   ],
+   "span_sha256_b78": "4015ad17501f08ceb425a1c5cc64d0b6db47c4ef9e897a158b854a5b2600c02a",
+   "span_sha256_current": "4015ad17501f08ceb425a1c5cc64d0b6db47c4ef9e897a158b854a5b2600c02a",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 9,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_admis.rs:548-556`); SAFETY comments at each unsafe operation.",
+   "recorded_contract_summary": "`bp` is a live BIO; `in_` is NULL or a live `NAMING_AUTHORITY` whose `namingAuthorityId` is a live object and whose `namingAuthorityText`/`namingAuthorityUrl` are live strings.",
+   "unsafe_operations_read": [
+    "NULL check then `(*na)` field reads",
+    "`OBJ_obj2nid`/`OBJ_obj2txt` into a fixed 128-byte buffer and `OBJ_nid2ln`",
+    "`ASN1_STRING_print` on the optional strings",
+    "`BIO_printf` with static literals"
+   ],
+   "safety_comment_quoted": "`bp` is a live BIO; `in_` is NULL or a live `NAMING_AUTHORITY`.",
+   "callers_enumerated": [
+    "`i2r_ADMISSION_SYNTAX` at `entry_na` (`src/x509/v3_admis.rs:695`) and at `pinfo_na` (`:742`), each reached only after a non-NULL field check"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`; the only callers are inside `i2r_ADMISSION_SYNTAX`, which checks both argument pointers non-NULL and passes a live BIO.",
+    "b_all_unsafe_covered": "Yes. It refuses a NULL `in_`, then treats the three fields as optional with explicit NULL checks; `OBJ_obj2txt` writes into a 128-byte stack buffer sized by its own `len` argument; the size/format pairing of each `BIO_printf` is local and static.",
+    "c_hidden_obligation": "None found. The field liveness is the decoder's for a `NAMING_AUTHORITY`; the function refuses the all-absent case and each optional field separately.",
+    "d_load_bearing_control": "Yes. The control checks both internal call sites are present and reached only after their non-NULL test; canaries M1/M2 exercise the dispatcher contract it relies on. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "NULL-or-live contract with an explicit first-statement NULL refusal; every field is individually checked; both callers establish liveness before the call."
+  },
+  {
+   "stable_id": "src/x509/v3_akid.rs::UNSAFE_FN_DEF::i2v_AUTHORITY_KEYID",
+   "id": "V1:src/x509/v3_akid.rs:231:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_akid.rs:231",
+   "boundary_receipt": "boundary-sweep-B54",
+   "boundary_ids": [
+    "OSSH-V1L-011",
+    "OSSH-V1L-012",
+    "B52SITE::src/x509/v3_akid.rs::UNSAFE_FN_DEF::i2v_AUTHORITY_KEYID",
+    "B52SITE::src/x509/v3_akid.rs::UNSAFE_FN_DEF::v2i_AUTHORITY_KEYID",
+    "src/x509/v3_akid.rs:231",
+    "src/x509/v3_akid.rs:359"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_akid.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn i2v_AUTHORITY_KEYID(",
+   "line_recorded_closure": 231,
+   "line_current_census": 231,
+   "line_current_def": 245,
+   "line_drift_vs_recorded": 14,
+   "coordinate_current": "src/x509/v3_akid.rs :: UNSAFE_FN_DEF :: i2v_AUTHORITY_KEYID @ def line 245",
+   "coordinate_provenance": "admission record coordinate is span start 231; the current definition is at 245 (content byte-identical, line shift +14)",
+   "span_current": [
+    245,
+    338
+   ],
+   "span_sha256_b78": "46f6b2d0d3b02331edaf57c2362ba42ca5bb8710600a899e6ef760e05c447b21",
+   "span_sha256_current": "46f6b2d0d3b02331edaf57c2362ba42ca5bb8710600a899e6ef760e05c447b21",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 15,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_akid.rs:238-245`); the `i2v` slot contract on `X509V3ExtMethod` (`src/x509/v3_lib.rs`); SAFETY comments at every operation; the `err!` tail macro documents the release arm.",
+   "recorded_contract_summary": "`method` may be NULL; `akeyid` is a live `AUTHORITY_KEYID`; `extlist` is NULL or a stack of this call's own `CONF_VALUE`s. The `err:` tail frees the stack only when this call built it, and each adopted `i2s` string is released at the authority's own success/failure line.",
+   "unsafe_operations_read": [
+    "`(*akeyid).keyid`/`issuer`/`serial` field reads",
+    "`i2s_ASN1_OCTET_STRING` outputs adopted by `OwnedStr` at `:58`/`:78`",
+    "`X509V3_add_value` into the owned sink",
+    "`i2v_GENERAL_NAMES` on the issuer stack",
+    "`OPENSSL_sk_pop_free(extlist, conf_value_free_thunk)` in `err!`"
+   ],
+   "safety_comment_quoted": "`akeyid` must be a live `AUTHORITY_KEYID`; `extlist` is NULL or a stack of this call's own `CONF_VALUE`s.",
+   "callers_enumerated": [
+    "`akid_i2v` thunk (`src/x509/v3_akid.rs:189-197`)",
+    "row `ossl_v3_akey_id.i2v` (`:231`)",
+    "`X509V3_EXT_print` `i2v` arm (`src/x509/v3_prn.rs:353-361`) with a non-NULL decoded `AUTHORITY_KEYID` and a NULL sink"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn` behind an `unsafe` thunk; the dispatcher's non-NULL decode establishes `akeyid`.",
+    "b_all_unsafe_covered": "Yes. Every string the seam returns is adopted immediately into `OwnedStr` with the authority's release line (success `:58`/`:78`, error `:54`/`:75`); on an `X509V3_add_value` failure the frame sets the error release line and takes `err!`, so the value is freed exactly once; `err!` frees the sink only when `origextlist` is NULL.",
+    "c_hidden_obligation": "None found. The only retained preconditions are the slot contract and the `AUTHORITY_KEYID` field types, both named; the `i2v_GENERAL_NAMES` result is assigned only after its NULL test, so the error path frees the unmodified sink exactly as the authority does.",
+    "d_load_bearing_control": "Yes. The control checks the row's `it`/`i2v`/`v2i` pairing and the print dispatcher's i2v arm passes the decoded object; canaries M1/M2 fire. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Ownership of every temporary is expressed by `OwnedStr` with the authority's exact release line, including both failure arms; the sink is freed only when the callee built it; caller preconditions are established by the dispatcher."
+  },
+  {
+   "stable_id": "src/x509/v3_akid.rs::UNSAFE_FN_DEF::v2i_AUTHORITY_KEYID",
+   "id": "V1:src/x509/v3_akid.rs:359:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_akid.rs:359",
+   "boundary_receipt": "boundary-sweep-B54",
+   "boundary_ids": [
+    "OSSH-V1L-011",
+    "OSSH-V1L-012",
+    "B52SITE::src/x509/v3_akid.rs::UNSAFE_FN_DEF::i2v_AUTHORITY_KEYID",
+    "B52SITE::src/x509/v3_akid.rs::UNSAFE_FN_DEF::v2i_AUTHORITY_KEYID",
+    "src/x509/v3_akid.rs:231",
+    "src/x509/v3_akid.rs:359"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_akid.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn v2i_AUTHORITY_KEYID(",
+   "line_recorded_closure": 359,
+   "line_current_census": 359,
+   "line_current_def": 373,
+   "line_drift_vs_recorded": 14,
+   "coordinate_current": "src/x509/v3_akid.rs :: UNSAFE_FN_DEF :: v2i_AUTHORITY_KEYID @ def line 373",
+   "coordinate_provenance": "admission record coordinate is span start 359; the current definition is at 373 (content byte-identical, line shift +14)",
+   "span_current": [
+    373,
+    581
+   ],
+   "span_sha256_b78": "005ce1d3cccf675f26b4d49bd8617358e746678cd1a0a651780bf5d01a003cce",
+   "span_sha256_current": "005ce1d3cccf675f26b4d49bd8617358e746678cd1a0a651780bf5d01a003cce",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 42,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_akid.rs:366-372`); the `v2i` slot contract on `X509V3ExtMethod` (`src/x509/v3_lib.rs`); `akid_v2i_err`'s own `# Safety`; SAFETY comments at each operation.",
+   "recorded_contract_summary": "`method` may be NULL; `ctx` is NULL or a live `X509V3_CTX`; `values` is a live stack of `CONF_VALUE` pointers. On failure every value built is released once through `akid_v2i_err`; on success the fresh `AUTHORITY_KEYID` owns the generated stack/name/ints and is freed once by the dispatcher through `AUTHORITY_KEYID_it`.",
+   "unsafe_operations_read": [
+    "`OPENSSL_sk_num`/`OPENSSL_sk_value`, `strcmp`, `push_cstr` over the live `CONF_VALUE` stack",
+    "`X509_check_private_key`, `X509_get_ext_by_NID`/`X509_get_ext` on `ctx`-owned certs",
+    "`X509V3_EXT_d2i`/`ASN1_OCTET_STRING_free` for the keyid, `X509_PUBKEY_set`/`X509_PUBKEY_free`/`ossl_x509_pubkey_hash`",
+    "`X509_NAME_dup`, `ASN1_INTEGER_dup`, `OPENSSL_sk_new_null`, `GENERAL_NAME_new`, `OPENSSL_sk_push`",
+    "transfer of `gens`/`serial`/`ikeyid` into `(*akeyid)`"
+   ],
+   "safety_comment_quoted": "`ctx` is NULL or a live `X509V3_CTX`; `values` must be a live stack of `CONF_VALUE` pointers.",
+   "callers_enumerated": [
+    "`akid_v2i` thunk (`src/x509/v3_akid.rs:207-215`)",
+    "row `ossl_v3_akey_id.v2i` (`:232`)",
+    "`do_ext_nconf` `v2i` arm (`src/x509/v3_conf.rs:1081-1118`) under the registry read hold, after refusing a NULL/empty stack"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn` behind an `unsafe` thunk; the only source caller is the dispatcher, which requires a live non-empty stack and holds the row live.",
+    "b_all_unsafe_covered": "Yes. `akeyid` is allocated first and every later failure routes through `akid_v2i_err`, which frees only values this call built (the issuer stack frees only its slots, matching the authority's `sk_GENERAL_NAME_free`); on success each local is assigned into the fresh object or is NULL. The `X509_PUBKEY_set` wrapper is freed unconditionally with `X509_PUBKEY_free`.",
+    "c_hidden_obligation": "None found. The `NID_subject_key_identifier` decode type is fixed by the registry table (`it = ASN1_OCTET_STRING_it`) and stated in the SAFETY comment; it is a retained type-pairing precondition, not hidden.",
+    "d_load_bearing_control": "Yes. The control checks the row's v2i pairing and the dispatcher passes the decoded `nval` after its NULL/empty refusal; canary M4 shows the dispatch check is load-bearing. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "A single `err:` tail releases exactly what the call built; success transfers all four owned locals into the result; caller preconditions (live non-empty stack, live-or-NULL ctx) are established by `do_ext_nconf` and the slot contract."
+  },
+  {
+   "stable_id": "src/x509/v3_asid.rs::UNSAFE_FN_DEF::as_identifier_choice_canonize",
+   "id": "V1:src/x509/v3_asid.rs:1263:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_asid.rs:1263",
+   "boundary_receipt": "boundary-sweep-B54",
+   "boundary_ids": [
+    "B49-I2R-004",
+    "B51-V2I-001",
+    "OSSH-DIS-112",
+    "OSSH-DIS-113",
+    "OSSH-DIS-114",
+    "OSSH-R3-011",
+    "OSSH-R3-012",
+    "OSSH-R3-013",
+    "B52SITE::src/x509/v3_asid.rs::UNSAFE_FN_DEF::i2r_ASIdentifiers",
+    "src/x509/v3_asid.rs:817",
+    "src/x509/v3_asid.rs:1263"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_asid.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe fn as_identifier_choice_canonize(choice: *mut AsIdentifierChoice) -> c_int {",
+   "line_recorded_closure": 1263,
+   "line_current_census": 1271,
+   "line_current_def": 1271,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_asid.rs :: UNSAFE_FN_DEF :: as_identifier_choice_canonize @ def line 1271",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    1271,
+    1436
+   ],
+   "span_sha256_b78": "7e0bb42cb76382220e37494b00758382286bf1a07fde53206f9a8438270f612d",
+   "span_sha256_current": "7e0bb42cb76382220e37494b00758382286bf1a07fde53206f9a8438270f612d",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 39,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_asid.rs:1259-1270`); SAFETY comments at every operation; the callers' own contracts (`X509v3_asid_canonize` at `:1438-1443`, `v2i_ASIdentifiers`).",
+   "recorded_contract_summary": "`choice` is NULL or a live `ASIdentifierChoice` whose selector is one of the item's two arms; on the list arm its stack holds live `ASIdOrRange` elements this call owns and may reorder, detach and free.",
+   "unsafe_operations_read": [
+    "`OPENSSL_sk_sort`, `OPENSSL_sk_num`, `OPENSSL_sk_value`, `OPENSSL_sk_delete`",
+    "`extract_min_max`, `ASN1_INTEGER_cmp`, `ASN1_INTEGER_to_BN`, `BN_add_word`, `BN_to_ASN1_INTEGER`",
+    "`RawRange::new`/`finish` for a replacement range arm",
+    "`ASN1_INTEGER_free` of the replaced bound and `ASIdOrRange_free` of the merged element",
+    "`as_identifier_choice_is_canonical` re-check"
+   ],
+   "safety_comment_quoted": "`choice` is NULL or a live `ASIdentifierChoice` whose selector is one of the item's two arms.",
+   "callers_enumerated": [
+    "`X509v3_asid_canonize` `asnum` arm (`src/x509/v3_asid.rs:1449`)",
+    "`X509v3_asid_canonize` `rdi` arm (`:1453`)",
+    "`X509v3_asid_canonize` is reached from `v2i_ASIdentifiers` (`:1677`) and is an exported `#[no_mangle] pub unsafe extern \"C\" fn` for C callers"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe fn`; its callers are the exported `X509v3_asid_canonize` (itself `unsafe`) and `v2i_ASIdentifiers` through it; `X509v3_asid_canonize` refuses a NULL `asid` and passes only decoded members.",
+    "b_all_unsafe_covered": "Yes. Sorting uses the stack's own comparator; merge paths transfer `a_min`/`b_max` into the survivor and null the donor's slot before `ASIdOrRange_free`, preventing a double free while freeing the surviving donor bounds once; `a_max_plus_one` and `bn` are released on every exit; a failed `BN_to_ASN1_INTEGER` preserves the prior owned value.",
+    "c_hidden_obligation": "None in memory ownership. One retained external precondition: the union selector/arm pairing is assumed (the contract says so) and is the decoder's obligation. Documentation note (not a safety defect): the caller citation `:1441,:1445` is now the body of `X509v3_asid_canonize`; the actual call chain and preconditions are correct.",
+    "d_load_bearing_control": "Yes. The control verifies the canonize call chain from `v2i_ASIdentifiers` and the asid row pairing; canary M3 and M6 fire; the merge/ownership review is source-level. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "The merge logic preserves the authority's ownership transfer (donor slot nulled before free, survivor bound replaced after the old one is freed, both temporaries released on all exits); the only retained obligation is the decoder's selector/arm pairing, which the contract names."
+  },
+  {
+   "stable_id": "src/x509/v3_asid.rs::UNSAFE_FN_DEF::i2r_ASIdentifierChoice",
+   "id": "V1:src/x509/v3_asid.rs:686:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_asid.rs:686",
+   "boundary_receipt": "boundary-sweep-B49",
+   "boundary_ids": [
+    "B49-I2R-004",
+    "B51-V2I-001",
+    "OSSH-DIS-112",
+    "OSSH-DIS-113",
+    "OSSH-DIS-114",
+    "OSSH-R3-011",
+    "OSSH-R3-012",
+    "OSSH-R3-013",
+    "B52SITE::src/x509/v3_asid.rs::UNSAFE_FN_DEF::i2r_ASIdentifiers",
+    "src/x509/v3_asid.rs:817",
+    "src/x509/v3_asid.rs:1263"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_asid.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe fn i2r_ASIdentifierChoice(",
+   "line_recorded_closure": 686,
+   "line_current_census": 699,
+   "line_current_def": 699,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_asid.rs :: UNSAFE_FN_DEF :: i2r_ASIdentifierChoice @ def line 699",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    699,
+    805
+   ],
+   "span_sha256_b78": "a86f00757496da9278af2196e2610364c171ab17e0eff55b01c81feec8d9d898",
+   "span_sha256_current": "a86f00757496da9278af2196e2610364c171ab17e0eff55b01c81feec8d9d898",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 16,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_asid.rs:681-698`); SAFETY comments at each operation; the caller `i2r_ASIdentifiers`'s contract.",
+   "recorded_contract_summary": "NULL or a live `ASIdentifierChoice` whose selector and union arm agree (decoder-built), with the selected stack/elements or range bounds live for the call; `out` is a non-NULL BIO and `msg` a live NUL-terminated string.",
+   "unsafe_operations_read": [
+    "`(*choice).type_` and `(*choice).u` under the selector",
+    "`OPENSSL_sk_num`/`OPENSSL_sk_value` over the list",
+    "`(*aor).type_`/`u`, `(*range).min`/`max`",
+    "`i2s_ASN1_INTEGER` outputs adopted by `OwnedStr` at the authority's free lines"
+   ],
+   "safety_comment_quoted": "`choice` is NULL or a live `ASIdentifierChoice` whose selector and active union arm agree (the decoder built them; this body does not re-check the pairing).",
+   "callers_enumerated": [
+    "`i2r_ASIdentifiers` `asnum` (`src/x509/v3_asid.rs:826-832`)",
+    "`i2r_ASIdentifiers` `rdi` (`:837-844`)"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe fn`; both call sites are inside `i2r_ASIdentifiers`, which passes each decoder-built choice (NULL allowed and handled first).",
+    "b_all_unsafe_covered": "Yes. It refuses NULL `choice`; each rendered integer is adopted into `OwnedStr` and released at the authority's own line (`id` `:83`, range min `:89`, range max `:93`), with the range-min value explicitly dropped before the max is created.",
+    "c_hidden_obligation": "None hidden. The selector/arm agreement and element typing are the ASN.1 decoder's obligations and are stated in the contract; unknown selectors return 0.",
+    "d_load_bearing_control": "Yes. The control checks both `i2r_ASIdentifierChoice` call sites inside `i2r_ASIdentifiers`; canaries M3/M6 fire. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "NULL-safe entry, selector-dispatched reads that are the decoder's contract, and `OwnedStr`-based release at the authority's exact lines; no safe-Rust path to the unsafe reads."
+  },
+  {
+   "stable_id": "src/x509/v3_asid.rs::UNSAFE_FN_DEF::i2r_ASIdentifiers",
+   "id": "V1:src/x509/v3_asid.rs:817:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_asid.rs:817",
+   "boundary_receipt": "boundary-sweep-B54",
+   "boundary_ids": [
+    "B49-I2R-004",
+    "B51-V2I-001",
+    "OSSH-DIS-112",
+    "OSSH-DIS-113",
+    "OSSH-DIS-114",
+    "OSSH-R3-011",
+    "OSSH-R3-012",
+    "OSSH-R3-013",
+    "B52SITE::src/x509/v3_asid.rs::UNSAFE_FN_DEF::i2r_ASIdentifiers",
+    "src/x509/v3_asid.rs:817",
+    "src/x509/v3_asid.rs:1263"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_asid.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn i2r_ASIdentifiers(",
+   "line_recorded_closure": 817,
+   "line_current_census": 817,
+   "line_current_def": 817,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_asid.rs :: UNSAFE_FN_DEF :: i2r_ASIdentifiers @ def line 817",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    817,
+    849
+   ],
+   "span_sha256_b78": "6cf679c86d7c652c46a06da9a4175975019323235319bdaccd0b013184a2700c",
+   "span_sha256_current": "6cf679c86d7c652c46a06da9a4175975019323235319bdaccd0b013184a2700c",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 3,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_asid.rs:807-816`); the `i2r` slot contract on `X509V3ExtMethod`; SAFETY comments at both calls.",
+   "recorded_contract_summary": "`ext` is a non-NULL live `ASIdentifiers` of the method's own item type and `out` a live BIO; the dispatcher calls `i2r` only after its own `d2i` returned non-NULL.",
+   "unsafe_operations_read": [
+    "`(*asid).asnum` and `(*asid).rdi`",
+    "two `i2r_ASIdentifierChoice` calls",
+    "the short-circuiting `&&` semantics of the authority's two-choice print"
+   ],
+   "safety_comment_quoted": "`ext` is a non-NULL, live `ASIdentifiers` of the method's own item type and `out` is a live `BIO`.",
+   "callers_enumerated": [
+    "row `ossl_v3_asid.i2r` (`src/x509/v3_asid.rs:1820`)",
+    "`X509V3_EXT_print` `i2r` arm after a non-NULL `ASIdentifiers_it` decode (`src/x509/v3_prn.rs:362-366`)"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn` reached only through the registry row after a non-NULL decode; safe callers need `unsafe`.",
+    "b_all_unsafe_covered": "Yes. The non-NULL `ext` and live BIO are the dispatcher-established precondition; each member is NULL-or-live per the item descriptor and `i2r_ASIdentifierChoice` handles NULL.",
+    "c_hidden_obligation": "None found. The printed object's type is fixed by the row's `it`, which the control checks.",
+    "d_load_bearing_control": "Yes. The control checks the row's `it`/`v2i`/`i2r` pairing and the print dispatcher's decode gate; canaries M3/M6 fire. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Preconditions are the dispatcher's non-NULL decode and live BIO; both members are NULL-safe in the callee; the row pairing is checked."
+  },
+  {
+   "stable_id": "src/x509/v3_asid.rs::UNSAFE_FN_DEF::v2i_ASIdentifiers",
+   "id": "V1:src/x509/v3_asid.rs:1453:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_asid.rs:1453",
+   "boundary_receipt": "boundary-sweep-B51",
+   "boundary_ids": [
+    "B49-I2R-004",
+    "B51-V2I-001",
+    "OSSH-DIS-112",
+    "OSSH-DIS-113",
+    "OSSH-DIS-114",
+    "OSSH-R3-011",
+    "OSSH-R3-012",
+    "OSSH-R3-013",
+    "B52SITE::src/x509/v3_asid.rs::UNSAFE_FN_DEF::i2r_ASIdentifiers",
+    "src/x509/v3_asid.rs:817",
+    "src/x509/v3_asid.rs:1263"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_asid.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn v2i_ASIdentifiers(",
+   "line_recorded_closure": 1453,
+   "line_current_census": 1513,
+   "line_current_def": 1513,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_asid.rs :: UNSAFE_FN_DEF :: v2i_ASIdentifiers @ def line 1513",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    1513,
+    1683
+   ],
+   "span_sha256_b78": "747deab93607879df356fdcf171793c52d4bf01ddf9f51c2b5f7f9833b6007f6",
+   "span_sha256_current": "747deab93607879df356fdcf171793c52d4bf01ddf9f51c2b5f7f9833b6007f6",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 43,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_asid.rs:1474-1512`); the `v2i` slot contract on `X509V3ExtMethod`; SAFETY comments at each operation.",
+   "recorded_contract_summary": "`values` is a live non-empty stack of live `CONF_VALUE`s (name non-NULL/NUL-terminated, value NULL-or-NUL-terminated) established by `do_ext_nconf`; on success a fresh `ASIdentifiers` is exclusively owned by the dispatcher and released once via `ASIdentifiers_it`; on failure every partial value is released.",
+   "unsafe_operations_read": [
+    "`OPENSSL_sk_num`/`OPENSSL_sk_value`, `(*val).name`/`value`",
+    "`ossl_v3_name_cmp`, `strcmp`, `strspn`, `value.add(i)` walks",
+    "`CRYPTO_strdup` output adopted by `OwnedStr`",
+    "`s2i_ASN1_INTEGER`, `ASN1_INTEGER_cmp`, `X509V3_get_value_int`",
+    "`X509v3_asid_add_id_or_range`/`_add_inherit`, `X509v3_asid_canonize`, `ASIdentifiers_free`"
+   ],
+   "safety_comment_quoted": "`values` is therefore a live, non-empty stack of live `CONF_VALUE` elements ... This body relies on exactly that and does not null-check `values`, an element or its `name`.",
+   "callers_enumerated": [
+    "row `ossl_v3_asid.v2i` (`src/x509/v3_asid.rs:1819`)",
+    "`do_ext_nconf` `v2i` arm (`src/x509/v3_conf.rs:1081-1118`) under the registry read hold, after refusing a NULL/empty stack"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn` behind the registry; the dispatcher refuses NULL/empty `values` before the call and holds the row live.",
+    "b_all_unsafe_covered": "Yes. The parse offsets stay `usize` so a run longer than `INT_MAX` cannot wrap (B51-R3); the range duplicate is owned by `OwnedStr` and dropped at the authority's `:580`; `min`/`max` are nulled after a successful add so the failure tail frees them exactly once; `asid` is freed on every failure return.",
+    "c_hidden_obligation": "None found. The returned object's type/`it` pairing and `usr_data` semantics are the registrar's obligation, explicitly recorded; the registry read hold makes row liveness an enforced property, not a caller duty.",
+    "d_load_bearing_control": "Yes. The control checks the row pairing and the dispatcher's `nval` hand-off; canary M4 shows the dispatch check is load-bearing; B51's read-hold reasoning is re-read at source. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Bounds arithmetic uses `usize` and stays inside the NUL-terminated duplicate; ownership of the duplicate and of `min`/`max` is explicit on every path; the dispatcher establishes the stack contract and the read hold."
+  },
+  {
+   "stable_id": "src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_HASH",
+   "id": "V1:src/x509/v3_attrdesc.rs:637:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_attrdesc.rs:637",
+   "boundary_receipt": "boundary-sweep-B54",
+   "boundary_ids": [
+    "src/x509/v3_attrdesc.rs:637",
+    "src/x509/v3_attrdesc.rs:699",
+    "src/x509/v3_attrdesc.rs:738",
+    "src/x509/v3_attrdesc.rs:794",
+    "src/x509/v3_attrdesc.rs:850",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_HASH",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_INFO_SYNTAX_POINTER",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_INFO_SYNTAX",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_PRIVILEGE_POLICY_ID",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_ATTRIBUTE_DESCRIPTOR"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_attrdesc.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn i2r_HASH(",
+   "line_recorded_closure": 637,
+   "line_current_census": 637,
+   "line_current_def": 637,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_attrdesc.rs :: UNSAFE_FN_DEF :: i2r_HASH @ def line 637",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    637,
+    691
+   ],
+   "span_sha256_b78": "cf21d791daf44ebdc5f8077bb1b4a21a75300b3cfe4107bad7ac0e31a3b232c0",
+   "span_sha256_current": "cf21d791daf44ebdc5f8077bb1b4a21a75300b3cfe4107bad7ac0e31a3b232c0",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 11,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_attrdesc.rs:631-636`); SAFETY comments at each operation; the caller `i2r_INFO_SYNTAX_POINTER`.",
+   "recorded_contract_summary": "`out` is a live BIO; `hash` is a live `OSSL_HASH` (whose `algorithmIdentifier` is a required `ASN1_SIMPLE` field and whose `hashValue` is optional, explicitly NULL-checked).",
+   "unsafe_operations_read": [
+    "`(*(*hash).algorithmIdentifier).algorithm` and `.parameter`",
+    "`i2a_ASN1_OBJECT`, `ossl_print_attribute_value`",
+    "`(*hash).hashValue` NULL check then `data`/`length` hex print"
+   ],
+   "safety_comment_quoted": "`out` is a live BIO; `hash` is a live `OSSL_HASH`.",
+   "callers_enumerated": [
+    "`i2r_INFO_SYNTAX_POINTER` hash arm (`src/x509/v3_attrdesc.rs:719-727`), entered only after `!(*pointer).hash.is_null()`"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`; its only caller checks the hash pointer non-NULL and passes a live BIO.",
+    "b_all_unsafe_covered": "Yes. `algorithmIdentifier` is a required `ASN1_SIMPLE` field of the decoder's item; `parameter` and `hashValue` are optional and both are NULL-checked before use.",
+    "c_hidden_obligation": "None hidden. The required-field liveness is the decoder's, fixed by `OSSL_HASH_TT` and stated in the contract.",
+    "d_load_bearing_control": "Yes. The control verifies the guarding NULL test precedes the call and M6 shows the span hash is sensitive; M5 shows the kind detector distinguishes this definition. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "The required field is decoder-guaranteed and the two optional fields are NULL-checked; the sole caller guards the pointer; no safe-Rust path."
+  },
+  {
+   "stable_id": "src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_INFO_SYNTAX_POINTER",
+   "id": "V1:src/x509/v3_attrdesc.rs:699:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_attrdesc.rs:699",
+   "boundary_receipt": "boundary-sweep-B54",
+   "boundary_ids": [
+    "src/x509/v3_attrdesc.rs:637",
+    "src/x509/v3_attrdesc.rs:699",
+    "src/x509/v3_attrdesc.rs:738",
+    "src/x509/v3_attrdesc.rs:794",
+    "src/x509/v3_attrdesc.rs:850",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_HASH",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_INFO_SYNTAX_POINTER",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_INFO_SYNTAX",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_PRIVILEGE_POLICY_ID",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_ATTRIBUTE_DESCRIPTOR"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_attrdesc.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn i2r_INFO_SYNTAX_POINTER(",
+   "line_recorded_closure": 699,
+   "line_current_census": 699,
+   "line_current_def": 699,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_attrdesc.rs :: UNSAFE_FN_DEF :: i2r_INFO_SYNTAX_POINTER @ def line 699",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    699,
+    730
+   ],
+   "span_sha256_b78": "dfcd6d9b66226ffb80c4e691a8ac60c377be4e28fc96efafe5163ca935f38e93",
+   "span_sha256_current": "dfcd6d9b66226ffb80c4e691a8ac60c377be4e28fc96efafe5163ca935f38e93",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 7,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_attrdesc.rs:693-698`); SAFETY comments at each operation; the caller `i2r_OSSL_INFO_SYNTAX`.",
+   "recorded_contract_summary": "`out` is a live BIO; `pointer` is a live `OSSL_INFO_SYNTAX_POINTER` whose `name` is a live `GENERAL_NAMES` and whose `hash` is optional.",
+   "unsafe_operations_read": [
+    "`(*pointer).name` and `(*pointer).hash`",
+    "`OSSL_GENERAL_NAMES_print`, `BIO_printf`/`BIO_puts`",
+    "guarded delegation to `i2r_HASH`"
+   ],
+   "safety_comment_quoted": "`out` is a live BIO; `pointer` is a live `OSSL_INFO_SYNTAX_POINTER`.",
+   "callers_enumerated": [
+    "`i2r_OSSL_INFO_SYNTAX` `POINTER` arm (`src/x509/v3_attrdesc.rs:770-783`), under the live `info` contract and only for the pointer selector"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`; the caller reaches it only on the pointer selector with a live decoded `info`.",
+    "b_all_unsafe_covered": "Yes. `name` is a required field of the pointer structure; `hash` is optional and NULL-checked before `i2r_HASH`.",
+    "c_hidden_obligation": "None hidden. The selector/arm agreement is the decoder's obligation stated by the caller's contract.",
+    "d_load_bearing_control": "Yes. The control verifies the selected POINTER call and the hash guard; canaries M5/M6 fire. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Live caller-established `pointer`, required `name`, optional `hash` guarded; selector dispatch is the decoder's contract; no safe-Rust path."
+  },
+  {
+   "stable_id": "src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_ATTRIBUTE_DESCRIPTOR",
+   "id": "V1:src/x509/v3_attrdesc.rs:850:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_attrdesc.rs:850",
+   "boundary_receipt": "boundary-sweep-B54",
+   "boundary_ids": [
+    "src/x509/v3_attrdesc.rs:637",
+    "src/x509/v3_attrdesc.rs:699",
+    "src/x509/v3_attrdesc.rs:738",
+    "src/x509/v3_attrdesc.rs:794",
+    "src/x509/v3_attrdesc.rs:850",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_HASH",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_INFO_SYNTAX_POINTER",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_INFO_SYNTAX",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_PRIVILEGE_POLICY_ID",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_ATTRIBUTE_DESCRIPTOR"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_attrdesc.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn i2r_OSSL_ATTRIBUTE_DESCRIPTOR(",
+   "line_recorded_closure": 850,
+   "line_current_census": 850,
+   "line_current_def": 850,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_attrdesc.rs :: UNSAFE_FN_DEF :: i2r_OSSL_ATTRIBUTE_DESCRIPTOR @ def line 850",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    850,
+    946
+   ],
+   "span_sha256_b78": "9b34e92c6f53fc8303d45566ba1af407c91497bbfe6fc7d8e33070311ff29941",
+   "span_sha256_current": "9b34e92c6f53fc8303d45566ba1af407c91497bbfe6fc7d8e33070311ff29941",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 12,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_attrdesc.rs:844-849`); the `i2r` slot contract on `X509V3ExtMethod`; SAFETY comments at each operation.",
+   "recorded_contract_summary": "`out` is a live BIO; `ad` is a live `OSSL_ATTRIBUTE_DESCRIPTOR` (identifier/attributeSyntax/dominationRule are required `ASN1_SIMPLE` fields; name/description are optional).",
+   "unsafe_operations_read": [
+    "`(*ad).identifier`/`attributeSyntax`/`name`/`description`/`dominationRule`",
+    "`OBJ_obj2txt` into an 80-byte buffer",
+    "`BIO_printf` `%.*s` over the string `data`/`length`",
+    "delegation to `i2r_OSSL_PRIVILEGE_POLICY_ID`"
+   ],
+   "safety_comment_quoted": "`out` is a live BIO; `ad` is a live `OSSL_ATTRIBUTE_DESCRIPTOR`.",
+   "callers_enumerated": [
+    "row `ossl_v3_attribute_descriptor.i2r` (`src/x509/v3_attrdesc.rs:967`)",
+    "`X509V3_EXT_print` `i2r` arm after a non-NULL `OSSL_ATTRIBUTE_DESCRIPTOR_it` decode (`src/x509/v3_prn.rs:362-366`)"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn` reached only through the registry row after a non-NULL decode.",
+    "b_all_unsafe_covered": "Yes. The three required fields are decoder-guaranteed (`ASN1_SIMPLE`); `name`/`description` are optional and NULL-checked; the `%.*s` writes use each string's own `data`/`length` pair.",
+    "c_hidden_obligation": "None hidden. Required-field liveness is the decoder's, fixed by `OSSL_ATTRIBUTE_DESCRIPTOR_TT` and stated in the contract.",
+    "d_load_bearing_control": "Yes. The control checks the row's `it`/`i2r` pairing and the descriptor-to-privilege-policy call; canaries M6/M7 exercise the control. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Required fields are decoder-guaranteed, optional fields are NULL-checked, and the row's declared item establishes the object type; no safe-Rust path."
+  },
+  {
+   "stable_id": "src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_INFO_SYNTAX",
+   "id": "V1:src/x509/v3_attrdesc.rs:738:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_attrdesc.rs:738",
+   "boundary_receipt": "boundary-sweep-B54",
+   "boundary_ids": [
+    "src/x509/v3_attrdesc.rs:637",
+    "src/x509/v3_attrdesc.rs:699",
+    "src/x509/v3_attrdesc.rs:738",
+    "src/x509/v3_attrdesc.rs:794",
+    "src/x509/v3_attrdesc.rs:850",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_HASH",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_INFO_SYNTAX_POINTER",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_INFO_SYNTAX",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_PRIVILEGE_POLICY_ID",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_ATTRIBUTE_DESCRIPTOR"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_attrdesc.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn i2r_OSSL_INFO_SYNTAX(",
+   "line_recorded_closure": 738,
+   "line_current_census": 738,
+   "line_current_def": 738,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_attrdesc.rs :: UNSAFE_FN_DEF :: i2r_OSSL_INFO_SYNTAX @ def line 738",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    738,
+    786
+   ],
+   "span_sha256_b78": "e3f08302763a4c998a4647fd89122220b9e45fed3ffebba5218618d82315df95",
+   "span_sha256_current": "e3f08302763a4c998a4647fd89122220b9e45fed3ffebba5218618d82315df95",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 7,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_attrdesc.rs:732-737`); SAFETY comments at each arm; the calling `i2r_OSSL_PRIVILEGE_POLICY_ID`.",
+   "recorded_contract_summary": "`out` is a live BIO; `info` is a live `OSSL_INFO_SYNTAX` whose selector selects the live `content` or `pointer` arm.",
+   "unsafe_operations_read": [
+    "`(*info).type_` selector read",
+    "CONTENT arm: `(*choice.content).length`/`data` through `%.*s`",
+    "POINTER arm: cast and delegation to `i2r_INFO_SYNTAX_POINTER`"
+   ],
+   "safety_comment_quoted": "`out` is a live BIO; `info` is a live `OSSL_INFO_SYNTAX`.",
+   "callers_enumerated": [
+    "`i2r_OSSL_PRIVILEGE_POLICY_ID` (`src/x509/v3_attrdesc.rs:834-841`), on the required `privPolSyntax` field"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`; the caller passes a live required field of a decoded object.",
+    "b_all_unsafe_covered": "Yes. The selector chooses one live arm; the content arm uses the string's own `length`/`data` pair, and the pointer arm forwards to a function whose contract is the same live object.",
+    "c_hidden_obligation": "None hidden. The selector/arm agreement is the ASN.1 `CHOICE`/union invariant of the decoder.",
+    "d_load_bearing_control": "Yes. The control verifies the privilege-policy call and the selected pointer arm; M6 fires. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Selector-dispatched union access under the decoder's invariant, with both arms using the selected live value; no safe-Rust path."
+  },
+  {
+   "stable_id": "src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_PRIVILEGE_POLICY_ID",
+   "id": "V1:src/x509/v3_attrdesc.rs:794:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_attrdesc.rs:794",
+   "boundary_receipt": "boundary-sweep-B54",
+   "boundary_ids": [
+    "src/x509/v3_attrdesc.rs:637",
+    "src/x509/v3_attrdesc.rs:699",
+    "src/x509/v3_attrdesc.rs:738",
+    "src/x509/v3_attrdesc.rs:794",
+    "src/x509/v3_attrdesc.rs:850",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_HASH",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_INFO_SYNTAX_POINTER",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_INFO_SYNTAX",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_PRIVILEGE_POLICY_ID",
+    "B52GAP::src/x509/v3_attrdesc.rs::UNSAFE_FN_DEF::i2r_OSSL_ATTRIBUTE_DESCRIPTOR"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_attrdesc.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn i2r_OSSL_PRIVILEGE_POLICY_ID(",
+   "line_recorded_closure": 794,
+   "line_current_census": 794,
+   "line_current_def": 794,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_attrdesc.rs :: UNSAFE_FN_DEF :: i2r_OSSL_PRIVILEGE_POLICY_ID @ def line 794",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    794,
+    842
+   ],
+   "span_sha256_b78": "5f7d97527b28901830ccd812a0d7c53926a68ade59faed45b16632159f16b66a",
+   "span_sha256_current": "5f7d97527b28901830ccd812a0d7c53926a68ade59faed45b16632159f16b66a",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 5,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_attrdesc.rs:788-793`); SAFETY comments at each operation; the calling `i2r_OSSL_ATTRIBUTE_DESCRIPTOR`.",
+   "recorded_contract_summary": "`out` is a live BIO; `ppid` is a live `OSSL_PRIVILEGE_POLICY_ID` whose `privilegePolicy` is a live object and whose `privPolSyntax` is a required live field.",
+   "unsafe_operations_read": [
+    "`(*ppid).privilegePolicy` through `OBJ_obj2txt` into an 80-byte buffer",
+    "`BIO_printf` with the NUL-terminated buffer",
+    "delegation to `i2r_OSSL_INFO_SYNTAX`"
+   ],
+   "safety_comment_quoted": "`out` is a live BIO; `ppid` is a live `OSSL_PRIVILEGE_POLICY_ID`.",
+   "callers_enumerated": [
+    "`i2r_OSSL_ATTRIBUTE_DESCRIPTOR` (`src/x509/v3_attrdesc.rs:938-945`) on the required `dominationRule` field"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`; the caller passes a required field of a decoded object.",
+    "b_all_unsafe_covered": "Yes. `OBJ_obj2txt` bounds its write by the 80-byte argument; `privPolSyntax` is required by the ASN.1 descriptor and forwarded live.",
+    "c_hidden_obligation": "None hidden. Required-field liveness is the decoder's obligation, stated in the context.",
+    "d_load_bearing_control": "Yes. The control checks the descriptor-to-privilege-policy and privilege-policy-to-info-syntax chains. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Both fields are required by the decoder's item and the buffer write is explicitly bounded; no safe-Rust path."
+  },
+  {
+   "stable_id": "src/x509/v3_attrmap.rs::UNSAFE_FN_DEF::i2r_ATTRIBUTE_MAPPING",
+   "id": "V1:src/x509/v3_attrmap.rs:576:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_attrmap.rs:576",
+   "boundary_receipt": "boundary-sweep-B54",
+   "boundary_ids": [
+    "src/x509/v3_attrmap.rs:576",
+    "src/x509/v3_attrmap.rs:653",
+    "B52GAP::src/x509/v3_attrmap.rs::UNSAFE_FN_DEF::i2r_ATTRIBUTE_MAPPING",
+    "B52GAP::src/x509/v3_attrmap.rs::UNSAFE_FN_DEF::i2r_ATTRIBUTE_MAPPINGS"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_attrmap.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn i2r_ATTRIBUTE_MAPPING(",
+   "line_recorded_closure": 576,
+   "line_current_census": 576,
+   "line_current_def": 576,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_attrmap.rs :: UNSAFE_FN_DEF :: i2r_ATTRIBUTE_MAPPING @ def line 576",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    576,
+    645
+   ],
+   "span_sha256_b78": "ccebc768068d9250d4c483d6ee9e2efda44d7e7a3cc151f300dbbd9b115b32ff",
+   "span_sha256_current": "ccebc768068d9250d4c483d6ee9e2efda44d7e7a3cc151f300dbbd9b115b32ff",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 17,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_attrmap.rs:570-575`); SAFETY comments at each arm; the calling `i2r_ATTRIBUTE_MAPPINGS`.",
+   "recorded_contract_summary": "`out` is a live BIO; `am` is a live `OSSL_ATTRIBUTE_MAPPING` whose selector selects a live type/value mapping arm with required `local`/`remote` fields.",
+   "unsafe_operations_read": [
+    "`(*am).type_`, `(*am).choice.typeMappings`/`typeValueMappings`",
+    "`(*mapping).local`/`remote`, `(*vm).local`/`remote` and their `type_`/`value`",
+    "`i2a_ASN1_OBJECT`, `ossl_print_attribute_value`, `OBJ_obj2nid`"
+   ],
+   "safety_comment_quoted": "`out` is a live BIO; `am` is a live `OSSL_ATTRIBUTE_MAPPING`.",
+   "callers_enumerated": [
+    "`i2r_ATTRIBUTE_MAPPINGS` stack loop (`src/x509/v3_attrmap.rs:663-673`), on each live stack element"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`; the caller passes live `OPENSSL_sk_value` elements of a live stack.",
+    "b_all_unsafe_covered": "Yes. Each arm's fields are `ASN1_SIMPLE` members of the decoder's `CHOICE` structures; the selected arm is the decoder's invariant; unknown selectors return 0.",
+    "c_hidden_obligation": "None hidden. The selector/arm and required-member liveness are the decoder's obligations, recorded in the caller contract.",
+    "d_load_bearing_control": "Yes. The control checks the stack-loop call site and the row pairing; canary M6 fires. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Live stack elements, selector-dispatched required members of decoder-built structures; no safe-Rust path."
+  },
+  {
+   "stable_id": "src/x509/v3_attrmap.rs::UNSAFE_FN_DEF::i2r_ATTRIBUTE_MAPPINGS",
+   "id": "V1:src/x509/v3_attrmap.rs:653:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_attrmap.rs:653",
+   "boundary_receipt": "boundary-sweep-B54",
+   "boundary_ids": [
+    "src/x509/v3_attrmap.rs:576",
+    "src/x509/v3_attrmap.rs:653",
+    "B52GAP::src/x509/v3_attrmap.rs::UNSAFE_FN_DEF::i2r_ATTRIBUTE_MAPPING",
+    "B52GAP::src/x509/v3_attrmap.rs::UNSAFE_FN_DEF::i2r_ATTRIBUTE_MAPPINGS"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_attrmap.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn i2r_ATTRIBUTE_MAPPINGS(",
+   "line_recorded_closure": 653,
+   "line_current_census": 653,
+   "line_current_def": 653,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_attrmap.rs :: UNSAFE_FN_DEF :: i2r_ATTRIBUTE_MAPPINGS @ def line 653",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    653,
+    681
+   ],
+   "span_sha256_b78": "dbef7f7b7e940a185f2040cd3b0b65d0c8d41ca825bfee575f0d95fb1dd072f5",
+   "span_sha256_current": "dbef7f7b7e940a185f2040cd3b0b65d0c8d41ca825bfee575f0d95fb1dd072f5",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 6,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_attrmap.rs:647-652`); the `i2r` slot contract on `X509V3ExtMethod`; SAFETY comments at each operation.",
+   "recorded_contract_summary": "`out` is a live BIO; `ams` is a live `STACK_OF(OSSL_ATTRIBUTE_MAPPING)` whose elements are live mappings.",
+   "unsafe_operations_read": [
+    "`OPENSSL_sk_num`/`OPENSSL_sk_value` over the stack",
+    "`BIO_printf`/`BIO_puts`",
+    "delegation to `i2r_ATTRIBUTE_MAPPING`"
+   ],
+   "safety_comment_quoted": "`out` is a live BIO; `ams` is a live `STACK_OF(OSSL_ATTRIBUTE_MAPPING)`.",
+   "callers_enumerated": [
+    "row `ossl_v3_attribute_mappings.i2r` (`src/x509/v3_attrmap.rs:702`)",
+    "`X509V3_EXT_print` `i2r` arm after a non-NULL `OSSL_ATTRIBUTE_MAPPINGS_it` decode (`src/x509/v3_prn.rs:362-366`)"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn` reached through the registry row after a non-NULL decode.",
+    "b_all_unsafe_covered": "Yes. The stack and its element type are the row item's own; the loop bound is `OPENSSL_sk_num`; each element is forwarded under the callee's live contract.",
+    "c_hidden_obligation": "None hidden. Element liveness is the decoder's, and the row's `it` fixes the stack element type (checked).",
+    "d_load_bearing_control": "Yes. The control checks the row's `it`/`i2r` pairing and the per-element call. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "The row item fixes the stack type, the loop is bounded by the stack itself, and each element is a live decoder value; no safe-Rust path."
+  },
+  {
+   "stable_id": "src/x509/v3_audit_id.rs::UNSAFE_FN_DEF::audit_i2s",
+   "id": "V1:src/x509/v3_audit_id.rs:30:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_audit_id.rs:30",
+   "boundary_receipt": "boundary-sweep-B54",
+   "boundary_ids": [
+    "P25-X509-V3-SLOT-004",
+    "P25-X509-V3-SLOT-005",
+    "src/x509/v3_audit_id.rs:30",
+    "src/x509/v3_audit_id.rs:37"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_audit_id.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn audit_i2s(meth: *const X509V3ExtMethod, value: *mut c_void) -> *mut c_char {",
+   "line_recorded_closure": 30,
+   "line_current_census": 37,
+   "line_current_def": 37,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_audit_id.rs :: UNSAFE_FN_DEF :: audit_i2s @ def line 37",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    37,
+    41
+   ],
+   "span_sha256_b78": "91e76fd7ba4d40e22ff5c03a883510ab883d1dd212aeb36f42002597fc815726",
+   "span_sha256_current": "91e76fd7ba4d40e22ff5c03a883510ab883d1dd212aeb36f42002597fc815726",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 2,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_audit_id.rs:29-36`); the `i2s` slot contract on `X509V3ExtMethod`; the dispatcher's `OwnedStr` adoption.",
+   "recorded_contract_summary": "`value` is the live `ASN1_OCTET_STRING` decoded through this row's `ASN1_OCTET_STRING_it`; the returned block is the caller's, adopted by `OwnedStr` and released once at the authority's free line.",
+   "unsafe_operations_read": [
+    "the `i2s_ASN1_OCTET_STRING` call, and the `meth` cast to `void *`"
+   ],
+   "safety_comment_quoted": "`value` is the `ASN1_OCTET_STRING` the caller stored in the slot.",
+   "callers_enumerated": [
+    "row `ossl_v3_audit_identity.i2s` (`src/x509/v3_audit_id.rs:71`)",
+    "`X509V3_EXT_print` `i2s` arm (`src/x509/v3_prn.rs:334-352`) after a non-NULL decode; the result is adopted by `OwnedStr`"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`; the only caller decodes through the same row's item and refuses a NULL result.",
+    "b_all_unsafe_covered": "Yes. The slot contract fixes `value`'s type and liveness; the callee `i2s_ASN1_OCTET_STRING` owns any allocation and returns a block the dispatcher adopts.",
+    "c_hidden_obligation": "None found. The result's release is the dispatcher's `OwnedStr` Drop; the function retains nothing.",
+    "d_load_bearing_control": "Yes. The control checks the row's `it`/`i2s`/`s2i` pairing and the print `i2s` arm; canary M7 shows the row-item check is load-bearing. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "A one-line slot forwarder whose precondition (a live decoded octet string) is established by the dispatcher; ownership of the result is the dispatcher's `OwnedStr`."
+  },
+  {
+   "stable_id": "src/x509/v3_audit_id.rs::UNSAFE_FN_DEF::audit_s2i",
+   "id": "V1:src/x509/v3_audit_id.rs:37:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_audit_id.rs:37",
+   "boundary_receipt": "boundary-sweep-B54",
+   "boundary_ids": [
+    "P25-X509-V3-SLOT-004",
+    "P25-X509-V3-SLOT-005",
+    "src/x509/v3_audit_id.rs:30",
+    "src/x509/v3_audit_id.rs:37"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_audit_id.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn audit_s2i(",
+   "line_recorded_closure": 37,
+   "line_current_census": 52,
+   "line_current_def": 52,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_audit_id.rs :: UNSAFE_FN_DEF :: audit_s2i @ def line 52",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    52,
+    59
+   ],
+   "span_sha256_b78": "1349a298d08bf2056382ae99905333e72edd2c7246c3c9a316672ed3adf01570",
+   "span_sha256_current": "1349a298d08bf2056382ae99905333e72edd2c7246c3c9a316672ed3adf01570",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 2,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_audit_id.rs:43-51`); the `s2i` slot contract on `X509V3ExtMethod`.",
+   "recorded_contract_summary": "`value` is a borrowed non-NULL NUL-terminated configuration string; the fresh `ASN1_OCTET_STRING` on success is encoded with this row's item and freed once by the dispatcher.",
+   "unsafe_operations_read": [
+    "the `s2i_ASN1_OCTET_STRING` call and casts"
+   ],
+   "safety_comment_quoted": "`value` is therefore non-NULL (what `s2i_ASN1_OCTET_STRING` requires) and is neither freed nor retained here.",
+   "callers_enumerated": [
+    "row `ossl_v3_audit_identity.s2i` (`src/x509/v3_audit_id.rs:72`)",
+    "`do_ext_nconf` `s2i` arm (`src/x509/v3_conf.rs:1119-1124`), which passes the borrowed config value"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`; the only caller passes a borrowed NUL-terminated string.",
+    "b_all_unsafe_covered": "Yes. The slot contract fixes the non-NULL/NUL-terminated input; the callee owns any allocation and the dispatcher frees the result exactly once.",
+    "c_hidden_obligation": "None found. The returned object's `it` pairing is the row's registrar obligation and is checked.",
+    "d_load_bearing_control": "Yes. The control checks the row's `s2i` pairing and the dispatcher's `s2i` arm. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "A slot forwarder with the caller-established non-NULL/NUL-terminated input; the result's single release is the dispatcher's."
+  },
+  {
+   "stable_id": "src/x509/v3_authattid.rs::UNSAFE_FN_DEF::i2r_ISSUER_SERIAL",
+   "id": "V1:src/x509/v3_authattid.rs:164:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_authattid.rs:164",
+   "boundary_receipt": "boundary-sweep-B54",
+   "boundary_ids": [
+    "src/x509/v3_authattid.rs:164",
+    "src/x509/v3_authattid.rs:229",
+    "B52GAP::src/x509/v3_authattid.rs::UNSAFE_FN_DEF::i2r_ISSUER_SERIAL",
+    "B52GAP::src/x509/v3_authattid.rs::UNSAFE_FN_DEF::i2r_auth_attr_id"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_authattid.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn i2r_ISSUER_SERIAL(",
+   "line_recorded_closure": 164,
+   "line_current_census": 164,
+   "line_current_def": 164,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_authattid.rs :: UNSAFE_FN_DEF :: i2r_ISSUER_SERIAL @ def line 164",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    164,
+    220
+   ],
+   "span_sha256_b78": "e72c8a48bd22a018be45373d689768ef47693ce642b97cfb5bbf9a5f5a713451",
+   "span_sha256_current": "e72c8a48bd22a018be45373d689768ef47693ce642b97cfb5bbf9a5f5a713451",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 14,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_authattid.rs:158-163`); SAFETY comments at each operation; the calling `i2r_auth_attr_id`.",
+   "recorded_contract_summary": "`iss` is a live `OSSL_ISSUER_SERIAL`; `out` is a live BIO. `issuer`/`issuerUID` are optional and NULL-checked; the embedded `serial` integer is live.",
+   "unsafe_operations_read": [
+    "`(*iss).issuer`/`issuerUID` NULL checks",
+    "`OSSL_GENERAL_NAMES_print`, `i2a_ASN1_INTEGER(&(*iss).serial)`, `i2a_ASN1_STRING`"
+   ],
+   "safety_comment_quoted": "`iss` is a live `OSSL_ISSUER_SERIAL`; `out` is a live BIO.",
+   "callers_enumerated": [
+    "`i2r_auth_attr_id` stack loop (`src/x509/v3_authattid.rs:239-254`), on each live stack element"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`; the caller passes live stack elements.",
+    "b_all_unsafe_covered": "Yes. The optional members are NULL-checked; `serial` is an embedded required integer of the structure; the stack element type is the row item's.",
+    "c_hidden_obligation": "None hidden. The element type and required `serial` are decoder invariants named in the caller contract.",
+    "d_load_bearing_control": "Yes. The control checks the per-element call and the row pairing. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Optional fields are guarded, the embedded serial is required, and the caller supplies live elements; no safe-Rust path."
+  },
+  {
+   "stable_id": "src/x509/v3_authattid.rs::UNSAFE_FN_DEF::i2r_auth_attr_id",
+   "id": "V1:src/x509/v3_authattid.rs:229:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_authattid.rs:229",
+   "boundary_receipt": "boundary-sweep-B54",
+   "boundary_ids": [
+    "src/x509/v3_authattid.rs:164",
+    "src/x509/v3_authattid.rs:229",
+    "B52GAP::src/x509/v3_authattid.rs::UNSAFE_FN_DEF::i2r_ISSUER_SERIAL",
+    "B52GAP::src/x509/v3_authattid.rs::UNSAFE_FN_DEF::i2r_auth_attr_id"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_authattid.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn i2r_auth_attr_id(",
+   "line_recorded_closure": 229,
+   "line_current_census": 229,
+   "line_current_def": 229,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_authattid.rs :: UNSAFE_FN_DEF :: i2r_auth_attr_id @ def line 229",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    229,
+    257
+   ],
+   "span_sha256_b78": "6208ffe6d7213afa58b4edf64fa61471d2dbd5fb69da945018225cae64a496c6",
+   "span_sha256_current": "6208ffe6d7213afa58b4edf64fa61471d2dbd5fb69da945018225cae64a496c6",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 6,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_authattid.rs:222-228`); the `i2r` slot contract on `X509V3ExtMethod`; SAFETY comments at each operation.",
+   "recorded_contract_summary": "`aids` is a live `OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX` (`STACK_OF(OSSL_ISSUER_SERIAL)`); `out` is a live BIO; every element is a live issuer/serial.",
+   "unsafe_operations_read": [
+    "`OPENSSL_sk_num`/`OPENSSL_sk_value` over the stack",
+    "`BIO_printf`/`BIO_puts`",
+    "delegation to `i2r_ISSUER_SERIAL`"
+   ],
+   "safety_comment_quoted": "`aids` is a live `OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX` (a `STACK_OF(OSSL_ISSUER_SERIAL)`); `out` is a live BIO.",
+   "callers_enumerated": [
+    "row `ossl_v3_authority_attribute_identifier.i2r` (`src/x509/v3_authattid.rs:274`)",
+    "`X509V3_EXT_print` `i2r` arm after a non-NULL `OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX_it` decode"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn` reached through the registry row after a non-NULL decode.",
+    "b_all_unsafe_covered": "Yes. The stack and element types are fixed by the row's `it`; the loop is bounded by the stack; each element is forwarded under the callee's live contract.",
+    "c_hidden_obligation": "None hidden. Element liveness is the decoder's; the row item fixes the type (checked).",
+    "d_load_bearing_control": "Yes. The control checks the row's `it`/`i2r` pairing and the per-element call. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Row-item-typed stack, bounded loop, live elements, and a live output BIO; no safe-Rust path."
+  },
+  {
+   "stable_id": "src/x509/v3_battcons.rs::UNSAFE_FN_DEF::i2v_OSSL_BASIC_ATTR_CONSTRAINTS",
+   "id": "V1:src/x509/v3_battcons.rs:191:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_battcons.rs:191",
+   "boundary_receipt": "boundary-sweep-B54",
+   "boundary_ids": [
+    "B51-V2I-002",
+    "P25-X509-V3-SLOT-006",
+    "P25-X509-V3-SLOT-007",
+    "src/x509/v3_battcons.rs:191"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_battcons.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn i2v_OSSL_BASIC_ATTR_CONSTRAINTS(",
+   "line_recorded_closure": 191,
+   "line_current_census": 198,
+   "line_current_def": 198,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_battcons.rs :: UNSAFE_FN_DEF :: i2v_OSSL_BASIC_ATTR_CONSTRAINTS @ def line 198",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    198,
+    211
+   ],
+   "span_sha256_b78": "813870ddf14862df7e31e80b62bbc1d2da0ae2db7fa0c29e5e8c3ff1b04cd856",
+   "span_sha256_current": "813870ddf14862df7e31e80b62bbc1d2da0ae2db7fa0c29e5e8c3ff1b04cd856",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 2,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_battcons.rs:188-198`); the `i2v` slot contract on `X509V3ExtMethod`.",
+   "recorded_contract_summary": "`battcons` is the dispatcher's live decoded `OSSL_BASIC_ATTR_CONSTRAINTS`, borrowed for the call; the returned stack (this call's own or the sink) and its members belong to the caller.",
+   "unsafe_operations_read": [
+    "`(*battcons).authority`/`pathlen` field reads",
+    "`X509V3_add_value_bool`/`_int` into the sink"
+   ],
+   "safety_comment_quoted": "`battcons` is the dispatcher's live value, borrowed for the call; the returned stack ... belong to the caller.",
+   "callers_enumerated": [
+    "row `ossl_v3_battcons.i2v` (`src/x509/v3_battcons.rs:308`)",
+    "`X509V3_EXT_print` `i2v` arm with a non-NULL decoded value and a NULL sink (`src/x509/v3_prn.rs:353-361`)"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`; the dispatcher passes a non-NULL decoded value.",
+    "b_all_unsafe_covered": "Yes. The two fields are plain required members of the decoded structure; the add helpers own any allocation and report through the sink.",
+    "c_hidden_obligation": "None found. The value's type is the row item's; the returned stack ownership is explicit.",
+    "d_load_bearing_control": "Yes. The control checks the row's `it`/`i2v`/`v2i` pairing and the print `i2v` arm. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Live decoded value, plain required members, explicit ownership of the returned stack; no safe-Rust path."
+  },
+  {
+   "stable_id": "src/x509/v3_battcons.rs::UNSAFE_FN_DEF::v2i_OSSL_BASIC_ATTR_CONSTRAINTS",
+   "id": "V1:src/x509/v3_battcons.rs:208:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_battcons.rs:208",
+   "boundary_receipt": "boundary-sweep-B51",
+   "boundary_ids": [
+    "B51-V2I-002",
+    "P25-X509-V3-SLOT-006",
+    "P25-X509-V3-SLOT-007",
+    "src/x509/v3_battcons.rs:191"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_battcons.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn v2i_OSSL_BASIC_ATTR_CONSTRAINTS(",
+   "line_recorded_closure": 208,
+   "line_current_census": 248,
+   "line_current_def": 248,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_battcons.rs :: UNSAFE_FN_DEF :: v2i_OSSL_BASIC_ATTR_CONSTRAINTS @ def line 248",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    248,
+    295
+   ],
+   "span_sha256_b78": "2a306bf301a494133538d95d28f4672dec10cec7b08d21ef5c46030706b22f7d",
+   "span_sha256_current": "2a306bf301a494133538d95d28f4672dec10cec7b08d21ef5c46030706b22f7d",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 14,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_battcons.rs:213-247`); the `v2i` slot contract on `X509V3ExtMethod`.",
+   "recorded_contract_summary": "`values` is a live non-empty stack of live `CONF_VALUE`s; on success a fresh `OSSL_BASIC_ATTR_CONSTRAINTS` is exclusively owned by the dispatcher and released once through the row's `it`; on failure the partial value is freed.",
+   "unsafe_operations_read": [
+    "`OPENSSL_sk_num`/`OPENSSL_sk_value`, `(*val).name`",
+    "`strcmp`, `X509V3_get_value_bool`/`_int`",
+    "`OSSL_BASIC_ATTR_CONSTRAINTS_free` on every failure return"
+   ],
+   "safety_comment_quoted": "`values` is a live `STACK_OF(CONF_VALUE)` per the caller's contract.",
+   "callers_enumerated": [
+    "row `ossl_v3_battcons.v2i` (`src/x509/v3_battcons.rs:309`)",
+    "`do_ext_nconf` `v2i` arm after refusing a NULL/empty stack (`src/x509/v3_conf.rs:1081-1118`)"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`; the dispatcher refuses NULL/empty `values`.",
+    "b_all_unsafe_covered": "Yes. `battcons` is allocated first; every failure path frees it exactly once; success returns it for the dispatcher's single `ASN1_item_free`.",
+    "c_hidden_obligation": "None hidden. The returned type/`it` pairing is the registrar's obligation, explicitly recorded.",
+    "d_load_bearing_control": "Yes. The control checks the row pairing and the dispatcher's `nval` hand-off; canary M4 fires. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "One owned allocation with a single release on every path; caller preconditions established by the dispatcher; no safe-Rust path."
+  },
+  {
+   "stable_id": "src/x509/v3_bcons.rs::UNSAFE_FN_DEF::i2v_BASIC_CONSTRAINTS",
+   "id": "V1:src/x509/v3_bcons.rs:192:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_bcons.rs:192",
+   "boundary_receipt": "boundary-sweep-B54",
+   "boundary_ids": [
+    "B51-V2I-003",
+    "P25-X509-V3-SLOT-008",
+    "P25-X509-V3-SLOT-009",
+    "src/x509/v3_bcons.rs:192"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_bcons.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn i2v_BASIC_CONSTRAINTS(",
+   "line_recorded_closure": 192,
+   "line_current_census": 199,
+   "line_current_def": 199,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_bcons.rs :: UNSAFE_FN_DEF :: i2v_BASIC_CONSTRAINTS @ def line 199",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    199,
+    212
+   ],
+   "span_sha256_b78": "0691b43de060776cc6d6c6042cc95b199c759b97403c28f216b4bb01ea21c2ce",
+   "span_sha256_current": "0691b43de060776cc6d6c6042cc95b199c759b97403c28f216b4bb01ea21c2ce",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 2,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_bcons.rs:190-198`); the `i2v` slot contract on `X509V3ExtMethod`.",
+   "recorded_contract_summary": "`bcons` is the dispatcher's live decoded `BASIC_CONSTRAINTS`, borrowed for the call, and the dispatcher frees it after; the returned stack and members belong to the caller.",
+   "unsafe_operations_read": [
+    "`(*bcons).ca`/`pathlen` field reads",
+    "`X509V3_add_value_bool`/`_int` into the sink"
+   ],
+   "safety_comment_quoted": "`bcons` is borrowed here, and the returned stack and its members are the caller's to release.",
+   "callers_enumerated": [
+    "row `ossl_v3_bcons.i2v` (`src/x509/v3_bcons.rs:309`)",
+    "`X509V3_EXT_print` `i2v` arm with a non-NULL decoded value and a NULL sink"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`; the dispatcher passes a non-NULL decoded value.",
+    "b_all_unsafe_covered": "Yes. Plain required members of the decoded structure; the helpers own any allocation.",
+    "c_hidden_obligation": "None found. The value's type is the row item's; ownership of the returned stack is explicit.",
+    "d_load_bearing_control": "Yes. The control checks the row's `it`/`i2v`/`v2i` pairing and the print `i2v` arm. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "Live decoded value, plain required members, explicit ownership of the returned stack; no safe-Rust path."
+  },
+  {
+   "stable_id": "src/x509/v3_bcons.rs::UNSAFE_FN_DEF::v2i_BASIC_CONSTRAINTS",
+   "id": "V1:src/x509/v3_bcons.rs:209:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_bcons.rs:209",
+   "boundary_receipt": "boundary-sweep-B51",
+   "boundary_ids": [
+    "B51-V2I-003",
+    "P25-X509-V3-SLOT-008",
+    "P25-X509-V3-SLOT-009",
+    "src/x509/v3_bcons.rs:192"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_bcons.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn v2i_BASIC_CONSTRAINTS(",
+   "line_recorded_closure": 209,
+   "line_current_census": 249,
+   "line_current_def": 249,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_bcons.rs :: UNSAFE_FN_DEF :: v2i_BASIC_CONSTRAINTS @ def line 249",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    249,
+    296
+   ],
+   "span_sha256_b78": "27f004feb49a5375ca574e910c1015d0302bd71d7b5c655e5b9b0698aa03900b",
+   "span_sha256_current": "27f004feb49a5375ca574e910c1015d0302bd71d7b5c655e5b9b0698aa03900b",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 14,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_bcons.rs:214-248`); the `v2i` slot contract on `X509V3ExtMethod`.",
+   "recorded_contract_summary": "`values` is a live non-empty stack of live `CONF_VALUE`s; on success a fresh `BasicConstraints` is exclusively owned by the dispatcher and released once through `BASIC_CONSTRAINTS_it`; on failure the partial value is freed.",
+   "unsafe_operations_read": [
+    "`OPENSSL_sk_num`/`OPENSSL_sk_value`, `(*val).name`",
+    "`strcmp`, `X509V3_get_value_bool`/`_int`",
+    "`BASIC_CONSTRAINTS_free` on every failure return"
+   ],
+   "safety_comment_quoted": "`values` is a live `STACK_OF(CONF_VALUE)` per the caller's contract.",
+   "callers_enumerated": [
+    "row `ossl_v3_bcons.v2i` (`src/x509/v3_bcons.rs:310`)",
+    "`do_ext_nconf` `v2i` arm after refusing a NULL/empty stack"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`; the dispatcher refuses NULL/empty `values`.",
+    "b_all_unsafe_covered": "Yes. `bcons` is allocated first; every failure path frees it exactly once; success returns it for the dispatcher's single `ASN1_item_free`.",
+    "c_hidden_obligation": "None hidden. The returned type/`it` pairing is the registrar's obligation, explicitly recorded.",
+    "d_load_bearing_control": "Yes. The control checks the row pairing and the dispatcher's `nval` hand-off; canary M4 fires. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "One owned allocation with a single release on every path; caller preconditions established by the dispatcher; no safe-Rust path."
+  },
+  {
+   "stable_id": "src/x509/v3_bitst.rs::UNSAFE_FN_DEF::bitst_i2v",
+   "id": "V1:src/x509/v3_bitst.rs:349:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_bitst.rs:349",
+   "boundary_receipt": "boundary-sweep-B54",
+   "boundary_ids": [
+    "P25-X509-V3-SLOT-010",
+    "P25-X509-V3-SLOT-011",
+    "P25-X509-V3-SLOT-012",
+    "P25-X509-V3-SLOT-013",
+    "src/x509/v3_bitst.rs:234",
+    "src/x509/v3_bitst.rs:288",
+    "src/x509/v3_bitst.rs:349",
+    "src/x509/v3_bitst.rs:360"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_bitst.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn bitst_i2v(",
+   "line_recorded_closure": 349,
+   "line_current_census": 356,
+   "line_current_def": 356,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_bitst.rs :: UNSAFE_FN_DEF :: bitst_i2v @ def line 356",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    356,
+    364
+   ],
+   "span_sha256_b78": "0d6cce7197665c94dc3ed93f78105cfae23f55fafb2cc6d3f224ebe5fd79a780",
+   "span_sha256_current": "0d6cce7197665c94dc3ed93f78105cfae23f55fafb2cc6d3f224ebe5fd79a780",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 2,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_bitst.rs:348-355`); the `i2v` slot contract on `X509V3ExtMethod`; `i2v_ASN1_BIT_STRING`'s own contract.",
+   "recorded_contract_summary": "`meth` is the live row whose `usr_data` is the `BitStringBitname` table; `value` is the `ASN1_BIT_STRING` the dispatcher decoded through that row; both preconditions are forwarded unchanged to `i2v_ASN1_BIT_STRING`.",
+   "unsafe_operations_read": [
+    "the `i2v_ASN1_BIT_STRING` call and the `meth` cast"
+   ],
+   "safety_comment_quoted": "`meth` is that same row, so its `usr_data` is the `BitStringBitname` table the callee walks; both preconditions are forwarded unchanged.",
+   "callers_enumerated": [
+    "row `ossl_v3_nscert.i2v` (`src/x509/v3_bitst.rs:395`)",
+    "row `ossl_v3_key_usage.i2v` (`:414`)",
+    "`X509V3_EXT_print` `i2v` arm after a non-NULL `ASN1_BIT_STRING_it` decode, under the registry read hold"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn` behind the registry; the dispatcher establishes the decoded value and holds the row live.",
+    "b_all_unsafe_covered": "Yes. The slot contract fixes `meth`'s `usr_data` and `value`'s type; the forwarder adds no precondition and retains nothing.",
+    "c_hidden_obligation": "None found. The `usr_data` table type is the row registrar's static obligation and is named; it is not inferred here.",
+    "d_load_bearing_control": "Yes. The control checks both bitst rows' `i2v`/`v2i` pairing and the dispatcher; canary M7 shows row-item checks are load-bearing. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "A pure slot forwarder whose two preconditions are established by the dispatcher and the row's own static table; no safe-Rust path."
+  },
+  {
+   "stable_id": "src/x509/v3_bitst.rs::UNSAFE_FN_DEF::bitst_v2i",
+   "id": "V1:src/x509/v3_bitst.rs:360:UNSAFE_FN_DEF",
+   "boundary": "src/x509/v3_bitst.rs:360",
+   "boundary_receipt": "boundary-sweep-B54",
+   "boundary_ids": [
+    "P25-X509-V3-SLOT-010",
+    "P25-X509-V3-SLOT-011",
+    "P25-X509-V3-SLOT-012",
+    "P25-X509-V3-SLOT-013",
+    "src/x509/v3_bitst.rs:234",
+    "src/x509/v3_bitst.rs:288",
+    "src/x509/v3_bitst.rs:349",
+    "src/x509/v3_bitst.rs:360"
+   ],
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_bitst.rs",
+   "kind_recorded": "UNSAFE_FN_DEF",
+   "kind_current": "UNSAFE_FN_DEF",
+   "kind_match": true,
+   "coordinate_by_file_kind_item": "present",
+   "signature": "unsafe extern \"C\" fn bitst_v2i(",
+   "line_recorded_closure": 360,
+   "line_current_census": 374,
+   "line_current_def": 374,
+   "line_drift_vs_recorded": 0,
+   "coordinate_current": "src/x509/v3_bitst.rs :: UNSAFE_FN_DEF :: bitst_v2i @ def line 374",
+   "coordinate_provenance": "admission record coordinate (matches the inventory at this stable identity)",
+   "span_current": [
+    374,
+    381
+   ],
+   "span_sha256_b78": "8e35a19f921c8f52b201af45c450fc76eea41ff0acd55a9d850e421e8025be22",
+   "span_sha256_current": "8e35a19f921c8f52b201af45c450fc76eea41ff0acd55a9d850e421e8025be22",
+   "span_hash_rederived": true,
+   "content_unchanged_vs_b78": true,
+   "resolution": "unique",
+   "unsafe_keyword_occurrences_in_span": 2,
+   "contract_location": "The `# Safety` doc at the definition (`src/x509/v3_bitst.rs:366-373`); the `v2i` slot contract on `X509V3ExtMethod`; `v2i_ASN1_BIT_STRING`'s own contract.",
+   "recorded_contract_summary": "`meth` is the live row resolved under the registry read hold, whose `usr_data` is the `BitStringBitname` table; `values` is a live non-empty `STACK_OF(CONF_VALUE)`; both preconditions are forwarded unchanged to `v2i_ASN1_BIT_STRING`.",
+   "unsafe_operations_read": [
+    "the `v2i_ASN1_BIT_STRING` call and the `meth` cast"
+   ],
+   "safety_comment_quoted": "`meth`'s `usr_data` is the row's `BitStringBitname` table; both preconditions are forwarded unchanged.",
+   "callers_enumerated": [
+    "row `ossl_v3_nscert.v2i` (`src/x509/v3_bitst.rs:396`)",
+    "row `ossl_v3_key_usage.v2i` (`:415`)",
+    "`do_ext_nconf` `v2i` arm after refusing a NULL/empty stack, under the registry read hold"
+   ],
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn` behind the registry; the dispatcher establishes the stack and holds the row live.",
+    "b_all_unsafe_covered": "Yes. The slot contract fixes the table and the stack; the forwarder adds no precondition and retains nothing.",
+    "c_hidden_obligation": "None found. The returned object's type/`it` pairing is the row registrar's obligation, named and checked.",
+    "d_load_bearing_control": "Yes. The control checks both bitst rows' `v2i` pairing and the dispatcher's `nval` hand-off; canary M4 fires. No runtime execution (no compilation)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_reason": "A pure slot forwarder whose preconditions are the dispatcher's live non-empty stack and the row's static table; no safe-Rust path."
+  }
+ ],
+ "tally": {
+  "batch1": {
+   "ACCEPT": 18,
+   "REJECT": 2,
+   "total": 20,
+   "reject_ids": [
+    "src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::i2s_poison",
+    "src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::s2i_poison"
+   ],
+   "reject_reason": "stale recorded kind (safe extern \"C\" fn recorded as UNSAFE_FN_DEF)"
+  },
+  "batch2": {
+   "ACCEPT": 25,
+   "REJECT": 0,
+   "ABSENT_BY_RECORDED_KIND": 0,
+   "total": 25
+  },
+  "cumulative": {
+   "ACCEPT": 43,
+   "REJECT": 2,
+   "reviewed": 45,
+   "remaining_in_X509_VERIFY_POLICY": 72
+  },
+  "other_mechanisms_unreviewed": {
+   "EVP_PKEY_PROVIDER": 73,
+   "RAND_CMS_STORE_KEYFMT": 13,
+   "RUNTIME_CONCURRENCY": 4
+  }
+ },
+ "residuals": [
+  "72 X509_VERIFY_POLICY span-bound obligations and 90 obligations in the other three mechanisms remain unreviewed.",
+  "The two batch-1 REJECTs are evidential identity defects; the required correction is re-admission as EXTERN_C_FN_DEF, not retirement (see batch1_stale_kind_disposition).",
+  "One documentation staleness (not a memory-safety defect): `as_identifier_choice_canonize`'s caller citation `src/x509/v3_asid.rs:1441,:1445` now names the body of `X509v3_asid_canonize`; the call chain and preconditions are correct.",
+  "Retained external preconditions, named in the contracts: decoder-established selector/arm pairing and required-field liveness for the printer family; the registrar's returned-type/`it` pairing for every `v2i`; the row's static `usr_data` table for the bitst pair.",
+  "The runtime controls referenced by the b78/B49/B51/B54 receipts were not re-executed; only the new source-level control ran.",
+  "No build, test, clippy, fmt, census or closure at HEAD; the last two commits remain uncompiled."
+ ],
+ "does_not_prove": [
+  "Source-level only: no compilation, no runtime probe, no test execution, no sanitizer, no Miri/ASan/Loom, no dudect/Wycheproof.",
+  "No obligation is discharged; these are review verdicts, not `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE` claims.",
+  "The b78c caller-closure claim is not re-established at HEAD; the review reads callers but does not re-run the closure.",
+  "The span hash does not cover dispatchers, shared guards, macro headers/invocations or caller closures.",
+  "Only the 25 named spans and the specific caller/type facts cited were reviewed; the rest of each file is out of scope.",
+  "No authority differential and no compatibility court; no claim about OpenSSL behavioural parity.",
+  "The batch-2 ACCEPTs do not prove the absence of defects elsewhere in the same functions' callers or in the ASN.1 decoders they rely on."
+ ]
+}
