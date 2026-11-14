@@ -1,0 +1,335 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/safety-argument/v1",
+ "kind": "section-7-criterion-3-whole-closure-safety-argument",
+ "candidate_tag": "b78c",
+ "generated_utc": "2026-11-14T19:22:32Z",
+ "author_role": "assurance subagent (argument author; not the instrument author and not the closure reviewer)",
+ "criterion": {
+  "source": "AGENTS.md section 7, graduation state SAFETY_DISCHARGED, criterion 3",
+  "text": "no safe-Rust caller can cause undefined behaviour through the safe interfaces, within the declared and established contract scope",
+  "granularity": "mechanism-wide within the OpenSSH ssh and sshd consumer closures; a site receipt or a green closure run is not a criterion-3 discharge (§7, §8)",
+  "strict_rule": "if the argument depends on a precondition that is documented but not established at this candidate, the mechanism verdict is NOT_ESTABLISHED"
+ },
+ "identity": {
+  "source_head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "src_content_sha256": "c0bd61c9",
+  "libcrypto_so_3_sha256": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
+  "ssh_sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
+  "sshd_sha256": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe",
+  "closure_tool_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8",
+  "closure_tool_version": 6,
+  "closure_ssh": {
+   "path": "evidence/closure-ssh-b78c.json",
+   "sha256": "45c39735f2f10e2b4c1137207b1565b3a945c325c356db8011f29a7311510964",
+   "bytes": 13351568,
+   "verdict": "ACCEPTED",
+   "counts": {"DISCHARGED": 290, "BLOCKED": 0, "UNKNOWN": 0, "refusals": 0},
+   "element_7": "PASS (0 target-bounded / 153 contract-bounded)"
+  },
+  "closure_sshd": {
+   "path": "evidence/closure-sshd-b78c.json",
+   "sha256": "dd3c1fd7bf351303f7faf1e16268bcfc79f2bbf1a9fbb82db24821193a7993c2",
+   "bytes": 13198148,
+   "verdict": "ACCEPTED",
+   "counts": {"DISCHARGED": 290, "BLOCKED": 0, "UNKNOWN": 0, "refusals": 0},
+   "element_7": "PASS (0 target-bounded / 153 contract-bounded)"
+  },
+  "census": {
+   "path": "court/freeze-b78/census-b78.json",
+   "source_head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac"
+  }
+ },
+ "method": {
+  "what_was_used": [
+   "the b78c closure receipts' counts.by_mechanism, per-obligation mechanism, contract_basis, discharge_receipt, boundary_ids, span_discharge and scoped_discharge_attempts",
+   "the b78c closure graph: function-level static reachable set over the exact candidate libcrypto.so.3, 8926 upper-bound functions (8828 reachable closure nodes), 630 upper-bound reachable files, 0 reachable files without a receipt",
+   "the independent review records: b76-review-v1i-batch1/2/3, b76-review-v1l, b77-review-v1i-repaired, b78-review-final (65/65 ACCEPT), b78-review-migrated-rows (7/7 independently re-established), b78-adjudicate-diff-review, b78-instrument-reconciliation",
+   "the discharge-receipt bodies named by the closure: boundary-sweep-B48/B49/B50/B51/B52/B53/B54/B55/B56/B57/B60/B67/B69/B70 and sslconf-exclusivity-2026-11-10",
+   "the repaired instrument record court/freeze-b78/b78c-verifier-repair.json and its controls court/freeze-b78/controls-migration-b78c.json (10/10)"
+  ],
+  "what_was_not_done": [
+   "no per-site finding was re-derived from source; the reviews' ACCEPT/REJECT judgments are used as recorded (§6 execution discipline, §18)",
+   "no compilation, test, Miri, ASan, Loom, dudect or ctgrind run was performed for this argument; none is claimed",
+   "no caller closure was re-audited at bb7d5206a outside the 65-site b78 review cohort; the span hash explicitly excludes caller closures",
+   "no claim is made that the tool-level DISCHARGED count is a §7 SAFETY_DISCHARGED state"
+  ]
+ },
+ "mechanism_partition": {
+  "source": "closure-ssh-b78c counts.by_mechanism; the sshd closure has the same partition",
+  "total_obligations": 290,
+  "mechanisms": [
+   {
+    "id": "EVP_PKEY_PROVIDER",
+    "obligations": 116,
+    "files": 20,
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 80,
+     "operation_level_safety_only": 36,
+     "cabi_contract_record": 0,
+     "no_contract": 0
+    },
+    "discharge_receipts": {"openssh-v1i": 42, "openssh-v1l": 1, "boundary-sweep-B48": 36, "boundary-sweep-B53": 30, "boundary-sweep-B56": 7},
+    "reviewed_at_b78": 43,
+    "outside_b78_cohort": 73,
+    "caller_closure_recorded": {
+     "rule": "every one of the mechanism's 20 files is in the closure's upper-bound reachable file set and has a receipt (boundary_coverage.reachable_files_without_receipt = [])",
+     "graph": "function-level static graph over the exact candidate libcrypto.so.3: 8926 upper-bound functions, 8828 reachable closure nodes, 103 reachable functions with indirect calls, 51943 indirect sites resolved as 51737 resolved / 206 unresolved, of which 153 reachable and 153 contract-bounded",
+     "imported_entry_points": 153,
+     "caller_analysis_basis": "b76/b78 provider-callback caller reads for the 43 reviewed sites; boundary-sweep-B48/B53/B56 caller rows for the other 73, bound to the operation span by content hash only"
+    },
+    "argument": "For the 43 sites in the b78 cohort the reviewer re-read the provider-callback invocation sites and accepted each (65/65 ACCEPT); R-PARAMS is closed at source by guards at the four parameter entry points. For the other 73 sites the b78c closure proves only that the operation span is byte-identical at bb7d5206a; its own claim_scope says the hash does not cover caller closures, so the earlier boundary-sweep caller analysis is not re-established at this candidate.",
+    "residual": "73/116 caller closures not re-established at bb7d5206a; 36/116 contracts exist only as an operation-level SAFETY block with no fn-level # Safety; the digest_impl! macro body carries 5 unsafe extern C fns (dupctx, internal_init, internal_final, update, get_params) without # Safety that are outside the 65-site reviewed cohort; no Miri/ASan/TSan.",
+    "verdict": "NOT_ESTABLISHED"
+   },
+   {
+    "id": "X509_VERIFY_POLICY",
+    "obligations": 122,
+    "files": 41,
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 114,
+     "operation_level_safety_only": 5,
+     "cabi_contract_record": 1,
+     "no_contract": 2
+    },
+    "discharge_receipts": {"boundary-sweep-B54": 72, "boundary-sweep-B49": 16, "boundary-sweep-B51": 10, "boundary-sweep-B55": 9, "boundary-sweep-B57": 2, "boundary-sweep-B50": 5, "boundary-sweep-B52": 3, "openssh-v1l": 5},
+    "reviewed_at_b78": 5,
+    "outside_b78_cohort": 117,
+    "caller_closure_recorded": {
+     "rule": "all 41 files are in the reachable set with receipts; 0 reachable files without a receipt",
+     "caller_analysis_basis": "b78-review-final for 5 sites; boundary-sweep-B49/B50/B51/B52/B54/B55/B57 caller/dispatch rows for the other 117, content-bound to the operation span only",
+     "repair_chain": "B54-F1 (documented-nullable ctx dereferenced on reachable config paths) repaired and re-adjudicated by B55; B55-F1 (misaligned inline-boolean slot in the shared ASN.1 template walk) reproduced and repaired structurally by B57, which re-adjudicates v2i_idp and v2i_aaidp with a load-bearing control"
+    },
+    "argument": "The 5 reviewed sites are ACCEPT. The two live repair findings in this mechanism are closed by structural repairs with controls (B55 repairs B54-F1; B57 reproduces the misaligned dereference, repairs the shared template walk and re-adjudicates the two rows it blocked). The remaining 117 obligations are bound by operation-span content hash; their caller closures and the BOUNDARY adjudication of the contract-bounded boundaries are not re-established at b78.",
+    "residual": "117/122 caller closures not re-established at bb7d5206a; 5/122 operation-level SAFETY only; 2 admission-record sites have no per-site inventory record and rest on the admission reason; BOUNDARY adjudication of the remaining contract-bounded boundaries is NOT_RUN; no Miri/ASan.",
+    "verdict": "NOT_ESTABLISHED"
+   },
+   {
+    "id": "RAND_CMS_STORE_KEYFMT",
+    "obligations": 27,
+    "files": 6,
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 8,
+     "operation_level_safety_only": 19,
+     "cabi_contract_record": 0,
+     "no_contract": 0
+    },
+    "discharge_receipts": {"openssh-v1i": 14, "boundary-sweep-B56": 8, "boundary-sweep-B69": 3, "boundary-sweep-B70": 2},
+    "reviewed_at_b78": 14,
+    "outside_b78_cohort": 13,
+    "caller_closure_recorded": {
+     "rule": "all 6 files are in the reachable set with receipts",
+     "caller_analysis_basis": "b78-review-final for 14 sites; boundary-sweep-B56/B69/B70 caller/obligation rows for the other 13, content-bound to the operation span only",
+     "receipt_scope": "B69 and B70 state explicitly that RAND_CMS_STORE_KEYFMT remains OWNERSHIP_RECONSTRUCTED mechanism-wide and the receipt is site-scoped"
+    },
+    "argument": "The 14 reviewed sites are ACCEPT. B69/B70 supply caller and obligation rows for the remaining site-scoped groups, but both receipts state they do not graduate the mechanism; B70-R1 records that the freefunc receives no type tag and its element type is a registration convention. Secret cleansing for the CMS/PEM key material is not audited by these receipts.",
+    "residual": "13/27 caller closures not re-established at bb7d5206a; 19/27 operation-level SAFETY only; B69 retains ossl_rand_cleanup_int as BLOCKED (uncalled/unexported) outside its scope; no secret-memory cleansing audit; no Miri/ASan.",
+    "verdict": "NOT_ESTABLISHED"
+   },
+   {
+    "id": "SSL_SESSION",
+    "obligations": 14,
+    "files": 3,
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 14,
+     "operation_level_safety_only": 0,
+     "cabi_contract_record": 0,
+     "no_contract": 0
+    },
+    "discharge_receipts": {"sslconf-exclusivity-2026-11-10": 14},
+    "reviewed_at_b78": 0,
+    "outside_b78_cohort": 14,
+    "caller_closure_recorded": {
+     "rule": "all 3 files (ssl_ciph.rs, ssl_conf.rs, ssl_rsa.rs) are in the reachable set with receipts and 67 ssl_ciph/ssl_lib functions are graph-reachable",
+     "caller_analysis_basis": "sslconf-exclusivity-2026-11-10: an independent adjudicator (not the model author) discharged 14/14 with three reentrancy/concurrency controls over the InUseGuard (reentrant dispatch refused, concurrent entry refused, every entry point refuses overlap and works when idle)"
+    },
+    "argument": "The establishing receipt has an independent adjudicator and three load-bearing reentrancy controls, but it was established before b78 and is not in the b78 review cohort. The receipt itself retains a hidden obligation: a second concurrent free, and an entry point racing the release, remain external serialisation; it does not claim that obligation discharged.",
+    "residual": "0/14 re-reviewed at b78; external serialisation for a second concurrent free and an entry point racing release is retained, not discharged; no TSan/Loom/runtime concurrency evidence.",
+    "verdict": "NOT_ESTABLISHED"
+   },
+   {
+    "id": "C_ABI_CONTRACT",
+    "obligations": 5,
+    "files": 5,
+    "ownership_state": "UNSAFE_OPEN",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 0,
+     "operation_level_safety_only": 2,
+     "cabi_contract_record": 3,
+     "no_contract": 0
+    },
+    "discharge_receipts": {"boundary-sweep-B56": 2, "openssh-v1l": 3},
+    "reviewed_at_b78": 3,
+    "outside_b78_cohort": 2,
+    "caller_closure_recorded": {
+     "rule": "all 5 files are in the reachable set with receipts",
+     "caller_analysis_basis": "b76-review-v1l for 3 free hooks; boundary-sweep-B56 caller/obligation rows for 2; the 3 inventory records are contract records, explicitly not discharges"
+    },
+    "argument": "The v1l reviewer accepted three C ABI free hooks with caller reads, and B56 supplies caller and obligation rows for two more; but the mechanism state is UNSAFE_OPEN, the inventory contract record is not a discharge, and the v1l review retains hidden obligation F09 (push_cstr_or_null transfers a NUL-termination obligation to callers with no # Safety).",
+    "residual": "mechanism_state UNSAFE_OPEN; 2/5 operation-level SAFETY only; 3/5 rest on an inventory contract record that is not a discharge; v1l hidden obligation F09 retained; no fn-level # Safety on the C ABI hooks.",
+    "verdict": "NOT_ESTABLISHED"
+   },
+   {
+    "id": "RUNTIME_CONCURRENCY",
+    "obligations": 4,
+    "files": 2,
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 4,
+     "operation_level_safety_only": 0,
+     "cabi_contract_record": 0,
+     "no_contract": 0
+    },
+    "discharge_receipts": {"boundary-sweep-B56": 2, "boundary-sweep-B60": 2},
+    "reviewed_at_b78": 0,
+    "outside_b78_cohort": 4,
+    "caller_closure_recorded": {
+     "rule": "both files are in the reachable set with receipts",
+     "caller_analysis_basis": "B56 supplies caller/obligation rows for 2; B60 discharges the two cfg-gated free_lock definitions with a four-control table (C1 both spans match, C2 one hash mutated, C3 one of two live definitions, C4 single-span shape)"
+    },
+    "argument": "B56 supplies caller rows for two sites, and B60's four controls establish the declared-definition-set binding for the two cfg-gated free_lock operations. B60's adjudication reviewer is recorded as the orchestrating agent, not an independent reviewer, and B60 is a candidate freeze at b6f38f134, not a re-adjudication at bb7d5206a; the concurrency claims are not exercised by a thread/TSan/Loom run.",
+    "residual": "0/4 re-reviewed at b78; B60 independent-reviewer condition not met (reviewer is the orchestrating agent); no thread/TSan/Loom evidence; caller closure not re-established at bb7d5206a.",
+    "verdict": "NOT_ESTABLISHED"
+   },
+   {
+    "id": "BIO",
+    "obligations": 2,
+    "files": 1,
+    "ownership_state": "UNSAFE_OPEN",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 0,
+     "operation_level_safety_only": 0,
+     "cabi_contract_record": 0,
+     "no_contract": 2
+    },
+    "discharge_receipts": {"boundary-sweep-B67": 2},
+    "reviewed_at_b78": 0,
+    "outside_b78_cohort": 2,
+    "caller_closure_recorded": {
+     "rule": "src/runtime/bio/bf_readbuff.rs is in the reachable set with a receipt",
+     "caller_analysis_basis": "boundary-sweep-B67 records that the only writer of each slot is READBUFFER_METHOD.bwrite_old / .bputs and that neither is exported"
+    },
+    "argument": "For the two sized sites the empty-precondition argument is complete at source: readbuffer_write and readbuffer_puts ignore every argument, dereference nothing, touch no global or thread state, contain no unsafe block/call/allocation, and return 0; every argument value (NULL, dangling, unaligned, arbitrary length) therefore yields 0 without UB, and the 3.6.4 authority body is also `{ return 0; }`. The argument is site-scoped: the mechanism state is UNSAFE_OPEN and only these two operations are in the closure.",
+    "residual": "mechanism_state UNSAFE_OPEN; no fn-level # Safety (the unsafe marker is vestigial); only 2 of the mechanism's production operations are in the closure; the site argument is not a mechanism-wide discharge.",
+    "verdict": "NOT_ESTABLISHED"
+   }
+  ]
+ },
+ "safe_interface_surface": {
+  "definition": "the consumer-visible entry points are the 179 libcrypto.so.3 exports the analysed ssh imports (symbol_evidence.imported_symbols), plus the crate's safe pub fn API; the mechanism entry points are C ABI functions (pub unsafe extern C from Rust), so a safe-Rust caller cannot invoke one without an unsafe block",
+  "imported_c_abi_entry_points": {
+   "total": 179,
+   "library": "libcrypto.so.3",
+   "by_mechanism": {"EVP_PKEY_PROVIDER": 153, "X509_VERIFY_POLICY": 6, "RAND_CMS_STORE_KEYFMT": 5, "BIO": 5, "SSL_SESSION": 0, "RUNTIME_CONCURRENCY": 0, "C_ABI_CONTRACT": 0, "unmapped": 10},
+   "unmapped_symbols": ["ASN1_OCTET_STRING_free", "CRYPTO_get_ex_new_index", "ERR_error_string", "ERR_get_error", "ERR_peek_error", "ERR_peek_last_error", "OPENSSL_init_crypto", "OpenSSL_version", "OpenSSL_version_num", "d2i_ASN1_OCTET_STRING"],
+   "direct_reachable_obligation_ids": "empty for 173/179 imported symbols; per-symbol reachability is the closure graph's transitive closure, not the direct field"
+  },
+  "safe_pub_fn_in_mechanism_files": {
+   "total": 13,
+   "list": [
+    "src/runtime/bio/print.rs::BIO_printf (BIO)",
+    "src/runtime/bio/print.rs::BIO_snprintf (BIO)",
+    "src/digest/blake2.rs::param_init (EVP_PKEY_PROVIDER)",
+    "src/digest/blake2.rs::param_set_digest_length (EVP_PKEY_PROVIDER)",
+    "src/digest/blake2.rs::param_set_key_length (EVP_PKEY_PROVIDER)",
+    "src/digest/blake2.rs::param_set_personal (EVP_PKEY_PROVIDER)",
+    "src/digest/blake2.rs::param_set_salt (EVP_PKEY_PROVIDER)",
+    "src/ec/curve.rs::fields (EVP_PKEY_PROVIDER)"
+   ],
+   "note": "none of these is a caller of any of the 57 operation-level-contract unsafe definitions; the closure records no direct-reachable obligation for them. The crate-wide safe pub fn count is 202, most of it apps::main and OS bindings. The interior safe abstraction is the owner family (OwnedCtx, OwnedBlock, OwnedBuf, OwnedTree, OwnedRaw), which is not pub; its soundness is the ownership argument, not a safe-Rust entry-point claim."
+  },
+  "per_mechanism": [
+   {"mechanism": "EVP_PKEY_PROVIDER", "entry_points": 153, "obligations_reachable": 116, "closure_status": "DISCHARGED 116/116 at the tool level", "precondition_established_in_code": "partial: 43/116 independently re-read at b78; 73/116 content-bound only", "verdict": "NOT_ESTABLISHED"},
+   {"mechanism": "X509_VERIFY_POLICY", "entry_points": 6, "obligations_reachable": 122, "closure_status": "DISCHARGED 122/122 at the tool level", "precondition_established_in_code": "partial: 5/122 independently re-read at b78; 117/122 content-bound only", "verdict": "NOT_ESTABLISHED"},
+   {"mechanism": "RAND_CMS_STORE_KEYFMT", "entry_points": 5, "obligations_reachable": 27, "closure_status": "DISCHARGED 27/27 at the tool level", "precondition_established_in_code": "partial: 14/27 independently re-read at b78; 13/27 content-bound only", "verdict": "NOT_ESTABLISHED"},
+   {"mechanism": "SSL_SESSION", "entry_points": 0, "obligations_reachable": 14, "closure_status": "DISCHARGED 14/14 at the tool level", "precondition_established_in_code": "no: 0/14 re-read at b78; the establishing receipt retains external serialisation", "verdict": "NOT_ESTABLISHED"},
+   {"mechanism": "C_ABI_CONTRACT", "entry_points": 0, "obligations_reachable": 5, "closure_status": "DISCHARGED 5/5 at the tool level", "precondition_established_in_code": "no: mechanism UNSAFE_OPEN; 3/5 rest on an inventory contract record that is not a discharge", "verdict": "NOT_ESTABLISHED"},
+   {"mechanism": "RUNTIME_CONCURRENCY", "entry_points": 0, "obligations_reachable": 4, "closure_status": "DISCHARGED 4/4 at the tool level", "precondition_established_in_code": "no: 0/4 re-read at b78; B60 adjudicated by the orchestrating agent", "verdict": "NOT_ESTABLISHED"},
+   {"mechanism": "BIO", "entry_points": 5, "obligations_reachable": 2, "closure_status": "DISCHARGED 2/2 at the tool level", "precondition_established_in_code": "yes for the two empty-body sites; no mechanism-wide (UNSAFE_OPEN)", "verdict": "NOT_ESTABLISHED"}
+  ]
+ },
+ "cross_cutting_obligations": {
+  "callbacks_reentrancy": {
+   "in_scope": true,
+   "why": "the mechanisms are dominated by provider dispatch tables, stack free/dup thunks, X509V3 method callbacks, BIO method tables, the CONF_METHOD cell, ENGINE free hooks and ex_data; the closure resolves 51943 indirect sites and records 191 CONTRACT_BOUNDED dispositions",
+   "instrument": "the closure's function-level indirect-target resolver plus per-call-site witnesses; the b76/b78 provider-callback caller reads; the sslconf InUseGuard reentrancy controls; the B56 caller/obligation rows",
+   "state": "NOT_ESTABLISHED",
+   "residual": "no TSan/Loom/runtime reentrancy test; SSL_SESSION retains external serialisation for a second concurrent free and an entry point racing release; B60's reviewer is the orchestrating agent; the 153 contract-bounded sites are intentionally target-unbounded by public ABI"
+  },
+  "aliasing_ownership": {
+   "in_scope": true,
+   "why": "the owner family and the provider copyctx self-copy arm are the shared ownership mechanism; a wrong release or a retained alias is exactly the UB class criterion 3 targets",
+   "instrument": "the owner-type contracts and the audit in b78-review-migrated-rows (7/7 independently re-established at b78); the repaired migration controls 10/10; targeted Miri (Stacked Borrows and Tree Borrows) at a BOUNDARY gate",
+   "state": "NOT_ESTABLISHED",
+   "residual": "no Miri run; the span hash excludes caller closures; the owner contract is documented, not mechanically checked"
+  },
+  "panic_safety": {
+   "in_scope": true,
+   "why": "the C ABI edge uses guard_ffi with AssertUnwindSafe; catching a panic does not repair partially mutated state (AGENTS.md section 4)",
+   "instrument": "panic-injection tests plus failure-atomic/rollback/poisoned-state checks on the stateful contexts; none has run at b78",
+   "state": "NOT_ESTABLISHED",
+   "residual": "no failure-atomicity, rollback or poison-state evidence for any stateful context in the closure"
+  },
+  "secret_memory": {
+   "in_scope": true,
+   "why": "RAND_CMS_STORE_KEYFMT covers CMS/PEM key material and SSL_SESSION covers session secrets; release and cleansing are separate obligations (AGENTS.md section 5)",
+   "instrument": "a cleansing-path audit enumerating every OPENSSL_clear_free arm, including failure and partial-initialisation paths, plus a secret/public classification of the 290 obligations; none has run at b78",
+   "state": "NOT_ESTABLISHED",
+   "residual": "no secret classification or cleansing audit for the RAND/CMS/PEM/SSL_SESSION sites; a destructor that frees is not a secret-safe destructor"
+  },
+  "constant_time": {
+   "in_scope": "conditional",
+   "why": "the 290 obligations are dispatch/free/parse sites, not the algorithm cores; a constant-time claim is in scope only if a reviewed unsafe operation is secret-dependent, which is not demonstrated here",
+   "instrument": "dudect and ctgrind at the algorithm-change gate; none ran at b78",
+   "state": "NOT_CLAIMED",
+   "residual": "no constant-time claim is made; source inspection alone is not evidence (AGENTS.md section 5.2)"
+  },
+  "not_in_scope": [
+   "protocol state-machine robustness (no TLS/SSH protocol state change in this closure)",
+   "full cryptographic vector correctness (Wycheproof/ACVP) for the algorithm cores",
+   "authority differential beyond the L7 w5 key-format differential",
+   "downstream replay beyond the ssh and sshd L7 workloads"
+  ]
+ },
+ "verdict": {
+  "decision_rule": "SAFETY_DISCHARGED only if every obligation in the mechanism has an explicit validity contract, every required precondition is established by its callers at the candidate, and no safe interface can cause UB. OWNERSHIP_RECONSTRUCTED only if a safe ownership model exists and the residual boundary is identified without an unestablished caller precondition. Otherwise NOT_ESTABLISHED.",
+  "per_mechanism": {
+   "EVP_PKEY_PROVIDER": "NOT_ESTABLISHED",
+   "X509_VERIFY_POLICY": "NOT_ESTABLISHED",
+   "RAND_CMS_STORE_KEYFMT": "NOT_ESTABLISHED",
+   "SSL_SESSION": "NOT_ESTABLISHED",
+   "C_ABI_CONTRACT": "NOT_ESTABLISHED",
+   "RUNTIME_CONCURRENCY": "NOT_ESTABLISHED",
+   "BIO": "NOT_ESTABLISHED"
+  },
+  "ownership_states": {
+   "EVP_PKEY_PROVIDER": "OWNERSHIP_RECONSTRUCTED",
+   "X509_VERIFY_POLICY": "OWNERSHIP_RECONSTRUCTED",
+   "RAND_CMS_STORE_KEYFMT": "OWNERSHIP_RECONSTRUCTED",
+   "SSL_SESSION": "OWNERSHIP_RECONSTRUCTED",
+   "C_ABI_CONTRACT": "UNSAFE_OPEN",
+   "RUNTIME_CONCURRENCY": "OWNERSHIP_RECONSTRUCTED",
+   "BIO": "UNSAFE_OPEN"
+  },
+  "totals": {"SAFETY_DISCHARGED": 0, "OWNERSHIP_RECONSTRUCTED": 0, "NOT_ESTABLISHED": 7, "mechanisms": 7},
+  "statement": "The §7 criterion-3 whole-closure safety argument is NOT ESTABLISHED at b78c. The b78c closures are ACCEPTED and discharge 290/290 obligations at the tool's site level, but only 65 of the 290 obligations were independently re-read at b78; the remaining 225 are bound by an operation-span content hash whose own claim_scope excludes caller closures. 57 sites carry only an operation-level SAFETY block and no fn-level # Safety. The two mechanisms with UNSAFE_OPEN state (C_ABI_CONTRACT, BIO) are not mechanism-wide. No Miri/ASan/TSan/Loom/dudect run supports any mechanism. This verdict is consistent with evidence/b78-assurance-adjudication.json (NOT ESTABLISHED) and CAMPAIGN-STATUS ('no mechanism is discharged mechanism-wide')."
+ },
+ "residuals": [
+  {"id": "SA-01", "kind": "criterion-3/whole-closure", "statement": "The argument is not established: 225/290 obligations rest on caller closures not re-established at bb7d5206a, and the closure's span hash explicitly excludes caller closures."},
+  {"id": "SA-02", "kind": "contract-location", "statement": "57 sites in the b78 review cohort have only an operation-level SAFETY block and no fn-level # Safety (R-BLOCKLEVEL-CONTRACT); the census classifies them uncontracted."},
+  {"id": "SA-03", "kind": "instrument-review", "statement": "No Miri (Stacked/Tree Borrows), ASan, TSan, Loom, dudect or ctgrind run supports the candidate; every review verdict is source-and-static-control."},
+  {"id": "SA-04", "kind": "mechanism-state", "statement": "C_ABI_CONTRACT and BIO are UNSAFE_OPEN mechanism-wide; SSL_SESSION retains external serialisation; RUNTIME_CONCURRENCY's B60 adjudication is by the orchestrating agent, not an independent reviewer."},
+  {"id": "SA-05", "kind": "cross-cutting/secret-and-panic", "statement": "No secret-cleansing audit and no panic-safety/failure-atomicity evidence for the stateful contexts; both are §5/§4 obligations, not documentation items."},
+  {"id": "SA-06", "kind": "scoping-observation", "statement": "The digest_impl! macro body contains 5 unsafe extern C fns without # Safety (dupctx, internal_init, internal_final, update, get_params) that are not in the 65-site reviewed cohort; whether the inventory's macro attribution accounts for them is not established by this argument."}
+ ],
+ "non_claims": [
+  "This argument does not promote the candidate to SAFE_COMPATIBLE; safe_compatible remains false.",
+  "A green b78c closure (ACCEPTED, 290/290, element 7 PASS) is a tool-level result, not a §7 SAFETY_DISCHARGED state (§8).",
+  "The per-mechanism NOT_ESTABLISHED verdict does not assert that any site is unsafe; it asserts that the §7 criterion-3 argument is not established at this candidate.",
+  "The 153 contract-bounded element-7 sites are intentionally target-unbounded by public ABI; contract-bounded is criterion 2, not criterion 3.",
+  "No constant-time, secret-cleansing or runtime-UB claim is made."
+ ]
+}

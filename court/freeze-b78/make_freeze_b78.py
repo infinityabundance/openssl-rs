@@ -4,7 +4,7 @@
 Every asserted value is measured here rather than copied from an earlier freeze
 document: the candidate source identity is recomputed from the working tree and
 cross-checked against the census, each artefact digest/size is recomputed from
-the file it names, the closure sections are read from the two b78b receipts,
+the file it names, the closure sections are read from the two b78c receipts,
 the gate outcomes and the instrument self-test are parsed from
 court/freeze-b78/gates-b78.log (the log the gates were actually run into), the
 atlas body hash is recomputed, the element-7 records and the CONF-method witness
@@ -12,7 +12,7 @@ evidence are read, and the git fields are read from the repository.
 
 Two identities are kept separate (AGENTS.md section 22).  S is the source+tool
 identity the evidence describes: production source bb7d5206acfb..., the
-closure-bound instrument f31816b1..., and the b78b closures.  E is the evidence
+closure-bound instrument 6e9cd261..., and the b78c closures.  E is the evidence
 commit that carries this freeze and the rebind receipts; committing E moves
 HEAD without changing S.
 
@@ -43,6 +43,13 @@ STATUS = CAMPAIGN / "CAMPAIGN-STATUS.json"
 COPYCTX = REPO / "evidence/b78b-copyctx-binding.json"
 L7 = REPO / "evidence/b78-l7-replay.json"
 ADJUDICATION = REPO / "evidence/b78-assurance-adjudication.json"
+SAFETY_ARGUMENT = REPO / "evidence/b78-safety-argument.json"
+TOOL_REPAIR = REPO / "court/freeze-b78/b78c-verifier-repair.json"
+MIGRATION_CONTROLS = REPO / "court/freeze-b78/controls-migration-b78c.json"
+MIGRATED_ROWS = REPO / "evidence/b78-review-migrated-rows.json"
+INSTRUMENT_REVIEW = REPO / "evidence/b78-adjudicate-diff-review.json"
+INSTRUMENT_RECON = REPO / "evidence/b78-instrument-reconciliation.json"
+REVIEW_FINAL = CAMPAIGN / "atlas-refresh/b78-review-final.json"
 BUILD_SCRIPT = REPO / "forensics/tools/build_openssh_closure.sh"
 LEDGERS = {
     "ssh": REPO / "evidence/ssh-artifact-ledger-b78.json",
@@ -243,13 +250,20 @@ def configure_from_script() -> list[str]:
 
 def main() -> int:
     census = load("court/freeze-b78/census-b78.json")
-    ssh = load("evidence/closure-ssh-b78b.json")
-    sshd = load("evidence/closure-sshd-b78b.json")
+    ssh = load("evidence/closure-ssh-b78c.json")
+    sshd = load("evidence/closure-sshd-b78c.json")
     atlas = json.loads(ATLAS.read_text())
     status = json.loads(STATUS.read_text())
     sections = read_sections(GATES)
     l7_doc = json.loads(L7.read_text())
     adj_doc = json.loads(ADJUDICATION.read_text())
+    safety_doc = json.loads(SAFETY_ARGUMENT.read_text())
+    repair_doc = json.loads(TOOL_REPAIR.read_text())
+    migration_doc = json.loads(MIGRATION_CONTROLS.read_text())
+    migrated_rows_doc = json.loads(MIGRATED_ROWS.read_text())
+    instrument_review_doc = json.loads(INSTRUMENT_REVIEW.read_text())
+    instrument_recon_doc = json.loads(INSTRUMENT_RECON.read_text())
+    review_final_doc = json.loads(REVIEW_FINAL.read_text())
 
     gate_fmt = summarize(sections.get("gate1_fmt", []))
     gate_clippy = summarize(sections.get("gate2_clippy", []))
@@ -328,10 +342,10 @@ def main() -> int:
         cwd=str(REPO), text=True, capture_output=True)
 
     def closure(name: str) -> dict:
-        rel = f"evidence/closure-{name}-b78b.json"
+        rel = f"evidence/closure-{name}-b78c.json"
         doc = ssh if name == "ssh" else sshd
         chain = []
-        for tag in ("b76c", "b77", "b78", "b78b"):
+        for tag in ("b76c", "b77", "b78", "b78b", "b78c"):
             p = f"evidence/closure-{name}-{tag}.json"
             d = load(p)
             chain.append(
@@ -343,6 +357,7 @@ def main() -> int:
                     "UNKNOWN": d["counts"].get("UNKNOWN"),
                     "verdict": d["verdict"]["state"],
                     "artifact_sha256": d["artifact_identity"]["sha256"],
+                    "tool_sha256": d["tool"].get("sha256"),
                     "carried_forward_removed": d["counts"].get(
                         "carried_forward_removed"),
                 }
@@ -374,13 +389,19 @@ def main() -> int:
                     "carried_forward_removed"),
                 "links": chain,
                 "note": (
-                    "the b78b run carries from evidence/closure-"
-                    + name + "-b78.json, which is ACCEPTED at "
+                    "the b78c run carries from evidence/closure-"
+                    + name + "-b78b.json, which is ACCEPTED at "
                     + str(carry_source["DISCHARGED"]) + " discharged / "
-                    + str(carry_source["BLOCKED"]) + " blocked; the b78b repair "
-                    "re-attributes the seven stale `copyctx` coordinates to "
-                    "their definition spans and the count becomes 290/290. "
-                    "No refused carry is used (unlike b76)."),
+                    + str(carry_source["BLOCKED"]) + " blocked, and re-runs the "
+                    "adjudication with the repaired instrument 6e9cd261 "
+                    "(anchored migration arm); the b78c closures are "
+                    "290/290 at the same candidate source head. The b78b repair "
+                    "re-attributed the seven stale `copyctx` coordinates to "
+                    "their definition spans; the b78c run repeats the full queue "
+                    "with the repaired migration path and every seven row is "
+                    "independently re-established in "
+                    "evidence/b78-review-migrated-rows.json. No refused carry is "
+                    "used (unlike b76)."),
             },
         }
 
@@ -559,6 +580,126 @@ def main() -> int:
             "non-builtin fallback, wrong declared field) each refuse with the "
             "named reason and the admitted image is restored.  The target set "
             "is intentionally unbounded because the setter is public."),
+    }
+
+    # The instrument repair: the b78c closures were run with 6e9cd261 (the
+    # anchored migration arm), not the f31816b1 that produced b78b.  The
+    # repair record, its ten controls, the independent seven-row review and the
+    # two instrument reviews are measured from their files.
+    repair_tool = repair_doc.get("tool") or {}
+    control_rows = migration_doc.get("controls") or []
+    control_ok = bool(control_rows) and all(r.get("pass") for r in control_rows)
+    migrated_result = migrated_rows_doc.get("result") or {}
+    instrument_verdict = instrument_review_doc.get("verdict") or {}
+    tool_repair = {
+        "repair_record": {
+            "path": "court/freeze-b78/b78c-verifier-repair.json",
+            "sha256": sha256_file(TOOL_REPAIR),
+            "bytes": TOOL_REPAIR.stat().st_size,
+            "kind": repair_doc.get("kind"),
+            "candidate_source": repair_doc.get("candidate_source"),
+            "tool": repair_tool,
+            "controls_result": (repair_doc.get("controls") or {}).get("result"),
+            "gates": repair_doc.get("gates"),
+            "residuals": repair_doc.get("residuals"),
+        },
+        "migration_controls": {
+            "path": "court/freeze-b78/controls-migration-b78c.json",
+            "sha256": sha256_file(MIGRATION_CONTROLS),
+            "bytes": MIGRATION_CONTROLS.stat().st_size,
+            "result": (repair_doc.get("controls") or {}).get("result"),
+            "all_pass": control_ok,
+            "controls": control_rows,
+            "failures": migration_doc.get("failures"),
+            "real_seven_rows": migration_doc.get("real_seven_rows"),
+            "old_tool": migration_doc.get("old_tool"),
+            "new_tool": migration_doc.get("new_tool"),
+        },
+        "migrated_rows_review": {
+            "path": "evidence/b78-review-migrated-rows.json",
+            "sha256": sha256_file(MIGRATED_ROWS),
+            "bytes": MIGRATED_ROWS.stat().st_size,
+            "result": migrated_result,
+            "rows": len(migrated_rows_doc.get("rows") or []),
+            "what_this_does_not_establish": migrated_rows_doc.get(
+                "what_this_does_not_establish"),
+        },
+        "instrument_review": {
+            "path": "evidence/b78-adjudicate-diff-review.json",
+            "sha256": sha256_file(INSTRUMENT_REVIEW),
+            "bytes": INSTRUMENT_REVIEW.stat().st_size,
+            "verdict": instrument_verdict,
+            "required_additional_obligations": instrument_review_doc.get(
+                "required_additional_obligations"),
+            "residual_risks": instrument_review_doc.get("residual_risks"),
+        },
+        "instrument_reconciliation": {
+            "path": "evidence/b78-instrument-reconciliation.json",
+            "sha256": sha256_file(INSTRUMENT_RECON),
+            "bytes": INSTRUMENT_RECON.stat().st_size,
+            "conclusion": instrument_recon_doc.get("conclusion"),
+            "answer": instrument_recon_doc.get("answer"),
+        },
+        "statement": (
+            "the final instrument is 6e9cd261 (the anchored migration arm); "
+            "the repair record names f31816b1 -> 6e9cd261 and the ten-control "
+            "table records " + str((repair_doc.get("controls") or {}).get("result"))
+            + " (controls a/b/c now refuse where the old arm discharged). "
+            "The seven rows moved by the earlier migration hunk are "
+            "independently re-established at b78 in "
+            "evidence/b78-review-migrated-rows.json ("
+            + str(migrated_result.get("accept")) + "/"
+            + str(migrated_result.get("rows_reviewed"))
+            + " accept; migration binding not relied on). The instrument "
+            "review requires O1-O4 (qualified-operation agreement, ancestry, "
+            "evidence-input integrity, fail closed); the repaired arm's "
+            "controls exercise them. The b78c closures bind 6e9cd261."),
+    }
+
+    # The section-7 criterion-3 argument.  It is an independent assurance
+    # document, not a promotion: every mechanism is NOT_ESTABLISHED.
+    safety_totals = (safety_doc.get("verdict") or {}).get("totals") or {}
+    safety_per = (safety_doc.get("verdict") or {}).get("per_mechanism") or {}
+    safety_mechanisms = []
+    for m in (safety_doc.get("mechanism_partition") or {}).get("mechanisms") or []:
+        safety_mechanisms.append(
+            {
+                "id": m.get("id"),
+                "obligations": m.get("obligations"),
+                "reviewed_at_b78": m.get("reviewed_at_b78"),
+                "outside_b78_cohort": m.get("outside_b78_cohort"),
+                "ownership_state": m.get("ownership_state"),
+                "contract_forms": m.get("contract_forms"),
+                "verdict": m.get("verdict"),
+                "residual": m.get("residual"),
+            }
+        )
+    safety_argument = {
+        "path": "evidence/b78-safety-argument.json",
+        "sha256": sha256_file(SAFETY_ARGUMENT),
+        "bytes": SAFETY_ARGUMENT.stat().st_size,
+        "schema": safety_doc.get("schema"),
+        "criterion": (safety_doc.get("criterion") or {}).get("text"),
+        "verdict_totals": safety_totals,
+        "per_mechanism": safety_per,
+        "mechanisms": safety_mechanisms,
+        "statement": (safety_doc.get("verdict") or {}).get("statement"),
+        "residuals": safety_doc.get("residuals"),
+        "review_final": {
+            "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b78-review-final.json",
+            "sha256": sha256_file(REVIEW_FINAL),
+            "bytes": REVIEW_FINAL.stat().st_size,
+            "final_tally": review_final_doc.get("final_tally"),
+            "residuals": review_final_doc.get("residuals"),
+            "does_not_prove": review_final_doc.get("does_not_prove"),
+            "controls": review_final_doc.get("controls"),
+        },
+        "not_established": True,
+        "note": (
+            "this receipt closes the earlier 'no section-7 criterion-3 argument' "
+            "residual by recording the argument and its verdict; the verdict is "
+            "NOT ESTABLISHED for all seven mechanisms, so it does not promote "
+            "the candidate and safe_compatible remains false."),
     }
 
     # Ledger row the closure joins against, and what this freeze proves.
@@ -804,8 +945,13 @@ def main() -> int:
             "adjudication_verdict": adj_verdict.get("state"),
         },
         "outstanding": [
-            "SAFE_COMPATIBLE is NOT established: independent adjudication "
-            "verdict '" + str(adj_verdict.get("state")) + "' (see adjudication)",
+            "SAFE_COMPATIBLE is NOT established: independent adjudication verdict '"
+            + str(adj_verdict.get("state")) + "' (see adjudication)",
+            ("the section-7 criterion-3 safety argument is recorded in "
+             "evidence/b78-safety-argument.json and its verdict is NOT_ESTABLISHED "
+             "for all seven mechanisms (0 SAFETY_DISCHARGED / 0 "
+             "OWNERSHIP_RECONSTRUCTED / 7 NOT_ESTABLISHED); 225/290 obligations "
+             "rest on caller closures not re-established at bb7d5206a"),
             f"{review_required} REVIEW_REQUIRED discharges "
             "(CAMPAIGN-STATUS current_applied_state.safe_compatible_blockers."
             "projected_after_recensus.REVIEW_REQUIRED); the closure already "
@@ -980,32 +1126,34 @@ def main() -> int:
             ["date", "-u", "+%FT%TZ"], text=True).strip(),
         "freeze_kind": "source-and-artefact freeze (S) with per-artefact ledger rebind",
         "freeze_reason": (
-            "b78 freezes the OCSP/element-7 candidate: the two b78b consumer "
+            "b78 freezes the OCSP/element-7 candidate: the two b78c consumer "
             "closures are ACCEPTED 290/290 with element 7 PASS (0 target-bounded "
-            "/ 153 contract-bounded), the install and OpenSSH closure binaries "
-            "are measured, the CONF-method witness closes the last target-"
-            "bounded site, and the per-artefact ledger rebinds bind both ssh and "
-            "sshd to the freeze. It also records, measured from their files, the "
-            "L7 functional replay (including the authority-linked OpenSSH "
-            "key-format differential) and the independent adjudication. The "
-            "adjudication verdict is NOT ESTABLISHED, so this freeze states "
-            "plainly that the candidate is NOT graduated."),
+            "/ 153 contract-bounded) under the repaired instrument 6e9cd261, the "
+            "install and OpenSSH closure binaries are measured, the CONF-method "
+            "witness closes the last target-bounded site, and the per-artefact "
+            "ledger rebinds bind both ssh and sshd to the freeze. It also "
+            "records, measured from their files, the L7 functional replay "
+            "(including the authority-linked OpenSSH key-format differential), "
+            "the independent adjudication, and the section-7 criterion-3 safety "
+            "argument. The adjudication verdict and the safety argument are "
+            "NOT ESTABLISHED, so this freeze states plainly that the candidate "
+            "is NOT graduated."),
         "identity": {
             "rule": (
                 "Two identities, never conflated (AGENTS.md section 22). S is the "
                 "frozen source+instrument identity this evidence describes: "
-                "production source bb7d5206acfb..., instrument f31816b1... and "
-                "the b78b closures. E is the evidence commit that carries this "
+                "production source bb7d5206acfb..., instrument 6e9cd261... and "
+                "the b78c closures. E is the evidence commit that carries this "
                 "freeze and the ledger receipts. Committing E moves HEAD; it does "
                 "not change S, its artefacts or their digests."),
             "production_source_head": source_head,
             "production_source_head_note": (
                 "census identity.source_head: the source tree the census and the "
-                "b78b closures analyse"),
+                "b78c closures analyse"),
             "instrument_head": evidence_head,
             "instrument_head_note": (
                 "git HEAD when this freeze was generated; it is the commit that "
-                "records the b78b closure and carries instrument "
+                "records the b78c closure and carries instrument "
                 + tool_sha[:12] + ". The closures record their own "
                 "repository_head (see closures.*.source_identity.repository_head)."),
             "evidence_commit": "E",
@@ -1073,6 +1221,8 @@ def main() -> int:
                     "callback-enrolment-blockers.json"),
             },
         },
+        "tool_repair": tool_repair,
+        "safety_argument": safety_argument,
         "artefacts": {
             "install_prefix": INSTALL,
             "files": artefacts,
@@ -1128,7 +1278,7 @@ def main() -> int:
                 "counted as target-bounded, and no site is unclassified. The "
                 "b78 re-pin record is an intermediate FAIL at 1 target-bounded "
                 "site (0x49a8dc); the CONF-method witness record resolves that "
-                "site and the b78b closures measure 0/153 PASS."),
+                "site and the b78c closures measure 0/153 PASS."),
         },
         "ledger_binding": ledger_binding,
         "gates": gates,
@@ -1137,6 +1287,32 @@ def main() -> int:
         "safe_compatible": safe_compatible,
         "adjudication": adjudication,
         "residuals": [
+            {"kind": "criterion3/safety-argument",
+             "statement": (
+                 "evidence/b78-safety-argument.json is the section-7 criterion-3 "
+                 "whole-closure argument. Its verdict is NOT_ESTABLISHED for all "
+                 "seven mechanisms (0 SAFETY_DISCHARGED / 0 "
+                 "OWNERSHIP_RECONSTRUCTED / 7 NOT_ESTABLISHED), because only "
+                 "65/290 obligations were independently re-read at b78 and the "
+                 "operation-span content hash explicitly excludes caller "
+                 "closures; 57 sites carry only an operation-level SAFETY block; "
+                 "C_ABI_CONTRACT and BIO are UNSAFE_OPEN. Recording the argument "
+                 "closes the earlier 'no argument' gap as an artifact, not as a "
+                 "safety result.")},
+            {"kind": "tool/migration-repair",
+             "statement": (
+                 "the b78c closures were run with 6e9cd261 (the anchored "
+                 "migration arm), not the f31816b1 that produced b78b. The "
+                 "ten-control table is "
+                 + str((repair_doc.get("controls") or {}).get("result"))
+                 + "; controls a/b/c refuse where the old arm discharged. The "
+                 "seven rows moved by the migration hunk are independently "
+                 "re-established at b78 in evidence/b78-review-migrated-rows.json "
+                 "(" + str(migrated_result.get("accept")) + "/"
+                 + str(migrated_result.get("rows_reviewed")) + " accept; "
+                 "migration binding not relied on). The instrument review's "
+                 "O1-O4 requirements are exercised by the repaired arm's "
+                 "controls.")},
             {"kind": "venue/memory", "statement": memory["deviation"]},
             {"kind": "gate/parallel-lib-tests",
              "statement": gates["verdict"]},
@@ -1163,37 +1339,41 @@ def main() -> int:
                  + str((repin_records[2] or {}).get("tool_sha256_before"))[:12]
                  + " -> "
                  + str((repin_records[2] or {}).get("tool_sha256_after"))[:12]
-                 + "; the final CONF witness and the b78b closures bind "
-                 + tool_sha[:12] + ". The re-pin record is retained as an "
+                 + "; the final instrument is " + tool_sha[:12]
+                 + " (6e9cd261, the anchored migration arm) and the b78c closures "
+                 "bind it. The e7-b78 re-pin record is retained as an "
                  "intermediate: its status is FAIL because the CONF site was "
                  "still target-bounded, and the later CONF witness record is the "
                  "evidence that closes it.")},
             {"kind": "carry-chain/sshd",
              "statement": (
-                 "sshd: evidence/closure-sshd-b78.json (ACCEPTED, "
+                 "sshd: evidence/closure-sshd-b78b.json (ACCEPTED, "
                  + str(closures["sshd"]["carry_chain"]["immediate_source"][
                      "DISCHARGED"]) + " discharged / "
                  + str(closures["sshd"]["carry_chain"]["immediate_source"][
-                     "BLOCKED"]) + " blocked) -> evidence/closure-sshd-b78b.json; "
+                     "BLOCKED"]) + " blocked) -> evidence/closure-sshd-b78c.json; "
                  + str(closures["sshd"]["carry_chain"]["carried_forward_removed"])
-                 + " carried-forward obligations removed")},
+                 + " carried-forward obligations removed; the b78c run repeats the "
+                 "full queue with the repaired instrument")},
             {"kind": "carry-chain/ssh",
              "statement": (
-                 "ssh: evidence/closure-ssh-b78.json (ACCEPTED, "
+                 "ssh: evidence/closure-ssh-b78b.json (ACCEPTED, "
                  + str(closures["ssh"]["carry_chain"]["immediate_source"][
                      "DISCHARGED"]) + " discharged / "
                  + str(closures["ssh"]["carry_chain"]["immediate_source"][
-                     "BLOCKED"]) + " blocked) -> evidence/closure-ssh-b78b.json; "
+                     "BLOCKED"]) + " blocked) -> evidence/closure-ssh-b78c.json; "
                  + str(closures["ssh"]["carry_chain"]["carried_forward_removed"])
-                 + " carried-forward obligations removed")},
+                 + " carried-forward obligations removed; the b78c run repeats the "
+                 "full queue with the repaired instrument")},
             {"kind": "copyctx-repair",
              "statement": (
                  "the seven b78 `copyctx` coordinates were stale coordinates of "
                  "the same definitions; evidence/b78b-copyctx-binding.json proves "
                  "each recorded coordinate is the definition line at the b76c "
                  "ancestor head and that the normalised body hashes to the "
-                 "declared span. The b78b run re-attributes them and reaches "
-                 "290/290.")},
+                 "declared span. The b78b run re-attributes them; the b78c run "
+                 "repeats the full queue with the repaired migration arm and "
+                 "reaches 290/290.")},
             {"kind": "not-run",
              "statement": (
                  "SEAL, BOUNDARY adjudication of the remaining contract-bounded "
@@ -1207,8 +1387,11 @@ def main() -> int:
              "statement": adjudication["not_graduated_statement"]},
         ],
         "not_run": [
-            "SAFE_COMPATIBLE promotion (independent adjudication verdict "
-            "'NOT ESTABLISHED'; the frozen candidate is NOT graduated)",
+            "SAFE_COMPATIBLE promotion (independent adjudication verdict '"
+            "NOT ESTABLISHED'; the frozen candidate is NOT graduated)",
+            "the section-7 criterion-3 argument's mechanisms are NOT_ESTABLISHED "
+            "(0 SAFETY_DISCHARGED / 0 OWNERSHIP_RECONSTRUCTED / 7 "
+            "NOT_ESTABLISHED; see safety_argument)",
             "BOUNDARY adjudication of the remaining contract-bounded boundaries",
             "SEAL (release build, full probe suite, full forensic regeneration)",
             "ASan/Miri/Loom and dudect/Wycheproof for this candidate",
@@ -1237,6 +1420,11 @@ def main() -> int:
              "graduation: the independent adjudication verdict is '"
              + str(adj_verdict.get("state")) + "' and the frozen candidate is "
              "NOT graduated"),
+            ("the section-7 safety argument is an argument artifact, not a "
+             "promotion: its verdict is NOT_ESTABLISHED for all seven mechanisms "
+             "and it changes no closure count, verdict or refusal"),
+            ("the instrument repair and the ten-control table are instrument "
+             "evidence, not a new closure measurement of any obligation"),
         ],
     }
     OUT.write_text(json.dumps(doc, indent=1) + "\n")
@@ -1254,6 +1442,10 @@ def main() -> int:
           f"{sorted(safe_compatible['l7_replay']['workloads'])}")
     print(f"[b78-freeze] adjudication verdict: {adjudication['verdict_state']} "
           f"graduated={adjudication['frozen_candidate_is_graduated']}")
+    print(f"[b78-freeze] safety argument: {safety_totals} "
+          f"not_established={safety_argument['not_established']}")
+    print(f"[b78-freeze] tool repair: {tool_repair['migration_controls']['result']} "
+          f"controls_all_pass={tool_repair['migration_controls']['all_pass']}")
     print(f"[b78-freeze] wrote {OUT.relative_to(REPO)}")
     print(f"[b78-freeze] sha256 {sha256_file(OUT)} size {OUT.stat().st_size}")
     print(f"[b78-freeze] keys {sorted(doc)}")

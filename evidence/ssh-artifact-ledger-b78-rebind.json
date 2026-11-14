@@ -3,13 +3,13 @@
  "tool": {
   "path": "forensics/tools/consumer_closure.py",
   "version": 6,
-  "sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+  "sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8",
   "schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4"
  },
- "generated_utc": "2026-11-14T10:44:20Z",
+ "generated_utc": "2026-11-14T18:33:36Z",
  "family": "openssh",
  "source_identity": {
-  "repository_head": "6cdf98598577e292003248503ca11ff9e1d4e8b0",
+  "repository_head": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
   "branch": "stage/p25/b75-ocsp",
   "tracked_tree_dirty": true,
   "inventory_path": "court/freeze-b78/census-b78.json",
@@ -82,7 +82,7 @@
     "matches_inventory": true
    }
   },
-  "raw_ldd": "\tlinux-vdso.so.1 (0x00007f51a40be000)\n\tlibcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3 (0x00007f51a3600000)\n\tlibz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x00007f51a3fa2000)\n\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007f51a341e000)\n\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007f51a3f82000)\n\t/lib64/ld-linux-x86-64.so.2 (0x00007f51a40c0000)\n"
+  "raw_ldd": "\tlinux-vdso.so.1 (0x00007ff8907d2000)\n\tlibcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3 (0x00007ff88fe00000)\n\tlibz.so.1 => /lib/x86_64-linux-gnu/libz.so.1 (0x00007ff8906b6000)\n\tlibc.so.6 => /lib/x86_64-linux-gnu/libc.so.6 (0x00007ff88fc1e000)\n\tlibgcc_s.so.1 => /lib/x86_64-linux-gnu/libgcc_s.so.1 (0x00007ff88fbfe000)\n\t/lib64/ld-linux-x86-64.so.2 (0x00007ff8907d4000)\n"
  },
  "ledger_record": {
   "run_id": "run:build-link:candidate:openssh:ssh",
@@ -79484,14 +79484,14 @@
    ],
    "note": "an empty admitted set or a missing defining symbol is a resolver gap, not a proof; those records are demoted to UNRESOLVED so the gap stays visible instead of being counted as PROVED_TARGET_SET"
   },
-  "records_path": "court/tmp/closure-b78b-ssh/edge-records.3b282f430d504b0d.jsonl",
+  "records_path": "court/tmp/closure-b78c-ssh/edge-records.3b282f430d504b0d.jsonl",
   "records_path_basis": "repo-relative when the sidecar is inside the repository, otherwise absolute; the default is the gitignored workdir and --edge-records is the only override",
   "records_sha256": "a24885289e59ae50ecb0d48749f77ccd728bc7bf7e2ebee0b78e72845fb89c0c",
   "records_bytes": 1398702365,
   "sidecar_lines": 51943,
-  "validator_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+  "validator_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8",
   "admissibility": {
-   "validator_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+   "validator_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8",
    "record_schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4",
    "artifact_sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
    "records_sha256": "a24885289e59ae50ecb0d48749f77ccd728bc7bf7e2ebee0b78e72845fb89c0c",
@@ -180011,8 +180011,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/cms/cms_asn1.rs:523:UNSAFE_FN_DEF",
     "previous_line": 523,
     "previous_status": "DISCHARGED",
@@ -180172,8 +180172,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/cms/cms_asn1.rs:539:UNSAFE_FN_DEF",
     "previous_line": 539,
     "previous_status": "DISCHARGED",
@@ -180368,8 +180368,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/cms/cms_asn1.rs:556:UNSAFE_FN_DEF",
     "previous_line": 556,
     "previous_status": "DISCHARGED",
@@ -180599,8 +180599,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/cms/cms_asn1.rs:585:UNSAFE_FN_DEF",
     "previous_line": 585,
     "previous_status": "DISCHARGED",
@@ -180865,8 +180865,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/cms/cms_asn1.rs:617:UNSAFE_FN_DEF",
     "previous_line": 617,
     "previous_status": "DISCHARGED",
@@ -181166,8 +181166,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/cms/cms_asn1.rs:668:UNSAFE_FN_DEF",
     "previous_line": 668,
     "previous_status": "DISCHARGED",
@@ -181762,8 +181762,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/context/namemap.rs:298:UNSAFE_FN_DEF",
     "previous_line": 298,
     "previous_status": "DISCHARGED",
@@ -181908,8 +181908,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/context/namemap.rs:308:UNSAFE_FN_DEF",
     "previous_line": 308,
     "previous_status": "DISCHARGED",
@@ -182480,8 +182480,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/ct/ct_x509v3.rs:100:UNSAFE_FN_DEF",
     "previous_line": 100,
     "previous_status": "DISCHARGED",
@@ -182756,8 +182756,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/decoder_pkey.rs:561:UNSAFE_FN_DEF",
     "previous_line": 561,
     "previous_status": "DISCHARGED",
@@ -182901,8 +182901,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/decoder_pkey.rs:567:UNSAFE_FN_DEF",
     "previous_line": 567,
     "previous_status": "DISCHARGED",
@@ -183081,8 +183081,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/digest/sha2.rs:393:UNSAFE_FN_DEF",
     "previous_line": 393,
     "previous_status": "DISCHARGED",
@@ -183270,8 +183270,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/encoder_meth.rs:1240:UNSAFE_FN_DEF",
     "previous_line": 1240,
     "previous_status": "DISCHARGED",
@@ -183767,8 +183767,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_blake2.rs:243:UNSAFE_FN_DEF",
     "previous_line": 243,
     "previous_status": "DISCHARGED",
@@ -183884,8 +183884,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_blake2.rs:260:UNSAFE_FN_DEF",
     "previous_line": 260,
     "previous_status": "DISCHARGED",
@@ -184043,8 +184043,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_blake2.rs:299:UNSAFE_FN_DEF",
     "previous_line": 299,
     "previous_status": "DISCHARGED",
@@ -184244,8 +184244,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_blake2.rs:315:UNSAFE_FN_DEF",
     "previous_line": 315,
     "previous_status": "DISCHARGED",
@@ -184487,8 +184487,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_md4.rs:191:UNSAFE_FN_DEF",
     "previous_line": 191,
     "previous_status": "DISCHARGED",
@@ -184611,8 +184611,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_md4.rs:198:UNSAFE_FN_DEF",
     "previous_line": 198,
     "previous_status": "DISCHARGED",
@@ -184777,8 +184777,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_md5.rs:216:UNSAFE_FN_DEF",
     "previous_line": 216,
     "previous_status": "DISCHARGED",
@@ -184898,8 +184898,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_md5.rs:223:UNSAFE_FN_DEF",
     "previous_line": 223,
     "previous_status": "DISCHARGED",
@@ -185061,8 +185061,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_md5.rs:234:UNSAFE_FN_DEF",
     "previous_line": 234,
     "previous_status": "DISCHARGED",
@@ -185266,8 +185266,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_md5.rs:240:UNSAFE_FN_DEF",
     "previous_line": 240,
     "previous_status": "DISCHARGED",
@@ -185513,8 +185513,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_md5.rs:250:UNSAFE_FN_DEF",
     "previous_line": 250,
     "previous_status": "DISCHARGED",
@@ -185802,8 +185802,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_md5.rs:258:UNSAFE_FN_DEF",
     "previous_line": 258,
     "previous_status": "DISCHARGED",
@@ -186133,8 +186133,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_mdc2.rs:197:UNSAFE_FN_DEF",
     "previous_line": 197,
     "previous_status": "DISCHARGED",
@@ -186244,8 +186244,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_mdc2.rs:204:UNSAFE_FN_DEF",
     "previous_line": 204,
     "previous_status": "DISCHARGED",
@@ -186397,8 +186397,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_ripemd.rs:192:UNSAFE_FN_DEF",
     "previous_line": 192,
     "previous_status": "DISCHARGED",
@@ -186521,8 +186521,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_ripemd.rs:199:UNSAFE_FN_DEF",
     "previous_line": 199,
     "previous_status": "DISCHARGED",
@@ -186687,8 +186687,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_sha.rs:262:UNSAFE_FN_DEF",
     "previous_line": 262,
     "previous_status": "DISCHARGED",
@@ -186924,8 +186924,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_sha.rs:269:UNSAFE_FN_DEF",
     "previous_line": 269,
     "previous_status": "DISCHARGED",
@@ -187203,8 +187203,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_sha.rs:277:UNSAFE_FN_DEF",
     "previous_line": 277,
     "previous_status": "DISCHARGED",
@@ -187524,8 +187524,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_sha.rs:324:UNSAFE_FN_DEF",
     "previous_line": 324,
     "previous_status": "DISCHARGED",
@@ -187887,8 +187887,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_sha.rs:330:UNSAFE_FN_DEF",
     "previous_line": 330,
     "previous_status": "DISCHARGED",
@@ -188292,8 +188292,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_sha.rs:360:UNSAFE_FN_DEF",
     "previous_line": 360,
     "previous_status": "DISCHARGED",
@@ -188739,8 +188739,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_sha.rs:366:UNSAFE_FN_DEF",
     "previous_line": 366,
     "previous_status": "DISCHARGED",
@@ -189228,8 +189228,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_sha.rs:396:UNSAFE_FN_DEF",
     "previous_line": 396,
     "previous_status": "DISCHARGED",
@@ -189759,8 +189759,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_sha.rs:402:UNSAFE_FN_DEF",
     "previous_line": 402,
     "previous_status": "DISCHARGED",
@@ -190332,8 +190332,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_sha.rs:432:UNSAFE_FN_DEF",
     "previous_line": 432,
     "previous_status": "DISCHARGED",
@@ -190947,8 +190947,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_sha.rs:438:UNSAFE_FN_DEF",
     "previous_line": 438,
     "previous_status": "DISCHARGED",
@@ -191604,8 +191604,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_sha.rs:471:UNSAFE_FN_DEF",
     "previous_line": 471,
     "previous_status": "DISCHARGED",
@@ -192303,8 +192303,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_sha.rs:501:UNSAFE_FN_DEF",
     "previous_line": 501,
     "previous_status": "DISCHARGED",
@@ -193044,8 +193044,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_sha3.rs:277:UNSAFE_FN_DEF",
     "previous_line": 277,
     "previous_status": "DISCHARGED",
@@ -193161,8 +193161,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_sha3.rs:289:UNSAFE_FN_DEF",
     "previous_line": 289,
     "previous_status": "DISCHARGED",
@@ -193320,8 +193320,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_sha3.rs:332:UNSAFE_FN_DEF",
     "previous_line": 332,
     "previous_status": "DISCHARGED",
@@ -193521,8 +193521,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_wp.rs:194:UNSAFE_FN_DEF",
     "previous_line": 194,
     "previous_status": "DISCHARGED",
@@ -193645,8 +193645,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/evp/legacy_wp.rs:201:UNSAFE_FN_DEF",
     "previous_line": 201,
     "previous_status": "DISCHARGED",
@@ -193811,8 +193811,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/ocsp/v3_ocsp.rs:122:UNSAFE_FN_DEF",
     "previous_line": 122,
     "previous_status": "DISCHARGED",
@@ -194155,8 +194155,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/ocsp/v3_ocsp.rs:187:UNSAFE_FN_DEF",
     "previous_line": 187,
     "previous_status": "DISCHARGED",
@@ -194534,8 +194534,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/ocsp/v3_ocsp.rs:325:UNSAFE_FN_DEF",
     "previous_line": 325,
     "previous_status": "DISCHARGED",
@@ -194948,8 +194948,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/ocsp/v3_ocsp.rs:344:UNSAFE_FN_DEF",
     "previous_line": 344,
     "previous_status": "DISCHARGED",
@@ -195397,8 +195397,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/ocsp/v3_ocsp.rs:406:UNSAFE_FN_DEF",
     "previous_line": 406,
     "previous_status": "DISCHARGED",
@@ -195881,8 +195881,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/pkcs7/pk7_asn1.rs:607:UNSAFE_FN_DEF",
     "previous_line": 607,
     "previous_status": "DISCHARGED",
@@ -196072,8 +196072,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/provider/cipher.rs:22193:UNSAFE_FN_DEF",
     "previous_line": 22193,
     "previous_status": "DISCHARGED",
@@ -196586,8 +196586,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/provider/conf.rs:234:UNSAFE_FN_DEF",
     "previous_line": 234,
     "previous_status": "DISCHARGED",
@@ -198081,12 +198081,12 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/provider/digest.rs:658:UNSAFE_FN_DEF",
     "previous_line": 658,
-    "previous_status": "BLOCKED",
-    "previous_discharge_receipt": null
+    "previous_status": "DISCHARGED",
+    "previous_discharge_receipt": "openssh-v1i"
    },
    "mechanism": "EVP_PKEY_PROVIDER",
    "mechanism_basis": "converted_files_on_branch",
@@ -198281,13 +198281,16 @@
      672,
      682
     ],
+    "candidate_qualified_identity": "sha1::copyctx",
     "candidate_census_attributed": true,
     "ancestor": {
      "receipt": "evidence/closure-ssh-b76c.json",
      "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
      "line": 658,
+     "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
      "def_line": 658,
      "resolution": "census-line-inside",
+     "qualified_identity": "sha1::copyctx",
      "span_sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
      "span_lines": [
       658,
@@ -198299,8 +198302,10 @@
       "receipt": "evidence/closure-ssh-b76c.json",
       "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
       "line": 658,
+      "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
       "def_line": 658,
       "resolution": "census-line-inside",
+      "qualified_identity": "sha1::copyctx",
       "span_sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
       "span_lines": [
        658,
@@ -198308,7 +198313,7 @@
       ]
      }
     ],
-    "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same operation at the inventory head the carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
+    "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same qualified operation at the inventory head the committed carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
    },
    "span_discharge": {
     "sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
@@ -198334,13 +198339,16 @@
       672,
       682
      ],
+     "candidate_qualified_identity": "sha1::copyctx",
      "candidate_census_attributed": true,
      "ancestor": {
       "receipt": "evidence/closure-ssh-b76c.json",
       "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
       "line": 658,
+      "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
       "def_line": 658,
       "resolution": "census-line-inside",
+      "qualified_identity": "sha1::copyctx",
       "span_sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
       "span_lines": [
        658,
@@ -198352,8 +198360,10 @@
        "receipt": "evidence/closure-ssh-b76c.json",
        "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
        "line": 658,
+       "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
        "def_line": 658,
        "resolution": "census-line-inside",
+       "qualified_identity": "sha1::copyctx",
        "span_sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
        "span_lines": [
         658,
@@ -198361,7 +198371,7 @@
        ]
       }
      ],
-     "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same operation at the inventory head the carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
+     "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same qualified operation at the inventory head the committed carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
     }
    },
    "scoped_discharge_attempts": [
@@ -199588,13 +199598,16 @@
        672,
        682
       ],
+      "candidate_qualified_identity": "sha1::copyctx",
       "candidate_census_attributed": true,
       "ancestor": {
        "receipt": "evidence/closure-ssh-b76c.json",
        "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
        "line": 658,
+       "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
        "def_line": 658,
        "resolution": "census-line-inside",
+       "qualified_identity": "sha1::copyctx",
        "span_sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
        "span_lines": [
         658,
@@ -199606,8 +199619,10 @@
         "receipt": "evidence/closure-ssh-b76c.json",
         "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
         "line": 658,
+        "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
         "def_line": 658,
         "resolution": "census-line-inside",
+        "qualified_identity": "sha1::copyctx",
         "span_sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
         "span_lines": [
          658,
@@ -199615,7 +199630,7 @@
         ]
        }
       ],
-      "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same operation at the inventory head the carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
+      "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same qualified operation at the inventory head the committed carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
      },
      "content_address_accepts": true
     }
@@ -205810,12 +205825,12 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/provider/digest.rs:970:UNSAFE_FN_DEF",
     "previous_line": 970,
-    "previous_status": "BLOCKED",
-    "previous_discharge_receipt": null
+    "previous_status": "DISCHARGED",
+    "previous_discharge_receipt": "openssh-v1i"
    },
    "mechanism": "EVP_PKEY_PROVIDER",
    "mechanism_basis": "converted_files_on_branch",
@@ -206010,13 +206025,16 @@
      992,
      1002
     ],
+    "candidate_qualified_identity": "nullmd::copyctx",
     "candidate_census_attributed": true,
     "ancestor": {
      "receipt": "evidence/closure-ssh-b76c.json",
      "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
      "line": 970,
+     "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
      "def_line": 970,
      "resolution": "census-line-inside",
+     "qualified_identity": "nullmd::copyctx",
      "span_sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
      "span_lines": [
       970,
@@ -206028,8 +206046,10 @@
       "receipt": "evidence/closure-ssh-b76c.json",
       "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
       "line": 970,
+      "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
       "def_line": 970,
       "resolution": "census-line-inside",
+      "qualified_identity": "nullmd::copyctx",
       "span_sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
       "span_lines": [
        970,
@@ -206037,7 +206057,7 @@
       ]
      }
     ],
-    "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same operation at the inventory head the carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
+    "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same qualified operation at the inventory head the committed carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
    },
    "span_discharge": {
     "sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
@@ -206063,13 +206083,16 @@
       992,
       1002
      ],
+     "candidate_qualified_identity": "nullmd::copyctx",
      "candidate_census_attributed": true,
      "ancestor": {
       "receipt": "evidence/closure-ssh-b76c.json",
       "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
       "line": 970,
+      "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
       "def_line": 970,
       "resolution": "census-line-inside",
+      "qualified_identity": "nullmd::copyctx",
       "span_sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
       "span_lines": [
        970,
@@ -206081,8 +206104,10 @@
        "receipt": "evidence/closure-ssh-b76c.json",
        "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
        "line": 970,
+       "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
        "def_line": 970,
        "resolution": "census-line-inside",
+       "qualified_identity": "nullmd::copyctx",
        "span_sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
        "span_lines": [
         970,
@@ -206090,7 +206115,7 @@
        ]
       }
      ],
-     "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same operation at the inventory head the carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
+     "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same qualified operation at the inventory head the committed carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
     }
    },
    "scoped_discharge_attempts": [
@@ -207569,13 +207594,16 @@
        992,
        1002
       ],
+      "candidate_qualified_identity": "nullmd::copyctx",
       "candidate_census_attributed": true,
       "ancestor": {
        "receipt": "evidence/closure-ssh-b76c.json",
        "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
        "line": 970,
+       "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
        "def_line": 970,
        "resolution": "census-line-inside",
+       "qualified_identity": "nullmd::copyctx",
        "span_sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
        "span_lines": [
         970,
@@ -207587,8 +207615,10 @@
         "receipt": "evidence/closure-ssh-b76c.json",
         "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
         "line": 970,
+        "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
         "def_line": 970,
         "resolution": "census-line-inside",
+        "qualified_identity": "nullmd::copyctx",
         "span_sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
         "span_lines": [
          970,
@@ -207596,7 +207626,7 @@
         ]
        }
       ],
-      "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same operation at the inventory head the carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
+      "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same qualified operation at the inventory head the committed carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
      },
      "content_address_accepts": true
     }
@@ -211009,12 +211039,12 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/provider/digest.rs:1165:UNSAFE_FN_DEF",
     "previous_line": 1165,
-    "previous_status": "BLOCKED",
-    "previous_discharge_receipt": null
+    "previous_status": "DISCHARGED",
+    "previous_discharge_receipt": "openssh-v1i"
    },
    "mechanism": "EVP_PKEY_PROVIDER",
    "mechanism_basis": "converted_files_on_branch",
@@ -211209,13 +211239,16 @@
      1195,
      1205
     ],
+    "candidate_qualified_identity": "md5_sha1::copyctx",
     "candidate_census_attributed": true,
     "ancestor": {
      "receipt": "evidence/closure-ssh-b76c.json",
      "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
      "line": 1165,
+     "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
      "def_line": 1165,
      "resolution": "census-line-inside",
+     "qualified_identity": "md5_sha1::copyctx",
      "span_sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
      "span_lines": [
       1165,
@@ -211227,8 +211260,10 @@
       "receipt": "evidence/closure-ssh-b76c.json",
       "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
       "line": 1165,
+      "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
       "def_line": 1165,
       "resolution": "census-line-inside",
+      "qualified_identity": "md5_sha1::copyctx",
       "span_sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
       "span_lines": [
        1165,
@@ -211236,7 +211271,7 @@
       ]
      }
     ],
-    "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same operation at the inventory head the carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
+    "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same qualified operation at the inventory head the committed carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
    },
    "span_discharge": {
     "sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
@@ -211262,13 +211297,16 @@
       1195,
       1205
      ],
+     "candidate_qualified_identity": "md5_sha1::copyctx",
      "candidate_census_attributed": true,
      "ancestor": {
       "receipt": "evidence/closure-ssh-b76c.json",
       "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
       "line": 1165,
+      "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
       "def_line": 1165,
       "resolution": "census-line-inside",
+      "qualified_identity": "md5_sha1::copyctx",
       "span_sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
       "span_lines": [
        1165,
@@ -211280,8 +211318,10 @@
        "receipt": "evidence/closure-ssh-b76c.json",
        "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
        "line": 1165,
+       "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
        "def_line": 1165,
        "resolution": "census-line-inside",
+       "qualified_identity": "md5_sha1::copyctx",
        "span_sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
        "span_lines": [
         1165,
@@ -211289,7 +211329,7 @@
        ]
       }
      ],
-     "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same operation at the inventory head the carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
+     "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same qualified operation at the inventory head the committed carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
     }
    },
    "scoped_discharge_attempts": [
@@ -212894,13 +212934,16 @@
        1195,
        1205
       ],
+      "candidate_qualified_identity": "md5_sha1::copyctx",
       "candidate_census_attributed": true,
       "ancestor": {
        "receipt": "evidence/closure-ssh-b76c.json",
        "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
        "line": 1165,
+       "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
        "def_line": 1165,
        "resolution": "census-line-inside",
+       "qualified_identity": "md5_sha1::copyctx",
        "span_sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
        "span_lines": [
         1165,
@@ -212912,8 +212955,10 @@
         "receipt": "evidence/closure-ssh-b76c.json",
         "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
         "line": 1165,
+        "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
         "def_line": 1165,
         "resolution": "census-line-inside",
+        "qualified_identity": "md5_sha1::copyctx",
         "span_sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
         "span_lines": [
          1165,
@@ -212921,7 +212966,7 @@
         ]
        }
       ],
-      "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same operation at the inventory head the carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
+      "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same qualified operation at the inventory head the committed carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
      },
      "content_address_accepts": true
     }
@@ -222429,12 +222474,12 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/provider/digest.rs:1348:UNSAFE_FN_DEF",
     "previous_line": 1348,
-    "previous_status": "BLOCKED",
-    "previous_discharge_receipt": null
+    "previous_status": "DISCHARGED",
+    "previous_discharge_receipt": "openssh-v1i"
    },
    "mechanism": "EVP_PKEY_PROVIDER",
    "mechanism_basis": "converted_files_on_branch",
@@ -222629,13 +222674,16 @@
      1386,
      1396
     ],
+    "candidate_qualified_identity": "sha3::copyctx",
     "candidate_census_attributed": true,
     "ancestor": {
      "receipt": "evidence/closure-ssh-b76c.json",
      "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
      "line": 1348,
+     "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
      "def_line": 1348,
      "resolution": "census-line-inside",
+     "qualified_identity": "sha3::copyctx",
      "span_sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
      "span_lines": [
       1348,
@@ -222647,8 +222695,10 @@
       "receipt": "evidence/closure-ssh-b76c.json",
       "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
       "line": 1348,
+      "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
       "def_line": 1348,
       "resolution": "census-line-inside",
+      "qualified_identity": "sha3::copyctx",
       "span_sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
       "span_lines": [
        1348,
@@ -222656,7 +222706,7 @@
       ]
      }
     ],
-    "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same operation at the inventory head the carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
+    "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same qualified operation at the inventory head the committed carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
    },
    "span_discharge": {
     "sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
@@ -222682,13 +222732,16 @@
       1386,
       1396
      ],
+     "candidate_qualified_identity": "sha3::copyctx",
      "candidate_census_attributed": true,
      "ancestor": {
       "receipt": "evidence/closure-ssh-b76c.json",
       "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
       "line": 1348,
+      "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
       "def_line": 1348,
       "resolution": "census-line-inside",
+      "qualified_identity": "sha3::copyctx",
       "span_sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
       "span_lines": [
        1348,
@@ -222700,8 +222753,10 @@
        "receipt": "evidence/closure-ssh-b76c.json",
        "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
        "line": 1348,
+       "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
        "def_line": 1348,
        "resolution": "census-line-inside",
+       "qualified_identity": "sha3::copyctx",
        "span_sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
        "span_lines": [
         1348,
@@ -222709,7 +222764,7 @@
        ]
       }
      ],
-     "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same operation at the inventory head the carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
+     "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same qualified operation at the inventory head the committed carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
     }
    },
    "scoped_discharge_attempts": [
@@ -224566,13 +224621,16 @@
        1386,
        1396
       ],
+      "candidate_qualified_identity": "sha3::copyctx",
       "candidate_census_attributed": true,
       "ancestor": {
        "receipt": "evidence/closure-ssh-b76c.json",
        "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
        "line": 1348,
+       "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
        "def_line": 1348,
        "resolution": "census-line-inside",
+       "qualified_identity": "sha3::copyctx",
        "span_sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
        "span_lines": [
         1348,
@@ -224584,8 +224642,10 @@
         "receipt": "evidence/closure-ssh-b76c.json",
         "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
         "line": 1348,
+        "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
         "def_line": 1348,
         "resolution": "census-line-inside",
+        "qualified_identity": "sha3::copyctx",
         "span_sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
         "span_lines": [
          1348,
@@ -224593,7 +224653,7 @@
         ]
        }
       ],
-      "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same operation at the inventory head the carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
+      "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same qualified operation at the inventory head the committed carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
      },
      "content_address_accepts": true
     }
@@ -237630,12 +237690,12 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/provider/digest.rs:1898:UNSAFE_FN_DEF",
     "previous_line": 1898,
-    "previous_status": "BLOCKED",
-    "previous_discharge_receipt": null
+    "previous_status": "DISCHARGED",
+    "previous_discharge_receipt": "openssh-v1i"
    },
    "mechanism": "EVP_PKEY_PROVIDER",
    "mechanism_basis": "converted_files_on_branch",
@@ -237830,13 +237890,16 @@
      1956,
      1966
     ],
+    "candidate_qualified_identity": "blake2::blake_row::copyctx",
     "candidate_census_attributed": true,
     "ancestor": {
      "receipt": "evidence/closure-ssh-b76c.json",
      "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
      "line": 1898,
+     "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
      "def_line": 1898,
      "resolution": "census-line-inside",
+     "qualified_identity": "blake2::blake_row::copyctx",
      "span_sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
      "span_lines": [
       1898,
@@ -237848,8 +237911,10 @@
       "receipt": "evidence/closure-ssh-b76c.json",
       "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
       "line": 1898,
+      "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
       "def_line": 1898,
       "resolution": "census-line-inside",
+      "qualified_identity": "blake2::blake_row::copyctx",
       "span_sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
       "span_lines": [
        1898,
@@ -237857,7 +237922,7 @@
       ]
      }
     ],
-    "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same operation at the inventory head the carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
+    "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same qualified operation at the inventory head the committed carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
    },
    "span_discharge": {
     "sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
@@ -237883,13 +237948,16 @@
       1956,
       1966
      ],
+     "candidate_qualified_identity": "blake2::blake_row::copyctx",
      "candidate_census_attributed": true,
      "ancestor": {
       "receipt": "evidence/closure-ssh-b76c.json",
       "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
       "line": 1898,
+      "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
       "def_line": 1898,
       "resolution": "census-line-inside",
+      "qualified_identity": "blake2::blake_row::copyctx",
       "span_sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
       "span_lines": [
        1898,
@@ -237901,8 +237969,10 @@
        "receipt": "evidence/closure-ssh-b76c.json",
        "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
        "line": 1898,
+       "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
        "def_line": 1898,
        "resolution": "census-line-inside",
+       "qualified_identity": "blake2::blake_row::copyctx",
        "span_sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
        "span_lines": [
         1898,
@@ -237910,7 +237980,7 @@
        ]
       }
      ],
-     "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same operation at the inventory head the carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
+     "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same qualified operation at the inventory head the committed carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
     }
    },
    "scoped_discharge_attempts": [
@@ -240061,13 +240131,16 @@
        1956,
        1966
       ],
+      "candidate_qualified_identity": "blake2::blake_row::copyctx",
       "candidate_census_attributed": true,
       "ancestor": {
        "receipt": "evidence/closure-ssh-b76c.json",
        "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
        "line": 1898,
+       "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
        "def_line": 1898,
        "resolution": "census-line-inside",
+       "qualified_identity": "blake2::blake_row::copyctx",
        "span_sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
        "span_lines": [
         1898,
@@ -240079,8 +240152,10 @@
         "receipt": "evidence/closure-ssh-b76c.json",
         "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
         "line": 1898,
+        "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
         "def_line": 1898,
         "resolution": "census-line-inside",
+        "qualified_identity": "blake2::blake_row::copyctx",
         "span_sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
         "span_lines": [
          1898,
@@ -240088,7 +240163,7 @@
         ]
        }
       ],
-      "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same operation at the inventory head the carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
+      "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same qualified operation at the inventory head the committed carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
      },
      "content_address_accepts": true
     }
@@ -257667,12 +257742,12 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/provider/legacyprov.rs:336:UNSAFE_FN_DEF",
     "previous_line": 336,
-    "previous_status": "BLOCKED",
-    "previous_discharge_receipt": null
+    "previous_status": "DISCHARGED",
+    "previous_discharge_receipt": "openssh-v1i"
    },
    "mechanism": "EVP_PKEY_PROVIDER",
    "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
@@ -257727,13 +257802,16 @@
      345,
      356
     ],
+    "candidate_qualified_identity": "legacy_digest_impl::copyctx",
     "candidate_census_attributed": true,
     "ancestor": {
      "receipt": "evidence/closure-ssh-b76c.json",
      "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
      "line": 336,
+     "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
      "def_line": 336,
      "resolution": "census-line-inside",
+     "qualified_identity": "legacy_digest_impl::copyctx",
      "span_sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
      "span_lines": [
       336,
@@ -257745,8 +257823,10 @@
       "receipt": "evidence/closure-ssh-b76c.json",
       "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
       "line": 336,
+      "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
       "def_line": 336,
       "resolution": "census-line-inside",
+      "qualified_identity": "legacy_digest_impl::copyctx",
       "span_sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
       "span_lines": [
        336,
@@ -257754,7 +257834,7 @@
       ]
      }
     ],
-    "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same operation at the inventory head the carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
+    "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same qualified operation at the inventory head the committed carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
    },
    "span_discharge": {
     "sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
@@ -257780,13 +257860,16 @@
       345,
       356
      ],
+     "candidate_qualified_identity": "legacy_digest_impl::copyctx",
      "candidate_census_attributed": true,
      "ancestor": {
       "receipt": "evidence/closure-ssh-b76c.json",
       "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
       "line": 336,
+      "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
       "def_line": 336,
       "resolution": "census-line-inside",
+      "qualified_identity": "legacy_digest_impl::copyctx",
       "span_sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
       "span_lines": [
        336,
@@ -257798,8 +257881,10 @@
        "receipt": "evidence/closure-ssh-b76c.json",
        "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
        "line": 336,
+       "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
        "def_line": 336,
        "resolution": "census-line-inside",
+       "qualified_identity": "legacy_digest_impl::copyctx",
        "span_sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
        "span_lines": [
         336,
@@ -257807,7 +257892,7 @@
        ]
       }
      ],
-     "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same operation at the inventory head the carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
+     "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same qualified operation at the inventory head the committed carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
     }
    },
    "scoped_discharge_attempts": [
@@ -257900,13 +257985,16 @@
        345,
        356
       ],
+      "candidate_qualified_identity": "legacy_digest_impl::copyctx",
       "candidate_census_attributed": true,
       "ancestor": {
        "receipt": "evidence/closure-ssh-b76c.json",
        "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
        "line": 336,
+       "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
        "def_line": 336,
        "resolution": "census-line-inside",
+       "qualified_identity": "legacy_digest_impl::copyctx",
        "span_sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
        "span_lines": [
         336,
@@ -257918,8 +258006,10 @@
         "receipt": "evidence/closure-ssh-b76c.json",
         "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
         "line": 336,
+        "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
         "def_line": 336,
         "resolution": "census-line-inside",
+        "qualified_identity": "legacy_digest_impl::copyctx",
         "span_sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
         "span_lines": [
          336,
@@ -257927,7 +258017,7 @@
         ]
        }
       ],
-      "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same operation at the inventory head the carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
+      "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same qualified operation at the inventory head the committed carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
      },
      "content_address_accepts": true
     }
@@ -259403,12 +259493,12 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/provider/legacyprov.rs:544:UNSAFE_FN_DEF",
     "previous_line": 544,
-    "previous_status": "BLOCKED",
-    "previous_discharge_receipt": null
+    "previous_status": "DISCHARGED",
+    "previous_discharge_receipt": "openssh-v1i"
    },
    "mechanism": "EVP_PKEY_PROVIDER",
    "mechanism_basis": "directory-rule:^src/(?:evp|provider|ec|rsa|dsa|dh|bn|ffc|hpke|ml_dsa|ml_kem|slh_dsa|mac|property|param|digest|des|aes|camellia|seed|srp|md5|sha|sm3)/",
@@ -259463,13 +259553,16 @@
      561,
      571
     ],
+    "candidate_qualified_identity": "mdc2::copyctx",
     "candidate_census_attributed": true,
     "ancestor": {
      "receipt": "evidence/closure-ssh-b76c.json",
      "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
      "line": 544,
+     "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
      "def_line": 544,
      "resolution": "census-line-inside",
+     "qualified_identity": "mdc2::copyctx",
      "span_sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
      "span_lines": [
       544,
@@ -259481,8 +259574,10 @@
       "receipt": "evidence/closure-ssh-b76c.json",
       "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
       "line": 544,
+      "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
       "def_line": 544,
       "resolution": "census-line-inside",
+      "qualified_identity": "mdc2::copyctx",
       "span_sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
       "span_lines": [
        544,
@@ -259490,7 +259585,7 @@
       ]
      }
     ],
-    "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same operation at the inventory head the carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
+    "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same qualified operation at the inventory head the committed carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
    },
    "span_discharge": {
     "sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
@@ -259516,13 +259611,16 @@
       561,
       571
      ],
+     "candidate_qualified_identity": "mdc2::copyctx",
      "candidate_census_attributed": true,
      "ancestor": {
       "receipt": "evidence/closure-ssh-b76c.json",
       "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
       "line": 544,
+      "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
       "def_line": 544,
       "resolution": "census-line-inside",
+      "qualified_identity": "mdc2::copyctx",
       "span_sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
       "span_lines": [
        544,
@@ -259534,8 +259632,10 @@
        "receipt": "evidence/closure-ssh-b76c.json",
        "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
        "line": 544,
+       "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
        "def_line": 544,
        "resolution": "census-line-inside",
+       "qualified_identity": "mdc2::copyctx",
        "span_sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
        "span_lines": [
         544,
@@ -259543,7 +259643,7 @@
        ]
       }
      ],
-     "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same operation at the inventory head the carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
+     "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same qualified operation at the inventory head the committed carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
     }
    },
    "scoped_discharge_attempts": [
@@ -259888,13 +259988,16 @@
        561,
        571
       ],
+      "candidate_qualified_identity": "mdc2::copyctx",
       "candidate_census_attributed": true,
       "ancestor": {
        "receipt": "evidence/closure-ssh-b76c.json",
        "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
        "line": 544,
+       "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
        "def_line": 544,
        "resolution": "census-line-inside",
+       "qualified_identity": "mdc2::copyctx",
        "span_sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
        "span_lines": [
         544,
@@ -259906,8 +260009,10 @@
         "receipt": "evidence/closure-ssh-b76c.json",
         "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
         "line": 544,
+        "anchor": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
         "def_line": 544,
         "resolution": "census-line-inside",
+        "qualified_identity": "mdc2::copyctx",
         "span_sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
         "span_lines": [
          544,
@@ -259915,7 +260020,7 @@
         ]
        }
       ],
-      "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same operation at the inventory head the carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
+      "basis": "the obligation's recorded coordinate is not a definition line at the candidate, but it was the definition line of the same qualified operation at the inventory head the committed carry-forward chain names, and that definition's normalised text hashes to the span the boundary declares; the candidate inventory attributes the operation to the boundary's resolved definition line"
      },
      "content_address_accepts": true
     }
@@ -262038,8 +262143,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/provider/mlx_kmgmt.rs:128:UNSAFE_FN_DEF",
     "previous_line": 128,
     "previous_status": "DISCHARGED",
@@ -262430,8 +262535,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/rand/rand_lib.rs:535:UNSAFE_FN_DEF",
     "previous_line": 535,
     "previous_status": "DISCHARGED",
@@ -263276,8 +263381,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/runtime/thread.rs:531:UNSAFE_FN_DEF",
     "previous_line": 531,
     "previous_status": "DISCHARGED",
@@ -263403,8 +263508,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/runtime/thread.rs:544:UNSAFE_FN_DEF",
     "previous_line": 544,
     "previous_status": "DISCHARGED",
@@ -263530,8 +263635,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/adrs.rs:119:UNSAFE_FN_DEF",
     "previous_line": 119,
     "previous_status": "DISCHARGED",
@@ -263738,8 +263843,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/adrs.rs:128:UNSAFE_FN_DEF",
     "previous_line": 128,
     "previous_status": "DISCHARGED",
@@ -263988,8 +264093,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/adrs.rs:134:UNSAFE_FN_DEF",
     "previous_line": 134,
     "previous_status": "DISCHARGED",
@@ -264280,8 +264385,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/adrs.rs:147:UNSAFE_FN_DEF",
     "previous_line": 147,
     "previous_status": "DISCHARGED",
@@ -264614,8 +264719,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/adrs.rs:154:UNSAFE_FN_DEF",
     "previous_line": 154,
     "previous_status": "DISCHARGED",
@@ -264990,8 +265095,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/adrs.rs:166:UNSAFE_FN_DEF",
     "previous_line": 166,
     "previous_status": "DISCHARGED",
@@ -265408,8 +265513,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/adrs.rs:172:UNSAFE_FN_DEF",
     "previous_line": 172,
     "previous_status": "DISCHARGED",
@@ -265868,8 +265973,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/adrs.rs:178:UNSAFE_FN_DEF",
     "previous_line": 178,
     "previous_status": "DISCHARGED",
@@ -266370,8 +266475,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/adrs.rs:184:UNSAFE_FN_DEF",
     "previous_line": 184,
     "previous_status": "DISCHARGED",
@@ -266914,8 +267019,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/adrs.rs:193:UNSAFE_FN_DEF",
     "previous_line": 193,
     "previous_status": "DISCHARGED",
@@ -267500,8 +267605,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/adrs.rs:200:UNSAFE_FN_DEF",
     "previous_line": 200,
     "previous_status": "DISCHARGED",
@@ -268128,8 +268233,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/adrs.rs:207:UNSAFE_FN_DEF",
     "previous_line": 207,
     "previous_status": "DISCHARGED",
@@ -268798,8 +268903,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/adrs.rs:221:UNSAFE_FN_DEF",
     "previous_line": 221,
     "previous_status": "DISCHARGED",
@@ -269510,8 +269615,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/adrs.rs:228:UNSAFE_FN_DEF",
     "previous_line": 228,
     "previous_status": "DISCHARGED",
@@ -270264,8 +270369,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/adrs.rs:241:UNSAFE_FN_DEF",
     "previous_line": 241,
     "previous_status": "DISCHARGED",
@@ -271060,8 +271165,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/adrs.rs:248:UNSAFE_FN_DEF",
     "previous_line": 248,
     "previous_status": "DISCHARGED",
@@ -271898,8 +272003,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/adrs.rs:254:UNSAFE_FN_DEF",
     "previous_line": 254,
     "previous_status": "DISCHARGED",
@@ -272778,8 +272883,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/adrs.rs:260:UNSAFE_FN_DEF",
     "previous_line": 260,
     "previous_status": "DISCHARGED",
@@ -273700,8 +273805,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/hash.rs:179:UNSAFE_FN_DEF",
     "previous_line": 179,
     "previous_status": "DISCHARGED",
@@ -273878,8 +273983,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/hash.rs:212:UNSAFE_FN_DEF",
     "previous_line": 212,
     "previous_status": "DISCHARGED",
@@ -274098,8 +274203,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/hash.rs:240:UNSAFE_FN_DEF",
     "previous_line": 240,
     "previous_status": "DISCHARGED",
@@ -274360,8 +274465,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/hash.rs:272:UNSAFE_FN_DEF",
     "previous_line": 272,
     "previous_status": "DISCHARGED",
@@ -274664,8 +274769,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/hash.rs:301:UNSAFE_FN_DEF",
     "previous_line": 301,
     "previous_status": "DISCHARGED",
@@ -275010,8 +275115,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/hash.rs:332:UNSAFE_FN_DEF",
     "previous_line": 332,
     "previous_status": "DISCHARGED",
@@ -275398,8 +275503,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/hash.rs:392:UNSAFE_FN_DEF",
     "previous_line": 392,
     "previous_status": "DISCHARGED",
@@ -275828,8 +275933,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/hash.rs:442:UNSAFE_FN_DEF",
     "previous_line": 442,
     "previous_status": "DISCHARGED",
@@ -276300,8 +276405,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/hash.rs:531:UNSAFE_FN_DEF",
     "previous_line": 531,
     "previous_status": "DISCHARGED",
@@ -276814,8 +276919,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/hash.rs:558:UNSAFE_FN_DEF",
     "previous_line": 558,
     "previous_status": "DISCHARGED",
@@ -277370,8 +277475,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/hash.rs:586:UNSAFE_FN_DEF",
     "previous_line": 586,
     "previous_status": "DISCHARGED",
@@ -277968,8 +278073,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/slh_dsa/hash.rs:618:UNSAFE_FN_DEF",
     "previous_line": 618,
     "previous_status": "DISCHARGED",
@@ -278608,8 +278713,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/sm3/legacy_sm3.rs:198:UNSAFE_FN_DEF",
     "previous_line": 198,
     "previous_status": "DISCHARGED",
@@ -278803,8 +278908,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/sm3/legacy_sm3.rs:209:UNSAFE_FN_DEF",
     "previous_line": 209,
     "previous_status": "DISCHARGED",
@@ -278914,8 +279019,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/ssl/ssl_ciph.rs:741:UNSAFE_FN_DEF",
     "previous_line": 741,
     "previous_status": "DISCHARGED",
@@ -279154,8 +279259,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/ssl/ssl_ciph.rs:851:UNSAFE_FN_DEF",
     "previous_line": 851,
     "previous_status": "DISCHARGED",
@@ -279429,8 +279534,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/ssl/ssl_conf.rs:240:UNSAFE_FN_DEF",
     "previous_line": 240,
     "previous_status": "DISCHARGED",
@@ -279789,8 +279894,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/ssl/ssl_conf.rs:274:UNSAFE_FN_DEF",
     "previous_line": 274,
     "previous_status": "DISCHARGED",
@@ -280184,8 +280289,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/ssl/ssl_conf.rs:379:UNSAFE_FN_DEF",
     "previous_line": 379,
     "previous_status": "DISCHARGED",
@@ -280614,8 +280719,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/ssl/ssl_conf.rs:438:UNSAFE_FN_DEF",
     "previous_line": 438,
     "previous_status": "DISCHARGED",
@@ -281079,8 +281184,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/ssl/ssl_conf.rs:455:UNSAFE_FN_DEF",
     "previous_line": 455,
     "previous_status": "DISCHARGED",
@@ -281579,8 +281684,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/ssl/ssl_conf.rs:511:UNSAFE_FN_DEF",
     "previous_line": 511,
     "previous_status": "DISCHARGED",
@@ -282114,8 +282219,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/ssl/ssl_conf.rs:537:UNSAFE_FN_DEF",
     "previous_line": 537,
     "previous_status": "DISCHARGED",
@@ -282684,8 +282789,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/ssl/ssl_conf.rs:552:UNSAFE_FN_DEF",
     "previous_line": 552,
     "previous_status": "DISCHARGED",
@@ -283289,8 +283394,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/ssl/ssl_conf.rs:567:UNSAFE_FN_DEF",
     "previous_line": 567,
     "previous_status": "DISCHARGED",
@@ -283929,8 +284034,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/ssl/ssl_conf.rs:573:UNSAFE_FN_DEF",
     "previous_line": 573,
     "previous_status": "DISCHARGED",
@@ -284604,8 +284709,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/ssl/ssl_rsa.rs:1007:UNSAFE_FN_DEF",
     "previous_line": 1007,
     "previous_status": "DISCHARGED",
@@ -284758,8 +284863,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/ssl/ssl_rsa.rs:1033:UNSAFE_FN_DEF",
     "previous_line": 1033,
     "previous_status": "DISCHARGED",
@@ -285179,8 +285284,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_aaa.rs:382:UNSAFE_FN_DEF",
     "previous_line": 382,
     "previous_status": "DISCHARGED",
@@ -285303,8 +285408,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_aaa.rs:452:UNSAFE_FN_DEF",
     "previous_line": 452,
     "previous_status": "DISCHARGED",
@@ -285469,8 +285574,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_aaa.rs:500:UNSAFE_FN_DEF",
     "previous_line": 500,
     "previous_status": "DISCHARGED",
@@ -285677,8 +285782,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_ac_tgt.rs:624:UNSAFE_FN_DEF",
     "previous_line": 624,
     "previous_status": "DISCHARGED",
@@ -285798,8 +285903,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_ac_tgt.rs:688:UNSAFE_FN_DEF",
     "previous_line": 688,
     "previous_status": "DISCHARGED",
@@ -285954,8 +286059,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_ac_tgt.rs:825:UNSAFE_FN_DEF",
     "previous_line": 825,
     "previous_status": "DISCHARGED",
@@ -286145,8 +286250,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_ac_tgt.rs:889:UNSAFE_FN_DEF",
     "previous_line": 889,
     "previous_status": "DISCHARGED",
@@ -286371,8 +286476,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_ac_tgt.rs:934:UNSAFE_FN_DEF",
     "previous_line": 934,
     "previous_status": "DISCHARGED",
@@ -286632,8 +286737,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_ac_tgt.rs:962:UNSAFE_FN_DEF",
     "previous_line": 962,
     "previous_status": "DISCHARGED",
@@ -286928,8 +287033,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_addr.rs:921:UNSAFE_FN_DEF",
     "previous_line": 921,
     "previous_status": "DISCHARGED",
@@ -287041,8 +287146,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_addr.rs:2241:UNSAFE_FN_DEF",
     "previous_line": 2241,
     "previous_status": "DISCHARGED",
@@ -287189,8 +287294,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_admis.rs:557:UNSAFE_FN_DEF",
     "previous_line": 557,
     "previous_status": "DISCHARGED",
@@ -287302,8 +287407,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_admis.rs:640:UNSAFE_FN_DEF",
     "previous_line": 640,
     "previous_status": "DISCHARGED",
@@ -287690,8 +287795,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_akid.rs:231:UNSAFE_FN_DEF",
     "previous_line": 231,
     "previous_status": "DISCHARGED",
@@ -287891,8 +287996,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_akid.rs:359:UNSAFE_FN_DEF",
     "previous_line": 359,
     "previous_status": "DISCHARGED",
@@ -288127,8 +288232,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_asid.rs:686:UNSAFE_FN_DEF",
     "previous_line": 686,
     "previous_status": "DISCHARGED",
@@ -288249,8 +288354,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_asid.rs:817:UNSAFE_FN_DEF",
     "previous_line": 817,
     "previous_status": "DISCHARGED",
@@ -288593,8 +288698,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_asid.rs:1263:UNSAFE_FN_DEF",
     "previous_line": 1263,
     "previous_status": "DISCHARGED",
@@ -288953,8 +289058,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_asid.rs:1453:UNSAFE_FN_DEF",
     "previous_line": 1453,
     "previous_status": "DISCHARGED",
@@ -289117,8 +289222,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_attrdesc.rs:637:UNSAFE_FN_DEF",
     "previous_line": 637,
     "previous_status": "DISCHARGED",
@@ -289236,8 +289341,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_attrdesc.rs:699:UNSAFE_FN_DEF",
     "previous_line": 699,
     "previous_status": "DISCHARGED",
@@ -289390,8 +289495,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_attrdesc.rs:738:UNSAFE_FN_DEF",
     "previous_line": 738,
     "previous_status": "DISCHARGED",
@@ -289579,8 +289684,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_attrdesc.rs:794:UNSAFE_FN_DEF",
     "previous_line": 794,
     "previous_status": "DISCHARGED",
@@ -289803,8 +289908,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_attrdesc.rs:850:UNSAFE_FN_DEF",
     "previous_line": 850,
     "previous_status": "DISCHARGED",
@@ -290062,8 +290167,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_attrmap.rs:576:UNSAFE_FN_DEF",
     "previous_line": 576,
     "previous_status": "DISCHARGED",
@@ -290175,8 +290280,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_attrmap.rs:653:UNSAFE_FN_DEF",
     "previous_line": 653,
     "previous_status": "DISCHARGED",
@@ -290323,8 +290428,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_audit_id.rs:30:UNSAFE_FN_DEF",
     "previous_line": 30,
     "previous_status": "DISCHARGED",
@@ -290436,8 +290541,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_audit_id.rs:37:UNSAFE_FN_DEF",
     "previous_line": 37,
     "previous_status": "DISCHARGED",
@@ -290584,8 +290689,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_authattid.rs:164:UNSAFE_FN_DEF",
     "previous_line": 164,
     "previous_status": "DISCHARGED",
@@ -290697,8 +290802,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_authattid.rs:229:UNSAFE_FN_DEF",
     "previous_line": 229,
     "previous_status": "DISCHARGED",
@@ -290845,8 +290950,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_battcons.rs:191:UNSAFE_FN_DEF",
     "previous_line": 191,
     "previous_status": "DISCHARGED",
@@ -291001,8 +291106,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_battcons.rs:208:UNSAFE_FN_DEF",
     "previous_line": 208,
     "previous_status": "DISCHARGED",
@@ -291122,8 +291227,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_bcons.rs:192:UNSAFE_FN_DEF",
     "previous_line": 192,
     "previous_status": "DISCHARGED",
@@ -291278,8 +291383,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_bcons.rs:209:UNSAFE_FN_DEF",
     "previous_line": 209,
     "previous_status": "DISCHARGED",
@@ -291399,8 +291504,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_bitst.rs:234:UNSAFE_FN_DEF",
     "previous_line": 234,
     "previous_status": "DISCHARGED",
@@ -291516,8 +291621,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_bitst.rs:288:UNSAFE_FN_DEF",
     "previous_line": 288,
     "previous_status": "DISCHARGED",
@@ -291668,8 +291773,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_bitst.rs:349:UNSAFE_FN_DEF",
     "previous_line": 349,
     "previous_status": "DISCHARGED",
@@ -291855,8 +291960,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_bitst.rs:360:UNSAFE_FN_DEF",
     "previous_line": 360,
     "previous_status": "DISCHARGED",
@@ -292077,8 +292182,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_cpols.rs:1249:UNSAFE_FN_DEF",
     "previous_line": 1249,
     "previous_status": "DISCHARGED",
@@ -292233,8 +292338,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_cpols.rs:1366:UNSAFE_FN_DEF",
     "previous_line": 1366,
     "previous_status": "DISCHARGED",
@@ -292354,8 +292459,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_crld.rs:1333:UNSAFE_FN_DEF",
     "previous_line": 1333,
     "previous_status": "DISCHARGED",
@@ -292481,8 +292586,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_crld.rs:1481:UNSAFE_FN_DEF",
     "previous_line": 1481,
     "previous_status": "DISCHARGED",
@@ -292643,8 +292748,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_crld.rs:1566:UNSAFE_FN_DEF",
     "previous_line": 1566,
     "previous_status": "DISCHARGED",
@@ -292840,8 +292945,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_crld.rs:1650:UNSAFE_FN_DEF",
     "previous_line": 1650,
     "previous_status": "DISCHARGED",
@@ -293072,8 +293177,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_crld.rs:1697:UNSAFE_FN_DEF",
     "previous_line": 1697,
     "previous_status": "DISCHARGED",
@@ -293339,8 +293444,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_crld.rs:1722:UNSAFE_FN_DEF",
     "previous_line": 1722,
     "previous_status": "DISCHARGED",
@@ -293641,8 +293746,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_crld.rs:1928:UNSAFE_FN_DEF",
     "previous_line": 1928,
     "previous_status": "DISCHARGED",
@@ -293978,8 +294083,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_crld.rs:2020:UNSAFE_FN_DEF",
     "previous_line": 2020,
     "previous_status": "DISCHARGED",
@@ -294350,8 +294455,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_enum.rs:120:UNSAFE_FN_DEF",
     "previous_line": 120,
     "previous_status": "DISCHARGED",
@@ -294472,8 +294577,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_enum.rs:156:UNSAFE_FN_DEF",
     "previous_line": 156,
     "previous_status": "DISCHARGED",
@@ -294629,8 +294734,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_extku.rs:184:UNSAFE_FN_DEF",
     "previous_line": 184,
     "previous_status": "DISCHARGED",
@@ -294785,8 +294890,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_extku.rs:212:UNSAFE_FN_DEF",
     "previous_line": 212,
     "previous_status": "DISCHARGED",
@@ -294906,8 +295011,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_ia5.rs:77:UNSAFE_FN_DEF",
     "previous_line": 77,
     "previous_status": "DISCHARGED",
@@ -295110,8 +295215,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_ia5.rs:113:UNSAFE_FN_DEF",
     "previous_line": 113,
     "previous_status": "DISCHARGED",
@@ -295349,8 +295454,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_ia5.rs:180:UNSAFE_FN_DEF",
     "previous_line": 180,
     "previous_status": "DISCHARGED",
@@ -295476,8 +295581,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_ia5.rs:197:UNSAFE_FN_DEF",
     "previous_line": 197,
     "previous_status": "DISCHARGED",
@@ -295645,8 +295750,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_info.rs:323:UNSAFE_FN_DEF",
     "previous_line": 323,
     "previous_status": "DISCHARGED",
@@ -295803,8 +295908,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_info.rs:414:UNSAFE_FN_DEF",
     "previous_line": 414,
     "previous_status": "DISCHARGED",
@@ -295926,8 +296031,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_int.rs:29:UNSAFE_FN_DEF",
     "previous_line": 29,
     "previous_status": "DISCHARGED",
@@ -296047,8 +296152,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_int.rs:51:UNSAFE_FN_DEF",
     "previous_line": 51,
     "previous_status": "DISCHARGED",
@@ -296210,8 +296315,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_iobo.rs:42:UNSAFE_FN_DEF",
     "previous_line": 42,
     "previous_status": "DISCHARGED",
@@ -296328,8 +296433,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_ist.rs:246:UNSAFE_FN_DEF",
     "previous_line": 246,
     "previous_status": "DISCHARGED",
@@ -296491,8 +296596,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_ist.rs:331:UNSAFE_FN_DEF",
     "previous_line": 331,
     "previous_status": "DISCHARGED",
@@ -296612,8 +296717,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_lib.rs:589:UNSAFE_FN_DEF",
     "previous_line": 589,
     "previous_status": "DISCHARGED",
@@ -296756,8 +296861,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_ncons.rs:393:UNSAFE_FN_DEF",
     "previous_line": 393,
     "previous_status": "DISCHARGED",
@@ -296870,8 +296975,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_ncons.rs:591:UNSAFE_FN_DEF",
     "previous_line": 591,
     "previous_status": "DISCHARGED",
@@ -297019,8 +297124,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_pci.rs:581:UNSAFE_FN_DEF",
     "previous_line": 581,
     "previous_status": "DISCHARGED",
@@ -297133,8 +297238,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_pci.rs:649:UNSAFE_FN_DEF",
     "previous_line": 649,
     "previous_status": "DISCHARGED",
@@ -297282,8 +297387,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_pcons.rs:154:UNSAFE_FN_DEF",
     "previous_line": 154,
     "previous_status": "DISCHARGED",
@@ -297438,8 +297543,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_pcons.rs:179:UNSAFE_FN_DEF",
     "previous_line": 179,
     "previous_status": "DISCHARGED",
@@ -297559,8 +297664,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_pku.rs:164:UNSAFE_FN_DEF",
     "previous_line": 164,
     "previous_status": "DISCHARGED",
@@ -297677,8 +297782,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_pmaps.rs:200:UNSAFE_FN_DEF",
     "previous_line": 200,
     "previous_status": "DISCHARGED",
@@ -297833,8 +297938,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_pmaps.rs:229:UNSAFE_FN_DEF",
     "previous_line": 229,
     "previous_status": "DISCHARGED",
@@ -297954,8 +298059,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_rolespec.rs:297:UNSAFE_FN_DEF",
     "previous_line": 297,
     "previous_status": "DISCHARGED",
@@ -298067,8 +298172,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_rolespec.rs:392:UNSAFE_FN_DEF",
     "previous_line": 392,
     "previous_status": "DISCHARGED",
@@ -298215,8 +298320,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_san.rs:317:UNSAFE_FN_DEF",
     "previous_line": 317,
     "previous_status": "DISCHARGED",
@@ -298471,8 +298576,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_san.rs:356:UNSAFE_FN_DEF",
     "previous_line": 356,
     "previous_status": "DISCHARGED",
@@ -298762,8 +298867,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_san.rs:1069:UNSAFE_FN_DEF",
     "previous_line": 1069,
     "previous_status": "DISCHARGED",
@@ -299088,8 +299193,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_san.rs:1127:UNSAFE_FN_DEF",
     "previous_line": 1127,
     "previous_status": "DISCHARGED",
@@ -299449,8 +299554,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_san.rs:1144:UNSAFE_FN_DEF",
     "previous_line": 1144,
     "previous_status": "DISCHARGED",
@@ -300307,8 +300412,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_san.rs:1246:UNSAFE_FN_DEF",
     "previous_line": 1246,
     "previous_status": "DISCHARGED",
@@ -300738,8 +300843,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_san.rs:1372:UNSAFE_FN_DEF",
     "previous_line": 1372,
     "previous_status": "DISCHARGED",
@@ -301204,8 +301309,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_sda.rs:140:UNSAFE_FN_DEF",
     "previous_line": 140,
     "previous_status": "DISCHARGED",
@@ -301322,8 +301427,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_skid.rs:73:UNSAFE_FN_DEF",
     "previous_line": 73,
     "previous_status": "DISCHARGED",
@@ -301483,8 +301588,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_skid.rs:90:UNSAFE_FN_DEF",
     "previous_line": 90,
     "previous_status": "DISCHARGED",
@@ -301679,8 +301784,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_skid.rs:206:UNSAFE_FN_DEF",
     "previous_line": 206,
     "previous_status": "DISCHARGED",
@@ -301910,8 +302015,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_skid.rs:249:UNSAFE_FN_DEF",
     "previous_line": 249,
     "previous_status": "DISCHARGED",
@@ -302036,8 +302141,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_sxnet.rs:332:UNSAFE_FN_DEF",
     "previous_line": 332,
     "previous_status": "DISCHARGED",
@@ -302157,8 +302262,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_sxnet.rs:420:UNSAFE_FN_DEF",
     "previous_line": 420,
     "previous_status": "DISCHARGED",
@@ -302320,8 +302425,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_timespec.rs:1390:UNSAFE_FN_DEF",
     "previous_line": 1390,
     "previous_status": "DISCHARGED",
@@ -302451,8 +302556,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_timespec.rs:1419:UNSAFE_FN_DEF",
     "previous_line": 1419,
     "previous_status": "DISCHARGED",
@@ -302624,8 +302729,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_timespec.rs:1475:UNSAFE_FN_DEF",
     "previous_line": 1475,
     "previous_status": "DISCHARGED",
@@ -303126,8 +303231,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_timespec.rs:1526:UNSAFE_FN_DEF",
     "previous_line": 1526,
     "previous_status": "DISCHARGED",
@@ -303663,8 +303768,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_timespec.rs:1549:UNSAFE_FN_DEF",
     "previous_line": 1549,
     "previous_status": "DISCHARGED",
@@ -304235,8 +304340,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_timespec.rs:1572:UNSAFE_FN_DEF",
     "previous_line": 1572,
     "previous_status": "DISCHARGED",
@@ -304842,8 +304947,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_timespec.rs:1603:UNSAFE_FN_DEF",
     "previous_line": 1603,
     "previous_status": "DISCHARGED",
@@ -305057,8 +305162,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_timespec.rs:1993:UNSAFE_FN_DEF",
     "previous_line": 1993,
     "previous_status": "DISCHARGED",
@@ -305314,8 +305419,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_timespec.rs:2047:UNSAFE_FN_DEF",
     "previous_line": 2047,
     "previous_status": "DISCHARGED",
@@ -305613,8 +305718,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_tlsf.rs:173:UNSAFE_FN_DEF",
     "previous_line": 173,
     "previous_status": "DISCHARGED",
@@ -305801,8 +305906,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_tlsf.rs:208:UNSAFE_FN_DEF",
     "previous_line": 208,
     "previous_status": "DISCHARGED",
@@ -305912,8 +306017,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_usernotice.rs:287:UNSAFE_FN_DEF",
     "previous_line": 287,
     "previous_status": "DISCHARGED",
@@ -306030,8 +306135,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_utf8.rs:74:UNSAFE_FN_DEF",
     "previous_line": 74,
     "previous_status": "DISCHARGED",
@@ -306234,8 +306339,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_utf8.rs:114:UNSAFE_FN_DEF",
     "previous_line": 114,
     "previous_status": "DISCHARGED",
@@ -306473,8 +306578,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_utf8.rs:164:UNSAFE_FN_DEF",
     "previous_line": 164,
     "previous_status": "DISCHARGED",
@@ -306600,8 +306705,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_utf8.rs:182:UNSAFE_FN_DEF",
     "previous_line": 182,
     "previous_status": "DISCHARGED",
@@ -306769,8 +306874,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_utl.rs:501:UNSAFE_FN_DEF",
     "previous_line": 501,
     "previous_status": "DISCHARGED",
@@ -306884,8 +306989,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_utl.rs:535:UNSAFE_FN_DEF",
     "previous_line": 535,
     "previous_status": "DISCHARGED",
@@ -307034,8 +307139,8 @@
    "site_boundary": null,
    "ledger_basis": null,
    "carried_forward_from": {
-    "receipt": "evidence/closure-ssh-b78.json",
-    "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+    "receipt": "evidence/closure-ssh-b78b.json",
+    "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
     "previous_id": "V1:src/x509/v3_utl.rs:573:UNSAFE_FN_DEF",
     "previous_line": 573,
     "previous_status": "DISCHARGED",
@@ -310379,11 +310484,11 @@
    },
    "suppressed": [],
    "applied": true,
-   "receipt": "evidence/closure-ssh-b78.json",
-   "receipt_sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
-   "receipt_generated_utc": "2026-11-14T00:57:41Z",
+   "receipt": "evidence/closure-ssh-b78b.json",
+   "receipt_sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
+   "receipt_generated_utc": "2026-11-14T10:44:20Z",
    "receipt_verdict": "ACCEPTED",
-   "receipt_source_head": "75add65c11b175bc53569dc0f24c4d767126d85b",
+   "receipt_source_head": "6cdf98598577e292003248503ca11ff9e1d4e8b0",
    "receipt_inventory_path": "court/freeze-b78/census-b78.json",
    "receipt_artifact_path": "court/tmp/openssh-closure/client-b78/openssh-9.9p1/ssh",
    "receipt_artifact_sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
@@ -311006,7 +311111,7 @@
      "kind": "UNSAFE_FN_DEF",
      "item": "copyctx",
      "contract": "contracted",
-     "previous_status": "BLOCKED"
+     "previous_status": "DISCHARGED"
     },
     {
      "id": "V1:src/provider/digest.rs:970:UNSAFE_FN_DEF",
@@ -311017,7 +311122,7 @@
      "kind": "UNSAFE_FN_DEF",
      "item": "copyctx",
      "contract": "contracted",
-     "previous_status": "BLOCKED"
+     "previous_status": "DISCHARGED"
     },
     {
      "id": "V1:src/provider/digest.rs:1165:UNSAFE_FN_DEF",
@@ -311028,7 +311133,7 @@
      "kind": "UNSAFE_FN_DEF",
      "item": "copyctx",
      "contract": "contracted",
-     "previous_status": "BLOCKED"
+     "previous_status": "DISCHARGED"
     },
     {
      "id": "V1:src/provider/digest.rs:1348:UNSAFE_FN_DEF",
@@ -311039,7 +311144,7 @@
      "kind": "UNSAFE_FN_DEF",
      "item": "copyctx",
      "contract": "contracted",
-     "previous_status": "BLOCKED"
+     "previous_status": "DISCHARGED"
     },
     {
      "id": "V1:src/provider/digest.rs:1898:UNSAFE_FN_DEF",
@@ -311050,7 +311155,7 @@
      "kind": "UNSAFE_FN_DEF",
      "item": "copyctx",
      "contract": "contracted",
-     "previous_status": "BLOCKED"
+     "previous_status": "DISCHARGED"
     },
     {
      "id": "V1:src/provider/legacyprov.rs:336:UNSAFE_FN_DEF",
@@ -311061,7 +311166,7 @@
      "kind": "UNSAFE_FN_DEF",
      "item": "copyctx",
      "contract": "contracted",
-     "previous_status": "BLOCKED"
+     "previous_status": "DISCHARGED"
     },
     {
      "id": "V1:src/provider/legacyprov.rs:544:UNSAFE_FN_DEF",
@@ -311072,7 +311177,7 @@
      "kind": "UNSAFE_FN_DEF",
      "item": "copyctx",
      "contract": "contracted",
-     "previous_status": "BLOCKED"
+     "previous_status": "DISCHARGED"
     },
     {
      "id": "V1:src/provider/mlx_kmgmt.rs:128:UNSAFE_FN_DEF",
