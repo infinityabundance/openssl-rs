@@ -3624,5 +3624,50 @@
   "SEAL, BOUNDARY adjudication, ASan/Miri/Loom, dudect/Wycheproof NOT_RUN"
  ],
  "note": "additive post-freeze adjudication block; no existing key removed. This edit changes this file sha256 away from the freeze-recorded 65fe71bb...; that staleness is recorded in the adjudication."
-}
+ },
+ "b78_promotion_assessment": {
+  "purpose": "Additive record supplying the b78 promotion artifact the independent adjudicator found missing. It points at the evidence and does not replace or delete any historical block in this file.",
+  "assessment": "evidence/b78-promotion-assessment.json",
+  "assessment_sha256": "7278af2f32df51a360df5de4eff4e79425b54ad3df1184c498727452b2e87cce",
+  "instrument_reconciliation": "evidence/b78-instrument-reconciliation.json",
+  "instrument_reconciliation_sha256": "bb931d5bbb0a2494adcfc4811f5f4bcbb6c52b07f4fd1bd3464bc7e11360f9e7",
+  "migrated_rows_rereview": "evidence/b78-review-migrated-rows.json",
+  "migrated_rows_rereview_sha256": "5d8e376f7b08b6b0a0d6b058ed19ce37180ebb739650708e554dc9d0017778a7",
+  "candidate": {
+   "production_source_head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+   "src_content_sha256": "c0bd61c94f5a8da2e08c105724d14750403fbfd53aa8d4b722672f9b11b0bd38",
+   "image_libcrypto_sha256": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
+   "closure_tool_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+   "review_tool_sha256": "facb2a97586493a8cf8fb6a073266046dfc1dd8138110f6c18c575b613e45426"
+  },
+  "closure_at_b78b": {
+   "ssh": "evidence/closure-ssh-b78b.json: ACCEPTED, 290/290 DISCHARGED, 0 BLOCKED, 0 UNKNOWN",
+   "sshd": "evidence/closure-sshd-b78b.json: ACCEPTED, 290/290 DISCHARGED, 0 BLOCKED, 0 UNKNOWN",
+   "element7": "PASS (contract-bounded): 0 target-bounded, 153 contract-bounded; 191 contract-bounded edge witnesses, 0 unattributed admissions"
+  },
+  "cohort_65": {
+   "reviewed_at_b78": 65,
+   "accepted": 65,
+   "composition": {"openssh-v1i": 56, "openssh-v1l": 9},
+   "grades": {"rereviewed": 12, "identity_transfers": 53, "identity8_with_caller_reread": 8}
+  },
+  "formerly_98_accounting": "65 reviewed at b78 + 9 genuine structural eliminations (B45 engine cleanup thunks; C5 remains OPEN in the review ledger) + 19 withdrawn and retained (13 v1i + 6 v1l) + 5 absent retired thunks = 98. The campaign's '33 structural eliminations' = 9 eliminations + 24 out-of-cohort rows (19 withdrawn + 5 absent); withdrawn is not eliminated and must not be counted as removed-by-elimination.",
+  "evidence_reuse": "12 of 53 identity transfers re-verified at b78: 12/12 pass; all 53 have file/operation-level non-impact evidence (22 in files with zero diff, 31 in the two changed files whose only non-doc change is OSSH-V1I-020 keccak_final); recorded in the promotion assessment's evidence_reuse section under AGENTS.md section 22.4",
+  "l7": "functional only: 31 probe checks, 18 matrix cases, 16/16 logins, authority key-format differential 10/10; single-host self-connection; executed sshd-session ee5f4ef6 differs from the frozen tree copy; not a graduation result",
+  "gates": "fmt PASS, clippy PASS, 2309 passed / 0 failed / 54 ignored at --test-threads=4; measured at 14-15 GiB available, below the section 6.1 floor; not rerun for this assessment",
+  "safe_compatible": false,
+  "families": {"ssh": "SAFE_COMPATIBLE not established", "sshd": "SAFE_COMPATIBLE not established"},
+  "residuals_preventing_graduation": [
+   "P1: section 7 criterion 3 whole-closure safety argument missing; the closure is a reachability upper bound, not a proof that no safe-Rust caller can cause UB; BOUNDARY adjudication of the 153 contract-bounded sites is NOT_RUN",
+   "P2: SEAL and dynamic evidence NOT_RUN (ASan/Miri/Loom, runtime negative controls, dudect/Wycheproof, release build, full probe suite)",
+   "P3: instrument self-test NOT_RUN (one e7core control did not run); no stored self-test log for the final instrument f31816b1",
+   "P4: section 6.1 memory floor not met at measurement or in this assessment session (available 12-15 GiB < 24 GiB)",
+   "P5: R-BLOCKLEVEL-CONTRACT OPEN-DOCUMENTATION for 57 of 65 sites (no # Safety section at the unsafe extern C fn interface)",
+   "P6: evidence reuse for 41 of 53 identity transfers is file/operation-level rather than per-row re-review; 12 are re-verified",
+   "P7: evidence shape - ledger_binding.artifact_matches_this_build=false; 19 withdrawn boundaries still listed in scoped_boundary_discharges; two contract-type wording residuals R-V1I-024-CONTRACT-TYPE and R-V1I-082-CONTRACT-TYPE; campaign applied ledger still at candidate 69d43bb8d",
+   "P8: L7 compatibility scope is single-host self-connection plus one authority key-format differential; no third-party peer, sanitizers or fuzzing"
+  ],
+  "what_would_change_it": "a section 7 criterion 3 argument over the conservative closure; ASan/Miri/Loom and BOUNDARY controls plus SEAL; a green self-test log for f31816b1; a gate run under the section 6.1 envelope; per-row reuse statements for the remaining 23 changed-file identity rows; a rebind of the build-link atlas row; and a campaign rebuild/re-census that applies the 65 reviewed discharges without resurrecting the 19 withdrawn boundaries",
+  "note": "Additive only. safe_compatible is false. This block does not overwrite current_applied_state or any historical block; the campaign applied ledger remains at candidate 69d43bb8d until a rebuild and re-census."
+ }
 }

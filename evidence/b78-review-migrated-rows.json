@@ -1,0 +1,266 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/migrated-row-rereview/v1",
+  "kind": "independent-re-review-at-b78-of-content-migrated-copyctx-rows",
+  "candidate_tag": "b78",
+  "generated_utc": "2026-11-14T16:10:00Z",
+  "author_role": "closing subagent: independent re-review from source at the candidate. No src/ or tests/ change, no receipt change, no commit.",
+  "venue": {
+    "free_g_available_gib": 12,
+    "compilation": "refused under AGENTS.md section 6.1 (available < 24 GiB); source reading and hashing only. No runtime test was executed in this session."
+  },
+  "candidate_identity": {
+    "production_source_head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "head_checked": "cbc42bab7fa17d00d3163b47157258c9e7c5f1ac",
+    "src_content_sha256": "c0bd61c94f5a8da2e08c105724d14750403fbfd53aa8d4b722672f9b11b0bd38",
+    "note": "src/provider/digest.rs and src/provider/legacyprov.rs are byte-identical between bb7d5206a and HEAD (git diff --name-only bb7d5206a..HEAD lists no src/ file)"
+  },
+  "method": {
+    "step_1": "Locate the current definition of each operation by its qualified identity in the candidate source; do not use the recorded coordinate as identity.",
+    "step_2": "Recompute the operation body hash with the receipts' own rule: lines start..end inclusive, rstrip every line, join with a single newline, sha256 over UTF-8 with no trailing newline.",
+    "step_3": "Recompute the same body at the ancestor head 0238c6e4adbc7ed85a42be68b6fb965e139bd93e (the inventory head named by the digest-pinned carry-forward chain) at the recorded coordinate, and compare with the boundary's recorded span_sha256.",
+    "step_4": "Read the boundary contract and the caller that establishes it at the candidate, including the guards added in ada7df257 and bb7d5206a.",
+    "step_5": "Confirm the body the b77 review accepted is the body present at b78: the two provider files have no diff from the repair head ada7df257 to HEAD.",
+    "rule": "A body-hash match alone is not a verdict. Each row also requires the extent/aliasing precondition to be established by the caller or ABI, and a check that no safe-Rust caller can reach the operation with a failing precondition."
+  },
+  "caller_analysis": {
+    "only_invocation_sites": [
+      "src/evp/digest.rs:3112 - provider self-copy arm (out == in), reached only after the source algctx non-NULL check at 3097-3099",
+      "src/evp/digest.rs:3159 - same-method non-self arm, reached only after the source check at 3097-3099 and the destination algctx non-NULL check at 3154-3156"
+    ],
+    "guards": {
+      "source_guard": {
+        "site": "src/evp/digest.rs:3097-3099",
+        "commit": "ada7df257e157964f3baade5ec40b66e9a9cbf35",
+        "statement": "refuse (return 0) when in_.algctx is NULL, before either arm; this is the failed-init state left by a refused provider newctx (D-DIGEST-NULL-ALGCTX-1)"
+      },
+      "destination_guard": {
+        "site": "src/evp/digest.rs:3154-3156, inside the copyctx arm",
+        "commits": [
+          "added by ada7df257 before the arm's copyctx call",
+          "moved inside the copyctx arm by bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac so a method with dupctx but no copyctx takes the re-acquiring arm"
+        ],
+        "statement": "refuse when out.algctx is NULL; the self-copy arm is covered because out == in there, so the checked source algctx is the destination"
+      },
+      "params_guard": {
+        "site": "evp_md_ctx_algctx_is_missing checks in EVP_MD_CTX_set_params / settable_params / get_params / gettable_params and EVP_MD_CTX_get_size_ex",
+        "commit": "bb7d5206a",
+        "statement": "narrows the provider-callback call set; it cannot introduce a call with a failing precondition"
+      }
+    },
+    "test_only_calls": [
+      "src/provider/digest.rs:803 (inside #[cfg(test)] mod tests for the digest_impl! macro template): copyctx(owner.as_ptr(), owner.as_ptr()) on one live, exclusively owned block",
+      "src/provider/legacyprov.rs:677 (inside #[cfg(test)] mod tests): same construction"
+    ],
+    "extent_source": "newctx/dupctx allocate OwnedCtx::<$ctx>::new()/dup() and hand out the raw $ctx block; the core receives that block through OSSL_FUNC_DIGEST_NEWCTX/DUPCTX and calls OSSL_FUNC_DIGEST_COPYCTX with destination and source of that size",
+    "other_callers": "none in src/"
+  },
+  "rows": [
+    {
+      "boundary": "OSSH-V1I-002",
+      "operation": "sha1::copyctx",
+      "file": "src/provider/digest.rs",
+      "recorded_coordinate": 658,
+      "ancestor_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+      "ancestor_span": "658-668",
+      "ancestor_hash_recomputed": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+      "ancestor_hash_matches_boundary": true,
+      "candidate_definition_line": 672,
+      "candidate_span": "672-682",
+      "candidate_hash_recomputed": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+      "boundary_recorded_span_sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+      "body_identical_to_accepted_head": true,
+      "accepted_head": "ada7df257",
+      "accepted_body_note": "the b77 review accepted the repaired body at ada7df257; src/provider/digest.rs has no diff from ada7df257 to HEAD, so the accepted bytes are the candidate bytes",
+      "contract": "`outctx` and `inctx` are each live regions of at least `size_of::<ShaCtx>()` bytes, `inctx` readable and `outctx` writable; they may be the same region because `EVP_MD_CTX_copy_ex`'s self-copy arm calls `copyctx(algctx, algctx)`. The function copies exactly `size_of::<ShaCtx>()` bytes and reads or writes nothing outside those regions.",
+      "contract_established_by": "OSSL_FUNC_DIGEST_COPYCTX ABI; both pointers are the row's own newctx/dupctx blocks; source and destination non-NULL guards at 3097 and 3154; self-copy aliasing is the same pointer",
+      "criteria": {
+        "a_safe_rust_can_cause_ub": "No: private unsafe extern C callback reachable only through the method table; the only in-crate invocations are the two guarded core sites and a test-only self-copy of one live block.",
+        "b_extent_and_aliasing_covered": "Yes: size_of::<ShaCtx>() from the body equals the block the owner allocates; ptr::copy is defined for the same-pointer case.",
+        "c_hidden_obligation": "None found.",
+        "d_load_bearing_control": "C7/C8 plus adjudicator C9; the b78 test a_same_method_destination_without_an_algctx_is_refused_when_copyctx_would_run pins the destination side and the macro test copyctx_tolerates_a_self_copy pins the alias side (present at the candidate; not re-executed in this session)."
+      },
+      "verdict": "ACCEPT",
+      "residual": null
+    },
+    {
+      "boundary": "OSSH-V1I-008",
+      "operation": "nullmd::copyctx",
+      "file": "src/provider/digest.rs",
+      "recorded_coordinate": 970,
+      "ancestor_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+      "ancestor_span": "970-980",
+      "ancestor_hash_recomputed": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+      "ancestor_hash_matches_boundary": true,
+      "candidate_definition_line": 992,
+      "candidate_span": "992-1002",
+      "candidate_hash_recomputed": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+      "boundary_recorded_span_sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+      "body_identical_to_accepted_head": true,
+      "accepted_head": "ada7df257",
+      "contract": "`outctx` and `inctx` are each live regions of at least `size_of::<NullMdCtx>()` bytes, `inctx` readable and `outctx` writable; they may be the same region because `EVP_MD_CTX_copy_ex`'s self-copy arm calls `copyctx(algctx, algctx)`. The function copies exactly `size_of::<NullMdCtx>()` bytes and reads or writes nothing outside those regions.",
+      "contract_established_by": "OSSL_FUNC_DIGEST_COPYCTX ABI; the NULL-digest row's block comes from newctx/dupctx; both core guards apply identically",
+      "criteria": {
+        "a_safe_rust_can_cause_ub": "No: same construction as OSSH-V1I-002.",
+        "b_extent_and_aliasing_covered": "Yes: the copied extent is exactly NullMdCtx and the body uses ptr::copy.",
+        "c_hidden_obligation": "None found.",
+        "d_load_bearing_control": "Same caller control (C7/C8/C9); the NULL row copies NullMdCtx and is exercised by the shared macro test."
+      },
+      "verdict": "ACCEPT",
+      "residual": null
+    },
+    {
+      "boundary": "OSSH-V1I-011",
+      "operation": "md5_sha1::copyctx",
+      "file": "src/provider/digest.rs",
+      "recorded_coordinate": 1165,
+      "ancestor_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+      "ancestor_span": "1165-1175",
+      "ancestor_hash_recomputed": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+      "ancestor_hash_matches_boundary": true,
+      "candidate_definition_line": 1195,
+      "candidate_span": "1195-1205",
+      "candidate_hash_recomputed": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+      "boundary_recorded_span_sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+      "body_identical_to_accepted_head": true,
+      "accepted_head": "ada7df257",
+      "contract": "`outctx` and `inctx` are each live regions of at least `size_of::<Md5Sha1Ctx>()` bytes, `inctx` readable and `outctx` writable; they may be the same region because `EVP_MD_CTX_copy_ex`'s self-copy arm calls `copyctx(algctx, algctx)`. The function copies exactly `size_of::<Md5Sha1Ctx>()` bytes and reads or writes nothing outside those regions.",
+      "contract_established_by": "OSSL_FUNC_DIGEST_COPYCTX ABI; the combined MD5-SHA1 row's newctx/dupctx block; both core guards apply identically",
+      "criteria": {
+        "a_safe_rust_can_cause_ub": "No: same construction.",
+        "b_extent_and_aliasing_covered": "Yes: exactly size_of::<Md5Sha1Ctx>() bytes, ptr::copy for the alias case.",
+        "c_hidden_obligation": "None found.",
+        "d_load_bearing_control": "Same caller control; the shared macro test covers the self-copy."
+      },
+      "verdict": "ACCEPT",
+      "residual": null
+    },
+    {
+      "boundary": "OSSH-V1I-017",
+      "operation": "sha3::copyctx",
+      "file": "src/provider/digest.rs",
+      "recorded_coordinate": 1348,
+      "ancestor_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+      "ancestor_span": "1348-1358",
+      "ancestor_hash_recomputed": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+      "ancestor_hash_matches_boundary": true,
+      "candidate_definition_line": 1386,
+      "candidate_span": "1386-1396",
+      "candidate_hash_recomputed": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+      "boundary_recorded_span_sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+      "body_identical_to_accepted_head": true,
+      "accepted_head": "ada7df257",
+      "contract": "`outctx` and `inctx` are each live regions of at least `size_of::<KeccakCtx>()` bytes, `inctx` readable and `outctx` writable; they may be the same region because `EVP_MD_CTX_copy_ex`'s self-copy arm calls `copyctx(algctx, algctx)`. The function copies exactly `size_of::<KeccakCtx>()` bytes and reads or writes nothing outside those regions.",
+      "contract_established_by": "OSSL_FUNC_DIGEST_COPYCTX ABI; the SHA-3/SHAKE/KMAC rows share KeccakCtx and obtain it from newctx/dupctx; both core guards apply identically",
+      "criteria": {
+        "a_safe_rust_can_cause_ub": "No: same construction; the b77 SHA3 final-outlen repair is a different operation (final_xof) and does not alter copyctx.",
+        "b_extent_and_aliasing_covered": "Yes: exactly size_of::<KeccakCtx>() bytes, ptr::copy.",
+        "c_hidden_obligation": "None found.",
+        "d_load_bearing_control": "Same caller control; the shared macro test covers the self-copy."
+      },
+      "verdict": "ACCEPT",
+      "residual": null
+    },
+    {
+      "boundary": "OSSH-V1I-024",
+      "operation": "blake2::blake_row::copyctx",
+      "file": "src/provider/digest.rs",
+      "recorded_coordinate": 1898,
+      "ancestor_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+      "ancestor_span": "1898-1908",
+      "ancestor_hash_recomputed": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+      "ancestor_hash_matches_boundary": true,
+      "candidate_definition_line": 1956,
+      "candidate_span": "1956-1966",
+      "candidate_hash_recomputed": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+      "boundary_recorded_span_sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+      "body_identical_to_accepted_head": true,
+      "accepted_head": "ada7df257",
+      "contract": "`outctx` and `inctx` are each live regions of at least `size_of::<MdData>()` bytes, `inctx` readable and `outctx` writable; they may be the same region because `EVP_MD_CTX_copy_ex`'s self-copy arm calls `copyctx(algctx, algctx)`. The function copies exactly `size_of::<MdData>()` bytes and reads or writes nothing outside those regions.",
+      "contract_established_by": "OSSL_FUNC_DIGEST_COPYCTX ABI; the blake_row! template's newctx/dupctx allocate OwnedCtx::<$flavour::MdData> and the body copies size_of::<$flavour::MdData>(); both core guards apply identically",
+      "criteria": {
+        "a_safe_rust_can_cause_ub": "No: the template is instantiated for blake2b and blake2s only; both obtain their MdData block from the same owner and the body's extent is the flavour's own MdData.",
+        "b_extent_and_aliasing_covered": "Yes in the body; see the residual on the contract wording, which does not name the flavour qualifier.",
+        "c_hidden_obligation": "None in code; the contract names `MdData` unqualified while the body uses `$flavour::MdData` and the two flavours are distinct structs.",
+        "d_load_bearing_control": "Same caller control; the shared macro test covers the self-copy for this template."
+      },
+      "verdict": "ACCEPT",
+      "residual": {
+        "id": "R-V1I-024-CONTRACT-TYPE",
+        "state": "OPEN-DOCUMENTATION",
+        "statement": "The receipt contract says size_of::<MdData>(); the body uses size_of::<$flavour::MdData>() and src/digest/blake2.rs defines distinct blake2b::MdData (line 160) and blake2s::MdData (line 531). Extent is established by the body and the caller, so the verdict rests on those; the receipt text should qualify the type."
+      }
+    },
+    {
+      "boundary": "OSSH-V1I-082",
+      "operation": "legacy_digest_impl::copyctx",
+      "file": "src/provider/legacyprov.rs",
+      "recorded_coordinate": 336,
+      "ancestor_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+      "ancestor_span": "336-347",
+      "ancestor_hash_recomputed": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+      "ancestor_hash_matches_boundary": true,
+      "candidate_definition_line": 345,
+      "candidate_span": "345-356",
+      "candidate_hash_recomputed": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+      "boundary_recorded_span_sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+      "body_identical_to_accepted_head": true,
+      "accepted_head": "ada7df257",
+      "contract": "`outctx` and `inctx` are each live regions of at least `size_of::<the row's OwnedCtx type>()` bytes, `inctx` readable and `outctx` writable; they may be the same region because `EVP_MD_CTX_copy_ex`'s self-copy arm calls `copyctx(algctx, algctx)`. The function copies exactly `size_of::<the row's OwnedCtx type>()` bytes and reads or writes nothing outside those regions.",
+      "contract_established_by": "OSSL_FUNC_DIGEST_COPYCTX ABI; legacy_digest_impl!($ctx) rows allocate OwnedCtx::<$ctx>::new()/dup() and the body copies size_of::<$ctx>(); both core guards apply identically",
+      "criteria": {
+        "a_safe_rust_can_cause_ub": "No: private unsafe extern C callback reachable only through the method table; the only in-crate calls are the two guarded core sites and a test-only self-copy of one live block.",
+        "b_extent_and_aliasing_covered": "Yes in the body (size_of::<$ctx>(), ptr::copy); the contract wording is imprecise - see residual.",
+        "c_hidden_obligation": "None in code.",
+        "d_load_bearing_control": "Same caller control; the mdc2 row's copyctx_tolerates_a_self_copy test pins the alias case."
+      },
+      "verdict": "ACCEPT",
+      "residual": {
+        "id": "R-V1I-082-CONTRACT-TYPE",
+        "state": "OPEN-DOCUMENTATION",
+        "statement": "The contract says 'the row's OwnedCtx type', but the block newctx hands out is the raw `$ctx` (e.g. Md4Ctx/Md5Ctx/Mdc2Ctx), and the body copies size_of::<$ctx>(). OwnedCtx<$ctx> is the wrapper type, not the allocated block. The body and the caller establish the correct extent, so the verdict does not depend on the wording; the receipt should say 'the row's C context type ($ctx)'."
+      }
+    },
+    {
+      "boundary": "OSSH-V1I-088",
+      "operation": "mdc2::copyctx",
+      "file": "src/provider/legacyprov.rs",
+      "recorded_coordinate": 544,
+      "ancestor_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+      "ancestor_span": "544-554",
+      "ancestor_hash_recomputed": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+      "ancestor_hash_matches_boundary": true,
+      "candidate_definition_line": 561,
+      "candidate_span": "561-571",
+      "candidate_hash_recomputed": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+      "boundary_recorded_span_sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+      "body_identical_to_accepted_head": true,
+      "accepted_head": "ada7df257",
+      "contract": "`outctx` and `inctx` are each live regions of at least `size_of::<Mdc2Ctx>()` bytes, `inctx` readable and `outctx` writable; they may be the same region because `EVP_MD_CTX_copy_ex`'s self-copy arm calls `copyctx(algctx, algctx)`. The function copies exactly `size_of::<Mdc2Ctx>()` bytes and reads or writes nothing outside those regions.",
+      "contract_established_by": "OSSL_FUNC_DIGEST_COPYCTX ABI; the mdc2 row's newctx/dupctx block; both core guards apply identically",
+      "criteria": {
+        "a_safe_rust_can_cause_ub": "No: same construction as OSSH-V1I-082; the mdc2 module is one instantiation of that template.",
+        "b_extent_and_aliasing_covered": "Yes: exactly size_of::<Mdc2Ctx>() bytes, ptr::copy.",
+        "c_hidden_obligation": "None found.",
+        "d_load_bearing_control": "Same caller control; the mdc2 copyctx_tolerates_a_self_copy test pins the alias case."
+      },
+      "verdict": "ACCEPT",
+      "residual": null
+    }
+  ],
+  "result": {
+    "rows_reviewed": 7,
+    "accept": 7,
+    "returned_to_blocked": 0,
+    "rows_with_documentation_residual": 2,
+    "hashes_independently_recomputed_at_candidate": 7,
+    "hashes_independently_recomputed_at_ancestor_head": 7,
+    "verdict_basis": "body content + contract + establishing caller at b78, not the migration binding",
+    "migration_binding_not_relied_on": true
+  },
+  "what_this_does_not_establish": [
+    "No runtime/ASan/Miri evidence: nothing was compiled or executed in this session.",
+    "No proof of absence of UB by a safe Rust caller across the whole closure; this is seven sites.",
+    "The two documentation residuals are recorded, not repaired (no receipt edits in this task).",
+    "A hash match proves text identity, not that the text is safe; the verdict rests on the caller/ABI argument above."
+  ]
+}
