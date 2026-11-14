@@ -1,0 +1,715 @@
+{
+ "C_ABI_CONTRACT": {
+  "files": [
+   "src/engine/eng_dyn.rs",
+   "src/engine/eng_fat.rs",
+   "src/engine/eng_list.rs",
+   "src/runtime/confmod/mod.rs",
+   "src/ui/ui_util.rs"
+  ],
+  "safe_fns_reaching_unsafe": 35,
+  "safe_pub_external_reaching_unsafe": 5,
+  "safe_plain_rust_abi_rawptr": [],
+  "rows": [
+   {
+    "file": "src/engine/eng_dyn.rs",
+    "name": "new",
+    "line": 347,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/engine/eng_dyn.rs",
+    "name": "as_ptr",
+    "line": 359,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/engine/eng_dyn.rs",
+    "name": "finish",
+    "line": 364,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/engine/eng_dyn.rs",
+    "name": "drop",
+    "line": 374,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/engine/eng_dyn.rs",
+    "name": "the_ex_data_free_hook_releases_its_context_once",
+    "line": 1067,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/engine/eng_fat.rs",
+    "name": "remove_unregisters_every_operation_table",
+    "line": 385,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/engine/eng_list.rs",
+    "name": "lock",
+    "line": 75,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/engine/eng_list.rs",
+    "name": "unlock",
+    "line": 81,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/engine/eng_list.rs",
+    "name": "reset",
+    "line": 102,
+    "vis": "pub(super)",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/engine/eng_list.rs",
+    "name": "head_about_to_be_removed",
+    "line": 116,
+    "vis": "pub(super)",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/engine/eng_list.rs",
+    "name": "dyn_err",
+    "line": 406,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/engine/eng_list.rs",
+    "name": "ENGINE_get_first",
+    "line": 452,
+    "vis": "pub",
+    "extern": true,
+    "raw_pointer_param": false,
+    "external": true
+   },
+   {
+    "file": "src/engine/eng_list.rs",
+    "name": "ENGINE_get_last",
+    "line": 480,
+    "vis": "pub",
+    "extern": true,
+    "raw_pointer_param": false,
+    "external": true
+   },
+   {
+    "file": "src/engine/eng_list.rs",
+    "name": "cleanup_observes_the_head_under_the_engine_lock",
+    "line": 856,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/runtime/confmod/mod.rs",
+    "name": "do_init_module_list_lock",
+    "line": 285,
+    "vis": "private",
+    "extern": true,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/runtime/confmod/mod.rs",
+    "name": "do_load_builtin_modules",
+    "line": 298,
+    "vis": "private",
+    "extern": true,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/runtime/confmod/mod.rs",
+    "name": "ensure_module_list_lock",
+    "line": 306,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/runtime/confmod/mod.rs",
+    "name": "supported_modules",
+    "line": 327,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/runtime/confmod/mod.rs",
+    "name": "initialized_modules",
+    "line": 335,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/runtime/confmod/mod.rs",
+    "name": "module_lists_free",
+    "line": 445,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/runtime/confmod/mod.rs",
+    "name": "conf_modules_finish_int",
+    "line": 1265,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/runtime/confmod/mod.rs",
+    "name": "CONF_modules_unload",
+    "line": 1309,
+    "vis": "pub",
+    "extern": true,
+    "raw_pointer_param": false,
+    "external": true
+   },
+   {
+    "file": "src/runtime/confmod/mod.rs",
+    "name": "CONF_modules_finish",
+    "line": 1376,
+    "vis": "pub",
+    "extern": true,
+    "raw_pointer_param": false,
+    "external": true
+   },
+   {
+    "file": "src/runtime/confmod/mod.rs",
+    "name": "ossl_config_modules_free",
+    "line": 1387,
+    "vis": "pub(crate)",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/runtime/confmod/mod.rs",
+    "name": "OPENSSL_load_builtin_modules",
+    "line": 1519,
+    "vis": "pub",
+    "extern": true,
+    "raw_pointer_param": false,
+    "external": true
+   },
+   {
+    "file": "src/ui/ui_util.rs",
+    "name": "zalloc",
+    "line": 86,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ui/ui_util.rs",
+    "name": "as_ptr",
+    "line": 107,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ui/ui_util.rs",
+    "name": "into_raw",
+    "line": 112,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ui/ui_util.rs",
+    "name": "drop",
+    "line": 121,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ui/ui_util.rs",
+    "name": "ui_method_data_index_init",
+    "line": 217,
+    "vis": "private",
+    "extern": true,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ui/ui_util.rs",
+    "name": "get_index_once_body",
+    "line": 239,
+    "vis": "private",
+    "extern": true,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ui/ui_util.rs",
+    "name": "run_once_get_index",
+    "line": 245,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ui/ui_util.rs",
+    "name": "the_wrapper_builds_a_method_and_attaches_its_data",
+    "line": 497,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ui/ui_util.rs",
+    "name": "a_null_callback_becomes_the_default",
+    "line": 522,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ui/ui_util.rs",
+    "name": "read_pw_refuses_a_size_below_one",
+    "line": 546,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   }
+  ]
+ },
+ "BIO": {
+  "files": [
+   "src/runtime/bio/bf_readbuff.rs"
+  ],
+  "safe_fns_reaching_unsafe": 2,
+  "safe_pub_external_reaching_unsafe": 1,
+  "safe_plain_rust_abi_rawptr": [],
+  "rows": [
+   {
+    "file": "src/runtime/bio/bf_readbuff.rs",
+    "name": "BIO_f_readbuffer",
+    "line": 63,
+    "vis": "pub",
+    "extern": true,
+    "raw_pointer_param": false,
+    "external": true
+   },
+   {
+    "file": "src/runtime/bio/bf_readbuff.rs",
+    "name": "resize_refuses_an_offset_that_would_overflow",
+    "line": 423,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   }
+  ]
+ },
+ "SSL_SESSION": {
+  "files": [
+   "src/ssl/ssl_ciph.rs",
+   "src/ssl/ssl_conf.rs",
+   "src/ssl/ssl_rsa.rs"
+  ],
+  "safe_fns_reaching_unsafe": 38,
+  "safe_pub_external_reaching_unsafe": 3,
+  "safe_plain_rust_abi_rawptr": [
+   "src/ssl/ssl_conf.rs::ssl_set_version_bound:567"
+  ],
+  "rows": [
+   {
+    "file": "src/ssl/ssl_ciph.rs",
+    "name": "ssl3_num_ciphers",
+    "line": 76,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_ciph.rs",
+    "name": "ssl_protocol_to_string",
+    "line": 81,
+    "vis": "pub(crate)",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_ciph.rs",
+    "name": "ssl3_get_cipher",
+    "line": 100,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_ciph.rs",
+    "name": "row_str",
+    "line": 167,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_ciph.rs",
+    "name": "name_matches",
+    "line": 172,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_ciph.rs",
+    "name": "move_to_end",
+    "line": 190,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_ciph.rs",
+    "name": "apply_rule",
+    "line": 212,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_ciph.rs",
+    "name": "ssl_cipher_strength_sort",
+    "line": 388,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_ciph.rs",
+    "name": "item_sep",
+    "line": 413,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_ciph.rs",
+    "name": "token_char",
+    "line": 418,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_ciph.rs",
+    "name": "mac_table_mask_ok",
+    "line": 775,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_ciph.rs",
+    "name": "OSSL_default_cipher_list",
+    "line": 1610,
+    "vis": "pub",
+    "extern": true,
+    "raw_pointer_param": false,
+    "external": true
+   },
+   {
+    "file": "src/ssl/ssl_ciph.rs",
+    "name": "OSSL_default_ciphersuites",
+    "line": 1619,
+    "vis": "pub",
+    "extern": true,
+    "raw_pointer_param": false,
+    "external": true
+   },
+   {
+    "file": "src/ssl/ssl_ciph.rs",
+    "name": "SSL_COMP_get_name",
+    "line": 1800,
+    "vis": "pub",
+    "extern": true,
+    "raw_pointer_param": true,
+    "external": true
+   },
+   {
+    "file": "src/ssl/ssl_conf.rs",
+    "name": "drop",
+    "line": 197,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_conf.rs",
+    "name": "ssl_set_version_bound",
+    "line": 567,
+    "vis": "pub(crate)",
+    "extern": false,
+    "raw_pointer_param": true,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_conf.rs",
+    "name": "atoi_prefix",
+    "line": 993,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_conf.rs",
+    "name": "a_verify_option_writes_only_its_own_word",
+    "line": 2167,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_conf.rs",
+    "name": "an_option_command_does_not_retain_its_frame_local_table",
+    "line": 2185,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_conf.rs",
+    "name": "conf_cmd_dispatch_feeds_a_live_ctx_and_does_not_retain_the_value",
+    "line": 2209,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_conf.rs",
+    "name": "conf_cmd_min_max_protocol_bounds_are_range_checked",
+    "line": 2264,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_conf.rs",
+    "name": "option_list_applies_leading_matches_and_reports_failures",
+    "line": 2329,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_conf.rs",
+    "name": "a_reentrant_dispatch_is_refused_and_leaves_the_context_usable",
+    "line": 2400,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_conf.rs",
+    "name": "the_in_use_guard_is_cleared_on_every_error_exit",
+    "line": 2463,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_conf.rs",
+    "name": "sequential_dispatches_are_not_refused_by_the_in_use_guard",
+    "line": 2515,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_conf.rs",
+    "name": "every_entry_point_refuses_an_overlap_and_works_when_idle",
+    "line": 2547,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_conf.rs",
+    "name": "free_while_in_use_is_deferred_and_released_exactly_once",
+    "line": 2758,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_conf.rs",
+    "name": "value_type_is_refused_while_in_use_and_correct_when_idle",
+    "line": 2858,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_conf.rs",
+    "name": "a_concurrent_entry_from_another_thread_is_refused",
+    "line": 2904,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_rsa.rs",
+    "name": "raise_ssl",
+    "line": 145,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_rsa.rs",
+    "name": "remaining",
+    "line": 917,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_rsa.rs",
+    "name": "get_net_4",
+    "line": 920,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_rsa.rs",
+    "name": "get_net_2",
+    "line": 929,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_rsa.rs",
+    "name": "get_length_prefixed_2",
+    "line": 938,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_rsa.rs",
+    "name": "self_aliasing_serverinfo_is_teed_before_realloc",
+    "line": 1608,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_rsa.rs",
+    "name": "write_fixture",
+    "line": 1730,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_rsa.rs",
+    "name": "ctx_certificate_file_forwards_the_password_callback",
+    "line": 1749,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   },
+   {
+    "file": "src/ssl/ssl_rsa.rs",
+    "name": "connection_certificate_file_forwards_the_password_callback",
+    "line": 1772,
+    "vis": "private",
+    "extern": false,
+    "raw_pointer_param": false,
+    "external": false
+   }
+  ]
+ }
+}

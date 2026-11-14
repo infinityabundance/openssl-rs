@@ -1,0 +1,38 @@
+{
+ "C1_contract_site_present": {
+  "result": "FAIL",
+  "detail": [
+   "module_free_thunk: no # Safety at definition (src/runtime/confmod/mod.rs)",
+   "ui_free_method_data: no # Safety at definition (src/ui/ui_util.rs)"
+  ]
+ },
+ "C2_bio_empty_body": {
+  "result": "PASS",
+  "detail": []
+ },
+ "C3_engine_cleanup_lock_order": {
+  "result": "PASS",
+  "detail": []
+ },
+ "C4_callbacks_never_invoked": {
+  "result": "PASS",
+  "detail": []
+ },
+ "C5_sslconf_entry_guard": {
+  "result": "PASS",
+  "detail": []
+ },
+ "C6_cipher_list_exclusivity_stated": {
+  "result": "FAIL",
+  "detail": [
+   "SSL_CTX_set_cipher_list: # Safety does not state the exclusive-access precondition",
+   "SSL_set_cipher_list: # Safety does not state the exclusive-access precondition",
+   "SSL_CTX_set_ciphersuites: # Safety does not state the exclusive-access precondition",
+   "SSL_set_ciphersuites: # Safety does not state the exclusive-access precondition"
+  ]
+ },
+ "C7_freehooks_not_safely_called": {
+  "result": "PASS",
+  "detail": []
+ }
+}
