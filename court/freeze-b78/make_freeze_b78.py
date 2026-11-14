@@ -41,6 +41,8 @@ ATLAS = REPO / "forensics/downstream/build-link-atlas.json"
 CONF = REPO / "court/freeze-b78/e7-b78-confmethod.json"
 STATUS = CAMPAIGN / "CAMPAIGN-STATUS.json"
 COPYCTX = REPO / "evidence/b78b-copyctx-binding.json"
+L7 = REPO / "evidence/b78-l7-replay.json"
+ADJUDICATION = REPO / "evidence/b78-assurance-adjudication.json"
 BUILD_SCRIPT = REPO / "forensics/tools/build_openssh_closure.sh"
 LEDGERS = {
     "ssh": REPO / "evidence/ssh-artifact-ledger-b78.json",
@@ -246,6 +248,8 @@ def main() -> int:
     atlas = json.loads(ATLAS.read_text())
     status = json.loads(STATUS.read_text())
     sections = read_sections(GATES)
+    l7_doc = json.loads(L7.read_text())
+    adj_doc = json.loads(ADJUDICATION.read_text())
 
     gate_fmt = summarize(sections.get("gate1_fmt", []))
     gate_clippy = summarize(sections.get("gate2_clippy", []))
@@ -649,6 +653,112 @@ def main() -> int:
             "witness": (rebind_doc.get("rebind") or {}).get("witness"),
         }
 
+    # L7 replay and the independent adjudication are measured from their files,
+    # and the executed session digest is recomputed here rather than copied.
+    session_exec = art(
+        "court/tmp/openssh-closure/server-b78/install/libexec/sshd-session")
+    session_tree = art(
+        "court/tmp/openssh-closure/server-b78/openssh-9.9p1/sshd-session")
+    auth_base = "court/tmp/openssh-closure/auth-b78/openssh-9.9p1"
+    auth_measured = {
+        "ssh": art(f"{auth_base}/ssh"),
+        "sshd": art(f"{auth_base}/sshd"),
+        "sshd_session": art(f"{auth_base}/sshd-session"),
+        "ssh_keygen": art(f"{auth_base}/ssh-keygen"),
+    }
+    auth_lib_rel = ("forensics/authorities/prefix/openssl-3.6.4-production/"
+                    "lib/libcrypto.so.3")
+    auth_lib = art(auth_lib_rel)
+
+    l7_workloads = {
+        name: {
+            "status": (w or {}).get("status"),
+            "transcript": (w or {}).get("transcript"),
+            "totals": (w or {}).get("totals"),
+        }
+        for name, w in (l7_doc.get("workloads") or {}).items()
+    }
+    l7_statuses = [w["status"] for w in l7_workloads.values()]
+    l7_exec = (((l7_doc.get("executed_identity") or {})
+                .get("sshd_session_executed") or {}).get("sha256"))
+    l7_tree = (((l7_doc.get("executed_identity") or {})
+                .get("sshd_session_tree_copy") or {}).get("sha256"))
+    l7_auth = (l7_doc.get("authority_openssh") or {})
+    l7_auth_bins = l7_auth.get("binaries") or {}
+    l7_auth_diff = ((l7_doc.get("workloads") or {}).get(
+        "w5_authority_keyformat_differential") or {})
+
+    l7_evidence = {
+        "path": "evidence/b78-l7-replay.json",
+        "sha256": sha256_file(L7),
+        "bytes": L7.stat().st_size,
+        "schema": l7_doc.get("schema"),
+        "workloads": l7_workloads,
+        "all_workloads_pass": bool(l7_statuses) and all(
+            s == "PASS" for s in l7_statuses),
+        "totals": l7_doc.get("totals"),
+        "executed_sshd_session": dict(
+            session_exec,
+            source="measured by this freeze from the install path sshd executes",
+            matches_l7_record=session_exec["sha256"] == l7_exec,
+        ),
+        "sshd_session_tree_copy": dict(
+            session_tree,
+            source="measured by this freeze from the link tree",
+            matches_l7_record=session_tree["sha256"] == l7_tree,
+        ),
+        "difference_explained": (
+            "the executed session binary is the stripped install copy ("
+            + session_exec["sha256"][:12] + "); the link-tree copy is "
+            + session_tree["sha256"][:12] + " and was never executed. `make "
+            "install` strips the binary, so the digests differ while the build "
+            "is the same by install provenance, not proven byte-equal. This "
+            "freeze binds the executed digest as the one that served logins."),
+        "authority_differential": {
+            "workload": "w5_authority_keyformat_differential",
+            "status": l7_auth_diff.get("status"),
+            "totals": l7_auth_diff.get("totals"),
+            "authority_libcrypto_so_3": dict(
+                auth_lib,
+                matches_l7_record=(auth_lib["sha256"]
+                                   == l7_auth.get("authority_libcrypto_so_3_sha256")),
+            ),
+            "candidate_libcrypto_so_3_sha256": artefacts["libcrypto.so.3"]["sha256"],
+            "authority_binaries": {
+                name: dict(
+                    a,
+                    matches_l7_record=(a["sha256"]
+                                       == (l7_auth_bins.get(name) or {}).get("sha256")),
+                )
+                for name, a in auth_measured.items()
+            },
+            "identity_discrimination": l7_auth.get("identity_discrimination"),
+        },
+        "not_run_retained": (
+            "the candidate-only keyformat_b78.sh authority rows remain NOT_RUN "
+            "by construction; the authority-linked differential w5 is the "
+            "evidence that closes the gap."),
+    }
+
+    adj_verdict = adj_doc.get("verdict") or {}
+    adjudication = {
+        "path": "evidence/b78-assurance-adjudication.json",
+        "sha256": sha256_file(ADJUDICATION),
+        "bytes": ADJUDICATION.stat().st_size,
+        "schema": adj_doc.get("schema"),
+        "verdict_state": adj_verdict.get("state"),
+        "verdict_by_family": adj_verdict.get("families"),
+        "frozen_candidate_is_graduated": False,
+        "not_graduated_statement": (
+            "The independent adjudication verdict is '"
+            + str(adj_verdict.get("state")) + "'. The frozen candidate b78 is "
+            "NOT graduated and this freeze does not promote it to "
+            "SAFE_COMPATIBLE; safe_compatible remains false. The freeze records "
+            "the refusal, not a discharge."),
+        "what_is_reproduced": adj_verdict.get("what_is_reproduced"),
+        "what_is_missing_ordered": adj_verdict.get("what_is_missing_ordered"),
+    }
+
     review_required = (((status.get("current_applied_state") or {})
                         .get("safe_compatible_blockers") or {})
                        .get("projected_after_recensus") or {}).get("REVIEW_REQUIRED")
@@ -678,13 +788,24 @@ def main() -> int:
             "The closures measure the queue at this candidate, not a promotion."),
         "measured": measured,
         "l7_replay": {
-            "status": "NOT_RUN",
-            "note": ("L7 functional replay of the consumers at this candidate was "
-                     "not run by this freeze; it remains a SEAL/BOUNDARY-stage "
-                     "obligation."),
+            "status": ("PASS" if l7_evidence["all_workloads_pass"] else "FAIL"),
+            "evidence": "evidence/b78-l7-replay.json",
+            "sha256": l7_evidence["sha256"],
+            "workloads": {n: w["status"] for n, w in l7_workloads.items()},
+            "authority_differential": (
+                "10/10 PASS (w5_authority_keyformat_differential)"),
+            "note": (
+                "the b78 freeze previously recorded this as NOT_RUN; the replay "
+                "has since been run and is recorded here from the file, not "
+                "copied from a prior claim. A green L7 replay is functional "
+                "evidence only (AGENTS.md section 8) and is not SAFE_COMPATIBLE "
+                "graduation."),
+            "not_graduated": True,
+            "adjudication_verdict": adj_verdict.get("state"),
         },
         "outstanding": [
-            "L7 functional replay of the consumers at this candidate (NOT_RUN)",
+            "SAFE_COMPATIBLE is NOT established: independent adjudication "
+            "verdict '" + str(adj_verdict.get("state")) + "' (see adjudication)",
             f"{review_required} REVIEW_REQUIRED discharges "
             "(CAMPAIGN-STATUS current_applied_state.safe_compatible_blockers."
             "projected_after_recensus.REVIEW_REQUIRED); the closure already "
@@ -727,6 +848,14 @@ def main() -> int:
         },
         "log": "court/freeze-b78/gates-b78.log",
         "log_sha256": sha256_file(GATES),
+        "log_bytes": GATES.stat().st_size,
+        "exact_counts": {
+            "fmt_exit": gate_fmt.get("returncode"),
+            "clippy_exit": gate_clippy.get("returncode"),
+            "lib_tests": gate_tests.get("main_test_result"),
+            "diagnostic_tests": gate_diag.get("main_test_result"),
+            "log_sha256": sha256_file(GATES),
+        },
         "verdict": (
             "fmt PASS (exit "
             + str(gate_fmt.get("returncode")) + "), clippy PASS (exit "
@@ -856,7 +985,11 @@ def main() -> int:
             "/ 153 contract-bounded), the install and OpenSSH closure binaries "
             "are measured, the CONF-method witness closes the last target-"
             "bounded site, and the per-artefact ledger rebinds bind both ssh and "
-            "sshd to the freeze."),
+            "sshd to the freeze. It also records, measured from their files, the "
+            "L7 functional replay (including the authority-linked OpenSSH "
+            "key-format differential) and the independent adjudication. The "
+            "adjudication verdict is NOT ESTABLISHED, so this freeze states "
+            "plainly that the candidate is NOT graduated."),
         "identity": {
             "rule": (
                 "Two identities, never conflated (AGENTS.md section 22). S is the "
@@ -999,8 +1132,10 @@ def main() -> int:
         },
         "ledger_binding": ledger_binding,
         "gates": gates,
+        "l7_evidence": l7_evidence,
         "memory": memory,
         "safe_compatible": safe_compatible,
+        "adjudication": adjudication,
         "residuals": [
             {"kind": "venue/memory", "statement": memory["deviation"]},
             {"kind": "gate/parallel-lib-tests",
@@ -1061,13 +1196,19 @@ def main() -> int:
                  "290/290.")},
             {"kind": "not-run",
              "statement": (
-                 "SEAL, BOUNDARY adjudication, L7 functional replay, ASan/Miri, "
-                 "dudect/Wycheproof and forensic regeneration are NOT_RUN at this "
-                 "candidate; they are scheduled at their gates, not implied by "
-                 "this freeze.")},
+                 "SEAL, BOUNDARY adjudication of the remaining contract-bounded "
+                 "boundaries, ASan/Miri, dudect/Wycheproof and forensic "
+                 "regeneration are NOT_RUN at this candidate; they are scheduled "
+                 "at their gates, not implied by this freeze. The L7 functional "
+                 "replay has been run (evidence/b78-l7-replay.json) and is "
+                 "recorded in l7_evidence, but it is functional evidence only, "
+                 "not a safety or graduation result.")},
+            {"kind": "adjudication/not-graduated",
+             "statement": adjudication["not_graduated_statement"]},
         ],
         "not_run": [
-            "L7 functional replay of the consumers at this candidate",
+            "SAFE_COMPATIBLE promotion (independent adjudication verdict "
+            "'NOT ESTABLISHED'; the frozen candidate is NOT graduated)",
             "BOUNDARY adjudication of the remaining contract-bounded boundaries",
             "SEAL (release build, full probe suite, full forensic regeneration)",
             "ASan/Miri/Loom and dudect/Wycheproof for this candidate",
@@ -1091,7 +1232,11 @@ def main() -> int:
              "verdict or refusal"),
             ("the instrument self-test's single failure is a NOT_RUN control; it "
              "is not a pass and does not certify the missing accessor"),
-            ("L7 functional replay was not run at this candidate"),
+            ("L7 functional replay was run (w1-w5 PASS, including the authority "
+             "key-format differential) but a green replay is not SAFE_COMPATIBLE "
+             "graduation: the independent adjudication verdict is '"
+             + str(adj_verdict.get("state")) + "' and the frozen candidate is "
+             "NOT graduated"),
         ],
     }
     OUT.write_text(json.dumps(doc, indent=1) + "\n")
@@ -1105,6 +1250,10 @@ def main() -> int:
     print(f"[b78-freeze] sizes match build receipt: {doc['artefacts']['build_receipt_sizes']['all_match']}")
     print(f"[b78-freeze] body_hash reproduces: {body_hash_reproduces}")
     print(f"[b78-freeze] rebind included: {sorted(k for k,v in ledger_binding['per_artefact_rebind'].items() if v)}")
+    print(f"[b78-freeze] L7 replay: {safe_compatible['l7_replay']['status']} "
+          f"{sorted(safe_compatible['l7_replay']['workloads'])}")
+    print(f"[b78-freeze] adjudication verdict: {adjudication['verdict_state']} "
+          f"graduated={adjudication['frozen_candidate_is_graduated']}")
     print(f"[b78-freeze] wrote {OUT.relative_to(REPO)}")
     print(f"[b78-freeze] sha256 {sha256_file(OUT)} size {OUT.stat().st_size}")
     print(f"[b78-freeze] keys {sorted(doc)}")

@@ -1,14 +1,14 @@
 {
  "schema": "openssl-rs/campaign/safe-c33/freeze/v1",
  "candidate_tag": "b78",
- "generated_utc": "2026-11-14T11:36:37Z",
+ "generated_utc": "2026-11-14T15:54:33Z",
  "freeze_kind": "source-and-artefact freeze (S) with per-artefact ledger rebind",
- "freeze_reason": "b78 freezes the OCSP/element-7 candidate: the two b78b consumer closures are ACCEPTED 290/290 with element 7 PASS (0 target-bounded / 153 contract-bounded), the install and OpenSSH closure binaries are measured, the CONF-method witness closes the last target-bounded site, and the per-artefact ledger rebinds bind both ssh and sshd to the freeze.",
+ "freeze_reason": "b78 freezes the OCSP/element-7 candidate: the two b78b consumer closures are ACCEPTED 290/290 with element 7 PASS (0 target-bounded / 153 contract-bounded), the install and OpenSSH closure binaries are measured, the CONF-method witness closes the last target-bounded site, and the per-artefact ledger rebinds bind both ssh and sshd to the freeze. It also records, measured from their files, the L7 functional replay (including the authority-linked OpenSSH key-format differential) and the independent adjudication. The adjudication verdict is NOT ESTABLISHED, so this freeze states plainly that the candidate is NOT graduated.",
  "identity": {
   "rule": "Two identities, never conflated (AGENTS.md section 22). S is the frozen source+instrument identity this evidence describes: production source bb7d5206acfb..., instrument f31816b1... and the b78b closures. E is the evidence commit that carries this freeze and the ledger receipts. Committing E moves HEAD; it does not change S, its artefacts or their digests.",
   "production_source_head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
   "production_source_head_note": "census identity.source_head: the source tree the census and the b78b closures analyse",
-  "instrument_head": "bd518a2149699ee41ee4ba00a40fae6e573b30a6",
+  "instrument_head": "5590faa435aca1475aee2dee6a20a5e5b68ad700",
   "instrument_head_note": "git HEAD when this freeze was generated; it is the commit that records the b78b closure and carries instrument f31816b1feec. The closures record their own repository_head (see closures.*.source_identity.repository_head).",
   "evidence_commit": "E",
   "evidence_commit_note": "E is the commit that carries this freeze and the rebind receipts; at generation it has not been created, so HEAD is the instrument/closure-record commit named above.",
@@ -36,16 +36,15 @@
    "rule": "sha256 over canonical JSON of sorted [relpath,size,sha256] for src/, Cargo.toml, Cargo.lock, build.rs (forensics/tools/phase7_courts.py::_source_tree_digest)"
   },
   "working_tree": {
-   "repository_head": "bd518a2149699ee41ee4ba00a40fae6e573b30a6",
+   "repository_head": "5590faa435aca1475aee2dee6a20a5e5b68ad700",
    "branch": "stage/p25/b75-ocsp",
-   "tracked_dirty": false,
-   "modified_tracked_paths": [],
+   "tracked_dirty": true,
+   "modified_tracked_paths": [
+    "court/freeze-b78/make_freeze_b78.py",
+    "evidence/b78-l7-replay.json"
+   ],
    "untracked_paths": [
-    "evidence/closure-sshd-b76.json",
-    "evidence/ssh-artifact-ledger-b78-rebind.json",
-    "evidence/ssh-artifact-ledger-b78.json",
-    "evidence/sshd-artifact-ledger-b78-rebind.json",
-    "evidence/sshd-artifact-ledger-b78.json"
+    "evidence/closure-sshd-b76.json"
    ]
   },
   "git_verification": {
@@ -55,7 +54,7 @@
  },
  "candidate_identity": {
   "source_head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
-  "instrument_head": "bd518a2149699ee41ee4ba00a40fae6e573b30a6",
+  "instrument_head": "5590faa435aca1475aee2dee6a20a5e5b68ad700",
   "tool_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
   "census_sha256": "b4babdf7d341d1407aa7787c1f3388b207943923787e3cc158e0a27296c08ea0",
   "libcrypto_so_3_sha256": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
@@ -103,8 +102,8 @@
    },
    "campaign_status": {
     "path": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
-    "sha256": "65fe71bb3d9d18f69034a2b176d96ac429a90e7cd0853f10d1ee17f6fc70b009",
-    "size": 248747
+    "sha256": "e62413f04e393be6ce923a76c1d1d5caa19b3776f36204c75a67f762b68d12fe",
+    "size": 250346
    },
    "enrolment_blockers": {
     "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json",
@@ -1199,8 +1198,145 @@
   },
   "log": "court/freeze-b78/gates-b78.log",
   "log_sha256": "b11f35bd2ad3bfa5a06f2c4bac5dac44201b2c202ed1b3f4045c4f035db99f81",
+  "log_bytes": 213424,
+  "exact_counts": {
+   "fmt_exit": 0,
+   "clippy_exit": 0,
+   "lib_tests": {
+    "state": "ok",
+    "passed": 2309,
+    "failed": 0,
+    "ignored": 54,
+    "measured": 0,
+    "filtered_out": 0
+   },
+   "diagnostic_tests": null,
+   "log_sha256": "b11f35bd2ad3bfa5a06f2c4bac5dac44201b2c202ed1b3f4045c4f035db99f81"
+  },
   "verdict": "fmt PASS (exit 0), clippy PASS (exit 0), library tests PASS at --test-threads=4 (2309 passed, 0 failed, 54 ignored; exit 0). The secure-heap tests did not fail under the court's default 4 GiB per-process RLIMIT_DATA, so the OPENSSL_RS_COURT_DATA=8388608 diagnostic was not needed.",
   "failure_class": "NONE"
+ },
+ "l7_evidence": {
+  "path": "evidence/b78-l7-replay.json",
+  "sha256": "b7f044abe77818f9bfce6998df7e0dcb6ae7f5d345c0e65c6b818c33c45f763d",
+  "bytes": 37383,
+  "schema": "openssl-rs/campaign/safe-c33/l7-replay/v1",
+  "workloads": {
+   "w1_key_operations": {
+    "status": "PASS",
+    "transcript": "court/freeze-b78/l7/transcripts/probe-b78.log",
+    "totals": null
+   },
+   "w2_live_sshd_and_login": {
+    "status": "PASS",
+    "transcript": "court/freeze-b78/l7/transcripts/probe-b78.log",
+    "totals": null
+   },
+   "w3_concurrency": {
+    "status": "PASS",
+    "transcript": "court/freeze-b78/l7/transcripts/probe-b78.log",
+    "totals": null
+   },
+   "w4_sftp_server_and_session_identity": {
+    "status": "PASS",
+    "transcript": "court/freeze-b78/l7/transcripts/supplement-b78.log",
+    "totals": null
+   },
+   "w5_authority_keyformat_differential": {
+    "status": "PASS",
+    "transcript": "court/freeze-b78/l7/keyformat-diff-authority-b78.out",
+    "totals": {
+     "pass": 10,
+     "fail": 0,
+     "of": 10
+    }
+   }
+  },
+  "all_workloads_pass": true,
+  "totals": {
+   "probe_checks": {
+    "pass": 31,
+    "fail": 0
+   },
+   "matrix_cases": {
+    "pass": 18,
+    "fail": 0
+   },
+   "concurrent_logins": {
+    "pass": 16,
+    "of": 16
+   },
+   "keyformat_checks": {
+    "ok": 10,
+    "fail": 0,
+    "not_run": 10
+   },
+   "authority_keyformat_differential": {
+    "pass": 10,
+    "fail": 0,
+    "of": 10
+   },
+   "keyformat_note": "keyformat_checks.not_run=10 are the authority rows of the candidate-only keyformat-b78.sh, retained as NOT_RUN with their reason; the separate authority-linked differential is 10/10 PASS."
+  },
+  "executed_sshd_session": {
+   "path": "court/tmp/openssh-closure/server-b78/install/libexec/sshd-session",
+   "sha256": "ee5f4ef630b0f3d33a4cc563c63cdbcdf281208bc2b7822fd8483abb0fa82ee8",
+   "size": 1002568,
+   "source": "measured by this freeze from the install path sshd executes",
+   "matches_l7_record": true
+  },
+  "sshd_session_tree_copy": {
+   "path": "court/tmp/openssh-closure/server-b78/openssh-9.9p1/sshd-session",
+   "sha256": "f5ad1a233b03d6f9aa9b8e79cf477efaa70e59f7cbac1d88e4dd2945ad04c3c9",
+   "size": 3594840,
+   "source": "measured by this freeze from the link tree",
+   "matches_l7_record": true
+  },
+  "difference_explained": "the executed session binary is the stripped install copy (ee5f4ef630b0); the link-tree copy is f5ad1a233b03 and was never executed. `make install` strips the binary, so the digests differ while the build is the same by install provenance, not proven byte-equal. This freeze binds the executed digest as the one that served logins.",
+  "authority_differential": {
+   "workload": "w5_authority_keyformat_differential",
+   "status": "PASS",
+   "totals": {
+    "pass": 10,
+    "fail": 0,
+    "of": 10
+   },
+   "authority_libcrypto_so_3": {
+    "path": "forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+    "sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2",
+    "size": 7295816,
+    "matches_l7_record": true
+   },
+   "candidate_libcrypto_so_3_sha256": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
+   "authority_binaries": {
+    "ssh": {
+     "path": "court/tmp/openssh-closure/auth-b78/openssh-9.9p1/ssh",
+     "sha256": "7201764eeda1c137ed1efde483bae1cedfc167167a152059561aa9b6f1107b1a",
+     "size": 3401768,
+     "matches_l7_record": true
+    },
+    "sshd": {
+     "path": "court/tmp/openssh-closure/auth-b78/openssh-9.9p1/sshd",
+     "sha256": "280571db8ed5b5f13f06b84d2b2009107fe0d3b4508204f00776f44157aae91d",
+     "size": 1763272,
+     "matches_l7_record": true
+    },
+    "sshd_session": {
+     "path": "court/tmp/openssh-closure/auth-b78/openssh-9.9p1/sshd-session",
+     "sha256": "18227a5f1500dbb45795360b8ff1df574ce8b0ef6da4c295bf9169418a4502e6",
+     "size": 3594864,
+     "matches_l7_record": true
+    },
+    "ssh_keygen": {
+     "path": "court/tmp/openssh-closure/auth-b78/openssh-9.9p1/ssh-keygen",
+     "sha256": "cda7caf8c8829e4ef17ef45fd0232542c207a8cd184c935e266b2dab2e86e1fe",
+     "size": 1796232,
+     "matches_l7_record": true
+    }
+   },
+   "identity_discrimination": "the version TEXT is identical to the candidate's (both print 'OpenSSL 3.6.4 25 Aug 2026'); ssh -V therefore does NOT distinguish the two and the candidate does not append '-rs' to its version text. Authority linkage is established by the resolved library path (ldd) and the libcrypto digest, which differ: authority 611e511db427 vs candidate a27ca428f899. This is the honest discriminator, not the version string."
+  },
+  "not_run_retained": "the candidate-only keyformat_b78.sh authority rows remain NOT_RUN by construction; the authority-linked differential w5 is the evidence that closes the gap."
  },
  "memory": {
   "deviation": "AGENTS.md section 6.1 requires host `available` >= 24 GiB before a build and a cap of min(8g, available-16g) with a 2g floor. Measured host available was 14-15 GiB throughout, so that formula yields less than 2g and the literal procedure refuses to run. This work instead ran inside the existing docker court whose cgroup hard cap is 8 GiB (memory.max=8589934592) with no swap (memory.swap.max=0), so host exposure is bounded by that cgroup. The deviation is recorded here rather than claimed as compliance.",
@@ -1230,11 +1366,11 @@
     "when": "tool_self_test"
    }
   ],
-  "host_available_gib_at_generation": 14.2,
+  "host_available_gib_at_generation": 12.7,
   "host_total_gib_at_generation": 31.3,
   "cgroup": {
    "memory_max_bytes": "8589934592",
-   "memory_current_bytes": "1618784256",
+   "memory_current_bytes": "1783193600",
    "memory_peak_bytes": "8589934592",
    "memory_swap_max_bytes": "0",
    "memory_swap_current_bytes": "0",
@@ -1283,11 +1419,23 @@
    }
   },
   "l7_replay": {
-   "status": "NOT_RUN",
-   "note": "L7 functional replay of the consumers at this candidate was not run by this freeze; it remains a SEAL/BOUNDARY-stage obligation."
+   "status": "PASS",
+   "evidence": "evidence/b78-l7-replay.json",
+   "sha256": "b7f044abe77818f9bfce6998df7e0dcb6ae7f5d345c0e65c6b818c33c45f763d",
+   "workloads": {
+    "w1_key_operations": "PASS",
+    "w2_live_sshd_and_login": "PASS",
+    "w3_concurrency": "PASS",
+    "w4_sftp_server_and_session_identity": "PASS",
+    "w5_authority_keyformat_differential": "PASS"
+   },
+   "authority_differential": "10/10 PASS (w5_authority_keyformat_differential)",
+   "note": "the b78 freeze previously recorded this as NOT_RUN; the replay has since been run and is recorded here from the file, not copied from a prior claim. A green L7 replay is functional evidence only (AGENTS.md section 8) and is not SAFE_COMPATIBLE graduation.",
+   "not_graduated": true,
+   "adjudication_verdict": "NOT ESTABLISHED"
   },
   "outstanding": [
-   "L7 functional replay of the consumers at this candidate (NOT_RUN)",
+   "SAFE_COMPATIBLE is NOT established: independent adjudication verdict 'NOT ESTABLISHED' (see adjudication)",
    "65 REVIEW_REQUIRED discharges (CAMPAIGN-STATUS current_applied_state.safe_compatible_blockers.projected_after_recensus.REVIEW_REQUIRED); the closure already records 56 openssh-v1i + 9 openssh-v1l discharges, but the campaign status requires a rebuild and re-census before the applied count changes",
    "BOUNDARY adjudication of the remaining contract-bounded boundaries",
    "SEAL (release build, complete probe suite, full forensic regeneration)"
@@ -1296,8 +1444,44 @@
    "count": 65,
    "source": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
    "json_pointer": "current_applied_state.safe_compatible_blockers.projected_after_recensus.REVIEW_REQUIRED",
-   "source_sha256": "65fe71bb3d9d18f69034a2b176d96ac429a90e7cd0853f10d1ee17f6fc70b009"
+   "source_sha256": "e62413f04e393be6ce923a76c1d1d5caa19b3776f36204c75a67f762b68d12fe"
   }
+ },
+ "adjudication": {
+  "path": "evidence/b78-assurance-adjudication.json",
+  "sha256": "004d9087aca60b7fd10146b0ce18d08e731a7886eed42dd3795649ffb6984a1b",
+  "bytes": 27540,
+  "schema": "openssl-rs/campaign/safe-c33/adjudication/v1",
+  "verdict_state": "NOT ESTABLISHED",
+  "verdict_by_family": {
+   "ssh": "SAFE_COMPATIBLE not established",
+   "sshd": "SAFE_COMPATIBLE not established"
+  },
+  "frozen_candidate_is_graduated": false,
+  "not_graduated_statement": "The independent adjudication verdict is 'NOT ESTABLISHED'. The frozen candidate b78 is NOT graduated and this freeze does not promote it to SAFE_COMPATIBLE; safe_compatible remains false. The freeze records the refusal, not a discharge.",
+  "what_is_reproduced": [
+   "the nine artefact digests and sizes",
+   "the census, tool and 878-file source-content identity",
+   "the two b78b closures: ACCEPTED, 290/290 DISCHARGED, 0 BLOCKED, 0 UNKNOWN, refusals []",
+   "element 7: 0 target-bounded, 153 contract-bounded, 0 unclassified, 191/191 witnesses present; three pinned witnesses reproduce",
+   "the gate log's fmt/clippy/2309/0/54 counts and the five repair tests",
+   "the source repairs and the two divergence records",
+   "the 30 sampled span hashes and 10 sampled contracts",
+   "the control scripts and the tool self-test's single NOT_RUN"
+  ],
+  "what_is_missing_ordered": [
+   "1. A promotion artifact: every current artifact records safe_compatible=false or 'does not establish SAFE_COMPATIBLE'. The campaign status must be updated with an authorized b78 adjudication before the claim can be made; its current_applied_state is still candidate_S 69d43bb8d / measured 15bebabc9 on stage/p25/b53-discharge, not b78.",
+   "2. Discharge of the campaign's review-grade gap (98 live; 65 after recensus), including B45's 9 with C5 OPEN and the v1l C-class conditions (load-bearing negative controls and a build/Miri/ASan run).",
+   "3. A section 7 criterion 3 safety argument for the whole conservative dependency closure: every mechanism SAFETY_DISCHARGED with caller obligations discharged, plus runtime negative controls; the closure is a reachability measurement, not a memory-safety proof.",
+   "4. Re-review of the 53 identity-transferred sites at b78, or proof of non-impact for their callers/contracts; close R-BLOCKLEVEL-CONTRACT for the 57 sites at the interface or record them as retained.",
+   "5. A reconciled instrument identity: re-run the 65 review/receipts with f31816b1, or prove non-impact of the 1782/204-line tool change; re-review the 7 content-migrated copyctx rows.",
+   "5b. Build provenance for the analysed ssh/sshd and the executed sshd-session: the atlas L4 row is a different build, the rebind is a join not a measurement, the closures record build_provenance null, and the executed sshd-session digest is not in the freeze.",
+   "6. A freeze that covers the L7 replay and the executed sshd-session digest, and resolves the freeze's L7 NOT_RUN and non-claim.",
+   "7. SEAL: release build, full probe suite, ASan/Miri/Loom, dudect/Wycheproof, full forensic regeneration.",
+   "8. A gate run under section 6.1 (available >= 24 GiB) or an explicitly accepted deviation; resolve the self-test NOT_RUN control.",
+   "9. L7 authority/keyformat differential and third-party peer evidence; the 10 keyformat NOT_RUN checks.",
+   "10. A boundary-level decision on the 153 contract-bounded sites: the freeze says they are not proven safe, and element 7 is only an upper-bound measurement."
+  ]
  },
  "residuals": [
   {
@@ -1338,11 +1522,15 @@
   },
   {
    "kind": "not-run",
-   "statement": "SEAL, BOUNDARY adjudication, L7 functional replay, ASan/Miri, dudect/Wycheproof and forensic regeneration are NOT_RUN at this candidate; they are scheduled at their gates, not implied by this freeze."
+   "statement": "SEAL, BOUNDARY adjudication of the remaining contract-bounded boundaries, ASan/Miri, dudect/Wycheproof and forensic regeneration are NOT_RUN at this candidate; they are scheduled at their gates, not implied by this freeze. The L7 functional replay has been run (evidence/b78-l7-replay.json) and is recorded in l7_evidence, but it is functional evidence only, not a safety or graduation result."
+  },
+  {
+   "kind": "adjudication/not-graduated",
+   "statement": "The independent adjudication verdict is 'NOT ESTABLISHED'. The frozen candidate b78 is NOT graduated and this freeze does not promote it to SAFE_COMPATIBLE; safe_compatible remains false. The freeze records the refusal, not a discharge."
   }
  ],
  "not_run": [
-  "L7 functional replay of the consumers at this candidate",
+  "SAFE_COMPATIBLE promotion (independent adjudication verdict 'NOT ESTABLISHED'; the frozen candidate is NOT graduated)",
   "BOUNDARY adjudication of the remaining contract-bounded boundaries",
   "SEAL (release build, full probe suite, full forensic regeneration)",
   "ASan/Miri/Loom and dudect/Wycheproof for this candidate",
@@ -1355,6 +1543,6 @@
   "a green differential/closure result is not a safety or cryptographic result (AGENTS.md section 8)",
   "the per-artefact rebind is not a closure run and changes no count, verdict or refusal",
   "the instrument self-test's single failure is a NOT_RUN control; it is not a pass and does not certify the missing accessor",
-  "L7 functional replay was not run at this candidate"
+  "L7 functional replay was run (w1-w5 PASS, including the authority key-format differential) but a green replay is not SAFE_COMPATIBLE graduation: the independent adjudication verdict is 'NOT ESTABLISHED' and the frozen candidate is NOT graduated"
  ]
 }
