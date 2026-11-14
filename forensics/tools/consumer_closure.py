@@ -2160,6 +2160,17 @@ ABI_CONTRACT_STORE_LOADER = "ABI_CONTRACT_STORE_LOADER"
 # DSO path binding `OPENSSL_init`/`OPENSSL_finish`.  Both seams are public, so
 # the target set is unbounded; every in-image writer is the documented path.
 ABI_CONTRACT_CONF_MODULE = "ABI_CONTRACT_CONF_MODULE"
+# The `CONF_set_nconf` -> `CONF_METHOD.init` dispatch, as inlined into
+# `X509V3_EXT_REQ_add_conf`'s trailing `CONF_set_nconf(ctmp, NULL)` call.  The
+# method table is read from the process-global `default_CONF_method` cell; the
+# only writers of that cell are the exported `CONF_set_default_method` (which
+# stores its parameter unchanged) and the built-in NULL-fallback that installs
+# the table `NCONF_default()` publishes.  The dispatched field is
+# `conf_method_st.init` at offset 0x10 (`conf_init_func`), a documented public
+# struct field.  An application may install its own `CONF_METHOD`, so the target
+# set is unbounded and the class is per-call-site: a same-shaped dispatch on a
+# neighbouring field, cell or interface is refused, never absorbed.
+ABI_CONTRACT_CONF_DEFAULT_METHOD = "ABI_CONTRACT_CONF_DEFAULT_METHOD"
 # An exported PEM PKCS#8 writer's `pem_password_cb *cb` parameter, together
 # with the documented NULL-selected in-image default `PEM_def_callback`.  The
 # existing `ABI_CONTRACT_EXPORT_CALLBACK` text says a NULL callback is a
@@ -2188,6 +2199,7 @@ ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR,
                                   ABI_CONTRACT_PBE_REGISTRY,
                                   ABI_CONTRACT_STORE_LOADER,
                                   ABI_CONTRACT_CONF_MODULE,
+                                  ABI_CONTRACT_CONF_DEFAULT_METHOD,
                                   ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT})
 
 ABI_CONTRACTS = {
@@ -2811,6 +2823,57 @@ ABI_CONTRACTS = {
             "a call at the enumerated address whose function leaf differs; it "
             "falls through to target-bounded with no named refusal (the address "
             "is not the identity)",
+        ],
+    },
+    ABI_CONTRACT_CONF_DEFAULT_METHOD: {
+        "resolution_kind": "contract-bounded (target set unbounded)",
+        "contract": (
+            "the `conf_method_st.init` callback of the method table installed in "
+            "the process-global `default_CONF_method` cell by the exported "
+            "`CONF_set_default_method(CONF_METHOD *)`, or the built-in "
+            "`NCONF_default()` table when the cell is NULL"),
+        "citation": [
+            "include/openssl/conf.h -- struct conf_method_st lists `int "
+            "(*init)(CONF *conf)`; CONF_set_default_method(CONF_METHOD *meth) "
+            "is the documented public setter; NCONF_default(void) publishes the "
+            "built-in table",
+            "src/runtime/conf/types.rs:59-86 -- `#[repr(C)] ConfMethod` with "
+            "`init` at offset 0x10 and type `Option<ConfInitFn>`",
+            "src/runtime/conf/lib.rs:54-55 -- `static DEFAULT_CONF_METHOD: "
+            "AtomicPtr<ConfMethod>`; lib.rs:75-79 -- `CONF_set_nconf` installs "
+            "`NCONF_default()` when the cell is NULL, then dispatches "
+            "`(*meth).init`; lib.rs:96-107 -- the exported setter stores its "
+            "`meth` parameter unchanged",
+            "src/runtime/conf/def.rs:808-834 -- the only two `ConfMethod` "
+            "table literals (`DEFAULT_METHOD` -> def_init_default, `WIN32_METHOD` "
+            "-> def_init_win32); no runtime store writes `init`",
+            "src/x509/v3_conf.rs:1629-1649 -- `X509V3_EXT_REQ_add_conf` calls "
+            "`CONF_set_nconf(ctmp, NULL)` on its own `NCONF_new(NULL)` result, "
+            "which the compiler inlines (the enumerated site)",
+        ],
+        "provider_obligation": (
+            "the application supplies a live `CONF_METHOD` whose `init` matches "
+            "`conf_init_func`; `CONF_set_default_method` publishes it to every "
+            "subsequent `CONF_set_nconf`, and the library calls it with a live "
+            "`CONF *` it allocated itself"),
+        "covers": (
+            "the enumerated call site, the `default_CONF_method` cell, its two "
+            "writer classes (the exported setter's parameter, and the built-in "
+            "NULL fallback whose value is the table `NCONF_default()` returns), "
+            "and the `ConfMethod.init` field at offset 0x10"),
+        "does_not_cover": [
+            "which method table an application installs; the setter is public "
+            "and the target set is unbounded",
+            "the behaviour or lifetime of the installed `init` callback, or the "
+            "application's own table contents",
+            "any field other than `init` at 0x10: a dispatch on `create` (0x8), "
+            "`destroy` (0x18) or `destroy_data` (0x20) is a different contract "
+            "and the witness refuses it",
+            "a writer of the cell outside the exported setter and the built-in "
+            "fallback; the whole-image store scan refuses one",
+            "a runtime store to a `ConfMethod` `init` field anywhere under "
+            "`src/`; the source scan refuses one (the only writers are the two "
+            "link-time table literals)",
         ],
     },
     ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT: {
@@ -12038,6 +12101,7 @@ _PINNED_SCALARS = {
     "PEM_SITE": "PEM_SITE_PIN",
     "STORE_LOADER_PROVIDER_SITE": "STORE_LOADER_PROVIDER_SITE_PIN",
     "REGISTRATION_ATEXIT_CALL_SITE": "REGISTRATION_ATEXIT_CALL_SITE_PIN",
+    "CONF_METHOD_SITE": "CONF_METHOD_SITE_PIN",
 }
 _SITE_PIN_CACHE = {}
 
@@ -12161,6 +12225,7 @@ _PIN_SCALAR_WITNESS = {
     "PEM_SITE": "pem_password_default_witness",
     "STORE_LOADER_PROVIDER_SITE": "store_loader_provider_witness",
     "REGISTRATION_ATEXIT_CALL_SITE": "registration_atexit_witness",
+    "CONF_METHOD_SITE": "conf_default_method_witness",
 }
 _PIN_PROVISIONAL = {}
 _PIN_SEARCH_ACTIVE = set()
@@ -12454,7 +12519,8 @@ def _external_abi_index(g) -> dict:
         # them; only the remaining literal-keyed rows use the strict pin.
         scalars = {PBE_SITE: "PBE_SITE",
                    STORE_LOADER_PROVIDER_SITE: "STORE_LOADER_PROVIDER_SITE",
-                   PEM_SITE: "PEM_SITE"}
+                   PEM_SITE: "PEM_SITE",
+                   CONF_METHOD_SITE: "CONF_METHOD_SITE"}
         tables = {}
         for table in ("STORE_LOADER_LEGACY_SITES", "CONF_SITES"):
             for old in globals()[table]:
@@ -17902,6 +17968,32 @@ def _store_loader_polarity(g: "DsoGraph", fstart: int, site_addr: int,
     return evidence, None
 
 
+def _polarity_selectors_for_site(g: "DsoGraph", fstart: int, site_addr: int,
+                                 evidence: dict):
+    """The polarity selectors whose arms can reach the site's block.
+
+    A must-analysis re-decides the predicate at every selector on the path to
+    the site, so inverting a selector that a later one overrides cannot change
+    the site's polarity.  Only an inversion of *all* selectors that can reach
+    the site is guaranteed to be observable; naming just the first selector
+    (as the b77 control did) silently stops being load-bearing when the
+    compiler adds another one upstream of it.  This returns the set.
+    """
+    cfg = _function_cfg(g, fstart)
+    idx = {a: i for i, (a, _t) in enumerate(cfg["insns"])}
+    sb = cfg["block_of"].get(idx.get(site_addr))
+    if sb is None:
+        return []
+    out = []
+    for sel in evidence.get("selectors") or ():
+        for key in ("taken_block", "fallthrough_block"):
+            b = cfg["block_of"].get(idx.get(int(sel[key], 16)))
+            if b is not None and sb in _cfg_reachable_from(cfg, b):
+                out.append(sel)
+                break
+    return out
+
+
 def _external_guard_chain(g: "DsoGraph", fstart: int, site_addr: int,
                           want_zero: bool):
     """The close-arm proof for one loader dispatch (see the helper above)."""
@@ -18816,6 +18908,352 @@ def conf_module_witness(g: "DsoGraph", site: dict, name: str):
                                               for c in setter_calls]},
         source={"file": CONF_SOURCE, "layout_line": layout["line"],
                 "writer_line": st["line"]},
+    )
+    return cls, witness, None
+
+
+# --------------------------------------------------------------------------- #
+# ABI_CONTRACT_CONF_DEFAULT_METHOD: the global CONF_METHOD cell
+# --------------------------------------------------------------------------- #
+#
+# `CONF_set_nconf` re-initialises a `CONF` through the process-global
+# `default_CONF_method` table: it loads the cell, installs the table published by
+# `NCONF_default()` when the cell is NULL, and calls that table's `init` slot.
+# `X509V3_EXT_REQ_add_conf` calls `CONF_set_nconf(ctmp, NULL)` on its own
+# `NCONF_new(NULL)` result and the compiler inlines it, so the dispatch appears
+# at the enumerated site.  The cell is public state: the exported
+# `CONF_set_default_method` stores an application-supplied `CONF_METHOD *` in it,
+# and `struct conf_method_st` is a documented public struct whose `init` field is
+# `conf_init_func`.  The witness proves exactly that shape and no wider one.
+
+CONF_METHOD_GLOBAL_RE = r"runtime4conf3lib\d+DEFAULT_CONF_METHOD\b"
+CONF_METHOD_BUILTIN_RE = r"runtime4conf3def\d+DEFAULT_METHOD\b"
+CONF_METHOD_OWNER = "ConfMethod"
+CONF_METHOD_FIELD = "init"
+CONF_METHOD_FIELD_OFFSET = 0x10
+CONF_METHOD_TYPEDEF = "ConfInitFn"
+CONF_METHOD_SETTER = "CONF_set_default_method"
+CONF_METHOD_DEFAULT_GETTER = "NCONF_default"
+CONF_METHOD_SOURCE = "src/runtime/conf/lib.rs"
+CONF_METHOD_DEF_SOURCE = "src/runtime/conf/def.rs"
+CONF_METHOD_SITE = 0x49A8DC
+CONF_METHOD_FUNCTION = "X509V3_EXT_REQ_add_conf"
+# The enumerated site is the second inlined `CONF_set_nconf`'s `init` dispatch.
+CONF_METHOD_SITE_PIN = ("X509V3_EXT_REQ_add_conf", 0xBC)
+
+
+def _conf_method_bodies(g):
+    """Every disassembled function body in the image, for a whole-image scan."""
+    bodies = getattr(g, "functions", None) or ()
+    if isinstance(bodies, dict):
+        return sorted(bodies.items())
+    if bodies:
+        return list(bodies)
+    return sorted((getattr(g.precision, "insns_by_func", {}) or {}).items())
+
+
+def _conf_method_cell_stores(g, cell: int):
+    """Every write, of any width, to the `cell` address in the image."""
+    out = []
+    for fstart, body in _conf_method_bodies(g):
+        name = (getattr(g, "funcs", {}) or {}).get(fstart) or "?"
+        for i, (addr, text) in enumerate(body):
+            _mn, _rest, ops = _insn_parts(text)
+            if len(ops) < 2 or not re.fullmatch(r"-?0x[0-9a-f]+\(%rip\)", ops[1]):
+                continue
+            if _insn_comment_addr(text) != cell:
+                continue
+            out.append({"function": name,
+                        "func": fstart,
+                        "leaf": _external_function_leaf(name),
+                        "address": hex(addr), "text": text,
+                        "source": ops[0],
+                        "previous": body[i - 1][1] if i else ""})
+    return out
+
+
+def _conf_method_getter_table(g):
+    """(address, error) of the table `NCONF_default()` publishes."""
+    found = []
+    for fstart, body in _conf_method_bodies(g):
+        name = (getattr(g, "funcs", {}) or {}).get(fstart) or ""
+        if _external_function_leaf(name) != CONF_METHOD_DEFAULT_GETTER:
+            continue
+        for addr, text in body:
+            mn, _rest, ops = _insn_parts(text)
+            if mn != "lea" or len(ops) < 2:
+                continue
+            target = _insn_comment_addr(text)
+            sym = (getattr(g, "all_syms", {}) or {}).get(target) or ""
+            if re.search(CONF_METHOD_BUILTIN_RE, sym):
+                found.append(target)
+    if len(set(found)) != 1:
+        return None, (f"{CONF_METHOD_DEFAULT_GETTER} publishes {len(set(found))} "
+                      "built-in table(s)")
+    return found[0], None
+
+
+def conf_default_method_witness(g: "DsoGraph", site: dict, name: str):
+    """The `default_CONF_method` -> `CONF_METHOD.init` dispatch."""
+    if not _external_site_matches(site, name, CONF_METHOD_FUNCTION,
+                                  _pinned_site("CONF_METHOD_SITE", g)):
+        return None
+    cls = ABI_CONTRACT_CONF_DEFAULT_METHOD
+    if not site.get("unresolved"):
+        return None
+    field = CONF_METHOD_FIELD
+    if "e7abi-conf-method-wrong-field" in _MUTED:
+        # Negative control: proving the neighbouring `destroy` field instead of
+        # the dispatched `init` one must not accept this site.
+        field = "destroy"
+    fstart = site.get("func")
+    insns = (getattr(g.precision, "insns_by_func", {}) or {}).get(fstart)
+    if not insns:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "image-disassembly-unavailable")
+    idx = _external_insn_index(g, site)
+    if idx is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "call-instruction-not-found")
+    defs = _external_reg_defs(g, fstart, idx, "%rax")
+    if defs is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "operand-has-an-open-definition")
+    if not defs:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "operand-has-no-reaching-definition")
+    loads = []
+    for d in sorted(defs):
+        text = insns[d][1]
+        mn, _rest, ops = _insn_parts(text)
+        if (mn not in ("mov", "movq") or len(ops) < 2
+                or _canon(ops[1]) != "%rax"):
+            return cls, None, _external_refusal(
+                cls, name, site, "operand-writer-is-not-a-load",
+                definition=text, address=hex(insns[d][0]))
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", ops[0])
+        if not m:
+            return cls, None, _external_refusal(
+                cls, name, site, "operand-writer-is-not-a-memory-load",
+                definition=text)
+        off = int(m.group(1), 16) if m.group(1) else 0
+        if off != CONF_METHOD_FIELD_OFFSET:
+            return cls, None, _external_refusal(
+                cls, name, site, "operand-load-is-not-the-init-slot",
+                offset=hex(off), expected=hex(CONF_METHOD_FIELD_OFFSET),
+                definition=text)
+        loads.append({"def": d, "address": hex(insns[d][0]),
+                      "text": text, "base_reg": m.group(2)})
+
+    # Every field base is a link-time address: the cell, or the built-in table.
+    # The compiler duplicates the inlined cleanup tail, so one field load can
+    # have several reaching base definitions; each of them must be admissible
+    # on its own (the union is never trusted as one value).
+    cell = None
+    builtin = None
+    bases = []
+    for ld in loads:
+        base_defs = _external_reg_defs(g, fstart, ld["def"], ld["base_reg"])
+        if base_defs is None:
+            return cls, None, _external_refusal(
+                cls, name, site, "field-base-has-an-open-definition",
+                base_reg=ld["base_reg"])
+        if not base_defs:
+            return cls, None, _external_refusal(
+                cls, name, site, "field-base-has-no-reaching-definition",
+                base_reg=ld["base_reg"])
+        for d2 in sorted(base_defs):
+            text2 = insns[d2][1]
+            mn2, _rest2, ops2 = _insn_parts(text2)
+            if mn2 not in ("mov", "movq", "lea") or len(ops2) < 2:
+                return cls, None, _external_refusal(
+                    cls, name, site, "field-base-is-not-a-link-time-address",
+                    definition=text2, address=hex(insns[d2][0]))
+            target = _insn_comment_addr(text2)
+            sym = (getattr(g, "all_syms", {}) or {}).get(target) or ""
+            if re.search(CONF_METHOD_GLOBAL_RE, sym):
+                kind = "default-method-cell"
+                if cell is not None and cell != target:
+                    return cls, None, _external_refusal(
+                        cls, name, site, "two-different-method-cells",
+                        first=hex(cell), second=hex(target))
+                cell = target
+            elif re.search(CONF_METHOD_BUILTIN_RE, sym):
+                kind = "builtin-default-table"
+                builtin = target
+            else:
+                return cls, None, _external_refusal(
+                    cls, name, site,
+                    "field-base-is-neither-the-cell-nor-the-builtin-table",
+                    symbol=sym, target=None if target is None else hex(target))
+            bases.append({"kind": kind, "definition": hex(insns[d2][0]),
+                          "base_reg": ld["base_reg"],
+                          "target": None if target is None else hex(target),
+                          "symbol": sym})
+    if cell is None:
+        return cls, None, _external_refusal(
+            cls, name, site, "dispatch-does-not-read-the-default-method-cell")
+    getter_table, err = _conf_method_getter_table(g)
+    if getter_table is None:
+        return cls, None, _external_refusal(
+            cls, name, site, "builtin-default-table-not-bound-to-its-getter",
+            detail=err)
+    if builtin is not None and builtin != getter_table:
+        return cls, None, _external_refusal(
+            cls, name, site, "builtin-table-is-not-the-one-NCONF_default-publishes",
+            builtin=hex(builtin), getter=hex(getter_table))
+
+    # The whole-image writer set of the cell: the exported setter's parameter,
+    # and the built-in fallback.  Nothing else may write it.
+    writes = _conf_method_cell_stores(g, cell)
+    if not writes:
+        return cls, None, _external_refusal(
+            cls, name, site, "default-method-cell-has-no-writer")
+    setter, builtin_stores, other = [], [], []
+    for w in writes:
+        if w["leaf"] == CONF_METHOD_SETTER and w["source"] == "%rdi":
+            setter.append(w)
+        elif (w["source"] == "%rax"
+              and re.search(CONF_METHOD_BUILTIN_RE, w["previous"])):
+            builtin_stores.append(w)
+        else:
+            other.append(w)
+    if other:
+        return cls, None, _external_refusal(
+            cls, name, site, "unaccounted-writer-of-the-default-method-cell",
+            writers=other)
+    if len(setter) != 1:
+        return cls, None, _external_refusal(
+            cls, name, site,
+            "default-method-cell-setter-is-not-the-single-parameter-store",
+            stores=setter)
+    if not builtin_stores:
+        return cls, None, _external_refusal(
+            cls, name, site, "cell-has-no-built-in-default-installation")
+    st = setter[0]
+    if st["source"] != "%rdi":
+        return cls, None, _external_refusal(
+            cls, name, site, "setter-store-is-not-its-parameter", store=st)
+    if _external_exported(g, CONF_METHOD_SETTER) is None:
+        return cls, None, _external_refusal(
+            cls, name, site, "default-method-setter-is-not-exported")
+    if _external_exported(g, CONF_METHOD_DEFAULT_GETTER) is None:
+        return cls, None, _external_refusal(
+            cls, name, site, "builtin-default-getter-is-not-exported")
+
+    text, _lines, err = _external_source(g, CONF_METHOD_SOURCE)
+    if text is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "source-unavailable", detail=err)
+    if ('pub extern "C" fn CONF_set_default_method(meth: *mut ConfMethod)'
+            not in text
+            or "DEFAULT_CONF_METHOD.store(meth" not in text):
+        return cls, None, _external_refusal(
+            cls, name, site, "source-does-not-store-the-setter-parameter")
+    if ("DEFAULT_CONF_METHOD.load" not in text
+            or "(*meth).init" not in text):
+        return cls, None, _external_refusal(
+            cls, name, site, "source-does-not-read-the-cell-init-slot")
+
+    layout, err = _external_struct_layout(g, CONF_METHOD_OWNER)
+    if layout is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "owner-layout-not-decidable",
+                                            detail=err)
+    if not (layout.get("file") or "").endswith("runtime/conf/types.rs"):
+        return cls, None, _external_refusal(
+            cls, name, site, "owner-layout-is-not-the-conf-method-table",
+            file=layout.get("file"))
+    fld = next((f for f in layout["fields"] if f["name"] == field), None)
+    if fld is None or fld["offset"] != CONF_METHOD_FIELD_OFFSET:
+        return cls, None, _external_refusal(
+            cls, name, site, "declared-init-field-is-not-at-the-dispatched-offset",
+            field=field, declared=fld, expected=hex(CONF_METHOD_FIELD_OFFSET))
+    if CONF_METHOD_TYPEDEF not in (fld["type"] or ""):
+        return cls, None, _external_refusal(
+            cls, name, site, "declared-field-is-not-a-conf-init-callback",
+            field=fld, expected=CONF_METHOD_TYPEDEF)
+
+    writers, err = _external_field_writers(
+        g, CONF_METHOD_OWNER, {CONF_METHOD_FIELD},
+        owner_tokens=("DEFAULT_CONF_METHOD", "DEFAULT_METHOD"))
+    if writers is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "source-scan-unavailable",
+                                            detail=err)
+    macro_slot = [w for w in writers if w["kind"] == "macro-slot"]
+    if macro_slot:
+        return cls, None, _external_refusal(
+            cls, name, site, "macro-expanded-slot-store-unattributed",
+            writers=macro_slot)
+    field_stores = [w for w in writers if w["kind"] == "store"]
+    if field_stores:
+        return cls, None, _external_refusal(
+            cls, name, site, "init-field-has-a-runtime-store",
+            stores=field_stores)
+    literals = [w for w in writers if w["kind"] == "literal"]
+    expected = {("DEFAULT_METHOD", "Some(def_init_default)"),
+                ("WIN32_METHOD", "Some(def_init_win32)")}
+    got = set()
+    for w in literals:
+        got.add((w.get("function"),
+                 (w.get("fields") or {}).get(CONF_METHOD_FIELD)))
+    if got != expected or len(literals) != len(expected):
+        return cls, None, _external_refusal(
+            cls, name, site,
+            "built-in-tables-are-not-the-enumerated-init-literals",
+            literals=literals)
+    if any(not (w.get("file") or "").endswith("runtime/conf/def.rs")
+           for w in literals):
+        return cls, None, _external_refusal(
+            cls, name, site, "init-literal-is-not-in-the-conf-method-module",
+            literals=literals)
+
+    witness = _external_witness(
+        cls, name, site,
+        slot=(f"default_CONF_method cell (0x{cell:x}) -> "
+              f"conf_method_st.{field} (offset {hex(CONF_METHOD_FIELD_OFFSET)})"),
+        writer=(f"{CONF_METHOD_SETTER} stores its `meth` parameter unchanged; "
+                f"the NULL fallback installs the table `{CONF_METHOD_DEFAULT_GETTER}()` "
+                "publishes"),
+        interface=("CONF_set_default_method(CONF_METHOD *) (exported) and "
+                   "struct conf_method_st.init = int (*)(CONF *)"),
+        basis=("the dispatched operand is a load of offset 0x10 from a table "
+               "reached through the default_CONF_method cell (or the built-in "
+               "table the cell is initialised with); every write to the cell in "
+               "the whole image is either the exported setter's parameter store "
+               "or the built-in fallback; the source has no runtime store to "
+               "`ConfMethod::init` and exactly two link-time table literals"),
+        conditions={
+            "site_enumerated": f"{CONF_METHOD_FUNCTION} {hex(site['addr'])}",
+            "operand_field": f"conf_method_st.{field} at "
+                             f"{hex(CONF_METHOD_FIELD_OFFSET)}",
+            "cell": f"{hex(cell)} (DEFAULT_CONF_METHOD)",
+            "writer_set": (f"{CONF_METHOD_SETTER}(%rdi) x{len(setter)} + "
+                           f"built-in NULL fallback x{len(builtin_stores)}"),
+            "documented_interface": ("CONF_set_default_method and struct "
+                                     "conf_method_st.init"),
+            "target_set_unbounded": ("the exported setter admits any "
+                                     "application CONF_METHOD"),
+        },
+        does_not_cover=ABI_CONTRACTS[cls]["does_not_cover"],
+        target_set=[],
+        operand={"reg": "%rax", "loads": loads},
+        field={"type": CONF_METHOD_OWNER, "repr_c": True, "name": field,
+               "offset": hex(CONF_METHOD_FIELD_OFFSET),
+               "typedef": CONF_METHOD_TYPEDEF,
+               "writer": CONF_METHOD_SETTER},
+        base_origins=bases,
+        writer_set={"setter": setter, "builtin": builtin_stores,
+                    "other": 0},
+        source={"file": CONF_METHOD_SOURCE,
+                "layout_file": layout.get("file"),
+                "layout_line": layout["line"],
+                "table_literals": [
+                    {"file": w.get("file"), "line": w.get("line"),
+                     "static": w.get("function"),
+                     "init": (w.get("fields") or {}).get(CONF_METHOD_FIELD)}
+                    for w in literals]},
     )
     return cls, witness, None
 
@@ -19963,6 +20401,7 @@ EXTERNAL_ABI_WITNESSES = (
     store_loader_legacy_witness,
     store_loader_provider_witness,
     conf_module_witness,
+    conf_default_method_witness,
     pem_password_default_witness,
 )
 # The address is not the identity: the documented function leaf must match too.
@@ -19974,6 +20413,7 @@ EXTERNAL_ABI_SITE_FUNCTIONS = {
     STORE_LOADER_PROVIDER_SITE: STORE_LOADER_FUNCTION,
     0x293F25: CONF_FUNCTION,
     0x294363: CONF_FUNCTION,
+    CONF_METHOD_SITE: CONF_METHOD_FUNCTION,
     PEM_SITE: PEM_FUNCTION,
 }
 # (site -> containing symbol, offset) for the literal keys above.
@@ -19983,12 +20423,14 @@ EXTERNAL_ABI_SITE_PINS = {
     0x1F8F13: ("OSSL_STORE_open_ex", 0x9F3),
     0x293F25: ("CONF_modules_load", 0x505),
     0x294363: ("CONF_modules_load", 0x943),
+    CONF_METHOD_SITE: CONF_METHOD_SITE_PIN,
 }
 EXTERNAL_ABI_SITE_ADDRESSES = frozenset(EXTERNAL_ABI_SITE_FUNCTIONS)
 EXTERNAL_ABI_CLASSES = frozenset({
     ABI_CONTRACT_PBE_REGISTRY,
     ABI_CONTRACT_STORE_LOADER,
     ABI_CONTRACT_CONF_MODULE,
+    ABI_CONTRACT_CONF_DEFAULT_METHOD,
     ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
 })
 
@@ -32776,6 +33218,7 @@ def build_receipt(args) -> dict:
                     "classes": [ABI_CONTRACT_PBE_REGISTRY,
                                 ABI_CONTRACT_STORE_LOADER,
                                 ABI_CONTRACT_CONF_MODULE,
+                                ABI_CONTRACT_CONF_DEFAULT_METHOD,
                                 ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
                                 ABI_CONTRACT_PROVIDER],
                     "rule": (
@@ -32797,6 +33240,7 @@ def build_receipt(args) -> dict:
                         (ABI_CONTRACT_PBE_REGISTRY,
                          ABI_CONTRACT_STORE_LOADER,
                          ABI_CONTRACT_CONF_MODULE,
+                         ABI_CONTRACT_CONF_DEFAULT_METHOD,
                          ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
                          ABI_CONTRACT_PROVIDER)},
                 },
@@ -34060,19 +34504,29 @@ def _e7repin_search_self_test():
         chk("e7repin-search two-candidate restored",
             (why, len(acc or [])), (None, 1))
 
-        # ---- witness perturbation: the close-guard polarity branch ---- #
+        # ---- witness perturbation: the close-guard polarity branches ---- #
+        # The guard is derived, so the control names the *derived* selectors:
+        # every selector whose arms can reach the site is inverted, because an
+        # upstream selector that a later one overrides cannot change the must-
+        # polarity (b78 added such an upstream selector, which is why naming
+        # `selectors[0]` alone stopped being load-bearing).
         cstart = _pin_start(g, STORE_LOADER_LEGACY_SITE_PINS[0x1F8F13])
         ev, why = _store_loader_polarity(g, cstart, provider, False)
         chk("e7repin-search guard basis present", ev is not None, True)
         if ev is not None:
-            sel = ev["selectors"][0]
-            flip = "jne" if sel["branch_text"].startswith("je") else "je"
-            px = proxy(mutate(cstart, int(sel["branch"], 16),
-                              sel["branch_text"].replace(
-                                  sel["branch_text"].split()[0], flip, 1)))
+            sels = _polarity_selectors_for_site(g, cstart, provider, ev)
+            chk("e7repin-search guard selectors present", bool(sels), True)
+            twin = {cstart: list(g.precision.insns_by_func[cstart])}
+            for sel in sels:
+                a = int(sel["branch"], 16)
+                text = next(t for aa, t in twin[cstart] if aa == a)
+                flip = "jne" if text.strip().startswith("je") else "je"
+                new = text.replace(text.strip().split()[0], flip, 1)
+                twin[cstart] = [(aa, new if aa == a else tt)
+                                for aa, tt in twin[cstart]]
             chk("e7repin-search guard mutation fixture applied",
-                px.precision.insns_by_func[cstart]
-                != g.precision.insns_by_func[cstart], True)
+                twin[cstart] != g.precision.insns_by_func[cstart], True)
+            px = proxy(twin)
             gwhy = _store_loader_polarity(px, cstart, provider, False)[1]
             chk("e7repin-search guard mutation refusal",
                 bool(gwhy) and "polarity" in gwhy, True)
@@ -34102,21 +34556,35 @@ def _e7repin_search_self_test():
                 search_row(g, "PBE_EX_SITES", 0x17CEE8)[2], None)
 
         # ---- the search removed: the pre-repair (target-bounded) behaviour ---- #
-        true_open = _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F89E8, g)[0]
-        _SITE_PIN_CACHE.clear()
-        _PIN_SEARCH_OFF = True
-        try:
-            addr, how = _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F89E8, g)
-            chk("e7repin-search disabled: the stale literal stays",
-                (how, addr), ("literal", 0x1F89E8))
-            chk("e7repin-search disabled: no row matches the true site",
-                _repinned("STORE_LOADER_LEGACY_SITES", g).get(true_open), None)
-        finally:
-            _PIN_SEARCH_OFF = False
+        # The fixture must be a row whose pin is *genuinely* stale in this
+        # image.  b77 used `OSSL_STORE_open_ex + 0x488`, but b78's rebuild put
+        # the legacy open dispatches back at the recorded offsets (+0x488 /
+        # +0x57D / +0x9F3), so that row now re-derives strictly and the old
+        # expectation ("the literal stays") encoded a property of b77, not of
+        # the control.  The stale row is therefore derived from the image, and
+        # the search-off behaviour is asserted on that row.
+        stale = next((old for old in PBE_EX_SITES
+                      if _pin_site_addr(g, PBE_EX_SITE_PINS[old]) is None
+                      and _pin_effective("PBE_EX_SITES", old, g)[1] == "search"),
+                     None)
+        chk("e7repin-search disabled: a stale row exists in this image",
+            stale is not None, True)
+        if stale is not None:
+            true_addr = _pin_effective("PBE_EX_SITES", stale, g)[0]
             _SITE_PIN_CACHE.clear()
-        chk("e7repin-search re-enabled: the row resolves again",
-            _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F89E8, g)[1]
-            in ("pin", "search"), True)
+            _PIN_SEARCH_OFF = True
+            try:
+                addr, how = _pin_effective("PBE_EX_SITES", stale, g)
+                chk("e7repin-search disabled: the stale literal stays",
+                    (how, addr), ("literal", stale))
+                chk("e7repin-search disabled: no row matches the true site",
+                    _repinned("PBE_EX_SITES", g).get(true_addr), None)
+            finally:
+                _PIN_SEARCH_OFF = False
+                _SITE_PIN_CACHE.clear()
+            chk("e7repin-search re-enabled: the row resolves again",
+                _pin_effective("PBE_EX_SITES", stale, g)[1]
+                in ("pin", "search"), True)
     finally:
         if saved is not None:
             for name, values in saved.items():
@@ -34129,6 +34597,158 @@ def _e7repin_search_self_test():
         "acceptance refuses on uniqueness; mutating the close-guard polarity "
         "branch and the PBE frame slot each refuse and restore; disabling the "
         "search reproduces the pre-repair target-bounded row")
+
+
+def _conf_default_method_self_test():
+    """Controls for ABI_CONTRACT_CONF_DEFAULT_METHOD, one per element.
+
+    The witness claims four things: the dispatched slot is `init` at 0x10, the
+    table is reached through the `default_CONF_method` cell, the cell's writers
+    are the exported setter's parameter and the built-in fallback, and the
+    source has no runtime writer of `ConfMethod::init`.  Each control removes
+    exactly one of them and requires a refusal; the restore check requires the
+    admitted image to accept again.
+    """
+    root = Path(__file__).resolve().parents[2]
+    dso = root / "artifacts/phase2/install/lib/libcrypto.so.3"
+    if not dso.is_file():
+        return [], "conf-method controls: skipped (candidate absent)"
+    workdir = root / "court/tmp/conf-method-selftest-work"
+    workdir.mkdir(parents=True, exist_ok=True)
+    try:
+        g = DsoGraph(dso, workdir)
+    except Exception as e:  # noqa: BLE001 -- a missing tool is a skip
+        return [], f"conf-method controls: skipped (graph unavailable: {e})"
+    g.source_root = str(root)
+    g.install_prefix = str(root / "artifacts/phase2/install")
+    g.precision = PrecisionResolver(g)
+    failures = []
+
+    def chk(name, got, want):
+        if got != want:
+            failures.append(f"{name}: got {got!r}, want {want!r}")
+
+    class _Prec:
+        def __init__(self, insns):
+            self.insns_by_func = insns
+
+    serial = [0]
+
+    def proxy(fstart, addr, new_text):
+        serial[0] += 1
+        bodies, prec = [], {}
+        for s, body in _conf_method_bodies(g):
+            if s == fstart:
+                body = [(a, new_text if a == addr else t) for a, t in body]
+            bodies.append((s, body))
+            prec[s] = body
+        px = _RepinProxy(g, functions=bodies, precision=_Prec(prec),
+                         sha256=f"{g.sha256}:conf-method:{serial[0]}")
+        for k in ("_fn_cfg_cache", "_reaching_cache", "_e7core_dom_cache",
+                  "_pin_site_index", "_e7abi_field_writers_cache"):
+            object.__setattr__(px, k, {})
+        return px
+
+    def site_for(graph, fstart, addr):
+        text = next(t for a, t in graph.precision.insns_by_func[fstart]
+                    if a == addr)
+        return {"kind": "call", "func": fstart, "addr": addr, "text": text,
+                "unresolved": True, "reason": "reg-value-partial[int]"}
+
+    site_addr = _pinned_site("CONF_METHOD_SITE", g)
+    fstart = _pin_start(g, CONF_METHOD_SITE_PIN)
+    if site_addr is None or fstart is None:
+        return [], ("conf-method controls: skipped (the enumerated site does "
+                    "not re-derive in this image)")
+    name = g.funcs[fstart]
+    cls, wit, refusal = conf_default_method_witness(
+        g, site_for(g, fstart, site_addr), name)
+    chk("conf-method positive class", cls, ABI_CONTRACT_CONF_DEFAULT_METHOD)
+    chk("conf-method positive accepted", (refusal, bool(wit)), (None, True))
+    w = wit or {}
+    chk("conf-method positive slot",
+        (w.get("field") or {}).get("offset"), "0x10")
+    chk("conf-method positive field",
+        (w.get("field") or {}).get("name"), "init")
+    chk("conf-method positive setter stores",
+        len((w.get("writer_set") or {}).get("setter") or []), 1)
+    chk("conf-method positive builtin fallbacks",
+        len((w.get("writer_set") or {}).get("builtin") or []) > 0, True)
+    chk("conf-method positive unaccounted writers",
+        (w.get("writer_set") or {}).get("other"), 0)
+    chk("conf-method registered in the external-ABI index",
+        (external_abi_contract_witness(g, site_for(g, fstart, site_addr), name)
+         or (None, None, None))[0], ABI_CONTRACT_CONF_DEFAULT_METHOD)
+    e7 = evaluate_predicate_element_7(
+        [("control.so", site_addr, {"class": cls, "unresolved": True})], [])
+    chk("conf-method site establishes element 7",
+        (e7["established"], e7["target_bounded_unresolved_sites"]), (True, 0))
+
+    loads = (w.get("operand") or {}).get("loads") or []
+    chk("conf-method positive operand loads", len(loads), 2)
+
+    # ---- control 1: the dispatched slot is not the init field at 0x10 ---- #
+    if loads:
+        ld_addr = int(loads[0]["address"], 16)
+        ld_text = loads[0]["text"]
+        bumped = ld_text.replace("0x10(", "0x18(", 1)
+        chk("conf-method wrong-slot fixture applied", bumped != ld_text, True)
+        px = proxy(fstart, ld_addr, bumped)
+        _c, _w, ref = conf_default_method_witness(
+            px, site_for(px, fstart, site_addr), name)
+        chk("conf-method wrong-slot-offset refusal",
+            (ref or {}).get("reason"), "operand-load-is-not-the-init-slot")
+
+    # ---- control 2: a writer of the cell that is not the setter's parameter ---- #
+    setters = (w.get("writer_set") or {}).get("setter") or []
+    if setters:
+        st = setters[0]
+        mutated = st["text"].replace("%rdi,", "%rsi,", 1)
+        chk("conf-method setter-writer fixture applied",
+            mutated != st["text"], True)
+        px = proxy(st.get("func", fstart), int(st["address"], 16), mutated)
+        # The store now lives in CONF_set_default_method but writes a value
+        # that is not that function's parameter: a second interface.
+        _c, _w, ref = conf_default_method_witness(
+            px, site_for(px, fstart, site_addr), name)
+        chk("conf-method non-parameter-setter refusal",
+            (ref or {}).get("reason"),
+            "unaccounted-writer-of-the-default-method-cell")
+
+    # ---- control 2b: a built-in fallback store that is not the built-in table ---- #
+    builtins = (w.get("writer_set") or {}).get("builtin") or []
+    if builtins:
+        b = builtins[0]
+        mutated = b["text"].replace("%rax,", "%rcx,", 1)
+        chk("conf-method fallback-writer fixture applied",
+            mutated != b["text"], True)
+        px = proxy(b.get("func", fstart), int(b["address"], 16), mutated)
+        _c, _w, ref = conf_default_method_witness(
+            px, site_for(px, fstart, site_addr), name)
+        chk("conf-method non-builtin-fallback refusal",
+            (ref or {}).get("reason"),
+            "unaccounted-writer-of-the-default-method-cell")
+
+    # ---- control 3: the proven field is not the dispatched one ---- #
+    _MUTED.add("e7abi-conf-method-wrong-field")
+    try:
+        _c, _w, ref = conf_default_method_witness(
+            g, site_for(g, fstart, site_addr), name)
+        chk("conf-method wrong-field refusal", (ref or {}).get("reason"),
+            "declared-init-field-is-not-at-the-dispatched-offset")
+    finally:
+        _MUTED.discard("e7abi-conf-method-wrong-field")
+
+    # ---- restore: the admitted image accepts exactly as before ---- #
+    _c, wit2, ref2 = conf_default_method_witness(
+        g, site_for(g, fstart, site_addr), name)
+    chk("conf-method restored", (ref2, wit2 == wit), (None, True))
+    return failures, (
+        "conf-method controls: the enumerated `default_CONF_method` -> "
+        "`CONF_METHOD.init` dispatch is contract-bounded by the exported "
+        "`CONF_set_default_method`; a wrong slot offset, a setter store that is "
+        "not its parameter, a fallback store that is not the built-in table and "
+        "a wrong declared field each refuse and restore")
 
 
 def _e7core_self_test():
@@ -34470,12 +35090,15 @@ def _e7core_self_test():
                                                g.funcs[s_st["func"]]) or
                  (None, None, {}))[1] is not None, True)
 
-        # control e7store guard: invert the fetched-loader polarity branch.
+        # control e7store guard: invert the fetched-loader polarity branches.
         # Then the provider p_close site does not arrive on the
         # fetched_loader != NULL edge and the legacy closefn site does not
         # arrive on the fetched_loader == NULL edge, so both witnesses must
-        # refuse.  The guard is derived (b77 moved it and added a second
-        # `test %r12,%r12`), so the control names the *derived* branch.
+        # refuse.  The guard is derived, and *every* selector whose arms can
+        # reach the site is inverted: a must-analysis re-decides the predicate
+        # at each selector on the path, so inverting one that a downstream
+        # selector overrides would not change the site's polarity (b78 added
+        # such an upstream selector).
         s_leg = None
         legacy_addr = _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F8F13, g)[0]
         if _is_indirect_transfer_strict(g, legacy_addr):
@@ -34483,12 +35106,19 @@ def _e7core_self_test():
         guard_ev, guard_why = _store_loader_polarity(
             g, s_st["func"], s_st["addr"], False)
         if s_leg is not None and guard_ev is not None:
-            sel = guard_ev["selectors"][0]
-            flip = ("jne" if sel["branch_text"].startswith("je") else "je")
-            bx = _Proxy(g, insns=mutate_insns(
-                s_st, int(sel["branch"], 16),
-                sel["branch_text"].replace(
-                    sel["branch_text"].split()[0], flip, 1)))
+            sels = _polarity_selectors_for_site(
+                g, s_st["func"], s_st["addr"], guard_ev)
+            chk("e7store guard selectors present", bool(sels), True)
+            insns = dict(g.precision.insns_by_func)
+            body = list(insns[s_st["func"]])
+            for sel in sels:
+                a = int(sel["branch"], 16)
+                text = next(t for aa, t in body if aa == a)
+                flip = "jne" if text.strip().startswith("je") else "je"
+                new = text.replace(text.strip().split()[0], flip, 1)
+                body = [(aa, new if aa == a else tt) for aa, tt in body]
+            insns[s_st["func"]] = body
+            bx = _Proxy(g, insns=insns)
             got = store_loader_provider_witness(bx, dict(s_st),
                                                 bx.funcs[s_st["func"]])
             chk("e7store guard mutation refusal",
@@ -39529,6 +40159,10 @@ def self_test() -> int:
     _e7abi_failures, _e7abi_line = _e7abi_self_test()
     failures.extend(_e7abi_failures)
     print(f"[consumer-closure] {_e7abi_line}")
+
+    _cm_failures, _cm_line = _conf_default_method_self_test()
+    failures.extend(_cm_failures)
+    print(f"[consumer-closure] {_cm_line}")
 
     _e7repin_failures, _e7repin_line = _e7repin_self_test()
     failures.extend(_e7repin_failures)
