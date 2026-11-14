@@ -430,7 +430,8 @@ pub(crate) unsafe extern "C" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut 
 
     // `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, NULL)`: base thread handling must exist
     // before this object does.
-    crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null());
+    // SAFETY: NULL settings, so the initialiser reads no caller memory.
+    unsafe { crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null()) };
 
     // SAFETY: `RANDOM_PROVIDER_FIPS_NAME` is a NUL-terminated literal and the answer is this
     // call's own fresh block or NULL.

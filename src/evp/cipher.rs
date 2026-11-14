@@ -1947,7 +1947,8 @@ unsafe extern "C" fn do_all_cipher_fn(nm: *const ObjName, arg: *mut c_void) {
 unsafe fn cipher_names_do_all(fn_: Option<CipherDoAllFn>, arg: *mut c_void, sorted: bool) {
     // SAFETY: `arg` is the caller's own and is passed through unchanged.
     let mut dc = DoAllCipher { arg, fn_ };
-    OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS, ptr::null());
+    // SAFETY: NULL settings, so the initialiser reads no caller memory.
+    unsafe { OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS, ptr::null()) };
     if sorted {
         // SAFETY: `dc` is this frame's own live object and `do_all_cipher_fn` is the visitor the
         // table's contract asks for.

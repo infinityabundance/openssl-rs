@@ -57,7 +57,9 @@ pub unsafe extern "C" fn OPENSSL_init_ssl(
         if opts & OPENSSL_INIT_NO_LOAD_CONFIG == 0 {
             opts |= OPENSSL_INIT_LOAD_CONFIG;
         }
-        if OPENSSL_init_crypto(opts, settings) == 0 {
+        // SAFETY: `settings` is NULL or a live `OPENSSL_INIT_SETTINGS` for the duration of
+        // this call per this function's own contract.
+        if unsafe { OPENSSL_init_crypto(opts, settings) } == 0 {
             return 0;
         }
         // `RUN_ONCE(&ssl_base, ossl_init_ssl_base)` (`ssl_init.c:73`); the step cannot fail here.

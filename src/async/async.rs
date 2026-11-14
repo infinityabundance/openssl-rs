@@ -432,8 +432,9 @@ pub unsafe extern "C" fn ASYNC_start_job(
     size: usize,
 ) -> c_int {
     guard_ffi(ASYNC_ERR, || {
-        // SAFETY: NULL settings, as the authority passes.
-        if OPENSSL_init_crypto(OPENSSL_INIT_ASYNC, ptr::null()) == 0 {
+        // SAFETY: NULL settings, as the authority passes; the initialiser reads no caller
+        // memory and `opts` carries no pointer.
+        if unsafe { OPENSSL_init_crypto(OPENSSL_INIT_ASYNC, ptr::null()) } == 0 {
             return ASYNC_ERR;
         }
         // SAFETY: no preconditions.
@@ -647,8 +648,9 @@ pub unsafe extern "C" fn ASYNC_init_thread(max_size: usize, init_size: usize) ->
             unsafe { raise_site(&err_sites::ASYNC_351) };
             return 0;
         }
-        // SAFETY: NULL settings, as the authority passes.
-        if OPENSSL_init_crypto(OPENSSL_INIT_ASYNC, ptr::null()) == 0 {
+        // SAFETY: NULL settings, as the authority passes; the initialiser reads no caller
+        // memory and `opts` carries no pointer.
+        if unsafe { OPENSSL_init_crypto(OPENSSL_INIT_ASYNC, ptr::null()) } == 0 {
             return 0;
         }
         // SAFETY: the handler is a valid `extern "C"` function of the required shape.
@@ -772,8 +774,9 @@ extern "C" fn async_delete_thread_state(_arg: *mut c_void) {
 #[no_mangle]
 pub unsafe extern "C" fn ASYNC_cleanup_thread() {
     guard_ffi((), || {
-        // SAFETY: NULL settings, as the authority passes.
-        if OPENSSL_init_crypto(OPENSSL_INIT_ASYNC, ptr::null()) == 0 {
+        // SAFETY: NULL settings, as the authority passes; the initialiser reads no caller
+        // memory and `opts` carries no pointer.
+        if unsafe { OPENSSL_init_crypto(OPENSSL_INIT_ASYNC, ptr::null()) } == 0 {
             return;
         }
         async_delete_thread_state(null_mut());
@@ -787,8 +790,9 @@ pub unsafe extern "C" fn ASYNC_cleanup_thread() {
 #[no_mangle]
 pub unsafe extern "C" fn ASYNC_get_current_job() -> *mut AsyncJob {
     guard_ffi(null_mut(), || {
-        // SAFETY: NULL settings, as the authority passes.
-        if OPENSSL_init_crypto(OPENSSL_INIT_ASYNC, ptr::null()) == 0 {
+        // SAFETY: NULL settings, as the authority passes; the initialiser reads no caller
+        // memory and `opts` carries no pointer.
+        if unsafe { OPENSSL_init_crypto(OPENSSL_INIT_ASYNC, ptr::null()) } == 0 {
             return null_mut();
         }
         // SAFETY: no preconditions.
@@ -820,8 +824,9 @@ pub unsafe extern "C" fn ASYNC_get_wait_ctx(job: *mut AsyncJob) -> *mut AsyncWai
 #[no_mangle]
 pub unsafe extern "C" fn ASYNC_block_pause() {
     guard_ffi((), || {
-        // SAFETY: NULL settings, as the authority passes.
-        if OPENSSL_init_crypto(OPENSSL_INIT_ASYNC, ptr::null()) == 0 {
+        // SAFETY: NULL settings, as the authority passes; the initialiser reads no caller
+        // memory and `opts` carries no pointer.
+        if unsafe { OPENSSL_init_crypto(OPENSSL_INIT_ASYNC, ptr::null()) } == 0 {
             return;
         }
         // SAFETY: no preconditions.
@@ -845,8 +850,9 @@ pub unsafe extern "C" fn ASYNC_block_pause() {
 #[no_mangle]
 pub unsafe extern "C" fn ASYNC_unblock_pause() {
     guard_ffi((), || {
-        // SAFETY: NULL settings, as the authority passes.
-        if OPENSSL_init_crypto(OPENSSL_INIT_ASYNC, ptr::null()) == 0 {
+        // SAFETY: NULL settings, as the authority passes; the initialiser reads no caller
+        // memory and `opts` carries no pointer.
+        if unsafe { OPENSSL_init_crypto(OPENSSL_INIT_ASYNC, ptr::null()) } == 0 {
             return;
         }
         // SAFETY: no preconditions.

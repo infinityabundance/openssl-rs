@@ -249,7 +249,8 @@ pub(crate) unsafe fn evp_get_cipherbyname_ex(
 ) -> *const EvpCipher {
     // The answer is ignored at the two call sites in `names.c`; the only thing it can report is a
     // refused initialisation option, which stops the lookup before it starts.
-    if OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS, ptr::null()) == 0 {
+    // SAFETY: NULL settings, so the initialiser reads no caller memory.
+    if unsafe { OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS, ptr::null()) } == 0 {
         return ptr::null();
     }
 
@@ -312,7 +313,8 @@ pub(crate) unsafe fn evp_get_digestbyname_ex(
     libctx: *mut c_void,
     name: *const c_char,
 ) -> *const EvpMd {
-    if OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_DIGESTS, ptr::null()) == 0 {
+    // SAFETY: NULL settings, so the initialiser reads no caller memory.
+    if unsafe { OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_DIGESTS, ptr::null()) } == 0 {
         return ptr::null();
     }
 

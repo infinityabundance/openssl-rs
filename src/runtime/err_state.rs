@@ -323,7 +323,9 @@ pub unsafe extern "C" fn OSSL_ERR_STATE_restore(es: *const ErrState) {
             thread_es.install_debug(top, plan.line, plan.debug);
 
             if let Some((copy, size, flags)) = plan.data {
-                thread_es.set_data(top, copy.into_raw(), size, flags);
+                // SAFETY: `copy` is the fresh seam block the save path just made, and this
+                // call transfers its single ownership to the restored slot.
+                unsafe { thread_es.set_data(top, copy.into_raw(), size, flags) };
             }
         }
     });

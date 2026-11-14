@@ -496,7 +496,8 @@ pub unsafe extern "C" fn PKCS7_verify(
         unsafe { raise_site(&err_sites::PKCS7_SMIME_229) };
         return 0;
     }
-    if !pkcs7_type_is_signed(p7) {
+    // SAFETY: `p7` is live per the caller's contract.
+    if !unsafe { pkcs7_type_is_signed(p7) } {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::PKCS7_SMIME_234) };
         return 0;
@@ -766,7 +767,8 @@ pub unsafe extern "C" fn PKCS7_get0_signers(
         unsafe { raise_site(&err_sites::PKCS7_SMIME_377) };
         return ptr::null_mut();
     }
-    if !pkcs7_type_is_signed(p7) {
+    // SAFETY: `p7` is live per the caller's contract.
+    if !unsafe { pkcs7_type_is_signed(p7) } {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::PKCS7_SMIME_382) };
         return ptr::null_mut();
@@ -922,7 +924,11 @@ pub unsafe extern "C" fn PKCS7_decrypt(
         unsafe { raise_site(&err_sites::PKCS7_SMIME_482) };
         return 0;
     }
-    if !pkcs7_type_is_enveloped(p7) && !pkcs7_type_is_signed_and_enveloped(p7) {
+    // SAFETY: `p7` is live per the caller's contract.
+    let enveloped = unsafe { pkcs7_type_is_enveloped(p7) };
+    // SAFETY: `p7` is live per the caller's contract.
+    let signed_and_enveloped = unsafe { pkcs7_type_is_signed_and_enveloped(p7) };
+    if !enveloped && !signed_and_enveloped {
         // SAFETY: a compile-time-constant site.
         unsafe { raise_site(&err_sites::PKCS7_SMIME_488) };
         return 0;

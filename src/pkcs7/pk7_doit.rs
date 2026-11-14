@@ -215,7 +215,8 @@ pub unsafe extern "C" fn PKCS7_type_is_other(p7: *mut Pkcs7) -> c_int {
 /// `p7` is live; a non-null answer borrows the content.
 #[no_mangle]
 pub unsafe extern "C" fn PKCS7_get_octet_string(p7: *mut Pkcs7) -> *mut Asn1String {
-    if pkcs7_type_is_data(p7) {
+    // SAFETY: `p7` is live per the caller's contract.
+    if unsafe { pkcs7_type_is_data(p7) } {
         // SAFETY: `p7` is a live data structure.
         return unsafe { (*p7).d.data };
     }
@@ -930,7 +931,7 @@ pub unsafe extern "C" fn PKCS7_dataInit(p7: *mut Pkcs7, bio: *mut Bio) -> *mut B
 
     if bio.is_null() {
         // SAFETY: `p7` is live.
-        if pkcs7_is_detached(p7) {
+        if unsafe { pkcs7_is_detached(p7) } {
             // SAFETY: `BIO_new` has no preconditions; the fresh sink is this frame's.
             tail = Some(unsafe { OwnedChain::adopt(BIO_new(BIO_s_null())) });
         } else if !os.is_null()
@@ -1779,7 +1780,8 @@ pub unsafe extern "C" fn PKCS7_dataFinal(p7: *mut Pkcs7, bio: *mut Bio) -> c_int
         }
     }
 
-    if !pkcs7_is_detached(p7) {
+    // SAFETY: `p7` is live.
+    if !unsafe { pkcs7_is_detached(p7) } {
         if os.is_null() {
             // SAFETY: `ctx_tmp` is live and owned here.
             unsafe { EVP_MD_CTX_free(ctx_tmp) };
@@ -1927,10 +1929,14 @@ pub unsafe extern "C" fn PKCS7_dataVerify(
         unsafe { raise_site(&err_sites::PKCS7_DOIT_1020) };
         return 0;
     }
-    let (untrusted, crls) = if pkcs7_type_is_signed(p7) {
+    // SAFETY: `p7` is live.
+    let signed = unsafe { pkcs7_type_is_signed(p7) };
+    // SAFETY: `p7` is live.
+    let signed_and_enveloped = unsafe { pkcs7_type_is_signed_and_enveloped(p7) };
+    let (untrusted, crls) = if signed {
         // SAFETY: `p7` is a live signed structure.
         unsafe { ((*(*p7).d.sign).cert, (*(*p7).d.sign).crl) }
-    } else if pkcs7_type_is_signed_and_enveloped(p7) {
+    } else if signed_and_enveloped {
         // SAFETY: `p7` is a live signed-and-enveloped structure.
         unsafe {
             (
@@ -1992,7 +1998,11 @@ pub unsafe extern "C" fn PKCS7_signatureVerify(
         unsafe { raise_site(&err_sites::PKCS7_DOIT_1083) };
         return 0;
     }
-    if !pkcs7_type_is_signed(p7) && !pkcs7_type_is_signed_and_enveloped(p7) {
+    // SAFETY: `p7` is live.
+    let signed = unsafe { pkcs7_type_is_signed(p7) };
+    // SAFETY: `p7` is live.
+    let signed_and_enveloped = unsafe { pkcs7_type_is_signed_and_enveloped(p7) };
+    if !signed && !signed_and_enveloped {
         // SAFETY: a compile-time-constant site.
         unsafe {
             raise_site(&err_sites::PKCS7_DOIT_1088);

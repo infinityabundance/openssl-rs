@@ -218,13 +218,15 @@ pub(crate) unsafe fn finalize<C: Md32>(md: *mut u8, c: *mut C) -> c_int {
     // SAFETY: the length field is the last eight bytes of the block.
     let q = unsafe { p.add(MD32_CBLOCK - 8) };
     if C::LITTLE_ENDIAN {
-        store_word(q, nl, true);
         // SAFETY: `q` is valid for eight bytes.
-        store_word(unsafe { q.add(4) }, nh, true);
+        unsafe { store_word(q, nl, true) };
+        // SAFETY: `q` is valid for eight bytes.
+        unsafe { store_word(q.add(4), nh, true) };
     } else {
-        store_word(q, nh, false);
+        // SAFETY: `q` is valid for eight bytes.
+        unsafe { store_word(q, nh, false) };
         // SAFETY: as above.
-        store_word(unsafe { q.add(4) }, nl, false);
+        unsafe { store_word(q.add(4), nl, false) };
     }
 
     // SAFETY: `p` is the start of the staging buffer here (`n` was reset if it advanced) and
@@ -246,7 +248,10 @@ pub(crate) unsafe fn finalize<C: Md32>(md: *mut u8, c: *mut C) -> c_int {
 /// of the two calls* in `HASH_FINAL` differs with them, so the pair together is "the 64-bit
 /// bit length, big-endian for a big-endian construction and little-endian for a
 /// little-endian one" — which is what MD5's and SHA-1's padding are.
-pub(crate) fn store_word(c: *mut u8, l: u32, little_endian: bool) {
+///
+/// # Safety
+/// `c` must point to four writable bytes, valid for the duration of the call.
+pub(crate) unsafe fn store_word(c: *mut u8, l: u32, little_endian: bool) {
     let bytes = if little_endian {
         l.to_le_bytes()
     } else {
@@ -269,5 +274,18 @@ pub(crate) unsafe fn load_word(c: *const u8, little_endian: bool) -> u32 {
         u32::from_le_bytes(buf)
     } else {
         u32::from_be_bytes(buf)
+    }
+}
+
+#[cfg(test)]
+mod unsafe_contract_controls {
+    /// Qualifier control: `store_word` writes four bytes through the caller's
+    /// pointer, so it must not be callable from safe Rust with an unchecked
+    /// pointer. A type-level "is an unsafe fn" assertion is not expressible on
+    /// stable Rust, so the declaration is pinned in the source text.
+    #[test]
+    fn store_word_is_an_unsafe_fn() {
+        let src = include_str!("md32.rs");
+        assert!(src.contains("pub(crate) unsafe fn store_word("));
     }
 }
