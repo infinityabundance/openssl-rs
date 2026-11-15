@@ -234,7 +234,7 @@
       },
       "reconciliation": "146 = 115 ACCEPT + 26 REJECT(stale kind) + 5 b78-reviewed; 122 closure = 117 outside-openssh-v1l (115 ACCEPT + 2 stale) + 5 openssh-v1l; 24 orphans present in source but outside the current upper bound."
      },
-     "mechanism_verdict": null
+     "mechanism_verdict": "NOT_ESTABLISHED (69 external safe pub fns audited clean; three crate-internal safe fns block criterion 3)"
     },
     "source_drift": {
      "rows": 122,
@@ -336,11 +336,29 @@
       "src/x509/v3_usernotice.rs::OSSL_USER_NOTICE_SYNTAX_new:140"
      ],
      "safe_pub_with_raw_pointer_param_reaching_unsafe": 0,
-     "answer": "not excluded: a safe caller cannot reach an obligation without an unsafe block (the obligations are pub unsafe extern \"C\" fns), and the exported v2i/i2v family's guard is established by test and by authority differential; but the 69 external safe pub fns that reach unsafe code are not individually discharged, so criterion 3 is not established mechanism-wide."
+     "answer": "review8 audited all 69 external safe pub fns at S and found 0 criterion-3 holes (each is a zero-argument constructor over a crate-owned static item or a fresh Sct zalloc); criterion 3 nevertheless fails at three crate-internal safe fns named in the residual, and no Miri/ASan ran at S.",
+     "safe_pub_external_audited_at_review8": 69,
+     "safe_pub_external_criterion3_holes": 0,
+     "crate_internal_safe_fns_reaching_unsafe": 78,
+     "crate_internal_safe_fns_with_raw_pointer_param": 10,
+     "crate_internal_criterion3_holes": [
+      "src/x509/v3_info.rs::i2v_ainfo_err:401",
+      "src/x509/v3_info.rs::v2i_ainfo_err:556",
+      "src/x509/v3_ncons.rs::nc_email_eai:1011"
+     ],
+     "raw_pointer_count_note": "the older 'inside_the_seven_mechanisms_files: 0' figure filtered vis == pub; 0 holds for pub, but 10 crate-internal safe fns take raw-pointer parameters (4 function-pointer type casts, 2 test-only probes, 1 body that ignores its pointers, 3 real holes)",
+     "evidence": {
+      "path": "evidence/b81-review-x509-surface.json",
+      "sha256": "d582e7cf25b2096517155fa181bd1f728bf8104472fb6bd91a74631aa0008ac3"
+     }
     },
-    "argument": "122/122 DISCHARGED at the tool's site level: 119 rows carry a fn-level contract, 1 a contracted-operation record, and the 2 no-contract rows are the stale-kind admission rows (i2s_poison, s2i_poison), which are no longer source unsafe operations and are therefore discharged as uncontracted; the review's required re-admission as EXTERN_C_FN_DEF is a ledger-kind correction, not a safety gap. The review's cumulative tally accounts for every closure row at its own S (122 = 115 ACCEPT + 2 stale-kind + 5 openssh-v1l read at b78). All 10 rows that live in src/x509/v3_san.rs (the only X509 file changed since the review tree) are re-established at S: 7 are byte-identical (10 of 10 drifted rows established, 0 not), the 2 guard-added builders (v2i_issuer_alt, v2i_subject_alt) were re-read and ACCEPTed by the b81 rebind, and v2i_GENERAL_NAME_ex was re-read by the b81 rebind after its citation-only change. The guards were measured against the pinned authority in this session: all three NULL-`name` shapes exit 139 at the authority, all three are refused with X509V3_R_MISSING_VALUE (reason 124, lib 34) by the candidate, and the valid and NULL-`value` shapes agree. The in-file controls pass, and each SIGSEGVs on a test-only guard-removed mutant.",
-    "residual": "the review explicitly declines mechanism-wide discharge ('these are review verdicts, not SAFETY_DISCHARGED claims') and its caller analysis does not cover indirect dispatch. 69 external safe pub fns in the mechanism files reach unsafe; none takes a raw pointer, but none has a per-function review establishing that its own inputs satisfy the unsafe callee's preconditions. No Miri/ASan at S, and 24 orphan rows recorded outside the current upper bound remain unresolved by the review.",
-    "verdict": "NOT_ESTABLISHED"
+    "argument": "122/122 DISCHARGED at the tool's site level: 119 rows carry a fn-level contract, 1 a contracted-operation record, and the 2 no-contract rows are the stale-kind admission rows (i2s_poison, s2i_poison), which are no longer source unsafe operations and are therefore discharged as uncontracted; the review's required re-admission as EXTERN_C_FN_DEF is a ledger-kind correction, not a safety gap. The review's cumulative tally accounts for every closure row at its own S (122 = 115 ACCEPT + 2 stale-kind + 5 openssh-v1l read at b78). All 10 rows that live in src/x509/v3_san.rs (the only X509 file changed since the review tree) are re-established at S: 7 are byte-identical (10 of 10 drifted rows established, 0 not), the 2 guard-added builders (v2i_issuer_alt, v2i_subject_alt) were re-read and ACCEPTed by the b81 rebind, and v2i_GENERAL_NAME_ex was re-read by the b81 rebind after its citation-only change. The guards were measured against the pinned authority in this session: all three NULL-`name` shapes exit 139 at the authority, all three are refused with X509V3_R_MISSING_VALUE (reason 124, lib 34) by the candidate, and the valid and NULL-`value` shapes agree. The in-file controls pass, and each SIGSEGVs on a test-only guard-removed mutant. Review8 audits all 69 external safe pub fns individually: each is a zero-argument constructor whose only unsafe act is ASN1_item_new on a crate-owned static item (68) or a fresh Sct zalloc (1), so no safe caller can supply memory, assume exclusivity, or reach an unchecked precondition; 0 of the 69 is a criterion-3 hole. The same pass found three crate-internal safe fns that are holes (below).",
+    "residual": "The 69-function blocker is retired: every one is a zero-argument constructor and 0 is a criterion-3 hole. Three crate-internal safe fns remain genuine criterion-3 holes at S: src/x509/v3_info.rs:401 i2v_ainfo_err and :556 v2i_ainfo_err (safe fns that pop-free a caller-supplied raw stack) and src/x509/v3_ncons.rs:1011 nc_email_eai (safe fn that dereferences a caller-supplied *mut Asn1Type). Each needs `unsafe fn` + # Safety (or an owning-handle signature); none was edited. Also retained: no Miri/ASan at S; 24 orphan rows are stale-kind bookkeeping for six extension-table files outside the upper bound (the six i2s_* CRYPTO_strdup ops are sound static-literal duplicates); 2 poison rows are inventory-uncontracted but carry source # Safety prose; cross-cutting panic/secret obligations are open. The previously recorded F1 (v2i_GENERAL_NAME_ex NULL name) is repaired at S by 32fedf5d and is not a blocker.",
+    "verdict": "NOT_ESTABLISHED",
+    "residual_evidence": {
+     "path": "evidence/b81-review-x509-surface.json",
+     "sha256": "d582e7cf25b2096517155fa181bd1f728bf8104472fb6bd91a74631aa0008ac3"
+    }
    },
    {
     "id": "RAND_CMS_STORE_KEYFMT",
@@ -485,7 +503,7 @@
     "id": "C_ABI_CONTRACT",
     "obligations": 5,
     "files": 5,
-    "ownership_state": "UNSAFE_OPEN",
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
     "contract_forms": {
      "fn_level_or_attached_safety": 0,
      "operation_level_safety_only": 0,
@@ -533,11 +551,29 @@
       "src/runtime/confmod/mod.rs::OPENSSL_load_builtin_modules:1526"
      ],
      "safe_pub_with_raw_pointer_param_reaching_unsafe": 0,
-     "answer": "not excluded: 5 safe pub fns reach unsafe C-ABI machinery and the free hooks themselves are UNSAFE_OPEN mechanism-wide, so criterion 3 is not established for the mechanism."
+     "answer": "not excluded: 5 safe pub fns reach unsafe C-ABI machinery; none takes a raw pointer. The mechanism is not discharged: the former UNSAFE_OPEN label was a stale bookkeeping state, and criterion 3 still rests on the B56-R3 pending-caller precondition and the F-EVID residuals."
     },
-    "argument": "5/5 DISCHARGED at the tool's site level, all recorded as contracted-operation records (not discharges); rest-final reviewed 5/5 ACCEPT and the b78 criterion-1 rejects (module_free_thunk, ui_free_method_data) now carry fn-level # Safety. No file of this mechanism changed between the review tree and S. 5 external safe pub fns reach unsafe (ENGINE_get_first, ENGINE_get_last, CONF_modules_finish, CONF_modules_unload, OPENSSL_load_builtin_modules); none takes a raw pointer.",
-    "residual": "mechanism_state is UNSAFE_OPEN and the review says the repairs 'do not change the mechanism classification'. Evidence residuals F-EVID-1 (stale B56 row for engine_list_cleanup) and F-EVID-2 (v1l F09 repaired in source; the bound receipt still rejects the site) remain recorded.",
-    "verdict": "NOT_ESTABLISHED"
+    "argument": "5/5 DISCHARGED at the tool's site level, all recorded as contracted-operation records (not discharges); rest-final reviewed 5/5 ACCEPT and the b78 criterion-1 rejects (module_free_thunk, ui_free_method_data) now carry fn-level # Safety. No file of this mechanism changed between the review tree and S. 5 external safe pub fns reach unsafe (ENGINE_get_first, ENGINE_get_last, CONF_modules_finish, CONF_modules_unload, OPENSSL_load_builtin_modules); none takes a raw pointer. Review8: the UNSAFE_OPEN label is a mechanism-level bookkeeping/scope state stamped from the superseded state.json, not a per-site defect verdict; owner types and Drop exist in eng_dyn/confmod/ui_util and B56 records the ownership work. Ownership axis repaired to OWNERSHIP_RECONSTRUCTED; the criterion-3 verdict remains NOT_ESTABLISHED.",
+    "residual": "mechanism_state was UNSAFE_OPEN, a bookkeeping/scope state that per-site discharges cannot change; it is repaired to OWNERSHIP_RECONSTRUCTED on the ownership axis. Criterion 3 stays NOT_ESTABLISHED: B56-R3 (medium, STATED-PENDING-CALLER) leaves engine_list_cleanup discharged with no in-candidate caller and its engine-lock precondition owed by the landing caller; F-EVID-1 (stale B56 row for engine_list_cleanup) and F-EVID-2 (v1l F09 repaired in source, the bound receipt still rejects the site) remain; only the 5 consumer-closure operations are accounted; no TSan/Loom/Miri reentrancy run at S.",
+    "verdict": "NOT_ESTABLISHED",
+    "ownership_state_basis": "the closure carried state.json#/mechanisms[id=C_ABI_CONTRACT] = UNSAFE_OPEN, but state.json is superseded and the label was never recomputed at S; owner types and Drop exist in src/engine/eng_dyn.rs, src/runtime/confmod/mod.rs and src/ui/ui_util.rs, and boundary-sweep-B56 records ownership work. UNSAFE_OPEN is a mechanism-level scope/bookkeeping state ('no ownership work on the raw boundary', CLOSURE.md section 2), not a per-site defect verdict, and per-site discharges cannot change it.",
+    "mechanism_state_determination": {
+     "classification": "bookkeeping/scope state (not a real open defect at the five discharged sites)",
+     "asserts": "CLOSURE.md section 2: UNSAFE_OPEN = no ownership work on the mechanism's raw boundary on this branch; boundary open",
+     "set_by": [
+      "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B56.json (non_claims: 'none of the four mechanisms is discharged mechanism-wide')",
+      "state.json#/mechanisms[id=C_ABI_CONTRACT] (superseded: true)"
+     ],
+     "recommended_verdict_ownership_axis": "OWNERSHIP_RECONSTRUCTED",
+     "recommended_verdict_criterion3": "NOT_ESTABLISHED",
+     "residual": "B56-R3 (medium, STATED-PENDING-CALLER): engine_list_cleanup is discharged with no in-candidate caller and its engine-lock precondition is owed by the landing caller; F-EVID-1 (stale B56 row for engine_list_cleanup) and F-EVID-2 (v1l F09 repaired in source, the bound receipt still rejects it) remain; only the 5 consumer-closure operations are accounted; no TSan/Loom/Miri reentrancy run at S.",
+     "evidence": [
+      "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B56.json",
+      "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+      "evidence/b81-review-x509-surface.json"
+     ],
+     "evidence_sha256": "d582e7cf25b2096517155fa181bd1f728bf8104472fb6bd91a74631aa0008ac3"
+    }
    },
    {
     "id": "RUNTIME_CONCURRENCY",
@@ -600,7 +636,7 @@
     "id": "BIO",
     "obligations": 2,
     "files": 1,
-    "ownership_state": "UNSAFE_OPEN",
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
     "contract_forms": {
      "fn_level_or_attached_safety": 0,
      "operation_level_safety_only": 0,
@@ -643,11 +679,29 @@
       "src/runtime/bio/bf_readbuff.rs::BIO_f_readbuffer:63"
      ],
      "safe_pub_with_raw_pointer_param_reaching_unsafe": 0,
-     "answer": "for the two empty-body sites a safe caller cannot violate a precondition (there is none), but the mechanism-wide verdict stays NOT_ESTABLISHED because its other operations are out of the closure and unread."
+     "answer": "for the two empty-body sites a safe caller cannot violate a precondition (there is none), but the mechanism-wide verdict stays NOT_ESTABLISHED because its other operations are out of the closure and unread. The UNSAFE_OPEN label was a stale bookkeeping state, now repaired to OWNERSHIP_RECONSTRUCTED on the ownership axis."
     },
-    "argument": "2/2 DISCHARGED at the tool's site level; both rows carry no # Safety and the mechanism state is UNSAFE_OPEN. rest-final reviewed 2/2 ACCEPT: readbuffer_write (bf_readbuff.rs:231) and readbuffer_puts (:237) ignore every argument, dereference nothing, touch no state and return 0, so every argument value yields 0 without UB (same as the 3.6.4 authority body). BIO_f_readbuffer is a safe extern \"C\" fn with no parameters. No file of this mechanism changed between the review tree and S.",
-    "residual": "mechanism_state is UNSAFE_OPEN and only 2 of the mechanism's production operations are in the closure, so the site argument is not a mechanism-wide discharge; the review says the same. 1 external safe pub fn reaches unsafe.",
-    "verdict": "NOT_ESTABLISHED"
+    "argument": "2/2 DISCHARGED at the tool's site level; both rows carry no # Safety and the mechanism state is UNSAFE_OPEN. rest-final reviewed 2/2 ACCEPT: readbuffer_write (bf_readbuff.rs:231) and readbuffer_puts (:237) ignore every argument, dereference nothing, touch no state and return 0, so every argument value yields 0 without UB (same as the 3.6.4 authority body). BIO_f_readbuffer is a safe extern \"C\" fn with no parameters. No file of this mechanism changed between the review tree and S. Review8: the UNSAFE_OPEN label is a mechanism-level bookkeeping/scope state (B67 non_claims) and its literal 'no ownership work' definition is falsified by src/runtime/bio/owned.rs; the state is repaired to OWNERSHIP_RECONSTRUCTED on the ownership axis, while the criterion-3 verdict remains NOT_ESTABLISHED.",
+    "residual": "mechanism_state was UNSAFE_OPEN, a bookkeeping/scope state (CLOSURE.md section 2; B67: BIO remains UNSAFE_OPEN mechanism-wide and the rest of the readbuffer filter stays BLOCKED/unclaimed), not a per-site defect and not changeable by per-site discharges; it is repaired to OWNERSHIP_RECONSTRUCTED on the ownership axis. Criterion 3 stays NOT_ESTABLISHED: only 2 of the mechanism's production operations are in the closure, both uncontracted in the inventory (no # Safety) though their bodies are constant 0 with an empty precondition set; readbuffer read/new/free/ctrl/gets/callback_ctrl are unclaimed; 1 external safe pub fn (BIO_f_readbuffer) reaches unsafe; no Miri/ASan at S.",
+    "verdict": "NOT_ESTABLISHED",
+    "ownership_state_basis": "the closure carried state.json#/mechanisms[id=BIO] = UNSAFE_OPEN, but state.json is superseded; src/runtime/bio/owned.rs (OwnedBlock/OwnedBuf/OwnedCtx) is real ownership reconstruction, so the literal 'no ownership work' definition is false at S. UNSAFE_OPEN here is a scope statement over the unread BIO methods, not a defect claim about the two discharged bodies.",
+    "mechanism_state_determination": {
+     "classification": "bookkeeping/scope state (not a real open defect at the two discharged sites)",
+     "asserts": "CLOSURE.md section 2: UNSAFE_OPEN = no ownership work on the mechanism's raw boundary on this branch; boundary open",
+     "set_by": [
+      "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B67.json (adjudicated APPROVE_WITH_CONDITIONS; non_claims: BIO remains UNSAFE_OPEN mechanism-wide; no ownership reconstruction or mechanism-wide discharge is claimed)",
+      "state.json#/mechanisms[id=BIO] (superseded: true)"
+     ],
+     "recommended_verdict_ownership_axis": "OWNERSHIP_RECONSTRUCTED",
+     "recommended_verdict_criterion3": "NOT_ESTABLISHED",
+     "residual": "only 2/2 consumer-closure operations are accounted; both are uncontracted in the inventory (no # Safety) though their bodies are constant 0 with an empty precondition set; readbuffer read/new/free/ctrl/gets/callback_ctrl remain BLOCKED and unclaimed per B67; BIO_f_readbuffer is a safe extern \"C\" fn with no parameters; no Miri/ASan at S.",
+     "evidence": [
+      "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B67.json",
+      "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+      "evidence/b81-review-x509-surface.json"
+     ],
+     "evidence_sha256": "d582e7cf25b2096517155fa181bd1f728bf8104472fb6bd91a74631aa0008ac3"
+    }
    }
   ]
  },
@@ -728,7 +782,19 @@
      "safe_fns_reaching_unsafe": 147,
      "safe_pub_external_reaching_unsafe": 69,
      "external_entry_points": 6,
-     "verdict": "NOT_ESTABLISHED"
+     "verdict": "NOT_ESTABLISHED (69 audited clean; 3 internal safe holes)",
+     "safe_pub_external_audited": 69,
+     "safe_pub_external_criterion3_holes": 0,
+     "crate_internal_safe_reaching_unsafe": 78,
+     "crate_internal_criterion3_holes": [
+      "src/x509/v3_info.rs::i2v_ainfo_err:401",
+      "src/x509/v3_info.rs::v2i_ainfo_err:556",
+      "src/x509/v3_ncons.rs::nc_email_eai:1011"
+     ],
+     "evidence": {
+      "path": "evidence/b81-review-x509-surface.json",
+      "sha256": "d582e7cf25b2096517155fa181bd1f728bf8104472fb6bd91a74631aa0008ac3"
+     }
     },
     {
      "mechanism": "RAND_CMS_STORE_KEYFMT",
@@ -752,7 +818,12 @@
      "safe_fns_reaching_unsafe": 35,
      "safe_pub_external_reaching_unsafe": 5,
      "external_entry_points": 0,
-     "verdict": "NOT_ESTABLISHED"
+     "verdict": "NOT_ESTABLISHED",
+     "mechanism_state_determination": "UNSAFE_OPEN is a bookkeeping/scope state; ownership axis repaired to OWNERSHIP_RECONSTRUCTED, criterion-3 verdict NOT_ESTABLISHED",
+     "evidence": {
+      "path": "evidence/b81-review-x509-surface.json",
+      "sha256": "d582e7cf25b2096517155fa181bd1f728bf8104472fb6bd91a74631aa0008ac3"
+     }
     },
     {
      "mechanism": "RUNTIME_CONCURRENCY",
@@ -768,7 +839,12 @@
      "safe_fns_reaching_unsafe": 2,
      "safe_pub_external_reaching_unsafe": 1,
      "external_entry_points": 5,
-     "verdict": "NOT_ESTABLISHED"
+     "verdict": "NOT_ESTABLISHED",
+     "mechanism_state_determination": "UNSAFE_OPEN is a bookkeeping/scope state; ownership axis repaired to OWNERSHIP_RECONSTRUCTED, criterion-3 verdict NOT_ESTABLISHED",
+     "evidence": {
+      "path": "evidence/b81-review-x509-surface.json",
+      "sha256": "d582e7cf25b2096517155fa181bd1f728bf8104472fb6bd91a74631aa0008ac3"
+     }
     }
    ],
    "review_cohort_covers_the_safe_surface_only_through_the_reviews": "the reviews read unsafe declarations and their callers; the safe pub fns that reach unsafe in the mechanism files are not themselves the subject of a per-function review, so criterion 3 for the safe surface rests on the reviews' caller analysis, not on a dedicated safe-interface audit."
@@ -816,9 +892,9 @@
    "X509_VERIFY_POLICY": "OWNERSHIP_RECONSTRUCTED",
    "RAND_CMS_STORE_KEYFMT": "OWNERSHIP_RECONSTRUCTED",
    "SSL_SESSION": "OWNERSHIP_RECONSTRUCTED",
-   "C_ABI_CONTRACT": "UNSAFE_OPEN",
+   "C_ABI_CONTRACT": "OWNERSHIP_RECONSTRUCTED",
    "RUNTIME_CONCURRENCY": "OWNERSHIP_RECONSTRUCTED",
-   "BIO": "UNSAFE_OPEN"
+   "BIO": "OWNERSHIP_RECONSTRUCTED"
   },
   "totals": {
    "SAFETY_DISCHARGED": 2,
@@ -826,7 +902,17 @@
    "NOT_ESTABLISHED": 5,
    "mechanisms": 7
   },
-  "statement": "At b81 the criterion-3 argument establishes two mechanisms under an explicitly scoped claim: SSL_SESSION (the rest-final scoped discharge, unchanged by this candidate) and RUNTIME_CONCURRENCY, which is now backed by a clean ThreadSanitizer run (54 tests, two schedules, 0 races, 0 use-after-free, both canaries fired) and is discharged only for the executed schedules -- the caller's exclusive-ownership precondition remains R1. The SAN builders are re-established at S and measured against the authority, which closes the b80 X509 drift gap, but X509_VERIFY_POLICY remains NOT_ESTABLISHED because the review declines mechanism-wide discharge and 69 external safe pub fns in its files reach unsafe without a per-function audit. RAND_CMS_STORE_KEYFMT, EVP_PKEY_PROVIDER, C_ABI_CONTRACT and BIO remain NOT_ESTABLISHED for the named residuals below. Nothing here graduates a consumer family: safe_compatible stays false."
+  "statement": "At b81 the criterion-3 argument establishes two mechanisms under an explicitly scoped claim: SSL_SESSION (the rest-final scoped discharge, unchanged by this candidate) and RUNTIME_CONCURRENCY, which is now backed by a clean ThreadSanitizer run (54 tests, two schedules, 0 races, 0 use-after-free, both canaries fired) and is discharged only for the executed schedules -- the caller's exclusive-ownership precondition remains R1. The SAN builders are re-established at S and measured against the authority, which closes the b80 X509 drift gap, but X509_VERIFY_POLICY remains NOT_ESTABLISHED because the review declines mechanism-wide discharge and, although review8 audited all 69 external safe pub fns clean, three crate-internal safe fns remain criterion-3 holes. RAND_CMS_STORE_KEYFMT, EVP_PKEY_PROVIDER, C_ABI_CONTRACT and BIO remain NOT_ESTABLISHED for the named residuals below. Nothing here graduates a consumer family: safe_compatible stays false. Review8 (source-level, at S) retires the 69-function blocker for X509_VERIFY_POLICY with 0 criterion-3 holes, but finds three crate-internal safe fns that block it: src/x509/v3_info.rs:401 i2v_ainfo_err, :556 v2i_ainfo_err and src/x509/v3_ncons.rs:1011 nc_email_eai. The C_ABI_CONTRACT and BIO UNSAFE_OPEN labels are bookkeeping/scope states stamped from a superseded inventory; they are repaired to OWNERSHIP_RECONSTRUCTED on the ownership axis, and both criterion-3 verdicts stay NOT_ESTABLISHED for the named residuals.",
+  "verdict_basis_b81_review8": {
+   "X509_VERIFY_POLICY": "NOT_ESTABLISHED: 69 safe pub fns audited clean; criterion 3 fails at i2v_ainfo_err, v2i_ainfo_err, nc_email_eai; no Miri/ASan at S",
+   "C_ABI_CONTRACT": "NOT_ESTABLISHED: 5/5 sites scoped-discharged, but B56-R3 pending-caller precondition and F-EVID-1/2 remain; ownership state repaired from stale UNSAFE_OPEN",
+   "BIO": "NOT_ESTABLISHED: 2/2 sites scoped-discharged, both uncontracted empty-body; the rest of the BIO methods are unclaimed/BLOCKED per B67; ownership state repaired from stale UNSAFE_OPEN"
+  },
+  "totals_note": "the three integer fields count the criterion-3 verdicts in per_mechanism; OWNERSHIP_RECONSTRUCTED in ownership_states is a separate axis and is 7/7 after review8 repaired the two stale UNSAFE_OPEN labels.",
+  "ownership_state_totals": {
+   "OWNERSHIP_RECONSTRUCTED": 7,
+   "mechanisms": 7
+  }
  },
  "residuals": [
   {
@@ -835,7 +921,7 @@
   },
   {
    "kind": "criterion3/mechanism",
-   "statement": "X509_VERIFY_POLICY: the review declines mechanism-wide discharge; 69 external safe pub fns reach unsafe with no per-function audit; no Miri/ASan at S; 24 orphan rows remain outside the current upper bound."
+   "statement": "X509_VERIFY_POLICY: the review declines mechanism-wide discharge. The 69 external safe pub fns are audited at S and none is a criterion-3 hole (evidence/b81-review-x509-surface.json), but three crate-internal safe fns are: src/x509/v3_info.rs:401 i2v_ainfo_err and :556 v2i_ainfo_err (safe fns that pop-free a caller-supplied raw stack) and src/x509/v3_ncons.rs:1011 nc_email_eai (safe fn that dereferences a caller-supplied *mut Asn1Type); each needs `unsafe fn` + # Safety or an owning handle. Also: no Miri/ASan at S; 24 orphan rows are stale-kind bookkeeping for six extension-table files outside the upper bound; 2 poison rows are inventory-uncontracted but carry source # Safety prose."
   },
   {
    "kind": "criterion3/mechanism",
@@ -847,7 +933,7 @@
   },
   {
    "kind": "criterion3/mechanism",
-   "statement": "C_ABI_CONTRACT and BIO: UNSAFE_OPEN mechanism-wide; the closure's 5 and 2 sites are site arguments, not mechanism discharge; F-EVID-1/F-EVID-2 remain."
+   "statement": "C_ABI_CONTRACT and BIO: UNSAFE_OPEN is a bookkeeping/scope state (CLOSURE.md section 2; B56 says 'none of the four mechanisms is discharged mechanism-wide'; B67 says BIO stays UNSAFE_OPEN mechanism-wide and the rest of the readbuffer filter is BLOCKED/unclaimed), not a per-site defect and not changeable by per-site discharges. Ownership axis repaired from the superseded state.json labels to OWNERSHIP_RECONSTRUCTED; criterion-3 verdicts stay NOT_ESTABLISHED. C_ABI residual: B56-R3 (engine_list_cleanup's engine-lock precondition owed by the landing caller), F-EVID-1, F-EVID-2. BIO residual: only 2/2 operations accounted, both uncontracted empty-body; readbuffer read/new/free/ctrl/gets/callback_ctrl unclaimed; no Miri/ASan."
   },
   {
    "kind": "criterion3/instrument",
@@ -864,6 +950,10 @@
   {
    "kind": "gate/self-test",
    "statement": "the closure tool's --self-test is FAILED at b81 (two image-property controls: e7repin-search expects a stale row that this image does not have, and the e7core default-context control reports NOT_RUN); it is recorded as FAILED, not as a pass."
+  },
+  {
+   "kind": "criterion3/safe-fn",
+   "statement": "three safe Rust fns in the X509 mechanism files can cause UB from safe callers at S: src/x509/v3_info.rs:401 i2v_ainfo_err, src/x509/v3_info.rs:556 v2i_ainfo_err, src/x509/v3_ncons.rs:1011 nc_email_eai. Recommendations only; no source was edited. Evidence: evidence/b81-review-x509-surface.json sha256 d582e7cf25b2096517155fa181bd1f728bf8104472fb6bd91a74631aa0008ac3"
   }
  ],
  "non_claims": [
@@ -871,6 +961,32 @@
   "a green closure run, a site receipt or a validated contract is not a criterion-3 discharge.",
   "the TSan result is not a proof of race-freedom and does not establish the caller's exclusive-ownership precondition.",
   "the SAN authority differential covers three shapes on three entry points; it is not a full behavioural equivalence claim.",
-  "no cryptographic, timing or constant-time property is claimed."
- ]
+  "no cryptographic, timing or constant-time property is claimed.",
+  "the C_ABI_CONTRACT and BIO ownership-state repair is not a discharge: both criterion-3 verdicts remain NOT_ESTABLISHED.",
+  "the 69-function X509 audit is lexical plus item-descriptor checking; it is not a Miri proof and does not audit the 78 crate-internal safe fns beyond the raw-pointer class."
+ ],
+ "review8": {
+  "generated_utc": "2026-11-15T20:31:33Z",
+  "role": "reviewer subagent; source-level audit, no build/test/sanitizer",
+  "evidence": {
+   "path": "evidence/b81-review-x509-surface.json",
+   "sha256": "d582e7cf25b2096517155fa181bd1f728bf8104472fb6bd91a74631aa0008ac3"
+  },
+  "candidate": "S = 32fedf5d32a2 (tag b81); HEAD 2ee194228; src at HEAD is byte-identical to S",
+  "outcomes": {
+   "x509_safe_pub_surface": {
+    "audited": 69,
+    "criterion3_holes": 0,
+    "note": "68 zero-argument X_new constructors (ASN1_item_new on a crate-owned static item; descriptors checked consistent) and SCT_new (one zalloc plus two integer writes). None dereferences caller memory, assumes exclusivity, or takes a raw pointer."
+   },
+   "x509_crate_internal_safe_fns_reaching_unsafe": 78,
+   "x509_internal_rawptr_safe_fns": 10,
+   "x509_criterion3_holes": [
+    "src/x509/v3_info.rs::i2v_ainfo_err:401",
+    "src/x509/v3_info.rs::v2i_ainfo_err:556",
+    "src/x509/v3_ncons.rs::nc_email_eai:1011"
+   ],
+   "c_abi_bio_mechanism_state": "bookkeeping/scope state, not a real open defect; repaired to OWNERSHIP_RECONSTRUCTED on the ownership axis, criterion-3 verdict unchanged"
+  }
+ }
 }
