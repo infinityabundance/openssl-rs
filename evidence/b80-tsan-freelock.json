@@ -1,0 +1,219 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/b80-tsan-freelock/v1",
+ "kind": "ThreadSanitizer run for the two runtime/thread.rs free_lock rows",
+ "generated_utc": "2026-11-15T12:10:00Z",
+ "reviewer": {
+  "role": "independent reviewer and instrumenter",
+  "rules_read": [
+   "AGENTS.md \u00a70-\u00a77",
+   "\u00a715",
+   "\u00a716",
+   "\u00a721",
+   "\u00a722"
+  ],
+  "tracked_files_modified": false,
+  "note": "the instrument was derived from forensics/tools/ms_tsan.py's own recipe, not re-invented; where it differs from that tool the difference is stated"
+ },
+ "subject": {
+  "stable_id": "src/runtime/thread.rs::UNSAFE_FN_DEF::free_lock",
+  "ledger_rows": [
+   "V1:src/runtime/thread.rs:531:UNSAFE_FN_DEF",
+   "V1:src/runtime/thread.rs:544:UNSAFE_FN_DEF"
+  ],
+  "prior_state": "NOT_ESTABLISHED (instrument required: TSan)",
+  "binding": "declared-definition-set (safe-c33/operation-span-set-sha256/v1)",
+  "definitions_at_S": [
+   {
+    "start": 673,
+    "end": 684,
+    "def_line": 679,
+    "cfg": "#[cfg(all(target_os=\"linux\", target_arch=\"x86_64\", target_env=\"gnu\", target_pointer_width=\"64\"))]",
+    "sha256": "e905dce107e67f2bfb9ccb615de7bc1976fd5db0a14421b56bf4bf29b0cd117e"
+   },
+   {
+    "start": 694,
+    "end": 704,
+    "def_line": 700,
+    "cfg": "#[cfg(not(all(target_os=\"linux\", target_arch=\"x86_64\", target_env=\"gnu\", target_pointer_width=\"64\")))]",
+    "sha256": "996b71e7162c2bf28589af2f778a57277db4c25c7893d2f504daa2043fd8d82f"
+   }
+  ],
+  "set_sha256_independently_recomputed_at_S": "66d303aa533ca63db74f98193a456292031f984792e1f81a255dc79cf58d3951",
+  "set_sha256_matches_b80b_closure": true,
+  "identity_note": "both definition hashes and the set hash were recomputed from the S blob with the tool's documented normalisation (splitlines, rstrip each line, join with \\n, sha256 over UTF-8, no trailing newline) and equal the values in evidence/closure-ssh-b80b.json",
+  "ledger_observation": "the two rows share one stable id: they are one operation with two cfg-exclusive definitions, recorded as two obligations. Not a soundness defect, but the ledger double-counts the operation."
+ },
+ "instrument": {
+  "sanitizer": "-Zsanitizer=thread (rustc)",
+  "channel": "nightly-2026-10-01",
+  "rustc": "rustc 1.101.0-nightly (21b707e3f 2026-09-30)",
+  "llvm": "23.1.1",
+  "components": [
+   "rust-src (for -Zbuild-std)"
+  ],
+  "rustup_home": "court/freeze-b80/review7/.phase25-rustup (the date-pinned toolchain installed for this run)",
+  "identity_deviation": "forensics/tools/ms_tsan.py pins NIGHTLY_HOME=/work/.phase25-rustup; this review was confined to court/freeze-b80/review7/**, so the same pinned nightly and the same component were installed under review7 instead. Same channel date and same rustc commit hash, different install path.",
+  "rustflags": "-Zsanitizer=thread -Cdebuginfo=1 -Clinker=clang -Ccodegen-units=16",
+  "cargo_command": "cargo test -Zbuild-std --lib --target x86_64-unknown-linux-gnu -- [--test-threads=1] <filter>",
+  "cc_wrapper": "court/freeze-b80/review7/bin/tsan-cc = clang -fsanitize=thread -fno-omit-frame-pointer -g (ms_tsan.py:602-609)",
+  "tsan_options": "halt_on_error=1:exit_code=66",
+  "std_instrumentation": "std is rebuilt under TSan (-Zbuild-std), which matters here: RwlockInner is `{ state: Mutex<LockState>, cond: Condvar }`, so the happens-before edges this lock relies on live inside std. A crate-only instrumentation would not see them and its result would be neither a pass nor a useful failure.",
+  "shadow_mapping": "the TSan binary mapped its shadow and ran; the container's per-process RLIMIT_DATA is `unlimited`, so the OPENSSL_RS_COURT_DATA venue override documented in ms_tsan.py was not needed in this container"
+ },
+ "venue": {
+  "container": "openssl-rs-court",
+  "memory_max_before": 8589934592,
+  "memory_max_during": 17179869184,
+  "change": "docker update --memory 16g --memory-swap 16g --memory-reservation 16g (the standing venue directive for this campaign; the 8 GiB cap was the state the container was found in)",
+  "nano_cpus": 16000000000,
+  "pids_limit": 2048,
+  "host_free_g_at_start": {
+   "total": 45,
+   "available": 32,
+   "swap_used_of_45": 11
+  },
+  "peak_cgroup_memory_bytes": 11185152000,
+  "parallelism": "CARGO_BUILD_JOBS=4 (AGENTS.md \u00a76.1 rule 4); one heavy command at a time; nothing else compiled during any run",
+  "baseline_build": "the stable 1.98.1 test binary was already warm (0.03 s), so the stable runs below recompiled nothing"
+ },
+ "schedules": {
+  "serial": {
+   "args": "--test-threads=1",
+   "role": "authoritative (docs/CONCURRENCY_MODEL.md \u00a76)"
+  },
+  "parallel": {
+   "args": "(default thread count)",
+   "role": "parallel-safety gate (\u00a77)"
+  }
+ },
+ "coverage": [
+  {
+   "filter": "runtime::thread::",
+   "schedule": "serial",
+   "result": "20 passed / 0 failed / 1 ignored",
+   "tsan_reports": 0,
+   "includes": [
+    "rwlock_write_lock_serialises_threads",
+    "rwlock_contested_readers_and_writers_serialise_updates",
+    "rwlock_contested_readers_never_observe_a_partial_write",
+    "rwlock_readers_and_unlock_on_a_read_lock",
+    "rwlock_read_write/upgrade refusals",
+    "run_once_executes_the_callback_exactly_once_across_threads",
+    "tests::lock_hook::hook_observes_authority_size_and_single_release (spawns a child process that frees the block and asserts the allocator hook saw exactly one release at the authority size)"
+   ]
+  },
+  {
+   "filter": "runtime::thread::",
+   "schedule": "parallel",
+   "result": "20 passed / 0 failed / 1 ignored",
+   "tsan_reports": 0
+  },
+  {
+   "filter": "runtime::thread::b56_probe::the_lock_block_is_released_exactly_once (--ignored, OPENSSL_RS_ADV_PROBE=1)",
+   "schedule": "serial",
+   "result": "1 passed / 0 failed",
+   "tsan_reports": 0,
+   "note": "the dedicated release-side probe: alloc -> use -> free, one process per probe"
+  },
+  {
+   "filter": "runtime::refcount::",
+   "schedule": "serial",
+   "result": "21 passed / 0 failed",
+   "tsan_reports": 0,
+   "includes": [
+    "the exhaustive scheduler model and its three mutants",
+    "seven family re-entry tests",
+    "concurrent_increments_and_decrements_conserve_ownership",
+    "down_ref_claims_last_reference_then_retires"
+   ]
+  },
+  {
+   "filter": "runtime::rcu::",
+   "schedule": "serial",
+   "result": "11 passed / 0 failed",
+   "tsan_reports": 0
+  },
+  {
+   "filter": "x509::x509_lu::tests::store_refcount_is_atomic_under_concurrent_up_ref",
+   "schedule": "serial",
+   "result": "1 passed / 0 failed",
+   "tsan_reports": 0
+  }
+ ],
+ "canaries": [
+  {
+   "id": "K-committed",
+   "path": "forensics/tools/tsan_canary.rs (the repo's own sensitivity canary)",
+   "built_with": "rustc -Zsanitizer=thread -Cdebuginfo=1 -Clinker=clang -Cunsafe-allow-abi-mismatch=sanitizer",
+   "observed": "exit 66; `WARNING: ThreadSanitizer: data race (pid=...)`",
+   "meaning": "the instrument, and its shadow, are live in this venue"
+  },
+  {
+   "id": "K-freelock-class",
+   "path": "court/freeze-b80/review7/tsan_freelock_canary.rs (added, test-only, linked into nothing)",
+   "built_with": "same flags as K-committed",
+   "observed": "exit 66; `WARNING: ThreadSanitizer: heap-use-after-free`",
+   "meaning": "TSan detects the defect class a release side carries (a 56-byte block, the authority RwLock size, freed while a second thread reads it through a happens-before edge), not only plain data races"
+  }
+ ],
+ "results": {
+  "races_observed": 0,
+  "use_after_free_observed": 0,
+  "schedules_executed": 2,
+  "tests_executed_under_tsan": 54,
+  "statement": "no ThreadSanitizer report on any of the runs above, on either schedule. The two free_lock rows therefore no longer lack the instrument the b80 argument named: TSan ran at S against the lock, refcount, rcu and store-refcount surfaces, with firing canaries on both the race and the release class.",
+  "state_after": "ESTABLISHED-AT-INSTRUMENT-LEVEL for the observed schedules: the release side of the primitive executes in this instrument without a race or a use-after-free report. This is not \u00a77 SAFETY_DISCHARGED: the caller precondition ('exclusively owned by this call') is not something TSan can establish, because no test performs the forbidden shape."
+ },
+ "instrument_defects_found": [
+  {
+   "id": "I1",
+   "statement": "the b79/b80 contract control C3a_contract_present reports both free_lock rows as `no-fn-level-#Safety`; both definitions carry a complete `# Safety`. C3a's upward scan stops at `))]`, so a multi-line `#[cfg(all(...))]` attribute between the doc comment and the `fn` hides the contract. Demonstrated with the additive check C3a2 in court/freeze-b80/review7/ctrl_rest_at_S.py, which passes all 48 rows. Recorded as G3 in evidence/b80-review-drifted.json."
+  }
+ ],
+ "loom": {
+  "available": "yes: `loom = \"0.7\"` is a `[target.'cfg(loom)'.dev-dependencies]` entry in Cargo.toml",
+  "existing_use": "four `loom::model` tests in src/runtime/refcount.rs (lines ~736-871) over the refcount protocol",
+  "fit_for_the_free_side": "poor. loom models its own atomics/Arc and detects races, deadlocks and ordering violations; it does not model freeing a non-loom allocation, so it cannot express 'the block is released while a waiter still holds it'. TSan (or Miri's provenance checking) is the instrument for this side.",
+  "can_be_added_without_a_source_change": false,
+  "proposed_batch": "B81-P1 (proposal only, NOT made here): add a `cfg(loom)` test for the LockState transitions (read/write/unlock, the read->write refusal and the per-thread accounting) beside the existing refcount loom tests, and a focused `--ignored` probe that frees a lock immediately after its last holder while a second thread is inside a failed acquire, so the release window is executed deliberately rather than incidentally."
+ },
+ "residuals": [
+  {
+   "id": "R1",
+   "state": "RETAINED",
+   "statement": "no test performs the shape the precondition forbids (a free while another thread still uses the lock), so the clean TSan result cannot establish that precondition; it establishes that every executed release path is race- and UAF-free"
+  },
+  {
+   "id": "R2",
+   "state": "RETAINED",
+   "statement": "only the linux/x86_64/gnu/64-bit definition is compiled and executed; the `Box` alternative (off the measured profile) is not compiled in this build, so TSan says nothing about it"
+  },
+  {
+   "id": "R3",
+   "state": "RETAINED",
+   "statement": "a clean TSan run bounds the executed schedules only; a race not observed is not a race absent"
+  },
+  {
+   "id": "R4",
+   "state": "NOT_RUN",
+   "statement": "no Miri (Stacked/Tree Borrows) or ASan/LSan run covers the release side; no loom model covers the lock"
+  },
+  {
+   "id": "R5",
+   "state": "NOT_RUN",
+   "statement": "the full library suite was not run under TSan (2378 tests); the surface chosen is the concurrency-bearing one (thread, refcount, rcu, store refcount)"
+  },
+  {
+   "id": "R6",
+   "state": "RETAINED",
+   "statement": "the ledger records this one operation as two obligations (same stable id, two cfg-exclusive definitions)"
+  }
+ ],
+ "does_not_prove": [
+  "that the two free_lock rows are \u00a77 SAFETY_DISCHARGED: the caller's exclusive-ownership obligation is a contract obligation, and TSan cannot establish it",
+  "that the crate is race-free: only the listed filters ran, on the two recorded schedules",
+  "that `CRYPTO_THREAD_lock_free` is never called concurrently with a user by any consumer (ssh/sshd/curl): that is a caller audit, not an instrument result",
+  "anything about the off-profile `Box` definition, memory ordering at the intrinsics level, or cryptographic/timing properties",
+  "that the third-party TSan runtime itself is bug-free; the two canaries only show it fires on the two classes tested"
+ ]
+}
