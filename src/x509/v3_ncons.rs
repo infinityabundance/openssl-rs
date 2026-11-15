@@ -784,35 +784,43 @@ unsafe fn nc_match_single(
     gen: *mut GeneralName,
     base: *mut GeneralName,
 ) -> c_int {
-    // SAFETY: both are live per the contract; each view reads only its own selector's arm.
-    unsafe {
-        let (Some(gen_view), Some(base_view)) = ((*gen).as_ref(), (*base).as_ref()) else {
-            return X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE;
-        };
-        match gen_view {
-            GeneralNameRef::OtherName(other) => match (effective_type, base_view) {
-                (GEN_EMAIL, GeneralNameRef::Ia5(b)) => nc_email_eai(other.value, b),
-                _ => X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE,
-            },
-            GeneralNameRef::DirectoryName(nm) => match base_view {
-                GeneralNameRef::DirectoryName(b) => nc_dn(nm, b),
-                _ => X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE,
-            },
-            GeneralNameRef::Ia5(s) => match base_view {
-                GeneralNameRef::Ia5(b) => match (*gen).type_ {
+    // SAFETY: `gen` and `base` are live `GENERAL_NAME`s per the contract, so both dereferences yield
+    // usable references; each view reads only its own selector's arm.
+    let (Some(gen_view), Some(base_view)) = (unsafe { ((*gen).as_ref(), (*base).as_ref()) }) else {
+        return X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE;
+    };
+    match gen_view {
+        GeneralNameRef::OtherName(other) => match (effective_type, base_view) {
+            // SAFETY: `other.value` is the `otherName` arm of the live `gen` view — an `ASN1_TYPE`
+            // owned by `gen` and reachable only through it — and `b` is the live IA5 arm of
+            // `base_view`; neither is mutated while the call runs, so `nc_email_eai`'s exclusive
+            // access and arm-validity preconditions are established.
+            (GEN_EMAIL, GeneralNameRef::Ia5(b)) => unsafe { nc_email_eai(other.value, b) },
+            _ => X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE,
+        },
+        GeneralNameRef::DirectoryName(nm) => match base_view {
+            // SAFETY: `nm` and `b` are the `dirName` arms of the two live `GENERAL_NAME`s per the
+            // contract, borrowed for this call only.
+            GeneralNameRef::DirectoryName(b) => unsafe { nc_dn(nm, b) },
+            _ => X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE,
+        },
+        GeneralNameRef::Ia5(s) => match base_view {
+            GeneralNameRef::Ia5(b) => {
+                // SAFETY: `gen` is live per the contract.
+                match unsafe { (*gen).type_ } {
                     GEN_DNS => nc_dns(s, b),
                     GEN_EMAIL => nc_email(s, b),
                     GEN_URI => nc_uri(s, b),
                     _ => X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE,
-                },
-                _ => X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE,
-            },
-            GeneralNameRef::IpAddress(s) => match base_view {
-                GeneralNameRef::IpAddress(b) => nc_ip(s, b),
-                _ => X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE,
-            },
+                }
+            }
             _ => X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE,
-        }
+        },
+        GeneralNameRef::IpAddress(s) => match base_view {
+            GeneralNameRef::IpAddress(b) => nc_ip(s, b),
+            _ => X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE,
+        },
+        _ => X509_V_ERR_UNSUPPORTED_CONSTRAINT_TYPE,
     }
 }
 
@@ -1007,8 +1015,14 @@ fn nc_email(eml: &Asn1String, base: &Asn1String) -> c_int {
 ///
 /// # Safety
 ///
-/// `emltype` is a live `ASN1_TYPE`; `base` a live IA5 string.
-fn nc_email_eai(emltype: *mut Asn1Type, base: &Asn1String) -> c_int {
+/// `emltype` is a live, aligned, initialised `ASN1_TYPE` that owns its value arm and is exclusively
+/// accessed for the duration of the call (no concurrent writer of its selector or arm). Only the
+/// `V_ASN1_UTF8STRING` selector is read through: when the selector holds that value the arm
+/// `value.utf8string` (reached as `value.ptr`) is a live `ASN1_STRING` allocated by the decoder or
+/// `ASN1_STRING_type_new`, readable for its own `length` bytes, released only when its owner frees
+/// it, and not freed or mutated by anyone else while the call runs; for any other selector the arm
+/// is never read. `base` is a live decoded IA5 string with `length` readable bytes at `data`.
+unsafe fn nc_email_eai(emltype: *mut Asn1Type, base: &Asn1String) -> c_int {
     // We do not accept embedded NUL characters.
     // SAFETY: `base` is a live decoded string.
     let base_bytes = unsafe { asn1_bytes(base) };
@@ -1941,5 +1955,24 @@ mod tests {
                 ASN1_STRING_free(base_ip);
             }
         }
+    }
+
+    /// Qualifier control: `nc_email_eai` reads the selector and UTF8 arm of a caller-supplied
+    /// `ASN1_TYPE`, so it must not be callable from safe Rust with an unchecked pointer. A
+    /// type-level "is an unsafe fn" assertion is not expressible on stable Rust, so the
+    /// declaration is pinned in the production source text, which is read from disk and truncated
+    /// at the first `#[cfg(test)]` module. This test's own assertion text is therefore never
+    /// searched, and the needle is assembled from fragments, so only removing an `unsafe`
+    /// qualifier can make it fail.
+    #[test]
+    #[allow(clippy::expect_used)]
+    fn nc_email_eai_is_an_unsafe_fn() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/x509/v3_ncons.rs");
+        let src = std::fs::read_to_string(path).expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        let needle = concat!("unsafe fn ", "nc_email_eai(");
+        assert!(prod.contains(needle), "missing {needle}");
     }
 }
