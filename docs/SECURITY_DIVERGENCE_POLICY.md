@@ -599,32 +599,50 @@ because the hand-typed trigger state it replaces is exactly what let `D-DECODER-
   compatibility probe asks what the authority does here, because it cannot compare a
   crash.
 
-### D-V3-SAN-NULL-NAME-1 — `v2i_GENERAL_NAME_ex` scans a NULL `name`
+### D-V3-SAN-NULL-NAME-1 — the SAN builders scan a NULL `name`
 
-- **Obligation:** `v2i_GENERAL_NAME_ex(out, method, ctx, cnf, is_nc)` with a live `CONF_VALUE`
-  whose `name` is NULL — the shape a direct C caller can pass. The registered `do_ext_nconf`
-  path is one caller that happens to establish a name, not the ABI's only caller.
-- **Authority:** **measured.** `crypto/x509/v3_san.c:592-605` copies `cnf->name` and `cnf->value`
-  and tests only `value`; the first read of `name` is `ossl_v3_name_cmp(name, "email")` at `:601`.
-  A program against `forensics/authorities/prefix/openssl-3.6.4-production` with
-  `{section = NULL, name = NULL, value = "DNS:example.com"}` prints the shape and dies with
-  **exit 139** (SIGSEGV) in that compare. The same program with `{name = "DNS", value = NULL}`
-  returns NULL after raising `X509V3_R_MISSING_VALUE` (exit 0). The fault is the measurement, so
-  there is nothing to compare past it; the NULL-`value` shape is compared normally.
-- **Crate:** refuses a NULL `name` at the entry point, before the scan, with the same
-  `X509V3_R_MISSING_VALUE` the entry's own `value` guard raises (`V3_SAN_604`), and returns NULL
-  without reading `cnf->name` or building a `GENERAL_NAME`. `v2i_GENERAL_NAME` and
-  `v2i_GENERAL_NAMES` inherit the refusal because both defer here.
+- **Obligation:** a live `CONF_VALUE` whose `name` is NULL, passed to any exported SAN builder:
+  `v2i_GENERAL_NAME_ex(out, method, ctx, cnf, is_nc)` (`:592-629`), and the two `v2i` slots the
+  exported `ossl_v3_alt` table installs — `v2i_subject_alt` (`ossl_v3_alt[0]`, `:377-413`) and
+  `v2i_issuer_alt` (`ossl_v3_alt[1]`, `:301-332`) — each reached with a `STACK_OF(CONF_VALUE)`
+  holding that entry. The registered `do_ext_nconf` path is one caller that happens to establish
+  a name, not the ABI's only caller: `X509V3_EXT_get_nid()` returns the method row and its public
+  `v2i` field is the callback, so a C caller holding its own `CONF_VALUE` stack reaches both
+  table builders.
+- **Authority:** **measured** against `forensics/authorities/prefix/openssl-3.6.4-production`.
+  - `v2i_GENERAL_NAME_ex`: `crypto/x509/v3_san.c:592-606` copies `cnf->name` and `cnf->value`
+    (`:600-601`) and tests only `value` (`:603`); the first read of `name` is
+    `ossl_v3_name_cmp(name, "email")` at `:608`. With `{section = NULL, name = NULL,
+    value = "DNS:example.com"}` the authority prints the shape and dies with **exit 139**
+    (SIGSEGV) in that compare. The same program with `{name = "DNS", value = NULL}` returns NULL
+    after raising `X509V3_R_MISSING_VALUE` (exit 0).
+  - `v2i_subject_alt` / `v2i_issuer_alt`: reached as
+    `X509V3_EXT_get_nid(NID_subject_alt_name | NID_issuer_alt_name)->v2i(method, NULL, nval)`.
+    Their first act on the element is `ossl_v3_name_cmp(cnf->name, "email" | "issuer")` (`:394`,
+    `:316`) with no NULL test, and `{name = NULL, value = "DNS:example.com"}` dies with **exit
+    139** (SIGSEGV) in each. The same program with `{name = "DNS", value = NULL}` returns NULL
+    after raising `X509V3_R_MISSING_VALUE` (reason 124, lib 34) — the deferred
+    `v2i_GENERAL_NAME_ex` guard — which is how the dispatch is shown to reach each builder. The
+    fault is the measurement, so there is nothing to compare past it; the NULL-`value` shape is
+    compared normally.
+- **Crate:** every entry refuses a NULL `name` before the scan, with the same
+  `X509V3_R_MISSING_VALUE` the entry's own `value` guard raises (`V3_SAN_604`).
+  `v2i_GENERAL_NAME_ex` returns NULL without reading `cnf->name` or building a `GENERAL_NAME`;
+  `v2i_subject_alt` and `v2i_issuer_alt` free the stack built so far and answer NULL.
+  `v2i_GENERAL_NAME` and `v2i_GENERAL_NAMES` inherit the refusal because both defer to
+  `v2i_GENERAL_NAME_ex`.
 - **Reason:** `D-V3-CONF-NULL-VALUE-1`'s and `D-LEGACY-MD-CALLBACK-MD-DATA-1`'s: a read through a
   NULL pointer is not a contract to reproduce (AGENTS.md §3 and §17). Nothing in the exported
-  builder's contract establishes a non-NULL `name`, so that precondition cannot be discharged by
-  the ABI; the builder must establish it itself.
+  builders' contracts establishes a non-NULL `name`, so that precondition cannot be discharged by
+  the ABI; each builder must establish it itself.
 - **Claim removed:** a NULL `name` is not claimed compatible — it is claimed *safe*. The only
-  observable is the refusal shape (NULL, an error on the stack):
-  `a_null_name_is_refused_before_the_name_scan` pins it, and asserts the live `value` pointer is
-  untouched.
-- **When it changes:** it does not. The authority faults on the NULL-`name` shape; the boundary is
-  permanent and the claim stays narrowed.
+  observable is the refusal shape (NULL, an error on the stack). Three unit controls pin it:
+  `a_null_name_is_refused_before_the_name_scan` (the exported builder),
+  `subject_alt_refuses_a_null_name_before_the_email_scan` and
+  `issuer_alt_refuses_a_null_name_before_the_issuer_scan` (the two table builders), each asserting
+  the refusal and that the live `value` pointer is untouched.
+- **When it changes:** it does not. The authority faults on the NULL-`name` shape in all three
+  entry points; the boundary is permanent and the claim stays narrowed.
 
 ### D-BIOCORE-1 — `BIO_new_from_core_bio` calls a NULL `BIO_up_ref`
 
