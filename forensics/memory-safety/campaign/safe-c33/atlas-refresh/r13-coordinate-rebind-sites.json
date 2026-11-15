@@ -157,11 +157,11 @@
   {
    "id": "src/cms/cms_asn1.rs:671",
    "file": "src/cms/cms_asn1.rs",
-   "line": 671,
+   "line": 680,
    "kind": "UNSAFE_FN_DEF",
    "operation": "cms_ri_cb",
    "mechanism": "RAND_CMS_STORE_KEYFMT",
-   "disposition": "SAFETY_DISCHARGED (scoped to this site by ledger row boundary-sweep-B56; recorded row verdict SAFETY_DISCHARGED; the binding is the content hash of the operation span at S, not the ledger coordinate)",
+   "disposition": "SAFETY_DISCHARGED: src/cms/cms_asn1.rs:680 (scoped to this site by ledger row boundary-sweep-B56; recorded row verdict SAFETY_DISCHARGED; the binding is the content hash of the operation span at S, not the ledger coordinate)",
    "recorded_verdict": "SAFETY_DISCHARGED",
    "ledger_receipt": "boundary-sweep-B56",
    "ledger_coordinate": "src/cms/cms_asn1.rs:671",
@@ -173,16 +173,39 @@
     "line_current": 671,
     "current_line": null
    },
-   "span_sha256": "f1f667a2ee29d16557a4a1d5744051081c6f8aabf26b7be8702adfc63aab0ee9",
+   "span_sha256": "fd94cb262e8ff33dce901c25292084996f2f0fe8478f297342e320fa19e3ed67",
    "span_schema": "safe-c33/operation-span-sha256/v1",
    "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
    "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
-   "span_start_line": 671,
-   "span_end_line": 717,
+   "span_start_line": 680,
+   "span_end_line": 733,
    "span_qualified_identity": "cms_ri_cb",
    "span_resolution": "unique",
-   "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
-   "span_source_field": "line_current"
+   "span_source_commit": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+   "span_source_field": "line_current",
+   "verdict": "ACCEPT",
+   "verdict_class": "content-reverified",
+   "verdict_basis": "ACCEPT re-established at d9fdf1357 (b80-review-rebind): the span moved 671-717 to 680-733 because d9fdf1357 added a NULL-`d` guard to the FREE_PRE arm plus three explanatory comment lines and two SAFETY lines, and grew the fn-level `# Safety` contract above the span. The guard, the contract and the one registration site (`asn1_cb: Some(cms_ri_cb)` in the CMS_RECIPIENT_INFO_ITEM funcs) were re-read at this candidate and the four questions re-answered. The earlier verdict was SAFETY_DISCHARGED at b6f38f134 (ledger row boundary-sweep-B56, re-bound by r13).",
+   "review_receipt": "b80-review-rebind",
+   "review_receipt_path": "evidence/b80-review-rebind.json",
+   "reviewed_span_sha256": "fd94cb262e8ff33dce901c25292084996f2f0fe8478f297342e320fa19e3ed67",
+   "span_hash_identical_to_review": true,
+   "covers_site": true,
+   "covers_site_basis": "the boundary's declared range (src/cms/cms_asn1.rs:680) covers the current census coordinate 680 and the recorded span_sha256 is the resolver's hash of the current bytes (fd94cb262e8ff33d); the ledger join key `src/cms/cms_asn1.rs:671` is the acceptance key, not a coordinate claim, and is retained unchanged",
+   "rebind": {
+    "review": "b80-review-rebind",
+    "review_path": "evidence/b80-review-rebind.json",
+    "candidate": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "prior_candidate": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+    "prior_span_sha256": "f1f667a2ee29d16557a4a1d5744051081c6f8aabf26b7be8702adfc63aab0ee9",
+    "prior_span_lines": [671, 717],
+    "prior_coordinate": 671,
+    "delta_classification": "guard-added",
+    "delta": "in-span: the FREE_PRE arm gained `if (*ri).d.is_null() { return 1; }` before the union match (the previous SAFETY comment line was replaced by three explanatory lines and two SAFETY lines). Above the span: the `# Safety` contract gained the paragraph explaining that `d` is not guaranteed non-NULL on FREE_PRE. The guard removes a NULL-union dereference; it adds no release and returns the same `1` the arm already returned.",
+    "prose_coordinate_updates": [
+     {"field": "disposition", "from": "(no declared range)", "to": "src/cms/cms_asn1.rs:680"}
+    ]
+   }
   },
   {
    "id": "src/cms/cms_asn1.rs:733",
@@ -3487,11 +3510,11 @@
   {
    "id": "src/x509/v3_san.rs:1069",
    "file": "src/x509/v3_san.rs",
-   "line": 1069,
+   "line": 1077,
    "kind": "UNSAFE_FN_DEF",
    "operation": "v2i_GENERAL_NAME_ex",
    "mechanism": null,
-   "disposition": "SAFETY_DISCHARGED (scoped to this site by ledger row boundary-sweep-B55; recorded row verdict SAFETY_DISCHARGED; the binding is the content hash of the operation span at S, not the ledger coordinate)",
+   "disposition": "SAFETY_DISCHARGED: src/x509/v3_san.rs:1077 (scoped to this site by ledger row boundary-sweep-B55; recorded row verdict SAFETY_DISCHARGED; the binding is the content hash of the operation span at S, not the ledger coordinate)",
    "recorded_verdict": "SAFETY_DISCHARGED",
    "ledger_receipt": "boundary-sweep-B55",
    "ledger_coordinate": "src/x509/v3_san.rs:1069",
@@ -3503,16 +3526,39 @@
     "line_current": 1069,
     "current_line": null
    },
-   "span_sha256": "095944c0642818b97a0966b145481cc2ff2a2358098dc856f899d274e4af576e",
+   "span_sha256": "b01dcb8bfc373c3aaf1da7c788d14356fd934cd5426fc6a1fc3d59ff657f2afa",
    "span_schema": "safe-c33/operation-span-sha256/v1",
    "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
    "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
-   "span_start_line": 1068,
-   "span_end_line": 1117,
+   "span_start_line": 1076,
+   "span_end_line": 1135,
    "span_qualified_identity": "v2i_GENERAL_NAME_ex",
    "span_resolution": "unique",
-   "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
-   "span_source_field": "line_current"
+   "span_source_commit": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+   "span_source_field": "line_current",
+   "verdict": "ACCEPT",
+   "verdict_class": "content-reverified",
+   "verdict_basis": "ACCEPT re-established at d9fdf1357 (b80-review-rebind): the span moved 1068-1117 to 1076-1135 because d9fdf1357 added a NULL-`name` refusal after the existing NULL-`value` refusal, plus the `# Safety` paragraph documenting both refusals. The body, the contract and all four call sites were re-read at this candidate and the four questions re-answered. The earlier verdict was SAFETY_DISCHARGED at b6f38f134 (ledger row boundary-sweep-B55, re-bound by r13).",
+   "review_receipt": "b80-review-rebind",
+   "review_receipt_path": "evidence/b80-review-rebind.json",
+   "reviewed_span_sha256": "b01dcb8bfc373c3aaf1da7c788d14356fd934cd5426fc6a1fc3d59ff657f2afa",
+   "span_hash_identical_to_review": true,
+   "covers_site": true,
+   "covers_site_basis": "the boundary's declared range (src/x509/v3_san.rs:1077) covers the current census coordinate 1077 and the recorded span_sha256 is the resolver's hash of the current bytes (b01dcb8bfc373c3a); the ledger join key `src/x509/v3_san.rs:1069` is the acceptance key, not a coordinate claim, and is retained unchanged",
+   "rebind": {
+    "review": "b80-review-rebind",
+    "review_path": "evidence/b80-review-rebind.json",
+    "candidate": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "prior_candidate": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+    "prior_span_sha256": "095944c0642818b97a0966b145481cc2ff2a2358098dc856f899d274e4af576e",
+    "prior_span_lines": [1068, 1117],
+    "prior_coordinate": 1069,
+    "delta_classification": "guard-added",
+    "delta": "in-span: an `if name.is_null() { raise_site(&V3_SAN_604); return null_mut() }` refusal was inserted after the existing `value` refusal (matching the authority, which tests `value` at v3_san.c:603 before reading through `name` at :608), and four SAFETY/`non-NULL` comment lines were updated to match. Above the span: a `# Safety` paragraph was added covering both NULL config fields. The authority reads through a NULL `name` at v3_san.c:608 (`ossl_v3_name_cmp` -> `strncmp`) and faults, so the guard eliminates an authority UB path rather than reproducing it (AGENTS.md section 17, D-V3-SAN-NULL-NAME-1).",
+    "prose_coordinate_updates": [
+     {"field": "disposition", "from": "(no declared range)", "to": "src/x509/v3_san.rs:1077"}
+    ]
+   }
   },
   {
    "id": "src/x509/v3_san.rs:1127",
@@ -5788,5 +5834,14 @@
   "why": "atlas-refresh/b67-g1-conflict-resolution.json#/unresolved recorded both as NEEDS_DECISION because the discharging B54 row was adjudicated-fast and the conflicting disposition was CONTRACTED (not a stale BLOCKED enumeration). A CONTRACTED disposition can only be superseded by actually obtaining the independent BOUNDARY review it names as its blocker.",
   "effect": "the two conflicts become superseded under the enforced conflict gate; no existing boundary, span hash, disposition or verdict is rewritten",
   "applied": true
+ },
+ "rebind_review_b80": {
+  "review": "b80-review-rebind",
+  "review_path": "evidence/b80-review-rebind.json",
+  "candidate": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+  "prior_candidate": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+  "scope": "the two boundaries this receipt owns whose bytes changed at d9fdf1357: `src/cms/cms_asn1.rs:671` (cms_ri_cb, NULL-`d` guard added) and `src/x509/v3_san.rs:1069` (v2i_GENERAL_NAME_ex, NULL-`name` refusal added)",
+  "rule": "each boundary's recorded span_sha256 is the closure tool's own resolve_operation_span hash at the candidate, its declared range is the operation's current definition coordinate (so the closure's covers_site witness is true, where before the two records declared no range at all), and its verdict is the b80-review-rebind verdict for that boundary. The boundary `id` values are ledger join keys and are unchanged. No other boundary, supersedes entry, count or verdict in this receipt was modified, and the remaining 131 boundaries still record their b6f38f134 spans.",
+  "prior_evidence_note": "the substantive per-site evidence for these two boundaries remains the ledger rows of boundary-sweep-B56 / boundary-sweep-B55, which this receipt transcribes and which were not rewritten; this receipt supplies the coordinate and content binding only."
  }
 }
