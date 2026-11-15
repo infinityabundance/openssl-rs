@@ -1,0 +1,43 @@
+b79c closure measurement — venue and peak record
+================================================
+candidate (source identity S) : 5b08c02944eb09cf3e7abc96b253c100dde673f2 (stage/p25/b75-ocsp)
+                                tracked_tree_dirty=false in both receipts
+tool                          : forensics/tools/consumer_closure.py v6
+                                sha256 6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8
+
+venue
+-----
+court container : openssl-rs-court
+cgroup cap      : Memory=17179869184 (16 GiB), MemorySwap=17179869184, NanoCpus=16000000000 (16 CPU), Pids=2048
+per-process cap : RLIMIT_DATA=12582912 KiB (OPENSSL_RS_COURT_DATA), applied via docker/openssl-rs-court.sh exec
+executed via    : sh docker/openssl-rs-court.sh exec ... (both caps, so the cap was not left unset)
+host memory     : MemTotal 45 GiB, MemAvailable 26 GiB before each run (>= 24 GiB floor of AGENTS.md 6.1)
+note            : the running court carries the orchestrator's 16 GiB venue spec; the 6.1 formula
+                  min(8g, available-16g) for this host would be 8 GiB. The 16 GiB cap is retained
+                  because it is the prescribed venue, it leaves 10 GiB of host headroom at cap, and
+                  recreating the court would discard the reusable build/analysis artefacts (6.8).
+                  Both runs observed oom_kill=0.
+
+runs (one heavy command at a time; no concurrent heavy command)
+---------------------------------------------------------------
+sshd : utc 2026-11-15T06:07:52Z -> 2026-11-15T06:46:48Z (38m56s)
+       peak memory.current = 12178616320 B (11.34 GiB of the 16 GiB cap)
+       cgroup events after: oom 0 oom_kill 0 oom_group_kill 0
+       artifact court/tmp/openssh-closure/server-b79/openssh-9.9p1/sshd sha256 9280e22e9708...
+       log court/freeze-b79/closure-sshd-b79c.log
+ssh  : utc 2026-11-15T06:46:59Z -> 2026-11-15T07:30:03Z (43m04s)
+       peak memory.current = 13785415680 B (12.84 GiB of the 16 GiB cap)
+       cgroup events after: oom 0 oom_kill 0 oom_group_kill 0
+       artifact court/tmp/openssh-closure/client-b79/openssh-9.9p1/ssh sha256 6be4db22e951...
+       log court/freeze-b79/closure-ssh-b79c.log (second section; an earlier run at the same
+           candidate is the first section)
+
+path correction: the artifact root is court/tmp/openssh-closure (double 's'). The pre-existing
+ssh receipt for this candidate recorded "court/tmp/openssl-closure/...", a misspelling that does
+not resolve; the ssh closure was therefore re-run so that the receipt's own path witness is true.
+The artifact sha256 was identical before and after (6be4db22e951...), so no identity changed.
+
+outputs
+-------
+evidence/closure-ssh-b79c.json   sha256 ebe8e9ab22b3dbd6656dced72390323dde5d732b455606c994126efec4520b92  13578190 B
+evidence/closure-sshd-b79c.json  sha256 d4e6ebd25642ca47deeec42206925a1a84b37430c6d68fefb2126418011cf24c  13425404 B
