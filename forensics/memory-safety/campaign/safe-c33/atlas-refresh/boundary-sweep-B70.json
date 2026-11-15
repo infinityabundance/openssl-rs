@@ -68,41 +68,41 @@
    "file": "src/cms/cms_lib.rs",
    "kind": "UNSAFE_FN_DEF",
    "operation": "x509_free_void",
-   "line": 1378,
-   "line_current": 1378,
+   "line": 1388,
+   "line_current": 1388,
    "inventory_line": 1378,
-   "span_start_line": 1378,
-   "span_end_line": 1381,
-   "span_sha256": "1237b76c964d4a55052b559f9f5fff0d7f1c944caff71895dacc3f37d8befef3",
-   "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+   "span_start_line": 1388,
+   "span_end_line": 1391,
+   "span_sha256": "3e41e7121b09fdb84b8fe696fd495be3be5d2369ae4df8d0de1ec5760f1c9c95",
+   "span_source_commit": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
    "span_schema": "safe-c33/operation-span-sha256/v1",
    "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
    "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
    "mechanism": "RAND_CMS_STORE_KEYFMT",
    "signature": "unsafe extern \"C\" fn x509_free_void(p: *mut c_void)",
-   "body": "unsafe extern \"C\" fn x509_free_void(p: *mut c_void) {\n    // SAFETY: `p` is an `X509` per the stack's element type.\n    unsafe { X509_free(p.cast()) };\n}",
+   "body": "unsafe extern \"C\" fn x509_free_void(p: *mut c_void) {\n    // SAFETY: `p` is an `X509` per the stack's element type and this call's exclusive release.\n    unsafe { X509_free(p.cast()) };\n}",
    "precondition_set": [
     "`p` is NULL or a live `X509` whose ownership is transferred to this call and which no other path releases concurrently."
    ],
-   "disposition": "SAFETY_DISCHARGED: src/cms/cms_lib.rs:1378 \u2014 x509_free_void is a `void (*)(void *)` freefunc whose only operation is `X509_free(p.cast())`. `X509_free` accepts NULL (`ASN1_item_free` -> `item_embed_free` returns when the value is NULL), so the thunk is a no-op for a NULL element; for a live `X509` it releases exactly one reference through that type's own free. Its registration sites are the two CMS get1 stacks, whose declared element type is `X509`; no type tag is needed from the freefunc. The certificate failure arm was reached through the exported `CMS_get1_certs` path in the external probe.",
+   "disposition": "SAFETY_DISCHARGED: src/cms/cms_lib.rs:1388 \u2014 x509_free_void is a `void (*)(void *)` freefunc whose only operation is `X509_free(p.cast())`. `X509_free` accepts NULL (`ASN1_item_free` -> `item_embed_free` returns when the value is NULL), so the thunk is a no-op for a NULL element; for a live `X509` it releases exactly one reference through that type's own free. Its registration sites are the two CMS get1 stacks, whose declared element type is `X509`; no type tag is needed from the freefunc. The certificate failure arm was reached through the exported `CMS_get1_certs` path in the external probe.",
    "contract": "C ABI `void (void *)`. `p` is NULL or a live `X509` owned by the stack registration site; ownership is transferred to this call and is not released by any other path. The object is released exactly once through `X509_free`; NULL is a no-op. The element type is established by each registration site's declared stack element type (`STACK_OF(X509)`), not by a tag the freefunc receives. The same contract is already recorded for this thunk shape in cms_smime.rs / p12_kiss.rs / store_result.rs / t_x509.rs and for the CMP thunk in OSSH-V1I-055.",
    "established": [
-    "The whole body is the single expression `X509_free(p.cast())` (src/cms/cms_lib.rs:1378-1381); there is no other operation.",
+    "The whole body is the single expression `X509_free(p.cast())` (src/cms/cms_lib.rs:1388-1391); there is no other operation.",
     "`X509_free` documents `a` as NULL-or-live and implements `ASN1_item_free(a, X509_it())` (src/x509/x_x509.rs:650-654); `item_embed_free` returns when the stored value is NULL (src/asn1/fre.rs:205-224).",
     "The admitted libcrypto.so.3 (sha256 1c03ec0a...) keeps the private symbol `...cms7cms_lib14x509_free_void` at 0x194150; its body forms a pointer slot and calls `item_embed_free` with the `X509_ITEM` vtable (the inlined `X509_free` body). The same vtable is what `X509_free` selects.",
-    "Registration sites: `OPENSSL_sk_pop_free(*certs, Some(x509_free_void))` at src/cms/cms_lib.rs:1204 (failure arm of ossl_cms_get1_certs_ex) and :1579 (test reserve/append assertions). The stacks are built by `OPENSSL_sk_new_reserve` and hold only `X509` values that `X509_add_cert` up-ref'd and pushed.",
+    "Registration sites: `OPENSSL_sk_pop_free(*certs, Some(x509_free_void))` at src/cms/cms_lib.rs:1204 (failure arm of ossl_cms_get1_certs_ex) and :1595 (test reserve/append assertions). The stacks are built by `OPENSSL_sk_new_reserve` and hold only `X509` values that `X509_add_cert` up-ref'd and pushed.",
     "In the failure arm only elements already pushed are drained and the output slot is set to NULL before return, so no element is released twice and no partially constructed element is freed (src/cms/cms_lib.rs:1195-1207).",
     "The same thunk contract is already discharged/contracted in src/cms/cms_smime.rs:171, src/pkcs12/p12_kiss.rs:132, src/store/store_result.rs:279, src/x509/t_x509.rs:305 and src/cmp/cmp_ctx.rs:376 (OSSH-V1I-055); this receipt reuses that contract rather than inventing a new one."
    ],
    "unsafe_operations": [
     {
-     "line": 1378,
+     "line": 1388,
      "kind": "unsafe_fn_definition",
      "operation": "x509_free_void",
      "contract": "The parameter precondition is stated above; marking the fn `unsafe` transfers that obligation to the registration site, which establishes it from the stack's declared element type."
     },
     {
-     "line": 1380,
+     "line": 1390,
      "kind": "unsafe_block",
      "operations": ["X509_free(p.cast::<X509>())"],
      "contract": "`p` is NULL or the live stack-owned `X509` per the fn contract; `X509_free` releases that reference exactly once and tolerates NULL."
@@ -111,49 +111,78 @@
    "caller_closure_ref": "shared caller_closure",
    "tests": [
     "courts/phase25/rt_cms_stack_thunks.c: the forced certificate failure arm returns NULL from CMS_get1_certs after the real thunk drains one live X509 (plain and LSan); success path, NULL element and direct NULL free also covered."
-   ]
+   ],
+   "qualified_identity": "x509_free_void",
+   "verdict": "ACCEPT",
+   "verdict_class": "content-reverified",
+   "verdict_basis": "ACCEPT re-established at d9fdf1357 (b80-review-rebind): the span moved 1378-1381 to 1388-1391 and the only in-span delta is the SAFETY comment, which gained the words 'and this call's exclusive release'; every code token is byte-identical (the body is still the single expression `X509_free(p.cast())`), while d9fdf1357 added a fn-level `# Safety` contract above the span stating provenance, whole-block extent, initialisation and exclusive release. The body, the strengthened contract and both registration sites were re-read and the four questions re-answered at this candidate. The earlier verdict was SAFETY_DISCHARGED at b8bba955 (boundary-sweep-B70).",
+   "review_receipt": "b80-review-rebind",
+   "review_receipt_path": "evidence/b80-review-rebind.json",
+   "reviewed_span_sha256": "3e41e7121b09fdb84b8fe696fd495be3be5d2369ae4df8d0de1ec5760f1c9c95",
+   "span_hash_identical_to_review": true,
+   "covers_site": true,
+   "covers_site_basis": "the boundary's declared range covers the current census coordinate 1388 and the recorded span_sha256 is the resolver's hash of the current bytes (3e41e7121b09fdb8); the superseded coordinate 1378 is kept as inventory_line/provenance",
+   "rebind": {
+    "review": "b80-review-rebind",
+    "review_path": "evidence/b80-review-rebind.json",
+    "candidate": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "prior_candidate": "b8bba955503014c8fd86303314c6deebaea093b0",
+    "prior_span_sha256": "1237b76c964d4a55052b559f9f5fff0d7f1c944caff71895dacc3f37d8befef3",
+    "prior_span_lines": [1378, 1381],
+    "prior_coordinate": 1378,
+    "delta_classification": "doc-only",
+    "delta": "in-span: two comment lines differ (the SAFETY comment gained 'and this call's exclusive release'); no code token, callee or argument changed. Above the span: a fn-level `# Safety` contract was added. The operation executed by the body is unchanged.",
+    "prose_coordinate_updates": [
+     {"field": "disposition", "from": "src/cms/cms_lib.rs:1378", "to": "src/cms/cms_lib.rs:1388"},
+     {"field": "established[0]", "from": "src/cms/cms_lib.rs:1378-1381", "to": "src/cms/cms_lib.rs:1388-1391"},
+     {"field": "established[3]", "from": "test registration site :1579", "to": "test registration site :1595"},
+     {"field": "unsafe_operations[0].line", "from": 1378, "to": 1388},
+     {"field": "unsafe_operations[1].line", "from": 1380, "to": 1390}
+    ],
+    "evidence_scope": "the established[] libcrypto.so.3 entry (sha256 1c03ec0a..., symbol offset 0x194150) is the b70 image's evidence and is NOT re-verified against the b80 image (libcrypto sha256 60c11112...); it is retained as prior evidence, not substituted. The two source registration sites, which are what this verdict rests on, were re-read at the candidate."
+   }
   },
   {
    "id": "CMS-FREE-002",
    "file": "src/cms/cms_lib.rs",
    "kind": "UNSAFE_FN_DEF",
    "operation": "x509_crl_free_void",
-   "line": 1384,
-   "line_current": 1384,
+   "line": 1400,
+   "line_current": 1400,
    "inventory_line": 1384,
-   "span_start_line": 1384,
-   "span_end_line": 1387,
-   "span_sha256": "34fa55ae4b1134b15b2f936bae53f9d6143a769e6700ec4aaf7489835d47a0bc",
-   "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+   "span_start_line": 1400,
+   "span_end_line": 1403,
+   "span_sha256": "f6c3dd451d2d0caae428d83c1a2417130ae3631e55abd73c47be6cdadd747b93",
+   "span_source_commit": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
    "span_schema": "safe-c33/operation-span-sha256/v1",
    "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
    "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
    "mechanism": "RAND_CMS_STORE_KEYFMT",
    "signature": "unsafe extern \"C\" fn x509_crl_free_void(p: *mut c_void)",
-   "body": "unsafe extern \"C\" fn x509_crl_free_void(p: *mut c_void) {\n    // SAFETY: `p` is an `X509_CRL` per the stack's element type.\n    unsafe { X509_CRL_free(p.cast()) };\n}",
+   "body": "unsafe extern \"C\" fn x509_crl_free_void(p: *mut c_void) {\n    // SAFETY: `p` is an `X509_CRL` per the stack's element type and this call's exclusive release.\n    unsafe { X509_CRL_free(p.cast()) };\n}",
    "precondition_set": [
     "`p` is NULL or a live `X509_CRL` whose ownership is transferred to this call and which no other path releases concurrently."
    ],
-   "disposition": "SAFETY_DISCHARGED: src/cms/cms_lib.rs:1384 \u2014 x509_crl_free_void is a `void (*)(void *)` freefunc whose only operation is `X509_CRL_free(p.cast())`. `X509_CRL_free` accepts NULL (`ASN1_item_free` -> `item_embed_free` returns when the value is NULL), so the thunk is a no-op for a NULL element; for a live `X509_CRL` it releases exactly one reference through that type's own free. Its registration sites declare `STACK_OF(X509_CRL)`, so the element type is established by the stack, not by a tag. x509_crl_free_void was NEVER executed (tracer hit=0) and its failure arm is NOT_RUN; this CMS-FREE-002 discharge is contract/body-level only, established statically at the registration sites and by callee equivalence, not by runtime coverage of the thunk.",
+   "disposition": "SAFETY_DISCHARGED: src/cms/cms_lib.rs:1400 \u2014 x509_crl_free_void is a `void (*)(void *)` freefunc whose only operation is `X509_CRL_free(p.cast())`. `X509_CRL_free` accepts NULL (`ASN1_item_free` -> `item_embed_free` returns when the value is NULL), so the thunk is a no-op for a NULL element; for a live `X509_CRL` it releases exactly one reference through that type's own free. Its registration sites declare `STACK_OF(X509_CRL)`, so the element type is established by the stack, not by a tag. x509_crl_free_void was NEVER executed (tracer hit=0) and its failure arm is NOT_RUN; this CMS-FREE-002 discharge is contract/body-level only, established statically at the registration sites and by callee equivalence, not by runtime coverage of the thunk.",
    "contract": "C ABI `void (void *)`. `p` is NULL or a live `X509_CRL` owned by the stack registration site; ownership is transferred to this call and is not released by any other path. The object is released exactly once through `X509_CRL_free`; NULL is a no-op. The element type is established by each registration site's declared stack element type (`STACK_OF(X509_CRL)`), not by a tag the freefunc receives. The same thunk shape and contract are recorded in cms_smime.rs and the CMP receipt (OSSH-V1I-055).",
    "established": [
-    "The whole body is the single expression `X509_CRL_free(p.cast())` (src/cms/cms_lib.rs:1384-1387); there is no other operation.",
+    "The whole body is the single expression `X509_CRL_free(p.cast())` (src/cms/cms_lib.rs:1400-1403); there is no other operation.",
     "`X509_CRL_free` documents `a` as NULL-or-live (src/x509/x_crl.rs:883); `ASN1_item_free` reaches `item_embed_free`, which returns when the stored value is NULL (src/asn1/fre.rs:205-224).",
     "The admitted libcrypto.so.3 (sha256 1c03ec0a...) keeps the private symbol `...cms7cms_lib18x509_crl_free_void` at 0x1945b0; its body forms a pointer slot and calls `item_embed_free` with the `X509_CRL_ITEM` vtable (the inlined `X509_CRL_free` body).",
-    "Registration sites: `OPENSSL_sk_pop_free(*crls, Some(x509_crl_free_void))` at src/cms/cms_lib.rs:1264 (failure arm of ossl_cms_get1_crls_ex) and :1594 (test reserve/append assertions). The stacks are built by `OPENSSL_sk_new_reserve` and hold only `X509_CRL` values that `X509_CRL_up_ref` and the push installed.",
+    "Registration sites: `OPENSSL_sk_pop_free(*crls, Some(x509_crl_free_void))` at src/cms/cms_lib.rs:1264 (failure arm of ossl_cms_get1_crls_ex) and :1610 (test reserve/append assertions). The stacks are built by `OPENSSL_sk_new_reserve` and hold only `X509_CRL` values that `X509_CRL_up_ref` and the push installed.",
     "In the failure arm only elements already pushed are drained and the output slot is set to NULL before return, so no element is released twice and no partially constructed element is freed (src/cms/cms_lib.rs:1255-1267).",
     "The same thunk contract is already contracted in src/cms/cms_smime.rs:180 and discharged for the CMP thunk in OSSH-V1I-055; this receipt reuses that contract.",
     "Runtime coverage: x509_crl_free_void was never executed (tracer hit=0); no reachable probe or test invokes the private thunk. The probe-local `X509_CRL_free` callback is a different function. This CMS-FREE-002 discharge is therefore contract/body-level only (registration-site establishment plus callee equivalence), not runtime coverage of the thunk."
    ],
    "unsafe_operations": [
     {
-     "line": 1384,
+     "line": 1400,
      "kind": "unsafe_fn_definition",
      "operation": "x509_crl_free_void",
      "contract": "The parameter precondition is stated above; marking the fn `unsafe` transfers that obligation to the registration site, which establishes it from the stack's declared element type."
     },
     {
-     "line": 1386,
+     "line": 1402,
      "kind": "unsafe_block",
      "operations": ["X509_CRL_free(p.cast::<X509Crl>())"],
      "contract": "`p` is NULL or the live stack-owned `X509_CRL` per the fn contract; `X509_CRL_free` releases that reference exactly once and tolerates NULL."
@@ -162,7 +191,36 @@
    "caller_closure_ref": "shared caller_closure",
    "tests": [
     "courts/phase25/rt_cms_stack_thunks.c: the probe-local `X509_CRL_free` callback (NOT `x509_crl_free_void`) is exercised on the success path, a NULL element and a direct NULL call (plain and LSan). The private thunk was never executed (tracer hit=0); its failure arm is NOT_RUN; see not_run."
-   ]
+   ],
+   "qualified_identity": "x509_crl_free_void",
+   "verdict": "ACCEPT",
+   "verdict_class": "content-reverified",
+   "verdict_basis": "ACCEPT re-established at d9fdf1357 (b80-review-rebind): the span moved 1384-1387 to 1400-1403 and the only in-span delta is the SAFETY comment, which gained the words 'and this call's exclusive release'; every code token is byte-identical (the body is still the single expression `X509_CRL_free(p.cast())`), while d9fdf1357 added a fn-level `# Safety` contract above the span. The body, the strengthened contract and both registration sites were re-read and the four questions re-answered at this candidate. The earlier verdict was SAFETY_DISCHARGED at b8bba955 (boundary-sweep-B70). The B70 residual stands: the private thunk is still never executed, so this remains a contract/body-level discharge.",
+   "review_receipt": "b80-review-rebind",
+   "review_receipt_path": "evidence/b80-review-rebind.json",
+   "reviewed_span_sha256": "f6c3dd451d2d0caae428d83c1a2417130ae3631e55abd73c47be6cdadd747b93",
+   "span_hash_identical_to_review": true,
+   "covers_site": true,
+   "covers_site_basis": "the boundary's declared range covers the current census coordinate 1400 and the recorded span_sha256 is the resolver's hash of the current bytes (f6c3dd451d2d0caa); the superseded coordinate 1384 is kept as inventory_line/provenance",
+   "rebind": {
+    "review": "b80-review-rebind",
+    "review_path": "evidence/b80-review-rebind.json",
+    "candidate": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "prior_candidate": "b8bba955503014c8fd86303314c6deebaea093b0",
+    "prior_span_sha256": "34fa55ae4b1134b15b2f936bae53f9d6143a769e6700ec4aaf7489835d47a0bc",
+    "prior_span_lines": [1384, 1387],
+    "prior_coordinate": 1384,
+    "delta_classification": "doc-only",
+    "delta": "in-span: two comment lines differ (the SAFETY comment gained 'and this call's exclusive release'); no code token, callee or argument changed. Above the span: a fn-level `# Safety` contract was added. The operation executed by the body is unchanged.",
+    "prose_coordinate_updates": [
+     {"field": "disposition", "from": "src/cms/cms_lib.rs:1384", "to": "src/cms/cms_lib.rs:1400"},
+     {"field": "established[0]", "from": "src/cms/cms_lib.rs:1384-1387", "to": "src/cms/cms_lib.rs:1400-1403"},
+     {"field": "established[3]", "from": "test registration site :1594", "to": "test registration site :1610"},
+     {"field": "unsafe_operations[0].line", "from": 1384, "to": 1400},
+     {"field": "unsafe_operations[1].line", "from": 1386, "to": 1402}
+    ],
+    "evidence_scope": "the established[] libcrypto.so.3 entry (sha256 1c03ec0a..., symbol offset 0x1945b0) is the b70 image's evidence and is NOT re-verified against the b80 image (libcrypto sha256 60c11112...); it is retained as prior evidence, not substituted. The two source registration sites, which are what this verdict rests on, were re-read at the candidate."
+   }
   }
  ],
  "caller_closure": {
@@ -325,5 +383,14 @@
   "No claim that the CRL failure arm executes, or that x509_crl_free_void was ever executed (tracer hit=0); it is NOT_RUN and the CMS-FREE-002 discharge is contract/body-level.",
   "No AddressSanitizer result; only plain and LeakSanitizer runs.",
   "No SAFE_COMPATIBLE consumer graduation."
- ]
+ ],
+ "rebind_review_b80": {
+  "review": "b80-review-rebind",
+  "review_path": "evidence/b80-review-rebind.json",
+  "candidate": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+  "prior_candidate": "b8bba955503014c8fd86303314c6deebaea093b0",
+  "scope": "the two boundaries this receipt owns (CMS-FREE-001, CMS-FREE-002), re-bound after d9fdf1357 added a fn-level `# Safety` contract to each thunk",
+  "rule": "each boundary's recorded span_sha256 is the closure tool's own resolve_operation_span hash at the candidate, its declared range is the operation's current definition line, and its verdict is the b80-review-rebind verdict for that boundary. No other boundary, supersedes entry, counts field or verdict was modified.",
+  "prior_evidence_note": "contract/established/precondition_set/unsafe_operations remain this receipt's text apart from the source coordinates listed per boundary in rebind.prose_coordinate_updates; the b70 image's binary-level established entries are retained, not re-derived, and are recorded as such."
+ }
 }
