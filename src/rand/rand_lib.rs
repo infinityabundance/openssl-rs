@@ -466,6 +466,19 @@ pub(crate) unsafe extern "C" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut 
 }
 
 /// `void ossl_rand_ctx_free(void *vdgbl)`.
+///
+/// # Safety
+///
+/// `vdgbl` is NULL or the `RAND_GLOBAL` block this slot was handed — `rand_ctx_new`'s return, at
+/// the `CRYPTO_zalloc` seam in this module — and it is released **exactly once, here**: the owning
+/// `OSSL_LIB_CTX` clears the slot as it drops the context, so no other holder frees or reads the
+/// block afterwards. The release covers the pool's whole ownership set, through `Drop`'s run of
+/// the authority's own free body: `lock` (`CRYPTO_THREAD_lock_new`), the two DRBG contexts
+/// (`primary`, `seed`), and the seven owned name strings (`random_provider_name`,
+/// `rng_name`/`rng_cipher`/`rng_digest`/`rng_propq`, `seed_name`/`seed_propq`). `random_provider`
+/// is a borrowed pointer and is deliberately not released by either side. The caller must
+/// therefore not retain, re-install or separately free any of the released members, and must not
+/// let another libctx adopt the block as its pool.
 pub(crate) unsafe fn ossl_rand_ctx_free(vdgbl: *mut c_void) {
     // SAFETY: `vdgbl` is NULL or the live `RAND_GLOBAL` this slot was handed, released exactly
     // once, here; `Drop` runs the authority's own free body and its single block release.

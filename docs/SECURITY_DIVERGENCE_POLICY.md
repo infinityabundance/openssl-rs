@@ -599,6 +599,33 @@ because the hand-typed trigger state it replaces is exactly what let `D-DECODER-
   compatibility probe asks what the authority does here, because it cannot compare a
   crash.
 
+### D-V3-SAN-NULL-NAME-1 — `v2i_GENERAL_NAME_ex` scans a NULL `name`
+
+- **Obligation:** `v2i_GENERAL_NAME_ex(out, method, ctx, cnf, is_nc)` with a live `CONF_VALUE`
+  whose `name` is NULL — the shape a direct C caller can pass. The registered `do_ext_nconf`
+  path is one caller that happens to establish a name, not the ABI's only caller.
+- **Authority:** **measured.** `crypto/x509/v3_san.c:592-605` copies `cnf->name` and `cnf->value`
+  and tests only `value`; the first read of `name` is `ossl_v3_name_cmp(name, "email")` at `:601`.
+  A program against `forensics/authorities/prefix/openssl-3.6.4-production` with
+  `{section = NULL, name = NULL, value = "DNS:example.com"}` prints the shape and dies with
+  **exit 139** (SIGSEGV) in that compare. The same program with `{name = "DNS", value = NULL}`
+  returns NULL after raising `X509V3_R_MISSING_VALUE` (exit 0). The fault is the measurement, so
+  there is nothing to compare past it; the NULL-`value` shape is compared normally.
+- **Crate:** refuses a NULL `name` at the entry point, before the scan, with the same
+  `X509V3_R_MISSING_VALUE` the entry's own `value` guard raises (`V3_SAN_604`), and returns NULL
+  without reading `cnf->name` or building a `GENERAL_NAME`. `v2i_GENERAL_NAME` and
+  `v2i_GENERAL_NAMES` inherit the refusal because both defer here.
+- **Reason:** `D-V3-CONF-NULL-VALUE-1`'s and `D-LEGACY-MD-CALLBACK-MD-DATA-1`'s: a read through a
+  NULL pointer is not a contract to reproduce (AGENTS.md §3 and §17). Nothing in the exported
+  builder's contract establishes a non-NULL `name`, so that precondition cannot be discharged by
+  the ABI; the builder must establish it itself.
+- **Claim removed:** a NULL `name` is not claimed compatible — it is claimed *safe*. The only
+  observable is the refusal shape (NULL, an error on the stack):
+  `a_null_name_is_refused_before_the_name_scan` pins it, and asserts the live `value` pointer is
+  untouched.
+- **When it changes:** it does not. The authority faults on the NULL-`name` shape; the boundary is
+  permanent and the claim stays narrowed.
+
 ### D-BIOCORE-1 — `BIO_new_from_core_bio` calls a NULL `BIO_up_ref`
 
 - **Obligation:** `BIO_new_from_core_bio(libctx, corebio)` where the context's dispatch
@@ -1079,7 +1106,7 @@ authority and the candidate for this function, and there was never supposed to b
   digest block the digest maths and the result are unchanged (`legacy_mdc2_init_…`,
   `legacy_sha3_init_…`, `legacy_shake_init_…` and `legacy_sm3_init_…`; SHA3-256("abc") =
   `3a985da7…11431532`, SM3("abc") = `66c7f0f4…8f4ba8e0` from the pinned authority).
-- **When it changes:** it does not. The authority faults on both shapes; the boundary is permanent
+- **When it changes:** it does not. The authority faults on both methods; the boundary is permanent
   and the claim stays narrowed.
 
 ### D-LEGACY-BLAKE2-INIT-MD-DATA-1 — the legacy BLAKE2b/BLAKE2s initialisers write through a
@@ -1115,6 +1142,55 @@ authority and the candidate for this function, and there was never supposed to b
   BLAKE2b-512("abc") = `ba80a53f…d4009923` and BLAKE2s-256("abc") = `508c5e8c…86675982` from the
   pinned authority).
 - **When it changes:** it does not. The authority faults on both methods; the boundary is
+  permanent and the claim stays narrowed.
+
+### D-LEGACY-MD-CALLBACK-MD-DATA-1 — the legacy digest update callbacks read `data` without a test
+
+- **Obligation:** the fifteen update callbacks the legacy `EVP_MD` tables install — `sha1_update`,
+  `sha224_update`, `sha256_update`, `sha384_update`, `sha512_update`, `md5_update`,
+  `md5_sha1_int_update`, `md4_update`, `ripe_update`, `wp_update`, `mdc2_update`,
+  `blake2b_int_update`, `blake2s_int_update`, `sha3_int_update` and `sm3_int_update` — are
+  `fn##_Update(EVP_MD_CTX_get0_md_data(ctx), data, count)`
+  (`crypto/evp/legacy_meth.h:15-18`, and the same shape for the provider-side BLAKE2 and SM3
+  tables). `EVP_MD_meth_get_update` (`crypto/evp/evp_lib.c`; `artifacts/phase2/libcrypto.ld`)
+  hands each of them to any C caller with `data` and `count` exactly as the caller supplied them,
+  and its documented contract (`doc/man3/EVP_MD_meth_new.pod`) says only that it retrieves the
+  pointer given to `EVP_MD_meth_set_update` — nothing about `data` being readable.
+- **Authority:** **measured**. Twelve probes, each in its own process against
+  `forensics/authorities/prefix/openssl-3.6.4-production`, over six tables (`EVP_sha1`,
+  `EVP_sha224`, `EVP_md5`, `EVP_blake2b512`, `EVP_mdc2`, `EVP_sm3`), each driven through that
+  table's own `EVP_MD_meth_get_update` callback over a by-hand method whose `app_datasize` (1024)
+  makes the context block valid — so the only bad argument is `data`. With `count = 1` every case
+  died with **exit 139** (SIGSEGV) in the primitive's copy; with `count = 0` every case returned
+  **1**, because the primitive tests the length first (`HASH_UPDATE` in `crypto/md32_common.h`,
+  `ossl_sha3_update`'s `if (len == 0) return 1;`) or performs a zero-length `memcpy` this libc
+  tolerates. The fault is the measurement, so there is nothing to compare past it; the
+  zero-length answer is compared normally.
+- **Crate:** every update callback answers `0` — the C update failure value — for a NULL `data`
+  with `count != 0`, **before** the primitive is called and without touching the block. A zero
+  `count` answers `1` for any `data`, without requiring it to be readable: for the SHA-1/SHA-2,
+  MD5, MD5-SHA1, MD4, RIPEMD-160, Whirlpool, SHA-3/SHAKE and SM3 callbacks the ported primitive
+  returns early exactly as the authority's does, and for the three whose primitive would reach a
+  zero-length copy from `in` (`blake2b_int_update`/`blake2s_int_update`, where
+  `ossl_blake2b_update` ends in `memcpy(c->buf + c->buflen, in, datalen)`, and `mdc2_update` with
+  a partly filled block) the callback answers `1` before the copy, because a zero-length copy
+  from a NULL pointer is undefined in Rust at any length even where the authority's `memcpy` does
+  not fault. No error is raised on either refusal: the authority raises nothing on this path; for
+  the non-zero shape it does not return at all. The block guards these callbacks share
+  (`init_md_data`, and `init_keccak` for the SHA-3/SHAKE tables) are the same repair and are
+  covered by this entry.
+- **Reason:** `D-LEGACY-MD-INIT-MD-DATA-1`'s: a read through a NULL pointer is not a contract to
+  reproduce (AGENTS.md §3 and §17). The getter's documented contract says nothing about `data`,
+  so a readable-data precondition cannot be discharged by the ABI; the callback must establish it
+  itself.
+- **Claim removed:** a NULL `data` with a non-zero `count` is not claimed compatible — the
+  authority faults in every measured case. A NULL `data` with `count == 0` **is** claimed
+  compatible: both sides answer `1`. On a readable `data` the digest maths and result are
+  unchanged: `null_data_with_nonzero_count_is_refused_for_every_update_callback` and
+  `null_data_with_zero_count_is_accepted_for_every_update_callback` drive all fifteen callbacks
+  and assert the block was untouched, and `valid_sha1_call_still_succeeds` in
+  `src/evp/legacy_digest_callback_surface.rs` pins the digest through the same surface.
+- **When it changes:** it does not. The authority faults on the non-zero shape; the boundary is
   permanent and the claim stays narrowed.
 
 ### D-MD-DOALL-NULL-1 — `EVP_MD_do_all_provided` calls a NULL visitor

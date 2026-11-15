@@ -659,10 +659,19 @@ unsafe extern "C" fn cms_kemri_cb(
 /// established by `CMS_RECIPIENT_INFO_ITEM`'s own `funcs` and `size`.
 ///
 /// `type_` selects the union arm this callback reads, so it must name the arm the template's
-/// selector (`encoded_type`) names. That holds structurally: `NEW_POST`/`D2I_POST` set
-/// `type_ = encoded_type` (the one field the machine writes from the encoded tag) before any
-/// other operation, and every in-crate constructor that writes the union also writes the same
-/// pair (`cms_env.rs`, `cms_kari.rs`, `cms_kemri.rs`, `cms_pwri.rs`).
+/// selector (`encoded_type`) names. That holds structurally whenever `d` is non-NULL: `NEW_POST`
+/// and `D2I_POST` set `type_ = encoded_type` (the one field the machine writes from the encoded
+/// tag) before any other operation, and every in-crate constructor that writes the union also
+/// writes the same pair (`cms_env.rs`, `cms_kari.rs`, `cms_kemri.rs`, `cms_pwri.rs`).
+///
+/// `d` itself is **not** guaranteed non-NULL on `FREE_PRE`, which is why the callback tests it: a
+/// re-decode into an existing value frees the selected alternative and resets `encoded_type`
+/// (`src/asn1/d2i.rs:1774-1789`) **without** resetting `type_`, and a value that was allocated but
+/// never decoded carries a zero `encoded_type` (index 0, `CMS_RECIPINFO_TRANS`) with `d` still
+/// NULL. `FREE_PRE` on either shape would read the arm through `d` and dereference NULL; the
+/// authority does exactly that and faults, which is not a contract to reproduce (§17). The guard
+/// releases nothing in that case and still answers `1`, so the walk frees the enclosing value
+/// itself.
 ///
 /// `FREE_PRE` runs *before* the walk, which is why this callback releases only the non-template
 /// members of the selected arm (`pkey`/`recip`/`pctx`, `key`/`keylen`, `pass`/`passlen`) and
@@ -677,7 +686,14 @@ unsafe extern "C" fn cms_ri_cb(
     // SAFETY: `pval` is a live value slot per the callback contract.
     let ri = unsafe { (*pval).cast::<CmsRecipientInfo>() };
     if operation == ASN1_OP_FREE_PRE {
-        // SAFETY: `ri` is live and `type_` selects the arm.
+        // The template's selector and `type_` can disagree only while no alternative is present;
+        // there is nothing to release then, and reading the arm through `d` would dereference
+        // NULL (the authority's fault, not reproduced).
+        // SAFETY: `ri` is a live value slot per the callback contract.
+        if unsafe { (*ri).d }.is_null() {
+            return 1;
+        }
+        // SAFETY: `ri` is live, `d` names an allocated arm, and `type_` selects it (see above).
         unsafe {
             match (*ri).type_ {
                 CMS_RECIPINFO_TRANS => {
@@ -2870,6 +2886,47 @@ mod b56_tests {
     #![allow(clippy::panic)]
     use super::*;
     use core::mem::size_of;
+
+    /// F-REST-1: `cms_ri_cb`'s `FREE_PRE` must not read the union through a NULL `d`.
+    ///
+    /// The machine's CHOICE selector is `encoded_type`; `type_` is this callback's derived copy
+    /// of it, so the two disagree on the two shapes reachable here: a value that was allocated
+    /// but never decoded (its zeroed `encoded_type` is index 0, `CMS_RECIPINFO_TRANS`, with `d`
+    /// still NULL) and a value whose alternative a re-decode released and reset
+    /// (`src/asn1/d2i.rs:1774-1789`, which resets the selector but not `type_`). The authority
+    /// dereferences `ri->d` on both and faults; the guard releases nothing and answers `1`, so
+    /// the walk still frees the enclosing value.
+    #[test]
+    fn free_pre_tolerates_a_value_whose_alternative_is_not_present() {
+        for arm in [
+            CMS_RECIPINFO_TRANS,
+            CMS_RECIPINFO_KEK,
+            CMS_RECIPINFO_PASS,
+            CMS_RECIPINFO_KEM,
+        ] {
+            // The stale shape: `type_` still names an arm, the union is not there.
+            let mut value = CmsRecipientInfo {
+                encoded_type: -1,
+                d: core::ptr::null_mut(),
+                type_: arm,
+            };
+            let mut pval: *mut c_void = (&mut value as *mut CmsRecipientInfo).cast();
+            // SAFETY: `pval` is this test's own live value slot of the item's type. The `FREE_PRE`
+            // arm reads neither `_it` nor `_exarg`, so both may be NULL.
+            let ret = unsafe {
+                cms_ri_cb(
+                    ASN1_OP_FREE_PRE,
+                    &mut pval,
+                    core::ptr::null(),
+                    core::ptr::null_mut(),
+                )
+            };
+            assert_eq!(
+                ret, 1,
+                "FREE_PRE must answer 1 with no alternative present (arm {arm})"
+            );
+        }
+    }
 
     /// B56-C1 — per-call-site witness (AGENTS.md §22) for the six release callbacks this sweep
     /// adjudicates.
