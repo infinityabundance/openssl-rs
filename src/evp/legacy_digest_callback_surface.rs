@@ -449,6 +449,39 @@ fn null_data_with_nonzero_count_is_refused_for_every_update_callback() {
     }
 }
 
+/// A NULL `data` with `count == 0` is **accepted** by every update callback, answering `1` and
+/// touching no byte of the block.
+///
+/// This is the shape the authority answers `1` to as well (it tests the length before the
+/// pointer, or performs a zero-length `memcpy` that does not fault), so it is compatibility rather
+/// than a narrowing: `D-LEGACY-MD-CALLBACK-MD-DATA-1` narrows only the non-zero-count shape. The
+/// two callbacks whose primitive would copy from `in` at length zero (`blake2b`/`blake2s`, `mdc2`
+/// with a partly filled block) must answer before the copy, because a zero-length copy from NULL
+/// is undefined in Rust at any length.
+#[test]
+fn null_data_with_zero_count_is_accepted_for_every_update_callback() {
+    let mut block = [0u64; 128];
+    for (name, table) in tables() {
+        // SAFETY: `table` is a live static method.
+        let update = unsafe { EVP_MD_meth_get_update(table) };
+        let Some(update) = update else { continue };
+        let mut c = ctx(table, block.as_mut_ptr().cast());
+        // SAFETY: `c` is live and the block is large enough for every legacy context; a zero
+        // length update reads no byte of `data`.
+        assert_eq!(
+            // SAFETY: `c` is live and the block is large enough for every legacy context; a zero
+            // length update reads no byte of `data`.
+            unsafe { update(&mut c, core::ptr::null(), 0) },
+            1,
+            "{name}: a zero-length update with a NULL data is accepted"
+        );
+        assert_eq!(
+            block, [0u64; 128],
+            "{name}: a zero-length update modified md_data"
+        );
+    }
+}
+
 /// A `METH`-origin method whose declared `ctx_size` is zero allocates no block, so every callback
 /// refuses the non-NULL block a caller might still attach.
 #[test]

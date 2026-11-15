@@ -1061,10 +1061,18 @@ unsafe fn err_value(site: &crate::runtime::err::err_sites::ErrSite, value: *cons
 ///
 /// # Safety
 ///
-/// `out` is NULL or a live `GENERAL_NAME`; `cnf` must be a live `CONF_VALUE`; `ctx` is NULL or
-/// live. A NULL `ctx` is refused on the `dirName` arm (`X509V3_get_section` raises and answers
-/// NULL, so the build fails) and accepted on the `otherName` arm (`ASN1_generate_v3` accepts
-/// NULL).
+/// `out` is NULL or a live `GENERAL_NAME`; `cnf` must be a live `CONF_VALUE` whose `name` and
+/// `value` are each NULL or NUL-terminated; `ctx` is NULL or live. A NULL `ctx` is refused on the
+/// `dirName` arm (`X509V3_get_section` raises and answers NULL, so the build fails) and accepted
+/// on the `otherName` arm (`ASN1_generate_v3` accepts NULL).
+///
+/// Both config fields are **refused when NULL**, before either is read: the authority tests
+/// `value` itself (`v3_san.c:604`, `X509V3_R_MISSING_VALUE`), but hands `name` straight to
+/// `ossl_v3_name_cmp(name, "email")` (`:601`), which reads through a NULL pointer and faults
+/// (measured: exit 139, `docs/SECURITY_DIVERGENCE_POLICY.md`, `D-V3-SAN-NULL-NAME-1`). A fault is
+/// not a contract to reproduce (§17), so a NULL `name` takes the same refusal and raises the
+/// entry's own missing-field reason instead. Neither NULL shape is claimed compatible; both leave
+/// `cnf` and `out` untouched.
 #[no_mangle]
 pub unsafe extern "C" fn v2i_GENERAL_NAME_ex(
     out: *mut GeneralName,
@@ -1080,9 +1088,19 @@ pub unsafe extern "C" fn v2i_GENERAL_NAME_ex(
         unsafe { raise_site(&V3_SAN_604) };
         return core::ptr::null_mut();
     }
+    if name.is_null() {
+        // The authority's first act on `name` is `ossl_v3_name_cmp(name, "email")` (`:601`),
+        // which reads through it; the scan is not a contract to reproduce
+        // (D-V3-SAN-NULL-NAME-1, the D-V3-CONF-NULL-VALUE-1 class at `X509V3_EXT_nconf*`). The
+        // entry is missing a field either way, so the refusal reuses the entry guard's own reason
+        // and touches no memory.
+        // SAFETY: the site is a declared constant.
+        unsafe { raise_site(&V3_SAN_604) };
+        return core::ptr::null_mut();
+    }
     // Each `ossl_v3_name_cmp(name, "...")` is a case-insensitive prefix compare by
-    // length; `name` is NUL-terminated.
-    // SAFETY: `name` is NUL-terminated per the contract.
+    // length; `name` is NUL-terminated and non-NULL per the contract.
+    // SAFETY: `name` is non-NULL and NUL-terminated per the contract.
     let type_ = unsafe {
         if ossl_v3_name_cmp(name, c"email".as_ptr()) == 0 {
             GEN_EMAIL
@@ -1105,7 +1123,7 @@ pub unsafe extern "C" fn v2i_GENERAL_NAME_ex(
     if type_ == -1 {
         // `ERR_raise_data(ERR_LIB_X509V3, X509V3_R_UNSUPPORTED_OPTION, "name=%s", name)`.
         let mut msg = b"name=".to_vec();
-        // SAFETY: `name` is NUL-terminated per the contract.
+        // SAFETY: `name` is non-NULL and NUL-terminated per the contract.
         unsafe { push_cstr(&mut msg, name) };
         msg.push(0);
         // SAFETY: `msg` is NUL-terminated; the site is a declared constant.
@@ -1583,6 +1601,56 @@ mod tests {
         assert_eq!(
             ossl_v3_alt[0].i2v.map(|f| f as usize),
             Some(san_i2v as *const () as usize)
+        );
+    }
+
+    /// F1: `v2i_GENERAL_NAME_ex` must refuse a NULL `name` **before** the name scan.
+    ///
+    /// The authority tests `value` (`v3_san.c:604`) but hands `name` straight to
+    /// `ossl_v3_name_cmp(name, "email")` (`:601`), which reads through a NULL pointer: measured
+    /// against the pinned prefix, `{name = NULL, value = "DNS:example.com"}` dies with exit 139,
+    /// while `{name = "DNS", value = NULL}` returns NULL after raising
+    /// `X509V3_R_MISSING_VALUE`. The refusal is the entry guard's own missing-field reason, and
+    /// neither `cnf` nor `out` is read past the two fields (`D-V3-SAN-NULL-NAME-1`).
+    #[test]
+    fn a_null_name_is_refused_before_the_name_scan() {
+        use crate::runtime::err::{ERR_clear_error, ERR_peek_last_error};
+
+        // The error stack is process-global; the lock keeps a sibling test's raise out of the
+        // read below.
+        let _g = crate::test_support::lock_global_state();
+
+        let mut value = b"DNS:example.com\0".to_vec();
+        let mut cnf = ConfValue {
+            section: core::ptr::null_mut(),
+            name: core::ptr::null_mut(),
+            value: value.as_mut_ptr().cast(),
+        };
+        ERR_clear_error();
+        // SAFETY: `cnf` is live and its `name` is NULL -- the shape this refusal exists for. `out`
+        // is NULL and `ctx` is unused, because no `GENERAL_NAME` is built.
+        let gen = unsafe {
+            v2i_GENERAL_NAME_ex(
+                core::ptr::null_mut(),
+                core::ptr::null(),
+                core::ptr::null_mut(),
+                &mut cnf,
+                0,
+            )
+        };
+        assert!(gen.is_null(), "a NULL name is refused");
+        let err = ERR_peek_last_error();
+        assert_ne!(err, 0, "the refusal raises");
+        assert_eq!(
+            (err & 0x7f_ffff) as c_int,
+            X509V3_R_MISSING_VALUE,
+            "the entry guard's own missing-field reason"
+        );
+        assert_eq!(((err >> 23) & 0xff) as c_int, 34, "raised from X509V3");
+        assert_eq!(
+            cnf.value,
+            value.as_ptr().cast_mut().cast::<c_char>(),
+            "the live value pointer is untouched"
         );
     }
 }

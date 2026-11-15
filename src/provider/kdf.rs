@@ -13553,19 +13553,32 @@ mod tests {
     /// `kdf_scrypt_dup` publishes the digest reference it takes on `dest` immediately, so a later
     /// `propq`/`memdup` failure releases it. `CRYPTO_memdup` refuses `siz >= INT_MAX` before
     /// reading, which drives that failure deterministically: the test observes the reference
-    /// count return to one instead of leaking the up-ref.
+    /// count return to where it started instead of leaking the up-ref.
+    ///
+    /// **Isolation (B44-TEST-1).** The count is read before and after, so nothing but this test's
+    /// own up-ref may move it. `EVP_MD_fetch` answers a *cached* method from the library context's
+    /// own method store (`src/evp/fetch.rs:990`, set at `:1070`), so a fetch from the default
+    /// context hands back an object every other digest user in the binary shares — and the suite
+    /// has ~100 tests that touch digest machinery without `lock_global_state`, which the
+    /// crate-wide lock therefore cannot exclude. The digest is fetched from this test's **own**
+    /// `OSSL_LIB_CTX` instead: its store is its own, so the object's refcount is private to this
+    /// test and the exact assertion stays exact.
     #[test]
     fn scrypt_dup_releases_its_digest_reference_on_a_later_failure() {
         use core::sync::atomic::Ordering;
 
-        // The fetched SHA256 and the method store are shared process-global state; holding the
-        // crate-wide lock keeps the before/after refcount readings free of a sibling's ±1.
+        use crate::context::{OSSL_LIB_CTX_free, OSSL_LIB_CTX_new};
+
+        // Creating the context activates a provider, which still touches process-global init, so
+        // the crate-wide lock is kept; the private context is what makes the counts exact.
         let _g = crate::test_support::lock_global_state();
 
-        // SAFETY: this test owns every object it touches.
+        // SAFETY: this test owns every object it touches, the library context included.
         unsafe {
-            let md = EVP_MD_fetch(ptr::null_mut(), c"SHA256".as_ptr(), ptr::null());
-            assert!(!md.is_null(), "SHA256 fetches");
+            let libctx = OSSL_LIB_CTX_new();
+            assert!(!libctx.is_null(), "a fresh library context");
+            let md = EVP_MD_fetch(libctx, c"SHA256".as_ptr(), ptr::null());
+            assert!(!md.is_null(), "SHA256 fetches from the private context");
 
             let src = kdf_scrypt_new_inner(ptr::null_mut()).cast::<KdfScrypt>();
             assert!(!src.is_null(), "a SCRYPT context");
@@ -13577,8 +13590,7 @@ mod tests {
             (*src).salt = salt;
             (*src).salt_len = i32::MAX as usize;
 
-            // The method store may already hold references to a fetched digest, so the test
-            // asserts the count is unchanged rather than assuming a particular absolute value.
+            // The private store holds its own reference, so the count is not assumed to be one.
             let before = (*md).refcnt.load(Ordering::Acquire);
             assert!(before >= 1);
             assert!(
@@ -13593,6 +13605,9 @@ mod tests {
 
             // `src` owns the fetched digest, so this releases it; no second `EVP_MD_free`.
             kdf_scrypt_free(src.cast());
+            // Everything the context owns has been released above, so this drops the store's
+            // last reference to the fetched digest and the context itself.
+            OSSL_LIB_CTX_free(libctx);
         }
     }
 

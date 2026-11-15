@@ -1375,14 +1375,30 @@ pub(crate) unsafe fn ossl_cms_set1_keyid(
 }
 
 /// The `void (*)(void *)` shape `OPENSSL_sk_pop_free` takes for [`X509_free`].
+///
+/// # Safety
+///
+/// `p` is NULL or a live `X509` that the calling stack owns **exclusively** — one element of the
+/// stack this thunk was handed to `OPENSSL_sk_pop_free`, never also held by another owner — so
+/// this call is that object's exactly-once release. Its provenance is the ASN.1 allocation seam
+/// (`X509_new`/`d2i_X509`), i.e. a block `CRYPTO_free`-compatible with `X509_free`'s own release,
+/// and it must be fully initialised for `X509_free`'s template walk. Whatever owned members it
+/// holds (name, extensions, cached encodings) are released by that walk; the stack frees the
+/// element slot, not the object.
 unsafe extern "C" fn x509_free_void(p: *mut c_void) {
-    // SAFETY: `p` is an `X509` per the stack's element type.
+    // SAFETY: `p` is an `X509` per the stack's element type and this call's exclusive release.
     unsafe { X509_free(p.cast()) };
 }
 
 /// The `void (*)(void *)` shape for [`X509_CRL_free`].
+///
+/// # Safety
+///
+/// As [`x509_free_void`], over an `X509_CRL`: `p` is NULL or a live CRL exclusively owned by the
+/// stack this thunk was given to, allocated at the ASN.1 seam (`X509_CRL_new`/`d2i_X509_CRL`), so
+/// this is its exactly-once release and its members are the ones `X509_CRL_free`'s walk expects.
 unsafe extern "C" fn x509_crl_free_void(p: *mut c_void) {
-    // SAFETY: `p` is an `X509_CRL` per the stack's element type.
+    // SAFETY: `p` is an `X509_CRL` per the stack's element type and this call's exclusive release.
     unsafe { X509_CRL_free(p.cast()) };
 }
 
