@@ -3669,5 +3669,142 @@
   ],
   "what_would_change_it": "a section 7 criterion 3 argument over the conservative closure; ASan/Miri/Loom and BOUNDARY controls plus SEAL; a green self-test log for f31816b1; a gate run under the section 6.1 envelope; per-row reuse statements for the remaining 23 changed-file identity rows; a rebind of the build-link atlas row; and a campaign rebuild/re-census that applies the 65 reviewed discharges without resurrecting the 19 withdrawn boundaries",
   "note": "Additive only. safe_compatible is false. This block does not overwrite current_applied_state or any historical block; the campaign applied ledger remains at candidate 69d43bb8d until a rebuild and re-census."
+ },
+ "b79": {
+  "candidate_tag": "b79",
+  "generated_utc": "2026-11-15T08:00:00Z",
+  "branch": "stage/p25/b75-ocsp",
+  "candidate": {
+   "measured_source_S": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+   "inventory_source_head": "63a23e72985fa65c6bf33ae07642a33d80234dad",
+   "gate_head": "ce47fe8263077a79ba040c107f36f8cc3dde3952",
+   "src_identical_to_S_at_gate_head": true,
+   "instrument_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8",
+   "libcrypto_so_3_sha256": "3045bd2d08a2abf535a555c20df7d94005ab64d74533294e4453e1e722cd0e23",
+   "ssh_sha256": "6be4db22e951a1283a3b97e087b8bd75b15c61e4e7031cfba19ab06222e82304",
+   "sshd_sha256": "9280e22e97087f3825cefdd9024197073d298178e0bab8e391188e3d60d46c07"
+  },
+  "freeze": {
+   "path": "court/freeze-b79/FREEZE-b79.json",
+   "sha256": "37e3ff2e662339a28d3939aef4209e28d0d8dacdfbb596f3b0db5f90e30e12a5",
+   "bytes": 96889
+  },
+  "verdict": "NOT ESTABLISHED",
+  "safe_compatible": false,
+  "families": {
+   "ssh": "SAFE_COMPATIBLE not established",
+   "sshd": "SAFE_COMPATIBLE not established"
+  },
+  "closures": {
+   "ssh": {
+    "verdict": "ACCEPTED",
+    "checks": "8/8 per-artefact rebind checks pass",
+    "reachable_files": 628,
+    "reachable_production_obligations": 290,
+    "DISCHARGED": 290,
+    "BLOCKED": 0,
+    "UNKNOWN": 0
+   },
+   "sshd": {
+    "verdict": "ACCEPTED",
+    "checks": "8/8 per-artefact rebind checks pass",
+    "reachable_files": 627,
+    "reachable_production_obligations": 290,
+    "DISCHARGED": 290,
+    "BLOCKED": 0,
+    "UNKNOWN": 0
+   }
+  },
+  "element7": {
+   "ssh": "PASS (0 target-bounded, 153 contract-bounded, 0 unclassified)",
+   "sshd": "PASS (0 target-bounded, 153 contract-bounded, 0 unclassified)"
+  },
+  "l7": {
+   "w1_key_operations": "PASS",
+   "w2_live_sshd_and_login": "PASS",
+   "w3_concurrency": "PASS",
+   "w4_sftp_server_and_session_identity": "PASS",
+   "w5_authority_keyformat_differential": "PASS",
+   "authority_differential": "10/10 PASS"
+  },
+  "gates": {
+   "source": "exact-S (gate head ce47fe826, src identical to S)",
+   "fmt": {
+    "exit": 0,
+    "diff_locations": 0
+   },
+   "clippy": {
+    "exit": 0,
+    "flags": "-D warnings, --all-targets"
+   },
+   "lib_tests": {
+    "exit": 0,
+    "passed": 2321,
+    "failed": 0,
+    "ignored": 54,
+    "threads": 4
+   },
+   "unsafe_fn_targeted": {
+    "exit": 0,
+    "passed": 12,
+    "failed": 0
+   },
+   "scrypt_flake_B44_TEST_1": "did not reproduce; no rerun needed",
+   "venue": {
+    "cgroup_memory_max_bytes": 8589934592,
+    "cargo_build_jobs": 4,
+    "peak_memory_current_bytes": {
+     "clippy": 7148605440,
+     "lib_tests": 7074668544
+    },
+    "oom_kill": 0
+   },
+   "log": {
+    "path": "court/freeze-b79/gates.log",
+    "sha256": "bdcfd2e39ff55f77ed5064186e90a4ae73e178e89d958cda5226f51ed8e175d3",
+    "bytes": 424237,
+    "superseded_pre_format_fmt_exit": 1
+   }
+  },
+  "criterion3": {
+   "source": "evidence/b79-safety-argument.json (re-derived at b79)",
+   "verdict_totals": {
+    "SAFETY_DISCHARGED": 0,
+    "OWNERSHIP_RECONSTRUCTED": 0,
+    "NOT_ESTABLISHED": 7,
+    "mechanisms": 7
+   },
+   "per_mechanism": {
+    "EVP_PKEY_PROVIDER": "NOT_ESTABLISHED",
+    "X509_VERIFY_POLICY": "NOT_ESTABLISHED",
+    "RAND_CMS_STORE_KEYFMT": "NOT_ESTABLISHED",
+    "SSL_SESSION": "NOT_ESTABLISHED",
+    "C_ABI_CONTRACT": "NOT_ESTABLISHED",
+    "RUNTIME_CONCURRENCY": "NOT_ESTABLISHED",
+    "BIO": "NOT_ESTABLISHED"
+   },
+   "reasons": "59/290 obligations independently re-read; 5 sites have only an operation-level contract; 6 rest on inventory contract records; 4 have no contract; C_ABI_CONTRACT and BIO are UNSAFE_OPEN"
+  },
+  "residuals": [
+   "criterion3/safety-argument: all seven mechanisms NOT_ESTABLISHED (0 SAFETY_DISCHARGED, 0 OWNERSHIP_RECONSTRUCTED)",
+   "criterion3/qualifier-control: D1 open (11 of 12 qualifier-control tests self-satisfying); D2, D4, D5 open",
+   "venue/memory: closures and L7 ran at the 16 GiB directive venue (documented deviation); the exact-S gate ran at the section 6.1 formula cap of 8 GiB",
+   "gate/exact-s: gates.log is append-only; its first four steps predate 63a23e729 and are SUPERSEDED by the *-exact-s steps",
+   "gate/recorded-scrypt-flake: B44-TEST-1 did not reproduce; still unquarantined and its re-review is NOT_RUN",
+   "instrument/self-test-not-run: consumer_closure.py --self-test was not invoked at b79; the b78 self-test is not reused",
+   "element7/contract-bounded: 153 sites per closure are target-unbounded by design and discharged under criterion 2 only",
+   "ledger-binding: the per-artefact rebind is not a closure run and changes no count, verdict or refusal",
+   "l7/not-run-rows: candidate-only keyformat-b79.sh authority rows are NOT_RUN by construction, closed by the w5 differential",
+   "adjudication/not-run: no independent SAFE_COMPATIBLE adjudication was performed at b79",
+   "campaign-status/b79-block: adding this block changes this file's sha256 away from the digest tool.inputs recorded at freeze generation"
+  ],
+  "not_run": [
+   "SAFE_COMPATIBLE promotion (no independent adjudication; candidate not graduated)",
+   "BOUNDARY adjudication of the remaining contract-bounded boundaries",
+   "SEAL (release build, full probe suite, full forensic regeneration)",
+   "ASan/Miri/Loom and dudect/Wycheproof for this candidate",
+   "the instrument --self-test at b79"
+  ],
+  "note": "Additive only. safe_compatible is false. No historical block is deleted or overwritten, and current_applied_state is unchanged. S is 5b08c0294; the gate ran at ce47fe826 whose src/ is identical to S. The freeze is the artefact of record; this block summarises it, and its recorded sha is the one in the freeze's tool.inputs."
  }
 }
