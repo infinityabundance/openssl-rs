@@ -1,0 +1,303 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/per-call-site-witness/v1",
+  "kind": "b80 element-7 re-pin: the two CONF dispatch sites and the three provider hw-table rows",
+  "receipt": "e7-b80-repin",
+  "date": "2026-11-15",
+  "source_identity": {
+    "branch": "stage/p25/b75-ocsp",
+    "head": "d4a3fe735",
+    "source_candidate_S": "d9fdf1357",
+    "install_prefix": "artifacts/phase2/install",
+    "libcrypto_so_3_sha256": "60c1111250684556012dac7436c4aea3115b8697e7845c81c5ffb7fbf4c112f2",
+    "consumers": {
+      "ssh": {
+        "path": "court/tmp/openssh-closure/client-b80/openssh-9.9p1/ssh",
+        "sha256": "f8f454782e6a793a624687755a779ad4b6cb9bbb8693f35f2a1f5f9d16234607"
+      },
+      "sshd": {
+        "path": "court/tmp/openssh-closure/server-b80/openssh-9.9p1/sshd",
+        "sha256": "152ccc3465240454b5ec0cd470dfa81dc7eb044c01c9bbe72519a65a71919b92"
+      }
+    },
+    "tool": {
+      "path": "forensics/tools/consumer_closure.py",
+      "sha256_before": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8",
+      "sha256_after": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66"
+    }
+  },
+  "task1_conf_sites": {
+    "question": "are CONF_free 0x2dd4c6 and CONF_load 0x2dd6eb the conf_method_st slot family already proved by ABI_CONTRACT_CONF_DEFAULT_METHOD, or a different object?",
+    "finding": "same slot family; reached through the inlined CONF_set_nconf tail of the classic CONF API. The receiver is the process-global `default_CONF_method` cell, the slot is conf_method_st.init at 0x10, and the writers of the slot are exactly the ones the b78 witness enumerated.",
+    "source_proof": [
+      "src/runtime/conf/lib.rs:70-94 -- CONF_set_nconf loads DEFAULT_CONF_METHOD (lib.rs:55), installs NCONF_default() when NULL (lib.rs:75-79), and calls `(*meth).init` (lib.rs:82-87) on a caller-provided stack `Conf`",
+      "src/runtime/conf/lib.rs CONF_free and CONF_load_bio both build `let mut ctmp = zeroed::<Conf>()` and call CONF_set_nconf(&mut ctmp, ...) -- CONF_free then NCONF_free_data, CONF_load_bio then NCONF_load_bio",
+      "src/runtime/conf/types.rs:71 -- `ConfMethod.init: Option<ConfInitFn>`; the witness reads the declared offset from the source layout (0x10) rather than assuming it",
+      "src/runtime/conf/lib.rs:119-124 -- the exported setter stores its `meth` parameter unchanged; the declaration is `pub unsafe extern \"C\" fn` since 97a1240e7"
+    ],
+    "disassembly_proof": {
+      "CONF_free": [
+        "0x2dd4a9 mov 0x5d12a8(%rip),%rax  # 8ae758 <DEFAULT_CONF_METHOD>",
+        "0x2dd4b3 jne 0x2dd4c3  (cell != NULL keeps the loaded table)",
+        "0x2dd4b5 lea 0x515a34(%rip),%rax  # 7f2ef0 <DEFAULT_METHOD>  (NULL fallback table)",
+        "0x2dd4bc mov %rax,0x5d1295(%rip)  # 8ae758  (the fallback store)",
+        "0x2dd4c3 mov %rsp,%rdi",
+        "0x2dd4c6 call *0x10(%rax)  (conf_method_st.init, operand-field form)"
+      ],
+      "CONF_load": [
+        "0x2dd6cc mov 0x5d1085(%rip),%rax # 8ae758",
+        "0x2dd6d8 lea 0x515811(%rip),%rax # 7f2ef0",
+        "0x2dd6df mov %rax,0x5d1072(%rip) # 8ae758",
+        "0x2dd6eb call *0x10(%rax)"
+      ]
+    },
+    "receiver": {
+      "cell": "0x8ae758",
+      "cell_symbol": "_RNvNtNtNtCsfUQpk6SBn4K_10openssl_rs7runtime4conf3lib19DEFAULT_CONF_METHOD.0.llvm.5462897590218982287",
+      "declared": "static DEFAULT_CONF_METHOD: AtomicPtr<ConfMethod>"
+    },
+    "slot": {
+      "object": "conf_method_st (ConfMethod, src/runtime/conf/types.rs)",
+      "field": "init",
+      "offset": "0x10",
+      "typedef": "ConfInitFn (conf_init_func)"
+    },
+    "writer_enumeration_whole_image": {
+      "setter_parameter_stores": 1,
+      "setter": {
+        "function": "CONF_set_default_method",
+        "address": "0x2dda40",
+        "text": "mov %rdi,0x5d0d11(%rip) # 8ae758"
+      },
+      "builtin_null_fallback_stores": 23,
+      "builtin_fallback_functions": 18,
+      "unaccounted_writers": 0,
+      "builtin_table": "0x7f2ef0 (DEFAULT_METHOD) == the table NCONF_default() publishes",
+      "getter": "NCONF_default 0x224370 lea 0x7f2ef0"
+    },
+    "reader_enumeration_whole_image": {
+      "loads_of_the_cell": 24,
+      "functions": 18,
+      "all_readers_in": ["runtime::conf", "x509::v3_conf"],
+      "rule": "every load of the cell must be inside the conf module or the x509::v3_conf module that inlines the classic API; anything else refuses (default-method-cell-read-outside-the-conf-modules)"
+    },
+    "source_writer_set": {
+      "runtime_stores_to_ConfMethod.init": 0,
+      "table_literals": [
+        {"file": "src/runtime/conf/def.rs", "line": 809, "static": "DEFAULT_METHOD", "init": "Some(def_init_default)"},
+        {"file": "src/runtime/conf/def.rs", "line": 823, "static": "WIN32_METHOD", "init": "Some(def_init_win32)"}
+      ]
+    },
+    "sites": [
+      {
+        "id": "b80-conf-free-init",
+        "function": "CONF_free",
+        "old_pin": "new row",
+        "new_pin": ["CONF_free", "0x36"],
+        "literal_key": "0x2DD4C6",
+        "resolved_address": "0x2dd4c6",
+        "text": "call   *0x10(%rax)",
+        "form": "operand-field",
+        "decision": "CONTRACT-BOUNDED: ABI_CONTRACT_CONF_DEFAULT_METHOD",
+        "witness_rule": "conf_default_method_witness (table CONF_METHOD_SITES)",
+        "base_origins": [
+          {"kind": "default-method-cell", "definition": "0x2dd4a9"},
+          {"kind": "builtin-default-table", "definition": "0x2dd4b5"}
+        ]
+      },
+      {
+        "id": "b80-conf-load-init",
+        "function": "CONF_load",
+        "old_pin": "new row",
+        "new_pin": ["CONF_load", "0x5B"],
+        "literal_key": "0x2DD6EB",
+        "resolved_address": "0x2dd6eb",
+        "text": "call   *0x10(%rax)",
+        "form": "operand-field",
+        "decision": "CONTRACT-BOUNDED: ABI_CONTRACT_CONF_DEFAULT_METHOD"
+      },
+      {
+        "id": "b80-conf-load-bio-init",
+        "function": "CONF_load_bio",
+        "old_pin": "new row",
+        "new_pin": ["CONF_load_bio", "0x40"],
+        "literal_key": "0x2DD860",
+        "resolved_address": "0x2dd860",
+        "text": "call   *0x10(%rax)",
+        "form": "operand-field",
+        "decision": "CONTRACT-BOUNDED (enumerated; not reachable from ssh/sshd at b80, so absent from the residual set)",
+        "why_enumerated": "the same inlined tail; a different consumer that reaches it must not fall back to target-bounded"
+      },
+      {
+        "id": "b78-x509v3-req-add-conf-init",
+        "function": "X509V3_EXT_REQ_add_conf",
+        "old_pin": ["X509V3_EXT_REQ_add_conf", "0xBC"],
+        "literal_key": "0x49A8DC",
+        "resolved_address": "0x37342c",
+        "text": "call   *%rax  (after mov 0x10(%rax),%rax at 0x373420 and 0x37354c)",
+        "form": "reg-load",
+        "decision": "CONTRACT-BOUNDED: ABI_CONTRACT_CONF_DEFAULT_METHOD (b78 row, re-pinned away from its stale literal)",
+        "note": "not reachable from ssh/sshd at b80 (so CONF_DEFAULT_METHOD counted 0 in the b80 closures); kept so the row survives a consumer that reaches it"
+      }
+    ],
+    "uniqueness_argument": [
+      "the site is identified by a per-call-site (function, offset) pin plus a recorded shape; a row that does not re-derive by pin is only accepted through the in-symbol witness search, which requires exactly one accepted transfer",
+      "the dispatched operand's base register has exactly two admissible producers: the load of the DEFAULT_CONF_METHOD cell and the lea of the built-in table; any other producer refuses (field-base-is-neither-the-cell-nor-the-built-in-table)",
+      "the built-in table must be the one NCONF_default() publishes (builtin-table-is-not-the-one-NCONF_default-publishes)",
+      "every write to the cell in the whole image is the exported setter's %rdi parameter store or a built-in NULL fallback (x1 + x23, 0 unaccounted); a store through any other interface refuses",
+      "every read of the cell in the whole image is inside runtime::conf or x509::v3_conf; a reader elsewhere refuses",
+      "the source has no runtime store to ConfMethod.init and exactly two table literals, both Some(def_init_*) in runtime/conf/def.rs"
+    ],
+    "stale_check_repaired": {
+      "check": "source-does-not-store-the-setter-parameter",
+      "problem": "the literal `pub extern \"C\" fn CONF_set_default_method(meth: *mut ConfMethod)` no longer matched the source after 97a1240e7 made the function `pub unsafe extern \"C\" fn`; the b78 row would have refused on any build where it is reachable",
+      "repair": "the check now matches `pub (unsafe )?extern \"C\" fn CONF_set_default_method(meth: *mut ConfMethod)` -- the contract, not the qualifier",
+      "observed_before": "the pristine tool at b80 refused the b78 row with this reason (court/freeze-b80/selftest-b80-baseline.log)"
+    }
+  },
+  "task2_provider_hw_rows": {
+    "question": "did the GCM source table change, or is the witness layout-sensitive?",
+    "answer": "the source and the table did not change; the three rows were dropped because the generic resolver happened to resolve those sites in b80, and the hw witness is only consulted for unresolved sites",
+    "source_unchanged": "git diff d9fdf1357^..d9fdf1357 -- src/provider/cipher_gcm.rs src/provider/cipher.rs is empty",
+    "tables_in_the_b80_image": {
+      "AES_GCM_HW": {
+        "address": "0x7c7858",
+        "slots": {
+          "0x10": "0x1bdd30 ossl_gcm_aad_update",
+          "0x18": "0x1bde60 sm4_gcm_cipher_update",
+          "0x20": "0x1bddb0 ossl_gcm_cipher_final"
+        }
+      },
+      "SM4_GCM_HW": {
+        "address": "0x7c7888",
+        "slots": {
+          "0x10": "0x1bdd30 ossl_gcm_aad_update",
+          "0x18": "0x1bde60 sm4_gcm_cipher_update",
+          "0x20": "0x1bddb0 ossl_gcm_cipher_final"
+        }
+      },
+      "ARIA_GCM_HW": {
+        "address": "0x7c78b8",
+        "slots": {
+          "0x10": "0x1bdd30 ossl_gcm_aad_update",
+          "0x18": "0x1bdf00 ossl_gcm_cipher_update",
+          "0x20": "0x1bddb0 ossl_gcm_cipher_final"
+        }
+      },
+      "relocation_evidence": "objdump -R shows R_X86_64_RELATIVE at 0x7c7868/0x7c7870/0x7c7878 (AES), 0x7c7898/0x7c78a0/0x7c78a8 (SM4), 0x7c78c8/0x7c78d0/0x7c78d8 (ARIA) with exactly those addends"
+    },
+    "sites_in_the_b80_image": {
+      "function": "ossl_gcm_one_shot",
+      "function_start": "0x1bd840",
+      "shape": "0x1bd857 mov 0xf0(%rdi),%r13 ; call *0x10/0x18/0x20(%r13)",
+      "sites": [
+        {"pin": ["openssl_rs::provider::cipher_gcm::ossl_gcm_one_shot", "0x1E"], "address": "0x1bd85e", "slot": "ProvGcmHw.aadupdate@0x10", "targets": ["ossl_gcm_aad_update"]},
+        {"pin": ["openssl_rs::provider::cipher_gcm::ossl_gcm_one_shot", "0x34"], "address": "0x1bd874", "slot": "ProvGcmHw.cipherupdate@0x18", "targets": ["ossl_gcm_cipher_update", "sm4_gcm_cipher_update"]},
+        {"pin": ["openssl_rs::provider::cipher_gcm::ossl_gcm_one_shot", "0x4C"], "address": "0x1bd88c", "slot": "ProvGcmHw.cipherfinal@0x20", "targets": ["ossl_gcm_cipher_final"]}
+      ]
+    },
+    "what_changed": {
+      "b79c": "class=field, reason=base-slot-partial (unresolved) -> the three rows existed as ABI_CONTRACT_PROVIDER_HW_TABLE",
+      "b80": "class=resolved, reason=base-slot (unresolved=False) -> the witness never ran, so the rows disappeared",
+      "mechanism": "the generic `field` rule keys its store map by the raw displacement across every type (`field_stores[off]`, `field_open`) and evaluates functions in order; a site analysed before the function that opens that displacement resolves, an identical site analysed after it does not",
+      "direct_evidence": "in this exact image `field_open` contains 0xf0 in its final state (court/freeze-b80/e7probe-b80.json: field_open_0xf0=true) while all three sites are recorded resolved (reason=base-slot); the opening store is therefore later in the pass than ossl_gcm_one_shot",
+      "cross_check": "the resolver's own target sets equal the witness's enumerated table leaves exactly, so the resolution is not wrong -- it is weaker and unstable"
+    },
+    "row_rederivation": {
+      "rule": "S5b: provider_hw_table_witness is evaluated on every enumerated hw-table site, resolved or not; when it accepts, the row is re-recorded from the table symbols/leaves and the resolver's class is retained as resolver_class",
+      "narrowing_guard": "the row is accepted only when the resolver's target set is a subset of the witness's; a witness narrower than the resolver refuses (hw-witness-narrower-than-resolver), so this path can never shrink a resolved set",
+      "observed": "3 rows re-represented (stats.S5b_provider_hw_table_rerepresented=3); 0 refused"
+    }
+  },
+  "task2_cts": {
+    "question": "why did the AES-CTS witness rename from `CRYPTO_nistcts128_encrypt_block (block)` to `CRYPTO_nistcts128_encrypt (cbc)` x2?",
+    "answer": "no source change and no lost row: the callback dispatches moved inside their functions and the reachability of the two exported functions changed",
+    "source_unchanged": "git diff d9fdf1357^..d9fdf1357 -- src/modes is empty",
+    "b80_disassembly": [
+      "CRYPTO_nistcts128_encrypt 0x31fb60: `call *%r14` at 0x31fba2 and 0x31fc00, %r14 = %r9 = parameter 5 (cbc_fn); source calls cbc_fn twice (src/modes/mod.rs:861,872)",
+      "CRYPTO_nistcts128_encrypt_block 0x31fc20: `call *%r8` at 0x31fcff, %r8 = parameter 4 (block); the full-block path calls the exported CRYPTO_cbc128_encrypt through the GOT at 0x31fc5b"
+    ],
+    "attribution": {
+      "b79c": [{"function": "0x447b00 (CRYPTO_nistcts128_encrypt_block)", "call_site": "0x447bdf", "witness": "CRYPTO_nistcts128_encrypt_block parameter 5 (block)"}],
+      "b80": [
+        {"function": "0x31fb60 (CRYPTO_nistcts128_encrypt)", "call_site": "0x31fba2", "witness": "CRYPTO_nistcts128_encrypt parameter 5 (cbc)"},
+        {"function": "0x31fb60 (CRYPTO_nistcts128_encrypt)", "call_site": "0x31fc00", "witness": "CRYPTO_nistcts128_encrypt parameter 5 (cbc)"}
+      ],
+      "block_row_still_exists": "the b80 probe finds `call *%r8` at 0x31fcff still contract-bounded as ABI_CONTRACT_EXPORT_CALLBACK (CRYPTO_nistcts128_encrypt_block parameter 5 (block)); it is not in the ssh residual because CRYPTO_nistcts128_encrypt_block is not reachable from this consumer at b80",
+      "conclusion": "the rename follows the machine code and the reachable set; both attributions are correct for their build and no contract row was silently dropped"
+    }
+  },
+  "mutation_controls": [
+    {"control": "conf-method wrong slot offset (reg-load form)", "mutation": "the proven load `mov 0x10(...),%rax` becomes `mov 0x18(...),%rax`", "expected": "operand-load-is-not-the-init-slot", "observed": "refused; restored"},
+    {"control": "conf-method wrong slot offset (operand-field form)", "mutation": "`call *0x10(%rax)` becomes `call *0x18(%rax)`", "expected": "operand-load-is-not-the-init-slot", "observed": "refused for each operand-field row; restored"},
+    {"control": "conf-method non-parameter setter", "mutation": "the setter store `%rdi,cell` becomes `%rsi,cell`", "expected": "unaccounted-writer-of-the-default-method-cell (a second writer via another interface)", "observed": "refused; restored"},
+    {"control": "conf-method non-builtin fallback", "mutation": "a built-in fallback store `%rax,cell` becomes `%rcx,cell`", "expected": "unaccounted-writer-of-the-default-method-cell", "observed": "refused; restored"},
+    {"control": "conf-method wrong declared field", "mutation": "_MUTED=e7abi-conf-method-wrong-field makes the witness prove `destroy` instead of `init`", "expected": "declared-init-field-is-not-at-the-dispatched-offset", "observed": "refused; restored"},
+    {"control": "conf-method foreign reader", "mutation": "a load of the cell is injected into a function outside runtime::conf / x509::v3_conf", "expected": "default-method-cell-read-outside-the-conf-modules", "observed": "refused"},
+    {"control": "conf-method restore", "mutation": "none", "expected": "the admitted image accepts again with an identical witness", "observed": "accepted, witness byte-identical"},
+    {"control": "S5b narrowing guard", "mutation": "assert resolver_targets <= hw_targets before re-representing", "expected": "a witness that omits a resolver target is refused, never written as the row", "observed": "guard in place; all three b80 sites satisfy it (target sets equal), 0 refusals"},
+    {"control": "e7repin pin conditions (pre-existing)", "mutation": "unknown symbol leaf, non-call offset, non-call instruction", "expected": "each refuses; no moved row accepted by two rows", "observed": "all refuse (44 rows pinned, 3 moved, 0 refused)"}
+  ],
+  "element7": {
+    "before": {
+      "status": "FAIL",
+      "target_bounded_unresolved_sites": 2,
+      "contract_bounded_sites": 151,
+      "unclassified_reachable_sites": 0,
+      "reachable_unresolved_sites": 153,
+      "target_bounded_sites": ["CONF_free 0x2dd4c6", "CONF_load 0x2dd6eb"],
+      "by_class": {"ABI_CONTRACT_CONF_MODULE": 2, "ABI_CONTRACT_CORE_DISPATCH": 26, "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3, "ABI_CONTRACT_EXPORT_CALLBACK": 68, "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1, "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2, "ABI_CONTRACT_PBE_REGISTRY": 1, "ABI_CONTRACT_PROVIDER": 16, "ABI_CONTRACT_PROVIDER_HW_TABLE": 22, "ABI_CONTRACT_REGISTRATION_ATEXIT": 1, "ABI_CONTRACT_SLH_METHOD_TABLE": 6, "ABI_CONTRACT_STORE_LOADER": 3},
+      "evidence": ["evidence/closure-ssh-b80.json", "evidence/closure-sshd-b80.json"]
+    },
+    "after": {
+      "status": "PASS (contract-bounded)",
+      "target_bounded_unresolved_sites": 0,
+      "contract_bounded_sites": 156,
+      "unclassified_reachable_sites": 0,
+      "reachable_unresolved_sites": 156,
+      "by_class": {"ABI_CONTRACT_CONF_DEFAULT_METHOD": 2, "ABI_CONTRACT_CONF_MODULE": 2, "ABI_CONTRACT_CORE_DISPATCH": 26, "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3, "ABI_CONTRACT_EXPORT_CALLBACK": 68, "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1, "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2, "ABI_CONTRACT_PBE_REGISTRY": 1, "ABI_CONTRACT_PROVIDER": 16, "ABI_CONTRACT_PROVIDER_HW_TABLE": 25, "ABI_CONTRACT_REGISTRATION_ATEXIT": 1, "ABI_CONTRACT_SLH_METHOD_TABLE": 6, "ABI_CONTRACT_STORE_LOADER": 3},
+      "ssh_receipt": {"path": "court/freeze-b80/e7-b80-repin-after.json", "sha256": "4163728cce7413f6b2f9b84226312406b8e652a14bacdcc8a54e867044aefe14"},
+      "sshd_receipt": {"path": "court/freeze-b80/e7-b80-repin-sshd-after.json", "sha256": "5ce3fa500e62ee1a20f5e345abd0966ff40c8da4fec7aa58299efc4d2f87646d"},
+      "tool_sha256": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66"
+    },
+    "delta": "151 + 3 (ProvGcmHw rows re-represented) + 2 (CONF init rows) = 156 contract-bounded; 2 target-bounded -> 0; unclassified unchanged at 0; both families identical"
+  },
+  "self_test": {
+    "note": "the tool self-test is FAILED at b80 both before and after this change; the change removes the conf-method failures and leaves two image-property failures",
+    "baseline_pristine_tool": {
+      "log": "court/freeze-b80/selftest-b80-baseline.log",
+      "sha256": "1baa79c3d01c6201ac282bd5783c9b4e348143354024f14599ff8fd32979e410",
+      "failures": 11,
+      "breakdown": "9 conf-method failures caused by the stale `pub extern \"C\"` source check, `e7repin-search disabled: a stale row exists in this image: got False`, `e7core default-context control DID NOT RUN`"
+    },
+    "after_this_change": {
+      "log": "court/freeze-b80/selftest-b80-repin.log",
+      "sha256": "7648da5d6d4fd8849edbc741bc51dfdb0c2569d6d566f300f7fd3264e1925c1a",
+      "failures": 2,
+      "breakdown": "the same two image-property failures: at b80 no PBE_EX row is stale (the fixture the search-off control needs is absent) and no admitted site records an inlined default-context accessor (reported NOT_RUN). Neither is caused by this change.",
+      "conf_method_controls": "0 failures (all four rows accepted, 7 refusal/restore controls pass)"
+    }
+  },
+  "fixture_changes": {
+    "CONF_METHOD_SITES": "the scalar CONF_METHOD_SITE became a table keyed by literal site address with per-row {function, form} and per-row (function, offset) pins: 0x49A8DC (reg-load), 0x2DD4C6 / 0x2DD6EB / 0x2DD860 (operand-field)",
+    "conf_default_method_witness": "accepts the operand-field shape (`call *0x10(<table>)`) as well as the register-load shape; the base-register producers are classified with the same cell/builtin rule; reader completeness is checked image-wide",
+    "apply_evidence_classes": "S5b re-derives enumerated provider hw-table rows on sites the generic resolver already resolved, with a narrowing guard",
+    "external ABI index": "CONF_METHOD_SITES joined the re-pinned tables so the index follows the pins rather than the literals",
+    "source check": "the setter declaration check accepts the `unsafe` qualifier"
+  },
+  "does_not_prove": [
+    "that any particular application CONF_METHOD is installed: CONF_set_default_method is public and the target set stays unbounded; this is a contract bound, not a finite set",
+    "the behaviour, lifetime or thread-safety of an installed CONF_METHOD or of an application/provider callback body",
+    "any ConfMethod field other than `init` at 0x10 (create 0x8, destroy 0x18, destroy_data 0x20 are different slots)",
+    "that the reader module gate cannot be bypassed by code inside runtime::conf or x509::v3_conf: the check is module-scoped by symbol, not per-site",
+    "a second or aliasing writer of the cell or of ConfMethod.init; the witness refuses one, but the scan is source- and image-scoped (a macro-expanded or opaque-alias store elsewhere would have to appear as a writer to be refused)",
+    "the provider's hw-table behaviour: S5b proves only which table slot holds which in-image function start, not what those functions do",
+    "that the generic resolver's `resolved` class is correct in general; S5b only refuses when the witness is narrower than the resolver, so a resolver over-approximation is carried, not confirmed",
+    "closure-level acceptance: element7-only is a FAST probe (mode=element7-only, not_a_closure_receipt=true); the accepted closures evidence/closure-{ssh,sshd}-b80.json were produced with the previous tool and are stale",
+    "compatibility or cryptographic properties: no authority differential, no ASan/Miri, no protocol court was run for this change"
+  ],
+  "non_claims": [
+    "the two remaining self-test failures are b80 image properties, reproduced with the pristine tool; they are not evidence that the new rows work by accident",
+    "a green element-7 here is a contract bound on reachable unresolved dispatches, not a SAFE_COMPATIBLE graduation",
+    "the b80 closure receipts must be regenerated at BATCH before any freeze that cites them"
+  ]
+}
