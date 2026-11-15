@@ -1,0 +1,2062 @@
+{
+ "schema": "openssl-rs/safe-c33/b79-review-rebind/v1",
+ "kind": "independent-review-and-receipt-rebind",
+ "subphase": "safe-c33/b79 review-3: re-establish and re-bind the sixteen rows the b79b closures left BLOCKED",
+ "generated_utc": "2026-11-14T00:00:00Z",
+ "reviewer": {
+  "role": "independent reviewer and receipt re-binder",
+  "independence": "not the author of 688c27cb8, 97a1240e7, 5595a1f5e or the b76/b78 receipts; the verdicts below rest on outputs of the closure tool read at this candidate"
+ },
+ "venue": {
+  "free_g_available_gib": 29,
+  "memory_cap": "16 GiB / 16 vCPU, user-authorized AGENTS.md 6.1 deviation",
+  "compilation": "none (source-level review; no cargo, no binary)",
+  "work_done": "span resolution, adjudication and canaries only"
+ },
+ "candidate_identity": {
+  "source_head": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+  "branch": "stage/p25/b75-ocsp",
+  "files_sha256": {
+   "src/cmp/cmp_ctx.rs": "e2204d97a4262493f1c04f8ff730c7ddde83252b9c1540763dfbe206e7a72622",
+   "src/cmp/cmp_asn.rs": "b216ee057139f1bbb6184eea75e287d081cb168ef5fbd43d6143f56b37a0abd3",
+   "src/rand/rand_lib.rs": "7a532c3789192521d603f679c13abceb2a067248b02ad57350acd57e14b5dc40",
+   "src/ssl/ssl_conf.rs": "78ae9c58d0f0bd98d47cd89a797771361472d72d3a89b55acd522bbe0ae03b6f"
+  },
+  "closure_tool_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8",
+  "span_schema": "safe-c33/operation-span-sha256/v1"
+ },
+ "method": {
+  "task1": "located each operation at the candidate by (file, qualified operation) with the tool's own resolver; quoted the brace-matched span and the fn-level contract",
+  "task2": "resolved the prior span at the commit whose bytes the recorded hash belongs to (bb7d5206 for the v1i rows, 04acfb7e for B69, b6f38f1 for the sslconf row), confirmed it reproduces the recorded hash, then diffed it against the candidate span and classified the delta hunk-locally",
+  "task3": "answered the four questions from source at this candidate and re-ran the closure adjudicator plus per-row canaries",
+  "task4": "updated only the sixteen rows (plus one additive receipt-level block per receipt) and re-ran the adjudicator and canaries"
+ },
+ "prior_state": {
+  "closures": [
+   "evidence/closure-ssh-b79b.json",
+   "evidence/closure-sshd-b79b.json"
+  ],
+  "tally": "290 obligations, 274 DISCHARGED / 16 BLOCKED / 0 UNKNOWN, element 7 PASS",
+  "cause": "every one of the sixteen was a span-hash mismatch: 688c27cb8 changed the inline SAFETY comment inside fourteen cmp spans (and added the fn-level `# Safety` above them, outside the hash), 97a1240e7 wrapped the rand initialiser call in an explicit unsafe block, and the ssl span took the same wrapper change.",
+  "premise_correction": "the task brief attributed the cmp span drift to 97a1240e7; git log -- src/cmp/cmp_ctx.rs over bb7d5206..HEAD shows 688c27cb8 as the only commit touching that file, and -S confirms it introduced both the twelve `# Safety` doc lines and the twelve rewritten inline SAFETY comments."
+ },
+ "rows": [
+  {
+   "boundary": "OSSH-V1I-049",
+   "receipt": "openssh-v1i-sites.json",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "x509_name_dup_void",
+   "kind": "UNSAFE_FN_DEF",
+   "prior": {
+    "coordinate": 350,
+    "span_lines": [
+     350,
+     353
+    ],
+    "span_sha256": "13028da9d8492f824d5761e48a7c2f0c44392f914ac4cd0227e8d6bec0048488",
+    "verdict": "ACCEPT",
+    "review": "b76-review-v1i-batch1"
+   },
+   "current": {
+    "coordinate": 357,
+    "def_line": 357,
+    "span_lines": [
+     357,
+     360
+    ],
+    "span_sha256": "68c3affef36dde35c69ad17c8be073d1ed36e9a957afbe84d623c802b79480b6",
+    "qualified_identity": "x509_name_dup_void",
+    "resolution": "unique"
+   },
+   "delta": {
+    "introduced_by": "688c27cb8",
+    "classification": "doc-only",
+    "statement": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+    "old_span_text": [
+     "unsafe extern \"C\" fn x509_name_dup_void(p: *const c_void) -> *mut c_void {",
+     "    // SAFETY: per this function's contract.",
+     "    unsafe { X509_NAME_dup(p.cast()) }.cast()",
+     "}"
+    ],
+    "new_span_text": [
+     "unsafe extern \"C\" fn x509_name_dup_void(p: *const c_void) -> *mut c_void {",
+     "    // SAFETY: `p` is NULL or a live `X509_NAME` per this function's contract.",
+     "    unsafe { X509_NAME_dup(p.cast()) }.cast()",
+     "}"
+    ]
+   },
+   "contract": {
+    "safety_section_present": true,
+    "doc_block_quote": [
+     "/// `X509_NAME_dup` in the `void *` shape the generic setter macro takes.",
+     "///",
+     "/// # Safety",
+     "/// `p` is NULL or a live `X509_NAME` the caller owns (the value currently stored in a",
+     "/// `OSSL_CMP_CTX` member the setter manages). The body takes no ownership of `p`: it",
+     "/// returns a new reference-counted copy on success, or NULL on failure, and the copy's",
+     "/// ownership transfers to the caller."
+    ],
+    "note": "the fn-level `# Safety` sits above the span and is therefore not part of the span hash"
+   },
+   "body_quote": [
+    "unsafe extern \"C\" fn x509_name_dup_void(p: *const c_void) -> *mut c_void {",
+    "    // SAFETY: `p` is NULL or a live `X509_NAME` per this function's contract.",
+    "    unsafe { X509_NAME_dup(p.cast()) }.cast()",
+    "}"
+   ],
+   "callers": [
+    "the six `ctx_set1_dup!` invocations (cmp_ctx.rs:806-840) pass it as `$dup`",
+    "macro body `ctx_set1_dup!`: `unsafe { $dup(val) }` where the public setter's `# Safety` makes `val` NULL or live"
+   ],
+   "answers": {
+    "a_safe_rust_ub": "No. Each thunk is a private `unsafe extern \"C\" fn` with no `pub`; every occurrence is a fn-pointer argument in a macro expansion or an `OPENSSL_sk_pop_free` freefunc, and each direct call site passes a value the same frame owns.",
+    "b_unsafe_covered": "Yes. The span holds one unsafe call; its precondition is stated by the fn-level `# Safety` added at 688c27cb8 (provenance, whole-value extent, exclusive release, NULL no-op) and by the inline SAFETY; the caller side is the macro's exclusive-storage replacement or the stack the context owns.",
+    "c_hidden_obligation": "None new. The retained external obligation is the b76 one: a C caller that hands a stack it still owns through a set0 setter violates that setter's `# Safety`. Recorded, not hidden.",
+    "d_load_bearing_control": "The span resolver plus the CALLERS witness: C4 fires for every row (corrupting one row's hash blocks exactly that row) and the b76 harness canaries K11 (direct thunk call) and K12 (stray item free) fire at this candidate."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "re-established at this candidate: the in-span delta is doc-only (the only in-span difference is a // SAFETY comment line; every code token is byte-identical); the body, contract and every use site were re-read and the four questions re-answered at 08cb1148b",
+   "residuals": []
+  },
+  {
+   "boundary": "OSSH-V1I-050",
+   "receipt": "openssh-v1i-sites.json",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "x509_name_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "prior": {
+    "coordinate": 354,
+    "span_lines": [
+     354,
+     357
+    ],
+    "span_sha256": "fbb8bfad2d75d2799d95893538c24c5ffa1359fd25eef77ae77f91a81cca6ef3",
+    "verdict": "ACCEPT",
+    "review": "b76-review-v1i-batch1"
+   },
+   "current": {
+    "coordinate": 366,
+    "def_line": 366,
+    "span_lines": [
+     366,
+     369
+    ],
+    "span_sha256": "aadfe639539338e4fddd52a2572f8968b838febbc33d9a931f68de8836e6f0bf",
+    "qualified_identity": "x509_name_free_void",
+    "resolution": "unique"
+   },
+   "delta": {
+    "introduced_by": "688c27cb8",
+    "classification": "doc-only",
+    "statement": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+    "old_span_text": [
+     "unsafe extern \"C\" fn x509_name_free_void(p: *mut c_void) {",
+     "    // SAFETY: per this function's contract.",
+     "    unsafe { X509_NAME_free(p.cast()) };",
+     "}"
+    ],
+    "new_span_text": [
+     "unsafe extern \"C\" fn x509_name_free_void(p: *mut c_void) {",
+     "    // SAFETY: `p` is NULL or a live, owned reference per this function's contract.",
+     "    unsafe { X509_NAME_free(p.cast()) };",
+     "}"
+    ]
+   },
+   "contract": {
+    "safety_section_present": true,
+    "doc_block_quote": [
+     "/// `X509_NAME_free` in the `void *` shape.",
+     "///",
+     "/// # Safety",
+     "/// `p` is NULL or a live `X509_NAME` reference this context owns and no other handle",
+     "/// releases: the call gives up exactly one reference (a NULL is the authority's no-op)."
+    ],
+    "note": "the fn-level `# Safety` sits above the span and is therefore not part of the span hash"
+   },
+   "body_quote": [
+    "unsafe extern \"C\" fn x509_name_free_void(p: *mut c_void) {",
+    "    // SAFETY: `p` is NULL or a live, owned reference per this function's contract.",
+    "    unsafe { X509_NAME_free(p.cast()) };",
+    "}"
+   ],
+   "callers": [
+    "the same macro passes it as `$free`: `$free((*ctx).$field.cast())`, the field being NULL (fresh zeroed context) or the previous duplicate the context owns",
+    "`destroy_body`/`OSSL_CMP_CTX_free` (cmp_ctx.rs:565-573) release the same members exactly once"
+   ],
+   "answers": {
+    "a_safe_rust_ub": "No. Each thunk is a private `unsafe extern \"C\" fn` with no `pub`; every occurrence is a fn-pointer argument in a macro expansion or an `OPENSSL_sk_pop_free` freefunc, and each direct call site passes a value the same frame owns.",
+    "b_unsafe_covered": "Yes. The span holds one unsafe call; its precondition is stated by the fn-level `# Safety` added at 688c27cb8 (provenance, whole-value extent, exclusive release, NULL no-op) and by the inline SAFETY; the caller side is the macro's exclusive-storage replacement or the stack the context owns.",
+    "c_hidden_obligation": "None new. The retained external obligation is the b76 one: a C caller that hands a stack it still owns through a set0 setter violates that setter's `# Safety`. Recorded, not hidden.",
+    "d_load_bearing_control": "The span resolver plus the CALLERS witness: C4 fires for every row (corrupting one row's hash blocks exactly that row) and the b76 harness canaries K11 (direct thunk call) and K12 (stray item free) fire at this candidate."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "re-established at this candidate: the in-span delta is doc-only (the only in-span difference is a // SAFETY comment line; every code token is byte-identical); the body, contract and every use site were re-read and the four questions re-answered at 08cb1148b",
+   "residuals": []
+  },
+  {
+   "boundary": "OSSH-V1I-051",
+   "receipt": "openssh-v1i-sites.json",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "asn1_integer_dup_void",
+   "kind": "UNSAFE_FN_DEF",
+   "prior": {
+    "coordinate": 358,
+    "span_lines": [
+     358,
+     361
+    ],
+    "span_sha256": "879ea7d76ffb4d0fd368a9c5a3056ed4184537401d6d6511515d16d0e22ea8df",
+    "verdict": "ACCEPT",
+    "review": "b76-review-v1i-batch1"
+   },
+   "current": {
+    "coordinate": 376,
+    "def_line": 376,
+    "span_lines": [
+     376,
+     379
+    ],
+    "span_sha256": "ada154c8fcf9c795b15269e75af7cebaf01626240d958ab693b71d9f68fc42d6",
+    "qualified_identity": "asn1_integer_dup_void",
+    "resolution": "unique"
+   },
+   "delta": {
+    "introduced_by": "688c27cb8",
+    "classification": "doc-only",
+    "statement": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+    "old_span_text": [
+     "unsafe extern \"C\" fn asn1_integer_dup_void(p: *const c_void) -> *mut c_void {",
+     "    // SAFETY: per this function's contract.",
+     "    unsafe { ASN1_item_dup(ASN1_INTEGER_it(), p) }.cast()",
+     "}"
+    ],
+    "new_span_text": [
+     "unsafe extern \"C\" fn asn1_integer_dup_void(p: *const c_void) -> *mut c_void {",
+     "    // SAFETY: `p` is NULL or a live item value per this function's contract.",
+     "    unsafe { ASN1_item_dup(ASN1_INTEGER_it(), p) }.cast()",
+     "}"
+    ]
+   },
+   "contract": {
+    "safety_section_present": true,
+    "doc_block_quote": [
+     "/// `ASN1_item_dup(ASN1_INTEGER_it(), ...)` in the `void *` shape.",
+     "///",
+     "/// # Safety",
+     "/// `p` is NULL or a live, decoded `ASN1_INTEGER` item value owned by the caller. The",
+     "/// body reads it to build a deep copy; ownership of the original is unchanged and the",
+     "/// copy (or NULL on failure) is handed back to the caller."
+    ],
+    "note": "the fn-level `# Safety` sits above the span and is therefore not part of the span hash"
+   },
+   "body_quote": [
+    "unsafe extern \"C\" fn asn1_integer_dup_void(p: *const c_void) -> *mut c_void {",
+    "    // SAFETY: `p` is NULL or a live item value per this function's contract.",
+    "    unsafe { ASN1_item_dup(ASN1_INTEGER_it(), p) }.cast()",
+    "}"
+   ],
+   "callers": [
+    "`OSSL_CMP_CTX_set1_serialNumber` (`ctx_set1_dup!`, cmp_ctx.rs:830-835) passes it as `$dup`"
+   ],
+   "answers": {
+    "a_safe_rust_ub": "No. Each thunk is a private `unsafe extern \"C\" fn` with no `pub`; every occurrence is a fn-pointer argument in a macro expansion or an `OPENSSL_sk_pop_free` freefunc, and each direct call site passes a value the same frame owns.",
+    "b_unsafe_covered": "Yes. The span holds one unsafe call; its precondition is stated by the fn-level `# Safety` added at 688c27cb8 (provenance, whole-value extent, exclusive release, NULL no-op) and by the inline SAFETY; the caller side is the macro's exclusive-storage replacement or the stack the context owns.",
+    "c_hidden_obligation": "None new. The retained external obligation is the b76 one: a C caller that hands a stack it still owns through a set0 setter violates that setter's `# Safety`. Recorded, not hidden.",
+    "d_load_bearing_control": "The span resolver plus the CALLERS witness: C4 fires for every row (corrupting one row's hash blocks exactly that row) and the b76 harness canaries K11 (direct thunk call) and K12 (stray item free) fire at this candidate."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "re-established at this candidate: the in-span delta is doc-only (the only in-span difference is a // SAFETY comment line; every code token is byte-identical); the body, contract and every use site were re-read and the four questions re-answered at 08cb1148b",
+   "residuals": []
+  },
+  {
+   "boundary": "OSSH-V1I-052",
+   "receipt": "openssh-v1i-sites.json",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "asn1_integer_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "prior": {
+    "coordinate": 362,
+    "span_lines": [
+     362,
+     365
+    ],
+    "span_sha256": "09ce335f71b364fa86cc7d60748551ff5226e2f5d2b5bb9b6a9efcfb1f7e0d68",
+    "verdict": "ACCEPT",
+    "review": "b76-review-v1i-batch1"
+   },
+   "current": {
+    "coordinate": 385,
+    "def_line": 385,
+    "span_lines": [
+     385,
+     388
+    ],
+    "span_sha256": "6d1ec00d6cac7a7b591255c264472ea2178307d28cef4013a35d9170d08f356b",
+    "qualified_identity": "asn1_integer_free_void",
+    "resolution": "unique"
+   },
+   "delta": {
+    "introduced_by": "688c27cb8",
+    "classification": "doc-only",
+    "statement": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+    "old_span_text": [
+     "unsafe extern \"C\" fn asn1_integer_free_void(p: *mut c_void) {",
+     "    // SAFETY: per this function's contract.",
+     "    unsafe { ASN1_INTEGER_free(p.cast()) };",
+     "}"
+    ],
+    "new_span_text": [
+     "unsafe extern \"C\" fn asn1_integer_free_void(p: *mut c_void) {",
+     "    // SAFETY: `p` is NULL or a live, owned `ASN1_INTEGER` per this function's contract.",
+     "    unsafe { ASN1_INTEGER_free(p.cast()) };",
+     "}"
+    ]
+   },
+   "contract": {
+    "safety_section_present": true,
+    "doc_block_quote": [
+     "/// `ASN1_INTEGER_free` in the `void *` shape.",
+     "///",
+     "/// # Safety",
+     "/// `p` is NULL or a live `ASN1_INTEGER` this context owns and no other handle releases;",
+     "/// the whole value (its allocated content included) is released exactly once here."
+    ],
+    "note": "the fn-level `# Safety` sits above the span and is therefore not part of the span hash"
+   },
+   "body_quote": [
+    "unsafe extern \"C\" fn asn1_integer_free_void(p: *mut c_void) {",
+    "    // SAFETY: `p` is NULL or a live, owned `ASN1_INTEGER` per this function's contract.",
+    "    unsafe { ASN1_INTEGER_free(p.cast()) };",
+    "}"
+   ],
+   "callers": [
+    "the same setter passes it as `$free` on the exclusively owned incumbent member"
+   ],
+   "answers": {
+    "a_safe_rust_ub": "No. Each thunk is a private `unsafe extern \"C\" fn` with no `pub`; every occurrence is a fn-pointer argument in a macro expansion or an `OPENSSL_sk_pop_free` freefunc, and each direct call site passes a value the same frame owns.",
+    "b_unsafe_covered": "Yes. The span holds one unsafe call; its precondition is stated by the fn-level `# Safety` added at 688c27cb8 (provenance, whole-value extent, exclusive release, NULL no-op) and by the inline SAFETY; the caller side is the macro's exclusive-storage replacement or the stack the context owns.",
+    "c_hidden_obligation": "None new. The retained external obligation is the b76 one: a C caller that hands a stack it still owns through a set0 setter violates that setter's `# Safety`. Recorded, not hidden.",
+    "d_load_bearing_control": "The span resolver plus the CALLERS witness: C4 fires for every row (corrupting one row's hash blocks exactly that row) and the b76 harness canaries K11 (direct thunk call) and K12 (stray item free) fire at this candidate."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "re-established at this candidate: the in-span delta is doc-only (the only in-span difference is a // SAFETY comment line; every code token is byte-identical); the body, contract and every use site were re-read and the four questions re-answered at 08cb1148b",
+   "residuals": []
+  },
+  {
+   "boundary": "OSSH-V1I-053",
+   "receipt": "openssh-v1i-sites.json",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "x509_req_dup_void",
+   "kind": "UNSAFE_FN_DEF",
+   "prior": {
+    "coordinate": 366,
+    "span_lines": [
+     366,
+     369
+    ],
+    "span_sha256": "ef04cda1695dd610a3eddd0ac37dec5ce3367663a427207648483393923e6cce",
+    "verdict": "ACCEPT",
+    "review": "b76-review-v1i-batch1"
+   },
+   "current": {
+    "coordinate": 395,
+    "def_line": 395,
+    "span_lines": [
+     395,
+     398
+    ],
+    "span_sha256": "c3bd7c6a68f5556a44991fec256736cae595ce8d5850d3bae356875167ccb78e",
+    "qualified_identity": "x509_req_dup_void",
+    "resolution": "unique"
+   },
+   "delta": {
+    "introduced_by": "688c27cb8",
+    "classification": "doc-only",
+    "statement": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+    "old_span_text": [
+     "unsafe extern \"C\" fn x509_req_dup_void(p: *const c_void) -> *mut c_void {",
+     "    // SAFETY: per this function's contract.",
+     "    unsafe { X509_REQ_dup(p.cast()) }.cast()",
+     "}"
+    ],
+    "new_span_text": [
+     "unsafe extern \"C\" fn x509_req_dup_void(p: *const c_void) -> *mut c_void {",
+     "    // SAFETY: `p` is NULL or a live `X509_REQ` per this function's contract.",
+     "    unsafe { X509_REQ_dup(p.cast()) }.cast()",
+     "}"
+    ]
+   },
+   "contract": {
+    "safety_section_present": true,
+    "doc_block_quote": [
+     "/// `X509_REQ_dup` in the `void *` shape.",
+     "///",
+     "/// # Safety",
+     "/// `p` is NULL or a live `X509_REQ` the caller owns; the body takes no ownership of it",
+     "/// and returns a new reference-counted copy (or NULL on failure) whose ownership",
+     "/// transfers to the caller."
+    ],
+    "note": "the fn-level `# Safety` sits above the span and is therefore not part of the span hash"
+   },
+   "body_quote": [
+    "unsafe extern \"C\" fn x509_req_dup_void(p: *const c_void) -> *mut c_void {",
+    "    // SAFETY: `p` is NULL or a live `X509_REQ` per this function's contract.",
+    "    unsafe { X509_REQ_dup(p.cast()) }.cast()",
+    "}"
+   ],
+   "callers": [
+    "`OSSL_CMP_CTX_set1_p10CSR` (`ctx_set1_dup!`, cmp_ctx.rs:836-841) passes it as `$dup`"
+   ],
+   "answers": {
+    "a_safe_rust_ub": "No. Each thunk is a private `unsafe extern \"C\" fn` with no `pub`; every occurrence is a fn-pointer argument in a macro expansion or an `OPENSSL_sk_pop_free` freefunc, and each direct call site passes a value the same frame owns.",
+    "b_unsafe_covered": "Yes. The span holds one unsafe call; its precondition is stated by the fn-level `# Safety` added at 688c27cb8 (provenance, whole-value extent, exclusive release, NULL no-op) and by the inline SAFETY; the caller side is the macro's exclusive-storage replacement or the stack the context owns.",
+    "c_hidden_obligation": "None new. The retained external obligation is the b76 one: a C caller that hands a stack it still owns through a set0 setter violates that setter's `# Safety`. Recorded, not hidden.",
+    "d_load_bearing_control": "The span resolver plus the CALLERS witness: C4 fires for every row (corrupting one row's hash blocks exactly that row) and the b76 harness canaries K11 (direct thunk call) and K12 (stray item free) fire at this candidate."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "re-established at this candidate: the in-span delta is doc-only (the only in-span difference is a // SAFETY comment line; every code token is byte-identical); the body, contract and every use site were re-read and the four questions re-answered at 08cb1148b",
+   "residuals": []
+  },
+  {
+   "boundary": "OSSH-V1I-054",
+   "receipt": "openssh-v1i-sites.json",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "x509_req_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "prior": {
+    "coordinate": 370,
+    "span_lines": [
+     370,
+     373
+    ],
+    "span_sha256": "31048346d3df8aa9a52bc4b18fd813722a65de998b0fb6819f7858fd82c8ecd1",
+    "verdict": "ACCEPT",
+    "review": "b76-review-v1i-batch1"
+   },
+   "current": {
+    "coordinate": 404,
+    "def_line": 404,
+    "span_lines": [
+     404,
+     407
+    ],
+    "span_sha256": "08102d47fcb390390d20e576b65826c8884b3792d02072195045ffbbbded5e57",
+    "qualified_identity": "x509_req_free_void",
+    "resolution": "unique"
+   },
+   "delta": {
+    "introduced_by": "688c27cb8",
+    "classification": "doc-only",
+    "statement": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+    "old_span_text": [
+     "unsafe extern \"C\" fn x509_req_free_void(p: *mut c_void) {",
+     "    // SAFETY: per this function's contract.",
+     "    unsafe { X509_REQ_free(p.cast()) };",
+     "}"
+    ],
+    "new_span_text": [
+     "unsafe extern \"C\" fn x509_req_free_void(p: *mut c_void) {",
+     "    // SAFETY: `p` is NULL or a live, owned reference per this function's contract.",
+     "    unsafe { X509_REQ_free(p.cast()) };",
+     "}"
+    ]
+   },
+   "contract": {
+    "safety_section_present": true,
+    "doc_block_quote": [
+     "/// `X509_REQ_free` in the `void *` shape.",
+     "///",
+     "/// # Safety",
+     "/// `p` is NULL or a live `X509_REQ` reference this context owns and no other handle",
+     "/// releases: exactly one reference is given up (NULL is a no-op)."
+    ],
+    "note": "the fn-level `# Safety` sits above the span and is therefore not part of the span hash"
+   },
+   "body_quote": [
+    "unsafe extern \"C\" fn x509_req_free_void(p: *mut c_void) {",
+    "    // SAFETY: `p` is NULL or a live, owned reference per this function's contract.",
+    "    unsafe { X509_REQ_free(p.cast()) };",
+    "}"
+   ],
+   "callers": [
+    "the same setter passes it as `$free` on the exclusively owned incumbent member"
+   ],
+   "answers": {
+    "a_safe_rust_ub": "No. Each thunk is a private `unsafe extern \"C\" fn` with no `pub`; every occurrence is a fn-pointer argument in a macro expansion or an `OPENSSL_sk_pop_free` freefunc, and each direct call site passes a value the same frame owns.",
+    "b_unsafe_covered": "Yes. The span holds one unsafe call; its precondition is stated by the fn-level `# Safety` added at 688c27cb8 (provenance, whole-value extent, exclusive release, NULL no-op) and by the inline SAFETY; the caller side is the macro's exclusive-storage replacement or the stack the context owns.",
+    "c_hidden_obligation": "None new. The retained external obligation is the b76 one: a C caller that hands a stack it still owns through a set0 setter violates that setter's `# Safety`. Recorded, not hidden.",
+    "d_load_bearing_control": "The span resolver plus the CALLERS witness: C4 fires for every row (corrupting one row's hash blocks exactly that row) and the b76 harness canaries K11 (direct thunk call) and K12 (stray item free) fire at this candidate."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "re-established at this candidate: the in-span delta is doc-only (the only in-span difference is a // SAFETY comment line; every code token is byte-identical); the body, contract and every use site were re-read and the four questions re-answered at 08cb1148b",
+   "residuals": []
+  },
+  {
+   "boundary": "OSSH-V1I-059",
+   "receipt": "openssh-v1i-sites.json",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "general_name_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "prior": {
+    "coordinate": 376,
+    "span_lines": [
+     376,
+     379
+    ],
+    "span_sha256": "f2c430ef6d2510ea8fb9bb46892deea51afcac75eefbe5a03d3883541845911b",
+    "verdict": "ACCEPT",
+    "review": "b76-review-v1i-batch1"
+   },
+   "current": {
+    "coordinate": 419,
+    "def_line": 419,
+    "span_lines": [
+     419,
+     422
+    ],
+    "span_sha256": "52f8d85ffa5fe3af291f9acbb6e681d58b75be5f832fa7776a085b4bb9c5c551",
+    "qualified_identity": "general_name_free_void",
+    "resolution": "unique"
+   },
+   "delta": {
+    "introduced_by": "688c27cb8",
+    "classification": "doc-only",
+    "statement": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+    "old_span_text": [
+     "unsafe extern \"C\" fn general_name_free_void(p: *mut c_void) {",
+     "    // SAFETY: per this function's contract.",
+     "    unsafe { GENERAL_NAME_free(p.cast()) };",
+     "}"
+    ],
+    "new_span_text": [
+     "unsafe extern \"C\" fn general_name_free_void(p: *mut c_void) {",
+     "    // SAFETY: `p` is NULL or a live, owned `GENERAL_NAME` per this thunk's contract.",
+     "    unsafe { GENERAL_NAME_free(p.cast()) };",
+     "}"
+    ]
+   },
+   "contract": {
+    "safety_section_present": true,
+    "doc_block_quote": [
+     "/// Releases the context's stored `GENERAL_NAME`.",
+     "///",
+     "/// # Safety",
+     "/// `p` is NULL or a live object of the thunk's own type (`GENERAL_NAME`,",
+     "/// `X509_EXTENSION`, `ASN1_UTF8STRING`, `OSSL_CMP_ITAV`, `POLICYINFO`) that this",
+     "/// context owns and no other handle releases. The call releases that object exactly",
+     "/// once, including its allocated content; NULL is a no-op."
+    ],
+    "note": "the fn-level `# Safety` sits above the span and is therefore not part of the span hash"
+   },
+   "body_quote": [
+    "unsafe extern \"C\" fn general_name_free_void(p: *mut c_void) {",
+    "    // SAFETY: `p` is NULL or a live, owned `GENERAL_NAME` per this thunk's contract.",
+    "    unsafe { GENERAL_NAME_free(p.cast()) };",
+    "}"
+   ],
+   "callers": [
+    "`OPENSSL_sk_pop_free((*ctx).subject_alt_names, Some(general_name_free_void))` (cmp_ctx.rs:565); elements are pushed only by the push0 setter, which takes ownership"
+   ],
+   "answers": {
+    "a_safe_rust_ub": "No. Each thunk is a private `unsafe extern \"C\" fn` with no `pub`; every occurrence is a fn-pointer argument in a macro expansion or an `OPENSSL_sk_pop_free` freefunc, and each direct call site passes a value the same frame owns.",
+    "b_unsafe_covered": "Yes. The span holds one unsafe call; its precondition is stated by the fn-level `# Safety` added at 688c27cb8 (provenance, whole-value extent, exclusive release, NULL no-op) and by the inline SAFETY; the caller side is the macro's exclusive-storage replacement or the stack the context owns.",
+    "c_hidden_obligation": "None new. The retained external obligation is the b76 one: a C caller that hands a stack it still owns through a set0 setter violates that setter's `# Safety`. Recorded, not hidden.",
+    "d_load_bearing_control": "The span resolver plus the CALLERS witness: C4 fires for every row (corrupting one row's hash blocks exactly that row) and the b76 harness canaries K11 (direct thunk call) and K12 (stray item free) fire at this candidate."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "re-established at this candidate: the in-span delta is doc-only (the only in-span difference is a // SAFETY comment line; every code token is byte-identical); the body, contract and every use site were re-read and the four questions re-answered at 08cb1148b",
+   "residuals": [
+    "the external C-ABI obligation at the set0/push0 boundary is retained, unchanged from b76"
+   ]
+  },
+  {
+   "boundary": "OSSH-V1I-060",
+   "receipt": "openssh-v1i-sites.json",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "x509_extension_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "prior": {
+    "coordinate": 380,
+    "span_lines": [
+     380,
+     383
+    ],
+    "span_sha256": "c55cd1b80bb171807ebc723f6a3a8b0faab9a0c8a24c3400c8b5e89e27bfd8e8",
+    "verdict": "ACCEPT",
+    "review": "b76-review-v1i-batch1"
+   },
+   "current": {
+    "coordinate": 427,
+    "def_line": 427,
+    "span_lines": [
+     427,
+     430
+    ],
+    "span_sha256": "537c06945c216902ed150dfaa4a44d7d3181ae3e19c2f3ed0dfb3b3311b685a2",
+    "qualified_identity": "x509_extension_free_void",
+    "resolution": "unique"
+   },
+   "delta": {
+    "introduced_by": "688c27cb8",
+    "classification": "doc-only",
+    "statement": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+    "old_span_text": [
+     "unsafe extern \"C\" fn x509_extension_free_void(p: *mut c_void) {",
+     "    // SAFETY: per this function's contract.",
+     "    unsafe { X509_EXTENSION_free(p.cast()) };",
+     "}"
+    ],
+    "new_span_text": [
+     "unsafe extern \"C\" fn x509_extension_free_void(p: *mut c_void) {",
+     "    // SAFETY: `p` is NULL or a live, owned `X509_EXTENSION`.",
+     "    unsafe { X509_EXTENSION_free(p.cast()) };",
+     "}"
+    ]
+   },
+   "contract": {
+    "safety_section_present": true,
+    "doc_block_quote": [
+     "/// Releases the context's stored `X509_EXTENSION`.",
+     "///",
+     "/// # Safety",
+     "/// `p` is NULL or a live, owned `X509_EXTENSION`."
+    ],
+    "note": "the fn-level `# Safety` sits above the span and is therefore not part of the span hash"
+   },
+   "body_quote": [
+    "unsafe extern \"C\" fn x509_extension_free_void(p: *mut c_void) {",
+    "    // SAFETY: `p` is NULL or a live, owned `X509_EXTENSION`.",
+    "    unsafe { X509_EXTENSION_free(p.cast()) };",
+    "}"
+   ],
+   "callers": [
+    "`OPENSSL_sk_pop_free((*ctx).req_extensions, Some(x509_extension_free_void))` (cmp_ctx.rs:566, 1253)"
+   ],
+   "answers": {
+    "a_safe_rust_ub": "No. Each thunk is a private `unsafe extern \"C\" fn` with no `pub`; every occurrence is a fn-pointer argument in a macro expansion or an `OPENSSL_sk_pop_free` freefunc, and each direct call site passes a value the same frame owns.",
+    "b_unsafe_covered": "Yes. The span holds one unsafe call; its precondition is stated by the fn-level `# Safety` added at 688c27cb8 (provenance, whole-value extent, exclusive release, NULL no-op) and by the inline SAFETY; the caller side is the macro's exclusive-storage replacement or the stack the context owns.",
+    "c_hidden_obligation": "None new. The retained external obligation is the b76 one: a C caller that hands a stack it still owns through a set0 setter violates that setter's `# Safety`. Recorded, not hidden.",
+    "d_load_bearing_control": "The span resolver plus the CALLERS witness: C4 fires for every row (corrupting one row's hash blocks exactly that row) and the b76 harness canaries K11 (direct thunk call) and K12 (stray item free) fire at this candidate."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "re-established at this candidate: the in-span delta is doc-only (the only in-span difference is a // SAFETY comment line; every code token is byte-identical); the body, contract and every use site were re-read and the four questions re-answered at 08cb1148b",
+   "residuals": [
+    "the external C-ABI obligation at the set0/push0 boundary is retained, unchanged from b76"
+   ]
+  },
+  {
+   "boundary": "OSSH-V1I-061",
+   "receipt": "openssh-v1i-sites.json",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "utf8_string_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "prior": {
+    "coordinate": 384,
+    "span_lines": [
+     384,
+     387
+    ],
+    "span_sha256": "78aab3c63127b04993c0447596fe2b4167e5e8b683967ff17420b540718870ba",
+    "verdict": "ACCEPT",
+    "review": "b76-review-v1i-batch1"
+   },
+   "current": {
+    "coordinate": 435,
+    "def_line": 435,
+    "span_lines": [
+     435,
+     438
+    ],
+    "span_sha256": "9fcb08fbebf7d93711f64f289f56b34e53b37bcfca1f6c16ec1834b6066b525a",
+    "qualified_identity": "utf8_string_free_void",
+    "resolution": "unique"
+   },
+   "delta": {
+    "introduced_by": "688c27cb8",
+    "classification": "doc-only",
+    "statement": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+    "old_span_text": [
+     "unsafe extern \"C\" fn utf8_string_free_void(p: *mut c_void) {",
+     "    // SAFETY: per this function's contract.",
+     "    unsafe { crate::asn1::string::ASN1_UTF8STRING_free(p.cast()) };",
+     "}"
+    ],
+    "new_span_text": [
+     "unsafe extern \"C\" fn utf8_string_free_void(p: *mut c_void) {",
+     "    // SAFETY: `p` is NULL or a live, owned `ASN1_UTF8STRING`.",
+     "    unsafe { crate::asn1::string::ASN1_UTF8STRING_free(p.cast()) };",
+     "}"
+    ]
+   },
+   "contract": {
+    "safety_section_present": true,
+    "doc_block_quote": [
+     "/// Releases the context's stored `ASN1_UTF8STRING`.",
+     "///",
+     "/// # Safety",
+     "/// `p` is NULL or a live, owned `ASN1_UTF8STRING`."
+    ],
+    "note": "the fn-level `# Safety` sits above the span and is therefore not part of the span hash"
+   },
+   "body_quote": [
+    "unsafe extern \"C\" fn utf8_string_free_void(p: *mut c_void) {",
+    "    // SAFETY: `p` is NULL or a live, owned `ASN1_UTF8STRING`.",
+    "    unsafe { crate::asn1::string::ASN1_UTF8STRING_free(p.cast()) };",
+    "}"
+   ],
+   "callers": [
+    "`OPENSSL_sk_pop_free((*ctx).status_string, Some(utf8_string_free_void))` (cmp_ctx.rs:573, 881)"
+   ],
+   "answers": {
+    "a_safe_rust_ub": "No. Each thunk is a private `unsafe extern \"C\" fn` with no `pub`; every occurrence is a fn-pointer argument in a macro expansion or an `OPENSSL_sk_pop_free` freefunc, and each direct call site passes a value the same frame owns.",
+    "b_unsafe_covered": "Yes. The span holds one unsafe call; its precondition is stated by the fn-level `# Safety` added at 688c27cb8 (provenance, whole-value extent, exclusive release, NULL no-op) and by the inline SAFETY; the caller side is the macro's exclusive-storage replacement or the stack the context owns.",
+    "c_hidden_obligation": "None new. The retained external obligation is the b76 one: a C caller that hands a stack it still owns through a set0 setter violates that setter's `# Safety`. Recorded, not hidden.",
+    "d_load_bearing_control": "The span resolver plus the CALLERS witness: C4 fires for every row (corrupting one row's hash blocks exactly that row) and the b76 harness canaries K11 (direct thunk call) and K12 (stray item free) fire at this candidate."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "re-established at this candidate: the in-span delta is doc-only (the only in-span difference is a // SAFETY comment line; every code token is byte-identical); the body, contract and every use site were re-read and the four questions re-answered at 08cb1148b",
+   "residuals": [
+    "the external C-ABI obligation at the set0/push0 boundary is retained, unchanged from b76"
+   ]
+  },
+  {
+   "boundary": "OSSH-V1I-063",
+   "receipt": "openssh-v1i-sites.json",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "itav_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "prior": {
+    "coordinate": 388,
+    "span_lines": [
+     388,
+     391
+    ],
+    "span_sha256": "716df8e4158a82f709333ef8f8e10d11b49a3640c3b50cb83e87c063093a024e",
+    "verdict": "ACCEPT",
+    "review": "b76-review-v1i-batch1"
+   },
+   "current": {
+    "coordinate": 443,
+    "def_line": 443,
+    "span_lines": [
+     443,
+     446
+    ],
+    "span_sha256": "36ecb712436300b555bc27f763f83b41cfa71ff96c1f32ebcc85b49c447265f3",
+    "qualified_identity": "itav_free_void",
+    "resolution": "unique"
+   },
+   "delta": {
+    "introduced_by": "688c27cb8",
+    "classification": "doc-only",
+    "statement": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+    "old_span_text": [
+     "unsafe extern \"C\" fn itav_free_void(p: *mut c_void) {",
+     "    // SAFETY: per this function's contract.",
+     "    unsafe { OSSL_CMP_ITAV_free(p.cast()) };",
+     "}"
+    ],
+    "new_span_text": [
+     "unsafe extern \"C\" fn itav_free_void(p: *mut c_void) {",
+     "    // SAFETY: `p` is NULL or a live, owned `OSSL_CMP_ITAV`.",
+     "    unsafe { OSSL_CMP_ITAV_free(p.cast()) };",
+     "}"
+    ]
+   },
+   "contract": {
+    "safety_section_present": true,
+    "doc_block_quote": [
+     "/// Releases the context's stored `OSSL_CMP_ITAV`.",
+     "///",
+     "/// # Safety",
+     "/// `p` is NULL or a live, owned `OSSL_CMP_ITAV`."
+    ],
+    "note": "the fn-level `# Safety` sits above the span and is therefore not part of the span hash"
+   },
+   "body_quote": [
+    "unsafe extern \"C\" fn itav_free_void(p: *mut c_void) {",
+    "    // SAFETY: `p` is NULL or a live, owned `OSSL_CMP_ITAV`.",
+    "    unsafe { OSSL_CMP_ITAV_free(p.cast()) };",
+    "}"
+   ],
+   "callers": [
+    "`itavs_free` (cmp_ctx.rs:460-463): `OPENSSL_sk_pop_free(sk, Some(itav_free_void))`, reached from destroy_body and from `OSSL_CMP_CTX_reset_geninfo_ITAVs`"
+   ],
+   "answers": {
+    "a_safe_rust_ub": "No. Each thunk is a private `unsafe extern \"C\" fn` with no `pub`; every occurrence is a fn-pointer argument in a macro expansion or an `OPENSSL_sk_pop_free` freefunc, and each direct call site passes a value the same frame owns.",
+    "b_unsafe_covered": "Yes. The span holds one unsafe call; its precondition is stated by the fn-level `# Safety` added at 688c27cb8 (provenance, whole-value extent, exclusive release, NULL no-op) and by the inline SAFETY; the caller side is the macro's exclusive-storage replacement or the stack the context owns.",
+    "c_hidden_obligation": "None new. The retained external obligation is the b76 one: a C caller that hands a stack it still owns through a set0 setter violates that setter's `# Safety`. Recorded, not hidden.",
+    "d_load_bearing_control": "The span resolver plus the CALLERS witness: C4 fires for every row (corrupting one row's hash blocks exactly that row) and the b76 harness canaries K11 (direct thunk call) and K12 (stray item free) fire at this candidate."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "re-established at this candidate: the in-span delta is doc-only (the only in-span difference is a // SAFETY comment line; every code token is byte-identical); the body, contract and every use site were re-read and the four questions re-answered at 08cb1148b",
+   "residuals": [
+    "the external C-ABI obligation at the set0/push0 boundary is retained, unchanged from b76"
+   ]
+  },
+  {
+   "boundary": "OSSH-V1I-064",
+   "receipt": "openssh-v1i-sites.json",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "policy_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "prior": {
+    "coordinate": 392,
+    "span_lines": [
+     392,
+     395
+    ],
+    "span_sha256": "462670b49e5deac6bb89a6bde03865bb4962f69860b469eda9889301e6e74b42",
+    "verdict": "ACCEPT",
+    "review": "b76-review-v1i-batch1"
+   },
+   "current": {
+    "coordinate": 451,
+    "def_line": 451,
+    "span_lines": [
+     451,
+     454
+    ],
+    "span_sha256": "b10d4e3682d87e51ac65e7fa6d7ac882adf24166057438244714ee01320ce356",
+    "qualified_identity": "policy_free_void",
+    "resolution": "unique"
+   },
+   "delta": {
+    "introduced_by": "688c27cb8",
+    "classification": "doc-only",
+    "statement": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+    "old_span_text": [
+     "unsafe extern \"C\" fn policy_free_void(p: *mut c_void) {",
+     "    // SAFETY: per this function's contract.",
+     "    unsafe { POLICYINFO_free(p.cast()) };",
+     "}"
+    ],
+    "new_span_text": [
+     "unsafe extern \"C\" fn policy_free_void(p: *mut c_void) {",
+     "    // SAFETY: `p` is NULL or a live, owned `POLICYINFO`.",
+     "    unsafe { POLICYINFO_free(p.cast()) };",
+     "}"
+    ]
+   },
+   "contract": {
+    "safety_section_present": true,
+    "doc_block_quote": [
+     "/// Releases the context's stored `POLICYINFO`.",
+     "///",
+     "/// # Safety",
+     "/// `p` is NULL or a live, owned `POLICYINFO`."
+    ],
+    "note": "the fn-level `# Safety` sits above the span and is therefore not part of the span hash"
+   },
+   "body_quote": [
+    "unsafe extern \"C\" fn policy_free_void(p: *mut c_void) {",
+    "    // SAFETY: `p` is NULL or a live, owned `POLICYINFO`.",
+    "    unsafe { POLICYINFO_free(p.cast()) };",
+    "}"
+   ],
+   "callers": [
+    "`OPENSSL_sk_pop_free((*ctx).policies, Some(policy_free_void))` (cmp_ctx.rs:567); the stack is created by the push0 setter, which takes ownership"
+   ],
+   "answers": {
+    "a_safe_rust_ub": "No. Each thunk is a private `unsafe extern \"C\" fn` with no `pub`; every occurrence is a fn-pointer argument in a macro expansion or an `OPENSSL_sk_pop_free` freefunc, and each direct call site passes a value the same frame owns.",
+    "b_unsafe_covered": "Yes. The span holds one unsafe call; its precondition is stated by the fn-level `# Safety` added at 688c27cb8 (provenance, whole-value extent, exclusive release, NULL no-op) and by the inline SAFETY; the caller side is the macro's exclusive-storage replacement or the stack the context owns.",
+    "c_hidden_obligation": "None new. The retained external obligation is the b76 one: a C caller that hands a stack it still owns through a set0 setter violates that setter's `# Safety`. Recorded, not hidden.",
+    "d_load_bearing_control": "The span resolver plus the CALLERS witness: C4 fires for every row (corrupting one row's hash blocks exactly that row) and the b76 harness canaries K11 (direct thunk call) and K12 (stray item free) fire at this candidate."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "re-established at this candidate: the in-span delta is doc-only (the only in-span difference is a // SAFETY comment line; every code token is byte-identical); the body, contract and every use site were re-read and the four questions re-answered at 08cb1148b",
+   "residuals": [
+    "the external C-ABI obligation at the set0/push0 boundary is retained, unchanged from b76"
+   ]
+  },
+  {
+   "boundary": "OSSH-V1I-065",
+   "receipt": "openssh-v1i-sites.json",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "cmp_ctx_set_md",
+   "kind": "UNSAFE_FN_DEF",
+   "prior": {
+    "coordinate": 407,
+    "span_lines": [
+     407,
+     421
+    ],
+    "span_sha256": "cd466dc13eee90d9e36e0601ccf6308e32c096b476d0982caf893b37c6f37ef8",
+    "verdict": "ACCEPT",
+    "review": "b76-review-v1i-batch1"
+   },
+   "current": {
+    "coordinate": 476,
+    "def_line": 476,
+    "span_lines": [
+     476,
+     491
+    ],
+    "span_sha256": "3c274e5c132d4c783470e5820d148965f9050cd6a08c7ae6dc1b2596fc177fa0",
+    "qualified_identity": "cmp_ctx_set_md",
+    "resolution": "unique"
+   },
+   "delta": {
+    "introduced_by": "688c27cb8",
+    "classification": "doc-only",
+    "statement": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+    "old_span_text": [
+     "unsafe fn cmp_ctx_set_md(ctx: *mut OsslCmpCtx, pmd: *mut *mut EvpMd, nid: c_int) -> c_int {",
+     "    // SAFETY: `ctx` is live; the object table answers a name for a known NID.",
+     "    let md = unsafe { EVP_MD_fetch((*ctx).libctx, OBJ_nid2sn(nid), (*ctx).propq.cast_const()) };",
+     "    if md.is_null() {",
+     "        // SAFETY: the site is a compile-time constant.",
+     "        unsafe { raise_ctx(136) };",
+     "        return 0;",
+     "    }",
+     "    // SAFETY: `pmd` is a live out-pointer.",
+     "    unsafe {",
+     "        EVP_MD_free(*pmd);",
+     "        *pmd = md;",
+     "    }",
+     "    1",
+     "}"
+    ],
+    "new_span_text": [
+     "unsafe fn cmp_ctx_set_md(ctx: *mut OsslCmpCtx, pmd: *mut *mut EvpMd, nid: c_int) -> c_int {",
+     "    // SAFETY: `ctx` is live; the object table answers a name for a known NID.",
+     "    let md = unsafe { EVP_MD_fetch((*ctx).libctx, OBJ_nid2sn(nid), (*ctx).propq.cast_const()) };",
+     "    if md.is_null() {",
+     "        // SAFETY: the site is a compile-time constant.",
+     "        unsafe { raise_ctx(136) };",
+     "        return 0;",
+     "    }",
+     "    // SAFETY: `pmd` is a live out-pointer to the context's own method slot, holding the",
+     "    // reference this context owns per the contract.",
+     "    unsafe {",
+     "        EVP_MD_free(*pmd);",
+     "        *pmd = md;",
+     "    }",
+     "    1",
+     "}"
+    ]
+   },
+   "contract": {
+    "safety_section_present": true,
+    "doc_block_quote": [
+     "/// `static int cmp_ctx_set_md(OSSL_CMP_CTX *ctx, EVP_MD **pmd, int nid)` \u2014 `cmp_ctx.c:82-94`.",
+     "///",
+     "/// # Safety",
+     "/// `ctx` is a live, aligned `OsslCmpCtx` whose `libctx`/`propq` fields are the values",
+     "/// its constructor installed; `pmd` is a live, writable `*mut EvpMd` slot that is a",
+     "/// member of that same context and currently holds NULL or the method this context",
+     "/// owns. On success the body releases the incumbent through `EVP_MD_free` and stores",
+     "/// the newly fetched method in `*pmd`, transferring that reference to the context; on",
+     "/// failure it raises an error, returns 0 and leaves `*pmd` untouched. `nid` is a plain",
+     "/// value, but a NID the object table does not know makes `OBJ_nid2sn` answer NULL,",
+     "/// which the fetch refuses without a dereference."
+    ],
+    "note": "the fn-level `# Safety` sits above the span and is therefore not part of the span hash"
+   },
+   "body_quote": [
+    "unsafe fn cmp_ctx_set_md(ctx: *mut OsslCmpCtx, pmd: *mut *mut EvpMd, nid: c_int) -> c_int {",
+    "    // SAFETY: `ctx` is live; the object table answers a name for a known NID.",
+    "    let md = unsafe { EVP_MD_fetch((*ctx).libctx, OBJ_nid2sn(nid), (*ctx).propq.cast_const()) };",
+    "    if md.is_null() {",
+    "        // SAFETY: the site is a compile-time constant.",
+    "        unsafe { raise_ctx(136) };",
+    "        return 0;",
+    "    }",
+    "    // SAFETY: `pmd` is a live out-pointer to the context's own method slot, holding the",
+    "    // reference this context owns per the contract.",
+    "    unsafe {",
+    "        EVP_MD_free(*pmd);",
+    "        *pmd = md;",
+    "    }",
+    "    1",
+    "}"
+   ],
+   "callers": [
+    "cmp_ctx.rs:628, 637 (a fresh zeroed context's NULL slots) and :1638, :1643 (`ptr::addr_of_mut!` on the context's own member slots)"
+   ],
+   "answers": {
+    "a_safe_rust_ub": "No. Each thunk is a private `unsafe extern \"C\" fn` with no `pub`; every occurrence is a fn-pointer argument in a macro expansion or an `OPENSSL_sk_pop_free` freefunc, and each direct call site passes a value the same frame owns.",
+    "b_unsafe_covered": "Yes. The span holds one unsafe call; its precondition is stated by the fn-level `# Safety` added at 688c27cb8 (provenance, whole-value extent, exclusive release, NULL no-op) and by the inline SAFETY; the caller side is the macro's exclusive-storage replacement or the stack the context owns.",
+    "c_hidden_obligation": "None new. The retained external obligation is the b76 one: a C caller that hands a stack it still owns through a set0 setter violates that setter's `# Safety`. Recorded, not hidden.",
+    "d_load_bearing_control": "The span resolver plus the CALLERS witness: C4 fires for every row (corrupting one row's hash blocks exactly that row) and the b76 harness canaries K11 (direct thunk call) and K12 (stray item free) fire at this candidate."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "re-established at this candidate: the in-span delta is doc-only (the only in-span difference is a // SAFETY comment line; every code token is byte-identical); the body, contract and every use site were re-read and the four questions re-answered at 08cb1148b",
+   "residuals": []
+  },
+  {
+   "boundary": "OSSH-V1I-067",
+   "receipt": "openssh-v1i-sites.json",
+   "file": "src/cmp/cmp_asn.rs",
+   "operation": "itav_free",
+   "kind": "UNSAFE_FN_DEF",
+   "prior": {
+    "coordinate": 1706,
+    "span_lines": [
+     1706,
+     1709
+    ],
+    "span_sha256": "5b0450b583d888ad1fa516a1db92cfd5493f24343bb7f8ac4e98943f7a46dfd5",
+    "verdict": "ACCEPT",
+    "review": "b76-review-v1i-batch1"
+   },
+   "current": {
+    "coordinate": 1712,
+    "def_line": 1712,
+    "span_lines": [
+     1712,
+     1715
+    ],
+    "span_sha256": "b23c42bb8b1a61c4de93b40c75faf45e2e2af5b116c9b0b770e7023526573412",
+    "qualified_identity": "itav_free",
+    "resolution": "unique"
+   },
+   "delta": {
+    "introduced_by": "688c27cb8",
+    "classification": "doc-only",
+    "statement": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+    "old_span_text": [
+     "unsafe fn itav_free(itav: *mut CmpItav) {",
+     "    // SAFETY: `itav` is NULL or a live item value.",
+     "    unsafe { ASN1_item_free(itav.cast(), cmp_itav_it()) };",
+     "}"
+    ],
+    "new_span_text": [
+     "unsafe fn itav_free(itav: *mut CmpItav) {",
+     "    // SAFETY: `itav` is NULL or a live, exclusively owned item value per the contract.",
+     "    unsafe { ASN1_item_free(itav.cast(), cmp_itav_it()) };",
+     "}"
+    ]
+   },
+   "contract": {
+    "safety_section_present": true,
+    "doc_block_quote": [
+     "/// `OSSL_CMP_ITAV_free` \u2014 the item free.",
+     "///",
+     "/// # Safety",
+     "/// `itav` is NULL or a whole `CmpItav` value this module allocated (`itav_new`, a dup,",
+     "/// or a `d2i` result) and no other owner releases; it is correctly aligned for",
+     "/// `CmpItav` and no reference into it stays live across the call. The body releases the",
+     "/// value exactly once, together with every member it owns; NULL is a no-op."
+    ],
+    "note": "the fn-level `# Safety` sits above the span and is therefore not part of the span hash"
+   },
+   "body_quote": [
+    "unsafe fn itav_free(itav: *mut CmpItav) {",
+    "    // SAFETY: `itav` is NULL or a live, exclusively owned item value per the contract.",
+    "    unsafe { ASN1_item_free(itav.cast(), cmp_itav_it()) };",
+    "}"
+   ],
+   "callers": [
+    "cmp_asn.rs:2105, 2173, 2385, 3128, 3137, 3147 \u2014 every call is a failure arm of an in-crate constructor that still owns the `itav_new()` block"
+   ],
+   "answers": {
+    "a_safe_rust_ub": "No. Each thunk is a private `unsafe extern \"C\" fn` with no `pub`; every occurrence is a fn-pointer argument in a macro expansion or an `OPENSSL_sk_pop_free` freefunc, and each direct call site passes a value the same frame owns.",
+    "b_unsafe_covered": "Yes. The span holds one unsafe call; its precondition is stated by the fn-level `# Safety` added at 688c27cb8 (provenance, whole-value extent, exclusive release, NULL no-op) and by the inline SAFETY; the caller side is the macro's exclusive-storage replacement or the stack the context owns.",
+    "c_hidden_obligation": "None new. The retained external obligation is the b76 one: a C caller that hands a stack it still owns through a set0 setter violates that setter's `# Safety`. Recorded, not hidden.",
+    "d_load_bearing_control": "The span resolver plus the CALLERS witness: C4 fires for every row (corrupting one row's hash blocks exactly that row) and the b76 harness canaries K11 (direct thunk call) and K12 (stray item free) fire at this candidate."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "re-established at this candidate: the in-span delta is doc-only (the only in-span difference is a // SAFETY comment line; every code token is byte-identical); the body, contract and every use site were re-read and the four questions re-answered at 08cb1148b",
+   "residuals": []
+  },
+  {
+   "boundary": "OSSH-V1I-069",
+   "receipt": "openssh-v1i-sites.json",
+   "file": "src/cmp/cmp_asn.rs",
+   "operation": "rootcakeyupdate_free",
+   "kind": "UNSAFE_FN_DEF",
+   "prior": {
+    "coordinate": 1722,
+    "span_lines": [
+     1722,
+     1725
+    ],
+    "span_sha256": "ab84f3d5975c0d0dde5598293da723073efe4e6cba97b983cd2c52483fa236ed",
+    "verdict": "ACCEPT",
+    "review": "b76-review-v1i-batch1"
+   },
+   "current": {
+    "coordinate": 1734,
+    "def_line": 1734,
+    "span_lines": [
+     1734,
+     1737
+    ],
+    "span_sha256": "e6eeb9d17271a94ed1d94e4f96605dd597abc6dea6304f6ec0dc6ac4703cebd0",
+    "qualified_identity": "rootcakeyupdate_free",
+    "resolution": "unique"
+   },
+   "delta": {
+    "introduced_by": "688c27cb8",
+    "classification": "doc-only",
+    "statement": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+    "old_span_text": [
+     "unsafe fn rootcakeyupdate_free(p: *mut CmpRootCaKeyUpdate) {",
+     "    // SAFETY: `p` is NULL or a live item value.",
+     "    unsafe { ASN1_item_free(p.cast(), cmp_rootcakeyupdate_it()) };",
+     "}"
+    ],
+    "new_span_text": [
+     "unsafe fn rootcakeyupdate_free(p: *mut CmpRootCaKeyUpdate) {",
+     "    // SAFETY: `p` is NULL or a live, exclusively owned item value per the contract.",
+     "    unsafe { ASN1_item_free(p.cast(), cmp_rootcakeyupdate_it()) };",
+     "}"
+    ]
+   },
+   "contract": {
+    "safety_section_present": true,
+    "doc_block_quote": [
+     "/// `OSSL_CMP_ROOTCAKEYUPDATE_free` \u2014 internal.",
+     "///",
+     "/// # Safety",
+     "/// `p` is NULL or a whole `CmpRootCaKeyUpdate` value this module allocated",
+     "/// (`rootcakeyupdate_new`, a dup, or a `d2i` result) and no other owner releases; it is",
+     "/// correctly aligned and no reference into it stays live across the call. The body",
+     "/// releases the value exactly once with its owned members; NULL is a no-op."
+    ],
+    "note": "the fn-level `# Safety` sits above the span and is therefore not part of the span hash"
+   },
+   "body_quote": [
+    "unsafe fn rootcakeyupdate_free(p: *mut CmpRootCaKeyUpdate) {",
+    "    // SAFETY: `p` is NULL or a live, exclusively owned item value per the contract.",
+    "    unsafe { ASN1_item_free(p.cast(), cmp_rootcakeyupdate_it()) };",
+    "}"
+   ],
+   "callers": [
+    "cmp_asn.rs:2242, 2252, 2263, 2273 \u2014 failure arms after `rootcakeyupdate_new()`/a failed `X509_dup`; the deliberate NULL pass at :2273 is within the contract"
+   ],
+   "answers": {
+    "a_safe_rust_ub": "No. Each thunk is a private `unsafe extern \"C\" fn` with no `pub`; every occurrence is a fn-pointer argument in a macro expansion or an `OPENSSL_sk_pop_free` freefunc, and each direct call site passes a value the same frame owns.",
+    "b_unsafe_covered": "Yes. The span holds one unsafe call; its precondition is stated by the fn-level `# Safety` added at 688c27cb8 (provenance, whole-value extent, exclusive release, NULL no-op) and by the inline SAFETY; the caller side is the macro's exclusive-storage replacement or the stack the context owns.",
+    "c_hidden_obligation": "None new. The retained external obligation is the b76 one: a C caller that hands a stack it still owns through a set0 setter violates that setter's `# Safety`. Recorded, not hidden.",
+    "d_load_bearing_control": "The span resolver plus the CALLERS witness: C4 fires for every row (corrupting one row's hash blocks exactly that row) and the b76 harness canaries K11 (direct thunk call) and K12 (stray item free) fire at this candidate."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "re-established at this candidate: the in-span delta is doc-only (the only in-span difference is a // SAFETY comment line; every code token is byte-identical); the body, contract and every use site were re-read and the four questions re-answered at 08cb1148b",
+   "residuals": []
+  },
+  {
+   "boundary": "RAND-CTX-001",
+   "receipt": "boundary-sweep-B69.json",
+   "file": "src/rand/rand_lib.rs",
+   "operation": "ossl_rand_ctx_new",
+   "kind": "UNSAFE_FN_DEF",
+   "prior": {
+    "coordinate": 426,
+    "span_lines": [
+     426,
+     465
+    ],
+    "span_sha256": "232c98ca33e79818c46dff8f5857876c778484213f069315127c2497e8b05186",
+    "verdict": null,
+    "review": null
+   },
+   "current": {
+    "coordinate": 426,
+    "def_line": 426,
+    "span_lines": [
+     426,
+     466
+    ],
+    "span_sha256": "304a782704a5b63d5780212521506752ccaaf804deaf6af742b7d6b1f511d1f8",
+    "qualified_identity": "ossl_rand_ctx_new",
+    "resolution": "unique"
+   },
+   "delta": {
+    "introduced_by": "97a1240e7",
+    "classification": "annotation-only",
+    "statement": "the in-span difference is an explicit `unsafe { }` block around an unchanged callee with unchanged arguments, plus its SAFETY comment: no token, callee, argument, control flow or effect changed",
+    "old_span_text": [
+     "pub(crate) unsafe extern \"C\" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut c_void {",
+     "    let Some(dgbl) = RawGlobal::new() else {",
+     "        return ptr::null_mut();",
+     "    };",
+     "",
+     "    // `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, NULL)`: base thread handling must exist",
+     "    // before this object does.",
+     "    crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null());",
+     "",
+     "    // SAFETY: `RANDOM_PROVIDER_FIPS_NAME` is a NUL-terminated literal and the answer is this",
+     "    // call's own fresh block or NULL.",
+     "    let name = unsafe {",
+     "        OwnedStr::adopt(",
+     "            CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, L_CTX_PROVIDER_NAME),",
+     "            FILE_SEAM,",
+     "            L_CTX_ERR_PROVIDER_NAME,",
+     "        )",
+     "    };",
+     "    // The authority's first failure arm frees the block alone (`:543`), which `RawGlobal`'s `Drop`",
+     "    // performs; the name was never acquired.",
+     "    let Some(name) = name else {",
+     "        return ptr::null_mut();",
+     "    };",
+     "",
+     "    let lock = CRYPTO_THREAD_lock_new();",
+     "    if lock.is_null() {",
+     "        // The authority's second failure arm frees the name (`:541`) and then the block (`:543`);",
+     "        // `name` drops before `dgbl` because it is declared later.",
+     "        return ptr::null_mut();",
+     "    }",
+     "",
+     "    let p = dgbl.as_ptr();",
+     "    // SAFETY: `p` is this call's own fresh block, published nowhere yet.",
+     "    unsafe {",
+     "        (*p).random_provider_name = name.into_raw();",
+     "        (*p).lock = lock;",
+     "    }",
+     "",
+     "    dgbl.finish().cast::<c_void>()",
+     "}"
+    ],
+    "new_span_text": [
+     "pub(crate) unsafe extern \"C\" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut c_void {",
+     "    let Some(dgbl) = RawGlobal::new() else {",
+     "        return ptr::null_mut();",
+     "    };",
+     "",
+     "    // `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, NULL)`: base thread handling must exist",
+     "    // before this object does.",
+     "    // SAFETY: NULL settings, so the initialiser reads no caller memory.",
+     "    unsafe { crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null()) };",
+     "",
+     "    // SAFETY: `RANDOM_PROVIDER_FIPS_NAME` is a NUL-terminated literal and the answer is this",
+     "    // call's own fresh block or NULL.",
+     "    let name = unsafe {",
+     "        OwnedStr::adopt(",
+     "            CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, L_CTX_PROVIDER_NAME),",
+     "            FILE_SEAM,",
+     "            L_CTX_ERR_PROVIDER_NAME,",
+     "        )",
+     "    };",
+     "    // The authority's first failure arm frees the block alone (`:543`), which `RawGlobal`'s `Drop`",
+     "    // performs; the name was never acquired.",
+     "    let Some(name) = name else {",
+     "        return ptr::null_mut();",
+     "    };",
+     "",
+     "    let lock = CRYPTO_THREAD_lock_new();",
+     "    if lock.is_null() {",
+     "        // The authority's second failure arm frees the name (`:541`) and then the block (`:543`);",
+     "        // `name` drops before `dgbl` because it is declared later.",
+     "        return ptr::null_mut();",
+     "    }",
+     "",
+     "    let p = dgbl.as_ptr();",
+     "    // SAFETY: `p` is this call's own fresh block, published nowhere yet.",
+     "    unsafe {",
+     "        (*p).random_provider_name = name.into_raw();",
+     "        (*p).lock = lock;",
+     "    }",
+     "",
+     "    dgbl.finish().cast::<c_void>()",
+     "}"
+    ]
+   },
+   "contract": {
+    "safety_section_present": false,
+    "doc_block_quote": [
+     "/// `void *ossl_rand_ctx_new(OSSL_LIB_CTX *libctx)`.",
+     "///",
+     "/// The slot constructor for `OSSL_LIB_CTX_DRBG_INDEX`: `context_init` calls this for slot 5 and",
+     "/// `context_deinit` calls [`ossl_rand_ctx_free`]."
+    ],
+    "note": "no `# Safety` section: `_libctx` is never read and the function has no caller-visible precondition; it stays `unsafe` because it hands out raw ownership"
+   },
+   "body_quote": [
+    "pub(crate) unsafe extern \"C\" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut c_void {",
+    "    let Some(dgbl) = RawGlobal::new() else {",
+    "        return ptr::null_mut();",
+    "    };",
+    "",
+    "    // `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, NULL)`: base thread handling must exist",
+    "    // before this object does.",
+    "    // SAFETY: NULL settings, so the initialiser reads no caller memory.",
+    "    unsafe { crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null()) };",
+    "",
+    "    // SAFETY: `RANDOM_PROVIDER_FIPS_NAME` is a NUL-terminated literal and the answer is this",
+    "    // call's own fresh block or NULL.",
+    "    let name = unsafe {",
+    "        OwnedStr::adopt(",
+    "            CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, L_CTX_PROVIDER_NAME),",
+    "            FILE_SEAM,",
+    "            L_CTX_ERR_PROVIDER_NAME,",
+    "        )",
+    "    };",
+    "    // The authority's first failure arm frees the block alone (`:543`), which `RawGlobal`'s `Drop`",
+    "    // performs; the name was never acquired.",
+    "    let Some(name) = name else {",
+    "        return ptr::null_mut();",
+    "    };",
+    "",
+    "    let lock = CRYPTO_THREAD_lock_new();",
+    "    if lock.is_null() {",
+    "        // The authority's second failure arm frees the name (`:541`) and then the block (`:543`);",
+    "        // `name` drops before `dgbl` because it is declared later.",
+    "        return ptr::null_mut();",
+    "    }",
+    "",
+    "    let p = dgbl.as_ptr();",
+    "    // SAFETY: `p` is this call's own fresh block, published nowhere yet.",
+    "    unsafe {",
+    "        (*p).random_provider_name = name.into_raw();",
+    "        (*p).lock = lock;",
+    "    }",
+    "",
+    "    dgbl.finish().cast::<c_void>()",
+    "}"
+   ],
+   "callers": [
+    "`context_init` (src/context/mod.rs) installs it as slot 5 through the `OSSL_LIB_CTX_DRBG_INDEX` constructor table; no Rust caller",
+    "the returned block is published once and released by `ossl_rand_ctx_free`"
+   ],
+   "answers": {
+    "a_safe_rust_ub": "No. `pub(crate) unsafe extern \"C\"` reached only from `context_init`'s constructor table; no safe-Rust path exists.",
+    "b_unsafe_covered": "Yes. Every unsafe operation in the span carries its own contract: the initialiser is called with NULL settings under `OPENSSL_INIT_BASE_ONLY` (no caller memory read); `CRYPTO_strdup`/`OwnedStr::adopt` own their fresh seam block; the two stores target this frame's unpublished block.",
+    "c_hidden_obligation": "None new. `_libctx` is never read, so the function has no caller precondition; it stays `unsafe` because it hands out raw ownership.",
+    "d_load_bearing_control": "C4 fires; the span hash, the body snapshot and the structured unsafe-operation lines are re-bound together so the row cannot cite a body it no longer contains."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "re-established at this candidate: the in-span delta is annotation-only (the in-span difference is an explicit `unsafe { }` block around an unchanged callee with unchanged arguments, plus its SAFETY comment: no token, callee, argument, control flow or effect changed); the body, contract and every use site were re-read and the four questions re-answered at 08cb1148b",
+   "residuals": [
+    "no `# Safety` section, justified by the absent caller precondition (`_libctx` unused); `missing_safety_doc` does not apply to a `pub(crate)` item"
+   ]
+  },
+  {
+   "boundary": "ssl_conf.rs:616",
+   "receipt": "sslconf-exclusivity-2026-11-10-sites.json",
+   "file": "src/ssl/ssl_conf.rs",
+   "operation": "min_max_proto",
+   "kind": "UNSAFE_FN_DEF",
+   "prior": {
+    "coordinate": 616,
+    "span_lines": [
+     616,
+     635
+    ],
+    "span_sha256": "22644409257205625b3d05a0ebd5902b9c032c676601f6fbc75c0ba0ee9518f7",
+    "verdict": "SAFETY_DISCHARGED",
+    "review": "boundary-sweep-B47"
+   },
+   "current": {
+    "coordinate": 628,
+    "def_line": 628,
+    "span_lines": [
+     628,
+     649
+    ],
+    "span_sha256": "cf85808865ee6e83b27e811dbebb28da3012deae9312d852972b3c35b5b84073",
+    "qualified_identity": "min_max_proto",
+    "resolution": "unique"
+   },
+   "delta": {
+    "introduced_by": "688c27cb8",
+    "classification": "annotation-only",
+    "statement": "the in-span difference is an explicit `unsafe { }` block around an unchanged callee with unchanged arguments, plus its SAFETY comment: no token, callee, argument, control flow or effect changed",
+    "old_span_text": [
+     "unsafe fn min_max_proto(cctx: *mut SslConfCtx, value: *const c_char, bound: *mut c_int) -> c_int {",
+     "    // SAFETY: `cctx` is live.",
+     "    let c = unsafe { &*cctx };",
+     "    let method_version = if !c.ctx.is_null() {",
+     "        // SAFETY: `ctx` is live.",
+     "        unsafe { (*(*c.ctx).method).version }",
+     "    } else if !c.ssl.is_null() {",
+     "        // SAFETY: `ssl` is live.",
+     "        unsafe { (*(*c.ssl).defltmeth).version }",
+     "    } else {",
+     "        return 0;",
+     "    };",
+     "    // SAFETY: `value` is NUL-terminated.",
+     "    let v = unsafe { core::ffi::CStr::from_ptr(value) }.to_bytes();",
+     "    let new_version = protocol_from_string(v);",
+     "    if new_version < 0 {",
+     "        return 0;",
+     "    }",
+     "    c_int::from(ssl_set_version_bound(method_version, new_version, bound))",
+     "}"
+    ],
+    "new_span_text": [
+     "unsafe fn min_max_proto(cctx: *mut SslConfCtx, value: *const c_char, bound: *mut c_int) -> c_int {",
+     "    // SAFETY: `cctx` is live.",
+     "    let c = unsafe { &*cctx };",
+     "    let method_version = if !c.ctx.is_null() {",
+     "        // SAFETY: `ctx` is live.",
+     "        unsafe { (*(*c.ctx).method).version }",
+     "    } else if !c.ssl.is_null() {",
+     "        // SAFETY: `ssl` is live.",
+     "        unsafe { (*(*c.ssl).defltmeth).version }",
+     "    } else {",
+     "        return 0;",
+     "    };",
+     "    // SAFETY: `value` is NUL-terminated.",
+     "    let v = unsafe { core::ffi::CStr::from_ptr(value) }.to_bytes();",
+     "    let new_version = protocol_from_string(v);",
+     "    if new_version < 0 {",
+     "        return 0;",
+     "    }",
+     "    // SAFETY: `bound` is the caller's live, aligned, writable slot per this function's",
+     "    // contract, and `cctx`/`value` were read under that same contract above.",
+     "    c_int::from(unsafe { ssl_set_version_bound(method_version, new_version, bound) })",
+     "}"
+    ]
+   },
+   "contract": {
+    "safety_section_present": true,
+    "doc_block_quote": [
+     "/// `min_max_proto` \u2014 `ssl_conf.c:335-349`.",
+     "///",
+     "/// # Safety",
+     "///",
+     "/// `cctx` must be non-NULL, aligned, live, initialised and exclusively accessible for the",
+     "/// call. When `cctx.ctx` is non-NULL it must be a live in-crate `SSL_CTX` whose `method` is",
+     "/// a live method table; when `cctx.ssl` is non-NULL it must be a live in-crate `SSL` whose",
+     "/// `defltmeth` is a live method table. `value` must be non-NULL and NUL-terminated (the",
+     "/// body reads it with `CStr::from_ptr`). `bound` must be NULL or a live, aligned, writable",
+     "/// `c_int` that outlives the call; `SSL_CONF_CTX_set_ssl`/`SSL_CONF_CTX_set_ssl_ctx`",
+     "/// establish it as the `min_proto_version`/`max_proto_version` field of that object",
+     "/// whenever `ctx`/`ssl` is non-NULL, and when both are NULL the body returns 0 before",
+     "/// reading `value` or `bound`.",
+     "///"
+    ],
+    "note": "the fn-level `# Safety` sits above the span and is therefore not part of the span hash"
+   },
+   "body_quote": [
+    "unsafe fn min_max_proto(cctx: *mut SslConfCtx, value: *const c_char, bound: *mut c_int) -> c_int {",
+    "    // SAFETY: `cctx` is live.",
+    "    let c = unsafe { &*cctx };",
+    "    let method_version = if !c.ctx.is_null() {",
+    "        // SAFETY: `ctx` is live.",
+    "        unsafe { (*(*c.ctx).method).version }",
+    "    } else if !c.ssl.is_null() {",
+    "        // SAFETY: `ssl` is live.",
+    "        unsafe { (*(*c.ssl).defltmeth).version }",
+    "    } else {",
+    "        return 0;",
+    "    };",
+    "    // SAFETY: `value` is NUL-terminated.",
+    "    let v = unsafe { core::ffi::CStr::from_ptr(value) }.to_bytes();",
+    "    let new_version = protocol_from_string(v);",
+    "    if new_version < 0 {",
+    "        return 0;",
+    "    }",
+    "    // SAFETY: `bound` is the caller's live, aligned, writable slot per this function's",
+    "    // contract, and `cctx`/`value` were read under that same contract above.",
+    "    c_int::from(unsafe { ssl_set_version_bound(method_version, new_version, bound) })",
+    "}"
+   ],
+   "callers": [
+    "`cmd_MinProtocol` (ssl_conf.rs:975-978) and `cmd_MaxProtocol` (:1007-1010), both `unsafe extern \"C\"` rows of the `SSL_CONF` command table",
+    "reached only through `SSL_CONF_cmd`, which refuses NULL `cctx`/`value` before the indirect call"
+   ],
+   "answers": {
+    "a_safe_rust_ub": "No. Private `unsafe fn`; the only callers are the two `unsafe extern \"C\"` command-table rows, reached through `SSL_CONF_cmd`, which refuses NULL `cctx`/`value` first.",
+    "b_unsafe_covered": "Yes. The `# Safety` section states the `cctx`/`value`/`bound` obligations and the early return when both `ctx` and `ssl` are NULL; the added `unsafe { }` wraps the same callee with the same arguments.",
+    "c_hidden_obligation": "None found. Acceptance does not imply a write: the bound is written only for the matching version arms, so a rejected name leaves it untouched.",
+    "d_load_bearing_control": "C4 fires; the in-file control `conf_cmd_min_max_protocol_bounds_are_range_checked` is NOT_RUN here (no compile) and belongs to the next BATCH gate."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "re-established at this candidate: the in-span delta is annotation-only (the in-span difference is an explicit `unsafe { }` block around an unchanged callee with unchanged arguments, plus its SAFETY comment: no token, callee, argument, control flow or effect changed); the body, contract and every use site were re-read and the four questions re-answered at 08cb1148b",
+   "residuals": [
+    "the in-file control for this site is NOT_RUN at this candidate (no compile)"
+   ]
+  }
+ ],
+ "controls": [
+  {
+   "id": "C0-candidate",
+   "purpose": "bind every hash to the review candidate",
+   "observed": "branch stage/p25/b75-ocsp, HEAD 08cb1148b40aa4cebc727e7c0b988505d3094ff0; span resolver = consumer_closure.resolve_operation_span at source_commit=CAND",
+   "pass": true
+  },
+  {
+   "id": "C1-stale-reproduction",
+   "purpose": "the tool's own adjudicator must still refuse all sixteen at the unmodified receipts",
+   "observed": "16/16 BLOCKED (span-hash-mismatch), matching the b79b closures",
+   "pass": true
+  },
+  {
+   "id": "C2-content-acceptance",
+   "purpose": "after the re-bind the same adjudicator must discharge all sixteen",
+   "observed": "16/16 DISCHARGED; covers_current=True and covers_site=True with binding=same-resolved-definition for every row",
+   "pass": true
+  },
+  {
+   "id": "C3-per-row-break-canary",
+   "purpose": "corrupt exactly one row's span_sha256 in a private receipt copy",
+   "observed": "16/16 FIRED: the corrupted row is BLOCKED and the other fifteen still discharge",
+   "pass": true
+  },
+  {
+   "id": "C4-doc-only-invariant",
+   "purpose": "revert the one changed line in a provided-text span",
+   "observed": "14/14 doc-only rows reproduce their recorded prior hash; the two annotation-only rows are excluded by construction",
+   "pass": true
+  },
+  {
+   "id": "C5-caller-witness",
+   "purpose": "the CALLERS/FAMILY detectors must be load-bearing at this candidate",
+   "observed": "CALLERS problems=[] on the tree; K11 break-direct-thunk-call, K12 break-stray-item-free, K7 real-call-site-witness and K9 break-span-hash all FIRED. K1/K2 are baseline assertions about the b76 defect state and are not applicable here.",
+   "pass": true
+  },
+  {
+   "id": "C6-no-collateral",
+   "purpose": "no row outside the sixteen changed",
+   "observed": "with the sixteen rows removed, each receipt is field-for-field identical to its HEAD copy; collateral=[]",
+   "pass": true
+  }
+ ],
+ "receipt_diffs": {
+  "note": "old/new coordinate and hash per row; the file sha256s are the re-bound receipts",
+  "rows": [
+   {
+    "receipt": "openssh-v1i-sites.json",
+    "boundary": "OSSH-V1I-049",
+    "old": {
+     "line": 350,
+     "line_current": 350,
+     "span_start_line": 350,
+     "span_end_line": 353,
+     "span_sha256": "13028da9d8492f824d5761e48a7c2f0c44392f914ac4cd0227e8d6bec0048488",
+     "span_source_commit": null
+    },
+    "new": {
+     "line": 357,
+     "line_current": 357,
+     "span_start_line": 357,
+     "span_end_line": 360,
+     "span_sha256": "68c3affef36dde35c69ad17c8be073d1ed36e9a957afbe84d623c802b79480b6",
+     "span_source_commit": null
+    },
+    "classification": "doc-only",
+    "disposition_update": {
+     "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:350 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+     "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:357 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+    },
+    "prose_coordinate_updates": []
+   },
+   {
+    "receipt": "openssh-v1i-sites.json",
+    "boundary": "OSSH-V1I-050",
+    "old": {
+     "line": 354,
+     "line_current": 354,
+     "span_start_line": 354,
+     "span_end_line": 357,
+     "span_sha256": "fbb8bfad2d75d2799d95893538c24c5ffa1359fd25eef77ae77f91a81cca6ef3",
+     "span_source_commit": null
+    },
+    "new": {
+     "line": 366,
+     "line_current": 366,
+     "span_start_line": 366,
+     "span_end_line": 369,
+     "span_sha256": "aadfe639539338e4fddd52a2572f8968b838febbc33d9a931f68de8836e6f0bf",
+     "span_source_commit": null
+    },
+    "classification": "doc-only",
+    "disposition_update": {
+     "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:354 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+     "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:366 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+    },
+    "prose_coordinate_updates": []
+   },
+   {
+    "receipt": "openssh-v1i-sites.json",
+    "boundary": "OSSH-V1I-051",
+    "old": {
+     "line": 358,
+     "line_current": 358,
+     "span_start_line": 358,
+     "span_end_line": 361,
+     "span_sha256": "879ea7d76ffb4d0fd368a9c5a3056ed4184537401d6d6511515d16d0e22ea8df",
+     "span_source_commit": null
+    },
+    "new": {
+     "line": 376,
+     "line_current": 376,
+     "span_start_line": 376,
+     "span_end_line": 379,
+     "span_sha256": "ada154c8fcf9c795b15269e75af7cebaf01626240d958ab693b71d9f68fc42d6",
+     "span_source_commit": null
+    },
+    "classification": "doc-only",
+    "disposition_update": {
+     "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:358 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+     "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:376 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+    },
+    "prose_coordinate_updates": []
+   },
+   {
+    "receipt": "openssh-v1i-sites.json",
+    "boundary": "OSSH-V1I-052",
+    "old": {
+     "line": 362,
+     "line_current": 362,
+     "span_start_line": 362,
+     "span_end_line": 365,
+     "span_sha256": "09ce335f71b364fa86cc7d60748551ff5226e2f5d2b5bb9b6a9efcfb1f7e0d68",
+     "span_source_commit": null
+    },
+    "new": {
+     "line": 385,
+     "line_current": 385,
+     "span_start_line": 385,
+     "span_end_line": 388,
+     "span_sha256": "6d1ec00d6cac7a7b591255c264472ea2178307d28cef4013a35d9170d08f356b",
+     "span_source_commit": null
+    },
+    "classification": "doc-only",
+    "disposition_update": {
+     "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:362 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+     "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:385 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+    },
+    "prose_coordinate_updates": []
+   },
+   {
+    "receipt": "openssh-v1i-sites.json",
+    "boundary": "OSSH-V1I-053",
+    "old": {
+     "line": 366,
+     "line_current": 366,
+     "span_start_line": 366,
+     "span_end_line": 369,
+     "span_sha256": "ef04cda1695dd610a3eddd0ac37dec5ce3367663a427207648483393923e6cce",
+     "span_source_commit": null
+    },
+    "new": {
+     "line": 395,
+     "line_current": 395,
+     "span_start_line": 395,
+     "span_end_line": 398,
+     "span_sha256": "c3bd7c6a68f5556a44991fec256736cae595ce8d5850d3bae356875167ccb78e",
+     "span_source_commit": null
+    },
+    "classification": "doc-only",
+    "disposition_update": {
+     "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:366 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+     "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:395 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+    },
+    "prose_coordinate_updates": []
+   },
+   {
+    "receipt": "openssh-v1i-sites.json",
+    "boundary": "OSSH-V1I-054",
+    "old": {
+     "line": 370,
+     "line_current": 370,
+     "span_start_line": 370,
+     "span_end_line": 373,
+     "span_sha256": "31048346d3df8aa9a52bc4b18fd813722a65de998b0fb6819f7858fd82c8ecd1",
+     "span_source_commit": null
+    },
+    "new": {
+     "line": 404,
+     "line_current": 404,
+     "span_start_line": 404,
+     "span_end_line": 407,
+     "span_sha256": "08102d47fcb390390d20e576b65826c8884b3792d02072195045ffbbbded5e57",
+     "span_source_commit": null
+    },
+    "classification": "doc-only",
+    "disposition_update": {
+     "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:370 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+     "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:404 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+    },
+    "prose_coordinate_updates": []
+   },
+   {
+    "receipt": "openssh-v1i-sites.json",
+    "boundary": "OSSH-V1I-059",
+    "old": {
+     "line": 376,
+     "line_current": 376,
+     "span_start_line": 376,
+     "span_end_line": 379,
+     "span_sha256": "f2c430ef6d2510ea8fb9bb46892deea51afcac75eefbe5a03d3883541845911b",
+     "span_source_commit": null
+    },
+    "new": {
+     "line": 419,
+     "line_current": 419,
+     "span_start_line": 419,
+     "span_end_line": 422,
+     "span_sha256": "52f8d85ffa5fe3af291f9acbb6e681d58b75be5f832fa7776a085b4bb9c5c551",
+     "span_source_commit": null
+    },
+    "classification": "doc-only",
+    "disposition_update": {
+     "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:376 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+     "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:419 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+    },
+    "prose_coordinate_updates": []
+   },
+   {
+    "receipt": "openssh-v1i-sites.json",
+    "boundary": "OSSH-V1I-060",
+    "old": {
+     "line": 380,
+     "line_current": 380,
+     "span_start_line": 380,
+     "span_end_line": 383,
+     "span_sha256": "c55cd1b80bb171807ebc723f6a3a8b0faab9a0c8a24c3400c8b5e89e27bfd8e8",
+     "span_source_commit": null
+    },
+    "new": {
+     "line": 427,
+     "line_current": 427,
+     "span_start_line": 427,
+     "span_end_line": 430,
+     "span_sha256": "537c06945c216902ed150dfaa4a44d7d3181ae3e19c2f3ed0dfb3b3311b685a2",
+     "span_source_commit": null
+    },
+    "classification": "doc-only",
+    "disposition_update": {
+     "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:380 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+     "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:427 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+    },
+    "prose_coordinate_updates": []
+   },
+   {
+    "receipt": "openssh-v1i-sites.json",
+    "boundary": "OSSH-V1I-061",
+    "old": {
+     "line": 384,
+     "line_current": 384,
+     "span_start_line": 384,
+     "span_end_line": 387,
+     "span_sha256": "78aab3c63127b04993c0447596fe2b4167e5e8b683967ff17420b540718870ba",
+     "span_source_commit": null
+    },
+    "new": {
+     "line": 435,
+     "line_current": 435,
+     "span_start_line": 435,
+     "span_end_line": 438,
+     "span_sha256": "9fcb08fbebf7d93711f64f289f56b34e53b37bcfca1f6c16ec1834b6066b525a",
+     "span_source_commit": null
+    },
+    "classification": "doc-only",
+    "disposition_update": {
+     "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:384 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+     "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:435 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+    },
+    "prose_coordinate_updates": []
+   },
+   {
+    "receipt": "openssh-v1i-sites.json",
+    "boundary": "OSSH-V1I-063",
+    "old": {
+     "line": 388,
+     "line_current": 388,
+     "span_start_line": 388,
+     "span_end_line": 391,
+     "span_sha256": "716df8e4158a82f709333ef8f8e10d11b49a3640c3b50cb83e87c063093a024e",
+     "span_source_commit": null
+    },
+    "new": {
+     "line": 443,
+     "line_current": 443,
+     "span_start_line": 443,
+     "span_end_line": 446,
+     "span_sha256": "36ecb712436300b555bc27f763f83b41cfa71ff96c1f32ebcc85b49c447265f3",
+     "span_source_commit": null
+    },
+    "classification": "doc-only",
+    "disposition_update": {
+     "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:388 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+     "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:443 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+    },
+    "prose_coordinate_updates": []
+   },
+   {
+    "receipt": "openssh-v1i-sites.json",
+    "boundary": "OSSH-V1I-064",
+    "old": {
+     "line": 392,
+     "line_current": 392,
+     "span_start_line": 392,
+     "span_end_line": 395,
+     "span_sha256": "462670b49e5deac6bb89a6bde03865bb4962f69860b469eda9889301e6e74b42",
+     "span_source_commit": null
+    },
+    "new": {
+     "line": 451,
+     "line_current": 451,
+     "span_start_line": 451,
+     "span_end_line": 454,
+     "span_sha256": "b10d4e3682d87e51ac65e7fa6d7ac882adf24166057438244714ee01320ce356",
+     "span_source_commit": null
+    },
+    "classification": "doc-only",
+    "disposition_update": {
+     "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:392 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+     "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:451 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+    },
+    "prose_coordinate_updates": []
+   },
+   {
+    "receipt": "openssh-v1i-sites.json",
+    "boundary": "OSSH-V1I-065",
+    "old": {
+     "line": 407,
+     "line_current": 407,
+     "span_start_line": 407,
+     "span_end_line": 421,
+     "span_sha256": "cd466dc13eee90d9e36e0601ccf6308e32c096b476d0982caf893b37c6f37ef8",
+     "span_source_commit": null
+    },
+    "new": {
+     "line": 476,
+     "line_current": 476,
+     "span_start_line": 476,
+     "span_end_line": 491,
+     "span_sha256": "3c274e5c132d4c783470e5820d148965f9050cd6a08c7ae6dc1b2596fc177fa0",
+     "span_source_commit": null
+    },
+    "classification": "doc-only",
+    "disposition_update": {
+     "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:407 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+     "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:476 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+    },
+    "prose_coordinate_updates": [
+     {
+      "field": "established_by[0]",
+      "old": "caller: src/cmp/cmp_ctx.rs:578,587 pass a fresh context's NULL fields; :1588,1593 pass the setter's owned incumbent through ptr::addr_of_mut!",
+      "new": "caller: src/cmp/cmp_ctx.rs:628,637 pass a fresh context's NULL fields; :1638,1643 pass the setter's owned incumbent through ptr::addr_of_mut!"
+     }
+    ]
+   },
+   {
+    "receipt": "openssh-v1i-sites.json",
+    "boundary": "OSSH-V1I-067",
+    "old": {
+     "line": 1706,
+     "line_current": 1706,
+     "span_start_line": 1706,
+     "span_end_line": 1709,
+     "span_sha256": "5b0450b583d888ad1fa516a1db92cfd5493f24343bb7f8ac4e98943f7a46dfd5",
+     "span_source_commit": null
+    },
+    "new": {
+     "line": 1712,
+     "line_current": 1712,
+     "span_start_line": 1712,
+     "span_end_line": 1715,
+     "span_sha256": "b23c42bb8b1a61c4de93b40c75faf45e2e2af5b116c9b0b770e7023526573412",
+     "span_source_commit": null
+    },
+    "classification": "doc-only",
+    "disposition_update": {
+     "old": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1706 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+     "new": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1712 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+    },
+    "prose_coordinate_updates": []
+   },
+   {
+    "receipt": "openssh-v1i-sites.json",
+    "boundary": "OSSH-V1I-069",
+    "old": {
+     "line": 1722,
+     "line_current": 1722,
+     "span_start_line": 1722,
+     "span_end_line": 1725,
+     "span_sha256": "ab84f3d5975c0d0dde5598293da723073efe4e6cba97b983cd2c52483fa236ed",
+     "span_source_commit": null
+    },
+    "new": {
+     "line": 1734,
+     "line_current": 1734,
+     "span_start_line": 1734,
+     "span_end_line": 1737,
+     "span_sha256": "e6eeb9d17271a94ed1d94e4f96605dd597abc6dea6304f6ec0dc6ac4703cebd0",
+     "span_source_commit": null
+    },
+    "classification": "doc-only",
+    "disposition_update": {
+     "old": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1722 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+     "new": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1734 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+    },
+    "prose_coordinate_updates": []
+   },
+   {
+    "receipt": "boundary-sweep-B69.json",
+    "boundary": "RAND-CTX-001",
+    "old": {
+     "line": 426,
+     "line_current": 426,
+     "span_start_line": 426,
+     "span_end_line": 465,
+     "span_sha256": "232c98ca33e79818c46dff8f5857876c778484213f069315127c2497e8b05186",
+     "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0"
+    },
+    "new": {
+     "line": 426,
+     "line_current": 426,
+     "span_start_line": 426,
+     "span_end_line": 466,
+     "span_sha256": "304a782704a5b63d5780212521506752ccaaf804deaf6af742b7d6b1f511d1f8",
+     "span_source_commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0"
+    },
+    "classification": "annotation-only",
+    "disposition_update": null,
+    "prose_coordinate_updates": [
+     {
+      "field": "body",
+      "old": "pub(crate) unsafe extern \"C\" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut c_void {\n    let Some(dgbl) = RawGlobal::new() else {\n        return ptr::null_mut();\n    };\n\n    // `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, NULL)`: base thread handling must exist\n    // before this object does.\n    crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null());\n\n    // SAFETY: `RANDOM_PROVIDER_FIPS_NAME` is a NUL-terminated literal and the answer is this\n    // call's own fresh block or NULL.\n    let name = unsafe {\n        OwnedStr::adopt(\n            CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, L_CTX_PROVIDER_NAME),\n            FILE_SEAM,\n            L_CTX_ERR_PROVIDER_NAME,\n        )\n    };\n    // The authority's first failure arm frees the block alone (`:543`), which `RawGlobal`'s `Drop`\n    // performs; the name was never acquired.\n    let Some(name) = name else {\n        return ptr::null_mut();\n    };\n\n    let lock = CRYPTO_THREAD_lock_new();\n    if lock.is_null() {\n        // The authority's second failure arm frees the name (`:541`) and then the block (`:543`);\n        // `name` drops before `dgbl` because it is declared later.\n        return ptr::null_mut();\n    }\n\n    let p = dgbl.as_ptr();\n    // SAFETY: `p` is this call's own fresh block, published nowhere yet.\n    unsafe {\n        (*p).random_provider_name = name.into_raw();\n        (*p).lock = lock;\n    }\n\n    dgbl.finish().cast::<c_void>()\n}",
+      "new": "pub(crate) unsafe extern \"C\" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut c_void {\n    let Some(dgbl) = RawGlobal::new() else {\n        return ptr::null_mut();\n    };\n\n    // `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, NULL)`: base thread handling must exist\n    // before this object does.\n    // SAFETY: NULL settings, so the initialiser reads no caller memory.\n    unsafe { crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null()) };\n\n    // SAFETY: `RANDOM_PROVIDER_FIPS_NAME` is a NUL-terminated literal and the answer is this\n    // call's own fresh block or NULL.\n    let name = unsafe {\n        OwnedStr::adopt(\n            CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, L_CTX_PROVIDER_NAME),\n            FILE_SEAM,\n            L_CTX_ERR_PROVIDER_NAME,\n        )\n    };\n    // The authority's first failure arm frees the block alone (`:543`), which `RawGlobal`'s `Drop`\n    // performs; the name was never acquired.\n    let Some(name) = name else {\n        return ptr::null_mut();\n    };\n\n    let lock = CRYPTO_THREAD_lock_new();\n    if lock.is_null() {\n        // The authority's second failure arm frees the name (`:541`) and then the block (`:543`);\n        // `name` drops before `dgbl` because it is declared later.\n        return ptr::null_mut();\n    }\n\n    let p = dgbl.as_ptr();\n    // SAFETY: `p` is this call's own fresh block, published nowhere yet.\n    unsafe {\n        (*p).random_provider_name = name.into_raw();\n        (*p).lock = lock;\n    }\n\n    dgbl.finish().cast::<c_void>()\n}"
+     },
+     {
+      "field": "established[0]",
+      "old": "`_libctx` is never read: the parameter is `_libctx` and no expression in lines 426-465 mentions it.",
+      "new": "`_libctx` is never read: the parameter is `_libctx` and no expression in lines 426-466 mentions it."
+     },
+     {
+      "field": "established[3]",
+      "old": "The name is `CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, ...)` where the source is a NUL-terminated static literal (`c\"fips\"`); `OwnedStr::adopt` receives that call's own fresh seam block, so provenance, whole-block identity, alignment, NUL-termination, exclusive ownership and the plain `CRYPTO_free` release site are all established by the allocation call and the literal (src/runtime/owned_str.rs:135-165; src/rand/rand_lib.rs:435-443).",
+      "new": "The name is `CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, ...)` where the source is a NUL-terminated static literal (`c\"fips\"`); `OwnedStr::adopt` receives that call's own fresh seam block, so provenance, whole-block identity, alignment, NUL-termination, exclusive ownership and the plain `CRYPTO_free` release site are all established by the allocation call and the literal (src/runtime/owned_str.rs:135-165; src/rand/rand_lib.rs:436-444)."
+     },
+     {
+      "field": "established[4]",
+      "old": "The two stores at :459-462 dereference `p = dgbl.as_ptr()`, the block `RawGlobal::new` allocated in this same frame; the block is zeroed and word-aligned, holds no Rust references, and has not been published, so no alias exists and every field is writable.",
+      "new": "The two stores at :460-463 dereference `p = dgbl.as_ptr()`, the block `RawGlobal::new` allocated in this same frame; the block is zeroed and word-aligned, holds no Rust references, and has not been published, so no alias exists and every field is writable."
+     },
+     {
+      "field": "unsafe_operations[].line",
+      "old": [
+       {
+        "line": 426,
+        "kind": "unsafe_fn_definition",
+        "operation": "ossl_rand_ctx_new",
+        "contract": "No parameter precondition (see above). Marking the fn `unsafe` transfers no unstated obligation: the body's unsafe operations are each independently contracted below."
+       },
+       {
+        "line": 437,
+        "kind": "unsafe_block",
+        "operations": [
+         "CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, 526)",
+         "OwnedStr::adopt(raw, FILE_SEAM, 541)"
+        ],
+        "contract": "The source is a static NUL-terminated literal; the answer is this call's own fresh seam block or NULL; the adopted block is the whole allocation and this handle is its single release. NULL is `None` and releases nothing."
+       },
+       {
+        "line": 459,
+        "kind": "unsafe_block",
+        "operations": [
+         "raw write (*p).random_provider_name = name.into_raw()",
+         "raw write (*p).lock = lock"
+        ],
+        "contract": "`p` is the fresh, zeroed, aligned block allocated in this frame and not yet published; no reference or alias to it exists. The name is transferred exactly once (the `RawGlobal` failure path cannot run after `finish`), and the lock is the live lock this frame just created or the block is released before publication."
+       }
+      ],
+      "new": [
+       {
+        "line": 426,
+        "kind": "unsafe_fn_definition",
+        "operation": "ossl_rand_ctx_new",
+        "contract": "No parameter precondition (see above). Marking the fn `unsafe` transfers no unstated obligation: the body's unsafe operations are each independently contracted below."
+       },
+       {
+        "line": 438,
+        "kind": "unsafe_block",
+        "operations": [
+         "CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, 526)",
+         "OwnedStr::adopt(raw, FILE_SEAM, 541)"
+        ],
+        "contract": "The source is a static NUL-terminated literal; the answer is this call's own fresh seam block or NULL; the adopted block is the whole allocation and this handle is its single release. NULL is `None` and releases nothing."
+       },
+       {
+        "line": 460,
+        "kind": "unsafe_block",
+        "operations": [
+         "raw write (*p).random_provider_name = name.into_raw()",
+         "raw write (*p).lock = lock"
+        ],
+        "contract": "`p` is the fresh, zeroed, aligned block allocated in this frame and not yet published; no reference or alias to it exists. The name is transferred exactly once (the `RawGlobal` failure path cannot run after `finish`), and the lock is the live lock this frame just created or the block is released before publication."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "receipt": "sslconf-exclusivity-2026-11-10-sites.json",
+    "boundary": "ssl_conf.rs:616",
+    "old": {
+     "line": 616,
+     "line_current": null,
+     "span_start_line": 616,
+     "span_end_line": 635,
+     "span_sha256": "22644409257205625b3d05a0ebd5902b9c032c676601f6fbc75c0ba0ee9518f7",
+     "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+    },
+    "new": {
+     "line": 628,
+     "line_current": 628,
+     "span_start_line": 628,
+     "span_end_line": 649,
+     "span_sha256": "cf85808865ee6e83b27e811dbebb28da3012deae9312d852972b3c35b5b84073",
+     "span_source_commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0"
+    },
+    "classification": "annotation-only",
+    "disposition_update": {
+     "old": "SAFETY_DISCHARGED (scoped to this site by ledger row sslconf-exclusivity-2026-11-10; adjudicated DISCHARGE 14/14; recorded boundary B47-SSL-CONF-003 of boundary-sweep-B47; the binding is the content hash of the operation span at S, not the ledger coordinate)",
+     "new": "SAFETY_DISCHARGED (scoped to this site by ledger row sslconf-exclusivity-2026-11-10; adjudicated DISCHARGE 14/14; recorded boundary B47-SSL-CONF-003 of boundary-sweep-B47; the binding is the content hash of the operation span at S, not the ledger coordinate; this row declares src/ssl/ssl_conf.rs:628)"
+    },
+    "prose_coordinate_updates": []
+   }
+  ],
+  "files": {
+   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-v1i-sites.json": {
+    "before_sha256": "6c6449a7bb2ba2b8c32a15cf8d5f0eab618672fa160ae54beb092fdec980649a",
+    "after_sha256": "664668d54f7c8a0b1aade754612d00f46f4774f017bae2e6a1067b2b9f24e21c"
+   },
+   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B69.json": {
+    "before_sha256": "deac3e3bca329398300e17771ee93bdcbef762bcdf908720b5f94ce71e9580f9",
+    "after_sha256": "58fb7b5a41e49ffce878d7d922128f2bfb3d355f865b6bc4f2c3db6073d85898"
+   },
+   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/sslconf-exclusivity-2026-11-10-sites.json": {
+    "before_sha256": "a6c2f00d6c66ae60a4968ae384db6f214b07edf51e21dac95fc6eae54a5c239c",
+    "after_sha256": "c3c715a88932d7a00dfc5e07d3816465ca107d27641c433a4feb3a72955347a9"
+   }
+  }
+ },
+ "residuals": [
+  {
+   "id": "R1-no-compile",
+   "state": "NOT_RUN",
+   "statement": "no cargo invocation at this candidate (source-level venue). fmt/clippy/test and the in-file controls (`zero_state_sweep_ossl_cmp_ctx`, `conf_cmd_min_max_protocol_bounds_are_range_checked`, `ssl_set_version_bound_is_an_unsafe_fn`) are NOT_RUN and belong to the next BATCH gate."
+  },
+  {
+   "id": "R2-closures-not-regenerated",
+   "state": "NOT_RUN",
+   "statement": "the 274/16 closures were not re-run; moving the sixteen rows to DISCHARGED (290/290) requires a fresh closure at this candidate. The C2 control is a synthetic-plane reproduction, not a closure."
+  },
+  {
+   "id": "R3-evidence-text",
+   "state": "OPEN",
+   "statement": "OSSH-V1I-059's first `established_by` bullet says `ctx_set1_dup!` passes the member; the actual use is the `OPENSSL_sk_pop_free` freefunc plus the push0 setter. That prose predates this review (b76 era) and is not load-bearing for the verdict, which rests on the enumerated use sites; it is recorded, not silently repaired."
+  },
+  {
+   "id": "R4-rand-safety-section",
+   "state": "JUSTIFIED",
+   "statement": "RAND-CTX-001 has no `# Safety` section because it has no caller-visible precondition (`_libctx` is unused); the fn is `unsafe` because it returns raw ownership. `missing_safety_doc` does not apply to a `pub(crate)` item."
+  },
+  {
+   "id": "R5-retained-external",
+   "state": "RETAINED",
+   "statement": "the set0/push0 C-ABI ownership obligations on the pop_free freefuncs are unchanged and remain the caller's, exactly as the b76 accept recorded."
+  },
+  {
+   "id": "R6-freeze-binding",
+   "state": "BOUND",
+   "statement": "these verdicts are bound to the exact source head and receipt bytes named above; any further edit to the four source files or the three receipts invalidates them."
+  }
+ ],
+ "does_not_prove": [
+  "It does not establish SAFE_COMPATIBLE for openssh or any consumer family; a site receipt is not a family graduation.",
+  "It does not establish that the other 274 obligations still discharge at this candidate; only the sixteen rows were re-established.",
+  "It does not establish the absence of UB at runtime: no sanitizer, Miri or binary-level check ran.",
+  "It does not validate the prose evidence fields of the three receipts beyond the coordinates it names.",
+  "It does not establish constant-time behaviour or any cryptographic property of these operations.",
+  "It does not establish that the in-file negative controls fire at this candidate (no compile)."
+ ]
+}

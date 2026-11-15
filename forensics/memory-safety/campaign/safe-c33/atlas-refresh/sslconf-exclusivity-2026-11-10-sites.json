@@ -158,11 +158,11 @@
   {
    "id": "ssl_conf.rs:616",
    "file": "src/ssl/ssl_conf.rs",
-   "line": 616,
+   "line": 628,
    "kind": "UNSAFE_FN_DEF",
    "operation": "min_max_proto",
    "mechanism": "SSL_SESSION",
-   "disposition": "SAFETY_DISCHARGED (scoped to this site by ledger row sslconf-exclusivity-2026-11-10; adjudicated DISCHARGE 14/14; recorded boundary B47-SSL-CONF-003 of boundary-sweep-B47; the binding is the content hash of the operation span at S, not the ledger coordinate)",
+   "disposition": "SAFETY_DISCHARGED (scoped to this site by ledger row sslconf-exclusivity-2026-11-10; adjudicated DISCHARGE 14/14; recorded boundary B47-SSL-CONF-003 of boundary-sweep-B47; the binding is the content hash of the operation span at S, not the ledger coordinate; this row declares src/ssl/ssl_conf.rs:628)",
    "recorded_verdict": "SAFETY_DISCHARGED",
    "ledger_receipt": "sslconf-exclusivity-2026-11-10",
    "ledger_coordinate": "ssl_conf.rs:616",
@@ -174,16 +174,36 @@
     "a_concurrent_entry_from_another_thread_is_refused",
     "every_entry_point_refuses_an_overlap_and_works_when_idle"
    ],
-   "span_sha256": "22644409257205625b3d05a0ebd5902b9c032c676601f6fbc75c0ba0ee9518f7",
+   "span_sha256": "cf85808865ee6e83b27e811dbebb28da3012deae9312d852972b3c35b5b84073",
    "span_schema": "safe-c33/operation-span-sha256/v1",
    "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
    "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
-   "span_start_line": 616,
-   "span_end_line": 635,
+   "span_start_line": 628,
+   "span_end_line": 649,
    "span_qualified_identity": "min_max_proto",
    "span_resolution": "unique",
-   "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
-   "span_source_field": "line_current"
+   "span_source_commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+   "span_source_field": "line_current",
+   "line_current": 628,
+   "reviewed_span_sha256": "cf85808865ee6e83b27e811dbebb28da3012deae9312d852972b3c35b5b84073",
+   "review_receipt": "b79-review-rebind",
+   "review_receipt_path": "evidence/b79-review-rebind.json",
+   "covers_site": true,
+   "covers_site_basis": "the boundary's declared range covers the current census coordinate 628 and the recorded span_sha256 is the resolver's hash of the current bytes (cf85808865ee6e83); the superseded coordinate 616 is kept as inventory_line/provenance",
+   "rebind": {
+    "review": "b79-review-rebind",
+    "review_path": "evidence/b79-review-rebind.json",
+    "candidate": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+    "prior_candidate": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+    "prior_span_sha256": "22644409257205625b3d05a0ebd5902b9c032c676601f6fbc75c0ba0ee9518f7",
+    "prior_span_lines": [
+     616,
+     635
+    ],
+    "prior_coordinate": 616,
+    "delta_classification": "annotation-only",
+    "delta": "the in-span difference is an explicit `unsafe { }` block around an unchanged callee with unchanged arguments, plus its SAFETY comment: no token, callee, argument, control flow or effect changed"
+   }
   },
   {
    "id": "ssl_conf.rs:702",
@@ -467,5 +487,14 @@
  "loader_visibility": {
   "loaded_by_consumer_closure": true,
   "reason": "the site-enumerating family load_boundaries reads; the boundary rows are identical to the detail receipt"
+ },
+ "rebind_review3": {
+  "review": "b79-review-rebind",
+  "review_path": "evidence/b79-review-rebind.json",
+  "candidate": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+  "boundaries": [
+   "ssl_conf.rs:616"
+  ],
+  "rule": "min_max_proto's span hash and span lines are re-bound to the candidate; the boundary id, ledger_coordinate and source_boundary_line_current stay as the B47/ledger provenance, and the other thirteen rows are untouched. The in-span change is the explicit-unsafe-block migration of the ssl_set_version_bound call (same callee, same arguments)."
  }
 }

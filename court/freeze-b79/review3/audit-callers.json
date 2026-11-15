@@ -1,0 +1,160 @@
+{
+ "callers": {
+  "problems": [],
+  "rows": [
+   {
+    "item": "itav_free",
+    "call_sites": [
+     2105,
+     2173,
+     2385,
+     3128,
+     3137,
+     3147
+    ]
+   },
+   {
+    "item": "rootcakeyupdate_free",
+    "call_sites": [
+     2242,
+     2252,
+     2263,
+     2273
+    ]
+   },
+   {
+    "item": "x509_name_dup_void",
+    "call_sites": [
+     809,
+     815,
+     821,
+     827
+    ],
+    "unclassified": []
+   },
+   {
+    "item": "x509_name_free_void",
+    "call_sites": [
+     810,
+     816,
+     822,
+     828
+    ],
+    "unclassified": []
+   },
+   {
+    "item": "asn1_integer_dup_void",
+    "call_sites": [
+     833
+    ],
+    "unclassified": []
+   },
+   {
+    "item": "asn1_integer_free_void",
+    "call_sites": [
+     834
+    ],
+    "unclassified": []
+   },
+   {
+    "item": "x509_req_dup_void",
+    "call_sites": [
+     839
+    ],
+    "unclassified": []
+   },
+   {
+    "item": "x509_req_free_void",
+    "call_sites": [
+     840
+    ],
+    "unclassified": []
+   },
+   {
+    "item": "general_name_free_void",
+    "call_sites": [
+     565
+    ],
+    "unclassified": []
+   },
+   {
+    "item": "x509_extension_free_void",
+    "call_sites": [
+     566,
+     1253
+    ],
+    "unclassified": []
+   },
+   {
+    "item": "utf8_string_free_void",
+    "call_sites": [
+     573,
+     881
+    ],
+    "unclassified": []
+   },
+   {
+    "item": "itav_free_void",
+    "call_sites": [
+     462
+    ],
+    "unclassified": []
+   },
+   {
+    "item": "policy_free_void",
+    "call_sites": [
+     567
+    ],
+    "unclassified": []
+   },
+   {
+    "item": "cmp_ctx_set_md",
+    "call_sites": [
+     628,
+     637,
+     1638,
+     1643
+    ],
+    "unclassified": []
+   },
+   {
+    "item": "copyctx",
+    "dispatch_registrations": 5
+   }
+  ]
+ },
+ "family": {
+  "false": [
+   "OSSH-V1I-059",
+   "OSSH-V1I-060",
+   "OSSH-V1I-061",
+   "OSSH-V1I-064"
+  ],
+  "rows": [
+   {
+    "id": "OSSH-V1I-059",
+    "op": "general_name_free_void",
+    "claims_ctx_set1_dup": true,
+    "actually_used_by_ctx_set1_dup": false
+   },
+   {
+    "id": "OSSH-V1I-060",
+    "op": "x509_extension_free_void",
+    "claims_ctx_set1_dup": true,
+    "actually_used_by_ctx_set1_dup": false
+   },
+   {
+    "id": "OSSH-V1I-061",
+    "op": "utf8_string_free_void",
+    "claims_ctx_set1_dup": true,
+    "actually_used_by_ctx_set1_dup": false
+   },
+   {
+    "id": "OSSH-V1I-064",
+    "op": "policy_free_void",
+    "claims_ctx_set1_dup": true,
+    "actually_used_by_ctx_set1_dup": false
+   }
+  ]
+ }
+}

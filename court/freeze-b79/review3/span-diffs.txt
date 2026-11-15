@@ -1,0 +1,148 @@
+========================================================================
+OSSH-V1I-049 src/cmp/cmp_ctx.rs::x509_name_dup_void old 350-353 -> new 357-360
+--- 
++++ 
+@@ -1,3 +1,3 @@
+ unsafe extern "C" fn x509_name_dup_void(p: *const c_void) -> *mut c_void {
+-    // SAFETY: per this function's contract.
++    // SAFETY: `p` is NULL or a live `X509_NAME` per this function's contract.
+     unsafe { X509_NAME_dup(p.cast()) }.cast()
+========================================================================
+OSSH-V1I-050 src/cmp/cmp_ctx.rs::x509_name_free_void old 354-357 -> new 366-369
+--- 
++++ 
+@@ -1,3 +1,3 @@
+ unsafe extern "C" fn x509_name_free_void(p: *mut c_void) {
+-    // SAFETY: per this function's contract.
++    // SAFETY: `p` is NULL or a live, owned reference per this function's contract.
+     unsafe { X509_NAME_free(p.cast()) };
+========================================================================
+OSSH-V1I-051 src/cmp/cmp_ctx.rs::asn1_integer_dup_void old 358-361 -> new 376-379
+--- 
++++ 
+@@ -1,3 +1,3 @@
+ unsafe extern "C" fn asn1_integer_dup_void(p: *const c_void) -> *mut c_void {
+-    // SAFETY: per this function's contract.
++    // SAFETY: `p` is NULL or a live item value per this function's contract.
+     unsafe { ASN1_item_dup(ASN1_INTEGER_it(), p) }.cast()
+========================================================================
+OSSH-V1I-052 src/cmp/cmp_ctx.rs::asn1_integer_free_void old 362-365 -> new 385-388
+--- 
++++ 
+@@ -1,3 +1,3 @@
+ unsafe extern "C" fn asn1_integer_free_void(p: *mut c_void) {
+-    // SAFETY: per this function's contract.
++    // SAFETY: `p` is NULL or a live, owned `ASN1_INTEGER` per this function's contract.
+     unsafe { ASN1_INTEGER_free(p.cast()) };
+========================================================================
+OSSH-V1I-053 src/cmp/cmp_ctx.rs::x509_req_dup_void old 366-369 -> new 395-398
+--- 
++++ 
+@@ -1,3 +1,3 @@
+ unsafe extern "C" fn x509_req_dup_void(p: *const c_void) -> *mut c_void {
+-    // SAFETY: per this function's contract.
++    // SAFETY: `p` is NULL or a live `X509_REQ` per this function's contract.
+     unsafe { X509_REQ_dup(p.cast()) }.cast()
+========================================================================
+OSSH-V1I-054 src/cmp/cmp_ctx.rs::x509_req_free_void old 370-373 -> new 404-407
+--- 
++++ 
+@@ -1,3 +1,3 @@
+ unsafe extern "C" fn x509_req_free_void(p: *mut c_void) {
+-    // SAFETY: per this function's contract.
++    // SAFETY: `p` is NULL or a live, owned reference per this function's contract.
+     unsafe { X509_REQ_free(p.cast()) };
+========================================================================
+OSSH-V1I-059 src/cmp/cmp_ctx.rs::general_name_free_void old 376-379 -> new 419-422
+--- 
++++ 
+@@ -1,3 +1,3 @@
+ unsafe extern "C" fn general_name_free_void(p: *mut c_void) {
+-    // SAFETY: per this function's contract.
++    // SAFETY: `p` is NULL or a live, owned `GENERAL_NAME` per this thunk's contract.
+     unsafe { GENERAL_NAME_free(p.cast()) };
+========================================================================
+OSSH-V1I-060 src/cmp/cmp_ctx.rs::x509_extension_free_void old 380-383 -> new 427-430
+--- 
++++ 
+@@ -1,3 +1,3 @@
+ unsafe extern "C" fn x509_extension_free_void(p: *mut c_void) {
+-    // SAFETY: per this function's contract.
++    // SAFETY: `p` is NULL or a live, owned `X509_EXTENSION`.
+     unsafe { X509_EXTENSION_free(p.cast()) };
+========================================================================
+OSSH-V1I-061 src/cmp/cmp_ctx.rs::utf8_string_free_void old 384-387 -> new 435-438
+--- 
++++ 
+@@ -1,3 +1,3 @@
+ unsafe extern "C" fn utf8_string_free_void(p: *mut c_void) {
+-    // SAFETY: per this function's contract.
++    // SAFETY: `p` is NULL or a live, owned `ASN1_UTF8STRING`.
+     unsafe { crate::asn1::string::ASN1_UTF8STRING_free(p.cast()) };
+========================================================================
+OSSH-V1I-063 src/cmp/cmp_ctx.rs::itav_free_void old 388-391 -> new 443-446
+--- 
++++ 
+@@ -1,3 +1,3 @@
+ unsafe extern "C" fn itav_free_void(p: *mut c_void) {
+-    // SAFETY: per this function's contract.
++    // SAFETY: `p` is NULL or a live, owned `OSSL_CMP_ITAV`.
+     unsafe { OSSL_CMP_ITAV_free(p.cast()) };
+========================================================================
+OSSH-V1I-064 src/cmp/cmp_ctx.rs::policy_free_void old 392-395 -> new 451-454
+--- 
++++ 
+@@ -1,3 +1,3 @@
+ unsafe extern "C" fn policy_free_void(p: *mut c_void) {
+-    // SAFETY: per this function's contract.
++    // SAFETY: `p` is NULL or a live, owned `POLICYINFO`.
+     unsafe { POLICYINFO_free(p.cast()) };
+========================================================================
+OSSH-V1I-065 src/cmp/cmp_ctx.rs::cmp_ctx_set_md old 407-421 -> new 476-491
+--- 
++++ 
+@@ -8,3 +8,4 @@
+     }
+-    // SAFETY: `pmd` is a live out-pointer.
++    // SAFETY: `pmd` is a live out-pointer to the context's own method slot, holding the
++    // reference this context owns per the contract.
+     unsafe {
+========================================================================
+OSSH-V1I-067 src/cmp/cmp_asn.rs::itav_free old 1706-1709 -> new 1712-1715
+--- 
++++ 
+@@ -1,3 +1,3 @@
+ unsafe fn itav_free(itav: *mut CmpItav) {
+-    // SAFETY: `itav` is NULL or a live item value.
++    // SAFETY: `itav` is NULL or a live, exclusively owned item value per the contract.
+     unsafe { ASN1_item_free(itav.cast(), cmp_itav_it()) };
+========================================================================
+OSSH-V1I-069 src/cmp/cmp_asn.rs::rootcakeyupdate_free old 1722-1725 -> new 1734-1737
+--- 
++++ 
+@@ -1,3 +1,3 @@
+ unsafe fn rootcakeyupdate_free(p: *mut CmpRootCaKeyUpdate) {
+-    // SAFETY: `p` is NULL or a live item value.
++    // SAFETY: `p` is NULL or a live, exclusively owned item value per the contract.
+     unsafe { ASN1_item_free(p.cast(), cmp_rootcakeyupdate_it()) };
+========================================================================
+RAND-CTX-001 src/rand/rand_lib.rs::ossl_rand_ctx_new old 426-465 -> new 426-466
+--- 
++++ 
+@@ -7,3 +7,4 @@
+     // before this object does.
+-    crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null());
++    // SAFETY: NULL settings, so the initialiser reads no caller memory.
++    unsafe { crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null()) };
+ 
+========================================================================
+ssl_conf.rs:616 src/ssl/ssl_conf.rs::min_max_proto old 616-635 -> new 628-649
+--- 
++++ 
+@@ -18,3 +18,5 @@
+     }
+-    c_int::from(ssl_set_version_bound(method_version, new_version, bound))
++    // SAFETY: `bound` is the caller's live, aligned, writable slot per this function's
++    // contract, and `cctx`/`value` were read under that same contract above.
++    c_int::from(unsafe { ssl_set_version_bound(method_version, new_version, bound) })
+ }

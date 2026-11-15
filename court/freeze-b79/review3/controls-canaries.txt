@@ -1,0 +1,18 @@
+C5 doc-only-invariant: reverting the added comment reproduces the recorded hash for 14/16 spans (the two annotation-only rows are excluded by construction)
+C4 break-OSSH-V1I-049       blocked=x509_name_dup_void        other15-discharged=True -> FIRED
+C4 break-OSSH-V1I-050       blocked=x509_name_free_void       other15-discharged=True -> FIRED
+C4 break-OSSH-V1I-051       blocked=asn1_integer_dup_void     other15-discharged=True -> FIRED
+C4 break-OSSH-V1I-052       blocked=asn1_integer_free_void    other15-discharged=True -> FIRED
+C4 break-OSSH-V1I-053       blocked=x509_req_dup_void         other15-discharged=True -> FIRED
+C4 break-OSSH-V1I-054       blocked=x509_req_free_void        other15-discharged=True -> FIRED
+C4 break-OSSH-V1I-059       blocked=general_name_free_void    other15-discharged=True -> FIRED
+C4 break-OSSH-V1I-060       blocked=x509_extension_free_void  other15-discharged=True -> FIRED
+C4 break-OSSH-V1I-061       blocked=utf8_string_free_void     other15-discharged=True -> FIRED
+C4 break-OSSH-V1I-063       blocked=itav_free_void            other15-discharged=True -> FIRED
+C4 break-OSSH-V1I-064       blocked=policy_free_void          other15-discharged=True -> FIRED
+C4 break-OSSH-V1I-065       blocked=cmp_ctx_set_md            other15-discharged=True -> FIRED
+C4 break-OSSH-V1I-067       blocked=itav_free                 other15-discharged=True -> FIRED
+C4 break-OSSH-V1I-069       blocked=rootcakeyupdate_free      other15-discharged=True -> FIRED
+C4 break-RAND-CTX-001       blocked=ossl_rand_ctx_new         other15-discharged=True -> FIRED
+C4 break-ssl_conf.rs:616    blocked=min_max_proto             other15-discharged=True -> FIRED
+C4 fired 16/16
