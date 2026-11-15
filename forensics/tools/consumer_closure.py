@@ -12095,13 +12095,13 @@ _PIN_TABLE_OF = {
     "PBE_EX_SITES": "PBE_EX_SITE_PINS",
     "STORE_LOADER_LEGACY_SITES": "STORE_LOADER_LEGACY_SITE_PINS",
     "CONF_SITES": "CONF_SITE_PINS",
+    "CONF_METHOD_SITES": "CONF_METHOD_SITE_PINS",
 }
 _PINNED_SCALARS = {
     "PBE_SITE": "PBE_SITE_PIN",
     "PEM_SITE": "PEM_SITE_PIN",
     "STORE_LOADER_PROVIDER_SITE": "STORE_LOADER_PROVIDER_SITE_PIN",
     "REGISTRATION_ATEXIT_CALL_SITE": "REGISTRATION_ATEXIT_CALL_SITE_PIN",
-    "CONF_METHOD_SITE": "CONF_METHOD_SITE_PIN",
 }
 _SITE_PIN_CACHE = {}
 
@@ -12219,13 +12219,13 @@ _PIN_TABLE_WITNESS = {
     "PBE_EX_SITES": "pbe_outparam_instance_witness",
     "STORE_LOADER_LEGACY_SITES": "store_loader_legacy_witness",
     "CONF_SITES": "conf_module_witness",
+    "CONF_METHOD_SITES": "conf_default_method_witness",
 }
 _PIN_SCALAR_WITNESS = {
     "PBE_SITE": "pbe_registry_witness",
     "PEM_SITE": "pem_password_default_witness",
     "STORE_LOADER_PROVIDER_SITE": "store_loader_provider_witness",
     "REGISTRATION_ATEXIT_CALL_SITE": "registration_atexit_witness",
-    "CONF_METHOD_SITE": "conf_default_method_witness",
 }
 _PIN_PROVISIONAL = {}
 _PIN_SEARCH_ACTIVE = set()
@@ -12519,10 +12519,10 @@ def _external_abi_index(g) -> dict:
         # them; only the remaining literal-keyed rows use the strict pin.
         scalars = {PBE_SITE: "PBE_SITE",
                    STORE_LOADER_PROVIDER_SITE: "STORE_LOADER_PROVIDER_SITE",
-                   PEM_SITE: "PEM_SITE",
-                   CONF_METHOD_SITE: "CONF_METHOD_SITE"}
+                   PEM_SITE: "PEM_SITE"}
         tables = {}
-        for table in ("STORE_LOADER_LEGACY_SITES", "CONF_SITES"):
+        for table in ("STORE_LOADER_LEGACY_SITES", "CONF_SITES",
+                      "CONF_METHOD_SITES"):
             for old in globals()[table]:
                 tables[old] = table
         out = {}
@@ -18938,8 +18938,43 @@ CONF_METHOD_SOURCE = "src/runtime/conf/lib.rs"
 CONF_METHOD_DEF_SOURCE = "src/runtime/conf/def.rs"
 CONF_METHOD_SITE = 0x49A8DC
 CONF_METHOD_FUNCTION = "X509V3_EXT_REQ_add_conf"
-# The enumerated site is the second inlined `CONF_set_nconf`'s `init` dispatch.
+# The b78-proven row: the second inlined `CONF_set_nconf`'s `init` dispatch.
 CONF_METHOD_SITE_PIN = ("X509V3_EXT_REQ_add_conf", 0xBC)
+
+# The enumerated `default_CONF_method` -> `conf_method_st.init` dispatches.
+#
+# `CONF_set_nconf` loads the process-global cell, installs the table
+# `NCONF_default()` publishes when the cell is NULL, and calls that table's
+# `init` at offset 0x10.  Every classic-API entry point and the
+# `X509V3_EXT_*_conf` family inlines it, so the same slot appears in each; the
+# compiler emits it in two shapes and both dispatch the same field:
+#
+#   * `reg-load`      `mov 0x10(<table>),<reg>` ... `call *<reg>`
+#   * `operand-field` `call *0x10(<table>)`
+#
+# The table pointer is never a computed value: it is either the cell's own
+# contents or the built-in table, so the site is bounded by the cell's
+# whole-image writer set (proved in the witness), not by an operand target set.
+# `form` names which shape this row was proved in; the witness accepts only
+# that shape, so a moved or reshaped row refuses instead of being absorbed.
+CONF_METHOD_SITES = {
+    0x49A8DC: {"function": "X509V3_EXT_REQ_add_conf", "form": "reg-load"},
+    0x2DD4C6: {"function": "CONF_free", "form": "operand-field"},
+    0x2DD6EB: {"function": "CONF_load", "form": "operand-field"},
+    0x2DD860: {"function": "CONF_load_bio", "form": "operand-field"},
+}
+CONF_METHOD_SITE_PINS = {
+    0x49A8DC: CONF_METHOD_SITE_PIN,
+    0x2DD4C6: ("CONF_free", 0x36),
+    0x2DD6EB: ("CONF_load", 0x5B),
+    0x2DD860: ("CONF_load_bio", 0x40),
+}
+# The only code in the image that may read the cell: the CONF module and the
+# `x509::v3_conf` module that inlines its classic API.  A reader elsewhere in
+# the image is refused (`default-method-cell-read-outside-the-conf-modules`),
+# which is the completeness half of the writer enumeration below.
+CONF_METHOD_READER_RE = re.compile(
+    r"(?:runtime4conf|4x5097v3_conf)|^(?:CONF_|X509V3_EXT_)")
 
 
 def _conf_method_bodies(g):
@@ -18972,6 +19007,31 @@ def _conf_method_cell_stores(g, cell: int):
     return out
 
 
+def _conf_method_cell_readers(g, cell: int):
+    """Every load of the `cell` address in the image, with its function.
+
+    A dispatch through the cell cannot exist without a load of the cell: the
+    table pointer is either the cell's contents or the built-in table the
+    NULL fallback installs.  Enumerating the readers is therefore the
+    completeness check on the reader side of the contract.
+    """
+    out = []
+    for fstart, body in _conf_method_bodies(g):
+        name = (getattr(g, "funcs", {}) or {}).get(fstart) or "?"
+        for addr, text in body:
+            _mn, _rest, ops = _insn_parts(text)
+            if len(ops) < 2 or not re.fullmatch(r"-?0x[0-9a-f]+\(%rip\)",
+                                               ops[0]):
+                continue
+            if _insn_comment_addr(text) != cell:
+                continue
+            out.append({"function": name,
+                        "leaf": _external_function_leaf(name),
+                        "func": fstart,
+                        "address": hex(addr), "text": text})
+    return out
+
+
 def _conf_method_getter_table(g):
     """(address, error) of the table `NCONF_default()` publishes."""
     found = []
@@ -18995,8 +19055,8 @@ def _conf_method_getter_table(g):
 
 def conf_default_method_witness(g: "DsoGraph", site: dict, name: str):
     """The `default_CONF_method` -> `CONF_METHOD.init` dispatch."""
-    if not _external_site_matches(site, name, CONF_METHOD_FUNCTION,
-                                  _pinned_site("CONF_METHOD_SITE", g)):
+    spec = _repinned("CONF_METHOD_SITES", g).get(site.get("addr"))
+    if spec is None or _external_function_leaf(name) != spec["function"]:
         return None
     cls = ABI_CONTRACT_CONF_DEFAULT_METHOD
     if not site.get("unresolved"):
@@ -19015,35 +19075,82 @@ def conf_default_method_witness(g: "DsoGraph", site: dict, name: str):
     if idx is None:
         return cls, None, _external_refusal(cls, name, site,
                                             "call-instruction-not-found")
-    defs = _external_reg_defs(g, fstart, idx, "%rax")
-    if defs is None:
-        return cls, None, _external_refusal(cls, name, site,
-                                            "operand-has-an-open-definition")
-    if not defs:
-        return cls, None, _external_refusal(cls, name, site,
-                                            "operand-has-no-reaching-definition")
+    form = spec["form"]
     loads = []
-    for d in sorted(defs):
-        text = insns[d][1]
-        mn, _rest, ops = _insn_parts(text)
-        if (mn not in ("mov", "movq") or len(ops) < 2
-                or _canon(ops[1]) != "%rax"):
-            return cls, None, _external_refusal(
-                cls, name, site, "operand-writer-is-not-a-load",
-                definition=text, address=hex(insns[d][0]))
-        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", ops[0])
+    if form == "operand-field":
+        # `call *0x10(<table>)`: the field read is the transfer operand itself,
+        # and <table> is the cell load or the built-in table.  It is not a
+        # register value, so the operand has no separate load to inspect; the
+        # base register carries the whole provenance.
+        text = insns[idx][1].split("#", 1)[0].strip()
+        mo = re.search(r"call\w*\s+\*(.+)$", text)
+        if not mo:
+            return cls, None, _external_refusal(cls, name, site,
+                                                "operand-not-indirect-call",
+                                                definition=text)
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)",
+                         mo.group(1).strip())
         if not m:
             return cls, None, _external_refusal(
-                cls, name, site, "operand-writer-is-not-a-memory-load",
-                definition=text)
+                cls, name, site, "operand-is-not-a-method-field",
+                operand=mo.group(1).strip())
         off = int(m.group(1), 16) if m.group(1) else 0
         if off != CONF_METHOD_FIELD_OFFSET:
             return cls, None, _external_refusal(
                 cls, name, site, "operand-load-is-not-the-init-slot",
                 offset=hex(off), expected=hex(CONF_METHOD_FIELD_OFFSET),
                 definition=text)
-        loads.append({"def": d, "address": hex(insns[d][0]),
-                      "text": text, "base_reg": m.group(2)})
+        base_reg = _canon(m.group(2))
+        defs = _external_reg_defs(g, fstart, idx, base_reg)
+        if defs is None:
+            return cls, None, _external_refusal(
+                cls, name, site, "operand-has-an-open-definition",
+                base_reg=base_reg)
+        if not defs:
+            return cls, None, _external_refusal(
+                cls, name, site, "operand-has-no-reaching-definition",
+                base_reg=base_reg)
+        loads.append({"form": "operand-field", "def": idx,
+                      "address": hex(insns[idx][0]), "text": insns[idx][1],
+                      "base_reg": base_reg,
+                      "offset": hex(CONF_METHOD_FIELD_OFFSET)})
+    elif form == "reg-load":
+        defs = _external_reg_defs(g, fstart, idx, "%rax")
+        if defs is None:
+            return cls, None, _external_refusal(cls, name, site,
+                                                "operand-has-an-open-definition")
+        if not defs:
+            return cls, None, _external_refusal(
+                cls, name, site, "operand-has-no-reaching-definition")
+        for d in sorted(defs):
+            text = insns[d][1]
+            mn, _rest, ops = _insn_parts(text)
+            if (mn not in ("mov", "movq") or len(ops) < 2
+                    or _canon(ops[1]) != "%rax"):
+                return cls, None, _external_refusal(
+                    cls, name, site, "operand-writer-is-not-a-load",
+                    definition=text, address=hex(insns[d][0]))
+            m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", ops[0])
+            if not m:
+                return cls, None, _external_refusal(
+                    cls, name, site, "operand-writer-is-not-a-memory-load",
+                    definition=text)
+            off = int(m.group(1), 16) if m.group(1) else 0
+            if off != CONF_METHOD_FIELD_OFFSET:
+                return cls, None, _external_refusal(
+                    cls, name, site, "operand-load-is-not-the-init-slot",
+                    offset=hex(off), expected=hex(CONF_METHOD_FIELD_OFFSET),
+                    definition=text)
+            loads.append({"form": "reg-load", "def": d,
+                          "address": hex(insns[d][0]),
+                          "text": text, "base_reg": m.group(2),
+                          "offset": hex(off)})
+    else:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "unrecorded-site-form", form=form)
+    if not loads:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "no-field-read-for-this-form")
 
     # Every field base is a link-time address: the cell, or the built-in table.
     # The compiler duplicates the inlined cleanup tail, so one field load can
@@ -19141,12 +19248,29 @@ def conf_default_method_witness(g: "DsoGraph", site: dict, name: str):
         return cls, None, _external_refusal(
             cls, name, site, "builtin-default-getter-is-not-exported")
 
+    # Reader completeness.  Every dispatch through the cell needs a load of the
+    # cell (the table pointer is the cell's contents or the built-in table), so
+    # the set of functions that read it bounds the set of readers of this
+    # contract.  The conf module and `x509::v3_conf` own the cell; a reader in
+    # any other module is an unexplained use of the same global and refuses.
+    readers = _conf_method_cell_readers(g, cell)
+    if not readers:
+        return cls, None, _external_refusal(
+            cls, name, site, "default-method-cell-has-no-reader")
+    outside = [r for r in readers
+               if not CONF_METHOD_READER_RE.search(r["function"] or "")]
+    if outside:
+        return cls, None, _external_refusal(
+            cls, name, site,
+            "default-method-cell-read-outside-the-conf-modules",
+            readers=outside)
+
     text, _lines, err = _external_source(g, CONF_METHOD_SOURCE)
     if text is None:
         return cls, None, _external_refusal(cls, name, site,
                                             "source-unavailable", detail=err)
-    if ('pub extern "C" fn CONF_set_default_method(meth: *mut ConfMethod)'
-            not in text
+    if (re.search(r'pub\s+(?:unsafe\s+)?extern "C" fn CONF_set_default_method'
+                  r'\s*\(\s*meth\s*:\s*\*mut\s*ConfMethod', text) is None
             or "DEFAULT_CONF_METHOD.store(meth" not in text):
         return cls, None, _external_refusal(
             cls, name, site, "source-does-not-store-the-setter-parameter")
@@ -19222,15 +19346,20 @@ def conf_default_method_witness(g: "DsoGraph", site: dict, name: str):
                "reached through the default_CONF_method cell (or the built-in "
                "table the cell is initialised with); every write to the cell in "
                "the whole image is either the exported setter's parameter store "
-               "or the built-in fallback; the source has no runtime store to "
-               "`ConfMethod::init` and exactly two link-time table literals"),
+               "or the built-in fallback; every read of the cell in the image is "
+               "in the conf module or x509::v3_conf, which own the classic API; "
+               "the source has no runtime store to `ConfMethod::init` and "
+               "exactly two link-time table literals"),
         conditions={
-            "site_enumerated": f"{CONF_METHOD_FUNCTION} {hex(site['addr'])}",
+            "site_enumerated": f"{spec['function']} {hex(site['addr'])} ({form})",
             "operand_field": f"conf_method_st.{field} at "
                              f"{hex(CONF_METHOD_FIELD_OFFSET)}",
             "cell": f"{hex(cell)} (DEFAULT_CONF_METHOD)",
             "writer_set": (f"{CONF_METHOD_SETTER}(%rdi) x{len(setter)} + "
                            f"built-in NULL fallback x{len(builtin_stores)}"),
+            "reader_set": (f"{len(readers)} load(s) of the cell in "
+                           f"{len({r['function'] for r in readers})} function(s), "
+                           "all in runtime::conf or x509::v3_conf"),
             "documented_interface": ("CONF_set_default_method and struct "
                                      "conf_method_st.init"),
             "target_set_unbounded": ("the exported setter admits any "
@@ -19238,7 +19367,8 @@ def conf_default_method_witness(g: "DsoGraph", site: dict, name: str):
         },
         does_not_cover=ABI_CONTRACTS[cls]["does_not_cover"],
         target_set=[],
-        operand={"reg": "%rax", "loads": loads},
+        form=form,
+        operand={"reg": loads[0]["base_reg"], "loads": loads},
         field={"type": CONF_METHOD_OWNER, "repr_c": True, "name": field,
                "offset": hex(CONF_METHOD_FIELD_OFFSET),
                "typedef": CONF_METHOD_TYPEDEF,
@@ -19246,6 +19376,9 @@ def conf_default_method_witness(g: "DsoGraph", site: dict, name: str):
         base_origins=bases,
         writer_set={"setter": setter, "builtin": builtin_stores,
                     "other": 0},
+        reader_set={"count": len(readers),
+                    "functions": sorted({r["function"] for r in readers}),
+                    "sites": readers},
         source={"file": CONF_METHOD_SOURCE,
                 "layout_file": layout.get("file"),
                 "layout_line": layout["line"],
@@ -20413,7 +20546,10 @@ EXTERNAL_ABI_SITE_FUNCTIONS = {
     STORE_LOADER_PROVIDER_SITE: STORE_LOADER_FUNCTION,
     0x293F25: CONF_FUNCTION,
     0x294363: CONF_FUNCTION,
-    CONF_METHOD_SITE: CONF_METHOD_FUNCTION,
+    0x49A8DC: CONF_METHOD_FUNCTION,
+    0x2DD4C6: "CONF_free",
+    0x2DD6EB: "CONF_load",
+    0x2DD860: "CONF_load_bio",
     PEM_SITE: PEM_FUNCTION,
 }
 # (site -> containing symbol, offset) for the literal keys above.
@@ -24124,6 +24260,41 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
             stats["contract_class_demoted"] += 1
             continue
         if not site["unresolved"]:
+            # S5b: an enumerated provider hw-table site is proven by its own
+            # per-call-site witness even when the generic resolver has already
+            # produced a finite set.  The generic `field` rule keys its store
+            # map by the raw displacement across every type and is evaluated in
+            # function order, so a store to offset N in unrelated code analysed
+            # earlier in the pass can turn the same site target-bounded in one
+            # build and resolved in the next (b80 lost the three `ProvGcmHw`
+            # one-shot rows exactly that way).  The witness proves the slot from
+            # the table symbols and the closed context, so the row must not
+            # disappear because the weaker rule happened to fire first.  A
+            # witness that is narrower than the resolver's own set refuses, so
+            # this path can never shrink a resolved target set.
+            hw_pre = provider_hw_table_witness(g, site, name)
+            if hw_pre is not None:
+                if hw_pre.get("resolved"):
+                    resolved_targets = {t for t in site["targets"]
+                                        if isinstance(t, int)}
+                    hw_targets = {int(t, 16) for t in hw_pre["targets"]}
+                    if resolved_targets <= hw_targets:
+                        site["resolver_class"] = site["class"]
+                        site["resolver_reason"] = site["reason"]
+                        site["resolver_targets"] = sorted(resolved_targets)
+                        site["targets"] |= residual | hw_targets
+                        site["class"] = ABI_CONTRACT_PROVIDER_HW_TABLE
+                        site["unresolved"] = True
+                        site["reason"] = ("provider hw-table closed context-set "
+                                          "contract: " + hw_pre["slot"])
+                        site["witness"] = hw_pre
+                        stats["S5b_provider_hw_table_rerepresented"] += 1
+                    else:
+                        site["provider_hw_table_refusal"] = dict(
+                            hw_pre, refusal="hw-witness-narrower-than-resolver",
+                            resolver=[hex(t) for t in
+                                      sorted(resolved_targets)])
+                        stats["S5b_provider_hw_table_refused"] += 1
             continue
         # O1: the allocator seam.  The seam is a witness only when this exact
         # site reads a named hook global and the image defines both the global
@@ -34924,39 +35095,60 @@ def _conf_default_method_self_test():
         return {"kind": "call", "func": fstart, "addr": addr, "text": text,
                 "unresolved": True, "reason": "reg-value-partial[int]"}
 
-    site_addr = _pinned_site("CONF_METHOD_SITE", g)
-    fstart = _pin_start(g, CONF_METHOD_SITE_PIN)
-    if site_addr is None or fstart is None:
-        return [], ("conf-method controls: skipped (the enumerated site does "
-                    "not re-derive in this image)")
-    name = g.funcs[fstart]
-    cls, wit, refusal = conf_default_method_witness(
-        g, site_for(g, fstart, site_addr), name)
-    chk("conf-method positive class", cls, ABI_CONTRACT_CONF_DEFAULT_METHOD)
-    chk("conf-method positive accepted", (refusal, bool(wit)), (None, True))
-    w = wit or {}
-    chk("conf-method positive slot",
-        (w.get("field") or {}).get("offset"), "0x10")
-    chk("conf-method positive field",
-        (w.get("field") or {}).get("name"), "init")
-    chk("conf-method positive setter stores",
-        len((w.get("writer_set") or {}).get("setter") or []), 1)
-    chk("conf-method positive builtin fallbacks",
-        len((w.get("writer_set") or {}).get("builtin") or []) > 0, True)
-    chk("conf-method positive unaccounted writers",
-        (w.get("writer_set") or {}).get("other"), 0)
-    chk("conf-method registered in the external-ABI index",
-        (external_abi_contract_witness(g, site_for(g, fstart, site_addr), name)
-         or (None, None, None))[0], ABI_CONTRACT_CONF_DEFAULT_METHOD)
-    e7 = evaluate_predicate_element_7(
-        [("control.so", site_addr, {"class": cls, "unresolved": True})], [])
-    chk("conf-method site establishes element 7",
-        (e7["established"], e7["target_bounded_unresolved_sites"]), (True, 0))
-
-    loads = (w.get("operand") or {}).get("loads") or []
-    chk("conf-method positive operand loads", len(loads), 2)
+    # Every enumerated row must re-derive and be accepted in the shape that row
+    # records; the writer controls run once against the first accepted row.
+    rows = []
+    for old, pin in CONF_METHOD_SITE_PINS.items():
+        addr = _pin_effective("CONF_METHOD_SITES", old, g)[0]
+        start = _pin_start(g, pin)
+        if addr is None or start is None:
+            failures.append(f"conf-method row {old:#x}: the enumerated site does "
+                            "not re-derive in this image")
+            continue
+        rows.append((old, addr, start, CONF_METHOD_SITES[old]))
+    if not rows:
+        return [], ("conf-method controls: skipped (no enumerated site "
+                    "re-derives in this image)")
+    first = None
+    for old, site_addr, fstart, spec in rows:
+        name = g.funcs[fstart]
+        cls, wit, refusal = conf_default_method_witness(
+            g, site_for(g, fstart, site_addr), name)
+        tag = f"conf-method {spec['function']} ({spec['form']})"
+        chk(f"{tag} positive class", cls, ABI_CONTRACT_CONF_DEFAULT_METHOD)
+        chk(f"{tag} positive accepted", (refusal, bool(wit)), (None, True))
+        w = wit or {}
+        chk(f"{tag} positive slot",
+            (w.get("field") or {}).get("offset"), "0x10")
+        chk(f"{tag} positive field",
+            (w.get("field") or {}).get("name"), "init")
+        chk(f"{tag} form", w.get("form"), spec["form"])
+        chk(f"{tag} setter stores",
+            len((w.get("writer_set") or {}).get("setter") or []), 1)
+        chk(f"{tag} builtin fallbacks",
+            len((w.get("writer_set") or {}).get("builtin") or []) > 0, True)
+        chk(f"{tag} unaccounted writers",
+            (w.get("writer_set") or {}).get("other"), 0)
+        chk(f"{tag} reader set non-empty",
+            (w.get("reader_set") or {}).get("count", 0) > 0, True)
+        chk(f"{tag} registered in the external-ABI index",
+            (external_abi_contract_witness(g, site_for(g, fstart, site_addr),
+                                           name)
+             or (None, None, None))[0], ABI_CONTRACT_CONF_DEFAULT_METHOD)
+        e7 = evaluate_predicate_element_7(
+            [("control.so", site_addr,
+              {"class": cls, "unresolved": True})], [])
+        chk(f"{tag} site establishes element 7",
+            (e7["established"], e7["target_bounded_unresolved_sites"]),
+            (True, 0))
+        loads = (w.get("operand") or {}).get("loads") or []
+        chk(f"{tag} operand loads", len(loads),
+            2 if spec["form"] == "reg-load" else 1)
+        if first is None:
+            first = (old, site_addr, fstart, name, spec, w, loads)
 
     # ---- control 1: the dispatched slot is not the init field at 0x10 ---- #
+    _old, site_addr, fstart, name, spec, w, loads = first
     if loads:
         ld_addr = int(loads[0]["address"], 16)
         ld_text = loads[0]["text"]
@@ -34967,6 +35159,54 @@ def _conf_default_method_self_test():
             px, site_for(px, fstart, site_addr), name)
         chk("conf-method wrong-slot-offset refusal",
             (ref or {}).get("reason"), "operand-load-is-not-the-init-slot")
+
+    # ---- control 1b: the operand-field shape dispatches 0x10 as well ---- #
+    for old, addr, start, spec in rows:
+        if spec["form"] != "operand-field":
+            continue
+        name2 = g.funcs[start]
+        _c0, w0, r0 = conf_default_method_witness(
+            g, site_for(g, start, addr), name2)
+        if r0 is not None or not w0:
+            continue
+        text0 = (w0.get("operand") or {}).get("loads", [{}])[0].get("text")
+        if not text0:
+            continue
+        bumped = text0.replace("0x10(", "0x18(", 1)
+        chk(f"conf-method operand-field fixture applied "
+            f"({spec['function']})", bumped != text0, True)
+        px = proxy(start, addr, bumped)
+        _c, _w, ref = conf_default_method_witness(
+            px, site_for(px, start, addr), name2)
+        chk(f"conf-method operand-field wrong-slot refusal "
+            f"({spec['function']})", (ref or {}).get("reason"),
+            "operand-load-is-not-the-init-slot")
+
+    # ---- control 1c: a reader of the cell outside the conf modules ---- #
+    cell_target = next((o["target"] for o in (w.get("base_origins") or [])
+                        if o.get("kind") == "default-method-cell"), None)
+    if cell_target:
+        cell = int(cell_target, 16)
+        donor = None
+        for fs, body in _conf_method_bodies(g):
+            nm = g.funcs.get(fs, "")
+            if CONF_METHOD_READER_RE.search(nm or ""):
+                continue
+            if any(_insn_comment_addr(t) == cell for _a, t in body):
+                continue
+            if body:
+                donor = (fs, body[0][0])
+                break
+        if donor:
+            cell_sym = ((getattr(g, "all_syms", {}) or {}).get(cell)
+                        or "DEFAULT_CONF_METHOD")
+            injected = f"mov    0x0(%rip),%rax        # {cell:x} <{cell_sym}>"
+            px = proxy(donor[0], donor[1], injected)
+            _c, _w, ref = conf_default_method_witness(
+                px, site_for(px, fstart, site_addr), name)
+            chk("conf-method foreign-reader refusal",
+                (ref or {}).get("reason"),
+                "default-method-cell-read-outside-the-conf-modules")
 
     # ---- control 2: a writer of the cell that is not the setter's parameter ---- #
     setters = (w.get("writer_set") or {}).get("setter") or []
@@ -35011,7 +35251,7 @@ def _conf_default_method_self_test():
     # ---- restore: the admitted image accepts exactly as before ---- #
     _c, wit2, ref2 = conf_default_method_witness(
         g, site_for(g, fstart, site_addr), name)
-    chk("conf-method restored", (ref2, wit2 == wit), (None, True))
+    chk("conf-method restored", (ref2, wit2 == w), (None, True))
     return failures, (
         "conf-method controls: the enumerated `default_CONF_method` -> "
         "`CONF_METHOD.init` dispatch is contract-bounded by the exported "
