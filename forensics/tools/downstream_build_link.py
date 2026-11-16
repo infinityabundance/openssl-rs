@@ -280,6 +280,28 @@ _RECIPE_OVERRIDES: dict[str, dict] = {
                  "this venue, which admits no autoconf/automake, cmake or meson; 24.17 recorded it "
                  "still-blocked"),
     },
+    # b84 review item (d): the OpenSSH closure analyses the binary built by
+    # `forensics/tools/build_openssh_closure.sh`, so this row must build *that* binary's build
+    # intent rather than a row of its own. The closure's argv is `--prefix`, `--sysconfdir`,
+    # `--with-ssl-dir`, `--with-privsep-user=sshd`, `--with-privsep-path`, with the candidate lib
+    # directory on the run path through LDFLAGS (the released Linux configure leaves rpath_opt
+    # empty) and a *full* `make` rather than `make ssh`. Everything here is table data: the
+    # OpenSSH install prefix is `{root}/.l7-install`, the same convention the irssi recipe uses,
+    # and `{prefix}` remains the admitted subject's OpenSSL prefix.
+    "openssh": {
+        "configure": ["--prefix={root}/.l7-install",
+                      "--sysconfdir={root}/.l7-install/etc",
+                      "--with-ssl-dir={prefix}",
+                      "--with-privsep-user=sshd",
+                      "--with-privsep-path={root}/.l7-install/var/empty"],
+        "make": [MAKE_JOBS],
+        "ldflags_extra": "-Wl,-rpath,{prefix}/lib",
+        "note": ("openssh 9.9p1's `ssh` links the subject's libcrypto directly. The build intent is "
+                 "the one the OpenSSH closure analyses (forensics/tools/"
+                 "build_openssh_closure.sh): the closure's configure flags, the candidate lib "
+                 "directory on the run path, and a full `make`; the archive digest, artifact and "
+                 "launch argv are unchanged"),
+    },
 }
 
 # The 24.17 admission batch: recipe-less counted families whose pinned release tarball ships a
