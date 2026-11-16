@@ -383,7 +383,7 @@
    "id": "B51-V2I-005",
    "file": "src/x509/v3_info.rs",
    "line": 414,
-   "line_current": 449,
+   "line_current": 485,
    "line_provenance": "V1 census coordinate at the closure source head; line_current refreshed to the committed B51 candidate",
    "kind": "UNSAFE_FN_DEF",
    "operation": "v2i_AUTHORITY_INFO_ACCESS",
@@ -409,18 +409,44 @@
     "x509::v3_conf::tests::v2i_callbacks_reject_bad_values"
    ],
    "tests_note": "Driven with 'OCSP;URI:http://example.com' and rejected with 'OCSP' (no ';' prefix).",
-   "span_sha256": "070893b8d932de42f67ea5f956b6b87d3aabe3a6ab13e44f1da256c30228b48e",
-   "span_start_line": 449,
-   "span_end_line": 540,
-   "span_source_commit": "cb9c4c64c4749b796603cddf0736049d37ea12b0",
+   "span_sha256": "65dc1fcdf77ed43f758c66011275e9c12e53f52fd5e3bce1a92e1343f6f79cdc",
+   "span_start_line": 485,
+   "span_end_line": 589,
+   "span_source_commit": "fed1f077b5be4edabff51191ad2c0f15985492fd",
    "span_normalisation": "universal newlines, rstrip per line, join with \\n, sha256, no trailing newline",
    "line_current_history": [
     {
      "value": 441,
      "candidate": "8b9a03e28",
      "note": "prior coordinate at the B51 base candidate; superseded by the cb9c4c64c comment-only doc edits"
+    },
+    {
+     "value": 449,
+     "candidate": "cb9c4c64c",
+     "note": "superseded at b82 by the `unsafe fn` elevation of the private i2v_ainfo_err/v2i_ainfo_err helpers (call-site `unsafe {}` wrappers only)"
     }
-   ]
+   ],
+   "rebind_review_b82": {
+    "review": "b82-review-rebind",
+    "review_path": "evidence/b82-review-rebind.json",
+    "candidate": "fed1f077b5be4edabff51191ad2c0f15985492fd",
+    "prior_candidate": "cb9c4c64c4749b796603cddf0736049d37ea12b0",
+    "prior_span_sha256": "070893b8d932de42f67ea5f956b6b87d3aabe3a6ab13e44f1da256c30228b48e",
+    "prior_span_lines": [
+     449,
+     540
+    ],
+    "delta_classification": "call-site-unsafe-wrapped-and-comment-added",
+    "delta": "the five failure exits now wrap the elevated `unsafe fn v2i_ainfo_err` in `unsafe { }` and carry a SAFETY comment; no value, branch, allocation, release order or failure result changed, and the helper is private and non-exported, so no symbol, ABI or behaviour changes",
+    "covers_site_note": "acceptance is the content address (span_sha256 over the current bytes) plus the stable identity (file, kind, operation); the disposition's legacy coordinate 449 is retained as prose and is not an acceptance predicate"
+   },
+   "verdict": "ACCEPT",
+   "review_receipt": "b82-review-rebind",
+   "review_receipt_path": "evidence/b82-review-rebind.json",
+   "reviewed_span_sha256": "65dc1fcdf77ed43f758c66011275e9c12e53f52fd5e3bce1a92e1343f6f79cdc",
+   "span_hash_identical_to_review": true,
+   "covers_site": true,
+   "covers_site_basis": "the recorded span_sha256 is this session's resolver hash of the operation's current bytes (src/x509/v3_info.rs:485-589) and the stable identity (file, kind, operation) is unchanged; the ledger coordinate 414 and the disposition prose 449 are not coordinate claims"
   },
   {
    "id": "B51-V2I-006",
