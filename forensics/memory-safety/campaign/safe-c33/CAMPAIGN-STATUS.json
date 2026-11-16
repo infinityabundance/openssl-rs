@@ -1,4 +1,33 @@
 {
+ "b84_adjudication":  {
+  "schema": "openssl-rs/safe-c33/adjudication/v1",
+  "candidate_tag": "b84",
+  "head_at_adjudication": "1c887c17e",
+  "evidence": "evidence/b84-adjudication.json",
+  "verdict": "NOT ESTABLISHED for SAFE_COMPATIBLE (ssh, sshd)",
+  "reproduced": [
+   "nine artefact digests 9/9",
+   "census identity",
+   "tool df0a9ae2",
+   "closures 290/290 with element 7 PASS",
+   "gate 2337/0/54",
+   "L7 w1-w5 incl. authority differential 10/10",
+   "both rebinds 8/8"
+  ],
+  "refused": [
+   "the cited receipts record verdict.safe_compatible=false and 'not a SAFE_COMPATIBLE promotion'",
+   "section 7: 2 scoped SAFETY_DISCHARGED / 5 NOT_ESTABLISHED at criterion 3",
+   "instrument --self-test FAILED at this candidate",
+   "ASan canary never executed; no ASan canary at b84",
+   "L4 build-link atlas row is a different build (libcrypto 6d401e06)"
+  ],
+  "instrument_edits": {
+   "E7BS_msblob_repin": "ACCEPTED (0x52a9c2 = unique 'call *0x18(%rax)' in msblob2key_decode; +0x322 correct; rcu +0x5A8 = 0x26a418)",
+   "MIGRATION_CHAIN_LIMIT_12_to_32": "ACCEPTED as work bound; hop proofs unchanged; post-measurement width change (section 22)"
+  },
+  "covers_site": "reporting field (covers_current over disposition prose), explicitly outside the acceptance predicate; same footing as the accepted b83b closure; not evidence of non-coverage",
+  "campaign_status_not_updated_by_b84_batch": true
+ },
  "schema": "openssl-rs/safe-c33/campaign-status/v1",
  "kind": "safe-c33-campaign-status",
  "generated_date": "2026-10-30",
