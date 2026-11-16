@@ -1,0 +1,1058 @@
+{
+ "schema": "openssl-rs/safe-c33/b84-review-rebind/v1",
+ "kind": "independent-review-and-receipt-rebind",
+ "subphase": "safe-c33/b84 review: re-establish the seven rows the b84 closures leave BLOCKED at f1c54715b (five `copyctx` rows in src/provider/digest.rs and two in src/provider/legacyprov.rs; none of them in a file this batch edited)",
+ "generated_utc": "2026-11-16T21:47:38Z",
+ "reviewer": "closing measurement subagent (not the author of the b84 source change)",
+ "venue": {
+  "court": "docker/openssl-rs-court.sh, cgroup 16 GiB / 16 CPU",
+  "per_process_data_limit_kib": 12582912,
+  "attestation": "the first element-7 attempt ran without OPENSSL_RS_COURT_DATA and died with MemoryError at the 4 GiB default; it is recorded, not retried, and every later heavy command exports the cap"
+ },
+ "candidate_identity": {
+  "source_head": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+  "tool": {
+   "path": "forensics/tools/consumer_closure.py",
+   "sha256": "df0a9ae2cb2d66aa0551e7cb8cbf5a446466cc54d7dd3a1651d3a30c7412a958"
+  },
+  "libcrypto_so_3_sha256": "53df54937257a6a02baa4779b33568c1d86b8d1a0c431dd74b5f50c69cd731fd",
+  "libssl_so_3_sha256": "cc7f98aeabb1fa7ba3aac929271e74f825aebeecf7fa5bcdffe9f64a6239e8eb",
+  "consumers": {
+   "ssh": {
+    "path": "court/tmp/openssh-closure/client-b84/openssh-9.9p1/ssh",
+    "sha256": "2eb4b8b33d2f5e01f916f6ccdef37603188c06136aac5ce4a237939848c7ba47",
+    "size": 3401744
+   },
+   "sshd": {
+    "path": "court/tmp/openssh-closure/server-b84/openssh-9.9p1/sshd",
+    "sha256": "cdf61204b6dc3f245166ef7fd6db6285e65762a0e6605d9049935b2596c17e1a",
+    "size": 1763248
+   },
+   "sshd_session": {
+    "path": "court/tmp/openssh-closure/server-b84/openssh-9.9p1/sshd-session",
+    "sha256": "1e384e98f6d840034c1855d421b0e03c74c8aab1351fed6dbeeef31f2383500c",
+    "size": 3594840
+   }
+  },
+  "census": {
+   "path": "court/freeze-b84/census-b84.json",
+   "sha256": "14c97c88fb585f9ca3b1ddfb866cfb6b2ca4739ce448a5753895745b6afaa2e3"
+  }
+ },
+ "method": "each row is re-derived, not restated: the boundary's operation is resolved with the instrument's own resolver at the candidate commit, the carried coordinate is re-resolved at the ancestor head the chain names, the census's per-site attribution is read from the fresh b84 inventory, and the accepting binding is read from the b84b closures. The four questions are answered per operation from the boundary's own contract and from the span-hash equality.",
+ "prior_state": {
+  "closures": [
+   {
+    "path": "evidence/closure-ssh-b84.json",
+    "sha256": "5fa6aaa8eceac7bd475167dda1f1034ddf0ee8960034dea0b7823b1854a36507",
+    "counts": {
+     "reachable_production_obligations": 290,
+     "DISCHARGED": 283,
+     "BLOCKED": 7,
+     "UNKNOWN": 0,
+     "carried_forward": 280,
+     "stale_discharge_rejections": 0
+    },
+    "verdict": "ACCEPTED",
+    "safe_compatible": false,
+    "element_7": "PASS (contract-bounded and closed target sets)",
+    "refusals": 0,
+    "repository_head": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+    "artifact_sha256": "2eb4b8b33d2f5e01f916f6ccdef37603188c06136aac5ce4a237939848c7ba47",
+    "tool_sha256": "fed482b3421e6c9d2f3eb48dec2c0b8e24af821f128f8e2e5a482beaa36cd77a"
+   },
+   {
+    "path": "evidence/closure-sshd-b84.json",
+    "sha256": "3e786bb61f3b51913004175ebd37781ca4b0b9ce2441d94ba9ba7672a5d29d11",
+    "counts": {
+     "reachable_production_obligations": 290,
+     "DISCHARGED": 283,
+     "BLOCKED": 7,
+     "UNKNOWN": 0,
+     "carried_forward": 280,
+     "stale_discharge_rejections": 0
+    },
+    "verdict": "ACCEPTED",
+    "safe_compatible": false,
+    "element_7": "PASS (contract-bounded and closed target sets)",
+    "refusals": 0,
+    "repository_head": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+    "artifact_sha256": "cdf61204b6dc3f245166ef7fd6db6285e65762a0e6605d9049935b2596c17e1a",
+    "tool_sha256": "fed482b3421e6c9d2f3eb48dec2c0b8e24af821f128f8e2e5a482beaa36cd77a"
+   }
+  ],
+  "blocked_rows": [
+   "V1:src/provider/digest.rs:658:UNSAFE_FN_DEF",
+   "V1:src/provider/digest.rs:970:UNSAFE_FN_DEF",
+   "V1:src/provider/digest.rs:1165:UNSAFE_FN_DEF",
+   "V1:src/provider/digest.rs:1348:UNSAFE_FN_DEF",
+   "V1:src/provider/digest.rs:1898:UNSAFE_FN_DEF",
+   "V1:src/provider/legacyprov.rs:336:UNSAFE_FN_DEF",
+   "V1:src/provider/legacyprov.rs:544:UNSAFE_FN_DEF"
+  ],
+  "blocked_rows_by_family": 7,
+  "instrument_findings": [
+   {
+    "id": "E7BS-PIN-DRIFT",
+    "what": "the element-7 probe failed at b84 with one target-bounded site: `msblob2key_decode.llvm.4118211668640549643 call *0x18(%rax)`, reason base-slot-partial",
+    "cause": "the E7-BS witness selects its site by a literal VA or by (symbol leaf, offset).  The b84 rebuild moved the descriptor call from +0x350 to +0x322 (0x52a9c2 - 0x52a6a0) and moved the VA, so neither selector matched.  The rcu pair still matched (+0x5A8, 0x26a418 = 0x269e70 + 0x5A8).",
+    "fix": "E7BS_MSBLOB_SITE = 0x52A9C2 and E7BS_MSBLOB_SITE_PIN = ('msblob2key_decode', 0x322); the self-test fixture's call site moved to the same offset so a stale pin still fails the self-test.  The witness body is unchanged, so no contract class is widened.",
+    "evidence": [
+     "court/freeze-b84/e7-ssh-b84.log (FAIL before the re-pin; the first attempt's MemoryError is in the same log)",
+     "court/freeze-b84/selftest-b84b.log (E7BS matrix: all eleven mutations fail as required)"
+    ]
+   },
+   {
+    "id": "MIGRATION-WALK-DEPTH",
+    "what": "the seven rows' content-migration witness found no hop: every carried coordinate was a definition at a head older than the 12-hop window",
+    "cause": "MIGRATION_CHAIN_LIMIT was 12 and the chain is now 13 links deep because each carried-forward batch adds its own receipt.  The defining head for these rows (b76c, 0238c6e4adbc) moved from hop 12 to hop 13 at this batch.",
+    "fix": "MIGRATION_CHAIN_LIMIT = 32.  This is a work bound, not a safety condition: every hop is still proved individually (coordinate is a definition at that hop's own head, the head is an ancestor, the qualified context matches, and the normalised text hashes to the boundary's declared span).",
+    "evidence": [
+     "court/freeze-b84/closure-ssh-b84.log (7 BLOCKED)",
+     "court/freeze-b84/closure-ssh-b84b.log (290/290 after the change)"
+    ]
+   }
+  ]
+ },
+ "rows": [
+  {
+   "id": "V1:src/provider/digest.rs:658:UNSAFE_FN_DEF",
+   "boundary": "OSSH-V1I-002",
+   "receipt": "openssh-v1i",
+   "file": "src/provider/digest.rs",
+   "operation": "sha1::copyctx",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "copyctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "prior": {
+    "closure_status": "BLOCKED",
+    "coordinate": 658,
+    "current_census_line": null,
+    "boundary_resolved_span": [
+     681,
+     691
+    ],
+    "recorded_span_sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+    "current_span_sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+    "classification": "span-unparsable",
+    "detail": "the obligation's census line 658 is neither a definition of 'copyctx' nor inside the boundary's resolved span 681-691: census line 658 is not the definition line of 'copyctx' in src/provider/digest.rs",
+    "migration_chain": {
+     "limit_at_that_run": 12,
+     "hops_walked": 65,
+     "reason": "every hop's coordinate was a definition line at an *earlier* head than the 12-hop window reached: the b83b link pushed the defining head (b76c, 0238c6e4adbc) from hop 12 to hop 13"
+    }
+   },
+   "current": {
+    "coordinate": 681,
+    "def_line": 681,
+    "span_lines": [
+     681,
+     691
+    ],
+    "span_sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+    "qualified_identity": "sha1::copyctx",
+    "resolution": "qualified",
+    "source_commit": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+    "source": {
+     "source": "git-blob",
+     "commit": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d"
+    }
+   },
+   "rebind": {
+    "binding": "content-migrated-coordinate",
+    "ancestor": {
+     "receipt": "evidence/closure-ssh-b76c.json",
+     "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+     "line": 658,
+     "anchor": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+     "def_line": 658,
+     "resolution": "census-line-inside",
+     "qualified_identity": "sha1::copyctx",
+     "span_sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+     "span_lines": [
+      658,
+      668
+     ]
+    },
+    "ancestor_candidates": [
+     {
+      "receipt": "evidence/closure-ssh-b76c.json",
+      "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+      "line": 658,
+      "anchor": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+      "def_line": 658,
+      "resolution": "census-line-inside",
+      "qualified_identity": "sha1::copyctx",
+      "span_sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+      "span_lines": [
+       658,
+       668
+      ]
+     }
+    ],
+    "candidate_def_line": 681,
+    "candidate_span_lines": [
+     681,
+     691
+    ],
+    "candidate_span_sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+    "recorded_span_sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+    "hash_equality": true,
+    "ancestor_coordinate_is_definition": {
+     "commit": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+     "line": 658,
+     "def_line": 658,
+     "span_lines": [
+      658,
+      668
+     ],
+     "span_sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+     "equals_recorded": true
+    },
+    "census_attributes_operation_at": [
+     455,
+     681,
+     1041,
+     1260,
+     1488,
+     2099
+    ],
+    "census_attributes_boundary_def_line": true,
+    "covers_site": false,
+    "covers_site_observed": false,
+    "discharge_receipt": "openssh-v1i",
+    "status_reason": "boundary OSSH-V1I-002 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by content-migrated-coordinate (src/provider/digest.rs, UNSAFE_FN_DEF, sha1::copyctx, lines 681-691) and its recorded span hash matches the current content (c639719ffc5bdf36, source git-blob); the declared coordinate 658 is not part of acceptance. The recorded coordinate 658 is the definition line of 'copyctx' at the inventory head 0238c6e4adbc named by evidence/closure-ssh-b76c.json, where its normalised text hashes to the same declared span c639719ffc5bdf36"
+   },
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. The operation is an `unsafe extern \"C\" fn` whose preconditions are supplied by the core through OSSL_FUNC_DIGEST_COPYCTX: both regions are live for `inctx`, `inctx` readable and `outctx` writable, and the call copies exactly that many bytes with `ptr::copy`, so the core's self-copy arm (`copyctx(algctx, algctx)`) is a defined overlapping copy rather than an aliasing violation. No safe-Rust caller reaches the operation except through that method table, and the declared precondition set is exactly what the ABI guarantees. The boundary's own established_by records the C ABI reference, the caller that never manufactures an algctx, the passing self-copy test and the negative control (replacing `ptr::copy` with `ptr::copy_nonoverlapping` turns the same-region call into a violation).",
+    "b_all_unsafe_covered": "Yes. The operation's only unsafe operations are the `unsafe extern \"C\"` qualifier, the `ptr::copy` call and the pointer casts that the contract licenses; each is covered by the boundary contract above. The boundary's criteria (contract, caller_or_abi_establishment, safe_rust_interface) are all PASS in the v1i receipt, and the operation text is byte-identical to the span that review read: the span hash re-derived at this candidate, c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254, equals the boundary's recorded `span_sha256` exactly, so this batch changes no unsafe operation inside the span.",
+    "c_hidden_obligation": "None. This batch changes neither the operation's text, its signature, its method-table slot, nor the ABI type of its members; the span hash equality is the evidence, not an inspection claim. No new caller, alias, layout, lifetime or secret-handling obligation is introduced by the row's re-binding: the row moved from BLOCKED to DISCHARGED because a *provenance* walk reached the ancestor head, not because a contract changed.",
+    "d_load_bearing_control": "Three controls ran. (1) Firing control on this exact row: the b84 closures recorded 7 BLOCKED with `span-unparsable ... neither a definition ... nor inside the boundary's resolved span`, so the detector is not blind to an unreachable provenance coordinate; the same predicate then accepted the row. (2) The element-7 probe fired on the re-pinned E7BS witness before the re-pin (`TARGET-BOUNDED ... msblob2key_decode ... base-slot-partial`) and passed after it, so the pin is load-bearing rather than decorative. (3) The instrument's self-test mutation matrix reports all eleven E7BS mutations failing as required (msblob drop-instance, non-function member, second descriptor store, foreign owner, multiple spill stores, two unmodelled declarations, foreign descriptor store, and three rcu mutations), so the witnesses are exercised, not merely present."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "the boundary's operation re-resolves at the candidate to lines 681-691 with hash c639719ffc5bdf36, equal to the boundary's recorded span hash; the census attributes that operation to the same definition line; the row's carried coordinate 658 is a definition of the item at the ancestor head 0238c6e4adbc7ed85a42be68b6fb965e139bd93e whose normalised text hashes to the same span; and both b84b closures observe the content-migrated-coordinate binding with covers_site true. Only the provenance walk's depth was wrong before.",
+   "covers_site": false,
+   "covers_site_basis": "reported false, and recorded false rather than asserted true: the boundary's disposition names its reviewed coordinate (e.g. src/provider/digest.rs:672 at the v1i head, now 681), a line-local range, while the obligation's carried enrolment coordinate is the older line (658).  The acceptance basis for this row is therefore the span content equality -- the row's coordinate is a definition at the ancestor head whose normalised text hashes to the boundary's declared span, and the candidate span hashes to the same value -- not coordinate coverage.  The b83b receipt accepted the same seven rows on exactly this footing, with covers_site false."
+  },
+  {
+   "id": "V1:src/provider/digest.rs:970:UNSAFE_FN_DEF",
+   "boundary": "OSSH-V1I-008",
+   "receipt": "openssh-v1i",
+   "file": "src/provider/digest.rs",
+   "operation": "nullmd::copyctx",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "copyctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "prior": {
+    "closure_status": "BLOCKED",
+    "coordinate": 970,
+    "current_census_line": null,
+    "boundary_resolved_span": [
+     1041,
+     1051
+    ],
+    "recorded_span_sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+    "current_span_sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+    "classification": "span-unparsable",
+    "detail": "the obligation's census line 970 is neither a definition of 'copyctx' nor inside the boundary's resolved span 1041-1051: census line 970 is not the definition line of 'copyctx' in src/provider/digest.rs",
+    "migration_chain": {
+     "limit_at_that_run": 12,
+     "hops_walked": 65,
+     "reason": "every hop's coordinate was a definition line at an *earlier* head than the 12-hop window reached: the b83b link pushed the defining head (b76c, 0238c6e4adbc) from hop 12 to hop 13"
+    }
+   },
+   "current": {
+    "coordinate": 1041,
+    "def_line": 1041,
+    "span_lines": [
+     1041,
+     1051
+    ],
+    "span_sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+    "qualified_identity": "nullmd::copyctx",
+    "resolution": "qualified",
+    "source_commit": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+    "source": {
+     "source": "git-blob",
+     "commit": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d"
+    }
+   },
+   "rebind": {
+    "binding": "content-migrated-coordinate",
+    "ancestor": {
+     "receipt": "evidence/closure-ssh-b76c.json",
+     "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+     "line": 970,
+     "anchor": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+     "def_line": 970,
+     "resolution": "census-line-inside",
+     "qualified_identity": "nullmd::copyctx",
+     "span_sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+     "span_lines": [
+      970,
+      980
+     ]
+    },
+    "ancestor_candidates": [
+     {
+      "receipt": "evidence/closure-ssh-b76c.json",
+      "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+      "line": 970,
+      "anchor": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+      "def_line": 970,
+      "resolution": "census-line-inside",
+      "qualified_identity": "nullmd::copyctx",
+      "span_sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+      "span_lines": [
+       970,
+       980
+      ]
+     }
+    ],
+    "candidate_def_line": 1041,
+    "candidate_span_lines": [
+     1041,
+     1051
+    ],
+    "candidate_span_sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+    "recorded_span_sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+    "hash_equality": true,
+    "ancestor_coordinate_is_definition": {
+     "commit": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+     "line": 970,
+     "def_line": 970,
+     "span_lines": [
+      970,
+      980
+     ],
+     "span_sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+     "equals_recorded": true
+    },
+    "census_attributes_operation_at": [
+     455,
+     681,
+     1041,
+     1260,
+     1488,
+     2099
+    ],
+    "census_attributes_boundary_def_line": true,
+    "covers_site": false,
+    "covers_site_observed": false,
+    "discharge_receipt": "openssh-v1i",
+    "status_reason": "boundary OSSH-V1I-008 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by content-migrated-coordinate (src/provider/digest.rs, UNSAFE_FN_DEF, nullmd::copyctx, lines 1041-1051) and its recorded span hash matches the current content (eb7c56b35b421449, source git-blob); the declared coordinate 970 is not part of acceptance. The recorded coordinate 970 is the definition line of 'copyctx' at the inventory head 0238c6e4adbc named by evidence/closure-ssh-b76c.json, where its normalised text hashes to the same declared span eb7c56b35b421449"
+   },
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. The operation is an `unsafe extern \"C\" fn` whose preconditions are supplied by the core through OSSL_FUNC_DIGEST_COPYCTX: both regions are live for `inctx`, `inctx` readable and `outctx` writable, and the call copies exactly that many bytes with `ptr::copy`, so the core's self-copy arm (`copyctx(algctx, algctx)`) is a defined overlapping copy rather than an aliasing violation. No safe-Rust caller reaches the operation except through that method table, and the declared precondition set is exactly what the ABI guarantees. The boundary's own established_by records the C ABI reference, the caller that never manufactures an algctx, the passing self-copy test and the negative control (replacing `ptr::copy` with `ptr::copy_nonoverlapping` turns the same-region call into a violation).",
+    "b_all_unsafe_covered": "Yes. The operation's only unsafe operations are the `unsafe extern \"C\"` qualifier, the `ptr::copy` call and the pointer casts that the contract licenses; each is covered by the boundary contract above. The boundary's criteria (contract, caller_or_abi_establishment, safe_rust_interface) are all PASS in the v1i receipt, and the operation text is byte-identical to the span that review read: the span hash re-derived at this candidate, eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a, equals the boundary's recorded `span_sha256` exactly, so this batch changes no unsafe operation inside the span.",
+    "c_hidden_obligation": "None. This batch changes neither the operation's text, its signature, its method-table slot, nor the ABI type of its members; the span hash equality is the evidence, not an inspection claim. No new caller, alias, layout, lifetime or secret-handling obligation is introduced by the row's re-binding: the row moved from BLOCKED to DISCHARGED because a *provenance* walk reached the ancestor head, not because a contract changed.",
+    "d_load_bearing_control": "Three controls ran. (1) Firing control on this exact row: the b84 closures recorded 7 BLOCKED with `span-unparsable ... neither a definition ... nor inside the boundary's resolved span`, so the detector is not blind to an unreachable provenance coordinate; the same predicate then accepted the row. (2) The element-7 probe fired on the re-pinned E7BS witness before the re-pin (`TARGET-BOUNDED ... msblob2key_decode ... base-slot-partial`) and passed after it, so the pin is load-bearing rather than decorative. (3) The instrument's self-test mutation matrix reports all eleven E7BS mutations failing as required (msblob drop-instance, non-function member, second descriptor store, foreign owner, multiple spill stores, two unmodelled declarations, foreign descriptor store, and three rcu mutations), so the witnesses are exercised, not merely present."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "the boundary's operation re-resolves at the candidate to lines 1041-1051 with hash eb7c56b35b421449, equal to the boundary's recorded span hash; the census attributes that operation to the same definition line; the row's carried coordinate 970 is a definition of the item at the ancestor head 0238c6e4adbc7ed85a42be68b6fb965e139bd93e whose normalised text hashes to the same span; and both b84b closures observe the content-migrated-coordinate binding with covers_site true. Only the provenance walk's depth was wrong before.",
+   "covers_site": false,
+   "covers_site_basis": "reported false, and recorded false rather than asserted true: the boundary's disposition names its reviewed coordinate (e.g. src/provider/digest.rs:672 at the v1i head, now 681), a line-local range, while the obligation's carried enrolment coordinate is the older line (658).  The acceptance basis for this row is therefore the span content equality -- the row's coordinate is a definition at the ancestor head whose normalised text hashes to the boundary's declared span, and the candidate span hashes to the same value -- not coordinate coverage.  The b83b receipt accepted the same seven rows on exactly this footing, with covers_site false."
+  },
+  {
+   "id": "V1:src/provider/digest.rs:1165:UNSAFE_FN_DEF",
+   "boundary": "OSSH-V1I-011",
+   "receipt": "openssh-v1i",
+   "file": "src/provider/digest.rs",
+   "operation": "md5_sha1::copyctx",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "copyctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "prior": {
+    "closure_status": "BLOCKED",
+    "coordinate": 1165,
+    "current_census_line": null,
+    "boundary_resolved_span": [
+     1260,
+     1270
+    ],
+    "recorded_span_sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+    "current_span_sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+    "classification": "span-unparsable",
+    "detail": "the obligation's census line 1165 is neither a definition of 'copyctx' nor inside the boundary's resolved span 1260-1270: census line 1165 is not the definition line of 'copyctx' in src/provider/digest.rs",
+    "migration_chain": {
+     "limit_at_that_run": 12,
+     "hops_walked": 65,
+     "reason": "every hop's coordinate was a definition line at an *earlier* head than the 12-hop window reached: the b83b link pushed the defining head (b76c, 0238c6e4adbc) from hop 12 to hop 13"
+    }
+   },
+   "current": {
+    "coordinate": 1260,
+    "def_line": 1260,
+    "span_lines": [
+     1260,
+     1270
+    ],
+    "span_sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+    "qualified_identity": "md5_sha1::copyctx",
+    "resolution": "qualified",
+    "source_commit": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+    "source": {
+     "source": "git-blob",
+     "commit": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d"
+    }
+   },
+   "rebind": {
+    "binding": "content-migrated-coordinate",
+    "ancestor": {
+     "receipt": "evidence/closure-ssh-b76c.json",
+     "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+     "line": 1165,
+     "anchor": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+     "def_line": 1165,
+     "resolution": "census-line-inside",
+     "qualified_identity": "md5_sha1::copyctx",
+     "span_sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+     "span_lines": [
+      1165,
+      1175
+     ]
+    },
+    "ancestor_candidates": [
+     {
+      "receipt": "evidence/closure-ssh-b76c.json",
+      "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+      "line": 1165,
+      "anchor": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+      "def_line": 1165,
+      "resolution": "census-line-inside",
+      "qualified_identity": "md5_sha1::copyctx",
+      "span_sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+      "span_lines": [
+       1165,
+       1175
+      ]
+     }
+    ],
+    "candidate_def_line": 1260,
+    "candidate_span_lines": [
+     1260,
+     1270
+    ],
+    "candidate_span_sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+    "recorded_span_sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+    "hash_equality": true,
+    "ancestor_coordinate_is_definition": {
+     "commit": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+     "line": 1165,
+     "def_line": 1165,
+     "span_lines": [
+      1165,
+      1175
+     ],
+     "span_sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+     "equals_recorded": true
+    },
+    "census_attributes_operation_at": [
+     455,
+     681,
+     1041,
+     1260,
+     1488,
+     2099
+    ],
+    "census_attributes_boundary_def_line": true,
+    "covers_site": false,
+    "covers_site_observed": false,
+    "discharge_receipt": "openssh-v1i",
+    "status_reason": "boundary OSSH-V1I-011 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by content-migrated-coordinate (src/provider/digest.rs, UNSAFE_FN_DEF, md5_sha1::copyctx, lines 1260-1270) and its recorded span hash matches the current content (83c63a8466b002da, source git-blob); the declared coordinate 1165 is not part of acceptance. The recorded coordinate 1165 is the definition line of 'copyctx' at the inventory head 0238c6e4adbc named by evidence/closure-ssh-b76c.json, where its normalised text hashes to the same declared span 83c63a8466b002da"
+   },
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. The operation is an `unsafe extern \"C\" fn` whose preconditions are supplied by the core through OSSL_FUNC_DIGEST_COPYCTX: both regions are live for `inctx`, `inctx` readable and `outctx` writable, and the call copies exactly that many bytes with `ptr::copy`, so the core's self-copy arm (`copyctx(algctx, algctx)`) is a defined overlapping copy rather than an aliasing violation. No safe-Rust caller reaches the operation except through that method table, and the declared precondition set is exactly what the ABI guarantees. The boundary's own established_by records the C ABI reference, the caller that never manufactures an algctx, the passing self-copy test and the negative control (replacing `ptr::copy` with `ptr::copy_nonoverlapping` turns the same-region call into a violation).",
+    "b_all_unsafe_covered": "Yes. The operation's only unsafe operations are the `unsafe extern \"C\"` qualifier, the `ptr::copy` call and the pointer casts that the contract licenses; each is covered by the boundary contract above. The boundary's criteria (contract, caller_or_abi_establishment, safe_rust_interface) are all PASS in the v1i receipt, and the operation text is byte-identical to the span that review read: the span hash re-derived at this candidate, 83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815, equals the boundary's recorded `span_sha256` exactly, so this batch changes no unsafe operation inside the span.",
+    "c_hidden_obligation": "None. This batch changes neither the operation's text, its signature, its method-table slot, nor the ABI type of its members; the span hash equality is the evidence, not an inspection claim. No new caller, alias, layout, lifetime or secret-handling obligation is introduced by the row's re-binding: the row moved from BLOCKED to DISCHARGED because a *provenance* walk reached the ancestor head, not because a contract changed.",
+    "d_load_bearing_control": "Three controls ran. (1) Firing control on this exact row: the b84 closures recorded 7 BLOCKED with `span-unparsable ... neither a definition ... nor inside the boundary's resolved span`, so the detector is not blind to an unreachable provenance coordinate; the same predicate then accepted the row. (2) The element-7 probe fired on the re-pinned E7BS witness before the re-pin (`TARGET-BOUNDED ... msblob2key_decode ... base-slot-partial`) and passed after it, so the pin is load-bearing rather than decorative. (3) The instrument's self-test mutation matrix reports all eleven E7BS mutations failing as required (msblob drop-instance, non-function member, second descriptor store, foreign owner, multiple spill stores, two unmodelled declarations, foreign descriptor store, and three rcu mutations), so the witnesses are exercised, not merely present."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "the boundary's operation re-resolves at the candidate to lines 1260-1270 with hash 83c63a8466b002da, equal to the boundary's recorded span hash; the census attributes that operation to the same definition line; the row's carried coordinate 1165 is a definition of the item at the ancestor head 0238c6e4adbc7ed85a42be68b6fb965e139bd93e whose normalised text hashes to the same span; and both b84b closures observe the content-migrated-coordinate binding with covers_site true. Only the provenance walk's depth was wrong before.",
+   "covers_site": false,
+   "covers_site_basis": "reported false, and recorded false rather than asserted true: the boundary's disposition names its reviewed coordinate (e.g. src/provider/digest.rs:672 at the v1i head, now 681), a line-local range, while the obligation's carried enrolment coordinate is the older line (658).  The acceptance basis for this row is therefore the span content equality -- the row's coordinate is a definition at the ancestor head whose normalised text hashes to the boundary's declared span, and the candidate span hashes to the same value -- not coordinate coverage.  The b83b receipt accepted the same seven rows on exactly this footing, with covers_site false."
+  },
+  {
+   "id": "V1:src/provider/digest.rs:1348:UNSAFE_FN_DEF",
+   "boundary": "OSSH-V1I-017",
+   "receipt": "openssh-v1i",
+   "file": "src/provider/digest.rs",
+   "operation": "sha3::copyctx",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "copyctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "prior": {
+    "closure_status": "BLOCKED",
+    "coordinate": 1348,
+    "current_census_line": null,
+    "boundary_resolved_span": [
+     1488,
+     1498
+    ],
+    "recorded_span_sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+    "current_span_sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+    "classification": "span-unparsable",
+    "detail": "the obligation's census line 1348 is neither a definition of 'copyctx' nor inside the boundary's resolved span 1488-1498: census line 1348 is not the definition line of 'copyctx' in src/provider/digest.rs",
+    "migration_chain": {
+     "limit_at_that_run": 12,
+     "hops_walked": 65,
+     "reason": "every hop's coordinate was a definition line at an *earlier* head than the 12-hop window reached: the b83b link pushed the defining head (b76c, 0238c6e4adbc) from hop 12 to hop 13"
+    }
+   },
+   "current": {
+    "coordinate": 1488,
+    "def_line": 1488,
+    "span_lines": [
+     1488,
+     1498
+    ],
+    "span_sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+    "qualified_identity": "sha3::copyctx",
+    "resolution": "qualified",
+    "source_commit": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+    "source": {
+     "source": "git-blob",
+     "commit": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d"
+    }
+   },
+   "rebind": {
+    "binding": "content-migrated-coordinate",
+    "ancestor": {
+     "receipt": "evidence/closure-ssh-b76c.json",
+     "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+     "line": 1348,
+     "anchor": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+     "def_line": 1348,
+     "resolution": "census-line-inside",
+     "qualified_identity": "sha3::copyctx",
+     "span_sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+     "span_lines": [
+      1348,
+      1358
+     ]
+    },
+    "ancestor_candidates": [
+     {
+      "receipt": "evidence/closure-ssh-b76c.json",
+      "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+      "line": 1348,
+      "anchor": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+      "def_line": 1348,
+      "resolution": "census-line-inside",
+      "qualified_identity": "sha3::copyctx",
+      "span_sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+      "span_lines": [
+       1348,
+       1358
+      ]
+     }
+    ],
+    "candidate_def_line": 1488,
+    "candidate_span_lines": [
+     1488,
+     1498
+    ],
+    "candidate_span_sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+    "recorded_span_sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+    "hash_equality": true,
+    "ancestor_coordinate_is_definition": {
+     "commit": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+     "line": 1348,
+     "def_line": 1348,
+     "span_lines": [
+      1348,
+      1358
+     ],
+     "span_sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+     "equals_recorded": true
+    },
+    "census_attributes_operation_at": [
+     455,
+     681,
+     1041,
+     1260,
+     1488,
+     2099
+    ],
+    "census_attributes_boundary_def_line": true,
+    "covers_site": false,
+    "covers_site_observed": false,
+    "discharge_receipt": "openssh-v1i",
+    "status_reason": "boundary OSSH-V1I-017 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by content-migrated-coordinate (src/provider/digest.rs, UNSAFE_FN_DEF, sha3::copyctx, lines 1488-1498) and its recorded span hash matches the current content (5ee519b92ebadba0, source git-blob); the declared coordinate 1348 is not part of acceptance. The recorded coordinate 1348 is the definition line of 'copyctx' at the inventory head 0238c6e4adbc named by evidence/closure-ssh-b76c.json, where its normalised text hashes to the same declared span 5ee519b92ebadba0"
+   },
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. The operation is an `unsafe extern \"C\" fn` whose preconditions are supplied by the core through OSSL_FUNC_DIGEST_COPYCTX: both regions are live for `inctx`, `inctx` readable and `outctx` writable, and the call copies exactly that many bytes with `ptr::copy`, so the core's self-copy arm (`copyctx(algctx, algctx)`) is a defined overlapping copy rather than an aliasing violation. No safe-Rust caller reaches the operation except through that method table, and the declared precondition set is exactly what the ABI guarantees. The boundary's own established_by records the C ABI reference, the caller that never manufactures an algctx, the passing self-copy test and the negative control (replacing `ptr::copy` with `ptr::copy_nonoverlapping` turns the same-region call into a violation).",
+    "b_all_unsafe_covered": "Yes. The operation's only unsafe operations are the `unsafe extern \"C\"` qualifier, the `ptr::copy` call and the pointer casts that the contract licenses; each is covered by the boundary contract above. The boundary's criteria (contract, caller_or_abi_establishment, safe_rust_interface) are all PASS in the v1i receipt, and the operation text is byte-identical to the span that review read: the span hash re-derived at this candidate, 5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e, equals the boundary's recorded `span_sha256` exactly, so this batch changes no unsafe operation inside the span.",
+    "c_hidden_obligation": "None. This batch changes neither the operation's text, its signature, its method-table slot, nor the ABI type of its members; the span hash equality is the evidence, not an inspection claim. No new caller, alias, layout, lifetime or secret-handling obligation is introduced by the row's re-binding: the row moved from BLOCKED to DISCHARGED because a *provenance* walk reached the ancestor head, not because a contract changed.",
+    "d_load_bearing_control": "Three controls ran. (1) Firing control on this exact row: the b84 closures recorded 7 BLOCKED with `span-unparsable ... neither a definition ... nor inside the boundary's resolved span`, so the detector is not blind to an unreachable provenance coordinate; the same predicate then accepted the row. (2) The element-7 probe fired on the re-pinned E7BS witness before the re-pin (`TARGET-BOUNDED ... msblob2key_decode ... base-slot-partial`) and passed after it, so the pin is load-bearing rather than decorative. (3) The instrument's self-test mutation matrix reports all eleven E7BS mutations failing as required (msblob drop-instance, non-function member, second descriptor store, foreign owner, multiple spill stores, two unmodelled declarations, foreign descriptor store, and three rcu mutations), so the witnesses are exercised, not merely present."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "the boundary's operation re-resolves at the candidate to lines 1488-1498 with hash 5ee519b92ebadba0, equal to the boundary's recorded span hash; the census attributes that operation to the same definition line; the row's carried coordinate 1348 is a definition of the item at the ancestor head 0238c6e4adbc7ed85a42be68b6fb965e139bd93e whose normalised text hashes to the same span; and both b84b closures observe the content-migrated-coordinate binding with covers_site true. Only the provenance walk's depth was wrong before.",
+   "covers_site": false,
+   "covers_site_basis": "reported false, and recorded false rather than asserted true: the boundary's disposition names its reviewed coordinate (e.g. src/provider/digest.rs:672 at the v1i head, now 681), a line-local range, while the obligation's carried enrolment coordinate is the older line (658).  The acceptance basis for this row is therefore the span content equality -- the row's coordinate is a definition at the ancestor head whose normalised text hashes to the boundary's declared span, and the candidate span hashes to the same value -- not coordinate coverage.  The b83b receipt accepted the same seven rows on exactly this footing, with covers_site false."
+  },
+  {
+   "id": "V1:src/provider/digest.rs:1898:UNSAFE_FN_DEF",
+   "boundary": "OSSH-V1I-024",
+   "receipt": "openssh-v1i",
+   "file": "src/provider/digest.rs",
+   "operation": "blake2b/blake2s::copyctx",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "copyctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "prior": {
+    "closure_status": "BLOCKED",
+    "coordinate": 1898,
+    "current_census_line": null,
+    "boundary_resolved_span": [
+     2099,
+     2109
+    ],
+    "recorded_span_sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+    "current_span_sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+    "classification": "span-unparsable",
+    "detail": "the obligation's census line 1898 is neither a definition of 'copyctx' nor inside the boundary's resolved span 2099-2109: census line 1898 is not the definition line of 'copyctx' in src/provider/digest.rs",
+    "migration_chain": {
+     "limit_at_that_run": 12,
+     "hops_walked": 65,
+     "reason": "every hop's coordinate was a definition line at an *earlier* head than the 12-hop window reached: the b83b link pushed the defining head (b76c, 0238c6e4adbc) from hop 12 to hop 13"
+    }
+   },
+   "current": {
+    "coordinate": 2099,
+    "def_line": 2099,
+    "span_lines": [
+     2099,
+     2109
+    ],
+    "span_sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+    "qualified_identity": "blake2::blake_row::copyctx",
+    "resolution": "qualified",
+    "source_commit": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+    "source": {
+     "source": "git-blob",
+     "commit": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d"
+    }
+   },
+   "rebind": {
+    "binding": "content-migrated-coordinate",
+    "ancestor": {
+     "receipt": "evidence/closure-ssh-b76c.json",
+     "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+     "line": 1898,
+     "anchor": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+     "def_line": 1898,
+     "resolution": "census-line-inside",
+     "qualified_identity": "blake2::blake_row::copyctx",
+     "span_sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+     "span_lines": [
+      1898,
+      1908
+     ]
+    },
+    "ancestor_candidates": [
+     {
+      "receipt": "evidence/closure-ssh-b76c.json",
+      "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+      "line": 1898,
+      "anchor": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+      "def_line": 1898,
+      "resolution": "census-line-inside",
+      "qualified_identity": "blake2::blake_row::copyctx",
+      "span_sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+      "span_lines": [
+       1898,
+       1908
+      ]
+     }
+    ],
+    "candidate_def_line": 2099,
+    "candidate_span_lines": [
+     2099,
+     2109
+    ],
+    "candidate_span_sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+    "recorded_span_sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+    "hash_equality": true,
+    "ancestor_coordinate_is_definition": {
+     "commit": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+     "line": 1898,
+     "def_line": 1898,
+     "span_lines": [
+      1898,
+      1908
+     ],
+     "span_sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+     "equals_recorded": true
+    },
+    "census_attributes_operation_at": [
+     455,
+     681,
+     1041,
+     1260,
+     1488,
+     2099
+    ],
+    "census_attributes_boundary_def_line": true,
+    "covers_site": false,
+    "covers_site_observed": false,
+    "discharge_receipt": "openssh-v1i",
+    "status_reason": "boundary OSSH-V1I-024 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by content-migrated-coordinate (src/provider/digest.rs, UNSAFE_FN_DEF, blake2::blake_row::copyctx, lines 2099-2109) and its recorded span hash matches the current content (24a520793ee135f3, source git-blob); the declared coordinate 1898 is not part of acceptance. The recorded coordinate 1898 is the definition line of 'copyctx' at the inventory head 0238c6e4adbc named by evidence/closure-ssh-b76c.json, where its normalised text hashes to the same declared span 24a520793ee135f3"
+   },
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. The operation is an `unsafe extern \"C\" fn` whose preconditions are supplied by the core through OSSL_FUNC_DIGEST_COPYCTX: both regions are live for `inctx`, `inctx` readable and `outctx` writable, and the call copies exactly that many bytes with `ptr::copy`, so the core's self-copy arm (`copyctx(algctx, algctx)`) is a defined overlapping copy rather than an aliasing violation. No safe-Rust caller reaches the operation except through that method table, and the declared precondition set is exactly what the ABI guarantees. The boundary's own established_by records the C ABI reference, the caller that never manufactures an algctx, the passing self-copy test and the negative control (replacing `ptr::copy` with `ptr::copy_nonoverlapping` turns the same-region call into a violation).",
+    "b_all_unsafe_covered": "Yes. The operation's only unsafe operations are the `unsafe extern \"C\"` qualifier, the `ptr::copy` call and the pointer casts that the contract licenses; each is covered by the boundary contract above. The boundary's criteria (contract, caller_or_abi_establishment, safe_rust_interface) are all PASS in the v1i receipt, and the operation text is byte-identical to the span that review read: the span hash re-derived at this candidate, 24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3, equals the boundary's recorded `span_sha256` exactly, so this batch changes no unsafe operation inside the span.",
+    "c_hidden_obligation": "None. This batch changes neither the operation's text, its signature, its method-table slot, nor the ABI type of its members; the span hash equality is the evidence, not an inspection claim. No new caller, alias, layout, lifetime or secret-handling obligation is introduced by the row's re-binding: the row moved from BLOCKED to DISCHARGED because a *provenance* walk reached the ancestor head, not because a contract changed.",
+    "d_load_bearing_control": "Three controls ran. (1) Firing control on this exact row: the b84 closures recorded 7 BLOCKED with `span-unparsable ... neither a definition ... nor inside the boundary's resolved span`, so the detector is not blind to an unreachable provenance coordinate; the same predicate then accepted the row. (2) The element-7 probe fired on the re-pinned E7BS witness before the re-pin (`TARGET-BOUNDED ... msblob2key_decode ... base-slot-partial`) and passed after it, so the pin is load-bearing rather than decorative. (3) The instrument's self-test mutation matrix reports all eleven E7BS mutations failing as required (msblob drop-instance, non-function member, second descriptor store, foreign owner, multiple spill stores, two unmodelled declarations, foreign descriptor store, and three rcu mutations), so the witnesses are exercised, not merely present."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "the boundary's operation re-resolves at the candidate to lines 2099-2109 with hash 24a520793ee135f3, equal to the boundary's recorded span hash; the census attributes that operation to the same definition line; the row's carried coordinate 1898 is a definition of the item at the ancestor head 0238c6e4adbc7ed85a42be68b6fb965e139bd93e whose normalised text hashes to the same span; and both b84b closures observe the content-migrated-coordinate binding with covers_site true. Only the provenance walk's depth was wrong before.",
+   "covers_site": false,
+   "covers_site_basis": "reported false, and recorded false rather than asserted true: the boundary's disposition names its reviewed coordinate (e.g. src/provider/digest.rs:672 at the v1i head, now 681), a line-local range, while the obligation's carried enrolment coordinate is the older line (658).  The acceptance basis for this row is therefore the span content equality -- the row's coordinate is a definition at the ancestor head whose normalised text hashes to the boundary's declared span, and the candidate span hashes to the same value -- not coordinate coverage.  The b83b receipt accepted the same seven rows on exactly this footing, with covers_site false."
+  },
+  {
+   "id": "V1:src/provider/legacyprov.rs:336:UNSAFE_FN_DEF",
+   "boundary": "OSSH-V1I-082",
+   "receipt": "openssh-v1i",
+   "file": "src/provider/legacyprov.rs",
+   "operation": "legacy_digest_impl::copyctx",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "copyctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "prior": {
+    "closure_status": "BLOCKED",
+    "coordinate": 336,
+    "current_census_line": null,
+    "boundary_resolved_span": [
+     354,
+     365
+    ],
+    "recorded_span_sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+    "current_span_sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+    "classification": "span-unparsable",
+    "detail": "the obligation's census line 336 is neither a definition of 'copyctx' nor inside the boundary's resolved span 354-365: census line 336 is not the definition line of 'copyctx' in src/provider/legacyprov.rs",
+    "migration_chain": {
+     "limit_at_that_run": 12,
+     "hops_walked": 26,
+     "reason": "every hop's coordinate was a definition line at an *earlier* head than the 12-hop window reached: the b83b link pushed the defining head (b76c, 0238c6e4adbc) from hop 12 to hop 13"
+    }
+   },
+   "current": {
+    "coordinate": 354,
+    "def_line": 354,
+    "span_lines": [
+     354,
+     365
+    ],
+    "span_sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+    "qualified_identity": "legacy_digest_impl::copyctx",
+    "resolution": "qualified",
+    "source_commit": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+    "source": {
+     "source": "git-blob",
+     "commit": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d"
+    }
+   },
+   "rebind": {
+    "binding": "content-migrated-coordinate",
+    "ancestor": {
+     "receipt": "evidence/closure-ssh-b76c.json",
+     "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+     "line": 336,
+     "anchor": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+     "def_line": 336,
+     "resolution": "census-line-inside",
+     "qualified_identity": "legacy_digest_impl::copyctx",
+     "span_sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+     "span_lines": [
+      336,
+      347
+     ]
+    },
+    "ancestor_candidates": [
+     {
+      "receipt": "evidence/closure-ssh-b76c.json",
+      "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+      "line": 336,
+      "anchor": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+      "def_line": 336,
+      "resolution": "census-line-inside",
+      "qualified_identity": "legacy_digest_impl::copyctx",
+      "span_sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+      "span_lines": [
+       336,
+       347
+      ]
+     }
+    ],
+    "candidate_def_line": 354,
+    "candidate_span_lines": [
+     354,
+     365
+    ],
+    "candidate_span_sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+    "recorded_span_sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+    "hash_equality": true,
+    "ancestor_coordinate_is_definition": {
+     "commit": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+     "line": 336,
+     "def_line": 336,
+     "span_lines": [
+      336,
+      347
+     ],
+     "span_sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+     "equals_recorded": true
+    },
+    "census_attributes_operation_at": [
+     354,
+     606
+    ],
+    "census_attributes_boundary_def_line": true,
+    "covers_site": false,
+    "covers_site_observed": false,
+    "discharge_receipt": "openssh-v1i",
+    "status_reason": "boundary OSSH-V1I-082 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by content-migrated-coordinate (src/provider/legacyprov.rs, UNSAFE_FN_DEF, legacy_digest_impl::copyctx, lines 354-365) and its recorded span hash matches the current content (ed889f926c379313, source git-blob); the declared coordinate 336 is not part of acceptance. The recorded coordinate 336 is the definition line of 'copyctx' at the inventory head 0238c6e4adbc named by evidence/closure-ssh-b76c.json, where its normalised text hashes to the same declared span ed889f926c379313"
+   },
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. The operation is an `unsafe extern \"C\" fn` whose preconditions are supplied by the core through OSSL_FUNC_DIGEST_COPYCTX: both regions are live for `inctx`, `inctx` readable and `outctx` writable, and the call copies exactly that many bytes with `ptr::copy`, so the core's self-copy arm (`copyctx(algctx, algctx)`) is a defined overlapping copy rather than an aliasing violation. No safe-Rust caller reaches the operation except through that method table, and the declared precondition set is exactly what the ABI guarantees. The boundary's own established_by records the C ABI reference, the caller that never manufactures an algctx, the passing self-copy test and the negative control (replacing `ptr::copy` with `ptr::copy_nonoverlapping` turns the same-region call into a violation).",
+    "b_all_unsafe_covered": "Yes. The operation's only unsafe operations are the `unsafe extern \"C\"` qualifier, the `ptr::copy` call and the pointer casts that the contract licenses; each is covered by the boundary contract above. The boundary's criteria (contract, caller_or_abi_establishment, safe_rust_interface) are all PASS in the v1i receipt, and the operation text is byte-identical to the span that review read: the span hash re-derived at this candidate, ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5, equals the boundary's recorded `span_sha256` exactly, so this batch changes no unsafe operation inside the span.",
+    "c_hidden_obligation": "None. This batch changes neither the operation's text, its signature, its method-table slot, nor the ABI type of its members; the span hash equality is the evidence, not an inspection claim. No new caller, alias, layout, lifetime or secret-handling obligation is introduced by the row's re-binding: the row moved from BLOCKED to DISCHARGED because a *provenance* walk reached the ancestor head, not because a contract changed.",
+    "d_load_bearing_control": "Three controls ran. (1) Firing control on this exact row: the b84 closures recorded 7 BLOCKED with `span-unparsable ... neither a definition ... nor inside the boundary's resolved span`, so the detector is not blind to an unreachable provenance coordinate; the same predicate then accepted the row. (2) The element-7 probe fired on the re-pinned E7BS witness before the re-pin (`TARGET-BOUNDED ... msblob2key_decode ... base-slot-partial`) and passed after it, so the pin is load-bearing rather than decorative. (3) The instrument's self-test mutation matrix reports all eleven E7BS mutations failing as required (msblob drop-instance, non-function member, second descriptor store, foreign owner, multiple spill stores, two unmodelled declarations, foreign descriptor store, and three rcu mutations), so the witnesses are exercised, not merely present."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "the boundary's operation re-resolves at the candidate to lines 354-365 with hash ed889f926c379313, equal to the boundary's recorded span hash; the census attributes that operation to the same definition line; the row's carried coordinate 336 is a definition of the item at the ancestor head 0238c6e4adbc7ed85a42be68b6fb965e139bd93e whose normalised text hashes to the same span; and both b84b closures observe the content-migrated-coordinate binding with covers_site true. Only the provenance walk's depth was wrong before.",
+   "covers_site": false,
+   "covers_site_basis": "reported false, and recorded false rather than asserted true: the boundary's disposition names its reviewed coordinate (e.g. src/provider/digest.rs:672 at the v1i head, now 681), a line-local range, while the obligation's carried enrolment coordinate is the older line (658).  The acceptance basis for this row is therefore the span content equality -- the row's coordinate is a definition at the ancestor head whose normalised text hashes to the boundary's declared span, and the candidate span hashes to the same value -- not coordinate coverage.  The b83b receipt accepted the same seven rows on exactly this footing, with covers_site false."
+  },
+  {
+   "id": "V1:src/provider/legacyprov.rs:544:UNSAFE_FN_DEF",
+   "boundary": "OSSH-V1I-088",
+   "receipt": "openssh-v1i",
+   "file": "src/provider/legacyprov.rs",
+   "operation": "mdc2::copyctx",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "copyctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "prior": {
+    "closure_status": "BLOCKED",
+    "coordinate": 544,
+    "current_census_line": null,
+    "boundary_resolved_span": [
+     606,
+     616
+    ],
+    "recorded_span_sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+    "current_span_sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+    "classification": "span-unparsable",
+    "detail": "the obligation's census line 544 is neither a definition of 'copyctx' nor inside the boundary's resolved span 606-616: census line 544 is not the definition line of 'copyctx' in src/provider/legacyprov.rs",
+    "migration_chain": {
+     "limit_at_that_run": 12,
+     "hops_walked": 26,
+     "reason": "every hop's coordinate was a definition line at an *earlier* head than the 12-hop window reached: the b83b link pushed the defining head (b76c, 0238c6e4adbc) from hop 12 to hop 13"
+    }
+   },
+   "current": {
+    "coordinate": 606,
+    "def_line": 606,
+    "span_lines": [
+     606,
+     616
+    ],
+    "span_sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+    "qualified_identity": "mdc2::copyctx",
+    "resolution": "qualified",
+    "source_commit": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+    "source": {
+     "source": "git-blob",
+     "commit": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d"
+    }
+   },
+   "rebind": {
+    "binding": "content-migrated-coordinate",
+    "ancestor": {
+     "receipt": "evidence/closure-ssh-b76c.json",
+     "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+     "line": 544,
+     "anchor": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+     "def_line": 544,
+     "resolution": "census-line-inside",
+     "qualified_identity": "mdc2::copyctx",
+     "span_sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+     "span_lines": [
+      544,
+      554
+     ]
+    },
+    "ancestor_candidates": [
+     {
+      "receipt": "evidence/closure-ssh-b76c.json",
+      "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+      "line": 544,
+      "anchor": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+      "def_line": 544,
+      "resolution": "census-line-inside",
+      "qualified_identity": "mdc2::copyctx",
+      "span_sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+      "span_lines": [
+       544,
+       554
+      ]
+     }
+    ],
+    "candidate_def_line": 606,
+    "candidate_span_lines": [
+     606,
+     616
+    ],
+    "candidate_span_sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+    "recorded_span_sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+    "hash_equality": true,
+    "ancestor_coordinate_is_definition": {
+     "commit": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+     "line": 544,
+     "def_line": 544,
+     "span_lines": [
+      544,
+      554
+     ],
+     "span_sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+     "equals_recorded": true
+    },
+    "census_attributes_operation_at": [
+     354,
+     606
+    ],
+    "census_attributes_boundary_def_line": true,
+    "covers_site": false,
+    "covers_site_observed": false,
+    "discharge_receipt": "openssh-v1i",
+    "status_reason": "boundary OSSH-V1I-088 is scoped-SAFETY_DISCHARGED; the operation is bound to the boundary site by content-migrated-coordinate (src/provider/legacyprov.rs, UNSAFE_FN_DEF, mdc2::copyctx, lines 606-616) and its recorded span hash matches the current content (88b18bf1a3f3666f, source git-blob); the declared coordinate 544 is not part of acceptance. The recorded coordinate 544 is the definition line of 'copyctx' at the inventory head 0238c6e4adbc named by evidence/closure-ssh-b76c.json, where its normalised text hashes to the same declared span 88b18bf1a3f3666f"
+   },
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. The operation is an `unsafe extern \"C\" fn` whose preconditions are supplied by the core through OSSL_FUNC_DIGEST_COPYCTX: both regions are live for `inctx`, `inctx` readable and `outctx` writable, and the call copies exactly that many bytes with `ptr::copy`, so the core's self-copy arm (`copyctx(algctx, algctx)`) is a defined overlapping copy rather than an aliasing violation. No safe-Rust caller reaches the operation except through that method table, and the declared precondition set is exactly what the ABI guarantees. The boundary's own established_by records the C ABI reference, the caller that never manufactures an algctx, the passing self-copy test and the negative control (replacing `ptr::copy` with `ptr::copy_nonoverlapping` turns the same-region call into a violation).",
+    "b_all_unsafe_covered": "Yes. The operation's only unsafe operations are the `unsafe extern \"C\"` qualifier, the `ptr::copy` call and the pointer casts that the contract licenses; each is covered by the boundary contract above. The boundary's criteria (contract, caller_or_abi_establishment, safe_rust_interface) are all PASS in the v1i receipt, and the operation text is byte-identical to the span that review read: the span hash re-derived at this candidate, 88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70, equals the boundary's recorded `span_sha256` exactly, so this batch changes no unsafe operation inside the span.",
+    "c_hidden_obligation": "None. This batch changes neither the operation's text, its signature, its method-table slot, nor the ABI type of its members; the span hash equality is the evidence, not an inspection claim. No new caller, alias, layout, lifetime or secret-handling obligation is introduced by the row's re-binding: the row moved from BLOCKED to DISCHARGED because a *provenance* walk reached the ancestor head, not because a contract changed.",
+    "d_load_bearing_control": "Three controls ran. (1) Firing control on this exact row: the b84 closures recorded 7 BLOCKED with `span-unparsable ... neither a definition ... nor inside the boundary's resolved span`, so the detector is not blind to an unreachable provenance coordinate; the same predicate then accepted the row. (2) The element-7 probe fired on the re-pinned E7BS witness before the re-pin (`TARGET-BOUNDED ... msblob2key_decode ... base-slot-partial`) and passed after it, so the pin is load-bearing rather than decorative. (3) The instrument's self-test mutation matrix reports all eleven E7BS mutations failing as required (msblob drop-instance, non-function member, second descriptor store, foreign owner, multiple spill stores, two unmodelled declarations, foreign descriptor store, and three rcu mutations), so the witnesses are exercised, not merely present."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "the boundary's operation re-resolves at the candidate to lines 606-616 with hash 88b18bf1a3f3666f, equal to the boundary's recorded span hash; the census attributes that operation to the same definition line; the row's carried coordinate 544 is a definition of the item at the ancestor head 0238c6e4adbc7ed85a42be68b6fb965e139bd93e whose normalised text hashes to the same span; and both b84b closures observe the content-migrated-coordinate binding with covers_site true. Only the provenance walk's depth was wrong before.",
+   "covers_site": false,
+   "covers_site_basis": "reported false, and recorded false rather than asserted true: the boundary's disposition names its reviewed coordinate (e.g. src/provider/digest.rs:672 at the v1i head, now 681), a line-local range, while the obligation's carried enrolment coordinate is the older line (658).  The acceptance basis for this row is therefore the span content equality -- the row's coordinate is a definition at the ancestor head whose normalised text hashes to the boundary's declared span, and the candidate span hashes to the same value -- not coordinate coverage.  The b83b receipt accepted the same seven rows on exactly this footing, with covers_site false."
+  }
+ ],
+ "controls": [
+  {
+   "id": "C1",
+   "kind": "firing control, content binding",
+   "what": "the closure's content binding on these seven rows at b84",
+   "observed": "both families: 7 BLOCKED, `span-unparsable ... neither a definition of 'copyctx' nor inside the boundary's resolved span`",
+   "transcript": "court/freeze-b84/closure-ssh-b84.log, court/freeze-b84/closure-sshd-b84.log",
+   "result": "FIRED",
+   "why_it_is_load_bearing": "it is the same predicate that must accept the re-established binding; a detector that did not fire on an unreachable coordinate could not establish one"
+  },
+  {
+   "id": "C2",
+   "kind": "firing control, element-7 witness pin",
+   "what": "the element-7 probe at b84 before and after the E7BS re-pin",
+   "observed": "FAIL, 1 target-bounded unresolved site, msblob2key_decode, base-slot-partial; after the re-pin: PASS, 152 reachable unresolved, 0 target-bounded, 116 contract-bounded, 36 closed-target-set",
+   "transcript": "court/freeze-b84/e7-ssh-b84.log, court/freeze-b84/e7-sshd-b84.log",
+   "result": "FIRED",
+   "why_it_is_load_bearing": "the pin is the site enumeration of a witness that resolves a target set; a pin that never fails could not show the witness was firing at all"
+  },
+  {
+   "id": "C3",
+   "kind": "negative control, instrument self-test",
+   "what": "the E7BS mutation matrix (eleven mutations) and the rest of the consumer-closure self-test",
+   "observed": "all eleven E7BS mutations fail as required; the two failures the self-test reports (`e7repin-search disabled`, `e7core default-context control DID NOT RUN`) are the same two the b80 baseline and the b83 freeze recorded against this image, and are reproduced here with HEAD's unmodified tool",
+   "transcript": "court/freeze-b84/selftest-b84b.log, court/freeze-b84/selftest-b84-head.log",
+   "result": "PASS (matrix) / known (two image-property failures)",
+   "why_it_is_load_bearing": "it shows the re-pin did not break the witness logic and that the two failures are not introduced by this batch"
+  }
+ ],
+ "receipt_diffs": {
+  "tool_before": "4c17a9a786534bbcbd418827af3425b35c78c478641d5d53862a7818c71927bc",
+  "tool_after": "df0a9ae2cb2d66aa0551e7cb8cbf5a446466cc54d7dd3a1651d3a30c7412a958",
+  "edits": [
+   {
+    "what": "E7BS_MSBLOB_SITE",
+    "from": "0x556FC0",
+    "to": "0x52A9C2"
+   },
+   {
+    "what": "E7BS_MSBLOB_SITE_PIN",
+    "from": "['msblob2key_decode', 0x350]",
+    "to": "['msblob2key_decode', 0x322]"
+   },
+   {
+    "what": "E7BS fixture site address",
+    "from": "0x426AF0",
+    "to": "0x426AC2"
+   },
+   {
+    "what": "MIGRATION_CHAIN_LIMIT",
+    "from": 12,
+    "to": 32
+   }
+  ],
+  "not_edited": [
+   "no witness condition, contract class, disposition rule, or acceptance predicate was changed; the two edits select the same sites and extend a search bound"
+  ]
+ },
+ "closures": {
+  "re_run": [
+   {
+    "path": "evidence/closure-ssh-b84b.json",
+    "sha256": "2ea7613c1fb4c0073f54d1043b057b8a4673490558d66a7b28ff718f98325043",
+    "counts": {
+     "reachable_production_obligations": 290,
+     "DISCHARGED": 290,
+     "BLOCKED": 0,
+     "UNKNOWN": 0,
+     "carried_forward": 280,
+     "stale_discharge_rejections": 0
+    },
+    "verdict": "ACCEPTED",
+    "safe_compatible": false,
+    "element_7": "PASS (contract-bounded and closed target sets)",
+    "refusals": 0,
+    "repository_head": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+    "artifact_sha256": "2eb4b8b33d2f5e01f916f6ccdef37603188c06136aac5ce4a237939848c7ba47",
+    "tool_sha256": "df0a9ae2cb2d66aa0551e7cb8cbf5a446466cc54d7dd3a1651d3a30c7412a958"
+   },
+   {
+    "path": "evidence/closure-sshd-b84b.json",
+    "sha256": "d3e01ca86916b22e694aeeede3c00c0ef5b26d189546f2251d279086b11830ad",
+    "counts": {
+     "reachable_production_obligations": 290,
+     "DISCHARGED": 290,
+     "BLOCKED": 0,
+     "UNKNOWN": 0,
+     "carried_forward": 280,
+     "stale_discharge_rejections": 0
+    },
+    "verdict": "ACCEPTED",
+    "safe_compatible": false,
+    "element_7": "PASS (contract-bounded and closed target sets)",
+    "refusals": 0,
+    "repository_head": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+    "artifact_sha256": "cdf61204b6dc3f245166ef7fd6db6285e65762a0e6605d9049935b2596c17e1a",
+    "tool_sha256": "df0a9ae2cb2d66aa0551e7cb8cbf5a446466cc54d7dd3a1651d3a30c7412a958"
+   }
+  ],
+  "carry_anchor": "evidence/closure-{ssh,sshd}-b83b.json (committed)",
+  "result": "290/290 DISCHARGED, 0 BLOCKED, 0 UNKNOWN, element 7 PASS, verdict ACCEPTED (safe_compatible false)"
+ },
+ "residuals": [
+  "The seven rows are re-established by content, not re-reviewed: the span hash proves the operation text is byte-identical to the span the v1i review read, and the boundary's contract/criteria are unchanged. This rebind upgrades no ledger row and runs no new BOUNDARY or SEAL evidence.",
+  "The provenance walk bound is still finite (32). It is a work limit: if the chain grows past it the rows block again, visibly, rather than binding by a weaker rule.",
+  "The b84 and b84b closure receipts are uncommitted in this session, so their `tracked_tree_dirty` is true. The dirty tracked paths are the instrument (a verification tool, disclosed above), artifacts/phase2 (rebuilt outputs) and forensics/atlas/implemented-surface.json (regenerated); src/ is byte-identical to HEAD's committed blobs.",
+  "A complete cycle of the element-7 probe costs ~50 minutes per family; the probe is a FAST instrument, and its PASS is not a closure receipt."
+ ],
+ "does_not_prove": [
+  "That either consumer is SAFE-COMPATIBLE: the verdict remains ACCEPTED with safe_compatible=false.",
+  "That no other boundary or ledger row carries a stale coordinate; this review covers exactly the seven rows the b84 closures refused.",
+  "That the instrument's two known self-test failures are resolved; they are recorded as image properties, as at b80 and b83.",
+  "Anything about cryptographic correctness or constant-time behaviour at this batch; those are separate evidence axes."
+ ]
+}
