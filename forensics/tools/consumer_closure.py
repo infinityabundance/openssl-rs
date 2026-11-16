@@ -56,6 +56,10 @@ modifies source; it reads the admitted install, the committed inventory and
 the committed receipts.
 
 Self-test:  python3 forensics/tools/consumer_closure.py --self-test
+            exit 0 = every control ran and passed; exit 1 = a control failed;
+            exit 2 = no failure but at least one PREMISE_UNAVAILABLE control
+            (its subject is absent from the image and could not be
+            synthesised), which is neither a pass nor a failure.
 Example:    python3 forensics/tools/consumer_closure.py \
               --family cyrus-sasl \
               --artifact court/tmp/v4-sasl/candidate/src/plugins/.libs/libdigestmd5.so.3.0.0
@@ -12345,6 +12349,10 @@ _PIN_SEARCH_OFF = False
 # --self-test only: the named outcome of every control, so a standalone runner
 # (court/freeze-b77/run_repin_controls.py) can report each one individually.
 _SELFTEST_TRACE = []
+# --self-test only: controls whose subject is absent from this image and could
+# not be synthesised.  Such a control did not run: it is neither a pass nor a
+# failure, so it is reported under its own state and the exit status says so.
+_PREMISE_UNAVAILABLE = []
 
 
 def _pin_witness(name):
@@ -35164,33 +35172,63 @@ def _e7repin_search_self_test():
                 search_row(g, "PBE_EX_SITES", 0x17CEE8)[2], None)
 
         # ---- the search removed: the pre-repair (target-bounded) behaviour ---- #
-        # The fixture must be a row whose pin is *genuinely* stale in this
-        # image.  b77 used `OSSL_STORE_open_ex + 0x488`, but b78's rebuild put
-        # the legacy open dispatches back at the recorded offsets (+0x488 /
-        # +0x57D / +0x9F3), so that row now re-derives strictly and the old
-        # expectation ("the literal stays") encoded a property of b77, not of
-        # the control.  The stale row is therefore derived from the image, and
-        # the search-off behaviour is asserted on that row.
+        # The subject is not a premise of the image.  b77 used
+        # `OSSL_STORE_open_ex + 0x488`, but b78's rebuild put every legacy
+        # dispatch back at its recorded offset, and b84's image carries no
+        # naturally stale row at all: asserting one exists made the control
+        # depend on a property of the candidate instead of exercising the
+        # rule.  One real table row is therefore re-registered under a
+        # deliberately stale offset inside its own symbol, so the control
+        # always drives the same three states -- strict re-derivation misses,
+        # the search resolves it, the search-off fallback keeps the literal --
+        # and can fail on any candidate.
+        SYNTH_ROW = 0x1
         stale = next((old for old in PBE_EX_SITES
-                      if _pin_site_addr(g, PBE_EX_SITE_PINS[old]) is None
-                      and _pin_effective("PBE_EX_SITES", old, g)[1] == "search"),
-                     None)
-        chk("e7repin-search disabled: a stale row exists in this image",
-            stale is not None, True)
-        if stale is not None:
+                      if _pin_effective("PBE_EX_SITES", old, g)[1]
+                      in ("pin", "search")), None)
+        if stale is None:
+            _PREMISE_UNAVAILABLE.append(
+                "e7repin-search disabled: no PBE_EX_SITES row resolves in "
+                "this image, so no row can be re-keyed onto a synthetic "
+                "stale pin")
+        else:
+            _real_spec = PBE_EX_SITES[stale]
+            _real_pin = PBE_EX_SITE_PINS[stale]
+            _synth_pin = (_real_pin[0], _real_pin[1] + 0x1000)
+            chk("e7repin-search disabled: synthetic pin is stale",
+                _pin_site_addr(g, _synth_pin), None)
             true_addr = _pin_effective("PBE_EX_SITES", stale, g)[0]
+            del PBE_EX_SITES[stale]
+            del PBE_EX_SITE_PINS[stale]
+            PBE_EX_SITES[SYNTH_ROW] = _real_spec
+            PBE_EX_SITE_PINS[SYNTH_ROW] = _synth_pin
             _SITE_PIN_CACHE.clear()
-            _PIN_SEARCH_OFF = True
             try:
-                addr, how = _pin_effective("PBE_EX_SITES", stale, g)
-                chk("e7repin-search disabled: the stale literal stays",
-                    (how, addr), ("literal", stale))
-                chk("e7repin-search disabled: no row matches the true site",
-                    _repinned("PBE_EX_SITES", g).get(true_addr), None)
-            finally:
-                _PIN_SEARCH_OFF = False
+                addr, how = _pin_effective("PBE_EX_SITES", SYNTH_ROW, g)
+                chk("e7repin-search disabled: the stale row resolves by "
+                    "search", (how, addr), ("search", true_addr))
                 _SITE_PIN_CACHE.clear()
-            chk("e7repin-search re-enabled: the row resolves again",
+                _PIN_SEARCH_OFF = True
+                try:
+                    addr, how = _pin_effective("PBE_EX_SITES", SYNTH_ROW, g)
+                    chk("e7repin-search disabled: the stale literal stays",
+                        (how, addr), ("literal", SYNTH_ROW))
+                    chk("e7repin-search disabled: no row matches the true "
+                        "site", _repinned("PBE_EX_SITES", g).get(true_addr),
+                        None)
+                finally:
+                    _PIN_SEARCH_OFF = False
+                    _SITE_PIN_CACHE.clear()
+                chk("e7repin-search re-enabled: the row resolves again",
+                    _pin_effective("PBE_EX_SITES", SYNTH_ROW, g)[1],
+                    "search")
+            finally:
+                del PBE_EX_SITES[SYNTH_ROW]
+                del PBE_EX_SITE_PINS[SYNTH_ROW]
+                PBE_EX_SITES[stale] = _real_spec
+                PBE_EX_SITE_PINS[stale] = _real_pin
+                _SITE_PIN_CACHE.clear()
+            chk("e7repin-search disabled: the real table is restored",
                 _pin_effective("PBE_EX_SITES", stale, g)[1]
                 in ("pin", "search"), True)
     finally:
@@ -35579,42 +35617,105 @@ def _e7core_self_test():
     # control core-default-context: the inlined default-context arm of
     # `ossl_lib_ctx_get_data` reads a different `OsslLibCtx` field, so the
     # slot index is no longer source-bound and the site must stop resolving.
-    # control core-default-context: the inlined default-context arm of
-    # `ossl_lib_ctx_get_data` reads a different `OsslLibCtx` field, so the
-    # slot index is no longer source-bound and the site must stop resolving.
-    # The arm is identified by the witness's own evidence, not by a recorded
-    # offset: b77 reads a different field than b76 did.
+    # The subject is not taken as a premise of the image: b84 carries no
+    # admitted site with an inlined default-context accessor, so when none is
+    # present the arm is synthesised from an admitted site -- the documented
+    # libctx accessor call and its literal index argument are replaced, one
+    # instruction for one, by `lea <DEFAULT_CONTEXT>` and
+    # `mov <child_provider offset>(%reg),%base`.  That is the encoding the
+    # witness recognises in a real image, so the control drives
+    # `_core_globals_origin`'s default-context arm on every candidate.
     _dc_site = None
     for _sites in core_sites.values():
         for _s, _w in _sites:
             _rec = next((r for r in (_w.get("base_origin") or {}).get(
                 "accessor_calls") or [] if r.get("default_context")), None)
             if _rec is not None:
-                _dc_site = (_s, _rec)
+                _dc_site = (_s, _rec, None)
                 break
         if _dc_site is not None:
             break
+    if _dc_site is None:
+        _layout, _dc_err = _external_struct_layout(g, "OsslLibCtx")
+        _dc_fld = next((_f for _f in (_layout or {}).get("fields", ())
+                        if _f["name"] == "child_provider"), None)
+        _dreg = "%r12"
+        if _dc_fld is not None:
+            for _sites in core_sites.values():
+                for _s, _w in _sites:
+                    if _dc_site is not None:
+                        break
+                    _dc_insns = g.precision.insns_by_func[_s["func"]]
+                    if any(_dreg in _t for _a, _t in _dc_insns):
+                        continue
+                    for _r in ((_w.get("base_origin") or {}).get(
+                            "accessor_calls") or []):
+                        if not _r.get("accessor"):
+                            continue
+                        _ci = next((_i for _i, (_a, _t) in
+                                    enumerate(_dc_insns)
+                                    if _a == int(_r["call_site"], 16)), None)
+                        if (_ci is None or _ci == 0
+                                or not _dc_insns[_ci - 1][1].strip()
+                                .startswith("mov    $")):
+                            continue
+                        _twin = list(_dc_insns)
+                        _twin[_ci - 1] = (
+                            _dc_insns[_ci - 1][0],
+                            f"lea    0x0(%rip),{_dreg}        "
+                            "# <DEFAULT_CONTEXT>")
+                        _twin[_ci] = (
+                            _dc_insns[_ci][0],
+                            f"mov    {_dc_fld['offset']:#x}({_dreg}),%rax")
+                        _probe = _Proxy(g, insns={
+                            **g.precision.insns_by_func, _s["func"]: _twin})
+                        _pw = core_dispatch_witness(
+                            _probe, dict(_s),
+                            _probe.funcs.get(_s["func"], ""), None)[0]
+                        _pacc = ((_pw or {}).get("base_origin") or {}).get(
+                            "accessor_calls") or []
+                        if (_pw is not None
+                                and len([_x for _x in _pacc
+                                        if _x.get("default_context")]) == 1
+                                and not _pw.get("refusal")):
+                            _dc_site = (_s, {"call_site": hex(_twin[_ci][0])},
+                                        _twin)
+                            break
     if _dc_site is not None:
-        a_core, _dc = _dc_site
+        a_core, _dc, _dc_twin = _dc_site
         dc_off = int(_dc["call_site"], 16)
-        _dc_text = next(t for a, t in g.precision.insns_by_func[a_core["func"]]
-                        if a == dc_off)
+        _dc_base = (_dc_twin if _dc_twin is not None
+                    else g.precision.insns_by_func[a_core["func"]])
+        _dc_g = (g if _dc_twin is None else _Proxy(
+            g, insns={**g.precision.insns_by_func,
+                      a_core["func"]: _dc_twin}))
+        _w_dc = core_dispatch_witness(
+            _dc_g, dict(a_core), _dc_g.funcs.get(a_core["func"], ""),
+            None)[0]
+        chk("e7core default-context subject resolves", _w_dc is not None, True)
+        chk("e7core default-context subject carries the inlined arm",
+            len([r for r in ((_w_dc or {}).get("base_origin") or {}).get(
+                "accessor_calls") or [] if r.get("default_context")]), 1)
+        _dc_text = next(t for a, t in _dc_base if a == dc_off)
         _dc_new = re.sub(
             r"^(\s*mov\s+)(-?0x[0-9a-f]+)(\()",
             lambda m: f"{m.group(1)}{hex(int(m.group(2), 16) + 8)}"
                       f"{m.group(3)}", _dc_text, count=1)
         chk("e7core default-context control fixture applied",
             _dc_new != _dc_text, True)
-        px = _Proxy(g, insns=mutate_insns(a_core, dc_off, _dc_new))
+        px = _Proxy(g, insns={**g.precision.insns_by_func,
+                              a_core["func"]: [
+                                  (a, _dc_new if a == dc_off else t)
+                                  for a, t in _dc_base]})
         got, _why = core_run(px, a_core)
-        chk("e7core default-context offset mutation refusal", got is None, True)
+        chk("e7core default-context offset mutation refusal", got, None)
         chk("e7core default-context offset restored",
             core_run(g, a_core)[0] is not None, True)
     else:
-        failures.append(
-            "e7core default-context control DID NOT RUN: no admitted site's "
-            "witness evidence records an inlined default-context accessor at "
-            "this candidate.  Reported as NOT_RUN, never as a pass")
+        _PREMISE_UNAVAILABLE.append(
+            "e7core default-context control: no admitted site carries an "
+            "inlined default-context accessor and none could be synthesised "
+            "from an admitted libctx accessor call")
 
     # control core-writer-id: the writer's store sits under the wrong
     # OSSL_FUNC_* arm
@@ -35877,8 +35978,10 @@ def _e7core_self_test():
         f"{_resolved} site(s) across {len(core_sites)} function(s); the offset, "
         "libctx-index, writer-id, second-source-store, header-id, "
         "default-context and NULL-guard mutation controls are each exercised "
-        "(a control this candidate cannot exercise is reported above as "
-        "NOT_RUN, never as a pass); "
+        "(the default-context subject is synthesised from an admitted libctx "
+        "accessor when the image carries none; a control whose subject is "
+        "neither present nor synthesizable is reported as "
+        "PREMISE_UNAVAILABLE, never as a pass); "
         "the provider-init rule refuses a store-offset and an extra-writer "
         "mutation and is restored; the store-loader close guard refuses an "
         "inverted fetched-loader polarity branch and is restored; the "
@@ -35891,6 +35994,7 @@ def _e7core_self_test():
 
 def self_test() -> int:
     failures = []
+    _PREMISE_UNAVAILABLE.clear()
 
     def check(name, got, want):
         if got != want:
@@ -40990,11 +41094,22 @@ def self_test() -> int:
     failures.extend(_e7core_failures)
     print(f"[consumer-closure] {_e7core_line}")
 
+    if _PREMISE_UNAVAILABLE:
+        print("[consumer-closure] SELF-TEST PREMISE_UNAVAILABLE: a control's "
+              "subject is absent from this image and could not be "
+              "synthesised; state is neither pass nor failure")
+        for _p in _PREMISE_UNAVAILABLE:
+            print("  ~", _p)
     if failures:
         print("[consumer-closure] SELF-TEST FAILED")
         for f in failures:
             print("  -", f)
         return 1
+    if _PREMISE_UNAVAILABLE:
+        # Not a pass (the control did not run) and not a failure (the rule was
+        # not contradicted).  The distinct status keeps a gate from reading
+        # this as either.
+        return 2
     print(f"[consumer-closure] self-test ok: parsing, adjudication truth table, "
           f"module/file mapping, export-site index, mechanism routing, precision "
           f"narrowing, unclassified-site negative control, R1/R2/R3/A2/O1 "
