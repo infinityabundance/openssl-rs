@@ -2202,6 +2202,112 @@ ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR,
                                   ABI_CONTRACT_CONF_DEFAULT_METHOD,
                                   ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT})
 
+# --------------------------------------------------------------------------- #
+# closed target sets (a bounded, enumerated in-image set, not an external ABI)
+# --------------------------------------------------------------------------- #
+#
+# Four classes in `ABI_CONTRACT_CLASSES` are *not* external ABI contracts.
+# Their witnesses prove a closed writer set and enumerate the exact target set
+# from the source and the image (their `resolution_kind` already says
+# "target-bounded by a closed ..."); the dispatched slot never crosses the C
+# ABI.  Counting them as contract-bounded made
+# `predicate_element_7.target_sets_remain_unbounded` contradict its own
+# `contract_bounded_by_class` (the b82 review's 36-of-152 finding: 3 + 2 + 25 +
+# 6 sites).  They get an explicit closed-set class at the reporting layer; the
+# `ABI_CONTRACT_*` key remains the provenance key on the site and in its
+# witness, so no witness, pin or contract text is re-labelled (AGENTS.md
+# section 22: the classification fix must not move evidence).
+CLOSED_TARGET_SET_SLH_METHOD_TABLE = "CLOSED_TARGET_SET_SLH_METHOD_TABLE"
+CLOSED_TARGET_SET_PROVIDER_HW_TABLE = "CLOSED_TARGET_SET_PROVIDER_HW_TABLE"
+CLOSED_TARGET_SET_LEGACY_EVP_CIPHER_DATA = \
+    "CLOSED_TARGET_SET_LEGACY_EVP_CIPHER_DATA"
+CLOSED_TARGET_SET_DECODER_METHOD_OBJECT = \
+    "CLOSED_TARGET_SET_DECODER_METHOD_OBJECT"
+
+# One reporting class per family, each paired with the `ABI_CONTRACT_*` key
+# that remains its provenance key.  The pair is what keeps the two counts
+# disjoint: a class is never in both sets.
+CLOSED_TARGET_SET_FROM_ABI_CLASS = {
+    ABI_CONTRACT_SLH_METHOD_TABLE: CLOSED_TARGET_SET_SLH_METHOD_TABLE,
+    ABI_CONTRACT_PROVIDER_HW_TABLE: CLOSED_TARGET_SET_PROVIDER_HW_TABLE,
+    ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA:
+        CLOSED_TARGET_SET_LEGACY_EVP_CIPHER_DATA,
+    ABI_CONTRACT_DECODER_METHOD_OBJECT:
+        CLOSED_TARGET_SET_DECODER_METHOD_OBJECT,
+}
+CLOSED_TARGET_SET_CLASSES = frozenset(CLOSED_TARGET_SET_FROM_ABI_CLASS.values())
+
+# The registry prefix that *is* the provenance of a closed target set.  A
+# closed family's `ABI_CONTRACTS` entry says its resolution is bounded by a
+# closed, enumerated set; an external contract's says its target set is
+# unbounded.  `classify_bound_kind` reads the declared table below, and
+# `closed_target_set_provenance_failures` holds that table answerable to this
+# registry string.  The registry is witness provenance and this repair does not
+# edit it, so the check is not circular: a mistaken entry in the table (or a
+# changed registry) is visible as a disagreement.
+CLOSED_TARGET_SET_RESOLUTION_PREFIX = "target-bounded by a closed"
+
+
+def registry_closed_target_set_families():
+    """Contract classes whose registered provenance says closed target set."""
+    return frozenset(
+        cls for cls in ABI_CONTRACT_CLASSES
+        if str((ABI_CONTRACTS.get(cls) or {}).get("resolution_kind", ""))
+        .startswith(CLOSED_TARGET_SET_RESOLUTION_PREFIX))
+
+
+def classify_bound_kind(site_class):
+    """Classify one residual site by the kind of bound its class carries.
+
+    ``"external-contract"``: a documented external ABI contract whose target
+    set is unbounded.  ``"closed-target-set"``: a closed, source-derived
+    writer set with an enumerated in-image target set.  ``None``: no bound, so
+    the site is target-bounded unresolved and keeps element 7 failing.
+
+    The declared table is the only knob: a class is closed exactly when the
+    table names it, and external exactly when the contract registry knows it
+    and the table does not.
+    """
+    if site_class in CLOSED_TARGET_SET_FROM_ABI_CLASS:
+        return "closed-target-set"
+    if site_class in ABI_CONTRACT_CLASSES:
+        return "external-contract"
+    return None
+
+
+def closed_target_set_class(site_class):
+    """The closed-target-set reporting class for a provenance class, or None."""
+    return CLOSED_TARGET_SET_FROM_ABI_CLASS.get(site_class)
+
+
+def closed_target_set_provenance_failures(mapping=None):
+    """Disagreements between the declared closed-set table and the registry.
+
+    Returns one string per defect, so the caller can report every disagreement
+    rather than the first.  ``mapping`` lets a control pass a mutated table.
+    """
+    table = dict(CLOSED_TARGET_SET_FROM_ABI_CLASS if mapping is None
+                 else mapping)
+    registry_closed = registry_closed_target_set_families()
+    failures = []
+    for cls in sorted(set(table) - registry_closed):
+        failures.append(
+            "closed target set counted as such without closed provenance: "
+            f"{cls} (registry resolution_kind="
+            f"{(ABI_CONTRACTS.get(cls) or {}).get('resolution_kind')!r})")
+    for cls in sorted(registry_closed - set(table)):
+        failures.append(
+            "a closed target set is counted as an external ABI contract: "
+            f"{cls} (registry resolution_kind="
+            f"{(ABI_CONTRACTS.get(cls) or {}).get('resolution_kind')!r})")
+    for src, name in sorted(table.items()):
+        if not str(name).startswith("CLOSED_TARGET_SET_"):
+            failures.append(
+                "a closed target set reports a name that is not a closed-set "
+                f"class: {src} -> {name}")
+    return failures
+
+
 ABI_CONTRACTS = {
     ABI_CONTRACT_PROVIDER: {
         "resolution_kind": "contract-bounded (target set unbounded)",
@@ -20622,36 +20728,64 @@ def evaluate_predicate_element_7(reachable_residual_sites, unclassified_sites) -
     """Element 7 under AGENTS.md section 7 criterion 2.
 
     An unresolved *target set* is still reported as such.  The element is met
-    only when every remaining reachable unresolved site is contract-bounded and
-    no reachable site is unclassified; an unrecognised indirect edge is
-    target-bounded unresolved and therefore keeps the element failing.
+    only when every remaining reachable unresolved site carries a bound: an
+    external ABI contract (section 7 criterion 2) or a closed target set (an
+    enumerated in-image target set whose writer set is proven closed).  A
+    target-bounded unresolved site has no such bound and keeps the element
+    failing, as does any unclassified site.
+
+    The two bounded kinds are counted and reported separately, and the flags
+    are derived from the classes actually present.  A closed target set is
+    never reported as an unbounded external contract, and an external ABI
+    contract is never filed as a closed set.
     """
-    contract_sites = [(d, f, s) for d, f, s in reachable_residual_sites
-                      if s.get("class") in ABI_CONTRACT_CLASSES]
+    external = [(d, f, s) for d, f, s in reachable_residual_sites
+                if classify_bound_kind(s.get("class")) == "external-contract"]
+    closed = [(d, f, s) for d, f, s in reachable_residual_sites
+              if classify_bound_kind(s.get("class")) == "closed-target-set"]
     target_bounded = [(d, f, s) for d, f, s in reachable_residual_sites
-                      if s.get("class") not in ABI_CONTRACT_CLASSES]
-    by_class = collections.Counter(s["class"] for _d, _f, s in contract_sites)
+                      if classify_bound_kind(s.get("class")) is None]
+    by_class = collections.Counter(s["class"] for _d, _f, s in external)
+    closed_by_class = collections.Counter(
+        closed_target_set_class(s["class"]) for _d, _f, s in closed)
     established = not target_bounded and not unclassified_sites
+    unbounded = bool(external)
     if not reachable_residual_sites:
+        status = "PASS (no unresolved dynamic dispatch)"
         why = "no unresolved dynamic dispatch remains"
-    elif established:
-        why = ("every reachable unresolved site is contract-bounded by a public "
-               "OpenSSL ABI contract (section 7 criterion 2); no target-bounded "
-               "unresolved site and no unclassified site remains")
+    elif not established:
+        status = "FAIL"
+        why = (f"{len(target_bounded)} reachable unresolved site(s) carry no "
+               "contract or closed-target-set bound, and/or an unclassified "
+               "site is reachable")
     else:
-        why = (f"{len(target_bounded)} reachable unresolved site(s) are not "
-               "contract-bounded, and/or an unclassified site is reachable")
+        if unbounded and closed:
+            status = "PASS (contract-bounded and closed target sets)"
+        elif unbounded:
+            status = "PASS (contract-bounded)"
+        else:
+            status = "PASS (closed target sets)"
+        why = (f"{len(external)} site(s) are bounded by a documented external "
+               f"ABI contract and {len(closed)} by a closed, enumerated "
+               "in-image target set; no target-bounded unresolved site and "
+               "no unclassified site remains")
     return {
         "established": established,
-        "status": ("PASS (contract-bounded)" if established else "FAIL"),
+        "status": status,
         "basis": ("AGENTS.md section 7 criterion 2: a required precondition may be "
-                  "established by an external ABI contract"),
+                  "established by an external ABI contract; a closed target set "
+                  "additionally enumerates every in-image target"),
         "reachable_unresolved_sites": len(reachable_residual_sites),
         "target_bounded_unresolved_sites": len(target_bounded),
-        "contract_bounded_sites": len(contract_sites),
+        "contract_bounded_sites": len(external),
         "contract_bounded_by_class": dict(sorted(by_class.items())),
+        "closed_target_set_sites": len(closed),
+        "closed_target_set_by_class": dict(sorted(closed_by_class.items())),
         "unclassified_reachable_sites": len(unclassified_sites),
-        "target_sets_remain_unbounded": bool(contract_sites),
+        # Flags derived from the actual classes: only an external ABI contract
+        # (never a closed target set) leaves the target set unbounded.
+        "target_sets_remain_unbounded": unbounded,
+        "has_closed_target_sets": bool(closed),
         "why": why,
     }
 
@@ -32626,6 +32760,8 @@ def build_receipt(args) -> dict:
                         "target_bounded_unresolved_sites"],
                     "reachable_contract_bounded_sites": e7[
                         "contract_bounded_sites"],
+                    "reachable_closed_target_set_sites": e7[
+                        "closed_target_set_sites"],
                     "unclassified_reachable_sites": len(
                         closure["unclassified_sites"]),
                 },
@@ -33258,10 +33394,15 @@ def build_receipt(args) -> dict:
                 "reachable_unresolved_sites": len(closure["reachable_residual_sites"]),
                 "reachable_target_bounded_unresolved_sites": sum(
                     1 for _d, _f, s in closure["reachable_residual_sites"]
-                    if s.get("class") not in ABI_CONTRACT_CLASSES),
+                    if classify_bound_kind(s.get("class")) is None),
                 "reachable_contract_bounded_sites": sum(
                     1 for _d, _f, s in closure["reachable_residual_sites"]
-                    if s.get("class") in ABI_CONTRACT_CLASSES),
+                    if classify_bound_kind(s.get("class")) ==
+                    "external-contract"),
+                "reachable_closed_target_set_sites": sum(
+                    1 for _d, _f, s in closure["reachable_residual_sites"]
+                    if classify_bound_kind(s.get("class")) ==
+                    "closed-target-set"),
                 "unclassified_reachable_sites": len(closure["unclassified_sites"]),
                 "resolved_by_reachable_caller": sum(
                     1 for g in graphs.values() for s in g.sites.values()
@@ -33709,8 +33850,9 @@ def build_receipt(args) -> dict:
                 "sites_truncated": admission.get("sites_truncated", False),
             },
             "settled": (
-                ("every reachable unresolved site is contract-bounded (section 7 "
-                 "criterion 2); no target-bounded unresolved site and no "
+                ("every reachable unresolved site carries a contract or "
+                 "closed-target-set bound (section 7 criterion 2); no "
+                 "target-bounded unresolved site and no "
                  "unclassified site is reachable")
                 if evaluate_predicate_element_7(
                     closure["reachable_residual_sites"],
@@ -39118,6 +39260,59 @@ def self_test() -> int:
     check("contract-bounded still records an unbounded target set",
           e7["target_sets_remain_unbounded"], True)
 
+    # ---- closed target sets are not external ABI contracts (b82 36/152) ---- #
+    # A closed target set is bounded by an enumerated in-image set: it is
+    # reported under its own class, is never counted as a contract-bounded
+    # external edge, and may not set the unbounded-target flag.
+    for fam in sorted(registry_closed_target_set_families()):
+        name = closed_target_set_class(fam)
+        site = _site(0x60)
+        site["class"] = fam
+        e7 = evaluate_predicate_element_7([("control.so", 0x60, site)], [])
+        check(f"closed target set {fam} is not an external contract",
+              e7["contract_bounded_sites"], 0)
+        check(f"closed target set {fam} is counted separately",
+              e7["closed_target_set_sites"], 1)
+        check(f"closed target set {fam} reports its closed-set class",
+              e7["closed_target_set_by_class"], {name: 1})
+        check(f"closed target set {fam} does not claim an unbounded target set",
+              e7["target_sets_remain_unbounded"], False)
+        check(f"closed target set {fam} is not target-bounded unresolved",
+              e7["target_bounded_unresolved_sites"], 0)
+
+    # The reverse direction, over *every* class the registry calls an external
+    # contract: none may be filed as a closed target set, and each keeps the
+    # unbounded-target flag.
+    external_classes = sorted(
+        ABI_CONTRACT_CLASSES - registry_closed_target_set_families())
+    check("the registry names at least one external ABI contract",
+          bool(external_classes), True)
+    for cls in external_classes:
+        site = _site(0x61)
+        site["class"] = cls
+        e7 = evaluate_predicate_element_7([("control.so", 0x61, site)], [])
+        check(f"external contract {cls} is not counted as a closed target set",
+              e7["closed_target_set_sites"], 0)
+        check(f"external contract {cls} is contract-bounded",
+              e7["contract_bounded_sites"], 1)
+        check(f"external contract {cls} keeps the unbounded target set",
+              e7["target_sets_remain_unbounded"], True)
+
+    # Provenance control, not a restatement of the table: the declared
+    # closed-set table must agree with the contract registry's own
+    # `resolution_kind`.  The registry is the witness provenance and this
+    # repair does not edit it, so a table entry missing a closed family
+    # (closed counted as external) or naming an external contract (external
+    # counted as closed) is a reported disagreement, not a silent
+    # reclassification.
+    check("declared closed target sets match the registry provenance",
+          closed_target_set_provenance_failures(), [])
+    check("closed-set reporting names are distinct from contract classes",
+          CLOSED_TARGET_SET_CLASSES & ABI_CONTRACT_CLASSES, frozenset())
+    check("every closed-set reporting class is a closed-set name",
+          {n for n in CLOSED_TARGET_SET_CLASSES
+           if not n.startswith("CLOSED_TARGET_SET_")}, set())
+
     # module -> file mapping needs a real tree; use the tool's own repo when present
     repo = Path(__file__).resolve().parents[2]
     if (repo / "src").is_dir():
@@ -40934,10 +41129,12 @@ def main(argv=None) -> int:
         print(f"  reachable_unresolved={e7['reachable_unresolved_sites']} "
               f"target_bounded={e7['target_bounded_unresolved_sites']} "
               f"contract_bounded={e7['contract_bounded_sites']} "
+              f"closed_target_set={e7['closed_target_set_sites']} "
               f"unclassified={e7['unclassified_reachable_sites']}")
         print(f"  by_class={e7['contract_bounded_by_class']}")
+        print(f"  closed_target_set_by_class={e7['closed_target_set_by_class']}")
         for r in p["residual_sites"]:
-            if r["class"] not in ABI_CONTRACT_CLASSES:
+            if classify_bound_kind(r["class"]) is None:
                 print(f"  TARGET-BOUNDED {r['call_site']} "
                       f"{r.get('function_name', '?')} reason={r['reason']}")
         print("  NOTE: element7-only is a FAST probe, not a closure receipt")
@@ -40973,10 +41170,12 @@ def main(argv=None) -> int:
               f"reachable_unresolved={p['reachable_unresolved_sites']} "
               f"target_bounded={p['reachable_target_bounded_unresolved_sites']} "
               f"contract_bounded={p['reachable_contract_bounded_sites']} "
+              f"closed_target_set={p['reachable_closed_target_set_sites']} "
               f"unclassified={p['unclassified_reachable_sites']}")
         e7 = receipt["precision"]["predicate_element_7"]
         print(f"  element-7={e7['status']} "
-              f"contract_bounded_by_class={e7['contract_bounded_by_class']}")
+              f"contract_bounded_by_class={e7['contract_bounded_by_class']} "
+              f"closed_target_set_by_class={e7['closed_target_set_by_class']}")
         cl = receipt["graph"]["closure"]
         print(f"  closure: rounds={cl['closure_rounds']} "
               f"converged={cl['converged']} "
