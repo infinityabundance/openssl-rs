@@ -20956,8 +20956,20 @@ E7BS_WRITER_LIST_SCHEMA = (
 # (symbol leaf, offset) key that survives a re-freeze.  Either selects the
 # site, so a stale literal VA cannot silently stop the witness firing (the
 # 0.0.46 re-pin missed these two constants).
-E7BS_MSBLOB_SITE = 0x556FC0
-E7BS_MSBLOB_SITE_PIN = ("msblob2key_decode", 0x350)
+#
+# b84 re-pin: the b84 libcrypto (53df54937257a6a0) moved both msblob constants.
+# The site is still the descriptor call -- ``call *0x18(%rax)`` on the spilled
+# ``desc`` field of ``msblob2key_decode`` -- but codegen put it at +0x322 rather
+# than +0x350 (0x52a9c2, function start 0x52a6a0), so neither the literal VA nor
+# the offset key selected it and element 7 saw the site as unresolved.  The rcu
+# pair below still matches this artefact (+0x5A8 of ``ossl_synchronize_rcu``,
+# 0x26a418 = 0x269e70 + 0x5A8) and is left untouched.  Only the identity of the
+# site is re-pinned; the witness body still proves the whole chain (declared
+# owner type, unique frame spill, the two-instance closed descriptor set, each
+# member an in-image function start, each descriptor stored only by its own
+# constructor), so no contract class is widened.
+E7BS_MSBLOB_SITE = 0x52A9C2
+E7BS_MSBLOB_SITE_PIN = ("msblob2key_decode", 0x322)
 E7BS_RCU_SITE = 0x2C2228
 E7BS_RCU_SITE_PIN = ("ossl_synchronize_rcu", 0x5A8)
 E7BS_MSBLOB_SOURCE = "src/provider/decode_msblob2key.rs"
@@ -31108,7 +31120,21 @@ def resolve_operation_at_line(repo, file, item, line, source_text=None,
 # and no head can be chosen by hand: every hop is reachable only through the
 # obligation's own recorded `carried_forward_from` links.
 
-MIGRATION_CHAIN_LIMIT = 12
+# A provenance walk is bounded so that a malformed chain cannot cost unbounded
+# work; the bound is a work limit, not a safety condition.  It was 12, and twelve
+# consecutive carried-forward receipts is exactly what an ordinary month of
+# batches produces: at b84 the seven ``copyctx`` rows in src/provider/digest.rs
+# and src/provider/legacyprov.rs could no longer reach the head (0238c6e4adbc,
+# b76c) at which their recorded coordinate was the definition line, because the
+# b83b link pushed that head from hop 12 to hop 13.  Every hop is still proved
+# individually -- the coordinate is a definition line at that hop's own head,
+# the head is an ancestor of the candidate, the qualified context is the same,
+# and the normalised text hashes to the boundary's declared span, which the same
+# adjudication separately requires to equal the candidate's live span hash -- so
+# raising the bound changes the depth of the search, not the proof.  The next
+# batch that re-anchors a coordinate resets the depth; this value gives the
+# chain room to grow again instead of failing one row per batch.
+MIGRATION_CHAIN_LIMIT = 32
 
 
 _EVIDENCE_JSON_CACHE: dict = {}
@@ -40103,28 +40129,31 @@ def self_test() -> int:
         names_at[0x9040] = {"MSTYPE2RSA_DESC"}
         if double_spill:
             decode_insns = [
-                (0x426AB0, "test   %eax,%eax"),
-                (0x426AB2, "je     426ac0 <left>"),
+                (0x426A80, "test   %eax,%eax"),
+                (0x426A82, "je     426a90 <left>"),
+                (0x426A84, "mov    %rdi,%r15"),
+                (0x426A86, "mov    0x8(%r15),%rsi"),
+                (0x426A88, "mov    %rsi,0x8(%rsp)"),
+                (0x426A8A, "jmp    426ac0 <join>"),
+                (0x426A90, "mov    %rdi,%r15"),
+                (0x426A92, "mov    0x8(%r15),%rsi"),
+                (0x426A94, "mov    %rsi,0x8(%rsp)"),
+                (0x426AC0, "mov    0x8(%rsp),%rax"),
+                (0x426AC2, "call   *0x18(%rax)"),
+                (0x426AC4, "ret"),
+            ]
+        else:
+            # The call sits at +0x322 of the fixture function, the offset the
+            # b84 artefact has (0x52a9c2 - 0x52a6a0); the fixture tracks
+            # ``E7BS_MSBLOB_SITE_PIN`` so a stale pin fails the self-test.
+            decode_insns = [
                 (0x426AB4, "mov    %rdi,%r15"),
                 (0x426AB6, "mov    0x8(%r15),%rsi"),
                 (0x426AB8, "mov    %rsi,0x8(%rsp)"),
-                (0x426ABA, "jmp    426ac6 <join>"),
-                (0x426AC0, "mov    %rdi,%r15"),
-                (0x426AC2, "mov    0x8(%r15),%rsi"),
-                (0x426AC4, "mov    %rsi,0x8(%rsp)"),
-                (0x426AC6, "mov    0x8(%rsp),%rax"),
-                (0x426AF0, "call   *0x18(%rax)"),
-                (0x426AF2, "ret"),
-            ]
-        else:
-            decode_insns = [
-                (0x426AC0, "mov    %rdi,%r15"),
-                (0x426AC2, "mov    0x8(%r15),%rsi"),
-                (0x426AC4, "mov    %rsi,0x8(%rsp)"),
-                (0x426AC6, "nop"),
-                (0x426AC8, "mov    0x8(%rsp),%rax"),
-                (0x426AF0, "call   *0x18(%rax)"),
-                (0x426AF2, "ret"),
+                (0x426ABA, "nop"),
+                (0x426ABC, "mov    0x8(%rsp),%rax"),
+                (0x426AC2, "call   *0x18(%rax)"),
+                (0x426AC4, "ret"),
             ]
         insns = {
             0x4267A0: decode_insns,
@@ -40157,7 +40186,7 @@ def self_test() -> int:
                      "var": "ctx", "type": owner_type, "param": "vctx",
                      "param_index": 0,
                      "declared": "vctx: *mut c_void"}}
-        site = {"kind": "call", "func": 0x4267A0, "addr": 0x426AF0,
+        site = {"kind": "call", "func": 0x4267A0, "addr": 0x426AC2,
                 "text": "call   *0x18(%rax)", "targets": set(),
                 "unresolved": True, "reason": "base-slot-partial",
                 "class": "field", "field_offsets": {0x18}, "seam": None,
