@@ -552,9 +552,28 @@
      "safe_pub_with_raw_pointer_param_reaching_unsafe": 0,
      "answer": "not excluded: 5 safe pub fns reach unsafe C-ABI machinery and the free hooks themselves are UNSAFE_OPEN mechanism-wide, so criterion 3 is not established for the mechanism."
     },
-    "argument": "5/5 DISCHARGED at the tool's site level, all recorded as contracted-operation records (not discharges); rest-final reviewed 5/5 ACCEPT and the b78 criterion-1 rejects (module_free_thunk, ui_free_method_data) now carry fn-level # Safety. No file of this mechanism changed between the review tree and S. 5 external safe pub fns reach unsafe (ENGINE_get_first, ENGINE_get_last, CONF_modules_finish, CONF_modules_unload, OPENSSL_load_builtin_modules); none takes a raw pointer.",
-    "residual": "mechanism_state is UNSAFE_OPEN and the review says the repairs 'do not change the mechanism classification'. Evidence residuals F-EVID-1 (stale B56 row for engine_list_cleanup) and F-EVID-2 (v1l F09 repaired in source; the bound receipt still rejects the site) remain recorded.",
-    "verdict": "NOT_ESTABLISHED"
+    "argument": "5/5 DISCHARGED at the tool's site level and 5/5 SAFETY_DISCHARGED on a per-site boundary argument: every site has a written # Safety at S (operation-span hashes recomputed 5/5 MATCH), each slot has a single crate-side writer or a crate-allocated value (ex_data index created with the hook; engine list head a private static written only by engine_list_add; CONF module stack written only by module_add, which allocates the module; UI_METHOD ex-data written only by ui_dup_method_data/OwnedPwData), and no safe pub fn in the mechanism accepts a raw pointer. The mechanism's declared surface is no longer unquantified: 292 unsafe extern \"C\" fn definitions in the six authority trees, 277 with a written contract, and all 15 without are inside #[cfg(test)].",
+    "residual": "mechanism_state stays UNSAFE_OPEN for one measured reason: contract *completeness* is unadjudicated for 272 of the 277 production definitions (presence was measured, quality was not). Evidence residuals F-EVID-1 (stale B56 row for engine_list_cleanup) and F-EVID-2 (v1l F09 repaired in source; the bound receipt still rejects the site) remain recorded. The 5 external safe pub fns that reach unsafe (ENGINE_get_first, ENGINE_get_last, CONF_modules_finish, CONF_modules_unload, OPENSSL_load_builtin_modules) each have a written one-line argument in the boundary review; none is a hole.",
+    "verdict": "NOT_ESTABLISHED",
+    "boundary_contracts": {
+     "review": "evidence/b82-boundary-contracts.json",
+     "review_sha256": "0f39a348608b1085d2fec592c5c7dfc16966b2f9324afc6439d128ea7276f1b9",
+     "site_verdicts": {
+      "SAFETY_DISCHARGED": "5/5",
+      "recomputed_span_hash_match": "5/5"
+     },
+     "surface_measured": {
+      "definitions_unsafe_extern_c_fn": 292,
+      "public": 228,
+      "with_written_contract": 277,
+      "public_with_written_contract": 228,
+      "without_written_contract": 15,
+      "without_are_test_only": true,
+      "scan": "court/freeze-b82/review9/c-abi-surface-scan.json"
+     },
+     "safe_surface_argument": "no safe pub fn of this mechanism takes a raw pointer or a length reaching an unsafe C-ABI operation: ENGINE_get_first/get_last return an opaque list member read under the engine lock; CONF_modules_finish/unload walk crate-private stacks whose only pusher is module_add (which allocates the module itself), so module_free_thunk's exactly-once/handed-over contract is upheld by provenance; OPENSSL_load_builtin_modules registers crate constants",
+     "residual_rule": "presence of a # Safety is measured; completeness (lifetime/reentrancy/ownership/error, not just arity) is adjudicated only for the 5 enrolled obligations and the 12 class exemplars"
+    }
    },
    {
     "id": "RUNTIME_CONCURRENCY",
@@ -663,8 +682,22 @@
      "answer": "for the two empty-body sites a safe caller cannot violate a precondition (there is none), but the mechanism-wide verdict stays NOT_ESTABLISHED because its other operations are out of the closure and unread."
     },
     "argument": "2/2 DISCHARGED at the tool's site level; both rows carry no # Safety and the mechanism state is UNSAFE_OPEN. rest-final reviewed 2/2 ACCEPT: readbuffer_write (bf_readbuff.rs:231) and readbuffer_puts (:237) ignore every argument, dereference nothing, touch no state and return 0, so every argument value yields 0 without UB (same as the 3.6.4 authority body). BIO_f_readbuffer is a safe extern \"C\" fn with no parameters. No file of this mechanism changed between the review tree and S.",
-    "residual": "mechanism_state is UNSAFE_OPEN and only 2 of the mechanism's production operations are in the closure, so the site argument is not a mechanism-wide discharge; the review says the same. 1 external safe pub fn reaches unsafe.",
-    "verdict": "NOT_ESTABLISHED"
+    "residual": "two independent residuals. (1) F-BCR-2: the written contract is missing on both obligations and is suppressed by the crate's only two missing_safety_doc allows, so section 7 criterion 1 is unmet even though the bodies are total; the fix is two documentation lines and no behaviour change. (2) scope: only 2 of the mechanism's 32 families are in the closure (5 measured, 27 inferred), so a 2-site argument is not a mechanism discharge. 1 external safe pub fn reaches unsafe (BIO_f_readbuffer) and its argument is above.",
+    "verdict": "NOT_ESTABLISHED",
+    "boundary_contracts": {
+     "review": "evidence/b82-boundary-contracts.json",
+     "review_sha256": "0f39a348608b1085d2fec592c5c7dfc16966b2f9324afc6439d128ea7276f1b9",
+     "site_verdicts": {
+      "SAFE_BY_CONSTRUCTION": "2/2",
+      "written_contract": "0/2"
+     },
+     "source_defect": {
+      "id": "F-BCR-2",
+      "statement": "src/runtime/bio/bf_readbuff.rs:230 and :236 carry the only two #[allow(clippy::missing_safety_doc)] attributes in src/ (a tree-wide grep returns exactly 2). AGENTS.md section 6 forbids weakening missing_safety_doc and section 7 criterion 1 requires an explicit contract; an allow on an unsafe fn is the opposite of both",
+      "fix": "source: replace each attribute with a # Safety section ('no precondition: the body ignores every argument and answers 0; the unsafe qualifier is required by the BIO_write/BIO_puts ABI type'). Behaviour-neutral, applied by a conversion batch, not by this reviewer"
+     },
+     "argument": "both callbacks are total: readbuffer_write and readbuffer_puts are '{ 0 }' with underscore-prefixed parameters, so every argument tuple yields 0 without a dereference, allocation or state change (the authority's 3.6.4 body is the same). The unsafe qualifier is forced by the BIO_write/BIO_puts method-table types, not by a precondition. A safe caller therefore cannot violate anything, and BIO_f_readbuffer (the one safe pub fn here, no parameters) installs exactly this table"
+    }
    }
   ]
  },
@@ -843,7 +876,7 @@
    "NOT_ESTABLISHED": 5,
    "mechanisms": 7
   },
-  "statement": "At b82 the criterion-3 argument establishes two mechanisms under an explicitly scoped claim: SSL_SESSION (the rest-final scoped discharge, unchanged by this candidate) and RUNTIME_CONCURRENCY, which is now backed by a clean ThreadSanitizer run (54 tests, two schedules, 0 races, 0 use-after-free, both canaries fired) and is discharged only for the executed schedules -- the caller's exclusive-ownership precondition remains R1. The SAN builders are re-established at S and measured against the authority, which closes the b80 X509 drift gap, but X509_VERIFY_POLICY remains NOT_ESTABLISHED because the review declines mechanism-wide discharge and 69 external safe pub fns in its files reach unsafe without a per-function audit. RAND_CMS_STORE_KEYFMT, EVP_PKEY_PROVIDER, C_ABI_CONTRACT and BIO remain NOT_ESTABLISHED for the named residuals below. Nothing here graduates a consumer family: safe_compatible stays false."
+  "statement": "At b82 the criterion-3 argument establishes two mechanisms under an explicitly scoped claim: SSL_SESSION (the rest-final scoped discharge, unchanged by this candidate) and RUNTIME_CONCURRENCY, which is now backed by a clean ThreadSanitizer run (54 tests, two schedules, 0 races, 0 use-after-free, both canaries fired) and is discharged only for the executed schedules -- the caller's exclusive-ownership precondition remains R1. The SAN builders are re-established at S and measured against the authority, which closes the b80 X509 drift gap, but X509_VERIFY_POLICY remains NOT_ESTABLISHED because the review declines mechanism-wide discharge and 69 external safe pub fns in its files reach unsafe without a per-function audit. RAND_CMS_STORE_KEYFMT, EVP_PKEY_PROVIDER, C_ABI_CONTRACT and BIO remain NOT_ESTABLISHED for the named residuals below. Nothing here graduates a consumer family: safe_compatible stays false. The b82 boundary review (evidence/b82-boundary-contracts.json) leaves these seven verdicts unchanged and replaces two bookkeeping reasons with measured ones: the C_ABI mechanism's surface is 277/277 production definitions contracted (15 exceptions all test-only) with 5/5 enrolled obligations SAFETY_DISCHARGED per site, and the BIO obligations are safe by construction but carry the crate's only two missing_safety_doc allows, which is a source defect (F-BCR-2) rather than a safety gap. The same review finds that 36 of the 152 element-7 edges rest on closed target sets rather than the external ABI contracts the receipt names (F-BCR-1); the element-7 PASS is therefore overstated in its basis while the site set is sound."
  },
  "residuals": [
   {
@@ -885,6 +918,18 @@
   {
    "kind": "gate/self-test",
    "statement": "the closure tool's --self-test is FAILED at b82 (two image-property controls: e7repin-search expects a stale row that this image does not have, and the e7core default-context control reports NOT_RUN); it is recorded as FAILED, not as a pass."
+  },
+  {
+   "kind": "element7/basis",
+   "statement": "F-BCR-1: 36 of the 152 contract-bounded sites (DECODER_METHOD_OBJECT 3, LEGACY_EVP_CIPHER_DATA 2, PROVIDER_HW_TABLE 25, SLH_METHOD_TABLE 6) are closed target-set arguments filed as external ABI contracts; precision.predicate_element_7.target_sets_remain_unbounded: true is inconsistent with its own by_class map. No UB follows (typed internal slots); the element-7 PASS rationale is overstated and must be re-derived by the instrument. The DECODER_METHOD_OBJECT bound ('3 closed algorithm tables') is additionally conditional on the consumer's provider set being closed, which is a scope condition that must travel with the PASS."
+  },
+  {
+   "kind": "criterion3/bio-contract-form",
+   "statement": "F-BCR-2: the two BIO obligations are recorded 'uncontracted' in both closures and discharged by boundary receipts anyway; in source they carry the crate's only two #[allow(clippy::missing_safety_doc)] attributes (src/runtime/bio/bf_readbuff.rs:230, :236). Section 6 forbids weakening missing_safety_doc and section 7 criterion 1 requires an explicit contract. The bodies are total, so the fix is two documentation lines, but until it lands criterion 1 is unmet for both sites."
+  },
+  {
+   "kind": "criterion3/residual-scope",
+   "statement": "F-BCR-3: R-1 (untyped dispatch slot: *mut c_void with the OSSL_FUNC id as the only witness) covers 48 sites, not 42: CORE_DISPATCH 26 + PROVIDER 16 + STORE_LOADER 3 + DECODER_METHOD_OBJECT 3 all reach the slot through a transmute/entry_function. R-1 is retained, not absorbed, and blocks SAFE_COMPATIBLE wherever a third-party provider, loader or decoder can be supplied."
   }
  ],
  "non_claims": [
@@ -892,6 +937,68 @@
   "a green closure run, a site receipt or a validated contract is not a criterion-3 discharge.",
   "the TSan result is not a proof of race-freedom and does not establish the caller's exclusive-ownership precondition.",
   "the SAN authority differential covers three shapes on three entry points; it is not a full behavioural equivalence claim.",
-  "no cryptographic, timing or constant-time property is claimed."
- ]
+  "no cryptographic, timing or constant-time property is claimed.",
+  "element 7's PASS does not establish contract completeness: presence of a # Safety was measured for 277 production definitions, completeness was adjudicated for 5 obligations and 12 class exemplars only.",
+  "a per-site SAFETY_DISCHARGED is not a mechanism discharge: 5 of 5 C_ABI sites and 2 of 2 BIO sites being argued does not graduate either mechanism."
+ ],
+ "boundary_contract_review": {
+  "review": "evidence/b82-boundary-contracts.json",
+  "review_sha256": "0f39a348608b1085d2fec592c5c7dfc16966b2f9324afc6439d128ea7276f1b9",
+  "candidate": "b82 (S = fed1f077b5be4edabff51191ad2c0f15985492fd; src byte-identical to review HEAD 0cbd29471)",
+  "task1": {
+   "edges": 152,
+   "classes": 12,
+   "class_verdicts": {
+    "CONTRACT_COMPLETE": 9,
+    "CONTRACT_GAP": 3,
+    "UNPROVABLE": 0
+   },
+   "site_verdicts": {
+    "CONTRACT_COMPLETE": 116,
+    "CONTRACT_GAP": 36,
+    "UNPROVABLE": 0
+   },
+   "complete_classes": [
+    "ABI_CONTRACT_CONF_MODULE 2",
+    "ABI_CONTRACT_CORE_DISPATCH 26",
+    "ABI_CONTRACT_EXPORT_CALLBACK 66",
+    "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT 1",
+    "ABI_CONTRACT_PBE_REGISTRY 1",
+    "ABI_CONTRACT_PROVIDER 16",
+    "ABI_CONTRACT_REGISTRATION_ATEXIT 1",
+    "ABI_CONTRACT_STORE_LOADER 3"
+   ],
+   "gap_classes": [
+    "ABI_CONTRACT_DECODER_METHOD_OBJECT 3",
+    "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA 2",
+    "ABI_CONTRACT_PROVIDER_HW_TABLE 25",
+    "ABI_CONTRACT_SLH_METHOD_TABLE 6"
+   ],
+   "gap_kind": "class attribution only: these 36 sites are closed target-set arguments (closed algorithm table / closed writer set / closed context-set / closed selector, per their own witness strings) filed under a section 7 criterion 2 external ABI contract. The sites are typed internal fields with no extern hop in 30 of 36 cases, so no UB follows; what fails is the receipt's stated basis",
+   "element7_effect": "the PASS survives for 116 sites as criterion 2 and for 36 sites only on a target-bounding argument the same receipt disclaims (target_sets_remain_unbounded: true). predicate_element_7 must be re-derived with the class split; the site set does not change"
+  },
+  "task2": {
+   "C_ABI_CONTRACT": "5/5 site SAFETY_DISCHARGED; surface measured 277/277 production definitions contracted (15 exceptions all test-only); safe surface argued per fn; mechanism stays NOT_ESTABLISHED for contract completeness over 272 definitions",
+   "BIO": "2/2 sites safe by construction (total bodies); 0/2 written contracts, suppressed by the crate's only two missing_safety_doc allows (F-BCR-2, source fix); 27 of 32 families unmeasured; mechanism stays NOT_ESTABLISHED"
+  },
+  "verdict_changes": "none: no mechanism is promoted and none regresses"
+ },
+ "revision": {
+  "revision_of_sha256": "3e33ea71ec65a4d1000bda20108e033cf7bd25b52d888889e88a4a366c693c2c",
+  "generated_utc": "2026-11-16T02:40:00Z",
+  "author_role": "boundary reviewer (added boundary_contract_review, per-mechanism boundary_contracts, three residuals and two non-claims; no other section altered)",
+  "sections_untouched": [
+   "criterion",
+   "identity",
+   "method",
+   "safe_interface_surface",
+   "cross_cutting_obligations",
+   "mechanism_partition.mechanisms[0..3]",
+   "mechanism_partition.mechanisms[6]",
+   "verdict.decision_rule",
+   "verdict.ownership_states",
+   "verdict.totals",
+   "verdict.per_mechanism"
+  ]
+ }
 }

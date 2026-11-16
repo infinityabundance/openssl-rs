@@ -1,0 +1,553 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/boundary-contracts/v1",
+ "kind": "element-7 contract-bounded edge adjudication + criterion-3 C_ABI/BIO mechanism argument",
+ "candidate_tag": "b82",
+ "generated_utc": "2026-11-15T22:10:00Z",
+ "author_role": "boundary reviewer (not the converter, not the instrument author, not the closure author)",
+ "identity": {
+  "source_head": "fed1f077b5be4edabff51191ad2c0f15985492fd",
+  "source_head_role": "S, tag b82. src/ is byte-identical between S and the review HEAD 0cbd29471 (git diff --stat fed1f077b..HEAD -- src/ Cargo.toml Cargo.lock build.rs: empty), so every source citation below is S-bound",
+  "review_head": "0cbd29471dcc2b8172b2a7a1b8642f3c180a9e9d",
+  "src_content_sha256": "7e94c1c22805d1f5513b4a82b8f9c87e82b6c8d37aa171450407d02ae426d81a",
+  "instrument_sha256": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66",
+  "libcrypto_so_3_sha256": "1340dc7d2940a41e6046c42e3f9e3f425e02a9fdb9dcd682b2c68f6b7028c4d0",
+  "closures": {
+   "ssh": {
+    "path": "evidence/closure-ssh-b82b.json",
+    "sha256": "f21d0def8e6feafa291a227d356a2aef6023b2c7b3dbf1b1e418d015149c1ab9"
+   },
+   "sshd": {
+    "path": "evidence/closure-sshd-b82b.json",
+    "sha256": "a74b259677e0c9061ecce399dcbe64f8b8cd82468eceb2e3fa6491819db6f5e4"
+   }
+  },
+  "closure_site_set": "both b82b closures yield the identical 152 reachable contract-bounded sites (51922 indirect sites, 51717 resolved, 205 unresolved, 152 reachable, 0 target-bounded, 0 unclassified), so one adjudication covers both families",
+  "supersedes": {
+   "path": "evidence/b82-safety-argument.json",
+   "prior_sha256": "3e33ea71ec65a4d1000bda20108e033cf7bd25b52d888889e88a4a366c693c2c",
+   "note": "this review rewrites that file in place (Task 3). It is evidence-side (E), not a build-relevant input, so S and its artefacts are unchanged by section 22's invalidation rule; court/freeze-b82/FREEZE-b82.json records the prior argument hash and is therefore a receipt-of-record for the superseded version, not a live digest"
+  },
+  "venue": {
+   "court": "openssl-rs-court (16 GiB / 16 CPU)",
+   "memory_at_start": "free -g: total 45, used 11, available 34; cap min(8g, 34-16) = 8g",
+   "commands": "read-only source analysis and git blob reads only; no compile, no link, no test binary, no benchmark ran, so AGENTS.md 6.1's build cap never binds and no host build occurred",
+   "not_run": "no rebuild at S in this review; the binary witnesses are the closure's S-bound site rows for libcrypto.so.3 1340dc7d"
+  }
+ },
+ "method": {
+  "question": "element 7 resolves every reachable unresolved indirect edge to an external ABI contract. A reachability count is not a BOUNDARY decision: for each class this review asks who fills the slot, from which code, whether the contract is complete for the consumer path that exercises it, whether safe Rust can install or reach it, and whether the contract is enforced at the boundary or only documented",
+  "witness_rule": "per AGENTS.md section 22, a class name is not a witness. Every class below names the documented interface, the source writer(s) with file:line at S, and at least one binary site (function address and call-site offset) from the frozen closure; court/freeze-b82/review9/class-witnesses.json carries all 152 site rows",
+  "sources_used": [
+   "evidence/closure-{ssh,sshd}-b82b.json precision.residual_sites (152 rows), predicate_element_7, precision.totals",
+   "evidence/closure-ssh-b82b.json graph.closure.reachable_functions (address -> symbol map used for every binary witness)",
+   "git show fed1f077b:<path> for every source citation, and recomputed operation-span hashes (court/freeze-b82/review9/span-rebind-7.json: 7/7 MATCH)",
+   "a mechanical scan of the six C_ABI authority trees (court/freeze-b82/review9/c-abi-surface-scan.json)",
+   "grep-level signature enumeration of all 34 distinct hosting functions of the EXPORT_CALLBACK class"
+  ],
+  "limits": [
+   "no Miri, ASan, LSan, TSan or timing instrument ran in this review",
+   "contract completeness is adjudicated here for the 5 C_ABI obligations and the 12 class exemplars; the 272 other production unsafe extern \"C\" fn definitions in the C_ABI trees were measured for the presence of a contract, not adjudicated one by one",
+   "the binary witnesses are the closure's S-bound rows; this review did not disassemble libcrypto.so.3 itself"
+  ]
+ },
+ "decision_rule": {
+  "CONTRACT_COMPLETE": "the documented interface fills the slot; the crate can neither write the slot from safe Rust nor choose its contents from safe Rust; every precondition the crate must rely on is stated by that interface (arity/type, lifetime, reentrancy, ownership transfer, error semantics) for the consumer path that exercises it",
+  "CONTRACT_GAP": "the edge is real and bounded, but the receipt's basis for it is not the class it is filed under, or a required contract form is missing. The gap and its exact fix (source, receipt or instrument) are named",
+  "UNPROVABLE": "no instrument or interface establishes the edge at this candidate; what would be needed is named",
+  "not_accepted": "a class is never accepted on count alone, and a class that rests on an internal closed table is not accepted as a section 7 criterion 2 external ABI contract"
+ },
+ "task1_contract_bounded_edges": {
+  "total_sites": 152,
+  "verdict_totals": {
+   "CONTRACT_COMPLETE": 9,
+   "CONTRACT_GAP": 3,
+   "UNPROVABLE": 0,
+   "classes": 12
+  },
+  "site_totals": {
+   "CONTRACT_COMPLETE": 116,
+   "CONTRACT_GAP": 36,
+   "UNPROVABLE": 0
+  },
+  "classes": [
+   {
+    "class": "ABI_CONTRACT_CONF_MODULE",
+    "sites": 2,
+    "distinct_functions": 1,
+    "interface": "CONF_module_add(name, ifunc, ffunc) - include/openssl/conf.h; authority crypto/conf/conf_mod.c. Types: ConfInitFn = unsafe extern \"C\" fn(*mut ConfModule) -> c_int, ConfFinishFn = unsafe extern \"C\" fn(*mut ConfModule). The two slots are ConfModule.init (0x10) and ConfModule.finish (0x18)",
+    "slot_writers": "src/runtime/confmod/mod.rs:861 module_add copies the two typed Option<fn> values into the ConfModule it allocates itself; the only external installation entry is pub unsafe extern \"C\" fn CONF_module_add (:1407); the crate's own built-in registrations come from OPENSSL_load_builtin_modules (:1526) with crate-defined constants",
+    "binary_witness": [
+     "libcrypto.so.3:0x1f02c0 CONF_modules_load, call *%rax at 0x1f07c5 (ConfModule.init@0x10)",
+     "libcrypto.so.3:0x1f02c0 CONF_modules_load, call *%rax at 0x1f0c03 (ConfModule.finish@0x18)"
+    ],
+    "contract_completeness": {
+     "arity_type": "enforced by the C header declaration and re-asserted by the typed Option field",
+     "lifetime": "documented: the module lives in the module registry; the callback receives a borrowed CONF_MODULE",
+     "reentrancy": "documented by the authority's own module_init/module_finish ordering (links decremented after finish)",
+     "ownership": "none transferred; the callback must not free the CONF_MODULE it receives",
+     "error": "documented: init answers 0 and module_add fails with the module's error code"
+    },
+    "safe_rust": "cannot install (CONF_module_add is unsafe pub) and cannot reach with a caller-controlled slot value; CONF_modules_load itself is pub unsafe extern \"C\" fn (:622), so no safe entry point even triggers the dispatch with caller data",
+    "enforcement": "documented plus type-enforced field; not verified at runtime (the authority does not verify it either)",
+    "verdict": "CONTRACT_COMPLETE",
+    "residual": "none at this class; a C caller that registers a module whose init has a different signature is C-invalid"
+   },
+   {
+    "class": "ABI_CONTRACT_CORE_DISPATCH",
+    "sites": 26,
+    "distinct_functions": 24,
+    "interface": "core_dispatch.h OSSL_FUNC_PROVIDER_UP_REF (0x48), _FREE (0x50), _NAME (0x30), _GET0_PROVIDER_CTX (0x38), _GET0_DISPATCH (0x40), _REGISTER_CHILD_CB (0x20), _DEREGISTER_CHILD_CB (0x28); and OSSL_FUNC_BIO_READ_EX (0x0), _WRITE_EX (0x8), _GETS (0x10), _PUTS (0x18), _CTRL (0x20), _FREE (0x30) on the core BIO upcalls",
+    "slot_writers": "src/provider/child.rs:500-547 ossl_provider_init_as_child walks the parent-supplied OSSL_DISPATCH and writes each typed Option<fn> field of the crate-private ChildProvGlobals (child.rs:168-191) with core::mem::transmute::<*mut c_void, Fn>(f); src/context/core_bio.rs reads BioCoreGlobals from OSSL_LIB_CTX_BIO_CORE_INDEX (get_globals :136, globals_of :148) and forwards BIO_get_data(bio) plus the caller's own pointers unchanged",
+    "binary_witness": [
+     "libcrypto.so.3:0x181360 evp_asym_cipher_from_algorithm, call *%rax at 0x181414 (ChildProvGlobals.c_prov_up_ref@0x48)",
+     "libcrypto.so.3:0x1990e0 store_meth::construct_loader, call *%rax at 0x199210 (c_prov_up_ref@0x48)",
+     "libcrypto.so.3:0x22af10 ossl_child_provider_init, call *%rax at 0x22af77 (c_prov_get0_provider_ctx@0x38); the bio_core_* family forwards the caller's pointers unchanged"
+    ],
+    "contract_completeness": {
+     "arity_type": "fixed by the OSSL_FUNC_* id-to-signature mapping in core_dispatch.h and asserted by the transmute; not checkable at runtime (R-1)",
+     "lifetime": "documented: the parent provider holds the object alive; the child takes a reference with up_ref and releases it with free (the crate performs both through these slots)",
+     "reentrancy": "documented by the provider up_ref/free refcount protocol",
+     "ownership": "documented: up_ref transfers a reference into the child, free releases exactly one",
+     "error": "the crate implements the authority's required-slot check (child.rs:552-559) and answers failure when a required slot is absent"
+    },
+    "safe_rust": "cannot write the globals (crate-private, filled only by the child-init path) and cannot supply a provider dispatch table from safe Rust (provider loading and ossl_provider_init_as_child are unsafe)",
+    "enforcement": "documented external ABI (core_dispatch.h) plus a type-asserted field; the assertion itself is unchecked (R-1)",
+    "verdict": "CONTRACT_COMPLETE",
+    "residual": "R-1 (retained, not absorbed): the dispatch entry is *mut c_void and the id is the only witness, so a C-valid provider that maps an id to a differently-typed function produces a wrong-signature call. The authority has the same defect; section 17 forbids reproducing a UB mechanism, so this stays a named residual and blocks SAFE_COMPATIBLE for EVP/provider-dependent consumers until a typed id->fn wrapper exists"
+   },
+   {
+    "class": "ABI_CONTRACT_DECODER_METHOD_OBJECT",
+    "sites": 3,
+    "distinct_functions": 1,
+    "interface": "claimed: 'OsslDecoder.newctx@0x30 / set_ctx_params@0x50 / freectx@0x38 over 3 closed algorithm table(s)'. Actual interface: OSSL_FUNC_DECODER_NEWCTX/FREECTX/SET_CTX_PARAMS (core_dispatch.h) delivered through an OSSL_ALGORITHM.implementation dispatch table",
+    "slot_writers": "src/decoder_meth.rs:352-360 ossl_decoder_from_algorithm writes (*decoder).newctx / .freectx / .set_ctx_params via entry_function::<DecoderNewCtxFn>(p) while walking (*algodef).implementation.cast::<OsslDispatch>(); the slots are typed Option<fn> fields on OsslDecoder (:192-206). The bound the receipt invokes is that only 3 algorithm tables can supply that dispatch (the crate's built-in decoder tables)",
+    "binary_witness": [
+     "libcrypto.so.3:0x566ca0 file_load, call *%rax at 0x56729a (OsslDecoder.newctx@0x30), 0x5672f8 (.set_ctx_params@0x50), 0x567676 (.freectx@0x38)"
+    ],
+    "contract_completeness": {
+     "arity_type": "fixed by core_dispatch.h and asserted by entry_function; unchecked at the extern hop",
+     "lifetime": "documented: the decoder is released by OSSL_DECODER_free, which calls the same slots",
+     "reentrancy": "documented by the decoder method-object contract",
+     "ownership": "documented: newctx owns the ctx, freectx releases exactly that ctx",
+     "error": "documented: NULL ctx means failure"
+    },
+    "safe_rust": "cannot write the slots and cannot supply a decoder dispatch from safe Rust",
+    "enforcement": "documented external ABI plus a type-asserted field",
+    "verdict": "CONTRACT_GAP",
+    "gap": "class attribution, not safety. The receipt files this edge as a section 7 criterion 2 external ABI contract, but its witness is a closed target-set argument ('over 3 closed algorithm table(s)'), i.e. the target is bounded because the set of supplying tables is closed - which is exactly what precision.predicate_element_7.target_sets_remain_unbounded: true says was not established. Two incompatible bases are in one receipt",
+    "fix": "instrument/receipt: classify closed internal table closures as TARGET_BOUNDED_CLOSED_TABLE with the closed-writer witness, and record the provider-set closure as an explicit scope condition (the bound fails if a third-party decoder provider is loadable). No source change",
+    "residual": "the '3 closed algorithm tables' bound is conditional on the provider set of the consumer; ssh/sshd load only the crate's own provider, which is a measured property of those consumers, not of the class name"
+   },
+   {
+    "class": "ABI_CONTRACT_EXPORT_CALLBACK",
+    "sites": 66,
+    "distinct_functions": 34,
+    "interface": "each hosting function's own header: modes.h block128_f / cbc128_f / ctr128_f / ocb128 stream / ccm128 stream, conf.h CONF_parse_list list_cb, safestack.h copy/free, lhash.h doall/doall_arg, pem.h i2d/d2i/cb, pkcs12.h cb, http.h bio_update_fn, cmp.h OSSL_CMP_log_cb_t, obj.h doall fn, decoder.h/encoder.h fn",
+    "slot_writers": "the C caller, through the parameter of the exported entry; the crate never writes these slots. Signature evidence: all 34 distinct hosting functions are pub unsafe extern \"C\" fn - OSSL_ENCODER_do_all_provided (src/encoder_meth.rs:990), i2b_PVK_bio_ex (src/pem/pvkfmt.rs:2037), CONF_parse_list (src/runtime/conf/modparse.rs:171), d2i_PKCS8PrivateKey_bio (src/pem/pem_pk8.rs:426), OPENSSL_sk_deep_copy (src/runtime/stack.rs:994), OPENSSL_sk_pop_free (:483), OSSL_HTTP_open (src/http/http_client.rs:2260), PEM_ASN1_read_bio (src/pem/pem_oth.rs:86), PKCS12_create_ex2 (src/pkcs12/p12_crt.rs:558), ASN1_i2d_bio (src/asn1/a_i2d_fp.rs:118), PEM_do_header (src/pem/pem_lib.rs:811), CRYPTO_128_wrap_pad (src/modes/wrap.rs:194), CRYPTO_128_unwrap_pad (:257), CRYPTO_cbc128_encrypt (src/modes/mod.rs:188), CRYPTO_cbc128_decrypt (:256), CRYPTO_cfb128_encrypt (:388), CRYPTO_cfb128_1_encrypt (:537), CRYPTO_ctr128_encrypt (:598), CRYPTO_ctr128_encrypt_ctr32 (:649), CRYPTO_ofb128_encrypt (:335), CRYPTO_ccm128_encrypt_ccm64 (src/modes/ccm.rs:442), CRYPTO_ccm128_decrypt_ccm64 (:501), CRYPTO_ocb128_init (src/modes/ocb.rs:223), OSSL_CMP_print_errors_cb (src/cmp/cmp_util.rs:279), OSSL_DECODER_do_all_provided (src/decoder_meth.rs:1347), OBJ_NAME_do_all (src/runtime/obj.rs:2340), OBJ_NAME_do_all_sorted (:2388), OBJ_bsearch_ex_ (:1739), OPENSSL_LH_doall (src/runtime/lhash.rs:724), OPENSSL_LH_doall_arg (:753)",
+    "binary_witness": [
+     "libcrypto.so.3:0x170e40 OSSL_ENCODER_do_all_provided, call *%r14 at 0x170f73 and 0x1710b3 (parameter 1, fn)",
+     "libcrypto.so.3:0x3d73a0 CRYPTO_cbc128_encrypt, call *%rax at 0x3d74d1 and 0x3d763d (parameter 5, block)",
+     "libcrypto.so.3:0x3ca0d0 CRYPTO_128_wrap, 6 call sites 0x3ca189..0x3ca45a (parameter 5, block); 0x3a0440 CRYPTO_128_wrap_pad at 0x3a04e6",
+     "libcrypto.so.3:0x1af6d0 CONF_parse_list, 3 call sites 0x1af7cc/0x1af7e9/0x1af899 (parameter 3, list_cb - the crate passes its own int_def_cb from ENGINE_set_default_string)"
+    ],
+    "contract_completeness": {
+     "arity_type": "enforced by the C declaration in the header and by the Rust fn-pointer parameter type",
+     "lifetime": "documented per function (the callback must remain valid for the call; sk_deep_copy copies into caller-owned storage)",
+     "reentrancy": "documented for the ones that re-enter (sk_pop_free, lhash doall, do_all_provided)",
+     "ownership": "documented: none for the cipher block callbacks, copy/free pairs for sk_deep_copy, no transfer for sk_pop_free",
+     "error": "documented: a callback answering <= 0 stops the walk (CONF_parse_list); the cipher block callbacks answer void"
+    },
+    "safe_rust": "cannot install: every one of the 34 hosting functions is unsafe pub, so passing a function pointer (or a safe extern \"C\" fn, which coerces to the unsafe fn type) requires an unsafe block at the caller. Installation is therefore a C-caller obligation by construction",
+    "enforcement": "documented plus the Rust fn-pointer parameter type; not verified at runtime",
+    "verdict": "CONTRACT_COMPLETE",
+    "residual": "the crate's own internal uses of these entries (e.g. int_def_cb passed to CONF_parse_list) are crate code and are covered by the C_ABI mechanism's per-site contracts, not by this class"
+   },
+   {
+    "class": "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT",
+    "sites": 1,
+    "distinct_functions": 1,
+    "interface": "pem.h pem_password_cb: do_pk8pkey's cb parameter, with NULL selecting PEM_def_callback",
+    "slot_writers": "src/pem/pem_pk8.rs:87 unsafe fn do_pk8pkey takes the cb from its caller and forwards it to PEM_ASN1_write_bio; do_pk8pkey is private and its public wrappers (src/pem/pem_pk8.rs:482 region and siblings) are unsafe extern \"C\"",
+    "binary_witness": [
+     "libcrypto.so.3:0x1dbc20 do_pk8pkey (outlined), call *%rax at 0x1dbebc"
+    ],
+    "contract_completeness": {
+     "arity_type": "pem_password_cb(char *, int, int, void *) - enforced by the Rust fn-pointer type",
+     "lifetime": "documented: valid for the call",
+     "reentrancy": "documented by PEM_read_bio's own retry loop",
+     "ownership": "documented: the callback writes into the buffer it is handed and answers its length; the crate owns the buffer",
+     "error": "documented: a negative answer aborts the read/write"
+    },
+    "safe_rust": "cannot install: the only entries are private unsafe fn / unsafe pub wrappers",
+    "enforcement": "documented plus type-enforced parameter",
+    "verdict": "CONTRACT_COMPLETE",
+    "residual": "the NULL->PEM_def_callback default changes the callee but not the contract; it is crate code covered by C_ABI"
+   },
+   {
+    "class": "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA",
+    "sites": 2,
+    "distinct_functions": 2,
+    "interface": "claimed: 'EvpAesKey.block@0x0 stored by aes_init_key over 3 image store(s)' and the SM4 twin. Actual interface: an internal EVP_CIPHER data record, not an external ABI",
+    "slot_writers": "src/evp/e_aes.rs aes_init_key writes (*dat).block from crate statics; the field is block: Block128F (src/evp/e_aes.rs:259-264) where pub type Block128F = unsafe extern \"C\" fn(*const u8, *mut u8, *const c_void) (src/modes/mod.rs:65). Reader: aes_ecb_cipher (:448, call at :466). The SM4 twin is the same shape",
+    "binary_witness": [
+     "libcrypto.so.3:0x28ec10 aes_ecb_cipher, call *%rax at 0x28ec71 (EvpAesKey.block@0x0); 0x3c4ac0 sm4_ecb_cipher at 0x3c4b52 (EvpSm4Key.block@0x0)"
+    ],
+    "contract_completeness": {
+     "arity_type": "enforced: the slot is a Rust fn-pointer type, so no unchecked cast exists on either the write or the read",
+     "lifetime": "the stored pointer is a 'static crate function",
+     "reentrancy": "n/a (stateless block cipher)",
+     "ownership": "none",
+     "error": "none"
+    },
+    "safe_rust": "cannot write the slot: aes_init_key is unsafe and the block value is a crate constant",
+    "enforcement": "type-enforced at both ends",
+    "verdict": "CONTRACT_GAP",
+    "gap": "class attribution: this is a closed writer set over a typed internal field, i.e. a proved finite target set, not a section 7 criterion 2 external ABI contract. The edge is safer than the class implies (fully typed, no extern hop) while the receipt's basis is the weaker and inapplicable one",
+    "fix": "receipt/instrument: reclassify as TARGET_BOUNDED_CLOSED_TABLE (closed writer set, typed slot). No source change",
+    "residual": "none for safety; the misclassification is the whole finding"
+   },
+   {
+    "class": "ABI_CONTRACT_PBE_REGISTRY",
+    "sites": 1,
+    "distinct_functions": 1,
+    "interface": "evp.h EVP_PBE_KEYGEN via EVP_PBE_find_ex's pkeygen out-parameter; the registry record is EvpPbeCtl.keygen (0x10)",
+    "slot_writers": "src/evp/evp_pbe.rs:790-859: pub unsafe extern \"C\" fn EVP_PBE_alg_add_type / EVP_PBE_alg_add store the caller's Option<EVP_PBE_KEYGEN>-typed keygen into the registry, with a # Safety requiring it to outlive the registry; crate built-ins add their own",
+    "binary_witness": [
+     "libcrypto.so.3:0x3e3960 EVP_PBE_CipherInit_ex, call *%rax at 0x3e3afd"
+    ],
+    "contract_completeness": {
+     "arity_type": "enforced by the typed parameter of EVP_PBE_alg_add and the typed registry field",
+     "lifetime": "documented explicitly: 'must outlive the registry'",
+     "reentrancy": "documented by the authority's keygen contract",
+     "ownership": "none transferred; the registry holds the pointer",
+     "error": "documented: keygen answers 0 on failure and sets the error stack"
+    },
+    "safe_rust": "cannot install (EVP_PBE_alg_add/_add_type are unsafe pub) and cannot reach the slot with caller data",
+    "enforcement": "documented plus type-enforced",
+    "verdict": "CONTRACT_COMPLETE",
+    "residual": "the registry outlives the call, so this is the one class where the lifetime obligation is on the C caller across process lifetime; it is stated in the # Safety"
+   },
+   {
+    "class": "ABI_CONTRACT_PROVIDER",
+    "sites": 16,
+    "distinct_functions": 14,
+    "interface": "core_dispatch.h provider fetch slots: OSSL_FUNC_MAC_SETTABLE_CTX_PARAMS (EvpMac 0x68), OSSL_FUNC_KDF_GETTABLE_CTX_PARAMS (0x58) / _SETTABLE_CTX_PARAMS (0x60), OSSL_FUNC_KEM_NEWCTX (0x28), _AUTH_ENCAPSULATE_INIT (0x80) / _AUTH_DECAPSULATE_INIT (0x88), _ENCAPSULATE_INIT (0x30) / _DECAPSULATE_INIT (0x40), OsslProvider.init_function (0x40), OsslStoreLoader.p_close (0xb8)",
+    "slot_writers": "the provider-dispatch fill paths: src/provider/init.rs provider_init reads OsslProvider.init_function; the kdf/mac/kem slots are filled from the fetched dispatch in the corresponding evp/provider fill loops (the same entry_function/transmute shape as CORE_DISPATCH)",
+    "binary_witness": [
+     "libcrypto.so.3:0x22a770 provider_init, call *%rax at 0x22a7e4 (OsslProvider.init_function@0x40)",
+     "libcrypto.so.3:0x31bc60 kdf_hkdf_gettable_ctx_params, call at 0x31bcda (EvpKdf.gettable_ctx_params@0x58); 0x31bda0 settable, call at 0x31be1a (@0x60)",
+     "libcrypto.so.3 evp_kem_init, 3 merged-slot call sites (encapsulate/decapsulate init and auth variants)"
+    ],
+    "contract_completeness": {
+     "arity_type": "fixed by core_dispatch.h and asserted at the fill point; unchecked (R-1)",
+     "lifetime": "documented: provider lifetime; a fetched method holds its provider reference",
+     "reentrancy": "documented for init_function (the provider's own init runs once per activation)",
+     "ownership": "documented: init_function hands the provider its handle and dispatch; the method slots own their ctx",
+     "error": "documented: NULL slot means 'not provided', which the crate checks per slot"
+    },
+    "safe_rust": "cannot install; a safe caller can trigger a fetch (which activates a provider) but the callee is external provider code governed by its own ABI contract - no safe-Rust-chosen pointer enters the slot",
+    "enforcement": "documented external ABI plus a type-asserted field",
+    "verdict": "CONTRACT_COMPLETE",
+    "residual": "R-1, as for CORE_DISPATCH; the merged call sites (KEM encap/decaps init sharing one call site) mean the id pairing at that site is a convention over two slots"
+   },
+   {
+    "class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+    "sites": 25,
+    "distinct_functions": 18,
+    "interface": "claimed: 'provider hw-table closed context-set contract ... over N closed-context table(s)', closure entry-table-pairing. Actual interface: internal provider cipher hw vtables",
+    "slot_writers": "src/provider/cipher.rs: static NAME: ProvCipherHw = ProvCipherHw { .. } tables (e.g. :5104 AES_XTS_HW, :5695 SM4_XTS_HW, :6320 AES_OCB_HW, :17563 SM4_ECB_HW, and the macro-generated tables at :3458), where pub(crate) struct ProvCipherHw (:353) has typed fields init/cipher/copyctx. Static initialisers are the only writers; there is no setter",
+    "binary_witness": [
+     "libcrypto.so.3:0x249fe0 ossl_gcm_one_shot, calls at 0x249ffe (ProvGcmHw.aadupdate@0x10), 0x24a014 (.cipherupdate@0x18), 0x24a02c (.cipherfinal@0x20)",
+     "25 call sites in total across ProvCipherHw.init@0x0 / .cipher@0x8 and the GCM/SIV/ChaCha20 specialisations"
+    ],
+    "contract_completeness": {
+     "arity_type": "enforced: typed fn fields, no extern hop, no transmute",
+     "lifetime": "'static table entries",
+     "reentrancy": "n/a at the slot; per-cipher ctx rules apply",
+     "ownership": "the ctx is owned by the provider cipher object; the hw entry borrows it",
+     "error": "documented per entry (int return, 0 = failure); the pair with the context type is the closure's entry-table-pairing witness"
+    },
+    "safe_rust": "cannot write: the tables are immutable statics and the structs are crate-private/public-crate with no setter",
+    "enforcement": "type-enforced",
+    "verdict": "CONTRACT_GAP",
+    "gap": "class attribution: a closed context-set over typed internal tables is a proved target set, not a section 7 criterion 2 external ABI contract",
+    "fix": "receipt/instrument: reclassify as TARGET_BOUNDED_CLOSED_TABLE with the entry-table-pairing witness. No source change",
+    "residual": "none for safety"
+   },
+   {
+    "class": "ABI_CONTRACT_REGISTRATION_ATEXIT",
+    "sites": 1,
+    "distinct_functions": 1,
+    "interface": "crypto.h OPENSSL_atexit(void (*handler)(void)); the node field is OpenSslInitStop.handler (offset 0), written by OPENSSL_atexit and dispatched by OPENSSL_cleanup",
+    "slot_writers": "src/runtime/init.rs:1004 pub unsafe extern \"C\" fn OPENSSL_atexit(handler: Option<extern \"C\" fn()>) is the only writer, with # Safety 'handler must be a valid extern \"C\" function with no parameters'; src/runtime/init.rs:1099 pub extern \"C\" fn OPENSSL_cleanup dispatches it",
+    "binary_witness": [
+     "libcrypto.so.3:0x4516d0 OPENSSL_cleanup, call *%rax at 0x451734"
+    ],
+    "contract_completeness": {
+     "arity_type": "enforced: the Rust parameter type is a safe extern \"C\" fn() - zero arguments, so there is no argument contract to violate",
+     "lifetime": "process lifetime by construction (the node is never released)",
+     "reentrancy": "documented: handlers run in registration order at cleanup",
+     "ownership": "none",
+     "error": "handler answers void"
+    },
+    "safe_rust": "cannot install (OPENSSL_atexit is unsafe pub). A safe caller CAN reach the dispatch through OPENSSL_cleanup, but the handler is invoked with no arguments, so no value a safe caller controls can reach it; the worst a safe caller can do is run cleanup early, which is the RUNTIME_CONCURRENCY R1 schedule question, not this class",
+    "enforcement": "type-enforced (zero-argument fn pointer) plus documented registration rule",
+    "verdict": "CONTRACT_COMPLETE",
+    "residual": "the safe OPENSSL_cleanup entry means a safe caller can force every registered handler to run; that obligation belongs to RUNTIME_CONCURRENCY (schedule-bounded discharge) and is recorded there, not absorbed here"
+   },
+   {
+    "class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+    "sites": 6,
+    "distinct_functions": 5,
+    "interface": "claimed: 'SLH-DSA method-table closed-selector contract: SlhDsaKey.adrs_func@0xa8 -> ossl_slh_get_adrs_fn METHODS[0..1][k]', likewise hash_func@0xb0. Actual interface: internal SLH-DSA selector tables",
+    "slot_writers": "src/slh_dsa/adrs.rs:393-397 ossl_slh_get_adrs_fn returns *const to a local const METHODS: [SlhAdrsFunc; 2]; the fields are adrs_func: *const SlhAdrsFunc and hash_func: *const SlhHashFunc on SlhDsaKey (src/slh_dsa/mod.rs:105-108). Readers deref them: (*(*key).adrs_func).zero (:478-479)",
+    "binary_witness": [
+     "libcrypto.so.3:0x1df9a0 slh_fors_node, call at 0x1dfc67; 0x1dfd90 ossl_slh_fors_sign at 0x1dff3f and 0x1e01c1; 0x1e0390 ossl_slh_fors_pk_from_sig at 0x1e08ad",
+     "libcrypto.so.3:0x2ebf00 ossl_slh_ht_sign at 0x2ebf8e; 0x2ec2b0 ossl_slh_ht_verify at 0x2ec339"
+    ],
+    "contract_completeness": {
+     "arity_type": "typed pointee (SlhAdrsFunc / SlhHashFunc are fn-pointer structs); the pointer itself is raw",
+     "lifetime": "'static const table",
+     "reentrancy": "n/a (pure functions over the adrs buffer)",
+     "ownership": "none",
+     "error": "documented per entry"
+    },
+    "safe_rust": "cannot write: the selectors are computed from a crate-internal parameter set and point at 'static consts",
+    "enforcement": "type-enforced pointee plus a closed selector set (the closure names it 'closed-selector')",
+    "verdict": "CONTRACT_GAP",
+    "gap": "class attribution: closed selector over internal const tables = proved target set, not an external ABI contract. Of the four closed-table classes this is the weakest witness for a target-bounding claim, because the field is a raw *const dereferenced without a copy, so the closure's selector index set (2 entries at 3 offsets) is carrying the whole argument",
+    "fix": "receipt/instrument: reclassify as TARGET_BOUNDED_CLOSED_TABLE and record the selector index set explicitly; optionally replace the raw *const fields with &'static refs (source, separate batch, not required for this verdict)",
+    "residual": "no safety residual at the current writer set"
+   },
+   {
+    "class": "ABI_CONTRACT_STORE_LOADER",
+    "sites": 3,
+    "distinct_functions": 1,
+    "interface": "core_dispatch.h OSSL_FUNC_STORE_OPEN (1), OSSL_FUNC_STORE_OPEN_EX (10), OSSL_FUNC_STORE_CLOSE; the slots are OsslStoreLoader.open (0x10), .open_ex (0x58), .closefn (0x50)",
+    "slot_writers": "src/store/store_meth.rs:353 / :419-421 fill the loader record from the fetched OSSL_DISPATCH with core::mem::transmute::<*mut c_void, ...>; src/store/store_register.rs:330 is the crate's own registration path. Reader: OSSL_STORE_open_ex (src/store/store_lib.rs:700, unsafe pub)",
+    "binary_witness": [
+     "libcrypto.so.3:0x546f60 OSSL_STORE_open_ex, call at 0x5473e8 (OsslStoreLoader.open_ex@0x58), 0x5474dd (.open@0x10), 0x547953 (.closefn@0x50)"
+    ],
+    "contract_completeness": {
+     "arity_type": "fixed by core_dispatch.h and asserted by the transmute; unchecked (R-1)",
+     "lifetime": "documented: the loader belongs to its provider",
+     "reentrancy": "documented (store open may call the loader repeatedly)",
+     "ownership": "documented: the loader returns a store ctx the caller releases through the same record",
+     "error": "documented: NULL = failure, the crate raises the store error"
+    },
+    "safe_rust": "cannot install and cannot supply a loader dispatch from safe Rust",
+    "enforcement": "documented external ABI plus a type-asserted field",
+    "verdict": "CONTRACT_COMPLETE",
+    "residual": "R-1 (the untyped hop also occurs here: store_meth.rs:421 transmits)",
+    "note": "the class is 1 distinct function but 3 slots, so 3 sites on one function is expected; it is not three independent witnesses"
+   }
+  ],
+  "cross_class_findings": [
+   {
+    "id": "F-BCR-1",
+    "severity": "receipt",
+    "statement": "36 of the 152 sites (DECODER_METHOD_OBJECT 3, LEGACY_EVP_CIPHER_DATA 2, PROVIDER_HW_TABLE 25, SLH_METHOD_TABLE 6) are filed as ABI_CONTRACT_* and their own witness strings describe closed table / closed writer set / closed context-set / closed selector arguments. Those are target-bounding arguments, so precision.predicate_element_7.target_sets_remain_unbounded: true is inconsistent with its own by_class map. The sites are substantively safer than the label (fully typed internal fields, no extern hop for 30 of the 36), so no UB follows; what is overstated is the element-7 PASS rationale, not the code",
+    "fix": "instrument/receipt: split contract_bounded_by_class into an external-ABI-contract group (116) and a closed-target-set group (36); set target_sets_remain_unbounded accordingly. No source change"
+   },
+   {
+    "id": "F-BCR-2",
+    "severity": "instrument/scope",
+    "statement": "the DECODER_METHOD_OBJECT bound ('3 closed algorithm tables') is conditional on the consumer's provider set being closed. For ssh/sshd that is a measured property; as a class name it implies a guarantee the class cannot carry",
+    "fix": "receipt: record the provider-set closure as an explicit scope condition of the element-7 PASS"
+   },
+   {
+    "id": "F-BCR-3",
+    "severity": "residual",
+    "statement": "R-1 (untyped dispatch slot: *mut c_void + id is the only witness) covers 48 sites, not 42: CORE_DISPATCH 26 + PROVIDER 16 + STORE_LOADER 3 + DECODER_METHOD_OBJECT 3 all reach the slot through a transmute/entry_function. The prior argument scoped R-1 to EVP only",
+    "fix": "argument: R-1 re-scoped to 48 sites; it blocks SAFE_COMPATIBLE wherever a fetched provider/loader/decoder can be supplied by third-party code"
+   }
+  ]
+ },
+ "task2_criterion3_mechanisms": {
+  "C_ABI_CONTRACT": {
+   "obligation_set": "the 5 obligations enrolled in both b82b closures, each with a boundary receipt (boundary-sweep-B56 2, openssh-v1l 3) and rest-final 5/5 ACCEPT",
+   "content_condition": "rest-final reviewed 5/5 ACCEPT and every one of the 5 sites carries a written # Safety at S; the declared coordinate drift does not matter because the binding is the operation-span hash, recomputed here 5/5 MATCH (court/freeze-b82/review9/span-rebind-7.json)",
+   "obligations": [
+    {
+     "site": "src/engine/eng_dyn.rs:415 dynamic_data_ctx_free_func",
+     "span": "a5dcd46e2c4acfb67db1e840285322d3996687d26d693b2c5c7f3185d1846cd8 (recomputed MATCH at S)",
+     "contract": "CRYPTO_EX_free's ex_data contract: ptr is NULL or the value stored at this index, a live DynamicDataCtx the enclosing ENGINE owns; release is OwnedCtx::from_raw_at's single block release",
+     "external_caller_class": "the crate itself is the installer (the index is created with this hook and stored in a private static) and CRYPTO_free_ex_data is the caller when a dynamic ENGINE dies; a C caller only has to not write a foreign pointer into that index",
+     "can_safe_rust_violate": "no. The only writer of the index is dynamic_set_data_ctx (:439, private unsafe fn) through ENGINE_set_ex_data (:713, unsafe pub), and ENGINE_set_ex_data itself is unsafe pub, so no safe path writes the slot. A safe caller cannot even obtain a dynamic ENGINE that owns such a context without unsafe",
+     "evidence_to_establish": "the span hash at S (done), the index-provenance chain (:481-488 create, :453 write, :415 release), and a negative control that a foreign write is unreachable from the safe surface (grep of safe pub fns taking raw pointers: 0)",
+     "verdict": "SAFETY_DISCHARGED (site-scoped)"
+    },
+    {
+     "site": "src/engine/eng_fat.rs:201 push_cstr_or_null",
+     "span": "3809a13b0285ce51cb28a2a84f1b2ebbc40b9e5e1adaab112b6b2ce1b0f861e6 (MATCH at S)",
+     "contract": "p is NULL or points at a NUL-terminated C string readable for the call; no ownership taken",
+     "external_caller_class": "private unsafe fn, two call kinds: (a) ENGINE_set_default_string (:222, unsafe pub) forwards the C caller's def_list, whose NUL-termination is that caller's obligation; (b) crate error formatters in eng_cnf/evp_cnf/v3_cpols/v3_pci/v3_utl pass crate-owned C strings",
+     "can_safe_rust_violate": "no. The fn is private and every caller is unsafe; the C string extent in (a) is the C caller's documented precondition, and in (b) the strings are crate constants or ASN1-owned NUL-terminated buffers",
+     "evidence_to_establish": "span hash (done); caller list at S (5 files, all unsafe); the # Safety of ENGINE_set_default_string naming def_list's obligation",
+     "verdict": "SAFETY_DISCHARGED (site-scoped)"
+    },
+    {
+     "site": "src/engine/eng_list.rs:158 engine_list_cleanup",
+     "span": "f1103798b4ca53c49d85fe57b306f6d74d2c7444fbe3ec543086a9977ba7cfa4 (MATCH at S)",
+     "contract": "the engine lock is initialised and not held; with a NULL lock the body stops with the list intact (a no-op/leak, not UB); every list member is a live ENGINE",
+     "external_caller_class": "registered by the crate itself through engine_cleanup_add_last (:237, pub(crate) unsafe fn) and dispatched from the cleanup stack; the C-side caller is whichever code runs OPENSSL_cleanup (or ENGINE_cleanup, unsafe pub)",
+     "can_safe_rust_violate": "not through this callback's arguments (it takes none). The list can only become non-empty through ENGINE_add, which is unsafe pub and takes an Engine* from ENGINE_new/ENGINE_by_id; the head is a private static, so no safe caller can put a foreign pointer in it. A safe caller could run cleanup early (OPENSSL_cleanup), which races only against threads the caller itself started using unsafe APIs - the RUNTIME_CONCURRENCY R1 question",
+     "evidence_to_establish": "span hash (done); the private-static writer set (engine_list_add only); the lock-init argument in the # Safety; the TSan schedule result already recorded for RUNTIME_CONCURRENCY",
+     "verdict": "SAFETY_DISCHARGED (site-scoped, with the schedule caveat referred to RUNTIME_CONCURRENCY)"
+    },
+    {
+     "site": "src/runtime/confmod/mod.rs:404 module_free_thunk",
+     "span": "a5b60056c9ddbcf6bd883eecd26fbb5a0eccc600eab2245ce5689a4ab0ebbaae (MATCH at S)",
+     "contract": "value is NULL or a live CONF_MODULE the calling stack owns and is handing over; module_free releases it and its owned members exactly once",
+     "external_caller_class": "OPENSSL_sk_pop_free(to_delete, Some(module_free_thunk)) at :1376, on a local stack built at :1361 from entries popped from the private registry supported_modules (:268)",
+     "can_safe_rust_violate": "no. The registry is a private static with private accessors; the only pusher is module_add (:861, unsafe fn) which allocates the ConfModule itself from name/ifunc/ffunc, and the public entry CONF_module_add (:1407) is unsafe. CONF_modules_unload/finish are safe pub but only walk that private stack, so they cannot be made to pass a foreign pointer",
+     "evidence_to_establish": "span hash (done); registry provenance (module_add allocates; :929/:1225 are the only pushes; no exported setter takes a ConfModule*)",
+     "verdict": "SAFETY_DISCHARGED (site-scoped)"
+    },
+    {
+     "site": "src/ui/ui_util.rs:205 ui_free_method_data",
+     "span": "9da4f85c2504a0b7baebbd33c8b6fb7e9b58f5ce2ae0c2abd95a6161cb1ac3fd (MATCH at S)",
+     "contract": "data is NULL or the PemPasswordCbData block ui_dup_method_data allocated (this unit's seam); this handle's Drop is its single release; no cleansing needed (function pointer + int, no passphrase)",
+     "external_caller_class": "registered as CRYPTO_EX_INDEX_UI_METHOD's free callback by ui_method_data_index_init (:230); CRYPTO_free_ex_data on a UI_METHOD invokes it",
+     "can_safe_rust_violate": "no. The value is written by the ex-data new/dup callbacks and the wrapper (:442) using OwnedPwData::zalloc/adopt; writing the slot directly needs CRYPTO_set_ex_data (unsafe pub) on that index, and the index is a private static. Adopter is unsafe fn adopt (:102) with the 'single release' premise",
+     "evidence_to_establish": "span hash (done); the creator/adopter chain (zalloc :86, adopt :102, into_raw :112, wrapper :442) and the fact that no safe pub fn reaches this index",
+     "verdict": "SAFETY_DISCHARGED (site-scoped)"
+    }
+   ],
+   "mechanism_surface_measured": {
+    "scan": "court/freeze-b82/review9/c-abi-surface-scan.json",
+    "roots": [
+     "src/engine",
+     "src/runtime/confmod",
+     "src/runtime/conf",
+     "src/ui",
+     "src/async",
+     "src/apps"
+    ],
+    "rule": "mechanical: every definition matching 'unsafe extern \"C\" fn NAME(' in those trees, with the contiguous doc/attribute block above it searched for '# Safety'",
+    "definitions": 292,
+    "public": 228,
+    "with_written_contract": 277,
+    "public_with_written_contract": 228,
+    "without_written_contract": 15,
+    "without_are_test_only": true,
+    "without_list": [
+     "src/engine/eng_ctrl.rs:532 no_op_ctrl",
+     "src/engine/eng_fat.rs:352 cipher_nids",
+     "src/engine/eng_fat.rs:365 pkey_nids",
+     "src/engine/eng_lib.rs:985 counting_destroy_mt",
+     "src/engine/eng_lib.rs:990 counting_destroy_re",
+     "src/engine/eng_lib.rs:997 reenter_free",
+     "src/engine/eng_list.rs:841 counting_destroy",
+     "src/engine/eng_table.rs:764 refusing_init",
+     "src/engine/eng_table.rs:1241 record_nid",
+     "src/engine/tb_asnmth.rs:484 one_method",
+     "src/runtime/conf/modparse.rs:322 collect",
+     "src/ui/ui_util.rs:487 fixed_phrase_cb",
+     "src/async/async.rs:888 pausing_job",
+     "src/async/async.rs:948 finishing_job",
+     "src/async/async_wait.rs:574 clear_another_entry"
+    ],
+    "conclusion": "the mechanism's declared surface is no longer unquantified: 0 production definitions in the six declared authority trees lack a written contract. This replaces the prior 'families_total: null' residual with a measured fact. It does NOT establish contract completeness (arity is type-enforced, lifetime/reentrancy/ownership/error are documented only) for the 272 definitions beyond the 5 enrolled"
+   },
+   "safe_surface": {
+    "safe_pub_fns_reaching_unsafe": 5,
+    "argument": [
+     "ENGINE_get_first / ENGINE_get_last (src/engine/eng_list.rs:452/:480): read the private list head under the engine lock and return a *mut Engine or NULL. No pointer is dereferenced on the caller's behalf and nothing is released; a safe caller holds an opaque pointer it cannot use without unsafe",
+     "CONF_modules_finish / CONF_modules_unload (src/runtime/confmod/mod.rs:1383/:1316): walk crate-private RCU-replaced stacks of crate-allocated modules and release them through module_free_thunk, whose contract is upheld by that provenance (see the fourth obligation above)",
+     "OPENSSL_load_builtin_modules (src/runtime/confmod/mod.rs:1526): registers crate-defined static modules; no caller input"
+    ],
+    "conclusion": "no safe pub fn in this mechanism takes a raw pointer or a length that reaches an unsafe C-ABI operation with a caller-controlled value (safe_pub_with_raw_pointer_param_reaching_unsafe: 0, re-checked at S). The mechanism's residual is contract completeness, not a safe-interface hole"
+   },
+   "residuals": [
+    "F-EVID-1 (stale B56 row for engine_list_cleanup) and F-EVID-2 (v1l F09 repaired in source; the bound receipt still rejects the site) remain: evidence artefacts, not code",
+    "contract completeness is unadjudicated for 272 of the 277 production definitions; presence of a # Safety is measured, quality is not",
+    "the mechanism's unsafe extern \"C\" fn definitions are installed into externally owned tables (BIO_METHOD, ENGINE, UI_METHOD, ex_data); a C caller that installs them where the contract does not hold is C-invalid, and section 21 rule 1 requires that to be stated rather than assumed - it is stated per site for the 5 enrolled obligations only"
+   ],
+   "verdict": "NOT_ESTABLISHED",
+   "why_not_discharged": "the 5 enrolled obligations are each SAFETY_DISCHARGED on a complete per-site argument, and the surface is now measured rather than null; but section 7 criterion 1 applies to every remaining unsafe operation in the mechanism's declared scope, and 272 of the 277 production definitions carry a written contract whose completeness this review did not adjudicate. Presence is not discharge (section 7: 'documentation alone does not discharge an obligation')",
+   "what_would_change_it": "a per-tree contract-completeness sweep (arity/lifetime/reentrancy/ownership/error, not just presence) over the 272; or a narrowing of the mechanism's declared scope to the closure-reachable set, which is a state.json/receipt decision, not a source one"
+  },
+  "BIO": {
+   "obligation_set": "both b82b closures enroll exactly 2 BIO obligations, both in src/runtime/bio/bf_readbuff.rs, both discharged by boundary-sweep-B67 (BIO-READBUF-001, BIO-READBUF-002) and reviewed 2/2 ACCEPT by rest-final",
+   "content_condition": "both sites are recorded 'contract: uncontracted' in the closure ('no # Safety / SAFETY: contract on the unsafe fn'), and the source confirms it: each definition is preceded by #[allow(clippy::missing_safety_doc)] and has no # Safety",
+   "obligations": [
+    {
+     "site": "src/runtime/bio/bf_readbuff.rs:231 readbuffer_write",
+     "span": "230-233, c345d2b09a79fe62... (MATCH at S)",
+     "contract": "none written. Substantively there is no precondition: the body is '{ 0 }' and every parameter is underscore-prefixed, so it reads and writes nothing",
+     "external_caller_class": "installed as the readbuffer BIO_METHOD's bwrite_old (:48) and called by BIO_write on a readbuffer BIO",
+     "can_safe_rust_violate": "no. For every argument tuple the body returns 0 without dereferencing anything; the unsafe qualifier is forced by the BIO_write ABI type, not by a requirement",
+     "evidence_to_establish": "the written contract (2 lines) plus a probe that BIO_write on a readbuffer BIO with a NULL buffer answers 0; the empty-body property is also testable by a source-text control like the b82 X509 qualifier controls",
+     "verdict": "SAFE_BY_CONSTRUCTION / contract form missing"
+    },
+    {
+     "site": "src/runtime/bio/bf_readbuff.rs:237 readbuffer_puts",
+     "span": "236-239, 16d8492f7898d9b1... (MATCH at S)",
+     "contract": "none written; same shape, body is '{ 0 }'",
+     "external_caller_class": "installed as the readbuffer BIO_METHOD's bputs (:51) and called by BIO_puts",
+     "can_safe_rust_violate": "no, for the same reason",
+     "evidence_to_establish": "as above",
+     "verdict": "SAFE_BY_CONSTRUCTION / contract form missing"
+    }
+   ],
+   "lint_gap": {
+    "id": "F-BCR-2",
+    "severity": "source",
+    "statement": "these two items carry the only two #[allow(clippy::missing_safety_doc)] attributes in src/ (a grep of the whole tree returns exactly 2, both at bf_readbuff.rs:230 and :236). AGENTS.md section 6 says never weaken missing_safety_doc, and section 7 criterion 1 requires an explicit contract for every remaining unsafe operation; an allow on an unsafe fn is the opposite of both",
+    "fix": "source: replace each attribute with a # Safety section stating 'no precondition: the body ignores every argument and answers 0; the unsafe qualifier is required by the BIO_write/BIO_puts ABI type'. No behaviour change, no signature change, and clippy keeps -D warnings",
+    "note": "this review did not apply the fix (boundary reviewer scope: no src edits). It is the one source-level defect this review found"
+   },
+   "safe_surface": {
+    "safe_pub_fns_reaching_unsafe": 1,
+    "argument": "BIO_f_readbuffer (src/runtime/bio/bf_readbuff.rs:63) is a safe extern \"C\" fn with no parameters; it allocates the readbuffer BIO and installs the method table, which includes the two empty callbacks above. Since both callbacks are total, the safe entry cannot make the crate UB",
+    "conclusion": "for the two enrolled sites a safe caller cannot violate a precondition because none exists"
+   },
+   "residuals": [
+    "only 2 of the mechanism's 32 families are in the closure (5 measured, 27 inferred; state.json BIO), so this is a site argument, not a mechanism discharge",
+    "the 2 sites' contract form is missing (F-BCR-2), which is criterion 1 unmet regardless of the body being empty",
+    "no BIO-family-wide safe-surface audit exists at S"
+   ],
+   "verdict": "NOT_ESTABLISHED",
+   "why_not_discharged": "the two sites are safe by construction, so criterion 3 holds for them, but criterion 1 requires a written contract and both sites are the crate's only lint-suppressed unsafe fns; and the mechanism's scope (32 families, 27 inferred) is not covered by a 2-site closure. The BIO verdict is closer to discharge than before (the site-level safety argument is complete and provable), but it is not discharge",
+   "what_would_change_it": "the 2-line source fix (F-BCR-2) plus a BIO family enumeration; then the mechanism can be assessed against its real scope"
+  }
+ },
+ "graduation_effect": {
+  "criterion3_verdict_changes": "none. No mechanism moves to SAFETY_DISCHARGED and none regresses: C_ABI_CONTRACT and BIO were NOT_ESTABLISHED and stay NOT_ESTABLISHED, but for measured reasons (272 unadjudicated contracts; 2 missing contract forms + 27 unmeasured families) instead of bookkeeping ones",
+  "element7_effect": "the PASS stands for 116 of 152 sites as a section 7 criterion 2 argument and stands for the other 36 on a target-bounding argument the receipt currently disclaims. The predicate's own reason string therefore overstates its basis and must be re-derived (F-BCR-1); the site set itself does not change",
+  "elements_untouched": "element 1-6, 8 and the L7 replay are outside this review and unchanged",
+  "safe_compatible": false
+ },
+ "findings": [
+  {
+   "id": "F-BCR-1",
+   "class": "receipt",
+   "defect": "36/152 contract-bounded sites are closed target-set arguments filed as external ABI contracts; predicate_element_7.target_sets_remain_unbounded contradicts its own by_class",
+   "fix_axis": "instrument/receipt",
+   "blocks": "the element-7 PASS rationale, not the code"
+  },
+  {
+   "id": "F-BCR-2",
+   "class": "source",
+   "defect": "the crate's only two #[allow(clippy::missing_safety_doc)] attributes sit on the two BIO obligations, which are recorded 'uncontracted' yet DISCHARGED",
+   "fix_axis": "source (2 documents), then receipt re-issue",
+   "blocks": "BIO criterion 1"
+  },
+  {
+   "id": "F-BCR-3",
+   "class": "residual",
+   "defect": "R-1 (untyped dispatch slot) covers 48 sites, not the 42 the argument implies; STORE_LOADER and DECODER_METHOD_OBJECT also cross the extern hop through transmute",
+   "fix_axis": "argument",
+   "blocks": "SAFE_COMPATIBLE for provider/loader-dependent consumers"
+  },
+  {
+   "id": "F-BCR-4",
+   "class": "scope",
+   "defect": "the DECODER_METHOD_OBJECT '3 closed algorithm tables' bound is conditional on the consumer's provider set being closed",
+   "fix_axis": "receipt (scope condition)",
+   "blocks": "nothing at b82; it is a condition that must travel with the PASS"
+  }
+ ],
+ "next_item": "Apply F-BCR-2 and re-derive element 7 with the class split of F-BCR-1 (instrument-only). F-BCR-2 is two documentation lines on the two BIO obligations and is the only source-level defect this review found; F-BCR-1 is what keeps element 7's stated basis honest. Neither graduates a family; both are prerequisites for the next criterion-3 promotion attempt"
+}
