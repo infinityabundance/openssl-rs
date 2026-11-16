@@ -63,18 +63,18 @@
    "id": "BIO-READBUF-001",
    "file": "src/runtime/bio/bf_readbuff.rs",
    "line": 231,
-   "line_current": 230,
+   "line_current": 237,
    "kind": "UNSAFE_FN_DEF",
    "operation": "readbuffer_write",
    "mechanism": "BIO",
    "signature": "unsafe extern \"C\" fn(*mut Bio, *const c_char, c_int) -> c_int",
    "registration": "READBUFFER_METHOD.bwrite_old at src/runtime/bio/bf_readbuff.rs:48 (the only writer)",
-   "body": "#[allow(clippy::missing_safety_doc)]\nunsafe extern \"C\" fn readbuffer_write(_b: *mut Bio, _in: *const c_char, _inl: c_int) -> c_int {\n    0\n}",
+   "body": "unsafe extern \"C\" fn readbuffer_write(_b: *mut Bio, _in: *const c_char, _inl: c_int) -> c_int {\n    0\n}",
    "precondition_set": [],
-   "disposition": "SAFETY_DISCHARGED: src/runtime/bio/bf_readbuff.rs:231 — readbuffer_write has an empty precondition set. The body ignores _b, _in and _inl, dereferences nothing, touches no global or thread state, contains no unsafe block, call or allocation, and returns the constant 0. Therefore every argument value (NULL, dangling, unaligned, arbitrary _inl) yields 0 without UB. Its only writer is READBUFFER_METHOD.bwrite_old at :48; neither an export nor any other writer exists. The 3.6.4 authority's readbuffer_write is also `{ return 0; }`.",
+   "disposition": "SAFETY_DISCHARGED: src/runtime/bio/bf_readbuff.rs:237 — readbuffer_write has an empty precondition set. The body ignores _b, _in and _inl, dereferences nothing, touches no global or thread state, contains no unsafe block, call or allocation, and returns the constant 0. Therefore every argument value (NULL, dangling, unaligned, arbitrary _inl) yields 0 without UB. Its only writer is READBUFFER_METHOD.bwrite_old at :48; neither an export nor any other writer exists. The 3.6.4 authority's readbuffer_write is also `{ return 0; }`.",
    "contract": "The C ABI operation is `int (BIO *, const char *, int)`. Because the body is the constant `0`, the callee derives no Rust reference, reads and writes no pointee, and has no failure path. `bwrite_conv` copies `legacy_write` out of the live method table before calling it and passes the raw arguments; no property of `_b`, `_in` or `_inl` is needed for this body to be UB-free.",
    "established": [
-    "The full body is exactly `{\\n    0\\n}`: one integer literal and no other expression (src/runtime/bio/bf_readbuff.rs:231-233).",
+    "The full body is exactly `{\\n    0\\n}`: one integer literal and no other expression (src/runtime/bio/bf_readbuff.rs:237-239).",
     "The parameters are named `_b`, `_in`, `_inl`; Rust's unused-parameter convention confirms the body does not bind or read them.",
     "The body contains no unsafe block, no dereference, no function call, no static/thread-local access and no allocation.",
     "A grep over src/ finds `readbuffer_write` only at this definition, at the static slot :48 and in the doc comment :229; there is no `#[no_mangle]`, `#[export_name]`, address-of or second assignment.",
@@ -88,31 +88,67 @@
    "tests": [
     "courts/phase25/rt_bio_readbuffer_control.c (public BIO_write path, admitted install)"
    ],
-   "span_sha256": "c345d2b09a79fe6222b26980881961d3ba37580450a5f7d59e278f483bd150d0",
-   "span_start_line": 230,
-   "span_end_line": 233,
-   "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+   "span_sha256": "af0760bb2672161c46d1a2a8e138253583750c2402f119b7b2590bcc8a74de81",
+   "span_start_line": 237,
+   "span_end_line": 239,
+   "span_source_commit": "1a152be1e931389e483ad5fc1cc268b66dc30104",
    "span_schema": "safe-c33/operation-span-sha256/v1",
    "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
    "span_claim_scope": "the operation's own text and its attributes, from the first non-documentation attribute/qualifier line through the brace-matched closing brace; dispatchers, guards and callers are outside the hash",
-   "caller_closure_ref": "shared caller_closure"
+   "caller_closure_ref": "shared caller_closure",
+   "rebind_review_b83": {
+    "review": "b83-review-rebind",
+    "date": "2026-11-16",
+    "cause": "b83's contract-doc change replaced the `#[allow(clippy::missing_safety_doc)]` attribute -- which sat inside the recorded span -- with a `# Safety` documentation block, which the span schema excludes. The operation's own text (signature, body, closing brace) is byte-identical, so only the span coordinate and hash moved; the disposition still holds.",
+    "prior": {
+     "span_lines": [
+      230,
+      233
+     ],
+     "span_sha256": "c345d2b09a79fe6222b26980881961d3ba37580450a5f7d59e278f483bd150d0",
+     "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+     "hash_reproduced_at_recorded_commit": true
+    },
+    "current": {
+     "coordinate": 237,
+     "span_lines": [
+      237,
+      239
+     ],
+     "span_sha256": "af0760bb2672161c46d1a2a8e138253583750c2402f119b7b2590bcc8a74de81",
+     "source_commit": "1a152be1e931389e483ad5fc1cc268b66dc30104",
+     "content_sha256": "fe631b449c14133d5fe0e10faaf146de38492911824bcb8b59e0b95904bc9e54",
+     "resolution": "unique"
+    },
+    "delta": "line-local: the first span line `#[allow(clippy::missing_safety_doc)]` was removed; every remaining span line is identical. The `unsafe extern \"C\" fn` qualifier, signature, parameters, body `{ 0 }` and closing brace are unchanged, so no codegen, symbol, ABI or observable behaviour changes.",
+    "answers": {
+     "a_safe_rust_can_cause_ub": "No. The callback is a total function: the body is the literal `0`, it binds no argument (all parameters are `_`-prefixed), dereferences nothing, calls nothing and touches no global, thread-local or allocation. Every argument value -- including null, dangling, unaligned, or an arbitrary length -- returns 0 with no memory access, so there is no precondition a safe Rust caller could violate.",
+     "b_all_unsafe_covered": "Yes. The operation contains no unsafe block, call or dereference; the only `unsafe` is the `extern \"C\" fn` qualifier that names the C ABI boundary, and its precondition set is empty (`precondition_set: []`). The `# Safety` block now states exactly that, replacing the previous clippy allow.",
+     "c_hidden_obligation": "None. The callback is private and non-exported (`nm -D` on the admitted libcrypto.so.3 names no readbuffer symbol), is never address-taken outside its one method-table slot, and its only writer remains the static READBUFFER_METHOD slot. No new caller, alias, layout or lifetime obligation appears.",
+     "d_load_bearing_control": "Two controls ran here. (1) Firing control: the closure's content binding fired on these exact rows before this rebind -- evidence/closure-ssh-b83.json and closure-sshd-b83.json record 2 BLOCKED with `span-hash-mismatch` -- so the detector is not blind to a stale span, and it is the same predicate that must accept the rebound hash. (2) Behaviour control: the B67 public BIO probe `courts/phase25/rt_bio_readbuffer_control.c`, rebuilt against the b83 admitted install, PASSes (BIO_write=0 BIO_puts=0 pending 4->4 cache_unchanged), so the total-callback behaviour the empty precondition set relies on is observed at this candidate."
+    },
+    "covers_site": true,
+    "covers_site_basis": "the disposition's declared coordinate src/runtime/bio/bf_readbuff.rs:237 covers the current census coordinate 237, the item matches, and the recorded span_sha256 is the resolver's hash of the current bytes",
+    "verdict": "ACCEPT",
+    "verdict_basis": "Re-established at 1a152be1e: the old span hash reproduces exactly at the commit B67 recorded, the new span hash reproduces exactly with the documented normalisation at HEAD and equals the closure resolver's current hash, the delta is one removed attribute line with a byte-identical body, and the public control still observes the constant-0 total behaviour."
+   }
   },
   {
    "id": "BIO-READBUF-002",
    "file": "src/runtime/bio/bf_readbuff.rs",
    "line": 237,
-   "line_current": 236,
+   "line_current": 249,
    "kind": "UNSAFE_FN_DEF",
    "operation": "readbuffer_puts",
    "mechanism": "BIO",
    "signature": "unsafe extern \"C\" fn(*mut Bio, *const c_char) -> c_int",
    "registration": "READBUFFER_METHOD.bputs at src/runtime/bio/bf_readbuff.rs:51 (the only writer)",
-   "body": "#[allow(clippy::missing_safety_doc)]\nunsafe extern \"C\" fn readbuffer_puts(_b: *mut Bio, _str_: *const c_char) -> c_int {\n    0\n}",
+   "body": "unsafe extern \"C\" fn readbuffer_puts(_b: *mut Bio, _str_: *const c_char) -> c_int {\n    0\n}",
    "precondition_set": [],
-   "disposition": "SAFETY_DISCHARGED: src/runtime/bio/bf_readbuff.rs:237 — readbuffer_puts has an empty precondition set. The body ignores _b and _str_, dereferences nothing, does not call strlen, touches no global or thread state, contains no unsafe block, call or allocation, and returns the constant 0. Therefore every argument value (NULL, dangling, unaligned) yields 0 without UB. Its only writer is READBUFFER_METHOD.bputs at :51; neither an export nor any other writer exists. The 3.6.4 authority's readbuffer_puts is also `{ return 0; }`.",
+   "disposition": "SAFETY_DISCHARGED: src/runtime/bio/bf_readbuff.rs:249 — readbuffer_puts has an empty precondition set. The body ignores _b and _str_, dereferences nothing, does not call strlen, touches no global or thread state, contains no unsafe block, call or allocation, and returns the constant 0. Therefore every argument value (NULL, dangling, unaligned) yields 0 without UB. Its only writer is READBUFFER_METHOD.bputs at :51; neither an export nor any other writer exists. The 3.6.4 authority's readbuffer_puts is also `{ return 0; }`.",
    "contract": "The C ABI operation is `int (BIO *, const char *)`. Because the body is the constant `0`, the callee derives no Rust reference, performs no string read and has no failure path. `BIO_puts` reads `m.bputs` from the live method table and calls it with the caller's `buf`; no property of `_b` or `_str_` is needed for this body to be UB-free.",
    "established": [
-    "The full body is exactly `{\\n    0\\n}`: one integer literal and no other expression (src/runtime/bio/bf_readbuff.rs:237-239).",
+    "The full body is exactly `{\\n    0\\n}`: one integer literal and no other expression (src/runtime/bio/bf_readbuff.rs:249-251).",
     "The parameters are named `_b`, `_str_`; Rust's unused-parameter convention confirms the body does not bind or read them.",
     "The body contains no unsafe block, no dereference, no function call (in particular no strlen), no static/thread-local access and no allocation.",
     "A grep over src/ finds `readbuffer_puts` only at this definition, at the static slot :51 and in the doc comment :235; there is no `#[no_mangle]`, `#[export_name]`, address-of or second assignment.",
@@ -126,14 +162,50 @@
    "tests": [
     "courts/phase25/rt_bio_readbuffer_control.c (public BIO_puts path, admitted install)"
    ],
-   "span_sha256": "16d8492f7898d9b15c45795fee7abdc89df1cc191c5d2c9f0a356389639e5ce2",
-   "span_start_line": 236,
-   "span_end_line": 239,
-   "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+   "span_sha256": "86a071a06093a4f5649a31f850ade7df2f80efb3e914f4d7b810b651a2eed9f7",
+   "span_start_line": 249,
+   "span_end_line": 251,
+   "span_source_commit": "1a152be1e931389e483ad5fc1cc268b66dc30104",
    "span_schema": "safe-c33/operation-span-sha256/v1",
    "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
    "span_claim_scope": "the operation's own text and its attributes, from the first non-documentation attribute/qualifier line through the brace-matched closing brace; dispatchers, guards and callers are outside the hash",
-   "caller_closure_ref": "shared caller_closure"
+   "caller_closure_ref": "shared caller_closure",
+   "rebind_review_b83": {
+    "review": "b83-review-rebind",
+    "date": "2026-11-16",
+    "cause": "b83's contract-doc change replaced the `#[allow(clippy::missing_safety_doc)]` attribute -- which sat inside the recorded span -- with a `# Safety` documentation block, which the span schema excludes. The operation's own text (signature, body, closing brace) is byte-identical, so only the span coordinate and hash moved; the disposition still holds.",
+    "prior": {
+     "span_lines": [
+      236,
+      239
+     ],
+     "span_sha256": "16d8492f7898d9b15c45795fee7abdc89df1cc191c5d2c9f0a356389639e5ce2",
+     "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+     "hash_reproduced_at_recorded_commit": true
+    },
+    "current": {
+     "coordinate": 249,
+     "span_lines": [
+      249,
+      251
+     ],
+     "span_sha256": "86a071a06093a4f5649a31f850ade7df2f80efb3e914f4d7b810b651a2eed9f7",
+     "source_commit": "1a152be1e931389e483ad5fc1cc268b66dc30104",
+     "content_sha256": "fe631b449c14133d5fe0e10faaf146de38492911824bcb8b59e0b95904bc9e54",
+     "resolution": "unique"
+    },
+    "delta": "line-local: the first span line `#[allow(clippy::missing_safety_doc)]` was removed; every remaining span line is identical. The `unsafe extern \"C\" fn` qualifier, signature, parameters, body `{ 0 }` and closing brace are unchanged, so no codegen, symbol, ABI or observable behaviour changes.",
+    "answers": {
+     "a_safe_rust_can_cause_ub": "No. The callback is a total function: the body is the literal `0`, it binds no argument (all parameters are `_`-prefixed), dereferences nothing, calls nothing and touches no global, thread-local or allocation. Every argument value -- including null, dangling, unaligned, or an arbitrary length -- returns 0 with no memory access, so there is no precondition a safe Rust caller could violate.",
+     "b_all_unsafe_covered": "Yes. The operation contains no unsafe block, call or dereference; the only `unsafe` is the `extern \"C\" fn` qualifier that names the C ABI boundary, and its precondition set is empty (`precondition_set: []`). The `# Safety` block now states exactly that, replacing the previous clippy allow.",
+     "c_hidden_obligation": "None. The callback is private and non-exported (`nm -D` on the admitted libcrypto.so.3 names no readbuffer symbol), is never address-taken outside its one method-table slot, and its only writer remains the static READBUFFER_METHOD slot. No new caller, alias, layout or lifetime obligation appears.",
+     "d_load_bearing_control": "Two controls ran here. (1) Firing control: the closure's content binding fired on these exact rows before this rebind -- evidence/closure-ssh-b83.json and closure-sshd-b83.json record 2 BLOCKED with `span-hash-mismatch` -- so the detector is not blind to a stale span, and it is the same predicate that must accept the rebound hash. (2) Behaviour control: the B67 public BIO probe `courts/phase25/rt_bio_readbuffer_control.c`, rebuilt against the b83 admitted install, PASSes (BIO_write=0 BIO_puts=0 pending 4->4 cache_unchanged), so the total-callback behaviour the empty precondition set relies on is observed at this candidate."
+    },
+    "covers_site": true,
+    "covers_site_basis": "the disposition's declared coordinate src/runtime/bio/bf_readbuff.rs:249 covers the current census coordinate 249, the item matches, and the recorded span_sha256 is the resolver's hash of the current bytes",
+    "verdict": "ACCEPT",
+    "verdict_basis": "Re-established at 1a152be1e: the old span hash reproduces exactly at the commit B67 recorded, the new span hash reproduces exactly with the documented normalisation at HEAD and equals the closure resolver's current hash, the delta is one removed attribute line with a byte-identical body, and the public control still observes the constant-0 total behaviour."
+   }
   }
  ],
  "caller_closure": {
@@ -265,5 +337,29 @@
  },
  "applied": true,
  "applied_in_ledger": "CAMPAIGN-STATUS.json scoped_boundary_discharges[receipt=boundary-sweep-B67] (adjudicated=true)",
- "schema_note": "Same boundary shape as boundary-sweep-B52.json. `line` is the V1 census coordinate; `line_current` is the resolver's span start; span_sha256 is the acceptance binding produced by consumer_closure.resolve_operation_span at the inventory/span source b8bba9555 (the closures bind spans to that commit). The ledger row is present with adjudicated=false."
+ "schema_note": "Same boundary shape as boundary-sweep-B52.json. `line` is the V1 census coordinate; `line_current` is the resolver's span start; span_sha256 is the acceptance binding produced by consumer_closure.resolve_operation_span at the inventory/span source b8bba9555 (the closures bind spans to that commit). The ledger row is present with adjudicated=false.",
+ "rebind_review_b83": {
+  "review": "b83-review-rebind",
+  "generated_utc": "2026-11-16T08:00:00Z",
+  "candidate": {
+   "source_head": "1a152be1e931389e483ad5fc1cc268b66dc30104",
+   "branch": "stage/p25/b75-ocsp",
+   "src_file_sha256": "fe631b449c14133d5fe0e10faaf146de38492911824bcb8b59e0b95904bc9e54",
+   "closure_receipts": [
+    "evidence/closure-ssh-b83.json",
+    "evidence/closure-sshd-b83.json"
+   ]
+  },
+  "rows_rebound": [
+   "BIO-READBUF-001",
+   "BIO-READBUF-002"
+  ],
+  "cause": "b83 replaced the clippy allow attribute inside each recorded span with a `# Safety` documentation block outside the span; the operation text is otherwise byte-identical.",
+  "evidence": "evidence/b83-review-rebind.json",
+  "scope": "Changes only the two records' span coordinate/hash/source commit, line_current, the quoted coordinate in disposition and established[0], the recorded body text, and adds a rebind_review_b83 member. Every disposition verdict, precondition set, registration, test list and all other records are byte-preserved.",
+  "does_not_prove": [
+   "nothing about other B67 boundaries",
+   "no ledger row is upgraded; the BOUNDARY/SEAL obligations recorded as NOT_RUN remain NOT_RUN"
+  ]
+ }
 }
