@@ -770,8 +770,17 @@ pub(crate) unsafe fn ossl_cms_EncryptedContent_init(
         };
         // SAFETY: `key` is readable for `keylen`; `owned` is `keylen` writable bytes.
         unsafe { ptr::copy_nonoverlapping(key, owned.as_ptr(), keylen) };
-        // SAFETY: `ec` is live; ownership of the block moves into `ec->key`.
-        unsafe { (*ec).key = owned.into_raw() };
+        // `CMS_EncryptedData_decrypt` reaches this function on every call, so a second call with a
+        // key replaces the one already held here. The authority overwrites the pointer and leaks
+        // the previous session key; release and cleanse it instead. The new block is built (and
+        // the copy made) first, so a failed allocation leaves `ec` unchanged exactly as the
+        // authority's ordering requires, and a `key` that aliased `ec->key` is still read live.
+        // SAFETY: `ec` is live; its previous key is NULL or this crate's allocation of `keylen`
+        // bytes; ownership of the new block moves into `ec->key`.
+        unsafe {
+            super::cms_asn1::OPENSSL_clear_free((*ec).key, (*ec).keylen);
+            (*ec).key = owned.into_raw();
+        }
     }
     // SAFETY: `ec` is live.
     unsafe {
@@ -1345,5 +1354,75 @@ mod tests {
             free_ec(ec);
         }
         ERR_clear_error();
+    }
+
+    /// G2: `CMS_EncryptedData_decrypt` reaches `CMS_EncryptedData_set1_key` -- and so this
+    /// function -- on every invocation, so a second decrypt hands it an `ec` that already holds
+    /// the previous session key. The authority overwrites `ec->key` and leaks that block; the
+    /// conversion releases and cleanses it over its own length first and installs the new one.
+    #[test]
+    fn cms_enc_content_init_wipes_and_replaces_the_previous_key() {
+        use crate::runtime::mem::{free_probe, CRYPTO_free};
+
+        let old_len = 16usize;
+        let replacement = [7u8; 16];
+
+        // SAFETY: `ec` is this test's own; the function copies the caller's key into a block of
+        // its own, and `free_ec` releases the installed one.
+        unsafe {
+            let ec = new_ec();
+            let old = CRYPTO_malloc(old_len, ptr::null(), 0).cast::<u8>();
+            assert!(!old.is_null(), "the caller's key block is allocated");
+            ptr::write_bytes(old, 0x5A, old_len);
+            assert_eq!(
+                ossl_cms_EncryptedContent_init(ec, ptr::null(), old, old_len, ptr::null()),
+                1,
+                "the first key is installed"
+            );
+            // The caller's buffer is only read: the function owns a copy of it.
+            CRYPTO_free(old.cast(), ptr::null(), 0);
+            let first = (*ec).key;
+            assert!(!first.is_null(), "the first key is installed");
+            assert_eq!((*ec).keylen, old_len, "the first key's length is installed");
+
+            free_probe::reset();
+            assert_eq!(
+                ossl_cms_EncryptedContent_init(
+                    ec,
+                    ptr::null(),
+                    replacement.as_ptr(),
+                    replacement.len(),
+                    ptr::null()
+                ),
+                1,
+                "the replacement key is installed"
+            );
+
+            assert_eq!(
+                free_probe::count(first.cast()),
+                1,
+                "the replaced key is released exactly once"
+            );
+            assert_eq!(
+                free_probe::cleared(first.cast()),
+                vec![(old_len, true)],
+                "the replaced key is cleansed over its own length before release"
+            );
+            // The replacement block is allocated while `first` is still live, so it cannot be the
+            // same address; the value is checked by content as well.
+            assert_ne!((*ec).key, first, "the new block is installed");
+            assert_eq!(
+                (*ec).keylen,
+                replacement.len(),
+                "the new length is installed"
+            );
+            assert_eq!(
+                core::slice::from_raw_parts((*ec).key, (*ec).keylen),
+                replacement.as_slice(),
+                "the new value is installed"
+            );
+
+            free_ec(ec);
+        }
     }
 }

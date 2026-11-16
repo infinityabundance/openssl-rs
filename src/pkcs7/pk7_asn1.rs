@@ -475,8 +475,9 @@ static PKCS7_ADB: SyncAdb = SyncAdb(Asn1Adb {
 });
 
 /// The `p7default_adb` accessor the `ADB` template stores: it answers the `ASN1_ADB`, which the
-/// machinery reads through `call_item_exp` exactly as it reads an item accessor.
-fn pkcs7_adb() -> *const c_void {
+/// machinery reads through `call_item_exp` exactly as it reads an item accessor. Declared with the
+/// C ABI because `call_item_exp` invokes a template's `item` through an `extern "C" fn` pointer.
+extern "C" fn pkcs7_adb() -> *const c_void {
     ptr::addr_of!(PKCS7_ADB.0).cast::<c_void>()
 }
 
@@ -1891,5 +1892,20 @@ mod b56_tests {
                 "{label}: the item's asn1_cb is not the callback audited for it"
             );
         }
+    }
+
+    /// MIRI-UB-1: an `ADB` accessor is a template's `item`, and `call_item_exp` invokes that
+    /// through an `extern "C"` function pointer. Declaring the accessor with the C ABI is what
+    /// makes the call sound; the binding below fails to compile if it regresses to the Rust ABI,
+    /// and the call exercises the transmute under Miri.
+    #[test]
+    fn the_adb_accessor_is_callable_through_the_c_abi() {
+        let accessor: extern "C" fn() -> *const c_void = pkcs7_adb;
+        let expected = ptr::addr_of!(PKCS7_ADB.0).cast::<c_void>();
+        // SAFETY: `accessor` is this module's own `ADB` accessor, called with the C ABI the
+        // template machinery uses; it answers a `&'static` record.
+        let actual =
+            unsafe { crate::asn1::utl::call_item_exp(accessor as *const () as *mut c_void) };
+        assert_eq!(actual, expected, "pkcs7_adb");
     }
 }

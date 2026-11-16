@@ -1986,7 +1986,9 @@ static CMS_ORI_ADB: SyncAdb = SyncAdb(Asn1Adb {
     null_tt: ptr::null(),
 });
 
-fn cms_ori_adb() -> *const c_void {
+/// The `ori_adb` accessor the `ADB` template stores. Declared with the C ABI because
+/// `call_item_exp` invokes a template's `item` through an `extern "C" fn` pointer.
+extern "C" fn cms_ori_adb() -> *const c_void {
     ptr::addr_of!(CMS_ORI_ADB.0).cast::<c_void>()
 }
 
@@ -2527,7 +2529,9 @@ static CMS_ADB: SyncAdb = SyncAdb(Asn1Adb {
     null_tt: ptr::null(),
 });
 
-fn cms_adb() -> *const c_void {
+/// The `cms_adb` accessor the `ADB` template stores. Declared with the C ABI because
+/// `call_item_exp` invokes a template's `item` through an `extern "C" fn` pointer.
+extern "C" fn cms_adb() -> *const c_void {
     ptr::addr_of!(CMS_ADB.0).cast::<c_void>()
 }
 
@@ -3018,6 +3022,38 @@ mod b56_tests {
                 core::ptr::fn_addr_eq(actual, expected_cb),
                 "{label}: the item's asn1_cb is not the callback audited for it"
             );
+        }
+    }
+}
+
+#[cfg(test)]
+mod adb_abi_tests {
+    use super::*;
+
+    /// MIRI-UB-1: an `ADB` accessor is a template's `item`, and `call_item_exp` invokes that
+    /// through an `extern "C"` function pointer. Declaring the accessor with the C ABI is what
+    /// makes the call sound; the binding below fails to compile if one regresses to the Rust ABI,
+    /// and the call exercises the transmute under Miri.
+    #[test]
+    fn the_adb_accessors_are_callable_through_the_c_abi() {
+        let cases: [(&str, extern "C" fn() -> *const c_void, *const c_void); 2] = [
+            (
+                "cms_ori_adb",
+                cms_ori_adb,
+                ptr::addr_of!(CMS_ORI_ADB.0).cast::<c_void>(),
+            ),
+            (
+                "cms_adb",
+                cms_adb,
+                ptr::addr_of!(CMS_ADB.0).cast::<c_void>(),
+            ),
+        ];
+        for (label, accessor, expected) in cases {
+            // SAFETY: `accessor` is this module's own `ADB` accessor, called with the C ABI the
+            // template machinery uses; it answers a `&'static` record.
+            let actual =
+                unsafe { crate::asn1::utl::call_item_exp(accessor as *const () as *mut c_void) };
+            assert_eq!(actual, expected, "{label}");
         }
     }
 }
