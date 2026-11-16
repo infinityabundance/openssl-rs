@@ -3136,16 +3136,39 @@
     "line_current": 331,
     "current_line": null
    },
-   "span_sha256": "a8134583c407c2fce564ddc13cadfa568cd081086e9ec87a675cd6c2f0c40bcd",
+   "span_sha256": "22f336455d6cdd36c2274571e610fe542b3965d84c17aa5ccd3c95bd4dc07f79",
    "span_schema": "safe-c33/operation-span-sha256/v1",
    "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
    "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
    "span_start_line": 331,
-   "span_end_line": 396,
+   "span_end_line": 404,
    "span_qualified_identity": "i2v_AUTHORITY_INFO_ACCESS",
    "span_resolution": "unique",
-   "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
-   "span_source_field": "line"
+   "span_source_commit": "fed1f077b5be4edabff51191ad2c0f15985492fd",
+   "span_source_field": "line_current",
+   "verdict": "ACCEPT",
+   "verdict_class": "content-reverified",
+   "verdict_basis": "ACCEPT re-established at fed1f077b5be4edabff51191ad2c0f15985492fd (b82-review-rebind): the span grew 331-396 to 331-404 and the hash changed only because the two `return i2v_ainfo_err(...)` statements were wrapped in `unsafe { }` and each gained a SAFETY comment, now that the helper is an `unsafe fn`; a line-local diff of the recorded span text at b6f38f13456b79ecd94b1088c835c3da92bc942a against the span at fed1f077b5be4edabff51191ad2c0f15985492fd shows no other change (no statement, expression, signature, attribute or layout changed, and no branch or release path moved). The body, its `# Safety`, the row registration and both call sites were re-read at this candidate and the four questions re-answered.",
+   "review_receipt": "b82-review-rebind",
+   "review_receipt_path": "evidence/b82-review-rebind.json",
+   "reviewed_span_sha256": "22f336455d6cdd36c2274571e610fe542b3965d84c17aa5ccd3c95bd4dc07f79",
+   "span_hash_identical_to_review": true,
+   "covers_site": true,
+   "covers_site_basis": "the boundary's declared range (src/x509/v3_info.rs:331) covers the current census coordinate 331 and the recorded span_sha256 is the resolver's hash of the current bytes (22f336455d6cdd36); the ledger join key `src/x509/v3_info.rs:323` is the acceptance key, not a coordinate claim, and is retained unchanged",
+   "rebind": {
+    "review": "b82-review-rebind",
+    "review_path": "evidence/b82-review-rebind.json",
+    "candidate": "fed1f077b5be4edabff51191ad2c0f15985492fd",
+    "prior_candidate": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+    "prior_span_sha256": "a8134583c407c2fce564ddc13cadfa568cd081086e9ec87a675cd6c2f0c40bcd",
+    "prior_span_lines": [
+     331,
+     396
+    ],
+    "prior_coordinate": 323,
+    "delta_classification": "call-site-unsafe-wrapped-and-comment-added",
+    "delta": "in-span: the two `i2v_GENERAL_NAME`/`OPENSSL_sk_push` failure exits changed from `return i2v_ainfo_err(ret, tret);` to `return unsafe { i2v_ainfo_err(ret, tret) };` and each gained a SAFETY comment stating the ownership witness. The change moved no value, branch, allocation or release: `unsafe { f(x) }` and `f(x)` compile to the same call, the helper's body and its `OPENSSL_sk_pop_free`-under-NULL-`ret` guard are unchanged, and the helper is a private non-exported fn, so no symbol, ABI or behaviour changes. The qualifier elevation makes the obligation the body always had (exclusive ownership of `tret`, single release) explicit in the type."
+   }
   },
   {
    "id": "src/x509/v3_info.rs:460",
@@ -3163,19 +3186,42 @@
    "source_row_key": "rows",
    "source_row_coordinates": {
     "line": null,
-    "line_current": 460,
+    "line_current": 485,
     "current_line": null
    },
-   "span_sha256": "070893b8d932de42f67ea5f956b6b87d3aabe3a6ab13e44f1da256c30228b48e",
+   "span_sha256": "65dc1fcdf77ed43f758c66011275e9c12e53f52fd5e3bce1a92e1343f6f79cdc",
    "span_schema": "safe-c33/operation-span-sha256/v1",
    "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
    "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
-   "span_start_line": 460,
-   "span_end_line": 551,
+   "span_start_line": 485,
+   "span_end_line": 589,
    "span_qualified_identity": "v2i_AUTHORITY_INFO_ACCESS",
    "span_resolution": "unique",
-   "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
-   "span_source_field": "line_current"
+   "span_source_commit": "fed1f077b5be4edabff51191ad2c0f15985492fd",
+   "span_source_field": "line_current",
+   "verdict": "ACCEPT",
+   "verdict_class": "content-reverified",
+   "verdict_basis": "ACCEPT re-established at fed1f077b5be4edabff51191ad2c0f15985492fd (b82-review-rebind): the span moved 460-551 to 485-589 and the hash changed only because the five `return v2i_ainfo_err(ainfo)` statements were wrapped in `unsafe { }` and each gained a SAFETY comment, now that the helper is an `unsafe fn`; a line-local diff of the recorded span text at b6f38f13456b79ecd94b1088c835c3da92bc942a against the span at fed1f077b5be4edabff51191ad2c0f15985492fd shows no other change. The body, its `# Safety`, the row registration and the `do_ext_nconf` dispatch path were re-read at this candidate and the four questions re-answered.",
+   "review_receipt": "b82-review-rebind",
+   "review_receipt_path": "evidence/b82-review-rebind.json",
+   "reviewed_span_sha256": "65dc1fcdf77ed43f758c66011275e9c12e53f52fd5e3bce1a92e1343f6f79cdc",
+   "span_hash_identical_to_review": true,
+   "covers_site": true,
+   "covers_site_basis": "the boundary's declared range (src/x509/v3_info.rs:485) covers the current census coordinate 485 and the recorded span_sha256 is the resolver's hash of the current bytes (65dc1fcdf77ed43f); the ledger join key `src/x509/v3_info.rs:460` is the acceptance key, not a coordinate claim, and is retained unchanged",
+   "rebind": {
+    "review": "b82-review-rebind",
+    "review_path": "evidence/b82-review-rebind.json",
+    "candidate": "fed1f077b5be4edabff51191ad2c0f15985492fd",
+    "prior_candidate": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+    "prior_span_sha256": "070893b8d932de42f67ea5f956b6b87d3aabe3a6ab13e44f1da256c30228b48e",
+    "prior_span_lines": [
+     460,
+     551
+    ],
+    "prior_coordinate": 460,
+    "delta_classification": "call-site-unsafe-wrapped-and-comment-added",
+    "delta": "in-span: each of the five failure exits changed from `return v2i_ainfo_err(ainfo);` to `return unsafe { v2i_ainfo_err(ainfo) };` with a SAFETY comment naming the exclusive `OPENSSL_sk_new_reserve` list, its elements and (at the last exit) the separate `objtmp` `Drop`. No value, branch, allocation, release order or failure result changed; `unsafe { f(x) }` and `f(x)` are the same call. The helper's body and unconditional `OPENSSL_sk_pop_free` are unchanged, and it is a private non-exported fn, so no symbol, ABI or behaviour changes. The qualifier elevation states the obligation the body always had (exclusively-owned non-NULL `ainfo`, consumed once)."
+   }
   },
   {
    "id": "src/x509/v3_lib.rs:624",
@@ -5859,5 +5905,14 @@
   "scope": "the three boundaries this receipt owns whose bytes changed at 32fedf5d3: `src/x509/v3_san.rs:1069` (v2i_GENERAL_NAME_ex, in-span authority-citation correction only), `src/x509/v3_san.rs:1246` (v2i_issuer_alt, NULL-`name` refusal added) and `src/x509/v3_san.rs:1372` (v2i_subject_alt, same refusal added)",
   "rule": "each boundary's recorded span_sha256 is the closure tool's own resolve_operation_span hash at S=32fedf5d3, its declared range is the operation's current definition coordinate (so the closure's covers_site witness is true), and its verdict is the b81-review-rebind verdict for that boundary. The boundary `id` values are ledger join keys and are unchanged. No other boundary, supersedes entry, count or verdict in this receipt was modified; the remaining 132 boundaries still record their earlier spans.",
   "prior_evidence_note": "the substantive per-site evidence remains each entry's ledger row (boundary-sweep-B55 for the three SAN builders), which this receipt transcribes and which the rebind does not rewrite; this receipt supplies the coordinate and content binding only."
+ },
+ "rebind_review_b82": {
+  "review": "b82-review-rebind",
+  "review_path": "evidence/b82-review-rebind.json",
+  "candidate": "fed1f077b5be4edabff51191ad2c0f15985492fd",
+  "prior_candidate": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+  "scope": "the two boundaries this receipt owns whose bytes changed at fed1f077b5be4edabff51191ad2c0f15985492fd (b82): `src/x509/v3_info.rs:323` (i2v_AUTHORITY_INFO_ACCESS) and `src/x509/v3_info.rs:460` (v2i_AUTHORITY_INFO_ACCESS), each changed only where it calls the now-`unsafe` private helper (`i2v_ainfo_err` / `v2i_ainfo_err`)",
+  "rule": "each boundary's recorded span_sha256 is the closure tool's own resolve_operation_span hash at S, independently reproduced by this review; its declared range is the operation's current definition coordinate (so the closure's covers_site witness is true), and its verdict is the b82-review-rebind verdict. The boundary `id` values are ledger join keys and are unchanged. No other boundary, supersedes entry, count or verdict in this receipt was modified; the remaining 132 boundaries still record their earlier spans.",
+  "prior_evidence_note": "the substantive per-site evidence remains each entry's ledger row (boundary-sweep-B54 for the i2v slot, boundary-sweep-B51/B55 for the v2i slot), which this receipt transcribes and which the rebind does not rewrite; this receipt supplies the coordinate and content binding only."
  }
 }
