@@ -1,0 +1,139 @@
+{
+  "schema": "openssl-rs/safe-c33/row-reconciliation/v1",
+  "kind": "reviewer row reconciliation (no build)",
+  "generated_utc": "2026-11-17",
+  "reviewer_role": "adversarial reviewer; did not author B51/B54/B55/B57; source-level only",
+  "branch": "stage/p25/b75-ocsp",
+  "head_at_review": "fc1a1e8df",
+  "source_candidate": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+  "conflict": {
+    "statement": "At S the b85c closures report 290/290 DISCHARGED, while CAMPAIGN-STATUS reopens B54-F1 src/x509/v3_info.rs::v2i_AUTHORITY_INFO_ACCESS (high) and keeps B55-F1 blocking v2i_idp and v2i_aaidp. None of the three is named in evidence/b85c-safety-argument.json.",
+    "resolution": "All three are LEDGER_STALE. In each case the defect named by the ledger row has a repair present at S, the repair is still true at S, and a load-bearing control at S fails on the pre-fix code (mutation evidence in the discharging receipt). No closure record was rewritten and no source was changed."
+  },
+  "ledger": {
+    "path": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+    "objects_edited": 3,
+    "objects_untouched": [
+      "b85c_adjudication (verdict and refusals preserved verbatim)",
+      "findings[B54-F2] (remains open: value-nullable contract finding, blocks nothing discharged)",
+      "remaining_obligations, scoped_boundary_discharges, gates, current_applied_state, all other findings"
+    ]
+  },
+  "rows": [
+    {
+      "ledger_pointer": "/reopened_discharges/0 (reopens boundary-sweep-B51)",
+      "obligation": "src/x509/v3_info.rs::v2i_AUTHORITY_INFO_ACCESS",
+      "closure_record": {
+        "file": "evidence/closure-ssh-b85c.json",
+        "id": "V1:src/x509/v3_info.rs:414:UNSAFE_FN_DEF",
+        "status": "DISCHARGED",
+        "discharge_receipt": "boundary-sweep-B51",
+        "boundary": "B51-V2I-005",
+        "span_binding": "same-resolved-definition, span hash matches S (65dc1fcdf77ed43f)"
+      },
+      "ledger_claim": "B51's premise is refuted because the dirName arm reaches X509V3_get_section, which dereferences (*ctx).",
+      "source_at_S": [
+        "src/x509/v3_conf.rs:435-446 - X509V3_get_section refuses a NULL ctx: raises V3_CONF_410_NULL and returns NULL instead of reading (*ctx).db; documented deliberate divergence from the authority's dereference.",
+        "src/x509/v3_conf.rs:493-499 - X509V3_section_free returns early when section is NULL, so the paired release never dereferences a NULL ctx.",
+        "src/x509/v3_conf.rs:1124-1136 - do_ext_nconf's r2i arm refuses a NULL ctx before reading (*ctx).db.",
+        "src/x509/v3_san.rs:874-892 - do_dirname calls X509V3_get_section(ctx, value), raises SECTION_NOT_FOUND when it answers NULL, and frees only the NULL section."
+      ],
+      "discharging_receipt": {
+        "receipt": "forensics/.../atlas-refresh/boundary-sweep-B55.json",
+        "row": "src/x509/v3_info.rs:460 v2i_AUTHORITY_INFO_ACCESS SAFETY_DISCHARGED",
+        "control": "NID_info_access `OCSP;dirName:b55_info_section` with a NULL ctx -> NULL + error (passed); guard removal aborts (SIGABRT)"
+      },
+      "control_at_S": "x509::v3_conf::b55_tests::b55_null_config_context_is_refused_on_every_section_path (src/x509/v3_conf.rs:2627) drives NID_info_access `OCSP;dirName:...` and NID_subject_alt_name `dirName:...` with a NULL ctx.",
+      "decision": "LEDGER_STALE",
+      "why_not_discharge_wrong": "The precondition the reopen named (a NULL ctx reaching (*ctx).db) no longer holds at S, and B51-V2I-005's stated contract (v2i_GENERAL_NAME_ex accepts NULL ctx and refuses the section read) is true at S.",
+      "old_state": "open (BLOCKED, ledger effect DISCHARGED -1 / BLOCKED +1)",
+      "new_state": "resolved; B51 row restored to DISCHARGED",
+      "note": "The ledger already contradicted itself: scoped_boundary_discharges[30] applies B55's effect including src/x509/v3_info.rs:460 BLOCKED -> SAFETY_DISCHARGED, while reopened_discharges still listed the row as BLOCKED."
+    },
+    {
+      "ledger_pointer": "/findings/0 (B54-F1)",
+      "obligation": "v2i_AUTHORITY_INFO_ACCESS (blocks: 11 B54 rows + reopened B51 row)",
+      "closure_record": {
+        "file": "evidence/closure-ssh-b85c.json",
+        "status": "DISCHARGED (all 290 rows DISCHARGED)"
+      },
+      "ledger_claim": "X509V3_EXT_nconf* document ctx as NULL-or-live while X509V3_get_section and do_ext_nconf read (*ctx).db; X509V3_EXT_nconf_nid(NULL, NULL, NID_subject_alt_name, \"dirName:x\") is a NULL dereference.",
+      "source_at_S": "same two guards as the row above, plus the r2i refusal; the required_resolution's first branch (refuse a NULL ctx) was taken.",
+      "discharging_receipt": {
+        "receipt": "boundary-sweep-B55",
+        "rows": "10 of 12 re-adjudicated SAFETY_DISCHARGED after the B54-F1 repair; the 2 retained (v2i_idp, v2i_aaidp) were then discharged by boundary-sweep-B57"
+      },
+      "control_at_S": "b55_null_config_context_is_refused_on_every_section_path (9 rows: v2i_crld, v2i_idp, v2i_aaidp, v2i_NAME_CONSTRAINTS, v2i_issuer_alt, v2i_subject_alt, v2i_AUTHORITY_INFO_ACCESS, r2i_certpol, r2i_pci).",
+      "decision": "LEDGER_STALE",
+      "unblocks": "all 11 B54 rows + the B51 row are DISCHARGED at S: 9 by B55, 2 by B57",
+      "old_state": "open",
+      "new_state": "closed_by_repair",
+      "evidence_level": "FAST + mutation negative control; BOUNDARY re-adjudication NOT_RUN",
+      "retained": "B54-F2 (value-nullable contract) stays open and is unaffected by this closure.",
+      "note": "Closing the finding does not by itself make any SAFE_COMPATIBLE claim; the b85c verdict rests on separate grounds (mechanism states, cross-cutting obligations, instrument coverage, identity)."
+    },
+    {
+      "ledger_pointer": "/findings/2 (B55-F1)",
+      "obligation": "v2i_idp and v2i_aaidp (2 rows)",
+      "closure_record": [
+        {"id": "V1:src/x509/v3_crld.rs:1566:UNSAFE_FN_DEF", "item": "v2i_idp", "status": "DISCHARGED", "discharge_receipt": "boundary-sweep-B57"},
+        {"id": "V1:src/x509/v3_crld.rs:1928:UNSAFE_FN_DEF", "item": "v2i_aaidp", "status": "DISCHARGED", "discharge_receipt": "boundary-sweep-B57"}
+      ],
+      "ledger_claim": "The template walk casts base+offset to a pointer slot for inline ASN1_FBOOLEAN/ASN1_TBOOLEAN fields at offsets 12/28 (ISSUING_DIST_POINT) and 20/28 (OSSL_AA_DIST_POINT) and dereferences it at src/asn1/fre.rs:218 and src/asn1/i2d.rs:234; v2i_idp refusal cleanup and successful idp/aaidp encodes abort.",
+      "source_at_S": [
+        "src/asn1/utl.rs:442-512 - is_inline_boolean gates width- and alignment-correct read_inline_boolean/write_inline_boolean (unaligned c_int access).",
+        "src/asn1/fre.rs:129,166 - the free walk never reads a primitive slot as a pointer and writes the fill through write_inline_boolean.",
+        "src/asn1/i2d.rs:554,622-637 - pointer test skipped for V_ASN1_BOOLEAN; value read through read_inline_boolean.",
+        "src/asn1/tasn_prn.rs:223 - print walk uses is_inline_boolean."
+      ],
+      "discharging_receipt": {
+        "receipt": "atlas-refresh/boundary-sweep-B57.json",
+        "rows": "v2i_idp src/x509/v3_crld.rs:1566 and v2i_aaidp :1928 both SAFETY_DISCHARGED, applied=true, candidate be5ed2023 (fix carried into S)",
+        "negative_control": "revert the six ASN.1 files -> each B57 test aborts: fre.rs:218 (misaligned, base+12) or i2d.rs:234",
+        "positive_control": "exact DER for set/clear booleans plus decode round-trip into the real struct fields"
+      },
+      "control_at_S": [
+        "x509::v3_crld::b57_idp_nconf_encodes_every_inline_boolean",
+        "x509::v3_crld::b57_aaidp_nconf_encodes_inline_booleans",
+        "b55_null_config_context_is_refused_on_every_section_path (idp/aaidp rows, refusal cleanup now runs to a NULL answer)"
+      ],
+      "decision": "LEDGER_STALE",
+      "old_state": "open",
+      "new_state": "closed_by_repair",
+      "evidence_level": "FAST + mutation negative control at S; BOUNDARY re-adjudication NOT_RUN",
+      "retained": "B57 residual: other inline-boolean templates (X509_EXTENSION.critical, TS certReq/ordering, OSSL_TIME_SPEC.notThisTime) are repaired by the shared change but not individually tested. Recorded as a test-coverage obligation; it does not block the two rows named here."
+    }
+  ],
+  "cross_check": {
+    "question": "Does any other ledger row name an obligation that is DISCHARGED in the b85c closures?",
+    "live_conflicts": 0,
+    "other_named_coordinates": 9,
+    "status": "historical only - all 9 sit in scoped_boundary_discharges[29] (boundary-sweep-B54, '11 rows RETAINED BLOCKED') and were re-adjudicated DISCHARGED by boundary-sweep-B55, whose applied effect is recorded in scoped_boundary_discharges[30]. Today's ledger therefore has no live row that blocks a discharged obligation once the three rows above are reconciled.",
+    "ids": [
+      {"operation": "r2i_certpol", "b54_site": "src/x509/v3_cpols.rs:1247", "b85c_status": "DISCHARGED", "via": "boundary-sweep-B55 (src/x509/v3_cpols.rs:1249)"},
+      {"operation": "r2i_pci", "b54_site": "src/x509/v3_pci.rs:647", "b85c_status": "DISCHARGED", "via": "boundary-sweep-B55 (src/x509/v3_pci.rs:649)"},
+      {"operation": "v2i_crld", "b54_site": "src/x509/v3_crld.rs:1325", "b85c_status": "DISCHARGED", "via": "boundary-sweep-B55 (src/x509/v3_crld.rs:1333)"},
+      {"operation": "v2i_NAME_CONSTRAINTS", "b54_site": "src/x509/v3_ncons.rs:390", "b85c_status": "DISCHARGED", "via": "boundary-sweep-B55 (src/x509/v3_ncons.rs:393)"},
+      {"operation": "v2i_GENERAL_NAME_ex", "b54_site": "src/x509/v3_san.rs:1058", "b85c_status": "DISCHARGED", "via": "boundary-sweep-B55 (src/x509/v3_san.rs:1069)"},
+      {"operation": "v2i_GENERAL_NAME", "b54_site": "src/x509/v3_san.rs:1115", "b85c_status": "DISCHARGED", "via": "boundary-sweep-B55 (src/x509/v3_san.rs:1127)"},
+      {"operation": "v2i_GENERAL_NAMES", "b54_site": "src/x509/v3_san.rs:1131", "b85c_status": "DISCHARGED", "via": "boundary-sweep-B55 (src/x509/v3_san.rs:1144)"},
+      {"operation": "v2i_issuer_alt", "b54_site": "src/x509/v3_san.rs:1231", "b85c_status": "DISCHARGED", "via": "boundary-sweep-B55 (src/x509/v3_san.rs:1246)"},
+      {"operation": "v2i_subject_alt", "b54_site": "src/x509/v3_san.rs:1355", "b85c_status": "DISCHARGED", "via": "boundary-sweep-B55 (src/x509/v3_san.rs:1372)"}
+    ],
+    "method": "loaded CAMPAIGN-STATUS.json and both b85c closures, matched every ledger string against closure obligation items/ids, then classified each named site by whether its discharging receipt was superseded by a later applied receipt. Findings, reopened_discharges, withdrawn_boundary_discharges, known_gaps, remaining_obligations and current_applied_state were checked; the only non-discharge mentions of discharged operations are the three reconciled here."
+  },
+  "closure_evidence_quality_note": {
+    "observation": "The closure records are not clean even where their verdict is right. For v2i_idp/v2i_aaidp the boundary_dispositions list is shorter than boundary_ids and is deduplicated, not index-aligned, and it contains a 'boundary-sweep-B55; recorded row verdict SAFETY_DISCHARGED' entry for src/x509/v3_crld.rs:1566 although B55's own row at that coordinate is BLOCKED (B57 is the receipt that discharged it). For v2i_AUTHORITY_INFO_ACCESS the list mixes dispositions of different operations (P25-X509-V3-SLOT-029 is i2v_AUTHORITY_INFO_ACCESS) with the v2i discharge.",
+    "consequence": "The DISCHARGED verdicts are supportable from the receipts and from S, but the human-readable disposition strings can be misread as a per-row mapping. A consumer must join boundary_ids to rows, not zip the two lists.",
+    "disposition": "Recorded for the orchestrator; no closure receipt was rewritten by this review."
+  },
+  "limits": {
+    "evidence_level": "FAST + mutation negative controls at S. BOUNDARY and SEAL re-adjudication were NOT_RUN for these rows.",
+    "not_claimed": "This reconciliation does not establish SAFE_COMPATIBLE and does not alter the b85c verdict. The b85c adjudication's remaining refusal grounds are untouched (EVP/X509/RAND/C_ABI/BIO mechanism states, cross-cutting obligations, instrument coverage, tool-identity classification, uninstrumented panic/secret-memory paths).",
+    "source_untouched": true,
+    "tests_untouched": true,
+    "committed": false,
+    "builds_run": false,
+    "build_note": "source-level review only; available memory was below the AGENTS.md section 6.1 build threshold (free -g available 11 GiB), so no court command was attempted."
+  }
+}
