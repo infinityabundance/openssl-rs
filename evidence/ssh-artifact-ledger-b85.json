@@ -1,0 +1,36 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/per-artefact-ledger/v1",
+ "kind": "per-artefact-ledger-binding",
+ "date": "2026-11-17",
+ "family_id": "openssh",
+ "run_id": "run:build-link:candidate:openssh:ssh",
+ "run_id_note": "the atlas row is run:build-link:candidate:openssh and records its own ssh build; this per-artefact join names the analysed closure build of the same recipe/source",
+ "level": "L4-linked",
+ "outcome": "reached",
+ "recipe_id": "recipe:openssh:9.9p1",
+ "source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+ "source_root_hash": "4a5abaf399ac1ee4ba977c30f73c748b7dcaf5c168eb26b1ff65cedefe28906f",
+ "source_root_hash_rule": null,
+ "source_tree_domain_hash": null,
+ "artifact_rel": "ssh",
+ "artifact_sha256": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b",
+ "install_libcrypto_sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+ "recorded_candidate_install": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+ "freeze": "court/freeze-b85/FREEZE-b85.json",
+ "freeze_sha256": "f7d312802129f1dfc8aa2df1cba9c2e44ff7b04aa5f6d7799b8ff3c4a70bddf1",
+ "freeze_sha256_note": "filled from FREEZE-b85.json as it existed when this ledger was written; consumer_artifact_rebind.verify() does not read this field (it reads freeze.source.head, freeze.candidate_identity.libcrypto_so_3_sha256 and freeze.artefacts.files[artifact_rel]), so a later freeze regeneration does not affect the rebind",
+ "carry_chain": {
+  "source": "evidence/closure-ssh-b84b.json",
+  "target": "evidence/closure-ssh-b85.json",
+  "carried_forward_removed": 3,
+  "note": "the b85 run repeats the full queue with instrument b42f19bd at S (source 17042ccf2) and reaches 290/290 with 0 refusals and 0 stale discharge rejections; it carries forward from evidence/closure-ssh-b84b.json"
+ },
+ "witness": "the same OpenSSH 9.9p1 recipe/source row that built sshd also built the analysed ssh: FREEZE-b85 records artefacts.files.ssh.sha256 = c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b, the exact binary the b85 receipt analysed at court/tmp/openssh-closure/client-b85/openssh-9.9p1/ssh, whose runpath resolves libcrypto.so.3 to the freeze-proven install 06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71. The atlas row records artifact_rel='ssh' artifact_sha256=45da459f72fafb25fb49d6d50406354d4baa54f2f18510ae9a560314a499b63a, its own ssh build (a different configure argv), not this artefact; this ledger is therefore the per-artefact join for ssh, and it does not claim the atlas row measured it.",
+ "note": "This is a per-artefact ledger join, not a build-link measurement. It removes the structural one-row-cannot-bind-two-artefacts defect for ssh; a fresh closure run is still required.",
+ "non_claims": [
+  "does not re-measure ssh",
+  "does not change any closure count, verdict or refusal",
+  "does not establish SAFE_COMPATIBLE",
+  "does not claim the atlas row measured the analysed closure build"
+ ]
+}

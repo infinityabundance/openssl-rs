@@ -1,15 +1,15 @@
 {
  "schema": "openssl-rs/campaign/safe-c33/l7-replay/v1",
  "candidate_tag": "b85",
- "generated_utc": "2026-11-17T04:53:50Z",
- "purpose": "L7 functional replay of the OpenSSH consumer family at the exact b85 frozen candidate (source 5edca576b, tag b85). Same workloads and case set as the b84 replay (court/freeze-b84/l7); only tree paths, ports, work dir and the identity block differ. This file is the evidence that the replay was run and the identity every measurement was taken at.",
+ "generated_utc": "2026-11-17T09:36:54Z",
+ "purpose": "L7 functional replay of the OpenSSH consumer family at the exact b85 frozen candidate (source 17042ccf2, tag b85). Same workloads and case set as the b84 replay (court/freeze-b84/l7); only tree paths, ports, work dir and the identity block differ. This file is the evidence that the replay was run and the identity every measurement was taken at.",
  "branch": "stage/p25/b75-ocsp",
- "repository_head_at_measurement": "5edca576b569b4a7bd6acfb09b77938ee555c147",
- "repository_head_note": "HEAD when the replay ran. The candidate source identity is 5edca576b569b4a7bd6acfb09b77938ee555c147 (tag b85). `git diff --stat 5edca576b569b4a7bd6acfb09b77938ee555c147 -- src Cargo.toml Cargo.lock build.rs` is empty at measurement, so the build-relevant source tree at HEAD is byte-identical to the candidate S. The b85b closure receipts record repository_head 5edca576b569b4a7bd6acfb09b77938ee555c147 with tracked_tree_dirty=true and inventory_source_head/span_source_commit 5edca576b, so the closures' obligation spans are bound to S's git blobs.",
+ "repository_head_at_measurement": "2170f55b4cec0afcf7c4349de97935cb7b8a1b82",
+ "repository_head_note": "HEAD when the replay ran. The candidate source identity is 17042ccf29bc39df638c63e69d3be6c6f965eef7 (tag b85). `git diff --stat 17042ccf29bc39df638c63e69d3be6c6f965eef7 -- src Cargo.toml Cargo.lock build.rs` is empty at measurement, so the build-relevant source tree at HEAD is byte-identical to the candidate S. The b85 closure receipts record repository_head 17042ccf29bc39df638c63e69d3be6c6f965eef7 with tracked_tree_dirty=true and inventory_source_head/span_source_commit 17042ccf2, so the closures' obligation spans are bound to S's git blobs.",
  "candidate_identity": {
-  "production_source_head": "5edca576b569b4a7bd6acfb09b77938ee555c147",
-  "closure_receipts_repository_head": "5edca576b569b4a7bd6acfb09b77938ee555c147",
-  "instrument_head": "5edca576b569b4a7bd6acfb09b77938ee555c147",
+  "production_source_head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+  "closure_receipts_repository_head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+  "instrument_head": "2170f55b4cec0afcf7c4349de97935cb7b8a1b82",
   "instrument_tool_sha256": "b42f19bdfb40d94009a6256dcc7a3d5fd96e6a2c8fba595133372ce6fed5f913",
   "libcrypto_so_3_sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
   "libssl_so_3_sha256": "1901de061d9d9793849b8c2d2b73847c7feb61339708062aea064a95f0e60b2b",
@@ -71,9 +71,9 @@
   },
   "census": {
    "path": "court/freeze-b85/census-b85.json",
-   "source_head": "5edca576b569b4a7bd6acfb09b77938ee555c147",
+   "source_head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
    "src_content_sha256": "bc6815c2120e4c440af264b22280fc379d30176e8e5d2f5ee3f3d466364a7a22",
-   "note": "the census was taken at the candidate tag b85 (5edca576b); its install digests are the ones measured above"
+   "note": "the census was taken at the candidate tag b85 (17042ccf2); its install digests are the ones measured above"
   }
  },
  "authority_openssh": {
@@ -140,7 +140,7 @@
  "venue": {
   "container": "openssl-rs-court (image openssl-rs-court:1), up before this batch",
   "caps": "memory.max=17179869184 (16 GiB) for the replay; memory.swap.max=17179869184; cpu.max=1600000 100000 (16 CPU); pids.max=2048; memory.events oom=0 oom_kill=0 after the batch",
-  "cap_note": "the replay and the authority build ran under the directed 16 GiB / 16 CPU venue (evidence/b79-court-limits-16g-16cpu.json is the record of the same directive). Every heavy command of this batch ran in that 16 GiB / 16 CPU court: the b85 install and consumer builds, the gate tests, the two closures (peaks 11.7 GiB and 12.9 GiB), the L7 replay and the authority build. AGENTS.md 6.1's formula at this session's host availability (33 GiB) would have capped at 8g; the operator venue of 16g still leaves >=16 GiB to the host. Both figures are recorded, neither is claimed for the other.",
+  "cap_note": "the replay and the authority build ran under the directed 16 GiB / 16 CPU venue (evidence/b79-court-limits-16g-16cpu.json is the record of the same directive). Every heavy command of this batch ran in that 16 GiB / 16 CPU court: the b85 install and consumer builds, the gate tests, the two closures (peaks 12.4 GiB and 12.2 GiB), the L7 replay and the authority build. AGENTS.md 6.1's formula at this session's host availability (33 GiB) would have capped at 8g; the operator venue of 16g still leaves >=16 GiB to the host. Both figures are recorded, neither is claimed for the other.",
   "host_free_g_at_start": "total 45, used 11, free 29, available 33",
   "io_pressure_at_start": "some avg10=0.00 avg60=0.00 avg300=0.00 (idle)",
   "heavy_commands": "one at a time: probe, supplement, keyformat, the authority OpenSSH build (auth-b85), then the authority differential. No candidate build or test was run in this L7 batch.",
@@ -168,15 +168,15 @@
   },
   "keyformat": {
    "path": "court/freeze-b85/l7/keyformat-b85.sh",
-   "sha256": "741f87c1e7587fced5e1f0432b8fff0cc4128e049bf201c1b9773b2b13f97d94",
-   "size": 4036,
+   "sha256": "86adb5de6dace4c84d84e3c643d43d6487fe08c0d8886a5ea9616467f3e0716c",
+   "size": 3957,
    "derived_from": "court/freeze-b84/l7/keyformat-b84.sh"
   },
   "authority_differential": {
    "path": "court/freeze-b85/l7/keyformat-diff-authority-b85.sh",
    "sha256": "712456cee2cdc2dd0169c8f528ac0e58d6d858c1145ab35d87b256e6af449bd9",
    "size": 4281,
-   "derived_from": "court/freeze-b84/l7/keyformat-diff-authority-b84.sh (tag auth-b85)"
+   "derived_from": "court/freeze-b84/l7/keyformat-diff-authority-b85.sh (tag auth-b85)"
   }
  },
  "workloads": {
@@ -197,20 +197,16 @@
     }
    },
    "cross_check": {
-    "status": "NOT_RUN",
-    "reason": "the candidate-only keyformat-b85.sh authority rows stay NOT_RUN: it is invoked with no AUTH_KG, by construction",
+    "status": "PASS",
+    "reason": "keyformat-b85.sh was run with AUTH_KG set to the b85 authority-linked ssh-keygen (auth-b85), so sections A-D are live candidate<->authority cross-reads, not candidate-only reads",
     "counts_in_this_transcript": {
-     "candidate_reads_OK": 7,
+     "reads_OK": 20,
      "FAIL": 0,
-     "authority_rows_NOT_RUN": 8
+     "authority_rows_NOT_RUN": 0
     },
-    "partial_substitute": {
-     "status": "PASS",
-     "detail": "Section C reads OpenSSH's own shipped regress private keys (rsa_openssh.prv, ed25519_openssh.prv): both read OK. ecdsa256_openssh.prv is not present in the 9.9p1 regress tree.",
-     "limit": "a static shipped artefact is not a live authority ssh-keygen"
-    },
-    "closed_by": "w5_authority_keyformat_differential",
-    "original_status_retained": "NOT_RUN"
+    "authority_keygen": "court/tmp/openssh-closure/auth-b85/openssh-9.9p1/ssh-keygen",
+    "section_C": "OpenSSH's own shipped regress private keys (rsa_openssh.prv, ed25519_openssh.prv) are read by both readers; ecdsa256_openssh.prv is not present in the 9.9p1 regress tree",
+    "independent_of": "w5_authority_keyformat_differential"
    }
   },
   "w2_live_sshd_and_login": {
@@ -435,7 +431,7 @@
      "result": "PASS"
     }
    ],
-   "closes": "the candidate-only keyformat-b85.sh authority rows that remain NOT_RUN; this is the live authority cross-reader differential"
+   "closes": "an independent second live authority cross-reader differential, beyond the 20 live cross-reads in keyformat-b85.sh"
   }
  },
  "totals": {
@@ -452,9 +448,9 @@
    "of": 16
   },
   "keyformat_checks": {
-   "candidate_ok": 7,
+   "candidate_ok": 20,
    "fail": 0,
-   "authority_not_run": 8
+   "authority_not_run": 0
   },
   "authority_keyformat_differential": {
    "pass": 10,
@@ -469,23 +465,23 @@
  "transcripts": {
   "probe": {
    "path": "court/freeze-b85/l7/transcripts/probe-b85.log",
-   "sha256": "f273d184b069f414c5e9aebd89afefd79a7a861b499bede1dbc0bdbf2adf6216",
-   "size": 6830
+   "sha256": "a4c84e33dac57c5a91eab004c50570e3f8d4e4cf4e717df76280ebad863738ce",
+   "size": 6841
   },
   "keyformat": {
    "path": "court/freeze-b85/l7/transcripts/keyformat-b85.log",
-   "sha256": "3a389aa23272ba5b17084192bbc64990f296f221ab9e466ecd2a5fd43d7f2e18",
-   "size": 3325
+   "sha256": "6ee0aff7c4a0645fd834ee620f3c6730d51c7bf20b2b92c16e9dce2474a50711",
+   "size": 4138
   },
   "supplement": {
    "path": "court/freeze-b85/l7/transcripts/supplement-b85.log",
-   "sha256": "671a10f122131ca0c8a2db0832a8f651f5b2968835f3b970116fb12e0f8813c6",
-   "size": 2169
+   "sha256": "bcd432260643b5200fdb745ebaee1338b00bf2c7e608f2b7a8c88aa34e7af4af",
+   "size": 2198
   },
   "authority_keyformat_differential": {
    "path": "court/freeze-b85/l7/transcripts/keyformat-diff-authority-b85.log",
-   "sha256": "7bc95398324f18b254ed5d7003c1928de9d75951a780ba81f8ba2088f4cb92ef",
-   "size": 1681
+   "sha256": "898a0c160424f904a1f4199d01a4c264c4ff72311b62cdf18c8965593aade3fc",
+   "size": 1712
   },
   "authority_build_log": {
    "path": "court/freeze-b85/build-auth-b85.log",
@@ -507,7 +503,7 @@
   "The authority-linked OpenSSH and the candidate share the same OpenSSH 9.9p1 source and version text; only the resolved libcrypto differs. The differential tests two OpenSSL implementations behind one OpenSSH version, not two OpenSSH releases."
  ],
  "residuals": [
-  "The candidate-only keyformat-b85.sh authority rows are NOT_RUN by construction and are retained as NOT_RUN; w5 is the evidence that closes the gap.",
+  "keyformat-b85.sh reports 0 NOT_RUN and 0 FAIL at b85: AUTH_KG points at auth-b85, so every authority read executed; w5 is an independent second differential.",
   "The authority build (auth-b85) is a compile run in the court at 16 GiB; it is recorded with its own log and digest, and no candidate source changed.",
   "court/ is git-ignored (/court/ in .gitignore), so these scripts and transcripts are invisible to git status and must be added with `git add -f` if the orchestrator wants them tracked.",
   "The executed sshd-session and sftp-server are the stripped install copies; the evidence binds the executed digests and the tree digests separately rather than asserting they are the same bytes.",
