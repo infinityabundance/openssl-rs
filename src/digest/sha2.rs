@@ -192,11 +192,23 @@ fn maj64(x: u64, y: u64, z: u64) -> u64 {
 }
 
 /// `sha256_block_data_order` — `crypto/sha/sha256.c`'s `OPENSSL_SMALL_FOOTPRINT` arm.
-fn sha256_block(ctx: &mut Sha256Ctx, mut data: *const u8, mut num: usize) {
+///
+/// # Safety
+///
+/// `data` must be the start of one region of `num * MD32_CBLOCK` readable bytes, live for the
+/// whole call and **disjoint from `*ctx`**: the receiver is an exclusive borrow, so a pointer
+/// into the context's own staging buffer (`ctx.data`) may not be passed. The block is read
+/// before the chaining words are written, and ordering alone does not make that overlap sound,
+/// so the staging call sites pass a copy (`md32::compress_staged` for the 32-bit width). The
+/// extent must be representable (`num * MD32_CBLOCK` must not overflow `usize`), and the region
+/// need not be aligned beyond `u8`, because every word is loaded byte-wise. When `num == 0`
+/// nothing is read.
+unsafe fn sha256_block(ctx: &mut Sha256Ctx, mut data: *const u8, mut num: usize) {
     while num > 0 {
         let mut x = [0u32; 16];
         for (i, word) in x.iter_mut().enumerate() {
-            // SAFETY: the caller guaranteed `num * MD32_CBLOCK` readable bytes.
+            // SAFETY: `i < 16`, so `i * 4 + 4 <= MD32_CBLOCK` and this word lies in the block
+            // this iteration compresses, which the contract makes readable.
             *word = unsafe { md32::load_word(data.add(i * 4), false) };
         }
 
@@ -242,20 +254,31 @@ fn sha256_block(ctx: &mut Sha256Ctx, mut data: *const u8, mut num: usize) {
         ctx.h[6] = ctx.h[6].wrapping_add(g);
         ctx.h[7] = ctx.h[7].wrapping_add(h);
 
-        // SAFETY: `num >= 1`, so advancing one block stays inside the caller's region.
+        // SAFETY: `num >= 1` here, so `num - 1` blocks remain and advancing one block stays at
+        // or below the end of the contracted extent.
         data = unsafe { data.add(MD32_CBLOCK) };
         num -= 1;
     }
 }
 
 /// `sha512_block_data_order` — `crypto/sha/sha512.c`'s `OPENSSL_SMALL_FOOTPRINT` arm.
-fn sha512_block(ctx: &mut Sha512Ctx, mut data: *const u8, mut num: usize) {
+///
+/// # Safety
+///
+/// `data` must be the start of one region of `num * 128` readable bytes, live for the whole
+/// call and **disjoint from `*ctx`**: the receiver is an exclusive borrow, so a pointer into
+/// the context's own staging block (`ctx.u`) may not be passed — `sha512_compress_staged`
+/// passes a copy for the authority's `block_data_order(c, c->p, 1)` spelling. The extent must
+/// be representable (`num * 128` must not overflow `usize`), and the region need not be aligned
+/// beyond `u8`, because every word is loaded byte-wise. When `num == 0` nothing is read.
+unsafe fn sha512_block(ctx: &mut Sha512Ctx, mut data: *const u8, mut num: usize) {
     while num > 0 {
         let mut x = [0u64; 16];
         for (i, word) in x.iter_mut().enumerate() {
-            // SAFETY: the caller guaranteed `num * 128` readable bytes; the load is a
-            // byte-wise copy, so an unaligned input is fine and `SHA512_BLOCK_CAN_MANAGE_
-            // UNALIGNED_DATA` is not needed for correctness.
+            // SAFETY: `i < 16`, so `i * 8 + 8 <= 128` and this word lies in the block this
+            // iteration compresses, which the contract makes readable. The load is a byte-wise
+            // copy, so an unaligned input is fine and `SHA512_BLOCK_CAN_MANAGE_UNALIGNED_DATA`
+            // is not needed for correctness.
             *word = unsafe { load_word64(data.add(i * 8)) };
         }
 
@@ -301,10 +324,32 @@ fn sha512_block(ctx: &mut Sha512Ctx, mut data: *const u8, mut num: usize) {
         ctx.h[6] = ctx.h[6].wrapping_add(g);
         ctx.h[7] = ctx.h[7].wrapping_add(h);
 
-        // SAFETY: `num >= 1`, so advancing one block stays inside the caller's region.
+        // SAFETY: `num >= 1` here, so `num - 1` blocks remain and advancing one block stays at
+        // or below the end of the contracted extent.
         data = unsafe { data.add(128) };
         num -= 1;
     }
+}
+
+/// Compress `c`'s own staging block — the authority's `sha512_block_data_order(c, c->p, 1)`.
+///
+/// # Safety
+/// `c` is live and its staging block holds one full block (128 bytes).
+unsafe fn sha512_compress_staged(c: *mut Sha512Ctx) {
+    let mut staged = [0u8; 128];
+    // SAFETY: `c` is live, so its staging block is valid for 128 bytes. The pointer is used only
+    // within this statement: the compression below borrows `*c`, and no pointer into the
+    // context may be held across that.
+    unsafe {
+        let p = (*c).block_bytes();
+        ptr::copy_nonoverlapping(p, staged.as_mut_ptr(), 128);
+    }
+    // SAFETY: `staged` is this frame's own 128-byte block, disjoint from `*c`.
+    unsafe { sha512_block(&mut *c, staged.as_ptr(), 1) };
+    // The staging block holds message bytes, so this copy is cleansed the way `SHA512_Final`
+    // cleanses the original.
+    // SAFETY: `staged` is valid for 128 bytes.
+    unsafe { ptr::write_bytes(staged.as_mut_ptr(), 0, 128) };
 }
 
 /// `PULL64` — one big-endian 64-bit word, byte-wise so the input need not be aligned.
@@ -358,7 +403,9 @@ impl Md32 for Sha256Ctx {
     }
 
     unsafe fn block(&mut self, data: *const u8, num: usize) {
-        sha256_block(self, data, num);
+        // SAFETY: per `Md32::block`'s contract, `data` is readable for `num * MD32_CBLOCK` bytes
+        // and disjoint from `self`.
+        unsafe { sha256_block(self, data, num) }
     }
 
     unsafe fn make_string(&self, md: *mut u8) -> c_int {
@@ -520,7 +567,8 @@ pub unsafe extern "C" fn SHA224_Update(
 /// `int SHA256_Update(SHA256_CTX *c, const void *data, size_t len)`.
 ///
 /// # Safety
-/// `c` must be a live initialised context; `data` readable for `len` bytes.
+/// `c` must be a live initialised context; `data` readable for `len` bytes and disjoint from
+/// `*c`.
 #[no_mangle]
 pub unsafe extern "C" fn SHA256_Update(
     c: *mut Sha256Ctx,
@@ -544,7 +592,8 @@ pub unsafe extern "C" fn SHA224_Final(md: *mut u8, c: *mut Sha256Ctx) -> c_int {
 /// `int SHA256_Final(unsigned char *md, SHA256_CTX *c)`.
 ///
 /// # Safety
-/// `c` must be a live initialised context; `md` writable for `md_len` bytes.
+/// `c` must be a live initialised context; `md` writable for `md_len` bytes and not overlapping
+/// `*c`.
 #[no_mangle]
 pub unsafe extern "C" fn SHA256_Final(md: *mut u8, c: *mut Sha256Ctx) -> c_int {
     // SAFETY: the caller's contract.
@@ -554,7 +603,8 @@ pub unsafe extern "C" fn SHA256_Final(md: *mut u8, c: *mut Sha256Ctx) -> c_int {
 /// `void SHA256_Transform(SHA256_CTX *c, const unsigned char *data)`.
 ///
 /// # Safety
-/// `c` must be a live context; `data` readable for one block.
+/// `c` must be a live context; `data` readable for one block and disjoint from `*c` (the
+/// context's own staging block may not be transformed in place).
 #[no_mangle]
 pub unsafe extern "C" fn SHA256_Transform(c: *mut Sha256Ctx, data: *const u8) {
     // SAFETY: the caller's contract.
@@ -613,7 +663,8 @@ pub unsafe extern "C" fn SHA512_Init(c: *mut Sha512Ctx) -> c_int {
 /// `crypto/sha/sha512.c:246-290`.
 ///
 /// # Safety
-/// `c` must be a live initialised context; `data` readable for `len` bytes.
+/// `c` must be a live initialised context; `data` readable for `len` bytes and disjoint from
+/// `*c` (a caller may not feed the context's own staging block back into it).
 #[no_mangle]
 pub unsafe extern "C" fn SHA512_Update(
     c: *mut Sha512Ctx,
@@ -637,8 +688,6 @@ pub unsafe extern "C" fn SHA512_Update(
         (*c).nh = nh;
     }
 
-    // SAFETY: `c` is live, so its staging block is valid for 128 bytes.
-    let p = unsafe { (*c).block_bytes() };
     // SAFETY: `c` is live.
     let num = unsafe { (*c).num } as usize;
     let mut data = data.cast::<u8>();
@@ -646,6 +695,10 @@ pub unsafe extern "C" fn SHA512_Update(
 
     if num != 0 {
         let n = 128 - num;
+        // SAFETY: `c` is live, so its staging block is valid for 128 bytes. The pointer is
+        // re-derived below after every call that borrows `*c` exclusively, because such a call
+        // invalidates a pointer taken from the context before it.
+        let p = unsafe { (*c).block_bytes() };
         if len < n {
             // SAFETY: both regions are in bounds and distinct.
             unsafe { ptr::copy_nonoverlapping(data, p.add(num), len) };
@@ -660,8 +713,8 @@ pub unsafe extern "C" fn SHA512_Update(
         len -= n;
         // SAFETY: the caller guaranteed `len + n` readable bytes.
         data = unsafe { data.add(n) };
-        // SAFETY: the staging block holds a full block.
-        unsafe { sha512_block(&mut *c, p, 1) };
+        // SAFETY: `c` is live and its staging block holds one full block.
+        unsafe { sha512_compress_staged(c) };
     }
 
     if len >= 128 {
@@ -669,7 +722,8 @@ pub unsafe extern "C" fn SHA512_Update(
         // authority takes this arm and the byte-copying arm is not compiled; this crate's
         // block function reads its input byte-wise, so both arms would be correct here anyway.
         let blocks = len / 128;
-        // SAFETY: `data` is readable for `len >= 128` bytes, so `len / 128` blocks are.
+        // SAFETY: `data` is readable for `len >= 128` bytes, so `len / 128` blocks are, and it
+        // is the caller's buffer, disjoint from `*c`.
         unsafe { sha512_block(&mut *c, data, blocks) };
         // The authority's `data += len, len %= sizeof(c->u), data -= len`: `data` ends at the
         // start of the trailing partial block. Without the `data` advance, the partial bytes
@@ -682,6 +736,10 @@ pub unsafe extern "C" fn SHA512_Update(
     }
 
     if len != 0 {
+        // The staging pointer is derived *after* the compression above, which borrowed `*c`
+        // exclusively.
+        // SAFETY: `c` is live, so its staging block is valid for 128 bytes.
+        let p = unsafe { (*c).block_bytes() };
         // SAFETY: `len < 128` and `data` is readable for `len`.
         unsafe { ptr::copy_nonoverlapping(data, p, len) };
         // SAFETY: `c` is live.
@@ -707,13 +765,14 @@ pub unsafe extern "C" fn SHA384_Update(
 /// `int SHA512_Final(unsigned char *md, SHA512_CTX *c)` — `crypto/sha/sha512.c:139-241`.
 ///
 /// # Safety
-/// `c` must be a live initialised context; `md` NULL or writable for `md_len` bytes.
+/// `c` must be a live initialised context; `md` NULL or writable for `md_len` bytes and not
+/// overlapping `*c`.
 #[no_mangle]
 pub unsafe extern "C" fn SHA512_Final(md: *mut u8, c: *mut Sha512Ctx) -> c_int {
-    // SAFETY: `c` is live, so its staging block is valid for 128 bytes.
-    let p = unsafe { (*c).block_bytes() };
     // SAFETY: `c` is live.
     let mut n = unsafe { (*c).num } as usize;
+    // SAFETY: `c` is live, so its staging block is valid for 128 bytes.
+    let p = unsafe { (*c).block_bytes() };
 
     // SAFETY: `n < 128` on every path that reaches Final.
     unsafe { *p.add(n) = 0x80 };
@@ -722,9 +781,12 @@ pub unsafe extern "C" fn SHA512_Final(md: *mut u8, c: *mut Sha512Ctx) -> c_int {
         // SAFETY: `n <= 128`.
         unsafe { ptr::write_bytes(p.add(n), 0, 128 - n) };
         n = 0;
-        // SAFETY: the staging block holds a full block.
-        unsafe { sha512_block(&mut *c, p, 1) };
+        // SAFETY: `c` is live and its staging block holds one full block.
+        unsafe { sha512_compress_staged(c) };
     }
+    // SAFETY: `c` is live, so its staging block is valid for 128 bytes. The pointer is
+    // re-derived because the compression above borrowed `*c` exclusively.
+    let p = unsafe { (*c).block_bytes() };
     // SAFETY: `n <= 128 - 16` here.
     unsafe { ptr::write_bytes(p.add(n), 0, 128 - 16 - n) };
 
@@ -738,8 +800,8 @@ pub unsafe extern "C" fn SHA512_Final(md: *mut u8, c: *mut Sha512Ctx) -> c_int {
     // SAFETY: the length field is the block's last sixteen bytes.
     unsafe { ptr::copy_nonoverlapping(length.as_ptr(), p.add(128 - 16), 16) };
 
-    // SAFETY: the staging block holds a full block.
-    unsafe { sha512_block(&mut *c, p, 1) };
+    // SAFETY: `c` is live and its staging block holds the padded block just filled.
+    unsafe { sha512_compress_staged(c) };
 
     if md.is_null() {
         return 0;
@@ -771,7 +833,7 @@ pub unsafe extern "C" fn SHA512_Final(md: *mut u8, c: *mut Sha512Ctx) -> c_int {
 /// `int SHA384_Final(unsigned char *md, SHA512_CTX *c)` — `SHA512_Final`.
 ///
 /// # Safety
-/// `c` must be a live initialised context; `md` writable for 48 bytes.
+/// `c` must be a live context; `md` writable for 48 bytes and not overlapping `*c`.
 #[no_mangle]
 pub unsafe extern "C" fn SHA384_Final(md: *mut u8, c: *mut Sha512Ctx) -> c_int {
     // SAFETY: the caller's contract.
@@ -781,7 +843,8 @@ pub unsafe extern "C" fn SHA384_Final(md: *mut u8, c: *mut Sha512Ctx) -> c_int {
 /// `void SHA512_Transform(SHA512_CTX *c, const unsigned char *data)`.
 ///
 /// # Safety
-/// `c` must be a live context; `data` readable for one block.
+/// `c` must be a live context; `data` readable for one block and disjoint from `*c` (the
+/// context's own staging block may not be transformed in place).
 #[no_mangle]
 pub unsafe extern "C" fn SHA512_Transform(c: *mut Sha512Ctx, data: *const u8) {
     // SAFETY: the caller's contract.
@@ -1134,6 +1197,33 @@ mod tests {
                 assert!(!ret.is_null(), "one-shot {i} answered NULL");
                 assert_eq!(hex(&out[..len]), want, "one-shot {i}");
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod unsafe_contract_controls {
+    /// Qualifier control: both compression kernels read `num × block` bytes through the caller's
+    /// pointer, so neither may be callable from safe Rust with an unchecked pointer — the audit
+    /// that found them (evidence/b84-safe-pub-audit.json, `EVP_PKEY_PROVIDER` rows 1-2) recorded
+    /// them as holes because the obligation lived only in a comment. A type-level "is an unsafe
+    /// fn" assertion is not expressible on stable Rust, so the declarations are pinned in the
+    /// production source text, which is read from disk and truncated at the first `#[cfg(test)]`
+    /// module. This test's own assertion text is therefore never searched, and the needles are
+    /// assembled from fragments, so only removing an `unsafe` qualifier can make it fail.
+    #[test]
+    #[allow(clippy::expect_used)]
+    fn the_block_functions_are_unsafe_fns() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/digest/sha2.rs");
+        let src = std::fs::read_to_string(path).expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        for needle in [
+            concat!("unsafe fn ", "sha256_block("),
+            concat!("unsafe fn ", "sha512_block("),
+        ] {
+            assert!(prod.contains(needle), "missing {needle}");
         }
     }
 }

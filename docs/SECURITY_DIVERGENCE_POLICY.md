@@ -2013,3 +2013,44 @@ D334's state, when the column was recorded as a NULL rather than resolved.
   32-byte canary buffer (16 declared + 16 guard) and requires 0 and all 32 bytes unchanged.
   Without the provider guard the call answers 1 and the guard bytes are overwritten.
 - **Trigger:** none planned: permanent, deliberate safety divergence.
+
+### D-CMS-ENCKEY-1 — `ossl_cms_EncryptedContent_init` records a key length while replacing no key, so `ec->key` can be shorter than `ec->keylen`
+
+- **Obligation:** `ossl_cms_EncryptedContent_init` (`src/cms/cms_enc.rs`) called with `key == NULL`
+  and a `keylen` that differs from the length of the block the object already holds.
+- **Authority:** accepts it and records the new length. `cms_enc.c:211-226` allocates and copies
+  `ec->key` only inside `if (key != NULL)` and then assigns `ec->keylen = keylen;`
+  **unconditionally**. The pair can therefore be left describing a block of `keylen` bytes where
+  the block is shorter. A reader then walks the recorded length:
+  `ossl_cms_EncryptedContent_init_bio` (`cms_enc.c:25-209`) keeps the incumbent block on its
+  `enc != 0` arm when `ec->key` is non-NULL and `ec->keylen` equals the context's key length, and
+  passes `ec->key` to `EVP_CipherInit_ex`, which reads
+  `EVP_CIPHER_CTX_get_key_length()` == `ec->keylen` bytes — an out-of-bounds read of the shorter
+  block. It is reachable through the public API only from an in-crate caller: the two
+  `CMS_EnvelopedData_create_ex`/`CMS_AuthEnvelopedData_create_ex` calls pass `(NULL, 0)` on an
+  object that holds no key, and `CMS_EncryptedData_set1_key` refuses `key == NULL || keylen == 0`
+  (`cms_enc.c:234`) before calling. No exported call can produce the shape today; the function's
+  own contract did not prevent it.
+- **Crate:** refuses the inconsistent call (`return 0`, leaving `ec` unchanged — the same
+  failure-atomic shape the allocation path already has). The invariant the object is held to is
+  stated on the function: a non-NULL `ec->key` is a block of exactly `ec->keylen` bytes owned by
+  `ec`, and the two fields are written together — by the `key != NULL` arm (which now writes
+  `(*ec).key` and `(*ec).keylen` in one statement group) and by the two `init_bio` arms that
+  install a generated key. A NULL `ec->key` may leave a stale `keylen`: every reader tests
+  `is_null()` first and `OPENSSL_clear_free(NULL, len)` is a no-op, so the authority's NULL-key
+  paths keep their behaviour.
+- **Reason:** `AGENTS.md` §17 — a known out-of-bounds-read mechanism is eliminated, not
+  reproduced; §1 — the obligation was placed on an in-crate caller population that had no way to
+  discharge it through the signature; §2 — the two fields are one invariant, not two.
+- **Compatibility consequence:** none for any caller reachable from the public API (see the
+  Authority paragraph). A crate-internal caller that passed `(NULL, keylen)` on an object holding
+  a key of a different length would now get 0 where the authority returns 1; there is no such
+  caller. A short *non-NULL* key is unchanged: it installs a block of exactly that length, and
+  `init_bio`'s `ec->keylen != tkeylen` arm either resizes the context to it or refuses.
+- **No error is raised:** the authority has no raise site on this path, and inventing one is what
+  D-SHA3-FINAL-OUTLEN-1 records it will not do.
+- **Evidence:** `cms::cms_enc::tests::cms_enc_a_null_key_may_not_restate_the_key_length` installs a
+  16-byte key, calls the function with `(NULL, 24)` and requires 0 with the same pointer, the same
+  recorded length and the same 16 bytes; it then requires the idempotent `(NULL, 16)` call to be
+  accepted and the `(NULL, 0)` create path to still succeed on an object that holds no key.
+- **Trigger:** none planned: permanent, deliberate safety divergence.
