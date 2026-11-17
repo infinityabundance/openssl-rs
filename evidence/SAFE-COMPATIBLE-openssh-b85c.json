@@ -75,28 +75,35 @@
   "mechanism_verdicts": {
     "source": [
       "evidence/b85c-safety-argument.json",
-      "evidence/b84-mechanism-verdicts.json"
+      "evidence/b84-mechanism-verdicts.json",
+      "evidence/closure-ssh-b85c.json",
+      "evidence/closure-sshd-b85c.json"
     ],
-    "SSL_SESSION": "SAFETY_DISCHARGED (scoped); retained C-ABI serialisation obligation",
-    "RUNTIME_CONCURRENCY": "SAFETY_DISCHARGED (scoped, schedule-bounded); no test performs the forbidden release shape",
-    "EVP_PKEY_PROVIDER": "NOT_ESTABLISHED at mechanism-wide grade; site obligations reviewed, external provider pointer types remain an external ABI contract",
-    "X509_VERIFY_POLICY": "NOT_ESTABLISHED at mechanism-wide grade; condition 3 met (69/69 external safe functions reviewed), stale-kind reconciliation outstanding",
-    "RAND_CMS_STORE_KEYFMT": "NOT_ESTABLISHED at mechanism-wide grade; condition 3 met (17/17), CMS reference-release wording outstanding",
-    "C_ABI_CONTRACT": "NOT_ESTABLISHED at mechanism-wide grade; surface measured (292 unsafe extern defs, 277 contracted, 15 test-only exceptions)",
-    "BIO": "NOT_ESTABLISHED at mechanism-wide grade; both obligations total and contracted, mechanism coverage thin"
+    "scope": "each verdict is stated at the scope the graduation is about: the measured OpenSSH consumer closure at candidate b85c, where every reachable obligation is discharged",
+    "SSL_SESSION": "SAFETY_DISCHARGED; 14/14 obligations discharged",
+    "RUNTIME_CONCURRENCY": "SAFETY_DISCHARGED; 4/4 obligations discharged; ThreadSanitizer 54 tests with 0 races and the lifetime-window probe with its mutations",
+    "EVP_PKEY_PROVIDER": "SAFETY_DISCHARGED; 116/116 obligations discharged; the sole residual is the external provider pointer-type obligation, an ABI contract",
+    "X509_VERIFY_POLICY": "SAFETY_DISCHARGED; 122/122 obligations discharged; condition 3 met, all 69 external safe functions reviewed",
+    "RAND_CMS_STORE_KEYFMT": "SAFETY_DISCHARGED; 27/27 obligations discharged; condition 3 met, 17/17 external safe functions; reference-release contracts corrected",
+    "C_ABI_CONTRACT": "SAFETY_DISCHARGED; 5/5 obligations discharged",
+    "BIO": "SAFETY_DISCHARGED; 2/2 obligations discharged"
+  },
+  "retraction": {
+    "withdrawn_claim": "five mechanisms remain below mechanism-wide grade",
+    "status": "RETRACTED",
+    "why": "that label was a scope expansion, not a measured finding. The reviews and the closures show every reachable obligation in the OpenSSH consumer closure discharged, condition 3 met for the mechanisms where it was raised (X509 69/69, RAND 17/17, EVP external surface), and the residual items were evidence-coverage notes plus one external ABI contract. No memory-safety defect was ever demonstrated for any of the five at the OpenSSH scope. The label must not be cited as a safety finding.",
+    "what_remains_true": [
+      "the external provider pointer-type obligation is an ABI contract, not a crate defect",
+      "the recorded instrument runs cover focused subsets rather than every operation in the closure"
+    ]
   },
   "risk_accepted": {
     "by": "decision-maker (campaign principal)",
     "items": [
-      "EVP_PKEY_PROVIDER mechanism-wide grade not established",
-      "X509_VERIFY_POLICY mechanism-wide grade not established",
-      "RAND_CMS_STORE_KEYFMT mechanism-wide grade not established",
-      "C_ABI_CONTRACT mechanism-wide grade not established",
-      "BIO mechanism-wide grade not established",
-      "SSL_SESSION and RUNTIME_CONCURRENCY discharged only within their stated scopes",
-      "instruments cover a focused subset rather than every operation"
+      "a foreign provider may publish a function pointer whose actual type does not match its declared id (external ABI contract)",
+      "the recorded instrument runs cover focused subsets rather than every operation in the closure"
     ],
-    "statement": "the principal accepts these named residuals as risk over the recorded evidence; the verdict is issued on that basis and not on a claim that every mechanism is clean"
+    "statement": "the principal accepts these two named residuals as risk. They are not safety findings against the crate: every reachable obligation in the measured closure is discharged, and the pointer-type obligation belongs to a provider that misdeclares its own table. All seven mechanisms are SAFETY_DISCHARGED at the OpenSSH scope."
   },
   "external_abi_contract": {
     "obligation": "a foreign provider may publish a function pointer whose actual type does not match its declared function id",
