@@ -1045,6 +1045,68 @@
   ],
   "verdict_unchanged": "2 SAFETY_DISCHARGED under scoped claims (SSL_SESSION; RUNTIME_CONCURRENCY, schedule-bounded), 0 OWNERSHIP_RECONSTRUCTED, 5 NOT_ESTABLISHED; safe_compatible stays false"
  },
+ "independent_mechanism_verdicts_b84": {
+  "source": "evidence/b84-mechanism-verdicts.json (sha256 12eb3540c2483a75e2c357a9d4377c522746d1411c62dbd571311b820322e284)",
+  "reviewer_role": "independent reviewer; no conversion, closure, review, rebind or instrument authorship; no src/test edit",
+  "source_head": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d (src byte-identical at HEAD 4b6ef7077)",
+  "mechanisms": {
+   "EVP_PKEY_PROVIDER": {
+    "scope": "the closure's 116 operations in 20 files plus the 26 CORE_DISPATCH and 16 PROVIDER indirect sites; the OSSL_OP_SIGNATURE/KEM/KEYMGMT/ENCODER/DECODER operation tables and EVP_PKEY_CTX tables are excluded by the review and are not among the 116",
+    "conditions": {
+     "1": "MET: 116/116 (93 b79 ACCEPT + 23 b76 content transfers; 0 files drifted; 7 copyctx rebinds ACCEPT at b84)",
+     "2": "NOT ESTABLISHED: R-1 (OsslDispatch.function is *mut c_void, src/context/dispatch.rs:44-52; 48 sites per F-BCR-3) and R-2 (SLH-DSA bare *mut u8 slots) are retained",
+     "3": "0 external safe pub fns in the 20 files reach unsafe, but 173 crate-internal safe fns do with no per-function audit; the review's excluded dispatch surfaces are uncovered",
+     "4": "NOT ESTABLISHED: no Miri/ASan test executes any of the 20 mechanism files at S"
+    },
+    "verdict": "NOT_ESTABLISHED",
+    "deciding": "conditions 2 and 4",
+    "residuals": [
+     "R-1 untyped id->signature pairing",
+     "R-2 SLH-DSA bare *mut u8 slots",
+     "excluded OSSL_OP_* operation tables (0 reviewed)",
+     "F-1 D-LEGACY-MD-CALLBACK-MD-DATA-1 unregistered",
+     "no Miri/ASan on the 20 files"
+    ]
+   },
+   "X509_VERIFY_POLICY": {
+    "scope": "the closure's 122 X509V3 method operations in 41 files; 5 openssh-v1l rows; 24 orphan rows outside the upper bound",
+    "conditions": {
+     "1": "MET BY COMPOSITION: 115 ACCEPT (batch1 18 + batch2 25 + batch3 25 + final 47) + 2 stale-kind + 5 v1l; the 4 drifted rows are byte-identical at S (a8dee41e, 49d1e032, 907272de, f6959253), but the 2 v3_cpols rows have no per-row verdict file (batch3 tally + controls only)",
+     "2": "PARTIAL: the export-callback class and the X509V3ExtMethod slot were read; the caller closure is not re-established at S and 24 orphan rows remain",
+     "3": "NOT ESTABLISHED: 69 external safe pub fns reach unsafe, 0/69 audited",
+     "4": "PARTIAL: x509::v3_san 4 ASan tests + one v3_cpols ADB Miri test; 120/122 obligations have no instrument test"
+    },
+    "verdict": "NOT_ESTABLISHED",
+    "deciding": "conditions 3 and 4",
+    "residuals": [
+     "69 external safe pub fns un-audited",
+     "no per-row verdict for v3_cpols i2r_certpol/r2i_certpol",
+     "no instrument on 120/122 obligations",
+     "24 orphan rows not re-admitted",
+     "review declines mechanism-wide discharge"
+    ]
+   },
+   "RAND_CMS_STORE_KEYFMT": {
+    "scope": "the closure's 27 operations in 6 files (cmp_ctx 12, cms_asn1 6, rand_lib 4, cmp_asn 2, cms_lib 2, pk7_asn1 1)",
+    "conditions": {
+     "1": "NOT ESTABLISHED: R2 OPEN; x509_free_void (1388) and x509_crl_free_void (1400) say the stack owns the object exclusively and it is the object's exactly-once release, but X509_add_cert(...,0x1) at 1204/1264 up-refs, so the CMS container keeps a reference (refcount 2 -> 1). ri_cb does transfer (5f0c47c7 at S) and ossl_rand_ctx_free was re-read by b80-review-drifted (2dad9e57), so the b84 'not re-established' count is an overcount",
+     "2": "PARTIAL: CMS item/aux/size pairing witnessed; no BOUNDARY class covers the RAND_METHOD slots reached from RAND_status/RAND_poll",
+     "3": "NOT ESTABLISHED: 17 external safe pub fns reach unsafe, 0/17 audited; RAND_status:883 calls (*meth).status:892-894 on a method replaceable via RAND_set_rand_method:724",
+     "4": "PARTIAL: Miri/ASan cover cms_asn1/cms_lib (the exact failure arms) + pkcs7 ADB; rand_lib 4, cmp 14, pkcs7 1 have no test at S"
+    },
+    "verdict": "NOT_ESTABLISHED",
+    "deciding": "conditions 1 and 3",
+    "residuals": [
+     "R2 contract wording (reference vs object)",
+     "17 external safe pub fns un-audited",
+     "RAND_METHOD slot has no BOUNDARY class",
+     "rand_lib/cmp/pkcs7 rows have no Miri/ASan",
+     "secret cleansing unaudited"
+    ]
+   }
+  },
+  "effect": "the b84 verdict stands: 0 of 7 mechanisms is discharged mechanism-wide; the three reviewed here are NOT_ESTABLISHED on the named conditions, not on a generic caveat. No consumer family graduates; safe_compatible stays false."
+ },
  "non_claims": [
   "this argument does not graduate any consumer family; safe_compatible remains false in both b84b closures.",
   "a green closure run, a site receipt or a validated contract is not a criterion-3 discharge.",
