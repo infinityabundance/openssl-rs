@@ -1,4 +1,49 @@
 {
+ "b85c_adjudication": {
+  "schema": "openssl-rs/safe-c33/adjudication/v1",
+  "candidate_tag": "b85c",
+  "head_at_adjudication": "bfa39a6c3",
+  "evidence_source_head": "17042ccf2",
+  "evidence": "evidence/b85c-adjudication.json",
+  "freeze": {"path": "evidence/FREEZE-b85c.json", "sha256": "b08131b1ca7849a3e7f801b87f427774df346366344a2b24bd8207fcb847ec4e"},
+  "verdict": "NOT ESTABLISHED for SAFE_COMPATIBLE (ssh, sshd)",
+  "reproduced": [
+   "nine artefact digests 9/9 (libcrypto 06b5f338, ssh c2db343d, sshd 8af50952), census 51b277f2, freeze b08131b1, instrument 3e86a74d",
+   "src/ Cargo.toml Cargo.lock build.rs identical between S 17042ccf2, b14923bda and HEAD bfa39a6c3",
+   "both b85c closures produced by the frozen tool: 290/290 DISCHARGED, 0 BLOCKED, 0 UNKNOWN, 0 refusals, element 7 PASS (152 = 116 contract-bounded + 36 closed target sets)",
+   "predicate repair independently re-executed: b85b's 37 BLOCKED rows yield BLOCKED_OBLIGATIONS and REFUSED; one BLOCKED with no refusal list is REFUSED",
+   "self-test exit 0 at 3e86a74d and 14/14 predicate controls (stored logs, hashes match; not re-executed)",
+   "111 invalidated receipts left unrewritten and not cited as acceptance; the real -Zmiri-tree-borrows re-run exists at court/freeze-b85/review15/miri (flag echoed, 0 UB)"
+  ],
+  "refused": [
+   "section 7 criterion 3: 5 of 7 applicable mechanisms NOT_ESTABLISHED (EVP 116, X509 122, RAND 27, C_ABI 5, BIO 2); only SSL_SESSION and RUNTIME_CONCURRENCY are SAFETY_DISCHARGED, both scoped",
+   "even the scoped two retain an un-established caller precondition (SSL_SESSION concurrent free/entry-point serialisation; RUNTIME_CONCURRENCY R1 exclusive ownership)",
+   "all four cross-cutting obligations NOT_ESTABLISHED (callbacks/reentrancy, aliasing/ownership, panic safety, secret memory)",
+   "0 BLOCKED is receipt coverage, not current adjudication: CAMPAIGN-STATUS reopens src/x509/v3_info.rs::v2i_AUTHORITY_INFO_ACCESS (open high B54-F1) and B55-F1 blocks v2i_idp/v2i_aaidp, all three DISCHARGED in the 290-row b85c closures; neither the safety argument nor the freeze names B54/B55",
+   "instrument coverage narrower than the claim: Miri six digest tests only; ASan b84 and TSan b80 not re-run; Loom/dudect/Wycheproof NOT_RUN; panic safety has no rollback/poison evidence; secret cleansing unaudited",
+   "identity/evidence binding: the evidence-deriving tool change is classified E though section 22 puts tools in S; the safety argument binds the superseded no-flag Miri arm (not review15); closure_receipts_repository_head misstated as 17042ccf2 vs receipts' b14923bda; court/ untracked (0 tracked files)",
+   "compatibility reused not re-executed (L7 by file digest; L4 atlas digest differs by build root; both receipts record artifact_rel='ssh'); fmt/clippy/lib-test gate carried from b85",
+   "ledger remains stale (2026-10-30, afcfdc47e, v1r 90/222, element 7 FAIL, safe_compatible 0/33); 65 REVIEW_REQUIRED and 24 X509 orphans remain"
+  ],
+  "residual_classification": {
+   "safety-relevant": [
+    "five of seven mechanisms NOT_ESTABLISHED",
+    "two scoped discharges with retained un-established caller preconditions",
+    "closure counts DISCHARGED rows the ledger records as reopened/BLOCKED (B54-F1, B55-F1)",
+    "65 REVIEW_REQUIRED discharges; 24 X509 orphans; 7 rows not re-established at S; B48-RC2-001 and B69 BLOCKED outside scope"
+   ],
+   "evidence-hygiene": [
+    "instrument change classified E instead of S",
+    "Miri review15 re-run not bound into the b85c evidence chain",
+    "closure_receipts_repository_head misstatement in the safety argument",
+    "court/ evidence untracked",
+    "L4 atlas build-root digest difference and artifact_rel='ssh' for the sshd receipt",
+    "L7 and the fmt/clippy/test gate carried, not re-executed"
+   ]
+  },
+  "campaign_status_updated_by_b85c_adjudicator": true,
+  "source_tree_untouched": true
+ },
  "b85_adjudication":  {
   "schema": "openssl-rs/safe-c33/adjudication/v1",
   "candidate_tag": "b85",
