@@ -47,7 +47,7 @@ use core::ffi::{c_char, c_int, c_void, CStr};
 use core::ptr;
 use core::sync::atomic::Ordering;
 
-use crate::context::dispatch::OsslDispatch;
+use crate::context::dispatch::{function_for, OsslDispatch};
 use crate::context::namemap::{
     ossl_namemap_add_name, ossl_namemap_doall_names, ossl_namemap_name2num, ossl_namemap_num2name,
     ossl_namemap_stored,
@@ -347,85 +347,69 @@ unsafe fn loader_from_algorithm(
 
         let mut f = fns;
         while !f.is_null() && (*f).function_id != 0 {
-            let function = (*f).function;
-            if !function.is_null() {
-                match (*f).function_id {
-                    OSSL_FUNC_STORE_OPEN => {
-                        if (*loader).p_open.is_none() {
-                            (*loader).p_open =
-                                Some(core::mem::transmute::<*mut c_void, StorePOpenFn>(function));
-                        }
+            // SAFETY: `f` is a live entry of the terminated table, and each arm
+            // passes the id it names so that `function_for` re-reads the entry's
+            // id before the cast; a published NULL answers None (absent).
+            match (*f).function_id {
+                OSSL_FUNC_STORE_OPEN => {
+                    if (*loader).p_open.is_none() {
+                        (*loader).p_open = function_for::<StorePOpenFn>(f, OSSL_FUNC_STORE_OPEN);
                     }
-                    OSSL_FUNC_STORE_ATTACH => {
-                        if (*loader).p_attach.is_none() {
-                            (*loader).p_attach = Some(core::mem::transmute::<
-                                *mut c_void,
-                                StorePAttachFn,
-                            >(function));
-                        }
-                    }
-                    OSSL_FUNC_STORE_SETTABLE_CTX_PARAMS => {
-                        if (*loader).p_settable_ctx_params.is_none() {
-                            (*loader).p_settable_ctx_params = Some(core::mem::transmute::<
-                                *mut c_void,
-                                StorePSettableCtxParamsFn,
-                            >(
-                                function
-                            ));
-                        }
-                    }
-                    OSSL_FUNC_STORE_SET_CTX_PARAMS => {
-                        if (*loader).p_set_ctx_params.is_none() {
-                            (*loader).p_set_ctx_params =
-                                Some(core::mem::transmute::<*mut c_void, StorePSetCtxParamsFn>(
-                                    function,
-                                ));
-                        }
-                    }
-                    OSSL_FUNC_STORE_LOAD => {
-                        if (*loader).p_load.is_none() {
-                            (*loader).p_load =
-                                Some(core::mem::transmute::<*mut c_void, StorePLoadFn>(function));
-                        }
-                    }
-                    OSSL_FUNC_STORE_EOF => {
-                        if (*loader).p_eof.is_none() {
-                            (*loader).p_eof =
-                                Some(core::mem::transmute::<*mut c_void, StorePEofFn>(function));
-                        }
-                    }
-                    OSSL_FUNC_STORE_CLOSE => {
-                        if (*loader).p_close.is_none() {
-                            (*loader).p_close =
-                                Some(core::mem::transmute::<*mut c_void, StorePCloseFn>(function));
-                        }
-                    }
-                    OSSL_FUNC_STORE_EXPORT_OBJECT => {
-                        if (*loader).p_export_object.is_none() {
-                            (*loader).p_export_object =
-                                Some(core::mem::transmute::<*mut c_void, StorePExportObjectFn>(
-                                    function,
-                                ));
-                        }
-                    }
-                    OSSL_FUNC_STORE_DELETE => {
-                        if (*loader).p_delete.is_none() {
-                            (*loader).p_delete = Some(core::mem::transmute::<
-                                *mut c_void,
-                                StorePDeleteFn,
-                            >(function));
-                        }
-                    }
-                    OSSL_FUNC_STORE_OPEN_EX => {
-                        if (*loader).p_open_ex.is_none() {
-                            (*loader).p_open_ex = Some(core::mem::transmute::<
-                                *mut c_void,
-                                StorePOpenExFn,
-                            >(function));
-                        }
-                    }
-                    _ => {}
                 }
+                OSSL_FUNC_STORE_ATTACH => {
+                    if (*loader).p_attach.is_none() {
+                        (*loader).p_attach =
+                            function_for::<StorePAttachFn>(f, OSSL_FUNC_STORE_ATTACH);
+                    }
+                }
+                OSSL_FUNC_STORE_SETTABLE_CTX_PARAMS => {
+                    if (*loader).p_settable_ctx_params.is_none() {
+                        (*loader).p_settable_ctx_params = function_for::<StorePSettableCtxParamsFn>(
+                            f,
+                            OSSL_FUNC_STORE_SETTABLE_CTX_PARAMS,
+                        );
+                    }
+                }
+                OSSL_FUNC_STORE_SET_CTX_PARAMS => {
+                    if (*loader).p_set_ctx_params.is_none() {
+                        (*loader).p_set_ctx_params =
+                            function_for::<StorePSetCtxParamsFn>(f, OSSL_FUNC_STORE_SET_CTX_PARAMS);
+                    }
+                }
+                OSSL_FUNC_STORE_LOAD => {
+                    if (*loader).p_load.is_none() {
+                        (*loader).p_load = function_for::<StorePLoadFn>(f, OSSL_FUNC_STORE_LOAD);
+                    }
+                }
+                OSSL_FUNC_STORE_EOF => {
+                    if (*loader).p_eof.is_none() {
+                        (*loader).p_eof = function_for::<StorePEofFn>(f, OSSL_FUNC_STORE_EOF);
+                    }
+                }
+                OSSL_FUNC_STORE_CLOSE => {
+                    if (*loader).p_close.is_none() {
+                        (*loader).p_close = function_for::<StorePCloseFn>(f, OSSL_FUNC_STORE_CLOSE);
+                    }
+                }
+                OSSL_FUNC_STORE_EXPORT_OBJECT => {
+                    if (*loader).p_export_object.is_none() {
+                        (*loader).p_export_object =
+                            function_for::<StorePExportObjectFn>(f, OSSL_FUNC_STORE_EXPORT_OBJECT);
+                    }
+                }
+                OSSL_FUNC_STORE_DELETE => {
+                    if (*loader).p_delete.is_none() {
+                        (*loader).p_delete =
+                            function_for::<StorePDeleteFn>(f, OSSL_FUNC_STORE_DELETE);
+                    }
+                }
+                OSSL_FUNC_STORE_OPEN_EX => {
+                    if (*loader).p_open_ex.is_none() {
+                        (*loader).p_open_ex =
+                            function_for::<StorePOpenExFn>(f, OSSL_FUNC_STORE_OPEN_EX);
+                    }
+                }
+                _ => {}
             }
             f = f.add(1);
         }

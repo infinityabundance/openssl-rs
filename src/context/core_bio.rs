@@ -57,10 +57,10 @@ use core::ffi::{c_char, c_int, c_long, c_void};
 use core::ptr;
 
 use crate::context::dispatch::{
-    entry_function, OsslDispatch, OsslFuncBioCtrl, OsslFuncBioFree, OsslFuncBioGets,
-    OsslFuncBioPuts, OsslFuncBioReadEx, OsslFuncBioUpRef, OsslFuncBioWriteEx, OSSL_DISPATCH_END,
-    OSSL_FUNC_BIO_CTRL, OSSL_FUNC_BIO_FREE, OSSL_FUNC_BIO_GETS, OSSL_FUNC_BIO_PUTS,
-    OSSL_FUNC_BIO_READ_EX, OSSL_FUNC_BIO_UP_REF, OSSL_FUNC_BIO_WRITE_EX,
+    function_for, OsslDispatch, OsslFuncBioCtrl, OsslFuncBioFree, OsslFuncBioGets, OsslFuncBioPuts,
+    OsslFuncBioReadEx, OsslFuncBioUpRef, OsslFuncBioWriteEx, OSSL_DISPATCH_END, OSSL_FUNC_BIO_CTRL,
+    OSSL_FUNC_BIO_FREE, OSSL_FUNC_BIO_GETS, OSSL_FUNC_BIO_PUTS, OSSL_FUNC_BIO_READ_EX,
+    OSSL_FUNC_BIO_UP_REF, OSSL_FUNC_BIO_WRITE_EX,
 };
 use crate::context::{lib_ctx_get_data, OSSL_LIB_CTX_BIO_CORE_INDEX};
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
@@ -417,25 +417,25 @@ pub(crate) unsafe fn ossl_bio_init_core(libctx: *mut c_void, fns: *const OsslDis
             let id = (*p).function_id;
             match id {
                 OSSL_FUNC_BIO_READ_EX if (*g).read_ex.is_none() => {
-                    (*g).read_ex = entry_function::<OsslFuncBioReadEx>(p);
+                    (*g).read_ex = function_for::<OsslFuncBioReadEx>(p, OSSL_FUNC_BIO_READ_EX);
                 }
                 OSSL_FUNC_BIO_WRITE_EX if (*g).write_ex.is_none() => {
-                    (*g).write_ex = entry_function::<OsslFuncBioWriteEx>(p);
+                    (*g).write_ex = function_for::<OsslFuncBioWriteEx>(p, OSSL_FUNC_BIO_WRITE_EX);
                 }
                 OSSL_FUNC_BIO_GETS if (*g).gets.is_none() => {
-                    (*g).gets = entry_function::<OsslFuncBioGets>(p);
+                    (*g).gets = function_for::<OsslFuncBioGets>(p, OSSL_FUNC_BIO_GETS);
                 }
                 OSSL_FUNC_BIO_PUTS if (*g).puts.is_none() => {
-                    (*g).puts = entry_function::<OsslFuncBioPuts>(p);
+                    (*g).puts = function_for::<OsslFuncBioPuts>(p, OSSL_FUNC_BIO_PUTS);
                 }
                 OSSL_FUNC_BIO_CTRL if (*g).ctrl.is_none() => {
-                    (*g).ctrl = entry_function::<OsslFuncBioCtrl>(p);
+                    (*g).ctrl = function_for::<OsslFuncBioCtrl>(p, OSSL_FUNC_BIO_CTRL);
                 }
                 OSSL_FUNC_BIO_UP_REF if (*g).up_ref.is_none() => {
-                    (*g).up_ref = entry_function::<OsslFuncBioUpRef>(p);
+                    (*g).up_ref = function_for::<OsslFuncBioUpRef>(p, OSSL_FUNC_BIO_UP_REF);
                 }
                 OSSL_FUNC_BIO_FREE if (*g).free.is_none() => {
-                    (*g).free = entry_function::<OsslFuncBioFree>(p);
+                    (*g).free = function_for::<OsslFuncBioFree>(p, OSSL_FUNC_BIO_FREE);
                 }
                 // Any other id is not this table's business, exactly as the
                 // authority's `switch` has no arm for it.

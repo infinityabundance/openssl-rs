@@ -63,7 +63,7 @@
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_ulong, c_void};
 use core::ptr;
 
-use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
+use crate::context::dispatch::{function_ptr_for, OsslDispatch, OSSL_DISPATCH_END};
 use crate::digest::md5::{MD5_Final, MD5_Init, MD5_Update, Md5Ctx};
 use crate::digest::md5_sha1::{
     ossl_md5_sha1_ctrl, ossl_md5_sha1_final, ossl_md5_sha1_init, ossl_md5_sha1_update, Md5Sha1Ctx,
@@ -2797,11 +2797,15 @@ pub(crate) unsafe extern "C" fn ossl_default_provider_init(
         let mut d = in_;
         while !d.is_null() && (*d).function_id != OSSL_DISPATCH_END {
             match (*d).function_id {
+                // SAFETY: `d` is a live entry and the accessor re-reads the entry's id
+                // before exposing the pointer; the locals are resolved below.
                 crate::provider::core_dispatch::FUNC_CORE_GET_PARAMS => {
-                    c_get_params = (*d).function
+                    c_get_params =
+                        function_ptr_for(d, crate::provider::core_dispatch::FUNC_CORE_GET_PARAMS)
                 }
                 crate::provider::core_dispatch::FUNC_CORE_GET_LIBCTX => {
-                    c_get_libctx = (*d).function
+                    c_get_libctx =
+                        function_ptr_for(d, crate::provider::core_dispatch::FUNC_CORE_GET_LIBCTX)
                 }
                 _ => {} // Just ignore anything we don't understand
             }
@@ -3330,10 +3334,11 @@ mod tests {
             unsafe {
                 while (*disp).function_id != OSSL_DISPATCH_END {
                     if (*disp).function_id == OSSL_FUNC_DIGEST_GET_PARAMS {
-                        get_params = Some(core::mem::transmute::<
-                            *mut c_void,
+                        // SAFETY: `disp` is a live entry and `function_for` re-reads
+                        // its id before the cast.
+                        get_params = crate::context::dispatch::function_for::<
                             unsafe extern "C" fn(*mut OsslParam) -> c_int,
-                        >((*disp).function));
+                        >(disp, OSSL_FUNC_DIGEST_GET_PARAMS);
                     }
                     disp = disp.add(1);
                 }

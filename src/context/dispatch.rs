@@ -31,6 +31,31 @@
 //! be silently misread. They are copied from the admitted authority's
 //! `core_dispatch.h` rather than derived, and the ones this subphase uses are the
 //! seven `BIO_*` entries.
+//!
+//! ## The id/pointer pairing
+//!
+//! `OsslDispatch` is the C wire type, so its layout and field names are fixed.
+//! Its fields are **crate-private**: outside this crate a safe caller can neither
+//! build an entry nor read a `function` out of one (the `compile_fail` doctest on
+//! the type is the control for that), so an externally reachable safe interface
+//! cannot install a mismatched `(function_id, function)` pair. Inside the crate
+//! the fields are still writable, because every built-in table is a `static`
+//! array literal naming a Rust function item beside a compile-time id constant;
+//! those literals are the representation, not an API.
+//!
+//! Every *read* that turns an entry into a typed pointer goes through this module
+//! and, for the tables supplied by a third party (a provider, store loader,
+//! decoder or the QUIC callbacks), through [`function_for`] or
+//! [`function_ptr_for`], which **check the entry's id before exposing the
+//! pointer**. [`entry_function`] remains for the in-crate walks whose `match` arm
+//! or `if` has already established the id; it trusts that witness, exactly as the
+//! C macro trusts the entry it is handed.
+//!
+//! The residual obligation is the provider's: a table that publishes id `X` with
+//! a function of signature `Y` is C-valid-but-lying input, and no Rust check can
+//! distinguish it from a correct table. The authority has the same defect; this
+//! module keeps the obligation at one auditable boundary instead of at every
+//! `transmute`.
 
 use core::ffi::{c_int, c_long, c_void};
 
@@ -40,13 +65,28 @@ use core::ffi::{c_int, c_long, c_void};
 /// every field of it is read by casting to the type the id names. A `*mut c_void`
 /// is that same pointer for every purpose this crate has, and it avoids a
 /// `transmute` at every read site.
+///
+/// Both fields are `pub(crate)` so that no safe caller outside the crate can
+/// construct an entry or turn one into a raw pointer; see the module header. A
+/// caller that needs the function for an id must use [`function_for`], which
+/// checks the id, or [`entry_function`] after matching the id itself.
+///
+/// ```compile_fail
+/// // Outside the crate the fields are private: a mismatched pair cannot be
+/// // installed by safe code.
+/// use openssl_rs::context::dispatch::OsslDispatch;
+/// let _ = OsslDispatch {
+///     function_id: 42,
+///     function: core::ptr::null_mut(),
+/// };
+/// ```
 #[repr(C)]
 pub struct OsslDispatch {
     /// `int function_id` — one of the `OSSL_FUNC_*` values, or `OSSL_DISPATCH_END`.
     /// The C type is `int` and the ids are small positive integers.
-    pub function_id: c_int,
+    pub(crate) function_id: c_int,
     /// `void (*function)(void)`.
-    pub function: *mut c_void,
+    pub(crate) function: *mut c_void,
 }
 
 // SAFETY: every `OSSL_DISPATCH` table in the authority is a `static const` array:
@@ -129,6 +169,11 @@ pub(crate) type OsslFuncBioFree = unsafe extern "C" fn(*mut c_void) -> c_int;
 
 /// The function an entry holds, cast to the type its id names.
 ///
+/// This is the unchecked form: the caller's walk has already established that the
+/// entry's `function_id` is the id `T` belongs to, so the id is not passed again.
+/// When the witness should be re-read at the point of the cast, use
+/// [`function_for`] instead.
+///
 /// # Safety
 /// `entry` must be a well-formed entry whose `function_id` is the id `T` belongs
 /// to. A table's entries and the casts applied to them are a matched pair; casting
@@ -155,6 +200,58 @@ where
     // SAFETY: the two types have the same size (checked above), and the value came
     // from a table entry whose id names `T` per the caller's contract.
     Some(unsafe { core::mem::transmute_copy::<*mut c_void, T>(&f) })
+}
+
+/// The function an entry holds, checked to be the one `id` names, cast to the
+/// type `id` defines.
+///
+/// The id is part of the read: an entry whose `function_id` is not `id` answers
+/// `None`, so a table entry cannot be turned into a typed pointer for a signature
+/// its own id does not name. Tables supplied from outside the crate (a provider,
+/// store loader, decoder or QUIC callback table) are read through this form.
+///
+/// # Safety
+/// `entry` must be NULL or point to a live, aligned, initialised `OsslDispatch`
+/// whose publisher honoured the id→signature contract for `id` — the provider-side
+/// obligation the C authority relies on as well. `T` must be the signature the
+/// published `OSSL_FUNC_*` id `id` defines.
+pub(crate) unsafe fn function_for<T>(entry: *const OsslDispatch, id: c_int) -> Option<T>
+where
+    T: Copy,
+{
+    if entry.is_null() || id == OSSL_DISPATCH_END {
+        return None;
+    }
+    // SAFETY: `entry` is a live entry per the caller's contract.
+    if unsafe { (*entry).function_id } != id {
+        return None;
+    }
+    // SAFETY: the entry's id is `id`, which names `T` per the caller's contract.
+    unsafe { entry_function::<T>(entry) }
+}
+
+/// The raw function pointer an entry holds, checked to be the entry for `id`.
+///
+/// This is the form for the call sites that store the pointer in an id-tagged
+/// slot first (the pointer is cast at the slot's own typed read) or that must
+/// preserve a published NULL as "absent". A mismatched entry answers NULL,
+/// exactly as an absent function does; callers that need to tell the two apart
+/// must check the entry's id themselves.
+///
+/// # Safety
+/// `entry` must be NULL or point to a live, aligned, initialised `OsslDispatch`
+/// whose publisher honoured the id→signature contract for `id`.
+pub(crate) unsafe fn function_ptr_for(entry: *const OsslDispatch, id: c_int) -> *mut c_void {
+    if entry.is_null() || id == OSSL_DISPATCH_END {
+        return core::ptr::null_mut();
+    }
+    // SAFETY: `entry` is a live entry per the caller's contract.
+    if unsafe { (*entry).function_id } != id {
+        return core::ptr::null_mut();
+    }
+    // SAFETY: the entry's id is `id`; the pointer is that entry's function, which
+    // may be the published NULL.
+    unsafe { (*entry).function }
 }
 
 #[allow(dead_code)] // unreachable until the stratum that calls it lands
@@ -228,5 +325,35 @@ mod tests {
         // SAFETY: `f` was just asserted `Some`; its parameter is a handle the
         // example ignores.
         assert_eq!(unsafe { f.unwrap_unchecked()(core::ptr::null_mut()) }, 7);
+    }
+
+    #[test]
+    fn function_for_rejects_an_id_the_entry_does_not_carry() {
+        let entry = OsslDispatch {
+            function_id: OSSL_FUNC_BIO_FREE,
+            function: example as *mut c_void,
+        };
+        // The matching id answers the typed pointer... and it is the callable one.
+        // SAFETY: the entry's id is `OSSL_FUNC_BIO_FREE`, which names the signature.
+        let f = unsafe { function_for::<OsslFuncBioFree>(&entry, OSSL_FUNC_BIO_FREE) };
+        assert!(f.is_some(), "the matching id answers the function");
+        // SAFETY: `f` was just asserted `Some`; the example ignores its argument.
+        assert_eq!(unsafe { f.unwrap_unchecked()(core::ptr::null_mut()) }, 7);
+        // A different published id is not answered, even though the pointer is non-NULL
+        // and its signature would fit: the entry's own id is the witness.
+        // SAFETY: the entry is live; the accessor only compares ids.
+        unsafe {
+            assert!(function_for::<OsslFuncBioUpRef>(&entry, OSSL_FUNC_BIO_UP_REF).is_none());
+            // An id that is not in the table at all is refused too.
+            assert!(function_for::<OsslFuncBioUpRef>(&entry, 31337).is_none());
+            // The terminator id never answers a function.
+            assert!(function_for::<OsslFuncBioUpRef>(&entry, OSSL_DISPATCH_END).is_none());
+            // The raw form refuses the same way, and the matching form preserves NULL.
+            assert!(function_ptr_for(&entry, OSSL_FUNC_BIO_UP_REF).is_null());
+            assert_eq!(
+                function_ptr_for(&entry, OSSL_FUNC_BIO_FREE),
+                example as *mut c_void
+            );
+        }
     }
 }

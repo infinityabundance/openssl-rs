@@ -22,7 +22,7 @@
 
 use core::ffi::{c_char, c_int, c_void};
 
-use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
+use crate::context::dispatch::{function_ptr_for, OsslDispatch, OSSL_DISPATCH_END};
 use crate::ffi::guard_ffi;
 use crate::runtime::err::raise_with;
 use crate::ssl::ssl_lib::{SSL_is_quic, SSL_is_tls, Ssl};
@@ -97,30 +97,36 @@ unsafe fn tls_callbacks_from_dispatch(
         if entry.function_id == OSSL_DISPATCH_END {
             break;
         }
-        // SAFETY: `qtcb` is live and `entry` is a readable dispatch entry.
+        // SAFETY: `qtcb` is live, `entry` is a readable dispatch entry, and the
+        // accessor re-reads each entry's id before exposing its pointer.
         unsafe {
             match entry.function_id {
                 OSSL_FUNC_SSL_QUIC_TLS_CRYPTO_SEND if (*qtcb).crypto_send_cb.is_null() => {
-                    (*qtcb).crypto_send_cb = entry.function;
+                    (*qtcb).crypto_send_cb =
+                        function_ptr_for(entry, OSSL_FUNC_SSL_QUIC_TLS_CRYPTO_SEND);
                 }
                 OSSL_FUNC_SSL_QUIC_TLS_CRYPTO_RECV_RCD if (*qtcb).crypto_recv_rcd_cb.is_null() => {
-                    (*qtcb).crypto_recv_rcd_cb = entry.function;
+                    (*qtcb).crypto_recv_rcd_cb =
+                        function_ptr_for(entry, OSSL_FUNC_SSL_QUIC_TLS_CRYPTO_RECV_RCD);
                 }
                 OSSL_FUNC_SSL_QUIC_TLS_CRYPTO_RELEASE_RCD
                     if (*qtcb).crypto_release_rcd_cb.is_null() =>
                 {
-                    (*qtcb).crypto_release_rcd_cb = entry.function;
+                    (*qtcb).crypto_release_rcd_cb =
+                        function_ptr_for(entry, OSSL_FUNC_SSL_QUIC_TLS_CRYPTO_RELEASE_RCD);
                 }
                 OSSL_FUNC_SSL_QUIC_TLS_YIELD_SECRET if (*qtcb).yield_secret_cb.is_null() => {
-                    (*qtcb).yield_secret_cb = entry.function;
+                    (*qtcb).yield_secret_cb =
+                        function_ptr_for(entry, OSSL_FUNC_SSL_QUIC_TLS_YIELD_SECRET);
                 }
                 OSSL_FUNC_SSL_QUIC_TLS_GOT_TRANSPORT_PARAMS
                     if (*qtcb).got_transport_params_cb.is_null() =>
                 {
-                    (*qtcb).got_transport_params_cb = entry.function;
+                    (*qtcb).got_transport_params_cb =
+                        function_ptr_for(entry, OSSL_FUNC_SSL_QUIC_TLS_GOT_TRANSPORT_PARAMS);
                 }
                 OSSL_FUNC_SSL_QUIC_TLS_ALERT if (*qtcb).alert_cb.is_null() => {
-                    (*qtcb).alert_cb = entry.function;
+                    (*qtcb).alert_cb = function_ptr_for(entry, OSSL_FUNC_SSL_QUIC_TLS_ALERT);
                 }
                 _ => {}
             }
