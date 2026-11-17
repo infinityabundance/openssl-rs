@@ -750,6 +750,18 @@ pub(crate) unsafe extern "C" fn ossl_cms_EncryptedContent_init_bio(
 ///
 /// # Safety
 /// `ec` is live; `cipher` NULL or live; `key` NULL or readable for `keylen`.
+///
+/// # Invariant on `ec->key`/`ec->keylen`
+/// A non-NULL `ec->key` is an allocation of exactly `ec->keylen` bytes owned by `ec`; the two
+/// fields are only written together, by the `key != NULL` arm below and by the two `init_bio`
+/// arms that install a generated key. (A NULL `ec->key` may leave a stale `keylen`: every
+/// reader tests `is_null()` before touching it and `OPENSSL_clear_free(NULL, len)` is a no-op.)
+/// `ossl_cms_EncryptedContent_init_bio` is the reader that depends on this: on its `enc != 0`
+/// arm it hands `ec->key` to `EVP_CipherInit_ex` for `EVP_CIPHER_CTX_get_key_length()` bytes,
+/// which is `ec->keylen`, so a block shorter than `ec->keylen` is an out-of-bounds read. The
+/// authority writes `ec->keylen = keylen` unconditionally, which is why a `key == NULL` call
+/// naming a different length than the block already held is refused here instead of recorded
+/// (see `D-CMS-ENCKEY-1` in `docs/SECURITY_DIVERGENCE_POLICY.md`).
 pub(crate) unsafe fn ossl_cms_EncryptedContent_init(
     ec: *mut CmsEncryptedContentInfo,
     cipher: *const EvpCipher,
@@ -776,13 +788,34 @@ pub(crate) unsafe fn ossl_cms_EncryptedContent_init(
         // the copy made) first, so a failed allocation leaves `ec` unchanged exactly as the
         // authority's ordering requires, and a `key` that aliased `ec->key` is still read live.
         // SAFETY: `ec` is live; its previous key is NULL or this crate's allocation of `keylen`
-        // bytes; ownership of the new block moves into `ec->key`.
+        // bytes; ownership of the new block moves into `ec->key`. The pointer and its extent are
+        // stored together, so the pair is consistent on every path out of this arm.
         unsafe {
             super::cms_asn1::OPENSSL_clear_free((*ec).key, (*ec).keylen);
             (*ec).key = owned.into_raw();
+            (*ec).keylen = keylen;
+        }
+    } else {
+        // SAFETY: `ec` is live.
+        let held = unsafe { (*ec).key };
+        // SAFETY: `ec` is live.
+        let heldlen = unsafe { (*ec).keylen };
+        // A NULL `key` replaces nothing, so recording a different length would describe bytes
+        // that are not there (the invariant above). This is the one shape the authority accepts
+        // and a later reader would then walk past: on the `enc != 0` arm `init_bio` keeps the
+        // incumbent block whenever `ec->key` is non-NULL and `ec->keylen == tkeylen`, and hands
+        // it to `EVP_CipherInit_ex` for `ec->keylen` bytes. Refusing leaves `ec` untouched. A
+        // NULL key on an object that holds no key keeps the authority's behaviour (the `enc == 0`
+        // create path and the `CMS_*_create_ex` calls pass exactly that), because a NULL
+        // `ec->key` is never dereferenced and is replaced by the generated key before use.
+        // No error is raised: the authority has no raise site on this path, and inventing one is
+        // what D-SHA3-FINAL-OUTLEN-1 records it will not do.
+        if !held.is_null() && heldlen != keylen {
+            return 0;
         }
     }
-    // SAFETY: `ec` is live.
+    // SAFETY: `ec` is live. The pair is consistent on both arms: a replaced key had its length
+    // written with it, and a kept key has the length it already had.
     unsafe {
         (*ec).keylen = keylen;
         if !cipher.is_null() {
@@ -1424,5 +1457,79 @@ mod tests {
 
             free_ec(ec);
         }
+    }
+
+    /// `D-CMS-ENCKEY-1`: a call that hands over no `key` may not restate the length of the key the
+    /// object already holds. The authority's unconditional `ec->keylen = keylen` would leave a
+    /// non-NULL `ec->key` whose block is shorter than its recorded length, and
+    /// `ossl_cms_EncryptedContent_init_bio` then passes that pair to `EVP_CipherInit_ex` for
+    /// `ec->keylen` bytes. The call is refused and the pair is left exactly as it was.
+    #[test]
+    fn cms_enc_a_null_key_may_not_restate_the_key_length() {
+        let held_len = 16usize;
+        let held = [0x5Au8; 16];
+
+        // SAFETY: `ec` and `fresh` are this test's own; `free_ec` releases the installed key.
+        unsafe {
+            let ec = new_ec();
+            assert_eq!(
+                ossl_cms_EncryptedContent_init(
+                    ec,
+                    ptr::null(),
+                    held.as_ptr(),
+                    held_len,
+                    ptr::null()
+                ),
+                1,
+                "the first key is installed"
+            );
+            let block = (*ec).key;
+            assert!(!block.is_null(), "the held key is a block of its own");
+            assert_eq!((*ec).keylen, held_len);
+
+            // A NULL key naming a longer length is refused, and neither field moves.
+            assert_eq!(
+                ossl_cms_EncryptedContent_init(
+                    ec,
+                    ptr::null(),
+                    ptr::null(),
+                    held_len + 8,
+                    ptr::null()
+                ),
+                0,
+                "a NULL key may not restate the length of the held key"
+            );
+            assert_eq!((*ec).key, block, "the held block is not released");
+            assert_eq!((*ec).keylen, held_len, "the recorded length is unchanged");
+            assert_eq!(
+                core::slice::from_raw_parts((*ec).key, (*ec).keylen),
+                held.as_slice(),
+                "the held key still names its whole block"
+            );
+
+            // Restating the length it already has replaces nothing, so it is accepted.
+            assert_eq!(
+                ossl_cms_EncryptedContent_init(ec, ptr::null(), ptr::null(), held_len, ptr::null()),
+                1,
+                "a NULL key that does not change the length is accepted"
+            );
+            assert_eq!((*ec).key, block, "the held block is still the same block");
+            assert_eq!((*ec).keylen, held_len);
+
+            // The `CMS_EnvelopedData_create_ex` and `CMS_AuthEnvelopedData_create_ex` paths hand
+            // over (NULL, 0) on an object that holds no key; that must still succeed.
+            let fresh = new_ec();
+            assert_eq!(
+                ossl_cms_EncryptedContent_init(fresh, ptr::null(), ptr::null(), 0, ptr::null()),
+                1,
+                "a NULL key and zero length on an empty object is the create path"
+            );
+            assert!((*fresh).key.is_null(), "the create path installs no key");
+            assert_eq!((*fresh).keylen, 0);
+
+            free_ec(fresh);
+            free_ec(ec);
+        }
+        ERR_clear_error();
     }
 }
