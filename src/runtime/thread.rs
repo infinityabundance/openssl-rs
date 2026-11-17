@@ -2536,3 +2536,135 @@ mod b56_probe {
         adv_alloc::assert_no_double_free();
     }
 }
+
+#[cfg(test)]
+mod free_lock_lifetime_probe {
+    //! R1 of the `RUNTIME_CONCURRENCY` residual — the release *window*, executed deliberately.
+    //!
+    //! `free_lock`'s precondition is that the block is exclusively owned by the call, i.e. that no
+    //! user is live when it runs. The b56 probe measures the release *count*; nothing measured the
+    //! *lifetime* shape, so the concurrency discharge was bounded to executed schedules. This probe
+    //! keeps a user thread live inside the lock (holding its write lock) at the point where a
+    //! release would be issued, and requires two things of that window: the lock refuses a foreign
+    //! release of the hold while the user is live, and the recorded allocator transcript shows
+    //! **no** release of the block during the window and exactly one release after the last user
+    //! has exited.
+    //!
+    //! The forbidden *call* — releasing while the user is live and then letting the user touch the
+    //! block — is not executed here: that is a use-after-free and cannot be asserted from a routine
+    //! test. What is executed is the window, plus the ordering property that the single release
+    //! follows the last user's exit. The control is load-bearing: removing the `BlockRelease` guard
+    //! makes the release count 0 (probe fails, `left: 0, right: 1`), and a second release makes it
+    //! 2 (probe fails, `left: 2, right: 1` — the b56 M3 mutation).
+    //!
+    //! One process per probe: the allocator seam latches after the first `CRYPTO_*` allocation, so
+    //! the child process runs this test alone (`--exact`, `--test-threads=1`) and installs the
+    //! recording hooks there.
+    use super::*;
+
+    const CHILD_ENV: &str = "OPENSSL_RS_FREELOCK_LIFETIME_CHILD";
+
+    #[test]
+    fn the_lock_block_is_not_released_while_a_user_is_live() {
+        if std::env::var_os(CHILD_ENV).is_some() {
+            run_probe();
+            return;
+        }
+
+        let exe = std::env::current_exe().unwrap_or_default();
+        assert!(!exe.as_os_str().is_empty(), "the test binary has no path");
+        let ran_and_passed = std::process::Command::new(exe)
+            .args([
+                "--exact",
+                "runtime::thread::free_lock_lifetime_probe::the_lock_block_is_not_released_while_a_user_is_live",
+                "--nocapture",
+                "--test-threads=1",
+            ])
+            .env(CHILD_ENV, "1")
+            .status()
+            .map(|status| status.success())
+            .unwrap_or(false);
+        assert!(
+            ran_and_passed,
+            "the isolated free_lock lifetime probe failed"
+        );
+    }
+
+    /// Transcript positions of every forwarded release of `addr`.
+    fn releases_of(addr: usize) -> Vec<usize> {
+        crate::ssl::adv_alloc::events()
+            .iter()
+            .enumerate()
+            .filter_map(|(i, e)| match e {
+                crate::ssl::adv_alloc::Ev::Free { p } if *p == addr => Some(i),
+                _ => None,
+            })
+            .collect()
+    }
+
+    fn run_probe() {
+        use crate::ssl::adv_alloc;
+
+        let _guard = crate::test_support::lock_global_state();
+        assert!(
+            adv_alloc::install(),
+            "the recording allocator hook did not install; run this probe alone"
+        );
+        adv_alloc::assert_instrument_live();
+        adv_alloc::reset();
+
+        let lock = CRYPTO_THREAD_lock_new();
+        assert!(!lock.is_null(), "the lock block is allocated");
+        let addr = lock as usize;
+
+        let (inside_tx, inside_rx) = std::sync::mpsc::channel();
+        let (go_tx, go_rx) = std::sync::mpsc::channel();
+        let user = std::thread::spawn(move || {
+            let lock = addr as *mut CryptoRwlock;
+            // SAFETY: `lock` is the live block created above; the parent joins this thread before
+            // releasing it, so the block outlives every use on this path.
+            assert_eq!(unsafe { CRYPTO_THREAD_write_lock(lock) }, 1);
+            assert!(inside_tx.send(()).is_ok(), "the parent is waiting");
+            assert!(go_rx.recv().is_ok(), "the parent lets the user exit");
+            // SAFETY: this thread holds the write lock it just took.
+            assert_eq!(unsafe { CRYPTO_THREAD_unlock(lock) }, 1);
+        });
+
+        assert!(inside_rx.recv().is_ok(), "the user enters the lock");
+
+        // The user is live now, holding the write lock: this is the window in which a release
+        // would be the forbidden shape. The lock's own state guard refuses to release the hold for
+        // any thread but its holder, so a release by another handle cannot silently succeed here.
+        // SAFETY: `lock` is live; this thread holds neither a read nor a write on it.
+        let foreign_unlock = unsafe { CRYPTO_THREAD_unlock(lock) };
+        assert_eq!(
+            foreign_unlock, 0,
+            "the guard must refuse a foreign release while the user is live"
+        );
+        assert!(
+            releases_of(addr).is_empty(),
+            "the lock block was released while a user was live"
+        );
+
+        assert!(go_tx.send(()).is_ok(), "the user is waiting to exit");
+        assert!(user.join().is_ok(), "the user thread must not panic");
+
+        // SAFETY: the only user has joined and released the lock, so this is the block's single
+        // release and no reference to it outlives this call.
+        unsafe { CRYPTO_THREAD_lock_free(lock) };
+
+        let releases = releases_of(addr);
+        assert_eq!(
+            releases.len(),
+            1,
+            "exactly one release, observed only after the last user exited"
+        );
+        adv_alloc::assert_no_double_free();
+
+        // NULL is the authority's own no-op and must release nothing.
+        // SAFETY: NULL is the documented no-op arm of `CRYPTO_THREAD_lock_free`.
+        unsafe { CRYPTO_THREAD_lock_free(core::ptr::null_mut()) };
+        assert_eq!(releases_of(addr).len(), 1, "a NULL free releases nothing");
+        adv_alloc::assert_no_double_free();
+    }
+}
