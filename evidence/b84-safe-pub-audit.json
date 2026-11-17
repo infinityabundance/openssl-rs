@@ -1,0 +1,2377 @@
+{
+ "schema": 1,
+ "kind": "b84-review14-condition3-safe-surface-audit",
+ "generated_by": "court/freeze-b84/review14/make_audit.py",
+ "generated_for": "evidence/b84-mechanism-verdicts.json condition 3",
+ "review": {
+  "role": "adversarial reviewer (AGENTS.md 15/21); not the author of any mechanism verdict",
+  "branch": "stage/p25/b75-ocsp",
+  "head": "7370c31d0d2e20cdc6aa802f2c80f0efb4d05817",
+  "source_identity": "src/ is byte-identical to S=f1c54715b (the b84 candidate the surface was measured at): `git diff --name-only f1c54715b HEAD -- src` is empty, 0 files",
+  "rules_read": [
+   "0",
+   "1",
+   "2",
+   "3",
+   "4",
+   "5",
+   "6",
+   "7",
+   "9",
+   "15",
+   "21",
+   "22"
+  ]
+ },
+ "venue": {
+  "free_g_before": "Mem 45 total / 28 available, swap 29 free (no compile or test ran; this review is source-level and ran no cargo command)",
+  "court": "16 GiB / 16 CPU class; no build requested, so no cgroup cap was consumed",
+  "discipline": "one subagent, no commit, no push, src/ and tests/ unmodified",
+  "hard_rules_observed": [
+   "no commit",
+   "no push",
+   "src/ and tests/ untouched"
+  ]
+ },
+ "method": {
+  "scanner": "court/freeze-b78/review2/surface.py (unchanged) re-run at HEAD by court/freeze-b84/review14/enumerate.py",
+  "test_filter": "court/freeze-b84/review14/evp_classify.py marks a fn test-only when its body_start falls inside a brace-matched `#[cfg(test)] mod` region",
+  "verdict_rule": "SAFE_FOR_SAFE_CALLER when the function has no parameter the caller can make invalid, or every raw parameter is either unread, stored without a read, or forwarded to a callee that validates it; HOLE otherwise",
+  "limits": "lexical, not rustc-resolved: the name-based call graph over-approximates (method names such as `new`/`as_ptr` bind across unrelated impls), so transitive-only rows were re-read rather than trusted"
+ },
+ "counts_confirmed_at_head": {
+  "X509_VERIFY_POLICY": {
+   "files": 41,
+   "safe_fn_definitions_reaching_unsafe": 148,
+   "external_safe_pub_reaching_unsafe": 69,
+   "raw_pointer_param_rows": 7
+  },
+  "RAND_CMS_STORE_KEYFMT": {
+   "files": 6,
+   "safe_fn_definitions_reaching_unsafe": 56,
+   "external_safe_pub_reaching_unsafe": 17,
+   "raw_pointer_param_rows": 2
+  },
+  "EVP_PKEY_PROVIDER": {
+   "files": 20,
+   "safe_fn_definitions_reaching_unsafe": 173,
+   "external_safe_pub_reaching_unsafe": 0,
+   "raw_pointer_param_rows": 59
+  }
+ },
+ "surfaces": {
+  "X509_VERIFY_POLICY": {
+   "files": 41,
+   "safe_fns_reaching_unsafe": 148,
+   "external_safe_pub_reaching_unsafe": 69,
+   "external_shape": "69/69 have an empty parameter list; 68 are `ASN1_item_new(<static ITEM>)` casts, 1 (`SCT_new`) writes sentinels into a fresh `OwnedCtx` block. No caller memory, no exclusivity assumption, no caller-established precondition.",
+   "per_function": [
+    {
+     "file": "src/ct/ct_sct.rs",
+     "name": "SCT_new",
+     "line": 206,
+     "params": [],
+     "unsafe": [
+      211
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn; allocates through `OwnedCtx::zalloc_at` and writes the two CT sentinels into that fresh, exclusively owned block"
+    },
+    {
+     "file": "src/x509/v3_aaa.rs",
+     "name": "OSSL_ALLOWED_ATTRIBUTES_CHOICE_new",
+     "line": 205,
+     "params": [],
+     "unsafe": [
+      207
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_aaa.rs",
+     "name": "OSSL_ALLOWED_ATTRIBUTES_ITEM_new",
+     "line": 266,
+     "params": [],
+     "unsafe": [
+      268
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_aaa.rs",
+     "name": "OSSL_ALLOWED_ATTRIBUTES_SYNTAX_new",
+     "line": 325,
+     "params": [],
+     "unsafe": [
+      327
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_ac_tgt.rs",
+     "name": "OSSL_TARGET_new",
+     "line": 412,
+     "params": [],
+     "unsafe": [
+      414
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_ac_tgt.rs",
+     "name": "OSSL_TARGETS_new",
+     "line": 491,
+     "params": [],
+     "unsafe": [
+      493
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_ac_tgt.rs",
+     "name": "OSSL_TARGETING_INFORMATION_new",
+     "line": 565,
+     "params": [],
+     "unsafe": [
+      567
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_addr.rs",
+     "name": "IPAddressRange_new",
+     "line": 454,
+     "params": [],
+     "unsafe": [
+      456
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_addr.rs",
+     "name": "IPAddressOrRange_new",
+     "line": 509,
+     "params": [],
+     "unsafe": [
+      511
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_addr.rs",
+     "name": "IPAddressChoice_new",
+     "line": 564,
+     "params": [],
+     "unsafe": [
+      566
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_addr.rs",
+     "name": "IPAddressFamily_new",
+     "line": 619,
+     "params": [],
+     "unsafe": [
+      621
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_admis.rs",
+     "name": "NAMING_AUTHORITY_new",
+     "line": 198,
+     "params": [],
+     "unsafe": [
+      200
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_admis.rs",
+     "name": "PROFESSION_INFO_new",
+     "line": 311,
+     "params": [],
+     "unsafe": [
+      313
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_admis.rs",
+     "name": "ADMISSIONS_new",
+     "line": 409,
+     "params": [],
+     "unsafe": [
+      411
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_admis.rs",
+     "name": "ADMISSION_SYNTAX_new",
+     "line": 497,
+     "params": [],
+     "unsafe": [
+      499
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_asid.rs",
+     "name": "ASRange_new",
+     "line": 472,
+     "params": [],
+     "unsafe": [
+      474
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_asid.rs",
+     "name": "ASIdOrRange_new",
+     "line": 523,
+     "params": [],
+     "unsafe": [
+      525
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_asid.rs",
+     "name": "ASIdentifierChoice_new",
+     "line": 574,
+     "params": [],
+     "unsafe": [
+      576
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_asid.rs",
+     "name": "ASIdentifiers_new",
+     "line": 631,
+     "params": [],
+     "unsafe": [
+      633
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_attrdesc.rs",
+     "name": "OSSL_HASH_new",
+     "line": 202,
+     "params": [],
+     "unsafe": [
+      204
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_attrdesc.rs",
+     "name": "OSSL_INFO_SYNTAX_POINTER_new",
+     "line": 286,
+     "params": [],
+     "unsafe": [
+      288
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_attrdesc.rs",
+     "name": "OSSL_INFO_SYNTAX_new",
+     "line": 377,
+     "params": [],
+     "unsafe": [
+      379
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_attrdesc.rs",
+     "name": "OSSL_PRIVILEGE_POLICY_ID_new",
+     "line": 464,
+     "params": [],
+     "unsafe": [
+      466
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_attrdesc.rs",
+     "name": "OSSL_ATTRIBUTE_DESCRIPTOR_new",
+     "line": 578,
+     "params": [],
+     "unsafe": [
+      580
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_attrmap.rs",
+     "name": "OSSL_ATAV_new",
+     "line": 168,
+     "params": [],
+     "unsafe": [
+      170
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_attrmap.rs",
+     "name": "OSSL_ATTRIBUTE_TYPE_MAPPING_new",
+     "line": 252,
+     "params": [],
+     "unsafe": [
+      254
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_attrmap.rs",
+     "name": "OSSL_ATTRIBUTE_VALUE_MAPPING_new",
+     "line": 343,
+     "params": [],
+     "unsafe": [
+      345
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_attrmap.rs",
+     "name": "OSSL_ATTRIBUTE_MAPPING_new",
+     "line": 436,
+     "params": [],
+     "unsafe": [
+      438
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_attrmap.rs",
+     "name": "OSSL_ATTRIBUTE_MAPPINGS_new",
+     "line": 518,
+     "params": [],
+     "unsafe": [
+      520
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_authattid.rs",
+     "name": "OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX_new",
+     "line": 106,
+     "params": [],
+     "unsafe": [
+      108
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_battcons.rs",
+     "name": "OSSL_BASIC_ATTR_CONSTRAINTS_new",
+     "line": 137,
+     "params": [],
+     "unsafe": [
+      139
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_bcons.rs",
+     "name": "BASIC_CONSTRAINTS_new",
+     "line": 113,
+     "params": [],
+     "unsafe": [
+      115
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_cpols.rs",
+     "name": "NOTICEREF_new",
+     "line": 381,
+     "params": [],
+     "unsafe": [
+      383
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_cpols.rs",
+     "name": "USERNOTICE_new",
+     "line": 463,
+     "params": [],
+     "unsafe": [
+      465
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_cpols.rs",
+     "name": "POLICYQUALINFO_new",
+     "line": 546,
+     "params": [],
+     "unsafe": [
+      548
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_cpols.rs",
+     "name": "POLICYINFO_new",
+     "line": 632,
+     "params": [],
+     "unsafe": [
+      634
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_cpols.rs",
+     "name": "CERTIFICATEPOLICIES_new",
+     "line": 707,
+     "params": [],
+     "unsafe": [
+      709
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_crld.rs",
+     "name": "DIST_POINT_NAME_new",
+     "line": 401,
+     "params": [],
+     "unsafe": [
+      403
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_crld.rs",
+     "name": "DIST_POINT_new",
+     "line": 517,
+     "params": [],
+     "unsafe": [
+      519
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_crld.rs",
+     "name": "CRL_DIST_POINTS_new",
+     "line": 602,
+     "params": [],
+     "unsafe": [
+      604
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_crld.rs",
+     "name": "ISSUING_DIST_POINT_new",
+     "line": 723,
+     "params": [],
+     "unsafe": [
+      725
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_crld.rs",
+     "name": "OSSL_AA_DIST_POINT_new",
+     "line": 844,
+     "params": [],
+     "unsafe": [
+      846
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_extku.rs",
+     "name": "EXTENDED_KEY_USAGE_new",
+     "line": 133,
+     "params": [],
+     "unsafe": [
+      135
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_info.rs",
+     "name": "ACCESS_DESCRIPTION_new",
+     "line": 192,
+     "params": [],
+     "unsafe": [
+      194
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_info.rs",
+     "name": "AUTHORITY_INFO_ACCESS_new",
+     "line": 271,
+     "params": [],
+     "unsafe": [
+      273
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_ist.rs",
+     "name": "ISSUER_SIGN_TOOL_new",
+     "line": 135,
+     "params": [],
+     "unsafe": [
+      137
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_ncons.rs",
+     "name": "GENERAL_SUBTREE_new",
+     "line": 323,
+     "params": [],
+     "unsafe": [
+      325
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_ncons.rs",
+     "name": "NAME_CONSTRAINTS_new",
+     "line": 349,
+     "params": [],
+     "unsafe": [
+      351
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_pcons.rs",
+     "name": "POLICY_CONSTRAINTS_new",
+     "line": 136,
+     "params": [],
+     "unsafe": [
+      138
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_pku.rs",
+     "name": "PKEY_USAGE_PERIOD_new",
+     "line": 112,
+     "params": [],
+     "unsafe": [
+      114
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_pmaps.rs",
+     "name": "POLICY_MAPPING_new",
+     "line": 154,
+     "params": [],
+     "unsafe": [
+      156
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_rolespec.rs",
+     "name": "OSSL_ROLE_SPEC_CERT_ID_new",
+     "line": 147,
+     "params": [],
+     "unsafe": [
+      149
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_rolespec.rs",
+     "name": "OSSL_ROLE_SPEC_CERT_ID_SYNTAX_new",
+     "line": 234,
+     "params": [],
+     "unsafe": [
+      236
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_sda.rs",
+     "name": "OSSL_ATTRIBUTES_SYNTAX_new",
+     "line": 87,
+     "params": [],
+     "unsafe": [
+      89
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_sxnet.rs",
+     "name": "SXNETID_new",
+     "line": 203,
+     "params": [],
+     "unsafe": [
+      205
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_sxnet.rs",
+     "name": "SXNET_new",
+     "line": 285,
+     "params": [],
+     "unsafe": [
+      287
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_timespec.rs",
+     "name": "OSSL_TIME_SPEC_ABSOLUTE_new",
+     "line": 285,
+     "params": [],
+     "unsafe": [
+      287
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_timespec.rs",
+     "name": "OSSL_DAY_TIME_new",
+     "line": 374,
+     "params": [],
+     "unsafe": [
+      376
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_timespec.rs",
+     "name": "OSSL_DAY_TIME_BAND_new",
+     "line": 450,
+     "params": [],
+     "unsafe": [
+      452
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_timespec.rs",
+     "name": "OSSL_NAMED_DAY_new",
+     "line": 529,
+     "params": [],
+     "unsafe": [
+      531
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_timespec.rs",
+     "name": "OSSL_TIME_SPEC_X_DAY_OF_new",
+     "line": 629,
+     "params": [],
+     "unsafe": [
+      631
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_timespec.rs",
+     "name": "OSSL_TIME_SPEC_DAY_new",
+     "line": 717,
+     "params": [],
+     "unsafe": [
+      719
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_timespec.rs",
+     "name": "OSSL_TIME_SPEC_WEEKS_new",
+     "line": 803,
+     "params": [],
+     "unsafe": [
+      805
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_timespec.rs",
+     "name": "OSSL_TIME_SPEC_MONTH_new",
+     "line": 891,
+     "params": [],
+     "unsafe": [
+      893
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_timespec.rs",
+     "name": "OSSL_TIME_PERIOD_new",
+     "line": 993,
+     "params": [],
+     "unsafe": [
+      995
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_timespec.rs",
+     "name": "OSSL_TIME_SPEC_TIME_new",
+     "line": 1072,
+     "params": [],
+     "unsafe": [
+      1074
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_timespec.rs",
+     "name": "OSSL_TIME_SPEC_new",
+     "line": 1160,
+     "params": [],
+     "unsafe": [
+      1162
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_tlsf.rs",
+     "name": "TLS_FEATURE_new",
+     "line": 153,
+     "params": [],
+     "unsafe": [
+      155
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/x509/v3_usernotice.rs",
+     "name": "OSSL_USER_NOTICE_SYNTAX_new",
+     "line": 140,
+     "params": [],
+     "unsafe": [
+      142
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    }
+   ],
+   "internal_rows_reviewed": {
+    "raw_pointer_param": [
+     "src/ct/ct_x509v3.rs::as_d2i:203",
+     "src/ct/ct_x509v3.rs::as_free:192",
+     "src/ct/ct_x509v3.rs::as_i2d:224",
+     "src/ct/ct_x509v3.rs::as_i2r:237",
+     "src/ct/ct_x509v3.rs::i2s_poison:70",
+     "src/ocsp/v3_ocsp.rs::created:590",
+     "src/ocsp/v3_ocsp.rs::released:597"
+    ],
+    "verdicts": [
+     {
+      "file": "src/ct/ct_x509v3.rs",
+      "name": "i2s_poison",
+      "line": 70,
+      "verdict": "SAFE_FOR_SAFE_CALLER",
+      "reason": "reads neither argument; only CRYPTO_strdup of a static literal"
+     },
+     {
+      "file": "src/ct/ct_x509v3.rs",
+      "name": "as_free",
+      "line": 192,
+      "verdict": "SAFE_FOR_SAFE_CALLER",
+      "reason": "transmutes a typed fn pointer into the slot type; no caller memory is read or written"
+     },
+     {
+      "file": "src/ct/ct_x509v3.rs",
+      "name": "as_d2i",
+      "line": 203,
+      "verdict": "SAFE_FOR_SAFE_CALLER",
+      "reason": "same typed fn-pointer transmute"
+     },
+     {
+      "file": "src/ct/ct_x509v3.rs",
+      "name": "as_i2d",
+      "line": 224,
+      "verdict": "SAFE_FOR_SAFE_CALLER",
+      "reason": "same typed fn-pointer transmute"
+     },
+     {
+      "file": "src/ct/ct_x509v3.rs",
+      "name": "as_i2r",
+      "line": 237,
+      "verdict": "SAFE_FOR_SAFE_CALLER",
+      "reason": "same typed fn-pointer transmute"
+     },
+     {
+      "file": "src/ocsp/v3_ocsp.rs",
+      "name": "created",
+      "line": 590,
+      "verdict": "SAFE_FOR_SAFE_CALLER",
+      "reason": "captures the pointer VALUE as usize; no deref"
+     },
+     {
+      "file": "src/ocsp/v3_ocsp.rs",
+      "name": "released",
+      "line": 597,
+      "verdict": "SAFE_FOR_SAFE_CALLER",
+      "reason": "captures the pointer VALUE as usize; no deref"
+     }
+    ]
+   },
+   "holes": []
+  },
+  "RAND_CMS_STORE_KEYFMT": {
+   "files": 6,
+   "safe_fns_reaching_unsafe": 56,
+   "external_safe_pub_reaching_unsafe": 17,
+   "external_shape": "16/17 nullary; `RAND_keep_random_devices_open(c_int)` takes no pointer. 13 are `ASN1_item_new(<static item>)`. The RAND_METHOD reads in RAND_status/RAND_poll take no argument, so the only precondition on that path is the installed table's liveness, established by the unsafe installer's contract (see reason).",
+   "per_function": [
+    {
+     "file": "src/cmp/cmp_asn.rs",
+     "name": "OSSL_CMP_ATAVS_new",
+     "line": 3222,
+     "params": [],
+     "unsafe": [
+      3224
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/cmp/cmp_asn.rs",
+     "name": "OSSL_CMP_PKIHEADER_new",
+     "line": 3239,
+     "params": [],
+     "unsafe": [
+      3241
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/cmp/cmp_asn.rs",
+     "name": "OSSL_CMP_PKISI_new",
+     "line": 3256,
+     "params": [],
+     "unsafe": [
+      3258
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/pkcs7/pk7_asn1.rs",
+     "name": "PKCS7_ISSUER_AND_SERIAL_new",
+     "line": 708,
+     "params": [],
+     "unsafe": [
+      710
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/pkcs7/pk7_asn1.rs",
+     "name": "PKCS7_SIGNER_INFO_new",
+     "line": 828,
+     "params": [],
+     "unsafe": [
+      830
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/pkcs7/pk7_asn1.rs",
+     "name": "PKCS7_RECIP_INFO_new",
+     "line": 926,
+     "params": [],
+     "unsafe": [
+      928
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/pkcs7/pk7_asn1.rs",
+     "name": "PKCS7_SIGNED_new",
+     "line": 1038,
+     "params": [],
+     "unsafe": [
+      1040
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/pkcs7/pk7_asn1.rs",
+     "name": "PKCS7_ENVELOPE_new",
+     "line": 1125,
+     "params": [],
+     "unsafe": [
+      1127
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/pkcs7/pk7_asn1.rs",
+     "name": "PKCS7_ENC_CONTENT_new",
+     "line": 1217,
+     "params": [],
+     "unsafe": [
+      1219
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/pkcs7/pk7_asn1.rs",
+     "name": "PKCS7_SIGN_ENVELOPE_new",
+     "line": 1336,
+     "params": [],
+     "unsafe": [
+      1338
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/pkcs7/pk7_asn1.rs",
+     "name": "PKCS7_ENCRYPT_new",
+     "line": 1421,
+     "params": [],
+     "unsafe": [
+      1423
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/pkcs7/pk7_asn1.rs",
+     "name": "PKCS7_DIGEST_new",
+     "line": 1519,
+     "params": [],
+     "unsafe": [
+      1521
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/pkcs7/pk7_asn1.rs",
+     "name": "PKCS7_new",
+     "line": 1663,
+     "params": [],
+     "unsafe": [
+      1665
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn (no parameters at all, so it takes no caller memory and assumes no exclusivity); its only unsafe operation is `ASN1_item_new(<crate-owned static item>)`, whose provenance is a `static Asn1Item` in the same file"
+    },
+    {
+     "file": "src/rand/rand_lib.rs",
+     "name": "RAND_keep_random_devices_open",
+     "line": 599,
+     "params": [
+      "keep"
+     ],
+     "unsafe": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "takes `c_int` only; no pointer, no caller memory; reaches `run_once_rand_init` and the pool keep-open flag"
+    },
+    {
+     "file": "src/rand/rand_lib.rs",
+     "name": "RAND_poll",
+     "line": 609,
+     "params": [],
+     "unsafe": [
+      614,
+      639,
+      641,
+      645,
+      648,
+      659,
+      664,
+      670
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn that reads the process-wide RAND_METHOD table. The table's liveness is a precondition established in code at its only non-NULL writer: `rand_set_rand_method_internal` (:696-713) is an `unsafe fn` whose contract is restated by `RAND_set_rand_method` (:722-724, `unsafe pub`). grep shows no safe fn stores into DEFAULT_RAND_METH (:713 internal unsafe fn, :768 inside unsafe `RAND_get_rand_method`, :801 inside unsafe `RAND_set_rand_engine`, which only installs NULL)"
+    },
+    {
+     "file": "src/rand/rand_lib.rs",
+     "name": "RAND_status",
+     "line": 883,
+     "params": [],
+     "unsafe": [
+      885,
+      892,
+      894,
+      901,
+      906
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary external safe fn that reads the process-wide RAND_METHOD table. The table's liveness is a precondition established in code at its only non-NULL writer: `rand_set_rand_method_internal` (:696-713) is an `unsafe fn` whose contract is restated by `RAND_set_rand_method` (:722-724, `unsafe pub`). grep shows no safe fn stores into DEFAULT_RAND_METH (:713 internal unsafe fn, :768 inside unsafe `RAND_get_rand_method`, :801 inside unsafe `RAND_set_rand_engine`, which only installs NULL)"
+    },
+    {
+     "file": "src/rand/rand_lib.rs",
+     "name": "RAND_OpenSSL",
+     "line": 2110,
+     "params": [],
+     "unsafe": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "nullary; answers the address of the module's own `'static` `OSSL_RAND_METH`"
+    }
+   ],
+   "internal_rows_reviewed": {
+    "raw_pointer_param": [
+     "src/rand/rand_lib.rs::RAND_get0_libctx:312",
+     "src/rand/rand_lib.rs::rand_ossl_ctx:301"
+    ],
+    "verdicts": [
+     {
+      "file": "src/rand/rand_lib.rs",
+      "name": "rand_ossl_ctx",
+      "line": 301,
+      "verdict": "SAFE_FOR_SAFE_CALLER",
+      "reason": "forwards to `lib_ctx_get_data`, which validates liveness against LIVE_CONTEXTS before reading (src/context/mod.rs:1487-1499)"
+     },
+     {
+      "file": "src/rand/rand_lib.rs",
+      "name": "RAND_get0_libctx",
+      "line": 312,
+      "verdict": "SAFE_FOR_SAFE_CALLER",
+      "reason": "forwards to `lib_ctx_get_concrete`, a safe accessor that resolves NULL/default without dereferencing an unvalidated address"
+     }
+    ]
+   },
+   "holes": []
+  },
+  "EVP_PKEY_PROVIDER": {
+   "files": 20,
+   "safe_fns_reaching_unsafe": 173,
+   "external_safe_pub_reaching_unsafe": 0,
+   "breakdown": {
+    "test_only_cfg_test": 77,
+    "production": 96,
+    "production_with_raw_pointer_param": 57,
+    "worktree_outside_the_20_files": 0
+   },
+   "why_external_is_zero": "all 116 EVP_PKEY_PROVIDER obligations are `pub unsafe extern \"C\"` provider callbacks; the scanner's external-safe-pub count over the 20 files is 0 and the crate-wide safe-pub-with-raw-pointer set excludes these files (AGENTS.md: a safe caller cannot name an `unsafe extern` callback without an unsafe block)",
+   "group_reasons": {
+    "src/provider/cipher.rs + digest.rs + legacyprov.rs (provider entry points)": "51 safe fns take only `_`-ignored pointer parameters; 49 of the raw-pointer production rows were verified unread and unforwarded by court/freeze-b84/review14/check_claims.py (the remainder are the two const row constructors, which store their pointers). The unsafe is reached in callees that receive no caller memory (error-site raise, static param lists, fresh OwnedCtx)",
+    "owner helpers (`new`/`as_ptr`/`into_raw`/`drop`, 2 impls each)": "operate on `OwnedCtx<T>`; the raw pointer they expose is a borrow of an owner or a transfer, so no precondition can be violated from safe code",
+    "`legacy_md` (9 files)": "`const fn` over typed `Option<unsafe extern \"C\" fn>` slots; its 'reaches unsafe' edge is a name-graph artefact (`AtomicI32::new` binds to unrelated `new` fns). Body read: no unsafe, no caller memory",
+    "`row`/`capable_row` (const table constructors)": "store the pointer into a `const` row; the 'unsafe' edge is the `CStr::as_ptr` method-name collision. No read",
+    "src/digest/sha2.rs::sha256_block / sha512_block": "HOLE \u2014 see holes",
+    "src/provider/conf.rs::matches_any / same": "HOLE \u2014 see holes"
+   },
+   "per_function": [
+    {
+     "file": "src/decoder_lib.rs",
+     "name": "fail_instance",
+     "line": 137,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/digest/sha2.rs",
+     "name": "sha256_block",
+     "line": 195,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [
+      "*word = unsafe { md32::load_word(data.add(i * 4), false) };",
+      "data = unsafe { data.add(MD32_CBLOCK) };"
+     ],
+     "verdict": "HOLE",
+     "reason": "safe fn; the body reads `data.add(i*4)` and advances `data.add(MD32_CBLOCK)`; its own SAFETY comment says 'the caller guaranteed num * MD32_CBLOCK readable bytes', i.e. the obligation is real and the signature is safe"
+    },
+    {
+     "file": "src/digest/sha2.rs",
+     "name": "sha512_block",
+     "line": 252,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [
+      "*word = unsafe { load_word64(data.add(i * 8)) };",
+      "data = unsafe { data.add(128) };"
+     ],
+     "verdict": "HOLE",
+     "reason": "same shape as sha256_block: safe fn, raw `*const u8` parameter, `data.add(i*8)` / `data.add(128)` in the body, obligation only in comments; four call sites already wrap the call in `unsafe { }`, which does not constrain a safe caller"
+    },
+    {
+     "file": "src/digest/sha2.rs",
+     "name": "block_bytes",
+     "line": 383,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [
+      "unsafe { self.u.p.as_mut_ptr() }"
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/encoder_meth.rs",
+     "name": "ossl_encoder_new",
+     "line": 272,
+     "vis": "pub(crate)",
+     "raw_pointer_param": false,
+     "unsafe_lines": [
+      "unsafe { (*ret).base.refcnt.store(1, Ordering::Release) };"
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/encoder_meth.rs",
+     "name": "get_encoder_store",
+     "line": 559,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/evp/legacy_blake2.rs",
+     "name": "legacy_md",
+     "line": 153,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/evp/legacy_md4.rs",
+     "name": "legacy_md",
+     "line": 108,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/evp/legacy_md5.rs",
+     "name": "legacy_md",
+     "line": 133,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/evp/legacy_mdc2.rs",
+     "name": "legacy_md",
+     "line": 113,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/evp/legacy_ripemd.rs",
+     "name": "legacy_md",
+     "line": 109,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/evp/legacy_sha.rs",
+     "name": "legacy_md",
+     "line": 189,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/evp/legacy_sha3.rs",
+     "name": "legacy_md",
+     "line": 186,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/evp/legacy_wp.rs",
+     "name": "legacy_md",
+     "line": 111,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "new",
+     "line": 499,
+     "vis": "pub(crate)",
+     "raw_pointer_param": false,
+     "unsafe_lines": [
+      "let raw = unsafe {"
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "as_ptr",
+     "line": 511,
+     "vis": "pub(crate)",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "into_raw",
+     "line": 516,
+     "vis": "pub(crate)",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "drop",
+     "line": 535,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [
+      "unsafe {"
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "as_ptr",
+     "line": 580,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "into_raw",
+     "line": 585,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "drop",
+     "line": 593,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [
+      "unsafe { CRYPTO_free(self.ptr.as_ptr().cast::<c_void>(), T::FILE, LINE) };"
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "raise_prov",
+     "line": 840,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [
+      "unsafe { raise_site(site) };"
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "fail_at",
+     "line": 852,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "ossl_cipher_generic_gettable_params",
+     "line": 1965,
+     "vis": "pub(crate)",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "ossl_cipher_generic_gettable_ctx_params",
+     "line": 1987,
+     "vis": "pub(crate)",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "ossl_cipher_generic_settable_ctx_params",
+     "line": 2008,
+     "vis": "pub(crate)",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "ossl_tdes_gettable_ctx_params",
+     "line": 3289,
+     "vis": "pub(crate)",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "ossl_tdes_settable_ctx_params",
+     "line": 3307,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "cts_mode_id2name",
+     "line": 4245,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "cts_gettable_ctx_params",
+     "line": 4754,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "cts_settable_ctx_params",
+     "line": 4773,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "aes_xts_settable_ctx_params",
+     "line": 5117,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "sm4_xts_settable_ctx_params",
+     "line": 6026,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "cipher_ocb_gettable_ctx_params",
+     "line": 6865,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "cipher_ocb_settable_ctx_params",
+     "line": 6884,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "set_enc",
+     "line": 8334,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "set_key_set",
+     "line": 8342,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "set_iv_set",
+     "line": 8350,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "set_tag_set",
+     "line": 8358,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "set_len_set",
+     "line": 8366,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "ossl_ccm_settable_ctx_params",
+     "line": 8627,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "ossl_ccm_gettable_ctx_params",
+     "line": 8724,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "aes_siv_gettable_ctx_params",
+     "line": 10279,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "aes_siv_settable_ctx_params",
+     "line": 10354,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "null_newctx",
+     "line": 10691,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "null_gettable_ctx_params",
+     "line": 10830,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "null_settable_ctx_params",
+     "line": 10872,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "aes_settable_ctx_params",
+     "line": 12590,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "aes_gettable_ctx_params",
+     "line": 12615,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "ossl_aes_gcm_siv_gettable_ctx_params",
+     "line": 14301,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "ossl_aes_gcm_siv_settable_ctx_params",
+     "line": 14377,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "row",
+     "line": 14753,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "capable_row",
+     "line": 14758,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "fill_exported_ciphers",
+     "line": 15103,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [
+      "unsafe {"
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "exported_ciphers",
+     "line": 15130,
+     "vis": "pub(crate)",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "chacha20_gettable_ctx_params",
+     "line": 15607,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "chacha20_settable_ctx_params",
+     "line": 15672,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "chacha20_poly1305_gettable_ctx_params",
+     "line": 16917,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "chacha20_poly1305_settable_ctx_params",
+     "line": 16995,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "var_keylen_settable_ctx_params",
+     "line": 18672,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "rc2_gettable_ctx_params",
+     "line": 20523,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "rc2_settable_ctx_params",
+     "line": 20544,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "rc4_hmac_md5_gettable_ctx_params",
+     "line": 22067,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/cipher.rs",
+     "name": "rc4_hmac_md5_settable_ctx_params",
+     "line": 22113,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/conf.rs",
+     "name": "ossl_prov_conf_ctx_new",
+     "line": 184,
+     "vis": "pub(crate)",
+     "raw_pointer_param": true,
+     "unsafe_lines": [
+      "unsafe { (*raw.as_ptr()).lock = lock };",
+      "unsafe { raw.assume_init().into_raw() }"
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/conf.rs",
+     "name": "matches_any",
+     "line": 680,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [
+      "if unsafe { crate::runtime::bio::sys::strcmp(s, *w) } == 0 {"
+     ],
+     "verdict": "HOLE",
+     "reason": "safe fn taking `*const c_char`; passes it to `strcmp`, which reads until NUL. Its doc claims 'it dereferences neither argument' \u2014 that claim is false, and the `# Safety` section on a safe fn is not enforced"
+    },
+    {
+     "file": "src/provider/conf.rs",
+     "name": "same",
+     "line": 695,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [
+      "unsafe { crate::runtime::bio::sys::strcmp(a, b) == 0 }"
+     ],
+     "verdict": "HOLE",
+     "reason": "same class as matches_any: safe fn over `strcmp` on raw pointers"
+    },
+    {
+     "file": "src/provider/conf.rs",
+     "name": "ossl_provider_add_conf_module",
+     "line": 879,
+     "vis": "pub(crate)",
+     "raw_pointer_param": false,
+     "unsafe_lines": [
+      "unsafe {"
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/digest.rs",
+     "name": "fail_at",
+     "line": 246,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [
+      "unsafe { raise_site(site) };"
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/digest.rs",
+     "name": "ossl_digest_default_gettable_params",
+     "line": 300,
+     "vis": "pub(crate)",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/digest.rs",
+     "name": "new",
+     "line": 328,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [
+      "let raw = unsafe {"
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/digest.rs",
+     "name": "as_ptr",
+     "line": 359,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/digest.rs",
+     "name": "into_raw",
+     "line": 364,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/digest.rs",
+     "name": "drop",
+     "line": 382,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [
+      "unsafe {"
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/digest.rs",
+     "name": "newctx",
+     "line": 407,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/digest.rs",
+     "name": "settable_ctx_params",
+     "line": 589,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/digest.rs",
+     "name": "newctx",
+     "line": 634,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/digest.rs",
+     "name": "gettable_params",
+     "line": 764,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/digest.rs",
+     "name": "newctx",
+     "line": 994,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/digest.rs",
+     "name": "gettable_params",
+     "line": 1102,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/digest.rs",
+     "name": "settable_ctx_params",
+     "line": 1167,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/digest.rs",
+     "name": "newctx",
+     "line": 1213,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/digest.rs",
+     "name": "gettable_params",
+     "line": 1344,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/digest.rs",
+     "name": "settable_ctx_params",
+     "line": 1701,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/digest.rs",
+     "name": "settable_ctx_params",
+     "line": 2035,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/digest.rs",
+     "name": "newctx",
+     "line": 2047,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/digest.rs",
+     "name": "deflt_gettable_params",
+     "line": 2673,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/legacyprov.rs",
+     "name": "legacy_gettable_params",
+     "line": 154,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/legacyprov.rs",
+     "name": "new",
+     "line": 222,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [
+      "let raw = unsafe {"
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/legacyprov.rs",
+     "name": "into_raw",
+     "line": 253,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/legacyprov.rs",
+     "name": "drop",
+     "line": 271,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [
+      "unsafe {"
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/provider/legacyprov.rs",
+     "name": "newctx",
+     "line": 302,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/legacyprov.rs",
+     "name": "mdc2_settable_ctx_params",
+     "line": 510,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/legacyprov.rs",
+     "name": "newctx",
+     "line": 555,
+     "vis": "private",
+     "raw_pointer_param": true,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "raw parameters are `_`-prefixed and unread (provider entry points), or are stored into a const table, or are forwarded to a validating safe callee"
+    },
+    {
+     "file": "src/provider/mlx_kmgmt.rs",
+     "name": "raise_fixed",
+     "line": 281,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [
+      "unsafe { raise_site_data(site, buf.as_ptr().cast()) };"
+     ],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    },
+    {
+     "file": "src/sm3/legacy_sm3.rs",
+     "name": "legacy_md",
+     "line": 115,
+     "vis": "private",
+     "raw_pointer_param": false,
+     "unsafe_lines": [],
+     "verdict": "SAFE_FOR_SAFE_CALLER",
+     "reason": "no raw-pointer parameter; the unsafe in the body is over crate-owned state or the row is transitive-only"
+    }
+   ],
+   "per_file": {
+    "src/decoder_lib.rs": {
+     "production": 1,
+     "holes": 0,
+     "test_only": 3
+    },
+    "src/digest/sha2.rs": {
+     "production": 3,
+     "holes": 2,
+     "test_only": 7
+    },
+    "src/encoder_meth.rs": {
+     "production": 2,
+     "holes": 0,
+     "test_only": 2
+    },
+    "src/evp/legacy_blake2.rs": {
+     "production": 1,
+     "holes": 0,
+     "test_only": 2
+    },
+    "src/evp/legacy_md4.rs": {
+     "production": 1,
+     "holes": 0,
+     "test_only": 1
+    },
+    "src/evp/legacy_md5.rs": {
+     "production": 1,
+     "holes": 0,
+     "test_only": 1
+    },
+    "src/evp/legacy_mdc2.rs": {
+     "production": 1,
+     "holes": 0,
+     "test_only": 1
+    },
+    "src/evp/legacy_ripemd.rs": {
+     "production": 1,
+     "holes": 0,
+     "test_only": 1
+    },
+    "src/evp/legacy_sha.rs": {
+     "production": 1,
+     "holes": 0,
+     "test_only": 11
+    },
+    "src/evp/legacy_sha3.rs": {
+     "production": 1,
+     "holes": 0,
+     "test_only": 5
+    },
+    "src/evp/legacy_wp.rs": {
+     "production": 1,
+     "holes": 0,
+     "test_only": 1
+    },
+    "src/provider/cipher.rs": {
+     "production": 50,
+     "holes": 0,
+     "test_only": 27
+    },
+    "src/provider/conf.rs": {
+     "production": 4,
+     "holes": 2,
+     "test_only": 2
+    },
+    "src/provider/digest.rs": {
+     "production": 19,
+     "holes": 0,
+     "test_only": 7
+    },
+    "src/provider/legacyprov.rs": {
+     "production": 7,
+     "holes": 0,
+     "test_only": 1
+    },
+    "src/provider/mlx_kmgmt.rs": {
+     "production": 1,
+     "holes": 0,
+     "test_only": 1
+    },
+    "src/sm3/legacy_sm3.rs": {
+     "production": 1,
+     "holes": 0,
+     "test_only": 1
+    }
+   },
+   "holes": [
+    {
+     "file": "src/digest/sha2.rs",
+     "name": "sha256_block",
+     "line": 195,
+     "precondition": "`data` is readable for `num * MD32_CBLOCK` bytes",
+     "why_hole": "safe fn; the body reads `data.add(i*4)` and advances `data.add(MD32_CBLOCK)`; its own SAFETY comment says 'the caller guaranteed num * MD32_CBLOCK readable bytes', i.e. the obligation is real and the signature is safe",
+     "fix": "`unsafe fn` + `# Safety` (as `Md32::block` already is), or take `&[u8]` checked to a whole number of blocks"
+    },
+    {
+     "file": "src/digest/sha2.rs",
+     "name": "sha512_block",
+     "line": 252,
+     "precondition": "`data` is readable for `num * 128` bytes",
+     "why_hole": "same shape as sha256_block: safe fn, raw `*const u8` parameter, `data.add(i*8)` / `data.add(128)` in the body, obligation only in comments; four call sites already wrap the call in `unsafe { }`, which does not constrain a safe caller",
+     "fix": "`unsafe fn` + `# Safety`"
+    },
+    {
+     "file": "src/provider/conf.rs",
+     "name": "matches_any",
+     "line": 680,
+     "precondition": "`s` (and each `words` entry) is NUL-terminated and readable",
+     "why_hole": "safe fn taking `*const c_char`; passes it to `strcmp`, which reads until NUL. Its doc claims 'it dereferences neither argument' \u2014 that claim is false, and the `# Safety` section on a safe fn is not enforced",
+     "fix": "`unsafe fn` + `# Safety`, or take `&CStr` for `s` and correct the doc (the current sentence is wrong)"
+    },
+    {
+     "file": "src/provider/conf.rs",
+     "name": "same",
+     "line": 695,
+     "precondition": "`a` and `b` are NUL-terminated and readable",
+     "why_hole": "same class as matches_any: safe fn over `strcmp` on raw pointers",
+     "fix": "`unsafe fn` + `# Safety`, or take `&CStr`"
+    }
+   ]
+  }
+ },
+ "dispatch_and_slh": {
+  "question": "can a SAFE caller install a mismatched dispatch table entry or invoke an SLH slot with the wrong extents?",
+  "dispatch_source_facts": {
+   "type": "src/context/dispatch.rs:44-49 `#[repr(C)] struct OsslDispatch { function_id: c_int, function: *mut c_void }`",
+   "sync": "src/context/dispatch.rs:58 `unsafe impl Sync for OsslDispatch {}` (a static-const invariant)",
+   "accessors": "`entry_function<T>` (:137) and `lookup` (:171) are `pub(crate) unsafe fn`; every in-crate consumer (`ossl_bio_init_core`, `ossl_prov_get_keymgmt_new`/`free`, `pilfer`, `ossl_prov_free_key`, `ossl_provider_get0_dispatch`, `find_call`, `ossl_prov_seeding_from_dispatch`) is `unsafe fn`, and `provider/rand.rs::entry_function` (:1536) is `unsafe fn`",
+   "non_unsafe_consumers": [
+    "src/provider/core_dispatch.rs:858:const fn e(function_id: c_int, function: *mut c_void) -> OsslDispatch {",
+    "src/provider/rand.rs:1542:fn non_null(p: *const OsslDispatch) -> Option<*const OsslDispatch> {"
+   ],
+   "answer": "holds at this source: the only safe fns that mention the type are `non_null` (a null test with no deref) and the `const fn e(...)` row builder (stores, no deref). Installing a mismatched entry requires an `unsafe` call to `entry_function`/`lookup` or an `unsafe` write through a table pointer, so no safe caller can do it.",
+   "retained_obligation": "R-1 is unchanged: the id->signature pairing is per-call-site `T`, not a type. That is a trust-boundary cost, not a safe-interface hole."
+  },
+  "slh_source_facts": {
+   "type": "src/slh_dsa/hash.rs:69-118 `#[repr(C)] struct SlhHashFunc` with six typed `unsafe extern \"C\" fn` slots (h_msg/prf/prf_msg/f/h/t)",
+   "producer": "`ossl_slh_get_hash_fn` (:735) is safe and answers a `const`-promoted `'static` table, with the E0435 control at :758-759 making promotion load-bearing",
+   "answer": "holds: the slots are typed `unsafe extern \"C\" fns`, so invoking one requires an unsafe call; the `*mut u8` arguments are per-slot contracts on those unsafe fns. A safe caller can obtain the table address but cannot call through it.",
+   "retained_obligation": "R-2 is unchanged: the extent discipline for those `*mut u8` arguments lives in the slot contracts, not in the types."
+  }
+ },
+ "holes": {
+  "count": 4,
+  "external_surface_holes": 0,
+  "rows": [
+   {
+    "file": "src/digest/sha2.rs",
+    "name": "sha256_block",
+    "line": 195,
+    "precondition": "`data` is readable for `num * MD32_CBLOCK` bytes",
+    "why_hole": "safe fn; the body reads `data.add(i*4)` and advances `data.add(MD32_CBLOCK)`; its own SAFETY comment says 'the caller guaranteed num * MD32_CBLOCK readable bytes', i.e. the obligation is real and the signature is safe",
+    "fix": "`unsafe fn` + `# Safety` (as `Md32::block` already is), or take `&[u8]` checked to a whole number of blocks"
+   },
+   {
+    "file": "src/digest/sha2.rs",
+    "name": "sha512_block",
+    "line": 252,
+    "precondition": "`data` is readable for `num * 128` bytes",
+    "why_hole": "same shape as sha256_block: safe fn, raw `*const u8` parameter, `data.add(i*8)` / `data.add(128)` in the body, obligation only in comments; four call sites already wrap the call in `unsafe { }`, which does not constrain a safe caller",
+    "fix": "`unsafe fn` + `# Safety`"
+   },
+   {
+    "file": "src/provider/conf.rs",
+    "name": "matches_any",
+    "line": 680,
+    "precondition": "`s` (and each `words` entry) is NUL-terminated and readable",
+    "why_hole": "safe fn taking `*const c_char`; passes it to `strcmp`, which reads until NUL. Its doc claims 'it dereferences neither argument' \u2014 that claim is false, and the `# Safety` section on a safe fn is not enforced",
+    "fix": "`unsafe fn` + `# Safety`, or take `&CStr` for `s` and correct the doc (the current sentence is wrong)"
+   },
+   {
+    "file": "src/provider/conf.rs",
+    "name": "same",
+    "line": 695,
+    "precondition": "`a` and `b` are NUL-terminated and readable",
+    "why_hole": "same class as matches_any: safe fn over `strcmp` on raw pointers",
+    "fix": "`unsafe fn` + `# Safety`, or take `&CStr`"
+   }
+  ],
+  "reach": "all four are module-private safe fns; no C-ABI caller and no consumer can name them, but crate code can call each without `unsafe`, which is exactly condition 3's subject",
+  "fix_shape": "source batch: add `unsafe` + `# Safety` to each (or take `&[u8]`/`&CStr`), then re-run the scanner; no obligation changes at the call sites, which already carry the contract",
+  "files_a_source_batch_needs": [
+   "src/digest/sha2.rs (sha256_block:195, sha512_block:252)",
+   "src/provider/conf.rs (matches_any:680, same:695, plus the factually wrong 'dereferences neither argument' doc sentence)"
+  ]
+ },
+ "bookkeeping_findings": [
+  "evidence/b84-mechanism-verdicts.json points at `safe_interface_surface.per_mechanism[...].safe_pub_external_reaching_unsafe_list`, but that key does not exist in evidence/b84-safety-argument.json; the lists live in court/freeze-b84/l7/surface-b84.json (mechanisms[*].safe_surface). The pointer is a \u00a722 evidence-identity defect: the verdict cites a witness that is not in the document it names.",
+  "The mechanism-wide counts (69/17/173) reproduce exactly at HEAD, but 77 of the 173 are `#[cfg(test)]` fns and 9 more (`legacy_md`) are name-graph artefacts, so the production surface that needs verdicts is 96, not 173.",
+  "src/provider/conf.rs:671-676 states 'it dereferences neither argument' for `matches_any`; the body calls `strcmp`, which dereferences both. The sentence is false and should be corrected with the fix."
+ ],
+ "answer": {
+  "condition_3_for_the_three_surfaces": "X509: MET once the 69 nullary constructors are accounted for (no precondition exists to violate). RAND: MET for the same reason, with the RAND_METHOD liveness obligation established at the unsafe installer rather than by a caller. EVP: NOT MET as a mechanism-wide claim only because of 4 crate-internal safe fns; the external surface is 0 and needs no fix.",
+  "holes_total": 4,
+  "blocking": "the 4 holes are small and local; fixing them is a two-file source batch, not a redesign",
+  "dispatch_slh": "the earlier answer is re-verified and still holds"
+ },
+ "verification": {
+  "tool": "court/freeze-b84/review14/check_claims.py",
+  "head": "7370c31d0d2e20cdc6aa802f2c80f0efb4d05817",
+  "all_passed": true,
+  "checks": [
+   {
+    "check": "x509_external_all_nullary",
+    "ok": true,
+    "detail": "69 rows, 0 with parameters: []"
+   },
+   {
+    "check": "rand_external_only_c_int_param",
+    "ok": true,
+    "detail": "17 rows, unexpected parameter lists: []"
+   },
+   {
+    "check": "raw_pointer_entry_points_ignore_their_params",
+    "ok": true,
+    "detail": "49 rows verified unread/unforwarded; offenders: []"
+   },
+   {
+    "check": "holes_dereference_their_parameters",
+    "ok": true,
+    "detail": "[{\"file\": \"src/digest/sha2.rs\", \"name\": \"sha256_block\", \"deref\": true}, {\"file\": \"src/digest/sha2.rs\", \"name\": \"sha512_block\", \"deref\": true}, {\"file\": \"src/provider/conf.rs\", \"name\": \"matches_any\", \"deref\": true}, {\"file\": \"src/provider/conf.rs\", \"name\": \"same\", \"deref\": true}]"
+   },
+   {
+    "check": "default_rand_meth_writers_are_unsafe_fns",
+    "ok": true,
+    "detail": "[[713, \"unsafe fn rand_set_rand_method_internal(meth: *const RandMethod, e: *mut c_void)\"], [768, \"pub unsafe extern \\\"C\\\" fn RAND_get_rand_method() -> *const RandMethod {\"]]"
+   },
+   {
+    "check": "dispatch_consumers_are_unsafe_fns",
+    "ok": true,
+    "detail": "[\"src/provider/core_dispatch.rs:858:const fn e(function_id: c_int, function: *mut c_void) -> OsslDispatch {\", \"src/provider/rand.rs:1542:fn non_null(p: *const OsslDispatch) -> Option<*const OsslDispatch> {\"]"
+   }
+  ]
+ }
+}
