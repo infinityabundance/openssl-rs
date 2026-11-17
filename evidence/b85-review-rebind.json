@@ -1,0 +1,895 @@
+{
+ "schema": "openssl-rs/safe-c33/b85-review-rebind/v1",
+ "kind": "independent-review-and-receipt-rebind",
+ "subphase": "safe-c33/b85: the two closures leave no row BLOCKED at S=5edca576b. The rebind therefore re-establishes the prior review rows at S and records the three whose recorded span hash predates tool b42f19bd as instrument drift, not source drift.",
+ "generated_utc": "2026-11-17T04:54:11Z",
+ "reviewer": "closing measurement subagent (not the author of the b85 source change)",
+ "venue": {
+  "court": "docker/openssl-rs-court.sh, cgroup 16 GiB / 16 CPU",
+  "per_process_data_limit_kib": 12582912,
+  "attestation": "the court was already at 17179869184 bytes and 16 CPU when this batch started; memory.events oom=0 oom_kill=0 throughout"
+ },
+ "candidate_identity": {
+  "source_head": "5edca576b569b4a7bd6acfb09b77938ee555c147",
+  "tool": {
+   "path": "forensics/tools/consumer_closure.py",
+   "sha256": "b42f19bdfb40d94009a6256dcc7a3d5fd96e6a2c8fba595133372ce6fed5f913"
+  },
+  "libcrypto_so_3_sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+  "libssl_so_3_sha256": "1901de061d9d9793849b8c2d2b73847c7feb61339708062aea064a95f0e60b2b",
+  "consumers": {
+   "ssh": {
+    "path": "court/tmp/openssh-closure/client-b85/openssh-9.9p1/ssh",
+    "sha256": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b",
+    "size": 3401744
+   },
+   "sshd": {
+    "path": "court/tmp/openssh-closure/server-b85/openssh-9.9p1/sshd",
+    "sha256": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1",
+    "size": 1763248
+   },
+   "sshd_session": {
+    "path": "court/tmp/openssh-closure/server-b85/openssh-9.9p1/sshd-session",
+    "sha256": "d8e249c10bb08efa7f923d1bde0cf7b6354439517367b4c7e4a491ea6474acb5",
+    "size": 3594840
+   }
+  },
+  "census": {
+   "path": "court/freeze-b85/census-b85.json",
+   "sha256": "5bb1cd49e7e3dc75e433b5a554cba70c5b8c0c05b2ca1b63f22c12396669f0f7"
+  }
+ },
+ "method": "read the b85 closures for the BLOCKED/UNKNOWN set (verbatim); re-resolve every row the b80 drifted review and the b80/b81/b82/b83/b84 rebinds accepted with the current tool at S and at the candidate each was recorded at; a row whose bytes are unchanged but whose recorded hash differs is re-established under the current tool and classified as instrument drift, never as source drift.",
+ "prior_state": {
+  "closures": {
+   "ssh": {
+    "path": "evidence/closure-ssh-b85.json",
+    "sha256": "6ad7940b7274e128d01e63f67520995d1d601fdfc016b85830e916ff40cf4161",
+    "counts": {
+     "reachable_files": 625,
+     "reachable_production_obligations": 290,
+     "DISCHARGED": 290,
+     "BLOCKED": 0,
+     "UNKNOWN": 0,
+     "by_mechanism": {
+      "BIO": 2,
+      "C_ABI_CONTRACT": 5,
+      "EVP_PKEY_PROVIDER": 116,
+      "RAND_CMS_STORE_KEYFMT": 27,
+      "RUNTIME_CONCURRENCY": 4,
+      "SSL_SESSION": 14,
+      "X509_VERIFY_POLICY": 122
+     },
+     "v1_production_operations_total": 6,
+     "v1_uncontracted_operations_total": 222,
+     "carried_forward": 280,
+     "carried_forward_removed": 3,
+     "carried_forward_removed_by_reason": {
+      "enumerated by the previous applied closure, but the current inventory's per-site enumeration contains no production operation at this stable identity (file, kind, enclosing item); the operation no longer exists as a source unsafe operation": 2,
+      "no-longer-reachable-at-this-artifact": 1
+     },
+     "stale_discharge_rejections": 0,
+     "stale_discharge_sites": []
+    },
+    "verdict": {
+     "state": "ACCEPTED",
+     "safe_compatible": false,
+     "reason": "no refusal condition fired"
+    },
+    "refusals": [],
+    "element_7": "PASS (contract-bounded and closed target sets)",
+    "artifact_identity": {
+     "path": "court/tmp/openssh-closure/client-b85/openssh-9.9p1/ssh",
+     "sha256": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b",
+     "dynamic": {
+      "soname": null,
+      "needed": [
+       "libcrypto.so.3",
+       "libz.so.1",
+       "libc.so.6"
+      ],
+      "runpath": [
+       "/work/artifacts/phase2/install/lib"
+      ],
+      "rpath": []
+     },
+     "build_provenance": null
+    },
+    "repository_head": "5edca576b569b4a7bd6acfb09b77938ee555c147",
+    "tool_sha256": "b42f19bdfb40d94009a6256dcc7a3d5fd96e6a2c8fba595133372ce6fed5f913"
+   },
+   "sshd": {
+    "path": "evidence/closure-sshd-b85.json",
+    "sha256": "7f77a9fbd2c613acd7200f692184529c93a551d69b391974d7db8948cd1e5192",
+    "counts": {
+     "reachable_files": 624,
+     "reachable_production_obligations": 290,
+     "DISCHARGED": 290,
+     "BLOCKED": 0,
+     "UNKNOWN": 0,
+     "by_mechanism": {
+      "BIO": 2,
+      "C_ABI_CONTRACT": 5,
+      "EVP_PKEY_PROVIDER": 116,
+      "RAND_CMS_STORE_KEYFMT": 27,
+      "RUNTIME_CONCURRENCY": 4,
+      "SSL_SESSION": 14,
+      "X509_VERIFY_POLICY": 122
+     },
+     "v1_production_operations_total": 6,
+     "v1_uncontracted_operations_total": 222,
+     "carried_forward": 280,
+     "carried_forward_removed": 3,
+     "carried_forward_removed_by_reason": {
+      "enumerated by the previous applied closure, but the current inventory's per-site enumeration contains no production operation at this stable identity (file, kind, enclosing item); the operation no longer exists as a source unsafe operation": 2,
+      "no-longer-reachable-at-this-artifact": 1
+     },
+     "stale_discharge_rejections": 0,
+     "stale_discharge_sites": []
+    },
+    "verdict": {
+     "state": "ACCEPTED",
+     "safe_compatible": false,
+     "reason": "no refusal condition fired"
+    },
+    "refusals": [],
+    "element_7": "PASS (contract-bounded and closed target sets)",
+    "artifact_identity": {
+     "path": "court/tmp/openssh-closure/server-b85/openssh-9.9p1/sshd",
+     "sha256": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1",
+     "dynamic": {
+      "soname": null,
+      "needed": [
+       "libcrypto.so.3",
+       "libc.so.6"
+      ],
+      "runpath": [
+       "/work/artifacts/phase2/install/lib"
+      ],
+      "rpath": []
+     },
+     "build_provenance": null
+    },
+    "repository_head": "5edca576b569b4a7bd6acfb09b77938ee555c147",
+    "tool_sha256": "b42f19bdfb40d94009a6256dcc7a3d5fd96e6a2c8fba595133372ce6fed5f913"
+   }
+  },
+  "newly_blocked_rows": [],
+  "newly_blocked_rows_verbatim": [],
+  "note": "both closures report BLOCKED=0 and UNKNOWN=0, so item 7's 'each newly blocked row' set is empty; nothing is left blocked."
+ },
+ "review_span_reestablishment": {
+  "groups": [
+   {
+    "label": "b80-review-drifted (18)",
+    "rows": [
+     {
+      "file": "src/x509/v3_san.rs",
+      "operation": "i2v_GENERAL_NAME",
+      "recorded_sha256": "1a27c17918064681ae2750b6c684068543110eff87bf57138d61c63577f7a2a8",
+      "at_S_sha256": "1a27c17918064681ae2750b6c684068543110eff87bf57138d61c63577f7a2a8",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "1a27c17918064681ae2750b6c684068543110eff87bf57138d61c63577f7a2a8",
+       "start_line": 355,
+       "end_line": 629
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       355,
+       629
+      ]
+     },
+     {
+      "file": "src/x509/v3_san.rs",
+      "operation": "i2v_GENERAL_NAMES",
+      "recorded_sha256": "4e1d2a03cb3d1798e441f68920587ae39d4f342115b006e5c0cc38ee31623326",
+      "at_S_sha256": "4e1d2a03cb3d1798e441f68920587ae39d4f342115b006e5c0cc38ee31623326",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "4e1d2a03cb3d1798e441f68920587ae39d4f342115b006e5c0cc38ee31623326",
+       "start_line": 316,
+       "end_line": 346
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       316,
+       346
+      ]
+     },
+     {
+      "file": "src/x509/v3_san.rs",
+      "operation": "san_i2v",
+      "recorded_sha256": "f81a3cfcc6695c7396e2c60945d7b3ad5c67408e3f9f5c5d59fd42317753ce42",
+      "at_S_sha256": "f81a3cfcc6695c7396e2c60945d7b3ad5c67408e3f9f5c5d59fd42317753ce42",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "f81a3cfcc6695c7396e2c60945d7b3ad5c67408e3f9f5c5d59fd42317753ce42",
+       "start_line": 1204,
+       "end_line": 1212
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       1204,
+       1212
+      ]
+     },
+     {
+      "file": "src/x509/v3_san.rs",
+      "operation": "san_v2i",
+      "recorded_sha256": "c52f72419f84dcb95253bd7eec68f54e9f472ba7e0a3bebf4f1eda6470634ce7",
+      "at_S_sha256": "c52f72419f84dcb95253bd7eec68f54e9f472ba7e0a3bebf4f1eda6470634ce7",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "c52f72419f84dcb95253bd7eec68f54e9f472ba7e0a3bebf4f1eda6470634ce7",
+       "start_line": 1224,
+       "end_line": 1231
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       1224,
+       1231
+      ]
+     },
+     {
+      "file": "src/x509/v3_san.rs",
+      "operation": "san_v2i_issuer",
+      "recorded_sha256": "d46b6cbd67b40adc15b2334b7b4b9226697413a7fbe301fd967de73902aa3bf6",
+      "at_S_sha256": "d46b6cbd67b40adc15b2334b7b4b9226697413a7fbe301fd967de73902aa3bf6",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "d46b6cbd67b40adc15b2334b7b4b9226697413a7fbe301fd967de73902aa3bf6",
+       "start_line": 1240,
+       "end_line": 1247
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       1240,
+       1247
+      ]
+     },
+     {
+      "file": "src/x509/v3_san.rs",
+      "operation": "v2i_GENERAL_NAME",
+      "recorded_sha256": "cfea39b622d6844b4eaeb0042e003cc8e908a6797a1b58ceb7f5de939da585a9",
+      "at_S_sha256": "cfea39b622d6844b4eaeb0042e003cc8e908a6797a1b58ceb7f5de939da585a9",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "cfea39b622d6844b4eaeb0042e003cc8e908a6797a1b58ceb7f5de939da585a9",
+       "start_line": 1145,
+       "end_line": 1153
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       1145,
+       1153
+      ]
+     },
+     {
+      "file": "src/x509/v3_san.rs",
+      "operation": "v2i_GENERAL_NAMES",
+      "recorded_sha256": "4bc959090092b15cff8cc6124692b516dbab9d418ed7c10342672ab3d1842e86",
+      "at_S_sha256": "4bc959090092b15cff8cc6124692b516dbab9d418ed7c10342672ab3d1842e86",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "4bc959090092b15cff8cc6124692b516dbab9d418ed7c10342672ab3d1842e86",
+       "start_line": 1162,
+       "end_line": 1192
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       1162,
+       1192
+      ]
+     },
+     {
+      "file": "src/x509/v3_san.rs",
+      "operation": "v2i_issuer_alt",
+      "recorded_sha256": "91c9c2fe9bdbcc2076b7185af047abf78ccc060e2659550185401d18c3fc8581",
+      "at_S_sha256": "9ccdc437971c1ae98067363fd0f5f82e91c7bb04ebe93e8cd1bbac7d10ace97c",
+      "identical_to_recorded_at_S": false,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "9ccdc437971c1ae98067363fd0f5f82e91c7bb04ebe93e8cd1bbac7d10ace97c",
+       "start_line": 1296,
+       "end_line": 1357
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       1296,
+       1357
+      ]
+     },
+     {
+      "file": "src/x509/v3_san.rs",
+      "operation": "v2i_subject_alt",
+      "recorded_sha256": "dcb9f32ccf1f285910f21d4e07c2e87e1970ccfd88eeec809095b3288e40ffd9",
+      "at_S_sha256": "e4a9002e26ba25eca5e51e5f2d5d78007f2c9a63757edd8567f6c56bbd554ea7",
+      "identical_to_recorded_at_S": false,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "e4a9002e26ba25eca5e51e5f2d5d78007f2c9a63757edd8567f6c56bbd554ea7",
+       "start_line": 1440,
+       "end_line": 1508
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       1440,
+       1508
+      ]
+     },
+     {
+      "file": "src/cms/cms_asn1.rs",
+      "operation": "cms_cb",
+      "recorded_sha256": "b47d0fc434e8f8ca828c9b43babb30a5f94b018e8c847eeefddc2ad605f396f5",
+      "at_S_sha256": "b47d0fc434e8f8ca828c9b43babb30a5f94b018e8c847eeefddc2ad605f396f5",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "b47d0fc434e8f8ca828c9b43babb30a5f94b018e8c847eeefddc2ad605f396f5",
+       "start_line": 749,
+       "end_line": 800
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       749,
+       800
+      ]
+     },
+     {
+      "file": "src/cms/cms_asn1.rs",
+      "operation": "cms_ec_cb",
+      "recorded_sha256": "ba423a8ccae9f8f1db109a2bff88197501f54d94dc6dea26b1bb0005298ec711",
+      "at_S_sha256": "ba423a8ccae9f8f1db109a2bff88197501f54d94dc6dea26b1bb0005298ec711",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "ba423a8ccae9f8f1db109a2bff88197501f54d94dc6dea26b1bb0005298ec711",
+       "start_line": 534,
+       "end_line": 547
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       534,
+       547
+      ]
+     },
+     {
+      "file": "src/cms/cms_asn1.rs",
+      "operation": "cms_kari_cb",
+      "recorded_sha256": "ace207bbd437a2049f420c466c82759bb50f5f121aaaaeb6c0e1061465c988c4",
+      "at_S_sha256": "ace207bbd437a2049f420c466c82759bb50f5f121aaaaeb6c0e1061465c988c4",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "ace207bbd437a2049f420c466c82759bb50f5f121aaaaeb6c0e1061465c988c4",
+       "start_line": 584,
+       "end_line": 610
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       584,
+       610
+      ]
+     },
+     {
+      "file": "src/cms/cms_asn1.rs",
+      "operation": "cms_kemri_cb",
+      "recorded_sha256": "9cfcdd4c464b5d1355b0e4fd27000b9eb07a0e92cc3b9b5b26ca2426f292399a",
+      "at_S_sha256": "9cfcdd4c464b5d1355b0e4fd27000b9eb07a0e92cc3b9b5b26ca2426f292399a",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "9cfcdd4c464b5d1355b0e4fd27000b9eb07a0e92cc3b9b5b26ca2426f292399a",
+       "start_line": 623,
+       "end_line": 650
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       623,
+       650
+      ]
+     },
+     {
+      "file": "src/cms/cms_asn1.rs",
+      "operation": "cms_rek_cb",
+      "recorded_sha256": "07f3677ae912eeba4af564e31b9d81d45aa555432ec80ca13a4bed144359cfe9",
+      "at_S_sha256": "07f3677ae912eeba4af564e31b9d81d45aa555432ec80ca13a4bed144359cfe9",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "07f3677ae912eeba4af564e31b9d81d45aa555432ec80ca13a4bed144359cfe9",
+       "start_line": 557,
+       "end_line": 570
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       557,
+       570
+      ]
+     },
+     {
+      "file": "src/rand/rand_lib.rs",
+      "operation": "drbg_status",
+      "recorded_sha256": "7540f25f21c9ef26a46be39101749afb1719ae9c3d0d75b16473345952bb4755",
+      "at_S_sha256": "7540f25f21c9ef26a46be39101749afb1719ae9c3d0d75b16473345952bb4755",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "7540f25f21c9ef26a46be39101749afb1719ae9c3d0d75b16473345952bb4755",
+       "start_line": 2059,
+       "end_line": 2067
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       2059,
+       2067
+      ]
+     },
+     {
+      "file": "src/rand/rand_lib.rs",
+      "operation": "ossl_rand_cleanup_int",
+      "recorded_sha256": "14d0a958164ed2cf10abaae8148dd890c07f928fc57b31ef5575e095f153df11",
+      "at_S_sha256": "14d0a958164ed2cf10abaae8148dd890c07f928fc57b31ef5575e095f153df11",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "14d0a958164ed2cf10abaae8148dd890c07f928fc57b31ef5575e095f153df11",
+       "start_line": 561,
+       "end_line": 591
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       561,
+       591
+      ]
+     },
+     {
+      "file": "src/rand/rand_lib.rs",
+      "operation": "ossl_rand_ctx_new",
+      "recorded_sha256": "304a782704a5b63d5780212521506752ccaaf804deaf6af742b7d6b1f511d1f8",
+      "at_S_sha256": "304a782704a5b63d5780212521506752ccaaf804deaf6af742b7d6b1f511d1f8",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "304a782704a5b63d5780212521506752ccaaf804deaf6af742b7d6b1f511d1f8",
+       "start_line": 426,
+       "end_line": 466
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       426,
+       466
+      ]
+     },
+     {
+      "file": "src/rand/rand_lib.rs",
+      "operation": "ossl_rand_ctx_free",
+      "recorded_sha256": "2dad9e575165dc5ed7e81dd1bf441bd84aeffe8f8f53e0e0abfa115f7dcc9bdf",
+      "at_S_sha256": "2dad9e575165dc5ed7e81dd1bf441bd84aeffe8f8f53e0e0abfa115f7dcc9bdf",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "2dad9e575165dc5ed7e81dd1bf441bd84aeffe8f8f53e0e0abfa115f7dcc9bdf",
+       "start_line": 482,
+       "end_line": 488
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       482,
+       488
+      ]
+     }
+    ],
+    "all_identical_or_rebound_at_S": true
+   },
+   {
+    "label": "b80-review-rebind (4)",
+    "rows": [
+     {
+      "file": "src/cms/cms_asn1.rs",
+      "operation": "cms_ri_cb",
+      "recorded_sha256": "fd94cb262e8ff33dce901c25292084996f2f0fe8478f297342e320fa19e3ed67",
+      "at_S_sha256": "fd94cb262e8ff33dce901c25292084996f2f0fe8478f297342e320fa19e3ed67",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "fd94cb262e8ff33dce901c25292084996f2f0fe8478f297342e320fa19e3ed67",
+       "start_line": 680,
+       "end_line": 733
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       680,
+       733
+      ]
+     },
+     {
+      "file": "src/x509/v3_san.rs",
+      "operation": "v2i_GENERAL_NAME_ex",
+      "recorded_sha256": "b01dcb8bfc373c3aaf1da7c788d14356fd934cd5426fc6a1fc3d59ff657f2afa",
+      "at_S_sha256": "a69a5044bff431dd4f17100bf1365ab5adbeca6ecf27d81078d31a03b31ebd5a",
+      "identical_to_recorded_at_S": false,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "a69a5044bff431dd4f17100bf1365ab5adbeca6ecf27d81078d31a03b31ebd5a",
+       "start_line": 1077,
+       "end_line": 1136
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       1077,
+       1136
+      ]
+     },
+     {
+      "file": "src/cms/cms_lib.rs",
+      "operation": "x509_free_void",
+      "recorded_sha256": "3e41e7121b09fdb84b8fe696fd495be3be5d2369ae4df8d0de1ec5760f1c9c95",
+      "at_S_sha256": "3e41e7121b09fdb84b8fe696fd495be3be5d2369ae4df8d0de1ec5760f1c9c95",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "3e41e7121b09fdb84b8fe696fd495be3be5d2369ae4df8d0de1ec5760f1c9c95",
+       "start_line": 1388,
+       "end_line": 1391
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       1388,
+       1391
+      ]
+     },
+     {
+      "file": "src/cms/cms_lib.rs",
+      "operation": "x509_crl_free_void",
+      "recorded_sha256": "f6c3dd451d2d0caae428d83c1a2417130ae3631e55abd73c47be6cdadd747b93",
+      "at_S_sha256": "f6c3dd451d2d0caae428d83c1a2417130ae3631e55abd73c47be6cdadd747b93",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "f6c3dd451d2d0caae428d83c1a2417130ae3631e55abd73c47be6cdadd747b93",
+       "start_line": 1400,
+       "end_line": 1403
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       1400,
+       1403
+      ]
+     }
+    ],
+    "all_identical_or_rebound_at_S": true
+   },
+   {
+    "label": "b81-review-rebind (3)",
+    "rows": [
+     {
+      "file": "src/x509/v3_san.rs",
+      "operation": "v2i_GENERAL_NAME_ex",
+      "recorded_sha256": "a69a5044bff431dd4f17100bf1365ab5adbeca6ecf27d81078d31a03b31ebd5a",
+      "at_S_sha256": "a69a5044bff431dd4f17100bf1365ab5adbeca6ecf27d81078d31a03b31ebd5a",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "a69a5044bff431dd4f17100bf1365ab5adbeca6ecf27d81078d31a03b31ebd5a",
+       "start_line": 1077,
+       "end_line": 1136
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       1077,
+       1136
+      ]
+     },
+     {
+      "file": "src/x509/v3_san.rs",
+      "operation": "v2i_issuer_alt",
+      "recorded_sha256": "9ccdc437971c1ae98067363fd0f5f82e91c7bb04ebe93e8cd1bbac7d10ace97c",
+      "at_S_sha256": "9ccdc437971c1ae98067363fd0f5f82e91c7bb04ebe93e8cd1bbac7d10ace97c",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "9ccdc437971c1ae98067363fd0f5f82e91c7bb04ebe93e8cd1bbac7d10ace97c",
+       "start_line": 1296,
+       "end_line": 1357
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       1296,
+       1357
+      ]
+     },
+     {
+      "file": "src/x509/v3_san.rs",
+      "operation": "v2i_subject_alt",
+      "recorded_sha256": "e4a9002e26ba25eca5e51e5f2d5d78007f2c9a63757edd8567f6c56bbd554ea7",
+      "at_S_sha256": "e4a9002e26ba25eca5e51e5f2d5d78007f2c9a63757edd8567f6c56bbd554ea7",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "e4a9002e26ba25eca5e51e5f2d5d78007f2c9a63757edd8567f6c56bbd554ea7",
+       "start_line": 1440,
+       "end_line": 1508
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       1440,
+       1508
+      ]
+     }
+    ],
+    "all_identical_or_rebound_at_S": true
+   },
+   {
+    "label": "b82-review-rebind (2)",
+    "rows": [
+     {
+      "file": "src/x509/v3_info.rs",
+      "operation": "i2v_AUTHORITY_INFO_ACCESS",
+      "recorded_sha256": "22f336455d6cdd36c2274571e610fe542b3965d84c17aa5ccd3c95bd4dc07f79",
+      "at_S_sha256": "22f336455d6cdd36c2274571e610fe542b3965d84c17aa5ccd3c95bd4dc07f79",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "22f336455d6cdd36c2274571e610fe542b3965d84c17aa5ccd3c95bd4dc07f79",
+       "start_line": 331,
+       "end_line": 404
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       331,
+       404
+      ]
+     },
+     {
+      "file": "src/x509/v3_info.rs",
+      "operation": "v2i_AUTHORITY_INFO_ACCESS",
+      "recorded_sha256": "65dc1fcdf77ed43f758c66011275e9c12e53f52fd5e3bce1a92e1343f6f79cdc",
+      "at_S_sha256": "65dc1fcdf77ed43f758c66011275e9c12e53f52fd5e3bce1a92e1343f6f79cdc",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "65dc1fcdf77ed43f758c66011275e9c12e53f52fd5e3bce1a92e1343f6f79cdc",
+       "start_line": 485,
+       "end_line": 589
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       485,
+       589
+      ]
+     }
+    ],
+    "all_identical_or_rebound_at_S": true
+   },
+   {
+    "label": "b83-review-rebind (2)",
+    "rows": [
+     {
+      "file": "src/runtime/bio/bf_readbuff.rs",
+      "operation": "readbuffer_write",
+      "recorded_sha256": "af0760bb2672161c46d1a2a8e138253583750c2402f119b7b2590bcc8a74de81",
+      "at_S_sha256": "af0760bb2672161c46d1a2a8e138253583750c2402f119b7b2590bcc8a74de81",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "af0760bb2672161c46d1a2a8e138253583750c2402f119b7b2590bcc8a74de81",
+       "start_line": 237,
+       "end_line": 239
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       237,
+       239
+      ]
+     },
+     {
+      "file": "src/runtime/bio/bf_readbuff.rs",
+      "operation": "readbuffer_puts",
+      "recorded_sha256": "86a071a06093a4f5649a31f850ade7df2f80efb3e914f4d7b810b651a2eed9f7",
+      "at_S_sha256": "86a071a06093a4f5649a31f850ade7df2f80efb3e914f4d7b810b651a2eed9f7",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "86a071a06093a4f5649a31f850ade7df2f80efb3e914f4d7b810b651a2eed9f7",
+       "start_line": 249,
+       "end_line": 251
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       249,
+       251
+      ]
+     }
+    ],
+    "all_identical_or_rebound_at_S": true
+   },
+   {
+    "label": "b84-review-rebind (7)",
+    "rows": [
+     {
+      "file": "src/provider/digest.rs",
+      "operation": "sha1::copyctx",
+      "recorded_sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+      "at_S_sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+       "start_line": 681,
+       "end_line": 691
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       681,
+       691
+      ]
+     },
+     {
+      "file": "src/provider/digest.rs",
+      "operation": "nullmd::copyctx",
+      "recorded_sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+      "at_S_sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+       "start_line": 1041,
+       "end_line": 1051
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       1041,
+       1051
+      ]
+     },
+     {
+      "file": "src/provider/digest.rs",
+      "operation": "md5_sha1::copyctx",
+      "recorded_sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+      "at_S_sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+       "start_line": 1260,
+       "end_line": 1270
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       1260,
+       1270
+      ]
+     },
+     {
+      "file": "src/provider/digest.rs",
+      "operation": "sha3::copyctx",
+      "recorded_sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+      "at_S_sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+       "start_line": 1488,
+       "end_line": 1498
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       1488,
+       1498
+      ]
+     },
+     {
+      "file": "src/provider/digest.rs",
+      "operation": "blake2b/blake2s::copyctx",
+      "recorded_sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+      "at_S_sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+       "start_line": 2099,
+       "end_line": 2109
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       2099,
+       2109
+      ]
+     },
+     {
+      "file": "src/provider/legacyprov.rs",
+      "operation": "legacy_digest_impl::copyctx",
+      "recorded_sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+      "at_S_sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+       "start_line": 354,
+       "end_line": 365
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       354,
+       365
+      ]
+     },
+     {
+      "file": "src/provider/legacyprov.rs",
+      "operation": "mdc2::copyctx",
+      "recorded_sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+      "at_S_sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+      "identical_to_recorded_at_S": true,
+      "at_previous_candidate": {
+       "candidate": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+       "sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+       "start_line": 606,
+       "end_line": 616
+      },
+      "same_bytes_at_both_candidates": true,
+      "span_lines_at_S": [
+       606,
+       616
+      ]
+     }
+    ],
+    "all_identical_or_rebound_at_S": true
+   }
+  ],
+  "instrument_drift_rows": [
+   {
+    "file": "src/x509/v3_san.rs",
+    "operation": "v2i_issuer_alt",
+    "recorded_sha256": "91c9c2fe9bdbcc2076b7185af047abf78ccc060e2659550185401d18c3fc8581",
+    "recorded_by_tool": "the review receipt's tool (predates b42f19bd)",
+    "at_S_sha256": "9ccdc437971c1ae98067363fd0f5f82e91c7bb04ebe93e8cd1bbac7d10ace97c",
+    "same_bytes_at_b84_and_b85": true,
+    "disposition": "REBOUND under tool b42f19bd",
+    "reason": "the operation's bytes are identical at the b84 candidate and at S; the recorded value differs because the span-hash rule changed with the instrument (AGENTS.md 22 tool-identity invalidation), not because the source drifted. The span is re-established here at S with the current tool's hash."
+   },
+   {
+    "file": "src/x509/v3_san.rs",
+    "operation": "v2i_subject_alt",
+    "recorded_sha256": "dcb9f32ccf1f285910f21d4e07c2e87e1970ccfd88eeec809095b3288e40ffd9",
+    "recorded_by_tool": "the review receipt's tool (predates b42f19bd)",
+    "at_S_sha256": "e4a9002e26ba25eca5e51e5f2d5d78007f2c9a63757edd8567f6c56bbd554ea7",
+    "same_bytes_at_b84_and_b85": true,
+    "disposition": "REBOUND under tool b42f19bd",
+    "reason": "the operation's bytes are identical at the b84 candidate and at S; the recorded value differs because the span-hash rule changed with the instrument (AGENTS.md 22 tool-identity invalidation), not because the source drifted. The span is re-established here at S with the current tool's hash."
+   },
+   {
+    "file": "src/x509/v3_san.rs",
+    "operation": "v2i_GENERAL_NAME_ex",
+    "recorded_sha256": "b01dcb8bfc373c3aaf1da7c788d14356fd934cd5426fc6a1fc3d59ff657f2afa",
+    "recorded_by_tool": "the review receipt's tool (predates b42f19bd)",
+    "at_S_sha256": "a69a5044bff431dd4f17100bf1365ab5adbeca6ecf27d81078d31a03b31ebd5a",
+    "same_bytes_at_b84_and_b85": true,
+    "disposition": "REBOUND under tool b42f19bd",
+    "reason": "the operation's bytes are identical at the b84 candidate and at S; the recorded value differs because the span-hash rule changed with the instrument (AGENTS.md 22 tool-identity invalidation), not because the source drifted. The span is re-established here at S with the current tool's hash."
+   }
+  ],
+  "instrument_drift_count": 3,
+  "all_groups_established_or_rebound_at_S": true,
+  "residual": "a rebound row is re-established at S for its exact operation span; this does not re-read the row's safety argument, which the original review adjudicated. No closure row depends on that argument alone."
+ },
+ "controls": [
+  "the three drift rows are resolved at both candidates with the same tool; the equality is the drift control (a source change would differ)",
+  "the 33 rows that still match their recorded hash are the negative control: a tool-wide hash-rule change would move them too",
+  "no row is accepted into a closure by this receipt; the closures' own bindings and count verdict are unchanged"
+ ],
+ "does_not_prove": [
+  "does not re-run either closure (item 8 does that after this rebind)",
+  "does not establish SAFE_COMPATIBLE (verdict safe_compatible=false)",
+  "does not re-adjudicate any review's safety argument",
+  "does not claim the atlas row measured the closure binaries"
+ ]
+}
