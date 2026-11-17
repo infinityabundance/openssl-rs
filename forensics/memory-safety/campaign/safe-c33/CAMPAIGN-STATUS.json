@@ -1,4 +1,43 @@
 {
+ "b85_adjudication":  {
+  "schema": "openssl-rs/safe-c33/adjudication/v1",
+  "candidate_tag": "b85",
+  "head_at_adjudication": "aae5fa523",
+  "evidence_source_head": "17042ccf2",
+  "evidence": "evidence/b85-adjudication.json",
+  "verdict": "NOT ESTABLISHED for SAFE_COMPATIBLE (ssh, sshd)",
+  "reproduced": [
+   "nine artefact digests 9/9, census 51b277f2, tool b42f19bd, freeze f7d31280",
+   "closures 290/290 both families, 0 BLOCKED/0 UNKNOWN, 0 refusals, element 7 PASS (116 contract-bounded + 36 closed target sets, 0 target-bounded, 0 unclassified)",
+   "L7 w1-w5 incl. authority differential 10/10, 31/0 probe checks, 16/16 concurrent logins",
+   "instrument --self-test exit 0, 0 failures",
+   "both per-artefact rebinds 8/8",
+   "gate 2340 passed / 0 failed / 54 ignored; 16 unsafe-fn controls"
+  ],
+  "refused": [
+   "both closure receipts and the freeze record verdict.safe_compatible=false; the freeze and the section-7 argument state the candidate is NOT graduated",
+   "section 7 criterion 3: 2 scoped SAFETY_DISCHARGED (SSL_SESSION; RUNTIME_CONCURRENCY, schedule-bounded) / 5 NOT_ESTABLISHED (EVP, X509, RAND, C_ABI, BIO); all four cross-cutting obligations NOT_ESTABLISHED",
+   "ledger retains 65 REVIEW_REQUIRED discharges and 24 X509 orphan definitions; BOUNDARY and SEAL NOT_RUN",
+   "instrument coverage narrower than claimed: Miri is six digest tests only and no -Zmiri-tree-borrows flag is recorded (both arms used the default model); ASan is b84 focused, TSan is b80, neither re-run at S",
+   "7 obligation rows touched since the review tree were not re-established at S",
+   "identity/anchor hygiene: S commit bundles instrument+rebuilt artefacts+receipts; court/ evidence untracked; review-rebind census 5bb1cd49 != frozen 51b277f2; terminal carry hop names uncommitted court/inventory/closure-*-b51-baseline.json although the content is committed under evidence/ names",
+   "committed closure-sshd-b85b.json shows 253 DISCHARGED / 37 BLOCKED with verdict ACCEPTED: the verdict predicate ignores BLOCKED"
+  ],
+  "residual_classification": {
+   "safety-relevant": [
+    "7 rows not re-established at S",
+    "two CMS free-contract wording defects (b80-rebind R2, 'exactly-once release' vs reference release)",
+    "missing RAND_METHOD boundary class reached from RAND_status/RAND_poll",
+    "48 untyped dispatch sites (OsslDispatch.function *mut c_void)"
+   ],
+   "evidence-hygiene": [
+    "openssh-server L4 build-root digest difference (same recipe/source; L7 executed the analysed binaries; per-artefact join says the atlas row measured a different build)",
+    "census/rebind identity drift, uncommitted terminal carry-hop path, untracked court/ evidence, mixed S/E commit"
+   ]
+  },
+  "campaign_status_updated_by_b85_adjudicator": true,
+  "source_tree_untouched": "no src/, test or receipt modified"
+ },
  "b84_adjudication":  {
   "schema": "openssl-rs/safe-c33/adjudication/v1",
   "candidate_tag": "b84",
