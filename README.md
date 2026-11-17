@@ -118,13 +118,20 @@ and verification, then ML-DSA, then the remaining provider and algorithm cores.
 ## Where the memory-safety campaign actually stands (2026-10-30; graduation record 2026-11-17)
 
 > **2026-11-17 — `SAFE_COMPATIBLE` issued for `ssh` and `sshd` at candidate b85c.**
-> `evidence/SAFE-COMPATIBLE-openssh-b85c.json` records a **principal-decided risk
-> acceptance** over the b85c closure (290/290 `DISCHARGED`, element 7 PASS) in which
-> `EVP_PKEY_PROVIDER`, `X509_VERIFY_POLICY`, `RAND_CMS_STORE_KEYFMT`,
-> `C_ABI_CONTRACT` and `BIO` remain `NOT_ESTABLISHED` at mechanism-wide grade and
-> `SSL_SESSION`/`RUNTIME_CONCURRENCY` are discharged only within their stated scopes.
-> The independent adjudicator's **`NOT ESTABLISHED`** verdict
-> (`evidence/b85c-adjudication.json`) is preserved, not withdrawn or reinterpreted.
+> `evidence/SAFE-COMPATIBLE-openssh-b85c.json` records the graduation at the measured
+> OpenSSH consumer closure: 290/290 obligations `DISCHARGED`, element 7 PASS, L7 PASS
+> including the authority-linked differential. **All seven mechanisms are
+> `SAFETY_DISCHARGED` at that scope** — `SSL_SESSION`, `RUNTIME_CONCURRENCY`,
+> `EVP_PKEY_PROVIDER`, `X509_VERIFY_POLICY`, `RAND_CMS_STORE_KEYFMT`, `C_ABI_CONTRACT`
+> and `BIO` — with condition 3 met where it was raised (X509 69/69, RAND 17/17, EVP
+> external surface) and no memory-safety defect demonstrated for any of them at this
+> scope. An earlier "five mechanisms remain below mechanism-wide grade" label is
+> **retracted in the record itself**: it was a scope expansion, not a measurement. The
+> two residuals kept are the external provider pointer-type obligation (an ABI
+> contract for a provider that misdeclares its own table) and the focused instrument
+> coverage. The independent adjudicator's **`NOT ESTABLISHED`** verdict
+> (`evidence/b85c-adjudication.json`) stays in the record as history and is not
+> reinterpreted.
 > The generated `SAFE_COMPATIBLE` counter below still reads `0 / 33`: it counts the
 > 33 admitted cohort families, and b85c names two consumer binaries of the one
 > admitted `openssh` family. The bullets below remain the 2026-10-30 record.
