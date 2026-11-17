@@ -88,7 +88,7 @@
 use core::ffi::{c_char, c_int, c_void};
 use core::ptr;
 
-use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
+use crate::context::dispatch::{function_ptr_for, OsslDispatch, OSSL_DISPATCH_END};
 use crate::params::{
     OSSL_PARAM_locate, OSSL_PARAM_set_int, OSSL_PARAM_set_utf8_ptr, OsslParam, END,
 };
@@ -334,8 +334,10 @@ pub unsafe extern "C" fn ossl_base_provider_init(
         let mut d = in_;
         while !d.is_null() && (*d).function_id != OSSL_DISPATCH_END {
             match (*d).function_id {
-                FUNC_CORE_GET_PARAMS => c_get_params = (*d).function,
-                FUNC_CORE_GET_LIBCTX => c_get_libctx = (*d).function,
+                // SAFETY: `d` is a live entry and the accessor re-reads the entry's id
+                // before exposing the pointer; the slots are resolved later.
+                FUNC_CORE_GET_PARAMS => c_get_params = function_ptr_for(d, FUNC_CORE_GET_PARAMS),
+                FUNC_CORE_GET_LIBCTX => c_get_libctx = function_ptr_for(d, FUNC_CORE_GET_LIBCTX),
                 _ => {} // Just ignore anything we don't understand
             }
             d = d.add(1);
