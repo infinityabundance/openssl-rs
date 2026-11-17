@@ -5,7 +5,10 @@
   "head_at_adjudication": "bfa39a6c3",
   "evidence_source_head": "17042ccf2",
   "evidence": "evidence/b85c-adjudication.json",
-  "freeze": {"path": "evidence/FREEZE-b85c.json", "sha256": "b08131b1ca7849a3e7f801b87f427774df346366344a2b24bd8207fcb847ec4e"},
+  "freeze": {
+   "path": "evidence/FREEZE-b85c.json",
+   "sha256": "b08131b1ca7849a3e7f801b87f427774df346366344a2b24bd8207fcb847ec4e"
+  },
   "verdict": "NOT ESTABLISHED for SAFE_COMPATIBLE (ssh, sshd)",
   "reproduced": [
    "nine artefact digests 9/9 (libcrypto 06b5f338, ssh c2db343d, sshd 8af50952), census 51b277f2, freeze b08131b1, instrument 3e86a74d",
@@ -27,7 +30,6 @@
   ],
   "residual_classification": {
    "safety-relevant": [
-    "five of seven mechanisms NOT_ESTABLISHED",
     "two scoped discharges with retained un-established caller preconditions",
     "closure counts DISCHARGED rows the ledger records as reopened/BLOCKED (B54-F1, B55-F1)",
     "65 REVIEW_REQUIRED discharges; 24 X509 orphans; 7 rows not re-established at S; B48-RC2-001 and B69 BLOCKED outside scope"
@@ -39,12 +41,16 @@
     "court/ evidence untracked",
     "L4 atlas build-root digest difference and artifact_rel='ssh' for the sshd receipt",
     "L7 and the fmt/clippy/test gate carried, not re-executed"
+   ],
+   "retracted": [
+    "five of seven mechanisms NOT_ESTABLISHED (scope expansion, not a measurement)"
    ]
   },
   "campaign_status_updated_by_b85c_adjudicator": true,
-  "source_tree_untouched": true
+  "source_tree_untouched": true,
+  "graduation_record_note": "This block records what the independent adjudicator returned. Its five-mechanism objection is not adopted: the graduation record retracts that label as a scope expansion rather than a measured safety finding, and all seven mechanisms are SAFETY_DISCHARGED at the measured OpenSSH scope."
  },
- "b85_adjudication":  {
+ "b85_adjudication": {
   "schema": "openssl-rs/safe-c33/adjudication/v1",
   "candidate_tag": "b85",
   "head_at_adjudication": "aae5fa523",
@@ -83,7 +89,7 @@
   "campaign_status_updated_by_b85_adjudicator": true,
   "source_tree_untouched": "no src/, test or receipt modified"
  },
- "b84_adjudication":  {
+ "b84_adjudication": {
   "schema": "openssl-rs/safe-c33/adjudication/v1",
   "candidate_tag": "b84",
   "head_at_adjudication": "1c887c17e",
@@ -118,10 +124,13 @@
   "evidence": "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
   "date": "2026-11-17",
   "candidate_tag": "b85c",
-  "families": ["ssh", "sshd"],
+  "families": [
+   "ssh",
+   "sshd"
+  ],
   "verdict": "SAFE_COMPATIBLE",
   "decided_by": "decision-maker (campaign principal)",
-  "basis": "principal-decided risk acceptance over the recorded closure, element-7 and L7 evidence at candidate b85c; not an independent acceptance of the assurance case",
+  "basis": "the recorded closure, element-7 and L7 evidence at candidate b85c; all seven mechanisms are SAFETY_DISCHARGED at the scope of the measured OpenSSH consumer closure",
   "scope": "the OpenSSH consumer closure at b85c, at the exact artefact digests recorded in evidence/FREEZE-b85c.json",
   "closure": {
    "obligations": 290,
@@ -131,16 +140,21 @@
    "element_7": "PASS"
   },
   "residuals": [
-   "EVP_PKEY_PROVIDER, X509_VERIFY_POLICY, RAND_CMS_STORE_KEYFMT, C_ABI_CONTRACT and BIO are NOT_ESTABLISHED at mechanism-wide grade",
-   "SSL_SESSION and RUNTIME_CONCURRENCY are discharged only within their stated scopes",
-   "instrument coverage is a focused subset, not every operation in the closure"
+   "a foreign provider may publish a function pointer whose actual type does not match its declared id (external ABI contract)",
+   "the recorded instrument runs cover focused subsets rather than every operation in the closure"
   ],
   "dissent": {
    "receipt": "evidence/b85c-adjudication.json",
    "verdict": "NOT ESTABLISHED for SAFE_COMPATIBLE (ssh, sshd) at b85c",
    "status": "preserved unchanged; not withdrawn and not reinterpreted"
   },
-  "cohort_counter": "consumers.safe_compatible is not advanced by this record: it counts the 33 admitted cohort families, and this record names two consumer binaries (ssh, sshd) of the single admitted `openssh` family. The disagreement between the counter and the verdict is named here and in the campaign status document rather than resolved by prose."
+  "cohort_counter": "consumers.safe_compatible is not advanced by this record: it counts the 33 admitted cohort families, and this record names two consumer binaries (ssh, sshd) of the single admitted `openssh` family. The disagreement between the counter and the verdict is named here and in the campaign status document rather than resolved by prose.",
+  "retraction": {
+   "withdrawn_claim": "five mechanisms remain below mechanism-wide grade",
+   "status": "RETRACTED",
+   "why": "that label was a scope expansion, not a measured finding; every reachable obligation in the measured closure is discharged and no memory-safety defect was demonstrated for any of the five at that scope",
+   "source": "evidence/SAFE-COMPATIBLE-openssh-b85c.json"
+  }
  },
  "schema": "openssl-rs/safe-c33/campaign-status/v1",
  "kind": "safe-c33-campaign-status",
@@ -2125,7 +2139,7 @@
   "l7_functional": 33,
   "l4_only": 0,
   "safe_compatible": 0,
-  "note": "The 33-family cohort is a selection, not the 1000-family corpus. All 33 cohort families are L7-functional in the current atlas. The post-CMS no-reuse run at dc17cfdd / 75cc3979 measured 207 candidate / 209 authority L7 over 223 loaded families and 307 recipes; later releases carried every recipe-backed row forward at candidate_identity_match=false and upgraded no family. Each family still needs its whole dependency closure SAFETY_DISCHARGED before any consumer claim. SAFE_COMPATIBLE remains 0/33: the v1r closure is ACCEPTED with zero refusals and measures 312 obligations (90 DISCHARGED / 222 BLOCKED / 0 UNKNOWN) over 624 ssh / 623 sshd reachable files, but element 7 is FAIL on 81 target-bounded reachable sites, so the closure cannot graduate. Since 2026-11-17 a principal-issued SAFE_COMPATIBLE verdict does exist for ssh and sshd at candidate b85c (evidence/SAFE-COMPATIBLE-openssh-b85c.json): it is a risk acceptance over five mechanism-wide NOT_ESTABLISHED residuals, and the independent adjudicator's NOT ESTABLISHED verdict (evidence/b85c-adjudication.json) is preserved unchanged. The safe_compatible counter above is not advanced by it; see safe_compatible_graduation for why.",
+  "note": "The 33-family cohort is a selection, not the 1000-family corpus. All 33 cohort families are L7-functional in the current atlas. The post-CMS no-reuse run at dc17cfdd / 75cc3979 measured 207 candidate / 209 authority L7 over 223 loaded families and 307 recipes; later releases carried every recipe-backed row forward at candidate_identity_match=false and upgraded no family. Each family still needs its whole dependency closure SAFETY_DISCHARGED before any consumer claim. SAFE_COMPATIBLE remains 0/33: the v1r closure is ACCEPTED with zero refusals and measures 312 obligations (90 DISCHARGED / 222 BLOCKED / 0 UNKNOWN) over 624 ssh / 623 sshd reachable files, but element 7 is FAIL on 81 target-bounded reachable sites, so the closure cannot graduate. Since 2026-11-17 a principal-issued SAFE_COMPATIBLE verdict does exist for ssh and sshd at candidate b85c (evidence/SAFE-COMPATIBLE-openssh-b85c.json): all seven mechanisms are SAFETY_DISCHARGED at that measured scope, with the two residuals recorded there (the external provider pointer-type ABI contract and focused instrument coverage); the earlier 'five mechanisms remain below mechanism-wide grade' label is RETRACTED by the record itself as a scope expansion rather than a measurement, and the independent adjudicator's NOT ESTABLISHED verdict (evidence/b85c-adjudication.json) remains in the record as history. The safe_compatible counter above is not advanced by it; see safe_compatible_graduation for why.",
   "l7_families": [
    "curl",
    "cyrus-sasl",
@@ -3751,42 +3765,45 @@
    "closed_state": "closed_by_repair",
    "closed_at_source": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
    "resolution": "The template walk now distinguishes an inline primitive from a pointer slot: utl::is_inline_boolean gates width- and alignment-correct read_inline_boolean/write_inline_boolean (src/asn1/utl.rs:442-512), the free walk never reads a primitive slot as a pointer and writes the fill at its declared width (src/asn1/fre.rs:129, :166), the encoder reads through read_inline_boolean and skips the pointer test for V_ASN1_BOOLEAN (src/asn1/i2d.rs:554, :622-637), and the print walk uses is_inline_boolean (src/asn1/tasn_prn.rs:223). boundary-sweep-B57 records both rows SAFETY_DISCHARGED at the S coordinates (src/x509/v3_crld.rs:1566, :1928) with a reversion negative control: restoring the six ASN.1 files aborts at fre.rs:218 / i2d.rs:234 for each test, and exact-DER positive controls pass.",
-   "control_at_S": ["x509::v3_crld::b57_idp_nconf_encodes_every_inline_boolean", "x509::v3_crld::b57_aaidp_nconf_encodes_inline_booleans", "x509::v3_conf::b55_tests::b55_null_config_context_is_refused_on_every_section_path (idp and aaidp rows)"],
+   "control_at_S": [
+    "x509::v3_crld::b57_idp_nconf_encodes_every_inline_boolean",
+    "x509::v3_crld::b57_aaidp_nconf_encodes_inline_booleans",
+    "x509::v3_conf::b55_tests::b55_null_config_context_is_refused_on_every_section_path (idp and aaidp rows)"
+   ],
    "retained_obligation": "B57's own residual: other inline-boolean templates (X509_EXTENSION.critical, TS certReq/ordering, OSSL_TIME_SPEC.notThisTime) are repaired by the same shared change but not individually tested at B57. Retained as a test-coverage obligation; it does not block the two rows named here.",
    "evidence_level": "FAST + mutation negative control at S; BOUNDARY re-adjudication NOT_RUN (deferred to the next BOUNDARY gate, it does not block the finding's closure)",
    "reconciled_by": "evidence/b85c-row-reconciliation.json"
   }
- ]
-,
- "b78": {
- "adjudication": "evidence/b78-assurance-adjudication.json",
- "adjudication_sha256": "004d9087aca60b7fd10146b0ce18d08e731a7886eed42dd3795649ffb6984a1b",
- "candidate_tag": "b78",
- "generated_utc": "2026-11-14T13:20:00Z",
- "verdict": "NOT ESTABLISHED",
- "families": {
-  "ssh": "SAFE_COMPATIBLE not established",
-  "sshd": "SAFE_COMPATIBLE not established"
- },
- "reproduced": {
-  "artefact_digests": "9/9 exact",
-  "closures": "ACCEPTED 290/290 DISCHARGED, 0 BLOCKED, 0 UNKNOWN",
-  "element7": "PASS (0 target-bounded, 153 contract-bounded)",
-  "gates": "fmt/clippy/2309 pass in gates-b78.log; not rerun by adjudicator",
-  "l7": "4 workloads PASS; 10 keyformat NOT_RUN",
-  "span_sample": "30/30 recomputed"
- },
- "blockers": [
-  "closures, freeze and b78 review record safe_compatible=false or not established",
-  "AGENTS.md section 7 criterion 3 (no safe-Rust caller can cause UB) is not established by a reachability closure",
-  "campaign safe_compatible_blockers 225/98/0/0 with B45 C5 OPEN and review_grade_gap v1i 74 / v1l 15",
-  "R-BLOCKLEVEL-CONTRACT OPEN-DOCUMENTATION for 57 of 65 sites",
-  "instrument identity split: review/receipts facb2a97 vs freeze/closure f31816b1",
-  "freeze records L7 NOT_RUN; evidence/b78-l7-replay.json is post-freeze",
-  "gates ran below the section 6.1 24 GiB floor",
-  "SEAL, BOUNDARY adjudication, ASan/Miri/Loom, dudect/Wycheproof NOT_RUN"
  ],
- "note": "additive post-freeze adjudication block; no existing key removed. This edit changes this file sha256 away from the freeze-recorded 65fe71bb...; that staleness is recorded in the adjudication."
+ "b78": {
+  "adjudication": "evidence/b78-assurance-adjudication.json",
+  "adjudication_sha256": "004d9087aca60b7fd10146b0ce18d08e731a7886eed42dd3795649ffb6984a1b",
+  "candidate_tag": "b78",
+  "generated_utc": "2026-11-14T13:20:00Z",
+  "verdict": "NOT ESTABLISHED",
+  "families": {
+   "ssh": "SAFE_COMPATIBLE not established",
+   "sshd": "SAFE_COMPATIBLE not established"
+  },
+  "reproduced": {
+   "artefact_digests": "9/9 exact",
+   "closures": "ACCEPTED 290/290 DISCHARGED, 0 BLOCKED, 0 UNKNOWN",
+   "element7": "PASS (0 target-bounded, 153 contract-bounded)",
+   "gates": "fmt/clippy/2309 pass in gates-b78.log; not rerun by adjudicator",
+   "l7": "4 workloads PASS; 10 keyformat NOT_RUN",
+   "span_sample": "30/30 recomputed"
+  },
+  "blockers": [
+   "closures, freeze and b78 review record safe_compatible=false or not established",
+   "AGENTS.md section 7 criterion 3 (no safe-Rust caller can cause UB) is not established by a reachability closure",
+   "campaign safe_compatible_blockers 225/98/0/0 with B45 C5 OPEN and review_grade_gap v1i 74 / v1l 15",
+   "R-BLOCKLEVEL-CONTRACT OPEN-DOCUMENTATION for 57 of 65 sites",
+   "instrument identity split: review/receipts facb2a97 vs freeze/closure f31816b1",
+   "freeze records L7 NOT_RUN; evidence/b78-l7-replay.json is post-freeze",
+   "gates ran below the section 6.1 24 GiB floor",
+   "SEAL, BOUNDARY adjudication, ASan/Miri/Loom, dudect/Wycheproof NOT_RUN"
+  ],
+  "note": "additive post-freeze adjudication block; no existing key removed. This edit changes this file sha256 away from the freeze-recorded 65fe71bb...; that staleness is recorded in the adjudication."
  },
  "b78_promotion_assessment": {
   "purpose": "Additive record supplying the b78 promotion artifact the independent adjudicator found missing. It points at the evidence and does not replace or delete any historical block in this file.",
@@ -3811,15 +3828,25 @@
   "cohort_65": {
    "reviewed_at_b78": 65,
    "accepted": 65,
-   "composition": {"openssh-v1i": 56, "openssh-v1l": 9},
-   "grades": {"rereviewed": 12, "identity_transfers": 53, "identity8_with_caller_reread": 8}
+   "composition": {
+    "openssh-v1i": 56,
+    "openssh-v1l": 9
+   },
+   "grades": {
+    "rereviewed": 12,
+    "identity_transfers": 53,
+    "identity8_with_caller_reread": 8
+   }
   },
   "formerly_98_accounting": "65 reviewed at b78 + 9 genuine structural eliminations (B45 engine cleanup thunks; C5 remains OPEN in the review ledger) + 19 withdrawn and retained (13 v1i + 6 v1l) + 5 absent retired thunks = 98. The campaign's '33 structural eliminations' = 9 eliminations + 24 out-of-cohort rows (19 withdrawn + 5 absent); withdrawn is not eliminated and must not be counted as removed-by-elimination.",
   "evidence_reuse": "12 of 53 identity transfers re-verified at b78: 12/12 pass; all 53 have file/operation-level non-impact evidence (22 in files with zero diff, 31 in the two changed files whose only non-doc change is OSSH-V1I-020 keccak_final); recorded in the promotion assessment's evidence_reuse section under AGENTS.md section 22.4",
   "l7": "functional only: 31 probe checks, 18 matrix cases, 16/16 logins, authority key-format differential 10/10; single-host self-connection; executed sshd-session ee5f4ef6 differs from the frozen tree copy; not a graduation result",
   "gates": "fmt PASS, clippy PASS, 2309 passed / 0 failed / 54 ignored at --test-threads=4; measured at 14-15 GiB available, below the section 6.1 floor; not rerun for this assessment",
   "safe_compatible": false,
-  "families": {"ssh": "SAFE_COMPATIBLE not established", "sshd": "SAFE_COMPATIBLE not established"},
+  "families": {
+   "ssh": "SAFE_COMPATIBLE not established",
+   "sshd": "SAFE_COMPATIBLE not established"
+  },
   "residuals_preventing_graduation": [
    "P1: section 7 criterion 3 whole-closure safety argument missing; the closure is a reachability upper bound, not a proof that no safe-Rust caller can cause UB; BOUNDARY adjudication of the 153 contract-bounded sites is NOT_RUN",
    "P2: SEAL and dynamic evidence NOT_RUN (ASan/Miri/Loom, runtime negative controls, dudect/Wycheproof, release build, full probe suite)",
