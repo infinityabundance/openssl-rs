@@ -32489,6 +32489,47 @@ def resolve_carry_forward(repo: Path, args, family: str, artifact: Path,
     }, refusals
 
 
+def obligation_status_refusals(obligations) -> list:
+    """Refusals for rows that can never support an ACCEPTED verdict.
+
+    ``DISCHARGED`` is the only status an accepted closure may contain.  An
+    ``UNKNOWN`` row was never adjudicated; a ``BLOCKED`` row *was* adjudicated
+    and refused.  A verdict computed only from the refusal list therefore
+    accepted a closure that still carried blocked obligations (b85: 253
+    DISCHARGED / 37 BLOCKED recorded as ACCEPTED).  Both states get a named
+    refusal here, with the count and the row ids in the record.
+    """
+    out = []
+    unknown = [o for o in obligations if o["status"] == "UNKNOWN"]
+    if unknown:
+        out.append({
+            "code": "UNKNOWN_OBLIGATION",
+            "detail": f"{len(unknown)} reachable production obligation(s) could not be "
+                      f"adjudicated DISCHARGED or BLOCKED",
+            "obligations": [o["id"] for o in unknown],
+        })
+    blocked = [o for o in obligations if o["status"] == "BLOCKED"]
+    if blocked:
+        out.append({
+            "code": "BLOCKED_OBLIGATIONS",
+            "detail": f"{len(blocked)} reachable production obligation(s) are BLOCKED "
+                      f"and cannot support an accepted closure",
+            "obligations": [o["id"] for o in blocked],
+        })
+    return out
+
+
+def closure_verdict_state(refusals, obligations) -> str:
+    """``ACCEPTED`` only when nothing is refused and every row is DISCHARGED.
+
+    The predicate is stated independently of :func:`obligation_status_refusals`
+    so a future edit to refusal synthesis cannot widen acceptance: a BLOCKED or
+    UNKNOWN row refuses on its own account.
+    """
+    unsupporting = [o for o in obligations if o["status"] != "DISCHARGED"]
+    return "ACCEPTED" if not refusals and not unsupporting else "REFUSED"
+
+
 def build_receipt(args) -> dict:
     repo = Path(args.repo).resolve()
     tool_identity = _tool_identity()
@@ -33110,14 +33151,10 @@ def build_receipt(args) -> dict:
                       f"obligations but no boundary-sweep receipt owns them",
             "files": missing_boundary,
         })
-    unknown = [o for o in obligations if o["status"] == "UNKNOWN"]
-    if unknown:
-        refusals.append({
-            "code": "UNKNOWN_OBLIGATION",
-            "detail": f"{len(unknown)} reachable production obligation(s) could not be "
-                      f"adjudicated DISCHARGED or BLOCKED",
-            "obligations": [o["id"] for o in unknown],
-        })
+    # UNKNOWN and BLOCKED rows each produce a named refusal; ACCEPTED requires
+    # every reachable production obligation to be DISCHARGED (see
+    # ``closure_verdict_state``).
+    refusals.extend(obligation_status_refusals(obligations))
 
     known = set(mechanisms)
     unmapped_mechanisms = sorted({o["mechanism"] for o in obligations
@@ -33214,7 +33251,7 @@ def build_receipt(args) -> dict:
     dirty = bool(run(["git", "-C", str(repo), "status", "--porcelain",
                       "--untracked-files=no"]).stdout.strip())
 
-    verdict_state = "REFUSED" if refusals else "ACCEPTED"
+    verdict_state = closure_verdict_state(refusals, obligations)
     receipt = {
         "schema": SCHEMA,
         "tool": tool_identity,
@@ -36822,6 +36859,40 @@ def self_test() -> int:
            one_pass["nonconvergent_detail"]["round_cap"]),
           (True, True, 1))
     check("a converged closure emits no refusal", closure_refusals(fixpoint), [])
+
+    # ---- acceptance predicate --------------------------------------------- #
+    # A BLOCKED obligation is an adjudicated refusal, not a detail: the verdict
+    # must not be computed from the refusal list alone.  Negative controls: one
+    # blocked row refuses with the named code; zero blocked rows and no other
+    # refusal stays accepted.
+    def status_row(status, ident):
+        return {"id": ident, "status": status}
+
+    clean_status = [status_row("DISCHARGED", "V1:src/x.rs:1:UNSAFE_FN_DEF")]
+    blocked_status = [status_row("DISCHARGED", "V1:src/x.rs:1:UNSAFE_FN_DEF"),
+                      status_row("BLOCKED", "V1:src/x.rs:9:UNSAFE_FN_DEF")]
+    unknown_status = [status_row("UNKNOWN", "V1:src/x.rs:2:UNSAFE_FN_DEF")]
+    check("zero blocked obligations emit no status refusal",
+          obligation_status_refusals(clean_status), [])
+    blocked_refusals = obligation_status_refusals(blocked_status)
+    check("one blocked obligation is refused as BLOCKED_OBLIGATIONS",
+          [r["code"] for r in blocked_refusals], ["BLOCKED_OBLIGATIONS"])
+    check("the blocked refusal carries the count and the row",
+          ("1 reachable production obligation" in blocked_refusals[0]["detail"],
+           blocked_refusals[0]["obligations"]),
+          (True, ["V1:src/x.rs:9:UNSAFE_FN_DEF"]))
+    check("an unknown obligation still refuses as UNKNOWN_OBLIGATION",
+          [r["code"] for r in obligation_status_refusals(unknown_status)],
+          ["UNKNOWN_OBLIGATION"])
+    check("zero blocked obligations with no refusal is ACCEPTED",
+          closure_verdict_state([], clean_status), "ACCEPTED")
+    check("one blocked obligation is REFUSED with the blocked code",
+          closure_verdict_state(obligation_status_refusals(blocked_status),
+                                blocked_status), "REFUSED")
+    check("the predicate refuses a blocked row without a synthesised refusal",
+          closure_verdict_state([], blocked_status), "REFUSED")
+    check("the predicate refuses an unknown row",
+          closure_verdict_state([], unknown_status), "REFUSED")
 
     # ---- monotone per-site bound ------------------------------------------ #
     class _MonoG:
