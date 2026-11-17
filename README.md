@@ -31,7 +31,7 @@ at. Every row names its own machine-readable evidence; none of them is a claim
 of completeness.
 
 <!-- BEGIN GENERATED: readme-achievements -->
-Source identity: candidate commit `fadca9328b9bda600d143e4964817afc6ae72fdb`; build source-tree digest `0ba60621822b1387a2e7f571e87379697d4c15b7da1f7e7baeef6d7b2ebb5606`; working-tree crate version `0.0.46` (**not published at this candidate identity**); `libcrypto.so.3` sha256 `136203564ebee50a28b428c3140ab877af9bef6a7d59225d1a5dbe88d09a9a44`; `libssl.so.3` sha256 `9bd1632fb4881a9de8eca83cde2cceb34c233585a0afc08ab068893b86c60cc9`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
+Source identity: candidate commit `36f31c64be148deda1ffd8733f124961d55ddcb9`; build source-tree digest `7123d4f907707e8a2fc16d0a243866de8b5b94c222b06ddc7c82fe8192ae4281`; working-tree crate version `0.0.47` (**not published at this candidate identity**); `libcrypto.so.3` sha256 `dfa476a8cf3edd0b4a01e75b54966ac992c6b13a34d2fab81b0fe33e955edbe5`; `libssl.so.3` sha256 `cd24597cb0ef2fbf13c30c8e6fd125ec73fede3654fdfefdb19d3fc6baab1427`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
 
 | Dimension | Result | Evidence |
 |---|---|---|
@@ -45,7 +45,7 @@ Source identity: candidate commit `fadca9328b9bda600d143e4964817afc6ae72fdb`; bu
 | **BOUNDARY / SEAL gates** | **`NOT_RUN` / `NOT_RUN`** — no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation control, authority differential, full forensic regeneration or held-out compatibility for the S16–S61 cluster | `CAMPAIGN-STATUS.json` (`gates.boundary_gate`, `gates.seal_gate`) |
 | **Allocator / ABI invariants** | **preserved** — recorded invariant planes: `abi_courts`, `allocator_seam`, `exported_symbols`, `repr_c_layouts`, `unsafe_lints` | `CAMPAIGN-STATUS.json` (`structural_invariants`) |
 | **Known gaps** | `CLOSURE-NON-MONOTONE` REPAIRED; `S21-O1` CLOSED; `S22-RETAINED` RETAINED; `DOWNSTREAM-IMPLEMENTATION` 0 OPEN AT THE MEASURED IDENTITY; `DOWNSTREAM-h2o` CLOSED; `DOWNSTREAM-charybdis` CLOSED IN S61 (carried forward); `DOWNSTREAM-fastd` ENVIRONMENT; `DOWNSTREAM-HARNESS-FIXTURE` 76 CARRIED S59-S60 BLOCKERS + 25 NEW VENUE/BUILD BLOCKERS; `DOWNSTREAM-BELOW-L7` 100 FAMILIES; `DOWNSTREAM-S42-SYMMETRIC-LOSSES` CLOSED IN S44; `DOWNSTREAM-partclone` CLOSED; `DOWNSTREAM-perl-net-ssleay` CLOSED; `DOWNSTREAM-NO-RECIPE` 693 UNMEASURED; `DOWNSTREAM-MEDUSA` HARNESS; `DOWNSTREAM-S53-YIELD` 2 NEW L7 / 35 ADMITTED; `DOWNSTREAM-S60-YIELD` 7 NEW L7 / 30 ADMITTED; `S56-RESIDUALS` RETAINED; `S57-RACE` DATA-RACE FREEDOM NOT ESTABLISHED; `S58-SECURITY-CALLBACK` PERMISSIVE ARMS RETAINED; `S61-RESIDUALS` OTHER CALLBACK ARMS REMAIN PERMISSIVE; `ELEMENT-7-PRECISION` OPEN — FAIL; `CONTRACTED-OBLIGATIONS-BLOCKED` 215 BLOCKED at the applied v1u closure (222 at the historical v1r closure); `RELEASE-EVIDENCE-DEBT` OPEN; `SSL-CONF-WITNESS` OPEN — blocks 18 SSL_SESSION sites | `CAMPAIGN-STATUS.json` (`known_gaps`) |
-| **Release** | **Published: 0.0.45** on crates.io (2026-10-30), checksum `f4b8639a…`, install-tree artefacts `libcrypto.so.3` `df8ca7c3…` / `libssl.so.3` `0b47eaf1…`. The published crate ships **source and documentation only, with no binaries**; those install-tree hashes describe the repository build recorded in the receipt, not the crate payload. **Working tree: 0.0.46 — the candidate, not yet published.** This evidence is bound to the 0.0.46 tree, not to the published 0.0.45 crate. 0.0.44 remains the previous release. | `atlas-refresh/publish-0.0.45.json`; `Cargo.toml` |
+| **Release** | **Published: 0.0.45** on crates.io (2026-10-30), checksum `f4b8639a…`, install-tree artefacts `libcrypto.so.3` `df8ca7c3…` / `libssl.so.3` `0b47eaf1…`. The published crate ships **source and documentation only, with no binaries**; those install-tree hashes describe the repository build recorded in the receipt, not the crate payload. **Working tree: 0.0.47 — the candidate, not yet published.** This evidence is bound to the 0.0.47 tree, not to the published 0.0.45 crate. 0.0.44 remains the previous release. | `atlas-refresh/publish-0.0.45.json`; `Cargo.toml` |
 
 Downstream evidence reuse: **301 of 307 recipe-backed families carried forward** (`committed-rows-carried-forward`); `candidate_identity_match` = `false`. A carried-forward row is compatibility evidence from the build recorded on that row, not a fresh measurement at the identity above. The Safe-33 cohort has 27/33 of its families in that set.
 <!-- END GENERATED: readme-achievements -->
@@ -115,13 +115,25 @@ and verification, then ML-DSA, then the remaining provider and algorithm cores.
 [`SEAL-CENSUS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/SEAL-CENSUS.md) ·
 [`PARITY_MODEL.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/PARITY_MODEL.md)
 
-## Where the memory-safety campaign actually stands (2026-10-30)
+## Where the memory-safety campaign actually stands (2026-10-30; graduation record 2026-11-17)
 
-Receipts only. This is not a graduation and does not claim `SAFE_COMPATIBLE`,
-constant-time behaviour, or that the BOUNDARY/SEAL gates passed. This section
-was refreshed for the 0.0.44 candidate. 0.0.44 is a packaging/documentation
-release, **not a verification event**: nothing below was re-measured at it
-unless a bullet says so.
+> **2026-11-17 — `SAFE_COMPATIBLE` issued for `ssh` and `sshd` at candidate b85c.**
+> `evidence/SAFE-COMPATIBLE-openssh-b85c.json` records a **principal-decided risk
+> acceptance** over the b85c closure (290/290 `DISCHARGED`, element 7 PASS) in which
+> `EVP_PKEY_PROVIDER`, `X509_VERIFY_POLICY`, `RAND_CMS_STORE_KEYFMT`,
+> `C_ABI_CONTRACT` and `BIO` remain `NOT_ESTABLISHED` at mechanism-wide grade and
+> `SSL_SESSION`/`RUNTIME_CONCURRENCY` are discharged only within their stated scopes.
+> The independent adjudicator's **`NOT ESTABLISHED`** verdict
+> (`evidence/b85c-adjudication.json`) is preserved, not withdrawn or reinterpreted.
+> The generated `SAFE_COMPATIBLE` counter below still reads `0 / 33`: it counts the
+> 33 admitted cohort families, and b85c names two consumer binaries of the one
+> admitted `openssh` family. The bullets below remain the 2026-10-30 record.
+
+Apart from the b85c record above, receipts only: no other graduation is claimed,
+and nothing here claims constant-time behaviour or that the BOUNDARY/SEAL gates
+passed. This section was refreshed for the 0.0.44 candidate. 0.0.44 is a
+packaging/documentation release, **not a verification event**: nothing below was
+re-measured at it unless a bullet says so.
 
 - **The consumer closure is ACCEPTED, with zero refusals**
   (`evidence/closure-ssh-v1r.json`, `evidence/inventory-sshd-v1r.json`;
@@ -210,7 +222,9 @@ unless a bullet says so.
   (46 `ABI_CONTRACT_EXPORT_CALLBACK` + 14 `ABI_CONTRACT_PROVIDER`), 0
   unclassified. A pre-engine analyzer checkpoint reduced target-bounded to
   **71** (base-slot-partial 50 → 39) but is **not re-measured at 0.0.44**.
-  `SAFE_COMPATIBLE` therefore stays **0/33**: 215 obligations are contracted
+  `SAFE_COMPATIBLE` therefore stays **0/33** on the cohort counter (see the
+  2026-11-17 b85c record above for the principal-issued verdict): 215 obligations
+  are contracted
   but BLOCKED at the applied v1u closure (222 at the historical v1r closure),
   and no family inherits safety from an accepted closure alone
   (`AGENTS.md` §7).
@@ -264,7 +278,9 @@ unless a bullet says so.
   sites still lack a bounded target set, so element 7 remains FAIL.
 - **215 contracted obligations awaiting discharge** (BLOCKED) at the applied
   v1u closure (222 at the historical v1r closure), inside each family's
-  dependency closure; `SAFE_COMPATIBLE` remains **0/33**. Nine engine cleanup
+  dependency closure; `SAFE_COMPATIBLE` remains **0/33** on the cohort counter
+  (the b85c record above is the principal-issued verdict for two consumer
+  binaries). Nine engine cleanup
   callbacks were discharged as the scoped boundary **B45**; the remaining
   engine-package sites stay BLOCKED and the mechanism stays `UNSAFE_OPEN`.
 - **Release-evidence debt**: FRF's 143 manifests are still `0.0.27`; the

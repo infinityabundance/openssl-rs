@@ -112,6 +112,36 @@
   "covers_site": "reporting field (covers_current over disposition prose), explicitly outside the acceptance predicate; same footing as the accepted b83b closure; not evidence of non-coverage",
   "campaign_status_not_updated_by_b84_batch": true
  },
+ "safe_compatible_graduation": {
+  "schema": "openssl-rs/campaign/safe-c33/graduation-record/v1",
+  "receipt": "SAFE-COMPATIBLE-openssh-b85c",
+  "evidence": "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
+  "date": "2026-11-17",
+  "candidate_tag": "b85c",
+  "families": ["ssh", "sshd"],
+  "verdict": "SAFE_COMPATIBLE",
+  "decided_by": "decision-maker (campaign principal)",
+  "basis": "principal-decided risk acceptance over the recorded closure, element-7 and L7 evidence at candidate b85c; not an independent acceptance of the assurance case",
+  "scope": "the OpenSSH consumer closure at b85c, at the exact artefact digests recorded in evidence/FREEZE-b85c.json",
+  "closure": {
+   "obligations": 290,
+   "discharged": 290,
+   "blocked": 0,
+   "unknown": 0,
+   "element_7": "PASS"
+  },
+  "residuals": [
+   "EVP_PKEY_PROVIDER, X509_VERIFY_POLICY, RAND_CMS_STORE_KEYFMT, C_ABI_CONTRACT and BIO are NOT_ESTABLISHED at mechanism-wide grade",
+   "SSL_SESSION and RUNTIME_CONCURRENCY are discharged only within their stated scopes",
+   "instrument coverage is a focused subset, not every operation in the closure"
+  ],
+  "dissent": {
+   "receipt": "evidence/b85c-adjudication.json",
+   "verdict": "NOT ESTABLISHED for SAFE_COMPATIBLE (ssh, sshd) at b85c",
+   "status": "preserved unchanged; not withdrawn and not reinterpreted"
+  },
+  "cohort_counter": "consumers.safe_compatible is not advanced by this record: it counts the 33 admitted cohort families, and this record names two consumer binaries (ssh, sshd) of the single admitted `openssh` family. The disagreement between the counter and the verdict is named here and in the campaign status document rather than resolved by prose."
+ },
  "schema": "openssl-rs/safe-c33/campaign-status/v1",
  "kind": "safe-c33-campaign-status",
  "generated_date": "2026-10-30",
@@ -2095,7 +2125,7 @@
   "l7_functional": 33,
   "l4_only": 0,
   "safe_compatible": 0,
-  "note": "The 33-family cohort is a selection, not the 1000-family corpus. All 33 cohort families are L7-functional in the current atlas. The post-CMS no-reuse run at dc17cfdd / 75cc3979 measured 207 candidate / 209 authority L7 over 223 loaded families and 307 recipes; later releases carried every recipe-backed row forward at candidate_identity_match=false and upgraded no family. Each family still needs its whole dependency closure SAFETY_DISCHARGED before any consumer claim. SAFE_COMPATIBLE remains 0/33: the v1r closure is ACCEPTED with zero refusals and measures 312 obligations (90 DISCHARGED / 222 BLOCKED / 0 UNKNOWN) over 624 ssh / 623 sshd reachable files, but element 7 is FAIL on 81 target-bounded reachable sites, so the closure cannot graduate.",
+  "note": "The 33-family cohort is a selection, not the 1000-family corpus. All 33 cohort families are L7-functional in the current atlas. The post-CMS no-reuse run at dc17cfdd / 75cc3979 measured 207 candidate / 209 authority L7 over 223 loaded families and 307 recipes; later releases carried every recipe-backed row forward at candidate_identity_match=false and upgraded no family. Each family still needs its whole dependency closure SAFETY_DISCHARGED before any consumer claim. SAFE_COMPATIBLE remains 0/33: the v1r closure is ACCEPTED with zero refusals and measures 312 obligations (90 DISCHARGED / 222 BLOCKED / 0 UNKNOWN) over 624 ssh / 623 sshd reachable files, but element 7 is FAIL on 81 target-bounded reachable sites, so the closure cannot graduate. Since 2026-11-17 a principal-issued SAFE_COMPATIBLE verdict does exist for ssh and sshd at candidate b85c (evidence/SAFE-COMPATIBLE-openssh-b85c.json): it is a risk acceptance over five mechanism-wide NOT_ESTABLISHED residuals, and the independent adjudicator's NOT ESTABLISHED verdict (evidence/b85c-adjudication.json) is preserved unchanged. The safe_compatible counter above is not advanced by it; see safe_compatible_graduation for why.",
   "l7_families": [
    "curl",
    "cyrus-sasl",
