@@ -3679,17 +3679,30 @@
    "boundary": "src/x509/v3_info.rs::v2i_AUTHORITY_INFO_ACCESS",
    "reason": "B54-F1 refutes the premise B51 relied on: X509V3_EXT_nconf* admit a NULL ctx, and v2i_AUTHORITY_INFO_ACCESS forwards ctx to v2i_GENERAL_NAME_ex, whose dirName arm reaches X509V3_get_section, which dereferences (*ctx). Until the NULL-ctx path is repaired or excluded, this row is BLOCKED again.",
    "receipt": "atlas-refresh/boundary-sweep-B54.json",
-   "ledger_effect": "DISCHARGED -1, BLOCKED +1"
+   "ledger_effect": "DISCHARGED -1, BLOCKED +1",
+   "resolved": true,
+   "resolution": "LEDGER_STALE: the premise B51 relied on is true again at S. X509V3_get_section returns NULL and raises for a NULL ctx instead of dereferencing it (src/x509/v3_conf.rs:435-446); do_ext_nconf's r2i arm refuses a NULL ctx (src/x509/v3_conf.rs:1124-1136); do_dirname refuses the NULL-ctx section read and releases only the NULL stack (src/x509/v3_san.rs:874-892); X509V3_section_free returns early on a NULL section (src/x509/v3_conf.rs:493-499). B55 already re-discharged the B51 row at this site (src/x509/v3_info.rs:460, SAFETY_DISCHARGED, NULL-ctx control `OCSP;dirName:...` answered NULL + error), and the ledger's own scoped_boundary_discharges entry for B55 records that applied effect, so this reopen contradicted the ledger it sits in.",
+   "resolved_at_source": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+   "resolved_by": "boundary-sweep-B55 (row src/x509/v3_info.rs:460) restoring the B51-V2I-005 discharge",
+   "ledger_effect_at_S": "BLOCKED -1, DISCHARGED +1 (B51 row restored)",
+   "control_at_S": "x509::v3_conf::b55_tests::b55_null_config_context_is_refused_on_every_section_path (src/x509/v3_conf.rs:2627); guard removal aborts (SIGABRT) per boundary-sweep-B55",
+   "reconciled_by": "evidence/b85c-row-reconciliation.json"
   }
  ],
  "findings": [
   {
    "id": "B54-F1",
    "severity": "high",
-   "state": "open",
+   "state": "closed_by_repair",
    "what": "A documented-nullable ctx is dereferenced on reachable configuration paths. X509V3_EXT_nconf / _nid / _int document ctx as NULL-or-live; value-less section branches call X509V3_get_section(ctx, name), which does (*ctx).db; do_ext_nconf also reads (*ctx).db before dispatching v2i/r2i. X509V3_EXT_nconf_nid(NULL, NULL, NID_subject_alt_name, \"dirName:x\") is therefore a NULL dereference.",
    "blocks": "the 11 BLOCKED B54 rows and the reopened B51 row; any SAFE_COMPATIBLE claim that includes the X509V3 config-decode surface",
-   "required_resolution": "Either refuse a NULL ctx at the entry points whose rows can reach a section path (matching the authority behaviour that the entries themselves document), or make the section path NULL-safe end to end. Whichever is chosen needs a load-bearing test that fails on the NULL input today."
+   "required_resolution": "Either refuse a NULL ctx at the entry points whose rows can reach a section path (matching the authority behaviour that the entries themselves document), or make the section path NULL-safe end to end. Whichever is chosen needs a load-bearing test that fails on the NULL input today.",
+   "closed_state": "closed_by_repair",
+   "closed_at_source": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+   "resolution": "The first branch of required_resolution was taken: a NULL ctx is refused at every section read. X509V3_get_section raises and answers NULL (src/x509/v3_conf.rs:435-446), do_ext_nconf's r2i arm refuses before reading (*ctx).db (src/x509/v3_conf.rs:1124-1136), do_dirname refuses the NULL-ctx section and frees the empty X509_NAME (src/x509/v3_san.rs:874-897), and X509V3_section_free's NULL-section early return keeps the paired release safe (src/x509/v3_conf.rs:493-499). The load-bearing control exists at S and names the entry in this finding: b55_null_config_context_is_refused_on_every_section_path drives NID_subject_alt_name `dirName:...`, NID_info_access `OCSP;dirName:...`, the value-less section branches and both r2i rows with a NULL ctx; boundary-sweep-B55 records that removing the guard aborts (SIGABRT).",
+   "unblocks": "all 11 B54 rows and the B51 row are re-adjudicated at S: 9 by boundary-sweep-B55 and v2i_idp/v2i_aaidp by boundary-sweep-B57 (see B55-F1)",
+   "evidence_level": "FAST + mutation negative control at S; BOUNDARY re-adjudication NOT_RUN (deferred to the next BOUNDARY gate, it does not block the finding's closure)",
+   "reconciled_by": "evidence/b85c-row-reconciliation.json"
   },
   {
    "id": "B54-F2",
@@ -3701,10 +3714,17 @@
   {
    "id": "B55-F1",
    "severity": "high",
-   "state": "open",
+   "state": "closed_by_repair",
    "what": "The generic ASN.1 template walk casts base+offset to a pointer-typed slot for inline ASN1_FBOOLEAN/ASN1_TBOOLEAN fields at non-8-aligned offsets (ISSUING_DIST_POINT 12/28, OSSL_AA_DIST_POINT 20/28) and dereferences it at src/asn1/fre.rs:218 and src/asn1/i2d.rs:234. Observed SIGABRT: v2i_idp frees at src/x509/v3_crld.rs:1638 under a NULL ctx; successful idp/aaidp builds abort during encoding.",
    "blocks": "v2i_idp and v2i_aaidp (2 rows), and any claim covering those extensions",
-   "required_resolution": "Fix the template walk so a boolean field is read and written through its declared width rather than an aligned pointer cast; new candidate S-prime, load-bearing test, re-adjudication."
+   "required_resolution": "Fix the template walk so a boolean field is read and written through its declared width rather than an aligned pointer cast; new candidate S-prime, load-bearing test, re-adjudication.",
+   "closed_state": "closed_by_repair",
+   "closed_at_source": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+   "resolution": "The template walk now distinguishes an inline primitive from a pointer slot: utl::is_inline_boolean gates width- and alignment-correct read_inline_boolean/write_inline_boolean (src/asn1/utl.rs:442-512), the free walk never reads a primitive slot as a pointer and writes the fill at its declared width (src/asn1/fre.rs:129, :166), the encoder reads through read_inline_boolean and skips the pointer test for V_ASN1_BOOLEAN (src/asn1/i2d.rs:554, :622-637), and the print walk uses is_inline_boolean (src/asn1/tasn_prn.rs:223). boundary-sweep-B57 records both rows SAFETY_DISCHARGED at the S coordinates (src/x509/v3_crld.rs:1566, :1928) with a reversion negative control: restoring the six ASN.1 files aborts at fre.rs:218 / i2d.rs:234 for each test, and exact-DER positive controls pass.",
+   "control_at_S": ["x509::v3_crld::b57_idp_nconf_encodes_every_inline_boolean", "x509::v3_crld::b57_aaidp_nconf_encodes_inline_booleans", "x509::v3_conf::b55_tests::b55_null_config_context_is_refused_on_every_section_path (idp and aaidp rows)"],
+   "retained_obligation": "B57's own residual: other inline-boolean templates (X509_EXTENSION.critical, TS certReq/ordering, OSSL_TIME_SPEC.notThisTime) are repaired by the same shared change but not individually tested at B57. Retained as a test-coverage obligation; it does not block the two rows named here.",
+   "evidence_level": "FAST + mutation negative control at S; BOUNDARY re-adjudication NOT_RUN (deferred to the next BOUNDARY gate, it does not block the finding's closure)",
+   "reconciled_by": "evidence/b85c-row-reconciliation.json"
   }
  ]
 ,
