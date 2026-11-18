@@ -1,0 +1,115 @@
+{
+  "receipt": "build-0.0.49",
+  "kind": "candidate-install-build",
+  "recorded_utc": "2026-11-18",
+  "crate": "openssl-rs",
+  "version": "0.0.49",
+  "status": "CANDIDATE_BUILD_PENDING_PUBLICATION",
+  "purpose": "The install-tree identity rendered into README.md for the 0.0.49 candidate. The artefacts were rebuilt from the frozen source by the canonical recipe; this receipt binds the rendered identity to the bytes that build actually produced.",
+  "source_identity": {
+    "candidate_branch": "main",
+    "measured_source_commit": "a13b59b6ce53563f8b683afc58381615f026b7cb",
+    "measured_source_commit_subject": "docs: release row names 0.0.48 with its registry checksum and build hashes",
+    "measured_source_tree_digest": "ca7d39b9bcfbe9827ded8b255a66980d32f16a9fbd15902f80dc1b921839d1c4",
+    "build_source_tree_digest": "ca7d39b9bcfbe9827ded8b255a66980d32f16a9fbd15902f80dc1b921839d1c4",
+    "build_source_tree_digest_rule": "sha256 over canonical JSON of sorted [relpath, size, sha256] for src/, Cargo.toml, Cargo.lock, build.rs (forensics/tools/phase7_courts.py::_source_tree_digest)",
+    "release_tree_digest": "ca7d39b9bcfbe9827ded8b255a66980d32f16a9fbd15902f80dc1b921839d1c4",
+    "release_tree_digest_rule": "same rule and same enumeration, computed over the 0.0.49 packaging tree (the working tree's src/, Cargo.toml, Cargo.lock, build.rs).",
+    "release_tree_digest_note": "The version bump is NOT committed when this build runs. `measured_source_commit` therefore names HEAD (a13b59b6c) only, and the tree digest is the identity of what was actually built. Recompute this digest after the orchestrator commits; the committed release commit must carry the same src/, Cargo.toml, Cargo.lock and build.rs bytes for these artefact hashes to remain bound.",
+    "working_tree_at_build": "dirty by design: Cargo.toml and Cargo.lock at 0.0.49, the regenerated documentation blocks, the campaign-status counter and this receipt. No src/ change accompanies the bump, so the source tree differs from 0.0.48 only in the Cargo.toml/Cargo.lock version strings."
+  },
+  "build": {
+    "recipe": "bash forensics/tools/build_phase2.sh",
+    "court_container": "openssl-rs-court",
+    "court_image": "openssl-rs-court:1",
+    "court_memory_cap": "16g",
+    "courts_cpu": 16,
+    "cargo_build_jobs": 8,
+    "exit_status": 0,
+    "wall_seconds": 3,
+    "wall_seconds_note": "the initial full build in this batch was not instrumented; this is the timed incremental re-run of the same recipe, which reproduced the same bytes and re-ran all 11 Phase-2 courts. The 0.0.48 receipt recorded 23 s for its clean-ish rebuild.",
+    "completed_utc": "2026-11-18T03:24:43Z",
+    "toolchain": {
+      "rustc": "1.98.1 (48a229cea 2026-09-01)",
+      "cargo": "1.98.1 (797e8a9bc 2026-08-05)",
+      "cc": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+      "python": "3.11.2",
+      "authority": "openssl-3.6.4-production"
+    },
+    "phase2_courts": {
+      "receipt": "artifacts/phase2/COURTS.json",
+      "all_pass": true,
+      "courts": 11,
+      "passed": 11
+    },
+    "rebuilt_for_this_release": true,
+    "why_rebuilt": "the receipt must carry artefact hashes produced by an actual build of the frozen source; the committed artefacts were bound to 0.0.48 and the version bump changes the crate metadata those bytes were built with."
+  },
+  "artefacts": {
+    "libcrypto.so.3": {
+      "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+      "size": 16863992,
+      "soname": "libcrypto.so.3",
+      "needed": [
+        "libgcc_s.so.1",
+        "libc.so.6",
+        "ld-linux-x86-64.so.2"
+      ],
+      "runpath": null,
+      "dynamic_defined_symbols": 5906
+    },
+    "libssl.so.3": {
+      "path": "artifacts/phase2/install/lib/libssl.so.3",
+      "sha256": "648f8caecda245d2186813fb67ceadedd798b9ce609c8b041a84f195946c5f68",
+      "size": 16572968,
+      "soname": "libssl.so.3",
+      "needed": [
+        "libcrypto.so.3",
+        "libgcc_s.so.1",
+        "libc.so.6",
+        "ld-linux-x86-64.so.2"
+      ],
+      "runpath": null,
+      "dynamic_defined_symbols": 608
+    },
+    "legacy.so": {
+      "path": "artifacts/phase2/install/lib/ossl-modules/legacy.so",
+      "sha256": "bd2cfd173729cb58ff8a6824f4034e0693128c37f1f09834360db3a6340feb21",
+      "size": 16535880,
+      "runpath": "$ORIGIN/.."
+    },
+    "openssl": {
+      "path": "artifacts/phase2/install/bin/openssl",
+      "sha256": "e15f89650013816e75c245e11303e3ef3ebdf06101bb915875aebf4b75dbab66",
+      "size": 12382280
+    }
+  },
+  "crate_package": {
+    "recipe": "CARGO_TARGET_DIR=/tmp/ospub49 cargo package --allow-dirty",
+    "why_allow_dirty": "the release commit is made by the orchestrator after this prep step, so the 0.0.49 bump and regenerated docs are uncommitted when the package is built.",
+    "path": "court/tmp/openssl-rs-0.0.49.crate",
+    "container_path": "/tmp/ospub49/package/openssl-rs-0.0.49.crate",
+    "files": 1011,
+    "uncompressed_mib": 41.7,
+    "compressed_mib": 8.7,
+    "size_bytes": 9154603,
+    "sha256": "a5aa60cf677b596c332385268f0a9e777b85c4ced0279629082edc8931a64280",
+    "verify_build": "cargo package verification build of the unpacked 0.0.49 package succeeded (dev profile, 16.39 s)",
+    "note": "the crate ships source and documentation only; these artefact hashes describe the repository install, not the crate payload."
+  },
+  "evidence_carried_forward": {
+    "closure": "the applied closure is not re-measured at this candidate; this receipt binds build identity only.",
+    "closure_not_re_measured": true,
+    "why": "re-running the safety closure is a deliberate verification activity, not part of packaging.",
+    "safe_compatible": "not adjudicated by this receipt; the campaign counter records the principal's OpenSSH graduation at b85c, not a re-measurement here",
+    "mechanism_discharges": "none claimed here; the ledger at measured_source_commit is the authority."
+  },
+  "non_claims": [
+    "No obligation is discharged by this receipt, and none is discharged by rebuilding.",
+    "The closure and downstream evidence are not re-measured at 0.0.49.",
+    "Passing the Phase 2 courts is an ABI/install-layout result, not a safety or cryptographic result.",
+    "The export counts are unchanged from 0.0.48 (libcrypto 5906, libssl 608); the artefact bytes differ because the version metadata differs, which is not a regression and not a safety result.",
+    "The recorded source identity is HEAD plus a tree digest; the version bump was uncommitted at build time."
+  ]
+}
