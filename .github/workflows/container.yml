@@ -76,11 +76,11 @@ jobs:
           file: docker/openssl-rs-court.Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ github.repository_owner }}/openssl-rs-court:${{ steps.meta.outputs.tag }}
-            ghcr.io/${{ github.repository_owner }}/openssl-rs-court:latest
+            ghcr.io/${{ github.repository_owner }}/openssl-rs:${{ steps.meta.outputs.tag }}
+            ghcr.io/${{ github.repository_owner }}/openssl-rs:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
-            org.opencontainers.image.title=openssl-rs court
+            org.opencontainers.image.title=openssl-rs
             org.opencontainers.image.description=Court container for the openssl-rs memory-safety campaign: pinned toolchain, no system OpenSSL.
             org.opencontainers.image.version=${{ steps.meta.outputs.tag }}
             org.opencontainers.image.revision=${{ github.sha }}
