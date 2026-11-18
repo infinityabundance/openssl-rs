@@ -2755,8 +2755,8 @@
    }
   },
   "closure_receipts": [
-   "evidence/closure-ssh-b73-r2.json",
-   "evidence/closure-sshd-b73-r2.json"
+   "evidence/closure-ssh-b86.json",
+   "evidence/closure-sshd-b86.json"
   ],
   "non_final_receipts": [
    "evidence/closure-ssh-b73.json",
@@ -3111,7 +3111,8 @@
    "state": "ELIMINATED IN SOURCE, NOT_BUILT",
    "projected_effect": "re-census is expected to remove 5 of the 74 openssh-v1i obligations; projected review-required 70 -> 65 (not applied)",
    "required_resolution": "cargo fmt/check/clippy/tests, rebuild, re-census and fresh closures at S5"
-  }
+  },
+  "closure_receipts_note": "the b86 pair is the closure measured at the current source, so the CI callback enumeration prerequisite compares against the shipped tree rather than an older candidate. The graduation verdict itself remains the b85c record, evidence/SAFE-COMPATIBLE-openssh-b85c.json."
  },
  "closure": {
   "receipt": "evidence/closure-ssh-v1r.json; evidence/inventory-sshd-v1r.json",
