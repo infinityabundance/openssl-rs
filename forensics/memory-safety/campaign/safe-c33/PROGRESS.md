@@ -1,7 +1,7 @@
 # Safe-33 unsafe→safe conversion — progress ledger
 
 > **Current state (2026-10-30; graduation record added 2026-11-17).** The working
-> tree is `openssl-rs 0.0.46` (**not published**; `0.0.45` is the published release,
+> tree is `openssl-rs 0.0.47`, published on crates.io (
 > 2026-10-30). The figures below were
 > measured at an earlier HEAD and are retained as the measurement they are. Current
 > facts that supersede any reading of them as a graduation: the non-monotone bound is
