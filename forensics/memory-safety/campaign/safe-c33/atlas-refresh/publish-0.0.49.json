@@ -47,6 +47,28 @@
   "download_sha256_recomputed": "4231962b1fcc54cb00983b299d78b986101c35675d583d4db9e2d8aafe507348",
   "download_verification": "PASS — the bytes served by the registry hash to the registry's own checksum"
  },
+ "container_package": {
+  "registry": "ghcr.io",
+  "name": "ghcr.io/infinityabundance/openssl-rs-court",
+  "tags": [
+   "0.0.49",
+   "latest"
+  ],
+  "index_digest": "sha256:6208ae03818d59b217b7e2ed8702a734a77a1d113dd4ac387db4efdec872bf71",
+  "platforms": "linux/amd64; the OCI index also carries a buildx provenance attestation manifest",
+  "visibility": "public",
+  "linked_repository": "https://github.com/infinityabundance/openssl-rs (package page resolves; the image carries org.opencontainers.image.source)",
+  "build": {
+   "workflow": ".github/workflows/container.yml",
+   "run": "https://github.com/infinityabundance/openssl-rs/actions/runs/44231565264",
+   "workflow_commit": "e1d52f6e9001dc3e05c8bffe60e585efeae1cf94",
+   "context": "docker/ (the court Dockerfile copies its entrypoint from the same directory)",
+   "note": "The image content is the court Dockerfile at that commit, which is unchanged from the release commit 1e7c221f0: the commit that published it added .github/workflows/container.yml and nothing else."
+  },
+  "why_a_workflow": "GitHub Packages has no Cargo registry, so the package artefact is the container. The maintainer credential carries repo/gist/read:org only and ghcr.io answers 403 for a direct push, so the image is built and pushed by the repository-scoped workflow token with packages: write, which is revoked with the run. No long-lived package credential is stored anywhere.",
+  "verified": "An anonymous pull token is issued for the package, and the manifests for both tags resolve 200, which is what a private package would refuse; the repository's package page also resolves rather than 404.",
+  "not_claimed": "A published image is a packaging artefact. It is not a safety, compatibility or cryptographic result, and pushing it discharges no obligation."
+ },
  "evidence_position": {
   "closure": "Not re-measured at 0.0.49. The applied closure evidence is unchanged by a version bump: no src/ file differs between the 0.0.48 tree and this one, which the identical build source-tree digest ca7d39b9… over the same eight hundred and eighty-eight entries establishes.",
   "safe_compatible": "1 of the 33 admitted cohort families: `openssh`, represented by its consumer binaries ssh and sshd, carries the principal's SAFE_COMPATIBLE verdict at candidate b85c (evidence/SAFE-COMPATIBLE-openssh-b85c.json). That record is the authority for the counter; this receipt neither re-adjudicates it nor extends it to any other family.",
