@@ -69,8 +69,10 @@
    "name": "ghcr.io/infinityabundance/openssl-rs-court",
    "published_by_run": "https://github.com/infinityabundance/openssl-rs/actions/runs/44231565264",
    "index_digest": "sha256:6208ae03818d59b217b7e2ed8702a734a77a1d113dd4ac387db4efdec872bf71",
-   "disposition": "SUPERSEDED — still public under the wrong name; deletion is outstanding",
-   "why_not_deleted": "Deleting a user-owned container package requires the delete:packages scope. The available credential carries repo/gist/read:org and is refused even for the read:packages listing (HTTP 403), and a repository-scoped GITHUB_TOKEN cannot delete a package in the user namespace. The package therefore needs either one deletion from the package settings page or a credential carrying delete:packages; this receipt records that rather than claiming the cleanup happened."
+   "disposition": "DELETED by the repository owner on 2026-11-18",
+   "verified_after_deletion": "The package page returns 404 and an anonymous pull token for the name is refused, so no version of the misnamed package remains; ghcr.io/<owner>/openssl-rs answers 200 for both tags.",
+   "why_automation_could_not_do_it": "Deleting a user-owned container package requires the delete:packages scope. The available credential carries repo/gist/read:org and is refused even for the read-only version listing (HTTP 403), and a repository-scoped GITHUB_TOKEN authenticates as the workflow installation rather than the user, so the user-namespace delete endpoint is not reachable for it either.",
+   "withdrawn_mechanism": "A temporary opt-in 'delete superseded package' step was added to the publish workflow and never completed: the owner deleted the package out of band first, so the step would have failed against an absent package. The step was removed rather than shipped unproven, and its run (44234869551) was cancelled; the withdrawl is recorded here instead of being left as an unexplained red run."
   },
   "why_a_workflow": "GitHub Packages has no Cargo registry, so the package artefact is the container. The maintainer credential carries repo/gist/read:org only and ghcr.io answers 403 for a direct push, so the image is built and pushed by the repository-scoped workflow token with packages: write, which is revoked with the run. No long-lived package credential is stored anywhere.",
   "verified": "An anonymous pull token is issued for the package, and the manifests for both tags resolve 200, which is what a private package would refuse; the repository's package page also resolves rather than 404.",

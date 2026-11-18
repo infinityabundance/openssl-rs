@@ -33,11 +33,6 @@ on:
         description: "Image tag to publish (e.g. 0.0.49)"
         required: true
         type: string
-      delete_package:
-        description: "Optional: repository-scoped container package to delete after publishing (e.g. a superseded name)"
-        required: false
-        type: string
-        default: ""
   push:
     tags:
       - "v*"
@@ -90,18 +85,3 @@ jobs:
             org.opencontainers.image.version=${{ steps.meta.outputs.tag }}
             org.opencontainers.image.revision=${{ github.sha }}
             org.opencontainers.image.licenses=Apache-2.0 OR MIT
-
-      # Deleting a package needs the packages permission, which the maintainer's
-      # own credential does not carry. The run token does, so a superseded
-      # package name is retired here rather than left public next to the
-      # correct one. Opt-in by name; a mistyped or already-deleted name fails
-      # the job instead of passing silently.
-      - name: Delete superseded package
-        if: github.event_name == 'workflow_dispatch' && inputs.delete_package != ''
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          pkg="${{ inputs.delete_package }}"
-          echo "deleting repository-scoped container package: $pkg"
-          gh api -X DELETE "/repos/${{ github.repository }}/packages/container/$pkg"
-          echo "deleted $pkg"
