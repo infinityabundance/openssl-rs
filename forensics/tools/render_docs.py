@@ -636,6 +636,27 @@ class Evidence:
         self.invariants = self.status.get("structural_invariants") or {}
         self.known_gaps = self.status.get("known_gaps") or []
 
+    def safe_compatible_clause(self) -> str:
+        """The clause after the `SAFE_COMPATIBLE` counter.
+
+        Derived from the graduation record: a counter advanced without the
+        sentence changing would leave every rendered row asserting that no
+        family has a proven closure.
+        """
+        if not self.consumers["safe_compatible"]:
+            return "no family has a proven dependency closure"
+        grad = self.status.get("safe_compatible_graduation") or {}
+        family = grad.get("admitted_family")
+        binaries = ", ".join(f"`{b}`" for b in grad.get("families") or [])
+        tag = grad.get("candidate_tag")
+        if family and binaries and tag:
+            return (
+                f"the admitted `{family}` family graduated at {tag} "
+                f"via its consumer binaries {binaries}; every other admitted family "
+                "still has no proven dependency closure"
+            )
+        return "a family has a proven dependency closure"
+
     def evidence_reuse(self) -> dict:
         """The atlas's carried-forward disclosure, with the names as a set.
 
@@ -897,7 +918,7 @@ class Evidence:
                 f"`{CENSUS_S}`, `{DELTA_S}` |",
                 "| **`SAFE_COMPATIBLE` consumers** | "
                 f"**{self.consumers['safe_compatible']} / {self.consumers['families_total']}** "
-                "— no family has a proven dependency closure | "
+                f"— {self.safe_compatible_clause()} | "
                 f"`{STATUS_S}` (`consumers`) |",
                 "| **BOUNDARY / SEAL gates** | "
                 f"**`{self.gate_state('boundary_gate')}` / `{self.gate_state('seal_gate')}`** "
@@ -1133,7 +1154,7 @@ class Evidence:
                 "| **Known gaps** | " + (gap_bits or "none recorded") + " |",
                 "| **`SAFE_COMPATIBLE` consumers** | "
                 f"**{self.consumers['safe_compatible']} / {self.consumers['families_total']}** "
-                "— no consumer family has a proven dependency closure. |",
+                f"— {self.safe_compatible_clause()}. |",
             ]
         )
 
