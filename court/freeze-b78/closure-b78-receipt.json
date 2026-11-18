@@ -1,0 +1,386 @@
+{
+ "task1_e7pbe_repin": {
+  "image_sha256": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
+  "sites": {
+   "EVP_PBE_CipherInit_ex": {
+    "stable_case_id": "0x17b1f5",
+    "pin": [
+     "EVP_PBE_CipherInit_ex",
+     "0x415"
+    ],
+    "symbol_start": "0x4120e0",
+    "site_address": "0x4124f5",
+    "resolved_offset": "0x415",
+    "how": "pin",
+    "instruction": "call   *%rax",
+    "is_indirect_transfer": true
+   },
+   "PKCS5_v2_PBE_keyivgen_ex": {
+    "stable_case_id": "0x17cee8",
+    "pin": [
+     "PKCS5_v2_PBE_keyivgen_ex",
+     "0x208"
+    ],
+    "symbol_start": "0x4d0640",
+    "site_address": "0x4d0802",
+    "resolved_offset": "0x1c2",
+    "how": "search",
+    "instruction": "call   *%rax",
+    "is_indirect_transfer": true
+   }
+  },
+  "target_leaves": {
+   "PKCS12_PBE_keyivgen_ex": [
+    "0x363580"
+   ],
+   "PKCS5_v2_PBE_keyivgen_ex": [
+    "0x4d0640"
+   ],
+   "PKCS5_v2_PBKDF2_keyivgen_ex": [
+    "0x4daf60"
+   ],
+   "PKCS5_PBE_keyivgen_ex": [
+    "0x492be0"
+   ],
+   "PKCS5_v2_scrypt_keyivgen_ex": [
+    "0x3150f0"
+   ]
+  },
+  "self_test": {
+   "tool_sha256": "d3d01dfe9127610c77b965491b08c61dde08098d3fc9f1a398fd8cbff0daee91",
+   "exit": 1,
+   "failure_entries": 7,
+   "e7pbe_failure_entries": 0,
+   "log": "court/tmp/selftest-b78-after.log",
+   "residual_classification": {
+    "DECODER_METHOD_SITES[0x24dfed,0x24e046,0x24e090]": "b78 fixture drift: the set_ctx_params dispatch moved to file_load+0x658 (reads 0x50) but the witness refuses at constructor-argument-not-closed-table (roots=[], expected table 0x8ab4c8). Conservative refusal; the three sites are no longer contract-bounded (element-7 loses ABI_CONTRACT_DECODER_METHOD_OBJECT:3).",
+    "store-loader close-guard controls (3)": "b78 fixture drift: the legacy closefn site 0x2ad4b3 is now reached with ZERO %r12 polarity, not NONZERO, and the OSSL_STORE_open_ex+0x488 pin now lands. The witnesses still refuse; the mutation targets are stale.",
+    "e7core default-context": "NOT_RUN at this candidate (no inlined default-context accessor); recorded as NOT_RUN, never as a pass."
+   }
+  },
+  "record": {
+   "path": "court/freeze-b78/e7pbe-repin-b78.json",
+   "sha256": "694dfb970ea0a407c3a0425f0a914a52561019d45dc33bfff50878bb71b93afd"
+  }
+ },
+ "task2_3_closures": {
+  "ssh": {
+   "receipt": "evidence/closure-ssh-b78.json",
+   "sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+   "size": 13326758,
+   "tool_sha256": "d3d01dfe9127610c77b965491b08c61dde08098d3fc9f1a398fd8cbff0daee91",
+   "artifact": {
+    "path": "court/tmp/openssh-closure/client-b78/openssh-9.9p1/ssh",
+    "sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251"
+   },
+   "source_identity": {
+    "repository_head": "75add65c11b175bc53569dc0f24c4d767126d85b",
+    "branch": "stage/p25/b75-ocsp",
+    "tracked_tree_dirty": true,
+    "inventory_path": "court/freeze-b78/census-b78.json",
+    "inventory_source_head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "span_source_commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "span_source_binding": "git-blob",
+    "inventory_is_ancestor_or_equal": true,
+    "note": "the admitted install is the V1 frozen candidate; the working tree may be a descendant, so obligations are joined to the inventory at the inventory's own source head, not the working tree"
+   },
+   "counts": {
+    "DISCHARGED": 283,
+    "BLOCKED": 7,
+    "UNKNOWN": 0,
+    "reachable_production_obligations": 290,
+    "carried_forward": 220,
+    "carried_forward_removed": 3,
+    "stale_discharge_rejections": 0
+   },
+   "verdict": {
+    "state": "ACCEPTED",
+    "safe_compatible": false,
+    "reason": "no refusal condition fired"
+   },
+   "refusals": [],
+   "element7": {
+    "status": "FAIL",
+    "established": false,
+    "reachable_unresolved_sites": 153,
+    "target_bounded_unresolved_sites": 4,
+    "contract_bounded_sites": 149,
+    "unclassified_reachable_sites": 0,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_CORE_DISPATCH": 26,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+     "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 16,
+     "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+     "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+     "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    }
+   },
+   "discharge_receipt_grouping": {
+    "openssh-v1i": 49,
+    "boundary-sweep-B56": 19,
+    "boundary-sweep-B70": 2,
+    "boundary-sweep-B54": 72,
+    "openssh-v1l": 9,
+    "boundary-sweep-B48": 36,
+    "boundary-sweep-B69": 3,
+    "boundary-sweep-B67": 2,
+    "boundary-sweep-B60": 2,
+    "boundary-sweep-B53": 30,
+    "sslconf-exclusivity-2026-11-10": 14,
+    "boundary-sweep-B49": 16,
+    "boundary-sweep-B51": 10,
+    "boundary-sweep-B55": 9,
+    "boundary-sweep-B57": 2,
+    "boundary-sweep-B50": 5,
+    "boundary-sweep-B52": 3
+   },
+   "ledger_record": {
+    "artifact_sha256_recorded": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57",
+    "recorded_candidate_install": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
+    "artifact_matches_this_build": false,
+    "outcome": "reached",
+    "level": "L4-linked"
+   }
+  },
+  "sshd": {
+   "receipt": "evidence/closure-sshd-b78.json",
+   "sha256": "dd8430916dc4ebd559b0c5bfda4415b4b2174e7d19e7e654f7f66d952407ee43",
+   "size": 13173402,
+   "tool_sha256": "d3d01dfe9127610c77b965491b08c61dde08098d3fc9f1a398fd8cbff0daee91",
+   "artifact": {
+    "path": "court/tmp/openssh-closure/server-b78/openssh-9.9p1/sshd",
+    "sha256": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe"
+   },
+   "source_identity": {
+    "repository_head": "75add65c11b175bc53569dc0f24c4d767126d85b",
+    "branch": "stage/p25/b75-ocsp",
+    "tracked_tree_dirty": true,
+    "inventory_path": "court/freeze-b78/census-b78.json",
+    "inventory_source_head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "span_source_commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "span_source_binding": "git-blob",
+    "inventory_is_ancestor_or_equal": true,
+    "note": "the admitted install is the V1 frozen candidate; the working tree may be a descendant, so obligations are joined to the inventory at the inventory's own source head, not the working tree"
+   },
+   "counts": {
+    "DISCHARGED": 283,
+    "BLOCKED": 7,
+    "UNKNOWN": 0,
+    "reachable_production_obligations": 290,
+    "carried_forward": 220,
+    "carried_forward_removed": 3,
+    "stale_discharge_rejections": 0
+   },
+   "verdict": {
+    "state": "ACCEPTED",
+    "safe_compatible": false,
+    "reason": "no refusal condition fired"
+   },
+   "refusals": [],
+   "element7": {
+    "status": "FAIL",
+    "established": false,
+    "reachable_unresolved_sites": 153,
+    "target_bounded_unresolved_sites": 4,
+    "contract_bounded_sites": 149,
+    "unclassified_reachable_sites": 0,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_CORE_DISPATCH": 26,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+     "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 16,
+     "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+     "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+     "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    }
+   },
+   "discharge_receipt_grouping": {
+    "openssh-v1i": 49,
+    "boundary-sweep-B56": 19,
+    "boundary-sweep-B70": 2,
+    "boundary-sweep-B54": 72,
+    "openssh-v1l": 9,
+    "boundary-sweep-B48": 36,
+    "boundary-sweep-B69": 3,
+    "boundary-sweep-B67": 2,
+    "boundary-sweep-B60": 2,
+    "boundary-sweep-B53": 30,
+    "sslconf-exclusivity-2026-11-10": 14,
+    "boundary-sweep-B49": 16,
+    "boundary-sweep-B51": 10,
+    "boundary-sweep-B55": 9,
+    "boundary-sweep-B57": 2,
+    "boundary-sweep-B50": 5,
+    "boundary-sweep-B52": 3
+   },
+   "ledger_record": {
+    "artifact_sha256_recorded": "c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57",
+    "recorded_candidate_install": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
+    "artifact_matches_this_build": false,
+    "outcome": "reached",
+    "level": "L4-linked"
+   }
+  }
+ },
+ "cohort_and_withdrawn": {
+  "cohort_total": 65,
+  "DISCHARGED": 58,
+  "BLOCKED": 7,
+  "blocked_ids": [
+   {
+    "id": "V1:src/provider/digest.rs:658:UNSAFE_FN_DEF",
+    "boundary": "OSSH-V1I-002",
+    "status_reason": "content-addressed scoped discharge refused: boundary OSSH-V1I-002 names (src/provider/digest.rs, UNSAFE_FN_DEF, copyctx) but span-unparsable: the obligation's census line 658 is neither a definition of 'copyctx' nor inside the boundary's resolved span 672-682: census line 658 is not the definition line of 'copyctx' in src/provider/digest.rs.  A coordinate alone never establishes a discharge. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from evidence/closure-ssh-b77.json; a contract transfers the obligation to the caller, it does not discharge it."
+   },
+   {
+    "id": "V1:src/provider/digest.rs:970:UNSAFE_FN_DEF",
+    "boundary": "OSSH-V1I-008",
+    "status_reason": "content-addressed scoped discharge refused: boundary OSSH-V1I-002 names (src/provider/digest.rs, UNSAFE_FN_DEF, copyctx) but span-unparsable: the obligation's census line 970 is neither a definition of 'copyctx' nor inside the boundary's resolved span 672-682: census line 970 is not the definition line of 'copyctx' in src/provider/digest.rs.  A coordinate alone never establishes a discharge. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from evidence/closure-ssh-b77.json; a contract transfers the obligation to the caller, it does not discharge it."
+   },
+   {
+    "id": "V1:src/provider/digest.rs:1165:UNSAFE_FN_DEF",
+    "boundary": "OSSH-V1I-011",
+    "status_reason": "content-addressed scoped discharge refused: boundary OSSH-V1I-002 names (src/provider/digest.rs, UNSAFE_FN_DEF, copyctx) but span-unparsable: the obligation's census line 1165 is neither a definition of 'copyctx' nor inside the boundary's resolved span 672-682: census line 1165 is not the definition line of 'copyctx' in src/provider/digest.rs.  A coordinate alone never establishes a discharge. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from evidence/closure-ssh-b77.json; a contract transfers the obligation to the caller, it does not discharge it."
+   },
+   {
+    "id": "V1:src/provider/digest.rs:1348:UNSAFE_FN_DEF",
+    "boundary": "OSSH-V1I-017",
+    "status_reason": "content-addressed scoped discharge refused: boundary OSSH-V1I-002 names (src/provider/digest.rs, UNSAFE_FN_DEF, copyctx) but span-unparsable: the obligation's census line 1348 is neither a definition of 'copyctx' nor inside the boundary's resolved span 672-682: census line 1348 is not the definition line of 'copyctx' in src/provider/digest.rs.  A coordinate alone never establishes a discharge. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from evidence/closure-ssh-b77.json; a contract transfers the obligation to the caller, it does not discharge it."
+   },
+   {
+    "id": "V1:src/provider/digest.rs:1898:UNSAFE_FN_DEF",
+    "boundary": "OSSH-V1I-024",
+    "status_reason": "content-addressed scoped discharge refused: boundary OSSH-V1I-002 names (src/provider/digest.rs, UNSAFE_FN_DEF, copyctx) but span-unparsable: the obligation's census line 1898 is neither a definition of 'copyctx' nor inside the boundary's resolved span 672-682: census line 1898 is not the definition line of 'copyctx' in src/provider/digest.rs.  A coordinate alone never establishes a discharge. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from evidence/closure-ssh-b77.json; a contract transfers the obligation to the caller, it does not discharge it."
+   },
+   {
+    "id": "V1:src/provider/legacyprov.rs:336:UNSAFE_FN_DEF",
+    "boundary": "OSSH-V1I-082",
+    "status_reason": "content-addressed scoped discharge refused: boundary OSSH-V1I-082 names (src/provider/legacyprov.rs, UNSAFE_FN_DEF, copyctx) but span-unparsable: the obligation's census line 336 is neither a definition of 'copyctx' nor inside the boundary's resolved span 345-356: census line 336 is not the definition line of 'copyctx' in src/provider/legacyprov.rs.  A coordinate alone never establishes a discharge. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from evidence/closure-ssh-b77.json; a contract transfers the obligation to the caller, it does not discharge it."
+   },
+   {
+    "id": "V1:src/provider/legacyprov.rs:544:UNSAFE_FN_DEF",
+    "boundary": "OSSH-V1I-088",
+    "status_reason": "content-addressed scoped discharge refused: boundary OSSH-V1I-082 names (src/provider/legacyprov.rs, UNSAFE_FN_DEF, copyctx) but span-unparsable: the obligation's census line 544 is neither a definition of 'copyctx' nor inside the boundary's resolved span 345-356: census line 544 is not the definition line of 'copyctx' in src/provider/legacyprov.rs.  A coordinate alone never establishes a discharge. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from evidence/closure-ssh-b77.json; a contract transfers the obligation to the caller, it does not discharge it."
+   }
+  ],
+  "withdrawn_total": 19,
+  "withdrawn_in_obligation_set": 0,
+  "withdrawn_not_in_obligation_set": 19,
+  "withdrawn_ids": [
+   "OSSH-V1I-066",
+   "OSSH-V1I-068",
+   "OSSH-V1I-070",
+   "OSSH-V1I-071",
+   "OSSH-V1I-072",
+   "OSSH-V1I-073",
+   "OSSH-V1I-074",
+   "OSSH-V1I-075",
+   "OSSH-V1I-076",
+   "OSSH-V1I-077",
+   "OSSH-V1I-078",
+   "OSSH-V1I-079",
+   "OSSH-V1I-080",
+   "OSSH-V1L-001",
+   "OSSH-V1L-002",
+   "OSSH-V1L-003",
+   "OSSH-V1L-004",
+   "OSSH-V1L-005",
+   "OSSH-V1L-008"
+  ]
+ },
+ "b77_to_b78": {
+  "ssh": {
+   "b77_counts": {
+    "DISCHARGED": 282,
+    "BLOCKED": 8
+   },
+   "b78_counts": {
+    "DISCHARGED": 283,
+    "BLOCKED": 7
+   },
+   "still_blocked": [
+    "V1:src/provider/digest.rs:1165:UNSAFE_FN_DEF",
+    "V1:src/provider/digest.rs:1348:UNSAFE_FN_DEF",
+    "V1:src/provider/digest.rs:1898:UNSAFE_FN_DEF",
+    "V1:src/provider/digest.rs:658:UNSAFE_FN_DEF",
+    "V1:src/provider/digest.rs:970:UNSAFE_FN_DEF",
+    "V1:src/provider/legacyprov.rs:336:UNSAFE_FN_DEF",
+    "V1:src/provider/legacyprov.rs:544:UNSAFE_FN_DEF"
+   ],
+   "status_changed": [
+    {
+     "id": "V1:src/provider/digest.rs:1415:UNSAFE_FN_DEF",
+     "from": "BLOCKED",
+     "to": "DISCHARGED"
+    }
+   ],
+   "added_ids": [],
+   "removed_ids": []
+  },
+  "sshd": {
+   "b77_counts": {
+    "DISCHARGED": 282,
+    "BLOCKED": 8
+   },
+   "b78_counts": {
+    "DISCHARGED": 283,
+    "BLOCKED": 7
+   },
+   "still_blocked": [
+    "V1:src/provider/digest.rs:1165:UNSAFE_FN_DEF",
+    "V1:src/provider/digest.rs:1348:UNSAFE_FN_DEF",
+    "V1:src/provider/digest.rs:1898:UNSAFE_FN_DEF",
+    "V1:src/provider/digest.rs:658:UNSAFE_FN_DEF",
+    "V1:src/provider/digest.rs:970:UNSAFE_FN_DEF",
+    "V1:src/provider/legacyprov.rs:336:UNSAFE_FN_DEF",
+    "V1:src/provider/legacyprov.rs:544:UNSAFE_FN_DEF"
+   ],
+   "status_changed": [
+    {
+     "id": "V1:src/provider/digest.rs:1415:UNSAFE_FN_DEF",
+     "from": "BLOCKED",
+     "to": "DISCHARGED"
+    }
+   ],
+   "added_ids": [],
+   "removed_ids": []
+  }
+ },
+ "residuals": [
+  {
+   "id": "R-COPYCTX-COORD",
+   "state": "OPEN",
+   "statement": "the 7 BLOCKED cohort rows are all copyctx duplicates whose carried-forward census line (658/970/1165/1348/1898 in digest.rs, 336/544 in legacyprov.rs) is stale; the b78 source defines them at 455/672/992/1195/1386/1956 and 345/561. The span discharge is refused by coordinate, not by witness."
+  },
+  {
+   "id": "R-DECODER-REPIN",
+   "state": "OPEN",
+   "statement": "the three DECODER_METHOD_SITES rows do not re-derive at b78; the set_ctx_params dispatch is at file_load+0x658 reading 0x50 but the constructor %rsi no longer closes to the table."
+  },
+  {
+   "id": "R-STORE-GUARD",
+   "state": "OPEN",
+   "statement": "the store-loader close-guard polarity arm swapped at b78; three mutation controls are no longer load-bearing."
+  },
+  {
+   "id": "R-LEDGER-ARTIFACT",
+   "state": "OPEN",
+   "statement": "ledger_record.artifact_matches_this_build=false in both b78 receipts: the ledger holds consumer sha c8723f3494a2..., not the executed 3b282f430d50 (ssh) / 9744ab649f3b (sshd)."
+  },
+  {
+   "id": "R-ELEMENT7",
+   "state": "OPEN",
+   "statement": "element-7=FAIL in both families: 4 reachable unresolved sites are not contract-bounded (target_bounded=4)."
+  }
+ ],
+ "next_blocker": "R-COPYCTX-COORD: re-anchor the 7 carried-forward copyctx obligations to the boundary receipt's inventory_line -> line mapping so the content-addressed span discharge applies. This is the only difference between 58/65 and 65/65 cohort discharge."
+}

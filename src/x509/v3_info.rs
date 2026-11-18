@@ -320,6 +320,14 @@ pub unsafe extern "C" fn i2d_AUTHORITY_INFO_ACCESS(
 ///
 /// One `CONF_VALUE` per access description, its name rewritten in place to
 /// `"<object> - <general-name>"`.
+///
+/// # Safety
+///
+/// The `i2v` slot contract stated on [`X509V3ExtMethod`]. Caller: `X509V3_EXT_print`'s `i2v`
+/// arm, which decoded `ainfo` through this row's `AUTHORITY_INFO_ACCESS_it`; each element is a
+/// live `ACCESS_DESCRIPTION` and is read only. `method` may be NULL (this body forwards it to
+/// [`i2v_GENERAL_NAME`], which accepts NULL); the returned stack and its members belong to the
+/// caller.
 unsafe extern "C" fn i2v_AUTHORITY_INFO_ACCESS(
     method: *const X509V3ExtMethod,
     ainfo: *mut c_void,
@@ -338,7 +346,12 @@ unsafe extern "C" fn i2v_AUTHORITY_INFO_ACCESS(
         if tmp.is_null() {
             // SAFETY: the site is a compiled-in constant.
             unsafe { raise_site(&V3_INFO_77) };
-            return i2v_ainfo_err(ret, tret);
+            // SAFETY: `ret` is this function's own `ret` argument (read for NULL only); `tret` is
+            // that value or the list an earlier `i2v_GENERAL_NAME` returned. The failed call
+            // returned NULL without taking `tret`, and every element in it was planted by this
+            // frame's earlier `i2v_GENERAL_NAME` calls and handed to no one else, so this is its
+            // single release.
+            return unsafe { i2v_ainfo_err(ret, tret) };
         }
         tret = tmp;
         // SAFETY: `tret` holds at least `i + 1` values from the call above.
@@ -356,7 +369,10 @@ unsafe extern "C" fn i2v_AUTHORITY_INFO_ACCESS(
         }
         .cast::<c_char>();
         if ntmp.is_null() {
-            return i2v_ainfo_err(ret, tret);
+            // SAFETY: as at the `i2v_GENERAL_NAME` failure above — `ret` is this function's argument
+            // (read for NULL only), and `tret` is the list `i2v_GENERAL_NAME` just returned, which
+            // holds only elements this frame planted and is owned by no one else.
+            return unsafe { i2v_ainfo_err(ret, tret) };
         }
         // SAFETY: `ntmp` has `nlen` bytes; both sources are NUL-terminated, and `(*vtmp).name` is
         // the `CONF_VALUE`'s own string.
@@ -389,8 +405,25 @@ unsafe extern "C" fn i2v_AUTHORITY_INFO_ACCESS(
 
 /// `i2v_AUTHORITY_INFO_ACCESS`'s `err:` label — `crypto/x509/v3_info.c:95-98`.
 ///
-/// A safe helper: `ret`/`tret` are the caller's own stacks (either may be NULL).
-fn i2v_ainfo_err(ret: *mut OpenSslStack, tret: *mut OpenSslStack) -> *mut OpenSslStack {
+/// # Safety
+///
+/// `ret` is the caller's own `i2v` `ret` argument and is only inspected for NULL: NULL, or a live
+/// `STACK_OF(CONF_VALUE)` this function must neither read nor release (a non-NULL `ret` suppresses
+/// the release below, so its elements stay the caller's).
+///
+/// `tret` is NULL, or a `STACK_OF(CONF_VALUE)` **this calling frame owns exclusively**: either the
+/// frame's own `OPENSSL_sk_new_null` list or the list a successful [`i2v_GENERAL_NAME`] returned
+/// (`ret`, or a fresh list of its own), whose every element was planted by an earlier call in this
+/// frame (`i2v_GENERAL_NAME`'s `CONF_VALUE`s, seam-allocated `name`/`value`/`section` members) and
+/// has never been handed to another owner or released. The whole block and its elements therefore
+/// carry the `CRYPTO_*` seam's provenance, and `OPENSSL_sk_pop_free`'s `X509V3_conf_free`
+/// destructor is the **single** release of each element and then of the list itself.
+///
+/// The call consumes `tret` whenever `ret` is NULL and it is non-NULL: nothing may read or release
+/// it afterwards, and passing the same pointer twice would double-free. A NULL `ret` with a stack
+/// the frame does **not** own (a caller-supplied list aliased in from elsewhere) is exactly the
+/// case this contract forbids.
+unsafe fn i2v_ainfo_err(ret: *mut OpenSslStack, tret: *mut OpenSslStack) -> *mut OpenSslStack {
     if ret.is_null() && !tret.is_null() {
         // SAFETY: `tret` is a live list this call built; `X509V3_conf_free` its destructor.
         unsafe { OPENSSL_sk_pop_free(tret, Some(conf_value_free_thunk)) };
@@ -441,9 +474,12 @@ unsafe fn push_cstr(buf: &mut Vec<u8>, p: *const c_char) {
 /// `X509V3_EXT_add` borrows a caller-owned row (only `X509V3_EXT_DYNAMIC` rows are
 /// registry-owned), so the registrar must keep the row storage live and unmodified while it is
 /// registered. The read hold is not re-entrant for registry writers, so this callback must not
-/// call `X509V3_EXT_add`, `X509V3_EXT_add_list`, `X509V3_EXT_add_alias` or
-/// `X509V3_EXT_cleanup` (B51-R9). `ctx` is NULL-or-live per the slot contract; this body forwards
-/// it unchanged to `v2i_GENERAL_NAME_ex`, which documents the same contract.
+/// `X509V3_EXT_add`, `X509V3_EXT_add_list`, `X509V3_EXT_add_alias` or
+/// `X509V3_EXT_cleanup` (B51-R9). `ctx` is NULL-or-live per the slot contract; this body
+/// forwards it unchanged to `v2i_GENERAL_NAME_ex`, which documents the same contract. A NULL
+/// `ctx` is refused on the forwarded `dirName` section path (`X509V3_get_section` raises and
+/// answers NULL) and accepted on the forwarded `otherName` path (`ASN1_generate_v3` accepts
+/// NULL).
 ///
 /// Authority-derived: `crypto/x509/v3_conf.c:96-112`; `crypto/x509/v3_info.c:101-149`.
 unsafe extern "C" fn v2i_AUTHORITY_INFO_ACCESS(
@@ -467,7 +503,10 @@ unsafe extern "C" fn v2i_AUTHORITY_INFO_ACCESS(
         if acc.is_null() {
             // SAFETY: the site is a compiled-in constant.
             unsafe { raise_site(&V3_INFO_121) };
-            return v2i_ainfo_err(ainfo);
+            // SAFETY: `ainfo` is the list created a few lines above by `OPENSSL_sk_new_reserve`
+            // (refused if NULL at `:468`); this frame still owns it exclusively and its only
+            // element is the empty `ACCESS_DESCRIPTION`, so this is the list's single release.
+            return unsafe { v2i_ainfo_err(ainfo) };
         }
         // SAFETY: `ainfo` was reserved for `num`, so the push cannot fail.
         unsafe { OPENSSL_sk_push(ainfo, acc.cast::<c_void>()) };
@@ -476,7 +515,9 @@ unsafe extern "C" fn v2i_AUTHORITY_INFO_ACCESS(
         if ptmp.is_null() {
             // SAFETY: the site is a compiled-in constant.
             unsafe { raise_site(&V3_INFO_127) };
-            return v2i_ainfo_err(ainfo);
+            // SAFETY: `ainfo` is this frame's `OPENSSL_sk_new_reserve` list, exclusively owned; the
+            // one element is the `acc` pushed just above and nobody else holds it.
+            return unsafe { v2i_ainfo_err(ainfo) };
         }
         // SAFETY: `ptmp` points inside `cnf->name`, so `ptmp + 1` is a suffix of it.
         let cname = unsafe { ptmp.add(1) };
@@ -499,7 +540,10 @@ unsafe extern "C" fn v2i_AUTHORITY_INFO_ACCESS(
             )
         };
         if gn.is_null() {
-            return v2i_ainfo_err(ainfo);
+            // SAFETY: `ainfo` is this frame's exclusively-owned `OPENSSL_sk_new_reserve` list; every
+            // element is an `ACCESS_DESCRIPTION` pushed by this loop and retained nowhere else, and
+            // the failed `v2i_GENERAL_NAME_ex` left ownership of `(*acc).location` with `acc`.
+            return unsafe { v2i_ainfo_err(ainfo) };
         }
         // SAFETY: `cnf->name` is NUL-terminated; the length is the `;` prefix.
         // SAFETY: `cnf` is live and its `name` is NUL-terminated; the allocator answers NULL or a
@@ -517,7 +561,9 @@ unsafe extern "C" fn v2i_AUTHORITY_INFO_ACCESS(
             )
         };
         let Some(objtmp) = objtmp else {
-            return v2i_ainfo_err(ainfo);
+            // SAFETY: `ainfo` is this frame's exclusively-owned `OPENSSL_sk_new_reserve` list; the
+            // `ACCESS_DESCRIPTION`s it holds were pushed here and released nowhere else.
+            return unsafe { v2i_ainfo_err(ainfo) };
         };
         // SAFETY: `objtmp` is NUL-terminated; `no_name` is 0.
         unsafe { (*acc).method = OBJ_txt2obj(objtmp.as_ptr(), 0) };
@@ -530,7 +576,10 @@ unsafe extern "C" fn v2i_AUTHORITY_INFO_ACCESS(
             // SAFETY: the site is a compiled-in constant.
             unsafe { raise_site_data(&V3_INFO_138, msg.as_ptr().cast::<c_char>()) };
             // `objtmp`'s `Drop` is the authority's `OPENSSL_free(objtmp)` at `:140`.
-            return v2i_ainfo_err(ainfo);
+            // SAFETY: `ainfo` is this frame's exclusively-owned `OPENSSL_sk_new_reserve` list, its
+            // elements pushed here and owned by it alone; `objtmp` is a separate seam block whose
+            // `Drop` runs as this scope unwinds, so the two releases do not alias.
+            return unsafe { v2i_ainfo_err(ainfo) };
         }
         // `objtmp`'s `Drop` is the authority's `OPENSSL_free(objtmp)` at `:140`; it runs at the end
         // of this iteration.
@@ -541,8 +590,18 @@ unsafe extern "C" fn v2i_AUTHORITY_INFO_ACCESS(
 
 /// `v2i_AUTHORITY_INFO_ACCESS`'s `err:` label — `crypto/x509/v3_info.c:146-148`.
 ///
-/// A safe helper: `ainfo` is a live list this call built.
-fn v2i_ainfo_err(ainfo: *mut OpenSslStack) -> *mut c_void {
+/// # Safety
+///
+/// `ainfo` is a live, aligned, **non-NULL** `AUTHORITY_INFO_ACCESS` (a `STACK_OF(ACCESS_DESCRIPTION)`)
+/// allocated through the `CRYPTO_*` seam by a frame that still owns it exclusively: this calling
+/// frame created it with `OPENSSL_sk_new_reserve`/`OPENSSL_sk_new_null` and has not returned it,
+/// freed it, or exposed it to another owner. Every element is a live `ACCESS_DESCRIPTION` that
+/// frame pushed and retains nowhere else, so `OPENSSL_sk_pop_free`'s `ACCESS_DESCRIPTION_free`
+/// destructor releases each element exactly once and then the list block.
+///
+/// The call consumes `ainfo` unconditionally (the authority's label frees without testing for NULL):
+/// nothing may read or release it afterwards, and a NULL or already-released list is not accepted.
+unsafe fn v2i_ainfo_err(ainfo: *mut OpenSslStack) -> *mut c_void {
     // SAFETY: `ainfo` is a live list this call built; `access_description_free_thunk` its destructor.
     unsafe { OPENSSL_sk_pop_free(ainfo, Some(access_description_free_thunk)) };
     ptr::null_mut()
@@ -589,3 +648,38 @@ pub static ossl_v3_info: X509V3ExtMethod = info_access_row(NID_info_access);
 
 /// `const X509V3_EXT_METHOD ossl_v3_sinfo` — `crypto/x509/v3_info.c:39-46`.
 pub static ossl_v3_sinfo: X509V3ExtMethod = info_access_row(NID_sinfo_access);
+
+#[cfg(test)]
+mod unsafe_contract_controls {
+    /// Qualifier control: the `err:` labels hand a caller-supplied raw stack to
+    /// `OPENSSL_sk_pop_free`, so they must not be callable from safe Rust with an unchecked
+    /// pointer. A type-level "is an unsafe fn" assertion is not expressible on stable Rust, so the
+    /// declarations are pinned in the production source text, which is read from disk and truncated
+    /// at the first `#[cfg(test)]` module. This test's own assertion text is therefore never
+    /// searched, and the needle is assembled from fragments, so only removing an `unsafe` qualifier
+    /// can make it fail.
+    #[test]
+    #[allow(clippy::expect_used)]
+    fn the_i2v_err_helper_is_an_unsafe_fn() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/x509/v3_info.rs");
+        let src = std::fs::read_to_string(path).expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        let needle = concat!("unsafe fn ", "i2v_ainfo_err(");
+        assert!(prod.contains(needle), "missing {needle}");
+    }
+
+    /// Same control for the `v2i` label, which pop-frees `ainfo` unconditionally.
+    #[test]
+    #[allow(clippy::expect_used)]
+    fn the_v2i_err_helper_is_an_unsafe_fn() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/x509/v3_info.rs");
+        let src = std::fs::read_to_string(path).expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        let needle = concat!("unsafe fn ", "v2i_ainfo_err(");
+        assert!(prod.contains(needle), "missing {needle}");
+    }
+}

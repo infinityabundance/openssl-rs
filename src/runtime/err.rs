@@ -434,7 +434,24 @@ impl ErrState {
     /// `strlen + 1` bytes of NUL-terminated contents, exclusively owned by this
     /// state and released exactly once by this state; without the flag, `data` is
     /// borrowed and must outlive the entry.
-    pub(crate) fn set_data(&mut self, i: usize, data: *mut c_char, size: usize, flags: c_int) {
+    ///
+    /// # Safety
+    ///
+    /// `i` is a live slot index (`< ERR_NUM_ERRORS`). With `ERR_TXT_MALLOCED` set,
+    /// a non-NULL `data` is the base pointer of one whole allocation from the active
+    /// `CRYPTO_*` seam, at least `size` bytes, whose ownership this call takes and
+    /// whose single release is this state's (now or at clear/replace); it must not
+    /// be stack memory, an interior pointer, a literal, or a block another owner
+    /// will also release. Without the flag, `data` is borrowed and must remain
+    /// live and readable for `size` bytes for as long as the entry survives. A
+    /// NULL `data` is total.
+    pub(crate) unsafe fn set_data(
+        &mut self,
+        i: usize,
+        data: *mut c_char,
+        size: usize,
+        flags: c_int,
+    ) {
         if (self.err_data_flags[i] & ERR_TXT_MALLOCED) != 0 {
             // Release the buffer this slot already owned before adopting the new one.
             // SAFETY: the MALLOCED flag says this state owns the pointer and no other
@@ -1233,7 +1250,9 @@ pub(crate) unsafe fn raise_site_data(site: &err_sites::ErrSite, msg: *const c_ch
         s.install_debug(t, site.line, parts);
         s.set_error(t, site.lib, site.reason);
         if let Some((buf, len)) = data {
-            s.set_data(t, buf.into_raw(), len, ERR_TXT_MALLOCED | ERR_TXT_STRING);
+            // SAFETY: `buf` is the fresh seam block `message_copy` produced, and this
+            // call transfers its single ownership to the slot.
+            unsafe { s.set_data(t, buf.into_raw(), len, ERR_TXT_MALLOCED | ERR_TXT_STRING) };
         }
     });
 }
@@ -1270,7 +1289,9 @@ pub(crate) unsafe fn raise_site_dynamic_data(
         s.install_debug(t, site.line, parts);
         s.set_error(t, site.lib, reason);
         if let Some((buf, len)) = data {
-            s.set_data(t, buf.into_raw(), len, ERR_TXT_MALLOCED | ERR_TXT_STRING);
+            // SAFETY: `buf` is the fresh seam block `message_copy` produced, and this
+            // call transfers its single ownership to the slot.
+            unsafe { s.set_data(t, buf.into_raw(), len, ERR_TXT_MALLOCED | ERR_TXT_STRING) };
         }
     });
 }
@@ -1339,7 +1360,9 @@ pub unsafe extern "C" fn openssl_rs_err_set_error(lib: c_int, reason: c_int, msg
             s.clear_data(t, false);
             s.set_error(t, lib, reason);
             if let Some((buf, len)) = data {
-                s.set_data(t, buf.into_raw(), len, ERR_TXT_MALLOCED | ERR_TXT_STRING);
+                // SAFETY: `buf` is the fresh seam block `message_copy` produced, and this
+                // call transfers its single ownership to the slot.
+                unsafe { s.set_data(t, buf.into_raw(), len, ERR_TXT_MALLOCED | ERR_TXT_STRING) };
             }
         });
     })
@@ -1502,7 +1525,9 @@ pub unsafe extern "C" fn openssl_rs_err_finish_data(
                         ))
                     };
                 } else {
-                    s.set_data(t, data, size, flags);
+                    // SAFETY: `data` is the owned seam block this function's contract hands
+                    // over, with the extent it also guarantees; ownership moves to the slot.
+                    unsafe { s.set_data(t, data, size, flags) };
                 }
             }
         });
@@ -1616,12 +1641,16 @@ unsafe fn append_current(sep: *const c_char, suffix: *const c_char) {
     // Phase 2, under a short borrow: install. `set_data` queues the incumbent's release, but the
     // slot is empty here.
     with_state(|s| {
-        s.set_data(
-            t,
-            buf.into_raw(),
-            total + 1,
-            ERR_TXT_MALLOCED | ERR_TXT_STRING,
-        )
+        // SAFETY: `buf` is this frame's fresh seam block and this call transfers its
+        // single ownership to the slot.
+        unsafe {
+            s.set_data(
+                t,
+                buf.into_raw(),
+                total + 1,
+                ERR_TXT_MALLOCED | ERR_TXT_STRING,
+            )
+        }
     });
     // Outside the borrow: release the block the slot used to own.
     drop(old_owned);
@@ -1675,7 +1704,9 @@ pub unsafe extern "C" fn ERR_set_error_data(data: *mut c_char, flags: c_int) {
         with_state(|s| {
             let t = s.top as usize;
             s.clear_data(t, true);
-            s.set_data(t, data, len, flags);
+            // SAFETY: `data` is NULL or an owned seam block per this function's contract;
+            // ownership moves to the slot (or nowhere, for NULL).
+            unsafe { s.set_data(t, data, len, flags) };
         });
     })
 }
@@ -3332,5 +3363,28 @@ mod tests {
             "the per-thread error state must release the buffer at {addr:#x} it still owned at \
              thread exit"
         );
+    }
+}
+
+#[cfg(test)]
+mod unsafe_contract_controls {
+    /// Qualifier control: `ErrState::set_data` adopts a caller pointer (or borrows
+    /// it) with an extent, so it must not be callable from safe Rust with an
+    /// unchecked pointer. A type-level "is an unsafe fn" assertion is not
+    /// expressible on stable Rust, so the declaration is pinned in the production
+    /// source text, which is read from disk and truncated at the first
+    /// `#[cfg(test)]` module. This test's own assertion text is therefore never
+    /// searched, and the needle is assembled from fragments, so only removing the
+    /// `unsafe` qualifier can make it fail.
+    #[test]
+    #[allow(clippy::expect_used)]
+    fn set_data_is_an_unsafe_fn() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/runtime/err.rs");
+        let src = std::fs::read_to_string(path).expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        let needle = concat!("pub(crate) unsafe fn ", "set_data(");
+        assert!(prod.contains(needle), "missing {needle}");
     }
 }

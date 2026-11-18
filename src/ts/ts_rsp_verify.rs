@@ -211,7 +211,7 @@ pub(crate) unsafe extern "C" fn TS_RESP_verify_signature(
             break 'err;
         }
         // SAFETY: `token` is live.
-        if !pkcs7_type_is_signed(token) {
+        if !unsafe { pkcs7_type_is_signed(token) } {
             // SAFETY: a compile-time coordinate.
             unsafe {
                 raise_ts(
@@ -243,7 +243,7 @@ pub(crate) unsafe extern "C" fn TS_RESP_verify_signature(
         // SAFETY: `sinfos` holds exactly one element.
         let si = unsafe { OPENSSL_sk_value(sinfos, 0) }.cast::<Pkcs7SignerInfo>();
         // SAFETY: `token` is live.
-        if pkcs7_get_detached(token) {
+        if unsafe { pkcs7_get_detached(token) } {
             // SAFETY: a compile-time coordinate.
             unsafe { raise_ts(FILE, 116, c"TS_RESP_verify_signature", TS_R_NO_CONTENT) };
             break 'err;

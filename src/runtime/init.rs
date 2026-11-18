@@ -713,8 +713,27 @@ pub extern "C" fn OPENSSL_init() {
 /// Returns 1 on success, 0 on failure (raising `ERR_R_INIT_FAIL` for the refused
 /// options and for a call made after `OPENSSL_cleanup`). See the module note for
 /// the option-by-option disposition.
+///
+/// # Safety
+///
+/// With `settings` NULL (the overwhelmingly common call, and every call whose
+/// `opts` do not include `OPENSSL_INIT_LOAD_CONFIG`) the function is total: no
+/// caller memory is read. A non-NULL `settings` must be a live, properly aligned
+/// `OPENSSL_INIT_SETTINGS` whose three fields are valid for the **whole call**:
+/// `filename` and `appname` are each NULL or NUL-terminated C strings that stay
+/// live until this function returns, and the object itself is neither moved,
+/// freed, nor concurrently written while the call is in progress. The pointer is
+/// published to `CONF_SETTINGS` for the duration of the configuration once and is
+/// read by `ossl_config_int` in this same call, which is why the lifetime is the
+/// call and not the process: the authority requires a non-NULL-settings call to
+/// happen before any other thread uses the library. Provenance is the caller's
+/// (a stack `OpenSSLInitSettings`, or one from `OPENSSL_INIT_new`); ownership is
+/// not taken and the object is not released here.
 #[no_mangle]
-pub extern "C" fn OPENSSL_init_crypto(opts: u64, settings: *const OpenSslInitSettings) -> c_int {
+pub unsafe extern "C" fn OPENSSL_init_crypto(
+    opts: u64,
+    settings: *const OpenSslInitSettings,
+) -> c_int {
     guard_ffi(0, || {
         // Terminal after cleanup. `BASE_ONLY` is the authority's one silent case.
         if STOPPED.load(Ordering::Acquire) {
@@ -858,6 +877,12 @@ pub extern "C" fn OPENSSL_init_crypto(opts: u64, settings: *const OpenSslInitSet
         1
     })
 }
+
+// ABI-shape control: the parameter/return types are pinned, so an ABI change stops
+// this file compiling. (It does not pin the `unsafe` qualifier: a safe `extern "C"
+// fn` item also coerces to an `unsafe extern "C" fn` pointer. The qualifier is
+// controlled by `the_initialiser_is_an_unsafe_fn` in the test module.)
+const _: unsafe extern "C" fn(u64, *const OpenSslInitSettings) -> c_int = OPENSSL_init_crypto;
 
 /// `typedef struct ossl_init_stop_st OPENSSL_INIT_STOP` — `crypto/init.c`.
 ///
@@ -1350,6 +1375,27 @@ mod tests {
     use super::*;
     use crate::runtime::err::{ERR_clear_error, ERR_peek_error};
 
+    /// Qualifier control: `OPENSSL_init_crypto` may publish and read a caller's
+    /// `OPENSSL_INIT_SETTINGS` during the call, so it must not be callable from
+    /// safe Rust with an unchecked pointer. A type-level "is an unsafe fn"
+    /// assertion is not expressible on stable Rust (a safe fn item coerces to an
+    /// `unsafe fn` pointer), so the declaration is pinned in the production source
+    /// text, which is read from disk and truncated at the first `#[cfg(test)]`
+    /// module. This test's own assertion text is therefore never searched, and the
+    /// needle is assembled from fragments, so only removing the `unsafe` qualifier
+    /// can make it fail.
+    #[test]
+    #[allow(clippy::expect_used)]
+    fn the_initialiser_is_an_unsafe_fn() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/runtime/init.rs");
+        let src = std::fs::read_to_string(path).expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        let needle = concat!("pub unsafe extern ", "\"C\" fn OPENSSL_init_crypto(");
+        assert!(prod.contains(needle), "missing {needle}");
+    }
+
     /// Takes the crate-wide global-state lock for the duration of `f`, then
     /// restores a clean state afterwards.
     ///
@@ -1528,20 +1574,27 @@ mod tests {
             let mut handles = Vec::new();
             for _ in 0..8 {
                 handles.push(std::thread::spawn(|| {
-                    let r = OPENSSL_init_crypto(
-                        OPENSSL_INIT_LOAD_CRYPTO_STRINGS
-                            | OPENSSL_INIT_NO_LOAD_CRYPTO_STRINGS
-                            | OPENSSL_INIT_NO_ADD_ALL_CIPHERS
-                            | OPENSSL_INIT_NO_ADD_ALL_DIGESTS
-                            | OPENSSL_INIT_NO_LOAD_CONFIG
-                            | OPENSSL_INIT_ATFORK
-                            | OPENSSL_INIT_NO_ATEXIT,
-                        core::ptr::null(),
-                    );
+                    // SAFETY: NULL settings, so the initialiser reads no caller memory;
+                    // `opts` carries no pointer.
+                    let r = unsafe {
+                        OPENSSL_init_crypto(
+                            OPENSSL_INIT_LOAD_CRYPTO_STRINGS
+                                | OPENSSL_INIT_NO_LOAD_CRYPTO_STRINGS
+                                | OPENSSL_INIT_NO_ADD_ALL_CIPHERS
+                                | OPENSSL_INIT_NO_ADD_ALL_DIGESTS
+                                | OPENSSL_INIT_NO_LOAD_CONFIG
+                                | OPENSSL_INIT_ATFORK
+                                | OPENSSL_INIT_NO_ATEXIT,
+                            core::ptr::null(),
+                        )
+                    };
                     assert_eq!(r, 1);
                     // A second call is the fast path and must still succeed.
                     assert_eq!(
-                        OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CRYPTO_STRINGS, core::ptr::null()),
+                        unsafe {
+                            // SAFETY: as above.
+                            OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CRYPTO_STRINGS, core::ptr::null())
+                        },
                         1
                     );
                 }));
@@ -1561,14 +1614,17 @@ mod tests {
         with_init_lock(|| {
             for opts in [OPENSSL_INIT_ADD_ALL_CIPHERS, OPENSSL_INIT_ADD_ALL_DIGESTS] {
                 ERR_clear_error();
-                assert_eq!(
-                    OPENSSL_init_crypto(opts, core::ptr::null()),
-                    1,
-                    "option {opts:#x} must be accepted"
-                );
-                assert_eq!(ERR_peek_error(), 0, "an accepted option raises nothing");
-                /* And it is recorded, so the second call takes the fast path and still answers 1. */
-                assert_eq!(OPENSSL_init_crypto(opts, core::ptr::null()), 1);
+                // SAFETY: NULL settings, so the initialiser reads no caller memory.
+                unsafe {
+                    assert_eq!(
+                        OPENSSL_init_crypto(opts, core::ptr::null()),
+                        1,
+                        "option {opts:#x} must be accepted"
+                    );
+                    assert_eq!(ERR_peek_error(), 0, "an accepted option raises nothing");
+                    /* And it is recorded, so the second call takes the fast path and still answers 1. */
+                    assert_eq!(OPENSSL_init_crypto(opts, core::ptr::null()), 1);
+                }
                 assert_eq!(ERR_peek_error(), 0);
             }
         });
@@ -1631,17 +1687,20 @@ mod tests {
     fn the_async_bit_is_accepted_and_raises_nothing() {
         with_init_lock(|| {
             ERR_clear_error();
-            assert_eq!(
-                OPENSSL_init_crypto(OPENSSL_INIT_ASYNC, core::ptr::null()),
-                1,
-                "OPENSSL_INIT_ASYNC must be accepted now that crypto/async landed"
-            );
-            assert_eq!(ERR_peek_error(), 0, "an accepted option raises nothing");
-            /* And it is recorded, so the second call takes the fast path and still answers 1. */
-            assert_eq!(
-                OPENSSL_init_crypto(OPENSSL_INIT_ASYNC, core::ptr::null()),
-                1
-            );
+            // SAFETY: NULL settings, so the initialiser reads no caller memory.
+            unsafe {
+                assert_eq!(
+                    OPENSSL_init_crypto(OPENSSL_INIT_ASYNC, core::ptr::null()),
+                    1,
+                    "OPENSSL_INIT_ASYNC must be accepted now that crypto/async landed"
+                );
+                assert_eq!(ERR_peek_error(), 0, "an accepted option raises nothing");
+                /* And it is recorded, so the second call takes the fast path and still answers 1. */
+                assert_eq!(
+                    OPENSSL_init_crypto(OPENSSL_INIT_ASYNC, core::ptr::null()),
+                    1
+                );
+            }
             assert_eq!(ERR_peek_error(), 0);
         });
     }
@@ -1650,17 +1709,20 @@ mod tests {
     fn the_dynamic_engine_bit_is_accepted_and_raises_nothing() {
         with_init_lock(|| {
             ERR_clear_error();
-            assert_eq!(
-                OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_DYNAMIC, core::ptr::null()),
-                1,
-                "OPENSSL_INIT_ENGINE_DYNAMIC must be accepted now that eng_dyn landed"
-            );
-            assert_eq!(ERR_peek_error(), 0, "an accepted option raises nothing");
-            /* The engine is registered, and the once makes a second call a fast path. */
-            assert_eq!(
-                OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_DYNAMIC, core::ptr::null()),
-                1
-            );
+            // SAFETY: NULL settings, so the initialiser reads no caller memory.
+            unsafe {
+                assert_eq!(
+                    OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_DYNAMIC, core::ptr::null()),
+                    1,
+                    "OPENSSL_INIT_ENGINE_DYNAMIC must be accepted now that eng_dyn landed"
+                );
+                assert_eq!(ERR_peek_error(), 0, "an accepted option raises nothing");
+                /* The engine is registered, and the once makes a second call a fast path. */
+                assert_eq!(
+                    OPENSSL_init_crypto(OPENSSL_INIT_ENGINE_DYNAMIC, core::ptr::null()),
+                    1
+                );
+            }
             assert_eq!(ERR_peek_error(), 0);
         });
     }
@@ -1684,14 +1746,17 @@ mod tests {
             ];
             for opts in cases {
                 ERR_clear_error();
-                assert_eq!(
-                    OPENSSL_init_crypto(opts, core::ptr::null()),
-                    1,
-                    "option {opts:#x} must be accepted"
-                );
-                assert_eq!(ERR_peek_error(), 0, "an accepted option raises nothing");
-                // Recording an accepted option makes the second call a fast path answering 1.
-                assert_eq!(OPENSSL_init_crypto(opts, core::ptr::null()), 1);
+                // SAFETY: NULL settings, so the initialiser reads no caller memory.
+                unsafe {
+                    assert_eq!(
+                        OPENSSL_init_crypto(opts, core::ptr::null()),
+                        1,
+                        "option {opts:#x} must be accepted"
+                    );
+                    assert_eq!(ERR_peek_error(), 0, "an accepted option raises nothing");
+                    // Recording an accepted option makes the second call a fast path answering 1.
+                    assert_eq!(OPENSSL_init_crypto(opts, core::ptr::null()), 1);
+                }
                 assert_eq!(ERR_peek_error(), 0);
             }
         });
@@ -1700,28 +1765,31 @@ mod tests {
     #[test]
     fn cleanup_is_idempotent_and_terminal() {
         with_init_lock(|| {
-            assert_eq!(
-                OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CRYPTO_STRINGS, core::ptr::null()),
-                1
-            );
-            OPENSSL_cleanup();
-            OPENSSL_cleanup();
+            // SAFETY: NULL settings throughout; `opts` carries no pointer.
+            unsafe {
+                assert_eq!(
+                    OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CRYPTO_STRINGS, core::ptr::null()),
+                    1
+                );
+                OPENSSL_cleanup();
+                OPENSSL_cleanup();
 
-            ERR_clear_error();
-            assert_eq!(OPENSSL_init_crypto(0, core::ptr::null()), 0);
-            // The refusal raises ... nothing. `err_cleanup()` has released the
-            // string registry and `ossl_err_get_state_int` now returns NULL,
-            // because its `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY)` fails
-            // once `stopped` is set. Every `ERR_*` call is therefore a no-op and
-            // the queue stays empty. Measured by the RT-ERR probe's `stopped`
-            // section, which asserts code 0 on both sides.
-            assert_eq!(ERR_peek_error(), 0);
+                ERR_clear_error();
+                assert_eq!(OPENSSL_init_crypto(0, core::ptr::null()), 0);
+                // The refusal raises ... nothing. `err_cleanup()` has released the
+                // string registry and `ossl_err_get_state_int` now returns NULL,
+                // because its `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY)` fails
+                // once `stopped` is set. Every `ERR_*` call is therefore a no-op and
+                // the queue stays empty. Measured by the RT-ERR probe's `stopped`
+                // section, which asserts code 0 on both sides.
+                assert_eq!(ERR_peek_error(), 0);
 
-            // BASE_ONLY after cleanup returns 0 without raising, per the authority.
-            assert_eq!(
-                OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, core::ptr::null()),
-                0
-            );
+                // BASE_ONLY after cleanup returns 0 without raising, per the authority.
+                assert_eq!(
+                    OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, core::ptr::null()),
+                    0
+                );
+            }
             assert_eq!(ERR_peek_error(), 0);
         });
     }

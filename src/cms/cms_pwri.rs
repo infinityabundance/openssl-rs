@@ -104,6 +104,12 @@ mod test_hooks {
 ///
 /// # Safety
 /// `ri` is live; `pass` is NULL or readable for `passlen` when `passlen >= 0`.
+///
+/// # Ownership
+/// Ownership of `pass` transfers to `ri` (the `set0` contract): the caller must not release it or
+/// use it after this call, and the recipient releases it with `OPENSSL_clear_free` when it is freed
+/// or replaced. A second call replaces the password and the previous block is released and
+/// cleansed; re-installing the pointer already held is left alone rather than freed.
 #[no_mangle]
 pub(crate) unsafe extern "C" fn CMS_RecipientInfo_set0_password(
     ri: *mut CmsRecipientInfo,
@@ -125,8 +131,20 @@ pub(crate) unsafe extern "C" fn CMS_RecipientInfo_set0_password(
 
     // SAFETY: `ri` is live.
     let pwri = unsafe { (*ri).d.cast::<CmsPasswordRecipientInfo>() };
-    // SAFETY: `pwri` is live.
-    unsafe { (*pwri).pass = pass };
+    // `set0` transfers ownership of `pass` to `ri`, whose free arm releases it with
+    // `OPENSSL_clear_free`. A second call therefore replaces a password this process already
+    // owns; the authority overwrites the pointer and leaks the previous block. Release and
+    // cleanse it instead, over the length recorded for it. Re-installing the same pointer is left
+    // untouched: freeing it here would leave the recipient holding a dangling pointer that its
+    // own release would free a second time.
+    // SAFETY: `pwri` is live; its previous password is NULL or this crate's allocation of `passlen`
+    // bytes that the recipient owns.
+    unsafe {
+        if (*pwri).pass != pass {
+            OPENSSL_clear_free((*pwri).pass, (*pwri).passlen);
+        }
+        (*pwri).pass = pass;
+    }
     if !pass.is_null() && passlen < 0 {
         // SAFETY: `pass` is a NUL-terminated string in this arm.
         passlen = unsafe { c_strlen(pass) } as isize;
@@ -1228,5 +1246,96 @@ mod tests {
             EVP_CIPHER_CTX_free(ctx);
             EVP_CIPHER_meth_free(cipher);
         }
+    }
+
+    /// G3: `CMS_RecipientInfo_set0_password` transfers ownership of `pass` to the recipient,
+    /// whose free arm releases it with `OPENSSL_clear_free`. A second `set0` therefore replaces a
+    /// block this process already owns; the authority overwrites the pointer and leaks it. The
+    /// conversion releases and cleanses the previous password over the length recorded for it and
+    /// installs the new one -- while re-installing the pointer already held releases nothing.
+    #[test]
+    fn cms_pwri_set0_password_wipes_and_replaces_the_previous_password() {
+        use crate::cms::cms_asn1::CmsPasswordRecipientInfo;
+        use crate::runtime::mem::{free_probe, CRYPTO_malloc};
+
+        let old_len = 11usize;
+        let old_text = b"sekret-pass";
+        let new_text = b"another-one!";
+
+        let _g = crate::test_support::lock_global_state();
+        ERR_clear_error();
+
+        // SAFETY: every object is this test's own. The built-in cipher outlives the CMS structure,
+        // which does not own it; each password block is handed to the recipient, which releases
+        // it once.
+        unsafe {
+            let cms =
+                crate::cms::cms_env::CMS_EnvelopedData_create(crate::evp::e_aes::EVP_aes_128_cbc());
+            assert!(!cms.is_null(), "the EnvelopedData allocation succeeds");
+            // A NULL password: the recipient starts with nothing to release.
+            let ri = CMS_add0_recipient_password(cms, 1, 0, 0, ptr::null_mut(), 0, ptr::null());
+            assert!(!ri.is_null(), "the password recipient is added");
+
+            assert_eq!(old_text.len(), old_len);
+            let old = CRYPTO_malloc(old_len, ptr::null(), 0).cast::<u8>();
+            assert!(!old.is_null(), "the previous password is allocated");
+            ptr::copy_nonoverlapping(old_text.as_ptr(), old, old_len);
+            assert_eq!(
+                CMS_RecipientInfo_set0_password(ri, old, old_len as isize),
+                1,
+                "the first password is installed"
+            );
+
+            let new = CRYPTO_malloc(new_text.len(), ptr::null(), 0).cast::<u8>();
+            assert!(!new.is_null(), "the replacement password is allocated");
+            ptr::copy_nonoverlapping(new_text.as_ptr(), new, new_text.len());
+
+            free_probe::reset();
+            assert_eq!(
+                CMS_RecipientInfo_set0_password(ri, new, new_text.len() as isize),
+                1,
+                "the replacement password is installed"
+            );
+
+            assert_eq!(
+                free_probe::count(old.cast()),
+                1,
+                "the replaced password is released exactly once"
+            );
+            assert_eq!(
+                free_probe::cleared(old.cast()),
+                vec![(old_len, true)],
+                "the replaced password is cleansed over its own length before release"
+            );
+
+            let pwri = (*ri).d.cast::<CmsPasswordRecipientInfo>();
+            assert_eq!((*pwri).pass, new, "the new block is installed");
+            assert_eq!(
+                (*pwri).passlen,
+                new_text.len(),
+                "the new length is installed"
+            );
+            assert_eq!(
+                core::slice::from_raw_parts((*pwri).pass, (*pwri).passlen),
+                new_text.as_slice(),
+                "the new value is installed"
+            );
+
+            // Re-installing the pointer already held must not release it: the recipient would be
+            // left holding a dangling pointer that its own release would free a second time.
+            free_probe::reset();
+            assert_eq!(
+                CMS_RecipientInfo_set0_password(ri, new, new_text.len() as isize),
+                1
+            );
+            assert_eq!(
+                free_probe::count(new.cast()),
+                0,
+                "re-installing the same pointer releases nothing"
+            );
+
+            crate::cms::cms_lib::CMS_ContentInfo_free(cms);
+        }
+        ERR_clear_error();
     }
 }

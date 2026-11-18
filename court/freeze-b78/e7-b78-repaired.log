@@ -1,0 +1,6 @@
+[consumer-closure] wrote /work/court/freeze-b78/e7-b78-repaired.json
+[consumer-closure] element7-only family=ssh status=FAIL
+  reachable_unresolved=153 target_bounded=1 contract_bounded=152 unclassified=0
+  by_class={'ABI_CONTRACT_CONF_MODULE': 2, 'ABI_CONTRACT_CORE_DISPATCH': 26, 'ABI_CONTRACT_DECODER_METHOD_OBJECT': 3, 'ABI_CONTRACT_EXPORT_CALLBACK': 66, 'ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT': 1, 'ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA': 2, 'ABI_CONTRACT_PBE_REGISTRY': 1, 'ABI_CONTRACT_PROVIDER': 16, 'ABI_CONTRACT_PROVIDER_HW_TABLE': 25, 'ABI_CONTRACT_REGISTRATION_ATEXIT': 1, 'ABI_CONTRACT_SLH_METHOD_TABLE': 6, 'ABI_CONTRACT_STORE_LOADER': 3}
+  TARGET-BOUNDED 0x49a8dc X509V3_EXT_REQ_add_conf reason=reg-value-partial[int]
+  NOTE: element7-only is a FAST probe, not a closure receipt

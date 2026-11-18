@@ -63,7 +63,7 @@
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_ulong, c_void};
 use core::ptr;
 
-use crate::context::dispatch::{OsslDispatch, OSSL_DISPATCH_END};
+use crate::context::dispatch::{function_ptr_for, OsslDispatch, OSSL_DISPATCH_END};
 use crate::digest::md5::{MD5_Final, MD5_Init, MD5_Update, Md5Ctx};
 use crate::digest::md5_sha1::{
     ossl_md5_sha1_ctrl, ossl_md5_sha1_final, ossl_md5_sha1_init, ossl_md5_sha1_update, Md5Sha1Ctx,
@@ -443,9 +443,15 @@ macro_rules! digest_impl {
                 ret.into_raw().cast()
             }
 
+            /// `OSSL_FUNC_digest_copyctx_fn` for this construction.
+            ///
             /// # Safety
-            /// `outctx` is writable and `inctx` readable for `size_of::<$ctx>()` bytes. They may
-            /// alias: `EVP_MD_CTX_copy_ex`'s provider self-copy arm passes the same pointer.
+            /// `outctx` is writable and `inctx` readable for `size_of::<$ctx>()` bytes; both are
+            /// whole blocks this row's `newctx`/`dupctx` produced (or a prior `copyctx`
+            /// destination on this row), correctly aligned for `$ctx`, and neither is NULL. They may
+            /// alias only by being the same block: the core's provider self-copy arm calls
+            /// `copyctx(algctx, algctx)`, which is why the body uses `ptr::copy`. The core never
+            /// passes a failed-init NULL context here (D-DIGEST-NULL-ALGCTX-1).
             unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
                 // SAFETY: both regions are valid for `size_of::<$ctx>()` bytes. They may be the
                 // same block: `EVP_MD_CTX_copy_ex`'s provider self-copy arm calls
@@ -644,6 +650,15 @@ mod sha1 {
         unsafe { drop(OwnedCtx::<ShaCtx>::from_raw(vctx.cast())) };
     }
 
+    /// `OSSL_FUNC_digest_dupctx_fn` for the SHA-1 row.
+    ///
+    /// # Safety
+    /// `ctx` is the core's `algctx`: NULL, or a whole block this row's `newctx` (or a
+    /// prior `dupctx`) produced with `OwnedCtx::<ShaCtx>` and the core has not released.
+    /// It is correctly aligned and readable for `size_of::<ShaCtx>()` bytes for the
+    /// whole call, and no other thread mutates it concurrently. A non-NULL result is a
+    /// fresh block whose ownership transfers to the caller; NULL reports allocation
+    /// failure or a NULL input and transfers nothing.
     unsafe extern "C" fn dupctx(ctx: *mut c_void) -> *mut c_void {
         if ossl_prov_is_running() == 0 || ctx.is_null() {
             return ptr::null_mut();
@@ -655,6 +670,14 @@ mod sha1 {
         ret.into_raw().cast()
     }
 
+    /// `OSSL_FUNC_digest_copyctx_fn` for the SHA-1 row.
+    ///
+    /// # Safety
+    /// `outctx` is writable and `inctx` readable for `size_of::<ShaCtx>()` bytes; both are whole
+    /// blocks this row's `newctx`/`dupctx` produced, correctly aligned for `ShaCtx`, and neither is
+    /// NULL. They may alias only by being the same block (the core's provider self-copy passes
+    /// `copyctx(algctx, algctx)`). The core never passes a failed-init NULL context here
+    /// (D-DIGEST-NULL-ALGCTX-1).
     unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
         // SAFETY: both regions are valid for `size_of::<ShaCtx>()` bytes and may be the same
         // block: the provider self-copy arm calls `copyctx(algctx, algctx)`.
@@ -667,6 +690,15 @@ mod sha1 {
         }
     }
 
+    /// `OSSL_FUNC_digest_init_fn` for the SHA-1 row.
+    ///
+    /// # Safety
+    /// `ctx` is a whole block this row's `newctx`/`dupctx` produced, aligned and
+    /// writable for `size_of::<ShaCtx>()` bytes, exclusively owned for the call; `params`
+    /// is NULL or a key-terminated `OSSL_PARAM` array whose located `ssl3-ms`
+    /// OCTET_STRING entry's `data` is readable for its `data_size`. The body writes the
+    /// context's initial state and reads the parameter array only through those two
+    /// fields.
     unsafe extern "C" fn internal_init(ctx: *mut c_void, params: *const OsslParam) -> c_int {
         if ossl_prov_is_running() == 0 {
             return 0;
@@ -679,6 +711,14 @@ mod sha1 {
         unsafe { set_ctx_params(ctx, params) }
     }
 
+    /// `OSSL_FUNC_digest_final_fn` for the SHA-1 row.
+    ///
+    /// # Safety
+    /// `ctx` is a live, aligned `ShaCtx` this row allocated that the core has not
+    /// released; `out` is writable for `outsz` bytes (`outsz >= 20`, checked below);
+    /// `outl` is a writable `usize` slot. The body writes exactly
+    /// `SHA_DIGEST_LENGTH` bytes to `out` and stores that length in `*outl`; it never
+    /// writes past `outsz`.
     unsafe extern "C" fn internal_final(
         ctx: *mut c_void,
         out: *mut u8,
@@ -697,11 +737,25 @@ mod sha1 {
         0
     }
 
+    /// `OSSL_FUNC_digest_update_fn` for the SHA-1 row.
+    ///
+    /// # Safety
+    /// `ctx` is a live, aligned `ShaCtx` this row allocated; `in_` is readable for `inl`
+    /// bytes (when `inl == 0` the pointer carries no readable extent and is not
+    /// dereferenced by the underlying `SHA1_Update`). The bytes are only read, never
+    /// retained.
     unsafe extern "C" fn update(ctx: *mut c_void, in_: *const c_uchar, inl: usize) -> c_int {
         // SAFETY: `ctx` is a SHA-1 context; `in_` is readable for `inl` bytes.
         c_int::from(unsafe { SHA1_Update(ctx.cast::<ShaCtx>(), in_.cast::<c_void>(), inl) } != 0)
     }
 
+    /// `OSSL_FUNC_digest_get_params_fn` for the SHA-1 row.
+    ///
+    /// # Safety
+    /// `params` is NULL or a key-terminated `OSSL_PARAM` array: every entry's key is a
+    /// NUL-terminated string readable for the call, and each located entry's `data` is
+    /// writable for its `data_size`, which is what `ossl_digest_default_get_params`
+    /// writes the block size, digest size and flags into.
     unsafe extern "C" fn get_params(params: *mut OsslParam) -> c_int {
         // SAFETY: the caller's contract is `ossl_digest_default_get_params`'s.
         unsafe { ossl_digest_default_get_params(params, SHA_CBLOCK, SHA_DIGEST_LENGTH, SHA2_FLAGS) }
@@ -956,6 +1010,15 @@ mod nullmd {
         unsafe { drop(OwnedCtx::<NullMdCtx>::from_raw(vctx.cast())) };
     }
 
+    /// `OSSL_FUNC_digest_dupctx_fn` for the NULL row.
+    ///
+    /// # Safety
+    /// `ctx` is NULL, or a whole block this row's `newctx`/`dupctx` produced with
+    /// `OwnedCtx::<NullMdCtx>` and the core has not released; it is aligned and readable
+    /// for `size_of::<NullMdCtx>()` for the call and not concurrently mutated. A
+    /// non-NULL result is a fresh block owned by the caller; NULL means the input was
+    /// NULL or the copy could not be allocated. `NullMdCtx` is a plain byte record, so
+    /// the byte copy cannot violate a field invariant.
     unsafe extern "C" fn dupctx(ctx: *mut c_void) -> *mut c_void {
         if ossl_prov_is_running() == 0 || ctx.is_null() {
             return ptr::null_mut();
@@ -967,6 +1030,14 @@ mod nullmd {
         ret.into_raw().cast()
     }
 
+    /// `OSSL_FUNC_digest_copyctx_fn` for the NULL row.
+    ///
+    /// # Safety
+    /// `outctx` is writable and `inctx` readable for `size_of::<NullMdCtx>()` bytes; both are
+    /// whole blocks this row's `newctx`/`dupctx` produced, correctly aligned for `NullMdCtx`, and
+    /// neither is NULL. They may alias only by being the same block (the core's provider self-copy
+    /// passes `copyctx(algctx, algctx)`). The core never passes a failed-init NULL context here
+    /// (D-DIGEST-NULL-ALGCTX-1).
     unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
         // SAFETY: both regions are valid for `size_of::<NullMdCtx>()` bytes and may be the same
         // block: the provider self-copy arm calls `copyctx(algctx, algctx)`.
@@ -1016,6 +1087,13 @@ mod nullmd {
         c_int::from(ctx_update(ctx.cast::<NullMdCtx>(), in_.cast::<c_void>(), inl) != 0)
     }
 
+    /// `OSSL_FUNC_digest_get_params_fn` for the NULL row.
+    ///
+    /// # Safety
+    /// `params` is NULL or a key-terminated `OSSL_PARAM` array whose keys are readable
+    /// NUL-terminated strings and whose located entries are writable for their
+    /// `data_size`. The NULL row reports a block size and digest size of zero, so the
+    /// writes are zero-length, but the array itself must still be valid.
     unsafe extern "C" fn get_params(params: *mut OsslParam) -> c_int {
         // SAFETY: the caller's contract is `ossl_digest_default_get_params`'s.
         unsafe { ossl_digest_default_get_params(params, 0, 0, 0) }
@@ -1151,6 +1229,15 @@ mod md5_sha1 {
         unsafe { drop(OwnedCtx::<Md5Sha1Ctx>::from_raw(vctx.cast())) };
     }
 
+    /// `OSSL_FUNC_digest_dupctx_fn` for the MD5-SHA1 row.
+    ///
+    /// # Safety
+    /// `ctx` is NULL, or a whole block this row's `newctx`/`dupctx` produced with
+    /// `OwnedCtx::<Md5Sha1Ctx>` and the core has not released; it is aligned and
+    /// readable for `size_of::<Md5Sha1Ctx>()` for the whole call and not concurrently
+    /// mutated. `Md5Sha1Ctx` is the authority's `#[repr(C)]` pair of chaining contexts,
+    /// so the block copy reproduces a valid context. A non-NULL result is a fresh block
+    /// owned by the caller; NULL means a NULL input or an allocation failure.
     unsafe extern "C" fn dupctx(ctx: *mut c_void) -> *mut c_void {
         if ossl_prov_is_running() == 0 || ctx.is_null() {
             return ptr::null_mut();
@@ -1162,6 +1249,14 @@ mod md5_sha1 {
         ret.into_raw().cast()
     }
 
+    /// `OSSL_FUNC_digest_copyctx_fn` for the MD5-SHA1 row.
+    ///
+    /// # Safety
+    /// `outctx` is writable and `inctx` readable for `size_of::<Md5Sha1Ctx>()` bytes; both are
+    /// whole blocks this row's `newctx`/`dupctx` produced, correctly aligned for `Md5Sha1Ctx`, and
+    /// neither is NULL. They may alias only by being the same block (the core's provider self-copy
+    /// passes `copyctx(algctx, algctx)`). The core never passes a failed-init NULL context here
+    /// (D-DIGEST-NULL-ALGCTX-1).
     unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
         // SAFETY: both regions are valid for `size_of::<Md5Sha1Ctx>()` bytes and may be the same
         // block: the provider self-copy arm calls `copyctx(algctx, algctx)`.
@@ -1174,6 +1269,14 @@ mod md5_sha1 {
         }
     }
 
+    /// `OSSL_FUNC_digest_init_fn` for the MD5-SHA1 row.
+    ///
+    /// # Safety
+    /// `ctx` is a whole block this row's `newctx`/`dupctx` produced, aligned and
+    /// writable for `size_of::<Md5Sha1Ctx>()` bytes, exclusively owned for the call;
+    /// `params` is NULL or a key-terminated `OSSL_PARAM` array whose located `ssl3-ms`
+    /// OCTET_STRING entry's `data` is readable for its `data_size`. The body initialises
+    /// both halves and then reads only that entry.
     unsafe extern "C" fn internal_init(ctx: *mut c_void, params: *const OsslParam) -> c_int {
         if ossl_prov_is_running() == 0 {
             return 0;
@@ -1186,6 +1289,13 @@ mod md5_sha1 {
         unsafe { set_ctx_params(ctx, params) }
     }
 
+    /// `OSSL_FUNC_digest_final_fn` for the MD5-SHA1 row.
+    ///
+    /// # Safety
+    /// `ctx` is a live, aligned `Md5Sha1Ctx` this row allocated; `out` is writable for
+    /// `outsz` bytes (`outsz >= 36`, checked below); `outl` is a writable `usize` slot.
+    /// The body writes MD5's 16 bytes and then SHA-1's 20 starting at offset 16, all
+    /// within the checked extent.
     unsafe extern "C" fn internal_final(
         ctx: *mut c_void,
         out: *mut u8,
@@ -1204,6 +1314,12 @@ mod md5_sha1 {
         0
     }
 
+    /// `OSSL_FUNC_digest_update_fn` for the MD5-SHA1 row.
+    ///
+    /// # Safety
+    /// `ctx` is a live, aligned `Md5Sha1Ctx` this row allocated; `in_` is readable for
+    /// `inl` bytes when `inl != 0` (a zero length carries no readable extent). Both
+    /// halves consume the same bytes; nothing is retained past the call.
     unsafe extern "C" fn update(ctx: *mut c_void, in_: *const c_uchar, inl: usize) -> c_int {
         // SAFETY: `ctx` is the context the provider allocated; `in_` is readable for `inl` bytes.
         c_int::from(unsafe {
@@ -1211,6 +1327,13 @@ mod md5_sha1 {
         })
     }
 
+    /// `OSSL_FUNC_digest_get_params_fn` for the MD5-SHA1 row.
+    ///
+    /// # Safety
+    /// `params` is NULL or a key-terminated `OSSL_PARAM` array whose keys are readable
+    /// NUL-terminated strings and whose located entries are writable for their
+    /// `data_size`; the default implementation writes the block size, digest size and
+    /// flags through them.
     unsafe extern "C" fn get_params(params: *mut OsslParam) -> c_int {
         // SAFETY: the caller's contract is `ossl_digest_default_get_params`'s.
         unsafe {
@@ -1334,6 +1457,15 @@ mod sha3 {
         unsafe { drop(OwnedCtx::<KeccakCtx>::from_raw(vctx.cast())) };
     }
 
+    /// `OSSL_FUNC_digest_dupctx_fn` for the SHA-3/SHAKE/KMAC rows.
+    ///
+    /// # Safety
+    /// `ctx` is NULL, or a whole `KeccakCtx` block this row's `newctx`/`dupctx`
+    /// produced and the core has not released; it is aligned and readable for
+    /// `size_of::<KeccakCtx>()` for the call and not concurrently mutated. `KeccakCtx`
+    /// is a plain `#[repr(C)]` record, so the block copy preserves validity. A non-NULL
+    /// result is a fresh block owned by the caller; NULL means a NULL input or an
+    /// allocation failure.
     unsafe extern "C" fn dupctx(ctx: *mut c_void) -> *mut c_void {
         if ossl_prov_is_running() == 0 || ctx.is_null() {
             return ptr::null_mut();
@@ -1345,6 +1477,14 @@ mod sha3 {
         ret.into_raw().cast()
     }
 
+    /// `OSSL_FUNC_digest_copyctx_fn` for the SHA-3/SHAKE/KMAC rows.
+    ///
+    /// # Safety
+    /// `outctx` is writable and `inctx` readable for `size_of::<KeccakCtx>()` bytes; both are
+    /// whole blocks this row's `newctx`/`dupctx` produced, correctly aligned for `KeccakCtx`, and
+    /// neither is NULL. They may alias only by being the same block (the core's provider self-copy
+    /// passes `copyctx(algctx, algctx)`). The core never passes a failed-init NULL context here
+    /// (D-DIGEST-NULL-ALGCTX-1).
     unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
         // SAFETY: both regions are valid for `size_of::<KeccakCtx>()` bytes and may be the same
         // block: the provider self-copy arm calls `copyctx(algctx, algctx)`.
@@ -1357,6 +1497,13 @@ mod sha3 {
         }
     }
 
+    /// `OSSL_FUNC_digest_init_fn` for the fixed-width SHA-3/KECCAK rows.
+    ///
+    /// # Safety
+    /// `ctx` is a live, aligned `KeccakCtx` this row's `newctx`/`dupctx` produced and
+    /// the core has not released, exclusively owned for the call. `_params` is unread:
+    /// `newctx` fixed the rate and the pad, so this body only resets the state. The
+    /// returned `1` transfers nothing; nothing outlives the call.
     unsafe extern "C" fn init(ctx: *mut c_void, _params: *const OsslParam) -> c_int {
         if ossl_prov_is_running() == 0 {
             return 0;
@@ -1368,12 +1515,24 @@ mod sha3 {
         1
     }
 
+    /// `OSSL_FUNC_digest_update_fn` for the SHA-3/SHAKE rows.
+    ///
+    /// # Safety
+    /// `ctx` is a live, aligned `KeccakCtx` this row produced; `in_` is readable for
+    /// `inl` bytes when `inl != 0` (a zero length carries no readable extent). The input
+    /// is absorbed and not retained; `ossl_sha3_update` writes only the context.
     unsafe extern "C" fn update(ctx: *mut c_void, in_: *const c_uchar, inl: usize) -> c_int {
         // SAFETY: `ctx` is the provider's context; `in_` is readable for `inl` bytes.
         unsafe { ossl_sha3_update(ctx.cast::<KeccakCtx>(), in_, inl) }
     }
 
     /// `keccak_final` — `sha3_prov.c:115-132`.
+    ///
+    /// # Safety
+    /// `ctx` is a live, aligned `KeccakCtx` this row produced; `out` is writable for
+    /// `outlen` bytes (the body refuses `outlen > 0` with `md_size > outlen`, so it never
+    /// writes more than the caller declared); `outl` is a writable `usize` slot. When
+    /// `outlen == 0` nothing is written to `out` and `*outl` still receives `md_size`.
     unsafe extern "C" fn keccak_final(
         ctx: *mut c_void,
         out: *mut u8,
@@ -1385,21 +1544,38 @@ mod sha3 {
         }
         let c = ctx.cast::<KeccakCtx>();
         // SAFETY: `c` is the provider's context.
-        if unsafe { (*c).md_size } == usize::MAX {
+        let md_size = unsafe { (*c).md_size };
+        if md_size == usize::MAX {
+            return 0;
+        }
+        // `ossl_sha3_final` writes exactly `md_size` bytes, and the authority forwards `outlen`
+        // without ever comparing it to `md_size`. So `EVP_DigestFinalXOF(SHA3-256, buf, 16)`
+        // reaches the provider with `outlen == 16` and `md_size == 32` and writes 32 bytes into a
+        // 16-byte buffer -- a caller-declared-extent overflow. A provider must never write past the
+        // extent it was given, so refuse the mismatch (`docs/SECURITY_DIVERGENCE_POLICY.md`,
+        // D-SHA3-FINAL-OUTLEN-1). The authority's `outlen == 0` arm is kept unchanged: it writes
+        // nothing and still reports `md_size`.
+        if outlen > 0 && md_size > outlen {
             return 0;
         }
         let mut ret = 1;
-        // SAFETY: `c` is live and `out` is writable for `outlen`.
+        // SAFETY: `c` is live and `out` is writable for `outlen >= md_size`.
         unsafe {
             if outlen > 0 {
-                ret = ossl_sha3_final(c, out, (*c).md_size);
+                ret = ossl_sha3_final(c, out, md_size);
             }
-            *outl = (*c).md_size;
+            *outl = md_size;
         }
         ret
     }
 
     /// `shake_squeeze` — `sha3_prov.c:134-149`.
+    ///
+    /// # Safety
+    /// `ctx` is a live, aligned `KeccakCtx` this row produced; `out` is writable for
+    /// `outlen` bytes (`outlen == 0` writes nothing and the pointer carries no extent);
+    /// `outl` is a writable `usize` slot that receives `outlen`. The squeeze reads and
+    /// advances the context; nothing is retained.
     unsafe extern "C" fn shake_squeeze(
         ctx: *mut c_void,
         out: *mut u8,
@@ -1478,6 +1654,13 @@ mod sha3 {
     }
 
     /// `shake_get_ctx_params` — `sha3_prov.c:644-662`.
+    ///
+    /// # Safety
+    /// `vctx` is NULL or a live, aligned `KeccakCtx` this row produced; `params` is a
+    /// key-terminated `OSSL_PARAM` array whose keys are readable NUL-terminated strings,
+    /// and each `xoflen`/`size` entry it locates is writable for a `size_t`
+    /// (`OSSL_PARAM_set_size_t` writes through the entry). A NULL `vctx` answers 0
+    /// without reading it.
     unsafe extern "C" fn shake_get_ctx_params(vctx: *mut c_void, params: *mut OsslParam) -> c_int {
         let c = vctx.cast::<KeccakCtx>();
         if c.is_null() {
@@ -1882,6 +2065,15 @@ mod blake2 {
                     unsafe { drop(OwnedCtx::<$flavour::MdData>::from_raw(vctx.cast())) };
                 }
 
+                /// `OSSL_FUNC_digest_dupctx_fn` for this BLAKE2 row.
+                ///
+                /// # Safety
+                /// `ctx` is NULL, or a whole `$flavour::MdData` block this row's
+                /// `newctx`/`dupctx` produced and the core has not released; it is
+                /// aligned and readable for `size_of::<$flavour::MdData>()` for the call
+                /// and not concurrently mutated. The type is a `#[repr(C)]` record, so
+                /// the block copy preserves validity. A non-NULL result is a fresh block
+                /// owned by the caller; NULL means a NULL input or allocation failure.
                 unsafe extern "C" fn dupctx(ctx: *mut c_void) -> *mut c_void {
                     if ossl_prov_is_running() == 0 || ctx.is_null() {
                         return ptr::null_mut();
@@ -1895,6 +2087,15 @@ mod blake2 {
                     ret.into_raw().cast()
                 }
 
+                /// `OSSL_FUNC_digest_copyctx_fn` for this BLAKE2 row.
+                ///
+                /// # Safety
+                /// `outctx` is writable and `inctx` readable for `size_of::<$flavour::MdData>()`
+                /// bytes; both are whole blocks this row's `newctx`/`dupctx` produced, correctly
+                /// aligned for `$flavour::MdData`, and neither is NULL. They may alias only by
+                /// being the same block (the core's provider self-copy passes
+                /// `copyctx(algctx, algctx)`). The core never passes a failed-init NULL context
+                /// here (D-DIGEST-NULL-ALGCTX-1).
                 unsafe extern "C" fn copyctx(outctx: *mut c_void, inctx: *mut c_void) {
                     // SAFETY: both regions are valid for the same size and may be the same
                     // block: the provider self-copy arm calls `copyctx(algctx, algctx)`.
@@ -1909,6 +2110,14 @@ mod blake2 {
 
                 /// `blake_set_ctx_params` — `blake2_prov.c:136-160`'s generated body, collapsed
                 /// to the one key the decoder accepts.
+                ///
+                /// # Safety
+                /// `ctx` is NULL or a live, aligned `$flavour::MdData` this row produced,
+                /// exclusively owned for the call; `params` is NULL or a key-terminated
+                /// `OSSL_PARAM` array whose keys are readable NUL-terminated strings and
+                /// whose located `size` entry is readable as a `c_uint`. The body only
+                /// updates the context's digest-length parameter, and refuses sizes
+                /// outside `1..=$outbytes`.
                 unsafe extern "C" fn set_ctx_params(
                     ctx: *mut c_void,
                     params: *const OsslParam,
@@ -1945,6 +2154,12 @@ mod blake2 {
                 }
 
                 /// `blake_get_ctx_params` — `blake2_prov.c:117-134`.
+                ///
+                /// # Safety
+                /// `ctx` is NULL or a live, aligned `$flavour::MdData` this row produced;
+                /// `params` is NULL or a key-terminated `OSSL_PARAM` array with readable
+                /// keys and located entries writable for their `data_size` (the body
+                /// stores the configured digest length through the `size` entry).
                 unsafe extern "C" fn get_ctx_params(
                     ctx: *mut c_void,
                     params: *mut OsslParam,
@@ -1972,6 +2187,13 @@ mod blake2 {
 
                 /// `blake_init` — `blake2_prov.c:162-171`: re-initialise the parameters but keep
                 /// a `size` the caller set before `init`.
+                ///
+                /// # Safety
+                /// `ctx` is a live, aligned `$flavour::MdData` this row allocated and the
+                /// core has not released, exclusively owned for the call; `params` is
+                /// NULL or a key-terminated `OSSL_PARAM` array binding exactly as for
+                /// `set_ctx_params` above. The body re-initialises the parameter record
+                /// in place and rebuilds the chaining state.
                 unsafe extern "C" fn internal_init(
                     ctx: *mut c_void,
                     params: *const OsslParam,
@@ -1997,6 +2219,13 @@ mod blake2 {
                     1
                 }
 
+                /// `OSSL_FUNC_digest_update_fn` for this BLAKE2 row.
+                ///
+                /// # Safety
+                /// `ctx` is a live, aligned `$flavour::MdData` this row produced, whose
+                /// first field is the `$flavour::Ctx` this cast names; `in_` is readable
+                /// for `inl` bytes when `inl != 0` (a zero length carries no readable
+                /// extent). The bytes are only read.
                 unsafe extern "C" fn update(
                     ctx: *mut c_void,
                     in_: *const c_uchar,
@@ -2010,6 +2239,12 @@ mod blake2 {
                 }
 
                 /// `blake_internal_final` — `blake2_prov.c:222-243`.
+                ///
+                /// # Safety
+                /// `ctx` is a live, aligned `$flavour::MdData` this row produced; `out` is
+                /// writable for `outsz` bytes, and the body checks `outsz >= outlen`
+                /// before writing (with `outsz == 0` a defined early success that writes
+                /// nothing); `outl` is a writable `usize` slot that receives `outlen`.
                 unsafe extern "C" fn internal_final(
                     ctx: *mut c_void,
                     out: *mut u8,
@@ -2036,6 +2271,13 @@ mod blake2 {
                     unsafe { $flavour::final_(out, ctx.cast::<$flavour::Ctx>()) }
                 }
 
+                /// `OSSL_FUNC_digest_get_params_fn` for this BLAKE2 row.
+                ///
+                /// # Safety
+                /// `params` is NULL or a key-terminated `OSSL_PARAM` array whose keys are
+                /// readable NUL-terminated strings and whose located entries are writable
+                /// for their `data_size`, which `ossl_digest_default_get_params` writes
+                /// the block size, digest size and flags into.
                 unsafe extern "C" fn get_params(params: *mut OsslParam) -> c_int {
                     // SAFETY: the caller's contract is `ossl_digest_default_get_params`'s.
                     unsafe { ossl_digest_default_get_params(params, $blksz, $dgstsz, 0) }
@@ -2555,11 +2797,15 @@ pub(crate) unsafe extern "C" fn ossl_default_provider_init(
         let mut d = in_;
         while !d.is_null() && (*d).function_id != OSSL_DISPATCH_END {
             match (*d).function_id {
+                // SAFETY: `d` is a live entry and the accessor re-reads the entry's id
+                // before exposing the pointer; the locals are resolved below.
                 crate::provider::core_dispatch::FUNC_CORE_GET_PARAMS => {
-                    c_get_params = (*d).function
+                    c_get_params =
+                        function_ptr_for(d, crate::provider::core_dispatch::FUNC_CORE_GET_PARAMS)
                 }
                 crate::provider::core_dispatch::FUNC_CORE_GET_LIBCTX => {
-                    c_get_libctx = (*d).function
+                    c_get_libctx =
+                        function_ptr_for(d, crate::provider::core_dispatch::FUNC_CORE_GET_LIBCTX)
                 }
                 _ => {} // Just ignore anything we don't understand
             }
@@ -3088,10 +3334,11 @@ mod tests {
             unsafe {
                 while (*disp).function_id != OSSL_DISPATCH_END {
                     if (*disp).function_id == OSSL_FUNC_DIGEST_GET_PARAMS {
-                        get_params = Some(core::mem::transmute::<
-                            *mut c_void,
+                        // SAFETY: `disp` is a live entry and `function_for` re-reads
+                        // its id before the cast.
+                        get_params = crate::context::dispatch::function_for::<
                             unsafe extern "C" fn(*mut OsslParam) -> c_int,
-                        >((*disp).function));
+                        >(disp, OSSL_FUNC_DIGEST_GET_PARAMS);
                     }
                     disp = disp.add(1);
                 }

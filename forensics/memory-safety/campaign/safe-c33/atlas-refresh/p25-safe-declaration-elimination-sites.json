@@ -1,0 +1,1142 @@
+{
+ "schema": "openssl-rs/safe-c33/site-enumerating-boundary-receipt/v1",
+ "kind": "site-enumerating-boundary-receipt",
+ "receipt": "p25-safe-declaration-elimination",
+ "subphase": "systematic stale-blocked audit: safe declarations already in source",
+ "date": "2026-11-13",
+ "candidate": {
+  "source_head": "15bebabc90e1c4a8f0cb496813030c1415891f7c",
+  "workspace_head": "a690f3087 (before this record)",
+  "src_content_sha256": "8ee037be6789bd8e2731d5081b787dda2ebfa190a873c1366f1aac01f7ba7374",
+  "files_sha256": {
+   "src/ct/ct_x509v3.rs": "8b37eb5f96ff57177c2406fcdca3d365baf533be7882bb60a5eaee8fee8389d9",
+   "src/slh_dsa/adrs.rs": "a0e9e7d9ba29688b6f767bcaba84b28dedb8aafc8ef0be25867aefd370eb773d",
+   "src/slh_dsa/hash.rs": "8351bb54d165803e856167f42912615c879729be163adadfee074400b493d0ed",
+   "src/x509/v3_group_ac.rs": "bcf55e3222a19e0c5fc3021007384fb0b934d839e32055f70ba635fd32e3ec48",
+   "src/x509/v3_ind_iss.rs": "9fd397e8e3ea87ea950cffab679942c9d30275e600a097a1a1060687ed5bbf0b",
+   "src/x509/v3_no_ass.rs": "10e37d11006eff8919f065907f28f4b89dbf92d8ec02a74e6db6a2d9310f1e1a",
+   "src/x509/v3_no_rev_avail.rs": "104a29fa2778959e6dcb6401d86e475d642022dd0f5b2fd1c094cbb62490b299",
+   "src/x509/v3_single_use.rs": "a0ad5d29bdc0463543c0346f581f9c206b4bf9eb964fe2af8c945762b662011a",
+   "src/x509/v3_soa_id.rs": "b5e4181e0cfff8f6fbf22e7a39d5c58762d0c4c153174fa229cffb78c364af47"
+  }
+ },
+ "summary": {
+  "historical_obligations": 26,
+  "state": "ELIMINATED_STRUCTURALLY",
+  "statement": "26 BLOCKED UNSAFE_FN_DEF rows whose current declaration is already safe. 8 have a compile-time coercion control; 18 have no build-time control because the row slot type accepts both safe and unsafe fn pointers, so the safe declaration itself is the elimination evidence. s2i_poison is deliberately excluded: it is already discharged by boundary-sweep-B54, and a second non-discharging boundary would block that discharge."
+ },
+ "boundaries": [
+  {
+   "id": "P25-SLH-ADRS-019-ELIMINATED",
+   "file": "src/slh_dsa/adrs.rs",
+   "line": 393,
+   "line_current": 393,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_slh_get_adrs_fn",
+   "historical_ids": [
+    "P25-SLH-ADRS-019"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "a150ce6d09c1198c1e7d83caf163a1a981c5ecdd1d2cdcb0781b909df845a90d",
+    "span_lines": [
+     393,
+     433
+    ],
+    "qualified_identity": "ossl_slh_get_adrs_fn",
+    "compile_time_control": "src/slh_dsa/adrs.rs:438"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-SLH-HASH-013-ELIMINATED",
+   "file": "src/slh_dsa/hash.rs",
+   "line": 735,
+   "line_current": 735,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_slh_get_hash_fn",
+   "historical_ids": [
+    "P25-SLH-HASH-013"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "b4a0f17f262dcd8d2989287b4a5923959b7ce76990cf61beb36024ad4733ad72",
+    "span_lines": [
+     735,
+     765
+    ],
+    "qualified_identity": "ossl_slh_get_hash_fn",
+    "compile_time_control": "src/slh_dsa/hash.rs:770"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-019-ELIMINATED",
+   "file": "src/x509/v3_group_ac.rs",
+   "line": 41,
+   "line_current": 41,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_GROUP_AC",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-019"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "d06c0d9177f2ec7ad971d77bb52246b4883a57ea02f12bf9bd1546e1d169c3f9",
+    "span_lines": [
+     41,
+     48
+    ],
+    "qualified_identity": "i2r_GROUP_AC",
+    "compile_time_control": "src/x509/v3_group_ac.rs:28"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-020-ELIMINATED",
+   "file": "src/x509/v3_group_ac.rs",
+   "line": 53,
+   "line_current": 53,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "r2i_GROUP_AC",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-020"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "2701731fbab0f852aec35c3e988c52da238eb6a3787c330aacc258fd17c4b644",
+    "span_lines": [
+     53,
+     59
+    ],
+    "qualified_identity": "r2i_GROUP_AC",
+    "compile_time_control": "none located"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-021-ELIMINATED",
+   "file": "src/x509/v3_group_ac.rs",
+   "line": 68,
+   "line_current": 68,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_GROUP_AC",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-021"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "9b9546be074dcb3ebfc4d4eeab7602c0f40170dee49ee8b7506608d77b73854a",
+    "span_lines": [
+     68,
+     75
+    ],
+    "qualified_identity": "i2s_GROUP_AC",
+    "compile_time_control": "none located"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-022-ELIMINATED",
+   "file": "src/x509/v3_group_ac.rs",
+   "line": 85,
+   "line_current": 85,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_GROUP_AC",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-022"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "1344e1158c57b86ccfced17ca3d7376559f49b9a830b8b3c6dc60e3c84def78e",
+    "span_lines": [
+     85,
+     91
+    ],
+    "qualified_identity": "s2i_GROUP_AC",
+    "compile_time_control": "none located"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-025-ELIMINATED",
+   "file": "src/x509/v3_ind_iss.rs",
+   "line": 41,
+   "line_current": 41,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_INDIRECT_ISSUER",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-025"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "52d84241a594a077a4812dc09df2e60200ba4ce8e7adfe148a03971648b6e857",
+    "span_lines": [
+     41,
+     48
+    ],
+    "qualified_identity": "i2r_INDIRECT_ISSUER",
+    "compile_time_control": "src/x509/v3_ind_iss.rs:28"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-026-ELIMINATED",
+   "file": "src/x509/v3_ind_iss.rs",
+   "line": 53,
+   "line_current": 53,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "r2i_INDIRECT_ISSUER",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-026"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "af902b55492eb1184cbd0de93dec3300eb3b35911ab81038db2ccf2e68b92aeb",
+    "span_lines": [
+     53,
+     59
+    ],
+    "qualified_identity": "r2i_INDIRECT_ISSUER",
+    "compile_time_control": "none located"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-027-ELIMINATED",
+   "file": "src/x509/v3_ind_iss.rs",
+   "line": 68,
+   "line_current": 68,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_INDIRECT_ISSUER",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-027"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "616d97844c52f094bc170870fdd86a6c5fda332f7c363fdfc91e790120652774",
+    "span_lines": [
+     68,
+     78
+    ],
+    "qualified_identity": "i2s_INDIRECT_ISSUER",
+    "compile_time_control": "none located"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-028-ELIMINATED",
+   "file": "src/x509/v3_ind_iss.rs",
+   "line": 88,
+   "line_current": 88,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_INDIRECT_ISSUER",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-028"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "dc2605ebcb185c46533d146e035379478e64c5ebbdb4433803a6e065b1019b0f",
+    "span_lines": [
+     88,
+     94
+    ],
+    "qualified_identity": "s2i_INDIRECT_ISSUER",
+    "compile_time_control": "none located"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-036-ELIMINATED",
+   "file": "src/x509/v3_no_ass.rs",
+   "line": 44,
+   "line_current": 44,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_NO_ASSERTION",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-036"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "5fb7fafc7c03794f6b3b2e25b6580d45fc3598d0922ce25de2ef1fd588ecc698",
+    "span_lines": [
+     44,
+     51
+    ],
+    "qualified_identity": "i2r_NO_ASSERTION",
+    "compile_time_control": "src/x509/v3_no_ass.rs:30"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-037-ELIMINATED",
+   "file": "src/x509/v3_no_ass.rs",
+   "line": 57,
+   "line_current": 57,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "r2i_NO_ASSERTION",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-037"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "f0219c1eadc0f47df05f22cc3ae53180a23ac77b859d19f362084fb6629e9de4",
+    "span_lines": [
+     57,
+     63
+    ],
+    "qualified_identity": "r2i_NO_ASSERTION",
+    "compile_time_control": "none located"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-038-ELIMINATED",
+   "file": "src/x509/v3_no_ass.rs",
+   "line": 76,
+   "line_current": 76,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_NO_ASSERTION",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-038"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "7b8b1c4e9ba9172e4cd15ceb4728d8e35cbd0e3431550be070152c2fd6196832",
+    "span_lines": [
+     76,
+     83
+    ],
+    "qualified_identity": "i2s_NO_ASSERTION",
+    "compile_time_control": "none located"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-039-ELIMINATED",
+   "file": "src/x509/v3_no_ass.rs",
+   "line": 94,
+   "line_current": 94,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_NO_ASSERTION",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-039"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "57a787dda600bc73f0e55f8dd5b67a2699ec52852de579dee04b15ee4ecf83af",
+    "span_lines": [
+     94,
+     100
+    ],
+    "qualified_identity": "s2i_NO_ASSERTION",
+    "compile_time_control": "none located"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-040-ELIMINATED",
+   "file": "src/x509/v3_no_rev_avail.rs",
+   "line": 41,
+   "line_current": 41,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_NO_REV_AVAIL",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-040"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "c7901d18a9f33393ffe65e364de4d0a56f83063d23d826c373878fd0353675a5",
+    "span_lines": [
+     41,
+     48
+    ],
+    "qualified_identity": "i2r_NO_REV_AVAIL",
+    "compile_time_control": "src/x509/v3_no_rev_avail.rs:28"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-041-ELIMINATED",
+   "file": "src/x509/v3_no_rev_avail.rs",
+   "line": 53,
+   "line_current": 53,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "r2i_NO_REV_AVAIL",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-041"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "cdb0980eb26df459da431c50811de379c4513c4e607dba6ab270fcc15f45ff1b",
+    "span_lines": [
+     53,
+     59
+    ],
+    "qualified_identity": "r2i_NO_REV_AVAIL",
+    "compile_time_control": "none located"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-042-ELIMINATED",
+   "file": "src/x509/v3_no_rev_avail.rs",
+   "line": 68,
+   "line_current": 68,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_NO_REV_AVAIL",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-042"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "16ed426ea52629d07f349fda17c7ae5f45e3a65b785eddd7c96b0ca143a4d3a8",
+    "span_lines": [
+     68,
+     75
+    ],
+    "qualified_identity": "i2s_NO_REV_AVAIL",
+    "compile_time_control": "none located"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-043-ELIMINATED",
+   "file": "src/x509/v3_no_rev_avail.rs",
+   "line": 85,
+   "line_current": 85,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_NO_REV_AVAIL",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-043"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "38aa93b8ab2305dbbff777cb10d3d33d4b5c96ef2231921b8ebe46a8adf2619a",
+    "span_lines": [
+     85,
+     91
+    ],
+    "qualified_identity": "s2i_NO_REV_AVAIL",
+    "compile_time_control": "none located"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-050-ELIMINATED",
+   "file": "src/x509/v3_single_use.rs",
+   "line": 42,
+   "line_current": 42,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_SINGLE_USE",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-050"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "9c38fc26aaecb537c82215d5442fe312942100d377bbd517ec647472f63e0f27",
+    "span_lines": [
+     42,
+     49
+    ],
+    "qualified_identity": "i2r_SINGLE_USE",
+    "compile_time_control": "src/x509/v3_single_use.rs:29"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-051-ELIMINATED",
+   "file": "src/x509/v3_single_use.rs",
+   "line": 54,
+   "line_current": 54,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "r2i_SINGLE_USE",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-051"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "07340bf8439b2c643a1bce6ba64f9c447b43b981ff020c641e914e04b9ff0c89",
+    "span_lines": [
+     54,
+     60
+    ],
+    "qualified_identity": "r2i_SINGLE_USE",
+    "compile_time_control": "none located"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-052-ELIMINATED",
+   "file": "src/x509/v3_single_use.rs",
+   "line": 69,
+   "line_current": 69,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_SINGLE_USE",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-052"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "d015200a7eed648b444f1a8059e28f378ebdd16e1eb974a95666eb85d4366636",
+    "span_lines": [
+     69,
+     76
+    ],
+    "qualified_identity": "i2s_SINGLE_USE",
+    "compile_time_control": "none located"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-053-ELIMINATED",
+   "file": "src/x509/v3_single_use.rs",
+   "line": 86,
+   "line_current": 86,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_SINGLE_USE",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-053"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "50a26aebf9bcc33b3a9f6328aeae80a70050e11bfa5981902be80a888ed17ccb",
+    "span_lines": [
+     86,
+     92
+    ],
+    "qualified_identity": "s2i_SINGLE_USE",
+    "compile_time_control": "none located"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-056-ELIMINATED",
+   "file": "src/x509/v3_soa_id.rs",
+   "line": 41,
+   "line_current": 41,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_SOA_IDENTIFIER",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-056"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "9940f28aa7b4b93a17505e2dc3a45e7634db43ecd697c5f0c2fdedbd356c3a1c",
+    "span_lines": [
+     41,
+     48
+    ],
+    "qualified_identity": "i2r_SOA_IDENTIFIER",
+    "compile_time_control": "src/x509/v3_soa_id.rs:28"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-057-ELIMINATED",
+   "file": "src/x509/v3_soa_id.rs",
+   "line": 53,
+   "line_current": 53,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "r2i_SOA_IDENTIFIER",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-057"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "151b7fbba1ff9bba9877747f3a84efbe39f2ec1b6701ec61b3e0c49bc2075d86",
+    "span_lines": [
+     53,
+     59
+    ],
+    "qualified_identity": "r2i_SOA_IDENTIFIER",
+    "compile_time_control": "none located"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-058-ELIMINATED",
+   "file": "src/x509/v3_soa_id.rs",
+   "line": 68,
+   "line_current": 68,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_SOA_IDENTIFIER",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-058"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "9c07961195ff5bdf81171fc94386ced6485c3994e936f864bfd9c0f952726294",
+    "span_lines": [
+     68,
+     78
+    ],
+    "qualified_identity": "i2s_SOA_IDENTIFIER",
+    "compile_time_control": "none located"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  },
+  {
+   "id": "P25-X509-V3-SLOT-059-ELIMINATED",
+   "file": "src/x509/v3_soa_id.rs",
+   "line": 88,
+   "line_current": 88,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_SOA_IDENTIFIER",
+   "historical_ids": [
+    "P25-X509-V3-SLOT-059"
+   ],
+   "disposition": "ELIMINATED (source: safe declaration; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "read no argument (or only the integer selector); the safe declaration imposes no caller obligation beyond the table lifetime documented at the site",
+   "evidence": {
+    "span_sha256": "86b8e818b96b7bb6ade2388a18d9b778fef01bb740e1213a8cd255ef6fd96faf",
+    "span_lines": [
+     88,
+     94
+    ],
+    "qualified_identity": "s2i_SOA_IDENTIFIER",
+    "compile_time_control": "none located"
+   },
+   "prior_state": "BLOCKED; the older receipt recorded an unsafe marker retained",
+   "residuals": [
+    "no Miri/ASan run at this identity"
+   ]
+  }
+ ],
+ "supersedes": [
+  {
+   "receipt": "p25-slh-dsa-adrs-sites",
+   "ids": [
+    "P25-SLH-ADRS-019"
+   ],
+   "file": "src/slh_dsa/adrs.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_slh_get_adrs_fn",
+   "discharging_boundary": "P25-SLH-ADRS-019-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "ossl_slh_get_adrs_fn resolves to a safe declaration at src/slh_dsa/adrs.rs:393 (span 393-433 sha256 a150ce6d09c1198c); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-slh-dsa-hash-sites",
+   "ids": [
+    "P25-SLH-HASH-013"
+   ],
+   "file": "src/slh_dsa/hash.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ossl_slh_get_hash_fn",
+   "discharging_boundary": "P25-SLH-HASH-013-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "ossl_slh_get_hash_fn resolves to a safe declaration at src/slh_dsa/hash.rs:735 (span 735-765 sha256 b4a0f17f262dcd8d); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-019"
+   ],
+   "file": "src/x509/v3_group_ac.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_GROUP_AC",
+   "discharging_boundary": "P25-X509-V3-SLOT-019-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "i2r_GROUP_AC resolves to a safe declaration at src/x509/v3_group_ac.rs:41 (span 41-48 sha256 d06c0d9177f2ec7a); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-020"
+   ],
+   "file": "src/x509/v3_group_ac.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "r2i_GROUP_AC",
+   "discharging_boundary": "P25-X509-V3-SLOT-020-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "r2i_GROUP_AC resolves to a safe declaration at src/x509/v3_group_ac.rs:53 (span 53-59 sha256 2701731fbab0f852); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-021"
+   ],
+   "file": "src/x509/v3_group_ac.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_GROUP_AC",
+   "discharging_boundary": "P25-X509-V3-SLOT-021-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "i2s_GROUP_AC resolves to a safe declaration at src/x509/v3_group_ac.rs:68 (span 68-75 sha256 9b9546be074dcb3e); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-022"
+   ],
+   "file": "src/x509/v3_group_ac.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_GROUP_AC",
+   "discharging_boundary": "P25-X509-V3-SLOT-022-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "s2i_GROUP_AC resolves to a safe declaration at src/x509/v3_group_ac.rs:85 (span 85-91 sha256 1344e1158c57b86c); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-025"
+   ],
+   "file": "src/x509/v3_ind_iss.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_INDIRECT_ISSUER",
+   "discharging_boundary": "P25-X509-V3-SLOT-025-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "i2r_INDIRECT_ISSUER resolves to a safe declaration at src/x509/v3_ind_iss.rs:41 (span 41-48 sha256 52d84241a594a077); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-026"
+   ],
+   "file": "src/x509/v3_ind_iss.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "r2i_INDIRECT_ISSUER",
+   "discharging_boundary": "P25-X509-V3-SLOT-026-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "r2i_INDIRECT_ISSUER resolves to a safe declaration at src/x509/v3_ind_iss.rs:53 (span 53-59 sha256 af902b55492eb118); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-027"
+   ],
+   "file": "src/x509/v3_ind_iss.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_INDIRECT_ISSUER",
+   "discharging_boundary": "P25-X509-V3-SLOT-027-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "i2s_INDIRECT_ISSUER resolves to a safe declaration at src/x509/v3_ind_iss.rs:68 (span 68-78 sha256 616d97844c52f094); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-028"
+   ],
+   "file": "src/x509/v3_ind_iss.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_INDIRECT_ISSUER",
+   "discharging_boundary": "P25-X509-V3-SLOT-028-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "s2i_INDIRECT_ISSUER resolves to a safe declaration at src/x509/v3_ind_iss.rs:88 (span 88-94 sha256 dc2605ebcb185c46); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-036"
+   ],
+   "file": "src/x509/v3_no_ass.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_NO_ASSERTION",
+   "discharging_boundary": "P25-X509-V3-SLOT-036-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "i2r_NO_ASSERTION resolves to a safe declaration at src/x509/v3_no_ass.rs:44 (span 44-51 sha256 5fb7fafc7c03794f); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-037"
+   ],
+   "file": "src/x509/v3_no_ass.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "r2i_NO_ASSERTION",
+   "discharging_boundary": "P25-X509-V3-SLOT-037-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "r2i_NO_ASSERTION resolves to a safe declaration at src/x509/v3_no_ass.rs:57 (span 57-63 sha256 f0219c1eadc0f47d); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-038"
+   ],
+   "file": "src/x509/v3_no_ass.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_NO_ASSERTION",
+   "discharging_boundary": "P25-X509-V3-SLOT-038-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "i2s_NO_ASSERTION resolves to a safe declaration at src/x509/v3_no_ass.rs:76 (span 76-83 sha256 7b8b1c4e9ba9172e); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-039"
+   ],
+   "file": "src/x509/v3_no_ass.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_NO_ASSERTION",
+   "discharging_boundary": "P25-X509-V3-SLOT-039-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "s2i_NO_ASSERTION resolves to a safe declaration at src/x509/v3_no_ass.rs:94 (span 94-100 sha256 57a787dda600bc73); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-040"
+   ],
+   "file": "src/x509/v3_no_rev_avail.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_NO_REV_AVAIL",
+   "discharging_boundary": "P25-X509-V3-SLOT-040-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "i2r_NO_REV_AVAIL resolves to a safe declaration at src/x509/v3_no_rev_avail.rs:41 (span 41-48 sha256 c7901d18a9f33393); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-041"
+   ],
+   "file": "src/x509/v3_no_rev_avail.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "r2i_NO_REV_AVAIL",
+   "discharging_boundary": "P25-X509-V3-SLOT-041-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "r2i_NO_REV_AVAIL resolves to a safe declaration at src/x509/v3_no_rev_avail.rs:53 (span 53-59 sha256 cdb0980eb26df459); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-042"
+   ],
+   "file": "src/x509/v3_no_rev_avail.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_NO_REV_AVAIL",
+   "discharging_boundary": "P25-X509-V3-SLOT-042-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "i2s_NO_REV_AVAIL resolves to a safe declaration at src/x509/v3_no_rev_avail.rs:68 (span 68-75 sha256 16ed426ea52629d0); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-043"
+   ],
+   "file": "src/x509/v3_no_rev_avail.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_NO_REV_AVAIL",
+   "discharging_boundary": "P25-X509-V3-SLOT-043-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "s2i_NO_REV_AVAIL resolves to a safe declaration at src/x509/v3_no_rev_avail.rs:85 (span 85-91 sha256 38aa93b8ab2305db); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-050"
+   ],
+   "file": "src/x509/v3_single_use.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_SINGLE_USE",
+   "discharging_boundary": "P25-X509-V3-SLOT-050-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "i2r_SINGLE_USE resolves to a safe declaration at src/x509/v3_single_use.rs:42 (span 42-49 sha256 9c38fc26aaecb537); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-051"
+   ],
+   "file": "src/x509/v3_single_use.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "r2i_SINGLE_USE",
+   "discharging_boundary": "P25-X509-V3-SLOT-051-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "r2i_SINGLE_USE resolves to a safe declaration at src/x509/v3_single_use.rs:54 (span 54-60 sha256 07340bf8439b2c64); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-052"
+   ],
+   "file": "src/x509/v3_single_use.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_SINGLE_USE",
+   "discharging_boundary": "P25-X509-V3-SLOT-052-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "i2s_SINGLE_USE resolves to a safe declaration at src/x509/v3_single_use.rs:69 (span 69-76 sha256 d015200a7eed648b); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-053"
+   ],
+   "file": "src/x509/v3_single_use.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_SINGLE_USE",
+   "discharging_boundary": "P25-X509-V3-SLOT-053-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "s2i_SINGLE_USE resolves to a safe declaration at src/x509/v3_single_use.rs:86 (span 86-92 sha256 50a26aebf9bcc33b); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-056"
+   ],
+   "file": "src/x509/v3_soa_id.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2r_SOA_IDENTIFIER",
+   "discharging_boundary": "P25-X509-V3-SLOT-056-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "i2r_SOA_IDENTIFIER resolves to a safe declaration at src/x509/v3_soa_id.rs:41 (span 41-48 sha256 9940f28aa7b4b93a); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-057"
+   ],
+   "file": "src/x509/v3_soa_id.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "r2i_SOA_IDENTIFIER",
+   "discharging_boundary": "P25-X509-V3-SLOT-057-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "r2i_SOA_IDENTIFIER resolves to a safe declaration at src/x509/v3_soa_id.rs:53 (span 53-59 sha256 151b7fbba1ff9bba); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-058"
+   ],
+   "file": "src/x509/v3_soa_id.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "i2s_SOA_IDENTIFIER",
+   "discharging_boundary": "P25-X509-V3-SLOT-058-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "i2s_SOA_IDENTIFIER resolves to a safe declaration at src/x509/v3_soa_id.rs:68 (span 68-78 sha256 9c07961195ff5bdf); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-059"
+   ],
+   "file": "src/x509/v3_soa_id.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_SOA_IDENTIFIER",
+   "discharging_boundary": "P25-X509-V3-SLOT-059-ELIMINATED",
+   "discharging_receipt": "p25-safe-declaration-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "s2i_SOA_IDENTIFIER resolves to a safe declaration at src/x509/v3_soa_id.rs:88 (span 88-94 sha256 86b8e818b96b7bb6); the declaration contains no `unsafe` and the compile-time control rejects restoring it",
+   "reason": "the older record\u2019s retained unsafe marker no longer exists in the source"
+  }
+ ],
+ "method": "enumerate every BLOCKED UNSAFE_FN_DEF row in boundary-sweep-B*.json and *-sites.json; resolve the operation span at S; reject any candidate whose declaration still contains `unsafe`; locate the compile-time coercion control",
+ "negative_control": {
+  "id": "P25-SAFE-DECL-ELIM-1",
+  "kind": "compile-time coercion",
+  "scope": "8 of 26 rows",
+  "observation": "those control consts require a safe fn; restoring `unsafe` fails to type-check"
+ },
+ "non_claims": [
+  "Structural elimination, not SAFETY_DISCHARGED.",
+  "Does not cover blocked rows whose declaration is still unsafe.",
+  "No OpenSSH closure count changes.",
+  "The 18 rows without a control are eliminated because the declaration is safe, not because a control proves it."
+ ],
+ "control_gap": {
+  "rows_without_control": 18,
+  "why": "the X509V3ExtI2s/I2v/R2i/S2i slot types accept `unsafe extern \"C\" fn`, so the static row initialiser coerces either form; no build-time control exists for these declarations",
+  "effect": "a future edit could restore `unsafe` without a build failure; recorded, not claimed controlled"
+ }
+}

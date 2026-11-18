@@ -1,0 +1,111 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/l4-build-intent-binding/v1",
+ "kind": "l4-atlas-row-build-intent-binding",
+ "date": "2026-11-17",
+ "branch": "stage/p25/b75-ocsp",
+ "head": "2170f55b4cec0afcf7c4349de97935cb7b8a1b82",
+ "candidate_tag": "b85",
+ "adjudication_item": "task (4): align the openssh-server L4 atlas row the way openssh was aligned (same recipe flags), re-measure only that family, and state whether its digest matches the analysed sshd.",
+ "recipe_alignment": {
+  "file": "forensics/tools/downstream_build_link.py",
+  "mechanism": "_RECIPE_OVERRIDES['openssh-server'] (table seam; no code special-cases the family)",
+  "openssh_configure_argv": [
+   "configure",
+   "--prefix={scratch}/openssh/candidate/src/openssh-9.9p1/.l7-install",
+   "--sysconfdir={scratch}/openssh/candidate/src/openssh-9.9p1/.l7-install/etc",
+   "--with-ssl-dir={prefix}",
+   "--with-privsep-user=sshd",
+   "--with-privsep-path={scratch}/openssh/candidate/src/openssh-9.9p1/.l7-install/var/empty"
+  ],
+  "openssh_server_configure_argv": [
+   "configure",
+   "--prefix={scratch}/openssh-server/candidate/src/openssh-9.9p1/.l7-install",
+   "--sysconfdir={scratch}/openssh-server/candidate/src/openssh-9.9p1/.l7-install/etc",
+   "--with-ssl-dir={prefix}",
+   "--with-privsep-user=sshd",
+   "--with-privsep-path={scratch}/openssh-server/candidate/src/openssh-9.9p1/.l7-install/var/empty"
+  ],
+  "configure_flags": [
+   "--prefix={root}/.l7-install",
+   "--sysconfdir={root}/.l7-install/etc",
+   "--with-ssl-dir={prefix}",
+   "--with-privsep-user=sshd",
+   "--with-privsep-path={root}/.l7-install/var/empty"
+  ],
+  "ldflags_extra": "-Wl,-rpath,{prefix}/lib",
+  "make_argv": [
+   "make",
+   "-j8"
+  ],
+  "same_recipe_flags_as_openssh": false,
+  "artifact_rel": "sshd",
+  "launch_argv_unchanged": true,
+  "archive_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02"
+ },
+ "measurement": {
+  "command": "python3 forensics/tools/downstream_build_link.py --measure --only openssh-server --reuse-committed --reuse-previous-candidate",
+  "check_command": "python3 forensics/tools/downstream_build_link.py --check",
+  "check_findings": 0,
+  "check_control_honest": true,
+  "elapsed_seconds": 38,
+  "counts": {
+   "with_recipe": 307,
+   "candidate_linked": 245,
+   "candidate_linkage_proven": 245,
+   "candidate_specific_patch_count": 0
+  },
+  "log": "court/freeze-b85/l4-server-b85.log",
+  "log_sha256": "339c17e3a76ac086eaedc5145197211457392809ef802217db4f847e4518b843",
+  "check_log": "court/freeze-b85/l4-check-b85.log",
+  "check_log_sha256": "358e0132945c024e66b47daf7d617c8c29881c08e4a9b99eb7b597bbd18dd58f",
+  "atlas": "forensics/downstream/build-link-atlas.json",
+  "atlas_sha256": "400aaf6a41919f7d4d0014940ec903fe9d30d4e3965b00efd820614ff1ffbbca",
+  "body_hash": "73fc116bf66bac321c295ade848438586c991d115b2f9f382aad545016767ebf",
+  "body_hash_note": "recomputed by the freeze generator from the body and reproduced"
+ },
+ "durable_identity": {
+  "candidate_install": "artifacts/phase2/install",
+  "atlas_candidate_libcrypto_sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+  "freeze_libcrypto_sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+  "matches_freeze": true,
+  "openssh_server_row_reused": false,
+  "reused_rows_carry": "reused_from_candidate_identity marker when the committed row was measured against a different install",
+  "statement": "the row was re-measured against the freeze's install, not reused; its candidate identity is the freeze's libcrypto"
+ },
+ "rows": {
+  "openssh": {
+   "run_id": "run:build-link:candidate:openssh",
+   "artifact_rel": "ssh",
+   "artifact_sha256": "45da459f72fafb25fb49d6d50406354d4baa54f2f18510ae9a560314a499b63a",
+   "analysed_ssh_sha256": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b",
+   "digest_matches_analysed": false,
+   "imported_openssl_symbols_count": 179
+  },
+  "openssh-server": {
+   "run_id": "run:build-link:candidate:openssh-server",
+   "recipe_id": "recipe:openssh-server:9.9p1",
+   "artifact_rel": "sshd",
+   "artifact_sha256": "44e714f072cb8a40b8d34464979edde1264f53d481e00732c9ac9f53322bb394",
+   "analysed_sshd_sha256": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1",
+   "digest_matches_analysed": false,
+   "imported_openssl_symbols_count": 132,
+   "linkage_proven": true,
+   "all_under_prefix": true
+  }
+ },
+ "remaining_difference": {
+  "statement": "The recipe flags are now the same as the openssh row and the closure: same configure flags, full make, candidate lib on the run path, same archive, same recipe/source. The only remaining difference is the build root and the compiled-in prefix. The atlas row configures with {scratch}/openssh-server/candidate/src/openssh-9.9p1/.l7-install (and that prefix's sysconfdir/privsep path), while the analysed sshd was built by forensics/tools/build_openssh_closure.sh under court/tmp/openssh-closure/server-b85/install. Those path strings are compiled into sshd (config paths, SSHD_SESSION), so the two binaries cannot be byte-equal even from identical flags.",
+  "digest_pair": {
+   "atlas_row": "44e714f072cb8a40b8d34464979edde1264f53d481e00732c9ac9f53322bb394",
+   "analysed_sshd": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1",
+   "equal": false
+  },
+  "not_a_build_failure": "the difference is the declared build-root difference; the recipe, archive, toolchain, candidate libcrypto and full-make intent are identical"
+ },
+ "non_claims": [
+  "does not claim the atlas row measured the analysed sshd",
+  "does not re-analyse or re-link either binary",
+  "does not change any closure count, verdict or refusal",
+  "does not establish SAFE_COMPATIBLE"
+ ]
+}

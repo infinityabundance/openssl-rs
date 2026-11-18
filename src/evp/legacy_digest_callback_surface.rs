@@ -25,6 +25,8 @@
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
+#![allow(clippy::panic)] // a missing table callback is this test's whole report
+
 use core::ffi::{c_int, c_void};
 
 use crate::evp::digest::{
@@ -447,6 +449,39 @@ fn null_data_with_nonzero_count_is_refused_for_every_update_callback() {
     }
 }
 
+/// A NULL `data` with `count == 0` is **accepted** by every update callback, answering `1` and
+/// touching no byte of the block.
+///
+/// This is the shape the authority answers `1` to as well (it tests the length before the
+/// pointer, or performs a zero-length `memcpy` that does not fault), so it is compatibility rather
+/// than a narrowing: `D-LEGACY-MD-CALLBACK-MD-DATA-1` narrows only the non-zero-count shape. The
+/// two callbacks whose primitive would copy from `in` at length zero (`blake2b`/`blake2s`, `mdc2`
+/// with a partly filled block) must answer before the copy, because a zero-length copy from NULL
+/// is undefined in Rust at any length.
+#[test]
+fn null_data_with_zero_count_is_accepted_for_every_update_callback() {
+    let mut block = [0u64; 128];
+    for (name, table) in tables() {
+        // SAFETY: `table` is a live static method.
+        let update = unsafe { EVP_MD_meth_get_update(table) };
+        let Some(update) = update else { continue };
+        let mut c = ctx(table, block.as_mut_ptr().cast());
+        // SAFETY: `c` is live and the block is large enough for every legacy context; a zero
+        // length update reads no byte of `data`.
+        assert_eq!(
+            // SAFETY: `c` is live and the block is large enough for every legacy context; a zero
+            // length update reads no byte of `data`.
+            unsafe { update(&mut c, core::ptr::null(), 0) },
+            1,
+            "{name}: a zero-length update with a NULL data is accepted"
+        );
+        assert_eq!(
+            block, [0u64; 128],
+            "{name}: a zero-length update modified md_data"
+        );
+    }
+}
+
 /// A `METH`-origin method whose declared `ctx_size` is zero allocates no block, so every callback
 /// refuses the non-NULL block a caller might still attach.
 #[test]
@@ -694,10 +729,12 @@ fn nonpositive_result_size_is_refused_for_every_sha3_and_shake_surface() {
             let mut c = ctx(md, block.as_mut_ptr().cast());
             let mut output = [0u8; 64];
 
-            // SAFETY: `c` is live and its method declares exactly the block's extent, so only the
-            // `md_size <= 0` guard can refuse.
             assert_eq!(
-                unsafe { final_(&mut c, output.as_mut_ptr()) },
+                unsafe {
+                    // SAFETY: `c` is live and its method declares exactly the block's extent, so
+                    // only the `md_size <= 0` guard can refuse.
+                    final_(&mut c, output.as_mut_ptr())
+                },
                 0,
                 "{name}: final accepted result_size {result_size}"
             );
@@ -706,18 +743,22 @@ fn nonpositive_result_size_is_refused_for_every_sha3_and_shake_surface() {
                 "{name}: a refused final modified md_data"
             );
 
-            // SAFETY: as above, for the initialiser.
             assert_eq!(
-                unsafe { init(&mut c) },
+                unsafe {
+                    // SAFETY: as above, for the initialiser.
+                    init(&mut c)
+                },
                 0,
                 "{name}: init accepted result_size {result_size}"
             );
             assert_eq!(block, [0u64; 64], "{name}: a refused init modified md_data");
 
             if let Some(ctrl) = ctrl {
-                // SAFETY: `c` is live and the command reads no argument buffer.
                 assert_eq!(
-                    unsafe { ctrl(&mut c, EVP_MD_CTRL_XOF_LEN, 32, core::ptr::null_mut()) },
+                    unsafe {
+                        // SAFETY: `c` is live and the command reads no argument buffer.
+                        ctrl(&mut c, EVP_MD_CTRL_XOF_LEN, 32, core::ptr::null_mut())
+                    },
                     0,
                     "{name}: ctrl accepted result_size {result_size}"
                 );
@@ -739,9 +780,11 @@ fn nonpositive_result_size_is_refused_for_every_sha3_and_shake_surface() {
             assert_eq!(EVP_MD_meth_set_init(md, Some(init)), 1);
         }
         let mut c = ctx(md, block.as_mut_ptr().cast());
-        // SAFETY: `c` is live and the block is at least a `KeccakCtx` long.
         assert_eq!(
-            unsafe { init(&mut c) },
+            unsafe {
+                // SAFETY: `c` is live and the block is at least a `KeccakCtx` long.
+                init(&mut c)
+            },
             1,
             "{name}: the matching extent was refused"
         );

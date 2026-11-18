@@ -83,7 +83,7 @@ use super::{
     ossl_provider_add_to_store, ossl_provider_find, ossl_provider_free, ossl_provider_libctx,
     ossl_provider_new, OsslProvider, ProviderInitFn,
 };
-use crate::context::dispatch::OsslDispatch;
+use crate::context::dispatch::{function_for, OsslDispatch};
 
 /// `crypto/provider_child.c`, for the coordinates of its allocations.
 const FILE: *const c_char = c"../../src/openssl-3.6.4/crypto/provider_child.c".as_ptr();
@@ -275,11 +275,9 @@ pub(crate) unsafe extern "C" fn ossl_child_provider_init(
     unsafe {
         while (*p).function_id != 0 {
             if (*p).function_id == OSSL_FUNC_CORE_GET_LIBCTX {
-                // SAFETY: the entry's `function` is the parent's
-                // `OSSL_FUNC_core_get_libctx_fn`; the id is what says so.
-                c_get_libctx = Some(core::mem::transmute::<*mut c_void, CoreGetLibCtxFn>(
-                    (*p).function,
-                ));
+                // SAFETY: `p` is a live entry and its id is the one the signature names;
+                // `function_for` re-reads that id before the cast.
+                c_get_libctx = function_for::<CoreGetLibCtxFn>(p, OSSL_FUNC_CORE_GET_LIBCTX);
             }
             p = p.add(1);
         }
@@ -500,42 +498,44 @@ pub(crate) unsafe fn ossl_provider_init_as_child(
 
         let mut p = r#in;
         while (*p).function_id != 0 {
-            let f = (*p).function;
             match (*p).function_id {
-                // SAFETY: each `function` is a pointer to the function whose id the entry
-                // carries; the id is the only thing that says so, which is the dispatch
-                // table's contract.
+                // SAFETY: each arm's id is the one its signature names, and
+                // `function_for` re-reads the entry's id before the cast. A
+                // published NULL is refused rather than formed into a NULL `fn`
+                // value, which is why the `is_none` checks below catch it too.
                 OSSL_FUNC_CORE_GET_LIBCTX => {
                     (*gbl).c_get_libctx =
-                        Some(core::mem::transmute::<*mut c_void, CoreGetLibCtxFn>(f))
+                        function_for::<CoreGetLibCtxFn>(p, OSSL_FUNC_CORE_GET_LIBCTX)
                 }
                 OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB => {
                     (*gbl).c_provider_register_child_cb =
-                        Some(core::mem::transmute::<*mut c_void, RegisterChildCbFn>(f))
+                        function_for::<RegisterChildCbFn>(p, OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB)
                 }
                 OSSL_FUNC_PROVIDER_DEREGISTER_CHILD_CB => {
-                    (*gbl).c_provider_deregister_child_cb =
-                        Some(core::mem::transmute::<*mut c_void, DeregisterChildCbFn>(f))
+                    (*gbl).c_provider_deregister_child_cb = function_for::<DeregisterChildCbFn>(
+                        p,
+                        OSSL_FUNC_PROVIDER_DEREGISTER_CHILD_CB,
+                    )
                 }
                 OSSL_FUNC_PROVIDER_NAME => {
-                    (*gbl).c_prov_name = Some(core::mem::transmute::<*mut c_void, ChildNameFn>(f))
+                    (*gbl).c_prov_name = function_for::<ChildNameFn>(p, OSSL_FUNC_PROVIDER_NAME)
                 }
                 OSSL_FUNC_PROVIDER_GET0_PROVIDER_CTX => {
-                    (*gbl).c_prov_get0_provider_ctx = Some(core::mem::transmute::<
-                        *mut c_void,
-                        ChildGet0ProviderCtxFn,
-                    >(f))
+                    (*gbl).c_prov_get0_provider_ctx = function_for::<ChildGet0ProviderCtxFn>(
+                        p,
+                        OSSL_FUNC_PROVIDER_GET0_PROVIDER_CTX,
+                    )
                 }
                 OSSL_FUNC_PROVIDER_GET0_DISPATCH => {
                     (*gbl).c_prov_get0_dispatch =
-                        Some(core::mem::transmute::<*mut c_void, ChildGet0DispatchFn>(f))
+                        function_for::<ChildGet0DispatchFn>(p, OSSL_FUNC_PROVIDER_GET0_DISPATCH)
                 }
                 OSSL_FUNC_PROVIDER_UP_REF => {
                     (*gbl).c_prov_up_ref =
-                        Some(core::mem::transmute::<*mut c_void, ChildUpRefFn>(f))
+                        function_for::<ChildUpRefFn>(p, OSSL_FUNC_PROVIDER_UP_REF)
                 }
                 OSSL_FUNC_PROVIDER_FREE => {
-                    (*gbl).c_prov_free = Some(core::mem::transmute::<*mut c_void, ChildFreeFn>(f))
+                    (*gbl).c_prov_free = function_for::<ChildFreeFn>(p, OSSL_FUNC_PROVIDER_FREE)
                 }
                 _ => {}
             }

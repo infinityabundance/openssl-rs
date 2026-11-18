@@ -1077,6 +1077,12 @@ pub unsafe extern "C" fn OSSL_DECODER_from_data(
 
 /// `sk_OSSL_DECODER_pop_free`'s destructor: the crate's stack frees elements through a `void *`
 /// callback, so `OSSL_DECODER_free` is reached through this thunk.
+///
+/// # Safety
+/// `p` is NULL or a live `OSSL_DECODER` value that the calling stack owns and is handing
+/// over (the decoder its element pointer names): correctly aligned, no other owner
+/// releases it, and no reference into it stays live across the call. The body gives up
+/// exactly one reference; NULL is a no-op.
 unsafe extern "C" fn decoder_free_thunk(p: *mut c_void) {
     // SAFETY: the stack's element is an `OsslDecoder` whose reference the stack owns.
     unsafe { OSSL_DECODER_free(p.cast::<OsslDecoder>()) };

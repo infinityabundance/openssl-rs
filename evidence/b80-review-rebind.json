@@ -1,0 +1,1041 @@
+{
+ "schema": "openssl-rs/safe-c33/b80-review-rebind/v1",
+ "kind": "independent-review-and-receipt-rebind",
+ "subphase": "safe-c33/b80 review: re-establish the four rows the b80 closures left BLOCKED at d9fdf1357 and re-bind their owning boundary records content-addressed",
+ "generated_utc": "2026-11-15T16:30:00Z",
+ "reviewer": {
+  "role": "independent reviewer and receipt re-binder",
+  "independence": "Did not write, design or adjudicate any of the four conversions (d9fdf1357 is not this session's work), the b80b closures, the receipts or the closure instrument. No author-supplied claim about the four rows was accepted: every span was re-resolved with the tool's own resolver, every prior hash was reproduced independently, every body and contract was re-read in source at S, and every control below was executed in this session. No commit or push was made.",
+  "instructions_read": [
+   "AGENTS.md sections 0-7",
+   "8",
+   "15",
+   "17",
+   "21",
+   "22"
+  ]
+ },
+ "venue": {
+  "free_g_available_gib_at_start": 33,
+  "free_g_available_gib_before_each_closure": [
+   32,
+   32
+  ],
+  "court": "existing openssl-rs-court container, Memory=17179869184, MemorySwap=17179869184, NanoCpus=16000000000, one heavy command at a time",
+  "per_process_cap": "OPENSSL_RS_COURT_DATA=12582912 KiB",
+  "compilation": "none in this review (no cargo/rustc invocation)",
+  "work_done": "span resolution, source read, receipt rebind, adjudicator-level controls, and the two b80b closures"
+ },
+ "candidate_identity": {
+  "source_head": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+  "head_at_review": "da7480a3fa0506cf28ab4e2ab1e8dfba27c91fab",
+  "branch": "stage/p25/b75-ocsp",
+  "src_unchanged_between_S_and_head": true,
+  "src_unchanged_witness": "`git diff --stat d9fdf1357 da7480a3f -- src/ Cargo.toml Cargo.lock build.rs` is empty, so the tree read at HEAD is S's src content; the three touched files hash identically in the worktree and in the S blob",
+  "files_sha256": {
+   "src/cms/cms_asn1.rs": "b384642c65863ea811ce8affc5e25c4749a740d355c06a2e3e3b8e2a5ee355e4",
+   "src/cms/cms_lib.rs": "8cb2a18d72d34c588d9388f7165521a3305ee0440a7483940f7704b343fdc192",
+   "src/x509/v3_san.rs": "bc66c1bc80be804cb840b64976edae44efa1fdc1a04156bb5f9c0aa4fc751818"
+  },
+  "image_libcrypto_sha256": "60c1111250684556012dac7436c4aea3115b8697e7845c81c5ffb7fbf4c112f2",
+  "consumer_artifacts": {
+   "ssh": "f8f454782e6a793a624687755a779ad4b6cb9bbb8693f35f2a1f5f9d16234607",
+   "sshd": "152ccc3465240454b5ec0cd470dfa81dc7eb044c01c9bbe72519a65a71919b92"
+  },
+  "closure_tool_sha256": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66",
+  "closure_tool_schema": "openssl-rs/campaign/safe-c33/edge-record/v1.4",
+  "census": "court/freeze-b80/census-b80.json",
+  "span_schema": "safe-c33/operation-span-sha256/v1"
+ },
+ "method": {
+  "task1": "Located each operation at S with the tool's own resolve_operation_span (never a coordinate): the four resolve unique, to one brace-matched definition each.",
+  "task2": "Reproduced each recorded prior span at the commit whose bytes its hash belongs to (b6f38f134 for the two r13 rows, b8bba955 for the two B70 rows): 4/4 reproduce both the line range and the hash, so the recorded hashes are genuine content bindings and the deltas are attributable.",
+  "task3": "Diffed old against new hunk-locally, classified the delta, and read the new body and contract plus every registration site. For the two guard-added rows the guard's own premise was checked in the machinery it relies on.",
+  "task4": "Answered the four questions from source at S, then edited only the two receipts that own the four sites (boundary-sweep-B70 for CMS-FREE-001/002, r13-coordinate-rebind-sites for the two ledger join keys), each with the resolver's span hash and a declared range covering the current census coordinate.",
+  "task5": "Ran the two closures at S with the new tool, sequentially, carrying from the b80 receipts."
+ },
+ "prior_state": {
+  "closures": [
+   "evidence/closure-ssh-b80.json",
+   "evidence/closure-sshd-b80.json"
+  ],
+  "tally": "290 obligations, 286 DISCHARGED / 4 BLOCKED / 0 UNKNOWN, verdict ACCEPTED, element 7 PASS",
+  "cause": "two distinct causes. The two r13 rows were a pure span-hash mismatch (d9fdf1357 added the guard to each body, so the bytes the recorded hash binds no longer exist). The two B70 rows were a stale coordinate AND a span-hash mismatch: the receipt declared [[1378,1378]] / [[1384,1384]] in its disposition, which no longer covers the census coordinates 1388 / 1400, and the fn-level `# Safety` addition changed the in-span comment bytes.",
+  "note": "the two r13 records declared NO line range in their disposition at all (only the ledger join key in `id`), so covers_site was false for them even before the drift. The rebind adds the declared range, which is the point of the covers_site field."
+ },
+ "rows": [
+  {
+   "boundary": "src/cms/cms_asn1.rs:671",
+   "receipt": "r13-coordinate-rebind",
+   "file": "src/cms/cms_asn1.rs",
+   "operation": "cms_ri_cb",
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "prior": {
+    "coordinate": 671,
+    "span_lines": [
+     671,
+     717
+    ],
+    "span_sha256": "f1f667a2ee29d16557a4a1d5744051081c6f8aabf26b7be8702adfc63aab0ee9",
+    "span_hash_reproduced_by_resolver": true,
+    "span_lines_reproduced_by_resolver": true,
+    "verdict": "SAFETY_DISCHARGED (ledger row boundary-sweep-B56, re-bound by r13 at b6f38f134)",
+    "source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+   },
+   "current": {
+    "coordinate": 680,
+    "def_line": 680,
+    "span_lines": [
+     680,
+     733
+    ],
+    "span_sha256": "fd94cb262e8ff33dce901c25292084996f2f0fe8478f297342e320fa19e3ed67",
+    "qualified_identity": "cms_ri_cb",
+    "resolution": "unique",
+    "source": {
+     "source": "git-blob",
+     "commit": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+     "content_sha256": "b384642c65863ea811ce8affc5e25c4749a740d355c06a2e3e3b8e2a5ee355e4"
+    }
+   },
+   "delta": {
+    "introduced_by": "d9fdf1357c7df26e36d15c1cda5154479b052c16 (b80)",
+    "classification": "guard-added",
+    "statement": "in-span: the FREE_PRE arm gained `if unsafe { (*ri).d }.is_null() { return 1; }` before the union match; the single previous SAFETY comment line became three explanatory comment lines plus two SAFETY lines. Above the span: the fn-level `# Safety` gained the paragraph stating that `d` is not guaranteed non-NULL on FREE_PRE (re-decode reset and never-decoded value) and that the guard releases nothing and still answers 1. The guard removes a NULL-union dereference; it adds no release, changes no callee, and returns the same 1 the arm already returned.",
+    "new_span_text": [
+     "unsafe extern \"C\" fn cms_ri_cb(",
+     "    operation: c_int,",
+     "    pval: *mut *mut c_void,",
+     "    _it: *const Asn1Item,",
+     "    _exarg: *mut c_void,",
+     ") -> c_int {",
+     "    // SAFETY: `pval` is a live value slot per the callback contract.",
+     "    let ri = unsafe { (*pval).cast::<CmsRecipientInfo>() };",
+     "    if operation == ASN1_OP_FREE_PRE {",
+     "        // The template's selector and `type_` can disagree only while no alternative is present;",
+     "        // there is nothing to release then, and reading the arm through `d` would dereference",
+     "        // NULL (the authority's fault, not reproduced).",
+     "        // SAFETY: `ri` is a live value slot per the callback contract.",
+     "        if unsafe { (*ri).d }.is_null() {",
+     "            return 1;",
+     "        }",
+     "        // SAFETY: `ri` is live, `d` names an allocated arm, and `type_` selects it (see above).",
+     "        unsafe {",
+     "            match (*ri).type_ {",
+     "                CMS_RECIPINFO_TRANS => {",
+     "                    let ktri = (*ri).d.cast::<CmsKeyTransRecipientInfo>();",
+     "                    EVP_PKEY_free((*ktri).pkey);",
+     "                    crate::x509::x_x509::X509_free((*ktri).recip);",
+     "                    EVP_PKEY_CTX_free((*ktri).pctx.cast());",
+     "                }",
+     "                CMS_RECIPINFO_KEK => {",
+     "                    let kekri = (*ri).d.cast::<CmsKekRecipientInfo>();",
+     "                    OPENSSL_clear_free((*kekri).key, (*kekri).keylen);",
+     "                }",
+     "                CMS_RECIPINFO_PASS => {",
+     "                    let pwri = (*ri).d.cast::<CmsPasswordRecipientInfo>();",
+     "                    OPENSSL_clear_free((*pwri).pass, (*pwri).passlen);",
+     "                }",
+     "                _ => {}",
+     "            }",
+     "        }",
+     "    } else if operation == ASN1_OP_D2I_POST {",
+     "        // SAFETY: `ri` is live; its selector field is readable.",
+     "        unsafe {",
+     "            (*ri).type_ = (*ri).encoded_type;",
+     "            if (*ri).type_ == CMS_RECIPINFO_OTHER {",
+     "                let ori = (*ri).d.cast::<CmsOtherRecipientInfo>();",
+     "                let nid = crate::runtime::obj::OBJ_obj2nid((*ori).ori_type);",
+     "                if nid == NID_id_smime_ori_kem {",
+     "                    (*ri).type_ = CMS_RECIPINFO_KEM;",
+     "                }",
+     "            }",
+     "        }",
+     "    } else if operation == ASN1_OP_NEW_POST {",
+     "        // SAFETY: `ri` was just allocated.",
+     "        unsafe { (*ri).type_ = (*ri).encoded_type };",
+     "    }",
+     "    1",
+     "}"
+    ],
+    "code_token_projection_identical": false,
+    "old_span_text": [
+     "unsafe extern \"C\" fn cms_ri_cb(",
+     "    operation: c_int,",
+     "    pval: *mut *mut c_void,",
+     "    _it: *const Asn1Item,",
+     "    _exarg: *mut c_void,",
+     ") -> c_int {",
+     "    // SAFETY: `pval` is a live value slot per the callback contract.",
+     "    let ri = unsafe { (*pval).cast::<CmsRecipientInfo>() };",
+     "    if operation == ASN1_OP_FREE_PRE {",
+     "        // SAFETY: `ri` is live and `type_` selects the arm.",
+     "        unsafe {",
+     "            match (*ri).type_ {",
+     "                CMS_RECIPINFO_TRANS => {",
+     "                    let ktri = (*ri).d.cast::<CmsKeyTransRecipientInfo>();",
+     "                    EVP_PKEY_free((*ktri).pkey);",
+     "                    crate::x509::x_x509::X509_free((*ktri).recip);",
+     "                    EVP_PKEY_CTX_free((*ktri).pctx.cast());",
+     "                }",
+     "                CMS_RECIPINFO_KEK => {",
+     "                    let kekri = (*ri).d.cast::<CmsKekRecipientInfo>();",
+     "                    OPENSSL_clear_free((*kekri).key, (*kekri).keylen);",
+     "                }",
+     "                CMS_RECIPINFO_PASS => {",
+     "                    let pwri = (*ri).d.cast::<CmsPasswordRecipientInfo>();",
+     "                    OPENSSL_clear_free((*pwri).pass, (*pwri).passlen);",
+     "                }",
+     "                _ => {}",
+     "            }",
+     "        }",
+     "    } else if operation == ASN1_OP_D2I_POST {",
+     "        // SAFETY: `ri` is live; its selector field is readable.",
+     "        unsafe {",
+     "            (*ri).type_ = (*ri).encoded_type;",
+     "            if (*ri).type_ == CMS_RECIPINFO_OTHER {",
+     "                let ori = (*ri).d.cast::<CmsOtherRecipientInfo>();",
+     "                let nid = crate::runtime::obj::OBJ_obj2nid((*ori).ori_type);",
+     "                if nid == NID_id_smime_ori_kem {",
+     "                    (*ri).type_ = CMS_RECIPINFO_KEM;",
+     "                }",
+     "            }",
+     "        }",
+     "    } else if operation == ASN1_OP_NEW_POST {",
+     "        // SAFETY: `ri` was just allocated.",
+     "        unsafe { (*ri).type_ = (*ri).encoded_type };",
+     "    }",
+     "    1",
+     "}"
+    ]
+   },
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. `cms_ri_cb` is a private `unsafe extern \"C\" fn` (no `pub`); its only non-test occurrence is the fn-pointer value `asn1_cb: Some(cms_ri_cb)` in the CMS_RECIPIENT_INFO_ITEM `funcs` (src/cms/cms_asn1.rs:2029). It is reached only from the ASN.1 CHOICE machinery (fre.rs:268-275 on FREE_PRE, d2i.rs, new.rs). No safe Rust item accepts or returns it.",
+    "b_all_unsafe_covered": "Yes. After the guard, `(*ri).d` is read once and the union match runs only when it is non-NULL; the contract states `pval` is the live value slot and (whenever `d` is non-NULL) `type_` names the arm the selector names. Inside the match every dereference is of the selected arm, and each release is the single release of a runtime (non-template) member: `pkey`/`recip`/`pctx`, `key`/`keylen`, `pass`/`passlen`. The `_ => {}` arm and the D2I_POST/NEW_POST arms are unchanged and were already covered.",
+    "c_hidden_obligation": "None new. Two facts the guard depends on were checked in source: `fre.rs:271` treats a callback return of 2 as 'handled' (the callback owns the value) and any other value as 'continue to the walk', so returning 1 keeps the enclosing-block free; and `d2i.rs:1774-1789` frees the selected alternative and sets the selector to -1 WITHOUT resetting `type_`, which is exactly the stale shape. With `d` NULL there is no alternative to release, and on the re-decode shape the alternative was already freed by d2i, so the guard leaks nothing. The never-decoded shape (zeroed `encoded_type` = index 0 with `d` NULL) takes the same path.",
+    "d_load_bearing_control": "The closure's own content-addressed adjudicator is load-bearing and fired here: this review's C2/C3/D arms show the row discharges only while the recorded hash equals the resolver's hash of the current bytes, and blocks when that one hash is corrupted. The in-file behavioural control F-REST-1 (`free_pre_tolerates_a_value_whose_alternative_is_not_present`, which drives FREE_PRE over all four arms with `d` NULL) is the control for the guard itself and is NOT_RUN here (R1)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "re-established at d9fdf1357: identity is the same (file, kind, operation) and the delta is exactly the NULL-`d` guard plus its contract paragraph and the F-REST-1 test; the guard's premise was checked in source (fre.rs:268-275 return-code semantics, d2i.rs:1774-1789 selector reset) and it cannot leak or double-release; four questions re-answered on the current bytes."
+  },
+  {
+   "boundary": "src/x509/v3_san.rs:1069",
+   "receipt": "r13-coordinate-rebind",
+   "file": "src/x509/v3_san.rs",
+   "operation": "v2i_GENERAL_NAME_ex",
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "X509_VERIFY_POLICY",
+   "prior": {
+    "coordinate": 1068,
+    "span_lines": [
+     1068,
+     1117
+    ],
+    "span_sha256": "095944c0642818b97a0966b145481cc2ff2a2358098dc856f899d274e4af576e",
+    "span_hash_reproduced_by_resolver": true,
+    "span_lines_reproduced_by_resolver": true,
+    "verdict": "SAFETY_DISCHARGED (ledger row boundary-sweep-B55, re-bound by r13 at b6f38f134)",
+    "source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+   },
+   "current": {
+    "coordinate": 1076,
+    "def_line": 1076,
+    "span_lines": [
+     1076,
+     1135
+    ],
+    "span_sha256": "b01dcb8bfc373c3aaf1da7c788d14356fd934cd5426fc6a1fc3d59ff657f2afa",
+    "qualified_identity": "v2i_GENERAL_NAME_ex",
+    "resolution": "unique",
+    "source": {
+     "source": "git-blob",
+     "commit": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+     "content_sha256": "bc66c1bc80be804cb840b64976edae44efa1fdc1a04156bb5f9c0aa4fc751818"
+    }
+   },
+   "delta": {
+    "introduced_by": "d9fdf1357c7df26e36d15c1cda5154479b052c16 (b80)",
+    "classification": "guard-added",
+    "statement": "in-span: an `if name.is_null() { raise_site(&V3_SAN_604); return null_mut() }` refusal was inserted after the existing `value` refusal, and four `non-NULL`/SAFETY comment lines were updated to match. Above the span: the `# Safety` gained a paragraph covering both NULL config fields and recording the authority fault (D-V3-SAN-NULL-NAME-1). The guard adds a refusal on a shape that faults in the authority; it changes no accepted input and no callee signature.",
+    "new_span_text": [
+     "#[no_mangle]",
+     "pub unsafe extern \"C\" fn v2i_GENERAL_NAME_ex(",
+     "    out: *mut GeneralName,",
+     "    method: *const X509V3ExtMethod,",
+     "    ctx: *mut X509V3Ctx,",
+     "    cnf: *mut ConfValue,",
+     "    is_nc: c_int,",
+     ") -> *mut GeneralName {",
+     "    // SAFETY: `cnf` is live per the contract.",
+     "    let (name, value) = unsafe { ((*cnf).name, (*cnf).value) };",
+     "    if value.is_null() {",
+     "        // SAFETY: the site is a declared constant.",
+     "        unsafe { raise_site(&V3_SAN_604) };",
+     "        return core::ptr::null_mut();",
+     "    }",
+     "    if name.is_null() {",
+     "        // The authority's first act on `name` is `ossl_v3_name_cmp(name, \"email\")` (`:601`),",
+     "        // which reads through it; the scan is not a contract to reproduce",
+     "        // (D-V3-SAN-NULL-NAME-1, the D-V3-CONF-NULL-VALUE-1 class at `X509V3_EXT_nconf*`). The",
+     "        // entry is missing a field either way, so the refusal reuses the entry guard's own reason",
+     "        // and touches no memory.",
+     "        // SAFETY: the site is a declared constant.",
+     "        unsafe { raise_site(&V3_SAN_604) };",
+     "        return core::ptr::null_mut();",
+     "    }",
+     "    // Each `ossl_v3_name_cmp(name, \"...\")` is a case-insensitive prefix compare by",
+     "    // length; `name` is NUL-terminated and non-NULL per the contract.",
+     "    // SAFETY: `name` is non-NULL and NUL-terminated per the contract.",
+     "    let type_ = unsafe {",
+     "        if ossl_v3_name_cmp(name, c\"email\".as_ptr()) == 0 {",
+     "            GEN_EMAIL",
+     "        } else if ossl_v3_name_cmp(name, c\"URI\".as_ptr()) == 0 {",
+     "            GEN_URI",
+     "        } else if ossl_v3_name_cmp(name, c\"DNS\".as_ptr()) == 0 {",
+     "            GEN_DNS",
+     "        } else if ossl_v3_name_cmp(name, c\"RID\".as_ptr()) == 0 {",
+     "            GEN_RID",
+     "        } else if ossl_v3_name_cmp(name, c\"IP\".as_ptr()) == 0 {",
+     "            GEN_IPADD",
+     "        } else if ossl_v3_name_cmp(name, c\"dirName\".as_ptr()) == 0 {",
+     "            GEN_DIRNAME",
+     "        } else if ossl_v3_name_cmp(name, c\"otherName\".as_ptr()) == 0 {",
+     "            GEN_OTHERNAME",
+     "        } else {",
+     "            -1",
+     "        }",
+     "    };",
+     "    if type_ == -1 {",
+     "        // `ERR_raise_data(ERR_LIB_X509V3, X509V3_R_UNSUPPORTED_OPTION, \"name=%s\", name)`.",
+     "        let mut msg = b\"name=\".to_vec();",
+     "        // SAFETY: `name` is non-NULL and NUL-terminated per the contract.",
+     "        unsafe { push_cstr(&mut msg, name) };",
+     "        msg.push(0);",
+     "        // SAFETY: `msg` is NUL-terminated; the site is a declared constant.",
+     "        unsafe { raise_site_data(&V3_SAN_623, msg.as_ptr().cast()) };",
+     "        return core::ptr::null_mut();",
+     "    }",
+     "    // SAFETY: `out`/`ctx` are per the contract; `value` is NUL-terminated.",
+     "    unsafe { a2i_GENERAL_NAME(out, method, ctx, type_, value, is_nc) }",
+     "}"
+    ],
+    "code_token_projection_identical": false,
+    "old_span_text": [
+     "#[no_mangle]",
+     "pub unsafe extern \"C\" fn v2i_GENERAL_NAME_ex(",
+     "    out: *mut GeneralName,",
+     "    method: *const X509V3ExtMethod,",
+     "    ctx: *mut X509V3Ctx,",
+     "    cnf: *mut ConfValue,",
+     "    is_nc: c_int,",
+     ") -> *mut GeneralName {",
+     "    // SAFETY: `cnf` is live per the contract.",
+     "    let (name, value) = unsafe { ((*cnf).name, (*cnf).value) };",
+     "    if value.is_null() {",
+     "        // SAFETY: the site is a declared constant.",
+     "        unsafe { raise_site(&V3_SAN_604) };",
+     "        return core::ptr::null_mut();",
+     "    }",
+     "    // Each `ossl_v3_name_cmp(name, \"...\")` is a case-insensitive prefix compare by",
+     "    // length; `name` is NUL-terminated.",
+     "    // SAFETY: `name` is NUL-terminated per the contract.",
+     "    let type_ = unsafe {",
+     "        if ossl_v3_name_cmp(name, c\"email\".as_ptr()) == 0 {",
+     "            GEN_EMAIL",
+     "        } else if ossl_v3_name_cmp(name, c\"URI\".as_ptr()) == 0 {",
+     "            GEN_URI",
+     "        } else if ossl_v3_name_cmp(name, c\"DNS\".as_ptr()) == 0 {",
+     "            GEN_DNS",
+     "        } else if ossl_v3_name_cmp(name, c\"RID\".as_ptr()) == 0 {",
+     "            GEN_RID",
+     "        } else if ossl_v3_name_cmp(name, c\"IP\".as_ptr()) == 0 {",
+     "            GEN_IPADD",
+     "        } else if ossl_v3_name_cmp(name, c\"dirName\".as_ptr()) == 0 {",
+     "            GEN_DIRNAME",
+     "        } else if ossl_v3_name_cmp(name, c\"otherName\".as_ptr()) == 0 {",
+     "            GEN_OTHERNAME",
+     "        } else {",
+     "            -1",
+     "        }",
+     "    };",
+     "    if type_ == -1 {",
+     "        // `ERR_raise_data(ERR_LIB_X509V3, X509V3_R_UNSUPPORTED_OPTION, \"name=%s\", name)`.",
+     "        let mut msg = b\"name=\".to_vec();",
+     "        // SAFETY: `name` is NUL-terminated per the contract.",
+     "        unsafe { push_cstr(&mut msg, name) };",
+     "        msg.push(0);",
+     "        // SAFETY: `msg` is NUL-terminated; the site is a declared constant.",
+     "        unsafe { raise_site_data(&V3_SAN_623, msg.as_ptr().cast()) };",
+     "        return core::ptr::null_mut();",
+     "    }",
+     "    // SAFETY: `out`/`ctx` are per the contract; `value` is NUL-terminated.",
+     "    unsafe { a2i_GENERAL_NAME(out, method, ctx, type_, value, is_nc) }",
+     "}"
+    ]
+   },
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. It is `pub unsafe extern \"C\" fn` with `#[no_mangle]`, so a safe Rust caller cannot call it; its C-ABI contract requires a live `cnf`. The three in-crate call sites (v3_ncons.rs:456, v3_info.rs:504, v3_san.rs:1151) all pass a live `CONF_VALUE`.",
+    "b_all_unsafe_covered": "Yes. The two field reads are followed by two refusals, so `ossl_v3_name_cmp` (whose `strncmp` reads through `name`), `push_cstr`, `raise_site_data` and `a2i_GENERAL_NAME` never receive a NULL `name` or `value`; the fn-level `# Safety` states the NULL-or-NUL-terminated shape of both fields and the NULL-or-live shapes of `out`/`ctx`.",
+    "c_hidden_obligation": "None new, and the change narrows rather than widens what callers must establish. Ordering was checked against the pinned authority: v3_san.c:600-601 load both fields, :603 tests `value`, :608 first reads through `name`. The port tests `value` then `name`, so {name=NULL,value=NULL} behaves identically (X509V3_R_MISSING_VALUE) and only {name=NULL,value!=NULL} changes from fault to refusal. That single divergence is deliberate (section 17: do not reproduce authority UB) and is recorded as D-V3-SAN-NULL-NAME-1 in docs/SECURITY_DIVERGENCE_POLICY.md; neither NULL shape is claimed compatible.",
+    "d_load_bearing_control": "The closure's content-addressed adjudicator (C2/C3/D). The in-file behavioural control F1 (`a_null_name_is_refused_before_the_name_scan`, which asserts the NULL result, the raised X509V3_R_MISSING_VALUE with lib 34, and that the live `value` pointer is untouched) is the control for the guard itself and is NOT_RUN here (R1)."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "re-established at d9fdf1357: identity is the same and the delta is exactly the NULL-`name` refusal plus its contract paragraph and the F1 test; the ordering was checked against the pinned authority v3_san.c:600-608; the one behavioural divergence is documented and is a refusal of an authority fault; four questions re-answered on the current bytes."
+  },
+  {
+   "boundary": "CMS-FREE-001",
+   "receipt": "boundary-sweep-B70",
+   "file": "src/cms/cms_lib.rs",
+   "operation": "x509_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "prior": {
+    "coordinate": 1378,
+    "span_lines": [
+     1378,
+     1381
+    ],
+    "span_sha256": "1237b76c964d4a55052b559f9f5fff0d7f1c944caff71895dacc3f37d8befef3",
+    "span_hash_reproduced_by_resolver": true,
+    "span_lines_reproduced_by_resolver": true,
+    "verdict": "SAFETY_DISCHARGED (boundary-sweep-B70 at b8bba955)",
+    "source_commit": "b8bba955503014c8fd86303314c6deebaea093b0"
+   },
+   "current": {
+    "coordinate": 1388,
+    "def_line": 1388,
+    "span_lines": [
+     1388,
+     1391
+    ],
+    "span_sha256": "3e41e7121b09fdb84b8fe696fd495be3be5d2369ae4df8d0de1ec5760f1c9c95",
+    "qualified_identity": "x509_free_void",
+    "resolution": "unique",
+    "source": {
+     "source": "git-blob",
+     "commit": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+     "content_sha256": "8cb2a18d72d34c588d9388f7165521a3305ee0440a7483940f7704b343fdc192"
+    }
+   },
+   "delta": {
+    "introduced_by": "d9fdf1357c7df26e36d15c1cda5154479b052c16 (b80)",
+    "classification": "doc-only",
+    "statement": "in-span: two comment lines differ (the SAFETY comment gained 'and this call's exclusive release'); the code is byte-identical. Above the span: d9fdf1357 added a fn-level `# Safety` contract (provenance at the ASN.1 allocation seam, whole-block extent, initialisation valid for X509_free's template walk, exclusive release, NULL accepted). No code token changed.",
+    "new_span_text": [
+     "unsafe extern \"C\" fn x509_free_void(p: *mut c_void) {",
+     "    // SAFETY: `p` is an `X509` per the stack's element type and this call's exclusive release.",
+     "    unsafe { X509_free(p.cast()) };",
+     "}"
+    ],
+    "code_token_projection_identical": true,
+    "old_span_text": [
+     "unsafe extern \"C\" fn x509_free_void(p: *mut c_void) {",
+     "    // SAFETY: `p` is an `X509` per the stack's element type.",
+     "    unsafe { X509_free(p.cast()) };",
+     "}"
+    ]
+   },
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`, appearing only as `Some(x509_free_void)` at cms_lib.rs:1204 (production failure arm of ossl_cms_get1_certs_ex) and :1595 (test). No safe Rust item exposes it.",
+    "b_all_unsafe_covered": "Yes, and more explicitly than before: the span holds the single call `X509_free(p.cast())` and d9fdf1357 added the fn-level `# Safety` stating NULL acceptance, provenance (X509_new/d2i_X509 at the ASN.1 seam), whole-block extent, initialisation valid for X509_free's template walk, and exclusive release by the stack it was handed to.",
+    "c_hidden_obligation": "None new; the body is unchanged, so the b70 obligation set is unchanged. One wording defect in the new contract is recorded, not repaired (R2): it says this call is 'that object's exactly-once release', but at both registration sites the object is also referenced by the CMS container (the b70 test asserts refcount 2 after the get1 and 1 after the pop_free), so what is released is the stack's exclusive REFERENCE. The disposition text states this correctly ('releases exactly one reference'); the safety requirement is unaffected.",
+    "d_load_bearing_control": "The closure's content-addressed adjudicator (C2/C3/D): because the code is byte-identical, the ONLY thing that can make this row discharge at b80 is the rebind, and C3/D show a wrong hash blocks exactly this row. C5 shows the code-token projection of the old and new spans is identical."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "re-established at d9fdf1357: the code is byte-identical (C5) and the only change is the fn-level `# Safety`; the operation, both registration sites and the NULL-tolerance of `X509_free` were re-read at this candidate; four questions re-answered. R2 records a wording imprecision in the new contract that does not change the requirement."
+  },
+  {
+   "boundary": "CMS-FREE-002",
+   "receipt": "boundary-sweep-B70",
+   "file": "src/cms/cms_lib.rs",
+   "operation": "x509_crl_free_void",
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "prior": {
+    "coordinate": 1384,
+    "span_lines": [
+     1384,
+     1387
+    ],
+    "span_sha256": "34fa55ae4b1134b15b2f936bae53f9d6143a769e6700ec4aaf7489835d47a0bc",
+    "span_hash_reproduced_by_resolver": true,
+    "span_lines_reproduced_by_resolver": true,
+    "verdict": "SAFETY_DISCHARGED (boundary-sweep-B70 at b8bba955)",
+    "source_commit": "b8bba955503014c8fd86303314c6deebaea093b0"
+   },
+   "current": {
+    "coordinate": 1400,
+    "def_line": 1400,
+    "span_lines": [
+     1400,
+     1403
+    ],
+    "span_sha256": "f6c3dd451d2d0caae428d83c1a2417130ae3631e55abd73c47be6cdadd747b93",
+    "qualified_identity": "x509_crl_free_void",
+    "resolution": "unique",
+    "source": {
+     "source": "git-blob",
+     "commit": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+     "content_sha256": "8cb2a18d72d34c588d9388f7165521a3305ee0440a7483940f7704b343fdc192"
+    }
+   },
+   "delta": {
+    "introduced_by": "d9fdf1357c7df26e36d15c1cda5154479b052c16 (b80)",
+    "classification": "doc-only",
+    "statement": "in-span: two comment lines differ (the SAFETY comment gained 'and this call's exclusive release'); the code is byte-identical. Above the span: d9fdf1357 added a fn-level `# Safety` contract of the same shape as x509_free_void. No code token changed.",
+    "new_span_text": [
+     "unsafe extern \"C\" fn x509_crl_free_void(p: *mut c_void) {",
+     "    // SAFETY: `p` is an `X509_CRL` per the stack's element type and this call's exclusive release.",
+     "    unsafe { X509_CRL_free(p.cast()) };",
+     "}"
+    ],
+    "code_token_projection_identical": true,
+    "old_span_text": [
+     "unsafe extern \"C\" fn x509_crl_free_void(p: *mut c_void) {",
+     "    // SAFETY: `p` is an `X509_CRL` per the stack's element type.",
+     "    unsafe { X509_CRL_free(p.cast()) };",
+     "}"
+    ]
+   },
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. Private `unsafe extern \"C\" fn`, appearing only as `Some(x509_crl_free_void)` at cms_lib.rs:1264 (production failure arm of ossl_cms_get1_crls_ex) and :1610 (test).",
+    "b_all_unsafe_covered": "Yes, by the same fn-level `# Safety` d9fdf1357 added (over an `X509_CRL`, ASN.1 seam `X509_CRL_new`/`d2i_X509_CRL`). The span holds the single call `X509_CRL_free(p.cast())`.",
+    "c_hidden_obligation": "None new; the body is unchanged. The b70 residual stands and is restated in the receipt: the private thunk is never executed (tracer hit=0), so this is a contract/body-level discharge, not runtime coverage. R2 (reference vs object wording) applies here too.",
+    "d_load_bearing_control": "The closure's content-addressed adjudicator (C2/C3/D) plus C5's code-token invariance. As with CMS-FREE-001 the only difference at b80 is the rebind, and a corrupted hash blocks exactly this row."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "re-established at d9fdf1357: the code is byte-identical (C5) and the only change is the fn-level `# Safety`; the operation, both registration sites and the NULL-tolerance of `X509_CRL_free` were re-read; four questions re-answered. The b70 never-executed residual is carried forward unchanged."
+  }
+ ],
+ "controls": [
+  {
+   "id": "C0-candidate",
+   "purpose": "bind every hash to this candidate",
+   "observed": "branch stage/p25/b75-ocsp, S=d9fdf1357c7df26e36d15c1cda5154479b052c16, HEAD=da7480a3f; src/ identical between them (empty git diff); resolver invoked at source_commit=S (git-blob, never worktree); tool 0ca2f9e4b",
+   "pass": true
+  },
+  {
+   "id": "C1-prior-span-reproduction",
+   "purpose": "the recorded prior hashes must be real content bindings, not coordinates",
+   "observed": "4/4 reproduce: cms_ri_cb 671-717 f1f667a2ee29d165 at b6f38f134; v2i_GENERAL_NAME_ex 1068-1117 095944c0642818b9 at b6f38f134; x509_free_void 1378-1381 1237b76c964d4a55 at b8bba955; x509_crl_free_void 1384-1387 34fa55ae4b1134b1 at b8bba955",
+   "pass": true
+  },
+  {
+   "id": "C2-rebound-receipts-adjudicate",
+   "purpose": "after the rebind the tool's own adjudicator must discharge all four",
+   "observed": "4/4 DISCHARGED; each bound to its owning boundary by same-resolved-definition with content_address_accepts true, covers_site true, covers_current_coordinate true, 0 stale / 0 span / 0 conflict rejections. Run through consumer_closure.adjudicate with --enforce-disposition-conflicts semantics on a plane built from load_boundaries",
+   "pass": true
+  },
+  {
+   "id": "C3-per-row-corruption-isolation",
+   "purpose": "the hash must be load-bearing, one row at a time",
+   "observed": "4/4 FIRED: corrupting exactly one owning boundary's recorded span_sha256 blocks exactly that row and leaves the other three DISCHARGED in the same run, for all four boundaries (CMS-FREE-001, CMS-FREE-002, src/cms/cms_asn1.rs:671, src/x509/v3_san.rs:1069)",
+   "pass": true
+  },
+  {
+   "id": "C4-stale-reproduction",
+   "purpose": "the pre-rebind receipts must reproduce the b80 refusals",
+   "observed": "4/4 BLOCKED from the HEAD copies of the two receipts with everything else at the candidate: the two B70 rows as 'stale scoped discharge refused ... declares [[1378,1378]] ... current census coordinate 1388' plus span-hash-mismatch, and the two r13 rows as span-hash-mismatch. This is the b80 state reproduced, so the rebind is the only cause of G2",
+   "pass": true
+  },
+  {
+   "id": "C5-code-token-invariance",
+   "purpose": "prevent a 'doc-only' label from hiding a code change",
+   "observed": "for CMS-FREE-001/002 the non-comment projection of the old and new spans is identical (3 code lines each: signature, the one call, closing brace), which is what makes 'doc-only' the right classification; the two guard-added rows differ by exactly the guard, as their classification says",
+   "pass": true
+  },
+  {
+   "id": "C6-no-collateral",
+   "purpose": "no boundary outside the four changed",
+   "observed": "structurally diffed every leaf of both receipts against their HEAD copies: the only changed leaves are the four boundary objects (their coordinates, spans, bodies, disposition text, two established[] coordinates, unsafe_operations lines, and the appended verdict/rebind fields) and one additive receipt-level rebind_review_b80 block per receipt. No other boundary, supersedes entry, counts field or verdict moved",
+   "pass": true
+  },
+  {
+   "id": "C7-closures-at-this-candidate",
+   "purpose": "the four rows must discharge in the real consumer closures",
+   "observed": "ssh 290/290 DISCHARGED, ACCEPTED, refusals=[]; sshd 290/290 DISCHARGED, ACCEPTED, refusals=[]; all four rows report covers_site true / same-resolved-definition in both receipts; element 7 PASS (contract-bounded) in both receipts (0 target-bounded, 156 contract-bounded, 0 unclassified)",
+   "pass": true
+  }
+ ],
+ "receipt_diffs": {
+  "files": [
+   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B70.json",
+   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/r13-coordinate-rebind-sites.json"
+  ],
+  "structural": [
+   {
+    "file": "boundary-sweep-B70.json",
+    "changed_leaf_count": 103,
+    "by_top_level": {
+     "boundaries[0]": 48,
+     "boundaries[1]": 48,
+     "rebind_review_b80": 7
+    },
+    "paths": [
+     "boundaries[0].body",
+     "boundaries[0].covers_site",
+     "boundaries[0].covers_site_basis",
+     "boundaries[0].disposition",
+     "boundaries[0].established[0]",
+     "boundaries[0].established[3]",
+     "boundaries[0].line",
+     "boundaries[0].line_current",
+     "boundaries[0].qualified_identity",
+     "boundaries[0].rebind.candidate",
+     "boundaries[0].rebind.delta",
+     "boundaries[0].rebind.delta_classification",
+     "boundaries[0].rebind.evidence_scope",
+     "boundaries[0].rebind.prior_candidate",
+     "boundaries[0].rebind.prior_coordinate",
+     "boundaries[0].rebind.prior_span_lines[0]",
+     "boundaries[0].rebind.prior_span_lines[1]",
+     "boundaries[0].rebind.prior_span_sha256",
+     "boundaries[0].rebind.prose_coordinate_updates[0].field",
+     "boundaries[0].rebind.prose_coordinate_updates[0].from",
+     "boundaries[0].rebind.prose_coordinate_updates[0].to",
+     "boundaries[0].rebind.prose_coordinate_updates[1].field",
+     "boundaries[0].rebind.prose_coordinate_updates[1].from",
+     "boundaries[0].rebind.prose_coordinate_updates[1].to",
+     "boundaries[0].rebind.prose_coordinate_updates[2].field",
+     "boundaries[0].rebind.prose_coordinate_updates[2].from",
+     "boundaries[0].rebind.prose_coordinate_updates[2].to",
+     "boundaries[0].rebind.prose_coordinate_updates[3].field",
+     "boundaries[0].rebind.prose_coordinate_updates[3].from",
+     "boundaries[0].rebind.prose_coordinate_updates[3].to",
+     "boundaries[0].rebind.prose_coordinate_updates[4].field",
+     "boundaries[0].rebind.prose_coordinate_updates[4].from",
+     "boundaries[0].rebind.prose_coordinate_updates[4].to",
+     "boundaries[0].rebind.review",
+     "boundaries[0].rebind.review_path",
+     "boundaries[0].review_receipt",
+     "boundaries[0].review_receipt_path",
+     "boundaries[0].reviewed_span_sha256",
+     "boundaries[0].span_end_line",
+     "boundaries[0].span_hash_identical_to_review",
+     "boundaries[0].span_sha256",
+     "boundaries[0].span_source_commit",
+     "boundaries[0].span_start_line",
+     "boundaries[0].unsafe_operations[0].line",
+     "boundaries[0].unsafe_operations[1].line",
+     "boundaries[0].verdict",
+     "boundaries[0].verdict_basis",
+     "boundaries[0].verdict_class",
+     "boundaries[1].body",
+     "boundaries[1].covers_site",
+     "boundaries[1].covers_site_basis",
+     "boundaries[1].disposition",
+     "boundaries[1].established[0]",
+     "boundaries[1].established[3]",
+     "boundaries[1].line",
+     "boundaries[1].line_current",
+     "boundaries[1].qualified_identity",
+     "boundaries[1].rebind.candidate",
+     "boundaries[1].rebind.delta",
+     "boundaries[1].rebind.delta_classification",
+     "boundaries[1].rebind.evidence_scope",
+     "boundaries[1].rebind.prior_candidate",
+     "boundaries[1].rebind.prior_coordinate",
+     "boundaries[1].rebind.prior_span_lines[0]",
+     "boundaries[1].rebind.prior_span_lines[1]",
+     "boundaries[1].rebind.prior_span_sha256",
+     "boundaries[1].rebind.prose_coordinate_updates[0].field",
+     "boundaries[1].rebind.prose_coordinate_updates[0].from",
+     "boundaries[1].rebind.prose_coordinate_updates[0].to",
+     "boundaries[1].rebind.prose_coordinate_updates[1].field",
+     "boundaries[1].rebind.prose_coordinate_updates[1].from",
+     "boundaries[1].rebind.prose_coordinate_updates[1].to",
+     "boundaries[1].rebind.prose_coordinate_updates[2].field",
+     "boundaries[1].rebind.prose_coordinate_updates[2].from",
+     "boundaries[1].rebind.prose_coordinate_updates[2].to",
+     "boundaries[1].rebind.prose_coordinate_updates[3].field",
+     "boundaries[1].rebind.prose_coordinate_updates[3].from",
+     "boundaries[1].rebind.prose_coordinate_updates[3].to",
+     "boundaries[1].rebind.prose_coordinate_updates[4].field",
+     "boundaries[1].rebind.prose_coordinate_updates[4].from",
+     "boundaries[1].rebind.prose_coordinate_updates[4].to",
+     "boundaries[1].rebind.review",
+     "boundaries[1].rebind.review_path",
+     "boundaries[1].review_receipt",
+     "boundaries[1].review_receipt_path",
+     "boundaries[1].reviewed_span_sha256",
+     "boundaries[1].span_end_line",
+     "boundaries[1].span_hash_identical_to_review",
+     "boundaries[1].span_sha256",
+     "boundaries[1].span_source_commit",
+     "boundaries[1].span_start_line",
+     "boundaries[1].unsafe_operations[0].line",
+     "boundaries[1].unsafe_operations[1].line",
+     "boundaries[1].verdict",
+     "boundaries[1].verdict_basis",
+     "boundaries[1].verdict_class",
+     "rebind_review_b80.candidate",
+     "rebind_review_b80.prior_candidate",
+     "rebind_review_b80.prior_evidence_note",
+     "rebind_review_b80.review",
+     "rebind_review_b80.review_path",
+     "rebind_review_b80.rule",
+     "rebind_review_b80.scope"
+    ]
+   },
+   {
+    "file": "r13-coordinate-rebind-sites.json",
+    "changed_leaf_count": 63,
+    "by_top_level": {
+     "boundaries[115]": 28,
+     "boundaries[4]": 28,
+     "rebind_review_b80": 7
+    },
+    "paths": [
+     "boundaries[115].covers_site",
+     "boundaries[115].covers_site_basis",
+     "boundaries[115].disposition",
+     "boundaries[115].line",
+     "boundaries[115].rebind.candidate",
+     "boundaries[115].rebind.delta",
+     "boundaries[115].rebind.delta_classification",
+     "boundaries[115].rebind.prior_candidate",
+     "boundaries[115].rebind.prior_coordinate",
+     "boundaries[115].rebind.prior_span_lines[0]",
+     "boundaries[115].rebind.prior_span_lines[1]",
+     "boundaries[115].rebind.prior_span_sha256",
+     "boundaries[115].rebind.prose_coordinate_updates[0].field",
+     "boundaries[115].rebind.prose_coordinate_updates[0].from",
+     "boundaries[115].rebind.prose_coordinate_updates[0].to",
+     "boundaries[115].rebind.review",
+     "boundaries[115].rebind.review_path",
+     "boundaries[115].review_receipt",
+     "boundaries[115].review_receipt_path",
+     "boundaries[115].reviewed_span_sha256",
+     "boundaries[115].span_end_line",
+     "boundaries[115].span_hash_identical_to_review",
+     "boundaries[115].span_sha256",
+     "boundaries[115].span_source_commit",
+     "boundaries[115].span_start_line",
+     "boundaries[115].verdict",
+     "boundaries[115].verdict_basis",
+     "boundaries[115].verdict_class",
+     "boundaries[4].covers_site",
+     "boundaries[4].covers_site_basis",
+     "boundaries[4].disposition",
+     "boundaries[4].line",
+     "boundaries[4].rebind.candidate",
+     "boundaries[4].rebind.delta",
+     "boundaries[4].rebind.delta_classification",
+     "boundaries[4].rebind.prior_candidate",
+     "boundaries[4].rebind.prior_coordinate",
+     "boundaries[4].rebind.prior_span_lines[0]",
+     "boundaries[4].rebind.prior_span_lines[1]",
+     "boundaries[4].rebind.prior_span_sha256",
+     "boundaries[4].rebind.prose_coordinate_updates[0].field",
+     "boundaries[4].rebind.prose_coordinate_updates[0].from",
+     "boundaries[4].rebind.prose_coordinate_updates[0].to",
+     "boundaries[4].rebind.review",
+     "boundaries[4].rebind.review_path",
+     "boundaries[4].review_receipt",
+     "boundaries[4].review_receipt_path",
+     "boundaries[4].reviewed_span_sha256",
+     "boundaries[4].span_end_line",
+     "boundaries[4].span_hash_identical_to_review",
+     "boundaries[4].span_sha256",
+     "boundaries[4].span_source_commit",
+     "boundaries[4].span_start_line",
+     "boundaries[4].verdict",
+     "boundaries[4].verdict_basis",
+     "boundaries[4].verdict_class",
+     "rebind_review_b80.candidate",
+     "rebind_review_b80.prior_candidate",
+     "rebind_review_b80.prior_evidence_note",
+     "rebind_review_b80.review",
+     "rebind_review_b80.review_path",
+     "rebind_review_b80.rule",
+     "rebind_review_b80.scope"
+    ]
+   }
+  ],
+  "rows": [
+   {
+    "receipt": "r13-coordinate-rebind-sites.json",
+    "boundary": "src/cms/cms_asn1.rs:671",
+    "old": {
+     "line": 671,
+     "span_lines": [
+      671,
+      717
+     ],
+     "span_hash": "f1f667a2ee29d165",
+     "declared_range": null
+    },
+    "new": {
+     "line": 680,
+     "span_lines": [
+      680,
+      733
+     ],
+     "span_hash": "fd94cb262e8ff33d",
+     "declared_range": "src/cms/cms_asn1.rs:680"
+    },
+    "classification": "guard-added"
+   },
+   {
+    "receipt": "r13-coordinate-rebind-sites.json",
+    "boundary": "src/x509/v3_san.rs:1069",
+    "old": {
+     "line": 1069,
+     "span_lines": [
+      1068,
+      1117
+     ],
+     "span_hash": "095944c0642818b9",
+     "declared_range": null
+    },
+    "new": {
+     "line": 1077,
+     "span_lines": [
+      1076,
+      1135
+     ],
+     "span_hash": "b01dcb8bfc373c3a",
+     "declared_range": "src/x509/v3_san.rs:1077"
+    },
+    "classification": "guard-added"
+   },
+   {
+    "receipt": "boundary-sweep-B70.json",
+    "boundary": "CMS-FREE-001",
+    "old": {
+     "line": 1378,
+     "span_lines": [
+      1378,
+      1381
+     ],
+     "span_hash": "1237b76c964d4a55",
+     "declared_range": "src/cms/cms_lib.rs:1378"
+    },
+    "new": {
+     "line": 1388,
+     "span_lines": [
+      1388,
+      1391
+     ],
+     "span_hash": "3e41e7121b09fdb8",
+     "declared_range": "src/cms/cms_lib.rs:1388"
+    },
+    "classification": "doc-only"
+   },
+   {
+    "receipt": "boundary-sweep-B70.json",
+    "boundary": "CMS-FREE-002",
+    "old": {
+     "line": 1384,
+     "span_lines": [
+      1384,
+      1387
+     ],
+     "span_hash": "34fa55ae4b1134b1",
+     "declared_range": "src/cms/cms_lib.rs:1384"
+    },
+    "new": {
+     "line": 1400,
+     "span_lines": [
+      1400,
+      1403
+     ],
+     "span_hash": "f6c3dd451d2d0caa",
+     "declared_range": "src/cms/cms_lib.rs:1400"
+    },
+    "classification": "doc-only"
+   }
+  ]
+ },
+ "closures": {
+  "ssh": {
+   "receipt": "evidence/closure-ssh-b80b.json",
+   "receipt_sha256": "7cf1383994b0af70daefc5438c20a7d503ff821038986ab723a58e844f93da7a",
+   "receipt_bytes": 13743818,
+   "tool_sha256": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66",
+   "source_head": "da7480a3fa0506cf28ab4e2ab1e8dfba27c91fab",
+   "artifact_sha256": "f8f454782e6a793a624687755a779ad4b6cb9bbb8693f35f2a1f5f9d16234607",
+   "counts": {
+    "reachable_files": 626,
+    "reachable_production_obligations": 290,
+    "DISCHARGED": 290,
+    "BLOCKED": 0,
+    "UNKNOWN": 0,
+    "v1_production_operations_total": 8,
+    "v1_uncontracted_operations_total": 224,
+    "carried_forward": 278,
+    "carried_forward_removed": 3,
+    "stale_discharge_rejections": 0
+   },
+   "verdict": {
+    "state": "ACCEPTED",
+    "safe_compatible": false,
+    "reason": "no refusal condition fired"
+   },
+   "refusals": [],
+   "element_7": {
+    "status": "PASS (contract-bounded)",
+    "established": true,
+    "target_bounded_unresolved_sites": 0,
+    "contract_bounded_sites": 156,
+    "unclassified_reachable_sites": 0
+   },
+   "ledger_record_artifact_matches_this_build": false,
+   "ledger_record_artifact_rel": "ssh",
+   "four_rows": [
+    {
+     "item": "cms_ri_cb",
+     "status": "DISCHARGED",
+     "boundary": "src/cms/cms_asn1.rs:671",
+     "span_sha256": "fd94cb262e8ff33dce901c25292084996f2f0fe8478f297342e320fa19e3ed67",
+     "covers_site": [
+      true
+     ]
+    },
+    {
+     "item": "x509_free_void",
+     "status": "DISCHARGED",
+     "boundary": "CMS-FREE-001",
+     "span_sha256": "3e41e7121b09fdb84b8fe696fd495be3be5d2369ae4df8d0de1ec5760f1c9c95",
+     "covers_site": [
+      true
+     ]
+    },
+    {
+     "item": "x509_crl_free_void",
+     "status": "DISCHARGED",
+     "boundary": "CMS-FREE-002",
+     "span_sha256": "f6c3dd451d2d0caae428d83c1a2417130ae3631e55abd73c47be6cdadd747b93",
+     "covers_site": [
+      true
+     ]
+    },
+    {
+     "item": "v2i_GENERAL_NAME_ex",
+     "status": "DISCHARGED",
+     "boundary": "src/x509/v3_san.rs:1069",
+     "span_sha256": "b01dcb8bfc373c3aaf1da7c788d14356fd934cd5426fc6a1fc3d59ff657f2afa",
+     "covers_site": [
+      true
+     ]
+    }
+   ]
+  },
+  "sshd": {
+   "receipt": "evidence/closure-sshd-b80b.json",
+   "receipt_sha256": "9739135b806cd8b22a5446770900601fa1fa7bbdb6cd31ffd0205636a025125d",
+   "receipt_bytes": 13590108,
+   "tool_sha256": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66",
+   "source_head": "da7480a3fa0506cf28ab4e2ab1e8dfba27c91fab",
+   "artifact_sha256": "152ccc3465240454b5ec0cd470dfa81dc7eb044c01c9bbe72519a65a71919b92",
+   "counts": {
+    "reachable_files": 625,
+    "reachable_production_obligations": 290,
+    "DISCHARGED": 290,
+    "BLOCKED": 0,
+    "UNKNOWN": 0,
+    "v1_production_operations_total": 8,
+    "v1_uncontracted_operations_total": 224,
+    "carried_forward": 278,
+    "carried_forward_removed": 3,
+    "stale_discharge_rejections": 0
+   },
+   "verdict": {
+    "state": "ACCEPTED",
+    "safe_compatible": false,
+    "reason": "no refusal condition fired"
+   },
+   "refusals": [],
+   "element_7": {
+    "status": "PASS (contract-bounded)",
+    "established": true,
+    "target_bounded_unresolved_sites": 0,
+    "contract_bounded_sites": 156,
+    "unclassified_reachable_sites": 0
+   },
+   "ledger_record_artifact_matches_this_build": false,
+   "ledger_record_artifact_rel": "ssh",
+   "four_rows": [
+    {
+     "item": "cms_ri_cb",
+     "status": "DISCHARGED",
+     "boundary": "src/cms/cms_asn1.rs:671",
+     "span_sha256": "fd94cb262e8ff33dce901c25292084996f2f0fe8478f297342e320fa19e3ed67",
+     "covers_site": [
+      true
+     ]
+    },
+    {
+     "item": "x509_free_void",
+     "status": "DISCHARGED",
+     "boundary": "CMS-FREE-001",
+     "span_sha256": "3e41e7121b09fdb84b8fe696fd495be3be5d2369ae4df8d0de1ec5760f1c9c95",
+     "covers_site": [
+      true
+     ]
+    },
+    {
+     "item": "x509_crl_free_void",
+     "status": "DISCHARGED",
+     "boundary": "CMS-FREE-002",
+     "span_sha256": "f6c3dd451d2d0caae428d83c1a2417130ae3631e55abd73c47be6cdadd747b93",
+     "covers_site": [
+      true
+     ]
+    },
+    {
+     "item": "v2i_GENERAL_NAME_ex",
+     "status": "DISCHARGED",
+     "boundary": "src/x509/v3_san.rs:1069",
+     "span_sha256": "b01dcb8bfc373c3aaf1da7c788d14356fd934cd5426fc6a1fc3d59ff657f2afa",
+     "covers_site": [
+      true
+     ]
+    }
+   ]
+  }
+ },
+ "residuals": [
+  {
+   "id": "R1-no-build",
+   "state": "NOT_RUN",
+   "statement": "no cargo invocation in this review, so the two in-file behavioural controls for the guards (F-REST-1 in cms_asn1.rs, F1 in v3_san.rs) and fmt/clippy/test are NOT_RUN here and belong to the next BATCH gate. The guard premises were established by reading fre.rs:268-275 and d2i.rs:1774-1789, not by execution."
+  },
+  {
+   "id": "R2-contract-wording",
+   "state": "OPEN",
+   "statement": "the new x509_free_void/x509_crl_free_void `# Safety` says the call is 'that object's exactly-once release'. At both registration sites the object is also referenced by the CMS container (the b70 test asserts refcount 2 after the get1, 1 after the pop_free), so the call releases the stack's exclusive REFERENCE, not the object. The B70 disposition text states this correctly. Not repaired (this review may not edit src/); it does not change the safety requirement or the verdict."
+  },
+  {
+   "id": "R3-ledger-artifact-identity",
+   "state": "OPEN",
+   "statement": "in both b80b receipts ledger_record.artifact_matches_this_build is false, and for the sshd closure ledger_record.artifact_rel is 'ssh'. The row records artifact_sha256_recorded=c8723f34... while the binaries actually read are ssh f8f45478... and sshd 152ccc34.... This is pre-existing (the same false value appears from b77 through b80) and is not caused by this rebind, but it means the L4 ledger row does not bind the executed consumer binary (AGENTS.md section 22, freeze step 4). The receipts' own artifact_identity.sha256 is the binary the tool actually read; the closure acceptance does not depend on the ledger row."
+  },
+  {
+   "id": "R4-tool-self-test-not-rerun",
+   "state": "NOT_RUN",
+   "statement": "the two closures were run with --summary, which does not execute the instrument's self-test suite. The last recorded self-test at b80 (court/freeze-b80/selftest-b80-repin.log) reports SELF-TEST FAILED on two items, both control-premise/NOT_RUN rather than detector regressions (an 'e7repin-search disabled' control whose premise is that a stale row exists in this image, and an e7core default-context control reported NOT_RUN). That is recorded here, not reported as a pass."
+  },
+  {
+   "id": "R5-unchanged-siblings",
+   "state": "DEFERRED",
+   "statement": "other receipts still carry pre-guard records for the same two operations, each valid at its own candidate: boundary-sweep-B71 CMS-CB-005 records the b8bba955 span 617-663 with hash f1f667a2ee29d165 (the resolver confirms the same content hashes to f1f667a2 at b6f38f134 over lines 671-717, because the span excludes documentation comments and only those lines moved), and openssh-v1l-sites records the b6f38f134 span 1068-1117 with hash 095944c0642818b9 and a RETAINED (BLOCKED) disposition. Neither is the owning record for the b80 adjudication (r13's ledger join keys are) and both are declared superseded, so neither refuses a row; they are left at their own candidate's bytes rather than rewritten, and editing them was outside this task's scope."
+  },
+  {
+   "id": "R6-other-286",
+   "state": "OUT_OF_SCOPE",
+   "statement": "this review re-established four rows. The other 286 discharge through the b80b closures' own logic; they were not independently reviewed here."
+  }
+ ],
+ "does_not_prove": [
+  "It does not establish SAFE_COMPATIBLE for openssh or any consumer family; both receipts record safe_compatible=false, and a consumer-scope closure is not a family graduation.",
+  "It does not establish the absence of UB at runtime: no sanitizer, Miri, Loom or other binary-level check ran, and no build ran at all.",
+  "It does not establish that the two new guards behave as their tests assert; the in-file tests (F-REST-1, F1) are NOT_RUN (R1).",
+  "It does not establish constant-time behaviour or any cryptographic property of these operations, none of which is secret-dependent.",
+  "It does not establish compatibility of the new NULL-name refusal against a live authority; that specific differential was measured when D-V3-SAN-NULL-NAME-1 was introduced and is cited, not re-run here.",
+  "It does not validate the prose evidence fields of the two receipts beyond the coordinates and spans this review names; in particular the b70 image's binary-level `established` entries (libcrypto 1c03ec0a..., symbol offsets) are carried, not re-derived against the b80 image.",
+  "It does not establish that the L4 ledger row binds the executed consumer binary; R3 records that it does not.",
+  "It does not establish that the closure instrument's own self-test suite is green at this candidate (R4)."
+ ]
+}

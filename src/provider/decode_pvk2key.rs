@@ -47,14 +47,10 @@ use crate::rsa::object::{ossl_rsa_set0_libctx, RSA_free};
 use crate::rsa::Rsa;
 use crate::runtime::bio::core_bio::ossl_bio_new_from_core_bio;
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
+use crate::runtime::bio::sys::strcmp;
 use crate::runtime::bio::{BIO_free, Bio};
 use crate::runtime::err::{peek_last_lib, peek_last_reason, ERR_clear_last_mark};
 use crate::selftest::OsslCallback;
-
-unsafe extern "C" {
-    /// The C library's `strcmp`, the generated parameter decoder's own comparison.
-    fn strcmp(a: *const c_char, b: *const c_char) -> c_int;
-}
 
 /// `EVP_PKEY_RSA`/`EVP_PKEY_DSA` — the two ids the descriptors name.
 const EVP_PKEY_RSA: c_int = 6;
@@ -201,7 +197,8 @@ unsafe extern "C" fn pvk2key_set_ctx_params(vctx: *mut c_void, params: *const Os
     if !p.is_null() {
         // SAFETY: `p` walks a `key == NULL`-terminated array.
         while !unsafe { (*p).key }.is_null() {
-            // SAFETY: each key is NUL-terminated and the literal is too.
+            // SAFETY: each key is NUL-terminated and the literal is too; `strcmp` is the
+            // audited libc declaration in `runtime::bio::sys`, not a second local one.
             if unsafe { strcmp((*p).key, OSSL_DECODER_PARAM_PROPERTIES) } == 0 {
                 // SAFETY: `p` is live and `propq`/`ctx` are this frame's.
                 if unsafe {

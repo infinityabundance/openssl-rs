@@ -216,7 +216,9 @@ pub unsafe extern "C" fn ASYNC_set_mem_functions(
     guard_ffi(0, || {
         // The authority's `ASYNC_set_mem_functions` reaches the init bit first; NULL settings,
         // as it passes.
-        OPENSSL_init_crypto(OPENSSL_INIT_ASYNC, ptr::null());
+        // SAFETY: NULL settings, so the initialiser reads no caller memory and `opts`
+        // carries no pointer.
+        unsafe { OPENSSL_init_crypto(OPENSSL_INIT_ASYNC, ptr::null()) };
         let lock = ASYNC_MEM_LOCK.load(Ordering::Acquire);
         if lock.is_null() {
             return 0;

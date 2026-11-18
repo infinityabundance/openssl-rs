@@ -1653,9 +1653,9 @@ pub(crate) unsafe fn ossl_provider_find(
         // for NULL, so there is nothing to guard here.
         let is_default = lib_ctx_is_default_symbol(libctx) != 0;
         if is_default {
-            // `OPENSSL_init_crypto` is likewise safe in this crate, and this is the same
-            // call `a_strnid` makes for the same reason.
-            OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, ptr::null());
+            // SAFETY: NULL settings, so the initialiser reads no caller memory; this is the
+            // same call `a_strnid` makes for the same reason.
+            unsafe { OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, ptr::null()) };
         }
     }
     let mut tmpl = blank_provider();

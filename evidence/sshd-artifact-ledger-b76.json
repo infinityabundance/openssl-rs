@@ -1,0 +1,36 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/per-artefact-ledger/v1",
+ "kind": "per-artefact-ledger-binding",
+ "date": "2026-11-13",
+ "family_id": "openssh",
+ "run_id": "run:build-link:candidate:openssh:sshd",
+ "level": "L4-linked",
+ "outcome": "reached",
+ "recipe_id": "recipe:openssh:9.9p1",
+ "source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+ "source_root_hash": "4a5abaf399ac1ee4ba977c30f73c748b7dcaf5c168eb26b1ff65cedefe28906f",
+ "source_root_hash_rule": null,
+ "source_tree_domain_hash": null,
+ "artifact_rel": "sshd",
+ "artifact_sha256": "547c0d14d0fed0b38f0165af1f9c65cd86309a572cdbd30abbc1d8b7c89d2a1d",
+ "install_libcrypto_sha256": "8f18871713a80cc58babcd2f539f273fe9a88807acfa15bb165fb4c8fc1f4aef",
+ "recorded_candidate_install": "8f18871713a80cc58babcd2f539f273fe9a88807acfa15bb165fb4c8fc1f4aef",
+ "freeze": "court/freeze-b76/FREEZE-b76.json",
+ "freeze_sha256": "597cf65e2ea9fbdcb00c92a6b29e7cc277077d06ddc142e41f12fcbc40669842",
+ "freeze_sha256_note": "filled from the final (post-rebind) FREEZE-b76.json after it was regenerated; consumer_artifact_rebind.verify() does not read this field (it reads freeze.source.head, freeze.candidate_identity.libcrypto_so_3_sha256 and freeze.artefacts.files[artifact_rel]), so the rebind receipt is unaffected by filling it",
+ "carry_chain": {
+  "source": "evidence/closure-sshd-b73-r2.json",
+  "source_sha256": "d0addc72f94904b03e63b2bd1d92dc5506c1ea67f6732b5a51a124f943f5cee5",
+  "carried_forward_removed": 36,
+  "target": "evidence/closure-sshd-b76c.json",
+  "note": "the b76 sshd run that was refused (evidence/closure-sshd-b76.json, CARRY_FORWARD_SUPPRESSED) is not a carry source; the control court/freeze-b76/closure-sshd-b76c-refused-carry-b76.json was refused with CARRY_FORWARD_SOURCE_INVALID"
+ },
+ "witness": "the same OpenSSH 9.9p1 recipe/source row that names ssh also built the analysed sshd: FREEZE-b76 records artefacts.files.sshd.sha256 = 547c0d14d0fed0b38f0165af1f9c65cd86309a572cdbd30abbc1d8b7c89d2a1d, the exact binary the b76c receipt analysed at court/tmp/openssh-closure/server-b76/openssh-9.9p1/sshd, whose runpath resolves libcrypto.so.3 to the freeze-proven install 8f18871713a80cc58babcd2f539f273fe9a88807acfa15bb165fb4c8fc1f4aef. Unlike b73, the atlas row was NOT rewritten to carry ssh: it still records artifact_rel='ssh' artifact_sha256=c8723f3494a2d8ea2c43bd786cf4ded342dbbb0177ded2b567d198084ef30e57, its own build (configure with a different line, then `make ssh`). This ledger is therefore the per-artefact join for sshd; it does not claim the atlas row measured sshd, and the ssh closure is bound by the freeze-proven ssh digest 0384f983b392b450a135b960c7b8f991636d509bf9ef5ff841e3d3b7367545d4 instead.",
+ "note": "This is a per-artefact ledger join, not a build-link measurement. It removes the structural one-row-cannot-bind-two-artefacts defect for sshd; a fresh closure run is still required. The ledger does not edit forensics/downstream/build-link-atlas.json (sha256 c6e73947f68bd8e60fcebf99706d636f9276eeeba7fed659561cf376c3a3b2e2, body_hash cf8673f9c562479112fe481f391f0583e12010fc3ffe5b5655feb529f230e33b reproduces).",
+ "non_claims": [
+  "does not re-measure sshd",
+  "does not change any closure count, verdict or refusal",
+  "does not establish SAFE_COMPATIBLE",
+  "does not claim the atlas row measured sshd (the row records its own `make ssh` build)"
+ ]
+}

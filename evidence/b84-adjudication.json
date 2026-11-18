@@ -1,0 +1,171 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/adjudication/v1",
+ "kind": "independent-adversarial-adjudication",
+ "candidate_tag": "b84",
+ "adjudicated_utc": "2026-11-16T00:00:00Z",
+ "adjudicator": "independent adversarial adjudicator (produced none of the b84 evidence)",
+ "branch": "stage/p25/b75-ocsp",
+ "head_at_adjudication": "1c887c17ec9596a1643d47ae28e44033612d4272",
+ "venue": {
+  "court": "docker/openssl-rs-court.sh (cgroup 16 GiB / 16 CPU), all probes executed inside the container",
+  "host_free_g_before": {"total": 45, "used": 14, "available": 31},
+  "discipline": "source-level and cheap probes only; no build, test or benchmark was run; the pinned libcrypto disassembly and the instrument's own resolver were run in-container",
+  "hard_rules_observed": "no commit, no push, no modification of src/, tests/ or receipts"
+ },
+ "claim_under_test": "at b84 both OpenSSH closures ACCEPTED 290/290, element 7 PASS, L7 PASS including the authority differential, Miri 0 UB, ASan clean, both rebinds 8/8, gate 2337, and SAFE_COMPATIBLE established for ssh and sshd",
+ "verdict": {
+  "state": "NOT ESTABLISHED",
+  "scope": "SAFE_COMPATIBLE for both ssh and sshd",
+  "summary": "every clause up to and including gate 2337 is reproduced by the bytes; the final clause is refuted by the cited receipts themselves, which record verdict.safe_compatible=false, a non-claim 'not a SAFE_COMPATIBLE promotion', a freeze field safe_compatible.value=false with 'the frozen candidate is NOT graduated', and no independent adjudication at b84. Independently, AGENTS.md section 7 requires every applicable mechanism in the dependency closure to be SAFETY_DISCHARGED; the candidate's own criterion-3 argument records 2 SAFETY_DISCHARGED (both explicitly scoped) and 5 NOT_ESTABLISHED."
+ },
+ "identity": {
+  "result": "REPRODUCED",
+  "artefact_digests": {
+   "checked": 9,
+   "matched": 9,
+   "values": {
+    "libcrypto.so.3": "53df54937257a6a02baa4779b33568c1d86b8d1a0c431dd74b5f50c69cd731fd",
+    "libssl.so.3": "cc7f98aeabb1fa7ba3aac929271e74f825aebeecf7fa5bcdffe9f64a6239e8eb",
+    "libcrypto.a": "b8a8864caa6c05f85d451198654caa002d9ee600f5516ba13f15505342ca6a50",
+    "libssl.a": "bad181d42093766b11e188f684ca4ca45f6c2433be30c6918a6822f7a270506f",
+    "legacy.so": "a13efa60574114ed92f8b47619343e5ea2fd68d3b4d5d8dd8bd803a8b9f5a6dc",
+    "openssl": "2c8a95bc3427e4c7550812e6b2ca67b0270e41b5774c3727deefdfcea77b36fa",
+    "ssh": "2eb4b8b33d2f5e01f916f6ccdef37603188c06136aac5ce4a237939848c7ba47",
+    "sshd": "cdf61204b6dc3f245166ef7fd6db6285e65762a0e6605d9049935b2596c17e1a",
+    "sshd_session": "1e384e98f6d840034c1855d421b0e03c74c8aab1351fed6dbeeef31f2383500c"
+   },
+   "sizes_match": true
+  },
+  "census_identity": {
+   "path": "court/freeze-b84/census-b84.json",
+   "sha256": "14c97c88fb585f9ca3b1ddfb866cfb6b2ca4739ce448a5753895745b6afaa2e3",
+   "matches_freeze": true,
+   "source_head": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+   "src_content_sha256": "773786ec113ae333cf328a800eabe1b80bd4a60b4ad247c5877e1900dff16aa5",
+   "libcrypto_in_census": "53df54937257a6a02baa4779b33568c1d86b8d1a0c431dd74b5f50c69cd731fd",
+   "tracked_working_tree_clean": false
+  },
+  "tool": {
+   "path": "forensics/tools/consumer_closure.py",
+   "sha256_measured": "df0a9ae2cb2d66aa0551e7cb8cbf5a446466cc54d7dd3a1651d3a30c7412a958",
+   "matches_claim": true,
+   "matches_both_b84b_receipts": true,
+   "note": "the non-accepted intermediate closures evidence/closure-{ssh,sshd}-b84.json were produced by a third digest, fed482b3421e6c9d2f3eb48dec2c0b8e24af821f128f8e2e5a482beaa36cd77a; the freeze correctly names only the b84b pair as the accepted closures"
+  },
+  "closure_fields": {
+   "ssh": {"repository_head": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d", "tracked_tree_dirty": true, "libcrypto": "53df54937257a6a0", "artefact": "2eb4b8b33d2f", "tool": "df0a9ae2", "receipt_sha256": "2ea7613c1fb4c0073f54d1043b057b8a4673490558d66a7b28ff718f98325043"},
+   "sshd": {"repository_head": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d", "tracked_tree_dirty": true, "libcrypto": "53df54937257a6a0", "artefact": "cdf61204b6dc", "tool": "df0a9ae2", "receipt_sha256": "d3e01ca86916b22e694aeeede3c00c0ef5b26d189546f2251d279086b11830ad"},
+   "all_match_freeze": true
+  },
+  "post_freeze_regeneration": {
+   "found": false,
+   "basis": "every receipt digest the freeze records still equals the working-tree bytes and `git status` is clean for evidence/ and FREEZE-b84.json; closure, rebind and safety-argument generation timestamps all precede the freeze timestamp 2026-11-16T21:48:45Z"
+  },
+  "identity_defects": [
+   "section 22: the evidence commit 1c887c17e is not evidence-only. It also carries the instrument change 4c17a9a7 -> df0a9ae2 and the six rebuilt install artefacts. Section 22 defines S to include the verification tools, so a change to an evidence-deriving tool inside E conflates the two identities; the digests do pin the result, but the procedure the section prescribes (repair, freeze S', then E) was not followed.",
+   "the accepted closures record tracked_tree_dirty=true and the receipts do not name the dirty paths; the freeze supplies the reconstruction, so this is a recorded residual, not a silent change.",
+   "the ssh per-artefact ledger's carry_chain note states the b84b run used instrument 4c17a9a7, while the receipt it describes records df0a9ae2. The note is wrong; the receipt field is right.",
+   "the build-link atlas row for openssh is a different build: recorded_artifact_sha256 c8723f3494a2 and recorded candidate install libcrypto 6d401e063ff3 are not the frozen ssh 2eb4b8b3 or libcrypto 53df5493, and artifact_matches_this_build is false. The L4 build-link measurement therefore does not exist for the frozen candidate; the per-artefact ledgers are joins, not measurements."
+  ]
+ },
+ "instrument_edits": {
+  "E7BS_msblob_repin": {
+   "diff": "E7BS_MSBLOB_SITE 0x556FC0 -> 0x52A9C2; E7BS_MSBLOB_SITE_PIN ('msblob2key_decode',0x350) -> ('msblob2key_decode',0x322)",
+   "verdict": "ACCEPTED, same witness/uniqueness discipline",
+   "reproduced": [
+    "objdump of the pinned libcrypto.so.3: 0x52a9c2 is `call *0x18(%rax)` inside msblob2key_decode (start 0x52a6a0), so 0x322 is the correct offset and the literal and the pin now select the same site",
+    "the instruction is the unique `call *0x18(%rax)` in that function (count 1)",
+    "the rcu pair is untouched and still selects: ossl_synchronize_rcu starts 0x269e70, +0x5A8 = 0x26a418 = `call *(%rbx)`; the stale rcu literal 0x2C2228 is not an instruction boundary in this image, so it cannot mis-select",
+    "`_e7bs_site_selected` accepts either selector but the witness then requires the msblob file/function and parameter-0 context type, so a literal that matched a foreign site would refuse, not accept"
+   ],
+   "caveat": "the self-test fixture hard-codes 0x426AC2 / function start 0x4267A0; it does not derive the offset from E7BS_MSBLOB_SITE_PIN, so the code comment 'the fixture tracks the pin so a stale pin fails the self-test' is an overstatement. Behaviour is unchanged from the prior pin, but no future stale pin is caught by that fixture."
+  },
+  "MIGRATION_CHAIN_LIMIT_12_to_32": {
+   "diff": "MIGRATION_CHAIN_LIMIT = 12 -> 32",
+   "verdict": "ACCEPTED as a work bound, but it is a post-measurement evidence-width change and must be read as such",
+   "reproduced": [
+    "the constant has exactly one use site (the depth guard of _carried_forward_coordinates); no hop proof, uniqueness rule, anchoring check or refusal test reads it",
+    "each hop remains proved individually: receipt committed at the anchor with a matching pin, head names a source commit, head is an ancestor of the candidate, the coordinate is a definition line at that head, the qualified context equals the candidate's, and the normalised text hashes to the boundary's declared span",
+    "migration_witness refuses inconsistent-ancestor-bodies when hits disagree, and migration_bindings refuses unless exactly one boundary owns the identity tuple; adding hops can only add refusals or complete an incomplete chain, never weaken an existing hop",
+    "the refused seven were an incompleteness refusal (chain exhausted at 12 before reaching head 0238c6e4adbc), not a soundness refusal"
+   ],
+   "residual": "the change converted 7 BLOCKED rows into DISCHARGED at an unchanged candidate after the result was seen. It is disclosed in the freeze and the closure, and the underlying proof is unchanged in kind, but section 22 treats a change to an evidence-deriving tool as candidate-side: the closures at fed482b3 and the closures at df0a9ae2 are not interchangeable evidence, and the higher bound buys room for chains that grow one hop per batch."
+  }
+ },
+ "covers_site": {
+  "recorded": {"ssh": "7 of 7 re-established rows carry covers_site=false, content_address_accepts=true", "sshd": "same"},
+  "determination": "REPORTING FIELD, NOT COVERAGE. covers_site = item_match AND covers_current (consumer_closure.py:31936), and covers_current only tests whether a line range parsed out of the boundary's disposition prose contains the coordinate. The instrument's own comment (31754-31758) states that a line range 'may never establish a discharge, and it is not part of the acceptance predicate'. The acceptance predicate is identity_match AND span_classification is None, plus a discharging disposition and span-hash equality, with uniqueness over the identity tuple.",
+  "same_footing_as_accepted_b83b": true,
+  "basis": "evidence/closure-ssh-b83b.json (the previously accepted closure) carries the identical seven rows with covers_site=false, binding=content-migrated-coordinate, content_address_accepts=true and the same span hashes; 140 further accepted rows across b83b and b84b also carry covers_site=false. The value did not change at b84.",
+  "can_support_a_discharge": "yes, on the content-migration footing (same qualified identity + normalised-text hash equality at an ancestor + census attribution at the candidate + uniqueness), which is what the seven use. It is not a per-site receipt (site_receipt is null) and it does not claim the disposition's prose range covers the site.",
+  "reproduced": {
+   "ancestor_hashes_at_0238c6e4adbc": {
+    "src/provider/digest.rs:658 sha1::copyctx": "c639719ffc5bdf36 (= recorded)",
+    "src/provider/digest.rs:970 nullmd::copyctx": "eb7c56b35b42 (= recorded)",
+    "src/provider/digest.rs:1165 md5_sha1::copyctx": "83c63a8466b0 (= recorded)",
+    "src/provider/digest.rs:1348 sha3::copyctx": "5ee519b92eba (= recorded)",
+    "src/provider/digest.rs:1898 blake2::blake_row::copyctx": "24a520793ee1 (= recorded)",
+    "src/provider/legacyprov.rs:336 legacy_digest_impl::copyctx": "ed889f926c37 (= recorded)",
+    "src/provider/legacyprov.rs:544 mdc2::copyctx": "88b18bf1a3f3 (= recorded)"
+   }
+  }
+ },
+ "closures": {
+  "ssh": {"reachable_files": 626, "obligations": 290, "DISCHARGED": 290, "BLOCKED": 0, "UNKNOWN": 0, "refusals": 0, "stale_discharge_rejections": 0, "verdict": "ACCEPTED", "safe_compatible": false, "element_7": "PASS (116 contract-bounded / 36 closed target set / 0 target-bounded / 0 unclassified, 152 reachable unresolved)"},
+  "sshd": {"reachable_files": 625, "obligations": 290, "DISCHARGED": 290, "BLOCKED": 0, "UNKNOWN": 0, "refusals": 0, "stale_discharge_rejections": 0, "verdict": "ACCEPTED", "safe_compatible": false, "element_7": "PASS (same split)"},
+  "discharge_grouping_warning": "the 290 DISCHARGED are queue/site discharges against scoped boundary receipts, not section-7 criterion-3 discharges; the receipt says so in its own non-claims",
+  "spot_checks_vs_source": {
+   "checked": 5,
+   "reproduced": 5,
+   "rows": [
+    "src/ct/ct_sct.rs SCT_LIST_free bound at 246-250, live span hash c6349e4d30da (= recorded), X509_VERIFY_POLICY",
+    "src/engine/eng_dyn.rs dynamic_data_ctx_free_func bound at 415-433, hash a5dcd46e2c4a (= recorded), C_ABI_CONTRACT",
+    "src/runtime/bio/bf_readbuff.rs readbuffer_write bound at 237-239, hash af0760bb2672 (= recorded), BIO",
+    "src/cmp/cmp_asn.rs itav_free bound at 1712-1715, hash b23c42bb8b1a (= recorded), RAND_CMS_STORE_KEYFMT",
+    "src/ssl/ssl_ciph.rs update_cipher_list_by_id bound at 756-773, hash 1c9b7874567a (= recorded), SSL_SESSION"
+   ],
+   "observation": "for 3 of those 5 the recorded census/obligation coordinate is a stale line that is not the definition at S; acceptance correctly comes from the boundary's resolved span and the census line, not the recorded coordinate. This is deliberate and stated in the instrument."
+  }
+ },
+ "instruments": {
+  "miri": {"status": "REPRODUCED as recorded, NOT a broad result", "toolchain": "nightly-2026-10-01 (court/freeze-b80/review7/.phase25-rustup)", "models": ["stacked", "tree"], "tests": 8, "result": "8/8 PASS under both models, 0 'Undefined Behavior' lines, 0 UNSUPPORTED, exit 0", "coverage_gap": "only the 8 reproducer/ABI tests of the changed surface; the other 2329 library tests were not run under Miri"},
+  "asan": {"status": "PARTIALLY REPRODUCED", "instrumented": true, "evidence": "the run emits an AddressSanitizer allocation-failure warning from an intentional allocation-failure test, so the ASan runtime is present and initialized", "tests": 49, "result": "49 passed across 5 filters, 0 failed", "coverage_gap": "49 focused tests, not the 2337-test suite; no ASan canary was run at b84", "canary_defect": "the only ASan canary on record (court/freeze-b83/review11/asan/canary.log) never executed: the rust canary aborted with 'AddressSanitizer failed to allocate ... ReserveShadowMemoryRange failed ... Perhaps you are using ulimit -v or ulimit -d', and the C canary failed to link (missing libclang_rt.asan static libs). The claim that the ASan canaries fire is NOT supported."},
+  "tsan": {"status": "RECORDED, NOT RE-RUN BY ME", "detail": "54 tests on two schedules, 0 races, 0 use-after-free, both canaries fired per the safety argument; full-suite TSan NOT_RUN"},
+  "instrument_self_test": {"status": "FAILED", "exit": 1, "failures": ["e7repin-search disabled: a stale row exists in this image: got False, want True", "e7core default-context control DID NOT RUN"], "consequence": "element 7 PASS at this candidate is produced by an instrument whose own control set is not certified at this candidate; the freeze records this honestly but still reports element 7 PASS"},
+  "l7": {"status": "REPRODUCED as recorded", "workloads": "w1-w5 all PASS", "authority_differential": "10/10 PASS (5 candidate-writes/authority-reads + 5 authority-writes/candidate-reads) against a separate OpenSSL 3.6.4 production prefix (libcrypto 611e511db4273c4b) with its own OpenSSH 9.9p1 build (auth-b84)", "limits": "single host, self-connection; no third-party SSH peer; no certificates, PKCS#8, DSA or signature-policy coverage"}
+ },
+ "criterion_3_seven_mechanisms": {
+  "reproduced": true,
+  "EVP_PKEY_PROVIDER": {"recorded": "NOT_ESTABLISHED", "obligations": 116, "reproduced": "NOT_ESTABLISHED", "residual": "review excludes the OSSL_OP_SIGNATURE/KEM/KEYMGMT/ENCODER/DECODER dispatch tables, the EVP_PKEY_CTX operation tables and fetched-digest release paths; R-1 (OsslDispatch.function is *mut c_void) and R-2 retained; F-1 divergence id unregistered"},
+  "X509_VERIFY_POLICY": {"recorded": "NOT_ESTABLISHED", "obligations": 122, "reproduced": "NOT_ESTABLISHED", "residual": "review declines mechanism-wide discharge; 69 external safe pub fns reach unsafe with no per-function input-validity review; indirect dispatch not covered"},
+  "RAND_CMS_STORE_KEYFMT": {"recorded": "NOT_ESTABLISHED", "obligations": 27, "reproduced": "NOT_ESTABLISHED", "residual": "R2 OPEN: x509_free_void/x509_crl_free_void contract says exactly-once release while the call releases the stack's exclusive reference; ossl_rand_ctx_free contract repair not re-read at S"},
+  "SSL_SESSION": {"recorded": "SAFETY_DISCHARGED (scoped)", "obligations": 14, "reproduced": "scoped only, does not reach criterion 3 at mechanism scope", "residual": "covers the 14 obligated ops and the reviewed call graph; a second concurrent free and an entry point racing the release remain external serialisation"},
+  "C_ABI_CONTRACT": {"recorded": "NOT_ESTABLISHED", "obligations": 5, "reproduced": "NOT_ESTABLISHED", "residual": "UNSAFE_OPEN; F-EVID-1 stale B56 row for engine_list_cleanup; F-EVID-2 v1l F09 repaired in source but the bound receipt still rejects the site"},
+  "RUNTIME_CONCURRENCY": {"recorded": "SAFETY_DISCHARGED (scoped, schedule-bounded)", "obligations": 4, "reproduced": "scoped only, does not reach criterion 3 at mechanism scope", "residual": "R1 retained: no test performs the forbidden free-while-in-use shape; no loom model of the free side"},
+  "BIO": {"recorded": "NOT_ESTABLISHED", "obligations": 2, "reproduced": "NOT_ESTABLISHED", "residual": "UNSAFE_OPEN; only 2 production operations in the closure; 1 external safe pub fn reaches unsafe"},
+  "mechanism_wide_discharged": 0
+ },
+ "gate": {"fmt_exit": 0, "clippy_exit": 0, "lib_tests_passed": 2337, "failed": 0, "ignored": 54, "ignored_unchanged_since_b80": true, "reproduced": "recorded values checked against court/freeze-b84/gates.log and the b80..b84 freezes; no removals, no newly ignored tests"},
+ "rebinds": {"ssh": "8/8 checks true", "sshd": "8/8 checks true", "note": "a rebind is a per-artefact join, not a closure run; it changes no count, verdict or refusal"},
+ "residual_ledger": [
+  "SAFE_COMPATIBLE: not established; no independent adjudication was run at b84 (freeze 'adjudication/not-run'); the b78/b79/b80 adjudications are not reused",
+  "5 of 7 mechanisms NOT_ESTABLISHED at criterion 3 (EVP, X509, RAND, C_ABI_CONTRACT, BIO); the other 2 are scoped, not mechanism-wide",
+  "instrument self-test FAILED at this candidate (2 controls); ASan negative control never executed (shadow-memory failure under the data rlimit at b83, C canary unlinked); no ASan canary at b84",
+  "instruments do not cover: Miri beyond 8 tests, ASan beyond 49 tests, full-suite TSan, Loom, dudect, Wycheproof/ACVP, BOUNDARY adjudication, SEAL, full forensic regeneration",
+  "criterion3/source-drift: 2 src/x509/v3_ncons.rs NAME_CONSTRAINTS rows are byte-identical at S but no reviewer re-read them at S (5 rows in total are measured-identical but not re-established)",
+  "criterion3/qualifier-control: D1 open; 11 of 12 qualifier-control tests are self-satisfying, so removing `unsafe` from 23 of 24 declarations would fail no test",
+  "65 REVIEW_REQUIRED discharges carried by the campaign status (which is still the v1r/2026-10-30 document; no b84 block was added by the b84 batch)",
+  "ledger: the L4 build-link atlas row for openssh is a different build (libcrypto 6d401e06, ssh c8723f34); L4 at the frozen candidate is unmeasured",
+  "element 7: 116 sites remain contract-bounded and therefore target-unbounded by design (target_sets_remain_unbounded=true); 36 closed target sets are bounded only within the stated module/source scope; E7BS residuals include candidate-bound address gates and RCU inlining/ICF copies",
+  "census: 222 total blockers of which 216 are test-only and 6 production; 4 obligations excluded from the upper bound as outside the conservative reachable set (bn/recp.rs x2, conf/modparse.rs, runtime/uid.rs)",
+  "known defect: scrypt test-isolation flake (boundary-sweep-B44, B44-TEST-1); a shared default-libctx method fetch/free without the global lock",
+  "section 22: the evidence commit also carries the instrument change and the rebuilt artefacts; the accepted closures ran on a tracked-dirty tree whose dirty path list was not recorded"
+ ],
+ "refutation_attempts": [
+  "tried to show covers_site=false means the site is uncovered: refuted by the instrument's predicate and by 140 accepted same-footing rows plus the identical seven in b83b",
+  "tried to show the raised chain limit weakens a hop proof: refuted for the hop proof itself; the real cost is evidence width after a measurement, which is a section 22 procedural defect, not a proof defect",
+  "tried to show the E7BS re-pin selects a foreign site: refuted for this image (unique call, correct offset, rcu pin correct, stale literal not an instruction boundary)",
+  "tried to show the ASan run was uninstrumented: refuted (ASan runtime present and initialized); the surviving defect is the absent canary, not the instrumentation",
+  "could not refute: the artefact, census, tool, closure, gate, L7 and rebind values; they reproduce from the bytes"
+ ]
+}

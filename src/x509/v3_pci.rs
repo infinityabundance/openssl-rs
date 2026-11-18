@@ -643,7 +643,9 @@ unsafe extern "C" fn i2r_pci(
 ///
 /// # Safety
 ///
-/// `ctx` is a live `X509V3_CTX`; `value` is NUL-terminated.
+/// `ctx` is NULL or live; `value` is NUL-terminated. The dispatcher's `r2i` arm establishes a
+/// live `ctx` (it refuses NULL before the call); a NULL `ctx` is also refused here on the
+/// `@section` read, which raises and answers NULL.
 unsafe extern "C" fn r2i_pci(
     _method: *const X509V3ExtMethod,
     ctx: *mut c_void,
@@ -680,7 +682,7 @@ unsafe extern "C" fn r2i_pci(
             }
             if leading_at {
                 let mut success_p = 1;
-                // SAFETY: `ctx` is live and `name + 1` names a section.
+                // SAFETY: `ctx` is NULL or live, and `name + 1` names a section.
                 let sect = unsafe { X509V3_get_section(ctx, name.add(1)) };
                 if sect.is_null() {
                     // SAFETY: the site is a compiled-in constant.
@@ -702,7 +704,8 @@ unsafe extern "C" fn r2i_pci(
                     };
                     j += 1;
                 }
-                // SAFETY: `ctx` is live and `sect` is a section this call owns.
+                // SAFETY: `sect` is non-NULL here, so `ctx` is live and `sect` is a section this
+                // call owns.
                 unsafe { X509V3_section_free(ctx, sect) };
                 if success_p == 0 {
                     failed = true;

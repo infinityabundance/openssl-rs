@@ -1,0 +1,11 @@
+Traceback (most recent call last):
+  File "/work/forensics/tools/consumer_closure.py", line 39000, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/work/forensics/tools/consumer_closure.py", line 38929, in main
+    receipt = build_receipt(args)
+              ^^^^^^^^^^^^^^^^^^^
+  File "/work/forensics/tools/consumer_closure.py", line 31033, in build_receipt
+    evidence_stats[g.name] = apply_evidence_classes(
+                             ^^^^^^^^^^^^^^^^^^^^^^^
+SystemError: error return without exception set

@@ -1375,14 +1375,52 @@ pub(crate) unsafe fn ossl_cms_set1_keyid(
 }
 
 /// The `void (*)(void *)` shape `OPENSSL_sk_pop_free` takes for [`X509_free`].
+///
+/// # Safety
+///
+/// `p` is NULL or a live `X509` on which the calling stack holds a reference, and this call
+/// releases **that reference, exactly once**. This is an exclusive *reference* release, not an
+/// exclusive release of the object. Every stack this thunk is handed is built from up-refs:
+/// `ossl_cms_get1_certs_ex` inserts with `X509_add_cert(*certs, (*cch).d.cast(), 0x1)` — `0x1` is
+/// `X509_ADD_FLAG_UP_REF` (`src/x509/x509_cmp.rs:95`, applied at `:1130`) — and
+/// `ossl_cms_get1_crls_ex` takes its element reference with `X509_CRL_up_ref` (`:1262`). The CMS
+/// therefore retains its own reference through the `CmsCertificateChoices` /
+/// `CmsRevocationInfoChoice` entry, the count moves 2 → 1 at this release, and the object
+/// **survives** it with the CMS as a remaining holder — which is required, because the CMS goes on
+/// owning and using it.
+///
+/// What the caller still owes is about the reference and the value: the stack's slot is this
+/// call's reference and no other owner will release it; `p` is live on entry; its provenance is
+/// the ASN.1 allocation seam (`X509_new`/`d2i_X509`), so it is the block `X509_free`'s own release
+/// expects; and it is fully initialised for `X509_free`'s template walk, which runs only when the
+/// count reaches zero (`X509_free` → `ASN1_item_free` decrements the reference first,
+/// `src/asn1/utl.rs:210`). Whatever owned members the object holds (name, extensions, cached
+/// encodings) are walked only on that final reference; the stack frees the element slot, never the
+/// object.
 unsafe extern "C" fn x509_free_void(p: *mut c_void) {
-    // SAFETY: `p` is an `X509` per the stack's element type.
+    // SAFETY: `p` is an `X509` per the stack's element type and this call releases the stack's
+    // reference once; the CMS may hold the object alive with its own reference.
     unsafe { X509_free(p.cast()) };
 }
 
 /// The `void (*)(void *)` shape for [`X509_CRL_free`].
+///
+/// # Safety
+///
+/// As [`x509_free_void`], over an `X509_CRL`: `p` is NULL or a live CRL on which the calling stack
+/// holds a reference, and this call releases **that reference, exactly once** — an exclusive
+/// *reference* release, not an exclusive release of the object. `ossl_cms_get1_crls_ex` takes its
+/// element reference with `X509_CRL_up_ref` (`:1262`) before pushing it, so the CMS retains the
+/// original reference through its `CmsRevocationInfoChoice`, the count moves 2 → 1, and the CRL
+/// survives this release while the CMS keeps using it.
+///
+/// The retained preconditions are the reference's and the value's: the stack's slot is this
+/// call's reference and no other owner will release it; `p` is live on entry; its provenance is
+/// the ASN.1 seam (`X509_CRL_new`/`d2i_X509_CRL`); and it is fully initialised for the walk
+/// `X509_CRL_free` runs when the count reaches zero.
 unsafe extern "C" fn x509_crl_free_void(p: *mut c_void) {
-    // SAFETY: `p` is an `X509_CRL` per the stack's element type.
+    // SAFETY: `p` is an `X509_CRL` per the stack's element type and this call releases the stack's
+    // reference once; the CMS may hold the CRL alive with its own reference.
     unsafe { X509_CRL_free(p.cast()) };
 }
 

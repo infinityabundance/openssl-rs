@@ -1,0 +1,3221 @@
+{
+ "schema": "openssl-rs/safe-c33/atlas-refresh/b78-obligation-set/v1",
+ "generated_utc": "2026-11-13T00:00:00Z",
+ "candidate": {
+  "source_head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "src_content_sha256": "c0bd61c94f5a8da2e08c105724d14750403fbfd53aa8d4b722672f9b11b0bd38",
+  "image_libcrypto_sha256": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
+  "census": "court/freeze-b78/census-b78.json",
+  "closure": "evidence/closure-ssh-b77.json",
+  "span_heads": {
+   "b76": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "b77": "ada7df257e157964f3baade5ec40b66e9a9cbf35",
+   "b78": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac"
+  },
+  "span_rule": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+  "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one."
+ },
+ "rule": "Cohort = the 56 obligations the b77 closure adjudicated with discharge_receipt openssh-v1i (48 DISCHARGED + the 8 the closure refused, which the v1i receipt had carried) plus the 9 with discharge_receipt openssh-v1l.  Current coordinates are resolved from census-b78 by (file, kind, item) and from the closure tool's own span resolver by (file, qualified operation); no recorded line is used for identity.  'earlier_accepted_span' is the same span resolved at the head the earlier review read.  A mechanical identity verdict is used only where the two hashes are equal.",
+ "counts": {
+  "cohort": 65,
+  "by_verdict": {
+   "ACCEPT": 65
+  },
+  "by_class": {
+   "identity45": 45,
+   "identity8": 8,
+   "rereview11": 11,
+   "rereview1": 1
+  },
+  "by_earlier_verdict": {
+   "ACCEPT": 45,
+   "REJECT": 20
+  },
+  "span_hash_identical": 65,
+  "item_present_in_census": 65,
+  "census_matches_resolved_def": 65,
+  "by_file": {
+   "src/cmp/cmp_asn.rs": 2,
+   "src/cmp/cmp_ctx.rs": 12,
+   "src/provider/digest.rs": 30,
+   "src/provider/legacyprov.rs": 12,
+   "src/runtime/confmod/mod.rs": 1,
+   "src/ui/ui_util.rs": 1,
+   "src/engine/eng_fat.rs": 1,
+   "src/decoder_lib.rs": 1,
+   "src/x509/v3_akid.rs": 2,
+   "src/x509/v3_san.rs": 3
+  }
+ },
+ "absent_items": [],
+ "file_or_kind_changed": [],
+ "non_cohort_absent_in_receipt": [
+  {
+   "boundary": "OSSH-V1I-055",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "x509_free_void",
+   "reason": "no brace-delimited definition at b78 (retired thunk)"
+  },
+  {
+   "boundary": "OSSH-V1I-056",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "evp_pkey_free_void",
+   "reason": "no brace-delimited definition at b78 (retired thunk)"
+  },
+  {
+   "boundary": "OSSH-V1I-057",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "evp_md_free_void",
+   "reason": "no brace-delimited definition at b78 (retired thunk)"
+  },
+  {
+   "boundary": "OSSH-V1I-058",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "octet_string_free_void",
+   "reason": "no brace-delimited definition at b78 (retired thunk)"
+  },
+  {
+   "boundary": "OSSH-V1I-062",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "x509_store_free_void",
+   "reason": "no brace-delimited definition at b78 (retired thunk)"
+  }
+ ],
+ "obligations": [
+  {
+   "boundary": "OSSH-V1I-067",
+   "file": "src/cmp/cmp_asn.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "itav_free",
+   "qualified_identity": "itav_free",
+   "operation": "itav_free",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch1",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1706,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "The precondition (live, exclusively owned item from the paired allocator) is established by construction at all six callers, not by documentation. Defects are presentational/evidential: no `# Safety` at the interface (E1), receipt coordinate 1697 instead of 1706 and stale file blob (E3/E2).",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 1697,
+   "current_census_lines": [
+    1706
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1706,
+    "end_line": 1709,
+    "def_line": 1706,
+    "sha256": "5b0450b583d888ad1fa516a1db92cfd5493f24343bb7f8ac4e98943f7a46dfd5",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 1706,
+    "end_line": 1709,
+    "sha256": "5b0450b583d888ad1fa516a1db92cfd5493f24343bb7f8ac4e98943f7a46dfd5"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (5b0450b583d888ad); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-069",
+   "file": "src/cmp/cmp_asn.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "rootcakeyupdate_free",
+   "qualified_identity": "rootcakeyupdate_free",
+   "operation": "rootcakeyupdate_free",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch1",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1722,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Precondition established in code at all four callers, with the NULL pass at 2261 explicitly within the recorded contract. Receipt coordinate 1709 instead of 1722 and stale file blob are evidence defects (E2/E3), not safety defects.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 1709,
+   "current_census_lines": [
+    1722
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1722,
+    "end_line": 1725,
+    "def_line": 1722,
+    "sha256": "ab84f3d5975c0d0dde5598293da723073efe4e6cba97b983cd2c52483fa236ed",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 1722,
+    "end_line": 1725,
+    "sha256": "ab84f3d5975c0d0dde5598293da723073efe4e6cba97b983cd2c52483fa236ed"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (ab84f3d5975c0d0d); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-051",
+   "file": "src/cmp/cmp_ctx.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "asn1_integer_dup_void",
+   "qualified_identity": "asn1_integer_dup_void",
+   "operation": "asn1_integer_dup_void",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch1",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 358,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Same pattern as 049 with the same static item descriptor used for dup and free.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 358,
+   "current_census_lines": [
+    358
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 358,
+    "end_line": 361,
+    "def_line": 358,
+    "sha256": "879ea7d76ffb4d0fd368a9c5a3056ed4184537401d6d6511515d16d0e22ea8df",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 358,
+    "end_line": 361,
+    "sha256": "879ea7d76ffb4d0fd368a9c5a3056ed4184537401d6d6511515d16d0e22ea8df"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (879ea7d76ffb4d0f); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-052",
+   "file": "src/cmp/cmp_ctx.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "asn1_integer_free_void",
+   "qualified_identity": "asn1_integer_free_void",
+   "operation": "asn1_integer_free_void",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch1",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 362,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Ownership established by the macro; NULL field is accepted by the item free.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 362,
+   "current_census_lines": [
+    362
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 362,
+    "end_line": 365,
+    "def_line": 362,
+    "sha256": "09ce335f71b364fa86cc7d60748551ff5226e2f5d2b5bb9b6a9efcfb1f7e0d68",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 362,
+    "end_line": 365,
+    "sha256": "09ce335f71b364fa86cc7d60748551ff5226e2f5d2b5bb9b6a9efcfb1f7e0d68"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (09ce335f71b364fa); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-065",
+   "file": "src/cmp/cmp_ctx.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "cmp_ctx_set_md",
+   "qualified_identity": "cmp_ctx_set_md",
+   "operation": "cmp_ctx_set_md",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch1",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 407,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Both preconditions are established in code: a zeroed/owned field slot, and a NULL-safe resolution path. The overly strong 'resolvable' clause and the 20-line-stale caller citations are contract/precision defects (E3, F4), not soundness gaps.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 427,
+   "current_census_lines": [
+    407
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 407,
+    "end_line": 421,
+    "def_line": 407,
+    "sha256": "cd466dc13eee90d9e36e0601ccf6308e32c096b476d0982caf893b37c6f37ef8",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 407,
+    "end_line": 421,
+    "sha256": "cd466dc13eee90d9e36e0601ccf6308e32c096b476d0982caf893b37c6f37ef8"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (cd466dc13eee90d9); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-059",
+   "file": "src/cmp/cmp_ctx.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "general_name_free_void",
+   "qualified_identity": "general_name_free_void",
+   "operation": "general_name_free_void",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch1",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 376,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "The ownership chain is established in code (writer -> stack -> pop_free), which I verified directly. The receipt's witness for this row is nevertheless WRONG: it cites ctx_set1_dup!, which never takes this thunk (\u00a722 generic-class defect, F3). Evidence defect, not a safety defect.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 392,
+   "current_census_lines": [
+    376
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 376,
+    "end_line": 379,
+    "def_line": 376,
+    "sha256": "f2c430ef6d2510ea8fb9bb46892deea51afcac75eefbe5a03d3883541845911b",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 376,
+    "end_line": 379,
+    "sha256": "f2c430ef6d2510ea8fb9bb46892deea51afcac75eefbe5a03d3883541845911b"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (f2c430ef6d2510ea); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-063",
+   "file": "src/cmp/cmp_ctx.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "itav_free_void",
+   "qualified_identity": "itav_free_void",
+   "operation": "itav_free_void",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch1",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 388,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "The ownership chain is established in code (writer -> stack -> pop_free), which I verified directly. The receipt's witness for this row is nevertheless WRONG: it cites ctx_set1_dup!, which never takes this thunk (\u00a722 generic-class defect, F3). Evidence defect, not a safety defect.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 408,
+   "current_census_lines": [
+    388
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 388,
+    "end_line": 391,
+    "def_line": 388,
+    "sha256": "716df8e4158a82f709333ef8f8e10d11b49a3640c3b50cb83e87c063093a024e",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 388,
+    "end_line": 391,
+    "sha256": "716df8e4158a82f709333ef8f8e10d11b49a3640c3b50cb83e87c063093a024e"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (716df8e4158a82f7); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-064",
+   "file": "src/cmp/cmp_ctx.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "policy_free_void",
+   "qualified_identity": "policy_free_void",
+   "operation": "policy_free_void",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch1",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 392,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "The ownership chain is established in code (writer -> stack -> pop_free), which I verified directly. The receipt's witness for this row is nevertheless WRONG: it cites ctx_set1_dup!, which never takes this thunk (\u00a722 generic-class defect, F3). Evidence defect, not a safety defect.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 412,
+   "current_census_lines": [
+    392
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 392,
+    "end_line": 395,
+    "def_line": 392,
+    "sha256": "462670b49e5deac6bb89a6bde03865bb4962f69860b469eda9889301e6e74b42",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 392,
+    "end_line": 395,
+    "sha256": "462670b49e5deac6bb89a6bde03865bb4962f69860b469eda9889301e6e74b42"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (462670b49e5deac6); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-061",
+   "file": "src/cmp/cmp_ctx.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "utf8_string_free_void",
+   "qualified_identity": "utf8_string_free_void",
+   "operation": "utf8_string_free_void",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch1",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 384,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "The ownership chain is established in code (writer -> stack -> pop_free), which I verified directly. The receipt's witness for this row is nevertheless WRONG: it cites ctx_set1_dup!, which never takes this thunk (\u00a722 generic-class defect, F3). Evidence defect, not a safety defect.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 400,
+   "current_census_lines": [
+    384
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 384,
+    "end_line": 387,
+    "def_line": 384,
+    "sha256": "78aab3c63127b04993c0447596fe2b4167e5e8b683967ff17420b540718870ba",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 384,
+    "end_line": 387,
+    "sha256": "78aab3c63127b04993c0447596fe2b4167e5e8b683967ff17420b540718870ba"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (78aab3c63127b049); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-060",
+   "file": "src/cmp/cmp_ctx.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "x509_extension_free_void",
+   "qualified_identity": "x509_extension_free_void",
+   "operation": "x509_extension_free_void",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch1",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 380,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "The ownership chain is established in code (writer -> stack -> pop_free), which I verified directly. The receipt's witness for this row is nevertheless WRONG: it cites ctx_set1_dup!, which never takes this thunk (\u00a722 generic-class defect, F3). Evidence defect, not a safety defect.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 396,
+   "current_census_lines": [
+    380
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 380,
+    "end_line": 383,
+    "def_line": 380,
+    "sha256": "c55cd1b80bb171807ebc723f6a3a8b0faab9a0c8a24c3400c8b5e89e27bfd8e8",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 380,
+    "end_line": 383,
+    "sha256": "c55cd1b80bb171807ebc723f6a3a8b0faab9a0c8a24c3400c8b5e89e27bfd8e8"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (c55cd1b80bb17180); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-049",
+   "file": "src/cmp/cmp_ctx.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "x509_name_dup_void",
+   "qualified_identity": "x509_name_dup_void",
+   "operation": "x509_name_dup_void",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch1",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 350,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Ownership is established by the macro's exclusive-storage pattern and the public setter's `# Safety`; the circular SAFETY comment is an E1 defect, not a caller-establishment gap.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 350,
+   "current_census_lines": [
+    350
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 350,
+    "end_line": 353,
+    "def_line": 350,
+    "sha256": "13028da9d8492f824d5761e48a7c2f0c44392f914ac4cd0227e8d6bec0048488",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 350,
+    "end_line": 353,
+    "sha256": "13028da9d8492f824d5761e48a7c2f0c44392f914ac4cd0227e8d6bec0048488"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (13028da9d8492f82); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-050",
+   "file": "src/cmp/cmp_ctx.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "x509_name_free_void",
+   "qualified_identity": "x509_name_free_void",
+   "operation": "x509_name_free_void",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch1",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 354,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "The macro is the only user and it always passes a field this context owns; release happens exactly once because the field is overwritten or destroyed.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 354,
+   "current_census_lines": [
+    354
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 354,
+    "end_line": 357,
+    "def_line": 354,
+    "sha256": "fbb8bfad2d75d2799d95893538c24c5ffa1359fd25eef77ae77f91a81cca6ef3",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 354,
+    "end_line": 357,
+    "sha256": "fbb8bfad2d75d2799d95893538c24c5ffa1359fd25eef77ae77f91a81cca6ef3"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (fbb8bfad2d75d279); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-053",
+   "file": "src/cmp/cmp_ctx.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "x509_req_dup_void",
+   "qualified_identity": "x509_req_dup_void",
+   "operation": "x509_req_dup_void",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch1",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 366,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Same established pattern; the paired free uses the same X509_REQ item.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 366,
+   "current_census_lines": [
+    366
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 366,
+    "end_line": 369,
+    "def_line": 366,
+    "sha256": "ef04cda1695dd610a3eddd0ac37dec5ce3367663a427207648483393923e6cce",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 366,
+    "end_line": 369,
+    "sha256": "ef04cda1695dd610a3eddd0ac37dec5ce3367663a427207648483393923e6cce"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (ef04cda1695dd610); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-054",
+   "file": "src/cmp/cmp_ctx.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "x509_req_free_void",
+   "qualified_identity": "x509_req_free_void",
+   "operation": "x509_req_free_void",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch1",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 370,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Ownership established by the macro and by destroy_body's single release.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 370,
+   "current_census_lines": [
+    370
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 370,
+    "end_line": 373,
+    "def_line": 370,
+    "sha256": "31048346d3df8aa9a52bc4b18fd813722a65de998b0fb6819f7858fd82c8ecd1",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 370,
+    "end_line": 373,
+    "sha256": "31048346d3df8aa9a52bc4b18fd813722a65de998b0fb6819f7858fd82c8ecd1"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch1) \u2014 the span bytes are identical to the source head that review read (31048346d3df8aa9); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1L-010",
+   "file": "src/decoder_lib.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "decoder_free_thunk",
+   "qualified_identity": "decoder_free_thunk",
+   "operation": "decoder_free_thunk",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1l",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1080,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "The stack's ownership of each element is established by the up-ref-then-push pair in the same unit and the sole registration at :1402, which is still the exact line the receipt records. decoder_lib.rs is unchanged between the receipt's candidate and S.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 1080,
+   "current_census_lines": [
+    1080
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1080,
+    "end_line": 1083,
+    "def_line": 1080,
+    "sha256": "ae3aa2602055af8784dc853c1737cb09bc0cd6ad5d9ccbc53da8cea97a94610c",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 1080,
+    "end_line": 1083,
+    "sha256": "ae3aa2602055af8784dc853c1737cb09bc0cd6ad5d9ccbc53da8cea97a94610c"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1l) \u2014 the span bytes are identical to the source head that review read (ae3aa2602055af87); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1L-009",
+   "file": "src/engine/eng_fat.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "push_cstr_or_null",
+   "qualified_identity": "push_cstr_or_null",
+   "operation": "push_cstr_or_null",
+   "mechanism": "C_ABI_CONTRACT",
+   "verdict_class": "rereview1",
+   "earlier_receipt": "b76-review-v1l",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 197,
+   "earlier_verdict": "REJECT",
+   "earlier_verdict_reason": "Precise defect: the unsafe fn transfers a NUL-termination obligation with no `# Safety` contract on the interface, the discharge receipt cites a call path that does not exist, and its control does not exercise the actual precondition. Discharge requires: (1) add a `# Safety` section stating NULL-or-NUL-terminated to push_cstr_or_null; (2) correct established_by to the single call site; (3) add a control that exercises a non-NUL-terminated argument (or records the helper's contract at the interface). The current call is believed safe on the evidence read, but `REJECT` is required because the precondition is not established by the interface.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 197,
+   "current_census_lines": [
+    201
+   ],
+   "current_census_set": [
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 201,
+    "end_line": 208,
+    "def_line": 201,
+    "sha256": "3809a13b0285ce51cb28a2a84f1b2ebbc40b9e5e1adaab112b6b2ce1b0f861e6",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 197,
+    "end_line": 204,
+    "sha256": "3809a13b0285ce51cb28a2a84f1b2ebbc40b9e5e1adaab112b6b2ce1b0f861e6"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for transferring a NUL-termination obligation with no fn contract; the fn now carries `# Safety` (docs are outside the span, so the byte hash 3809a13b0285ce51 is unchanged), its single caller forwards the same pointer under ENGINE_set_default_string's own `# Safety`, and the external C ABI contract is the retained obligation."
+  },
+  {
+   "boundary": "OSSH-V1I-002",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "copyctx",
+   "qualified_identity": "sha1::copyctx",
+   "operation": "sha1::copyctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity8",
+   "earlier_receipt": "b76-review-v1i-batch1",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 658,
+   "earlier_verdict": "REJECT",
+   "earlier_verdict_reason": "The recorded discharge (SAFETY_DISCHARGED) is not established. (1) The unsafe op has no `# Safety` fn contract at the definition; the block comment alone is a documentation-only discharge. (2) The precondition 'both regions are live' is not established by the caller: 3042 forwards `algctx` without a NULL test while :3131 proves NULL is expected. (3) The failed-init state at :2311/:2328/:2332 is a hidden obligation. Discharge requires: add `# Safety` to all five hand-written copyctx (reuse the :447-449 text, including non-NULL); make the two copyctx arms refuse or tolerate a NULL algctx exactly as :3131 does (a documented \u00a717 divergence from the authority's fault); and a control that fails if a copyctx call site loses its guard. Self-copy arm.",
+   "b77_repair_review": "b77-review-v1i-repaired",
+   "recorded_line_at_b77_closure": 658,
+   "current_census_lines": [
+    455,
+    672,
+    992,
+    1195,
+    1386,
+    1956
+   ],
+   "current_census_set": [
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 672,
+    "end_line": 682,
+    "def_line": 672,
+    "sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "ada7df257e157964f3baade5ec40b66e9a9cbf35",
+    "start_line": 672,
+    "end_line": 682,
+    "sha256": "c639719ffc5bdf36a8f78077d4efe08897182c0802b16f900d16a49bf6cc1254"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b77-review-v1i-repaired) \u2014 the repaired body is byte-identical to the repair head ada7df257 (c639719ffc5bdf36); the b78 edit to EVP_MD_CTX_copy_ex was re-read and preserves the copyctx destination precondition."
+  },
+  {
+   "boundary": "OSSH-V1I-008",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "copyctx",
+   "qualified_identity": "nullmd::copyctx",
+   "operation": "nullmd::copyctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity8",
+   "earlier_receipt": "b76-review-v1i-batch1",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 970,
+   "earlier_verdict": "REJECT",
+   "earlier_verdict_reason": "The recorded discharge (SAFETY_DISCHARGED) is not established. (1) The unsafe op has no `# Safety` fn contract at the definition; the block comment alone is a documentation-only discharge. (2) The precondition 'both regions are live' is not established by the caller: 3042 forwards `algctx` without a NULL test while :3131 proves NULL is expected. (3) The failed-init state at :2311/:2328/:2332 is a hidden obligation. Discharge requires: add `# Safety` to all five hand-written copyctx (reuse the :447-449 text, including non-NULL); make the two copyctx arms refuse or tolerate a NULL algctx exactly as :3131 does (a documented \u00a717 divergence from the authority's fault); and a control that fails if a copyctx call site loses its guard. Self-copy arm.",
+   "b77_repair_review": "b77-review-v1i-repaired",
+   "recorded_line_at_b77_closure": 970,
+   "current_census_lines": [
+    455,
+    672,
+    992,
+    1195,
+    1386,
+    1956
+   ],
+   "current_census_set": [
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 992,
+    "end_line": 1002,
+    "def_line": 992,
+    "sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "ada7df257e157964f3baade5ec40b66e9a9cbf35",
+    "start_line": 992,
+    "end_line": 1002,
+    "sha256": "eb7c56b35b4214494b9cc030b58187f336c72a063fc734a98f46131c7299416a"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b77-review-v1i-repaired) \u2014 the repaired body is byte-identical to the repair head ada7df257 (eb7c56b35b421449); the b78 edit to EVP_MD_CTX_copy_ex was re-read and preserves the copyctx destination precondition."
+  },
+  {
+   "boundary": "OSSH-V1I-011",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "copyctx",
+   "qualified_identity": "md5_sha1::copyctx",
+   "operation": "md5_sha1::copyctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity8",
+   "earlier_receipt": "b76-review-v1i-batch1",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1165,
+   "earlier_verdict": "REJECT",
+   "earlier_verdict_reason": "The recorded discharge (SAFETY_DISCHARGED) is not established. (1) The unsafe op has no `# Safety` fn contract at the definition; the block comment alone is a documentation-only discharge. (2) The precondition 'both regions are live' is not established by the caller: 3042 forwards `algctx` without a NULL test while :3131 proves NULL is expected. (3) The failed-init state at :2311/:2328/:2332 is a hidden obligation. Discharge requires: add `# Safety` to all five hand-written copyctx (reuse the :447-449 text, including non-NULL); make the two copyctx arms refuse or tolerate a NULL algctx exactly as :3131 does (a documented \u00a717 divergence from the authority's fault); and a control that fails if a copyctx call site loses its guard. Self-copy arm.",
+   "b77_repair_review": "b77-review-v1i-repaired",
+   "recorded_line_at_b77_closure": 1165,
+   "current_census_lines": [
+    455,
+    672,
+    992,
+    1195,
+    1386,
+    1956
+   ],
+   "current_census_set": [
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1195,
+    "end_line": 1205,
+    "def_line": 1195,
+    "sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "ada7df257e157964f3baade5ec40b66e9a9cbf35",
+    "start_line": 1195,
+    "end_line": 1205,
+    "sha256": "83c63a8466b002dac06ab578fb53de8c8840c05f67e3e3f016b712fff57b7815"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b77-review-v1i-repaired) \u2014 the repaired body is byte-identical to the repair head ada7df257 (83c63a8466b002da); the b78 edit to EVP_MD_CTX_copy_ex was re-read and preserves the copyctx destination precondition."
+  },
+  {
+   "boundary": "OSSH-V1I-017",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "copyctx",
+   "qualified_identity": "sha3::copyctx",
+   "operation": "sha3::copyctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity8",
+   "earlier_receipt": "b76-review-v1i-batch1",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1348,
+   "earlier_verdict": "REJECT",
+   "earlier_verdict_reason": "The recorded discharge (SAFETY_DISCHARGED) is not established. (1) The unsafe op has no `# Safety` fn contract at the definition; the block comment alone is a documentation-only discharge. (2) The precondition 'both regions are live' is not established by the caller: 3079 forwards `algctx` without a NULL test while :3131 proves NULL is expected. (3) The failed-init state at :2311/:2328/:2332 is a hidden obligation. Discharge requires: add `# Safety` to all five hand-written copyctx (reuse the :447-449 text, including non-NULL); make the two copyctx arms refuse or tolerate a NULL algctx exactly as :3131 does (a documented \u00a717 divergence from the authority's fault); and a control that fails if a copyctx call site loses its guard. Same-method arm.",
+   "b77_repair_review": "b77-review-v1i-repaired",
+   "recorded_line_at_b77_closure": 1348,
+   "current_census_lines": [
+    455,
+    672,
+    992,
+    1195,
+    1386,
+    1956
+   ],
+   "current_census_set": [
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1386,
+    "end_line": 1396,
+    "def_line": 1386,
+    "sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "ada7df257e157964f3baade5ec40b66e9a9cbf35",
+    "start_line": 1386,
+    "end_line": 1396,
+    "sha256": "5ee519b92ebadba0b960e10f8dc9c3d11eab626e539f8a6cccf5d05a55f0b15e"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b77-review-v1i-repaired) \u2014 the repaired body is byte-identical to the repair head ada7df257 (5ee519b92ebadba0); the b78 edit to EVP_MD_CTX_copy_ex was re-read and preserves the copyctx destination precondition."
+  },
+  {
+   "boundary": "OSSH-V1I-024",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "copyctx",
+   "qualified_identity": "blake2::blake_row::copyctx",
+   "operation": "blake2b/blake2s::copyctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity8",
+   "earlier_receipt": "b76-review-v1i-batch1",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1898,
+   "earlier_verdict": "REJECT",
+   "earlier_verdict_reason": "The recorded discharge (SAFETY_DISCHARGED) is not established. (1) The unsafe op has no `# Safety` fn contract at the definition; the block comment alone is a documentation-only discharge. (2) The precondition 'both regions are live' is not established by the caller: 3079 forwards `algctx` without a NULL test while :3131 proves NULL is expected. (3) The failed-init state at :2311/:2328/:2332 is a hidden obligation. Discharge requires: add `# Safety` to all five hand-written copyctx (reuse the :447-449 text, including non-NULL); make the two copyctx arms refuse or tolerate a NULL algctx exactly as :3131 does (a documented \u00a717 divergence from the authority's fault); and a control that fails if a copyctx call site loses its guard. Same-method arm.",
+   "b77_repair_review": "b77-review-v1i-repaired",
+   "recorded_line_at_b77_closure": 1898,
+   "current_census_lines": [
+    455,
+    672,
+    992,
+    1195,
+    1386,
+    1956
+   ],
+   "current_census_set": [
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1956,
+    "end_line": 1966,
+    "def_line": 1956,
+    "sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "ada7df257e157964f3baade5ec40b66e9a9cbf35",
+    "start_line": 1956,
+    "end_line": 1966,
+    "sha256": "24a520793ee135f365371dc03fce82490ed49f96471fe7be16f4a15a88af8be3"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b77-review-v1i-repaired) \u2014 the repaired body is byte-identical to the repair head ada7df257 (24a520793ee135f3); the b78 edit to EVP_MD_CTX_copy_ex was re-read and preserves the copyctx destination precondition."
+  },
+  {
+   "boundary": "OSSH-V1I-001",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "dupctx",
+   "qualified_identity": "sha1::dupctx",
+   "operation": "sha1::dupctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch2",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 647,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Precondition (live, exclusively owned ShaCtx from NEWCTX/DUPCTX) is established by the core ABI and re-checked in-crate at both call sites; the copy is a whole-block bitwise copy of a POD type. Evidence defects only: no `# Safety` at the interface (E-B2-2), generic witness (E-B2-5), inventory coordinate collision (E-B2-1).",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 647,
+   "current_census_lines": [
+    433,
+    653,
+    973,
+    1176,
+    1367,
+    1934
+   ],
+   "current_census_set": [
+    "blockers",
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 653,
+    "end_line": 662,
+    "def_line": 653,
+    "sha256": "47267c002ee9f12d6c20efa3c2e1648e60243868c4ae4caa72d8de04e7a4ed4b",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 647,
+    "end_line": 656,
+    "sha256": "47267c002ee9f12d6c20efa3c2e1648e60243868c4ae4caa72d8de04e7a4ed4b"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (47267c002ee9f12d); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-007",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "dupctx",
+   "qualified_identity": "nullmd::dupctx",
+   "operation": "nullmd::dupctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch2",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 959,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Ownership and extent are fixed by the paired NEWCTX/DUPCTX row; the type owns no pointer. Evidence defects E-B2-2, E-B2-5, E-B2-1.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 959,
+   "current_census_lines": [
+    433,
+    653,
+    973,
+    1176,
+    1367,
+    1934
+   ],
+   "current_census_set": [
+    "blockers",
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 973,
+    "end_line": 982,
+    "def_line": 973,
+    "sha256": "efa8d5556346e659c5c3ec2b40667be32a4ab8af95db8fc0978652e4fe1bcf76",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 959,
+    "end_line": 968,
+    "sha256": "efa8d5556346e659c5c3ec2b40667be32a4ab8af95db8fc0978652e4fe1bcf76"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (efa8d5556346e659); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-010",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "dupctx",
+   "qualified_identity": "md5_sha1::dupctx",
+   "operation": "md5_sha1::dupctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch2",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1154,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Same contract as the other dupctx rows, established in code; POD context, whole-block copy. Evidence defects E-B2-2, E-B2-5, E-B2-1.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 1154,
+   "current_census_lines": [
+    433,
+    653,
+    973,
+    1176,
+    1367,
+    1934
+   ],
+   "current_census_set": [
+    "blockers",
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1176,
+    "end_line": 1185,
+    "def_line": 1176,
+    "sha256": "b231a39825d54dbcbf3929591232d8ecec78eb3af835e81648961b56fda9ae56",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 1154,
+    "end_line": 1163,
+    "sha256": "b231a39825d54dbcbf3929591232d8ecec78eb3af835e81648961b56fda9ae56"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (b231a39825d54dbc); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-016",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "dupctx",
+   "qualified_identity": "sha3::dupctx",
+   "operation": "sha3::dupctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch2",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1337,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Whole-block copy of a POD context; the sentinel state that `keccak_final` tests is carried by the copy, so duplication does not silently change the row's behaviour. Evidence defects E-B2-2, E-B2-5, E-B2-1.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 1337,
+   "current_census_lines": [
+    433,
+    653,
+    973,
+    1176,
+    1367,
+    1934
+   ],
+   "current_census_set": [
+    "blockers",
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1367,
+    "end_line": 1376,
+    "def_line": 1367,
+    "sha256": "940d10c6f3f0e190d607f5cd93d4cd114526d28004462ac668b5ec5344716e91",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 1337,
+    "end_line": 1346,
+    "sha256": "940d10c6f3f0e190d607f5cd93d4cd114526d28004462ac668b5ec5344716e91"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (940d10c6f3f0e190); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-023",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "dupctx",
+   "qualified_identity": "blake2::blake_row::dupctx",
+   "operation": "blake2b/blake2s::dupctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch2",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1885,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Two instantiations, each a whole-block copy of a POD context, NULL-tested and guarded at both callers. Evidence defects E-B2-2, E-B2-5, E-B2-1 (the inventory's actual_definition_line 433 is the `digest_impl!` item, not this one).",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 1885,
+   "current_census_lines": [
+    433,
+    653,
+    973,
+    1176,
+    1367,
+    1934
+   ],
+   "current_census_set": [
+    "blockers",
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1934,
+    "end_line": 1945,
+    "def_line": 1934,
+    "sha256": "861f2634e5e0f84a5ec54bbe1cdb51518e75fd9a67cd689fa7cdf47f93ffe528",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 1885,
+    "end_line": 1896,
+    "sha256": "861f2634e5e0f84a5ec54bbe1cdb51518e75fd9a67cd689fa7cdf47f93ffe528"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (861f2634e5e0f84a); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-026",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "get_ctx_params",
+   "qualified_identity": "blake2::blake_row::get_ctx_params",
+   "operation": "blake2b/blake2s::get_ctx_params",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch2",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1948,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Both unsafe operations are bounded by the OSSL_PARAM descriptor the caller supplies; NULL params and NULL ctx are refused by code. Evidence defects: no `# Safety` (E-B2-2), generic witness although this callback does receive the algctx (E-B2-5), and one contract sentence overstates the return value (E-B2-6).",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 1948,
+   "current_census_lines": [
+    2006
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 2006,
+    "end_line": 2029,
+    "def_line": 2006,
+    "sha256": "40d977b16e4c560fc744074a5e4c15134777f98d0f7e4756b245cf09fdf37608",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 1948,
+    "end_line": 1971,
+    "sha256": "40d977b16e4c560fc744074a5e4c15134777f98d0f7e4756b245cf09fdf37608"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (40d977b16e4c560f); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-006",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "get_params",
+   "qualified_identity": "sha1::get_params",
+   "operation": "sha1::get_params",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch2",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 705,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Same mechanism; the NULL-array probe claim in established_by is not needed for the verdict, which rests on the callee's own NULL tests read here. Evidence defects E-B2-1, E-B2-2, E-B2-5.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 705,
+   "current_census_lines": [
+    521,
+    719,
+    1041,
+    1244,
+    1605,
+    1673,
+    2097
+   ],
+   "current_census_set": [
+    "blockers",
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 719,
+    "end_line": 722,
+    "def_line": 719,
+    "sha256": "c38a239cac91d9e03c6cb408054b92f07c6dd3e46e35acfaba4fed39aff389a4",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 705,
+    "end_line": 708,
+    "sha256": "c38a239cac91d9e03c6cb408054b92f07c6dd3e46e35acfaba4fed39aff389a4"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (c38a239cac91d9e0); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-009",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "get_params",
+   "qualified_identity": "nullmd::get_params",
+   "operation": "nullmd::get_params",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch2",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1019,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "The NULL array answers 1 and only located descriptors are written; the precondition is the caller's array, which is an OSSL_PARAM ABI contract. Evidence defects: no `# Safety` (E-B2-2), an inapplicable per-call-site witness (E-B2-5), coordinate collision (E-B2-1).",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 1019,
+   "current_census_lines": [
+    521,
+    719,
+    1041,
+    1244,
+    1605,
+    1673,
+    2097
+   ],
+   "current_census_set": [
+    "blockers",
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1041,
+    "end_line": 1044,
+    "def_line": 1041,
+    "sha256": "2199cf3f0f33b514c39a501341adc229123f07f09938086d69498e11b2e1cd67",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 1019,
+    "end_line": 1022,
+    "sha256": "2199cf3f0f33b514c39a501341adc229123f07f09938086d69498e11b2e1cd67"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (2199cf3f0f33b514); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-015",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "get_params",
+   "qualified_identity": "md5_sha1::get_params",
+   "operation": "md5_sha1::get_params",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch2",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1214,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Identical mechanism and identical establishment to OSSH-V1I-009. Evidence defects E-B2-1, E-B2-2, E-B2-5.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 1214,
+   "current_census_lines": [
+    521,
+    719,
+    1041,
+    1244,
+    1605,
+    1673,
+    2097
+   ],
+   "current_census_set": [
+    "blockers",
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1244,
+    "end_line": 1249,
+    "def_line": 1244,
+    "sha256": "d3ae32259e9e51e3d73c311e547c5283a21db88e69975bcef8bf8889a02e72c9",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 1214,
+    "end_line": 1219,
+    "sha256": "d3ae32259e9e51e3d73c311e547c5283a21db88e69975bcef8bf8889a02e72c9"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (d3ae32259e9e51e3); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-030",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "get_params",
+   "qualified_identity": "blake2::blake_row::get_params",
+   "operation": "blake2b/blake2s::get_params",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch2",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 2039,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Identical to the other get_params rows, including the two instantiations of the macro. Evidence defects E-B2-1, E-B2-2, E-B2-5.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 2039,
+   "current_census_lines": [
+    521,
+    719,
+    1041,
+    1244,
+    1605,
+    1673,
+    2097
+   ],
+   "current_census_set": [
+    "blockers",
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 2097,
+    "end_line": 2100,
+    "def_line": 2097,
+    "sha256": "16841d3c3a78ac3729dd2d4304cebe2118363a960c194e69e30b047100b48437",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 2039,
+    "end_line": 2042,
+    "sha256": "16841d3c3a78ac3729dd2d4304cebe2118363a960c194e69e30b047100b48437"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (16841d3c3a78ac37); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-018",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "init",
+   "qualified_identity": "sha3::init",
+   "operation": "sha3::init",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch2",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1360,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "The precondition is established by the single guarded call site, not by documentation. Evidence defects E-B2-2, E-B2-5.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 1360,
+   "current_census_lines": [
+    1398
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1398,
+    "end_line": 1407,
+    "def_line": 1398,
+    "sha256": "0080323c6082771dc21b3350d885ebf8bbd551ebbaaff0e95abf8cf6c120735a",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 1360,
+    "end_line": 1369,
+    "sha256": "0080323c6082771dc21b3350d885ebf8bbd551ebbaaff0e95abf8cf6c120735a"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (0080323c6082771d); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-004",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "internal_final",
+   "qualified_identity": "sha1::internal_final",
+   "operation": "sha1::internal_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "rereview11",
+   "earlier_receipt": "b76-review-v1i-batch2",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 682,
+   "earlier_verdict": "REJECT",
+   "earlier_verdict_reason": "Same defect and same discharge as OSSH-V1I-013: add the algctx test in EVP_DigestFinal_ex/FinalXOF (recorded \u00a717 improvement) or refuse NULL in the provider. `SHA1_Final` -> `md32::finalize` dereferences the context, so the fault is a write through a NULL context. Evidence defects E-B2-1, E-B2-2, E-B2-5.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 682,
+   "current_census_lines": [
+    485,
+    696,
+    1018,
+    1219,
+    2071
+   ],
+   "current_census_set": [
+    "blockers",
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 696,
+    "end_line": 712,
+    "def_line": 696,
+    "sha256": "706d55a5f726daa1f0a36024e15b79ceca8f8cfc39fbf0d2346e25df17c70810",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 682,
+    "end_line": 698,
+    "sha256": "706d55a5f726daa1f0a36024e15b79ceca8f8cfc39fbf0d2346e25df17c70810"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (706d55a5f726daa1)."
+  },
+  {
+   "boundary": "OSSH-V1I-013",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "internal_final",
+   "qualified_identity": "md5_sha1::internal_final",
+   "operation": "md5_sha1::internal_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "rereview11",
+   "earlier_receipt": "b76-review-v1i-batch2",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1189,
+   "earlier_verdict": "REJECT",
+   "earlier_verdict_reason": "The disposition claims the caller establishes a live Md5Sha1Ctx; it does not. Reachable sequence: EVP_DigestInit_ex fails at NEWCTX (allocation refusal) -> digest set, algctx NULL -> EVP_DigestFinal_ex -> dfinal(NULL) -> `(*mctx).md5` faults. Discharge: test `(*ctx).algctx` in EVP_DigestFinal_ex (and FinalXOF/Update) before dfinal, or make the providers refuse NULL; either is a recorded \u00a717 improvement over 3.6.4, which has the same shape. Evidence defects E-B2-1, E-B2-2, E-B2-5 also apply.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 1189,
+   "current_census_lines": [
+    485,
+    696,
+    1018,
+    1219,
+    2071
+   ],
+   "current_census_set": [
+    "blockers",
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1219,
+    "end_line": 1235,
+    "def_line": 1219,
+    "sha256": "b6bd52cc12ae7b9162932a23105ca375bcd8379af47d529661cfe7080c1f1c6e",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 1189,
+    "end_line": 1205,
+    "sha256": "b6bd52cc12ae7b9162932a23105ca375bcd8379af47d529661cfe7080c1f1c6e"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (b6bd52cc12ae7b91)."
+  },
+  {
+   "boundary": "OSSH-V1I-029",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "internal_final",
+   "qualified_identity": "blake2::blake_row::internal_final",
+   "operation": "blake2b/blake2s::internal_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch2",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 2013,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "The write is bounded by a check the caller's outsz cannot bypass, and the F1 NULL-algctx state is refused upstream *by code in this crate* (unlike sha1/md5_sha1). Residual finding E-B2-7 records the missing error-queue entry.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 2013,
+   "current_census_lines": [
+    485,
+    696,
+    1018,
+    1219,
+    2071
+   ],
+   "current_census_set": [
+    "blockers",
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 2071,
+    "end_line": 2095,
+    "def_line": 2071,
+    "sha256": "5170938e1038eef4d3d4ecaeb914ff1ebafbbd6ebee937e95828c8bbf22c5334",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 2013,
+    "end_line": 2037,
+    "sha256": "5170938e1038eef4d3d4ecaeb914ff1ebafbbd6ebee937e95828c8bbf22c5334"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (5170938e1038eef4); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-003",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "internal_init",
+   "qualified_identity": "sha1::internal_init",
+   "operation": "sha1::internal_init",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch2",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 670,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Precondition established by the single guarded call site. Evidence defects E-B2-1, E-B2-2, E-B2-5.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 670,
+   "current_census_lines": [
+    471,
+    684,
+    1207,
+    2033
+   ],
+   "current_census_set": [
+    "blockers",
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 684,
+    "end_line": 694,
+    "def_line": 684,
+    "sha256": "c7b85a166cc4e3bff7d13ced64679b7e203bc262469d6d90875f1635dae22db2",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 670,
+    "end_line": 680,
+    "sha256": "c7b85a166cc4e3bff7d13ced64679b7e203bc262469d6d90875f1635dae22db2"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (c7b85a166cc4e3bf); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-012",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "internal_init",
+   "qualified_identity": "md5_sha1::internal_init",
+   "operation": "md5_sha1::internal_init",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch2",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1177,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Precondition established in code by the single guarded `dinit` call. Evidence defects E-B2-1, E-B2-2, E-B2-5.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 1177,
+   "current_census_lines": [
+    471,
+    684,
+    1207,
+    2033
+   ],
+   "current_census_set": [
+    "blockers",
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1207,
+    "end_line": 1217,
+    "def_line": 1207,
+    "sha256": "e4aa2d6a01d52aa3a29570f0aedbacffee391cbd6b31101759ed0c95f2944ef6",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 1177,
+    "end_line": 1187,
+    "sha256": "e4aa2d6a01d52aa3a29570f0aedbacffee391cbd6b31101759ed0c95f2944ef6"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (e4aa2d6a01d52aa3); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-027",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "internal_init",
+   "qualified_identity": "blake2::blake_row::internal_init",
+   "operation": "blake2b/blake2s::internal_init",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch2",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1975,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "The digest-length bound that `blake2::init` documents as a caller obligation is actually enforced by this function in code, not by prose. Evidence defects E-B2-2, E-B2-5, E-B2-1.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 1975,
+   "current_census_lines": [
+    471,
+    684,
+    1207,
+    2033
+   ],
+   "current_census_set": [
+    "blockers",
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 2033,
+    "end_line": 2056,
+    "def_line": 2033,
+    "sha256": "20f58a3a5891c863475da16bd61d04ac19dc62a6ff16e261e10d60fee711e391",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 1975,
+    "end_line": 1998,
+    "sha256": "20f58a3a5891c863475da16bd61d04ac19dc62a6ff16e261e10d60fee711e391"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (20f58a3a5891c863); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-020",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "keccak_final",
+   "qualified_identity": "sha3::keccak_final",
+   "operation": "sha3::keccak_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity8",
+   "earlier_receipt": "b76-review-v1i-batch2",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1377,
+   "earlier_verdict": "REJECT",
+   "earlier_verdict_reason": "Two independent unestablished preconditions. Discharge: (1) refuse `md_size > outlen` in keccak_final or test `EVP_MD_xof` in FinalXOF's provider arm \u2014 a \u00a717-recorded safety improvement over 3.6.4; (2) test `(*ctx).algctx` before dfinal (shared with OSSH-V1I-004/013); (3) restate the contract to include `outlen >= md_size`. Evidence defects E-B2-2, E-B2-5 also apply.",
+   "b77_repair_review": "b77-review-v1i-repaired",
+   "recorded_line_at_b77_closure": 1377,
+   "current_census_lines": [
+    1415
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1415,
+    "end_line": 1449,
+    "def_line": 1415,
+    "sha256": "4dbe9bbde6e9ad0867b7bdb0dd0a7518ae00189ff07aa0407b7bcb5f72c112b2",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "ada7df257e157964f3baade5ec40b66e9a9cbf35",
+    "start_line": 1415,
+    "end_line": 1449,
+    "sha256": "4dbe9bbde6e9ad0867b7bdb0dd0a7518ae00189ff07aa0407b7bcb5f72c112b2"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b77-review-v1i-repaired) \u2014 the repaired body is byte-identical to the repair head ada7df257 (4dbe9bbde6e9ad08); the b78 edit to EVP_MD_CTX_copy_ex was re-read and preserves the copyctx destination precondition."
+  },
+  {
+   "boundary": "OSSH-V1I-025",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "set_ctx_params",
+   "qualified_identity": "blake2::blake_row::set_ctx_params",
+   "operation": "blake2b/blake2s::set_ctx_params",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch2",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1912,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Both preconditions (live ctx, well-formed params) are established in code and the value is range-checked before the write. Evidence defects E-B2-1, E-B2-2, E-B2-5.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 1912,
+   "current_census_lines": [
+    602,
+    1125,
+    1970
+   ],
+   "current_census_set": [
+    "blockers",
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1970,
+    "end_line": 2003,
+    "def_line": 1970,
+    "sha256": "d84cc9a808b86bd3d0e619cce378beba49795dd037ba8a364fa09c7240ed0b26",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 1912,
+    "end_line": 1945,
+    "sha256": "d84cc9a808b86bd3d0e619cce378beba49795dd037ba8a364fa09c7240ed0b26"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch2) \u2014 the span bytes are identical to the source head that review read (d84cc9a808b86bd3); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-022",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "shake_get_ctx_params",
+   "qualified_identity": "sha3::shake_get_ctx_params",
+   "operation": "sha3::shake_get_ctx_params",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch3",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1481,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Body refuses a NULL context and a NULL array; writes only the located entries, whose data_size the setter enforces. ACCEPT is \u00a77-conditional (interface contract missing).",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 1481,
+   "current_census_lines": [
+    1530
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1530,
+    "end_line": 1558,
+    "def_line": 1530,
+    "sha256": "e09736f8f56e5df114a14c6150d105193ba970d4db06170296a6f005b5d4acc8",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 1481,
+    "end_line": 1509,
+    "sha256": "e09736f8f56e5df114a14c6150d105193ba970d4db06170296a6f005b5d4acc8"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch3) \u2014 the span bytes are identical to the source head that review read (e09736f8f56e5df1); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-021",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "shake_squeeze",
+   "qualified_identity": "sha3::shake_squeeze",
+   "operation": "sha3::shake_squeeze",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "rereview11",
+   "earlier_receipt": "b76-review-v1i-batch3",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1403,
+   "earlier_verdict": "REJECT",
+   "earlier_verdict_reason": "NULL algctx sink: evp/digest.rs:2891 -> shake_squeeze(1403) -> ossl_sha3_squeeze dereferences ctx. Required discharge: test (*ctx).algctx NULL in EVP_DigestSqueeze (or refuse NULL in shake_squeeze) and record the \u00a717 divergence.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 1403,
+   "current_census_lines": [
+    1452
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1452,
+    "end_line": 1470,
+    "def_line": 1452,
+    "sha256": "dbdba48f28b197d6a6693746d95497e2a8579f88687d906dd807c935fb8ed4ba",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 1403,
+    "end_line": 1421,
+    "sha256": "dbdba48f28b197d6a6693746d95497e2a8579f88687d906dd807c935fb8ed4ba"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (dbdba48f28b197d6)."
+  },
+  {
+   "boundary": "OSSH-V1I-005",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "update",
+   "qualified_identity": "sha1::update",
+   "operation": "sha1::update",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "rereview11",
+   "earlier_receipt": "b76-review-v1i-batch3",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 700,
+   "earlier_verdict": "REJECT",
+   "earlier_verdict_reason": "NULL algctx sink through EVP_DigestUpdate:2559. Required discharge: guard at the call site or provider.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 700,
+   "current_census_lines": [
+    507,
+    714,
+    1237,
+    1409,
+    2058
+   ],
+   "current_census_set": [
+    "blockers",
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 714,
+    "end_line": 717,
+    "def_line": 714,
+    "sha256": "ca9ddbfb4c86d18614a55dcce33d1a6dcfb9afe9bd258d0dd710854aaadf52a9",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 700,
+    "end_line": 703,
+    "sha256": "ca9ddbfb4c86d18614a55dcce33d1a6dcfb9afe9bd258d0dd710854aaadf52a9"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (ca9ddbfb4c86d186)."
+  },
+  {
+   "boundary": "OSSH-V1I-014",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "update",
+   "qualified_identity": "md5_sha1::update",
+   "operation": "md5_sha1::update",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "rereview11",
+   "earlier_receipt": "b76-review-v1i-batch3",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1207,
+   "earlier_verdict": "REJECT",
+   "earlier_verdict_reason": "NULL algctx sink through EVP_DigestUpdate:2559. Required discharge: guard (*ctx).algctx in EVP_DigestUpdate, or refuse NULL in the provider update.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 1207,
+   "current_census_lines": [
+    507,
+    714,
+    1237,
+    1409,
+    2058
+   ],
+   "current_census_set": [
+    "blockers",
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1237,
+    "end_line": 1242,
+    "def_line": 1237,
+    "sha256": "7b4f8b48a05be1501edacfb34ac83e9d84f3f9118ae26e51fd774f480d00063e",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 1207,
+    "end_line": 1212,
+    "sha256": "7b4f8b48a05be1501edacfb34ac83e9d84f3f9118ae26e51fd774f480d00063e"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (7b4f8b48a05be150)."
+  },
+  {
+   "boundary": "OSSH-V1I-019",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "update",
+   "qualified_identity": "sha3::update",
+   "operation": "sha3::update",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "rereview11",
+   "earlier_receipt": "b76-review-v1i-batch3",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1371,
+   "earlier_verdict": "REJECT",
+   "earlier_verdict_reason": "NULL algctx sink through EVP_DigestUpdate:2559. Required discharge: guard at the call site or provider.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 1371,
+   "current_census_lines": [
+    507,
+    714,
+    1237,
+    1409,
+    2058
+   ],
+   "current_census_set": [
+    "blockers",
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1409,
+    "end_line": 1412,
+    "def_line": 1409,
+    "sha256": "043324d93993c9aed5be3f4eb57a53a7d0ff3b9fc3c096c4bca4f91df739059d",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 1371,
+    "end_line": 1374,
+    "sha256": "043324d93993c9aed5be3f4eb57a53a7d0ff3b9fc3c096c4bca4f91df739059d"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (043324d93993c9ae)."
+  },
+  {
+   "boundary": "OSSH-V1I-028",
+   "file": "src/provider/digest.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "update",
+   "qualified_identity": "blake2::blake_row::update",
+   "operation": "blake2b/blake2s::update",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "rereview11",
+   "earlier_receipt": "b76-review-v1i-batch3",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 2000,
+   "earlier_verdict": "REJECT",
+   "earlier_verdict_reason": "NULL algctx sink through EVP_DigestUpdate:2559. Required discharge: guard at the call site or provider.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 2000,
+   "current_census_lines": [
+    507,
+    714,
+    1237,
+    1409,
+    2058
+   ],
+   "current_census_set": [
+    "blockers",
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 2058,
+    "end_line": 2068,
+    "def_line": 2058,
+    "sha256": "48c2be05cf5cf82b15fec5d0215cad8b4ca2f060a7420c8cefcc9d36b22241dd",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 2000,
+    "end_line": 2010,
+    "sha256": "48c2be05cf5cf82b15fec5d0215cad8b4ca2f060a7420c8cefcc9d36b22241dd"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (48c2be05cf5cf82b)."
+  },
+  {
+   "boundary": "OSSH-V1I-082",
+   "file": "src/provider/legacyprov.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "copyctx",
+   "qualified_identity": "legacy_digest_impl::copyctx",
+   "operation": "legacy_digest_impl::copyctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity8",
+   "earlier_receipt": "b76-review-v1i-batch3",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 336,
+   "earlier_verdict": "REJECT",
+   "earlier_verdict_reason": "Batch-1 F1 recurrence in the legacy provider: unguarded copyctx at evp/digest.rs:3042/3079. Required discharge: guard both algctx pointers (or refuse NULL in copyctx) and record it.",
+   "b77_repair_review": "b77-review-v1i-repaired",
+   "recorded_line_at_b77_closure": 336,
+   "current_census_lines": [
+    345,
+    561
+   ],
+   "current_census_set": [
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 345,
+    "end_line": 356,
+    "def_line": 345,
+    "sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "ada7df257e157964f3baade5ec40b66e9a9cbf35",
+    "start_line": 345,
+    "end_line": 356,
+    "sha256": "ed889f926c3793132ac192465087df65e284027ca9ad40a55c05b2c56a7736b5"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b77-review-v1i-repaired) \u2014 the repaired body is byte-identical to the repair head ada7df257 (ed889f926c379313); the b78 edit to EVP_MD_CTX_copy_ex was re-read and preserves the copyctx destination precondition."
+  },
+  {
+   "boundary": "OSSH-V1I-088",
+   "file": "src/provider/legacyprov.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "copyctx",
+   "qualified_identity": "mdc2::copyctx",
+   "operation": "mdc2::copyctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity8",
+   "earlier_receipt": "b76-review-v1i-batch3",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 544,
+   "earlier_verdict": "REJECT",
+   "earlier_verdict_reason": "Batch-1 F1 recurrence. Required discharge: guard at :3042/:3079 or in copyctx.",
+   "b77_repair_review": "b77-review-v1i-repaired",
+   "recorded_line_at_b77_closure": 544,
+   "current_census_lines": [
+    345,
+    561
+   ],
+   "current_census_set": [
+    "contracted"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 561,
+    "end_line": 571,
+    "def_line": 561,
+    "sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "ada7df257e157964f3baade5ec40b66e9a9cbf35",
+    "start_line": 561,
+    "end_line": 571,
+    "sha256": "88b18bf1a3f3666f511a301b74fe6bdac362afbc1d722f01486783ceed621e70"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b77-review-v1i-repaired) \u2014 the repaired body is byte-identical to the repair head ada7df257 (88b18bf1a3f3666f); the b78 edit to EVP_MD_CTX_copy_ex was re-read and preserves the copyctx destination precondition."
+  },
+  {
+   "boundary": "OSSH-V1I-081",
+   "file": "src/provider/legacyprov.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "dupctx",
+   "qualified_identity": "legacy_digest_impl::dupctx",
+   "operation": "legacy_digest_impl::dupctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch3",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 323,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Body refuses NULL; the only caller establishes non-NULL. ACCEPT is \u00a77-conditional (interface contract missing).",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 323,
+   "current_census_lines": [
+    323,
+    540
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 323,
+    "end_line": 334,
+    "def_line": 323,
+    "sha256": "9ef8e6d4c1a012f2c0d7fd75a274970080e36b74d915370f47d9876445f96e00",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 323,
+    "end_line": 334,
+    "sha256": "9ef8e6d4c1a012f2c0d7fd75a274970080e36b74d915370f47d9876445f96e00"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch3) \u2014 the span bytes are identical to the source head that review read (9ef8e6d4c1a012f2); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-087",
+   "file": "src/provider/legacyprov.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "dupctx",
+   "qualified_identity": "mdc2::dupctx",
+   "operation": "mdc2::dupctx",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch3",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 531,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Body and caller both establish non-NULL. ACCEPT is \u00a77-conditional.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 531,
+   "current_census_lines": [
+    323,
+    540
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 540,
+    "end_line": 551,
+    "def_line": 540,
+    "sha256": "53914997e52cd69c0d3439049d1fb36d2adb8412167764c00008bd55c11c460d",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 531,
+    "end_line": 542,
+    "sha256": "53914997e52cd69c0d3439049d1fb36d2adb8412167764c00008bd55c11c460d"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch3) \u2014 the span bytes are identical to the source head that review read (53914997e52cd69c); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-086",
+   "file": "src/provider/legacyprov.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "get_params",
+   "qualified_identity": "legacy_digest_impl::get_params",
+   "operation": "legacy_digest_impl::get_params",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch3",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 387,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "NULL-array safe; no context precondition. ACCEPT is \u00a77-conditional.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 387,
+   "current_census_lines": [
+    396,
+    604
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 396,
+    "end_line": 399,
+    "def_line": 396,
+    "sha256": "60741d24cb50535f7dae2865b4c85204eb7a5e2bbbcc72791949cb16e52fb0bf",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 387,
+    "end_line": 390,
+    "sha256": "60741d24cb50535f7dae2865b4c85204eb7a5e2bbbcc72791949cb16e52fb0bf"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch3) \u2014 the span bytes are identical to the source head that review read (60741d24cb50535f); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-092",
+   "file": "src/provider/legacyprov.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "get_params",
+   "qualified_identity": "mdc2::get_params",
+   "operation": "mdc2::get_params",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch3",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 587,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "NULL-array safe; no context precondition. ACCEPT is \u00a77-conditional.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 587,
+   "current_census_lines": [
+    396,
+    604
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 604,
+    "end_line": 607,
+    "def_line": 604,
+    "sha256": "1cec3bc72bf7542388aa512f39a1046a5e65e3a2f13db27cbb3cbe4eb0e4371d",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 587,
+    "end_line": 590,
+    "sha256": "1cec3bc72bf7542388aa512f39a1046a5e65e3a2f13db27cbb3cbe4eb0e4371d"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch3) \u2014 the span bytes are identical to the source head that review read (1cec3bc72bf75423); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-084",
+   "file": "src/provider/legacyprov.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "internal_final",
+   "qualified_identity": "legacy_digest_impl::internal_final",
+   "operation": "legacy_digest_impl::internal_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "rereview11",
+   "earlier_receipt": "b76-review-v1i-batch3",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 360,
+   "earlier_verdict": "REJECT",
+   "earlier_verdict_reason": "NULL algctx sink through EVP_DigestFinal_ex:2646 / FinalXOF:2779. Required discharge: guard algctx in the finals or refuse NULL in the provider.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 360,
+   "current_census_lines": [
+    369,
+    581
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 369,
+    "end_line": 385,
+    "def_line": 369,
+    "sha256": "76998f9e1ef14b7e47aeb3be9e2535ebaedd5020f4d92a0d3b1852401ac72434",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 360,
+    "end_line": 376,
+    "sha256": "76998f9e1ef14b7e47aeb3be9e2535ebaedd5020f4d92a0d3b1852401ac72434"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (76998f9e1ef14b7e)."
+  },
+  {
+   "boundary": "OSSH-V1I-090",
+   "file": "src/provider/legacyprov.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "internal_final",
+   "qualified_identity": "mdc2::internal_final",
+   "operation": "mdc2::internal_final",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "rereview11",
+   "earlier_receipt": "b76-review-v1i-batch3",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 564,
+   "earlier_verdict": "REJECT",
+   "earlier_verdict_reason": "NULL algctx sink through the finals. Required discharge: guard at the call sites or in the provider.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 564,
+   "current_census_lines": [
+    369,
+    581
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 581,
+    "end_line": 597,
+    "def_line": 581,
+    "sha256": "1620b0c9aff1ffa574db1c8ec58f0f8ba6269aa7d05adb4a698b369c79df71e1",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 564,
+    "end_line": 580,
+    "sha256": "1620b0c9aff1ffa574db1c8ec58f0f8ba6269aa7d05adb4a698b369c79df71e1"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (1620b0c9aff1ffa5)."
+  },
+  {
+   "boundary": "OSSH-V1I-083",
+   "file": "src/provider/legacyprov.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "internal_init",
+   "qualified_identity": "legacy_digest_impl::internal_init",
+   "operation": "legacy_digest_impl::internal_init",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch3",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 349,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "The only dinit call site establishes non-NULL. ACCEPT is \u00a77-conditional.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 349,
+   "current_census_lines": [
+    358,
+    573
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 358,
+    "end_line": 367,
+    "def_line": 358,
+    "sha256": "74cf175e7a97e56fb5549878470a8921e59d504e5b23a8492fc5abc91eeda37c",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 349,
+    "end_line": 358,
+    "sha256": "74cf175e7a97e56fb5549878470a8921e59d504e5b23a8492fc5abc91eeda37c"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch3) \u2014 the span bytes are identical to the source head that review read (74cf175e7a97e56f); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-089",
+   "file": "src/provider/legacyprov.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "internal_init",
+   "qualified_identity": "mdc2::internal_init",
+   "operation": "mdc2::internal_init",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1i-batch3",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 556,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "The only dinit call site establishes non-NULL. ACCEPT is \u00a77-conditional.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 556,
+   "current_census_lines": [
+    358,
+    573
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 573,
+    "end_line": 579,
+    "def_line": 573,
+    "sha256": "45d0d3fadf62b85b1414683847040529b0bd4a06afe87fa7b818ad234a357325",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 556,
+    "end_line": 562,
+    "sha256": "45d0d3fadf62b85b1414683847040529b0bd4a06afe87fa7b818ad234a357325"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1i-batch3) \u2014 the span bytes are identical to the source head that review read (45d0d3fadf62b85b); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1I-085",
+   "file": "src/provider/legacyprov.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "update",
+   "qualified_identity": "legacy_digest_impl::update",
+   "operation": "legacy_digest_impl::update",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "rereview11",
+   "earlier_receipt": "b76-review-v1i-batch3",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 378,
+   "earlier_verdict": "REJECT",
+   "earlier_verdict_reason": "NULL algctx sink through EVP_DigestUpdate:2559. Required discharge: guard at the call site or provider.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 378,
+   "current_census_lines": [
+    387,
+    599
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 387,
+    "end_line": 394,
+    "def_line": 387,
+    "sha256": "55723f2723d0a7302746d4abaf85ec8e9598b5e7df2a71a3128cbabd2ad41d3b",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 378,
+    "end_line": 385,
+    "sha256": "55723f2723d0a7302746d4abaf85ec8e9598b5e7df2a71a3128cbabd2ad41d3b"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (55723f2723d0a730)."
+  },
+  {
+   "boundary": "OSSH-V1I-091",
+   "file": "src/provider/legacyprov.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "update",
+   "qualified_identity": "mdc2::update",
+   "operation": "mdc2::update",
+   "mechanism": "EVP_PKEY_PROVIDER",
+   "verdict_class": "rereview11",
+   "earlier_receipt": "b76-review-v1i-batch3",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 582,
+   "earlier_verdict": "REJECT",
+   "earlier_verdict_reason": "NULL algctx sink through EVP_DigestUpdate:2559. Required discharge: guard at the call site or provider.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 582,
+   "current_census_lines": [
+    387,
+    599
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 599,
+    "end_line": 602,
+    "def_line": 599,
+    "sha256": "834f662737d593c62ef6cbae4f9c7bd3d806bfcf7dd84ff8aca5ca633c378f90",
+    "source": "git-blob",
+    "resolution": "qualified"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 582,
+    "end_line": 585,
+    "sha256": "834f662737d593c62ef6cbae4f9c7bd3d806bfcf7dd84ff8aca5ca633c378f90"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (re-review at b78) \u2014 rejected at b76 for a NULL-algctx sink; the required caller guard now exists at the single dispatch site (EVP_DigestUpdate:2568 / EVP_DigestFinal_ex:2663 / EVP_DigestFinalXOF:2799 / EVP_DigestSqueeze:2935), and the site body is unchanged (834f662737d593c6)."
+  },
+  {
+   "boundary": "OSSH-V1L-006",
+   "file": "src/runtime/confmod/mod.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "module_free_thunk",
+   "qualified_identity": "module_free_thunk",
+   "operation": "module_free_thunk",
+   "mechanism": "C_ABI_CONTRACT",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1l",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 397,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Precondition (each element is a live registry ConfModule with one owner) is established by the construction code, not by documentation; no safe caller; control is load-bearing at source level. The recorded registration line :1369 is still exact.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 397,
+   "current_census_lines": [
+    397
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 397,
+    "end_line": 401,
+    "def_line": 397,
+    "sha256": "a5b60056c9ddbcf6bd883eecd26fbb5a0eccc600eab2245ce5689a4ab0ebbaae",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 397,
+    "end_line": 401,
+    "sha256": "a5b60056c9ddbcf6bd883eecd26fbb5a0eccc600eab2245ce5689a4ab0ebbaae"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1l) \u2014 the span bytes are identical to the source head that review read (a5b60056c9ddbcf6); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1L-007",
+   "file": "src/ui/ui_util.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "ui_free_method_data",
+   "qualified_identity": "ui_free_method_data",
+   "operation": "ui_free_method_data",
+   "mechanism": "C_ABI_CONTRACT",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1l",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 197,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Ownership is established by the two in-crate writers and a private index; the single-release invariant is visible and controlled. Evidence-record caveat: the receipt's index-load citations are stale (see findings E3), and ui_util.rs changed by 11 lines after the receipt was written; the property itself is unaffected and was re-established from current source.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 197,
+   "current_census_lines": [
+    197
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 197,
+    "end_line": 209,
+    "def_line": 197,
+    "sha256": "9da4f85c2504a0b7baebbd33c8b6fb7e9b58f5ce2ae0c2abd95a6161cb1ac3fd",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 197,
+    "end_line": 209,
+    "sha256": "9da4f85c2504a0b7baebbd33c8b6fb7e9b58f5ce2ae0c2abd95a6161cb1ac3fd"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1l) \u2014 the span bytes are identical to the source head that review read (9da4f85c2504a0b7); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1L-011",
+   "file": "src/x509/v3_akid.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "akid_i2v",
+   "qualified_identity": "akid_i2v",
+   "operation": "akid_i2v",
+   "mechanism": "X509_VERIFY_POLICY",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1l",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 182,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Precondition established by current code I read: the row's `it` is AUTHORITY_KEYID_it, the printer decodes with that same row's item, and the cast target is its #[repr(C)] mirror. Evidence-record caveat: the receipt's dispatch citations are stale by a 2,493-line rewrite (findings E2/E3); the ACCEPT does not rest on them.",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 182,
+   "current_census_lines": [
+    182
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 182,
+    "end_line": 190,
+    "def_line": 182,
+    "sha256": "6f51a4906e3cf43beb25bbdfc03dbe93ff93a2a097b7d1a49622af20502c4fc4",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 182,
+    "end_line": 190,
+    "sha256": "6f51a4906e3cf43beb25bbdfc03dbe93ff93a2a097b7d1a49622af20502c4fc4"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1l) \u2014 the span bytes are identical to the source head that review read (6f51a4906e3cf43b); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1L-012",
+   "file": "src/x509/v3_akid.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "akid_v2i",
+   "qualified_identity": "akid_v2i",
+   "operation": "akid_v2i",
+   "mechanism": "X509_VERIFY_POLICY",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1l",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 193,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "The parser passes its own X509V3Ctx under void* and its own parsed stack; the cast mirror and the NULL-ctx refusal are both in current code. Evidence-record caveat: v3_conf dispatch citation is stale (E3).",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 193,
+   "current_census_lines": [
+    193
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 193,
+    "end_line": 201,
+    "def_line": 193,
+    "sha256": "59082f4cd416d5a12fd09babe46787b33ca10fec66e677bdb3de88b2940a0ea1",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 193,
+    "end_line": 201,
+    "sha256": "59082f4cd416d5a12fd09babe46787b33ca10fec66e677bdb3de88b2940a0ea1"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1l) \u2014 the span bytes are identical to the source head that review read (59082f4cd416d5a1); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1L-013",
+   "file": "src/x509/v3_san.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "san_i2v",
+   "qualified_identity": "san_i2v",
+   "operation": "san_i2v",
+   "mechanism": "X509_VERIFY_POLICY",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1l",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1176,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Row/type/dispatch agreement is established by current code. Evidence-record defect: the boundary receipt declares this item at :1163, which now holds different code; the obligation itself is at :1176 and the closure recorded covers_site=false yet DISCHARGED (findings E3/E4).",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 1163,
+   "current_census_lines": [
+    1176
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1176,
+    "end_line": 1184,
+    "def_line": 1176,
+    "sha256": "f81a3cfcc6695c7396e2c60945d7b3ad5c67408e3f9f5c5d59fd42317753ce42",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 1176,
+    "end_line": 1184,
+    "sha256": "f81a3cfcc6695c7396e2c60945d7b3ad5c67408e3f9f5c5d59fd42317753ce42"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1l) \u2014 the span bytes are identical to the source head that review read (f81a3cfcc6695c73); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1L-014",
+   "file": "src/x509/v3_san.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "san_v2i",
+   "qualified_identity": "san_v2i",
+   "operation": "san_v2i",
+   "mechanism": "X509_VERIFY_POLICY",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1l",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1187,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "The subject row pairs with the subject builder, and the ctx/stack preconditions are established by the parser. Evidence-record defect: receipt declares :1174 (currently different code); closure recorded covers_site=false (E3/E4).",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 1174,
+   "current_census_lines": [
+    1187
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1187,
+    "end_line": 1194,
+    "def_line": 1187,
+    "sha256": "c52f72419f84dcb95253bd7eec68f54e9f472ba7e0a3bebf4f1eda6470634ce7",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 1187,
+    "end_line": 1194,
+    "sha256": "c52f72419f84dcb95253bd7eec68f54e9f472ba7e0a3bebf4f1eda6470634ce7"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1l) \u2014 the span bytes are identical to the source head that review read (c52f72419f84dcb9); no re-review."
+  },
+  {
+   "boundary": "OSSH-V1L-015",
+   "file": "src/x509/v3_san.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "item": "san_v2i_issuer",
+   "qualified_identity": "san_v2i_issuer",
+   "operation": "san_v2i_issuer",
+   "mechanism": "X509_VERIFY_POLICY",
+   "verdict_class": "identity45",
+   "earlier_receipt": "b76-review-v1l",
+   "earlier_receipt_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+   "earlier_reviewed_line": 1197,
+   "earlier_verdict": "ACCEPT",
+   "earlier_verdict_reason": "Issuer row pairs with the issuer builder and the ctx/stack preconditions are established by the parser. Evidence-record defect: receipt declares :1184 (currently different code); closure recorded covers_site=false (E3/E4).",
+   "b77_repair_review": null,
+   "recorded_line_at_b77_closure": 1184,
+   "current_census_lines": [
+    1197
+   ],
+   "current_census_set": [
+    "blockers"
+   ],
+   "current_census_partition": [
+    "production"
+   ],
+   "current_span": {
+    "start_line": 1197,
+    "end_line": 1204,
+    "def_line": 1197,
+    "sha256": "d46b6cbd67b40adc15b2334b7b4b9226697413a7fbe301fd967de73902aa3bf6",
+    "source": "git-blob",
+    "resolution": "unique"
+   },
+   "earlier_accepted_span": {
+    "head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "start_line": 1197,
+    "end_line": 1204,
+    "sha256": "d46b6cbd67b40adc15b2334b7b4b9226697413a7fbe301fd967de73902aa3bf6"
+   },
+   "span_hash_identical": true,
+   "census_matches_resolved_def": true,
+   "item_present_in_census": true,
+   "kind_unchanged": true,
+   "verdict": "ACCEPT",
+   "verdict_basis": "ACCEPT (identity; reviewed at b76-review-v1l) \u2014 the span bytes are identical to the source head that review read (d46b6cbd67b40adc); no re-review."
+  }
+ ]
+}

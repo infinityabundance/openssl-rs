@@ -1,0 +1,240 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/b84-mechanism-verdicts/v1",
+ "kind": "independent mechanism-wide adjudication of AGENTS.md section 7 criterion 3",
+ "generated_utc": "2026-11-16T18:05:00Z",
+ "author_role": "independent reviewer; did not write, design or adjudicate the conversions, the b84b closures, the per-site reviews, the rebinds or the instrument repair. No commit, no push, no src/ or test edit. This receipt and the appended section of b84-safety-argument.json are the only writes.",
+ "candidate": {
+  "branch": "stage/p25/b75-ocsp",
+  "head_at_review": "4b6ef707736e2615507c1b1fb98000e059840371",
+  "source_head_s": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+  "src_identity_witness": "git diff --stat f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d 4b6ef7077 -- src is empty, so the reviewed source bytes are the b84 S; b84-safety-argument.identity records src_content_sha256 773786ec113ae333cf328a800eabe1b80bd4a60b4ad247c5877e1900dff16aa5 over 878 files. NOTE: the same file's revision.what_changed[0] says 'S is 1a152be1e'; that is wrong (1a152be1e -> f1c54715 changes 9 src files) and the identity.source_head value f1c54715 is the one used here.",
+  "libcrypto_so_3_sha256": "53df54937257a6a02baa4779b33568c1d86b8d1a0c431dd74b5f50c69cd731fd",
+  "consumers": {
+   "ssh": "2eb4b8b33d2f5e01f916f6ccdef37603188c06136aac5ce4a237939848c7ba47",
+   "sshd": "cdf61204b6dc3f245166ef7fd6db6285e65762a0e6605d9049935b2596c17e1a"
+  },
+  "closures": [
+   "evidence/closure-ssh-b84b.json 2ea7613c1fb4c0073f54d1043b057b8a4673490558d66a7b28ff718f98325043",
+   "evidence/closure-sshd-b84b.json d3e01ca86916b22e694aeeede3c00c0ef5b26d189546f2251d279086b11830ad"
+  ],
+  "review_trees": {
+   "criterion3_reviews": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+   "batch3_controls": "7c9d16d042da7125da1fd54f80bd777523d5fc0b",
+   "b74_rebind_tree": "fed1f077b5be4edabff51191ad2c0f15985492fd"
+  },
+  "closure_tool": "forensics/tools/consumer_closure.py df0a9ae2cb2d66aa0551e7cb8cbf5a446466cc54d7dd3a1651d3a30c7412a958"
+ },
+ "venue": {
+  "free_g_before": "total 45, used 16, free 17, buff/cache 12, available 29; swap 45 used 16",
+  "court": "16 GiB / 16 CPU (docker/openssl-rs-court.sh)",
+  "discipline": "source-level reads plus cheap probes only: git blob diffs, span-hash recomputation, one lexical safe-surface scan. No build, link, test, benchmark or sanitizer run; AGENTS.md 6.1 build cap never binds.",
+  "hard_rules_observed": "no commit, no push, no modification of src/, tests/ or existing receipts; only the two evidence files named in the task were written."
+ },
+ "rules_read": [
+  "AGENTS.md sections 0-7",
+  "AGENTS.md section 9",
+  "AGENTS.md section 15",
+  "AGENTS.md section 21",
+  "AGENTS.md section 22"
+ ],
+ "method": {
+  "obligation_set": "the 290 production obligations of the b84b closure, partitioned by counts.by_mechanism; the three mechanisms reviewed here are 116 + 122 + 27 = 265 of them",
+  "site_verdicts": "read from evidence/b79-review-evp-final.json, evidence/b79-review-x509-final.json, evidence/b79-review-x509-batch1.json, evidence/b79-review-x509-batch2.json, court/freeze-b79/review/controls-b79-x509-batch3.json, evidence/b79-review-rest-final.json, and the b80/b81/b82/b83/b84 review-rebinds, never from a summary claim",
+  "span_transfer": "recomputed the operation-span sha256 at S (splitlines, rstrip, join, sha256 over UTF-8) for src/pkcs7/pk7_asn1.rs::ri_cb and checked every review's recorded hash; compared the batch3 control spans and the b84b closure spans for the four drifted X509 rows",
+  "boundary_contracts": "evidence/b82-boundary-contracts.json: 152 reachable unresolved sites = 116 external-ABI-contract + 36 closed target sets, 0 UNPROVABLE; the b84b closure re-derives the same 116/36 partition at S. The b82 class witnesses are bound to fed1f077b; the per-class slot/writer text was not re-derived at S.",
+  "safe_surface": "ran court/freeze-b78/review2/surface.py unchanged at this tree: 469 external safe pub fns reach unsafe crate-wide; per mechanism file set, 0 (EVP), 69 (X509), 17 (RAND). 0 of the 69 and 0 of the 17 have a per-function input-validity review.",
+  "instruments": "Miri 8 tests (both borrow models), ASan 49 focused tests, TSan 54 tests, all as recorded in b84-safety-argument.instruments, b84-instrument-repair.json, court/freeze-b84/miri/per-test-stacked.tsv and evidence/b80-tsan-freelock.json; the TSan run is at b80, whose touched files are byte-identical at S, not a b84 run",
+  "source_drift": "git diff --stat 5b08c0294 f1c54715 -- src = 16 files; the b84 safety argument's per-mechanism source_drift blocks are the drift accounting; the 5 rows it calls 'not re-established' were re-checked here by content hash (see per-mechanism bookkeeping notes)"
+ },
+ "conditions": {
+  "1": "every obligation in the mechanism is discharged by a receipt whose verdict an independent review established at this source, or transferred by content hash with the identity stated",
+  "2": "every remaining precondition is established by its callers or by an external ABI contract whose slot/writer/interface is witnessed (the BOUNDARY classes for the 116; the 36 closed target sets for the rest)",
+  "3": "no safe-Rust interface can violate a precondition; for any function that can reach a mechanism obligation, state whether it establishes the precondition in code",
+  "4": "the instrument evidence that covers the mechanism (Miri/ASan/TSan) is named with its coverage limit, and no required instrument is missing"
+ },
+ "mechanisms": {
+  "EVP_PKEY_PROVIDER": {
+   "scope": {
+    "obligations": 116,
+    "files": 20,
+    "obligation_set": "the closure's 116 EVP_PKEY_PROVIDER rows: src/provider/digest.rs 30, src/slh_dsa/adrs.rs 18, src/evp/legacy_sha.rs 13, src/slh_dsa/hash.rs 12, src/provider/legacyprov.rs 12, src/evp/legacy_md5.rs 6, src/evp/legacy_blake2.rs 4, and 13 files with 1-3 each",
+    "consumer_edges": "151 of the 179 imported libcrypto symbols in the ssh closure are EVP/provider entry points; the closure's reachable indirect surface for this mechanism is the 26 ABI_CONTRACT_CORE_DISPATCH sites (provider up_ref/free/name/get0_*) and the 16 ABI_CONTRACT_PROVIDER sites, plus the 36 closed target sets (SLH 6, PROVIDER_HW_TABLE 25, LEGACY_EVP_CIPHER_DATA 2, DECODER_METHOD_OBJECT 3)",
+    "explicit_scope_exclusion": "b79-review-evp-final.does_not_prove states the review does not establish the OSSL_OP_SIGNATURE/KEM/KEYMGMT/ENCODER/DECODER dispatch-table surfaces, the EVP_PKEY_CTX operation tables, or the fetched-digest release paths; none of the 116 rows is such a callback"
+   },
+   "condition_1": {
+    "state": "MET for the 116-operation scope",
+    "evidence": "116/116 reviewed: 93 ACCEPT in evidence/b79-review-evp-final.json plus 23 prior b76 ACCEPTs transferred by span hash; 0 REJECT; 0 closure rows without a record. source_drift.rows_in_files_changed_since_review_tree = 0, so all 116 spans are byte-identical at S. The 7 copyctx rows that the b84 closures had BLOCKED are ACCEPTed by evidence/b84-review-rebind.json on content-migrated-coordinate identity, 7/7 span hashes equal at S."
+   },
+   "condition_2": {
+    "state": "NOT ESTABLISHED",
+    "evidence": "the 116 contract-bounded sites have CONTRACT_COMPLETE class witnesses in b82-boundary-contracts, but two retained obligations survive inside those classes: R-1 (the dispatch entry is *mut c_void and the id is the only witness) and R-2 (SLH-DSA slots take bare *mut u8). The b82 receipt itself records R-1 as blocking SAFE_COMPATIBLE for EVP/provider-dependent consumers until a typed id->fn wrapper exists; F-BCR-3 re-scopes R-1 to 48 sites (CORE_DISPATCH 26 + PROVIDER 16 + STORE_LOADER 3 + DECODER_METHOD_OBJECT 3).",
+    "residual": "R-1: src/context/dispatch.rs:44-52 OsslDispatch.function: *mut c_void (with unsafe impl Sync at :58); R-2: src/slh_dsa/hash.rs SlhHashFunc slots (h_msg/prf/prf_msg/f/h/t) take *mut u8 and the blob type is only in the contract text"
+   },
+   "condition_3": {
+    "state": "NOT ESTABLISHED for the mechanism name; MET for the 116-operation scope",
+    "evidence": "the measured external safe pub surface in the 20 mechanism files is 0 (surface.py at this tree). But 173 crate-internal safe fns in those files reach unsafe bodies (b84-safety-argument.safe_interface_surface.per_mechanism[EVP]), e.g. src/digest/sha2.rs::sha256_block:195 is a safe fn taking *const u8 whose in-body SAFETY says 'the caller guaranteed num * MD32_CBLOCK readable bytes'; none of the 173 has a per-function audit. The scanner graph is name-based, so its 0 external count is an absence of evidence, not a proof for the dispatch surfaces the review excludes.",
+    "residual": "173 crate-internal safe fns in the 20 files reach unsafe with no per-function review; the 116 operations are all pub unsafe extern \"C\" callbacks, so no external safe caller can name one, but a mechanism-wide claim cannot cover the excluded OSSL_OP_* operation tables with the 0-external count"
+   },
+   "condition_4": {
+    "state": "NOT ESTABLISHED",
+    "evidence": "no Miri and no ASan test executes any of the 20 mechanism files at S. Miri 8 = cms::cms_asn1 ADB, ec::asn1 ADB, pkcs12::p12_asn ADB, pkcs7::pk7_asn1 ADB, x509::v3_cpols ADB, and 3 cms::cms_lib release tests. ASan 49 = adb 7, cms::cms_lib 3, evp::digest 33, provider::ctx 2, x509::v3_san 4. src/evp/digest.rs and src/provider/ctx.rs are not in the 20-file set, so the 35 evp::digest/provider::ctx tests do not cover this mechanism.",
+    "residual": "required instrument missing: Miri (both borrow models) and ASan on operations in src/provider/digest.rs, src/slh_dsa/*.rs, src/evp/legacy_*.rs; 0 of the 20 files covered at S. TSan does not apply to this mechanism and did not run at S."
+   },
+   "verdict": "NOT_ESTABLISHED",
+   "deciding_conditions": "condition 2 (R-1/R-2 retained, untyped dispatch id->signature) and condition 4 (no Miri/ASan on any of the 20 mechanism files at S)",
+   "exact_residuals": [
+    "src/context/dispatch.rs:44-52 OsslDispatch.function: *mut c_void -- R-1, re-scoped by F-BCR-3 to 48 sites; the id->signature pairing is a convention, not a type",
+    "src/slh_dsa/hash.rs SlhHashFunc slots -- R-2, bare *mut u8, extent only in the per-slot contract",
+    "b79-review-evp-final.does_not_prove excludes OSSL_OP_SIGNATURE/KEM/KEYMGMT/ENCODER/DECODER, EVP_PKEY_CTX tables and fetched-digest release; a mechanism-wide verdict must include them (0 reviewed) or explicitly scope the name",
+    "F-1: D-LEGACY-MD-CALLBACK-MD-DATA-1 is cited in 29 source comments across 9 files (e.g. src/evp/legacy_blake2.rs:256, src/evp/legacy_md4.rs:204, src/evp/legacy_md5.rs:229, src/evp/legacy_sha.rs:302) but has no entry in docs/SECURITY_DIVERGENCE_POLICY.md; section 17 recording obligation, guards themselves correct",
+    "instrument: no Miri/ASan test in the 20 mechanism files at S (Miri 8 = ADB+cms; ASan 49 = adb/cms/evp::digest/provider::ctx/v3_san)",
+    "condition 3: 173 crate-internal safe fns reach unsafe in the 20 files with no per-function audit"
+   ],
+   "future_reproduction": [
+    "recompute all 116 span hashes at S from evidence/closure-ssh-b84b.json and confirm each verdict is a b79 ACCEPT or a named b76/b80/b81/b82/b84 content transfer, with 0 rows in files changed since 5b08c0294",
+    "re-derive the 152/116/36 partition at S and re-witness the CORE_DISPATCH/PROVIDER/STORE_LOADER slot writers and binary call sites at S; the b82 class addresses are bound to fed1f077b and are stale at libcrypto 53df5493",
+    "audit the 173 crate-internal safe fns (or prove none reaches a 116 obligation) and keep the external safe-pub-reaches-unsafe count at 0",
+    "run Miri under Stacked and Tree Borrows plus ASan on tests that execute the 20 mechanism files; currently 0 tests",
+    "repair R-1/R-2 with a typed id->fn wrapper or record them as retained obligations, and register F-1 in docs/SECURITY_DIVERGENCE_POLICY.md"
+   ]
+  },
+  "X509_VERIFY_POLICY": {
+   "scope": {
+    "obligations": 122,
+    "files": 41,
+    "obligation_set": "the closure's 122 X509V3 method rows (v2i/i2v/i2r/r2i/s2i etc.); the largest files are src/x509/v3_san.rs 10, src/x509/v3_timespec.rs 9, src/x509/v3_crld.rs 8, src/x509/v3_ac_tgt.rs 6, src/ocsp/v3_ocsp.rs 5, src/x509/v3_attrdesc.rs 5",
+    "consumer_edges": "6 imported libcrypto symbols in the ssh closure are X509 entry points; 66 of the 116 contract-bounded indirect sites are ABI_CONTRACT_EXPORT_CALLBACK (the X509V3 method and exported v2i/i2v callback families); 5 rows were reviewed at b78 under openssh-v1l",
+    "explicit_scope_limit": "b79-review-x509-final.does_not_prove: 'the b79c caller-closure claim is not re-established at S; callers were read, not re-closed'; 24 orphan definitions sit outside the current upper bound; the review declines mechanism-wide discharge"
+   },
+   "condition_1": {
+    "state": "MET BY COMPOSITION (with one per-row receipt gap)",
+    "evidence": "122 closure rows = 115 ACCEPT + 2 stale-kind (i2s_poison, s2i_poison, no longer source unsafe operations) + 5 b78-reviewed openssh-v1l. The 115 = batch1 18 + batch2 25 + batch3 25 + final 47. The 4 rows the safety argument calls 'not re-established' are byte-identical at S: v3_ncons i2r_NAME_CONSTRAINTS f69592530f160a28... and v2i_NAME_CONSTRAINTS 907272de5879ea76... (both ACCEPTed in x509-final), v3_cpols i2r_certpol a8dee41e15e5e929... and r2i_certpol 49d1e032aa3bdf54... (batch3 control spans = closure spans at S). The batch3 ACCEPT verdict exists only as a tally in x509-final; its 25 per-row identity records are in court/freeze-b79/review/controls-b79-x509-batch3.json, which records no verdict.",
+    "residual": "no per-row verdict file names src/x509/v3_cpols.rs::i2r_certpol or ::r2i_certpol; their ACCEPT is the composition of the x509-final tally 'batch3 25 ACCEPT' with the batch3 control selection (indices 45..69)"
+   },
+   "condition_2": {
+    "state": "PARTIALLY ESTABLISHED",
+    "evidence": "the 122 rows are X509V3_EXT_METHOD callbacks and exported v2i/i2v entry points; the slot contract on X509V3ExtMethod and the registration rows were read by the review, and the exported callback family is the 66-site ABI_CONTRACT_EXPORT_CALLBACK class. However the caller closure is not re-established at S, and the review's caller analysis does not cover indirect dispatch.",
+    "residual": "the b79c caller-closure claim is not re-established at S; 24 orphan rows remain outside the upper bound; no per-row caller witness at S"
+   },
+   "condition_3": {
+    "state": "NOT ESTABLISHED",
+    "evidence": "69 external safe pub fns in the 41 mechanism files reach unsafe at this tree (surface.py at S); none takes a raw pointer (safe_pub_with_raw_pointer_param_reaching_unsafe = 0), but 0 of 69 has a per-function review that its inputs satisfy the unsafe callee's preconditions. Examples: src/x509/v3_bcons.rs::BASIC_CONSTRAINTS_new:113, src/x509/v3_aaa.rs::OSSL_ALLOWED_ATTRIBUTES_CHOICE_new:205, src/x509/v3_ac_tgt.rs::OSSL_TARGETING_INFORMATION_new:565.",
+    "residual": "69/69 external safe pub fns un-audited (list in evidence/b84-safety-argument.json safe_interface_surface.per_mechanism[X509].safe_pub_external_reaching_unsafe_list)"
+   },
+   "condition_4": {
+    "state": "PARTIALLY ESTABLISHED",
+    "evidence": "ASan covers x509::v3_san 4 tests at S (10 of the 122 obligations' file); Miri covers one x509::v3_cpols ADB test, which is not one of the 2 v3_cpols obligations. No Miri/ASan test executes the other 120 obligation operations. The x509 review records no sanitizer, Miri, ASan or Loom run at S.",
+    "residual": "the aliasing/initialisation axis for 120 of 122 operations has no instrument coverage; Miri is the required instrument under AGENTS.md 18 and ran on no X509 obligation operation"
+   },
+   "verdict": "NOT_ESTABLISHED",
+   "deciding_conditions": "condition 3 (69 external safe pub fns reach unsafe, 0/69 audited) and condition 4 (no instrument test executes 120 of the 122 obligations; only v3_san ASan and a v3_cpols ADB Miri test exist)",
+   "exact_residuals": [
+    "69 external safe pub fns reach unsafe with no per-function input-validity review, e.g. src/x509/v3_bcons.rs::BASIC_CONSTRAINTS_new:113, src/x509/v3_aaa.rs::OSSL_ALLOWED_ATTRIBUTES_CHOICE_new:205",
+    "src/x509/v3_cpols.rs::i2r_certpol (a8dee41e...) and ::r2i_certpol (49d1e032...) have no per-row verdict file; only the x509-final batch3 tally + controls-b79-x509-batch3.json identity",
+    "src/x509/v3_ncons.rs::i2r_NAME_CONSTRAINTS (f6959253...) and ::v2i_NAME_CONSTRAINTS (907272de...) were ACCEPTed in x509-final at 5b08c0294 and are byte-identical at S; no reviewer re-read them at S",
+    "24 orphan definitions outside the current upper bound remain REJECT_stale_kind (not re-admitted as EXTERN_C_FN_DEF); i2s_poison/s2i_poison are stale-kind closure rows, not source unsafe operations",
+    "b79-review-x509-final.does_not_prove: 'No obligation is discharged; these are review verdicts, not SAFETY_DISCHARGED or SAFE_COMPATIBLE claims'; the caller closure is not re-established at S",
+    "instrument: only x509::v3_san 4 ASan tests and one v3_cpols ADB Miri test at S; no instrument on 120/122 obligations"
+   ],
+   "future_reproduction": [
+    "produce per-row verdict records for the 2 v3_cpols batch3 rows (or an equivalent signed batch3 receipt) and recompute all 4 drifted spans at S (a8dee41e, 49d1e032, 907272de, f6959253)",
+    "audit all 69 external safe pub fns that reach unsafe for input-validity establishment; currently 0/69",
+    "run Miri (both models) and ASan on tests that execute the 122 obligation operations; currently v3_san 4 ASan tests + one v3_cpols ADB Miri test",
+    "resolve the 24 orphan rows (re-admit as EXTERN_C_FN_DEF or record why each is no longer an unsafe operation) and replace the review's mechanism-wide-decline statement with a criterion-3 argument",
+    "re-establish the caller closure at S (the b79c claim is not re-established)"
+   ]
+  },
+  "RAND_CMS_STORE_KEYFMT": {
+   "scope": {
+    "obligations": 27,
+    "files": 6,
+    "obligation_set": "src/cmp/cmp_ctx.rs 12, src/cms/cms_asn1.rs 6, src/rand/rand_lib.rs 4, src/cmp/cmp_asn.rs 2, src/cms/cms_lib.rs 2, src/pkcs7/pk7_asn1.rs 1",
+    "consumer_edges": "5 imported libcrypto symbols in the ssh closure are RAND/CMS/STORE entry points; the mechanism covers the CMS free/up-ref thunks, the CMS/PKCS7 ASN.1 item callbacks and the RAND method/ctx release paths",
+    "explicit_scope_limit": "B69 retains ossl_rand_cleanup_int BLOCKED outside its scope; secret cleansing is not audited as a category"
+   },
+   "condition_1": {
+    "state": "NOT ESTABLISHED",
+    "evidence": "27/27 have a site-level DISCHARGED row; rest-final recorded 23 ACCEPT / 4 REJECT; the b80 rebind and b80-review-drifted ACCEPT the four repaired rows (cms_ri_cb, x509_free_void, x509_crl_free_void, ossl_rand_ctx_free) at S. But R2 is OPEN: x509_free_void and x509_crl_free_void carry a # Safety that says the stack owns the object exclusively and 'never also held by another owner ... that object's exactly-once release', while at call sites 1204/1264 X509_add_cert(*certs, ptr, 0x1) up-refs each element (src/x509/x509_cmp.rs:1096,1130), so the CMS container retains a reference: the b70 test asserts refcount 2 after get1 and 1 after pop_free. The contract describes the wrong object; §1 requires exclusive ownership and the exact release mechanism.",
+    "residual": "src/cms/cms_lib.rs::x509_free_void (def 1388; # Safety 1379-1387) and ::x509_crl_free_void (1400; # Safety 1395-1399): 'never also held by another owner' and 'that object's exactly-once release' are false; what is released is the stack's reference"
+   },
+   "condition_2": {
+    "state": "PARTIALLY ESTABLISHED",
+    "evidence": "the CMS ASN.1 item callbacks have item/aux/size pairing witnesses (C4 in rest-final) and the 2 exported CMS free arms are reached from ossl_cms_get1_certs_ex/crls_ex failure paths that were read. But the RAND_METHOD dispatch reached from RAND_status/RAND_poll is not one of the 12 BOUNDARY classes; its external contract is only the rand.h RandMethod struct.",
+    "residual": "no BOUNDARY class covers (*meth).status / the RAND_METHOD slots; RAND_status:892-894 calls the method's status slot on the method returned by RAND_get_rand_method:736, which a C caller can replace through RAND_set_rand_method (unsafe pub, :724)"
+   },
+   "condition_3": {
+    "state": "NOT ESTABLISHED",
+    "evidence": "17 external safe pub fns in the 6 mechanism files reach unsafe at this tree: e.g. src/rand/rand_lib.rs::RAND_status:883, RAND_poll:609, RAND_OpenSSL:2110; src/pkcs7/pk7_asn1.rs::PKCS7_*_new; src/cmp/cmp_asn.rs::OSSL_CMP_*_new. None takes a raw pointer, but 0 of 17 has a per-function input-validity review. RAND_status is a safe pub extern fn that invokes a caller-installable method-table callback, and its comment 'the method table is this module's own' is only true until a C caller installs a foreign method.",
+    "residual": "17/17 external safe pub fns un-audited (list in evidence/b84-safety-argument.json safe_interface_surface.per_mechanism[RAND].safe_pub_external_reaching_unsafe_list)"
+   },
+   "condition_4": {
+    "state": "PARTIALLY ESTABLISHED",
+    "evidence": "Miri 8 at S includes the 3 cms::cms_lib tests that exercise the exact x509_free_void/x509_crl_free_void failure arms (both_get1_helpers_fill_their_reserved_stacks_at_capacity, a_failed_cert_insertion_releases_the_up_ref, a_failed_crl_push_orphans_one_reference_control) plus cms_asn1 ADB; ASan covers cms::cms_lib 3 and cms_asn1/pkcs7 ADB. The remaining rows (rand_lib 4, cmp 14, pkcs7 1) have no Miri/ASan test at S; b80-review-drifted R1 records that as NOT_RUN.",
+    "residual": "rand_lib/cmp/pkcs7 rows have no Miri/ASan coverage; the b80-review-drifted R1 NOT_RUN is still open for them; secret cleansing for CMS/PEM key material is unaudited"
+   },
+   "verdict": "NOT_ESTABLISHED",
+   "deciding_conditions": "condition 1 (R2: the two CMS free # Safety contracts assert object exclusivity that the call sites do not have) and condition 3 (17 external safe pub fns reach unsafe, 0/17 audited; RAND_status invokes a caller-installable method slot)",
+   "exact_residuals": [
+    "R2 OPEN: src/cms/cms_lib.rs::x509_free_void (1388; contract 1379-1387) and ::x509_crl_free_void (1400; contract 1395-1399) say the stack owns the object exclusively and it is 'that object's exactly-once release'; X509_add_cert(...,0x1) at 1204/1264 up-refs, the CMS container keeps its reference, refcount 2 -> 1 after pop_free",
+    "condition 3: 17 external safe pub fns reach unsafe, e.g. src/rand/rand_lib.rs::RAND_status:883 and RAND_poll:609; RAND_status calls (*meth).status:892-894 on a method a C caller can replace via RAND_set_rand_method:724; 0/17 audited",
+    "no BOUNDARY class for the RAND_METHOD slots; the external ABI witness is only the rand.h RandMethod struct",
+    "instrument: Miri/ASan cover cms_asn1/cms_lib (+pkcs7 ADB) only; rand_lib 4, cmp 14, pkcs7 1 have no instrument test at S; b80-review-drifted R1 NOT_RUN remains",
+    "secret cleansing for CMS/PEM key material is unaudited; B69 retains ossl_rand_cleanup_int BLOCKED outside scope",
+    "bookkeeping correction: src/pkcs7/pk7_asn1.rs::ri_cb is content-identical at S (span hash 5f0c47c7284311262665d10f8cf664ad8f00e11ac6bb4584edff8cde91dd57c5 equals the b79 record), so it transfers; b84's 'not re-established' count is an overcount. ossl_rand_ctx_free was re-read and ACCEPTed by b80-review-drifted (span 2dad9e575165dc5ed7e81dd1bf441bd84aeffe8f8f53e0e0abfa115f7dcc9bdf at S), so the b84 residual prose calling it unre-read is stale."
+   ],
+   "future_reproduction": [
+    "repair the R2 contract text to say the stack's exclusive reference (not the object's release) at 1379-1387 and 1395-1399, then re-review at S with the refcount-2 -> 1 witness",
+    "recompute the 27 spans at S; confirm ri_cb 5f0c47c7 and the 12 re-established rows, and correct the b84 overcount",
+    "audit all 17 external safe pub fns for input-validity establishment; witness the RAND_METHOD slot (RAND_status -> RandMethod.status) as an external ABI contract or add a BOUNDARY class",
+    "run Miri (both models) and ASan on rand_lib/cmp/pkcs7 tests; currently only cms rows are covered",
+    "audit CMS/PEM key-material cleansing (OPENSSL_clear_free arms) as a secret-memory category"
+   ]
+  }
+ },
+ "instrument_coverage": {
+  "miri": {
+   "state": "RUN at S",
+   "tests": 8,
+   "models": ["stacked", "tree"],
+   "result": "8/8 PASS, 0 UB, 0 OTHER, 0 undefined-behaviour lines",
+   "covered_files": ["src/cms/cms_asn1.rs", "src/ec/asn1.rs", "src/pkcs12/p12_asn.rs", "src/pkcs7/pk7_asn1.rs", "src/x509/v3_cpols.rs", "src/cms/cms_lib.rs"],
+   "limit": "the 8 changed-surface reproducer/ABI tests only; the other 2329 library tests are not under Miri; no EVP mechanism file is executed"
+  },
+  "asan": {
+   "state": "RUN at S",
+   "tests": 49,
+   "result": "49 passed, 0 failed, 0 AddressSanitizer error reports",
+   "filters": {"adb": 7, "cms::cms_lib": 3, "evp::digest": 33, "provider::ctx": 2, "x509::v3_san": 4},
+   "canary": "b84-instrument-repair: the Rust and C ASan canaries both FIRE (heap-use-after-free), so the instrument is sensitive in this venue; the b83 canary failure is repaired",
+   "limit": "49 focused tests, not the 2337-test suite; evp::digest and provider::ctx are not in the 20 EVP mechanism files"
+  },
+  "tsan": {
+   "state": "RUN at b80, NOT re-run at S",
+   "tests": 54,
+   "result": "0 races, 0 use-after-free, both canaries fired; two schedules",
+   "limit": "the lock/refcount/rcu/store-refcount surfaces; no test performs the forbidden free-while-in-use shape; full-suite TSan NOT_RUN; R1-R6 retained"
+  },
+  "self_test": {
+   "state": "repaired at b84-review12: exit 0, 0 failures, 0 PREMISE_UNAVAILABLE, two independent runs byte-identical",
+   "note": "the b84 adjudication's FAILED self-test was repaired after that adjudication; the repair is recorded in evidence/b84-instrument-repair.json and does not change the surface the self-test controls"
+  }
+ },
+ "identity_findings": [
+  "b84-safety-argument.revision.what_changed[0] says 'S is 1a152be1e', but identity.source_head is f1c54715 and 1a152be1e -> f1c54715 changes 9 src files (441 insertions): the revision text is wrong, the identity field is right. This review used f1c54715, whose src bytes are identical at HEAD 4b6ef7077.",
+  "b84-safety-argument.source_drift.rows_in_files_changed_since_review_tree = 31, but the same file's revision text says '28 rows (not 26)'. The per-mechanism source_drift blocks (31 rows, 26 re-established, 5 not) are the consistent account.",
+  "the b84 closure receipts record tracked_tree_dirty=true and do not name the dirty paths; section 22's freeze is reconstructed by the adjudication, not by the receipts.",
+  "the L4 atlas row for openssh was a different build at b84 adjudication; evidence/b84-l4-binding.json now records the same build intent at 45da459f vs the closure binary 2eb4b8b3, differing only in the embedded absolute build root; the L4 measurement is not the closure binary."
+ ],
+ "cross_mechanism_residuals": [
+  "the b82 BOUNDARY class witnesses (slot/writer/interface and binary call sites) are bound to fed1f077b and libcrypto 1340dc7d; the b84b closure re-derives the 152/116/36 partition at S but not the per-class witness text or addresses. Condition 2 is therefore accepted at class level with that identity caveat, not re-witnessed at S.",
+  "the measured C_ABI surface (292 unsafe extern defs, 277 contracted, 15 test-only) is bound to fed1f077b; it is the C_ABI_CONTRACT mechanism's evidence, not one of the three mechanisms here.",
+  "no per-function audit exists for the 69 (X509), 17 (RAND) external safe pub fns or the 173 (EVP) crate-internal safe fns; this is the common condition-3 gap.",
+  "no Miri/ASan test executes the 20 EVP mechanism files, 120 of the 122 X509 obligations, or the 4 rand_lib + 14 cmp + 1 pkcs7 RAND rows at S."
+ ],
+ "non_claims": [
+  "no mechanism here is SAFETY_DISCHARGED; no consumer family graduates; safe_compatible stays false.",
+  "a green closure run, a site ACCEPT or a validated contract is not a criterion-3 discharge.",
+  "the ASan canary firing and the self-test repair are instrument-sensitivity evidence, not whole-suite results.",
+  "no cryptographic, timing or constant-time property is claimed."
+ ]
+}

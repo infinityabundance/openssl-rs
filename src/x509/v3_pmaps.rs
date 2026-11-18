@@ -196,7 +196,13 @@ pub extern "C" fn POLICY_MAPPINGS_it() -> *const Asn1Item {
 }
 
 /// `static STACK_OF(CONF_VALUE) *i2v_POLICY_MAPPINGS(const X509V3_EXT_METHOD *method, void *a,
-/// STACK_OF(CONF_VALUE) *ext_list)` — `crypto/x509/v3_pmaps.c:45-62`.
+/// `STACK_OF(CONF_VALUE) *ext_list)` — `crypto/x509/v3_pmaps.c:45-62`.
+///
+/// # Safety
+///
+/// The `i2v` slot contract stated on [`X509V3ExtMethod`]. Caller: `X509V3_EXT_print`'s `i2v`
+/// arm, which decoded `a` through this row's `POLICY_MAPPINGS_it` (a stack of `POLICY_MAPPING`);
+/// each element is read only. The returned stack and its members belong to the caller.
 unsafe extern "C" fn i2v_POLICY_MAPPINGS(
     _method: *const X509V3ExtMethod,
     a: *mut c_void,

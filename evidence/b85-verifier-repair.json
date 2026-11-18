@@ -1,0 +1,293 @@
+{
+  "schema": "openssl-rs/verifier-repair/1",
+  "kind": "independent verifier repair (b85)",
+  "generated_utc": "2026-11-17T10:22:06Z",
+  "source_identity": {
+    "repository_head": "0cbeed5f100dc43f325740afc6a2a1de0bb31bc3",
+    "branch": "stage/p25/b75-ocsp",
+    "worktree": "forensics/tools/consumer_closure.py modified; no commit or push made by the verifier",
+    "freeze_under_review": "court/freeze-b85/FREEZE-b85.json",
+    "head_subject": "adjudication b85: NOT ESTABLISHED; two evidence-integrity defects found"
+  },
+  "venue": {
+    "court_cgroup_memory_max_bytes": 17179869184,
+    "court_nproc": 30,
+    "OPENSSL_RS_COURT_DATA": 12582912,
+    "host_free_g_available_at_start": 31,
+    "discipline": "one heavy command at a time; measured cgroup peak per record; no oom/oom_kill in any record"
+  },
+  "defect_1_acceptance_predicate": {
+    "finding": "the verdict predicate was `REFUSED if refusals else ACCEPTED`; nothing synthesised a refusal for a BLOCKED obligation, so evidence/closure-sshd-b85b.json (253 DISCHARGED / 37 BLOCKED) recorded ACCEPTED.  UNKNOWN was already a named refusal.",
+    "status": "REPAIRED",
+    "file": "forensics/tools/consumer_closure.py",
+    "tool_sha256_before": "b42f19bdfb40d94009a6256dcc7a3d5fd96e6a2c8fba595133372ce6fed5f913",
+    "tool_sha256_after": "3e86a74dbbe9095ca98ef3b8d889ec67a9447e59ef1caceecaa72152202988a1",
+    "change": {
+      "new_refusal": {
+        "code": "BLOCKED_OBLIGATIONS",
+        "detail": "<n> reachable production obligation(s) are BLOCKED and cannot support an accepted closure",
+        "obligations": "the blocked row ids"
+      },
+      "predicate": "closure_verdict_state(refusals, obligations): ACCEPTED only when no refusal fired and every row is DISCHARGED (so BLOCKED==0 and UNKNOWN==0, and any future non-DISCHARGED status also refuses)",
+      "unknown_refusal": "UNKNOWN_OBLIGATION text and code unchanged",
+      "other_refusals": "unchanged"
+    },
+    "controls": {
+      "self_test": {
+        "command": "python3 forensics/tools/consumer_closure.py --self-test",
+        "exit": 0,
+        "failures": 0,
+        "log": "court/freeze-b85/review15/selftest.log",
+        "log_sha256": "87250a448871d37f872f17090458b3914018410b57ba60f1aac62edcf8487496",
+        "record": "court/freeze-b85/review15/selftest.record",
+        "record_sha256": "d2fe1abaa87cdef1770fe885641c9f063c9da5e7e4be20daa0e539e41f1bcd3c",
+        "elapsed_s": 175,
+        "note": "same exit 0 as the pre-repair baseline court/freeze-b85/selftest-b85.log (173 s)"
+      },
+      "fixtures": {
+        "script": "court/freeze-b85/review15/controls.py",
+        "log": "court/freeze-b85/review15/controls.log",
+        "result": "court/freeze-b85/review15/controls.json",
+        "result_sha256": "0f6691f5bb602fdaed256616a3204361cd4246ab71b1c998f674f56d9678873f",
+        "passed": 14,
+        "failed": 0,
+        "cases": [
+          "zero BLOCKED -> no status refusal and ACCEPTED",
+          "one BLOCKED -> BLOCKED_OBLIGATIONS refusal with the count and the row id, REFUSED",
+          "the predicate alone refuses a BLOCKED row even with an empty refusal list",
+          "one UNKNOWN -> UNKNOWN_OBLIGATION unchanged",
+          "the legacy refusal-list-only predicate accepts the blocked fixture (the hole, replayed)",
+          "evidence/closure-sshd-b85b.json replayed: 37 BLOCKED rows, BLOCKED_OBLIGATIONS, REFUSED; committed state was ACCEPTED"
+        ]
+      }
+    },
+    "receipts_whose_verdict_changes": {
+      "committed_evidence_receipts_with_a_verdict": 168,
+      "accepted_under_the_old_predicate": 156,
+      "now_refused": 111,
+      "still_accepted": 45,
+      "already_not_accepted": 12,
+      "list": "court/freeze-b85/review15/verdict-change-list.txt",
+      "list_json": "court/freeze-b85/review15/verdict-change-list.json",
+      "list_json_sha256": "372b85a8611f8fd27df33ff9e233df5e0cad4c930baadc40c4b525deb71475e4",
+      "now_refused_receipts": [
+        "evidence/closure-ssh-0046.json",
+        "evidence/closure-ssh-0046h.json",
+        "evidence/closure-ssh-311.json",
+        "evidence/closure-ssh-b50-baseline.json",
+        "evidence/closure-ssh-b50.json",
+        "evidence/closure-ssh-b51-applied.json",
+        "evidence/closure-ssh-b51-baseline-r2.json",
+        "evidence/closure-ssh-b51-baseline.json",
+        "evidence/closure-ssh-b51c-baseline.json",
+        "evidence/closure-ssh-b51d-baseline.json",
+        "evidence/closure-ssh-b52-applied.json",
+        "evidence/closure-ssh-b52-baseline.json",
+        "evidence/closure-ssh-b52-owned-r3.json",
+        "evidence/closure-ssh-b52-owned.json",
+        "evidence/closure-ssh-b53-baseline.json",
+        "evidence/closure-ssh-b53-e7atexit-r2.json",
+        "evidence/closure-ssh-b53-e7atexit.json",
+        "evidence/closure-ssh-b53-e7cap-r2.json",
+        "evidence/closure-ssh-b53-e7cap.json",
+        "evidence/closure-ssh-b53-e7cb.json",
+        "evidence/closure-ssh-b53-e7chain-r2.json",
+        "evidence/closure-ssh-b53-e7chain.json",
+        "evidence/closure-ssh-b53-e7final.json",
+        "evidence/closure-ssh-b53-e7fix-baseline.json",
+        "evidence/closure-ssh-b53-e7fix-r2.json",
+        "evidence/closure-ssh-b53-e7hdr-r2.json",
+        "evidence/closure-ssh-b53-e7hdr.json",
+        "evidence/closure-ssh-b53-e7hw-r2.json",
+        "evidence/closure-ssh-b53-e7hw-r3.json",
+        "evidence/closure-ssh-b53-e7hw.json",
+        "evidence/closure-ssh-b53-e7kem-r2.json",
+        "evidence/closure-ssh-b53-e7kem.json",
+        "evidence/closure-ssh-b53-e7ld-r2.json",
+        "evidence/closure-ssh-b53-e7ld.json",
+        "evidence/closure-ssh-b53-e7slh-r2.json",
+        "evidence/closure-ssh-b53-e7slh-r3.json",
+        "evidence/closure-ssh-b58.json",
+        "evidence/closure-ssh-b59.json",
+        "evidence/closure-ssh-b62-element7.json",
+        "evidence/closure-ssh-b63-e7bs.json",
+        "evidence/closure-ssh-b64-e7pk12.json",
+        "evidence/closure-ssh-b65-e7abi.json",
+        "evidence/closure-ssh-b66-e7pbe.json",
+        "evidence/closure-ssh-b67-io.json",
+        "evidence/closure-ssh-b68-io.json",
+        "evidence/closure-ssh-b69-rand.json",
+        "evidence/closure-ssh-b70-thunk.json",
+        "evidence/closure-ssh-b73-r2.json",
+        "evidence/closure-ssh-b74.json",
+        "evidence/closure-ssh-b77.json",
+        "evidence/closure-ssh-b78.json",
+        "evidence/closure-ssh-b79b.json",
+        "evidence/closure-ssh-b80.json",
+        "evidence/closure-ssh-b81.json",
+        "evidence/closure-ssh-b82.json",
+        "evidence/closure-ssh-b83.json",
+        "evidence/closure-ssh-b84.json",
+        "evidence/closure-sshd-311.json",
+        "evidence/closure-sshd-b58.json",
+        "evidence/closure-sshd-b59.json",
+        "evidence/closure-sshd-b73-r2.json",
+        "evidence/closure-sshd-b77.json",
+        "evidence/closure-sshd-b78.json",
+        "evidence/closure-sshd-b79b.json",
+        "evidence/closure-sshd-b80.json",
+        "evidence/closure-sshd-b81.json",
+        "evidence/closure-sshd-b82.json",
+        "evidence/closure-sshd-b83.json",
+        "evidence/closure-sshd-b84.json",
+        "evidence/closure-sshd-b85b.json",
+        "evidence/inventory-sshd-b50-baseline.json",
+        "evidence/inventory-sshd-b50.json",
+        "evidence/inventory-sshd-b51-applied.json",
+        "evidence/inventory-sshd-b51-baseline-r2.json",
+        "evidence/inventory-sshd-b51-baseline.json",
+        "evidence/inventory-sshd-b51c-baseline.json",
+        "evidence/inventory-sshd-b51d-baseline.json",
+        "evidence/inventory-sshd-b52-applied.json",
+        "evidence/inventory-sshd-b52-baseline.json",
+        "evidence/inventory-sshd-b52-owned-r3.json",
+        "evidence/inventory-sshd-b52-owned.json",
+        "evidence/inventory-sshd-b53-baseline.json",
+        "evidence/inventory-sshd-b53-e7atexit-r2.json",
+        "evidence/inventory-sshd-b53-e7atexit.json",
+        "evidence/inventory-sshd-b53-e7cap-r2.json",
+        "evidence/inventory-sshd-b53-e7cap.json",
+        "evidence/inventory-sshd-b53-e7cb.json",
+        "evidence/inventory-sshd-b53-e7chain-r2.json",
+        "evidence/inventory-sshd-b53-e7chain.json",
+        "evidence/inventory-sshd-b53-e7fix-baseline.json",
+        "evidence/inventory-sshd-b53-e7fix-r2.json",
+        "evidence/inventory-sshd-b53-e7hdr-r2.json",
+        "evidence/inventory-sshd-b53-e7hdr.json",
+        "evidence/inventory-sshd-b53-e7hw-r2.json",
+        "evidence/inventory-sshd-b53-e7hw-r3.json",
+        "evidence/inventory-sshd-b53-e7hw.json",
+        "evidence/inventory-sshd-b53-e7kem-r2.json",
+        "evidence/inventory-sshd-b53-e7kem.json",
+        "evidence/inventory-sshd-b53-e7ld-r2.json",
+        "evidence/inventory-sshd-b53-e7ld.json",
+        "evidence/inventory-sshd-b53-e7slh-r2.json",
+        "evidence/inventory-sshd-b53-e7slh-r3.json",
+        "evidence/inventory-sshd-b62-element7.json",
+        "evidence/inventory-sshd-b63-e7bs.json",
+        "evidence/inventory-sshd-b64-e7pk12.json",
+        "evidence/inventory-sshd-b65-e7abi.json",
+        "evidence/inventory-sshd-b66-e7pbe.json",
+        "evidence/inventory-sshd-b67-io.json",
+        "evidence/inventory-sshd-b68-io.json",
+        "evidence/inventory-sshd-b69-rand.json",
+        "evidence/inventory-sshd-b70-thunk.json"
+      ],
+      "invalid_as_acceptance_evidence": "ALL of the now_refused receipt paths, without exception: each carries at least one BLOCKED obligation and may no longer be cited as an accepted closure.  They were not rewritten here.",
+      "current_freeze_specific": {
+        "evidence/closure-sshd-b85b.json": "253 DISCHARGED / 37 BLOCKED -> REFUSED",
+        "evidence/closure-ssh-b85.json": "290 DISCHARGED / 0 BLOCKED -> stays ACCEPTED",
+        "evidence/closure-ssh-b85b.json": "290 DISCHARGED / 0 BLOCKED -> stays ACCEPTED",
+        "evidence/closure-sshd-b85.json": "290 DISCHARGED / 0 BLOCKED -> stays ACCEPTED"
+      }
+    },
+    "freeze_identity_impact": "the tool is a build/evidence-relevant input (AGENTS.md section 22): changing its sha256 invalidates the freeze's closure evidence identity, so S must be refrozen and the closure receipts regenerated.  The committed receipts above retain their old ACCEPTED label until that re-run; the tool's carry-forward resolver still selects them on that stored label.",
+    "residuals": [
+      "the closure was not re-run end-to-end (no artifact rebuild); the predicate control replays the receipt's own obligation rows",
+      "receipts with obligation status None exist only in five b79 review files that carry no verdict, so the stricter all-DISCHARGED predicate changes no closure receipt beyond the 111 BLOCKED ones"
+    ]
+  },
+  "defect_2_miri_model_claim": {
+    "finding": "the two b85 arms named 'stacked' and 'tree' were invoked with identical MIRIFLAGS (only -Zmiri-disable-isolation).  No -Zmiri-tree-borrows flag appears in any b85 record or transcript, so 'both Stacked Borrows and Tree Borrows' was unsupported by the stored evidence.",
+    "status": "RE-RUN WITH THE FLAG; CLAIM NOW SUPPORTED BY THIS RECEIPT, NOT BY THE B85 RUN",
+    "miri_identity": {
+      "miri": "miri 0.1.0 (21b707e3f9 2026-09-30)",
+      "rustc": "rustc 1.101.0-nightly (21b707e3f 2026-09-30)",
+      "cargo": "cargo 1.101.0-nightly (f3865b2a4 2026-09-29)",
+      "toolchain": "nightly-2026-10-01-x86_64-unknown-linux-gnu",
+      "note": "this build recognises -Zmiri-tree-borrows (and its sub-flags); an unrecognised model flag aborts cargo miri instead of being ignored"
+    },
+    "arms": [
+      {
+        "arm": "default (Stacked Borrows)",
+        "MIRIFLAGS": "-Zmiri-disable-isolation",
+        "results": [
+          "PASS\tdigest::md32::tests::store_word_is_an_unsafe_fn",
+          "PASS\tdigest::sha2::tests::the_authoritys_vectors",
+          "PASS\tdigest::sha2::tests::the_truncated_widths_use_the_documented_initial_words",
+          "PASS\tdigest::sha2::tests::a_split_update_answers_the_same_as_one_call_for_both_widths",
+          "UNSUPPORTED:unsupported operation: can't call foreign function `pthread_once` on OS `linux`\tdigest::sha2::tests::the_one_shots_resolve_through_the_default_provider",
+          "PASS\tdigest::sha2::tests::the_block_functions_are_unsafe_fns"
+        ],
+        "tsv": "court/freeze-b85/review15/miri/per-test-default.tsv",
+        "tsv_sha256": "515ac71f475951a2e9b94139471228e8884aac58c279333b12d73c5350b4b1c6",
+        "transcript_sha256": "526c99a11f93042fe7398387d8cc8f3c02841a30eb8be6030a8b2b7fa43e70ff",
+        "identity": [
+          "arm=default",
+          "MIRIFLAGS=-Zmiri-disable-isolation ",
+          "miri 0.1.0 (21b707e3f9 2026-09-30)",
+          "rustc 1.101.0-nightly (21b707e3f 2026-09-30)",
+          "cargo 1.101.0-nightly (f3865b2a4 2026-09-29)"
+        ],
+        "record": "court/freeze-b85/review15/miri/default.record",
+        "elapsed_s": 139,
+        "peak_memory_current_bytes": 12279742464,
+        "exit": 0
+      },
+      {
+        "arm": "Tree Borrows",
+        "MIRIFLAGS": "-Zmiri-disable-isolation -Zmiri-tree-borrows",
+        "results": [
+          "PASS\tdigest::md32::tests::store_word_is_an_unsafe_fn",
+          "PASS\tdigest::sha2::tests::the_authoritys_vectors",
+          "PASS\tdigest::sha2::tests::the_truncated_widths_use_the_documented_initial_words",
+          "PASS\tdigest::sha2::tests::a_split_update_answers_the_same_as_one_call_for_both_widths",
+          "UNSUPPORTED:unsupported operation: can't call foreign function `pthread_once` on OS `linux`\tdigest::sha2::tests::the_one_shots_resolve_through_the_default_provider",
+          "PASS\tdigest::sha2::tests::the_block_functions_are_unsafe_fns"
+        ],
+        "tsv": "court/freeze-b85/review15/miri/per-test-tree.tsv",
+        "tsv_sha256": "515ac71f475951a2e9b94139471228e8884aac58c279333b12d73c5350b4b1c6",
+        "transcript_sha256": "9aa1f123688fde0c569292e5504f009bb0eafa0dc6099aaeb99375a9dbe9496a",
+        "identity": [
+          "arm=tree",
+          "MIRIFLAGS=-Zmiri-disable-isolation -Zmiri-tree-borrows",
+          "miri 0.1.0 (21b707e3f9 2026-09-30)",
+          "rustc 1.101.0-nightly (21b707e3f 2026-09-30)",
+          "cargo 1.101.0-nightly (f3865b2a4 2026-09-29)"
+        ],
+        "record": "court/freeze-b85/review15/miri/tree.record",
+        "elapsed_s": 404,
+        "peak_memory_current_bytes": 12438941696,
+        "exit": 0
+      }
+    ],
+    "outcome": "5 PASS + 1 UNSUPPORTED per arm, 0 Undefined Behavior.  The UNSUPPORTED test is digest::sha2::tests::the_one_shots_resolve_through_the_default_provider: `unsupported operation: can't call foreign function pthread_once on OS linux` -- Miri cannot execute that foreign call under either model, so it is a tool limitation, not a test failure.",
+    "corrected_claim": "At b85, on these six digest tests only, the same five tests pass under both the default (Stacked Borrows) model and an explicitly flagged Tree Borrows run, with 0 UB.  This does not cover X509, EVP or RAND obligations.  The sentence in evidence/b85-safety-argument.json citing 'Stacked and Tree Borrows' was not supported by the b85 stored run; this receipt supersedes it as the evidence for that sentence.",
+    "limitations": [
+      "six tests only; no full-library Miri",
+      "identical result lines do not prove the two models behave identically elsewhere; they prove these six tests do",
+      "the earlier b85 'tree' transcript remains in court/freeze-b85/miri and must be read as the default model"
+    ]
+  },
+  "defect_3_reproducibility": {
+    "finding": "the b85 carry chain's terminal hop records court/inventory/closure-ssh-b51-baseline.json (e8481a47...) and court/inventory/closure-sshd-b51-baseline.json (1509f666...).  That path exists in no commit and not in the working tree (court/inventory does not exist).  The same bytes are committed at evidence/closure-ssh-b51-baseline.json (e8481a47...) and evidence/inventory-sshd-b51-baseline.json (1509f666...), so only a renamed copy is anchored.  court/ is ignored by .gitignore:26, so the freeze, census and instrument logs are not in the repository.",
+    "status": "RECORDED ONLY (not fixed; court/ tracking policy is infrastructure scope)",
+    "smallest_change_recommended": "1) record the terminal hop by the committed evidence/ path, or commit a content-addressed court/inventory/ mirror of the two b51 baselines, so the (path, sha256) witness resolves as recorded; 2) replace the blanket `/court/` ignore with a narrow allowlist -- keep `/court/tmp/` and `/court/*/target/` ignored, unignore `/court/inventory/` and the freeze record set (`/court/freeze-*/{*.record,*.log,*.json,*.tsv}`) -- and force-add the two referenced baselines.  That makes a fresh clone able to replay the freeze, census and instrument references without moving the scratch trees.",
+    "not_made_here": true
+  },
+  "validation_summary": {
+    "tool_self_test": "exit 0, 0 failures (175 s)",
+    "predicate_controls": "14/14 pass",
+    "miri": "default 5 PASS + 1 UNSUPPORTED; tree-borrows 5 PASS + 1 UNSUPPORTED; 0 UB each",
+    "not_run": [
+      "end-to-end closure re-run against the b85 artefact",
+      "ASan/TSan (unchanged by this repair)",
+      "full-library Miri"
+    ]
+  },
+  "non_claims": [
+    "This receipt repairs a verdict predicate and re-runs one bounded Miri sample; it does not promote any consumer to SAFE_COMPATIBLE.",
+    "It does not rewrite any committed receipt; every now_refused receipt keeps its old ACCEPTED label until regenerated.",
+    "It does not establish that the remaining 45 still-accepted receipts are sound; it only removes the BLOCKED-row hole."
+  ]
+}

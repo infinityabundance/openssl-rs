@@ -1,0 +1,92 @@
+{
+ "schema": "openssl-rs/safe-c33/site-enumerating-boundary-receipt/v1",
+ "kind": "site-enumerating-boundary-receipt",
+ "receipt": "b48-rc2-elimination",
+ "subphase": "B48 completion: the RC2 magic-to-meth obligation no longer exists as an unsafe fn definition",
+ "date": "2026-11-13",
+ "candidate": {
+  "source_head": "15bebabc90e1c4a8f0cb496813030c1415891f7c",
+  "workspace_head": "ce597a35a (before this record)",
+  "src_content_sha256": "8ee037be6789bd8e2731d5081b787dda2ebfa190a873c1366f1aac01f7ba7374",
+  "file": "src/evp/e_rc2.rs",
+  "file_sha256": "fe855cfb70ed439b97142eb9bf6603021863097adb765e57a7fadf05cb5e0383",
+  "git_blob": "e6f537416e48a94704f58c5580a0778d3795bc0b"
+ },
+ "summary": {
+  "historical_obligations": ["B48-RC2-001", "P25-VESTIGIAL-MARKER-002"],
+  "state": "ELIMINATED_STRUCTURALLY",
+  "statement": "rc2_magic_to_meth is a safe `fn` at src/evp/e_rc2.rs:352. The only unsafe operation in its body is the `raise_site` in the unknown-magic arm, which takes a compile-time-constant ErrSite. No argument is a pointer, no memory is read or written, and no caller obligation exists. The unsafe-fn identity the two older receipts recorded is gone, so the obligation is eliminated rather than discharged."
+ },
+ "boundaries": [
+  {
+   "id": "B48-RC2-001-ELIMINATED",
+   "file": "src/evp/e_rc2.rs",
+   "line": 352,
+   "line_current": 352,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rc2_magic_to_meth",
+   "historical_ids": ["B48-RC2-001", "P25-VESTIGIAL-MARKER-002"],
+   "disposition": "ELIMINATED (source: safe fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "`rc2_magic_to_meth(i: c_int) -> c_int`: `i` is a plain integer. The three RC2 magic values map to 128/64/40; the default arm raises E_RC2_125 and answers 0. The raise site is an inner `unsafe` block over a compile-time-constant site, which needs no caller contract. The function reads no pointer, retains nothing, and cannot be re-entered through application code.",
+   "evidence": {
+    "span_sha256": "fb2f310faf987b76da88f63b31d7110c36a75afc3dbd38b11f97e311a0181f84",
+    "span_lines": [352, 363],
+    "span_schema": "safe-c33/operation-span-sha256/v1",
+    "qualified_identity": "rc2_magic_to_meth",
+    "resolution": "unique",
+    "compile_time_control": "src/evp/e_rc2.rs:367-368 — `const _: fn(c_int) -> c_int = rc2_magic_to_meth;` with the comment that restoring the `unsafe` qualifier breaks this build. This is a build-time mutation control, not a runtime test.",
+    "caller": "src/evp/e_rc2.rs:391 `rc2_magic_to_meth(num as c_int)` inside rc2_get_asn1_type_and_iv; a safe call needs no unsafe block."
+   },
+   "prior_state": {
+    "B48-RC2-001": "BLOCKED (not discharged: co-boundary P25-VESTIGIAL-MARKER-002 is BLOCKED and residual B48-R8 is NOT_RUN)",
+    "P25-VESTIGIAL-MARKER-002": "BLOCKED; the receipt recorded an unsafe fn at line 348 whose body performs one raise_site",
+    "preservation": "both historical records are left byte-for-byte unchanged; this receipt records the source transition and supersedes their non-discharging dispositions"
+   },
+   "residuals": [
+    "No Miri/ASan run for this file.",
+    "No runtime test of the three magic mappings; the compile-time coercion control proves only that the declaration is safe.",
+    "The operation is outside the OpenSSH reachable set; this record does not affect any consumer closure."
+   ]
+  }
+ ],
+ "supersedes": [
+  {
+   "receipt": "boundary-sweep-B48",
+   "ids": ["B48-RC2-001"],
+   "file": "src/evp/e_rc2.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rc2_magic_to_meth",
+   "discharging_boundary": "B48-RC2-001-ELIMINATED",
+   "discharging_receipt": "b48-rc2-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "the same (file, kind, operation) at src/evp/e_rc2.rs:352 resolves to one brace-matched definition with span sha256 fb2f310f and span lines 352-363; the declaration is a safe `fn`, the compile-time control at :367-368 rejects a restored `unsafe`, and the body reads no pointer. The older record's BLOCKED premise (an unsafe fn at :348) no longer describes the source.",
+   "reason": "an obligation that no longer exists as an unsafe fn definition cannot remain a blocked unsafe-fn obligation; it is eliminated, not discharged"
+  },
+  {
+   "receipt": "p25-vestigial-marker-sites",
+   "ids": ["P25-VESTIGIAL-MARKER-002"],
+   "file": "src/evp/e_rc2.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rc2_magic_to_meth",
+   "discharging_boundary": "B48-RC2-001-ELIMINATED",
+   "discharging_receipt": "b48-rc2-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "same identity and source evidence as the B48-RC2-001 entry: safe `fn` at :352, span sha256 fb2f310f, compile-time coercion control at :367-368, no pointer read.",
+   "reason": "the marker receipt recorded the marker as retained; the source now carries no marker, so the retained-marker disposition is stale"
+  }
+ ],
+ "negative_control": {
+  "id": "B48-RC2-ELIM-1",
+  "name": "restore the unsafe qualifier",
+  "kind": "compile-time coercion",
+  "observation": "the control const requires a safe `fn(c_int) -> c_int`; restoring `unsafe fn` fails to type-check, so the elimination cannot silently regress",
+  "fails_if": "the declaration is changed back to `unsafe fn` or the control is deleted"
+ },
+ "non_claims": [
+  "This is a structural elimination, not a SAFETY_DISCHARGED claim.",
+  "It does not cover the other five vestigial-marker sites; P25-VESTIGIAL-MARKER-005/006 are already superseded by B67 and 001/003/004 remain BLOCKED outside the OpenSSH closure.",
+  "It does not establish SAFE_COMPATIBLE or change any consumer closure count."
+ ]
+}

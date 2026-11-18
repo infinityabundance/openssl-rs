@@ -1,0 +1,55 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/review-blocker-audit/v1",
+ "kind": "review-blocker-audit",
+ "receipt": "b75-review-blocker-audit",
+ "date": "2026-11-13",
+ "purpose": "test whether any of the 98 REVIEW_REQUIRED discharges is already structurally eliminated, so it would not need review",
+ "candidate": {
+  "source_head": "15bebabc90e1c4a8f0cb496813030c1415891f7c",
+  "src_content_sha256": "8ee037be6789bd8e2731d5081b787dda2ebfa190a873c1366f1aac01f7ba7374"
+ },
+ "coverage": {
+  "obligations": 323,
+  "with_span_discharge": 321,
+  "without_span_discharge": 2,
+  "without_span_detail": "both are the BLOCKED OCSP rows src/ocsp/v3_ocsp.rs:122 and :406, now discharged by B75",
+  "review_required": 98,
+  "review_required_by_receipt": {"openssh-v1i": 74, "openssh-v1l": 15, "boundary-sweep-B45": 9}
+ },
+ "result": {
+  "structurally_eliminated_inside_the_98": 0,
+  "structurally_eliminated_outside_the_98": 1,
+  "outside_detail": "src/ct/ct_x509v3.rs:86 s2i_poison is a safe extern \"C\" fn, but it is already discharged by boundary-sweep-B54; a second non-discharging boundary would block it, so it is not added to the elimination receipt",
+  "conclusion": "no review-required row can be cleared by the stale-declaration route; the 98 require an independent adversarial review or withdrawal"
+ },
+ "disproved_findings": [
+  {
+   "id": "B75-A1",
+   "what": "two free_lock obligations appear to share a stale span (recorded 66d303aa, contiguous 673-704 hashes d22d7310)",
+   "verdict": "DISPROVED",
+   "why": "the recorded hash is the operation-span-set hash v1 over two cfg-gated definitions, 673-684 (e905dce1) and 694-704 (996b71e7); both per-definition hashes match the current bytes. The contiguous hash covers doc lines 685-693, which are outside both declared spans. The B60 discharge is valid."
+  },
+  {
+   "id": "B75-A2",
+   "what": "43 spans have no qualified_identity and 37 openssh-v1i sites failed a resolver pass",
+   "verdict": "RESOLVER-USAGE ARTEFACT",
+   "why": "the recorded qualified_identity uses module::item notation or the resolver was called without the closure's locators; the span-based audit covers all 321 recorded spans and finds no declaration mismatch"
+  }
+ ],
+ "method": [
+  "load evidence/closure-ssh-b74.json and read each obligation's own span_discharge",
+  "read only the recorded span lines and test the declaration for an unsafe qualifier",
+  "recompute the recorded set/span hashes for the two suspicious free_lock rows",
+  "aggregate candidates by discharge_receipt and by the 98 review-required groups"
+ ],
+ "residuals": [
+  "The audit tests declaration shape, not contract establishment; a safe-looking declaration can still carry a false contract.",
+  "No Miri/ASan or build was run.",
+  "The 98 review-required rows are untouched."
+ ],
+ "non_claims": [
+  "This audit does not discharge or eliminate any of the 98 review-required rows.",
+  "It does not change the 323/0 evidence-level result.",
+  "It is not a substitute for the independent review the campaign requires."
+ ]
+}

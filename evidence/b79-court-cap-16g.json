@@ -1,0 +1,90 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/court-cap-deviation/v1",
+  "kind": "court-cap-deviation",
+  "receipt": "b79-court-cap-16g",
+  "date": "2026-11-14",
+  "candidate": {
+    "source_head": "7c9d16d042da7125da1fd54f80bd777523d5fc0b",
+    "branch": "stage/p25/b75-ocsp",
+    "uncompiled_commits_under_test": ["688c27cb8", "97a1240e7", "5595a1f5e"],
+    "note": "No source or test file was modified by this subagent; this receipt records a venue decision only."
+  },
+  "user_directive": {
+    "instruction": "Raise the court container's memory limit to 16 GiB so the pending verification can run.",
+    "authority": "explicit user authorization, relayed by the orchestrator",
+    "scope": "memory cap for the openssl-rs-court container only; no source, test, evidence or receipt content is altered by it",
+    "still_required": [
+      "report the host readings and the observed peak",
+      "never retry a command that is OOM-killed at the same size"
+    ]
+  },
+  "cap": {
+    "old": {
+      "requested": "8g (default OPENSSL_RS_COURT_MEM)",
+      "docker_host_config_memory_bytes": 8589934592,
+      "memory_swap_bytes": 8589934592,
+      "memory_reservation_bytes": 8589934592,
+      "cgroup_memory_max_bytes": 8589934592
+    },
+    "new": {
+      "requested": "16g (OPENSSL_RS_COURT_MEM=16g OPENSSL_RS_COURT_MEMSWAP=16g)",
+      "docker_host_config_memory_bytes": 17179869184,
+      "memory_swap_bytes": 17179869184,
+      "memory_reservation_bytes": 17179869184,
+      "cgroup_memory_max_bytes": 17179869184,
+      "cgroup_memory_swap_max_bytes": 0,
+      "verified_via": "docker inspect HostConfig.Memory / HostConfig.MemorySwap and /sys/fs/cgroup/memory.max inside the container"
+    }
+  },
+  "host_before_change": {
+    "timestamp_utc": "2026-11-14T20:44:46Z",
+    "free_g": {
+      "mem_total_gib": 31,
+      "mem_used_gib": 25,
+      "mem_free_gib": 3,
+      "mem_buff_cache_gib": 3,
+      "mem_available_gib": 5
+    },
+    "free_m_swap": {
+      "total_mib": 32016,
+      "used_mib": 31432,
+      "free_mib": 584
+    },
+    "host_memtotal_bytes": 33572372480,
+    "host_memavailable_bytes_at_up": 6661373952,
+    "io_pressure": "some avg300=0.06; full avg300=0.06 (idle)",
+    "previous_container_state": {
+      "cgroup_memory_events": "oom=1 oom_kill=1",
+      "docker_oom_killed": true,
+      "interpretation": "the 8 GiB court had already recorded one cgroup OOM kill before this change; that is consistent with, but not proof of, the pending commands exceeding 8 GiB"
+    },
+    "pressure_sources_named_in_prior_refusal": "zed-editor about 12.8 GB RSS and rust-analyzer about 1.5 GB RSS against an exhausted swap (evidence/b79-venue-refusal.json)"
+  },
+  "compliance_statement": {
+    "section_6_1_formula": "min(8g, available - 16g), floor 2g",
+    "formula_result_at_observed_availability": "negative (available measured at 6661373952 bytes = 6.20 GiB, so available - 16g is far below the 2g floor)",
+    "status": "NOT COMPLIANT with AGENTS.md section 6.1 rule 2",
+    "applied_under": "the user's explicit authorization, not as compliance with section 6.1",
+    "consequence": "16 GiB is a ceiling the host cannot currently back with free RAM (5-6 GiB available, swap exhausted at 31/31 GiB). A cgroup OOM kill remains possible at 16 GiB; a host-level OOM kill of the court (oom_score_adj=500) is also possible. Both must be reported as evidence and must not be retried at the same size.",
+    "guard_emitted_warning": "openssl-rs-court: WARNING: host MemAvailable is 6661373952 bytes, below the requested 17179869184-byte cap plus 2147483648 bytes of headroom; starting this container may put the host under memory pressure."
+  },
+  "court_after_change": {
+    "timestamp_utc": "2026-11-14T20:47Z",
+    "running": true,
+    "cgroup_memory_current_bytes": 384688128,
+    "cgroup_memory_max_bytes": 17179869184,
+    "cgroup_memory_events": "oom=0 oom_kill=0",
+    "docker_oom_killed": false,
+    "container_id": "6358dd6edb76",
+    "preserved_from_old_container": [
+      "court/freeze-b79/court-toolchain-before-recreate.txt",
+      "court/freeze-b79/court-non-authority-openssl.txt"
+    ],
+    "note": "/court held only those two informational text files; no authority binaries or scratch state were lost by the recreate."
+  },
+  "non_claims": [
+    "This receipt is not a safety, compatibility or cryptographic measurement.",
+    "It does not discharge, weaken or withdraw any obligation, and it does not make the 16 GiB cap a compliant cap.",
+    "The b78 freeze remains the last measured candidate."
+  ]
+}

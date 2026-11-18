@@ -1,0 +1,3685 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/freeze/v1",
+ "candidate_tag": "b85c",
+ "generated_utc": "2026-11-17T12:50:02Z",
+ "freeze_kind": "re-freeze at a repaired instrument identity (E) with per-artefact ledger rebind; source and artefacts unchanged (S)",
+ "freeze_reason": "b85c re-freezes the b85 candidate at the repaired acceptance predicate. The b85 adjudication found that the verifier accepted a receipt with 37 BLOCKED obligations (evidence/closure-sshd-b85b.json); the instrument was repaired to 3e86a74d (ACCEPTED only when no refusal fired and every row is DISCHARGED) and both closures were re-measured: evidence/closure-{ssh,sshd}-b85c.json are ACCEPTED 290/290 DISCHARGED, 0 BLOCKED, 0 UNKNOWN, 0 refusals, element 7 PASS (116 external ABI contracts + 36 closed target sets, 0 target-bounded, 0 unclassified), and they are the only valid acceptance evidence at this candidate -- the other 111 receipts the old predicate accepted are invalidated and recorded as a residual. Source S is unchanged: 17042ccf2 (tag b85; source-content 5edca576b; src_content bc6815c2) and all nine artefact digests are identical to the b85 freeze (measured). The instrument self-test passes at this tool (exit 0, 0 failures) and the predicate is controlled by a 14/14 fixture suite run at this tool. The L7 replay is reused by content: evidence/b85-l7-replay.json is the same file (digest matched), it measured these exact binaries, and the repaired predicate is not in its path. The b85 gate is carried for the same reason: no build-relevant source input changed. Both b85c rebinds bind ssh and sshd to this freeze. The freeze states plainly that the candidate is NOT graduated: safe_compatible is false, 2 mechanisms are SAFETY_DISCHARGED under scoped claims and 5 are NOT_ESTABLISHED.",
+ "identity": {
+  "rule": "Two identities, never conflated (AGENTS.md section 22). S is the frozen source: 17042ccf2 (tag b85; source-content 5edca576b), the same tree the census names, src_content bc6815c2, and the nine artefacts. E is the evidence commit: the repaired instrument 3e86a74d, the b85c closures, the ledgers, the rebind receipts, the re-derived safety argument and this freeze. The instrument change is treated as E on the task's directive and recorded as a residual ('identity/instrument-change-is-E'); the b85 freeze stays as the record of the b42f19bd candidate.",
+  "production_source_head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+  "production_source_head_note": "tag b85, unchanged from the b85 freeze. The b85c receipts' repository_head is b14923bda (the predicate repair commit) with tracked_tree_dirty=true; its src/ is byte-identical to S (measured) and the receipts bind their spans to S's git blobs (inventory_source_head = span_source_commit = 17042ccf29bc39df638c63e69d3be6c6f965eef7).",
+  "inventory_source_head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+  "inventory_source_head_note": "census identity.source_head and the receipts' inventory_source_head/span_source_commit; equal to S",
+  "closure_receipts_repository_head": "b14923bda31e24f46a11f290d2aef713704994a1",
+  "instrument_head": "fe99bdffbe24a8ced77146f695fdea7f948aeb77",
+  "instrument_head_note": "git HEAD when this freeze was generated; src is byte-identical to S and it carries the repaired instrument 3e86a74dbbe9 (committed at b14923bda).",
+  "evidence_commit": "E",
+  "evidence_commit_note": "E is the commit that carries this freeze, the b85c closures, the safety argument, the two ledgers and the two rebind receipts; at generation it has not been created, so HEAD is fe99bdffbe24a8ced77146f695fdea7f948aeb77.",
+  "closure_repository_heads": {
+   "ssh": "b14923bda31e24f46a11f290d2aef713704994a1",
+   "sshd": "b14923bda31e24f46a11f290d2aef713704994a1"
+  }
+ },
+ "inheritance": {
+  "base": {
+   "path": "court/freeze-b85/FREEZE-b85.json",
+   "sha256": "f7d312802129f1dfc8aa2df1cba9c2e44ff7b04aa5f6d7799b8ff3c4a70bddf1",
+   "bytes": 158971,
+   "candidate_tag": "b85",
+   "generated_utc": "2026-11-17T09:57:00Z"
+  },
+  "rule": "a section is carried only if its claim is still true at this candidate, and every carried section's evidence is re-hashed so 'carried' never means 'unchecked'. Sections bound to the instrument are re-measured instead.",
+  "carried_verbatim": [
+   "census",
+   "element7.prior_measurements",
+   "element7.repin_receipt",
+   "element7.target_set_classification_vs_b82b",
+   "reviews",
+   "l4_rows",
+   "gates.fmt",
+   "gates.clippy",
+   "gates.lib_tests_parallel",
+   "gates.unsafe_fn_targeted",
+   "gates.verdict",
+   "gates.recorded_scrypt_flake",
+   "memory.gate_venue",
+   "memory.closure_l7_venue",
+   "safe_compatible.outstanding",
+   "not_run",
+   "non_claims"
+  ],
+  "re_measured": [
+   "tool",
+   "closures",
+   "safety_argument",
+   "ledger_binding",
+   "l7_evidence (re-bound by file sha; not re-executed)",
+   "element7.measured_by_closures",
+   "source",
+   "artefacts",
+   "memory (this batch's steps)",
+   "residuals",
+   "gates.generator"
+  ],
+  "carried_verified": {
+   "census_unchanged": true,
+   "gates_log_unchanged": true,
+   "reviews_unchanged": [
+    "b85_rebind",
+    "drifted_18",
+    "evp_final",
+    "reconversion",
+    "rest_final",
+    "tsan_lock",
+    "x509_final"
+   ],
+   "reviews_changed": [],
+   "element7_prior_measurements_unchanged": [
+    "court/freeze-b80/e7-b80-repin-after.json",
+    "court/freeze-b80/e7-b80-repin-sshd-after.json",
+    "court/freeze-b80/e7probe-b80-after.json",
+    "court/freeze-b80/e7probe-b80.json",
+    "court/freeze-b85/e7-ssh-b85.json",
+    "court/freeze-b85/e7-sshd-b85.json",
+    "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b76c-three-sites.json",
+    "forensics/memory-safety/campaign/safe-c33/atlas-refresh/e7-b76-repin.json",
+    "forensics/memory-safety/campaign/safe-c33/atlas-refresh/e7-b77-repin.json",
+    "forensics/memory-safety/campaign/safe-c33/atlas-refresh/e7-b78-repin.json",
+    "forensics/memory-safety/campaign/safe-c33/atlas-refresh/e7-b80-repin.json"
+   ],
+   "element7_measurement_identical_to_b85": true,
+   "artefacts_unchanged": [
+    "legacy.so",
+    "libcrypto.a",
+    "libcrypto.so.3",
+    "libssl.a",
+    "libssl.so.3",
+    "openssl",
+    "ssh",
+    "sshd",
+    "sshd_session"
+   ],
+   "artefacts_changed": [],
+   "src_content_unchanged_since_b85": true,
+   "source_tree_digest_unchanged_since_b85": true,
+   "l7_file_identical_to_b85_binding": true
+  },
+  "not_carried": "nothing asserted by the b85 freeze is dropped. Where a b85 statement names the b42f19bd instrument or the b85 receipts it is restated at b85c rather than inherited: residuals carry a restated_at_b85c flag naming exactly which ones were rewritten."
+ },
+ "source": {
+  "head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+  "head_role": "the inventory/span source head: the census identity and the b85c receipts' inventory_source_head and span_source_commit, and the tag b85 (commit 17042ccf2; source-content commit 5edca576b)",
+  "head_subject": "evidence: commit every receipt and freeze produced since b84",
+  "closure_receipts_repository_head": "b14923bda31e24f46a11f290d2aef713704994a1",
+  "closure_receipts_repository_head_role": "the b85c receipts' repository_head (b14923bda, the predicate repair commit). Its src/ is byte-identical to S (src_diff is empty), so the closures' obligation spans resolve at S; the instrument differs from S's tree, which is exactly the E-side change this re-freeze records",
+  "closure_receipts_tracked_tree_dirty": false,
+  "closure_receipts_tracked_tree_dirty_note": "the receipts do not record which tracked paths were dirty. At the time the b85c closures ran the tracked dirt was the evidence files this batch writes; no src/, Cargo.toml, Cargo.lock or build.rs path differed from S, which is measurable now (git_verification).",
+  "src_identical_between_S_and_receipts_head": true,
+  "branch": "stage/p25/b75-ocsp",
+  "src_rs_files": 878,
+  "src_rs_files_census": 878,
+  "crate_version": "0.0.46",
+  "src_content_sha256": "bc6815c2120e4c440af264b22280fc379d30176e8e5d2f5ee3f3d466364a7a22",
+  "src_content_sha256_census": "bc6815c2120e4c440af264b22280fc379d30176e8e5d2f5ee3f3d466364a7a22",
+  "src_content_sha256_matches_census": true,
+  "src_content_hash_rule": "sha256('openssl-rs/src-rs/v1\\0' + sorted relpath\\0bytes\\0)",
+  "census_working_tree_clean": true,
+  "census_tracked_working_tree_clean": true,
+  "source_tree_digest": {
+   "count": 888,
+   "sha256": "aade78b5d2fc647955c23bba7fb6cd93095b96807e4ca1abe3192129de935275",
+   "rule": "sha256 over canonical JSON of sorted [relpath,size,sha256] for src/, Cargo.toml, Cargo.lock, build.rs (forensics/tools/phase7_courts.py::_source_tree_digest)",
+   "b85_freeze_sha256": "aade78b5d2fc647955c23bba7fb6cd93095b96807e4ca1abe3192129de935275",
+   "unchanged_since_b85": true
+  },
+  "working_tree": {
+   "repository_head": "fe99bdffbe24a8ced77146f695fdea7f948aeb77",
+   "branch": "stage/p25/b75-ocsp",
+   "tracked_dirty": false,
+   "modified_tracked_paths": [],
+   "untracked_paths": [
+    "evidence/FREEZE-b85c.json",
+    "evidence/ssh-artifact-ledger-b85c-rebind.json",
+    "evidence/ssh-artifact-ledger-b85c.json",
+    "evidence/sshd-artifact-ledger-b85c-rebind.json",
+    "evidence/sshd-artifact-ledger-b85c.json"
+   ],
+   "tracked_dirty_note": "the tracked dirt at generation is evidence and tool state, never build inputs: the b85c receipts, the two ledgers, the two rebind receipts, the safety argument, this freeze and the instrument. No src/, Cargo.toml, Cargo.lock or build.rs path is modified (src_diff_vs_source_head is empty), so candidate S is untouched."
+  },
+  "git_verification": {
+   "source_head_is_ancestor_of_evidence_head": true,
+   "inventory_head_is_ancestor_of_evidence_head": true,
+   "ssh_receipts_head_is_ancestor_of_evidence_head": true,
+   "sshd_receipts_head_is_ancestor_of_evidence_head": true,
+   "src_diff_vs_source_head": null,
+   "src_diff_ssh_receipts_head_vs_S": null,
+   "src_diff_sshd_receipts_head_vs_S": null,
+   "src_diff_evidence_head_vs_S": null,
+   "instrument_diff_vs_S": "forensics/tools/consumer_closure.py | 89 +++++++++++++++++++++++++++++++++----\n 1 file changed, 80 insertions(+), 9 deletions(-)",
+   "instrument_is_the_only_build_relevant_change": true
+  },
+  "src_identical_between_S_and_sshd_receipts_head": true,
+  "src_content_sha256_b85_freeze": "bc6815c2120e4c440af264b22280fc379d30176e8e5d2f5ee3f3d466364a7a22",
+  "src_content_unchanged_since_b85": true
+ },
+ "candidate_identity": {
+  "source_head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+  "inventory_head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+  "instrument_head": "fe99bdffbe24a8ced77146f695fdea7f948aeb77",
+  "tool_sha256": "3e86a74dbbe9095ca98ef3b8d889ec67a9447e59ef1caceecaa72152202988a1",
+  "instrument_sha256": "3e86a74dbbe9095ca98ef3b8d889ec67a9447e59ef1caceecaa72152202988a1",
+  "previous_tool_sha256": "b42f19bdfb40d94009a6256dcc7a3d5fd96e6a2c8fba595133372ce6fed5f913",
+  "census_sha256": "51b277f2814f6046942a9850e2f6bc07380f272bd56a87ebb489e098836c4e90",
+  "src_content_sha256": "bc6815c2120e4c440af264b22280fc379d30176e8e5d2f5ee3f3d466364a7a22",
+  "libcrypto_so_3_sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+  "libssl_so_3_sha256": "1901de061d9d9793849b8c2d2b73847c7feb61339708062aea064a95f0e60b2b",
+  "ssh_sha256": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b",
+  "sshd_sha256": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1",
+  "sshd_session_sha256": "d8e249c10bb08efa7f923d1bde0cf7b6354439517367b4c7e4a491ea6474acb5",
+  "sshd_session_executed_sha256": "588ed111f6e96811843798288e29213b88f81173ee26100f8d9fd8477fc8991e",
+  "rule": "source head + census sha + instrument sha + measured artefact digests; a change to any one of them is a new candidate"
+ },
+ "tool": {
+  "path": "forensics/tools/consumer_closure.py",
+  "sha256": "3e86a74dbbe9095ca98ef3b8d889ec67a9447e59ef1caceecaa72152202988a1",
+  "version": 6,
+  "closure_bound_sha256": "3e86a74dbbe9095ca98ef3b8d889ec67a9447e59ef1caceecaa72152202988a1",
+  "sshd_closure_bound_sha256": "3e86a74dbbe9095ca98ef3b8d889ec67a9447e59ef1caceecaa72152202988a1",
+  "changed_since_b85_closures": false,
+  "changed_against_b85_freeze": true,
+  "previous_tool_sha256": "b42f19bdfb40d94009a6256dcc7a3d5fd96e6a2c8fba595133372ce6fed5f913",
+  "previous_tool_sha256_role": "the instrument the b85 freeze bound (b42f19bd). It is superseded: its verdict predicate accepted BLOCKED obligations.",
+  "predicate_repair": {
+   "receipt": "evidence/b85-verifier-repair.json",
+   "sha256": "3972222946d82d4001affe2c79ceab4cd1f8e6abfecd0c65795c86cd66688aee",
+   "adjudication": "evidence/b85-adjudication.json",
+   "adjudication_sha256": "3e877f9ccb5e27ddfa9d6dc271b63cc87e82a6efe0737603760b46ead4725a96",
+   "defect": "the verdict predicate was `REFUSED if refusals else ACCEPTED`; nothing synthesised a refusal for a BLOCKED obligation, so evidence/closure-sshd-b85b.json (253 DISCHARGED / 37 BLOCKED) recorded ACCEPTED.  UNKNOWN was already a named refusal.",
+   "predicate": "closure_verdict_state(refusals, obligations): ACCEPTED only when no refusal fired and every row is DISCHARGED (so BLOCKED==0 and UNKNOWN==0, and any future non-DISCHARGED status also refuses)",
+   "status": "REPAIRED",
+   "note": "the repair is committed at b14923bda; the b85c closures record repository_head b14923bda and instrument 3e86a74d"
+  },
+  "python_syntax": "py_compile of the instrument: OK",
+  "self_test": {
+   "status": "PASS",
+   "command": "python3 forensics/tools/consumer_closure.py --self-test",
+   "exit": 0,
+   "log": "court/freeze-b85c/selftest-b85c.log",
+   "log_sha256": "16322cf5592652e11baf5d2c14a98901e6470dff6351de9cc1d9edde9a60d48d",
+   "log_bytes": 11272,
+   "record": "court/freeze-b85c/selftest-b85c.record",
+   "record_sha256": "e54ab1b7f4eb49ad3a2517715ad8f3ada0f94bdcadd73f05bddc7fcc5a81a2b5",
+   "elapsed_s": 175,
+   "peak_memory_current_bytes": 12992581632,
+   "instrument_sha256_at_run": "3e86a74dbbe9095ca98ef3b8d889ec67a9447e59ef1caceecaa72152202988a1",
+   "failures": [],
+   "failure_class": "NONE: exit 0 and no failure line at the repaired instrument. The self-test certifies the tool's own controls, not the candidate's safety.",
+   "scope": "the self-test's summary line does not name the acceptance predicate: the predicate repair is controlled by the 14-case fixture suite below and by the replay of the b85b receipt, not by --self-test."
+  },
+  "predicate_controls": {
+   "status": "PASS",
+   "command": "python3 court/freeze-b85c/controls.py",
+   "result": "court/freeze-b85c/controls-b85c.json",
+   "result_sha256": "0f6691f5bb602fdaed256616a3204361cd4246ab71b1c998f674f56d9678873f",
+   "log": "court/freeze-b85c/controls-b85c.log",
+   "log_sha256": "aafc3f9b41bd9e37c5846aab241f8cb88f0c40903cfea845270c88615317e081",
+   "record_sha256": "c9e8c69d7bde0745d68c2d91000555ce7f5cfed25fa17e4002c084c65dfd5dca",
+   "tool_sha256_recorded_in_result": "3e86a74dbbe9095ca98ef3b8d889ec67a9447e59ef1caceecaa72152202988a1",
+   "tool_identity_matches": true,
+   "cases": [
+    "zero blocked: no status refusal",
+    "zero blocked: ACCEPTED",
+    "one blocked: refusal code",
+    "one blocked: count in the detail",
+    "one blocked: named row",
+    "one blocked: REFUSED",
+    "one blocked: predicate refuses without synthesis",
+    "one unknown: UNKNOWN_OBLIGATION unchanged",
+    "legacy predicate accepts the blocked fixture (the hole)",
+    "b85 receipt: recorded BLOCKED count is 37",
+    "b85 receipt: rows agree with the recorded count",
+    "b85 receipt: refused as BLOCKED_OBLIGATIONS",
+    "b85 receipt: verdict under the new predicate",
+    "b85 receipt: committed verdict said ACCEPTED"
+   ],
+   "passed": 14,
+   "failed": 0,
+   "note": "re-run at this tool, in this court, from the review15 suite: zero BLOCKED -> ACCEPTED; one BLOCKED -> BLOCKED_OBLIGATIONS/REFUSED (with the count and the row id); the legacy refusal-list-only predicate accepts the blocked fixture (the hole, replayed); evidence/closure-sshd-b85b.json's 37 BLOCKED rows are refused by name while its committed verdict said ACCEPTED."
+  },
+  "inputs": {
+   "census": {
+    "path": "court/freeze-b85/census-b85.json",
+    "sha256": "51b277f2814f6046942a9850e2f6bc07380f272bd56a87ebb489e098836c4e90",
+    "size": 13456698
+   },
+   "state": {
+    "path": "forensics/memory-safety/campaign/safe-c33/state.json",
+    "sha256": "508095bcb91f439fc126cf964d31a4f0f656f997587234d5bfbb07ec0cbc8273",
+    "size": 53598
+   },
+   "campaign_status": {
+    "path": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+    "sha256": "834ae124c7a818b1c6cd904c1dd9aa803085e1fe38d4452bcf88327620d95190",
+    "size": 265414
+   },
+   "enrolment_blockers": {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json",
+    "sha256": "46d1e5fcd00a0a96c4346f01302f938b74e12cd3e92986ee7743e007d232c652",
+    "size": 71165
+   }
+  }
+ },
+ "safety_argument": {
+  "path": "evidence/b85c-safety-argument.json",
+  "sha256": "338649f3d29bdafaac48401328fbc37012fc09ad9a0bb5bba45b25ec43c27a66",
+  "bytes": 83414,
+  "schema": "openssl-rs/campaign/safe-c33/safety-argument/v1",
+  "criterion": "no safe-Rust caller can cause undefined behaviour through the safe interfaces, within the declared and established contract scope",
+  "verdict_totals": {
+   "SAFETY_DISCHARGED": 2,
+   "OWNERSHIP_RECONSTRUCTED": 0,
+   "NOT_ESTABLISHED": 5,
+   "mechanisms": 7
+  },
+  "per_mechanism": {
+   "EVP_PKEY_PROVIDER": "NOT_ESTABLISHED",
+   "X509_VERIFY_POLICY": "NOT_ESTABLISHED",
+   "RAND_CMS_STORE_KEYFMT": "NOT_ESTABLISHED",
+   "SSL_SESSION": "SAFETY_DISCHARGED (scoped)",
+   "C_ABI_CONTRACT": "NOT_ESTABLISHED",
+   "RUNTIME_CONCURRENCY": "SAFETY_DISCHARGED (scoped, schedule-bounded)",
+   "BIO": "NOT_ESTABLISHED"
+  },
+  "mechanisms": [
+   {
+    "id": "EVP_PKEY_PROVIDER",
+    "obligations": 116,
+    "reviewed": 116,
+    "unreviewed": 0,
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 116,
+     "operation_level_safety_only": 0,
+     "cabi_contract_record": 0,
+     "no_contract": 0
+    },
+    "source_drift": {
+     "rows": 116,
+     "rows_in_files_changed_since_review_tree": 2,
+     "rows_re_established_at_S": 0,
+     "rows_not_re_established_at_S": 2,
+     "re_established": [],
+     "not_re_established": [
+      "src/digest/sha2.rs::sha512_224_init",
+      "src/provider/conf.rs::provider_free_thunk"
+     ]
+    },
+    "verdict": "NOT_ESTABLISHED",
+    "residual": "R-1 (OsslDispatch.function is *mut c_void; the id->signature pairing is a convention, not a type, re-scoped to 48 sites) and R-2 (SLH-DSA bare *mut u8 slots) are retained. The review still excludes the OSSL_OP_SIGNATURE/KEM/KEYMGMT/ENCODER-DECODER dispatch surfaces and the EVP_PKEY_CTX operation tables. 171 crate-internal safe fns in the 20 files reach unsafe with no per-function audit. No Miri/ASan test executes any of the 20 mechanism files at S. Two changed EVP rows (sha512_224_init, provider_free_thunk) are not re-established at S."
+   },
+   {
+    "id": "X509_VERIFY_POLICY",
+    "obligations": 122,
+    "reviewed": 122,
+    "unreviewed": 0,
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 119,
+     "operation_level_safety_only": 0,
+     "cabi_contract_record": 1,
+     "no_contract": 2
+    },
+    "source_drift": {
+     "rows": 122,
+     "rows_in_files_changed_since_review_tree": 16,
+     "rows_re_established_at_S": 12,
+     "rows_not_re_established_at_S": 4,
+     "re_established": [
+      "src/x509/v3_info.rs::i2v_AUTHORITY_INFO_ACCESS",
+      "src/x509/v3_info.rs::v2i_AUTHORITY_INFO_ACCESS",
+      "src/x509/v3_san.rs::i2v_GENERAL_NAME",
+      "src/x509/v3_san.rs::i2v_GENERAL_NAMES",
+      "src/x509/v3_san.rs::san_i2v",
+      "src/x509/v3_san.rs::san_v2i",
+      "src/x509/v3_san.rs::san_v2i_issuer",
+      "src/x509/v3_san.rs::v2i_GENERAL_NAME",
+      "src/x509/v3_san.rs::v2i_GENERAL_NAMES",
+      "src/x509/v3_san.rs::v2i_GENERAL_NAME_ex",
+      "src/x509/v3_san.rs::v2i_issuer_alt",
+      "src/x509/v3_san.rs::v2i_subject_alt"
+     ],
+     "not_re_established": [
+      "src/x509/v3_cpols.rs::i2r_certpol",
+      "src/x509/v3_cpols.rs::r2i_certpol",
+      "src/x509/v3_ncons.rs::i2r_NAME_CONSTRAINTS",
+      "src/x509/v3_ncons.rs::v2i_NAME_CONSTRAINTS"
+     ]
+    },
+    "verdict": "NOT_ESTABLISHED",
+    "residual": "condition 3 is closed by the audit, but the mechanism stays NOT_ESTABLISHED: v3_cpols::i2r_certpol and ::r2i_certpol have no per-row verdict file (only the batch3 tally and control selection); the b79c caller closure is not re-established at S and 24 orphan definitions remain outside the upper bound; and only x509::v3_san 4 ASan tests plus one v3_cpols ADB Miri test execute X509 code, so 120 of 122 obligations have no instrument coverage. The two v3_ncons NAME_CONSTRAINTS rows are measured byte-identical at S but were not re-read."
+   },
+   {
+    "id": "RAND_CMS_STORE_KEYFMT",
+    "obligations": 27,
+    "reviewed": 27,
+    "unreviewed": 0,
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 25,
+     "operation_level_safety_only": 2,
+     "cabi_contract_record": 0,
+     "no_contract": 0
+    },
+    "source_drift": {
+     "rows": 27,
+     "rows_in_files_changed_since_review_tree": 13,
+     "rows_re_established_at_S": 12,
+     "rows_not_re_established_at_S": 1,
+     "re_established": [
+      "src/cms/cms_asn1.rs::cms_cb",
+      "src/cms/cms_asn1.rs::cms_ec_cb",
+      "src/cms/cms_asn1.rs::cms_kari_cb",
+      "src/cms/cms_asn1.rs::cms_kemri_cb",
+      "src/cms/cms_asn1.rs::cms_rek_cb",
+      "src/cms/cms_asn1.rs::cms_ri_cb",
+      "src/cms/cms_lib.rs::x509_crl_free_void",
+      "src/cms/cms_lib.rs::x509_free_void",
+      "src/rand/rand_lib.rs::drbg_status",
+      "src/rand/rand_lib.rs::ossl_rand_cleanup_int",
+      "src/rand/rand_lib.rs::ossl_rand_ctx_free",
+      "src/rand/rand_lib.rs::ossl_rand_ctx_new"
+     ],
+     "not_re_established": [
+      "src/pkcs7/pk7_asn1.rs::ri_cb"
+     ]
+    },
+    "verdict": "NOT_ESTABLISHED",
+    "residual": "R2 OPEN: src/cms/cms_lib.rs::x509_free_void and ::x509_crl_free_void still say 'exactly-once release' where the call releases the stack's exclusive reference (X509_add_cert(...,0x1) up-refs, refcount 2 -> 1 after pop_free). One drift row (src/pkcs7/pk7_asn1.rs::ri_cb) is measured content-identical at S but not re-read; the rand_lib 4, cmp 14 and pkcs7 1 rows have no Miri/ASan coverage; secret cleansing for CMS/PEM key material is unaudited; B69 retains ossl_rand_cleanup_int BLOCKED outside scope. Condition 3 itself is closed by the audit."
+   },
+   {
+    "id": "SSL_SESSION",
+    "obligations": 14,
+    "reviewed": 14,
+    "unreviewed": 0,
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 14,
+     "operation_level_safety_only": 0,
+     "cabi_contract_record": 0,
+     "no_contract": 0
+    },
+    "source_drift": {
+     "rows": 14,
+     "rows_in_files_changed_since_review_tree": 0,
+     "rows_re_established_at_S": 0,
+     "rows_not_re_established_at_S": 0,
+     "re_established": [],
+     "not_re_established": []
+    },
+    "verdict": "SAFETY_DISCHARGED (scoped)",
+    "residual": "the discharge is SCOPED, not mechanism-wide: it covers the 14 obligated operations and the call graph the review establishes. The sslconf-exclusivity receipt's hidden obligation ('a second concurrent free, and an entry point racing the release, remain external serialisation') is classified by the review as a documented C-ABI obligation, not a safe-Rust precondition, and stays RETAINED and un-discharged. No TSan/Loom run covers SSL_SESSION."
+   },
+   {
+    "id": "C_ABI_CONTRACT",
+    "obligations": 5,
+    "reviewed": 5,
+    "unreviewed": 0,
+    "ownership_state": "UNSAFE_OPEN",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 0,
+     "operation_level_safety_only": 0,
+     "cabi_contract_record": 5,
+     "no_contract": 0
+    },
+    "source_drift": {
+     "rows": 5,
+     "rows_in_files_changed_since_review_tree": 0,
+     "rows_re_established_at_S": 0,
+     "rows_not_re_established_at_S": 0,
+     "re_established": [],
+     "not_re_established": []
+    },
+    "verdict": "NOT_ESTABLISHED",
+    "residual": "mechanism_state is UNSAFE_OPEN and the review says the repairs 'do not change the mechanism classification'. Evidence residuals F-EVID-1 (stale B56 row for engine_list_cleanup) and F-EVID-2 (v1l F09 repaired in source; the bound receipt still rejects the site) remain recorded."
+   },
+   {
+    "id": "RUNTIME_CONCURRENCY",
+    "obligations": 4,
+    "reviewed": 4,
+    "unreviewed": 0,
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 4,
+     "operation_level_safety_only": 0,
+     "cabi_contract_record": 0,
+     "no_contract": 0
+    },
+    "source_drift": {
+     "rows": 4,
+     "rows_in_files_changed_since_review_tree": 0,
+     "rows_re_established_at_S": 0,
+     "rows_not_re_established_at_S": 0,
+     "re_established": [],
+     "not_re_established": []
+    },
+    "verdict": "SAFETY_DISCHARGED (scoped, schedule-bounded)",
+    "residual": "the discharge is SCOPED TO EXECUTED SCHEDULES. R1 is the named residual: no test performs the shape the precondition forbids (a free while another thread still uses the lock), so a clean TSan result establishes that every executed release path is race- and UAF-free, not that the caller's exclusive-ownership precondition is met. R2: only the linux/x86_64/gnu/64-bit definition is compiled; R3: a race not observed is not a race absent; R4: Miri and ASan ran at this candidate but cover the changed ADB/CMS surface and the provider copy/dup paths, not the concurrency free side, and no loom model covers it; R5: the full suite (2337 tests at S) was not run under TSan; R6: the ledger counts the two cfg-exclusive definitions as two obligations."
+   },
+   {
+    "id": "BIO",
+    "obligations": 2,
+    "reviewed": 2,
+    "unreviewed": 0,
+    "ownership_state": "UNSAFE_OPEN",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 2,
+     "operation_level_safety_only": 0,
+     "cabi_contract_record": 0,
+     "no_contract": 0
+    },
+    "source_drift": {
+     "rows": 2,
+     "rows_in_files_changed_since_review_tree": 2,
+     "rows_re_established_at_S": 2,
+     "rows_not_re_established_at_S": 0,
+     "re_established": [
+      "src/runtime/bio/bf_readbuff.rs::readbuffer_puts",
+      "src/runtime/bio/bf_readbuff.rs::readbuffer_write"
+     ],
+     "not_re_established": []
+    },
+    "verdict": "NOT_ESTABLISHED",
+    "residual": "mechanism_state is UNSAFE_OPEN and only 2 of the mechanism's production operations are in the closure, so the site argument is not a mechanism-wide discharge; the review says the same. 1 external safe pub fn reaches unsafe."
+   }
+  ],
+  "reviewed_total": 290,
+  "source_drift": {
+   "criterion3_reviews_tree": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+   "files_changed_between_review_tree_and_S": [
+    "src/cms/cms_asn1.rs",
+    "src/cms/cms_enc.rs",
+    "src/cms/cms_lib.rs",
+    "src/cms/cms_pwri.rs",
+    "src/digest/md32.rs",
+    "src/digest/sha2.rs",
+    "src/ec/asn1.rs",
+    "src/evp/legacy_digest_callback_surface.rs",
+    "src/pkcs12/p12_asn.rs",
+    "src/pkcs7/pk7_asn1.rs",
+    "src/provider/conf.rs",
+    "src/provider/kdf.rs",
+    "src/rand/rand_lib.rs",
+    "src/runtime/bio/bf_readbuff.rs",
+    "src/runtime/mem.rs",
+    "src/x509/v3_cpols.rs",
+    "src/x509/v3_info.rs",
+    "src/x509/v3_ncons.rs",
+    "src/x509/v3_san.rs"
+   ],
+   "rows_in_changed_files": 33,
+   "rows_re_established_at_S": 26,
+   "rows_not_re_established_at_S": 7,
+   "re_established_by": {
+    "b80_review_drifted_18": {
+     "path": "evidence/b80-review-drifted.json",
+     "tally": {
+      "rows": 18,
+      "ACCEPT": 18,
+      "REJECT": 0,
+      "span_identical": 18,
+      "coordinate_shift_only": 4,
+      "callee_side_guard_added": 2,
+      "none_in_row": 11,
+      "doc_only_contract_added": 1,
+      "with_retained_obligations": 6,
+      "by_mechanism": {
+       "X509_VERIFY_POLICY": 9,
+       "RAND_CMS_STORE_KEYFMT": 9
+      }
+     },
+     "verified_at_S": "16 of 18 spans byte-identical at S; the 2 that changed (v2i_issuer_alt, v2i_subject_alt) are the two rows the b82 rebind re-read; both are identical at S to their b82 hashes"
+    },
+    "b80_review_rebind_4": {
+     "path": "evidence/b80-review-rebind.json",
+     "rows": 4,
+     "verdicts": {
+      "ACCEPT": 4
+     },
+     "verified_at_S": "3 of 4 spans byte-identical at S; v2i_GENERAL_NAME_ex changed by a citation-only edit and was re-read by the b81 rebind, whose recorded hash is identical at S"
+    },
+    "b81_review_rebind_3": {
+     "path": "evidence/b81-review-rebind.json",
+     "rows": 3,
+     "verdicts": {
+      "ACCEPT": 3
+     },
+     "verified_at_S": "3 of 3 spans hash to the b81-recorded value at S"
+    },
+    "b82_review_rebind_2": {
+     "path": "evidence/b82-review-rebind.json",
+     "rows": 2,
+     "verdicts": {
+      "ACCEPT": 2
+     },
+     "verified_at_S": "2 of 2 spans hash to the b82-recorded value at S"
+    },
+    "b83_review_rebind_2": {
+     "path": "evidence/b83-review-rebind.json",
+     "rows": 2,
+     "verdicts": {
+      "ACCEPT": 2
+     },
+     "verified_at_S": "2 of 2 spans hash to the b83-recorded value at S; the readbuffer operations' text is byte-identical and only the recorded span coordinate moved when an attribute was replaced by a documentation block"
+    },
+    "b84_review_rebind_7": {
+     "path": "evidence/b84-review-rebind.json",
+     "rows": 7,
+     "verdicts": {
+      "ACCEPT": 7
+     },
+     "verified_at_S": "7 of 7 b84 rebind spans hash to the b84-recorded value at S; carried as prior coverage"
+    },
+    "b85_review_rebind": {
+     "path": "evidence/b85-review-rebind.json",
+     "groups": [
+      {
+       "label": "b80-review-drifted (18)",
+       "rows": 18,
+       "identical_at_S": 16
+      },
+      {
+       "label": "b80-review-rebind (4)",
+       "rows": 4,
+       "identical_at_S": 3
+      },
+      {
+       "label": "b81-review-rebind (3)",
+       "rows": 3,
+       "identical_at_S": 3
+      },
+      {
+       "label": "b82-review-rebind (2)",
+       "rows": 2,
+       "identical_at_S": 2
+      },
+      {
+       "label": "b83-review-rebind (2)",
+       "rows": 2,
+       "identical_at_S": 2
+      },
+      {
+       "label": "b84-review-rebind (7)",
+       "rows": 7,
+       "identical_at_S": 7
+      }
+     ],
+     "instrument_drift_rows": [
+      {
+       "file": "src/x509/v3_san.rs",
+       "operation": "v2i_issuer_alt",
+       "recorded_sha256": "91c9c2fe9bdbcc2076b7185af047abf78ccc060e2659550185401d18c3fc8581",
+       "recorded_by_tool": "the review receipt's tool (predates b42f19bd)",
+       "at_S_sha256": "9ccdc437971c1ae98067363fd0f5f82e91c7bb04ebe93e8cd1bbac7d10ace97c",
+       "same_bytes_at_b84_and_b85": true,
+       "disposition": "REBOUND under tool b42f19bd",
+       "reason": "the operation's bytes are identical at the b84 candidate and at S; the recorded value differs because the span-hash rule changed with the instrument (AGENTS.md 22 tool-identity invalidation), not because the source drifted. The span is re-established here at S with the current tool's hash."
+      },
+      {
+       "file": "src/x509/v3_san.rs",
+       "operation": "v2i_subject_alt",
+       "recorded_sha256": "dcb9f32ccf1f285910f21d4e07c2e87e1970ccfd88eeec809095b3288e40ffd9",
+       "recorded_by_tool": "the review receipt's tool (predates b42f19bd)",
+       "at_S_sha256": "e4a9002e26ba25eca5e51e5f2d5d78007f2c9a63757edd8567f6c56bbd554ea7",
+       "same_bytes_at_b84_and_b85": true,
+       "disposition": "REBOUND under tool b42f19bd",
+       "reason": "the operation's bytes are identical at the b84 candidate and at S; the recorded value differs because the span-hash rule changed with the instrument (AGENTS.md 22 tool-identity invalidation), not because the source drifted. The span is re-established here at S with the current tool's hash."
+      },
+      {
+       "file": "src/x509/v3_san.rs",
+       "operation": "v2i_GENERAL_NAME_ex",
+       "recorded_sha256": "b01dcb8bfc373c3aaf1da7c788d14356fd934cd5426fc6a1fc3d59ff657f2afa",
+       "recorded_by_tool": "the review receipt's tool (predates b42f19bd)",
+       "at_S_sha256": "a69a5044bff431dd4f17100bf1365ab5adbeca6ecf27d81078d31a03b31ebd5a",
+       "same_bytes_at_b84_and_b85": true,
+       "disposition": "REBOUND under tool b42f19bd",
+       "reason": "the operation's bytes are identical at the b84 candidate and at S; the recorded value differs because the span-hash rule changed with the instrument (AGENTS.md 22 tool-identity invalidation), not because the source drifted. The span is re-established here at S with the current tool's hash."
+      }
+     ],
+     "verified_at_S": "every group row is re-established at S by content identity or by the current instrument's re-resolution; the 3 rows whose recorded hash differs are instrument drift (the recorded span predates tool b42f19bd), not source drift"
+    }
+   },
+   "reconversion_review_tree": "97a1240e7",
+   "files_changed_between_reconversion_tree_and_S": [
+    "src/cms/cms_asn1.rs",
+    "src/cms/cms_enc.rs",
+    "src/cms/cms_lib.rs",
+    "src/cms/cms_pwri.rs",
+    "src/context/mod.rs",
+    "src/context/namemap.rs",
+    "src/digest/md32.rs",
+    "src/digest/sha2.rs",
+    "src/ec/asn1.rs",
+    "src/evp/legacy_digest_callback_surface.rs",
+    "src/pkcs12/p12_asn.rs",
+    "src/pkcs7/pk7_asn1.rs",
+    "src/provider/conf.rs",
+    "src/provider/kdf.rs",
+    "src/rand/rand_lib.rs",
+    "src/runtime/bio/bf_readbuff.rs",
+    "src/runtime/bio/comp.rs",
+    "src/runtime/conf/lib.rs",
+    "src/runtime/err.rs",
+    "src/runtime/init.rs",
+    "src/runtime/mem.rs",
+    "src/runtime/obj.rs",
+    "src/ssl/ssl_ciph.rs",
+    "src/ssl/ssl_conf.rs",
+    "src/ssl/ssl_init.rs",
+    "src/ssl/statem/statem_srvr.rs",
+    "src/x509/v3_cpols.rs",
+    "src/x509/v3_info.rs",
+    "src/x509/v3_ncons.rs",
+    "src/x509/v3_san.rs"
+   ],
+   "reconversion_note": "the reconversion review records its own source identity 97a1240e7, not 5b08c0294; 30 src files changed between it and S, so its findings are carried as unresolved obligations of a known defect class, not as established properties of S."
+  },
+  "identity": {
+   "source_head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+   "source_head_role": "tag b85 commit 17042ccf2 (the source-content commit is 5edca576b; `git diff --stat 17042ccf2 -- src Cargo.toml Cargo.lock build.rs` is empty at measurement)",
+   "review_source_head": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+   "review_source_head_role": "the source head the three criterion-3 reviews record in their own controls blocks (the b79c closure tree); it is an ancestor of S",
+   "reconversion_review_source_head": "97a1240e7",
+   "src_content_sha256": "bc6815c2120e4c440af264b22280fc379d30176e8e5d2f5ee3f3d466364a7a22",
+   "src_rs_files": 878,
+   "inventory_source_head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+   "closure_receipts_repository_head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+   "closure_receipts": [
+    {
+     "path": "evidence/closure-ssh-b85c.json",
+     "sha256": "45e3b48d5d6ce1ea19a6cd5248a194922f1b572858f8d556c2361dde98b02402",
+     "bytes": 13722383
+    },
+    {
+     "path": "evidence/closure-sshd-b85c.json",
+     "sha256": "a3bd7376d9f906a46b93bea2c5feffd4a17f388fb81482d8ad09aa66ca9377e6",
+     "bytes": 13575390
+    }
+   ],
+   "instrument": {
+    "path": "forensics/tools/consumer_closure.py",
+    "sha256": "3e86a74dbbe9095ca98ef3b8d889ec67a9447e59ef1caceecaa72152202988a1"
+   },
+   "source_content_commit": "5edca576b569b4a7bd6acfb09b77938ee555c147",
+   "generated_by": [
+    {
+     "path": "court/freeze-b85/review16/make_safety_b85c.py",
+     "sha256": "6715c539e811b68fd3b9e21cdf4bdd99e584a79449799bed8bea447c9b5b509a"
+    },
+    {
+     "path": "court/freeze-b85/l7/make_safety_b85.py",
+     "sha256": "ca4ea948a18ec91e387379c51613527add410cef525e236a42cd7b20a6011699",
+     "role": "generated the b85 base document this one rebinds"
+    },
+    {
+     "path": "court/freeze-b85/l7/update_safety_b85.py",
+     "sha256": "85d210ef29818264ab42ccae62d312c71e9d5d6b84e169c2a6852801500f59e5",
+     "role": "applied the b85 narrative to the base document"
+    },
+    {
+     "path": "court/freeze-b85/l7/derive_b85.py",
+     "sha256": "73b359da53bb509c89d6d1bf0ea2704c1130eaa410abda9abea69836130f21b2",
+     "role": "re-derived the measured b85 structure"
+    }
+   ],
+   "instrument_commit": "3e86a74d is committed at b14923bda (\"verifier: ACCEPTED now requires zero blocked obligations\"); the b85 receipts recorded instrument b42f19bd against a dirty tree"
+  },
+  "revision_of": "evidence/b85-safety-argument.json",
+  "receipt_revision": "b85c",
+  "binds_closure_receipts": [
+   "evidence/closure-ssh-b85c.json",
+   "evidence/closure-sshd-b85c.json"
+  ],
+  "binds_exactly_the_b85c_receipts": true,
+  "binds_the_repaired_instrument": true,
+  "safe_interface_surface": {
+   "imported_entry_points": 179,
+   "crate_safe_pub_fn_total": 871,
+   "crate_safe_pub_external_reaching_unsafe": 469,
+   "crate_safe_pub_extern_c_raw_pointer_reaching_unsafe": 38,
+   "crate_safe_pub_plain_raw_pointer_reaching_unsafe": 281,
+   "in_mechanism_files_with_raw_pointer": 0
+  },
+  "statement": "At b85c the receipt basis is re-established under the repaired verifier: both consumer closures are ACCEPTED with all 290 reachable production obligations DISCHARGED, 0 BLOCKED and 0 UNKNOWN, and element 7 PASS (116 external ABI contracts + 36 closed target sets). That is a predicate the b85 receipts did not have to meet. The substantive argument is otherwise unchanged from b85 and still establishes only two mechanisms under explicitly scoped claims: SSL_SESSION (unchanged) and RUNTIME_CONCURRENCY (clean TSan at b80 on byte-identical concurrency files, schedule-bounded). The four internal safe-surface holes and the SHA-256 Final staging-buffer aliasing UB are closed at 5edca576b, with Miri reporting 0 UB on the six digest tests under both borrow models; the b84 safe-surface audit closes condition 3 for the X509 (69/69 nullary) and RAND (17/17 nullary or c_int-only) external surfaces, and F-1 is registered. Neither X509 nor RAND nor EVP is discharged: X509 retains the v3_cpols per-row gap, the un-re-established caller closure and 120/122 instrument gaps; RAND retains the OPEN R2 release contract and missing instrument coverage; EVP retains R-1/R-2, the excluded dispatch surfaces and 171 unaudited internal safe fns. C_ABI_CONTRACT and BIO remain NOT_ESTABLISHED. Nothing here graduates a consumer family: safe_compatible stays false.",
+  "residuals": [
+   {
+    "kind": "criterion3/source-drift",
+    "statement": "33 obligations live in files changed between the reviews' tree (5b08c0294) and S; 26 are re-established at S by content identity or by a b80/b81/b82/b83/b84/b85 rebind, and 7 are not: src/digest/sha2.rs::sha512_224_init and src/provider/conf.rs::provider_free_thunk (the b85 digest/conf repair), src/x509/v3_cpols.rs::i2r_certpol and ::r2i_certpol (no per-row verdict), and src/x509/v3_ncons.rs::i2r_NAME_CONSTRAINTS and ::v2i_NAME_CONSTRAINTS (byte-identical but not re-read), and src/pkcs7/pk7_asn1.rs::ri_cb (byte-identical but not re-read). They are counted as not re-established, not absorbed; the b85 repair's own rows are the new ones and are adjudicated by the Miri digest run and the unsafe-fn controls, not by a site re-read."
+   },
+   {
+    "kind": "criterion3/x509-helper-qualifiers",
+    "statement": "the three private X509 helpers fed1f077b elevated -- i2v_ainfo_err, v2i_ainfo_err (src/x509/v3_info.rs) and nc_email_eai (src/x509/v3_ncons.rs) -- are now `unsafe fn` with written ownership contracts, and their call sites state the witness. This removes a safe-Rust entry point that could free a caller-supplied stack (i2v/v2i) or read a caller-supplied ASN1_TYPE arm (nc_email_eai); it does not discharge X509_VERIFY_POLICY, whose review still declines mechanism-wide discharge. The three source-text qualifier controls are the only instrument that can detect a qualifier regression (a qualifier-removed mutant compiles with 8 `unnecessary unsafe block` warnings and fails exactly the three controls; that mutant ran at b82 and is NOT_RUN at b85 (unchanged from b84), while its baseline arm re-ran at b84 and passed); a semantically equivalent re-introduction of the same obligation behind a different safe signature would not be detected by that instrument and remains a review obligation."
+   },
+   {
+    "kind": "criterion3/bio-contract-doc",
+    "statement": "b84 changed src/runtime/bio/bf_readbuff.rs only by replacing the two callbacks' `#[allow(clippy::missing_safety_doc)]` attributes with written `# Safety` contracts; b85 leaves the file unchanged. The mechanism remains UNSAFE_OPEN and only 2 of its production operations are in the closure, so BIO stays NOT_ESTABLISHED mechanism-wide."
+   },
+   {
+    "kind": "criterion3/mechanism",
+    "statement": "X509_VERIFY_POLICY condition 3 is MET at b85 by the external-surface audit (69/69 nullary). The mechanism remains NOT_ESTABLISHED on condition 1's v3_cpols per-row gap, condition 2's un-re-established caller closure and 24 orphans, and condition 4 (120 of 122 obligations have no Miri/ASan test)."
+   },
+   {
+    "kind": "criterion3/mechanism",
+    "statement": "RAND_CMS_STORE_KEYFMT condition 3 is MET at b85 (17/17 external safe pub fns nullary or c_int-only). It remains NOT_ESTABLISHED on R2 (the CMS free contracts still say 'exactly-once release' where the stack's reference is released) and on condition 4 (rand_lib/cmp/pkcs7 rows have no instrument coverage)."
+   },
+   {
+    "kind": "criterion3/mechanism",
+    "statement": "EVP_PKEY_PROVIDER: the four internal holes are closed at 5edca576b (two unsafe fns, two &CStr helpers) and F-1 is registered, but R-1/R-2, the review's excluded OSSL_OP_* surfaces and 171 unaudited internal safe fns keep it NOT_ESTABLISHED."
+   },
+   {
+    "kind": "criterion3/mechanism",
+    "statement": "C_ABI_CONTRACT and BIO: UNSAFE_OPEN mechanism-wide; the closure's 5 and 2 sites are site arguments, not mechanism discharge; F-EVID-1/F-EVID-2 remain."
+   },
+   {
+    "kind": "criterion3/instrument",
+    "statement": "Miri ran at b85 on the six digest tests under Stacked and Tree Borrows: 5 PASS + 1 UNSUPPORTED (pthread_once) each, 0 UB. It does not cover the X509, EVP or RAND obligation operations. ASan (b84: 49 focused tests, canaries firing) and TSan (b80: 54 tests, 0 races/UAF, both canaries) were not re-run at b85; their files are unchanged or content-identical where the claim relies on them. No Loom model covers the free side."
+   },
+   {
+    "kind": "criterion3/instrument",
+    "statement": "Miri ran at b85 on the six digest tests under Stacked and Tree Borrows: 5 PASS + 1 UNSUPPORTED (pthread_once) each, 0 UB. It does not cover the X509, EVP or RAND obligation operations. ASan (b84: 49 focused tests, canaries firing) and TSan (b80: 54 tests, 0 races/UAF, both canaries) were not re-run at b85; their files are unchanged or content-identical where the claim relies on them. No Loom model covers the free side."
+   },
+   {
+    "kind": "criterion3/secret-timing",
+    "statement": "no constant-time or leakage instrument ran at S; no timing claim is made."
+   },
+   {
+    "kind": "gate/self-test",
+    "statement": "the closure tool's --self-test exits 0 with 0 failures under the repaired instrument at b85c (court/freeze-b85/review15/selftest.log, instrument 3e86a74d), and the 14 fixture controls in review15/controls.json include the replayed 37-BLOCKED receipt that the b85 predicate accepted. This is a tool control result, not a safety result; the b85 self-test ran under b42f19bd."
+   },
+   {
+    "kind": "criterion3/internal-holes",
+    "statement": "the four crate-internal safe fns the b84 audit named are closed at 5edca576b: sha256_block and sha512_block are unsafe fns with extent/disjointness contracts (their callers are unsafe blocks) and matches_any/same take &CStr. This removes the four caller-memory preconditions from the safe surface; it does not audit the remaining 171 internal safe fns that reach unsafe in the EVP files, which stay a named residual."
+   },
+   {
+    "kind": "criterion3/safe-surface-audit",
+    "statement": "the X509 (69) and RAND (17) external safe pub fns are audited nullary/c_int-only in evidence/b84-safe-pub-audit.json, so no external safe caller can pass memory the mechanism assumes valid. This closes criterion 3 for those surfaces only; it is not a mechanism-wide discharge and does not establish the caller closures, the per-row receipts or the missing instrument coverage."
+   },
+   {
+    "kind": "receipt/acceptance-predicate-repair",
+    "statement": "the b85 receipts were ACCEPTED under a predicate that did not refuse BLOCKED rows, so their ACCEPTED did not entail a fully-DISCHARGED closure. The b85c re-run under 3e86a74d (committed at b14923bda) reports all 290 reachable production obligations DISCHARGED, 0 BLOCKED, 0 UNKNOWN, no refusal and element 7 PASS for both families; each receipt differs from its b85 predecessor only as classified in court/freeze-b85/review16/receipt-delta-{ssh,sshd}.json. The closure still derives most rows by carry-forward: 280 of 290 rows carry the b84b-era discharge forward through b85 to b85c, so this rebind re-attests those discharges at a new instrument and does not re-derive them from source. The 111 committed receipts that the repaired predicate now refuses remain refused and are not covered by this rebind."
+   },
+   {
+    "kind": "receipt/instrument-staleness-elsewhere",
+    "statement": "the b85 review-rebind and artefact-ledger receipts record instrument b42f19bd and were NOT re-run under 3e86a74d in this pass. The instrument delta is confined to refusal synthesis and the verdict predicate, which no rebind row consumes (the rebind reads predicate_element_7 and span resolution), but the re-execution is recorded as NOT_RUN rather than asserted. The L4 and L7 receipts are likewise unchanged and were not re-measured here."
+   }
+  ],
+  "not_graduated": true,
+  "note": "the section-7 criterion-3 argument is re-derived against the two b85c receipts and the repaired instrument (its identity binds both, checked above); the argument's content is unchanged from the b85 derivation because the closures' counts and verdict inputs are unchanged. It still does not promote the candidate."
+ },
+ "artefacts": {
+  "install_prefix": "artifacts/phase2/install",
+  "files": {
+   "libcrypto.so.3": {
+    "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+    "sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+    "size": 16870320
+   },
+   "libssl.so.3": {
+    "path": "artifacts/phase2/install/lib/libssl.so.3",
+    "sha256": "1901de061d9d9793849b8c2d2b73847c7feb61339708062aea064a95f0e60b2b",
+    "size": 16583392
+   },
+   "libcrypto.a": {
+    "path": "artifacts/phase2/install/lib/libcrypto.a",
+    "sha256": "4a209a3874b30f99b08aacc2431bd1ce316527654b3da5808111a409db59bee4",
+    "size": 44433600
+   },
+   "libssl.a": {
+    "path": "artifacts/phase2/install/lib/libssl.a",
+    "sha256": "70aa79f8cc8e06b98f851f971640a877196f67a69056018295264a502693ad88",
+    "size": 44434152
+   },
+   "legacy.so": {
+    "path": "artifacts/phase2/install/lib/ossl-modules/legacy.so",
+    "sha256": "234068b02b5fbcc880ceb83d25a1ae159a9b6dd0f9b4c2ac7a0792d4e84cac2d",
+    "size": 16546304
+   },
+   "openssl": {
+    "path": "artifacts/phase2/install/bin/openssl",
+    "sha256": "6c3616791e43fd71247eb241ea4995e03d937a32b77e209235fee32b36229bbd",
+    "size": 12383000
+   },
+   "ssh": {
+    "path": "court/tmp/openssh-closure/client-b85/openssh-9.9p1/ssh",
+    "sha256": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b",
+    "size": 3401744
+   },
+   "sshd": {
+    "path": "court/tmp/openssh-closure/server-b85/openssh-9.9p1/sshd",
+    "sha256": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1",
+    "size": 1763248
+   },
+   "sshd_session": {
+    "path": "court/tmp/openssh-closure/server-b85/openssh-9.9p1/sshd-session",
+    "sha256": "d8e249c10bb08efa7f923d1bde0cf7b6354439517367b4c7e4a491ea6474acb5",
+    "size": 3594840
+   }
+  },
+  "unchanged_from_b85": {
+   "libcrypto.so.3": {
+    "b85_sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+    "b85c_sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+    "unchanged": true
+   },
+   "libssl.so.3": {
+    "b85_sha256": "1901de061d9d9793849b8c2d2b73847c7feb61339708062aea064a95f0e60b2b",
+    "b85c_sha256": "1901de061d9d9793849b8c2d2b73847c7feb61339708062aea064a95f0e60b2b",
+    "unchanged": true
+   },
+   "libcrypto.a": {
+    "b85_sha256": "4a209a3874b30f99b08aacc2431bd1ce316527654b3da5808111a409db59bee4",
+    "b85c_sha256": "4a209a3874b30f99b08aacc2431bd1ce316527654b3da5808111a409db59bee4",
+    "unchanged": true
+   },
+   "libssl.a": {
+    "b85_sha256": "70aa79f8cc8e06b98f851f971640a877196f67a69056018295264a502693ad88",
+    "b85c_sha256": "70aa79f8cc8e06b98f851f971640a877196f67a69056018295264a502693ad88",
+    "unchanged": true
+   },
+   "legacy.so": {
+    "b85_sha256": "234068b02b5fbcc880ceb83d25a1ae159a9b6dd0f9b4c2ac7a0792d4e84cac2d",
+    "b85c_sha256": "234068b02b5fbcc880ceb83d25a1ae159a9b6dd0f9b4c2ac7a0792d4e84cac2d",
+    "unchanged": true
+   },
+   "openssl": {
+    "b85_sha256": "6c3616791e43fd71247eb241ea4995e03d937a32b77e209235fee32b36229bbd",
+    "b85c_sha256": "6c3616791e43fd71247eb241ea4995e03d937a32b77e209235fee32b36229bbd",
+    "unchanged": true
+   },
+   "ssh": {
+    "b85_sha256": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b",
+    "b85c_sha256": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b",
+    "unchanged": true
+   },
+   "sshd": {
+    "b85_sha256": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1",
+    "b85c_sha256": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1",
+    "unchanged": true
+   },
+   "sshd_session": {
+    "b85_sha256": "d8e249c10bb08efa7f923d1bde0cf7b6354439517367b4c7e4a491ea6474acb5",
+    "b85c_sha256": "d8e249c10bb08efa7f923d1bde0cf7b6354439517367b4c7e4a491ea6474acb5",
+    "unchanged": true
+   }
+  },
+  "all_unchanged_from_b85": true,
+  "install_matches_census": {
+   "libcrypto.so.3": {
+    "census_sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+    "freeze_sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+    "match": true
+   },
+   "libssl.so.3": {
+    "census_sha256": "1901de061d9d9793849b8c2d2b73847c7feb61339708062aea064a95f0e60b2b",
+    "freeze_sha256": "1901de061d9d9793849b8c2d2b73847c7feb61339708062aea064a95f0e60b2b",
+    "match": true
+   },
+   "legacy.so": {
+    "census_sha256": "234068b02b5fbcc880ceb83d25a1ae159a9b6dd0f9b4c2ac7a0792d4e84cac2d",
+    "freeze_sha256": "234068b02b5fbcc880ceb83d25a1ae159a9b6dd0f9b4c2ac7a0792d4e84cac2d",
+    "match": true
+   },
+   "openssl": {
+    "census_sha256": "6c3616791e43fd71247eb241ea4995e03d937a32b77e209235fee32b36229bbd",
+    "freeze_sha256": "6c3616791e43fd71247eb241ea4995e03d937a32b77e209235fee32b36229bbd",
+    "match": true
+   }
+  },
+  "all_install_artefacts_match_census": true,
+  "compared_names": [
+   "legacy.so",
+   "libcrypto.so.3",
+   "libssl.so.3",
+   "openssl"
+  ],
+  "committed_blob_sizes": {
+   "rule": "`git cat-file -s HEAD:<rel>` vs the measured working-tree size for the six tracked install artefacts; the court/tmp consumer binaries are git-ignored and have no blob",
+   "checks": {
+    "libcrypto.so.3": {
+     "committed_blob_size": 16870320,
+     "measured_size": 16870320,
+     "match": true
+    },
+    "libssl.so.3": {
+     "committed_blob_size": 16583392,
+     "measured_size": 16583392,
+     "match": true
+    },
+    "libcrypto.a": {
+     "committed_blob_size": 44433600,
+     "measured_size": 44433600,
+     "match": true
+    },
+    "libssl.a": {
+     "committed_blob_size": 44434152,
+     "measured_size": 44434152,
+     "match": true
+    },
+    "legacy.so": {
+     "committed_blob_size": 16546304,
+     "measured_size": 16546304,
+     "match": true
+    },
+    "openssl": {
+     "committed_blob_size": 12383000,
+     "measured_size": 12383000,
+     "match": true
+    }
+   },
+   "all_match": true
+  },
+  "resolved_libcrypto_sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+  "consumer_source": "OpenSSH 9.9p1 in the closure trees court/tmp/openssh-closure/{client,server}-b85/openssh-9.9p1",
+  "note": "each digest and size is recomputed from the file named in this working tree and compared with the b85 freeze and the census; no b85c rebuild was made, so a digest change would be a defect, not a new build"
+ },
+ "census": {
+  "path": "court/freeze-b85/census-b85.json",
+  "sha256": "51b277f2814f6046942a9850e2f6bc07380f272bd56a87ebb489e098836c4e90",
+  "bytes": 13456698,
+  "source_head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+  "delta_vs": {
+   "path": "court/freeze-b84/census-b84.json",
+   "source_head": "f1c54715beb2f8b11f28e5e909d440fc0a8f8b3d",
+   "src_content_sha256": "773786ec113ae333cf328a800eabe1b80bd4a60b4ad247c5877e1900dff16aa5",
+   "libcrypto_so_3_sha256": "53df54937257a6a02baa4779b33568c1d86b8d1a0c431dd74b5f50c69cd731fd",
+   "census_carried_forward": false,
+   "census_basis": "the previous document's census was generated at its source head",
+   "previous_rebind": null
+  },
+  "operation_counts": {
+   "production_blockers": 6,
+   "test_only_blockers": 216,
+   "allocator_seam_blockers": 0,
+   "total_blockers": 222
+  },
+  "gates": {
+   "v1_clippy_all_targets": null,
+   "note": "No pass/fail gate was recorded for this census run: the compiler JSON is a census input, not a gate result, and this run did not execute the -D warnings gate.  A null gate is NOT a PASS."
+  },
+  "gates_note": "the census records no pass/fail gate for its own run; a null gate is NOT a PASS",
+  "unchanged_since_b85": true
+ },
+ "closures": {
+  "ssh": {
+   "receipt": "evidence/closure-ssh-b85c.json",
+   "sha256": "45e3b48d5d6ce1ea19a6cd5248a194922f1b572858f8d556c2361dde98b02402",
+   "bytes": 13722383,
+   "artifact": "court/tmp/openssh-closure/client-b85/openssh-9.9p1/ssh",
+   "artifact_sha256": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b",
+   "artifact_dynamic": {
+    "soname": null,
+    "needed": [
+     "libcrypto.so.3",
+     "libz.so.1",
+     "libc.so.6"
+    ],
+    "runpath": [
+     "/work/artifacts/phase2/install/lib"
+    ],
+    "rpath": []
+   },
+   "closure_bound_tool_sha256": "3e86a74dbbe9095ca98ef3b8d889ec67a9447e59ef1caceecaa72152202988a1",
+   "tool_version": 6,
+   "generated_utc": "2026-11-17T11:41:24Z",
+   "counts": {
+    "reachable_files": 625,
+    "reachable_production_obligations": 290,
+    "DISCHARGED": 290,
+    "BLOCKED": 0,
+    "UNKNOWN": 0,
+    "v1_production_operations_total": 6,
+    "v1_uncontracted_operations_total": 222,
+    "carried_forward": 280,
+    "carried_forward_removed": 3,
+    "stale_discharge_rejections": 0
+   },
+   "by_mechanism": {
+    "BIO": 2,
+    "C_ABI_CONTRACT": 5,
+    "EVP_PKEY_PROVIDER": 116,
+    "RAND_CMS_STORE_KEYFMT": 27,
+    "RUNTIME_CONCURRENCY": 4,
+    "SSL_SESSION": 14,
+    "X509_VERIFY_POLICY": 122
+   },
+   "verdict": {
+    "state": "ACCEPTED",
+    "safe_compatible": false,
+    "reason": "no refusal condition fired"
+   },
+   "refusals": [],
+   "element_7": {
+    "established": true,
+    "status": "PASS (contract-bounded and closed target sets)",
+    "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract; a closed target set additionally enumerates every in-image target",
+    "reachable_unresolved_sites": 152,
+    "target_bounded_unresolved_sites": 0,
+    "contract_bounded_sites": 116,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_CORE_DISPATCH": 26,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 16,
+     "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    },
+    "closed_target_set_sites": 36,
+    "closed_target_set_by_class": {
+     "CLOSED_TARGET_SET_DECODER_METHOD_OBJECT": 3,
+     "CLOSED_TARGET_SET_LEGACY_EVP_CIPHER_DATA": 2,
+     "CLOSED_TARGET_SET_PROVIDER_HW_TABLE": 25,
+     "CLOSED_TARGET_SET_SLH_METHOD_TABLE": 6
+    },
+    "unclassified_reachable_sites": 0,
+    "target_sets_remain_unbounded": true,
+    "has_closed_target_sets": true,
+    "why": "116 site(s) are bounded by a documented external ABI contract and 36 by a closed, enumerated in-image target set; no target-bounded unresolved site and no unclassified site remains"
+   },
+   "source_identity": {
+    "repository_head": "b14923bda31e24f46a11f290d2aef713704994a1",
+    "branch": "stage/p25/b75-ocsp",
+    "tracked_tree_dirty": false,
+    "inventory_path": "court/freeze-b85/census-b85.json",
+    "inventory_source_head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+    "span_source_commit": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+    "span_source_binding": "git-blob",
+    "inventory_is_ancestor_or_equal": true,
+    "note": "the admitted install is the V1 frozen candidate; the working tree may be a descendant, so obligations are joined to the inventory at the inventory's own source head, not the working tree"
+   },
+   "discharge_receipt_grouping": {
+    "total": 290,
+    "openssh-v1i": 56,
+    "openssh-v1l": 9,
+    "boundary_sweep_total": 211,
+    "by_receipt": {
+     "boundary-sweep-B48": 36,
+     "boundary-sweep-B49": 16,
+     "boundary-sweep-B50": 5,
+     "boundary-sweep-B51": 10,
+     "boundary-sweep-B52": 3,
+     "boundary-sweep-B53": 30,
+     "boundary-sweep-B54": 72,
+     "boundary-sweep-B55": 9,
+     "boundary-sweep-B56": 19,
+     "boundary-sweep-B57": 2,
+     "boundary-sweep-B60": 2,
+     "boundary-sweep-B67": 2,
+     "boundary-sweep-B69": 3,
+     "boundary-sweep-B70": 2,
+     "openssh-v1i": 56,
+     "openssh-v1l": 9,
+     "sslconf-exclusivity-2026-11-10": 14
+    }
+   },
+   "obligations_recorded": 290,
+   "ledger_record": {
+    "run_id": "run:build-link:candidate:openssh",
+    "level": "L4-linked",
+    "outcome": "reached",
+    "recipe_id": "recipe:openssh:9.9p1",
+    "source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+    "source_root_hash": "4a5abaf399ac1ee4ba977c30f73c748b7dcaf5c168eb26b1ff65cedefe28906f",
+    "source_root_hash_rule": null,
+    "source_tree_domain_hash": null,
+    "artifact_rel": "ssh",
+    "artifact_sha256_recorded": "45da459f72fafb25fb49d6d50406354d4baa54f2f18510ae9a560314a499b63a",
+    "recorded_candidate_install": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+    "artifact_matches_this_build": false
+   },
+   "carry_chain": {
+    "immediate_source": "evidence/closure-ssh-b85.json",
+    "target": "evidence/closure-ssh-b85c.json",
+    "carried_forward_removed": 3,
+    "links": [
+     {
+      "receipt": "evidence/closure-ssh-b73.json",
+      "sha256": "5d1784271dafcb4a6af1f2c225252aa48833bd97de327983a2e19304813ed587",
+      "verdict": "REFUSED",
+      "DISCHARGED": 320,
+      "BLOCKED": 3,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "bff896e3f8511be1f81f33deae4b62052ba40cb803be7ddff9f332c815f78c35",
+      "tool_sha256": "c65cbab5d8812eee6199ee96703881ca2f14d576981341bbbfb095abd9be19c4"
+     },
+     {
+      "receipt": "evidence/closure-ssh-b73-r2.json",
+      "sha256": "72a08e58f77a093f8f7a8376709e12db403ca85dedd9ae5179548e10fd882f83",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 320,
+      "BLOCKED": 3,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "bff896e3f8511be1f81f33deae4b62052ba40cb803be7ddff9f332c815f78c35",
+      "tool_sha256": "edadf43b71285612cf53c9895c7beb751f270949e2f093dec8fa6e1bbd3fb483"
+     },
+     {
+      "receipt": "evidence/closure-ssh-b76.json",
+      "sha256": "997711129ee4a1d5730677b686f82445ebfb4345f27cb5d899d9a62337e4b512",
+      "verdict": "REFUSED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "0384f983b392b450a135b960c7b8f991636d509bf9ef5ff841e3d3b7367545d4",
+      "tool_sha256": "edadf43b71285612cf53c9895c7beb751f270949e2f093dec8fa6e1bbd3fb483"
+     },
+     {
+      "receipt": "evidence/closure-ssh-b76c.json",
+      "sha256": "a5b55b88b926e24a6324f8b939b466e2bf940fc142cafcdea2f719b10ae426d6",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": true,
+      "artifact_sha256": "0384f983b392b450a135b960c7b8f991636d509bf9ef5ff841e3d3b7367545d4",
+      "tool_sha256": "74e3953b36233b1071b9b720e1a0551e866801fa41db5e31b5f878fdabd46161"
+     },
+     {
+      "receipt": "evidence/closure-ssh-b77.json",
+      "sha256": "bb139da0f8a5d7cc1ea4b53cf644f36e5dde2508bbaf34444495409e29eab81b",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 282,
+      "BLOCKED": 8,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "b7c356681dd15e1ba146aaf51d8f8adbfd9da201d29966d664adbe122f84d2a4",
+      "tool_sha256": "74e3953b36233b1071b9b720e1a0551e866801fa41db5e31b5f878fdabd46161"
+     },
+     {
+      "receipt": "evidence/closure-ssh-b78.json",
+      "sha256": "c255b86af7d006a6ce376a4f6ba4198d4a399f03fd4faaf1d28b8f3d998f8304",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 283,
+      "BLOCKED": 7,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
+      "tool_sha256": "d3d01dfe9127610c77b965491b08c61dde08098d3fc9f1a398fd8cbff0daee91"
+     },
+     {
+      "receipt": "evidence/closure-ssh-b78b.json",
+      "sha256": "1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": true,
+      "artifact_sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
+      "tool_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca"
+     },
+     {
+      "receipt": "evidence/closure-ssh-b78c.json",
+      "sha256": "45c39735f2f10e2b4c1137207b1565b3a945c325c356db8011f29a7311510964",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": true,
+      "artifact_sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
+      "tool_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8"
+     },
+     {
+      "receipt": "evidence/closure-ssh-b79.json",
+      "sha256": "e4b64de187f26987a3e5a408baa0078f5c8cc6c4baf48ddcb11add1fa0da3352",
+      "verdict": "REFUSED",
+      "DISCHARGED": 274,
+      "BLOCKED": 16,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "6be4db22e951a1283a3b97e087b8bd75b15c61e4e7031cfba19ab06222e82304",
+      "tool_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8"
+     },
+     {
+      "receipt": "evidence/closure-ssh-b79b.json",
+      "sha256": "510e96e658f27050427f310bf1a95bd30facd7b52761229b8d28f4843b714dcf",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 274,
+      "BLOCKED": 16,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "6be4db22e951a1283a3b97e087b8bd75b15c61e4e7031cfba19ab06222e82304",
+      "tool_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8"
+     },
+     {
+      "receipt": "evidence/closure-ssh-b79c.json",
+      "sha256": "ebe8e9ab22b3dbd6656dced72390323dde5d732b455606c994126efec4520b92",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": true,
+      "artifact_sha256": "6be4db22e951a1283a3b97e087b8bd75b15c61e4e7031cfba19ab06222e82304",
+      "tool_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8"
+     },
+     {
+      "receipt": "evidence/closure-ssh-b80.json",
+      "sha256": "dc296a34e905796919da36572533a09f7c4394acc0cbc7d5e46e298bd7545607",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 286,
+      "BLOCKED": 4,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "f8f454782e6a793a624687755a779ad4b6cb9bbb8693f35f2a1f5f9d16234607",
+      "tool_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8"
+     },
+     {
+      "receipt": "evidence/closure-ssh-b80b.json",
+      "sha256": "7cf1383994b0af70daefc5438c20a7d503ff821038986ab723a58e844f93da7a",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": true,
+      "artifact_sha256": "f8f454782e6a793a624687755a779ad4b6cb9bbb8693f35f2a1f5f9d16234607",
+      "tool_sha256": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66"
+     },
+     {
+      "receipt": "evidence/closure-ssh-b81.json",
+      "sha256": "82067694adfd8fd03bcc5bb4fdb49d4cff2a35b798c7125a84abe5dc4306132a",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 287,
+      "BLOCKED": 3,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "f513c6b22d0bfc4abfb2f4ccf70f0320a7a58aab847795ed81761f022f64d84a",
+      "tool_sha256": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66"
+     },
+     {
+      "receipt": "evidence/closure-ssh-b81b.json",
+      "sha256": "04a3dd3c8634540372627af0cd644da45980ffb76f3f9f710428359c3d83876c",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": true,
+      "artifact_sha256": "f513c6b22d0bfc4abfb2f4ccf70f0320a7a58aab847795ed81761f022f64d84a",
+      "tool_sha256": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66"
+     },
+     {
+      "receipt": "evidence/closure-ssh-b82.json",
+      "sha256": "abc882edfdb790b14f54657c8c81d01dd9b7cbd56a5b77b044824ddc31f415e3",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 288,
+      "BLOCKED": 2,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "04185dba07525d1153b46a478318e765adc56ec4c475c2fea15280092ea5c655",
+      "tool_sha256": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66"
+     },
+     {
+      "receipt": "evidence/closure-ssh-b82b.json",
+      "sha256": "f21d0def8e6feafa291a227d356a2aef6023b2c7b3dbf1b1e418d015149c1ab9",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": true,
+      "artifact_sha256": "04185dba07525d1153b46a478318e765adc56ec4c475c2fea15280092ea5c655",
+      "tool_sha256": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66"
+     },
+     {
+      "receipt": "evidence/closure-ssh-b84.json",
+      "sha256": "5fa6aaa8eceac7bd475167dda1f1034ddf0ee8960034dea0b7823b1854a36507",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 283,
+      "BLOCKED": 7,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "2eb4b8b33d2f5e01f916f6ccdef37603188c06136aac5ce4a237939848c7ba47",
+      "tool_sha256": "fed482b3421e6c9d2f3eb48dec2c0b8e24af821f128f8e2e5a482beaa36cd77a"
+     },
+     {
+      "receipt": "evidence/closure-ssh-b84b.json",
+      "sha256": "2ea7613c1fb4c0073f54d1043b057b8a4673490558d66a7b28ff718f98325043",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": true,
+      "artifact_sha256": "2eb4b8b33d2f5e01f916f6ccdef37603188c06136aac5ce4a237939848c7ba47",
+      "tool_sha256": "df0a9ae2cb2d66aa0551e7cb8cbf5a446466cc54d7dd3a1651d3a30c7412a958"
+     },
+     {
+      "receipt": "evidence/closure-ssh-b85.json",
+      "sha256": "89320a3d9f6ccd4ad07a83e125d72707582f19a1220c2e626e5dc964f186710c",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": true,
+      "artifact_sha256": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b",
+      "tool_sha256": "b42f19bdfb40d94009a6256dcc7a3d5fd96e6a2c8fba595133372ce6fed5f913"
+     },
+     {
+      "receipt": "evidence/closure-ssh-b85b.json",
+      "sha256": "a45d374ce262cf8cbd9e9ce9cbe53ebfca281f256b45c7e58cb18e64a06e2090",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": true,
+      "artifact_sha256": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b",
+      "tool_sha256": "b42f19bdfb40d94009a6256dcc7a3d5fd96e6a2c8fba595133372ce6fed5f913"
+     },
+     {
+      "receipt": "evidence/closure-ssh-b85c.json",
+      "sha256": "45e3b48d5d6ce1ea19a6cd5248a194922f1b572858f8d556c2361dde98b02402",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": true,
+      "artifact_sha256": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b",
+      "tool_sha256": "3e86a74dbbe9095ca98ef3b8d889ec67a9447e59ef1caceecaa72152202988a1"
+     }
+    ],
+    "note": "the b85c run repeats the full queue with the repaired instrument 3e86a74d at S (source 17042ccf2) and is the only acceptance evidence at this candidate: 290/290 DISCHARGED, 0 BLOCKED, 0 UNKNOWN, 0 refusals, element 7 PASS. The b85 run it supersedes (instrument b42f19bd) recorded the same counts but under the defective predicate; every earlier ACCEPTED link in this chain is invalidated as acceptance evidence and is listed in residuals 'acceptance/invalidated-receipts'."
+   }
+  },
+  "sshd": {
+   "receipt": "evidence/closure-sshd-b85c.json",
+   "sha256": "a3bd7376d9f906a46b93bea2c5feffd4a17f388fb81482d8ad09aa66ca9377e6",
+   "bytes": 13575390,
+   "artifact": "court/tmp/openssh-closure/server-b85/openssh-9.9p1/sshd",
+   "artifact_sha256": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1",
+   "artifact_dynamic": {
+    "soname": null,
+    "needed": [
+     "libcrypto.so.3",
+     "libc.so.6"
+    ],
+    "runpath": [
+     "/work/artifacts/phase2/install/lib"
+    ],
+    "rpath": []
+   },
+   "closure_bound_tool_sha256": "3e86a74dbbe9095ca98ef3b8d889ec67a9447e59ef1caceecaa72152202988a1",
+   "tool_version": 6,
+   "generated_utc": "2026-11-17T12:36:45Z",
+   "counts": {
+    "reachable_files": 624,
+    "reachable_production_obligations": 290,
+    "DISCHARGED": 290,
+    "BLOCKED": 0,
+    "UNKNOWN": 0,
+    "v1_production_operations_total": 6,
+    "v1_uncontracted_operations_total": 222,
+    "carried_forward": 280,
+    "carried_forward_removed": 3,
+    "stale_discharge_rejections": 0
+   },
+   "by_mechanism": {
+    "BIO": 2,
+    "C_ABI_CONTRACT": 5,
+    "EVP_PKEY_PROVIDER": 116,
+    "RAND_CMS_STORE_KEYFMT": 27,
+    "RUNTIME_CONCURRENCY": 4,
+    "SSL_SESSION": 14,
+    "X509_VERIFY_POLICY": 122
+   },
+   "verdict": {
+    "state": "ACCEPTED",
+    "safe_compatible": false,
+    "reason": "no refusal condition fired"
+   },
+   "refusals": [],
+   "element_7": {
+    "established": true,
+    "status": "PASS (contract-bounded and closed target sets)",
+    "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract; a closed target set additionally enumerates every in-image target",
+    "reachable_unresolved_sites": 152,
+    "target_bounded_unresolved_sites": 0,
+    "contract_bounded_sites": 116,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_CORE_DISPATCH": 26,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 16,
+     "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    },
+    "closed_target_set_sites": 36,
+    "closed_target_set_by_class": {
+     "CLOSED_TARGET_SET_DECODER_METHOD_OBJECT": 3,
+     "CLOSED_TARGET_SET_LEGACY_EVP_CIPHER_DATA": 2,
+     "CLOSED_TARGET_SET_PROVIDER_HW_TABLE": 25,
+     "CLOSED_TARGET_SET_SLH_METHOD_TABLE": 6
+    },
+    "unclassified_reachable_sites": 0,
+    "target_sets_remain_unbounded": true,
+    "has_closed_target_sets": true,
+    "why": "116 site(s) are bounded by a documented external ABI contract and 36 by a closed, enumerated in-image target set; no target-bounded unresolved site and no unclassified site remains"
+   },
+   "source_identity": {
+    "repository_head": "b14923bda31e24f46a11f290d2aef713704994a1",
+    "branch": "stage/p25/b75-ocsp",
+    "tracked_tree_dirty": false,
+    "inventory_path": "court/freeze-b85/census-b85.json",
+    "inventory_source_head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+    "span_source_commit": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+    "span_source_binding": "git-blob",
+    "inventory_is_ancestor_or_equal": true,
+    "note": "the admitted install is the V1 frozen candidate; the working tree may be a descendant, so obligations are joined to the inventory at the inventory's own source head, not the working tree"
+   },
+   "discharge_receipt_grouping": {
+    "total": 290,
+    "openssh-v1i": 56,
+    "openssh-v1l": 9,
+    "boundary_sweep_total": 211,
+    "by_receipt": {
+     "boundary-sweep-B48": 36,
+     "boundary-sweep-B49": 16,
+     "boundary-sweep-B50": 5,
+     "boundary-sweep-B51": 10,
+     "boundary-sweep-B52": 3,
+     "boundary-sweep-B53": 30,
+     "boundary-sweep-B54": 72,
+     "boundary-sweep-B55": 9,
+     "boundary-sweep-B56": 19,
+     "boundary-sweep-B57": 2,
+     "boundary-sweep-B60": 2,
+     "boundary-sweep-B67": 2,
+     "boundary-sweep-B69": 3,
+     "boundary-sweep-B70": 2,
+     "openssh-v1i": 56,
+     "openssh-v1l": 9,
+     "sslconf-exclusivity-2026-11-10": 14
+    }
+   },
+   "obligations_recorded": 290,
+   "ledger_record": {
+    "run_id": "run:build-link:candidate:openssh",
+    "level": "L4-linked",
+    "outcome": "reached",
+    "recipe_id": "recipe:openssh:9.9p1",
+    "source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+    "source_root_hash": "4a5abaf399ac1ee4ba977c30f73c748b7dcaf5c168eb26b1ff65cedefe28906f",
+    "source_root_hash_rule": null,
+    "source_tree_domain_hash": null,
+    "artifact_rel": "ssh",
+    "artifact_sha256_recorded": "45da459f72fafb25fb49d6d50406354d4baa54f2f18510ae9a560314a499b63a",
+    "recorded_candidate_install": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+    "artifact_matches_this_build": false
+   },
+   "carry_chain": {
+    "immediate_source": "evidence/closure-sshd-b85.json",
+    "target": "evidence/closure-sshd-b85c.json",
+    "carried_forward_removed": 3,
+    "links": [
+     {
+      "receipt": "evidence/closure-sshd-b73.json",
+      "sha256": "cbfc0b7d10c58b1d555ab1def114e299e14fb24cd344dca142cbe8a7e112bdaa",
+      "verdict": "REFUSED",
+      "DISCHARGED": 320,
+      "BLOCKED": 3,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "64e0a4cc190fc3897aabcd2f95cdc630d25b3dc11b2a9635973449fe84164f92",
+      "tool_sha256": "c65cbab5d8812eee6199ee96703881ca2f14d576981341bbbfb095abd9be19c4"
+     },
+     {
+      "receipt": "evidence/closure-sshd-b73-r2.json",
+      "sha256": "d0addc72f94904b03e63b2bd1d92dc5506c1ea67f6732b5a51a124f943f5cee5",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 320,
+      "BLOCKED": 3,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "64e0a4cc190fc3897aabcd2f95cdc630d25b3dc11b2a9635973449fe84164f92",
+      "tool_sha256": "edadf43b71285612cf53c9895c7beb751f270949e2f093dec8fa6e1bbd3fb483"
+     },
+     {
+      "receipt": "evidence/closure-sshd-b76.json",
+      "sha256": "58316a475ed88a610ef9ffd018759669215f035ae0de8f673e9a4849f0fceb04",
+      "verdict": "REFUSED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "547c0d14d0fed0b38f0165af1f9c65cd86309a572cdbd30abbc1d8b7c89d2a1d",
+      "tool_sha256": "edadf43b71285612cf53c9895c7beb751f270949e2f093dec8fa6e1bbd3fb483"
+     },
+     {
+      "receipt": "evidence/closure-sshd-b76c.json",
+      "sha256": "5e7d9acfb9d28bb622a4215b82375fc2eda4bf923fbbce56f1a32b076ced60f1",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": true,
+      "artifact_sha256": "547c0d14d0fed0b38f0165af1f9c65cd86309a572cdbd30abbc1d8b7c89d2a1d",
+      "tool_sha256": "74e3953b36233b1071b9b720e1a0551e866801fa41db5e31b5f878fdabd46161"
+     },
+     {
+      "receipt": "evidence/closure-sshd-b77.json",
+      "sha256": "021617660576a2ebae3706496f63d4cdaf02798f1cce59c94677e538d049e170",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 282,
+      "BLOCKED": 8,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "d84d83ac98a8dae7c09f7023c8e792ce963a462095ebd487a68a90466273242a",
+      "tool_sha256": "74e3953b36233b1071b9b720e1a0551e866801fa41db5e31b5f878fdabd46161"
+     },
+     {
+      "receipt": "evidence/closure-sshd-b78.json",
+      "sha256": "dd8430916dc4ebd559b0c5bfda4415b4b2174e7d19e7e654f7f66d952407ee43",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 283,
+      "BLOCKED": 7,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe",
+      "tool_sha256": "d3d01dfe9127610c77b965491b08c61dde08098d3fc9f1a398fd8cbff0daee91"
+     },
+     {
+      "receipt": "evidence/closure-sshd-b78b.json",
+      "sha256": "4f0ca02f31ed4efa4901636ccd42402fe1562649cd532bbadcc1a3f95355e863",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": true,
+      "artifact_sha256": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe",
+      "tool_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca"
+     },
+     {
+      "receipt": "evidence/closure-sshd-b78c.json",
+      "sha256": "dd3c1fd7bf351303f7faf1e16268bcfc79f2bbf1a9fbb82db24821193a7993c2",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": true,
+      "artifact_sha256": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe",
+      "tool_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8"
+     },
+     {
+      "receipt": "evidence/closure-sshd-b79.json",
+      "sha256": "e4d901281bb89a189dd10bf1eca13bb3b333ebb19bca827b609432b9a5e31884",
+      "verdict": "REFUSED",
+      "DISCHARGED": 274,
+      "BLOCKED": 16,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "9280e22e97087f3825cefdd9024197073d298178e0bab8e391188e3d60d46c07",
+      "tool_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8"
+     },
+     {
+      "receipt": "evidence/closure-sshd-b79b.json",
+      "sha256": "15aa77940b2884205c86b658b2dfd5cc696b44ef88fef62061759b9f731bc50a",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 274,
+      "BLOCKED": 16,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "9280e22e97087f3825cefdd9024197073d298178e0bab8e391188e3d60d46c07",
+      "tool_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8"
+     },
+     {
+      "receipt": "evidence/closure-sshd-b79c.json",
+      "sha256": "d4e6ebd25642ca47deeec42206925a1a84b37430c6d68fefb2126418011cf24c",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": true,
+      "artifact_sha256": "9280e22e97087f3825cefdd9024197073d298178e0bab8e391188e3d60d46c07",
+      "tool_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8"
+     },
+     {
+      "receipt": "evidence/closure-sshd-b80.json",
+      "sha256": "bc9f7be42f953314ff19ec7c69776c482d588af79514f8dc16fe005025350768",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 286,
+      "BLOCKED": 4,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "152ccc3465240454b5ec0cd470dfa81dc7eb044c01c9bbe72519a65a71919b92",
+      "tool_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8"
+     },
+     {
+      "receipt": "evidence/closure-sshd-b80b.json",
+      "sha256": "9739135b806cd8b22a5446770900601fa1fa7bbdb6cd31ffd0205636a025125d",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": true,
+      "artifact_sha256": "152ccc3465240454b5ec0cd470dfa81dc7eb044c01c9bbe72519a65a71919b92",
+      "tool_sha256": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66"
+     },
+     {
+      "receipt": "evidence/closure-sshd-b81.json",
+      "sha256": "3445604e9aed4bfca9894dcd07ecdee3f75de9598cd2177cacfc6f6c202bcfc3",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 287,
+      "BLOCKED": 3,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "4c0620139d064a9173a9eecd6481914ba6f5491f1901e7acd2a6c997a4fbcfc3",
+      "tool_sha256": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66"
+     },
+     {
+      "receipt": "evidence/closure-sshd-b81b.json",
+      "sha256": "1355f75fd87a6d20e28703ca8f5f8ac42bd077f21fb5459270eee6f1ea1748e8",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": true,
+      "artifact_sha256": "4c0620139d064a9173a9eecd6481914ba6f5491f1901e7acd2a6c997a4fbcfc3",
+      "tool_sha256": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66"
+     },
+     {
+      "receipt": "evidence/closure-sshd-b82.json",
+      "sha256": "886d8c8ed478a0e223f9f7c4622a41f57a52ba2e7c1d1a0bad607c85615f2822",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 288,
+      "BLOCKED": 2,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "6b4a3ad383f36c75f275b788a43652a7c249560dd0ed7ca77a29351c64000377",
+      "tool_sha256": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66"
+     },
+     {
+      "receipt": "evidence/closure-sshd-b82b.json",
+      "sha256": "a74b259677e0c9061ecce399dcbe64f8b8cd82468eceb2e3fa6491819db6f5e4",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": true,
+      "artifact_sha256": "6b4a3ad383f36c75f275b788a43652a7c249560dd0ed7ca77a29351c64000377",
+      "tool_sha256": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66"
+     },
+     {
+      "receipt": "evidence/closure-sshd-b84.json",
+      "sha256": "3e786bb61f3b51913004175ebd37781ca4b0b9ce2441d94ba9ba7672a5d29d11",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 283,
+      "BLOCKED": 7,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "cdf61204b6dc3f245166ef7fd6db6285e65762a0e6605d9049935b2596c17e1a",
+      "tool_sha256": "fed482b3421e6c9d2f3eb48dec2c0b8e24af821f128f8e2e5a482beaa36cd77a"
+     },
+     {
+      "receipt": "evidence/closure-sshd-b84b.json",
+      "sha256": "d3e01ca86916b22e694aeeede3c00c0ef5b26d189546f2251d279086b11830ad",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": true,
+      "artifact_sha256": "cdf61204b6dc3f245166ef7fd6db6285e65762a0e6605d9049935b2596c17e1a",
+      "tool_sha256": "df0a9ae2cb2d66aa0551e7cb8cbf5a446466cc54d7dd3a1651d3a30c7412a958"
+     },
+     {
+      "receipt": "evidence/closure-sshd-b85.json",
+      "sha256": "4552dc0a26f4c2911d09512c19b9cc1cdb8c819f179534165b98fd736dfe57d4",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": true,
+      "artifact_sha256": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1",
+      "tool_sha256": "b42f19bdfb40d94009a6256dcc7a3d5fd96e6a2c8fba595133372ce6fed5f913"
+     },
+     {
+      "receipt": "evidence/closure-sshd-b85b.json",
+      "sha256": "ea0acc8ef1468fa9e5ef1bbb98c82319d5495b0e090dad7065da91377d125284",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 253,
+      "BLOCKED": 37,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": false,
+      "artifact_sha256": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1",
+      "tool_sha256": "b42f19bdfb40d94009a6256dcc7a3d5fd96e6a2c8fba595133372ce6fed5f913"
+     },
+     {
+      "receipt": "evidence/closure-sshd-b85c.json",
+      "sha256": "a3bd7376d9f906a46b93bea2c5feffd4a17f388fb81482d8ad09aa66ca9377e6",
+      "verdict": "ACCEPTED",
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "accepted_under_repaired_predicate": true,
+      "artifact_sha256": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1",
+      "tool_sha256": "3e86a74dbbe9095ca98ef3b8d889ec67a9447e59ef1caceecaa72152202988a1"
+     }
+    ],
+    "note": "the b85c run repeats the full queue with the repaired instrument 3e86a74d at S (source 17042ccf2) and is the only acceptance evidence at this candidate: 290/290 DISCHARGED, 0 BLOCKED, 0 UNKNOWN, 0 refusals, element 7 PASS. The b85 run it supersedes (instrument b42f19bd) recorded the same counts but under the defective predicate; every earlier ACCEPTED link in this chain is invalidated as acceptance evidence and is listed in residuals 'acceptance/invalidated-receipts'."
+   }
+  },
+  "safe_compatible": false,
+  "acceptance": {
+   "valid_acceptance_evidence_at_this_candidate": [
+    "evidence/closure-ssh-b85c.json",
+    "evidence/closure-sshd-b85c.json"
+   ],
+   "superseded_acceptance_evidence": "every earlier ACCEPTED closure receipt, including the b85 and b85b runs; see residuals 'acceptance/invalidated-receipts'",
+   "predicate": "closure_verdict_state(refusals, obligations): ACCEPTED only when no refusal fired and every row is DISCHARGED (so BLOCKED==0 and UNKNOWN==0, and any future non-DISCHARGED status also refuses)"
+  }
+ },
+ "element7": {
+  "prior_measurements": [
+   {
+    "path": "court/freeze-b85/e7-ssh-b85.json",
+    "sha256": "d32bb5d4f58f739a1958c8b0cd05f8706c5b88d640327f852cc0380c73167906",
+    "bytes": 1655572,
+    "schema": "openssl-rs/campaign/safe-c33/consumer-closure/v2",
+    "candidate_tag": null,
+    "role": "a b85 element-7 measurement of the ssh or sshd closure at S produced by the instrument itself (court-side, git-ignored)",
+    "historical_only": false,
+    "tool_sha256": "b42f19bdfb40d94009a6256dcc7a3d5fd96e6a2c8fba595133372ce6fed5f913",
+    "precision_element_7": {
+     "established": true,
+     "status": "PASS (contract-bounded and closed target sets)",
+     "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract; a closed target set additionally enumerates every in-image target",
+     "reachable_unresolved_sites": 152,
+     "target_bounded_unresolved_sites": 0,
+     "contract_bounded_sites": 116,
+     "contract_bounded_by_class": {
+      "ABI_CONTRACT_CONF_MODULE": 2,
+      "ABI_CONTRACT_CORE_DISPATCH": 26,
+      "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+      "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+      "ABI_CONTRACT_PBE_REGISTRY": 1,
+      "ABI_CONTRACT_PROVIDER": 16,
+      "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+      "ABI_CONTRACT_STORE_LOADER": 3
+     },
+     "closed_target_set_sites": 36,
+     "closed_target_set_by_class": {
+      "CLOSED_TARGET_SET_DECODER_METHOD_OBJECT": 3,
+      "CLOSED_TARGET_SET_LEGACY_EVP_CIPHER_DATA": 2,
+      "CLOSED_TARGET_SET_PROVIDER_HW_TABLE": 25,
+      "CLOSED_TARGET_SET_SLH_METHOD_TABLE": 6
+     },
+     "unclassified_reachable_sites": 0,
+     "target_sets_remain_unbounded": true,
+     "has_closed_target_sets": true,
+     "why": "116 site(s) are bounded by a documented external ABI contract and 36 by a closed, enumerated in-image target set; no target-bounded unresolved site and no unclassified site remains"
+    },
+    "b85_sha256": "d32bb5d4f58f739a1958c8b0cd05f8706c5b88d640327f852cc0380c73167906",
+    "sha256_at_b85c": "d32bb5d4f58f739a1958c8b0cd05f8706c5b88d640327f852cc0380c73167906",
+    "unchanged_since_b85": true
+   },
+   {
+    "path": "court/freeze-b85/e7-sshd-b85.json",
+    "sha256": "f672a4133069e3cc7d09d1d846fbfdd0e73d45b8008f4377083599845e235c5e",
+    "bytes": 1539711,
+    "schema": "openssl-rs/campaign/safe-c33/consumer-closure/v2",
+    "candidate_tag": null,
+    "role": "a b85 element-7 measurement of the ssh or sshd closure at S produced by the instrument itself (court-side, git-ignored)",
+    "historical_only": false,
+    "tool_sha256": "b42f19bdfb40d94009a6256dcc7a3d5fd96e6a2c8fba595133372ce6fed5f913",
+    "precision_element_7": {
+     "established": true,
+     "status": "PASS (contract-bounded and closed target sets)",
+     "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract; a closed target set additionally enumerates every in-image target",
+     "reachable_unresolved_sites": 152,
+     "target_bounded_unresolved_sites": 0,
+     "contract_bounded_sites": 116,
+     "contract_bounded_by_class": {
+      "ABI_CONTRACT_CONF_MODULE": 2,
+      "ABI_CONTRACT_CORE_DISPATCH": 26,
+      "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+      "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+      "ABI_CONTRACT_PBE_REGISTRY": 1,
+      "ABI_CONTRACT_PROVIDER": 16,
+      "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+      "ABI_CONTRACT_STORE_LOADER": 3
+     },
+     "closed_target_set_sites": 36,
+     "closed_target_set_by_class": {
+      "CLOSED_TARGET_SET_DECODER_METHOD_OBJECT": 3,
+      "CLOSED_TARGET_SET_LEGACY_EVP_CIPHER_DATA": 2,
+      "CLOSED_TARGET_SET_PROVIDER_HW_TABLE": 25,
+      "CLOSED_TARGET_SET_SLH_METHOD_TABLE": 6
+     },
+     "unclassified_reachable_sites": 0,
+     "target_sets_remain_unbounded": true,
+     "has_closed_target_sets": true,
+     "why": "116 site(s) are bounded by a documented external ABI contract and 36 by a closed, enumerated in-image target set; no target-bounded unresolved site and no unclassified site remains"
+    },
+    "b85_sha256": "f672a4133069e3cc7d09d1d846fbfdd0e73d45b8008f4377083599845e235c5e",
+    "sha256_at_b85c": "f672a4133069e3cc7d09d1d846fbfdd0e73d45b8008f4377083599845e235c5e",
+    "unchanged_since_b85": true
+   },
+   {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/e7-b80-repin.json",
+    "sha256": "57eda09176baf444db268f5a0c09f23e5aa6993ec02159aa779d3ec9027d9142",
+    "bytes": 22713,
+    "schema": "openssl-rs/campaign/safe-c33/per-call-site-witness/v1",
+    "candidate_tag": "2026-11-15",
+    "role": "the b80 element-7 repin receipt (tracked; prior generation, not a b85 measurement; no new repin was made at b85)",
+    "historical_only": false,
+    "tool_sha256": null,
+    "element7": {
+     "before": {
+      "status": "FAIL",
+      "target_bounded_unresolved_sites": 2,
+      "contract_bounded_sites": 151,
+      "unclassified_reachable_sites": 0,
+      "reachable_unresolved_sites": 153,
+      "target_bounded_sites": [
+       "CONF_free 0x2dd4c6",
+       "CONF_load 0x2dd6eb"
+      ],
+      "by_class": {
+       "ABI_CONTRACT_CONF_MODULE": 2,
+       "ABI_CONTRACT_CORE_DISPATCH": 26,
+       "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+       "ABI_CONTRACT_EXPORT_CALLBACK": 68,
+       "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+       "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+       "ABI_CONTRACT_PBE_REGISTRY": 1,
+       "ABI_CONTRACT_PROVIDER": 16,
+       "ABI_CONTRACT_PROVIDER_HW_TABLE": 22,
+       "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+       "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+       "ABI_CONTRACT_STORE_LOADER": 3
+      },
+      "evidence": [
+       "evidence/closure-ssh-b80.json",
+       "evidence/closure-sshd-b80.json"
+      ]
+     },
+     "after": {
+      "status": "PASS (contract-bounded)",
+      "target_bounded_unresolved_sites": 0,
+      "contract_bounded_sites": 156,
+      "unclassified_reachable_sites": 0,
+      "reachable_unresolved_sites": 156,
+      "by_class": {
+       "ABI_CONTRACT_CONF_DEFAULT_METHOD": 2,
+       "ABI_CONTRACT_CONF_MODULE": 2,
+       "ABI_CONTRACT_CORE_DISPATCH": 26,
+       "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+       "ABI_CONTRACT_EXPORT_CALLBACK": 68,
+       "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+       "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+       "ABI_CONTRACT_PBE_REGISTRY": 1,
+       "ABI_CONTRACT_PROVIDER": 16,
+       "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+       "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+       "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+       "ABI_CONTRACT_STORE_LOADER": 3
+      },
+      "ssh_receipt": {
+       "path": "court/freeze-b80/e7-b80-repin-after.json",
+       "sha256": "4163728cce7413f6b2f9b84226312406b8e652a14bacdcc8a54e867044aefe14"
+      },
+      "sshd_receipt": {
+       "path": "court/freeze-b80/e7-b80-repin-sshd-after.json",
+       "sha256": "5ce3fa500e62ee1a20f5e345abd0966ff40c8da4fec7aa58299efc4d2f87646d"
+      },
+      "tool_sha256": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66"
+     },
+     "delta": "151 + 3 (ProvGcmHw rows re-represented) + 2 (CONF init rows) = 156 contract-bounded; 2 target-bounded -> 0; unclassified unchanged at 0; both families identical"
+    },
+    "b85_sha256": "57eda09176baf444db268f5a0c09f23e5aa6993ec02159aa779d3ec9027d9142",
+    "sha256_at_b85c": "57eda09176baf444db268f5a0c09f23e5aa6993ec02159aa779d3ec9027d9142",
+    "unchanged_since_b85": true
+   },
+   {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/e7-b78-repin.json",
+    "sha256": "192ef6eb7d8f426f16baa1c1a06703201b9ecf1fbff9dd32241babd2bd89a5b3",
+    "bytes": 9873,
+    "schema": "openssl-rs/safe-c33/e7-repin/v1",
+    "candidate_tag": "b78",
+    "role": "historical: established at an earlier candidate, retained as history, not used as b85 evidence",
+    "historical_only": true,
+    "tool_sha256": null,
+    "element7": {
+     "before": {
+      "target_bounded": 4,
+      "contract_bounded": 149,
+      "unclassified": 0,
+      "decoder_method_object_class_present": false
+     },
+     "after": {
+      "target_bounded": 1,
+      "contract_bounded": 152,
+      "unclassified": 0,
+      "decoder_method_object_class_present": true,
+      "receipt": "court/freeze-b78/e7-b78-repaired.json"
+     },
+     "status": "FAIL",
+     "residual_site": "0x49a8dc"
+    },
+    "b85_sha256": "192ef6eb7d8f426f16baa1c1a06703201b9ecf1fbff9dd32241babd2bd89a5b3",
+    "sha256_at_b85c": "192ef6eb7d8f426f16baa1c1a06703201b9ecf1fbff9dd32241babd2bd89a5b3",
+    "unchanged_since_b85": true
+   },
+   {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/e7-b77-repin.json",
+    "sha256": "9d5ec7918b937d4648ab453a025c2ad07669739c2b02c5e1d3ef1cab00f993fc",
+    "bytes": 25383,
+    "schema": "openssl-rs/consumer-closure/e7-repin/v1",
+    "candidate_tag": "b77 (stage/p25/b75-ocsp)",
+    "role": "historical: established at an earlier candidate, retained as history, not used as b85 evidence",
+    "historical_only": true,
+    "tool_sha256": "facb2a97586493a8cf8fb6a073266046dfc1dd8138110f6c18c575b613e45426",
+    "b85_sha256": "9d5ec7918b937d4648ab453a025c2ad07669739c2b02c5e1d3ef1cab00f993fc",
+    "sha256_at_b85c": "9d5ec7918b937d4648ab453a025c2ad07669739c2b02c5e1d3ef1cab00f993fc",
+    "unchanged_since_b85": true
+   },
+   {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/e7-b76-repin.json",
+    "sha256": "0501344ed5387776664451904aff31020cf973224631b4471230a2f3c66ed30e",
+    "bytes": 32198,
+    "schema": "openssl-rs/campaign/safe-c33/e7-repin/v1",
+    "candidate_tag": "b76",
+    "role": "historical: established at an earlier candidate, retained as history, not used as b85 evidence",
+    "historical_only": true,
+    "tool_sha256": "2fcf9247008abf5057beeed5f5beb2819c962547bd93d923289fe0279c8ad431",
+    "b85_sha256": "0501344ed5387776664451904aff31020cf973224631b4471230a2f3c66ed30e",
+    "sha256_at_b85c": "0501344ed5387776664451904aff31020cf973224631b4471230a2f3c66ed30e",
+    "unchanged_since_b85": true
+   },
+   {
+    "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b76c-three-sites.json",
+    "sha256": "93fe18cd17fec82dd16d4a09405800593aa5adcb2ab3941250961297496cb28d",
+    "bytes": 12798,
+    "schema": "openssl-rs/campaign/safe-c33/per-call-site-witness/v1",
+    "candidate_tag": "2026-11-13",
+    "role": "historical: established at an earlier candidate, retained as history, not used as b85 evidence",
+    "historical_only": true,
+    "tool_sha256": null,
+    "element7": {
+     "before": {
+      "target_bounded_unresolved_sites": 3,
+      "contract_bounded_sites": 152,
+      "unclassified_reachable_sites": 0,
+      "resolved_sites": 51835,
+      "by_class": {
+       "ABI_CONTRACT_CORE_DISPATCH": 25,
+       "ABI_CONTRACT_PROVIDER": 15,
+       "ABI_CONTRACT_STORE_LOADER": 2
+      }
+     },
+     "after": {
+      "target_bounded_unresolved_sites": 0,
+      "contract_bounded_sites": 155,
+      "unclassified_reachable_sites": 0,
+      "resolved_sites": 51835,
+      "by_class": {
+       "ABI_CONTRACT_CORE_DISPATCH": 26,
+       "ABI_CONTRACT_PROVIDER": 16,
+       "ABI_CONTRACT_STORE_LOADER": 3
+      },
+      "status": "PASS (contract-bounded)",
+      "receipt": "court/freeze-b76/e7-b76c-after.json",
+      "tool_sha256": "74e3953b36233b1071b9b720e1a0551e866801fa41db5e31b5f878fdabd46161"
+     }
+    },
+    "b85_sha256": "93fe18cd17fec82dd16d4a09405800593aa5adcb2ab3941250961297496cb28d",
+    "sha256_at_b85c": "93fe18cd17fec82dd16d4a09405800593aa5adcb2ab3941250961297496cb28d",
+    "unchanged_since_b85": true
+   },
+   {
+    "path": "court/freeze-b80/e7probe-b80.json",
+    "sha256": "44e6e5b3637854a024fe7c59b6e8cd01a3ac900af56d15a7d76a17a1e3966245",
+    "bytes": 1146966,
+    "schema": null,
+    "candidate_tag": null,
+    "role": "a b80 element-7 measurement produced by the instrument itself (court-side, git-ignored)",
+    "historical_only": false,
+    "tool_sha256": null,
+    "b85_sha256": "44e6e5b3637854a024fe7c59b6e8cd01a3ac900af56d15a7d76a17a1e3966245",
+    "sha256_at_b85c": "44e6e5b3637854a024fe7c59b6e8cd01a3ac900af56d15a7d76a17a1e3966245",
+    "unchanged_since_b85": true
+   },
+   {
+    "path": "court/freeze-b80/e7probe-b80-after.json",
+    "sha256": "c32ee664ceb1c32d4cea92369affbce836ddc48334d8f09b173d8b0a5f4914ee",
+    "bytes": 1383316,
+    "schema": null,
+    "candidate_tag": null,
+    "role": "a b80 element-7 measurement produced by the instrument itself (court-side, git-ignored)",
+    "historical_only": false,
+    "tool_sha256": null,
+    "b85_sha256": "c32ee664ceb1c32d4cea92369affbce836ddc48334d8f09b173d8b0a5f4914ee",
+    "sha256_at_b85c": "c32ee664ceb1c32d4cea92369affbce836ddc48334d8f09b173d8b0a5f4914ee",
+    "unchanged_since_b85": true
+   },
+   {
+    "path": "court/freeze-b80/e7-b80-repin-after.json",
+    "sha256": "4163728cce7413f6b2f9b84226312406b8e652a14bacdcc8a54e867044aefe14",
+    "bytes": 1786118,
+    "schema": "openssl-rs/campaign/safe-c33/consumer-closure/v2",
+    "candidate_tag": null,
+    "role": "a b80 element-7 measurement produced by the instrument itself (court-side, git-ignored)",
+    "historical_only": false,
+    "tool_sha256": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66",
+    "precision_element_7": {
+     "established": true,
+     "status": "PASS (contract-bounded)",
+     "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract",
+     "reachable_unresolved_sites": 156,
+     "target_bounded_unresolved_sites": 0,
+     "contract_bounded_sites": 156,
+     "contract_bounded_by_class": {
+      "ABI_CONTRACT_CONF_DEFAULT_METHOD": 2,
+      "ABI_CONTRACT_CONF_MODULE": 2,
+      "ABI_CONTRACT_CORE_DISPATCH": 26,
+      "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+      "ABI_CONTRACT_EXPORT_CALLBACK": 68,
+      "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+      "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+      "ABI_CONTRACT_PBE_REGISTRY": 1,
+      "ABI_CONTRACT_PROVIDER": 16,
+      "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+      "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+      "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+      "ABI_CONTRACT_STORE_LOADER": 3
+     },
+     "unclassified_reachable_sites": 0,
+     "target_sets_remain_unbounded": true,
+     "why": "every reachable unresolved site is contract-bounded by a public OpenSSL ABI contract (section 7 criterion 2); no target-bounded unresolved site and no unclassified site remains"
+    },
+    "b85_sha256": "4163728cce7413f6b2f9b84226312406b8e652a14bacdcc8a54e867044aefe14",
+    "sha256_at_b85c": "4163728cce7413f6b2f9b84226312406b8e652a14bacdcc8a54e867044aefe14",
+    "unchanged_since_b85": true
+   },
+   {
+    "path": "court/freeze-b80/e7-b80-repin-sshd-after.json",
+    "sha256": "5ce3fa500e62ee1a20f5e345abd0966ff40c8da4fec7aa58299efc4d2f87646d",
+    "bytes": 1668421,
+    "schema": "openssl-rs/campaign/safe-c33/consumer-closure/v2",
+    "candidate_tag": null,
+    "role": "a b80 element-7 measurement produced by the instrument itself (court-side, git-ignored)",
+    "historical_only": false,
+    "tool_sha256": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66",
+    "precision_element_7": {
+     "established": true,
+     "status": "PASS (contract-bounded)",
+     "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract",
+     "reachable_unresolved_sites": 156,
+     "target_bounded_unresolved_sites": 0,
+     "contract_bounded_sites": 156,
+     "contract_bounded_by_class": {
+      "ABI_CONTRACT_CONF_DEFAULT_METHOD": 2,
+      "ABI_CONTRACT_CONF_MODULE": 2,
+      "ABI_CONTRACT_CORE_DISPATCH": 26,
+      "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+      "ABI_CONTRACT_EXPORT_CALLBACK": 68,
+      "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+      "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+      "ABI_CONTRACT_PBE_REGISTRY": 1,
+      "ABI_CONTRACT_PROVIDER": 16,
+      "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+      "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+      "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+      "ABI_CONTRACT_STORE_LOADER": 3
+     },
+     "unclassified_reachable_sites": 0,
+     "target_sets_remain_unbounded": true,
+     "why": "every reachable unresolved site is contract-bounded by a public OpenSSL ABI contract (section 7 criterion 2); no target-bounded unresolved site and no unclassified site remains"
+    },
+    "b85_sha256": "5ce3fa500e62ee1a20f5e345abd0966ff40c8da4fec7aa58299efc4d2f87646d",
+    "sha256_at_b85c": "5ce3fa500e62ee1a20f5e345abd0966ff40c8da4fec7aa58299efc4d2f87646d",
+    "unchanged_since_b85": true
+   }
+  ],
+  "measured_by_closures": {
+   "ssh": {
+    "status": "PASS (contract-bounded and closed target sets)",
+    "reachable_unresolved_sites": 152,
+    "target_bounded_unresolved_sites": 0,
+    "contract_bounded_sites": 116,
+    "closed_target_set_sites": 36,
+    "closed_target_set_by_class": {
+     "CLOSED_TARGET_SET_DECODER_METHOD_OBJECT": 3,
+     "CLOSED_TARGET_SET_LEGACY_EVP_CIPHER_DATA": 2,
+     "CLOSED_TARGET_SET_PROVIDER_HW_TABLE": 25,
+     "CLOSED_TARGET_SET_SLH_METHOD_TABLE": 6
+    },
+    "has_closed_target_sets": true,
+    "unclassified_reachable_sites": 0,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_CORE_DISPATCH": 26,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 16,
+     "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    },
+    "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract; a closed target set additionally enumerates every in-image target",
+    "target_sets_remain_unbounded": true
+   },
+   "sshd": {
+    "status": "PASS (contract-bounded and closed target sets)",
+    "reachable_unresolved_sites": 152,
+    "target_bounded_unresolved_sites": 0,
+    "contract_bounded_sites": 116,
+    "closed_target_set_sites": 36,
+    "closed_target_set_by_class": {
+     "CLOSED_TARGET_SET_DECODER_METHOD_OBJECT": 3,
+     "CLOSED_TARGET_SET_LEGACY_EVP_CIPHER_DATA": 2,
+     "CLOSED_TARGET_SET_PROVIDER_HW_TABLE": 25,
+     "CLOSED_TARGET_SET_SLH_METHOD_TABLE": 6
+    },
+    "has_closed_target_sets": true,
+    "unclassified_reachable_sites": 0,
+    "contract_bounded_by_class": {
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_CORE_DISPATCH": 26,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+     "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 16,
+     "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    },
+    "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract; a closed target set additionally enumerates every in-image target",
+    "target_sets_remain_unbounded": true
+   }
+  },
+  "measurement_identical_to_b85": true,
+  "repin_receipt": {
+   "scope": "prior generation (b80). No e7 repin was run at b85; the b85 closures measured element 7 PASS directly, and the b85 e7-ssh/e7-sshd probe records are carried as measurements from this batch.",
+   "b85_status": "NOT_RUN (closure-measured PASS)",
+   "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/e7-b80-repin.json",
+   "sha256": "57eda09176baf444db268f5a0c09f23e5aa6993ec02159aa779d3ec9027d9142",
+   "bytes": 22713,
+   "before": {
+    "status": "FAIL",
+    "target_bounded_unresolved_sites": 2,
+    "contract_bounded_sites": 151,
+    "unclassified_reachable_sites": 0,
+    "reachable_unresolved_sites": 153,
+    "target_bounded_sites": [
+     "CONF_free 0x2dd4c6",
+     "CONF_load 0x2dd6eb"
+    ],
+    "by_class": {
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_CORE_DISPATCH": 26,
+     "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 68,
+     "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+     "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 16,
+     "ABI_CONTRACT_PROVIDER_HW_TABLE": 22,
+     "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+     "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    },
+    "evidence": [
+     "evidence/closure-ssh-b80.json",
+     "evidence/closure-sshd-b80.json"
+    ]
+   },
+   "after": {
+    "status": "PASS (contract-bounded)",
+    "target_bounded_unresolved_sites": 0,
+    "contract_bounded_sites": 156,
+    "unclassified_reachable_sites": 0,
+    "reachable_unresolved_sites": 156,
+    "by_class": {
+     "ABI_CONTRACT_CONF_DEFAULT_METHOD": 2,
+     "ABI_CONTRACT_CONF_MODULE": 2,
+     "ABI_CONTRACT_CORE_DISPATCH": 26,
+     "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+     "ABI_CONTRACT_EXPORT_CALLBACK": 68,
+     "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+     "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+     "ABI_CONTRACT_PBE_REGISTRY": 1,
+     "ABI_CONTRACT_PROVIDER": 16,
+     "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+     "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+     "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+     "ABI_CONTRACT_STORE_LOADER": 3
+    },
+    "ssh_receipt": {
+     "path": "court/freeze-b80/e7-b80-repin-after.json",
+     "sha256": "4163728cce7413f6b2f9b84226312406b8e652a14bacdcc8a54e867044aefe14"
+    },
+    "sshd_receipt": {
+     "path": "court/freeze-b80/e7-b80-repin-sshd-after.json",
+     "sha256": "5ce3fa500e62ee1a20f5e345abd0966ff40c8da4fec7aa58299efc4d2f87646d"
+    },
+    "tool_sha256": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66"
+   },
+   "self_test_note": {
+    "note": "the tool self-test is FAILED at b80 both before and after this change; the change removes the conf-method failures and leaves two image-property failures",
+    "baseline_pristine_tool": {
+     "log": "court/freeze-b80/selftest-b80-baseline.log",
+     "sha256": "1baa79c3d01c6201ac282bd5783c9b4e348143354024f14599ff8fd32979e410",
+     "failures": 11,
+     "breakdown": "9 conf-method failures caused by the stale `pub extern \"C\"` source check, `e7repin-search disabled: a stale row exists in this image: got False`, `e7core default-context control DID NOT RUN`"
+    },
+    "after_this_change": {
+     "log": "court/freeze-b80/selftest-b80-repin.log",
+     "sha256": "7648da5d6d4fd8849edbc741bc51dfdb0c2569d6d566f300f7fd3264e1925c1a",
+     "failures": 2,
+     "breakdown": "the same two image-property failures: at b80 no PBE_EX row is stale (the fixture the search-off control needs is absent) and no admitted site records an inlined default-context accessor (reported NOT_RUN). Neither is caused by this change.",
+     "conf_method_controls": "0 failures (all four rows accepted, 7 refusal/restore controls pass)"
+    }
+   },
+   "source_identity": {
+    "branch": "stage/p25/b75-ocsp",
+    "head": "d4a3fe735",
+    "source_candidate_S": "d9fdf1357",
+    "install_prefix": "artifacts/phase2/install",
+    "libcrypto_so_3_sha256": "60c1111250684556012dac7436c4aea3115b8697e7845c81c5ffb7fbf4c112f2",
+    "consumers": {
+     "ssh": {
+      "path": "court/tmp/openssh-closure/client-b80/openssh-9.9p1/ssh",
+      "sha256": "f8f454782e6a793a624687755a779ad4b6cb9bbb8693f35f2a1f5f9d16234607"
+     },
+     "sshd": {
+      "path": "court/tmp/openssh-closure/server-b80/openssh-9.9p1/sshd",
+      "sha256": "152ccc3465240454b5ec0cd470dfa81dc7eb044c01c9bbe72519a65a71919b92"
+     }
+    },
+    "tool": {
+     "path": "forensics/tools/consumer_closure.py",
+     "sha256_before": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8",
+     "sha256_after": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66"
+    }
+   },
+   "sha256_at_b85c": "57eda09176baf444db268f5a0c09f23e5aa6993ec02159aa779d3ec9027d9142",
+   "note": "prior generation (b80). No e7 repin was run at b85 or b85c; both b85c closures measured element 7 PASS directly with the repaired instrument."
+  },
+  "target_set_classification_vs_b82b": {
+   "rule": "predicate_element_7 site totals and classes compared between evidence/closure-ssh-b82b.json (instrument 0ca2f9e4) and evidence/closure-ssh-b85c.json (instrument 3e86a74d); [b82b, b85c]",
+   "prior": {
+    "reachable_unresolved_sites": 152,
+    "contract_bounded_sites": 152,
+    "target_bounded_unresolved_sites": 0,
+    "unclassified_reachable_sites": 0,
+    "closed_target_set_sites": null,
+    "tool_sha256": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66"
+   },
+   "now": {
+    "reachable_unresolved_sites": 152,
+    "contract_bounded_sites": 116,
+    "closed_target_set_sites": 36,
+    "target_bounded_unresolved_sites": 0,
+    "unclassified_reachable_sites": 0
+   },
+   "class_changes": {
+    "ABI_CONTRACT_DECODER_METHOD_OBJECT": [
+     3,
+     0
+    ],
+    "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": [
+     2,
+     0
+    ],
+    "ABI_CONTRACT_PROVIDER_HW_TABLE": [
+     25,
+     0
+    ],
+    "ABI_CONTRACT_SLH_METHOD_TABLE": [
+     6,
+     0
+    ]
+   },
+   "reclassified_as_closed_target_sets": {
+    "CLOSED_TARGET_SET_DECODER_METHOD_OBJECT": {
+     "from_class": "ABI_CONTRACT_DECODER_METHOD_OBJECT",
+     "count": 3,
+     "prior_count_in_that_class": 3
+    },
+    "CLOSED_TARGET_SET_LEGACY_EVP_CIPHER_DATA": {
+     "from_class": "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA",
+     "count": 2,
+     "prior_count_in_that_class": 2
+    },
+    "CLOSED_TARGET_SET_PROVIDER_HW_TABLE": {
+     "from_class": "ABI_CONTRACT_PROVIDER_HW_TABLE",
+     "count": 25,
+     "prior_count_in_that_class": 25
+    },
+    "CLOSED_TARGET_SET_SLH_METHOD_TABLE": {
+     "from_class": "ABI_CONTRACT_SLH_METHOD_TABLE",
+     "count": 6,
+     "prior_count_in_that_class": 6
+    }
+   },
+   "reclassified_total": 36,
+   "statement": "the reachable unresolved site set is identical (152) and still has 0 target-bounded and 0 unclassified sites; the only change against b82b remains the instrument's classification (36 sites filed as closed enumerated in-image target sets, 116 under external ABI contracts). Element 7 is PASS for both families under the repaired instrument."
+  },
+  "statement": "every remaining target set is bounded: 116 sites by a declared external ABI contract (AGENTS.md section 7 criterion 2) and 36 by a closed, enumerated in-image target set. None is counted as target-bounded, and no site is unclassified. The b85c closures measure element 7 PASS directly; no e7 repin was re-run."
+ },
+ "reviews": {
+  "evp_final": {
+   "path": "evidence/b79-review-evp-final.json",
+   "sha256": "17495434573f74dc2daac659d2d4d8610bd2509377f3628b9c6bb3351bbe01e4",
+   "bytes": 546741,
+   "kind": "independent source-level review (no compilation)",
+   "source_head": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+   "source_identity": null,
+   "tally": {
+    "reviewed_this_pass": 93,
+    "accept": 93,
+    "reject": 0,
+    "carried_prior_accept": 23,
+    "evp_total_accounted": 116,
+    "closure_rows_without_record": 0,
+    "remaining_by_mechanism": {
+     "RAND_CMS_STORE_KEYFMT": 27,
+     "RUNTIME_CONCURRENCY": 4,
+     "C_ABI_CONTRACT": 5,
+     "BIO": 2,
+     "SSL_SESSION": 14
+    },
+    "remaining_across_mechanisms_after_this_pass": {
+     "RAND_CMS_STORE_KEYFMT": 27,
+     "RUNTIME_CONCURRENCY": 4,
+     "X509_VERIFY_POLICY": 0,
+     "EVP_PKEY_PROVIDER": 0,
+     "C_ABI_CONTRACT": 5,
+     "BIO": 2,
+     "SSL_SESSION": 14
+    },
+    "remaining_total": 52,
+    "mechanisms_fully_reviewed": [
+     "EVP_PKEY_PROVIDER",
+     "X509_VERIFY_POLICY"
+    ]
+   },
+   "rows": null,
+   "controls": null,
+   "residuals": [
+    {
+     "id": "R-1",
+     "what": "`OsslDispatch.function` is `*mut c_void`; the id->signature pairing is an invariant on the unsafe reader `entry_function` and on module-private statics. No safe-Rust caller can publish a table (publication is unsafe), so this is not a safe-API UB hole, but a mismatched private static would be a safe expression.",
+     "class": "retained (convention, not type)",
+     "hardening": "a typed per-id slot (e.g. `OsslDispatch::update(f)` constructors) or `unsafe fn OsslDispatch::new` would make the pairing unrepresentable"
+    },
+    {
+     "id": "R-2",
+     "what": "The SLH-DSA tables' pointer arguments are bare `*mut u8` into a live `SlhAdrs` local; extent is stated per slot and the table pairing is fixed in `slh_dsa_key_hash_init`, but the blob type does not appear in the slot signature.",
+     "class": "retained (module-internal invariant)",
+     "hardening": "an `&mut SlhAdrs` slot type would remove the raw-pointer obligation"
+    },
+    {
+     "id": "R-3",
+     "what": "Legacy EVP_MD callbacks accept a foreign method with `ctx_size >= size_of::<Ctx>()` and trust the caller's declared type; extent is established, type identity is a caller contract (stated in each `# Safety`).",
+     "class": "retained (documented C ABI contract)",
+     "hardening": "none available in-crate: the C caller owns the method object"
+    }
+   ],
+   "does_not_prove": [
+    "No compilation, test, Miri, sanitizer or timing evidence: this is a source-level contract review only.",
+    "It does not establish the OSSL_OP_SIGNATURE, OSSL_OP_KEM, OSSL_OP_KEYMGMT or OSSL_OP_ENCODER/DECODER *dispatch-table* surfaces: none of these 116 rows is such a callback, so the mechanism's name does not imply coverage of them.",
+    "It does not establish the `EVP_PKEY_CTX` operation tables or the digest-reference release paths (`EVP_MD_free(fetched_digest)` in EVP_MD_CTX_reset/cleanup_old_md_data); those were read as context but are not obligations of this closure.",
+    "Carrying 23 b76 ACCEPTs proves the reviewed *text* is unchanged, not that the earlier review was correct; their contracts and callers were spot-checked, not re-derived.",
+    "The span hash covers the definition's code and attributes but NOT its `///` documentation (the closure's own `claim_scope`). A carried ACCEPT therefore proves the body is the reviewed body, not that the contract wording is unchanged; contract *presence* at S is checked (C4), contract wording is not re-diffed.",
+    "The b76 REJECT remediation is established at named caller guards; it does not prove that no *other* unguarded path reaches these callbacks (e.g. through a future provider consumer), only that the paths present at S are guarded.",
+    "Extern C callers of the exported `EVP_MD_meth_get_update/final/ctrl` pointers are assumed to honour the documented extents; a hostile C caller is outside the soundness claim (\u00a721.1).",
+    "No claim is made about compatibility, cryptographic correctness or constant-time behaviour of these callbacks.",
+    "The `src_content_sha256` re-derivation uses the same rule as the freeze tool; it is self-consistent evidence, not an independent instrument."
+   ],
+   "b85_sha256": "17495434573f74dc2daac659d2d4d8610bd2509377f3628b9c6bb3351bbe01e4",
+   "sha256_at_b85c": "17495434573f74dc2daac659d2d4d8610bd2509377f3628b9c6bb3351bbe01e4",
+   "unchanged_since_b85": true
+  },
+  "x509_final": {
+   "path": "evidence/b79-review-x509-final.json",
+   "sha256": "01bd0efa7eb1b863602a889643ae99af8490790c99de4827829e04b96ef76805",
+   "bytes": 292165,
+   "kind": "independent source-level review (no compilation)",
+   "source_head": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+   "source_identity": null,
+   "tally": {
+    "prior_batches": {
+     "batch1": {
+      "reviewed": 20,
+      "ACCEPT": 18,
+      "REJECT_stale_kind": 2
+     },
+     "batch2": {
+      "reviewed": 25,
+      "ACCEPT": 25
+     },
+     "batch3": {
+      "reviewed": 25,
+      "ACCEPT": 25
+     },
+     "reviewed": 70,
+     "ACCEPT": 68,
+     "REJECT_stale_kind": 2
+    },
+    "this_pass": {
+     "reviewed": 71,
+     "ACCEPT": 47,
+     "REJECT_stale_kind": 24,
+     "current_cohort_remaining_ACCEPT": 47,
+     "orphan_stale_kind_REJECT": 24
+    },
+    "cumulative_x509": {
+     "distinct_obligations_ever_queued_at_S": 146,
+     "closure_total_at_S": 122,
+     "closure_outside_openssh_v1l": 117,
+     "reviewed_at_b79": 141,
+     "ACCEPT": 115,
+     "REJECT_stale_kind": 26,
+     "reviewed_at_b78_openssh_v1l": 5,
+     "closure_122_partition": {
+      "ACCEPT": 115,
+      "REJECT_stale_kind": 2,
+      "b78_openssh_v1l": 5
+     },
+     "orphan_24_partition": {
+      "REJECT_stale_kind": 24
+     },
+     "reconciliation": "146 = 115 ACCEPT + 26 REJECT(stale kind) + 5 b78-reviewed; 122 closure = 117 outside-openssh-v1l (115 ACCEPT + 2 stale) + 5 openssh-v1l; 24 orphans present in source but outside the current upper bound."
+    },
+    "remaining_other_mechanisms": {
+     "EVP_PKEY_PROVIDER": 116,
+     "RAND_CMS_STORE_KEYFMT": 27,
+     "SSL_SESSION": 14,
+     "C_ABI_CONTRACT": 5,
+     "RUNTIME_CONCURRENCY": 4,
+     "BIO": 2,
+     "total": 168
+    },
+    "count_discrepancy": "The brief's '142 total / 72 remaining' is not reproducible from the accepted closure at S: the closure has 122 X509 obligations, 117 outside the 5 openssh-v1l rows, 70 reviewed by batches 1-3, so 47 remain. The nearest defensible totals are 122 (closure) / 146 (union of the current closure and the older accepted queue). This pass reviewed 71 = 47 + 24 orphan definitions, not 72."
+   },
+   "rows": null,
+   "controls": null,
+   "residuals": [
+    "47 current-cohort rows remain unreviewed by any independent reader at b78-b79 only if the 24 orphans are excluded; as recorded above, this pass reviewed 71 (47 + 24).",
+    "The two batch-1 stale-kind rows (`i2s_poison`, `s2i_poison`) and all 24 orphan rows need re-admission as `EXTERN_C_FN_DEF` in the queue; this review records the disposition and changes no tracked file.",
+    "F1 is a contract/guard finding for an exported function; it does not invalidate the registered dispatcher path.",
+    "The 5 openssh-v1l X509 rows were reviewed at b78, not re-read here.",
+    "No closure, build, test, clippy, fmt, sanitizer, Miri or timing instrument was run at S."
+   ],
+   "does_not_prove": [
+    "Source-level only: no compilation, no runtime probe, no test execution, no sanitizer, no Miri/ASan/Loom, no dudect/Wycheproof.",
+    "No obligation is discharged; these are review verdicts, not `SAFETY_DISCHARGED` or `SAFE_COMPATIBLE` claims.",
+    "The b79c caller-closure claim is not re-established at S; callers were read, not re-closed.",
+    "The span hash does not cover dispatchers, shared guards, macro headers/invocations or caller closures.",
+    "Only the 71 named spans and the specific caller/type facts cited were reviewed; the rest of each file is out of scope.",
+    "No authority differential and no compatibility court; no claim about OpenSSL behavioural parity.",
+    "The 24 REJECTs do not prove the sites unsafe; they prove their recorded stable identity is not the current coordinate."
+   ],
+   "b85_sha256": "01bd0efa7eb1b863602a889643ae99af8490790c99de4827829e04b96ef76805",
+   "sha256_at_b85c": "01bd0efa7eb1b863602a889643ae99af8490790c99de4827829e04b96ef76805",
+   "unchanged_since_b85": true
+  },
+  "rest_final": {
+   "path": "evidence/b79-review-rest-final.json",
+   "sha256": "e6d40974e0c8cc3640a1c999da109f05174d510c7fd9fe078d08cbd4cd125f7c",
+   "bytes": 205877,
+   "kind": "independent-review/receipt",
+   "source_head": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+   "source_identity": null,
+   "tally": {
+    "reviewed": 52,
+    "by_mechanism": {
+     "BIO": {
+      "reviewed": 2,
+      "ACCEPT": 2,
+      "REJECT": 0,
+      "NOT_ESTABLISHED": 0
+     },
+     "C_ABI_CONTRACT": {
+      "reviewed": 5,
+      "ACCEPT": 5,
+      "REJECT": 0,
+      "NOT_ESTABLISHED": 0
+     },
+     "RAND_CMS_STORE_KEYFMT": {
+      "reviewed": 27,
+      "ACCEPT": 23,
+      "REJECT": 4,
+      "NOT_ESTABLISHED": 0
+     },
+     "RUNTIME_CONCURRENCY": {
+      "reviewed": 4,
+      "ACCEPT": 2,
+      "REJECT": 0,
+      "NOT_ESTABLISHED": 2
+     },
+     "SSL_SESSION": {
+      "reviewed": 14,
+      "ACCEPT": 14,
+      "REJECT": 0,
+      "NOT_ESTABLISHED": 0
+     }
+    },
+    "verdicts": {
+     "ACCEPT": 46,
+     "REJECT": 4,
+     "NOT_ESTABLISHED": 2
+    }
+   },
+   "rows": null,
+   "controls": null,
+   "residuals": [
+    "3 contract-placement rejects (F-REST-2) and 1 latent hidden-obligation reject (F-REST-1) remain; they are mechanical/no-reachability repairs, but they are not discharged by this review.",
+    "RUNTIME_CONCURRENCY: two free_lock rows and the mechanism verdict are NOT_ESTABLISHED (instrument required: ThreadSanitizer); no TSan/Loom run exists.",
+    "SSL_SESSION: the external-serialisation obligation is classified as a documented C-ABI obligation but remains retained and un-discharged.",
+    "C_ABI_CONTRACT and BIO remain UNSAFE_OPEN mechanism-wide; the repairs closed the site defects, not the classification.",
+    "Evidence residuals: F-EVID-1 (stale B56 row for engine_list_cleanup), F-EVID-2 (v1l F09 repaired in source; the bound receipt still rejects the site) and F-REST-3 (stale line citations in dynamic_data_ctx_free_func).",
+    "No compilation, Miri, ASan, TSan or Loom ran in this venue; every runtime claim is NOT_RUN."
+   ],
+   "does_not_prove": [
+    "That any of these operations is free of UB: these are source-level contract reviews with firing structural controls, not an executable proof.",
+    "That no safe-Rust caller can reach these operations *through a future edit*: the safe-surface check (C7) is bound to the exact S text.",
+    "That the closure's DISCHARGED status is correct: the closure binds receipts, and at least F-EVID-1/F-EVID-2 show bound receipts whose reasoning is stale; this review establishes the sites from the current span instead.",
+    "That RUNTIME_CONCURRENCY is safe: NOT_ESTABLISHED; TSan/Loom are required.",
+    "That the SSL_SESSION external-serialisation obligation is discharged: it is classified, not discharged.",
+    "That the mechanisms' UNSAFE_OPEN state should be flipped: it is a mechanism-wide campaign action.",
+    "That SAFE_COMPATIBLE is established: \u00a77 dependency closure, L4/L7 identity and the SEAL/BOUNDARY evidence are outside this review.",
+    "That the miri/ASan/sanitizer axes were exercised: they were NOT_RUN."
+   ],
+   "b85_sha256": "e6d40974e0c8cc3640a1c999da109f05174d510c7fd9fe078d08cbd4cd125f7c",
+   "sha256_at_b85c": "e6d40974e0c8cc3640a1c999da109f05174d510c7fd9fe078d08cbd4cd125f7c",
+   "unchanged_since_b85": true
+  },
+  "reconversion": {
+   "path": "evidence/b79-reconversion-review.json",
+   "sha256": "c9169d1063c5b1d86dc20853470a1559b0367ebd3313e88cada4b0d427523737",
+   "bytes": 35939,
+   "kind": "independent source-level review of the safe->unsafe reconversion commits (no compile, no runtime, no discharge)",
+   "source_head": "97a1240e7",
+   "source_identity": {
+    "branch": "stage/p25/b75-ocsp",
+    "requested_head": "97a1240e7",
+    "actual_head": "9be31d4beb1faf955e72fb55b1cc8a3e33ff3f4c",
+    "head_ahead_by": 1,
+    "head_extra_commit": {
+     "sha": "9be31d4be",
+     "subject": "venue: refuse the b79 rebuild rather than run unprotected",
+     "src_files_touched": 0,
+     "files": [
+      "evidence/b79-venue-refusal.json"
+     ],
+     "effect": "source identity of the review equals 97a1240e7; the reviewed code is unchanged"
+    },
+    "reviewed_commits": [
+     "688c27cb8",
+     "97a1240e7"
+    ],
+    "pre_conversion_base": "50aaeb6f9"
+   },
+   "tally": null,
+   "rows": null,
+   "controls": null,
+   "residuals": null,
+   "does_not_prove": [
+    "Does not prove the crate compiles: no rustc/cargo invocation was permitted at this venue state.",
+    "Does not prove the 12 qualifier-control tests pass or fail: their behaviour is inferred from their source text. The D1 vacuity argument is textual (include_str! includes the test module) and should be confirmed by the rebuild with one negative control (temporarily strip a qualifier and confirm the test fails).",
+    "The D2 language-rule claim (safe fn pointer coerces to unsafe fn pointer) is asserted from the Rust coercion/subtyping rules, not measured here; the repo's own comp.rs comment agrees with it.",
+    "Does not prove any behaviour, memory-safety property or cryptographic property at runtime: no build, no test, no sanitizer, no Miri, no dudect.",
+    "Does not discharge any obligation and does not change any graduation state: this artefact is review evidence only (no SAFETY_DISCHARGED, no SAFE_COMPATIBLE).",
+    "Does not review the remaining contract-edit hunks in the two commits (the 57 edits: callback-type annotations, added unsafe blocks, comment rewrites) beyond confirming they do not alter exported symbols, #[repr] attributes or calling conventions.",
+    "Does not audit call sites in files outside the crate (consumers ssh/sshd) - the closure runs that would do that were refused.",
+    "Does not verify the authority differential for any of these functions."
+   ],
+   "b85_sha256": "c9169d1063c5b1d86dc20853470a1559b0367ebd3313e88cada4b0d427523737",
+   "sha256_at_b85c": "c9169d1063c5b1d86dc20853470a1559b0367ebd3313e88cada4b0d427523737",
+   "unchanged_since_b85": true
+  },
+  "b85_rebind": {
+   "path": "evidence/b85-review-rebind.json",
+   "sha256": "1f21c31895c1d18ba4ca6cb6a1a45b5cefe54f7231c23dceb7446a54119aa7fb",
+   "bytes": 34117,
+   "kind": "independent-review-and-receipt-rebind",
+   "source_head": "5edca576b569b4a7bd6acfb09b77938ee555c147",
+   "source_identity": null,
+   "tally": null,
+   "rows": null,
+   "controls": [
+    "the three drift rows are resolved at both candidates with the same tool; the equality is the drift control (a source change would differ)",
+    "the 33 rows that still match their recorded hash are the negative control: a tool-wide hash-rule change would move them too",
+    "no row is accepted into a closure by this receipt; the closures' own bindings and count verdict are unchanged"
+   ],
+   "residuals": null,
+   "does_not_prove": [
+    "does not re-run either closure (item 8 does that after this rebind)",
+    "does not establish SAFE_COMPATIBLE (verdict safe_compatible=false)",
+    "does not re-adjudicate any review's safety argument",
+    "does not claim the atlas row measured the closure binaries"
+   ],
+   "b85_sha256": "1f21c31895c1d18ba4ca6cb6a1a45b5cefe54f7231c23dceb7446a54119aa7fb",
+   "sha256_at_b85c": "1f21c31895c1d18ba4ca6cb6a1a45b5cefe54f7231c23dceb7446a54119aa7fb",
+   "unchanged_since_b85": true
+  },
+  "drifted_18": {
+   "path": "evidence/b80-review-drifted.json",
+   "sha256": "c0850ad86f959f0f46cc3f29b3321cb71cf36f071c1af606d41a1891a2ae7cb9",
+   "bytes": 56822,
+   "kind": "independent re-establishment of the 18 drifted criterion-3 rows",
+   "source_head": null,
+   "source_identity": null,
+   "tally": {
+    "rows": 18,
+    "ACCEPT": 18,
+    "REJECT": 0,
+    "span_identical": 18,
+    "coordinate_shift_only": 4,
+    "callee_side_guard_added": 2,
+    "none_in_row": 11,
+    "doc_only_contract_added": 1,
+    "with_retained_obligations": 6,
+    "by_mechanism": {
+     "X509_VERIFY_POLICY": 9,
+     "RAND_CMS_STORE_KEYFMT": 9
+    }
+   },
+   "rows": 18,
+   "controls": [
+    {
+     "id": "C-x509-at-S",
+     "path": "court/freeze-b80/review7/ctrl_x509_at_S.py",
+     "derivation": "verbatim copy of court/freeze-b79/review4/ctrl_x509_final.py with S re-bound to d9fdf1357 and OUT redirected into review7",
+     "result": "overall PASS; identity_ok 46, orphan_stale_kind 24, failed_checks []; all 15 canaries fired",
+     "covers": [
+      "C5-v2i-values",
+      "C9-helper-chain (chain:san_i2v, chain:san_v2i, chain:san_v2i_issuer)",
+      "C12-span-hash",
+      "C13-table-bound",
+      "C14-abi-export"
+     ]
+    },
+    {
+     "id": "C-rest-at-S",
+     "path": "court/freeze-b80/review7/ctrl_rest_at_S.py",
+     "derivation": "copy of court/freeze-b79/review6/ctrl_rest.py, S re-bound, recon regenerated at S, two canaries repaired, one check added",
+     "result": "13 checks, 11 pass; failing at S: C1_identity (only the 3 rows b80-rebind repaired) and C3a_contract_present (a scan artefact, see findings); 12/12 canaries fired",
+     "repairs": [
+      "K4 was bound to a hardcoded line 1358 and had stopped firing once S added 16 lines above it; it now locates the slot by identity",
+      "K11b mutated nothing the check read and its b79 'fired: true' was contamination from C11 already failing by design; it now deletes the guard C11 actually tests, and C11 reads the override-aware bytes",
+      "C3a2 was added: C3a's upward scan stops at `))]` and so cannot see a `# Safety` that sits above a multi-line attribute"
+     ],
+     "covers": [
+      "C2-definition-shape",
+      "C3a2-contract-present",
+      "C4-callback-item-pairing",
+      "C11-recipient-info-reachability (+ its repaired canary)"
+     ]
+    },
+    {
+     "id": "M-guards",
+     "path": "court/freeze-b80/review7/mutant (private copy of src/ + Cargo.toml/lock + build.rs, guards deleted)",
+     "result": "F1 test -> SIGSEGV (signal 11); F-REST-1 test -> SIGABRT (signal 6, non-unwinding panic) on the S control build both pass",
+     "meaning": "both guards S introduced are load-bearing and both in-file controls detect their absence"
+    }
+   ],
+   "residuals": [
+    {
+     "id": "R1",
+     "state": "NOT_RUN",
+     "statement": "no Miri (Stacked/Tree Borrows), ASan or loom run covers these rows at S; the identity and contract evidence here is static plus the two in-file behavioural controls"
+    },
+    {
+     "id": "R2",
+     "state": "NOT_RUN",
+     "statement": "no consumer replay or closure regeneration was run in this review; the accepted b80b closures are used as given"
+    },
+    {
+     "id": "R3",
+     "state": "NOT_RUN",
+     "statement": "the mutation canaries cover only the two guards S added; no mutation was run against the 16 rows whose bodies are unchanged (their delta is nil, so there is nothing to mutate)"
+    }
+   ],
+   "does_not_prove": [
+    "that these 18 rows are SAFETY_DISCHARGED (\u00a77 is a mechanism-and-closure state; this is a row review)",
+    "that no other row in the six drifted files drifted: the population is the argument's 22-row set, not a fresh closure enumeration",
+    "that the two guarded defects are absent everywhere else in the crate: only the two functions S touched were mutated",
+    "anything about runtime behaviour beyond the two in-file tests and the probe runs named above (no sanitizer, no Miri, no consumer differential)",
+    "that the retained contract obligations on san_v2i, san_v2i_issuer, v2i_subject_alt, v2i_issuer_alt and ossl_rand_ctx_free are harmless in every consumer: they are recorded, not discharged",
+    "constant-time, cryptographic or protocol properties: nothing here measures them"
+   ],
+   "b85_sha256": "c0850ad86f959f0f46cc3f29b3321cb71cf36f071c1af606d41a1891a2ae7cb9",
+   "sha256_at_b85c": "c0850ad86f959f0f46cc3f29b3321cb71cf36f071c1af606d41a1891a2ae7cb9",
+   "unchanged_since_b85": true
+  },
+  "tsan_lock": {
+   "path": "evidence/b80-tsan-freelock.json",
+   "sha256": "1081414f2ef6b73800a79fb81b9a0d5f84459f3c9bacfedc9b3c1403ffdddad8",
+   "bytes": 11718,
+   "kind": "ThreadSanitizer run for the two runtime/thread.rs free_lock rows",
+   "source_head": null,
+   "source_identity": null,
+   "tally": null,
+   "rows": null,
+   "controls": null,
+   "residuals": [
+    {
+     "id": "R1",
+     "state": "RETAINED",
+     "statement": "no test performs the shape the precondition forbids (a free while another thread still uses the lock), so the clean TSan result cannot establish that precondition; it establishes that every executed release path is race- and UAF-free"
+    },
+    {
+     "id": "R2",
+     "state": "RETAINED",
+     "statement": "only the linux/x86_64/gnu/64-bit definition is compiled and executed; the `Box` alternative (off the measured profile) is not compiled in this build, so TSan says nothing about it"
+    },
+    {
+     "id": "R3",
+     "state": "RETAINED",
+     "statement": "a clean TSan run bounds the executed schedules only; a race not observed is not a race absent"
+    },
+    {
+     "id": "R4",
+     "state": "NOT_RUN",
+     "statement": "no Miri (Stacked/Tree Borrows) or ASan/LSan run covers the release side; no loom model covers the lock"
+    },
+    {
+     "id": "R5",
+     "state": "NOT_RUN",
+     "statement": "the full library suite was not run under TSan (2378 tests); the surface chosen is the concurrency-bearing one (thread, refcount, rcu, store refcount)"
+    },
+    {
+     "id": "R6",
+     "state": "RETAINED",
+     "statement": "the ledger records this one operation as two obligations (same stable id, two cfg-exclusive definitions)"
+    }
+   ],
+   "does_not_prove": [
+    "that the two free_lock rows are \u00a77 SAFETY_DISCHARGED: the caller's exclusive-ownership obligation is a contract obligation, and TSan cannot establish it",
+    "that the crate is race-free: only the listed filters ran, on the two recorded schedules",
+    "that `CRYPTO_THREAD_lock_free` is never called concurrently with a user by any consumer (ssh/sshd/curl): that is a caller audit, not an instrument result",
+    "anything about the off-profile `Box` definition, memory ordering at the intrinsics level, or cryptographic/timing properties",
+    "that the third-party TSan runtime itself is bug-free; the two canaries only show it fires on the two classes tested"
+   ],
+   "b85_sha256": "1081414f2ef6b73800a79fb81b9a0d5f84459f3c9bacfedc9b3c1403ffdddad8",
+   "sha256_at_b85c": "1081414f2ef6b73800a79fb81b9a0d5f84459f3c9bacfedc9b3c1403ffdddad8",
+   "unchanged_since_b85": true
+  }
+ },
+ "ledger_binding": {
+  "source": "forensics/downstream/build-link-atlas.json",
+  "atlas_sha256": "400aaf6a41919f7d4d0014940ec903fe9d30d4e3965b00efd820614ff1ffbbca",
+  "atlas_bytes": 5520638,
+  "body_hash": "73fc116bf66bac321c295ade848438586c991d115b2f9f382aad545016767ebf",
+  "body_hash_rule": "sha256 of canonical JSON of body (atlas_common.content_hash)",
+  "body_hash_reproduces": true,
+  "lookup": "body.runs[run_id='run:build-link:candidate:openssh']",
+  "run_id": "run:build-link:candidate:openssh",
+  "recipe_id": "recipe:openssh:9.9p1",
+  "recorded_artifact_rel": "ssh",
+  "recorded_artifact_sha256": "45da459f72fafb25fb49d6d50406354d4baa54f2f18510ae9a560314a499b63a",
+  "recorded_candidate_install_libcrypto_sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+  "recorded_install_matches_freeze_install": true,
+  "freeze_proven_ssh_sha256": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b",
+  "freeze_proven_sshd_sha256": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1",
+  "freeze_proven_sshd_session_sha256": "d8e249c10bb08efa7f923d1bde0cf7b6354439517367b4c7e4a491ea6474acb5",
+  "ssh_receipt_artifact_sha256": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b",
+  "sshd_receipt_artifact_sha256": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1",
+  "artifact_matches_this_build_reported_by_receipts": {
+   "ssh": false,
+   "sshd": false
+  },
+  "artifact_matches_this_build": false,
+  "artifact_matches_this_build_statement": "artifact_matches_this_build is false because the atlas rows build in their own extracted roots with their own compiled-in prefix: the recipe flags are the closure's (a full `make`, the candidate lib on the run path, the same configure flags) but the configure argv spells a different root, [\"configure\", \"--prefix={scratch}/openssh/candidate/src/openssh-9.9p1/.l7-install\", \"--sysconfdir={scratch}/openssh/candidate/src/openssh-9.9p1/.l7-install/etc\", \"--with-ssl-dir={prefix}\", \"--with-privsep-user=sshd\", \"--with-privsep-path={scratch}/openssh/candidate/src/openssh-9.9p1/.l7-install/var/empty\"] for ssh and [\"configure\", \"--prefix={scratch}/openssh-server/candidate/src/openssh-9.9p1/.l7-install\", \"--sysconfdir={scratch}/openssh-server/candidate/src/openssh-9.9p1/.l7-install/etc\", \"--with-ssl-dir={prefix}\", \"--with-privsep-user=sshd\", \"--with-privsep-path={scratch}/openssh-server/candidate/src/openssh-9.9p1/.l7-install/var/empty\"] for sshd, against the closure's [\"--prefix=\\\"$PREFIX\\\"\", \"--sysconfdir=\\\"$PREFIX/etc\\\"\", \"--with-ssl-dir=\\\"$CANDIDATE\\\"\", \"--with-privsep-user=sshd\", \"--with-privsep-path=\\\"$PREFIX/var/empty\\\"\"]. The ssh row's recorded digest 45da459f72fa is not the analysed ssh, and the sshd row's recorded digest 44e714f072cb is not the analysed sshd; the exact remaining difference is the build root/prefix, so byte equality is not claimed. Both b85c receipts still record artifact_rel='ssh' for the sshd closure (the structural one-row-cannot-bind-two-artefacts defect); per-artefact binding is carried by evidence/{ssh,sshd}-artifact-ledger-b85c-rebind.json and by the freeze digests recorded here.",
+  "atlas_row_configure_argv": [
+   "configure",
+   "--prefix={scratch}/openssh/candidate/src/openssh-9.9p1/.l7-install",
+   "--sysconfdir={scratch}/openssh/candidate/src/openssh-9.9p1/.l7-install/etc",
+   "--with-ssl-dir={prefix}",
+   "--with-privsep-user=sshd",
+   "--with-privsep-path={scratch}/openssh/candidate/src/openssh-9.9p1/.l7-install/var/empty"
+  ],
+  "closure_build_configure_argv": [
+   "--prefix=\"$PREFIX\"",
+   "--sysconfdir=\"$PREFIX/etc\"",
+   "--with-ssl-dir=\"$CANDIDATE\"",
+   "--with-privsep-user=sshd",
+   "--with-privsep-path=\"$PREFIX/var/empty\""
+  ],
+  "closure_build_script": {
+   "path": "forensics/tools/build_openssh_closure.sh",
+   "sha256": "a046975a61b87be5dc1cf325cdaf823d69cfb6e1cc66927afeab48f64e8cb20c",
+   "size": 3563
+  },
+  "atlas_row_steps": [
+   {
+    "name": "extract",
+    "argv": [
+     "tar",
+     "xf",
+     "{scratch}/openssh/source.tar.gz",
+     "-C",
+     "{scratch}/openssh/candidate/src"
+    ],
+    "exit_code": 0
+   },
+   {
+    "name": "configure",
+    "argv": [
+     "configure",
+     "--prefix={scratch}/openssh/candidate/src/openssh-9.9p1/.l7-install",
+     "--sysconfdir={scratch}/openssh/candidate/src/openssh-9.9p1/.l7-install/etc",
+     "--with-ssl-dir={prefix}",
+     "--with-privsep-user=sshd",
+     "--with-privsep-path={scratch}/openssh/candidate/src/openssh-9.9p1/.l7-install/var/empty"
+    ],
+    "exit_code": 0
+   },
+   {
+    "name": "make",
+    "argv": [
+     "make",
+     "-j8"
+    ],
+    "exit_code": 0
+   }
+  ],
+  "per_artefact_rebind": {
+   "ssh": {
+    "receipt": "evidence/ssh-artifact-ledger-b85c-rebind.json",
+    "sha256": "bda6457b7f77b89f9820e00e13db62114ceae64cc4d67a58574150fb56e1fe74",
+    "bytes": 11542942,
+    "verdict": "ACCEPTED (all checks passed; not a closure run)",
+    "artifact_rel": "ssh",
+    "artifact_sha256_recorded": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b",
+    "artifact_matches_this_build": true,
+    "ledger": "evidence/ssh-artifact-ledger-b85c.json",
+    "freeze_from_ledger": "evidence/FREEZE-b85c.json",
+    "checks": {
+     "artifact_sha256_matches": true,
+     "family_matches": true,
+     "artifact_rel_matches": true,
+     "freeze_artifact_matches": true,
+     "freeze_libcrypto_matches": true,
+     "freeze_source_matches": true,
+     "recipe_id_matches": true,
+     "source_sha256_matches": true
+    },
+    "not_a_closure_run": true,
+    "witness": "the same OpenSSH 9.9p1 recipe/source row that built sshd also built the analysed ssh: evidence/FREEZE-b85c.json records artefacts.files.ssh.sha256 = c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b, the exact binary the b85c receipt analysed at court/tmp/openssh-closure/client-b85/openssh-9.9p1/ssh, whose runpath resolves libcrypto.so.3 to the freeze-proven install 06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71. The atlas row records artifact_rel='ssh' artifact_sha256=45da459f72fafb25fb49d6d50406354d4baa54f2f18510ae9a560314a499b63a, its own ssh build (a different configure argv), not this artefact; this ledger is therefore the per-artefact join for ssh, and it does not claim the atlas row measured it.",
+    "ledger_sha256": "f3f10e20f426a018c872a19cbafb97f0fe0737c5302d6c7333ebb6a284d922da",
+    "verified_against_final": true,
+    "checks_against_final": {
+     "artifact_sha256_matches": true,
+     "family_matches": true,
+     "artifact_rel_matches": true,
+     "freeze_artifact_matches": true,
+     "freeze_libcrypto_matches": true,
+     "freeze_source_matches": true,
+     "recipe_id_matches": true,
+     "source_sha256_matches": true
+    }
+   },
+   "sshd": {
+    "receipt": "evidence/sshd-artifact-ledger-b85c-rebind.json",
+    "sha256": "9d8b37d4f2efa3fa3e40f367ddaffee67403dd0eacc53d7d7850cddb65decf97",
+    "bytes": 11418816,
+    "verdict": "ACCEPTED (all checks passed; not a closure run)",
+    "artifact_rel": "sshd",
+    "artifact_sha256_recorded": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1",
+    "artifact_matches_this_build": true,
+    "ledger": "evidence/sshd-artifact-ledger-b85c.json",
+    "freeze_from_ledger": "evidence/FREEZE-b85c.json",
+    "checks": {
+     "artifact_sha256_matches": true,
+     "family_matches": true,
+     "artifact_rel_matches": true,
+     "freeze_artifact_matches": true,
+     "freeze_libcrypto_matches": true,
+     "freeze_source_matches": true,
+     "recipe_id_matches": true,
+     "source_sha256_matches": true
+    },
+    "not_a_closure_run": true,
+    "witness": "the same OpenSSH 9.9p1 recipe/source row that built ssh also built the analysed sshd: evidence/FREEZE-b85c.json records artefacts.files.sshd.sha256 = 8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1, the exact binary the b85c receipt analysed at court/tmp/openssh-closure/server-b85/openssh-9.9p1/sshd, whose runpath resolves libcrypto.so.3 to the freeze-proven install 06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71. The atlas row records artifact_rel='ssh' artifact_sha256=45da459f72fafb25fb49d6d50406354d4baa54f2f18510ae9a560314a499b63a, its own ssh build (a different configure argv), not this artefact; this ledger is therefore the per-artefact join for sshd, and it does not claim the atlas row measured it.",
+    "ledger_sha256": "052b01267bd8807c630ae86736af5dbeda99e1aa58ca115c7e13751abe3b5901",
+    "verified_against_final": true,
+    "checks_against_final": {
+     "artifact_sha256_matches": true,
+     "family_matches": true,
+     "artifact_rel_matches": true,
+     "freeze_artifact_matches": true,
+     "freeze_libcrypto_matches": true,
+     "freeze_source_matches": true,
+     "recipe_id_matches": true,
+     "source_sha256_matches": true
+    }
+   }
+  },
+  "ledgers": {
+   "ssh": "evidence/ssh-artifact-ledger-b85c.json",
+   "sshd": "evidence/sshd-artifact-ledger-b85c.json"
+  },
+  "rebind_verified_against_this_generation": true
+ },
+ "l4_rows": {
+  "source": "forensics/downstream/build-link-atlas.json",
+  "openssh": {
+   "run_id": "run:build-link:candidate:openssh",
+   "artifact_rel": "ssh",
+   "artifact_sha256": "45da459f72fafb25fb49d6d50406354d4baa54f2f18510ae9a560314a499b63a",
+   "analysed_ssh_sha256": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b",
+   "digest_matches_analysed": false,
+   "configure_argv": [
+    "configure",
+    "--prefix={scratch}/openssh/candidate/src/openssh-9.9p1/.l7-install",
+    "--sysconfdir={scratch}/openssh/candidate/src/openssh-9.9p1/.l7-install/etc",
+    "--with-ssl-dir={prefix}",
+    "--with-privsep-user=sshd",
+    "--with-privsep-path={scratch}/openssh/candidate/src/openssh-9.9p1/.l7-install/var/empty"
+   ],
+   "closure_configure_argv": [
+    "--prefix=\"$PREFIX\"",
+    "--sysconfdir=\"$PREFIX/etc\"",
+    "--with-ssl-dir=\"$CANDIDATE\"",
+    "--with-privsep-user=sshd",
+    "--with-privsep-path=\"$PREFIX/var/empty\""
+   ],
+   "remaining_difference": "same closure configure flags and full `make`; the archive, recipe and launch argv are identical, but the build root differs (the atlas uses {root}/.l7-install under its own extracted tree, the closure uses court/tmp/openssh-closure/client-b85/install), and the compiled-in prefix/sysconfdir/privsep paths differ, so byte equality is not claimed and the digests differ"
+  },
+  "openssh-server": {
+   "run_id": "run:build-link:candidate:openssh-server",
+   "recipe_id": "recipe:openssh-server:9.9p1",
+   "artifact_rel": "sshd",
+   "artifact_sha256": "44e714f072cb8a40b8d34464979edde1264f53d481e00732c9ac9f53322bb394",
+   "analysed_sshd_sha256": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1",
+   "digest_matches_analysed": false,
+   "configure_argv": [
+    "configure",
+    "--prefix={scratch}/openssh-server/candidate/src/openssh-9.9p1/.l7-install",
+    "--sysconfdir={scratch}/openssh-server/candidate/src/openssh-9.9p1/.l7-install/etc",
+    "--with-ssl-dir={prefix}",
+    "--with-privsep-user=sshd",
+    "--with-privsep-path={scratch}/openssh-server/candidate/src/openssh-9.9p1/.l7-install/var/empty"
+   ],
+   "closure_configure_argv": [
+    "--prefix=\"$PREFIX\"",
+    "--sysconfdir=\"$PREFIX/etc\"",
+    "--with-ssl-dir=\"$CANDIDATE\"",
+    "--with-privsep-user=sshd",
+    "--with-privsep-path=\"$PREFIX/var/empty\""
+   ],
+   "remaining_difference": "the recipe flags are now the same closure flags (--prefix, --sysconfdir, --with-ssl-dir, --with-privsep-user=sshd, --with-privsep-path; candidate lib on the run path through LDFLAGS; full make), and both link the same candidate libcrypto. The only remaining difference is the build root and the compiled-in prefix: the atlas row's configure argv uses {scratch}/openssh-server/candidate/src/openssh-9.9p1/.l7-install while the closure build uses court/tmp/openssh-closure/server-b85/install, so the embedded config paths and build path differ and the digests cannot be equal. Byte equality is NOT claimed."
+  },
+  "statement": "The openssh-server L4 row is aligned to the closure recipe (same flags, run path and full make) but its recorded sshd digest is not the analysed sshd digest; the exact remaining difference is the build root / compiled-in prefix, not the recipe.",
+  "non_claims": [
+   "does not re-analyse or re-link either binary",
+   "does not promote any family or change a closure count",
+   "does not claim the atlas row measured the analysed sshd"
+  ]
+ },
+ "gates": {
+  "gate_source": "single generation at S",
+  "run_at": {
+   "gate_head": "2170f55b4cec0afcf7c4349de97935cb7b8a1b82",
+   "measured_source_S": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+   "src_identical_to_S": true,
+   "src_diff_stat_vs_S": "",
+   "src_identity_check": "`git diff --stat 17042ccf29bc39df638c63e69d3be6c6f965eef7 -- src Cargo.toml Cargo.lock build.rs` is empty: the gate ran on the exact build-relevant source of S even though HEAD is 2170f55b4cec0afcf7c4349de97935cb7b8a1b82",
+   "utc": {
+    "fmt": "2026-11-17T01:17:36Z",
+    "clippy": "2026-11-17T01:17:41Z",
+    "lib_tests": "2026-11-17T01:18:02Z",
+    "unsafe_fn": "2026-11-17T09:35:12Z"
+   }
+  },
+  "fmt": {
+   "command": "env CARGO_BUILD_JOBS=8 cargo fmt --all -- --check",
+   "returncode": 0,
+   "formatted_diff_locations": 0,
+   "formatted_files": []
+  },
+  "clippy": {
+   "command": "env CARGO_BUILD_JOBS=8 cargo clippy --all-targets -- -D warnings",
+   "returncode": 0,
+   "warnings_or_errors_in_log": 0
+  },
+  "lib_tests_parallel": {
+   "command": "env CARGO_BUILD_JOBS=8 cargo test --lib -- --test-threads=4",
+   "returncode": 0,
+   "test_result": {
+    "state": "ok",
+    "passed": 2340,
+    "failed": 0,
+    "ignored": 54,
+    "measured": 0,
+    "filtered_out": 0
+   },
+   "failed_tests": []
+  },
+  "unsafe_fn_targeted": {
+   "command": "cargo test --lib -- unsafe_fn",
+   "returncode": 0,
+   "test_result": {
+    "state": "ok",
+    "passed": 16,
+    "failed": 0,
+    "ignored": 0,
+    "measured": 0,
+    "filtered_out": 2378
+   },
+   "failed_tests": []
+  },
+  "log": "court/freeze-b85/gates.log",
+  "log_sha256": "e6a50ae98f9f8dcfa1952703b2b10d875132e279ba0a43bcbd79593408ad0f51",
+  "log_bytes": 210804,
+  "log_is_append_only": true,
+  "generator": {
+   "path": "court/freeze-b85c/make_freeze_b85c.py",
+   "sha256": "89ed40f743c44e1c13c77551369df159a6403e53c9db86bf88526bad061c91e2",
+   "note": "the tool that assembled this freeze. Section 22 counts a verification-tool change as a candidate-side change, so this sha binds the evidence to the exact generator that produced it; the generator lives under the git-ignored court/ tree and does not touch src/.",
+   "previous_generator": {
+    "path": "court/freeze-b85/make_freeze_b85.py",
+    "sha256": "5a5bbc61af646647450d05fbf3f31ae41eb37894081b3e946a6640e5436d41c1",
+    "note": "the tool that assembled this gate section. Section 22 counts a verification-tool change as a candidate-side change, so this sha binds the evidence to the exact generator that produced it; the generator lives under the git-ignored court/ tree and does not touch src/."
+   }
+  },
+  "exact_counts": {
+   "fmt_exit": 0,
+   "clippy_exit": 0,
+   "lib_tests": {
+    "state": "ok",
+    "passed": 2340,
+    "failed": 0,
+    "ignored": 54,
+    "measured": 0,
+    "filtered_out": 0
+   },
+   "unsafe_fn_tests": {
+    "state": "ok",
+    "passed": 16,
+    "failed": 0,
+    "ignored": 0,
+    "measured": 0,
+    "filtered_out": 2378
+   },
+   "log_sha256": "e6a50ae98f9f8dcfa1952703b2b10d875132e279ba0a43bcbd79593408ad0f51"
+  },
+  "verdict": "gate at gate HEAD 2170f55b4 (src byte-identical to S = 17042ccf29bc39df638c63e69d3be6c6f965eef7): fmt PASS (exit 0, 0 diff locations). clippy PASS (exit 0, --all-targets -D warnings). library tests PASS at --test-threads=4 (2340 passed, 0 failed, 54 ignored; exit 0). The targeted unsafe_fn tests PASS (16 passed, 0 failed; exit 0). No test failed, so the recorded scrypt isolation flake (B44-TEST-1) did not reproduce and no rerun was needed.",
+  "gate_identity_caveat": "court/freeze-b85/gates.log holds one generation only: the four steps were run in this batch at HEAD 2170f55b4, whose src/ is byte-identical to S = 17042ccf29bc39df638c63e69d3be6c6f965eef7 (checked at generation). There is no superseded pre-format generation at this batch. Source identity and evidence identity stay separate (section 22): committing E moves HEAD without changing S. Every heavy step of this batch ran inside the court container with memory.max=17179869184 (16 GiB), the venue the closures and the L7 replay used, one at a time; CARGO_BUILD_JOBS was 8 for the builds and the clippy step, above the AGENTS.md 6.1 ceiling of 4, and that deviation is recorded here and in memory.deviation.",
+  "recorded_scrypt_flake": "the campaign records one scrypt test-isolation flake: boundary-sweep-B44 (B44-TEST-1) says five routine tests fetched or freed the shared default-libctx method without the global lock, so another test's +/-1 on the cached refcount made the scrypt assertion fail intermittently (2/20 module runs); B44 made the assertion relative and took the lock, and its re-review is NOT_RUN. The b80 gate run observed 0 failed tests, so no flake reproduced and no rerun was required.",
+  "failure_class": "NONE_AT_S",
+  "carried_forward": {
+   "from": "court/freeze-b85/FREEZE-b85.json",
+   "b85_log_sha256": "e6a50ae98f9f8dcfa1952703b2b10d875132e279ba0a43bcbd79593408ad0f51",
+   "log_sha256_at_b85c": "e6a50ae98f9f8dcfa1952703b2b10d875132e279ba0a43bcbd79593408ad0f51",
+   "unchanged": true,
+   "why_valid_at_b85c": "the gate is bound to the build-relevant source of S, and the only tracked change since it ran is the instrument: `git diff --stat 17042ccf29bc39df638c63e69d3be6c6f965eef7 -- src Cargo.toml Cargo.lock build.rs` is empty now (source.git_verification.src_diff_vs_source_head = null) and the instrument diff is \"forensics/tools/consumer_closure.py | 89 +++++++++++++++++++++++++++++++++----\\n 1 file changed, 80 insertions(+), 9 deletions(-)\". The instrument is not built by the library gate, so the b85 gate result stands at S. No gate step was re-run at b85c.",
+   "not_rerun": true
+  }
+ },
+ "l7_evidence": {
+  "path": "evidence/b85-l7-replay.json",
+  "sha256": "32960470219bd71e04a9bfab455efa70e82cce932b22313398f0bfcba2920837",
+  "bytes": 25148,
+  "schema": "openssl-rs/campaign/safe-c33/l7-replay/v1",
+  "generated_utc": "2026-11-17T09:36:54Z",
+  "reuse": {
+   "reused_not_rerun": true,
+   "rule": "reused by content, not by assumption: the file digest above is the same file the b85 freeze bound, and this freeze re-measures the binaries it names (see identity_binding) before reusing it",
+   "b85_bound_sha256": "32960470219bd71e04a9bfab455efa70e82cce932b22313398f0bfcba2920837",
+   "identical_to_the_b85_binding": true,
+   "why_reuse_is_valid": "the repaired predicate is not in the L7 path: L7 is a runtime functional replay of the consumer binaries against the candidate libcrypto, it consumes no closure verdict and it executes no verifier code. The binaries this freeze re-measures are the ones the replay executed (identity_binding), and the source and artefacts are unchanged from the b85 freeze (artefact_unchanged).",
+   "not_rerun_because": "re-running it would produce a second measurement of the same binaries without changing any claim, and the task's directive is to reuse it by content; the file is bound by sha so a future edit to it is detectable.",
+   "instrument_field_in_the_file": {
+    "instrument_tool_sha256": "b42f19bdfb40d94009a6256dcc7a3d5fd96e6a2c8fba595133372ce6fed5f913",
+    "instrument_head": "2170f55b4cec0afcf7c4349de97935cb7b8a1b82",
+    "note": "recorded verbatim: the replay was produced before the predicate repair. It is not a verifier run; see why_reuse_is_valid."
+   }
+  },
+  "identity_binding": {
+   "libcrypto_so_3_sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+   "libcrypto_matches_l7_record": true,
+   "ssh": {
+    "path": "court/tmp/openssh-closure/client-b85/openssh-9.9p1/ssh",
+    "sha256": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b",
+    "size": 3401744,
+    "matches_l7_record": true
+   },
+   "sshd": {
+    "path": "court/tmp/openssh-closure/server-b85/openssh-9.9p1/sshd",
+    "sha256": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1",
+    "size": 1763248,
+    "matches_l7_record": true
+   },
+   "libcrypto_so_3_sha256_l7": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+   "source_head_l7": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+   "source_head_matches_S": true
+  },
+  "workloads": {
+   "w1_key_operations": {
+    "status": "PASS",
+    "transcript": "court/freeze-b85/l7/transcripts/probe-b85.log",
+    "results": {
+     "keygen_generate": "6/6 PASS (host ed25519, host ecdsa-256, host rsa-2048, user ed25519, user ecdsa-256, user rsa-2048)",
+     "fingerprints": "6/6 keys produced SHA256 and MD5 fingerprints",
+     "sign_verify": "3/3 PASS (ssh-keygen -Y sign + -Y verify, ed25519/ecdsa/rsa)",
+     "legacy_pem_roundtrip": "2/2 PASS (-m PEM written and re-read for rsa and ecdsa)",
+     "algorithm_enumeration": {
+      "kex": 15,
+      "key": 14,
+      "cipher": 10,
+      "mac": 16,
+      "sig": 10
+     }
+    },
+    "totals": null
+   },
+   "w2_live_sshd_and_login": {
+    "status": "PASS",
+    "transcript": "court/freeze-b85/l7/transcripts/probe-b85.log",
+    "results": {
+     "sshd_config_test": "PASS (sshd -t)",
+     "sshd_start": "PASS on 127.0.0.1:2500, foreground -D -e with log file, pid recorded, killed afterwards",
+     "pubkey_login": "PASS: `echo PROBE_OK; id -u` -> 'PROBE_OK 0' (root, ed25519 user key)",
+     "agent_login": "PASS: ssh-agent + ssh-add held the key, AGENT_OK",
+     "matrix_cases": "18/18 PASS, 0 FAIL, 0 HANG (20 s timeout per case)",
+     "sshd_log_scan": "0 fatal / segmentation / Aborted / core dump / assert / SSL library error lines"
+    },
+    "totals": null
+   },
+   "w3_concurrency": {
+    "status": "PASS",
+    "transcript": "court/freeze-b85/l7/transcripts/probe-b85.log",
+    "results": {
+     "simultaneous_logins": 16,
+     "succeeded": 16,
+     "failed": 0,
+     "observed": "concurrent_logins=16/16"
+    },
+    "totals": null
+   },
+   "w4_sftp_server_and_session_identity": {
+    "status": "PASS",
+    "transcript": "court/freeze-b85/l7/transcripts/supplement-b85.log",
+    "results": {
+     "algorithm_enumeration_written": "ssh -Q kex/key/cipher/mac/sig -> 15/14/10/16/10 entries",
+     "executed_session_witness": "live sshd-session pid observed in /proc; exe -> /work/court/tmp/openssh-closure/server-b85/install/libexec/sshd-session; libcrypto -> /work/artifacts/phase2/install/lib/libcrypto.so.3; libssl mappings 0",
+     "sftp_transfer": "sftp put + ls + get over the candidate ssh/sshd/session path: byte-identical round-trip"
+    },
+    "totals": null
+   },
+   "w5_authority_keyformat_differential": {
+    "status": "PASS",
+    "transcript": "court/freeze-b85/l7/transcripts/keyformat-diff-authority-b85.log",
+    "results": {
+     "candidate_writes_authority_reads": "5/5 PASS",
+     "authority_writes_candidate_reads": "5/5 PASS",
+     "both_directions": "RSA/ECDSA/Ed25519 native openssh-key-v1 and RSA/ECDSA legacy PEM, each writer -> opposite reader with key material equality and fingerprint check"
+    },
+    "totals": {
+     "pass": 10,
+     "fail": 0,
+     "of": 10
+    }
+   }
+  },
+  "all_workloads_pass": true,
+  "totals": {
+   "probe_checks": {
+    "pass": 31,
+    "fail": 0
+   },
+   "matrix_cases": {
+    "pass": 18,
+    "fail": 0
+   },
+   "concurrent_logins": {
+    "pass": 16,
+    "of": 16
+   },
+   "keyformat_checks": {
+    "candidate_ok": 20,
+    "fail": 0,
+    "authority_not_run": 0
+   },
+   "authority_keyformat_differential": {
+    "pass": 10,
+    "fail": 0,
+    "of": 10
+   },
+   "supplement_checks": {
+    "pass": 3,
+    "fail": 0
+   }
+  },
+  "executed_sshd_session": {
+   "path": "court/tmp/openssh-closure/server-b85/install/libexec/sshd-session",
+   "sha256": "588ed111f6e96811843798288e29213b88f81173ee26100f8d9fd8477fc8991e",
+   "size": 1002568,
+   "source": "measured by this freeze from the install path sshd executes",
+   "matches_l7_record": true
+  },
+  "sshd_session_tree_copy": {
+   "path": "court/tmp/openssh-closure/server-b85/openssh-9.9p1/sshd-session",
+   "sha256": "d8e249c10bb08efa7f923d1bde0cf7b6354439517367b4c7e4a491ea6474acb5",
+   "size": 3594840,
+   "source": "measured by this freeze from the link tree",
+   "matches_l7_record": true
+  },
+  "difference_explained": "the executed session binary is the stripped install copy (588ed111f6e9); the link-tree copy is d8e249c10bb0 and was never executed. `make install` strips the binary, so the digests differ while the build is the same by install provenance, not proven byte-equal. The freeze binds the executed digest as the one that served logins.",
+  "matrix_comparison_with_previous": {
+   "same_label_set": true,
+   "differing_tuples": {},
+   "statement": "the negotiated tuple of every case is identical to the b84 replay's (18 labels compared, 0 differing)",
+   "note": "the two cases the Phase-17 script labels 'EXPECT FAIL: key parse defect' (ECDSA and RSA host-key parsing) again PASS. The inherited labels are left verbatim: they are not assertions."
+  },
+  "authority_differential": {
+   "workload": "w5_authority_keyformat_differential",
+   "status": "PASS",
+   "totals": {
+    "pass": 10,
+    "fail": 0,
+    "of": 10
+   },
+   "authority_libcrypto_so_3": {
+    "path": "forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+    "sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2",
+    "size": 7295816,
+    "matches_l7_record": true
+   },
+   "candidate_libcrypto_so_3_sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+   "authority_binaries": {
+    "ssh": {
+     "path": "court/tmp/openssh-closure/auth-b85/openssh-9.9p1/ssh",
+     "sha256": "584f24a0cb77a53503992ab28c63ac3865baccc003fa1f32aaaae261e74b9365",
+     "size": 3401768,
+     "matches_l7_record": true
+    },
+    "sshd": {
+     "path": "court/tmp/openssh-closure/auth-b85/openssh-9.9p1/sshd",
+     "sha256": "a5b469a7f970844f4c18a63e407f077d87518ac67bad72944747baa384780a09",
+     "size": 1763272,
+     "matches_l7_record": true
+    },
+    "sshd_session": {
+     "path": "court/tmp/openssh-closure/auth-b85/openssh-9.9p1/sshd-session",
+     "sha256": "aeeaae22b8fc78e81a5c7fbd93e8259f03c442ecb8e389a6c019e9d7c2516ae6",
+     "size": 3594864,
+     "matches_l7_record": true
+    },
+    "ssh_keygen": {
+     "path": "court/tmp/openssh-closure/auth-b85/openssh-9.9p1/ssh-keygen",
+     "sha256": "d760edc7af863b9b0b61feb84b7a2c48fd83443c827718c79c88a6531b89ff03",
+     "size": 1796232,
+     "matches_l7_record": true
+    }
+   },
+   "identity_discrimination": "the version TEXT is identical to the candidate's; ssh -V does not distinguish the two. Authority linkage is established by the resolved library path and the libcrypto digest, which differ: authority 611e511db427 (7,295,816 B) vs candidate 06b5f3384e34 (16,870,320 B).",
+   "build_tag": "auth-b85",
+   "build_exit": 0
+  },
+  "not_run_retained": "no L7 workload is NOT_RUN: keyformat-b85.sh ran all 20 live authority cross-reads (AUTH_KG=auth-b85) and w5 adds the independent 10/10 differential. The replay was not re-executed at b85c (see reuse)."
+ },
+ "memory": {
+  "deviation": "AGENTS.md section 6.1 computes the cap as min(8g, available-16g) with a 2g floor; at start the host reported MemAvailable 28.2 GiB, so the formula would give 8g. This batch ran in the court instance the b85 closures used, at the task-declared 16 GiB / 16 CPU venue (memory.max=17179869184, cpu.max=1600000 100000), because the instrument self-test measured a peak of 12.1 GiB at this tool and an 8g cap would have OOM-killed it. Both b85c steps ran one at a time with oom=0 oom_kill=0; the deviation is recorded, not silently adopted.",
+  "b85c_steps": {
+   "selftest": {
+    "record": "court/freeze-b85c/selftest-b85c.record",
+    "sha256": "e54ab1b7f4eb49ad3a2517715ad8f3ada0f94bdcadd73f05bddc7fcc5a81a2b5",
+    "elapsed_s": 175,
+    "exit": 0,
+    "peak_memory_current_bytes": 12992581632
+   },
+   "predicate_controls": {
+    "record": "court/freeze-b85c/controls-b85c.record",
+    "sha256": "c9e8c69d7bde0745d68c2d91000555ce7f5cfed25fa17e4002c084c65dfd5dca",
+    "exit": 0,
+    "peak_memory_current_bytes": 12390260736
+   }
+  },
+  "gate_venue": {
+   "memory_max_bytes": "17179869184",
+   "memory_swap_max_bytes": "max",
+   "cpu_max": "1600000 100000",
+   "pids_max": "2048",
+   "cargo_build_jobs": 8,
+   "test_threads": 4,
+   "parallelism_note": "AGENTS.md 6.1 rule 4 caps parallelism at 4; this batch ran at the task's declared venue of CARGO_BUILD_JOBS=8 and --test-threads=4, inside the 16 GiB cap, with closure peaks of 11.7 GiB and 12.9 GiB and oom_kill=0 throughout. The deviation is recorded, not silently adopted.",
+   "rlimit_data_kib": 4194304,
+   "peak_memory_current_bytes": {
+    "lib_tests": null
+   },
+   "peak_samples": [],
+   "peak_rule": "the gate runner records memory.current at each step boundary in court/freeze-b85/gates.log but does not sample a peak; no per-step peak is therefore claimed for the gate. The closure and L7 steps were run through court/freeze-b85/run-step.sh, which samples memory.current every 2 s, and their peaks are recorded under closure_l7_venue.peak_observations.",
+   "memory_events": {
+    "low": "0",
+    "high": "0",
+    "max": "8359",
+    "oom": "0",
+    "oom_kill": "0",
+    "oom_group_kill": "0",
+    "sock_throttled": "0"
+   }
+  },
+  "closure_l7_venue": {
+   "caps": "memory.max=17179869184 (16 GiB), memory.swap.max=17179869184, cpu.max=1600000 100000 (16 CPU), pids.max=2048",
+   "applies_to": "the two b85 closures, the b85 L7 replay, the b85 Miri runs and the authority build",
+   "peak_observations": {
+    "closure_ssh_b85": 13259276288,
+    "closure_sshd_b85": 13146357760,
+    "build_phase2_b85": 11372818432,
+    "l7_probe_b85": 8381960192,
+    "l7_supplement_b85": 8380391424,
+    "l7_keyformat_b85": 8383270912,
+    "miri_stacked_b85": 12002770944,
+    "miri_tree_b85": 11705188352,
+    "build_ssh_b85": 12038488064,
+    "build_sshd_b85": 11896119296,
+    "build_auth_b85": 8435351552,
+    "selftest_b85": 13651791872,
+    "source": "court/freeze-b85/*.record (run-step.sh samples memory.current every 2 s); the element-7 ssh probe and the five L7 keyformat/second-pass steps were not run through run-step.sh and no peak is claimed for them"
+   },
+   "memory_events_after": "oom=0 oom_kill=0 in every step record"
+  },
+  "carried_venue_note": "gate_venue and closure_l7_venue are carried from the b85 freeze: the same court instance, the same caps (re-read now), and no closure or L7 step ran at b85c, so no new closure peak exists. The only new measurements are the self-test and the predicate controls above.",
+  "host_readings": [
+   {
+    "when": "fmt",
+    "line": "MemTotal:       48085060 kB"
+   },
+   {
+    "when": "fmt",
+    "line": "MemAvailable:   34201484 kB"
+   },
+   {
+    "when": "clippy",
+    "line": "MemTotal:       48085060 kB"
+   },
+   {
+    "when": "clippy",
+    "line": "MemAvailable:   34064672 kB"
+   },
+   {
+    "when": "test-lib-4",
+    "line": "MemTotal:       48085060 kB"
+   },
+   {
+    "when": "test-lib-4",
+    "line": "MemAvailable:   34547944 kB"
+   },
+   {
+    "when": "unsafe-fn",
+    "line": "MemTotal:       48085060 kB"
+   },
+   {
+    "when": "unsafe-fn",
+    "line": "MemAvailable:   33296976 kB"
+   }
+  ],
+  "host_available_gib_at_generation": 28.2,
+  "host_total_gib_at_generation": 45.9,
+  "cgroup": {
+   "memory_max_bytes": "17179869184",
+   "memory_current_bytes": "12608884736",
+   "memory_peak_bytes": "17179869184",
+   "memory_swap_max_bytes": "max",
+   "memory_events": {
+    "low": "0",
+    "high": "0",
+    "max": "9775",
+    "oom": "0",
+    "oom_kill": "0",
+    "oom_group_kill": "0",
+    "sock_throttled": "0"
+   },
+   "cpu_max": "1600000 100000",
+   "pids_max": "2048"
+  },
+  "rlimit_data_kib": -1
+ },
+ "invalidated_acceptance": {
+  "count": 111,
+  "of_accepted_under_the_old_predicate": 156,
+  "committed_evidence_receipts_with_a_verdict": 168,
+  "still_accepted_after_the_repair": 45,
+  "already_not_accepted": 12,
+  "source": "evidence/b85-verifier-repair.json",
+  "json_pointer": "defect_1_acceptance_predicate.receipts_whose_verdict_changes",
+  "source_sha256": "3972222946d82d4001affe2c79ceab4cd1f8e6abfecd0c65795c86cd66688aee",
+  "list": "court/freeze-b85/review15/verdict-change-list.txt",
+  "list_json": "court/freeze-b85/review15/verdict-change-list.json",
+  "list_json_sha256": "372b85a8611f8fd27df33ff9e233df5e0cad4c930baadc40c4b525deb71475e4",
+  "only_valid_acceptance_evidence_at_this_candidate": [
+   "evidence/closure-ssh-b85c.json",
+   "evidence/closure-sshd-b85c.json"
+  ],
+  "statement": "the repaired predicate refuses 111 of the 156 receipts that the defective predicate had accepted. They stay in the repository as history, but none of them is acceptance evidence at this candidate; the two b85c receipts are the only valid acceptance evidence here."
+ },
+ "safe_compatible": {
+  "value": false,
+  "reason": "consumer_closure.py never promotes: verdict.safe_compatible is a hard-coded false in the instrument. AGENTS.md section 7 additionally requires every mechanism in the conservative dependency closure to be SAFETY_DISCHARGED with its callers' obligations discharged, and compatibility confirmed against the exact converted implementation. The b85c closures measure the queue at this candidate under the repaired predicate -- which is a stronger acceptance test than b85's, not a promotion -- and the criterion-3 argument is SAFETY_DISCHARGED for two mechanisms under scoped claims (SSL_SESSION; RUNTIME_CONCURRENCY, schedule-bounded) and NOT_ESTABLISHED for the other five (EVP, X509, RAND, C_ABI_CONTRACT, BIO). No independent SAFE_COMPATIBLE adjudication was run at b85c.",
+  "measured": {
+   "ssh": {
+    "DISCHARGED": 290,
+    "reachable_production_obligations": 290,
+    "BLOCKED": 0,
+    "UNKNOWN": 0,
+    "element_7_status": "PASS (contract-bounded and closed target sets)",
+    "target_bounded": 0,
+    "contract_bounded": 116
+   },
+   "sshd": {
+    "DISCHARGED": 290,
+    "reachable_production_obligations": 290,
+    "BLOCKED": 0,
+    "UNKNOWN": 0,
+    "element_7_status": "PASS (contract-bounded and closed target sets)",
+    "target_bounded": 0,
+    "contract_bounded": 116
+   }
+  },
+  "l7_replay": {
+   "status": "PASS",
+   "evidence": "evidence/b85-l7-replay.json",
+   "sha256": "32960470219bd71e04a9bfab455efa70e82cce932b22313398f0bfcba2920837",
+   "reused_not_rerun": true,
+   "workloads": {
+    "w1_key_operations": "PASS",
+    "w2_live_sshd_and_login": "PASS",
+    "w3_concurrency": "PASS",
+    "w4_sftp_server_and_session_identity": "PASS",
+    "w5_authority_keyformat_differential": "PASS"
+   },
+   "authority_differential": "10/10 PASS (w5_authority_keyformat_differential)",
+   "note": "functional evidence only (AGENTS.md section 8); not SAFE_COMPATIBLE graduation",
+   "not_graduated": true
+  },
+  "outstanding": [
+   "SAFE_COMPATIBLE is NOT established: no independent adjudication was run at b85 (the b78/b79/b80/b84 adjudications are NOT reused); the b85 closures are queue measurements",
+   "the section-7 criterion-3 safety argument is recorded in evidence/b85-safety-argument.json and its verdict is 2 SAFETY_DISCHARGED under scoped claims (SSL_SESSION; RUNTIME_CONCURRENCY, schedule-bounded) / 0 OWNERSHIP_RECONSTRUCTED / 5 NOT_ESTABLISHED; 26 of 33 drifted obligation rows are re-established at S, and the 7 not re-read at S are named individually (two new EVP digest/conf rows, two v3_cpols rows, two v3_ncons rows and the pkcs7 ri_cb row); each non-discharge names its residual",
+   "65 REVIEW_REQUIRED discharges (CAMPAIGN-STATUS current_applied_state.safe_compatible_blockers.projected_after_recensus.REVIEW_REQUIRED); CAMPAIGN-STATUS has no b85 update, so this figure is the campaign-status projection, not a b85 measurement",
+   "BOUNDARY adjudication of the remaining contract-bounded boundaries",
+   "ThreadSanitizer for the full 2337-test suite (the concurrency-bearing filters ran) and Loom for the free side",
+   "drifted obligation rows at S: 33 in 19 changed 26 re-established (content identity or the b80/b81/b82/b83/b84/b85 rebinds), 7 not re-read at S (two EVP digest/conf rows, two v3_cpols rows, two v3_ncons rows and one pkcs7 row)",
+   "SEAL (release build, complete probe suite, full forensic regeneration)"
+  ],
+  "review_required": {
+   "count": 65,
+   "source": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+   "json_pointer": "current_applied_state.safe_compatible_blockers.projected_after_recensus.REVIEW_REQUIRED",
+   "source_sha256": "8f669f11ad9a4f4bde2a80a2373fe1e041e1e921a346f14d71e8060222989fcf",
+   "stale_note": "the status file predates b85 (its candidate_S is 69d43bb8d8d4b4641f939c7283eb57d92ca5b89c); the count is recorded with its source, not re-derived",
+   "note_at_b85c": "carried from the b85 freeze with its source and sha; CAMPAIGN-STATUS still predates b85, so the figure remains a campaign-status projection, not a b85c measurement",
+   "source_sha256_now": "834ae124c7a818b1c6cd904c1dd9aa803085e1fe38d4452bcf88327620d95190",
+   "source_unchanged": false
+  }
+ },
+ "residuals": [
+  {
+   "kind": "criterion3/safety-argument",
+   "statement": "evidence/b85c-safety-argument.json is the section-7 criterion-3 whole-closure argument re-derived against the two b85c receipts and the repaired instrument (its identity binds both, checked in safety_argument.binds_exactly_the_b85c_receipts). Its verdict is {\"SAFETY_DISCHARGED\": 2, \"OWNERSHIP_RECONSTRUCTED\": 0, \"NOT_ESTABLISHED\": 5, \"mechanisms\": 7}: 2 SAFETY_DISCHARGED under scoped claims / 0 OWNERSHIP_RECONSTRUCTED / 5 NOT_ESTABLISHED. Recording the argument closes the 'no argument' gap as an artifact, not as a safety result.",
+   "inherited_from": "court/freeze-b85/FREEZE-b85.json",
+   "restated_at_b85c": true
+  },
+  {
+   "kind": "criterion3/source-drift",
+   "statement": "33 obligation rows live in files changed since the reviews' tree; 26 are re-established at S by content identity or by the b80/b81/b82/b83/b84/b85 rebinds. 7 are not: src/digest/sha2.rs::sha512_224_init and src/provider/conf.rs::provider_free_thunk (the b85 digest/conf repair), src/x509/v3_cpols.rs::i2r_certpol and ::r2i_certpol (no per-row verdict file), the two src/x509/v3_ncons.rs NAME_CONSTRAINTS rows (byte-identical but not re-read), and src/pkcs7/pk7_asn1.rs::ri_cb (byte-identical but not re-read). They are reported as not re-established, not absorbed.",
+   "inherited_from": "court/freeze-b85/FREEZE-b85.json",
+   "restated_at_b85c": false
+  },
+  {
+   "kind": "criterion3/instrument/tsan",
+   "statement": "RUNTIME_CONCURRENCY is discharged only for executed schedules: TSan ran 54 tests on two schedules with 0 races and 0 use-after-free and both canaries fired, but R1 (no test performs the forbidden release shape) and R2-R6 are retained; no loom model covers the free side.",
+   "inherited_from": "court/freeze-b85/FREEZE-b85.json",
+   "restated_at_b85c": false
+  },
+  {
+   "kind": "criterion3/unsafe-open",
+   "statement": "C_ABI_CONTRACT (5 obligations) and BIO (2) remain UNSAFE_OPEN mechanism-wide; the reviews closed the site defects, not the classification.",
+   "inherited_from": "court/freeze-b85/FREEZE-b85.json",
+   "restated_at_b85c": false
+  },
+  {
+   "kind": "criterion3/qualifier-control",
+   "statement": "the reconversion review's D1 remains open for the earlier controls: 11 of the 12 qualifier-control tests it examined are self-satisfying, so removing `unsafe` from 23 of the 24 declarations it examined would not fail any test; D2 (SSL_COMP_get_name) and D5 (OPENSSL_init_ssl) are also open. The three b82 qualifier controls are not in that class; their baseline arm was re-run at b85 (16 passed under the unsafe_fn filter, including the three). The mutant arm was NOT re-run at b85: the b82 mutant result (8 `unnecessary unsafe block` warnings, exactly the three controls failing) describes bytes that are unchanged at S (v3_info.rs and v3_ncons.rs are byte-identical between fed1f077b and S, measured), but it is recorded as NOT_RUN at this candidate. That fixes the instrument for these three declarations only; it does not close D1 for the rest.",
+   "inherited_from": "court/freeze-b85/FREEZE-b85.json",
+   "restated_at_b85c": false
+  },
+  {
+   "kind": "venue/memory",
+   "statement": "AGENTS.md section 6.1 computes the cap as min(8g, available-16g) with a 2g floor; at start the host reported MemAvailable 28.2 GiB, so the formula would give 8g. This batch ran in the court instance the b85 closures used, at the task-declared 16 GiB / 16 CPU venue (memory.max=17179869184, cpu.max=1600000 100000), because the instrument self-test measured a peak of 12.1 GiB at this tool and an 8g cap would have OOM-killed it. Both b85c steps ran one at a time with oom=0 oom_kill=0; the deviation is recorded, not silently adopted.",
+   "inherited_from": "court/freeze-b85/FREEZE-b85.json",
+   "restated_at_b85c": true
+  },
+  {
+   "kind": "gate/exact-s",
+   "statement": "court/freeze-b85/gates.log holds one generation only: the four steps were run in this batch at HEAD 2170f55b4, whose src/ is byte-identical to S = 17042ccf29bc39df638c63e69d3be6c6f965eef7 (checked at generation). There is no superseded pre-format generation at this batch. Source identity and evidence identity stay separate (section 22): committing E moves HEAD without changing S. Every heavy step of this batch ran inside the court container with memory.max=17179869184 (16 GiB), the venue the closures and the L7 replay used, one at a time; CARGO_BUILD_JOBS was 8 for the builds and the clippy step, above the AGENTS.md 6.1 ceiling of 4, and that deviation is recorded here and in memory.deviation.",
+   "inherited_from": "court/freeze-b85/FREEZE-b85.json",
+   "restated_at_b85c": false
+  },
+  {
+   "kind": "gate/recorded-scrypt-flake",
+   "statement": "the campaign records one scrypt test-isolation flake: boundary-sweep-B44 (B44-TEST-1) says five routine tests fetched or freed the shared default-libctx method without the global lock, so another test's +/-1 on the cached refcount made the scrypt assertion fail intermittently (2/20 module runs); B44 made the assertion relative and took the lock, and its re-review is NOT_RUN. The b80 gate run observed 0 failed tests, so no flake reproduced and no rerun was required.",
+   "inherited_from": "court/freeze-b85/FREEZE-b85.json",
+   "restated_at_b85c": false
+  },
+  {
+   "kind": "instrument/self-test",
+   "statement": "the instrument's --self-test exits 0 with 0 failures at this candidate (court/freeze-b85c/selftest-b85c.log, instrument 3e86a74d, peak 12992581632 bytes). The predicate repair is controlled separately by the 14-case fixture suite (court/freeze-b85c/controls-b85c.json, 14/14 PASS at this tool). A self-test pass certifies the tool's controls, not the candidate's safety.",
+   "inherited_from": "court/freeze-b85/FREEZE-b85.json",
+   "restated_at_b85c": true
+  },
+  {
+   "kind": "element7/contract-bounded",
+   "statement": "116 sites remain bounded by an external ABI contract and 36 by a closed enumerated in-image target set. The 116 are target-unbounded by design: the application supplies the targets through public ABI contracts (exported callbacks, provider tables, the CONF_METHOD cell) and they are discharged under AGENTS.md section 7 criterion 2, not proven safe by this freeze. The 36 are target-enumerated, not contracts, and the b85 instrument keeps the two kinds separate.",
+   "inherited_from": "court/freeze-b85/FREEZE-b85.json",
+   "restated_at_b85c": false
+  },
+  {
+   "kind": "element7/witness-sensitivity",
+   "statement": "the reachable unresolved site set is unchanged (152) with 0 target-bounded and 0 unclassified sites, and the 116 contract-bounded / 36 closed-target-set split is unchanged from the b85 measurement: the repaired predicate changed the acceptance verdict, not element 7. The split still reflects instrument classification rather than the candidate's linked code.",
+   "inherited_from": "court/freeze-b85/FREEZE-b85.json",
+   "restated_at_b85c": true
+  },
+  {
+   "kind": "ledger-binding",
+   "statement": "artifact_matches_this_build is false because the atlas rows build in their own extracted roots with their own compiled-in prefix: the recipe flags are the closure's (a full `make`, the candidate lib on the run path, the same configure flags) but the configure argv spells a different root, [\"configure\", \"--prefix={scratch}/openssh/candidate/src/openssh-9.9p1/.l7-install\", \"--sysconfdir={scratch}/openssh/candidate/src/openssh-9.9p1/.l7-install/etc\", \"--with-ssl-dir={prefix}\", \"--with-privsep-user=sshd\", \"--with-privsep-path={scratch}/openssh/candidate/src/openssh-9.9p1/.l7-install/var/empty\"] for ssh and [\"configure\", \"--prefix={scratch}/openssh-server/candidate/src/openssh-9.9p1/.l7-install\", \"--sysconfdir={scratch}/openssh-server/candidate/src/openssh-9.9p1/.l7-install/etc\", \"--with-ssl-dir={prefix}\", \"--with-privsep-user=sshd\", \"--with-privsep-path={scratch}/openssh-server/candidate/src/openssh-9.9p1/.l7-install/var/empty\"] for sshd, against the closure's [\"--prefix=\\\"$PREFIX\\\"\", \"--sysconfdir=\\\"$PREFIX/etc\\\"\", \"--with-ssl-dir=\\\"$CANDIDATE\\\"\", \"--with-privsep-user=sshd\", \"--with-privsep-path=\\\"$PREFIX/var/empty\\\"\"]. The ssh row's recorded digest 45da459f72fa is not the analysed ssh, and the sshd row's recorded digest 44e714f072cb is not the analysed sshd; the exact remaining difference is the build root/prefix, so byte equality is not claimed. Both b85c receipts still record artifact_rel='ssh' for the sshd closure (the structural one-row-cannot-bind-two-artefacts defect); per-artefact binding is carried by evidence/{ssh,sshd}-artifact-ledger-b85c-rebind.json and by the freeze digests recorded here.",
+   "inherited_from": "court/freeze-b85/FREEZE-b85.json",
+   "restated_at_b85c": true
+  },
+  {
+   "kind": "artefact/uncommitted-at-freeze",
+   "statement": "the six tracked install artefacts in the working tree match their committed blob sizes (6 of 6 match) and the census digests; all nine artefact digests are unchanged from the b85 freeze (artefacts.unchanged_from_b85). No uncommitted-install residual remains at b85c. The court/tmp consumer binaries are git-ignored and are bound by the freeze digests, not by a HEAD blob.",
+   "inherited_from": "court/freeze-b85/FREEZE-b85.json",
+   "restated_at_b85c": true
+  },
+  {
+   "kind": "ledger/dirty-tree-at-closure-time",
+   "statement": "the receipts do not record which tracked paths were dirty. At the time the b85c closures ran the tracked dirt was the evidence files this batch writes; no src/, Cargo.toml, Cargo.lock or build.rs path differed from S, which is measurable now (git_verification).",
+   "inherited_from": "court/freeze-b85/FREEZE-b85.json",
+   "restated_at_b85c": true
+  },
+  {
+   "kind": "l7/not-run-rows",
+   "statement": "no L7 row is NOT_RUN and none is re-run here: the replay is reused by content. evidence/b85-l7-replay.json is the same file the b85 freeze bound (sha checked), and the binaries it executed are the ones this freeze re-measures (libcrypto 06b5f338, ssh c2db343d, sshd 8af50952; see l7_evidence.identity_binding).",
+   "inherited_from": "court/freeze-b85/FREEZE-b85.json",
+   "restated_at_b85c": true
+  },
+  {
+   "kind": "adjudication/not-run",
+   "statement": "no independent SAFE_COMPATIBLE adjudication was performed at b85c; the b78, b79, b80 and b84 adjudications are NOT reused (section 22), and the b85 adjudication is the NOT ESTABLISHED finding that caused this re-freeze, not an acceptance of the candidate.",
+   "inherited_from": "court/freeze-b85/FREEZE-b85.json",
+   "restated_at_b85c": true
+  },
+  {
+   "kind": "campaign-status/b85-block",
+   "statement": "CAMPAIGN-STATUS.json is recorded in tool.inputs with the sha256 it had at generation. This measurement subagent did NOT add a b85c block to it: the status predates b85, its REVIEW_REQUIRED projection is carried with its source and not re-derived, and updating it is the orchestrator's ledger step. No historical block is deleted and no gate reads this file as evidence.",
+   "inherited_from": "court/freeze-b85/FREEZE-b85.json",
+   "restated_at_b85c": true
+  },
+  {
+   "kind": "artefact/prior-ledger-sha",
+   "statement": "the two b85c ledgers record the sha256 evidence/FREEZE-b85c.json had when they were written (pass 1). The freeze is then rewritten once more so that it binds the ledgers and the rebind receipts, so the ledgers' informational freeze_sha256 field names the pass-1 generation. consumer_artifact_rebind.verify() does not read that field (it reads freeze.source.head, freeze.candidate_identity.libcrypto_so_3_sha256 and freeze.artefacts.files[artifact_rel]), so the rebind is unaffected; it is re-verified read-only against this final generation and ledger_binding.per_artefact_rebind.*.verified_against_final records the result.",
+   "inherited_from": "court/freeze-b85/FREEZE-b85.json",
+   "restated_at_b85c": true
+  },
+  {
+   "kind": "not-run",
+   "statement": "SEAL, BOUNDARY adjudication of the remaining contract-bounded boundaries, Loom, dudect, Wycheproof and forensic regeneration are NOT_RUN at this candidate; they are scheduled at their gates, not implied by this freeze.",
+   "inherited_from": "court/freeze-b85/FREEZE-b85.json",
+   "restated_at_b85c": false
+  },
+  {
+   "kind": "acceptance/invalidated-receipts",
+   "inherited_from": null,
+   "restated_at_b85c": false,
+   "statement": "the repaired predicate refuses 111 of the 156 receipts that the defective predicate had accepted. They stay in the repository as history, but none of them is acceptance evidence at this candidate; the two b85c receipts are the only valid acceptance evidence here.",
+   "count": 111,
+   "source": "evidence/b85-verifier-repair.json",
+   "list_json": "court/freeze-b85/review15/verdict-change-list.json",
+   "list_json_sha256": "372b85a8611f8fd27df33ff9e233df5e0cad4c930baadc40c4b525deb71475e4",
+   "only_valid_acceptance_evidence": [
+    "evidence/closure-ssh-b85c.json",
+    "evidence/closure-sshd-b85c.json"
+   ]
+  },
+  {
+   "kind": "identity/instrument-change-is-E",
+   "inherited_from": null,
+   "restated_at_b85c": false,
+   "statement": "AGENTS.md section 22 counts a change to a tool that derives evidence as a candidate-side change that requires a new S. This re-freeze instead treats the repaired instrument as E, on the task's directive, and says so rather than hiding it: S (source 17042ccf2, src_content bc6815c2) and all nine artefacts are re-measured unchanged from the b85 freeze, so no build-relevant source input moved; what changed is the verifier that reads the receipts. candidate_identity.instrument_sha256 is recorded so no consumer can mistake this freeze for one produced by b42f19bd. The b85 freeze remains the record of the instrument-b42f19bd candidate; it is not erased."
+  },
+  {
+   "kind": "instrument/predicate-scope",
+   "inherited_from": null,
+   "restated_at_b85c": false,
+   "statement": "the repaired predicate makes ACCEPTED require every row DISCHARGED, so acceptance is now a function of the queue's statuses as well as the refusal list. The 111 invalidated receipts are evidence that the old predicate was permissive, not that their obligations were safe; conversely, a 290/290 ACCEPTED at b85c is a statement about the queue at this candidate, not a SAFE_COMPATIBLE promotion (verdict.safe_compatible is hard-coded false)."
+  }
+ ],
+ "not_run": [
+  "SAFE_COMPATIBLE promotion (no independent adjudication at b85c; the frozen candidate is NOT graduated)",
+  "five of the seven section-7 criterion-3 mechanisms are NOT_ESTABLISHED (see safety_argument)",
+  "BOUNDARY adjudication of the remaining contract-bounded boundaries",
+  "SEAL (release build, full probe suite, full forensic regeneration)",
+  "Loom, dudect and Wycheproof for this candidate",
+  "the L7 replay is reused, not re-executed at b85c (see l7_evidence.reuse); its five workloads PASS at the binaries this freeze re-measures",
+  "the gate (fmt, clippy, library tests, unsafe-fn controls) is carried from the b85 run at S, not re-run: no build-relevant source input changed (measured)",
+  "Miri at b85 ran the six digest tests under both borrow models (0 UB); ASan (b84) and TSan (b80) were not re-run, and the full-suite Miri/ASan/TSan remain NOT_RUN",
+  "ThreadSanitizer for the full library suite (the concurrency-bearing filters ran)",
+  "no tool control is NOT_RUN: --self-test exits 0 with 0 failures at this tool and the 14 predicate controls pass",
+  "65 REVIEW_REQUIRED discharges (campaign status requires a rebuild and re-census)"
+ ],
+ "non_claims": [
+  "the closures named here are measurements of the candidate at S with the repaired instrument; they are not re-measured by this generator",
+  "0 BLOCKED / 0 UNKNOWN (ssh) and 0 BLOCKED / 0 UNKNOWN (sshd) is a statement about the instrument's queue at this candidate, not a SAFE_COMPATIBLE promotion",
+  "a green differential/closure result is not a safety or cryptographic result (AGENTS.md section 8)",
+  "the per-artefact rebind is not a closure run and changes no count, verdict or refusal",
+  "the instrument self-test and the predicate controls certify the tool, not the candidate",
+  "L7 is reused by content and is not re-executed here; a green replay is not SAFE_COMPATIBLE graduation",
+  "the section-7 safety argument is an argument artifact, not a promotion: 2 SAFETY_DISCHARGED (scoped) / 5 NOT_ESTABLISHED",
+  "the 111 invalidated receipts are not evidence of unsafety in their own candidates; they are evidence that the old predicate could not support their acceptance",
+  "the b85 freeze is not reused as an acceptance record at b85c; only its verified sections are carried and its instrument-bound sections are superseded"
+ ]
+}

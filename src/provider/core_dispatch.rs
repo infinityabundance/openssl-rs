@@ -1097,11 +1097,10 @@ mod tests {
 
     #[test]
     fn gettable_params_answers_the_static_array_for_any_handle() {
-        // SAFETY: the function ignores its argument, so any handle is acceptable -- which is
-        // asserted by passing two different ones and requiring the same answer back.
-        let p = unsafe { core_gettable_params(ptr::null()) };
-        // SAFETY: as above.
-        let p2 = unsafe { core_gettable_params(ptr::null::<c_void>()) };
+        // The function ignores its argument, so any handle is acceptable -- which is asserted by
+        // passing two different ones and requiring the same answer back.
+        let p = core_gettable_params(ptr::null());
+        let p2 = core_gettable_params(ptr::null::<c_void>());
         assert_eq!(
             p,
             PARAM_TYPES.0.as_ptr(),

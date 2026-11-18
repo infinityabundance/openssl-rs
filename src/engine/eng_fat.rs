@@ -194,6 +194,10 @@ unsafe extern "C" fn int_def_cb(alg: *const c_char, len: c_int, arg: *mut c_void
 
 /// Format `"str=%s"` the way `crypto/err/err.c`'s `_dopr` does, with a NULL pointer rendered
 /// as `<NULL>`.
+///
+/// # Safety
+/// `p` must be NULL or point to a NUL-terminated C string that stays readable for the duration of
+/// the call. The argument names a string the caller lends to this frame; no ownership is taken.
 unsafe fn push_cstr_or_null(buf: &mut Vec<u8>, p: *const c_char) {
     if p.is_null() {
         buf.extend_from_slice(b"<NULL>");

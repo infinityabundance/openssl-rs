@@ -320,7 +320,8 @@ pub extern "C" fn ASN1_STRING_TABLE_get(nid: c_int) -> *mut Asn1StringTable {
         // `#ifndef OPENSSL_NO_AUTOLOAD_CONFIG`, which is not defined on this
         // profile: the config file is loaded before the table is consulted, so a
         // `stbl_section` entry is visible to this call.
-        OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, core::ptr::null());
+        // SAFETY: NULL settings, so the initialiser reads no caller memory.
+        unsafe { OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, core::ptr::null()) };
 
         let fnd = Asn1StringTable {
             nid,

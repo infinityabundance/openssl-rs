@@ -1,0 +1,563 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/promotion-assessment/v1",
+  "kind": "b78-promotion-record-with-evidence-reuse-sample",
+  "candidate_tag": "b78",
+  "generated_utc": "2026-11-14T16:10:00Z",
+  "author_role": "closing subagent: promotion record and evidence-reuse sample. No src/ or tests/ change, no existing receipt change, no commit, no push.",
+  "purpose": "Supply the b78 promotion record the independent adjudicator found missing, and record whether the 53 identity-transfer ACCEPTs can be reused under AGENTS.md section 22.4.",
+  "venue": {
+    "free_g_available_gib": 12,
+    "compilation": "refused: section 6.1 requires available >= 24 GiB and a cap of min(8g, available-16g) with a 2g floor, which is unmet. No build, test, sanitizer or runtime probe ran in this session.",
+    "evidence_used": "committed artefacts in this tree read at HEAD cbc42bab7, plus git blobs at bb7d5206a, ada7df257 and 0238c6e4"
+  },
+  "candidate_identity": {
+    "rule": "AGENTS.md section 22: S is the frozen source+instrument identity; E is an evidence commit about S. Committing E does not change S.",
+    "S": {
+      "production_source_head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+      "src_content_sha256": "c0bd61c94f5a8da2e08c105724d14750403fbfd53aa8d4b722672f9b11b0bd38",
+      "census_sha256": "b4babdf7d341d1407aa7787c1f3388b207943923787e3cc158e0a27296c08ea0",
+      "closure_tool_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+      "review_tool_sha256": "facb2a97586493a8cf8fb6a073266046dfc1dd8138110f6c18c575b613e45426",
+      "artefacts": {
+        "libcrypto.so.3": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
+        "libssl.so.3": "4ad53379bbe44219d9514ded5b973a3ac40891e0a1598b8f0dcb8b51316a4d1b",
+        "libcrypto.a": "1c060258f0e88452aa766dd377c34a0eeda10498697e5f758ef6794ecf92f703",
+        "libssl.a": "96ad5349c24659f9dcb4531947156aa6d25a791a22bb3bf4c9d7f2b0c2cb1dae",
+        "legacy.so": "e74ba2135ef0370bb0eaf03925c46f47356a5bb8f90041b505174202b2988208",
+        "openssl": "abb828a049106a62412b3ff771fc634ab2013bcb33f8f64ef3f963bc723b6df0",
+        "ssh": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
+        "sshd": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe"
+      }
+    },
+    "E": {
+      "note": "the commits carrying the b78 review, freeze, closures and adjudication; HEAD moved by evidence only. The closure receipts record repository_head 6cdf98598 with tracked_tree_dirty=true and join obligations to the inventory at bb7d5206a.",
+      "candidate_bound_artefacts": [
+        "evidence/closure-ssh-b78b.json (sha256 1ab8a79428625cb975532a29d0e09f08fb94eddb63de94ad132741a710f4d988)",
+        "evidence/closure-sshd-b78b.json (sha256 4f0ca02f31ed4efa4901636ccd42402fe1562649cd532bbadcc1a3f95355e863)",
+        "court/freeze-b78/FREEZE-b78.json (sha256 a9b27fc18c8e1dfc1923bc8e6f7f03b40e478828158f4b8c9dbbfcd4ceb1196d)",
+        "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b78-review-final.json (sha256 2e377d556dbd9ee3a3e77362e91a04b41c4f2f55d8e2eb36bff7c1297f4d7f51)"
+      ]
+    },
+    "identity_residual": "both closures report artifact_identity material but the b78 freeze's ledger_binding.artifact_matches_this_build=false: the build-link atlas row is its own ssh build (different configure argv) whose recorded digest c8723f34 is neither analysed binary. The closure analyses ssh 3b282f43 and sshd 9744ab64; the atlas row is not rebound to them."
+  },
+  "per_family_closure": {
+    "ssh": {
+      "receipt": "evidence/closure-ssh-b78b.json",
+      "verdict": "ACCEPTED",
+      "safe_compatible_in_receipt": false,
+      "reachable_files": 630,
+      "reachable_production_obligations": 290,
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "refusals": [],
+      "stale_discharge_rejections": 0,
+      "by_mechanism": {
+        "BIO": 2,
+        "C_ABI_CONTRACT": 5,
+        "EVP_PKEY_PROVIDER": 116,
+        "RAND_CMS_STORE_KEYFMT": 27,
+        "RUNTIME_CONCURRENCY": 4,
+        "SSL_SESSION": 14,
+        "X509_VERIFY_POLICY": 122
+      }
+    },
+    "sshd": {
+      "receipt": "evidence/closure-sshd-b78b.json",
+      "verdict": "ACCEPTED",
+      "safe_compatible_in_receipt": false,
+      "reachable_production_obligations": 290,
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "refusals": []
+    },
+    "superseded_run": "evidence/closure-ssh-b78.json (tool d3d01dfe) reported 283 DISCHARGED / 7 BLOCKED on the seven stale copyctx coordinates; b78b (tool f31816b1) is the operative run after the content-migration binding."
+  },
+  "element_7": {
+    "status": "PASS (contract-bounded) for ssh and sshd",
+    "target_bounded_unresolved_sites": 0,
+    "contract_bounded_sites": 153,
+    "unclassified_sites": 0,
+    "by_class": {
+      "ABI_CONTRACT_CONF_DEFAULT_METHOD": 1,
+      "ABI_CONTRACT_CONF_MODULE": 2,
+      "ABI_CONTRACT_CORE_DISPATCH": 26,
+      "ABI_CONTRACT_DECODER_METHOD_OBJECT": 3,
+      "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+      "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+      "ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA": 2,
+      "ABI_CONTRACT_PBE_REGISTRY": 1,
+      "ABI_CONTRACT_PROVIDER": 16,
+      "ABI_CONTRACT_PROVIDER_HW_TABLE": 25,
+      "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+      "ABI_CONTRACT_SLH_METHOD_TABLE": 6,
+      "ABI_CONTRACT_STORE_LOADER": 3
+    },
+    "edge_ledger": {
+      "count": 51943,
+      "CONTRACT_BOUNDED": 191,
+      "PROVED_TARGET_SET": 51143,
+      "UNRESOLVED": 609,
+      "unattributed_admissions": 0,
+      "refutation_admissions": 24,
+      "note": "the 609 UNRESOLVED rows are in the edge ledger; the element-7 report classifies 0 target-bounded sites and 153 contract-bounded sites. A BOUNDARY adjudication of the contract-bounded sites has not run."
+    },
+    "interpretation": "contract-bounded means the target set is supplied by an external ABI contract (application callbacks, provider tables, the global CONF_METHOD cell). It is a classification under section 7 criterion 2, not a proof that no safe-Rust caller can cause UB."
+  },
+  "cohort_65": {
+    "size": 65,
+    "composition": {
+      "openssh-v1i": 56,
+      "openssh-v1l": 9
+    },
+    "review_result": {
+      "ACCEPT": 65,
+      "REJECT": 0,
+      "ABSENT": 0
+    },
+    "grades": {
+      "identity45": 45,
+      "identity8": 8,
+      "rereview11": 11,
+      "rereview1": 1,
+      "note": "identity8 means an identity transcription of a repaired body plus a caller re-read; it is not a bare transfer."
+    },
+    "review_receipts": {
+      "openssh-v1i-sites.json": "6c6449a7bb2ba2b8c32a15cf8d5f0eab618672fa160ae54beb092fdec980649a",
+      "openssh-v1l-sites.json": "5abcfb9ec5cee1044e0cf64e812ec4ba553278ff26036d8aeba036b1acb8b9e3"
+    },
+    "cohort_is_not_the_campaign_65": "CAMPAIGN-STATUS's 65 was a projected residual after structural elimination (98 minus 33). The b78 cohort 65 is a different set: 56 openssh-v1i + 9 openssh-v1l obligations that are live at this candidate. The campaign status must be rebuilt and re-censused before its applied count is changed; this file does not overwrite it."
+  },
+  "review_grade_accounting": {
+    "formerly_review_required": 98,
+    "composition": {
+      "boundary_sweep_B45": 9,
+      "openssh-v1i": 74,
+      "openssh-v1l": 15
+    },
+    "fate_at_b78": {
+      "reviewed_and_accepted_at_b78": 65,
+      "structurally_eliminated": {
+        "count": 9,
+        "which": "the nine zero-argument engine_unregister_all_* cleanup thunks that boundarary-sweep-B45 carried: the unsafe qualifier was removed and a compile-time coercion control added (atlas-refresh/b45-safe-thunks-elimination-sites.json, source_batch_s4)",
+        "state": "eliminated (the operation is no longer an unsafe operation), not discharged by review"
+      },
+      "withdrawn_from_the_cohort": {
+        "count": 19,
+        "composition": {
+          "openssh-v1i": 13,
+          "openssh-v1l": 6
+        },
+        "state": "RETAINED in the regenerated receipts; they cannot discharge. CAMPAIGN-STATUS still lists them in scoped_boundary_discharges (residual R-WITHDRAWN-NONCOHORT)."
+      },
+      "absent_items": {
+        "count": 5,
+        "which": "OSSH-V1I-055, -056, -057, -058, -062 name retired thunks that no longer exist; recorded ABSENT / non-discharging"
+      }
+    },
+    "arithmetic": "65 reviewed + 9 eliminated + 19 withdrawn + 5 absent = 98",
+    "campaign_projection_mismatch": {
+      "campaign_says": "CAMPAIGN-STATUS current_applied_state.safe_compatible_blockers describes 33 structural eliminations at S5, leaving 65 unadjudicated (56 openssh-v1i + 9 openssh-v1l).",
+      "actual_composition_of_the_33": "9 B45 thunks are genuine structural eliminations (the unsafe qualifier is gone and a compile-time coercion control exists). The other 24 are out of the b78 cohort rather than eliminated: 19 were withdrawn because their prior discharge is no longer in the receipt scope and the review marks them RETAINED (13 openssh-v1i + 6 openssh-v1l), and 5 name items that no longer exist (ABSENT).",
+      "why_it_matters": "a withdrawn row is not an eliminated operation: its text still exists and carries an unsafe operation unless separately eliminated. The campaign must not carry it as removed-by-elimination; the review's R-WITHDRAWN-NONCOHORT records it as retained and unable to discharge.",
+      "state": "OPEN-STATUS-DOC"
+    },
+    "review_grades_of_the_65": {
+      "independently_re_reviewed_at_b78": 12,
+      "identity_transcribed_with_file_level_non_impact": 53,
+      "of_which_caller_re_read_by_the_b78_review": 8
+    },
+    "residuals_recorded_by_the_review": [
+      {
+        "id": "R-BLOCKLEVEL-CONTRACT",
+        "state": "OPEN-DOCUMENTATION",
+        "sites": 57,
+        "statement": "the 57 sites carry a validity contract only as an operation-level // SAFETY: block plus the OSSL_FUNC ABI; the unsafe extern C fn has no # Safety section. None of the seven migrated copyctx rows is in this 57 (they carry the b77 # Safety doc)."
+      },
+      {
+        "id": "R-PARAMS",
+        "state": "CLOSED-AT-SOURCE-NOT-RUNTIME",
+        "statement": "the b78 params entry points refuse the failed-init state before forwarding; closed by source reading and tests, not measured at runtime in the review (no build)."
+      },
+      {
+        "id": "R-REPAIR-RECEIPT-FIELD",
+        "state": "OPEN-EVIDENCE-SHAPE",
+        "statement": "b77-review-v1i-repaired.json records span_sha256_reviewed for sha3::keccak_final as the pre-repair hash while accepting the repaired body (4dbe9bbd); the verdict is sound but the field is not a reviewed-body hash."
+      },
+      {
+        "id": "R-NO-RUNTIME",
+        "state": "OPEN",
+        "statement": "every b78 review verdict is a source-and-static-control verdict; no build, sanitizer, Miri or timing run."
+      },
+      {
+        "id": "R-CARRYFORWARD-COORDINATE",
+        "state": "CLOSED-BY-B78B-AND-THIS-REREVIEW",
+        "statement": "the seven stale coordinates were bound by content migration in b78b and independently re-established at b78 in evidence/b78-review-migrated-rows.json; two documentation residuals (R-V1I-024-CONTRACT-TYPE, R-V1I-082-CONTRACT-TYPE) remain."
+      }
+    ]
+  },
+  "evidence_reuse": {
+    "rule_applied": "AGENTS.md section 22.4: a discharged mechanism's evidence is bound to its exact source identity and declared contract scope. An unrelated edit preserves it; an edit to the shared owner, its contract, or a precondition it relies on invalidates the mechanism and its dependent closure. If non-impact cannot be proven, the evidence is treated as invalid.",
+    "scope": "12 of the 53 identity-transfer ACCEPTs, all from the weaker class (identity45), spread across nine files.",
+    "recomputation": "for every sampled row the operation body was re-hashed at HEAD with the receipt's own rule; the earlier-head hash is the one recorded in court/freeze-b78/span-recompute-b78.json for b76 0238c6e4 and b77 ada7df257; the candidate hash equals the receipt hash in all 12.",
+    "file_impact_analysis": {
+      "unchanged_since_review_head": [
+        "src/cmp/cmp_ctx.rs",
+        "src/cmp/cmp_asn.rs",
+        "src/x509/v3_san.rs",
+        "src/x509/v3_akid.rs",
+        "src/runtime/confmod/mod.rs",
+        "src/ui/ui_util.rs",
+        "src/decoder_lib.rs"
+      ],
+      "changed_since_review_head": {
+        "src/provider/digest.rs": "64 insertions / 6 deletions between 0238c6e4 and HEAD: documentation comments above the six copyctx definitions, plus the OSSH-V1I-020 keccak_final body (the D-SHA3-FINAL-OUTLEN-1 repair, accepted at b77). No identity45 row is keccak_final and none is called by it.",
+        "src/provider/legacyprov.rs": "17 insertions / 0 deletions: documentation comments above the copyctx definitions only."
+      },
+      "conclusion": "non-impact is proven for all sampled rows: the unchanged files cannot have changed a span, contract or caller; the changed files' only non-documentation change is the body of OSSH-V1I-020, which is itself one of the eight identity8 rows and is not the operation or caller of any sampled row."
+    },
+    "sample": [
+      {
+        "boundary": "OSSH-V1I-049",
+        "file": "src/cmp/cmp_ctx.rs",
+        "operation": "x509_name_dup_void",
+        "span": "350-353",
+        "span_sha256": "13028da9d8492f824d5761e48a7c2f0c44392f914ac4cd0227e8d6bec0048488",
+        "review_receipt": "b76-review-v1i-batch1",
+        "reviewed_head": "0238c6e4",
+        "checks": {
+          "b78_hash_equals_reviewed_hash": true,
+          "contract_unchanged": true,
+          "establishing_caller_unchanged": true,
+          "no_later_commit_touched_the_hunk": true
+        },
+        "caller": "ctx_set1_dup! in the same file passes val to this thunk; the public setter's # Safety is val NULL or live",
+        "verdict": "REUSE-OK"
+      },
+      {
+        "boundary": "OSSH-V1I-065",
+        "file": "src/cmp/cmp_ctx.rs",
+        "operation": "cmp_ctx_set_md",
+        "span": "407-421",
+        "span_sha256": "cd466dc13eee90d9e36e0601ccf6308e32c096b476d0982caf893b37c6f37ef8",
+        "review_receipt": "b76-review-v1i-batch1",
+        "reviewed_head": "0238c6e4",
+        "checks": {
+          "b78_hash_equals_reviewed_hash": true,
+          "contract_unchanged": true,
+          "establishing_caller_unchanged": true,
+          "no_later_commit_touched_the_hunk": true
+        },
+        "caller": "same-file call sites at 578/587 (fresh context NULL fields) and 1588/1593 (owned incumbent through addr_of_mut)",
+        "verdict": "REUSE-OK"
+      },
+      {
+        "boundary": "OSSH-V1I-001",
+        "file": "src/provider/digest.rs",
+        "operation": "sha1::dupctx",
+        "span": "653-662",
+        "span_sha256": "47267c002ee9f12d6c20efa3c2e1648e60243868c4ae4caa72d8de04e7a4ed4b",
+        "review_receipt": "b76-review-v1i-batch2",
+        "reviewed_head": "0238c6e4",
+        "checks": {
+          "b78_hash_equals_reviewed_hash": true,
+          "contract_unchanged": true,
+          "establishing_caller_unchanged": "caller file changed only by guards that narrow the call set; the ABI contract and the newctx/dupctx provenance are unchanged",
+          "no_later_commit_touched_the_hunk": true
+        },
+        "caller": "OSSL_FUNC_DIGEST_DUPCTX; the core passes a live ShaCtx from NEWCTX/DUPCTX. EVP_MD_CTX_copy_ex gained source/destination NULL guards in ada7df257/bb7d5206a; those refuse more inputs, never fewer.",
+        "verdict": "REUSE-OK"
+      },
+      {
+        "boundary": "OSSH-V1I-022",
+        "file": "src/provider/digest.rs",
+        "operation": "sha3::shake_get_ctx_params",
+        "span": "1530-1558",
+        "span_sha256": "e09736f8f56e5df114a14c6150d105193ba970d4db06170296a6f005b5d4acc8",
+        "review_receipt": "b76-review-v1i-batch3",
+        "reviewed_head": "0238c6e4",
+        "checks": {
+          "b78_hash_equals_reviewed_hash": true,
+          "contract_unchanged": true,
+          "establishing_caller_unchanged": "the params entry points gained an algctx-is-missing refusal in bb7d5206a; the provider callback is now invoked on a subset of the previous states",
+          "no_later_commit_touched_the_hunk": true
+        },
+        "caller": "OSSL_FUNC_DIGEST_GET_CTX_PARAMS; the core supplies a live KeccakCtx and the caller's OSSL_PARAM array",
+        "verdict": "REUSE-OK"
+      },
+      {
+        "boundary": "OSSH-V1I-081",
+        "file": "src/provider/legacyprov.rs",
+        "operation": "legacy_digest_impl::dupctx",
+        "span": "323-334",
+        "span_sha256": "9ef8e6d4c1a012f2c0d7fd75a274970080e36b74d915370f47d9876445f96e00",
+        "review_receipt": "b76-review-v1i-batch3",
+        "reviewed_head": "0238c6e4",
+        "checks": {
+          "b78_hash_equals_reviewed_hash": true,
+          "contract_unchanged": true,
+          "establishing_caller_unchanged": true,
+          "no_later_commit_touched_the_hunk": true
+        },
+        "caller": "OSSL_FUNC_DIGEST_DUPCTX; the file's only change is documentation above copyctx, which is a different operation",
+        "verdict": "REUSE-OK"
+      },
+      {
+        "boundary": "OSSH-V1I-087",
+        "file": "src/provider/legacyprov.rs",
+        "operation": "mdc2::dupctx",
+        "span": "540-551",
+        "span_sha256": "53914997e52cd69c0d3439049d1fb36d2adb8412167764c00008bd55c11c460d",
+        "review_receipt": "b76-review-v1i-batch3",
+        "reviewed_head": "0238c6e4",
+        "checks": {
+          "b78_hash_equals_reviewed_hash": true,
+          "contract_unchanged": true,
+          "establishing_caller_unchanged": true,
+          "no_later_commit_touched_the_hunk": true
+        },
+        "caller": "OSSL_FUNC_DIGEST_DUPCTX for the MDC-2 row; documentation-only file delta",
+        "verdict": "REUSE-OK"
+      },
+      {
+        "boundary": "OSSH-V1L-013",
+        "file": "src/x509/v3_san.rs",
+        "operation": "san_i2v",
+        "span": "1176-1184",
+        "span_sha256": "f81a3cfcc6695c7396e2c60945d7b3ad5c67408e3f9f5c5d59fd42317753ce42",
+        "review_receipt": "b76-review-v1l",
+        "reviewed_head": "0238c6e4",
+        "checks": {
+          "b78_hash_equals_reviewed_hash": true,
+          "contract_unchanged": true,
+          "establishing_caller_unchanged": true,
+          "no_later_commit_touched_the_hunk": true
+        },
+        "caller": "ossl_v3_alt rows declare i2v = san_i2v at 1218 and it = GENERAL_NAMES_it; v3_prn dispatch decodes with that it",
+        "verdict": "REUSE-OK"
+      },
+      {
+        "boundary": "OSSH-V1I-067",
+        "file": "src/cmp/cmp_asn.rs",
+        "operation": "itav_free",
+        "span": "1706-1709",
+        "span_sha256": "5b0450b583d888ad1fa516a1db92cfd5493f24343bb7f8ac4e98943f7a46dfd5",
+        "review_receipt": "b76-review-v1i-batch1",
+        "reviewed_head": "0238c6e4",
+        "checks": {
+          "b78_hash_equals_reviewed_hash": true,
+          "contract_unchanged": true,
+          "establishing_caller_unchanged": true,
+          "no_later_commit_touched_the_hunk": true
+        },
+        "caller": "six in-crate call sites; the paired itav_new uses the same cmp_itav_it descriptor. Confirmed at HEAD: 7 occurrences of itav_free( = 1 definition + 6 calls.",
+        "verdict": "REUSE-OK"
+      },
+      {
+        "boundary": "OSSH-V1L-011",
+        "file": "src/x509/v3_akid.rs",
+        "operation": "akid_i2v",
+        "span": "182-190",
+        "span_sha256": "6f51a4906e3cf43beb25bbdfc03dbe93ff93a2a097b7d1a49622af20502c4fc4",
+        "review_receipt": "b76-review-v1l",
+        "reviewed_head": "0238c6e4",
+        "checks": {
+          "b78_hash_equals_reviewed_hash": true,
+          "contract_unchanged": true,
+          "establishing_caller_unchanged": true,
+          "no_later_commit_touched_the_hunk": true
+        },
+        "caller": "ossl_v3_akey_id declares i2v = akid_i2v at 217 and it = AUTHORITY_KEYID_it; v3_prn dispatch",
+        "verdict": "REUSE-OK"
+      },
+      {
+        "boundary": "OSSH-V1L-006",
+        "file": "src/runtime/confmod/mod.rs",
+        "operation": "module_free_thunk",
+        "span": "397-401",
+        "span_sha256": "a5b60056c9ddbcf6bd883eecd26fbb5a0eccc600eab2245ce5689a4ab0ebbaae",
+        "review_receipt": "b76-review-v1l",
+        "reviewed_head": "0238c6e4",
+        "checks": {
+          "b78_hash_equals_reviewed_hash": true,
+          "contract_unchanged": true,
+          "establishing_caller_unchanged": true,
+          "no_later_commit_touched_the_hunk": true
+        },
+        "caller": "sole registration at 1369 in OPENSSL_sk_pop_free(to_delete, Some(module_free_thunk)); the list is built under the module-list lock",
+        "verdict": "REUSE-OK"
+      },
+      {
+        "boundary": "OSSH-V1L-007",
+        "file": "src/ui/ui_util.rs",
+        "operation": "ui_free_method_data",
+        "span": "197-209",
+        "span_sha256": "9da4f85c2504a0b7baebbd33c8b6fb7e9b58f5ce2ae0c2abd95a6161cb1ac3fd",
+        "review_receipt": "b76-review-v1l",
+        "reviewed_head": "0238c6e4",
+        "checks": {
+          "b78_hash_equals_reviewed_hash": true,
+          "contract_unchanged": true,
+          "establishing_caller_unchanged": true,
+          "no_later_commit_touched_the_hunk": true
+        },
+        "caller": "private ex-data index at 133; only writers/readers are in this file; the free thunk is registered at 224",
+        "verdict": "REUSE-OK"
+      },
+      {
+        "boundary": "OSSH-V1L-010",
+        "file": "src/decoder_lib.rs",
+        "operation": "decoder_free_thunk",
+        "span": "1080-1083",
+        "span_sha256": "ae3aa2602055af8784dc853c1737cb09bc0cd6ad5d9ccbc53da8cea97a94610c",
+        "review_receipt": "b76-review-v1l",
+        "reviewed_head": "0238c6e4",
+        "checks": {
+          "b78_hash_equals_reviewed_hash": true,
+          "contract_unchanged": true,
+          "establishing_caller_unchanged": true,
+          "no_later_commit_touched_the_hunk": true
+        },
+        "caller": "sole registration at 1402 in OPENSSL_sk_pop_free(skdecoders, Some(decoder_free_thunk))",
+        "verdict": "REUSE-OK"
+      }
+    ],
+    "tally": {
+      "sampled": 12,
+      "pass": 12,
+      "fail": 0,
+      "returned_to_review": 0
+    },
+    "all_53_status": {
+      "in_files_with_zero_diff_since_review_head": 22,
+      "in_files_with_a_documented_non_impact_delta": 31,
+      "identity45": 45,
+      "identity8": 8,
+      "file_level_non_impact_proven": 53,
+      "individually_re_read_here": 12,
+      "caller_re_read_by_the_b78_review": 8
+    },
+    "residual": "for 23 identity45 rows in the two changed files the reuse is at file/operation granularity (documentation delta plus one distinct operation) rather than a per-row caller re-read. The non-impact argument is explicit, but an adversarial reviewer may still require a per-row statement; that is recorded here rather than presented as a re-review.",
+    "decision": "all 12 sampled rows REUSE-OK; the 53 identity transfers are admissible under section 22.4 with the file-level argument above, while the 12 are independently re-verified"
+  },
+  "l7": {
+    "receipt": "evidence/b78-l7-replay.json",
+    "sha256": "b7f044abe77818f9bfce6998df7e0dcb6ae7f5d345c0e65c6b818c33c45f763d",
+    "totals": {
+      "probe_checks": "31 pass / 0 fail",
+      "matrix_cases": "18 pass / 0 fail",
+      "concurrent_logins": "16 / 16",
+      "candidate_keyformat_checks": "10 ok / 0 fail / 10 not_run (authority rows of the candidate-only script)",
+      "authority_keyformat_differential": "10 / 10 PASS"
+    },
+    "authority_differential": "an authority-linked unmodified OpenSSH 9.9p1 built with the tracked recipe against openssl-3.6.4-production (authority libcrypto 611e511d) read/wrote the candidate's key formats 10/10",
+    "executed_identity": {
+      "sshd": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe",
+      "sshd_session_executed": "ee5f4ef630b0f3d33a4cc563c63cdbcdf281208bc2b7822fd8483abb0fa82ee8",
+      "sshd_session_tree_copy": "f5ad1a233b03d6f9aa9b8e79cf477efaa70e59f7cbac1d88e4dd2945ad04c3c9",
+      "note": "the executed session binary is not the frozen tree copy; the evidence binds both digests separately and does not claim they are the same bytes"
+    },
+    "scope": "single host, candidate self-connection on loopback; no third-party peer; permissive auth policy; 16 concurrent logins; no sanitizer, fuzz, timing or Wycheproof/ACVP run. The file's own scope_statement says it does not certify memory safety or SAFE_COMPATIBLE graduation.",
+    "verdict": "functional evidence only; L7 PASS is not a section 7 graduation"
+  },
+  "gates": {
+    "fmt": "PASS (exit 0)",
+    "clippy": "PASS (exit 0, -D warnings)",
+    "library_tests": "2309 passed / 0 failed / 54 ignored (cargo test --lib -- --test-threads=4)",
+    "log": "court/freeze-b78/gates-b78.log",
+    "log_sha256": "b11f35bd2ad3bfa5a06f2c4bac5dac44201b2c202ed1b3f4045c4f035db99f81",
+    "measured_memory": "host MemAvailable 14-15 GiB at the gate sections, below the section 6.1 24 GiB floor; the freeze records the deviation rather than claiming compliance",
+    "not_rerun_here": "no gate was rerun in this session"
+  },
+  "instrument_and_self_test": {
+    "reconciliation": "evidence/b78-instrument-reconciliation.json",
+    "review_tool": "facb2a97",
+    "closure_tool": "f31816b1",
+    "one_verdict_changing_hunk": "adjudicate b 31303-31333 (carry-forward content migration), re-reviewed for the seven affected rows in evidence/b78-review-migrated-rows.json",
+    "self_test": {
+      "freeze_record": "returncode 1, failure_count 1, the e7core default-context control DID NOT RUN; classified NOT_RUN",
+      "stored_logs": "the four stored selftest-b78*.log files predate the final instrument commit bd518a214 and each ends SELF-TEST FAILED with 6-8 entries; they are not evidence about f31816b1",
+      "stored_log_of_final_instrument": "none",
+      "this_session": "NOT_RUN (memory floor)",
+      "state": "NOT_RUN, not PASS"
+    }
+  },
+  "verdict": {
+    "candidate": "b78 (source bb7d5206a, libcrypto a27ca428, tool f31816b1)",
+    "safe_compatible": false,
+    "families": {
+      "ssh": "SAFE_COMPATIBLE not established",
+      "sshd": "SAFE_COMPATIBLE not established"
+    },
+    "what_is_established": [
+      "candidate identity S and the nine artefact digests reproduce",
+      "both b78b closures ACCEPTED with 290/290 DISCHARGED, 0 BLOCKED, 0 UNKNOWN, no refusals",
+      "element 7 PASS: 0 target-bounded sites, 153 contract-bounded sites, 191 edge witnesses, 0 unattributed admissions",
+      "the 65-site cohort is ACCEPTed at b78: 12 re-reviewed, 53 identity-transferred with file-level non-impact, of which 8 had their callers re-read",
+      "the seven content-migrated copyctx rows are independently re-established at b78 (evidence/b78-review-migrated-rows.json): 7/7 ACCEPT, 0 returned to BLOCKED",
+      "the instrument split does not invalidate the review verdicts; the one verdict-changing hunk is named and its seven rows re-reviewed",
+      "fmt, clippy and 2309/0/54 library tests recorded green at b78",
+      "L7 functional replay: 31 probe checks, 18 matrix cases, 16/16 logins, and a 10/10 authority-linked key-format differential",
+      "the formerly-98 review-required set is accounted for: 65 reviewed, 9 structurally eliminated, 19 withdrawn and retained, 5 absent"
+    ],
+    "residuals_that_still_prevent_graduation": [
+      {
+        "id": "P1-SECTION7-CRITERION3",
+        "kind": "whole-closure safety argument missing",
+        "statement": "the closure is a reachability measurement with an upper bound, not a proof that no safe-Rust caller can cause UB. Every mechanism in the conservative dependency closure is not shown SAFETY_DISCHARGED with its caller obligations discharged at the interface; 153 element-7 sites are contract-bounded by external ABI, not proven safe by this evidence. BOUNDARY adjudication of the contract-bounded sites is NOT_RUN."
+      },
+      {
+        "id": "P2-SEAL-SANITIZERS",
+        "kind": "dynamic and SEAL evidence NOT_RUN",
+        "statement": "no ASan/Miri/Loom, no runtime negative controls, no dudect/Wycheproof at b78, no SEAL release build or full probe suite. Section 7 criterion 3 cannot be met by source review alone."
+      },
+      {
+        "id": "P3-SELF-TEST",
+        "kind": "instrument self-test NOT_RUN",
+        "statement": "the self-test exits 1 with one NOT_RUN control (e7core default-context). No stored log of the final instrument's self-test exists; the stored logs predate the final instrument. Deferred is never PASS."
+      },
+      {
+        "id": "P4-VENUE",
+        "kind": "section 6.1 memory floor not met",
+        "statement": "the b78 gates were measured at 14-15 GiB available and this session has 12 GiB, both below the 24 GiB build floor. The gates are recorded as run, with the deviation recorded; they were not reproducible under the mandated envelope here."
+      },
+      {
+        "id": "P5-R-BLOCKLEVEL",
+        "kind": "interface-contract documentation",
+        "statement": "57 of the 65 sites carry no # Safety section on the unsafe extern C fn; the validity contract is an operation-level block plus the OSSL_FUNC ABI. The review records this OPEN-DOCUMENTATION and does not reclassify it as a discharge."
+      },
+      {
+        "id": "P6-IDENTITY-REUSE-GRANULARITY",
+        "kind": "evidence reuse granularity",
+        "statement": "41 of the 53 identity transfers were not individually re-read in this batch; the reuse argument is file/operation-level non-impact. 12 are re-verified here. A stricter adjudicator may require per-row statements for the remaining 23 rows in the two changed files."
+      },
+      {
+        "id": "P7-EVIDENCE-SHAPE",
+        "kind": "receipt/ledger shape",
+        "statement": "FREEZE-b78.ledger_binding.artifact_matches_this_build=false (the build-link atlas row is a different ssh build); CAMPAIGN-STATUS still lists 19 withdrawn boundaries in scoped_boundary_discharges and describes the 33 out-of-cohort rows as structural eliminations although only 9 are eliminations and 24 are withdrawn/absent; the campaign applied ledger remains at candidate 69d43bb8d; two migrated rows carry imprecise contract type names (R-V1I-024-CONTRACT-TYPE, R-V1I-082-CONTRACT-TYPE)."
+      },
+      {
+        "id": "P8-L7-SCOPE",
+        "kind": "compatibility scope",
+        "statement": "L7 is single-host self-connection plus one authority key-format differential; no third-party SSH peer, no sanitizers, no fuzzing, and the executed sshd-session differs from the frozen tree copy."
+      }
+    ],
+    "reason": "The b78 evidence now reproduces, and the review chain, the migrated rows and the identity-transfer sample are reconciled. It still does not meet AGENTS.md section 7: the closure is not a whole-closure memory-safety argument, no dynamic/SEAL evidence exists at this candidate, the instrument self-test is NOT_RUN, and the venue floor was not met. The promotion record is therefore a refusal with a named residual list, not a graduation."
+  },
+  "what_would_change_the_verdict": [
+    "a section 7 criterion 3 argument over the conservative dependency closure: per-mechanism SAFETY_DISCHARGED with caller obligations, or a reviewer-accepted scope reduction",
+    "ASan/Miri (or equivalent) and the BOUNDARY negative controls at the exact candidate, plus a SEAL run",
+    "a green instrument self-test at f31816b1 with its log stored, or a documented disposition of the one NOT_RUN control",
+    "a measured gate run under the section 6.1 envelope (or an authorised replacement envelope)",
+    "per-row reuse statements for the 23 identity45 rows in the two changed files, or their re-review",
+    "a rebind of the build-link atlas row to ssh 3b282f43 / sshd 9744ab64",
+    "a campaign-status rebuild and re-census that applies the 65 reviewed discharges without resurrecting the 19 withdrawn boundaries"
+  ],
+  "non_claims": [
+    "This file does not itself graduate anything; it is a promotion record whose verdict is safe_compatible=false.",
+    "It does not prove absence of UB at runtime.",
+    "It does not re-run the closures, gates or L7.",
+    "It does not modify CAMPAIGN-STATUS's historical blocks; the additive b78_promotion_assessment block points here."
+  ]
+}

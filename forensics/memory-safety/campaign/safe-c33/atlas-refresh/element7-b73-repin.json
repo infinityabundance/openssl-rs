@@ -1,0 +1,346 @@
+{
+  "schema": "openssl-rs/consumer-closure/element7-repin/v1",
+  "freeze": "b73",
+  "description": "Element-7 address re-pin for the discharge instrument: every site table in forensics/tools/consumer_closure.py that was keyed by a virtual address in the previous libcrypto.so.3 was re-pinned by (symbol, offset) against the b73 image, and each new address was shape-verified before it was written to the tool. Production pins and self-test fixture literals are recorded separately. This is instrument evidence, not a closure result; no closure was run.",
+  "source": {
+    "source_head": "15bebabc9",
+    "source_note": "src/ is byte-identical to 0d39697ae (eng_list TOCTOU repair); verified before this pass",
+    "artifact": "artifacts/phase2/install/lib/libcrypto.so.3",
+    "artifact_sha256": "e8a90ba4bd1e597ed22adbfef56c7336b80a65477393ba5a74afbbe428b985cb",
+    "previous_artifact_sha256": "f3061a4f",
+    "fixture_previous_artifact_sha256": "136203564ebee50a28b428c3140ab877af9bef6a7d59225d1a5dbe88d09a9a44",
+    "tool_path": "forensics/tools/consumer_closure.py",
+    "tool_sha256_after_repin": "c65cbab5d8812eee6199ee96703881ca2f14d576981341bbbfb095abd9be19c4"
+  },
+  "method": {
+    "anchor": "resolve the demangled symbol name in the b73 DSO with nm --defined-only, add the recorded (symbol, offset) pin, then require the resulting address to be an instruction start in objdump.",
+    "shape_check": "for every site: instruction start; exact mnemonic/operand text and bytes; the operand-feed relation described by the pin; then the tool's own witness (external_abi_contract_witness / pbe_outparam_instance_witness / guard chain) was run against a materialised site at the new address and had to return the same contract class with contract_bounded=True and target_set=[] (or resolved=True for the finite PBE_EX targets).",
+    "no_class_widening": "ABI_CONTRACT_CORE_DISPATCH, ABI_CONTRACT_PROVIDER, ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT and every other class kept its existing membership; no site was added to a class and no refusal path was relaxed.",
+    "recovered_not_guessed": "Addresses were computed from the pin anchors, never by nearest-address proximity. The one intra-function layout change (PEM) was recovered by shape and records both the old and new offset."
+  },
+  "anchors": {
+    "EVP_PBE_CipherInit_ex": {"address": "0x17ade0"},
+    "PKCS5_v2_PBE_keyivgen_ex": {"address": "0x17cce0"},
+    "OSSL_STORE_open_ex": {"address": "0x1f8550"},
+    "CONF_modules_load": {"address": "0x293a20"},
+    "openssl_rs::pem::pem_pk8::do_pk8pkey": {"address": "0x4ad070"},
+    "EVP_PBE_find_ex": {"address": "0x17b970", "got_slot": "0x896b80", "relocation": "R_X86_64_GLOB_DAT"},
+    "EVP_PBE_alg_add_type": {"address": "0x17b610"},
+    "openssl_rs::evp::evp_pbe::BUILTIN_PBE": {"address": "0x7be0b8", "row32_member_keygen_ex": "0x7be4d0", "row32_member_old_value": "0x194fe0"},
+    "PKCS12_PBE_keyivgen_ex": {"address": "0x542380"},
+    "PKCS5_v2_PBKDF2_keyivgen_ex": {"address": "0x194fe0"},
+    "PKCS5_PBE_keyivgen_ex": {"address": "0x31e7e0"},
+    "PKCS5_v2_scrypt_keyivgen_ex": {"address": "0x1b93d0"}
+  },
+  "production_sites": [
+    {
+      "id": "PBE_SITE",
+      "tables": ["PBE_SITE", "PBE_SITE_PIN", "EXTERNAL_ABI_SITE_FUNCTIONS", "EXTERNAL_ABI_SITE_PINS"],
+      "owner": "EvpPbeCtl.keygen (offset 0x10)",
+      "anchor_symbol": "EVP_PBE_CipherInit_ex",
+      "anchor_address": "0x17ade0",
+      "old_offset": "0x19d",
+      "new_offset": "0x19d",
+      "old_address": "0x39dbdd",
+      "new_address": "0x17af7d",
+      "delta": "-0x222c60",
+      "instruction_bytes": "ff d0",
+      "instruction_text": "call   *%rax",
+      "instruction_start": true,
+      "shape_predicate": "indirect call whose single reaching operand definition is the frame load of the EvpPbeCtl.keygen slot (offset 0x10); slot is zero-initialised and its address escapes once as argument 5 of the unique EVP_PBE_find_ex call; pbe_registry_witness accepted",
+      "witness_result": {"class": "ABI_CONTRACT_PBE_REGISTRY", "contract_bounded": true, "target_set": []},
+      "verified": true
+    },
+    {
+      "id": "PBE_EX_OUTER",
+      "tables": ["PBE_EX_SITES", "PBE_EX_SITE_PINS"],
+      "owner": "EvpPbeCtl.keygen_ex (offset 0x18)",
+      "anchor_symbol": "EVP_PBE_CipherInit_ex",
+      "anchor_address": "0x17ade0",
+      "old_offset": "0x415",
+      "new_offset": "0x415",
+      "old_address": "0x39de55",
+      "new_address": "0x17b1f5",
+      "delta": "-0x222c60",
+      "instruction_bytes": "ff d0",
+      "instruction_text": "call   *%rax",
+      "instruction_start": true,
+      "shape_predicate": "indirect call through a reload of the frame slot whose address escaped as argument 6 of the unique EVP_PBE_find_ex call; slot zero-initialised; selection 'all' over BUILTIN_PBE; pbe_outparam_instance_witness resolved",
+      "witness_result": {"resolved": true, "selection": "all", "targets": ["0x17cce0", "0x194fe0", "0x1b93d0", "0x31e7e0", "0x542380"], "target_count": 5},
+      "verified": true
+    },
+    {
+      "id": "PBE_EX_KDF",
+      "tables": ["PBE_EX_SITES", "PBE_EX_SITE_PINS"],
+      "owner": "EvpPbeCtl.keygen_ex (offset 0x18)",
+      "anchor_symbol": "PKCS5_v2_PBE_keyivgen_ex",
+      "anchor_address": "0x17cce0",
+      "old_offset": "0x208",
+      "new_offset": "0x208",
+      "old_address": "0x3a0158",
+      "new_address": "0x17cee8",
+      "delta": "-0x223270",
+      "instruction_bytes": "ff d0",
+      "instruction_text": "call   *%rax",
+      "instruction_start": true,
+      "shape_predicate": "same out-parameter reload shape as PBE_EX_OUTER; selection EVP_PBE_TYPE_KDF; pbe_outparam_instance_witness resolved and selected rows [32, 33]",
+      "witness_result": {"resolved": true, "selection": "EVP_PBE_TYPE_KDF", "targets": ["0x194fe0", "0x1b93d0"], "target_count": 2},
+      "verified": true
+    },
+    {
+      "id": "STORE_LOADER_OPEN_EX",
+      "tables": ["STORE_LOADER_LEGACY_SITES", "STORE_LOADER_LEGACY_SITE_PINS", "EXTERNAL_ABI_SITE_FUNCTIONS", "EXTERNAL_ABI_SITE_PINS"],
+      "owner": "OsslStoreLoader.open_ex (offset 0x58)",
+      "anchor_symbol": "OSSL_STORE_open_ex",
+      "anchor_address": "0x1f8550",
+      "old_offset": "0x498",
+      "new_offset": "0x498",
+      "old_address": "0x3dd2d8",
+      "new_address": "0x1f89e8",
+      "delta": "-0x1e48f0",
+      "instruction_bytes": "ff d0",
+      "instruction_text": "call   *%rax",
+      "instruction_start": true,
+      "shape_predicate": "indirect call whose operand load is 0x58(%r14) of the loader returned by ossl_store_get0_loader_int; writer set is OSSL_STORE_LOADER_set_open_ex(open_ex_function) only; store_loader_legacy_witness accepted",
+      "witness_result": {"class": "ABI_CONTRACT_STORE_LOADER", "contract_bounded": true, "target_set": []},
+      "verified": true
+    },
+    {
+      "id": "STORE_LOADER_OPEN",
+      "tables": ["STORE_LOADER_LEGACY_SITES", "STORE_LOADER_LEGACY_SITE_PINS", "EXTERNAL_ABI_SITE_FUNCTIONS", "EXTERNAL_ABI_SITE_PINS"],
+      "owner": "OsslStoreLoader.open (offset 0x10)",
+      "anchor_symbol": "OSSL_STORE_open_ex",
+      "anchor_address": "0x1f8550",
+      "old_offset": "0x551",
+      "new_offset": "0x551",
+      "old_address": "0x3dd391",
+      "new_address": "0x1f8aa1",
+      "delta": "-0x1e48f0",
+      "instruction_bytes": "ff d0",
+      "instruction_text": "call   *%rax",
+      "instruction_start": true,
+      "shape_predicate": "indirect call whose operand load is 0x10(%r14) of the legacy loader; writer set is OSSL_STORE_LOADER_set_open(open_function) only; store_loader_legacy_witness accepted",
+      "witness_result": {"class": "ABI_CONTRACT_STORE_LOADER", "contract_bounded": true, "target_set": []},
+      "verified": true
+    },
+    {
+      "id": "STORE_LOADER_CLOSEFN",
+      "tables": ["STORE_LOADER_LEGACY_SITES", "STORE_LOADER_LEGACY_SITE_PINS", "EXTERNAL_ABI_SITE_FUNCTIONS", "EXTERNAL_ABI_SITE_PINS", "STORE_LOADER_CLOSE_GUARDS", "STORE_LOADER_CLOSE_GUARD_PINS"],
+      "owner": "OsslStoreLoader.closefn (offset 0x50)",
+      "anchor_symbol": "OSSL_STORE_open_ex",
+      "anchor_address": "0x1f8550",
+      "old_offset": "0x9c3",
+      "new_offset": "0x9c3",
+      "old_address": "0x3dd803",
+      "new_address": "0x1f8f13",
+      "delta": "-0x1e48f0",
+      "instruction_bytes": "ff d0",
+      "instruction_text": "call   *%rax",
+      "instruction_start": true,
+      "shape_predicate": "indirect call after the enumerated closefn NULL guard; operand load is 0x50(%r14); writer set is OSSL_STORE_LOADER_set_close(close_function) only; guard pair legacy_je accepted; store_loader_legacy_witness accepted",
+      "witness_result": {"class": "ABI_CONTRACT_STORE_LOADER", "contract_bounded": true, "target_set": []},
+      "verified": true
+    },
+    {
+      "id": "STORE_LOADER_PROVIDER_P_CLOSE",
+      "tables": ["STORE_LOADER_PROVIDER_SITE", "STORE_LOADER_PROVIDER_SITE_PIN", "EXTERNAL_ABI_SITE_FUNCTIONS", "STORE_LOADER_CLOSE_GUARDS", "STORE_LOADER_CLOSE_GUARD_PINS"],
+      "owner": "OsslStoreLoader.p_close (offset 0xb8)",
+      "anchor_symbol": "OSSL_STORE_open_ex",
+      "anchor_address": "0x1f8550",
+      "old_offset": "0x7d9",
+      "new_offset": "0x7d9",
+      "old_address": "0x3dd619",
+      "new_address": "0x1f8d29",
+      "delta": "-0x1e48f0",
+      "instruction_bytes": "ff d0",
+      "instruction_text": "call   *%rax",
+      "instruction_start": true,
+      "shape_predicate": "indirect call whose operand load is 0xb8(%r14) of the provider loader; the base is the fetched_loader==NULL branch reached from the provider_jne guard; writer is loader_from_algorithm (OSSL_FUNC_STORE_CLOSE); store_loader_provider_witness accepted",
+      "witness_result": {"class": "ABI_CONTRACT_PROVIDER", "contract_bounded": true, "target_set": [], "scope": "store-loader-p_close"},
+      "verified": true
+    },
+    {
+      "id": "CONF_INIT",
+      "tables": ["CONF_SITES", "CONF_SITE_PINS", "EXTERNAL_ABI_SITE_FUNCTIONS", "EXTERNAL_ABI_SITE_PINS"],
+      "owner": "ConfModule.init (offset 0x10)",
+      "anchor_symbol": "CONF_modules_load",
+      "anchor_address": "0x293a20",
+      "old_offset": "0x505",
+      "new_offset": "0x505",
+      "old_address": "0x4ba825",
+      "new_address": "0x293f25",
+      "delta": "-0x226900",
+      "instruction_bytes": "41 ff d7",
+      "instruction_text": "call   *%r15",
+      "instruction_start": true,
+      "shape_predicate": "indirect call whose operand load is 0x10(%r12) (ConfModule.init); writer set is module_add/Conf_module_add(ifunc) only; conf_module_witness accepted",
+      "witness_result": {"class": "ABI_CONTRACT_CONF_MODULE", "contract_bounded": true, "target_set": []},
+      "verified": true
+    },
+    {
+      "id": "CONF_FINISH",
+      "tables": ["CONF_SITES", "CONF_SITE_PINS", "EXTERNAL_ABI_SITE_FUNCTIONS", "EXTERNAL_ABI_SITE_PINS"],
+      "owner": "ConfModule.finish (offset 0x18)",
+      "anchor_symbol": "CONF_modules_load",
+      "anchor_address": "0x293a20",
+      "old_offset": "0x943",
+      "new_offset": "0x943",
+      "old_address": "0x4bac63",
+      "new_address": "0x294363",
+      "delta": "-0x226900",
+      "instruction_bytes": "ff d0",
+      "instruction_text": "call   *%rax",
+      "instruction_start": true,
+      "shape_predicate": "indirect call whose operand load is 0x18(%r12) (ConfModule.finish); writer set is module_add/Conf_module_add(ffunc) only; conf_module_witness accepted",
+      "witness_result": {"class": "ABI_CONTRACT_CONF_MODULE", "contract_bounded": true, "target_set": []},
+      "verified": true
+    },
+    {
+      "id": "PEM_PASSWORD_DEFAULT",
+      "tables": ["PEM_SITE", "PEM_SITE_PIN", "EXTERNAL_ABI_SITE_FUNCTIONS"],
+      "owner": "do_pk8pkey cb parameter (stack argument index 7) and the PEM_def_callback default",
+      "anchor_symbol": "openssl_rs::pem::pem_pk8::do_pk8pkey",
+      "anchor_address": "0x4ad070",
+      "old_offset": "0x286",
+      "new_offset": "0x29c",
+      "old_address": "0x30ef0c",
+      "new_address": "0x4ad30c",
+      "delta": "+0x19e400",
+      "instruction_bytes": "ff d3",
+      "instruction_text": "call   *%rbx",
+      "instruction_start": true,
+      "layout_change": true,
+      "layout_change_note": "the site moved within the function as well as with the image: +0x286 in the previous production image, +0x29c at b73, and the callback register changed from %r14 to %rbx. The pin offset was re-derived by shape; the register is not pinned by the witness (register allocation is a compiler choice).",
+      "shape_predicate": "register-agnostic: the callback register has exactly two reaching definitions, one a mov copy of the declared cb stack parameter (index 7) and one the in-image PEM_def_callback load; the default arm is the GOT load naming PEM_def_callback; default_target=PEM_def_callback; pem_password_default_witness accepted",
+      "witness_result": {"class": "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT", "contract_bounded": true, "target_set": [], "default_target": "PEM_def_callback"},
+      "verified": true
+    }
+  ],
+  "production_close_guards": [
+    {
+      "id": "legacy_je",
+      "table": "STORE_LOADER_CLOSE_GUARDS.legacy_je",
+      "old": ["0x3dd601", "0x3dd604", "0x3dd7f7"],
+      "new": ["0x1f8d11", "0x1f8d14", "0x1f8f07"],
+      "delta": "-0x1e48f0",
+      "instructions": [
+        {"address": "0x1f8d11", "bytes": "4d 85 e4", "text": "test   %r12,%r12"},
+        {"address": "0x1f8d14", "bytes": "0f 84 ed 01 00 00", "text": "je     1f8f07 <OSSL_STORE_open_ex+0x9b7>"},
+        {"address": "0x1f8f07", "bytes": "49 8b 46 50", "text": "mov    0x50(%r14),%rax"}
+      ],
+      "shape_predicate": "closefn guard: test %r12,%r12 then je to the legacy closefn load; guard chain accepted by store_loader_legacy_witness",
+      "verified": true
+    },
+    {
+      "id": "provider_jne",
+      "table": "STORE_LOADER_CLOSE_GUARDS.provider_jne",
+      "old": ["0x3dd7ee", "0x3dd7f1", "0x3dd60a"],
+      "new": ["0x1f8efe", "0x1f8f01", "0x1f8d1a"],
+      "delta": "-0x1e48f0",
+      "instructions": [
+        {"address": "0x1f8efe", "bytes": "4d 85 e4", "text": "test   %r12,%r12"},
+        {"address": "0x1f8f01", "bytes": "0f 85 13 fe ff ff", "text": "jne    1f8d1a <OSSL_STORE_open_ex+0x7ca>"},
+        {"address": "0x1f8d1a", "bytes": "49 8b 86 b8 00 00 00", "text": "mov    0xb8(%r14),%rax"}
+      ],
+      "shape_predicate": "provider guard: test %r12,%r12 then jne to the provider p_close load; guard chain accepted by store_loader_provider_witness",
+      "verified": true
+    }
+  ],
+  "fixture_repins": {
+    "e7abi": {
+      "fixture": "_e7abi_self_test",
+      "model": "the built libcrypto.so.3 (artifacts/phase2/install/lib/libcrypto.so.3); values derived from the current symbols and the same eight sites, not typed from the old image",
+      "sites": [
+        {"old_address": "0x50604d", "new_address": "0x17af7d", "delta": "-0x38b0d0", "anchor_symbol": "EVP_PBE_CipherInit_ex", "old_anchor": "0x505eb0", "new_anchor": "0x17ade0", "old_offset": "0x19d", "new_offset": "0x19d", "old_text": "call   *%rax", "new_text": "call   *%rax", "bytes": "ff d0", "expected_class": "ABI_CONTRACT_PBE_REGISTRY", "verified": true},
+        {"old_address": "0x3e2088", "new_address": "0x1f89e8", "delta": "-0x1e96a0", "anchor_symbol": "OSSL_STORE_open_ex", "old_anchor": "0x3e1c00", "new_anchor": "0x1f8550", "old_offset": "0x488", "new_offset": "0x498", "old_text": "call   *%rax", "new_text": "call   *%rax", "bytes": "ff d0", "expected_class": "ABI_CONTRACT_STORE_LOADER", "verified": true},
+        {"old_address": "0x3e217d", "new_address": "0x1f8aa1", "delta": "-0x1e96dc", "anchor_symbol": "OSSL_STORE_open_ex", "old_anchor": "0x3e1c00", "new_anchor": "0x1f8550", "old_offset": "0x57d", "new_offset": "0x551", "old_text": "call   *%rax", "new_text": "call   *%rax", "bytes": "ff d0", "expected_class": "ABI_CONTRACT_STORE_LOADER", "verified": true},
+        {"old_address": "0x3e2648", "new_address": "0x1f8f13", "delta": "-0x1e9735", "anchor_symbol": "OSSL_STORE_open_ex", "old_anchor": "0x3e1c00", "new_anchor": "0x1f8550", "old_offset": "0xa48", "new_offset": "0x9c3", "old_text": "call   *%rax", "new_text": "call   *%rax", "bytes": "ff d0", "expected_class": "ABI_CONTRACT_STORE_LOADER", "verified": true},
+        {"old_address": "0x3e2408", "new_address": "0x1f8d29", "delta": "-0x1e96df", "anchor_symbol": "OSSL_STORE_open_ex", "old_anchor": "0x3e1c00", "new_anchor": "0x1f8550", "old_offset": "0x808", "new_offset": "0x7d9", "old_text": "call   *%rax", "new_text": "call   *%rax", "bytes": "ff d0", "expected_class": "ABI_CONTRACT_PROVIDER", "verified": true},
+        {"old_address": "0x17319a", "new_address": "0x293f25", "delta": "+0x120d8b", "anchor_symbol": "CONF_modules_load", "old_anchor": "0x172c90", "new_anchor": "0x293a20", "old_offset": "0x50a", "new_offset": "0x505", "old_text": "call   *%r15", "new_text": "call   *%r15", "bytes": "41 ff d7", "expected_class": "ABI_CONTRACT_CONF_MODULE", "verified": true},
+        {"old_address": "0x1735b2", "new_address": "0x294363", "delta": "+0x120db1", "anchor_symbol": "CONF_modules_load", "old_anchor": "0x172c90", "new_anchor": "0x293a20", "old_offset": "0x922", "new_offset": "0x943", "old_text": "call   *%rax", "new_text": "call   *%rax", "bytes": "ff d0", "expected_class": "ABI_CONTRACT_CONF_MODULE", "verified": true},
+        {"old_address": "0x495de6", "new_address": "0x4ad30c", "delta": "+0x17526", "anchor_symbol": "openssl_rs::pem::pem_pk8::do_pk8pkey", "old_anchor": "0x495b60", "new_anchor": "0x4ad070", "old_offset": "0x286", "new_offset": "0x29c", "old_text": "call   *%r14", "new_text": "call   *%rbx", "bytes": "ff d3", "expected_class": "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT", "layout_change": true, "verified": true}
+      ],
+      "fixture_offset_note": "The old e7abi pins were keyed to the b6f image (offsets 0x488/0x57d/0xa48/0x808/0x50a/0x922). The corresponding b73 sites are the same eight sites but their in-function offsets are the production offsets 0x498/0x551/0x9c3/0x7d9/0x505/0x943. The fixture was re-derived from the current image's symbols and shape-verified, not copied from the old offsets.",
+      "refusal_controls": {
+        "count": 6,
+        "cases": ["PBE type alias", "STORE type alias", "CONF type alias", "PBE continuation writer", "PBE macro-expanded slot store", "STORE registration alias", "STORE split-line registration alias", "PEM forwarded non-cb"],
+        "behaviour": "unchanged: every refusal still refuses with its recorded reason, and every paired mutation switch still flips the refusal back to acceptance; observed by --self-test exit 0. No refusal became an acceptance."
+      }
+    },
+    "e7pbe": {
+      "fixture": "_pbe_outparam_self_test",
+      "sites": [
+        {"old_address": "0x5062c5", "new_address": "0x17b1f5", "delta": "-0x38b0d0", "anchor_symbol": "EVP_PBE_CipherInit_ex", "old_anchor": "0x505eb0", "new_anchor": "0x17ade0", "old_offset": "0x415", "new_offset": "0x415", "bytes": "ff d0", "text": "call   *%rax", "verified": true},
+        {"old_address": "0x2bd122", "new_address": "0x17cee8", "delta": "-0x14023a", "anchor_symbol": "PKCS5_v2_PBE_keyivgen_ex", "old_anchor": "0x2bcf60", "new_anchor": "0x17cce0", "old_offset": "0x1c2", "new_offset": "0x208", "bytes": "ff d0", "text": "call   *%rax", "layout_change": true, "layout_change_note": "the old fixture recorded 0x1c2 for the b6f image; the b73 function layout matches the production pin at 0x208. Recovered by shape (call *%rax fed by the frame-slot reload) and confirmed by the witness.", "verified": true}
+      ],
+      "target_pins": [
+        {"old_address": "0x1ac1c0", "new_address": "0x542380", "delta": "+0x3961c0", "symbol": "PKCS12_PBE_keyivgen_ex", "verified": true},
+        {"old_address": "0x2bcf60", "new_address": "0x17cce0", "delta": "-0x140280", "symbol": "PKCS5_v2_PBE_keyivgen_ex", "verified": true},
+        {"old_address": "0x2c5fe0", "new_address": "0x194fe0", "delta": "-0x131000", "symbol": "PKCS5_v2_PBKDF2_keyivgen_ex", "verified": true},
+        {"old_address": "0x4b51d0", "new_address": "0x31e7e0", "delta": "-0x1969f0", "symbol": "PKCS5_PBE_keyivgen_ex", "verified": true},
+        {"old_address": "0x53bf10", "new_address": "0x1b93d0", "delta": "-0x382b40", "symbol": "PKCS5_v2_scrypt_keyivgen_ex", "verified": true}
+      ],
+      "expected_target_sets": {
+        "old_all": ["0x1ac1c0", "0x2bcf60", "0x2c5fe0", "0x4b51d0", "0x53bf10"],
+        "new_all": ["0x17cce0", "0x194fe0", "0x1b93d0", "0x31e7e0", "0x542380"],
+        "old_kdf": ["0x2c5fe0", "0x53bf10"],
+        "new_kdf": ["0x194fe0", "0x1b93d0"]
+      },
+      "control_literals": [
+        {"id": "find_ex_got_slot", "old_address": "0x898b68", "new_address": "0x896b80", "delta": "-0x1fe8", "shape_predicate": "R_X86_64_GLOB_DAT relocation naming EVP_PBE_find_ex (readelf -rW)", "verified": true},
+        {"id": "wrong_callee_replacement_value", "old_address": "0x5066e0", "new_address": "0x17b610", "delta": "-0x38b0d0", "symbol": "EVP_PBE_alg_add_type", "verified": true},
+        {"id": "builtin_pbe_row32_keygen_ex_member", "old_address": "0x889948", "new_address": "0x7be4d0", "delta": "-0xcb478", "shape_predicate": "BUILTIN_PBE + 0x418 (row 32, member 0x18); relocation value at this slot is 0x194fe0", "verified": true},
+        {"id": "builtin_pbe_data_object", "old_address": "0x889530", "new_address": "0x7be0b8", "delta": "-0xcb478", "symbol": "openssl_rs::evp::evp_pbe::BUILTIN_PBE", "verified": true},
+        {"id": "zero_store_instruction", "old_address": "0x505ef8", "new_address": "0x17ae28", "delta": "-0x38b0d0", "bytes": "48 c7 84 24 a0 00 00 00 00 00 00 00", "text": "movq   $0x0,0xa0(%rsp)", "shape_predicate": "zero initialiser of the keygen_ex frame slot; instruction start", "verified": true},
+        {"id": "slot_address_escape_instruction", "old_address": "0x505f25", "new_address": "0x17ae55", "delta": "-0x38b0d0", "bytes": "4c 8d 8c 24 a0 00 00 00", "text": "lea    0xa0(%rsp),%r9", "shape_predicate": "the unique address escape of the frame slot, into the pkeygen_ex argument register %r9; instruction start", "verified": true},
+        {"id": "slot_reload_instruction", "old_address": "0x505ffb", "new_address": "0x17af2b", "delta": "-0x38b0d0", "bytes": "48 8b 84 24 a0 00 00 00", "text": "mov    0xa0(%rsp),%rax", "shape_predicate": "64-bit reload of the frame slot feeding the indirect call; instruction start", "verified": true},
+        {"id": "synthetic_insert_address", "old_address": "0x505efc", "new_address": "0x17ae2c", "delta": "-0x38b0d0", "shape_predicate": "synthetic insertion key only (zero-store address + 4), not an instruction; it stays strictly between the zero store at 0x17ae28 and the next instruction at 0x17ae34", "verified": true}
+      ],
+      "sha_constants": {
+        "old": "136203564ebee50a28b428c3140ab877af9bef6a7d59225d1a5dbe88d09a9a44",
+        "new": "e8a90ba4bd1e597ed22adbfef56c7336b80a65477393ba5a74afbbe428b985cb"
+      },
+      "mutation_controls": {
+        "count": 10,
+        "cases": ["wrong callee", "wrong argument index", "non-null registry keygen_ex", "data row target", "second slot writer", "4-byte zero store", "4-byte reload", "partial overlap store", "non-in-image GOT binding", "KDF selection (5 vs 2)"],
+        "behaviour": "unchanged: each refusal still refuses with its recorded reason and each mutation switch flips it to resolved=True; the KDF selection still distinguishes 5 from 2; observed by --self-test exit 0. No refusal became an acceptance."
+      }
+    }
+  },
+  "self_test": {
+    "command": "python3 forensics/tools/consumer_closure.py --self-test",
+    "exit_status": 0,
+    "chk_assertions": 229,
+    "previous_failures": 42,
+    "previous_failures_breakdown": {"e7abi": 34, "e7pbe": 8},
+    "summary_line_prefix": "[consumer-closure] self-test ok:",
+    "cases_removed": 0,
+    "cases_converted_to_expected_fail": 0,
+    "note": "The diff changes only address/offset/SHA literals and the associated explanatory comments (132 insertions, 132 deletions). No cases.append entry, chk site or refusal control was deleted; the number of assertion evaluations with the corrected pins is 229."
+  },
+  "targeted_probe": {
+    "probe": "court/tmp/b67_g1_probe.py",
+    "driver_reference": "court/freeze-b61/run_probe.py (exact command reproduced directly so the probe's stdout writer was not invoked; run_probe.py writes outside this task's write scope)",
+    "closure_inputs": ["evidence/closure-ssh-b61.json", "evidence/closure-sshd-b61.json"],
+    "default_counts": {
+      "ssh": {"total_obligations": 323, "after_counts": {"DISCHARGED": 323, "BLOCKED": 0, "UNKNOWN": 0}, "withdrawn_count": 0, "conflict_obligations": 165, "conflict_edges": 179, "conflicts": 179},
+      "sshd": {"total_obligations": 323, "after_counts": {"DISCHARGED": 323, "BLOCKED": 0, "UNKNOWN": 0}, "withdrawn_count": 0, "conflict_obligations": 165, "conflict_edges": 179, "conflicts": 179}
+    },
+    "enforced_counts": {
+      "ssh": {"total_obligations": 323, "after_counts": {"DISCHARGED": 321, "BLOCKED": 2, "UNKNOWN": 0}, "withdrawn_count": 2, "conflict_obligations": 165, "conflict_edges": 181, "conflicts": 181},
+      "sshd": {"total_obligations": 323, "after_counts": {"DISCHARGED": 321, "BLOCKED": 2, "UNKNOWN": 0}, "withdrawn_count": 2, "conflict_obligations": 165, "conflict_edges": 181, "conflicts": 181}
+    },
+    "comparison_to_prior_freeze_b61_run": "semantically identical to court/freeze-b61/{ssh,sshd}-{diagnostic,enforced}.json after JSON parsing (the on-disk byte difference is only dictionary insertion order in after_by_receipt). The conflict state did not change.",
+    "controls": {"a_blocked_disposition": "BLOCKED/disposition-is-not-safety-discharged", "b_positive": "DISCHARGED", "c_conflict_diagnostic": "DISCHARGED with one diagnostic conflict", "c_conflict_enforced": "BLOCKED/conflicting-disposition", "d_superseded_bare_ids": "diagnostic DISCHARGED, enforced DISCHARGED", "d_superseded_receipt_ids": "diagnostic DISCHARGED, enforced DISCHARGED", "e_span_hash_mismatch": "BLOCKED/span-hash-mismatch", "f_identity_mismatch": "BLOCKED"}
+  },
+  "residuals": [
+    "The instrument still matches sites by absolute virtual address (`_external_site_matches` is an equality on site.addr). Every future rebuild therefore requires this same re-pin pass; the (symbol, offset) tables are the re-pin key, not evidence about the artefact.",
+    "The production PBE/STORE/CONF/PEM pins are bound to libcrypto.so.3 sha256 e8a90ba4...; a different DSO must be re-pinned, and element 7 must fail rather than re-use these addresses.",
+    "The b73 re-pin was verified by targeted shape checks and the tool's own witnesses, not by a full closure: the ssh/sshd closures were not run (out of scope for this pass)."
+  ],
+  "not_run": [
+    "ssh closure (evidence/closure-ssh-b73.json)",
+    "sshd closure (evidence/closure-sshd-b73.json)",
+    "cargo build / library test suite / Miri / ASan"
+  ]
+}

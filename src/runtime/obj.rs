@@ -2164,10 +2164,21 @@ pub extern "C" fn OBJ_NAME_new_index(
 /// Follows alias chains (at most ten, as the authority does) and returns the
 /// stored `data` pointer, or NULL.
 ///
-/// # Notes
-/// `name` must be NULL or a valid NUL-terminated string.
+/// # Safety
+///
+/// `name` must be NULL or a valid NUL-terminated C string: properly aligned,
+/// readable up to and including its terminator, and valid for the duration of the
+/// call. Its provenance is the caller's (a static, a caller-owned buffer, or a
+/// string the registry itself stores). For a `type_` that has a caller-registered
+/// comparator, the pointer is handed to that comparator, whose contract then also
+/// applies to it. NULL is total; a dangling or non-terminated non-NULL pointer is
+/// undefined behaviour. No ownership is taken: the returned `data` pointer is the
+/// registry entry's borrowed value, valid only while the entry stays installed and
+/// only under the type's own contract. For an alias entry the registry follows the
+/// value as a name string, which is why such an entry's `data` had to be a live
+/// NUL-terminated name; for every other entry the value is returned untouched.
 #[no_mangle]
-pub extern "C" fn OBJ_NAME_get(name: *const c_char, type_: c_int) -> *const c_char {
+pub unsafe extern "C" fn OBJ_NAME_get(name: *const c_char, type_: c_int) -> *const c_char {
     guard_ffi(core::ptr::null(), || {
         if name.is_null() {
             return core::ptr::null();
@@ -2201,11 +2212,30 @@ pub extern "C" fn OBJ_NAME_get(name: *const c_char, type_: c_int) -> *const c_ch
 ///
 /// Inserts or replaces an entry. Returns 1 on success.
 ///
-/// # Notes
-/// `name` and `data` must be valid NUL-terminated strings, and must outlive the
-/// entry (the authority also stores them borrowed).
+/// # Safety
+///
+/// `name` must be a valid NUL-terminated C string (properly aligned and readable)
+/// and **must remain live for as long as the entry stays installed** — until it is
+/// replaced, removed, or the registry is cleaned up. The registry stores the
+/// pointer borrowed, exactly as the authority does, and may hand it back to this
+/// function's own lookup (`OBJ_NAME_get`) or to the destructor registered for
+/// `type_`; the string is not copied, so a caller that frees it while the entry
+/// lives leaves the registry holding a dangling pointer. `data` is the **opaque
+/// value** stored with the entry: the registry itself never dereferences it except
+/// when the entry carries `OBJ_NAME_ALIAS`, in which case it is followed as a name
+/// string (and so must then be a live, NUL-terminated name). Otherwise it must be
+/// valid for as long as the entry lives **under the contract of the type's
+/// registered `hash`/`cmp`/`free` hooks** — for the crate's own callers that is a
+/// live `EVP_CIPHER`/`EVP_MD`, not a string. Ownership of neither pointer is taken
+/// by this call: any release is the registering caller's (or that type's
+/// registered destructor's) obligation. A NULL `name` is the defined no-op short
+/// circuit.
 #[no_mangle]
-pub extern "C" fn OBJ_NAME_add(name: *const c_char, type_: c_int, data: *const c_char) -> c_int {
+pub unsafe extern "C" fn OBJ_NAME_add(
+    name: *const c_char,
+    type_: c_int,
+    data: *const c_char,
+) -> c_int {
     guard_ffi(0, || {
         if name.is_null() {
             return 0;
@@ -2254,10 +2284,18 @@ pub extern "C" fn OBJ_NAME_add(name: *const c_char, type_: c_int, data: *const c
 ///
 /// Returns 1 if an entry was removed, else 0.
 ///
-/// # Notes
-/// `name` must be NULL or a valid NUL-terminated string.
+/// # Safety
+///
+/// `name` must be NULL or a valid NUL-terminated C string, aligned, readable up to
+/// its terminator and valid for the duration of the call; for a `type_` with a
+/// caller-registered comparator it is additionally subject to that comparator's
+/// contract. Removing a record runs the destructor registered for its type on the
+/// record's stored `name`/`data`, so those pointers must still satisfy the
+/// [`OBJ_NAME_add`] contract at removal time (including `data`'s meaning for that
+/// type): this call does not make a dangling entry safe. NULL is the defined no-op
+/// short circuit.
 #[no_mangle]
-pub extern "C" fn OBJ_NAME_remove(name: *const c_char, type_: c_int) -> c_int {
+pub unsafe extern "C" fn OBJ_NAME_remove(name: *const c_char, type_: c_int) -> c_int {
     guard_ffi(0, || {
         if name.is_null() {
             return 0;
@@ -2280,6 +2318,15 @@ pub extern "C" fn OBJ_NAME_remove(name: *const c_char, type_: c_int) -> c_int {
         c_int::from(removed)
     })
 }
+
+// ABI-shape controls for the three registry entry points above: the parameter/return
+// types are pinned, so an ABI change stops this file compiling. (They do *not* pin the
+// `unsafe` qualifier: a safe `extern "C" fn` item also coerces to an `unsafe extern
+// "C" fn` pointer, verified at this head. The qualifier is controlled by
+// `the_three_registry_entry_points_are_unsafe_fns` in the test module.)
+const _: unsafe extern "C" fn(*const c_char, c_int) -> *const c_char = OBJ_NAME_get;
+const _: unsafe extern "C" fn(*const c_char, c_int, *const c_char) -> c_int = OBJ_NAME_add;
+const _: unsafe extern "C" fn(*const c_char, c_int) -> c_int = OBJ_NAME_remove;
 
 /// `void OBJ_NAME_do_all(int type, void (*fn)(const OBJ_NAME *, void *), void *arg)`
 ///
@@ -2542,6 +2589,31 @@ pub unsafe extern "C" fn OBJ_create_objects(in_: *mut super::bio::Bio) -> c_int 
 #[allow(clippy::unwrap_used, clippy::expect_used, clippy::panic)]
 mod tests {
     use super::*;
+
+    /// Qualifier control for F-BIO-1: the three registry entry points take a caller
+    /// string or opaque value and must not be callable from safe Rust with an
+    /// unchecked pointer. A type-level "is an unsafe fn" assertion is not expressible
+    /// on stable Rust (a safe fn item coerces to an `unsafe fn` pointer), so the
+    /// signature is pinned in the production source text, which is read from disk and
+    /// truncated at the first `#[cfg(test)]` module. This test's own assertion text is
+    /// therefore never searched, and each needle is assembled from fragments, so this
+    /// test fails if either `unsafe` is dropped.
+    #[test]
+    #[allow(clippy::expect_used)]
+    fn the_three_registry_entry_points_are_unsafe_fns() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/runtime/obj.rs");
+        let src = std::fs::read_to_string(path).expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        for needle in [
+            concat!("pub unsafe extern ", "\"C\" fn OBJ_NAME_get("),
+            concat!("pub unsafe extern ", "\"C\" fn OBJ_NAME_add("),
+            concat!("pub unsafe extern ", "\"C\" fn OBJ_NAME_remove("),
+        ] {
+            assert!(prod.contains(needle), "missing {needle}");
+        }
+    }
 
     /// Takes the crate-wide global-state lock. These tests touch the
     /// process-global object database (`OBJ_DB`), the object-name registries
@@ -2917,8 +2989,9 @@ mod tests {
         let name = std::ffi::CString::new("zedtest-digest").unwrap();
         let data = std::ffi::CString::new("zedtest-data").unwrap();
         let name2 = std::ffi::CString::new("zedtest-digest2").unwrap();
-        // SAFETY: live NUL-terminated strings; entries are borrowed for the
-        // duration of the test.
+        // SAFETY: every string is a local `CString` that outlives its registry entry (all
+        // entries are removed or cleaned up before the strings are dropped), both for the
+        // whole call and for as long as the entry stays installed.
         unsafe {
             assert_eq!(OBJ_NAME_add(name.as_ptr(), 0x01, data.as_ptr()), 1);
             // Lookup is case-insensitive by default.
@@ -3086,8 +3159,8 @@ mod tests {
             // re-entry is exercised only when the control proves the lock is
             // released, so a regression fails the assertion instead of hanging.
             if unlocked && !name.is_null() {
-                // SAFETY: `name` is the destructor's captured NUL-terminated name and was just
-                // checked non-null; `type_` is the recorded name index.
+                // SAFETY: `name` is the entry's recorded, NUL-terminated name and is still
+                // live at destruction time (the registry borrowed it until now).
                 let _ = unsafe { OBJ_NAME_get(name, type_) };
                 QUERIES.fetch_add(1, Ordering::SeqCst);
             }
@@ -3097,7 +3170,7 @@ mod tests {
         let idx = OBJ_NAME_new_index(None, None, Some(observing_free));
         let name = std::ffi::CString::new("zedtest-destructor").unwrap();
         let data = std::ffi::CString::new("zedtest-destructor-data").unwrap();
-        // SAFETY: live strings; the destructor observes rather than frees them.
+        // SAFETY: both strings outlive the entry, which is removed before they are dropped.
         unsafe {
             assert_eq!(OBJ_NAME_add(name.as_ptr(), idx, data.as_ptr()), 1);
             assert_eq!(OBJ_NAME_remove(name.as_ptr(), idx), 1);

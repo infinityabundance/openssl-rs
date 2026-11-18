@@ -183,8 +183,7 @@ fn fresh_libctx() -> *mut core::ffi::c_void {
 
 /// The variant's `MlKemVinfo`, asserted present.
 fn vinfo_of(evp_type: c_int) -> &'static MlKemVinfo {
-    // SAFETY: the answer is a pointer into this module's static table.
-    let vinfo = unsafe { ossl_ml_kem_get_vinfo(evp_type) };
+    let vinfo = ossl_ml_kem_get_vinfo(evp_type);
     assert!(!vinfo.is_null(), "vinfo for {evp_type}");
     // SAFETY: the static table outlives the test.
     unsafe { &*vinfo }

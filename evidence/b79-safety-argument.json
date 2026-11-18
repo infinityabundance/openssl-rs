@@ -1,0 +1,722 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/safety-argument/v1",
+ "kind": "section-7-criterion-3-whole-closure-safety-argument",
+ "candidate_tag": "b79",
+ "generated_utc": "2026-11-15T07:40:10Z",
+ "author_role": "measurement subagent (argument author; not the converter, not the instrument author, not the closure reviewer)",
+ "criterion": {
+  "source": "AGENTS.md section 7, graduation state SAFETY_DISCHARGED, criterion 3",
+  "text": "no safe-Rust caller can cause undefined behaviour through the safe interfaces, within the declared and established contract scope",
+  "granularity": "mechanism-wide within the OpenSSH ssh and sshd consumer closures; a site receipt or a green closure run is not a criterion-3 discharge",
+  "strict_rule": "if the argument depends on a precondition that is documented but not established at this candidate, the mechanism verdict is NOT_ESTABLISHED"
+ },
+ "identity": {
+  "source_head": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+  "src_content_sha256": "e012f514e4a41eda1fade96090c24827c25d4181c2eab16c19aaf4cd40177986",
+  "inventory_source_head": "63a23e72985fa65c6bf33ae07642a33d80234dad",
+  "src_identical_between_source_and_inventory": true,
+  "libcrypto_so_3_sha256": "3045bd2d08a2abf535a555c20df7d94005ab64d74533294e4453e1e722cd0e23",
+  "ssh_sha256": "6be4db22e951a1283a3b97e087b8bd75b15c61e4e7031cfba19ab06222e82304",
+  "sshd_sha256": "9280e22e97087f3825cefdd9024197073d298178e0bab8e391188e3d60d46c07",
+  "sshd_session_executed_sha256": "5557a51264c8782a95538ce938bc4e35f7a6f035f71c510f795a2c184bcd4efd",
+  "closure_tool_sha256": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8",
+  "closure_tool_version": 6,
+  "closure_ssh": {
+   "path": "evidence/closure-ssh-b79c.json",
+   "sha256": "ebe8e9ab22b3dbd6656dced72390323dde5d732b455606c994126efec4520b92",
+   "bytes": 13578190,
+   "verdict": "ACCEPTED",
+   "counts": {
+    "DISCHARGED": 290,
+    "BLOCKED": 0,
+    "UNKNOWN": 0,
+    "refusals": 0
+   },
+   "element_7": "PASS (contract-bounded)",
+   "element_7_target_bounded": 0,
+   "element_7_contract_bounded": 153,
+   "reachable_files": 628
+  },
+  "closure_sshd": {
+   "path": "evidence/closure-sshd-b79c.json",
+   "sha256": "d4e6ebd25642ca47deeec42206925a1a84b37430c6d68fefb2126418011cf24c",
+   "bytes": 13425404,
+   "verdict": "ACCEPTED",
+   "counts": {
+    "DISCHARGED": 290,
+    "BLOCKED": 0,
+    "UNKNOWN": 0,
+    "refusals": 0
+   },
+   "element_7": "PASS (contract-bounded)",
+   "element_7_target_bounded": 0,
+   "element_7_contract_bounded": 153,
+   "reachable_files": 627
+  },
+  "census": {
+   "path": "court/freeze-b79/census-b79b.json",
+   "sha256": "41f34d6ed7ecb5ce921a40d251d3b88e8cb42e7b9570073f854a15826887ff37"
+  },
+  "l7_replay": {
+   "path": "evidence/b79-l7-replay.json",
+   "sha256": "01fa854fb97d71ef98e882412c661108fad57125a85d53e78b395d106e5aa2a7",
+   "bytes": 23744
+  },
+  "surface": {
+   "path": "court/freeze-b79/l7/surface-b79.json",
+   "sha256": "e22c60dc7315dbe6257730994b2dca913d81a26cb339d44d7851141bf5846b3d",
+   "bytes": 57632
+  },
+  "review_receipts": {
+   "evidence/b79-review-rebind.json": {
+    "path": "evidence/b79-review-rebind.json",
+    "sha256": "5859734ccb14541b3a426ff7cdf9c0c43d2f4feab53346cd9a8bd7255b863a22",
+    "bytes": 101335
+   },
+   "evidence/b79-review-x509-batch1.json": {
+    "path": "evidence/b79-review-x509-batch1.json",
+    "sha256": "1bdaf23edcd2d4274baca35f4b9990727e8a22118db04d2cbf3b00d8bd385c64",
+    "bytes": 79185
+   },
+   "evidence/b79-review-x509-batch2.json": {
+    "path": "evidence/b79-review-x509-batch2.json",
+    "sha256": "496b662ad3505cedf8611a180842715129f9f74b300ab47af596f62dae32dba2",
+    "bytes": 96358
+   },
+   "evidence/b79-reconversion-review.json": {
+    "path": "evidence/b79-reconversion-review.json",
+    "sha256": "c9169d1063c5b1d86dc20853470a1559b0367ebd3313e88cada4b0d427523737",
+    "bytes": 35939
+   }
+  }
+ },
+ "method": {
+  "what_was_used": [
+   "the b79c closure receipts' counts.by_mechanism, per-obligation mechanism, contract_basis, discharge_receipt, boundary_ids, mechanism_state, span_discharge and scoped_discharge_attempts",
+   "the b79c closure graph: function-level static reachable set over the exact candidate libcrypto.so.3",
+   "the b79 independent reviews: X509 batch1 (18 ACCEPT, 2 stale-kind rejects) and batch2 (25 ACCEPT); the sixteen-row rebind review (16/16 ACCEPT, C1-C6 controls); the reconversion review of the 24 safe->unsafe declarations (22 sound, 2 sound with note, defects D1-D5)",
+   "the b79 L7 replay (all five workloads PASS, including the authority key-format differential 10/10)",
+   "the lexical safe-surface scanner reused unchanged from court/freeze-b78/review2/surface.py, run at this tree"
+  ],
+  "what_was_not_done": [
+   "no per-site finding was re-derived from source; the independent reviews' ACCEPT/REJECT judgments are used as recorded",
+   "no compilation, test, Miri, ASan, Loom, dudect or ctgrind run was performed for this argument; none is claimed",
+   "the b78 65-site cohort was not re-read at b79 and is not reused: the src content changed (c0bd61c9 -> e012f514) and AGENTS.md section 22 invalidates evidence whose source identity changed",
+   "no caller closure was re-audited beyond the 59 rows the b79 reviews re-read",
+   "no claim is made that the tool-level DISCHARGED count is a section-7 SAFETY_DISCHARGED state"
+  ]
+ },
+ "mechanism_partition": {
+  "source": "closure-ssh-b79c counts.by_mechanism; the sshd closure has the same partition",
+  "total_obligations": 290,
+  "reviewed_total": 59,
+  "mechanisms": [
+   {
+    "id": "EVP_PKEY_PROVIDER",
+    "obligations": 116,
+    "files": 20,
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 116,
+     "operation_level_safety_only": 0,
+     "cabi_contract_record": 0,
+     "no_contract": 0
+    },
+    "discharge_receipts": {
+     "boundary-sweep-B48": 36,
+     "boundary-sweep-B53": 30,
+     "boundary-sweep-B56": 7,
+     "openssh-v1i": 42,
+     "openssh-v1l": 1
+    },
+    "reviewed_at_b79": 0,
+    "outside_b79_cohort": 116,
+    "caller_closure_recorded": {
+     "rule": "all 20 of the mechanism's files are in the closure's upper-bound reachable file set and have a receipt (boundary_coverage.reachable_files_without_receipt = [])",
+     "graph": "function-level static graph over the exact candidate libcrypto.so.3: 8861 upper-bound reachable functions, 103 reachable functions with indirect calls, 153 reachable unresolved sites of which 153 are contract-bounded and 0 target-bounded",
+     "imported_entry_points": 179,
+     "caller_analysis_basis": "the operation-span content hash binds the body, and the closure's own claim_scope says that hash does not cover caller closures; caller evidence at b79 exists only for the 0 rows the independent reviews re-read"
+    },
+    "safe_interface_check": {
+     "safe_fn_definitions_in_mechanism_files": 327,
+     "safe_fns_reaching_unsafe": 173,
+     "safe_pub_external_reaching_unsafe": 0,
+     "safe_pub_external_reaching_unsafe_list": [],
+     "safe_pub_with_raw_pointer_param_reaching_unsafe": 0,
+     "answer": "not excluded: a crate-internal safe caller reaches the unsafe provider bodies, and only the tools' span hash binds those bodies. No external safe pub fn in the mechanism files takes a pointer, so no safe pub entry point in this mechanism was shown to assume caller-validated memory; that absence is not a proof for 116 unreviewed contracts."
+    },
+    "argument": "116/116 obligations are DISCHARGED at the tool's site level and all 116 carry an attached # Safety / SAFETY contract (up from 80 fn-level at b78; the b79 conversions added contracts). The closure graph reaches 173 safe fns in the 20 mechanism files that reach unsafe, but none of them is an external safe pub fn. No obligation in this mechanism was independently re-read at b79: the 43 provider rows the b78 argument relied on were accepted at bb7d5206a, and the src content changed since (c0bd61c9 -> e012f514), so that evidence is not re-established at this candidate.",
+    "residual": "0/116 re-read at b79; 116/116 rest on the operation-span content hash, whose claim_scope excludes caller closures; no Miri/ASan.",
+    "verdict": "NOT_ESTABLISHED"
+   },
+   {
+    "id": "X509_VERIFY_POLICY",
+    "obligations": 122,
+    "files": 41,
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 119,
+     "operation_level_safety_only": 0,
+     "cabi_contract_record": 1,
+     "no_contract": 2
+    },
+    "discharge_receipts": {
+     "boundary-sweep-B49": 16,
+     "boundary-sweep-B50": 5,
+     "boundary-sweep-B51": 10,
+     "boundary-sweep-B52": 3,
+     "boundary-sweep-B54": 72,
+     "boundary-sweep-B55": 9,
+     "boundary-sweep-B57": 2,
+     "openssh-v1l": 5
+    },
+    "reviewed_at_b79": 43,
+    "outside_b79_cohort": 79,
+    "caller_closure_recorded": {
+     "rule": "all 41 of the mechanism's files are in the closure's upper-bound reachable file set and have a receipt (boundary_coverage.reachable_files_without_receipt = [])",
+     "graph": "function-level static graph over the exact candidate libcrypto.so.3: 8861 upper-bound reachable functions, 103 reachable functions with indirect calls, 153 reachable unresolved sites of which 153 are contract-bounded and 0 target-bounded",
+     "imported_entry_points": 179,
+     "caller_analysis_basis": "the operation-span content hash binds the body, and the closure's own claim_scope says that hash does not cover caller closures; caller evidence at b79 exists only for the 43 rows the independent reviews re-read"
+    },
+    "safe_interface_check": {
+     "safe_fn_definitions_in_mechanism_files": 252,
+     "safe_fns_reaching_unsafe": 144,
+     "safe_pub_external_reaching_unsafe": 69,
+     "safe_pub_external_reaching_unsafe_list": [
+      "src/ct/ct_sct.rs::SCT_new:206",
+      "src/x509/v3_aaa.rs::OSSL_ALLOWED_ATTRIBUTES_CHOICE_new:205",
+      "src/x509/v3_aaa.rs::OSSL_ALLOWED_ATTRIBUTES_ITEM_new:266",
+      "src/x509/v3_aaa.rs::OSSL_ALLOWED_ATTRIBUTES_SYNTAX_new:325",
+      "src/x509/v3_ac_tgt.rs::OSSL_TARGETING_INFORMATION_new:565",
+      "src/x509/v3_ac_tgt.rs::OSSL_TARGETS_new:491",
+      "src/x509/v3_ac_tgt.rs::OSSL_TARGET_new:412",
+      "src/x509/v3_addr.rs::IPAddressChoice_new:564",
+      "src/x509/v3_addr.rs::IPAddressFamily_new:619",
+      "src/x509/v3_addr.rs::IPAddressOrRange_new:509",
+      "src/x509/v3_addr.rs::IPAddressRange_new:454",
+      "src/x509/v3_admis.rs::ADMISSIONS_new:409",
+      "src/x509/v3_admis.rs::ADMISSION_SYNTAX_new:497",
+      "src/x509/v3_admis.rs::NAMING_AUTHORITY_new:198",
+      "src/x509/v3_admis.rs::PROFESSION_INFO_new:311",
+      "src/x509/v3_asid.rs::ASIdOrRange_new:523",
+      "src/x509/v3_asid.rs::ASIdentifierChoice_new:574",
+      "src/x509/v3_asid.rs::ASIdentifiers_new:631",
+      "src/x509/v3_asid.rs::ASRange_new:472",
+      "src/x509/v3_attrdesc.rs::OSSL_ATTRIBUTE_DESCRIPTOR_new:578",
+      "src/x509/v3_attrdesc.rs::OSSL_HASH_new:202",
+      "src/x509/v3_attrdesc.rs::OSSL_INFO_SYNTAX_POINTER_new:286",
+      "src/x509/v3_attrdesc.rs::OSSL_INFO_SYNTAX_new:377",
+      "src/x509/v3_attrdesc.rs::OSSL_PRIVILEGE_POLICY_ID_new:464",
+      "src/x509/v3_attrmap.rs::OSSL_ATAV_new:168",
+      "src/x509/v3_attrmap.rs::OSSL_ATTRIBUTE_MAPPINGS_new:518",
+      "src/x509/v3_attrmap.rs::OSSL_ATTRIBUTE_MAPPING_new:436",
+      "src/x509/v3_attrmap.rs::OSSL_ATTRIBUTE_TYPE_MAPPING_new:252",
+      "src/x509/v3_attrmap.rs::OSSL_ATTRIBUTE_VALUE_MAPPING_new:343",
+      "src/x509/v3_authattid.rs::OSSL_AUTHORITY_ATTRIBUTE_ID_SYNTAX_new:106",
+      "src/x509/v3_battcons.rs::OSSL_BASIC_ATTR_CONSTRAINTS_new:137",
+      "src/x509/v3_bcons.rs::BASIC_CONSTRAINTS_new:113",
+      "src/x509/v3_cpols.rs::CERTIFICATEPOLICIES_new:706",
+      "src/x509/v3_cpols.rs::NOTICEREF_new:380",
+      "src/x509/v3_cpols.rs::POLICYINFO_new:631",
+      "src/x509/v3_cpols.rs::POLICYQUALINFO_new:545",
+      "src/x509/v3_cpols.rs::USERNOTICE_new:462",
+      "src/x509/v3_crld.rs::CRL_DIST_POINTS_new:602",
+      "src/x509/v3_crld.rs::DIST_POINT_NAME_new:401",
+      "src/x509/v3_crld.rs::DIST_POINT_new:517",
+      "src/x509/v3_crld.rs::ISSUING_DIST_POINT_new:723",
+      "src/x509/v3_crld.rs::OSSL_AA_DIST_POINT_new:844",
+      "src/x509/v3_extku.rs::EXTENDED_KEY_USAGE_new:133",
+      "src/x509/v3_info.rs::ACCESS_DESCRIPTION_new:192",
+      "src/x509/v3_info.rs::AUTHORITY_INFO_ACCESS_new:271",
+      "src/x509/v3_ist.rs::ISSUER_SIGN_TOOL_new:135",
+      "src/x509/v3_ncons.rs::GENERAL_SUBTREE_new:323",
+      "src/x509/v3_ncons.rs::NAME_CONSTRAINTS_new:349",
+      "src/x509/v3_pcons.rs::POLICY_CONSTRAINTS_new:136",
+      "src/x509/v3_pku.rs::PKEY_USAGE_PERIOD_new:112",
+      "src/x509/v3_pmaps.rs::POLICY_MAPPING_new:154",
+      "src/x509/v3_rolespec.rs::OSSL_ROLE_SPEC_CERT_ID_SYNTAX_new:234",
+      "src/x509/v3_rolespec.rs::OSSL_ROLE_SPEC_CERT_ID_new:147",
+      "src/x509/v3_sda.rs::OSSL_ATTRIBUTES_SYNTAX_new:87",
+      "src/x509/v3_sxnet.rs::SXNETID_new:203",
+      "src/x509/v3_sxnet.rs::SXNET_new:285",
+      "src/x509/v3_timespec.rs::OSSL_DAY_TIME_BAND_new:450",
+      "src/x509/v3_timespec.rs::OSSL_DAY_TIME_new:374",
+      "src/x509/v3_timespec.rs::OSSL_NAMED_DAY_new:529",
+      "src/x509/v3_timespec.rs::OSSL_TIME_PERIOD_new:993",
+      "src/x509/v3_timespec.rs::OSSL_TIME_SPEC_ABSOLUTE_new:285",
+      "src/x509/v3_timespec.rs::OSSL_TIME_SPEC_DAY_new:717",
+      "src/x509/v3_timespec.rs::OSSL_TIME_SPEC_MONTH_new:891",
+      "src/x509/v3_timespec.rs::OSSL_TIME_SPEC_TIME_new:1072",
+      "src/x509/v3_timespec.rs::OSSL_TIME_SPEC_WEEKS_new:803",
+      "src/x509/v3_timespec.rs::OSSL_TIME_SPEC_X_DAY_OF_new:629",
+      "src/x509/v3_timespec.rs::OSSL_TIME_SPEC_new:1160",
+      "src/x509/v3_tlsf.rs::TLS_FEATURE_new:153",
+      "src/x509/v3_usernotice.rs::OSSL_USER_NOTICE_SYNTAX_new:140"
+     ],
+     "safe_pub_with_raw_pointer_param_reaching_unsafe": 0,
+     "answer": "not excluded: 69 safe pub fns (all without pointer parameters) reach unsafe internally, and the scanner does not prove their internal preconditions for the 79 unreviewed rows."
+    },
+    "argument": "122/122 DISCHARGED at the tool's site level; 119 carry an attached # Safety contract, 1 a contracted-operation record and 2 have no contract (the two admission-record sites). 43 rows were independently re-read and ACCEPTED at b79 (evidence/b79-review-x509-batch1/2.json: 18 + 25). Two further rows were REJECTED as stale recorded kind (i2s_poison, s2i_poison); both are the carried-forward-removed rows the b79c closure no longer enumerates, so they are not live obligations. 79 live rows were not re-read. 69 external safe pub fns in the mechanism files reach unsafe; none takes a raw pointer.",
+    "residual": "79/122 not re-read at b79; 2 live rows have no contract; BOUNDARY adjudication of the remaining contract-bounded boundaries is NOT_RUN; no Miri/ASan.",
+    "verdict": "NOT_ESTABLISHED"
+   },
+   {
+    "id": "RAND_CMS_STORE_KEYFMT",
+    "obligations": 27,
+    "files": 6,
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 22,
+     "operation_level_safety_only": 5,
+     "cabi_contract_record": 0,
+     "no_contract": 0
+    },
+    "discharge_receipts": {
+     "boundary-sweep-B56": 8,
+     "boundary-sweep-B69": 3,
+     "boundary-sweep-B70": 2,
+     "openssh-v1i": 14
+    },
+    "reviewed_at_b79": 15,
+    "outside_b79_cohort": 12,
+    "caller_closure_recorded": {
+     "rule": "all 6 of the mechanism's files are in the closure's upper-bound reachable file set and have a receipt (boundary_coverage.reachable_files_without_receipt = [])",
+     "graph": "function-level static graph over the exact candidate libcrypto.so.3: 8861 upper-bound reachable functions, 103 reachable functions with indirect calls, 153 reachable unresolved sites of which 153 are contract-bounded and 0 target-bounded",
+     "imported_entry_points": 179,
+     "caller_analysis_basis": "the operation-span content hash binds the body, and the closure's own claim_scope says that hash does not cover caller closures; caller evidence at b79 exists only for the 15 rows the independent reviews re-read"
+    },
+    "safe_interface_check": {
+     "safe_fn_definitions_in_mechanism_files": 124,
+     "safe_fns_reaching_unsafe": 53,
+     "safe_pub_external_reaching_unsafe": 17,
+     "safe_pub_external_reaching_unsafe_list": [
+      "src/cmp/cmp_asn.rs::OSSL_CMP_ATAVS_new:3222",
+      "src/cmp/cmp_asn.rs::OSSL_CMP_PKIHEADER_new:3239",
+      "src/cmp/cmp_asn.rs::OSSL_CMP_PKISI_new:3256",
+      "src/pkcs7/pk7_asn1.rs::PKCS7_DIGEST_new:1518",
+      "src/pkcs7/pk7_asn1.rs::PKCS7_ENCRYPT_new:1420",
+      "src/pkcs7/pk7_asn1.rs::PKCS7_ENC_CONTENT_new:1216",
+      "src/pkcs7/pk7_asn1.rs::PKCS7_ENVELOPE_new:1124",
+      "src/pkcs7/pk7_asn1.rs::PKCS7_ISSUER_AND_SERIAL_new:707",
+      "src/pkcs7/pk7_asn1.rs::PKCS7_RECIP_INFO_new:925",
+      "src/pkcs7/pk7_asn1.rs::PKCS7_SIGNED_new:1037",
+      "src/pkcs7/pk7_asn1.rs::PKCS7_SIGNER_INFO_new:827",
+      "src/pkcs7/pk7_asn1.rs::PKCS7_SIGN_ENVELOPE_new:1335",
+      "src/pkcs7/pk7_asn1.rs::PKCS7_new:1662",
+      "src/rand/rand_lib.rs::RAND_OpenSSL:2097",
+      "src/rand/rand_lib.rs::RAND_keep_random_devices_open:586",
+      "src/rand/rand_lib.rs::RAND_poll:596",
+      "src/rand/rand_lib.rs::RAND_status:870"
+     ],
+     "safe_pub_with_raw_pointer_param_reaching_unsafe": 0,
+     "answer": "not excluded: the 17 safe pub constructors allocate and return raw ownership; a safe caller that drops one without the matching free leaks rather than causes UB, and no reviewed row shows a retained alias, but neither the 12 unreviewed rows nor secret cleansing are established."
+    },
+    "argument": "27/27 DISCHARGED at the tool's site level; 22 fn-level contracts and 5 operation-level-only contracts. 15 rows were independently re-established at b79 (evidence/b79-review-rebind.json: the 14 CMP thunk/setter rows and RAND-CTX-001), with the C1-C6 controls firing (stale reproduction 16/16 BLOCKED, post-bind acceptance 16/16, per-row break canary 16/16). 12 rows were not re-read. 17 external safe pub fns in the 6 files reach unsafe (mostly ASN.1 constructors and PKCS7_*_new); none takes a raw pointer.",
+    "residual": "12/27 not re-read at b79; 5 operation-level SAFETY only; B69 retains ossl_rand_cleanup_int BLOCKED outside its scope; secret cleansing for CMS/PEM key material is not audited; the set0/push0 C-ABI ownership obligations on the pop_free freefuncs are retained.",
+    "verdict": "NOT_ESTABLISHED"
+   },
+   {
+    "id": "SSL_SESSION",
+    "obligations": 14,
+    "files": 3,
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 14,
+     "operation_level_safety_only": 0,
+     "cabi_contract_record": 0,
+     "no_contract": 0
+    },
+    "discharge_receipts": {
+     "sslconf-exclusivity-2026-11-10": 14
+    },
+    "reviewed_at_b79": 1,
+    "outside_b79_cohort": 13,
+    "caller_closure_recorded": {
+     "rule": "all 3 of the mechanism's files are in the closure's upper-bound reachable file set and have a receipt (boundary_coverage.reachable_files_without_receipt = [])",
+     "graph": "function-level static graph over the exact candidate libcrypto.so.3: 8861 upper-bound reachable functions, 103 reachable functions with indirect calls, 153 reachable unresolved sites of which 153 are contract-bounded and 0 target-bounded",
+     "imported_entry_points": 179,
+     "caller_analysis_basis": "the operation-span content hash binds the body, and the closure's own claim_scope says that hash does not cover caller closures; caller evidence at b79 exists only for the 1 rows the independent reviews re-read"
+    },
+    "safe_interface_check": {
+     "safe_fn_definitions_in_mechanism_files": 58,
+     "safe_fns_reaching_unsafe": 38,
+     "safe_pub_external_reaching_unsafe": 2,
+     "safe_pub_external_reaching_unsafe_list": [
+      "src/ssl/ssl_ciph.rs::OSSL_default_cipher_list:1610",
+      "src/ssl/ssl_ciph.rs::OSSL_default_ciphersuites:1619"
+     ],
+     "safe_pub_with_raw_pointer_param_reaching_unsafe": 0,
+     "answer": "not excluded: the receipt itself says a concurrent free and a release race remain external obligations; the b79 candidate has no thread/TSan evidence."
+    },
+    "argument": "14/14 DISCHARGED at the tool's site level, all 14 fn-level. Only 1 row (ssl_conf.rs min_max_proto) was independently re-read at b79; the establishing sslconf-exclusivity-2026-11-10 receipt was adjudicated before b78 and is not re-established at b79. 2 external safe pub fns reach unsafe (OSSL_default_cipher_list / OSSL_default_ciphersuites), neither with a pointer parameter.",
+    "residual": "13/14 not re-read at b79; the receipt retains external serialisation for a second concurrent free and for an entry point racing release; no TSan/Loom/runtime concurrency evidence.",
+    "verdict": "NOT_ESTABLISHED"
+   },
+   {
+    "id": "C_ABI_CONTRACT",
+    "obligations": 5,
+    "files": 5,
+    "ownership_state": "UNSAFE_OPEN",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 0,
+     "operation_level_safety_only": 0,
+     "cabi_contract_record": 5,
+     "no_contract": 0
+    },
+    "discharge_receipts": {
+     "boundary-sweep-B56": 2,
+     "openssh-v1l": 3
+    },
+    "reviewed_at_b79": 0,
+    "outside_b79_cohort": 5,
+    "caller_closure_recorded": {
+     "rule": "all 5 of the mechanism's files are in the closure's upper-bound reachable file set and have a receipt (boundary_coverage.reachable_files_without_receipt = [])",
+     "graph": "function-level static graph over the exact candidate libcrypto.so.3: 8861 upper-bound reachable functions, 103 reachable functions with indirect calls, 153 reachable unresolved sites of which 153 are contract-bounded and 0 target-bounded",
+     "imported_entry_points": 179,
+     "caller_analysis_basis": "the operation-span content hash binds the body, and the closure's own claim_scope says that hash does not cover caller closures; caller evidence at b79 exists only for the 0 rows the independent reviews re-read"
+    },
+    "safe_interface_check": {
+     "safe_fn_definitions_in_mechanism_files": 46,
+     "safe_fns_reaching_unsafe": 35,
+     "safe_pub_external_reaching_unsafe": 5,
+     "safe_pub_external_reaching_unsafe_list": [
+      "src/engine/eng_list.rs::ENGINE_get_first:452",
+      "src/engine/eng_list.rs::ENGINE_get_last:480",
+      "src/runtime/confmod/mod.rs::CONF_modules_finish:1383",
+      "src/runtime/confmod/mod.rs::CONF_modules_unload:1316",
+      "src/runtime/confmod/mod.rs::OPENSSL_load_builtin_modules:1526"
+     ],
+     "safe_pub_with_raw_pointer_param_reaching_unsafe": 0,
+     "answer": "not excluded: 5 safe pub fns reach unsafe C-ABI machinery, and the free hooks themselves are unreviewed at b79."
+    },
+    "argument": "5/5 DISCHARGED at the tool's site level, all recorded as contracted-operation records (not discharges). The mechanism state is UNSAFE_OPEN and 0/5 was re-read at b79. 5 external safe pub fns in the 5 files reach unsafe (ENGINE_get_first, ENGINE_get_last, CONF_modules_finish, CONF_modules_unload, OPENSSL_load_builtin_modules); none takes a raw pointer.",
+    "residual": "mechanism_state UNSAFE_OPEN; 0/5 re-read at b79; the v1l hidden obligation F09 (push_cstr_or_null transfers a NUL-termination obligation to callers with no # Safety) is retained; the inventory contract record is not a discharge.",
+    "verdict": "NOT_ESTABLISHED"
+   },
+   {
+    "id": "RUNTIME_CONCURRENCY",
+    "obligations": 4,
+    "files": 2,
+    "ownership_state": "OWNERSHIP_RECONSTRUCTED",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 4,
+     "operation_level_safety_only": 0,
+     "cabi_contract_record": 0,
+     "no_contract": 0
+    },
+    "discharge_receipts": {
+     "boundary-sweep-B56": 2,
+     "boundary-sweep-B60": 2
+    },
+    "reviewed_at_b79": 0,
+    "outside_b79_cohort": 4,
+    "caller_closure_recorded": {
+     "rule": "all 2 of the mechanism's files are in the closure's upper-bound reachable file set and have a receipt (boundary_coverage.reachable_files_without_receipt = [])",
+     "graph": "function-level static graph over the exact candidate libcrypto.so.3: 8861 upper-bound reachable functions, 103 reachable functions with indirect calls, 153 reachable unresolved sites of which 153 are contract-bounded and 0 target-bounded",
+     "imported_entry_points": 179,
+     "caller_analysis_basis": "the operation-span content hash binds the body, and the closure's own claim_scope says that hash does not cover caller closures; caller evidence at b79 exists only for the 0 rows the independent reviews re-read"
+    },
+    "safe_interface_check": {
+     "safe_fn_definitions_in_mechanism_files": 61,
+     "safe_fns_reaching_unsafe": 54,
+     "safe_pub_external_reaching_unsafe": 4,
+     "safe_pub_external_reaching_unsafe_list": [
+      "src/runtime/thread.rs::CRYPTO_THREAD_compare_id:933",
+      "src/runtime/thread.rs::CRYPTO_THREAD_get_current_id:924",
+      "src/runtime/thread.rs::CRYPTO_THREAD_lock_new:477",
+      "src/runtime/thread.rs::OSSL_sleep:2261"
+     ],
+     "safe_pub_with_raw_pointer_param_reaching_unsafe": 0,
+     "answer": "not excluded: the four public thread entry points are safe fns reaching unsafe lock/sleep primitives; only a thread/TSan run at this candidate could exclude a data race, and none ran."
+    },
+    "argument": "4/4 DISCHARGED at the tool's site level, all fn-level. 0/4 re-read at b79. B60's four-control table was adjudicated at b6f38f134 by the orchestrating agent, not an independent reviewer. 4 external safe pub fns reach unsafe (CRYPTO_THREAD_compare_id, CRYPTO_THREAD_get_current_id, CRYPTO_THREAD_lock_new, OSSL_sleep); none takes a raw pointer.",
+    "residual": "0/4 re-read at b79; B60's independent-reviewer condition not met; no thread/TSan/Loom evidence; caller closure not re-established.",
+    "verdict": "NOT_ESTABLISHED"
+   },
+   {
+    "id": "BIO",
+    "obligations": 2,
+    "files": 1,
+    "ownership_state": "UNSAFE_OPEN",
+    "contract_forms": {
+     "fn_level_or_attached_safety": 0,
+     "operation_level_safety_only": 0,
+     "cabi_contract_record": 0,
+     "no_contract": 2
+    },
+    "discharge_receipts": {
+     "boundary-sweep-B67": 2
+    },
+    "reviewed_at_b79": 0,
+    "outside_b79_cohort": 2,
+    "caller_closure_recorded": {
+     "rule": "all 1 of the mechanism's files are in the closure's upper-bound reachable file set and have a receipt (boundary_coverage.reachable_files_without_receipt = [])",
+     "graph": "function-level static graph over the exact candidate libcrypto.so.3: 8861 upper-bound reachable functions, 103 reachable functions with indirect calls, 153 reachable unresolved sites of which 153 are contract-bounded and 0 target-bounded",
+     "imported_entry_points": 179,
+     "caller_analysis_basis": "the operation-span content hash binds the body, and the closure's own claim_scope says that hash does not cover caller closures; caller evidence at b79 exists only for the 0 rows the independent reviews re-read"
+    },
+    "safe_interface_check": {
+     "safe_fn_definitions_in_mechanism_files": 2,
+     "safe_fns_reaching_unsafe": 2,
+     "safe_pub_external_reaching_unsafe": 1,
+     "safe_pub_external_reaching_unsafe_list": [
+      "src/runtime/bio/bf_readbuff.rs::BIO_f_readbuffer:63"
+     ],
+     "safe_pub_with_raw_pointer_param_reaching_unsafe": 0,
+     "answer": "no: for the two empty-body sites a safe caller cannot violate a precondition (there is none), but the mechanism-wide verdict stays NOT_ESTABLISHED because its other operations are out of the closure and unread."
+    },
+    "argument": "2/2 DISCHARGED at the tool's site level; both rows have no # Safety and the mechanism state is UNSAFE_OPEN. The two obligated sites were re-read at b79 directly: readbuffer_write (bf_readbuff.rs:231) and readbuffer_puts (:237) ignore every argument, dereference nothing, touch no state, contain no unsafe block/call/allocation and return 0, so every argument value yields 0 without UB (same as the 3.6.4 authority body). BIO_f_readbuffer is a safe extern \"C\" fn with no parameters.",
+    "residual": "mechanism_state UNSAFE_OPEN; only 2 of the mechanism's production operations are in the closure; the site argument is not a mechanism-wide discharge.",
+    "verdict": "NOT_ESTABLISHED"
+   }
+  ]
+ },
+ "safe_interface_surface": {
+  "definition": "the consumer-visible entry points are the 179 libcrypto.so.3 exports the analysed ssh imports, plus the crate's safe pub fn API; the mechanism obligations themselves are C ABI functions (pub unsafe extern \"C\" from Rust), so a safe-Rust caller cannot invoke one without an unsafe block",
+  "imported_c_abi_entry_points": {
+   "total": 179,
+   "library": "libcrypto.so.3",
+   "by_mechanism": {
+    "BIO": 5,
+    "EVP_PKEY_PROVIDER": 151,
+    "RAND_CMS_STORE_KEYFMT": 5,
+    "X509_VERIFY_POLICY": 6,
+    "outside_mechanism": 7,
+    "unmapped": 5
+   },
+   "multi_symbols": [],
+   "unmapped_symbols": [
+    "ASN1_OCTET_STRING_free",
+    "ERR_get_error",
+    "ERR_peek_error",
+    "ERR_peek_last_error",
+    "d2i_ASN1_OCTET_STRING"
+   ],
+   "outside_mechanism_symbols": [
+    "AES_encrypt (src/aes.rs)",
+    "AES_set_encrypt_key (src/aes.rs)",
+    "CRYPTO_get_ex_new_index (src/runtime/ex_data.rs)",
+    "ERR_error_string (src/runtime/err.rs)",
+    "OPENSSL_init_crypto (src/runtime/init.rs)",
+    "OpenSSL_version (src/runtime/init.rs)",
+    "OpenSSL_version_num (src/runtime/init.rs)"
+   ],
+   "direct_reachable_obligations_summary": {
+    "symbols_with_zero": 162,
+    "symbols_with_any": 17,
+    "basis": "direct_reachable_obligation_count is the closure's direct call/PLT view only; it is explicitly not an upper bound, so a zero here is not evidence that no obligation is reachable."
+   },
+   "not_comparable_to_b78": "the b78 argument recorded a different coarse attribution (EVP 153 / X509 6 / RAND 5 / BIO 5 / unmapped 10). This run measures the rule above at b79; the two are not the same method and are not presented as a delta."
+  },
+  "safe_pub_surface_at_b79": {
+   "scanner": "court/freeze-b78/review2/surface.py (unchanged)",
+   "files": 878,
+   "counts": {
+    "fn_records_total": 20459,
+    "foreign_import_declarations": 252,
+    "no_body_declarations_non_foreign": 212,
+    "safe_fn_definitions_total": 6664,
+    "unsafe_fn_definitions_total": 13411,
+    "safe_pub_fn_total": 871,
+    "safe_pub_plain_rust_abi": 122,
+    "safe_pub_extern_c": 749,
+    "safe_pub_fn_external": 871,
+    "safe_pub_fn_reaching_unsafe": 469,
+    "safe_pub_plain_rust_abi_reaching_unsafe": 81,
+    "safe_pub_extern_c_reaching_unsafe": 388,
+    "safe_pub_fn_external_reaching_unsafe": 469,
+    "safe_fn_reaching_unsafe_all_visibilities": 4725,
+    "safe_fn_raw_pointer_param_reaching_unsafe": 482,
+    "safe_pub_extern_c_raw_pointer_param_reaching_unsafe": 38,
+    "safe_plain_fn_raw_pointer_param_reaching_unsafe": 287,
+    "extern_c_fn_definitions_total": 9943,
+    "pub_extern_c_unsafe": 5417
+   },
+   "limitations": [
+    "not a rustc-level resolution: trait-object dispatch, generics, closures and macro-expanded call edges are not resolved; the graph over-approximates call edges by name and under-approximates dynamic dispatch",
+    "re-exports (`pub use private_mod::x`) are not followed; a pub fn in a private module re-exported is counted as external only if its own module chain is pub, so the external count is a lower bound for that shape",
+    "fn-level attributes on the same line as the signature are captured; attributes are matched by balanced brackets on stripped text"
+   ],
+   "mechanism_files_are_clean_of_the_raw_pointer_class": {
+    "crate_wide_safe_pub_with_raw_pointer_reaching_unsafe": 38,
+    "inside_the_seven_mechanisms_files": 0,
+    "basis": "an independent recount over the scanner's own records filtered on safe, definition, direct_unsafe, raw_pointer_param and vis == pub gives 38 crate-wide (all extern C) and 0 whose file is in a mechanism's file list"
+   },
+   "per_mechanism": [
+    {
+     "mechanism": "EVP_PKEY_PROVIDER",
+     "safe_fn_definitions_in_files": 327,
+     "safe_fns_reaching_unsafe": 173,
+     "safe_pub_external_reaching_unsafe": 0,
+     "external_entry_points": 151,
+     "verdict": "NOT_ESTABLISHED"
+    },
+    {
+     "mechanism": "X509_VERIFY_POLICY",
+     "safe_fn_definitions_in_files": 252,
+     "safe_fns_reaching_unsafe": 144,
+     "safe_pub_external_reaching_unsafe": 69,
+     "external_entry_points": 6,
+     "verdict": "NOT_ESTABLISHED"
+    },
+    {
+     "mechanism": "RAND_CMS_STORE_KEYFMT",
+     "safe_fn_definitions_in_files": 124,
+     "safe_fns_reaching_unsafe": 53,
+     "safe_pub_external_reaching_unsafe": 17,
+     "external_entry_points": 5,
+     "verdict": "NOT_ESTABLISHED"
+    },
+    {
+     "mechanism": "SSL_SESSION",
+     "safe_fn_definitions_in_files": 58,
+     "safe_fns_reaching_unsafe": 38,
+     "safe_pub_external_reaching_unsafe": 2,
+     "external_entry_points": 0,
+     "verdict": "NOT_ESTABLISHED"
+    },
+    {
+     "mechanism": "C_ABI_CONTRACT",
+     "safe_fn_definitions_in_files": 46,
+     "safe_fns_reaching_unsafe": 35,
+     "safe_pub_external_reaching_unsafe": 5,
+     "external_entry_points": 0,
+     "verdict": "NOT_ESTABLISHED"
+    },
+    {
+     "mechanism": "RUNTIME_CONCURRENCY",
+     "safe_fn_definitions_in_files": 61,
+     "safe_fns_reaching_unsafe": 54,
+     "safe_pub_external_reaching_unsafe": 4,
+     "external_entry_points": 0,
+     "verdict": "NOT_ESTABLISHED"
+    },
+    {
+     "mechanism": "BIO",
+     "safe_fn_definitions_in_files": 2,
+     "safe_fns_reaching_unsafe": 2,
+     "safe_pub_external_reaching_unsafe": 1,
+     "external_entry_points": 5,
+     "verdict": "NOT_ESTABLISHED"
+    }
+   ],
+   "review_cohort_does_not_cover_the_safe_surface": "the 59 independently re-read rows are unsafe declarations and their receipts. None of the 99 external safe pub fns that reach unsafe in the seven mechanisms' files is itself the subject of a b79 review, so the reviews do not establish criterion 3 for the safe surface."
+  }
+ },
+ "cross_cutting_obligations": {
+  "callbacks_reentrancy": {
+   "in_scope": true,
+   "why": "the mechanisms are dominated by provider dispatch tables, stack free/dup thunks, X509V3 method callbacks, BIO method tables, the CONF_METHOD cell, ENGINE free hooks and ex_data; the closure resolves indirect sites and classifies every reachable unresolved site as contract-bounded",
+   "state": "NOT_ESTABLISHED",
+   "residual": "no TSan/Loom/runtime reentrancy test at b79; SSL_SESSION retains external serialisation for a concurrent free and a release race; B60's reviewer is the orchestrating agent; 153 contract-bounded sites are intentionally target-unbounded by public ABI"
+  },
+  "aliasing_ownership": {
+   "in_scope": true,
+   "why": "the owner family and the provider copyctx self-copy arm are the shared ownership mechanism; the b79 conversions made 24 declarations unsafe",
+   "state": "NOT_ESTABLISHED",
+   "residual": "no Miri run at b79; the operation-span hash excludes caller closures; the reconversion review's D1 (11/12 qualifier-control tests self-satisfying) and D2 (SSL_COMP_get_name has no effective qualifier control) are open"
+  },
+  "panic_safety": {
+   "in_scope": true,
+   "why": "the C ABI edge uses guard_ffi with AssertUnwindSafe; catching a panic does not repair partially mutated state (AGENTS.md section 4)",
+   "state": "NOT_ESTABLISHED",
+   "residual": "no failure-atomicity, rollback or poison-state evidence for any stateful context in the closure at b79"
+  },
+  "secret_memory": {
+   "in_scope": true,
+   "why": "RAND_CMS_STORE_KEYFMT covers CMS/PEM key material and SSL_SESSION covers session secrets; release and cleansing are separate obligations",
+   "state": "NOT_ESTABLISHED",
+   "residual": "no secret/public classification and no cleansing audit of the 290 obligations at b79; the b79 reviews do not audit cleansing"
+  },
+  "constant_time": {
+   "in_scope": "conditional",
+   "why": "the 290 obligations are dispatch/free/parse sites, not algorithm cores; a constant-time claim is in scope only if a reviewed unsafe operation is secret-dependent, which is not demonstrated",
+   "state": "NOT_CLAIMED",
+   "residual": "no dudect/ctgrind run at b79; no constant-time claim is made"
+  },
+  "not_in_scope": [
+   "protocol state-machine robustness (the L7 replay is functional, not an adversarial protocol court)",
+   "full cryptographic vector correctness (Wycheproof/ACVP)",
+   "downstream replay beyond the ssh and sshd L7 workloads"
+  ]
+ },
+ "verdict": {
+  "decision_rule": "SAFETY_DISCHARGED only if every obligation in the mechanism has an explicit validity contract, every required precondition is established by its callers at the candidate, and no safe interface can cause UB. OWNERSHIP_RECONSTRUCTED only if a safe ownership model exists and the residual boundary is identified without an unestablished caller precondition. Otherwise NOT_ESTABLISHED.",
+  "per_mechanism": {
+   "EVP_PKEY_PROVIDER": "NOT_ESTABLISHED",
+   "X509_VERIFY_POLICY": "NOT_ESTABLISHED",
+   "RAND_CMS_STORE_KEYFMT": "NOT_ESTABLISHED",
+   "SSL_SESSION": "NOT_ESTABLISHED",
+   "C_ABI_CONTRACT": "NOT_ESTABLISHED",
+   "RUNTIME_CONCURRENCY": "NOT_ESTABLISHED",
+   "BIO": "NOT_ESTABLISHED"
+  },
+  "ownership_states": {
+   "EVP_PKEY_PROVIDER": "OWNERSHIP_RECONSTRUCTED",
+   "X509_VERIFY_POLICY": "OWNERSHIP_RECONSTRUCTED",
+   "RAND_CMS_STORE_KEYFMT": "OWNERSHIP_RECONSTRUCTED",
+   "SSL_SESSION": "OWNERSHIP_RECONSTRUCTED",
+   "C_ABI_CONTRACT": "UNSAFE_OPEN",
+   "RUNTIME_CONCURRENCY": "OWNERSHIP_RECONSTRUCTED",
+   "BIO": "UNSAFE_OPEN"
+  },
+  "totals": {
+   "SAFETY_DISCHARGED": 0,
+   "OWNERSHIP_RECONSTRUCTED": 0,
+   "NOT_ESTABLISHED": 7,
+   "mechanisms": 7
+  },
+  "statement": "The section-7 criterion-3 whole-closure safety argument is NOT ESTABLISHED at b79. The b79c closures are ACCEPTED and discharge 290/290 obligations at the tool's site level, and the conversions raised the fn-level contract coverage from 220/290 at b78 to 275/290. But only 59 of the 290 obligations were independently re-read at b79 (43 X509/VERIFY_POLICY, 15 RAND_CMS_STORE_KEYFMT, 1 SSL_SESSION); the other 231 are bound by an operation-span content hash whose own claim_scope excludes caller closures. The b78 65-row cohort is not reused, because the src content changed (section 22). Five obligations carry only an operation-level SAFETY block, six rest on inventory contract records, and four have no contract. C_ABI_CONTRACT and BIO remain UNSAFE_OPEN mechanism-wide. The reconversion review leaves D1 (11/12 qualifier-control tests self-satisfying), D2 and D5 open. No Miri/ASan/TSan/Loom/dudect run supports any mechanism at b79. The 99 external safe pub fns that reach unsafe in the mechanism files were not reviewed as safe interfaces, so the reviews do not establish criterion 3 for the safe surface. This verdict is consistent with the closures being measurements of the queue, not promotions."
+ },
+ "residuals": [
+  {
+   "kind": "criterion3/coverage",
+   "statement": "231/290 obligations were not independently re-read at b79; the b78 65-row cohort is invalidated by the src change and not re-established"
+  },
+  {
+   "kind": "criterion3/qualifier-control",
+   "statement": "reconversion review D1: 11 of the 12 qualifier-control tests are self-satisfying (include_str! includes the test module and the needle appears in the assert), so removing `unsafe` from 23 of the 24 converted declarations would not fail any test. D2: the SSL_COMP_get_name const assertion pins only the signature and is not a qualifier control."
+  },
+  {
+   "kind": "criterion3/contract-strength",
+   "statement": "D4: send_certificate_request's callers cite only 's is live' and not the stated exclusivity/pending_cipher obligations. D5: OPENSSL_init_ssl's # Safety under-specifies the settings obligations it forwards to OPENSSL_init_crypto."
+  },
+  {
+   "kind": "criterion3/unsafe-open",
+   "statement": "C_ABI_CONTRACT (5 obligations) and BIO (2) are UNSAFE_OPEN mechanism-wide; the BIO site argument covers only the two empty-body operations in the closure"
+  },
+  {
+   "kind": "criterion3/no-dynamic-evidence",
+   "statement": "no Miri (Stacked/Tree Borrows), ASan, TSan, Loom or dudect/ctgrind run at b79; the argument is source/closure-level only"
+  },
+  {
+   "kind": "criterion3/caller-closure-scope",
+   "statement": "the operation-span content hash explicitly excludes caller closures; caller evidence exists only for the 59 re-read rows"
+  },
+  {
+   "kind": "criterion3/safe-surface-not-reviewed",
+   "statement": "99 external safe pub fns in the seven mechanisms' files reach unsafe; none is itself the subject of a b79 review, so criterion 3 is not established for the safe surface even where the obligation rows are accepted"
+  },
+  {
+   "kind": "element7/contract-bounded",
+   "statement": "153 reachable unresolved sites are contract-bounded by public ABI (0 target-bounded, 0 unclassified); they are discharged under section 7 criterion 2, not proven safe by this argument"
+  },
+  {
+   "kind": "secret-memory",
+   "statement": "no secret classification or cleansing audit for the RAND/CMS/PEM/SSL_SESSION sites at b79"
+  },
+  {
+   "kind": "scanner-limits",
+   "statement": "the safe-surface numbers are lexical: trait-object dispatch, generics, closures and macro-expanded call edges are not resolved, and re-exports are not followed; the counts are over-approximations of call edges and under-approximations of dynamic dispatch"
+  }
+ ],
+ "non_claims": [
+  "this file is an argument artifact, not a promotion: it changes no closure count, verdict or refusal",
+  "the tool-level DISCHARGED=290 is not a section-7 SAFETY_DISCHARGED state",
+  "the 59 re-read rows are not a mechanism-wide discharge",
+  "a green L7 replay (all five workloads PASS) is functional evidence only and is not a safety or cryptographic result (section 8)",
+  "the imported-symbol attribution is measured by a different rule than the b78 argument's and is not presented as a delta",
+  "no constant-time claim is made",
+  "no Miri/ASan/TSan/Loom/dudect evidence is claimed"
+ ]
+}

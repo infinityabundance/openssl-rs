@@ -520,6 +520,17 @@ unsafe extern "C" fn cms_si_cb(
 }
 
 /// `cms_ec_cb` — `cms_asn1.c:83-90`. On `FREE_POST`, clear the session key.
+///
+/// # Safety
+///
+/// `pval` is the live value slot of the `CMS_EncryptedContentInfo` being freed. Established by
+/// this row's own item (`CMS_ENCRYPTED_CONTENT_INFO_ITEM`, through `cms_encryptedcontentinfo_it`):
+/// the item machinery allocates the value with that item's `size` and reaches this callback only
+/// through that item's `funcs`, so `*pval` is a live value of exactly this type. `FREE_POST` runs
+/// after the template walk has released and NULLed the item's three template fields
+/// (`contentType`, `contentEncryptionAlgorithm`, `encryptedContent`), so `key`/`keylen` are
+/// non-template members this callback owns and the walk never touches: one release.
+/// `_it`/`_exarg` are unread.
 unsafe extern "C" fn cms_ec_cb(
     operation: c_int,
     pval: *mut *mut c_void,
@@ -536,6 +547,13 @@ unsafe extern "C" fn cms_ec_cb(
 }
 
 /// `cms_rek_cb` — `cms_asn1.c:121-128`. On `FREE_POST`, release the recipient key.
+///
+/// # Safety
+///
+/// `pval` is the live value slot of the `CMS_RecipientEncryptedKey` being freed, established by
+/// `CMS_RECIPIENT_ENCRYPTED_KEY_ITEM`'s own `funcs` and `size` exactly as in [`cms_ec_cb`].
+/// `FREE_POST` runs after the walk released and NULLed `rid` and `encryptedKey`; `pkey` is not a
+/// template field, so this callback's `EVP_PKEY_free` is its only release. `_it`/`_exarg` unread.
 unsafe extern "C" fn cms_rek_cb(
     operation: c_int,
     pval: *mut *mut c_void,
@@ -553,6 +571,16 @@ unsafe extern "C" fn cms_rek_cb(
 
 /// `cms_kari_cb` — `cms_asn1.c:146-160`. `NEW_POST` creates the wrapping cipher context;
 /// `FREE_POST` releases the contexts.
+///
+/// # Safety
+///
+/// `pval` is the live value slot of the `CMS_KeyAgreeRecipientInfo` the item machinery is
+/// building or freeing, established by `CMS_KEY_AGREE_RECIPIENT_INFO_ITEM`'s own `funcs` and
+/// `size`. `NEW_POST` follows the value's allocation, so every field is its zero-initialised
+/// state (`ctx`/`pctx` NULL) and this callback writes only the two non-template members it goes
+/// on to own; a refusal returns 0 and leaves the machine's own error path to release them.
+/// `FREE_POST` runs after the walk released and NULLed all five template fields, so `ctx`/`pctx`
+/// are non-template members with exactly one release here. `_it`/`_exarg` are unread.
 unsafe extern "C" fn cms_kari_cb(
     operation: c_int,
     pval: *mut *mut c_void,
@@ -582,6 +610,16 @@ unsafe extern "C" fn cms_kari_cb(
 }
 
 /// `cms_kemri_cb` — `cms_asn1.c:186-203`.
+///
+/// # Safety
+///
+/// `pval` is the live value slot of the `CMS_KEMRecipientInfo` being built or freed,
+/// established by `CMS_KEM_RECIPIENT_INFO_ITEM`'s own `funcs` and `size`. `NEW_POST` follows the
+/// allocation (zero-initialised fields) and writes only `ctx`/`pctx`; `FREE_POST` runs after the
+/// walk released and NULLed all nine template fields, so `ctx`/`pctx` are non-template members
+/// with exactly one release here, and `ukm` -- which *is* a template field -- is NULL by then, so
+/// the authority's own `ASN1_STRING_free(ukm)` is a no-op and never a second release. `_it` and
+/// `_exarg` are unread.
 unsafe extern "C" fn cms_kemri_cb(
     operation: c_int,
     pval: *mut *mut c_void,
@@ -614,6 +652,31 @@ unsafe extern "C" fn cms_kemri_cb(
 /// `cms_ri_cb` — `cms_asn1.c:233-269`. Frees the per-arm payload on `FREE_PRE` and copies the
 /// encoded type into the internal `type` on `D2I_POST`/`NEW_POST`, mapping an ORI whose OID is
 /// the KEM ORI to the KEM arm.
+///
+/// # Safety
+///
+/// `pval` is the live value slot of the `CMS_RecipientInfo` being decoded, built or freed,
+/// established by `CMS_RECIPIENT_INFO_ITEM`'s own `funcs` and `size`.
+///
+/// `type_` selects the union arm this callback reads, so it must name the arm the template's
+/// selector (`encoded_type`) names. That holds structurally whenever `d` is non-NULL: `NEW_POST`
+/// and `D2I_POST` set `type_ = encoded_type` (the one field the machine writes from the encoded
+/// tag) before any other operation, and every in-crate constructor that writes the union also
+/// writes the same pair (`cms_env.rs`, `cms_kari.rs`, `cms_kemri.rs`, `cms_pwri.rs`).
+///
+/// `d` itself is **not** guaranteed non-NULL on `FREE_PRE`, which is why the callback tests it: a
+/// re-decode into an existing value frees the selected alternative and resets `encoded_type`
+/// (`src/asn1/d2i.rs:1774-1789`) **without** resetting `type_`, and a value that was allocated but
+/// never decoded carries a zero `encoded_type` (index 0, `CMS_RECIPINFO_TRANS`) with `d` still
+/// NULL. `FREE_PRE` on either shape would read the arm through `d` and dereference NULL; the
+/// authority does exactly that and faults, which is not a contract to reproduce (§17). The guard
+/// releases nothing in that case and still answers `1`, so the walk frees the enclosing value
+/// itself.
+///
+/// `FREE_PRE` runs *before* the walk, which is why this callback releases only the non-template
+/// members of the selected arm (`pkey`/`recip`/`pctx`, `key`/`keylen`, `pass`/`passlen`) and
+/// returns 1: the walk then releases that same arm and its enclosing block, so each member has
+/// exactly one release. `_it`/`_exarg` are unread.
 unsafe extern "C" fn cms_ri_cb(
     operation: c_int,
     pval: *mut *mut c_void,
@@ -623,7 +686,14 @@ unsafe extern "C" fn cms_ri_cb(
     // SAFETY: `pval` is a live value slot per the callback contract.
     let ri = unsafe { (*pval).cast::<CmsRecipientInfo>() };
     if operation == ASN1_OP_FREE_PRE {
-        // SAFETY: `ri` is live and `type_` selects the arm.
+        // The template's selector and `type_` can disagree only while no alternative is present;
+        // there is nothing to release then, and reading the arm through `d` would dereference
+        // NULL (the authority's fault, not reproduced).
+        // SAFETY: `ri` is a live value slot per the callback contract.
+        if unsafe { (*ri).d }.is_null() {
+            return 1;
+        }
+        // SAFETY: `ri` is live, `d` names an allocated arm, and `type_` selects it (see above).
         unsafe {
             match (*ri).type_ {
                 CMS_RECIPINFO_TRANS => {
@@ -665,6 +735,17 @@ unsafe extern "C" fn cms_ri_cb(
 /// `cms_cb` — `cms_asn1.c:347-379`. The streaming encoder's four arms call
 /// [`CMS_stream`], [`CMS_dataInit`] and [`CMS_dataFinal`]; `FREE_POST` releases the property
 /// query.
+///
+/// # Safety
+///
+/// `pval` is NULL or the live value slot of the `CMS_ContentInfo` the item machinery is encoding
+/// or freeing, established by `CMS_CONTENT_INFO_ITEM`'s own `funcs` and `size` (the NULL test
+/// below is the authority's own `if (pval != NULL)`), reached through `CMS_ContentInfo_it`. On the four streaming operations `exarg` is
+/// the caller's live `ASN1_STREAM_ARG`: `BIO_new_NDEF` passes its own local
+/// (`src/asn1/bio_asn1.rs:911`) and `ndef_suffix` the rebuilt one (`:1121-1127`); on `FREE_POST`
+/// it is NULL and is only cast, never dereferenced. `FREE_POST` runs after the walk released the
+/// template fields, and `ctx.propq` is not one of them (`CmsPropqSlot` is the member's only
+/// writer and its `clear` is the member's one release).
 unsafe extern "C" fn cms_cb(
     operation: c_int,
     pval: *mut *mut c_void,
@@ -1905,7 +1986,9 @@ static CMS_ORI_ADB: SyncAdb = SyncAdb(Asn1Adb {
     null_tt: ptr::null(),
 });
 
-fn cms_ori_adb() -> *const c_void {
+/// The `ori_adb` accessor the `ADB` template stores. Declared with the C ABI because
+/// `call_item_exp` invokes a template's `item` through an `extern "C" fn` pointer.
+extern "C" fn cms_ori_adb() -> *const c_void {
     ptr::addr_of!(CMS_ORI_ADB.0).cast::<c_void>()
 }
 
@@ -2446,7 +2529,9 @@ static CMS_ADB: SyncAdb = SyncAdb(Asn1Adb {
     null_tt: ptr::null(),
 });
 
-fn cms_adb() -> *const c_void {
+/// The `cms_adb` accessor the `ADB` template stores. Declared with the C ABI because
+/// `call_item_exp` invokes a template's `item` through an `extern "C" fn` pointer.
+extern "C" fn cms_adb() -> *const c_void {
     ptr::addr_of!(CMS_ADB.0).cast::<c_void>()
 }
 
@@ -2797,5 +2882,178 @@ pub(crate) unsafe extern "C" fn CMS_CMSORIforKEMOtherInfo_encode(
             pder,
             cms_ori_for_kem_other_info_it(),
         )
+    }
+}
+
+#[cfg(test)]
+mod b56_tests {
+    #![allow(clippy::panic)]
+    use super::*;
+    use core::mem::size_of;
+
+    /// F-REST-1: `cms_ri_cb`'s `FREE_PRE` must not read the union through a NULL `d`.
+    ///
+    /// The machine's CHOICE selector is `encoded_type`; `type_` is this callback's derived copy
+    /// of it, so the two disagree on the two shapes reachable here: a value that was allocated
+    /// but never decoded (its zeroed `encoded_type` is index 0, `CMS_RECIPINFO_TRANS`, with `d`
+    /// still NULL) and a value whose alternative a re-decode released and reset
+    /// (`src/asn1/d2i.rs:1774-1789`, which resets the selector but not `type_`). The authority
+    /// dereferences `ri->d` on both and faults; the guard releases nothing and answers `1`, so
+    /// the walk still frees the enclosing value.
+    #[test]
+    fn free_pre_tolerates_a_value_whose_alternative_is_not_present() {
+        for arm in [
+            CMS_RECIPINFO_TRANS,
+            CMS_RECIPINFO_KEK,
+            CMS_RECIPINFO_PASS,
+            CMS_RECIPINFO_KEM,
+        ] {
+            // The stale shape: `type_` still names an arm, the union is not there.
+            let mut value = CmsRecipientInfo {
+                encoded_type: -1,
+                d: core::ptr::null_mut(),
+                type_: arm,
+            };
+            let mut pval: *mut c_void = (&mut value as *mut CmsRecipientInfo).cast();
+            // SAFETY: `pval` is this test's own live value slot of the item's type. The `FREE_PRE`
+            // arm reads neither `_it` nor `_exarg`, so both may be NULL.
+            let ret = unsafe {
+                cms_ri_cb(
+                    ASN1_OP_FREE_PRE,
+                    &mut pval,
+                    core::ptr::null(),
+                    core::ptr::null_mut(),
+                )
+            };
+            assert_eq!(
+                ret, 1,
+                "FREE_PRE must answer 1 with no alternative present (arm {arm})"
+            );
+        }
+    }
+
+    /// B56-C1 — per-call-site witness (AGENTS.md §22) for the six release callbacks this sweep
+    /// adjudicates.
+    ///
+    /// The obligation is a registrar one: the callback's `*pval` cast is sound only because the
+    /// item machinery reaches it through *this* item's `funcs` and allocates the value with *this*
+    /// item's `size`. The test states that pairing explicitly for every row, so a row whose
+    /// callback was swapped (or whose `size` no longer names its C type) fails here rather than at
+    /// a later double release.
+    #[test]
+    fn each_release_callback_is_bound_to_the_item_whose_type_it_casts() {
+        let cases: [(
+            &str,
+            extern "C" fn() -> *const Asn1Item,
+            Asn1AuxCb,
+            &str,
+            usize,
+        ); 6] = [
+            (
+                "CMS_EncryptedContentInfo",
+                cms_encryptedcontentinfo_it,
+                cms_ec_cb,
+                "CMS_EncryptedContentInfo",
+                size_of::<CmsEncryptedContentInfo>(),
+            ),
+            (
+                "CMS_RecipientEncryptedKey",
+                cms_recipientencryptedkey_it,
+                cms_rek_cb,
+                "CMS_RecipientEncryptedKey",
+                size_of::<CmsRecipientEncryptedKey>(),
+            ),
+            (
+                "CMS_KeyAgreeRecipientInfo",
+                cms_keyagreerecipientinfo_it,
+                cms_kari_cb,
+                "CMS_KeyAgreeRecipientInfo",
+                size_of::<CmsKeyAgreeRecipientInfo>(),
+            ),
+            (
+                "CMS_KEMRecipientInfo",
+                cms_kemrecipientinfo_it,
+                cms_kemri_cb,
+                "CMS_KEMRecipientInfo",
+                size_of::<CmsKemRecipientInfo>(),
+            ),
+            (
+                "CMS_RecipientInfo",
+                cms_recipientinfo_it,
+                cms_ri_cb,
+                "CMS_RecipientInfo",
+                size_of::<CmsRecipientInfo>(),
+            ),
+            (
+                "CMS_ContentInfo",
+                CMS_ContentInfo_it,
+                cms_cb,
+                "CMS_ContentInfo",
+                size_of::<CmsContentInfo>(),
+            ),
+        ];
+
+        for (label, accessor, expected_cb, expected_name, expected_size) in cases {
+            // SAFETY: every accessor answers a `static` item this module defines, live for the
+            // whole process and never mutated.
+            let item = unsafe { &*accessor() };
+            assert_eq!(
+                item.size as usize, expected_size,
+                "{label}: the item's size is not the C type its callback casts to"
+            );
+            // SAFETY: `sname` is a NUL-terminated `static` string set on the line above it.
+            let name = unsafe { core::ffi::CStr::from_ptr(item.sname) };
+            assert_eq!(
+                name.to_str().unwrap_or(""),
+                expected_name,
+                "{label}: the item names a different C type"
+            );
+            assert!(
+                !item.funcs.is_null(),
+                "{label}: the item declares no `ASN1_AUX`, so the audited callback is unreachable"
+            );
+            // SAFETY: a non-NULL `funcs` on a SEQUENCE/CHOICE item in this module is that item's
+            // own `SyncAux` wrapper around an `Asn1Aux` static.
+            let aux = unsafe { &*item.funcs.cast::<Asn1Aux>() };
+            let actual = aux
+                .asn1_cb
+                .unwrap_or_else(|| panic!("{label}: the item declares no asn1_cb"));
+            assert!(
+                core::ptr::fn_addr_eq(actual, expected_cb),
+                "{label}: the item's asn1_cb is not the callback audited for it"
+            );
+        }
+    }
+}
+
+#[cfg(test)]
+mod adb_abi_tests {
+    use super::*;
+
+    /// MIRI-UB-1: an `ADB` accessor is a template's `item`, and `call_item_exp` invokes that
+    /// through an `extern "C"` function pointer. Declaring the accessor with the C ABI is what
+    /// makes the call sound; the binding below fails to compile if one regresses to the Rust ABI,
+    /// and the call exercises the transmute under Miri.
+    #[test]
+    fn the_adb_accessors_are_callable_through_the_c_abi() {
+        let cases: [(&str, extern "C" fn() -> *const c_void, *const c_void); 2] = [
+            (
+                "cms_ori_adb",
+                cms_ori_adb,
+                ptr::addr_of!(CMS_ORI_ADB.0).cast::<c_void>(),
+            ),
+            (
+                "cms_adb",
+                cms_adb,
+                ptr::addr_of!(CMS_ADB.0).cast::<c_void>(),
+            ),
+        ];
+        for (label, accessor, expected) in cases {
+            // SAFETY: `accessor` is this module's own `ADB` accessor, called with the C ABI the
+            // template machinery uses; it answers a `&'static` record.
+            let actual =
+                unsafe { crate::asn1::utl::call_item_exp(accessor as *const () as *mut c_void) };
+            assert_eq!(actual, expected, "{label}");
+        }
     }
 }

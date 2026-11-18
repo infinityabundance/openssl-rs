@@ -430,7 +430,8 @@ pub(crate) unsafe extern "C" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut 
 
     // `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, NULL)`: base thread handling must exist
     // before this object does.
-    crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null());
+    // SAFETY: NULL settings, so the initialiser reads no caller memory.
+    unsafe { crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null()) };
 
     // SAFETY: `RANDOM_PROVIDER_FIPS_NAME` is a NUL-terminated literal and the answer is this
     // call's own fresh block or NULL.
@@ -465,6 +466,19 @@ pub(crate) unsafe extern "C" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut 
 }
 
 /// `void ossl_rand_ctx_free(void *vdgbl)`.
+///
+/// # Safety
+///
+/// `vdgbl` is NULL or the `RAND_GLOBAL` block this slot was handed — `rand_ctx_new`'s return, at
+/// the `CRYPTO_zalloc` seam in this module — and it is released **exactly once, here**: the owning
+/// `OSSL_LIB_CTX` clears the slot as it drops the context, so no other holder frees or reads the
+/// block afterwards. The release covers the pool's whole ownership set, through `Drop`'s run of
+/// the authority's own free body: `lock` (`CRYPTO_THREAD_lock_new`), the two DRBG contexts
+/// (`primary`, `seed`), and the seven owned name strings (`random_provider_name`,
+/// `rng_name`/`rng_cipher`/`rng_digest`/`rng_propq`, `seed_name`/`seed_propq`). `random_provider`
+/// is a borrowed pointer and is deliberately not released by either side. The caller must
+/// therefore not retain, re-install or separately free any of the released members, and must not
+/// let another libctx adopt the block as its pool.
 pub(crate) unsafe fn ossl_rand_ctx_free(vdgbl: *mut c_void) {
     // SAFETY: `vdgbl` is NULL or the live `RAND_GLOBAL` this slot was handed, released exactly
     // once, here; `Drop` runs the authority's own free body and its single block release.
@@ -531,6 +545,19 @@ fn run_once_rand_init() -> c_int {
 }
 
 /// `void ossl_rand_cleanup_int(void)`.
+///
+/// # Safety
+///
+/// The caller must hold the shutdown exclusion: no other thread may be inside a RAND call, and
+/// no later `RAND_*` entry may run before [`run_once_rand_init`] succeeds again. The releases
+/// below are process-global (the method table through `RAND_set_rand_method(NULL)`, the pool, the
+/// two `RAND_ENGINE_LOCK`/`RAND_METH_LOCK` statics), so a concurrent reader would use a freed
+/// lock. The function is nonetheless idempotent when re-entered on a quiescent process: the
+/// `RAND_INITED` test returns before any release, and the two lock swaps leave NULL (a no-op for
+/// `CRYPTO_THREAD_lock_free`), so a second call releases nothing twice. In-tree it has no
+/// caller: the landing caller is `OPENSSL_cleanup`'s RAND arm, which is the shutdown point that
+/// establishes the exclusion. `_it`-style obligations do not apply; the `cleanup` hook of the
+/// method table is the table's own and takes no arguments.
 #[allow(dead_code)] // the landing caller is `OPENSSL_cleanup`'s RAND arm (`src/runtime/init.rs`)
 pub(crate) unsafe fn ossl_rand_cleanup_int() {
     // The authority reads `default_RAND_meth` before the `rand_inited` test; both are copied

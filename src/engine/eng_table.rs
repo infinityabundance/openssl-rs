@@ -589,7 +589,8 @@ pub(crate) unsafe fn ossl_engine_table_select(
     let _ = (f, l);
     // Load the config before taking the engine lock: configuration modules may register
     // engines, and that path takes the same lock.
-    OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, ptr::null());
+    // SAFETY: NULL settings, so the initialiser reads no caller memory.
+    unsafe { OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, ptr::null()) };
 
     // The authority checks `*table == NULL` before locking. The crate deliberately reads
     // the slot inside the write lock only, so a locked cleanup/register cannot be observed

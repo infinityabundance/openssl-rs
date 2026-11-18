@@ -55,10 +55,13 @@ pub unsafe extern "C" fn ENGINE_unregister_DSA(e: *mut Engine) {
 /// initialised the engine lock, and the lock is not held when the callback runs;
 /// [`engine_table_cleanup`] takes it. If the lock were uninitialised, the cleanup would
 /// return before releasing the table (a documented no-op/leak, not UB).
-unsafe extern "C" fn engine_unregister_all_dsa() {
+extern "C" fn engine_unregister_all_dsa() {
     // SAFETY: the table slot is this module's static.
     unsafe { engine_table_cleanup(dsa_table_slot()) };
 }
+
+#[cfg(test)]
+const _: extern "C" fn() = engine_unregister_all_dsa;
 
 /// `int ENGINE_register_DSA(ENGINE *e)` — `:28-35`.
 ///

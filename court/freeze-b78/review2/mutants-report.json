@@ -1,0 +1,72 @@
+{
+ "M1_bio_deref": {
+  "applied": true,
+  "check": "C2_bio_empty_body",
+  "mutant_result": "FAIL",
+  "detail": [
+   "readbuffer_write: body is not exactly `0`: '\\n    if b.is_null() { return 0; }\\n    unsafe { (*b).shutdown } as c_int\\n'"
+  ],
+  "expected": "FAIL",
+  "fired": true
+ },
+ "M2_engine_toctou": {
+  "applied": true,
+  "check": "C3_engine_cleanup_lock_order",
+  "mutant_result": "FAIL",
+  "detail": [
+   "the head is read before the lock is taken (TOCTOU shape)"
+  ],
+  "expected": "FAIL",
+  "fired": true
+ },
+ "M3_sslconf_no_guard": {
+  "applied": true,
+  "check": "C5_sslconf_entry_guard",
+  "mutant_result": "FAIL",
+  "detail": [
+   "SSL_CONF_cmd: takes *mut SslConfCtx but never calls enter_use"
+  ],
+  "expected": "FAIL",
+  "fired": true
+ },
+ "M4_contract_removed": {
+  "applied": true,
+  "check": "C1_contract_site_present",
+  "mutant_result": "FAIL",
+  "detail": [
+   "push_cstr_or_null: no # Safety at definition (src/engine/eng_fat.rs)",
+   "module_free_thunk: no # Safety at definition (src/runtime/confmod/mod.rs)",
+   "ui_free_method_data: no # Safety at definition (src/ui/ui_util.rs)"
+  ],
+  "expected": "FAIL",
+  "fired": true
+ },
+ "M5_callback_invoked": {
+  "applied": true,
+  "check": "C4_callbacks_never_invoked",
+  "mutant_result": "FAIL",
+  "detail": [
+   "src/ssl/statem/extensions_cust.rs:225: parse_cb appears to be cast/invoked"
+  ],
+  "expected": "FAIL",
+  "fired": true
+ },
+ "M6_exclusivity_stated": {
+  "applied": true,
+  "check": "C6_cipher_list_exclusivity_stated",
+  "mutant_result": "PASS",
+  "detail": [],
+  "expected": "PASS",
+  "fired": true
+ },
+ "M7_safe_freehook_call": {
+  "applied": true,
+  "check": "C7_freehooks_not_safely_called",
+  "mutant_result": "FAIL",
+  "detail": [
+   "module_free_thunk: direct call from safe fn CONF_modules_unload outside an unsafe block (src/runtime/confmod/mod.rs:1311)"
+  ],
+  "expected": "FAIL",
+  "fired": true
+ }
+}

@@ -83,7 +83,16 @@ pub(crate) trait Md32: Sized {
     /// `HASH_BLOCK_DATA_ORDER(c, p, n)` — the compression function.
     ///
     /// # Safety
-    /// `data` must be readable for `num * MD32_CBLOCK` bytes.
+    ///
+    /// `data` must be the start of one region of `num * MD32_CBLOCK` readable bytes (an extent
+    /// that must itself be representable, so no `num` that overflows `usize`), live for the
+    /// whole call and **disjoint from `self`**. The receiver is an exclusive borrow, so the
+    /// authority's own `block_data_order(c, c->data, 1)` spelling — a pointer into the
+    /// context's staging buffer — may not be passed: the compression reads before it writes the
+    /// chaining words, and ordering alone does not make that overlap sound. [`update`] and
+    /// [`finalize`] therefore compress their staging buffer through `compress_staged`, which
+    /// copies the block out first, and [`transform`] requires its caller to supply a block that
+    /// is not the context's own.
     unsafe fn block(&mut self, data: *const u8, num: usize);
 
     /// `HASH_MAKE_STRING(c, md)` — the digest, in the construction's own byte order.
@@ -95,14 +104,17 @@ pub(crate) trait Md32: Sized {
     /// still transcribed rather than dropped, because it is what the macro *is*.
     ///
     /// # Safety
-    /// `md` must be writable for the construction's digest length.
+    /// `md` must be writable for the construction's digest length, and must not overlap `self`:
+    /// the receiver is a shared borrow, so a digest written into the context's own storage is
+    /// not expressible.
     unsafe fn make_string(&self, md: *mut u8) -> c_int;
 }
 
 /// `HASH_UPDATE` — `include/crypto/md32_common.h:154-203`.
 ///
 /// # Safety
-/// `c` must be a live context and `data` readable for `len` bytes.
+/// `c` must be a live context and `data` readable for `len` bytes and disjoint from `*c` (a
+/// caller may not feed the context's own staging buffer back into it).
 pub(crate) unsafe fn update<C: Md32>(c: *mut C, data: *const u8, len: usize) -> c_int {
     if len == 0 {
         return 1;
@@ -131,8 +143,11 @@ pub(crate) unsafe fn update<C: Md32>(c: *mut C, data: *const u8, len: usize) -> 
             // SAFETY: `p` is valid for `MD32_CBLOCK` bytes from `n`; `data` is readable for
             // `MD32_CBLOCK - n`; the two regions are distinct because `p` is the context's.
             unsafe { ptr::copy_nonoverlapping(data, p.add(n), MD32_CBLOCK - n) };
-            // SAFETY: the buffer holds a full block.
-            unsafe { (*c).block(p, 1) };
+            // SAFETY: `c` is live and its staging buffer holds one full block.
+            unsafe { compress_staged(c) };
+            // `p` is dead from here: the compression above borrowed `*c` exclusively, which
+            // invalidates a pointer taken from the context before it. Every later use below
+            // re-derives the staging pointer instead of holding this one.
             n = MD32_CBLOCK - n;
             // SAFETY: the caller guaranteed `len` readable bytes and `n <= len` here.
             data = unsafe { data.add(n) };
@@ -141,8 +156,8 @@ pub(crate) unsafe fn update<C: Md32>(c: *mut C, data: *const u8, len: usize) -> 
             unsafe { (*c).set_num(0) };
             // The authority's `memset(p, 0, HASH_CBLOCK)` — keep the buffer zeroed, which is
             // why `MD5_Init`'s own `memset` is not the only zeroing in the machine.
-            // SAFETY: `p` is valid for `MD32_CBLOCK` bytes.
-            unsafe { ptr::write_bytes(p, 0, MD32_CBLOCK) };
+            // SAFETY: `c` is live, so its staging buffer is valid for `MD32_CBLOCK` bytes.
+            unsafe { ptr::write_bytes((*c).data_ptr(), 0, MD32_CBLOCK) };
         } else {
             // SAFETY: the two regions are distinct and the copy is in bounds.
             unsafe { ptr::copy_nonoverlapping(data, p.add(n), len) };
@@ -154,7 +169,8 @@ pub(crate) unsafe fn update<C: Md32>(c: *mut C, data: *const u8, len: usize) -> 
 
     n = len / MD32_CBLOCK;
     if n > 0 {
-        // SAFETY: `data` is readable for `n * MD32_CBLOCK` bytes, which is `<= len`.
+        // SAFETY: `data` is readable for `n * MD32_CBLOCK` bytes, which is `<= len`, and it is
+        // the caller's buffer, disjoint from the context per this function's contract.
         unsafe { (*c).block(data, n) };
         let advance = n * MD32_CBLOCK;
         // SAFETY: as above; the block function read exactly this many bytes.
@@ -164,9 +180,11 @@ pub(crate) unsafe fn update<C: Md32>(c: *mut C, data: *const u8, len: usize) -> 
 
     if len != 0 {
         // SAFETY: `c` is live.
-        let p = unsafe { (*c).data_ptr() };
-        // SAFETY: `c` is live.
         unsafe { (*c).set_num(len as u32) };
+        // The staging pointer is taken *after* the setter: the setter is a `&mut` borrow of
+        // `*c`, which invalidates a pointer derived from the context before it.
+        // SAFETY: `c` is live, so its staging buffer is valid for `MD32_CBLOCK` bytes.
+        let p = unsafe { (*c).data_ptr() };
         // SAFETY: `len < MD32_CBLOCK` here and `data` is readable for `len`.
         unsafe { ptr::copy_nonoverlapping(data, p, len) };
     }
@@ -182,59 +200,93 @@ pub(crate) unsafe fn update<C: Md32>(c: *mut C, data: *const u8, len: usize) -> 
 /// rather than with a short one.
 ///
 /// # Safety
-/// `c` must be a live context and `data` readable for one block (`MD32_CBLOCK` bytes).
+/// `c` must be a live context; `data` readable for one block (`MD32_CBLOCK` bytes) and
+/// disjoint from `*c` — a block that *is* the context's staging buffer must go through
+/// `compress_staged` (which is internal) or be copied by the caller first.
 pub(crate) unsafe fn transform<C: Md32>(c: *mut C, data: *const u8) {
     // SAFETY: the caller's contract.
     unsafe { (*c).block(data, 1) };
 }
 
+/// `HASH_BLOCK_DATA_ORDER(c, c->data, 1)` — compress the context's **own** staging buffer.
+///
+/// The authority spells this `block_data_order(c, c->data, 1)`, passing a pointer into the
+/// context. [`Md32::block`] borrows the context exclusively, so that spelling is not sound in
+/// Rust: the bytes are copied into this frame first and the compression reads a region disjoint
+/// from `*c`. The compressed bytes are identical, so no digest changes.
+///
+/// # Safety
+/// `c` must be a live context whose staging buffer holds one full block.
+unsafe fn compress_staged<C: Md32>(c: *mut C) {
+    let mut staged = [0u8; MD32_CBLOCK];
+    // SAFETY: `c` is live, so its staging buffer is valid for `MD32_CBLOCK` bytes. The pointer
+    // is used only within this statement: the compression below borrows `*c`, and no pointer
+    // into the context may be held across that.
+    unsafe {
+        let p = (*c).data_ptr();
+        ptr::copy_nonoverlapping(p, staged.as_mut_ptr(), MD32_CBLOCK);
+    }
+    // SAFETY: `staged` is this frame's own `MD32_CBLOCK`-byte block, disjoint from `*c`.
+    unsafe { (*c).block(staged.as_ptr(), 1) };
+    // The staging buffer holds message bytes, so this copy is cleansed the way `HASH_FINAL`
+    // cleanses the original.
+    // SAFETY: `staged` is valid for `MD32_CBLOCK` bytes.
+    unsafe { ptr::write_bytes(staged.as_mut_ptr(), 0, MD32_CBLOCK) };
+}
+
 /// `HASH_FINAL` — `include/crypto/md32_common.h:210-241`.
 ///
 /// # Safety
-/// `c` must be a live context and `md` writable for the construction's digest length.
+/// `c` must be a live context and `md` writable for the construction's digest length, and `md`
+/// must not overlap `*c` (see [`Md32::make_string`]).
 pub(crate) unsafe fn finalize<C: Md32>(md: *mut u8, c: *mut C) -> c_int {
-    // SAFETY: `c` is live, so the staging buffer is valid for `MD32_CBLOCK` bytes.
-    let p = unsafe { (*c).data_ptr() };
     // SAFETY: `c` is live.
     let mut n = unsafe { (*c).num() } as usize;
+    // The staging pointer is re-derived for every use below and never held across a `&mut`
+    // borrow of `*c` (the setters, `compress_staged`, `nl_nh`, `make_string`): such a borrow
+    // invalidates a pointer taken from the context before it.
 
     // "there is always room for one": `num < MD32_CBLOCK` on every path that reaches Final.
-    // SAFETY: `n < MD32_CBLOCK`.
-    unsafe { *p.add(n) = 0x80 };
+    // SAFETY: `c` is live, so its staging buffer is valid for `MD32_CBLOCK` bytes, and
+    // `n < MD32_CBLOCK`.
+    unsafe { *(*c).data_ptr().add(n) = 0x80 };
     n += 1;
 
     if n > MD32_CBLOCK - 8 {
-        // SAFETY: `n <= MD32_CBLOCK`, so the range is within the buffer.
-        unsafe { ptr::write_bytes(p.add(n), 0, MD32_CBLOCK - n) };
+        // SAFETY: `c` is live and `n <= MD32_CBLOCK`, so the range is within the staging buffer.
+        unsafe { ptr::write_bytes((*c).data_ptr().add(n), 0, MD32_CBLOCK - n) };
         n = 0;
-        // SAFETY: the buffer holds a full block.
-        unsafe { (*c).block(p, 1) };
+        // SAFETY: `c` is live and its staging buffer holds one full block.
+        unsafe { compress_staged(c) };
     }
-    // SAFETY: `n <= MD32_CBLOCK - 8` here, so the range is within the buffer.
-    unsafe { ptr::write_bytes(p.add(n), 0, MD32_CBLOCK - 8 - n) };
+    // SAFETY: `c` is live and `n <= MD32_CBLOCK - 8` here, so the range is within the buffer.
+    unsafe { ptr::write_bytes((*c).data_ptr().add(n), 0, MD32_CBLOCK - 8 - n) };
 
     // SAFETY: `c` is live.
     let (nl, nh) = unsafe { (*c).nl_nh() };
-    // SAFETY: the length field is the last eight bytes of the block.
-    let q = unsafe { p.add(MD32_CBLOCK - 8) };
+    // SAFETY: `c` is live, so its staging buffer is valid for `MD32_CBLOCK` bytes, and the
+    // length field is the last eight bytes of the block.
+    let q = unsafe { (*c).data_ptr().add(MD32_CBLOCK - 8) };
     if C::LITTLE_ENDIAN {
-        store_word(q, nl, true);
         // SAFETY: `q` is valid for eight bytes.
-        store_word(unsafe { q.add(4) }, nh, true);
+        unsafe { store_word(q, nl, true) };
+        // SAFETY: `q` is valid for eight bytes.
+        unsafe { store_word(q.add(4), nh, true) };
     } else {
-        store_word(q, nh, false);
+        // SAFETY: `q` is valid for eight bytes.
+        unsafe { store_word(q, nh, false) };
         // SAFETY: as above.
-        store_word(unsafe { q.add(4) }, nl, false);
+        unsafe { store_word(q.add(4), nl, false) };
     }
 
-    // SAFETY: `p` is the start of the staging buffer here (`n` was reset if it advanced) and
-    // the block is the one just filled.
-    unsafe { (*c).block(p, 1) };
+    // SAFETY: `c` is live and its staging buffer holds the padded block just filled (`n` was
+    // reset above if it advanced).
+    unsafe { compress_staged(c) };
     // SAFETY: `c` is live.
     unsafe { (*c).set_num(0) };
     // `OPENSSL_cleanse(p, HASH_CBLOCK)`.
-    // SAFETY: `p` is valid for `MD32_CBLOCK` bytes.
-    unsafe { ptr::write_bytes(p, 0, MD32_CBLOCK) };
+    // SAFETY: `c` is live, so its staging buffer is valid for `MD32_CBLOCK` bytes.
+    unsafe { ptr::write_bytes((*c).data_ptr(), 0, MD32_CBLOCK) };
 
     // SAFETY: the caller guaranteed `md` writable for the digest length.
     unsafe { (*c).make_string(md) }
@@ -246,7 +298,10 @@ pub(crate) unsafe fn finalize<C: Md32>(md: *mut u8, c: *mut C) -> c_int {
 /// of the two calls* in `HASH_FINAL` differs with them, so the pair together is "the 64-bit
 /// bit length, big-endian for a big-endian construction and little-endian for a
 /// little-endian one" — which is what MD5's and SHA-1's padding are.
-pub(crate) fn store_word(c: *mut u8, l: u32, little_endian: bool) {
+///
+/// # Safety
+/// `c` must point to four writable bytes, valid for the duration of the call.
+pub(crate) unsafe fn store_word(c: *mut u8, l: u32, little_endian: bool) {
     let bytes = if little_endian {
         l.to_le_bytes()
     } else {
@@ -269,5 +324,28 @@ pub(crate) unsafe fn load_word(c: *const u8, little_endian: bool) -> u32 {
         u32::from_le_bytes(buf)
     } else {
         u32::from_be_bytes(buf)
+    }
+}
+
+#[cfg(test)]
+mod unsafe_contract_controls {
+    /// Qualifier control: `store_word` writes four bytes through the caller's
+    /// pointer, so it must not be callable from safe Rust with an unchecked
+    /// pointer. A type-level "is an unsafe fn" assertion is not expressible on
+    /// stable Rust, so the declaration is pinned in the production source text,
+    /// which is read from disk and truncated at the first `#[cfg(test)]` module.
+    /// This test's own assertion text is therefore never searched, and the needle
+    /// is assembled from fragments, so only removing the `unsafe` qualifier can
+    /// make it fail.
+    #[test]
+    #[allow(clippy::expect_used)]
+    fn store_word_is_an_unsafe_fn() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/digest/md32.rs");
+        let src = std::fs::read_to_string(path).expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        let needle = concat!("pub(crate) unsafe fn ", "store_word(");
+        assert!(prod.contains(needle), "missing {needle}");
     }
 }

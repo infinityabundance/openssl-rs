@@ -56,6 +56,10 @@ modifies source; it reads the admitted install, the committed inventory and
 the committed receipts.
 
 Self-test:  python3 forensics/tools/consumer_closure.py --self-test
+            exit 0 = every control ran and passed; exit 1 = a control failed;
+            exit 2 = no failure but at least one PREMISE_UNAVAILABLE control
+            (its subject is absent from the image and could not be
+            synthesised), which is neither a pass nor a failure.
 Example:    python3 forensics/tools/consumer_closure.py \
               --family cyrus-sasl \
               --artifact court/tmp/v4-sasl/candidate/src/plugins/.libs/libdigestmd5.so.3.0.0
@@ -2160,6 +2164,17 @@ ABI_CONTRACT_STORE_LOADER = "ABI_CONTRACT_STORE_LOADER"
 # DSO path binding `OPENSSL_init`/`OPENSSL_finish`.  Both seams are public, so
 # the target set is unbounded; every in-image writer is the documented path.
 ABI_CONTRACT_CONF_MODULE = "ABI_CONTRACT_CONF_MODULE"
+# The `CONF_set_nconf` -> `CONF_METHOD.init` dispatch, as inlined into
+# `X509V3_EXT_REQ_add_conf`'s trailing `CONF_set_nconf(ctmp, NULL)` call.  The
+# method table is read from the process-global `default_CONF_method` cell; the
+# only writers of that cell are the exported `CONF_set_default_method` (which
+# stores its parameter unchanged) and the built-in NULL-fallback that installs
+# the table `NCONF_default()` publishes.  The dispatched field is
+# `conf_method_st.init` at offset 0x10 (`conf_init_func`), a documented public
+# struct field.  An application may install its own `CONF_METHOD`, so the target
+# set is unbounded and the class is per-call-site: a same-shaped dispatch on a
+# neighbouring field, cell or interface is refused, never absorbed.
+ABI_CONTRACT_CONF_DEFAULT_METHOD = "ABI_CONTRACT_CONF_DEFAULT_METHOD"
 # An exported PEM PKCS#8 writer's `pem_password_cb *cb` parameter, together
 # with the documented NULL-selected in-image default `PEM_def_callback`.  The
 # existing `ABI_CONTRACT_EXPORT_CALLBACK` text says a NULL callback is a
@@ -2167,8 +2182,17 @@ ABI_CONTRACT_CONF_MODULE = "ABI_CONTRACT_CONF_MODULE"
 # gets its own class and records the default target explicitly.
 ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT = \
     "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT"
+# The core-to-provider `in` dispatch table of `OSSL_provider_init`: the entries
+# the Core supplies *to* a provider, which a provider that needs its own
+# `OSSL_LIB_CTX` forwards to `OSSL_LIB_CTX_new_from_dispatch`/
+# `OSSL_LIB_CTX_new_child`.  This is the opposite direction to
+# `ABI_CONTRACT_PROVIDER` (the table the provider returns), so it is a separate
+# class: the *caller* supplies these function values, the documented
+# `OSSL_FUNC_*` ids name their signatures, and the target set is unbounded.
+ABI_CONTRACT_CORE_DISPATCH = "ABI_CONTRACT_CORE_DISPATCH"
 
 ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR,
+                                  ABI_CONTRACT_CORE_DISPATCH,
                                   ABI_CONTRACT_EXPORT_CALLBACK,
                                   ABI_CONTRACT_PROVIDER_CAPABILITIES_CALLBACK,
                                   ABI_CONTRACT_SLH_METHOD_TABLE,
@@ -2179,7 +2203,114 @@ ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR,
                                   ABI_CONTRACT_PBE_REGISTRY,
                                   ABI_CONTRACT_STORE_LOADER,
                                   ABI_CONTRACT_CONF_MODULE,
+                                  ABI_CONTRACT_CONF_DEFAULT_METHOD,
                                   ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT})
+
+# --------------------------------------------------------------------------- #
+# closed target sets (a bounded, enumerated in-image set, not an external ABI)
+# --------------------------------------------------------------------------- #
+#
+# Four classes in `ABI_CONTRACT_CLASSES` are *not* external ABI contracts.
+# Their witnesses prove a closed writer set and enumerate the exact target set
+# from the source and the image (their `resolution_kind` already says
+# "target-bounded by a closed ..."); the dispatched slot never crosses the C
+# ABI.  Counting them as contract-bounded made
+# `predicate_element_7.target_sets_remain_unbounded` contradict its own
+# `contract_bounded_by_class` (the b82 review's 36-of-152 finding: 3 + 2 + 25 +
+# 6 sites).  They get an explicit closed-set class at the reporting layer; the
+# `ABI_CONTRACT_*` key remains the provenance key on the site and in its
+# witness, so no witness, pin or contract text is re-labelled (AGENTS.md
+# section 22: the classification fix must not move evidence).
+CLOSED_TARGET_SET_SLH_METHOD_TABLE = "CLOSED_TARGET_SET_SLH_METHOD_TABLE"
+CLOSED_TARGET_SET_PROVIDER_HW_TABLE = "CLOSED_TARGET_SET_PROVIDER_HW_TABLE"
+CLOSED_TARGET_SET_LEGACY_EVP_CIPHER_DATA = \
+    "CLOSED_TARGET_SET_LEGACY_EVP_CIPHER_DATA"
+CLOSED_TARGET_SET_DECODER_METHOD_OBJECT = \
+    "CLOSED_TARGET_SET_DECODER_METHOD_OBJECT"
+
+# One reporting class per family, each paired with the `ABI_CONTRACT_*` key
+# that remains its provenance key.  The pair is what keeps the two counts
+# disjoint: a class is never in both sets.
+CLOSED_TARGET_SET_FROM_ABI_CLASS = {
+    ABI_CONTRACT_SLH_METHOD_TABLE: CLOSED_TARGET_SET_SLH_METHOD_TABLE,
+    ABI_CONTRACT_PROVIDER_HW_TABLE: CLOSED_TARGET_SET_PROVIDER_HW_TABLE,
+    ABI_CONTRACT_LEGACY_EVP_CIPHER_DATA:
+        CLOSED_TARGET_SET_LEGACY_EVP_CIPHER_DATA,
+    ABI_CONTRACT_DECODER_METHOD_OBJECT:
+        CLOSED_TARGET_SET_DECODER_METHOD_OBJECT,
+}
+CLOSED_TARGET_SET_CLASSES = frozenset(CLOSED_TARGET_SET_FROM_ABI_CLASS.values())
+
+# The registry prefix that *is* the provenance of a closed target set.  A
+# closed family's `ABI_CONTRACTS` entry says its resolution is bounded by a
+# closed, enumerated set; an external contract's says its target set is
+# unbounded.  `classify_bound_kind` reads the declared table below, and
+# `closed_target_set_provenance_failures` holds that table answerable to this
+# registry string.  The registry is witness provenance and this repair does not
+# edit it, so the check is not circular: a mistaken entry in the table (or a
+# changed registry) is visible as a disagreement.
+CLOSED_TARGET_SET_RESOLUTION_PREFIX = "target-bounded by a closed"
+
+
+def registry_closed_target_set_families():
+    """Contract classes whose registered provenance says closed target set."""
+    return frozenset(
+        cls for cls in ABI_CONTRACT_CLASSES
+        if str((ABI_CONTRACTS.get(cls) or {}).get("resolution_kind", ""))
+        .startswith(CLOSED_TARGET_SET_RESOLUTION_PREFIX))
+
+
+def classify_bound_kind(site_class):
+    """Classify one residual site by the kind of bound its class carries.
+
+    ``"external-contract"``: a documented external ABI contract whose target
+    set is unbounded.  ``"closed-target-set"``: a closed, source-derived
+    writer set with an enumerated in-image target set.  ``None``: no bound, so
+    the site is target-bounded unresolved and keeps element 7 failing.
+
+    The declared table is the only knob: a class is closed exactly when the
+    table names it, and external exactly when the contract registry knows it
+    and the table does not.
+    """
+    if site_class in CLOSED_TARGET_SET_FROM_ABI_CLASS:
+        return "closed-target-set"
+    if site_class in ABI_CONTRACT_CLASSES:
+        return "external-contract"
+    return None
+
+
+def closed_target_set_class(site_class):
+    """The closed-target-set reporting class for a provenance class, or None."""
+    return CLOSED_TARGET_SET_FROM_ABI_CLASS.get(site_class)
+
+
+def closed_target_set_provenance_failures(mapping=None):
+    """Disagreements between the declared closed-set table and the registry.
+
+    Returns one string per defect, so the caller can report every disagreement
+    rather than the first.  ``mapping`` lets a control pass a mutated table.
+    """
+    table = dict(CLOSED_TARGET_SET_FROM_ABI_CLASS if mapping is None
+                 else mapping)
+    registry_closed = registry_closed_target_set_families()
+    failures = []
+    for cls in sorted(set(table) - registry_closed):
+        failures.append(
+            "closed target set counted as such without closed provenance: "
+            f"{cls} (registry resolution_kind="
+            f"{(ABI_CONTRACTS.get(cls) or {}).get('resolution_kind')!r})")
+    for cls in sorted(registry_closed - set(table)):
+        failures.append(
+            "a closed target set is counted as an external ABI contract: "
+            f"{cls} (registry resolution_kind="
+            f"{(ABI_CONTRACTS.get(cls) or {}).get('resolution_kind')!r})")
+    for src, name in sorted(table.items()):
+        if not str(name).startswith("CLOSED_TARGET_SET_"):
+            failures.append(
+                "a closed target set reports a name that is not a closed-set "
+                f"class: {src} -> {name}")
+    return failures
+
 
 ABI_CONTRACTS = {
     ABI_CONTRACT_PROVIDER: {
@@ -2239,6 +2370,70 @@ ABI_CONTRACTS = {
             "literal-field conservative pattern does not see it and it is not "
             "refused; no such macro exists in the candidate's "
             "`OsslStoreLoader`-naming files",
+        ],
+    },
+    ABI_CONTRACT_CORE_DISPATCH: {
+        "resolution_kind": "contract-bounded (target set unbounded)",
+        "contract": (
+            "the core-to-provider `in` dispatch table passed to "
+            "`OSSL_provider_init` (and forwarded by the provider to "
+            "`OSSL_LIB_CTX_new_from_dispatch`/`OSSL_LIB_CTX_new_child`)"),
+        "citation": [
+            "include/openssl/core.h:186-195 -- typedef int(OSSL_provider_init_fn)("
+            "const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in, "
+            "const OSSL_DISPATCH **out, void **provctx); the header's own comment "
+            "says |in| 'is the array of functions that the Core passes to the "
+            "provider'",
+            "include/openssl/core_dispatch.h:73-78 -- 'Core function identities, "
+            "for the two OSSL_DISPATCH tables being passed in the "
+            "OSSL_provider_init call. ... Functions provided by the Core to the "
+            "provider, reserved numbers 1-1023'",
+            "include/openssl/core_dispatch.h:153-161 -- the OSSL_FUNC_BIO_* ids "
+            "(42, 43, 44, 45, 48, 49, 50) with their OSSL_CORE_MAKE_FUNC "
+            "signatures (BIO_read_ex, BIO_write_ex, BIO_up_ref, BIO_free, "
+            "BIO_puts, BIO_gets, BIO_ctrl)",
+            "include/openssl/core_dispatch.h:202-227 -- the "
+            "OSSL_FUNC_PROVIDER_* ids (105-111) and their signatures "
+            "(provider_register_child_cb, provider_deregister_child_cb, "
+            "provider_name, provider_get0_provider_ctx, provider_get0_dispatch, "
+            "provider_up_ref, provider_free)",
+            "include/openssl/crypto.h:601-604 -- OSSL_LIB_CTX_new_from_dispatch("
+            "const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in) and "
+            "OSSL_LIB_CTX_new_child(const OSSL_CORE_HANDLE *handle, const "
+            "OSSL_DISPATCH *in): the caller passes the same `in` table on",
+            "src/context/core_bio.rs:402-447 -- `ossl_bio_init_core` is the only "
+            "writer of BioCoreGlobals, one field per OSSL_FUNC_BIO_* id, from "
+            "the caller's `fns` array; reached from "
+            "`OSSL_LIB_CTX_new_from_dispatch` (src/context/mod.rs)",
+            "src/provider/child.rs:470-560 -- `ossl_provider_init_as_child` is "
+            "the only writer of ChildProvGlobals' callback fields, one field per "
+            "OSSL_FUNC_* id, from the caller's `in` array; reached from "
+            "`OSSL_LIB_CTX_new_child` (src/context/mod.rs:1234)",
+        ],
+        "provider_obligation": (
+            "the caller (the Core, or a provider acting as the Core for a "
+            "nested child) supplies the function for each documented id and owns "
+            "its correctness and lifetime; the crate forwards the entry and "
+            "invokes it with the documented signature, and never substitutes an "
+            "in-image target"),
+        "covers": (
+            "the exact libctx slot objects (slot 17 `BioCoreGlobals`, slot 18 "
+            "`ChildProvGlobals`), the exact field each enumerated site reads, "
+            "the single in-image writer of that field, and the documented "
+            "`OSSL_FUNC_*` id that writer stores into it"),
+        "does_not_cover": [
+            "which core/module supplies the `in` table; the target set is "
+            "unbounded by the C ABI",
+            "the behaviour or lifetime of the supplied upcall, which is the "
+            "supplying core's obligation",
+            "a site whose base register is not proven to be the slot-17/18 "
+            "libctx data object",
+            "a site whose offset is not a field of the documented table, or "
+            "whose in-image writer is not the enumerated init function",
+            "a field with a second source store, a macro-expanded store, or a "
+            "store under a different `OSSL_FUNC_*` id; the witness refuses it",
+            "reachability from these two workloads, or that a configuration "
+            "file exists at run time",
         ],
     },
     ABI_CONTRACT_EXPORT_CALLBACK: {
@@ -2738,6 +2933,57 @@ ABI_CONTRACTS = {
             "a call at the enumerated address whose function leaf differs; it "
             "falls through to target-bounded with no named refusal (the address "
             "is not the identity)",
+        ],
+    },
+    ABI_CONTRACT_CONF_DEFAULT_METHOD: {
+        "resolution_kind": "contract-bounded (target set unbounded)",
+        "contract": (
+            "the `conf_method_st.init` callback of the method table installed in "
+            "the process-global `default_CONF_method` cell by the exported "
+            "`CONF_set_default_method(CONF_METHOD *)`, or the built-in "
+            "`NCONF_default()` table when the cell is NULL"),
+        "citation": [
+            "include/openssl/conf.h -- struct conf_method_st lists `int "
+            "(*init)(CONF *conf)`; CONF_set_default_method(CONF_METHOD *meth) "
+            "is the documented public setter; NCONF_default(void) publishes the "
+            "built-in table",
+            "src/runtime/conf/types.rs:59-86 -- `#[repr(C)] ConfMethod` with "
+            "`init` at offset 0x10 and type `Option<ConfInitFn>`",
+            "src/runtime/conf/lib.rs:54-55 -- `static DEFAULT_CONF_METHOD: "
+            "AtomicPtr<ConfMethod>`; lib.rs:75-79 -- `CONF_set_nconf` installs "
+            "`NCONF_default()` when the cell is NULL, then dispatches "
+            "`(*meth).init`; lib.rs:96-107 -- the exported setter stores its "
+            "`meth` parameter unchanged",
+            "src/runtime/conf/def.rs:808-834 -- the only two `ConfMethod` "
+            "table literals (`DEFAULT_METHOD` -> def_init_default, `WIN32_METHOD` "
+            "-> def_init_win32); no runtime store writes `init`",
+            "src/x509/v3_conf.rs:1629-1649 -- `X509V3_EXT_REQ_add_conf` calls "
+            "`CONF_set_nconf(ctmp, NULL)` on its own `NCONF_new(NULL)` result, "
+            "which the compiler inlines (the enumerated site)",
+        ],
+        "provider_obligation": (
+            "the application supplies a live `CONF_METHOD` whose `init` matches "
+            "`conf_init_func`; `CONF_set_default_method` publishes it to every "
+            "subsequent `CONF_set_nconf`, and the library calls it with a live "
+            "`CONF *` it allocated itself"),
+        "covers": (
+            "the enumerated call site, the `default_CONF_method` cell, its two "
+            "writer classes (the exported setter's parameter, and the built-in "
+            "NULL fallback whose value is the table `NCONF_default()` returns), "
+            "and the `ConfMethod.init` field at offset 0x10"),
+        "does_not_cover": [
+            "which method table an application installs; the setter is public "
+            "and the target set is unbounded",
+            "the behaviour or lifetime of the installed `init` callback, or the "
+            "application's own table contents",
+            "any field other than `init` at 0x10: a dispatch on `create` (0x8), "
+            "`destroy` (0x18) or `destroy_data` (0x20) is a different contract "
+            "and the witness refuses it",
+            "a writer of the cell outside the exported setter and the built-in "
+            "fallback; the whole-image store scan refuses one",
+            "a runtime store to a `ConfMethod` `init` field anywhere under "
+            "`src/`; the source scan refuses one (the only writers are the two "
+            "link-time table literals)",
         ],
     },
     ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT: {
@@ -5688,10 +5934,21 @@ def _fetch_family_by_callee(name: str):
 
 
 def _is_generic_fetch_wrapper(name: str) -> bool:
-    """The public ``evp_generic_fetch`` wrapper, not the inner/from_prov forms."""
+    """A family-agnostic generic fetch entry point, not the inner form.
+
+    `evp_generic_fetch` (the public wrapper) and `evp_generic_fetch_from_prov`
+    (the provider-restricted wrapper) both build the method object with the
+    caller's `new_method` callback, so the returned object is the family
+    object whose fields the family writer assigns.  The family is still bound
+    by the writer reference at the call site, not by the callee's name.
+    `inner_evp_generic_fetch` is the shared implementation and is matched
+    separately.
+    """
     base = re.sub(r"\.llvm(?:\.[0-9]+)?$", "", name or "")
+    if "inner_evp_generic_fetch" in base:
+        return False
     return (base.endswith("evp_generic_fetch")
-            and "inner_evp_generic_fetch" not in base)
+            or base.endswith("evp_generic_fetch_from_prov"))
 
 
 def _writer_reference(g: "DsoGraph", fstart: int, call_idx: int):
@@ -11903,7 +12160,7 @@ SLH_HASH_CTX_KEY_OFF = 0x00
 # --------------------------------------------------------------------------- #
 # Address re-pin.  The site tables below and REGISTRATION_ATEXIT_CALL_SITE are
 # keyed by virtual address in one exact artefact: libcrypto.so.3 with sha256
-# 136203564ebee50a28b428c3140ab877af9bef6a7d59225d1a5dbe88d09a9a44.
+# e8a90ba4bd1e597ed22adbfef56c7336b80a65477393ba5a74afbbe428b985cb (b73).
 # A virtual address is not stable across a rebuild.  Every row MUST be
 # re-pinned by (symbol, offset): resolve the named symbol (demangled path with
 # the per-build crate hash stripped) in the new image, add the recorded offset, then require the new address to be an instruction start,
@@ -11912,22 +12169,747 @@ SLH_HASH_CTX_KEY_OFF = 0x00
 # the mechanical re-pin mechanism; they are not evidence about the artefact.
 # --------------------------------------------------------------------------- #
 
+
+def _pin_leaf(symbol: str) -> str:
+    """Source leaf of a pin symbol: a demangled path or a plain C name."""
+    return (symbol or "").rsplit("::", 1)[-1]
+
+
+# --------------------------------------------------------------------------- #
+# (symbol leaf, offset) re-pin engine
+# --------------------------------------------------------------------------- #
+#
+# ``_repinned`` re-derives this image's address for every pinned row, and
+# ``_pinned_site`` does the same for an enumerated scalar site.  A row that
+# cannot be re-derived keeps its recorded literal, which no site in another
+# image matches, so its witness refuses instead of firing at an unproven
+# address.  The derivation is deliberately strict:
+#
+#   1. the pin's leaf must name exactly one function start in this image (an
+#      ambiguous leaf -- ICF aliases -- is refused, never resolved arbitrarily);
+#   2. ``start + offset`` must be an instruction start in that function;
+#   3. that instruction must be an indirect call/jmp (every pinned site is one).
+#
+# The witness at the re-derived address remains the shape gate: it re-proves
+# the operand, base object, field offset, writer set and target table in this
+# image.  Re-pinning therefore cannot widen a rule; it can only let an
+# already-specified witness run against a moved image.  A *moved* row (the pin
+# offset itself changed) additionally needs a uniqueness proof that no other
+# row in the same table accepts that address -- see ``e7repin_controls``.
+
+_PIN_TABLE_OF = {
+    "SLH_METHOD_TABLE_SITES": "SLH_METHOD_TABLE_SITE_PINS",
+    "PROVIDER_HW_SITES": "PROVIDER_HW_SITE_PINS",
+    "LEGACY_EVP_DATA_SITES": "LEGACY_EVP_DATA_SITE_PINS",
+    "DECODER_METHOD_SITES": "DECODER_METHOD_SITE_PINS",
+    "PBE_EX_SITES": "PBE_EX_SITE_PINS",
+    "STORE_LOADER_LEGACY_SITES": "STORE_LOADER_LEGACY_SITE_PINS",
+    "CONF_SITES": "CONF_SITE_PINS",
+    "CONF_METHOD_SITES": "CONF_METHOD_SITE_PINS",
+}
+_PINNED_SCALARS = {
+    "PBE_SITE": "PBE_SITE_PIN",
+    "PEM_SITE": "PEM_SITE_PIN",
+    "STORE_LOADER_PROVIDER_SITE": "STORE_LOADER_PROVIDER_SITE_PIN",
+    "REGISTRATION_ATEXIT_CALL_SITE": "REGISTRATION_ATEXIT_CALL_SITE_PIN",
+}
+_SITE_PIN_CACHE = {}
+
+
+def _pin_insns(g, start: int):
+    insns = None
+    if g.precision is not None:
+        insns = g.precision.insns_by_func.get(start)
+    if insns is None:
+        for fstart, body in getattr(g, "functions", ()):  # pragma: no branch
+            if fstart == start:
+                insns = body
+                break
+    return insns
+
+
+def _pin_insn_addr(g, pin):
+    """This image's address for an instruction ``(symbol leaf, offset)`` pin.
+
+    Unlike [`_pin_site_addr`] the pinned instruction need not be an indirect
+    transfer: the close guard is a `test`/`je` pair.  The same three
+    conditions apply -- a unique function start for the leaf, an instruction
+    at ``start + offset`` -- and the caller proves the instruction's shape.
+    """
+    if not pin:
+        return None
+    symbol, off = pin
+    leaf = _pin_leaf(symbol)
+    start_set = getattr(g, "start_set", set())
+    starts = sorted(a for a, names in getattr(g, "names_at", {}).items()
+                    if a in start_set
+                    and any(_external_function_leaf(n) == leaf for n in names))
+    if len(starts) != 1:
+        return None
+    start = starts[0]
+    insns = _pin_insns(g, start)
+    if not insns:
+        return None
+    addr = start + off
+    return addr if any(a == addr for a, _t in insns) else None
+
+
+def _pin_site_addr(g, pin):
+    """This image's address for a ``(symbol leaf, offset)`` pin, or None.
+
+    None means the pin does not establish a site in this image; the caller
+    keeps the recorded literal and the witness refuses.  The three conditions
+    are the whole rule -- the witness supplies the shape proof at the result.
+    """
+    if not pin:
+        return None
+    symbol, off = pin
+    leaf = _pin_leaf(symbol)
+    starts = sorted(a for a, names in getattr(g, "names_at", {}).items()
+                    if a in g.start_set
+                    and any(_external_function_leaf(n) == leaf for n in names))
+    if len(starts) != 1:
+        return None
+    start = starts[0]
+    insns = _pin_insns(g, start)
+    if not insns:
+        return None
+    addr = start + off
+    text = next((t for a, t in insns if a == addr), None)
+    if text is None:
+        return None
+    mn, rest, _ops = _insn_parts(text)
+    if not (mn.startswith("call") or mn.startswith("jmp")):
+        return None
+    if not rest.strip().startswith("*"):
+        return None
+    return addr
+
+
+def _site_pin_vintage(g):
+    """The per-image cache key, or None for a test double that has no image.
+
+    Several committed controls build a minimal fake graph from literal
+    instruction tuples.  Such a graph cannot establish a symbol+offset pin, so
+    the engine leaves the tables exactly as recorded for it (the old
+    literal-keyed behaviour); a real DsoGraph always carries an image digest.
+    """
+    sha = getattr(g, "sha256", None)
+    if not sha or not getattr(g, "names_at", None) or not hasattr(g, "start_set"):
+        return None
+    return (getattr(g, "name", "?"), sha)
+
+
+# --------------------------------------------------------------------------- #
+# moved-pin search: the witness accepts exactly one transfer in the symbol
+# --------------------------------------------------------------------------- #
+#
+# A symbol+offset pin is provenance, not a proof: the offset is a property of
+# one build.  In b77 the four `OSSL_STORE_open_ex` loader dispatches and the
+# `PKCS5_v2_PBE_keyivgen_ex` out-parameter call moved inside their functions
+# while the recorded offsets stayed put, so the strict re-derivation above
+# refuses and the rows would keep a literal that names no site.  The rule for
+# such a row is a search *inside the pin's own symbol*: every indirect transfer
+# in that symbol is offered to the same witness the table already owns, and the
+# row is resolved only when the witness accepts exactly one of them.  Zero
+# acceptances or two refusals; the search cannot widen a rule, because the
+# witness - not the offset - is what decides.
+#
+# The witness is invoked through a provisional binding of the row (or scalar)
+# it is being asked about, because each witness starts from "is this address my
+# row?".  The binding is scoped, so a nested search for a different row sees
+# its own binding only, and a recursive search for the same row refuses rather
+# than looping.
+
+_PIN_TABLE_WITNESS = {
+    "SLH_METHOD_TABLE_SITES": "slh_method_table_witness",
+    "PROVIDER_HW_SITES": "provider_hw_table_witness",
+    "LEGACY_EVP_DATA_SITES": "legacy_evp_cipher_data_witness",
+    "DECODER_METHOD_SITES": "decoder_method_object_witness",
+    "PBE_EX_SITES": "pbe_outparam_instance_witness",
+    "STORE_LOADER_LEGACY_SITES": "store_loader_legacy_witness",
+    "CONF_SITES": "conf_module_witness",
+    "CONF_METHOD_SITES": "conf_default_method_witness",
+}
+_PIN_SCALAR_WITNESS = {
+    "PBE_SITE": "pbe_registry_witness",
+    "PEM_SITE": "pem_password_default_witness",
+    "STORE_LOADER_PROVIDER_SITE": "store_loader_provider_witness",
+    "REGISTRATION_ATEXIT_CALL_SITE": "registration_atexit_witness",
+}
+_PIN_PROVISIONAL = {}
+_PIN_SEARCH_ACTIVE = set()
+_PIN_SEARCH_REFUSALS = {}
+_PIN_MOVED = {}
+_PIN_HOW = {}
+_ABI_INDEX_BUILDING = [False]
+# Control switch (never set outside --self-test): the pre-repair behaviour, in
+# which a stale pin keeps its recorded literal instead of searching its symbol.
+_PIN_SEARCH_OFF = False
+# --self-test only: the named outcome of every control, so a standalone runner
+# (court/freeze-b77/run_repin_controls.py) can report each one individually.
+_SELFTEST_TRACE = []
+# --self-test only: controls whose subject is absent from this image and could
+# not be synthesised.  Such a control did not run: it is neither a pass nor a
+# failure, so it is reported under its own state and the exit status says so.
+_PREMISE_UNAVAILABLE = []
+
+
+def _pin_witness(name):
+    """The witness callable a pin table or scalar name is proved by."""
+    if not name:
+        return None
+    fn = globals().get(name)
+    return fn if callable(fn) else None
+
+
+def _pin_start(g, pin):
+    """The one function start the pin's leaf names in this image, or None."""
+    if not pin:
+        return None
+    leaf = _pin_leaf(pin[0])
+    starts = sorted(a for a, names in getattr(g, "names_at", {}).items()
+                    if a in getattr(g, "start_set", set())
+                    and any(_external_function_leaf(n) == leaf for n in names))
+    return starts[0] if len(starts) == 1 else None
+
+
+def _pin_candidates(g, start):
+    """The indirect transfers of one function, in address order."""
+    return [(a, t) for a, t in (_pin_insns(g, start) or ())
+            if _is_indirect_transfer(t)]
+
+
+def _pin_site_record(g, fstart, addr, text):
+    """The analysed site record at ``addr``, or a materialised stand-in.
+
+    A real graph has already analysed every indirect site, and its record
+    carries the resolver's class and any operand dependencies.  The stand-in
+    exists for the enumeration-only views the controls build; each witness
+    re-derives everything it needs about the site from the instruction stream.
+    """
+    idx = getattr(g, "_pin_site_index", None)
+    if idx is None:
+        idx = {}
+        for s in (getattr(g, "sites", None) or {}).values():
+            idx[(s.get("func"), s.get("addr"))] = s
+        try:
+            g._pin_site_index = idx
+        except AttributeError:
+            pass
+    live = idx.get((fstart, addr))
+    if live is not None:
+        return dict(live)
+    return {"kind": ("jmp" if text.strip().startswith("jmp") else "call"),
+            "func": fstart, "addr": addr, "text": text,
+            "targets": set(), "unresolved": True,
+            "reason": "materialised", "class": "materialised",
+            "field_offsets": set(), "seam": None,
+            "arg_deps": set(), "arg_targets": set(),
+            "witness_of": "pin-search"}
+
+
+def _pin_accepted(result) -> bool:
+    """A witness result accepts when it resolved the site by its own rule.
+
+    Two result protocols exist: the envelope witnesses return
+    ``(class, witness, refusal)`` and accept when the witness is
+    contract-bounded; the PBE out-parameter witness returns a single record
+    whose ``resolved`` flag means the target set is fully enumerated.
+    """
+    if not result:
+        return False
+    if isinstance(result, dict):
+        return result.get("resolved") is True
+    if len(result) > 1 and isinstance(result[1], dict):
+        return bool(result[1].get("contract_bounded"))
+    return False
+
+
+def _pin_refusal_reason(result):
+    """The reason a witness refused, for either result shape."""
+    if isinstance(result, dict):
+        return result.get("refusal") or result.get("reason")
+    if result and len(result) > 2 and isinstance(result[2], dict):
+        return result[2].get("reason")
+    return None
+
+
+def _pin_search(g, kind, key, pin, spec, witness) -> tuple:
+    """Resolve one moved row by uniqueness of the witness in its symbol.
+
+    Returns ``(addr, provenance, None)`` on acceptance and
+    ``(None, None, refusal)`` otherwise.  ``refusal`` is a record that names
+    the reason and carries the candidate evidence, so a caller never has to
+    guess why a row stayed unresolved.
+    """
+    if witness is None:
+        return None, None, {"refusal": "no-witness-for-this-pin"}
+    if _PIN_SEARCH_OFF:
+        return None, None, {"refusal": "search-disabled-by-control"}
+    tag = (kind, key)
+    if tag in _PIN_SEARCH_ACTIVE:
+        return None, None, {"refusal": "pin-search-recursion"}
+    start = _pin_start(g, pin)
+    if start is None:
+        return None, None, {
+            "refusal": "pin-symbol-names-no-unique-function-start"}
+    cands = _pin_candidates(g, start)
+    if not cands:
+        return None, None, {
+            "refusal": "pin-symbol-has-no-indirect-transfer"}
+    name = g.funcs.get(start, "")
+    accepted, refused = [], []
+    _PIN_SEARCH_ACTIVE.add(tag)
+    try:
+        for addr, text in cands:
+            _PIN_PROVISIONAL[tag] = (addr if kind == "scalar"
+                                     else {addr: spec})
+            try:
+                site = _pin_site_record(g, start, addr, text)
+                res = witness(g, site, name)
+            except Exception as e:  # noqa: BLE001 -- a refusal, never a crash
+                refused.append((addr, f"witness-error:{type(e).__name__}"))
+                continue
+            finally:
+                _PIN_PROVISIONAL.pop(tag, None)
+            if _pin_accepted(res):
+                accepted.append(addr)
+            else:
+                refused.append((addr, _pin_refusal_reason(res)
+                                or "witness-refused"))
+    finally:
+        _PIN_SEARCH_ACTIVE.discard(tag)
+        _PIN_PROVISIONAL.pop(tag, None)
+    evidence = {
+        "symbol": pin[0],
+        "pin_offset": hex(pin[1]),
+        "symbol_start": hex(start),
+        "candidates": len(cands),
+        "accepted": [hex(a) for a in accepted],
+        "refused_count": len(refused),
+        "refused_sample": [[hex(a), why] for a, why in refused[:8]],
+        "rule": "exactly-one-accepted-transfer-in-symbol",
+        "witness": getattr(witness, "__name__", "?"),
+    }
+    if len(accepted) != 1:
+        why = ("no-candidate-transfer-is-accepted-by-the-witness" if not accepted
+               else "the-witness-accepts-more-than-one-transfer-in-the-symbol")
+        return None, None, dict(evidence, refusal=why)
+    addr = accepted[0]
+    prov = dict(evidence,
+                address=hex(addr),
+                resolved_offset=hex(addr - start),
+                moved_from=hex(start + pin[1]),
+                moved_from_offset=hex(pin[1]))
+    _PIN_MOVED[(kind, key, prov["address"],
+                getattr(g, "sha256", "?"))] = prov
+    return addr, prov, None
+
+
+def _repinned(name: str, g):
+    """The literal-keyed site table ``name`` re-keyed to this image.
+
+    A row whose pin still lands on an indirect transfer keeps the strict
+    derivation.  A row whose pin no longer lands is offered to the table's own
+    witness as a search over that symbol, and is re-keyed only when the witness
+    accepts exactly one transfer there.  Rows of the same table that would land
+    on one address are both refused: two rows are never silently collapsed onto
+    one witness.
+    """
+    prov = _PIN_PROVISIONAL.get(("table", name))
+    if prov is not None:
+        return prov
+    vintage = _site_pin_vintage(g)
+    if vintage is None:
+        return globals()[name]
+    key = ("table", name, vintage)
+    hit = _SITE_PIN_CACHE.get(key)
+    if hit is not None:
+        return hit
+    table = globals()[name]
+    pins = globals()[_PIN_TABLE_OF[name]]
+    witness = _pin_witness(_PIN_TABLE_WITNESS.get(name))
+    derived = {}
+    for old, spec in table.items():
+        pin = pins.get(old)
+        addr = _pin_site_addr(g, pin)
+        how = "pin"
+        if addr is None:
+            addr, _prov, why = _pin_search(g, "table", name, pin, spec,
+                                           witness)
+            how = "search"
+            if addr is None:
+                _PIN_SEARCH_REFUSALS.setdefault(
+                    ("table", old),
+                    dict(why or {}, table=name, literal=hex(old),
+                         pin=None if not pin else [pin[0], hex(pin[1])]))
+        if addr is not None:
+            derived[old] = addr
+            _PIN_HOW[(name, old, vintage)] = how
+        else:
+            _PIN_HOW.pop((name, old, vintage), None)
+    counts = collections.Counter(derived.values())
+    out = {}
+    for old, spec in table.items():
+        addr = derived.get(old)
+        out[addr if addr is not None and counts[addr] == 1 else old] = spec
+    _SITE_PIN_CACHE[key] = out
+    return out
+
+
+def _pinned_site(name: str, g) -> int:
+    """This image's address for the enumerated scalar site ``name``."""
+    prov = _PIN_PROVISIONAL.get(("scalar", name))
+    if prov is not None:
+        return prov
+    vintage = _site_pin_vintage(g)
+    if vintage is None:
+        return globals()[name]
+    key = ("scalar", name, vintage)
+    hit = _SITE_PIN_CACHE.get(key)
+    if hit is not None:
+        return hit
+    old = globals()[name]
+    pin = globals()[_PINNED_SCALARS[name]]
+    addr = _pin_site_addr(g, pin)
+    if addr is None:
+        addr, _prov, why = _pin_search(
+            g, "scalar", name, pin, None,
+            _pin_witness(_PIN_SCALAR_WITNESS.get(name)))
+        if addr is None:
+            _PIN_SEARCH_REFUSALS.setdefault(
+                ("scalar", name),
+                dict(why or {}, scalar=name, literal=hex(old)))
+    val = addr if addr is not None else old
+    _SITE_PIN_CACHE[key] = val
+    return val
+
+
+def pin_resolution_report() -> dict:
+    """Provenance of every row this process resolved by search, not offset."""
+    return {"moved": [dict(v) for _k, v in sorted(_PIN_MOVED.items())],
+            "refused": [dict(v) for _k, v in sorted(_PIN_SEARCH_REFUSALS.items())]}
+
+
+def _pin_effective(table: str, old: int, g):
+    """``(address, how)`` for one table row: how is pin, search or literal."""
+    vintage = _site_pin_vintage(g)
+    pin = globals()[_PIN_TABLE_OF[table]].get(old)
+    if pin is None:
+        return old, "literal"
+    strict = _pin_site_addr(g, pin)
+    if strict is not None:
+        return strict, "pin"
+    deriv = _repinned(table, g)
+    found = next((a for a, spec in deriv.items()
+                  if spec is globals()[table][old]), old)
+    how = _PIN_HOW.get((table, old, vintage))
+    return found, (how or "literal")
+
+
+def _external_abi_index(g) -> dict:
+    """``addr -> documented function leaf`` for this image."""
+    vintage = _site_pin_vintage(g)
+    if vintage is None:
+        return dict(EXTERNAL_ABI_SITE_FUNCTIONS)
+    key = ("external-abi", vintage)
+    hit = _SITE_PIN_CACHE.get(key)
+    if hit is not None:
+        return hit
+    if _ABI_INDEX_BUILDING[0]:
+        # A witness invoked by the re-pin search must not re-enter the index
+        # that search is being built for.  The empty answer refuses the site.
+        return {}
+    _ABI_INDEX_BUILDING[0] = True
+    try:
+        pins = dict(EXTERNAL_ABI_SITE_PINS)
+        pins.setdefault(PBE_SITE, PBE_SITE_PIN)
+        pins.setdefault(STORE_LOADER_PROVIDER_SITE,
+                        STORE_LOADER_PROVIDER_SITE_PIN)
+        pins.setdefault(PEM_SITE, PEM_SITE_PIN)
+        # The scalar rows and the two re-pinned tables are indexed at the
+        # address the re-pin engine (offset or witness search) resolves for
+        # them; only the remaining literal-keyed rows use the strict pin.
+        scalars = {PBE_SITE: "PBE_SITE",
+                   STORE_LOADER_PROVIDER_SITE: "STORE_LOADER_PROVIDER_SITE",
+                   PEM_SITE: "PEM_SITE"}
+        tables = {}
+        for table in ("STORE_LOADER_LEGACY_SITES", "CONF_SITES",
+                      "CONF_METHOD_SITES"):
+            for old in globals()[table]:
+                tables[old] = table
+        out = {}
+        for old, leaf in EXTERNAL_ABI_SITE_FUNCTIONS.items():
+            if old in scalars:
+                addr = _pinned_site(scalars[old], g)
+            elif old in tables:
+                addr = _pin_effective(tables[old], old, g)[0]
+            else:
+                addr = _pin_site_addr(g, pins.get(old))
+            out[addr if addr is not None else old] = leaf
+    finally:
+        _ABI_INDEX_BUILDING[0] = False
+    _SITE_PIN_CACHE[key] = out
+    return out
+
+
+def _is_indirect_transfer_strict(g, addr) -> bool:
+    """True when this image has an indirect transfer instruction at ``addr``."""
+    for body in (getattr(g.precision, "insns_by_func", {}) or {}).values():
+        for a, t in body:
+            if a == addr:
+                return _is_indirect_transfer(t)
+    return False
+
+
+class _RepinProxy:
+    """A read-only view of one graph with a specific field overridden."""
+
+    def __init__(self, base, **overrides):
+        object.__setattr__(self, "_base", base)
+        for k, v in overrides.items():
+            object.__setattr__(self, k, v)
+
+    def __getattr__(self, name):
+        return getattr(object.__getattribute__(self, "_base"), name)
+
+
+def _e7decoder_cursor_controls_body(g) -> list:
+    """Controls for the decoder table-cursor argument proof (b78 repair).
+
+    The repaired rule replaces an exact-base register closure with a bounded
+    table-cursor derivation.  Each control removes exactly one of its
+    conditions and requires a refusal; the restore check then requires the
+    admitted image to accept all three rows again.
+    """
+    failures = []
+    fstart = _external_function_address(g, "file_load")
+    table = _phw_symbol_addr(g, DECODER_METHOD_TABLE)
+    extent = (getattr(g, "sym_sizes", None) or {}).get(DECODER_METHOD_TABLE)
+    if not fstart or table is None or not extent or not g.start_set:
+        return []
+    insns = g.precision.insns_by_func.get(fstart, ())
+    ctor = _phw_function_addresses(g, DECODER_METHOD_CONSTRUCTOR)
+    call_idx = next((i for i, (a, t) in enumerate(insns)
+                     if t.startswith("call ")
+                     and not t.split(None, 1)[1].startswith("*")
+                     and int(t.split()[1].split()[0], 16) in ctor), None)
+    if call_idx is None:
+        return []
+
+    def sites():
+        out = []
+        for old, spec in DECODER_METHOD_SITES.items():
+            addr, how = _pin_effective("DECODER_METHOD_SITES", old, g)
+            if how == "literal":
+                continue
+            text = next((t for a, t in insns if a == addr), None)
+            if text is None:
+                continue
+            out.append((old, spec, {
+                "kind": "call", "func": fstart, "addr": addr, "text": text,
+                "targets": set(), "unresolved": True,
+                "reason": "materialised", "class": "materialised",
+                "field_offsets": set(), "seam": None,
+                "arg_deps": set(), "arg_targets": set()}))
+        return out
+
+    def accepts(site):
+        got = decoder_method_object_witness(g, site, "file_load")
+        return isinstance(got, dict) and got.get("contract_bounded")
+
+    # positive: the admitted image's cursor derives from the named table
+    roots, cursor = _led_table_cursor(g, fstart, call_idx, "%rsi", table, extent)
+    if not roots or roots != {table}:
+        failures.append("e7dec: the constructor argument does not derive "
+                        "from the enumerated table")
+    if not cursor.get("row_stride"):
+        failures.append("e7dec: no whole-row advance was recognised")
+    else:
+        guard = _led_table_terminator_guard(g, fstart, cursor["cursor_reg"],
+                                            cursor["row_stride"], extent)
+        if guard is None:
+            failures.append("e7dec: no terminator guard was recognised")
+
+    # 1. an advance that is not a whole row can leave the table: refuse
+    bad, _meta = _led_table_cursor(g, fstart, call_idx, "%rsi", table,
+                                   extent + 5)
+    if bad:
+        failures.append("e7dec stride control: a non-whole-row advance was accepted")
+
+    # 2. the answer follows the code, not the pin: move the table root in the
+    #    instruction stream and require the derivation to stop matching it
+    moved = [(a, t.replace(hex(table)[2:], "8a0000") if f"# {table:x}" in t or
+              f"<{DECODER_METHOD_TABLE}>" in t else t) for a, t in insns]
+    proxy = _RepinProxy(g, precision=_RepinProxy(g.precision,
+                                                insns_by_func={fstart: moved}),
+                        _fn_cfg_cache={}, _reaching_cache={})
+    roots2, _m2 = _led_table_cursor(proxy, fstart, call_idx, "%rsi", table,
+                                    extent)
+    if roots2 and roots2 == {table} and moved != insns:
+        failures.append("e7dec root control: a moved table root still matched")
+
+    # 3. wrong constructor: the witness must refuse to attribute the object
+    saved_ctor = globals()["DECODER_METHOD_CONSTRUCTOR"]
+    try:
+        globals()["DECODER_METHOD_CONSTRUCTOR"] = "e7dec_no_such_constructor"
+        if any(accepts(s) for _o, _p, s in sites()):
+            failures.append("e7dec constructor control: a wrong constructor was accepted")
+    finally:
+        globals()["DECODER_METHOD_CONSTRUCTOR"] = saved_ctor
+
+    # 4. a perturbed slot offset must refuse (the read-field condition)
+    rows = sites()
+    if rows:
+        old, spec, site = rows[0]
+        saved = dict(spec)
+        try:
+            spec["read"] = spec["read"] + 8
+            if accepts(site):
+                failures.append("e7dec slot control: a perturbed slot offset was accepted")
+        finally:
+            spec.clear()
+            spec.update(saved)
+
+    # 5. restore: every row accepted again after the mutations
+    for old, spec, site in rows:
+        if not accepts(site):
+            failures.append(f"e7dec restore: {hex(old)} no longer accepts")
+    return failures
+
+
+def e7repin_controls(g) -> list:
+    """Load-bearing controls for the re-pin rule.
+
+    Each control removes exactly one condition and shows the rule then
+    refuses (or, for the moved-row control, that an address is accepted by at
+    most one row).  Returned failures are strings; an empty list is a pass.
+    """
+    failures = []
+    name = "STORE_LOADER_LEGACY_SITES"
+    table = globals()[name]
+    pins = globals()[_PIN_TABLE_OF[name]]
+    if not table or not g.start_set:
+        return ["e7repin: empty table or graph"]
+    # A control mutation must not leave a refusal or a moved row behind: those
+    # records describe the admitted image, not the counterexample.
+    saved = {k: dict(v) for k, v in (
+        ("_SITE_PIN_CACHE", _SITE_PIN_CACHE),
+        ("_PIN_MOVED", _PIN_MOVED),
+        ("_PIN_SEARCH_REFUSALS", _PIN_SEARCH_REFUSALS))}
+    try:
+        failures.extend(_e7repin_controls_body(g))
+        failures.extend(_e7decoder_cursor_controls_body(g))
+    finally:
+        for key, values in saved.items():
+            target = globals()[key]
+            target.clear()
+            target.update(values)
+    return failures
+
+
+def _e7repin_controls_body(g) -> list:
+    """The body of [`e7repin_controls`], run with the reports snapshotted."""
+    failures = []
+    name = "STORE_LOADER_LEGACY_SITES"
+    table = globals()[name]
+    pins = globals()[_PIN_TABLE_OF[name]]
+    old = next(iter(table))
+    pin = pins.get(old)
+    good, how = _pin_effective(name, old, g)
+    if how == "literal" or not _is_indirect_transfer_strict(g, good):
+        return [f"e7repin: positive row {hex(old)} does not re-derive"]
+
+    # 1. symbol: a leaf that names no function start
+    if _pin_site_addr(g, ("e7repin-no-such-symbol", pin[1])) is not None:
+        failures.append("e7repin symbol control: unknown leaf was accepted")
+
+    # 2. offset: perturb to an instruction that is not an indirect call
+    start = _pin_start(g, pin)
+    insns = _pin_insns(g, start) or ()
+    offs = sorted({a - start for a, t in insns
+                   if a != good and not _is_indirect_transfer(t)})
+    if offs:
+        pert = (pin[0], offs[0])
+        if _pin_site_addr(g, pert) is not None:
+            failures.append("e7repin offset control: non-call offset was accepted")
+    else:
+        failures.append("e7repin offset control: no perturbable instruction")
+
+    # 3. instruction: the resolved address is no longer an indirect transfer, so
+    #    neither the strict pin nor the symbol search may produce a site.
+    mutated = [(a, "mov    %rax,%rax" if a == good else t) for a, t in insns]
+    proxy = _RepinProxy(g, precision=_RepinProxy(g.precision,
+                                                 insns_by_func={start: mutated}),
+                        sha256=g.sha256 + ":mut")
+    if _pin_site_addr(proxy, pin) is not None:
+        failures.append("e7repin instruction control: a non-call was accepted")
+    if _pin_effective(name, old, proxy)[1] != "literal":
+        failures.append("e7repin instruction control: the search accepted a "
+                        "symbol with no indirect transfer at the site")
+
+    # 4. moved rows: no address may be accepted by two rows of one table.
+    # The loader call sites moved inside their function, so this is the
+    # control that makes "the witness proves the row, not the offset" real.
+    loader = _repinned("STORE_LOADER_LEGACY_SITES", g)
+    loader_pins = STORE_LOADER_LEGACY_SITE_PINS
+    fstart = _pin_start(g, next(iter(loader_pins.values())))
+    for addr, spec in loader.items():
+        if addr in loader_pins:      # not re-derived in this image
+            continue
+        if fstart is None:
+            failures.append("e7repin moved control: function not found")
+            continue
+        text = next((t for a, t in (_pin_insns(g, fstart) or ())
+                     if a == addr), "")
+        site = {"kind": "call", "func": fstart, "addr": addr,
+                "text": text, "targets": set(), "unresolved": True,
+                "reason": "control", "class": "materialised",
+                "field_offsets": set(), "seam": None,
+                "arg_deps": set(), "arg_targets": set()}
+        # Ask each *other* loader spec whether it also accepts this address.
+        # The provisional binding is the same mechanism the search uses, so the
+        # control exercises the real lookup rather than a stale cache.
+        for other in STORE_LOADER_LEGACY_SITES.values():
+            if other is spec:
+                continue
+            _PIN_PROVISIONAL[("table", "STORE_LOADER_LEGACY_SITES")] = {
+                addr: other}
+            try:
+                r = store_loader_legacy_witness(g, site,
+                                                g.funcs.get(fstart, ""))
+            finally:
+                _PIN_PROVISIONAL.pop(("table", "STORE_LOADER_LEGACY_SITES"),
+                                     None)
+            if _pin_accepted(r):
+                failures.append(
+                    f"e7repin moved control: {hex(addr)} accepted both "
+                    f"{spec['field']!r} and {other['field']!r}")
+    return failures
+
+
+def _is_indirect_transfer(text: str) -> bool:
+    mn, rest, _ops = _insn_parts(text or "")
+    return ((mn.startswith("call") or mn.startswith("jmp"))
+            and rest.strip().startswith("*"))
+
 SLH_METHOD_TABLE_SITES = {
-    0x1F9EFE: ("ossl_slh_ht_sign", 0xA8, 0x48),
-    0x1FA2A9: ("ossl_slh_ht_verify", 0xA8, 0x48),
-    0x2E36B7: ("slh_fors_node", 0xA8, 0x50),
-    0x2E398F: ("ossl_slh_fors_sign", 0xA8, 0x50),
-    0x2E3C11: ("ossl_slh_fors_sign", 0xA8, 0x50),
-    0x2E42FD: ("ossl_slh_fors_pk_from_sig", 0xB0, 0x28),
+    0x3D192E: ("ossl_slh_ht_sign", 0xA8, 0x48),
+    0x3D1CD9: ("ossl_slh_ht_verify", 0xA8, 0x48),
+    0x4B2737: ("slh_fors_node", 0xA8, 0x50),
+    0x4B2A0F: ("ossl_slh_fors_sign", 0xA8, 0x50),
+    0x4B2C91: ("ossl_slh_fors_sign", 0xA8, 0x50),
+    0x4B337D: ("ossl_slh_fors_pk_from_sig", 0xB0, 0x28),
 }
 
 SLH_METHOD_TABLE_SITE_PINS = {
-    0x1F9EFE: ("openssl_rs::slh_dsa::hypertree::ossl_slh_ht_sign", 0x8E),
-    0x1FA2A9: ("openssl_rs::slh_dsa::hypertree::ossl_slh_ht_verify", 0x89),
-    0x2E36B7: ("openssl_rs::slh_dsa::fors::slh_fors_node", 0x2C7),
-    0x2E398F: ("openssl_rs::slh_dsa::fors::ossl_slh_fors_sign", 0x1AF),
-    0x2E3C11: ("openssl_rs::slh_dsa::fors::ossl_slh_fors_sign", 0x431),
-    0x2E42FD: ("openssl_rs::slh_dsa::fors::ossl_slh_fors_pk_from_sig", 0x51D),
+    0x3D192E: ("openssl_rs::slh_dsa::hypertree::ossl_slh_ht_sign", 0x8E),
+    0x3D1CD9: ("openssl_rs::slh_dsa::hypertree::ossl_slh_ht_verify", 0x89),
+    0x4B2737: ("openssl_rs::slh_dsa::fors::slh_fors_node", 0x2C7),
+    0x4B2A0F: ("openssl_rs::slh_dsa::fors::ossl_slh_fors_sign", 0x1AF),
+    0x4B2C91: ("openssl_rs::slh_dsa::fors::ossl_slh_fors_sign", 0x431),
+    0x4B337D: ("openssl_rs::slh_dsa::fors::ossl_slh_fors_pk_from_sig", 0x51D),
 }
 
 SLH_METHOD_KEY_FIELDS = {
@@ -12035,7 +13017,7 @@ def slh_method_table_witness(g: "DsoGraph", site: dict, name: str):
     """
     if site.get("kind") != "call" or not _has_insns(g):
         return None
-    spec = SLH_METHOD_TABLE_SITES.get(site.get("addr"))
+    spec = _repinned("SLH_METHOD_TABLE_SITES", g).get(site.get("addr"))
     if spec is None:
         return None
     want_fn, key_off, member_off = spec
@@ -12396,12 +13378,12 @@ PROVIDER_HW_FIELD_WRITERS = {
 # the table member; `targets` is the complete function set the context closure
 # resolves that member to.
 PROVIDER_HW_SITES = {
-    0x1BE7DE: {
+    0x39453E: {
         "function": "ossl_gcm_one_shot", "ctx": "ProvGcmCtx", "hw_off": 0xF0,
         "read": 0x10, "type": "ProvGcmHw", "field": "aadupdate",
         "targets": ("ossl_gcm_aad_update",),
     },
-    0x1BE7F4: {
+    0x394554: {
         "function": "ossl_gcm_one_shot", "ctx": "ProvGcmCtx", "hw_off": 0xF0,
         "read": 0x18, "type": "ProvGcmHw", "field": "cipherupdate",
         "targets": ("ossl_gcm_cipher_update", "sm4_gcm_cipher_update"),
@@ -12410,49 +13392,49 @@ PROVIDER_HW_SITES = {
                          "folds into sm4_gcm_cipher_update; the two table "
                          "slots hold the same address"),
     },
-    0x1BE80C: {
+    0x39456C: {
         "function": "ossl_gcm_one_shot", "ctx": "ProvGcmCtx", "hw_off": 0xF0,
         "read": 0x20, "type": "ProvGcmHw", "field": "cipherfinal",
         "targets": ("ossl_gcm_cipher_final",),
     },
-    0x1C169B: {
+    0x396E4B: {
         "function": "aes_ocb_", "ctx": "ProvAesOcbCtx", "hw_off": 0xA8,
         "read": 0x0, "type": "ProvCipherHw", "field": "init",
         "targets": ("cipher_hw_aes_ocb_generic_initkey",),
     },
-    0x1C179E: {
+    0x396F4E: {
         "function": "aes_ocb_", "ctx": "ProvAesOcbCtx", "hw_off": 0xA8,
         "read": 0x0, "type": "ProvCipherHw", "field": "init",
         "targets": ("cipher_hw_aes_ocb_generic_initkey",),
     },
-    0x1C1BEF: {
+    0x39739F: {
         "function": "sm4_xts_", "ctx": "ProvSm4XtsCtx", "hw_off": 0xA8,
         "read": 0x0, "type": "ProvCipherHw", "field": "init",
         "targets": ("cipher_hw_sm4_xts_generic_initkey",),
     },
-    0x1C1CC2: {
+    0x397472: {
         "function": "sm4_xts_", "ctx": "ProvSm4XtsCtx", "hw_off": 0xA8,
         "read": 0x0, "type": "ProvCipherHw", "field": "init",
         "targets": ("cipher_hw_sm4_xts_generic_initkey",),
     },
-    0x1C2C52: {
+    0x398442: {
         "function": "aes_siv_freectx", "ctx": "ProvAesSivCtx",
         "hw_off": 0x68, "read": 0x20, "type": "ProvSivHw",
         "field": "cleanup", "targets": ("aes_siv_cleanup",),
         "impl_fn": "destroy_body",
     },
-    0x1C63DD: {
+    0x39BB1D: {
         "function": "cts128_cs2_decrypt", "ctx": "ProvCipherCtx",
         "hw_off": 0xA8, "read": 0x8, "type": "ProvCipherHw",
         "field": "cipher", "targets": ("ossl_cipher_hw_generic_cbc",),
     },
-    0x1CBE00: {
+    0x3A1650: {
         "function": "chacha20_poly1305_initiv",
         "ctx": "ProvChacha20Poly1305Ctx", "base_first": True,
         "hw_off": 0x168, "read": 0x18, "type": "ProvCipherHwChacha20",
         "field": "initiv", "targets": ("chacha20_initiv",),
     },
-    0x1CBF26: {
+    0x3A1776: {
         "function": "chacha20_poly1305_update",
         "ctx": "ProvChacha20Poly1305Ctx",
         "inline_from": ("chacha20_poly1305_cipher", "vctx",
@@ -12461,31 +13443,31 @@ PROVIDER_HW_SITES = {
         "type": "ProvCipherHwChacha20Poly1305", "field": "aead_cipher",
         "targets": ("chacha20_poly1305_aead_cipher",),
     },
-    0x1CC098: {
+    0x3A18E8: {
         "function": "ossl_aes_gcm_siv_freectx", "ctx": "ProvAesGcmSivCtx",
         "hw_off": 0x8, "read": 0x18, "type": "ProvCipherHwAesGcmSiv",
         "field": "clean_ctx", "targets": ("aes_gcm_siv_clean_ctx",),
         "impl_fn": "destroy_body",
     },
-    0x1CC9F9: {
+    0x3A2249: {
         "function": "chacha20_poly1305_initkey",
         "ctx": "ProvChacha20Poly1305Ctx", "base_first": True,
         "hw_off": 0x168, "read": 0x0, "type": "ProvCipherHwChacha20",
         "field": "base.init", "targets": ("chacha20_initkey",),
     },
-    0x1CF39F: {
+    0x3A4BEF: {
         "function": "chacha20_poly1305_aead_cipher",
         "ctx": "ProvChacha20Poly1305Ctx", "base_first": True,
         "hw_off": 0x168, "read": 0x8, "type": "ProvCipherHwChacha20",
         "field": "base.cipher", "targets": ("chacha20_cipher",),
     },
-    0x1CF551: {
+    0x3A4DA1: {
         "function": "chacha20_poly1305_aead_cipher",
         "ctx": "ProvChacha20Poly1305Ctx", "base_first": True,
         "hw_off": 0x168, "read": 0x8, "type": "ProvCipherHwChacha20",
         "field": "base.cipher", "targets": ("chacha20_cipher",),
     },
-    0x1D189F: {
+    0x3A70EF: {
         "function": "ossl_cipher_generic_block_final",
         "ctx": "ProvCipherCtx", "hw_off": 0xA8, "read": 0x8,
         "type": "ProvCipherHw", "field": "cipher",
@@ -12500,7 +13482,7 @@ PROVIDER_HW_SITES = {
                     "cipher_hw_blowfish_cbc_cipher",
                     "cipher_hw_blowfish_ecb_cipher"),
     },
-    0x1D1974: {
+    0x3A71C4: {
         "function": "ossl_cipher_generic_block_final",
         "ctx": "ProvCipherCtx", "hw_off": 0xA8, "read": 0x8,
         "type": "ProvCipherHw", "field": "cipher",
@@ -12515,19 +13497,19 @@ PROVIDER_HW_SITES = {
                     "cipher_hw_blowfish_cbc_cipher",
                     "cipher_hw_blowfish_ecb_cipher"),
     },
-    0x1D2117: {
+    0x3A7967: {
         "function": "chacha20_poly1305_set_ctx_params",
         "ctx": "ProvChacha20Poly1305Ctx", "hw_off": 0xA8, "read": 0x28,
         "type": "ProvCipherHwChacha20Poly1305", "field": "tls_init",
         "targets": ("chacha_poly1305_tls_init",),
     },
-    0x1D2158: {
+    0x3A79A8: {
         "function": "chacha20_poly1305_set_ctx_params",
         "ctx": "ProvChacha20Poly1305Ctx", "hw_off": 0xA8, "read": 0x30,
         "type": "ProvCipherHwChacha20Poly1305", "field": "tls_iv_set_fixed",
         "targets": ("chacha_poly1305_tls_iv_set_fixed",),
     },
-    0x1D244C: {
+    0x3A7C9C: {
         "function": "ossl_cipher_generic_block_update",
         "ctx": "ProvCipherCtx", "hw_off": 0xA8, "read": 0x8,
         "type": "ProvCipherHw", "field": "cipher",
@@ -12542,7 +13524,7 @@ PROVIDER_HW_SITES = {
                     "cipher_hw_blowfish_cbc_cipher",
                     "cipher_hw_blowfish_ecb_cipher"),
     },
-    0x1D249C: {
+    0x3A7CEC: {
         "function": "ossl_cipher_generic_block_update",
         "ctx": "ProvCipherCtx", "hw_off": 0xA8, "read": 0x8,
         "type": "ProvCipherHw", "field": "cipher",
@@ -12557,23 +13539,23 @@ PROVIDER_HW_SITES = {
                     "cipher_hw_blowfish_cbc_cipher",
                     "cipher_hw_blowfish_ecb_cipher"),
     },
-    0x1DD930: {
+    0x3B33F0: {
         "function": "rc4_hmac_md5_set_ctx_params", "ctx": "ProvRc4HmacMd5Ctx",
         "hw_off": 0xA8, "read": 0x18, "type": "ProvCipherHwRc4HmacMd5",
         "field": "tls_init", "targets": ("cipher_hw_rc4_hmac_md5_tls_init",),
     },
-    0x1DD977: {
+    0x3B3437: {
         "function": "rc4_hmac_md5_set_ctx_params", "ctx": "ProvRc4HmacMd5Ctx",
         "hw_off": 0xA8, "read": 0x20, "type": "ProvCipherHwRc4HmacMd5",
         "field": "init_mackey",
         "targets": ("cipher_hw_rc4_hmac_md5_init_mackey",),
     },
-    0x1DF0B2: {
+    0x3B4B72: {
         "function": "des_", "ctx": "ProvCipherCtx", "hw_off": 0xA8,
         "read": 0x0, "type": "ProvCipherHw", "field": "init",
         "targets": ("cipher_hw_des_initkey",),
     },
-    0x1DF1A1: {
+    0x3B4C61: {
         "function": "des_", "ctx": "ProvCipherCtx", "hw_off": 0xA8,
         "read": 0x0, "type": "ProvCipherHw", "field": "init",
         "targets": ("cipher_hw_des_initkey",),
@@ -12581,31 +13563,31 @@ PROVIDER_HW_SITES = {
 }
 
 PROVIDER_HW_SITE_PINS = {
-    0x1BE7DE: ("openssl_rs::provider::cipher_gcm::ossl_gcm_one_shot", 0x1E),
-    0x1BE7F4: ("openssl_rs::provider::cipher_gcm::ossl_gcm_one_shot", 0x34),
-    0x1BE80C: ("openssl_rs::provider::cipher_gcm::ossl_gcm_one_shot", 0x4C),
-    0x1C169B: ("openssl_rs::provider::cipher::aes_ocb_dinit", 0xAB),
-    0x1C179E: ("openssl_rs::provider::cipher::aes_ocb_einit", 0xAE),
-    0x1C1BEF: ("openssl_rs::provider::cipher::sm4_xts_dinit", 0x7F),
-    0x1C1CC2: ("openssl_rs::provider::cipher::sm4_xts_einit", 0x82),
-    0x1C2C52: ("openssl_rs::provider::cipher::aes_siv_freectx", 0x12),
-    0x1C63DD: ("openssl_rs::provider::cipher::cts128_cs2_decrypt", 0x1D),
-    0x1CBE00: ("openssl_rs::provider::cipher::chacha20_poly1305_initiv", 0xE0),
-    0x1CBF26: ("openssl_rs::provider::cipher::chacha20_poly1305_update", 0x36),
-    0x1CC098: ("openssl_rs::provider::cipher::ossl_aes_gcm_siv_freectx", 0xB8),
-    0x1CC9F9: ("openssl_rs::provider::cipher::chacha20_poly1305_initkey", 0x139),
-    0x1CF39F: ("openssl_rs::provider::cipher::chacha20_poly1305_aead_cipher", 0x75F),
-    0x1CF551: ("openssl_rs::provider::cipher::chacha20_poly1305_aead_cipher", 0x911),
-    0x1D189F: ("openssl_rs::provider::cipher::ossl_cipher_generic_block_final", 0x6F),
-    0x1D1974: ("openssl_rs::provider::cipher::ossl_cipher_generic_block_final", 0x144),
-    0x1D2117: ("openssl_rs::provider::cipher::chacha20_poly1305_set_ctx_params", 0x2F7),
-    0x1D2158: ("openssl_rs::provider::cipher::chacha20_poly1305_set_ctx_params", 0x338),
-    0x1D244C: ("openssl_rs::provider::cipher::ossl_cipher_generic_block_update", 0x16C),
-    0x1D249C: ("openssl_rs::provider::cipher::ossl_cipher_generic_block_update", 0x1BC),
-    0x1DD930: ("openssl_rs::provider::cipher::legacy::rc4_hmac_md5_set_ctx_params", 0xE0),
-    0x1DD977: ("openssl_rs::provider::cipher::legacy::rc4_hmac_md5_set_ctx_params", 0x127),
-    0x1DF0B2: ("openssl_rs::provider::cipher::legacy::des_dinit", 0xA2),
-    0x1DF1A1: ("openssl_rs::provider::cipher::legacy::des_einit", 0xA1),
+    0x39453E: ("openssl_rs::provider::cipher_gcm::ossl_gcm_one_shot", 0x1E),
+    0x394554: ("openssl_rs::provider::cipher_gcm::ossl_gcm_one_shot", 0x34),
+    0x39456C: ("openssl_rs::provider::cipher_gcm::ossl_gcm_one_shot", 0x4C),
+    0x396E4B: ("openssl_rs::provider::cipher::aes_ocb_dinit", 0xAB),
+    0x396F4E: ("openssl_rs::provider::cipher::aes_ocb_einit", 0xAE),
+    0x39739F: ("openssl_rs::provider::cipher::sm4_xts_dinit", 0x7F),
+    0x397472: ("openssl_rs::provider::cipher::sm4_xts_einit", 0x82),
+    0x398442: ("openssl_rs::provider::cipher::aes_siv_freectx", 0x12),
+    0x39BB1D: ("openssl_rs::provider::cipher::cts128_cs2_decrypt", 0x1D),
+    0x3A1650: ("openssl_rs::provider::cipher::chacha20_poly1305_initiv", 0xE0),
+    0x3A1776: ("openssl_rs::provider::cipher::chacha20_poly1305_update", 0x36),
+    0x3A18E8: ("openssl_rs::provider::cipher::ossl_aes_gcm_siv_freectx", 0xB8),
+    0x3A2249: ("openssl_rs::provider::cipher::chacha20_poly1305_initkey", 0x139),
+    0x3A4BEF: ("openssl_rs::provider::cipher::chacha20_poly1305_aead_cipher", 0x75F),
+    0x3A4DA1: ("openssl_rs::provider::cipher::chacha20_poly1305_aead_cipher", 0x911),
+    0x3A70EF: ("openssl_rs::provider::cipher::ossl_cipher_generic_block_final", 0x6F),
+    0x3A71C4: ("openssl_rs::provider::cipher::ossl_cipher_generic_block_final", 0x144),
+    0x3A7967: ("openssl_rs::provider::cipher::chacha20_poly1305_set_ctx_params", 0x2F7),
+    0x3A79A8: ("openssl_rs::provider::cipher::chacha20_poly1305_set_ctx_params", 0x338),
+    0x3A7C9C: ("openssl_rs::provider::cipher::ossl_cipher_generic_block_update", 0x16C),
+    0x3A7CEC: ("openssl_rs::provider::cipher::ossl_cipher_generic_block_update", 0x1BC),
+    0x3B33F0: ("openssl_rs::provider::cipher::legacy::rc4_hmac_md5_set_ctx_params", 0xE0),
+    0x3B3437: ("openssl_rs::provider::cipher::legacy::rc4_hmac_md5_set_ctx_params", 0x127),
+    0x3B4B72: ("openssl_rs::provider::cipher::legacy::des_dinit", 0xA2),
+    0x3B4C61: ("openssl_rs::provider::cipher::legacy::des_einit", 0xA1),
 }
 
 
@@ -12638,15 +13620,53 @@ def _phw_split(text: str):
 
 
 def _phw_cfg_test_spans(text: str):
-    """`#[cfg(test)]` item spans: test-only source is recorded, never admitted."""
+    """`#[cfg(test)]` item spans: test-only source is recorded, never admitted.
+
+    The span is the *item's* extent.  A semicolon-terminated item -- in this
+    crate, the `#[cfg(test)] const _: fn(...) = f;` compile-time assertions that
+    pin dispatch shapes -- ends at its semicolon.  Brace-matching from the
+    attribute instead runs into the *next* item, and every production function
+    between the assertion and that brace is then misclassified as test-only: a
+    context constructor excluded that way silently shrinks a `hw`-table closure
+    (B58: the two GCM constructors after the AES assertion).
+    """
     spans = []
+    comments = [cm.span() for cm in
+                re.finditer(r"//[^\n]*|/\*.*?\*/", text, re.S)]
     for m in re.finditer(r"#\[cfg\(\s*test\s*\)\]", text):
-        brace = text.find("{", m.end())
-        if brace < 0:
+        if any(a <= m.start() < b for a, b in comments):
             continue
-        end = _s1_brace_span(text, brace)
-        if end is not None:
-            spans.append((m.start(), end))
+        i = m.end()
+        while i < len(text):
+            if text.startswith("//", i):
+                nl = text.find("\n", i)
+                i = len(text) if nl < 0 else nl + 1
+                continue
+            if text.startswith("/*", i):
+                end = text.find("*/", i + 2)
+                i = len(text) if end < 0 else end + 2
+                continue
+            c = text[i]
+            if c == '"':
+                i += 1
+                while i < len(text):
+                    if text[i] == "\\":
+                        i += 2
+                        continue
+                    if text[i] == '"':
+                        i += 1
+                        break
+                    i += 1
+                continue
+            if c in ";,":
+                spans.append((m.start(), i + 1))
+                break
+            if c == "{":
+                end = _s1_brace_span(text, i)
+                if end is not None:
+                    spans.append((m.start(), end))
+                break
+            i += 1
     return spans
 
 
@@ -13691,7 +14711,7 @@ def provider_hw_table_witness(g: "DsoGraph", site: dict, name: str):
     """
     if site.get("kind") != "call" or not _has_insns(g):
         return None
-    spec = PROVIDER_HW_SITES.get(site.get("addr"))
+    spec = _repinned("PROVIDER_HW_SITES", g).get(site.get("addr"))
     if spec is None:
         return None
     fstart = site.get("func")
@@ -14109,14 +15129,14 @@ LED_ZERO_INITIALISERS = {
 # is `repr(C)`) and the image stores at that displacement bind it to the named
 # field.  `dat_off` is `EVP_CIPHER_CTX::cipher_data`.
 LEGACY_EVP_DATA_SITES = {
-    0x37DE91: {
+    0x32B741: {
         "function": "aes_ecb_cipher", "ctx": "EvpCipherCtx",
         "dat_off": 0x78, "type": "EvpAesKey", "field": "block",
         "read": 0x0, "init": "aes_init_key",
         "targets": ("aes_decrypt_block", "aes_encrypt_block"),
         "source": "src/evp/e_aes.rs",
     },
-    0x4E0D52: {
+    0x382D72: {
         "function": "sm4_ecb_cipher", "ctx": "EvpCipherCtx",
         "dat_off": 0x78, "type": "EvpSm4Key", "field": "block",
         "read": 0x0, "init": "sm4_init_key",
@@ -14126,8 +15146,8 @@ LEGACY_EVP_DATA_SITES = {
 }
 
 LEGACY_EVP_DATA_SITE_PINS = {
-    0x37DE91: ("openssl_rs::evp::e_aes::aes_ecb_cipher", 0x61),
-    0x4E0D52: ("openssl_rs::evp::e_sm4::sm4_ecb_cipher", 0x92),
+    0x32B741: ("openssl_rs::evp::e_aes::aes_ecb_cipher", 0x61),
+    0x382D72: ("openssl_rs::evp::e_sm4::sm4_ecb_cipher", 0x92),
 }
 
 # The one source constructor of the decoder objects this site uses, and the
@@ -14141,24 +15161,24 @@ DECODER_METHOD_TABLES = frozenset((
 ))
 
 DECODER_METHOD_SITES = {
-    0x45C02D: {
+    0x24DFED: {
         "function": "file_load", "slot": "newctx", "read": 0x30,
         "dispatch_id": 1, "targets": ("any2obj_newctx",),
     },
-    0x45C086: {
+    0x24E046: {
         "function": "file_load", "slot": "set_ctx_params", "read": 0x50,
         "dispatch_id": 5, "targets": ("any2obj_set_ctx_params",),
     },
-    0x45C0D0: {
+    0x24E090: {
         "function": "file_load", "slot": "freectx", "read": 0x38,
         "dispatch_id": 2, "targets": ("any2obj_freectx",),
     },
 }
 
 DECODER_METHOD_SITE_PINS = {
-    0x45C02D: ("openssl_rs::provider::file_store::file_load", 0x6FD),
-    0x45C086: ("openssl_rs::provider::file_store::file_load", 0x756),
-    0x45C0D0: ("openssl_rs::provider::file_store::file_load", 0x7A0),
+    0x24DFED: ("openssl_rs::provider::file_store::file_load", 0x64D),
+    0x24E046: ("openssl_rs::provider::file_store::file_load", 0x6A6),
+    0x24E090: ("openssl_rs::provider::file_store::file_load", 0x6F0),
 }
 
 
@@ -14570,7 +15590,7 @@ def legacy_evp_cipher_data_witness(g: "DsoGraph", site: dict, name: str):
     """Prove (or refuse) an enumerated legacy `EVP_CIPHER` data dispatch."""
     if site.get("kind") != "call" or not _has_insns(g):
         return None
-    spec = LEGACY_EVP_DATA_SITES.get(site.get("addr"))
+    spec = _repinned("LEGACY_EVP_DATA_SITES", g).get(site.get("addr"))
     if spec is None:
         return None
     rule, klass = LEGACY_EVP_DATA_WITNESS_RULE, \
@@ -14910,11 +15930,225 @@ def _led_dispatch_entry(g: "DsoGraph", table: int, function_id: int,
     return found[0], None
 
 
+def _slot_reaching_stores(g: "DsoGraph", fstart: int, slot: int,
+                          idx: int):
+    """The stores that can reach frame ``slot`` at instruction ``idx``.
+
+    Frames reuse a slot for several values, so "the slot's only writer" is too
+    strong and "any writer" is unsound.  This is the reaching-definition
+    question asked of one frame slot: the last store in the block before
+    ``idx``, or else the union over the block's predecessors.  An unknown
+    predecessor (a block reached from an indirect jump) or a path that reaches
+    the function entry with no store refuses, because the value would then be
+    whatever the frame held.
+
+    Returns a list of store records (``index``/``source``/``text``) or None.
+    """
+    cfg = _function_cfg(g, fstart)
+    bi = cfg["block_of"].get(idx)
+    if bi is None:
+        return None
+    writes = _stack_slot_writes(g, fstart, slot)
+    stores = {w["index"]: w for w in writes if w["kind"] == "store"}
+    if any(w["kind"] == "address" for w in writes):
+        return None
+    lo, _hi = cfg["blocks"][bi]
+    local = [i for i in stores if lo <= i < idx]
+    if local:
+        return [stores[max(local)]]
+    preds = collections.defaultdict(list)
+    for b, succ in cfg["succ"].items():
+        for s in succ:
+            preds[s].append(b)
+    found = {}
+    seen = set()
+    frontier = [bi]
+    while frontier:
+        b = frontier.pop()
+        if b in seen:
+            continue
+        seen.add(b)
+        if b != bi:
+            blo, bhi = cfg["blocks"][b]
+            here = [i for i in stores if blo <= i < bhi]
+            if here:
+                i = max(here)
+                found[i] = stores[i]
+                continue
+        if b in cfg["open_reach"]:
+            return None
+        parents = preds.get(b, ())
+        if not parents:
+            if b == 0:
+                # a real path from the entry with no store: the frame value is
+                # whatever the caller left there
+                return None
+            # A block with no predecessor that is not the entry block is
+            # unreachable code (padding between a `jmp` and the next symbol).
+            # It cannot execute, so it contributes no value.  A block reachable
+            # from an indirect jump is already refused above by open_reach.
+            continue
+        frontier.extend(p for p in parents if p not in seen)
+    return list(found.values())
+
+
+def _led_table_cursor(g: "DsoGraph", fstart: int, idx: int, reg: str,
+                      table_addr: int, extent: int, max_depth: int = 12):
+    """Roots of ``reg`` at ``idx`` when it is a cursor over one closed table.
+
+    The b77 witness required the constructor's argument register to close to
+    *exactly* the table base address.  That is a property of one build's
+    register allocation, not of the operation: as soon as the compiler spills
+    the row pointer and advances it by one row per iteration, the argument is
+    ``base + k*stride`` and the exact-base closure fails even though the only
+    possible origin is still the named table.
+
+    This derivation proves the actual invariant, and nothing wider:
+
+    * a definition may be a register copy, a ``lea <table>(%rip)`` of the named
+      table, a *whole-row* self-advance (``lea K(%r),%r`` / ``add $K,%r`` with
+      ``0 < K <= extent`` and ``extent % K == 0``), or a reload from a frame
+      slot whose only writer stores this same register (no address escapes);
+    * any other definition refuses, so the register cannot also carry a load,
+      a call result or an incoming argument;
+    * revisiting a definition on the same path is a loop cut, not a failure.
+
+    Returns ``(roots, meta)``.  ``meta`` records the cursor register, the
+    observed row stride and the derivation steps so the witness states what it
+    checked rather than only its verdict.
+    """
+    insns = g.precision.insns_by_func.get(fstart, ())
+    seen = set()
+    meta = {"cursor_reg": None, "row_stride": None, "steps": [],
+            "spill_slots": []}
+
+    def walk(i, r, depth):
+        if (i, r) in seen:
+            meta["steps"].append({"kind": "loop-cut", "reg": r})
+            return set()
+        if depth > max_depth:
+            return None
+        seen.add((i, r))
+        defs = _reaching_defs(g, fstart, i, r)
+        if defs is None or not defs:
+            return None
+        roots = set()
+        for d in sorted(defs):
+            if d < 0 or d >= len(insns):
+                return None
+            text = insns[d][1]
+            mn, _rest, ops = _insn_parts(text.split("#", 1)[0].strip())
+            if mn == "lea" and len(ops) == 2:
+                m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)",
+                                 ops[0].strip())
+                if m and _canon(m.group(2)) != "%rip":
+                    base = _canon(m.group(2))
+                    imm = int(m.group(1), 16) if m.group(1) else 0
+                    if base == r:
+                        if not (0 < imm <= extent and extent % imm == 0):
+                            meta["steps"].append(
+                                {"kind": "unbounded-advance", "text": text})
+                            return None
+                        sub = walk(d, r, depth + 1)
+                        meta["row_stride"] = imm
+                        meta["cursor_reg"] = r
+                        meta["steps"].append({"kind": "advance",
+                                              "address": hex(insns[d][0]),
+                                              "stride": hex(imm)})
+                    else:
+                        sub = walk(d, base, depth + 1)
+                        meta["steps"].append({"kind": "copy",
+                                              "address": hex(insns[d][0]),
+                                              "from": base})
+                    if sub is None:
+                        return None
+                    roots |= sub
+                    continue
+                if m:
+                    addr = _insn_comment_addr(text)
+                    if addr is None:
+                        return None
+                    meta["steps"].append({"kind": "table",
+                                          "address": hex(insns[d][0]),
+                                          "root": hex(addr)})
+                    roots.add(addr)
+                    continue
+                return None
+            if mn in ("mov", "movq") and len(ops) == 2:
+                src = ops[0].strip()
+                if _canon(src) in _REGS:
+                    sub = walk(d, _canon(src), depth + 1)
+                    meta["steps"].append({"kind": "copy",
+                                          "address": hex(insns[d][0]),
+                                          "from": _canon(src)})
+                    if sub is None:
+                        return None
+                    roots |= sub
+                    continue
+                slot = _stack_slot_abs(g, fstart, d, src)
+                if slot is not None:
+                    reaching = _slot_reaching_stores(g, fstart, slot, d)
+                    if not reaching or len(reaching) != 1:
+                        meta["steps"].append(
+                            {"kind": "ambiguous-slot", "slot": slot,
+                             "reaching_stores": len(reaching or ())})
+                        return None
+                    store = reaching[0]
+                    if _canon(store["source"]) not in _REGS:
+                        return None
+                    sub = walk(store["index"], _canon(store["source"]),
+                               depth + 1)
+                    meta["spill_slots"].append(slot)
+                    meta["steps"].append(
+                        {"kind": "reload", "address": hex(insns[d][0]),
+                         "slot": slot,
+                         "store_address": hex(insns[store["index"]][0])})
+                    if sub is None:
+                        return None
+                    roots |= sub
+                    continue
+                return None
+            return None
+        return roots
+
+    return walk(idx, reg, 0), meta
+
+
+def _led_table_terminator_guard(g: "DsoGraph", fstart: int, reg: str,
+                                stride: int, extent: int):
+    """The loop's continuation test: a zero compare of a row field of ``reg``.
+
+    A cursor that advances by a whole row is only bounded because the walk is
+    conditional on the table's own terminator.  Requiring the test makes the
+    claim "iterates the closed table's rows" rather than "adds a constant to a
+    pointer".
+    """
+    insns = g.precision.insns_by_func.get(fstart, ())
+    for i, (a, text) in enumerate(insns):
+        mn, _rest, ops = _insn_parts(text.split("#", 1)[0].strip())
+        if mn not in ("cmp", "cmpq") or len(ops) != 2:
+            continue
+        if ops[0].strip() not in ("$0x0", "$0"):
+            continue
+        m = re.fullmatch(r"(0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", ops[1].strip())
+        if not m or _canon(m.group(2)) != reg:
+            continue
+        off = int(m.group(1), 16) if m.group(1) else 0
+        if off % stride or off >= extent:
+            continue
+        for k in range(i + 1, min(i + 3, len(insns))):
+            mnk, _rk, _ok = _insn_parts(insns[k][1].split("#", 1)[0].strip())
+            if mnk.startswith("j") and mnk != "jmp":
+                return {"test": hex(a), "field_offset": hex(off),
+                        "branch": hex(insns[k][0]), "conditional": mnk}
+    return None
+
+
 def decoder_method_object_witness(g: "DsoGraph", site: dict, name: str):
     """Prove (or refuse) an enumerated `OsslDecoder` method-slot dispatch."""
     if site.get("kind") != "call" or not _has_insns(g):
         return None
-    spec = DECODER_METHOD_SITES.get(site.get("addr"))
+    spec = _repinned("DECODER_METHOD_SITES", g).get(site.get("addr"))
     if spec is None:
         return None
     rule, klass = DECODER_METHOD_WITNESS_RULE, \
@@ -14964,17 +16198,44 @@ def decoder_method_object_witness(g: "DsoGraph", site: dict, name: str):
                             call_site=hex(site["addr"]),
                             callee=hex(obj.get("callee_addr") or 0))
     call_at = obj["call_site"]
-    roots = _led_reg_roots(g, fstart, call_at, "%rsi")
     table_addr = _phw_symbol_addr(g, DECODER_METHOD_TABLE)
     if table_addr is None:
         return _led_refusal(rule, klass, "algorithm-table-not-in-image",
                             call_site=hex(site["addr"]),
                             table=DECODER_METHOD_TABLE)
+    extent = (getattr(g, "sym_sizes", None) or {}).get(DECODER_METHOD_TABLE)
+    if not extent:
+        return _led_refusal(rule, klass, "algorithm-table-extent-unknown",
+                            call_site=hex(site["addr"]),
+                            table=DECODER_METHOD_TABLE)
+    roots, cursor = _led_table_cursor(g, fstart, call_at, "%rsi", table_addr,
+                                      extent)
     if not roots or roots != {table_addr}:
         return _led_refusal(rule, klass, "constructor-argument-not-closed-table",
                             call_site=hex(site["addr"]),
                             expected=hex(table_addr),
-                            roots=sorted(hex(r) for r in (roots or ())))
+                            roots=sorted(hex(r) for r in (roots or ())),
+                            derivation=cursor)
+    argument = {
+        "table": DECODER_METHOD_TABLE,
+        "table_address": hex(table_addr),
+        "table_extent": hex(extent),
+        "row_stride": (hex(cursor["row_stride"])
+                       if cursor.get("row_stride") else None),
+        "cursor_reg": cursor.get("cursor_reg"),
+        "derivation": cursor.get("steps"),
+        "terminator_guard": None,
+    }
+    if cursor.get("row_stride"):
+        guard = _led_table_terminator_guard(
+            g, fstart, cursor["cursor_reg"], cursor["row_stride"], extent)
+        if guard is None:
+            return _led_refusal(rule, klass, "table-cursor-has-no-terminator-guard",
+                                call_site=hex(site["addr"]),
+                                cursor_reg=cursor["cursor_reg"],
+                                row_stride=hex(cursor["row_stride"]),
+                                table=hex(table_addr), extent=hex(extent))
+        argument["terminator_guard"] = guard
 
     owners = _led_source_gate(g)
     if owners["types"]["OsslDecoder"]["status"] != "PASS":
@@ -15039,6 +16300,7 @@ def decoder_method_object_witness(g: "DsoGraph", site: dict, name: str):
             "construction_call_site": hex(insns[call_at][0]),
             "argument_table": DECODER_METHOD_TABLE,
             "argument_table_address": hex(table_addr),
+            "argument": argument,
             "null_guarded": True,
         },
         "field": {
@@ -15129,6 +16391,192 @@ def allocator_contract_witness(g: "DsoGraph", site: dict, name: str) -> dict | N
     )
 
 
+PROVIDER_INIT_SLOT_FUNCTION = "provider_init"
+PROVIDER_INIT_SLOT_OFFSET = 0x40
+PROVIDER_INIT_SLOT_FIELD = "init_function"
+PROVIDER_INIT_SLOT_BIND = "DSO_bind_func"
+PROVIDER_INIT_SLOT_SYMBOL = "OSSL_provider_init"
+
+
+def provider_init_slot_witness(g: "DsoGraph", site: dict, name: str):
+    """The `provider_init` entry-point call through `init_function` (0x40).
+
+    The site's operand register has exactly two reaching definitions in this
+    build: the load of `OsslProvider.init_function`, and the return of
+    `DSO_bind_func(module, "OSSL_provider_init")` which is stored into that
+    same field immediately after the call.  Both are the documented provider
+    entry point:
+
+      * `OSSL_PROVIDER_add_builtin(..., OSSL_provider_init_fn *)` stores the
+        application's (or another provider's) entry point;
+      * a loadable module exports `OSSL_provider_init` under the name the ABI
+        fixes.
+
+    The source side is checked as well: the field's stores are confined to the
+    enumerated in-image writers, the bind is the documented symbol, and the
+    exported `OSSL_PROVIDER_add_builtin` seam is defined in this image.
+    """
+    if _external_function_leaf(name) != PROVIDER_INIT_SLOT_FUNCTION:
+        return None
+    if not _has_insns(g):
+        return None
+    cls = ABI_CONTRACT_PROVIDER
+    fstart = site["func"]
+    idx = _external_insn_index(g, site)
+    if idx is None:
+        return None
+    opnd = _site_operand(site)
+    reg = _canon(opnd)
+    if reg not in _REGS:
+        return None
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None or not defs or _ENTRY_DEF in defs:
+        return None
+    insns = g.precision.insns_by_func[fstart]
+
+    def refuse(reason, **extra):
+        rec = _external_refusal(cls, name, site, reason, **extra)
+        site["provider_init_slot_refusal"] = rec
+        return None
+
+    shapes = []
+    for k in sorted(defs):
+        text = insns[k][1]
+        mn, _rest, ops = _insn_parts(text)
+        if mn in ("mov", "movq") and len(ops) >= 2:
+            m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", ops[0])
+            if m and int(m.group(1) or "0", 16) == PROVIDER_INIT_SLOT_OFFSET \
+                    and _canon(ops[-1]) == reg:
+                origin = _reg_origin(g, fstart, k, _canon(m.group(2)))
+                if origin.get("kind") != "param" or origin.get("index") != 0:
+                    return refuse("field-load-base-is-not-the-provider-parameter",
+                                  definition=text, origin=origin)
+                shapes.append({"kind": "field-load",
+                               "definition": hex(insns[k][0]),
+                               "text": text})
+                continue
+        if mn.startswith("call"):
+            symbol = _s1_call_symbol(g, fstart, k)
+            if _external_function_leaf(symbol) == PROVIDER_INIT_SLOT_BIND:
+                if k + 1 >= len(insns):
+                    return refuse("module-bind-has-no-store")
+                smn, _sr, sops = _insn_parts(insns[k + 1][1])
+                sm = (re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", sops[1])
+                      if smn in ("mov", "movq") and len(sops) == 2 else None)
+                if (sm is None or _canon(sops[0]) != "%rax"
+                        or int(sm.group(1) or "0", 16)
+                        != PROVIDER_INIT_SLOT_OFFSET):
+                    return refuse("module-bind-result-is-not-stored-into-the-field",
+                                  store=insns[k + 1][1])
+                origin = _reg_origin(g, fstart, k + 1, _canon(sm.group(2)))
+                if origin.get("kind") != "param" or origin.get("index") != 0:
+                    return refuse("module-bind-store-base-is-not-the-provider",
+                                  origin=origin)
+                arg, why = _provider_init_bind_symbol(g, fstart, k)
+                if arg is None:
+                    return refuse("module-bind-symbol-is-not-proven",
+                                  detail=why)
+                if arg != PROVIDER_INIT_SLOT_SYMBOL:
+                    return refuse("module-binds-a-different-symbol",
+                                  symbol=arg)
+                shapes.append({"kind": "module-bind",
+                               "definition": hex(insns[k][0]),
+                               "call": _insn(g, fstart, k),
+                               "store": insns[k + 1][1],
+                               "symbol": arg})
+                continue
+        return refuse("operand-definition-is-not-the-init-function-slot",
+                      definition=hex(insns[k][0]), text=text)
+    if not shapes:
+        return refuse("no-enumerated-init-function-definition")
+
+    writes, err = _external_field_writers(
+        g, "OsslProvider", {PROVIDER_INIT_SLOT_FIELD},
+        owner_tokens=("OsslProvider", "provider_new", "provider_init"))
+    if writes is None:
+        return refuse("source-writer-scan-unavailable", detail=err)
+    macro = [w for w in writes if w["kind"] == "macro-slot"]
+    if macro:
+        return refuse("macro-expanded-slot-store-unattributed", writers=macro)
+    stores = [w for w in writes if w["kind"] == "store"]
+    allowed = {("src/provider/init.rs", "provider_init"),
+               ("src/provider/mod.rs", "provider_new")}
+    stray = [w for w in stores if (w["file"], w["function"]) not in allowed]
+    if stray:
+        return refuse("field-has-a-store-outside-the-enumerated-writers",
+                      writers=stray)
+    bind_store = [w for w in stores
+                  if w["file"] == "src/provider/init.rs"
+                  and "transmute" in (w["value"] or "")]
+    if len(bind_store) != 1:
+        return refuse("the-module-bind-store-is-not-enumerated",
+                      writers=stores)
+    bind_text, _bl, err = _external_source(g, "src/provider/init.rs")
+    if bind_text is None:
+        return refuse("source-unavailable", detail=err)
+    if "DSO_bind_func" not in bind_text \
+            or f'"{PROVIDER_INIT_SLOT_SYMBOL}"' not in bind_text:
+        return refuse("the-source-does-not-bind-the-documented-symbol")
+    if _external_exported(g, "OSSL_PROVIDER_add_builtin") is None:
+        return refuse("the-builtin-registration-seam-is-not-exported")
+
+    witness = _external_witness(
+        cls, name, site,
+        slot=(f"OsslProvider.{PROVIDER_INIT_SLOT_FIELD} (offset "
+              f"{PROVIDER_INIT_SLOT_OFFSET:#x})"),
+        writer=(
+            "provider_new stores the caller's init_function "
+            "(src/provider/mod.rs:1891, reached from the exported "
+            "OSSL_PROVIDER_add_builtin); provider_init binds the loaded "
+            f"module's {PROVIDER_INIT_SLOT_SYMBOL} into the same slot "
+            f"(src/provider/init.rs:{bind_store[0]['line']})"),
+        interface=(
+            "OSSL_provider_init_fn -- include/openssl/core.h:186-195; "
+            "OSSL_PROVIDER_add_builtin(OSSL_LIB_CTX *, const char *, "
+            "OSSL_provider_init_fn *) -- include/openssl/provider.h:78-85; "
+            "a loadable module exports the same entry point as "
+            "OSSL_provider_init"),
+        basis=(
+            "the call operand has exactly two reaching definitions: the load "
+            "of the documented init_function field, and the return of "
+            f"DSO_bind_func(module, \"{PROVIDER_INIT_SLOT_SYMBOL}\") stored "
+            "back into that same field; every store of the field in the "
+            "source is one of the enumerated in-image writers, and the "
+            "public registration seam is exported"),
+        conditions={
+            "site": f"{name} {hex(site.get('addr') or 0)}",
+            "operand": opnd,
+            "slot_offset": hex(PROVIDER_INIT_SLOT_OFFSET),
+            "definitions": shapes,
+            "source_writers": stores,
+            "builtin_seam_exported": True,
+            "target_set_unbounded": ("an application-supplied "
+                                     "OSSL_provider_init_fn, or a module's "
+                                     "exported OSSL_provider_init"),
+        },
+        does_not_cover=ABI_CONTRACTS[cls]["does_not_cover"],
+        target_set=[],
+    )
+    return witness
+
+
+def _provider_init_bind_symbol(g: "DsoGraph", fstart: int, call_idx: int):
+    """The NUL-terminated symbol name passed to `DSO_bind_func`, or a refusal."""
+    defs = _reaching_defs(g, fstart, call_idx, "%rsi")
+    if defs is None or len(defs) != 1 or _ENTRY_DEF in defs:
+        return None, "the %rsi argument has no single reaching definition"
+    insns = g.precision.insns_by_func[fstart]
+    k = next(iter(defs))
+    text = insns[k][1]
+    m = re.search(r"#\s*([0-9a-f]+)", text)
+    if m is None:
+        return None, f"the %rsi writer names no literal address: {text}"
+    name = g.cstring_at(int(m.group(1), 16))
+    if not name:
+        return None, f"the literal at {m.group(1)} is not a string"
+    return name, None
+
+
 def provider_contract_witness(g: "DsoGraph", site: dict, name: str) -> dict | None:
     """Witness for an OSSL_provider_init dispatch slot at this exact site."""
     fetch = fetch_slot_witness(g, site, name)
@@ -15137,6 +16585,9 @@ def provider_contract_witness(g: "DsoGraph", site: dict, name: str) -> dict | No
     merged = fetch_merged_slot_witness(g, site, name)
     if merged is not None and merged.get("resolved"):
         return merged
+    init_slot = provider_init_slot_witness(g, site, name)
+    if init_slot is not None:
+        return init_slot
     offsets = site.get("field_offsets") or set()
     for spec in PROVIDER_SLOTS:
         if spec["function"] not in (name or ""):
@@ -15184,7 +16635,7 @@ REGISTRATION_ATEXIT_LIST = "STOP_HANDLERS"
 REGISTRATION_ATEXIT_DRAIN = "run_atexit_handlers"
 # The class is site-enumerated by address, exactly like the SLH and provider hw
 # witnesses.  A second `call *(%reg)` in the same function is a different site.
-REGISTRATION_ATEXIT_CALL_SITE = 0x27B0C4
+REGISTRATION_ATEXIT_CALL_SITE = 0x2D9C94
 REGISTRATION_ATEXIT_CALL_SITE_PIN = ('OPENSSL_cleanup', 0x64)
 
 
@@ -15320,7 +16771,7 @@ def registration_atexit_witness(g: "DsoGraph", site: dict, name: str):
     enumerated site.  Six independent conditions must hold; each failure has
     its own reason.
     """
-    if (site.get("addr") != REGISTRATION_ATEXIT_CALL_SITE
+    if (site.get("addr") != _pinned_site("REGISTRATION_ATEXIT_CALL_SITE", g)
             and "e7-atexit-site-address" not in _MUTED):
         return None, None
     base = re.sub(r"\.llvm(?:\.[0-9]+)?$", "", name or "")
@@ -15563,7 +17014,7 @@ def registration_atexit_witness(g: "DsoGraph", site: dict, name: str):
 PBE_OWNER = "EvpPbeCtl"
 PBE_SOURCE = "src/evp/evp_pbe.rs"
 PBE_FUNCTION = "EVP_PBE_CipherInit_ex"
-PBE_SITE = 0x50604D
+PBE_SITE = 0x17AF7D
 PBE_SITE_PIN = ("EVP_PBE_CipherInit_ex", 0x19D)
 PBE_FIELD = "keygen"
 PBE_FIELD_OFFSET = 0x10
@@ -15597,7 +17048,7 @@ PBE_EX_TYPE_NAMES = {
     2: "EVP_PBE_TYPE_KDF",
 }
 PBE_EX_SITES = {
-    0x5062C5: {
+    0x17B1F5: {
         "function": "EVP_PBE_CipherInit_ex",
         "selection": "all",
         "selection_note": (
@@ -15606,7 +17057,7 @@ PBE_EX_SITES = {
             "be selected by this call, but including them cannot narrow the "
             "bound)"),
     },
-    0x2BD122: {
+    0x17CEE8: {
         "function": "PKCS5_v2_PBE_keyivgen_ex",
         "selection": "EVP_PBE_TYPE_KDF",
         "selection_note": (
@@ -15616,8 +17067,8 @@ PBE_EX_SITES = {
 }
 
 PBE_EX_SITE_PINS = {
-    0x2BD122: ("PKCS5_v2_PBE_keyivgen_ex", 0x1C2),  # structural: inlined cipher-fetch region differs
-    0x5062C5: ("EVP_PBE_CipherInit_ex", 0x415),
+    0x17CEE8: ("PKCS5_v2_PBE_keyivgen_ex", 0x208),
+    0x17B1F5: ("EVP_PBE_CipherInit_ex", 0x415),
 }
 
 STORE_LOADER_OWNER = "OsslStoreLoader"
@@ -15630,8 +17081,12 @@ STORE_LOADER_GET0 = "ossl_store_get0_loader_int"
 STORE_LOADER_REGISTER = "OSSL_STORE_register_loader"
 STORE_LOADER_REGISTER_INT = "ossl_store_register_loader_int"
 STORE_LOADER_FETCH = "inner_loader_fetch"
+# The exported public entry points that resolve a loader by forwarding to
+# `inner_loader_fetch`.  A call to one of these is the same base object; the
+# witness verifies the forwarding shape in the source before accepting it.
+STORE_LOADER_FETCH_WRAPPERS = ("OSSL_STORE_LOADER_fetch",)
 STORE_LOADER_LEGACY_SITES = {
-    0x3E2088: {
+    0x1F89E8: {
         "field": "open_ex",
         "offset": 0x58,
         "setter": "OSSL_STORE_LOADER_set_open_ex",
@@ -15640,7 +17095,7 @@ STORE_LOADER_LEGACY_SITES = {
         "rust_typedef": "OsslStoreOpenExFn",
         "base": "legacy-single",
     },
-    0x3E217D: {
+    0x1F8AA1: {
         "field": "open",
         "offset": 0x10,
         "setter": "OSSL_STORE_LOADER_set_open",
@@ -15649,7 +17104,7 @@ STORE_LOADER_LEGACY_SITES = {
         "rust_typedef": "OsslStoreOpenFn",
         "base": "legacy-single",
     },
-    0x3E2648: {
+    0x1F8F13: {
         "field": "closefn",
         "offset": 0x50,
         "setter": "OSSL_STORE_LOADER_set_close",
@@ -15661,12 +17116,23 @@ STORE_LOADER_LEGACY_SITES = {
 }
 
 STORE_LOADER_LEGACY_SITE_PINS = {
-    0x3E2088: ("OSSL_STORE_open_ex", 0x488),
-    0x3E217D: ("OSSL_STORE_open_ex", 0x57D),
-    0x3E2648: ("OSSL_STORE_open_ex", 0xA48),
+    # The b73 rows recorded +0x498/+0x551.  In the b76 build the calls sit at
+    # +0x488/+0x57D (legacy open/open_ex) and +0x9F3 (legacy closefn): the
+    # offsets are re-derived per image (see the re-pin engine) and the
+    # correspondence is proved by the witness, not by the offset: at each
+    # address exactly one of the four loader specs is accepted and each spec
+    # accepts exactly one address (e7repin_controls).  The b73 closefn row was
+    # +0x9C3; b76 moved the call to 0x4561f3 (+0x9F3) and the close guard from
+    # a je/jne pair to one `test %r12,%r12; je <legacy>` with the provider
+    # block as the fallthrough (see STORE_LOADER_CLOSE_GUARD).
+    0x1F89E8: ("OSSL_STORE_open_ex", 0x488),
+    0x1F8AA1: ("OSSL_STORE_open_ex", 0x57D),
+    0x1F8F13: ("OSSL_STORE_open_ex", 0x9F3),
 }
-STORE_LOADER_PROVIDER_SITE = 0x3E2408
-STORE_LOADER_PROVIDER_SITE_PIN = ("OSSL_STORE_open_ex", 0x808)
+STORE_LOADER_PROVIDER_SITE = 0x1F8D29
+# b73 recorded +0x7D9; b76 addresses the `mov 0xb8(%r14),%rax` slot load and
+# the `call *%rax` at 0x456007 (+0x807) on the fetched_loader != NULL path.
+STORE_LOADER_PROVIDER_SITE_PIN = ("OSSL_STORE_open_ex", 0x807)
 STORE_LOADER_PROVIDER_FIELD = "p_close"
 STORE_LOADER_PROVIDER_OFFSET = 0xB8
 STORE_LOADER_PROVIDER_WRITER = "loader_from_algorithm"
@@ -15677,17 +17143,17 @@ CONF_OWNER = "ConfModule"
 CONF_SOURCE = "src/runtime/confmod/mod.rs"
 CONF_FUNCTION = "CONF_modules_load"
 CONF_SITES = {
-    0x17319A: {"field": "init", "offset": 0x10,
+    0x293F25: {"field": "init", "offset": 0x10,
                 "typedef": "conf_init_func", "rust_typedef": "ConfInitFn",
                 "parameter": "ifunc"},
-    0x1735B2: {"field": "finish", "offset": 0x18,
+    0x294363: {"field": "finish", "offset": 0x18,
                 "typedef": "conf_finish_func",
                 "rust_typedef": "ConfFinishFn", "parameter": "ffunc"},
 }
 
 CONF_SITE_PINS = {
-    0x17319A: ("CONF_modules_load", 0x50A),
-    0x1735B2: ("CONF_modules_load", 0x922),
+    0x293F25: ("CONF_modules_load", 0x505),
+    0x294363: ("CONF_modules_load", 0x943),
 }
 CONF_MODULE_ADD = "module_add"
 CONF_MODULE_SETTER = "CONF_module_add"
@@ -15697,25 +17163,30 @@ CONF_DSO_FINISH = "OPENSSL_finish"
 PEM_FUNCTION = "do_pk8pkey"
 PEM_SOURCE = "src/pem/pem_pk8.rs"
 PEM_SOURCE_FILES = ("src/pem/pem_pk8.rs", "src/pem/pem_pkey.rs")
-PEM_SITE = 0x495DE6
-PEM_SITE_PIN = ("openssl_rs::pem::pem_pk8::do_pk8pkey", 0x286)
+PEM_SITE = 0x4AD30C
+PEM_SITE_PIN = ("openssl_rs::pem::pem_pk8::do_pk8pkey", 0x29C)
 PEM_DEFAULT = "PEM_def_callback"
 PEM_CB_STACK_INDEX = 7
 PEM_CB_STACK_SLOT = "0x4b8(%rsp)"
 
-# The guards that select the two provider/legacy close paths.  These are image
-# addresses, not inferred block numbers; a change to either refuses.
-STORE_LOADER_CLOSE_GUARDS = {
-    "legacy_je": (0x3E23F0, 0x3E23F3, "%r12", 0x3E263C),
-    "provider_jne": (0x3E2633, 0x3E2636, "%r12", 0x3E23F9),
-}
-STORE_LOADER_CLOSE_GUARD_PINS = {
-    "legacy_je": (("OSSL_STORE_open_ex", 0x7F0),
-                  ("OSSL_STORE_open_ex", 0x7F3),
-                  ("OSSL_STORE_open_ex", 0xA3C)),
-    "provider_jne": (("OSSL_STORE_open_ex", 0xA33),
-                     ("OSSL_STORE_open_ex", 0xA36),
-                     ("OSSL_STORE_open_ex", 0x7F9)),
+# The guard that selects the two provider/legacy close paths.  The b73 build
+# had a je/jne pair; the b76 build emits one `test %r12,%r12` + `je <legacy>`
+# with the provider p_close block as the fallthrough.  The four addresses are
+# pinned by (symbol, offset), like every other site, so a move is re-derived
+# and a changed shape refuses; a plain absolute address would silently follow a
+# new instruction.
+#
+# b76 image (OSSL_STORE_open_ex at 0x455800):
+#   0x455fef  test %r12,%r12
+#   0x455ff2  je   0x4561e7        (fetched_loader == NULL -> legacy closefn)
+#   0x455ff8  provider p_close block (fallthrough, fetched_loader != NULL)
+#   0x4561e7  legacy closefn block
+STORE_LOADER_CLOSE_GUARD = {
+    "reg": "%r12",
+    "test": ("OSSL_STORE_open_ex", 0x7EF),
+    "branch": ("OSSL_STORE_open_ex", 0x7F2),
+    "zero_block": ("OSSL_STORE_open_ex", 0x9E7),
+    "nonzero_block": ("OSSL_STORE_open_ex", 0x7F8),
 }
 
 _EXTERNAL_PRIM_SIZES = {
@@ -16354,52 +17825,293 @@ def _external_line_number(text: str, needle: str):
     return None
 
 
+def _store_loader_zero_write(text: str, reg: str) -> bool:
+    """An instruction that writes zero into ``reg`` (and nothing else)."""
+    aliases = [r for r, base in _SUBREG.items() if base == reg] + [reg]
+    body = text.strip()
+    for alias in aliases:
+        if re.fullmatch(r"(xor|sub)\s+" + re.escape(alias) + r","
+                        + re.escape(alias), body):
+            return True
+        if re.fullmatch(r"mov\s+\$0x0," + re.escape(alias), body):
+            return True
+    return False
+
+
+def _store_loader_fetched_origin(g: "DsoGraph", fstart: int, idx: int,
+                                 reg: str = "%r12"):
+    """Prove ``reg`` holds only NULL or the loader-fetch return at ``idx``.
+
+    Every definition of the register that reaches ``idx`` must be either a
+    zero write or `mov %rax,reg` whose `%rax` has one reaching definition, a
+    call.  The caller decides whether that call is the loader fetch; this
+    helper establishes the *set* property, which is what both the close-arm
+    polarity proof and the provider witness need.
+
+    Returns ``({"fetch_def": i, "zero_defs": [...], "callee": sym}, None)``
+    or ``(None, reason)``.  The b77 image has three zero writes instead of the
+    b76 single one, so the rule is stated over the def *set*, not a count.
+    """
+    insns = g.precision.insns_by_func.get(fstart, ()) if g.precision else ()
+    defs = _external_reg_defs(g, fstart, idx, reg)
+    if defs is None:
+        return None, f"{reg} has an open or entry definition at {hex(idx)}"
+    if not defs:
+        return None, f"{reg} has no definition at {hex(idx)}"
+    zero, mov, other = [], [], []
+    for d in sorted(defs):
+        text = insns[d][1].strip()
+        if _store_loader_zero_write(text, reg):
+            zero.append(d)
+        elif text == f"mov    %rax,{reg}":
+            mov.append(d)
+        else:
+            other.append(text)
+    if other:
+        return None, (f"{reg} is also written by something other than the "
+                      f"fetched-loader value: {other}")
+    if len(mov) != 1:
+        return None, (f"{reg} has {len(mov)} fetched-loader assignment(s); "
+                      "exactly one is the fetch return")
+    fetch_def = mov[0]
+    rax_defs = _external_reg_defs(g, fstart, fetch_def, "%rax")
+    if rax_defs is None or len(rax_defs) != 1 or _ENTRY_DEF in rax_defs:
+        return None, (f"the fetched-loader assignment at "
+                      f"{hex(insns[fetch_def][0])} does not read a single "
+                      "call return")
+    call_idx = next(iter(rax_defs))
+    callee = _external_call_symbol(g, fstart, call_idx)
+    if callee is None:
+        return None, (f"the fetched-loader assignment at "
+                      f"{hex(insns[fetch_def][0])} does not read a call "
+                      "return")
+    return {"fetch_def": fetch_def,
+            "fetch_call": call_idx,
+            "zero_defs": zero,
+            "callee": callee}, None
+
+
+def _store_loader_fetch_is_loader(g: "DsoGraph", callee):
+    """The fetch call is `inner_loader_fetch`, or the transparent wrapper."""
+    leaf = _external_function_leaf(callee)
+    if leaf == STORE_LOADER_FETCH:
+        return True, leaf, None
+    if leaf not in STORE_LOADER_FETCH_WRAPPERS:
+        return False, leaf, f"the loader value comes from {leaf}"
+    if _external_exported(g, leaf) is None:
+        return False, leaf, "loader-fetch-wrapper-is-not-exported"
+    meth_text, _ml, err = _external_source(g, STORE_LOADER_METH_SOURCE)
+    if meth_text is None:
+        return False, leaf, f"source-unavailable: {err}"
+    ok, why = _loader_fetch_wrapper_is_transparent(meth_text, leaf)
+    if not ok:
+        return False, leaf, ("loader-fetch-wrapper-is-not-a-transparent-"
+                             f"forwarder: {why}")
+    return True, STORE_LOADER_FETCH, None
+
+
+def _store_loader_polarity(g: "DsoGraph", fstart: int, site_addr: int,
+                          want_zero: bool):
+    """Prove which `ossl_store_close_it` arm a close dispatch sits under.
+
+    The predicate is about the *value*, not about an offset: the site must be
+    reached on every path with `%r12 == 0` (the legacy loader) or on every path
+    with `%r12 != 0` (the fetched provider loader).  The proof is:
+
+    1. `%r12` has exactly two reaching definitions in the function, one zeroing
+       and one `mov %rax,%r12`; that `%rax` is the unique return of a call to
+       `inner_loader_fetch` (or to the exported `OSSL_STORE_LOADER_fetch`
+       wrapper, whose forwarding body is checked).  So `%r12` is either NULL or
+       the fetched loader, nothing else.
+    2. Every `test %r12,%r12` that is immediately followed by a conditional
+       branch is a polarity selector: its two successors arrive with a known
+       value of the predicate.
+    3. A forward must-analysis meets those successor values over every path, and
+       the site's block must arrive with the required polarity.  A block reached
+       through both arms arrives unknown and is refused.
+
+    This replaces the b73/b76 `je`-pair shape proof.  That proof named four
+    instructions by (symbol, offset), so any rebuild that kept the dispatch but
+    moved it inside the function lost the row; b77 did exactly that.  A
+    must-polarity is also *stronger* than the old reachability test: the legacy
+    arm merges back into the provider path in b77 (`test %r12,%r12; jne` at
+    +0x9b1), so "the site is not reachable from the other arm" is false there
+    while "every path to the site has %r12 == 0" is true.  What it proves is
+    stated exactly: the dispatch is selected by the fetched-loader NULL test,
+    and nothing about the callback's own behaviour.
+    """
+    reg = STORE_LOADER_CLOSE_GUARD["reg"]
+    cfg = _function_cfg(g, fstart)
+    insns = cfg["insns"]
+    idx_of = {a: i for i, (a, _t) in enumerate(insns)}
+    si = idx_of.get(site_addr)
+    if si is None:
+        return None, "site instruction is outside the function CFG"
+    sb = cfg["block_of"].get(si)
+    if sb is None:
+        return None, "site instruction is in no CFG block"
+
+    selectors = []
+    edges = {}
+    for i, (_a, text) in enumerate(insns[:-1]):
+        mn, rest, ops = _insn_parts(text)
+        if mn != "test" or len(ops) != 2:
+            continue
+        if _canon(ops[0]) != reg or _canon(ops[1]) != reg:
+            continue
+        bmn, brest, _bops = _insn_parts(insns[i + 1][1])
+        m = re.match(r"^([0-9a-f]+)", brest)
+        if bmn not in ("je", "jz", "jne", "jnz") or m is None:
+            continue
+        tgt = int(m.group(1), 16)
+        if tgt not in idx_of:
+            continue
+        b = cfg["block_of"][i]
+        if i + 1 != cfg["blocks"][b][1] - 1:
+            continue                      # the branch must end its block
+        taken, fall = cfg["block_of"][idx_of[tgt]], None
+        if i + 2 < len(insns):
+            fall = cfg["block_of"].get(i + 2)
+        if fall is None or fall == taken:
+            continue
+        taken_val = "ZERO" if bmn in ("je", "jz") else "NONZERO"
+        fall_val = "NONZERO" if taken_val == "ZERO" else "ZERO"
+        edges[(b, taken)] = taken_val
+        edges[(b, fall)] = fall_val
+        selectors.append({"test": hex(insns[i][0]),
+                          "index": i,
+                          "test_text": text.strip(),
+                          "branch": hex(insns[i + 1][0]),
+                          "branch_text": insns[i + 1][1].strip(),
+                          "taken_block": hex(insns[cfg["blocks"][taken][0]][0]),
+                          "taken_polarity": taken_val,
+                          "fallthrough_block": hex(
+                              insns[cfg["blocks"][fall][0]][0]),
+                          "fallthrough_polarity": fall_val})
+    if not selectors:
+        return None, (f"no `test {reg},{reg}` polarity selector in the "
+                      "function")
+
+    # 1. The register carries the fetched-loader value, not something else, at
+    #    every selector (a selector on a different value is not a selector).
+    origins = []
+    for sel in selectors:
+        o, why = _store_loader_fetched_origin(g, fstart, sel["index"], reg)
+        if o is None:
+            return None, f"at {sel['test']}: {why}"
+        ok, leaf, why = _store_loader_fetch_is_loader(g, o["callee"])
+        if not ok:
+            return None, f"at {sel['test']}: {why}"
+        origins.append((o, leaf))
+    for sel, (origin, leaf) in zip(selectors, origins):
+        sel["definitions"] = ([hex(insns[origin["fetch_def"]][0])]
+                              + [hex(insns[d][0])
+                                 for d in origin["zero_defs"]])
+        sel["fetch_call"] = hex(insns[origin["fetch_call"]][0])
+        sel["fetch_callee"] = leaf
+
+    # 3. Must-polarity over every path, with the lattice
+    #    UNREACHED < {ZERO, NONZERO} < unknown.
+    nb = len(cfg["blocks"])
+    preds = collections.defaultdict(list)
+    for p, ss in cfg["succ"].items():
+        for s in ss:
+            preds[s].append(p)
+    UNREACHED = "unreached"
+
+    def join(vals):
+        if not vals:
+            return UNREACHED
+        first = vals[0]
+        return first if all(v == first for v in vals) else None
+
+    arrived = {b: UNREACHED for b in range(nb)}
+    arrived[0] = None
+    for _round in range(4 * nb + 8):
+        changed = False
+        for b in range(1, nb):
+            vals = []
+            for p in preds.get(b, ()):
+                v = arrived[p]
+                if v == UNREACHED:
+                    continue
+                vals.append(edges.get((p, b), v))
+            new = join(vals)
+            if new != arrived[b]:
+                arrived[b] = new
+                changed = True
+        if not changed:
+            break
+    else:
+        return None, "the close-guard polarity analysis did not converge"
+
+    want = "ZERO" if want_zero else "NONZERO"
+    got = arrived.get(sb)
+    if got != want:
+        return None, (f"site {hex(site_addr)} is reached with "
+                      f"{'unknown' if got is None else got} {reg} polarity, "
+                      f"not {want}")
+    anchored = [b for (_p, b), v in edges.items() if v == want]
+    if not any(sb in _cfg_reachable_from(cfg, b) for b in anchored):
+        return None, (f"site {hex(site_addr)} is not reachable from any "
+                      f"{want} successor of the polarity selector")
+
+    evidence = {"guard_zero": want_zero,
+                "site_polarity": got,
+                "bases": f"every path to {hex(site_addr)} carries "
+                         f"{reg} {'==' if want_zero else '!='} 0, where "
+                         f"{reg} is {{0, inner_loader_fetch return}}",
+                "selectors": selectors}
+    # Provenance cross-check: when the recorded guard pins still land, they must
+    # name this derivation.  A pin that lands on a different branch is a
+    # contradiction between provenance and proof, and is refused rather than
+    # resolved in favour of either.
+    spec = STORE_LOADER_CLOSE_GUARD
+    pinned_test = _pin_insn_addr(g, spec["test"])
+    pinned_branch = _pin_insn_addr(g, spec["branch"])
+    if pinned_test is not None and pinned_branch is not None:
+        named = {(s["test"], s["branch"]) for s in selectors}
+        if (hex(pinned_test), hex(pinned_branch)) not in named:
+            return None, ("the recorded close-guard pins land on "
+                          f"{hex(pinned_test)}/{hex(pinned_branch)}, which is "
+                          "not a polarity selector of this image")
+        evidence["pins_agree"] = True
+    else:
+        evidence["pins_agree"] = None
+        evidence["pins_moved"] = True
+    return evidence, None
+
+
+def _polarity_selectors_for_site(g: "DsoGraph", fstart: int, site_addr: int,
+                                 evidence: dict):
+    """The polarity selectors whose arms can reach the site's block.
+
+    A must-analysis re-decides the predicate at every selector on the path to
+    the site, so inverting a selector that a later one overrides cannot change
+    the site's polarity.  Only an inversion of *all* selectors that can reach
+    the site is guaranteed to be observable; naming just the first selector
+    (as the b77 control did) silently stops being load-bearing when the
+    compiler adds another one upstream of it.  This returns the set.
+    """
+    cfg = _function_cfg(g, fstart)
+    idx = {a: i for i, (a, _t) in enumerate(cfg["insns"])}
+    sb = cfg["block_of"].get(idx.get(site_addr))
+    if sb is None:
+        return []
+    out = []
+    for sel in evidence.get("selectors") or ():
+        for key in ("taken_block", "fallthrough_block"):
+            b = cfg["block_of"].get(idx.get(int(sel[key], 16)))
+            if b is not None and sb in _cfg_reachable_from(cfg, b):
+                out.append(sel)
+                break
+    return out
+
+
 def _external_guard_chain(g: "DsoGraph", fstart: int, site_addr: int,
                           want_zero: bool):
-    """Prove the `%r12` guard polarity that selects this close path.
-
-    Both close sites sit under the same pair of `test %r12,%r12` branches:
-    check they name: 0x3e23f3 `je` to the legacy block and 0x3e2636 `jne` to the
-    provider block.  The witness checks those exact instructions and targets; a
-    new or moved predecessor refuses.
-    """
-    je = STORE_LOADER_CLOSE_GUARDS["legacy_je"]
-    jne = STORE_LOADER_CLOSE_GUARDS["provider_jne"]
-    insns = g.precision.insns_by_func.get(fstart, ())
-    by_addr = {a: t for a, t in insns}
-    for test_addr, branch_addr, reg, target in (je, jne):
-        text = by_addr.get(test_addr, "").strip()
-        if not re.fullmatch(r"test\s+" + re.escape(reg) + r"," +
-                            re.escape(reg), text):
-            return None, f"guard test at {hex(test_addr)} is not test {reg},{reg}"
-        mn, tgt, text = _external_branch(g, fstart, branch_addr)
-        if mn not in ("je", "jne") or tgt != target:
-            return None, (f"guard branch at {hex(branch_addr)} is not the "
-                          f"enumerated {target:#x} branch: {text!r}")
-    # je taken / jne not taken selects the legacy block (r12 == 0); je not
-    # taken / jne taken selects the provider block (r12 != 0).
-    cfg = _function_cfg(g, fstart)
-    idx = None
-    for i, (a, _t) in enumerate(insns):
-        if a == site_addr:
-            idx = i
-            break
-    if idx is None:
-        return None, "site instruction not found"
-    preds = [p for p, ss in cfg["succ"].items() if cfg["block_of"][idx] in ss]
-    if len(preds) != 1:
-        return None, (f"site {hex(site_addr)} has {len(preds)} predecessor "
-                      "blocks, not one")
-    block_start = insns[cfg["blocks"][preds[0]][0]][0]
-    expected = je[3] if want_zero else jne[3]
-    if block_start != expected:
-        return None, (f"site {hex(site_addr)} is preceded by block "
-                      f"{hex(block_start)}, not the enumerated "
-                      f"{hex(expected)} block")
-    return {"guard_zero": want_zero,
-            "tests": [hex(je[0]), hex(jne[0])],
-            "branches": [hex(je[1]), hex(jne[1])],
-            "targets": [hex(je[3]), hex(jne[3])]}, None
+    """The close-arm proof for one loader dispatch (see the helper above)."""
+    return _store_loader_polarity(g, fstart, site_addr, want_zero)
 
 
 def _external_base_defs(g: "DsoGraph", site: dict, load: dict):
@@ -16436,7 +18148,8 @@ def _external_witness(cls: str, name: str, site: dict, *, slot: str,
 
 def pbe_registry_witness(g: "DsoGraph", site: dict, name: str):
     """The `EVP_PBE_CipherInit_ex` plain-keygen dispatch."""
-    if not _external_site_matches(site, name, PBE_FUNCTION, PBE_SITE):
+    if not _external_site_matches(site, name, PBE_FUNCTION,
+                                  _pinned_site("PBE_SITE", g)):
         return None
     cls = ABI_CONTRACT_PBE_REGISTRY
     if not site.get("unresolved"):
@@ -16592,7 +18305,8 @@ def pbe_registry_witness(g: "DsoGraph", site: dict, name: str):
                "rows, and the function-local search key; the exported registry "
                "seam makes the target set unbounded"),
         conditions={
-            "site_enumerated": f"{PBE_FUNCTION} {hex(PBE_SITE)}",
+            "site_enumerated": (f"{PBE_FUNCTION} "
+                                 f"{hex(_pinned_site('PBE_SITE', g))}"),
             "operand_is_the_keygen_local": (
                 f"{load['text']} -> the zeroed frame slot at "
                 f"{hex(slot_abs)}"),
@@ -16634,7 +18348,7 @@ def pbe_registry_witness(g: "DsoGraph", site: dict, name: str):
 
 def store_loader_legacy_witness(g: "DsoGraph", site: dict, name: str):
     """The legacy `OSSL_STORE_LOADER` open/open_ex/closefn dispatch."""
-    spec = STORE_LOADER_LEGACY_SITES.get(site.get("addr"))
+    spec = _repinned("STORE_LOADER_LEGACY_SITES", g).get(site.get("addr"))
     if spec is None or not _external_site_matches(
             site, name, STORE_LOADER_FUNCTION, site.get("addr")):
         return None
@@ -16867,10 +18581,34 @@ def store_loader_legacy_witness(g: "DsoGraph", site: dict, name: str):
     return cls, witness, None
 
 
+def _loader_fetch_wrapper_is_transparent(text: str, name: str):
+    """Whether ``name`` forwards straight to `inner_loader_fetch` and returns it."""
+    m = re.search(r"\bfn\s+" + re.escape(name) + r"\s*\(", text)
+    if not m:
+        return False, f"no definition of {name} in the source"
+    brace = text.find("{", m.end())
+    if brace < 0:
+        return False, "the definition has no body"
+    end = _s1_brace_span(text, brace)
+    if end is None:
+        return False, "the definition body is not balanced"
+    body = text[brace + 1:end - 1]
+    if not re.search(r"let\s+method\s*=\s*unsafe\s*\{\s*"
+                     + re.escape(STORE_LOADER_FETCH) + r"\(", body):
+        return False, (f"{name} does not bind its result to "
+                       f"{STORE_LOADER_FETCH}")
+    tail = [ln.strip() for ln in body.splitlines()
+            if ln.strip() and not ln.strip().startswith("//")]
+    if not tail or tail[-1] != "method":
+        return False, f"{name} does not return the fetched method"
+    return True, None
+
+
 def store_loader_provider_witness(g: "DsoGraph", site: dict, name: str):
     """The provider `OsslStoreLoader.p_close` dispatch (OSSL_FUNC_STORE_CLOSE)."""
     if not _external_site_matches(site, name, STORE_LOADER_FUNCTION,
-                                  STORE_LOADER_PROVIDER_SITE):
+                                  _pinned_site("STORE_LOADER_PROVIDER_SITE",
+                                               g)):
         return None
     cls = ABI_CONTRACT_PROVIDER
     if not site.get("unresolved"):
@@ -16904,18 +18642,41 @@ def store_loader_provider_witness(g: "DsoGraph", site: dict, name: str):
         return cls, None, _external_refusal(
             cls, name, site, "base-definition-shape-changed",
             definitions=[insns[d][1] for d in sorted(base_defs)])
-    r12_defs = _external_reg_defs(g, fstart, provider[0], "%r12")
-    if r12_defs is None or len(r12_defs) != 2:
+    # `%r12` is the fetched loader: every definition reaching the provider
+    # assignment is either a zero write or the fetch call's return.  b76 had
+    # exactly one zero write; b77 has three, so the rule is over the set.
+    origin, why = _store_loader_fetched_origin(g, fstart, provider[0], "%r12")
+    if origin is None:
         return cls, None, _external_refusal(
             cls, name, site, "fetched-loader-definition-set-is-not-enumerated",
-            definitions=sorted(r12_defs or ()))
-    fetch = [d for d in r12_defs
-             if insns[d][1].strip() == "mov    %rax,%r12"]
-    if len(fetch) != 1:
-        return cls, None, _external_refusal(
-            cls, name, site, "fetched-loader-is-not-a-call-return")
-    fetch_sym = _external_def_call(g, site, fetch[0] - 1)
-    if _external_function_leaf(fetch_sym) != STORE_LOADER_FETCH:
+            detail=why)
+    fetch_call = origin["fetch_call"]
+    fetch_sym = origin["callee"]
+    fetch_leaf = _external_function_leaf(fetch_sym)
+    fetch_callee = fetch_leaf
+    if fetch_leaf in STORE_LOADER_FETCH_WRAPPERS:
+        # The exported `OSSL_STORE_LOADER_fetch` wrapper is the documented
+        # public entry point; it forwards straight to the same private
+        # `inner_loader_fetch` the witness already understands.  Accepting the
+        # name alone would widen the rule, so the wrapper's source is checked
+        # here: it must call `inner_loader_fetch` with its own arguments and
+        # return that result, and it must be an exported symbol of this image.
+        if _external_exported(g, fetch_leaf) is None:
+            return cls, None, _external_refusal(
+                cls, name, site, "loader-fetch-wrapper-is-not-exported",
+                callee=fetch_sym)
+        meth_text, _ml, err = _external_source(g, STORE_LOADER_METH_SOURCE)
+        if meth_text is None:
+            return cls, None, _external_refusal(
+                cls, name, site, "source-unavailable", detail=err)
+        ok, why = _loader_fetch_wrapper_is_transparent(meth_text, fetch_leaf)
+        if not ok:
+            return cls, None, _external_refusal(
+                cls, name, site,
+                "loader-fetch-wrapper-is-not-a-transparent-forwarder",
+                callee=fetch_sym, detail=why)
+        fetch_leaf = STORE_LOADER_FETCH
+    if fetch_leaf != STORE_LOADER_FETCH:
         return cls, None, _external_refusal(
             cls, name, site, "wrong-base-constructor", callee=fetch_sym)
     guard, why = _external_guard_chain(g, fstart, site["addr"], False)
@@ -17021,7 +18782,7 @@ def store_loader_provider_witness(g: "DsoGraph", site: dict, name: str):
                "the provider's OSSL_FUNC_STORE_CLOSE dispatch entry"),
         conditions={
             "site_enumerated": (f"{STORE_LOADER_FUNCTION} "
-                                f"{hex(STORE_LOADER_PROVIDER_SITE)}"),
+                                f"{hex(_pinned_site('STORE_LOADER_PROVIDER_SITE', g))}"),
             "operand_field": (f"{STORE_LOADER_PROVIDER_FIELD} at "
                               f"{hex(STORE_LOADER_PROVIDER_OFFSET)}"),
             "base_object": "the inner_loader_fetch return on the "
@@ -17045,10 +18806,12 @@ def store_loader_provider_witness(g: "DsoGraph", site: dict, name: str):
                  "base_reg": load["base_reg"],
                  "offset": hex(load["offset"])},
         object={"type": STORE_LOADER_OWNER,
-                "constructor": STORE_LOADER_FETCH,
+                "constructor": fetch_callee,
+                "constructor_offset_hint": STORE_LOADER_FETCH,
                 "definitions": [hex(insns[d][0]) for d in sorted(base_defs)],
-                "fetched_loader_definitions": [
-                    hex(insns[d][0]) for d in sorted(r12_defs)]},
+                "fetched_loader_definitions": (
+                    [hex(insns[origin["fetch_def"]][0])]
+                    + [hex(insns[d][0]) for d in origin["zero_defs"]])},
         field={"type": STORE_LOADER_OWNER, "repr_c": True,
                "name": STORE_LOADER_PROVIDER_FIELD,
                "offset": hex(fld["offset"]),
@@ -17067,7 +18830,7 @@ def store_loader_provider_witness(g: "DsoGraph", site: dict, name: str):
 
 def conf_module_witness(g: "DsoGraph", site: dict, name: str):
     """The `CONF_MODULE` init/finish dispatch."""
-    spec = CONF_SITES.get(site.get("addr"))
+    spec = _repinned("CONF_SITES", g).get(site.get("addr"))
     if spec is None or not _external_site_matches(
             site, name, CONF_FUNCTION, site.get("addr")):
         return None
@@ -17259,6 +19022,485 @@ def conf_module_witness(g: "DsoGraph", site: dict, name: str):
                                               for c in setter_calls]},
         source={"file": CONF_SOURCE, "layout_line": layout["line"],
                 "writer_line": st["line"]},
+    )
+    return cls, witness, None
+
+
+# --------------------------------------------------------------------------- #
+# ABI_CONTRACT_CONF_DEFAULT_METHOD: the global CONF_METHOD cell
+# --------------------------------------------------------------------------- #
+#
+# `CONF_set_nconf` re-initialises a `CONF` through the process-global
+# `default_CONF_method` table: it loads the cell, installs the table published by
+# `NCONF_default()` when the cell is NULL, and calls that table's `init` slot.
+# `X509V3_EXT_REQ_add_conf` calls `CONF_set_nconf(ctmp, NULL)` on its own
+# `NCONF_new(NULL)` result and the compiler inlines it, so the dispatch appears
+# at the enumerated site.  The cell is public state: the exported
+# `CONF_set_default_method` stores an application-supplied `CONF_METHOD *` in it,
+# and `struct conf_method_st` is a documented public struct whose `init` field is
+# `conf_init_func`.  The witness proves exactly that shape and no wider one.
+
+CONF_METHOD_GLOBAL_RE = r"runtime4conf3lib\d+DEFAULT_CONF_METHOD\b"
+CONF_METHOD_BUILTIN_RE = r"runtime4conf3def\d+DEFAULT_METHOD\b"
+CONF_METHOD_OWNER = "ConfMethod"
+CONF_METHOD_FIELD = "init"
+CONF_METHOD_FIELD_OFFSET = 0x10
+CONF_METHOD_TYPEDEF = "ConfInitFn"
+CONF_METHOD_SETTER = "CONF_set_default_method"
+CONF_METHOD_DEFAULT_GETTER = "NCONF_default"
+CONF_METHOD_SOURCE = "src/runtime/conf/lib.rs"
+CONF_METHOD_DEF_SOURCE = "src/runtime/conf/def.rs"
+CONF_METHOD_SITE = 0x49A8DC
+CONF_METHOD_FUNCTION = "X509V3_EXT_REQ_add_conf"
+# The b78-proven row: the second inlined `CONF_set_nconf`'s `init` dispatch.
+CONF_METHOD_SITE_PIN = ("X509V3_EXT_REQ_add_conf", 0xBC)
+
+# The enumerated `default_CONF_method` -> `conf_method_st.init` dispatches.
+#
+# `CONF_set_nconf` loads the process-global cell, installs the table
+# `NCONF_default()` publishes when the cell is NULL, and calls that table's
+# `init` at offset 0x10.  Every classic-API entry point and the
+# `X509V3_EXT_*_conf` family inlines it, so the same slot appears in each; the
+# compiler emits it in two shapes and both dispatch the same field:
+#
+#   * `reg-load`      `mov 0x10(<table>),<reg>` ... `call *<reg>`
+#   * `operand-field` `call *0x10(<table>)`
+#
+# The table pointer is never a computed value: it is either the cell's own
+# contents or the built-in table, so the site is bounded by the cell's
+# whole-image writer set (proved in the witness), not by an operand target set.
+# `form` names which shape this row was proved in; the witness accepts only
+# that shape, so a moved or reshaped row refuses instead of being absorbed.
+CONF_METHOD_SITES = {
+    0x49A8DC: {"function": "X509V3_EXT_REQ_add_conf", "form": "reg-load"},
+    0x2DD4C6: {"function": "CONF_free", "form": "operand-field"},
+    0x2DD6EB: {"function": "CONF_load", "form": "operand-field"},
+    0x2DD860: {"function": "CONF_load_bio", "form": "operand-field"},
+}
+CONF_METHOD_SITE_PINS = {
+    0x49A8DC: CONF_METHOD_SITE_PIN,
+    0x2DD4C6: ("CONF_free", 0x36),
+    0x2DD6EB: ("CONF_load", 0x5B),
+    0x2DD860: ("CONF_load_bio", 0x40),
+}
+# The only code in the image that may read the cell: the CONF module and the
+# `x509::v3_conf` module that inlines its classic API.  A reader elsewhere in
+# the image is refused (`default-method-cell-read-outside-the-conf-modules`),
+# which is the completeness half of the writer enumeration below.
+CONF_METHOD_READER_RE = re.compile(
+    r"(?:runtime4conf|4x5097v3_conf)|^(?:CONF_|X509V3_EXT_)")
+
+
+def _conf_method_bodies(g):
+    """Every disassembled function body in the image, for a whole-image scan."""
+    bodies = getattr(g, "functions", None) or ()
+    if isinstance(bodies, dict):
+        return sorted(bodies.items())
+    if bodies:
+        return list(bodies)
+    return sorted((getattr(g.precision, "insns_by_func", {}) or {}).items())
+
+
+def _conf_method_cell_stores(g, cell: int):
+    """Every write, of any width, to the `cell` address in the image."""
+    out = []
+    for fstart, body in _conf_method_bodies(g):
+        name = (getattr(g, "funcs", {}) or {}).get(fstart) or "?"
+        for i, (addr, text) in enumerate(body):
+            _mn, _rest, ops = _insn_parts(text)
+            if len(ops) < 2 or not re.fullmatch(r"-?0x[0-9a-f]+\(%rip\)", ops[1]):
+                continue
+            if _insn_comment_addr(text) != cell:
+                continue
+            out.append({"function": name,
+                        "func": fstart,
+                        "leaf": _external_function_leaf(name),
+                        "address": hex(addr), "text": text,
+                        "source": ops[0],
+                        "previous": body[i - 1][1] if i else ""})
+    return out
+
+
+def _conf_method_cell_readers(g, cell: int):
+    """Every load of the `cell` address in the image, with its function.
+
+    A dispatch through the cell cannot exist without a load of the cell: the
+    table pointer is either the cell's contents or the built-in table the
+    NULL fallback installs.  Enumerating the readers is therefore the
+    completeness check on the reader side of the contract.
+    """
+    out = []
+    for fstart, body in _conf_method_bodies(g):
+        name = (getattr(g, "funcs", {}) or {}).get(fstart) or "?"
+        for addr, text in body:
+            _mn, _rest, ops = _insn_parts(text)
+            if len(ops) < 2 or not re.fullmatch(r"-?0x[0-9a-f]+\(%rip\)",
+                                               ops[0]):
+                continue
+            if _insn_comment_addr(text) != cell:
+                continue
+            out.append({"function": name,
+                        "leaf": _external_function_leaf(name),
+                        "func": fstart,
+                        "address": hex(addr), "text": text})
+    return out
+
+
+def _conf_method_getter_table(g):
+    """(address, error) of the table `NCONF_default()` publishes."""
+    found = []
+    for fstart, body in _conf_method_bodies(g):
+        name = (getattr(g, "funcs", {}) or {}).get(fstart) or ""
+        if _external_function_leaf(name) != CONF_METHOD_DEFAULT_GETTER:
+            continue
+        for addr, text in body:
+            mn, _rest, ops = _insn_parts(text)
+            if mn != "lea" or len(ops) < 2:
+                continue
+            target = _insn_comment_addr(text)
+            sym = (getattr(g, "all_syms", {}) or {}).get(target) or ""
+            if re.search(CONF_METHOD_BUILTIN_RE, sym):
+                found.append(target)
+    if len(set(found)) != 1:
+        return None, (f"{CONF_METHOD_DEFAULT_GETTER} publishes {len(set(found))} "
+                      "built-in table(s)")
+    return found[0], None
+
+
+def conf_default_method_witness(g: "DsoGraph", site: dict, name: str):
+    """The `default_CONF_method` -> `CONF_METHOD.init` dispatch."""
+    spec = _repinned("CONF_METHOD_SITES", g).get(site.get("addr"))
+    if spec is None or _external_function_leaf(name) != spec["function"]:
+        return None
+    cls = ABI_CONTRACT_CONF_DEFAULT_METHOD
+    if not site.get("unresolved"):
+        return None
+    field = CONF_METHOD_FIELD
+    if "e7abi-conf-method-wrong-field" in _MUTED:
+        # Negative control: proving the neighbouring `destroy` field instead of
+        # the dispatched `init` one must not accept this site.
+        field = "destroy"
+    fstart = site.get("func")
+    insns = (getattr(g.precision, "insns_by_func", {}) or {}).get(fstart)
+    if not insns:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "image-disassembly-unavailable")
+    idx = _external_insn_index(g, site)
+    if idx is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "call-instruction-not-found")
+    form = spec["form"]
+    loads = []
+    if form == "operand-field":
+        # `call *0x10(<table>)`: the field read is the transfer operand itself,
+        # and <table> is the cell load or the built-in table.  It is not a
+        # register value, so the operand has no separate load to inspect; the
+        # base register carries the whole provenance.
+        text = insns[idx][1].split("#", 1)[0].strip()
+        mo = re.search(r"call\w*\s+\*(.+)$", text)
+        if not mo:
+            return cls, None, _external_refusal(cls, name, site,
+                                                "operand-not-indirect-call",
+                                                definition=text)
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)",
+                         mo.group(1).strip())
+        if not m:
+            return cls, None, _external_refusal(
+                cls, name, site, "operand-is-not-a-method-field",
+                operand=mo.group(1).strip())
+        off = int(m.group(1), 16) if m.group(1) else 0
+        if off != CONF_METHOD_FIELD_OFFSET:
+            return cls, None, _external_refusal(
+                cls, name, site, "operand-load-is-not-the-init-slot",
+                offset=hex(off), expected=hex(CONF_METHOD_FIELD_OFFSET),
+                definition=text)
+        base_reg = _canon(m.group(2))
+        defs = _external_reg_defs(g, fstart, idx, base_reg)
+        if defs is None:
+            return cls, None, _external_refusal(
+                cls, name, site, "operand-has-an-open-definition",
+                base_reg=base_reg)
+        if not defs:
+            return cls, None, _external_refusal(
+                cls, name, site, "operand-has-no-reaching-definition",
+                base_reg=base_reg)
+        loads.append({"form": "operand-field", "def": idx,
+                      "address": hex(insns[idx][0]), "text": insns[idx][1],
+                      "base_reg": base_reg,
+                      "offset": hex(CONF_METHOD_FIELD_OFFSET)})
+    elif form == "reg-load":
+        defs = _external_reg_defs(g, fstart, idx, "%rax")
+        if defs is None:
+            return cls, None, _external_refusal(cls, name, site,
+                                                "operand-has-an-open-definition")
+        if not defs:
+            return cls, None, _external_refusal(
+                cls, name, site, "operand-has-no-reaching-definition")
+        for d in sorted(defs):
+            text = insns[d][1]
+            mn, _rest, ops = _insn_parts(text)
+            if (mn not in ("mov", "movq") or len(ops) < 2
+                    or _canon(ops[1]) != "%rax"):
+                return cls, None, _external_refusal(
+                    cls, name, site, "operand-writer-is-not-a-load",
+                    definition=text, address=hex(insns[d][0]))
+            m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", ops[0])
+            if not m:
+                return cls, None, _external_refusal(
+                    cls, name, site, "operand-writer-is-not-a-memory-load",
+                    definition=text)
+            off = int(m.group(1), 16) if m.group(1) else 0
+            if off != CONF_METHOD_FIELD_OFFSET:
+                return cls, None, _external_refusal(
+                    cls, name, site, "operand-load-is-not-the-init-slot",
+                    offset=hex(off), expected=hex(CONF_METHOD_FIELD_OFFSET),
+                    definition=text)
+            loads.append({"form": "reg-load", "def": d,
+                          "address": hex(insns[d][0]),
+                          "text": text, "base_reg": m.group(2),
+                          "offset": hex(off)})
+    else:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "unrecorded-site-form", form=form)
+    if not loads:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "no-field-read-for-this-form")
+
+    # Every field base is a link-time address: the cell, or the built-in table.
+    # The compiler duplicates the inlined cleanup tail, so one field load can
+    # have several reaching base definitions; each of them must be admissible
+    # on its own (the union is never trusted as one value).
+    cell = None
+    builtin = None
+    bases = []
+    for ld in loads:
+        base_defs = _external_reg_defs(g, fstart, ld["def"], ld["base_reg"])
+        if base_defs is None:
+            return cls, None, _external_refusal(
+                cls, name, site, "field-base-has-an-open-definition",
+                base_reg=ld["base_reg"])
+        if not base_defs:
+            return cls, None, _external_refusal(
+                cls, name, site, "field-base-has-no-reaching-definition",
+                base_reg=ld["base_reg"])
+        for d2 in sorted(base_defs):
+            text2 = insns[d2][1]
+            mn2, _rest2, ops2 = _insn_parts(text2)
+            if mn2 not in ("mov", "movq", "lea") or len(ops2) < 2:
+                return cls, None, _external_refusal(
+                    cls, name, site, "field-base-is-not-a-link-time-address",
+                    definition=text2, address=hex(insns[d2][0]))
+            target = _insn_comment_addr(text2)
+            sym = (getattr(g, "all_syms", {}) or {}).get(target) or ""
+            if re.search(CONF_METHOD_GLOBAL_RE, sym):
+                kind = "default-method-cell"
+                if cell is not None and cell != target:
+                    return cls, None, _external_refusal(
+                        cls, name, site, "two-different-method-cells",
+                        first=hex(cell), second=hex(target))
+                cell = target
+            elif re.search(CONF_METHOD_BUILTIN_RE, sym):
+                kind = "builtin-default-table"
+                builtin = target
+            else:
+                return cls, None, _external_refusal(
+                    cls, name, site,
+                    "field-base-is-neither-the-cell-nor-the-builtin-table",
+                    symbol=sym, target=None if target is None else hex(target))
+            bases.append({"kind": kind, "definition": hex(insns[d2][0]),
+                          "base_reg": ld["base_reg"],
+                          "target": None if target is None else hex(target),
+                          "symbol": sym})
+    if cell is None:
+        return cls, None, _external_refusal(
+            cls, name, site, "dispatch-does-not-read-the-default-method-cell")
+    getter_table, err = _conf_method_getter_table(g)
+    if getter_table is None:
+        return cls, None, _external_refusal(
+            cls, name, site, "builtin-default-table-not-bound-to-its-getter",
+            detail=err)
+    if builtin is not None and builtin != getter_table:
+        return cls, None, _external_refusal(
+            cls, name, site, "builtin-table-is-not-the-one-NCONF_default-publishes",
+            builtin=hex(builtin), getter=hex(getter_table))
+
+    # The whole-image writer set of the cell: the exported setter's parameter,
+    # and the built-in fallback.  Nothing else may write it.
+    writes = _conf_method_cell_stores(g, cell)
+    if not writes:
+        return cls, None, _external_refusal(
+            cls, name, site, "default-method-cell-has-no-writer")
+    setter, builtin_stores, other = [], [], []
+    for w in writes:
+        if w["leaf"] == CONF_METHOD_SETTER and w["source"] == "%rdi":
+            setter.append(w)
+        elif (w["source"] == "%rax"
+              and re.search(CONF_METHOD_BUILTIN_RE, w["previous"])):
+            builtin_stores.append(w)
+        else:
+            other.append(w)
+    if other:
+        return cls, None, _external_refusal(
+            cls, name, site, "unaccounted-writer-of-the-default-method-cell",
+            writers=other)
+    if len(setter) != 1:
+        return cls, None, _external_refusal(
+            cls, name, site,
+            "default-method-cell-setter-is-not-the-single-parameter-store",
+            stores=setter)
+    if not builtin_stores:
+        return cls, None, _external_refusal(
+            cls, name, site, "cell-has-no-built-in-default-installation")
+    st = setter[0]
+    if st["source"] != "%rdi":
+        return cls, None, _external_refusal(
+            cls, name, site, "setter-store-is-not-its-parameter", store=st)
+    if _external_exported(g, CONF_METHOD_SETTER) is None:
+        return cls, None, _external_refusal(
+            cls, name, site, "default-method-setter-is-not-exported")
+    if _external_exported(g, CONF_METHOD_DEFAULT_GETTER) is None:
+        return cls, None, _external_refusal(
+            cls, name, site, "builtin-default-getter-is-not-exported")
+
+    # Reader completeness.  Every dispatch through the cell needs a load of the
+    # cell (the table pointer is the cell's contents or the built-in table), so
+    # the set of functions that read it bounds the set of readers of this
+    # contract.  The conf module and `x509::v3_conf` own the cell; a reader in
+    # any other module is an unexplained use of the same global and refuses.
+    readers = _conf_method_cell_readers(g, cell)
+    if not readers:
+        return cls, None, _external_refusal(
+            cls, name, site, "default-method-cell-has-no-reader")
+    outside = [r for r in readers
+               if not CONF_METHOD_READER_RE.search(r["function"] or "")]
+    if outside:
+        return cls, None, _external_refusal(
+            cls, name, site,
+            "default-method-cell-read-outside-the-conf-modules",
+            readers=outside)
+
+    text, _lines, err = _external_source(g, CONF_METHOD_SOURCE)
+    if text is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "source-unavailable", detail=err)
+    if (re.search(r'pub\s+(?:unsafe\s+)?extern "C" fn CONF_set_default_method'
+                  r'\s*\(\s*meth\s*:\s*\*mut\s*ConfMethod', text) is None
+            or "DEFAULT_CONF_METHOD.store(meth" not in text):
+        return cls, None, _external_refusal(
+            cls, name, site, "source-does-not-store-the-setter-parameter")
+    if ("DEFAULT_CONF_METHOD.load" not in text
+            or "(*meth).init" not in text):
+        return cls, None, _external_refusal(
+            cls, name, site, "source-does-not-read-the-cell-init-slot")
+
+    layout, err = _external_struct_layout(g, CONF_METHOD_OWNER)
+    if layout is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "owner-layout-not-decidable",
+                                            detail=err)
+    if not (layout.get("file") or "").endswith("runtime/conf/types.rs"):
+        return cls, None, _external_refusal(
+            cls, name, site, "owner-layout-is-not-the-conf-method-table",
+            file=layout.get("file"))
+    fld = next((f for f in layout["fields"] if f["name"] == field), None)
+    if fld is None or fld["offset"] != CONF_METHOD_FIELD_OFFSET:
+        return cls, None, _external_refusal(
+            cls, name, site, "declared-init-field-is-not-at-the-dispatched-offset",
+            field=field, declared=fld, expected=hex(CONF_METHOD_FIELD_OFFSET))
+    if CONF_METHOD_TYPEDEF not in (fld["type"] or ""):
+        return cls, None, _external_refusal(
+            cls, name, site, "declared-field-is-not-a-conf-init-callback",
+            field=fld, expected=CONF_METHOD_TYPEDEF)
+
+    writers, err = _external_field_writers(
+        g, CONF_METHOD_OWNER, {CONF_METHOD_FIELD},
+        owner_tokens=("DEFAULT_CONF_METHOD", "DEFAULT_METHOD"))
+    if writers is None:
+        return cls, None, _external_refusal(cls, name, site,
+                                            "source-scan-unavailable",
+                                            detail=err)
+    macro_slot = [w for w in writers if w["kind"] == "macro-slot"]
+    if macro_slot:
+        return cls, None, _external_refusal(
+            cls, name, site, "macro-expanded-slot-store-unattributed",
+            writers=macro_slot)
+    field_stores = [w for w in writers if w["kind"] == "store"]
+    if field_stores:
+        return cls, None, _external_refusal(
+            cls, name, site, "init-field-has-a-runtime-store",
+            stores=field_stores)
+    literals = [w for w in writers if w["kind"] == "literal"]
+    expected = {("DEFAULT_METHOD", "Some(def_init_default)"),
+                ("WIN32_METHOD", "Some(def_init_win32)")}
+    got = set()
+    for w in literals:
+        got.add((w.get("function"),
+                 (w.get("fields") or {}).get(CONF_METHOD_FIELD)))
+    if got != expected or len(literals) != len(expected):
+        return cls, None, _external_refusal(
+            cls, name, site,
+            "built-in-tables-are-not-the-enumerated-init-literals",
+            literals=literals)
+    if any(not (w.get("file") or "").endswith("runtime/conf/def.rs")
+           for w in literals):
+        return cls, None, _external_refusal(
+            cls, name, site, "init-literal-is-not-in-the-conf-method-module",
+            literals=literals)
+
+    witness = _external_witness(
+        cls, name, site,
+        slot=(f"default_CONF_method cell (0x{cell:x}) -> "
+              f"conf_method_st.{field} (offset {hex(CONF_METHOD_FIELD_OFFSET)})"),
+        writer=(f"{CONF_METHOD_SETTER} stores its `meth` parameter unchanged; "
+                f"the NULL fallback installs the table `{CONF_METHOD_DEFAULT_GETTER}()` "
+                "publishes"),
+        interface=("CONF_set_default_method(CONF_METHOD *) (exported) and "
+                   "struct conf_method_st.init = int (*)(CONF *)"),
+        basis=("the dispatched operand is a load of offset 0x10 from a table "
+               "reached through the default_CONF_method cell (or the built-in "
+               "table the cell is initialised with); every write to the cell in "
+               "the whole image is either the exported setter's parameter store "
+               "or the built-in fallback; every read of the cell in the image is "
+               "in the conf module or x509::v3_conf, which own the classic API; "
+               "the source has no runtime store to `ConfMethod::init` and "
+               "exactly two link-time table literals"),
+        conditions={
+            "site_enumerated": f"{spec['function']} {hex(site['addr'])} ({form})",
+            "operand_field": f"conf_method_st.{field} at "
+                             f"{hex(CONF_METHOD_FIELD_OFFSET)}",
+            "cell": f"{hex(cell)} (DEFAULT_CONF_METHOD)",
+            "writer_set": (f"{CONF_METHOD_SETTER}(%rdi) x{len(setter)} + "
+                           f"built-in NULL fallback x{len(builtin_stores)}"),
+            "reader_set": (f"{len(readers)} load(s) of the cell in "
+                           f"{len({r['function'] for r in readers})} function(s), "
+                           "all in runtime::conf or x509::v3_conf"),
+            "documented_interface": ("CONF_set_default_method and struct "
+                                     "conf_method_st.init"),
+            "target_set_unbounded": ("the exported setter admits any "
+                                     "application CONF_METHOD"),
+        },
+        does_not_cover=ABI_CONTRACTS[cls]["does_not_cover"],
+        target_set=[],
+        form=form,
+        operand={"reg": loads[0]["base_reg"], "loads": loads},
+        field={"type": CONF_METHOD_OWNER, "repr_c": True, "name": field,
+               "offset": hex(CONF_METHOD_FIELD_OFFSET),
+               "typedef": CONF_METHOD_TYPEDEF,
+               "writer": CONF_METHOD_SETTER},
+        base_origins=bases,
+        writer_set={"setter": setter, "builtin": builtin_stores,
+                    "other": 0},
+        reader_set={"count": len(readers),
+                    "functions": sorted({r["function"] for r in readers}),
+                    "sites": readers},
+        source={"file": CONF_METHOD_SOURCE,
+                "layout_file": layout.get("file"),
+                "layout_line": layout["line"],
+                "table_literals": [
+                    {"file": w.get("file"), "line": w.get("line"),
+                     "static": w.get("function"),
+                     "init": (w.get("fields") or {}).get(CONF_METHOD_FIELD)}
+                    for w in literals]},
     )
     return cls, witness, None
 
@@ -17586,7 +19828,8 @@ def _external_pem_source_chain(g: "DsoGraph", fstart: int, index: int,
 
 def pem_password_default_witness(g: "DsoGraph", site: dict, name: str):
     """The PEM PKCS#8 writer's `cb` parameter with its PEM_def_callback default."""
-    if not _external_site_matches(site, name, PEM_FUNCTION, PEM_SITE):
+    if not _external_site_matches(site, name, PEM_FUNCTION,
+                                  _pinned_site("PEM_SITE", g)):
         return None
     cls = ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT
     if not site.get("unresolved"):
@@ -17598,27 +19841,36 @@ def pem_password_default_witness(g: "DsoGraph", site: dict, name: str):
     fstart = site["func"]
     insns = g.precision.insns_by_func[fstart]
     opnd = _site_operand(site)
-    if _canon(opnd) != "%r14":
+    # The callback register is whatever the site actually calls through.  It is
+    # not pinned: register allocation is a compiler choice, and the same source
+    # shape (`if cb.is_null() { cb = PEM_def_callback } cb(...)`) compiles to
+    # different registers between builds.  The *shape* -- exactly two reaching
+    # definitions, one a copy of the declared stack parameter and one the
+    # in-image PEM_def_callback load -- is what the witness requires.
+    reg = _canon(opnd)
+    if reg not in _REGS or reg in ("%rsp", "%rbp"):
         return cls, None, _external_refusal(
-            cls, name, site, "operand-is-not-the-enumerated-callback-register",
+            cls, name, site, "operand-is-not-a-callback-register",
             operand=opnd)
-    defs = _external_reg_defs(g, fstart, idx, "%r14")
+    defs = _external_reg_defs(g, fstart, idx, reg)
     if defs is None or len(defs) != 2:
         return cls, None, _external_refusal(
             cls, name, site, "callback-register-definition-set-is-not-enumerated",
             definitions=sorted(defs or ()))
-    copy = [d for d in defs if insns[d][1].strip() == "mov    %rcx,%r14"]
+    copy_re = re.compile(r"mov\s+(%r[a-z0-9]+)," + re.escape(reg) + r"$")
+    copy = [d for d in defs if copy_re.match(insns[d][1].strip())]
     default = [d for d in defs if "PEM_def_callback" in insns[d][1]]
     if len(copy) != 1 or len(default) != 1:
         return cls, None, _external_refusal(
             cls, name, site, "callback-load-shape-is-not-enumerated",
             definitions=[insns[d][1] for d in sorted(defs)])
     copy_def, default_def = copy[0], default[0]
-    rcx_defs = _external_reg_defs(g, fstart, copy_def, "%rcx")
+    source_reg = _canon(copy_re.match(insns[copy_def][1].strip()).group(1))
+    rcx_defs = _external_reg_defs(g, fstart, copy_def, source_reg)
     if rcx_defs is None or len(rcx_defs) != 3:
         return cls, None, _external_refusal(
             cls, name, site, "callback-source-definition-set-is-not-enumerated",
-            definitions=sorted(rcx_defs or ()))
+            definitions=sorted(rcx_defs or ()), source_register=source_reg)
     param = [d for d in rcx_defs if "(%rsp)" in insns[d][1]
              and insns[d][1].lstrip().startswith("mov")]
     if len(param) != 1:
@@ -17715,8 +19967,10 @@ def pem_password_default_witness(g: "DsoGraph", site: dict, name: str):
                "exported writer whose header declares pem_password_cb; the "
                "default target is recorded and the target set is unbounded"),
         conditions={
-            "site_enumerated": f"{PEM_FUNCTION} {hex(PEM_SITE)}",
-            "operand_is_the_cb_register": "%r14",
+            "site_enumerated": (f"{PEM_FUNCTION} "
+                                 f"{hex(_pinned_site('PEM_SITE', g))}"),
+            "operand_is_the_cb_register": {"register": reg,
+                                          "source_register": source_reg},
             "cb_is_stack_parameter": f"index {PEM_CB_STACK_INDEX}",
             "default_arm": (f"{insns[default_def][1]} -> "
                             f"{PEM_DEFAULT} at {hex(default_addr)}"),
@@ -17727,8 +19981,9 @@ def pem_password_default_witness(g: "DsoGraph", site: dict, name: str):
         },
         does_not_cover=ABI_CONTRACTS[cls]["does_not_cover"],
         target_set=[],
-        operand={"reg": "%r14", "definitions": [hex(insns[d][0])
-                                                 for d in sorted(defs)]},
+        operand={"reg": reg, "source_register": source_reg,
+                 "definitions": [hex(insns[d][0])
+                                 for d in sorted(defs)]},
         parameter={"name": "cb", "index": PEM_CB_STACK_INDEX,
                    "source": insns[param[0]][1]},
         default_target={"symbol": PEM_DEFAULT, "address": hex(default_addr),
@@ -17747,37 +20002,685 @@ def pem_password_default_witness(g: "DsoGraph", site: dict, name: str):
     return cls, witness, None
 
 
+# --------------------------------------------------------------------------- #
+# E7/core: the core-to-provider `in` dispatch table (AGENTS.md section 22)
+# --------------------------------------------------------------------------- #
+#
+# `OSSL_provider_init` receives `in`, the array of functions the Core passes to
+# the provider (include/openssl/core.h:186-195).  A provider that needs an
+# `OSSL_LIB_CTX` of its own forwards that same array to
+# `OSSL_LIB_CTX_new_from_dispatch`/`OSSL_LIB_CTX_new_child`
+# (include/openssl/crypto.h:601-604), and two in-image writers copy the entries
+# they recognise into a per-libctx object:
+#
+#   * `ossl_bio_init_core` fills `BioCoreGlobals` (libctx slot 17) from the
+#     OSSL_FUNC_BIO_* ids (src/context/core_bio.rs:402-447);
+#   * `ossl_provider_init_as_child` fills `ChildProvGlobals` (libctx slot 18)
+#     from the OSSL_FUNC_CORE_*/OSSL_FUNC_PROVIDER_* ids
+#     (src/provider/child.rs:470-560).
+#
+# Every later indirect call through one of those fields therefore targets a
+# function the *supplying core* chose; the C ABI places no bound on it.  The
+# per-call-site witness below proves the three facts section 22 requires: the
+# site's operand reads exactly this field of exactly this object, the field's
+# only in-image writer is the enumerated init function, and that writer stored
+# the dispatch entry whose documented id names this field.
+
+CORE_DISPATCH_HEADER = "include/openssl/core_dispatch.h"
+CORE_DISPATCH_ACCESSORS = ("lib_ctx_get_data", "OSSL_LIB_CTX_get_data")
+
+CORE_DISPATCH_TABLES = {
+    17: {
+        "object": "BioCoreGlobals",
+        "source": "src/context/core_bio.rs",
+        "writer": "ossl_bio_init_core",
+        "owner_tokens": ("ossl_bio_init_core", "get_globals"),
+        "index_const": "OSSL_LIB_CTX_BIO_CORE_INDEX",
+        "index_source": "src/context/mod.rs",
+        "index_literal": 17,
+        "fields": {
+            0x00: ("read_ex", "OSSL_FUNC_BIO_READ_EX", 42, "BIO_read_ex"),
+            0x08: ("write_ex", "OSSL_FUNC_BIO_WRITE_EX", 43, "BIO_write_ex"),
+            0x10: ("gets", "OSSL_FUNC_BIO_GETS", 49, "BIO_gets"),
+            0x18: ("puts", "OSSL_FUNC_BIO_PUTS", 48, "BIO_puts"),
+            0x20: ("ctrl", "OSSL_FUNC_BIO_CTRL", 50, "BIO_ctrl"),
+            0x28: ("up_ref", "OSSL_FUNC_BIO_UP_REF", 44, "BIO_up_ref"),
+            0x30: ("free", "OSSL_FUNC_BIO_FREE", 45, "BIO_free"),
+        },
+    },
+    18: {
+        "object": "ChildProvGlobals",
+        "source": "src/provider/child.rs",
+        "writer": "ossl_provider_init_as_child",
+        "owner_tokens": ("ossl_provider_init_as_child",),
+        "index_const": "OSSL_LIB_CTX_CHILD_PROVIDER_INDEX",
+        "index_source": "src/provider/child.rs",
+        "index_literal": 18,
+        # The b76 `ossl_provider_up_ref_parent` inlines the default-context
+        # arm of `ossl_lib_ctx_get_data`: when the defensive
+        # `ossl_provider_libctx` sees a NULL `prov` it reads slot 18 straight
+        # out of `DEFAULT_CONTEXT.child_provider`.  That is the same slot-18
+        # object the explicit arm obtains through `lib_ctx_get_data`, so the
+        # witness admits it only at the source-declared `OsslLibCtx` offset
+        # and only when the base is the process-global/thread-local default.
+        "libctx_source": "src/context/mod.rs",
+        "default_context_field": "child_provider",
+        "fields": {
+            0x18: ("c_get_libctx", "OSSL_FUNC_CORE_GET_LIBCTX", 4,
+                   "core_get_libctx"),
+            0x20: ("c_provider_register_child_cb",
+                   "OSSL_FUNC_PROVIDER_REGISTER_CHILD_CB", 105,
+                   "provider_register_child_cb"),
+            0x28: ("c_provider_deregister_child_cb",
+                   "OSSL_FUNC_PROVIDER_DEREGISTER_CHILD_CB", 106,
+                   "provider_deregister_child_cb"),
+            0x30: ("c_prov_name", "OSSL_FUNC_PROVIDER_NAME", 107,
+                   "provider_name"),
+            0x38: ("c_prov_get0_provider_ctx",
+                   "OSSL_FUNC_PROVIDER_GET0_PROVIDER_CTX", 108,
+                   "provider_get0_provider_ctx"),
+            0x40: ("c_prov_get0_dispatch",
+                   "OSSL_FUNC_PROVIDER_GET0_DISPATCH", 109,
+                   "provider_get0_dispatch"),
+            0x48: ("c_prov_up_ref", "OSSL_FUNC_PROVIDER_UP_REF", 110,
+                   "provider_up_ref"),
+            0x50: ("c_prov_free", "OSSL_FUNC_PROVIDER_FREE", 111,
+                   "provider_free"),
+        },
+    },
+}
+
+
+def _core_dispatch_refusal(name: str, site: dict, reason: str, **extra) -> dict:
+    rec = {"class": ABI_CONTRACT_CORE_DISPATCH,
+           "contract_bounded": False,
+           "function": name,
+           "call_site": hex(site.get("addr") or 0),
+           "reason": reason}
+    rec.update(extra)
+    return rec
+
+
+def _core_index_arg(g: "DsoGraph", fstart: int, call_idx: int):
+    """The literal libctx data index an accessor call is given, or None."""
+    cfg = _function_cfg(g, fstart)
+    bi = cfg["block_of"].get(call_idx)
+    if bi is None:
+        return None
+    lo, _hi = cfg["blocks"][bi]
+    for k in range(call_idx - 1, lo - 1, -1):
+        mn, _rest, ops = _insn_parts(_insn(g, fstart, k))
+        if (mn in ("mov", "movq", "movl") and len(ops) == 2
+                and _canon(ops[-1]) == "%rsi" and ops[0].startswith("$")):
+            try:
+                return int(ops[0][1:], 16)
+            except ValueError:
+                return None
+        if "%rsi" in _defined_regs_at(_insn(g, fstart, k)):
+            return None
+    return None
+
+
+def _core_globals_origin(g: "DsoGraph", fstart: int, idx: int, reg: str,
+                         depth: int = 0):
+    """The libctx data slot index a register provably holds, or a refusal.
+
+    Every reaching definition must independently be a call to a documented
+    libctx data accessor with a literal index; a copy is followed.  A NULL
+    definition refuses: a NULL base cannot be dereferenced, so a site that can
+    see one is not the shape this witness describes.
+    """
+    if depth > 4:
+        return None, "provenance depth bound", None
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None:
+        return None, "open or non-convergent CFG at the slot base", None
+    if not defs or _ENTRY_DEF in defs:
+        return None, "the slot base is not defined in this function", None
+    indexes, evidence = set(), []
+    for k in sorted(defs):
+        text = _insn(g, fstart, k)
+        mn, _rest, ops = _insn_parts(text)
+        if mn in ("xor", "sub") and len(ops) == 2 and ops[0] == ops[1]:
+            return None, "the slot base can be NULL at the load", None
+        if mn in ("mov", "movq") and len(ops) >= 2 and ops[0] in _REGS:
+            index, why, ev = _core_globals_origin(
+                g, fstart, k, _canon(ops[0]), depth + 1)
+            if index is None:
+                return None, why, None
+            indexes.add(index)
+            evidence.extend(ev or [])
+            continue
+        # A direct `mov <disp>(<base>),reg` is the inlined default-context arm
+        # of `ossl_lib_ctx_get_data`.  It is admitted only when the field
+        # offset is the source-declared `OsslLibCtx` slot for a documented
+        # index and the base is provably the default context; otherwise this
+        # is an unqualified load and refuses.  It does not widen the class: it
+        # recognises a second encoding of the same slot object.
+        m = (re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", ops[0])
+             if (mn in ("mov", "movq", "movl") and len(ops) >= 2) else None)
+        if m is not None:
+            offset = int(m.group(1), 16) if m.group(1) else 0
+            base_reg = _canon(m.group(2))
+            slot = _core_default_context_slot(g, offset)
+            if slot is None:
+                return None, ("the slot base is a memory load, not a libctx "
+                              "data accessor call"), None
+            index, field, fld = slot
+            if not _core_default_context_base(g, fstart, k, base_reg):
+                return None, ("the slot base is a memory load whose base is "
+                              "not the default library context"), None
+            indexes.add(index)
+            evidence.append({"default_context": True,
+                             "field": field, "offset": hex(fld["offset"]),
+                             "call_site": hex(_insn_pc(g, fstart, k)),
+                             "index": index})
+            continue
+        if not mn.startswith("call"):
+            return None, (f"the slot base writer is {mn!r}, not a libctx "
+                          "data accessor call"), None
+        symbol = _s1_call_symbol(g, fstart, k)
+        leaf = _external_function_leaf(symbol)
+        if leaf not in CORE_DISPATCH_ACCESSORS:
+            return None, (f"the slot base is the result of {symbol!r}, not a "
+                          "libctx data accessor"), None
+        index = _core_index_arg(g, fstart, k)
+        if index is None:
+            return None, "the accessor's index argument is not a literal", None
+        indexes.add(index)
+        evidence.append({"accessor": leaf,
+                         "call_site": hex(_insn_pc(g, fstart, k)),
+                         "index": index})
+    if len(indexes) != 1:
+        return None, ("the slot base merges different libctx data indexes: "
+                      + ", ".join(str(i) for i in sorted(indexes))), None
+    return indexes.pop(), None, evidence
+
+
+def _insn_pc(g: "DsoGraph", fstart: int, idx: int) -> int:
+    insns = g.precision.insns_by_func.get(fstart, ())
+    return insns[idx][0] if 0 <= idx < len(insns) else 0
+
+
+def _core_default_context_slot(g: "DsoGraph", offset: int):
+    """`(index, field, layout-row)` for a direct `OsslLibCtx` slot read.
+
+    The displacement must equal the source-declared offset of the table's
+    `default_context_field`, and exactly one documented table may claim it.
+    A hard-coded 0x78 would silently follow a layout change; deriving it from
+    the `#[repr(C)]` struct is what makes the arm a proof about this source.
+    """
+    layout, _err = _external_struct_layout(g, "OsslLibCtx")
+    if layout is None:
+        return None
+    hits = []
+    for index, table in CORE_DISPATCH_TABLES.items():
+        field = table.get("default_context_field")
+        if field is None:
+            continue
+        fld = next((f for f in layout["fields"] if f["name"] == field), None)
+        if fld is not None and fld["offset"] == offset:
+            hits.append((index, field, fld))
+    return hits[0] if len(hits) == 1 else None
+
+
+def _core_default_context_base(g: "DsoGraph", fstart: int, idx: int,
+                               reg: str, depth: int = 0) -> bool:
+    """Whether ``reg`` provably holds the default library context.
+
+    The accepted origins are exactly the authority's `DEFAULT_CONTEXT`
+    global, a copy of it, and `pthread_getspecific(DEFAULT_CONTEXT_THREAD_LOCAL)`
+    (the thread-local default).  Anything else refuses: this is not a
+    catch-all for "some pointer came from a load".
+    """
+    if depth > 4:
+        return False
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None or not defs or _ENTRY_DEF in defs:
+        return False
+    for k in sorted(defs):
+        text = _insn(g, fstart, k)
+        mn, _rest, ops = _insn_parts(text)
+        if mn == "lea" and len(ops) >= 2:
+            comment = text.split("#", 1)[1] if "#" in text else ""
+            if ("DEFAULT_CONTEXT" in comment
+                    and "DEFAULT_CONTEXT_THREAD_LOCAL" not in comment):
+                continue
+            return False
+        if mn in ("mov", "movq") and len(ops) >= 2 and ops[0] in _REGS:
+            if not _core_default_context_base(
+                    g, fstart, k, _canon(ops[0]), depth + 1):
+                return False
+            continue
+        if mn.startswith("call"):
+            symbol = _s1_call_symbol(g, fstart, k)
+            if _external_function_leaf(symbol) != "pthread_getspecific":
+                return False
+            if not _core_thread_default_arg(g, fstart, k):
+                return False
+            continue
+        return False
+    return True
+
+
+def _core_thread_default_arg(g: "DsoGraph", fstart: int, k: int) -> bool:
+    """Whether the `pthread_getspecific` at ``k`` uses the default key."""
+    cfg = _function_cfg(g, fstart)
+    bi = cfg["block_of"].get(k)
+    if bi is None:
+        return False
+    lo, _hi = cfg["blocks"][bi]
+    for j in range(k - 1, lo - 1, -1):
+        text = _insn(g, fstart, j)
+        mn, _rest, ops = _insn_parts(text)
+        if (mn in ("mov", "movq", "movl") and len(ops) == 2
+                and ops[-1] == "%edi"
+                and "DEFAULT_CONTEXT_THREAD_LOCAL" in text):
+            return True
+        if _canon("%edi") in _defined_regs_at(text):
+            return False
+    return False
+
+
+def _core_cfg_preds(cfg: dict, bi: int) -> list:
+    return [b for b, ss in cfg["succ"].items() if bi in ss]
+
+
+def _core_slot_load(g: "DsoGraph", fstart: int, idx: int, reg: str):
+    """The reaching `mov disp(%base),reg` of a core-dispatch call operand.
+
+    A tail `jmp *reg` ends a block the shared CFG marks *open*, so the reaching
+    table refuses it.  A tail jump has no in-function successor; when its block
+    has exactly one predecessor and that predecessor is not itself open, the
+    value at the site is the value at the end of that predecessor, and the
+    predecessor's last write to the register is the reaching definition.  Any
+    other open shape refuses.
+    """
+    cfg = _function_cfg(g, fstart)
+    bi = cfg["block_of"].get(idx)
+    if bi is None:
+        return None, "the call is not in a basic block of this function"
+    _lo, hi = cfg["blocks"][bi]
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None:
+        if hi - 1 != idx:
+            return None, ("the operand is in an open block that is not the "
+                          "tail jump")
+        mn, rest, _ops = _insn_parts(cfg["insns"][idx][1])
+        if mn != "jmp" or not rest.startswith("*"):
+            return None, "the open block does not end in a tail jump"
+        preds = _core_cfg_preds(cfg, bi)
+        if len(preds) != 1:
+            return None, (f"the tail block has {len(preds)} predecessors; the "
+                          "operand has more than one possible origin")
+        p = preds[0]
+        if p in cfg["open_reach"]:
+            return None, "the tail block's predecessor is itself open"
+        plo, phi = cfg["blocks"][p]
+        for k in range(phi - 1, plo - 1, -1):
+            if reg in _defined_regs_at(cfg["insns"][k][1]):
+                return k, None
+        return None, "the tail block's predecessor does not define the operand"
+    if not defs or _ENTRY_DEF in defs:
+        return None, f"{reg} has an entry definition at the call"
+    if len(defs) != 1:
+        return None, (f"{reg} has {len(defs)} reaching definitions; the "
+                      "witness requires exactly one slot load")
+    return next(iter(defs)), None
+
+
+def _core_dispatch_writer(g: "DsoGraph", table: dict, field: str,
+                          function_id: str):
+    """The single source store of ``field``, bound to its dispatched id."""
+    writes, err = _external_field_writers(
+        g, table["object"], {field}, owner_tokens=table["owner_tokens"])
+    if writes is None:
+        return None, _core_dispatch_refusal("", {}, "source-scan-unavailable",
+                                            detail=err)
+    macro = [w for w in writes if w["kind"] == "macro-slot"]
+    if macro:
+        return None, _core_dispatch_refusal(
+            "", {}, "macro-expanded-slot-store-unattributed", writers=macro)
+    stores = [w for w in writes if w["kind"] == "store"]
+    if len(stores) != 1:
+        return None, _core_dispatch_refusal(
+            "", {}, "field-does-not-have-exactly-one-source-store",
+            writers=stores)
+    w = stores[0]
+    if (w["file"] != table["source"] or w["function"] != table["writer"]
+            or w["attribution"] != "owner"):
+        return None, _core_dispatch_refusal(
+            "", {}, "store-is-not-the-enumerated-writer", writer=w)
+    text, _lines, err = _external_source(g, table["source"])
+    if text is None:
+        return None, _core_dispatch_refusal("", {}, "source-unavailable",
+                                            detail=err)
+    lines = text.splitlines()
+    arm, arm_line = None, None
+    for j in range(w["line"] - 1, -1, -1):
+        m = re.search(r"(OSSL_FUNC_[A-Z0-9_]+)", lines[j])
+        if m:
+            arm, arm_line = m.group(1), j + 1
+            break
+    if arm != function_id:
+        return None, _core_dispatch_refusal(
+            "", {}, "store-is-not-under-the-documented-function-id",
+            expected=function_id, observed=arm, line=arm_line)
+    return {"file": table["source"], "line": w["line"],
+            "function": w["function"], "value": w["value"],
+            "function_id": arm, "function_id_line": arm_line}, None
+
+
+def _core_dispatch_header(g: "DsoGraph", function_id: str, number: int,
+                          lower: str):
+    """Whether the admitted header declares the id (at its documented value)
+    and its OSSL_CORE_MAKE_FUNC signature."""
+    root = _install_root(g)
+    if root is None:
+        return False, "install root unavailable"
+    path = Path(root) / CORE_DISPATCH_HEADER
+    if not path.is_file():
+        return False, f"header {CORE_DISPATCH_HEADER} is absent"
+    try:
+        text = path.read_text(errors="replace")
+    except OSError as e:
+        return False, f"cannot read {CORE_DISPATCH_HEADER}: {e}"
+    if not re.search(r"#define\s+" + re.escape(function_id) + r"\s+"
+                     + str(number) + r"\b", text):
+        return False, (f"{function_id} is not declared as {number} in the "
+                       "header")
+    if not re.search(r"OSSL_CORE_MAKE_FUNC\([^;]*\b" + re.escape(lower) + r"\s*,",
+                     text, re.S):
+        return False, (f"the header declares no OSSL_CORE_MAKE_FUNC entry for "
+                       f"{lower}")
+    return True, None
+
+
+def _core_index_binding(g: "DsoGraph", table: dict):
+    """Whether the slot index constant really is the documented literal."""
+    text, _lines, err = _external_source(g, table["index_source"])
+    if text is None:
+        return False, err
+    pat = (r"const\s+" + re.escape(table["index_const"])
+           + r"\s*:\s*c_int\s*=\s*" + str(table["index_literal"]) + r"\s*;")
+    if not re.search(pat, text):
+        return False, (f"{table['index_const']} is not declared as "
+                       f"{table['index_literal']} in {table['index_source']}")
+    return True, None
+
+
+def _cfg_dominators(g: "DsoGraph", fstart: int) -> dict:
+    """Block dominators for one function (iterative over the block CFG)."""
+    cache = getattr(g, "_e7core_dom_cache", None)
+    if cache is None:
+        cache = {}
+        g._e7core_dom_cache = cache
+    if fstart in cache:
+        return cache[fstart]
+    cfg = _function_cfg(g, fstart)
+    n = len(cfg["blocks"])
+    preds = {b: [] for b in range(n)}
+    for b, ss in cfg["succ"].items():
+        for s in ss:
+            preds[s].append(b)
+    universe = set(range(n))
+    dom = {0: {0}}
+    for b in range(1, n):
+        dom[b] = set(universe)
+    changed = True
+    while changed:
+        changed = False
+        for b in range(1, n):
+            ps = preds[b]
+            new = {b} | (set.intersection(*(dom[p] for p in ps)) if ps else set())
+            if new != dom[b]:
+                dom[b] = new
+                changed = True
+    cache[fstart] = dom
+    return dom
+
+
+def _cfg_reachable_from(cfg: dict, block: int) -> set:
+    seen = {block}
+    work = [block]
+    while work:
+        b = work.pop()
+        for s in cfg["succ"].get(b, ()):
+            if s not in seen:
+                seen.add(s)
+                work.append(s)
+    return seen
+
+
+def _core_null_guard(g: "DsoGraph", fstart: int, load_k: int,
+                     site_idx: int, reg: str):
+    """Whether a NULL test of the *loaded slot* dominates the call.
+
+    This is what turns "the only writer is the init" into "if the call
+    executes, that writer ran": the slot is an `Option<fn>`, and a NULL value
+    takes the branch that does not reach the call.  The guard block must be
+    dominated by the slot-load block (so the test really tests the loaded
+    value, not an earlier value in the same register) and must dominate the
+    call; the NULL branch target must not be able to reach the call.
+    """
+    cfg = _function_cfg(g, fstart)
+    lb = cfg["block_of"].get(load_k)
+    sb = cfg["block_of"].get(site_idx)
+    if lb is None or sb is None:
+        return False, "the slot load or the call is outside the function"
+    dom = _cfg_dominators(g, fstart)
+    for gb in sorted(dom.get(sb, ())):
+        if lb not in dom.get(gb, ()):
+            continue
+        lo, hi = cfg["blocks"][gb]
+        test_k = None
+        for k in range(lo, hi):
+            mn, _rest, ops = _insn_parts(cfg["insns"][k][1])
+            if (mn.startswith("test") and len(ops) == 2
+                    and _canon(ops[0]) == reg and _canon(ops[1]) == reg):
+                test_k = k
+                break
+            if (mn.startswith("cmp") and len(ops) == 2
+                    and ops[0] in ("$0x0", "$0") and _canon(ops[1]) == reg):
+                test_k = k
+                break
+        if test_k is None:
+            continue
+        j = None
+        for k in range(test_k + 1, hi):
+            mn, rest, _ops = _insn_parts(cfg["insns"][k][1])
+            if mn.startswith("j") and not rest.startswith("*"):
+                j = k
+                break
+            if reg in _defined_regs_at(cfg["insns"][k][1]):
+                break
+        if j is None:
+            continue
+        mn, rest, _ops = _insn_parts(cfg["insns"][j][1])
+        m = re.match(r"^([0-9a-f]+)", rest)
+        if m is None:
+            continue
+        ti = next((i for i, (a, _t) in enumerate(cfg["insns"])
+                   if a == int(m.group(1), 16)), None)
+        if ti is None:
+            continue
+        skip_block = cfg["block_of"].get(ti)
+        if skip_block is None:
+            continue
+        if sb in _cfg_reachable_from(cfg, skip_block):
+            continue
+        return True, {"guard_block": hex(cfg["insns"][lo][0]),
+                      "test": cfg["insns"][test_k][1],
+                      "test_address": hex(cfg["insns"][test_k][0]),
+                      "branch": cfg["insns"][j][1],
+                      "branch_address": hex(cfg["insns"][j][0]),
+                      "skip_target_does_not_reach_the_call": True}
+    return False, ("no dominating NULL guard whose NULL path skips the call")
+
+
+def core_dispatch_witness(g: "DsoGraph", site: dict, name: str,
+                          reachable: set | None = None):
+    """Per-call-site witness for a core-to-provider dispatch slot.
+
+    Returns ``(witness, None)``, ``(None, refusal)`` when the site's shape is
+    the one this rule describes but a fact fails, and ``(None, None)`` when the
+    site is not this shape at all (another rule may own it).
+    """
+    if site.get("kind") not in ("call", "jmp"):
+        return None, None
+    if not _has_insns(g):
+        return None, None
+    fstart = site["func"]
+    idx = _external_insn_index(g, site)
+    if idx is None:
+        return None, None
+    opnd = _site_operand(site)
+    reg = _canon(opnd)
+    if reg not in _REGS:
+        return None, None
+    load_k, why = _core_slot_load(g, fstart, idx, reg)
+    if load_k is None:
+        # A site that cannot even produce one slot load is not this shape; the
+        # other rules keep their chance.  The reason is recorded by the caller
+        # only when the base proves to be a core-dispatch object below.
+        return None, None
+    mn, _rest, ops = _insn_parts(_insn(g, fstart, load_k))
+    m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", ops[0]) \
+        if (mn in ("mov", "movq") and len(ops) >= 2) else None
+    if m is None:
+        return None, None
+    offset = int(m.group(1), 16) if m.group(1) else 0
+    base = _canon(m.group(2))
+    index, why, accessors = _core_globals_origin(g, fstart, load_k, base)
+    if index is None:
+        return None, None
+    table = CORE_DISPATCH_TABLES.get(index)
+    if table is None:
+        return None, _core_dispatch_refusal(
+            name, site, "libctx-data-index-is-not-a-documented-core-table",
+            index=index, load=_insn(g, fstart, load_k))
+    ok, bind_why = _core_index_binding(g, table)
+    if not ok:
+        return None, _core_dispatch_refusal(
+            name, site, "slot-index-is-not-source-bound", detail=bind_why)
+    spec = table["fields"].get(offset)
+    if spec is None:
+        return None, _core_dispatch_refusal(
+            name, site, "offset-is-not-a-field-of-the-documented-table",
+            offset=hex(offset), object=table["object"])
+    field, function_id, number, lower = spec
+    header_ok, header_why = _core_dispatch_header(g, function_id, number,
+                                                  lower)
+    if not header_ok:
+        return None, _core_dispatch_refusal(
+            name, site, "function-id-is-not-in-the-admitted-header",
+            detail=header_why)
+    writer, writer_refusal = _core_dispatch_writer(
+        g, table, field, function_id)
+    if writer is None:
+        rec = dict(writer_refusal)
+        rec.update(function=name, call_site=hex(site.get("addr") or 0))
+        return None, rec
+    writer_addr = _external_function_address(g, table["writer"])
+    if writer_addr is None:
+        return None, _core_dispatch_refusal(
+            name, site, "slot-writer-is-not-an-in-image-function",
+            writer=table["writer"])
+    guarded, guard = _core_null_guard(g, fstart, load_k, idx, reg)
+    if not guarded:
+        return None, _core_dispatch_refusal(
+            name, site, "slot-load-is-not-null-guarded", detail=guard)
+    # Reachability of the writer is recorded, not gated: the NULL guard is the
+    # load-bearing fact (a non-NULL slot implies the sole writer ran).  The
+    # closure's reachable set is an under-approximation of the run-time set
+    # (a module loaded at run time is not a static root), so refusing on it
+    # would discard a proven in-flow fact.
+    writer_reachable = (None if reachable is None
+                        else writer_addr in reachable)
+    slot = f"{table['object']}.{field} (offset {offset:#x}, {function_id})"
+    witness = _external_witness(
+        ABI_CONTRACT_CORE_DISPATCH, name, site,
+        slot=slot,
+        writer=(f"{writer['file']}:{writer['line']} in {writer['function']}: "
+                f"{writer['value']}"),
+        interface=(
+            "the core-to-provider `in` OSSL_DISPATCH table of "
+            "OSSL_provider_init (include/openssl/core.h:186-195), forwarded to "
+            "OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child "
+            "(include/openssl/crypto.h:601-604); "
+            f"include/openssl/core_dispatch.h declares {function_id} and "
+            f"OSSL_CORE_MAKE_FUNC(..., {lower}, ...)"),
+        basis=(
+            "the indirect operand reads this exact field of the libctx "
+            f"data object at slot {index}, whose only in-image writer is "
+            f"{writer['function']} storing the OSSL_DISPATCH entry for "
+            f"{function_id}; the slot is NULL-tested and a NULL skips the "
+            "call, so an executed call means that writer ran; the target is "
+            "the supplying core's function and the C ABI bounds nothing"),
+        conditions={
+            "site": f"{name} {hex(site.get('addr') or 0)}",
+            "operand": opnd,
+            "slot_load": _insn(g, fstart, load_k),
+            "libctx_data_index": index,
+            "slot_object": table["object"],
+            "slot_offset": hex(offset),
+            "field": field,
+            "function_id": function_id,
+            "writer": writer,
+            "writer_address": hex(writer_addr),
+            "writer_reachable_in_closure": writer_reachable,
+            "null_guard": guard,
+            "in_flow": ("the slot is NULL-tested and a NULL skips the call, so "
+                        "if the indirect call executes at least one writer "
+                        "ran; the sole writer is the enumerated init"),
+        },
+        does_not_cover=ABI_CONTRACTS[ABI_CONTRACT_CORE_DISPATCH][
+            "does_not_cover"],
+        target_set=[],
+        base_origin={"libctx_index": index, "accessor_calls": accessors},
+        unreachable_reason=why,
+    )
+    return witness, None
+
+
 EXTERNAL_ABI_WITNESSES = (
     pbe_registry_witness,
     store_loader_legacy_witness,
     store_loader_provider_witness,
     conf_module_witness,
+    conf_default_method_witness,
     pem_password_default_witness,
 )
 # The address is not the identity: the documented function leaf must match too.
 EXTERNAL_ABI_SITE_FUNCTIONS = {
     PBE_SITE: PBE_FUNCTION,
-    0x3E2088: STORE_LOADER_FUNCTION,
-    0x3E217D: STORE_LOADER_FUNCTION,
-    0x3E2648: STORE_LOADER_FUNCTION,
+    0x1F89E8: STORE_LOADER_FUNCTION,
+    0x1F8AA1: STORE_LOADER_FUNCTION,
+    0x1F8F13: STORE_LOADER_FUNCTION,
     STORE_LOADER_PROVIDER_SITE: STORE_LOADER_FUNCTION,
-    0x17319A: CONF_FUNCTION,
-    0x1735B2: CONF_FUNCTION,
+    0x293F25: CONF_FUNCTION,
+    0x294363: CONF_FUNCTION,
+    0x49A8DC: CONF_METHOD_FUNCTION,
+    0x2DD4C6: "CONF_free",
+    0x2DD6EB: "CONF_load",
+    0x2DD860: "CONF_load_bio",
     PEM_SITE: PEM_FUNCTION,
 }
 # (site -> containing symbol, offset) for the literal keys above.
 EXTERNAL_ABI_SITE_PINS = {
-    0x3E2088: ("OSSL_STORE_open_ex", 0x488),
-    0x3E217D: ("OSSL_STORE_open_ex", 0x57D),
-    0x3E2648: ("OSSL_STORE_open_ex", 0xA48),
-    0x17319A: ("CONF_modules_load", 0x50A),
-    0x1735B2: ("CONF_modules_load", 0x922),
+    0x1F89E8: ("OSSL_STORE_open_ex", 0x488),
+    0x1F8AA1: ("OSSL_STORE_open_ex", 0x57D),
+    0x1F8F13: ("OSSL_STORE_open_ex", 0x9F3),
+    0x293F25: ("CONF_modules_load", 0x505),
+    0x294363: ("CONF_modules_load", 0x943),
+    CONF_METHOD_SITE: CONF_METHOD_SITE_PIN,
 }
 EXTERNAL_ABI_SITE_ADDRESSES = frozenset(EXTERNAL_ABI_SITE_FUNCTIONS)
 EXTERNAL_ABI_CLASSES = frozenset({
     ABI_CONTRACT_PBE_REGISTRY,
     ABI_CONTRACT_STORE_LOADER,
     ABI_CONTRACT_CONF_MODULE,
+    ABI_CONTRACT_CONF_DEFAULT_METHOD,
     ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
 })
 
@@ -17789,7 +20692,7 @@ def external_abi_contract_witness(g: "DsoGraph", site: dict, name: str):
     returned as ``(class, None, refusal)`` and keeps the site target-bounded;
     it is never absorbed by a same-shaped call elsewhere.
     """
-    expected = EXTERNAL_ABI_SITE_FUNCTIONS.get(site.get("addr"))
+    expected = _external_abi_index(g).get(site.get("addr"))
     if expected is None:
         return None
     if _external_function_leaf(name) != expected:
@@ -17833,36 +20736,64 @@ def evaluate_predicate_element_7(reachable_residual_sites, unclassified_sites) -
     """Element 7 under AGENTS.md section 7 criterion 2.
 
     An unresolved *target set* is still reported as such.  The element is met
-    only when every remaining reachable unresolved site is contract-bounded and
-    no reachable site is unclassified; an unrecognised indirect edge is
-    target-bounded unresolved and therefore keeps the element failing.
+    only when every remaining reachable unresolved site carries a bound: an
+    external ABI contract (section 7 criterion 2) or a closed target set (an
+    enumerated in-image target set whose writer set is proven closed).  A
+    target-bounded unresolved site has no such bound and keeps the element
+    failing, as does any unclassified site.
+
+    The two bounded kinds are counted and reported separately, and the flags
+    are derived from the classes actually present.  A closed target set is
+    never reported as an unbounded external contract, and an external ABI
+    contract is never filed as a closed set.
     """
-    contract_sites = [(d, f, s) for d, f, s in reachable_residual_sites
-                      if s.get("class") in ABI_CONTRACT_CLASSES]
+    external = [(d, f, s) for d, f, s in reachable_residual_sites
+                if classify_bound_kind(s.get("class")) == "external-contract"]
+    closed = [(d, f, s) for d, f, s in reachable_residual_sites
+              if classify_bound_kind(s.get("class")) == "closed-target-set"]
     target_bounded = [(d, f, s) for d, f, s in reachable_residual_sites
-                      if s.get("class") not in ABI_CONTRACT_CLASSES]
-    by_class = collections.Counter(s["class"] for _d, _f, s in contract_sites)
+                      if classify_bound_kind(s.get("class")) is None]
+    by_class = collections.Counter(s["class"] for _d, _f, s in external)
+    closed_by_class = collections.Counter(
+        closed_target_set_class(s["class"]) for _d, _f, s in closed)
     established = not target_bounded and not unclassified_sites
+    unbounded = bool(external)
     if not reachable_residual_sites:
+        status = "PASS (no unresolved dynamic dispatch)"
         why = "no unresolved dynamic dispatch remains"
-    elif established:
-        why = ("every reachable unresolved site is contract-bounded by a public "
-               "OpenSSL ABI contract (section 7 criterion 2); no target-bounded "
-               "unresolved site and no unclassified site remains")
+    elif not established:
+        status = "FAIL"
+        why = (f"{len(target_bounded)} reachable unresolved site(s) carry no "
+               "contract or closed-target-set bound, and/or an unclassified "
+               "site is reachable")
     else:
-        why = (f"{len(target_bounded)} reachable unresolved site(s) are not "
-               "contract-bounded, and/or an unclassified site is reachable")
+        if unbounded and closed:
+            status = "PASS (contract-bounded and closed target sets)"
+        elif unbounded:
+            status = "PASS (contract-bounded)"
+        else:
+            status = "PASS (closed target sets)"
+        why = (f"{len(external)} site(s) are bounded by a documented external "
+               f"ABI contract and {len(closed)} by a closed, enumerated "
+               "in-image target set; no target-bounded unresolved site and "
+               "no unclassified site remains")
     return {
         "established": established,
-        "status": ("PASS (contract-bounded)" if established else "FAIL"),
+        "status": status,
         "basis": ("AGENTS.md section 7 criterion 2: a required precondition may be "
-                  "established by an external ABI contract"),
+                  "established by an external ABI contract; a closed target set "
+                  "additionally enumerates every in-image target"),
         "reachable_unresolved_sites": len(reachable_residual_sites),
         "target_bounded_unresolved_sites": len(target_bounded),
-        "contract_bounded_sites": len(contract_sites),
+        "contract_bounded_sites": len(external),
         "contract_bounded_by_class": dict(sorted(by_class.items())),
+        "closed_target_set_sites": len(closed),
+        "closed_target_set_by_class": dict(sorted(closed_by_class.items())),
         "unclassified_reachable_sites": len(unclassified_sites),
-        "target_sets_remain_unbounded": bool(contract_sites),
+        # Flags derived from the actual classes: only an external ABI contract
+        # (never a closed target set) leaves the target set unbounded.
+        "target_sets_remain_unbounded": unbounded,
+        "has_closed_target_sets": bool(closed),
         "why": why,
     }
 
@@ -18033,10 +20964,22 @@ E7BS_WRITER_LIST_SCHEMA = (
 # (symbol leaf, offset) key that survives a re-freeze.  Either selects the
 # site, so a stale literal VA cannot silently stop the witness firing (the
 # 0.0.46 re-pin missed these two constants).
-E7BS_MSBLOB_SITE = 0x426AD1
-E7BS_MSBLOB_SITE_PIN = ("msblob2key_decode", 0x331)
-E7BS_RCU_SITE = 0x259E98
-E7BS_RCU_SITE_PIN = ("ossl_synchronize_rcu", 0x2F8)
+#
+# b84 re-pin: the b84 libcrypto (53df54937257a6a0) moved both msblob constants.
+# The site is still the descriptor call -- ``call *0x18(%rax)`` on the spilled
+# ``desc`` field of ``msblob2key_decode`` -- but codegen put it at +0x322 rather
+# than +0x350 (0x52a9c2, function start 0x52a6a0), so neither the literal VA nor
+# the offset key selected it and element 7 saw the site as unresolved.  The rcu
+# pair below still matches this artefact (+0x5A8 of ``ossl_synchronize_rcu``,
+# 0x26a418 = 0x269e70 + 0x5A8) and is left untouched.  Only the identity of the
+# site is re-pinned; the witness body still proves the whole chain (declared
+# owner type, unique frame spill, the two-instance closed descriptor set, each
+# member an in-image function start, each descriptor stored only by its own
+# constructor), so no contract class is widened.
+E7BS_MSBLOB_SITE = 0x52A9C2
+E7BS_MSBLOB_SITE_PIN = ("msblob2key_decode", 0x322)
+E7BS_RCU_SITE = 0x2C2228
+E7BS_RCU_SITE_PIN = ("ossl_synchronize_rcu", 0x5A8)
 E7BS_MSBLOB_SOURCE = "src/provider/decode_msblob2key.rs"
 E7BS_MSBLOB_FUNCTION = "msblob2key_decode"
 E7BS_MSBLOB_CTX = "Msblob2keyCtx"
@@ -20967,7 +23910,7 @@ def pbe_outparam_instance_witness(g: "DsoGraph", site: dict, name: str):
     conjunction: a failed proof returns ``resolved=False`` with its own
     refusal reason and never a partial or widened target set.
     """
-    spec = PBE_EX_SITES.get(site.get("addr"))
+    spec = _repinned("PBE_EX_SITES", g).get(site.get("addr"))
     if spec is None or _external_function_leaf(name) != spec["function"]:
         return None
     if not site.get("unresolved"):
@@ -21471,6 +24414,41 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
             stats["contract_class_demoted"] += 1
             continue
         if not site["unresolved"]:
+            # S5b: an enumerated provider hw-table site is proven by its own
+            # per-call-site witness even when the generic resolver has already
+            # produced a finite set.  The generic `field` rule keys its store
+            # map by the raw displacement across every type and is evaluated in
+            # function order, so a store to offset N in unrelated code analysed
+            # earlier in the pass can turn the same site target-bounded in one
+            # build and resolved in the next (b80 lost the three `ProvGcmHw`
+            # one-shot rows exactly that way).  The witness proves the slot from
+            # the table symbols and the closed context, so the row must not
+            # disappear because the weaker rule happened to fire first.  A
+            # witness that is narrower than the resolver's own set refuses, so
+            # this path can never shrink a resolved target set.
+            hw_pre = provider_hw_table_witness(g, site, name)
+            if hw_pre is not None:
+                if hw_pre.get("resolved"):
+                    resolved_targets = {t for t in site["targets"]
+                                        if isinstance(t, int)}
+                    hw_targets = {int(t, 16) for t in hw_pre["targets"]}
+                    if resolved_targets <= hw_targets:
+                        site["resolver_class"] = site["class"]
+                        site["resolver_reason"] = site["reason"]
+                        site["resolver_targets"] = sorted(resolved_targets)
+                        site["targets"] |= residual | hw_targets
+                        site["class"] = ABI_CONTRACT_PROVIDER_HW_TABLE
+                        site["unresolved"] = True
+                        site["reason"] = ("provider hw-table closed context-set "
+                                          "contract: " + hw_pre["slot"])
+                        site["witness"] = hw_pre
+                        stats["S5b_provider_hw_table_rerepresented"] += 1
+                    else:
+                        site["provider_hw_table_refusal"] = dict(
+                            hw_pre, refusal="hw-witness-narrower-than-resolver",
+                            resolver=[hex(t) for t in
+                                      sorted(resolved_targets)])
+                        stats["S5b_provider_hw_table_refused"] += 1
             continue
         # O1: the allocator seam.  The seam is a witness only when this exact
         # site reads a named hook global and the image defines both the global
@@ -21935,6 +24913,24 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
         if atexit_refusal:
             site["registration_atexit_refusal"] = atexit_refusal
             stats["E7_registration_atexit_refused"] += 1
+        # E7/core: a call through the core-to-provider `in` dispatch table.
+        # The witness proves the slot object (libctx data slot 17/18), the
+        # field, its single in-image writer and the documented OSSL_FUNC_* id
+        # that writer stored there.  A refusal records its own reason and
+        # leaves the site target-bounded; a site of another shape is ignored.
+        core, core_refusal = core_dispatch_witness(g, site, name, reachable)
+        if core is not None:
+            site["targets"] |= residual
+            site["class"] = ABI_CONTRACT_CORE_DISPATCH
+            site["unresolved"] = True
+            site["reason"] = ("core-dispatch ABI contract witness: "
+                              + core["slot"])
+            site["witness"] = core
+            stats["E7_core_dispatch_contract_bounded"] += 1
+            continue
+        if core_refusal:
+            site["core_dispatch_refusal"] = core_refusal
+            stats["E7_core_dispatch_refused"] += 1
         if _match(name, A1_FUNCTIONS):
             witness = contract_witness(ABI_CONTRACT_PROVIDER, g, site, name)
             if witness is not None:
@@ -24710,9 +27706,13 @@ class EdgeRecordStream:
 
 
 def _tool_identity() -> dict:
-    """The exact validator identity bound into every receipt (AGENTS.md 22)."""
+    """The exact validator identity bound into every receipt (AGENTS.md 22).
+
+    Version 6 adds the declared-definition-set resolution rule
+    (``declared_spans``); version 5 receipts remain valid and unchanged.
+    """
     path = Path(__file__).resolve()
-    return {"path": TOOL, "version": 5,
+    return {"path": TOOL, "version": 6,
             "sha256": sha256_file(path),
             "schema": EDGE_RECORD_SCHEMA}
 
@@ -26553,7 +29553,20 @@ def carry_forward_candidates(previous: dict, contracts: dict,
             item = prev.get("item")
             matched = by_stable.get(operation_key(prev), [])
             if not matched:
-                matched = by_exact.get((f, line, kind), [])
+                # Coordinate tolerance for a definition that moved.  The item
+                # is required: a source line is not an operation identity, and
+                # a deleted definition's line is often recycled by the next
+                # definition in the same file (b76: the four retired
+                # `*_free_void` thunks of `OSSL_CMP_CTX_free` were replaced
+                # one-for-one by `general_name_free_void` and siblings).  An
+                # item-blind match would then report the retired operation as
+                # still present, which suppresses the carry instead of
+                # recording its removal.  So the fallback accepts a new line
+                # only for the *same* operation, and a legacy record with no
+                # enclosing item (whose stable identity is its line) still
+                # matches only another itemless record.
+                matched = [pair for pair in by_exact.get((f, line, kind), [])
+                           if pair[1].get("item") == item]
             if reachable_files is not None and f not in reachable_files:
                 census_lines = sorted({r.get("line") for _s, r in matched
                                        if r.get("line") is not None})
@@ -26654,6 +29667,15 @@ def carry_forward_candidates(previous: dict, contracts: dict,
                 "item": item,
                 "partition": V1_PARTITION_PRODUCTION,
                 "v1_reason": prev.get("v1_reason"),
+                # The supplementary callback-enumeration gate classified this
+                # stable identity and the previous applied closure recorded the
+                # classification.  Carry it with the identity: the admission
+                # source still names this operation, but the live admission is
+                # skipped because carry-forward already queued it, so dropping
+                # the field would make a file with no directory rule
+                # UNKNOWN_MECHANISM.  This only classifies; the mechanism's own
+                # state and receipts still decide discharge.
+                "enrolment_mechanism": prev.get("enrolment_mechanism"),
                 "contract": state,
                 "contract_basis": basis,
                 "site_receipt": None,
@@ -27184,8 +30206,15 @@ def load_boundaries(boundary_dir: Path) -> tuple[dict, dict]:
                 "span_normalisation": b.get("span_normalisation"),
                 "span_claim_scope": b.get("span_claim_scope"),
                 "span_hash_source": ("receipt" if b.get("span_sha256") else None),
+                # A boundary for an item with more than one live definition (a
+                # pair of `#[cfg]`-gated definitions) may declare the whole set
+                # of definition spans it is about.  The list is carried
+                # verbatim and validated by resolve_declared_spans; the loader
+                # never interprets it, and it never substitutes for the
+                # single-span hash above.
+                "declared_spans": b.get("declared_spans"),
             }
-            if not rec["span_sha256"]:
+            if not rec["span_sha256"] and not rec["declared_spans"]:
                 migrated = migration.get(f"{receipt}::{rec['id']}")
                 if migrated:
                     rec["span_sha256"] = migrated.get("span_sha256")
@@ -27295,6 +30324,12 @@ def scope_item(name) -> str | None:
 # --------------------------------------------------------------------------- #
 
 SPAN_HASH_SCHEMA = "safe-c33/operation-span-sha256/v1"
+SPAN_SET_SCHEMA = "safe-c33/operation-span-set-sha256/v1"
+SPAN_SET_HASH_RULE = (
+    "sha256 over the UTF-8 bytes of 'start-end:sha256' lines for every resolved "
+    "definition, ordered by start line and joined with '\\n' (no trailing "
+    "newline). It identifies the exact definition set a declared-span boundary "
+    "was bound to; the per-definition span hashes remain the acceptance evidence.")
 SPAN_NORMALISATION = (
     "split on universal newlines (Python str.splitlines), rstrip() every line, "
     "join with '\\n', sha256 over UTF-8 bytes (no trailing newline)")
@@ -27863,6 +30898,162 @@ def resolve_operation_span(repo, file, operation, item, locators=None,
     return dict(result)
 
 
+def _declared_spans_validated(declared) -> list[dict]:
+    """Validate a boundary's ``declared_spans`` list; refuse anything malformed."""
+    entries: list[dict] = []
+    seen: set[tuple[int, int]] = set()
+    for entry in declared:
+        if not isinstance(entry, dict):
+            raise SpanResolutionError(
+                "span-unparsable", "a declared_spans entry is not an object")
+        start, end = entry.get("start_line"), entry.get("end_line")
+        if (not isinstance(start, int) or not isinstance(end, int)
+                or isinstance(start, bool) or isinstance(end, bool)
+                or start < 1 or end < start):
+            raise SpanResolutionError(
+                "span-unparsable",
+                f"declared span coordinates {start!r}-{end!r} are not a "
+                "1-based inclusive line range")
+        sha = entry.get("span_sha256")
+        if sha is None or sha == "":
+            raise SpanResolutionError(
+                "unmigrated",
+                (f"the declared span {start}-{end} carries no span_sha256; a "
+                 "coordinate cannot establish a content-addressed discharge"))
+        if not isinstance(sha, str) or not re.fullmatch(r"[0-9a-f]{64}", sha):
+            raise SpanResolutionError(
+                "span-unparsable",
+                (f"the declared span {start}-{end} span_sha256 is not 64 "
+                 "lowercase hex characters"))
+        if (start, end) in seen:
+            raise SpanResolutionError(
+                "span-unparsable",
+                f"the declared span {start}-{end} is listed more than once")
+        seen.add((start, end))
+        cfg = entry.get("cfg")
+        if cfg is not None and not isinstance(cfg, str):
+            raise SpanResolutionError(
+                "span-unparsable",
+                f"the declared span {start}-{end} cfg predicate is not a string")
+        entries.append({"cfg": cfg, "start_line": start, "end_line": end,
+                        "span_sha256": sha})
+    return entries
+
+
+def resolve_declared_spans(repo, file, item, declared_spans, source_text=None,
+                           source_commit=None, allow_worktree=False) -> dict:
+    """Resolve a multiply-defined item against a receipt's declared span set.
+
+    An item may have more than one live definition (two ``#[cfg]``-gated
+    definitions selected by complementary predicates).  It has no single "the"
+    definition, so :func:`resolve_operation_span` refuses it as
+    ``ambiguous-identity`` before any recorded hash is compared.  A receipt may
+    instead declare the *set* of definition spans it is about::
+
+        "declared_spans": [
+          {"cfg": "#[cfg(all(...))]", "start_line": 673, "end_line": 684,
+           "span_sha256": "<hash at S>"},
+          {"cfg": "#[cfg(not(all(...)))]", "start_line": 694, "end_line": 704,
+           "span_sha256": "<hash at S>"}]
+
+    Binding rule, all of it on every call:
+
+    1. the live definitions of ``item`` in ``file`` number exactly as many as
+       the declaration;
+    2. the line extents agree one-to-one: every live ``(start_line, end_line)``
+       is declared exactly once and no declared extent is absent from the blob;
+    3. every declared ``span_sha256`` equals the normalised content hash of the
+       live span at those coordinates (and the span-hash rule is the same one
+       the single-definition path uses).
+
+    A receipt therefore cannot bind while only one of several live definitions
+    matches: an undeclared live definition breaks (1)/(2), and a moved or
+    edited definition breaks (3).  The rule is about an item's definition set,
+    so it is not specific to any one operation.
+
+    ``cfg`` is declaration metadata: it is validated, reported back and never
+    evaluated.  This instrument does not know which profile a consumer binary
+    was built for, so requiring *every* definition to match is the only sound
+    reading of a declaration that names more than one.
+    """
+    _require_span_source(repo, file, source_text, source_commit, allow_worktree)
+    declared = _declared_spans_validated(declared_spans)
+    text, masked, starts, candidates, containers, meta = _span_source_and_candidates(
+        repo, file, item, source_text=source_text, source_commit=source_commit)
+    if not candidates:
+        raise SpanResolutionError(
+            "span-unparsable", f"no brace-delimited definition of {item!r} in {file}")
+    lines = text.splitlines()
+    live: dict[tuple[int, int], dict] = {}
+    for c in candidates:
+        if not c.get("has_body", False):
+            raise SpanResolutionError(
+                "span-unparsable",
+                (f"{item!r} at line {c['def_line'] + 1} has no balanced body "
+                 "brace before a top-level `;`; the declared definition set "
+                 "cannot be bounded exactly"))
+        body = lines[c["start"]:c["end"] + 1]
+        norm = "\n".join(x.rstrip() for x in body)
+        live[(c["start"] + 1, c["end"] + 1)] = {
+            "start_line": c["start"] + 1,
+            "end_line": c["end"] + 1,
+            "def_line": c["def_line"] + 1,
+            "sha256": hashlib.sha256(norm.encode("utf-8")).hexdigest(),
+            "qualified_identity": _span_qualified_identity(c, containers, item),
+        }
+    declared_extents = [(d["start_line"], d["end_line"]) for d in declared]
+    if len(declared_extents) != len(live) or set(declared_extents) != set(live):
+        raise SpanResolutionError(
+            "ambiguous-identity",
+            (f"{item!r} in {file} has {len(live)} live definition(s) "
+             f"({', '.join(f'{a}-{b}' for a, b in sorted(live))}) but the "
+             f"receipt declares {len(declared_extents)} "
+             f"({', '.join(f'{a}-{b}' for a, b in sorted(declared_extents))}); a "
+             "declared definition set must name every live definition exactly "
+             "once and nothing else"),
+            collision={"last_component": item,
+                       "declared_extents": [list(x) for x in sorted(declared_extents)],
+                       "live_extents": [list(x) for x in sorted(live)]})
+    definitions = []
+    for d in sorted(declared, key=lambda x: x["start_line"]):
+        found = live[(d["start_line"], d["end_line"])]
+        if d["span_sha256"] != found["sha256"]:
+            raise SpanResolutionError(
+                "span-hash-mismatch",
+                (f"declared span {d['start_line']}-{d['end_line']} of {item!r} "
+                 f"records {d['span_sha256'][:16]} but the bound source hashes "
+                 f"to {found['sha256'][:16]}"),
+                collision={"last_component": item,
+                           "declared_span": [d["start_line"], d["end_line"]],
+                           "recorded_hash": d["span_sha256"],
+                           "current_hash": found["sha256"]})
+        definitions.append({
+            "cfg": d["cfg"],
+            "start_line": found["start_line"],
+            "end_line": found["end_line"],
+            "def_line": found["def_line"],
+            "sha256": found["sha256"],
+            "qualified_identity": found["qualified_identity"],
+        })
+    set_digest = hashlib.sha256("\n".join(
+        f"{d['start_line']}-{d['end_line']}:{d['sha256']}"
+        for d in definitions).encode("utf-8")).hexdigest()
+    return {
+        "schema": SPAN_SET_SCHEMA,
+        "sha256": set_digest,
+        "start_line": definitions[0]["start_line"],
+        "end_line": definitions[-1]["end_line"],
+        "def_line": definitions[0]["def_line"],
+        "qualified_identity": definitions[0]["qualified_identity"],
+        "resolution": "declared-spans",
+        "collision": None,
+        "definitions": definitions,
+        "source": meta,
+        "normalisation": SPAN_NORMALISATION,
+        "claim_scope": SPAN_CLAIM_SCOPE,
+    }
+
+
 def resolve_operation_at_line(repo, file, item, line, source_text=None,
                               source_commit=None, allow_worktree=False) -> dict:
     """Resolve the definition of ``item`` that occupies census ``line``.
@@ -27912,6 +31103,509 @@ def resolve_operation_at_line(repo, file, item, line, source_text=None,
     result = _span_result(text, selected, containers, item, meta, resolution)
     _SPAN_CACHE[key] = result
     return dict(result)
+
+
+# --------------------------------------------------------------------------- #
+# carry-forward coordinate migration (content-addressed identity)
+# --------------------------------------------------------------------------- #
+#
+# A carried-forward obligation's `line` is the coordinate the *previous* applied
+# closure enumerated.  It is provenance, not identity: an edit anywhere above a
+# definition moves that definition without changing it, and the recorded
+# coordinate then names no definition of the item at the candidate -- or, worse,
+# names a *different* operation whose body inherited the line.
+#
+# Binding such a row must prove that the recorded coordinate and the boundary's
+# declared span denote the *same bytes*, never that two numbers agree.  The
+# proof is the recorded evidence chain itself: each hop names the closure
+# receipt it was carried from (digest-pinned) and that receipt records its own
+# inventory source head.  At that head the carried coordinate must be the
+# definition line of the operation, and that definition's normalised text must
+# hash to the boundary's declared span hash -- which the same adjudication
+# independently requires to equal the candidate's live span hash.  Coordinates
+# are therefore only locators inside a revision named by committed evidence;
+# content is the identity.  The rule cannot be satisfied by widening a span,
+# and no head can be chosen by hand: every hop is reachable only through the
+# obligation's own recorded `carried_forward_from` links.
+
+# A provenance walk is bounded so that a malformed chain cannot cost unbounded
+# work; the bound is a work limit, not a safety condition.  It was 12, and twelve
+# consecutive carried-forward receipts is exactly what an ordinary month of
+# batches produces: at b84 the seven ``copyctx`` rows in src/provider/digest.rs
+# and src/provider/legacyprov.rs could no longer reach the head (0238c6e4adbc,
+# b76c) at which their recorded coordinate was the definition line, because the
+# b83b link pushed that head from hop 12 to hop 13.  Every hop is still proved
+# individually -- the coordinate is a definition line at that hop's own head,
+# the head is an ancestor of the candidate, the qualified context is the same,
+# and the normalised text hashes to the boundary's declared span, which the same
+# adjudication separately requires to equal the candidate's live span hash -- so
+# raising the bound changes the depth of the search, not the proof.  The next
+# batch that re-anchors a coordinate resets the depth; this value gives the
+# chain room to grow again instead of failing one row per batch.
+MIGRATION_CHAIN_LIMIT = 32
+
+
+_EVIDENCE_JSON_CACHE: dict = {}
+
+
+def _digest_pinned_json(repo, rel_path, expected_sha):
+    key = (str(repo), str(rel_path), str(expected_sha))
+    cached = _EVIDENCE_JSON_CACHE.get(key)
+    if cached is not None:
+        return cached
+    doc = _digest_pinned_json_uncached(repo, rel_path, expected_sha)
+    _EVIDENCE_JSON_CACHE[key] = doc
+    return doc
+
+
+_EVIDENCE_JSON_CACHE = {}
+
+
+def _digest_pinned_json_uncached(repo, rel_path, expected_sha):
+    if not rel_path or not expected_sha:
+        return None
+    root = Path(repo)
+    path = Path(rel_path)
+    # O7: a carry pin is evidence only if it names a repository-relative file.
+    # An absolute path selects an input outside the repository, so the pin
+    # would authenticate whatever that path happened to contain.
+    if path.is_absolute():
+        return None
+    path = root / path
+    try:
+        raw = path.read_bytes()
+    except OSError:
+        return None
+    if hashlib.sha256(raw).hexdigest() != expected_sha:
+        return None
+    try:
+        return json.loads(raw)
+    except Exception:  # noqa: BLE001 -- an unreadable receipt establishes nothing
+        return None
+
+
+def _git_committed_bytes(root: Path, commit: str, rel_path: str) -> bytes | None:
+    """The committed bytes of ``rel_path`` at ``commit``; never the worktree.
+
+    Absent path, absent commit, or an absolute path yield None (fail closed).
+    """
+    if not commit or not rel_path:
+        return None
+    if Path(rel_path).is_absolute():
+        return None
+    try:
+        return subprocess.check_output(
+            ["git", "-C", str(root), "cat-file", "blob",
+             f"{commit}:{rel_path}"],
+            stderr=subprocess.DEVNULL)
+    except (subprocess.CalledProcessError, OSError):
+        return None
+
+
+def _git_is_ancestor(root: Path, ancestor: str, descendant: str) -> bool:
+    """O2: does ``ancestor`` reach ``descendant`` (equal commits count)?"""
+    if not ancestor or not descendant:
+        return False
+    try:
+        return subprocess.run(
+            ["git", "-C", str(root), "merge-base", "--is-ancestor",
+             ancestor, descendant],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL).returncode == 0
+    except OSError:
+        return False
+
+
+def _repository_anchor_commit(root: Path) -> str | None:
+    """O3: the repository HEAD -- an anchor external to the working tree."""
+    try:
+        return subprocess.check_output(
+            ["git", "-C", str(root), "rev-parse", "--verify", "HEAD"],
+            stderr=subprocess.DEVNULL).decode().strip() or None
+    except (subprocess.CalledProcessError, OSError, UnicodeDecodeError):
+        return None
+
+
+def _digest_pinned_committed_json(repo, rel_path, expected_sha, anchor_commit):
+    """Parse a hop receipt only from its committed blob at ``anchor_commit``.
+
+    O3: the recorded pin must equal the sha256 of a blob that is *committed in
+    the repository*.  A pin recomputed from an uncommitted or modified file has
+    no committed anchor, so it establishes nothing and the chain stops.
+    """
+    if not rel_path or not expected_sha or not anchor_commit:
+        return None
+    if Path(rel_path).is_absolute():
+        return None
+    raw = _git_committed_bytes(Path(repo), anchor_commit, rel_path)
+    if raw is None:
+        return None
+    if hashlib.sha256(raw).hexdigest() != expected_sha:
+        return None
+    try:
+        return json.loads(raw)
+    except Exception:  # noqa: BLE001 -- an unreadable receipt establishes nothing
+        return None
+
+
+def _carried_forward_coordinates(repo, obligation):
+    """``(hops, refusals)``: the chain coordinates the carry-forward records.
+
+    Each hop yields the *ancestor* receipt's own inventory source head and the
+    coordinate that receipt carried for this operation.  Both are read from
+    committed evidence, not inferred:
+
+    * O7 -- the receipt path must be repository-relative;
+    * O3 -- the receipt's bytes must be a blob committed at the repository HEAD
+      whose sha256 equals the recorded pin (an uncommitted or modified receipt
+      has no anchor and ends the walk);
+    * O4 -- the receipt must name the source commit it was produced at.
+
+    A hop whose receipt is missing, unanchored or does not name a source commit
+    ends the walk and records the reason: an unverifiable link establishes
+    nothing, and later hops are not used to repair it.
+    """
+    out = []
+    refusals = []
+    seen = set()
+    record = obligation.get("carried_forward_from") or {}
+    depth = 0
+    root = Path(repo)
+    anchor = _repository_anchor_commit(root)
+    while record and depth < MIGRATION_CHAIN_LIMIT:
+        receipt = record.get("receipt")
+        pin = record.get("receipt_sha256")
+        if not receipt or receipt in seen:
+            refusals.append({"receipt": receipt,
+                             "reason": "receipt-missing-or-repeated"})
+            break
+        if Path(str(receipt)).is_absolute():
+            refusals.append({"receipt": receipt,
+                             "reason": "receipt-path-absolute"})
+            break
+        if not pin:
+            refusals.append({"receipt": receipt,
+                             "reason": "receipt-pin-missing"})
+            break
+        if not anchor:
+            refusals.append({"receipt": receipt,
+                             "reason": "no-committed-anchor"})
+            break
+        committed = _git_committed_bytes(root, anchor, str(receipt))
+        if committed is None:
+            refusals.append({"receipt": receipt,
+                             "reason": "receipt-not-committed",
+                             "anchor": anchor})
+            break
+        committed_sha = hashlib.sha256(committed).hexdigest()
+        if committed_sha != pin:
+            refusals.append({"receipt": receipt,
+                             "reason": "receipt-pin-not-anchored",
+                             "anchor": anchor,
+                             "committed_sha256": committed_sha,
+                             "recorded_pin": pin})
+            break
+        # Parse the committed blob, never the working tree: a modified or
+        # uncommitted receipt cannot steer the chain even when the caller
+        # recomputed the pin from that file.
+        try:
+            doc = json.loads(committed)
+        except Exception:  # noqa: BLE001
+            refusals.append({"receipt": receipt,
+                             "reason": "receipt-unparsable"})
+            break
+        seen.add(receipt)
+        ident = doc.get("source_identity") or {}
+        head = ident.get("span_source_commit") or ident.get("inventory_source_head")
+        line = record.get("previous_line")
+        if not head:
+            refusals.append({"receipt": receipt,
+                             "reason": "hop-source-commit-missing"})
+            break
+        if not isinstance(line, int) or isinstance(line, bool):
+            refusals.append({"receipt": receipt,
+                             "reason": "hop-coordinate-missing"})
+            break
+        out.append({"receipt": receipt, "head": head, "line": line,
+                    "receipt_sha256": pin, "anchor": anchor})
+        previous_id = record.get("previous_id")
+        row = next((o for o in doc.get("obligations") or []
+                    if o.get("id") == previous_id), None)
+        if row is None:
+            row = next((o for o in doc.get("obligations") or []
+                        if (o.get("file"), o.get("kind"), o.get("item"),
+                            o.get("line")) == (obligation.get("file"),
+                                               obligation.get("kind"),
+                                               obligation.get("item"),
+                                               line)), None)
+        record = (row or {}).get("carried_forward_from")
+        depth += 1
+    return out, refusals
+
+
+def _census_operation_index(contracts):
+    """(file, kind, item) -> set(line) for this inventory's own enumerations.
+
+    Both the contracted-operation records and the production blockers are the
+    inventory's per-site enumeration of a source unsafe operation, so both are
+    admissible: what this index answers is "does *this* inventory attribute an
+    operation of this kind to this line", which is a fact about the candidate,
+    not about the boundary.
+    """
+    index = collections.defaultdict(set)
+    if not isinstance(contracts, dict):
+        return index
+    for table in (contracts.get("contracted_operations") or [],
+                  contracts.get("blockers") or []):
+        for rec in table:
+            if rec.get("partition") not in (None, V1_PARTITION_PRODUCTION):
+                continue
+            key = (rec.get("file"), rec.get("kind"), rec.get("item"))
+            if key[0] and key[1] and key[2] and isinstance(rec.get("line"), int):
+                index[key].add(rec["line"])
+    return index
+
+
+def migration_witness(repo, obligation, boundary, source_commit,
+                      allow_worktree=False, census_ops=None, refusals=None):
+    """Prove the boundary's declared span *is* the recorded coordinate's body.
+
+    Returns a witness dict or None.  Every condition is required:
+
+    1. the boundary's recorded span hash is a valid digest (a boundary with no
+       recorded hash can never migrate: a coordinate cannot establish a
+       content identity);
+    2. O4 -- the candidate source commit is known and resolvable (otherwise the
+       "same head" guard and the ancestry/qualified-identity comparisons have
+       nothing to compare against);
+    3. the boundary's operation resolves at the candidate and its qualified
+       context is derivable;
+    4. the current inventory attributes an operation of the obligation's
+       (file, kind, item) to the boundary's resolved definition line -- the
+       boundary must declare a span the census itself attributes the operation
+       to, not merely a span of the same item;
+    5. some ancestor coordinate in the committed carry-forward chain is the
+       *definition line* of the item at that ancestor's own inventory head,
+       O2 -- that head is an ancestor of the candidate source commit,
+       O1 -- that definition has the *same qualified context* as the candidate
+       definition (a sibling with the same last component is a different
+       operation even when the body is byte-identical), and
+       the normalised text there hashes to the boundary's recorded span hash.
+
+    Two coordinates that resolve to different bodies are inconsistent evidence:
+    the stronger witness is refused, never picked between.  O5: every refusal is
+    appended to ``refusals`` as ``{reason, ...detail}`` so the receipt can record
+    why a hop did not bind.
+    """
+    def refuse(reason, **detail):
+        if refusals is not None:
+            refusals.append(dict(detail, reason=reason))
+        return None
+
+    recorded = boundary.get("span_sha256")
+    if not isinstance(recorded, str) or not re.fullmatch(r"[0-9a-f]{64}", recorded):
+        return refuse("boundary-span-hash-invalid")
+    if census_ops is None:
+        return refuse("census-unavailable")
+    item = obligation.get("item")
+    if not item:
+        return refuse("item-missing")
+    if not source_commit:
+        return refuse("candidate-source-commit-missing")
+    root = Path(repo)
+    if not _git_commit_exists(root, source_commit):
+        return refuse("candidate-source-commit-unresolvable",
+                      candidate=source_commit)
+
+    # (3) the candidate definition: the boundary's operation must select exactly
+    # one definition and its qualified context must be derivable.
+    try:
+        resolved = resolve_operation_span(
+            root, obligation["file"], boundary.get("operation"), item,
+            source_commit=source_commit, allow_worktree=allow_worktree)
+    except SpanResolutionError as exc:
+        return refuse("candidate-operation-unresolvable",
+                      classification=exc.classification, detail=exc.detail)
+    candidate_identity = resolved.get("qualified_identity")
+    if not candidate_identity:
+        return refuse("candidate-qualified-context-underivable")
+
+    chain, chain_refusals = _carried_forward_coordinates(root, obligation)
+    if refusals is not None:
+        refusals.extend(chain_refusals)
+    if not chain:
+        return refuse("carry-forward-chain-empty")
+    # The row's own recorded coordinate must be one the chain names; a row that
+    # claims a coordinate its evidence never carried is inconsistent, and an
+    # inconsistent provenance cannot establish a content identity.
+    row_line = obligation.get("line")
+    if isinstance(row_line, int) and row_line not in {h["line"] for h in chain}:
+        return refuse("row-coordinate-not-in-chain",
+                      previous_coordinate=row_line)
+    hits = []
+    for hop in chain:
+        head = hop["head"]
+        if head == source_commit:
+            # Not a refusal: the hop *is* the candidate, where this coordinate
+            # is known not to be a definition (that is why migration is being
+            # considered at all).  Recorded so the trail names every hop.
+            if refusals is not None:
+                refusals.append({
+                    "receipt": hop["receipt"], "head": head,
+                    "line": hop["line"], "reason": "hop-at-candidate-head"})
+            continue
+        if not _git_is_ancestor(root, head, source_commit):
+            if refusals is not None:
+                refusals.append({
+                    "receipt": hop["receipt"], "head": head,
+                    "line": hop["line"], "reason": "hop-not-an-ancestor",
+                    "candidate": source_commit})
+            continue
+        try:
+            span = resolve_operation_at_line(
+                root, obligation["file"], item, hop["line"],
+                source_commit=head, allow_worktree=allow_worktree)
+        except SpanResolutionError as exc:
+            if refusals is not None:
+                refusals.append({
+                    "receipt": hop["receipt"], "head": head,
+                    "line": hop["line"],
+                    "reason": "hop-coordinate-not-a-definition",
+                    "classification": exc.classification})
+            continue
+        # The coordinate must be this operation's *definition line* at that
+        # head -- not merely a line inside some definition of the same item
+        # (which is what makes a stale coordinate bind to the wrong function).
+        if span.get("def_line") != hop["line"]:
+            if refusals is not None:
+                refusals.append({
+                    "receipt": hop["receipt"], "head": head,
+                    "line": hop["line"],
+                    "reason": "hop-coordinate-not-the-definition-line",
+                    "def_line": span.get("def_line")})
+            continue
+        # O1: the ancestor definition must have the same qualified context as
+        # the candidate's.  Scope identity is the whole qualified path, never
+        # the last component: `m1::copyctx` and `m2::copyctx` are different
+        # operations even when their bodies are byte-identical.
+        hop_identity = span.get("qualified_identity")
+        if not hop_identity:
+            if refusals is not None:
+                refusals.append({
+                    "receipt": hop["receipt"], "head": head,
+                    "line": hop["line"],
+                    "reason": "hop-qualified-context-underivable"})
+            continue
+        if hop_identity != candidate_identity:
+            if refusals is not None:
+                refusals.append({
+                    "receipt": hop["receipt"], "head": head,
+                    "line": hop["line"],
+                    "reason": "hop-qualified-context-mismatch",
+                    "ancestor_qualified_identity": hop_identity,
+                    "candidate_qualified_identity": candidate_identity})
+            continue
+        hits.append({
+            "receipt": hop["receipt"], "head": head, "line": hop["line"],
+            "anchor": hop["anchor"],
+            "def_line": span["def_line"],
+            "resolution": span.get("resolution"),
+            "qualified_identity": hop_identity,
+            "span_sha256": span["sha256"],
+            "span_lines": [span["start_line"], span["end_line"]],
+        })
+    matching = [h for h in hits if h["span_sha256"] == recorded]
+    if len({h["span_sha256"] for h in hits}) > 1:
+        return refuse("inconsistent-ancestor-bodies",
+                      observed=sorted({h["span_sha256"] for h in hits}),
+                      recorded_span_sha256=recorded)
+    if not matching:
+        return refuse("ancestor-body-hash-mismatch",
+                      recorded_span_sha256=recorded,
+                      observed_span_sha256=sorted({h["span_sha256"] for h in hits}),
+                      hop_coordinates=[{"receipt": h["receipt"],
+                                        "head": h["head"],
+                                        "line": h["line"]} for h in hits])
+
+    # (4) the candidate must attribute the operation to exactly the line the
+    # boundary resolves.  ``census_ops`` is this inventory's enumeration.
+    attributed = census_ops.get(
+        (obligation["file"], obligation.get("kind"), item), set())
+    if resolved["def_line"] not in attributed:
+        return refuse("candidate-census-absent",
+                      candidate_def_line=resolved["def_line"],
+                      attributed_lines=sorted(attributed))
+
+    return {
+        "rule": "content-migrated-coordinate",
+        "recorded_span_sha256": recorded,
+        "candidate_def_line": resolved["def_line"],
+        "candidate_span_lines": [resolved["start_line"], resolved["end_line"]],
+        "candidate_qualified_identity": candidate_identity,
+        "candidate_census_attributed": True,
+        "ancestor": matching[0],
+        "ancestor_candidates": hits,
+        "basis": (
+            "the obligation's recorded coordinate is not a definition line at "
+            "the candidate, but it was the definition line of the same "
+            "qualified operation at the inventory head the committed "
+            "carry-forward chain names, and that definition's normalised text "
+            "hashes to the span the boundary declares; the candidate inventory "
+            "attributes the operation to the boundary's resolved definition "
+            "line"),
+    }
+
+
+def migration_bindings(repo, obligation, boundaries, source_commit,
+                       allow_worktree=False, census_ops=None):
+    """``(witnesses, refusals)`` for this obligation, keyed by boundary id.
+
+    O6 -- uniqueness is part of the proof and is scoped to the identity tuple
+    ``(file, kind, item, qualified context, body hash)``: exactly one boundary
+    may own a given tuple.  Two boundaries whose declared hashes both match the
+    recorded coordinate's body -- or whose qualified contexts collide -- are
+    indistinguishable and are all refused, never picked between.
+
+    ``refusals`` maps a boundary id to the per-hop refusal reasons recorded by
+    :func:`migration_witness`, so a refused hop reports *why* it did not bind
+    rather than a generic span-unparsable.
+    """
+    out = {}
+    refusals = {}
+    owners = collections.defaultdict(list)
+    for b in boundaries:
+        if b.get("file") != obligation["file"]:
+            continue
+        if b.get("kind") != obligation.get("kind"):
+            continue
+        if scope_item(b.get("operation")) != obligation.get("item"):
+            continue
+        if b.get("declared_spans"):
+            continue
+        refusals.setdefault(b["id"], [])
+        witness = migration_witness(
+            repo, obligation, b, source_commit,
+            allow_worktree=allow_worktree, census_ops=census_ops,
+            refusals=refusals[b["id"]])
+        if witness is None:
+            continue
+        key = (obligation["file"], obligation.get("kind"),
+               obligation.get("item"),
+               witness.get("candidate_qualified_identity"),
+               witness["recorded_span_sha256"])
+        owners[key].append(b["id"])
+        out[b["id"]] = witness
+    for key, ids in owners.items():
+        if len(ids) > 1:
+            for bid in ids:
+                refusals.setdefault(bid, []).append({
+                    "reason": "non-unique-owner",
+                    "identity_key": {
+                        "file": key[0], "kind": key[1], "item": key[2],
+                        "qualified_context": key[3], "body_sha256": key[4]},
+                    "owners": sorted(ids)})
+                out.pop(bid, None)
+    return out, refusals
 
 
 NON_DISCHARGING_DISPOSITIONS = ("BLOCKED", "ELIMINATED", "CONTRACTED",
@@ -28024,7 +31718,7 @@ def boundary_operation_key(boundary: dict) -> tuple:
 
 def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
                plane: dict, repo=None, allow_worktree_span=False,
-               enforce_conflicts=None) -> dict:
+               enforce_conflicts=None, census_ops=None) -> dict:
     if enforce_conflicts is None:
         enforce_conflicts = ENFORCE_DISPOSITION_CONFLICTS
     repo = repo if repo is not None else _repo_root()
@@ -28076,6 +31770,8 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
     span_rejections = []
     disposition_rejections = []
     conflict_rejections = []
+    migration_map = None
+    migration_refusals = {}
     current_line = (obligation.get("current_census_line")
                     if isinstance(obligation.get("current_census_line"), int)
                     else obligation["line"])
@@ -28098,20 +31794,34 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
         boundary_span = None
         obligation_span = None
         binding = None
+        migration = None
         span_classification = None
         span_detail = None
         span_info = {}
         source_commit = _EVIDENCE_ENV.get("source_commit")
+        # A boundary may declare the complete set of definition spans of a
+        # multiply-defined item instead of a single span hash.  When it does,
+        # the declaration itself is the binding evidence: every declared
+        # definition must be live at these coordinates and match its recorded
+        # hash (see resolve_declared_spans), so a declaration that names only
+        # one of several live definitions cannot bind.
+        declared_spans = b.get("declared_spans") or None
         if item_match:
             try:
-                boundary_span = resolve_operation_span(
-                    repo, obligation["file"], b.get("operation"),
-                    obligation.get("item"),
-                    locators=(b.get("line"), b.get("inventory_line"),
-                              b.get("line_current"), current_line,
-                              obligation["line"]),
-                    source_commit=source_commit,
-                    allow_worktree=allow_worktree_span)
+                if declared_spans:
+                    boundary_span = resolve_declared_spans(
+                        repo, obligation["file"], obligation.get("item"),
+                        declared_spans, source_commit=source_commit,
+                        allow_worktree=allow_worktree_span)
+                else:
+                    boundary_span = resolve_operation_span(
+                        repo, obligation["file"], b.get("operation"),
+                        obligation.get("item"),
+                        locators=(b.get("line"), b.get("inventory_line"),
+                                  b.get("line_current"), current_line,
+                                  obligation["line"]),
+                        source_commit=source_commit,
+                        allow_worktree=allow_worktree_span)
             except SpanResolutionError as exc:
                 span_classification = exc.classification
                 span_detail = exc.detail
@@ -28150,7 +31860,16 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
                             "obligation_qualified_identity":
                                 obligation_span["qualified_identity"]}}
                 except SpanResolutionError as exc:
-                    if exc.classification == "ambiguous-identity":
+                    if declared_spans and exc.classification == "span-unparsable":
+                        # The whole point of a declared set is that it names
+                        # every live definition and each one matched.  A stale
+                        # carry-forward coordinate (the previous applied
+                        # closure's enumeration line) then names no definition
+                        # at all; the obligation's identity is still the item,
+                        # and every definition of that item is bound above, so
+                        # the binding is the complete declared definition set.
+                        binding = "declared-definition-set"
+                    elif exc.classification == "ambiguous-identity":
                         span_classification = exc.classification
                         span_detail = exc.detail
                         span_info = dict(exc.info)
@@ -28158,16 +31877,39 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
                           <= boundary_span["end_line"]):
                         binding = "census-line-inside-boundary-span"
                     else:
-                        span_classification = exc.classification
-                        span_detail = (
-                            "the obligation's census line "
-                            f"{current_line} is neither a definition of "
-                            f"{obligation.get('item')!r} nor inside the "
-                            f"boundary's resolved span "
-                            f"{boundary_span['start_line']}-"
-                            f"{boundary_span['end_line']}: {exc.detail}")
-                        span_info = dict(exc.info)
-                if binding is not None and span_classification is None:
+                        # A carry-forward coordinate is provenance, not identity.
+                        # When it names no definition at the candidate, the row
+                        # may still be the boundary's operation -- but only on a
+                        # content proof that the two coordinates are the same
+                        # bytes (see migration_witness), and only when exactly
+                        # one boundary in this file satisfies it.
+                        if migration_map is None:
+                            migration_map, migration_refusals = migration_bindings(
+                                repo, obligation, boundaries, source_commit,
+                                allow_worktree=allow_worktree_span,
+                                census_ops=census_ops)
+                        witness = migration_map.get(b["id"])
+                        if witness is not None and len(migration_map) == 1:
+                            binding = "content-migrated-coordinate"
+                            migration = witness
+                        else:
+                            span_classification = exc.classification
+                            span_detail = (
+                                "the obligation's census line "
+                                f"{current_line} is neither a definition of "
+                                f"{obligation.get('item')!r} nor inside the "
+                                f"boundary's resolved span "
+                                f"{boundary_span['start_line']}-"
+                                f"{boundary_span['end_line']}: {exc.detail}")
+                            if migration_map:
+                                span_detail += (
+                                    "; the content-migration check matched "
+                                    f"{len(migration_map)} boundaries "
+                                    f"({', '.join(sorted(migration_map))}), so "
+                                    "it establishes no unique owner")
+                            span_info = dict(exc.info)
+                if (binding is not None and span_classification is None
+                        and not declared_spans):
                     recorded = b.get("span_sha256")
                     if not recorded:
                         span_classification = "unmigrated"
@@ -28205,12 +31947,15 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
             "span_hash_present": bool(b.get("span_sha256")),
             "span_hash": b.get("span_sha256"),
             "span_hash_source": b.get("span_hash_source"),
+            "declared_span_count": (len(declared_spans) if declared_spans else 0),
+            "observed_definition_count": len((span or {}).get("definitions") or []),
             "span_current_hash": (span or {}).get("sha256"),
             "span_lines": ((span or {}).get("start_line"),
                            (span or {}).get("end_line")),
             "span_resolution": (span or {}).get("resolution"),
             "span_classification": span_classification,
             "span_collision": span_info.get("collision"),
+            "migration": migration,
             "content_address_accepts": content_accepts,
         })
         if content_accepts:
@@ -28282,16 +32027,38 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
                     obligation["discharge_receipt"] = (rec.get("receipt")
                                                        or rec.get("artifact"))
                     obligation["discharge_boundary_id"] = b["id"]
+                    if declared_spans:
+                        content_clause = (
+                            f"every one of its {len(boundary_span['definitions'])} "
+                            f"declared definition span(s) matches the current "
+                            f"content (set {boundary_span['sha256'][:16]}: " +
+                            ", ".join(f"{d['start_line']}-{d['end_line']}"
+                                      for d in boundary_span["definitions"]) +
+                            f", source {boundary_span['source']['source']})")
+                    else:
+                        content_clause = (
+                            f"its recorded span hash matches the current content "
+                            f"({boundary_span['sha256'][:16]}, source "
+                            f"{boundary_span['source']['source']})")
                     obligation["status_reason"] = (
                         f"boundary {b['id']} is scoped-SAFETY_DISCHARGED; the operation "
                         f"is bound to the boundary site by {binding} "
                         f"({obligation['file']}, {obligation.get('kind')}, "
                         f"{boundary_span['qualified_identity']}, lines "
                         f"{boundary_span['start_line']}-"
-                        f"{boundary_span['end_line']}) and its recorded span hash "
-                        f"matches the current content ({boundary_span['sha256'][:16]}, "
-                        f"source {boundary_span['source']['source']}); the declared "
-                        f"coordinate {current_line} is not part of acceptance")
+                        f"{boundary_span['end_line']}) and {content_clause}; the "
+                        f"declared coordinate {current_line} is not part of "
+                        f"acceptance")
+                    if migration is not None:
+                        anc = migration["ancestor"]
+                        obligation["status_reason"] += (
+                            f". The recorded coordinate {current_line} is the "
+                            f"definition line of {obligation.get('item')!r} at "
+                            f"the inventory head {anc['head'][:12]} named by "
+                            f"{anc['receipt']}, where its normalised text hashes "
+                            f"to the same declared span "
+                            f"{migration['recorded_span_sha256'][:16]}")
+                        obligation["migration"] = migration
                     obligation["span_discharge"] = {
                         "sha256": boundary_span["sha256"],
                         "start_line": boundary_span["start_line"],
@@ -28306,6 +32073,16 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
                         "claim_scope": SPAN_CLAIM_SCOPE,
                         "schema": SPAN_HASH_SCHEMA,
                     }
+                    if migration is not None:
+                        obligation["span_discharge"]["migration"] = migration
+                    if declared_spans:
+                        obligation["span_discharge"].update({
+                            "schema": SPAN_SET_SCHEMA,
+                            "set_sha256": boundary_span["sha256"],
+                            "span_set_hash_rule": SPAN_SET_HASH_RULE,
+                            "definition_count": len(boundary_span["definitions"]),
+                            "definitions": boundary_span["definitions"],
+                        })
                     obligation["scoped_discharge_attempts"] = scoped_attempt
                     return obligation
         if item_match and span_classification is not None:
@@ -28329,6 +32106,7 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
                 "span_lines": ((span or {}).get("start_line"),
                                (span or {}).get("end_line")),
                 "recorded_hash": b.get("span_sha256"),
+                "declared_spans": declared_spans,
                 "current_hash": (span or {}).get("sha256"),
             })
         if (not covers_current and covers_previous
@@ -28353,6 +32131,15 @@ def adjudicate(obligation: dict, mechanisms: dict, boundaries: list[dict],
             })
     if scoped_attempt:
         obligation["scoped_discharge_attempts"] = scoped_attempt
+    # O5: only a row that did *not* bind carries per-hop refusal reasons.  A
+    # discharged row must never inherit the refusals of a sibling boundary it
+    # was not bound to; that would read as a refused discharge in the receipt.
+    if migration_refusals and obligation.get("status") is None:
+        reasons = [dict(r, boundary=bid)
+                   for bid, per_hop in migration_refusals.items()
+                   for r in per_hop]
+        if reasons:
+            obligation["migration_refusals"] = reasons
     if span_rejections:
         obligation["span_discharge_rejections"] = span_rejections
     if stale_rejections:
@@ -28702,6 +32489,47 @@ def resolve_carry_forward(repo: Path, args, family: str, artifact: Path,
     }, refusals
 
 
+def obligation_status_refusals(obligations) -> list:
+    """Refusals for rows that can never support an ACCEPTED verdict.
+
+    ``DISCHARGED`` is the only status an accepted closure may contain.  An
+    ``UNKNOWN`` row was never adjudicated; a ``BLOCKED`` row *was* adjudicated
+    and refused.  A verdict computed only from the refusal list therefore
+    accepted a closure that still carried blocked obligations (b85: 253
+    DISCHARGED / 37 BLOCKED recorded as ACCEPTED).  Both states get a named
+    refusal here, with the count and the row ids in the record.
+    """
+    out = []
+    unknown = [o for o in obligations if o["status"] == "UNKNOWN"]
+    if unknown:
+        out.append({
+            "code": "UNKNOWN_OBLIGATION",
+            "detail": f"{len(unknown)} reachable production obligation(s) could not be "
+                      f"adjudicated DISCHARGED or BLOCKED",
+            "obligations": [o["id"] for o in unknown],
+        })
+    blocked = [o for o in obligations if o["status"] == "BLOCKED"]
+    if blocked:
+        out.append({
+            "code": "BLOCKED_OBLIGATIONS",
+            "detail": f"{len(blocked)} reachable production obligation(s) are BLOCKED "
+                      f"and cannot support an accepted closure",
+            "obligations": [o["id"] for o in blocked],
+        })
+    return out
+
+
+def closure_verdict_state(refusals, obligations) -> str:
+    """``ACCEPTED`` only when nothing is refused and every row is DISCHARGED.
+
+    The predicate is stated independently of :func:`obligation_status_refusals`
+    so a future edit to refusal synthesis cannot widen acceptance: a BLOCKED or
+    UNKNOWN row refuses on its own account.
+    """
+    unsupporting = [o for o in obligations if o["status"] != "DISCHARGED"]
+    return "ACCEPTED" if not refusals and not unsupporting else "REFUSED"
+
+
 def build_receipt(args) -> dict:
     repo = Path(args.repo).resolve()
     tool_identity = _tool_identity()
@@ -28954,6 +32782,83 @@ def build_receipt(args) -> dict:
         entry.split(":", 1)[0] for entry in reachable_functions)
     analysis_ident = analysis_identity(graphs)
 
+    # ---- element-7-only fast path (development feedback, never a receipt) - #
+    # The element-7 predicate needs exactly the graph, the precision resolver,
+    # the evidence classes and the reachability closure.  Everything after this
+    # point (the streamed edge-record population, the obligation queue, the
+    # carry-forward, the discharge plane) is unrelated to it and dominates the
+    # wall time and the RSS of a full closure (measured b76: 42 min, 4.45 GiB
+    # peak).  This mode is a FAST-level instrument: its output is explicitly
+    # not a closure receipt and carries none of the closure's claims.
+    if getattr(args, "element7_only", False):
+        e7 = evaluate_predicate_element_7(
+            closure["reachable_residual_sites"], closure["unclassified_sites"])
+        residual = [{"dso": d, "function": hex(s.get("func", 0)),
+                     "call_site": hex(s.get("addr", 0)),
+                     "function_name": graphs[d].funcs.get(s.get("func"), "?"),
+                     "reason": s.get("reason"), "class": s.get("class"),
+                     "text": s.get("text"), "targets": sorted(s.get("targets") or ()),
+                     "witness_rule": (s.get("witness") or {}).get("rule")}
+                    for d, _f, s in closure["reachable_residual_sites"]]
+        residual.sort(key=lambda r: (r["dso"], r["call_site"]))
+        return {
+            "schema": SCHEMA,
+            "tool": tool_identity,
+            "generated_utc": now_utc(),
+            "family": args.family,
+            "mode": "element7-only",
+            "not_a_closure_receipt": True,
+            "artifact_identity": {"path": rel(artifact, repo),
+                                  "sha256": artifact_sha},
+            "candidate_identity": {
+                "install_prefix": rel(install, repo),
+                "libcrypto_so_3_sha256": classification["openssl_sonames"].get(
+                    "libcrypto.so.3", {}).get("resolved_sha256"),
+            },
+            "refusals": refusals + closure_refusals(closure),
+            "precision": {
+                "residual_sites": residual,
+                "reachable_residual_sites": len(
+                    closure["reachable_residual_sites"]),
+                "predicate_element_7": e7,
+                "totals": {
+                    "indirect_sites": sum(len(g.sites) for g in graphs.values()),
+                    "resolved_sites": sum(1 for g in graphs.values()
+                                          for s in g.sites.values()
+                                          if not s["unresolved"]),
+                    "unresolved_sites": sum(1 for g in graphs.values()
+                                            for s in g.sites.values()
+                                            if s["unresolved"]),
+                    "reachable_unresolved_sites": len(
+                        closure["reachable_residual_sites"]),
+                    "reachable_target_bounded_unresolved_sites": e7[
+                        "target_bounded_unresolved_sites"],
+                    "reachable_contract_bounded_sites": e7[
+                        "contract_bounded_sites"],
+                    "reachable_closed_target_set_sites": e7[
+                        "closed_target_set_sites"],
+                    "unclassified_reachable_sites": len(
+                        closure["unclassified_sites"]),
+                },
+            },
+            "graph": {"closure": {
+                "closure_rounds": closure["closure_rounds"],
+                "converged": closure["converged"],
+                "reachable_functions_count": len(reachable_functions),
+                "reachable_functions_sha256": reachable_functions_sha256,
+                "analysis_identity": analysis_ident,
+            }},
+            "non_claims": [
+                "this is a FAST-level element-7 probe, not a closure receipt: it "
+                "runs none of the edge-record, obligation, carry-forward or "
+                "discharge stages, and its counts are not DISCHARGED/BLOCKED "
+                "counts",
+                "the residual set is produced by the same resolver, evidence "
+                "classes and reachability closure as the full run, but the two "
+                "must still be compared before this output is cited",
+            ],
+        }
+
     # ---- edge provenance records ----------------------------------------- #
     # Every indirect site emits a semantic record.  The *final upper bound* is
     # the authoritative oracle for every negative reachability claim: the
@@ -29097,6 +33002,7 @@ def build_receipt(args) -> dict:
 
     # ---- 4. obligations --------------------------------------------------- #
     contracts = inventory.get("contracts") or {}
+    censused = _census_operation_index(contracts)
     blockers = contracts.get("blockers") or []
     production = [b for b in blockers if b.get("partition") == V1_PARTITION_PRODUCTION]
     carry_forward, carry_refusals = resolve_carry_forward(
@@ -29128,7 +33034,8 @@ def build_receipt(args) -> dict:
         o["status_reason"] = None
     for o in obligations:
         adjudicate(o, mechanisms, boundaries_by_file.get(o["file"], []), plane,
-                   repo=repo, enforce_conflicts=enforce_conflicts)
+                   repo=repo, enforce_conflicts=enforce_conflicts,
+                   census_ops=censused)
         if o.get("contract") == "contracted":
             if o.get("status") == "DISCHARGED":
                 # The queue note explains why a documented operation stayed
@@ -29162,6 +33069,28 @@ def build_receipt(args) -> dict:
                 "The operation is documented (an attached # Safety/SAFETY contract) "
                 "but remains enrolled; the attached contract alone does not "
                 "discharge it.")
+
+    # O5: per-hop migration refusal reasons are enrollment evidence.  They are
+    # recorded under documented_enrollment.carry_forward so a BLOCKED row carries
+    # *why* its coordinate did not bind (receipt, head, coordinate and cause).
+    migration_refusal_records = [
+        {
+            "id": o["id"],
+            "file": o.get("file"),
+            "kind": o.get("kind"),
+            "item": o.get("item"),
+            "line": o.get("line"),
+            "carried_forward_from": (o.get("carried_forward_from") or {}).get(
+                "receipt"),
+            "reasons": o.get("migration_refusals"),
+        }
+        for o in obligations if o.get("migration_refusals")
+    ]
+    if migration_refusal_records:
+        enrollment.setdefault("carry_forward", {}).update({
+            "migration_refusals": migration_refusal_records,
+            "migration_refusal_count": len(migration_refusal_records),
+        })
 
     suppressed = (enrollment.get("carry_forward") or {}).get("suppressed") or []
     if suppressed:
@@ -29222,14 +33151,10 @@ def build_receipt(args) -> dict:
                       f"obligations but no boundary-sweep receipt owns them",
             "files": missing_boundary,
         })
-    unknown = [o for o in obligations if o["status"] == "UNKNOWN"]
-    if unknown:
-        refusals.append({
-            "code": "UNKNOWN_OBLIGATION",
-            "detail": f"{len(unknown)} reachable production obligation(s) could not be "
-                      f"adjudicated DISCHARGED or BLOCKED",
-            "obligations": [o["id"] for o in unknown],
-        })
+    # UNKNOWN and BLOCKED rows each produce a named refusal; ACCEPTED requires
+    # every reachable production obligation to be DISCHARGED (see
+    # ``closure_verdict_state``).
+    refusals.extend(obligation_status_refusals(obligations))
 
     known = set(mechanisms)
     unmapped_mechanisms = sorted({o["mechanism"] for o in obligations
@@ -29326,7 +33251,7 @@ def build_receipt(args) -> dict:
     dirty = bool(run(["git", "-C", str(repo), "status", "--porcelain",
                       "--untracked-files=no"]).stdout.strip())
 
-    verdict_state = "REFUSED" if refusals else "ACCEPTED"
+    verdict_state = closure_verdict_state(refusals, obligations)
     receipt = {
         "schema": SCHEMA,
         "tool": tool_identity,
@@ -29540,10 +33465,15 @@ def build_receipt(args) -> dict:
                 "reachable_unresolved_sites": len(closure["reachable_residual_sites"]),
                 "reachable_target_bounded_unresolved_sites": sum(
                     1 for _d, _f, s in closure["reachable_residual_sites"]
-                    if s.get("class") not in ABI_CONTRACT_CLASSES),
+                    if classify_bound_kind(s.get("class")) is None),
                 "reachable_contract_bounded_sites": sum(
                     1 for _d, _f, s in closure["reachable_residual_sites"]
-                    if s.get("class") in ABI_CONTRACT_CLASSES),
+                    if classify_bound_kind(s.get("class")) ==
+                    "external-contract"),
+                "reachable_closed_target_set_sites": sum(
+                    1 for _d, _f, s in closure["reachable_residual_sites"]
+                    if classify_bound_kind(s.get("class")) ==
+                    "closed-target-set"),
                 "unclassified_reachable_sites": len(closure["unclassified_sites"]),
                 "resolved_by_reachable_caller": sum(
                     1 for g in graphs.values() for s in g.sites.values()
@@ -29940,6 +33870,7 @@ def build_receipt(args) -> dict:
                     "classes": [ABI_CONTRACT_PBE_REGISTRY,
                                 ABI_CONTRACT_STORE_LOADER,
                                 ABI_CONTRACT_CONF_MODULE,
+                                ABI_CONTRACT_CONF_DEFAULT_METHOD,
                                 ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
                                 ABI_CONTRACT_PROVIDER],
                     "rule": (
@@ -29961,6 +33892,7 @@ def build_receipt(args) -> dict:
                         (ABI_CONTRACT_PBE_REGISTRY,
                          ABI_CONTRACT_STORE_LOADER,
                          ABI_CONTRACT_CONF_MODULE,
+                         ABI_CONTRACT_CONF_DEFAULT_METHOD,
                          ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
                          ABI_CONTRACT_PROVIDER)},
                 },
@@ -29989,8 +33921,9 @@ def build_receipt(args) -> dict:
                 "sites_truncated": admission.get("sites_truncated", False),
             },
             "settled": (
-                ("every reachable unresolved site is contract-bounded (section 7 "
-                 "criterion 2); no target-bounded unresolved site and no "
+                ("every reachable unresolved site carries a contract or "
+                 "closed-target-set bound (section 7 criterion 2); no "
+                 "target-bounded unresolved site and no "
                  "unclassified site is reachable")
                 if evaluate_predicate_element_7(
                     closure["reachable_residual_sites"],
@@ -30187,10 +34120,6 @@ def build_receipt(args) -> dict:
 # self-test
 # --------------------------------------------------------------------------- #
 
-def _pin_leaf(symbol: str) -> str:
-    """Source leaf of a pin symbol: a demangled path or a plain C name."""
-    return (symbol or "").rsplit("::", 1)[-1]
-
 
 def _e7abi_self_test():
     """Committed positive and negative controls for the E7-ABI witnesses.
@@ -30225,61 +34154,75 @@ def _e7abi_self_test():
     g.install_prefix = str(install)
     g.precision = PrecisionResolver(g)
     # (site -> containing symbol, offset) for the literal keys below.  The
-    # literal VAs identify one exact artefact (libcrypto.so.3, sha256
-    # 136203564ebee50a28b428c3140ab877af9bef6a7d59225d1a5dbe88d09a9a44); the
-    # pins are the mechanical re-pin key.  Each literal is checked against its
-    # pin against the graph, so a stale VA fails loudly instead of silently
-    # retiring the control.
+    # literal VAs identify one exact artefact (recorded in the closure receipt
+    # and in atlas-refresh/e7-b76-repin.json); the pins are the mechanical
+    # re-pin key.  Each site address used by the controls is *derived* from
+    # this image by the re-pin engine (offset or in-symbol witness search), so
+    # a rebuild moves the fixture with the site instead of retiring it.  The
+    # literals below are stable case identifiers only; they are never used as
+    # addresses.
     site_pins = {
-        0x50604D: ("EVP_PBE_CipherInit_ex", 0x19D),
-        0x3E2088: ("OSSL_STORE_open_ex", 0x488),
-        0x3E217D: ("OSSL_STORE_open_ex", 0x57D),
-        0x3E2648: ("OSSL_STORE_open_ex", 0xA48),
-        0x3E2408: ("OSSL_STORE_open_ex", 0x808),
-        0x17319A: ("CONF_modules_load", 0x50A),
-        0x1735B2: ("CONF_modules_load", 0x922),
-        0x495DE6: ("openssl_rs::pem::pem_pk8::do_pk8pkey", 0x286),
+        0x541C2D: PBE_SITE_PIN,
+        0x455C88: STORE_LOADER_LEGACY_SITE_PINS[0x1F89E8],
+        0x455D7D: STORE_LOADER_LEGACY_SITE_PINS[0x1F8AA1],
+        0x4561F3: STORE_LOADER_LEGACY_SITE_PINS[0x1F8F13],
+        0x456007: STORE_LOADER_PROVIDER_SITE_PIN,
+        0x22CB65: CONF_SITE_PINS[0x293F25],
+        0x22CFA3: CONF_SITE_PINS[0x294363],
+        0x384BBC: PEM_SITE_PIN,
     }
-    site_specs = (
-        (0x50604D, 0x505EB0, "call   *%rax"),
-        (0x3E2088, 0x3E1C00, "call   *%rax"),
-        (0x3E217D, 0x3E1C00, "call   *%rax"),
-        (0x3E2648, 0x3E1C00, "call   *%rax"),
-        (0x3E2408, 0x3E1C00, "call   *%rax"),
-        (0x17319A, 0x172C90, "call   *%r15"),
-        (0x1735B2, 0x172C90, "call   *%rax"),
-        (0x495DE6, 0x495B60, "call   *%r14"),
-    )
+    derived = {
+        0x541C2D: _pinned_site("PBE_SITE", g),
+        0x455C88: _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F89E8, g)[0],
+        0x455D7D: _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F8AA1, g)[0],
+        0x4561F3: _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F8F13, g)[0],
+        0x456007: _pinned_site("STORE_LOADER_PROVIDER_SITE", g),
+        0x22CB65: _pin_effective("CONF_SITES", 0x293F25, g)[0],
+        0x22CFA3: _pin_effective("CONF_SITES", 0x294363, g)[0],
+        0x384BBC: _pinned_site("PEM_SITE", g),
+    }
+    funcs = {old: _pin_start(g, pin) for old, pin in site_pins.items()}
+    site_specs = [(lit, funcs[lit], "") for lit in site_pins]
     g.sites = {}
-    for addr, func, text in site_specs:
-        g.sites[(func, addr, "call")] = {
-            "kind": "call", "func": func, "addr": addr, "text": text,
+    for lit, func, _text in site_specs:
+        real = derived[lit]
+        text = next((t for a, t in (g.precision.insns_by_func.get(func) or ())
+                     if a == real), None)
+        if func is None or text is None:
+            continue
+        g.sites[(func, real, "call")] = {
+            "kind": "call", "func": func, "addr": real, "text": text,
             "targets": set(), "unresolved": True,
             "reason": "materialised", "class": "materialised",
             "field_offsets": set(), "seam": None,
             "arg_deps": set(), "arg_targets": set()}
     expected = {
-        0x50604D: ABI_CONTRACT_PBE_REGISTRY,
-        0x3E2088: ABI_CONTRACT_STORE_LOADER,
-        0x3E217D: ABI_CONTRACT_STORE_LOADER,
-        0x3E2648: ABI_CONTRACT_STORE_LOADER,
-        0x3E2408: ABI_CONTRACT_PROVIDER,
-        0x17319A: ABI_CONTRACT_CONF_MODULE,
-        0x1735B2: ABI_CONTRACT_CONF_MODULE,
-        0x495DE6: ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
+        0x541C2D: ABI_CONTRACT_PBE_REGISTRY,
+        0x455C88: ABI_CONTRACT_STORE_LOADER,
+        0x455D7D: ABI_CONTRACT_STORE_LOADER,
+        0x4561F3: ABI_CONTRACT_STORE_LOADER,
+        0x456007: ABI_CONTRACT_PROVIDER,
+        0x22CB65: ABI_CONTRACT_CONF_MODULE,
+        0x22CFA3: ABI_CONTRACT_CONF_MODULE,
+        0x384BBC: ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
     }
-    for addr, func, _text in site_specs:
-        pin = site_pins[addr]
+    for lit, func, _text in site_specs:
+        real = derived[lit]
+        pin = site_pins[lit]
         names = getattr(g, "names_at", {}).get(func) or {g.funcs.get(func, "")}
-        if not (addr - func == pin[1]
-                and any(_external_function_leaf(n) == _pin_leaf(pin[0])
-                        for n in names)):
+        ok = (func is not None
+              and any(_external_function_leaf(n) == _pin_leaf(pin[0])
+                      for n in names)
+              and _is_indirect_transfer_strict(g, real))
+        if not ok:
             failures.append(
-                f"e7abi {addr:#x}: literal does not match pin "
-                f"{(pin[0], hex(pin[1]))!r}; re-pin")
+                f"e7abi {lit:#x}: the fixture site did not resolve to an "
+                f"indirect transfer in {_pin_leaf(pin[0])} (derived "
+                f"{real:#x}); re-pin or investigate the witness")
 
     def site(addr):
-        return next(s for s in g.sites.values() if s.get("addr") == addr)
+        real = derived[addr]
+        return next(s for s in g.sites.values() if s.get("addr") == real)
 
     def wit(addr):
         s = site(addr)
@@ -30301,10 +34244,10 @@ def _e7abi_self_test():
             w.get("contract_bounded"), True)
         chk(f"e7abi {addr:#x} target set", w.get("target_set"), [])
     chk("e7abi site 5 scope",
-        ((wit(0x3E2408) or (None, {}))[1] or {}).get("scope"),
+        ((wit(0x456007) or (None, {}))[1] or {}).get("scope"),
         "store-loader-p_close")
     chk("e7abi site 8 default",
-        ((wit(0x495DE6) or (None, {}))[1] or {}).get("default_target",
+        ((wit(0x384BBC) or (None, {}))[1] or {}).get("default_target",
                                                     {}).get("symbol"),
         PEM_DEFAULT)
 
@@ -30366,7 +34309,7 @@ def _e7abi_self_test():
            "#[allow(dead_code)]\n"
            "unsafe fn e7abi_alias(row: *mut E7AliasPbe, "
            "k: Option<EvpPbeKeygen>) { unsafe { (*row).keygen = k; } }")
-    cases.append(("PBE type alias", d, 0x50604D, "e7abi-type-alias",
+    cases.append(("PBE type alias", d, 0x541C2D, "e7abi-type-alias",
                   "keygen-field-writer-set-is-not-exactly-the-registry"))
 
     d = fixture("store-alias", ["src/store/mod.rs",
@@ -30378,7 +34321,7 @@ def _e7abi_self_test():
            "#[allow(dead_code)]\n"
            "unsafe fn e7abi_alias(loader: *mut E7AliasLoader, "
            "f: Option<OsslStoreOpenExFn>) { unsafe { (*loader).open_ex = f; } }")
-    cases.append(("STORE type alias", d, 0x3E2088, "e7abi-type-alias",
+    cases.append(("STORE type alias", d, 0x455C88, "e7abi-type-alias",
                   "open_ex-writer-set-is-not-the-setter"))
 
     d = fixture("conf-alias", ["src/runtime/confmod/mod.rs"])
@@ -30387,7 +34330,7 @@ def _e7abi_self_test():
            "#[allow(dead_code)]\n"
            "unsafe fn e7abi_alias(m: *mut E7AliasModule, "
            "f: Option<ConfInitFn>) { unsafe { (*m).init = f; } }")
-    cases.append(("CONF type alias", d, 0x17319A, "e7abi-type-alias",
+    cases.append(("CONF type alias", d, 0x22CB65, "e7abi-type-alias",
                   "init-writer-set-is-not-module-add"))
 
     d = fixture("pbe-cont", ["src/evp/evp_pbe.rs"])
@@ -30396,7 +34339,7 @@ def _e7abi_self_test():
            "unsafe fn e7abi_cont(row: *mut EvpPbeCtl, "
            "k: Option<EvpPbeKeygen>) {\n"
            "    unsafe { (*row)\n        .keygen = k; }\n}")
-    cases.append(("PBE continuation writer", d, 0x50604D,
+    cases.append(("PBE continuation writer", d, 0x541C2D,
                   "e7abi-continuation",
                   "keygen-field-writer-set-is-not-exactly-the-registry"))
 
@@ -30405,7 +34348,7 @@ def _e7abi_self_test():
            "macro_rules! e7abi_m {\n"
            "    ($p:ident, $v:expr) => { unsafe { (*$p).keygen = $v; } };\n"
            "}")
-    cases.append(("PBE macro-expanded slot store", d, 0x50604D,
+    cases.append(("PBE macro-expanded slot store", d, 0x541C2D,
                   "e7abi-macro-slot",
                   "macro-expanded-slot-store-unattributed"))
 
@@ -30424,7 +34367,7 @@ def _e7abi_self_test():
         "    let f = "
         "crate::store::store_register::OSSL_STORE_register_loader;\n"
         "    unsafe { f(loader); }\n}\n")
-    cases.append(("STORE registration alias", d, 0x3E2088,
+    cases.append(("STORE registration alias", d, 0x455C88,
                   "e7abi-registration-alias",
                   "in-image-registration-reference"))
 
@@ -30438,7 +34381,7 @@ def _e7abi_self_test():
         "#[allow(dead_code)]\n"
         "unsafe fn e7abi_reg_split(loader: *mut "
         "crate::store::OsslStoreLoader) { unsafe { reg(loader); } }\n")
-    cases.append(("STORE split-line registration alias", d, 0x3E2088,
+    cases.append(("STORE split-line registration alias", d, 0x455C88,
                   "e7abi-registration-alias",
                   "in-image-registration-reference"))
 
@@ -30449,7 +34392,7 @@ def _e7abi_self_test():
         "do_pk8pkey(bp, x, 0, -1, enc, kstr, klen, cb, u, ptr::null())",
         "do_pk8pkey(bp, x, 0, -1, enc, kstr, klen, u, u, ptr::null())")
     p.write_text(text)
-    cases.append(("PEM forwarded non-cb", d, 0x495DE6,
+    cases.append(("PEM forwarded non-cb", d, 0x384BBC,
                   "e7abi-forward-binding",
                   "callback-chain-forwarded-argument-is-not-the-cb-parameter"))
 
@@ -30505,45 +34448,117 @@ def _pbe_outparam_self_test():
                 "field_offsets": set(), "seam": None,
                 "arg_deps": set(), "arg_targets": set()}
 
-    # (site -> containing symbol, offset) and target symbols for this exact
-    # artefact (libcrypto.so.3 sha256
-    # 136203564ebee50a28b428c3140ab877af9bef6a7d59225d1a5dbe88d09a9a44).
-    # Site 2's offset is 0x1C2 in this build, not 0x208 as in the previous one:
-    # instruction selection changed inside PKCS5_v2_PBE_keyivgen_ex, so the pin
-    # records the window-verified offset.  A literal that stops matching its
-    # pin is reported, never silently accepted.
-    site_pins = {
-        0x5062C5: ("EVP_PBE_CipherInit_ex", 0x415),
-        0x2BD122: ("PKCS5_v2_PBE_keyivgen_ex", 0x1C2),
-    }
-    target_pins = {
-        0x1AC1C0: ("PKCS12_PBE_keyivgen_ex", 0),
-        0x2BCF60: ("PKCS5_v2_PBE_keyivgen_ex", 0),
-        0x2C5FE0: ("PKCS5_v2_PBKDF2_keyivgen_ex", 0),
-        0x4B51D0: ("PKCS5_PBE_keyivgen_ex", 0),
-        0x53BF10: ("PKCS5_v2_scrypt_keyivgen_ex", 0),
-    }
-    site_func = {0x5062C5: 0x505EB0, 0x2BD122: 0x2BCF60}
-    for addr, func in site_func.items():
-        pin = site_pins[addr]
-        names = getattr(g, "names_at", {}).get(func) or {g.funcs.get(func, "")}
-        if not (addr - func == pin[1]
-                and any(_external_function_leaf(n) == _pin_leaf(pin[0])
-                        for n in names)):
-            failures.append(
-                f"e7pbe {addr:#x}: literal does not match pin "
-                f"{(pin[0], hex(pin[1]))!r}; re-pin")
-    for addr, (leaf, _off) in target_pins.items():
-        names = getattr(g, "names_at", {}).get(addr) or {g.funcs.get(addr, "")}
-        if not any(_external_function_leaf(n) == _pin_leaf(leaf) for n in names):
-            failures.append(
-                f"e7pbe target {addr:#x}: does not match pin {leaf!r}; re-pin")
+    # Stable case identifiers: the literal keys of PBE_EX_SITES name the two
+    # documented sites and are *never* used as addresses.  This image's sites
+    # are derived from the (symbol leaf, offset) pins by the re-pin engine --
+    # by offset where the pin still lands, by the in-symbol witness search
+    # (uniqueness of the acceptance) where it moved -- exactly as the e7abi
+    # fixture does.  A rebuild therefore moves the fixture with the site
+    # instead of retiring it.  The b78 PKCS5_v2_PBE_keyivgen_ex transfer sits
+    # at +0x1c2 (the pin records +0x208): the search accepts exactly one of
+    # the symbol's 17 transfers, which is what makes the re-pin a proof rather
+    # than a guess.
+    MAIN = "EVP_PBE_CipherInit_ex"
+    KDF = "PKCS5_v2_PBE_keyivgen_ex"
+    TARGET_LEAVES = ("PKCS12_PBE_keyivgen_ex", "PKCS5_v2_PBE_keyivgen_ex",
+                     "PKCS5_v2_PBKDF2_keyivgen_ex", "PKCS5_PBE_keyivgen_ex",
+                     "PKCS5_v2_scrypt_keyivgen_ex")
+    KDF_LEAVES = ("PKCS5_v2_PBKDF2_keyivgen_ex", "PKCS5_v2_scrypt_keyivgen_ex")
+    if sorted(spec["function"] for spec in PBE_EX_SITES.values()) != sorted(
+            (MAIN, KDF)):
+        return (["e7pbe controls: PBE_EX_SITES is no longer exactly the two "
+                 "documented sites"],
+                "e7pbe controls: REFUSED (the enumerated site table changed)")
 
-    def wit(addr, graph=None):
+    derived = {}
+    for literal, spec in PBE_EX_SITES.items():
+        func = spec["function"]
+        pin = PBE_EX_SITE_PINS.get(literal)
+        addr, how = _pin_effective("PBE_EX_SITES", literal, g)
+        start = _pin_start(g, pin) if pin else None
+        text = next((t for a, t in (_pin_insns(g, start) or ())
+                     if a == addr), None) if start is not None else None
+        derived[func] = {"literal": literal, "pin": pin, "addr": addr,
+                         "how": how, "start": start, "text": text}
+        if pin is None or how == "literal" or addr is None:
+            failures.append(
+                f"e7pbe {func}: the recorded pin {pin!r} does not establish a "
+                "site in this image, so the fixture cannot test the witness "
+                "(re-pin needed)")
+        elif start is None:
+            failures.append(
+                f"e7pbe {func}: the pin leaf {pin[0]!r} names no unique "
+                "function start in this image")
+        elif text is None:
+            failures.append(
+                f"e7pbe {func}: the derived site {addr:#x} is not an "
+                f"instruction of {pin[0]!r}")
+        elif not _is_indirect_transfer_strict(g, addr):
+            failures.append(
+                f"e7pbe {func}: the site's shape changed ({text.strip()!r} is "
+                "not an indirect transfer); re-pin")
+    if failures:
+        return failures, ("e7pbe controls: REFUSED (the fixture could not "
+                          "derive both sites in this image; the witness was "
+                          "not exercised)")
+
+    # A moved site is accepted only together with its uniqueness witness: the
+    # pin's own symbol offered exactly one transfer that the witness accepted.
+    moved = {m.get("address"): m
+             for m in (pin_resolution_report().get("moved") or [])}
+    for func, rec in derived.items():
+        pin = rec["pin"]
+        if rec["how"] == "pin":
+            chk(f"e7pbe {func} resolves at the pinned offset",
+                rec["addr"] - rec["start"], pin[1])
+        else:
+            ev = moved.get(hex(rec["addr"])) or {}
+            chk(f"e7pbe {func} moved-pin acceptance is unique",
+                len(ev.get("accepted") or []), 1)
+            chk(f"e7pbe {func} moved-pin candidate count is non-zero",
+                (ev.get("candidates") or 0) > 0, True)
+
+    # The five target leaves, resolved as symbols in this image.  A leaf that
+    # disappears or becomes ambiguous is a fixture failure, never a skip: the
+    # fixture exists to prove this exact target set.
+    leaf_start = {}
+    for leaf in TARGET_LEAVES:
+        starts = sorted(a for a, names in g.names_at.items()
+                        if a in g.start_set
+                        and any(_external_function_leaf(n) == leaf
+                                for n in names))
+        if len(starts) != 1:
+            failures.append(
+                f"e7pbe target leaf {leaf}: "
+                f"{'disappeared from' if not starts else 'is ambiguous in'} "
+                f"this image ({len(starts)} function start(s)); the target "
+                "set is no longer established")
+            continue
+        leaf_start[leaf] = starts[0]
+    if failures:
+        return failures, ("e7pbe controls: REFUSED (the target leaf set did "
+                          "not resolve uniquely in this image)")
+    addr_leaf = {a: leaf for leaf, a in leaf_start.items()}
+
+    def leaves_of(rec):
+        got, unknown = [], []
+        for t in (rec or {}).get("targets") or []:
+            a = int(str(t), 16)
+            if a in addr_leaf:
+                got.append(addr_leaf[a])
+            else:
+                unknown.append(str(t))
+        return sorted(got), sorted(unknown)
+
+    want_all = sorted(TARGET_LEAVES)
+    want_kdf = sorted(KDF_LEAVES)
+
+    def wit(func, graph=None, text=None):
+        rec = derived[func]
         gr = graph or g
-        func = site_func[addr]
         return pbe_outparam_instance_witness(
-            gr, site(addr, func), gr.funcs.get(func, ""))
+            gr, site(rec["addr"], rec["start"], text or rec["text"]),
+            gr.funcs.get(rec["start"], ""))
 
     def _mut(name, fn):
         _MUTED.add(name)
@@ -30605,14 +34620,18 @@ def _pbe_outparam_self_test():
                 out.append((r[0], r[1], r[2], r[3], value))
         return out
 
-    w1 = wit(0x5062C5)
-    w2 = wit(0x2BD122)
-    want1 = ["0x1ac1c0", "0x2bcf60", "0x2c5fe0", "0x4b51d0", "0x53bf10"]
-    want2 = ["0x2c5fe0", "0x53bf10"]
+    w1 = wit(MAIN)
+    w2 = wit(KDF)
     chk("e7pbe site 1 resolved", (w1 or {}).get("resolved"), True)
-    chk("e7pbe site 1 targets", (w1 or {}).get("targets"), want1)
     chk("e7pbe site 2 resolved", (w2 or {}).get("resolved"), True)
-    chk("e7pbe site 2 targets", (w2 or {}).get("targets"), want2)
+    got1, unknown1 = leaves_of(w1)
+    got2, unknown2 = leaves_of(w2)
+    chk("e7pbe site 1 target leaves", got1, want_all)
+    chk("e7pbe site 1 target set is exactly the five leaves", unknown1, [])
+    chk("e7pbe site 2 target leaves", got2, want_kdf)
+    chk("e7pbe site 2 target set is exactly the two KDF leaves", unknown2, [])
+    chk("e7pbe site 1 target count", len((w1 or {}).get("targets") or []), 5)
+    chk("e7pbe site 2 target count", len((w2 or {}).get("targets") or []), 2)
     chk("e7pbe schema", (w1 or {}).get("schema"), PBE_EX_SCHEMA)
     chk("e7pbe resolution kind", (w1 or {}).get("resolution_kind"),
         PBE_EX_RESOLUTION_KIND)
@@ -30632,31 +34651,84 @@ def _pbe_outparam_self_test():
     chk("e7pbe site 2 selected rows", (w2 or {}).get("selected_rows"),
         [32, 33])
 
-    # Wrong callee: the GOT relocation names another in-image function while
-    # the disassembly annotation still names EVP_PBE_find_ex.
-    # The GOT slot is pinned by its relocation symbol (EVP_PBE_find_ex); the
-    # 0x898b68 literal is the slot the candidate's site-1 load names.
-    wrong = _PbeProxy(g, relocs=_relocs_with_symbol(
-        0x898B68, "EVP_PBE_alg_add_type@@OPENSSL_3.0.0", 0x5066E0))
-    rec = wit(0x5062C5, graph=wrong)
-    chk("e7pbe wrong callee refusal", (rec or {}).get("refusal"),
-        "pbe-find-ex-callee-is-not-the-documented-symbol")
-    acc = _mut("e7pbe-outparam-callee", lambda: wit(0x5062C5, graph=wrong))
-    chk("e7pbe wrong callee control is load-bearing",
-        (acc or {}).get("resolved"), True)
-    chk("e7pbe wrong callee restored", (wit(0x5062C5) or {}).get("targets"),
-        want1)
+    # Shape anchors, taken from the witness itself: the frame slot's zero
+    # initialiser and its single address escape must still be the PBE shapes,
+    # and the mutation switches below must anchor at this image's instructions.
+    zero_addr = int(((w1 or {}).get("zero_initialisation") or {}).get(
+        "store") or "0x0", 16)
+    zero_text = (((w1 or {}).get("zero_initialisation") or {}).get("text")
+                 or "").strip()
+    esc_addr = int(((w1 or {}).get("address_escape") or {}).get("address")
+                   or "0x0", 16)
+    esc_text = (((w1 or {}).get("address_escape") or {}).get("text")
+                or "").strip()
+    m_zero = re.fullmatch(r"movq\s+\$0x0,(-?0x[0-9a-f]+)\(%rsp\)", zero_text)
+    m_esc = re.fullmatch(r"lea\s+(-?0x[0-9a-f]+)\(%rsp\),(%r\w+)", esc_text)
+    chk("e7pbe slot initialiser shape", bool(m_zero), True)
+    chk("e7pbe slot escape shape", bool(m_esc), True)
+    slot_mem = f"{m_zero.group(1)}(%rsp)" if m_zero else None
+    if m_zero and m_esc:
+        chk("e7pbe zero store and escape name the same slot",
+            m_zero.group(1), m_esc.group(1))
+        chk("e7pbe escape register is argument 6", m_esc.group(2), "%r9")
+    site1_insns = _pin_insns(g, derived[MAIN]["start"]) or ()
+    site1_addrs = {a for a, _t in site1_insns}
+    chk("e7pbe zero store belongs to the site symbol",
+        zero_addr in site1_addrs, True)
+    chk("e7pbe escape belongs to the site symbol",
+        esc_addr in site1_addrs, True)
+    reload_rows = [r for r in ((w1 or {}).get("operand") or {}).get("reloads")
+                   or []
+                   if slot_mem and re.fullmatch(
+                       r"mov\s+" + re.escape(slot_mem) + r",%r\w+",
+                       (r.get("text") or "").strip())]
+    chk("e7pbe call-target reload shape", bool(reload_rows), True)
+    if not (m_zero and m_esc and reload_rows):
+        return failures, ("e7pbe controls: REFUSED (a shape anchor moved; "
+                          "the mutation controls were not exercised)")
+    # A synthetic instruction address strictly between the zero store and the
+    # next real instruction, so the inserted counterexample keeps the stream
+    # ordered in every image.
+    next_addr = min((a for a in site1_addrs if a > zero_addr),
+                    default=zero_addr + 8)
+    synth_addr = zero_addr + max(1, (next_addr - zero_addr) // 2)
 
-    # Wrong argument index: the same slot escapes in %r8 (the plain keygen
-    # argument) instead of %r9 (pkeygen_ex).
-    arg_insns = _replace_insn(_insns_copy(0x505EB0), 0x505F25,
-                              "lea    0xa0(%rsp),%r8")
-    wrong_arg = _PbeProxy(g, precision=_PbePrecision({0x505EB0: arg_insns}))
-    rec = wit(0x5062C5, graph=wrong_arg)
+    # Wrong callee: the GOT relocation names another in-image function while
+    # the disassembly annotation still names EVP_PBE_find_ex.  The slot is
+    # derived from its own relocation symbol (EVP_PBE_find_ex), never from a
+    # literal address.
+    got_slots = sorted({r[0] for r in g.relocs
+                        if (r[2] or "").split("@")[0] == PBE_FIND})
+    registry_addr = _external_exported(g, PBE_REGISTRY)
+    if len(got_slots) != 1 or registry_addr is None:
+        failures.append(
+            "e7pbe wrong-callee control: the EVP_PBE_find_ex GOT slot or the "
+            f"registry address is not unique/available ({len(got_slots)} "
+            "slot(s)); the control did not run")
+    else:
+        wrong = _PbeProxy(g, relocs=_relocs_with_symbol(
+            got_slots[0], PBE_REGISTRY + "@@OPENSSL_3.0.0", registry_addr))
+        rec = wit(MAIN, graph=wrong)
+        chk("e7pbe wrong callee refusal", (rec or {}).get("refusal"),
+            "pbe-find-ex-callee-is-not-the-documented-symbol")
+        acc = _mut("e7pbe-outparam-callee", lambda: wit(MAIN, graph=wrong))
+        chk("e7pbe wrong callee control is load-bearing",
+            (acc or {}).get("resolved"), True)
+        chk("e7pbe wrong callee restored", leaves_of(wit(MAIN))[0], want_all)
+
+    # Wrong argument index: the same slot escapes in the plain-keygen argument
+    # register instead of the pkeygen_ex one.
+    other_reg = "%r8" if m_esc.group(2) != "%r8" else "%r10"
+    bad_esc = re.sub(r",%r\w+$", "," + other_reg, esc_text)
+    arg_insns = _replace_insn(_insns_copy(derived[MAIN]["start"]), esc_addr,
+                              bad_esc)
+    wrong_arg = _PbeProxy(
+        g, precision=_PbePrecision({derived[MAIN]["start"]: arg_insns}))
+    rec = wit(MAIN, graph=wrong_arg)
     chk("e7pbe wrong argument refusal", (rec or {}).get("refusal"),
         "escaped-slot-is-not-the-pkeygen-ex-argument")
     acc = _mut("e7pbe-outparam-arg-index",
-               lambda: wit(0x5062C5, graph=wrong_arg))
+               lambda: wit(MAIN, graph=wrong_arg))
     chk("e7pbe wrong argument control is load-bearing",
         (acc or {}).get("resolved"), True)
 
@@ -30674,162 +34746,1292 @@ def _pbe_outparam_self_test():
             failures.append("e7pbe registry fixture: store not found")
         (fixture / PBE_SOURCE).write_text(mutated)
         bad_registry = _PbeProxy(g, source_root=str(fixture))
-        rec = wit(0x5062C5, graph=bad_registry)
+        rec = wit(MAIN, graph=bad_registry)
         chk("e7pbe registry non-null refusal", (rec or {}).get("refusal"),
             "pbe-registry-writes-a-non-null-keygen-ex")
         acc = _mut("e7pbe-outparam-registry",
-                   lambda: wit(0x5062C5, graph=bad_registry))
+                   lambda: wit(MAIN, graph=bad_registry))
         chk("e7pbe registry non-null control is load-bearing",
             (acc or {}).get("resolved"), True)
         chk("e7pbe registry non-null restored",
-            (wit(0x5062C5) or {}).get("targets"), want1)
+            leaves_of(wit(MAIN))[0], want_all)
     finally:
         shutil.rmtree(fixture, ignore_errors=True)
 
-    # One selected row member is a data address, not a function start.
-    # 0x889948 is BUILTIN_PBE + 0x418 (row 32, member 0x18); 0x889530 is the
-    # BUILTIN_PBE data object, which is not an in-image function start.
-    bad_row = _PbeProxy(g, relocs=_relocs_with_value(0x889948, 0x889530))
-    rec = wit(0x2BD122, graph=bad_row)
-    chk("e7pbe row data target refusal", (rec or {}).get("refusal"),
-        "row-member-not-a-function-start")
-    acc = _mut("e7pbe-outparam-row-target",
-               lambda: wit(0x2BD122, graph=bad_row))
-    chk("e7pbe row data target control is load-bearing",
-        (acc or {}).get("resolved"), True)
-    chk("e7pbe row data target restored",
-        (wit(0x2BD122) or {}).get("targets"), want2)
+    # One selected row member is a data address, not a function start.  The
+    # member slot is derived from the witness's table metadata (the first
+    # selected row's `keygen_ex` member); the substituted value is the table
+    # object itself, which is not an in-image function start.
+    table = (w2 or {}).get("table") or {}
+    selected = (w2 or {}).get("selected_rows") or []
+    if not table or not selected:
+        failures.append(
+            "e7pbe row data target control: the selected row set is absent "
+            "from the witness result; the control did not run")
+    else:
+        table_addr = (table["address"] if isinstance(table["address"], int)
+                      else int(table["address"], 16))
+        row_slot = (table_addr
+                    + selected[0] * table["stride"] + table["member_offset"])
+        bad_row = _PbeProxy(g, relocs=_relocs_with_value(
+            row_slot, table_addr))
+        rec = wit(KDF, graph=bad_row)
+        chk("e7pbe row data target refusal", (rec or {}).get("refusal"),
+            "row-member-not-a-function-start")
+        acc = _mut("e7pbe-outparam-row-target",
+                   lambda: wit(KDF, graph=bad_row))
+        chk("e7pbe row data target control is load-bearing",
+            (acc or {}).get("resolved"), True)
+        chk("e7pbe row data target restored",
+            leaves_of(wit(KDF))[0], want_kdf)
 
     # A second writer of the same frame slot.
-    second_insns = _insert_insn(_insns_copy(0x505EB0), 0x505EF8, 0x505EFC,
-                                "movq   $0x0,0xa0(%rsp)")
-    second = _PbeProxy(g, precision=_PbePrecision({0x505EB0: second_insns}))
-    rec = wit(0x5062C5, graph=second)
+    second_insns = _insert_insn(_insns_copy(derived[MAIN]["start"]),
+                                zero_addr, synth_addr,
+                                f"movq   $0x0,{slot_mem}")
+    second = _PbeProxy(
+        g, precision=_PbePrecision({derived[MAIN]["start"]: second_insns}))
+    rec = wit(MAIN, graph=second)
     chk("e7pbe second writer refusal", (rec or {}).get("refusal"),
         "slot-has-a-second-writer")
     acc = _mut("e7pbe-outparam-second-writer",
-               lambda: wit(0x5062C5, graph=second))
+               lambda: wit(MAIN, graph=second))
     chk("e7pbe second writer control is load-bearing",
         (acc or {}).get("resolved"), True)
-    chk("e7pbe second writer restored", (wit(0x5062C5) or {}).get("targets"),
-        want1)
+    chk("e7pbe second writer restored", leaves_of(wit(MAIN))[0], want_all)
 
     # A 4-byte zero store leaves the upper half of the pointer slot stale.
-    zero_width_insns = _replace_insn(_insns_copy(0x505EB0), 0x505EF8,
-                                     "movl   $0x0,0xa0(%rsp)")
+    zero_width_insns = _replace_insn(_insns_copy(derived[MAIN]["start"]),
+                                     zero_addr, f"movl   $0x0,{slot_mem}")
     zero_width = _PbeProxy(
-        g, precision=_PbePrecision({0x505EB0: zero_width_insns}))
-    rec = wit(0x5062C5, graph=zero_width)
+        g, precision=_PbePrecision({derived[MAIN]["start"]: zero_width_insns}))
+    rec = wit(MAIN, graph=zero_width)
     chk("e7pbe zero store width refusal", (rec or {}).get("refusal"),
         "slot-width-is-not-64-bit")
     acc = _mut("e7pbe-outparam-zero-width",
-               lambda: wit(0x5062C5, graph=zero_width))
+               lambda: wit(MAIN, graph=zero_width))
     chk("e7pbe zero store width control is load-bearing",
         (acc or {}).get("resolved"), True)
     chk("e7pbe zero store width restored",
-        (wit(0x5062C5) or {}).get("targets"), want1)
+        leaves_of(wit(MAIN))[0], want_all)
 
-    # A 4-byte reload truncates the pointer in the call-target register.
-    reload_width_insns = _replace_insn(_insns_copy(0x505EB0), 0x505FFB,
-                                       "mov    0xa0(%rsp),%eax")
+    # Every 64-bit reload of the slot is narrowed to a 32-bit one: any reaching
+    # load that truncates the pointer must refuse the site.
+    reload_addrs = {int(r["address"], 16) for r in reload_rows}
+    rw_insns, rewritten = [], set()
+    for a, t in _insns_copy(derived[MAIN]["start"]):
+        if a in reload_addrs:
+            dest = t.strip().rsplit(",", 1)[-1].strip()
+            narrow = ("%e" + dest[2:]) if dest.startswith("%r") else dest
+            rw_insns.append((a, f"mov    {slot_mem},{narrow}"))
+            rewritten.add(a)
+        else:
+            rw_insns.append((a, t))
+    chk("e7pbe reload-width control rewrote every reaching reload",
+        rewritten == reload_addrs, True)
     reload_width = _PbeProxy(
-        g, precision=_PbePrecision({0x505EB0: reload_width_insns}))
-    rec = wit(0x5062C5, graph=reload_width)
+        g, precision=_PbePrecision({derived[MAIN]["start"]: rw_insns}))
+    rec = wit(MAIN, graph=reload_width)
     chk("e7pbe reload width refusal", (rec or {}).get("refusal"),
         "slot-width-is-not-64-bit")
     acc = _mut("e7pbe-outparam-reload-width",
-               lambda: wit(0x5062C5, graph=reload_width))
+               lambda: wit(MAIN, graph=reload_width))
     chk("e7pbe reload width control is load-bearing",
         (acc or {}).get("resolved"), True)
     chk("e7pbe reload width restored",
-        (wit(0x5062C5) or {}).get("targets"), want1)
+        leaves_of(wit(MAIN))[0], want_all)
 
     # A partial 4-byte write at slot+4 leaves the upper half of the pointer
     # stale even though the exact-offset scan sees only the zero store.
-    overlap_insns = _insert_insn(_insns_copy(0x505EB0), 0x505EF8, 0x505EFC,
-                                 "movl   $0xdead,0xa4(%rsp)")
+    mem4 = f"{hex(int(m_zero.group(1), 16) + 4)}(%rsp)"
+    overlap_insns = _insert_insn(_insns_copy(derived[MAIN]["start"]),
+                                 zero_addr, synth_addr,
+                                 f"movl   $0xdead,{mem4}")
     overlap = _PbeProxy(
-        g, precision=_PbePrecision({0x505EB0: overlap_insns}))
-    rec = wit(0x5062C5, graph=overlap)
+        g, precision=_PbePrecision({derived[MAIN]["start"]: overlap_insns}))
+    rec = wit(MAIN, graph=overlap)
     chk("e7pbe overlap store refusal", (rec or {}).get("refusal"),
         "slot-overlap-store")
     acc = _mut("e7pbe-outparam-overlap",
-               lambda: wit(0x5062C5, graph=overlap))
+               lambda: wit(MAIN, graph=overlap))
     chk("e7pbe overlap store control is load-bearing",
         (acc or {}).get("resolved"), True)
     chk("e7pbe overlap store restored",
-        (wit(0x5062C5) or {}).get("targets"), want1)
+        leaves_of(wit(MAIN))[0], want_all)
 
     # The GOT binding is not in this image.
     dyn = dict(g.dynamic_defs)
     dyn.pop("EVP_PBE_find_ex", None)
     bad_got = _PbeProxy(g, dynamic_defs=dyn)
-    rec = wit(0x5062C5, graph=bad_got)
+    rec = wit(MAIN, graph=bad_got)
     chk("e7pbe got not in image refusal", (rec or {}).get("refusal"),
         "pbe-find-ex-callee-is-not-in-image")
     acc = _mut("e7pbe-outparam-got-not-in-image",
-               lambda: wit(0x5062C5, graph=bad_got))
+               lambda: wit(MAIN, graph=bad_got))
     chk("e7pbe got not in image control is load-bearing",
         (acc or {}).get("resolved"), True)
     chk("e7pbe got not in image restored",
-        (wit(0x5062C5) or {}).get("targets"), want1)
+        leaves_of(wit(MAIN))[0], want_all)
 
     # The site-2 KDF selection is load-bearing: all rows gives 5, not 2.
-    all_rows = _mut("e7pbe-outparam-all-rows", lambda: wit(0x2BD122))
-    chk("e7pbe site 2 all-row control count",
-        len((all_rows or {}).get("targets") or []), 5)
-    chk("e7pbe site 2 all-row control set",
-        set((all_rows or {}).get("targets") or []), set(want1))
+    all_rows = _mut("e7pbe-outparam-all-rows", lambda: wit(KDF))
+    all_leaves, all_unknown = leaves_of(all_rows)
+    chk("e7pbe site 2 all-row control leaves", all_leaves, want_all)
+    chk("e7pbe site 2 all-row control has no unknown target",
+        all_unknown, [])
     chk("e7pbe site 2 KDF set is a proper subset",
-        set((w2 or {}).get("targets") or [])
-        < set((all_rows or {}).get("targets") or []), True)
+        set(got2) < set(all_leaves), True)
 
     # Non-widening: the plain keygen site and the eight b65 ABI sites keep
     # their contract class and unbounded target set; the new witness does not
-    # absorb any of them.
-    abi_specs = (
-        (0x50604D, 0x505EB0, "call   *%rax", ABI_CONTRACT_PBE_REGISTRY),
-        (0x3E2088, 0x3E1C00, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
-        (0x3E217D, 0x3E1C00, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
-        (0x3E2648, 0x3E1C00, "call   *%rax", ABI_CONTRACT_STORE_LOADER),
-        (0x3E2408, 0x3E1C00, "call   *%rax", ABI_CONTRACT_PROVIDER),
-        (0x17319A, 0x172C90, "call   *%r15", ABI_CONTRACT_CONF_MODULE),
-        (0x1735B2, 0x172C90, "call   *%rax", ABI_CONTRACT_CONF_MODULE),
-        (0x495DE6, 0x495B60, "call   *%r14",
-         ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT),
+    # absorb any of them.  Their addresses are derived from each site's own
+    # pin, so the control is exercised at this image rather than at a
+    # recorded VA.
+    abi_cases = (
+        ("plain " + MAIN, PBE_SITE_PIN, ABI_CONTRACT_PBE_REGISTRY,
+         _pinned_site("PBE_SITE", g)),
+        ("STORE_LOADER open_ex", STORE_LOADER_LEGACY_SITE_PINS[0x1F89E8],
+         ABI_CONTRACT_STORE_LOADER,
+         _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F89E8, g)[0]),
+        ("STORE_LOADER open", STORE_LOADER_LEGACY_SITE_PINS[0x1F8AA1],
+         ABI_CONTRACT_STORE_LOADER,
+         _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F8AA1, g)[0]),
+        ("STORE_LOADER closefn", STORE_LOADER_LEGACY_SITE_PINS[0x1F8F13],
+         ABI_CONTRACT_STORE_LOADER,
+         _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F8F13, g)[0]),
+        ("STORE_LOADER provider close", STORE_LOADER_PROVIDER_SITE_PIN,
+         ABI_CONTRACT_PROVIDER, _pinned_site("STORE_LOADER_PROVIDER_SITE", g)),
+        ("CONF init", CONF_SITE_PINS[0x293F25], ABI_CONTRACT_CONF_MODULE,
+         _pin_effective("CONF_SITES", 0x293F25, g)[0]),
+        ("CONF finish", CONF_SITE_PINS[0x294363], ABI_CONTRACT_CONF_MODULE,
+         _pin_effective("CONF_SITES", 0x294363, g)[0]),
+        ("PEM default callback", PEM_SITE_PIN,
+         ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
+         _pinned_site("PEM_SITE", g)),
     )
-    for addr, func, text, cls in abi_specs:
+    for label, pin, cls, addr in abi_cases:
+        func = _pin_start(g, pin)
+        text = next((t for a, t in (_pin_insns(g, func) or ()) if a == addr),
+                    None) if func is not None else None
+        if func is None or text is None:
+            failures.append(f"e7pbe non-widening {label}: the fixture site did "
+                            "not resolve to an instruction of its pinned "
+                            "symbol; the control did not run")
+            continue
         s = site(addr, func, text)
         res = external_abi_contract_witness(g, s, g.funcs.get(func, ""))
         if res is None:
-            failures.append(f"e7pbe non-widening {addr:#x}: no ABI witness")
+            failures.append(f"e7pbe non-widening {label}: no ABI witness")
             continue
         got_cls, abi_w, abi_ref = res
-        chk(f"e7pbe non-widening {addr:#x} class", got_cls, cls)
+        chk(f"e7pbe non-widening {label} class", got_cls, cls)
         if abi_w is None:
-            failures.append(f"e7pbe non-widening {addr:#x}: refused: "
+            failures.append(f"e7pbe non-widening {label}: refused: "
                             f"{(abi_ref or {}).get('reason')}")
             continue
-        chk(f"e7pbe non-widening {addr:#x} contract_bounded",
+        chk(f"e7pbe non-widening {label} contract_bounded",
             abi_w.get("contract_bounded"), True)
-        chk(f"e7pbe non-widening {addr:#x} target set",
+        chk(f"e7pbe non-widening {label} target set",
             abi_w.get("target_set"), [])
-        chk(f"e7pbe does not absorb {addr:#x}",
+        chk(f"e7pbe does not absorb {label}",
             pbe_outparam_instance_witness(g, s, g.funcs.get(func, "")), None)
 
     return failures, (
-        "e7pbe controls: both sites resolve to the builtin table sets "
-        "(5 / 2); wrong callee, wrong argument index, non-null registry "
-        "keygen_ex, data row target, second slot writer, 4-byte zero "
-        "store, 4-byte reload, partial overlap store and non-in-image GOT "
-        "binding each refuse with slot-width-is-not-64-bit or "
-        "slot-overlap-store as applicable and each mutation flips it to "
-        "accepted; the KDF selection control distinguishes 5 from 2; the "
-        "plain keygen site and all eight b65 ABI sites are unchanged")
+        "e7pbe controls: both sites resolve by symbol ("
+        + ", ".join(f"{f}+{derived[f]['addr'] - derived[f]['start']:#x}"
+                    for f in (MAIN, KDF))
+        + ") to the five target leaves (5 / 2), compared as symbols; a "
+        "disappeared or ambiguous target leaf and a changed site shape each "
+        "refuse; wrong callee, wrong argument index, non-null registry "
+        "keygen_ex, data row target, second slot writer, 4-byte zero store, "
+        "32-bit reload, partial overlap store and non-in-image GOT binding "
+        "each refuse and each mutation flips it to accepted; the KDF "
+        "selection control distinguishes 5 from 2; the plain keygen site and "
+        "all eight b65 ABI sites are unchanged")
+
+
+# --------------------------------------------------------------------------- #
+# E7/core self-test: the core-dispatch, provider-init, store-wrapper and PEM
+# register rules (AGENTS.md section 16).
+# --------------------------------------------------------------------------- #
+
+# Function leaves and the number of core-dispatch sites each must produce at
+# the admitted candidate.  Keyed to the stable function leaf, never to a VA.
+CORE_DISPATCH_EXPECTED = {
+    "evp_signature_from_algorithm": 1,
+    "construct_loader": 1,
+    "ossl_provider_find": 1,
+    "ossl_provider_free": 1,
+    "ossl_provider_up_ref": 1,
+    "ossl_provider_add_to_store": 1,
+    "provider_activate": 2,
+    "provider_deactivate": 1,
+    "provider_up_ref_intern": 1,
+    "OSSL_LIB_CTX_free": 1,
+    "evp_asym_cipher_from_algorithm": 1,
+    "evp_kem_from_algorithm": 1,
+    "evp_keyexch_from_algorithm": 1,
+    "ossl_child_provider_init": 2,
+    "provider_create_child_cb": 1,
+    "provider_remove_child_cb": 1,
+    "ossl_provider_init_as_child": 1,
+    "ossl_provider_up_ref_parent": 1,
+    "bio_core_ctrl": 1,
+    "bio_core_free": 1,
+    "bio_core_gets": 1,
+    "bio_core_puts": 1,
+    "bio_core_read_ex": 1,
+    "bio_core_write_ex": 1,
+}
+
+
+def _e7repin_self_test():
+    """Controls for the (symbol leaf, offset) re-pin rule.
+
+    The positive case is that every pinned row of the enumerated tables still
+    re-derives in the admitted install; the negative cases perturb one pin
+    condition at a time (unknown leaf, non-call offset, non-call instruction)
+    and the moved-row case checks that no address is accepted by two rows.
+    """
+    root = Path(__file__).resolve().parents[2]
+    dso = root / "artifacts/phase2/install/lib/libcrypto.so.3"
+    if not dso.is_file():
+        return [], "e7repin controls: skipped (candidate absent)"
+    workdir = root / "court/tmp/e7repin-selftest-work"
+    workdir.mkdir(parents=True, exist_ok=True)
+    try:
+        g = DsoGraph(dso, workdir)
+    except Exception as e:  # noqa: BLE001 -- a missing tool is a skip, not a fail
+        return [], f"e7repin controls: skipped (graph unavailable: {e})"
+    g.source_root = str(root)
+    g.install_prefix = str(root / "artifacts/phase2/install")
+    g.precision = PrecisionResolver(g)
+    failures = list(e7repin_controls(g))
+    rederived, moved, refused = [], [], []
+    for name, pin_name in _PIN_TABLE_OF.items():
+        for old, _pin in globals()[pin_name].items():
+            addr, how = _pin_effective(name, old, g)
+            row = {"table": name, "literal": hex(old),
+                   "address": hex(addr) if isinstance(addr, int) else None}
+            {"pin": rederived, "search": moved}.get(how, refused).append(row)
+    if refused:
+        failures.append(
+            "e7repin: " + str(len(refused)) + " pinned row(s) neither re-derive "
+            "by offset nor resolve by witness search: "
+            + ", ".join(sorted(f"{r['table']}@{r['literal']}"
+                                for r in refused)))
+    return failures, (
+        "e7repin controls: every pinned row re-derives by offset or resolves "
+        "by the in-symbol witness search ("
+        f"{len(rederived)} by pin, {len(moved)} moved, {len(refused)} refused); "
+        "unknown-leaf, non-call-offset and non-call-instruction mutations each "
+        "refuse; no moved row is accepted by two rows")
+
+
+def _e7repin_search_self_test():
+    """Load-bearing controls for the moved-pin search (uniqueness is proof).
+
+    Four facts are exercised, each with its own counterexample and restore:
+    the search resolves a stale row only when the witness accepts exactly one
+    transfer in the symbol; forcing a second acceptance refuses; perturbing the
+    witness's own facts (the close-guard polarity branch, the PBE frame slot)
+    refuses; and turning the search off reproduces the pre-repair behaviour
+    (the stale literal stays, and the site is target-bounded).
+    """
+    root = Path(__file__).resolve().parents[2]
+    dso = root / "artifacts/phase2/install/lib/libcrypto.so.3"
+    if not dso.is_file():
+        return [], "e7repin-search controls: skipped (candidate absent)"
+    global _PIN_SEARCH_OFF
+    workdir = root / "court/tmp/e7repin-search-work"
+    workdir.mkdir(parents=True, exist_ok=True)
+    _SELFTEST_TRACE.clear()
+    try:
+        g = DsoGraph(dso, workdir)
+    except Exception as e:  # noqa: BLE001 -- a missing tool is a skip
+        return [], f"e7repin-search controls: skipped (graph unavailable: {e})"
+    g.source_root = str(root)
+    g.install_prefix = str(root / "artifacts/phase2/install")
+    g.precision = PrecisionResolver(g)
+    failures = []
+
+    def chk(name, got, want):
+        ok = got == want
+        _SELFTEST_TRACE.append((name, got, want, ok))
+        if not ok:
+            failures.append(f"{name}: got {got!r}, want {want!r}")
+
+    class _Prec:
+        def __init__(self, insns):
+            self.insns_by_func = insns
+
+    serial = [0]
+
+    def proxy(insns_map):
+        serial[0] += 1
+        px = _RepinProxy(g, precision=_Prec(insns_map),
+                         sha256=f"{g.sha256}:e7repin-search:{serial[0]}")
+        for k in ("_fn_cfg_cache", "_reaching_cache", "_e7core_dom_cache",
+                  "_pin_site_index"):
+            object.__setattr__(px, k, {})
+        return px
+
+    def mutate(fstart, addr, new_text):
+        return {fstart: [(a, new_text if a == addr else t)
+                         for a, t in g.precision.insns_by_func[fstart]]}
+
+    def search_row(graph, table, old):
+        """(address, accepted list, refusal) for one table row."""
+        spec = globals()[table][old]
+        pin = globals()[_PIN_TABLE_OF[table]][old]
+        addr, prov, why = _pin_search(graph, "table", table, pin, spec,
+                                      _pin_witness(_PIN_TABLE_WITNESS[table]))
+        return addr, (prov or why or {}).get("accepted"), (why or {}).get("refusal")
+
+    saved = None
+    try:
+        # ---- positive: every stale row resolves, with one acceptance ---- #
+        rows = [("STORE_LOADER_LEGACY_SITES", 0x1F89E8, "open_ex"),
+                ("STORE_LOADER_LEGACY_SITES", 0x1F8AA1, "open"),
+                ("STORE_LOADER_LEGACY_SITES", 0x1F8F13, "closefn"),
+                ("PBE_EX_SITES", 0x17CEE8, "keygen_ex")]
+        for table, old, label in rows:
+            addr, how = _pin_effective(table, old, g)
+            chk(f"e7repin-search {label}: row resolves", how in ("pin", "search"),
+                True)
+            if how == "search":
+                name, why = _PIN_TABLE_WITNESS[table], None
+                spec = globals()[table][old]
+                a2, prov, why = _pin_search(
+                    g, "table", table, globals()[_PIN_TABLE_OF[table]][old],
+                    spec, _pin_witness(name))
+                chk(f"e7repin-search {label}: unique acceptance",
+                    (prov or {}).get("accepted"), [hex(addr)])
+                chk(f"e7repin-search {label}: same address as the table",
+                    a2, addr)
+        prov_addr, how = _pin_effective("STORE_LOADER_LEGACY_SITES",
+                                        0x1F8F13, g)
+        chk("e7repin-search closefn: resolved address is a transfer",
+            _is_indirect_transfer_strict(g, prov_addr), True)
+        provider = _pinned_site("STORE_LOADER_PROVIDER_SITE", g)
+        chk("e7repin-search provider scalar is a transfer",
+            _is_indirect_transfer_strict(g, provider), True)
+        prov_rows = [r for r in pin_resolution_report()["moved"]
+                     if r.get("symbol") == STORE_LOADER_FUNCTION]
+        chk("e7repin-search store rows: one acceptance each",
+            sorted(len(r["accepted"]) for r in prov_rows), [1] * len(prov_rows))
+        # From here on the controls mutate the image.  Their refusals and moved
+        # rows describe the counterexample, not the admitted image, so the
+        # reports are restored to this point on the way out.
+        saved = {k: dict(v) for k, v in (
+            ("_SITE_PIN_CACHE", _SITE_PIN_CACHE),
+            ("_PIN_MOVED", _PIN_MOVED),
+            ("_PIN_SEARCH_REFUSALS", _PIN_SEARCH_REFUSALS))}
+
+        # ---- uniqueness: force a second candidate to be accepted ---- #
+        mstart = _pin_start(g, STORE_LOADER_LEGACY_SITE_PINS[0x1F89E8])
+        minss = g.precision.insns_by_func[mstart]
+        open_addr = _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F8AA1, g)[0]
+        oi = next(k for k, (a, _t) in enumerate(minss) if a == open_addr)
+        site_o = _pin_site_record(g, mstart, open_addr, minss[oi][1])
+        load_o, _why = _external_operand_load(g, site_o, "%rax")
+        chk("e7repin-search uniqueness fixture applied", load_o is not None, True)
+        if load_o is not None:
+            twin = mutate(mstart, minss[load_o["def"]][0],
+                          minss[load_o["def"]][1].replace(
+                              f"{load_o['offset']:#x}(%r14)", "0x58(%r14)"))
+            chk("e7repin-search uniqueness fixture text",
+                twin[mstart][load_o["def"]][1]
+                != minss[load_o["def"]][1], True)
+            px = proxy(twin)
+            _addr, acc, why = search_row(px, "STORE_LOADER_LEGACY_SITES",
+                                         0x1F89E8)
+            chk("e7repin-search two-candidate refusal reason", why,
+                "the-witness-accepts-more-than-one-transfer-in-the-symbol")
+            chk("e7repin-search two-candidate refusal is a refusal",
+                _addr, None)
+            chk("e7repin-search two-candidate evidence",
+                len(acc or []) >= 2, True)
+        # restore: the same query on the unmutated image accepts exactly one
+        _addr, acc, why = search_row(g, "STORE_LOADER_LEGACY_SITES", 0x1F89E8)
+        chk("e7repin-search two-candidate restored",
+            (why, len(acc or [])), (None, 1))
+
+        # ---- witness perturbation: the close-guard polarity branches ---- #
+        # The guard is derived, so the control names the *derived* selectors:
+        # every selector whose arms can reach the site is inverted, because an
+        # upstream selector that a later one overrides cannot change the must-
+        # polarity (b78 added such an upstream selector, which is why naming
+        # `selectors[0]` alone stopped being load-bearing).
+        cstart = _pin_start(g, STORE_LOADER_LEGACY_SITE_PINS[0x1F8F13])
+        ev, why = _store_loader_polarity(g, cstart, provider, False)
+        chk("e7repin-search guard basis present", ev is not None, True)
+        if ev is not None:
+            sels = _polarity_selectors_for_site(g, cstart, provider, ev)
+            chk("e7repin-search guard selectors present", bool(sels), True)
+            twin = {cstart: list(g.precision.insns_by_func[cstart])}
+            for sel in sels:
+                a = int(sel["branch"], 16)
+                text = next(t for aa, t in twin[cstart] if aa == a)
+                flip = "jne" if text.strip().startswith("je") else "je"
+                new = text.replace(text.strip().split()[0], flip, 1)
+                twin[cstart] = [(aa, new if aa == a else tt)
+                                for aa, tt in twin[cstart]]
+            chk("e7repin-search guard mutation fixture applied",
+                twin[cstart] != g.precision.insns_by_func[cstart], True)
+            px = proxy(twin)
+            gwhy = _store_loader_polarity(px, cstart, provider, False)[1]
+            chk("e7repin-search guard mutation refusal",
+                bool(gwhy) and "polarity" in gwhy, True)
+            chk("e7repin-search guard mutation restored",
+                _store_loader_polarity(g, cstart, provider, False)[0]
+                is not None, True)
+
+        # ---- witness perturbation: the PBE frame slot displacement ---- #
+        pstart = _pin_start(g, PBE_EX_SITE_PINS[0x17CEE8])
+        paddr = _pin_effective("PBE_EX_SITES", 0x17CEE8, g)[0]
+        pinsns = g.precision.insns_by_func[pstart]
+        pi = next(k for k, (a, _t) in enumerate(pinsns) if a == paddr)
+        reloads, _why = _pbe_frame_reloads(g, pstart, pi, "%rax")
+        chk("e7repin-search pbe slot fixture present", bool(reloads), True)
+        if reloads:
+            r_addr = pinsns[reloads[0]["def"]][0]
+            r_text = pinsns[reloads[0]["def"]][1]
+            bumped = re.sub(r"^(\s*mov\s+)(-?0x[0-9a-f]+)(\()",
+                            lambda m: f"{m.group(1)}{hex(int(m.group(2), 16) + 8)}"
+                                      f"{m.group(3)}", r_text, count=1)
+            chk("e7repin-search pbe slot fixture applied", bumped != r_text, True)
+            px = proxy(mutate(pstart, r_addr, bumped))
+            _a, _acc, why = search_row(px, "PBE_EX_SITES", 0x17CEE8)
+            chk("e7repin-search pbe slot mutation refusal",
+                why, "no-candidate-transfer-is-accepted-by-the-witness")
+            chk("e7repin-search pbe slot mutation restored",
+                search_row(g, "PBE_EX_SITES", 0x17CEE8)[2], None)
+
+        # ---- the search removed: the pre-repair (target-bounded) behaviour ---- #
+        # The subject is not a premise of the image.  b77 used
+        # `OSSL_STORE_open_ex + 0x488`, but b78's rebuild put every legacy
+        # dispatch back at its recorded offset, and b84's image carries no
+        # naturally stale row at all: asserting one exists made the control
+        # depend on a property of the candidate instead of exercising the
+        # rule.  One real table row is therefore re-registered under a
+        # deliberately stale offset inside its own symbol, so the control
+        # always drives the same three states -- strict re-derivation misses,
+        # the search resolves it, the search-off fallback keeps the literal --
+        # and can fail on any candidate.
+        SYNTH_ROW = 0x1
+        stale = next((old for old in PBE_EX_SITES
+                      if _pin_effective("PBE_EX_SITES", old, g)[1]
+                      in ("pin", "search")), None)
+        if stale is None:
+            _PREMISE_UNAVAILABLE.append(
+                "e7repin-search disabled: no PBE_EX_SITES row resolves in "
+                "this image, so no row can be re-keyed onto a synthetic "
+                "stale pin")
+        else:
+            _real_spec = PBE_EX_SITES[stale]
+            _real_pin = PBE_EX_SITE_PINS[stale]
+            _synth_pin = (_real_pin[0], _real_pin[1] + 0x1000)
+            chk("e7repin-search disabled: synthetic pin is stale",
+                _pin_site_addr(g, _synth_pin), None)
+            true_addr = _pin_effective("PBE_EX_SITES", stale, g)[0]
+            del PBE_EX_SITES[stale]
+            del PBE_EX_SITE_PINS[stale]
+            PBE_EX_SITES[SYNTH_ROW] = _real_spec
+            PBE_EX_SITE_PINS[SYNTH_ROW] = _synth_pin
+            _SITE_PIN_CACHE.clear()
+            try:
+                addr, how = _pin_effective("PBE_EX_SITES", SYNTH_ROW, g)
+                chk("e7repin-search disabled: the stale row resolves by "
+                    "search", (how, addr), ("search", true_addr))
+                _SITE_PIN_CACHE.clear()
+                _PIN_SEARCH_OFF = True
+                try:
+                    addr, how = _pin_effective("PBE_EX_SITES", SYNTH_ROW, g)
+                    chk("e7repin-search disabled: the stale literal stays",
+                        (how, addr), ("literal", SYNTH_ROW))
+                    chk("e7repin-search disabled: no row matches the true "
+                        "site", _repinned("PBE_EX_SITES", g).get(true_addr),
+                        None)
+                finally:
+                    _PIN_SEARCH_OFF = False
+                    _SITE_PIN_CACHE.clear()
+                chk("e7repin-search re-enabled: the row resolves again",
+                    _pin_effective("PBE_EX_SITES", SYNTH_ROW, g)[1],
+                    "search")
+            finally:
+                del PBE_EX_SITES[SYNTH_ROW]
+                del PBE_EX_SITE_PINS[SYNTH_ROW]
+                PBE_EX_SITES[stale] = _real_spec
+                PBE_EX_SITE_PINS[stale] = _real_pin
+                _SITE_PIN_CACHE.clear()
+            chk("e7repin-search disabled: the real table is restored",
+                _pin_effective("PBE_EX_SITES", stale, g)[1]
+                in ("pin", "search"), True)
+    finally:
+        if saved is not None:
+            for name, values in saved.items():
+                target = globals()[name]
+                target.clear()
+                target.update(values)
+    return failures, (
+        "e7repin-search controls: a stale pin resolves only through the "
+        "in-symbol witness search (one acceptance); forcing a second "
+        "acceptance refuses on uniqueness; mutating the close-guard polarity "
+        "branch and the PBE frame slot each refuse and restore; disabling the "
+        "search reproduces the pre-repair target-bounded row")
+
+
+def _conf_default_method_self_test():
+    """Controls for ABI_CONTRACT_CONF_DEFAULT_METHOD, one per element.
+
+    The witness claims four things: the dispatched slot is `init` at 0x10, the
+    table is reached through the `default_CONF_method` cell, the cell's writers
+    are the exported setter's parameter and the built-in fallback, and the
+    source has no runtime writer of `ConfMethod::init`.  Each control removes
+    exactly one of them and requires a refusal; the restore check requires the
+    admitted image to accept again.
+    """
+    root = Path(__file__).resolve().parents[2]
+    dso = root / "artifacts/phase2/install/lib/libcrypto.so.3"
+    if not dso.is_file():
+        return [], "conf-method controls: skipped (candidate absent)"
+    workdir = root / "court/tmp/conf-method-selftest-work"
+    workdir.mkdir(parents=True, exist_ok=True)
+    try:
+        g = DsoGraph(dso, workdir)
+    except Exception as e:  # noqa: BLE001 -- a missing tool is a skip
+        return [], f"conf-method controls: skipped (graph unavailable: {e})"
+    g.source_root = str(root)
+    g.install_prefix = str(root / "artifacts/phase2/install")
+    g.precision = PrecisionResolver(g)
+    failures = []
+
+    def chk(name, got, want):
+        if got != want:
+            failures.append(f"{name}: got {got!r}, want {want!r}")
+
+    class _Prec:
+        def __init__(self, insns):
+            self.insns_by_func = insns
+
+    serial = [0]
+
+    def proxy(fstart, addr, new_text):
+        serial[0] += 1
+        bodies, prec = [], {}
+        for s, body in _conf_method_bodies(g):
+            if s == fstart:
+                body = [(a, new_text if a == addr else t) for a, t in body]
+            bodies.append((s, body))
+            prec[s] = body
+        px = _RepinProxy(g, functions=bodies, precision=_Prec(prec),
+                         sha256=f"{g.sha256}:conf-method:{serial[0]}")
+        for k in ("_fn_cfg_cache", "_reaching_cache", "_e7core_dom_cache",
+                  "_pin_site_index", "_e7abi_field_writers_cache"):
+            object.__setattr__(px, k, {})
+        return px
+
+    def site_for(graph, fstart, addr):
+        text = next(t for a, t in graph.precision.insns_by_func[fstart]
+                    if a == addr)
+        return {"kind": "call", "func": fstart, "addr": addr, "text": text,
+                "unresolved": True, "reason": "reg-value-partial[int]"}
+
+    # Every enumerated row must re-derive and be accepted in the shape that row
+    # records; the writer controls run once against the first accepted row.
+    rows = []
+    for old, pin in CONF_METHOD_SITE_PINS.items():
+        addr = _pin_effective("CONF_METHOD_SITES", old, g)[0]
+        start = _pin_start(g, pin)
+        if addr is None or start is None:
+            failures.append(f"conf-method row {old:#x}: the enumerated site does "
+                            "not re-derive in this image")
+            continue
+        rows.append((old, addr, start, CONF_METHOD_SITES[old]))
+    if not rows:
+        return [], ("conf-method controls: skipped (no enumerated site "
+                    "re-derives in this image)")
+    first = None
+    for old, site_addr, fstart, spec in rows:
+        name = g.funcs[fstart]
+        cls, wit, refusal = conf_default_method_witness(
+            g, site_for(g, fstart, site_addr), name)
+        tag = f"conf-method {spec['function']} ({spec['form']})"
+        chk(f"{tag} positive class", cls, ABI_CONTRACT_CONF_DEFAULT_METHOD)
+        chk(f"{tag} positive accepted", (refusal, bool(wit)), (None, True))
+        w = wit or {}
+        chk(f"{tag} positive slot",
+            (w.get("field") or {}).get("offset"), "0x10")
+        chk(f"{tag} positive field",
+            (w.get("field") or {}).get("name"), "init")
+        chk(f"{tag} form", w.get("form"), spec["form"])
+        chk(f"{tag} setter stores",
+            len((w.get("writer_set") or {}).get("setter") or []), 1)
+        chk(f"{tag} builtin fallbacks",
+            len((w.get("writer_set") or {}).get("builtin") or []) > 0, True)
+        chk(f"{tag} unaccounted writers",
+            (w.get("writer_set") or {}).get("other"), 0)
+        chk(f"{tag} reader set non-empty",
+            (w.get("reader_set") or {}).get("count", 0) > 0, True)
+        chk(f"{tag} registered in the external-ABI index",
+            (external_abi_contract_witness(g, site_for(g, fstart, site_addr),
+                                           name)
+             or (None, None, None))[0], ABI_CONTRACT_CONF_DEFAULT_METHOD)
+        e7 = evaluate_predicate_element_7(
+            [("control.so", site_addr,
+              {"class": cls, "unresolved": True})], [])
+        chk(f"{tag} site establishes element 7",
+            (e7["established"], e7["target_bounded_unresolved_sites"]),
+            (True, 0))
+        loads = (w.get("operand") or {}).get("loads") or []
+        chk(f"{tag} operand loads", len(loads),
+            2 if spec["form"] == "reg-load" else 1)
+        if first is None:
+            first = (old, site_addr, fstart, name, spec, w, loads)
+
+    # ---- control 1: the dispatched slot is not the init field at 0x10 ---- #
+    _old, site_addr, fstart, name, spec, w, loads = first
+    if loads:
+        ld_addr = int(loads[0]["address"], 16)
+        ld_text = loads[0]["text"]
+        bumped = ld_text.replace("0x10(", "0x18(", 1)
+        chk("conf-method wrong-slot fixture applied", bumped != ld_text, True)
+        px = proxy(fstart, ld_addr, bumped)
+        _c, _w, ref = conf_default_method_witness(
+            px, site_for(px, fstart, site_addr), name)
+        chk("conf-method wrong-slot-offset refusal",
+            (ref or {}).get("reason"), "operand-load-is-not-the-init-slot")
+
+    # ---- control 1b: the operand-field shape dispatches 0x10 as well ---- #
+    for old, addr, start, spec in rows:
+        if spec["form"] != "operand-field":
+            continue
+        name2 = g.funcs[start]
+        _c0, w0, r0 = conf_default_method_witness(
+            g, site_for(g, start, addr), name2)
+        if r0 is not None or not w0:
+            continue
+        text0 = (w0.get("operand") or {}).get("loads", [{}])[0].get("text")
+        if not text0:
+            continue
+        bumped = text0.replace("0x10(", "0x18(", 1)
+        chk(f"conf-method operand-field fixture applied "
+            f"({spec['function']})", bumped != text0, True)
+        px = proxy(start, addr, bumped)
+        _c, _w, ref = conf_default_method_witness(
+            px, site_for(px, start, addr), name2)
+        chk(f"conf-method operand-field wrong-slot refusal "
+            f"({spec['function']})", (ref or {}).get("reason"),
+            "operand-load-is-not-the-init-slot")
+
+    # ---- control 1c: a reader of the cell outside the conf modules ---- #
+    cell_target = next((o["target"] for o in (w.get("base_origins") or [])
+                        if o.get("kind") == "default-method-cell"), None)
+    if cell_target:
+        cell = int(cell_target, 16)
+        donor = None
+        for fs, body in _conf_method_bodies(g):
+            nm = g.funcs.get(fs, "")
+            if CONF_METHOD_READER_RE.search(nm or ""):
+                continue
+            if any(_insn_comment_addr(t) == cell for _a, t in body):
+                continue
+            if body:
+                donor = (fs, body[0][0])
+                break
+        if donor:
+            cell_sym = ((getattr(g, "all_syms", {}) or {}).get(cell)
+                        or "DEFAULT_CONF_METHOD")
+            injected = f"mov    0x0(%rip),%rax        # {cell:x} <{cell_sym}>"
+            px = proxy(donor[0], donor[1], injected)
+            _c, _w, ref = conf_default_method_witness(
+                px, site_for(px, fstart, site_addr), name)
+            chk("conf-method foreign-reader refusal",
+                (ref or {}).get("reason"),
+                "default-method-cell-read-outside-the-conf-modules")
+
+    # ---- control 2: a writer of the cell that is not the setter's parameter ---- #
+    setters = (w.get("writer_set") or {}).get("setter") or []
+    if setters:
+        st = setters[0]
+        mutated = st["text"].replace("%rdi,", "%rsi,", 1)
+        chk("conf-method setter-writer fixture applied",
+            mutated != st["text"], True)
+        px = proxy(st.get("func", fstart), int(st["address"], 16), mutated)
+        # The store now lives in CONF_set_default_method but writes a value
+        # that is not that function's parameter: a second interface.
+        _c, _w, ref = conf_default_method_witness(
+            px, site_for(px, fstart, site_addr), name)
+        chk("conf-method non-parameter-setter refusal",
+            (ref or {}).get("reason"),
+            "unaccounted-writer-of-the-default-method-cell")
+
+    # ---- control 2b: a built-in fallback store that is not the built-in table ---- #
+    builtins = (w.get("writer_set") or {}).get("builtin") or []
+    if builtins:
+        b = builtins[0]
+        mutated = b["text"].replace("%rax,", "%rcx,", 1)
+        chk("conf-method fallback-writer fixture applied",
+            mutated != b["text"], True)
+        px = proxy(b.get("func", fstart), int(b["address"], 16), mutated)
+        _c, _w, ref = conf_default_method_witness(
+            px, site_for(px, fstart, site_addr), name)
+        chk("conf-method non-builtin-fallback refusal",
+            (ref or {}).get("reason"),
+            "unaccounted-writer-of-the-default-method-cell")
+
+    # ---- control 3: the proven field is not the dispatched one ---- #
+    _MUTED.add("e7abi-conf-method-wrong-field")
+    try:
+        _c, _w, ref = conf_default_method_witness(
+            g, site_for(g, fstart, site_addr), name)
+        chk("conf-method wrong-field refusal", (ref or {}).get("reason"),
+            "declared-init-field-is-not-at-the-dispatched-offset")
+    finally:
+        _MUTED.discard("e7abi-conf-method-wrong-field")
+
+    # ---- restore: the admitted image accepts exactly as before ---- #
+    _c, wit2, ref2 = conf_default_method_witness(
+        g, site_for(g, fstart, site_addr), name)
+    chk("conf-method restored", (ref2, wit2 == w), (None, True))
+    return failures, (
+        "conf-method controls: the enumerated `default_CONF_method` -> "
+        "`CONF_METHOD.init` dispatch is contract-bounded by the exported "
+        "`CONF_set_default_method`; a wrong slot offset, a setter store that is "
+        "not its parameter, a fallback store that is not the built-in table and "
+        "a wrong declared field each refuse and restore")
+
+
+def _e7core_self_test():
+    """Positive coverage plus a load-bearing mutation for every new rule."""
+    root = Path(__file__).resolve().parents[2]
+    dso = root / "artifacts/phase2/install/lib/libcrypto.so.3"
+    install = root / "artifacts/phase2/install"
+    if not dso.is_file() or not (install / CORE_DISPATCH_HEADER).is_file():
+        return [], "e7core controls: skipped (candidate or install absent)"
+    if not (shutil.which("nm") and shutil.which("objdump")):
+        return [], "e7core controls: skipped (nm/objdump absent)"
+    failures = []
+
+    def chk(name, got, want):
+        if got != want:
+            failures.append(f"{name}: got {got!r}, want {want!r}")
+
+    class _Prec:
+        def __init__(self, insns):
+            self.insns_by_func = insns
+
+    class _Proxy:
+        """A graph view with one fact replaced, or the base graph itself."""
+
+        def __init__(self, base, *, insns=None, source_root=None,
+                     install_prefix=None):
+            self.funcs = base.funcs
+            self._base = base
+            self.start_set = base.start_set
+            self.names_at = base.names_at
+            self.dynamic_defs = dict(base.dynamic_defs)
+            self.slot_syms = base.slot_syms
+            self.sections = base.sections
+            self.source_root = (str(source_root) if source_root is not None
+                                else str(base.source_root))
+            self.install_prefix = (str(install_prefix)
+                                   if install_prefix is not None
+                                   else str(base.install_prefix))
+            self.precision = _Prec(insns if insns is not None
+                                   else base.precision.insns_by_func)
+            self._fn_cfg_cache = {}
+            self._reaching_cache = {}
+            self._e7core_dom_cache = {}
+            self._e7source_cache = {}
+
+        def __getattr__(self, name):
+            return getattr(object.__getattribute__(self, "_base"), name)
+
+    try:
+        g = DsoGraph(dso, root / "court/tmp/e7core-selftest-work")
+    except Exception as e:  # noqa: BLE001 -- a missing tool is a skip
+        return [], f"e7core controls: skipped (graph unavailable: {e})"
+    g.source_root = str(root)
+    g.install_prefix = str(install)
+    g.precision = PrecisionResolver(g)
+
+    def site(gx, fstart, addr, text):
+        return {"kind": ("jmp" if text.strip().startswith("jmp") else "call"),
+                "func": fstart, "addr": addr, "text": text,
+                "targets": set(), "unresolved": True,
+                "reason": "materialised", "class": "materialised",
+                "field_offsets": set(), "seam": None,
+                "arg_deps": set(), "arg_targets": set()}
+
+    def sites_of(gx, leaf, witness):
+        f = _external_function_address(gx, leaf)
+        out = []
+        if f is None:
+            return out
+        for a, text in gx.precision.insns_by_func.get(f, ()):
+            if not re.match(r"\s*(call|jmp)\s+\*%r", text):
+                continue
+            s = site(gx, f, a, text)
+            try:
+                w = witness(gx, s, gx.funcs.get(f, ""))
+            except Exception:  # noqa: BLE001
+                w = None
+            if isinstance(w, tuple):
+                w = None
+            if w is not None:
+                out.append((s, w))
+        return out
+
+    # ---- positive coverage ------------------------------------------------- #
+    core_sites = {}
+    for leaf, want in CORE_DISPATCH_EXPECTED.items():
+        got = sites_of(g, leaf, lambda gx, s, n: core_dispatch_witness(
+            gx, s, n, None)[0])
+        core_sites[leaf] = got
+        chk(f"e7core {leaf} site count", len(got), want)
+        for _s, w in got:
+            chk(f"e7core {leaf} class", w.get("class"),
+                ABI_CONTRACT_CORE_DISPATCH)
+            chk(f"e7core {leaf} contract_bounded",
+                w.get("contract_bounded"), True)
+    chk("e7core cohort total",
+        sum(len(v) for v in core_sites.values()), 26)
+
+    # Two additional unresolved-but-unreachable sites in the same image carry
+    # the same class; they were never in the reachable residual set and are
+    # checked here so the rule's coverage is not silently narrower.
+    for leaf in ("ossl_provider_deinit_child", "BIO_new_from_core_bio"):
+        got = sites_of(g, leaf, lambda gx, s, n: core_dispatch_witness(
+            gx, s, n, None)[0])
+        chk(f"e7core extra {leaf} site count", len(got) >= 1, True)
+
+    a_free, w_free = core_sites["ossl_provider_free"][0]
+    a_find, w_find = core_sites["ossl_provider_find"][0]
+
+    def mutate_insns(base, addr, new_text):
+        f = base["func"] if isinstance(base, dict) else base
+        insns = dict(g.precision.insns_by_func)
+        insns[f] = [(a, new_text if a == addr else t)
+                    for a, t in insns[f]]
+        return insns
+
+    def core_run(gx, s):
+        w = core_dispatch_witness(gx, dict(s), gx.funcs.get(s["func"], ""),
+                                  None)
+        return w[0], (w[1] or {}).get("reason")
+
+    # control core-offset: the load names an undeclared field offset
+    guard = w_free["conditions"]["null_guard"]
+    off_insn = next(a for a, t in g.precision.insns_by_func[a_free["func"]]
+                    if t.strip() == "mov    0x50(%rax),%rax")
+    px = _Proxy(g, insns=mutate_insns(a_free, off_insn,
+                                      "mov    0x58(%rax),%rax"))
+    got, why = core_run(px, a_free)
+    chk("e7core offset mutation refusal", (got, why),
+        (None, "offset-is-not-a-field-of-the-documented-table"))
+    chk("e7core offset restored", core_run(g, a_free)[0] is not None, True)
+
+    # control core-index: the accessor is asked for a different libctx slot
+    a32 = next(a for a, t in g.precision.insns_by_func[a_free["func"]]
+               if t.strip() == "mov    $0x12,%esi")
+    px = _Proxy(g, insns=mutate_insns(a_free, a32, "mov    $0x13,%esi"))
+    got, why = core_run(px, a_free)
+    chk("e7core index mutation refusal", (got, why),
+        (None, "libctx-data-index-is-not-a-documented-core-table"))
+    chk("e7core index restored", core_run(g, a_free)[0] is not None, True)
+
+    # control core-guard: the NULL test is replaced by a nop, so a zero slot
+    # could reach the call
+    test_addr = int(guard["test_address"], 16)
+    px = _Proxy(g, insns=mutate_insns(a_free, test_addr, "nop"))
+    got, why = core_run(px, a_free)
+    chk("e7core guard mutation refusal", (got, why),
+        (None, "slot-load-is-not-null-guarded"))
+    chk("e7core guard restored", core_run(g, a_free)[0] is not None, True)
+
+    # control core-default-context: the inlined default-context arm of
+    # `ossl_lib_ctx_get_data` reads a different `OsslLibCtx` field, so the
+    # slot index is no longer source-bound and the site must stop resolving.
+    # The subject is not taken as a premise of the image: b84 carries no
+    # admitted site with an inlined default-context accessor, so when none is
+    # present the arm is synthesised from an admitted site -- the documented
+    # libctx accessor call and its literal index argument are replaced, one
+    # instruction for one, by `lea <DEFAULT_CONTEXT>` and
+    # `mov <child_provider offset>(%reg),%base`.  That is the encoding the
+    # witness recognises in a real image, so the control drives
+    # `_core_globals_origin`'s default-context arm on every candidate.
+    _dc_site = None
+    for _sites in core_sites.values():
+        for _s, _w in _sites:
+            _rec = next((r for r in (_w.get("base_origin") or {}).get(
+                "accessor_calls") or [] if r.get("default_context")), None)
+            if _rec is not None:
+                _dc_site = (_s, _rec, None)
+                break
+        if _dc_site is not None:
+            break
+    if _dc_site is None:
+        _layout, _dc_err = _external_struct_layout(g, "OsslLibCtx")
+        _dc_fld = next((_f for _f in (_layout or {}).get("fields", ())
+                        if _f["name"] == "child_provider"), None)
+        _dreg = "%r12"
+        if _dc_fld is not None:
+            for _sites in core_sites.values():
+                for _s, _w in _sites:
+                    if _dc_site is not None:
+                        break
+                    _dc_insns = g.precision.insns_by_func[_s["func"]]
+                    if any(_dreg in _t for _a, _t in _dc_insns):
+                        continue
+                    for _r in ((_w.get("base_origin") or {}).get(
+                            "accessor_calls") or []):
+                        if not _r.get("accessor"):
+                            continue
+                        _ci = next((_i for _i, (_a, _t) in
+                                    enumerate(_dc_insns)
+                                    if _a == int(_r["call_site"], 16)), None)
+                        if (_ci is None or _ci == 0
+                                or not _dc_insns[_ci - 1][1].strip()
+                                .startswith("mov    $")):
+                            continue
+                        _twin = list(_dc_insns)
+                        _twin[_ci - 1] = (
+                            _dc_insns[_ci - 1][0],
+                            f"lea    0x0(%rip),{_dreg}        "
+                            "# <DEFAULT_CONTEXT>")
+                        _twin[_ci] = (
+                            _dc_insns[_ci][0],
+                            f"mov    {_dc_fld['offset']:#x}({_dreg}),%rax")
+                        _probe = _Proxy(g, insns={
+                            **g.precision.insns_by_func, _s["func"]: _twin})
+                        _pw = core_dispatch_witness(
+                            _probe, dict(_s),
+                            _probe.funcs.get(_s["func"], ""), None)[0]
+                        _pacc = ((_pw or {}).get("base_origin") or {}).get(
+                            "accessor_calls") or []
+                        if (_pw is not None
+                                and len([_x for _x in _pacc
+                                        if _x.get("default_context")]) == 1
+                                and not _pw.get("refusal")):
+                            _dc_site = (_s, {"call_site": hex(_twin[_ci][0])},
+                                        _twin)
+                            break
+    if _dc_site is not None:
+        a_core, _dc, _dc_twin = _dc_site
+        dc_off = int(_dc["call_site"], 16)
+        _dc_base = (_dc_twin if _dc_twin is not None
+                    else g.precision.insns_by_func[a_core["func"]])
+        _dc_g = (g if _dc_twin is None else _Proxy(
+            g, insns={**g.precision.insns_by_func,
+                      a_core["func"]: _dc_twin}))
+        _w_dc = core_dispatch_witness(
+            _dc_g, dict(a_core), _dc_g.funcs.get(a_core["func"], ""),
+            None)[0]
+        chk("e7core default-context subject resolves", _w_dc is not None, True)
+        chk("e7core default-context subject carries the inlined arm",
+            len([r for r in ((_w_dc or {}).get("base_origin") or {}).get(
+                "accessor_calls") or [] if r.get("default_context")]), 1)
+        _dc_text = next(t for a, t in _dc_base if a == dc_off)
+        _dc_new = re.sub(
+            r"^(\s*mov\s+)(-?0x[0-9a-f]+)(\()",
+            lambda m: f"{m.group(1)}{hex(int(m.group(2), 16) + 8)}"
+                      f"{m.group(3)}", _dc_text, count=1)
+        chk("e7core default-context control fixture applied",
+            _dc_new != _dc_text, True)
+        px = _Proxy(g, insns={**g.precision.insns_by_func,
+                              a_core["func"]: [
+                                  (a, _dc_new if a == dc_off else t)
+                                  for a, t in _dc_base]})
+        got, _why = core_run(px, a_core)
+        chk("e7core default-context offset mutation refusal", got, None)
+        chk("e7core default-context offset restored",
+            core_run(g, a_core)[0] is not None, True)
+    else:
+        _PREMISE_UNAVAILABLE.append(
+            "e7core default-context control: no admitted site carries an "
+            "inlined default-context accessor and none could be synthesised "
+            "from an admitted libctx accessor call")
+
+    # control core-writer-id: the writer's store sits under the wrong
+    # OSSL_FUNC_* arm
+    total_src = (root / "src/provider/child.rs").read_text()
+    td = Path(tempfile.mkdtemp(prefix="e7core-source-", dir=root / "court/tmp"))
+    try:
+        (td / "src/provider").mkdir(parents=True)
+        mutated = total_src.replace(
+            "                OSSL_FUNC_PROVIDER_FREE => {",
+            "                OSSL_FUNC_PROVIDER_UP_REF => {")
+        chk("e7core writer-id fixture applied", mutated != total_src, True)
+        (td / "src/provider/child.rs").write_text(mutated)
+        px = _Proxy(g, source_root=td)
+        got, why = core_run(px, a_free)
+        chk("e7core writer-id mutation refusal", (got, why),
+            (None, "store-is-not-under-the-documented-function-id"))
+        chk("e7core writer-id restored", core_run(g, a_free)[0] is not None,
+            True)
+    finally:
+        shutil.rmtree(td, ignore_errors=True)
+
+    # control core-second-store: a second store of the same field
+    td = Path(tempfile.mkdtemp(prefix="e7core-store-", dir=root / "court/tmp"))
+    try:
+        (td / "src/provider").mkdir(parents=True)
+        mutated = total_src.replace(
+            "pub(crate) unsafe fn ossl_provider_deinit_child(ctx: *mut c_void) {",
+            "pub(crate) unsafe fn ossl_provider_deinit_child(ctx: *mut c_void) {\n"
+            "    let mut gbl = lib_ctx_get_data(ctx, "
+            "OSSL_LIB_CTX_CHILD_PROVIDER_INDEX).cast::<ChildProvGlobals>();\n"
+            "    if !gbl.is_null() { (*gbl).c_prov_free = None; }", 1)
+        chk("e7core second-store fixture applied", mutated != total_src, True)
+        (td / "src/provider/child.rs").write_text(mutated)
+        px = _Proxy(g, source_root=td)
+        got, why = core_run(px, a_free)
+        chk("e7core second-store mutation refusal", (got, why),
+            (None, "field-does-not-have-exactly-one-source-store"))
+        chk("e7core second-store restored",
+            core_run(g, a_free)[0] is not None, True)
+    finally:
+        shutil.rmtree(td, ignore_errors=True)
+
+    # control core-header: the admitted header no longer declares the id
+    td = Path(tempfile.mkdtemp(prefix="e7core-install-", dir=root / "court/tmp"))
+    try:
+        (td / "include/openssl").mkdir(parents=True)
+        hdr = (install / CORE_DISPATCH_HEADER).read_text()
+        mutated = hdr.replace("#define OSSL_FUNC_PROVIDER_FREE 111",
+                              "#define OSSL_FUNC_PROVIDER_FREE 999")
+        chk("e7core header fixture applied", mutated != hdr, True)
+        (td / CORE_DISPATCH_HEADER).write_text(mutated)
+        px = _Proxy(g, install_prefix=td)
+        got, why = core_run(px, a_free)
+        chk("e7core header mutation refusal", (got, why),
+            (None, "function-id-is-not-in-the-admitted-header"))
+        chk("e7core header restored", core_run(g, a_free)[0] is not None, True)
+    finally:
+        shutil.rmtree(td, ignore_errors=True)
+
+    # ---- provider-init rule ------------------------------------------------ #
+    init_sites = sites_of(g, PROVIDER_INIT_SLOT_FUNCTION,
+                          lambda gx, s, n: provider_init_slot_witness(gx, s, n))
+    chk("e7init site count", len(init_sites), 1)
+    if init_sites:
+        s_init, w_init = init_sites[0]
+        chk("e7init class", w_init.get("class"), ABI_CONTRACT_PROVIDER)
+        store_addr = next(
+            a for a, t in g.precision.insns_by_func[s_init["func"]]
+            if t.strip() == "mov    %rax,0x40(%rbx)")
+        px = _Proxy(g, insns=mutate_insns(
+            s_init, store_addr, "mov    %rax,0x48(%rbx)"))
+        s_copy = dict(s_init)
+        got = provider_init_slot_witness(px, s_copy, px.funcs[s_init["func"]])
+        chk("e7init store-offset mutation refusal", (got,
+            (s_copy.get("provider_init_slot_refusal") or {}).get("reason")),
+            (None, "module-bind-result-is-not-stored-into-the-field"))
+        chk("e7init store-offset restored",
+            provider_init_slot_witness(g, dict(s_init),
+                                       g.funcs[s_init["func"]]) is not None,
+            True)
+        td = Path(tempfile.mkdtemp(prefix="e7init-source-",
+                                   dir=root / "court/tmp"))
+        try:
+            (td / "src/provider").mkdir(parents=True)
+            for name in ("mod.rs", "init.rs"):
+                shutil.copy(root / "src/provider" / name, td / "src/provider" / name)
+            init_src = (td / "src/provider/init.rs").read_text()
+            mutated = init_src + (
+                "\n\npub(crate) unsafe fn e7core_fixture_extra_writer("
+                "p: *mut OsslProvider) {\n"
+                "    (*p).init_function = None;\n}\n")
+            chk("e7init extra-writer fixture applied",
+                mutated != init_src, True)
+            (td / "src/provider/init.rs").write_text(mutated)
+            px = _Proxy(g, source_root=td)
+            s_copy = dict(s_init)
+            got = provider_init_slot_witness(px, s_copy,
+                                             px.funcs[s_init["func"]])
+            chk("e7init extra-writer mutation refusal", (got,
+                (s_copy.get("provider_init_slot_refusal") or {}).get("reason")),
+                (None, "field-has-a-store-outside-the-enumerated-writers"))
+            chk("e7init extra-writer restored",
+                provider_init_slot_witness(g, dict(s_init),
+                                           g.funcs[s_init["func"]]) is not None,
+                True)
+        finally:
+            shutil.rmtree(td, ignore_errors=True)
+
+    # ---- store-loader wrapper rule ---------------------------------------- #
+    store_sites = sites_of(g, STORE_LOADER_FUNCTION,
+                           lambda gx, s, n: (store_loader_provider_witness(
+                               gx, s, n) or (None, None))[1])
+    prof_sites = [(s, w) for s, w in store_sites
+                  if (w or {}).get("scope") == "store-loader-p_close"]
+    chk("e7store provider p_close site count", len(prof_sites), 1)
+    if prof_sites:
+        s_st, w_st = prof_sites[0]
+        # The b76 image resolves the provider loader through
+        # `inner_loader_fetch` directly (OSSL_STORE_open_ex inlines the
+        # exported wrapper), so the wrapper-source control is not exercised at
+        # this candidate and is recorded as NOT_RUN rather than silently
+        # dropped.  The load-bearing control for the b76 shape is the fetch
+        # call itself: retarget it and the constructor proof must refuse.
+        insns_st = g.precision.insns_by_func[s_st["func"]]
+        fetch_addr = next((a for a, t in insns_st
+                           if "inner_loader_fetch" in t
+                           or "OSSL_STORE_LOADER_fetch" in t), None)
+        other = next((t for _a, t in insns_st
+                      if t.strip().startswith("call") and "<" in t
+                      and "ossl_store_get0_loader_int" in t), None)
+        if fetch_addr is None or other is None:
+            failures.append(
+                "e7store fetch control DID NOT RUN: this image's "
+                "OSSL_STORE_open_ex has no loader-fetch call or no "
+                "ossl_store_get0_loader_int call to retarget; reported as "
+                "NOT_RUN, never as a pass")
+            bad_addr = None
+        else:
+            bad_addr = re.search(r"call\s+([0-9a-f]+)", other).group(1)
+        if bad_addr is not None:
+            px = _Proxy(g, insns=mutate_insns(s_st, fetch_addr,
+                                              "call   " + bad_addr))
+            got = store_loader_provider_witness(px, dict(s_st),
+                                                px.funcs[s_st["func"]])
+            chk("e7store fetch mutation refusal",
+                ((got or (None, None, {}))[2] or {}).get("reason"),
+                "wrong-base-constructor")
+            chk("e7store fetch restored",
+                (store_loader_provider_witness(g, dict(s_st),
+                                               g.funcs[s_st["func"]]) or
+                 (None, None, {}))[1] is not None, True)
+
+        # control e7store guard: invert the fetched-loader polarity branches.
+        # Then the provider p_close site does not arrive on the
+        # fetched_loader != NULL edge and the legacy closefn site does not
+        # arrive on the fetched_loader == NULL edge, so both witnesses must
+        # refuse.  The guard is derived, and *every* selector whose arms can
+        # reach the site is inverted: a must-analysis re-decides the predicate
+        # at each selector on the path, so inverting one that a downstream
+        # selector overrides would not change the site's polarity (b78 added
+        # such an upstream selector).
+        s_leg = None
+        legacy_addr = _pin_effective("STORE_LOADER_LEGACY_SITES", 0x1F8F13, g)[0]
+        if _is_indirect_transfer_strict(g, legacy_addr):
+            s_leg = site(g, s_st["func"], legacy_addr, "call   *%rax")
+        guard_ev, guard_why = _store_loader_polarity(
+            g, s_st["func"], s_st["addr"], False)
+        if s_leg is not None and guard_ev is not None:
+            sels = _polarity_selectors_for_site(
+                g, s_st["func"], s_st["addr"], guard_ev)
+            chk("e7store guard selectors present", bool(sels), True)
+            insns = dict(g.precision.insns_by_func)
+            body = list(insns[s_st["func"]])
+            for sel in sels:
+                a = int(sel["branch"], 16)
+                text = next(t for aa, t in body if aa == a)
+                flip = "jne" if text.strip().startswith("je") else "je"
+                new = text.replace(text.strip().split()[0], flip, 1)
+                body = [(aa, new if aa == a else tt) for aa, tt in body]
+            insns[s_st["func"]] = body
+            bx = _Proxy(g, insns=insns)
+            got = store_loader_provider_witness(bx, dict(s_st),
+                                                bx.funcs[s_st["func"]])
+            chk("e7store guard mutation refusal",
+                "polarity" in str(((got or (None, None, {}))[2] or {})
+                                  .get("detail")), True)
+            got = store_loader_legacy_witness(bx, dict(s_leg),
+                                              bx.funcs[s_leg["func"]])
+            chk("e7store legacy guard mutation refusal",
+                "polarity" in str(((got or (None, None, {}))[2] or {})
+                                  .get("detail")), True)
+            chk("e7store guard restored",
+                (store_loader_provider_witness(
+                    g, dict(s_st), g.funcs[s_st["func"]]) or
+                 (None, None, {}))[1] is not None, True)
+        else:
+            failures.append(
+                "e7store guard control did NOT RUN: the derived close-guard "
+                f"or the legacy closefn row is absent at this candidate "
+                f"({guard_why or 'no legacy site'}); recorded as NOT_RUN, "
+                "never as a pass")
+
+    # ---- PEM register-agnostic rule --------------------------------------- #
+    pem_sites = sites_of(g, PEM_FUNCTION,
+                         lambda gx, s, n: (pem_password_default_witness(
+                             gx, s, n) or (None, None))[1])
+    chk("e7pemreg site count", len(pem_sites), 1)
+    if pem_sites:
+        s_pem, w_pem = pem_sites[0]
+        chk("e7pemreg class", w_pem.get("class"),
+            ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT)
+        chk("e7pemreg operand is register-derived",
+            w_pem.get("operand", {}).get("reg"),
+            (w_pem.get("conditions", {}).get(
+                "operand_is_the_cb_register") or {}).get("register"))
+        # control: the NULL-selected default is not an exported target
+        px = _Proxy(g)
+        px.dynamic_defs.pop(PEM_DEFAULT, None)
+        got = pem_password_default_witness(px, dict(s_pem),
+                                           px.funcs[s_pem["func"]])
+        chk("e7pemreg default-target mutation refusal",
+            ((got or (None, None, {}))[2] or {}).get("reason"),
+            "default-target-is-missing-or-not-in-image")
+        chk("e7pemreg default-target restored",
+            (pem_password_default_witness(g, dict(s_pem),
+                                          g.funcs[s_pem["func"]]) or
+             (None, None, {}))[1] is not None, True)
+        copy_addr = next(a for a, t in g.precision.insns_by_func[s_pem["func"]]
+                         if t.strip() == "mov    %rcx,%rbx")
+        px = _Proxy(g, insns=mutate_insns(s_pem, copy_addr,
+                                          "mov    %rdx,%rbx"))
+        got = pem_password_default_witness(px, dict(s_pem),
+                                           px.funcs[s_pem["func"]])
+        chk("e7pemreg copy-source mutation refusal",
+            ((got or (None, None, {}))[2] or {}).get("reason"),
+            "callback-source-definition-set-is-not-enumerated")
+        chk("e7pemreg copy-source restored",
+            (pem_password_default_witness(g, dict(s_pem),
+                                          g.funcs[s_pem["func"]]) or
+             (None, None, {}))[1] is not None, True)
+        # control: the operand is not a register at all
+        px = _Proxy(g, insns=mutate_insns(s_pem, s_pem["addr"],
+                                          "call   *0x10(%rsp)"))
+        s_copy = dict(s_pem)
+        s_copy["text"] = "call   *0x10(%rsp)"
+        got = pem_password_default_witness(px, s_copy,
+                                           px.funcs[s_pem["func"]])
+        chk("e7pemreg non-register-operand mutation refusal",
+            ((got or (None, None, {}))[2] or {}).get("reason"),
+            "operand-is-not-a-callback-register")
+        chk("e7pemreg non-register-operand restored",
+            (pem_password_default_witness(g, dict(s_pem),
+                                          g.funcs[s_pem["func"]]) or
+             (None, None, {}))[1] is not None, True)
+
+    _resolved = sum(len(v) for v in core_sites.values())
+    return failures, (
+        f"e7core controls: the recorded cohort is "
+        f"{len(CORE_DISPATCH_EXPECTED)} function(s); this image resolves "
+        f"{_resolved} site(s) across {len(core_sites)} function(s); the offset, "
+        "libctx-index, writer-id, second-source-store, header-id, "
+        "default-context and NULL-guard mutation controls are each exercised "
+        "(the default-context subject is synthesised from an admitted libctx "
+        "accessor when the image carries none; a control whose subject is "
+        "neither present nor synthesizable is reported as "
+        "PREMISE_UNAVAILABLE, never as a pass); "
+        "the provider-init rule refuses a store-offset and an extra-writer "
+        "mutation and is restored; the store-loader close guard refuses an "
+        "inverted fetched-loader polarity branch and is restored; the "
+        "loader-fetch retarget refuses (the wrapper-source arm is NOT_RUN at "
+        "this candidate because the wrapper is inlined); "
+        "the register-agnostic PEM "
+        "witness refuses a wrong-default-symbol and a wrong-copy-source "
+        "mutation and is restored")
 
 
 def self_test() -> int:
     failures = []
+    _PREMISE_UNAVAILABLE.clear()
 
     def check(name, got, want):
         if got != want:
@@ -30839,9 +36041,88 @@ def self_test() -> int:
     check("opensym libssl3", bool(OPENSYM.match("libssl.so.3")), True)
     check("opensym other", bool(OPENSYM.match("libcrypto.a")), False)
 
+    # cfg(test) item spans.  A semicolon-terminated `#[cfg(test)]` assertion
+    # item must end at its own semicolon; brace-matching from the attribute
+    # would swallow the production items that follow it and silently shrink a
+    # provider hw-table context closure (B58: ARIA/SM4 GCM constructors).
+    cfg_text = (
+        "#[cfg(test)]\n"
+        "const _: fn(u8) -> u8 = f;\n"
+        "\n"
+        "pub fn g() -> u8 { 1 }\n"
+        "\n"
+        "#[cfg(test)]\n"
+        "mod tests {\n"
+        "    fn t() { }\n"
+        "}\n"
+        "\n"
+        "/// negative control (`#[cfg(test)]` only) names the attribute\n"
+        "pub fn h() -> u8 { 2 }\n")
+    cfg_spans = _phw_cfg_test_spans(cfg_text)
+    check("cfg(test) assertion item is test-only",
+          _phw_in_spans(cfg_spans, cfg_text.index("const _: fn")), True)
+    check("cfg(test) assertion span ends at its semicolon",
+          _phw_in_spans(cfg_spans, cfg_text.index("pub fn g")), False)
+    check("cfg(test) mod span covers its body",
+          _phw_in_spans(cfg_spans, cfg_text.index("fn t")), True)
+    check("cfg(test) mod span ends at its brace",
+          _phw_in_spans(cfg_spans, cfg_text.index("pub fn h")), False)
+    check("cfg(test) named in a doc comment is not an attribute",
+          _phw_in_spans(cfg_spans, cfg_text.index("/// negative")), False)
+
     # nm line parsing
     check("nm defined", parse_nm_line("0000000000000123 T EVP_rc4"), (0x123, "T", "EVP_rc4"))
     check("nm undef", parse_nm_line("                 U EVP_rc4"), None)
+
+    # carry-forward coordinate tolerance.  Obligation identity is
+    # file+kind+enclosing item; a line is provenance.  A moved definition is
+    # re-enrolled, but a recycled line belonging to a *different* operation is
+    # not evidence that the previous operation still exists.
+    def cf_prev(item, line):
+        return {
+            "receipt": "fixture-closure.json", "receipt_sha256": "0" * 64,
+            "obligations": [{
+                "id": f"V1:src/x.rs:{line}:UNSAFE_FN_DEF",
+                "stable_id": f"src/x.rs::UNSAFE_FN_DEF::{item}",
+                "file": "src/x.rs", "line": line, "kind": "UNSAFE_FN_DEF",
+                "item": item, "status": "DISCHARGED",
+                "contract": "contracted", "discharge_receipt": "R-1"}]}
+
+    def cf_census(item, line, contracted=True):
+        rec = {"file": "src/x.rs", "line": line, "kind": "UNSAFE_FN_DEF",
+               "item": item, "partition": V1_PARTITION_PRODUCTION}
+        if contracted:
+            return {"contracted_operations": [rec], "blockers": []}
+        return {"contracted_operations": [],
+                "blockers": [dict(rec, reason="no contract")]}
+
+    # (a) the same operation at a new line -> carried, not removed.
+    out_a, sum_a = carry_forward_candidates(
+        cf_prev("x509_free_void", 376), cf_census("x509_free_void", 640),
+        collections.Counter(), {"src/x.rs"})
+    check("carry-forward moved definition is carried", len(out_a), 1)
+    check("carry-forward moved definition is not removed",
+          sum_a["removed_count"], 0)
+    check("carry-forward moved definition records the census line",
+          out_a[0].get("current_census_line"), 640)
+    check("carry-forward moved definition keeps its identity",
+          out_a[0].get("stable_id"), "src/x.rs::UNSAFE_FN_DEF::x509_free_void")
+
+    # (b) the line is recycled by a different operation (the b76 thunk case):
+    # nothing is carried and the operation is recorded as non-existent.
+    out_b, sum_b = carry_forward_candidates(
+        cf_prev("x509_free_void", 376),
+        cf_census("general_name_free_void", 376, contracted=False),
+        collections.Counter(), {"src/x.rs"})
+    check("carry-forward recycled line carries nothing", len(out_b), 0)
+    check("carry-forward recycled line removes the operation",
+          sum_b["removed_count"], 1)
+    check("carry-forward recycled line names the removed identity",
+          (sum_b["removed"][0].get("item"), sum_b["removed"][0].get("line")),
+          ("x509_free_void", 376))
+    check("carry-forward removal reason names non-existence",
+          "no longer exists as a source unsafe operation"
+          in (sum_b["removed"][0].get("reason") or ""), True)
 
     # adjudication truth table
     mechs = {
@@ -30865,13 +36146,15 @@ def self_test() -> int:
             rec["current_census_line"] = current
         return rec
     def bound(file, kind, operation, disposition, span_sha256=None, line=None,
-              receipt=None, superseded_ids=None):
+              receipt=None, superseded_ids=None, declared_spans=None):
         rec = {"id": "B23-WPKT-1", "file": file, "kind": kind,
                "operation": operation, "disposition": disposition,
                "disposition_discharges":
                    boundary_disposition_is_discharge(disposition),
                "superseded_ids": sorted(superseded_ids or []),
                "span_sha256": span_sha256}
+        if declared_spans is not None:
+            rec["declared_spans"] = declared_spans
         if receipt is not None:
             rec["receipt"] = receipt
         if line is not None:
@@ -31002,6 +36285,76 @@ def self_test() -> int:
     check("stale range does not discharge a hashless drifted coordinate",
           (stale_ob["status"], bool(stale_ob.get("stale_discharge_rejections"))),
           ("BLOCKED", True))
+
+    # ---- declared definition sets (multiply-defined items) ------------------ #
+    # An item with two cfg-gated definitions has no single "the" definition, so
+    # the single-span path refuses it as ambiguous-identity before any recorded
+    # hash is compared.  A receipt may declare the whole definition set; the
+    # binding requires the declared set to equal the live set exactly and every
+    # declared hash to match, so one matching definition can never carry the
+    # others.
+    (span_repo / "src/ssl/dup.rs").write_text(
+        "#[cfg(all(unix))]\n"
+        "pub unsafe fn d() -> u8 {\n"
+        "    1\n"
+        "}\n\n"
+        "#[cfg(not(all(unix)))]\n"
+        "pub unsafe fn d() -> u8 {\n"
+        "    2\n"
+        "}\n")
+    clear_span_cache()
+    d_first = resolve_operation_at_line(span_repo, "src/ssl/dup.rs", "d", 2,
+                                       allow_worktree=True)
+    d_second = resolve_operation_at_line(span_repo, "src/ssl/dup.rs", "d", 7,
+                                        allow_worktree=True)
+    declared_pair = [
+        {"cfg": "#[cfg(all(unix))]", "start_line": d_first["start_line"],
+         "end_line": d_first["end_line"], "span_sha256": d_first["sha256"]},
+        {"cfg": "#[cfg(not(all(unix)))]", "start_line": d_second["start_line"],
+         "end_line": d_second["end_line"], "span_sha256": d_second["sha256"]},
+    ]
+    pair_ok = adj(ob("src/ssl/dup.rs", 2, "SSL_SESSION", item="d"),
+                  [bound("src/ssl/dup.rs", "UNSAFE_FN_DEF", "d",
+                         "SAFETY_DISCHARGED (scope: src/ssl/dup.rs:1-7)",
+                         declared_spans=declared_pair)])
+    check("declared definition set binds when every span matches",
+          (pair_ok["status"], (pair_ok.get("span_discharge") or {}).get(
+              "definition_count")),
+          ("DISCHARGED", 2))
+    # Adversarial control: mutate ONE declared hash.  The set is complete but the
+    # mutated definition no longer matches, so the whole row must be refused.
+    mutated_pair = [dict(declared_pair[0]), dict(declared_pair[1])]
+    mutated_pair[1]["span_sha256"] = "0" * 64
+    pair_mutated = adj(ob("src/ssl/dup.rs", 2, "SSL_SESSION", item="d"),
+                       [bound("src/ssl/dup.rs", "UNSAFE_FN_DEF", "d",
+                              "SAFETY_DISCHARGED (scope: src/ssl/dup.rs:1-7)",
+                              declared_spans=mutated_pair)])
+    check("one mutated definition span refuses the whole declaration",
+          (pair_mutated["status"],
+           (pair_mutated.get("span_discharge_rejections") or [{}])[0].get(
+               "classification")),
+          ("BLOCKED", "span-hash-mismatch"))
+    # Incomplete declaration: only one of the two live definitions is named, so
+    # the matching one must not carry the row either.
+    pair_partial = adj(ob("src/ssl/dup.rs", 2, "SSL_SESSION", item="d"),
+                       [bound("src/ssl/dup.rs", "UNSAFE_FN_DEF", "d",
+                              "SAFETY_DISCHARGED (scope: src/ssl/dup.rs:1-7)",
+                              span_sha256=d_first["sha256"])])
+    check("a single span cannot bind a multiply-defined item",
+          (pair_partial["status"],
+           (pair_partial.get("span_discharge_rejections") or [{}])[0].get(
+               "classification")),
+          ("BLOCKED", "ambiguous-identity"))
+    # A stale carry-forward coordinate names no definition; the complete declared
+    # set is then the binding (this is the free_lock obligation shape).
+    pair_stale = adj(ob("src/ssl/dup.rs", 99, "SSL_SESSION", item="d"),
+                     [bound("src/ssl/dup.rs", "UNSAFE_FN_DEF", "d",
+                            "SAFETY_DISCHARGED (scope: src/ssl/dup.rs:1-7)",
+                            declared_spans=declared_pair)])
+    check("a stale coordinate binds through the complete declared set",
+          (pair_stale["status"], (pair_stale.get("span_discharge") or {}).get(
+              "binding")),
+          ("DISCHARGED", "declared-definition-set"))
 
     # ---- B67-G1 disposition gates ----------------------------------------- #
     # Every fixture goes through the real load_boundaries path so the parsed
@@ -31139,6 +36492,217 @@ def self_test() -> int:
                        _plane("D-IDENTITY", "sweep-f"), repo=span_repo,
                        allow_worktree_span=True)
     check("f: an identity mismatch still refuses", f_res["status"], "BLOCKED")
+
+    # ---- carry-forward coordinate migration (blocker 1, b78) ---------------- #
+    # A carried-forward row's `line` is the coordinate the previous closure
+    # enumerated.  An edit above the definition moves it, and the recorded
+    # coordinate then names no definition -- or names a *different* operation
+    # whose body inherited the line.  The binding may not use containment (that
+    # is the b78 defect) and may not pick a boundary by hand: it must prove, from
+    # the digest-pinned carry-forward chain, that the recorded coordinate was the
+    # definition line of this operation at a head the evidence itself names and
+    # that the body there is byte-identical to the span the boundary declares.
+    import subprocess
+
+    def _git(d, *args):
+        subprocess.run(["git", "-C", str(d), "-c", "user.email=t@t",
+                        "-c", "user.name=t"] + list(args), check=True,
+                       capture_output=True)
+
+    def _mig_fixture(candidate_body, *, boundary_operation="m1::copyctx",
+                     census_lines=(5, 10), boundary_hash=None,
+                     two_boundaries=False, tamper_receipt=False,
+                     repin_uncommitted=False, absolute_receipt=False,
+                     disposition="SAFETY_DISCHARGED (scope: src/ssl/mig.rs:1-20)",
+                     row_line=2, previous_line=2,
+                     recorded_from_ancestor=False, without_source_commit=False):
+        """Two commits: an ancestor, then the candidate plus its carry receipt.
+
+        The receipt is *committed*, so its recorded pin has an external anchor
+        (O3).  ``repin_uncommitted`` instead modifies the working-tree receipt
+        after that commit and recomputes the recorded pin from the modified
+        bytes -- the pre-repair arm accepted exactly that, and the repaired one
+        must refuse because HEAD still holds the original blob.
+        """
+        td = tempfile.TemporaryDirectory()
+        fixture_dirs.append(td)
+        d = Path(td.name)
+        (d / "src/ssl").mkdir(parents=True)
+        (d / "evidence").mkdir()
+        _git(d, "init", "-q")
+        ancestor = (
+            "mod m1 {\n"
+            "    pub unsafe fn copyctx(a: *mut u8) {\n"
+            "        core::ptr::read_volatile(a);\n"
+            "    }\n"
+            "}\n"
+            "mod m2 {\n"
+            "    pub unsafe fn copyctx(a: *mut u8) {\n"
+            "        core::ptr::read_volatile(a);\n"
+            "    }\n"
+            "}\n")
+        (d / "src/ssl/mig.rs").write_text(ancestor)
+        _git(d, "add", "-A")
+        _git(d, "commit", "-qm", "ancestor")
+        head = subprocess.check_output(
+            ["git", "-C", str(d), "rev-parse", "HEAD"], text=True).strip()
+        # the candidate inserts documentation above m1, which moves both
+        # definitions without editing either body
+        (d / "src/ssl/mig.rs").write_text(
+            "//! a module doc line that did not exist at the ancestor head\n"
+            "//! second line\n"
+            "\n" + candidate_body)
+        evidence = {
+            "source_identity": {"span_source_commit": head},
+            "obligations": [{
+                "id": "V1:src/ssl/mig.rs:2:UNSAFE_FN_DEF",
+                "file": "src/ssl/mig.rs", "kind": "UNSAFE_FN_DEF",
+                "item": "copyctx", "line": 2,
+                "carried_forward_from": None}],
+        }
+        ev_rel = "evidence/closure-test-anc.json"
+        (d / ev_rel).write_text(json.dumps(evidence))
+        _git(d, "add", "-A")
+        _git(d, "commit", "-qm", "candidate")
+        candidate_head = subprocess.check_output(
+            ["git", "-C", str(d), "rev-parse", "HEAD"], text=True).strip()
+        digest = hashlib.sha256((d / ev_rel).read_bytes()).hexdigest()
+        if tamper_receipt:
+            digest = "0" * 64
+        receipt_ref = str(d / ev_rel) if absolute_receipt else ev_rel
+        clear_span_cache()
+        if recorded_from_ancestor:
+            # the receipt recorded the body it reviewed, at the head it read
+            recorded = resolve_operation_at_line(
+                d, "src/ssl/mig.rs", "copyctx", 2, source_commit=head)["sha256"]
+        else:
+            recorded = boundary_hash or resolve_operation_span(
+                d, "src/ssl/mig.rs", boundary_operation, "copyctx",
+                allow_worktree=True)["sha256"]
+        bounds = [{
+            "id": "D-MIG", "receipt": "sweep-mig", "file": "src/ssl/mig.rs",
+            "kind": "UNSAFE_FN_DEF", "operation": boundary_operation,
+            "disposition": disposition,
+            "disposition_discharges": boundary_disposition_is_discharge(
+                disposition), "superseded_ids": [],
+            "span_sha256": recorded, "line": 5, "inventory_line": 2}]
+        if two_boundaries:
+            bounds.append(dict(bounds[0], id="D-MIG-2"))
+        obn = {
+            "file": "src/ssl/mig.rs", "line": row_line,
+            "kind": "UNSAFE_FN_DEF", "item": "copyctx",
+            "mechanism": "SSL_SESSION", "status": None,
+            "discharge_receipt": None, "status_reason": None,
+            "carried_forward_from": {
+                "receipt": receipt_ref, "receipt_sha256": digest,
+                "previous_id": "V1:src/ssl/mig.rs:2:UNSAFE_FN_DEF",
+                "previous_line": previous_line},
+        }
+        if repin_uncommitted:
+            tampered = dict(evidence, note="modified after the commit")
+            (d / ev_rel).write_text(json.dumps(tampered))
+            obn["carried_forward_from"]["receipt_sha256"] = (
+                hashlib.sha256((d / ev_rel).read_bytes()).hexdigest())
+        census = {("src/ssl/mig.rs", "UNSAFE_FN_DEF", "copyctx"):
+                  set(census_lines)}
+        plane = {"mechanism_discharges": {},
+                 "scoped_boundary_discharges": {
+                     b["id"]: {"receipt": "sweep-mig"} for b in bounds},
+                 "err_scope": {}}
+        previous_source = _EVIDENCE_ENV.get("source_commit")
+        _EVIDENCE_ENV["source_commit"] = (
+            None if without_source_commit else candidate_head)
+        try:
+            return adjudicate(obn, mechs, bounds, plane, repo=d,
+                              allow_worktree_span=True, census_ops=census)
+        finally:
+            _EVIDENCE_ENV["source_commit"] = previous_source
+
+    cand = ("mod m1 {\n"
+            "    pub unsafe fn copyctx(a: *mut u8) {\n"
+            "        core::ptr::read_volatile(a);\n"
+            "    }\n"
+            "}\n"
+            "mod m2 {\n"
+            "    pub unsafe fn copyctx(a: *mut u8) {\n"
+            "        core::ptr::read_volatile(a);\n"
+            "    }\n"
+            "}\n")
+    mig_ok = _mig_fixture(cand)
+    check("migration binds a stale coordinate on a content proof",
+          (mig_ok["status"],
+           ((mig_ok.get("span_discharge") or {}).get("binding"))),
+          ("DISCHARGED", "content-migrated-coordinate"))
+    check("migration names the ancestor head and coordinate",
+          bool(((mig_ok.get("migration") or {}).get("ancestor") or {}).get("head")),
+          True)
+    check("migration is not reachable without the census attribution",
+          _mig_fixture(cand, census_lines=(999,))["status"], "BLOCKED")
+    # a *stale boundary hash* must still refuse: the recorded hash equals the
+    # ancestor coordinate's body, but the candidate body was edited, so the
+    # content-addressed check refuses even though the migration matched.
+    edited = _mig_fixture(
+        cand.replace("core::ptr::read_volatile(a);",
+                     "core::ptr::read_volatile(a); // edited", 1),
+        recorded_from_ancestor=True)
+    check("migration does not repair a stale boundary hash",
+          (edited["status"],
+           ((edited.get("span_discharge_rejections") or
+             [{}])[0].get("classification"))),
+          ("BLOCKED", "span-hash-mismatch"))
+    check("migration refuses a sibling operation's boundary",
+          _mig_fixture(cand, boundary_operation="m2::copyctx")["status"],
+          "BLOCKED")
+    sibling = _mig_fixture(cand, boundary_operation="m2::copyctx")
+    check("the sibling refusal names the qualified-context mismatch",
+          any(r.get("reason") == "hop-qualified-context-mismatch"
+              for r in sibling.get("migration_refusals") or []), True)
+    check("two boundaries with the same body are not a unique owner",
+          _mig_fixture(cand, two_boundaries=True)["status"], "BLOCKED")
+    duplicate = _mig_fixture(cand, two_boundaries=True)
+    check("the duplicate refusal names the non-unique owner",
+          any(r.get("reason") == "non-unique-owner"
+              for r in duplicate.get("migration_refusals") or []), True)
+    check("a hop coordinate inside a definition is not the definition line",
+          _mig_fixture(cand, previous_line=3, row_line=3)["status"],
+          "BLOCKED")
+    inside = _mig_fixture(cand, previous_line=3, row_line=3)
+    check("the inside-definition refusal names the cause",
+          any(r.get("reason") == "hop-coordinate-not-the-definition-line"
+              for r in inside.get("migration_refusals") or []), True)
+    check("a tampered carry-forward receipt establishes nothing",
+          _mig_fixture(cand, tamper_receipt=True)["status"], "BLOCKED")
+    tampered = _mig_fixture(cand, tamper_receipt=True)
+    check("the tampered receipt refusal names the missing anchor",
+          any(r.get("reason") == "receipt-pin-not-anchored"
+              for r in tampered.get("migration_refusals") or []), True)
+    # (f2) the review's false accept: the receipt is modified *after* it was
+    # committed and the pin is recomputed from the modified file.  The working
+    # tree matches the pin; the committed blob does not, so there is no anchor.
+    check("an uncommitted receipt re-pinned from the worktree establishes nothing",
+          _mig_fixture(cand, repin_uncommitted=True)["status"], "BLOCKED")
+    repinned = _mig_fixture(cand, repin_uncommitted=True)
+    check("the re-pinned receipt refusal names the missing anchor",
+          any(r.get("reason") == "receipt-pin-not-anchored"
+              for r in repinned.get("migration_refusals") or []), True)
+    check("an absolute receipt path is not evidence",
+          _mig_fixture(cand, absolute_receipt=True)["status"], "BLOCKED")
+    absolute = _mig_fixture(cand, absolute_receipt=True)
+    check("the absolute-path refusal names the path",
+          any(r.get("reason") == "receipt-path-absolute"
+              for r in absolute.get("migration_refusals") or []), True)
+    check("a RETAINED disposition cannot migrate",
+          _mig_fixture(cand, disposition="RETAINED (BLOCKED)")["status"],
+          "BLOCKED")
+    check("a row coordinate the chain does not name establishes nothing",
+          _mig_fixture(cand, row_line=99)["status"], "BLOCKED")
+    # no migration binding when the candidate head is unknown (O4).
+    check("migration is refused when no source commit is bound",
+          _mig_fixture(cand, without_source_commit=True)["status"],
+          "BLOCKED")
+    # restore control: the unmutated fixture still binds after the refusals
+    check("restore: the base fixture still binds",
+          _mig_fixture(cand)["status"], "DISCHARGED")
 
     # (g) structured disposition prefix.  A substring mention and the
     # SAFETY_DISCHARGED_* suffix must not discharge; the documented ":" and
@@ -31295,6 +36859,40 @@ def self_test() -> int:
            one_pass["nonconvergent_detail"]["round_cap"]),
           (True, True, 1))
     check("a converged closure emits no refusal", closure_refusals(fixpoint), [])
+
+    # ---- acceptance predicate --------------------------------------------- #
+    # A BLOCKED obligation is an adjudicated refusal, not a detail: the verdict
+    # must not be computed from the refusal list alone.  Negative controls: one
+    # blocked row refuses with the named code; zero blocked rows and no other
+    # refusal stays accepted.
+    def status_row(status, ident):
+        return {"id": ident, "status": status}
+
+    clean_status = [status_row("DISCHARGED", "V1:src/x.rs:1:UNSAFE_FN_DEF")]
+    blocked_status = [status_row("DISCHARGED", "V1:src/x.rs:1:UNSAFE_FN_DEF"),
+                      status_row("BLOCKED", "V1:src/x.rs:9:UNSAFE_FN_DEF")]
+    unknown_status = [status_row("UNKNOWN", "V1:src/x.rs:2:UNSAFE_FN_DEF")]
+    check("zero blocked obligations emit no status refusal",
+          obligation_status_refusals(clean_status), [])
+    blocked_refusals = obligation_status_refusals(blocked_status)
+    check("one blocked obligation is refused as BLOCKED_OBLIGATIONS",
+          [r["code"] for r in blocked_refusals], ["BLOCKED_OBLIGATIONS"])
+    check("the blocked refusal carries the count and the row",
+          ("1 reachable production obligation" in blocked_refusals[0]["detail"],
+           blocked_refusals[0]["obligations"]),
+          (True, ["V1:src/x.rs:9:UNSAFE_FN_DEF"]))
+    check("an unknown obligation still refuses as UNKNOWN_OBLIGATION",
+          [r["code"] for r in obligation_status_refusals(unknown_status)],
+          ["UNKNOWN_OBLIGATION"])
+    check("zero blocked obligations with no refusal is ACCEPTED",
+          closure_verdict_state([], clean_status), "ACCEPTED")
+    check("one blocked obligation is REFUSED with the blocked code",
+          closure_verdict_state(obligation_status_refusals(blocked_status),
+                                blocked_status), "REFUSED")
+    check("the predicate refuses a blocked row without a synthesised refusal",
+          closure_verdict_state([], blocked_status), "REFUSED")
+    check("the predicate refuses an unknown row",
+          closure_verdict_state([], unknown_status), "REFUSED")
 
     # ---- monotone per-site bound ------------------------------------------ #
     class _MonoG:
@@ -33863,6 +39461,59 @@ def self_test() -> int:
     check("contract-bounded still records an unbounded target set",
           e7["target_sets_remain_unbounded"], True)
 
+    # ---- closed target sets are not external ABI contracts (b82 36/152) ---- #
+    # A closed target set is bounded by an enumerated in-image set: it is
+    # reported under its own class, is never counted as a contract-bounded
+    # external edge, and may not set the unbounded-target flag.
+    for fam in sorted(registry_closed_target_set_families()):
+        name = closed_target_set_class(fam)
+        site = _site(0x60)
+        site["class"] = fam
+        e7 = evaluate_predicate_element_7([("control.so", 0x60, site)], [])
+        check(f"closed target set {fam} is not an external contract",
+              e7["contract_bounded_sites"], 0)
+        check(f"closed target set {fam} is counted separately",
+              e7["closed_target_set_sites"], 1)
+        check(f"closed target set {fam} reports its closed-set class",
+              e7["closed_target_set_by_class"], {name: 1})
+        check(f"closed target set {fam} does not claim an unbounded target set",
+              e7["target_sets_remain_unbounded"], False)
+        check(f"closed target set {fam} is not target-bounded unresolved",
+              e7["target_bounded_unresolved_sites"], 0)
+
+    # The reverse direction, over *every* class the registry calls an external
+    # contract: none may be filed as a closed target set, and each keeps the
+    # unbounded-target flag.
+    external_classes = sorted(
+        ABI_CONTRACT_CLASSES - registry_closed_target_set_families())
+    check("the registry names at least one external ABI contract",
+          bool(external_classes), True)
+    for cls in external_classes:
+        site = _site(0x61)
+        site["class"] = cls
+        e7 = evaluate_predicate_element_7([("control.so", 0x61, site)], [])
+        check(f"external contract {cls} is not counted as a closed target set",
+              e7["closed_target_set_sites"], 0)
+        check(f"external contract {cls} is contract-bounded",
+              e7["contract_bounded_sites"], 1)
+        check(f"external contract {cls} keeps the unbounded target set",
+              e7["target_sets_remain_unbounded"], True)
+
+    # Provenance control, not a restatement of the table: the declared
+    # closed-set table must agree with the contract registry's own
+    # `resolution_kind`.  The registry is the witness provenance and this
+    # repair does not edit it, so a table entry missing a closed family
+    # (closed counted as external) or naming an external contract (external
+    # counted as closed) is a reported disagreement, not a silent
+    # reclassification.
+    check("declared closed target sets match the registry provenance",
+          closed_target_set_provenance_failures(), [])
+    check("closed-set reporting names are distinct from contract classes",
+          CLOSED_TARGET_SET_CLASSES & ABI_CONTRACT_CLASSES, frozenset())
+    check("every closed-set reporting class is a closed-set name",
+          {n for n in CLOSED_TARGET_SET_CLASSES
+           if not n.startswith("CLOSED_TARGET_SET_")}, set())
+
     # module -> file mapping needs a real tree; use the tool's own repo when present
     repo = Path(__file__).resolve().parents[2]
     if (repo / "src").is_dir():
@@ -34653,28 +40304,31 @@ def self_test() -> int:
         names_at[0x9040] = {"MSTYPE2RSA_DESC"}
         if double_spill:
             decode_insns = [
-                (0x426AB0, "test   %eax,%eax"),
-                (0x426AB2, "je     426ac0 <left>"),
+                (0x426A80, "test   %eax,%eax"),
+                (0x426A82, "je     426a90 <left>"),
+                (0x426A84, "mov    %rdi,%r15"),
+                (0x426A86, "mov    0x8(%r15),%rsi"),
+                (0x426A88, "mov    %rsi,0x8(%rsp)"),
+                (0x426A8A, "jmp    426ac0 <join>"),
+                (0x426A90, "mov    %rdi,%r15"),
+                (0x426A92, "mov    0x8(%r15),%rsi"),
+                (0x426A94, "mov    %rsi,0x8(%rsp)"),
+                (0x426AC0, "mov    0x8(%rsp),%rax"),
+                (0x426AC2, "call   *0x18(%rax)"),
+                (0x426AC4, "ret"),
+            ]
+        else:
+            # The call sits at +0x322 of the fixture function, the offset the
+            # b84 artefact has (0x52a9c2 - 0x52a6a0); the fixture tracks
+            # ``E7BS_MSBLOB_SITE_PIN`` so a stale pin fails the self-test.
+            decode_insns = [
                 (0x426AB4, "mov    %rdi,%r15"),
                 (0x426AB6, "mov    0x8(%r15),%rsi"),
                 (0x426AB8, "mov    %rsi,0x8(%rsp)"),
-                (0x426ABA, "jmp    426ac6 <join>"),
-                (0x426AC0, "mov    %rdi,%r15"),
-                (0x426AC2, "mov    0x8(%r15),%rsi"),
-                (0x426AC4, "mov    %rsi,0x8(%rsp)"),
-                (0x426AC6, "mov    0x8(%rsp),%rax"),
-                (0x426AD1, "call   *0x18(%rax)"),
-                (0x426AD3, "ret"),
-            ]
-        else:
-            decode_insns = [
-                (0x426AC0, "mov    %rdi,%r15"),
-                (0x426AC2, "mov    0x8(%r15),%rsi"),
-                (0x426AC4, "mov    %rsi,0x8(%rsp)"),
-                (0x426AC6, "nop"),
-                (0x426AC8, "mov    0x8(%rsp),%rax"),
-                (0x426AD1, "call   *0x18(%rax)"),
-                (0x426AD3, "ret"),
+                (0x426ABA, "nop"),
+                (0x426ABC, "mov    0x8(%rsp),%rax"),
+                (0x426AC2, "call   *0x18(%rax)"),
+                (0x426AC4, "ret"),
             ]
         insns = {
             0x4267A0: decode_insns,
@@ -34707,7 +40361,7 @@ def self_test() -> int:
                      "var": "ctx", "type": owner_type, "param": "vctx",
                      "param_index": 0,
                      "declared": "vctx: *mut c_void"}}
-        site = {"kind": "call", "func": 0x4267A0, "addr": 0x426AD1,
+        site = {"kind": "call", "func": 0x4267A0, "addr": 0x426AC2,
                 "text": "call   *0x18(%rax)", "targets": set(),
                 "unresolved": True, "reason": "base-slot-partial",
                 "class": "field", "field_offsets": {0x18}, "seam": None,
@@ -34755,9 +40409,9 @@ def self_test() -> int:
         path = root / "src" / "runtime"
         path.mkdir(parents=True, exist_ok=True)
         (path / "rcu.rs").write_text(_E7BS_RCU_SOURCE)
-        funcs = {0x259BA0:
+        funcs = {0x2598F0:
                  "_RNvNtCs1234_10openssl_rs7runtime3rcu20ossl_synchronize_rcu"}
-        insns = {0x259BA0: [
+        insns = {0x2598F0: [
             (0x259E70, "mov    %rdi,%r14"),
             (0x259E72, "mov    (%r14),%rbx"),
             (0x259E74, "movq   $0x0,(%r14)"),
@@ -34774,12 +40428,12 @@ def self_test() -> int:
         g = _E7BSG(insns, funcs, sections={".text": (0x259000, 0, 0x2000)},
                    source_root=root)
         g._s1_ctx_cache = {
-            0x259BA0: {"file": "src/runtime/rcu.rs",
+            0x2598F0: {"file": "src/runtime/rcu.rs",
                      "function": "ossl_synchronize_rcu", "line": 1,
                      "var": "lock", "type": "RcuLockSt", "param": "lock",
                      "param_index": 0,
                      "declared": "lock: *mut RcuLockSt"}}
-        site = {"kind": "call", "func": 0x259BA0, "addr": 0x259E98,
+        site = {"kind": "call", "func": 0x2598F0, "addr": 0x259E98,
                 "text": "call   *(%rbx)", "targets": set(),
                 "unresolved": True, "reason": "base-slot-partial",
                 "class": "field", "field_offsets": {0}, "seam": None,
@@ -34798,7 +40452,7 @@ def self_test() -> int:
 
     _g_rcu, _s_rcu = _e7bs_rcu_fixture()
     _w_rcu = internal_closed_writer_list_witness(
-        _g_rcu, _s_rcu, _g_rcu.funcs[0x259BA0])
+        _g_rcu, _s_rcu, _g_rcu.funcs[0x2598F0])
     check("E7BS rcu positive resolves an empty target set",
           ((_w_rcu or {}).get("resolved"), (_w_rcu or {}).get("targets")),
           (True, []))
@@ -34884,9 +40538,9 @@ def self_test() -> int:
              "cb-from-reachable-caller-unknown")]:
         _rec = _mutation(
             _name, lambda: internal_closed_writer_list_witness(
-                _g_rcu, _s_rcu, _g_rcu.funcs[0x259BA0])) or {}
+                _g_rcu, _s_rcu, _g_rcu.funcs[0x2598F0])) or {}
         _restored = internal_closed_writer_list_witness(
-            _g_rcu, _s_rcu, _g_rcu.funcs[0x259BA0])
+            _g_rcu, _s_rcu, _g_rcu.funcs[0x2598F0])
         e7bs_mutation_matrix.append({
             "mutation": _name, "case": "rcu",
             "case_fails": (_rec.get("refusal") == _want
@@ -34919,7 +40573,7 @@ def self_test() -> int:
     # The empty rcu target set is only a resolved disposition when the exact
     # witness says so.  The two negative controls make that gate load-bearing.
     _empty_site = {
-        "kind": "call", "func": 0x259BA0, "addr": 0x259E98,
+        "kind": "call", "func": 0x2598F0, "addr": 0x259E98,
         "text": "call   *(%rbx)", "targets": set(), "unresolved": False,
         "reason": "internal closed writer list: no production writer or "
                   "publication in this image",
@@ -35479,15 +41133,54 @@ def self_test() -> int:
     failures.extend(_e7abi_failures)
     print(f"[consumer-closure] {_e7abi_line}")
 
+    _cm_failures, _cm_line = _conf_default_method_self_test()
+    failures.extend(_cm_failures)
+    print(f"[consumer-closure] {_cm_line}")
+
+    _e7repin_failures, _e7repin_line = _e7repin_self_test()
+    failures.extend(_e7repin_failures)
+    print(f"[consumer-closure] {_e7repin_line}")
+
+    _e7repin_search_failures, _e7repin_search_line = \
+        _e7repin_search_self_test()
+    failures.extend(_e7repin_search_failures)
+    print(f"[consumer-closure] {_e7repin_search_line}")
+    _pin_rep = pin_resolution_report()
+    for row in _pin_rep["moved"]:
+        print(f"[consumer-closure] pin MISMATCH (moved, re-resolved): "
+              f"{row['symbol']}+{row['pin_offset']} -> +{row['resolved_offset']} "
+              f"{row['address']} by {row['witness']} "
+              f"({len(row['accepted'])} of {row['candidates']} candidate(s) "
+              "accepted)")
+    for row in _pin_rep["refused"]:
+        print(f"[consumer-closure] pin UNRESOLVED: "
+              f"{row.get('table') or row.get('scalar')} {row.get('literal')} "
+              f"refusal={row.get('refusal')}")
+
     _e7pbe_failures, _e7pbe_line = _pbe_outparam_self_test()
     failures.extend(_e7pbe_failures)
     print(f"[consumer-closure] {_e7pbe_line}")
 
+    _e7core_failures, _e7core_line = _e7core_self_test()
+    failures.extend(_e7core_failures)
+    print(f"[consumer-closure] {_e7core_line}")
+
+    if _PREMISE_UNAVAILABLE:
+        print("[consumer-closure] SELF-TEST PREMISE_UNAVAILABLE: a control's "
+              "subject is absent from this image and could not be "
+              "synthesised; state is neither pass nor failure")
+        for _p in _PREMISE_UNAVAILABLE:
+            print("  ~", _p)
     if failures:
         print("[consumer-closure] SELF-TEST FAILED")
         for f in failures:
             print("  -", f)
         return 1
+    if _PREMISE_UNAVAILABLE:
+        # Not a pass (the control did not run) and not a failure (the rule was
+        # not contradicted).  The distinct status keeps a gate from reading
+        # this as either.
+        return 2
     print(f"[consumer-closure] self-test ok: parsing, adjudication truth table, "
           f"module/file mapping, export-site index, mechanism routing, precision "
           f"narrowing, unclassified-site negative control, R1/R2/R3/A2/O1 "
@@ -35549,7 +41242,9 @@ def self_test() -> int:
           f"non-in-image GOT binding refusals, each with its load-bearing "
           f"mutation switch; the KDF selection control distinguishes 5 from "
           f"2; the plain keygen site and the eight b65 ABI sites are "
-          f"unchanged)")
+          f"unchanged), and the carry-forward coordinate-tolerance controls "
+          f"(a moved definition is re-enrolled; a recycled line is recorded as "
+          f"removed, never reported present)")
     return 0
 
 
@@ -35581,6 +41276,11 @@ def main(argv=None) -> int:
     ap.add_argument("--workdir", default="court/tmp/v4-consumer-closure")
     ap.add_argument("--skip-graph-on-refusal", action="store_true",
                     help="stop after identity/import refusals; used for negative controls")
+    ap.add_argument("--element7-only", action="store_true",
+                    help="FAST path: run only the resolver, the evidence classes and "
+                         "the reachability closure, then report the element-7 "
+                         "predicate.  Skips the edge-record, obligation and "
+                         "discharge stages, so the output is NOT a closure receipt")
     ap.add_argument("--output")
     ap.add_argument("--edge-records",
                     help="explicit JSONL sidecar path; the default is "
@@ -35636,6 +41336,24 @@ def main(argv=None) -> int:
         out.parent.mkdir(parents=True, exist_ok=True)
         out.write_text(json.dumps(receipt, indent=2) + "\n")
         print(f"[consumer-closure] wrote {out}")
+    if receipt.get("mode") == "element7-only":
+        p = receipt["precision"]
+        e7 = p["predicate_element_7"]
+        print(f"[consumer-closure] element7-only family={receipt['family']} "
+              f"status={e7['status']}")
+        print(f"  reachable_unresolved={e7['reachable_unresolved_sites']} "
+              f"target_bounded={e7['target_bounded_unresolved_sites']} "
+              f"contract_bounded={e7['contract_bounded_sites']} "
+              f"closed_target_set={e7['closed_target_set_sites']} "
+              f"unclassified={e7['unclassified_reachable_sites']}")
+        print(f"  by_class={e7['contract_bounded_by_class']}")
+        print(f"  closed_target_set_by_class={e7['closed_target_set_by_class']}")
+        for r in p["residual_sites"]:
+            if classify_bound_kind(r["class"]) is None:
+                print(f"  TARGET-BOUNDED {r['call_site']} "
+                      f"{r.get('function_name', '?')} reason={r['reason']}")
+        print("  NOTE: element7-only is a FAST probe, not a closure receipt")
+        return 0 if e7["established"] else 1
     if args.summary or not args.output:
         c = receipt["counts"]
         print(f"[consumer-closure] family={receipt['family']} "
@@ -35667,10 +41385,12 @@ def main(argv=None) -> int:
               f"reachable_unresolved={p['reachable_unresolved_sites']} "
               f"target_bounded={p['reachable_target_bounded_unresolved_sites']} "
               f"contract_bounded={p['reachable_contract_bounded_sites']} "
+              f"closed_target_set={p['reachable_closed_target_set_sites']} "
               f"unclassified={p['unclassified_reachable_sites']}")
         e7 = receipt["precision"]["predicate_element_7"]
         print(f"  element-7={e7['status']} "
-              f"contract_bounded_by_class={e7['contract_bounded_by_class']}")
+              f"contract_bounded_by_class={e7['contract_bounded_by_class']} "
+              f"closed_target_set_by_class={e7['closed_target_set_by_class']}")
         cl = receipt["graph"]["closure"]
         print(f"  closure: rounds={cl['closure_rounds']} "
               f"converged={cl['converged']} "

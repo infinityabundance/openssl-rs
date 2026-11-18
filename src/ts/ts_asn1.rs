@@ -1095,13 +1095,13 @@ pub(crate) unsafe extern "C" fn PKCS7_to_TS_TST_INFO(token: *mut Pkcs7) -> *mut 
         return ptr::null_mut();
     }
     // SAFETY: `token` is live.
-    if !pkcs7_type_is_signed(token) {
+    if !unsafe { pkcs7_type_is_signed(token) } {
         // SAFETY: a compile-time coordinate.
         unsafe { raise_ts(FILE, 213, c"PKCS7_to_TS_TST_INFO", TS_R_BAD_PKCS7_TYPE) };
         return ptr::null_mut();
     }
     // SAFETY: `token` is live.
-    if pkcs7_get_detached(token) {
+    if unsafe { pkcs7_get_detached(token) } {
         // SAFETY: a compile-time coordinate.
         unsafe { raise_ts(FILE, 217, c"PKCS7_to_TS_TST_INFO", TS_R_DETACHED_CONTENT) };
         return ptr::null_mut();

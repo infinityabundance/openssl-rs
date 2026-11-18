@@ -1,0 +1,170 @@
+{
+ "V1:src/engine/eng_dyn.rs:415:UNSAFE_FN_DEF": {
+  "item": "dynamic_data_ctx_free_func",
+  "file": "src/engine/eng_dyn.rs",
+  "def_line": 415,
+  "safety_doc": "/// `CRYPTO_EX_free`'s ex_data contract: `ptr` is NULL or the value currently stored at the index this hook was registered for (`CRYPTO_get_ex_data`'s answer at callback time, `src/runtime/ex_data.rs:508-510`), and that value is a live `DynamicDataCtx` which the enclosing ENGINE owns through its own ex_data slot. Established structurally: the index is created with this hook as its free function (`:481-488`) and the only writer of that index is [`dynamic_set_data_ctx`]'s `ENGINE_set_ex_data(e, idx, p)` at `:453`, whose `p` is a `*mut DynamicDataCtx`. The hook runs once per `CRYPTO_free_ex_data` for that ENGINE (the authority's own free_ex_data contract), and `OwnedCtx::from_raw_at` is the block's single release, so a repeated call on the same non-NULL value would be a caller defect rather than a second release this hook performs on its own. `_parent`/`_ad`/`_idx`/`_argl`/`_argp` are unread (the authority's own signature names them, hence the leading underscores).",
+  "notes_doc": [],
+  "allow_missing_safety_doc": false
+ },
+ "V1:src/engine/eng_fat.rs:201:UNSAFE_FN_DEF": {
+  "item": "push_cstr_or_null",
+  "file": "src/engine/eng_fat.rs",
+  "def_line": 201,
+  "safety_doc": "`p` must be NULL or point to a NUL-terminated C string that stays readable for the duration of the call. The argument names a string the caller lends to this frame; no ownership is taken.",
+  "notes_doc": [],
+  "allow_missing_safety_doc": false
+ },
+ "V1:src/engine/eng_list.rs:158:UNSAFE_FN_DEF": {
+  "item": "engine_list_cleanup",
+  "file": "src/engine/eng_list.rs",
+  "def_line": 158,
+  "safety_doc": "The engine lock must be initialised (non-NULL) and must not already be held by this thread: this body takes it. The list can only become non-empty through [`ENGINE_add`], whose engine came from `ENGINE_new`/`ENGINE_by_id`, both of which run the lock init. With a NULL lock, `lock()` answers false and this cleanup stops with the list intact \u2014 a no-op/leak, not UB.",
+  "notes_doc": [],
+  "allow_missing_safety_doc": false
+ },
+ "V1:src/runtime/bio/bf_readbuff.rs:231:UNSAFE_FN_DEF": {
+  "item": "readbuffer_write",
+  "file": "src/runtime/bio/bf_readbuff.rs",
+  "def_line": 231,
+  "safety_doc": [],
+  "notes_doc": [],
+  "allow_missing_safety_doc": true
+ },
+ "V1:src/runtime/bio/bf_readbuff.rs:237:UNSAFE_FN_DEF": {
+  "item": "readbuffer_puts",
+  "file": "src/runtime/bio/bf_readbuff.rs",
+  "def_line": 237,
+  "safety_doc": [],
+  "notes_doc": [],
+  "allow_missing_safety_doc": true
+ },
+ "V1:src/runtime/confmod/mod.rs:397:UNSAFE_FN_DEF": {
+  "item": "module_free_thunk",
+  "file": "src/runtime/confmod/mod.rs",
+  "def_line": 397,
+  "safety_doc": [],
+  "notes_doc": [],
+  "allow_missing_safety_doc": false
+ },
+ "V1:src/ssl/ssl_ciph.rs:741:UNSAFE_FN_DEF": {
+  "item": "update_cipher_list_by_id",
+  "file": "src/ssl/ssl_ciph.rs",
+  "def_line": 756,
+  "safety_doc": "/// `cipher_list_by_id` must be non-NULL and point to a writable slot that this call has exclusive access to; the slot must hold NULL or a live stack currently owned by the same `SSL_CTX`/`SSL`, and the old value is freed here. `cipherstack` must be a live stack of NULL-or-live `*const SSL_CIPHER` entries owned by the caller; it is duplicated, so the caller retains ownership of `cipherstack`. No other reference to the slot or to the installed stack may be live for the call. /// Authority-derived: the slot/stack ownership split is the authority's (`ssl_ciph.c:1325-1341`). The candidate establishes it at both callers: [`update_cipher_list`] (`:828`), whose `cipher_list_by_id` comes from a live `SSL_CTX`, and `ssl_create_cipher_list` (`:1208`), which passes `&mut (*ctx).cipher_list_by_id` from a live context.",
+  "notes_doc": [],
+  "allow_missing_safety_doc": false
+ },
+ "V1:src/ssl/ssl_ciph.rs:851:UNSAFE_FN_DEF": {
+  "item": "set_ciphersuites",
+  "file": "src/ssl/ssl_ciph.rs",
+  "def_line": 880,
+  "safety_doc": "/// `currciphers` must be non-NULL and point to a writable slot owned by a live `SSL_CTX`/`SSL` that this call has exclusive access to; the slot must hold NULL or a stack the object owns (the old value is freed here). `str_` must be NULL or point to a NUL-terminated byte string readable for the whole call; no pointer to it is retained. No other reference to the object or its stack slot may be live for the call. /// Authority-derived: the NULL-`str_` arm is the authority's \"empty list\" behaviour (`ssl_ciph.c:1304-1323`), and the element callback is `CONF_parse_list`'s contract. The candidate's callers are `SSL_CTX_set_ciphersuites` (`:1638`) and `SSL_set_ciphersuites` (`:1668`), which pass `&mut (*ctx).tls13_ciphersuites` / `&mut (*s).tls13_ciphersuites` from live objects.",
+  "notes_doc": [],
+  "allow_missing_safety_doc": false
+ },
+ "V1:src/ssl/ssl_conf.rs:240:UNSAFE_FN_DEF": {
+  "item": "ssl_match_option",
+  "file": "src/ssl/ssl_conf.rs",
+  "def_line": 434,
+  "safety_doc": "/// `cctx` must be non-NULL, aligned, live, initialised and exclusively accessible for the whole call: on a match this function calls [`ssl_set_option`], which takes `&mut *cctx` and writes a field of the selected `SSL`/`SSL_CTX`, so no other shared/exclusive reference to either object and no racing raw access may exist. `tbl` is a safe reference, so Rust already guarantees its validity; the caller must keep the name it borrows valid for the call. `elem` must be readable for `len` bytes when `len >= 0`, or NUL-terminated when `len == -1`; no other value is accepted. `onoff` is an integer toggle with no pointer obligation. /// Authority-derived: `elem`/`len` are `CONF_parse_list`'s element-callback arguments (`ssl_conf.c:146-160` consumes them the same way); the candidate's only caller is [`ssl_set_option_list`], which receives them from `CONF_parse_list` at `:558`. The exclusivity requirement comes from [`ssl_set_option`], not from the authority's documentation.",
+  "notes_doc": [],
+  "allow_missing_safety_doc": false
+ },
+ "V1:src/ssl/ssl_conf.rs:274:UNSAFE_FN_DEF": {
+  "item": "ssl_set_option_list",
+  "file": "src/ssl/ssl_conf.rs",
+  "def_line": 486,
+  "safety_doc": "/// `usr` must be non-NULL and point to a live, initialised `SslConfCtx` that this callback has exclusive access to for its whole duration: the body reads `tbl`/`ntbl` from the context and, on a match, reaches [`ssl_match_option`] -> [`ssl_set_option`], which takes `&mut *cctx` and writes a field of the selected `SSL`/`SSL_CTX`. No other reference and no racing raw access may exist. `cctx.tbl` must be NULL or point to a live array of `ntbl` `SslFlagTbl` values that outlives the call (NULL with `ntbl == 0` is the empty list). `elem` must be NULL or readable for `len` bytes when `len >= 0`, or NUL-terminated when `len == -1`. The callback stores no pointer to `elem` or `usr`. /// Authority-derived: this is the `CONF_parse_list` element callback installed by [`parse_option_list`] with `usr = cctx` (`:559`); `CONF_parse_list` invokes it synchronously with the element pointer/length and never retains it. The context table is set to a frame-local table by `parse_option_list` and cleared before it returns. The exclusivity requirement is this crate's [`ssl_set_option`] contract, not an authority-documented one.",
+  "notes_doc": [],
+  "allow_missing_safety_doc": false
+ },
+ "V1:src/ssl/ssl_conf.rs:379:UNSAFE_FN_DEF": {
+  "item": "min_max_proto",
+  "file": "src/ssl/ssl_conf.rs",
+  "def_line": 616,
+  "safety_doc": "/// `cctx` must be non-NULL, aligned, live, initialised and exclusively accessible for the call. When `cctx.ctx` is non-NULL it must be a live in-crate `SSL_CTX` whose `method` is a live method table; when `cctx.ssl` is non-NULL it must be a live in-crate `SSL` whose `defltmeth` is a live method table. `value` must be non-NULL and NUL-terminated (the body reads it with `CStr::from_ptr`). `bound` must be NULL or a live, aligned, writable `c_int` that outlives the call; `SSL_CONF_CTX_set_ssl`/`SSL_CONF_CTX_set_ssl_ctx` establish it as the `min_proto_version`/`max_proto_version` field of that object whenever `ctx`/`ssl` is non-NULL, and when both are NULL the body returns 0 before reading `value` or `bound`. /// Authority-derived: the protocol-name table and the version-range/method-match rules are the authority's (`ssl/ssl_conf.c:303-349`, `ssl/statem/statem_lib.c:2107-2156`); they are behaviour, not pointer-safety preconditions. The live-`method` obligation rests on `SSL_CTX_new`/`SSL_new`, which install a non-NULL method table.",
+  "notes_doc": [],
+  "allow_missing_safety_doc": false
+ },
+ "V1:src/ssl/ssl_conf.rs:438:UNSAFE_FN_DEF": {
+  "item": "cmd_Protocol",
+  "file": "src/ssl/ssl_conf.rs",
+  "def_line": 702,
+  "safety_doc": "/// `cctx` must be non-NULL, aligned, and point to a live, initialised `SslConfCtx` that this call exclusively accesses for its duration: the handler writes the context's `tbl`/`ntbl` and the option word of the `ctx`/`ssl` it references, so neither object may be concurrently read or written. `value` must be non-NULL and point to a NUL-terminated byte string readable for the whole call; the handler stores no copy of the pointer. ABI: the `ConfCmdFn` (`int (*)(SSL_CONF_CTX *, const char *)`) signature the command table stores. /// Established by the sole caller, `SSL_CONF_cmd` (`src/ssl/ssl_conf.rs:1473`): it refuses a NULL `cctx` at `:1522` and a NULL `value` for a typed row at `:1490` before the indirect call. `cctx` provenance is `SSL_CONF_CTX_new` (`:1672`), and `SSL_CONF_CTX_set_ssl`/`_set_ssl_ctx` (`:1795`/`:1839`) establish `ctx`/`ssl` as NULL or live in-crate objects. The dispatch holds no shared `&SslConfCtx` across `:1473` (the `&*cctx` at `:1457` ends with the lookup). `SSL_CONF_cmd`'s public `# Safety` (`:1489`) now requires exclusive access to the context and to the `SSL`/`SSL_CTX` it wraps and forbids concurrent mutation; the authority documents neither, so this is a recorded divergence (`AGENTS.md` \u00a717, B46-D1) that narrows the accepted contract. Returns 1 only when every element matched: `CONF_parse_list` stops at the first element whose callback returns `<= 0` and returns that value, so a mixed list may apply its leading matches and still return 0. `SSL_CONF_cmd` maps `>0` to 2 and every other value to 0. `parse_option_list` clears `cctx.tbl`/`ntbl` on the normal and `guard_ffi`-caught paths, so an error leaves no frame-local pointer behind.",
+  "notes_doc": [],
+  "allow_missing_safety_doc": false
+ },
+ "V1:src/ssl/ssl_conf.rs:455:UNSAFE_FN_DEF": {
+  "item": "cmd_Options",
+  "file": "src/ssl/ssl_conf.rs",
+  "def_line": 744,
+  "safety_doc": "/// `cctx` must be non-NULL, aligned, and point to a live, initialised `SslConfCtx` with exclusive access for its duration; the handler writes `cctx.tbl`/`ntbl` and the option word of the referenced `ctx`/`ssl`, so neither object may be concurrently read or written. `value` must be non-NULL and point to a NUL-terminated byte string readable for the whole call; the handler stores no copy of the pointer. ABI: the `ConfCmdFn` signature the command table stores. /// Established by the sole caller, `SSL_CONF_cmd` (`:1473`): NULL `cctx` is refused at `:1522` and a NULL `value` for a typed row at `:1490` before the call; `cctx` provenance is `SSL_CONF_CTX_new` (`:1672`) with `set_ssl`/`set_ssl_ctx` (`:1795`/`:1839`) supplying NULL-or-live members. `SSL_CONF_cmd`'s public `# Safety` (`:1489`) now requires exclusive access to the context and the wrapped `SSL`/`SSL_CTX` and forbids concurrent mutation; the authority documents neither, so this is a recorded divergence (`AGENTS.md` \u00a717, B46-D1) that narrows the accepted contract. This handler additionally tolerates a NULL `value` by returning `-3` (authority `ssl_conf.c:411-412`); that arm is unreachable through `SSL_CONF_cmd`, which refuses NULL first, and the dispatch maps `-3` to 0. Returns 1 only when every element matched on the parse path; `CONF_parse_list` stops at the first failing element, so a mixed list may apply its leading matches and still return 0. `parse_option_list` clears `cctx.tbl`/`ntbl` before returning on every path, so a rejected list leaves no frame-local pointer behind.",
+  "notes_doc": [],
+  "allow_missing_safety_doc": false
+ },
+ "V1:src/ssl/ssl_conf.rs:511:UNSAFE_FN_DEF": {
+  "item": "cmd_VerifyMode",
+  "file": "src/ssl/ssl_conf.rs",
+  "def_line": 824,
+  "safety_doc": "/// `cctx` must be non-NULL, aligned, and point to a live, initialised `SslConfCtx` with exclusive access for its duration; the handler writes `cctx.tbl`/`ntbl` and the verify-mode word of the referenced `ctx`/`ssl`, so neither object may be concurrently read or written. `value` must be non-NULL and point to a NUL-terminated byte string readable for the whole call; the handler stores no copy of the pointer. ABI: the `ConfCmdFn` signature the command table stores. /// Established by the sole caller, `SSL_CONF_cmd` (`:1473`): NULL `cctx` is refused at `:1522` and a NULL `value` for a typed row at `:1490`; `cctx` provenance is `SSL_CONF_CTX_new` (`:1672`) with `set_ssl`/`set_ssl_ctx` (`:1795`/`:1839`) supplying NULL-or-live members. `SSL_CONF_cmd`'s public `# Safety` (`:1489`) now requires exclusive access to the context and the wrapped `SSL`/`SSL_CTX` and forbids concurrent mutation; the authority documents neither, so this is a recorded divergence (`AGENTS.md` \u00a717, B46-D1) that narrows the accepted contract. This handler additionally tolerates a NULL `value` by returning `-3` (authority `ssl_conf.c:432-433`); that arm is unreachable through `SSL_CONF_cmd`, which refuses NULL first, and the dispatch maps `-3` to 0. Returns 1 only when every element matched on the parse path; `CONF_parse_list` stops at the first failing element, so a mixed list may apply its leading matches and still return 0. `parse_option_list` clears `cctx.tbl`/`ntbl` before returning on every path.",
+  "notes_doc": [],
+  "allow_missing_safety_doc": false
+ },
+ "V1:src/ssl/ssl_conf.rs:537:UNSAFE_FN_DEF": {
+  "item": "cmd_CipherString",
+  "file": "src/ssl/ssl_conf.rs",
+  "def_line": 875,
+  "safety_doc": "/// `cctx` must be non-NULL, aligned, and point to a live, initialised `SslConfCtx` with exclusive access for its duration; `ctx`/`ssl` must each be NULL or a live context/connection of this crate that the cipher-list setters may mutate and that is not concurrently accessed. `value` must point to a NUL-terminated byte string readable for the call (the setters tolerate NULL as a failure, but the dispatch refuses it first); the setters parse it into fresh stacks and retain no reference. ABI: the `ConfCmdFn` signature the command table stores. /// Established by the sole caller, `SSL_CONF_cmd` (`:1473`): NULL `cctx` is refused at `:1522` and a NULL `value` for a typed row at `:1490`; `cctx` provenance is `SSL_CONF_CTX_new` (`:1672`) with `set_ssl`/`set_ssl_ctx` (`:1795`/`:1839`) supplying NULL-or-live members. `SSL_CONF_cmd`'s public `# Safety` (`:1489`) now requires exclusive access to the context and the wrapped `SSL`/`SSL_CTX` and forbids concurrent mutation; the authority documents neither, so this is a recorded divergence (`AGENTS.md` \u00a717, B46-D1) that narrows the accepted contract. Returns 1 when the last applied setter succeeded and 0 otherwise. A `NULL` result from `ssl_create_cipher_list` leaves the previous lists untouched, but the authority's zero-TLS1.2-cipher arm returns 0 after `ssl_create_cipher_list` has already published new `cipher_list`/`cipher_list_by_id` stacks (`ssl_lib.c:3367-3379`), so a 0 return can leave the new list installed. That published state is fully initialised and owned by the object: the error path leaves no partial or dangling list.",
+  "notes_doc": [],
+  "allow_missing_safety_doc": false
+ },
+ "V1:src/ssl/ssl_conf.rs:552:UNSAFE_FN_DEF": {
+  "item": "cmd_Ciphersuites",
+  "file": "src/ssl/ssl_conf.rs",
+  "def_line": 914,
+  "safety_doc": "/// `cctx` must be non-NULL, aligned, and point to a live, initialised `SslConfCtx` with exclusive access for its duration; `ctx`/`ssl` must each be NULL or a live context/connection of this crate that the ciphersuite setters may mutate and that is not concurrently accessed. `value` must point to a NUL-terminated byte string readable for the call (the setters tolerate NULL as a failure, but the dispatch refuses it first); the setters parse it and retain no reference. ABI: the `ConfCmdFn` signature the command table stores. /// Established by the sole caller, `SSL_CONF_cmd` (`:1473`): NULL `cctx` is refused at `:1522` and a NULL `value` for a typed row at `:1490`; `cctx` provenance is `SSL_CONF_CTX_new` (`:1672`) with `set_ssl`/`set_ssl_ctx` (`:1795`/`:1839`) supplying NULL-or-live members. `SSL_CONF_cmd`'s public `# Safety` (`:1489`) now requires exclusive access to the context and the wrapped `SSL`/`SSL_CTX` and forbids concurrent mutation; the authority documents neither, so this is a recorded divergence (`AGENTS.md` \u00a717, B46-D1) that narrows the accepted contract. Returns 1 when the last applied setter succeeded and 0 otherwise. `set_ciphersuites` does not replace the TLS 1.3 list on a parse failure, but the authority's `update_cipher_list` arm (`ssl_ciph.c:1381-1385`) can return 0 after the TLS 1.3 list and the paired lists have already been published, so a 0 return can leave fully initialised, object-owned lists installed; no partial or dangling state is retained.",
+  "notes_doc": [],
+  "allow_missing_safety_doc": false
+ },
+ "V1:src/ssl/ssl_conf.rs:567:UNSAFE_FN_DEF": {
+  "item": "cmd_MinProtocol",
+  "file": "src/ssl/ssl_conf.rs",
+  "def_line": 955,
+  "safety_doc": "/// `cctx` must be non-NULL, aligned, and point to a live, initialised `SslConfCtx` with exclusive access for its duration; the callee reads `ctx`/`ssl` and their method version and writes `(*cctx).min_version`'s target on success, so neither object may be concurrently accessed. `value` must be non-NULL and point to a NUL-terminated byte string readable for the call: `min_max_proto` reads it with `CStr::from_ptr`, so a NULL value while `ctx` or `ssl` is live is undefined behaviour. ABI: the `ConfCmdFn` signature the command table stores. /// Established by the sole caller, `SSL_CONF_cmd` (`:1473`): NULL `cctx` is refused at `:1522` and a NULL `value` for a typed row at `:1490` before the call; `cctx` provenance is `SSL_CONF_CTX_new` (`:1672`) with `set_ssl`/`set_ssl_ctx` (`:1795`/`:1839`) supplying NULL-or-live members and a live `min_version` whenever `ctx` or `ssl` is non-NULL (when both are NULL, `min_max_proto` returns 0 before reading `value` or the bound). `SSL_CONF_cmd`'s public `# Safety` (`:1489`) now requires exclusive access to the context and the wrapped `SSL`/`SSL_CTX` and forbids concurrent mutation; the authority documents neither, so this is a recorded divergence (`AGENTS.md` \u00a717, B46-D1) that narrows the accepted contract. Returns 1 when `ssl_set_version_bound` accepts the name, otherwise 0; acceptance does not imply a write: the bound is written only for `version == 0` and for the matching `TLS_ANY_VERSION`/`DTLS_ANY_VERSION` arm, while the `_` arm returns true without writing, so a rejected name and an unmatched method version both leave it untouched.",
+  "notes_doc": [],
+  "allow_missing_safety_doc": false
+ },
+ "V1:src/ssl/ssl_conf.rs:573:UNSAFE_FN_DEF": {
+  "item": "cmd_MaxProtocol",
+  "file": "src/ssl/ssl_conf.rs",
+  "def_line": 987,
+  "safety_doc": "/// `cctx` must be non-NULL, aligned, and point to a live, initialised `SslConfCtx` with exclusive access for its duration; the callee reads `ctx`/`ssl` and their method version and writes `(*cctx).max_version`'s target on success, so neither object may be concurrently accessed. `value` must be non-NULL and point to a NUL-terminated byte string readable for the call: `min_max_proto` reads it with `CStr::from_ptr`, so a NULL value while `ctx` or `ssl` is live is undefined behaviour. ABI: the `ConfCmdFn` signature the command table stores. /// Established by the sole caller, `SSL_CONF_cmd` (`:1473`): NULL `cctx` is refused at `:1522` and a NULL `value` for a typed row at `:1490` before the call; `cctx` provenance is `SSL_CONF_CTX_new` (`:1672`) with `set_ssl`/`set_ssl_ctx` (`:1795`/`:1839`) supplying NULL-or-live members and a live `max_version` whenever `ctx` or `ssl` is non-NULL (when both are NULL, `min_max_proto` returns 0 before reading `value` or the bound). `SSL_CONF_cmd`'s public `# Safety` (`:1489`) now requires exclusive access to the context and the wrapped `SSL`/`SSL_CTX` and forbids concurrent mutation; the authority documents neither, so this is a recorded divergence (`AGENTS.md` \u00a717, B46-D1) that narrows the accepted contract. Returns 1 when `ssl_set_version_bound` accepts the name, otherwise 0; acceptance does not imply a write: the bound is written only for `version == 0` and for the matching `TLS_ANY_VERSION`/`DTLS_ANY_VERSION` arm, while the `_` arm returns true without writing, so a rejected name and an unmatched method version both leave it untouched.",
+  "notes_doc": [],
+  "allow_missing_safety_doc": false
+ },
+ "V1:src/ssl/ssl_rsa.rs:1007:UNSAFE_FN_DEF": {
+  "item": "serverinfoex_srv_parse_cb",
+  "file": "src/ssl/ssl_rsa.rs",
+  "def_line": 1021,
+  "safety_doc": "/// ABI-only, because this slice installs the callback but never invokes it: the `custom_ext_method` record in `src/ssl/statem/extensions_cust.rs` stores the erased add/parse pointers and records that this slice never calls either. If an invocation is added, the `SSL_custom_ext_parse_cb_ex` contract applies: `s` must be a live connection, `in` must be NULL or readable for `inlen` bytes, and `al` must be non-NULL and point to a writable `int` for the call (this body writes `*al` whenever `inlen != 0`). `ext_type`, `context`, `x`, `chainidx` and `arg` are unread here. /// Authority-derived: the signature and the `al`/`in` contract are the authority's (`ssl.h:337`, `ssl/ssl_rsa.c:637-650`). Installation is by [`serverinfo_process_buffer`] (`:1176`) through `SSL_CTX_add_custom_ext` with `arg = NULL`.",
+  "notes_doc": [],
+  "allow_missing_safety_doc": false
+ },
+ "V1:src/ssl/ssl_rsa.rs:1033:UNSAFE_FN_DEF": {
+  "item": "serverinfo_srv_parse_cb",
+  "file": "src/ssl/ssl_rsa.rs",
+  "def_line": 1057,
+  "safety_doc": "/// Same ABI-only status as [`serverinfoex_srv_parse_cb`]: installed by [`serverinfo_process_buffer`] (`:1165`) as the old-style `custom_ext_parse_cb` and never invoked at this identity. On invocation, `s` must be live, `in` NULL or readable for `inlen`, and `al` non-NULL and writable; this body forwards every pointer unchanged to `serverinfoex_srv_parse_cb`. /// Authority-derived: `ssl.h:321` and `ssl/ssl_rsa.c:652-658`.",
+  "notes_doc": [],
+  "allow_missing_safety_doc": false
+ },
+ "V1:src/ui/ui_util.rs:197:UNSAFE_FN_DEF": {
+  "item": "ui_free_method_data",
+  "file": "src/ui/ui_util.rs",
+  "def_line": 197,
+  "safety_doc": [],
+  "notes_doc": [],
+  "allow_missing_safety_doc": false
+ }
+}
