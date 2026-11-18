@@ -860,14 +860,17 @@ unsafe fn do_othername(
 ///
 /// # Safety
 ///
-/// `value` must be NUL-terminated; `ctx` must be a live `X509V3_CTX`.
+/// `value` must be NUL-terminated; `ctx` is NULL or live. A NULL `ctx` is refused on the
+/// section read: `X509V3_get_section` raises and answers NULL, after which this body frees the
+/// name it allocated and answers NULL. `X509V3_section_free` is then a no-op because the
+/// section is NULL.
 unsafe fn do_dirname(value: *const c_char, ctx: *mut X509V3Ctx) -> *mut X509Name {
     let mut ret = 0;
     let mut sk: *mut OpenSslStack = core::ptr::null_mut();
     // SAFETY: the item allocator answers NULL or a live value.
     let nm = X509_NAME_new();
     if !nm.is_null() {
-        // SAFETY: `ctx` is live and `value` is NUL-terminated per the contract.
+        // SAFETY: `ctx` is NULL or live and `value` is NUL-terminated per the contract.
         sk = unsafe { X509V3_get_section(ctx, value) };
         if sk.is_null() {
             // `ERR_raise_data(ERR_LIB_X509V3, X509V3_R_SECTION_NOT_FOUND, "section=%s", value)`.
@@ -883,7 +886,9 @@ unsafe fn do_dirname(value: *const c_char, ctx: *mut X509V3Ctx) -> *mut X509Name
             ret = unsafe { X509V3_NAME_from_section(nm, sk, MBSTRING_ASC as c_ulong) };
         }
     }
-    // SAFETY: `ctx` is live and `sk` is NULL or this call's own section.
+    // SAFETY: `ctx` is NULL or live and `sk` is NULL or a section this call owns. A NULL `sk`
+    // makes the release a no-op; a non-NULL `sk` came from `X509V3_get_section`, which only
+    // answers when `ctx` was live.
     unsafe { X509V3_section_free(ctx, sk) };
     if ret == 0 {
         // SAFETY: `nm` is NULL or this call's own value.
@@ -902,7 +907,10 @@ unsafe fn do_dirname(value: *const c_char, ctx: *mut X509V3Ctx) -> *mut X509Name
 ///
 /// # Safety
 ///
-/// `out` is NULL or a live `GENERAL_NAME`; `value` must be NUL-terminated; `ctx` is NULL or live.
+/// `out` is NULL or a live `GENERAL_NAME`; `value` must be NUL-terminated; `ctx` is NULL or
+/// live. The `dirName` arm refuses a NULL `ctx` through [`do_dirname`]'s section read; the
+/// `otherName` arm passes `ctx` to `ASN1_generate_v3`, which accepts NULL and uses it only for
+/// a section reference.
 #[no_mangle]
 pub unsafe extern "C" fn a2i_GENERAL_NAME(
     out: *mut GeneralName,
@@ -1053,7 +1061,19 @@ unsafe fn err_value(site: &crate::runtime::err::err_sites::ErrSite, value: *cons
 ///
 /// # Safety
 ///
-/// `out` is NULL or a live `GENERAL_NAME`; `cnf` must be a live `CONF_VALUE`; `ctx` is NULL or live.
+/// `out` is NULL or a live `GENERAL_NAME`; `cnf` must be a live `CONF_VALUE` whose `name` and
+/// `value` are each NULL or NUL-terminated; `ctx` is NULL or live. A NULL `ctx` is refused on the
+/// `dirName` arm (`X509V3_get_section` raises and answers NULL, so the build fails) and accepted
+/// on the `otherName` arm (`ASN1_generate_v3` accepts NULL).
+///
+/// Both config fields are **refused when NULL**, before either is read: the authority tests
+/// `value` itself (`v3_san.c:604`, `X509V3_R_MISSING_VALUE`), but hands `name` straight to
+/// `ossl_v3_name_cmp(name, "email")` (`:608`), which reads through a NULL pointer and faults
+/// (measured: exit 139, `docs/SECURITY_DIVERGENCE_POLICY.md`, `D-V3-SAN-NULL-NAME-1`). A fault is
+/// not a contract to reproduce (§17), so a NULL `name` takes the same refusal and raises the
+/// entry's own missing-field reason instead. Neither NULL shape is claimed compatible; both leave
+/// `cnf` and `out` untouched. `v2i_subject_alt` and `v2i_issuer_alt` apply the same refusal
+/// before their own name scans, so no exported SAN builder reads a NULL `name`.
 #[no_mangle]
 pub unsafe extern "C" fn v2i_GENERAL_NAME_ex(
     out: *mut GeneralName,
@@ -1069,9 +1089,19 @@ pub unsafe extern "C" fn v2i_GENERAL_NAME_ex(
         unsafe { raise_site(&V3_SAN_604) };
         return core::ptr::null_mut();
     }
+    if name.is_null() {
+        // The authority's first act on `name` is `ossl_v3_name_cmp(name, "email")` (`:608`),
+        // which reads through it; the scan is not a contract to reproduce
+        // (D-V3-SAN-NULL-NAME-1, the D-V3-CONF-NULL-VALUE-1 class at `X509V3_EXT_nconf*`). The
+        // entry is missing a field either way, so the refusal reuses the entry guard's own reason
+        // and touches no memory.
+        // SAFETY: the site is a declared constant.
+        unsafe { raise_site(&V3_SAN_604) };
+        return core::ptr::null_mut();
+    }
     // Each `ossl_v3_name_cmp(name, "...")` is a case-insensitive prefix compare by
-    // length; `name` is NUL-terminated.
-    // SAFETY: `name` is NUL-terminated per the contract.
+    // length; `name` is NUL-terminated and non-NULL per the contract.
+    // SAFETY: `name` is non-NULL and NUL-terminated per the contract.
     let type_ = unsafe {
         if ossl_v3_name_cmp(name, c"email".as_ptr()) == 0 {
             GEN_EMAIL
@@ -1094,7 +1124,7 @@ pub unsafe extern "C" fn v2i_GENERAL_NAME_ex(
     if type_ == -1 {
         // `ERR_raise_data(ERR_LIB_X509V3, X509V3_R_UNSUPPORTED_OPTION, "name=%s", name)`.
         let mut msg = b"name=".to_vec();
-        // SAFETY: `name` is NUL-terminated per the contract.
+        // SAFETY: `name` is non-NULL and NUL-terminated per the contract.
         unsafe { push_cstr(&mut msg, name) };
         msg.push(0);
         // SAFETY: `msg` is NUL-terminated; the site is a declared constant.
@@ -1110,7 +1140,8 @@ pub unsafe extern "C" fn v2i_GENERAL_NAME_ex(
 ///
 /// # Safety
 ///
-/// `cnf` must be a live `CONF_VALUE`; `ctx` is NULL or live.
+/// `cnf` must be a live `CONF_VALUE`; `ctx` is NULL or live. A NULL `ctx` is refused on the
+/// `dirName` arm; see [`v2i_GENERAL_NAME_ex`].
 #[no_mangle]
 pub unsafe extern "C" fn v2i_GENERAL_NAME(
     method: *const X509V3ExtMethod,
@@ -1126,7 +1157,8 @@ pub unsafe extern "C" fn v2i_GENERAL_NAME(
 ///
 /// # Safety
 ///
-/// `ctx` is NULL or live; `nval` must be a live stack of `CONF_VALUE` pointers.
+/// `ctx` is NULL or live; `nval` must be a live stack of `CONF_VALUE` pointers. A NULL `ctx`
+/// is refused on each element's `dirName` arm; see [`v2i_GENERAL_NAME_ex`].
 #[no_mangle]
 pub unsafe extern "C" fn v2i_GENERAL_NAMES(
     method: *const X509V3ExtMethod,
@@ -1160,6 +1192,15 @@ pub unsafe extern "C" fn v2i_GENERAL_NAMES(
 }
 
 /// The `i2v` slot for `i2v_GENERAL_NAMES`.
+///
+/// # Safety
+/// `meth` is the live `X509V3_EXT_METHOD` row the extension machinery is dispatching (this
+/// module's static `ossl_v3_alt` row; it is process-lifetime and only read). `value` is
+/// the `GENERAL_NAMES` stack the slot holds: NULL or a live `OpenSSLStack` of
+/// NULL-or-live `GENERAL_NAME` values, exclusively read for the call. `out` is NULL or a
+/// live target stack the caller owns; any strings the body builds are added to it, so
+/// ownership of them transfers to that stack's owner. The returned stack is `out` (or a
+/// new one the implementation creates), borrowed by the caller.
 unsafe extern "C" fn san_i2v(
     meth: *const X509V3ExtMethod,
     value: *mut c_void,
@@ -1171,6 +1212,15 @@ unsafe extern "C" fn san_i2v(
 }
 
 /// The `v2i` slots for the `ossl_v3_alt` rows (`v2i_subject_alt`, `v2i_issuer_alt`).
+///
+/// # Safety
+/// `meth` is the live row the machinery is dispatching (this module's static table row,
+/// read only). `ctx` is the live `X509V3_CTX` the extension machinery passes under its
+/// `void *` spelling; it must be aligned for `X509V3Ctx` and valid for the call. `out`
+/// is NULL or a live `OpenSSLStack` of `GENERAL_NAME` values that the body may append
+/// to, transferring ownership of each appended node to that stack's owner. The answer
+/// is the newly built node (`v2i_*` already transferred ownership of it to the caller
+/// on success) or NULL on failure.
 unsafe extern "C" fn san_v2i(
     meth: *const X509V3ExtMethod,
     ctx: *mut c_void,
@@ -1181,6 +1231,12 @@ unsafe extern "C" fn san_v2i(
 }
 
 /// The `v2i` slot for the issuer-alt arm.
+///
+/// # Safety
+/// Exactly as for [`san_v2i`]: `meth` is the live static row, `ctx` is a live, aligned
+/// `X509V3_CTX` valid for the call, and `out` is NULL or a live `OpenSSLStack` that may
+/// take ownership of the node the issuer-arm constructor appends. The returned node is
+/// owned by the caller, or NULL on failure.
 unsafe extern "C" fn san_v2i_issuer(
     meth: *const X509V3ExtMethod,
     ctx: *mut c_void,
@@ -1227,7 +1283,16 @@ pub static ossl_v3_alt: [X509V3ExtMethod; 3] = [
 ///
 /// # Safety
 ///
-/// `ctx` is NULL or live; `nval` must be a live stack of `CONF_VALUE` pointers.
+/// `ctx` is NULL or live; `nval` must be a live stack of `CONF_VALUE` pointers. A NULL `ctx`
+/// is refused by the `issuer=copy` arm ([`copy_issuer`]) and on each element's `dirName` arm
+/// (the section read refuses it); both raise and this body answers NULL.
+///
+/// An element whose `name` is NULL is refused before the name scan, with
+/// `X509V3_R_MISSING_VALUE` at `V3_SAN_604` -- the reason [`v2i_GENERAL_NAME_ex`]'s own
+/// missing-field guard raises -- and the stack built so far is freed. The authority's first act
+/// on the element is `ossl_v3_name_cmp(cnf->name, "issuer")` (`v3_san.c:316`), which reads through
+/// the NULL `name` and faults (measured: exit 139, `D-V3-SAN-NULL-NAME-1`); that shape is refused,
+/// not reproduced (§17), and neither the element nor its `value` is read.
 unsafe extern "C" fn v2i_issuer_alt(
     method: *mut X509V3ExtMethod,
     ctx: *mut X509V3Ctx,
@@ -1255,7 +1320,18 @@ unsafe extern "C" fn v2i_issuer_alt(
         let cnf = unsafe { OPENSSL_sk_value(nval, i) }.cast::<ConfValue>();
         // SAFETY: `cnf` is live.
         let (name, value) = unsafe { ((*cnf).name, (*cnf).value) };
-        // SAFETY: `name`/`value` are NUL-terminated when non-NULL.
+        if name.is_null() {
+            // The authority's first act on the element is `ossl_v3_name_cmp(cnf->name, "issuer")`
+            // (`:316`), which reads through the NULL `name` and faults (measured: exit 139,
+            // D-V3-SAN-NULL-NAME-1). The scan is not a contract to reproduce (§17); the entry is
+            // missing a field either way, so the refusal reuses `v2i_GENERAL_NAME_ex`'s own
+            // missing-field reason, frees the stack built so far and touches no memory.
+            // SAFETY: the site is a declared constant.
+            unsafe { raise_site(&V3_SAN_604) };
+            err!();
+        }
+        // SAFETY: `name` is non-NULL per the refusal above and both are NUL-terminated when
+        // non-NULL.
         let is_issuer_copy = unsafe {
             !value.is_null()
                 && ossl_v3_name_cmp(name, c"issuer".as_ptr()) == 0
@@ -1351,7 +1427,16 @@ unsafe extern "C" fn copy_issuer(ctx: *mut X509V3Ctx, gens: *mut OpenSslStack) -
 ///
 /// # Safety
 ///
-/// `ctx` is NULL or live; `nval` must be a live stack of `CONF_VALUE` pointers.
+/// `ctx` is NULL or live; `nval` must be a live stack of `CONF_VALUE` pointers. A NULL `ctx`
+/// is refused by the `email=copy`/`email=move` arms ([`copy_email`]) and on each element's
+/// `dirName` arm (the section read refuses it); both raise and this body answers NULL.
+///
+/// An element whose `name` is NULL is refused before the name scan, with
+/// `X509V3_R_MISSING_VALUE` at `V3_SAN_604` -- the reason [`v2i_GENERAL_NAME_ex`]'s own
+/// missing-field guard raises -- and the stack built so far is freed. The authority's first act
+/// on the element is `ossl_v3_name_cmp(cnf->name, "email")` (`v3_san.c:394`), which reads through
+/// the NULL `name` and faults (measured: exit 139, `D-V3-SAN-NULL-NAME-1`); that shape is refused,
+/// not reproduced (§17), and neither the element nor its `value` is read.
 unsafe extern "C" fn v2i_subject_alt(
     method: *mut X509V3ExtMethod,
     ctx: *mut X509V3Ctx,
@@ -1379,7 +1464,18 @@ unsafe extern "C" fn v2i_subject_alt(
         let cnf = unsafe { OPENSSL_sk_value(nval, i) }.cast::<ConfValue>();
         // SAFETY: `cnf` is live.
         let (name, value) = unsafe { ((*cnf).name, (*cnf).value) };
-        // SAFETY: `name`/`value` are NUL-terminated when non-NULL.
+        if name.is_null() {
+            // The authority's first act on the element is `ossl_v3_name_cmp(cnf->name, "email")`
+            // (`:394`), which reads through the NULL `name` and faults (measured: exit 139,
+            // D-V3-SAN-NULL-NAME-1). The scan is not a contract to reproduce (§17); the entry is
+            // missing a field either way, so the refusal reuses `v2i_GENERAL_NAME_ex`'s own
+            // missing-field reason, frees the stack built so far and touches no memory.
+            // SAFETY: the site is a declared constant.
+            unsafe { raise_site(&V3_SAN_604) };
+            err!();
+        }
+        // SAFETY: `name` is non-NULL per the refusal above and both are NUL-terminated when
+        // non-NULL.
         let (is_email, is_copy, is_move) = unsafe {
             (
                 ossl_v3_name_cmp(name, c"email".as_ptr()) == 0,
@@ -1498,4 +1594,206 @@ unsafe extern "C" fn copy_email(
     }
 
     1
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(clippy::expect_used)]
+    use super::*;
+
+    /// B54-W3: the config-decode type fact, per call site. `do_ext_nconf` resolves the row by
+    /// NID and calls that row's `v2i`; `ossl_v3_alt`'s three rows all declare `GENERAL_NAMES_it`,
+    /// so each builder's cast to `GENERAL_NAMES` is fixed by the entry it is installed in. Only
+    /// `subject_alt_name` may use the copy/move-email builder and only `issuer_alt_name` the
+    /// issuer builder; swapping the two `v2i` values makes this fail.
+    #[test]
+    fn the_alt_rows_pair_each_builder_with_its_nid() {
+        let general_names = GENERAL_NAMES_it();
+        assert_eq!(ossl_v3_alt[0].ext_nid, NID_subject_alt_name);
+        assert_eq!(ossl_v3_alt[1].ext_nid, NID_issuer_alt_name);
+        assert_eq!(
+            unsafe {
+                // SAFETY: both rows' `it` accessors answer the static `GENERAL_NAMES` item.
+                ossl_v3_alt[0].it.expect("an item")()
+            },
+            general_names
+        );
+        assert_eq!(
+            unsafe {
+                // SAFETY: as above.
+                ossl_v3_alt[1].it.expect("an item")()
+            },
+            general_names
+        );
+        assert_eq!(
+            ossl_v3_alt[0].v2i.map(|f| f as usize),
+            Some(san_v2i as *const () as usize),
+            "subjectAltName must be built by v2i_subject_alt"
+        );
+        assert_eq!(
+            ossl_v3_alt[1].v2i.map(|f| f as usize),
+            Some(san_v2i_issuer as *const () as usize),
+            "issuerAltName must be built by v2i_issuer_alt"
+        );
+        assert_eq!(
+            ossl_v3_alt[0].i2v.map(|f| f as usize),
+            Some(san_i2v as *const () as usize)
+        );
+    }
+
+    /// F1: `v2i_GENERAL_NAME_ex` must refuse a NULL `name` **before** the name scan.
+    ///
+    /// The authority tests `value` (`v3_san.c:604`) but hands `name` straight to
+    /// `ossl_v3_name_cmp(name, "email")` (`:608`), which reads through a NULL pointer: measured
+    /// against the pinned prefix, `{name = NULL, value = "DNS:example.com"}` dies with exit 139,
+    /// while `{name = "DNS", value = NULL}` returns NULL after raising
+    /// `X509V3_R_MISSING_VALUE`. The refusal is the entry guard's own missing-field reason, and
+    /// neither `cnf` nor `out` is read past the two fields (`D-V3-SAN-NULL-NAME-1`).
+    #[test]
+    fn a_null_name_is_refused_before_the_name_scan() {
+        use crate::runtime::err::{ERR_clear_error, ERR_peek_last_error};
+
+        // The error stack is process-global; the lock keeps a sibling test's raise out of the
+        // read below.
+        let _g = crate::test_support::lock_global_state();
+
+        let mut value = b"DNS:example.com\0".to_vec();
+        let mut cnf = ConfValue {
+            section: core::ptr::null_mut(),
+            name: core::ptr::null_mut(),
+            value: value.as_mut_ptr().cast(),
+        };
+        ERR_clear_error();
+        // SAFETY: `cnf` is live and its `name` is NULL -- the shape this refusal exists for. `out`
+        // is NULL and `ctx` is unused, because no `GENERAL_NAME` is built.
+        let gen = unsafe {
+            v2i_GENERAL_NAME_ex(
+                core::ptr::null_mut(),
+                core::ptr::null(),
+                core::ptr::null_mut(),
+                &mut cnf,
+                0,
+            )
+        };
+        assert!(gen.is_null(), "a NULL name is refused");
+        let err = ERR_peek_last_error();
+        assert_ne!(err, 0, "the refusal raises");
+        assert_eq!(
+            (err & 0x7f_ffff) as c_int,
+            X509V3_R_MISSING_VALUE,
+            "the entry guard's own missing-field reason"
+        );
+        assert_eq!(((err >> 23) & 0xff) as c_int, 34, "raised from X509V3");
+        assert_eq!(
+            cnf.value,
+            value.as_ptr().cast_mut().cast::<c_char>(),
+            "the live value pointer is untouched"
+        );
+    }
+
+    /// F2: `v2i_subject_alt` must refuse a NULL `name` before its `email` scan.
+    ///
+    /// The authority's first act on the element is `ossl_v3_name_cmp(cnf->name, "email")`
+    /// (`v3_san.c:394`), which reads through a NULL pointer: measured through
+    /// `X509V3_EXT_get_nid(NID_subject_alt_name)->v2i` against the pinned prefix,
+    /// `{name = NULL, value = "DNS:example.com"}` dies with exit 139, while
+    /// `{name = "DNS", value = NULL}` returns NULL after raising `X509V3_R_MISSING_VALUE` (reason
+    /// 124, lib 34). The refusal frees the stack built so far and answers NULL; neither `cnf` nor
+    /// its `value` is read past the two fields (`D-V3-SAN-NULL-NAME-1`).
+    #[test]
+    fn subject_alt_refuses_a_null_name_before_the_email_scan() {
+        use crate::runtime::err::{ERR_clear_error, ERR_peek_last_error};
+
+        // The error stack is process-global; the lock keeps a sibling test's raise out of the
+        // read below.
+        let _g = crate::test_support::lock_global_state();
+
+        let mut value = b"DNS:example.com\0".to_vec();
+        let mut cnf = ConfValue {
+            section: core::ptr::null_mut(),
+            name: core::ptr::null_mut(),
+            value: value.as_mut_ptr().cast(),
+        };
+        // SAFETY: `nval` is this test's own stack holding a pointer to the live `cnf` below.
+        let nval = unsafe {
+            let stack = OPENSSL_sk_new_null();
+            assert!(!stack.is_null(), "the test stack is allocated");
+            OPENSSL_sk_push(stack, core::ptr::addr_of_mut!(cnf).cast::<c_void>());
+            stack
+        };
+        ERR_clear_error();
+        // SAFETY: `nval` is live and its one element is a live `CONF_VALUE` whose `name` is NULL --
+        // the shape this refusal exists for. `method` and `ctx` are unused, because no
+        // `GENERAL_NAME` is built.
+        let gens = unsafe { v2i_subject_alt(core::ptr::null_mut(), core::ptr::null_mut(), nval) };
+        assert!(gens.is_null(), "a NULL name is refused");
+        let err = ERR_peek_last_error();
+        assert_ne!(err, 0, "the refusal raises");
+        assert_eq!(
+            (err & 0x7f_ffff) as c_int,
+            X509V3_R_MISSING_VALUE,
+            "the entry guard's own missing-field reason"
+        );
+        assert_eq!(((err >> 23) & 0xff) as c_int, 34, "raised from X509V3");
+        assert_eq!(
+            cnf.value,
+            value.as_ptr().cast_mut().cast::<c_char>(),
+            "the live value pointer is untouched"
+        );
+        // SAFETY: `nval` is this test's own stack; it owns none of its elements.
+        unsafe { OPENSSL_sk_free(nval) };
+    }
+
+    /// F3: `v2i_issuer_alt` must refuse a NULL `name` before its `issuer` scan.
+    ///
+    /// The authority's first act on the element is `ossl_v3_name_cmp(cnf->name, "issuer")`
+    /// (`v3_san.c:316`), which reads through a NULL pointer: measured through
+    /// `X509V3_EXT_get_nid(NID_issuer_alt_name)->v2i` against the pinned prefix,
+    /// `{name = NULL, value = "DNS:example.com"}` dies with exit 139, while
+    /// `{name = "DNS", value = NULL}` returns NULL after raising `X509V3_R_MISSING_VALUE` (reason
+    /// 124, lib 34). The refusal frees the stack built so far and answers NULL; neither `cnf` nor
+    /// its `value` is read past the two fields (`D-V3-SAN-NULL-NAME-1`).
+    #[test]
+    fn issuer_alt_refuses_a_null_name_before_the_issuer_scan() {
+        use crate::runtime::err::{ERR_clear_error, ERR_peek_last_error};
+
+        // The error stack is process-global; the lock keeps a sibling test's raise out of the
+        // read below.
+        let _g = crate::test_support::lock_global_state();
+
+        let mut value = b"DNS:example.com\0".to_vec();
+        let mut cnf = ConfValue {
+            section: core::ptr::null_mut(),
+            name: core::ptr::null_mut(),
+            value: value.as_mut_ptr().cast(),
+        };
+        // SAFETY: `nval` is this test's own stack holding a pointer to the live `cnf` below.
+        let nval = unsafe {
+            let stack = OPENSSL_sk_new_null();
+            assert!(!stack.is_null(), "the test stack is allocated");
+            OPENSSL_sk_push(stack, core::ptr::addr_of_mut!(cnf).cast::<c_void>());
+            stack
+        };
+        ERR_clear_error();
+        // SAFETY: `nval` is live and its one element is a live `CONF_VALUE` whose `name` is NULL --
+        // the shape this refusal exists for. `method` and `ctx` are unused, because no
+        // `GENERAL_NAME` is built.
+        let gens = unsafe { v2i_issuer_alt(core::ptr::null_mut(), core::ptr::null_mut(), nval) };
+        assert!(gens.is_null(), "a NULL name is refused");
+        let err = ERR_peek_last_error();
+        assert_ne!(err, 0, "the refusal raises");
+        assert_eq!(
+            (err & 0x7f_ffff) as c_int,
+            X509V3_R_MISSING_VALUE,
+            "the entry guard's own missing-field reason"
+        );
+        assert_eq!(((err >> 23) & 0xff) as c_int, 34, "raised from X509V3");
+        assert_eq!(
+            cnf.value,
+            value.as_ptr().cast_mut().cast::<c_char>(),
+            "the live value pointer is untouched"
+        );
+        // SAFETY: `nval` is this test's own stack; it owns none of its elements.
+        unsafe { OPENSSL_sk_free(nval) };
+    }
 }

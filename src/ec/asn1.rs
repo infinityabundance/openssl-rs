@@ -759,10 +759,9 @@ static CHAR_TWO_ADB: SyncAdb = SyncAdb(Asn1Adb {
 /// The `char_two_adb` accessor the `ADB` template stores: it answers the `ASN1_ADB`, which the
 /// machinery reads through `call_item_exp` exactly as it reads an item accessor.
 ///
-/// # Safety
-///
-/// None: it takes no pointer and answers a `&'static` constant.
-fn x9_62_characteristic_two_adb() -> *const c_void {
+/// No safety contract: it takes no pointer and answers a `&'static` constant. Declared with the
+/// C ABI because `call_item_exp` invokes a template's `item` through an `extern "C" fn` pointer.
+extern "C" fn x9_62_characteristic_two_adb() -> *const c_void {
     ptr::addr_of!(CHAR_TWO_ADB.0).cast::<c_void>()
 }
 
@@ -810,8 +809,9 @@ static FIELDID_ADB: SyncAdb = SyncAdb(Asn1Adb {
     null_tt: ptr::null(),
 });
 
-/// The `fieldID_adb` accessor the `ADB` template stores.
-fn x9_62_fieldid_adb() -> *const c_void {
+/// The `fieldID_adb` accessor the `ADB` template stores. Declared with the C ABI because
+/// `call_item_exp` invokes a template's `item` through an `extern "C" fn` pointer.
+extern "C" fn x9_62_fieldid_adb() -> *const c_void {
     ptr::addr_of!(FIELDID_ADB.0).cast::<c_void>()
 }
 
@@ -2536,6 +2536,33 @@ mod tests {
             assert!(!(*params).base.is_null());
             assert!(!(*params).order.is_null());
             ECPARAMETERS_free(params);
+        }
+    }
+
+    /// MIRI-UB-1: an `ADB` accessor is a template's `item`, and `call_item_exp` invokes that
+    /// through an `extern "C"` function pointer. Declaring the accessor with the C ABI is what
+    /// makes the call sound; the binding below fails to compile if one regresses to the Rust ABI,
+    /// and the call exercises the transmute under Miri.
+    #[test]
+    fn the_adb_accessors_are_callable_through_the_c_abi() {
+        let cases: [(&str, extern "C" fn() -> *const c_void, *const c_void); 2] = [
+            (
+                "x9_62_characteristic_two_adb",
+                x9_62_characteristic_two_adb,
+                ptr::addr_of!(CHAR_TWO_ADB.0).cast::<c_void>(),
+            ),
+            (
+                "x9_62_fieldid_adb",
+                x9_62_fieldid_adb,
+                ptr::addr_of!(FIELDID_ADB.0).cast::<c_void>(),
+            ),
+        ];
+        for (label, accessor, expected) in cases {
+            // SAFETY: `accessor` is this module's own `ADB` accessor, called with the C ABI the
+            // template machinery uses; it answers a `&'static` record.
+            let actual =
+                unsafe { crate::asn1::utl::call_item_exp(accessor as *const () as *mut c_void) };
+            assert_eq!(actual, expected, "{label}");
         }
     }
 }

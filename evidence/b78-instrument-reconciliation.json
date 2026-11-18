@@ -1,0 +1,209 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/instrument-reconciliation/v1",
+  "kind": "adjudication-response/instrument-reconciliation",
+  "candidate_tag": "b78",
+  "generated_utc": "2026-11-14T16:10:00Z",
+  "author_role": "closing subagent: evidence production only. No src/ or tests/ change, no existing receipt change, no commit, no push.",
+  "venue": {
+    "free_g_available_gib": 12,
+    "compilation": "refused: AGENTS.md section 6.1 requires host available >= 24 GiB before a build and the cap formula min(8g, available-16g) is below its 2g floor here. No build, test, sanitizer, self-test or runtime probe was run in this session.",
+    "work_done": "git blob extraction, source reading, JSON analysis and hashing only"
+  },
+  "question": "The b78 review chain bound tool facb2a97 (review head 75add65c1) while the b78b closures bound f31816b1 (commit bd518a214). Does that split invalidate a b78 review verdict, the 65-site cohort, or the 290/290 closure counts?",
+  "answer": {
+    "review_verdicts": "NOT invalidated. Every ACCEPT/REJECT is the reviewer's source-level judgment; the instrument supplied span resolution, span hashes and negative controls, never the judgment.",
+    "cohort": "NOT invalidated. The 65 boundaries are enumerated by id in the regenerated receipts; the instrument locates and hashes them, it does not decide membership.",
+    "closure_counts": "TOOL-BOUND to f31816b1 and must be cited that way. One changed hunk on the adjudication path can and did move 7 rows from BLOCKED to DISCHARGED between closure-ssh-b78 (tool d3d01dfe) and closure-ssh-b78b (tool f31816b1). That hunk is named below and its seven affected rows are re-reviewed in evidence/b78-review-migrated-rows.json.",
+    "silent_verdict_change": false
+  },
+  "candidate_identity": {
+    "production_source_head": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "src_content_sha256": "c0bd61c94f5a8da2e08c105724d14750403fbfd53aa8d4b722672f9b11b0bd38",
+    "image_libcrypto_sha256": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507",
+    "census_sha256": "b4babdf7d341d1407aa7787c1f3388b207943923787e3cc158e0a27296c08ea0",
+    "head_at_this_check": "cbc42bab7fa17d00d3163b47157258c9e7c5f1ac",
+    "src_unchanged_from_b78": "git diff --name-only bb7d5206a..HEAD matches no src/, tests/, Cargo or build file"
+  },
+  "instruments": {
+    "review": {
+      "path": "forensics/tools/consumer_closure.py",
+      "sha256": "facb2a97586493a8cf8fb6a073266046dfc1dd8138110f6c18c575b613e45426",
+      "short": "facb2a97",
+      "head_at_review": "75add65c11b175bc53569dc0f24c4d767126d85b",
+      "evidence": [
+        "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b78-review-final.json candidate_identity.closure_tool_sha256",
+        "court/freeze-b78/span-recompute-b78.json tool.sha256"
+      ],
+      "used_for": [
+        "locating each obligation's span at the census coordinate",
+        "the normalised-body span hash at the b76 0238c6e4, b77 ada7df257 and b78 bb7d5206a heads",
+        "the C1-C9 controls (pristine span, doc-only edit, code edit, unqualified identity, absent item, disposition gate, covers-site, exact range, hash binding, end-to-end adjudication)"
+      ],
+      "not_used_for": [
+        "deciding ACCEPT or REJECT for any site",
+        "establishing a caller precondition",
+        "producing the 290/290 closure counts"
+      ]
+    },
+    "closure": {
+      "path": "forensics/tools/consumer_closure.py",
+      "sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+      "short": "f31816b1",
+      "head": "bd518a214 (closure(b78b)); unchanged through 5628e8d67, 5590faa43 and HEAD cbc42bab7",
+      "evidence": [
+        "evidence/closure-ssh-b78b.json tool.sha256",
+        "evidence/closure-sshd-b78b.json tool.sha256",
+        "court/freeze-b78/FREEZE-b78.json tool.sha256 = closure_bound_sha256"
+      ],
+      "used_for": [
+        "the obligation queue and the 290/290 DISCHARGED / 0 BLOCKED / 0 UNKNOWN counts",
+        "the element-7 edge dispositions and the census cross-check",
+        "the content-migration binding for seven stale carry-forward coordinates"
+      ]
+    }
+  },
+  "diff_between_instruments": {
+    "command": "git diff 75add65c1:forensics/tools/consumer_closure.py HEAD:forensics/tools/consumer_closure.py",
+    "insertions": 1782,
+    "deletions": 204,
+    "removed_top_level_functions": [],
+    "added_top_level_functions": [
+      "_carried_forward_coordinates",
+      "_census_operation_index",
+      "_conf_default_method_self_test",
+      "_conf_method_bodies",
+      "_conf_method_cell_stores",
+      "_conf_method_getter_table",
+      "_digest_pinned_json",
+      "_digest_pinned_json_uncached",
+      "_e7decoder_cursor_controls_body",
+      "_led_table_cursor",
+      "_led_table_terminator_guard",
+      "_polarity_selectors_for_site",
+      "_slot_reaching_stores",
+      "conf_default_method_witness",
+      "migration_bindings",
+      "migration_witness"
+    ],
+    "changed_top_level_functions": {
+      "_pbe_outparam_self_test": 482,
+      "self_test": 150,
+      "_e7repin_search_self_test": 68,
+      "adjudicate": 57,
+      "decoder_method_object_witness": 32,
+      "_e7core_self_test": 28,
+      "build_receipt": 6,
+      "_external_abi_index": 3,
+      "e7repin_controls": 1
+    },
+    "nested_or_method_changes_not_in_that_table": [
+      "publish: a dispatch/contract table method whose b78 change adds the ABI_CONTRACT_CONF_DEFAULT_METHOD entry (the change count from the per-line attribution is not authoritative and is not quoted)",
+      "matching: passes the census operation index to adjudicate",
+      "_plane, _mig_fixture, _git, leaves_of, accepts, sites, site_for, walk, site, search_row, core_run: fixtures and search/pin helpers used by the self-tests and by element 7; several are nested inside self_test() or the disassembly-graph class",
+      "these are listed for completeness. The authoritative counts are the module-level table above; a per-line attribution that walks to the nearest preceding def can over-attribute a nested helper and was not used for a numeric claim here"
+    ],
+    "method": "difflib.SequenceMatcher over the two git blobs with autojunk disabled; a function's change count is the number of changed lines in the exact def-to-dedent range; the adjudicate reference scan reads only the adjudicate body (b lines 31143-31674)"
+  },
+  "hunk_classes": [
+    {
+      "class": "A-element7-pin-witness-and-self-tests",
+      "summary": "The large majority of the diff: the b78 element-7 repairs and their controls. New CONF method witness and its table readers; decoder table-cursor proof; slot-reaching store scan; polarity selector derivation; PBE out-parameter pin re-derivation; repin-search fixture fix; the ABI_CONTRACT_CONF_DEFAULT_METHOD contract.",
+      "functions_added": [
+        "conf_default_method_witness",
+        "_conf_method_bodies",
+        "_conf_method_cell_stores",
+        "_conf_method_getter_table",
+        "_conf_default_method_self_test",
+        "_led_table_cursor",
+        "_led_table_terminator_guard",
+        "_slot_reaching_stores",
+        "_polarity_selectors_for_site",
+        "_e7decoder_cursor_controls_body"
+      ],
+      "functions_changed": [
+        "_pbe_outparam_self_test",
+        "_e7repin_search_self_test",
+        "decoder_method_object_witness",
+        "_e7core_self_test",
+        "_external_abi_index",
+        "e7repin_controls",
+        "publish"
+      ],
+      "on_adjudication_path": false,
+      "proof": "The adjudicate body references none of these names: direct scan of adjudicate (b 31143-31674) gives 0 references to walk, site, publish, accepts, sites, search_row, core_run, conf_default_method_witness and _led_table_cursor. Their callers are element7(), the self-tests and the graph/search builders. They change element-7 classification (target-bounded vs contract-bounded) and the self-test controls, not a per-obligation DISCHARGED/BLOCKED verdict."
+    },
+    {
+      "class": "B-carry-forward-coordinate-migration",
+      "summary": "A new content-addressed binding for carried-forward rows whose recorded coordinate no longer names a definition at the candidate. This is the only changed code on the obligation-verdict path.",
+      "functions_added": [
+        "migration_bindings",
+        "migration_witness",
+        "_carried_forward_coordinates",
+        "_digest_pinned_json",
+        "_digest_pinned_json_uncached",
+        "_census_operation_index",
+        "_mig_fixture"
+      ],
+      "functions_changed": [
+        "adjudicate",
+        "build_receipt",
+        "matching",
+        "_plane"
+      ],
+      "on_adjudication_path": true,
+      "named_hunks": {
+        "adjudicate signature": "b 31145: adds census_ops=None",
+        "adjudicate migration state": "b 31197 (migration_map = None) and b 31220 (migration = None)",
+        "adjudicate migration fallback": "b 31303-31333: when resolve_operation_at_line raises span-unparsable, call migration_bindings once and accept a binding only if exactly one boundary has a witness",
+        "adjudicate receipt fields": "b 31381, 31475-31484 and 31499-31500 add the migration witness and its status_reason/span_discharge fields",
+        "harness": "build_receipt (b 31906) and its nested helper matching (b 32290): b 32376 builds the census operation index and b 32409 passes census_ops to adjudicate"
+      },
+      "what_can_change": "A row that would be BLOCKED with span-unparsable can become DISCHARGED when all of these hold: the boundary's recorded span_sha256 is valid; the recorded coordinate is one the obligation's own carried_forward_from chain names; at the ancestor head that chain hop's receipt declares, that coordinate is the definition line of the item and its normalised text hashes to the boundary's recorded span hash; every resolving hop agrees; the current census attributes the operation to the boundary's resolved definition line; exactly one boundary in the file satisfies this. The ordinary check (live span hash == recorded hash at the candidate) still runs, and no span was widened or hand-edited.",
+      "what_cannot_change": "It cannot change the three reviewer criteria (contract / caller-or-ABI establishment / safe-Rust interface), cannot create a discharge without the recorded content hash reproducing at a documented ancestor head, and cannot choose that head by hand.",
+      "observed_effect": "evidence/closure-ssh-b78.json (tool d3d01dfe): 283 DISCHARGED, 7 BLOCKED on copyctx identity. evidence/closure-ssh-b78b.json (tool f31816b1): 290 DISCHARGED, 0 BLOCKED. The delta is exactly the seven rows listed in evidence/b78b-copyctx-binding.json and re-reviewed in evidence/b78-review-migrated-rows.json."
+    },
+    {
+      "class": "C-receipt-and-harness-plumbing",
+      "summary": "Receipt schema/field additions, the end-to-end adjudication control, migration fixtures and self-test coverage.",
+      "functions_changed": [
+        "self_test",
+        "_plane",
+        "build_receipt"
+      ],
+      "on_adjudication_path": false,
+      "proof": "self_test and _plane are test-only entry points (--self-test and the in-memory scenario helper). build_receipt's six lines are the census index and the new ABI class in its list; it does not decide a verdict."
+    }
+  ],
+  "verdict_path_proof": {
+    "adjudicate_changed": true,
+    "adjudicate_changed_lines": 57,
+    "adjudicate_semantic_delta": "the migration fallback, the census_ops parameter and new receipt fields; nothing else",
+    "resolve_operation_at_line_changed": false,
+    "resolve_operation_at_line_changed_lines": 0,
+    "boundary_disposition_is_discharge_changed": false,
+    "boundary_disposition_is_discharge_changed_lines": 0,
+    "conclusion": "The disposition predicate and the span resolver are byte-identical between the instruments. Exactly one changed hunk can change an obligation verdict, and it is named above. No element-7, pin, witness or self-test hunk can."
+  },
+  "why_review_verdicts_are_tool_independent": {
+    "reviewer_statement": "b78-review-final.json reviewer.independence and method.task2: every verdict is the reviewer's own, from source read at bb7d5206a; identity transcription is used only where the operation span is byte-identical at the earlier head.",
+    "verdict_criteria_are_source_questions": "Each re-review answers (a) can a safe-Rust caller cause UB, (b) is every unsafe operation covered, (c) is there a hidden obligation, (d) is a load-bearing control present. None is an instrument output.",
+    "instrument_role": "The instrument located spans, recomputed hashes and enforced the C1-C9 controls. A resolver change can change which text is hashed or which coordinate is displayed; it cannot change a judgment about a body the reviewer read.",
+    "verification_here": "The seven migrated spans reproduce independently at HEAD and at the ancestor head (evidence/b78-review-migrated-rows.json), so the coordinate-migration question does not overlay a reviewer judgment."
+  },
+  "why_closure_counts_are_tool_bound": {
+    "binding": "Both closures record tool.sha256 = f31816b1 in the receipt itself; the freeze records closure_bound_sha256 = f31816b1 and changed_since_closures = false.",
+    "consequence": "The 290/290 / 0 BLOCKED / 0 UNKNOWN figures and the element-7 dispositions are outputs of f31816b1 at the b78b run. They must not be quoted as facts about the source alone. The closure's own non_claim says DISCHARGED means an existing receipt covers the site and the tool did not re-audit it.",
+    "additional_binding": "The closures ran with tracked_tree_dirty=true at repository_head 6cdf98598 and joined obligations to the inventory at bb7d5206a (span_source_commit). The source-tree digests (src_content c0bd61c9, image a27ca428) are the operative identity; the dirty-tree flag is recorded, not hidden."
+  },
+  "conclusion": {
+    "instrument_split_invalidates_review": false,
+    "instrument_split_invalidates_closure_counts": "no, but it binds them to f31816b1 and makes the seven-row movement attributable to the named migration hunk",
+    "verdict_changing_hunk_present": true,
+    "verdict_changing_hunk": "adjudicate b 31303-31333 plus the census_ops plumbing (class B). It is not an element-7 or self-test hunk.",
+    "unexplained_verdict_change": "none: the movement is 7 rows, matches b78b-copyctx-binding.json exactly, and each row was independently re-established at b78 in evidence/b78-review-migrated-rows.json",
+    "still_residual": [
+      "no stored --self-test log for the final instrument f31816b1; the four stored logs predate commit bd518a214 and are not evidence about it",
+      "the self-test was NOT_RUN in this session because the section 6.1 memory floor is not met"
+    ]
+  }
+}

@@ -1,0 +1,119 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/verifier-repair/v1",
+  "kind": "carry-forward-migration-arm-repair",
+  "generated_utc": "2026-11-14T00:00:00Z",
+  "candidate_source": {
+    "source_commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "inventory": "court/freeze-b78/census-b78.json",
+    "working_head": "b94602921976fbcdff8f626aa0de27a253b9fd5f",
+    "branch": "stage/p25/b75-ocsp",
+    "tracked_tree_dirty": true
+  },
+  "tool": {
+    "path": "forensics/tools/consumer_closure.py",
+    "sha256_before": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+    "sha256_after": "6e9cd261c396b561d4f1a61b1de6879cb255e69eed9ec3188ea4f0196e0147a8",
+    "reviewed_at": "d01596f8280b0ef85fcdd247a775754a39a57d06"
+  },
+  "changes": {
+    "O1": "ancestor definition must carry the same qualified_identity as the candidate definition; scope_item alone no longer binds; underivable context refuses",
+    "O2": "a hop head must satisfy git merge-base --is-ancestor <hop_head> <candidate span_source_commit>; non-ancestors are skipped with a recorded reason",
+    "O3": "each hop receipt must be a committed blob at the repository HEAD whose sha256 equals the recorded pin; the chain parses the committed blob, never the worktree",
+    "O4": "no migration binding when the candidate source_commit is unset/unresolvable, or when a hop does not name its source commit",
+    "O5": "per-hop refusal reasons (receipt, head, coordinate, cause) recorded on the obligation and in documented_enrollment.carry_forward.migration_refusals; only non-discharged rows carry them",
+    "O6": "uniqueness keyed on (file, kind, item, qualified context, body hash): exactly one boundary may own a tuple; collisions refuse every claimant as non-unique-owner",
+    "O7": "absolute receipt paths are rejected by both the digest-pinned reader and the chain walk"
+  },
+  "controls": {
+    "runner": "court/freeze-b78/controls-migration-b78c.py",
+    "report": "court/freeze-b78/controls-migration-b78c.json",
+    "old_tool": "git b94602921976fbcdff8f626aa0de27a253b9fd5f:forensics/tools/consumer_closure.py",
+    "new_tool": "worktree",
+    "result": "10/10 behaved as expected",
+    "table": [
+      {"id": "base", "old": "DISCHARGED", "new": "DISCHARGED", "expected_new": "DISCHARGED"},
+      {"id": "a", "old": "DISCHARGED", "new": "BLOCKED", "expected_new": "BLOCKED", "why": "hop-qualified-context-mismatch"},
+      {"id": "b", "old": "BLOCKED", "new": "BLOCKED", "expected_new": "BLOCKED", "why": "non-unique-owner"},
+      {"id": "c", "old": "BLOCKED", "new": "BLOCKED", "expected_new": "BLOCKED", "why": "hop-coordinate-not-the-definition-line"},
+      {"id": "d", "old": "BLOCKED", "new": "BLOCKED", "expected_new": "BLOCKED", "why": "span-hash-mismatch"},
+      {"id": "e", "old": "BLOCKED", "new": "BLOCKED", "expected_new": "BLOCKED", "why": "disposition-is-not-safety-discharged"},
+      {"id": "f1", "old": "BLOCKED", "new": "BLOCKED", "expected_new": "BLOCKED", "why": "receipt-pin-not-anchored"},
+      {"id": "f2", "old": "DISCHARGED", "new": "BLOCKED", "expected_new": "BLOCKED", "why": "receipt-pin-not-anchored"},
+      {"id": "g", "old": "DISCHARGED", "new": "BLOCKED", "expected_new": "BLOCKED", "why": "receipt-path-absolute"},
+      {"id": "o4", "old": "DISCHARGED", "new": "BLOCKED", "expected_new": "BLOCKED", "why": "candidate-source-commit-missing"}
+    ]
+  },
+  "closures": {
+    "ssh": {
+      "receipt": "evidence/closure-ssh-b78c.json",
+      "sha256": "45c39735f2f10e2b4c1137207b1565b3a945c325c356db8011f29a7311510964",
+      "size": 13351568,
+      "artifact": "court/tmp/openssh-closure/client-b78/openssh-9.9p1/ssh",
+      "artifact_sha256": "3b282f430d504b0d6fa66f314630b7cddd323879c9584b6d80ff83a248fbd251",
+      "counts": {"DISCHARGED": 290, "BLOCKED": 0, "UNKNOWN": 0,
+                 "reachable_files": 630, "carried_forward": 220,
+                 "carried_forward_removed": 3},
+      "verdict": "ACCEPTED",
+      "refusals": [],
+      "element_7": "PASS (contract-bounded)",
+      "disposition_conflicts": {"enforced": true, "obligation_count": 156,
+                                "unresolved_obligation_count": 0,
+                                "conflict_edge_count": 170},
+      "by_mechanism": {"BIO": 2, "C_ABI_CONTRACT": 5, "EVP_PKEY_PROVIDER": 116,
+                       "RAND_CMS_STORE_KEYFMT": 27, "RUNTIME_CONCURRENCY": 4,
+                       "SSL_SESSION": 14, "X509_VERIFY_POLICY": 122},
+      "closure": {"rounds": 2, "converged": true, "reachable_functions": 8828,
+                  "sha256": "2cba504b0527df122dd199df525dc02ce3f412a4576353f294bb1773e6ce1f5d"},
+      "migration_refusal_count": null
+    },
+    "sshd": {
+      "receipt": "evidence/closure-sshd-b78c.json",
+      "sha256": "dd3c1fd7bf351303f7faf1e16268bcfc79f2bbf1a9fbb82db24821193a7993c2",
+      "size": 13198148,
+      "artifact": "court/tmp/openssh-closure/server-b78/openssh-9.9p1/sshd",
+      "artifact_sha256": "9744ab64f3b114b9282c2e64901a3e712178cb994a44706921f8fc5439e39bbe",
+      "counts": {"DISCHARGED": 290, "BLOCKED": 0, "UNKNOWN": 0,
+                 "reachable_files": 629, "carried_forward": 220,
+                 "carried_forward_removed": 3},
+      "verdict": "ACCEPTED",
+      "refusals": [],
+      "element_7": "PASS (contract-bounded)",
+      "disposition_conflicts": {"enforced": true, "obligation_count": 156,
+                                "unresolved_obligation_count": 0,
+                                "conflict_edge_count": 170},
+      "by_mechanism": {"BIO": 2, "C_ABI_CONTRACT": 5, "EVP_PKEY_PROVIDER": 116,
+                       "RAND_CMS_STORE_KEYFMT": 27, "RUNTIME_CONCURRENCY": 4,
+                       "SSL_SESSION": 14, "X509_VERIFY_POLICY": 122},
+      "closure": {"rounds": 2, "converged": true, "reachable_functions": 8799,
+                  "sha256": "8dae65fe35e85c92b72a8d72586c07d0caa8d4bb8e9811659ef6482bbe795c4d"},
+      "migration_refusal_count": null
+    }
+  },
+  "seven_rows": [
+    {"id": "V1:src/provider/digest.rs:658:UNSAFE_FN_DEF", "status": "DISCHARGED", "qualified_identity": "sha1::copyctx", "candidate_def_line": 672, "ancestor_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e", "ancestor_line": 658},
+    {"id": "V1:src/provider/digest.rs:970:UNSAFE_FN_DEF", "status": "DISCHARGED", "qualified_identity": "nullmd::copyctx", "candidate_def_line": 992, "ancestor_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e", "ancestor_line": 970},
+    {"id": "V1:src/provider/digest.rs:1165:UNSAFE_FN_DEF", "status": "DISCHARGED", "qualified_identity": "md5_sha1::copyctx", "candidate_def_line": 1195, "ancestor_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e", "ancestor_line": 1165},
+    {"id": "V1:src/provider/digest.rs:1348:UNSAFE_FN_DEF", "status": "DISCHARGED", "qualified_identity": "sha3::copyctx", "candidate_def_line": 1386, "ancestor_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e", "ancestor_line": 1348},
+    {"id": "V1:src/provider/digest.rs:1898:UNSAFE_FN_DEF", "status": "DISCHARGED", "qualified_identity": "blake2::blake_row::copyctx", "candidate_def_line": 1956, "ancestor_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e", "ancestor_line": 1898},
+    {"id": "V1:src/provider/legacyprov.rs:336:UNSAFE_FN_DEF", "status": "DISCHARGED", "qualified_identity": "legacy_digest_impl::copyctx", "candidate_def_line": 345, "ancestor_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e", "ancestor_line": 336},
+    {"id": "V1:src/provider/legacyprov.rs:544:UNSAFE_FN_DEF", "status": "DISCHARGED", "qualified_identity": "mdc2::copyctx", "candidate_def_line": 561, "ancestor_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e", "ancestor_line": 544}
+  ],
+  "gates": {
+    "cargo_fmt_check": "PASS",
+    "cargo_clippy_all_targets_deny_warnings": "PASS",
+    "cargo_test_lib_test_threads_4": "2309 passed, 0 failed, 54 ignored",
+    "consumer_closure_self_test": "only pre-existing e7core default-context NOT_RUN (same as b78d baseline); migration controls pass",
+    "rust_source_changed": false
+  },
+  "venue": {
+    "court": "docker/openssl-rs-court.sh exec, OPENSSL_RS_COURT_MEM=8g, OPENSSL_RS_COURT_MEMSWAP=8g, OPENSSL_RS_COURT_DATA=6291456",
+    "host_free_g": "total 31, available 8 (first check) / 10 (tests); swap 31 of 31 used",
+    "deviation": "AGENTS.md section 6.1 24 GiB build floor is unmet; the 8 GiB cap was applied as instructed and recorded here. No OOM kill observed; gates-b78.log records an earlier memory.peak of 8 GiB in a prior run."
+  },
+  "residuals": [
+    "the closure receipts were produced with tracked_tree_dirty=true at repository_head b9460292; the operative candidate identity is the source-content digest at span_source_commit bb7d5206",
+    "the migration witness records only the chosen ancestor and the anchors; rejected hops are recorded on refusals, not in the success witness",
+    "the repository-HEAD anchor authenticates receipts committed at HEAD; a receipt committed as part of a doctored commit is outside this tool's threat model",
+    "the consumer-closure self-test's pre-existing e7core default-context NOT_RUN is unchanged and not a pass"
+  ]
+}

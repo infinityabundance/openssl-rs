@@ -1,0 +1,13 @@
+MISSED K1-pristine {"SPAN19": false, "COORD19": false, "CLOC19": false, "SAFETYFN": false, "FAMILY": false, "MACROCTX": false, "NULLCTX": false, "NULREACH": true, "REACQ": true, "CALLERS": true}
+MISSED K2-copyctx-safety-doc {"MACROCTX": false}
+FIRED K3-null-algctx-guard {"NULLCTX": true}
+FIRED K4-break-reachability {"NULREACH": false}
+FIRED K5-break-reacq-guard {"REACQ": false}
+FIRED K11-break-direct-thunk-call {"CALLERS": false}
+FIRED K12-break-stray-item-free {"CALLERS": false}
+FIRED K6-rebind-coordinates {"COORD19": true, "stale_left": 0}
+FIRED K7-real-call-site-witness {"FAMILY": true}
+FIRED K8-contract-location {"CLOC19": true}
+FIRED K9-break-span-hash {"SPAN19": false}
+FIRED K10-all-safety-docs {"SAFETYFN": true}
+10/12 canaries behaved as required

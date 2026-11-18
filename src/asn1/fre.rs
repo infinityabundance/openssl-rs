@@ -113,23 +113,31 @@ pub(crate) unsafe fn primitive_free(pval: *mut *mut c_void, it: *const Asn1Item,
     } else {
         // SAFETY: `it` is non-null.
         let item = unsafe { &*it };
-        // SAFETY: `pval` is a live slot.
-        value = unsafe { *pval };
 
         if item.itype == ASN1_ITYPE_MSTRING {
             // A multi-string's value is an `ASN1_STRING` whatever its type, and the
             // authority encodes that as `utype = -1`, which the match below sends to
             // the string arm.
             utype = V_ASN1_UNDEF;
+            // SAFETY: a multi-string's slot holds a pointer to its `ASN1_STRING`.
+            value = unsafe { *pval };
             if value.is_null() {
                 return;
             }
         } else {
             utype = item.utype as c_int;
-            // The `BOOLEAN` exception again: its value is in the slot, so a null slot
-            // is a legal value rather than an empty one.
-            if utype != V_ASN1_BOOLEAN && value.is_null() {
-                return;
+            if utl::is_inline_boolean(item) {
+                // The value lives in the slot's low four bytes. There is no pointer to
+                // read, and reading one would be over-wide and, at a four-byte-aligned
+                // field offset, misaligned. The `BOOLEAN` arm below does not consult
+                // `value`, so it stays null here.
+                value = core::ptr::null_mut();
+            } else {
+                // SAFETY: every other primitive's slot holds a pointer.
+                value = unsafe { *pval };
+                if value.is_null() {
+                    return;
+                }
             }
         }
     }
@@ -143,16 +151,19 @@ pub(crate) unsafe fn primitive_free(pval: *mut *mut c_void, it: *const Asn1Item,
         V_ASN1_BOOLEAN => {
             // A freed item's BOOLEAN reads back as the item's own `size`, which is its
             // default; a freed bare `ASN1_TYPE` reads back as `-1`, because there is no
-            // item to ask. SAFETY: `pval` is at least `size_of::<c_int>()` bytes wide,
-            // because it holds a pointer. The truncation from `long` is the authority's.
+            // item to ask. The truncation from `long` is the authority's. `pval` is the
+            // field slot itself for a template field, or the `ASN1_TYPE`'s union member
+            // for the item-less case; either way only its low four bytes are the value.
             let fill = if it.is_null() {
                 -1
             } else {
                 // SAFETY: `it` is non-null in this arm.
                 unsafe { (*it).size as c_int }
             };
-            // SAFETY: as above.
-            unsafe { *(pval as *mut c_int) = fill };
+            // SAFETY: `pval` addresses a field slot of at least
+            // `size_of::<c_int>()` bytes holding an inline boolean; the write is at the
+            // field's real width and need not be pointer-aligned.
+            unsafe { utl::write_inline_boolean(pval.cast(), fill) };
             return;
         }
         V_ASN1_NULL => {
@@ -214,10 +225,14 @@ pub(crate) unsafe fn item_embed_free(pval: *mut *mut c_void, it: *const Asn1Item
     }
     // SAFETY: `it` is non-null.
     let item = unsafe { &*it };
-    // SAFETY: `pval` is a live slot.
-    let value = unsafe { *pval };
-    if item.itype != ASN1_ITYPE_PRIMITIVE && value.is_null() {
-        return;
+    // A non-primitive value is reached through the slot, and a null one is nothing to
+    // release. A primitive's value may live in the slot instead — an inline
+    // `ASN1_BOOLEAN` — so the slot is not read as a pointer for primitives at all.
+    if item.itype != ASN1_ITYPE_PRIMITIVE {
+        // SAFETY: `pval` is a live slot holding a pointer for a non-primitive item.
+        if unsafe { *pval }.is_null() {
+            return;
+        }
     }
 
     // The callback is only consulted by the `CHOICE` and `SEQUENCE` arms, so it is read
@@ -445,4 +460,44 @@ pub unsafe extern "C" fn ASN1_item_free(val: *mut c_void, it: *const Asn1Item) {
 pub unsafe extern "C" fn ASN1_item_ex_free(pval: *mut *mut c_void, it: *const Asn1Item) {
     // SAFETY: the caller's contract.
     unsafe { item_embed_free(pval, it, 0) }
+}
+
+#[cfg(test)]
+mod b56_tests {
+    use super::*;
+
+    /// B56-C3 — the rule that makes a `FREE_POST` callback's second release a no-op.
+    ///
+    /// `cms_kemri_cb` releases `kemri->ukm` on `ASN1_OP_FREE_POST`, and `ukm` *is* a template
+    /// field. That is sound only because the walk releases the field through its own item and
+    /// clears the caller's slot, so the callback sees NULL. This test pins the clearing: a
+    /// SEQUENCE template's simple (non-embedded) pointer field is released and the slot is left
+    /// NULL. Removing the write makes a later `free(slot)` a second release of the same block,
+    /// which is exactly what the CMS callback would do.
+    #[test]
+    fn the_template_walk_nulls_a_simple_field_slot() {
+        // The template's `item` slot holds the accessor's address, the shape `item_ref` builds in
+        // the item modules.
+        fn item_ref(f: extern "C" fn() -> *const Asn1Item) -> *mut c_void {
+            f as *mut c_void
+        }
+        // A field whose shape is `ukm`'s: a non-embedded pointer to an `ASN1_OCTET_STRING`.
+        let tt = Asn1Template {
+            flags: 0,
+            tag: 0,
+            offset: 0,
+            field_name: core::ptr::null(),
+            item: item_ref(crate::asn1::items::ASN1_OCTET_STRING_it),
+        };
+        let value = crate::asn1::string::ASN1_STRING_new();
+        assert!(!value.is_null(), "the field's value is allocated");
+        let mut slot: *mut c_void = value.cast();
+        // SAFETY: `slot` is a live field slot holding the live `ASN1_OCTET_STRING` this frame
+        // allocated, and `tt` is a live template naming that value's own item.
+        unsafe { template_free(&mut slot, &tt) };
+        assert!(
+            slot.is_null(),
+            "the template walk left the field slot non-NULL, so a FREE_POST callback would release it twice"
+        );
+    }
 }

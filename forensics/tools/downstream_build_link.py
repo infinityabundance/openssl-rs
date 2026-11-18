@@ -280,6 +280,47 @@ _RECIPE_OVERRIDES: dict[str, dict] = {
                  "this venue, which admits no autoconf/automake, cmake or meson; 24.17 recorded it "
                  "still-blocked"),
     },
+    # b84 review item (d): the OpenSSH closure analyses the binary built by
+    # `forensics/tools/build_openssh_closure.sh`, so this row must build *that* binary's build
+    # intent rather than a row of its own. The closure's argv is `--prefix`, `--sysconfdir`,
+    # `--with-ssl-dir`, `--with-privsep-user=sshd`, `--with-privsep-path`, with the candidate lib
+    # directory on the run path through LDFLAGS (the released Linux configure leaves rpath_opt
+    # empty) and a *full* `make` rather than `make ssh`. Everything here is table data: the
+    # OpenSSH install prefix is `{root}/.l7-install`, the same convention the irssi recipe uses,
+    # and `{prefix}` remains the admitted subject's OpenSSL prefix.
+    "openssh": {
+        "configure": ["--prefix={root}/.l7-install",
+                      "--sysconfdir={root}/.l7-install/etc",
+                      "--with-ssl-dir={prefix}",
+                      "--with-privsep-user=sshd",
+                      "--with-privsep-path={root}/.l7-install/var/empty"],
+        "make": [MAKE_JOBS],
+        "ldflags_extra": "-Wl,-rpath,{prefix}/lib",
+        "note": ("openssh 9.9p1's `ssh` links the subject's libcrypto directly. The build intent is "
+                 "the one the OpenSSH closure analyses (forensics/tools/"
+                 "build_openssh_closure.sh): the closure's configure flags, the candidate lib "
+                 "directory on the run path, and a full `make`; the archive digest, artifact and "
+                 "launch argv are unchanged"),
+    },
+    # b85: the server direction is the same release and the same closure recipe. Aligning it
+    # with `openssh` means the same closure build intent (configure flags, candidate lib on the
+    # run path, full `make`); only the artifact (`sshd`) and launch argv stay server-specific.
+    # The closure's tree root is still not the atlas `{root}`, so byte equality is not claimed.
+    "openssh-server": {
+        "configure": ["--prefix={root}/.l7-install",
+                      "--sysconfdir={root}/.l7-install/etc",
+                      "--with-ssl-dir={prefix}",
+                      "--with-privsep-user=sshd",
+                      "--with-privsep-path={root}/.l7-install/var/empty"],
+        "make": [MAKE_JOBS],
+        "ldflags_extra": "-Wl,-rpath,{prefix}/lib",
+        "note": ("openssh-server 9.9p1's `sshd` is built with the same build intent the OpenSSH "
+                 "closure analyses (forensics/tools/build_openssh_closure.sh), aligned with the "
+                 "`openssh` row in b84: the closure's configure flags, the candidate lib directory "
+                 "on the run path, and a full `make`. The archive digest, artifact (`sshd`) and "
+                 "launch argv are unchanged. The build root still differs from the closure tree, "
+                 "so the digest is not claimed to equal the analysed binary"),
+    },
 }
 
 # The 24.17 admission batch: recipe-less counted families whose pinned release tarball ships a
@@ -1942,6 +1983,10 @@ def _build_catalogue() -> tuple[dict, ...]:
     # writes its generated inputs and runtime state into.
     for spec in _L7_EXPAND3_SPECS:
         rec = dict(spec)
+        # b85: the table seam the 24.3 census recipes already use, applied here so the
+        # `openssh-server` row can express the OpenSSH closure's build intent the same way
+        # the `openssh` row does. Only openssh-server has an entry among these six.
+        rec.update(_RECIPE_OVERRIDES.get(rec["family"], {}))
         rec["recipe_id"] = f"recipe:{rec['family']}:{rec['version']}"
         recipes.append(rec)
     # The Phase-25 L7 expansion batch (b7): tcpdump, slrn, epic5, bannergrab, httperf and

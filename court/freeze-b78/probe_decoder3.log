@@ -1,0 +1,11 @@
+table 0x8ab4c8 extent 128
+newctx: candidate transfers reading +0x30 -> ['0x2cc9aa']
+set_ctx_params: candidate transfers reading +0x50 -> ['0x2cca08']
+freectx: candidate transfers reading +0x38 -> ['0x2ccd86']
+roots ['0x8ab4c8']
+cursor {'cursor_reg': '%r13', 'row_stride': '0x20', 'spill_slots': [-264]}
+steps [{'kind': 'table', 'address': '0x2cc961', 'root': '0x8ab4c8'}, {'kind': 'table', 'address': '0x2cc961', 'root': '0x8ab4c8'}, {'kind': 'loop-cut', 'reg': '%r13'}, {'kind': 'advance', 'address': '0x2ccb82', 'stride': '0x20'}, {'kind': 'reload', 'address': '0x2ccae4', 'slot': -264, 'store_address': '0x2cc9b8'}, {'kind': 'advance', 'address': '0x2ccb82', 'stride': '0x20'}, {'kind': 'copy', 'address': '0x2cc983', 'from': '%r13'}]
+guard {'test': '0x2cc932', 'field_offset': '0x0', 'branch': '0x2cc937', 'conditional': 'jne'}
+0x2cc9aa OK class ABI_CONTRACT_DECODER_METHOD_OBJECT slot newctx arg 0x20
+0x2cca08 OK class ABI_CONTRACT_DECODER_METHOD_OBJECT slot set_ctx_params arg 0x20
+0x2ccd86 OK class ABI_CONTRACT_DECODER_METHOD_OBJECT slot freectx arg 0x20

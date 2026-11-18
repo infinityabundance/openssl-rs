@@ -576,6 +576,74 @@ because the hand-typed trigger state it replaces is exactly what let `D-DECODER-
 - **Claim removed:** not claimed compatible. The probe does not exercise these, because a
   probe cannot compare a crash.
 
+### D-V3-CONF-NULL-VALUE-1 — `X509V3_EXT_nconf*` dereferences a NULL `value`
+
+- **Obligation:** `X509V3_EXT_nconf(conf, ctx, name, NULL)` and
+  `X509V3_EXT_nconf_nid(conf, ctx, nid, NULL)`, the inputs the interfaces document
+  (`value` is NULL or NUL-terminated) and that the `# Safety` contracts accept.
+- **Authority:** `crypto/x509/v3_conf.c:34-75` assigns `value` to `p` and calls
+  `v3_check_critical(&p)`, whose first act is `strncmp(p, "critical", 8)`; there is no
+  NULL test before the scan, so the documented call reads through NULL and faults.
+  `X509V3_EXT_nconf_nid` has the same scan before `v3_check_generic`/`do_ext_nconf`.
+- **Candidate:** refuses a NULL `value` at the entry point, before the prefix scan.
+  `X509V3_EXT_nconf_int` builds the same `section=…, name=…, value=(null)` message its
+  other failure path uses and raises `X509V3_R_ERROR_IN_EXTENSION` at `V3_CONF_48`
+  when the section is named and `V3_CONF_52` otherwise; `X509V3_EXT_nconf_nid` raises
+  `V3_CONF_52` with `value=(null)`. Both return NULL without touching the pointer.
+- **Reason:** `docs/UNSAFE.md` §5 — a crash in the authority is not reproduced merely
+  because the documented interface admits the input. The extension-error the caller
+  already handles is observable and testable; a fault is neither.
+- **Claim removed:** a NULL `value` is not claimed to be scanned, nor to produce an
+  extension. The unit control `a_null_extension_value_is_refused_before_the_prefix_scan`
+  asserts that both entry points return NULL and leave an error on the stack; no
+  compatibility probe asks what the authority does here, because it cannot compare a
+  crash.
+
+### D-V3-SAN-NULL-NAME-1 — the SAN builders scan a NULL `name`
+
+- **Obligation:** a live `CONF_VALUE` whose `name` is NULL, passed to any exported SAN builder:
+  `v2i_GENERAL_NAME_ex(out, method, ctx, cnf, is_nc)` (`:592-629`), and the two `v2i` slots the
+  exported `ossl_v3_alt` table installs — `v2i_subject_alt` (`ossl_v3_alt[0]`, `:377-413`) and
+  `v2i_issuer_alt` (`ossl_v3_alt[1]`, `:301-332`) — each reached with a `STACK_OF(CONF_VALUE)`
+  holding that entry. The registered `do_ext_nconf` path is one caller that happens to establish
+  a name, not the ABI's only caller: `X509V3_EXT_get_nid()` returns the method row and its public
+  `v2i` field is the callback, so a C caller holding its own `CONF_VALUE` stack reaches both
+  table builders.
+- **Authority:** **measured** against `forensics/authorities/prefix/openssl-3.6.4-production`.
+  - `v2i_GENERAL_NAME_ex`: `crypto/x509/v3_san.c:592-606` copies `cnf->name` and `cnf->value`
+    (`:600-601`) and tests only `value` (`:603`); the first read of `name` is
+    `ossl_v3_name_cmp(name, "email")` at `:608`. With `{section = NULL, name = NULL,
+    value = "DNS:example.com"}` the authority prints the shape and dies with **exit 139**
+    (SIGSEGV) in that compare. The same program with `{name = "DNS", value = NULL}` returns NULL
+    after raising `X509V3_R_MISSING_VALUE` (exit 0).
+  - `v2i_subject_alt` / `v2i_issuer_alt`: reached as
+    `X509V3_EXT_get_nid(NID_subject_alt_name | NID_issuer_alt_name)->v2i(method, NULL, nval)`.
+    Their first act on the element is `ossl_v3_name_cmp(cnf->name, "email" | "issuer")` (`:394`,
+    `:316`) with no NULL test, and `{name = NULL, value = "DNS:example.com"}` dies with **exit
+    139** (SIGSEGV) in each. The same program with `{name = "DNS", value = NULL}` returns NULL
+    after raising `X509V3_R_MISSING_VALUE` (reason 124, lib 34) — the deferred
+    `v2i_GENERAL_NAME_ex` guard — which is how the dispatch is shown to reach each builder. The
+    fault is the measurement, so there is nothing to compare past it; the NULL-`value` shape is
+    compared normally.
+- **Crate:** every entry refuses a NULL `name` before the scan, with the same
+  `X509V3_R_MISSING_VALUE` the entry's own `value` guard raises (`V3_SAN_604`).
+  `v2i_GENERAL_NAME_ex` returns NULL without reading `cnf->name` or building a `GENERAL_NAME`;
+  `v2i_subject_alt` and `v2i_issuer_alt` free the stack built so far and answer NULL.
+  `v2i_GENERAL_NAME` and `v2i_GENERAL_NAMES` inherit the refusal because both defer to
+  `v2i_GENERAL_NAME_ex`.
+- **Reason:** `D-V3-CONF-NULL-VALUE-1`'s and `D-LEGACY-MD-CALLBACK-MD-DATA-1`'s: a read through a
+  NULL pointer is not a contract to reproduce (AGENTS.md §3 and §17). Nothing in the exported
+  builders' contracts establishes a non-NULL `name`, so that precondition cannot be discharged by
+  the ABI; each builder must establish it itself.
+- **Claim removed:** a NULL `name` is not claimed compatible — it is claimed *safe*. The only
+  observable is the refusal shape (NULL, an error on the stack). Three unit controls pin it:
+  `a_null_name_is_refused_before_the_name_scan` (the exported builder),
+  `subject_alt_refuses_a_null_name_before_the_email_scan` and
+  `issuer_alt_refuses_a_null_name_before_the_issuer_scan` (the two table builders), each asserting
+  the refusal and that the live `value` pointer is untouched.
+- **When it changes:** it does not. The authority faults on the NULL-`name` shape in all three
+  entry points; the boundary is permanent and the claim stays narrowed.
+
 ### D-BIOCORE-1 — `BIO_new_from_core_bio` calls a NULL `BIO_up_ref`
 
 - **Obligation:** `BIO_new_from_core_bio(libctx, corebio)` where the context's dispatch
@@ -1056,7 +1124,7 @@ authority and the candidate for this function, and there was never supposed to b
   digest block the digest maths and the result are unchanged (`legacy_mdc2_init_…`,
   `legacy_sha3_init_…`, `legacy_shake_init_…` and `legacy_sm3_init_…`; SHA3-256("abc") =
   `3a985da7…11431532`, SM3("abc") = `66c7f0f4…8f4ba8e0` from the pinned authority).
-- **When it changes:** it does not. The authority faults on both shapes; the boundary is permanent
+- **When it changes:** it does not. The authority faults on both methods; the boundary is permanent
   and the claim stays narrowed.
 
 ### D-LEGACY-BLAKE2-INIT-MD-DATA-1 — the legacy BLAKE2b/BLAKE2s initialisers write through a
@@ -1092,6 +1160,55 @@ authority and the candidate for this function, and there was never supposed to b
   BLAKE2b-512("abc") = `ba80a53f…d4009923` and BLAKE2s-256("abc") = `508c5e8c…86675982` from the
   pinned authority).
 - **When it changes:** it does not. The authority faults on both methods; the boundary is
+  permanent and the claim stays narrowed.
+
+### D-LEGACY-MD-CALLBACK-MD-DATA-1 — the legacy digest update callbacks read `data` without a test
+
+- **Obligation:** the fifteen update callbacks the legacy `EVP_MD` tables install — `sha1_update`,
+  `sha224_update`, `sha256_update`, `sha384_update`, `sha512_update`, `md5_update`,
+  `md5_sha1_int_update`, `md4_update`, `ripe_update`, `wp_update`, `mdc2_update`,
+  `blake2b_int_update`, `blake2s_int_update`, `sha3_int_update` and `sm3_int_update` — are
+  `fn##_Update(EVP_MD_CTX_get0_md_data(ctx), data, count)`
+  (`crypto/evp/legacy_meth.h:15-18`, and the same shape for the provider-side BLAKE2 and SM3
+  tables). `EVP_MD_meth_get_update` (`crypto/evp/evp_lib.c`; `artifacts/phase2/libcrypto.ld`)
+  hands each of them to any C caller with `data` and `count` exactly as the caller supplied them,
+  and its documented contract (`doc/man3/EVP_MD_meth_new.pod`) says only that it retrieves the
+  pointer given to `EVP_MD_meth_set_update` — nothing about `data` being readable.
+- **Authority:** **measured**. Twelve probes, each in its own process against
+  `forensics/authorities/prefix/openssl-3.6.4-production`, over six tables (`EVP_sha1`,
+  `EVP_sha224`, `EVP_md5`, `EVP_blake2b512`, `EVP_mdc2`, `EVP_sm3`), each driven through that
+  table's own `EVP_MD_meth_get_update` callback over a by-hand method whose `app_datasize` (1024)
+  makes the context block valid — so the only bad argument is `data`. With `count = 1` every case
+  died with **exit 139** (SIGSEGV) in the primitive's copy; with `count = 0` every case returned
+  **1**, because the primitive tests the length first (`HASH_UPDATE` in `crypto/md32_common.h`,
+  `ossl_sha3_update`'s `if (len == 0) return 1;`) or performs a zero-length `memcpy` this libc
+  tolerates. The fault is the measurement, so there is nothing to compare past it; the
+  zero-length answer is compared normally.
+- **Crate:** every update callback answers `0` — the C update failure value — for a NULL `data`
+  with `count != 0`, **before** the primitive is called and without touching the block. A zero
+  `count` answers `1` for any `data`, without requiring it to be readable: for the SHA-1/SHA-2,
+  MD5, MD5-SHA1, MD4, RIPEMD-160, Whirlpool, SHA-3/SHAKE and SM3 callbacks the ported primitive
+  returns early exactly as the authority's does, and for the three whose primitive would reach a
+  zero-length copy from `in` (`blake2b_int_update`/`blake2s_int_update`, where
+  `ossl_blake2b_update` ends in `memcpy(c->buf + c->buflen, in, datalen)`, and `mdc2_update` with
+  a partly filled block) the callback answers `1` before the copy, because a zero-length copy
+  from a NULL pointer is undefined in Rust at any length even where the authority's `memcpy` does
+  not fault. No error is raised on either refusal: the authority raises nothing on this path; for
+  the non-zero shape it does not return at all. The block guards these callbacks share
+  (`init_md_data`, and `init_keccak` for the SHA-3/SHAKE tables) are the same repair and are
+  covered by this entry.
+- **Reason:** `D-LEGACY-MD-INIT-MD-DATA-1`'s: a read through a NULL pointer is not a contract to
+  reproduce (AGENTS.md §3 and §17). The getter's documented contract says nothing about `data`,
+  so a readable-data precondition cannot be discharged by the ABI; the callback must establish it
+  itself.
+- **Claim removed:** a NULL `data` with a non-zero `count` is not claimed compatible — the
+  authority faults in every measured case. A NULL `data` with `count == 0` **is** claimed
+  compatible: both sides answer `1`. On a readable `data` the digest maths and result are
+  unchanged: `null_data_with_nonzero_count_is_refused_for_every_update_callback` and
+  `null_data_with_zero_count_is_accepted_for_every_update_callback` drive all fifteen callbacks
+  and assert the block was untouched, and `valid_sha1_call_still_succeeds` in
+  `src/evp/legacy_digest_callback_surface.rs` pins the digest through the same surface.
+- **When it changes:** it does not. The authority faults on the non-zero shape; the boundary is
   permanent and the claim stays narrowed.
 
 ### D-MD-DOALL-NULL-1 — `EVP_MD_do_all_provided` calls a NULL visitor
@@ -1794,4 +1911,146 @@ D334's state, when the column was recorded as a NULL rather than resolved.
   unchanged — and a fresh hand-built `METH` method per setter (accepted, getter reports the set
   value). Removing any single origin gate makes the corresponding assertions fail; the
   empirically checked gates are `set_copy`, `set_cleanup` and `set_ctrl`.
+- **Trigger:** none planned: permanent, deliberate safety divergence.
+
+### D-DIGEST-NULL-ALGCTX-1 — the `EVP_Digest*` provider arms descend into a failed initialise
+
+- **Obligation:** `EVP_DigestUpdate`, `EVP_DigestFinal_ex`, `EVP_DigestFinalXOF`,
+  `EVP_DigestSqueeze` and `EVP_MD_CTX_copy_ex` on a context left by a **failed provider
+  initialise**: `digest`/`reqdigest` set, `algctx == NULL`. The same state reaches the provider
+  through the parameter family: `EVP_MD_CTX_set_params`, `EVP_MD_CTX_get_params`,
+  `EVP_MD_CTX_settable_params`, `EVP_MD_CTX_gettable_params`, and `EVP_MD_CTX_get_size_ex`
+  (which reaches `gettable_params`/`get_params` first).
+- **Authority:** **faults or forwards NULL.** `evp_md_init_internal` stores `ctx->digest = type`
+  (`crypto/evp/digest.c:288`) and only then calls `type->newctx`; a NULL answer raises and
+  returns 0 (`:289-294`), leaving `digest` set and `algctx` NULL. None of the five entry points
+  tests `algctx`:
+  - `EVP_DigestUpdate` calls `ctx->digest->dupdate(ctx->algctx, ...)` (`:425`);
+  - `EVP_DigestFinal_ex` calls `ctx->digest->dfinal(ctx->algctx, ...)` (`:468`);
+  - `EVP_DigestFinalXOF` passes the same NULL to `EVP_MD_CTX_set_params` and then to `dfinal`
+    (`:530-531`);
+  - `EVP_DigestSqueeze` calls `ctx->digest->dsqueeze(ctx->algctx, ...)` (`:572`);
+  - `EVP_MD_CTX_copy_ex`'s in-place arm calls `in->digest->copyctx(out->algctx, in->algctx)`
+    (`:620-622`) and `copyctx` is a `ptr::copy` of `size_of::<Ctx>()` bytes, so a NULL on either
+    side is a read **and** a write through NULL. Its re-acquiring arm copies the source's NULL
+    into the destination (`:639-650`).
+
+  The parameter family forwards the same NULL without any test: `set_ctx_params(ctx->algctx, ...)`
+  (`crypto/evp/digest.c:790`), `settable_ctx_params(ctx->algctx, alg)` (`:826`),
+  `get_ctx_params(ctx->algctx, ...)` (`:846`) and `gettable_ctx_params(ctx->algctx, provctx)`
+  (`:884`). `EVP_MD_CTX_get_size_ex` (`crypto/evp/evp_lib.c:1032-1054`) calls
+  `EVP_MD_CTX_gettable_params` and then `EVP_MD_CTX_get_params`, so it takes the same road.
+
+  The recursive `sha3`/`sha1`/`md5_sha1`/legacy-provider bodies all dereference the context they
+  are given when they read it; the in-tree parameter callbacks happen to ignore or null-check
+  `vctx`, which is why this is a boundary defect rather than an observed in-tree fault. The
+  observation is source-derived from the pinned authority; this batch did not re-run a fault
+  probe, and the existing `RT-FETCH` `NOT_MEASURED_AUTHORITY_FAULTS` markers are not extended by
+  this entry.
+- **Crate:** each digest entry point answers 0 before its own provider callback, and
+  `EVP_DigestFinal_ex` reaches that refusal through `EVP_MD_CTX_get_size_ex`, which itself refuses
+  the state (-1) before calling `gettable_params`/`get_params`; no provider callback is reached.
+  The four parameter entry points answer their own failure convention (`0`, NULL, `0`, NULL) and
+  `get_size_ex` answers `-1`, all before the provider is asked. `EVP_MD_CTX_copy_ex` refuses when
+  the **source** `algctx` is NULL and, separately, when a same-method **destination** `algctx` is
+  NULL **and the method has a `copyctx` callback** -- the only arm that writes through it; a method
+  with `dupctx` but no `copyctx` takes the authority's re-acquiring arm and succeeds. The
+  `FINALISED` flag is not set by a refused final, so the context is reusable after a successful
+  re-initialise.
+- **Reason:** an indirect call through a NULL pointer, and a `ptr::copy` through NULL, are not
+  contracts to reproduce. This is the same class as D-MD-NULL-CALLBACK-1, reached through the same
+  failed-init state; `AGENTS.md` §17 requires the UB mechanism to be eliminated and the
+  compatibility consequence recorded.
+- **Compatibility consequence:** a C caller that ignored the failing `EVP_DigestInit_ex` and then
+  called Update/Final/FinalXOF/Squeeze/Copy, or one of the parameter entry points, now gets the
+  entry point's refusal where the authority has undefined behaviour or forwards NULL to the
+  provider (a fault in every provider body that reads its context, and a NULL `vctx` for the
+  parameter callbacks). A caller that checks the init's return -- the documented contract -- sees
+  no change: every successfully initialised context has a non-NULL `algctx`. The re-acquiring copy
+  arm also refuses a source that the authority would have copied as an all-NULL context; that
+  state is only reachable through the same ignored failure.
+- **Evidence:** `evp::digest::tests::a_failed_provider_init_is_refused_by_the_digest_entry_points`
+  builds the state in-crate and drives the five digest entry points, asserting 0, zero callback
+  invocations, and no output write;
+  `evp::digest::tests::a_failed_init_refuses_the_params_entry_points_without_asking_the_provider`
+  does the same for the parameter family, asserting each failure convention and zero callback
+  invocations. `evp::digest::tests`
+  `a_same_method_destination_without_an_algctx_is_refused_when_copyctx_would_run` and
+  `a_same_method_destination_without_an_algctx_is_reacquired_when_copyctx_is_absent` pin the two
+  sides of the destination check. Without the guards the callbacks run and the calls answer 1.
+- **Trigger:** none planned: permanent, deliberate safety divergence.
+
+### D-SHA3-FINAL-OUTLEN-1 — `keccak_final` writes `md_size` bytes into a shorter caller buffer
+
+- **Obligation:** the `OSSL_FUNC_DIGEST_FINAL` callback of the SHA-3, SHAKE and KECCAK-KMAC rows
+  (`sha3::keccak_final`, `src/provider/digest.rs`) when the caller's declared extent `outlen` is
+  smaller than the context's `md_size`.
+- **Authority:** writes past the caller's extent. `providers/implementations/digests/sha3_prov.c`
+  `keccak_final` (`:115-132`) tests only `outlen > 0` and then calls
+  `ctx->meth.final(ctx, out, ctx->md_size)` (`:128`), i.e. `ossl_sha3_final` writes exactly
+  `md_size` bytes. A fixed SHA3 row never accepts `xoflen` (`sha3_fixed_row` installs no
+  `set_ctx_params`), so `EVP_DigestFinalXOF(EVP_sha3_256(), buf, 16)` reaches the provider with
+  `outlen == 16` and `md_size == 32` and writes 32 bytes into a 16-byte buffer. This is a
+  caller-declared-extent overflow — the same class as D-WRAP-PAD-CLEANSE-1 — not a fault, so it
+  would not be visible as a comparison difference.
+- **Crate:** refuses when `outlen > 0 && md_size > outlen`, answering 0 without writing. The
+  authority's `outlen == 0` arm is kept exactly: it writes nothing and still reports `md_size`
+  through `*outl`. A SHAKE/KMAC row is unaffected for valid use because its `set_ctx_params`
+  writes the requested `xoflen` into `md_size` before `dfinal`, making the two equal; the refusal
+  is reached only when the method fixes a size larger than the caller allowed.
+- **Reason:** `AGENTS.md` §17: a known out-of-bounds write mechanism is eliminated, not
+  reproduced. §5.1's extent rule is the same one D-WRAP-PAD-CLEANSE-1 applies — the provider may
+  write only the storage the caller declared.
+- **Compatibility consequence:** `EVP_DigestFinalXOF` on a fixed SHA3/Keccak method (or KMAC with
+  an `xoflen` that the method's own `set_ctx_params` does not accept) with `size < md_size` now
+  returns 0 and leaves the buffer untouched; the authority returns 1 and writes `md_size` bytes.
+  A caller that passes `size >= md_size`, or that uses SHAKE/KMAC with an accepted `xoflen`, sees
+  no change. No error is raised: the authority has no raise site on this path, and
+  `docs/ERROR_MODEL.md` does not permit inventing one (the same choice D-MD-NULL-CALLBACK-1
+  records for its refusals).
+- **Evidence:** `evp::digest::tests::a_final_xof_shorter_than_the_digest_is_refused_without_writing`
+  fetches SHA3-256 from the default provider, calls `EVP_DigestFinalXOF(ctx, buf, 16)` on a
+  32-byte canary buffer (16 declared + 16 guard) and requires 0 and all 32 bytes unchanged.
+  Without the provider guard the call answers 1 and the guard bytes are overwritten.
+- **Trigger:** none planned: permanent, deliberate safety divergence.
+
+### D-CMS-ENCKEY-1 — `ossl_cms_EncryptedContent_init` records a key length while replacing no key, so `ec->key` can be shorter than `ec->keylen`
+
+- **Obligation:** `ossl_cms_EncryptedContent_init` (`src/cms/cms_enc.rs`) called with `key == NULL`
+  and a `keylen` that differs from the length of the block the object already holds.
+- **Authority:** accepts it and records the new length. `cms_enc.c:211-226` allocates and copies
+  `ec->key` only inside `if (key != NULL)` and then assigns `ec->keylen = keylen;`
+  **unconditionally**. The pair can therefore be left describing a block of `keylen` bytes where
+  the block is shorter. A reader then walks the recorded length:
+  `ossl_cms_EncryptedContent_init_bio` (`cms_enc.c:25-209`) keeps the incumbent block on its
+  `enc != 0` arm when `ec->key` is non-NULL and `ec->keylen` equals the context's key length, and
+  passes `ec->key` to `EVP_CipherInit_ex`, which reads
+  `EVP_CIPHER_CTX_get_key_length()` == `ec->keylen` bytes — an out-of-bounds read of the shorter
+  block. It is reachable through the public API only from an in-crate caller: the two
+  `CMS_EnvelopedData_create_ex`/`CMS_AuthEnvelopedData_create_ex` calls pass `(NULL, 0)` on an
+  object that holds no key, and `CMS_EncryptedData_set1_key` refuses `key == NULL || keylen == 0`
+  (`cms_enc.c:234`) before calling. No exported call can produce the shape today; the function's
+  own contract did not prevent it.
+- **Crate:** refuses the inconsistent call (`return 0`, leaving `ec` unchanged — the same
+  failure-atomic shape the allocation path already has). The invariant the object is held to is
+  stated on the function: a non-NULL `ec->key` is a block of exactly `ec->keylen` bytes owned by
+  `ec`, and the two fields are written together — by the `key != NULL` arm (which now writes
+  `(*ec).key` and `(*ec).keylen` in one statement group) and by the two `init_bio` arms that
+  install a generated key. A NULL `ec->key` may leave a stale `keylen`: every reader tests
+  `is_null()` first and `OPENSSL_clear_free(NULL, len)` is a no-op, so the authority's NULL-key
+  paths keep their behaviour.
+- **Reason:** `AGENTS.md` §17 — a known out-of-bounds-read mechanism is eliminated, not
+  reproduced; §1 — the obligation was placed on an in-crate caller population that had no way to
+  discharge it through the signature; §2 — the two fields are one invariant, not two.
+- **Compatibility consequence:** none for any caller reachable from the public API (see the
+  Authority paragraph). A crate-internal caller that passed `(NULL, keylen)` on an object holding
+  a key of a different length would now get 0 where the authority returns 1; there is no such
+  caller. A short *non-NULL* key is unchanged: it installs a block of exactly that length, and
+  `init_bio`'s `ec->keylen != tkeylen` arm either resizes the context to it or refuses.
+- **No error is raised:** the authority has no raise site on this path, and inventing one is what
+  D-SHA3-FINAL-OUTLEN-1 records it will not do.
+- **Evidence:** `cms::cms_enc::tests::cms_enc_a_null_key_may_not_restate_the_key_length` installs a
+  16-byte key, calls the function with `(NULL, 24)` and requires 0 with the same pointer, the same
+  recorded length and the same 16 bytes; it then requires the idempotent `(NULL, 16)` call to be
+  accepted and the `(NULL, 0)` create path to still succeed on an object that holds no key.
 - **Trigger:** none planned: permanent, deliberate safety divergence.

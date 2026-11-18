@@ -1,0 +1,593 @@
+{
+ "schema": "openssl-rs/safe-c33/site-enumerating-boundary-receipt/v1",
+ "kind": "site-enumerating-boundary-receipt",
+ "receipt": "cmp-safe-constructors-elimination",
+ "subphase": "openssh-v1i structural reduction: 13 zero-argument CMP item constructors are safe",
+ "date": "2026-11-13",
+ "candidate": {
+  "source_head": "5d4a3ff007e711315d2036aab4214989433ba7b5",
+  "previous_S": "15bebabc90e1c4a8f0cb496813030c1415891f7c",
+  "src_content_sha256": "feb1203547a4a6af4d649e4d39fae97ba331a2271a587c1421a3895b135578a7",
+  "file": "src/cmp/cmp_asn.rs",
+  "file_sha256": "8d54b311ebd75504df4aae047f718b87ec026551a448f7da4b75d66dade9c9b1"
+ },
+ "summary": {
+  "historical_obligations": 13,
+  "state": "ELIMINATED_STRUCTURALLY",
+  "statement": "13 of the 74 openssh-v1i obligations are zero-argument ASN1_item_new constructors. They are safe declarations at S-prime-prime and are pinned by compile-time coercion controls. A re-census is required before the applied review-required count can drop from 98 to a projected 85; this receipt does not change the applied count."
+ },
+ "boundaries": [
+  {
+   "id": "OSSH-V1I-066-ELIMINATED",
+   "file": "src/cmp/cmp_asn.rs",
+   "line": 1696,
+   "line_current": 1696,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "itav_new",
+   "historical_ids": [
+    "OSSH-V1I-066"
+   ],
+   "disposition": "ELIMINATED (source: safe fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument allocator: calls ASN1_item_new over a static in-crate item descriptor and returns the caller-owned block; no caller precondition",
+   "evidence": {
+    "span_sha256": "92619701afb2a760a17a59b64a49244e19f36fed145864ebd18c008bb57fd46f",
+    "span_lines": [
+     1696,
+     1700
+    ],
+    "qualified_identity": "itav_new",
+    "compile_time_control": "src/cmp/cmp_asn.rs:1703"
+   },
+   "prior_state": "DISCHARGED by openssh-v1i (site-scoped, review-required); the unsafe-fn identity is now gone",
+   "residuals": [
+    "no build/test run at this source candidate",
+    "the caller still owns the returned block; freeing it remains unsafe"
+   ]
+  },
+  {
+   "id": "OSSH-V1I-068-ELIMINATED",
+   "file": "src/cmp/cmp_asn.rs",
+   "line": 1712,
+   "line_current": 1712,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rootcakeyupdate_new",
+   "historical_ids": [
+    "OSSH-V1I-068"
+   ],
+   "disposition": "ELIMINATED (source: safe fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument allocator: calls ASN1_item_new over a static in-crate item descriptor and returns the caller-owned block; no caller precondition",
+   "evidence": {
+    "span_sha256": "ff13d4ec56139c98a4d8001b69fd99c70d22e64615f013bb2a9eedd5623c3805",
+    "span_lines": [
+     1712,
+     1716
+    ],
+    "qualified_identity": "rootcakeyupdate_new",
+    "compile_time_control": "src/cmp/cmp_asn.rs:1719"
+   },
+   "prior_state": "DISCHARGED by openssh-v1i (site-scoped, review-required); the unsafe-fn identity is now gone",
+   "residuals": [
+    "no build/test run at this source candidate",
+    "the caller still owns the returned block; freeing it remains unsafe"
+   ]
+  },
+  {
+   "id": "OSSH-V1I-070-ELIMINATED",
+   "file": "src/cmp/cmp_asn.rs",
+   "line": 1728,
+   "line_current": 1728,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "certreqtemplate_new",
+   "historical_ids": [
+    "OSSH-V1I-070"
+   ],
+   "disposition": "ELIMINATED (source: safe fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument allocator: calls ASN1_item_new over a static in-crate item descriptor and returns the caller-owned block; no caller precondition",
+   "evidence": {
+    "span_sha256": "b00a7b338092f8bb75c27ba97cafc3d28d4be0028c05b493ffbfe601e2000354",
+    "span_lines": [
+     1728,
+     1732
+    ],
+    "qualified_identity": "certreqtemplate_new",
+    "compile_time_control": "src/cmp/cmp_asn.rs:1735"
+   },
+   "prior_state": "DISCHARGED by openssh-v1i (site-scoped, review-required); the unsafe-fn identity is now gone",
+   "residuals": [
+    "no build/test run at this source candidate",
+    "the caller still owns the returned block; freeing it remains unsafe"
+   ]
+  },
+  {
+   "id": "OSSH-V1I-071-ELIMINATED",
+   "file": "src/cmp/cmp_asn.rs",
+   "line": 1738,
+   "line_current": 1738,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "crlstatus_new",
+   "historical_ids": [
+    "OSSH-V1I-071"
+   ],
+   "disposition": "ELIMINATED (source: safe fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument allocator: calls ASN1_item_new over a static in-crate item descriptor and returns the caller-owned block; no caller precondition",
+   "evidence": {
+    "span_sha256": "ef2dc1ae0f4a53ee7de7c4635dea9f48043380c1171cad732b7eb9ebed3e4c71",
+    "span_lines": [
+     1738,
+     1742
+    ],
+    "qualified_identity": "crlstatus_new",
+    "compile_time_control": "src/cmp/cmp_asn.rs:1745"
+   },
+   "prior_state": "DISCHARGED by openssh-v1i (site-scoped, review-required); the unsafe-fn identity is now gone",
+   "residuals": [
+    "no build/test run at this source candidate",
+    "the caller still owns the returned block; freeing it remains unsafe"
+   ]
+  },
+  {
+   "id": "OSSH-V1I-072-ELIMINATED",
+   "file": "src/cmp/cmp_asn.rs",
+   "line": 1763,
+   "line_current": 1763,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "OSSL_CMP_CERTREPMESSAGE_new",
+   "historical_ids": [
+    "OSSH-V1I-072"
+   ],
+   "disposition": "ELIMINATED (source: safe fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument allocator: calls ASN1_item_new over a static in-crate item descriptor and returns the caller-owned block; no caller precondition",
+   "evidence": {
+    "span_sha256": "589f07a183098fbcff73a9175f4a5c0655f0d4d579dd1d7ce06dab7988f9078f",
+    "span_lines": [
+     1763,
+     1767
+    ],
+    "qualified_identity": "OSSL_CMP_CERTREPMESSAGE_new",
+    "compile_time_control": "src/cmp/cmp_asn.rs:1770"
+   },
+   "prior_state": "DISCHARGED by openssh-v1i (site-scoped, review-required); the unsafe-fn identity is now gone",
+   "residuals": [
+    "no build/test run at this source candidate",
+    "the caller still owns the returned block; freeing it remains unsafe"
+   ]
+  },
+  {
+   "id": "OSSH-V1I-073-ELIMINATED",
+   "file": "src/cmp/cmp_asn.rs",
+   "line": 1773,
+   "line_current": 1773,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "OSSL_CMP_REVREPCONTENT_new",
+   "historical_ids": [
+    "OSSH-V1I-073"
+   ],
+   "disposition": "ELIMINATED (source: safe fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument allocator: calls ASN1_item_new over a static in-crate item descriptor and returns the caller-owned block; no caller precondition",
+   "evidence": {
+    "span_sha256": "a03995d02878437e7872fbbfbb9cbfdd493a7c8ad2fdde4fe0e20ab4675654c8",
+    "span_lines": [
+     1773,
+     1777
+    ],
+    "qualified_identity": "OSSL_CMP_REVREPCONTENT_new",
+    "compile_time_control": "src/cmp/cmp_asn.rs:1780"
+   },
+   "prior_state": "DISCHARGED by openssh-v1i (site-scoped, review-required); the unsafe-fn identity is now gone",
+   "residuals": [
+    "no build/test run at this source candidate",
+    "the caller still owns the returned block; freeing it remains unsafe"
+   ]
+  },
+  {
+   "id": "OSSH-V1I-074-ELIMINATED",
+   "file": "src/cmp/cmp_asn.rs",
+   "line": 1783,
+   "line_current": 1783,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "OSSL_CMP_ERRORMSGCONTENT_new",
+   "historical_ids": [
+    "OSSH-V1I-074"
+   ],
+   "disposition": "ELIMINATED (source: safe fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument allocator: calls ASN1_item_new over a static in-crate item descriptor and returns the caller-owned block; no caller precondition",
+   "evidence": {
+    "span_sha256": "93df69931c9908e855044b8d4f8ebfc99453d53199dc2a42c130436e97737186",
+    "span_lines": [
+     1783,
+     1787
+    ],
+    "qualified_identity": "OSSL_CMP_ERRORMSGCONTENT_new",
+    "compile_time_control": "src/cmp/cmp_asn.rs:1790"
+   },
+   "prior_state": "DISCHARGED by openssh-v1i (site-scoped, review-required); the unsafe-fn identity is now gone",
+   "residuals": [
+    "no build/test run at this source candidate",
+    "the caller still owns the returned block; freeing it remains unsafe"
+   ]
+  },
+  {
+   "id": "OSSH-V1I-075-ELIMINATED",
+   "file": "src/cmp/cmp_asn.rs",
+   "line": 1793,
+   "line_current": 1793,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "OSSL_CMP_CERTIFIEDKEYPAIR_new",
+   "historical_ids": [
+    "OSSH-V1I-075"
+   ],
+   "disposition": "ELIMINATED (source: safe fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument allocator: calls ASN1_item_new over a static in-crate item descriptor and returns the caller-owned block; no caller precondition",
+   "evidence": {
+    "span_sha256": "45cae2da6c5d7956aff69064eebea2f75aae2bee7d9011f2ba8d497cbc509931",
+    "span_lines": [
+     1793,
+     1797
+    ],
+    "qualified_identity": "OSSL_CMP_CERTIFIEDKEYPAIR_new",
+    "compile_time_control": "src/cmp/cmp_asn.rs:1800"
+   },
+   "prior_state": "DISCHARGED by openssh-v1i (site-scoped, review-required); the unsafe-fn identity is now gone",
+   "residuals": [
+    "no build/test run at this source candidate",
+    "the caller still owns the returned block; freeing it remains unsafe"
+   ]
+  },
+  {
+   "id": "OSSH-V1I-076-ELIMINATED",
+   "file": "src/cmp/cmp_asn.rs",
+   "line": 1803,
+   "line_current": 1803,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "OSSL_CMP_REVDETAILS_new",
+   "historical_ids": [
+    "OSSH-V1I-076"
+   ],
+   "disposition": "ELIMINATED (source: safe fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument allocator: calls ASN1_item_new over a static in-crate item descriptor and returns the caller-owned block; no caller precondition",
+   "evidence": {
+    "span_sha256": "e18cdaed4397b20607a2c362a028817bc8fe643e0236f4f3223ab735564aecbc",
+    "span_lines": [
+     1803,
+     1807
+    ],
+    "qualified_identity": "OSSL_CMP_REVDETAILS_new",
+    "compile_time_control": "src/cmp/cmp_asn.rs:1810"
+   },
+   "prior_state": "DISCHARGED by openssh-v1i (site-scoped, review-required); the unsafe-fn identity is now gone",
+   "residuals": [
+    "no build/test run at this source candidate",
+    "the caller still owns the returned block; freeing it remains unsafe"
+   ]
+  },
+  {
+   "id": "OSSH-V1I-077-ELIMINATED",
+   "file": "src/cmp/cmp_asn.rs",
+   "line": 1822,
+   "line_current": 1822,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "OSSL_CMP_CERTSTATUS_new",
+   "historical_ids": [
+    "OSSH-V1I-077"
+   ],
+   "disposition": "ELIMINATED (source: safe fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument allocator: calls ASN1_item_new over a static in-crate item descriptor and returns the caller-owned block; no caller precondition",
+   "evidence": {
+    "span_sha256": "92b5c61fc0b6b9fe37acf60bc0403fb798cf5af19c2e6090e6391cb6e69646d9",
+    "span_lines": [
+     1822,
+     1826
+    ],
+    "qualified_identity": "OSSL_CMP_CERTSTATUS_new",
+    "compile_time_control": "src/cmp/cmp_asn.rs:1829"
+   },
+   "prior_state": "DISCHARGED by openssh-v1i (site-scoped, review-required); the unsafe-fn identity is now gone",
+   "residuals": [
+    "no build/test run at this source candidate",
+    "the caller still owns the returned block; freeing it remains unsafe"
+   ]
+  },
+  {
+   "id": "OSSH-V1I-078-ELIMINATED",
+   "file": "src/cmp/cmp_asn.rs",
+   "line": 1841,
+   "line_current": 1841,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "OSSL_CMP_CERTRESPONSE_new",
+   "historical_ids": [
+    "OSSH-V1I-078"
+   ],
+   "disposition": "ELIMINATED (source: safe fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument allocator: calls ASN1_item_new over a static in-crate item descriptor and returns the caller-owned block; no caller precondition",
+   "evidence": {
+    "span_sha256": "23989b5efd8186f5510b000aa8b112ebceda315f11c44a867fe0004946326cb7",
+    "span_lines": [
+     1841,
+     1845
+    ],
+    "qualified_identity": "OSSL_CMP_CERTRESPONSE_new",
+    "compile_time_control": "src/cmp/cmp_asn.rs:1848"
+   },
+   "prior_state": "DISCHARGED by openssh-v1i (site-scoped, review-required); the unsafe-fn identity is now gone",
+   "residuals": [
+    "no build/test run at this source candidate",
+    "the caller still owns the returned block; freeing it remains unsafe"
+   ]
+  },
+  {
+   "id": "OSSH-V1I-079-ELIMINATED",
+   "file": "src/cmp/cmp_asn.rs",
+   "line": 1860,
+   "line_current": 1860,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "OSSL_CMP_POLLREQ_new",
+   "historical_ids": [
+    "OSSH-V1I-079"
+   ],
+   "disposition": "ELIMINATED (source: safe fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument allocator: calls ASN1_item_new over a static in-crate item descriptor and returns the caller-owned block; no caller precondition",
+   "evidence": {
+    "span_sha256": "6201c087923002b05a425968325e66d606481da8ed0574e924a55bf925344167",
+    "span_lines": [
+     1860,
+     1864
+    ],
+    "qualified_identity": "OSSL_CMP_POLLREQ_new",
+    "compile_time_control": "src/cmp/cmp_asn.rs:1867"
+   },
+   "prior_state": "DISCHARGED by openssh-v1i (site-scoped, review-required); the unsafe-fn identity is now gone",
+   "residuals": [
+    "no build/test run at this source candidate",
+    "the caller still owns the returned block; freeing it remains unsafe"
+   ]
+  },
+  {
+   "id": "OSSH-V1I-080-ELIMINATED",
+   "file": "src/cmp/cmp_asn.rs",
+   "line": 1879,
+   "line_current": 1879,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "OSSL_CMP_POLLREP_new",
+   "historical_ids": [
+    "OSSH-V1I-080"
+   ],
+   "disposition": "ELIMINATED (source: safe fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "zero-argument allocator: calls ASN1_item_new over a static in-crate item descriptor and returns the caller-owned block; no caller precondition",
+   "evidence": {
+    "span_sha256": "30ef2a86341a386ecd97c84cb999cb4870d844a815f167229f035bb26cb10d3c",
+    "span_lines": [
+     1879,
+     1883
+    ],
+    "qualified_identity": "OSSL_CMP_POLLREP_new",
+    "compile_time_control": "src/cmp/cmp_asn.rs:1886"
+   },
+   "prior_state": "DISCHARGED by openssh-v1i (site-scoped, review-required); the unsafe-fn identity is now gone",
+   "residuals": [
+    "no build/test run at this source candidate",
+    "the caller still owns the returned block; freeing it remains unsafe"
+   ]
+  }
+ ],
+ "supersedes": [
+  {
+   "receipt": "openssh-v1i",
+   "ids": [
+    "OSSH-V1I-066"
+   ],
+   "file": "src/cmp/cmp_asn.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "itav_new",
+   "discharging_boundary": "OSSH-V1I-066-ELIMINATED",
+   "discharging_receipt": "cmp-safe-constructors-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "itav_new is a safe declaration at src/cmp/cmp_asn.rs:1696 (span 1696-1700 sha256 92619701afb2a760); the control at src/cmp/cmp_asn.rs:1703 rejects a restored unsafe qualifier",
+   "reason": "the openssh-v1i unsafe-fn obligation no longer exists at S-prime-prime"
+  },
+  {
+   "receipt": "openssh-v1i",
+   "ids": [
+    "OSSH-V1I-068"
+   ],
+   "file": "src/cmp/cmp_asn.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "rootcakeyupdate_new",
+   "discharging_boundary": "OSSH-V1I-068-ELIMINATED",
+   "discharging_receipt": "cmp-safe-constructors-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "rootcakeyupdate_new is a safe declaration at src/cmp/cmp_asn.rs:1712 (span 1712-1716 sha256 ff13d4ec56139c98); the control at src/cmp/cmp_asn.rs:1719 rejects a restored unsafe qualifier",
+   "reason": "the openssh-v1i unsafe-fn obligation no longer exists at S-prime-prime"
+  },
+  {
+   "receipt": "openssh-v1i",
+   "ids": [
+    "OSSH-V1I-070"
+   ],
+   "file": "src/cmp/cmp_asn.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "certreqtemplate_new",
+   "discharging_boundary": "OSSH-V1I-070-ELIMINATED",
+   "discharging_receipt": "cmp-safe-constructors-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "certreqtemplate_new is a safe declaration at src/cmp/cmp_asn.rs:1728 (span 1728-1732 sha256 b00a7b338092f8bb); the control at src/cmp/cmp_asn.rs:1735 rejects a restored unsafe qualifier",
+   "reason": "the openssh-v1i unsafe-fn obligation no longer exists at S-prime-prime"
+  },
+  {
+   "receipt": "openssh-v1i",
+   "ids": [
+    "OSSH-V1I-071"
+   ],
+   "file": "src/cmp/cmp_asn.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "crlstatus_new",
+   "discharging_boundary": "OSSH-V1I-071-ELIMINATED",
+   "discharging_receipt": "cmp-safe-constructors-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "crlstatus_new is a safe declaration at src/cmp/cmp_asn.rs:1738 (span 1738-1742 sha256 ef2dc1ae0f4a53ee); the control at src/cmp/cmp_asn.rs:1745 rejects a restored unsafe qualifier",
+   "reason": "the openssh-v1i unsafe-fn obligation no longer exists at S-prime-prime"
+  },
+  {
+   "receipt": "openssh-v1i",
+   "ids": [
+    "OSSH-V1I-072"
+   ],
+   "file": "src/cmp/cmp_asn.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "OSSL_CMP_CERTREPMESSAGE_new",
+   "discharging_boundary": "OSSH-V1I-072-ELIMINATED",
+   "discharging_receipt": "cmp-safe-constructors-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "OSSL_CMP_CERTREPMESSAGE_new is a safe declaration at src/cmp/cmp_asn.rs:1763 (span 1763-1767 sha256 589f07a183098fbc); the control at src/cmp/cmp_asn.rs:1770 rejects a restored unsafe qualifier",
+   "reason": "the openssh-v1i unsafe-fn obligation no longer exists at S-prime-prime"
+  },
+  {
+   "receipt": "openssh-v1i",
+   "ids": [
+    "OSSH-V1I-073"
+   ],
+   "file": "src/cmp/cmp_asn.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "OSSL_CMP_REVREPCONTENT_new",
+   "discharging_boundary": "OSSH-V1I-073-ELIMINATED",
+   "discharging_receipt": "cmp-safe-constructors-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "OSSL_CMP_REVREPCONTENT_new is a safe declaration at src/cmp/cmp_asn.rs:1773 (span 1773-1777 sha256 a03995d02878437e); the control at src/cmp/cmp_asn.rs:1780 rejects a restored unsafe qualifier",
+   "reason": "the openssh-v1i unsafe-fn obligation no longer exists at S-prime-prime"
+  },
+  {
+   "receipt": "openssh-v1i",
+   "ids": [
+    "OSSH-V1I-074"
+   ],
+   "file": "src/cmp/cmp_asn.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "OSSL_CMP_ERRORMSGCONTENT_new",
+   "discharging_boundary": "OSSH-V1I-074-ELIMINATED",
+   "discharging_receipt": "cmp-safe-constructors-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "OSSL_CMP_ERRORMSGCONTENT_new is a safe declaration at src/cmp/cmp_asn.rs:1783 (span 1783-1787 sha256 93df69931c9908e8); the control at src/cmp/cmp_asn.rs:1790 rejects a restored unsafe qualifier",
+   "reason": "the openssh-v1i unsafe-fn obligation no longer exists at S-prime-prime"
+  },
+  {
+   "receipt": "openssh-v1i",
+   "ids": [
+    "OSSH-V1I-075"
+   ],
+   "file": "src/cmp/cmp_asn.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "OSSL_CMP_CERTIFIEDKEYPAIR_new",
+   "discharging_boundary": "OSSH-V1I-075-ELIMINATED",
+   "discharging_receipt": "cmp-safe-constructors-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "OSSL_CMP_CERTIFIEDKEYPAIR_new is a safe declaration at src/cmp/cmp_asn.rs:1793 (span 1793-1797 sha256 45cae2da6c5d7956); the control at src/cmp/cmp_asn.rs:1800 rejects a restored unsafe qualifier",
+   "reason": "the openssh-v1i unsafe-fn obligation no longer exists at S-prime-prime"
+  },
+  {
+   "receipt": "openssh-v1i",
+   "ids": [
+    "OSSH-V1I-076"
+   ],
+   "file": "src/cmp/cmp_asn.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "OSSL_CMP_REVDETAILS_new",
+   "discharging_boundary": "OSSH-V1I-076-ELIMINATED",
+   "discharging_receipt": "cmp-safe-constructors-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "OSSL_CMP_REVDETAILS_new is a safe declaration at src/cmp/cmp_asn.rs:1803 (span 1803-1807 sha256 e18cdaed4397b206); the control at src/cmp/cmp_asn.rs:1810 rejects a restored unsafe qualifier",
+   "reason": "the openssh-v1i unsafe-fn obligation no longer exists at S-prime-prime"
+  },
+  {
+   "receipt": "openssh-v1i",
+   "ids": [
+    "OSSH-V1I-077"
+   ],
+   "file": "src/cmp/cmp_asn.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "OSSL_CMP_CERTSTATUS_new",
+   "discharging_boundary": "OSSH-V1I-077-ELIMINATED",
+   "discharging_receipt": "cmp-safe-constructors-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "OSSL_CMP_CERTSTATUS_new is a safe declaration at src/cmp/cmp_asn.rs:1822 (span 1822-1826 sha256 92b5c61fc0b6b9fe); the control at src/cmp/cmp_asn.rs:1829 rejects a restored unsafe qualifier",
+   "reason": "the openssh-v1i unsafe-fn obligation no longer exists at S-prime-prime"
+  },
+  {
+   "receipt": "openssh-v1i",
+   "ids": [
+    "OSSH-V1I-078"
+   ],
+   "file": "src/cmp/cmp_asn.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "OSSL_CMP_CERTRESPONSE_new",
+   "discharging_boundary": "OSSH-V1I-078-ELIMINATED",
+   "discharging_receipt": "cmp-safe-constructors-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "OSSL_CMP_CERTRESPONSE_new is a safe declaration at src/cmp/cmp_asn.rs:1841 (span 1841-1845 sha256 23989b5efd8186f5); the control at src/cmp/cmp_asn.rs:1848 rejects a restored unsafe qualifier",
+   "reason": "the openssh-v1i unsafe-fn obligation no longer exists at S-prime-prime"
+  },
+  {
+   "receipt": "openssh-v1i",
+   "ids": [
+    "OSSH-V1I-079"
+   ],
+   "file": "src/cmp/cmp_asn.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "OSSL_CMP_POLLREQ_new",
+   "discharging_boundary": "OSSH-V1I-079-ELIMINATED",
+   "discharging_receipt": "cmp-safe-constructors-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "OSSL_CMP_POLLREQ_new is a safe declaration at src/cmp/cmp_asn.rs:1860 (span 1860-1864 sha256 6201c087923002b0); the control at src/cmp/cmp_asn.rs:1867 rejects a restored unsafe qualifier",
+   "reason": "the openssh-v1i unsafe-fn obligation no longer exists at S-prime-prime"
+  },
+  {
+   "receipt": "openssh-v1i",
+   "ids": [
+    "OSSH-V1I-080"
+   ],
+   "file": "src/cmp/cmp_asn.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "OSSL_CMP_POLLREP_new",
+   "discharging_boundary": "OSSH-V1I-080-ELIMINATED",
+   "discharging_receipt": "cmp-safe-constructors-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "OSSL_CMP_POLLREP_new is a safe declaration at src/cmp/cmp_asn.rs:1879 (span 1879-1883 sha256 30ef2a86341a386e); the control at src/cmp/cmp_asn.rs:1886 rejects a restored unsafe qualifier",
+   "reason": "the openssh-v1i unsafe-fn obligation no longer exists at S-prime-prime"
+  }
+ ],
+ "negative_control": {
+  "id": "CMP-SAFE-ELIM-1",
+  "kind": "compile-time coercion",
+  "observation": "each control const requires a safe fn; restoring unsafe fails to type-check"
+ },
+ "non_claims": [
+  "Structural elimination, not SAFETY_DISCHARGED.",
+  "The applied 98 count is unchanged until a rebuild, re-census and fresh closure run.",
+  "The returned block remains caller-owned; use and release require unsafe.",
+  "No Miri/ASan/test run at S-prime-prime."
+ ]
+}

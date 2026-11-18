@@ -1550,8 +1550,12 @@ pub(crate) fn lib_ctx_is_global_default(ctx: *mut c_void) -> c_int {
 /// `int ossl_lib_ctx_write_lock(OSSL_LIB_CTX *ctx)` — internal. The three lock
 /// helpers all answer 0 for a NULL context, which is how the property code
 /// reports "no context" rather than "lock failed".
+///
+/// # Safety
+/// `ctx` is NULL (which answers 0) or a live context whose lock was created by
+/// `context_init` and is not concurrently released.
 #[allow(dead_code)] // unreachable until the stratum that calls it lands
-pub(crate) fn lib_ctx_write_lock(ctx: *mut c_void) -> c_int {
+pub(crate) unsafe fn lib_ctx_write_lock(ctx: *mut c_void) -> c_int {
     let ctx = concrete(ctx.cast::<OsslLibCtx>());
     if ctx.is_null() {
         return 0;
@@ -1562,8 +1566,11 @@ pub(crate) fn lib_ctx_write_lock(ctx: *mut c_void) -> c_int {
 }
 
 /// `int ossl_lib_ctx_read_lock(OSSL_LIB_CTX *ctx)` — internal.
+///
+/// # Safety
+/// As [`lib_ctx_write_lock`] for the same context.
 #[allow(dead_code)] // unreachable until the stratum that calls it lands
-pub(crate) fn lib_ctx_read_lock(ctx: *mut c_void) -> c_int {
+pub(crate) unsafe fn lib_ctx_read_lock(ctx: *mut c_void) -> c_int {
     let ctx = concrete(ctx.cast::<OsslLibCtx>());
     if ctx.is_null() {
         return 0;
@@ -1573,8 +1580,12 @@ pub(crate) fn lib_ctx_read_lock(ctx: *mut c_void) -> c_int {
 }
 
 /// `int ossl_lib_ctx_unlock(OSSL_LIB_CTX *ctx)` — internal.
+///
+/// # Safety
+/// `ctx` is NULL or a live context whose lock this thread currently holds; the
+/// release must match the helper that acquired it.
 #[allow(dead_code)] // unreachable until the stratum that calls it lands
-pub(crate) fn lib_ctx_unlock(ctx: *mut c_void) -> c_int {
+pub(crate) unsafe fn lib_ctx_unlock(ctx: *mut c_void) -> c_int {
     let ctx = concrete(ctx.cast::<OsslLibCtx>());
     if ctx.is_null() {
         return 0;
@@ -1710,3 +1721,31 @@ mod tests {
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(OsslLibCtx => zero_state_sweep_ossl_lib_ctx);
+
+#[cfg(test)]
+mod unsafe_contract_controls {
+    /// Qualifier control: the three context lock helpers dereference the caller's
+    /// context, so they must not be callable from safe Rust with an unchecked
+    /// pointer. A type-level "is an unsafe fn" assertion is not expressible on
+    /// stable Rust, so the declarations are pinned in the production source text,
+    /// which is read from disk and truncated at the first `#[cfg(test)]` module.
+    /// This test's own assertion text is therefore never searched, and each needle
+    /// is assembled from fragments, so only removing an `unsafe` qualifier can make
+    /// it fail.
+    #[test]
+    #[allow(clippy::expect_used)]
+    fn the_context_lock_helpers_are_unsafe_fns() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/context/mod.rs");
+        let src = std::fs::read_to_string(path).expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        for needle in [
+            concat!("pub(crate) unsafe fn ", "lib_ctx_write_lock("),
+            concat!("pub(crate) unsafe fn ", "lib_ctx_read_lock("),
+            concat!("pub(crate) unsafe fn ", "lib_ctx_unlock("),
+        ] {
+            assert!(prod.contains(needle), "missing {needle}");
+        }
+    }
+}

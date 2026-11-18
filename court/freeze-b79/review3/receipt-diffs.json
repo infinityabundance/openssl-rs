@@ -1,0 +1,579 @@
+{
+ "rows": [
+  {
+   "receipt": "openssh-v1i-sites.json",
+   "boundary": "OSSH-V1I-049",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "x509_name_dup_void",
+   "prior_verdict": "ACCEPT",
+   "prior_review": "b76-review-v1i-batch1",
+   "old": {
+    "line": 350,
+    "line_current": 350,
+    "span_start_line": 350,
+    "span_end_line": 353,
+    "span_sha256": "13028da9d8492f824d5761e48a7c2f0c44392f914ac4cd0227e8d6bec0048488",
+    "span_source_commit": null
+   },
+   "new": {
+    "line": 357,
+    "line_current": 357,
+    "span_start_line": 357,
+    "span_end_line": 360,
+    "span_sha256": "68c3affef36dde35c69ad17c8be073d1ed36e9a957afbe84d623c802b79480b6",
+    "span_source_commit": null
+   },
+   "classification": "doc-only",
+   "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+   "prose_coordinate_updates": [],
+   "disposition_update": {
+    "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:350 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+    "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:357 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+   }
+  },
+  {
+   "receipt": "openssh-v1i-sites.json",
+   "boundary": "OSSH-V1I-050",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "x509_name_free_void",
+   "prior_verdict": "ACCEPT",
+   "prior_review": "b76-review-v1i-batch1",
+   "old": {
+    "line": 354,
+    "line_current": 354,
+    "span_start_line": 354,
+    "span_end_line": 357,
+    "span_sha256": "fbb8bfad2d75d2799d95893538c24c5ffa1359fd25eef77ae77f91a81cca6ef3",
+    "span_source_commit": null
+   },
+   "new": {
+    "line": 366,
+    "line_current": 366,
+    "span_start_line": 366,
+    "span_end_line": 369,
+    "span_sha256": "aadfe639539338e4fddd52a2572f8968b838febbc33d9a931f68de8836e6f0bf",
+    "span_source_commit": null
+   },
+   "classification": "doc-only",
+   "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+   "prose_coordinate_updates": [],
+   "disposition_update": {
+    "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:354 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+    "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:366 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+   }
+  },
+  {
+   "receipt": "openssh-v1i-sites.json",
+   "boundary": "OSSH-V1I-051",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "asn1_integer_dup_void",
+   "prior_verdict": "ACCEPT",
+   "prior_review": "b76-review-v1i-batch1",
+   "old": {
+    "line": 358,
+    "line_current": 358,
+    "span_start_line": 358,
+    "span_end_line": 361,
+    "span_sha256": "879ea7d76ffb4d0fd368a9c5a3056ed4184537401d6d6511515d16d0e22ea8df",
+    "span_source_commit": null
+   },
+   "new": {
+    "line": 376,
+    "line_current": 376,
+    "span_start_line": 376,
+    "span_end_line": 379,
+    "span_sha256": "ada154c8fcf9c795b15269e75af7cebaf01626240d958ab693b71d9f68fc42d6",
+    "span_source_commit": null
+   },
+   "classification": "doc-only",
+   "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+   "prose_coordinate_updates": [],
+   "disposition_update": {
+    "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:358 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+    "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:376 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+   }
+  },
+  {
+   "receipt": "openssh-v1i-sites.json",
+   "boundary": "OSSH-V1I-052",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "asn1_integer_free_void",
+   "prior_verdict": "ACCEPT",
+   "prior_review": "b76-review-v1i-batch1",
+   "old": {
+    "line": 362,
+    "line_current": 362,
+    "span_start_line": 362,
+    "span_end_line": 365,
+    "span_sha256": "09ce335f71b364fa86cc7d60748551ff5226e2f5d2b5bb9b6a9efcfb1f7e0d68",
+    "span_source_commit": null
+   },
+   "new": {
+    "line": 385,
+    "line_current": 385,
+    "span_start_line": 385,
+    "span_end_line": 388,
+    "span_sha256": "6d1ec00d6cac7a7b591255c264472ea2178307d28cef4013a35d9170d08f356b",
+    "span_source_commit": null
+   },
+   "classification": "doc-only",
+   "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+   "prose_coordinate_updates": [],
+   "disposition_update": {
+    "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:362 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+    "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:385 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+   }
+  },
+  {
+   "receipt": "openssh-v1i-sites.json",
+   "boundary": "OSSH-V1I-053",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "x509_req_dup_void",
+   "prior_verdict": "ACCEPT",
+   "prior_review": "b76-review-v1i-batch1",
+   "old": {
+    "line": 366,
+    "line_current": 366,
+    "span_start_line": 366,
+    "span_end_line": 369,
+    "span_sha256": "ef04cda1695dd610a3eddd0ac37dec5ce3367663a427207648483393923e6cce",
+    "span_source_commit": null
+   },
+   "new": {
+    "line": 395,
+    "line_current": 395,
+    "span_start_line": 395,
+    "span_end_line": 398,
+    "span_sha256": "c3bd7c6a68f5556a44991fec256736cae595ce8d5850d3bae356875167ccb78e",
+    "span_source_commit": null
+   },
+   "classification": "doc-only",
+   "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+   "prose_coordinate_updates": [],
+   "disposition_update": {
+    "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:366 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+    "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:395 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+   }
+  },
+  {
+   "receipt": "openssh-v1i-sites.json",
+   "boundary": "OSSH-V1I-054",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "x509_req_free_void",
+   "prior_verdict": "ACCEPT",
+   "prior_review": "b76-review-v1i-batch1",
+   "old": {
+    "line": 370,
+    "line_current": 370,
+    "span_start_line": 370,
+    "span_end_line": 373,
+    "span_sha256": "31048346d3df8aa9a52bc4b18fd813722a65de998b0fb6819f7858fd82c8ecd1",
+    "span_source_commit": null
+   },
+   "new": {
+    "line": 404,
+    "line_current": 404,
+    "span_start_line": 404,
+    "span_end_line": 407,
+    "span_sha256": "08102d47fcb390390d20e576b65826c8884b3792d02072195045ffbbbded5e57",
+    "span_source_commit": null
+   },
+   "classification": "doc-only",
+   "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+   "prose_coordinate_updates": [],
+   "disposition_update": {
+    "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:370 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+    "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:404 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+   }
+  },
+  {
+   "receipt": "openssh-v1i-sites.json",
+   "boundary": "OSSH-V1I-059",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "general_name_free_void",
+   "prior_verdict": "ACCEPT",
+   "prior_review": "b76-review-v1i-batch1",
+   "old": {
+    "line": 376,
+    "line_current": 376,
+    "span_start_line": 376,
+    "span_end_line": 379,
+    "span_sha256": "f2c430ef6d2510ea8fb9bb46892deea51afcac75eefbe5a03d3883541845911b",
+    "span_source_commit": null
+   },
+   "new": {
+    "line": 419,
+    "line_current": 419,
+    "span_start_line": 419,
+    "span_end_line": 422,
+    "span_sha256": "52f8d85ffa5fe3af291f9acbb6e681d58b75be5f832fa7776a085b4bb9c5c551",
+    "span_source_commit": null
+   },
+   "classification": "doc-only",
+   "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+   "prose_coordinate_updates": [],
+   "disposition_update": {
+    "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:376 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+    "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:419 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+   }
+  },
+  {
+   "receipt": "openssh-v1i-sites.json",
+   "boundary": "OSSH-V1I-060",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "x509_extension_free_void",
+   "prior_verdict": "ACCEPT",
+   "prior_review": "b76-review-v1i-batch1",
+   "old": {
+    "line": 380,
+    "line_current": 380,
+    "span_start_line": 380,
+    "span_end_line": 383,
+    "span_sha256": "c55cd1b80bb171807ebc723f6a3a8b0faab9a0c8a24c3400c8b5e89e27bfd8e8",
+    "span_source_commit": null
+   },
+   "new": {
+    "line": 427,
+    "line_current": 427,
+    "span_start_line": 427,
+    "span_end_line": 430,
+    "span_sha256": "537c06945c216902ed150dfaa4a44d7d3181ae3e19c2f3ed0dfb3b3311b685a2",
+    "span_source_commit": null
+   },
+   "classification": "doc-only",
+   "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+   "prose_coordinate_updates": [],
+   "disposition_update": {
+    "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:380 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+    "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:427 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+   }
+  },
+  {
+   "receipt": "openssh-v1i-sites.json",
+   "boundary": "OSSH-V1I-061",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "utf8_string_free_void",
+   "prior_verdict": "ACCEPT",
+   "prior_review": "b76-review-v1i-batch1",
+   "old": {
+    "line": 384,
+    "line_current": 384,
+    "span_start_line": 384,
+    "span_end_line": 387,
+    "span_sha256": "78aab3c63127b04993c0447596fe2b4167e5e8b683967ff17420b540718870ba",
+    "span_source_commit": null
+   },
+   "new": {
+    "line": 435,
+    "line_current": 435,
+    "span_start_line": 435,
+    "span_end_line": 438,
+    "span_sha256": "9fcb08fbebf7d93711f64f289f56b34e53b37bcfca1f6c16ec1834b6066b525a",
+    "span_source_commit": null
+   },
+   "classification": "doc-only",
+   "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+   "prose_coordinate_updates": [],
+   "disposition_update": {
+    "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:384 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+    "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:435 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+   }
+  },
+  {
+   "receipt": "openssh-v1i-sites.json",
+   "boundary": "OSSH-V1I-063",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "itav_free_void",
+   "prior_verdict": "ACCEPT",
+   "prior_review": "b76-review-v1i-batch1",
+   "old": {
+    "line": 388,
+    "line_current": 388,
+    "span_start_line": 388,
+    "span_end_line": 391,
+    "span_sha256": "716df8e4158a82f709333ef8f8e10d11b49a3640c3b50cb83e87c063093a024e",
+    "span_source_commit": null
+   },
+   "new": {
+    "line": 443,
+    "line_current": 443,
+    "span_start_line": 443,
+    "span_end_line": 446,
+    "span_sha256": "36ecb712436300b555bc27f763f83b41cfa71ff96c1f32ebcc85b49c447265f3",
+    "span_source_commit": null
+   },
+   "classification": "doc-only",
+   "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+   "prose_coordinate_updates": [],
+   "disposition_update": {
+    "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:388 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+    "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:443 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+   }
+  },
+  {
+   "receipt": "openssh-v1i-sites.json",
+   "boundary": "OSSH-V1I-064",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "policy_free_void",
+   "prior_verdict": "ACCEPT",
+   "prior_review": "b76-review-v1i-batch1",
+   "old": {
+    "line": 392,
+    "line_current": 392,
+    "span_start_line": 392,
+    "span_end_line": 395,
+    "span_sha256": "462670b49e5deac6bb89a6bde03865bb4962f69860b469eda9889301e6e74b42",
+    "span_source_commit": null
+   },
+   "new": {
+    "line": 451,
+    "line_current": 451,
+    "span_start_line": 451,
+    "span_end_line": 454,
+    "span_sha256": "b10d4e3682d87e51ac65e7fa6d7ac882adf24166057438244714ee01320ce356",
+    "span_source_commit": null
+   },
+   "classification": "doc-only",
+   "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+   "prose_coordinate_updates": [],
+   "disposition_update": {
+    "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:392 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+    "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:451 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+   }
+  },
+  {
+   "receipt": "openssh-v1i-sites.json",
+   "boundary": "OSSH-V1I-065",
+   "file": "src/cmp/cmp_ctx.rs",
+   "operation": "cmp_ctx_set_md",
+   "prior_verdict": "ACCEPT",
+   "prior_review": "b76-review-v1i-batch1",
+   "old": {
+    "line": 407,
+    "line_current": 407,
+    "span_start_line": 407,
+    "span_end_line": 421,
+    "span_sha256": "cd466dc13eee90d9e36e0601ccf6308e32c096b476d0982caf893b37c6f37ef8",
+    "span_source_commit": null
+   },
+   "new": {
+    "line": 476,
+    "line_current": 476,
+    "span_start_line": 476,
+    "span_end_line": 491,
+    "span_sha256": "3c274e5c132d4c783470e5820d148965f9050cd6a08c7ae6dc1b2596fc177fa0",
+    "span_source_commit": null
+   },
+   "classification": "doc-only",
+   "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+   "prose_coordinate_updates": [
+    {
+     "field": "established_by[0]",
+     "old": "caller: src/cmp/cmp_ctx.rs:578,587 pass a fresh context's NULL fields; :1588,1593 pass the setter's owned incumbent through ptr::addr_of_mut!",
+     "new": "caller: src/cmp/cmp_ctx.rs:628,637 pass a fresh context's NULL fields; :1638,1643 pass the setter's owned incumbent through ptr::addr_of_mut!"
+    }
+   ],
+   "disposition_update": {
+    "old": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:407 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+    "new": "SAFETY_DISCHARGED: src/cmp/cmp_ctx.rs:476 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+   }
+  },
+  {
+   "receipt": "openssh-v1i-sites.json",
+   "boundary": "OSSH-V1I-067",
+   "file": "src/cmp/cmp_asn.rs",
+   "operation": "itav_free",
+   "prior_verdict": "ACCEPT",
+   "prior_review": "b76-review-v1i-batch1",
+   "old": {
+    "line": 1706,
+    "line_current": 1706,
+    "span_start_line": 1706,
+    "span_end_line": 1709,
+    "span_sha256": "5b0450b583d888ad1fa516a1db92cfd5493f24343bb7f8ac4e98943f7a46dfd5",
+    "span_source_commit": null
+   },
+   "new": {
+    "line": 1712,
+    "line_current": 1712,
+    "span_start_line": 1712,
+    "span_end_line": 1715,
+    "span_sha256": "b23c42bb8b1a61c4de93b40c75faf45e2e2af5b116c9b0b770e7023526573412",
+    "span_source_commit": null
+   },
+   "classification": "doc-only",
+   "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+   "prose_coordinate_updates": [],
+   "disposition_update": {
+    "old": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1706 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+    "new": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1712 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+   }
+  },
+  {
+   "receipt": "openssh-v1i-sites.json",
+   "boundary": "OSSH-V1I-069",
+   "file": "src/cmp/cmp_asn.rs",
+   "operation": "rootcakeyupdate_free",
+   "prior_verdict": "ACCEPT",
+   "prior_review": "b76-review-v1i-batch1",
+   "old": {
+    "line": 1722,
+    "line_current": 1722,
+    "span_start_line": 1722,
+    "span_end_line": 1725,
+    "span_sha256": "ab84f3d5975c0d0dde5598293da723073efe4e6cba97b983cd2c52483fa236ed",
+    "span_source_commit": null
+   },
+   "new": {
+    "line": 1734,
+    "line_current": 1734,
+    "span_start_line": 1734,
+    "span_end_line": 1737,
+    "span_sha256": "e6eeb9d17271a94ed1d94e4f96605dd597abc6dea6304f6ec0dc6ac4703cebd0",
+    "span_source_commit": null
+   },
+   "classification": "doc-only",
+   "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+   "prose_coordinate_updates": [],
+   "disposition_update": {
+    "old": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1722 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields",
+    "new": "SAFETY_DISCHARGED: src/cmp/cmp_asn.rs:1734 \u2014 discharged at this candidate; the basis and the review link are in the receipt fields"
+   }
+  },
+  {
+   "receipt": "boundary-sweep-B69.json",
+   "boundary": "RAND-CTX-001",
+   "file": "src/rand/rand_lib.rs",
+   "operation": "ossl_rand_ctx_new",
+   "prior_verdict": null,
+   "prior_review": null,
+   "old": {
+    "line": 426,
+    "line_current": 426,
+    "span_start_line": 426,
+    "span_end_line": 465,
+    "span_sha256": "232c98ca33e79818c46dff8f5857876c778484213f069315127c2497e8b05186",
+    "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0"
+   },
+   "new": {
+    "line": 426,
+    "line_current": 426,
+    "span_start_line": 426,
+    "span_end_line": 466,
+    "span_sha256": "304a782704a5b63d5780212521506752ccaaf804deaf6af742b7d6b1f511d1f8",
+    "span_source_commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0"
+   },
+   "classification": "annotation-only",
+   "delta": "the in-span difference is an explicit `unsafe { }` block around an unchanged callee with unchanged arguments, plus its SAFETY comment: no token, callee, argument, control flow or effect changed",
+   "prose_coordinate_updates": [
+    {
+     "field": "body",
+     "old": "pub(crate) unsafe extern \"C\" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut c_void {\n    let Some(dgbl) = RawGlobal::new() else {\n        return ptr::null_mut();\n    };\n\n    // `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, NULL)`: base thread handling must exist\n    // before this object does.\n    crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null());\n\n    // SAFETY: `RANDOM_PROVIDER_FIPS_NAME` is a NUL-terminated literal and the answer is this\n    // call's own fresh block or NULL.\n    let name = unsafe {\n        OwnedStr::adopt(\n            CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, L_CTX_PROVIDER_NAME),\n            FILE_SEAM,\n            L_CTX_ERR_PROVIDER_NAME,\n        )\n    };\n    // The authority's first failure arm frees the block alone (`:543`), which `RawGlobal`'s `Drop`\n    // performs; the name was never acquired.\n    let Some(name) = name else {\n        return ptr::null_mut();\n    };\n\n    let lock = CRYPTO_THREAD_lock_new();\n    if lock.is_null() {\n        // The authority's second failure arm frees the name (`:541`) and then the block (`:543`);\n        // `name` drops before `dgbl` because it is declared later.\n        return ptr::null_mut();\n    }\n\n    let p = dgbl.as_ptr();\n    // SAFETY: `p` is this call's own fresh block, published nowhere yet.\n    unsafe {\n        (*p).random_provider_name = name.into_raw();\n        (*p).lock = lock;\n    }\n\n    dgbl.finish().cast::<c_void>()\n}",
+     "new": "pub(crate) unsafe extern \"C\" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut c_void {\n    let Some(dgbl) = RawGlobal::new() else {\n        return ptr::null_mut();\n    };\n\n    // `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, NULL)`: base thread handling must exist\n    // before this object does.\n    // SAFETY: NULL settings, so the initialiser reads no caller memory.\n    unsafe { crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null()) };\n\n    // SAFETY: `RANDOM_PROVIDER_FIPS_NAME` is a NUL-terminated literal and the answer is this\n    // call's own fresh block or NULL.\n    let name = unsafe {\n        OwnedStr::adopt(\n            CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, L_CTX_PROVIDER_NAME),\n            FILE_SEAM,\n            L_CTX_ERR_PROVIDER_NAME,\n        )\n    };\n    // The authority's first failure arm frees the block alone (`:543`), which `RawGlobal`'s `Drop`\n    // performs; the name was never acquired.\n    let Some(name) = name else {\n        return ptr::null_mut();\n    };\n\n    let lock = CRYPTO_THREAD_lock_new();\n    if lock.is_null() {\n        // The authority's second failure arm frees the name (`:541`) and then the block (`:543`);\n        // `name` drops before `dgbl` because it is declared later.\n        return ptr::null_mut();\n    }\n\n    let p = dgbl.as_ptr();\n    // SAFETY: `p` is this call's own fresh block, published nowhere yet.\n    unsafe {\n        (*p).random_provider_name = name.into_raw();\n        (*p).lock = lock;\n    }\n\n    dgbl.finish().cast::<c_void>()\n}"
+    },
+    {
+     "field": "established[0]",
+     "old": "`_libctx` is never read: the parameter is `_libctx` and no expression in lines 426-465 mentions it.",
+     "new": "`_libctx` is never read: the parameter is `_libctx` and no expression in lines 426-466 mentions it."
+    },
+    {
+     "field": "established[3]",
+     "old": "The name is `CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, ...)` where the source is a NUL-terminated static literal (`c\"fips\"`); `OwnedStr::adopt` receives that call's own fresh seam block, so provenance, whole-block identity, alignment, NUL-termination, exclusive ownership and the plain `CRYPTO_free` release site are all established by the allocation call and the literal (src/runtime/owned_str.rs:135-165; src/rand/rand_lib.rs:435-443).",
+     "new": "The name is `CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, ...)` where the source is a NUL-terminated static literal (`c\"fips\"`); `OwnedStr::adopt` receives that call's own fresh seam block, so provenance, whole-block identity, alignment, NUL-termination, exclusive ownership and the plain `CRYPTO_free` release site are all established by the allocation call and the literal (src/runtime/owned_str.rs:135-165; src/rand/rand_lib.rs:436-444)."
+    },
+    {
+     "field": "established[4]",
+     "old": "The two stores at :459-462 dereference `p = dgbl.as_ptr()`, the block `RawGlobal::new` allocated in this same frame; the block is zeroed and word-aligned, holds no Rust references, and has not been published, so no alias exists and every field is writable.",
+     "new": "The two stores at :460-463 dereference `p = dgbl.as_ptr()`, the block `RawGlobal::new` allocated in this same frame; the block is zeroed and word-aligned, holds no Rust references, and has not been published, so no alias exists and every field is writable."
+    },
+    {
+     "field": "unsafe_operations[].line",
+     "old": [
+      {
+       "line": 426,
+       "kind": "unsafe_fn_definition",
+       "operation": "ossl_rand_ctx_new",
+       "contract": "No parameter precondition (see above). Marking the fn `unsafe` transfers no unstated obligation: the body's unsafe operations are each independently contracted below."
+      },
+      {
+       "line": 437,
+       "kind": "unsafe_block",
+       "operations": [
+        "CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, 526)",
+        "OwnedStr::adopt(raw, FILE_SEAM, 541)"
+       ],
+       "contract": "The source is a static NUL-terminated literal; the answer is this call's own fresh seam block or NULL; the adopted block is the whole allocation and this handle is its single release. NULL is `None` and releases nothing."
+      },
+      {
+       "line": 459,
+       "kind": "unsafe_block",
+       "operations": [
+        "raw write (*p).random_provider_name = name.into_raw()",
+        "raw write (*p).lock = lock"
+       ],
+       "contract": "`p` is the fresh, zeroed, aligned block allocated in this frame and not yet published; no reference or alias to it exists. The name is transferred exactly once (the `RawGlobal` failure path cannot run after `finish`), and the lock is the live lock this frame just created or the block is released before publication."
+      }
+     ],
+     "new": [
+      {
+       "line": 426,
+       "kind": "unsafe_fn_definition",
+       "operation": "ossl_rand_ctx_new",
+       "contract": "No parameter precondition (see above). Marking the fn `unsafe` transfers no unstated obligation: the body's unsafe operations are each independently contracted below."
+      },
+      {
+       "line": 438,
+       "kind": "unsafe_block",
+       "operations": [
+        "CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, 526)",
+        "OwnedStr::adopt(raw, FILE_SEAM, 541)"
+       ],
+       "contract": "The source is a static NUL-terminated literal; the answer is this call's own fresh seam block or NULL; the adopted block is the whole allocation and this handle is its single release. NULL is `None` and releases nothing."
+      },
+      {
+       "line": 460,
+       "kind": "unsafe_block",
+       "operations": [
+        "raw write (*p).random_provider_name = name.into_raw()",
+        "raw write (*p).lock = lock"
+       ],
+       "contract": "`p` is the fresh, zeroed, aligned block allocated in this frame and not yet published; no reference or alias to it exists. The name is transferred exactly once (the `RawGlobal` failure path cannot run after `finish`), and the lock is the live lock this frame just created or the block is released before publication."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "receipt": "sslconf-exclusivity-2026-11-10-sites.json",
+   "boundary": "ssl_conf.rs:616",
+   "file": "src/ssl/ssl_conf.rs",
+   "operation": "min_max_proto",
+   "prior_verdict": "SAFETY_DISCHARGED",
+   "prior_review": "boundary-sweep-B47",
+   "old": {
+    "line": 616,
+    "line_current": null,
+    "span_start_line": 616,
+    "span_end_line": 635,
+    "span_sha256": "22644409257205625b3d05a0ebd5902b9c032c676601f6fbc75c0ba0ee9518f7",
+    "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+   },
+   "new": {
+    "line": 628,
+    "line_current": 628,
+    "span_start_line": 628,
+    "span_end_line": 649,
+    "span_sha256": "cf85808865ee6e83b27e811dbebb28da3012deae9312d852972b3c35b5b84073",
+    "span_source_commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0"
+   },
+   "classification": "annotation-only",
+   "delta": "the in-span difference is an explicit `unsafe { }` block around an unchanged callee with unchanged arguments, plus its SAFETY comment: no token, callee, argument, control flow or effect changed",
+   "prose_coordinate_updates": [],
+   "disposition_update": {
+    "old": "SAFETY_DISCHARGED (scoped to this site by ledger row sslconf-exclusivity-2026-11-10; adjudicated DISCHARGE 14/14; recorded boundary B47-SSL-CONF-003 of boundary-sweep-B47; the binding is the content hash of the operation span at S, not the ledger coordinate)",
+    "new": "SAFETY_DISCHARGED (scoped to this site by ledger row sslconf-exclusivity-2026-11-10; adjudicated DISCHARGE 14/14; recorded boundary B47-SSL-CONF-003 of boundary-sweep-B47; the binding is the content hash of the operation span at S, not the ledger coordinate; this row declares src/ssl/ssl_conf.rs:628)"
+   }
+  }
+ ],
+ "collateral": []
+}

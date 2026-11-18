@@ -85,24 +85,24 @@
    "line_current": 426,
    "inventory_line": 426,
    "span_start_line": 426,
-   "span_end_line": 465,
-   "span_sha256": "232c98ca33e79818c46dff8f5857876c778484213f069315127c2497e8b05186",
-   "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+   "span_end_line": 466,
+   "span_sha256": "304a782704a5b63d5780212521506752ccaaf804deaf6af742b7d6b1f511d1f8",
+   "span_source_commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
    "span_schema": "safe-c33/operation-span-sha256/v1",
    "span_normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
    "span_claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
    "mechanism": "RAND_CMS_STORE_KEYFMT",
    "signature": "pub(crate) unsafe extern \"C\" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut c_void",
-   "body": "pub(crate) unsafe extern \"C\" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut c_void {\n    let Some(dgbl) = RawGlobal::new() else {\n        return ptr::null_mut();\n    };\n\n    // `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, NULL)`: base thread handling must exist\n    // before this object does.\n    crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null());\n\n    // SAFETY: `RANDOM_PROVIDER_FIPS_NAME` is a NUL-terminated literal and the answer is this\n    // call's own fresh block or NULL.\n    let name = unsafe {\n        OwnedStr::adopt(\n            CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, L_CTX_PROVIDER_NAME),\n            FILE_SEAM,\n            L_CTX_ERR_PROVIDER_NAME,\n        )\n    };\n    // The authority's first failure arm frees the block alone (`:543`), which `RawGlobal`'s `Drop`\n    // performs; the name was never acquired.\n    let Some(name) = name else {\n        return ptr::null_mut();\n    };\n\n    let lock = CRYPTO_THREAD_lock_new();\n    if lock.is_null() {\n        // The authority's second failure arm frees the name (`:541`) and then the block (`:543`);\n        // `name` drops before `dgbl` because it is declared later.\n        return ptr::null_mut();\n    }\n\n    let p = dgbl.as_ptr();\n    // SAFETY: `p` is this call's own fresh block, published nowhere yet.\n    unsafe {\n        (*p).random_provider_name = name.into_raw();\n        (*p).lock = lock;\n    }\n\n    dgbl.finish().cast::<c_void>()\n}",
+   "body": "pub(crate) unsafe extern \"C\" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut c_void {\n    let Some(dgbl) = RawGlobal::new() else {\n        return ptr::null_mut();\n    };\n\n    // `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, NULL)`: base thread handling must exist\n    // before this object does.\n    // SAFETY: NULL settings, so the initialiser reads no caller memory.\n    unsafe { crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null()) };\n\n    // SAFETY: `RANDOM_PROVIDER_FIPS_NAME` is a NUL-terminated literal and the answer is this\n    // call's own fresh block or NULL.\n    let name = unsafe {\n        OwnedStr::adopt(\n            CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, L_CTX_PROVIDER_NAME),\n            FILE_SEAM,\n            L_CTX_ERR_PROVIDER_NAME,\n        )\n    };\n    // The authority's first failure arm frees the block alone (`:543`), which `RawGlobal`'s `Drop`\n    // performs; the name was never acquired.\n    let Some(name) = name else {\n        return ptr::null_mut();\n    };\n\n    let lock = CRYPTO_THREAD_lock_new();\n    if lock.is_null() {\n        // The authority's second failure arm frees the name (`:541`) and then the block (`:543`);\n        // `name` drops before `dgbl` because it is declared later.\n        return ptr::null_mut();\n    }\n\n    let p = dgbl.as_ptr();\n    // SAFETY: `p` is this call's own fresh block, published nowhere yet.\n    unsafe {\n        (*p).random_provider_name = name.into_raw();\n        (*p).lock = lock;\n    }\n\n    dgbl.finish().cast::<c_void>()\n}",
    "precondition_set": [],
    "disposition": "SAFETY_DISCHARGED: src/rand/rand_lib.rs:426 \u2014 ossl_rand_ctx_new has no parameter precondition because _libctx is never read. The body allocates its own record, fills only that fresh private block, and returns it or NULL. Every unsafe operation in the span has a stated validity contract, and no safe Rust caller can cause UB through the safe interfaces it uses.",
    "contract": "C ABI: `void *(OSSL_LIB_CTX *)`. There is NO caller precondition on _libctx: it is bound with an underscore and the body never reads, compares, dereferences or forwards it, so NULL, dangling, unaligned or arbitrary values are all inert. The return value is either NULL (every failure arm) or a fully constructed, uniquely owned `RAND_GLOBAL` the caller becomes responsible for handing to the slot. The two stores are writes into the fresh block `RawGlobal::new` allocated for this call and published nowhere before `finish`.",
    "established": [
-    "`_libctx` is never read: the parameter is `_libctx` and no expression in lines 426-465 mentions it.",
+    "`_libctx` is never read: the parameter is `_libctx` and no expression in lines 426-466 mentions it.",
     "`RawGlobal::new()` is a safe wrapper over `CRYPTO_zalloc(size_of::<RandGlobal>(), FILE, 513)`; it answers `Some(NonNull)` for a fresh, zeroed, correctly aligned, whole-block allocation or `None` for NULL (src/rand/rand_lib.rs:383-394).",
     "A zeroed `RandGlobal` is a valid value: `unsafe impl CtxDestroy for RandGlobal` establishes obligation (b) (all-zero record of raw pointers; each releaser is NULL-tolerant), and the constructor's failure path runs only `RawGlobal::drop`, which frees the block alone and never runs `destroy_body` (src/rand/rand_lib.rs:320-371, 409-416).",
-    "The name is `CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, ...)` where the source is a NUL-terminated static literal (`c\"fips\"`); `OwnedStr::adopt` receives that call's own fresh seam block, so provenance, whole-block identity, alignment, NUL-termination, exclusive ownership and the plain `CRYPTO_free` release site are all established by the allocation call and the literal (src/runtime/owned_str.rs:135-165; src/rand/rand_lib.rs:435-443).",
-    "The two stores at :459-462 dereference `p = dgbl.as_ptr()`, the block `RawGlobal::new` allocated in this same frame; the block is zeroed and word-aligned, holds no Rust references, and has not been published, so no alias exists and every field is writable.",
+    "The name is `CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, ...)` where the source is a NUL-terminated static literal (`c\"fips\"`); `OwnedStr::adopt` receives that call's own fresh seam block, so provenance, whole-block identity, alignment, NUL-termination, exclusive ownership and the plain `CRYPTO_free` release site are all established by the allocation call and the literal (src/runtime/owned_str.rs:135-165; src/rand/rand_lib.rs:436-444).",
+    "The two stores at :460-463 dereference `p = dgbl.as_ptr()`, the block `RawGlobal::new` allocated in this same frame; the block is zeroed and word-aligned, holds no Rust references, and has not been published, so no alias exists and every field is writable.",
     "`dgbl.finish()` forgets the wrapper and returns the block pointer; ownership transfers exactly once to the caller (src/rand/rand_lib.rs:401-406).",
     "Every failure arm returns NULL after releasing exactly what was acquired: first-arm `dgbl` drops the block alone (name never acquired); second-arm `name` drops the name and `dgbl` drops the block; the lock arm returns with `lock == NULL` and performs no free of a lock it did not acquire (authority's err1 `CRYPTO_THREAD_lock_free(NULL)` is a no-op)."
    ],
@@ -117,7 +117,7 @@
      "contract": "No parameter precondition (see above). Marking the fn `unsafe` transfers no unstated obligation: the body's unsafe operations are each independently contracted below."
     },
     {
-     "line": 437,
+     "line": 438,
      "kind": "unsafe_block",
      "operations": [
       "CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, 526)",
@@ -126,7 +126,7 @@
      "contract": "The source is a static NUL-terminated literal; the answer is this call's own fresh seam block or NULL; the adopted block is the whole allocation and this handle is its single release. NULL is `None` and releases nothing."
     },
     {
-     "line": 459,
+     "line": 460,
      "kind": "unsafe_block",
      "operations": [
       "raw write (*p).random_provider_name = name.into_raw()",
@@ -161,7 +161,26 @@
    ],
    "authority_derived": [
     "rand_lib.c:511-545 allocates `dgbl` first, calls `OPENSSL_init_crypto`, duplicates the FIPS name, creates the lock, and on failure frees the name (if acquired) and the block; the Rust body preserves that order and those release arms."
-   ]
+   ],
+   "reviewed_span_sha256": "304a782704a5b63d5780212521506752ccaaf804deaf6af742b7d6b1f511d1f8",
+   "review_receipt": "b79-review-rebind",
+   "review_receipt_path": "evidence/b79-review-rebind.json",
+   "covers_site": true,
+   "covers_site_basis": "the boundary's declared range covers the current census coordinate 426 and the recorded span_sha256 is the resolver's hash of the current bytes (304a782704a5b63d); the superseded coordinate 426 is kept as inventory_line/provenance",
+   "rebind": {
+    "review": "b79-review-rebind",
+    "review_path": "evidence/b79-review-rebind.json",
+    "candidate": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+    "prior_candidate": "04acfb7ea03a2713ab69bf10a4b331c6ae65a29d",
+    "prior_span_sha256": "232c98ca33e79818c46dff8f5857876c778484213f069315127c2497e8b05186",
+    "prior_span_lines": [
+     426,
+     465
+    ],
+    "prior_coordinate": 426,
+    "delta_classification": "annotation-only",
+    "delta": "the in-span difference is an explicit `unsafe { }` block around an unchanged callee with unchanged arguments, plus its SAFETY comment: no token, callee, argument, control flow or effect changed"
+   }
   },
   {
    "id": "RAND-CTX-002",
@@ -482,5 +501,14 @@
   "conditions_met": "Conditions 1-3 are recorded in boundaries[RAND-CTX-002].caller_closure, boundaries[RAND-CTX-002].established, caller_closure and stale_reachability_evidence; adjudicated=true in this receipt and in the CAMPAIGN-STATUS boundary-sweep-B69 row.",
   "adjudicated": true
  },
- "adjudicated": true
+ "adjudicated": true,
+ "rebind_review3": {
+  "review": "b79-review-rebind",
+  "review_path": "evidence/b79-review-rebind.json",
+  "candidate": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+  "boundaries": [
+   "RAND-CTX-001"
+  ],
+  "rule": "RAND-CTX-001's span hash, span lines, body snapshot, structured unsafe-operation lines and the coordinates inside its established list are re-bound to the candidate; the receipt's other two rows and all receipt-level identity fields are untouched. The in-span change is the explicit-unsafe-block migration of the OPENSSL_init_crypto call (same callee, same arguments)."
+ }
 }

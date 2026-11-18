@@ -43,7 +43,14 @@ fn ossl_init_ssl_base() {
 /// `ssl/ssl_init.c:46-77`.
 ///
 /// # Safety
-/// `settings` must be NULL or a live `OPENSSL_INIT_SETTINGS`.
+/// `settings` must be NULL or a live `OPENSSL_INIT_SETTINGS` that also satisfies
+/// [`OPENSSL_init_crypto`]'s settings contract, because this function forwards the
+/// pointer there unchanged: its `filename` and `appname` fields must each be NULL or
+/// NUL-terminated C strings that stay live until this function returns, and the object
+/// itself must not be moved, freed, or concurrently written for the duration of this
+/// call. Stating the full contract here matters: a caller that satisfies only "NULL or
+/// a live settings object" could still drive the callee's data race or read past a
+/// non-terminated `filename`.
 #[no_mangle]
 pub unsafe extern "C" fn OPENSSL_init_ssl(
     opts: u64,
@@ -57,7 +64,11 @@ pub unsafe extern "C" fn OPENSSL_init_ssl(
         if opts & OPENSSL_INIT_NO_LOAD_CONFIG == 0 {
             opts |= OPENSSL_INIT_LOAD_CONFIG;
         }
-        if OPENSSL_init_crypto(opts, settings) == 0 {
+        // SAFETY: `settings` is NULL or a live `OPENSSL_INIT_SETTINGS` whose `filename`
+        // and `appname` fields are NUL-terminated and stay live for this call, per this
+        // function's contract, which restates the callee's requirement because the
+        // pointer is forwarded unchanged.
+        if unsafe { OPENSSL_init_crypto(opts, settings) } == 0 {
             return 0;
         }
         // `RUN_ONCE(&ssl_base, ossl_init_ssl_base)` (`ssl_init.c:73`); the step cannot fail here.

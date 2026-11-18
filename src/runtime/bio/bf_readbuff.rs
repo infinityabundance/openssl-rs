@@ -227,13 +227,25 @@ unsafe extern "C" fn readbuffer_read(b: *mut Bio, out: *mut c_char, outl: c_int)
 }
 
 /// `readbuffer_write` — this filter is read-only and always reports 0.
-#[allow(clippy::missing_safety_doc)]
+///
+/// # Safety
+/// No precondition is required.  The callback is total: it returns 0
+/// without reading, dereferencing or retaining `_b`, `_in` or `_inl`, so
+/// any argument value (including a null or dangling pointer) is accepted
+/// and ignored.  This is the C ABI signature the readbuffer `BIO_METHOD`
+/// table requires; the body performs no memory access.
 unsafe extern "C" fn readbuffer_write(_b: *mut Bio, _in: *const c_char, _inl: c_int) -> c_int {
     0
 }
 
 /// `readbuffer_puts` — always reports 0, like the write.
-#[allow(clippy::missing_safety_doc)]
+///
+/// # Safety
+/// No precondition is required.  The callback is total: it returns 0
+/// without reading, dereferencing or retaining `_b` or `_str_`, so any
+/// argument value (including a null or dangling pointer) is accepted and
+/// ignored.  This is the C ABI signature the readbuffer `BIO_METHOD` table
+/// requires; the body performs no memory access.
 unsafe extern "C" fn readbuffer_puts(_b: *mut Bio, _str_: *const c_char) -> c_int {
     0
 }

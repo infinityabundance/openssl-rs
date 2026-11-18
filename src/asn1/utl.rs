@@ -467,6 +467,51 @@ pub(crate) unsafe fn get_const_field_ptr(
     unsafe { offset2ptr(*pval, tt.offset as c_long) as *mut *const c_void }
 }
 
+/// Whether `it`'s value is stored **in the field slot itself** rather than behind it.
+///
+/// An `ASN1_BOOLEAN` primitive is the only item for which this is true: `ASN1_item_new`
+/// writes the item's default into the slot's low four bytes, and the encoder, decoder
+/// and free walk read and write four bytes there. Every other item's slot holds a
+/// pointer.
+///
+/// This is the distinction the generic template walk must respect. A field is reached
+/// as `base + offset` and the walk otherwise assumes the slot is `ASN1_VALUE **`, an
+/// eight-byte pointer. For an inline boolean that assumption is wrong twice over: the
+/// access is over-wide (eight bytes read from a four-byte field, and at a struct's last
+/// field four bytes past the allocation) and, at the four-byte-aligned offsets these
+/// fields occupy, misaligned for a pointer read. Reading or writing the slot as an
+/// [`c_int`] through [`read_inline_boolean`]/[`write_inline_boolean`] is the only
+/// width- and alignment-correct access.
+pub(crate) fn is_inline_boolean(it: &Asn1Item) -> bool {
+    it.itype == ASN1_ITYPE_PRIMITIVE && it.utype == c_long::from(V_ASN1_BOOLEAN)
+}
+
+/// Read an inline `ASN1_BOOLEAN` from its field slot, at the field's real width.
+///
+/// # Safety
+///
+/// `slot` must address a readable field slot of at least `size_of::<c_int>()` bytes
+/// whose item satisfies [`is_inline_boolean`]. An unaligned read is deliberate: the
+/// field is a four-byte `int` and its offset need not be pointer-aligned.
+#[inline]
+pub(crate) unsafe fn read_inline_boolean(slot: *const c_void) -> c_int {
+    // SAFETY: the caller establishes the slot holds an initialized `c_int`.
+    unsafe { core::ptr::read_unaligned(slot.cast::<c_int>()) }
+}
+
+/// Write an inline `ASN1_BOOLEAN` into its field slot, at the field's real width.
+///
+/// # Safety
+///
+/// `slot` must address a writable field slot of at least `size_of::<c_int>()` bytes
+/// whose item satisfies [`is_inline_boolean`]. An unaligned write is deliberate: the
+/// field is a four-byte `int` and its offset need not be pointer-aligned.
+#[inline]
+pub(crate) unsafe fn write_inline_boolean(slot: *mut c_void, value: c_int) {
+    // SAFETY: the caller establishes the slot is writable for a `c_int`.
+    unsafe { core::ptr::write_unaligned(slot.cast::<c_int>(), value) }
+}
+
 /// `ossl_asn1_do_adb` — resolve an `ANY DEFINED BY` template to a concrete one.
 ///
 /// Returns `tt` unchanged when the template carries no `ASN1_TFLG_ADB_MASK`, and null on

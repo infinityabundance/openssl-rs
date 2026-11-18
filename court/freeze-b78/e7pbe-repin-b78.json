@@ -1,0 +1,78 @@
+{
+  "schema": "openssl-rs/safe-c33/e7pbe-fixture-repin/v1",
+  "purpose": "re-pin the E7-PBE self-test fixture by symbol for the b78 image; the fixture's literal keys are stable case ids only",
+  "image": {
+    "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+    "sha256": "a27ca428f899a58bab0449d46914a54af3f604d4b72c0ff0e5153ab14415e507"
+  },
+  "sites": {
+    "EVP_PBE_CipherInit_ex": {
+      "stable_case_id": "0x17b1f5",
+      "pin": [
+        "EVP_PBE_CipherInit_ex",
+        "0x415"
+      ],
+      "symbol_start": "0x4120e0",
+      "site_address": "0x4124f5",
+      "resolved_offset": "0x415",
+      "how": "pin",
+      "instruction": "call   *%rax",
+      "is_indirect_transfer": true
+    },
+    "PKCS5_v2_PBE_keyivgen_ex": {
+      "stable_case_id": "0x17cee8",
+      "pin": [
+        "PKCS5_v2_PBE_keyivgen_ex",
+        "0x208"
+      ],
+      "symbol_start": "0x4d0640",
+      "site_address": "0x4d0802",
+      "resolved_offset": "0x1c2",
+      "how": "search",
+      "instruction": "call   *%rax",
+      "is_indirect_transfer": true
+    }
+  },
+  "target_leaves": {
+    "PKCS12_PBE_keyivgen_ex": [
+      "0x363580"
+    ],
+    "PKCS5_v2_PBE_keyivgen_ex": [
+      "0x4d0640"
+    ],
+    "PKCS5_v2_PBKDF2_keyivgen_ex": [
+      "0x4daf60"
+    ],
+    "PKCS5_PBE_keyivgen_ex": [
+      "0x492be0"
+    ],
+    "PKCS5_v2_scrypt_keyivgen_ex": [
+      "0x3150f0"
+    ]
+  },
+  "builtin_table": {
+    "base": "0x858090",
+    "keygen_ex_member_offset": "0x18",
+    "row_stride": 32,
+    "selected_rows": [
+      32,
+      33
+    ]
+  },
+  "find_ex_got_slot": [
+    "0x89ab48"
+  ],
+  "derivation": {
+    "site_2_moved_from_pin": "the recorded +0x208 no longer lands; the in-symbol witness search accepts exactly one of the symbol's indirect transfers",
+    "uniqueness": "see pin_resolution_report()['moved'] for the b78 run"
+  },
+  "controls_added": [
+    "a target leaf that disappears or is ambiguous fails the fixture",
+    "a site that is not an indirect transfer in its pinned symbol fails",
+    "a moved site is accepted only with a unique witness acceptance",
+    "the mutation anchors (zero store, address escape, reloads) are read from the witness and their shapes are asserted"
+  ],
+  "not_proved": [
+    "the fixture proves the target set and the refusal controls; it is not a family discharge"
+  ]
+}

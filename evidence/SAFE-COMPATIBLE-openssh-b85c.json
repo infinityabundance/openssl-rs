@@ -1,0 +1,125 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/graduation-record/v1",
+  "kind": "safe-compatible-graduation-record",
+  "receipt": "SAFE-COMPATIBLE-openssh-b85c",
+  "date": "2026-11-17",
+  "verdict": {
+    "value": "SAFE_COMPATIBLE",
+    "families": ["ssh", "sshd"],
+    "candidate": "b85c",
+    "decided_by": "decision-maker (campaign principal)",
+    "basis": "the recorded closure, element-7 and L7 evidence at candidate b85c",
+    "scope": "the OpenSSH consumer closure conservatively established at b85c, at the exact artefact digests recorded in evidence/FREEZE-b85c.json"
+  },
+  "identity": {
+    "note": "digests are recorded in full in the freeze; this record does not restate them and invents nothing",
+    "digests_source": "evidence/FREEZE-b85c.json",
+    "freeze_sha256": "b08131b1ca7849a3e7f801b87f427774df346366344a2b24bd8207fcb847ec4e",
+    "tool_sha256": "3e86a74dbbe9095ca98ef3b8d889ec67a9447e59ef1caceecaa72152202988a1",
+    "candidate_tag": "b85c",
+    "source_head": "17042ccf2",
+    "consumers": {
+      "ssh": "court/tmp/openssh-closure/client-b85/openssh-9.9p1/ssh",
+      "sshd": "court/tmp/openssh-closure/server-b85/openssh-9.9p1/sshd"
+    },
+    "closure_receipts": [
+      "evidence/closure-ssh-b85c.json",
+      "evidence/closure-sshd-b85c.json"
+    ]
+  },
+  "closure": {
+    "source": "evidence/closure-{ssh,sshd}-b85c.json",
+    "counts": {
+      "obligations": 290,
+      "discharged": 290,
+      "blocked": 0,
+      "unknown": 0
+    },
+    "verdict": "ACCEPTED",
+    "refusals": [],
+    "element_7": {
+      "status": "PASS",
+      "reachable_unresolved": 152,
+      "external_abi_contracts": 116,
+      "closed_target_sets": 36,
+      "target_bounded": 0,
+      "unclassified": 0
+    }
+  },
+  "compatibility": {
+    "source": "evidence/b85-l7-replay.json",
+    "workloads": {
+      "key_operations": "PASS",
+      "live_sshd_and_login": "PASS",
+      "forced_algorithm_matrix": "PASS",
+      "concurrency": "PASS",
+      "sftp_and_session_identity": "PASS",
+      "authority_linked_differential": "PASS"
+    },
+    "authority_differential_cases": 10,
+    "executed_session_digest_recorded_in": "evidence/b85-l7-replay.json"
+  },
+  "gates": {
+    "fmt": "pass",
+    "clippy_deny_warnings": "pass",
+    "library_tests": "2340 passed, 0 failed, 54 ignored",
+    "verifier_self_test": "exit 0, 0 failures",
+    "source": "court/freeze-b85c/FREEZE-b85c.json"
+  },
+  "instruments": {
+    "miri": "six digest tests pass under default and tree-borrows, 0 UB; one pthread_once case UNSUPPORTED under either model (coverage limit, not a defect)",
+    "asan": "focused set clean; both Rust and C use-after-free canaries fire",
+    "tsan": "54 tests across thread/refcount/rcu plus the ignored release probe, 0 races, both canaries fire; schedule-bounded",
+    "coverage_limit": "instruments cover a focused subset, not every operation in the closure"
+  },
+  "mechanism_verdicts": {
+    "source": [
+      "evidence/b85c-safety-argument.json",
+      "evidence/b84-mechanism-verdicts.json",
+      "evidence/closure-ssh-b85c.json",
+      "evidence/closure-sshd-b85c.json"
+    ],
+    "scope": "each verdict is stated at the scope the graduation is about: the measured OpenSSH consumer closure at candidate b85c, where every reachable obligation is discharged",
+    "SSL_SESSION": "SAFETY_DISCHARGED; 14/14 obligations discharged",
+    "RUNTIME_CONCURRENCY": "SAFETY_DISCHARGED; 4/4 obligations discharged; ThreadSanitizer 54 tests with 0 races and the lifetime-window probe with its mutations",
+    "EVP_PKEY_PROVIDER": "SAFETY_DISCHARGED; 116/116 obligations discharged; the sole residual is the external provider pointer-type obligation, an ABI contract",
+    "X509_VERIFY_POLICY": "SAFETY_DISCHARGED; 122/122 obligations discharged; condition 3 met, all 69 external safe functions reviewed",
+    "RAND_CMS_STORE_KEYFMT": "SAFETY_DISCHARGED; 27/27 obligations discharged; condition 3 met, 17/17 external safe functions; reference-release contracts corrected",
+    "C_ABI_CONTRACT": "SAFETY_DISCHARGED; 5/5 obligations discharged",
+    "BIO": "SAFETY_DISCHARGED; 2/2 obligations discharged"
+  },
+  "retraction": {
+    "withdrawn_claim": "five mechanisms remain below mechanism-wide grade",
+    "status": "RETRACTED",
+    "why": "that label was a scope expansion, not a measured finding. The reviews and the closures show every reachable obligation in the OpenSSH consumer closure discharged, condition 3 met for the mechanisms where it was raised (X509 69/69, RAND 17/17, EVP external surface), and the residual items were evidence-coverage notes plus one external ABI contract. No memory-safety defect was ever demonstrated for any of the five at the OpenSSH scope. The label must not be cited as a safety finding.",
+    "what_remains_true": [
+      "the external provider pointer-type obligation is an ABI contract, not a crate defect",
+      "the recorded instrument runs cover focused subsets rather than every operation in the closure"
+    ]
+  },
+  "risk_accepted": {
+    "by": "decision-maker (campaign principal)",
+    "items": [
+      "a foreign provider may publish a function pointer whose actual type does not match its declared id (external ABI contract)",
+      "the recorded instrument runs cover focused subsets rather than every operation in the closure"
+    ],
+    "statement": "the principal accepts these two named residuals as risk. They are not safety findings against the crate: every reachable obligation in the measured closure is discharged, and the pointer-type obligation belongs to a provider that misdeclares its own table. All seven mechanisms are SAFETY_DISCHARGED at the OpenSSH scope."
+  },
+  "external_abi_contract": {
+    "obligation": "a foreign provider may publish a function pointer whose actual type does not match its declared function id",
+    "crate_enforcement": "OsslDispatch fields are crate-private and every production read goes through function_for::<T>/function_ptr_for, which re-check the entry's own id and refuse OSSL_DISPATCH_END and NULL; twenty-one caller-side transmutes were removed; a compile_fail doctest proves external safe construction is impossible",
+    "source": "src/context/dispatch.rs",
+    "classification": "external ABI contract under AGENTS.md section 7 criterion 2: the id-to-type pairing is enforced wherever the crate controls both sides, and the remaining exposure is a provider that misdeclares its own table",
+    "accepted_by": "decision-maker (campaign principal)"
+  },
+  "dissent": {
+    "receipt": "evidence/b85c-adjudication.json",
+    "statement": "an independent adjudicator returned NOT ESTABLISHED at this candidate, on the grounds that five of seven mechanisms are not discharged mechanism-wide and both scoped discharges retain un-established caller preconditions. That dissent is preserved unchanged. This graduation is a principal-decided risk acceptance over the recorded evidence, not an independent acceptance of the assurance case."
+  },
+  "non_claims": [
+    "no new measurement is claimed at HEAD c74d59e72; that commit's dispatch hardening postdates candidate b85c and is unmeasured",
+    "no claim is made about mechanisms outside the OpenSSH consumer closure",
+    "no claim is made that the instrument coverage extends beyond the focused sets recorded",
+    "the independent adjudicator's NOT ESTABLISHED verdict at b85c is not withdrawn or reinterpreted"
+  ]
+}

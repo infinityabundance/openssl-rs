@@ -25,5 +25,6 @@ const OPENSSL_INIT_LOAD_SSL_STRINGS: u64 = 0x0020_0000;
 /// The authority's second argument is a null `OPENSSL_INIT_SETTINGS *`; no precondition.
 #[no_mangle]
 pub extern "C" fn ERR_load_SSL_strings() -> c_int {
-    OPENSSL_init_crypto(OPENSSL_INIT_LOAD_SSL_STRINGS, ptr::null())
+    // SAFETY: NULL settings, so the initialiser reads no caller memory.
+    unsafe { OPENSSL_init_crypto(OPENSSL_INIT_LOAD_SSL_STRINGS, ptr::null()) }
 }

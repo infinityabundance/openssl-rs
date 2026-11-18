@@ -1,0 +1,49 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/boundary-review/v1",
+ "kind": "independent-boundary-review",
+ "receipt": "b45-c5-review-2026-11-13",
+ "date": "2026-11-13",
+ "campaign": "safe-c33",
+ "subject": "whether boundary-sweep-B45 condition C5 (evidence commit and freeze) is now closed, so the nine B45 discharges can be applied",
+ "candidate": {
+  "named_by_the_b45_receipt": "afcfdc47eb8354a6eadef9adf92d49b174c98db5",
+  "library_named_by_the_b45_review": "d720727aa4b9a59fa7618dc5a5130b30d2554c97776cf55ce2ab7a605a573837",
+  "current_candidate": "15bebabc90e1c4a8f0cb496813030c1415891f7c",
+  "current_library": "e8a90ba4bd1e597ed22adbfef56c7336b80a65477393ba5a74afbbe428b985cb",
+  "current_head": "df7ad0304"
+ },
+ "reviewer": {
+  "role": "independent adjudicator; read-only; not the author of boundary-sweep-B45 or of the C1 control",
+  "independence": "separate agent session; reviewed the committed repository state and the B45 evidence read-only",
+  "scope": "condition C5 only; C1-C4 were not re-opened and their recorded closures were not re-adjudicated"
+ },
+ "verdict": "C5 OPEN — B45 MUST REMAIN NOT_APPLIED",
+ "facts": [
+  {"id": 1, "claim": "the tree is clean and HEAD is a commit", "result": "PASS", "detail": "git status --porcelain empty; HEAD df7ad0304"},
+  {"id": 2, "claim": "the proposal and control commits are ancestors", "result": "PASS", "detail": "cdeb6841c (B45 discharge proposed, NOT applied) and bdd04fa68 (C1 control)"},
+  {"id": 3, "claim": "the B45 receipt is tracked in HEAD", "result": "PASS", "detail": "git ls-tree HEAD -- atlas-refresh/boundary-sweep-B45.json returns blob 186984dc"},
+  {"id": 4, "claim": "the nine B45 source files are unchanged between the receipt candidate and the current source", "result": "PASS", "detail": "git diff --stat afcfdc47e 15bebabc9 -- the nine tb_*.rs paths is empty; also empty afcfdc47e..HEAD"},
+  {"id": 5, "claim": "the C1 control is present", "result": "PASS", "detail": "src/engine/eng_table.rs:995 in HEAD"},
+  {"id": 6, "claim": "a freeze satisfies C5 evidence finality", "result": "FAIL", "detail": "court/freeze-b73/FREEZE-b73.json binds source 15bebabc9 and libcrypto e8a90ba4, but records working_tree.tracked_dirty=true, repository_head=cd83e0c2a, modified_paths including forensics/tools/consumer_closure.py, tool.changed_since_closures=true ('re-run required') and gates.closure_verdicts=REFUSED. It self-declares non-finality."},
+  {"id": 7, "claim": "C1-C4 are recorded closed and C5 is the only open condition", "result": "PASS", "detail": "mechanism-discharge-ENGINE-CLEANUP-B45-review.json lines 76/82/89/96 mark C1-C4 CLOSED; lines 101-106 mark C5 OPEN; CAMPAIGN-STATUS review_grade_gap says C5 is still OPEN and no archived review entry records its closure"}
+ ],
+ "residuals": [
+  "FREEZE-b73 self-declares non-finality: dirty working tree, instrument changed since its closures, closures REFUSED, and the required re-run was never re-frozen.",
+  "The B45 receipt names candidate afcfdc47e and library d720727a, not the freeze's 15bebabc9 / e8a90ba4. The nine files match, but the named identity does not.",
+  "The C1 mutation/focused-test evidence was observed at a working tree, not re-observed at a commit.",
+  "CAMPAIGN-STATUS already says the B45 row is applied at v1u, which contradicts its own review_grade_gap note; the contradiction is recorded, not used to justify an application."
+ ],
+ "prohibitions": [
+  "Do not mark B45 APPLIED.",
+  "Do not cite dcddae209 as an adjudicated closure.",
+  "Do not call FREEZE-b73 final.",
+  "Do not claim C_ABI_CONTRACT discharged.",
+  "Do not flip C5 by prose edit without a genuine re-freeze and a fresh independent adjudication."
+ ],
+ "required_resolution": [
+  "Re-run the C1 control at a committed source candidate and record the observed result.",
+  "Re-bind the B45 receipt to that candidate and to the library it was measured against, or re-measure it.",
+  "Generate a freeze whose working tree is clean, whose instrument did not change since the closures, and whose closures are ACCEPTED.",
+  "Obtain a fresh independent adjudication that C5 is closed; only then apply the nine discharges."
+ ]
+}

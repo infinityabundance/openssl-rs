@@ -1,0 +1,66 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/evidence-readjudication/v1",
+ "kind": "evidence-readjudication-probe",
+ "date": "2026-11-13",
+ "family": "sshd",
+ "candidate": {
+  "src_content_sha256": "8ee037be6789bd8e2731d5081b787dda2ebfa190a873c1366f1aac01f7ba7374",
+  "source_head": "15bebabc90e1c4a8f0cb496813030c1415891f7c"
+ },
+ "artifact": {
+  "path": "sshd",
+  "sha256": "64e0a4cc190fc3897aabcd2f95cdc630d25b3dc11b2a9635973449fe84164f92"
+ },
+ "instrument": {
+  "path": "forensics/tools/consumer_closure.py",
+  "sha256": "edadf43b71285612cf53c9895c7beb751f270949e2f093dec8fa6e1bbd3fb483",
+  "version": 6
+ },
+ "probe": {
+  "path": "forensics/memory-safety/campaign/safe-c33/evidence/b75_readjudicate.py",
+  "sha256": "71cc8af70e86e1b949070e9b83db83d8c1de1e8b02d36b7a5ee60eb1a4a14200",
+  "exit": 0
+ },
+ "inputs": {
+  "evidence/closure-sshd-b73-r2.json": "d0addc72f94904b03e63b2bd1d92dc5506c1ea67f6732b5a51a124f943f5cee5",
+  "evidence/sshd-artifact-ledger.json": "34ff5e2eec66d7c522951c9ef639d0e97c1a61501a232b0f579a4fe5fd7dc36e",
+  "court/freeze-b73/FREEZE-b73.json": "1926ccdba24c8cb3c11068207a37a456a1d9a904b224a852254582f3a97a5324",
+  "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": "97b3c41ea09b9c05c6725e790413aa5a472e4dc8904a2474cbcb7e8f0e470411",
+  "forensics/memory-safety/campaign/safe-c33/atlas-refresh/r13-coordinate-rebind-sites.json": "225275e35179c7f475c1031e6a783a9ee4630529127a715da67a1cecab51863e",
+  "forensics/memory-safety/campaign/safe-c33/evidence/b75_readjudicate.py": "71cc8af70e86e1b949070e9b83db83d8c1de1e8b02d36b7a5ee60eb1a4a14200"
+ },
+ "method": "import the shipping tool's load_obligation_mechanisms, discharge_plane, load_boundaries and adjudicate; run every obligation in the frozen b73-r2 sshd receipt with enforce_conflicts=True, repo=worktree, allow_worktree_span=True; then run the per-artefact ledger verifier over the receipt, sidecar and freeze. No rebuild and no binary analysis.",
+ "before": {
+  "DISCHARGED": 320,
+  "BLOCKED": 3,
+  "UNKNOWN": 0
+ },
+ "after": {
+  "DISCHARGED": 323,
+  "BLOCKED": 0,
+  "UNKNOWN": 0
+ },
+ "artifact_binding": {
+  "artifact_sha256_matches": true,
+  "family_matches": true,
+  "artifact_rel_matches": true,
+  "freeze_artifact_matches": true,
+  "freeze_libcrypto_matches": true,
+  "freeze_source_matches": true,
+  "recipe_id_matches": true,
+  "source_sha256_matches": true
+ },
+ "explanation": "the three BLOCKED obligations are the eng_list TOCTOU already discharged by boundary-sweep-B73 and the two OCSP conflicts resolved by B75; the sshd artefact is the exact binary FREEZE-b73 records for the same recipe/source, so the per-artefact ledger join is verifiable.",
+ "does_not_prove": [
+  "a fresh closure run",
+  "a rebuilt sshd",
+  "L7 workloads",
+  "any BOUNDARY/SEAL instrument",
+  "SAFE_COMPATIBLE"
+ ],
+ "non_claims": [
+  "The probe is evidence about the evidence ledger, not a new closure receipt.",
+  "The b73-r2 receipt remains immutable and still states 320/3.",
+  "The re-bound receipt is not written to evidence; the tool is verified but the final receipt requires a fresh run."
+ ]
+}

@@ -258,9 +258,14 @@ unsafe extern "C" fn stbl_module_init(md: *mut ConfImodule, cnf: *const Conf) ->
 
 /// `static void stbl_module_finish(CONF_IMODULE *md)` — `crypto/asn1/asn_mstbl.c:42-45`: the whole
 /// body is `ASN1_STRING_TABLE_cleanup()`.
-unsafe extern "C" fn stbl_module_finish(_md: *mut ConfImodule) {
+extern "C" fn stbl_module_finish(_md: *mut ConfImodule) {
     ASN1_STRING_TABLE_cleanup();
 }
+
+// Compile-time control: the converted finish callback keeps its exact C signature,
+// and restoring the `unsafe` qualifier breaks this build.
+#[cfg(test)]
+const _: extern "C" fn(*mut ConfImodule) = stbl_module_finish;
 
 /// `void ASN1_add_stable_module(void)` — `crypto/asn1/asn_mstbl.c:47-50`.
 ///

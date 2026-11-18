@@ -1,0 +1,54 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/boundary-review/v1",
+ "kind": "independent-boundary-review",
+ "receipt": "v1l-c-class-review-2026-11-13",
+ "date": "2026-11-13",
+ "campaign": "safe-c33",
+ "subject": "the nine remaining openssh-v1l C-class callbacks",
+ "candidate": {
+  "source_head": "ba60ad76a423c9e8d36cba24535fb578a02dbce3",
+  "src_content_sha256": "e2d945af520d5b54dd033a5bb2eee05f916fc98c740e2d8353b8c6adc129075f",
+  "note": "S4; the six A-class v1l helpers are already structurally eliminated by v1l-safe-helpers-elimination-sites.json"
+ },
+ "reviewer": {
+  "role": "independent adjudicator; read-only; not the author of the v1l receipt",
+  "scope": "the nine C-class sites only",
+  "method": "read each function, its contract, and every production reference; follow the dispatcher/ownership path; check for a load-bearing control"
+ },
+ "verdict": "APPROVE_WITH_CONDITIONS — the caller contracts are established, but the control condition is not met, so the discharge is NOT APPLIED",
+ "sites": [
+  {"id":1,"file":"src/decoder_lib.rs","line":1080,"operation":"decoder_free_thunk","caller":"OSSL_DECODER_CTX_add_extra -> sk_pop_free (:1402); elements up_ref'd in collect_all_decoders (:1120)","precondition_established":true,"hidden_obligation":"none; per-element ref balanced","control":"none drives add_extra"},
+  {"id":2,"file":"src/engine/eng_fat.rs","line":197,"operation":"push_cstr_or_null","caller":"ENGINE_set_default_string :235; NULL rendered <NULL>","precondition_established":true,"hidden_obligation":"def_list NUL-termination is the documented external ABI precondition, not re-checked","control":"none; error arm untested"},
+  {"id":3,"file":"src/runtime/confmod/mod.rs","line":397,"operation":"module_free_thunk","caller":"CONF_modules_unload :1369; entries sk_delete'd from the re-published dup, freed after ossl_synchronize_rcu","precondition_established":true,"hidden_obligation":"depends on conf_modules_finish_int running first (it does, :1313)","control":"none"},
+  {"id":4,"file":"src/ui/ui_util.rs","line":197,"operation":"ui_free_method_data","caller":"CRYPTO_free_ex_data -> registered CRYPTO_EX_INDEX_UI_METHOD free slot (:224); index private","precondition_established":true,"hidden_obligation":"CRYPTO_set_ex_data is failure-atomic, so no double release","control":"positive test the_wrapper_builds_a_method_and_attaches_its_data; no negative canary"},
+  {"id":5,"file":"src/x509/v3_akid.rs","line":182,"operation":"akid_i2v","caller":"X509V3_EXT_print -> v3_prn.rs:326 under RegistryReadGuard; ext_str decoded with the row's own AUTHORITY_KEYID_it","precondition_established":true,"hidden_obligation":"row it -> value-type match; no AKID test pin","control":"none (no cfg(test) in v3_akid.rs)"},
+  {"id":6,"file":"src/x509/v3_akid.rs","line":193,"operation":"akid_v2i","caller":"do_ext_nconf -> v3_conf.rs:1074, read guard held, live X509V3_CTX; impl accepts NULL ctx","precondition_established":true,"hidden_obligation":"same row/it match","control":"none"},
+  {"id":7,"file":"src/x509/v3_san.rs","line":1176,"operation":"san_i2v","caller":"v3_prn.rs:326; value decoded with row's GENERAL_NAMES_it","precondition_established":true,"hidden_obligation":"row/it match","control":"row-pairing test :1523"},
+  {"id":8,"file":"src/x509/v3_san.rs","line":1187,"operation":"san_v2i","caller":"v3_conf.rs:1074, row[0] subject-alt builder","precondition_established":true,"hidden_obligation":"none","control":"test pins builder per NID"},
+  {"id":9,"file":"src/x509/v3_san.rs","line":1197,"operation":"san_v2i_issuer","caller":"v3_conf.rs:1074, row[1] issuer-alt builder","precondition_established":true,"hidden_obligation":"none","control":"test pins builder per NID"}
+ ],
+ "caller_closure": {
+  "state": "CLOSED",
+  "detail": "no second production caller; .i2v is invoked only at v3_prn.rs:326, .v2i only at v3_conf.rs:1074, both through the site's own table row"
+ },
+ "conditions": [
+  {"id":"C1","status":"OPEN","requirement":"add a load-bearing negative control for decoder_free_thunk (double or wrong release must be observable)"},
+  {"id":"C2","status":"OPEN","requirement":"add a control for push_cstr_or_null's error arm and its NULL/<NULL> rendering"},
+  {"id":"C3","status":"OPEN","requirement":"add a control for module_free_thunk release-once under CONF_modules_unload"},
+  {"id":"C4","status":"OPEN","requirement":"add a negative canary for ui_free_method_data (wrong index or double release must be refused)"},
+  {"id":"C5","status":"OPEN","requirement":"add a row/it pairing or decode-refusal control for akid_i2v and akid_v2i"},
+  {"id":"C6","status":"OPEN","requirement":"run Miri/ASan and a full build; this review is source-only"}
+ ],
+ "residuals": [
+  "No Miri/ASan, no build and no test execution.",
+  "The six controls above are missing; the discharge condition 'every guard has a load-bearing mutation control' therefore fails on the same test B48 used to refuse its 67-row application.",
+  "The review establishes contracts, not runtime behaviour."
+ ],
+ "disposition": "NOT_APPLIED",
+ "required_resolution": "add C1-C5 controls, run C6, then obtain a fresh adjudication; only then apply the nine sites. Until then the applied ledger keeps them REVIEW_REQUIRED.",
+ "non_claims": [
+  "This review does not discharge or apply the nine sites.",
+  "It does not change the projected 70 count.",
+  "It is not a sanitizer or build result."
+ ]
+}

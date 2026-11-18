@@ -224,22 +224,24 @@ null_factory!(
 ///
 /// `NID_undef` for NULL. Unlike the context accessor below, this one checks the
 /// pointer it is given.
-// A safe `extern "C" fn` taking a pointer it reads is what the authority declares,
-// and `ABI-PROTOTYPE` resolves the export by that declaration: making it `unsafe`
-// would be a different prototype. The pointer's contract is the caller's, which is
-// the same statement every other accessor in this crate makes through an `unsafe`
-// block and the same one this one makes through the NULL check and the SAFETY line.
-#[allow(
-    clippy::not_unsafe_ptr_arg_deref,
-    reason = "the authority's declaration is a safe extern fn taking a borrowed pointer"
-)]
+///
+/// # Safety
+///
+/// `meth` must be NULL or point to a live `CompMethod` that is properly aligned for
+/// that type and fully initialised, and it must stay valid for the duration of the
+/// call. The pointer's provenance is the caller's: it names a method object the
+/// caller owns or borrows (a `COMP_*` factory result, in practice), never a block
+/// this function creates. NULL is total and is the only value that needs no
+/// precondition; a dangling, misaligned or uninitialised pointer is undefined
+/// behaviour even though the body's NULL test runs first. No ownership is taken:
+/// the returned `int` is a copy of `meth->type`.
 #[no_mangle]
-pub extern "C" fn COMP_get_type(meth: *const CompMethod) -> c_int {
+pub unsafe extern "C" fn COMP_get_type(meth: *const CompMethod) -> c_int {
     if meth.is_null() {
         return NID_UNDEF;
     }
-    // SAFETY: `meth` is non-NULL and, per the caller's contract, points at a live
-    // `CompMethod`.
+    // SAFETY: `meth` is non-NULL and, per this function's contract, points at a live,
+    // aligned, initialised `CompMethod` valid for the call.
     unsafe { (*meth).type_ }
 }
 
@@ -247,15 +249,32 @@ pub extern "C" fn COMP_get_type(meth: *const CompMethod) -> c_int {
 ///
 /// `NULL` for NULL, and the method's own name otherwise — which the authority
 /// documents as possibly NULL itself for a method whose author set no name.
-#[allow(clippy::not_unsafe_ptr_arg_deref, reason = "as COMP_get_type")]
+///
+/// # Safety
+///
+/// `meth` must be NULL or point to a live `CompMethod`, aligned and fully
+/// initialised, valid for the duration of the call, exactly as for
+/// [`COMP_get_type`]. The returned `*const c_char` is **borrowed** from the method:
+/// it is that method's own `name` field, not a copy, so it may be NULL and is valid
+/// only while the method is. The caller must not release it through the crate's
+/// allocator seam.
 #[no_mangle]
-pub extern "C" fn COMP_get_name(meth: *const CompMethod) -> *const c_char {
+pub unsafe extern "C" fn COMP_get_name(meth: *const CompMethod) -> *const c_char {
     if meth.is_null() {
         return core::ptr::null();
     }
-    // SAFETY: as in `COMP_get_type`.
+    // SAFETY: `meth` is non-NULL and points at a live method per this function's
+    // contract; reading its `name` field is a read of initialised storage.
     unsafe { (*meth).name }
 }
+
+// ABI-shape controls for the two accessors above: the parameter/return types are
+// pinned, so an ABI change stops this file compiling. (They do *not* pin the `unsafe`
+// qualifier: a safe `extern "C" fn` item also coerces to an `unsafe extern "C" fn`
+// pointer, verified at this head. The qualifier is controlled by
+// `the_two_exported_accessors_are_unsafe_fns` in the test module below.)
+const _: unsafe extern "C" fn(*const CompMethod) -> c_int = COMP_get_type;
+const _: unsafe extern "C" fn(*const CompMethod) -> *const c_char = COMP_get_name;
 
 /// `COMP_CTX *COMP_CTX_new(COMP_METHOD *meth)`
 ///
@@ -429,6 +448,30 @@ mod comp_api_tests {
     use super::*;
     use core::sync::atomic::{AtomicUsize, Ordering};
 
+    /// Qualifier control for the six-defect repair: safe Rust must not be able to call
+    /// these two with an unchecked pointer. A type-level assertion cannot express
+    /// "this item is an `unsafe fn`" on stable Rust (a safe fn item coerces to an
+    /// `unsafe fn` pointer), so the signature is pinned in the production source text,
+    /// which is read from disk and truncated at the first `#[cfg(test)]` module. This
+    /// test's own assertion text is therefore never searched, and each needle is
+    /// assembled from fragments, so removing either `unsafe` makes this test fail in
+    /// the `cargo test --lib` gate.
+    #[test]
+    #[allow(clippy::expect_used)]
+    fn the_two_exported_accessors_are_unsafe_fns() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/runtime/bio/comp.rs");
+        let src = std::fs::read_to_string(path).expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        for needle in [
+            concat!("pub unsafe extern ", "\"C\" fn COMP_get_type("),
+            concat!("pub unsafe extern ", "\"C\" fn COMP_get_name("),
+        ] {
+            assert!(prod.contains(needle), "missing {needle}");
+        }
+    }
+
     /// Negative control for the `finish` hook: the successful-free path must run it.
     static FINISHES_AFTER_FREE: AtomicUsize = AtomicUsize::new(0);
 
@@ -447,9 +490,13 @@ mod comp_api_tests {
 
     #[test]
     fn the_null_contracts_are_the_authoritys() {
-        assert_eq!(COMP_get_type(core::ptr::null()), NID_UNDEF);
-        assert_eq!(COMP_get_type(core::ptr::null()), 0);
-        assert!(COMP_get_name(core::ptr::null()).is_null());
+        // SAFETY: NULL is a defined argument for both accessors, so the contract is
+        // satisfied without a live method.
+        unsafe {
+            assert_eq!(COMP_get_type(core::ptr::null()), NID_UNDEF);
+            assert_eq!(COMP_get_type(core::ptr::null()), 0);
+            assert!(COMP_get_name(core::ptr::null()).is_null());
+        }
         // SAFETY: NULL is a defined argument for both of these.
         unsafe {
             assert!(COMP_CTX_new(core::ptr::null_mut()).is_null());

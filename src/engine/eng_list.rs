@@ -83,27 +83,96 @@ fn unlock() {
     unsafe { CRYPTO_THREAD_unlock(global_engine_lock()) };
 }
 
+/// Test-only observation point for [`engine_list_cleanup`].
+///
+/// It sits exactly where the pre-fix body handed a head read **outside** the engine lock to
+/// `ENGINE_remove`; the canary in `tests` uses it to assert that the head is now observed
+/// while this thread already holds the engine write lock. No release build contains it.
+#[cfg(test)]
+mod cleanup_order_probe {
+    use super::*;
+    use core::sync::atomic::AtomicUsize;
+
+    /// How many steps of the cleanup loop this test process has observed.
+    static STEPS: AtomicUsize = AtomicUsize::new(0);
+    /// Whether every observed step held the engine write lock on its own thread.
+    static HELD_EVERY_STEP: core::sync::atomic::AtomicBool =
+        core::sync::atomic::AtomicBool::new(false);
+
+    pub(super) fn reset() {
+        STEPS.store(0, Ordering::SeqCst);
+        HELD_EVERY_STEP.store(true, Ordering::SeqCst);
+    }
+
+    pub(super) fn steps() -> usize {
+        STEPS.load(Ordering::SeqCst)
+    }
+
+    pub(super) fn lock_was_held_at_every_step() -> bool {
+        HELD_EVERY_STEP.load(Ordering::SeqCst)
+    }
+
+    /// Called after the head has been read and before it is passed to the remover.
+    pub(super) fn head_about_to_be_removed() {
+        STEPS.fetch_add(1, Ordering::SeqCst);
+        // This crate's rwlock refuses a recursive write acquisition instead of deadlocking
+        // (`runtime::thread::CRYPTO_THREAD_write_lock`), and the refusal mutates no state. So
+        // `lock()` answering false here means *this thread already holds the write lock*; if
+        // it answers true the lock was not held, and the acquisition this probe just made is
+        // given back so the caller's own `unlock()` still balances.
+        if lock() {
+            unlock();
+            HELD_EVERY_STEP.store(false, Ordering::SeqCst);
+        }
+    }
+}
+
 /// `static void engine_list_cleanup(void)` — `crypto/engine/eng_list.c:42-51`.
 ///
 /// Registered on the cleanup stack the first time the list becomes non-empty. It is
 /// unreachable until `engine_cleanup_int` is named by `OPENSSL_cleanup` (see `eng_lib.rs`).
 ///
+/// The authority writes `while (engine_list_head) ENGINE_remove(engine_list_head);`, which
+/// reads the head **before** taking the lock `ENGINE_remove` then acquires. That split is
+/// unsound: a concurrent [`ENGINE_remove`] (or an `engine_free_util` releasing the last
+/// reference) that retires the head inside the window leaves this frame passing a freed
+/// `ENGINE *` to `ENGINE_remove`, whose contract requires a live engine. This body takes the
+/// lock first and reads the head under it, so the head it removes is the head it observed:
+/// every unlink of a list member, and every release of a member's structural reference,
+/// already happens under this lock. The removal is therefore the unlocked body
+/// [`engine_list_remove`] — the same work `ENGINE_remove` performs while holding the same
+/// lock, and a deliberate safety improvement over the authority's ordering (AGENTS.md §17).
+///
+/// The work performed while the lock is held is unchanged from both the authority and the
+/// previous body: `engine_list_remove`'s `engine_free_util` call, and the application
+/// `destroy`/ex-data hooks inside it, were already reached under this lock. Any panic on
+/// that path leaves the lock held, so the unwind aborts at this `extern "C"` boundary
+/// rather than continuing with a poisoned engine lock.
+///
 /// # Safety
 /// The engine lock must be initialised (non-NULL) and must not already be held by this
-/// thread: [`ENGINE_remove`] takes it. The list can only become non-empty through
-/// [`ENGINE_add`], whose engine came from `ENGINE_new`/`ENGINE_by_id`, both of which run the
-/// lock init. With a NULL lock, `ENGINE_remove` answers 0 and this cleanup stops with the
-/// list intact — a no-op/leak, not UB.
+/// thread: this body takes it. The list can only become non-empty through [`ENGINE_add`],
+/// whose engine came from `ENGINE_new`/`ENGINE_by_id`, both of which run the lock init. With
+/// a NULL lock, `lock()` answers false and this cleanup stops with the list intact — a
+/// no-op/leak, not UB.
 unsafe extern "C" fn engine_list_cleanup() {
     loop {
-        let head = ENGINE_LIST_HEAD.load(Ordering::Acquire);
-        if head.is_null() {
+        // The head observed below cannot be unlinked, nor can its structural reference be
+        // released, before the removal that follows: both require the lock taken here.
+        if !lock() {
             return;
         }
-        // `ENGINE_remove(iterator)` — the same call the authority makes, and the loop's
-        // exit condition is the list emptying.
-        // SAFETY: `head` is the list's first member.
-        let removed = unsafe { ENGINE_remove(head) };
+        let head = ENGINE_LIST_HEAD.load(Ordering::Acquire);
+        if head.is_null() {
+            unlock();
+            return;
+        }
+        #[cfg(test)]
+        cleanup_order_probe::head_about_to_be_removed();
+        // SAFETY: the engine lock is held and `head` was read as the list head under it, so
+        // it is a live list member; this is the body `ENGINE_remove` runs under the same lock.
+        let removed = unsafe { engine_list_remove(head) };
+        unlock();
         if removed == 0 {
             return;
         }
@@ -756,4 +825,107 @@ pub unsafe extern "C" fn ENGINE_by_id(id: *const c_char) -> *mut Engine {
         unsafe { raise_site_data(&ENG_LIST_470, msg.as_ptr().cast::<c_char>()) };
         ptr::null_mut()
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::engine::eng_lib::{ENGINE_free, ENGINE_new};
+    use crate::test_support::lock_global_state;
+    use core::sync::atomic::AtomicUsize;
+
+    /// Counts the canary engine's `destroy` hook, so the test can see that the cleanup really
+    /// released it (the survivors below are still referenced and are not destroyed).
+    static DESTROY_CALLS: AtomicUsize = AtomicUsize::new(0);
+
+    unsafe extern "C" fn counting_destroy(_e: *mut Engine) -> c_int {
+        DESTROY_CALLS.fetch_add(1, Ordering::SeqCst);
+        1
+    }
+
+    /// Regression canary for the pre-fix ordering.
+    ///
+    /// The pre-fix body read `engine_list_head` **outside** the engine lock and then passed
+    /// that pointer to `ENGINE_remove`, which takes the lock: a concurrent removal could
+    /// unlink and free the head inside that window, so `ENGINE_remove` would receive a freed
+    /// `*mut Engine`. The fix reads the head under the lock that performs the removal. This
+    /// test pins the fix at the seam that stands in the former gap: the head must be observed
+    /// by a thread that already holds the engine write lock, in which case no other thread
+    /// can have unlinked or freed it.
+    #[test]
+    fn cleanup_observes_the_head_under_the_engine_lock() {
+        // This test empties the process-global engine registry and restores it, so it takes
+        // the crate-wide global-state lock (`test_support`).
+        let _g = lock_global_state();
+
+        // Take one structural reference to every engine already registered (the suite's
+        // `dynamic` engine, registered by `runtime::init`'s OPENSSL_INIT_ENGINE_DYNAMIC
+        // test, is the likely one). The cleanup then unlinks them without destroying them,
+        // and they are re-published at the end, so the registry survives this test.
+        let mut survivors = Vec::new();
+        // SAFETY: `ENGINE_get_first`/`ENGINE_get_next` return live engines and hand one
+        // structural reference to the caller for each; `survivors` owns those references
+        // until the loop at the end of the test releases them.
+        unsafe {
+            let mut e = ENGINE_get_first();
+            while !e.is_null() {
+                survivors.push(e);
+                e = ENGINE_get_next(e);
+            }
+        }
+
+        DESTROY_CALLS.store(0, Ordering::SeqCst);
+        cleanup_order_probe::reset();
+
+        // SAFETY: `e` is this test's own engine. `ENGINE_add` takes its own structural
+        // reference and leaves the caller's in place; the caller's reference is released
+        // here so the list's reference is the only one and the cleanup's removal is the
+        // final release (which runs `counting_destroy`).
+        unsafe {
+            let e = ENGINE_new();
+            assert!(!e.is_null(), "ENGINE_new allocates");
+            (*e).id = c"canary-cleanup-order".as_ptr();
+            (*e).name = c"canary-cleanup-order".as_ptr();
+            (*e).destroy = Some(counting_destroy);
+            assert_eq!(ENGINE_add(e), 1, "the canary engine is published");
+            assert_eq!(ENGINE_free(e), 1, "the caller's reference is released");
+        }
+
+        // SAFETY: the engine lock is initialised (`ENGINE_new` ran the once), it is not held
+        // by this thread, and the crate-wide global-state lock keeps every other test out.
+        unsafe { engine_list_cleanup() };
+
+        assert!(
+            cleanup_order_probe::steps() >= 1,
+            "cleanup took at least one step"
+        );
+        assert!(
+            cleanup_order_probe::lock_was_held_at_every_step(),
+            "the head must be observed and removed while this thread holds the engine lock"
+        );
+        assert_eq!(
+            DESTROY_CALLS.load(Ordering::SeqCst),
+            1,
+            "the cleanup released exactly the unreferenced canary engine"
+        );
+        assert!(
+            ENGINE_LIST_HEAD.load(Ordering::Acquire).is_null(),
+            "the cleanup emptied the list"
+        );
+        assert!(
+            ENGINE_LIST_TAIL.load(Ordering::Acquire).is_null(),
+            "the cleanup cleared the tail"
+        );
+
+        // Restore the registry this test found.
+        for e in survivors {
+            // SAFETY: `e` is a live engine whose structural reference `survivors` holds and
+            // that the cleanup unlinked; `ENGINE_add` takes its own reference and the
+            // `ENGINE_free` releases the one this test holds.
+            unsafe {
+                assert_eq!(ENGINE_add(e), 1, "the pre-existing engine is re-published");
+                assert_eq!(ENGINE_free(e), 1);
+            }
+        }
+    }
 }

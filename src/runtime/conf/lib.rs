@@ -98,8 +98,25 @@ pub unsafe extern "C" fn CONF_set_nconf(conf: *mut Conf, hash: *mut OpenSslLhash
 /// Installs a replacement for the method `CONF_set_nconf` will use. Always
 /// succeeds, including for NULL, which makes the next `CONF_set_nconf` fall back
 /// to the default again.
+///
+/// # Safety
+///
+/// `meth` is NULL (the defined "restore the default" value) or the address of a
+/// live, properly aligned `CONF_METHOD` table that remains live and unmodified
+/// from this call until the default is replaced by a later call to this function
+/// or the process ends. The table is stored borrowed in a process-global slot and
+/// is dereferenced later by `CONF_set_nconf`/`NCONF_new` — after this call has
+/// returned — so a stack temporary, a freed table, or one whose function-pointer
+/// fields are later overwritten is a use-after-free or a call through a stale
+/// pointer. Its `init`/`create` fields must be valid for the documented calls;
+/// a NULL `init` is tolerated by `CONF_set_nconf` exactly as in the authority, and
+/// the other fields are used by the NCONF entry points that read the installed
+/// method. No ownership is taken and the table is never released here. If the
+/// installation is observed from another thread, the caller is responsible for
+/// publishing the table safely (the authority imposes the same, unstated,
+/// ordering obligation).
 #[no_mangle]
-pub extern "C" fn CONF_set_default_method(meth: *mut ConfMethod) -> c_int {
+pub unsafe extern "C" fn CONF_set_default_method(meth: *mut ConfMethod) -> c_int {
     guard_ffi(0, || {
         DEFAULT_CONF_METHOD.store(meth, Ordering::Relaxed);
         1
@@ -695,14 +712,24 @@ pub unsafe extern "C" fn NCONF_get_string(
 /// `static int default_is_number(const CONF *conf, char c)`
 ///
 /// The method-independent fallback: `ossl_isdigit`, i.e. ASCII only.
-unsafe extern "C" fn default_is_number(_conf: *const Conf, c: c_char) -> c_int {
+extern "C" fn default_is_number(_conf: *const Conf, c: c_char) -> c_int {
     c_int::from((b'0' as c_char..=b'9' as c_char).contains(&c))
 }
 
+// Compile-time control: the converted predicate keeps its exact C signature, and
+// restoring the `unsafe` qualifier breaks this build.
+#[cfg(test)]
+const _: extern "C" fn(*const Conf, c_char) -> c_int = default_is_number;
+
 /// `static int default_to_int(const CONF *conf, char c)`
-unsafe extern "C" fn default_to_int(_conf: *const Conf, c: c_char) -> c_int {
+extern "C" fn default_to_int(_conf: *const Conf, c: c_char) -> c_int {
     c_int::from(c) - c_int::from(b'0' as c_char)
 }
+
+// Compile-time control: the converted digit conversion keeps its exact C signature,
+// and restoring the `unsafe` qualifier breaks this build.
+#[cfg(test)]
+const _: extern "C" fn(*const Conf, c_char) -> c_int = default_to_int;
 
 /// `int NCONF_get_number_e(const CONF *conf, const char *group, const char *name, long *result)`
 ///
@@ -819,4 +846,33 @@ pub unsafe extern "C" fn NCONF_dump_bio(conf: *const Conf, out: *mut Bio) -> c_i
             None => 0,
         }
     })
+}
+
+// ABI-shape control: the parameter/return types are pinned, so an ABI change stops
+// this file compiling. (It does not pin the `unsafe` qualifier: a safe `extern "C"
+// fn` item also coerces to an `unsafe extern "C" fn` pointer. The qualifier is
+// controlled by `the_default_method_setter_is_an_unsafe_fn` below.)
+const _: unsafe extern "C" fn(*mut ConfMethod) -> c_int = CONF_set_default_method;
+
+#[cfg(test)]
+mod tests {
+    /// Qualifier control: the setter stores a caller table that later calls
+    /// dereference, so it must not be callable from safe Rust with an unchecked
+    /// pointer. A type-level "is an unsafe fn" assertion is not expressible on
+    /// stable Rust (a safe fn item coerces to an `unsafe fn` pointer), so the
+    /// declaration is pinned in the production source text, which is read from disk
+    /// and truncated at the first `#[cfg(test)]` module. This test's own assertion
+    /// text is therefore never searched, and the needle is assembled from fragments,
+    /// so only removing the `unsafe` qualifier can make it fail.
+    #[test]
+    #[allow(clippy::expect_used)]
+    fn the_default_method_setter_is_an_unsafe_fn() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/runtime/conf/lib.rs");
+        let src = std::fs::read_to_string(path).expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        let needle = concat!("pub unsafe extern ", "\"C\" fn CONF_set_default_method(");
+        assert!(prod.contains(needle), "missing {needle}");
+    }
 }

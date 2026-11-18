@@ -1,0 +1,1288 @@
+[
+ {
+  "extra": {
+   "line_current": 350,
+   "span_end_line": 353,
+   "span_start_line": 350
+  },
+  "file": "src/cmp/cmp_ctx.rs",
+  "id": "OSSH-V1I-049",
+  "new_lines": [
+   "unsafe extern \"C\" fn x509_name_dup_void(p: *const c_void) -> *mut c_void {",
+   "    // SAFETY: `p` is NULL or a live `X509_NAME` per this function's contract.",
+   "    unsafe { X509_NAME_dup(p.cast()) }.cast()",
+   "}"
+  ],
+  "new_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 357,
+   "end_line": 360,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "x509_name_dup_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "68c3affef36dde35c69ad17c8be073d1ed36e9a957afbe84d623c802b79480b6",
+   "source": {
+    "commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+    "content_sha256": "e2204d97a4262493f1c04f8ff730c7ddde83252b9c1540763dfbe206e7a72622",
+    "source": "git-blob"
+   },
+   "start_line": 357
+  },
+  "old_commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "old_lines": [
+   "unsafe extern \"C\" fn x509_name_dup_void(p: *const c_void) -> *mut c_void {",
+   "    // SAFETY: per this function's contract.",
+   "    unsafe { X509_NAME_dup(p.cast()) }.cast()",
+   "}"
+  ],
+  "old_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 350,
+   "end_line": 353,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "x509_name_dup_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "13028da9d8492f824d5761e48a7c2f0c44392f914ac4cd0227e8d6bec0048488",
+   "source": {
+    "commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "content_sha256": "c4429e7ee692bc55982fc9d5b84db88691cdf0b7ca49c654669348f368ceb283",
+    "source": "git-blob"
+   },
+   "start_line": 350
+  },
+  "operation": "x509_name_dup_void",
+  "recorded": "13028da9d8492f824d5761e48a7c2f0c44392f914ac4cd0227e8d6bec0048488",
+  "source_receipt": "openssh-v1i-sites.json",
+  "classification": "doc-only",
+  "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+  "added_lines_all_comments": true,
+  "hunks": [
+   {
+    "old": [
+     "    // SAFETY: per this function's contract."
+    ],
+    "new": [
+     "    // SAFETY: `p` is NULL or a live `X509_NAME` per this function's contract."
+    ]
+   }
+  ]
+ },
+ {
+  "extra": {
+   "line_current": 354,
+   "span_end_line": 357,
+   "span_start_line": 354
+  },
+  "file": "src/cmp/cmp_ctx.rs",
+  "id": "OSSH-V1I-050",
+  "new_lines": [
+   "unsafe extern \"C\" fn x509_name_free_void(p: *mut c_void) {",
+   "    // SAFETY: `p` is NULL or a live, owned reference per this function's contract.",
+   "    unsafe { X509_NAME_free(p.cast()) };",
+   "}"
+  ],
+  "new_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 366,
+   "end_line": 369,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "x509_name_free_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "aadfe639539338e4fddd52a2572f8968b838febbc33d9a931f68de8836e6f0bf",
+   "source": {
+    "commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+    "content_sha256": "e2204d97a4262493f1c04f8ff730c7ddde83252b9c1540763dfbe206e7a72622",
+    "source": "git-blob"
+   },
+   "start_line": 366
+  },
+  "old_commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "old_lines": [
+   "unsafe extern \"C\" fn x509_name_free_void(p: *mut c_void) {",
+   "    // SAFETY: per this function's contract.",
+   "    unsafe { X509_NAME_free(p.cast()) };",
+   "}"
+  ],
+  "old_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 354,
+   "end_line": 357,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "x509_name_free_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "fbb8bfad2d75d2799d95893538c24c5ffa1359fd25eef77ae77f91a81cca6ef3",
+   "source": {
+    "commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "content_sha256": "c4429e7ee692bc55982fc9d5b84db88691cdf0b7ca49c654669348f368ceb283",
+    "source": "git-blob"
+   },
+   "start_line": 354
+  },
+  "operation": "x509_name_free_void",
+  "recorded": "fbb8bfad2d75d2799d95893538c24c5ffa1359fd25eef77ae77f91a81cca6ef3",
+  "source_receipt": "openssh-v1i-sites.json",
+  "classification": "doc-only",
+  "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+  "added_lines_all_comments": true,
+  "hunks": [
+   {
+    "old": [
+     "    // SAFETY: per this function's contract."
+    ],
+    "new": [
+     "    // SAFETY: `p` is NULL or a live, owned reference per this function's contract."
+    ]
+   }
+  ]
+ },
+ {
+  "extra": {
+   "line_current": 358,
+   "span_end_line": 361,
+   "span_start_line": 358
+  },
+  "file": "src/cmp/cmp_ctx.rs",
+  "id": "OSSH-V1I-051",
+  "new_lines": [
+   "unsafe extern \"C\" fn asn1_integer_dup_void(p: *const c_void) -> *mut c_void {",
+   "    // SAFETY: `p` is NULL or a live item value per this function's contract.",
+   "    unsafe { ASN1_item_dup(ASN1_INTEGER_it(), p) }.cast()",
+   "}"
+  ],
+  "new_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 376,
+   "end_line": 379,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "asn1_integer_dup_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "ada154c8fcf9c795b15269e75af7cebaf01626240d958ab693b71d9f68fc42d6",
+   "source": {
+    "commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+    "content_sha256": "e2204d97a4262493f1c04f8ff730c7ddde83252b9c1540763dfbe206e7a72622",
+    "source": "git-blob"
+   },
+   "start_line": 376
+  },
+  "old_commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "old_lines": [
+   "unsafe extern \"C\" fn asn1_integer_dup_void(p: *const c_void) -> *mut c_void {",
+   "    // SAFETY: per this function's contract.",
+   "    unsafe { ASN1_item_dup(ASN1_INTEGER_it(), p) }.cast()",
+   "}"
+  ],
+  "old_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 358,
+   "end_line": 361,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "asn1_integer_dup_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "879ea7d76ffb4d0fd368a9c5a3056ed4184537401d6d6511515d16d0e22ea8df",
+   "source": {
+    "commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "content_sha256": "c4429e7ee692bc55982fc9d5b84db88691cdf0b7ca49c654669348f368ceb283",
+    "source": "git-blob"
+   },
+   "start_line": 358
+  },
+  "operation": "asn1_integer_dup_void",
+  "recorded": "879ea7d76ffb4d0fd368a9c5a3056ed4184537401d6d6511515d16d0e22ea8df",
+  "source_receipt": "openssh-v1i-sites.json",
+  "classification": "doc-only",
+  "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+  "added_lines_all_comments": true,
+  "hunks": [
+   {
+    "old": [
+     "    // SAFETY: per this function's contract."
+    ],
+    "new": [
+     "    // SAFETY: `p` is NULL or a live item value per this function's contract."
+    ]
+   }
+  ]
+ },
+ {
+  "extra": {
+   "line_current": 362,
+   "span_end_line": 365,
+   "span_start_line": 362
+  },
+  "file": "src/cmp/cmp_ctx.rs",
+  "id": "OSSH-V1I-052",
+  "new_lines": [
+   "unsafe extern \"C\" fn asn1_integer_free_void(p: *mut c_void) {",
+   "    // SAFETY: `p` is NULL or a live, owned `ASN1_INTEGER` per this function's contract.",
+   "    unsafe { ASN1_INTEGER_free(p.cast()) };",
+   "}"
+  ],
+  "new_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 385,
+   "end_line": 388,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "asn1_integer_free_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "6d1ec00d6cac7a7b591255c264472ea2178307d28cef4013a35d9170d08f356b",
+   "source": {
+    "commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+    "content_sha256": "e2204d97a4262493f1c04f8ff730c7ddde83252b9c1540763dfbe206e7a72622",
+    "source": "git-blob"
+   },
+   "start_line": 385
+  },
+  "old_commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "old_lines": [
+   "unsafe extern \"C\" fn asn1_integer_free_void(p: *mut c_void) {",
+   "    // SAFETY: per this function's contract.",
+   "    unsafe { ASN1_INTEGER_free(p.cast()) };",
+   "}"
+  ],
+  "old_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 362,
+   "end_line": 365,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "asn1_integer_free_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "09ce335f71b364fa86cc7d60748551ff5226e2f5d2b5bb9b6a9efcfb1f7e0d68",
+   "source": {
+    "commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "content_sha256": "c4429e7ee692bc55982fc9d5b84db88691cdf0b7ca49c654669348f368ceb283",
+    "source": "git-blob"
+   },
+   "start_line": 362
+  },
+  "operation": "asn1_integer_free_void",
+  "recorded": "09ce335f71b364fa86cc7d60748551ff5226e2f5d2b5bb9b6a9efcfb1f7e0d68",
+  "source_receipt": "openssh-v1i-sites.json",
+  "classification": "doc-only",
+  "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+  "added_lines_all_comments": true,
+  "hunks": [
+   {
+    "old": [
+     "    // SAFETY: per this function's contract."
+    ],
+    "new": [
+     "    // SAFETY: `p` is NULL or a live, owned `ASN1_INTEGER` per this function's contract."
+    ]
+   }
+  ]
+ },
+ {
+  "extra": {
+   "line_current": 366,
+   "span_end_line": 369,
+   "span_start_line": 366
+  },
+  "file": "src/cmp/cmp_ctx.rs",
+  "id": "OSSH-V1I-053",
+  "new_lines": [
+   "unsafe extern \"C\" fn x509_req_dup_void(p: *const c_void) -> *mut c_void {",
+   "    // SAFETY: `p` is NULL or a live `X509_REQ` per this function's contract.",
+   "    unsafe { X509_REQ_dup(p.cast()) }.cast()",
+   "}"
+  ],
+  "new_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 395,
+   "end_line": 398,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "x509_req_dup_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "c3bd7c6a68f5556a44991fec256736cae595ce8d5850d3bae356875167ccb78e",
+   "source": {
+    "commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+    "content_sha256": "e2204d97a4262493f1c04f8ff730c7ddde83252b9c1540763dfbe206e7a72622",
+    "source": "git-blob"
+   },
+   "start_line": 395
+  },
+  "old_commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "old_lines": [
+   "unsafe extern \"C\" fn x509_req_dup_void(p: *const c_void) -> *mut c_void {",
+   "    // SAFETY: per this function's contract.",
+   "    unsafe { X509_REQ_dup(p.cast()) }.cast()",
+   "}"
+  ],
+  "old_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 366,
+   "end_line": 369,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "x509_req_dup_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "ef04cda1695dd610a3eddd0ac37dec5ce3367663a427207648483393923e6cce",
+   "source": {
+    "commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "content_sha256": "c4429e7ee692bc55982fc9d5b84db88691cdf0b7ca49c654669348f368ceb283",
+    "source": "git-blob"
+   },
+   "start_line": 366
+  },
+  "operation": "x509_req_dup_void",
+  "recorded": "ef04cda1695dd610a3eddd0ac37dec5ce3367663a427207648483393923e6cce",
+  "source_receipt": "openssh-v1i-sites.json",
+  "classification": "doc-only",
+  "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+  "added_lines_all_comments": true,
+  "hunks": [
+   {
+    "old": [
+     "    // SAFETY: per this function's contract."
+    ],
+    "new": [
+     "    // SAFETY: `p` is NULL or a live `X509_REQ` per this function's contract."
+    ]
+   }
+  ]
+ },
+ {
+  "extra": {
+   "line_current": 370,
+   "span_end_line": 373,
+   "span_start_line": 370
+  },
+  "file": "src/cmp/cmp_ctx.rs",
+  "id": "OSSH-V1I-054",
+  "new_lines": [
+   "unsafe extern \"C\" fn x509_req_free_void(p: *mut c_void) {",
+   "    // SAFETY: `p` is NULL or a live, owned reference per this function's contract.",
+   "    unsafe { X509_REQ_free(p.cast()) };",
+   "}"
+  ],
+  "new_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 404,
+   "end_line": 407,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "x509_req_free_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "08102d47fcb390390d20e576b65826c8884b3792d02072195045ffbbbded5e57",
+   "source": {
+    "commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+    "content_sha256": "e2204d97a4262493f1c04f8ff730c7ddde83252b9c1540763dfbe206e7a72622",
+    "source": "git-blob"
+   },
+   "start_line": 404
+  },
+  "old_commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "old_lines": [
+   "unsafe extern \"C\" fn x509_req_free_void(p: *mut c_void) {",
+   "    // SAFETY: per this function's contract.",
+   "    unsafe { X509_REQ_free(p.cast()) };",
+   "}"
+  ],
+  "old_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 370,
+   "end_line": 373,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "x509_req_free_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "31048346d3df8aa9a52bc4b18fd813722a65de998b0fb6819f7858fd82c8ecd1",
+   "source": {
+    "commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "content_sha256": "c4429e7ee692bc55982fc9d5b84db88691cdf0b7ca49c654669348f368ceb283",
+    "source": "git-blob"
+   },
+   "start_line": 370
+  },
+  "operation": "x509_req_free_void",
+  "recorded": "31048346d3df8aa9a52bc4b18fd813722a65de998b0fb6819f7858fd82c8ecd1",
+  "source_receipt": "openssh-v1i-sites.json",
+  "classification": "doc-only",
+  "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+  "added_lines_all_comments": true,
+  "hunks": [
+   {
+    "old": [
+     "    // SAFETY: per this function's contract."
+    ],
+    "new": [
+     "    // SAFETY: `p` is NULL or a live, owned reference per this function's contract."
+    ]
+   }
+  ]
+ },
+ {
+  "extra": {
+   "line_current": 376,
+   "span_end_line": 379,
+   "span_start_line": 376
+  },
+  "file": "src/cmp/cmp_ctx.rs",
+  "id": "OSSH-V1I-059",
+  "new_lines": [
+   "unsafe extern \"C\" fn general_name_free_void(p: *mut c_void) {",
+   "    // SAFETY: `p` is NULL or a live, owned `GENERAL_NAME` per this thunk's contract.",
+   "    unsafe { GENERAL_NAME_free(p.cast()) };",
+   "}"
+  ],
+  "new_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 419,
+   "end_line": 422,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "general_name_free_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "52f8d85ffa5fe3af291f9acbb6e681d58b75be5f832fa7776a085b4bb9c5c551",
+   "source": {
+    "commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+    "content_sha256": "e2204d97a4262493f1c04f8ff730c7ddde83252b9c1540763dfbe206e7a72622",
+    "source": "git-blob"
+   },
+   "start_line": 419
+  },
+  "old_commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "old_lines": [
+   "unsafe extern \"C\" fn general_name_free_void(p: *mut c_void) {",
+   "    // SAFETY: per this function's contract.",
+   "    unsafe { GENERAL_NAME_free(p.cast()) };",
+   "}"
+  ],
+  "old_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 376,
+   "end_line": 379,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "general_name_free_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "f2c430ef6d2510ea8fb9bb46892deea51afcac75eefbe5a03d3883541845911b",
+   "source": {
+    "commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "content_sha256": "c4429e7ee692bc55982fc9d5b84db88691cdf0b7ca49c654669348f368ceb283",
+    "source": "git-blob"
+   },
+   "start_line": 376
+  },
+  "operation": "general_name_free_void",
+  "recorded": "f2c430ef6d2510ea8fb9bb46892deea51afcac75eefbe5a03d3883541845911b",
+  "source_receipt": "openssh-v1i-sites.json",
+  "classification": "doc-only",
+  "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+  "added_lines_all_comments": true,
+  "hunks": [
+   {
+    "old": [
+     "    // SAFETY: per this function's contract."
+    ],
+    "new": [
+     "    // SAFETY: `p` is NULL or a live, owned `GENERAL_NAME` per this thunk's contract."
+    ]
+   }
+  ]
+ },
+ {
+  "extra": {
+   "line_current": 380,
+   "span_end_line": 383,
+   "span_start_line": 380
+  },
+  "file": "src/cmp/cmp_ctx.rs",
+  "id": "OSSH-V1I-060",
+  "new_lines": [
+   "unsafe extern \"C\" fn x509_extension_free_void(p: *mut c_void) {",
+   "    // SAFETY: `p` is NULL or a live, owned `X509_EXTENSION`.",
+   "    unsafe { X509_EXTENSION_free(p.cast()) };",
+   "}"
+  ],
+  "new_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 427,
+   "end_line": 430,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "x509_extension_free_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "537c06945c216902ed150dfaa4a44d7d3181ae3e19c2f3ed0dfb3b3311b685a2",
+   "source": {
+    "commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+    "content_sha256": "e2204d97a4262493f1c04f8ff730c7ddde83252b9c1540763dfbe206e7a72622",
+    "source": "git-blob"
+   },
+   "start_line": 427
+  },
+  "old_commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "old_lines": [
+   "unsafe extern \"C\" fn x509_extension_free_void(p: *mut c_void) {",
+   "    // SAFETY: per this function's contract.",
+   "    unsafe { X509_EXTENSION_free(p.cast()) };",
+   "}"
+  ],
+  "old_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 380,
+   "end_line": 383,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "x509_extension_free_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "c55cd1b80bb171807ebc723f6a3a8b0faab9a0c8a24c3400c8b5e89e27bfd8e8",
+   "source": {
+    "commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "content_sha256": "c4429e7ee692bc55982fc9d5b84db88691cdf0b7ca49c654669348f368ceb283",
+    "source": "git-blob"
+   },
+   "start_line": 380
+  },
+  "operation": "x509_extension_free_void",
+  "recorded": "c55cd1b80bb171807ebc723f6a3a8b0faab9a0c8a24c3400c8b5e89e27bfd8e8",
+  "source_receipt": "openssh-v1i-sites.json",
+  "classification": "doc-only",
+  "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+  "added_lines_all_comments": true,
+  "hunks": [
+   {
+    "old": [
+     "    // SAFETY: per this function's contract."
+    ],
+    "new": [
+     "    // SAFETY: `p` is NULL or a live, owned `X509_EXTENSION`."
+    ]
+   }
+  ]
+ },
+ {
+  "extra": {
+   "line_current": 384,
+   "span_end_line": 387,
+   "span_start_line": 384
+  },
+  "file": "src/cmp/cmp_ctx.rs",
+  "id": "OSSH-V1I-061",
+  "new_lines": [
+   "unsafe extern \"C\" fn utf8_string_free_void(p: *mut c_void) {",
+   "    // SAFETY: `p` is NULL or a live, owned `ASN1_UTF8STRING`.",
+   "    unsafe { crate::asn1::string::ASN1_UTF8STRING_free(p.cast()) };",
+   "}"
+  ],
+  "new_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 435,
+   "end_line": 438,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "utf8_string_free_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "9fcb08fbebf7d93711f64f289f56b34e53b37bcfca1f6c16ec1834b6066b525a",
+   "source": {
+    "commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+    "content_sha256": "e2204d97a4262493f1c04f8ff730c7ddde83252b9c1540763dfbe206e7a72622",
+    "source": "git-blob"
+   },
+   "start_line": 435
+  },
+  "old_commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "old_lines": [
+   "unsafe extern \"C\" fn utf8_string_free_void(p: *mut c_void) {",
+   "    // SAFETY: per this function's contract.",
+   "    unsafe { crate::asn1::string::ASN1_UTF8STRING_free(p.cast()) };",
+   "}"
+  ],
+  "old_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 384,
+   "end_line": 387,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "utf8_string_free_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "78aab3c63127b04993c0447596fe2b4167e5e8b683967ff17420b540718870ba",
+   "source": {
+    "commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "content_sha256": "c4429e7ee692bc55982fc9d5b84db88691cdf0b7ca49c654669348f368ceb283",
+    "source": "git-blob"
+   },
+   "start_line": 384
+  },
+  "operation": "utf8_string_free_void",
+  "recorded": "78aab3c63127b04993c0447596fe2b4167e5e8b683967ff17420b540718870ba",
+  "source_receipt": "openssh-v1i-sites.json",
+  "classification": "doc-only",
+  "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+  "added_lines_all_comments": true,
+  "hunks": [
+   {
+    "old": [
+     "    // SAFETY: per this function's contract."
+    ],
+    "new": [
+     "    // SAFETY: `p` is NULL or a live, owned `ASN1_UTF8STRING`."
+    ]
+   }
+  ]
+ },
+ {
+  "extra": {
+   "line_current": 388,
+   "span_end_line": 391,
+   "span_start_line": 388
+  },
+  "file": "src/cmp/cmp_ctx.rs",
+  "id": "OSSH-V1I-063",
+  "new_lines": [
+   "unsafe extern \"C\" fn itav_free_void(p: *mut c_void) {",
+   "    // SAFETY: `p` is NULL or a live, owned `OSSL_CMP_ITAV`.",
+   "    unsafe { OSSL_CMP_ITAV_free(p.cast()) };",
+   "}"
+  ],
+  "new_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 443,
+   "end_line": 446,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "itav_free_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "36ecb712436300b555bc27f763f83b41cfa71ff96c1f32ebcc85b49c447265f3",
+   "source": {
+    "commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+    "content_sha256": "e2204d97a4262493f1c04f8ff730c7ddde83252b9c1540763dfbe206e7a72622",
+    "source": "git-blob"
+   },
+   "start_line": 443
+  },
+  "old_commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "old_lines": [
+   "unsafe extern \"C\" fn itav_free_void(p: *mut c_void) {",
+   "    // SAFETY: per this function's contract.",
+   "    unsafe { OSSL_CMP_ITAV_free(p.cast()) };",
+   "}"
+  ],
+  "old_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 388,
+   "end_line": 391,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "itav_free_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "716df8e4158a82f709333ef8f8e10d11b49a3640c3b50cb83e87c063093a024e",
+   "source": {
+    "commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "content_sha256": "c4429e7ee692bc55982fc9d5b84db88691cdf0b7ca49c654669348f368ceb283",
+    "source": "git-blob"
+   },
+   "start_line": 388
+  },
+  "operation": "itav_free_void",
+  "recorded": "716df8e4158a82f709333ef8f8e10d11b49a3640c3b50cb83e87c063093a024e",
+  "source_receipt": "openssh-v1i-sites.json",
+  "classification": "doc-only",
+  "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+  "added_lines_all_comments": true,
+  "hunks": [
+   {
+    "old": [
+     "    // SAFETY: per this function's contract."
+    ],
+    "new": [
+     "    // SAFETY: `p` is NULL or a live, owned `OSSL_CMP_ITAV`."
+    ]
+   }
+  ]
+ },
+ {
+  "extra": {
+   "line_current": 392,
+   "span_end_line": 395,
+   "span_start_line": 392
+  },
+  "file": "src/cmp/cmp_ctx.rs",
+  "id": "OSSH-V1I-064",
+  "new_lines": [
+   "unsafe extern \"C\" fn policy_free_void(p: *mut c_void) {",
+   "    // SAFETY: `p` is NULL or a live, owned `POLICYINFO`.",
+   "    unsafe { POLICYINFO_free(p.cast()) };",
+   "}"
+  ],
+  "new_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 451,
+   "end_line": 454,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "policy_free_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "b10d4e3682d87e51ac65e7fa6d7ac882adf24166057438244714ee01320ce356",
+   "source": {
+    "commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+    "content_sha256": "e2204d97a4262493f1c04f8ff730c7ddde83252b9c1540763dfbe206e7a72622",
+    "source": "git-blob"
+   },
+   "start_line": 451
+  },
+  "old_commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "old_lines": [
+   "unsafe extern \"C\" fn policy_free_void(p: *mut c_void) {",
+   "    // SAFETY: per this function's contract.",
+   "    unsafe { POLICYINFO_free(p.cast()) };",
+   "}"
+  ],
+  "old_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 392,
+   "end_line": 395,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "policy_free_void",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "462670b49e5deac6bb89a6bde03865bb4962f69860b469eda9889301e6e74b42",
+   "source": {
+    "commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "content_sha256": "c4429e7ee692bc55982fc9d5b84db88691cdf0b7ca49c654669348f368ceb283",
+    "source": "git-blob"
+   },
+   "start_line": 392
+  },
+  "operation": "policy_free_void",
+  "recorded": "462670b49e5deac6bb89a6bde03865bb4962f69860b469eda9889301e6e74b42",
+  "source_receipt": "openssh-v1i-sites.json",
+  "classification": "doc-only",
+  "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+  "added_lines_all_comments": true,
+  "hunks": [
+   {
+    "old": [
+     "    // SAFETY: per this function's contract."
+    ],
+    "new": [
+     "    // SAFETY: `p` is NULL or a live, owned `POLICYINFO`."
+    ]
+   }
+  ]
+ },
+ {
+  "extra": {
+   "line_current": 407,
+   "span_end_line": 421,
+   "span_start_line": 407
+  },
+  "file": "src/cmp/cmp_ctx.rs",
+  "id": "OSSH-V1I-065",
+  "new_lines": [
+   "unsafe fn cmp_ctx_set_md(ctx: *mut OsslCmpCtx, pmd: *mut *mut EvpMd, nid: c_int) -> c_int {",
+   "    // SAFETY: `ctx` is live; the object table answers a name for a known NID.",
+   "    let md = unsafe { EVP_MD_fetch((*ctx).libctx, OBJ_nid2sn(nid), (*ctx).propq.cast_const()) };",
+   "    if md.is_null() {",
+   "        // SAFETY: the site is a compile-time constant.",
+   "        unsafe { raise_ctx(136) };",
+   "        return 0;",
+   "    }",
+   "    // SAFETY: `pmd` is a live out-pointer to the context's own method slot, holding the",
+   "    // reference this context owns per the contract.",
+   "    unsafe {",
+   "        EVP_MD_free(*pmd);",
+   "        *pmd = md;",
+   "    }",
+   "    1",
+   "}"
+  ],
+  "new_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 476,
+   "end_line": 491,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "cmp_ctx_set_md",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "3c274e5c132d4c783470e5820d148965f9050cd6a08c7ae6dc1b2596fc177fa0",
+   "source": {
+    "commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+    "content_sha256": "e2204d97a4262493f1c04f8ff730c7ddde83252b9c1540763dfbe206e7a72622",
+    "source": "git-blob"
+   },
+   "start_line": 476
+  },
+  "old_commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "old_lines": [
+   "unsafe fn cmp_ctx_set_md(ctx: *mut OsslCmpCtx, pmd: *mut *mut EvpMd, nid: c_int) -> c_int {",
+   "    // SAFETY: `ctx` is live; the object table answers a name for a known NID.",
+   "    let md = unsafe { EVP_MD_fetch((*ctx).libctx, OBJ_nid2sn(nid), (*ctx).propq.cast_const()) };",
+   "    if md.is_null() {",
+   "        // SAFETY: the site is a compile-time constant.",
+   "        unsafe { raise_ctx(136) };",
+   "        return 0;",
+   "    }",
+   "    // SAFETY: `pmd` is a live out-pointer.",
+   "    unsafe {",
+   "        EVP_MD_free(*pmd);",
+   "        *pmd = md;",
+   "    }",
+   "    1",
+   "}"
+  ],
+  "old_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 407,
+   "end_line": 421,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "cmp_ctx_set_md",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "cd466dc13eee90d9e36e0601ccf6308e32c096b476d0982caf893b37c6f37ef8",
+   "source": {
+    "commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "content_sha256": "c4429e7ee692bc55982fc9d5b84db88691cdf0b7ca49c654669348f368ceb283",
+    "source": "git-blob"
+   },
+   "start_line": 407
+  },
+  "operation": "cmp_ctx_set_md",
+  "recorded": "cd466dc13eee90d9e36e0601ccf6308e32c096b476d0982caf893b37c6f37ef8",
+  "source_receipt": "openssh-v1i-sites.json",
+  "classification": "doc-only",
+  "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+  "added_lines_all_comments": true,
+  "hunks": [
+   {
+    "old": [
+     "    // SAFETY: `pmd` is a live out-pointer."
+    ],
+    "new": [
+     "    // SAFETY: `pmd` is a live out-pointer to the context's own method slot, holding the",
+     "    // reference this context owns per the contract."
+    ]
+   }
+  ]
+ },
+ {
+  "extra": {
+   "line_current": 1706,
+   "span_end_line": 1709,
+   "span_start_line": 1706
+  },
+  "file": "src/cmp/cmp_asn.rs",
+  "id": "OSSH-V1I-067",
+  "new_lines": [
+   "unsafe fn itav_free(itav: *mut CmpItav) {",
+   "    // SAFETY: `itav` is NULL or a live, exclusively owned item value per the contract.",
+   "    unsafe { ASN1_item_free(itav.cast(), cmp_itav_it()) };",
+   "}"
+  ],
+  "new_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 1712,
+   "end_line": 1715,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "itav_free",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "b23c42bb8b1a61c4de93b40c75faf45e2e2af5b116c9b0b770e7023526573412",
+   "source": {
+    "commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+    "content_sha256": "b216ee057139f1bbb6184eea75e287d081cb168ef5fbd43d6143f56b37a0abd3",
+    "source": "git-blob"
+   },
+   "start_line": 1712
+  },
+  "old_commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "old_lines": [
+   "unsafe fn itav_free(itav: *mut CmpItav) {",
+   "    // SAFETY: `itav` is NULL or a live item value.",
+   "    unsafe { ASN1_item_free(itav.cast(), cmp_itav_it()) };",
+   "}"
+  ],
+  "old_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 1706,
+   "end_line": 1709,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "itav_free",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "5b0450b583d888ad1fa516a1db92cfd5493f24343bb7f8ac4e98943f7a46dfd5",
+   "source": {
+    "commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "content_sha256": "8d54b311ebd75504df4aae047f718b87ec026551a448f7da4b75d66dade9c9b1",
+    "source": "git-blob"
+   },
+   "start_line": 1706
+  },
+  "operation": "itav_free",
+  "recorded": "5b0450b583d888ad1fa516a1db92cfd5493f24343bb7f8ac4e98943f7a46dfd5",
+  "source_receipt": "openssh-v1i-sites.json",
+  "classification": "doc-only",
+  "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+  "added_lines_all_comments": true,
+  "hunks": [
+   {
+    "old": [
+     "    // SAFETY: `itav` is NULL or a live item value."
+    ],
+    "new": [
+     "    // SAFETY: `itav` is NULL or a live, exclusively owned item value per the contract."
+    ]
+   }
+  ]
+ },
+ {
+  "extra": {
+   "line_current": 1722,
+   "span_end_line": 1725,
+   "span_start_line": 1722
+  },
+  "file": "src/cmp/cmp_asn.rs",
+  "id": "OSSH-V1I-069",
+  "new_lines": [
+   "unsafe fn rootcakeyupdate_free(p: *mut CmpRootCaKeyUpdate) {",
+   "    // SAFETY: `p` is NULL or a live, exclusively owned item value per the contract.",
+   "    unsafe { ASN1_item_free(p.cast(), cmp_rootcakeyupdate_it()) };",
+   "}"
+  ],
+  "new_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 1734,
+   "end_line": 1737,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "rootcakeyupdate_free",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "e6eeb9d17271a94ed1d94e4f96605dd597abc6dea6304f6ec0dc6ac4703cebd0",
+   "source": {
+    "commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+    "content_sha256": "b216ee057139f1bbb6184eea75e287d081cb168ef5fbd43d6143f56b37a0abd3",
+    "source": "git-blob"
+   },
+   "start_line": 1734
+  },
+  "old_commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+  "old_lines": [
+   "unsafe fn rootcakeyupdate_free(p: *mut CmpRootCaKeyUpdate) {",
+   "    // SAFETY: `p` is NULL or a live item value.",
+   "    unsafe { ASN1_item_free(p.cast(), cmp_rootcakeyupdate_it()) };",
+   "}"
+  ],
+  "old_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 1722,
+   "end_line": 1725,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "rootcakeyupdate_free",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "ab84f3d5975c0d0dde5598293da723073efe4e6cba97b983cd2c52483fa236ed",
+   "source": {
+    "commit": "bb7d5206acfbf6c3e0ba202a0a03e61b8bf13aac",
+    "content_sha256": "8d54b311ebd75504df4aae047f718b87ec026551a448f7da4b75d66dade9c9b1",
+    "source": "git-blob"
+   },
+   "start_line": 1722
+  },
+  "operation": "rootcakeyupdate_free",
+  "recorded": "ab84f3d5975c0d0dde5598293da723073efe4e6cba97b983cd2c52483fa236ed",
+  "source_receipt": "openssh-v1i-sites.json",
+  "classification": "doc-only",
+  "delta": "the only in-span difference is a // SAFETY comment line; every code token is byte-identical",
+  "added_lines_all_comments": true,
+  "hunks": [
+   {
+    "old": [
+     "    // SAFETY: `p` is NULL or a live item value."
+    ],
+    "new": [
+     "    // SAFETY: `p` is NULL or a live, exclusively owned item value per the contract."
+    ]
+   }
+  ]
+ },
+ {
+  "extra": {
+   "line_current": 426,
+   "span_end_line": 465,
+   "span_start_line": 426
+  },
+  "file": "src/rand/rand_lib.rs",
+  "id": "RAND-CTX-001",
+  "new_lines": [
+   "pub(crate) unsafe extern \"C\" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut c_void {",
+   "    let Some(dgbl) = RawGlobal::new() else {",
+   "        return ptr::null_mut();",
+   "    };",
+   "",
+   "    // `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, NULL)`: base thread handling must exist",
+   "    // before this object does.",
+   "    // SAFETY: NULL settings, so the initialiser reads no caller memory.",
+   "    unsafe { crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null()) };",
+   "",
+   "    // SAFETY: `RANDOM_PROVIDER_FIPS_NAME` is a NUL-terminated literal and the answer is this",
+   "    // call's own fresh block or NULL.",
+   "    let name = unsafe {",
+   "        OwnedStr::adopt(",
+   "            CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, L_CTX_PROVIDER_NAME),",
+   "            FILE_SEAM,",
+   "            L_CTX_ERR_PROVIDER_NAME,",
+   "        )",
+   "    };",
+   "    // The authority's first failure arm frees the block alone (`:543`), which `RawGlobal`'s `Drop`",
+   "    // performs; the name was never acquired.",
+   "    let Some(name) = name else {",
+   "        return ptr::null_mut();",
+   "    };",
+   "",
+   "    let lock = CRYPTO_THREAD_lock_new();",
+   "    if lock.is_null() {",
+   "        // The authority's second failure arm frees the name (`:541`) and then the block (`:543`);",
+   "        // `name` drops before `dgbl` because it is declared later.",
+   "        return ptr::null_mut();",
+   "    }",
+   "",
+   "    let p = dgbl.as_ptr();",
+   "    // SAFETY: `p` is this call's own fresh block, published nowhere yet.",
+   "    unsafe {",
+   "        (*p).random_provider_name = name.into_raw();",
+   "        (*p).lock = lock;",
+   "    }",
+   "",
+   "    dgbl.finish().cast::<c_void>()",
+   "}"
+  ],
+  "new_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 426,
+   "end_line": 466,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "ossl_rand_ctx_new",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "304a782704a5b63d5780212521506752ccaaf804deaf6af742b7d6b1f511d1f8",
+   "source": {
+    "commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+    "content_sha256": "7a532c3789192521d603f679c13abceb2a067248b02ad57350acd57e14b5dc40",
+    "source": "git-blob"
+   },
+   "start_line": 426
+  },
+  "old_commit": "04acfb7ea03a2713ab69bf10a4b331c6ae65a29d",
+  "old_lines": [
+   "pub(crate) unsafe extern \"C\" fn ossl_rand_ctx_new(_libctx: *mut c_void) -> *mut c_void {",
+   "    let Some(dgbl) = RawGlobal::new() else {",
+   "        return ptr::null_mut();",
+   "    };",
+   "",
+   "    // `OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, NULL)`: base thread handling must exist",
+   "    // before this object does.",
+   "    crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null());",
+   "",
+   "    // SAFETY: `RANDOM_PROVIDER_FIPS_NAME` is a NUL-terminated literal and the answer is this",
+   "    // call's own fresh block or NULL.",
+   "    let name = unsafe {",
+   "        OwnedStr::adopt(",
+   "            CRYPTO_strdup(RANDOM_PROVIDER_FIPS_NAME, FILE, L_CTX_PROVIDER_NAME),",
+   "            FILE_SEAM,",
+   "            L_CTX_ERR_PROVIDER_NAME,",
+   "        )",
+   "    };",
+   "    // The authority's first failure arm frees the block alone (`:543`), which `RawGlobal`'s `Drop`",
+   "    // performs; the name was never acquired.",
+   "    let Some(name) = name else {",
+   "        return ptr::null_mut();",
+   "    };",
+   "",
+   "    let lock = CRYPTO_THREAD_lock_new();",
+   "    if lock.is_null() {",
+   "        // The authority's second failure arm frees the name (`:541`) and then the block (`:543`);",
+   "        // `name` drops before `dgbl` because it is declared later.",
+   "        return ptr::null_mut();",
+   "    }",
+   "",
+   "    let p = dgbl.as_ptr();",
+   "    // SAFETY: `p` is this call's own fresh block, published nowhere yet.",
+   "    unsafe {",
+   "        (*p).random_provider_name = name.into_raw();",
+   "        (*p).lock = lock;",
+   "    }",
+   "",
+   "    dgbl.finish().cast::<c_void>()",
+   "}"
+  ],
+  "old_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 426,
+   "end_line": 465,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "ossl_rand_ctx_new",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "232c98ca33e79818c46dff8f5857876c778484213f069315127c2497e8b05186",
+   "source": {
+    "commit": "04acfb7ea03a2713ab69bf10a4b331c6ae65a29d",
+    "content_sha256": "ee19112d10a5a9c96d39db3b6d466044acb4185479149810a0585ad520a7c5e5",
+    "source": "git-blob"
+   },
+   "start_line": 426
+  },
+  "operation": "ossl_rand_ctx_new",
+  "recorded": "232c98ca33e79818c46dff8f5857876c778484213f069315127c2497e8b05186",
+  "source_receipt": "boundary-sweep-B69.json",
+  "classification": "annotation-only",
+  "delta": "the in-span difference is an explicit `unsafe { }` block around an unchanged callee with unchanged arguments, plus its SAFETY comment: no token, callee, argument, control flow or effect changed",
+  "added_lines_all_comments": true,
+  "hunks": [
+   {
+    "old": [
+     "    crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null());"
+    ],
+    "new": [
+     "    // SAFETY: NULL settings, so the initialiser reads no caller memory.",
+     "    unsafe { crate::runtime::init::OPENSSL_init_crypto(OPENSSL_INIT_BASE_ONLY, ptr::null()) };"
+    ]
+   }
+  ]
+ },
+ {
+  "extra": {
+   "line_current": null,
+   "span_end_line": 635,
+   "span_start_line": 616
+  },
+  "file": "src/ssl/ssl_conf.rs",
+  "id": "ssl_conf.rs:616",
+  "new_lines": [
+   "unsafe fn min_max_proto(cctx: *mut SslConfCtx, value: *const c_char, bound: *mut c_int) -> c_int {",
+   "    // SAFETY: `cctx` is live.",
+   "    let c = unsafe { &*cctx };",
+   "    let method_version = if !c.ctx.is_null() {",
+   "        // SAFETY: `ctx` is live.",
+   "        unsafe { (*(*c.ctx).method).version }",
+   "    } else if !c.ssl.is_null() {",
+   "        // SAFETY: `ssl` is live.",
+   "        unsafe { (*(*c.ssl).defltmeth).version }",
+   "    } else {",
+   "        return 0;",
+   "    };",
+   "    // SAFETY: `value` is NUL-terminated.",
+   "    let v = unsafe { core::ffi::CStr::from_ptr(value) }.to_bytes();",
+   "    let new_version = protocol_from_string(v);",
+   "    if new_version < 0 {",
+   "        return 0;",
+   "    }",
+   "    // SAFETY: `bound` is the caller's live, aligned, writable slot per this function's",
+   "    // contract, and `cctx`/`value` were read under that same contract above.",
+   "    c_int::from(unsafe { ssl_set_version_bound(method_version, new_version, bound) })",
+   "}"
+  ],
+  "new_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 628,
+   "end_line": 649,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "min_max_proto",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "cf85808865ee6e83b27e811dbebb28da3012deae9312d852972b3c35b5b84073",
+   "source": {
+    "commit": "08cb1148b40aa4cebc727e7c0b988505d3094ff0",
+    "content_sha256": "78ae9c58d0f0bd98d47cd89a797771361472d72d3a89b55acd522bbe0ae03b6f",
+    "source": "git-blob"
+   },
+   "start_line": 628
+  },
+  "old_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+  "old_lines": [
+   "unsafe fn min_max_proto(cctx: *mut SslConfCtx, value: *const c_char, bound: *mut c_int) -> c_int {",
+   "    // SAFETY: `cctx` is live.",
+   "    let c = unsafe { &*cctx };",
+   "    let method_version = if !c.ctx.is_null() {",
+   "        // SAFETY: `ctx` is live.",
+   "        unsafe { (*(*c.ctx).method).version }",
+   "    } else if !c.ssl.is_null() {",
+   "        // SAFETY: `ssl` is live.",
+   "        unsafe { (*(*c.ssl).defltmeth).version }",
+   "    } else {",
+   "        return 0;",
+   "    };",
+   "    // SAFETY: `value` is NUL-terminated.",
+   "    let v = unsafe { core::ffi::CStr::from_ptr(value) }.to_bytes();",
+   "    let new_version = protocol_from_string(v);",
+   "    if new_version < 0 {",
+   "        return 0;",
+   "    }",
+   "    c_int::from(ssl_set_version_bound(method_version, new_version, bound))",
+   "}"
+  ],
+  "old_span": {
+   "claim_scope": "The span hash covers only the operation's own text and its attributes: from the first non-documentation attribute/qualifier line through the brace-matched closing brace. Documentation comments (///, //!, /** */) above the attributes are excluded. The hash does NOT cover dispatchers, shared guards, macro headers/invocations, caller closures, or any other code outside that span; those remain governed by the existing freeze and mechanism-scope rules. This is a narrowing claim, not a strengthening one.",
+   "collision": null,
+   "def_line": 616,
+   "end_line": 635,
+   "normalisation": "split on universal newlines (Python str.splitlines), rstrip() every line, join with '\\n', sha256 over UTF-8 bytes (no trailing newline)",
+   "qualified_identity": "min_max_proto",
+   "resolution": "unique",
+   "schema": "safe-c33/operation-span-sha256/v1",
+   "sha256": "22644409257205625b3d05a0ebd5902b9c032c676601f6fbc75c0ba0ee9518f7",
+   "source": {
+    "commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+    "content_sha256": "e921bf71f4d1dd574a515e71965e506ac2a7070e1846ed60bcc25ec50b09cd7b",
+    "source": "git-blob"
+   },
+   "start_line": 616
+  },
+  "operation": "min_max_proto",
+  "recorded": "22644409257205625b3d05a0ebd5902b9c032c676601f6fbc75c0ba0ee9518f7",
+  "source_receipt": "sslconf-exclusivity-2026-11-10-sites.json",
+  "classification": "annotation-only",
+  "delta": "the in-span difference is an explicit `unsafe { }` block around an unchanged callee with unchanged arguments, plus its SAFETY comment: no token, callee, argument, control flow or effect changed",
+  "added_lines_all_comments": true,
+  "hunks": [
+   {
+    "old": [
+     "    c_int::from(ssl_set_version_bound(method_version, new_version, bound))"
+    ],
+    "new": [
+     "    // SAFETY: `bound` is the caller's live, aligned, writable slot per this function's",
+     "    // contract, and `cctx`/`value` were read under that same contract above.",
+     "    c_int::from(unsafe { ssl_set_version_bound(method_version, new_version, bound) })"
+    ]
+   }
+  ]
+ }
+]

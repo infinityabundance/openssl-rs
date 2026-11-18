@@ -1627,7 +1627,14 @@ pub extern "C" fn OSSL_default_ciphersuites() -> *const c_char {
 /// `int SSL_CTX_set_ciphersuites(SSL_CTX *ctx, const char *str)` — `ssl/ssl_ciph.c:1389-1398`.
 ///
 /// # Safety
-/// `ctx` must be NULL or live; `str` NULL or NUL-terminated.
+/// `ctx` must be NULL or live; `str` NULL or NUL-terminated. For a non-NULL `ctx` this
+/// call has **exclusive access to the context's cipher slots** for its whole duration:
+/// it replaces `tls13_ciphersuites` and, when `cipher_list` is already installed,
+/// rebuilds and replaces `cipher_list`/`cipher_list_by_id` as well, releasing each
+/// incumbent stack (`set_ciphersuites` and `update_cipher_list_by_id` free them). No
+/// other reference to any of those stacks — including a pointer previously returned by
+/// `SSL_CTX_get_ciphers` — and no concurrent reader or writer of the same context may
+/// be live across the call. The `str` bytes are read only for the call.
 #[no_mangle]
 pub unsafe extern "C" fn SSL_CTX_set_ciphersuites(ctx: *mut SslCtx, str_: *const c_char) -> c_int {
     guard_ffi(0, || {
@@ -1657,7 +1664,15 @@ pub unsafe extern "C" fn SSL_CTX_set_ciphersuites(ctx: *mut SslCtx, str_: *const
 /// `int SSL_set_ciphersuites(SSL *s, const char *str)` — `ssl/ssl_ciph.c:1400-1421`.
 ///
 /// # Safety
-/// `s` must be NULL or live; `str` NULL or NUL-terminated.
+/// `s` must be NULL or live; `str` NULL or NUL-terminated. For a non-NULL `s` this call
+/// has **exclusive access to the connection's cipher slots** for its whole duration: it
+/// replaces `tls13_ciphersuites` and, when `cipher_list` is installed (directly or by
+/// duplicating `SSL_get_ciphers(s)`), rebuilds and replaces
+/// `cipher_list`/`cipher_list_by_id`, and both helpers release the incumbent stacks. No
+/// other reference to any of those stacks and no concurrent reader or writer of `s` may
+/// be live across the call. `s->ctx`, read for its disabled-cipher masks by
+/// `update_cipher_list`, must be live and not concurrently mutated. The `str` bytes are
+/// read only for the call.
 #[no_mangle]
 pub unsafe extern "C" fn SSL_set_ciphersuites(s: *mut Ssl, str_: *const c_char) -> c_int {
     guard_ffi(0, || {
@@ -1764,8 +1779,8 @@ pub unsafe extern "C" fn SSL_COMP_add_compression_method(id: c_int, cm: *mut Com
         if cm.is_null() {
             return 1;
         }
-        // SAFETY: `cm` is live per the caller's contract.
-        if COMP_get_type(cm) == NID_undef {
+        // SAFETY: `cm` is non-NULL and live per the caller's contract.
+        if unsafe { COMP_get_type(cm) } == NID_undef {
             return 1;
         }
         if !(193..=255).contains(&id) {
@@ -1794,18 +1809,33 @@ pub unsafe extern "C" fn SSL_COMP_add_compression_method(id: c_int, cm: *mut Com
 
 /// `const char *SSL_COMP_get_name(const COMP_METHOD *comp)` — `ssl/ssl_ciph.c:2057-2064`.
 ///
-/// # Notes
-/// `comp` NULL or a live `COMP_METHOD`.
+/// # Safety
+///
+/// `comp` must be NULL or point to a live `CompMethod`, properly aligned and fully
+/// initialised, valid for the duration of the call. The pointer is a method object
+/// the caller owns or borrows; this function takes no ownership of it. The returned
+/// `*const c_char` is borrowed from that method (its own `name` field, not a copy),
+/// so it may be NULL and is valid only while the method is. NULL is the only value
+/// that needs no precondition, and the body's NULL test does not make a dangling or
+/// uninitialised non-NULL pointer safe.
 #[no_mangle]
-pub extern "C" fn SSL_COMP_get_name(comp: *const CompMethod) -> *const c_char {
+pub unsafe extern "C" fn SSL_COMP_get_name(comp: *const CompMethod) -> *const c_char {
     guard_ffi(ptr::null(), || {
         if comp.is_null() {
             return ptr::null();
         }
-        // SAFETY: `comp` is live per the caller's contract.
-        COMP_get_name(comp)
+        // SAFETY: `comp` is non-NULL and live per this function's contract; the
+        // forwarded callee requires exactly the same precondition and returns a
+        // pointer borrowed from the same method.
+        unsafe { COMP_get_name(comp) }
     })
 }
+
+// ABI-shape control: the parameter/return types are pinned, so an ABI change stops
+// this file compiling. (It does not pin the `unsafe` qualifier: a safe `extern "C"
+// fn` item also coerces to an `unsafe extern "C" fn` pointer. The qualifier is
+// controlled by `ssl_comp_get_name_is_an_unsafe_fn` below.)
+const _: unsafe extern "C" fn(*const CompMethod) -> *const c_char = SSL_COMP_get_name;
 
 /// `const char *SSL_COMP_get0_name(const SSL_COMP *comp)` — `ssl/ssl_ciph.c:2066-2073`.
 ///
@@ -1833,3 +1863,25 @@ pub unsafe extern "C" fn SSL_COMP_get_id(comp: *const SslComp) -> c_int {
 
 /// The file name the authority's `OPENSSL_malloc`/`OPENSSL_free` sites carry.
 const FILE_SEAM: SeamFile = SeamFile::new(c"ssl_ciph.c");
+
+#[cfg(test)]
+mod tests {
+    /// Qualifier control for F-SSL-3: `SSL_COMP_get_name` forwards to a callee that
+    /// dereferences the method, so it must not be callable from safe Rust. A safe fn
+    /// item coerces to an `unsafe fn` pointer, so a const type assertion cannot detect
+    /// a dropped qualifier; this test instead reads the production source from disk,
+    /// truncates it at the first `#[cfg(test)]` module and assembles the needle from
+    /// fragments, so this test's own assertion text is never searched and it fails
+    /// only if `unsafe` is removed.
+    #[test]
+    #[allow(clippy::expect_used)]
+    fn ssl_comp_get_name_is_an_unsafe_fn() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/ssl/ssl_ciph.rs");
+        let src = std::fs::read_to_string(path).expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        let needle = concat!("pub unsafe extern ", "\"C\" fn SSL_COMP_get_name(");
+        assert!(prod.contains(needle), "missing {needle}");
+    }
+}

@@ -189,6 +189,13 @@ const V3_BCONS_76: crate::runtime::err::err_sites::ErrSite =
 
 /// `static STACK_OF(CONF_VALUE) *i2v_BASIC_CONSTRAINTS(X509V3_EXT_METHOD *method,
 /// BASIC_CONSTRAINTS *bcons, STACK_OF(CONF_VALUE) *extlist)` — `crypto/x509/v3_bcons.c:45-54`.
+///
+/// # Safety
+///
+/// The `i2v` slot contract stated on [`X509V3ExtMethod`]. Caller: `X509V3_EXT_print`'s `i2v`
+/// arm, which decoded `bcons` through this row's `BASIC_CONSTRAINTS_it` and passes NULL as the
+/// sink; the dispatcher frees the decoded value after the call. `bcons` is borrowed here, and
+/// the returned stack and its members are the caller's to release.
 unsafe extern "C" fn i2v_BASIC_CONSTRAINTS(
     _method: *const X509V3ExtMethod,
     bcons: *mut c_void,

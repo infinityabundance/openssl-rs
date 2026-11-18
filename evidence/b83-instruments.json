@@ -1,0 +1,390 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/b83-instruments/v1",
+ "batch": "b83-review11",
+ "date": "2026-11-16",
+ "candidate": {
+  "source_head": "e14a2589285874818da84c6727cd488ae6e6b77f",
+  "branch": "stage/p25/b75-ocsp",
+  "src_edited": false,
+  "note": "no src/ or test file was modified by this batch; only court/freeze-b83/review11/** and this receipt were written"
+ },
+ "venue": {
+  "container": "openssl-rs-court:1",
+  "cgroup_memory": "8g (AGENTS section 6.1 cap min(8g, available-16g) with available=31g; the brief's 16 GiB was NOT used because the standing rule is unconditional and smaller is strictly safer)",
+  "cpus": 8,
+  "cargo_build_jobs": 8,
+  "one_heavy_command_at_a_time": true
+ },
+ "instruments": {
+  "miri": {
+   "state": "RUN",
+   "toolchain": {
+    "channel": "nightly-2026-10-01",
+    "rustc": "rustc 1.101.0-nightly (21b707e3f 2026-09-30)",
+    "rustc_commit": "21b707e3f97e0b522ebd2f277a862339625ad83f",
+    "miri_component": "miri-preview from https://static.rust-lang.org/dist/2026-10-01/miri-nightly-x86_64-unknown-linux-gnu.tar.xz (sha256 77ef5fb329eebe6f6189d8e17ec7b3757ab482efaaa50afb289fc371703de0ed)",
+    "toolchain_home": "/work/court/freeze-b80/review7/.phase25-rustup (the cached TSan toolchain; the miri-preview component was extracted into it because the cached copy had rust-src but no miri binary)",
+    "miri_sysroot": "/work/court/freeze-b83/review11/miri/sysroot (cargo miri setup, 9 s)",
+    "deviation": "forensics/tools/ms_miri.py pins NIGHTLY_HOME=/work/.phase25-rustup; this batch reused the review7 cache as instructed and records the exact identity above"
+   },
+   "commands": {
+    "setup": "MIRI_SYSROOT=... CARGO_TARGET_DIR=... cargo miri setup",
+    "per_test_stacked": "MIRIFLAGS='-Zmiri-disable-isolation' cargo miri test --lib <exact test> -- --test-threads=1",
+    "per_test_tree": "MIRIFLAGS='-Zmiri-disable-isolation -Zmiri-tree-borrows' cargo miri test --lib <exact test> -- --test-threads=1",
+    "why_per_test": "Miri aborts the test process at the first unsupported operation, so one module filter hides every later test; each of the 42 tests ran in its own Miri process"
+   },
+   "targets": {
+    "evp::digest::tests": "digest entry-point guards and the provider copyctx/dupctx family (33 tests)",
+    "provider::ctx::tests": "provider context accessors (2)",
+    "cms::cms_lib::tests": "CMS free paths (3)",
+    "x509::v3_san::tests": "X509 SAN builders (4)",
+    "total_tests": 42
+   },
+   "results": {
+    "stacked_borrows": {
+     "PASS": 34,
+     "UNSUPPORTED": 4,
+     "UB": 3,
+     "FAILED_MIRI_ARTIFACT": 1
+    },
+    "tree_borrows": {
+     "PASS": 34,
+     "UNSUPPORTED": 4,
+     "UB": 3,
+     "FAILED_MIRI_ARTIFACT": 1
+    },
+    "model_disagreement": "none: the two aliasing models agree test-for-test (only the thread id in the libtest panic line differs)"
+   },
+   "findings": [
+    {
+     "id": "MIRI-UB-1",
+     "severity": "STOP (confirmed memory-safety defect per AGENTS section 6)",
+     "kind": "ABI mismatch: a Rust-ABI function is called through an extern C function pointer",
+     "verbatim": "error: Undefined Behavior: calling a function with calling convention \"Rust\" using calling convention \"C\"\n  --> src/asn1/utl.rs:93:14\n   |\n93 |     unsafe { f() }\n   |              ^^^ Undefined Behavior occurred here",
+     "backtrace_verbatim": "0: asn1::utl::call_item_exp (src/asn1/utl.rs:93)\n1: asn1::utl::do_adb (src/asn1/utl.rs:549)\n2: asn1::fre::item_embed_free (src/asn1/fre.rs:351)\n3: asn1::fre::ASN1_item_free (src/asn1/fre.rs:450)\n4: cms::cms_lib::CMS_ContentInfo_free (src/cms/cms_lib.rs:125)",
+     "reproduced_by": [
+      "cms::cms_lib::tests::both_get1_helpers_fill_their_reserved_stacks_at_capacity",
+      "cms::cms_lib::tests::a_failed_cert_insertion_releases_the_up_ref",
+      "cms::cms_lib::tests::a_failed_crl_push_orphans_one_reference_control"
+     ],
+     "root_cause": {
+      "dispatch": "src/asn1/utl.rs:89-94 call_item_exp transmutes Asn1Template.item to `unsafe extern \"C\" fn() -> *const c_void` and calls it",
+      "wrong_abi_definitions": [
+       "src/cms/cms_asn1.rs:2530 fn cms_adb (stored at :2557) -- the CMS ANY-DEFINED-BY accessor reached by every CMS_ContentInfo_free",
+       "src/cms/cms_asn1.rs:1989 fn cms_ori_adb (stored at :2006)",
+       "src/ec/asn1.rs:765 fn x9_62_characteristic_two_adb (stored at :884)",
+       "src/ec/asn1.rs:814 fn x9_62_fieldid_adb (stored at :916)",
+       "src/pkcs12/p12_asn.rs:182 fn pkcs12_bags_adb (stored at :392)",
+       "src/pkcs12/p12_asn.rs:275 fn pkcs12_safebag_adb (stored at :475)",
+       "src/pkcs7/pk7_asn1.rs:479 fn pkcs7_adb (stored at :1638)",
+       "src/x509/v3_cpols.rs:337 fn policyqualinfo_adb (stored at :520)"
+      ],
+      "correctly_declared_comparison": "src/crmf/crmf_asn.rs:934 pub(crate) extern \"C\" fn crmf_atav_adb -- the same shape declared with the ABI call_item_exp assumes",
+      "why_latent": "on x86-64 SysV a nullary C fn returning a pointer and the Rust ABI coincide in practice, so native tests pass; the code is still UB under the Rust reference and Miri refuses it"
+     },
+     "native_control": "court/freeze-b83/review11/miri/native-control.log: the three CMS tests pass natively (3 passed) and the SAN test passes natively (1 passed) -- libtest does not detect the defect, only the instrument does",
+     "fix_not_made": "source was not modified (batch rule); the fix is to declare the eight accessors `unsafe extern \"C\" fn` (or to carry the ABI in call_item_exp's contract and dispatch accordingly)"
+    },
+    {
+     "id": "MIRI-UNSUPPORTED-1",
+     "severity": "coverage limit (NOT a pass, NOT a failure)",
+     "verbatim": "error: unsupported operation: can't call foreign function `pthread_once` on OS `linux`\n   --> src/runtime/thread.rs:762:21",
+     "path": "src/runtime/thread.rs:753-767 CRYPTO_THREAD_run_once -> src/context/mod.rs:993 run_once_default_context -> default context -> EVP_MD_fetch",
+     "tests": [
+      "evp::digest::tests::an_unpublished_algorithm_answers_null_with_an_error",
+      "evp::digest::tests::the_one_shots_answer_zero_and_write_a_zero_length",
+      "evp::digest::tests::do_all_refuses_a_null_visitor_and_visits_nothing_without_providers",
+      "evp::digest::tests::a_final_xof_shorter_than_the_digest_is_refused_without_writing"
+     ],
+     "requirement": "Miri cannot execute pthread_once; a committed cfg(miri) substitute for CRYPTO_THREAD_run_once (or a Miri-supported once shim) would be required to reach these four tests. None exists in src/runtime/thread.rs today."
+    },
+    {
+     "id": "MIRI-ARTIFACT-1",
+     "severity": "instrument artifact, not a code defect",
+     "verbatim": "assertion `left == right` failed: subjectAltName must be built by v2i_subject_alt\n  left: Some(30753296)\n right: Some(30753591)",
+     "explanation": "src/x509/v3_san.rs:1626-1632 compares a stored function pointer cast to usize with a function item cast through *const (); Miri's synthetic function-pointer addresses are not stable across distinct ptr-to-int cast paths. The same test passes natively (see native_control).",
+     "disposition": "ADJUDICATED (Miri model stricter than the test's identity check); no source change"
+    }
+   ],
+   "coverage_limits": [
+    "Miri is an interpreter: any FFI, inline asm, OS thread primitive or dynamic load stops the run (pthread_once observed here).",
+    "MIRI_PASS is per-test, not per-operation: a passing test shows the operations it executed were sound, not that every unsafe site in its module is.",
+    "Only 42 focused tests were run (the four reviewed boundaries); this is not a crate-wide Miri result.",
+    "Function-pointer identity/equality checks cannot be validated under Miri's synthetic addresses."
+   ]
+  },
+  "asan": {
+   "state": "RUN",
+   "toolchain": {
+    "channel": "nightly-2026-10-01",
+    "rustc": "rustc 1.101.0-nightly (21b707e3f 2026-09-30)",
+    "clang": "Debian clang version 14.0.6",
+    "asan_runtime": "librustc-nightly_rt.asan.a in the pinned toolchain",
+    "target": "x86_64-unknown-linux-gnu",
+    "profile": "dev"
+   },
+   "instrument": {
+    "rustflags": "-Zsanitizer=address -Cdebuginfo=1 -Clinker=clang -Ccodegen-units=16",
+    "build_std": "-Zbuild-std (std, proc_macro, test rebuilt under ASan)",
+    "cc_wrapper": "court/freeze-b83/review11/asan/bin/asan-cc = clang -fsanitize=address -fno-omit-frame-pointer -g \"$@\"",
+    "asan_options": "detect_leaks=0:symbolize=1:allocator_may_return_null=1"
+   },
+   "venue_deviation": {
+    "data_limit": "OPENSSL_RS_COURT_DATA=unlimited, not the brief's 12582912 KiB",
+    "why_verbatim": "==370136==ERROR: AddressSanitizer failed to allocate 0xdfff0001000 (15392894357504) bytes at address 0x02008fff7000 (errno: 12)\n==370136==ReserveShadowMemoryRange failed while trying to map 0xdfff0001000 bytes. Perhaps you're using ulimit -v or ulimit -d",
+    "scope": "only the per-process RLIMIT_DATA is removed, exactly the documented ms_asan.py derivation; the cgroup memory cap (8g), PIDs and CPUs are unchanged"
+   },
+   "allocator_option_reason": "the first run aborted with 'AddressSanitizer: requested allocation size 0xffffffffffffffff ... exceeds maximum supported size' -- a deliberate allocation-failure test, not a memory error; allocator_may_return_null=1 is required to exercise the crate's NULL-on-failure paths (see court/freeze-b83/review11/asan/focused.log)",
+   "commands": {
+    "build": "RUSTFLAGS='...' CC=asan-cc cargo test -Zbuild-std --lib --target x86_64-unknown-linux-gnu --no-run",
+    "run": "ASAN_OPTIONS=... cargo test -Zbuild-std --lib --target x86_64-unknown-linux-gnu <filter> -- --test-threads=1"
+   },
+   "canary": {
+    "rust_canary": "fired: 'ERROR: AddressSanitizer: heap-use-after-free' on forensics/tools/asan_canary.rs built with the exact -Zsanitizer=address instrument used for the crate; nonzero diagnosis observed",
+    "c_canary": "NOT_RUN: the clang-14 ASan runtime archive is absent from the court image (libclang_rt.asan-x86_64.a / libclang_rt.asan_static-x86_64.a not found under /usr/lib/llvm-14), so forensics/tools/asan_canary.c cannot link here",
+    "trust_rule": "the zero-findings crate result is trusted only because the Rust canary (same instrument) fired; the C canary is recorded as NOT_RUN, never as a pass"
+   },
+   "results": {
+    "evp::digest::tests": "33 passed / 0 failed",
+    "provider::ctx::tests": "2 passed / 0 failed",
+    "cms::cms_lib::tests": "3 passed / 0 failed",
+    "x509::v3_san::tests": "4 passed / 0 failed",
+    "total": "42 passed / 0 failed",
+    "asan_reports": 0
+   },
+   "coverage_limits": [
+    "ASan cannot see inline asm or a dlopen'd module; no such site is on these four paths.",
+    "The ABI-mismatch UB found by Miri is invisible to ASan -- this is why the instruments are not interchangeable.",
+    "Only the 42 focused tests were run, not the crate-wide suite."
+   ]
+  }
+ },
+ "task3_cleansing_audit": {
+  "scope": "RAND, CMS, STORE and KDF release/failure paths for secret-bearing member state; source only, no edits",
+  "classification_basis": "AGENTS.md section 5: release and cleansing are separate; copies, partial state and failure paths count; salts/IVs/names/UKM are public unless they key secret state",
+  "structures": [
+   {
+    "subsystem": "RAND",
+    "structure": "RandGlobal (src/rand/rand_lib.rs)",
+    "holds": "lock, primary/seed EVP_RAND_CTX, seven provider/name strings; no secret bytes in the block",
+    "release": "src/rand/rand_lib.rs:330-360 (OwnedCtx Drop) -> CRYPTO_THREAD_lock_free, EVP_RAND_CTX_free, OwnedStr",
+    "cleanses": "yes for the secret-bearing members (delegated to the DRBG contexts); the block itself is plain CRYPTO_free, correct because it holds no secret bytes",
+    "failure": "ossl_rand_ctx_new arms at :426-466 free the block alone or block+name; nothing secret is acquired before those arms",
+    "gap": "none"
+   },
+   {
+    "subsystem": "RAND",
+    "structure": "PROV_DRBG CTR/HASH/HMAC state (src/provider/rand.rs:1849, 3296, 4389)",
+    "holds": "secret K/V, seed material, blocktmp",
+    "release": "CRYPTO_secure_clear_free over size_of::<T>() at src/provider/rand.rs:1906, 3339, 4430",
+    "cleanses": "yes (secure clear_free)",
+    "failure": "resets cleanse k/v/blocktmp at :2337-2338, :2603-2606, :3829-3831, :4545, :4800-4801",
+    "gap": "none"
+   },
+   {
+    "subsystem": "RAND",
+    "structure": "RAND_POOL buffer (src/rand/pool.rs)",
+    "holds": "entropy bytes",
+    "release": "src/rand/pool.rs:237-246 CRYPTO_secure_clear_free / CRYPTO_clear_free with a recorded extent",
+    "cleanses": "yes",
+    "failure": "reattach cleanses before zeroing the length (:436-437); detach transfers the same release obligation to the caller",
+    "gap": "none"
+   },
+   {
+    "subsystem": "RAND",
+    "structure": "seed buffers (src/rand/prov_seed.rs)",
+    "holds": "seed material",
+    "release": "CRYPTO_clear_free at :132, :154, :260, :274",
+    "cleanses": "yes",
+    "failure": "the same arms are the failure arms",
+    "gap": "none"
+   },
+   {
+    "subsystem": "RAND",
+    "structure": "RAND_load_file / RAND_write_file stack buffers (src/rand/rand_lib.rs)",
+    "holds": "seed/random bytes",
+    "release": "OPENSSL_cleanse of the whole array at :2215 and :2290",
+    "cleanses": "yes",
+    "failure": "the cleanse is before the status check / after fclose, on every loop exit",
+    "gap": "none"
+   },
+   {
+    "subsystem": "CMS",
+    "structure": "CMS_EncryptedContentInfo.key (session/content key)",
+    "holds": "secret symmetric key",
+    "release": "src/cms/cms_asn1.rs:540-545 cms_ec_cb -> OPENSSL_clear_free(key, keylen); also src/cms/cms_enc.rs:638, :737; cms_env.rs:1724, :2570, :2781; cms_smime.rs:1655 before re-key",
+    "cleanses": "yes at final free and at the re-key sites that clear first",
+    "failure": "staging key is an OwnedBuf::new_cleansed_released (cms_enc.rs:581-583), cleansed on drop",
+    "gap": "G2: replacement inside ossl_cms_EncryptedContent_init (cms_enc.rs:770-778) overwrites ec->key without releasing or cleansing the incumbent"
+   },
+   {
+    "subsystem": "CMS",
+    "structure": "CMS_KekRecipientInfo.key (KEK)",
+    "holds": "secret key-encryption key",
+    "release": "src/cms/cms_asn1.rs:705-709 -> OPENSSL_clear_free(key, keylen)",
+    "cleanses": "yes at final free",
+    "failure": "KeySlot install is a detach, not a release (see G4)",
+    "gap": "G4 (documented, authority-identical): set0_key replaces the slot without releasing the incumbent; a caller that transferred ownership must release the old block itself"
+   },
+   {
+    "subsystem": "CMS",
+    "structure": "CMS_PasswordRecipientInfo.pass / passlen",
+    "holds": "secret passphrase",
+    "release": "src/cms/cms_asn1.rs:710-712 -> OPENSSL_clear_free(pass, passlen)",
+    "cleanses": "yes at final free",
+    "failure": "none acquired on the failure paths",
+    "gap": "G3: CMS_RecipientInfo_set0_password (src/cms/cms_pwri.rs:129-135) overwrites pass/passlen without release or cleanse, and its doc omits the detachment rule set0_key documents"
+   },
+   {
+    "subsystem": "CMS",
+    "structure": "KARI derived KEK (src/cms/cms_kari.rs:488-501, 598-627)",
+    "holds": "derived key-encryption key",
+    "release": "OPENSSL_cleanse over the derived length in the Drop; staging block is OwnedBuf::new_cleansed_released",
+    "cleanses": "yes on every exit",
+    "failure": "every exit below the derivation cleanses the KEK (documented at :644)",
+    "gap": "none"
+   },
+   {
+    "subsystem": "CMS",
+    "structure": "KEMRI kek / kem_secret (src/cms/cms_kemri.rs)",
+    "holds": "KEM shared secret and KEK",
+    "release": "OPENSSL_cleanse at :560, :581, :605, :627; out is OwnedBuf::new_cleansed_released at :596",
+    "cleanses": "yes",
+    "failure": "the same cleanse arms are the error arms",
+    "gap": "none"
+   },
+   {
+    "subsystem": "STORE",
+    "structure": "OsslPassphraseData (explicit and cached passphrase)",
+    "holds": "secret passphrase copy and cache",
+    "release": "src/passphrase.rs:207-227 ossl_pw_clear_passphrase_data -> CRYPTO_clear_free + zeroed cache + write_bytes(data,0); cache alone at :241-247",
+    "cleanses": "yes",
+    "failure": "STORE clears it on every free/error path: src/store/store_lib.rs:681, :872, :1328, :1437",
+    "gap": "none"
+   },
+   {
+    "subsystem": "STORE",
+    "structure": "PKCS#12 import passphrase temporary tpass (src/store/store_result.rs:936-1102)",
+    "holds": "secret passphrase",
+    "release": "OPENSSL_cleanse over the whole PEM_BUFSIZE+1 array at :1102",
+    "cleanses": "yes",
+    "failure": "the cleanse follows the parse loop and is reached by the break paths",
+    "gap": "none"
+   },
+   {
+    "subsystem": "KDF",
+    "structure": "KDF_SSKDF secret/salt/info",
+    "holds": "secret keying material",
+    "release": "CRYPTO_clear_free at src/provider/kdf.rs:1266-1268 (reset)",
+    "cleanses": "yes",
+    "failure": "mac buffer/keepalive is cleansed at :1198-1226; replacement uses ossl_param_get1_octet_string_from_param, whose prior block is adopted with a cleansing Drop (src/params/mod.rs:2994)",
+    "gap": "none"
+   },
+   {
+    "subsystem": "KDF",
+    "structure": "KDF_X942 secret",
+    "holds": "secret keying material",
+    "release": "CRYPTO_clear_free at src/provider/kdf.rs:2356 (reset)",
+    "cleanses": "yes at final free",
+    "failure": "derive failure arms do not drop the secret",
+    "gap": "G1: x942kdf_set_buffer (src/provider/kdf.rs:2472) plain-frees the previous block, and it is the helper used for the secret at :2655"
+   },
+   {
+    "subsystem": "KDF",
+    "structure": "PKCS12/PBKDF2/PBKDF1/PVK/Scrypt pass",
+    "holds": "secret password",
+    "release": "CRYPTO_clear_free at src/provider/kdf.rs:3046, :4170, :12275, :12758, :7921",
+    "cleanses": "yes",
+    "failure": "replacement helpers clear before get (:4248-4272 and peers); salts use plain CRYPTO_free because a salt is public",
+    "gap": "none"
+   },
+   {
+    "subsystem": "KDF",
+    "structure": "HKDF key/data/info; TLS1PRF sec/seed; KBKDF ki/context/iv; KRB5 key; HMACDRBG entropy/nonce",
+    "holds": "secret keying material",
+    "release": "CRYPTO_clear_free at src/provider/kdf.rs:5131-5136, :6304-6308, :7012-7019, :8680-8686, :9086-9105",
+    "cleanses": "yes",
+    "failure": "replacement paths clear first (:6515-6537 TLS1PRF, :8715-8722 KRB5, :9307-9345 HMACDRBG, the last documenting a deliberate improvement over the authority's plain free)",
+    "gap": "none"
+   },
+   {
+    "subsystem": "KDF",
+    "structure": "KDF_ARGON2 pwd/salt/secret/ad + matrix",
+    "holds": "secret password, secret, associated data; work matrix",
+    "release": "CRYPTO_clear_free at src/provider/kdf.rs:607-641; matrix CRYPTO_secure_clear_free/CRYPTO_clear_free at :10615",
+    "cleanses": "yes",
+    "failure": "over-length secret and pwd are clear-freed on the refusal arms (:11492 and peers); replacement clears the incumbent first (:11215, :11463)",
+    "gap": "none"
+   }
+  ],
+  "gaps": [
+   {
+    "id": "G1",
+    "subsystem": "KDF",
+    "file": "src/provider/kdf.rs",
+    "lines": "2472 with call site 2655",
+    "statement": "x942kdf_set_buffer replaces the previous buffer with a plain CRYPTO_free, and it is the helper that installs the X942 secret. Re-setting OSSL_KDF_PARAM_SECRET/KEY on an X942 context therefore frees the previous secret without cleansing it, while the final x942kdf_reset (:2356) does cleanse. The same file's SSKDF path (via src/params/mod.rs:2994) and HMACDRBG path (:9307-9345) do cleanse, so X942 is internally inconsistent. Authority-identical (OpenSSL x942kdf.c plain-frees the old secret); AGENTS section 5 forbids reproducing release-without-cleanse.",
+    "severity": "secret-retention (not UB)",
+    "fix": "not made"
+   },
+   {
+    "id": "G2",
+    "subsystem": "CMS",
+    "file": "src/cms/cms_enc.rs",
+    "lines": "770-778 (keylen at 781)",
+    "statement": "ossl_cms_EncryptedContent_init overwrites ec->key with a fresh OwnedBuf and never releases or cleanses the incumbent; the next line sets ec->keylen unconditionally. Reachable through CMS_EncryptedData_set1_key(cms, NULL, ...) / CMS_EncryptedData_decrypt called twice on the same CMS (src/cms/cms_smime.rs:576-620). The final free cleanses keylen bytes (src/cms/cms_asn1.rs:544), so a replaced key is freed or leaked without being zeroized, and a future key==NULL call on a keyed ec would desynchronise the cleanse extent. Authority-identical (cms_enc.c:203-230).",
+    "severity": "secret-retention + latent extent desync (not UB today)",
+    "fix": "not made"
+   },
+   {
+    "id": "G3",
+    "subsystem": "CMS",
+    "file": "src/cms/cms_pwri.rs",
+    "lines": "129-135",
+    "statement": "CMS_RecipientInfo_set0_password assigns pwri->pass/passlen without releasing or cleansing the incumbent, and its documentation (unlike CMS_RecipientInfo_set0_key's, src/cms/cms_env.rs:2068-2110) does not state that replacement detaches rather than releases. A caller that transferred a passphrase and then re-associates or clears with NULL orphans an uncleansed passphrase copy. Authority-identical (cms_pwri.c:22-37).",
+    "severity": "secret-retention + documentation gap (not UB)",
+    "fix": "not made"
+   },
+   {
+    "id": "G4",
+    "subsystem": "CMS",
+    "file": "src/cms/cms_env.rs",
+    "lines": "1209-1225",
+    "statement": "KeySlot::install replaces the KEK slot without releasing the incumbent. This is documented and authority-identical, and is required to let CMS_decrypt_set1_key detach a borrowed buffer; recorded as a retained caller obligation, not a defect.",
+    "severity": "retained obligation (documented)",
+    "fix": "none proposed"
+   }
+  ],
+  "outside_scope_residual": "derived keys handed to EVP_CIPHER_CTX/EVP_MAC_CTX/EVP_PKEY are released by those subsystems' own free paths, which this audit did not open; they remain an unresolved dependency for any secret-memory claim about CMS/KDF.",
+  "verdict": "RAND_CMS_STORE_KEYFMT secret-memory residual moves from unaudited to AUDITED WITH GAPS: RAND (ctx, DRBG state, pool, seed, I/O buffers), STORE (passphrase data/cache, PKCS#12 temporary) and most of KDF cleanse on release and on failure. Three concrete release-without-cleanse paths remain (G1 KDF/X942, G2 CMS content key, G3 CMS password), all authority-identical and therefore compatibility-preserving but not safe. The mechanism cannot be SAFETY_DISCHARGED for secret memory."
+ },
+ "mechanism_impact": {
+  "new_defect": "MIRI-UB-1 invalidates the call_item_exp contract for eight ADB accessors (CMS, EC, PKCS#7, PKCS#12, X.509 policy). Any mechanism whose closure includes src/asn1/utl.rs:89 (at minimum CMS, X.509 and the shared ASN.1 mechanism) cannot be SAFETY_DISCHARGED until the ABI is corrected: criterion 1 (an explicit validity contract per unsafe op) is not met when the contract states the wrong ABI.",
+  "rand_cms_store_keyfmt": "no verdict flips to discharged; the secret-cleansing residual is now specific (G1-G3) instead of unexamined, and remains OPEN.",
+  "asan": "no verdict change: 42/42 focused tests clean with a firing Rust canary supports 'no detected fault on these paths', which is not a safety certificate (AGENTS section 8).",
+  "stop_condition": "AGENTS section 6 STOP applies to MIRI-UB-1: a confirmed memory-safety defect. The narrowest BOUNDARY check is a review of every Asn1Template.item writer for ABI-typed accessors plus a Miri rerun of the affected item families after repair. This receipt does not fix source."
+ },
+ "residuals": [
+  "Miri could not run 4 digest tests because CRYPTO_THREAD_run_once calls pthread_once (no cfg(miri) substitute exists).",
+  "The C ASan canary could not link (clang-14 ASan runtime absent from the court image); only the Rust canary proves the instrument fires.",
+  "Miri and ASan covered 42 focused tests, not the crate-wide suite; neither result is a mechanism-wide pass.",
+  "G1-G3 are inherited from the OpenSSL authority and were deliberately not repaired in this instrument-only batch.",
+  "The ASan venue used RLIMIT_DATA=unlimited and allocator_may_return_null=1; both deviations are recorded with their reasons."
+ ],
+ "artifacts": {
+  "court/freeze-b83/review11/miri/miri-nightly-x86_64-unknown-linux-gnu.tar.xz": "77ef5fb329eebe6f6189d8e17ec7b3757ab482efaaa50afb289fc371703de0ed",
+  "court/freeze-b83/review11/miri/per-test-stacked.tsv": "0edc09a8eb9cabd8c2b4f6b07a69054f37a65fd21a950e29c10a7ad460f72317",
+  "court/freeze-b83/review11/miri/per-test-stacked.tsv.transcript": "d498a78e366226a868a1dca259a7daefb22143c43b6707efa52c6de2d98d0acf",
+  "court/freeze-b83/review11/miri/per-test-tree.tsv": "ca446702eedeaf009278a3bbca303280e5ced692b8c270c620424fd07e864c34",
+  "court/freeze-b83/review11/miri/digest-stacked.log": "21091c38541cc1a8e9e959fd505aa6dcfafdefa5b4a5a213d07ac99460b9eff0",
+  "court/freeze-b83/review11/miri/three-modules.log": "d1c19f58196eb5a5e1d78c1a50474280f6e60c5bdffbc8b4ba7be4d4f50f5948",
+  "court/freeze-b83/review11/miri/cms.log": "d9b20d8dbcea1f89b323bd2d1bf2f4397cd0597f35dfe929caad03f6aa996b32",
+  "court/freeze-b83/review11/miri/san-alt-rows.log": "e727fd0369d0abd54dbdfc46f82fc4437d78f71b06ff24e7eaa7da8ca4edc0af",
+  "court/freeze-b83/review11/miri/native-control.log": "1d666d6368f8c54a9094d3a50f2b5c3fb502392d71bf6d93c51a84940a5d0ca1",
+  "court/freeze-b83/review11/asan/canary-unlimited.log": "5c4c0ac0cf7c92d918ba0aaa7596148d29424c2c1d15574a3aebb286c77ddcb7",
+  "court/freeze-b83/review11/asan/canary.log": "f39689f591dc21849a3e43baa7f26eab5a16bb5542dae09298a8340efa9a0a5f",
+  "court/freeze-b83/review11/asan/build.log": "1c9e9016b409e4ff7881ceb8d77afd2c565b29c889d0944a90fb51b0f7490a25",
+  "court/freeze-b83/review11/asan/focused.log": "b24ffd718d6dc17e3547cfc673e776198b9ebff4e0feebfc6418aa99f54b16f0",
+  "court/freeze-b83/review11/asan/focused-returnnull.log": "070319854241f0226fcdd0cd6c3d9d2ffc99af4b7f067c895c3b5da2ddcc1ceb"
+ }
+}

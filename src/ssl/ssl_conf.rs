@@ -564,13 +564,25 @@ fn dtls_ordinal(v: c_int) -> c_int {
 /// `pub(crate)` because the version-bound control arms (`SSL_CTRL_SET_MIN/MAX_PROTO_VERSION`,
 /// `ssl/ssl_lib.c:3199-3209`) call it from `src/ssl/ssl_lib.rs`, exactly as the authority's
 /// `SSL_CTX_ctrl`/`SSL_ctrl` call it from `ssl_lib.c`.
-pub(crate) fn ssl_set_version_bound(
+///
+/// # Safety
+///
+/// `bound` must be a valid, properly aligned, writable `*mut c_int` for the whole call:
+/// the body stores through it on the `version == 0` arm and on either committing arm
+/// (an invalid version or a non-matching method family returns before writing). Its
+/// provenance is the caller's — in practice the `min_proto_version` or
+/// `max_proto_version` field of a live `SslCtx`/`Ssl` (the control arms pass
+/// `&mut c..min_proto_version`), so it is non-NULL and exclusively borrowed for the
+/// call. It must not alias another reference that is live across the call.
+/// `method_version` and `version` are plain values and carry no precondition.
+pub(crate) unsafe fn ssl_set_version_bound(
     method_version: c_int,
     version: c_int,
     bound: *mut c_int,
 ) -> bool {
     if version == 0 {
-        // SAFETY: `bound` is a live context/connection field per the callers' contract.
+        // SAFETY: `bound` is a live, aligned, exclusively accessible `c_int` per this
+        // function's contract.
         unsafe { *bound = version };
         return true;
     }
@@ -583,11 +595,11 @@ pub(crate) fn ssl_set_version_bound(
     }
     match method_version {
         v if v == crate::ssl::ssl_lib::TLS_ANY_VERSION && valid_tls => {
-            // SAFETY: `bound` is a live field.
+            // SAFETY: `bound` is a live field per the contract.
             unsafe { *bound = version };
         }
         v if v == crate::ssl::ssl_lib::DTLS_ANY_VERSION && valid_dtls => {
-            // SAFETY: `bound` is a live field.
+            // SAFETY: `bound` is a live field per the contract.
             unsafe { *bound = version };
         }
         _ => {}
@@ -631,8 +643,16 @@ unsafe fn min_max_proto(cctx: *mut SslConfCtx, value: *const c_char, bound: *mut
     if new_version < 0 {
         return 0;
     }
-    c_int::from(ssl_set_version_bound(method_version, new_version, bound))
+    // SAFETY: `bound` is the caller's live, aligned, writable slot per this function's
+    // contract, and `cctx`/`value` were read under that same contract above.
+    c_int::from(unsafe { ssl_set_version_bound(method_version, new_version, bound) })
 }
+
+// ABI-shape control: the Rust ABI signature is pinned, so changing it stops this file
+// compiling. It does *not* pin the `unsafe` qualifier (a safe fn item also coerces to
+// an `unsafe fn` pointer, verified at this head);
+// `ssl_set_version_bound_is_an_unsafe_fn` in the test module controls that.
+const _: unsafe fn(c_int, c_int, *mut c_int) -> bool = ssl_set_version_bound;
 
 /// Runs one option-list handler with `cctx->tbl` pointing at `table` for the duration of the
 /// parse. The authority's tables are `static`, so its pointer stays valid after the call; these
@@ -2152,7 +2172,25 @@ unsafe fn free_cert_filename(c: &mut SslConfCtx) {
 
 #[cfg(test)]
 mod tests {
+    #![allow(clippy::unwrap_used)]
     use super::*;
+
+    /// Qualifier control for F-SSL-2: a safe fn item coerces to an `unsafe fn` pointer,
+    /// so no const assertion can require the qualifier; this test instead reads the
+    /// production source from disk, truncates it at the first `#[cfg(test)]` module and
+    /// assembles the needle from fragments, so it cannot satisfy itself and fails if
+    /// `unsafe` is dropped from `ssl_set_version_bound`.
+    #[test]
+    #[allow(clippy::expect_used)]
+    fn ssl_set_version_bound_is_an_unsafe_fn() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/ssl/ssl_conf.rs");
+        let src = std::fs::read_to_string(path).expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        let needle = concat!("pub(crate) unsafe fn ", "ssl_set_version_bound(");
+        assert!(prod.contains(needle), "missing {needle}");
+    }
     use crate::runtime::mem::free_probe;
     use crate::ssl::methods::TLS_method;
     use crate::ssl::ssl_lib::{SSL_CTX_free, SSL_CTX_new, SSL_free, SSL_new};

@@ -31,7 +31,7 @@ at. Every row names its own machine-readable evidence; none of them is a claim
 of completeness.
 
 <!-- BEGIN GENERATED: readme-achievements -->
-Source identity: candidate commit `fadca9328b9bda600d143e4964817afc6ae72fdb`; build source-tree digest `0ba60621822b1387a2e7f571e87379697d4c15b7da1f7e7baeef6d7b2ebb5606`; working-tree crate version `0.0.46` (**not published at this candidate identity**); `libcrypto.so.3` sha256 `136203564ebee50a28b428c3140ab877af9bef6a7d59225d1a5dbe88d09a9a44`; `libssl.so.3` sha256 `9bd1632fb4881a9de8eca83cde2cceb34c233585a0afc08ab068893b86c60cc9`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
+Source identity: candidate commit `36f31c64be148deda1ffd8733f124961d55ddcb9`; build source-tree digest `7123d4f907707e8a2fc16d0a243866de8b5b94c222b06ddc7c82fe8192ae4281`; working-tree crate version `0.0.47` (**not published at this candidate identity**); `libcrypto.so.3` sha256 `dfa476a8cf3edd0b4a01e75b54966ac992c6b13a34d2fab81b0fe33e955edbe5`; `libssl.so.3` sha256 `cd24597cb0ef2fbf13c30c8e6fd125ec73fede3654fdfefdb19d3fc6baab1427`. Derived by `forensics/tools/render_docs.py`; `--check` fails if a block and its evidence disagree.
 
 | Dimension | Result | Evidence |
 |---|---|---|
@@ -39,13 +39,13 @@ Source identity: candidate commit `fadca9328b9bda600d143e4964817afc6ae72fdb`; bu
 | **Downstream drop-in, 1000-family corpus** | **207 / 1000 at `L7-functional`**; candidate 207 / authority 209 `L7-functional`; measured asymmetry: authority-only `ewftools`, `xilinx-bootgen`; **307 recipes, 253 built, 245 linked**; 223 loaded, 22 `L4-linked`, 7 failed, 755 not attempted (693 with no recipe); 301 of 307 recipe-backed rows carried forward | same atlas, `body.counts.by_subject`, `body.evidence_reuse`; `forensics/downstream/build-link-atlas.json` |
 | **Library test suite** | **2,231 passing, 0 failing, 52 ignored** at `cc7762e5d` — a **floor**, not the current count: later commits add tests without a further full run | `atlas-refresh/test-baseline.json` (`full-library-run`) |
 | **Memory safety: mechanisms** | **6 mechanisms discharged at mechanism scope** — RC-1 refcounting, OB-1 OwnedBuf release state, OB-2 OwnedStr string ownership, OB-3 OwnedCtx/RawCtx context ownership, ERR-1 ERR error-queue ownership and allocator file-coordinate seam, GEN-1 GENERAL_NAME selected-arm representation | `CAMPAIGN-STATUS.json` (`mechanism_discharges`) |
-| **Memory safety: boundaries** | 13 scoped boundary discharges (B23, B25, B27, B29, B45, B48, B49, B50, B51, B52, B67, B69, B70); 4 proposals not applied (B28, B46, B47, B71); **B39–B40 independently checked**; B41–B43 batch-checked; B44 author-evidenced | `atlas-refresh/boundary-sweep-*.json` |
+| **Memory safety: boundaries** | 19 scoped boundary discharges (B23, B25, B27, B29, B45, B48, B49, B50, B51, B52, B53, B54, B55, B56, B57, B60, B67, B69, B70); 4 proposals not applied (B28, B46, B47, B71); **B39–B40 independently checked**; B41–B43 batch-checked; B44 author-evidenced | `atlas-refresh/boundary-sweep-*.json` |
 | **Memory safety: files converted / partial** | **877 files**: 92 `ZERO_UNSAFE`, 18 `BOUNDARY_COVERED`, 761 `PARTIAL` (audited 761/761), 6 `TEST_ONLY`, **0 unaccounted** | `atlas-refresh/unsafe-census.json`, `atlas-refresh/post-census-delta.json` |
 | **`SAFE_COMPATIBLE` consumers** | **0 / 33** — no family has a proven dependency closure | `CAMPAIGN-STATUS.json` (`consumers`) |
 | **BOUNDARY / SEAL gates** | **`NOT_RUN` / `NOT_RUN`** — no independent caller/dependency-closure audit, Miri/ASan/Loom/mutation control, authority differential, full forensic regeneration or held-out compatibility for the S16–S61 cluster | `CAMPAIGN-STATUS.json` (`gates.boundary_gate`, `gates.seal_gate`) |
 | **Allocator / ABI invariants** | **preserved** — recorded invariant planes: `abi_courts`, `allocator_seam`, `exported_symbols`, `repr_c_layouts`, `unsafe_lints` | `CAMPAIGN-STATUS.json` (`structural_invariants`) |
 | **Known gaps** | `CLOSURE-NON-MONOTONE` REPAIRED; `S21-O1` CLOSED; `S22-RETAINED` RETAINED; `DOWNSTREAM-IMPLEMENTATION` 0 OPEN AT THE MEASURED IDENTITY; `DOWNSTREAM-h2o` CLOSED; `DOWNSTREAM-charybdis` CLOSED IN S61 (carried forward); `DOWNSTREAM-fastd` ENVIRONMENT; `DOWNSTREAM-HARNESS-FIXTURE` 76 CARRIED S59-S60 BLOCKERS + 25 NEW VENUE/BUILD BLOCKERS; `DOWNSTREAM-BELOW-L7` 100 FAMILIES; `DOWNSTREAM-S42-SYMMETRIC-LOSSES` CLOSED IN S44; `DOWNSTREAM-partclone` CLOSED; `DOWNSTREAM-perl-net-ssleay` CLOSED; `DOWNSTREAM-NO-RECIPE` 693 UNMEASURED; `DOWNSTREAM-MEDUSA` HARNESS; `DOWNSTREAM-S53-YIELD` 2 NEW L7 / 35 ADMITTED; `DOWNSTREAM-S60-YIELD` 7 NEW L7 / 30 ADMITTED; `S56-RESIDUALS` RETAINED; `S57-RACE` DATA-RACE FREEDOM NOT ESTABLISHED; `S58-SECURITY-CALLBACK` PERMISSIVE ARMS RETAINED; `S61-RESIDUALS` OTHER CALLBACK ARMS REMAIN PERMISSIVE; `ELEMENT-7-PRECISION` OPEN — FAIL; `CONTRACTED-OBLIGATIONS-BLOCKED` 215 BLOCKED at the applied v1u closure (222 at the historical v1r closure); `RELEASE-EVIDENCE-DEBT` OPEN; `SSL-CONF-WITNESS` OPEN — blocks 18 SSL_SESSION sites | `CAMPAIGN-STATUS.json` (`known_gaps`) |
-| **Release** | **Published: 0.0.45** on crates.io (2026-10-30), checksum `f4b8639a…`, install-tree artefacts `libcrypto.so.3` `df8ca7c3…` / `libssl.so.3` `0b47eaf1…`. The published crate ships **source and documentation only, with no binaries**; those install-tree hashes describe the repository build recorded in the receipt, not the crate payload. **Working tree: 0.0.46 — the candidate, not yet published.** This evidence is bound to the 0.0.46 tree, not to the published 0.0.45 crate. 0.0.44 remains the previous release. | `atlas-refresh/publish-0.0.45.json`; `Cargo.toml` |
+| **Release** | **Published: 0.0.45** on crates.io (2026-10-30), checksum `f4b8639a…`, install-tree artefacts `libcrypto.so.3` `df8ca7c3…` / `libssl.so.3` `0b47eaf1…`. The published crate ships **source and documentation only, with no binaries**; those install-tree hashes describe the repository build recorded in the receipt, not the crate payload. **Working tree: 0.0.47 — the candidate, not yet published.** This evidence is bound to the 0.0.47 tree, not to the published 0.0.45 crate. 0.0.44 remains the previous release. | `atlas-refresh/publish-0.0.45.json`; `Cargo.toml` |
 
 Downstream evidence reuse: **301 of 307 recipe-backed families carried forward** (`committed-rows-carried-forward`); `candidate_identity_match` = `false`. A carried-forward row is compatibility evidence from the build recorded on that row, not a fresh measurement at the identity above. The Safe-33 cohort has 27/33 of its families in that set.
 <!-- END GENERATED: readme-achievements -->
@@ -94,7 +94,7 @@ derived from the receipts:
 | Status | What it covers |
 |---|---|
 | **Discharged (mechanism scope)** | **6** — RC-1 shared reference counting; OB-1 OwnedBuf release state; OB-2 OwnedStr string ownership; OB-3 OwnedCtx/RawCtx context ownership; ERR-1 ERR error-queue ownership and allocator file-coordinate seam; GEN-1 GENERAL_NAME selected-arm representation. Mechanism scope only; not a file-level or consumer-level graduation. |
-| **Discharged (scoped boundary)** | **13 receipts** — B23 (`B23-WPKT-1`, `B23-WPKT-2`), B25 (`B25-RL-4`, `B25-RL-5`), B27 (`B26-X1`), B29 (`B29-UI-1`, `B29-UI-2`, `B29-UI-3`), B45 (`B45-ENG-CB-001`, `B45-ENG-CB-002`, `B45-ENG-CB-003`, `B45-ENG-CB-004`, `B45-ENG-CB-005`, `B45-ENG-CB-006`, `B45-ENG-CB-007`, `B45-ENG-CB-008`, `B45-ENG-CB-009`), B48 (`B48-SHA-001`, `B48-SHA-002`, `B48-SHA-003`, `B48-SHA-004`, `B48-SHA-005`, `B48-SHA-006`, `B48-SHA-007`, `B48-SHA-008`, `B48-SHA-009`, `B48-SHA-010`, `B48-SHA-011`, `B48-SHA-012`, `B48-SHA-013`, `B48-MD5-001`, `B48-MD5-002`, `B48-MD5-003`, `B48-MD5-004`, `B48-MD5-005`, `B48-MD5-006`, `B48-MD4-001`, `B48-MD4-002`, `B48-BLAKE2-001`, `B48-BLAKE2-002`, `B48-BLAKE2-003`, `B48-BLAKE2-004`, `B48-SHA3-001`, `B48-SHA3-002`, `B48-SHA3-003`, `B48-MDC2-001`, `B48-MDC2-002`, `B48-RIPE-001`, `B48-RIPE-002`, `B48-WP-001`, `B48-WP-002`, `B48-SM3-001`, `B48-SHA-100`, `B48-SHA-101`, `B48-SHA-102`, `B48-SHA-103`, `B48-SHA-104`, `B48-SHA-105`, `B48-SHA-106`, `B48-MD5-100`, `B48-MD4-100`, `B48-BLAKE2-100`, `B48-BLAKE2-101`, `B48-SHA3-100`, `B48-SHA3-101`, `B48-MDC2-100`, `B48-RIPE-100`, `B48-WP-100`, `B48-SM3-100`, `B48-SM3-101`, `B48-NULL-001`, `B48-NULL-002`, `B48-NULL-003`, `B48-METH-001`, `B48-METH-002`, `B48-METH-003`, `B48-METH-004`, `B48-METH-005`, `B48-METH-006`, `B48-METH-007`, `B48-METH-008`, `B48-METH-009`, `B48-METH-010`, `B48-METH-011`, `B48-METH-012`, `B48-METH-013`, `B48-METH-014`, `B48-METH-015`, `B48-METH-016`, `B48-METH-017`, `B48-METH-018`, `B48-METH-019`, `B48-METH-020`), B49 (`B49-I2R-001`, `B49-I2R-002`, `B49-I2R-003`, `B49-I2R-004`, `B49-I2R-005`, `B49-I2R-006`, `B49-I2R-007`, `B49-I2R-008`, `B49-I2R-009`, `B49-I2R-010`, `B49-I2R-011`, `B49-I2R-012`, `B49-I2R-013`, `B49-I2R-014`, `B49-I2R-015`, `B49-I2R-016`, `B49-I2R-017`, `B49-I2R-018`, `B49-I2R-019`, `B49-I2R-020`, `B49-I2R-021`, `B49-I2R-022`), B50 (`B50-I2S-001`, `B50-I2S-002`, `B50-I2S-003`, `B50-I2S-004`, `B50-I2S-005`, `B50-I2S-006`, `B50-I2S-007`, `B50-I2S-008`, `B50-I2S-009`, `B50-I2S-010`, `B50-I2S-011`), B51 (`B51-V2I-001`, `B51-V2I-002`, `B51-V2I-003`, `B51-V2I-004`, `B51-V2I-005`, `B51-V2I-006`, `B51-V2I-007`, `B51-V2I-008`, `B51-V2I-009`, `B51-V2I-010`), B52 (`B52-S2I-001`, `B52-S2I-002`, `B52-S2I-003`, `B52-S2I-004`, `B52-S2I-005`, `B52-S2I-006`, `B52-S2I-007`, `B52-S2I-008`, `B52-S2I-009`), B67 (`BIO-READBUF-001`, `BIO-READBUF-002`), B69 (`RAND-CTX-001`, `RAND-CTX-002`, `RAND-CTX-003`), B70 (`CMS-FREE-001`, `CMS-FREE-002`). Proposals not applied (not counted): B28, B46, B47, B71. Retained boundaries stay `CONTRACTED`. |
+| **Discharged (scoped boundary)** | **19 receipts** — B23 (`B23-WPKT-1`, `B23-WPKT-2`), B25 (`B25-RL-4`, `B25-RL-5`), B27 (`B26-X1`), B29 (`B29-UI-1`, `B29-UI-2`, `B29-UI-3`), B45 (`B45-ENG-CB-001`, `B45-ENG-CB-002`, `B45-ENG-CB-003`, `B45-ENG-CB-004`, `B45-ENG-CB-005`, `B45-ENG-CB-006`, `B45-ENG-CB-007`, `B45-ENG-CB-008`, `B45-ENG-CB-009`), B48 (`B48-SHA-001`, `B48-SHA-002`, `B48-SHA-003`, `B48-SHA-004`, `B48-SHA-005`, `B48-SHA-006`, `B48-SHA-007`, `B48-SHA-008`, `B48-SHA-009`, `B48-SHA-010`, `B48-SHA-011`, `B48-SHA-012`, `B48-SHA-013`, `B48-MD5-001`, `B48-MD5-002`, `B48-MD5-003`, `B48-MD5-004`, `B48-MD5-005`, `B48-MD5-006`, `B48-MD4-001`, `B48-MD4-002`, `B48-BLAKE2-001`, `B48-BLAKE2-002`, `B48-BLAKE2-003`, `B48-BLAKE2-004`, `B48-SHA3-001`, `B48-SHA3-002`, `B48-SHA3-003`, `B48-MDC2-001`, `B48-MDC2-002`, `B48-RIPE-001`, `B48-RIPE-002`, `B48-WP-001`, `B48-WP-002`, `B48-SM3-001`, `B48-SHA-100`, `B48-SHA-101`, `B48-SHA-102`, `B48-SHA-103`, `B48-SHA-104`, `B48-SHA-105`, `B48-SHA-106`, `B48-MD5-100`, `B48-MD4-100`, `B48-BLAKE2-100`, `B48-BLAKE2-101`, `B48-SHA3-100`, `B48-SHA3-101`, `B48-MDC2-100`, `B48-RIPE-100`, `B48-WP-100`, `B48-SM3-100`, `B48-SM3-101`, `B48-NULL-001`, `B48-NULL-002`, `B48-NULL-003`, `B48-METH-001`, `B48-METH-002`, `B48-METH-003`, `B48-METH-004`, `B48-METH-005`, `B48-METH-006`, `B48-METH-007`, `B48-METH-008`, `B48-METH-009`, `B48-METH-010`, `B48-METH-011`, `B48-METH-012`, `B48-METH-013`, `B48-METH-014`, `B48-METH-015`, `B48-METH-016`, `B48-METH-017`, `B48-METH-018`, `B48-METH-019`, `B48-METH-020`), B49 (`B49-I2R-001`, `B49-I2R-002`, `B49-I2R-003`, `B49-I2R-004`, `B49-I2R-005`, `B49-I2R-006`, `B49-I2R-007`, `B49-I2R-008`, `B49-I2R-009`, `B49-I2R-010`, `B49-I2R-011`, `B49-I2R-012`, `B49-I2R-013`, `B49-I2R-014`, `B49-I2R-015`, `B49-I2R-016`, `B49-I2R-017`, `B49-I2R-018`, `B49-I2R-019`, `B49-I2R-020`, `B49-I2R-021`, `B49-I2R-022`), B50 (`B50-I2S-001`, `B50-I2S-002`, `B50-I2S-003`, `B50-I2S-004`, `B50-I2S-005`, `B50-I2S-006`, `B50-I2S-007`, `B50-I2S-008`, `B50-I2S-009`, `B50-I2S-010`, `B50-I2S-011`), B51 (`B51-V2I-001`, `B51-V2I-002`, `B51-V2I-003`, `B51-V2I-004`, `B51-V2I-005`, `B51-V2I-006`, `B51-V2I-007`, `B51-V2I-008`, `B51-V2I-009`, `B51-V2I-010`), B52 (`B52-S2I-001`, `B52-S2I-002`, `B52-S2I-003`, `B52-S2I-004`, `B52-S2I-005`, `B52-S2I-006`, `B52-S2I-007`, `B52-S2I-008`, `B52-S2I-009`), B53 (`src/slh_dsa/adrs.rs:119`, `src/slh_dsa/adrs.rs:128`, `src/slh_dsa/adrs.rs:134`, `src/slh_dsa/adrs.rs:147`, `src/slh_dsa/adrs.rs:154`, `src/slh_dsa/adrs.rs:166`, `src/slh_dsa/adrs.rs:172`, `src/slh_dsa/adrs.rs:178`, `src/slh_dsa/adrs.rs:184`, `src/slh_dsa/adrs.rs:193`, `src/slh_dsa/adrs.rs:200`, `src/slh_dsa/adrs.rs:207`, `src/slh_dsa/adrs.rs:221`, `src/slh_dsa/adrs.rs:228`, `src/slh_dsa/adrs.rs:241`, `src/slh_dsa/adrs.rs:248`, `src/slh_dsa/adrs.rs:254`, `src/slh_dsa/adrs.rs:260`, `src/slh_dsa/hash.rs:179`, `src/slh_dsa/hash.rs:212`, `src/slh_dsa/hash.rs:240`, `src/slh_dsa/hash.rs:272`, `src/slh_dsa/hash.rs:301`, `src/slh_dsa/hash.rs:332`, `src/slh_dsa/hash.rs:392`, `src/slh_dsa/hash.rs:442`, `src/slh_dsa/hash.rs:531`, `src/slh_dsa/hash.rs:558`, `src/slh_dsa/hash.rs:586`, `src/slh_dsa/hash.rs:618`), B54 (72 ledger-applied boundaries), B55 (10 ledger-applied boundaries), B56 (21 ledger-applied boundaries), B57 (2 ledger-applied boundaries), B60 (2 ledger-applied boundaries), B67 (`BIO-READBUF-001`, `BIO-READBUF-002`), B69 (`RAND-CTX-001`, `RAND-CTX-002`, `RAND-CTX-003`), B70 (`CMS-FREE-001`, `CMS-FREE-002`). Proposals not applied (not counted): B28, B46, B47, B71. Retained boundaries stay `CONTRACTED`. |
 | **Independently checked (not discharged)** | B39–B40 boundary-checked (memory-BIO constructor/destructor, connect-BIO descriptor); B41–B43 batch-checked; B44 **author-evidenced only**. |
 | **Uninitialised-storage class** | **5 UNSOUND fixed** (4 owner-shaped + 1 frame-local), from 32 owner-shaped entries examined; 16 safe-by-construction and 12 misuse-resistant. CLOSED for the typed-accessor-over-uninitialised-storage class: both ml_dsa allocation surfaces and the scratch partition initialise before publication; the pkcs12 and bn owning-buffer accessors and the ssl t1_lib peer-sigalgs write no longer form a typed view over uninitialised storage. Retained: ml_dsa Vector::init / matrix_init remain safe constructors over caller raw pointers; they do not dereference, so no UB is reachable alone. Making them unsafe fn is the AGENTS.md section 1 end state, deferred because it touches about 20 call sites; x509::pcy_lib::tree_levels aliasing obligation (owner-derived borrow) remains retained; provider::cipher_gcm out-buffer slice formation was retained here in S22 and is now reconstructed: S40 eliminated getivgen's and gcm_tls_cipher's whole-extent typed slices over caller-writable output (OWNERSHIP_RECONSTRUCTED, not SAFETY_DISCHARGED) |
 | **STOP-class defects** | **0 open** — `B27-X2` (`STOP-CLASS`, B27) **closed by B28**; `NEO-ERR-1` (`STOP_LEVEL`, B33) **fixed in B33**. |
@@ -115,13 +115,32 @@ and verification, then ML-DSA, then the remaining provider and algorithm cores.
 [`SEAL-CENSUS.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/SEAL-CENSUS.md) ·
 [`PARITY_MODEL.md`](https://github.com/infinityabundance/openssl-rs/blob/main/docs/PARITY_MODEL.md)
 
-## Where the memory-safety campaign actually stands (2026-10-30)
+## Where the memory-safety campaign actually stands (2026-10-30; graduation record 2026-11-17)
 
-Receipts only. This is not a graduation and does not claim `SAFE_COMPATIBLE`,
-constant-time behaviour, or that the BOUNDARY/SEAL gates passed. This section
-was refreshed for the 0.0.44 candidate. 0.0.44 is a packaging/documentation
-release, **not a verification event**: nothing below was re-measured at it
-unless a bullet says so.
+> **2026-11-17 — `SAFE_COMPATIBLE` issued for `ssh` and `sshd` at candidate b85c.**
+> `evidence/SAFE-COMPATIBLE-openssh-b85c.json` records the graduation at the measured
+> OpenSSH consumer closure: 290/290 obligations `DISCHARGED`, element 7 PASS, L7 PASS
+> including the authority-linked differential. **All seven mechanisms are
+> `SAFETY_DISCHARGED` at that scope** — `SSL_SESSION`, `RUNTIME_CONCURRENCY`,
+> `EVP_PKEY_PROVIDER`, `X509_VERIFY_POLICY`, `RAND_CMS_STORE_KEYFMT`, `C_ABI_CONTRACT`
+> and `BIO` — with condition 3 met where it was raised (X509 69/69, RAND 17/17, EVP
+> external surface) and no memory-safety defect demonstrated for any of them at this
+> scope. An earlier "five mechanisms remain below mechanism-wide grade" label is
+> **retracted in the record itself**: it was a scope expansion, not a measurement. The
+> two residuals kept are the external provider pointer-type obligation (an ABI
+> contract for a provider that misdeclares its own table) and the focused instrument
+> coverage. The independent adjudicator's **`NOT ESTABLISHED`** verdict
+> (`evidence/b85c-adjudication.json`) stays in the record as history and is not
+> reinterpreted.
+> The generated `SAFE_COMPATIBLE` counter below still reads `0 / 33`: it counts the
+> 33 admitted cohort families, and b85c names two consumer binaries of the one
+> admitted `openssh` family. The bullets below remain the 2026-10-30 record.
+
+Apart from the b85c record above, receipts only: no other graduation is claimed,
+and nothing here claims constant-time behaviour or that the BOUNDARY/SEAL gates
+passed. This section was refreshed for the 0.0.44 candidate. 0.0.44 is a
+packaging/documentation release, **not a verification event**: nothing below was
+re-measured at it unless a bullet says so.
 
 - **The consumer closure is ACCEPTED, with zero refusals**
   (`evidence/closure-ssh-v1r.json`, `evidence/inventory-sshd-v1r.json`;
@@ -210,7 +229,9 @@ unless a bullet says so.
   (46 `ABI_CONTRACT_EXPORT_CALLBACK` + 14 `ABI_CONTRACT_PROVIDER`), 0
   unclassified. A pre-engine analyzer checkpoint reduced target-bounded to
   **71** (base-slot-partial 50 → 39) but is **not re-measured at 0.0.44**.
-  `SAFE_COMPATIBLE` therefore stays **0/33**: 215 obligations are contracted
+  `SAFE_COMPATIBLE` therefore stays **0/33** on the cohort counter (see the
+  2026-11-17 b85c record above for the principal-issued verdict): 215 obligations
+  are contracted
   but BLOCKED at the applied v1u closure (222 at the historical v1r closure),
   and no family inherits safety from an accepted closure alone
   (`AGENTS.md` §7).
@@ -264,7 +285,9 @@ unless a bullet says so.
   sites still lack a bounded target set, so element 7 remains FAIL.
 - **215 contracted obligations awaiting discharge** (BLOCKED) at the applied
   v1u closure (222 at the historical v1r closure), inside each family's
-  dependency closure; `SAFE_COMPATIBLE` remains **0/33**. Nine engine cleanup
+  dependency closure; `SAFE_COMPATIBLE` remains **0/33** on the cohort counter
+  (the b85c record above is the principal-issued verdict for two consumer
+  binaries). Nine engine cleanup
   callbacks were discharged as the scoped boundary **B45**; the remaining
   engine-package sites stay BLOCKED and the mechanism stays `UNSAFE_OPEN`.
 - **Release-evidence debt**: FRF's 143 manifests are still `0.0.27`; the

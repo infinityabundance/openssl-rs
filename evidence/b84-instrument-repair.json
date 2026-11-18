@@ -1,0 +1,153 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/b84-instrument-repair/v1",
+  "batch": "b84-review12",
+  "date": "2026-11-16",
+  "candidate": {
+    "source_head": "3cffda14884b8207699f2e2b51469cd05920c509",
+    "branch": "stage/p25/b75-ocsp",
+    "src_edited": false,
+    "note": "no src/ or test file was modified. Edits: forensics/tools/consumer_closure.py (self-test controls only; nothing outside --self-test changes behaviour). asan_canary.rs and asan_canary.c are unchanged. Written: court/freeze-b84/review12/** and this receipt."
+  },
+  "venue": {
+    "container": "openssl-rs-court:1 (docker/openssl-rs-court.sh; running 37 h)",
+    "cgroup_memory": "8g (AGENTS section 6.1: min(8g, available-16g), available=30g)",
+    "cpus": 8,
+    "canary_data_limit": "unlimited (OPENSSL_RS_COURT_DATA=unlimited, the venue's documented override; ASan's shadow reservation is ~16 TiB of virtual address space and cannot fit any finite RLIMIT_DATA)",
+    "free_g_before": "total 45 used 15 free 24 available 30, swap 45 used 17",
+    "one_heavy_command_at_a_time": true
+  },
+  "tool_identity": {
+    "forensics/tools/consumer_closure.py": {
+      "before": "df0a9ae2cb2d66aa0551e7cb8cbf5a446466cc54d7dd3a1651d3a30c7412a958",
+      "after": "b42f19bdfb40d94009a6256dcc7a3d5fd96e6a2c8fba595133372ce6fed5f913"
+    },
+    "forensics/tools/asan_canary.rs": "9f3343a56cacb8af715a0c7f5c2ac7c7ff116d2523a2636902fd5bffe4bc7654 (unchanged)",
+    "forensics/tools/asan_canary.c": "8f9f80dc056860eafbeb63dd6e493b9e5726adfe9e7993976b75054ce29b65f0 (unchanged)"
+  },
+  "item1_self_test_premise_dependence": {
+    "state_before": {
+      "command": "python3 forensics/tools/consumer_closure.py --self-test",
+      "exit": 1,
+      "failures": [
+        "e7repin-search disabled: a stale row exists in this image: got False, want True",
+        "e7core default-context control DID NOT RUN: no admitted site's witness evidence records an inlined default-context accessor at this candidate.  Reported as NOT_RUN, never as a pass"
+      ],
+      "diagnosis": "both controls asserted a property of the candidate (a naturally stale pin; an image-carried inlined default-context accessor) instead of exercising their rule. b84 supplies neither, so neither control had a subject."
+    },
+    "repair_control_1_search_disabled": {
+      "approach": "synthesise the subject: one real PBE_EX_SITES row is temporarily re-registered under a deliberately stale pin inside its own symbol (same symbol leaf, offset + 0x1000), with the real table/pin entries removed for the duration and restored in a finally block plus a cache purge on every transition.",
+      "b84_subject": "row 0x17B1F5 (EVP_PBE_CipherInit_ex, pin +0x415) re-registered as synthetic key 0x1 with pin (EVP_PBE_CipherInit_ex, +0x1415); strict re-derivation refuses the synthetic pin, the in-symbol search resolves 0x30a125 with exactly one acceptance",
+      "assertions": [
+        "the synthetic pin is stale (strict re-derivation refuses it)",
+        "the stale row resolves by search to the same address the real row resolves to",
+        "with the search off the literal stays (('literal', 0x1)) and no row maps the true address",
+        "re-enabling the search resolves it again",
+        "the real table is restored"
+      ],
+      "fallback": "if no PBE_EX_SITES row resolves in the image, the control records PREMISE_UNAVAILABLE (not a pass, not a failure) instead of failing or passing silently"
+    },
+    "repair_control_2_default_context": {
+      "approach": "synthesise the subject from an admitted core site: one instruction pair around the documented libctx accessor call is replaced, one instruction for one, by `lea 0x0(%rip),%r12  # <DEFAULT_CONTEXT>` and `mov <child_provider offset>(%r12),%rax`. The field offset is derived from the #[repr(C)] OsslLibCtx layout (child_provider = 120 = 0x78), never hard-coded. Candidates are tried in order until the synthetic witness resolves with exactly one default_context record; the register is required to be unused by that function.",
+      "b84_subject": "ossl_provider_free core-dispatch site 0x54be51; accessor call 0x54be27 (lib_ctx_get_data, index 18); the `mov $0x12,%esi` and the call are replaced as above; the site resolves with base_origin.accessor_calls = [{default_context: true, field: child_provider, offset: 0x78, call_site: 0x54be27, index: 18}]",
+      "assertions": [
+        "the synthetic subject resolves",
+        "the subject carries exactly one inlined default-context accessor record",
+        "changing the field displacement 0x78 -> 0x80 makes the site stop resolving",
+        "the unmutated image still resolves"
+      ],
+      "fallback": "if no candidate can be synthesised, PREMISE_UNAVAILABLE (exit status 2), never a pass"
+    },
+    "exit_status_contract": "0 = every control ran and passed; 1 = a control failed; 2 = no failure but at least one PREMISE_UNAVAILABLE control (neither a pass nor a failure). Documented in the module docstring.",
+    "state_after": {
+      "command": "python3 forensics/tools/consumer_closure.py --self-test",
+      "exit": 0,
+      "failures": 0,
+      "premise_unavailable": 0,
+      "remaining_non_pass_states": "none of the failure/PREMISE_UNAVAILABLE kind. The e7core summary still states one informational NOT_RUN arm (the loader-fetch wrapper-source arm, because the wrapper is inlined at this candidate); it is not a premise of a control that failed and is not counted as a pass.",
+      "unchanged_observation": "e7repin controls: 44 by pin, 3 moved, 0 refused; the same 4 moved rows are reported (OSSL_STORE_open_ex +0x807, +0x488, +0x57d, +0x9f3) -- identical to the pre-edit run, so the repair did not perturb the pin tables",
+      "log": "court/freeze-b84/review12/selftest-after.log",
+      "log_sha256": "97106326ca158b1c4bd7e050b4b81872e6cb6de9de1c3d129c665c6781f919ec",
+      "determinism": "two independent full runs produced byte-identical logs and exit 0"
+    },
+    "negative_controls": {
+      "runner": "court/freeze-b84/review12/negative_controls.py",
+      "runner_sha256": "b1a6022b1a856ff737794d7da132c06929a072db0554c2c9be66ee659aa0ad0a",
+      "results": [
+        {"mutation": "search-off switch ignored in _pin_search", "observed": "control fails: \"e7repin-search disabled: the stale literal stays: got ('search', 3186981), want ('literal', 1)\" and \"no row matches the true site\" also fails"},
+        {"mutation": "_pin_search refuses the synthetic stale offset", "observed": "control fails: \"e7repin-search disabled: the stale row resolves by search: got ('literal', 1), want ('search', 3186981)\"", "note": "the failing run is reported relative to the mutated instrument; NC1's got value is the same 0x30a125 (3186981) address"},
+        {"mutation": "_core_default_context_slot forced to return the child_provider slot for every displacement", "observed": "control fails: \"e7core default-context offset mutation refusal\" got a resolved witness (resolved=False in the record, but non-None), want None"},
+        {"mutation": "default_context evidence recorded as false", "observed": "PREMISE_UNAVAILABLE is raised (the synthesis finds no subject and says so); the state is exercised and is never a pass"}
+      ]
+    }
+  },
+  "item2_asan_canary": {
+    "state_before": {
+      "record": "court/freeze-b83/review11/asan/canary.log (the only on-record ASan canary)",
+      "rust": "aborted at ASan init: 'AddressSanitizer failed to allocate 0xdfff0001000 ... ReserveShadowMemoryRange failed ... Perhaps you're using ulimit -v or ulimit -d'",
+      "c": "failed to link: /usr/bin/ld cannot find /usr/lib/llvm-14/lib/clang/14.0.6/lib/linux/libclang_rt.asan{_static,}-x86_64.a",
+      "conclusion": "no canary fired; the zero-findings ASan result at b84 rested on an unproven instrument"
+    },
+    "repair": "run the committed Rust canary with RLIMIT_DATA unlimited (the shadow's virtual reservation cannot fit any finite cap) and build the committed C canary with the image's gcc-12, whose libasan is present, instead of clang-14, whose compiler-rt ASan archives this image does not carry.",
+    "toolchain_in_venue": {
+      "clang": "Debian clang version 14.0.6",
+      "clang_asan_archive": "ABSENT: /usr/lib/llvm-14/lib/clang/14.0.6/lib/linux does not exist, so no libclang_rt.asan-x86_64.a exists for the image's clang. This is the precise missing dependency of the recorded C link failure; it is a property of the image, not of the canary source.",
+      "gcc": "gcc (Debian 12.2.0-14+deb12u1) 12.2.0",
+      "gcc_asan": "/usr/lib/gcc/x86_64-linux-gnu/12/libasan.a and libasan.so are present (libasan.so.8 at /usr/lib/x86_64-linux-gnu)",
+      "rust": "nightly-2026-10-01 from /work/court/freeze-b80/review7/.phase25-rustup; rustc links its own librustc-nightly_rt.asan.a from the toolchain's rustlib, so clang's missing compiler-rt does not block the Rust canary"
+    },
+    "commands": {
+      "runner": "OPENSSL_RS_COURT_DATA=unlimited bash docker/openssl-rs-court.sh exec sh court/freeze-b84/review12/asan/run_canary.sh",
+      "rust_build": "PATH=/work/court/freeze-b80/review7/.phase25-rustup/toolchains/nightly-2026-10-01-x86_64-unknown-linux-gnu/bin:$PATH rustc --edition 2021 -Zsanitizer=address -Cdebuginfo=1 -Clinker=clang -o court/freeze-b84/review12/asan/bin/asan_canary_rs forensics/tools/asan_canary.rs",
+      "rust_run": "ASAN_OPTIONS=detect_leaks=0:symbolize=1 court/freeze-b84/review12/asan/bin/asan_canary_rs  (ulimit -d = unlimited)",
+      "c_build": "gcc -std=c11 -O0 -D_GNU_SOURCE -fsanitize=address -fno-omit-frame-pointer -g -o court/freeze-b84/review12/asan/bin/asan_canary forensics/tools/asan_canary.c",
+      "c_run": "ASAN_OPTIONS=detect_leaks=0:symbolize=1 court/freeze-b84/review12/asan/bin/asan_canary  (ulimit -d = unlimited)"
+    },
+    "observed": {
+      "rust": {
+        "build_rc": 0,
+        "run_rc": 1,
+        "FIRED": true,
+        "verbatim": [
+          "==471269==ERROR: AddressSanitizer: heap-use-after-free on address 0x7b41f6de0010 at pc 0x5607d0869841 bp 0x7fff31cd1b60 sp 0x7fff31cd1b58",
+          "READ of size 1 at 0x7b41f6de0010 thread T0",
+          "SUMMARY: AddressSanitizer: heap-use-after-free (/work/court/freeze-b84/review12/asan/bin/asan_canary_rs+0xd5840) (BuildId: c156507c4cbef7ce825a54ebe4f267f09d15352f)"
+        ],
+        "binary_sha256": "277393a8cdd4c08326bf3aa89185360a5d81b8f8e7f8c158b3c994136c577bb7",
+        "build_id_note": "identical BuildId to the b83 Rust canary (c156507c...), so the firing instrument is the same object the earlier record attempted to run"
+      },
+      "c": {
+        "build_rc": 0,
+        "run_rc": 1,
+        "FIRED": true,
+        "verbatim": [
+          "==471276==ERROR: AddressSanitizer: heap-use-after-free on address 0x602000000013 at pc 0x562cc96162ef bp 0x7ffff0691410 sp 0x7ffff0691408",
+          "READ of size 1 at 0x602000000013 thread T0",
+          "    #0 0x562cc96162ee in main forensics/tools/asan_canary.c:31",
+          "SUMMARY: AddressSanitizer: heap-use-after-free forensics/tools/asan_canary.c:31 in main"
+        ],
+        "binary_sha256": "72fc1910997ee4fb0dd13ba54755c3a8e199008c75af4ce1a71d3342cddf6f58"
+      },
+      "log": "court/freeze-b84/review12/asan/canary.log",
+      "log_sha256": "aeb6a6253d06e0e7bce67fa0d6030d58acd3d94c0d3bf0df60f8cf3cec74f164"
+    },
+    "residual": [
+      "forensics/tools/ms_asan.py was not edited (outside this repair's permitted edit set). Its canary() builds the same two sources; the Rust canary still aborts at ASan init there unless the ASan venue is run with OPENSSL_RS_COURT_DATA=unlimited, which the tool's own reason string already names. Making that setting unconditional belongs to the ASan venue/gate, not to the canary binary.",
+      "ms_asan.py's C canary command already uses gcc, so the recorded clang-14 link failure is a property of how the b83 canary was invoked, not of the committed C source or of ms_asan.py. The image's clang-14 still has no compiler-rt ASan archive; any future clang-based C probe in this image will fail to link until the image provides it.",
+      "the evidence axis is canary sensitivity only: it proves the instrument fires in this venue. It is not a whole-suite ASan result and does not re-run the 49 focused b84 tests."
+    ]
+  },
+  "residuals": [
+    "three other self-test arms still use the older 'DID NOT RUN -> failure' form (e7store fetch, e7store guard close, loader-fetch wrapper source). They are exercised at b84 and did not fire; they were not converted to PREMISE_UNAVAILABLE because the adjudication named only the two controls above. Converting them is a follow-up, not a claim made here.",
+    "the default-context synthesis uses %r12 only after proving it is unused in the chosen function's instruction stream; a candidate whose every admitted core site uses %r12 would fall back to PREMISE_UNAVAILABLE (exit 2) rather than pass.",
+    "the search-disabled synthesis re-registers a real table row in place for the duration of the control; the table and pin dicts are restored in a finally block and the derived caches are purged, and the post-run pin census (44 pin / 3 moved / 0 refused) is identical to the pre-edit census."
+  ],
+  "artifacts": {
+    "court/freeze-b84/review12/selftest-after.log": "97106326ca158b1c4bd7e050b4b81872e6cb6de9de1c3d129c665c6781f919ec",
+    "court/freeze-b84/review12/asan/canary.log": "aeb6a6253d06e0e7bce67fa0d6030d58acd3d94c0d3bf0df60f8cf3cec74f164",
+    "court/freeze-b84/review12/asan/run_canary.sh": "written by this batch (court-side runner; see commands above)",
+    "court/freeze-b84/review12/negative_controls.py": "b1a6022b1a856ff737794d7da132c06929a072db0554c2c9be66ee659aa0ad0a",
+    "court/freeze-b84/review12/probe_synth.py": "pre-edit probe proving both syntheses resolve/refuse on the b84 image",
+    "court/freeze-b84/review12/probe_dc.py": "pre-edit probe of the core-dispatch slot-base shape",
+    "court/freeze-b84/review12/probe_dc2.py": "pre-edit probe of which admitted core sites can host the synthesis"
+  }
+}

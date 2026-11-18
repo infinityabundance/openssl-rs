@@ -1584,8 +1584,7 @@ mod tests {
     #[test]
     fn the_store_this_surface_flushes_is_the_contexts_own() {
         let ctx = Ctx::new();
-        // SAFETY: `ctx.0` is live.
-        let store = unsafe { get_evp_method_store(ctx.0) };
+        let store = get_evp_method_store(ctx.0);
         assert!(!store.is_null(), "slot 0 is filled for a fresh context");
     }
 

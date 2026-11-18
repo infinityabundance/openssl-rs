@@ -1,0 +1,846 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/graduation-gap/v1",
+ "kind": "graduation-blocker-report",
+ "receipt": "b75-safe-compatible-gap",
+ "date": "2026-11-13",
+ "target": {
+  "ssh": {
+   "safe_compatible": false
+  },
+  "sshd": {
+   "safe_compatible": false
+  }
+ },
+ "established_this_session": [
+  {
+   "what": "P25-OSSH-OCSP-3 and P25-OSSH-OCSP-7",
+   "how": "independent source review + per-obligation supersedes + frozen-artifact runtime probe",
+   "evidence": [
+    "forensics/memory-safety/campaign/safe-c33/evidence/ocsp-i2r-dispatch-review-2026-11-13.json",
+    "evidence/b75-ocsp-readjudication.json",
+    "forensics/memory-safety/campaign/safe-c33/evidence/b75-ocsp-runtime/probe.json"
+   ],
+   "result": "shipping adjudicator 323 DISCHARGED / 0 BLOCKED over the frozen b74 queue"
+  },
+  {
+   "what": "sshd queue and per-artefact binding",
+   "how": "re-adjudicated the frozen b73-r2 sshd queue with the current boundaries; verified the per-artefact ledger join against FREEZE-b73",
+   "evidence": [
+    "evidence/b75-sshd-readjudication.json",
+    "evidence/sshd-artifact-ledger.json",
+    "forensics/tools/rebind_consumer_artifact.py"
+   ],
+   "result": "320/3 -> 323 DISCHARGED / 0 BLOCKED; all eight binding checks pass"
+  },
+  {
+   "what": "B48-RC2-001 / P25-VESTIGIAL-MARKER-002 structural elimination",
+   "how": "read the source at S; the declaration is a safe fn and the build-time control rejects restoring unsafe",
+   "evidence": [
+    "atlas-refresh/b48-rc2-elimination-sites.json"
+   ],
+   "result": "ELIMINATED_STRUCTURALLY; no consumer closure count changes"
+  },
+  {
+   "what": "P25-VESTIGIAL-MARKER-001/003/004 structural elimination",
+   "how": "read the source at S; all three are safe declarations with compile-time coercion controls",
+   "evidence": [
+    "atlas-refresh/p25-vestigial-elimination-sites.json"
+   ],
+   "result": "ELIMINATED_STRUCTURALLY; no OpenSSH closure count changes"
+  },
+  {
+   "what": "26 safe-declaration eliminations from stale BLOCKED rows",
+   "how": "systematic audit of every BLOCKED UNSAFE_FN_DEF row against the current declaration; only rows with no `unsafe` qualifier were accepted",
+   "evidence": [
+    "atlas-refresh/p25-safe-declaration-elimination-sites.json"
+   ],
+   "result": "26 ELIMINATED_STRUCTURALLY; 8 with compile-time controls, 18 without; no OpenSSH count change"
+  }
+ ],
+ "blockers": [
+  {
+   "id": "B75-G1",
+   "severity": "blocking",
+   "what": "98 live discharges carry no adjudication of the required grade",
+   "groups": [
+    {
+     "receipt": "boundary-sweep-B45",
+     "count": 9,
+     "why": "the receipt carries no review block; the separate review is APPROVE_WITH_CONDITIONS and C5 (clean evidence commit and freeze) is still OPEN",
+     "sites": [
+      {
+       "id": "V1:src/engine/tb_asnmth.rs:79:UNSAFE_FN_DEF",
+       "file": "src/engine/tb_asnmth.rs",
+       "item": "engine_unregister_all_pkey_asn1_meths",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/engine/tb_cipher.rs:62:UNSAFE_FN_DEF",
+       "file": "src/engine/tb_cipher.rs",
+       "item": "engine_unregister_all_ciphers",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/engine/tb_dh.rs:58:UNSAFE_FN_DEF",
+       "file": "src/engine/tb_dh.rs",
+       "item": "engine_unregister_all_dh",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/engine/tb_digest.rs:73:UNSAFE_FN_DEF",
+       "file": "src/engine/tb_digest.rs",
+       "item": "engine_unregister_all_digests",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/engine/tb_dsa.rs:58:UNSAFE_FN_DEF",
+       "file": "src/engine/tb_dsa.rs",
+       "item": "engine_unregister_all_dsa",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/engine/tb_eckey.rs:58:UNSAFE_FN_DEF",
+       "file": "src/engine/tb_eckey.rs",
+       "item": "engine_unregister_all_ec",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/engine/tb_pkmeth.rs:60:UNSAFE_FN_DEF",
+       "file": "src/engine/tb_pkmeth.rs",
+       "item": "engine_unregister_all_pkey_meths",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/engine/tb_rand.rs:58:UNSAFE_FN_DEF",
+       "file": "src/engine/tb_rand.rs",
+       "item": "engine_unregister_all_rand",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/engine/tb_rsa.rs:59:UNSAFE_FN_DEF",
+       "file": "src/engine/tb_rsa.rs",
+       "item": "engine_unregister_all_rsa",
+       "status": "DISCHARGED"
+      }
+     ],
+     "structural_elimination": "all 9 are safe declarations at S4 (receipt atlas-refresh/b45-safe-thunks-elimination-sites.json); projected to leave REVIEW_REQUIRED after re-census; the applied count still includes them"
+    },
+    {
+     "receipt": "openssh-v1i",
+     "count": 74,
+     "why": "the receipt's own does_not_prove says the probe and receipt share one author and it is not an independent review",
+     "sites": [
+      {
+       "id": "V1:src/cmp/cmp_asn.rs:1691:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_asn.rs",
+       "item": "itav_new",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_asn.rs:1697:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_asn.rs",
+       "item": "itav_free",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_asn.rs:1703:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_asn.rs",
+       "item": "rootcakeyupdate_new",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_asn.rs:1709:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_asn.rs",
+       "item": "rootcakeyupdate_free",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_asn.rs:1715:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_asn.rs",
+       "item": "certreqtemplate_new",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_asn.rs:1721:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_asn.rs",
+       "item": "crlstatus_new",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_asn.rs:1742:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_asn.rs",
+       "item": "OSSL_CMP_CERTREPMESSAGE_new",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_asn.rs:1748:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_asn.rs",
+       "item": "OSSL_CMP_REVREPCONTENT_new",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_asn.rs:1754:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_asn.rs",
+       "item": "OSSL_CMP_ERRORMSGCONTENT_new",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_asn.rs:1760:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_asn.rs",
+       "item": "OSSL_CMP_CERTIFIEDKEYPAIR_new",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_asn.rs:1766:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_asn.rs",
+       "item": "OSSL_CMP_REVDETAILS_new",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_asn.rs:1781:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_asn.rs",
+       "item": "OSSL_CMP_CERTSTATUS_new",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_asn.rs:1796:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_asn.rs",
+       "item": "OSSL_CMP_CERTRESPONSE_new",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_asn.rs:1811:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_asn.rs",
+       "item": "OSSL_CMP_POLLREQ_new",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_asn.rs:1826:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_asn.rs",
+       "item": "OSSL_CMP_POLLREP_new",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_ctx.rs:350:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_ctx.rs",
+       "item": "x509_name_dup_void",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_ctx.rs:354:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_ctx.rs",
+       "item": "x509_name_free_void",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_ctx.rs:358:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_ctx.rs",
+       "item": "asn1_integer_dup_void",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_ctx.rs:362:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_ctx.rs",
+       "item": "asn1_integer_free_void",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_ctx.rs:366:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_ctx.rs",
+       "item": "x509_req_dup_void",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_ctx.rs:370:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_ctx.rs",
+       "item": "x509_req_free_void",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_ctx.rs:376:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_ctx.rs",
+       "item": "x509_free_void",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_ctx.rs:380:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_ctx.rs",
+       "item": "evp_pkey_free_void",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_ctx.rs:384:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_ctx.rs",
+       "item": "evp_md_free_void",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_ctx.rs:388:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_ctx.rs",
+       "item": "octet_string_free_void",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_ctx.rs:392:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_ctx.rs",
+       "item": "general_name_free_void",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_ctx.rs:396:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_ctx.rs",
+       "item": "x509_extension_free_void",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_ctx.rs:400:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_ctx.rs",
+       "item": "utf8_string_free_void",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_ctx.rs:404:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_ctx.rs",
+       "item": "x509_store_free_void",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_ctx.rs:408:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_ctx.rs",
+       "item": "itav_free_void",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_ctx.rs:412:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_ctx.rs",
+       "item": "policy_free_void",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/cmp/cmp_ctx.rs:427:UNSAFE_FN_DEF",
+       "file": "src/cmp/cmp_ctx.rs",
+       "item": "cmp_ctx_set_md",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:647:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "dupctx",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:658:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "copyctx",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:670:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "internal_init",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:682:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "internal_final",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:700:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "update",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:705:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "get_params",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:959:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "dupctx",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:970:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "copyctx",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:1019:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "get_params",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:1154:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "dupctx",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:1165:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "copyctx",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:1177:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "internal_init",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:1189:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "internal_final",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:1207:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "update",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:1214:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "get_params",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:1337:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "dupctx",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:1348:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "copyctx",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:1360:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "init",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:1371:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "update",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:1377:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "keccak_final",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:1403:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "shake_squeeze",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:1481:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "shake_get_ctx_params",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:1885:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "dupctx",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:1898:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "copyctx",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:1912:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "set_ctx_params",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:1948:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "get_ctx_params",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:1975:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "internal_init",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:2000:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "update",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:2013:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "internal_final",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/digest.rs:2039:UNSAFE_FN_DEF",
+       "file": "src/provider/digest.rs",
+       "item": "get_params",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/legacyprov.rs:323:UNSAFE_FN_DEF",
+       "file": "src/provider/legacyprov.rs",
+       "item": "dupctx",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/legacyprov.rs:336:UNSAFE_FN_DEF",
+       "file": "src/provider/legacyprov.rs",
+       "item": "copyctx",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/legacyprov.rs:349:UNSAFE_FN_DEF",
+       "file": "src/provider/legacyprov.rs",
+       "item": "internal_init",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/legacyprov.rs:360:UNSAFE_FN_DEF",
+       "file": "src/provider/legacyprov.rs",
+       "item": "internal_final",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/legacyprov.rs:378:UNSAFE_FN_DEF",
+       "file": "src/provider/legacyprov.rs",
+       "item": "update",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/legacyprov.rs:387:UNSAFE_FN_DEF",
+       "file": "src/provider/legacyprov.rs",
+       "item": "get_params",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/legacyprov.rs:531:UNSAFE_FN_DEF",
+       "file": "src/provider/legacyprov.rs",
+       "item": "dupctx",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/legacyprov.rs:544:UNSAFE_FN_DEF",
+       "file": "src/provider/legacyprov.rs",
+       "item": "copyctx",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/legacyprov.rs:556:UNSAFE_FN_DEF",
+       "file": "src/provider/legacyprov.rs",
+       "item": "internal_init",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/legacyprov.rs:564:UNSAFE_FN_DEF",
+       "file": "src/provider/legacyprov.rs",
+       "item": "internal_final",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/legacyprov.rs:582:UNSAFE_FN_DEF",
+       "file": "src/provider/legacyprov.rs",
+       "item": "update",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/provider/legacyprov.rs:587:UNSAFE_FN_DEF",
+       "file": "src/provider/legacyprov.rs",
+       "item": "get_params",
+       "status": "DISCHARGED"
+      }
+     ]
+    },
+    {
+     "receipt": "openssh-v1l",
+     "count": 15,
+     "why": "the receipt's own does_not_prove says it is not a boundary audit",
+     "sites": [
+      {
+       "id": "V1:src/apps/ciphers.rs:93:UNSAFE_FN_DEF",
+       "file": "src/apps/ciphers.rs",
+       "item": "dummy_psk",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/asn1/asn_mstbl.rs:261:UNSAFE_FN_DEF",
+       "file": "src/asn1/asn_mstbl.rs",
+       "item": "stbl_module_finish",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/decoder_lib.rs:1080:UNSAFE_FN_DEF",
+       "file": "src/decoder_lib.rs",
+       "item": "decoder_free_thunk",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/engine/eng_fat.rs:197:UNSAFE_FN_DEF",
+       "file": "src/engine/eng_fat.rs",
+       "item": "push_cstr_or_null",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/runtime/conf/lib.rs:698:UNSAFE_FN_DEF",
+       "file": "src/runtime/conf/lib.rs",
+       "item": "default_is_number",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/runtime/conf/lib.rs:703:UNSAFE_FN_DEF",
+       "file": "src/runtime/conf/lib.rs",
+       "item": "default_to_int",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/runtime/confmod/asn1.rs:255:UNSAFE_FN_DEF",
+       "file": "src/runtime/confmod/asn1.rs",
+       "item": "oid_module_finish",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/runtime/confmod/mod.rs:397:UNSAFE_FN_DEF",
+       "file": "src/runtime/confmod/mod.rs",
+       "item": "module_free_thunk",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/ui/ui_util.rs:197:UNSAFE_FN_DEF",
+       "file": "src/ui/ui_util.rs",
+       "item": "ui_free_method_data",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/ui/ui_util.rs:217:UNSAFE_FN_DEF",
+       "file": "src/ui/ui_util.rs",
+       "item": "ui_method_data_index_init",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/x509/v3_akid.rs:182:UNSAFE_FN_DEF",
+       "file": "src/x509/v3_akid.rs",
+       "item": "akid_i2v",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/x509/v3_akid.rs:193:UNSAFE_FN_DEF",
+       "file": "src/x509/v3_akid.rs",
+       "item": "akid_v2i",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/x509/v3_san.rs:1176:UNSAFE_FN_DEF",
+       "file": "src/x509/v3_san.rs",
+       "item": "san_i2v",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/x509/v3_san.rs:1187:UNSAFE_FN_DEF",
+       "file": "src/x509/v3_san.rs",
+       "item": "san_v2i",
+       "status": "DISCHARGED"
+      },
+      {
+       "id": "V1:src/x509/v3_san.rs:1197:UNSAFE_FN_DEF",
+       "file": "src/x509/v3_san.rs",
+       "item": "san_v2i_issuer",
+       "status": "DISCHARGED"
+      }
+     ],
+     "c_class_review": "9 C-class sites: caller contracts established, APPROVE_WITH_CONDITIONS, NOT_APPLIED (six controls missing; no build/Miri/ASan)"
+    }
+   ],
+   "required_resolution": "an independent adversarial review at BOUNDARY level of each receipt group, by a reviewer that is not the author, recorded as an adjudication entry; or withdraw the discharges. Adding an \"adjudicated\" flag without the review is a weakened instrument and is refused.",
+   "state": "REVIEW_REQUIRED, excluded from the supportable count",
+   "audit": {
+    "path": "evidence/b75-review-blocker-audit.json",
+    "result": "0 of the 98 are structurally eliminated; 321/323 spans audited; the two free_lock spans are a valid set hash; s2i_poison is the only safe declaration outside the 98 and is already B54-discharged"
+   }
+  },
+  {
+   "id": "B75-G2",
+   "severity": "blocking",
+   "what": "sshd artefact binding is now implementable but not yet carried by a fresh receipt",
+   "detail": "a per-artefact ledger join is implemented in forensics/tools/rebind_consumer_artifact.py with evidence/sshd-artifact-ledger.json; it verifies sshd 64e0a4cc against FREEZE-b73 at the same source/recipe and passes all eight checks. The b73-r2 receipt still records artifact_matches_this_build false because no fresh closure run has applied the join.",
+   "required_resolution": "re-run the sshd closure at the exact candidate and apply the per-artefact join to the new receipt (or have consumer_closure.py perform the join natively in a versioned tool change); commit the resulting receipt."
+  },
+  {
+   "id": "B75-G3",
+   "severity": "blocking",
+   "what": "no closure receipt carries 323/0/0",
+   "detail": "the b74 ssh receipt states 321/2 and the b73-r2 sshd receipt states 320/3; both queues re-adjudicate to 323/0 at the evidence level. Neither receipt carries 323/0 because no fresh closure run has been made.",
+   "required_resolution": "rebuild the libraries and both consumers at the exact candidate, then run consumer_closure.py for both families and commit the receipts."
+  },
+  {
+   "id": "B75-G4",
+   "severity": "blocking",
+   "what": "no L7 workload replay at the exact consumer identity",
+   "detail": "the ssh binary bff896e3 and sshd binary 64e0a4cc are not present; no OpenSSH L7 workload was replayed in this venue",
+   "required_resolution": "relink OpenSSH 9.9p1 against the exact install and replay the L7 workloads; bind the executed binary digest into every runtime row."
+  },
+  {
+   "id": "B75-G5",
+   "severity": "blocking",
+   "what": "BATCH/BOUNDARY/SEAL gates are NOT_RUN",
+   "detail": "no Rust toolchain, no court container, no sanitizer/differential/forensic regeneration was available. FREEZE-b73 itself records a dirty tree, a changed instrument and REFUSED closures, so it cannot be used as a final freeze. Absence is NOT_RUN, never PASS.",
+   "required_resolution": "run the full library suite serially and with --test-threads=4, clippy --all-targets, Miri/ASan/TSan, the authority differential, the full forensic/FRF regeneration and the second reproducible rebuild at the exact candidate."
+  },
+  {
+   "id": "B75-G6",
+   "severity": "blocking",
+   "what": "the OCSP review is agent-based, not external human review",
+   "detail": "two separate read-only agent sessions performed the review and the second closed the first's withheld conditions; this is independent judgment under AGENTS.md section 15 but it is not external human review",
+   "required_resolution": "an external independent reviewer reproduces and accepts the final assurance case, including the OCSP dispatch review."
+  }
+ ],
+ "not_blocking": [
+  {
+   "id": "B48-RC2-001",
+   "why": "ELIMINATED at S: src/evp/e_rc2.rs:352 is a safe fn with span sha256 fb2f310f and a compile-time coercion control at :367-368; the historical B48-RC2-001 / P25-VESTIGIAL-MARKER-002 BLOCKED dispositions are superseded by atlas-refresh/b48-rc2-elimination-sites.json. It was never in the OpenSSH reachable set."
+  },
+  {
+   "id": "B54-F2",
+   "why": "the NULL-value contract defect is in src/x509/v3_conf.rs, which is not in the OpenSSH reachable obligation set. It remains an open finding for the wider library and is not fixed here because a source edit would invalidate the frozen candidate without a rebuild; it must be repaired and re-measured at the next source batch."
+  }
+ ],
+ "verdict": "SAFE_COMPATIBLE NOT ESTABLISHED for ssh or sshd. The last measured S = 15bebabc9 has 225 supportable / 98 REVIEW_REQUIRED / 0 BLOCKED / 0 UNKNOWN and element 7 PASS 153/0/153. The current source S5 = 69d43bb8d adds the B54-F2 fix and 33 structural eliminations, but is unbuilt and unmeasured; the projected review-required count is 65, not applied.",
+ "input_hashes": {
+  "evidence/closure-ssh-b74.json": "87f1dd9ac062d60da6a07c06abc4eec626254217dfd84861c7b495e59357c8ff",
+  "evidence/closure-sshd-b73-r2.json": "d0addc72f94904b03e63b2bd1d92dc5506c1ea67f6732b5a51a124f943f5cee5",
+  "evidence/sshd-artifact-ledger.json": "34ff5e2eec66d7c522951c9ef639d0e97c1a61501a232b0f579a4fe5fd7dc36e",
+  "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": "65fe71bb3d9d18f69034a2b176d96ac429a90e7cd0853f10d1ee17f6fc70b009",
+  "forensics/memory-safety/campaign/safe-c33/atlas-refresh/r13-coordinate-rebind-sites.json": "225275e35179c7f475c1031e6a783a9ee4630529127a715da67a1cecab51863e"
+ },
+ "non_claims": [
+  "This report is not a progress substitute for implementation; it is the precise blocker report required when the venue cannot run the gates.",
+  "No blocker is reclassified as PASS.",
+  "No safe Rust interface is claimed sound for the wider library by this report."
+ ],
+ "pipeline_findings": [
+  {
+   "tool": "forensics/tools/docs_consistency.py",
+   "before": "FAIL: README claimed 14 scoped boundary discharges, the ledger applies 19",
+   "fix": "render_docs.py now derives the applied set from CAMPAIGN-STATUS; README 14 -> 19; B54-B57 rows-only receipts and the B60 freeze are counted, B73 is no longer double-counted under another label",
+   "after": "ok: 20 hand-written claims agree",
+   "state": "FIXED"
+  },
+  {
+   "tool": "forensics/tools/check_forbidden_dependencies.py",
+   "result": "clean",
+   "state": "PASS"
+  },
+  {
+   "tool": "forensics/tools/callback_enumeration_gate.py",
+   "result": "exit 0, unresolved 0, but the regeneration rewrote 15 committed evidence files and changed REACHABLE_BOUND 135 -> 109 and enrolment 66 -> 64",
+   "action": "reverted; not committed. The gate also rewrites the closure enrolment input, so accepting the change without a build and a closure re-run would silently alter the adjudication",
+   "state": "UNRESOLVED \u2014 regeneration not accepted"
+  },
+  {
+   "tool": "forensics/tools/check_evidence_portability.py",
+   "result": "FAIL: implemented_surface.py needs target/release/libopenssl_rs.a, which does not exist in this venue",
+   "state": "BLOCKED \u2014 no build"
+  },
+  {
+   "tool": "forensics/tools/probe_hygiene.py",
+   "result": "no built distribution shell at artifacts/phase2 (the tool expects a different layout than artifacts/phase2/install)",
+   "state": "BLOCKED \u2014 venue"
+  },
+  {
+   "tool": "forensics/tools/divergence_obligations.py",
+   "result": "the committed table recorded a stale docs/SECURITY_DIVERGENCE_POLICY.md digest 7fa882ab; the current digest is a3f0f6c1",
+   "fix": "re-pinned; 10 rows, 0 blocking, dispositions unchanged",
+   "state": "FIXED"
+  },
+  {
+   "tool": "systematic blocked-row audit",
+   "result": "31 stale rows found: 4 already recorded (RC2 + 3 vestigial), 26 recorded here, 1 excluded (s2i_poison, already B54-discharged)",
+   "state": "RECORDED"
+  },
+  {
+   "tool": "independent v1l C-class review",
+   "result": "all 9 caller contracts established; six lack load-bearing controls; disposition NOT_APPLIED",
+   "state": "CONDITIONAL"
+  }
+ ],
+ "source_changes": [
+  {
+   "id": "B54-F2",
+   "commit": "cccd641490499c4cb82e45cbecb789418b749a3c",
+   "previous_S": "15bebabc90e1c4a8f0cb496813030c1415891f7c",
+   "src_content_sha256": "a5f85a2bbc730530912fc1c2774dd629632569ee756f72008b2360c9c763d595",
+   "what": "X509V3_EXT_nconf/_nid refuse a NULL value instead of dereferencing it; unit control added; divergence D-V3-CONF-NULL-VALUE-1",
+   "state": "FIXED IN SOURCE, NOT_BUILT",
+   "evidence_bound_to": "S=15bebabc9 (all closure/census/artefact evidence)",
+   "required_resolution": "build, test, rebuild consumers, re-run both closures and L7 at S-prime"
+  },
+  {
+   "id": "CMP-SAFE-13",
+   "commit": "5d4a3ff007e711315d2036aab4214989433ba7b5",
+   "previous_S": "cccd641490499c4cb82e45cbecb789418b749a3c",
+   "src_content_sha256": "feb1203547a4a6af4d649e4d39fae97ba331a2271a587c1421a3895b135578a7",
+   "what": "13 zero-argument CMP item constructors are safe declarations; 17 redundant unsafe blocks removed; compile-time controls added",
+   "state": "ELIMINATED IN SOURCE, NOT_BUILT",
+   "evidence_bound_to": "S=15bebabc9 (all closure/census/artefact evidence)",
+   "projected_effect": "review-required 98 -> 85 after rebuild and re-census (not applied)",
+   "required_resolution": "build, test, rebuild consumers, re-census, re-run both closures and L7 at S-double-prime"
+  },
+  {
+   "id": "V1L-SAFE-6",
+   "commit": "df0201be3bf1474bac07463371bf62c491b8f847",
+   "previous_S": "5d4a3ff007e711315d2036aab4214989433ba7b5",
+   "src_content_sha256": "4a7f7cad17a4dc59e83a7420fd725734bd27ed88c06cde620e057da1f7ec3497",
+   "what": "six zero-precondition v1l helpers are safe extern fns with compile-time controls; one redundant unsafe block removed",
+   "state": "ELIMINATED IN SOURCE, NOT_BUILT",
+   "evidence_bound_to": "S=15bebabc9 (all closure/census/artefact evidence)",
+   "projected_effect": "review-required 98 -> 79 after rebuild and re-census (not applied)",
+   "required_resolution": "build, test, rebuild consumers, re-census, re-run both closures and L7 at S3"
+  },
+  {
+   "id": "B45-SAFE-9",
+   "commit": "ba60ad76a423c9e8d36cba24535fb578a02dbce3",
+   "previous_S": "df0201be3bf1474bac07463371bf62c491b8f847",
+   "src_content_sha256": "e2d945af520d5b54dd033a5bb2eee05f916fc98c740e2d8353b8c6adc129075f",
+   "what": "nine zero-argument engine cleanup thunks are safe extern fns with compile-time controls",
+   "state": "ELIMINATED IN SOURCE, NOT_BUILT",
+   "evidence_bound_to": "S=15bebabc9 (all closure/census/artefact evidence)",
+   "projected_effect": "review-required 98 -> 70 after rebuild and re-census (not applied); the B45 C5 refusal is preserved but blocks no live obligation",
+   "required_resolution": "build, test, rebuild consumers, re-census, re-run both closures and L7 at S4"
+  },
+  {
+   "id": "CMP-CTX-DEAD-5",
+   "commit": "69d43bb8d8d4b4641f939c7283eb57d92ca5b89c",
+   "previous_S": "ba60ad76a423c9e8d36cba24535fb578a02dbce3",
+   "src_content_sha256": "65aa47536dc88532da20880dcfe922bc5b3170177ea68f925e734c92f90670f1",
+   "what": "five unreferenced module-local free thunks deleted from cmp_ctx.rs",
+   "state": "ELIMINATED IN SOURCE, NOT_BUILT",
+   "evidence_bound_to": "S=15bebabc9 (all closure/census/artefact evidence)",
+   "projected_effect": "review-required 70 -> 65 after rebuild and re-census (not applied)",
+   "required_resolution": "build, test, rebuild consumers, re-census, re-run both closures and L7 at S5"
+  }
+ ]
+}

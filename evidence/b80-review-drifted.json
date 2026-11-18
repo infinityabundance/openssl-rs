@@ -1,0 +1,916 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/b80-review-drifted/v1",
+ "kind": "independent re-establishment of the 18 drifted criterion-3 rows",
+ "generated_utc": "2026-11-15T12:00:00Z",
+ "reviewer": {
+  "role": "independent reviewer and instrumenter",
+  "independence": "did not write, convert or adjudicate any of these rows; S=d9fdf1357 is not this session's work",
+  "rules_read": [
+   "AGENTS.md \u00a70-\u00a77",
+   "\u00a715",
+   "\u00a716",
+   "\u00a721",
+   "\u00a722"
+  ],
+  "tracked_files_modified": false
+ },
+ "identity": {
+  "source_head_under_argument": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+  "review_tree": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+  "head_at_review": "e46ca6e1d3b96e9f1e96426ede835a322d5600c1",
+  "src_changed_between_review_tree_and_S": 6,
+  "files": [
+   "src/cms/cms_asn1.rs",
+   "src/cms/cms_lib.rs",
+   "src/evp/legacy_digest_callback_surface.rs",
+   "src/provider/kdf.rs",
+   "src/rand/rand_lib.rs",
+   "src/x509/v3_san.rs"
+  ],
+  "rows_in_changed_files": 22,
+  "rows_re_established_by_b80_rebind": 4,
+  "rows_re_established_here": 18,
+  "span_schema": "safe-c33/operation-span-sha256/v1 (resolver: forensics/tools/consumer_closure.py::resolve_operation_span)"
+ },
+ "venue": {
+  "free_g_at_start": {
+   "total": 45,
+   "used": 12,
+   "available": 32,
+   "swap_used_of_45": 11
+  },
+  "court": "openssl-rs-court, container memory.max raised this session from 8589934592 to 17179869184 (docker update, the standing user directive for this venue); MemorySwap and MemoryReservation 17179869184, NanoCpus 16000000000, PidsLimit 2048",
+  "heavy_command_policy": "one at a time; CARGO_BUILD_JOBS=4 (AGENTS.md \u00a76.1 rule 4, stricter than the venue's stated 8)",
+  "peaks": {
+   "stable_baseline_test_build": "0.03 s warm, no rebuild",
+   "mutant_crate_build": "11185152000 bytes cgroup peak",
+   "tsan_build": "11185152000 bytes cgroup peak"
+  }
+ },
+ "method": {
+  "identity": "resolved each operation at the review tree and at S with the closure tool's own resolver over committed git blobs; no coordinate was used to select a definition and the worktree was never read",
+  "delta": "diffed the two spans textually and the two files hunk-locally, then classified: none-in-row / coordinate-shift only / callee-side guard added / doc-only",
+  "answers": "the four criterion-3 questions were re-derived from the S bytes (contract, callees, callers, control), not carried from the receipt",
+  "controls": "both criterion-3 control suites were re-bound to S and re-run in review7; where a canary could not fire it was repaired and the repair recorded",
+  "mutation": "the two guards S introduced were deleted in a private copy of the crate under review7 and the in-file tests re-run to show the controls fire",
+  "not_done": [
+   "no Miri/ASan/loom run for these rows",
+   "no consumer replay was re-run",
+   "no caller-closure graph was re-derived at S"
+  ]
+ },
+ "controls": [
+  {
+   "id": "C-x509-at-S",
+   "path": "court/freeze-b80/review7/ctrl_x509_at_S.py",
+   "derivation": "verbatim copy of court/freeze-b79/review4/ctrl_x509_final.py with S re-bound to d9fdf1357 and OUT redirected into review7",
+   "result": "overall PASS; identity_ok 46, orphan_stale_kind 24, failed_checks []; all 15 canaries fired",
+   "covers": [
+    "C5-v2i-values",
+    "C9-helper-chain (chain:san_i2v, chain:san_v2i, chain:san_v2i_issuer)",
+    "C12-span-hash",
+    "C13-table-bound",
+    "C14-abi-export"
+   ]
+  },
+  {
+   "id": "C-rest-at-S",
+   "path": "court/freeze-b80/review7/ctrl_rest_at_S.py",
+   "derivation": "copy of court/freeze-b79/review6/ctrl_rest.py, S re-bound, recon regenerated at S, two canaries repaired, one check added",
+   "result": "13 checks, 11 pass; failing at S: C1_identity (only the 3 rows b80-rebind repaired) and C3a_contract_present (a scan artefact, see findings); 12/12 canaries fired",
+   "repairs": [
+    "K4 was bound to a hardcoded line 1358 and had stopped firing once S added 16 lines above it; it now locates the slot by identity",
+    "K11b mutated nothing the check read and its b79 'fired: true' was contamination from C11 already failing by design; it now deletes the guard C11 actually tests, and C11 reads the override-aware bytes",
+    "C3a2 was added: C3a's upward scan stops at `))]` and so cannot see a `# Safety` that sits above a multi-line attribute"
+   ],
+   "covers": [
+    "C2-definition-shape",
+    "C3a2-contract-present",
+    "C4-callback-item-pairing",
+    "C11-recipient-info-reachability (+ its repaired canary)"
+   ]
+  },
+  {
+   "id": "M-guards",
+   "path": "court/freeze-b80/review7/mutant (private copy of src/ + Cargo.toml/lock + build.rs, guards deleted)",
+   "result": "F1 test -> SIGSEGV (signal 11); F-REST-1 test -> SIGABRT (signal 6, non-unwinding panic) on the S control build both pass",
+   "meaning": "both guards S introduced are load-bearing and both in-file controls detect their absence"
+  }
+ ],
+ "rows": [
+  {
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::i2v_GENERAL_NAME",
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_san.rs",
+   "operation": "i2v_GENERAL_NAME",
+   "reviewed": {
+    "tree": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+    "span": [
+     355,
+     629
+    ],
+    "sha256": "1a27c17918064681ae2750b6c684068543110eff87bf57138d61c63577f7a2a8",
+    "source": "b79-review-x509-final.json obligations[stable_id] (span_sha256_current)",
+    "receipt_hash_reproduced_at_review_tree": true,
+    "receipt_verdict_at_review": "ACCEPT"
+   },
+   "current": {
+    "tree": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "span": [
+     355,
+     629
+    ],
+    "sha256": "1a27c17918064681ae2750b6c684068543110eff87bf57138d61c63577f7a2a8",
+    "source": "resolve_operation_span over the git blob at S"
+   },
+   "span_identity": "content-identical (byte-identical span at both commits)",
+   "delta": {
+    "class": "none-in-row",
+    "detail": "the only v3_san.rs change between the review tree and S is the NULL-`name` guard, its doc block and one test inside v2i_GENERAL_NAME_ex; this row is not on that path and none of its callees changed"
+   },
+   "answers": {
+    "a_safe_rust_reachability": "No. `pub unsafe extern \"C\" fn` reached from the C ABI and from the row's own i2v slot; no safe Rust caller reaches it.",
+    "b_contract_coverage": "Contract present (`/// # Safety`: method NULL-or-live, gens live, ret NULL-or-own stack). Every unsafe op in the 275-line span carries a `// SAFETY:` note, each derived from the live `gen` the stack yields.",
+    "c_hidden_obligation": "None found and none introduced: the row reads only its arguments and the stack elements, and no callee in its path changed at S.",
+    "d_load_bearing_control": "Yes, and it fired: ctrl_x509_at_S.py C5-v2i-values, C12-span-hash and C9-helper-chain pass at S with all 15 canaries firing."
+   },
+   "control": "court/freeze-b80/review7/ctrl_x509_at_S.py (review7 derivation of court/freeze-b79/review4/ctrl_x509_final.py, S re-bound to d9fdf1357, output redirected into review7); 15 grouped mutation canaries, all fired",
+   "verdict": "ACCEPT",
+   "verdict_basis": "Identity re-established at S (identical span, unchanged callee set), contract and per-op SAFETY coverage read at S, and the X509 control passes at S with firing canaries. The definition span is byte-identical at the review tree and at S, so the reviewed four-question answers transfer to the same bytes; what had to be re-established is that nothing the row relies on outside its own span changed, and that a firing control exists.",
+   "retained_obligations": []
+  },
+  {
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::i2v_GENERAL_NAMES",
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_san.rs",
+   "operation": "i2v_GENERAL_NAMES",
+   "reviewed": {
+    "tree": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+    "span": [
+     316,
+     346
+    ],
+    "sha256": "4e1d2a03cb3d1798e441f68920587ae39d4f342115b006e5c0cc38ee31623326",
+    "source": "b79-review-x509-final.json obligations[stable_id] (span_sha256_current)",
+    "receipt_hash_reproduced_at_review_tree": true,
+    "receipt_verdict_at_review": "ACCEPT"
+   },
+   "current": {
+    "tree": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "span": [
+     316,
+     346
+    ],
+    "sha256": "4e1d2a03cb3d1798e441f68920587ae39d4f342115b006e5c0cc38ee31623326",
+    "source": "resolve_operation_span over the git blob at S"
+   },
+   "span_identity": "content-identical (byte-identical span at both commits)",
+   "delta": {
+    "class": "none-in-row",
+    "detail": "unchanged body; its only callee `i2v_GENERAL_NAME` is also byte-identical at S, and the file's change is confined to v2i_GENERAL_NAME_ex"
+   },
+   "answers": {
+    "a_safe_rust_reachability": "No: exported `#[no_mangle]` `unsafe extern \"C\" fn`, plus the i2v slot.",
+    "b_contract_coverage": "Contract states method NULL-or-live, gens live, ret NULL-or-own stack; each `OPENSSL_sk_*`/`OPENSSL_sk_pop_free` call carries its SAFETY note.",
+    "c_hidden_obligation": "None new. The failure arm frees only a stack this call created (`origret.is_null()`), re-witnessed at S.",
+    "d_load_bearing_control": "Yes: C9-helper-chain and C12-span-hash pass at S with firing canaries."
+   },
+   "control": "court/freeze-b80/review7/ctrl_x509_at_S.py (review7 derivation of court/freeze-b79/review4/ctrl_x509_final.py, S re-bound to d9fdf1357, output redirected into review7); 15 grouped mutation canaries, all fired",
+   "verdict": "ACCEPT",
+   "verdict_basis": "Identical span, unchanged callee, contract read at S, X509 control PASS at S. The definition span is byte-identical at the review tree and at S, so the reviewed four-question answers transfer to the same bytes; what had to be re-established is that nothing the row relies on outside its own span changed, and that a firing control exists.",
+   "retained_obligations": []
+  },
+  {
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::san_i2v",
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_san.rs",
+   "operation": "san_i2v",
+   "reviewed": {
+    "tree": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+    "span": [
+     1185,
+     1193
+    ],
+    "sha256": "f81a3cfcc6695c7396e2c60945d7b3ad5c67408e3f9f5c5d59fd42317753ce42",
+    "source": "no obligation record in any review receipt. The reviewed identity is the reviewer's witness coordinate ('row via `san_i2v` at src/x509/v3_san.rs:1184-1194' in b79-review-x509-final); the resolver places the definition at 1185-1193 at the review tree, i.e. inside that window, and that byte range is what this review diffed",
+    "receipt_hash_reproduced_at_review_tree": false,
+    "receipt_verdict_at_review": null
+   },
+   "current": {
+    "tree": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "span": [
+     1203,
+     1211
+    ],
+    "sha256": "f81a3cfcc6695c7396e2c60945d7b3ad5c67408e3f9f5c5d59fd42317753ce42",
+    "source": "resolve_operation_span over the git blob at S"
+   },
+   "span_identity": "content-identical (byte-identical span at both commits)",
+   "delta": {
+    "class": "coordinate-shift only",
+    "detail": "span content identical; the coordinate moved +18 because the F1 guard and its test lengthened the file above it. No caller and no callee changed."
+   },
+   "answers": {
+    "a_safe_rust_reachability": "No: private `unsafe extern \"C\" fn`, installed only as `ossl_v3_alt[*].i2v`; the dispatcher is the only caller.",
+    "b_contract_coverage": "Contract states the table row, the slot type and the `out` stack; the single unsafe op is the forward to `i2v_GENERAL_NAMES`, whose contract it restates.",
+    "c_hidden_obligation": "None new; the dispatch signature is the authority's own (`void *value`), and `value` is the GENERAL_NAMES stack the slot holds.",
+    "d_load_bearing_control": "Yes: chain:san_i2v is a grouped check, and K9/C6-row-slot-swap fire."
+   },
+   "control": "court/freeze-b80/review7/ctrl_x509_at_S.py (review7 derivation of court/freeze-b79/review4/ctrl_x509_final.py, S re-bound to d9fdf1357, output redirected into review7); 15 grouped mutation canaries, all fired",
+   "verdict": "ACCEPT",
+   "verdict_basis": "Identity re-established at S by content (no recorded hash exists for this row; the reviewed witness coordinate reproduces the reviewed bytes), contract read, chain control fires. The definition span is byte-identical at the review tree and at S, so the reviewed four-question answers transfer to the same bytes; what had to be re-established is that nothing the row relies on outside its own span changed, and that a firing control exists.",
+   "retained_obligations": [
+    "no recorded span hash exists for this row in any review receipt: its reviewed identity is a witness coordinate plus a chain control, so the drift check had to be done against the review tree's bytes rather than against a recorded hash"
+   ]
+  },
+  {
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::san_v2i",
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_san.rs",
+   "operation": "san_v2i",
+   "reviewed": {
+    "tree": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+    "span": [
+     1205,
+     1212
+    ],
+    "sha256": "c52f72419f84dcb95253bd7eec68f54e9f472ba7e0a3bebf4f1eda6470634ce7",
+    "source": "no obligation record in any review receipt. The reviewed identity is the chain control (chain:san_v2i in b79-review-x509-final) plus the definition's resolved byte range at the review tree",
+    "receipt_hash_reproduced_at_review_tree": false,
+    "receipt_verdict_at_review": null
+   },
+   "current": {
+    "tree": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "span": [
+     1223,
+     1230
+    ],
+    "sha256": "c52f72419f84dcb95253bd7eec68f54e9f472ba7e0a3bebf4f1eda6470634ce7",
+    "source": "resolve_operation_span over the git blob at S"
+   },
+   "span_identity": "content-identical (byte-identical span at both commits)",
+   "delta": {
+    "class": "coordinate-shift only",
+    "detail": "span content identical; only the coordinate moved (+18). Its callee `v2i_subject_alt` is byte-identical too."
+   },
+   "answers": {
+    "a_safe_rust_reachability": "No: private slot fn, invoked only through `ossl_v3_alt[0].v2i`.",
+    "b_contract_coverage": "Contract present, but its text describes an i2v-shaped convention (a GENERAL_NAME stack `out` and a single built node returned) rather than the v2i slot's actual `(method, ctx, STACK_OF(CONF_VALUE) *) -> ext_struc` shape. The slot contract in src/x509/v3_lib.rs:195-209 is the correct statement and the body conforms to it.",
+    "c_hidden_obligation": "The callee's precondition (CONF_VALUE entries with non-NULL name/value) is established by re-witnessed at S: the v2i stack is built by the dispatcher (src/x509/v3_conf.rs:1084-1093) from X509V3_parse_list(value) or NCONF_get_section(conf, value+1), both of which produce CONF_VALUE entries with non-NULL name and value; X509V3_EXT_nconf* never hands the v2i slot a hand-built stack, and OBJ_sn2nid(NULL) answers NID_undef before any v2i is reached.",
+    "d_load_bearing_control": "Yes: chain:san_v2i passes and C6-row-slot-swap fires."
+   },
+   "control": "court/freeze-b80/review7/ctrl_x509_at_S.py (review7 derivation of court/freeze-b79/review4/ctrl_x509_final.py, S re-bound to d9fdf1357, output redirected into review7); 15 grouped mutation canaries, all fired",
+   "verdict": "ACCEPT",
+   "verdict_basis": "Identity and soundness re-established at S; the row's own unsafe op is a forward whose precondition is established by the dispatcher. The stated contract text is weaker/mistaken about the slot shape, which is recorded rather than treated as soundness.",
+   "retained_obligations": [
+    "contract text describes the wrong parameter convention for a v2i slot; correct it to the borrowed `STACK_OF(CONF_VALUE)` shape (documentation change, not a soundness defect)"
+   ]
+  },
+  {
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::san_v2i_issuer",
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_san.rs",
+   "operation": "san_v2i_issuer",
+   "reviewed": {
+    "tree": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+    "span": [
+     1221,
+     1228
+    ],
+    "sha256": "d46b6cbd67b40adc15b2334b7b4b9226697413a7fbe301fd967de73902aa3bf6",
+    "source": "no obligation record in any review receipt. The reviewed identity is the chain control (chain:san_v2i_issuer in b79-review-x509-final) plus the definition's resolved byte range at the review tree",
+    "receipt_hash_reproduced_at_review_tree": false,
+    "receipt_verdict_at_review": null
+   },
+   "current": {
+    "tree": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "span": [
+     1239,
+     1246
+    ],
+    "sha256": "d46b6cbd67b40adc15b2334b7b4b9226697413a7fbe301fd967de73902aa3bf6",
+    "source": "resolve_operation_span over the git blob at S"
+   },
+   "span_identity": "content-identical (byte-identical span at both commits)",
+   "delta": {
+    "class": "coordinate-shift only",
+    "detail": "span content identical; coordinate +18. Callee `v2i_issuer_alt` byte-identical."
+   },
+   "answers": {
+    "a_safe_rust_reachability": "No: private slot fn, invoked only through `ossl_v3_alt[1].v2i`.",
+    "b_contract_coverage": "Contract present; it is the 'exactly as san_v2i' form and inherits the same shape mismatch.",
+    "c_hidden_obligation": "The issuer arm's callee precondition is established by the same dispatcher witness: re-witnessed at S: the v2i stack is built by the dispatcher (src/x509/v3_conf.rs:1084-1093) from X509V3_parse_list(value) or NCONF_get_section(conf, value+1), both of which produce CONF_VALUE entries with non-NULL name and value; X509V3_EXT_nconf* never hands the v2i slot a hand-built stack, and OBJ_sn2nid(NULL) answers NID_undef before any v2i is reached.",
+    "d_load_bearing_control": "Yes: chain:san_v2i_issuer passes and C6-row-slot-swap fires."
+   },
+   "control": "court/freeze-b80/review7/ctrl_x509_at_S.py (review7 derivation of court/freeze-b79/review4/ctrl_x509_final.py, S re-bound to d9fdf1357, output redirected into review7); 15 grouped mutation canaries, all fired",
+   "verdict": "ACCEPT",
+   "verdict_basis": "Identity and soundness re-established at S; contract text recorded as needing the v2i shape.",
+   "retained_obligations": [
+    "contract text describes the wrong parameter convention (inherited from san_v2i)"
+   ]
+  },
+  {
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_GENERAL_NAME",
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_san.rs",
+   "operation": "v2i_GENERAL_NAME",
+   "reviewed": {
+    "tree": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+    "span": [
+     1126,
+     1134
+    ],
+    "sha256": "cfea39b622d6844b4eaeb0042e003cc8e908a6797a1b58ceb7f5de939da585a9",
+    "source": "b79-review-x509-final.json obligations[stable_id] (span_sha256_current)",
+    "receipt_hash_reproduced_at_review_tree": true,
+    "receipt_verdict_at_review": "ACCEPT"
+   },
+   "current": {
+    "tree": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "span": [
+     1144,
+     1152
+    ],
+    "sha256": "cfea39b622d6844b4eaeb0042e003cc8e908a6797a1b58ceb7f5de939da585a9",
+    "source": "resolve_operation_span over the git blob at S"
+   },
+   "span_identity": "content-identical (byte-identical span at both commits)",
+   "delta": {
+    "class": "callee-side guard added",
+    "detail": "the row is a three-argument forward to `v2i_GENERAL_NAME_ex`, which at S refuses a NULL `name` before the name scan; the row's own bytes are unchanged, and the change in its callee is a refusal (it can only remove a fault, never add one)"
+   },
+   "answers": {
+    "a_safe_rust_reachability": "No: exported `#[no_mangle]` `unsafe extern \"C\" fn`.",
+    "b_contract_coverage": "Contract present and unchanged; the callee's contract at S now also refuses NULL name/value, which is a strengthening of what this forward may pass.",
+    "c_hidden_obligation": "None new. The F1 guard makes the callee's behaviour for `{name = NULL}` defined (NULL + X509V3_R_MISSING_VALUE) instead of a NULL read; the row neither reads nor retains `cnf` itself.",
+    "d_load_bearing_control": "Yes, and it fired under mutation: the in-file F1 test `a_null_name_is_refused_before_the_name_scan` passes at S and SIGSEGVs (signal 11) in the review7 mutant build with the guard deleted."
+   },
+   "control": "court/freeze-b80/review7/ctrl_x509_at_S.py (review7 derivation of court/freeze-b79/review4/ctrl_x509_final.py, S re-bound to d9fdf1357, output redirected into review7); 15 grouped mutation canaries, all fired; plus the review7 mutant-crate canary (court/freeze-b80/review7/mutant)",
+   "verdict": "ACCEPT",
+   "verdict_basis": "Identity re-established; the only reachable delta is the callee's new refusal, which is a strengthening, and the guard's control demonstrably fires. The definition span is byte-identical at the review tree and at S, so the reviewed four-question answers transfer to the same bytes; what had to be re-established is that nothing the row relies on outside its own span changed, and that a firing control exists.",
+   "retained_obligations": []
+  },
+  {
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_GENERAL_NAMES",
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_san.rs",
+   "operation": "v2i_GENERAL_NAMES",
+   "reviewed": {
+    "tree": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+    "span": [
+     1143,
+     1173
+    ],
+    "sha256": "4bc959090092b15cff8cc6124692b516dbab9d418ed7c10342672ab3d1842e86",
+    "source": "b79-review-x509-final.json obligations[stable_id] (span_sha256_current)",
+    "receipt_hash_reproduced_at_review_tree": true,
+    "receipt_verdict_at_review": "ACCEPT"
+   },
+   "current": {
+    "tree": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "span": [
+     1161,
+     1191
+    ],
+    "sha256": "4bc959090092b15cff8cc6124692b516dbab9d418ed7c10342672ab3d1842e86",
+    "source": "resolve_operation_span over the git blob at S"
+   },
+   "span_identity": "content-identical (byte-identical span at both commits)",
+   "delta": {
+    "class": "callee-side guard added",
+    "detail": "unchanged body; it calls `v2i_GENERAL_NAME`, which forwards to the now-guarded `v2i_GENERAL_NAME_ex`. The stack cleanup on failure (`OPENSSL_sk_pop_free(gens, general_name_free_thunk)`) is unchanged."
+   },
+   "answers": {
+    "a_safe_rust_reachability": "No: exported `#[no_mangle]` `unsafe extern \"C\" fn`.",
+    "b_contract_coverage": "Contract present (ctx NULL-or-live, nval a live stack); each `OPENSSL_sk_*` call carries its SAFETY note; the elements' precondition is the dispatcher's.",
+    "c_hidden_obligation": "None new; the guarded callee refuses rather than faults, and the row frees exactly the stack it built on failure.",
+    "d_load_bearing_control": "Yes: C5-v2i-values passes; the F1 control fires under mutation (same callee)."
+   },
+   "control": "court/freeze-b80/review7/ctrl_x509_at_S.py (review7 derivation of court/freeze-b79/review4/ctrl_x509_final.py, S re-bound to d9fdf1357, output redirected into review7); 15 grouped mutation canaries, all fired; plus the F1 mutant canary",
+   "verdict": "ACCEPT",
+   "verdict_basis": "Identity re-established; delta is a strengthening one frame down; control fires. The definition span is byte-identical at the review tree and at S, so the reviewed four-question answers transfer to the same bytes; what had to be re-established is that nothing the row relies on outside its own span changed, and that a firing control exists.",
+   "retained_obligations": []
+  },
+  {
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_issuer_alt",
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_san.rs",
+   "operation": "v2i_issuer_alt",
+   "reviewed": {
+    "tree": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+    "span": [
+     1270,
+     1320
+    ],
+    "sha256": "91c9c2fe9bdbcc2076b7185af047abf78ccc060e2659550185401d18c3fc8581",
+    "source": "b79-review-x509-final.json obligations[stable_id] (span_sha256_current)",
+    "receipt_hash_reproduced_at_review_tree": true,
+    "receipt_verdict_at_review": "ACCEPT"
+   },
+   "current": {
+    "tree": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "span": [
+     1288,
+     1338
+    ],
+    "sha256": "91c9c2fe9bdbcc2076b7185af047abf78ccc060e2659550185401d18c3fc8581",
+    "source": "resolve_operation_span over the git blob at S"
+   },
+   "span_identity": "content-identical (byte-identical span at both commits)",
+   "delta": {
+    "class": "none-in-row",
+    "detail": "unchanged body; it reads `name` itself (`ossl_v3_name_cmp(name, \"issuer\")`, guarded only by `!value.is_null()`), so the F1 guard one frame down does not cover its own read. Its callee `v2i_GENERAL_NAME` is on the guarded path; the read is not."
+   },
+   "answers": {
+    "a_safe_rust_reachability": "No: private slot fn, invoked only through `ossl_v3_alt[1].v2i`.",
+    "b_contract_coverage": "Contract present but states only '`nval` must be a live stack of `CONF_VALUE` pointers', without the non-NULL `name`/`value` its body needs; the body's own SAFETY note says 'NUL-terminated when non-NULL', which is what makes the gap visible.",
+    "c_hidden_obligation": "Yes, one, and it is recorded not hidden by this review: a hand-built live stack whose entry has `name = NULL` would satisfy the stated contract and be read through NULL. It is not reachable, because re-witnessed at S: the v2i stack is built by the dispatcher (src/x509/v3_conf.rs:1084-1093) from X509V3_parse_list(value) or NCONF_get_section(conf, value+1), both of which produce CONF_VALUE entries with non-NULL name and value; X509V3_EXT_nconf* never hands the v2i slot a hand-built stack, and OBJ_sn2nid(NULL) answers NID_undef before any v2i is reached.",
+    "d_load_bearing_control": "Yes: C5-v2i-values passes and the F1 canary fires one frame down; the row's own read is not covered by a canary of its own."
+   },
+   "control": "court/freeze-b80/review7/ctrl_x509_at_S.py (review7 derivation of court/freeze-b79/review4/ctrl_x509_final.py, S re-bound to d9fdf1357, output redirected into review7); 15 grouped mutation canaries, all fired",
+   "verdict": "ACCEPT",
+   "verdict_basis": "Sound at S for its established caller class (dispatcher-built stacks); the stated contract is weaker than the established precondition, so the contract obligation is retained and named rather than silently accepted.",
+   "retained_obligations": [
+    "state the non-NULL `name`/`value` requirement in the `# Safety` (the established caller class already supplies it; no exported entry can build a stack with a NULL name)",
+    "record why the F1 refusal was not propagated to this row's own name read (asymmetry: F1's function is an exported symbol, this one is not)"
+   ]
+  },
+  {
+   "stable_id": "src/x509/v3_san.rs::UNSAFE_FN_DEF::v2i_subject_alt",
+   "mechanism": "X509_VERIFY_POLICY",
+   "file": "src/x509/v3_san.rs",
+   "operation": "v2i_subject_alt",
+   "reviewed": {
+    "tree": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+    "span": [
+     1396,
+     1453
+    ],
+    "sha256": "dcb9f32ccf1f285910f21d4e07c2e87e1970ccfd88eeec809095b3288e40ffd9",
+    "source": "b79-review-x509-final.json obligations[stable_id] (span_sha256_current)",
+    "receipt_hash_reproduced_at_review_tree": true,
+    "receipt_verdict_at_review": "ACCEPT"
+   },
+   "current": {
+    "tree": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "span": [
+     1414,
+     1471
+    ],
+    "sha256": "dcb9f32ccf1f285910f21d4e07c2e87e1970ccfd88eeec809095b3288e40ffd9",
+    "source": "resolve_operation_span over the git blob at S"
+   },
+   "span_identity": "content-identical (byte-identical span at both commits)",
+   "delta": {
+    "class": "none-in-row",
+    "detail": "unchanged body. The `email=copy`/`email=move` prefixes read `ossl_v3_name_cmp(name, \"email\")` unconditionally (the only arm of the three siblings with no `!value.is_null()` conjunct), while the `strcmp(value, ...)` calls are `value`-guarded."
+   },
+   "answers": {
+    "a_safe_rust_reachability": "No: private slot fn, invoked only through `ossl_v3_alt[0].v2i`.",
+    "b_contract_coverage": "Contract present but, as for `v2i_issuer_alt`, it does not state the non-NULL `name` the body reads.",
+    "c_hidden_obligation": "The same NULL-`name` shape as `v2i_issuer_alt`, and here with no `value` conjunct in front of it. Not reachable, because re-witnessed at S: the v2i stack is built by the dispatcher (src/x509/v3_conf.rs:1084-1093) from X509V3_parse_list(value) or NCONF_get_section(conf, value+1), both of which produce CONF_VALUE entries with non-NULL name and value; X509V3_EXT_nconf* never hands the v2i slot a hand-built stack, and OBJ_sn2nid(NULL) answers NID_undef before any v2i is reached.",
+    "d_load_bearing_control": "Yes: C5-v2i-values passes; no canary targets this row's own read."
+   },
+   "control": "court/freeze-b80/review7/ctrl_x509_at_S.py (review7 derivation of court/freeze-b79/review4/ctrl_x509_final.py, S re-bound to d9fdf1357, output redirected into review7); 15 grouped mutation canaries, all fired",
+   "verdict": "ACCEPT",
+   "verdict_basis": "Sound at S for its established caller class; contract text weaker than the precondition; recorded as a retained contract obligation (same class as F1, one function down).",
+   "retained_obligations": [
+    "state the non-NULL `name`/`value` requirement in the `# Safety`",
+    "record the F1-class asymmetry (this read is unguarded and uncanaried; it is unreachable only because the slot's only caller class builds the stack)"
+   ]
+  },
+  {
+   "stable_id": "src/cms/cms_asn1.rs::UNSAFE_FN_DEF::cms_cb",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "file": "src/cms/cms_asn1.rs",
+   "operation": "cms_cb",
+   "reviewed": {
+    "tree": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+    "span": [
+     733,
+     784
+    ],
+    "sha256": "b47d0fc434e8f8ca828c9b43babb30a5f94b018e8c847eeefddc2ad605f396f5",
+    "source": "b79-review-rest-final.json obligations[stable_id] (span_sha256_current)",
+    "receipt_hash_reproduced_at_review_tree": true,
+    "receipt_verdict_at_review": "ACCEPT"
+   },
+   "current": {
+    "tree": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "span": [
+     749,
+     800
+    ],
+    "sha256": "b47d0fc434e8f8ca828c9b43babb30a5f94b018e8c847eeefddc2ad605f396f5",
+    "source": "resolve_operation_span over the git blob at S"
+   },
+   "span_identity": "content-identical (byte-identical span at both commits)",
+   "delta": {
+    "class": "none-in-row",
+    "detail": "unchanged body. The only cms_asn1.rs change between the review tree and S is the NULL-`d` guard, its explanatory comment and one test inside the *sibling* callback `cms_ri_cb`; no callee of this row changed."
+   },
+   "answers": {
+    "a_safe_rust_reachability": "No: private `unsafe extern \"C\" fn`, installed only as the item's `funcs` entry; the ASN.1 item machinery is the only caller.",
+    "b_contract_coverage": "Contract present at S (the item's `funcs`/`size` pairing is the establishing witness) and every unsafe op carries a SAFETY note.",
+    "c_hidden_obligation": "None. The body tests `pval` itself (the authority's own `if (pval != NULL)`) and casts `exarg` without dereferencing it on `FREE_POST`.",
+    "d_load_bearing_control": "Yes: C4-callback-item_pairing passes at S and its repaired K4 canary fires (the b79 canary used a hardcoded line 1358 and had stopped firing after S added 16 lines above it)."
+   },
+   "control": "court/freeze-b80/review7/ctrl_rest_at_S.py (review7 derivation of court/freeze-b79/review6/ctrl_rest.py, S re-bound to d9fdf1357, recon regenerated at S, two canaries repaired and one check added); 12/12 canaries fired",
+   "verdict": "ACCEPT",
+   "verdict_basis": "Identity re-established at S (identical span, unchanged callee set), contract and per-op SAFETY coverage read at S, rest control PASS at S with firing canaries. The definition span is byte-identical at the review tree and at S, so the reviewed four-question answers transfer to the same bytes; what had to be re-established is that nothing the row relies on outside its own span changed, and that a firing control exists.",
+   "retained_obligations": []
+  },
+  {
+   "stable_id": "src/cms/cms_asn1.rs::UNSAFE_FN_DEF::cms_ec_cb",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "file": "src/cms/cms_asn1.rs",
+   "operation": "cms_ec_cb",
+   "reviewed": {
+    "tree": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+    "span": [
+     534,
+     547
+    ],
+    "sha256": "ba423a8ccae9f8f1db109a2bff88197501f54d94dc6dea26b1bb0005298ec711",
+    "source": "b79-review-rest-final.json obligations[stable_id] (span_sha256_current)",
+    "receipt_hash_reproduced_at_review_tree": true,
+    "receipt_verdict_at_review": "ACCEPT"
+   },
+   "current": {
+    "tree": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "span": [
+     534,
+     547
+    ],
+    "sha256": "ba423a8ccae9f8f1db109a2bff88197501f54d94dc6dea26b1bb0005298ec711",
+    "source": "resolve_operation_span over the git blob at S"
+   },
+   "span_identity": "content-identical (byte-identical span at both commits)",
+   "delta": {
+    "class": "none-in-row",
+    "detail": "unchanged body. The only cms_asn1.rs change between the review tree and S is the NULL-`d` guard, its explanatory comment and one test inside the *sibling* callback `cms_ri_cb`; no callee of this row changed."
+   },
+   "answers": {
+    "a_safe_rust_reachability": "No: private `unsafe extern \"C\" fn`, installed only as the item's `funcs` entry; the ASN.1 item machinery is the only caller.",
+    "b_contract_coverage": "Contract present at S (the item's `funcs`/`size` pairing is the establishing witness) and every unsafe op carries a SAFETY note.",
+    "c_hidden_obligation": "None. `FREE_POST` runs after the walk released and NULLed the template fields; the members this row releases are non-template and released once. A value allocated but never decoded yields NULL members, so the frees are no-ops.",
+    "d_load_bearing_control": "Yes: C4-callback-item_pairing passes at S and its repaired K4 canary fires (the b79 canary used a hardcoded line 1358 and had stopped firing after S added 16 lines above it)."
+   },
+   "control": "court/freeze-b80/review7/ctrl_rest_at_S.py (review7 derivation of court/freeze-b79/review6/ctrl_rest.py, S re-bound to d9fdf1357, recon regenerated at S, two canaries repaired and one check added); 12/12 canaries fired",
+   "verdict": "ACCEPT",
+   "verdict_basis": "Identity re-established at S (identical span, unchanged callee set), contract and per-op SAFETY coverage read at S, rest control PASS at S with firing canaries. The definition span is byte-identical at the review tree and at S, so the reviewed four-question answers transfer to the same bytes; what had to be re-established is that nothing the row relies on outside its own span changed, and that a firing control exists.",
+   "retained_obligations": []
+  },
+  {
+   "stable_id": "src/cms/cms_asn1.rs::UNSAFE_FN_DEF::cms_kari_cb",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "file": "src/cms/cms_asn1.rs",
+   "operation": "cms_kari_cb",
+   "reviewed": {
+    "tree": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+    "span": [
+     584,
+     610
+    ],
+    "sha256": "ace207bbd437a2049f420c466c82759bb50f5f121aaaaeb6c0e1061465c988c4",
+    "source": "b79-review-rest-final.json obligations[stable_id] (span_sha256_current)",
+    "receipt_hash_reproduced_at_review_tree": true,
+    "receipt_verdict_at_review": "ACCEPT"
+   },
+   "current": {
+    "tree": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "span": [
+     584,
+     610
+    ],
+    "sha256": "ace207bbd437a2049f420c466c82759bb50f5f121aaaaeb6c0e1061465c988c4",
+    "source": "resolve_operation_span over the git blob at S"
+   },
+   "span_identity": "content-identical (byte-identical span at both commits)",
+   "delta": {
+    "class": "none-in-row",
+    "detail": "unchanged body. The only cms_asn1.rs change between the review tree and S is the NULL-`d` guard, its explanatory comment and one test inside the *sibling* callback `cms_ri_cb`; no callee of this row changed."
+   },
+   "answers": {
+    "a_safe_rust_reachability": "No: private `unsafe extern \"C\" fn`, installed only as the item's `funcs` entry; the ASN.1 item machinery is the only caller.",
+    "b_contract_coverage": "Contract present at S (the item's `funcs`/`size` pairing is the establishing witness) and every unsafe op carries a SAFETY note.",
+    "c_hidden_obligation": "None. `FREE_POST` runs after the walk released and NULLed the template fields; the members this row releases are non-template and released once. A value allocated but never decoded yields NULL members, so the frees are no-ops.",
+    "d_load_bearing_control": "Yes: C4-callback-item_pairing passes at S and its repaired K4 canary fires (the b79 canary used a hardcoded line 1358 and had stopped firing after S added 16 lines above it)."
+   },
+   "control": "court/freeze-b80/review7/ctrl_rest_at_S.py (review7 derivation of court/freeze-b79/review6/ctrl_rest.py, S re-bound to d9fdf1357, recon regenerated at S, two canaries repaired and one check added); 12/12 canaries fired",
+   "verdict": "ACCEPT",
+   "verdict_basis": "Identity re-established at S (identical span, unchanged callee set), contract and per-op SAFETY coverage read at S, rest control PASS at S with firing canaries. The definition span is byte-identical at the review tree and at S, so the reviewed four-question answers transfer to the same bytes; what had to be re-established is that nothing the row relies on outside its own span changed, and that a firing control exists.",
+   "retained_obligations": []
+  },
+  {
+   "stable_id": "src/cms/cms_asn1.rs::UNSAFE_FN_DEF::cms_kemri_cb",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "file": "src/cms/cms_asn1.rs",
+   "operation": "cms_kemri_cb",
+   "reviewed": {
+    "tree": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+    "span": [
+     623,
+     650
+    ],
+    "sha256": "9cfcdd4c464b5d1355b0e4fd27000b9eb07a0e92cc3b9b5b26ca2426f292399a",
+    "source": "b79-review-rest-final.json obligations[stable_id] (span_sha256_current)",
+    "receipt_hash_reproduced_at_review_tree": true,
+    "receipt_verdict_at_review": "ACCEPT"
+   },
+   "current": {
+    "tree": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "span": [
+     623,
+     650
+    ],
+    "sha256": "9cfcdd4c464b5d1355b0e4fd27000b9eb07a0e92cc3b9b5b26ca2426f292399a",
+    "source": "resolve_operation_span over the git blob at S"
+   },
+   "span_identity": "content-identical (byte-identical span at both commits)",
+   "delta": {
+    "class": "none-in-row",
+    "detail": "unchanged body. The only cms_asn1.rs change between the review tree and S is the NULL-`d` guard, its explanatory comment and one test inside the *sibling* callback `cms_ri_cb`; no callee of this row changed."
+   },
+   "answers": {
+    "a_safe_rust_reachability": "No: private `unsafe extern \"C\" fn`, installed only as the item's `funcs` entry; the ASN.1 item machinery is the only caller.",
+    "b_contract_coverage": "Contract present at S (the item's `funcs`/`size` pairing is the establishing witness) and every unsafe op carries a SAFETY note.",
+    "c_hidden_obligation": "None. `FREE_POST` runs after the walk released and NULLed the template fields; the members this row releases are non-template and released once. A value allocated but never decoded yields NULL members, so the frees are no-ops.",
+    "d_load_bearing_control": "Yes: C4-callback-item_pairing passes at S and its repaired K4 canary fires (the b79 canary used a hardcoded line 1358 and had stopped firing after S added 16 lines above it)."
+   },
+   "control": "court/freeze-b80/review7/ctrl_rest_at_S.py (review7 derivation of court/freeze-b79/review6/ctrl_rest.py, S re-bound to d9fdf1357, recon regenerated at S, two canaries repaired and one check added); 12/12 canaries fired",
+   "verdict": "ACCEPT",
+   "verdict_basis": "Identity re-established at S (identical span, unchanged callee set), contract and per-op SAFETY coverage read at S, rest control PASS at S with firing canaries. The definition span is byte-identical at the review tree and at S, so the reviewed four-question answers transfer to the same bytes; what had to be re-established is that nothing the row relies on outside its own span changed, and that a firing control exists.",
+   "retained_obligations": []
+  },
+  {
+   "stable_id": "src/cms/cms_asn1.rs::UNSAFE_FN_DEF::cms_rek_cb",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "file": "src/cms/cms_asn1.rs",
+   "operation": "cms_rek_cb",
+   "reviewed": {
+    "tree": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+    "span": [
+     557,
+     570
+    ],
+    "sha256": "07f3677ae912eeba4af564e31b9d81d45aa555432ec80ca13a4bed144359cfe9",
+    "source": "b79-review-rest-final.json obligations[stable_id] (span_sha256_current)",
+    "receipt_hash_reproduced_at_review_tree": true,
+    "receipt_verdict_at_review": "ACCEPT"
+   },
+   "current": {
+    "tree": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "span": [
+     557,
+     570
+    ],
+    "sha256": "07f3677ae912eeba4af564e31b9d81d45aa555432ec80ca13a4bed144359cfe9",
+    "source": "resolve_operation_span over the git blob at S"
+   },
+   "span_identity": "content-identical (byte-identical span at both commits)",
+   "delta": {
+    "class": "none-in-row",
+    "detail": "unchanged body. The only cms_asn1.rs change between the review tree and S is the NULL-`d` guard, its explanatory comment and one test inside the *sibling* callback `cms_ri_cb`; no callee of this row changed."
+   },
+   "answers": {
+    "a_safe_rust_reachability": "No: private `unsafe extern \"C\" fn`, installed only as the item's `funcs` entry; the ASN.1 item machinery is the only caller.",
+    "b_contract_coverage": "Contract present at S (the item's `funcs`/`size` pairing is the establishing witness) and every unsafe op carries a SAFETY note.",
+    "c_hidden_obligation": "None. `FREE_POST` runs after the walk released and NULLed the template fields; the members this row releases are non-template and released once. A value allocated but never decoded yields NULL members, so the frees are no-ops.",
+    "d_load_bearing_control": "Yes: C4-callback-item_pairing passes at S and its repaired K4 canary fires (the b79 canary used a hardcoded line 1358 and had stopped firing after S added 16 lines above it)."
+   },
+   "control": "court/freeze-b80/review7/ctrl_rest_at_S.py (review7 derivation of court/freeze-b79/review6/ctrl_rest.py, S re-bound to d9fdf1357, recon regenerated at S, two canaries repaired and one check added); 12/12 canaries fired",
+   "verdict": "ACCEPT",
+   "verdict_basis": "Identity re-established at S (identical span, unchanged callee set), contract and per-op SAFETY coverage read at S, rest control PASS at S with firing canaries. The definition span is byte-identical at the review tree and at S, so the reviewed four-question answers transfer to the same bytes; what had to be re-established is that nothing the row relies on outside its own span changed, and that a firing control exists.",
+   "retained_obligations": []
+  },
+  {
+   "stable_id": "src/rand/rand_lib.rs::UNSAFE_FN_DEF::drbg_status",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "file": "src/rand/rand_lib.rs",
+   "operation": "drbg_status",
+   "reviewed": {
+    "tree": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+    "span": [
+     2046,
+     2054
+    ],
+    "sha256": "7540f25f21c9ef26a46be39101749afb1719ae9c3d0d75b16473345952bb4755",
+    "source": "b79-review-rest-final.json obligations[stable_id] (span_sha256_current)",
+    "receipt_hash_reproduced_at_review_tree": true,
+    "receipt_verdict_at_review": "ACCEPT"
+   },
+   "current": {
+    "tree": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "span": [
+     2059,
+     2067
+    ],
+    "sha256": "7540f25f21c9ef26a46be39101749afb1719ae9c3d0d75b16473345952bb4755",
+    "source": "resolve_operation_span over the git blob at S"
+   },
+   "span_identity": "content-identical (byte-identical span at both commits)",
+   "delta": {
+    "class": "none-in-row",
+    "detail": "unchanged body and no arguments; the only rand_lib.rs change is the `# Safety` paragraph on `ossl_rand_ctx_free` (13 doc lines, no code)"
+   },
+   "answers": {
+    "a_safe_rust_reachability": "No: private `unsafe extern \"C\" fn` reached only as the method table's `status` slot.",
+    "b_contract_coverage": "Takes no arguments, so it has no caller-facing precondition set; the control's empty-precondition exemption is justified from the signature (C3b passes).",
+    "c_hidden_obligation": "None: it reads only the module's own `RAND_get0_primary` answer and the DRBG state.",
+    "d_load_bearing_control": "Yes: C3b-empty_precondition_justified passes and C2's signature canary fires."
+   },
+   "control": "court/freeze-b80/review7/ctrl_rest_at_S.py (review7 derivation of court/freeze-b79/review6/ctrl_rest.py, S re-bound to d9fdf1357, recon regenerated at S, two canaries repaired and one check added); 12/12 canaries fired",
+   "verdict": "ACCEPT",
+   "verdict_basis": "Identity re-established at S; no argument means no precondition to state, and the control's exemption is re-derived from the signature. The definition span is byte-identical at the review tree and at S, so the reviewed four-question answers transfer to the same bytes; what had to be re-established is that nothing the row relies on outside its own span changed, and that a firing control exists.",
+   "retained_obligations": []
+  },
+  {
+   "stable_id": "src/rand/rand_lib.rs::UNSAFE_FN_DEF::ossl_rand_cleanup_int",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "file": "src/rand/rand_lib.rs",
+   "operation": "ossl_rand_cleanup_int",
+   "reviewed": {
+    "tree": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+    "span": [
+     548,
+     578
+    ],
+    "sha256": "14d0a958164ed2cf10abaae8148dd890c07f928fc57b31ef5575e095f153df11",
+    "source": "b79-review-rest-final.json obligations[stable_id] (span_sha256_current)",
+    "receipt_hash_reproduced_at_review_tree": true,
+    "receipt_verdict_at_review": "ACCEPT"
+   },
+   "current": {
+    "tree": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "span": [
+     561,
+     591
+    ],
+    "sha256": "14d0a958164ed2cf10abaae8148dd890c07f928fc57b31ef5575e095f153df11",
+    "source": "resolve_operation_span over the git blob at S"
+   },
+   "span_identity": "content-identical (byte-identical span at both commits)",
+   "delta": {
+    "class": "none-in-row",
+    "detail": "unchanged body; the rand_lib.rs delta is a doc block on a different function, so neither this row nor its callees changed"
+   },
+   "answers": {
+    "a_safe_rust_reachability": "No: `pub(crate) unsafe fn`, called from `OPENSSL_cleanup`'s RAND arm.",
+    "b_contract_coverage": "Contract present and read at S: the shutdown exclusion (no thread inside a RAND call), the process-global releases named, and the idempotence argument (the `RAND_INITED` early return plus the NULL-leaving lock swaps).",
+    "c_hidden_obligation": "None new. The `extern \"C\"` callback invoked here is the method table's own and takes no arguments, so no application callback can re-enter while a `&mut` is live.",
+    "d_load_bearing_control": "Yes: C3a2 (contract presence over attribute-continuation lines) and C9-concurrency pass at S."
+   },
+   "control": "court/freeze-b80/review7/ctrl_rest_at_S.py (review7 derivation of court/freeze-b79/review6/ctrl_rest.py, S re-bound to d9fdf1357, recon regenerated at S, two canaries repaired and one check added); 12/12 canaries fired",
+   "verdict": "ACCEPT",
+   "verdict_basis": "Identity re-established at S; the contract was read at S and the exclusion argument holds. The definition span is byte-identical at the review tree and at S, so the reviewed four-question answers transfer to the same bytes; what had to be re-established is that nothing the row relies on outside its own span changed, and that a firing control exists.",
+   "retained_obligations": []
+  },
+  {
+   "stable_id": "src/rand/rand_lib.rs::UNSAFE_FN_DEF::ossl_rand_ctx_new",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "file": "src/rand/rand_lib.rs",
+   "operation": "ossl_rand_ctx_new",
+   "reviewed": {
+    "tree": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+    "span": [
+     426,
+     466
+    ],
+    "sha256": "304a782704a5b63d5780212521506752ccaaf804deaf6af742b7d6b1f511d1f8",
+    "source": "b79-review-rest-final.json obligations[stable_id] (span_sha256_current)",
+    "receipt_hash_reproduced_at_review_tree": true,
+    "receipt_verdict_at_review": "ACCEPT"
+   },
+   "current": {
+    "tree": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "span": [
+     426,
+     466
+    ],
+    "sha256": "304a782704a5b63d5780212521506752ccaaf804deaf6af742b7d6b1f511d1f8",
+    "source": "resolve_operation_span over the git blob at S"
+   },
+   "span_identity": "content-identical (byte-identical span at both commits)",
+   "delta": {
+    "class": "none-in-row",
+    "detail": "unchanged body; the rand_lib.rs delta is doc-only on its sibling `ossl_rand_ctx_free`"
+   },
+   "answers": {
+    "a_safe_rust_reachability": "No: `pub(crate) unsafe extern \"C\" fn`, the `OSSL_LIB_CTX` slot-5 constructor.",
+    "b_contract_coverage": "No `# Safety` and none required: the parameter is `_libctx` (unused), so the caller-facing precondition set is empty; the control's empty-precondition exemption is justified from the signature.",
+    "c_hidden_obligation": "None new: the failure arms release exactly what each acquired (`RawGlobal::Drop` for the block, `name` before `dgbl` by declaration order, the lock's absence before any write).",
+    "d_load_bearing_control": "Yes: C3b-empty_precondition_justified passes; the release pairing of this constructor with `ossl_rand_ctx_free` is the subject of `hook`-style probes elsewhere."
+   },
+   "control": "court/freeze-b80/review7/ctrl_rest_at_S.py (review7 derivation of court/freeze-b79/review6/ctrl_rest.py, S re-bound to d9fdf1357, recon regenerated at S, two canaries repaired and one check added); 12/12 canaries fired",
+   "verdict": "ACCEPT",
+   "verdict_basis": "Identity re-established at S; empty precondition set established from the signature. The definition span is byte-identical at the review tree and at S, so the reviewed four-question answers transfer to the same bytes; what had to be re-established is that nothing the row relies on outside its own span changed, and that a firing control exists.",
+   "retained_obligations": []
+  },
+  {
+   "stable_id": "src/rand/rand_lib.rs::UNSAFE_FN_DEF::ossl_rand_ctx_free",
+   "mechanism": "RAND_CMS_STORE_KEYFMT",
+   "file": "src/rand/rand_lib.rs",
+   "operation": "ossl_rand_ctx_free",
+   "reviewed": {
+    "tree": "5b08c02944eb09cf3e7abc96b253c100dde673f2",
+    "span": [
+     469,
+     475
+    ],
+    "sha256": "2dad9e575165dc5ed7e81dd1bf441bd84aeffe8f8f53e0e0abfa115f7dcc9bdf",
+    "source": "b79-review-rest-final.json obligations[stable_id] (span_sha256_current); its recorded verdict was REJECT",
+    "receipt_hash_reproduced_at_review_tree": true,
+    "receipt_verdict_at_review": "REJECT"
+   },
+   "current": {
+    "tree": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+    "span": [
+     482,
+     488
+    ],
+    "sha256": "2dad9e575165dc5ed7e81dd1bf441bd84aeffe8f8f53e0e0abfa115f7dcc9bdf",
+    "source": "resolve_operation_span over the git blob at S"
+   },
+   "span_identity": "content-identical (byte-identical span at both commits)",
+   "delta": {
+    "class": "doc-only (contract added)",
+    "detail": "the body is byte-identical; S adds a 13-line `# Safety` paragraph. This is the delta that answers the b79 REJECT, whose reason was contract placement ('no `# Safety` fn contract'), so the verdict can only be re-established by reading the new contract, not by the span hash."
+   },
+   "answers": {
+    "a_safe_rust_reachability": "No: `pub(crate) unsafe fn`, called from `context_deinit` for slot 5.",
+    "b_contract_coverage": "Now covered and read at S: provenance (`rand_ctx_new`'s return at the `CRYPTO_zalloc` seam), exclusive ownership ('released exactly once, here'; the owning libctx clears the slot), the complete member set (lock, primary/seed DRBG contexts, seven owned name strings), the borrowed member carved out (`random_provider`), and the release mechanism (`Drop`'s run of the authority's own free body plus the single block release).",
+    "c_hidden_obligation": "None newly introduced. The alignment precondition of `OwnedCtx::from_raw_at` is not stated in this contract, but the implementation *filters* a misaligned pointer into `None`, so a misaligned argument loses the block instead of causing UB.",
+    "d_load_bearing_control": "Yes: C3a/C3a2 pass at S for this row (it was one of C3a's three baseline failures at b79 and is no longer flagged), and the in-crate release probe `runtime::thread::b56_probe`-style lifecycle assertions pass."
+   },
+   "control": "court/freeze-b80/review7/ctrl_rest_at_S.py (review7 derivation of court/freeze-b79/review6/ctrl_rest.py, S re-bound to d9fdf1357, recon regenerated at S, two canaries repaired and one check added); 12/12 canaries fired",
+   "verdict": "ACCEPT",
+   "verdict_basis": "The b79 REJECT is answered at S: the body is unchanged and the missing contract is present and complete for the six \u00a71 elements. ACCEPT at S.",
+   "retained_obligations": [
+    "the `# Safety` does not state the alignment of the adopted block; it is enforced by `from_raw_at`'s filter (a misaligned pointer is refused, leaking rather than corrupting), so this is a documentation gap, not a soundness one"
+   ]
+  }
+ ],
+ "tally": {
+  "rows": 18,
+  "ACCEPT": 18,
+  "REJECT": 0,
+  "span_identical": 18,
+  "coordinate_shift_only": 4,
+  "callee_side_guard_added": 2,
+  "none_in_row": 11,
+  "doc_only_contract_added": 1,
+  "with_retained_obligations": 6,
+  "by_mechanism": {
+   "X509_VERIFY_POLICY": 9,
+   "RAND_CMS_STORE_KEYFMT": 9
+  }
+ },
+ "findings": [
+  {
+   "id": "G1",
+   "severity": "control-defect",
+   "statement": "court/freeze-b79/review6/ctrl_rest.py's K11b canary was never load-bearing: C11(c) read `recon[\"rows\"]` (unmutated text), so the mutation could not move it, and its recorded 'fired: true' was contamination from C11 already failing by design at b79. Repaired in review7; at S it fires."
+  },
+  {
+   "id": "G2",
+   "severity": "control-defect",
+   "statement": "the same control's K4 canary was bound to a hardcoded line 1358 and silently stopped firing at S; a coordinate-bound canary is the \u00a722 failure mode inside the control itself. Repaired to locate the slot by identity."
+  },
+  {
+   "id": "G3",
+   "severity": "control-defect",
+   "statement": "C3a_contract_present's upward scan cannot see a `# Safety` above a multi-line `#[cfg(all(...))]` attribute, so it reports the two `free_lock` rows as contractless although both carry a full `# Safety`. C3a2 (added) passes all 48 rows. The b79 note that described C3a's baseline failures as 'the three contract-placement rejects' also omitted the two thread.rs rows it in fact flagged."
+  },
+  {
+   "id": "G4",
+   "severity": "contract-asymmetry",
+   "statement": "F1 (NULL `name` read) was fixed at S in `v2i_GENERAL_NAME_ex` (an exported symbol) but the same read remains unguarded in `v2i_subject_alt` and `v2i_issuer_alt`, whose stated contracts admit a NULL name. They are unreachable with such a stack because their only caller class is the v2i dispatcher, which builds it from X509V3_parse_list/NCONF_get_section; the asymmetry is recorded as a retained obligation on those two rows, not as a soundness defect."
+  }
+ ],
+ "residuals": [
+  {
+   "id": "R1",
+   "state": "NOT_RUN",
+   "statement": "no Miri (Stacked/Tree Borrows), ASan or loom run covers these rows at S; the identity and contract evidence here is static plus the two in-file behavioural controls"
+  },
+  {
+   "id": "R2",
+   "state": "NOT_RUN",
+   "statement": "no consumer replay or closure regeneration was run in this review; the accepted b80b closures are used as given"
+  },
+  {
+   "id": "R3",
+   "state": "NOT_RUN",
+   "statement": "the mutation canaries cover only the two guards S added; no mutation was run against the 16 rows whose bodies are unchanged (their delta is nil, so there is nothing to mutate)"
+  }
+ ],
+ "does_not_prove": [
+  "that these 18 rows are SAFETY_DISCHARGED (\u00a77 is a mechanism-and-closure state; this is a row review)",
+  "that no other row in the six drifted files drifted: the population is the argument's 22-row set, not a fresh closure enumeration",
+  "that the two guarded defects are absent everywhere else in the crate: only the two functions S touched were mutated",
+  "anything about runtime behaviour beyond the two in-file tests and the probe runs named above (no sanitizer, no Miri, no consumer differential)",
+  "that the retained contract obligations on san_v2i, san_v2i_issuer, v2i_subject_alt, v2i_issuer_alt and ossl_rand_ctx_free are harmless in every consumer: they are recorded, not discharged",
+  "constant-time, cryptographic or protocol properties: nothing here measures them"
+ ]
+}

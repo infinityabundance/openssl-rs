@@ -113,14 +113,16 @@ pub unsafe extern "C" fn EVP_add_cipher(c: *const EvpCipher) -> c_int {
     let nid = unsafe { (*c).nid };
     // `OBJ_nid2sn` is safe in this crate: an integer in, a static string or NULL out.
     let short = OBJ_nid2sn(nid);
-    // SAFETY: `OBJ_NAME_add` borrows both strings, and `short` is a static the object table owns.
-    let r = OBJ_NAME_add(short, OBJ_NAME_TYPE_CIPHER_METH, c.cast::<c_char>());
+    // SAFETY: `OBJ_NAME_add` borrows both strings without copying them, and both outlive
+    // the entry: `short` is a static the object table owns, and `c` is the caller's live
+    // method, which the caller has promised keeps it valid for the entry's lifetime.
+    let r = unsafe { OBJ_NAME_add(short, OBJ_NAME_TYPE_CIPHER_METH, c.cast::<c_char>()) };
     if r == 0 {
         return 0;
     }
     let long = OBJ_nid2ln(nid);
     // SAFETY: as above.
-    OBJ_NAME_add(long, OBJ_NAME_TYPE_CIPHER_METH, c.cast::<c_char>())
+    unsafe { OBJ_NAME_add(long, OBJ_NAME_TYPE_CIPHER_METH, c.cast::<c_char>()) }
 }
 
 /// `int EVP_add_digest(const EVP_MD *md)`.
@@ -147,14 +149,15 @@ pub unsafe extern "C" fn EVP_add_digest(md: *const EvpMd) -> c_int {
     // SAFETY: `md` is live per the contract.
     let type_ = unsafe { (*md).type_ };
     let name = OBJ_nid2sn(type_);
-    // SAFETY: `OBJ_NAME_add` borrows both strings.
-    let r = OBJ_NAME_add(name, OBJ_NAME_TYPE_MD_METH, md.cast::<c_char>());
+    // SAFETY: `OBJ_NAME_add` borrows both strings; `name` is a static and `md` is the
+    // caller's live method, which the caller has promised outlives the entry.
+    let r = unsafe { OBJ_NAME_add(name, OBJ_NAME_TYPE_MD_METH, md.cast::<c_char>()) };
     if r == 0 {
         return 0;
     }
     let long = OBJ_nid2ln(type_);
     // SAFETY: as above.
-    let r = OBJ_NAME_add(long, OBJ_NAME_TYPE_MD_METH, md.cast::<c_char>());
+    let r = unsafe { OBJ_NAME_add(long, OBJ_NAME_TYPE_MD_METH, md.cast::<c_char>()) };
     if r == 0 {
         return 0;
     }
@@ -164,14 +167,15 @@ pub unsafe extern "C" fn EVP_add_digest(md: *const EvpMd) -> c_int {
     if pkey_type != 0 && pkey_type != type_ {
         let pkey_short = OBJ_nid2sn(pkey_type);
         // SAFETY: `name` is the digest's own short name, which the table borrows as the alias's
-        // target rather than as a method.
-        let r = OBJ_NAME_add(pkey_short, OBJ_NAME_TYPE_MD_METH | OBJ_NAME_ALIAS, name);
+        // target rather than as a method; both are NUL-terminated statics or the caller's live
+        // method string.
+        let r = unsafe { OBJ_NAME_add(pkey_short, OBJ_NAME_TYPE_MD_METH | OBJ_NAME_ALIAS, name) };
         if r == 0 {
             return 0;
         }
         let pkey_long = OBJ_nid2ln(pkey_type);
         // SAFETY: as above.
-        let r = OBJ_NAME_add(pkey_long, OBJ_NAME_TYPE_MD_METH | OBJ_NAME_ALIAS, name);
+        let r = unsafe { OBJ_NAME_add(pkey_long, OBJ_NAME_TYPE_MD_METH | OBJ_NAME_ALIAS, name) };
         return r;
     }
     r
@@ -204,8 +208,8 @@ unsafe extern "C" fn cipher_from_name(name: *const c_char, data: *mut c_void) {
     if !unsafe { *slot }.is_null() {
         return;
     }
-    // SAFETY: `name` is NUL-terminated per the contract.
-    let found = OBJ_NAME_get(name, OBJ_NAME_TYPE_CIPHER_METH);
+    // SAFETY: `name` is NUL-terminated and valid for the call per the contract.
+    let found = unsafe { OBJ_NAME_get(name, OBJ_NAME_TYPE_CIPHER_METH) };
     // SAFETY: `slot` is live and writable.
     unsafe { *slot = found.cast::<EvpCipher>() };
 }
@@ -223,8 +227,8 @@ unsafe extern "C" fn digest_from_name(name: *const c_char, data: *mut c_void) {
     if !unsafe { *slot }.is_null() {
         return;
     }
-    // SAFETY: `name` is NUL-terminated per the contract.
-    let found = OBJ_NAME_get(name, OBJ_NAME_TYPE_MD_METH);
+    // SAFETY: `name` is NUL-terminated and valid for the call per the contract.
+    let found = unsafe { OBJ_NAME_get(name, OBJ_NAME_TYPE_MD_METH) };
     // SAFETY: `slot` is live and writable.
     unsafe { *slot = found.cast::<EvpMd>() };
 }
@@ -245,12 +249,13 @@ pub(crate) unsafe fn evp_get_cipherbyname_ex(
 ) -> *const EvpCipher {
     // The answer is ignored at the two call sites in `names.c`; the only thing it can report is a
     // refused initialisation option, which stops the lookup before it starts.
-    if OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS, ptr::null()) == 0 {
+    // SAFETY: NULL settings, so the initialiser reads no caller memory.
+    if unsafe { OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS, ptr::null()) } == 0 {
         return ptr::null();
     }
 
     // SAFETY: `name` is NULL or NUL-terminated per the contract.
-    let cp = OBJ_NAME_get(name, OBJ_NAME_TYPE_CIPHER_METH).cast::<EvpCipher>();
+    let cp = unsafe { OBJ_NAME_get(name, OBJ_NAME_TYPE_CIPHER_METH) }.cast::<EvpCipher>();
     if !cp.is_null() {
         return cp;
     }
@@ -308,12 +313,13 @@ pub(crate) unsafe fn evp_get_digestbyname_ex(
     libctx: *mut c_void,
     name: *const c_char,
 ) -> *const EvpMd {
-    if OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_DIGESTS, ptr::null()) == 0 {
+    // SAFETY: NULL settings, so the initialiser reads no caller memory.
+    if unsafe { OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_DIGESTS, ptr::null()) } == 0 {
         return ptr::null();
     }
 
     // SAFETY: `name` is NULL or NUL-terminated per the contract.
-    let dp = OBJ_NAME_get(name, OBJ_NAME_TYPE_MD_METH).cast::<EvpMd>();
+    let dp = unsafe { OBJ_NAME_get(name, OBJ_NAME_TYPE_MD_METH) }.cast::<EvpMd>();
     if !dp.is_null() {
         return dp;
     }
@@ -495,7 +501,7 @@ mod tests {
         assert_eq!(unsafe { EVP_add_cipher(cipher) }, 1);
         // SAFETY: `nid` is live in the object table.
         let (short, long) = (OBJ_nid2sn(nid), OBJ_nid2ln(nid));
-        // SAFETY: both are NUL-terminated strings owned by the object table.
+        // SAFETY: `short`/`long` are static object-table names, valid for the call.
         unsafe {
             assert_eq!(
                 OBJ_NAME_get(short, OBJ_NAME_TYPE_CIPHER_METH),
@@ -530,14 +536,13 @@ mod tests {
         }
         // SAFETY: `nid` is live and its short name is a static string.
         let short = OBJ_nid2sn(nid);
-        // SAFETY: `short` is NUL-terminated.
-        unsafe {
-            assert_eq!(
-                OBJ_NAME_get(short, OBJ_NAME_TYPE_CIPHER_METH),
-                second.cast::<c_char>(),
-                "the second add is the one the table holds",
-            );
-        }
+        // SAFETY: `short` is a static object-table name, valid for the call.
+        let found = unsafe { OBJ_NAME_get(short, OBJ_NAME_TYPE_CIPHER_METH) };
+        assert_eq!(
+            found,
+            second.cast::<c_char>(),
+            "the second add is the one the table holds",
+        );
     }
 
     /// A digest whose `pkey_type` names a different object registers that object's short name as an
@@ -561,23 +566,23 @@ mod tests {
         // SAFETY: `md` is a leaked heap object that outlives the registry entries.
         assert_eq!(unsafe { EVP_add_digest(md) }, 1);
         let (short, pkey_short) = (OBJ_nid2sn(type_), OBJ_nid2sn(pkey_type));
-        // SAFETY: `pkey_short` is a NUL-terminated string owned by the object table.
-        unsafe {
-            /* Asked for the alias **as an alias**, the table answers the string the adder stored
-             * rather than the object it names. */
-            assert_eq!(
-                OBJ_NAME_get(pkey_short, OBJ_NAME_TYPE_MD_METH | OBJ_NAME_ALIAS),
-                short,
-                "the pkey name is an alias whose data is the digest's short name"
-            );
-            /* Asked for it plainly, `OBJ_NAME_get` follows the chain and answers the method --
-             * which is what makes the alias useful to `EVP_get_digestbyname`. */
-            assert_eq!(
-                OBJ_NAME_get(pkey_short, OBJ_NAME_TYPE_MD_METH),
-                md.cast::<c_char>(),
-                "and the plain lookup follows it to the method"
-            );
-        }
+        /* Asked for the alias **as an alias**, the table answers the string the adder stored
+         * rather than the object it names. */
+        // SAFETY: `pkey_short` is a static object-table name, valid for the call.
+        let aliased = unsafe { OBJ_NAME_get(pkey_short, OBJ_NAME_TYPE_MD_METH | OBJ_NAME_ALIAS) };
+        assert_eq!(
+            aliased, short,
+            "the pkey name is an alias whose data is the digest's short name"
+        );
+        /* Asked for it plainly, `OBJ_NAME_get` follows the chain and answers the method --
+         * which is what makes the alias useful to `EVP_get_digestbyname`. */
+        // SAFETY: `pkey_short` is a static object-table name, valid for the call.
+        let followed = unsafe { OBJ_NAME_get(pkey_short, OBJ_NAME_TYPE_MD_METH) };
+        assert_eq!(
+            followed,
+            md.cast::<c_char>(),
+            "and the plain lookup follows it to the method"
+        );
     }
 
     /// A digest whose `pkey_type` is zero gets the two plain registrations and no alias.
@@ -595,12 +600,8 @@ mod tests {
         assert_eq!(unsafe { EVP_add_digest(md) }, 1);
         // SAFETY: `type_` is live and its short name is a static string.
         let short = OBJ_nid2sn(type_);
-        // SAFETY: `short` is NUL-terminated.
-        unsafe {
-            assert_eq!(
-                OBJ_NAME_get(short, OBJ_NAME_TYPE_MD_METH),
-                md.cast::<c_char>()
-            );
-        }
+        // SAFETY: `short` is a static object-table name, valid for the call.
+        let found = unsafe { OBJ_NAME_get(short, OBJ_NAME_TYPE_MD_METH) };
+        assert_eq!(found, md.cast::<c_char>());
     }
 }

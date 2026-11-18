@@ -1,0 +1,959 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/b59-close18/v1",
+ "generated_utc": "2026-11-12T04:12:30Z",
+ "subphase": "b59-close18",
+ "purpose": "supply the missing binding evidence for the 18 BLOCKED obligations of the b58 freeze at S, without changing a verdict or widening a class",
+ "candidate": {
+  "source_head": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+  "measured_working_tree_head": "560e74b43e39cfdc3676f1d94a59d3ad6d6cba9e",
+  "inventory": "court/freeze-b58/census-b58.json",
+  "inventory_source_head": "b6f38f13456b79ecd94b1088c835c3da92bc942a",
+  "span_source_binding": "git-blob",
+  "instrument": {
+   "path": "forensics/tools/consumer_closure.py",
+   "sha256": "e2e4eed17205a09d6802e3f3ea8fed2b90e4f9c3bfe56e4265d62462d25dda2b",
+   "version": 5
+  },
+  "artefacts": {
+   "libcrypto.so.3": "f3061a4fccdf96370e8c0e41891555f76f0e1612bd402d34a49ece1ae555a7ec",
+   "ssh": "77975f469c9409ac43a0213ae9f0530488d28a343c6fb78f94e34625efa543b7",
+   "sshd": "11a41af8d5cff2e9dc693ae43b082a28134fff327bf271b671566b418bcc4a0d"
+  }
+ },
+ "counts": {
+  "ssh": {
+   "before": {
+    "reachable_production_obligations": 323,
+    "DISCHARGED": 305,
+    "BLOCKED": 18,
+    "UNKNOWN": 0,
+    "carried_forward": 150,
+    "stale_discharge_rejections": 0
+   },
+   "after": {
+    "reachable_production_obligations": 323,
+    "DISCHARGED": 321,
+    "BLOCKED": 2,
+    "UNKNOWN": 0,
+    "carried_forward": 150,
+    "stale_discharge_rejections": 0
+   },
+   "delta": {
+    "reachable_production_obligations": 0,
+    "DISCHARGED": 16,
+    "BLOCKED": -16,
+    "UNKNOWN": 0,
+    "carried_forward": 0,
+    "stale_discharge_rejections": 0
+   }
+  },
+  "sshd": {
+   "before": {
+    "reachable_production_obligations": 323,
+    "DISCHARGED": 305,
+    "BLOCKED": 18,
+    "UNKNOWN": 0,
+    "carried_forward": 150,
+    "stale_discharge_rejections": 0
+   },
+   "after": {
+    "reachable_production_obligations": 323,
+    "DISCHARGED": 321,
+    "BLOCKED": 2,
+    "UNKNOWN": 0,
+    "carried_forward": 150,
+    "stale_discharge_rejections": 0
+   },
+   "delta": {
+    "reachable_production_obligations": 0,
+    "DISCHARGED": 16,
+    "BLOCKED": -16,
+    "UNKNOWN": 0,
+    "carried_forward": 0,
+    "stale_discharge_rejections": 0
+   }
+  }
+ },
+ "verdicts": {
+  "ssh": {
+   "before": {
+    "state": "ACCEPTED",
+    "safe_compatible": false,
+    "reason": "no refusal condition fired"
+   },
+   "after": {
+    "state": "ACCEPTED",
+    "safe_compatible": false,
+    "reason": "no refusal condition fired"
+   }
+  },
+  "sshd": {
+   "before": {
+    "state": "ACCEPTED",
+    "safe_compatible": false,
+    "reason": "no refusal condition fired"
+   },
+   "after": {
+    "state": "ACCEPTED",
+    "safe_compatible": false,
+    "reason": "no refusal condition fired"
+   }
+  }
+ },
+ "element_7": {
+  "ssh": {
+   "before": "FAIL",
+   "after": "FAIL",
+   "moved": false,
+   "why": "32 reachable unresolved site(s) are not contract-bounded, and/or an unclassified site is reachable"
+  },
+  "sshd": {
+   "before": "FAIL",
+   "after": "FAIL",
+   "moved": false,
+   "why": "32 reachable unresolved site(s) are not contract-bounded, and/or an unclassified site is reachable"
+  }
+ },
+ "added_files": [
+  {
+   "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/sslconf-exclusivity-2026-11-10.json",
+   "sha256": "0870725f1f7fceb35ff27e3b58bdcd1289b7b4f529b35bcad6935c5a32d07872",
+   "role": "the receipt the ledger row names (adjudication transcription + per-site span evidence)"
+  },
+  {
+   "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/sslconf-exclusivity-2026-11-10-sites.json",
+   "sha256": "a6c2f00d6c66ae60a4968ae384db6f214b07edf51e21dac95fc6eae54a5c239c",
+   "role": "loader-visible projection (load_boundaries admits boundary-sweep-B*.json and *-sites.json only)"
+  },
+  {
+   "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b59_generate.py",
+   "sha256": "574a44621ca2cde9bbbf5fb217faed8816de8101be3cce109ba4be11f40e9743",
+   "role": "generator for the two receipts above (reads the ledger row, B46/B47 line_current, and the S git blob)"
+  },
+  {
+   "path": "evidence/closure-ssh-b59.json",
+   "sha256": "07036d70bfcdea0847116c1205240b3000b7ef633cf35837eb169ff83ff8f7a1",
+   "role": "measured ssh closure"
+  },
+  {
+   "path": "evidence/closure-sshd-b59.json",
+   "sha256": "abb00877900ce1e11a1cb07630b79cdf21c8d6e4026e23b7b149662f0d813530",
+   "role": "measured sshd closure"
+  }
+ ],
+ "changed_files": [
+  {
+   "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json",
+   "sha256": "46d1e5fcd00a0a96c4346f01302f938b74e12cd3e92986ee7743e007d232c652",
+   "change": "two admission coordinates corrected to the S definition lines: i2s_poison 59 -> 70, s2i_poison 70 -> 86. file, kind, item, stable_id, partition and requested_status are unchanged; each record keeps line_at_admission and a coordinate_correction block",
+   "why": "the admission source was enumerated at inventory head a8716b4f, before the definitions moved. load_enrolment_blockers uses the census line only when a per-site census record matches the stable identity, and the census has no UNSAFE_FN_DEF record for these two (they are safe extern fns with an unsafe block interior). The stale coordinate was therefore the only obligation-side value, and current_census_line stayed null"
+  }
+ ],
+ "causes": {
+  "sslconf-exclusivity-2026-11-10": {
+   "sites": 14,
+   "result": "DISCHARGED 14/14",
+   "mechanism": "the ledger row keys the discharge by coordinate (ssl_conf.rs:434 ...), while consumer_closure joins by boundary[\"id\"]. No receipt carried those ids. The new receipt uses the ledger coordinate as the boundary id and the S operation-span hash as the acceptance evidence; B46/B47 line_current is the coordinate join",
+   "adjudication_transcription": {
+    "verdict": "DISCHARGE 14/14",
+    "reviewer": "independent adjudicator (not the author of the model)",
+    "control": "a_reentrant_dispatch_is_refused_and_leaves_the_context_usable (ssl_conf.rs:2399) fails if enter_use is dropped from SSL_CONF_cmd:1633; plus a_concurrent_entry_from_another_thread_is_refused (:2903) and every_entry_point_refuses_an_overlap_and_works_when_idle (:2546)",
+    "controls": [
+     "a_reentrant_dispatch_is_refused_and_leaves_the_context_usable",
+     "a_concurrent_entry_from_another_thread_is_refused",
+     "every_entry_point_refuses_an_overlap_and_works_when_idle"
+    ],
+    "evidence": "all ten ssl_conf sites are reachable only beneath a held InUseGuard (cmd/cmd_argv -> ssl_conf_cmd_inner:1638 guard :1633/:1678); ssl_ciph obligations are slot+stack exclusivity over live ctx; ssl_rsa 1021/1057 are governed by the SSL_CTX_add_custom_ext install contract (:1176)",
+    "hidden_obligations": 1,
+    "retained_state": "one hidden obligation retained: a second concurrent free, and an entry point racing the release, remain external serialisation and are recorded in the module docs; the free-race residual undermines none of the 14",
+    "note": "The B46/B47 blocking premise (only two dispatch functions guarded) is false: the model covers all ten mutating entry points with an RAII guard. Re-reviewed rather than overridden.",
+    "transcription_rule": "verbatim transcription of the ledger row's adjudication; this receipt supplies the missing boundary-id join and the content-addressed span, it does not re-adjudicate"
+   },
+   "rows": [
+    {
+     "id": "ssl_ciph.rs:756",
+     "file": "src/ssl/ssl_ciph.rs",
+     "line": 756,
+     "operation": "update_cipher_list_by_id",
+     "span_sha256": "1c9b7874567a505ce6abfb2e0756dc21ad41755c26a4caa3493ec34e91c33f6c",
+     "span_lines": [
+      756,
+      773
+     ],
+     "source_receipt": "boundary-sweep-B47",
+     "source_boundary_id": "B47-CIPH-001",
+     "controls": [
+      "a_reentrant_dispatch_is_refused_and_leaves_the_context_usable",
+      "a_concurrent_entry_from_another_thread_is_refused",
+      "every_entry_point_refuses_an_overlap_and_works_when_idle"
+     ],
+     "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+    },
+    {
+     "id": "ssl_ciph.rs:880",
+     "file": "src/ssl/ssl_ciph.rs",
+     "line": 880,
+     "operation": "set_ciphersuites",
+     "span_sha256": "016690a1db8d9a3de3766cb19f3febce0cf86270f440f2aa48f8a85c7c2f4ff3",
+     "span_lines": [
+      880,
+      912
+     ],
+     "source_receipt": "boundary-sweep-B47",
+     "source_boundary_id": "B47-CIPH-002",
+     "controls": [
+      "a_reentrant_dispatch_is_refused_and_leaves_the_context_usable",
+      "a_concurrent_entry_from_another_thread_is_refused",
+      "every_entry_point_refuses_an_overlap_and_works_when_idle"
+     ],
+     "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+    },
+    {
+     "id": "ssl_conf.rs:434",
+     "file": "src/ssl/ssl_conf.rs",
+     "line": 434,
+     "operation": "ssl_match_option",
+     "span_sha256": "ddc6f53ab1bf3a3a411cd5fe58f626a69c6886435c39bf96f5c067b1e6df8713",
+     "span_lines": [
+      434,
+      465
+     ],
+     "source_receipt": "boundary-sweep-B47",
+     "source_boundary_id": "B47-SSL-CONF-001",
+     "controls": [
+      "a_reentrant_dispatch_is_refused_and_leaves_the_context_usable",
+      "a_concurrent_entry_from_another_thread_is_refused",
+      "every_entry_point_refuses_an_overlap_and_works_when_idle"
+     ],
+     "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+    },
+    {
+     "id": "ssl_conf.rs:486",
+     "file": "src/ssl/ssl_conf.rs",
+     "line": 486,
+     "operation": "ssl_set_option_list",
+     "span_sha256": "20b4cf87479c78394f68899f683002e61abdbacddd421ef6176dc0db0910348f",
+     "span_lines": [
+      486,
+      531
+     ],
+     "source_receipt": "boundary-sweep-B47",
+     "source_boundary_id": "B47-SSL-CONF-002",
+     "controls": [
+      "a_reentrant_dispatch_is_refused_and_leaves_the_context_usable",
+      "a_concurrent_entry_from_another_thread_is_refused",
+      "every_entry_point_refuses_an_overlap_and_works_when_idle"
+     ],
+     "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+    },
+    {
+     "id": "ssl_conf.rs:616",
+     "file": "src/ssl/ssl_conf.rs",
+     "line": 616,
+     "operation": "min_max_proto",
+     "span_sha256": "22644409257205625b3d05a0ebd5902b9c032c676601f6fbc75c0ba0ee9518f7",
+     "span_lines": [
+      616,
+      635
+     ],
+     "source_receipt": "boundary-sweep-B47",
+     "source_boundary_id": "B47-SSL-CONF-003",
+     "controls": [
+      "a_reentrant_dispatch_is_refused_and_leaves_the_context_usable",
+      "a_concurrent_entry_from_another_thread_is_refused",
+      "every_entry_point_refuses_an_overlap_and_works_when_idle"
+     ],
+     "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+    },
+    {
+     "id": "ssl_conf.rs:702",
+     "file": "src/ssl/ssl_conf.rs",
+     "line": 702,
+     "operation": "cmd_Protocol",
+     "span_sha256": "2aff841342d6fa38594a970810038188a87c1da82b5b12b8da5c037ebac13c82",
+     "span_lines": [
+      702,
+      716
+     ],
+     "source_receipt": "boundary-sweep-B46",
+     "source_boundary_id": "B46-SSL-CONF-001",
+     "controls": [
+      "a_reentrant_dispatch_is_refused_and_leaves_the_context_usable",
+      "a_concurrent_entry_from_another_thread_is_refused",
+      "every_entry_point_refuses_an_overlap_and_works_when_idle"
+     ],
+     "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+    },
+    {
+     "id": "ssl_conf.rs:744",
+     "file": "src/ssl/ssl_conf.rs",
+     "line": 744,
+     "operation": "cmd_Options",
+     "span_sha256": "a3fd9f8eda80c75b92ac878068b4da6279ca1e2eea4bb2e7d09a5e4770091538",
+     "span_lines": [
+      744,
+      797
+     ],
+     "source_receipt": "boundary-sweep-B46",
+     "source_boundary_id": "B46-SSL-CONF-002",
+     "controls": [
+      "a_reentrant_dispatch_is_refused_and_leaves_the_context_usable",
+      "a_concurrent_entry_from_another_thread_is_refused",
+      "every_entry_point_refuses_an_overlap_and_works_when_idle"
+     ],
+     "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+    },
+    {
+     "id": "ssl_conf.rs:824",
+     "file": "src/ssl/ssl_conf.rs",
+     "line": 824,
+     "operation": "cmd_VerifyMode",
+     "span_sha256": "f27ef7de2115891d443e3f9effb2652deea362b37a7978f7281a60532081b8bc",
+     "span_lines": [
+      824,
+      847
+     ],
+     "source_receipt": "boundary-sweep-B46",
+     "source_boundary_id": "B46-SSL-CONF-003",
+     "controls": [
+      "a_reentrant_dispatch_is_refused_and_leaves_the_context_usable",
+      "a_concurrent_entry_from_another_thread_is_refused",
+      "every_entry_point_refuses_an_overlap_and_works_when_idle"
+     ],
+     "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+    },
+    {
+     "id": "ssl_conf.rs:875",
+     "file": "src/ssl/ssl_conf.rs",
+     "line": 875,
+     "operation": "cmd_CipherString",
+     "span_sha256": "1fdf1b4901264990ac24c4fa6bd08dbdbd4f261302f2cb6329f8cea6feb66da0",
+     "span_lines": [
+      875,
+      887
+     ],
+     "source_receipt": "boundary-sweep-B46",
+     "source_boundary_id": "B46-SSL-CONF-004",
+     "controls": [
+      "a_reentrant_dispatch_is_refused_and_leaves_the_context_usable",
+      "a_concurrent_entry_from_another_thread_is_refused",
+      "every_entry_point_refuses_an_overlap_and_works_when_idle"
+     ],
+     "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+    },
+    {
+     "id": "ssl_conf.rs:914",
+     "file": "src/ssl/ssl_conf.rs",
+     "line": 914,
+     "operation": "cmd_Ciphersuites",
+     "span_sha256": "7486e2591ec38bc0f5357f6c1b2f715543ea166f0d07c5441895943b3897e4e1",
+     "span_lines": [
+      914,
+      926
+     ],
+     "source_receipt": "boundary-sweep-B46",
+     "source_boundary_id": "B46-SSL-CONF-005",
+     "controls": [
+      "a_reentrant_dispatch_is_refused_and_leaves_the_context_usable",
+      "a_concurrent_entry_from_another_thread_is_refused",
+      "every_entry_point_refuses_an_overlap_and_works_when_idle"
+     ],
+     "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+    },
+    {
+     "id": "ssl_conf.rs:955",
+     "file": "src/ssl/ssl_conf.rs",
+     "line": 955,
+     "operation": "cmd_MinProtocol",
+     "span_sha256": "313a0265f9bdfbdb7acfb6723fb9d8cc4260c3b72ee00ad4718afdb4ce69ac98",
+     "span_lines": [
+      955,
+      958
+     ],
+     "source_receipt": "boundary-sweep-B46",
+     "source_boundary_id": "B46-SSL-CONF-006",
+     "controls": [
+      "a_reentrant_dispatch_is_refused_and_leaves_the_context_usable",
+      "a_concurrent_entry_from_another_thread_is_refused",
+      "every_entry_point_refuses_an_overlap_and_works_when_idle"
+     ],
+     "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+    },
+    {
+     "id": "ssl_conf.rs:987",
+     "file": "src/ssl/ssl_conf.rs",
+     "line": 987,
+     "operation": "cmd_MaxProtocol",
+     "span_sha256": "c241bf77df5d14f106d68e31bffb55df3d5b84a0b417b176e34b7ce11547aca9",
+     "span_lines": [
+      987,
+      990
+     ],
+     "source_receipt": "boundary-sweep-B46",
+     "source_boundary_id": "B46-SSL-CONF-007",
+     "controls": [
+      "a_reentrant_dispatch_is_refused_and_leaves_the_context_usable",
+      "a_concurrent_entry_from_another_thread_is_refused",
+      "every_entry_point_refuses_an_overlap_and_works_when_idle"
+     ],
+     "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+    },
+    {
+     "id": "ssl_rsa.rs:1021",
+     "file": "src/ssl/ssl_rsa.rs",
+     "line": 1021,
+     "operation": "serverinfoex_srv_parse_cb",
+     "span_sha256": "0d5a327a3870df9a46824854ca47b5d8fa4a7753400d51c06fbab1632d593979",
+     "span_lines": [
+      1021,
+      1038
+     ],
+     "source_receipt": "boundary-sweep-B47",
+     "source_boundary_id": "B47-RSA-001",
+     "controls": [
+      "a_reentrant_dispatch_is_refused_and_leaves_the_context_usable",
+      "a_concurrent_entry_from_another_thread_is_refused",
+      "every_entry_point_refuses_an_overlap_and_works_when_idle"
+     ],
+     "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+    },
+    {
+     "id": "ssl_rsa.rs:1057",
+     "file": "src/ssl/ssl_rsa.rs",
+     "line": 1057,
+     "operation": "serverinfo_srv_parse_cb",
+     "span_sha256": "dc040c5e88484055554940911a77ec1c2381a4ee612d7b0d589d419d0324b47e",
+     "span_lines": [
+      1057,
+      1067
+     ],
+     "source_receipt": "boundary-sweep-B47",
+     "source_boundary_id": "B47-RSA-002",
+     "controls": [
+      "a_reentrant_dispatch_is_refused_and_leaves_the_context_usable",
+      "a_concurrent_entry_from_another_thread_is_refused",
+      "every_entry_point_refuses_an_overlap_and_works_when_idle"
+     ],
+     "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+    }
+   ]
+  },
+  "ct_x509v3-stale-coordinate": {
+   "sites": 2,
+   "result": "DISCHARGED 2/2",
+   "mechanism": "the r13 receipt already carries the content-addressed spans (i2s 70-73 / c2ec..., s2i 86-92 / 371c...); only the obligation-side coordinate was stale. Correcting the admission coordinate lets resolve_operation_at_line bind the definition, after which the recorded span hash gates acceptance as before",
+   "rows": [
+    {
+     "stable_id": "src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::i2s_poison",
+     "id": "V1:src/ct/ct_x509v3.rs:70:UNSAFE_FN_DEF",
+     "previous_id": "V1:src/ct/ct_x509v3.rs:59:UNSAFE_FN_DEF",
+     "file": "src/ct/ct_x509v3.rs",
+     "line": 70,
+     "item": "i2s_poison",
+     "status": "DISCHARGED",
+     "discharge_receipt": "boundary-sweep-B54",
+     "discharge_boundary_id": "src/ct/ct_x509v3.rs:59",
+     "span_sha256": "c2ece281fdee44f543a0e94ad37dae00e3e5b1a6c45e769e748e4a04492ab145",
+     "span_lines": [
+      70,
+      73
+     ]
+    },
+    {
+     "stable_id": "src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::s2i_poison",
+     "id": "V1:src/ct/ct_x509v3.rs:86:UNSAFE_FN_DEF",
+     "previous_id": "V1:src/ct/ct_x509v3.rs:70:UNSAFE_FN_DEF",
+     "file": "src/ct/ct_x509v3.rs",
+     "line": 86,
+     "item": "s2i_poison",
+     "status": "DISCHARGED",
+     "discharge_receipt": "boundary-sweep-B54",
+     "discharge_boundary_id": "src/ct/ct_x509v3.rs:70",
+     "span_sha256": "371ce3362f5d9babd65cbf8df4ad0610bbeb191af063ad8bf1d5a090d90d4feb",
+     "span_lines": [
+      86,
+      92
+     ]
+    }
+   ],
+   "sibling_control": {
+    "site": "src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::i2r_SCT_LIST",
+    "status_at_b58": "DISCHARGED",
+    "why": "the same r13 boundary (src/ct/ct_x509v3.rs:86, span 100-110) already bound at b58 because the census carries a UNSAFE_FN_DEF record for i2r_SCT_LIST at line 100, so use_line became 100 and current_line resolved. The two poison callbacks lacked that census record, which is why only their obligation-side coordinate was stale"
+   }
+  },
+  "thread-free_lock-cfg-duplicate": {
+   "sites": 2,
+   "result": "BLOCKED 2/2 (unchanged)",
+   "missing_fact": "no receipt-side selector exists for an item with two cfg-gated definitions. resolve_operation_span finds both definitions (679 and 700), neither is inside a named container, so the qualified-identity rule cannot choose one, and it refuses ambiguous-identity before the recorded span hash is ever compared. The locators argument is accepted but unused, and load_boundaries/adjudicate carry no declared-span field. span_coverage_controls documents this refusal as intended",
+   "why_not_closed": "the two suggested representations were tested against the real resolver and neither binds: (i) one row per profile definition still resolves the same item name and refuses ambiguous-identity; (ii) an operation-level binding cannot select a definition in this file because both definitions are at top level and share an empty container chain. A boundary row with either operation spelling (\"free_lock\", \"free_lock (linux/x86_64/gnu/64-bit)\") refuses identically",
+   "ways_to_close": [
+    "a consumer_closure.py change that honours locators for an otherwise-ambiguous item (the tool is build-relevant evidence: this creates a new candidate S and invalidates the b58 freeze)",
+    "distinct item identities per cfg profile in src/runtime/thread.rs (a source change: new S)"
+   ],
+   "rows": [
+    {
+     "stable_id": "src/runtime/thread.rs::UNSAFE_FN_DEF::free_lock",
+     "id": "V1:src/runtime/thread.rs:531:UNSAFE_FN_DEF",
+     "file": "src/runtime/thread.rs",
+     "line": 531,
+     "item": "free_lock",
+     "status": "BLOCKED",
+     "status_reason": "mechanism state is OWNERSHIP_RECONSTRUCTED and the owning boundary is CONTRACTED/SAFETY_DISCHARGED: src/runtime/thread.rs:2113; the V1 operation is uncontracted and no SAFETY_DISCHARGED receipt covers it. A scoped SAFETY_DISCHARGED boundary exists for this file but its disposition does not name this line; blanket discharge is refused. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b51-baseline.json; a contract transfers the obligation to the caller, it does not discharge it.",
+     "boundary_ids": [
+      "B11-THR-1",
+      "B11-THR-2",
+      "B11-THR-3",
+      "B11-THR-4",
+      "OSSH-DIS-093"
+     ]
+    },
+    {
+     "stable_id": "src/runtime/thread.rs::UNSAFE_FN_DEF::free_lock",
+     "id": "V1:src/runtime/thread.rs:544:UNSAFE_FN_DEF",
+     "file": "src/runtime/thread.rs",
+     "line": 544,
+     "item": "free_lock",
+     "status": "BLOCKED",
+     "status_reason": "mechanism state is OWNERSHIP_RECONSTRUCTED and the owning boundary is CONTRACTED/SAFETY_DISCHARGED: src/runtime/thread.rs:2113; the V1 operation is uncontracted and no SAFETY_DISCHARGED receipt covers it. A scoped SAFETY_DISCHARGED boundary exists for this file but its disposition does not name this line; blanket discharge is refused. The operation is documented (an attached # Safety/SAFETY contract) but remains enrolled by carry-forward from court/inventory/closure-ssh-b51-baseline.json; a contract transfers the obligation to the caller, it does not discharge it.",
+     "boundary_ids": [
+      "B11-THR-1",
+      "B11-THR-2",
+      "B11-THR-3",
+      "B11-THR-4",
+      "OSSH-DIS-093"
+     ]
+    }
+   ],
+   "profile_spans": [
+    {
+     "definition_line": 679,
+     "cfg_predicate": "#[cfg(all(target_os = \"linux\", target_arch = \"x86_64\", target_env = \"gnu\", target_pointer_width = \"64\"))]",
+     "span_start_line": 673,
+     "span_end_line": 684,
+     "span_sha256": "e905dce107e67f2bfb9ccb615de7bc1976fd5db0a14421b56bf4bf29b0cd117e",
+     "qualified_identity": "free_lock",
+     "resolution": "census-line-inside",
+     "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+    },
+    {
+     "definition_line": 700,
+     "cfg_predicate": "#[cfg(not(all(target_os = \"linux\", target_arch = \"x86_64\", target_env = \"gnu\", target_pointer_width = \"64\")))]",
+     "span_start_line": 694,
+     "span_end_line": 704,
+     "span_sha256": "996b71e7162c2bf28589af2f778a57277db4c25c7893d2f504daa2043fd8d82f",
+     "qualified_identity": "free_lock",
+     "resolution": "census-line-inside",
+     "span_source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+    }
+   ],
+   "profile_spans_note": "both profile definitions are recorded with their own S span hash and cfg predicate. They are audit evidence that the two definitions were identified and hashed; they are NOT a discharge, because no receipt-side selector exists to tell the resolver which definition a boundary row means (see missing_fact). The obligation side can select by line (resolve_operation_at_line succeeds at 679 and 700), the boundary side cannot."
+  }
+ },
+ "movement": {
+  "obligations_total": {
+   "before": 323,
+   "after": 323
+  },
+  "stable_identities_added": [],
+  "stable_identities_removed": [],
+  "discharged_to_blocked": [],
+  "blocked_to_discharged": 16,
+  "moved_rows": [
+   {
+    "stable_id": "src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::i2s_poison",
+    "file": "src/ct/ct_x509v3.rs",
+    "item": "i2s_poison",
+    "previous_status": "BLOCKED",
+    "status": "DISCHARGED",
+    "previous_id": "V1:src/ct/ct_x509v3.rs:59:UNSAFE_FN_DEF",
+    "id": "V1:src/ct/ct_x509v3.rs:70:UNSAFE_FN_DEF",
+    "previous_line": 59,
+    "line": 70,
+    "current_census_line": null,
+    "discharge_receipt": "boundary-sweep-B54",
+    "discharge_boundary_id": "src/ct/ct_x509v3.rs:59",
+    "span": "c2ece281fdee44f543a0e94ad37dae00e3e5b1a6c45e769e748e4a04492ab145",
+    "span_lines": [
+     70,
+     73
+    ]
+   },
+   {
+    "stable_id": "src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::s2i_poison",
+    "file": "src/ct/ct_x509v3.rs",
+    "item": "s2i_poison",
+    "previous_status": "BLOCKED",
+    "status": "DISCHARGED",
+    "previous_id": "V1:src/ct/ct_x509v3.rs:70:UNSAFE_FN_DEF",
+    "id": "V1:src/ct/ct_x509v3.rs:86:UNSAFE_FN_DEF",
+    "previous_line": 70,
+    "line": 86,
+    "current_census_line": null,
+    "discharge_receipt": "boundary-sweep-B54",
+    "discharge_boundary_id": "src/ct/ct_x509v3.rs:70",
+    "span": "371ce3362f5d9babd65cbf8df4ad0610bbeb191af063ad8bf1d5a090d90d4feb",
+    "span_lines": [
+     86,
+     92
+    ]
+   },
+   {
+    "stable_id": "src/ssl/ssl_ciph.rs::UNSAFE_FN_DEF::update_cipher_list_by_id",
+    "file": "src/ssl/ssl_ciph.rs",
+    "item": "update_cipher_list_by_id",
+    "previous_status": "BLOCKED",
+    "status": "DISCHARGED",
+    "previous_id": "V1:src/ssl/ssl_ciph.rs:741:UNSAFE_FN_DEF",
+    "id": "V1:src/ssl/ssl_ciph.rs:741:UNSAFE_FN_DEF",
+    "previous_line": 741,
+    "line": 741,
+    "current_census_line": 756,
+    "discharge_receipt": "sslconf-exclusivity-2026-11-10",
+    "discharge_boundary_id": "ssl_ciph.rs:756",
+    "span": "1c9b7874567a505ce6abfb2e0756dc21ad41755c26a4caa3493ec34e91c33f6c",
+    "span_lines": [
+     756,
+     773
+    ]
+   },
+   {
+    "stable_id": "src/ssl/ssl_ciph.rs::UNSAFE_FN_DEF::set_ciphersuites",
+    "file": "src/ssl/ssl_ciph.rs",
+    "item": "set_ciphersuites",
+    "previous_status": "BLOCKED",
+    "status": "DISCHARGED",
+    "previous_id": "V1:src/ssl/ssl_ciph.rs:851:UNSAFE_FN_DEF",
+    "id": "V1:src/ssl/ssl_ciph.rs:851:UNSAFE_FN_DEF",
+    "previous_line": 851,
+    "line": 851,
+    "current_census_line": 880,
+    "discharge_receipt": "sslconf-exclusivity-2026-11-10",
+    "discharge_boundary_id": "ssl_ciph.rs:880",
+    "span": "016690a1db8d9a3de3766cb19f3febce0cf86270f440f2aa48f8a85c7c2f4ff3",
+    "span_lines": [
+     880,
+     912
+    ]
+   },
+   {
+    "stable_id": "src/ssl/ssl_conf.rs::UNSAFE_FN_DEF::ssl_match_option",
+    "file": "src/ssl/ssl_conf.rs",
+    "item": "ssl_match_option",
+    "previous_status": "BLOCKED",
+    "status": "DISCHARGED",
+    "previous_id": "V1:src/ssl/ssl_conf.rs:240:UNSAFE_FN_DEF",
+    "id": "V1:src/ssl/ssl_conf.rs:240:UNSAFE_FN_DEF",
+    "previous_line": 240,
+    "line": 240,
+    "current_census_line": 434,
+    "discharge_receipt": "sslconf-exclusivity-2026-11-10",
+    "discharge_boundary_id": "ssl_conf.rs:434",
+    "span": "ddc6f53ab1bf3a3a411cd5fe58f626a69c6886435c39bf96f5c067b1e6df8713",
+    "span_lines": [
+     434,
+     465
+    ]
+   },
+   {
+    "stable_id": "src/ssl/ssl_conf.rs::UNSAFE_FN_DEF::ssl_set_option_list",
+    "file": "src/ssl/ssl_conf.rs",
+    "item": "ssl_set_option_list",
+    "previous_status": "BLOCKED",
+    "status": "DISCHARGED",
+    "previous_id": "V1:src/ssl/ssl_conf.rs:274:UNSAFE_FN_DEF",
+    "id": "V1:src/ssl/ssl_conf.rs:274:UNSAFE_FN_DEF",
+    "previous_line": 274,
+    "line": 274,
+    "current_census_line": 486,
+    "discharge_receipt": "sslconf-exclusivity-2026-11-10",
+    "discharge_boundary_id": "ssl_conf.rs:486",
+    "span": "20b4cf87479c78394f68899f683002e61abdbacddd421ef6176dc0db0910348f",
+    "span_lines": [
+     486,
+     531
+    ]
+   },
+   {
+    "stable_id": "src/ssl/ssl_conf.rs::UNSAFE_FN_DEF::min_max_proto",
+    "file": "src/ssl/ssl_conf.rs",
+    "item": "min_max_proto",
+    "previous_status": "BLOCKED",
+    "status": "DISCHARGED",
+    "previous_id": "V1:src/ssl/ssl_conf.rs:379:UNSAFE_FN_DEF",
+    "id": "V1:src/ssl/ssl_conf.rs:379:UNSAFE_FN_DEF",
+    "previous_line": 379,
+    "line": 379,
+    "current_census_line": 616,
+    "discharge_receipt": "sslconf-exclusivity-2026-11-10",
+    "discharge_boundary_id": "ssl_conf.rs:616",
+    "span": "22644409257205625b3d05a0ebd5902b9c032c676601f6fbc75c0ba0ee9518f7",
+    "span_lines": [
+     616,
+     635
+    ]
+   },
+   {
+    "stable_id": "src/ssl/ssl_conf.rs::UNSAFE_FN_DEF::cmd_Protocol",
+    "file": "src/ssl/ssl_conf.rs",
+    "item": "cmd_Protocol",
+    "previous_status": "BLOCKED",
+    "status": "DISCHARGED",
+    "previous_id": "V1:src/ssl/ssl_conf.rs:438:UNSAFE_FN_DEF",
+    "id": "V1:src/ssl/ssl_conf.rs:438:UNSAFE_FN_DEF",
+    "previous_line": 438,
+    "line": 438,
+    "current_census_line": 702,
+    "discharge_receipt": "sslconf-exclusivity-2026-11-10",
+    "discharge_boundary_id": "ssl_conf.rs:702",
+    "span": "2aff841342d6fa38594a970810038188a87c1da82b5b12b8da5c037ebac13c82",
+    "span_lines": [
+     702,
+     716
+    ]
+   },
+   {
+    "stable_id": "src/ssl/ssl_conf.rs::UNSAFE_FN_DEF::cmd_Options",
+    "file": "src/ssl/ssl_conf.rs",
+    "item": "cmd_Options",
+    "previous_status": "BLOCKED",
+    "status": "DISCHARGED",
+    "previous_id": "V1:src/ssl/ssl_conf.rs:455:UNSAFE_FN_DEF",
+    "id": "V1:src/ssl/ssl_conf.rs:455:UNSAFE_FN_DEF",
+    "previous_line": 455,
+    "line": 455,
+    "current_census_line": 744,
+    "discharge_receipt": "sslconf-exclusivity-2026-11-10",
+    "discharge_boundary_id": "ssl_conf.rs:744",
+    "span": "a3fd9f8eda80c75b92ac878068b4da6279ca1e2eea4bb2e7d09a5e4770091538",
+    "span_lines": [
+     744,
+     797
+    ]
+   },
+   {
+    "stable_id": "src/ssl/ssl_conf.rs::UNSAFE_FN_DEF::cmd_VerifyMode",
+    "file": "src/ssl/ssl_conf.rs",
+    "item": "cmd_VerifyMode",
+    "previous_status": "BLOCKED",
+    "status": "DISCHARGED",
+    "previous_id": "V1:src/ssl/ssl_conf.rs:511:UNSAFE_FN_DEF",
+    "id": "V1:src/ssl/ssl_conf.rs:511:UNSAFE_FN_DEF",
+    "previous_line": 511,
+    "line": 511,
+    "current_census_line": 824,
+    "discharge_receipt": "sslconf-exclusivity-2026-11-10",
+    "discharge_boundary_id": "ssl_conf.rs:824",
+    "span": "f27ef7de2115891d443e3f9effb2652deea362b37a7978f7281a60532081b8bc",
+    "span_lines": [
+     824,
+     847
+    ]
+   },
+   {
+    "stable_id": "src/ssl/ssl_conf.rs::UNSAFE_FN_DEF::cmd_CipherString",
+    "file": "src/ssl/ssl_conf.rs",
+    "item": "cmd_CipherString",
+    "previous_status": "BLOCKED",
+    "status": "DISCHARGED",
+    "previous_id": "V1:src/ssl/ssl_conf.rs:537:UNSAFE_FN_DEF",
+    "id": "V1:src/ssl/ssl_conf.rs:537:UNSAFE_FN_DEF",
+    "previous_line": 537,
+    "line": 537,
+    "current_census_line": 875,
+    "discharge_receipt": "sslconf-exclusivity-2026-11-10",
+    "discharge_boundary_id": "ssl_conf.rs:875",
+    "span": "1fdf1b4901264990ac24c4fa6bd08dbdbd4f261302f2cb6329f8cea6feb66da0",
+    "span_lines": [
+     875,
+     887
+    ]
+   },
+   {
+    "stable_id": "src/ssl/ssl_conf.rs::UNSAFE_FN_DEF::cmd_Ciphersuites",
+    "file": "src/ssl/ssl_conf.rs",
+    "item": "cmd_Ciphersuites",
+    "previous_status": "BLOCKED",
+    "status": "DISCHARGED",
+    "previous_id": "V1:src/ssl/ssl_conf.rs:552:UNSAFE_FN_DEF",
+    "id": "V1:src/ssl/ssl_conf.rs:552:UNSAFE_FN_DEF",
+    "previous_line": 552,
+    "line": 552,
+    "current_census_line": 914,
+    "discharge_receipt": "sslconf-exclusivity-2026-11-10",
+    "discharge_boundary_id": "ssl_conf.rs:914",
+    "span": "7486e2591ec38bc0f5357f6c1b2f715543ea166f0d07c5441895943b3897e4e1",
+    "span_lines": [
+     914,
+     926
+    ]
+   },
+   {
+    "stable_id": "src/ssl/ssl_conf.rs::UNSAFE_FN_DEF::cmd_MinProtocol",
+    "file": "src/ssl/ssl_conf.rs",
+    "item": "cmd_MinProtocol",
+    "previous_status": "BLOCKED",
+    "status": "DISCHARGED",
+    "previous_id": "V1:src/ssl/ssl_conf.rs:567:UNSAFE_FN_DEF",
+    "id": "V1:src/ssl/ssl_conf.rs:567:UNSAFE_FN_DEF",
+    "previous_line": 567,
+    "line": 567,
+    "current_census_line": 955,
+    "discharge_receipt": "sslconf-exclusivity-2026-11-10",
+    "discharge_boundary_id": "ssl_conf.rs:955",
+    "span": "313a0265f9bdfbdb7acfb6723fb9d8cc4260c3b72ee00ad4718afdb4ce69ac98",
+    "span_lines": [
+     955,
+     958
+    ]
+   },
+   {
+    "stable_id": "src/ssl/ssl_conf.rs::UNSAFE_FN_DEF::cmd_MaxProtocol",
+    "file": "src/ssl/ssl_conf.rs",
+    "item": "cmd_MaxProtocol",
+    "previous_status": "BLOCKED",
+    "status": "DISCHARGED",
+    "previous_id": "V1:src/ssl/ssl_conf.rs:573:UNSAFE_FN_DEF",
+    "id": "V1:src/ssl/ssl_conf.rs:573:UNSAFE_FN_DEF",
+    "previous_line": 573,
+    "line": 573,
+    "current_census_line": 987,
+    "discharge_receipt": "sslconf-exclusivity-2026-11-10",
+    "discharge_boundary_id": "ssl_conf.rs:987",
+    "span": "c241bf77df5d14f106d68e31bffb55df3d5b84a0b417b176e34b7ce11547aca9",
+    "span_lines": [
+     987,
+     990
+    ]
+   },
+   {
+    "stable_id": "src/ssl/ssl_rsa.rs::UNSAFE_FN_DEF::serverinfoex_srv_parse_cb",
+    "file": "src/ssl/ssl_rsa.rs",
+    "item": "serverinfoex_srv_parse_cb",
+    "previous_status": "BLOCKED",
+    "status": "DISCHARGED",
+    "previous_id": "V1:src/ssl/ssl_rsa.rs:1007:UNSAFE_FN_DEF",
+    "id": "V1:src/ssl/ssl_rsa.rs:1007:UNSAFE_FN_DEF",
+    "previous_line": 1007,
+    "line": 1007,
+    "current_census_line": 1021,
+    "discharge_receipt": "sslconf-exclusivity-2026-11-10",
+    "discharge_boundary_id": "ssl_rsa.rs:1021",
+    "span": "0d5a327a3870df9a46824854ca47b5d8fa4a7753400d51c06fbab1632d593979",
+    "span_lines": [
+     1021,
+     1038
+    ]
+   },
+   {
+    "stable_id": "src/ssl/ssl_rsa.rs::UNSAFE_FN_DEF::serverinfo_srv_parse_cb",
+    "file": "src/ssl/ssl_rsa.rs",
+    "item": "serverinfo_srv_parse_cb",
+    "previous_status": "BLOCKED",
+    "status": "DISCHARGED",
+    "previous_id": "V1:src/ssl/ssl_rsa.rs:1033:UNSAFE_FN_DEF",
+    "id": "V1:src/ssl/ssl_rsa.rs:1033:UNSAFE_FN_DEF",
+    "previous_line": 1033,
+    "line": 1033,
+    "current_census_line": 1057,
+    "discharge_receipt": "sslconf-exclusivity-2026-11-10",
+    "discharge_boundary_id": "ssl_rsa.rs:1057",
+    "span": "dc040c5e88484055554940911a77ec1c2381a4ee612d7b0d589d419d0324b47e",
+    "span_lines": [
+     1057,
+     1067
+    ]
+   }
+  ]
+ },
+ "disposition_conflicts": {
+  "ssh": {
+   "before": {
+    "obligation_count": 163,
+    "unresolved_edge_count": 173,
+    "enforced": false
+   },
+   "after": {
+    "obligation_count": 165,
+    "unresolved_edge_count": 175,
+    "enforced": false
+   }
+  },
+  "sshd": {
+   "before": {
+    "obligation_count": 163,
+    "unresolved_edge_count": 173,
+    "enforced": false
+   },
+   "after": {
+    "obligation_count": 165,
+    "unresolved_edge_count": 175,
+    "enforced": false
+   }
+  },
+  "new_edges": [
+   {
+    "obligation": "V1:src/ct/ct_x509v3.rs:70:UNSAFE_FN_DEF",
+    "discharging_boundary": "src/ct/ct_x509v3.rs:59",
+    "conflicting_boundary": "B52GAP::src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::i2s_poison",
+    "superseded": false
+   },
+   {
+    "obligation": "V1:src/ct/ct_x509v3.rs:86:UNSAFE_FN_DEF",
+    "discharging_boundary": "src/ct/ct_x509v3.rs:70",
+    "conflicting_boundary": "B52GAP::src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::s2i_poison",
+    "superseded": false
+   }
+  ],
+  "note": "the two new edges are the B52-gap enumeration rows that later B54 adjudicated; they are diagnostic only (ENFORCE_DISPOSITION_CONFLICTS is off and the run did not pass --enforce-disposition-conflicts). No verdict depends on them; they are recorded rather than hidden"
+ },
+ "controls": [
+  {
+   "name": "receipt-absent (before measurement)",
+   "observation": "both closures 305/18/0"
+  },
+  {
+   "name": "span-hash mutation: ssl_conf.rs:434",
+   "method": "in-memory mutation of the loaded boundary record to 64 zeros, then the real adjudicate()",
+   "observation": "ssl_match_option DISCHARGED -> BLOCKED (span-hash-mismatch)"
+  },
+  {
+   "name": "span-hash mutation: src/ct/ct_x509v3.rs:59",
+   "method": "same",
+   "observation": "i2s_poison DISCHARGED -> BLOCKED (span-hash-mismatch)"
+  },
+  {
+   "name": "coordinate-only control",
+   "method": "the r13 boundary is still present with a stale obligation coordinate before the admission fix",
+   "observation": "BLOCKED (span-unparsable: line 59 is not the definition line); the content hash was correct throughout"
+  }
+ ],
+ "gates": {
+  "fast": "not run: no Rust source changed",
+  "batch": "not run: no Rust source changed",
+  "closure_runs": {
+   "ssh": "ACCEPTED, 0 refusals",
+   "sshd": "ACCEPTED, 0 refusals"
+  },
+  "self_test": "python3 forensics/tools/consumer_closure.py --self-test raises KeyError 5267120 in _pbe_outparam_self_test at the working-tree instrument. The tool is unmodified by this batch (git status clean for it); the failure is a pre-existing fixture/pin mismatch at HEAD and is not evidence about the new bindings"
+ },
+ "oom": {
+  "available_gib_before": "83 (first read) / 85 (second read)",
+  "cap": "OPENSSL_RS_COURT_MEM=8g OPENSSL_RS_COURT_MEMSWAP=8g",
+  "closure_rlimit_data_kib": 6291456,
+  "light_rlimit_data_kib": "1048576-4194304",
+  "observed_peak_memory_current": "6.4 GiB of 8 GiB (ssh), 6.4 GiB of 8 GiB (sshd)",
+  "cgroup_oom_events": {
+   "ssh": 0,
+   "sshd": 0
+  },
+  "io_pressure_note": "one heavy command at a time; the other venue (weft-python-court) kept avg10 I/O pressure near 30 throughout, recorded rather than ignored"
+ },
+ "non_claims": [
+  "supplying a boundary id and a content hash is not a new adjudication; every verdict transcribed here pre-existed in CAMPAIGN-STATUS.json",
+  "the thread free_lock rows are not discharged, not reclassified and not removed; they remain BLOCKED",
+  "no mechanism state was promoted; RUNTIME_CONCURRENCY remains OWNERSHIP_RECONSTRUCTED and X509_VERIFY_POLICY / SSL_SESSION remain unchanged",
+  "element 7 remains FAIL in both families, as at b58; this batch did not touch it",
+  "the two ct rows are still the same obligations (same stable identity); only their provenance coordinate moved"
+ ]
+}

@@ -35,15 +35,22 @@
    "stable_id": "src/ct/ct_sct.rs::UNSAFE_FN_DEF::SCT_LIST_free"
   },
   {
+   "coordinate_correction": {
+    "basis": "the admission source was enumerated at inventory source head a8716b4f2112bde03c97db5ff7bd1caf3a483c35, where this callback was defined at line 59; at S = b6f38f13456b79ecd94b1088c835c3da92bc942a the definition line is 70. The correction moves the coordinate only: file, kind, item, stable identity, partition and requested_status are unchanged, and the site's acceptance evidence is still the content hash of the operation span at S (atlas-refresh/sslconf-exclusivity-2026-11-10 is unrelated; see atlas-refresh/r13-coordinate-rebind-sites.json rows src/ct/ct_x509v3.rs:59)",
+    "line_at_admission": 59,
+    "observed_definition_line_at_S": 70,
+    "source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+   },
    "file": "src/ct/ct_x509v3.rs",
    "gate_provenance": {
     "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
-   "id": "V1:src/ct/ct_x509v3.rs:59:UNSAFE_FN_DEF",
+   "id": "V1:src/ct/ct_x509v3.rs:70:UNSAFE_FN_DEF",
    "item": "i2s_poison",
    "kind": "UNSAFE_FN_DEF",
-   "line": 59,
+   "line": 70,
+   "line_at_admission": 59,
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",
@@ -63,15 +70,22 @@
    "stable_id": "src/ct/ct_x509v3.rs::UNSAFE_FN_DEF::i2s_poison"
   },
   {
+   "coordinate_correction": {
+    "basis": "the admission source was enumerated at inventory source head a8716b4f2112bde03c97db5ff7bd1caf3a483c35, where s2i_poison was defined at line 70; at S = b6f38f13456b79ecd94b1088c835c3da92bc942a the definition line is 86. The correction moves the coordinate only: file, kind, item, stable identity, partition and requested_status are unchanged, and the site's acceptance evidence is still the content hash of the operation span at S (atlas-refresh/r13-coordinate-rebind-sites.json row src/ct/ct_x509v3.rs:70)",
+    "line_at_admission": 70,
+    "observed_definition_line_at_S": 86,
+    "source_commit": "b6f38f13456b79ecd94b1088c835c3da92bc942a"
+   },
    "file": "src/ct/ct_x509v3.rs",
    "gate_provenance": {
     "classification": "REACHABLE_BOUND",
     "gate": "callback-enumeration-completeness"
    },
-   "id": "V1:src/ct/ct_x509v3.rs:70:UNSAFE_FN_DEF",
+   "id": "V1:src/ct/ct_x509v3.rs:86:UNSAFE_FN_DEF",
    "item": "s2i_poison",
    "kind": "UNSAFE_FN_DEF",
-   "line": 70,
+   "line": 86,
+   "line_at_admission": 70,
    "mechanism": "X509_VERIFY_POLICY",
    "partition": "production",
    "queue_status": "absent",

@@ -1,0 +1,385 @@
+{
+ "schema": "openssl-rs/safe-c33/b83-review-rebind/v1",
+ "kind": "independent-review-and-receipt-rebind",
+ "subphase": "safe-c33/b83 review: re-establish the two rows the b83 closures leave BLOCKED at 1a152be1e (both src/runtime/bio/bf_readbuff.rs, BIO read-buffer write/puts) and re-bind their owning B67 boundary records content-addressed. The b83 source change is documentation-only: the two `#[allow(clippy::missing_safety_doc)]` attributes were replaced by `# Safety` doc blocks, which moved the recorded spans by one line.",
+ "generated_utc": "2026-11-16T13:30:00Z",
+ "reviewer": {
+  "role": "measurement subagent: closure runner, independent reviewer and receipt re-binder",
+  "independence": "Did not author the b83 contract-doc edit, the closure instrument or the B67 receipt. Every span hash below was recomputed in this session from the commit named, with the documented normalisation, before the recorded value was accepted; the resolver's current span was reproduced independently; the delta was classified from a line-local comparison of the recorded and current span text; and the firing control is the closure instrument's own refusal, observed before the rebind.",
+  "limit": "This session also ran the closures it reports on. The rebind's acceptance is therefore re-checked by an instrument whose input (the B67 record) this session edited, and a second reviewer must confirm the B67 diff; the closure's own refusals and the public behaviour control are the independent limits on that circularity."
+ },
+ "venue": {
+  "court": "existing openssl-rs-court container, memory.max=17179869184 (16 GiB), 16 CPU, pids.max=2048",
+  "host_free_g_at_start": "total 45, used 17, free 16, available 28",
+  "policy": "one heavy command at a time; CARGO_BUILD_JOBS=8; OPENSSL_RS_COURT_DATA=12582912; memory.events oom=0 oom_kill=0 throughout; observed peaks 11.7 GiB (ssh closure) and 12.9 GiB (sshd closure)"
+ },
+ "candidate_identity": {
+  "source_head": "1a152be1e931389e483ad5fc1cc268b66dc30104",
+  "candidate_tag": "b83 (tag created by the orchestrator at this HEAD)",
+  "branch": "stage/p25/b75-ocsp",
+  "src_file_sha256": "fe631b449c14133d5fe0e10faaf146de38492911824bcb8b59e0b95904bc9e54",
+  "libcrypto_so_3_sha256": "1b0c5159af24fce9aaf9ae5e7b2eb7e0b5364524738185ce4786979673a8f1fb",
+  "libcrypto_so_3_size": 16862608,
+  "libssl_so_3_sha256": "2b238f07590c2370c4ed2173737f8923e0ff472aac1a159471a94407e1c6baad",
+  "consumer_artifacts": {
+   "ssh": {
+    "path": "court/tmp/openssh-closure/client-b83/openssh-9.9p1/ssh",
+    "sha256": "60d91d0d3095d4f24efa74cc5f3597afaedd8a12eadfce15505b13bd86d67f36",
+    "size": 3401744
+   },
+   "sshd": {
+    "path": "court/tmp/openssh-closure/server-b83/openssh-9.9p1/sshd",
+    "sha256": "e3cd5b70de7273ae0d73dcab6cb48eb2632a13fb01eb592b14d5ed31e296b2c3",
+    "size": 1763248
+   },
+   "sshd_session": {
+    "path": "court/tmp/openssh-closure/server-b83/openssh-9.9p1/sshd-session",
+    "sha256": "a421f524354a723524ca284db680319c1e17923df16138a9578665da6174b038",
+    "size": 3594840
+   }
+  },
+  "closure_instrument_sha256": "4c17a9a786534bbcbd418827af3425b35c78c478641d5d53862a7818c71927bc",
+  "census": "court/freeze-b83/census-b83.json"
+ },
+ "method": {
+  "task1": "Located both operations at HEAD by the resolver and by this session's own brace matching: readbuffer_write 237-239, readbuffer_puts 249-251, each a unique definition.",
+  "task2": "Reproduced both recorded hashes at b8bba9555 (the commit B67 names) with the documented normalisation: write lines 230-233 -> c345d2b09a79fe62, puts lines 236-239 -> 16d8492f7898d9b1. The recorded hashes are genuine content bindings.",
+  "task3": "Recomputed the current hashes from the HEAD blobs: write 237-239 -> af0760bb2672161c, puts 249-251 -> 86a071a06093a4f5. The closure resolver returns the same values, so its current-span hash and the independent computation agree.",
+  "task4": "Classified the delta line-locally: the removed line is the `#[allow(clippy::missing_safety_doc)]` attribute; every remaining span line is identical. The span schema excludes documentation, so the hash binds the operation text, and that text did not change.",
+  "task5": "Answered the four questions from the source at HEAD and confirmed `nm -D` on the admitted libcrypto names no readbuffer symbol.",
+  "task6": "Rewrote exactly the two B67 records with a record-scoped textual rewrite (court/freeze-b83/rebind-b67-b83.py); every replacement was asserted to occur exactly once and the result was re-parsed as JSON before writing.",
+  "task7": "Re-ran both closures after the rebind: 290/290 DISCHARGED, element 7 PASS, 0 refusals, 0 stale rejections."
+ },
+ "prior_state": {
+  "closures_at_b83": [
+   {
+    "path": "evidence/closure-ssh-b83.json",
+    "sha256": "5939e645be065363a0bb378c6317546814b50f7c5768cd5d8521fe3a08e17163",
+    "counts": {
+     "obligations": 290,
+     "DISCHARGED": 288,
+     "BLOCKED": 2,
+     "UNKNOWN": 0,
+     "carried_forward": 280,
+     "stale_discharge_rejections": 2
+    },
+    "verdict": {
+     "state": "ACCEPTED",
+     "safe_compatible": false,
+     "reason": "no refusal condition fired"
+    },
+    "element_7": "PASS (contract-bounded and closed target sets)",
+    "refusals": 0,
+    "repository_head": "1a152be1e931389e483ad5fc1cc268b66dc30104",
+    "tracked_tree_dirty": true,
+    "tool_sha256": "4c17a9a786534bbcbd418827af3425b35c78c478641d5d53862a7818c71927bc",
+    "carry_forward": null
+   },
+   {
+    "path": "evidence/closure-sshd-b83.json",
+    "sha256": "4223b963554254049c610bfc952f239ce14197048f278add6b2394afb77494ba",
+    "counts": {
+     "obligations": 290,
+     "DISCHARGED": 288,
+     "BLOCKED": 2,
+     "UNKNOWN": 0,
+     "carried_forward": 280,
+     "stale_discharge_rejections": 2
+    },
+    "verdict": {
+     "state": "ACCEPTED",
+     "safe_compatible": false,
+     "reason": "no refusal condition fired"
+    },
+    "element_7": "PASS (contract-bounded and closed target sets)",
+    "refusals": 0,
+    "repository_head": "1a152be1e931389e483ad5fc1cc268b66dc30104",
+    "tracked_tree_dirty": true,
+    "tool_sha256": "4c17a9a786534bbcbd418827af3425b35c78c478641d5d53862a7818c71927bc",
+    "carry_forward": null
+   }
+  ],
+  "tally": "290 obligations, 288 DISCHARGED / 2 BLOCKED / 0 UNKNOWN, verdict ACCEPTED, element 7 PASS, refusals 0, on both families",
+  "cause": "one cause on both families: stale span content binding on the same two src/runtime/bio/bf_readbuff.rs rows. The operation identity (file, kind, item) and the disposition are unchanged; the recorded hashes reproduce at their own commit, so the rows are re-bound, not re-declared.",
+  "carry_forward_diagnostic": {
+   "what": "the first b83 ssh pass was also run carrying from evidence/closure-ssh-b82b.json, as the batch brief specified",
+   "receipt_preserved_at": "court/freeze-b83/closure-ssh-b83-carry-b82b.json",
+   "counts": {
+    "obligations": 290,
+    "DISCHARGED": 251,
+    "BLOCKED": 39,
+    "UNKNOWN": 0
+   },
+   "blocked_rows": "39 = 2 readbuffer rows (the genuine span move) + 37 src/provider/digest.rs (25) and src/provider/legacyprov.rs (12) UNSAFE_FN_DEF rows",
+   "root_cause": "those 37 rows' carried coordinates are historical definitions that only the content-migration chain can bind, and the chain's first hop is the immediate carry-forward receipt. evidence/closure-ssh-b82b.json is NOT COMMITTED at HEAD 1a152be1e, so `_carried_forward_coordinates` refuses the hop (`receipt-not-committed`) and the chain is empty: migration then refuses with `span-unparsable`.",
+   "not_a_safety_regression": "the same rows discharge when the chain is anchored on the last COMMITTED ACCEPTED closure (b82): the anchored b83 pass gives 288/290 with only the two genuine span moves BLOCKED.",
+   "consequence_for_this_batch": "both b83 and b83b closures are anchored on evidence/closure-{ssh,sshd}-b82.json. b83 and b83b themselves are uncommitted during this session, so neither can serve as the anchored hop for the other. Committing b82b and b83 (with this rebind) and re-running would restore the b83->b83b chain; the tally is not expected to change, because the only content the rebind adds is in the boundary receipt, not in the closure receipt."
+  }
+ },
+ "rows": [
+  {
+   "boundary": "BIO-READBUF-001",
+   "receipt": "boundary-sweep-B67",
+   "file": "src/runtime/bio/bf_readbuff.rs",
+   "operation": "readbuffer_write",
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "BIO",
+   "prior": {
+    "coordinate": 231,
+    "line_current_at_b67": 230,
+    "span_lines": [
+     230,
+     233
+    ],
+    "span_sha256": "c345d2b09a79fe6222b26980881961d3ba37580450a5f7d59e278f483bd150d0",
+    "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+    "verdict": "SAFETY_DISCHARGED",
+    "span_hash_reproduced_by_this_session": true,
+    "hash_reproduction": "sha256 of the recorded lines at b8bba9555 with the documented normalisation equals the recorded span_sha256 exactly"
+   },
+   "current": {
+    "coordinate": 237,
+    "span_lines": [
+     237,
+     239
+    ],
+    "span_sha256": "af0760bb2672161c46d1a2a8e138253583750c2402f119b7b2590bcc8a74de81",
+    "source_commit": "1a152be1e931389e483ad5fc1cc268b66dc30104",
+    "content_sha256": "fe631b449c14133d5fe0e10faaf146de38492911824bcb8b59e0b95904bc9e54",
+    "resolution": "unique"
+   },
+   "delta": {
+    "classification": "attribute-removed-and-replaced-by-documentation",
+    "statement": "line-local: the first span line `#[allow(clippy::missing_safety_doc)]` was removed; every remaining span line is identical. The `unsafe extern \"C\" fn` qualifier, signature, parameters, body `{ 0 }` and closing brace are unchanged, so no codegen, symbol, ABI or observable behaviour changes.",
+    "lines_removed": 1,
+    "lines_added": 0,
+    "span_shrank_by": 1
+   },
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. The callback is a total function: the body is the literal `0`, it binds no argument (all parameters are `_`-prefixed), dereferences nothing, calls nothing and touches no global, thread-local or allocation. Every argument value -- including null, dangling, unaligned, or an arbitrary length -- returns 0 with no memory access, so there is no precondition a safe Rust caller could violate.",
+    "b_all_unsafe_covered": "Yes. The operation contains no unsafe block, call or dereference; the only `unsafe` is the `extern \"C\" fn` qualifier that names the C ABI boundary, and its precondition set is empty (`precondition_set: []`). The `# Safety` block now states exactly that, replacing the previous clippy allow.",
+    "c_hidden_obligation": "None. The callback is private and non-exported (`nm -D` on the admitted libcrypto.so.3 names no readbuffer symbol), is never address-taken outside its one method-table slot, and its only writer remains the static READBUFFER_METHOD slot. No new caller, alias, layout or lifetime obligation appears.",
+    "d_load_bearing_control": "Two controls ran here. (1) Firing control: the closure's content binding fired on these exact rows before this rebind -- evidence/closure-ssh-b83.json and closure-sshd-b83.json record 2 BLOCKED with `span-hash-mismatch` -- so the detector is not blind to a stale span, and it is the same predicate that must accept the rebound hash. (2) Behaviour control: the B67 public BIO probe `courts/phase25/rt_bio_readbuffer_control.c`, rebuilt against the b83 admitted install, PASSes (BIO_write=0 BIO_puts=0 pending 4->4 cache_unchanged), so the total-callback behaviour the empty precondition set relies on is observed at this candidate."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "Re-established at 1a152be1e: the old span hash reproduces exactly at the commit B67 recorded, the new span hash reproduces exactly with the documented normalisation at HEAD and equals the closure resolver's current hash, the delta is one removed attribute line with a byte-identical body, and the public control still observes the constant-0 total behaviour.",
+   "covers_site": true,
+   "covers_site_basis": "the disposition's declared coordinate src/runtime/bio/bf_readbuff.rs:237 covers the current census coordinate 237, the item matches, and the recorded span_sha256 is the resolver's hash of the current bytes"
+  },
+  {
+   "boundary": "BIO-READBUF-002",
+   "receipt": "boundary-sweep-B67",
+   "file": "src/runtime/bio/bf_readbuff.rs",
+   "operation": "readbuffer_puts",
+   "kind": "UNSAFE_FN_DEF",
+   "mechanism": "BIO",
+   "prior": {
+    "coordinate": 237,
+    "line_current_at_b67": 236,
+    "span_lines": [
+     236,
+     239
+    ],
+    "span_sha256": "16d8492f7898d9b15c45795fee7abdc89df1cc191c5d2c9f0a356389639e5ce2",
+    "span_source_commit": "b8bba955503014c8fd86303314c6deebaea093b0",
+    "verdict": "SAFETY_DISCHARGED",
+    "span_hash_reproduced_by_this_session": true,
+    "hash_reproduction": "sha256 of the recorded lines at b8bba9555 with the documented normalisation equals the recorded span_sha256 exactly"
+   },
+   "current": {
+    "coordinate": 249,
+    "span_lines": [
+     249,
+     251
+    ],
+    "span_sha256": "86a071a06093a4f5649a31f850ade7df2f80efb3e914f4d7b810b651a2eed9f7",
+    "source_commit": "1a152be1e931389e483ad5fc1cc268b66dc30104",
+    "content_sha256": "fe631b449c14133d5fe0e10faaf146de38492911824bcb8b59e0b95904bc9e54",
+    "resolution": "unique"
+   },
+   "delta": {
+    "classification": "attribute-removed-and-replaced-by-documentation",
+    "statement": "line-local: the first span line `#[allow(clippy::missing_safety_doc)]` was removed; every remaining span line is identical. The `unsafe extern \"C\" fn` qualifier, signature, parameters, body `{ 0 }` and closing brace are unchanged, so no codegen, symbol, ABI or observable behaviour changes.",
+    "lines_removed": 1,
+    "lines_added": 0,
+    "span_shrank_by": 1
+   },
+   "answers": {
+    "a_safe_rust_can_cause_ub": "No. The callback is a total function: the body is the literal `0`, it binds no argument (all parameters are `_`-prefixed), dereferences nothing, calls nothing and touches no global, thread-local or allocation. Every argument value -- including null, dangling, unaligned, or an arbitrary length -- returns 0 with no memory access, so there is no precondition a safe Rust caller could violate.",
+    "b_all_unsafe_covered": "Yes. The operation contains no unsafe block, call or dereference; the only `unsafe` is the `extern \"C\" fn` qualifier that names the C ABI boundary, and its precondition set is empty (`precondition_set: []`). The `# Safety` block now states exactly that, replacing the previous clippy allow.",
+    "c_hidden_obligation": "None. The callback is private and non-exported (`nm -D` on the admitted libcrypto.so.3 names no readbuffer symbol), is never address-taken outside its one method-table slot, and its only writer remains the static READBUFFER_METHOD slot. No new caller, alias, layout or lifetime obligation appears.",
+    "d_load_bearing_control": "Two controls ran here. (1) Firing control: the closure's content binding fired on these exact rows before this rebind -- evidence/closure-ssh-b83.json and closure-sshd-b83.json record 2 BLOCKED with `span-hash-mismatch` -- so the detector is not blind to a stale span, and it is the same predicate that must accept the rebound hash. (2) Behaviour control: the B67 public BIO probe `courts/phase25/rt_bio_readbuffer_control.c`, rebuilt against the b83 admitted install, PASSes (BIO_write=0 BIO_puts=0 pending 4->4 cache_unchanged), so the total-callback behaviour the empty precondition set relies on is observed at this candidate."
+   },
+   "verdict": "ACCEPT",
+   "verdict_basis": "Re-established at 1a152be1e: the old span hash reproduces exactly at the commit B67 recorded, the new span hash reproduces exactly with the documented normalisation at HEAD and equals the closure resolver's current hash, the delta is one removed attribute line with a byte-identical body, and the public control still observes the constant-0 total behaviour.",
+   "covers_site": true,
+   "covers_site_basis": "the disposition's declared coordinate src/runtime/bio/bf_readbuff.rs:249 covers the current census coordinate 249, the item matches, and the recorded span_sha256 is the resolver's hash of the current bytes"
+  }
+ ],
+ "controls": [
+  {
+   "id": "C1",
+   "kind": "firing control, instrument arm",
+   "what": "the closure's content binding on the unmodified B67 record, at the b83 candidate",
+   "observed": "both families: 2 BLOCKED, status_reason `stale scoped discharge refused ... content-addressed check also refused: span-hash-mismatch`",
+   "transcript": "court/freeze-b83/closure-ssh-b83.log, court/freeze-b83/closure-sshd-b83.log",
+   "result": "FIRED",
+   "why_it_is_load_bearing": "it is the same predicate that must accept the re-bound hash; a detector that did not fire on a stale span could not establish the new one"
+  },
+  {
+   "id": "C2",
+   "kind": "behaviour control, public path",
+   "what": "courts/phase25/rt_bio_readbuffer_control.c built against the b83 admitted install",
+   "observed": "PASS readbuffer write/puts: BIO_write=0 BIO_puts=0 tell_before=4 tell_after=4 pending_before=4 pending_after=4 cache_unchanged=1",
+   "result": "PASS",
+   "why_it_is_load_bearing": "the empty precondition set rests on the callbacks being total and returning 0; the public BIO_write/BIO_puts path observes exactly that at this candidate"
+  }
+ ],
+ "receipt_diffs": {
+  "files": [
+   "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B67.json"
+  ],
+  "sha256_before": "0069db7a5fa85a38206ea1d3d119c140ff818227d45ffcaa547a94b7fe2f38b2",
+  "sha256_after": "1528c0de7edd3c016ffcc8fe1354553d2d4ea416796a409f28b4371e04d4d993",
+  "structural": [
+   {
+    "file": "boundary-sweep-B67.json",
+    "records_changed": [
+     "boundaries[id=BIO-READBUF-001]",
+     "boundaries[id=BIO-READBUF-002]"
+    ],
+    "fields": "line_current, disposition's quoted coordinate, established[0]'s quoted range, body (attribute line removed), span_sha256, span_start_line, span_end_line, span_source_commit; a rebind_review_b83 member added to each record; a top-level rebind_review_b83 summary added",
+    "preserved": "every disposition verdict and reasoning sentence (other than the coordinate), precondition_set, signature, registration, contract, established[1..], authority_derived, tests and all other records",
+    "byte_preserved_outside_records": true
+   }
+  ]
+ },
+ "closures": {
+  "tool": "forensics/tools/consumer_closure.py sha256 4c17a9a7",
+  "carry_forward": [
+   "evidence/closure-ssh-b82.json",
+   "evidence/closure-sshd-b82.json"
+  ],
+  "first_pass_at_b83": [
+   {
+    "path": "evidence/closure-ssh-b83.json",
+    "sha256": "5939e645be065363a0bb378c6317546814b50f7c5768cd5d8521fe3a08e17163",
+    "counts": {
+     "obligations": 290,
+     "DISCHARGED": 288,
+     "BLOCKED": 2,
+     "UNKNOWN": 0,
+     "carried_forward": 280,
+     "stale_discharge_rejections": 2
+    },
+    "verdict": {
+     "state": "ACCEPTED",
+     "safe_compatible": false,
+     "reason": "no refusal condition fired"
+    },
+    "element_7": "PASS (contract-bounded and closed target sets)",
+    "refusals": 0,
+    "repository_head": "1a152be1e931389e483ad5fc1cc268b66dc30104",
+    "tracked_tree_dirty": true,
+    "tool_sha256": "4c17a9a786534bbcbd418827af3425b35c78c478641d5d53862a7818c71927bc",
+    "carry_forward": null
+   },
+   {
+    "path": "evidence/closure-sshd-b83.json",
+    "sha256": "4223b963554254049c610bfc952f239ce14197048f278add6b2394afb77494ba",
+    "counts": {
+     "obligations": 290,
+     "DISCHARGED": 288,
+     "BLOCKED": 2,
+     "UNKNOWN": 0,
+     "carried_forward": 280,
+     "stale_discharge_rejections": 2
+    },
+    "verdict": {
+     "state": "ACCEPTED",
+     "safe_compatible": false,
+     "reason": "no refusal condition fired"
+    },
+    "element_7": "PASS (contract-bounded and closed target sets)",
+    "refusals": 0,
+    "repository_head": "1a152be1e931389e483ad5fc1cc268b66dc30104",
+    "tracked_tree_dirty": true,
+    "tool_sha256": "4c17a9a786534bbcbd418827af3425b35c78c478641d5d53862a7818c71927bc",
+    "carry_forward": null
+   }
+  ],
+  "second_pass_after_rebind_at_b83b": [
+   {
+    "path": "evidence/closure-ssh-b83b.json",
+    "sha256": "e6ce2b48a8b8f212a268e0fb2108baa42914181b6ce8fcd100e0e2906b8cf850",
+    "counts": {
+     "obligations": 290,
+     "DISCHARGED": 290,
+     "BLOCKED": 0,
+     "UNKNOWN": 0,
+     "carried_forward": 280,
+     "stale_discharge_rejections": 0
+    },
+    "verdict": {
+     "state": "ACCEPTED",
+     "safe_compatible": false,
+     "reason": "no refusal condition fired"
+    },
+    "element_7": "PASS (contract-bounded and closed target sets)",
+    "refusals": 0,
+    "repository_head": "1a152be1e931389e483ad5fc1cc268b66dc30104",
+    "tracked_tree_dirty": true,
+    "tool_sha256": "4c17a9a786534bbcbd418827af3425b35c78c478641d5d53862a7818c71927bc",
+    "carry_forward": null
+   },
+   {
+    "path": "evidence/closure-sshd-b83b.json",
+    "sha256": "629384ce2109e2f104280d77d1330a2a46315049fe7981a4a2e49c32ba3c9b44",
+    "counts": {
+     "obligations": 290,
+     "DISCHARGED": 290,
+     "BLOCKED": 0,
+     "UNKNOWN": 0,
+     "carried_forward": 280,
+     "stale_discharge_rejections": 0
+    },
+    "verdict": {
+     "state": "ACCEPTED",
+     "safe_compatible": false,
+     "reason": "no refusal condition fired"
+    },
+    "element_7": "PASS (contract-bounded and closed target sets)",
+    "refusals": 0,
+    "repository_head": "1a152be1e931389e483ad5fc1cc268b66dc30104",
+    "tracked_tree_dirty": true,
+    "tool_sha256": "4c17a9a786534bbcbd418827af3425b35c78c478641d5d53862a7818c71927bc",
+    "carry_forward": null
+   }
+  ],
+  "element_7_split": {
+   "status": "PASS (contract-bounded and closed target sets)",
+   "reachable_unresolved": 152,
+   "external_contract": 116,
+   "closed_target_set": 36,
+   "target_bounded": 0,
+   "unclassified": 0,
+   "closed_target_set_by_class": {
+    "CLOSED_TARGET_SET_DECODER_METHOD_OBJECT": 3,
+    "CLOSED_TARGET_SET_LEGACY_EVP_CIPHER_DATA": 2,
+    "CLOSED_TARGET_SET_PROVIDER_HW_TABLE": 25,
+    "CLOSED_TARGET_SET_SLH_METHOD_TABLE": 6
+   }
+  }
+ },
+ "residuals": [
+  "The two re-bound records still transcribe ledger rows whose own BOUNDARY/SEAL evidence is NOT_RUN; this rebind re-establishes the content binding and the verdict, it does not upgrade any ledger row.",
+  "evidence/closure-ssh-b82b.json and evidence/closure-sshd-b82b.json were uncommitted at HEAD when this batch ran; every b83 closure is therefore anchored on the committed b82 receipts. The b82b receipts remain evidence with no committed anchor until the orchestrator commits them.",
+  "The b83 and b83b closure receipts are uncommitted in this session, so their `tracked_tree_dirty` is true. The dirty tracked path is the B67 rebind (an evidence receipt, not a build input); src/ is byte-identical to HEAD's committed blobs.",
+  "The closure instrument's span hash covers the operation text, so a semantically equivalent re-introduction of a memory access behind the same text would not be detected; only the public control and review cover that class."
+ ],
+ "does_not_prove": [
+  "That either builder is SAFE-COMPATIBLE for the consumer family; the closure verdict remains ACCEPTED with safe_compatible=false.",
+  "That no other boundary record in B67, or any other receipt, has a stale span; this review covers exactly the two rows the b83 closures refused.",
+  "That the 37 content-migration refusals from the b82b-anchored diagnostic are resolved as evidence; they are explained, and they discharge only under an anchored chain, which the committed-receipt rule requires."
+ ]
+}

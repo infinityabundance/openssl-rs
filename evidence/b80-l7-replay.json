@@ -1,0 +1,519 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/l7-replay/v1",
+ "candidate_tag": "b80",
+ "generated_utc": "2026-11-15T16:35:16Z",
+ "purpose": "L7 functional replay of the OpenSSH consumer family at the exact b80 frozen candidate (source d9fdf1357, tag b80). Same workloads and case set as the b79 replay (court/freeze-b79/l7); only tree paths, ports, work dir and the identity block differ. This file is the evidence that the replay was run and the identity every measurement was taken at.",
+ "branch": "stage/p25/b75-ocsp",
+ "repository_head_at_measurement": "05c869802852a439cd056ea9b93e1161e2ed9405",
+ "repository_head_note": "HEAD when the replay ran. The candidate source identity is d9fdf1357c7df26e36d15c1cda5154479b052c16 (tag b80). `git diff --stat d9fdf1357c7df26e36d15c1cda5154479b052c16 -- src Cargo.toml Cargo.lock build.rs` is empty at measurement, so the build-relevant source tree at HEAD is byte-identical to the candidate S. The b80b closure receipts record repository_head da7480a3fa0506cf28ab4e2ab1e8dfba27c91fab with tracked_tree_dirty=true and inventory_source_head/span_source_commit d9fdf1357, so the closures' obligation spans are bound to S's git blobs.",
+ "candidate_identity": {
+  "production_source_head": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+  "closure_receipts_repository_head": "da7480a3fa0506cf28ab4e2ab1e8dfba27c91fab",
+  "instrument_head": "05c869802852a439cd056ea9b93e1161e2ed9405",
+  "instrument_tool_sha256": "0ca2f9e4bac3cd6a75253d463fa99e6b9aef1c4db25932b7b3e816dc41c8bf66",
+  "libcrypto_so_3_sha256": "60c1111250684556012dac7436c4aea3115b8697e7845c81c5ffb7fbf4c112f2",
+  "libssl_so_3_sha256": "2eebf3f6c6f0a71d3f83fbbb63157b1083937e25db8085408e0c22b24da5592a",
+  "binaries": {
+   "ssh": {
+    "path": "court/tmp/openssh-closure/client-b80/openssh-9.9p1/ssh",
+    "sha256": "f8f454782e6a793a624687755a779ad4b6cb9bbb8693f35f2a1f5f9d16234607",
+    "size": 3401744
+   },
+   "ssh_keygen": {
+    "path": "court/tmp/openssh-closure/client-b80/openssh-9.9p1/ssh-keygen",
+    "sha256": "f2e523ede1a51d855f35eaac2f91f74840b4285032654c1db1360f887ea01664",
+    "size": 1796208
+   },
+   "ssh_agent": {
+    "path": "court/tmp/openssh-closure/client-b80/openssh-9.9p1/ssh-agent",
+    "sha256": "b5b1d24864014b8f4267881d9da01524cc36abae49f86646f0efc76846e0328f",
+    "size": 1237416
+   },
+   "ssh_add": {
+    "path": "court/tmp/openssh-closure/client-b80/openssh-9.9p1/ssh-add",
+    "sha256": "d6272cbd03639604679591ca54a4f1a174da3624fe933b086d37e1b1334883af",
+    "size": 1369952
+   },
+   "sshd": {
+    "path": "court/tmp/openssh-closure/server-b80/openssh-9.9p1/sshd",
+    "sha256": "152ccc3465240454b5ec0cd470dfa81dc7eb044c01c9bbe72519a65a71919b92",
+    "size": 1763248
+   },
+   "sshd_session_tree_binary": {
+    "path": "court/tmp/openssh-closure/server-b80/openssh-9.9p1/sshd-session",
+    "sha256": "644bb0e0d0f911e92b63c59410be7c79207bf2e8b3bc607d80ff59e1e99b1941",
+    "size": 3594840,
+    "note": "unstripped link-tree copy; never executed by sshd"
+   },
+   "sshd_session_executed": {
+    "path": "court/tmp/openssh-closure/server-b80/install/libexec/sshd-session",
+    "sha256": "7eda6683fd94ad61ec145baacdf6482394a9b0fc00fcf9361118928955670d14",
+    "size": 1002568,
+    "note": "the path compiled into sshd (SSHD_SESSION); the session binary that served every login. Stripped install copy; same build by install provenance, not proven byte-equivalent."
+   },
+   "sftp_server_tree_binary": {
+    "path": "court/tmp/openssh-closure/server-b80/openssh-9.9p1/sftp-server",
+    "sha256": "ef318f0fcdfef7ce4b92f2a32468771b7b114f583aa1aed1fedd71c1a63e047c",
+    "size": 575048
+   },
+   "sftp_server_executed": {
+    "path": "court/tmp/openssh-closure/server-b80/install/libexec/sftp-server",
+    "sha256": "de23d82dd8d31df7a8c761d5cb804a815274b5f4bdc9c10a2b4de4a9c1728e98",
+    "size": 161984
+   }
+  },
+  "version_string": "OpenSSH_9.9p1, OpenSSL 3.6.4 25 Aug 2026 (ssh -V and sshd -V)",
+  "linkage": {
+   "ssh": "libcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3; no libssl",
+   "sshd": "libcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3; no libssl",
+   "sshd_session_executed": "readlink /proc/<pid>/exe = install/libexec/sshd-session; /proc/<pid>/maps resolves libcrypto.so.3 from /work/artifacts/phase2/install/lib; 0 libssl mappings",
+   "sftp_server_executed": "links libc only (linux-vdso, libc, ld-linux); no libcrypto and no libssl at all"
+  },
+  "census": {
+   "path": "court/freeze-b80/census-b80.json",
+   "source_head": "d9fdf1357c7df26e36d15c1cda5154479b052c16",
+   "src_content_sha256": "7a7b1eb7f2101cfbe19337f009a91b5c21f57df94ad87bb98008305be5b1cadf",
+   "note": "the census was taken at the candidate tag d9fdf1357; its install digests are the ones measured above"
+  }
+ },
+ "authority_openssh": {
+  "role": "authority-linked unmodified OpenSSH 9.9p1, built by the tracked recipe against the pinned production authority; used only as the independent reader/writer in the key-format differential",
+  "authority_prefix": "forensics/authorities/prefix/openssl-3.6.4-production",
+  "authority_openssl_version_text": "OpenSSL 3.6.4 25 Aug 2026",
+  "authority_libcrypto_so_3_sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2",
+  "authority_libssl_so_3_sha256": "c25b910e51116973f1e0f2c4a834d39f07c818e6e22727a5eb8bd0fa3f4f3d9b",
+  "build_recipe": "forensics/tools/build_openssh_closure.sh (tracked)",
+  "build_tag": "auth-b80",
+  "build_command": "bash docker/openssl-rs-court.sh exec sh -c 'CANDIDATE=/work/forensics/authorities/prefix/openssl-3.6.4-production sh /work/forensics/tools/build_openssh_closure.sh auth-b80'",
+  "build_exit": 0,
+  "build_log": "court/freeze-b80/l7/build-auth-b80.log",
+  "build_log_sha256": "775a621cbc0754d2de37c8e5e2e0e53cc673cf1e166c4eb147869dd6d29dce2d",
+  "binaries": {
+   "ssh": {
+    "path": "court/tmp/openssh-closure/auth-b80/openssh-9.9p1/ssh",
+    "sha256": "13fd52f131517c8a6b9baf9ae143928d3f61b205c1a869e3e6a39e0ab8831e4a",
+    "size": 3401768
+   },
+   "sshd": {
+    "path": "court/tmp/openssh-closure/auth-b80/openssh-9.9p1/sshd",
+    "sha256": "d11f05e066782158053a882b4e99b6037371249c05b2846a4702fe0cff1a2786",
+    "size": 1763272
+   },
+   "sshd_session": {
+    "path": "court/tmp/openssh-closure/auth-b80/openssh-9.9p1/sshd-session",
+    "sha256": "9a422a7abcc31df35095b5e080593018a47e2a1d6cb6a057e172472255fe2eae",
+    "size": 3594864
+   },
+   "ssh_keygen": {
+    "path": "court/tmp/openssh-closure/auth-b80/openssh-9.9p1/ssh-keygen",
+    "sha256": "14f7f96294aae478d2e495631786e0b0a0f6abca667447d93646aa8a72f232f7",
+    "size": 1796232
+   }
+  },
+  "linkage": "ssh, sshd and ssh-keygen each resolve libcrypto.so.3 => forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 (ldd in the differential transcript's identity block); no libcrypto/libssl system copy is used",
+  "version_text": "OpenSSH_9.9p1, OpenSSL 3.6.4 25 Aug 2026",
+  "identity_discrimination": "the version TEXT is identical to the candidate's; ssh -V does not distinguish the two. Authority linkage is established by the resolved library path and the libcrypto digest, which differ: authority 611e511db427 (7,295,816 B) vs candidate 60c111125068 (16,887,896 B)."
+ },
+ "executed_identity": {
+  "sshd": {
+   "path": "/work/court/tmp/openssh-closure/server-b80/openssh-9.9p1/sshd",
+   "repo_path": "court/tmp/openssh-closure/server-b80/openssh-9.9p1/sshd",
+   "sha256": "152ccc3465240454b5ec0cd470dfa81dc7eb044c01c9bbe72519a65a71919b92",
+   "role": "listens and forks the session process"
+  },
+  "sshd_session_executed": {
+   "path": "/work/court/tmp/openssh-closure/server-b80/install/libexec/sshd-session",
+   "repo_path": "court/tmp/openssh-closure/server-b80/install/libexec/sshd-session",
+   "sha256": "7eda6683fd94ad61ec145baacdf6482394a9b0fc00fcf9361118928955670d14",
+   "size": 1002568,
+   "role": "the binary that actually served every login: sshd's compiled-in SSHD_SESSION resolves here"
+  },
+  "sshd_session_tree_copy": {
+   "path": "/work/court/tmp/openssh-closure/server-b80/openssh-9.9p1/sshd-session",
+   "repo_path": "court/tmp/openssh-closure/server-b80/openssh-9.9p1/sshd-session",
+   "sha256": "644bb0e0d0f911e92b63c59410be7c79207bf2e8b3bc607d80ff59e1e99b1941",
+   "size": 3594840,
+   "role": "unstripped link-tree copy; never executed by sshd"
+  },
+  "difference_explained": "the two digests differ because `make install` installs a stripped copy of the same build. They are the same build by install provenance, not proven byte-equal. The digest bound as 'executed' is the install copy 7eda6683fd94; the link-tree copy is 644bb0e0d0f9 and was not executed. The live /proc witness names the install path, so this record binds the executed bytes."
+ },
+ "venue": {
+  "container": "openssl-rs-court (image openssl-rs-court:1), up before this batch",
+  "caps": "memory.max=17179869184 (16 GiB) for the replay; memory.swap.max=17179869184; cpu.max=1600000 100000 (16 CPU); pids.max=2048; memory.events oom=0 oom_kill=0 after the batch",
+  "cap_note": "the replay and the authority build ran under the directed 16 GiB / 16 CPU venue (evidence/b79-court-limits-16g-16cpu.json is the b79 record of the same directive). AGENTS.md 6.1's formula cap at this session's host availability was min(8g, 32g-16g) = 8g; the gate steps of this batch were run at that 8 GiB cap instead. Both figures are recorded, neither is claimed for the other.",
+  "host_free_g_at_start": "total 45, used 12, free 22, available 32",
+  "io_pressure_at_start": "some avg10=0.00 avg60=0.00 avg300=0.00 (idle)",
+  "heavy_commands": "one at a time: probe, supplement, keyformat, the authority OpenSSH build (auth-b80), then the authority differential. No candidate build or test was run in this L7 batch.",
+  "authority_build_note": "the auth-b80 tree was absent (the directory existed but was empty), so it was built once with the tracked recipe inside the court (exit 0). auth-b79 was not reused: it links the same authority libcrypto, but a b80-tagged build keeps the authority side's provenance in this candidate's own batch."
+ },
+ "commands": [
+  "sh /work/court/freeze-b80/l7/probe-b80.sh",
+  "sh /work/court/freeze-b80/l7/supplement-b80.sh",
+  "sh /work/court/freeze-b80/l7/keyformat-b80.sh",
+  "CANDIDATE=/work/forensics/authorities/prefix/openssl-3.6.4-production sh /work/forensics/tools/build_openssh_closure.sh auth-b80",
+  "sh /work/court/freeze-b80/l7/keyformat-diff-authority-b80.sh"
+ ],
+ "scripts": {
+  "probe": {
+   "path": "court/freeze-b80/l7/probe-b80.sh",
+   "sha256": "4a3a78f926e1d887c85b427cfda0650eed2f85f5156f58a1b32d26cc674194ee",
+   "size": 12552,
+   "derived_from": "court/freeze-b79/l7/probe-b79.sh (same case logic; tree paths, port 2250, work dir and identity block changed)"
+  },
+  "supplement": {
+   "path": "court/freeze-b80/l7/supplement-b80.sh",
+   "sha256": "500565f6505b8a9a9d36f3fb809e7243d99d8e151cf056df2085f28d4f0eedae",
+   "size": 4994,
+   "derived_from": "court/freeze-b79/l7/supplement-b79.sh (port 2252)"
+  },
+  "keyformat": {
+   "path": "court/freeze-b80/l7/keyformat-b80.sh",
+   "sha256": "4ccd77c99148fdb9b41d23d00ad6fb5d47747b082c9af868b88a3f67aaf3add7",
+   "size": 4036,
+   "derived_from": "court/freeze-b79/l7/keyformat-b79.sh"
+  },
+  "authority_differential": {
+   "path": "court/freeze-b80/l7/keyformat-diff-authority-b80.sh",
+   "sha256": "61460db6bef287ea0e26395643066cf09d889765150f7628521b16bc82cebdc1",
+   "size": 4281,
+   "derived_from": "court/freeze-b79/l7/keyformat-diff-authority-b79.sh (tag auth-b80)"
+  }
+ },
+ "workloads": {
+  "w1_key_operations": {
+   "status": "PASS",
+   "transcript": "court/freeze-b80/l7/transcripts/probe-b80.log",
+   "results": {
+    "keygen_generate": "6/6 PASS (host ed25519, host ecdsa-256, host rsa-2048, user ed25519, user ecdsa-256, user rsa-2048)",
+    "fingerprints": "6/6 keys produced SHA256 and MD5 fingerprints",
+    "sign_verify": "3/3 PASS (ssh-keygen -Y sign + -Y verify, ed25519/ecdsa/rsa)",
+    "legacy_pem_roundtrip": "2/2 PASS (-m PEM written and re-read for rsa and ecdsa)",
+    "algorithm_enumeration": {
+     "kex": 15,
+     "key": 14,
+     "cipher": 10,
+     "mac": 16,
+     "sig": 10
+    }
+   },
+   "cross_check": {
+    "status": "NOT_RUN",
+    "reason": "the candidate-only keyformat-b80.sh authority rows stay NOT_RUN: it is invoked with no AUTH_KG, by construction",
+    "counts_in_this_transcript": {
+     "candidate_reads_OK": 7,
+     "FAIL": 0,
+     "authority_rows_NOT_RUN": 8
+    },
+    "partial_substitute": {
+     "status": "PASS",
+     "detail": "Section C reads OpenSSH's own shipped regress private keys (rsa_openssh.prv, ed25519_openssh.prv): both read OK. ecdsa256_openssh.prv is not present in the 9.9p1 regress tree.",
+     "limit": "a static shipped artefact is not a live authority ssh-keygen"
+    },
+    "closed_by": "w5_authority_keyformat_differential",
+    "original_status_retained": "NOT_RUN"
+   }
+  },
+  "w2_live_sshd_and_login": {
+   "status": "PASS",
+   "transcript": "court/freeze-b80/l7/transcripts/probe-b80.log",
+   "results": {
+    "sshd_config_test": "PASS (sshd -t)",
+    "sshd_start": "PASS on 127.0.0.1:2250, foreground -D -e with log file, pid recorded, killed afterwards",
+    "pubkey_login": "PASS: `echo PROBE_OK; id -u` -> 'PROBE_OK 0' (root, ed25519 user key)",
+    "agent_login": "PASS: ssh-agent + ssh-add held the key, AGENT_OK",
+    "matrix_cases": "18/18 PASS, 0 FAIL, 0 HANG (20 s timeout per case)",
+    "sshd_log_scan": "0 fatal / segmentation / Aborted / core dump / assert / SSL library error lines"
+   },
+   "matrix": [
+    {
+     "label": "default-negotiated",
+     "kex": "sntrup761x25519-sha512",
+     "hostkey": "ssh-ed25519",
+     "cipher_mac": "chacha20-poly1305@openssh.com/<implicit>",
+     "auth": "publickey"
+    },
+    {
+     "label": "x25519/ed25519/aes256-gcm",
+     "kex": "curve25519-sha256",
+     "hostkey": "ssh-ed25519",
+     "cipher_mac": "aes256-gcm@openssh.com/<implicit>",
+     "auth": "publickey"
+    },
+    {
+     "label": "dh-group14-sha256(bn)/ed25519/aes128-ctr",
+     "kex": "diffie-hellman-group14-sha256",
+     "hostkey": "ssh-ed25519",
+     "cipher_mac": "aes128-ctr/hmac-sha2-256",
+     "auth": "publickey"
+    },
+    {
+     "label": "dh-group16-sha512(bn)",
+     "kex": "diffie-hellman-group16-sha512",
+     "hostkey": "ssh-ed25519",
+     "cipher_mac": "chacha20-poly1305@openssh.com/<implicit>",
+     "auth": "publickey"
+    },
+    {
+     "label": "dh-group18-sha512(bn)",
+     "kex": "diffie-hellman-group18-sha512",
+     "hostkey": "ssh-ed25519",
+     "cipher_mac": "chacha20-poly1305@openssh.com/<implicit>",
+     "auth": "publickey"
+    },
+    {
+     "label": "dh-gex-sha256(bn,moduli)",
+     "kex": "diffie-hellman-group-exchange-sha256",
+     "hostkey": "ssh-ed25519",
+     "cipher_mac": "chacha20-poly1305@openssh.com/<implicit>",
+     "auth": "publickey"
+    },
+    {
+     "label": "ecdh-nistp256(kex)/ed25519/aes128-ctr",
+     "kex": "ecdh-sha2-nistp256",
+     "hostkey": "ssh-ed25519",
+     "cipher_mac": "aes128-ctr/hmac-sha2-256",
+     "auth": "publickey"
+    },
+    {
+     "label": "ecdh-nistp384(kex)/ed25519",
+     "kex": "ecdh-sha2-nistp384",
+     "hostkey": "ssh-ed25519",
+     "cipher_mac": "chacha20-poly1305@openssh.com/<implicit>",
+     "auth": "publickey"
+    },
+    {
+     "label": "ecdh-nistp521(kex)/ed25519",
+     "kex": "ecdh-sha2-nistp521",
+     "hostkey": "ssh-ed25519",
+     "cipher_mac": "chacha20-poly1305@openssh.com/<implicit>",
+     "auth": "publickey"
+    },
+    {
+     "label": "ecdsa-hostkey(EXPECT FAIL: key parse defect)",
+     "kex": "ecdh-sha2-nistp256",
+     "hostkey": "ecdsa-sha2-nistp256",
+     "cipher_mac": "aes128-ctr/hmac-sha2-256",
+     "auth": "publickey"
+    },
+    {
+     "label": "chacha20-poly1305",
+     "kex": "sntrup761x25519-sha512",
+     "hostkey": "ssh-ed25519",
+     "cipher_mac": "chacha20-poly1305@openssh.com/<implicit>",
+     "auth": "publickey"
+    },
+    {
+     "label": "aes128-ctr/hmac-sha1",
+     "kex": "sntrup761x25519-sha512",
+     "hostkey": "ssh-ed25519",
+     "cipher_mac": "aes128-ctr/hmac-sha1",
+     "auth": "publickey"
+    },
+    {
+     "label": "aes128-ctr/umac-64-etm",
+     "kex": "sntrup761x25519-sha512",
+     "hostkey": "ssh-ed25519",
+     "cipher_mac": "aes128-ctr/umac-64-etm@openssh.com",
+     "auth": "publickey"
+    },
+    {
+     "label": "rsa-hostkey/rsa-sha2-512(EXPECT FAIL: key parse defect)",
+     "kex": "sntrup761x25519-sha512",
+     "hostkey": "rsa-sha2-512",
+     "cipher_mac": "chacha20-poly1305@openssh.com/<implicit>",
+     "auth": "publickey"
+    },
+    {
+     "label": "sntrup761x25519-sha512",
+     "kex": "sntrup761x25519-sha512",
+     "hostkey": "ssh-ed25519",
+     "cipher_mac": "chacha20-poly1305@openssh.com/<implicit>",
+     "auth": "publickey"
+    },
+    {
+     "label": "mlkem768x25519-sha256(PQ)",
+     "kex": "mlkem768x25519-sha256",
+     "hostkey": "ssh-ed25519",
+     "cipher_mac": "chacha20-poly1305@openssh.com/<implicit>",
+     "auth": "publickey"
+    },
+    {
+     "label": "auth-ecdsa-userkey",
+     "kex": "sntrup761x25519-sha512",
+     "hostkey": "ssh-ed25519",
+     "cipher_mac": "chacha20-poly1305@openssh.com/<implicit>",
+     "auth": "publickey"
+    },
+    {
+     "label": "auth-rsa-userkey",
+     "kex": "sntrup761x25519-sha512",
+     "hostkey": "ssh-ed25519",
+     "cipher_mac": "chacha20-poly1305@openssh.com/<implicit>",
+     "auth": "publickey"
+    }
+   ],
+   "comparison_with_b79": {
+    "same_label_set": true,
+    "differing_tuples": {},
+    "statement": "the negotiated tuple of every case is identical to the b79 replay's (18 labels compared, 0 differing)",
+    "note": "the two cases the Phase-17 script labels 'EXPECT FAIL: key parse defect' (ECDSA and RSA host-key parsing) again PASS. The inherited labels are left verbatim: they are not assertions."
+   }
+  },
+  "w3_concurrency": {
+   "status": "PASS",
+   "transcript": "court/freeze-b80/l7/transcripts/probe-b80.log",
+   "results": {
+    "simultaneous_logins": 16,
+    "succeeded": 16,
+    "failed": 0,
+    "observed": "concurrent_logins=16/16"
+   },
+   "config": "sshd MaxStartups 64:30:100; each client 30 s timeout, ConnectTimeout=10, publickey only"
+  },
+  "w4_sftp_server_and_session_identity": {
+   "status": "PASS",
+   "transcript": "court/freeze-b80/l7/transcripts/supplement-b80.log",
+   "results": {
+    "algorithm_enumeration_written": "ssh -Q kex/key/cipher/mac/sig -> 15/14/10/16/10 entries",
+    "executed_session_witness": "live sshd-session pid observed in /proc; exe -> /work/court/tmp/openssh-closure/server-b80/install/libexec/sshd-session; libcrypto -> /work/artifacts/phase2/install/lib/libcrypto.so.3; libssl mappings 0",
+    "sftp_transfer": "sftp put + ls + get over the candidate ssh/sshd/session path: byte-identical round-trip"
+   },
+   "note": "sftp-server does not link libcrypto or libssl at all (ldd shows only libc, ld-linux and vdso). Its L7 pass exercises the sftp protocol path through the candidate ssh/sshd and the crypto they use, not the sftp-server binary against OpenSSL."
+  },
+  "w5_authority_keyformat_differential": {
+   "status": "PASS",
+   "transcript": "court/freeze-b80/l7/transcripts/keyformat-diff-authority-b80.log",
+   "results": {
+    "candidate_writes_authority_reads": "5/5 PASS",
+    "authority_writes_candidate_reads": "5/5 PASS",
+    "both_directions": "RSA/ECDSA/Ed25519 native openssh-key-v1 and RSA/ECDSA legacy PEM, each writer -> opposite reader with key material equality and fingerprint check"
+   },
+   "totals": {
+    "pass": 10,
+    "fail": 0,
+    "of": 10
+   },
+   "cases": [
+    {
+     "id": "C1",
+     "result": "PASS"
+    },
+    {
+     "id": "C2",
+     "result": "PASS"
+    },
+    {
+     "id": "C3",
+     "result": "PASS"
+    },
+    {
+     "id": "C4",
+     "result": "PASS"
+    },
+    {
+     "id": "C5",
+     "result": "PASS"
+    },
+    {
+     "id": "A1",
+     "result": "PASS"
+    },
+    {
+     "id": "A2",
+     "result": "PASS"
+    },
+    {
+     "id": "A3",
+     "result": "PASS"
+    },
+    {
+     "id": "A4",
+     "result": "PASS"
+    },
+    {
+     "id": "A5",
+     "result": "PASS"
+    }
+   ],
+   "closes": "the candidate-only keyformat-b80.sh authority rows that remain NOT_RUN; this is the live authority cross-reader differential"
+  }
+ },
+ "totals": {
+  "probe_checks": {
+   "pass": 31,
+   "fail": 0
+  },
+  "matrix_cases": {
+   "pass": 18,
+   "fail": 0
+  },
+  "concurrent_logins": {
+   "pass": 16,
+   "of": 16
+  },
+  "keyformat_checks": {
+   "candidate_ok": 7,
+   "fail": 0,
+   "authority_not_run": 8
+  },
+  "authority_keyformat_differential": {
+   "pass": 10,
+   "fail": 0,
+   "of": 10
+  },
+  "supplement_checks": {
+   "pass": 3,
+   "fail": 0
+  }
+ },
+ "transcripts": {
+  "probe": {
+   "path": "court/freeze-b80/l7/transcripts/probe-b80.log",
+   "sha256": "162542516b30a10abe07a4fa7a4a60f8e48bc2c1b19c73361de6ee25ef3a51c2",
+   "size": 6244
+  },
+  "keyformat": {
+   "path": "court/freeze-b80/l7/transcripts/keyformat-b80.log",
+   "sha256": "1a181737c7ec53ee6f31ba558937d680891fe8fad1209eb4d31adc61a248505b",
+   "size": 2711
+  },
+  "supplement": {
+   "path": "court/freeze-b80/l7/transcripts/supplement-b80.log",
+   "sha256": "273f19a898c64f2ac61cc1e0fff0a0f5df3bf66f7510da72bf48de8d361c8ab9",
+   "size": 1546
+  },
+  "authority_keyformat_differential": {
+   "path": "court/freeze-b80/l7/transcripts/keyformat-diff-authority-b80.log",
+   "sha256": "e25abf8e659e19b428e3c00027fcaac91e1cb28ac9d72056f699944b8a05c504",
+   "size": 1056
+  },
+  "authority_build_log": {
+   "path": "court/freeze-b80/l7/build-auth-b80.log",
+   "sha256": "775a621cbc0754d2de37c8e5e2e0e53cc673cf1e166c4eb147869dd6d29dce2d",
+   "size": 2320
+  },
+  "raw_workdir": "court/freeze-b80/l7/work (per-case ssh -v logs, generated keys, sshd logs)"
+ },
+ "does_not_prove": [
+  "Single host, self-connection: client and server are the same b80 build on loopback. A failure could not be localised to one side, and agreement between them is not evidence of interoperability with any other implementation.",
+  "No third-party peer: no upstream, BoringSSL, rustls or commercial SSH implementation was used other than the authority-linked OpenSSH built here for w5.",
+  "Functional evidence only (AGENTS.md section 8): no ASan/valgrind/Miri run, no adversarial or fuzzing court (section 13), no constant-time or timing measurement (section 11), no Wycheproof/ACVP vectors in this batch.",
+  "Authentication policy is deliberately permissive for the probe (PermitRootLogin yes, StrictModes no, root login with pubkey). This exercises the crypto path, not a hardened baseline.",
+  "Concurrency is 16 simultaneous loopback logins, not sustained load and not a rekey-under-load workload.",
+  "L7 functional PASS is not SAFE_COMPATIBLE graduation (section 7): it says nothing about the safety obligations of the mechanisms these binaries reach.",
+  "The executed session binary is the stripped install copy 7eda6683fd94, not the link-tree binary 644bb0e0d0f9. Same install provenance; byte-equivalence is not proven.",
+  "The matrix is not exhaustive: it covers the algorithms the Phase-17 probe names plus default negotiation, not every kex/cipher/MAC/host-key combination the build advertises.",
+  "The authority differential covers key-file compatibility for RSA/ECDSA/Ed25519 and legacy PEM in both directions; it does not cover certificates, PKCS#8, DSA, or signature verification policy.",
+  "The authority-linked OpenSSH and the candidate share the same OpenSSH 9.9p1 source and version text; only the resolved libcrypto differs. The differential tests two OpenSSL implementations behind one OpenSSH version, not two OpenSSH releases."
+ ],
+ "residuals": [
+  "The candidate-only keyformat-b80.sh authority rows are NOT_RUN by construction and are retained as NOT_RUN; w5 is the evidence that closes the gap.",
+  "The authority build (auth-b80) is a compile run in the court at 16 GiB; it is recorded with its own log and digest, and no candidate source changed.",
+  "court/ is git-ignored (/court/ in .gitignore), so these scripts and transcripts are invisible to git status and must be added with `git add -f` if the orchestrator wants them tracked.",
+  "The executed sshd-session and sftp-server are the stripped install copies; the evidence binds the executed digests and the tree digests separately rather than asserting they are the same bytes.",
+  "OpenSSH 9.9p1 omits finite-field DH from its default kex list; the probe re-enables group14/16/18 and gex explicitly, so those cases are not default 9.9p1 negotiation.",
+  "The Phase-17 'EXPECT FAIL' labels for ECDSA/RSA host keys are stale: both pass. The labels are left verbatim to keep the case set byte-identical, and the actual result is recorded here.",
+  "The replay's authority side is a fresh b80-tagged build of the same pinned tarball; its binaries differ from auth-b79's by build order only, and no byte-equivalence to auth-b79 is claimed."
+ ],
+ "scope_statement": "This file records observed L7 functional behaviour of the b80 OpenSSH consumer binaries on one host against themselves and against an authority-linked OpenSSH key-format peer. It does not certify memory safety, cryptographic assurance, interoperability, or SAFE_COMPATIBLE graduation."
+}

@@ -1,0 +1,345 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/boundary-receipt/v1",
+  "kind": "site-enumerating-boundary-receipt",
+  "receipt": "b76-removed-thunk-retirements",
+  "date": "2026-11-13",
+  "campaign": "safe-c33",
+  "subphase": "b76 element-7 re-pin: retire the four carry-forward obligations whose unsafe operation was deleted",
+  "scope": "The four obligations that the applied b76 closures (evidence/closure-ssh-b76.json and evidence/closure-sshd-b76.json) report as CARRY_FORWARD_SUPPRESSED at src/cmp/cmp_ctx.rs lines 376, 380, 384 and 388, together with the two applied closures that enumerated them (evidence/closure-ssh-b74.json and evidence/closure-sshd-b73-r2.json). It records that each operation was deleted from source and is absent from the current per-site inventory; it records no contract, no discharge and no new reachability finding.",
+  "source": {
+    "repository_head": "c809d94f1f665548e77e3e3d8ed49e521ec87878",
+    "branch": "stage/p25/b75-ocsp",
+    "inventory_path": "court/freeze-b76/census-b76.json",
+    "inventory_source_head": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+    "deleting_commit": "69d43bb8d8d4b4641f939c7283eb57d92ca5b89c",
+    "deleting_commit_subject": "cmp: delete five unreferenced free thunks",
+    "deleting_commit_diff": "src/cmp/cmp_ctx.rs: 20 deletions, five UNSAFE_FN_DEF thunks (x509_free_void, evp_pkey_free_void, evp_md_free_void, octet_string_free_void, x509_store_free_void); the four in this record are the first four",
+    "prior_closures": [
+      {
+        "receipt": "evidence/closure-ssh-b74.json",
+        "sha256": "87f1dd9ac062d60da6a07c06abc4eec626254217dfd84861c7b495e59357c8ff",
+        "source_head": "258c2a9b9d407011d218b32553cf212cbc320e75",
+        "inventory_path": "court/freeze-b73/census-b73.json"
+      },
+      {
+        "receipt": "evidence/closure-sshd-b73-r2.json",
+        "sha256": "d0addc72f94904b03e63b2bd1d92dc5506c1ea67f6732b5a51a124f943f5cee5",
+        "source_head": "a7615d835ecf35526e8e1f86d615721eb5139602",
+        "inventory_path": "court/freeze-b73/census-b73.json"
+      }
+    ],
+    "elimination_receipt": {
+      "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/cmp-ctx-dead-thunks-elimination-sites.json",
+      "sha256": "a3e8e1c98580c3f0b123efdb58cbe124dc68c18595a11eac44e7a964f64a7eef",
+      "bytes": 8732,
+      "receipt": "cmp-ctx-dead-thunks-elimination",
+      "relation": "that receipt supersedes the openssh-v1i review-required boundaries OSSH-V1I-055..058 (and OSSH-V1I-062) as ELIMINATED_STRUCTURALLY; this record restates the same source fact for the separate carry-forward obligations and adds the current-coordinate witnesses"
+    }
+  },
+  "retirement_rule": "A retirement row is emitted only when all of the following hold: (a) the operation's stable identity (file, kind, enclosing item) is absent from the current per-site inventory at inventory_source_head; (b) the deleting commit's diff removes exactly that definition; (c) the coordinate the previous applied closure enumerated now holds a different item, or holds nothing. A retirement row carries no span_sha256 and asserts no contract; it records non-existence.",
+  "counts": {
+    "carry_forward_obligations_retired": 4,
+    "boundaries": 4,
+    "sites_with_live_span": 0,
+    "unresolved": 0,
+    "previous_coordinates_reused_by_other_items": 4
+  },
+  "boundaries": [
+    {
+      "id": "B76-RETIRED::src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::x509_free_void",
+      "file": "src/cmp/cmp_ctx.rs",
+      "line": 376,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "x509_free_void",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "disposition": "ELIMINATED (source: the unreferenced function was deleted by 69d43bb8d; the operation no longer exists as a source unsafe operation)",
+      "recorded_verdict": "ELIMINATED",
+      "ledger_receipt": "openssh-v1i",
+      "ledger_coordinate": "src/cmp/cmp_ctx.rs:376",
+      "source_receipt": "closure-ssh-b74",
+      "source_receipts": [
+        "evidence/closure-ssh-b74.json",
+        "evidence/closure-sshd-b73-r2.json"
+      ],
+      "source_row_id": "V1:src/cmp/cmp_ctx.rs:376:UNSAFE_FN_DEF",
+      "source_row_key": "obligations",
+      "source_row_coordinates": {
+        "line": 376,
+        "line_current": null,
+        "current_line": null
+      },
+      "span_sha256": null,
+      "span_schema": null,
+      "span_normalisation": null,
+      "span_claim_scope": "not applicable: no definition of this operation exists at the source head, so no span can be hashed",
+      "span_start_line": null,
+      "span_end_line": null,
+      "span_qualified_identity": null,
+      "span_resolution": "operation-absent",
+      "span_source_commit": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+      "span_source_field": null,
+      "source_state": "DELETED",
+      "unsafe_operation_present": false,
+      "deleting_commit": "69d43bb8d8d4b4641f939c7283eb57d92ca5b89c",
+      "previous_coordinate": 376,
+      "current_source_witness": "At S=0238c6e4/c809d94f1, src/cmp/cmp_ctx.rs:376 holds `unsafe extern \"C\" fn general_name_free_void`, a different item. `grep -n x509_free_void src/cmp/cmp_ctx.rs` finds no definition or reference (the same-named definitions in src/cms/cms_lib.rs:1378 and src/cmp/cmp_asn.rs:225 are different file-local functions, not this site).",
+      "elimination_receipt_boundary": "OSSH-V1I-055-DELETED",
+      "supersedes_boundary": "OSSH-V1I-055"
+    },
+    {
+      "id": "B76-RETIRED::src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::evp_pkey_free_void",
+      "file": "src/cmp/cmp_ctx.rs",
+      "line": 380,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "evp_pkey_free_void",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "disposition": "ELIMINATED (source: the unreferenced function was deleted by 69d43bb8d; the operation no longer exists as a source unsafe operation)",
+      "recorded_verdict": "ELIMINATED",
+      "ledger_receipt": "openssh-v1i",
+      "ledger_coordinate": "src/cmp/cmp_ctx.rs:380",
+      "source_receipt": "closure-ssh-b74",
+      "source_receipts": [
+        "evidence/closure-ssh-b74.json",
+        "evidence/closure-sshd-b73-r2.json"
+      ],
+      "source_row_id": "V1:src/cmp/cmp_ctx.rs:380:UNSAFE_FN_DEF",
+      "source_row_key": "obligations",
+      "source_row_coordinates": {
+        "line": 380,
+        "line_current": null,
+        "current_line": null
+      },
+      "span_sha256": null,
+      "span_schema": null,
+      "span_normalisation": null,
+      "span_claim_scope": "not applicable: no definition of this operation exists at the source head, so no span can be hashed",
+      "span_start_line": null,
+      "span_end_line": null,
+      "span_qualified_identity": null,
+      "span_resolution": "operation-absent",
+      "span_source_commit": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+      "span_source_field": null,
+      "source_state": "DELETED",
+      "unsafe_operation_present": false,
+      "deleting_commit": "69d43bb8d8d4b4641f939c7283eb57d92ca5b89c",
+      "previous_coordinate": 380,
+      "current_source_witness": "At S=0238c6e4/c809d94f1, src/cmp/cmp_ctx.rs:380 holds `unsafe extern \"C\" fn x509_extension_free_void`, a different item. `evp_pkey_free_void` no longer occurs anywhere in src/cmp/cmp_ctx.rs.",
+      "elimination_receipt_boundary": "OSSH-V1I-056-DELETED",
+      "supersedes_boundary": "OSSH-V1I-056"
+    },
+    {
+      "id": "B76-RETIRED::src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::evp_md_free_void",
+      "file": "src/cmp/cmp_ctx.rs",
+      "line": 384,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "evp_md_free_void",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "disposition": "ELIMINATED (source: the unreferenced function was deleted by 69d43bb8d; the operation no longer exists as a source unsafe operation)",
+      "recorded_verdict": "ELIMINATED",
+      "ledger_receipt": "openssh-v1i",
+      "ledger_coordinate": "src/cmp/cmp_ctx.rs:384",
+      "source_receipt": "closure-ssh-b74",
+      "source_receipts": [
+        "evidence/closure-ssh-b74.json",
+        "evidence/closure-sshd-b73-r2.json"
+      ],
+      "source_row_id": "V1:src/cmp/cmp_ctx.rs:384:UNSAFE_FN_DEF",
+      "source_row_key": "obligations",
+      "source_row_coordinates": {
+        "line": 384,
+        "line_current": null,
+        "current_line": null
+      },
+      "span_sha256": null,
+      "span_schema": null,
+      "span_normalisation": null,
+      "span_claim_scope": "not applicable: no definition of this operation exists at the source head, so no span can be hashed",
+      "span_start_line": null,
+      "span_end_line": null,
+      "span_qualified_identity": null,
+      "span_resolution": "operation-absent",
+      "span_source_commit": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+      "span_source_field": null,
+      "source_state": "DELETED",
+      "unsafe_operation_present": false,
+      "deleting_commit": "69d43bb8d8d4b4641f939c7283eb57d92ca5b89c",
+      "previous_coordinate": 384,
+      "current_source_witness": "At S=0238c6e4/c809d94f1, src/cmp/cmp_ctx.rs:384 holds `unsafe extern \"C\" fn utf8_string_free_void`, a different item. `evp_md_free_void` no longer occurs anywhere in src/cmp/cmp_ctx.rs.",
+      "elimination_receipt_boundary": "OSSH-V1I-057-DELETED",
+      "supersedes_boundary": "OSSH-V1I-057"
+    },
+    {
+      "id": "B76-RETIRED::src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::octet_string_free_void",
+      "file": "src/cmp/cmp_ctx.rs",
+      "line": 388,
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "octet_string_free_void",
+      "mechanism": "RAND_CMS_STORE_KEYFMT",
+      "disposition": "ELIMINATED (source: the unreferenced function was deleted by 69d43bb8d; the operation no longer exists as a source unsafe operation)",
+      "recorded_verdict": "ELIMINATED",
+      "ledger_receipt": "openssh-v1i",
+      "ledger_coordinate": "src/cmp/cmp_ctx.rs:388",
+      "source_receipt": "closure-ssh-b74",
+      "source_receipts": [
+        "evidence/closure-ssh-b74.json",
+        "evidence/closure-sshd-b73-r2.json"
+      ],
+      "source_row_id": "V1:src/cmp/cmp_ctx.rs:388:UNSAFE_FN_DEF",
+      "source_row_key": "obligations",
+      "source_row_coordinates": {
+        "line": 388,
+        "line_current": null,
+        "current_line": null
+      },
+      "span_sha256": null,
+      "span_schema": null,
+      "span_normalisation": null,
+      "span_claim_scope": "not applicable: no definition of this operation exists at the source head, so no span can be hashed",
+      "span_start_line": null,
+      "span_end_line": null,
+      "span_qualified_identity": null,
+      "span_resolution": "operation-absent",
+      "span_source_commit": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+      "span_source_field": null,
+      "source_state": "DELETED",
+      "unsafe_operation_present": false,
+      "deleting_commit": "69d43bb8d8d4b4641f939c7283eb57d92ca5b89c",
+      "previous_coordinate": 388,
+      "current_source_witness": "At S=0238c6e4/c809d94f1, src/cmp/cmp_ctx.rs:388 holds `unsafe extern \"C\" fn itav_free_void`, a different item. `octet_string_free_void` no longer occurs anywhere in src/cmp/cmp_ctx.rs.",
+      "elimination_receipt_boundary": "OSSH-V1I-058-DELETED",
+      "supersedes_boundary": "OSSH-V1I-058"
+    }
+  ],
+  "unresolved": [],
+  "carry_forward_retirements": [
+    {
+      "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::x509_free_void",
+      "previous_id": "V1:src/cmp/cmp_ctx.rs:376:UNSAFE_FN_DEF",
+      "previous_status": "DISCHARGED",
+      "previous_discharge_receipt": "openssh-v1i",
+      "current_census_occupant_at_same_coordinate": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::general_name_free_void",
+      "retired_boundary": "B76-RETIRED::src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::x509_free_void"
+    },
+    {
+      "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::evp_pkey_free_void",
+      "previous_id": "V1:src/cmp/cmp_ctx.rs:380:UNSAFE_FN_DEF",
+      "previous_status": "DISCHARGED",
+      "previous_discharge_receipt": "openssh-v1i",
+      "current_census_occupant_at_same_coordinate": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::x509_extension_free_void",
+      "retired_boundary": "B76-RETIRED::src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::evp_pkey_free_void"
+    },
+    {
+      "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::evp_md_free_void",
+      "previous_id": "V1:src/cmp/cmp_ctx.rs:384:UNSAFE_FN_DEF",
+      "previous_status": "DISCHARGED",
+      "previous_discharge_receipt": "openssh-v1i",
+      "current_census_occupant_at_same_coordinate": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::utf8_string_free_void",
+      "retired_boundary": "B76-RETIRED::src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::evp_md_free_void"
+    },
+    {
+      "stable_id": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::octet_string_free_void",
+      "previous_id": "V1:src/cmp/cmp_ctx.rs:388:UNSAFE_FN_DEF",
+      "previous_status": "DISCHARGED",
+      "previous_discharge_receipt": "openssh-v1i",
+      "current_census_occupant_at_same_coordinate": "src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::itav_free_void",
+      "retired_boundary": "B76-RETIRED::src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::octet_string_free_void"
+    }
+  ],
+  "supersedes": [
+    {
+      "receipt": "openssh-v1i",
+      "ids": ["OSSH-V1I-055"],
+      "file": "src/cmp/cmp_ctx.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "x509_free_void",
+      "retired_boundary": "B76-RETIRED::src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::x509_free_void",
+      "discharging_receipt": "b76-removed-thunk-retirements",
+      "classification": "ELIMINATED_STRUCTURALLY",
+      "witness": "x509_free_void is absent from src/cmp/cmp_ctx.rs at S=0238c6e4/c809d94f1, and commit 69d43bb8d deletes its definition; src/cmp/cmp_ctx.rs:376 now holds general_name_free_void. The obligation identity (file, kind, enclosing item) no longer exists.",
+      "discharging_evidence": "cmp-ctx-dead-thunks-elimination-sites.json (sha256 a3e8e1c98580c3f0b123efdb58cbe124dc68c18595a11eac44e7a964f64a7eef) records the deletion of OSSH-V1I-055 as ELIMINATED_STRUCTURALLY. This record adds the carry-forward coordinates and the current-coordinate witness. No contract is claimed.",
+      "reason": "dead-code deletion, not a conversion; retirement is existence, not contract",
+      "ledger_row_receipt": "openssh-v1i",
+      "carry_forward_ids": ["V1:src/cmp/cmp_ctx.rs:376:UNSAFE_FN_DEF"],
+      "previous_closures": ["evidence/closure-ssh-b74.json", "evidence/closure-sshd-b73-r2.json"]
+    },
+    {
+      "receipt": "openssh-v1i",
+      "ids": ["OSSH-V1I-056"],
+      "file": "src/cmp/cmp_ctx.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "evp_pkey_free_void",
+      "retired_boundary": "B76-RETIRED::src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::evp_pkey_free_void",
+      "discharging_receipt": "b76-removed-thunk-retirements",
+      "classification": "ELIMINATED_STRUCTURALLY",
+      "witness": "evp_pkey_free_void is absent from src/cmp/cmp_ctx.rs at S=0238c6e4/c809d94f1, and commit 69d43bb8d deletes its definition; src/cmp/cmp_ctx.rs:380 now holds x509_extension_free_void. The obligation identity no longer exists.",
+      "discharging_evidence": "cmp-ctx-dead-thunks-elimination-sites.json (sha256 a3e8e1c98580c3f0b123efdb58cbe124dc68c18595a11eac44e7a964f64a7eef) records the deletion of OSSH-V1I-056 as ELIMINATED_STRUCTURALLY. This record adds the carry-forward coordinates and the current-coordinate witness. No contract is claimed.",
+      "reason": "dead-code deletion, not a conversion; retirement is existence, not contract",
+      "ledger_row_receipt": "openssh-v1i",
+      "carry_forward_ids": ["V1:src/cmp/cmp_ctx.rs:380:UNSAFE_FN_DEF"],
+      "previous_closures": ["evidence/closure-ssh-b74.json", "evidence/closure-sshd-b73-r2.json"]
+    },
+    {
+      "receipt": "openssh-v1i",
+      "ids": ["OSSH-V1I-057"],
+      "file": "src/cmp/cmp_ctx.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "evp_md_free_void",
+      "retired_boundary": "B76-RETIRED::src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::evp_md_free_void",
+      "discharging_receipt": "b76-removed-thunk-retirements",
+      "classification": "ELIMINATED_STRUCTURALLY",
+      "witness": "evp_md_free_void is absent from src/cmp/cmp_ctx.rs at S=0238c6e4/c809d94f1, and commit 69d43bb8d deletes its definition; src/cmp/cmp_ctx.rs:384 now holds utf8_string_free_void. The obligation identity no longer exists.",
+      "discharging_evidence": "cmp-ctx-dead-thunks-elimination-sites.json (sha256 a3e8e1c98580c3f0b123efdb58cbe124dc68c18595a11eac44e7a964f64a7eef) records the deletion of OSSH-V1I-057 as ELIMINATED_STRUCTURALLY. This record adds the carry-forward coordinates and the current-coordinate witness. No contract is claimed.",
+      "reason": "dead-code deletion, not a conversion; retirement is existence, not contract",
+      "ledger_row_receipt": "openssh-v1i",
+      "carry_forward_ids": ["V1:src/cmp/cmp_ctx.rs:384:UNSAFE_FN_DEF"],
+      "previous_closures": ["evidence/closure-ssh-b74.json", "evidence/closure-sshd-b73-r2.json"]
+    },
+    {
+      "receipt": "openssh-v1i",
+      "ids": ["OSSH-V1I-058"],
+      "file": "src/cmp/cmp_ctx.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "octet_string_free_void",
+      "retired_boundary": "B76-RETIRED::src/cmp/cmp_ctx.rs::UNSAFE_FN_DEF::octet_string_free_void",
+      "discharging_receipt": "b76-removed-thunk-retirements",
+      "classification": "ELIMINATED_STRUCTURALLY",
+      "witness": "octet_string_free_void is absent from src/cmp/cmp_ctx.rs at S=0238c6e4/c809d94f1, and commit 69d43bb8d deletes its definition; src/cmp/cmp_ctx.rs:388 now holds itav_free_void. The obligation identity no longer exists.",
+      "discharging_evidence": "cmp-ctx-dead-thunks-elimination-sites.json (sha256 a3e8e1c98580c3f0b123efdb58cbe124dc68c18595a11eac44e7a964f64a7eef) records the deletion of OSSH-V1I-058 as ELIMINATED_STRUCTURALLY. This record adds the carry-forward coordinates and the current-coordinate witness. No contract is claimed.",
+      "reason": "dead-code deletion, not a conversion; retirement is existence, not contract",
+      "ledger_row_receipt": "openssh-v1i",
+      "carry_forward_ids": ["V1:src/cmp/cmp_ctx.rs:388:UNSAFE_FN_DEF"],
+      "previous_closures": ["evidence/closure-ssh-b74.json", "evidence/closure-sshd-b73-r2.json"]
+    }
+  ],
+  "supersedes_note": "The loader (consumer_closure.load_boundaries) admits this file because its kind is 'site-enumerating-boundary-receipt' and its name matches '*-sites.json'; it attaches this receipt's supersedes id list to every boundary this receipt declares. That machinery, however, resolves only same-operation disposition conflicts (adjudicate, conflicting-disposition) and cannot remove a carried-forward obligation. It does not read carry_forward_retirements.",
+  "consumption": {
+    "loader_admission": "consumer_closure.load_boundaries (glob '*-sites.json' + kind == SITE_RECEIPT_KIND); CLI flag not required: --boundary-dir defaults to forensics/memory-safety/campaign/safe-c33/atlas-refresh",
+    "disposition_effect": "none: every boundary here has disposition 'ELIMINATED (...)', so boundary_disposition_is_discharge is false and no site can be discharged from this receipt",
+    "carry_forward_effect": "none by itself: carry_forward_candidates() matches a previous obligation against the current per-site inventory by stable identity (file, kind, item) and falls back to by_exact (file, line, kind) when no stable-identity row is found (forensics/tools/consumer_closure.py:27491-27493). At b76 the four deleted operations are absent by identity but the by_exact fallback matches the DIFFERENT items now occupying lines 376/380/384/388, so the tool reports them as present and cannot add them at either coordinate (obligation_candidates, :27911-27918), producing CARRY_FORWARD_SUPPRESSED. A tool-level guard (require the by_exact row's item to be the same item, or empty) is required before this record can change the closure verdict.",
+    "flag": "there is no retirement/supersession CLI flag; the only census-driven exit is carry_forward_candidates' 'removed' path, which the by_exact fallback defeats here"
+  },
+  "does_not_prove": {
+    "retirement_basis": "The operation no longer exists in source at S=0238c6e4/c809d94f1. Retirement is existence, not contract: no SAFETY_DISCHARGED claim is made for any deleted thunk, because a deleted function has no safety precondition to discharge.",
+    "not_claimed": [
+      "no contract, invariant or # Safety obligation is established for any removed operation",
+      "no live code was reviewed for the deleted thunks; they are retired because they are absent, not because their bodies were proven sound",
+      "the b76 closure verdict is unchanged by this record (it remains REFUSED until the instrument's by_exact fallback is corrected or a corrected census is used)",
+      "no build, test, fmt, clippy, Miri or sanitizer result is claimed: the deletion commit states that no build or closure has run at its source",
+      "this receipt does not assert anything about the fifth deleted thunk (x509_store_free_void), which is covered only by cmp-ctx-dead-thunks-elimination-sites.json"
+    ],
+    "residuals": [
+      "the current per-site inventory (census-b76.json) is the authority for absence; if a future inventory at the same source head reports any of the four items, this record is invalid and must be withdrawn",
+      "the four coordinates are reused by different items, so line-based reasoning about these obligations is unreliable; only the stable identity joined to source absence is load-bearing"
+    ]
+  },
+  "negative_control": {
+    "id": "B76-RETIRED-NC-1",
+    "kind": "source absence scan",
+    "observation": "grep -n over src/cmp/cmp_ctx.rs finds zero occurrences of the four retired item names at S=0238c6e4/c809d94f1; a reintroduced definition would make this record's witness false and would invalidate it"
+  },
+  "non_claims": [
+    "Structural elimination, not SAFETY_DISCHARGED.",
+    "No closure was re-run for this record; it is a source-existence witness bound to the named commits.",
+    "The record is admissible evidence but is not, on its own, sufficient to clear CARRY_FORWARD_SUPPRESSED."
+  ]
+}

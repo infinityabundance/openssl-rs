@@ -1,0 +1,291 @@
+{
+ "schema": "openssl-rs/safe-c33/site-enumerating-boundary-receipt/v1",
+ "kind": "site-enumerating-boundary-receipt",
+ "receipt": "v1l-safe-helpers-elimination",
+ "subphase": "openssh-v1l structural reduction: six zero-precondition helpers are safe",
+ "date": "2026-11-13",
+ "candidate": {
+  "source_head": "df0201be3bf1474bac07463371bf62c491b8f847",
+  "previous_S": "5d4a3ff007e711315d2036aab4214989433ba7b5",
+  "src_content_sha256": "4a7f7cad17a4dc59e83a7420fd725734bd27ed88c06cde620e057da1f7ec3497",
+  "files_sha256": {
+   "src/apps/ciphers.rs": "a00851d52cf8cdbb656f0eac32c6feec8fbe0d7650a5df69d8dcb108e9626d60",
+   "src/asn1/asn_mstbl.rs": "0796c1352d06e7dd4aaceb6a53f8b7d73517bef02897bc354e16750de7646a99",
+   "src/runtime/conf/lib.rs": "10d64a651e75d5ec4dca4af8d4104463e464d937b923387ea2bdd8f00a45b2a2",
+   "src/runtime/confmod/asn1.rs": "5cc7b301f6b5485da393b8aa3587a4a82e83485632171ffa9739be22837e6984",
+   "src/ui/ui_util.rs": "1f11083dec3fbbd47d59a96d7519c6e4bf23a305548773ab4610f3c0c81449e8"
+  }
+ },
+ "summary": {
+  "historical_obligations": 6,
+  "state": "ELIMINATED_STRUCTURALLY",
+  "statement": "6 of the 15 openssh-v1l obligations read no caller pointer or only integers. They are safe extern fns at S3 with compile-time controls. A re-census is required before the applied review-required count can drop from 98 to a projected 79; this receipt does not change the applied count."
+ },
+ "boundaries": [
+  {
+   "id": "OSSH-V1L-001-ELIMINATED",
+   "file": "src/apps/ciphers.rs",
+   "line": 93,
+   "line_current": 93,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dummy_psk",
+   "historical_ids": [
+    "OSSH-V1L-001"
+   ],
+   "disposition": "ELIMINATED (source: safe extern fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "reads no caller pointer or only integer inputs; no caller precondition; the table/registration site accepts a safe fn pointer",
+   "evidence": {
+    "span_sha256": "5c25597b259354f2992bf3d1e9392c058a050b58c3ab20421d1914f2e0f6c911",
+    "span_lines": [
+     93,
+     102
+    ],
+    "qualified_identity": "dummy_psk",
+    "compile_time_control": "src/apps/ciphers.rs:108"
+   },
+   "prior_state": "DISCHARGED by openssh-v1l (site-scoped, review-required); the unsafe-fn identity is now gone",
+   "residuals": [
+    "no build/test at this source candidate"
+   ]
+  },
+  {
+   "id": "OSSH-V1L-005-ELIMINATED",
+   "file": "src/asn1/asn_mstbl.rs",
+   "line": 261,
+   "line_current": 261,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "stbl_module_finish",
+   "historical_ids": [
+    "OSSH-V1L-005"
+   ],
+   "disposition": "ELIMINATED (source: safe extern fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "reads no caller pointer or only integer inputs; no caller precondition; the table/registration site accepts a safe fn pointer",
+   "evidence": {
+    "span_sha256": "c2314cb381fea90facb152fe1122a34829b85b55445bb110a3c47ceeb752984f",
+    "span_lines": [
+     261,
+     263
+    ],
+    "qualified_identity": "stbl_module_finish",
+    "compile_time_control": "src/asn1/asn_mstbl.rs:268"
+   },
+   "prior_state": "DISCHARGED by openssh-v1l (site-scoped, review-required); the unsafe-fn identity is now gone",
+   "residuals": [
+    "no build/test at this source candidate"
+   ]
+  },
+  {
+   "id": "OSSH-V1L-002-ELIMINATED",
+   "file": "src/runtime/conf/lib.rs",
+   "line": 698,
+   "line_current": 698,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "default_is_number",
+   "historical_ids": [
+    "OSSH-V1L-002"
+   ],
+   "disposition": "ELIMINATED (source: safe extern fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "reads no caller pointer or only integer inputs; no caller precondition; the table/registration site accepts a safe fn pointer",
+   "evidence": {
+    "span_sha256": "28e918605aa8dafa7443f0c266d2e3ae39ff081169b5a1a38009aed9006f70a4",
+    "span_lines": [
+     698,
+     700
+    ],
+    "qualified_identity": "default_is_number",
+    "compile_time_control": "src/runtime/conf/lib.rs:705"
+   },
+   "prior_state": "DISCHARGED by openssh-v1l (site-scoped, review-required); the unsafe-fn identity is now gone",
+   "residuals": [
+    "no build/test at this source candidate"
+   ]
+  },
+  {
+   "id": "OSSH-V1L-003-ELIMINATED",
+   "file": "src/runtime/conf/lib.rs",
+   "line": 708,
+   "line_current": 708,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "default_to_int",
+   "historical_ids": [
+    "OSSH-V1L-003"
+   ],
+   "disposition": "ELIMINATED (source: safe extern fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "reads no caller pointer or only integer inputs; no caller precondition; the table/registration site accepts a safe fn pointer",
+   "evidence": {
+    "span_sha256": "9a0ab96e733776fd4af51054f4d0b3c28f972b4598a6c1114801d91cd415a3e0",
+    "span_lines": [
+     708,
+     710
+    ],
+    "qualified_identity": "default_to_int",
+    "compile_time_control": "src/runtime/conf/lib.rs:715"
+   },
+   "prior_state": "DISCHARGED by openssh-v1l (site-scoped, review-required); the unsafe-fn identity is now gone",
+   "residuals": [
+    "no build/test at this source candidate"
+   ]
+  },
+  {
+   "id": "OSSH-V1L-004-ELIMINATED",
+   "file": "src/runtime/confmod/asn1.rs",
+   "line": 255,
+   "line_current": 255,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "oid_module_finish",
+   "historical_ids": [
+    "OSSH-V1L-004"
+   ],
+   "disposition": "ELIMINATED (source: safe extern fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "reads no caller pointer or only integer inputs; no caller precondition; the table/registration site accepts a safe fn pointer",
+   "evidence": {
+    "span_sha256": "2aa612790a83a00e33dc5b751c3d6e5e6495f5aea657690239eaa46c5b6878b9",
+    "span_lines": [
+     255,
+     258
+    ],
+    "qualified_identity": "oid_module_finish",
+    "compile_time_control": "src/runtime/confmod/asn1.rs:263"
+   },
+   "prior_state": "DISCHARGED by openssh-v1l (site-scoped, review-required); the unsafe-fn identity is now gone",
+   "residuals": [
+    "no build/test at this source candidate"
+   ]
+  },
+  {
+   "id": "OSSH-V1L-008-ELIMINATED",
+   "file": "src/ui/ui_util.rs",
+   "line": 217,
+   "line_current": 217,
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ui_method_data_index_init",
+   "historical_ids": [
+    "OSSH-V1L-008"
+   ],
+   "disposition": "ELIMINATED (source: safe extern fn; the unsafe marker is removed)",
+   "source_state": "ELIMINATED",
+   "unsafe_operation_present": false,
+   "contract": "reads no caller pointer or only integer inputs; no caller precondition; the table/registration site accepts a safe fn pointer",
+   "evidence": {
+    "span_sha256": "e57cbdad7ff06b1efa3fba81eed2972aec75a3b70d8fe1e2cf1cf51812514fe5",
+    "span_lines": [
+     217,
+     228
+    ],
+    "qualified_identity": "ui_method_data_index_init",
+    "compile_time_control": "src/ui/ui_util.rs:233"
+   },
+   "prior_state": "DISCHARGED by openssh-v1l (site-scoped, review-required); the unsafe-fn identity is now gone",
+   "residuals": [
+    "no build/test at this source candidate"
+   ]
+  }
+ ],
+ "supersedes": [
+  {
+   "receipt": "openssh-v1l",
+   "ids": [
+    "OSSH-V1L-001"
+   ],
+   "file": "src/apps/ciphers.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "dummy_psk",
+   "discharging_boundary": "OSSH-V1L-001-ELIMINATED",
+   "discharging_receipt": "v1l-safe-helpers-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "dummy_psk is a safe extern fn at src/apps/ciphers.rs:93 (span 93-102 sha256 5c25597b259354f2); the control at src/apps/ciphers.rs:None rejects a restored unsafe qualifier",
+   "reason": "the openssh-v1l unsafe-fn obligation no longer exists at S3"
+  },
+  {
+   "receipt": "openssh-v1l",
+   "ids": [
+    "OSSH-V1L-005"
+   ],
+   "file": "src/asn1/asn_mstbl.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "stbl_module_finish",
+   "discharging_boundary": "OSSH-V1L-005-ELIMINATED",
+   "discharging_receipt": "v1l-safe-helpers-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "stbl_module_finish is a safe extern fn at src/asn1/asn_mstbl.rs:261 (span 261-263 sha256 c2314cb381fea90f); the control at src/asn1/asn_mstbl.rs:268 rejects a restored unsafe qualifier",
+   "reason": "the openssh-v1l unsafe-fn obligation no longer exists at S3"
+  },
+  {
+   "receipt": "openssh-v1l",
+   "ids": [
+    "OSSH-V1L-002"
+   ],
+   "file": "src/runtime/conf/lib.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "default_is_number",
+   "discharging_boundary": "OSSH-V1L-002-ELIMINATED",
+   "discharging_receipt": "v1l-safe-helpers-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "default_is_number is a safe extern fn at src/runtime/conf/lib.rs:698 (span 698-700 sha256 28e918605aa8dafa); the control at src/runtime/conf/lib.rs:705 rejects a restored unsafe qualifier",
+   "reason": "the openssh-v1l unsafe-fn obligation no longer exists at S3"
+  },
+  {
+   "receipt": "openssh-v1l",
+   "ids": [
+    "OSSH-V1L-003"
+   ],
+   "file": "src/runtime/conf/lib.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "default_to_int",
+   "discharging_boundary": "OSSH-V1L-003-ELIMINATED",
+   "discharging_receipt": "v1l-safe-helpers-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "default_to_int is a safe extern fn at src/runtime/conf/lib.rs:708 (span 708-710 sha256 9a0ab96e733776fd); the control at src/runtime/conf/lib.rs:715 rejects a restored unsafe qualifier",
+   "reason": "the openssh-v1l unsafe-fn obligation no longer exists at S3"
+  },
+  {
+   "receipt": "openssh-v1l",
+   "ids": [
+    "OSSH-V1L-004"
+   ],
+   "file": "src/runtime/confmod/asn1.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "oid_module_finish",
+   "discharging_boundary": "OSSH-V1L-004-ELIMINATED",
+   "discharging_receipt": "v1l-safe-helpers-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "oid_module_finish is a safe extern fn at src/runtime/confmod/asn1.rs:255 (span 255-258 sha256 2aa612790a83a00e); the control at src/runtime/confmod/asn1.rs:263 rejects a restored unsafe qualifier",
+   "reason": "the openssh-v1l unsafe-fn obligation no longer exists at S3"
+  },
+  {
+   "receipt": "openssh-v1l",
+   "ids": [
+    "OSSH-V1L-008"
+   ],
+   "file": "src/ui/ui_util.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ui_method_data_index_init",
+   "discharging_boundary": "OSSH-V1L-008-ELIMINATED",
+   "discharging_receipt": "v1l-safe-helpers-elimination",
+   "classification": "ELIMINATED_STRUCTURALLY",
+   "witness": "ui_method_data_index_init is a safe extern fn at src/ui/ui_util.rs:217 (span 217-228 sha256 e57cbdad7ff06b1e); the control at src/ui/ui_util.rs:233 rejects a restored unsafe qualifier",
+   "reason": "the openssh-v1l unsafe-fn obligation no longer exists at S3"
+  }
+ ],
+ "negative_control": {
+  "id": "V1L-SAFE-ELIM-1",
+  "kind": "compile-time coercion",
+  "observation": "each control const requires a safe extern fn; restoring unsafe fails to type-check"
+ },
+ "non_claims": [
+  "Structural elimination, not SAFETY_DISCHARGED.",
+  "The applied 98 count is unchanged until a rebuild, re-census and fresh closure run.",
+  "The nine C-class v1l sites remain review-required.",
+  "No Miri/ASan/test run at S3."
+ ]
+}

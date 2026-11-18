@@ -181,6 +181,13 @@ pub unsafe extern "C" fn i2d_EXTENDED_KEY_USAGE(
 /// STACK_OF(CONF_VALUE) *ext_list)` — `crypto/x509/v3_extku.c:76-90`.
 ///
 /// One `CONF_VALUE` per object, name NULL, value the object's textual form.
+///
+/// # Safety
+///
+/// The `i2v` slot contract stated on [`X509V3ExtMethod`]. Caller: `X509V3_EXT_print`'s `i2v`
+/// arm, which decoded `a` through this row's `EXTENDED_KEY_USAGE_it` (a stack of `ASN1_OBJECT`)
+/// and passes NULL as the sink. The elements are read only; the returned stack and its members
+/// belong to the caller.
 unsafe extern "C" fn i2v_EXTENDED_KEY_USAGE(
     _method: *const X509V3ExtMethod,
     a: *mut c_void,

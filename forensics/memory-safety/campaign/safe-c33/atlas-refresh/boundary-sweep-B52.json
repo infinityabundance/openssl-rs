@@ -743,5 +743,53 @@
   "issue": "the receipt said UNAPPLIED with a prohibition while the ledger already carried an APPROVE row and nine discharged boundaries",
   "resolution": "the ledger adjudication is transcribed into review; the authoring UNAPPLIED block and its prohibition are preserved verbatim in review_history; applied=true. The applied measurement is evidence/closure-ssh-b52-applied.json (186/126/0, nine moved).",
   "reviewed_by": "orchestrator transcription; no verdict was created or altered"
- }
+ },
+ "supersedes": [
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-024"
+   ],
+   "file": "src/x509/v3_ia5.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "ia5_s2i",
+   "discharging_boundary": "B52-S2I-002",
+   "discharging_receipt": "boundary-sweep-B52",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_ia5.rs, UNSAFE_FN_DEF, ia5_s2i) as discharging boundary B52-S2I-002; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 210-218, sha256 00eaeb27a8e602a7), and the discharging record's recorded span_sha256 00eaeb27a8e602a7 equals that content hash; the older record's coordinate 186 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 186-193)",
+   "discharging_evidence": "boundary-sweep-B52 discharges the s2i slot callbacks through do_ext_nconf; its independent adversarial adjudicator returned APPROVE (applied, 2026-11-02)",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-032"
+   ],
+   "file": "src/x509/v3_int.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "s2i_asn1_int",
+   "discharging_boundary": "B52-S2I-004",
+   "discharging_receipt": "boundary-sweep-B52",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_int.rs, UNSAFE_FN_DEF, s2i_asn1_int) as discharging boundary B52-S2I-004; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 65-73, sha256 36cc7c66011c79e0), and the discharging record's recorded span_sha256 36cc7c66011c79e0 equals that content hash; the older record's coordinate 39 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 39-47)",
+   "discharging_evidence": "boundary-sweep-B52 discharges the s2i slot callbacks through do_ext_nconf; its independent adversarial adjudicator returned APPROVE (applied, 2026-11-02)",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  },
+  {
+   "receipt": "p25-x509-v3-ext-slots-sites",
+   "ids": [
+    "P25-X509-V3-SLOT-064"
+   ],
+   "file": "src/x509/v3_utf8.rs",
+   "kind": "UNSAFE_FN_DEF",
+   "operation": "utf8_s2i",
+   "discharging_boundary": "B52-S2I-009",
+   "discharging_receipt": "boundary-sweep-B52",
+   "classification": "SUPERSEDED_PROVEN",
+   "witness": "same (file, kind, operation) = (src/x509/v3_utf8.rs, UNSAFE_FN_DEF, utf8_s2i) as discharging boundary B52-S2I-009; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 195-203, sha256 c0f1478f65cc0472), and the discharging record's recorded span_sha256 c0f1478f65cc0472 equals that content hash; the older record's coordinate 170 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 170-177)",
+   "discharging_evidence": "boundary-sweep-B52 discharges the s2i slot callbacks through do_ext_nconf; its independent adversarial adjudicator returned APPROVE (applied, 2026-11-02)",
+   "reason": "the older record enumerates this slot callback with its required dispatch contract and records no defect: the receipt summary states defective_sites 0 and 'No slot defect was found', and its BLOCKED disposition is explained by the absence of independent review and per-file sanitizer evidence for that batch, not by a defect in the operation."
+  }
+ ],
+ "supersedes_note": "B67-G1 disposition-conflict resolution against the b61 openssh closure. Each entry names ONE older boundary id plus the single boundary of this receipt that carries the same (file, kind, operation); the loader attaches a receipt's supersedes list to every boundary it declares, so every id was checked to match exactly one boundary here, namely the named discharging_boundary. Each entry records the content-addressed binding at S=b6f38f13 and the specific reason the older record is stale; no boundary disposition, span hash or verdict of this receipt is changed by this block."
 }

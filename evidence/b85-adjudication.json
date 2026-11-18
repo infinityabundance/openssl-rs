@@ -1,0 +1,215 @@
+{
+ "schema": "openssl-rs/safe-c33/adjudication/v1",
+ "kind": "independent-adversarial-adjudication",
+ "candidate_tag": "b85",
+ "branch": "stage/p25/b75-ocsp",
+ "head_at_adjudication": "aae5fa52375b93db6c9827ee822775b364371825",
+ "evidence_source_head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+ "source_content_commit": "5edca576b569b4a7bd6acfb09b77938ee555c147",
+ "src_content_sha256": "bc6815c2120e4c440af264b22280fc379d30176e8e5d2f5ee3f3d466364a7a22",
+ "freeze": {
+  "path": "court/freeze-b85/FREEZE-b85.json",
+  "sha256": "f7d312802129f1dfc8aa2df1cba9c2e44ff7b04aa5f6d7799b8ff3c4a70bddf1",
+  "generated_utc": "2026-11-17T09:57:00Z"
+ },
+ "author_role": "independent adversarial adjudicator; produced none of the b85 source, closures, receipts, instruments or reviews",
+ "venue": "source-level and cheap probes; no build, test, Miri, ASan or TSan run by this adjudicator",
+ "claim_under_test": "both OpenSSH closures ACCEPTED 290/290 with element 7 PASS, L7 PASS including the authority differential, self-test 0 failures, Miri 0 UB on the digest set, ASan canaries firing, both rebinds 8/8, gate 2340; SAFE_COMPATIBLE established for ssh and sshd",
+ "verdict": {
+  "state": "NOT ESTABLISHED",
+  "for": ["SAFE_COMPATIBLE (ssh)", "SAFE_COMPATIBLE (sshd)"],
+  "reason": "the count-level claims largely reproduce, but SAFE_COMPATIBLE is refuted by the candidate's own evidence: the closure instrument hard-codes safe_compatible=false, the freeze and the section-7 argument state the candidate is not graduated, five of seven criterion-3 mechanisms are NOT_ESTABLISHED, and the remaining two are discharged only under scoped claims."
+ },
+ "item1_identity": {
+  "reproduced": {
+   "nine_artefact_digests": "9/9 (hash and size recomputed from the files named in the freeze)",
+   "libcrypto_so_3": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+   "libssl_so_3": "1901de061d9d9793849b8c2d2b73847c7feb61339708062aea064a95f0e60b2b",
+   "libcrypto_a": "4a209a3874b30f99b08aacc2431bd1ce316527654b3da5808111a409db59bee4",
+   "libssl_a": "70aa79f8cc8e06b98f851f971640a877196f67a69056018295264a502693ad88",
+   "legacy_so": "234068b02b5fbcc880ceb83d25a1ae159a9b6dd0f9b4c2ac7a0792d4e84cac2d",
+   "openssl": "6c3616791e43fd71247eb241ea4995e03d937a32b77e209235fee32b36229bbd",
+   "ssh": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b",
+   "sshd": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1",
+   "sshd_session_tree_copy": "d8e249c10bb08efa7f923d1bde0cf7b6354439517367b4c7e4a491ea6474acb5",
+   "census": "51b277f2814f6046942a9850e2f6bc07380f272bd56a87ebb489e098836c4e90",
+   "census_source_head": "17042ccf2",
+   "tool": "b42f19bdfb40d94009a6256dcc7a3d5fd96e6a2c8fba595133372ce6fed5f913",
+   "closure_receipts": {
+    "ssh": "89320a3d9f6ccd4ad07a83e125d72707582f19a1220c2e626e5dc964f186710c",
+    "sshd": "4552dc0a26f4c2911d09512c19b9cc1cdb8c819f179534165b98fd736dfe57d4"
+   },
+   "committed_blob_sizes": "6/6 tracked install artefacts match git cat-file -s; working tree clean, so the committed blobs are the measured bytes",
+   "no_receipt_after_freeze": "no evidence/*.json carries generated_utc or date after 2026-11-17T09:57:00Z"
+  },
+  "defects": [
+   "S/E split is not clean: 17042ccf2 (tag b85, named as S) bundles an instrument change (forensics/tools/downstream_build_link.py), the rebuilt artefacts and the b85 closure receipts/atlas in one commit. AGENTS.md section 22 requires E to contain only receipts/atlases/ledger updates; the instrument and rebuilt artefacts are inside the candidate commit.",
+   "court/ is git-ignored. The freeze, census, gate log, Miri transcripts, ASan/TSan records and L7 scripts/transcripts are untracked working-tree files. evidence/b85-l7-replay.json itself says they must be `git add -f`ed if they are to be tracked. The freeze identity is therefore reproducible only while this working tree survives.",
+   "evidence/b85-review-rebind.json binds candidate census sha256 5bb1cd49e7e3dc75e433b5a554cba70c5b8c0c05b2ca1b63f22c12396669f0f7 and source_head 5edca576b, not the frozen census 51b277f2 and head 17042ccf2. src content is byte-identical (bc6815c2), but the review-rebind and the freeze name different census identities; the freeze does not reconcile the delta.",
+   "the rebind's recorded prior closure hashes (ssh 6ad7940b, sshd 7f77a9fb) are pre-final receipts, not the receipts the freeze binds (89320a3d, 4552dc0a). The final receipts were regenerated at 17042ccf2 after the rebind; the chain from rebind to final receipt is not recorded as one identity."
+  ]
+ },
+ "item2_anchors": {
+  "result": "PARTLY REFUTED",
+  "chain_depth": {"ssh": 17, "sshd": 17},
+  "intermediate_hops": "every intermediate carried_forward_from (receipt, sha256) pair is a committed blob at S whose sha256 matches the recorded value (ssh/sshd b84b through b61)",
+  "span_heads": "every recorded span_source_commit is an ancestor of S (checked with git merge-base --is-ancestor for b74..b85)",
+  "terminal_hop_defect": "the chain's terminal hop names court/inventory/closure-ssh-b51-baseline.json (e8481a47...) and court/inventory/closure-sshd-b51-baseline.json (1509f666...). That path exists in no commit and not in the working tree. The content is committed under different paths: evidence/closure-ssh-b51-baseline.json hashes to e8481a47 and evidence/inventory-sshd-b51-baseline.json to 1509f666. The terminal (path, hash) witness is therefore not a committed blob as recorded; only a renamed copy is.",
+  "note": "the chain does terminate at b61, whose span head b6f38f134 is an ancestor of S; the defect is the path identity of the baseline the b61 receipt names."
+ },
+ "item3_closures": {
+  "ssh": {
+   "reachable_files": 625,
+   "obligations": 290,
+   "DISCHARGED": 290,
+   "BLOCKED": 0,
+   "UNKNOWN": 0,
+   "refusals": [],
+   "verdict": "ACCEPTED",
+   "safe_compatible": false,
+   "carried_forward": 280,
+   "carried_forward_removed": 3,
+   "stale_discharge_rejections": 0
+  },
+  "sshd": {
+   "reachable_files": 624,
+   "obligations": 290,
+   "DISCHARGED": 290,
+   "BLOCKED": 0,
+   "UNKNOWN": 0,
+   "refusals": [],
+   "verdict": "ACCEPTED",
+   "safe_compatible": false,
+   "carried_forward": 280,
+   "carried_forward_removed": 3,
+   "stale_discharge_rejections": 0
+  },
+  "element_7": {
+   "reachable_unresolved_sites": 152,
+   "contract_bounded_sites": 116,
+   "contract_bounded_by_class": {
+    "ABI_CONTRACT_CONF_MODULE": 2,
+    "ABI_CONTRACT_CORE_DISPATCH": 26,
+    "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+    "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+    "ABI_CONTRACT_PBE_REGISTRY": 1,
+    "ABI_CONTRACT_PROVIDER": 16,
+    "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+    "ABI_CONTRACT_STORE_LOADER": 3
+   },
+   "closed_target_set_sites": 36,
+   "target_bounded_unresolved_sites": 0,
+   "unclassified_reachable_sites": 0,
+   "status": "PASS (contract-bounded and closed target sets)",
+   "caveat": "the receipt also records target_sets_remain_unbounded=true: the 36 sets are enumerated, not type-enforced, and the RAND_METHOD slot class is not among the 116/36."
+  },
+  "verdict_semantics_defect": "verdict.state is REFUSED only if the refusals list is non-empty; BLOCKED obligations do not refuse. The committed evidence/closure-sshd-b85b.json shows 253 DISCHARGED / 37 BLOCKED with verdict ACCEPTED and refusals [] - the same mechanism-vs-verdict gap, and a stale b85-named receipt left in the freeze.",
+  "discharge_semantics": "DISCHARGED means an existing committed receipt covers the exact site; the closure tool did not re-audit, re-run or independently review that receipt (the receipts' own non_claims say so)",
+  "spot_checks_reproduced": [
+   "src/cmp/cmp_asn.rs::itav_free: `unsafe fn` at 1712-1715 with a # Safety contract; matches OSSH-V1I-067",
+   "src/digest/sha2.rs::sha256_block/sha512_block: `unsafe fn` with extent + disjointness contracts (the 5edca576b four-hole repair is real)",
+   "src/x509/v3_san.rs::v2i_GENERAL_NAME_ex: exported unsafe fn at 1078; NULL-name refusal documented (D-V3-SAN-NULL-NAME-1)",
+   "src/runtime/bio/bf_readbuff.rs::readbuffer_write: unsafe fn at 237-239; BIO stays UNSAFE_OPEN mechanism-wide",
+   "src/provider/digest.rs::dupctx: six distinct `dupctx` definitions (433, 662, 1022, 1241, 1469, 2077). The b85b run refused OSSH-V1I-001..037 as span-unparsable; the final receipt binds sha1::dupctx 662-671 by 'content-migrated-coordinate', although the boundary names only (src/provider/digest.rs, UNSAFE_FN_DEF, dupctx). The enclosing-item identifier is ambiguous across six sites."
+  ]
+ },
+ "item4_instruments": {
+  "self_test": {
+   "command": "python3 forensics/tools/consumer_closure.py --self-test",
+   "exit": 0,
+   "failures": 0,
+   "reproduced_by_adjudicator": true,
+   "scope": "tool controls only, not a candidate safety result"
+  },
+  "miri": {
+   "state": "RUN at b85",
+   "targets": 6,
+   "results_per_arm": {"PASS": 5, "UNSUPPORTED": 1, "UB": 0},
+   "unsupported": "digest::sha2::tests::the_one_shots_resolve_through_the_default_provider (pthread_once)",
+   "coverage": "six digest tests only; no X509, EVP or RAND obligation operation executes under Miri at b85",
+   "refuted_claim": "no b85 command, record or transcript contains -Zmiri-tree-borrows; per-test.sh exports only -Zmiri-disable-isolation plus an empty MIRI_EXTRA_FLAGS, and both arms were invoked with the same flags. The 'tree' arm is the toolchain default model tagged 'tree', so 'Stacked and Tree Borrows' and 'both models agree' are not supported by the stored evidence.",
+   "secondary": "per-test-stacked.tsv and per-test-tree.tsv are byte-identical (outcome-only TSVs)"
+  },
+  "asan": {
+   "state": "RUN at b84; NOT_RUN at b85",
+   "scope": "49 focused tests, 0 AddressSanitizer error reports",
+   "canaries": "both fire: Rust heap-use-after-free and C heap-use-after-free (evidence/b84-instrument-repair.json); the b84 run exists because the b83 canary never executed",
+   "limits": "focused filters only; full suite NOT_RUN under ASan; the canary was not rebuilt at b85"
+  },
+  "tsan": {
+   "state": "RUN at b80; NOT_RUN at b85",
+   "result": "54 tests, two schedules, 0 races, 0 use-after-free, both canaries fired",
+   "limits": "lock/refcount/rcu/store-refcount surfaces only; no test performs the forbidden free-while-in-use shape"
+  },
+  "safe_surface_scan": {
+   "method": "lexical, name-based call graph; a method name can bind across unrelated impls",
+   "result": "X509 69/69 external safe pub fns nullary; RAND 17/17 nullary or c_int-only; EVP 0 external safe pub fns",
+   "limit": "this closes criterion 3 only for those external surfaces; 171 crate-internal safe fns in the EVP files still reach unsafe unaudited"
+  }
+ },
+ "item5_criterion3": {
+  "recorded_verdicts": {
+   "EVP_PKEY_PROVIDER": "NOT_ESTABLISHED",
+   "X509_VERIFY_POLICY": "NOT_ESTABLISHED",
+   "RAND_CMS_STORE_KEYFMT": "NOT_ESTABLISHED",
+   "SSL_SESSION": "SAFETY_DISCHARGED (scoped)",
+   "C_ABI_CONTRACT": "NOT_ESTABLISHED",
+   "RUNTIME_CONCURRENCY": "SAFETY_DISCHARGED (scoped, schedule-bounded)",
+   "BIO": "NOT_ESTABLISHED"
+  },
+  "reproduced": true,
+  "residuals": {
+   "EVP_PKEY_PROVIDER": "R-1 (OsslDispatch.function is *mut c_void; id->signature pairing is a convention, re-scoped to 48 sites), R-2 (SLH-DSA bare *mut u8 slots), review-excluded OSSL_OP_SIGNATURE/KEM/KEYMGMT/ENCODER-DECODER surfaces and EVP_PKEY_CTX tables, 171 unaudited internal safe fns, 2 rows not re-established (sha512_224_init, provider_free_thunk), no Miri/ASan on the 20 mechanism files",
+   "X509_VERIFY_POLICY": "condition 1 per-row gap (v3_cpols i2r_certpol/r2i_certpol have no per-row verdict), condition 2 caller closure not re-established at S with 24 orphan definitions outside the upper bound, condition 4 instrument coverage 2/122; 4 rows not re-established (2 v3_cpols, 2 v3_ncons)",
+   "RAND_CMS_STORE_KEYFMT": "R2 CMS free # Safety texts say 'exactly-once release' where the call releases a reference; no instrument coverage for rand_lib/cmp/pkcs7; 1 row not re-established (pk7_asn1::ri_cb); secret cleansing unaudited",
+   "SSL_SESSION": "scoped only; external serialisation for a concurrent free and a release race; callback/reentrancy cross-cutting obligation NOT_ESTABLISHED",
+   "C_ABI_CONTRACT": "UNSAFE_OPEN mechanism-wide; the 5 closure sites are site arguments, not mechanism discharge; F-EVID-1/F-EVID-2 retained",
+   "RUNTIME_CONCURRENCY": "scoped and schedule-bounded; R1 (no test performs the forbidden release shape) and R2-R6 retained; no Loom model; TSan is a b80 result, not a b85 run",
+   "BIO": "UNSAFE_OPEN mechanism-wide; only 2 production operations are in the closure; the two callbacks now carry written contracts but that is documentation, not discharge"
+  },
+  "cross_cutting": {
+   "callbacks_reentrancy": "NOT_ESTABLISHED",
+   "aliasing_ownership": "NOT_ESTABLISHED",
+   "panic_safety": "NOT_ESTABLISHED",
+   "secret_memory": "NOT_ESTABLISHED"
+  },
+  "note": "even the two SAFETY_DISCHARGED mechanisms are scoped claims; section 7 requires mechanism-wide discharge plus every applicable mechanism in the conservative dependency closure, which is not met."
+ },
+ "item6_residual_classification": [
+  {"residual": "7 rows not re-established at S (sha512_224_init, provider_free_thunk, v3_cpols i2r/r2i_certpol, v3_ncons i2r/v2i_NAME_CONSTRAINTS, pk7_asn1 ri_cb)", "class": "safety-relevant", "why": "a changed or unread obligation operation is a review/discharge coverage gap; two of the seven are in the b85 repair itself"},
+  {"residual": "two CMS free # Safety texts say 'exactly-once release' where the call releases a reference (b80-rebind R2)", "class": "safety-relevant", "why": "the contract-text obligation is wrong. The OPENSSL_clear_free arms are preserved, so cleansing is not lost, but a caller reading the contract can mis-own the value"},
+  {"residual": "no BOUNDARY class covers the RAND_METHOD slots reached from RAND_status/RAND_poll", "class": "safety-relevant", "why": "a dispatch slot reachable from nullary safe functions is not in the 116 contract-bounded or 36 closed-target-set sites and has no witness beyond the rand.h struct; element 7's coverage does not include it"},
+  {"residual": "48 untyped dispatch sites (OsslDispatch.function *mut c_void; id->signature pairing by convention)", "class": "safety-relevant", "why": "no type enforces the function/signature pairing; a mis-typed id is a UB-class defect the safe surface cannot prevent"},
+  {"residual": "openssh-server L4 build-root digest difference (atlas sshd 44e714f0 vs analysed sshd 8af50952; atlas ssh 45da459f vs analysed ssh c2db343d)", "class": "evidence-hygiene", "why": "same recipe/source, different compiled-in prefix; the L7 replay executed the analysed binaries and the per-artefact ledger explicitly does not claim the atlas row measured them. It limits what the L4 row proves, not the safety of the analysed binary"},
+  {"residual": "frozen census (51b277f2) differs from the review-rebind census (5bb1cd49); terminal carry-hop path is uncommitted; court/ is untracked; S commit bundles instrument+artefacts+receipts", "class": "evidence-hygiene", "why": "identity/reproducibility defects. src content is byte-identical between the named heads, so they do not by themselves prove a source drift, but they break section 22's clean S/E and per-call-site witness discipline"}
+ ],
+ "item7_ledger_safety_relevant": [
+  "65 REVIEW_REQUIRED site discharges in the applied campaign ledger (unadjudicated at the required grade; projected after a rebuild and re-census)",
+  "24 X509 orphan definitions present in source but outside the closure's conservative upper bound",
+  "B48-RC2-001 retained BLOCKED and ossl_rand_cleanup_int (B69) BLOCKED outside the closure scope",
+  "BOUNDARY adjudication of the remaining contract-bounded boundaries NOT_RUN; SEAL NOT_RUN",
+  "Loom, dudect, Wycheproof and constant-time/leakage instruments NOT_RUN at S",
+  "full-suite Miri/ASan/TSan NOT_RUN; ASan (b84) and TSan (b80) are carried by content identity, not re-run at S",
+  "the 36 closed target sets are enumerated but the receipt records target_sets_remain_unbounded=true; no type-level closure",
+  "5 of 7 criterion-3 mechanisms and all four cross-cutting obligations NOT_ESTABLISHED"
+ ],
+ "ordered_refutations": [
+  "the candidate's own instrument hard-codes verdict.safe_compatible=false; both closure receipts, the freeze (safe_compatible.value=false), and the safety argument's non_claims state that no SAFE_COMPATIBLE promotion is made and the candidate is not graduated",
+  "section 7 criterion 3 is not met: 5/7 mechanisms NOT_ESTABLISHED (EVP, X509, RAND, C_ABI, BIO) and the 2 discharged mechanisms are scoped only; all four cross-cutting obligations are NOT_ESTABLISHED",
+  "the ledger retains 65 REVIEW_REQUIRED discharges and 24 orphan definitions, and BOUNDARY/SEAL are NOT_RUN; a green site-level closure is not a graduation",
+  "instrument coverage is narrower than the claim: Miri is six digest tests only and no Tree Borrows flag is recorded; ASan is b84 focused and TSan is b80, neither re-run at S",
+  "seven obligation rows touched by changes since the review tree were not re-established at S",
+  "identity/anchor hygiene: the S commit bundles the instrument, rebuilt artefacts and receipts; court/ evidence is untracked; the review-rebind names a different census; the terminal carry hop names an uncommitted path"
+ ],
+ "non_claims": [
+  "this adjudication runs no build, test, Miri, ASan or TSan; it reproduces stored evidence and source-level facts",
+  "it does not claim the b85 conversions are unsafe; it refuses SAFE_COMPATIBLE because the candidate's own evidence does not establish it",
+  "it does not re-adjudicate any individual site review or re-derive any boundary witness",
+  "the count-level claims (290/290, element 7, L7, self-test, rebinds 8/8, gate 2340) are recorded as reproduced; reproducing a count is not reproducing a safety result"
+ ],
+ "artifacts_written": [
+  "evidence/b85-adjudication.json",
+  "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json#/b85_adjudication"
+ ],
+ "source_tree_untouched": "no src/, test or receipt file was modified by this adjudication"
+}

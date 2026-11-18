@@ -999,10 +999,12 @@ pub(crate) unsafe fn ossl_provider_doall_activated(
     // loads `openssl.cnf` first, so a provider named only in the configuration file is
     // present before the sweep.
     //
-    // SAFETY: `lib_ctx_is_default_symbol` and `OPENSSL_init_crypto` are SAFE functions in
-    // this crate, so there is nothing to guard here (D113).
+    // SAFETY: `lib_ctx_is_default_symbol` is a safe pointer comparison and
+    // `OPENSSL_init_crypto` is called with NULL settings, so neither reads caller memory
+    // (D113).
     if lib_ctx_is_default_symbol(ctx) != 0 {
-        OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, ptr::null());
+        // SAFETY: NULL settings, so the initialiser reads no caller memory.
+        unsafe { OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, ptr::null()) };
     }
 
     if store.is_null() {

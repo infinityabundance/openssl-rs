@@ -58,7 +58,7 @@ use crate::runtime::owned_str::OwnedStr;
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_ulong, c_void};
 use core::ptr;
 
-use crate::context::dispatch::OsslDispatch;
+use crate::context::dispatch::{function_for, function_ptr_for, OsslDispatch};
 use crate::dso::{
     DSO_bind_func, DSO_convert_filename, DSO_ctrl, DSO_free, DSO_load, DSO_merge, DSO_new,
     DSO_CTRL_SET_FLAGS, DSO_FLAG_NAME_TRANSLATION_EXT_ONLY,
@@ -360,25 +360,44 @@ pub(crate) unsafe fn provider_init(prov: *mut OsslProvider) -> c_int {
         // field (reason strings) is skipped, because a NULL Rust `fn` value is not valid.
         unsafe {
             while (*d).function_id != 0 {
+                // SAFETY: `d` is a live entry of the terminated table. Each arm names
+                // the id it stores and the accessor re-reads the entry's id before
+                // exposing the pointer, so the id is not only in the arm pattern.
                 match (*d).function_id {
-                    FUNC_PROVIDER_TEARDOWN => (*prov).teardown = (*d).function,
-                    FUNC_PROVIDER_GETTABLE_PARAMS => (*prov).gettable_params = (*d).function,
-                    FUNC_PROVIDER_GET_PARAMS => (*prov).get_params = (*d).function,
-                    FUNC_PROVIDER_SELF_TEST => (*prov).self_test = (*d).function,
-                    FUNC_PROVIDER_RANDOM_BYTES => (*prov).random_bytes = (*d).function,
-                    FUNC_PROVIDER_GET_CAPABILITIES => (*prov).get_capabilities = (*d).function,
-                    FUNC_PROVIDER_QUERY_OPERATION => (*prov).query_operation = (*d).function,
-                    FUNC_PROVIDER_UNQUERY_OPERATION => (*prov).unquery_operation = (*d).function,
-                    FUNC_PROVIDER_GET_REASON_STRINGS if !(*d).function.is_null() => {
+                    FUNC_PROVIDER_TEARDOWN => {
+                        (*prov).teardown = function_ptr_for(d, FUNC_PROVIDER_TEARDOWN)
+                    }
+                    FUNC_PROVIDER_GETTABLE_PARAMS => {
+                        (*prov).gettable_params = function_ptr_for(d, FUNC_PROVIDER_GETTABLE_PARAMS)
+                    }
+                    FUNC_PROVIDER_GET_PARAMS => {
+                        (*prov).get_params = function_ptr_for(d, FUNC_PROVIDER_GET_PARAMS)
+                    }
+                    FUNC_PROVIDER_SELF_TEST => {
+                        (*prov).self_test = function_ptr_for(d, FUNC_PROVIDER_SELF_TEST)
+                    }
+                    FUNC_PROVIDER_RANDOM_BYTES => {
+                        (*prov).random_bytes = function_ptr_for(d, FUNC_PROVIDER_RANDOM_BYTES)
+                    }
+                    FUNC_PROVIDER_GET_CAPABILITIES => {
+                        (*prov).get_capabilities =
+                            function_ptr_for(d, FUNC_PROVIDER_GET_CAPABILITIES)
+                    }
+                    FUNC_PROVIDER_QUERY_OPERATION => {
+                        (*prov).query_operation = function_ptr_for(d, FUNC_PROVIDER_QUERY_OPERATION)
+                    }
+                    FUNC_PROVIDER_UNQUERY_OPERATION => {
+                        (*prov).unquery_operation =
+                            function_ptr_for(d, FUNC_PROVIDER_UNQUERY_OPERATION)
+                    }
+                    FUNC_PROVIDER_GET_REASON_STRINGS => {
                         // The authority's `OSSL_FUNC_provider_get_reason_strings` macro
-                        // answers NULL for an entry whose `function` is NULL, and its caller
-                        // then skips the table. Forming a Rust `fn` value from NULL is not a
-                        // valid value, so the guard keeps a provider's NULL entry the no-op
-                        // it is in C.
-                        get_reason_strings = Some(core::mem::transmute::<
-                            *mut c_void,
-                            GetReasonStringsFn,
-                        >((*d).function));
+                        // answers NULL for an entry whose `function` is NULL, and its
+                        // caller then skips the table. Forming a Rust `fn` value from
+                        // NULL is not a valid value, so the check is inside the
+                        // accessor: a published NULL leaves `None`.
+                        get_reason_strings =
+                            function_for::<GetReasonStringsFn>(d, FUNC_PROVIDER_GET_REASON_STRINGS);
                     }
                     _ => {}
                 }

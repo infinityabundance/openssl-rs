@@ -250,8 +250,8 @@ pub(crate) unsafe fn ossl_prop_defn_get(
     if t.is_null() {
         return core::ptr::null_mut();
     }
-    // SAFETY: `ctx` is NULL or live, so it has a lock.
-    if crate::context::lib_ctx_read_lock(ctx) == 0 {
+    // SAFETY: `ctx` is NULL or live per this function's contract, so it has a lock.
+    if unsafe { crate::context::lib_ctx_read_lock(ctx) } == 0 {
         return core::ptr::null_mut();
     }
     let elem = PropertyDefnElem {
@@ -266,7 +266,7 @@ pub(crate) unsafe fn ossl_prop_defn_get(
             .cast::<PropertyDefnElem>()
     };
     // SAFETY: the lock was taken above.
-    crate::context::lib_ctx_unlock(ctx);
+    unsafe { crate::context::lib_ctx_unlock(ctx) };
     if r.is_null() {
         return core::ptr::null_mut();
     }
@@ -314,8 +314,8 @@ pub(crate) unsafe fn ossl_prop_defn_set(
     if prop.is_null() {
         return 1;
     }
-    // SAFETY: `ctx` is NULL or live, so it has a lock.
-    if crate::context::lib_ctx_write_lock(ctx) == 0 {
+    // SAFETY: `ctx` is NULL or live per this function's contract, so it has a lock.
+    if unsafe { crate::context::lib_ctx_write_lock(ctx) } == 0 {
         return 0;
     }
     // Everything below runs under the write lock and leaves through `end`.
@@ -378,7 +378,7 @@ pub(crate) unsafe fn ossl_prop_defn_set(
                         // No error: the element is in the table and the table owns it.
                         let _ = block.into_raw();
                         // SAFETY: the lock was taken above.
-                        crate::context::lib_ctx_unlock(ctx);
+                        unsafe { crate::context::lib_ctx_unlock(ctx) };
                         return res;
                     }
                 }
@@ -392,7 +392,7 @@ pub(crate) unsafe fn ossl_prop_defn_set(
         }
     }
     // SAFETY: the lock was taken above.
-    crate::context::lib_ctx_unlock(ctx);
+    unsafe { crate::context::lib_ctx_unlock(ctx) };
     res
 }
 

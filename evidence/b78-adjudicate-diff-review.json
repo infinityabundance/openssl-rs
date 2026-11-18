@@ -1,0 +1,132 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/adjudicate-diff-review/v1",
+  "kind": "independent-adversarial-review",
+  "generated_utc": "2026-11-14T16:14:42Z",
+  "reviewer": {
+    "role": "independent adversarial reviewer of an instrument change (AGENTS.md sections 1-7, 15, 21, 22)",
+    "independence": "produced none of the b78 conversions, receipts, closures or the migration instrument; every observed result below is from a command run in this session inside docker/openssl-rs-court.sh",
+    "author_is_not_reviewer": true
+  },
+  "candidate": {
+    "repository_head": "d01596f8280b0ef85fcdd247a775754a39a57d06",
+    "branch": "stage/p25/b75-ocsp",
+    "review_tool_sha256": "facb2a97586493a8cf8fb6a073266046dfc1dd8138110f6c18c575b613e45426",
+    "review_tool_head": "75add65c11b175bc53569dc0f24c4d767126d85b",
+    "closure_tool_sha256": "f31816b1feec47ea1ff78a0481bdf2fb2de2648b21a643653f1564e2f2ac16ca",
+    "closure_tool_commit": "bd518a2149699ee41ee4ba00a40fae6e573b30a6",
+    "claimed_rows": "the seven carried-forward copyctx obligations in evidence/b78-review-migrated-rows.json, moved BLOCKED -> DISCHARGED by the migration arm in evidence/closure-ssh-b78b.json and evidence/closure-sshd-b78b.json"
+  },
+  "venue": {
+    "court": "docker/openssl-rs-court.sh exec (container openssl-rs-court:1, memory.max 8g, memory.current ~3.6g, docker OOMKilled true, memory.events oom=1 oom_kill=1)",
+    "host_free_g": "total 31, used 18, free 5, buff/cache 7, available 12; swap 28 of 31 used. Below the section 6.1 24 GiB build floor; this review ran no build and no closure",
+    "compiles": "none",
+    "scratch": "temporary git fixture under /tmp inside the court; protected paths court/freeze-b78/review-adjudicate-diff.json and evidence/b78-adjudicate-diff-review.json only"
+  },
+  "method": [
+    "obtained both tool revisions (git cat-file -p 75add65c1:forensics/tools/consumer_closure.py sha256 = facb2a97; current worktree sha256 = f31816b1)",
+    "diffed the two revisions and classified every changed top-level function by verdict impact",
+    "read the migration arm, migration_witness, migration_bindings, _carried_forward_coordinates, _census_operation_index, load_boundaries, resolve_carry_forward and the carry-forward enrollment path",
+    "reproduced one real row with the actual tool functions (row 658 sha1::copyctx): ancestor head 0238c6e4ad line 658 def_line 658 span 658-668 sha c639719ffc5bdf36; candidate head bb7d5206 def_line 672 span 672-682 sha c639719ffc5bdf36; boundary recorded hash equals both",
+    "recomputed all copyctx definition hashes in src/provider/digest.rs (6 definitions) and src/provider/legacyprov.rs (2 definitions) at the candidate: all eight are distinct",
+    "ran eight in-memory mutations through the real adjudicate()/migration functions on a temporary git fixture",
+    "read evidence/b78-instrument-reconciliation.json as a claim and checked its two named tool identities against the tool file"
+  ],
+  "diff_summary": {
+    "path": "forensics/tools/consumer_closure.py",
+    "stat": "1782 insertions, 204 deletions",
+    "verdict_changing_functions": [
+      "adjudicate (new census_ops parameter and the migration branch at new lines 31303-31333; the other adjudicate hunks are migration witness plumbing)",
+      "_carried_forward_coordinates (new: ancestor hop extraction)",
+      "_census_operation_index (new: (file, kind, item) -> census lines)",
+      "_digest_pinned_json and _digest_pinned_json_uncached (new: receipt-bytes sha256 gate)",
+      "migration_witness (new: content-migration proof)",
+      "migration_bindings (new: uniqueness map)",
+      "build_receipt (passes census_ops and _census_operation_index(contracts); this is what enables migration)"
+    ],
+    "non_scoped_discharge_changes": [
+      "ABI_CONTRACT_CONF_DEFAULT_METHOD added to the element-7 ABI class sets in build_receipt",
+      "new/changed element-7 and indirect-site helpers (_led_table_cursor, _led_table_terminator_guard, _slot_reaching_stores, _polarity_selectors_for_site, _conf_method_* , conf_default_method_witness, _e7decoder_cursor_controls_body, _external_abi_index, decoder_method_object_witness, e7repin_controls)",
+      "self-test expansions (_pbe_outparam_self_test, _e7repin_search_self_test, _e7core_self_test, self_test)"
+    ],
+    "note": "the element-7/ABI changes can change element-7 PASS/FAIL or contract-bounded counts; they cannot by themselves set an obligation to DISCHARGED. The only verdict-changing path for a scoped discharge is adjudicate + the migration helpers"
+  },
+  "precondition_analysis": {
+    "digest_pinned_carry_chain": {
+      "checked_in_code": "yes: _digest_pinned_json_uncached sha256-compares each hop's receipt bytes to record.receipt_sha256; a missing/unreadable receipt, digest mismatch or repeated receipt ends the walk; later hops come only from the pinned receipt's own obligations[].carried_forward_from",
+      "sound": "not fully",
+      "why": "the pin has no independent anchor. resolve_carry_forward sets receipt_sha256 = sha256_file(path) for the receipt it selects (verdict ACCEPTED, family, artifact name, schema), so a substituted or edited receipt is self-pinned on a fresh run. Control f1 (modified receipt, stale pin) refuses; control f2 (same receipt, pin recomputed by the production rule) discharges. The b78b chain is evidence/closure-ssh-b78.json (sha256 c255b86a..., reproduced) -> evidence/closure-ssh-b76c.json (pinned inside the b78 receipt) -> head 0238c6e4ad; both anchors are computed from working-tree evidence, not compared to a committed manifest. The tool never reads court/freeze-b78/receipt-digests-b78.json",
+      "additional": "chain heads are only checked with git cat-file -e (existence), not ancestry of the candidate span_source_commit; _digest_pinned_json also accepts an absolute receipt path"
+    },
+    "ancestor_coordinate_is_definition_line": {
+      "checked_in_code": "yes: resolve_operation_at_line(root, file, item, hop.line, source_commit=head); span.def_line != hop.line is skipped; a coordinate inside a body resolves to the definition but fails the equality; an ambiguous coordinate refuses",
+      "sound": "yes for this requirement",
+      "observed": "control c BLOCKED"
+    },
+    "ancestor_body_equals_boundary_recorded_hash": {
+      "checked_in_code": "yes: hits are filtered to span_sha256 == boundary.span_sha256; all resolving hops must agree (len(set) > 1 -> None); the unchanged candidate check recorded != boundary_span.sha256 still runs after the migration binding",
+      "sound": "yes as a content check",
+      "observed": "control d BLOCKED span-hash-mismatch; real row 658 reproduces c639719ffc5bdf36 at both heads",
+      "caveat": "load_boundaries reads span_sha256 from the boundary receipt with no digest pin on that receipt, so the 'recorded' side of this equality is only as trustworthy as the evidence directory"
+    },
+    "uniqueness_exactly_one_boundary": {
+      "checked_in_code": "yes: migration_bindings over all boundaries for the file; adjudicate binds only when len(migration_map) == 1; two distinct ids whose bodies match refuse",
+      "sound": "yes for owner uniqueness",
+      "observed": "control b BLOCKED",
+      "notes": "the map includes non-discharging and superseded boundaries (over-refusal only) and is keyed by boundary id (same-id duplicates collapse; no false discharge found from that)"
+    },
+    "different_operation_with_same_name": {
+      "checked_in_code": "partially: resolve_operation_span refuses an unqualified name with several definitions and selects by qualifier when one matches; migration_bindings filters only by scope_item (last component)",
+      "sound": "NO: nothing compares the ancestor hit's qualified identity with the boundary's resolved qualified identity or the candidate resolved identity, so a boundary can bind a row whose ancestor coordinate was a different qualified operation when the two bodies are byte-identical",
+      "observed": "control a DISCHARGED: boundary m2::copyctx, ancestor coordinate the definition line of m1::copyctx, identical bodies; the witness recorded ancestor line 2 and candidate line 11",
+      "realized_rows_impact": "none demonstrated: all 6 copyctx definitions in src/provider/digest.rs and both in src/provider/legacyprov.rs have distinct candidate hashes (recomputed), and the seven rows' operations are the qualified operations at the recorded coordinates. The gap is a property of the mechanism, not a changed verdict in these seven"
+    },
+    "re_admitting_a_prior_refusal": {
+      "checked_in_code": "the arm is reached only when resolve_operation_at_line fails with span-unparsable at the candidate coordinate; the content_accepts path then still applies disposition_discharges, conflict detection, the candidate recorded-hash check, and the uniqueness check. There is no persisted 'refused' state and no check of a prior closure's verdict",
+      "sound": "conditionally: it deliberately re-admits the coordinate-refusal class (the seven rows) and cannot re-admit a withdrawn/RETAINED disposition (control e), a current-hash mismatch (d), a tampered pin (f1), an ambiguous identity, or a row coordinate the chain does not name. It does not consult supersession for admission, so a boundary withdrawn only by a same-operation BLOCKED disposition in another receipt still discharges under the default ENFORCE_DISPOSITION_CONFLICTS=False; that gate is pre-existing, not introduced here"
+    }
+  },
+  "controls": {
+    "method": "temporary two-commit git fixture (m1::copyctx and m2::copyctx; candidate inserts three documentation lines), real adjudicate() with real migration_witness/migration_bindings and git ancestor resolution; no closure run",
+    "results": [
+      {"id": "base", "mutation": "none", "expected": "DISCHARGED", "observed": "DISCHARGED content-migrated-coordinate", "pass": true},
+      {"id": "a", "mutation": "boundary m2::copyctx; ancestor coordinate is m1::copyctx's definition line; bodies byte-identical", "expected": "BLOCKED (different operation)", "observed": "DISCHARGED content-migrated-coordinate; ancestor line 2, candidate def line 11", "pass": false},
+      {"id": "b", "mutation": "second boundary with the identical body", "expected": "BLOCKED", "observed": "BLOCKED span-unparsable (two witnesses, no unique owner)", "pass": true},
+      {"id": "c", "mutation": "hop coordinate inside the definition, not the definition line", "expected": "BLOCKED", "observed": "BLOCKED span-unparsable", "pass": true},
+      {"id": "d", "mutation": "recorded hash equals the ancestor body; candidate body edited", "expected": "BLOCKED", "observed": "BLOCKED span-hash-mismatch", "pass": true},
+      {"id": "e", "mutation": "boundary disposition RETAINED (BLOCKED) (withdrawn/rejected)", "expected": "BLOCKED", "observed": "BLOCKED disposition-is-not-safety-discharged", "pass": true},
+      {"id": "f1", "mutation": "modified carry receipt with the original pin retained", "expected": "BLOCKED", "observed": "BLOCKED span-unparsable (chain empty; no migration-specific reason recorded)", "pass": true},
+      {"id": "f2", "mutation": "same modified receipt with the pin recomputed exactly as resolve_carry_forward does", "expected": "BLOCKED (an authenticated chain needs an independent anchor)", "observed": "DISCHARGED content-migrated-coordinate", "pass": false}
+    ]
+  },
+  "verdict": {
+    "mechanism_state": "OWNERSHIP_RECONSTRUCTED / CONTRACTED, not SAFETY_DISCHARGED",
+    "mechanism_sound_enough_to_justify_the_seven_discharges": false,
+    "seven_rows": "On the migration mechanism's evidence the seven must return to BLOCKED: the mechanism has a reproduced false bind (control a), no independent input anchor (f2) and an unchecked qualification assumption. They may remain DISCHARGED only if the closure explicitly cites the independent per-row content proof in evidence/b78-review-migrated-rows.json (which recomputed ancestor and candidate hashes and re-read the callers) and records that the migration binding itself is not the discharge evidence; the review's migration_binding_not_relied_on=true is exactly that separation. As currently produced, evidence/closure-ssh-b78b.json and evidence/closure-sshd-b78b.json present the 290/290 as tool output, so for closure purposes the seven are BLOCKED until the tool is repaired or the closure is re-issued with the per-row evidence binding",
+    "why_not_documentation": "the missing qualified-identity comparison is a hidden obligation discovered by an adversarial control, not a documentation gap. Section 7 criterion 1 and the section 6 STOP condition (new hidden obligation) apply",
+    "what_the_seven_rows_do_establish": "for each of the seven, the recorded coordinate was the definition line of the same qualified operation at ancestor head 0238c6e4ad; the normalised body there hashes to the boundary's recorded span; the candidate definition has the same hash; the candidate census attributes the operation to the resolved definition line; the caller/contract was re-read at b78 (evidence/b78-review-migrated-rows.json). That is a content proof. It is not a proof that the instrument's migration path is sound"
+  },
+  "required_additional_obligations": [
+    "O1 qualified-operation agreement: require the ancestor hit's qualified_identity to equal the candidate resolved qualified_identity (and the boundary's qualified operation), or refuse the migration; scope_item alone is insufficient",
+    "O2 ancestry: require the hop head to be an ancestor of (or equal to) the candidate span_source_commit (git merge-base --is-ancestor), not merely to exist in the object database",
+    "O3 evidence-input integrity: bind the boundary receipts' digests (the source of span_sha256) and the carry-forward closure's digest to a committed manifest or freeze and check that manifest in the tool; do not compute the only pin from the file selected at run time",
+    "O4 fail closed when source_commit is unset: a migration bind must not be available when the candidate head is unknown, because the 'skip the candidate head' guard is then disabled",
+    "O5 per-hop refusal reasons: record receipt-missing / pin-mismatch / not-the-definition-line / body-hash-mismatch / census-absent / non-unique-owner on the obligation; today f1 and c both surface only span-unparsable",
+    "O6 uniqueness scope: decide and document whether non-discharging siblings may block an owner (currently they do), and key the map by (receipt, id) or boundary object rather than id alone",
+    "O7 path confinement: _digest_pinned_json should reject an absolute receipt path; a carry pin is evidence only if it names a repository-relative evidence file"
+  ],
+  "residual_risks": [
+    "the b78b closures were produced with tracked_tree_dirty=true at repository_head 6cdf9859 while joining obligations at span_source_commit bb7d5206; the operative identity is the source-content digest, not the commit",
+    "the carry-forward source for b78b is the same-artifact closure evidence/closure-ssh-b78.json (sha 3b282f43 for both runs). The discovery path would have skipped a same-sha closure; only an explicit --carry-forward-closure selects it, and that selection is process evidence, not a property the tool enforces",
+    "the default ENFORCE_DISPOSITION_CONFLICTS=False means a boundary withdrawn only by a conflicting BLOCKED disposition can still discharge; migration does not strengthen this and does not consult supersession on admission",
+    "the self-test for f31816b1 is NOT_RUN (no stored log after commit bd518a214); this review's controls are direct function-level evidence, not a self-test pass",
+    "the seven-row content proof is source-level: no build, Miri, ASan or runtime control ran at this candidate (section 6.1 floor not met; available 12 GiB)",
+    "the migration witness records only the chosen ancestor, not the rejected hops; a future edit to the ancestor or to the candidate body is still caught by the span hash, but the reasoning trail is thinner than the uniqueness check implies"
+  ],
+  "what_this_does_not_establish": [
+    "that any of the seven operations is or is not memory-safe at runtime; this review is instrument-level",
+    "that the seven rows' caller/contract analysis is correct beyond reading evidence/b78-review-migrated-rows.json",
+    "that SAFE_COMPATIBLE is established for ssh or sshd; the closures and the promotion assessment both record safe_compatible=false",
+    "that the element-7/ABI changes in the same tool diff are sound; they were classified for verdict impact only",
+    "that any other row reached by the migration path is correctly discharged; none was found beyond the seven, but the mechanism is refused here"
+  ]
+}

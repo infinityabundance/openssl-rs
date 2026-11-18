@@ -363,5 +363,143 @@
     "It does not discharge the shared callee engine_table_cleanup (B20-TBL-3, CONTRACTED) or the two retained sites.",
     "No sanitizer, Miri, dudect or authority differential was run in B45.",
     "A green closure count is a consumer-adjudication result, not a cryptographic or memory-safety proof."
-  ]
+  ],
+  "supersedes": [
+    {
+      "receipt": "p25-engine-callback-sites",
+      "ids": [
+        "P25-ENGINE-CB-001"
+      ],
+      "file": "src/engine/tb_asnmth.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "engine_unregister_all_pkey_asn1_meths",
+      "discharging_boundary": "B45-ENG-CB-001",
+      "discharging_receipt": "boundary-sweep-B45",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/engine/tb_asnmth.rs, UNSAFE_FN_DEF, engine_unregister_all_pkey_asn1_meths) as discharging boundary B45-ENG-CB-001; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 79-82, sha256 5899e51ad5d5eecf), and the discharging record's recorded span_sha256 5899e51ad5d5eecf equals that content hash; the older record's coordinate 72 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 72-75)",
+      "discharging_evidence": "boundary-sweep-B45 re-binds the independently reviewed ENGINE-CLEANUP package to the nine v1t census sites (evidence/mechanism-discharge-ENGINE-CLEANUP-B45-review.json: APPROVE_WITH_CONDITIONS, conditions recorded met) with the mutation-proven control C1",
+      "reason": "the older record states the zero-argument contract is already established ('there is NO caller-supplied pointer, extent, alignment or initialisation precondition'), records defects: [], and explains BLOCKED as 'no independent BOUNDARY review for this site in this batch'. B45 re-binds the independently reviewed ENGINE-CLEANUP package (APPROVE_WITH_CONDITIONS, conditions recorded met) to this site and adds the mutation-proven control C1; the retained callee obligation is B45-R1 and the reachability condition B45-R2."
+    },
+    {
+      "receipt": "p25-engine-callback-sites",
+      "ids": [
+        "P25-ENGINE-CB-002"
+      ],
+      "file": "src/engine/tb_cipher.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "engine_unregister_all_ciphers",
+      "discharging_boundary": "B45-ENG-CB-002",
+      "discharging_receipt": "boundary-sweep-B45",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/engine/tb_cipher.rs, UNSAFE_FN_DEF, engine_unregister_all_ciphers) as discharging boundary B45-ENG-CB-002; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 62-65, sha256 9e8bed9f5c6b150a), and the discharging record's recorded span_sha256 9e8bed9f5c6b150a equals that content hash; the older record's coordinate 55 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 55-58)",
+      "discharging_evidence": "boundary-sweep-B45 re-binds the independently reviewed ENGINE-CLEANUP package to the nine v1t census sites (evidence/mechanism-discharge-ENGINE-CLEANUP-B45-review.json: APPROVE_WITH_CONDITIONS, conditions recorded met) with the mutation-proven control C1",
+      "reason": "the older record states the zero-argument contract is already established ('there is NO caller-supplied pointer, extent, alignment or initialisation precondition'), records defects: [], and explains BLOCKED as 'no independent BOUNDARY review for this site in this batch'. B45 re-binds the independently reviewed ENGINE-CLEANUP package (APPROVE_WITH_CONDITIONS, conditions recorded met) to this site and adds the mutation-proven control C1; the retained callee obligation is B45-R1 and the reachability condition B45-R2."
+    },
+    {
+      "receipt": "p25-engine-callback-sites",
+      "ids": [
+        "P25-ENGINE-CB-003"
+      ],
+      "file": "src/engine/tb_dh.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "engine_unregister_all_dh",
+      "discharging_boundary": "B45-ENG-CB-003",
+      "discharging_receipt": "boundary-sweep-B45",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/engine/tb_dh.rs, UNSAFE_FN_DEF, engine_unregister_all_dh) as discharging boundary B45-ENG-CB-003; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 58-61, sha256 9e805b78aed032c5), and the discharging record's recorded span_sha256 9e805b78aed032c5 equals that content hash; the older record's coordinate 51 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 51-54)",
+      "discharging_evidence": "boundary-sweep-B45 re-binds the independently reviewed ENGINE-CLEANUP package to the nine v1t census sites (evidence/mechanism-discharge-ENGINE-CLEANUP-B45-review.json: APPROVE_WITH_CONDITIONS, conditions recorded met) with the mutation-proven control C1",
+      "reason": "the older record states the zero-argument contract is already established ('there is NO caller-supplied pointer, extent, alignment or initialisation precondition'), records defects: [], and explains BLOCKED as 'no independent BOUNDARY review for this site in this batch'. B45 re-binds the independently reviewed ENGINE-CLEANUP package (APPROVE_WITH_CONDITIONS, conditions recorded met) to this site and adds the mutation-proven control C1; the retained callee obligation is B45-R1 and the reachability condition B45-R2."
+    },
+    {
+      "receipt": "p25-engine-callback-sites",
+      "ids": [
+        "P25-ENGINE-CB-004"
+      ],
+      "file": "src/engine/tb_digest.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "engine_unregister_all_digests",
+      "discharging_boundary": "B45-ENG-CB-004",
+      "discharging_receipt": "boundary-sweep-B45",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/engine/tb_digest.rs, UNSAFE_FN_DEF, engine_unregister_all_digests) as discharging boundary B45-ENG-CB-004; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 73-76, sha256 b70c2c967d142e9e), and the discharging record's recorded span_sha256 b70c2c967d142e9e equals that content hash; the older record's coordinate 66 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 66-69)",
+      "discharging_evidence": "boundary-sweep-B45 re-binds the independently reviewed ENGINE-CLEANUP package to the nine v1t census sites (evidence/mechanism-discharge-ENGINE-CLEANUP-B45-review.json: APPROVE_WITH_CONDITIONS, conditions recorded met) with the mutation-proven control C1",
+      "reason": "the older record states the zero-argument contract is already established ('there is NO caller-supplied pointer, extent, alignment or initialisation precondition'), records defects: [], and explains BLOCKED as 'no independent BOUNDARY review for this site in this batch'. B45 re-binds the independently reviewed ENGINE-CLEANUP package (APPROVE_WITH_CONDITIONS, conditions recorded met) to this site and adds the mutation-proven control C1; the retained callee obligation is B45-R1 and the reachability condition B45-R2."
+    },
+    {
+      "receipt": "p25-engine-callback-sites",
+      "ids": [
+        "P25-ENGINE-CB-005"
+      ],
+      "file": "src/engine/tb_dsa.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "engine_unregister_all_dsa",
+      "discharging_boundary": "B45-ENG-CB-005",
+      "discharging_receipt": "boundary-sweep-B45",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/engine/tb_dsa.rs, UNSAFE_FN_DEF, engine_unregister_all_dsa) as discharging boundary B45-ENG-CB-005; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 58-61, sha256 8cdee9f070eba0f4), and the discharging record's recorded span_sha256 8cdee9f070eba0f4 equals that content hash; the older record's coordinate 51 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 51-54)",
+      "discharging_evidence": "boundary-sweep-B45 re-binds the independently reviewed ENGINE-CLEANUP package to the nine v1t census sites (evidence/mechanism-discharge-ENGINE-CLEANUP-B45-review.json: APPROVE_WITH_CONDITIONS, conditions recorded met) with the mutation-proven control C1",
+      "reason": "the older record states the zero-argument contract is already established ('there is NO caller-supplied pointer, extent, alignment or initialisation precondition'), records defects: [], and explains BLOCKED as 'no independent BOUNDARY review for this site in this batch'. B45 re-binds the independently reviewed ENGINE-CLEANUP package (APPROVE_WITH_CONDITIONS, conditions recorded met) to this site and adds the mutation-proven control C1; the retained callee obligation is B45-R1 and the reachability condition B45-R2."
+    },
+    {
+      "receipt": "p25-engine-callback-sites",
+      "ids": [
+        "P25-ENGINE-CB-006"
+      ],
+      "file": "src/engine/tb_eckey.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "engine_unregister_all_ec",
+      "discharging_boundary": "B45-ENG-CB-006",
+      "discharging_receipt": "boundary-sweep-B45",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/engine/tb_eckey.rs, UNSAFE_FN_DEF, engine_unregister_all_ec) as discharging boundary B45-ENG-CB-006; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 58-61, sha256 3cd27fd849ddf3fa), and the discharging record's recorded span_sha256 3cd27fd849ddf3fa equals that content hash; the older record's coordinate 51 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 51-54)",
+      "discharging_evidence": "boundary-sweep-B45 re-binds the independently reviewed ENGINE-CLEANUP package to the nine v1t census sites (evidence/mechanism-discharge-ENGINE-CLEANUP-B45-review.json: APPROVE_WITH_CONDITIONS, conditions recorded met) with the mutation-proven control C1",
+      "reason": "the older record states the zero-argument contract is already established ('there is NO caller-supplied pointer, extent, alignment or initialisation precondition'), records defects: [], and explains BLOCKED as 'no independent BOUNDARY review for this site in this batch'. B45 re-binds the independently reviewed ENGINE-CLEANUP package (APPROVE_WITH_CONDITIONS, conditions recorded met) to this site and adds the mutation-proven control C1; the retained callee obligation is B45-R1 and the reachability condition B45-R2."
+    },
+    {
+      "receipt": "p25-engine-callback-sites",
+      "ids": [
+        "P25-ENGINE-CB-007"
+      ],
+      "file": "src/engine/tb_pkmeth.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "engine_unregister_all_pkey_meths",
+      "discharging_boundary": "B45-ENG-CB-007",
+      "discharging_receipt": "boundary-sweep-B45",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/engine/tb_pkmeth.rs, UNSAFE_FN_DEF, engine_unregister_all_pkey_meths) as discharging boundary B45-ENG-CB-007; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 60-63, sha256 5dd02bab6744d130), and the discharging record's recorded span_sha256 5dd02bab6744d130 equals that content hash; the older record's coordinate 53 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 53-56)",
+      "discharging_evidence": "boundary-sweep-B45 re-binds the independently reviewed ENGINE-CLEANUP package to the nine v1t census sites (evidence/mechanism-discharge-ENGINE-CLEANUP-B45-review.json: APPROVE_WITH_CONDITIONS, conditions recorded met) with the mutation-proven control C1",
+      "reason": "the older record states the zero-argument contract is already established ('there is NO caller-supplied pointer, extent, alignment or initialisation precondition'), records defects: [], and explains BLOCKED as 'no independent BOUNDARY review for this site in this batch'. B45 re-binds the independently reviewed ENGINE-CLEANUP package (APPROVE_WITH_CONDITIONS, conditions recorded met) to this site and adds the mutation-proven control C1; the retained callee obligation is B45-R1 and the reachability condition B45-R2."
+    },
+    {
+      "receipt": "p25-engine-callback-sites",
+      "ids": [
+        "P25-ENGINE-CB-008"
+      ],
+      "file": "src/engine/tb_rand.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "engine_unregister_all_rand",
+      "discharging_boundary": "B45-ENG-CB-008",
+      "discharging_receipt": "boundary-sweep-B45",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/engine/tb_rand.rs, UNSAFE_FN_DEF, engine_unregister_all_rand) as discharging boundary B45-ENG-CB-008; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 58-61, sha256 a9122f207c82d7cc), and the discharging record's recorded span_sha256 a9122f207c82d7cc equals that content hash; the older record's coordinate 51 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 51-54)",
+      "discharging_evidence": "boundary-sweep-B45 re-binds the independently reviewed ENGINE-CLEANUP package to the nine v1t census sites (evidence/mechanism-discharge-ENGINE-CLEANUP-B45-review.json: APPROVE_WITH_CONDITIONS, conditions recorded met) with the mutation-proven control C1",
+      "reason": "the older record states the zero-argument contract is already established ('there is NO caller-supplied pointer, extent, alignment or initialisation precondition'), records defects: [], and explains BLOCKED as 'no independent BOUNDARY review for this site in this batch'. B45 re-binds the independently reviewed ENGINE-CLEANUP package (APPROVE_WITH_CONDITIONS, conditions recorded met) to this site and adds the mutation-proven control C1; the retained callee obligation is B45-R1 and the reachability condition B45-R2."
+    },
+    {
+      "receipt": "p25-engine-callback-sites",
+      "ids": [
+        "P25-ENGINE-CB-009"
+      ],
+      "file": "src/engine/tb_rsa.rs",
+      "kind": "UNSAFE_FN_DEF",
+      "operation": "engine_unregister_all_rsa",
+      "discharging_boundary": "B45-ENG-CB-009",
+      "discharging_receipt": "boundary-sweep-B45",
+      "classification": "SUPERSEDED_PROVEN",
+      "witness": "same (file, kind, operation) = (src/engine/tb_rsa.rs, UNSAFE_FN_DEF, engine_unregister_all_rsa) as discharging boundary B45-ENG-CB-009; at S=b6f38f134 the operation resolves to exactly one brace-matched definition (span lines 59-62, sha256 8d65003d04f8479d), and the discharging record's recorded span_sha256 8d65003d04f8479d equals that content hash; the older record's coordinate 52 lies inside this operation's definition span at its own identity 6fa558f9c (there: lines 52-55)",
+      "discharging_evidence": "boundary-sweep-B45 re-binds the independently reviewed ENGINE-CLEANUP package to the nine v1t census sites (evidence/mechanism-discharge-ENGINE-CLEANUP-B45-review.json: APPROVE_WITH_CONDITIONS, conditions recorded met) with the mutation-proven control C1",
+      "reason": "the older record states the zero-argument contract is already established ('there is NO caller-supplied pointer, extent, alignment or initialisation precondition'), records defects: [], and explains BLOCKED as 'no independent BOUNDARY review for this site in this batch'. B45 re-binds the independently reviewed ENGINE-CLEANUP package (APPROVE_WITH_CONDITIONS, conditions recorded met) to this site and adds the mutation-proven control C1; the retained callee obligation is B45-R1 and the reachability condition B45-R2."
+    }
+  ],
+  "supersedes_note": "B67-G1 disposition-conflict resolution against the b61 openssh closure. Each entry names ONE older boundary id plus the single boundary of this receipt that carries the same (file, kind, operation); the loader attaches a receipt's supersedes list to every boundary it declares, so every id was checked to match exactly one boundary here, namely the named discharging_boundary. Each entry records the content-addressed binding at S=b6f38f13 and the specific reason the older record is stale; no boundary disposition, span hash or verdict of this receipt is changed by this block."
 }

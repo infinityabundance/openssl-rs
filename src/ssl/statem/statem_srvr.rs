@@ -279,8 +279,16 @@ fn do_compressed_cert(s: *mut Ssl) -> bool {
 }
 
 /// `int send_certificate_request(SSL_CONNECTION *s)` — `statem_srvr.c:416-456`.
-pub(crate) fn send_certificate_request(s: *mut Ssl) -> bool {
-    // SAFETY: the caller passes a live connection.
+///
+/// # Safety
+/// `s` is a live connection. A live connection's `pending_cipher` field is then
+/// NULL or a published static cipher-table row, because the field is only ever
+/// assigned a NULL default or a row returned by `ssl3_choose_cipher` /
+/// `ssl3_get_cipher_by_char`. That read-only invariant is all this predicate
+/// needs, so no exclusive borrow is required.
+pub(crate) unsafe fn send_certificate_request(s: *mut Ssl) -> bool {
+    // SAFETY: the caller passes a live connection, so `pending_cipher` is NULL or a
+    // static table row and every field read below is live.
     unsafe {
         let c = (*s).pending_cipher;
         let auth = if c.is_null() {
@@ -307,7 +315,11 @@ pub(crate) fn send_certificate_request(s: *mut Ssl) -> bool {
 /// `static int send_server_key_exchange(SSL_CONNECTION *s)` — `statem_srvr.c:353-386`,
 /// the plain-PSK identity-hint arm reduced (module header). `pub(crate)` so the client driver can
 /// use the same predicate to know whether a `ServerKeyExchange` follows the Certificate.
-pub(crate) fn send_server_key_exchange(s: *mut Ssl) -> bool {
+///
+/// # Safety
+/// `s` is a live connection; its `pending_cipher` field is NULL or a live cipher
+/// table.
+pub(crate) unsafe fn send_server_key_exchange(s: *mut Ssl) -> bool {
     // SAFETY: the caller passes a live connection.
     unsafe {
         let c = (*s).pending_cipher;
@@ -3452,8 +3464,8 @@ unsafe fn tls13_server_post_server_hello(s: *mut Ssl) -> c_int {
     if unsafe { (*s).hit } == 0 {
         // The TLS1.3 write transition's `SW_ENCRYPTED_EXTENSIONS` arm
         // (`statem_srvr.c:664-674`): an in-handshake CertificateRequest precedes the server Certificate.
-        // SAFETY: `s` is live.
-        if send_certificate_request(s) {
+        // SAFETY: `s` is live per this function's caller contract.
+        if unsafe { send_certificate_request(s) } {
             // In-handshake requests carry an empty `certificate_request_context`
             // (`statem_srvr.c:3049-3054`).
             // SAFETY: `s` is live.
@@ -10203,6 +10215,33 @@ mod client_hello_parse_tests {
                 SSL_free(s);
             }
             SSL_CTX_free(ctx);
+        }
+    }
+}
+
+#[cfg(test)]
+mod unsafe_contract_controls {
+    /// Qualifier control: both server predicates dereference the caller's
+    /// connection, so they must not be callable from safe Rust with an unchecked
+    /// pointer. A type-level "is an unsafe fn" assertion is not expressible on
+    /// stable Rust, so the declarations are pinned in the production source text,
+    /// which is read from disk and truncated at the first `#[cfg(test)]` module.
+    /// This test's own assertion text is therefore never searched, and each needle is
+    /// assembled from fragments, so only removing an `unsafe` qualifier can make it
+    /// fail.
+    #[test]
+    #[allow(clippy::expect_used)]
+    fn the_server_predicates_are_unsafe_fns() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/ssl/statem/statem_srvr.rs");
+        let src = std::fs::read_to_string(path).expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        for needle in [
+            concat!("pub(crate) unsafe fn ", "send_certificate_request("),
+            concat!("pub(crate) unsafe fn ", "send_server_key_exchange("),
+        ] {
+            assert!(prod.contains(needle), "missing {needle}");
         }
     }
 }

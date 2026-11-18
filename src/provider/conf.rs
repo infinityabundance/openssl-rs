@@ -68,7 +68,7 @@
 // exports by name, and a `provider_conf_init` renamed would be a different symbol.
 #![allow(non_snake_case)]
 
-use core::ffi::{c_char, c_int, c_void};
+use core::ffi::{c_char, c_int, c_void, CStr};
 use core::ptr;
 
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx, RawCtx};
@@ -232,6 +232,15 @@ pub(crate) unsafe fn ossl_prov_conf_ctx_free(vpcgbl: *mut c_void) {
 /// The `ossl_provider_free` callback in the shape `OPENSSL_sk_pop_free` takes. The authority
 /// passes the function pointer directly; the registry's stack here is untyped, so the adapter
 /// exists to make the coercion explicit rather than to change it.
+///
+/// # Safety
+///
+/// `OPENSSL_sk_pop_free`'s element-release contract: `value` is one element of
+/// `ProviderConfGlobal::activated_providers`, i.e. a live `OSSL_PROVIDER *` whose single
+/// reference the list owns. The list is only ever grown at `:566-578`, which pushes `actual` --
+/// the object `ossl_provider_add_to_store` handed over with the store's reference -- and on a
+/// refused push deactivates and frees that reference itself. `ossl_provider_free` releases the
+/// one reference, so the list's teardown releases it exactly once.
 unsafe extern "C" fn provider_free_thunk(value: *mut c_void) {
     // SAFETY: the list's entries are `OSSL_PROVIDER *` and it is handing each one over for
     // release.
@@ -618,7 +627,9 @@ unsafe fn provider_conf_parse_bool_setting(
         return 0;
     }
 
-    // SAFETY: `confvalue` is NUL-terminated.
+    // SAFETY: `confvalue` is non-NULL here and NUL-terminated per this function's contract, so
+    // the borrow of its whole string is valid for the rest of the call.
+    let confvalue = unsafe { CStr::from_ptr(confvalue) };
     if matches_any(confvalue, TRUE_WORDS) != 0 {
         // SAFETY: `val` is writable per the contract.
         unsafe { *val = 1 };
@@ -638,54 +649,33 @@ unsafe fn provider_conf_parse_bool_setting(
 }
 
 /// The seven spellings that mean true, in the authority's own order.
-const TRUE_WORDS: &[*const c_char] = &[
-    c"1".as_ptr(),
-    c"yes".as_ptr(),
-    c"YES".as_ptr(),
-    c"true".as_ptr(),
-    c"TRUE".as_ptr(),
-    c"on".as_ptr(),
-    c"ON".as_ptr(),
-];
+///
+/// `&CStr`, not `*const c_char`: the comparison below reads both operands, so the spelling the
+/// authority hands to `strcmp` is expressed as the value that already carries its invariant.
+const TRUE_WORDS: &[&CStr] = &[c"1", c"yes", c"YES", c"true", c"TRUE", c"on", c"ON"];
 /// The seven that mean false.
-const FALSE_WORDS: &[*const c_char] = &[
-    c"0".as_ptr(),
-    c"no".as_ptr(),
-    c"NO".as_ptr(),
-    c"false".as_ptr(),
-    c"FALSE".as_ptr(),
-    c"off".as_ptr(),
-    c"OFF".as_ptr(),
-];
+const FALSE_WORDS: &[&CStr] = &[c"0", c"no", c"NO", c"false", c"FALSE", c"off", c"OFF"];
 
 /// Whether `s` is `strcmp`-equal to any of `words`.
 ///
-/// A **safe** function, per D113's rule: it dereferences neither argument, so it has no
-/// contract of its own to state -- both pointers are handed to `strcmp`, which is where the
-/// requirement lives. That is what lets the two call sites below stand in an `if`/`else if`
-/// chain without each needing an `unsafe` block of its own.
-///
-/// # Safety
-/// The caller's responsibility, discharged by the call sites: `s` must be NUL-terminated, and
-/// every entry of `words` is a static literal.
-fn matches_any(s: *const c_char, words: &[*const c_char]) -> c_int {
-    for w in words {
-        // SAFETY: `s` is NUL-terminated and `w` is a static literal -- the contract this
-        // function's caller meets.
-        if unsafe { crate::runtime::bio::sys::strcmp(s, *w) } == 0 {
-            return 1;
-        }
+/// Both operands are `&CStr`, so the two things `strcmp` needs — live storage and a terminating
+/// NUL — are established before the call and a safe caller cannot supply a pointer that lacks
+/// them. Equality of two `CStr`s is equality of their byte sequences, which is exactly
+/// `strcmp(a, b) == 0` (neither operand may contain an interior NUL, by construction). The
+/// conversion from the authority's raw `*const c_char` therefore happens once, at the call site
+/// that already holds the `CONF_VALUE`'s NUL-terminated string, and the comparison itself no
+/// longer needs `unsafe`.
+fn matches_any(s: &CStr, words: &[&CStr]) -> c_int {
+    if words.iter().any(|w| **w == *s) {
+        1
+    } else {
+        0
     }
-    0
 }
 
-/// Whether `a` and `b` are `strcmp`-equal. Safe for the same reason as [`matches_any`].
-///
-/// # Safety
-/// Both must be NUL-terminated.
-fn same(a: *const c_char, b: *const c_char) -> bool {
-    // SAFETY: both are NUL-terminated per the contract.
-    unsafe { crate::runtime::bio::sys::strcmp(a, b) == 0 }
+/// Whether `a` and `b` are `strcmp`-equal, for the same reason as [`matches_any`].
+fn same(a: &CStr, b: &CStr) -> bool {
+    a == b
 }
 
 /// `static int provider_conf_load(OSSL_LIB_CTX *libctx, const char *name, const char *value,
@@ -744,21 +734,25 @@ unsafe fn provider_conf_load(
         let (raw_name, confvalue) = unsafe { ((*ecmd).name, (*ecmd).value) };
         // SAFETY: `raw_name` is NUL-terminated.
         let confname = unsafe { skip_dot(raw_name) };
+        // SAFETY: `confname` is `raw_name` or a suffix of it, so it is NUL-terminated, and the
+        // storage belongs to `cnf`, which is live for the rest of this call.
+        let confname_cstr = unsafe { CStr::from_ptr(confname) };
 
-        // The four pseudo-commands. `strcmp` on the *dot-stripped* name, so `.activate` and
-        // `activate` are the same command. `same` is safe and its contract is the one line
-        // above: `confname` is NUL-terminated and each literal is static -- which is what lets
-        // the chain stand without an `unsafe` block per comparison.
-        if same(confname, c"identity".as_ptr()) {
+        // The four pseudo-commands. Equality on the *dot-stripped* name, so `.activate` and
+        // `activate` are the same command. `same` takes `&CStr` operands, so the NUL-termination
+        // that `strcmp` needs is part of the values being compared and the chain needs no
+        // `unsafe` block of its own.
+        if same(confname_cstr, c"identity") {
             name = confvalue;
-        } else if same(confname, c"soft_load".as_ptr()) {
-            // SAFETY: all three arguments are this call's.
+        } else if same(confname_cstr, c"soft_load") {
+            // SAFETY: all three arguments are this call's; `confname` is the raw form of the
+            // `&CStr` above.
             if unsafe { provider_conf_parse_bool_setting(confname, confvalue, &mut soft) } == 0 {
                 return 0;
             }
-        } else if same(confname, c"module".as_ptr()) {
+        } else if same(confname_cstr, c"module") {
             path = confvalue;
-        } else if same(confname, c"activate".as_ptr()) {
+        } else if same(confname_cstr, c"activate") {
             // SAFETY: as above.
             if unsafe { provider_conf_parse_bool_setting(confname, confvalue, &mut activate) } == 0
             {
@@ -1050,3 +1044,38 @@ mod diagnostic_buffer_tests {
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(ProviderConfGlobal => zero_state_sweep_provider_conf_global);
+
+#[cfg(test)]
+mod unsafe_contract_controls {
+    /// Qualifier control: `matches_any` and `same` compare NUL-terminated strings, and the audit
+    /// that found them (evidence/b84-safe-pub-audit.json, `EVP_PKEY_PROVIDER` rows 65-66) recorded
+    /// them as holes because a **safe** fn with a raw-pointer parameter cannot state a contract
+    /// that a safe caller is obliged to meet. The repair expresses both operands as `&CStr`, which
+    /// makes liveness and the terminating NUL properties of the value rather than obligations of
+    /// the caller, so the comparison needs no `unsafe` at all. A type-level assertion on the
+    /// parameter type is not expressible on stable Rust, so the signatures are pinned in the
+    /// production source text, which is read from disk and truncated at the first `#[cfg(test)]`
+    /// **module** (this file has an earlier `#[cfg(test)] const _` declaration, which is not a
+    /// test body and must not truncate the prefix). This test's own assertion text is therefore
+    /// never searched, and the needles are assembled from fragments, so only reverting a
+    /// signature can make it fail.
+    #[test]
+    #[allow(clippy::expect_used)]
+    fn the_comparison_helpers_take_cstr_operands() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/provider/conf.rs");
+        let src = std::fs::read_to_string(path).expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]\nmod ")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        for needle in [
+            concat!("fn matches_any(s: &", "CStr, words: &[&", "CStr]) -> c_int"),
+            concat!("fn same(a: &", "CStr, b: &", "CStr) -> bool"),
+        ] {
+            assert!(prod.contains(needle), "missing {needle}");
+        }
+        assert!(
+            !prod.contains(concat!("unsafe fn ", "matches_any")),
+            "the comparison helpers must not need `unsafe`"
+        );
+    }
+}

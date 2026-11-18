@@ -1,0 +1,258 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/per-call-site-witness/v1",
+  "kind": "b76 three-site close/core dispatch analysis and re-pin",
+  "receipt": "b76c-three-sites",
+  "date": "2026-11-13",
+  "source_identity": {
+    "branch": "stage/p25/b75-ocsp",
+    "head": "ab075cdc3",
+    "install_prefix": "artifacts/phase2/install",
+    "libcrypto_so_3_sha256": "8f18871713a80cc58babcd2f539f273fe9a88807acfa15bb165fb4c8fc1f4aef",
+    "consumer": {
+      "path": "court/tmp/openssh-closure/client-b76/openssh-9.9p1/ssh",
+      "sha256": "0384f983b392b450a135b960c7b8f991636d509bf9ef5ff841e3d3b7367545d4"
+    },
+    "tool": {
+      "path": "forensics/tools/consumer_closure.py",
+      "sha256_before": "2fcf9247008abf5057beeed5f5beb2819c962547bd93d923289fe0279c8ad431",
+      "sha256_after": "74e3953b36233b1071b9b720e1a0551e866801fa41db5e31b5f878fdabd46161"
+    }
+  },
+  "sites": [
+    {
+      "id": "b76c-store-p_close",
+      "symbol": "OSSL_STORE_open_ex",
+      "function_start": "0x455800",
+      "enclosing_inlined_function": "ossl_store_close_it",
+      "transfer": {
+        "address": "0x456007",
+        "instruction": "call   *%rax",
+        "bytes": "ff d0",
+        "path_guard": "fetched_loader != NULL: 0x455fef test %r12,%r12 (4d 85 e4); 0x455ff2 je 0x4561e7 (0f 84 ef 01 00 00); provider block is the fallthrough at 0x455ff8"
+      },
+      "slot_load": {
+        "address": "0x455ff8",
+        "instruction": "mov    0xb8(%r14),%rax",
+        "bytes": "49 8b 86 b8 00 00 00",
+        "offset": "0xb8"
+      },
+      "slot": "OsslStoreLoader.p_close (offset 0xb8, OSSL_FUNC_store_close_fn)",
+      "base_object": {
+        "register": "%r14",
+        "value": "(*ctx).loader",
+        "reaching_definitions": [
+          "0x455c51 mov %rax,%r14 (ossl_store_get0_loader_int return)",
+          "0x455d8d xor %r14d,%r14d (loader = fetched_loader = NULL after a failed fetch)",
+          "0x455fb2 mov %r12,%r14 (loader = fetched_loader)"
+        ],
+        "fetched_loader_register": "%r12",
+        "fetched_loader_definitions": [
+          "0x455c3c xor %r12d,%r12d",
+          "0x455ce9 mov %rax,%r12 (inner_loader_fetch return)"
+        ]
+      },
+      "writer": {
+        "function": "loader_from_algorithm",
+        "file": "src/store/store_meth.rs",
+        "line": 399,
+        "arm": "OSSL_FUNC_STORE_CLOSE",
+        "value": "the provider's OSSL_FUNC_store_close_fn dispatch entry"
+      },
+      "documented_interface": "OSSL_provider_init OSSL_DISPATCH table (include/openssl/core.h:186-195); OSSL_FUNC_STORE_CLOSE in include/openssl/core_dispatch.h",
+      "decision": "EXTERNAL ABI CONTRACT (provider-supplied store loader)",
+      "class": "ABI_CONTRACT_PROVIDER",
+      "scope": "store-loader-p_close",
+      "witness_rule": "store_loader_provider_witness: slot 0xb8, base %r14, fetched_loader = inner_loader_fetch return, single writer loader_from_algorithm under OSSL_FUNC_STORE_CLOSE, new b76 guard shape, source layout/typedef checks"
+    },
+    {
+      "id": "b76c-store-closefn",
+      "symbol": "OSSL_STORE_open_ex",
+      "function_start": "0x455800",
+      "enclosing_inlined_function": "ossl_store_close_it",
+      "transfer": {
+        "address": "0x4561f3",
+        "instruction": "call   *%rax",
+        "bytes": "ff d0",
+        "path_guard": "fetched_loader == NULL: the je 0x4561e7 taken at 0x455ff2"
+      },
+      "slot_load": {
+        "address": "0x4561e7",
+        "instruction": "mov    0x50(%r14),%rax",
+        "bytes": "49 8b 46 50",
+        "offset": "0x50"
+      },
+      "slot": "OsslStoreLoader.closefn (offset 0x50, OSSL_STORE_close_fn)",
+      "base_object": {
+        "register": "%r14",
+        "value": "(*ctx).loader (the legacy loader on this arm)",
+        "reaching_definitions": [
+          "0x455c51 mov %rax,%r14 (ossl_store_get0_loader_int return)",
+          "0x455d8d xor %r14d,%r14d",
+          "0x455fb2 mov %r12,%r14"
+        ]
+      },
+      "writer": {
+        "function": "OSSL_STORE_LOADER_set_close",
+        "file": "src/store/store_register.rs",
+        "line": 452,
+        "value": "the close_function parameter"
+      },
+      "documented_interface": "OSSL_STORE_LOADER_set_close (include/openssl/store.h:346) + OSSL_STORE_register_loader (store.h:353); the exported registration seam admits any application OSSL_STORE_LOADER",
+      "decision": "EXTERNAL ABI CONTRACT (application-registered legacy loader)",
+      "class": "ABI_CONTRACT_STORE_LOADER",
+      "witness_rule": "store_loader_legacy_witness: slot 0x50, base %r14 with the three enumerated definitions, single writer OSSL_STORE_LOADER_set_close, no in-image registration caller, new b76 guard shape, source layout/typedef and exported-header checks"
+    },
+    {
+      "id": "b76c-child-c_prov_up_ref",
+      "symbol": "ossl_provider_up_ref_parent",
+      "function_start": "0x47ca10",
+      "transfer": {
+        "address": "0x47caaa",
+        "instruction": "jmp    *%rcx",
+        "bytes": "ff e1",
+        "tail_call": true
+      },
+      "slot_load": {
+        "address": "0x47ca95",
+        "instruction": "mov    0x48(%rcx),%rcx",
+        "bytes": "48 8b 49 48",
+        "offset": "0x48"
+      },
+      "slot": "ChildProvGlobals.c_prov_up_ref (offset 0x48, OSSL_FUNC_PROVIDER_UP_REF = 110)",
+      "base_object": {
+        "register": "%rcx",
+        "value": "the libctx slot-18 object (ChildProvGlobals)",
+        "reaching_definitions": [
+          "0x47ca31 mov %rax,%rcx after 0x47ca27 call lib_ctx_get_data(libctx, 18) (the explicit arm)",
+          "0x47ca85 mov 0x78(%rax),%rcx (the inlined default-context arm: OsslLibCtx.child_provider is at 0x78; %rax is DEFAULT_CONTEXT at 0x47ca60 or pthread_getspecific(DEFAULT_CONTEXT_THREAD_LOCAL) at 0x47ca7a)"
+        ],
+        "note": "these are two encodings of the same slot-18 object; the null-prov path is the defensive branch of ossl_provider_libctx and is not a different object"
+      },
+      "writer": {
+        "function": "ossl_provider_init_as_child",
+        "file": "src/provider/child.rs",
+        "line": 534,
+        "arm": "OSSL_FUNC_PROVIDER_UP_REF",
+        "value": "the parent's OSSL_DISPATCH entry for OSSL_FUNC_PROVIDER_UP_REF"
+      },
+      "documented_interface": "the core-to-provider `in` OSSL_DISPATCH table of OSSL_provider_init (include/openssl/core.h:186-195), forwarded to OSSL_LIB_CTX_new_from_dispatch/OSSL_LIB_CTX_new_child; core_dispatch.h declares OSSL_FUNC_PROVIDER_UP_REF 110 and OSSL_CORE_MAKE_FUNC(..., provider_up_ref, ...)",
+      "decision": "EXTERNAL ABI CONTRACT (the parent/core supplies the upcall)",
+      "class": "ABI_CONTRACT_CORE_DISPATCH",
+      "witness_rule": "core_dispatch_witness: libctx index 18, field offset 0x48, single writer ossl_provider_init_as_child under OSSL_FUNC_PROVIDER_UP_REF, header id 110, NULL guard on the loaded slot; the default-context arm is admitted only at the source-derived OsslLibCtx.child_provider offset"
+    }
+  ],
+  "fixture_changes": {
+    "STORE_LOADER_LEGACY_SITE_PINS[0x1F8F13]": {
+      "before": "(\"OSSL_STORE_open_ex\", 0x9C3)",
+      "after": "(\"OSSL_STORE_open_ex\", 0x9F3)",
+      "evidence": "b73 +0x9C3 does not land on an indirect transfer in b76 (it is inside the cmpq at 0x4561c2); the closefn call is 0x4561f3 (+0x9F3, ff d0), searched over OSSL_STORE_open_ex 0x455800..0x456287 and proved by the legacy witness"
+    },
+    "STORE_LOADER_PROVIDER_SITE_PIN": {
+      "before": "(\"OSSL_STORE_open_ex\", 0x7D9)",
+      "after": "(\"OSSL_STORE_open_ex\", 0x807)",
+      "evidence": "b73 +0x7D9 lands mid-instruction in b76; the p_close call is 0x456007 (+0x807, ff d0) and is proved by the provider witness"
+    },
+    "STORE_LOADER_CLOSE_GUARD": {
+      "before": "je/jne pair at b73 0x1F8D11/0x1F8EFE (pins +0x7C1/+0x7C4, +0x9AE/+0x9B1)",
+      "after": "single test/je: 0x455fef (4d 85 e4), 0x455ff2 je 0x4561e7; zero block 0x4561e7, nonzero block 0x455ff8",
+      "why": "the b76 build folds the two close arms into the two successors of one guard block; the witness proves the CFG reachability of the site from exactly one arm, not block identity"
+    },
+    "self_test_fixtures": {
+      "e7abi site_pins/site_specs/expected": "the two store sites moved from 0x1F8F13/0x1F8D29 (func 0x1F8550) to 0x4561F3/0x456007 (func 0x455800) with pins +0x9F3/+0x807",
+      "e7pbe non-widening abi_specs": "the same two rows re-pinned to 0x4561F3/0x456007",
+      "e7core cohort": "kept at 26 (not lowered); ossl_provider_up_ref_parent is resolved again",
+      "e7store p_close count": "kept at 1 (not lowered)",
+      "e7store wrapper-source control": "replaced by a direct inner_loader_fetch retarget control; the exported-wrapper arm is recorded NOT_RUN because b76 inlines the wrapper"
+    }
+  },
+  "mutation_controls": [
+    {
+      "control": "e7core default-context offset",
+      "mutation": "0x47ca85 mov 0x78(%rax),%rcx -> mov 0x70(%rax),%rcx",
+      "expected": "core_dispatch_witness refuses (slot base is no longer a documented slot-18 field)",
+      "observed": "refused; restored"
+    },
+    {
+      "control": "e7store close guard target",
+      "mutation": "0x455ff2 je 0x4561e7 -> je 0x455ff8",
+      "expected": "p_close-guard-is-not-the-enumerated-pair and closefn-guard-is-not-the-enumerated-pair",
+      "observed": "both refused; restored"
+    },
+    {
+      "control": "e7store fetch provenance",
+      "mutation": "the call to inner_loader_fetch is retargeted to ossl_store_get0_loader_int",
+      "expected": "wrong-base-constructor",
+      "observed": "refused; restored"
+    },
+    {
+      "control": "e7repin pin conditions",
+      "mutation": "unknown symbol leaf; non-call offset; non-call instruction",
+      "expected": "each refuses; no moved row accepted by two rows",
+      "observed": "all refuse (pre-existing control, still passing after the re-pin)"
+    }
+  ],
+  "element7": {
+    "before": {
+      "target_bounded_unresolved_sites": 3,
+      "contract_bounded_sites": 152,
+      "unclassified_reachable_sites": 0,
+      "resolved_sites": 51835,
+      "by_class": {
+        "ABI_CONTRACT_CORE_DISPATCH": 25,
+        "ABI_CONTRACT_PROVIDER": 15,
+        "ABI_CONTRACT_STORE_LOADER": 2
+      }
+    },
+    "after": {
+      "target_bounded_unresolved_sites": 0,
+      "contract_bounded_sites": 155,
+      "unclassified_reachable_sites": 0,
+      "resolved_sites": 51835,
+      "by_class": {
+        "ABI_CONTRACT_CORE_DISPATCH": 26,
+        "ABI_CONTRACT_PROVIDER": 16,
+        "ABI_CONTRACT_STORE_LOADER": 3
+      },
+      "status": "PASS (contract-bounded)",
+      "receipt": "court/freeze-b76/e7-b76c-after.json",
+      "tool_sha256": "74e3953b36233b1071b9b720e1a0551e866801fa41db5e31b5f878fdabd46161"
+    }
+  },
+  "self_test": {
+    "result": "PASS",
+    "log": "court/freeze-b76/selftest-b76c.log",
+    "note": "e7abi, e7repin, e7pbe, e7core, e7store, e7pemreg and the store guard/fetch controls pass"
+  },
+  "closure": {
+    "status": "COMPLETED",
+    "command": "python3 forensics/tools/consumer_closure.py --family openssh --artifact court/tmp/openssh-closure/client-b76/openssh-9.9p1/ssh --install artifacts/phase2/install --inventory court/freeze-b76/census-b76.json --enrolment-blockers forensics/memory-safety/campaign/safe-c33/atlas-refresh/callback-enrolment-blockers.json --carry-forward-closure evidence/closure-ssh-b76b.json --enforce-disposition-conflicts --workdir court/tmp/closure-b76c-ssh --output evidence/closure-ssh-b76c.json",
+    "receipt": "evidence/closure-ssh-b76c.json",
+    "receipt_sha256": "a5b55b88b926e24a6324f8b939b466e2bf940fc142cafcdea2f719b10ae426d6",
+    "verdict": {
+      "state": "ACCEPTED",
+      "safe_compatible": false,
+      "reason": "no refusal condition fired"
+    },
+    "refusals": 0,
+    "counts": {
+      "reachable_files": 631,
+      "reachable_production_obligations": 290,
+      "DISCHARGED": 290,
+      "BLOCKED": 0,
+      "UNKNOWN": 0,
+      "carried_forward": 213,
+      "carried_forward_removed": 3
+    },
+    "element7": {
+      "status": "PASS (contract-bounded)",
+      "target_bounded_unresolved_sites": 0,
+      "contract_bounded_sites": 155,
+      "unclassified_reachable_sites": 0
+    }
+  },
+  "non_claims": [
+    "the witnesses bound the slot, its in-image writer and the documented interface that fills it; they do not prove the body of the provider/application callback or the provider's own memory safety",
+    "the target set remains unbounded because the external ABI admits any conforming provider/application loader; a green element-7 is a contract bound, not a finite target set",
+    "the default-context arm of ossl_provider_up_ref_parent is the defensive prov == NULL branch of ossl_provider_libctx; admitting it proves only that it reads the same slot-18 object, not that a NULL prov is a valid caller input (the `# Safety` contract still requires a live prov)"
+  ]
+}

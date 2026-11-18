@@ -394,6 +394,13 @@ unsafe fn module_free(md: *mut ConfModule) {
 }
 
 /// The `module_free` callback in the shape `OPENSSL_sk_pop_free` takes.
+///
+/// # Safety
+/// `value` is NULL or a live `CONF_MODULE` (the `*mut ConfModule` the stack element
+/// stores) that the calling stack owns and is handing over: aligned, not already
+/// released, and not referenced anywhere else once the callback runs. The body passes
+/// it to `module_free`, which releases the module and its owned members exactly once;
+/// NULL is a no-op for that callee.
 unsafe extern "C" fn module_free_thunk(value: *mut c_void) {
     // SAFETY: the stack's entries are `ConfModule *` and it is handing each one over for
     // release.

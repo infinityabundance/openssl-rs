@@ -231,10 +231,9 @@ pub(crate) fn ossl_namemap_stored(libctx: *mut c_void) -> *mut OsslNamemap {
     if namemap.is_null() {
         return namemap;
     }
-    // SAFETY: `namemap` is a live stored map and the pre-population is the authority's own
-    // first-use step; the map's own lock guards each insertion (*not* the block as a whole,
-    // which matches the authority, whose pre-population runs outside the map's lock).
-    let nms = ossl_namemap_empty(namemap);
+    // SAFETY: `namemap` is NULL or the live map `lib_ctx_get_data` just resolved from a
+    // liveness-checked context, which is `ossl_namemap_empty`'s contract.
+    let nms = unsafe { ossl_namemap_empty(namemap) };
     if nms < 0 {
         // The authority's "could not get lock to make the count, so maybe internal objects
         // weren't added. This seems safest." -- it answers NULL rather than a map whose
@@ -295,6 +294,15 @@ unsafe fn get_legacy_evp_names(
 }
 
 /// `static void get_legacy_cipher_names(const OBJ_NAME *on, void *arg)`.
+///
+/// # Safety
+///
+/// `OBJ_NAME_do_all`'s walk contract: `on` is a live, non-NULL row of the global `OBJ_NAME`
+/// table for the walk's type, valid for the duration of the call and owned by the table, whose
+/// `name` is a NUL-terminated string the table owns; `arg` is the pointer the walk was given,
+/// here the live `OSSL_NAMEMAP` of [`prepopulate_legacy_names`]'s frame (the only installation
+/// site, `:367-376`, passes that map and nothing else). Neither pointer is stored or released
+/// here, so the callback owns no allocation and cannot double-release anything.
 unsafe extern "C" fn get_legacy_cipher_names(on: *const ObjName, arg: *mut c_void) {
     // SAFETY: `on` is the walk's own row and both strings are the table's.
     let cipher = unsafe { OBJ_NAME_get((*on).name, (*on).type_) }.cast::<EvpCipher>();
@@ -305,6 +313,11 @@ unsafe extern "C" fn get_legacy_cipher_names(on: *const ObjName, arg: *mut c_voi
 }
 
 /// `static void get_legacy_md_names(const OBJ_NAME *on, void *arg)`.
+///
+/// # Safety
+///
+/// As [`get_legacy_cipher_names`]: `on` is a live row of the `OBJ_NAME_TYPE_MD_METH` half of the
+/// table and `arg` is [`prepopulate_legacy_names`]'s live map (installation at `:372-376`).
 unsafe extern "C" fn get_legacy_md_names(on: *const ObjName, arg: *mut c_void) {
     // SAFETY: as `get_legacy_cipher_names`.
     let md = unsafe { OBJ_NAME_get((*on).name, (*on).type_) }.cast::<EvpMd>();
@@ -524,8 +537,12 @@ unsafe extern "C" fn names_stack_free(n: *mut c_void) {
 /// (supported concurrent use) must not read the counter beside a writer that stores it
 /// under the write lock in [`namemap_add_name`]. Answering the counter without the lock
 /// was the data race TSan's parallel gate found (finding `tf-tsan-parallel-gate-parallel`).
+///
+/// # Safety
+/// `namemap` is NULL (which answers 1) or a live `OSSL_NAMEMAP` that is not
+/// concurrently freed; its lock was created by the map's constructor.
 #[allow(dead_code)] // unreachable until the stratum that calls it lands
-pub(crate) fn ossl_namemap_empty(namemap: *mut OsslNamemap) -> c_int {
+pub(crate) unsafe fn ossl_namemap_empty(namemap: *mut OsslNamemap) -> c_int {
     if namemap.is_null() {
         return 1;
     }
@@ -1392,5 +1409,27 @@ mod tests {
             // The context's releaser clears the flag and then releases.
             ossl_stored_namemap_free(nm);
         }
+    }
+}
+
+#[cfg(test)]
+mod unsafe_contract_controls {
+    /// Qualifier control: `ossl_namemap_empty` dereferences the caller's map, so
+    /// it must not be callable from safe Rust with an unchecked pointer. A
+    /// type-level "is an unsafe fn" assertion is not expressible on stable Rust,
+    /// so the declaration is pinned in the production source text, which is read
+    /// from disk and truncated at the first `#[cfg(test)]` module. This test's own
+    /// assertion text is therefore never searched, and the needle is assembled from
+    /// fragments, so only removing the `unsafe` qualifier can make it fail.
+    #[test]
+    #[allow(clippy::expect_used)]
+    fn namemap_empty_is_an_unsafe_fn() {
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/src/context/namemap.rs");
+        let src = std::fs::read_to_string(path).expect("production source must be readable");
+        let prod = src
+            .split_once("\n#[cfg(test)]")
+            .map_or(src.as_str(), |(prod, _)| prod);
+        let needle = concat!("pub(crate) unsafe fn ", "ossl_namemap_empty(");
+        assert!(prod.contains(needle), "missing {needle}");
     }
 }

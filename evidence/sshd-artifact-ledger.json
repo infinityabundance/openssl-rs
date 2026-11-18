@@ -1,0 +1,27 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/per-artefact-ledger/v1",
+ "kind": "per-artefact-ledger-binding",
+ "date": "2026-11-13",
+ "family_id": "openssh",
+ "run_id": "run:build-link:candidate:openssh:sshd",
+ "level": "L4-linked",
+ "outcome": "reached",
+ "recipe_id": "recipe:openssh:9.9p1",
+ "source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+ "source_root_hash": "4a5abaf399ac1ee4ba977c30f73c748b7dcaf5c168eb26b1ff65cedefe28906f",
+ "source_root_hash_rule": null,
+ "source_tree_domain_hash": null,
+ "artifact_rel": "sshd",
+ "artifact_sha256": "64e0a4cc190fc3897aabcd2f95cdc630d25b3dc11b2a9635973449fe84164f92",
+ "install_libcrypto_sha256": "e8a90ba4bd1e597ed22adbfef56c7336b80a65477393ba5a74afbbe428b985cb",
+ "recorded_candidate_install": null,
+ "freeze": "court/freeze-b73/FREEZE-b73.json",
+ "freeze_sha256": "1926ccdba24c8cb3c11068207a37a456a1d9a904b224a852254582f3a97a5324",
+ "witness": "the same OpenSSH 9.9p1 recipe/source row that built ssh also built sshd; FREEZE-b73 records artefacts.files.sshd.sha256 = 64e0a4cc190fc3897aabcd2f95cdc630d25b3dc11b2a9635973449fe84164f92, the exact binary this receipt analysed, and build/openssh_relink_script.sha256 = efc650eeb744a8af14e4721d532204b11f0976871aaa9d60aa9f1d9c668a6d76. The atlas body candidate_identity install (be578c86) is stale and is deliberately not carried into recorded_candidate_install; the freeze-proven install is e8a90ba4.",
+ "note": "This is a per-artefact ledger join, not a build-link measurement. It removes the structural one-row-cannot-bind-two-artefacts defect for sshd; a fresh closure run is still required.",
+ "non_claims": [
+  "does not re-measure sshd",
+  "does not change any closure count, verdict or refusal",
+  "does not establish SAFE_COMPATIBLE"
+ ]
+}

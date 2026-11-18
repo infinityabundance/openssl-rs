@@ -1,13 +1,20 @@
 # Safe-33 unsafe→safe conversion — progress ledger
 
-> **Current state (2026-10-30).** The current candidate is `openssl-rs 0.0.44` (**not
-> published**; `0.0.43` is the published release, 2026-10-30). The figures below were
+> **Current state (2026-10-30; graduation record added 2026-11-17).** The working
+> tree is `openssl-rs 0.0.46` (**not published**; `0.0.45` is the published release,
+> 2026-10-30). The figures below were
 > measured at an earlier HEAD and are retained as the measurement they are. Current
 > facts that supersede any reading of them as a graduation: the non-monotone bound is
 > **REPAIRED** and the v1r closure is ACCEPTED at 312 obligations (90 DISCHARGED /
 > 222 BLOCKED / 0 UNKNOWN), but element 7 remains **FAIL** on 81 target-bounded sites
 > (71 at the pre-engine analyzer checkpoint, not re-measured at 0.0.44), so
-> `SAFE_COMPATIBLE` remains **0/33**. The engine-cleanup package is
+> `SAFE_COMPATIBLE` remains **0/33**. Since 2026-11-17 a **principal-issued**
+> `SAFE_COMPATIBLE` verdict exists for the `ssh` and `sshd` consumer binaries at
+> candidate b85c (`evidence/SAFE-COMPATIBLE-openssh-b85c.json`): a risk acceptance
+> over five mechanisms still `NOT_ESTABLISHED` at mechanism-wide grade, with the
+> independent adjudicator's `NOT ESTABLISHED` verdict preserved in
+> `evidence/b85c-adjudication.json`. The cohort counter is not advanced by it. The
+> engine-cleanup package is
 > APPROVED_WITH_CONDITIONS but still blocked and discharges no obligation. The current
 > file/test/unsafe figures are in
 > `forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md`.

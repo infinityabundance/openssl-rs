@@ -456,8 +456,8 @@ pub(crate) fn evp_cipher_new() -> *mut EvpCipher {
 /// `name` must be NUL-terminated and `vlegacy_nid` a writable `c_int`.
 unsafe extern "C" fn set_legacy_nid(name: *const c_char, vlegacy_nid: *mut c_void) {
     let legacy_nid = vlegacy_nid.cast::<c_int>();
-    // SAFETY: `name` is NUL-terminated per the contract.
-    let legacy_method = OBJ_NAME_get(name, OBJ_NAME_TYPE_CIPHER_METH);
+    // SAFETY: `name` is NUL-terminated and valid for the call per the contract.
+    let legacy_method = unsafe { OBJ_NAME_get(name, OBJ_NAME_TYPE_CIPHER_METH) };
     // SAFETY: `legacy_nid` is writable per the contract.
     if unsafe { *legacy_nid } == -1 {
         return;
@@ -1947,7 +1947,8 @@ unsafe extern "C" fn do_all_cipher_fn(nm: *const ObjName, arg: *mut c_void) {
 unsafe fn cipher_names_do_all(fn_: Option<CipherDoAllFn>, arg: *mut c_void, sorted: bool) {
     // SAFETY: `arg` is the caller's own and is passed through unchanged.
     let mut dc = DoAllCipher { arg, fn_ };
-    OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS, ptr::null());
+    // SAFETY: NULL settings, so the initialiser reads no caller memory.
+    unsafe { OPENSSL_init_crypto(OPENSSL_INIT_ADD_ALL_CIPHERS, ptr::null()) };
     if sorted {
         // SAFETY: `dc` is this frame's own live object and `do_all_cipher_fn` is the visitor the
         // table's contract asks for.

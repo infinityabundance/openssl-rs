@@ -180,11 +180,10 @@ pub unsafe extern "C" fn OPENSSL_config(appname: *const c_char) {
         dup = unsafe { sys::strdup(appname) };
     }
     let settings = stack_settings(dup);
-    // `OPENSSL_init_crypto` is not an `unsafe fn`: it is a safe C entry point that
-    // validates its own arguments and reports failure through the error queue and
-    // its return value. The settings object is live and correctly laid out for the
-    // duration of the call, which is the most it can require of a caller.
-    OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, &settings);
+    // SAFETY: `settings` is this frame's live `OpenSSLInitSettings` and outlives the
+    // call; its `filename` is NULL and its `appname` is NULL or the `strdup` block
+    // above, which is NUL-terminated. Nothing else accesses the object during the call.
+    unsafe { OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, &settings) };
     // SAFETY: `dup` came from `strdup` and is released exactly once; `free(NULL)`
     // is defined, which is the authority's release path for the NULL case.
     unsafe { sys::free(dup.cast::<c_void>()) };

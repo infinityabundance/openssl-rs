@@ -507,6 +507,7 @@ pub(crate) mod free_probe {
 
     thread_local! {
         static RELEASES: RefCell<Vec<usize>> = const { RefCell::new(Vec::new()) };
+        static CLEARED: RefCell<Vec<(usize, usize, bool)>> = const { RefCell::new(Vec::new()) };
     }
 
     /// Record that the seam is about to release `p` (NULL records nothing).
@@ -527,6 +528,40 @@ pub(crate) mod free_probe {
     /// Forget every observation made on this thread.
     pub(crate) fn reset() {
         RELEASES.with(|r| r.borrow_mut().clear());
+        CLEARED.with(|r| r.borrow_mut().clear());
+    }
+
+    /// Record that the seam cleansed `p` over `n` bytes before releasing it, together with
+    /// whether every one of those bytes read zero immediately afterwards (the block is still live
+    /// at this point, so the read is in bounds).
+    ///
+    /// A family test asserts `cleared(p) == vec![(n, true)]` to show that the release took the
+    /// cleansing arm over the right length; a plain `CRYPTO_free`, or a release removed entirely,
+    /// records nothing for that address.
+    ///
+    /// # Safety
+    /// `p` is non-NULL and live for `n` bytes, and `cleanse` has just written zero to all of them.
+    pub(crate) unsafe fn record_cleared(p: *mut c_void, n: usize) {
+        let addr = p as usize;
+        // SAFETY: `p` is live for `n` bytes per this function's contract.
+        let zeroed = (0..n).all(|i| unsafe { *p.cast::<u8>().add(i) } == 0);
+        let _ = CLEARED.try_with(|r| {
+            if let Ok(mut r) = r.try_borrow_mut() {
+                r.push((addr, n, zeroed));
+            }
+        });
+    }
+
+    /// The `(length, zeroed)` cleansing records the seam made for `p` on this thread, in order.
+    pub(crate) fn cleared(p: *const c_void) -> Vec<(usize, bool)> {
+        let addr = p as usize;
+        CLEARED.with(|r| {
+            r.borrow()
+                .iter()
+                .filter(|&&(a, _, _)| a == addr)
+                .map(|&(_, n, zeroed)| (n, zeroed))
+                .collect()
+        })
     }
 
     /// How many releases of `p` the seam has performed on this thread.
@@ -553,6 +588,13 @@ unsafe fn clear_dealloc(p: *mut c_void, n: usize, file: *const c_char, line: c_i
     }
     // SAFETY: `p` is live for `n` bytes per the caller's contract.
     unsafe { cleanse(p.cast::<u8>(), n) };
+    // Test-only: observe at the one funnel every cleansing release passes through -- while the
+    // block is still live -- that the wipe covered `n` bytes and left them zero.
+    #[cfg(test)]
+    {
+        // SAFETY: `p` is still live for `n` bytes and `cleanse` just zeroed them.
+        unsafe { free_probe::record_cleared(p, n) };
+    }
     // SAFETY: `p` is live for `n` bytes and `file` is NULL or NUL-terminated per
     // the caller's contract.
     unsafe { dealloc(p, file, line) }

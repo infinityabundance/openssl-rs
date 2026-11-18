@@ -2469,7 +2469,11 @@ unsafe fn x942kdf_set_buffer(out: *mut *mut u8, out_len: *mut usize, p: *const O
         if (*p).data_size == 0 || (*p).data.is_null() {
             return 1;
         }
-        CRYPTO_free((*out).cast(), FILE_X942, LINE);
+        // The authority releases the previous value with `OPENSSL_free` here but with
+        // `OPENSSL_clear_free` in `x942kdf_reset` (`x942kdf.c:356-371`). These are the same context
+        // members and one of them (`secret`) is secret, so the release is made consistent: cleanse
+        // over the length the previous allocation recorded, then free.
+        CRYPTO_clear_free((*out).cast(), *out_len, FILE_X942, LINE);
         *out = ptr::null_mut();
         OSSL_PARAM_get_octet_string(p, out.cast::<*mut c_void>(), 0, out_len)
     }
@@ -13553,19 +13557,32 @@ mod tests {
     /// `kdf_scrypt_dup` publishes the digest reference it takes on `dest` immediately, so a later
     /// `propq`/`memdup` failure releases it. `CRYPTO_memdup` refuses `siz >= INT_MAX` before
     /// reading, which drives that failure deterministically: the test observes the reference
-    /// count return to one instead of leaking the up-ref.
+    /// count return to where it started instead of leaking the up-ref.
+    ///
+    /// **Isolation (B44-TEST-1).** The count is read before and after, so nothing but this test's
+    /// own up-ref may move it. `EVP_MD_fetch` answers a *cached* method from the library context's
+    /// own method store (`src/evp/fetch.rs:990`, set at `:1070`), so a fetch from the default
+    /// context hands back an object every other digest user in the binary shares — and the suite
+    /// has ~100 tests that touch digest machinery without `lock_global_state`, which the
+    /// crate-wide lock therefore cannot exclude. The digest is fetched from this test's **own**
+    /// `OSSL_LIB_CTX` instead: its store is its own, so the object's refcount is private to this
+    /// test and the exact assertion stays exact.
     #[test]
     fn scrypt_dup_releases_its_digest_reference_on_a_later_failure() {
         use core::sync::atomic::Ordering;
 
-        // The fetched SHA256 and the method store are shared process-global state; holding the
-        // crate-wide lock keeps the before/after refcount readings free of a sibling's ±1.
+        use crate::context::{OSSL_LIB_CTX_free, OSSL_LIB_CTX_new};
+
+        // Creating the context activates a provider, which still touches process-global init, so
+        // the crate-wide lock is kept; the private context is what makes the counts exact.
         let _g = crate::test_support::lock_global_state();
 
-        // SAFETY: this test owns every object it touches.
+        // SAFETY: this test owns every object it touches, the library context included.
         unsafe {
-            let md = EVP_MD_fetch(ptr::null_mut(), c"SHA256".as_ptr(), ptr::null());
-            assert!(!md.is_null(), "SHA256 fetches");
+            let libctx = OSSL_LIB_CTX_new();
+            assert!(!libctx.is_null(), "a fresh library context");
+            let md = EVP_MD_fetch(libctx, c"SHA256".as_ptr(), ptr::null());
+            assert!(!md.is_null(), "SHA256 fetches from the private context");
 
             let src = kdf_scrypt_new_inner(ptr::null_mut()).cast::<KdfScrypt>();
             assert!(!src.is_null(), "a SCRYPT context");
@@ -13577,8 +13594,7 @@ mod tests {
             (*src).salt = salt;
             (*src).salt_len = i32::MAX as usize;
 
-            // The method store may already hold references to a fetched digest, so the test
-            // asserts the count is unchanged rather than assuming a particular absolute value.
+            // The private store holds its own reference, so the count is not assumed to be one.
             let before = (*md).refcnt.load(Ordering::Acquire);
             assert!(before >= 1);
             assert!(
@@ -13593,6 +13609,9 @@ mod tests {
 
             // `src` owns the fetched digest, so this releases it; no second `EVP_MD_free`.
             kdf_scrypt_free(src.cast());
+            // Everything the context owns has been released above, so this drops the store's
+            // last reference to the fetched digest and the context itself.
+            OSSL_LIB_CTX_free(libctx);
         }
     }
 
@@ -14056,6 +14075,63 @@ mod tests {
 
                 pbkdf1_free(ctx.cast());
             }
+        }
+    }
+
+    /// G1: `x942kdf_set_buffer` replaces a member the context already holds. The authority
+    /// releases the old value with `OPENSSL_free` here while `x942kdf_reset` cleanses the same
+    /// members, so this conversion releases it with `CRYPTO_clear_free` over the length the
+    /// previous allocation recorded. A second set therefore wipes and frees exactly the block it
+    /// replaced, and installs the new one.
+    #[test]
+    fn x942kdf_set_buffer_wipes_and_replaces_the_previous_secret() {
+        use crate::runtime::mem::{free_probe, CRYPTO_malloc};
+
+        let old_len = 8usize;
+        let mut replacement = [0x11u8, 0x22, 0x33, 0x44];
+
+        // SAFETY: both blocks come from the seam; the function under test takes ownership of the
+        // first and replaces it, and every pointer is live where it is read.
+        unsafe {
+            let old = CRYPTO_malloc(old_len, ptr::null(), 0).cast::<u8>();
+            assert!(!old.is_null(), "the previous block is allocated");
+            ptr::write_bytes(old, 0xA5, old_len);
+            let mut out: *mut u8 = old;
+            let mut out_len = old_len;
+
+            let p = OSSL_PARAM_construct_octet_string(
+                c"secret".as_ptr(),
+                replacement.as_mut_ptr().cast(),
+                replacement.len(),
+            );
+
+            free_probe::reset();
+            assert_eq!(
+                x942kdf_set_buffer(&mut out, &mut out_len, &p),
+                1,
+                "the octet string is copied"
+            );
+
+            assert_eq!(
+                free_probe::count(old.cast()),
+                1,
+                "the replaced block is released exactly once"
+            );
+            assert_eq!(
+                free_probe::cleared(old.cast()),
+                vec![(old_len, true)],
+                "the replaced block is cleansed over its own length before release"
+            );
+            // The seam may hand the replacement the address just released, so the installed value
+            // is checked by content and length rather than by address identity.
+            assert_eq!(out_len, replacement.len(), "the new length is installed");
+            assert_eq!(
+                core::slice::from_raw_parts(out, out_len),
+                replacement.as_slice(),
+                "the new value is installed"
+            );
+
+            CRYPTO_free(out.cast(), ptr::null(), 0);
         }
     }
 }
