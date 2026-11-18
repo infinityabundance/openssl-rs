@@ -4,18 +4,23 @@
   "recorded_utc": "2026-11-18",
   "crate": "openssl-rs",
   "version": "0.0.49",
-  "status": "CANDIDATE_BUILD_PENDING_PUBLICATION",
+  "status": "RELEASED",
+  "release_commit": "1e7c221f0229ea7ae7d3a55ff2ce8aa9db242134",
+  "published_as": "0.0.49 (atlas-refresh/publish-0.0.49.json)",
   "purpose": "The install-tree identity rendered into README.md for the 0.0.49 candidate. The artefacts were rebuilt from the frozen source by the canonical recipe; this receipt binds the rendered identity to the bytes that build actually produced.",
   "source_identity": {
     "candidate_branch": "main",
-    "measured_source_commit": "a13b59b6ce53563f8b683afc58381615f026b7cb",
-    "measured_source_commit_subject": "docs: release row names 0.0.48 with its registry checksum and build hashes",
+    "measured_source_commit": "1e7c221f0229ea7ae7d3a55ff2ce8aa9db242134",
+    "measured_source_commit_subject": "release 0.0.49: version, rebuilt artefacts, generated 1/33 consumer count",
+    "build_ran_at_head": "a13b59b6ce53563f8b683afc58381615f026b7cb",
+    "measured_source_commit_note": "The build ran against the working tree whose only uncommitted change was the 0.0.49 version bump and the regenerated documentation, i.e. HEAD a13b59b6c plus the release edits. After the release commit, the digest rule was recomputed over the committed release commit and returned the same ca7d39b9… value, so the artefacts above are bound to the content of commit 1e7c221f0 rather than merely asserted to be.",
     "measured_source_tree_digest": "ca7d39b9bcfbe9827ded8b255a66980d32f16a9fbd15902f80dc1b921839d1c4",
     "build_source_tree_digest": "ca7d39b9bcfbe9827ded8b255a66980d32f16a9fbd15902f80dc1b921839d1c4",
     "build_source_tree_digest_rule": "sha256 over canonical JSON of sorted [relpath, size, sha256] for src/, Cargo.toml, Cargo.lock, build.rs (forensics/tools/phase7_courts.py::_source_tree_digest)",
     "release_tree_digest": "ca7d39b9bcfbe9827ded8b255a66980d32f16a9fbd15902f80dc1b921839d1c4",
+    "release_tree_digest_recomputed_at": "1e7c221f0229ea7ae7d3a55ff2ce8aa9db242134",
     "release_tree_digest_rule": "same rule and same enumeration, computed over the 0.0.49 packaging tree (the working tree's src/, Cargo.toml, Cargo.lock, build.rs).",
-    "release_tree_digest_note": "The version bump is NOT committed when this build runs. `measured_source_commit` therefore names HEAD (a13b59b6c) only, and the tree digest is the identity of what was actually built. Recompute this digest after the orchestrator commits; the committed release commit must carry the same src/, Cargo.toml, Cargo.lock and build.rs bytes for these artefact hashes to remain bound.",
+    "release_tree_digest_note": "The version bump was not committed when this build ran, so at build time the tree digest was the only identity witness. It was recomputed after the release commit and is unchanged (888 entries, same sha256), which is what binds these artefact hashes to the released source.",
     "working_tree_at_build": "dirty by design: Cargo.toml and Cargo.lock at 0.0.49, the regenerated documentation blocks, the campaign-status counter and this receipt. No src/ change accompanies the bump, so the source tree differs from 0.0.48 only in the Cargo.toml/Cargo.lock version strings."
   },
   "build": {
@@ -86,17 +91,23 @@
     }
   },
   "crate_package": {
-    "recipe": "CARGO_TARGET_DIR=/tmp/ospub49 cargo package --allow-dirty",
-    "why_allow_dirty": "the release commit is made by the orchestrator after this prep step, so the 0.0.49 bump and regenerated docs are uncommitted when the package is built.",
-    "path": "court/tmp/openssl-rs-0.0.49.crate",
-    "container_path": "/tmp/ospub49/package/openssl-rs-0.0.49.crate",
+    "recipe": "CARGO_TARGET_DIR=/tmp/ospub49 cargo publish (re-packs and verifies from the committed tree)",
+    "status": "PUBLISHED",
+    "path": "openssl-rs-0.0.49.crate as served by crates.io",
     "files": 1011,
     "uncompressed_mib": 41.7,
     "compressed_mib": 8.7,
-    "size_bytes": 9154603,
-    "sha256": "a5aa60cf677b596c332385268f0a9e777b85c4ced0279629082edc8931a64280",
-    "verify_build": "cargo package verification build of the unpacked 0.0.49 package succeeded (dev profile, 16.39 s)",
-    "note": "the crate ships source and documentation only; these artefact hashes describe the repository install, not the crate payload."
+    "size_bytes": 9154664,
+    "sha256": "4231962b1fcc54cb00983b299d78b986101c35675d583d4db9e2d8aafe507348",
+    "verify_build": "cargo publish's own verification build of the unpacked 0.0.49 package succeeded before upload",
+    "note": "the crate ships source and documentation only; these artefact hashes describe the repository install, not the crate payload.",
+    "superseded_local_pack": {
+      "path": "court/tmp/openssl-rs-0.0.49.crate",
+      "sha256": "a5aa60cf677b596c332385268f0a9e777b85c4ced0279629082edc8931a64280",
+      "size_bytes": 9154603,
+      "disposition": "NOT THE PUBLISHED PAYLOAD — recorded as superseded negative evidence rather than deleted",
+      "why": "This explicit `cargo package` ran before the documentation regeneration, so the payload it produced carries the pre-regeneration README.md and a .cargo_vcs_info.json with sha1 a13b59b6c and dirty=true. It was never uploaded. Unpacking both crates shows the payloads differ in exactly README.md and .cargo_vcs_info.json; every source file is byte-identical. Any earlier statement binding the 0.0.49 release to a5aa60cf was wrong and is corrected here."
+    }
   },
   "evidence_carried_forward": {
     "closure": "the applied closure is not re-measured at this candidate; this receipt binds build identity only.",
