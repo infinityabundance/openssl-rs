@@ -49,21 +49,28 @@
  },
  "container_package": {
   "registry": "ghcr.io",
-  "name": "ghcr.io/infinityabundance/openssl-rs-court",
+  "name": "ghcr.io/infinityabundance/openssl-rs",
   "tags": [
    "0.0.49",
    "latest"
   ],
-  "index_digest": "sha256:6208ae03818d59b217b7e2ed8702a734a77a1d113dd4ac387db4efdec872bf71",
+  "index_digest": "sha256:2418255adb08f1666c148bc591b8bab478687ec39ec6fee100733a3a17323eb0",
   "platforms": "linux/amd64; the OCI index also carries a buildx provenance attestation manifest",
   "visibility": "public",
   "linked_repository": "https://github.com/infinityabundance/openssl-rs (package page resolves; the image carries org.opencontainers.image.source)",
   "build": {
    "workflow": ".github/workflows/container.yml",
-   "run": "https://github.com/infinityabundance/openssl-rs/actions/runs/44231565264",
-   "workflow_commit": "e1d52f6e9001dc3e05c8bffe60e585efeae1cf94",
+   "run": "https://github.com/infinityabundance/openssl-rs/actions/runs/44231988458",
+   "workflow_commit": "ae5d39756",
    "context": "docker/ (the court Dockerfile copies its entrypoint from the same directory)",
-   "note": "The image content is the court Dockerfile at that commit, which is unchanged from the release commit 1e7c221f0: the commit that published it added .github/workflows/container.yml and nothing else."
+   "note": "The image content is the court Dockerfile, which is unchanged from the release commit 1e7c221f0. Only the published package name and the workflow differ between the two runs."
+  },
+  "superseded_package": {
+   "name": "ghcr.io/infinityabundance/openssl-rs-court",
+   "published_by_run": "https://github.com/infinityabundance/openssl-rs/actions/runs/44231565264",
+   "index_digest": "sha256:6208ae03818d59b217b7e2ed8702a734a77a1d113dd4ac387db4efdec872bf71",
+   "disposition": "SUPERSEDED — still public under the wrong name; deletion is outstanding",
+   "why_not_deleted": "Deleting a user-owned container package requires the delete:packages scope. The available credential carries repo/gist/read:org and is refused even for the read:packages listing (HTTP 403), and a repository-scoped GITHUB_TOKEN cannot delete a package in the user namespace. The package therefore needs either one deletion from the package settings page or a credential carrying delete:packages; this receipt records that rather than claiming the cleanup happened."
   },
   "why_a_workflow": "GitHub Packages has no Cargo registry, so the package artefact is the container. The maintainer credential carries repo/gist/read:org only and ghcr.io answers 403 for a direct push, so the image is built and pushed by the repository-scoped workflow token with packages: write, which is revoked with the run. No long-lived package credential is stored anywhere.",
   "verified": "An anonymous pull token is issued for the package, and the manifests for both tags resolve 200, which is what a private package would refuse; the repository's package page also resolves rather than 404.",
