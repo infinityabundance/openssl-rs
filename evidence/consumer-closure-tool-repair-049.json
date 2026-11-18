@@ -1,0 +1,57 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/instrument-repair/v1",
+  "receipt": "consumer-closure-tool-repair-0.0.49",
+  "generated_utc_note": "written when the repair was committed, at the candidate whose source exposed the defect",
+  "candidate": {
+    "crate_version": "0.0.49",
+    "install_libcrypto_so_3_sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+    "install_libssl_so_3_sha256": "648f8caecda245d2186813fb67ceadedd798b9ce609c8b041a84f195946c5f68"
+  },
+  "instrument": {
+    "path": "forensics/tools/consumer_closure.py",
+    "sha256_after_repair": "141b8a0f7806780cd2100b13562fd3d9bd84a22c8122793cd9e232f8daa3caae",
+    "sha256_before_repair_note": "the pre-repair digest is the blob at the commit this receipt follows; it is recorded in that commit's diff rather than restated here",
+    "control": "e7core writer-id mutation refusal",
+    "self_test_command": "bash docker/openssl-rs-court.sh exec sh -c 'cd /work && python3 forensics/tools/consumer_closure.py --self-test'",
+    "self_test_after_repair": "exit 0, no PREMISE_UNAVAILABLE",
+    "self_test_before_repair": "exit 1: 'e7core writer-id mutation refusal: got (<witness resolved=False>, None), want (None, \"store-is-not-under-the-documented-function-id\")'"
+  },
+  "defect": {
+    "kind": "stale mutation fixture, not a weakened rule",
+    "statement": "The control mutated only the OSSL_FUNC_* match-arm label in src/provider/child.rs. Commit c74d59e72 moved the authoritative id into the argument of function_for::<ChildFreeFn>(p, OSSL_FUNC_PROVIDER_FREE), and _core_dispatch_writer reads the first OSSL_FUNC_* token at or before the store line, which after the refactor is the argument on line 538. Renaming the arm therefore no longer produced a wrong-id store, so the control could not refuse and the self-test failed.",
+    "why_the_failure_was_correct": "The self-test failing is the control doing its job: it detected that the mutation no longer exercised the invariant. A control that had silently kept passing would have been the worse outcome.",
+    "empirical_evidence": {
+      "arm_label_only": "resolves, no refusal",
+      "call_argument": "refuses with store-is-not-under-the-documented-function-id (expected FREE, observed UP_REF, line 538)",
+      "arm_and_argument": "refuses with the same reason",
+      "source_const_value": "resolves, no refusal (separate pre-existing gap, below)"
+    }
+  },
+  "repair": {
+    "change": "the fixture now rewrites the store's id argument, and additionally the arm label so the mutated store stays coherent, with occurrence-specific staleness guards (each source string must occur exactly once and be removed by the rewrite)",
+    "why_not_a_relaxation": "The control name, its expected refusal reason and its restore check are unchanged. Nothing was deleted, skipped, or converted to PREMISE_UNAVAILABLE. The staleness guard replaces `mutated != total_src`, which had passed while the fixture was already stale.",
+    "compile": "none; this batch compiles nothing, so the 24 GiB pre-build floor does not apply"
+  },
+  "residuals": [
+    {
+      "id": "CC-R1",
+      "statement": "core_dispatch_witness reads the store's id expression but does not cross-check the enclosing match arm's id against it. After c74d59e72 an arm-label-only mismatch is not detected. The store's id-to-type binding is still checked, so the effect of such a mismatch is a dispatch arm that no longer routes the real id, not a mis-typed function pointer.",
+      "status": "RECORDED, not patched",
+      "required_work": "a bounded BOUNDARY batch that makes _core_dispatch_writer confirm the enclosing arm id, with the original arm-only fixture as its negative control"
+    },
+    {
+      "id": "CC-R2",
+      "statement": "The source const `const OSSL_FUNC_PROVIDER_FREE: c_int = 111;` is never compared with the installed header's number. The id symbol at the store and the header are checked separately, so a divergent const value would not be refused.",
+      "status": "RECORDED, not patched; pre-existing and independent of c74d59e72",
+      "required_work": "a bounded batch that refuses when the source const disagrees with the header number, mutation-tested"
+    }
+  ],
+  "effect_on_existing_evidence": {
+    "b85c_closures": "produced by an earlier instrument identity (3e86a74d…). This repair changes the instrument, so those receipts are not re-adjudicated here and are not inherited as evidence at this candidate; re-running them is a separate activity.",
+    "openssh_l7_replay_049": "not derived from this instrument; unaffected"
+  },
+  "non_claims": [
+    "A passing self-test is not a safety result and discharges no obligation.",
+    "This receipt does not re-measure any consumer closure."
+  ]
+}

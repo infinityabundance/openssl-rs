@@ -35754,16 +35754,29 @@ def _e7core_self_test():
             "inlined default-context accessor and none could be synthesised "
             "from an admitted libctx accessor call")
 
-    # control core-writer-id: the writer's store sits under the wrong
-    # OSSL_FUNC_* arm
+    # control core-writer-id: the writer's store is attributed to the wrong
+    # OSSL_FUNC_* id.  The id is also passed as an argument to
+    # `function_for::<T>(p, id)`, and that argument is the occurrence the
+    # witness reads; the arm label alone no longer carries the id.  Rewriting
+    # both keeps the mutation a coherent wrong-id store and keeps the fixture
+    # load-bearing whichever occurrence a later refactor makes authoritative.
     total_src = (root / "src/provider/child.rs").read_text()
     td = Path(tempfile.mkdtemp(prefix="e7core-source-", dir=root / "court/tmp"))
     try:
         (td / "src/provider").mkdir(parents=True)
-        mutated = total_src.replace(
-            "                OSSL_FUNC_PROVIDER_FREE => {",
-            "                OSSL_FUNC_PROVIDER_UP_REF => {")
-        chk("e7core writer-id fixture applied", mutated != total_src, True)
+        _arm = "                OSSL_FUNC_PROVIDER_FREE => {"
+        _arg = "function_for::<ChildFreeFn>(p, OSSL_FUNC_PROVIDER_FREE)"
+        mutated = total_src.replace(_arg, _arg.replace(
+            "OSSL_FUNC_PROVIDER_FREE", "OSSL_FUNC_PROVIDER_UP_REF"))
+        mutated = mutated.replace(_arm, _arm.replace(
+            "OSSL_FUNC_PROVIDER_FREE", "OSSL_FUNC_PROVIDER_UP_REF"))
+        # The store's id argument is what the witness now reads, so assert it
+        # was rewritten: `mutated != total_src` still passed while the fixture
+        # had gone stale and is not a staleness guard.
+        chk("e7core writer-id fixture applied",
+            (total_src.count(_arg) == 1 and _arg not in mutated), True)
+        chk("e7core writer-id arm applied",
+            (total_src.count(_arm) == 1 and _arm not in mutated), True)
         (td / "src/provider/child.rs").write_text(mutated)
         px = _Proxy(g, source_root=td)
         got, why = core_run(px, a_free)
