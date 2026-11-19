@@ -1,0 +1,33 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/element7-correction/v1",
+  "receipt": "element7-curl-049-shape-correction",
+  "consumer": "curl",
+  "corrects": "evidence/element7-curl-049-triage.json",
+  "finding": {
+    "claimed": "34 reachable indirect sites in src/runtime/err.rs need a source change that removes the indirect call",
+    "actual": "all 34 are call *%rax through a dso_shared resolver: 30 x dso_shared::ERR_GET_STATE and 4 x the process-global allocator slots (CRYPTO_MALLOC_SYM / MALLOC_FN, CRYPTO_REALLOC_SYM). The with_state FnOnce closure is fully inlined at every err.rs site and emits no indirect call.",
+    "evidence": "all 34 triage VAs disassembled in artifacts/phase2/install/lib/libssl.so.3, the triage's own artefact; nm shows with_state outlined only for the three err_state.rs callers, which are out of scope",
+    "why_no_source_change": "the target is a dlsym-resolved function pointer, so the indirection IS the contract: ERR_get_state must be libcrypto's copy or a libssl-raised error lands in a private queue invisible to ERR_peek_error (RT-CROSS-DSO-STATE), and CRYPTO_MALLOC/REALLOC must be the application's CRYPTO_set_mem_functions hooks. A direct call would bind this DSO's own state and allocator — a behaviour change, not a structural improvement.",
+    "decision": "source unchanged; src/runtime/err.rs is byte-identical to the triage's source head 17e45eec"
+  },
+  "queue_after_correction": {
+    "total_sites": 120,
+    "total_groups": 70,
+    "a_external_abi_contract": {"sites": 116, "note": "82 previously counted plus the 34 err.rs sites reclassified here; per-site witnesses needed (ERR_GET_STATE slot written solely by dso_shared's dlsym; allocator slots written solely by CRYPTO_set_mem_functions)"},
+    "b_proved_empty": {"sites": 4, "note": "blocked on the proved-empty gate: three OpenSslStack::Inner.free_thunk sites and OPENSSL_cleanup's localized libssl atexit slot"},
+    "c_source_change": {"sites": 0, "note": "the shape does not exist for this consumer; the triage's fix_shape_basis was a blanket label"}
+  },
+  "gates_on_the_unchanged_tree": {
+    "fmt": "exit 0",
+    "clippy": "exit 0",
+    "tests": "cargo test --lib runtime::err -- --test-threads=4 -> 23 passed, 0 failed, 0 ignored, 2373 filtered"
+  },
+  "status": {
+    "element_7": "FAIL — 120 sites remain",
+    "safe_compatible_curl": "NOT ESTABLISHED"
+  },
+  "non_claims": [
+    "No site is resolved or reclassified as bound by this receipt; only a closure run can re-classify them.",
+    "The gates above were run on an unchanged tree and prove nothing about element-7."
+  ]
+}
