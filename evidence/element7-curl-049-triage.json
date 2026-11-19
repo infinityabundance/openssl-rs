@@ -1,0 +1,2609 @@
+{
+ "schema": "openssl-rs/campaign/safe-c33/element7-triage/v1",
+ "generated_utc": "2026-11-19T12:26:00Z",
+ "family": "curl",
+ "source_identity": {
+  "repository_head": "17e45eec1a48a7a5e1679e1d29ee69451e9d59a1",
+  "branch": "staging",
+  "tracked_tree_dirty": false,
+  "inventory_path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1x-candidate-freeze.json",
+  "inventory_source_head": "17e45eec1a48a7a5e1679e1d29ee69451e9d59a1",
+  "span_source_commit": "17e45eec1a48a7a5e1679e1d29ee69451e9d59a1",
+  "span_source_binding": "git-blob",
+  "inventory_is_ancestor_or_equal": true,
+  "note": "the admitted install is the V1 frozen candidate; the working tree may be a descendant, so obligations are joined to the inventory at the inventory's own source head, not the working tree"
+ },
+ "candidate_identity": {
+  "install_prefix": "artifacts/phase2/install",
+  "libcrypto_so_3_sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+  "libssl_so_3_sha256": "648f8caecda245d2186813fb67ceadedd798b9ce609c8b041a84f195946c5f68",
+  "all_openssl_under_install": true
+ },
+ "artifact_identity": {
+  "path": "court/tmp/curl-049/curl-8.10.1/lib/.libs/libcurl.so.4.8.0",
+  "sha256": "7dfe9b54e8a477d1e60aeb3359ea94e7cedd6d3023f5bad600cd23bcea844d59",
+  "dynamic": {
+   "soname": "libcurl.so.4",
+   "needed": [
+    "libssl.so.3",
+    "libcrypto.so.3",
+    "libz.so.1",
+    "libc.so.6"
+   ],
+   "runpath": [
+    "/work/artifacts/phase2/install/lib"
+   ],
+   "rpath": []
+  },
+  "build_provenance": null
+ },
+ "receipt": {
+  "path": "evidence/closure-curl-049.json",
+  "sha256": "6aedaa4ee6691ba3d09a4c4f655a8001b35252fa4206f30584d87effe748ca16",
+  "predicate_element_7": {
+   "established": false,
+   "status": "FAIL",
+   "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract; a closed target set additionally enumerates every in-image target",
+   "reachable_unresolved_sites": 449,
+   "target_bounded_unresolved_sites": 219,
+   "contract_bounded_sites": 158,
+   "contract_bounded_by_class": {
+    "ABI_CONTRACT_CONF_MODULE": 2,
+    "ABI_CONTRACT_CORE_DISPATCH": 51,
+    "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+    "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+    "ABI_CONTRACT_PBE_REGISTRY": 1,
+    "ABI_CONTRACT_PROVIDER": 33,
+    "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+    "ABI_CONTRACT_STORE_LOADER": 3
+   },
+   "closed_target_set_sites": 72,
+   "closed_target_set_by_class": {
+    "CLOSED_TARGET_SET_DECODER_METHOD_OBJECT": 6,
+    "CLOSED_TARGET_SET_LEGACY_EVP_CIPHER_DATA": 4,
+    "CLOSED_TARGET_SET_PROVIDER_HW_TABLE": 50,
+    "CLOSED_TARGET_SET_SLH_METHOD_TABLE": 12
+   },
+   "unclassified_reachable_sites": 0,
+   "target_sets_remain_unbounded": true,
+   "has_closed_target_sets": true,
+   "why": "219 reachable unresolved site(s) carry no contract or closed-target-set bound, and/or an unclassified site is reachable"
+  }
+ },
+ "sidecar": {
+  "path": "court/tmp/v4-consumer-closure/edge-records.7dfe9b54e8a477d1.jsonl",
+  "sha256": "730837eecb033b3e3e210bdc838c95c6023bdd71bab058986a5ba098226141a4",
+  "lines": 103992,
+  "bound_by_receipt_records_sha256": "730837eecb033b3e3e210bdc838c95c6023bdd71bab058986a5ba098226141a4",
+  "matches_receipt": true
+ },
+ "reachability_source": {
+  "receipt_field": "graph.closure.reachable_functions",
+  "reachable_functions": 17403,
+  "basis": "the same final upper bound that produced predicate_element_7"
+ },
+ "totals": {
+  "reachable_unresolved_sites": 449,
+  "target_bounded_unresolved_sites": 219,
+  "contract_bounded_sites": 158,
+  "closed_target_set_sites": 72,
+  "demoted_vacuous_resolved_records_excluded": 1216,
+  "group_count": 118
+ },
+ "by_class": {
+  "ABI_OPEN_METHOD_TABLE": 18,
+  "field": 75,
+  "materialised": 126
+ },
+ "by_reason": {
+  "base-slot-partial": 3,
+  "legacy method-table ABI: the workload imports a method-table setter": 18,
+  "provider-contract-witness-missing:an in-image value in this frame; this image carries no documented provider interface that writes it": 1,
+  "reg-top": 95,
+  "reg-value-partial[]": 6,
+  "reg-value-partial[int]": 14,
+  "stack-slot-open": 10,
+  "static-instance-refused:unproven-cohort-store": 72
+ },
+ "by_class_and_reason": {
+  "ABI_OPEN_METHOD_TABLE | legacy method-table ABI: the workload imports a method-table setter": 18,
+  "field | base-slot-partial": 3,
+  "field | static-instance-refused:unproven-cohort-store": 72,
+  "materialised | provider-contract-witness-missing:an in-image value in this frame; this image carries no documented provider interface that writes it": 1,
+  "materialised | reg-top": 95,
+  "materialised | reg-value-partial[]": 6,
+  "materialised | reg-value-partial[int]": 14,
+  "materialised | stack-slot-open": 10
+ },
+ "groups": [
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider10cipher_gcm19gcm_cipher_internal",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher_gcm::gcm_cipher_internal",
+   "file": "src/provider/cipher_gcm.rs",
+   "count": 7,
+   "classes": {
+    "field": 7
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 7
+   },
+   "call_sites": [
+    "0x1fc4e4",
+    "0x1fc539",
+    "0x1fc60b",
+    "0x1fc658",
+    "0x1fc6e3",
+    "0x1fc71c",
+    "0x1fc74e"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider16cipher_tdes_wrap16tdes_wrap_cipher",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher_tdes_wrap::tdes_wrap_cipher",
+   "file": "src/provider/cipher_tdes_wrap.rs",
+   "count": 7,
+   "classes": {
+    "field": 7
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 7
+   },
+   "call_sites": [
+    "0x1fdc60",
+    "0x1fddd7",
+    "0x1fde4f",
+    "0x1fde69",
+    "0x1fdf94",
+    "0x1fdfae",
+    "0x1fe1cc"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19ccm_cipher_internal",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::ccm_cipher_internal",
+   "file": "src/provider/cipher.rs",
+   "count": 7,
+   "classes": {
+    "field": 7
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 7
+   },
+   "call_sites": [
+    "0x20523e",
+    "0x20529f",
+    "0x2052e3",
+    "0x20534b",
+    "0x20536e",
+    "0x2053ed",
+    "0x20542c"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "X509V3_EXT_print",
+   "demangled": "X509V3_EXT_print",
+   "file": "src/x509/v3_prn.rs",
+   "count": 6,
+   "classes": {
+    "materialised": 6
+   },
+   "reasons": {
+    "reg-top": 6
+   },
+   "call_sites": [
+    "0x26dcd1",
+    "0x26dd4a",
+    "0x26dd6f",
+    "0x26de95",
+    "0x26df12",
+    "0x26df5a"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static X509V3 extension / EVP_PKEY_asn1 method table; curl imports no registration setter, so the writer set is closed",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5097v3_conf12do_ext_nconf",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::x509::v3_conf::do_ext_nconf",
+   "file": "src/x509/v3_conf.rs",
+   "count": 6,
+   "classes": {
+    "materialised": 6
+   },
+   "reasons": {
+    "reg-top": 6
+   },
+   "call_sites": [
+    "0x51149f",
+    "0x5114dd",
+    "0x511544",
+    "0x5117d5",
+    "0x51187c",
+    "0x51189e"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static X509V3 extension / EVP_PKEY_asn1 method table; curl imports no registration setter, so the writer set is closed",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5modes4wrap7wrap128",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::modes::wrap::wrap128",
+   "file": "src/modes/wrap.rs",
+   "count": 6,
+   "classes": {
+    "materialised": 6
+   },
+   "reasons": {
+    "reg-value-partial[int]": 6
+   },
+   "call_sites": [
+    "0x14dc29",
+    "0x14dcba",
+    "0x14dd4a",
+    "0x14ddda",
+    "0x14de6a",
+    "0x14defa"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libcrypto.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5097v3_conf12do_ext_nconf",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::x509::v3_conf::do_ext_nconf",
+   "file": "src/x509/v3_conf.rs",
+   "count": 4,
+   "classes": {
+    "materialised": 4
+   },
+   "reasons": {
+    "reg-top": 4
+   },
+   "call_sites": [
+    "0x5574af",
+    "0x5574ed",
+    "0x55788c",
+    "0x5578ae"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static X509V3 extension / EVP_PKEY_asn1 method table; curl imports no registration setter, so the writer set is closed",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "CRYPTO_cfb128_encrypt",
+   "demangled": "CRYPTO_cfb128_encrypt",
+   "file": "src/modes/mod.rs",
+   "count": 4,
+   "classes": {
+    "materialised": 4
+   },
+   "reasons": {
+    "stack-slot-open": 4
+   },
+   "call_sites": [
+    "0x2a0ac9",
+    "0x2a0c3d",
+    "0x2a0c99",
+    "0x2a0e3d"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "ENGINE_register_all_complete",
+   "demangled": "ENGINE_register_all_complete",
+   "file": "src/engine/eng_fat.rs",
+   "count": 4,
+   "classes": {
+    "materialised": 4
+   },
+   "reasons": {
+    "reg-top": 4
+   },
+   "call_sites": [
+    "0x42c297",
+    "0x42c2d8",
+    "0x42c3fa",
+    "0x42c43b"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": false
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3err14append_current.llvm.10721983013695117071",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::runtime::err::append_current",
+   "file": "src/runtime/err.rs",
+   "count": 4,
+   "classes": {
+    "materialised": 4
+   },
+   "reasons": {
+    "reg-top": 4
+   },
+   "call_sites": [
+    "0x514eeb",
+    "0x514f08",
+    "0x515161",
+    "0x51539a"
+   ],
+   "fix_shape": "c_source_change_removes_indirect_call",
+   "fix_shape_basis": "internal Rust FnOnce closure / ERR state dispatch; target is statically known per call site but not materialised as a table",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18aes_set_ctx_params",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::aes_set_ctx_params",
+   "file": "src/provider/cipher.rs",
+   "count": 4,
+   "classes": {
+    "field": 4
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 4
+   },
+   "call_sites": [
+    "0x20342d",
+    "0x2034db",
+    "0x203591",
+    "0x2035db"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18cts128_cs1_decrypt",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::cts128_cs1_decrypt",
+   "file": "src/provider/cipher.rs",
+   "count": 4,
+   "classes": {
+    "field": 4
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 4
+   },
+   "call_sites": [
+    "0x203997",
+    "0x2039c3",
+    "0x203a18",
+    "0x203acd"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18cts128_cs2_encrypt",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::cts128_cs2_encrypt",
+   "file": "src/provider/cipher.rs",
+   "count": 4,
+   "classes": {
+    "field": 4
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 4
+   },
+   "call_sites": [
+    "0x203c25",
+    "0x203c47",
+    "0x203c76",
+    "0x203ce3"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18cts128_cs3_decrypt",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::cts128_cs3_decrypt",
+   "file": "src/provider/cipher.rs",
+   "count": 4,
+   "classes": {
+    "field": 4
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 4
+   },
+   "call_sites": [
+    "0x203d48",
+    "0x203d92",
+    "0x203dd7",
+    "0x203ee3"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libcrypto.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5097v3_conf10do_ext_i2d.llvm.10721983013695117071",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::x509::v3_conf::do_ext_i2d",
+   "file": "src/x509/v3_conf.rs",
+   "count": 3,
+   "classes": {
+    "materialised": 3
+   },
+   "reasons": {
+    "reg-value-partial[]": 3
+   },
+   "call_sites": [
+    "0x5570fb",
+    "0x557229",
+    "0x55728c"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static X509V3 extension / EVP_PKEY_asn1 method table; curl imports no registration setter, so the writer set is closed",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "CRYPTO_ofb128_encrypt",
+   "demangled": "CRYPTO_ofb128_encrypt",
+   "file": "src/modes/mod.rs",
+   "count": 3,
+   "classes": {
+    "materialised": 3
+   },
+   "reasons": {
+    "reg-top": 3
+   },
+   "call_sites": [
+    "0x2a282b",
+    "0x2a294b",
+    "0x2a2a78"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "OSSL_HTTP_get",
+   "demangled": "OSSL_HTTP_get",
+   "file": "src/http/http_client.rs",
+   "count": 3,
+   "classes": {
+    "materialised": 3
+   },
+   "reasons": {
+    "reg-top": 3
+   },
+   "call_sites": [
+    "0x325d8d",
+    "0x325ec5",
+    "0x325fbe"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": false
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "OSSL_STORE_open_ex",
+   "demangled": "OSSL_STORE_open_ex",
+   "file": "src/store/store_lib.rs",
+   "count": 3,
+   "classes": {
+    "materialised": 3
+   },
+   "reasons": {
+    "reg-top": 3
+   },
+   "call_sites": [
+    "0x329358",
+    "0x32944d",
+    "0x3298c3"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "PKCS12_create_ex2",
+   "demangled": "PKCS12_create_ex2",
+   "file": "src/pkcs12/p12_crt.rs",
+   "count": 3,
+   "classes": {
+    "materialised": 3
+   },
+   "reasons": {
+    "reg-top": 2,
+    "stack-slot-open": 1
+   },
+   "call_sites": [
+    "0x268526",
+    "0x2686e8",
+    "0x268b2c"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": false
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3ssl8ssl_mcnf13ssl_do_config.llvm.10063243364245920279",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::ssl::ssl_mcnf::ssl_do_config",
+   "file": "src/ssl/ssl_mcnf.rs",
+   "count": 3,
+   "classes": {
+    "materialised": 3
+   },
+   "reasons": {
+    "reg-top": 3
+   },
+   "call_sites": [
+    "0x27e6b7",
+    "0x27e7f0",
+    "0x27ead4"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5097v3_conf10do_ext_i2d.llvm.10721983013695117071",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::x509::v3_conf::do_ext_i2d",
+   "file": "src/x509/v3_conf.rs",
+   "count": 3,
+   "classes": {
+    "materialised": 3
+   },
+   "reasons": {
+    "reg-value-partial[]": 3
+   },
+   "call_sites": [
+    "0x5110eb",
+    "0x511219",
+    "0x51127c"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static X509V3 extension / EVP_PKEY_asn1 method table; curl imports no registration setter, so the writer set is closed",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4rand18ossl_rand_drbg_new",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::rand::ossl_rand_drbg_new",
+   "file": "src/provider/rand.rs",
+   "count": 3,
+   "classes": {
+    "materialised": 3
+   },
+   "reasons": {
+    "reg-top": 3
+   },
+   "call_sites": [
+    "0x419bb7",
+    "0x419bc5",
+    "0x419bdc"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18cts128_cs3_encrypt",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::cts128_cs3_encrypt",
+   "file": "src/provider/cipher.rs",
+   "count": 3,
+   "classes": {
+    "field": 3
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 3
+   },
+   "call_sites": [
+    "0x203f6c",
+    "0x203fac",
+    "0x204016"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "openssl_rs_err_set_error",
+   "demangled": "openssl_rs_err_set_error",
+   "file": "src/runtime/err.rs",
+   "count": 3,
+   "classes": {
+    "materialised": 3
+   },
+   "reasons": {
+    "reg-top": 3
+   },
+   "call_sites": [
+    "0x526769",
+    "0x5268bb",
+    "0x5268d8"
+   ],
+   "fix_shape": "c_source_change_removes_indirect_call",
+   "fix_shape_basis": "internal Rust FnOnce closure / ERR state dispatch; target is statically known per call site but not materialised as a table",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "openssl_rs_err_take_data",
+   "demangled": "openssl_rs_err_take_data",
+   "file": "src/runtime/err.rs",
+   "count": 3,
+   "classes": {
+    "materialised": 3
+   },
+   "reasons": {
+    "reg-top": 3
+   },
+   "call_sites": [
+    "0x526c8b",
+    "0x526ca8",
+    "0x526dbf"
+   ],
+   "fix_shape": "c_source_change_removes_indirect_call",
+   "fix_shape_basis": "internal Rust FnOnce closure / ERR state dispatch; target is statically known per call site but not materialised as a table",
+   "source_verified": true
+  },
+  {
+   "module": "libcrypto.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp10asymcipher25evp_pkey_asym_cipher_init.llvm.17743312130737942970",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::evp::asymcipher::evp_pkey_asym_cipher_init",
+   "file": "src/evp/asymcipher.rs",
+   "count": 2,
+   "classes": {
+    "ABI_OPEN_METHOD_TABLE": 2
+   },
+   "reasons": {
+    "legacy method-table ABI: the workload imports a method-table setter": 2
+   },
+   "call_sites": [
+    "0x340f29",
+    "0x340fb4"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "A2: workload imports a legacy method-table setter, so the table target set is the documented setter ABI",
+   "source_verified": true
+  },
+  {
+   "module": "libcrypto.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp8exchange20evp_pkey_derive_init.llvm.6461702556168653308",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::evp::exchange::evp_pkey_derive_init",
+   "file": "src/evp/exchange.rs",
+   "count": 2,
+   "classes": {
+    "ABI_OPEN_METHOD_TABLE": 2
+   },
+   "reasons": {
+    "legacy method-table ABI: the workload imports a method-table setter": 2
+   },
+   "call_sites": [
+    "0x510ab3",
+    "0x510ad2"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "A2: workload imports a legacy method-table setter, so the table target set is the documented setter ABI",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "CONF_modules_load",
+   "demangled": "CONF_modules_load",
+   "file": "src/runtime/confmod/mod.rs",
+   "count": 2,
+   "classes": {
+    "materialised": 2
+   },
+   "reasons": {
+    "reg-top": 2
+   },
+   "call_sites": [
+    "0x4e5555",
+    "0x4e5993"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "CRYPTO_cbc128_encrypt",
+   "demangled": "CRYPTO_cbc128_encrypt",
+   "file": "src/modes/mod.rs",
+   "count": 2,
+   "classes": {
+    "materialised": 2
+   },
+   "reasons": {
+    "reg-value-partial[int]": 2
+   },
+   "call_sites": [
+    "0x2a0561",
+    "0x2a06cd"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "CRYPTO_ctr128_encrypt",
+   "demangled": "CRYPTO_ctr128_encrypt",
+   "file": "src/modes/mod.rs",
+   "count": 2,
+   "classes": {
+    "materialised": 2
+   },
+   "reasons": {
+    "stack-slot-open": 2
+   },
+   "call_sites": [
+    "0x2a1219",
+    "0x2a1419"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "CRYPTO_ctr128_encrypt_ctr32",
+   "demangled": "CRYPTO_ctr128_encrypt_ctr32",
+   "file": "src/modes/mod.rs",
+   "count": 2,
+   "classes": {
+    "materialised": 2
+   },
+   "reasons": {
+    "stack-slot-open": 2
+   },
+   "call_sites": [
+    "0x2a1704",
+    "0x2a180a"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "ERR_new",
+   "demangled": "ERR_new",
+   "file": "src/runtime/err.rs",
+   "count": 2,
+   "classes": {
+    "materialised": 2
+   },
+   "reasons": {
+    "reg-top": 2
+   },
+   "call_sites": [
+    "0x4e8d2b",
+    "0x4e8d4b"
+   ],
+   "fix_shape": "c_source_change_removes_indirect_call",
+   "fix_shape_basis": "internal Rust FnOnce closure / ERR state dispatch; target is statically known per call site but not materialised as a table",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "ERR_set_debug",
+   "demangled": "ERR_set_debug",
+   "file": "src/runtime/err.rs",
+   "count": 2,
+   "classes": {
+    "materialised": 2
+   },
+   "reasons": {
+    "reg-top": 2
+   },
+   "call_sites": [
+    "0x4ea31b",
+    "0x4ea338"
+   ],
+   "fix_shape": "c_source_change_removes_indirect_call",
+   "fix_shape_basis": "internal Rust FnOnce closure / ERR state dispatch; target is statically known per call site but not materialised as a table",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "EVP_PBE_CipherInit_ex",
+   "demangled": "EVP_PBE_CipherInit_ex",
+   "file": "src/evp/evp_pbe.rs",
+   "count": 2,
+   "classes": {
+    "materialised": 2
+   },
+   "reasons": {
+    "reg-top": 2
+   },
+   "call_sites": [
+    "0x2ad18d",
+    "0x2ad405"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "OSSL_ENCODER_do_all_provided",
+   "demangled": "OSSL_ENCODER_do_all_provided",
+   "file": "src/encoder_meth.rs",
+   "count": 2,
+   "classes": {
+    "materialised": 2
+   },
+   "reasons": {
+    "reg-value-partial[int]": 2
+   },
+   "call_sites": [
+    "0x126493",
+    "0x1265d3"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "X509V3_EXT_d2i",
+   "demangled": "X509V3_EXT_d2i",
+   "file": "src/x509/v3_lib.rs",
+   "count": 2,
+   "classes": {
+    "materialised": 2
+   },
+   "reasons": {
+    "reg-top": 2
+   },
+   "call_sites": [
+    "0x23d361",
+    "0x23d3a4"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static X509V3 extension / EVP_PKEY_asn1 method table; curl imports no registration setter, so the writer set is closed",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2dh5check22ossl_dh_check_pairwise",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::dh::check::ossl_dh_check_pairwise",
+   "file": "src/dh/check.rs",
+   "count": 2,
+   "classes": {
+    "materialised": 2
+   },
+   "reasons": {
+    "reg-top": 2
+   },
+   "call_sites": [
+    "0x174626",
+    "0x17478d"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp10asymcipher25evp_pkey_asym_cipher_init.llvm.17743312130737942970",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::evp::asymcipher::evp_pkey_asym_cipher_init",
+   "file": "src/evp/asymcipher.rs",
+   "count": 2,
+   "classes": {
+    "ABI_OPEN_METHOD_TABLE": 2
+   },
+   "reasons": {
+    "legacy method-table ABI: the workload imports a method-table setter": 2
+   },
+   "call_sites": [
+    "0x2faf19",
+    "0x2fafa4"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "A2: workload imports a legacy method-table setter, so the table target set is the documented setter ABI",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp8exchange20evp_pkey_derive_init.llvm.6461702556168653308",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::evp::exchange::evp_pkey_derive_init",
+   "file": "src/evp/exchange.rs",
+   "count": 2,
+   "classes": {
+    "ABI_OPEN_METHOD_TABLE": 2
+   },
+   "reasons": {
+    "legacy method-table ABI: the workload imports a method-table setter": 2
+   },
+   "call_sites": [
+    "0x4caaa3",
+    "0x4caac2"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "A2: workload imports a legacy method-table setter, so the table target set is the documented setter ABI",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime10dso_shared13err_state_ptr",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::runtime::dso_shared::err_state_ptr",
+   "file": "src/runtime/dso_shared.rs",
+   "count": 2,
+   "classes": {
+    "materialised": 2
+   },
+   "reasons": {
+    "reg-top": 2
+   },
+   "call_sites": [
+    "0x40bbca",
+    "0x40bbe1"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": false
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3err11debug_parts",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::runtime::err::debug_parts",
+   "file": "src/runtime/err.rs",
+   "count": 2,
+   "classes": {
+    "materialised": 2
+   },
+   "reasons": {
+    "reg-top": 2
+   },
+   "call_sites": [
+    "0x514b95",
+    "0x514cdf"
+   ],
+   "fix_shape": "c_source_change_removes_indirect_call",
+   "fix_shape_basis": "internal Rust FnOnce closure / ERR state dispatch; target is statically known per call site but not materialised as a table",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3err15raise_site_data",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::runtime::err::raise_site_data",
+   "file": "src/runtime/err.rs",
+   "count": 2,
+   "classes": {
+    "materialised": 2
+   },
+   "reasons": {
+    "reg-top": 2
+   },
+   "call_sites": [
+    "0x515708",
+    "0x515881"
+   ],
+   "fix_shape": "c_source_change_removes_indirect_call",
+   "fix_shape_basis": "internal Rust FnOnce closure / ERR state dispatch; target is statically known per call site but not materialised as a table",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3err23raise_site_dynamic_data",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::runtime::err::raise_site_dynamic_data",
+   "file": "src/runtime/err.rs",
+   "count": 2,
+   "classes": {
+    "materialised": 2
+   },
+   "reasons": {
+    "reg-top": 2
+   },
+   "call_sites": [
+    "0x516b28",
+    "0x516cb1"
+   ],
+   "fix_shape": "c_source_change_removes_indirect_call",
+   "fix_shape_basis": "internal Rust FnOnce closure / ERR state dispatch; target is statically known per call site but not materialised as a table",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3err28err_clear_last_constant_time",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::runtime::err::err_clear_last_constant_time",
+   "file": "src/runtime/err.rs",
+   "count": 2,
+   "classes": {
+    "materialised": 2
+   },
+   "reasons": {
+    "reg-top": 2
+   },
+   "call_sites": [
+    "0x517049",
+    "0x517066"
+   ],
+   "fix_shape": "c_source_change_removes_indirect_call",
+   "fix_shape_basis": "internal Rust FnOnce closure / ERR state dispatch; target is statically known per call site but not materialised as a table",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18cts128_cs1_encrypt",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::cts128_cs1_encrypt",
+   "file": "src/provider/cipher.rs",
+   "count": 2,
+   "classes": {
+    "field": 2
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 2
+   },
+   "call_sites": [
+    "0x203b58",
+    "0x203b98"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher22aes_siv_set_ctx_params",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::aes_siv_set_ctx_params",
+   "file": "src/provider/cipher.rs",
+   "count": 2,
+   "classes": {
+    "field": 2
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 2
+   },
+   "call_sites": [
+    "0x207681",
+    "0x2076be"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "openssl_rs_err_finish_data",
+   "demangled": "openssl_rs_err_finish_data",
+   "file": "src/runtime/err.rs",
+   "count": 2,
+   "classes": {
+    "materialised": 2
+   },
+   "reasons": {
+    "reg-top": 2
+   },
+   "call_sites": [
+    "0x52635b",
+    "0x52637b"
+   ],
+   "fix_shape": "c_source_change_removes_indirect_call",
+   "fix_shape_basis": "internal Rust FnOnce closure / ERR state dispatch; target is statically known per call site but not materialised as a table",
+   "source_verified": true
+  },
+  {
+   "module": "libcrypto.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2ui7ui_util7ui_read.llvm.18268413494276176845",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::ui::ui_util::ui_read",
+   "file": "src/ui/ui_util.rs",
+   "count": 1,
+   "classes": {
+    "ABI_OPEN_METHOD_TABLE": 1
+   },
+   "reasons": {
+    "legacy method-table ABI: the workload imports a method-table setter": 1
+   },
+   "call_sites": [
+    "0x28a500"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "A2: workload imports a legacy method-table setter, so the table target set is the documented setter ABI",
+   "source_verified": true
+  },
+  {
+   "module": "libcrypto.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp6digest14do_sigver_init.llvm.6461702556168653308",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::evp::digest::do_sigver_init",
+   "file": "src/evp/digest.rs",
+   "count": 1,
+   "classes": {
+    "ABI_OPEN_METHOD_TABLE": 1
+   },
+   "reasons": {
+    "legacy method-table ABI: the workload imports a method-table setter": 1
+   },
+   "call_sites": [
+    "0x50dadd"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "A2: workload imports a legacy method-table setter, so the table target set is the documented setter ABI",
+   "source_verified": true
+  },
+  {
+   "module": "libcrypto.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp8pkey_ctx14pmeth_func_cmp",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::evp::pkey_ctx::pmeth_func_cmp",
+   "file": "src/evp/pkey_ctx.rs",
+   "count": 1,
+   "classes": {
+    "ABI_OPEN_METHOD_TABLE": 1
+   },
+   "reasons": {
+    "legacy method-table ABI: the workload imports a method-table setter": 1
+   },
+   "call_sites": [
+    "0x346026"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "A2: workload imports a legacy method-table setter, so the table target set is the documented setter ABI",
+   "source_verified": true
+  },
+  {
+   "module": "libcrypto.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3pem7pem_lib27PEM_ASN1_write_bio_internal.llvm.3604577613724043",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::pem::pem_lib::PEM_ASN1_write_bio_internal",
+   "file": "src/pem/pem_lib.rs",
+   "count": 1,
+   "classes": {
+    "ABI_OPEN_METHOD_TABLE": 1
+   },
+   "reasons": {
+    "legacy method-table ABI: the workload imports a method-table setter": 1
+   },
+   "call_sites": [
+    "0x3f0e1e"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "A2: workload imports a legacy method-table setter, so the table target set is the documented setter ABI",
+   "source_verified": true
+  },
+  {
+   "module": "libcrypto.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5098x509_vfy9check_crl",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::x509::x509_vfy::check_crl",
+   "file": "src/x509/x509_vfy.rs",
+   "count": 1,
+   "classes": {
+    "ABI_OPEN_METHOD_TABLE": 1
+   },
+   "reasons": {
+    "legacy method-table ABI: the workload imports a method-table setter": 1
+   },
+   "call_sites": [
+    "0x421cb2"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "A2: workload imports a legacy method-table setter, so the table target set is the documented setter ABI",
+   "source_verified": true
+  },
+  {
+   "module": "libcrypto.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider17decode_msblob2key17msblob2key_decode.llvm.7568275522712508715",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::decode_msblob2key::msblob2key_decode",
+   "file": "src/provider/decode_msblob2key.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "base-slot-partial": 1
+   },
+   "call_sites": [
+    "0x1d5231"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "CRYPTO_128_wrap_pad",
+   "demangled": "CRYPTO_128_wrap_pad",
+   "file": "src/modes/wrap.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-value-partial[int]": 1
+   },
+   "call_sites": [
+    "0x1232d6"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "CRYPTO_cfb128_1_encrypt",
+   "demangled": "CRYPTO_cfb128_1_encrypt",
+   "file": "src/modes/mod.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "stack-slot-open": 1
+   },
+   "call_sites": [
+    "0x2a07d0"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "ERR_clear_error",
+   "demangled": "ERR_clear_error",
+   "file": "src/runtime/err.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x4e7121"
+   ],
+   "fix_shape": "c_source_change_removes_indirect_call",
+   "fix_shape_basis": "internal Rust FnOnce closure / ERR state dispatch; target is statically known per call site but not materialised as a table",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "ERR_clear_last_mark",
+   "demangled": "ERR_clear_last_mark",
+   "file": "src/runtime/err.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x4e8151"
+   ],
+   "fix_shape": "c_source_change_removes_indirect_call",
+   "fix_shape_basis": "internal Rust FnOnce closure / ERR state dispatch; target is statically known per call site but not materialised as a table",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "ERR_count_to_mark",
+   "demangled": "ERR_count_to_mark",
+   "file": "src/runtime/err.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x4e83a1"
+   ],
+   "fix_shape": "c_source_change_removes_indirect_call",
+   "fix_shape_basis": "internal Rust FnOnce closure / ERR state dispatch; target is statically known per call site but not materialised as a table",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "ERR_pop_to_mark",
+   "demangled": "ERR_pop_to_mark",
+   "file": "src/runtime/err.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x4e96a1"
+   ],
+   "fix_shape": "c_source_change_removes_indirect_call",
+   "fix_shape_basis": "internal Rust FnOnce closure / ERR state dispatch; target is statically known per call site but not materialised as a table",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "ERR_set_mark",
+   "demangled": "ERR_set_mark",
+   "file": "src/runtime/err.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x4ea8b1"
+   ],
+   "fix_shape": "c_source_change_removes_indirect_call",
+   "fix_shape_basis": "internal Rust FnOnce closure / ERR state dispatch; target is statically known per call site but not materialised as a table",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "OBJ_NAME_do_all",
+   "demangled": "OBJ_NAME_do_all",
+   "file": "src/runtime/obj.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-value-partial[int]": 1
+   },
+   "call_sites": [
+    "0x229c7a"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "OPENSSL_cleanup",
+   "demangled": "OPENSSL_cleanup",
+   "file": "src/runtime/init.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "base-slot-partial": 1
+   },
+   "call_sites": [
+    "0x261b34"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "OPENSSL_sk_pop_free",
+   "demangled": "OPENSSL_sk_pop_free",
+   "file": "src/runtime/stack.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-value-partial[int]": 1
+   },
+   "call_sites": [
+    "0x4ef912"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "OSSL_HTTP_open",
+   "demangled": "OSSL_HTTP_open",
+   "file": "src/http/http_client.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x3261d8"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": false
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "PEM_do_header",
+   "demangled": "PEM_do_header",
+   "file": "src/pem/pem_lib.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-value-partial[int]": 1
+   },
+   "call_sites": [
+    "0x39a74b"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "PKCS5_v2_PBE_keyivgen_ex",
+   "demangled": "PKCS5_v2_PBE_keyivgen_ex",
+   "file": "src/evp/p5_crpt2.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x39c798"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "RAND_bytes_ex",
+   "demangled": "RAND_bytes_ex",
+   "file": "src/rand/rand_lib.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x23753f"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "RAND_priv_bytes_ex",
+   "demangled": "RAND_priv_bytes_ex",
+   "file": "src/rand/rand_lib.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x238252"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "SSL_CTX_new_ex",
+   "demangled": "SSL_CTX_new_ex",
+   "file": "src/ssl/ssl_lib.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x483b66"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "X509_signature_print",
+   "demangled": "X509_signature_print",
+   "file": "src/x509/t_x509.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x273e13"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static X509V3 extension / EVP_PKEY_asn1 method table; curl imports no registration setter, so the writer set is closed",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs2ui7ui_util7ui_read.llvm.18268413494276176845",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::ui::ui_util::ui_read",
+   "file": "src/ui/ui_util.rs",
+   "count": 1,
+   "classes": {
+    "ABI_OPEN_METHOD_TABLE": 1
+   },
+   "reasons": {
+    "legacy method-table ABI: the workload imports a method-table setter": 1
+   },
+   "call_sites": [
+    "0x2444f0"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "A2: workload imports a legacy method-table setter, so the table target set is the documented setter ABI",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3cmp7cmp_vfy19check_msg_all_certs",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::cmp::cmp_vfy::check_msg_all_certs",
+   "file": "src/cmp/cmp_vfy.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x504466"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp6digest14do_sigver_init.llvm.6461702556168653308",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::evp::digest::do_sigver_init",
+   "file": "src/evp/digest.rs",
+   "count": 1,
+   "classes": {
+    "ABI_OPEN_METHOD_TABLE": 1
+   },
+   "reasons": {
+    "legacy method-table ABI: the workload imports a method-table setter": 1
+   },
+   "call_sites": [
+    "0x4c7acd"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "A2: workload imports a legacy method-table setter, so the table target set is the documented setter ABI",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3evp8pkey_ctx14pmeth_func_cmp",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::evp::pkey_ctx::pmeth_func_cmp",
+   "file": "src/evp/pkey_ctx.rs",
+   "count": 1,
+   "classes": {
+    "ABI_OPEN_METHOD_TABLE": 1
+   },
+   "reasons": {
+    "legacy method-table ABI: the workload imports a method-table setter": 1
+   },
+   "call_sites": [
+    "0x300016"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "A2: workload imports a legacy method-table setter, so the table target set is the documented setter ABI",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3pem7pem_lib27PEM_ASN1_write_bio_internal.llvm.3604577613724043",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::pem::pem_lib::PEM_ASN1_write_bio_internal",
+   "file": "src/pem/pem_lib.rs",
+   "count": 1,
+   "classes": {
+    "ABI_OPEN_METHOD_TABLE": 1
+   },
+   "reasons": {
+    "legacy method-table ABI: the workload imports a method-table setter": 1
+   },
+   "call_sites": [
+    "0x3aae0e"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "A2: workload imports a legacy method-table setter, so the table target set is the documented setter ABI",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs3pem7pem_pk810do_pk8pkey.llvm.7565015981208789359",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::pem::pem_pk8::do_pk8pkey",
+   "file": "src/pem/pem_pk8.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x1d029c"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5096v3_pci7r2i_pci",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::x509::v3_pci::r2i_pci",
+   "file": "src/x509/v3_pci.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x5107ea"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static X509V3 extension / EVP_PKEY_asn1 method table; curl imports no registration setter, so the writer set is closed",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5098x509_vfy9check_crl",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::x509::x509_vfy::check_crl",
+   "file": "src/x509/x509_vfy.rs",
+   "count": 1,
+   "classes": {
+    "ABI_OPEN_METHOD_TABLE": 1
+   },
+   "reasons": {
+    "legacy method-table ABI: the workload imports a method-table setter": 1
+   },
+   "call_sites": [
+    "0x3dbca2"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "A2: workload imports a legacy method-table setter, so the table target set is the documented setter ABI",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs4x5099v3_ac_tgt25i2r_TARGETING_INFORMATION",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::x509::v3_ac_tgt::i2r_TARGETING_INFORMATION",
+   "file": "src/x509/v3_ac_tgt.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x40a125"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static X509V3 extension / EVP_PKEY_asn1 method table; curl imports no registration setter, so the writer set is closed",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs5store12store_result29ossl_store_handle_load_result",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::store::store_result::ossl_store_handle_load_result",
+   "file": "src/store/store_result.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x14e8c7"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3err10raise_site",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::runtime::err::raise_site",
+   "file": "src/runtime/err.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x514561"
+   ],
+   "fix_shape": "c_source_change_removes_indirect_call",
+   "fix_shape_basis": "internal Rust FnOnce closure / ERR state dispatch; target is statically known per call site but not materialised as a table",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3err10raise_with",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::runtime::err::raise_with",
+   "file": "src/runtime/err.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x514891"
+   ],
+   "fix_shape": "c_source_change_removes_indirect_call",
+   "fix_shape_basis": "internal Rust FnOnce closure / ERR state dispatch; target is statically known per call site but not materialised as a table",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3err16get_error_values.llvm.10721983013695117071",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::runtime::err::get_error_values",
+   "file": "src/runtime/err.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x515c21"
+   ],
+   "fix_shape": "c_source_change_removes_indirect_call",
+   "fix_shape_basis": "internal Rust FnOnce closure / ERR state dispatch; target is statically known per call site but not materialised as a table",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs7runtime3err18raise_site_dynamic",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::runtime::err::raise_site_dynamic",
+   "file": "src/runtime/err.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x516061"
+   ],
+   "fix_shape": "c_source_change_removes_indirect_call",
+   "fix_shape_basis": "internal Rust FnOnce closure / ERR state dispatch; target is statically known per call site but not materialised as a table",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider10cipher_gcm14ossl_gcm_dinit",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher_gcm::ossl_gcm_dinit",
+   "file": "src/provider/cipher_gcm.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x1fb920"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider10cipher_gcm14ossl_gcm_einit",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher_gcm::ossl_gcm_einit",
+   "file": "src/provider/cipher_gcm.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x1fb9e0"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider10cipher_gcm8getivgen",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher_gcm::getivgen",
+   "file": "src/provider/cipher_gcm.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x1fd4a1"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider10cipher_gcm8setivinv",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher_gcm::setivinv",
+   "file": "src/provider/cipher_gcm.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x1fd5cf"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider17decode_msblob2key17msblob2key_decode.llvm.7568275522712508715",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::decode_msblob2key::msblob2key_decode",
+   "file": "src/provider/decode_msblob2key.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "base-slot-partial": 1
+   },
+   "call_sites": [
+    "0x18f221"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4init13provider_init",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::init::provider_init",
+   "file": "src/provider/init.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "provider-contract-witness-missing:an in-image value in this frame; this image carries no documented provider interface that writes it": 1
+   },
+   "call_sites": [
+    "0x51bed4"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "provider ABI contract shape; this slot lacks a per-call-site witness",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider5child27ossl_provider_up_ref_parent",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::child::ossl_provider_up_ref_parent",
+   "file": "src/provider/child.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x3b0069"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher10siv_cipher",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::siv_cipher",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x1fe42a"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher10siv_dupctx",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::siv_dupctx",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x1fe48a"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher12aes_xts_init",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::aes_xts_init",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x1fea9e"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher14ossl_ccm_dinit",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::ossl_ccm_dinit",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x1ffd3c"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher14ossl_ccm_einit",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::ossl_ccm_einit",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x1ffdee"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher16siv_stream_final",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::siv_stream_final",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x2023e2"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher18aes_get_ctx_params",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::aes_get_ctx_params",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x2031ef"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19ossl_chacha20_dinit",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::ossl_chacha20_dinit",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x205604"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher19ossl_chacha20_einit",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::ossl_chacha20_einit",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x205664"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher22ossl_aes_gcm_siv_dinit",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::ossl_aes_gcm_siv_dinit",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x207b5c"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher22ossl_aes_gcm_siv_einit",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::ossl_aes_gcm_siv_einit",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x207c0c"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher23chacha20_poly1305_dinit",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::chacha20_poly1305_dinit",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x208394"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher23chacha20_poly1305_einit",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::chacha20_poly1305_einit",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x208404"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher23chacha20_poly1305_final",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::chacha20_poly1305_final",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x208456"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher23ossl_aes_gcm_siv_cipher",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::ossl_aes_gcm_siv_cipher",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x208599"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher23ossl_aes_gcm_siv_dupctx",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::ossl_aes_gcm_siv_dupctx",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x208656"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher23ossl_ccm_get_ctx_params",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::ossl_ccm_get_ctx_params",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x208b0c"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher24chacha20_poly1305_cipher",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::chacha20_poly1305_cipher",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x209425"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher26ossl_cipher_generic_cipher",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::ossl_cipher_generic_cipher",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x20ae84"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher28cipher_generic_init_internal",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::cipher_generic_init_internal",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x20c43b"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher29ossl_aes_gcm_siv_stream_final",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::ossl_aes_gcm_siv_stream_final",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x20dc6c"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher33ossl_cipher_generic_stream_update",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::ossl_cipher_generic_stream_update",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x210ab9"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher9siv_dinit",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::siv_dinit",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x212810"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider6cipher9siv_einit",
+   "demangled": "openssl_rs[b5bd89b8f057016f]::provider::cipher::siv_einit",
+   "file": "src/provider/cipher.rs",
+   "count": 1,
+   "classes": {
+    "field": 1
+   },
+   "reasons": {
+    "static-instance-refused:unproven-cohort-store": 1
+   },
+   "call_sites": [
+    "0x212870"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static-instance/cohort or base-slot dispatch; the closed-set machinery refused (unproven-cohort-store / base-slot-partial)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "openssl_rs_err_realloc",
+   "demangled": "openssl_rs_err_realloc",
+   "file": "src/runtime/err.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x526680"
+   ],
+   "fix_shape": "c_source_change_removes_indirect_call",
+   "fix_shape_basis": "internal Rust FnOnce closure / ERR state dispatch; target is statically known per call site but not materialised as a table",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "ossl_pw_get_passphrase",
+   "demangled": "ossl_pw_get_passphrase",
+   "file": "src/passphrase.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x19c33d"
+   ],
+   "fix_shape": "a_external_abi_contract",
+   "fix_shape_basis": "documented external ABI dispatch (caller-supplied callback, provider/engine/BIO/store method contract, or dlsym'd symbol ABI)",
+   "source_verified": true
+  },
+  {
+   "module": "libssl.so.3",
+   "symbol": "ossl_x509_init_sig_info",
+   "demangled": "ossl_x509_init_sig_info",
+   "file": "src/x509/x509_set.rs",
+   "count": 1,
+   "classes": {
+    "materialised": 1
+   },
+   "reasons": {
+    "reg-top": 1
+   },
+   "call_sites": [
+    "0x15e397"
+   ],
+   "fix_shape": "b_closed_target_set_from_source",
+   "fix_shape_basis": "static X509V3 extension / EVP_PKEY_asn1 method table; curl imports no registration setter, so the writer set is closed",
+   "source_verified": true
+  }
+ ],
+ "fix_shape_totals": {
+  "sites_by_shape": {
+   "a_external_abi_contract": 82,
+   "b_closed_target_set_from_source": 103,
+   "c_source_change_removes_indirect_call": 34
+  },
+  "groups_by_shape": {
+   "a_external_abi_contract": 47,
+   "b_closed_target_set_from_source": 51,
+   "c_source_change_removes_indirect_call": 20
+  },
+  "files_by_shape": {
+   "a_external_abi_contract": [
+    "src/cmp/cmp_vfy.rs",
+    "src/dh/check.rs",
+    "src/encoder_meth.rs",
+    "src/engine/eng_fat.rs",
+    "src/evp/asymcipher.rs",
+    "src/evp/digest.rs",
+    "src/evp/evp_pbe.rs",
+    "src/evp/exchange.rs",
+    "src/evp/p5_crpt2.rs",
+    "src/evp/pkey_ctx.rs",
+    "src/http/http_client.rs",
+    "src/modes/mod.rs",
+    "src/modes/wrap.rs",
+    "src/passphrase.rs",
+    "src/pem/pem_lib.rs",
+    "src/pem/pem_pk8.rs",
+    "src/pkcs12/p12_crt.rs",
+    "src/provider/child.rs",
+    "src/provider/init.rs",
+    "src/provider/rand.rs",
+    "src/rand/rand_lib.rs",
+    "src/runtime/confmod/mod.rs",
+    "src/runtime/dso_shared.rs",
+    "src/runtime/obj.rs",
+    "src/runtime/stack.rs",
+    "src/ssl/ssl_lib.rs",
+    "src/ssl/ssl_mcnf.rs",
+    "src/store/store_lib.rs",
+    "src/store/store_result.rs",
+    "src/ui/ui_util.rs",
+    "src/x509/x509_vfy.rs"
+   ],
+   "b_closed_target_set_from_source": [
+    "src/provider/cipher.rs",
+    "src/provider/cipher_gcm.rs",
+    "src/provider/cipher_tdes_wrap.rs",
+    "src/provider/decode_msblob2key.rs",
+    "src/runtime/init.rs",
+    "src/x509/t_x509.rs",
+    "src/x509/v3_ac_tgt.rs",
+    "src/x509/v3_conf.rs",
+    "src/x509/v3_lib.rs",
+    "src/x509/v3_pci.rs",
+    "src/x509/v3_prn.rs",
+    "src/x509/x509_set.rs"
+   ],
+   "c_source_change_removes_indirect_call": [
+    "src/runtime/err.rs"
+   ]
+  }
+ },
+ "cross_check_openssh_b85c": {
+  "ssh_predicate": {
+   "established": true,
+   "status": "PASS (contract-bounded and closed target sets)",
+   "basis": "AGENTS.md section 7 criterion 2: a required precondition may be established by an external ABI contract; a closed target set additionally enumerates every in-image target",
+   "reachable_unresolved_sites": 152,
+   "target_bounded_unresolved_sites": 0,
+   "contract_bounded_sites": 116,
+   "contract_bounded_by_class": {
+    "ABI_CONTRACT_CONF_MODULE": 2,
+    "ABI_CONTRACT_CORE_DISPATCH": 26,
+    "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+    "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+    "ABI_CONTRACT_PBE_REGISTRY": 1,
+    "ABI_CONTRACT_PROVIDER": 16,
+    "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+    "ABI_CONTRACT_STORE_LOADER": 3
+   },
+   "closed_target_set_sites": 36,
+   "closed_target_set_by_class": {
+    "CLOSED_TARGET_SET_DECODER_METHOD_OBJECT": 3,
+    "CLOSED_TARGET_SET_LEGACY_EVP_CIPHER_DATA": 2,
+    "CLOSED_TARGET_SET_PROVIDER_HW_TABLE": 25,
+    "CLOSED_TARGET_SET_SLH_METHOD_TABLE": 6
+   },
+   "unclassified_reachable_sites": 0,
+   "target_sets_remain_unbounded": true,
+   "has_closed_target_sets": true,
+   "why": "116 site(s) are bounded by a documented external ABI contract and 36 by a closed, enumerated in-image target set; no target-bounded unresolved site and no unclassified site remains"
+  },
+  "ssh_bound_classes": {
+   "ABI_CONTRACT_CONF_MODULE": 2,
+   "ABI_CONTRACT_CORE_DISPATCH": 26,
+   "ABI_CONTRACT_EXPORT_CALLBACK": 66,
+   "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT": 1,
+   "ABI_CONTRACT_PBE_REGISTRY": 1,
+   "ABI_CONTRACT_PROVIDER": 16,
+   "ABI_CONTRACT_REGISTRATION_ATEXIT": 1,
+   "ABI_CONTRACT_STORE_LOADER": 3,
+   "CLOSED_TARGET_SET_DECODER_METHOD_OBJECT": 3,
+   "CLOSED_TARGET_SET_LEGACY_EVP_CIPHER_DATA": 2,
+   "CLOSED_TARGET_SET_PROVIDER_HW_TABLE": 25,
+   "CLOSED_TARGET_SET_SLH_METHOD_TABLE": 6
+  },
+  "reading": {
+   "already_accepted_shape_not_applied": {
+    "sites": 76,
+    "why": "closed-target-set (field) and provider ABI contract are already bound in ssh; here the witness refused or is absent"
+   },
+   "same_shape_new_class": {
+    "sites": 18,
+    "why": "external ABI contract shape exists, but no accepted receipt has ever bound ABI_OPEN_METHOD_TABLE"
+   },
+   "genuinely_new": {
+    "sites": 125,
+    "why": "no accepted receipt binds a reachable materialised register/stack site (ssh's 7 materialised sites were unreachable)",
+    "by_fix_shape_sites": {
+     "a_external_abi_contract": 63,
+     "b_closed_target_set_from_source": 28,
+     "c_source_change_removes_indirect_call": 34
+    }
+   },
+   "already_accepted_shape_by_fix_shape_sites": {
+    "a_external_abi_contract": 1,
+    "b_closed_target_set_from_source": 75
+   },
+   "same_shape_new_class_by_fix_shape_sites": {
+    "a_external_abi_contract": 18
+   }
+  }
+ },
+ "completeness": {
+  "covered_sites": 219,
+  "expected_sites": 219,
+  "remainder": 0,
+  "unmapped_file_sites": 0
+ },
+ "caveats": [
+  "Fix shape is a triage assignment. (a) for materialised sites whose enclosing function is a documented callback/provider/engine ABI is an inference from the function role and the imported-symbol set; the per-call-site contract witness is the resolution work itself.",
+  "The edge stream demotes a resolved site with an empty admitted set to UNRESOLVED; those records are not residual sites and are excluded here (count recorded)."
+ ]
+}
