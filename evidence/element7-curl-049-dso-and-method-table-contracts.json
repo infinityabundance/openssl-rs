@@ -1,0 +1,78 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/element7-repair/v1",
+  "receipt": "element7-curl-049-dso-and-method-table-contracts",
+  "consumer": "curl",
+  "candidate": {
+    "install_libcrypto_so_3_sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+    "install_libssl_so_3_sha256": "648f8caecda245d2186813fb67ceadedd798b9ce609c8b041a84f195946c5f68",
+    "closure_receipt": "evidence/closure-curl-049.json",
+    "triage": "evidence/element7-curl-049-triage.json"
+  },
+  "bound": {
+    "sites": 48,
+    "ABI_CONTRACT_DSO_EXPORT": {
+      "sites": 30,
+      "witness": "the operand is a load of a named dso_shared LazySymbol cell or its inlined dlsym result; every writer of that cell in the image is the resolve publication, dso_shared::LazySymbol::resolve storing dlsym(RTLD_DEFAULT, <literal>)"
+    },
+    "ABI_CONTRACT_ALLOCATOR": {
+      "sites": 4,
+      "witness": "the allocator slot is written by CRYPTO_set_mem_functions (src/runtime/mem.rs:1164-1202); libssl's local setter is never called, so its hook arm is dead and only the in-image default remains"
+    },
+    "ABI_CONTRACT_PROVIDER_ALGORITHM_SLOT": {
+      "sites": 10,
+      "witness": "documented OSSL_FUNC_* ABI, slot written solely by *_from_algorithm"
+    },
+    "ABI_CONTRACT_PEM_PASSWORD_CB": {
+      "sites": 1,
+      "witness": "the dispatched slot is PemPasswordCbData.cb, written solely by the exported UI_UTIL_wrap_read_pem_callback from its pem_password_cb *cb parameter; UI_method_set_* does not open this slot"
+    },
+    "ABI_CONTRACT_X509_CTX_CALLBACK": {
+      "sites": 1,
+      "witness": "X509StoreCtx.cleanup, written by exported X509_STORE_set_cleanup plus the init/cleanup arms"
+    },
+    "CLOSED_TARGET_SET_PMETH_STANDARD": {
+      "sites": 2,
+      "witness": "the 10 immutable PMETH_STANDARD_METHODS getters; the comparator is passed only to OBJ_bsearch_ex_"
+    }
+  },
+  "refused": [
+    {"sites": 2, "group": "PEM_ASN1_write_bio_internal callback", "reason": "caller-chain-passes-a-non-parameter-value"},
+    {"sites": 1, "group": "ui_read (libssl)", "reason": "the wrapper is local to that DSO, so the exported route to the callback is not proved"},
+    {"sites": 1, "group": "check_crl (libssl)", "reason": "the store setter is not exported by that DSO"}
+  ],
+  "controls": {
+    "firing": [
+      "e7dso-second-writer", "e7dso-foreign-literal", "the real foreign-writer fixture (refuses without any switch)",
+      "e7dso overlap-artifact positive", "e7pas-wrong-offset", "e7pas-second-writer", "e7pemcb-second-writer",
+      "e7xctx-wrong-offset", "e7xctx-second-writer", "e7pmcmp-second-reference",
+      "e7a2-blanket (restores the class-widening blanket so it is demonstrably load-bearing)"
+    ],
+    "negatives": "unpinned shapes and unrelated sites return None",
+    "self_test": "exit 0, 'self-test ok', E7BATCH reports every mutation load-bearing, no PREMISE_UNAVAILABLE"
+  },
+  "queue_delta": {
+    "before": {"sites": 120, "groups": 70},
+    "after": {"sites": 72, "groups": 38},
+    "remaining": {
+      "a_external_abi_contract": {"sites": 68, "groups": 35},
+      "b_proved_empty": {"sites": 4, "groups": 3}
+    }
+  },
+  "residuals": [
+    "a permissive linear-sweep artifact inside a preceding call is ignored",
+    "the provider witness admits a null definition at a path-insensitive merge (source guards it)",
+    "the allocator writer scan is image-wide"
+  ],
+  "validation": {
+    "method": "self-test plus a targeted re-resolution of all 52 triage records through the tool's own image/source machinery",
+    "full_closure_run": "NOT_RUN — deferred so one run at one identity carries the whole result"
+  },
+  "status": {
+    "element_7": "FAIL — 72 sites remain",
+    "safe_compatible_curl": "NOT ESTABLISHED"
+  },
+  "non_claims": [
+    "A targeted re-resolution is not a closure run and does not by itself move element-7.",
+    "No obligation is discharged and no consumer graduates by this receipt."
+  ]
+}

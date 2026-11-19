@@ -2190,6 +2190,34 @@ ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT = \
 # class: the *caller* supplies these function values, the documented
 # `OSSL_FUNC_*` ids name their signatures, and the target set is unbounded.
 ABI_CONTRACT_CORE_DISPATCH = "ABI_CONTRACT_CORE_DISPATCH"
+# A process-global export reached through `dso_shared`'s `dlsym` resolver.  The
+# site is `call *%rax` / `jmp *%rax` on the value of a named `LazySymbol` cell;
+# the cell's only writer stores `dlsym(RTLD_DEFAULT, <export>)` and the export is
+# a documented OpenSSL entry point.  A direct call would be wrong: the whole
+# point of the indirection is to reach libcrypto's copy of `ERR_get_state`
+# (cross-DSO error state) or libcrypto's copy of `CRYPTO_malloc`/`CRYPTO_realloc`
+# (the application's `CRYPTO_set_mem_functions` hooks).  Site-enumerated by the
+# cell; a different cell or a second writer refuses.
+ABI_CONTRACT_DSO_EXPORT = "ABI_CONTRACT_DSO_EXPORT"
+# A fetched provider algorithm method object's callback slot (`newctx`,
+# `encrypt_init`, `decrypt_init`, `init`).  The object is built by the in-image
+# `*_from_algorithm` constructor from the provider's `OSSL_DISPATCH` table, so
+# the target is the provider's documented `OSSL_FUNC_*` implementation and the
+# target set is unbounded.  Distinct from `ABI_CONTRACT_PROVIDER`, whose witness
+# reads the fetch return directly: these sites read a field of a stored method
+# object one hop away from the fetch, so they get their own class and witness.
+ABI_CONTRACT_PROVIDER_ALGORITHM_SLOT = \
+    "ABI_CONTRACT_PROVIDER_ALGORITHM_SLOT"
+# A `pem_password_cb` stored in a wrapper method's ex-data by the exported
+# `UI_UTIL_wrap_read_pem_callback` and called later by `ui_read`.  The value is
+# the exported function's `cb` parameter; the writer is that one function.
+ABI_CONTRACT_PEM_PASSWORD_CB = "ABI_CONTRACT_PEM_PASSWORD_CB"
+# The `X509_STORE_CTX.cleanup` callback read from a live context.  The writer
+# set is the exported `X509_STORE_set_cleanup` (its parameter unchanged) and the
+# two in-image `X509_STORE_CTX_init`/`_cleanup` arms (copy from the store, or
+# NULL).  The target set is unbounded and the type is the documented
+# `X509_STORE_CTX_cleanup_fn`.
+ABI_CONTRACT_X509_CTX_CALLBACK = "ABI_CONTRACT_X509_CTX_CALLBACK"
 
 ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR,
                                   ABI_CONTRACT_CORE_DISPATCH,
@@ -2204,7 +2232,11 @@ ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR,
                                   ABI_CONTRACT_STORE_LOADER,
                                   ABI_CONTRACT_CONF_MODULE,
                                   ABI_CONTRACT_CONF_DEFAULT_METHOD,
-                                  ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT})
+                                  ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
+                                  ABI_CONTRACT_DSO_EXPORT,
+                                  ABI_CONTRACT_PROVIDER_ALGORITHM_SLOT,
+                                  ABI_CONTRACT_PEM_PASSWORD_CB,
+                                  ABI_CONTRACT_X509_CTX_CALLBACK})
 
 # --------------------------------------------------------------------------- #
 # closed target sets (a bounded, enumerated in-image set, not an external ABI)
@@ -3032,6 +3064,183 @@ ABI_CONTRACTS = {
             "a call at the enumerated address whose function leaf differs; it "
             "falls through to target-bounded with no named refusal (the address "
             "is not the identity)",
+        ],
+    },
+    ABI_CONTRACT_DSO_EXPORT: {
+        "resolution_kind": "contract-bounded (target set unbounded)",
+        "contract": (
+            "a process-global OpenSSL export reached through the `dso_shared` "
+            "`dlsym(RTLD_DEFAULT, ...)` resolver: `ERR_get_state`, "
+            "`CRYPTO_malloc`, `CRYPTO_realloc`"
+        ),
+        "citation": [
+            "include/openssl/err.h:496 -- ERR_STATE *ERR_get_state(void): the "
+            "per-thread error queue every DSO must reach",
+            "include/openssl/crypto.h:372-382 -- CRYPTO_set_mem_functions and "
+            "CRYPTO_malloc(size_t, const char *, int)",
+            "include/openssl/crypto.h:396 -- CRYPTO_realloc(void *, size_t, "
+            "const char *, int)",
+            "src/runtime/dso_shared.rs:136-142 -- the three named LazySymbol "
+            "cells (ERR_GET_STATE, CRYPTO_MALLOC_SYM, CRYPTO_REALLOC_SYM)",
+            "src/runtime/dso_shared.rs:90-110 -- LazySymbol::resolve: the only "
+            "writer is `self.value.store(dlsym(RTLD_DEFAULT, name))`; the "
+            "literal name is a static C string",
+            "src/runtime/dso_shared.rs:145-156 / 258-276 / 288-306 -- the "
+            "call through the resolved pointer, with a local fallback when "
+            "the symbol is absent",
+        ],
+        "provider_obligation": (
+            "the process-global definition of the documented export owns the "
+            "called function; for ERR_get_state it is libcrypto's per-thread "
+            "ERR_STATE (a libssl error must land in the queue ERR_peek_error "
+            "reads), and for the allocator pair it is libcrypto's copy, which "
+            "dispatches through whatever CRYPTO_set_mem_functions installed"
+        ),
+        "covers": (
+            "the site's operand provenance (the named cell or the dlsym "
+            "return), every writer of that cell in this image, and the "
+            "documented export name the writer resolves"
+        ),
+        "does_not_cover": [
+            "the process-global symbol an interposed dlsym resolves; that is "
+            "the configuration",
+            "the correctness of the external implementation",
+            "a second writer of the cell, a non-literal symbol name, or a "
+            "cell outside the three enumerated lazily-resolved exports; the "
+            "witness refuses each",
+            "a site whose operand is not the cell load or the dlsym result",
+        ],
+    },
+    ABI_CONTRACT_PROVIDER_ALGORITHM_SLOT: {
+        "resolution_kind": "contract-bounded (target set unbounded)",
+        "contract": (
+            "a fetched EVP algorithm method object's provider callback slot "
+            "(`EVP_ASYM_CIPHER.newctx`/`encrypt_init`/`decrypt_init`, "
+            "`EVP_KEYEXCH.newctx`/`init`, `EVP_SIGNATURE.newctx`)"
+        ),
+        "citation": [
+            "include/openssl/core_dispatch.h:891-929 -- "
+            "OSSL_FUNC_ASYM_CIPHER_NEWCTX/ENCRYPT_INIT/DECRYPT_INIT ids and "
+            "OSSL_CORE_MAKE_FUNC signatures",
+            "include/openssl/core_dispatch.h:762-783 -- OSSL_FUNC_KEYEXCH_* "
+            "ids and signatures",
+            "include/openssl/core_dispatch.h:789-820 -- "
+            "OSSL_FUNC_SIGNATURE_NEWCTX and the signature family",
+            "include/openssl/core.h:40-44 -- struct ossl_dispatch_st { int "
+            "function_id; void (*function)(void); } terminated by "
+            "OSSL_DISPATCH_END",
+            "src/evp/asymcipher.rs:405-459 -- evp_asym_cipher_from_algorithm "
+            "is the only writer of newctx/encrypt_init/decrypt_init, from "
+            "`entry_function::<...>(entry)` at the documented function_id",
+            "src/evp/exchange.rs:415-431 -- evp_keyexch_from_algorithm is the "
+            "only writer of newctx/init",
+            "src/evp/signature.rs:505-515 -- evp_signature_from_algorithm is "
+            "the only writer of newctx",
+        ],
+        "provider_obligation": (
+            "the provider publishes the callback under the documented "
+            "OSSL_FUNC_* id and owns its correctness and lifetime; the core "
+            "stores that exact pointer into the method object and calls it "
+            "with the documented signature"
+        ),
+        "covers": (
+            "the pinned (function, call) shapes for the five enumerated "
+            "sites, the method object's field offset, the in-image fetch that "
+            "produced the object, and the single in-image writer of the field"
+        ),
+        "does_not_cover": [
+            "which provider (if any) the effective configuration names; the "
+            "target set is unbounded",
+            "the external provider's own correctness",
+            "a slot at another offset, a method object that is not a fetch "
+            "return, or a field with a writer outside the enumerated "
+            "*_from_algorithm constructor; the witness refuses each",
+            "a null (no-method) reaching definition admitted at a "
+            "path-insensitive CFG merge; the source guards the pointer "
+            "before the read and the witness records that residual",
+        ],
+    },
+    ABI_CONTRACT_PEM_PASSWORD_CB: {
+        "resolution_kind": "contract-bounded (target set unbounded)",
+        "contract": (
+            "the `pem_password_cb *cb` parameter of the exported "
+            "`UI_UTIL_wrap_read_pem_callback`, stored in the wrapper method's "
+            "ex-data and called by `ui_read`"
+        ),
+        "citation": [
+            "include/openssl/ui.h:404 -- UI_METHOD "
+            "*UI_UTIL_wrap_read_pem_callback(pem_password_cb *cb, int "
+            "rwflag)",
+            "include/openssl/types.h:237 -- typedef int pem_password_cb(char "
+            "*buf, int size, int rwflag, void *userdata)",
+            "include/openssl/pem.h:440 -- int PEM_def_callback(char *, int, "
+            "int, void *): the NULL-selected default",
+            "src/ui/ui_util.rs:435-476 -- the exported wrapper is the only "
+            "writer of `PemPasswordCbData.cb` (offset 0), storing "
+            "`cb.unwrap_or(PEM_def_callback)` as its own parameter",
+            "src/ui/ui_util.rs:301-308 -- ui_read calls `(*data).cb(...)` with "
+            "the documented pem_password_cb arguments",
+        ],
+        "provider_obligation": (
+            "the application supplies a pem_password_cb of the declared "
+            "signature that stays valid for the method's lifetime; NULL "
+            "selects the in-image PEM_def_callback"
+        ),
+        "covers": (
+            "the enumerated ui_read call site in each DSO copy, the "
+            "PemPasswordCbData.cb field at offset 0, its single source "
+            "writer, the exported wrapper symbol and its declared parameter"
+        ),
+        "does_not_cover": [
+            "which callback the application supplies; the target set is "
+            "unbounded",
+            "the callback's behaviour or lifetime",
+            "a slot at a nonzero displacement, a second writer of the field, "
+            "an unexported wrapper, or a header that does not declare "
+            "pem_password_cb; the witness refuses each",
+            "the untested ex-data dereference of a foreign UI_METHOD that "
+            "installs this crate's non-exported ui_read; that is a source "
+            "mis-wiring the authority also does not test",
+        ],
+    },
+    ABI_CONTRACT_X509_CTX_CALLBACK: {
+        "resolution_kind": "contract-bounded (target set unbounded)",
+        "contract": (
+            "the `X509_STORE_CTX.cleanup` callback of a live verification "
+            "context (`X509_STORE_CTX_cleanup_fn`)"
+        ),
+        "citation": [
+            "include/openssl/x509_vfy.h:274 -- typedef int "
+            "(*X509_STORE_CTX_cleanup_fn)(X509_STORE_CTX *ctx)",
+            "include/openssl/x509_vfy.h:575-577 -- void "
+            "X509_STORE_set_cleanup(X509_STORE *, "
+            "X509_STORE_CTX_cleanup_fn)",
+            "src/x509/x509_lu.rs:2541-2547 -- the exported setter stores its "
+            "parameter unchanged into X509Store.cleanup",
+            "src/x509/x509_vfy.rs:5364-5367 -- X509_STORE_CTX_init copies the "
+            "store's callback or installs NULL",
+            "src/x509/x509_vfy.rs:1745 -- X509_STORE_CTX_cleanup clears the "
+            "field before/after the drain",
+            "src/x509/x509_vfy.rs:5437-5442 -- check_crl calls the local "
+            "context's cleanup slot after X509_STORE_CTX_init",
+        ],
+        "provider_obligation": (
+            "the application supplies an X509_STORE_CTX_cleanup_fn through "
+            "the documented store setter; the context copies it and calls it "
+            "once at cleanup; NULL is admitted and not called"
+        ),
+        "covers": (
+            "the enumerated check_crl cleanup site in each DSO copy, the "
+            "local context's disposal offset, the source writer set, and the "
+            "exported setter with its declared parameter type"
+        ),
+        "does_not_cover": [
+            "which callback the application supplies; the target set is "
+            "unbounded",
+            "the callback's behaviour or lifetime",
+            "another callback field (verify_cb, check_issued, ...) or a "
+            "displacement that is not the declared cleanup offset; the "
+            "witness refuses each",
         ],
     },
 }
@@ -25089,6 +25298,1202 @@ def closed_method_table_witness(g, site, name, workload_imports=None):
     }
 
 
+# --------------------------------------------------------------------------- #
+# E7-DSO / E7-PAS / E7-PEMCB / E7-X509CTX / E7-PMCMP witnesses
+# --------------------------------------------------------------------------- #
+#
+# Five site classes the curl-049 queue carried as one blanket
+# `ABI_OPEN_METHOD_TABLE` label.  Each witness below is per-call-site: it names
+# the slot, the writer and the documented interface, and it refuses a site whose
+# writer set is not closed to the documented path.  A refusal is a dict without
+# the witness schema; `apply_evidence_classes` records it and leaves the site
+# unresolved, so a refused group is never absorbed by a same-shaped rule.
+
+E7DSO_SCHEMA = "openssl-rs/consumer-closure/dso-resolved-export/v1"
+E7DSO_DLSYM = "dlsym"
+# (cell symbol fragment, documented export).  A cell outside this set is refused
+# rather than classified: this is one mechanism, not a generic dlsym class.
+E7DSO_CELLS = (
+    ("dso_shared13ERR_GET_STATE", "ERR_get_state"),
+    ("dso_shared17CRYPTO_MALLOC_SYM", "CRYPTO_malloc"),
+    ("dso_shared18CRYPTO_REALLOC_SYM", "CRYPTO_realloc"),
+)
+
+
+def _e7dso_cell(g, addr):
+    """The enumerated LazySymbol cell at ``addr``, or None."""
+    if addr is None:
+        return None
+    for raw in (getattr(g, "names_at", {}) or {}).get(addr, ()):
+        base = (raw or "").split("@")[0]
+        for frag, export in E7DSO_CELLS:
+            if frag in base:
+                return {"cell": addr, "symbol": base, "export": export,
+                        "fragment": frag}
+    return None
+
+
+E7DSO_MEM_CELLS = (
+    ("runtime3mem9MALLOC_FN", "MALLOC_FN"),
+    ("runtime3mem10REALLOC_FN", "REALLOC_FN"),
+    ("runtime3mem7FREE_FN", "FREE_FN"),
+)
+
+
+def _e7dso_mem_cell(g, addr):
+    """The `runtime::mem` hook cell at ``addr``, or None."""
+    if addr is None:
+        return None
+    for raw in (getattr(g, "names_at", {}) or {}).get(addr, ()):
+        base = (raw or "").split("@")[0]
+        for frag, which in E7DSO_MEM_CELLS:
+            if frag in base:
+                return {"cell": addr, "symbol": base, "which": which,
+                        "fragment": frag}
+    return None
+
+
+def _e7dso_mem_writers(g, cell):
+    """(writers, defects) for stores to a `runtime::mem` hook cell."""
+    cache = getattr(g, "_e7dso_mem_writer_cache", None)
+    if cache is None:
+        cache = {}
+        g._e7dso_mem_writer_cache = cache
+    key = (cell, tuple(sorted(_MUTED)))
+    if key in cache:
+        return cache[key]
+    writers, defects = [], []
+    for fstart, insns in getattr(g, "functions", ()):
+        for addr, text in insns:
+            if _insn_comment_addr(text) != cell:
+                continue
+            mn, _rest, ops = _insn_parts(text)
+            if (mn not in ("mov", "movq", "movb", "movl") or not ops
+                    or "(" in ops[0]):
+                continue
+            leaf = _external_function_leaf(g.funcs.get(fstart) or "")
+            if leaf != "CRYPTO_set_mem_functions":
+                defects.append({"site": hex(addr), "function": leaf,
+                                "text": text,
+                                "reason": "hook-cell-store-outside-the-setter"})
+            else:
+                writers.append({"site": hex(addr), "function": leaf,
+                                "text": text})
+    out = (writers, defects)
+    cache[key] = out
+    return out
+
+
+def _e7_direct_callers_raw(g, target):
+    """In-image direct call sites of ``target``, from the raw disassembly."""
+    cache = getattr(g, "_e7_raw_caller_cache", None)
+    if cache is None:
+        cache = {}
+        g._e7_raw_caller_cache = cache
+    if target in cache:
+        return cache[target]
+    out = []
+    for fs, insns in getattr(g, "functions", ()):
+        for a, text in insns:
+            m = re.match(r"^call\w*\s+([0-9a-f]+)\s", text)
+            if m and int(m.group(1), 16) == target:
+                out.append({"function": g.funcs.get(fs), "call_site": hex(a)})
+    cache[target] = out
+    return out
+
+
+def _e7dso_literal(g, insns, call_idx):
+    """The literal C string passed to the call, or None (negative control)."""
+    for k in range(call_idx - 1, max(-1, call_idx - 8), -1):
+        text = insns[k][1]
+        mn, _rest, ops = _insn_parts(text)
+        if not ops:
+            continue
+        if ops[-1] in ("%rsi", "%esi"):
+            tgt = _insn_comment_addr(text)
+            if tgt is not None:
+                name = g.cstring_at(tgt)
+                if name:
+                    return name
+        if mn.startswith("call"):
+            break
+    return None
+
+
+def _e7dso_store_signature(g, insns, idx):
+    """Classify one instruction that names the cell as a value.
+
+    Returns ``("writer", cell, literal, None)`` for the inlined
+    ``LazySymbol::resolve`` publication (``mov %rax,<cell>``, the state
+    ``movb $PRESENT,<cell+8>`` next, and a preceding ``dlsym`` whose single
+    literal is the cell's documented export), ``("overlap", ...)`` for a
+    linear-sweep artifact that cannot be an instruction (it begins inside the
+    previous ``call``/``jmp``), or ``("refuse", None, reason, extra)``.
+    """
+    addr, text = insns[idx]
+    mn, _rest, ops = _insn_parts(text)
+    target = _insn_comment_addr(text)
+    if mn not in ("mov", "movq") or len(ops) != 2:
+        return "refuse", None, "cell-reference-is-not-a-move", {"text": text}
+    if _canon(ops[0]) != "%rax":
+        return "refuse", None, "cell-store-value-is-not-the-dlsym-return", {
+            "text": text}
+    state = None
+    for k in range(idx + 1, min(len(insns), idx + 3)):
+        _m, _r, oo = _insn_parts(insns[k][1])
+        if (oo and oo[0].startswith("$")
+                and _insn_comment_addr(insns[k][1]) == (target or 0) + 8):
+            state = insns[k][1]
+            break
+    call_idx = None
+    for k in range(idx - 1, max(-1, idx - 6), -1):
+        if _insn_parts(insns[k][1])[0].startswith("call"):
+            call_idx = k
+            break
+    if call_idx is None:
+        return "refuse", None, "cell-store-has-no-dlsym-call", {"text": text}
+    call_addr, call_text = insns[call_idx]
+    if addr - call_addr < 5:
+        # The candidate begins inside the call instruction's bytes: this is a
+        # linear-sweep artifact, never an independently executed store.
+        return "overlap", None, None, {"text": text, "call": call_text}
+    if E7DSO_DLSYM not in call_text:
+        return "refuse", None, "cell-store-caller-is-not-dlsym", {
+            "call": call_text}
+    if state is None:
+        return "refuse", None, "cell-store-does-not-publish-the-state", {
+            "text": text}
+    literal = _e7dso_literal(g, insns, call_idx)
+    if literal is None:
+        return "refuse", None, "dlsym-symbol-is-not-a-literal", {
+            "call": call_text}
+    return "writer", _e7dso_cell(g, target), literal, {"text": text,
+                                                       "call": call_text}
+
+
+def _e7dso_cell_writers(g, cell):
+    """(writers, artifacts, defects) for every reference to ``cell``."""
+    cache = getattr(g, "_e7dso_writer_cache", None)
+    if cache is None:
+        cache = {}
+        g._e7dso_writer_cache = cache
+    key = (cell, tuple(sorted(_MUTED)))
+    if key in cache:
+        return cache[key]
+    writers, artifacts, defects = [], [], []
+    for fstart, insns in getattr(g, "functions", ()):
+        for idx, (addr, text) in enumerate(insns):
+            if _insn_comment_addr(text) != cell:
+                continue
+            mn, _rest, ops = _insn_parts(text)
+            if (mn in ("mov", "movq", "movb", "movl") and len(ops) == 2
+                    and "(" in ops[0]):
+                continue  # a load from the cell
+            kind, info, why, extra = _e7dso_store_signature(g, insns, idx)
+            if kind == "writer":
+                if info is None or info["cell"] != cell:
+                    defects.append({"site": hex(addr), "reason":
+                                    "writer-names-another-cell", **extra})
+                elif why != info["export"]:
+                    defects.append({"site": hex(addr),
+                                    "reason": "dlsym-literal-is-not-the-export",
+                                    "literal": why,
+                                    "expected": info["export"], **extra})
+                else:
+                    writers.append({"site": hex(addr),
+                                    "function": g.funcs.get(fstart),
+                                    **extra})
+            elif kind == "overlap":
+                artifacts.append({"site": hex(addr),
+                                  "reason": "linear-sweep-overlap", **extra})
+            else:
+                defects.append({"site": hex(addr), "reason": why, **extra})
+    out = (writers, artifacts, defects)
+    cache[key] = out
+    return out
+
+
+def dso_resolved_export_witness(g, site, name):
+    """The `dso_shared` dlsym-resolver contract at this exact site."""
+    if not _has_insns(g):
+        return None
+    idx = _external_insn_index(g, site)
+    if idx is None:
+        return None
+    text = site.get("text") or ""
+    m = re.search(r"(?:call|jmp)\w*\s+\*(.+)$", text.split("#", 1)[0].strip())
+    if m is None:
+        return None
+    opnd = m.group(1).strip()
+    reg = _canon(opnd) if opnd in _SUBREG else opnd
+    if reg not in _REGS:
+        return None
+    fstart = site["func"]
+    insns = g.precision.insns_by_func[fstart]
+    defs = _reaching_defs(g, fstart, idx, reg)
+    tail = False
+    if defs is None:
+        # A `jmp *%reg` tail call has no fall-through definition in the CFG;
+        # the single preceding write inside the function is the evidence.
+        kind, k, _ops = _semantic_last_write(g, fstart, idx, reg)
+        if kind != "insn":
+            return None
+        defs = {k}
+        tail = True
+    if not defs or _ENTRY_DEF in defs:
+        return None
+
+    def refuse(reason, **extra):
+        rec = {"class": ABI_CONTRACT_DSO_EXPORT, "resolved": False,
+               "refusal": reason, "function": name,
+               "call_site": hex(site.get("addr") or 0)}
+        rec.update(extra)
+        return rec
+
+    cells, mem_cells, shapes, unknown = set(), set(), [], []
+    for k in sorted(defs):
+        dtext = insns[k][1]
+        daddr = insns[k][0]
+        target = _insn_comment_addr(dtext)
+        cell = _e7dso_cell(g, target)
+        if cell is not None and "(" in dtext and not dtext.lstrip().startswith(
+                "call"):
+            # A load of the published cell.
+            cells.add(cell["cell"])
+            shapes.append({"kind": "cell-load", "addr": hex(daddr),
+                           "cell": cell["symbol"], "export":
+                           cell["export"], "text": dtext})
+            continue
+        if _insn_parts(dtext)[0].startswith("call") and k + 1 < len(insns):
+            store_idx = None
+            for kk in range(k + 1, min(len(insns), k + 6)):
+                if _e7dso_cell(g, _insn_comment_addr(insns[kk][1])) is not None:
+                    store_idx = kk
+                    break
+            if store_idx is None:
+                return refuse("dlsym-result-is-not-stored-into-a-cell",
+                              call=dtext, at=hex(daddr))
+            kind, info, why, extra = _e7dso_store_signature(
+                g, insns, store_idx)
+            if kind == "writer" and info is not None and why == info["export"]:
+                cells.add(info["cell"])
+                shapes.append({"kind": "dlsym-result",
+                               "call": hex(daddr),
+                               "store": insns[store_idx][1],
+                               "cell": info["symbol"],
+                               "export": info["export"]})
+                continue
+        mn = _insn_parts(dtext)[0]
+        if mn.startswith("cmov"):
+            ops = _insn_parts(dtext)[2]
+            src = _canon(ops[0]) if ops else None
+            sdefs = _reaching_defs(g, fstart, k, src) if src else None
+            hook = None
+            for d in sorted(sdefs or ()):
+                hook = _e7dso_mem_cell(g, _insn_comment_addr(insns[d][1]))
+                if hook is not None:
+                    hook["load"] = insns[d][1]
+                    break
+            if hook is None:
+                unknown.append(dtext)
+                continue
+            prior_kind, prior_k, _po = _semantic_last_write(
+                g, fstart, k, "%rax")
+            prior = _insn(g, fstart, prior_k) if prior_k is not None else ""
+            pm = re.search(r"<([A-Za-z_][A-Za-z0-9_]*)", prior)
+            fallback = pm.group(1) if pm else ""
+            if "default_" not in fallback:
+                return refuse("hook-select-fallback-is-not-the-in-image-default",
+                              definition=dtext, fallback=prior)
+            mem_cells.add(hook["cell"])
+            shapes.append({"kind": "hook-select", "addr": hex(daddr),
+                           "cell": hook["symbol"], "which": hook["which"],
+                           "load": hook["load"], "fallback": fallback,
+                           "select": dtext})
+            continue
+        unknown.append(dtext)
+    if not shapes:
+        return None
+    if unknown:
+        return refuse("operand-definition-is-not-the-enumerated-cell",
+                      definitions=unknown[:4],
+                      matched=len(shapes))
+
+    detail = []
+    writers, artifacts, defects = [], [], []
+    if cells:
+        if len(cells) != 1:
+            return refuse("operand-spans-several-cells",
+                          cells=sorted(hex(c) for c in cells))
+        cell = next(iter(cells))
+        cinfo = _e7dso_cell(g, cell)
+        writers, artifacts, defects = _e7dso_cell_writers(g, cell)
+        if "e7dso-second-writer" in _MUTED:
+            defects = defects + [{"site": "0x0", "function": "injected",
+                                  "reason":
+                                  "second-writer-installs-a-different-target"}]
+        if "e7dso-foreign-literal" in _MUTED:
+            defects = defects + [{"site": "0x0",
+                                  "reason": "dlsym-literal-is-not-the-export"}]
+        detail.append({"cell": cinfo["symbol"], "export": cinfo["export"],
+                       "writers": writers, "artifacts": artifacts})
+    for mc in sorted(mem_cells):
+        minfo = _e7dso_mem_cell(g, mc)
+        mw, md = _e7dso_mem_writers(g, mc)
+        if "e7dso-second-writer" in _MUTED:
+            md = md + [{"site": "0x0", "function": "injected",
+                        "reason": "second-writer-installs-a-different-target"}]
+        writers = list(writers) + mw
+        defects = list(defects) + md
+        mem_src, _ml, _merr = _external_source(g, "src/runtime/mem.rs")
+        if mem_src is None:
+            return refuse("mem-source-unavailable")
+        stores = len(re.findall(re.escape(minfo["which"]) + r"\.store\(",
+                                mem_src))
+        if stores != 1:
+            return refuse("hook-cell-has-not-one-source-store",
+                          cell=minfo["which"], stores=stores)
+        setter = _external_exported(g, "CRYPTO_set_mem_functions")
+        dead = None
+        if setter is None:
+            local = _e7bs_function_symbol(g, "CRYPTO_set_mem_functions")
+            callers = _e7_direct_callers_raw(g, local[0]) if local else []
+            if "e7dso-dead-hook" in _MUTED:
+                callers = [{"function": "injected", "call_site": "0x0"}]
+            if local is None or callers:
+                return refuse("the-hook-setter-is-not-exported-and-is-reachable",
+                              callers=callers[:4])
+            # The setter is local and never called: the application cannot
+            # install a hook in this DSO, so this arm selects the in-image
+            # default only.
+            dead = "local-setter-with-no-in-image-caller"
+        detail.append({"cell": minfo["symbol"], "which": minfo["which"],
+                       "writers": mw,
+                       **({"dead_hook": dead} if dead else {})})
+    if defects:
+        return refuse("cell-has-a-writer-outside-the-enumerated-seam",
+                      details=detail, defects=defects[:6])
+    if not writers:
+        return refuse("cell-has-no-in-image-writer", details=detail)
+    cls = (ABI_CONTRACT_ALLOCATOR if mem_cells
+           else ABI_CONTRACT_DSO_EXPORT)
+    slot = ", ".join(d["cell"] for d in detail)
+    if cls == ABI_CONTRACT_ALLOCATOR:
+        writer = ("mem::" + "/".join(d["which"] for d in detail
+                                     if "which" in d)
+                  + " is written only by the exported "
+                  "CRYPTO_set_mem_functions; the other site definitions are "
+                  "the documented process-global export and the in-image "
+                  "default")
+        interface = ("CRYPTO_set_mem_functions -- include/openssl/crypto.h:"
+                     "372; src/runtime/mem.rs:158-160 and 1164-1202")
+    else:
+        writer = (f"{len(writers)} inlined LazySymbol::resolve "
+                  "publication(s), each `mov %rax,<cell>` after "
+                  "`dlsym(RTLD_DEFAULT, ...)` with the PRESENT state store; "
+                  "no other writer in this image")
+        interface = ("the documented process-global export -- "
+                     "include/openssl/err.h:496 / include/openssl/crypto.h:"
+                     "372-396")
+    w = _witness(
+        cls, name, site,
+        slot=slot,
+        writer=writer,
+        interface=interface,
+        basis=(
+            "the site's operand definitions are cell loads, dlsym results, "
+            "and (for the allocator seam) a select between the mem hook cell "
+            "and the in-image default; every reference to each cell in this "
+            "image is an enumerated writer, a load, or a linear-sweep "
+            "artifact inside the preceding instruction; a second writer or a "
+            "different dlsym literal refuses"),
+    )
+    w["conditions"] = {
+        "site_enumerated": f"{name} {hex(site.get('addr') or 0)}",
+        "operand": opnd,
+        "definitions": shapes,
+        "cells": detail,
+        "writer_set_closed": True,
+        "target_set_unbounded": True,
+    }
+    w["does_not_cover"] = ABI_CONTRACTS[cls]["does_not_cover"]
+    w["targets"] = []
+    w["residuals"] = [
+        "a linear-sweep artifact that begins inside a preceding call/jmp is "
+        "recorded and ignored; it cannot be an independently executed store",
+        "the process-global symbol an interposed dlsym resolves is the "
+        "configuration, not a property of this image",
+    ]
+    return w
+
+
+# ---- E7-PAS: a fetched provider algorithm method object's callback slot ---- #
+
+E7PAS_SCHEMA = "openssl-rs/consumer-closure/provider-algorithm-slot/v1"
+E7PAS_FETCHES = ("inner_evp_generic_fetch", "evp_generic_fetch",
+                 "evp_generic_fetch_from_prov")
+# (function leaf, offset from function start) -> (object type, source file,
+# writer function, ((field, image offset, OSSL_FUNC id), ...))
+E7PAS_SITES = {
+    ("evp_pkey_asym_cipher_init", 0x639): (
+        "EvpAsymCipher", "src/evp/asymcipher.rs",
+        "evp_asym_cipher_from_algorithm",
+        (("newctx", 0x28, "OSSL_FUNC_ASYM_CIPHER_NEWCTX"),)),
+    ("evp_pkey_asym_cipher_init", 0x6c4): (
+        "EvpAsymCipher", "src/evp/asymcipher.rs",
+        "evp_asym_cipher_from_algorithm",
+        (("encrypt_init", 0x30, "OSSL_FUNC_ASYM_CIPHER_ENCRYPT_INIT"),
+         ("decrypt_init", 0x40, "OSSL_FUNC_ASYM_CIPHER_DECRYPT_INIT"))),
+    ("evp_pkey_derive_init", 0x533): (
+        "EvpKeyExch", "src/evp/exchange.rs", "evp_keyexch_from_algorithm",
+        (("newctx", 0x28, "OSSL_FUNC_KEYEXCH_NEWCTX"),)),
+    ("evp_pkey_derive_init", 0x552): (
+        "EvpKeyExch", "src/evp/exchange.rs", "evp_keyexch_from_algorithm",
+        (("init", 0x30, "OSSL_FUNC_KEYEXCH_INIT"),)),
+    ("do_sigver_init", 0x76d): (
+        "EvpSignature", "src/evp/signature.rs",
+        "evp_signature_from_algorithm",
+        (("newctx", 0x28, "OSSL_FUNC_SIGNATURE_NEWCTX"),)),
+}
+
+
+def _e7pas_source(g, owner, relpath, writer, fields):
+    """Check the field's source writer set.  Returns (detail, refusal)."""
+    text, _lines, err = _external_source(g, relpath)
+    if text is None:
+        return None, ("source-unavailable", {"detail": err})
+    writes, werr = _external_field_writers(
+        g, owner, {f for f, _o, _i in fields},
+        owner_tokens=(owner, writer))
+    if writes is None:
+        return None, ("source-writer-scan-unavailable", {"detail": werr})
+    macro = [r for r in writes if r.get("kind") == "macro-slot"]
+    if macro:
+        return None, ("macro-expanded-slot-store-unattributed",
+                      {"writers": macro[:4]})
+    stores = [r for r in writes if r.get("kind") == "store"]
+    if "e7pas-second-writer" in _MUTED:
+        stores = stores + [{"file": relpath, "function": "an_injected_writer",
+                            "field": fields[0][0], "value": "x",
+                            "attribution": "owner"}]
+    same_file = [r for r in stores if r.get("file") == relpath]
+    stray = [r for r in same_file if r.get("function") != writer]
+    if stray:
+        return None, ("field-has-a-writer-outside-the-constructor",
+                      {"writers": stray[:6]})
+    detail = []
+    for field, _off, func_id in fields:
+        hits = [r for r in same_file if r.get("function") == writer
+                and r.get("field") == field]
+        if len(hits) != 1:
+            return None, ("constructor-does-not-write-the-field-once",
+                          {"field": field, "writers": hits})
+        value = hits[0].get("value") or ""
+        if not value.startswith("entry_function::<"):
+            return None, ("field-value-is-not-a-dispatch-entry",
+                          {"field": field, "value": value})
+        pat = (re.escape(func_id) + r"\s+if\s+\(\*[A-Za-z_]\w*\)\."
+               + re.escape(field) + r"\.is_none\(\)")
+        if not re.search(pat, text):
+            return None, ("source-does-not-bind-the-documented-function-id",
+                          {"field": field, "id": func_id})
+        detail.append({"field": field, "function_id": func_id,
+                       "value": value, "line": hits[0].get("line")})
+    return detail, None
+
+
+def provider_algorithm_slot_witness(g, site, name):
+    """A fetched provider method object's callback slot, per call site."""
+    if site.get("kind") != "call" or not _has_insns(g):
+        return None
+    fstart = site.get("func")
+    if fstart is None:
+        return None
+    pin = E7PAS_SITES.get((_external_function_leaf(name),
+                           site.get("addr", -1) - fstart))
+    if pin is None:
+        return None
+    owner, relpath, writer, fields = pin
+    if "e7pas-wrong-offset" in _MUTED:
+        fields = tuple((f, o + 8, i) for f, o, i in fields)
+    allowed = {o: f for f, o, _i in fields}
+    idx = _external_insn_index(g, site)
+    if idx is None:
+        return None
+    insns = g.precision.insns_by_func[fstart]
+
+    def refuse(reason, **extra):
+        rec = {"class": ABI_CONTRACT_PROVIDER_ALGORITHM_SLOT,
+               "resolved": False, "refusal": reason, "function": name,
+               "call_site": hex(site.get("addr") or 0)}
+        rec.update(extra)
+        return rec
+
+    defs = _external_reg_defs(g, fstart, idx,
+                              _canon(_site_operand(site)))
+    if defs is None or not defs or _ENTRY_DEF in defs:
+        return refuse("operand-has-no-enumerated-definition")
+    loads = []
+    for k in sorted(defs):
+        mn, _rest, ops = _insn_parts(insns[k][1])
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)",
+                         ops[0]) if (len(ops) == 2 and ops) else None
+        if (mn not in ("mov", "movq") or m is None
+                or int(m.group(1) or "0", 16) not in allowed):
+            return refuse("operand-is-not-a-pinned-method-field",
+                          definition=insns[k][1])
+        loads.append((k, _canon(m.group(2)),
+                      int(m.group(1) or "0", 16), insns[k][0]))
+    if len({o for _k, _b, o, _a in loads}) != len(loads):
+        return refuse("merged-site-loads-the-same-field-twice")
+    seen_zero = []
+    for k, base, off, _load_addr in loads:
+        bdefs = _reaching_defs(g, fstart, k, base)
+        if bdefs is None or not bdefs or _ENTRY_DEF in bdefs:
+            return refuse("method-object-base-has-no-enumerated-definition",
+                          field=allowed[off])
+        proven = 0
+        for d in sorted(bdefs):
+            dtext = " ".join(insns[d][1].split())
+            if _is_zero_reg_write(dtext, base):
+                seen_zero.append({"field": allowed[off],
+                                  "definition": dtext,
+                                  "at": hex(insns[d][0])})
+                continue
+            if not re.fullmatch(r"mov %rax, ?" + re.escape(base), dtext):
+                return refuse("method-object-base-definition-is-not-a-copy"
+                              "-of-a-fetch", field=allowed[off],
+                              definition=dtext, at=hex(insns[d][0]))
+            call_idx = None
+            for kk in range(d - 1, max(-1, d - 4), -1):
+                if _insn_parts(insns[kk][1])[0].startswith("call"):
+                    call_idx = kk
+                    break
+            if call_idx is None:
+                return refuse("method-object-copy-has-no-call",
+                              field=allowed[off])
+            sym = _s1_call_symbol(g, fstart, call_idx)
+            if _external_function_leaf(sym) not in E7PAS_FETCHES:
+                return refuse("method-object-does-not-come-from-the-fetch",
+                              field=allowed[off], callee=sym)
+            proven += 1
+        if proven == 0:
+            return refuse("method-object-has-only-null-definitions",
+                          field=allowed[off])
+        # The loaded callback is NULL-guarded immediately after the load.
+        nxt = [insns[k + 1][1] for k in range(k, min(len(insns), k + 3))]
+        if "e7pas-unchecked-slot" not in _MUTED \
+                and not any(t.strip().startswith("test") for t in nxt):
+            return refuse("loaded-callback-is-not-null-guarded",
+                          field=allowed[off], following=nxt)
+    detail, refusal = _e7pas_source(g, owner, relpath, writer, fields)
+    if refusal is not None:
+        return refuse(refusal[0], **refusal[1])
+    src, _sl, _err = _external_source(g, relpath)
+    for field, _off, _i in fields:
+        if not re.search(r"\(\*[A-Za-z_]\w*\)\." + re.escape(field) + r"\b",
+                         src or ""):
+            return refuse("source-site-does-not-read-the-pinned-field",
+                          field=field)
+    w = _witness(
+        ABI_CONTRACT_PROVIDER_ALGORITHM_SLOT, name, site,
+        slot=(" ".join(f"{owner}.{f} (offset {o:#x})"
+                       for f, o, _i in fields)),
+        writer=(f"{writer} is the only writer of the field(s): "
+                + "; ".join(f"{d['field']} <- {d['value']} at "
+                            f"{relpath}:{d['line']}" for d in detail)),
+        interface=("the provider's OSSL_DISPATCH entry under "
+                   + ", ".join(sorted({i for _f, _o, i in fields}))
+                   + " (include/openssl/core_dispatch.h); the fetched "
+                   "method object stores that exact pointer"),
+        basis=("every reaching definition of the method-object pointer is a "
+               "copy of a call to the enumerated EVP fetch; each operand "
+               "load reads the pinned field offset; the source constructor "
+               "is the field's only writer and stores the dispatch entry for "
+               "the documented function_id"),
+    )
+    w["conditions"] = {
+        "site_enumerated": f"{name} {hex(site.get('addr') or 0)}",
+        "fields": detail,
+        "definitions": [
+            {"field": allowed[o], "offset": hex(o), "load": insns[k][1],
+             "at": hex(a)} for k, _b, o, a in loads],
+        "fetch_functions": list(E7PAS_FETCHES),
+        "null_definitions_admitted": seen_zero,
+        "target_set_unbounded": True,
+    }
+    w["does_not_cover"] = ABI_CONTRACTS[
+        ABI_CONTRACT_PROVIDER_ALGORITHM_SLOT]["does_not_cover"]
+    w["targets"] = []
+    w["residuals"] = [
+        "a null (no-method) definition reaches the field load at a "
+        "path-insensitive CFG merge; the source guards the pointer before "
+        "the read and the loaded callback is NULL-tested at the site, but "
+        "the witness does not encode the pointer-local guard as a dataflow "
+        "fact",
+        "the provider's implementation and lifetime are the provider's "
+        "obligation after the ABI boundary",
+    ]
+    return w
+
+
+def _subreg_name(reg):
+    """The 32-bit spelling used by `xor %e..,%e..` (for zero-definition match)."""
+    return {"%rax": "%eax", "%rcx": "%ecx", "%rdx": "%edx", "%rbx": "%ebx",
+            "%rsp": "%esp", "%rbp": "%ebp", "%rsi": "%esi", "%rdi": "%edi",
+            "%r8": "%r8d", "%r9": "%r9d", "%r10": "%r10d", "%r11": "%r11d",
+            "%r12": "%r12d", "%r13": "%r13d", "%r14": "%r14d",
+            "%r15": "%r15d"}.get(reg, reg)
+
+
+def _is_zero_reg_write(text, reg):
+    """True for a zero-initialising definition of ``reg``."""
+    sub = _subreg_name(reg)
+    return (text in (f"xor {sub},{sub}", f"xor {sub}, {sub}")
+            or re.fullmatch(r"mov \$0x0, " + re.escape(reg), text) is not None
+            or re.fullmatch(r"movl \$0x0, " + re.escape(sub), text) is not None)
+
+
+def _e7_ensure_insns(g, fstart):
+    """The analysed instruction list for ``fstart``, analysing it if needed."""
+    insns = g.precision.insns_by_func.get(fstart)
+    if insns is not None:
+        return insns
+    raw = dict(getattr(g, "functions", ()) or ()).get(fstart)
+    if raw is None:
+        return None
+    g.precision.analyze_function(fstart, raw)
+    return g.precision.insns_by_func.get(fstart)
+
+
+# ---- E7-PEMCB: the wrapper method's caller-supplied pem_password_cb -------- #
+
+E7PEMCB_SCHEMA = "openssl-rs/consumer-closure/pem-password-cb/v1"
+E7PEMCB_SITE = ("ui_read", 0xA0)
+E7PEMCB_SOURCE = "src/ui/ui_util.rs"
+E7PEMCB_WRAPPER = "UI_UTIL_wrap_read_pem_callback"
+
+
+def pem_password_wrapper_witness(g, site, name):
+    """`ui_read`'s `(*data).cb` call: the exported wrapper's `cb` parameter."""
+    if site.get("kind") != "call" or not _has_insns(g):
+        return None
+    fstart = site.get("func")
+    if fstart is None:
+        return None
+    leaf, off = E7PEMCB_SITE
+    if _external_function_leaf(name) != leaf \
+            or site.get("addr", -1) - fstart != off:
+        return None
+
+    def refuse(reason, **extra):
+        rec = {"class": ABI_CONTRACT_PEM_PASSWORD_CB, "resolved": False,
+               "refusal": reason, "function": name,
+               "call_site": hex(site.get("addr") or 0)}
+        rec.update(extra)
+        return rec
+
+    text = site.get("text") or ""
+    m = re.fullmatch(r"call\w*\s+\*\((%r[a-z0-9]+)\)",
+                     text.split("#", 1)[0].strip())
+    if m is None:
+        return refuse("operand-is-not-the-zero-offset-callback-slot",
+                      operand=_site_operand(site))
+    layout = _s1_struct_layout(g, "PemPasswordCbData")
+    if layout is None:
+        return refuse("wrapper-data-layout-undecidable")
+    cb = next((f for f in layout["fields"] if f.get("name") == "cb"), None)
+    if cb is None or cb.get("offset") != 0:
+        return refuse("cb-is-not-at-the-called-displacement",
+                      layout=layout["fields"][:2])
+    src, _lines, err = _external_source(g, E7PEMCB_SOURCE)
+    if src is None:
+        return refuse("source-unavailable", detail=err)
+    writes = re.findall(r"\.cb\s*=(?!=)([^;]*)", src)
+    if "e7pemcb-second-writer" in _MUTED:
+        writes = writes + ["foreign"]
+    if len(writes) != 1:
+        return refuse("cb-has-not-exactly-one-writer-in-the-owner-file",
+                      writes=writes[:6])
+    if "cb.unwrap_or(PEM_def_callback)" not in " ".join(writes[0].split()):
+        return refuse("cb-writer-is-not-the-caller-parameter-with-the-default",
+                      value=writes[0].strip())
+    if E7PEMCB_WRAPPER not in src:
+        return refuse("wrapper-is-absent-from-the-source")
+    if "#[no_mangle]" not in src:
+        return refuse("wrapper-is-not-exported-in-the-source")
+    if _external_exported(g, E7PEMCB_WRAPPER) is None:
+        if _e7bs_function_symbol(g, E7PEMCB_WRAPPER) is not None:
+            return refuse(
+                "wrapper-is-local-to-this-dso-so-the-exported-route-to-the-"
+                "callback-is-not-proved-here")
+        return refuse("wrapper-is-not-exported-in-this-image")
+    if _external_exported(g, leaf) is not None:
+        return refuse("the-reader-is-exported-so-an-application-could-install-it")
+    if _gate_refusal(g, "UI_UTIL_wrap_read_pem_callback", 0,
+                     "pem_password_cb") is not None:
+        return refuse("header-does-not-declare-the-pem-callback",
+                      detail=_gate_refusal(g, E7PEMCB_WRAPPER, 0,
+                                           "pem_password_cb"))
+    default = g.dynamic_defs.get("PEM_def_callback")
+    if default is None or default not in g.start_set:
+        return refuse("default-target-is-not-in-this-image")
+    defs = _external_reg_defs(g, fstart, _external_insn_index(g, site),
+                              _canon(m.group(1)))
+    if defs is None or not defs or _ENTRY_DEF in defs:
+        return refuse("ex-data-pointer-has-no-enumerated-definition")
+    exdata = []
+    for d in sorted(defs):
+        dtext = g.precision.insns_by_func[fstart][d][1]
+        if re.fullmatch(r"mov\s+\(%r[a-z0-9]+,%r[a-z0-9]+,8\),\s*%r[a-z0-9]+",
+                        dtext.strip()):
+            exdata.append(dtext)
+    if "e7pemcb-no-exdata-read" not in _MUTED and not exdata:
+        return refuse("data-pointer-is-not-the-ex-data-slot-read",
+                      definitions=[g.precision.insns_by_func[fstart][d][1]
+                                   for d in sorted(defs)])
+    w = _witness(
+        ABI_CONTRACT_PEM_PASSWORD_CB, name, site,
+        slot="PemPasswordCbData.cb (offset 0) called at (*data).cb(...)",
+        writer=(f"{E7PEMCB_WRAPPER} stores `cb.unwrap_or(PEM_def_callback)` "
+                f"into the struct's only `cb` field ({E7PEMCB_SOURCE}); it is "
+                "the sole writer in the owner file"),
+        interface=("UI_UTIL_wrap_read_pem_callback(pem_password_cb *cb, int "
+                   "rwflag) -- include/openssl/ui.h:404; pem_password_cb -- "
+                   "include/openssl/types.h:237; PEM_def_callback -- "
+                   "include/openssl/pem.h:440"),
+        basis=("the operand is a zero-displacement read of the wrapper's "
+               "data block; the block's `cb` field at offset 0 has exactly "
+               "one source writer, the exported wrapper, storing its own "
+               "parameter with the documented NULL default; the reader is "
+               "not exported"),
+    )
+    w["conditions"] = {
+        "site_enumerated": f"{name} {hex(site.get('addr') or 0)}",
+        "field_offset": 0,
+        "source_writers": [w_.strip() for w_ in writes],
+        "ex_data_reads": exdata,
+        "target_set_unbounded": True,
+    }
+    w["does_not_cover"] = ABI_CONTRACTS[ABI_CONTRACT_PEM_PASSWORD_CB][
+        "does_not_cover"]
+    w["targets"] = []
+    return w
+
+
+# ---- E7-X509CTX: the context's cleanup callback --------------------------- #
+
+E7XCTX_SCHEMA = "openssl-rs/consumer-closure/x509-ctx-callback/v1"
+E7XCTX_SITE = ("check_crl", 0x432)
+E7XCTX_SOURCE = "src/x509/x509_vfy.rs"
+E7XCTX_FIELD = "cleanup"
+
+
+def x509_ctx_callback_witness(g, site, name):
+    """`check_crl`'s local-context `cleanup` call."""
+    if site.get("kind") != "call" or not _has_insns(g):
+        return None
+    fstart = site.get("func")
+    if fstart is None:
+        return None
+    leaf, off = E7XCTX_SITE
+    if _external_function_leaf(name) != leaf \
+            or site.get("addr", -1) - fstart != off:
+        return None
+
+    def refuse(reason, **extra):
+        rec = {"class": ABI_CONTRACT_X509_CTX_CALLBACK, "resolved": False,
+               "refusal": reason, "function": name,
+               "call_site": hex(site.get("addr") or 0)}
+        rec.update(extra)
+        return rec
+
+    layout_src, _sl, err = _external_source(g, "src/x509/x509_lu.rs")
+    if layout_src is None:
+        return refuse("layout-source-unavailable", detail=err)
+    m = re.search(r"offset_of!\(\s*X509StoreCtx\s*,\s*cleanup\s*\)\s*==\s*(\d+)",
+                  layout_src)
+    if m is None:
+        return refuse("cleanup-offset-is-not-declared")
+    field_off = int(m.group(1))
+    if "e7xctx-wrong-offset" in _MUTED:
+        field_off += 8
+    idx = _external_insn_index(g, site)
+    load = _external_operand_load(g, site, "%rax")
+    if load[0] is None:
+        return refuse("operand-is-not-a-single-load", detail=load[1])
+    load = load[0]
+    if load["base_reg"] != "%rsp" or load["offset"] != 8 + field_off:
+        return refuse("load-is-not-the-disposal-offset-of-the-local-context",
+                      offset=hex(load["offset"]), expected=hex(8 + field_off))
+    # The local context is the stack object X509_STORE_CTX_init received.
+    insns = g.precision.insns_by_func[fstart]
+    init_call = None
+    for k in range(idx):
+        if not insns[k][1].startswith("call"):
+            continue
+        try:
+            sym = _s1_call_symbol(g, fstart, k, resolve_slot=True)
+        except Exception:  # noqa: BLE001 -- unresolvable slot is a refusal
+            continue
+        if _external_function_leaf(sym) == "X509_STORE_CTX_init":
+            init_call = k
+    if init_call is None:
+        return refuse("function-does-not-initialise-a-local-context")
+    if "e7xctx-no-null-guard" not in _MUTED:
+        gidx = load["def"]
+        nxt = [insns[k][1] for k in range(gidx + 1,
+                                          min(len(insns), gidx + 3))]
+        if not any(t.strip().startswith("test") for t in nxt):
+            return refuse("callback-is-not-null-guarded", following=nxt)
+    writes, werr = _external_field_writers(
+        g, "X509StoreCtx", {E7XCTX_FIELD},
+        owner_tokens=("X509StoreCtx", "X509Store", "cleanup"))
+    if writes is None:
+        return refuse("source-writer-scan-unavailable", detail=werr)
+    macro = [r for r in writes if r.get("kind") == "macro-slot"]
+    if macro:
+        return refuse("macro-expanded-slot-store-unattributed",
+                      writers=macro[:4])
+    stores = [r for r in writes if r.get("kind") == "store"]
+    if "e7xctx-second-writer" in _MUTED:
+        stores = stores + [{"file": E7XCTX_SOURCE,
+                            "function": "an_injected_writer",
+                            "value": "x", "field": E7XCTX_FIELD}]
+    x509 = [r for r in stores if str(r.get("file", "")).startswith("src/x509/")]
+    allowed = {
+        ("src/x509/x509_lu.rs", "X509_STORE_set_cleanup"),
+        ("src/x509/x509_vfy.rs", "X509_STORE_CTX_init"),
+        ("src/x509/x509_vfy.rs", "X509_STORE_CTX_cleanup"),
+    }
+    stray = [r for r in x509 if (r.get("file"), r.get("function"))
+             not in allowed]
+    if stray:
+        return refuse("cleanup-has-a-writer-outside-the-enumerated-set",
+                      writers=stray[:6])
+    src, _sl, _err = _external_source(g, E7XCTX_SOURCE)
+    if src is None or "X509_STORE_CTX_init" not in src:
+        return refuse("init-does-not-initialise-the-local-context")
+    if _external_exported(g, "X509_STORE_set_cleanup") is None:
+        return refuse("the-store-setter-is-not-exported-in-this-image")
+    hdr = _gate_refusal(g, "X509_STORE_set_cleanup", 1,
+                        "X509_STORE_CTX_cleanup_fn")
+    if hdr is not None:
+        return refuse("header-does-not-declare-the-cleanup-typedef",
+                      detail=hdr)
+    w = _witness(
+        ABI_CONTRACT_X509_CTX_CALLBACK, name, site,
+        slot=f"X509StoreCtx.cleanup (offset {field_off:#x}) of the local "
+             "verification context",
+        writer=("X509_STORE_set_cleanup stores its parameter "
+                "(src/x509/x509_lu.rs); X509_STORE_CTX_init copies the "
+                "store's callback or NULL; X509_STORE_CTX_cleanup clears it"),
+        interface=("X509_STORE_CTX_cleanup_fn -- include/openssl/x509_vfy.h:"
+                   "274; X509_STORE_set_cleanup -- x509_vfy.h:575-576"),
+        basis=("the site loads the declared cleanup offset of the context "
+               "X509_STORE_CTX_init built in this frame; the field's only "
+               "writers in src/x509 are the exported setter and the two "
+               "init/cleanup arms; the loaded value is NULL-tested"),
+    )
+    w["conditions"] = {
+        "site_enumerated": f"{name} {hex(site.get('addr') or 0)}",
+        "field_offset": field_off,
+        "load": load["text"],
+        "source_writers": [{"file": r.get("file"),
+                            "function": r.get("function"),
+                            "value": r.get("value")} for r in x509],
+        "target_set_unbounded": True,
+    }
+    w["does_not_cover"] = ABI_CONTRACTS[ABI_CONTRACT_X509_CTX_CALLBACK][
+        "does_not_cover"]
+    w["targets"] = []
+    return w
+
+
+def _gate_refusal(g, symbol, index, typedef):
+    """None when ``symbol``'s parameter ``index`` is declared ``typedef``."""
+    decl, why = _header_callback_param(g, symbol, index)
+    if decl is None:
+        return why
+    if decl.get("type_typedef") != typedef:
+        return {"declaration": decl, "expected": typedef}
+    return None
+
+
+# ---- E7-PMCMP: the `PMETH_STANDARD_METHODS` comparator -------------------- #
+
+E7PMCMP_SCHEMA = "openssl-rs/consumer-closure/pmeth-comparator/v1"
+E7PMCMP_CLASS = "internal-closed-method-table-comparator"
+E7PMCMP_SITE = ("pmeth_func_cmp", 0x6)
+E7PMCMP_FUNCTION = "EVP_PKEY_meth_find"
+
+
+def pmeth_comparator_witness(g, site, name):
+    """The comparator call through an element of PMETH_STANDARD_METHODS."""
+    if site.get("kind") != "call" or not _has_insns(g):
+        return None
+    fstart = site.get("func")
+    if fstart is None:
+        return None
+    leaf, off = E7PMCMP_SITE
+    if _external_function_leaf(name) != leaf \
+            or site.get("addr", -1) - fstart != off:
+        return None
+
+    def refuse(reason, **extra):
+        return {"class": E7PMCMP_CLASS, "resolved": False,
+                "refusal": reason, "function": name,
+                "call_site": hex(site.get("addr") or 0), **extra}
+
+    m = re.fullmatch(r"call\w*\s+\*\((%r[a-z0-9]+)\)",
+                     (site.get("text") or "").split("#", 1)[0].strip())
+    if m is None:
+        return refuse("operand-is-not-the-row-getter-slot")
+    origin = _reg_origin(g, fstart, _external_insn_index(g, site),
+                         _canon(m.group(1)))
+    if origin.get("kind") != "param" or origin.get("index") != 1:
+        return refuse("slot-base-is-not-the-comparator-element-parameter",
+                      origin=origin)
+    span, source, why = _e7pmeth_source(g)
+    if span is None:
+        return refuse(why.get("reason", "source-unavailable"), detail=why)
+    table = _s1_symbol_address(g, E7PMETH_TABLE)
+    if table is None:
+        return refuse("table-symbol-absent")
+    if source["rows"] != E7PMETH_TABLE_ROWS:
+        return refuse("table-row-count-mismatch",
+                      source_rows=source["rows"])
+    section = g.section_of(table[0])
+    if section not in S1_IMMUTABLE_SECTIONS:
+        return refuse("table-not-in-immutable-section", section=section)
+    cmp_sym = _s1_symbol_address(g, E7PMETH_COMPARATOR)
+    if cmp_sym is None:
+        return refuse("comparator-symbol-absent")
+    refs = []
+    for fs, insns in getattr(g, "functions", ()):
+        for a, t in insns:
+            if _insn_comment_addr(t) == cmp_sym[0] and a != cmp_sym[0]:
+                refs.append(a)
+    if "e7pmcmp-second-reference" in _MUTED:
+        refs.append(0xDEAD)
+    if not refs:
+        return refuse("comparator-address-is-never-taken")
+    search_rows = []
+    for ref in refs:
+        rf = _containing(g, ref)
+        rinsns = _e7_ensure_insns(g, rf) if rf is not None else None
+        if rinsns is None:
+            return refuse("reference-function-is-not-analysable",
+                          reference=hex(ref))
+        ridx = next((i for i, (a, _t) in enumerate(rinsns) if a == ref), None)
+        call_idx = None
+        if ridx is not None:
+            for k in range(ridx + 1, min(len(rinsns), ridx + 24)):
+                if rinsns[k][1].startswith("call"):
+                    call_idx = k
+                    break
+        if call_idx is None:
+            return refuse("reference-is-not-followed-by-a-call",
+                          reference=hex(ref), function=g.funcs.get(rf))
+        try:
+            sym = _s1_call_symbol(g, rf, call_idx, resolve_slot=True)
+        except Exception:  # noqa: BLE001 -- unresolvable slot is a refusal
+            sym = None
+        if _external_function_leaf(sym) != E7PMETH_BSEARCH:
+            return refuse("reference-is-not-the-documented-search",
+                          reference=hex(ref), callee=sym,
+                          function=g.funcs.get(rf))
+        base = _e7pmeth_search_arg_addr(g, rf, call_idx, "%rsi")
+        if base != table[0]:
+            return refuse("search-base-is-not-the-table", reference=hex(ref),
+                          base=base, expected=table[0])
+        search_rows.append({"reference": hex(ref),
+                            "function": g.funcs.get(rf),
+                            "call_site": hex(rinsns[call_idx][0]),
+                            "base": hex(base)})
+    targets, rows = set(), []
+    for i, ident in enumerate(source["idents"]):
+        slot = table[0] + E7PMETH_ELEMENT_SIZE * i
+        vals = {v for v in (g.static_slot(slot) or ())
+                if isinstance(v, int) and v != 0}
+        if len(vals) != 1 or next(iter(vals)) not in g.start_set:
+            return refuse("table-member-not-function-start", row=i,
+                          slot=hex(slot),
+                          values=sorted(hex(v) for v in vals))
+        value = next(iter(vals))
+        target = _e7bs_function_symbol(g, ident)
+        if target is None or target[0] != value:
+            return refuse("table-member-does-not-match-the-declared-array",
+                          row=i, ident=ident, value=hex(value))
+        rows.append({"row": i, "slot": hex(slot), "value": hex(value),
+                     "source": ident})
+        targets.add(value)
+    if len(targets) != E7PMETH_TABLE_ROWS:
+        return refuse("table-does-not-enumerate-every-declared-row")
+    return {
+        "schema": E7PMCMP_SCHEMA,
+        "class": E7PMCMP_CLASS,
+        "contract_bounded": False,
+        "resolved": True,
+        "function": name,
+        "call_site": hex(site.get("addr") or 0),
+        "operand": site.get("text"),
+        "table": {"symbol": table[1], "base": hex(table[0]),
+                  "rows": E7PMETH_TABLE_ROWS,
+                  "element_size": E7PMETH_ELEMENT_SIZE,
+                  "section": section},
+        "rows": rows,
+        "searches": search_rows,
+        "targets": sorted(hex(t) for t in targets),
+        "conditions": {
+            "slot_is_the_comparator_element_parameter": True,
+            "comparator_address_taken_here_only": True,
+            "table_immutable": True,
+            "every_row_is_a_declared_in_image_function": True,
+        },
+        "residuals": [
+            "the OBJ_bsearch_ element contract confines the comparator "
+            "argument; an interposed implementation that violates it is "
+            "outside this witness",
+            "the callbacks' behaviour after the call is out of scope",
+        ],
+        "basis": (
+            "the comparator is passed only to the documented OBJ_bsearch_ "
+            f"over {E7PMETH_TABLE}; the slot argument is its element "
+            f"parameter; the table's {E7PMETH_TABLE_ROWS} immutable rows are "
+            "exactly the declared in-image getters"),
+    }
+
+
+
+# ---- E7-PEMPARAM: a private writer's `pem_password_cb` parameter ---------- #
+
+E7PEMPARAM_SCHEMA = "openssl-rs/consumer-closure/pem-cb-parameter/v1"
+E7PEMPARAM_SITE = ("PEM_ASN1_write_bio_internal", 0x4DE)
+E7PEMPARAM_INDEX = 9
+
+
+def pem_password_parameter_witness(g, site, name):
+    """`PEM_ASN1_write_bio_internal`'s `callback` parameter call."""
+    if site.get("kind") != "call" or not _has_insns(g):
+        return None
+    fstart = site.get("func")
+    if fstart is None:
+        return None
+    leaf, off = E7PEMPARAM_SITE
+    if _external_function_leaf(name) != leaf \
+            or site.get("addr", -1) - fstart != off:
+        return None
+
+    def refuse(reason, **extra):
+        rec = {"class": ABI_CONTRACT_EXPORT_CALLBACK, "resolved": False,
+               "refusal": reason, "function": name,
+               "call_site": hex(site.get("addr") or 0)}
+        rec.update(extra)
+        return rec
+
+    load, why = _external_operand_load(g, site, "%rax")
+    if load is None:
+        return refuse("operand-is-not-a-single-load", detail=why)
+    if load["base_reg"] != "%rsp":
+        return refuse("operand-is-not-a-frame-parameter",
+                      base_reg=load["base_reg"])
+    param = _stack_param(g, fstart, load["def"], load["slot_text"], None)
+    if "e7pemparam-wrong-index" in _MUTED:
+        param = None
+    if param is None or param.get("kind") != "param" \
+            or param.get("index") != E7PEMPARAM_INDEX:
+        return refuse("operand-is-not-the-declared-cb-parameter",
+                      origin=param, slot=load["slot_text"])
+    roots, chain, bad = _external_forward_chain(
+        g, fstart, E7PEMPARAM_INDEX, typedef="pem_password_cb",
+        rust_typedef="PemPasswordCb")
+    if bad:
+        return refuse("caller-chain-passes-a-non-parameter-value",
+                      in_image=bad[:6])
+    if not roots:
+        return refuse("caller-chain-has-no-exported-root")
+    sroots, schain, sbad = _external_pem_source_chain(
+        g, fstart, E7PEMPARAM_INDEX, "PemPasswordCb")
+    if sbad:
+        return refuse("source-chain-does-not-forward-the-cb-parameter",
+                      in_image=sbad[:6])
+    missing = ({sym for sym, _k in roots}
+               - {sym for sym, _k in sroots})
+    if missing:
+        return refuse("machine-root-is-not-source-bound",
+                      symbols=sorted(missing))
+    for (symbol, k), info in sorted(roots.items()):
+        cb = info.get("declaration")
+        if cb is None or cb.get("type_typedef") != "pem_password_cb":
+            return refuse("root-does-not-declare-a-pem-callback",
+                          symbol=symbol, declaration=cb)
+    w = _witness(
+        ABI_CONTRACT_EXPORT_CALLBACK, name, site,
+        slot=(f"{leaf}'s `callback` parameter (index {E7PEMPARAM_INDEX}) "
+              "called at cb(buf, PEM_BUFSIZE, 1, u)"),
+        writer=(f"{len(chain)} in-image call edges forward their own `cb` "
+                f"parameter to this function, rooted in {len(roots)} exported "
+                "PEM writer(s); no edge passes a computed value"),
+        interface=("pem_password_cb -- include/openssl/types.h:237; the "
+                   "exported PEM writer family -- include/openssl/pem.h "
+                   "(PEM_write_bio_ASN1*, PEM_ASN1_write_bio, ...)"),
+        basis=("the operand is the declared stack parameter "
+               f"{E7PEMPARAM_INDEX} (cb), every in-image caller forwards its "
+               "own parameter, and every root is an exported writer whose "
+               "header declares the pem_password_cb parameter"),
+    )
+    w["conditions"] = {
+        "site_enumerated": f"{name} {hex(site.get('addr') or 0)}",
+        "stack_parameter": param,
+        "roots": sorted(f"{sym}:{k}" for sym, k in roots),
+        "forward_chain": chain[:8],
+        "target_set_unbounded": True,
+    }
+    w["does_not_cover"] = ABI_CONTRACTS[ABI_CONTRACT_EXPORT_CALLBACK][
+        "does_not_cover"]
+    w["targets"] = []
+    return w
+
+
+# The A2 name rule's family gate.  The blanket "the workload imports any
+# method-table setter" condition is a class widening: curl imports
+# UI_create_method/BIO_meth_new for its own UI and BIO objects, which cannot
+# write an EVP_PKEY/EVP_CIPHER/EVP_MD table.  Each A2 function is gated on the
+# setters that can write *its* family; a family with no enumerated setter never
+# inherits another family's import.
+# Only a dispatch that actually reads the named family's table may inherit that
+# family's setters.  The other six A2-named functions do not read a registry
+# table at all (they call a provider method slot, a stored `pem_password_cb`, a
+# context callback, or the `PMETH_STANDARD_METHODS` getter), so no setter import
+# can open them; they are enumerated with an empty set and fall through to their
+# own per-call-site witness.
+A2_FAMILY_SETTERS = {
+    "evp_pkey_asym_cipher_init": (),
+    "evp_pkey_derive_init": (),
+    "do_sigver_init": (),
+    "pmeth_func_cmp": ("EVP_PKEY_meth_new", "EVP_PKEY_meth_add0"),
+    "PEM_ASN1_write_bio_internal": (),
+    "ui_read": (),
+    "check_crl": (),
+}
+
+
+def a2_family_open(name: str, workload_imports) -> bool:
+    """Whether an A2-named dispatch may inherit an open method table.
+
+    The pre-repair rule was "the workload imports *any* method-table setter",
+    which let curl's `UI_create_method`/`BIO_meth_new` imports open every EVP
+    family.  It is now per family, and a family with no enumerated setter is
+    never open.  The switch restores the blanket rule for the control.
+    """
+    if "e7a2-blanket" in _MUTED:
+        return bool(set(workload_imports) & A2_REGISTRATION_SETTERS)
+    family = next((f for f in A2_FAMILY_SETTERS if f in (name or "")), None)
+    if family is None:
+        return False
+    return bool(set(workload_imports) & set(A2_FAMILY_SETTERS[family]))
+
 def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                            reachable: set | None = None) -> dict:
     """Apply the R2/R3/A1/A2 evidence classes to one candidate DSO.
@@ -25170,6 +26575,95 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                             resolver=[hex(t) for t in
                                       sorted(resolved_targets)])
                         stats["S5b_provider_hw_table_refused"] += 1
+            continue
+        # E7-DSO: a value reached through `dso_shared`'s dlsym resolver.
+        # The witness is per-cell and per-site; a refused shape keeps the site
+        # target-bounded and never falls through to a weaker class.
+        dso = dso_resolved_export_witness(g, site, name)
+        if dso is not None:
+            if dso.get("schema") == WITNESS_SCHEMA:
+                site["class"] = ABI_CONTRACT_DSO_EXPORT
+                site["unresolved"] = True
+                site["reason"] = ("dso-resolved process-global export: "
+                                  + dso["slot"])
+                site["witness"] = dso
+                stats["E7DSO_contract_bounded"] += 1
+            else:
+                site["dso_export_refusal"] = dso
+                stats["E7DSO_refused"] += 1
+            continue
+        # E7-PAS: a fetched provider algorithm method object's callback slot.
+        pas = provider_algorithm_slot_witness(g, site, name)
+        if pas is not None:
+            if pas.get("schema") == WITNESS_SCHEMA:
+                site["class"] = ABI_CONTRACT_PROVIDER_ALGORITHM_SLOT
+                site["unresolved"] = True
+                site["reason"] = ("provider algorithm-slot ABI contract: "
+                                  + pas["slot"])
+                site["witness"] = pas
+                stats["E7PAS_contract_bounded"] += 1
+            else:
+                site["provider_algorithm_refusal"] = pas
+                stats["E7PAS_refused"] += 1
+            continue
+        # E7-PEMCB: ui_read's call through the wrapper method's ex-data.
+        pemcb = pem_password_wrapper_witness(g, site, name)
+        if pemcb is not None:
+            if pemcb.get("schema") == WITNESS_SCHEMA:
+                site["class"] = ABI_CONTRACT_PEM_PASSWORD_CB
+                site["unresolved"] = True
+                site["reason"] = ("wrapper pem_password_cb ABI contract: "
+                                  + pemcb["slot"])
+                site["witness"] = pemcb
+                stats["E7PEMCB_contract_bounded"] += 1
+            else:
+                site["pem_password_cb_refusal"] = pemcb
+                stats["E7PEMCB_refused"] += 1
+            continue
+        # E7-PEMPARAM: a private writer's forwarded pem_password_cb parameter.
+        pemparam = pem_password_parameter_witness(g, site, name)
+        if pemparam is not None:
+            if pemparam.get("schema") == WITNESS_SCHEMA:
+                site["class"] = ABI_CONTRACT_EXPORT_CALLBACK
+                site["unresolved"] = True
+                site["reason"] = ("forwarded pem_password_cb ABI contract: "
+                                  + pemparam["slot"])
+                site["witness"] = pemparam
+                stats["E7PEMPARAM_contract_bounded"] += 1
+            else:
+                site["pem_password_parameter_refusal"] = pemparam
+                stats["E7PEMPARAM_refused"] += 1
+            continue
+        # E7-X509CTX: a live context's cleanup callback.
+        xctx = x509_ctx_callback_witness(g, site, name)
+        if xctx is not None:
+            if xctx.get("schema") == WITNESS_SCHEMA:
+                site["class"] = ABI_CONTRACT_X509_CTX_CALLBACK
+                site["unresolved"] = True
+                site["reason"] = ("X509_STORE_CTX cleanup ABI contract: "
+                                  + xctx["slot"])
+                site["witness"] = xctx
+                stats["E7XCTX_contract_bounded"] += 1
+            else:
+                site["x509_ctx_callback_refusal"] = xctx
+                stats["E7XCTX_refused"] += 1
+            continue
+        # E7-PMCMP: the PMETH_STANDARD_METHODS comparator, a closed target set.
+        pmcmp = pmeth_comparator_witness(g, site, name)
+        if pmcmp is not None:
+            if pmcmp.get("resolved"):
+                site["targets"] = {int(t, 16) for t in pmcmp["targets"]}
+                site["unresolved"] = False
+                site["class"] = E7PMCMP_CLASS
+                site["reason"] = ("internal closed method-table comparator: "
+                                  + pmcmp["table"]["symbol"] + " -> "
+                                  + str(len(pmcmp["targets"]))
+                                  + " function start(s)")
+                site["pmeth_comparator_witness"] = pmcmp
+                stats["E7PMCMP_resolved"] += 1
+            else:
+                site["pmeth_comparator_refusal"] = pmcmp
+                stats["E7PMCMP_refused"] += 1
             continue
         # O1: the allocator seam.  The seam is a witness only when this exact
         # site reads a named hook global and the image defines both the global
@@ -25703,10 +27197,19 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                 stats["A1_witness_missing"] += 1
             continue
         if _match(name, A2_FUNCTIONS):
-            if workload_imports & A2_REGISTRATION_SETTERS:
+            # The family gate: a workload import can only open the table whose
+            # setter it imports.  The old blanket condition let curl's
+            # UI_create_method/BIO_meth_new imports open every EVP table.
+            family = next((f for f in A2_FAMILY_SETTERS
+                           if f in (name or "")), None)
+            if family is None:
+                site["reason"] = ("legacy method-table ABI: no setter family "
+                                  "is registered for this dispatch")
+                stats["A2_no_family"] += 1
+            elif a2_family_open(name, workload_imports):
                 site["class"] = "ABI_OPEN_METHOD_TABLE"
-                site["reason"] = ("legacy method-table ABI: the workload imports a "
-                                  "method-table setter")
+                site["reason"] = ("legacy method-table ABI: the workload imports "
+                                  "a setter for this family")
                 stats["A2_abi_open"] += 1
             elif residual:
                 _resolve(g, site, residual, "legacy-method-abi",
@@ -37072,6 +38575,319 @@ def _e7mt_self_test():
         "operand each refuse (the four mutation switches flip their arm)")
 
 
+def _e7batch_self_test():
+    """Controls for the E7-DSO/PAS/PEMCB/XCTX/PMCMP rules and the A2 gate."""
+    root = Path(__file__).resolve().parents[2]
+    install = root / "artifacts/phase2/install"
+    dsos = [install / "lib/libssl.so.3", install / "lib/libcrypto.so.3"]
+    if not all(p.is_file() for p in dsos):
+        return [], "e7batch controls: skipped (candidate absent)"
+    if not (shutil.which("nm") and shutil.which("objdump")):
+        return [], "e7batch controls: skipped (nm/objdump absent)"
+    workdir = root / "court/tmp/e7batch-selftest-work"
+    workdir.mkdir(parents=True, exist_ok=True)
+    _EVIDENCE_ENV["repo"] = str(root)
+    _EVIDENCE_ENV["install"] = str(install)
+    failures, matrix = [], []
+
+    def chk(name, got, want):
+        if got != want:
+            failures.append(f"{name}: got {got!r}, want {want!r}")
+
+    graphs = {}
+    for dso in dsos:
+        try:
+            g = DsoGraph(dso, workdir)
+        except Exception as e:  # noqa: BLE001 -- absent tooling is a skip
+            return [], f"e7batch controls: skipped (graph unavailable: {e})"
+        g.source_root = str(root)
+        g.install_prefix = str(install)
+        g.precision = PrecisionResolver(g)
+        graphs[dso.name] = g
+
+    def site_at(g, addr):
+        for fstart, insns in g.functions:
+            for a, text in insns:
+                if a == addr:
+                    _e7_ensure_insns(g, fstart)
+                    return {"func": fstart, "addr": a, "text": text,
+                            "kind": "call", "unresolved": True}
+        return None
+
+    def mutated(name, fn):
+        """(mutated result, baseline result)."""
+        saved = set(_MUTED)
+        try:
+            _MUTED.clear()
+            _MUTED.update(saved)
+            base = fn()
+            _MUTED.add(name)
+            got = fn()
+        finally:
+            _MUTED.clear()
+            _MUTED.update(saved)
+        return got, base
+
+    gs = graphs["libssl.so.3"]
+    gc = graphs["libcrypto.so.3"]
+
+    # --- E7-DSO: positive sites by cell, plus the allocator-seam select ---
+    dso_sites = []
+    for leaf in ("append_current", "openssl_rs_err_set_error",
+                 "openssl_rs_err_realloc", "raise_site", "ERR_new",
+                 "debug_parts"):
+        hit = _e7bs_function_symbol(gs, leaf)
+        if hit is None:
+            continue
+        for idx, (a, text) in enumerate(dict(gs.functions)[hit[0]]):
+            if not (text.startswith("call") or text.startswith("jmp")):
+                continue
+            s = site_at(gs, a)
+            if s is None:
+                continue
+            w = dso_resolved_export_witness(gs, s, hit[1])
+            if w is not None and w.get("schema") == WITNESS_SCHEMA:
+                dso_sites.append((s, a, w))
+    chk("e7dso positive sites found", len(dso_sites) >= 4, True)
+    classes = {w["class"] for _l, _a, w in dso_sites}
+    chk("e7dso covers the allocator class", ABI_CONTRACT_ALLOCATOR in classes,
+        ABI_CONTRACT_ALLOCATOR in classes)
+    chk("e7dso covers the export class", ABI_CONTRACT_DSO_EXPORT in classes,
+        True)
+    a_site, a_addr, a_w = dso_sites[0]
+    a_fn = gs.funcs.get(a_site["func"])
+    chk("e7dso positive writer set closed",
+        a_w["conditions"]["writer_set_closed"], True)
+    got, base = mutated("e7dso-second-writer",
+                        lambda: dso_resolved_export_witness(gs, dict(a_site),
+                                                            a_fn))
+    matrix.append({"mutation": "e7dso-second-writer",
+                   "case": "foreign writer",
+                   "case_fails": (got or {}).get("refusal")
+                   == "cell-has-a-writer-outside-the-enumerated-seam"})
+    chk("e7dso second-writer mutated refusal", (got or {}).get("refusal"),
+        "cell-has-a-writer-outside-the-enumerated-seam")
+    got, base = mutated("e7dso-foreign-literal",
+                        lambda: dso_resolved_export_witness(gs, dict(a_site),
+                                                            a_fn))
+    matrix.append({"mutation": "e7dso-foreign-literal",
+                   "case": "foreign dlsym literal",
+                   "case_fails": (got or {}).get("refusal")
+                   == "cell-has-a-writer-outside-the-enumerated-seam"})
+    chk("e7dso foreign-literal mutated refusal",
+        (got or {}).get("refusal"),
+        "cell-has-a-writer-outside-the-enumerated-seam")
+
+    # A real foreign writer, installed into the image's function list.
+    err_cell = next((addr for addr, names in gs.names_at.items()
+                     for n in names
+                     if "dso_shared13ERR_GET_STATE" in n), None)
+    chk("e7dso err cell present", err_cell is not None, True)
+    if err_cell is not None:
+        class _Fns:
+            def __init__(self, real, extra):
+                self._real = real
+                self._extra = extra
+
+            def __iter__(self):
+                return iter(list(self._real) + self._extra)
+
+        sym = next(n for n in gs.names_at[err_cell]
+                   if "dso_shared13ERR_GET_STATE" in n)
+        foreign = (0xDEAD0000, [
+            (0xDEAD0000, f"mov %rdx,0x10(%rip)        # {err_cell:x} <{sym}>")])
+        phantom = (0xDEAD1000, [
+            (0xDEAD1000, "call *0x10(%rip)        # 400000 <default_malloc>"),
+            (0xDEAD1002, f"mov %rax,0x10(%rip)        # {err_cell:x} <{sym}>")])
+
+        class _Proxy:
+            def __init__(self, real, extra):
+                object.__setattr__(self, "real", real)
+                object.__setattr__(self, "_fns", _Fns(real.functions, extra))
+                object.__setattr__(self, "_writers_cache", {})
+                object.__setattr__(self, "_mem_cache", {})
+
+            def __getattr__(self, name):
+                if name == "functions":
+                    return self._fns
+                if name == "_e7dso_writer_cache":
+                    return self._writers_cache
+                if name == "_e7dso_mem_writer_cache":
+                    return self._mem_cache
+                return getattr(self.real, name)
+
+        px = _Proxy(gs, [foreign])
+        w = dso_resolved_export_witness(px, dict(a_site), a_fn)
+        chk("e7dso foreign-writer fixture refuses",
+            (w or {}).get("refusal"),
+            "cell-has-a-writer-outside-the-enumerated-seam")
+        matrix.append({"mutation": "e7dso-foreign-writer-fixture",
+                       "case": "a second writer installs a different target",
+                       "case_fails": (w or {}).get("refusal") is not None})
+        px2 = _Proxy(gs, [phantom])
+        w2 = dso_resolved_export_witness(px2, dict(a_site), a_fn)
+        chk("e7dso overlap artifact is ignored",
+            bool((w2 or {}).get("schema") == WITNESS_SCHEMA), True)
+
+    # --- E7-PAS ---
+    pas_ok = []
+    for leaf, off, _pin in (("evp_pkey_asym_cipher_init", 0x639, None),
+                            ("evp_pkey_asym_cipher_init", 0x6C4, None),
+                            ("evp_pkey_derive_init", 0x533, None),
+                            ("evp_pkey_derive_init", 0x552, None),
+                            ("do_sigver_init", 0x76D, None)):
+        hit = _e7bs_function_symbol(gc, leaf)
+        if hit is None:
+            continue
+        s = site_at(gc, hit[0] + off)
+        if s is None:
+            continue
+        w = provider_algorithm_slot_witness(gc, s, hit[1])
+        if w is not None and w.get("schema") == WITNESS_SCHEMA:
+            pas_ok.append((leaf, off, w))
+    chk("e7pas positive sites found", len(pas_ok) >= 5, True)
+    hit = _e7bs_function_symbol(gc, "evp_pkey_asym_cipher_init")
+    s_pas = site_at(gc, hit[0] + 0x639) if hit else None
+    if s_pas is not None:
+        got, base = mutated("e7pas-wrong-offset",
+                            lambda: provider_algorithm_slot_witness(
+                                gc, dict(s_pas), hit[1]))
+        matrix.append({"mutation": "e7pas-wrong-offset",
+                       "case": "wrong method-field offset",
+                       "case_fails": (got or {}).get("refusal")
+                       == "operand-is-not-a-pinned-method-field"})
+        chk("e7pas wrong-offset mutated refusal",
+            (got or {}).get("refusal"),
+            "operand-is-not-a-pinned-method-field")
+        got, base = mutated("e7pas-second-writer",
+                            lambda: provider_algorithm_slot_witness(
+                                gc, dict(s_pas), hit[1]))
+        matrix.append({"mutation": "e7pas-second-writer",
+                       "case": "second source writer",
+                       "case_fails": (got or {}).get("refusal")
+                       == "field-has-a-writer-outside-the-constructor"})
+        chk("e7pas second-writer mutated refusal",
+            (got or {}).get("refusal"),
+            "field-has-a-writer-outside-the-constructor")
+        # an unrelated site is not absorbed
+        s_other = site_at(gc, 0x421CB2)
+        if s_other is not None:
+            chk("e7pas unrelated site is not absorbed",
+                provider_algorithm_slot_witness(gc, s_other, "check_crl"),
+                None)
+
+    # --- E7-PEMCB ---
+    hit = _e7bs_function_symbol(gc, "ui_read")
+    s_pem = site_at(gc, hit[0] + 0xA0) if hit else None
+    if s_pem is not None:
+        w = pem_password_wrapper_witness(gc, dict(s_pem), hit[1])
+        chk("e7pemcb positive", bool((w or {}).get("schema") == WITNESS_SCHEMA),
+            True)
+        got, base = mutated("e7pemcb-second-writer",
+                            lambda: pem_password_wrapper_witness(
+                                gc, dict(s_pem), hit[1]))
+        matrix.append({"mutation": "e7pemcb-second-writer",
+                       "case": "second field writer",
+                       "case_fails": (got or {}).get("refusal")
+                       == "cb-has-not-exactly-one-writer-in-the-owner-file"})
+        chk("e7pemcb second-writer mutated refusal",
+            (got or {}).get("refusal"),
+            "cb-has-not-exactly-one-writer-in-the-owner-file")
+        fake = dict(s_pem, text="call   *0x8(%r12)")
+        chk("e7pemcb nonzero displacement refuses",
+            (pem_password_wrapper_witness(gc, fake, hit[1]) or
+             {}).get("refusal"),
+            "operand-is-not-the-zero-offset-callback-slot")
+        fake = dict(s_pem, addr=s_pem["addr"] + 1)
+        chk("e7pemcb unpinned site is not absorbed",
+            pem_password_wrapper_witness(gc, fake, hit[1]), None)
+
+    # --- E7-PEMPARAM: the refused group is refused by name, not absorbed ---
+    hit = _e7bs_function_symbol(gc, "PEM_ASN1_write_bio_internal")
+    if hit is not None:
+        s_pp = site_at(gc, hit[0] + 0x4DE)
+        if s_pp is not None:
+            w = pem_password_parameter_witness(gc, dict(s_pp), hit[1])
+            chk("e7pemparam refuses with a named reason",
+                (w or {}).get("refusal"),
+                "caller-chain-passes-a-non-parameter-value")
+            fake = dict(s_pp, addr=s_pp["addr"] + 1)
+            chk("e7pemparam unpinned site is not absorbed",
+                pem_password_parameter_witness(gc, fake, hit[1]), None)
+
+    # --- E7-X509CTX ---
+    hit = _e7bs_function_symbol(gc, "check_crl")
+    s_x = site_at(gc, hit[0] + 0x432) if hit else None
+    if s_x is not None:
+        w = x509_ctx_callback_witness(gc, dict(s_x), hit[1])
+        chk("e7xctx positive", bool((w or {}).get("schema") == WITNESS_SCHEMA),
+            True)
+        for mut, want in (("e7xctx-wrong-offset",
+                           "load-is-not-the-disposal-offset-of-the-local-context"),
+                          ("e7xctx-second-writer",
+                           "cleanup-has-a-writer-outside-the-enumerated-set")):
+            got, base = mutated(mut, lambda: x509_ctx_callback_witness(
+                gc, dict(s_x), hit[1]))
+            matrix.append({"mutation": mut, "case": "field writer/offset",
+                           "case_fails": (got or {}).get("refusal") == want})
+            chk(f"{mut} mutated refusal", (got or {}).get("refusal"), want)
+        fake = dict(s_x, addr=s_x["addr"] + 1)
+        chk("e7xctx unpinned site is not absorbed",
+            x509_ctx_callback_witness(gc, fake, hit[1]), None)
+
+    # --- E7-PMCMP (closed target set) ---
+    hit = _e7bs_function_symbol(gc, "pmeth_func_cmp")
+    s_cmp = site_at(gc, hit[0] + 0x6) if hit else None
+    if s_cmp is not None:
+        w = pmeth_comparator_witness(gc, dict(s_cmp), hit[1])
+        chk("e7pmcmp positive", bool((w or {}).get("resolved")), True)
+        chk("e7pmcmp enumerates every row",
+            len((w or {}).get("targets") or ()), E7PMETH_TABLE_ROWS)
+        chk("e7pmcmp every search is the documented bsearch",
+            len((w or {}).get("searches") or ()) >= 1, True)
+        got, base = mutated("e7pmcmp-second-reference",
+                            lambda: pmeth_comparator_witness(
+                                gc, dict(s_cmp), hit[1]))
+        matrix.append({"mutation": "e7pmcmp-second-reference",
+                       "case": "a foreign reference to the comparator",
+                       "case_fails": (got or {}).get("resolved") is False})
+        chk("e7pmcmp second-reference mutated refusal",
+            (got or {}).get("resolved"), False)
+        fake = dict(s_cmp, addr=s_cmp["addr"] + 1)
+        chk("e7pmcmp unpinned site is not absorbed",
+            pmeth_comparator_witness(gc, fake, hit[1]), None)
+
+    # --- A2 family gate ---
+    chk("a2 ui_read with a BIO setter is closed",
+        a2_family_open("ui_read", {"BIO_meth_new"}), False)
+    chk("a2 ui_read with a UI setter is closed",
+        a2_family_open("ui_read", {"UI_create_method",
+                                   "UI_method_set_reader"}), False)
+    chk("a2 pmeth with the EVP_PKEY setter is open",
+        a2_family_open("pmeth_func_cmp", {"EVP_PKEY_meth_add0"}), True)
+    got, base = mutated("e7a2-blanket",
+                        lambda: a2_family_open("ui_read",
+                                               {"BIO_meth_new"}))
+    matrix.append({"mutation": "e7a2-blanket",
+                   "case": "blanket setter import",
+                   "case_fails": got is True and base is False})
+    chk("a2 blanket mutated open", got, True)
+
+    chk("e7batch mutation matrix: every mutation is load-bearing",
+        [r["case_fails"] for r in matrix], [True] * len(matrix))
+    print("[consumer-closure] E7BATCH mutation matrix: " + "; ".join(
+        f"{r['mutation']} -> {r['case']} "
+        f"{'fails as required' if r['case_fails'] else 'STILL PASSES'}"
+        for r in matrix))
+    return failures, (
+        f"e7batch controls: {len(dso_sites)} dlsym/allocator site(s) bind "
+        f"across the two DSOs, {len(pas_ok)} provider-slot site(s) bind; the "
+        "foreign-writer fixture and every mutation switch (second writer, "
+        "foreign literal, wrong offset, second source writer, comparator "
+        "reference, blanket A2 import) refuse and flip; the PEM parameter "
+        "group is refused by name; unpinned shapes are never absorbed")
+
+
 def self_test() -> int:
     failures = []
     _PREMISE_UNAVAILABLE.clear()
@@ -39848,11 +41664,22 @@ def self_test() -> int:
                 "reason": "field-of-unknown-base", "class": "field",
                 "field_offsets": set(), "seam": seam}
 
+    # The A2 family gate.  An import can only open the family whose table the
+    # dispatch actually reads: `pmeth_func_cmp` reads the EVP_PKEY method
+    # table, so an EVP_PKEY setter import opens it, while the PEM writer reads
+    # no table and the EVP_MD setter import cannot open it.
+    eg = _EG()
+    eg.funcs = {**_EG.funcs, 0x40: "...pmeth_func_cmp"}
+    a2 = _site(0x40)
+    eg.sites = {(0x40, 0x41, "call"): a2}
+    apply_evidence_classes(eg, {"EVP_PKEY_meth_add0"})
+    check("A2 with the family's imported setter stays unresolved",
+          a2["unresolved"], True)
     eg = _EG()
     a2 = _site(0x40)
     eg.sites = {(0x40, 0x41, "call"): a2}
     apply_evidence_classes(eg, {"EVP_MD_meth_new"})
-    check("A2 with an imported setter stays unresolved", a2["unresolved"], True)
+    check("A2 with another family's setter resolves", a2["unresolved"], False)
     eg = _EG()
     a2 = _site(0x40)
     eg.sites = {(0x40, 0x41, "call"): a2}
@@ -42254,6 +44081,10 @@ def self_test() -> int:
     _e7mt_failures, _e7mt_line = _e7mt_self_test()
     failures.extend(_e7mt_failures)
     print(f"[consumer-closure] {_e7mt_line}")
+
+    _e7b_failures, _e7b_line = _e7batch_self_test()
+    failures.extend(_e7b_failures)
+    print(f"[consumer-closure] {_e7b_line}")
 
     if _PREMISE_UNAVAILABLE:
         print("[consumer-closure] SELF-TEST PREMISE_UNAVAILABLE: a control's "
