@@ -1,0 +1,65 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/element7-repair/v1",
+  "receipt": "element7-curl-049-closed-method-tables",
+  "consumer": "curl",
+  "candidate": {
+    "install_libcrypto_so_3_sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+    "install_libssl_so_3_sha256": "648f8caecda245d2186813fb67ceadedd798b9ce609c8b041a84f195946c5f68",
+    "closure_receipt": "evidence/closure-curl-049.json",
+    "triage": "evidence/element7-curl-049-triage.json",
+    "prior_repair": "evidence/element7-curl-049-s1-got-slot.json"
+  },
+  "result": {
+    "sites_before": 31,
+    "sites_after": 4,
+    "groups_before": 13,
+    "groups_after": 3,
+    "bound": "27 sites across 10 groups",
+    "method": "closed_method_table_witness (E7-MT): the x509 extension and EVP_PKEY_asn1 row sets are enumerated from the image (STANDARD_EXTS 73 immutable rows at .data.rel.ro; 15 compile-time STANDARD_METHODS rows), after establishing that curl's reachable code cannot install new rows — libcurl.so.4.8.0 imports only X509V3_EXT_print from this surface, no X509V3_EXT_add*, no EVP_PKEY_asn1_add0/_add_alias/_set_siginf, and the in-image direct caller sets for all six setters are empty"
+  },
+  "controls": {
+    "with_switch": [
+      "e7mt-producer: a foreign producer symbol refuses; the switch flips it to accepted",
+      "e7mt-member-offset: a load at an offset that is not a callable member refuses",
+      "e7mt-param-caller: one clone caller passing a non-member refuses; the switch drops only that caller",
+      "e7mt-row-count: a table size that disagrees with the source row count refuses"
+    ],
+    "without_switch": [
+      "non-callable pin (usr_data)", "usr_data not counted callable", "open-CFG origin",
+      "non-function member", "all-NULL member", "imported setter",
+      "unpinned same-shape site returns None", "memory operand",
+      "mutable-section row", "the three declined sites"
+    ],
+    "self_test": "exit 0, 'self-test ok', no PREMISE_UNAVAILABLE, no NOT_RUN; two consecutive full runs passed"
+  },
+  "still_refused": [
+    {"sites": 3, "group": "do_ext_nconf (libssl 0x511544, 0x5117d5) and r2i_pci (libssl 0x5107ea)", "reason": "the operand is OpenSslStack::Inner.free_thunk, not a method-row member; its sole writer OPENSSL_sk_set_thunks is an exported seam with no in-image caller, so the field is NULL for every in-image stack and the call is unreachable — an empty proved target set, which needs the proved-empty gate this batch did not extend"},
+    {"sites": 1, "group": "OPENSSL_cleanup (libssl 0x261b34)", "reason": "the libssl copy defines neither OPENSSL_atexit in .dynsym nor in-image, so registration_atexit_witness refuses as atexit-entry-point-not-exported; the honest claim would be an empty handler-writer list, again the proved-empty gate"}
+  ],
+  "queue_delta": {
+    "before": {"sites": 147, "groups": 80},
+    "after": {"sites": 120, "groups": 70},
+    "remaining_by_shape": {
+      "a_external_abi_contract": {"sites": 82, "groups": 47},
+      "b_closed_target_set": {"sites": 4, "groups": 3, "blocker": "proved-empty gate"},
+      "c_source_change_removes_indirect_call": {"sites": 34, "groups": 20, "file": "src/runtime/err.rs"}
+    }
+  },
+  "validation": {
+    "self_test": "exit 0",
+    "targeted_re_resolution": "both graphs rebuilt, PrecisionResolver.run(), apply_evidence_classes with curl's 339 imported names: libcrypto E7MT resolved 7 / libssl E7MT resolved 18, exactly the 4 refusals listed",
+    "full_closure_run": "NOT_RUN — deferred so one run at one identity carries the whole result"
+  },
+  "residuals": [
+    "The 4 empty-set sites are argued unreachable from source and the image, but that argument is not yet an admitted gate; they are left refused rather than claimed.",
+    "The E7-MT producer check is by symbol leaf plus a source return-type check under the tool's existing in-image GOT-binding policy; a runtime GOT interposer outside the image remains unaddressed."
+  ],
+  "status": {
+    "element_7": "FAIL — 120 sites remain; unchanged until the queue is bound and the closure is re-run",
+    "safe_compatible_curl": "NOT ESTABLISHED"
+  },
+  "non_claims": [
+    "A targeted re-resolution is not a closure run and does not by itself move element-7.",
+    "No obligation is discharged and no consumer graduates by this receipt."
+  ]
+}

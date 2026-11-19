@@ -21004,8 +21004,15 @@ E7BS_WRITER_LIST_SCHEMA = (
 # owner type, unique frame spill, the two-instance closed descriptor set, each
 # member an in-image function start, each descriptor stored only by its own
 # constructor), so no contract class is widened.
-E7BS_MSBLOB_SITE = 0x52A9C2
-E7BS_MSBLOB_SITE_PIN = ("msblob2key_decode", 0x322)
+#
+# curl-049 re-pin: this candidate (libcrypto fd25cc9e6424ea79, libssl
+# 648f8caecda245d2) emits ``call *0x18(%r14)`` at function-start + 0x331 in both
+# DSO copies (0x1d5231 / 0x18f221).  The b84 literal and the +0x322 key both
+# went stale again, so the witness did not select the site and element 7 fell
+# through to the S1/nested refusal (``ctx-not-proven-parameter``).  Only the two
+# identity constants move; the witness body and its conditions are unchanged.
+E7BS_MSBLOB_SITE = 0x1D5231
+E7BS_MSBLOB_SITE_PIN = ("msblob2key_decode", 0x331)
 E7BS_RCU_SITE = 0x2C2228
 E7BS_RCU_SITE_PIN = ("ossl_synchronize_rcu", 0x5A8)
 E7BS_MSBLOB_SOURCE = "src/provider/decode_msblob2key.rs"
@@ -24396,6 +24403,692 @@ def pbe_outparam_instance_witness(g: "DsoGraph", site: dict, name: str):
     }
 
 
+# --------------------------------------------------------------------------- #
+# E7-MT: the closed X509V3 extension / EVP_PKEY_asn1 method-table dispatch
+# --------------------------------------------------------------------------- #
+#
+# `X509V3_EXT_print`, `X509V3_EXT_d2i`, `do_ext_nconf`, `do_ext_i2d`,
+# `X509_signature_print`, `ossl_x509_init_sig_info` and the inlined
+# `X509_signature_print` copy in `i2r_TARGETING_INFORMATION` all dispatch through
+# a *method row*: the address `X509V3_EXT_get`/`X509V3_EXT_get_nid` or
+# `EVP_PKEY_asn1_find` returned, dereferenced at a declared member offset.  The
+# resolver sees `call *%reg` whose value is a load from that row, and the row
+# pointer itself is a call result, so the member load is `reg-top`.
+#
+# The target set is closed when the row set is closed:
+#
+#   * the extension row set is `STANDARD_EXTS` -- a 73-element immutable table
+#     of immutable rows (`src/x509/v3_lib.rs`).  `X509V3_EXT_get_nid` searches
+#     it first and then the process-global `EXT_LIST`; `EXT_LIST` is written
+#     only by the exported `X509V3_EXT_add`/`_add_list`/`_add_alias`, and this
+#     witness refuses unless the workload imports none of them and no in-image
+#     function calls one.  A dynamic row added by `_add_alias` is a copy of a
+#     declared row, so even that path would add no function the table does not
+#     already name.
+#   * the `EVP_PKEY_ASN1_METHOD` row set is `STANDARD_METHODS` -- the 15
+#     compile-time rows `src/evp/pkey_asn1.rs` declares.  `pkey_asn1_find` asks
+#     the application table first, so the same import/caller condition on
+#     `EVP_PKEY_asn1_add0`/`_add_alias` is required, and `EVP_PKEY_asn1_set_*`
+#     field setters are checked the same way.
+#
+# The witness is site-enumerated by (function leaf, offset) pins.  A pin only
+# selects the site; the proof at the site is the operand's reaching-definition
+# walk (row member load whose base is a verified row producer, possibly through
+# a frame spill), the declared layout of the row type, the source-declared table
+# count, and the image's table size and section.  A site inside the
+# `do_ext_i2d` clone takes its member from the *caller's argument*, so both
+# direct callers' argument registers are walked and must agree.
+#
+# Residuals (recorded in the witness and in the report): the producer check is
+# by symbol leaf plus a source return-type check; a runtime GOT interposer
+# outside the image is under the tool's existing in-image GOT-binding policy;
+# the argument walk covers the direct-call closure of the clone only.
+
+E7MT_CLASS = "internal-closed-method-table"
+E7MT_SCHEMA = "openssl-rs/consumer-closure/e7-closed-method-table/v1"
+X509_EXT_TYPE = "X509V3ExtMethod"
+X509_EXT_LAYOUT_SOURCE = "src/x509/v3_lib.rs"
+X509_EXT_TABLE_LEAF = "STANDARD_EXTS"
+X509_EXT_COUNT_CONST = "STANDARD_EXTENSION_COUNT"
+X509_EXT_ROW_PRODUCERS = ("X509V3_EXT_get", "X509V3_EXT_get_nid",
+                          "ext_get_nid_locked")
+X509_EXT_SETTERS = ("X509V3_EXT_add", "X509V3_EXT_add_list",
+                    "X509V3_EXT_add_alias")
+AMETH_TYPE = "EvpPkeyAsn1Method"
+AMETH_SOURCE = "src/evp/pkey_asn1.rs"
+AMETH_TABLE = "STANDARD_METHODS"
+AMETH_ROW_PRODUCERS = ("EVP_PKEY_asn1_find",)
+AMETH_SETTERS = ("EVP_PKEY_asn1_add0", "EVP_PKEY_asn1_add_alias",
+                 "EVP_PKEY_asn1_add")
+
+# `(function leaf, call offset) -> (family, members, parameter index or None)`.
+# `do_ext_i2d` is the partially inlined clone: its two slot arguments are the
+# row's `it` (parameter 0) and `i2d` (parameter 1), read in the caller.
+E7MT_SITE_PINS = {
+    ("X509V3_EXT_print", 0xA1): ("ext", ("it",), None),
+    ("X509V3_EXT_print", 0x11A): ("ext", ("d2i",), None),
+    ("X509V3_EXT_print", 0x13F): ("ext", ("i2s",), None),
+    ("X509V3_EXT_print", 0x265): ("ext", ("i2v",), None),
+    ("X509V3_EXT_print", 0x2E2): ("ext", ("i2r",), None),
+    ("X509V3_EXT_print", 0x32A): ("ext", ("ext_free",), None),
+    ("X509V3_EXT_d2i", 0x71): ("ext", ("it",), None),
+    ("X509V3_EXT_d2i", 0xB4): ("ext", ("d2i",), None),
+    ("do_ext_nconf", 0x13F): ("ext", ("s2i", "r2i"), None),
+    ("do_ext_nconf", 0x17D): ("ext", ("v2i",), None),
+    ("do_ext_nconf", 0x51C): ("ext", ("it",), None),
+    ("do_ext_nconf", 0x53E): ("ext", ("ext_free",), None),
+    ("do_ext_i2d", 0x4B): ("ext", ("it",), 0),
+    ("do_ext_i2d", 0x179): ("ext", ("i2d",), 1),
+    ("do_ext_i2d", 0x1DC): ("ext", ("i2d",), 1),
+    ("X509_signature_print", 0xD3): ("ameth", ("sig_print",), None),
+    ("ossl_x509_init_sig_info", 0x127): ("ameth", ("siginf_set",), None),
+    ("i2r_TARGETING_INFORMATION", 0x6E5): ("ameth", ("sig_print",), None),
+}
+# Sites in the same source families whose target set is *not* a method-row member.
+# They are pinned to keep the refusal explicit and named instead of silently
+# falling through to the generic resolver reason.  `do_ext_nconf`'s two sites
+# and `r2i_pci`'s one site dispatch through `OpenSslStack::Inner.free_thunk`
+# (offset 0x20), which only the exported runtime seam
+# `OPENSSL_sk_set_thunks` writes and which is NULL for every in-image stack; an
+# empty, proved target set needs the proved-empty gate, which this family does
+# not extend.  `OPENSSL_cleanup` is left to the atexit witness, which already
+# refuses this localized duplicate by name.
+E7MT_REFUSED_SITES = {
+    ("do_ext_nconf", 0x1E4): "stack-free-thunk-not-a-method-row",
+    ("do_ext_nconf", 0x475): "stack-free-thunk-not-a-method-row",
+    ("r2i_pci", 0x49A): "stack-free-thunk-not-a-method-row",
+}
+# Load-bearing controls, set only by `--self-test`.  Each one removes exactly
+# one conjunct so a fixture that the witness refuses on that conjunct resolves.
+
+
+def _e7mt_refusal(reason, name, site, **extra):
+    rec = {"schema": E7MT_SCHEMA, "class": E7MT_CLASS, "resolved": False,
+           "refusal": reason, "function": name,
+           "call_site": hex(site.get("addr", 0))}
+    rec.update(extra)
+    return rec
+
+
+def _e7mt_site_pin(site, name):
+    """The pin for this exact (function, call offset), or None."""
+    fstart = site.get("func")
+    if fstart is None:
+        return None
+    leaf = _external_function_leaf(name)
+    return E7MT_SITE_PINS.get((leaf, site.get("addr", 0) - fstart))
+
+
+def _e7mt_family(family):
+    if family == "ext":
+        return {"type": X509_EXT_TYPE, "source": X509_EXT_LAYOUT_SOURCE,
+                "table": X509_EXT_TABLE_LEAF, "count": 73,
+                "producers": X509_EXT_ROW_PRODUCERS,
+                "setters": X509_EXT_SETTERS}
+    return {"type": AMETH_TYPE, "source": AMETH_SOURCE, "table": AMETH_TABLE,
+            "count": 15, "producers": AMETH_ROW_PRODUCERS,
+            "setters": AMETH_SETTERS}
+
+
+def _e7mt_source_count(g, spec):
+    """The declared table count from the source, or None."""
+    text = _s1_docs(g).get(spec["source"])
+    if text is None:
+        return None
+    if spec["table"] == X509_EXT_TABLE_LEAF:
+        m = re.search(r"\b" + X509_EXT_COUNT_CONST +
+                      r"\s*:\s*usize\s*=\s*(\d+)\s*;", text)
+        return int(m.group(1)) if m else None
+    m = re.search(r"pub\s+const\s+STANDARD_METHODS\s*:\s*\[\s*\*const\s+" +
+                  re.escape(AMETH_TYPE) + r"\s*;\s*(\d+)\s*\]", text)
+    return int(m.group(1)) if m else None
+
+
+def _e7mt_member_offsets(g, spec):
+    """Declared member offsets of the row type, for callable members only."""
+    if spec["type"] == X509_EXT_TYPE:
+        layout = _s1_struct_layout(g, X509_EXT_TYPE)
+        if layout is None:
+            return None, "row-layout-undecidable"
+    else:
+        layout = _e7mt_ameth_layout(g)
+        if layout is None:
+            return None, "row-layout-undecidable"
+    text = _s1_docs(g).get(spec["source"]) or ""
+    out = {}
+    for row in layout["fields"]:
+        ftype = " ".join((row.get("type") or "").split())
+        if not _e7mt_type_is_callable(g, ftype):
+            continue
+        out[row["offset"]] = row["name"]
+    if not out:
+        return None, "no-callable-member"
+    return {"layout": layout, "offsets": out, "source_text": text}, None
+
+
+def _e7mt_type_is_callable(g, ftype):
+    """True when a declared member type denotes a function pointer."""
+    t = " ".join((ftype or "").split())
+    seen = set()
+    for _ in range(5):
+        if not t or t in seen:
+            return False
+        seen.add(t)
+        if "fn" in t:
+            return True
+        if re.search(r"\*\s*(?:const|mut)\b", t):
+            return False
+        m = re.search(r"(?:Option\s*<\s*)?([A-Za-z_]\w*)\s*>?$", t)
+        if not m:
+            return False
+        alias = _s1_type_alias(g, m.group(1))
+        if alias is None:
+            return False
+        t = alias
+    return False
+
+
+def _e7mt_ameth_layout(g):
+    """Repr(C) layout of `EvpPkeyAsn1Method`.
+
+    `_s1_struct_layout` refuses the one field whose type is
+    `Option<OsslCallback>`: the alias is declared in another module, so the
+    file-local resolver cannot size it.  It is still a function pointer, so the
+    global unique alias is resolved here; every other field delegates to the
+    existing decidable rule.
+    """
+    text = _s1_docs(g).get(AMETH_SOURCE)
+    if text is None:
+        return None
+    defs = [d for d in _e7bs_struct_defs(text, AMETH_TYPE) if d["repr_c"]]
+    if len(defs) != 1:
+        return None
+    fields = _s1_split_fields(defs[0]["body"])
+    if not fields:
+        return None
+    infos = []
+    for fname, ftype in fields:
+        info = _e7bs_type_size(g, text, ftype)
+        if info is None:
+            m = re.match(r"Option\s*<\s*([A-Za-z_]\w*)\s*>",
+                         " ".join(ftype.split()))
+            alias = _s1_type_alias(g, m.group(1)) if m else None
+            if alias is not None and "fn" in alias:
+                info = (8, 8)
+        if info is None:
+            return None
+        infos.append((fname, ftype, info[0], info[1]))
+    off, align, rows = 0, 1, []
+    for fname, ftype, size, falign in infos:
+        off = (off + falign - 1) // falign * falign
+        rows.append({"offset": off, "name": fname, "type": ftype})
+        off += size
+        align = max(align, falign)
+    size = (off + align - 1) // align * align
+    return {"name": AMETH_TYPE, "size": size, "align": align,
+            "fields": rows, "repr_c": True, "file": AMETH_SOURCE,
+            "line": defs[0]["line"]}
+
+
+def _e7mt_row_table(g, spec):
+    """Enumerate the immutable method-row table of this image."""
+    count = spec["count"]
+    declared = _e7mt_source_count(g, spec)
+    if declared is None:
+        return None, "source-table-count-absent"
+    if declared != count and "e7mt-row-count" not in _MUTED:
+        return None, f"source-count-{declared}-not-{count}"
+    if spec["table"] == X509_EXT_TABLE_LEAF:
+        hits = [a for a, names in (getattr(g, "names_at", {}) or {}).items()
+                if any(_external_function_leaf(n) == X509_EXT_TABLE_LEAF
+                       for n in names)]
+        if len(hits) != 1:
+            return None, "table-symbol-ambiguous-or-absent"
+        base = hits[0]
+        raw = next(n for n in g.names_at[base]
+                   if _external_function_leaf(n) == X509_EXT_TABLE_LEAF)
+        size = (getattr(g, "sym_sizes", {}) or {}).get(raw.split("@")[0])
+        if size != count * 8 and "e7mt-row-count" not in _MUTED:
+            return None, f"table-size-{size}-not-{count * 8}"
+        rows = []
+        for k in range(count):
+            vals = {v for v in (g.static_slot(base + 8 * k) or ())
+                    if isinstance(v, int)}
+            if len(vals) != 1:
+                return None, f"row-{k}-not-a-single-pointer"
+            rows.append(next(iter(vals)))
+        if len(set(rows)) != len(rows):
+            return None, "row-table-has-duplicate-rows"
+        sections = sorted({g.section_of(r) for r in rows})
+        if any(s not in S1_IMMUTABLE_SECTIONS for s in sections):
+            return None, "row-outside-immutable-section"
+        return {"symbol": raw, "base": base, "size": size,
+                "count": count, "rows": rows, "sections": sections}, None
+    # The ASN.1 table is a `const`, so it is inlined at every use and has no
+    # symbol.  Its 15 entries are `&raw const path::NAME[idx]`; each name is a
+    # declared static (or an array of rows) in this image.
+    text = _s1_docs(g).get(AMETH_SOURCE)
+    m = re.search(r"pub\s+const\s+" + AMETH_TABLE +
+                  r"\s*:\s*\[\s*\*const\s+" + re.escape(AMETH_TYPE) +
+                  r"\s*;\s*(\d+)\s*\]\s*=\s*\[(.*?)\];", text, re.S)
+    if m is None:
+        return None, "table-declaration-absent"
+    if int(m.group(1)) != count and "e7mt-row-count" not in _MUTED:
+        return None, "table-declaration-count-mismatch"
+    entries = [e.strip() for e in m.group(2).split(",") if e.strip()]
+    if len(entries) != count and "e7mt-row-count" not in _MUTED:
+        return None, f"table-entry-count-{len(entries)}-not-{count}"
+    layout = _e7mt_ameth_layout(g)
+    if layout is None:
+        return None, "row-layout-undecidable"
+    rows = []
+    for entry in entries:
+        em = re.search(r"crate::(?:[A-Za-z_]\w*::)*([A-Za-z_]\w*)"
+                       r"(?:\[(\d+)\])?", entry)
+        if em is None:
+            return None, "table-entry-unreadable"
+        name, idx = em.group(1), int(em.group(2) or 0)
+        hits = [a for a, names in (getattr(g, "names_at", {}) or {}).items()
+                if any(_external_function_leaf(n) == name for n in names)]
+        if len(hits) != 1:
+            return None, f"row-{name}-ambiguous-or-absent"
+        base = hits[0]
+        addr = base + idx * layout["size"]
+        if idx:
+            raw = next(n for n in g.names_at[base]
+                       if _external_function_leaf(n) == name)
+            size = (getattr(g, "sym_sizes", {}) or {}).get(raw.split("@")[0])
+            if size is None or size < (idx + 1) * layout["size"]:
+                return None, f"row-{name}-array-extent-unproven"
+        rows.append(addr)
+    if len(set(rows)) != len(rows):
+        return None, "row-table-has-duplicate-rows"
+    sections = sorted({g.section_of(r) for r in rows})
+    if any(s not in S1_IMMUTABLE_SECTIONS for s in sections):
+        return None, "row-outside-immutable-section"
+    return {"symbol": AMETH_TABLE, "base": None, "size": layout["size"],
+            "count": len(rows), "rows": rows, "sections": sections}, None
+
+
+def _e7mt_walk(g, fstart, idx, reg, producers, depth=0, seen=()):
+    """Origins of ``reg`` at ``idx`` in terms of method-row members.
+
+    Returns a set of ``(kind, payload)``: ``("member", (offset, producer_leaf))``
+    for a load out of a value produced by ``producers``; ``("param", n)`` for an
+    entry parameter; ``("refuse", why)`` otherwise.  A frame slot is followed to
+    its reaching stores; every store's source must agree.
+    """
+    if depth > 8:
+        return {("refuse", "depth")}
+    key = (fstart, idx, reg)
+    if key in seen:
+        return {("refuse", "recursion")}
+    seen = seen + (key,)
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None:
+        return {("refuse", "open-cfg")}
+    out = set()
+    for k in sorted(defs):
+        if k < 0:
+            if reg in _ENTRY_ARG_REGS:
+                out.add(("param", _ENTRY_ARG_REGS[reg]))
+            else:
+                out.add(("refuse", "entry"))
+            continue
+        text = g.precision.insns_by_func[fstart][k][1]
+        mn, _rest, ops = _insn_parts(text)
+        if mn.startswith("call"):
+            sym = _s1_call_symbol(g, fstart, k, resolve_slot=True)
+            if sym is None:
+                out.add(("refuse", "call-unresolved"))
+            else:
+                out.add(("member", (0, _external_function_leaf(sym),
+                                    "call")))
+            continue
+        if mn not in ("mov", "movq", "movl", "lea") or len(ops) != 2:
+            out.add(("refuse", "writer:" + mn))
+            continue
+        src = ops[0]
+        if src in _REGS or src in _SUBREG:
+            out |= _e7mt_walk(g, fstart, k, _canon(src), producers,
+                              depth + 1, seen)
+            continue
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", src)
+        if m is None:
+            out.add(("refuse", "source:" + src))
+            continue
+        off = int(m.group(1), 16) if m.group(1) else 0
+        base = m.group(2)
+        if base in ("%rsp", "%rbp"):
+            slot = _stack_slot_abs(g, fstart, k, src)
+            if slot is None:
+                out.add(("refuse", "frame-slot"))
+                continue
+            writes = _reaching_stores(g, fstart, k, slot)
+            if not writes or _NO_STORE in writes:
+                out.add(("refuse", "frame-slot-writers"))
+                continue
+            for sk in sorted(writes):
+                _smn, _srest, sops = _insn_parts(
+                    g.precision.insns_by_func[fstart][sk][1])
+                ssrc = sops[0] if sops else ""
+                if ssrc not in _REGS and ssrc not in _SUBREG:
+                    out.add(("refuse", "frame-slot-source"))
+                    continue
+                out |= _e7mt_walk(g, fstart, sk, _canon(ssrc), producers,
+                                  depth + 1, seen)
+            continue
+        base_origins = _e7mt_walk(g, fstart, k, _canon(base), producers,
+                                  depth + 1, seen)
+        for kind, payload in base_origins:
+            if kind == "member":
+                out.add(("member", (off, payload[1], "member")))
+            else:
+                out.add((kind, payload))
+    return out
+
+
+def _e7mt_origins_members(origins, offsets, pinned, producers):
+    """Reduce walker origins to the member names of the row type."""
+    members, bad = set(), []
+    if not origins:
+        return None, "no-reaching-definition"
+    for kind, payload in sorted(origins, key=str):
+        if kind == "refuse":
+            bad.append(payload)
+            continue
+        if kind == "param":
+            bad.append(f"param-{payload}")
+            continue
+        # a row producer itself is not a member
+        if not isinstance(payload, tuple) or len(payload) != 3:
+            bad.append("malformed-origin")
+            continue
+        off, producer, how = payload
+        if how == "call":
+            bad.append(f"row-pointer-not-dereferenced:{producer}")
+            continue
+        if "e7mt-producer" not in _MUTED and producer not in producers:
+            bad.append(f"producer:{producer}")
+            continue
+        if off not in offsets:
+            if "e7mt-member-offset" not in _MUTED:
+                bad.append(f"offset:{off:#x}")
+                continue
+            members |= set(pinned)
+            continue
+        members.add(offsets[off])
+    if bad:
+        return None, "origin-not-a-method-row-member:" + ";".join(sorted(bad)[:4])
+    if not members:
+        return None, "no-member"
+    return members, None
+
+
+def _e7mt_param_origin_rows(rows, offsets, pinned, producers):
+    """Reduce every caller's argument origins to the clone's member set.
+
+    ``rows`` is ``[(caller_record, origins)]``.  A caller whose argument is not
+    a row member refuses the site unless ``e7mt-param-caller`` is muted (the
+    control); a muted refusal contributes no member, so the switch cannot
+    invent one.
+    """
+    members, bad, kept = set(), [], []
+    for caller, origins in rows:
+        got, why = _e7mt_origins_members(origins, offsets, pinned, producers)
+        if why is not None:
+            if "e7mt-param-caller" in _MUTED:
+                continue
+            bad.append({"caller": caller.get("caller"),
+                        "call_site": caller.get("call_site"),
+                        "reason": why})
+            continue
+        members |= got
+        kept.append(dict(caller, members=sorted(got)))
+    if bad:
+        return None, "parameter-not-a-row-member", bad
+    if not members:
+        return None, "no-caller-contributes-a-member", []
+    return {"members": members, "callers": kept}, None, []
+
+
+def _e7mt_param_members(g, spec, fstart, param, offsets):
+    """Member set contributed by a clone parameter's direct callers."""
+    if param >= len(_ARGREGS):
+        return None, "parameter-index-out-of-range", []
+    reg = _ARGREGS[param]
+    callers = _direct_call_index(g).get(fstart, [])
+    if not callers:
+        return None, "no-direct-caller", []
+    rows = []
+    for cf, ci, ca in callers:
+        rows.append(({"caller": g.funcs.get(cf, hex(cf)),
+                      "call_site": hex(ca)},
+                     _e7mt_walk(g, cf, ci, reg, spec["producers"])))
+    info, why, bad = _e7mt_param_origin_rows(rows, offsets, (),
+                                            spec["producers"])
+    if info is None:
+        return None, why, bad
+    info.update({"parameter": param, "register": reg})
+    return info, None, []
+
+
+def _e7mt_targets(g, rows, members, offsets):
+    """Union of every row's value for the named members."""
+    targets, values, bad = set(), {}, []
+    for name in sorted(members):
+        off = next(o for o, n in offsets.items() if n == name)
+        vals = set()
+        for r in rows:
+            v = {x for x in (g.static_slot(r + off) or ()) if isinstance(x, int)}
+            if len(v) != 1:
+                bad.append({"member": name, "row": hex(r),
+                            "reason": "not-a-single-pointer"})
+                continue
+            vals |= v
+        vals.discard(0)
+        for v in sorted(vals):
+            if v not in g.start_set:
+                bad.append({"member": name, "value": hex(v),
+                            "reason": "not-an-in-image-function-start"})
+        targets |= vals
+        values[name] = {"offset": hex(off),
+                        "targets": sorted(hex(v) for v in vals)}
+    return targets, values, bad
+
+
+def _e7mt_producer_returns_row(g, producers, type_name):
+    """Every producer's source signature returns a row pointer."""
+    docs = _s1_docs(g)
+    missing = []
+    for leaf in producers:
+        sigs = set()
+        for text in docs.values():
+            for m in re.finditer(
+                    r"\bfn\s+" + re.escape(leaf) + r"\s*\([^)]*\)\s*->\s*([^{;]+)",
+                    text):
+                sigs.add(" ".join(m.group(1).split()))
+        if not sigs:
+            missing.append(leaf)
+            continue
+        for sig in sigs:
+            if not re.search(r"\*\s*(?:const|mut)\s*" + re.escape(type_name) +
+                             r"\b", sig):
+                missing.append(f"{leaf}->{sig}")
+    return missing
+
+
+def closed_method_table_witness(g, site, name, workload_imports=None):
+    """Resolve a method-row member dispatch to the closed row table.
+
+    Returns None outside the pinned site set; a dict with ``resolved``
+    otherwise.  A refusal never changes the site's existing class, targets or
+    conservative bound.
+    """
+    if site.get("kind") != "call" or not _has_insns(g):
+        return None
+    fstart = site.get("func")
+    if fstart is not None:
+        off = site.get("addr", 0) - fstart
+        declined = E7MT_REFUSED_SITES.get(
+            (_external_function_leaf(name), off))
+        if declined is not None:
+            return _e7mt_refusal(
+                declined, name, site,
+                detail=("the operand is a function pointer read from "
+                        "OpenSslStack::Inner.free_thunk; the sole writer is "
+                        "the exported OPENSSL_sk_set_thunks seam and the field "
+                        "is NULL for this image's stacks, so the call is "
+                        "unreachable and the target set is empty; an empty "
+                        "target set requires the proved-empty gate"))
+    pin = _e7mt_site_pin(site, name)
+    if pin is None:
+        return None
+    family, pinned, param = pin
+    spec = _e7mt_family(family)
+
+    # 1. The registry seam must be closed: no workload import and no in-image
+    #    direct caller of any setter.
+    imported = sorted(set(spec["setters"]) & set(workload_imports or ()))
+    if imported:
+        return _e7mt_refusal("registry-setter-imported", name, site,
+                             setters=imported)
+    callers = _direct_call_index(g)
+    in_image = []
+    for setter in spec["setters"]:
+        for addr, sym in (getattr(g, "funcs", {}) or {}).items():
+            if _external_function_leaf(sym) != setter:
+                continue
+            for cf, _ci, ca in callers.get(addr, []):
+                in_image.append({"setter": setter,
+                                 "caller": g.funcs.get(cf, hex(cf)),
+                                 "call_site": hex(ca)})
+    if in_image:
+        return _e7mt_refusal("registry-setter-called-in-image", name, site,
+                             callers=in_image)
+
+    # 2. The row type's declared member offsets and the source table count.
+    offs, why = _e7mt_member_offsets(g, spec)
+    if offs is None:
+        return _e7mt_refusal(why, name, site)
+    named = offs["offsets"]
+    by_name = {n: o for o, n in named.items()}
+    if any(m not in by_name for m in pinned):
+        return _e7mt_refusal("pinned-member-not-in-layout", name, site,
+                             members=list(pinned),
+                             callable_members=sorted(named.values()))
+    missing_sig = _e7mt_producer_returns_row(g, spec["producers"],
+                                             spec["type"])
+    if missing_sig and "e7mt-producer" not in _MUTED:
+        return _e7mt_refusal("producer-does-not-return-a-row", name, site,
+                             detail=missing_sig)
+
+    # 3. The operand's provenance.
+    text = site.get("text") or ""
+    m = re.search(r"call\w*\s+\*(.+)$", text.split("#", 1)[0].strip())
+    if m is None:
+        return _e7mt_refusal("operand-is-not-an-indirect-call", name, site)
+    operand = m.group(1).strip()
+    mo = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", operand)
+    if mo is not None:
+        return _e7mt_refusal("memory-operand-not-enumerated", name, site,
+                             operand=operand)
+    reg = _canon(operand) if operand in _SUBREG else operand
+    if reg not in _REGS:
+        return _e7mt_refusal("operand-is-not-a-register", name, site,
+                             operand=operand)
+    idx = next((i for i, (a, _t) in
+                enumerate(g.precision.insns_by_func.get(site["func"], ()))
+                if a == site["addr"]), None)
+    if idx is None:
+        return _e7mt_refusal("site-not-in-function", name, site)
+
+    if param is None:
+        origins = _e7mt_walk(g, site["func"], idx, reg, spec["producers"])
+        members, why = _e7mt_origins_members(origins, named, pinned,
+                                             spec["producers"])
+        if members is None:
+            return _e7mt_refusal(why, name, site, operand=operand,
+                                 origins=sorted(str(o) for o in origins))
+        derived = sorted(members)
+        if set(derived) != set(pinned):
+            return _e7mt_refusal("member-set-does-not-match-the-pin", name, site,
+                                 derived=derived, pinned=list(pinned))
+        param_info = None
+    else:
+        origins = _e7mt_walk(g, site["func"], idx, reg, spec["producers"])
+        if origins != {("param", param)} and "e7mt-param-caller" not in _MUTED:
+            return _e7mt_refusal("operand-is-not-the-pinned-parameter", name,
+                                 site, operand=operand,
+                                 origins=sorted(str(o) for o in origins))
+        param_info, why, bad = _e7mt_param_members(g, spec, site["func"],
+                                                   param, named)
+        if param_info is None:
+            return _e7mt_refusal(why, name, site, operand=operand,
+                                 defects=bad)
+        derived = sorted(param_info["members"])
+        if set(derived) != set(pinned):
+            return _e7mt_refusal("member-set-does-not-match-the-pin", name, site,
+                                 derived=derived, pinned=list(pinned))
+
+    # 4. The closed, enumerated row table and the target union.
+    table, why = _e7mt_row_table(g, spec)
+    if table is None:
+        return _e7mt_refusal(why, name, site)
+    targets, values, bad = _e7mt_targets(g, table["rows"], derived, named)
+    if bad:
+        return _e7mt_refusal("row-member-not-an-in-image-function", name, site,
+                             defects=bad[:6])
+    if not targets:
+        return _e7mt_refusal("empty-target-set", name, site, values=values)
+
+    return {
+        "schema": E7MT_SCHEMA,
+        "class": E7MT_CLASS,
+        "resolved": True,
+        "function": name,
+        "call_site": hex(site["addr"]),
+        "operand": operand,
+        "family": family,
+        "row_type": spec["type"],
+        "members": derived,
+        "member_values": values,
+        "row_table": {"symbol": table["symbol"],
+                      "base": (hex(table["base"])
+                               if table["base"] is not None else None),
+                      "count": table["count"],
+                      "size": table["size"],
+                      "section": (g.section_of(table["rows"][0])
+                                  if table["rows"] else None)},
+        "parameter": param_info,
+        "producer_return_check": missing_sig,
+        "registry": {"setters": list(spec["setters"]),
+                     "imported": imported,
+                     "in_image_callers": in_image},
+        "targets": sorted(hex(t) for t in targets),
+        "conditions": {
+            "site_enumerated": True,
+            "registry_closed": True,
+            "row_table_immutable": True,
+            "row_table_count_matches_source": True,
+            "every_member_value_is_a_function_start": True,
+            "member_set_matches_the_pin": True,
+        },
+        "residuals": [
+            "a runtime GOT interposer outside this image is under the tool's "
+            "in-image GOT-binding policy",
+            "a dynamic row added by an application is excluded by the "
+            "imported/called setter condition, not by inspecting a runtime row",
+            "the callbacks' behaviour after the call is out of scope",
+        ],
+        "basis": (
+            f"{len(table['rows'])} immutable {spec['type']} rows enumerated "
+            f"from {spec['table']}; members {', '.join(derived)} are in-image "
+            "function starts; the registry's setters are neither imported by "
+            "the workload nor called in this image"),
+    }
+
+
 def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                            reachable: set | None = None) -> dict:
     """Apply the R2/R3/A1/A2 evidence classes to one candidate DSO.
@@ -24703,6 +25396,27 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                 continue
             site["e7pmeth_refusal"] = pmeth
             stats["E7PMETH_method_table_refused"] += 1
+        # E7-MT: the closed `X509V3_EXT_METHOD` / `EVP_PKEY_ASN1_METHOD` row
+        # dispatch.  The site is selected by an enumerated (function, offset)
+        # pin; the proof walks the operand back to a row member load and
+        # enumerates every immutable row's value for that member.  A refusal
+        # falls through to every existing conservative rule.
+        mt = closed_method_table_witness(g, site, name, workload_imports)
+        if mt is not None:
+            if mt.get("resolved"):
+                site["targets"] = {int(t, 16) for t in mt["targets"]}
+                site["unresolved"] = False
+                site["class"] = E7MT_CLASS
+                site["reason"] = (
+                    "closed method table: " + mt["row_type"] + "."
+                    + ",".join(mt["members"]) + " over "
+                    + str(mt["row_table"]["count"]) + " immutable row(s) -> "
+                    + str(len(mt["targets"])) + " function start(s)")
+                site["closed_method_table_witness"] = mt
+                stats["E7MT_closed_method_table_resolved"] += 1
+                continue
+            site["closed_method_table_refusal"] = mt
+            stats["E7MT_closed_method_table_refused"] += 1
         # S1: a field-sensitive static-table instance dispatch.  The witness
         # keys on (object type, pointer-slot offset, member offset), restricts
         # the writer set by the static dispatch table that pairs the consumer
@@ -25485,6 +26199,10 @@ def _edge_record(g, site: dict, ordinal: int, oracle=None, seen_ids=None) -> dic
                        or site.get("e7pmeth_refusal"))
     if e7pmeth_witness is not None:
         extra["e7pmeth_witness"] = e7pmeth_witness
+    e7mt_witness = (site.get("closed_method_table_witness")
+                    or site.get("closed_method_table_refusal"))
+    if e7mt_witness is not None:
+        extra["closed_method_table_witness"] = e7mt_witness
     pbe_ex_witness = (site.get("pbe_outparam_witness")
                       or site.get("pbe_outparam_refusal"))
     if pbe_ex_witness is not None:
@@ -36070,6 +36788,290 @@ def _e7core_self_test():
         "mutation and is restored")
 
 
+def _e7mt_self_test():
+    """Controls for the closed extension / ASN.1 method-table witness.
+
+    Positive: every pinned site that exists in the candidate resolves, in both
+    the libcrypto and the libssl copy.  Negative fixtures are checked against
+    the same helpers the witness uses, each with a mutation switch that
+    removes exactly the conjunct it exercises and must flip the refusal.
+    """
+    root = Path(__file__).resolve().parents[2]
+    install = root / "artifacts/phase2/install"
+    dsos = [install / "lib/libssl.so.3", install / "lib/libcrypto.so.3"]
+    if not all(p.is_file() for p in dsos):
+        return [], "e7mt controls: skipped (candidate absent)"
+    if not (shutil.which("nm") and shutil.which("objdump")):
+        return [], "e7mt controls: skipped (nm/objdump absent)"
+    workdir = root / "court/tmp/e7mt-selftest-work"
+    workdir.mkdir(parents=True, exist_ok=True)
+    _EVIDENCE_ENV["repo"] = str(root)
+    _EVIDENCE_ENV["install"] = str(install)
+    failures = []
+    matrix = []
+
+    def chk(name, got, want):
+        if got != want:
+            failures.append(f"{name}: got {got!r}, want {want!r}")
+
+    class _Proxy:
+        """Delegating graph with one observable overridden for a control."""
+
+        def __init__(self, real, *, sym_sizes=None, section_of=None,
+                     static_slot=None):
+            self.real = real
+            self.sym_sizes = (dict(real.sym_sizes) if sym_sizes is None
+                              else sym_sizes)
+            self._section_of = section_of
+            self._static_slot = static_slot
+
+        def __getattr__(self, name):
+            return getattr(self.real, name)
+
+        def section_of(self, addr):
+            if self._section_of is not None:
+                override = self._section_of(addr)
+                if override is not None:
+                    return override
+            return self.real.section_of(addr)
+
+        def static_slot(self, addr):
+            if self._static_slot is not None:
+                override = self._static_slot(addr)
+                if override is not None:
+                    return override
+            return self.real.static_slot(addr)
+
+    graphs = {}
+    for dso in dsos:
+        try:
+            g = DsoGraph(dso, workdir)
+        except Exception as e:  # noqa: BLE001 -- absent tooling is a skip
+            return [], f"e7mt controls: skipped (graph unavailable: {e})"
+        g.source_root = str(root)
+        g.install_prefix = str(install)
+        g.precision = PrecisionResolver(g)
+        graphs[dso.name] = g
+
+    imports = {"X509V3_EXT_print", "OPENSSL_sk_num", "EVP_PKEY_get0_asn1"}
+
+    def _mutated(name, fn):
+        """(mutated result, the baseline refusal reason or None)."""
+        saved = set(_MUTED)
+        try:
+            _MUTED.clear()
+            _MUTED.update(saved)
+            base = fn()
+            _MUTED.add(name)
+            got = fn()
+        finally:
+            _MUTED.clear()
+            _MUTED.update(saved)
+        why = (str(base[1]) if isinstance(base, tuple) and base
+               and base[0] is None else None)
+        return got, why
+
+    def _site_for(g, leaf, off):
+        starts = sorted(a for a, names in g.names_at.items()
+                        if a in g.start_set
+                        and any(_external_function_leaf(n) == leaf
+                                for n in names))
+        for start in starts:
+            insns = g.precision.insns_by_func.get(start, ())
+            addr = start + off
+            text = next((t for a, t in insns if a == addr), None)
+            if text is not None:
+                return {"kind": "call", "func": start, "addr": addr,
+                        "text": text, "targets": set(), "unresolved": True,
+                        "class": "materialised", "reason": "reg-top",
+                        "field_offsets": set()}
+        return None
+
+    # Positive: every pin that exists resolves with its pinned member set.
+    seen = {}
+    for image, g in graphs.items():
+        hits = 0
+        for (leaf, off), (_fam, members, _param) in E7MT_SITE_PINS.items():
+            site = _site_for(g, leaf, off)
+            if site is None:
+                continue
+            got = closed_method_table_witness(g, site, g.funcs[site["func"]],
+                                              imports)
+            chk(f"e7mt positive {image} {leaf}+{off:#x} resolved",
+                bool((got or {}).get("resolved")), True)
+            if (got or {}).get("resolved"):
+                chk(f"e7mt positive {image} {leaf}+{off:#x} members",
+                    tuple(got["members"]), tuple(sorted(members)))
+                chk(f"e7mt positive {image} {leaf}+{off:#x} targets",
+                    bool(got["targets"]), True)
+                hits += 1
+            else:
+                chk(f"e7mt positive {image} {leaf}+{off:#x} refusal",
+                    (got or {}).get("refusal"), None)
+        seen[image] = hits
+    chk("e7mt positive libssl site count",
+        seen.get("libssl.so.3", 0) >= 15, True)
+    chk("e7mt positive libcrypto site count",
+        seen.get("libcrypto.so.3", 0) >= 8, True)
+
+    # The sibling shapes that are deliberately not method-row members are
+    # refused by name, never absorbed into the closed-set class.
+    for (leaf, off), reason in E7MT_REFUSED_SITES.items():
+        site = _site_for(graphs["libssl.so.3"], leaf, off)
+        if site is None:
+            continue
+        got = closed_method_table_witness(graphs["libssl.so.3"], site,
+                                          graphs["libssl.so.3"].funcs[
+                                              site["func"]], imports)
+        chk(f"e7mt declined {leaf}+{off:#x}", (got or {}).get("refusal"),
+            reason)
+        chk(f"e7mt declined {leaf}+{off:#x} not resolved",
+            bool((got or {}).get("resolved")), False)
+
+    g = graphs["libssl.so.3"]
+    base = next(a for a, names in g.names_at.items()
+                if any(_external_function_leaf(n) == X509_EXT_TABLE_LEAF
+                       for n in names))
+    raw = next(n for n in g.names_at[base]
+               if _external_function_leaf(n) == X509_EXT_TABLE_LEAF)
+    spec = _e7mt_family("ext")
+    table, why = _e7mt_row_table(g, spec)
+    chk("e7mt row table present", why, None)
+    chk("e7mt row table count", (table or {}).get("count"), 73)
+    chk("e7mt row table sections", (table or {}).get("sections"),
+        [".data.rel.ro"])
+
+    # 1. the operand's producer must be a verified row lookup
+    offs = _e7mt_member_offsets(g, spec)[0]["offsets"]
+    good = {("member", (8, "X509V3_EXT_get", "member"))}
+    bad_producer = {("member", (8, "OBJ_nid2sn", "member"))}
+    chk("e7mt producer positive",
+        _e7mt_origins_members(good, offs, ("it",), spec["producers"]),
+        ({"it"}, None))
+    chk("e7mt producer refusal",
+        _e7mt_origins_members(bad_producer, offs, ("it",),
+                              spec["producers"])[1].split(":", 1)[0],
+        "origin-not-a-method-row-member")
+    _rec, _why = _mutated("e7mt-producer", lambda: _e7mt_origins_members(
+        bad_producer, offs, ("it",), spec["producers"]))
+    matrix.append({"mutation": "e7mt-producer", "case": "producer",
+                   "case_fails": (_why is not None
+                                  and _rec == ({"it"}, None))})
+    chk("e7mt producer mutated", _rec, ({"it"}, None))
+    # unproven origins are refused even with the producer switch
+    chk("e7mt open-cfg refusal",
+        _e7mt_origins_members({("refuse", "open-cfg")}, offs, ("it",),
+                              spec["producers"])[1].split(":", 1)[0],
+        "origin-not-a-method-row-member")
+
+    # 2. the load offset must be a callable member of the row type
+    bad_off = {("member", (0x60, "X509V3_EXT_get", "member"))}
+    chk("e7mt member-offset refusal",
+        _e7mt_origins_members(bad_off, offs, ("it",), spec["producers"])[1]
+        .split(":", 1)[0], "origin-not-a-method-row-member")
+    _rec, _why = _mutated("e7mt-member-offset", lambda: _e7mt_origins_members(
+        bad_off, offs, ("it",), spec["producers"]))
+    matrix.append({"mutation": "e7mt-member-offset", "case": "member-offset",
+                   "case_fails": (_why is not None
+                                  and _rec == ({"it"}, None))})
+    chk("e7mt member-offset mutated", _rec, ({"it"}, None))
+    chk("e7mt usr_data is not callable", 0x60 in offs, False)
+
+    # 3. the clone parameter: one good and one bad caller
+    good_row = ({"caller": "c1", "call_site": "0x1"}, good)
+    bad_row = ({"caller": "c2", "call_site": "0x2"}, {("refuse", "entry")})
+    chk("e7mt param refusal",
+        _e7mt_param_origin_rows([good_row, bad_row], offs, (), 
+                                spec["producers"])[1],
+        "parameter-not-a-row-member")
+    _rec, _why = _mutated("e7mt-param-caller",
+                          lambda: _e7mt_param_origin_rows(
+                              [good_row, bad_row], offs, (),
+                              spec["producers"]))
+    _info = _rec[0] if isinstance(_rec, tuple) else None
+    matrix.append({"mutation": "e7mt-param-caller", "case": "param-caller",
+                   "case_fails": (_why is not None
+                                  and (_info or {}).get("members") == {"it"})})
+    chk("e7mt param mutated members", (_info or {}).get("members"), {"it"})
+
+    # 4. the table's declared size and immutable section are load-bearing
+    px = _Proxy(g, sym_sizes=dict(g.sym_sizes, **{raw.split("@")[0]: 583}))
+    chk("e7mt table-size refusal", _e7mt_row_table(px, spec)[1],
+        "table-size-583-not-584")
+    _rec, _why = _mutated("e7mt-row-count", lambda: _e7mt_row_table(px, spec))
+    _tbl = _rec[0] if isinstance(_rec, tuple) else None
+    matrix.append({"mutation": "e7mt-row-count", "case": "row-count",
+                   "case_fails": (_why is not None and _tbl is not None)})
+    chk("e7mt table-size mutated", (_tbl or {}).get("count"), 73)
+    rows0 = set(table["rows"][:1])
+    px = _Proxy(g, section_of=lambda a: (".data" if a in rows0 else None))
+    chk("e7mt section refusal", _e7mt_row_table(px, spec)[1],
+        "row-outside-immutable-section")
+
+    # 5. a member value that is not a function start, and an all-NULL member
+    site = _site_for(g, "X509V3_EXT_print", 0xA1)
+    chk("e7mt positive site present", site is not None, True)
+    if site is not None:
+        it_off = next(o for o, n in offs.items() if n == "it")
+        px = _Proxy(g, static_slot=lambda a: (
+            frozenset({0xDEAD}) if (a - it_off) in table["rows"] else None))
+        got = closed_method_table_witness(px, site,
+                                          g.funcs[site["func"]], imports)
+        chk("e7mt nonfunction-member refusal",
+            (got or {}).get("refusal"),
+            "row-member-not-an-in-image-function")
+        px = _Proxy(g, static_slot=lambda a: (
+            frozenset({0}) if (a - it_off) in table["rows"] else None))
+        got = closed_method_table_witness(px, site,
+                                          g.funcs[site["func"]], imports)
+        chk("e7mt empty-target-set refusal",
+            (got or {}).get("refusal"), "empty-target-set")
+        # 6. a registry setter in the workload import set refuses
+        got = closed_method_table_witness(g, site, g.funcs[site["func"]],
+                                          imports | {"X509V3_EXT_add"})
+        chk("e7mt imported-setter refusal", (got or {}).get("refusal"),
+            "registry-setter-imported")
+        # 7. an unpinned shape is not absorbed
+        fake = dict(site, addr=site["addr"] + 1)
+        chk("e7mt unselected site", closed_method_table_witness(
+            g, fake, g.funcs[site["func"]], imports), None)
+        # 8. a memory operand is refused, never resolved through the register
+        mem = dict(site, text="call   *0x18(%r14)")
+        chk("e7mt memory-operand refusal",
+            (closed_method_table_witness(g, mem, g.funcs[site["func"]],
+                                         imports) or {}).get("refusal"),
+            "memory-operand-not-enumerated")
+
+    # 9. a pinned member that is not a callable layout member refuses
+    key = ("X509V3_EXT_print", 0xA1)
+    saved = E7MT_SITE_PINS[key]
+    try:
+        E7MT_SITE_PINS[key] = ("ext", ("usr_data",), None)
+        if site is not None:
+            got = closed_method_table_witness(g, site,
+                                              g.funcs[site["func"]], imports)
+            chk("e7mt non-callable pin refusal",
+                (got or {}).get("refusal"), "pinned-member-not-in-layout")
+    finally:
+        E7MT_SITE_PINS[key] = saved
+
+    chk("e7mt mutation matrix: every mutation is load-bearing",
+        [r["case_fails"] for r in matrix], [True] * len(matrix))
+    print("[consumer-closure] E7MT mutation matrix: " + "; ".join(
+        f"{r['mutation']} -> {r['case']} "
+        f"{'fails as required' if r['case_fails'] else 'STILL PASSES'}"
+        for r in matrix))
+    return failures, (
+        f"e7mt controls: the pinned closed method-table sites resolve in both "
+        f"DSO copies (libssl {seen.get('libssl.so.3')}, libcrypto "
+        f"{seen.get('libcrypto.so.3')}); the table is "
+        f"{table.get('count') if table else '?'} immutable rows; a foreign "
+        "producer, a non-callable offset, a bad clone caller, a table-size "
+        "mutation, a mutable-section row, a non-function member, an all-NULL "
+        "member, an imported registry setter, an unpinned shape and a memory "
+        "operand each refuse (the four mutation switches flip their arm)")
+
+
 def self_test() -> int:
     failures = []
     _PREMISE_UNAVAILABLE.clear()
@@ -40398,12 +41400,12 @@ def self_test() -> int:
                 (0x426A92, "mov    0x8(%r15),%rsi"),
                 (0x426A94, "mov    %rsi,0x8(%rsp)"),
                 (0x426AC0, "mov    0x8(%rsp),%rax"),
-                (0x426AC2, "call   *0x18(%rax)"),
-                (0x426AC4, "ret"),
+                (0x426AD1, "call   *0x18(%rax)"),
+                (0x426AD3, "ret"),
             ]
         else:
-            # The call sits at +0x322 of the fixture function, the offset the
-            # b84 artefact has (0x52a9c2 - 0x52a6a0); the fixture tracks
+            # The call sits at +0x331 of the fixture function, the offset the
+            # curl-049 artefacts have (0x1d5231 - 0x1d4f00); the fixture tracks
             # ``E7BS_MSBLOB_SITE_PIN`` so a stale pin fails the self-test.
             decode_insns = [
                 (0x426AB4, "mov    %rdi,%r15"),
@@ -40411,8 +41413,8 @@ def self_test() -> int:
                 (0x426AB8, "mov    %rsi,0x8(%rsp)"),
                 (0x426ABA, "nop"),
                 (0x426ABC, "mov    0x8(%rsp),%rax"),
-                (0x426AC2, "call   *0x18(%rax)"),
-                (0x426AC4, "ret"),
+                (0x426AD1, "call   *0x18(%rax)"),
+                (0x426AD3, "ret"),
             ]
         insns = {
             0x4267A0: decode_insns,
@@ -40445,7 +41447,7 @@ def self_test() -> int:
                      "var": "ctx", "type": owner_type, "param": "vctx",
                      "param_index": 0,
                      "declared": "vctx: *mut c_void"}}
-        site = {"kind": "call", "func": 0x4267A0, "addr": 0x426AC2,
+        site = {"kind": "call", "func": 0x4267A0, "addr": 0x426AD1,
                 "text": "call   *0x18(%rax)", "targets": set(),
                 "unresolved": True, "reason": "base-slot-partial",
                 "class": "field", "field_offsets": {0x18}, "seam": None,
@@ -41248,6 +42250,10 @@ def self_test() -> int:
     _e7core_failures, _e7core_line = _e7core_self_test()
     failures.extend(_e7core_failures)
     print(f"[consumer-closure] {_e7core_line}")
+
+    _e7mt_failures, _e7mt_line = _e7mt_self_test()
+    failures.extend(_e7mt_failures)
+    print(f"[consumer-closure] {_e7mt_line}")
 
     if _PREMISE_UNAVAILABLE:
         print("[consumer-closure] SELF-TEST PREMISE_UNAVAILABLE: a control's "
