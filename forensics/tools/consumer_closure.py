@@ -8326,9 +8326,37 @@ def _s1_writer_construct(g: "DsoGraph", wf: int, base: str):
     return None
 
 
-def _s1_call_symbol(g: "DsoGraph", fstart: int, idx: int):
-    """Symbol a call instruction names, directly or through its GOT slot."""
+def _s1_call_symbol(g: "DsoGraph", fstart: int, idx: int,
+                    resolve_slot: bool = False):
+    """Symbol a call instruction names, directly or through its GOT slot.
+
+    ``resolve_slot`` makes an indirect call through a link-time-constant slot
+    answer with the slot's own binding.  The disassembler annotation for such a
+    call names the slot's nearest *preceding* symbol, and a GOT entry commonly
+    renders as ``<_DYNAMIC+0x1e20>`` -- a section symbol, not the callee.  The
+    relocation is authoritative: ``R_X86_64_RELATIVE`` to an in-image function
+    start, or ``GLOB_DAT``/``JUMP_SLOT`` to a named import.  An ambiguous slot
+    (more than one binding) never resolves here; it falls back to the
+    annotation, so the caller keeps its conservative refusal.  The default is
+    off, so only a caller that has established the slot evidence opts in.
+    """
     text = _insn(g, fstart, idx)
+    if resolve_slot and "s1-got-slot" not in _MUTED:
+        mn, rest, _ops = _insn_parts(text)
+        if mn.startswith("call") and rest.startswith("*"):
+            slot = _insn_comment_addr(text)
+            if slot is not None:
+                info = _semantic_slot(g, slot)
+                names = set()
+                if info.get("kind") == "relocation":
+                    names = {str(r.get("symbol", "")).split("@")[0]
+                             for r in info.get("symbols") or ()}
+                elif info.get("kind") == "static-slot":
+                    names = {(g.funcs.get(v) or "").split("@")[0]
+                             for v in info.get("values") or ()}
+                names.discard("")
+                if len(names) == 1:
+                    return next(iter(names))
     if "#" in text:
         m = re.search(r"<([A-Za-z_][\w]*)", text.split("#", 1)[1])
         if m:
@@ -8442,7 +8470,7 @@ def _s1_store_base_witness_raw(g: "DsoGraph", wf: int, store: dict,
         if kind == "call":
             call_idx = origin.get("call_site")
             sym = ((g.funcs.get(origin.get("callee")) or "").split("@")[0]
-                   or _s1_call_symbol(g, wf, call_idx))
+                   or _s1_call_symbol(g, wf, call_idx, resolve_slot=True))
             target = origin.get("callee")
         elif kind in ("alloc", "alloc-unknown"):
             call_idx = origin.get("call_site")
@@ -8451,8 +8479,8 @@ def _s1_store_base_witness_raw(g: "DsoGraph", wf: int, store: dict,
         elif "call" in str(origin.get("why") or ""):
             call_idx = _s1_call_def(g, wf, store["index"],
                                     _canon(store["base"]))
-            sym = _s1_call_symbol(g, wf, call_idx) if call_idx is not None \
-                else None
+            sym = (_s1_call_symbol(g, wf, call_idx, resolve_slot=True)
+                   if call_idx is not None else None)
             target = None
         else:
             rec.update(qualified=False, unknown=True,
@@ -38190,7 +38218,8 @@ def self_test() -> int:
 
     class _S1G:
         def __init__(self, insns, funcs, data_syms, sizes, static_values,
-                     u32, sections, direct=None, source_root=None):
+                     u32, sections, direct=None, source_root=None,
+                     slot_funcs=None, slot_syms=None):
             self.name = "s1.so"
             self.funcs = dict(funcs)
             self.start_set = set(funcs)
@@ -38207,6 +38236,10 @@ def self_test() -> int:
             self.source_root = source_root
             self.install_prefix = None
             self.direct = collections.defaultdict(set, direct or {})
+            self.dynamic_defs = {}
+            self.slot_funcs = {k: set(v) for k, v in (slot_funcs or {}).items()}
+            self.slot_syms = {k: set(v) for k, v in (slot_syms or {}).items()}
+            self.slot_data = {}
             self._static_values = dict(static_values)
             self._u32 = dict(u32)
             self.sites = {}
@@ -38257,7 +38290,8 @@ def self_test() -> int:
                     null_member=False, cast=False, cast_missing=False,
                     prefix=False, prefix_nonbase=False, prefix_layout=False,
                     prefix_cast=False, different_object=False,
-                    unknown_base=False, fourth=False):
+                    unknown_base=False, fourth=False, indirect_alloc=False,
+                    alloc_slot="single"):
         td = tempfile.mkdtemp()
         repo = Path(td)
         path = repo / "src" / "provider" / "cipher_gcm.rs"
@@ -38351,8 +38385,14 @@ def self_test() -> int:
         site_addr = next(a for a, t in insns[S1_SITE] if "call" in t)
 
         def newctx(addr, table_addr, extra=None):
-            rows = [(addr, "mov    $0x40,%edi"),
-                    (addr + 5, "call   1500 <zalloc>"),
+            if indirect_alloc:
+                alloc = [(addr, "mov    $0x40,%edi"),
+                         (addr + 5,
+                          "call   *0x0(%rip)        # 9000 <_DYNAMIC+0x10>")]
+            else:
+                alloc = [(addr, "mov    $0x40,%edi"),
+                         (addr + 5, "call   1500 <zalloc>")]
+            rows = alloc + [
                     (addr + 10, "mov    %rax,%rbx"),
                     (addr + 15,
                      f"lea    0x0(%rip),%rcx        # {table_addr:x} <table>"),
@@ -38384,6 +38424,19 @@ def self_test() -> int:
                                  (0x12c7, "ret")]
         static_values, u32, sizes = {}, {}, {}
         data_syms = {}
+        slot_funcs = {}
+        if indirect_alloc:
+            # The slot binding is the proof: a single in-image function start
+            # is the callee; more than one binding, a non-allocator start, or
+            # no binding at all must keep the conservative refusal.
+            decoy = 0x1540
+            funcs[decoy] = "decoy_fn"
+            if alloc_slot == "single":
+                slot_funcs[0x9000] = {S1_ZALLOC}
+            elif alloc_slot == "ambiguous":
+                slot_funcs[0x9000] = {S1_ZALLOC, decoy}
+            elif alloc_slot == "nonalloc":
+                slot_funcs[0x9000] = {decoy}
         tables = dict(S1_TBL)
         if fourth:
             tables.update(S1_TBL_D)
@@ -38428,7 +38481,8 @@ def self_test() -> int:
         if unknown_base:
             direct.setdefault(S1_SITE, set()).add(S1_UNKNOWN)
         g = _S1G(insns, funcs, data_syms, sizes, static_values, u32,
-                 sections, direct=direct, source_root=repo)
+                 sections, direct=direct, source_root=repo,
+                 slot_funcs=slot_funcs)
         site = {"kind": "call", "func": S1_SITE, "addr": site_addr,
                 "text": next(t for a, t in insns[S1_SITE]
                              if a == site_addr), "arg_deps": set()}
@@ -38500,6 +38554,21 @@ def self_test() -> int:
     check("S1 unknown base origin still refuses",
           (_s1_witness(unknown_base=True) or {}).get("refusal"),
           "unproven-cohort-store")
+
+    # A link-time-constant call slot names the allocator even when the
+    # disassembler prints the slot's nearest preceding symbol (``_DYNAMIC``),
+    # which is the libssl form of the same constructor already admitted in
+    # libcrypto.  Each broken binding must keep the refusal.
+    sw_got = _s1_witness(indirect_alloc=True)
+    check("S1 allocator call through a GOT slot resolves",
+          bool(sw_got and sw_got.get("resolved")), True)
+    check("S1 GOT-slot witness keeps the declared instance set",
+          (sw_got or {}).get("targets"), ["0x2010", "0x2110", "0x2210"])
+    for _label in ("ambiguous", "nonalloc", "missing"):
+        check(f"S1 GOT-slot {_label} binding refuses",
+              (_s1_witness(indirect_alloc=True,
+                           alloc_slot=_label) or {}).get("refusal"),
+              "unproven-cohort-store")
 
     # Prefix-compatible instance enumeration.
     sw5 = _s1_witness(prefix=True)
@@ -38626,6 +38695,8 @@ def self_test() -> int:
          False, "ctx-not-proven-parameter"),
         ("s1-ctx-object", lambda: _s1_witness(shape="copy-multi"),
          False, "ctx-not-proven-parameter"),
+        ("s1-got-slot", lambda: _s1_witness(indirect_alloc=True),
+         False, "unproven-cohort-store"),
     ]
     mut2_results = []
     for name, fn, _wr, _rf in mut2:
