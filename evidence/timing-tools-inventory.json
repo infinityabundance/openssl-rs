@@ -1,0 +1,186 @@
+{
+  "schema": "openssl-rs/timing-tools-inventory/v1",
+  "purpose": "Phase 1 of the timing campaign: prove the timing-analysis instruments exist and are functional (with a sensitivity control), rather than classifying them absent.",
+  "recorded_at": "2026-11-20",
+  "source": {
+    "repository": "openssl-rs",
+    "branch": "staging",
+    "head": "0433aa40cdaff10eed3b3cd5c50ed0be208ca562",
+    "head_subject": "baseline: OpenSSH interop and timing-safety campaign, Phase 1",
+    "changes_to_src_cargo": "none (src/, Cargo.toml, Cargo.lock untouched)"
+  },
+  "venue": {
+    "container": "openssl-rs-court",
+    "image": "openssl-rs-court:1",
+    "os": "Debian GNU/Linux 12 (bookworm)",
+    "kernel": "7.3.4-1-cachyos",
+    "memory_max_bytes": 17179869184,
+    "cpus": 8,
+    "seccomp_mode": 2,
+    "seccomp_filters": 1,
+    "no_new_privs": true,
+    "host_available_gib_at_start": 30,
+    "note": "Court was already running at the 16 GiB cap and was not recreated."
+  },
+  "tools": [
+    {
+      "name": "valgrind",
+      "version": "3.19.0 (Debian 1:3.19.0-1)",
+      "install_command": "apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends valgrind",
+      "url": "https://deb.debian.org/debian bookworm/main (package valgrind)",
+      "status": "FUNCTIONAL",
+      "validation_command": "gcc -g -O0 -o trivial court/tmp/tools/trivial.c && valgrind --quiet --error-exitcode=99 ./trivial",
+      "observed_output_signature": "stdout 'trivial ok', no memcheck diagnostics, exit 0",
+      "limitations": [
+        "Memcheck is a dynamic instrument; only executed paths are observed.",
+        "Court is shared/virtualised: no claim of quiet-machine timing."
+      ]
+    },
+    {
+      "name": "ctgrind (technique, not the abandoned patched-valgrind fork)",
+      "version": "stock valgrind 3.19.0 + client requests from /usr/include/valgrind/memcheck.h",
+      "install_command": "no separate install; the valgrind package ships memcheck.h/valgrind.h (the legacy ctgrind fork was NOT built)",
+      "url": "https://github.com/agl/ctgrind (technique reference only; not built)",
+      "status": "FUNCTIONAL",
+      "validation_command": "gcc -g -O0 -o ctgrind_probe court/tmp/tools/ctgrind_probe.c && valgrind --tool=memcheck --error-exitcode=99 ./ctgrind_probe",
+      "observed_output_signature": "==NNNN== Conditional jump or move depends on uninitialised value(s)\\n==NNNN==    at 0x109412: main (ctgrind_probe.c:26)\\n...\\n==NNNN== ERROR SUMMARY: 16 errors from 1 contexts (suppressed: 0 from 0), exit 99",
+      "sensitivity_control": {
+        "positive": "16 errors from 1 contexts (one per loop iteration) for the buffer marked via VALGRIND_MAKE_MEM_UNDEFINED; exit 99",
+        "negative": "identical program without the taint marker: 'ERROR SUMMARY: 0 errors from 0 contexts', exit 0",
+        "conclusion": "the tool reports the deliberate secret-dependent branch and stays silent without the taint, so the detector is sensitive, not merely silent"
+      },
+      "limitations": [
+        "Detects secret-dependent control flow and secret-dependent memory addresses only.",
+        "Does NOT detect variable-latency instructions (e.g. division/multiplication) on secret data.",
+        "Secret marking is a source-level client request; unmarked secrets are invisible to the tool.",
+        "Only executed paths are analysed."
+      ]
+    },
+    {
+      "name": "perf",
+      "version": "6.1.192 (Debian linux-perf 6.1.192-2)",
+      "install_command": "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends linux-perf",
+      "url": "https://deb.debian.org/debian bookworm-security/main (package linux-perf)",
+      "status": "BLOCKED",
+      "validation_command": "perf stat -e task-clock ./trivial ; perf stat -e cycles ./trivial ; court/tmp/tools/perf_probe (direct perf_event_open(2))",
+      "observed_output_signature": "perf: 'Error: No permission to enable task-clock event.' / 'No permission to enable cycles event.'; direct syscall: 'sw/task-clock exclude_kernel: FAIL errno=1 (Operation not permitted)' for task-clock, cpu-clock and cpu-cycles alike",
+      "blocker": {
+        "kind": "capability restriction of the court container, not a missing install",
+        "evidence": "perf_event_open(2) returns EPERM even with exclude_kernel=1, which precedes the kernel's paranoid gate (that path returns EACCES); /proc/self/status reports Seccomp: 2 with 1 filter and NoNewPrivs: 1",
+        "secondary": "kernel.perf_event_paranoid=2 for kernel-inclusive events, and CapEff=0x00000000a80425fb includes neither CAP_PERFMON nor CAP_SYS_ADMIN; /proc/sys/kernel/perf_event_paranoid is read-only in the container, so it cannot be raised from inside",
+        "what_would_unblock": "docker run with a seccomp profile that permits perf_event_open (or seccomp=unconfined) plus CAP_PERFMON, and perf_event_paranoid<=1 for kernel events; this is a docker/ change, out of scope for this batch"
+      },
+      "capability_note": "'perf list' succeeds and enumerates 1353 events; that exercises the binary's event tables only and proves no measurement capability.",
+      "limitations": [
+        "Installed perf is 6.1.x while the kernel is 7.3.4; version skew is an additional (untested) risk even once the syscall is permitted."
+      ]
+    },
+    {
+      "name": "dudect",
+      "version": "0.2.0-25-gdc26965 (upstream master at pinned commit)",
+      "install_command": "git clone https://github.com/oreparaz/dudect.git && cd dudect && make dut_simple && make dut_donnabad",
+      "url": "https://github.com/oreparaz/dudect.git",
+      "commit": "dc269651fb2567e46755cfb2a13d3875592968b5",
+      "commit_date": "2024-03-19",
+      "status": "FUNCTIONAL",
+      "validation_command": "make dut_donnabad && timeout 90 ./dudect_donnabad_O2",
+      "observed_output_signature": "meas:    0.01 M, max t:  +67.38, max tau: 6.46e-01, (5/tau)^2: 5.99e+01. Probably not constant time.",
+      "sensitivity_control": {
+        "positive": "dut_donnabad (upstream's deliberately leaky curve25519) terminates with max t=+67.38, far above the |t|>5 threshold",
+        "negative": "dudect_simple_O2 (memcmp example) kept reporting 'max t: +1.1x ... maybe constant time' until killed by timeout(1) at 133.8 M measurements; this is a NON-DETECTION, not evidence that memcmp is constant-time (both input classes in that example diverge at the first byte)"
+      },
+      "limitations": [
+        "Welch's t-test is statistical: absence of a detected difference is not a proof of constant-time behaviour.",
+        "Results are environment-bound (shared/virtualised CPU, frequency scaling, scheduler); no quiet-machine claim is made.",
+        "Needs a fixed number of measurements; long-running by design, so runs must be bounded with timeout(1)."
+      ]
+    },
+    {
+      "name": "BINSEC",
+      "version": "0.11.3 (ocaml-base-compiler 4.14.2, dune 3.25.0, unisim_archisec 0.0.14)",
+      "install_command": "apt-get install -y --no-install-recommends opam bubblewrap patch m4 pkg-config unzip rsync libgmp-dev; export OPAMROOT=/court/opam; opam init --bare --disable-sandboxing -n; opam switch create 4.14.2 --jobs=4; opam install -y --assume-depexts binsec.0.11.3 unisim_archisec",
+      "url": "https://opam.ocaml.org (package binsec.0.11.3)",
+      "source_archive": "https://github.com/binsec/binsec/releases/download/0.11.3/binsec-0.11.3.tbz",
+      "sha256": "93f6fe439d486b166062ef6dd92c4ce3aa0947b5e18b1c3aa7de2fc3003aa6d9",
+      "extra_dependency": {
+        "name": "unisim_archisec.0.0.14",
+        "source_archive": "https://github.com/binsec/unisim_archisec/releases/download/0.0.14/unisim_archisec-0.0.14.tbz",
+        "sha256": "4618bf579da50064a4b03988b5cc5d0796ede6717f76e47e1928ab2427d9ab04",
+        "why": "without it, symbolic execution fails with '[sse:fatal] Can not resolve decoder for x86-64'"
+      },
+      "status": "FUNCTIONAL",
+      "validation_command": "binsec -version; gcc -nostdlib -static -no-pie -o tiny court/tmp/tools/tiny.s; printf 'starting from 0x401000\\nreach 0x40100c\\n' > /tmp/sse.cfg; binsec -sse -sse-script /tmp/sse.cfg -sse-depth 20 ./tiny",
+      "observed_output_signature": "version: 'Binsec version 0.11.3'; SSE summary: 'total paths 1 / branching points 1 / discontinued paths 1 / visited instructions (static) 9 / max path depth 8'",
+      "limitations": [
+        "The checkct constant-time plugin is NOT validated: 'binsec -checkct [-sse-script ...] ./tiny' exited 0 with no output at all, which is not a result; its configuration contract was not established in this batch.",
+        "'binsec -disasm ./trivial_static' (large static glibc ELF) aborted with an assertion failure in src/cli/command/disasm/disasm_core.ml:124 after printing a linear disassembly range; small freestanding ELFs are fine.",
+        "SSE needs an explicit reach goal; a bare '-sse' reports 'Nothing to reach' and explores nothing.",
+        "Symbolic execution covers the modelled ISA only; it does not observe real timing."
+      ]
+    },
+    {
+      "name": "TIMECOP",
+      "version": "poison.h method (upstream project dormant; no tagged release; SUPERCOP patches pinned to supercop-20181113/20190110/20190816)",
+      "install_command": "no install: the TIMECOP method is stock valgrind + poison.h (public-domain header from the project page); no patched valgrind was built",
+      "url": "https://www.post-apocalyptic-crypto.org/timecop/",
+      "status": "FUNCTIONAL",
+      "method_validated": "poison.h (VALGRIND_MAKE_MEM_UNDEFINED wrappers) over stock valgrind 3.19.0 with --track-origins=yes",
+      "not_validated": "the SUPERCOP-integrated TIMECOP harness (patch -p1 over a pinned SUPERCOP tree) was NOT attempted; see timecop_supercop_harness",
+      "validation_command": "gcc -O0 -g -Wall -I/usr/include/valgrind -o example court/tmp/tools/timecop_repro/example.c && valgrind --track-origins=yes ./example",
+      "observed_output_signature": "two contexts: 'Conditional jump or move depends on uninitialised value(s) at ... modular_pow (example.c:14)' and '... (example.c:15)', each with 'Uninitialised value was created by a client request at ... main (example.c:29)'; 'ERROR SUMMARY: 61 errors from 2 contexts (suppressed: 0 from 0)'",
+      "agreement_with_upstream": "the upstream page documents the same result for this example (both secret-dependent branches reported, origin traced to the poison() call, 61 errors from 2 contexts)",
+      "limitations": [
+        "Same property and same blind spots as the ctgrind technique: control flow and memory addresses only, no variable-time instructions.",
+        "The SUPERCOP harness is unmaintained and version-pinned; it would require a large pinned SUPERCOP tree and patch that may no longer apply.",
+        "Requires the secret to be marked with poison(); unmarked secrets are invisible."
+      ]
+    }
+  ],
+  "timecop_supercop_harness": {
+    "status": "NOT_ATTEMPTED",
+    "reason": "Unmaintained project: upstream ships patches only for supercop-20181113, supercop-20190110 and supercop-20190816, requires the full SUPERCOP tree (2,700+ implementations), and its maintenance status is dormant. The secret-taint property it exists to check is reproduced on current Valgrind by the ctgrind/TIMECOP poison.h technique recorded above, so the short path (method reproduction) was taken and the long path (pinned SUPERCOP patch) was not.",
+    "reference": "https://www.post-apocalyptic-crypto.org/timecop/"
+  },
+  "network_urls_used": [
+    "http://deb.debian.org/debian/ (apt: valgrind, linux-perf, opam, bubblewrap, patch, m4, pkg-config, unzip, rsync, libgmp-dev)",
+    "https://opam.ocaml.org (opam repository index and package cache)",
+    "https://github.com/oreparaz/dudect.git",
+    "https://github.com/binsec/binsec/releases/download/0.11.3/binsec-0.11.3.tbz",
+    "https://github.com/binsec/unisim_archisec/releases/download/0.0.14/unisim_archisec-0.0.14.tbz",
+    "https://www.post-apocalyptic-crypto.org/timecop/ (poison.h and documented example, transcribed)",
+    "https://github.com/constant-time-tools/timecop.git (attempted; does not exist — clone prompted for GitHub credentials)"
+  ],
+  "install_replay": [
+    "apt-get update -qq",
+    "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends valgrind linux-perf opam bubblewrap patch m4 pkg-config unzip rsync libgmp-dev",
+    "export OPAMROOT=/court/opam OPAMYES=1 OPAMJOBS=4",
+    "opam init --bare --disable-sandboxing -n",
+    "opam switch create 4.14.2 --jobs=4",
+    "opam install -y --assume-depexts binsec.0.11.3 unisim_archisec",
+    "git clone https://github.com/oreparaz/dudect.git && cd dudect && git checkout dc269651fb2567e46755cfb2a13d3875592968b5 && make dut_simple dut_donnabad",
+    "gcc -O0 -g -Wall -I/usr/include/valgrind -o example court/tmp/tools/timecop_repro/example.c"
+  ],
+  "persistence": {
+    "state": "EPHEMERAL",
+    "statement": "All installs above live in the running court container's writable layer and are lost on `docker/openssl-rs-court.sh down`, which also removes /court (the opam root). Nothing here is persisted in an image.",
+    "replay": "install_replay is the exact, ordered command list that recreates this toolchain from a fresh openssl-rs-court:1 container.",
+    "durable_route": "Persisting these tools requires a change to docker/ (a Dockerfile layer installing the apt packages, plus an opam switch and a pinned dudect checkout), which is out of scope for this batch.",
+    "not_done": "no image was built, committed or retagged, and no container state is being relied upon."
+  },
+  "not_run": [
+    "BINSEC checkct constant-time plugin (invocation produced no output; configuration contract not established).",
+    "TIMECOP SUPERCOP patch harness (unmaintained, version-pinned).",
+    "perf measurement of any kind (perf_event_open denied by seccomp).",
+    "Any timing measurement of openssl-rs code: no dudect, valgrind or BINSEC run was performed against the crate or its test suite.",
+    "Release-profile builds, full test suite, clippy, fmt (no source change was made, so the §6 local gate was not invoked).",
+    "Persistence in the court image (requires a docker/ Dockerfile change)."
+  ],
+  "non_claims": [
+    "This inventory is not evidence about the constant-timeness of any openssl-rs implementation; it records tool availability and detector sensitivity only.",
+    "The ctgrind/TIMECOP technique cannot see variable-latency instructions, and a clean run is not a constant-time proof.",
+    "dudect's t-test is statistical; a single run on a shared/virtualised CPU is not a timing verdict.",
+    "The presence of the perf binary and its 1353-entry 'perf list' output is not measurement capability.",
+    "No claim is made that these tools behave identically to the pinned OpenSSL authority or to a quiet machine.",
+    "Nothing here is a §7 SAFETY_DISCHARGED or SAFE_COMPATIBLE promotion."
+  ]
+}
