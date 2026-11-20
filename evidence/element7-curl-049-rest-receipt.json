@@ -1,0 +1,95 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/element7-repair/v1",
+  "receipt": "element7-curl-049-untouched-families",
+  "consumer": "curl",
+  "source_identity": {
+    "repository_head_start": "230d2a13e9836d3d6298e554df8d5a3e211e917e",
+    "worktree": "no commit; forensics/tools/consumer_closure.py modified only",
+    "install_libssl_so_3_sha256": "648f8caecda245d2186813fb67ceadedd798b9ce609c8b041a84f195946c5f68",
+    "install_libcrypto_so_3_sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+    "diff": "+115 / -7 in forensics/tools/consumer_closure.py"
+  },
+  "scope": {
+    "sites": 30,
+    "files": [
+      "src/ssl/ssl_mcnf.rs",
+      "src/provider/rand.rs",
+      "src/runtime/confmod/mod.rs",
+      "src/evp/evp_pbe.rs",
+      "src/encoder_meth.rs",
+      "src/dh/check.rs",
+      "src/rand/rand_lib.rs",
+      "src/pem/pem_lib.rs",
+      "src/pem/pem_pk8.rs",
+      "src/runtime/obj.rs",
+      "src/runtime/stack.rs",
+      "src/ui/ui_util.rs",
+      "src/x509/x509_vfy.rs",
+      "src/cmp/cmp_vfy.rs",
+      "src/passphrase.rs",
+      "src/store/store_result.rs",
+      "src/ssl/ssl_lib.rs"
+    ]
+  },
+  "results": {
+    "newly_bound": 5,
+    "already_bound": 2,
+    "refused": 23,
+    "by_family": {
+      "ssl_mcnf": {"sites": 3, "bound": 3, "shape": "E7-DSO ABI_CONTRACT_DSO_EXPORT",
+                   "cells": ["CONF_SSL_NAME_FIND", "CONF_SSL_GET", "CONF_SSL_GET_CMD"]},
+      "SSL_CTX_new_ex": {"sites": 1, "bound": 1, "shape": "E7-DSO ABI_CONTRACT_DSO_EXPORT",
+                         "cells": ["OPENSSL_INIT_CRYPTO"]},
+      "cmp_vfy": {"sites": 1, "bound": 1, "shape": "E7-SF internal-null-initialised-slot",
+                  "pin": "check_msg_all_certs+0x1D6"},
+      "ui_read": {"sites": 2, "bound": 0, "already_bound": 1,
+                  "refused": 1, "reason": "wrapper-is-local-to-this-dso"},
+      "x509_vfy/check_crl": {"sites": 2, "bound": 0, "already_bound": 1,
+                             "refused": 1, "reason": "the-store-setter-is-not-exported-in-this-image"},
+      "provider/rand": {"sites": 3, "refused": 3, "reason": "inlined find_call/entry_function dispatch-entry shape has no existing witness"},
+      "confmod": {"sites": 2, "refused": 2, "reason": "module-add-setter-is-not-exported"},
+      "evp_pbe": {"sites": 2, "refused": 2, "reason": "pbe-find-ex-call-is-not-unique"},
+      "encoder_meth": {"sites": 2, "refused": 2, "reason": "no-in-image-direct-caller"},
+      "dh/check": {"sites": 2, "refused": 2, "reason": "self-test-callback-setter-not-exported-here"},
+      "rand_lib": {"sites": 2, "refused": 2, "reason": "method-table-writer-set-not-enumerated"},
+      "pem_lib/pem_pk8": {"sites": 4, "refused": 4,
+                          "reason": "no-closed-caller-set / caller-chain-passes-a-non-parameter-value / default-target-is-not-exported-here"},
+      "obj": {"sites": 1, "refused": 1, "reason": "no-in-image-direct-caller"},
+      "stack": {"sites": 1, "refused": 1, "reason": "no-in-image-direct-caller"},
+      "passphrase": {"sites": 1, "refused": 1, "reason": "setter-not-an-exported-entry-point-of-this-dso"},
+      "store_result": {"sites": 1, "refused": 1, "reason": "field-writer-set-not-established"}
+    },
+    "resolved_sites": [
+      "libssl 0x27e6b7", "libssl 0x27e7f0", "libssl 0x27ead4",
+      "libssl 0x483b66", "libssl 0x504466"
+    ]
+  },
+  "controls": {
+    "E7DSO_NEW_CELLS": [
+      "baseline resolves with writer_set_closed",
+      "e7dso-second-writer refuses cell-has-a-writer-outside-the-enumerated-seam",
+      "cell removed from the enumeration refuses (no target admitted)"
+    ],
+    "E7SF_NEW_PIN": [
+      "baseline resolves to [] with proved_empty",
+      "field offset equals the installer's compiled store offset",
+      "a synthetic new direct call to OPENSSL_sk_set_thunks flips that site to installer-has-in-image-caller"
+    ],
+    "independent_evidence": "pre-edit baseline re-resolution refused the four DSO sites with dlsym-result-is-not-stored-into-a-cell and left the E7SF site unmatched"
+  },
+  "validation": {
+    "self_test": "rc=0, self-test ok, no FAIL, no new PREMISE_UNAVAILABLE",
+    "targeted_reresolution": "30 seeded; E7DSO_contract_bounded=4, E7SF_stack_free_thunk_resolved=1, 2 pre-bound, 23 refused by name",
+    "full_closure": "NOT_RUN (per brief)"
+  },
+  "queue_after": {
+    "running_count": "56 -> 51",
+    "triage_arithmetic": "55 -> 50 (the +/-1 is the already-recorded batch-2 discrepancy, not smoothed)",
+    "remaining_groups": {"modes": 21, "http": 4, "p12": 1, "this_batch_refusals": 23}
+  },
+  "status": {
+    "element_7": "FAIL",
+    "safe_compatible_curl": "NOT ESTABLISHED",
+    "withdrawn": "none (the CRYPTO_128_wrap_pad withdrawal stands and is not resurrected)"
+  }
+}
