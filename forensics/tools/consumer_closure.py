@@ -2218,6 +2218,18 @@ ABI_CONTRACT_PEM_PASSWORD_CB = "ABI_CONTRACT_PEM_PASSWORD_CB"
 # NULL).  The target set is unbounded and the type is the documented
 # `X509_STORE_CTX_cleanup_fn`.
 ABI_CONTRACT_X509_CTX_CALLBACK = "ABI_CONTRACT_X509_CTX_CALLBACK"
+# The `OsslProvider.init_function` entry point called by `provider_init`: the
+# slot is filled by `OSSL_PROVIDER_add_builtin`'s `OSSL_provider_init_fn`
+# parameter and by the `DSO_bind_func("OSSL_provider_init")` result of the
+# module-load arm.  The provider module is out of image, so the target set is
+# unbounded by the documented provider-entry ABI.  Site-enumerated.
+ABI_CONTRACT_PROVIDER_ENTRY = "ABI_CONTRACT_PROVIDER_ENTRY"
+# The child provider's `ChildProvGlobals.c_prov_up_ref` upcall: the parent
+# provider publishes it in the `OSSL_DISPATCH` table it hands to
+# `ossl_provider_init_as_child`, so the target is the parent's
+# `OSSL_FUNC_PROVIDER_UP_REF` implementation.  Site-enumerated.
+ABI_CONTRACT_PROVIDER_PARENT_UP_REF = \
+    "ABI_CONTRACT_PROVIDER_PARENT_UP_REF"
 
 ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR,
                                   ABI_CONTRACT_CORE_DISPATCH,
@@ -2236,7 +2248,9 @@ ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR,
                                   ABI_CONTRACT_DSO_EXPORT,
                                   ABI_CONTRACT_PROVIDER_ALGORITHM_SLOT,
                                   ABI_CONTRACT_PEM_PASSWORD_CB,
-                                  ABI_CONTRACT_X509_CTX_CALLBACK})
+                                  ABI_CONTRACT_X509_CTX_CALLBACK,
+                                  ABI_CONTRACT_PROVIDER_ENTRY,
+                                  ABI_CONTRACT_PROVIDER_PARENT_UP_REF})
 
 # --------------------------------------------------------------------------- #
 # closed target sets (a bounded, enumerated in-image set, not an external ABI)
@@ -3241,6 +3255,82 @@ ABI_CONTRACTS = {
             "another callback field (verify_cb, check_issued, ...) or a "
             "displacement that is not the declared cleanup offset; the "
             "witness refuses each",
+        ],
+    },
+    ABI_CONTRACT_PROVIDER_ENTRY: {
+        "resolution_kind": "contract-bounded (target set unbounded)",
+        "contract": (
+            "the `OsslProvider.init_function` entry point, called as "
+            "`OSSL_provider_init_fn` then walked for the provider dispatch"
+        ),
+        "citation": [
+            "include/openssl/core.h:186-195 -- typedef int "
+            "OSSL_provider_init_fn(const OSSL_CORE_HANDLE *handle, const "
+            "OSSL_DISPATCH *in, const OSSL_DISPATCH **out, void **provctx)",
+            "include/openssl/provider.h -- OSSL_PROVIDER_add_builtin("
+            "OSSL_LIB_CTX *, const char *name, OSSL_provider_init_fn *init_fn)",
+            "src/provider/init.rs:301-315 -- the module arm binds "
+            "`DSO_bind_func(module, \"OSSL_provider_init\")` and stores it into "
+            "`init_function`, or stores NULL",
+            "src/provider/init.rs:318-338 -- `let init = (*prov).init_function` "
+            "then the NULL-guarded call with `CORE_DISPATCH.0.as_ptr()`",
+            "src/provider/mod.rs:1891 -- `provider_new` stores its "
+            "`init_function` parameter, reached from the exported "
+            "`OSSL_PROVIDER_add_builtin`",
+        ],
+        "provider_obligation": (
+            "the application or provider module supplies the entry point; the "
+            "module owns its OSSL_provider_init implementation and everything "
+            "it allocates after the ABI boundary"
+        ),
+        "covers": (
+            "the enumerated provider_init call site in this DSO copy, the "
+            "declared OsslProvider.init_function offset, the source writer "
+            "set (provider_new's parameter and the DSO-bind arm), and the "
+            "NULL-guarded call"
+        ),
+        "does_not_cover": [
+            "which module or builtin entry point the effective configuration "
+            "names; the target set is unbounded",
+            "the module's own correctness after the ABI boundary",
+            "reachability from the two workloads, or that a module is loaded "
+            "at run time",
+            "a store to another OsslProvider field or a call through a slot "
+            "at a different displacement; the witness refuses each",
+        ],
+    },
+    ABI_CONTRACT_PROVIDER_PARENT_UP_REF: {
+        "resolution_kind": "contract-bounded (target set unbounded)",
+        "contract": (
+            "the child provider's parent `OSSL_FUNC_PROVIDER_UP_REF` upcall "
+            "(`ChildProvGlobals.c_prov_up_ref`)"
+        ),
+        "citation": [
+            "include/openssl/core_dispatch.h -- OSSL_FUNC_PROVIDER_UP_REF "
+            "(110) and OSSL_FUNC_provider_up_ref_fn",
+            "src/provider/child.rs:168-191 -- `#[repr(C)] ChildProvGlobals`; "
+            "`c_prov_up_ref` is the ninth pointer field (offset 0x48)",
+            "src/provider/child.rs:533-536 -- `ossl_provider_init_as_child` "
+            "stores `function_for::<ChildUpRefFn>(p, "
+            "OSSL_FUNC_PROVIDER_UP_REF)` from the parent's `in` table",
+            "src/provider/child.rs:618-643 -- `ossl_provider_up_ref_parent` "
+            "loads the slot, NULL-tests it, and tail-calls it",
+        ],
+        "provider_obligation": (
+            "the parent provider supplies the upcall in the dispatch table it "
+            "publishes; the parent owns its implementation and lifetime"
+        ),
+        "covers": (
+            "the enumerated up_ref_parent tail call, the declared "
+            "ChildProvGlobals.c_prov_up_ref offset, the single source writer "
+            "in ossl_provider_init_as_child, and the NULL guard"
+        ),
+        "does_not_cover": [
+            "which parent provider supplies the upcall; the target set is "
+            "unbounded",
+            "the parent's implementation or lifetime",
+            "another child upcall field (c_prov_free, c_prov_name, ...) or a "
+            "different displacement; the witness refuses each",
         ],
     },
 }
@@ -21009,6 +21099,8 @@ EXTERNAL_ABI_CLASSES = frozenset({
     ABI_CONTRACT_CONF_MODULE,
     ABI_CONTRACT_CONF_DEFAULT_METHOD,
     ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT,
+    ABI_CONTRACT_PROVIDER_ENTRY,
+    ABI_CONTRACT_PROVIDER_PARENT_UP_REF,
 })
 
 
@@ -26119,10 +26211,16 @@ def dso_resolved_export_witness(g, site, name):
     tail = False
     if defs is None:
         # A `jmp *%reg` tail call has no fall-through definition in the CFG;
-        # the single preceding write inside the function is the evidence.
+        # the single preceding write inside the function is the evidence.  A
+        # LazySymbol resolve publishes the dlsym result into the cell and then
+        # tail-calls it, so the preceding write is the dlsym *call* itself.
         kind, k, _ops = _semantic_last_write(g, fstart, idx, reg)
-        if kind != "insn":
+        if kind not in ("insn", "call"):
             return None
+        if kind == "call" and "e7dso-tail-call" in _MUTED:
+            return {"class": ABI_CONTRACT_DSO_EXPORT, "resolved": False,
+                    "refusal": "tail-call-result-not-accepted",
+                    "function": name, "call_site": hex(site.get("addr") or 0)}
         defs = {k}
         tail = True
     if not defs or _ENTRY_DEF in defs:
@@ -26308,6 +26406,365 @@ def dso_resolved_export_witness(g, site, name):
         "recorded and ignored; it cannot be an independently executed store",
         "the process-global symbol an interposed dlsym resolves is the "
         "configuration, not a property of this image",
+    ]
+    return w
+
+
+# ---- E7-PE / E7-PU: the two provider entry/upcall slots ------------------ #
+#
+# Both are site-enumerated: the exact (function leaf, call offset) selects the
+# site, a different shape returns None, and a selected site whose writer set or
+# operand does not prove the contract returns a named refusal.  The writer set
+# is the *source* assignment set for the owner field, cross-checked against the
+# compiled loads/stores in this image; a second writer refuses.
+
+E7PE_SITE_PINS = {
+    "provider_init": (0x74,),
+}
+E7PU_SITE_PINS = {
+    "ossl_provider_up_ref_parent": (0x59,),
+}
+
+
+def _e7prov_call_symbol(g, text: str):
+    """The named in-image import a direct/GOT call targets, or None."""
+    mn, rest, _ops = _insn_parts(text)
+    if not mn.startswith("call"):
+        return None
+    if not rest.startswith("*"):
+        m = re.match(r"^([0-9a-f]+)", rest)
+        if m:
+            hit = _containing(g, int(m.group(1), 16))
+            if hit is not None:
+                return g.funcs.get(hit)
+        return None
+    slot = _insn_comment_addr(text)
+    if slot is None:
+        return None
+    sem = _semantic_slot(g, slot)
+    if sem.get("kind") == "relocation":
+        syms = sorted({r["symbol"] for r in sem.get("symbols", ())})
+        return syms[0] if len(syms) == 1 else None
+    if sem.get("kind") == "static-slot":
+        vals = sem.get("values") or ()
+        if len(vals) != 1:
+            return None
+        target = vals[0]
+        return (g.funcs.get(target)
+                or g.funcs.get(_containing(g, target) or -1))
+    return None
+
+
+def _e7prov_param(g, fstart: int, idx: int, base: str, index: int = 0) -> bool:
+    """True when ``base`` is the entry parameter ``index`` at ``idx``."""
+    p = _param_of_operand(g, fstart, idx, base)
+    return bool(p and p.get("kind") == "param" and p.get("index") == index)
+
+
+def _e7prov_guard(g, fstart: int, lo: int, hi: int, reg: str) -> bool:
+    """A ``test reg,reg`` followed by a conditional branch in [lo, hi)."""
+    seen_test = False
+    for k in range(max(0, lo), min(hi, len(g.precision.insns_by_func[fstart]))):
+        mn, _rest, ops = _insn_parts(_insn(g, fstart, k))
+        if mn == "test" and len(ops) == 2 and ops[0] == ops[1] == reg:
+            seen_test = True
+            continue
+        if seen_test and mn.startswith("j"):
+            return True
+    return False
+
+
+def _e7prov_source_writers(g, owner: str, field: str, tokens):
+    """(stores, detail) for one owner field, or (None, refusal)."""
+    writes, err = _external_field_writers(
+        g, owner, {field}, owner_tokens=tokens)
+    if writes is None:
+        return None, ("source-writer-scan-unavailable", {"detail": err})
+    macro = [r for r in writes if r.get("kind") == "macro-slot"]
+    if macro:
+        return None, ("macro-expanded-slot-store-unattributed",
+                      {"writers": macro[:4]})
+    return [r for r in writes if r.get("kind") == "store"], None
+
+
+def provider_entry_witness(g, site: dict, name: str):
+    """The `OsslProvider.init_function` provider-entry ABI, per site."""
+    if not _has_insns(g):
+        return None
+    leaf = _external_function_leaf(name)
+    pins = E7PE_SITE_PINS.get(leaf)
+    if pins is None:
+        return None
+    idx = _external_insn_index(g, site)
+    if idx is None:
+        return None
+    fstart = site["func"]
+    off = (site.get("addr") or 0) - fstart
+    if off not in pins:
+        return None
+    cls = ABI_CONTRACT_PROVIDER_ENTRY
+
+    def refuse(reason, **extra):
+        return _external_refusal(cls, name, site, reason, **extra)
+
+    text = (site.get("text") or "").split("#", 1)[0]
+    if not re.match(r"\s*call\s+\*%rax\b", text):
+        return refuse("operand-is-not-the-init-function-register")
+    defs = _external_reg_defs(g, fstart, idx, "%rax")
+    if not defs:
+        return refuse("operand-has-no-reachable-definition")
+    want_off = 0x48 if "e7pe-wrong-offset" in _MUTED else 0x40
+    load_k = dso_k = None
+    other = []
+    for k in sorted(defs):
+        itext = _insn(g, fstart, k)
+        mn, _rest, ops = _insn_parts(itext)
+        if mn in ("mov", "movq") and len(ops) >= 2:
+            m = re.fullmatch(r"(?:0x)?([0-9a-f]+)\((%r[0-9a-z]+)\)", ops[0])
+            if m and int(m.group(1), 16) == want_off:
+                load_k = (k, m.group(2))
+                continue
+        if mn.startswith("call"):
+            sym = _e7prov_call_symbol(g, itext)
+            if sym == "DSO_bind_func":
+                dso_k = k
+                continue
+        other.append(itext.strip())
+    if other or load_k is None or dso_k is None:
+        return refuse("operand-is-not-the-init-function-slot",
+                      definitions=[_insn(g, fstart, k).strip()
+                                   for k in sorted(defs)],
+                      matched={"load": load_k is not None,
+                               "dso_bind": dso_k is not None})
+    if not _e7prov_param(g, fstart, load_k[0], load_k[1]):
+        return refuse("slot-base-is-not-the-provider-parameter",
+                      base=load_k[1])
+    # The module arm's result must be stored into the same offset before use.
+    store_k = None
+    for k in range(dso_k + 1, min(len(g.precision.insns_by_func[fstart]),
+                                  dso_k + 10)):
+        mn, _rest, ops = _insn_parts(_insn(g, fstart, k))
+        if (mn in ("mov", "movq") and len(ops) >= 2 and ops[0] == "%rax"
+                and re.fullmatch(r"0x" + format(want_off, "x")
+                                 + r"\(%r[0-9a-z]+\)", ops[1] or "")):
+            store_k = (k, ops[1].split("(", 1)[1].rstrip(")"))
+            break
+    if store_k is None or not _e7prov_param(g, fstart, store_k[0], store_k[1]):
+        return refuse("dso-result-is-not-stored-into-the-init-slot")
+    if "e7pe-unguarded" not in _MUTED:
+        if not (_e7prov_guard(g, fstart, load_k[0], idx, "%rax")
+                and _e7prov_guard(g, fstart, store_k[0], idx, "%rax")):
+            return refuse("init-slot-is-not-null-guarded")
+    stores, err = _e7prov_source_writers(
+        g, "OsslProvider", "init_function",
+        ("provider_new", "provider_init"))
+    if stores is None:
+        return refuse(err[0], **err[1])
+    if "e7pe-second-writer" in _MUTED:
+        stores = stores + [{"kind": "store", "file": "src/x.rs",
+                            "line": 1, "field": "init_function",
+                            "function": "foreign_writer",
+                            "value": "foreign_entry",
+                            "attribution": "owner"}]
+    foreign = [r for r in stores
+               if r.get("function") not in ("provider_new", "provider_init")]
+    if foreign:
+        return refuse("field-has-a-writer-outside-the-enumerated-set",
+                      writers=foreign[:6])
+    pn = [r for r in stores if r.get("function") == "provider_new"]
+    pi = [r for r in stores if r.get("function") == "provider_init"]
+    pn_value = pn[0].get("value") if pn else ""
+    if "e7pe-non-parameter" in _MUTED:
+        pn_value = "foreign_entry"
+    if len(pn) != 1 or pn_value.strip() != "init_function":
+        return refuse("provider_new-does-not-store-its-parameter",
+                      writers=pn)
+    if len(pi) != 2:
+        return refuse("provider_init-does-not-write-the-slot-twice",
+                      writers=pi)
+    if not any((r.get("value") or "").strip() == "None" for r in pi):
+        return refuse("provider_init-does-not-clear-the-slot")
+    if not any("DSO_bind_func" in (r.get("value") or "")
+               or "transmute" in (r.get("value") or "") for r in pi):
+        return refuse("provider_init-does-not-store-the-module-entry")
+    w = _witness(
+        cls, name, site,
+        slot=f"OsslProvider.init_function (offset 0x{want_off:x})",
+        writer=("provider_new stores its init_function parameter "
+                "(src/provider/mod.rs:1891, reached from the exported "
+                "OSSL_PROVIDER_add_builtin); provider_init stores the "
+                "DSO_bind_func(\"OSSL_provider_init\") result or NULL "
+                "(src/provider/init.rs:301-315); no other source writer"),
+        interface=("OSSL_provider_init_fn -- include/openssl/core.h:186-195; "
+                   "OSSL_PROVIDER_add_builtin -- include/openssl/provider.h"),
+        basis=("both reaching definitions of the call operand are the "
+               "pinned field: a load of init_function from the provider "
+               "parameter and the DSO_bind_func result that the same arm "
+               "stores back into it; each is NULL-guarded; the source "
+               "assignment set has exactly the two enumerated writers"))
+    w["conditions"] = {
+        "site_enumerated": f"provider_init {hex(site.get('addr') or 0)}",
+        "operand": "%rax",
+        "load": {"offset": f"0x{want_off:x}", "instruction":
+                 _insn(g, fstart, load_k[0]).strip()},
+        "dso_bind": {"call": _insn(g, fstart, dso_k).strip(),
+                     "store": _insn(g, fstart, store_k[0]).strip()},
+        "source_writers": [{"function": r.get("function"),
+                            "file": r.get("file"),
+                            "line": r.get("line"),
+                            "value": r.get("value")} for r in stores],
+        "writer_set_closed": True,
+        "target_set_unbounded": True,
+    }
+    w["does_not_cover"] = ABI_CONTRACTS[cls]["does_not_cover"]
+    w["targets"] = []
+    w["residuals"] = [
+        "the raw displacement 0x40 is not image-wide unique; the writer set "
+        "is the source assignment set cross-checked against the enumerated "
+        "writer functions, not a raw-displacement scan",
+        "a runtime GOT interposer outside the image is not addressed",
+    ]
+    return w
+
+
+def provider_parent_up_ref_witness(g, site: dict, name: str):
+    """The child provider's parent `OSSL_FUNC_PROVIDER_UP_REF` upcall."""
+    if not _has_insns(g):
+        return None
+    leaf = _external_function_leaf(name)
+    pins = E7PU_SITE_PINS.get(leaf)
+    if pins is None:
+        return None
+    idx = _external_insn_index(g, site)
+    if idx is None:
+        return None
+    fstart = site["func"]
+    off = (site.get("addr") or 0) - fstart
+    if off not in pins:
+        return None
+    cls = ABI_CONTRACT_PROVIDER_PARENT_UP_REF
+
+    def refuse(reason, **extra):
+        return _external_refusal(cls, name, site, reason, **extra)
+
+    text = (site.get("text") or "").split("#", 1)[0]
+    if not re.match(r"\s*jmp\s+\*%rax\b", text):
+        return refuse("operand-is-not-the-up-ref-register")
+    want_off = 0x50 if "e7pu-wrong-offset" in _MUTED else 0x48
+    defs = _external_reg_defs(g, fstart, idx, "%rax")
+    if not defs:
+        kind, k, _ops = _semantic_last_write(g, fstart, idx, "%rax")
+        if kind == "insn":
+            defs = {k}
+    if not defs:
+        return refuse("operand-has-no-reachable-definition")
+    if len(defs) != 1:
+        return refuse("operand-has-several-definitions",
+                      definitions=[_insn(g, fstart, k).strip()
+                                   for k in sorted(defs)])
+    k = next(iter(defs))
+    mn, _rest, ops = _insn_parts(_insn(g, fstart, k))
+    m = (re.fullmatch(r"(?:0x)?([0-9a-f]+)\((%r[0-9a-z]+)\)", ops[0])
+         if mn in ("mov", "movq") and len(ops) >= 2 else None)
+    if m is None or int(m.group(1), 16) != want_off:
+        return refuse("operand-is-not-the-child-up-ref-slot",
+                      definition=_insn(g, fstart, k).strip())
+    base = m.group(2)
+    # The base is the child globals returned by lib_ctx_get_data(..., 18).
+    base_defs = _external_reg_defs(g, fstart, k, base) or set()
+    calls = []
+    for d in sorted(base_defs):
+        itext = _insn(g, fstart, d)
+        sym = _e7prov_call_symbol(g, itext)
+        if sym:
+            idx_arg = any(
+                re.search(r"mov\s+\$0x12,%e?si\b",
+                          _insn(g, fstart, q))
+                for q in range(max(0, d - 4), d))
+            calls.append((sym, itext.strip(), idx_arg))
+    if "e7pu-no-dispatch-id" in _MUTED:
+        calls = []
+    allowed = ("lib_ctx_get_data", "OSSL_LIB_CTX_get_data")
+    if (not calls
+            or any(_external_function_leaf(s) not in allowed or not arg
+                   for s, _t, arg in calls)):
+        return refuse("base-is-not-the-child-globals",
+                      base=base, definitions=calls)
+    if "e7pu-unguarded" not in _MUTED and not _e7prov_guard(
+            g, fstart, k, idx, "%rax"):
+        return refuse("up-ref-slot-is-not-null-guarded")
+    stores, err = _e7prov_source_writers(
+        g, "ChildProvGlobals", "c_prov_up_ref",
+        ("ossl_provider_init_as_child",))
+    if stores is None:
+        return refuse(err[0], **err[1])
+    if "e7pu-second-writer" in _MUTED:
+        stores = stores + [{"kind": "store", "file": "src/x.rs",
+                            "line": 1, "field": "c_prov_up_ref",
+                            "function": "foreign_writer",
+                            "value": "foreign_up_ref",
+                            "attribution": "owner"}]
+    foreign = [r for r in stores
+               if r.get("function") != "ossl_provider_init_as_child"]
+    if foreign:
+        return refuse("field-has-a-writer-outside-the-init-as-child",
+                      writers=foreign[:6])
+    if len(stores) != 1:
+        return refuse("init-as-child-does-not-write-the-slot-once",
+                      writers=stores)
+    value = stores[0].get("value") or ""
+    if ("e7pu-no-dispatch-id" not in _MUTED
+            and ("OSSL_FUNC_PROVIDER_UP_REF" not in value
+                 or "function_for" not in value)):
+        return refuse("slot-is-not-filled-from-the-documented-dispatch-id",
+                      value=value)
+    # The compiled writer must store into the same offset.
+    fsym = _e7bs_function_symbol(g, "ossl_provider_init_as_child")
+    if fsym is None:
+        return refuse("init-as-child-is-not-in-this-image")
+    compiled = [ins for _a, ins in g.precision.insns_by_func.get(fsym[0], ())
+                if re.search(r"mov\s+%r\w+,0x" + format(want_off, "x")
+                             + r"\(%r\w+\)", ins)]
+    if len(compiled) != 1:
+        return refuse("compiled-writer-is-not-single", stores=compiled[:4])
+    w = _witness(
+        cls, name, site,
+        slot=f"ChildProvGlobals.c_prov_up_ref (offset 0x{want_off:x})",
+        writer=("ossl_provider_init_as_child stores "
+                "function_for::<ChildUpRefFn>(p, "
+                "OSSL_FUNC_PROVIDER_UP_REF) from the parent's in table "
+                "(src/provider/child.rs:533-536); no other source writer"),
+        interface=("OSSL_FUNC_PROVIDER_UP_REF (110) / "
+                   "OSSL_FUNC_provider_up_ref_fn -- "
+                   "include/openssl/core_dispatch.h"),
+        basis=("the tail-call operand is a single load of the declared "
+               "child-globals field from lib_ctx_get_data(..., 18); the "
+               "slot is NULL-guarded; its only source writer binds the "
+               "documented dispatch id and the compiled store is at the "
+               "same offset"))
+    w["conditions"] = {
+        "site_enumerated": ("ossl_provider_up_ref_parent "
+                            + hex(site.get("addr") or 0)),
+        "operand": "%rax",
+        "load": {"offset": f"0x{want_off:x}",
+                 "instruction": _insn(g, fstart, k).strip()},
+        "base": calls,
+        "source_writer": {"function": stores[0].get("function"),
+                          "file": stores[0].get("file"),
+                          "line": stores[0].get("line"),
+                          "value": value},
+        "compiled_writer": compiled[0].strip(),
+        "writer_set_closed": True,
+        "target_set_unbounded": True,
+    }
+    w["does_not_cover"] = ABI_CONTRACTS[cls]["does_not_cover"]
+    w["targets"] = []
+    w["residuals"] = [
+        "the raw displacement 0x48 is not image-wide unique; the writer set "
+        "is the source assignment set cross-checked against the compiled "
+        "store in the writer function",
+        "the parent provider's implementation and lifetime are outside the "
+        "ABI boundary",
     ]
     return w
 
@@ -27160,6 +27617,35 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                             resolver=[hex(t) for t in
                                       sorted(resolved_targets)])
                         stats["S5b_provider_hw_table_refused"] += 1
+            continue
+        # E7-PE / E7-PU: the two provider slots whose target is an external
+        # module or parent provider.  Each witness is site-enumerated and
+        # source-checked; a refusal keeps the site target-bounded.
+        pe = provider_entry_witness(g, site, name)
+        if pe is not None:
+            if pe.get("schema") == WITNESS_SCHEMA:
+                site["class"] = ABI_CONTRACT_PROVIDER_ENTRY
+                site["unresolved"] = True
+                site["reason"] = ("provider entry-function ABI contract: "
+                                  + pe["slot"])
+                site["witness"] = pe
+                stats["E7PE_contract_bounded"] += 1
+            else:
+                site["provider_entry_refusal"] = pe
+                stats["E7PE_refused"] += 1
+            continue
+        pu = provider_parent_up_ref_witness(g, site, name)
+        if pu is not None:
+            if pu.get("schema") == WITNESS_SCHEMA:
+                site["class"] = ABI_CONTRACT_PROVIDER_PARENT_UP_REF
+                site["unresolved"] = True
+                site["reason"] = ("provider parent up-ref ABI contract: "
+                                  + pu["slot"])
+                site["witness"] = pu
+                stats["E7PU_contract_bounded"] += 1
+            else:
+                site["provider_parent_up_ref_refusal"] = pu
+                stats["E7PU_refused"] += 1
             continue
         # E7-DSO: a value reached through `dso_shared`'s dlsym resolver.
         # The witness is per-cell and per-site; a refused shape keeps the site
@@ -39855,6 +40341,133 @@ def _e7batch_self_test():
         "group is refused by name; unpinned shapes are never absorbed")
 
 
+def _e7prov_self_test():
+    """E7-PE/E7-PU: the two provider entry/upcall witnesses and controls.
+
+    Real-site acceptance, a load-bearing mutation for every rule (including a
+    guardless fixture whose baseline refuses), and a negative control that an
+    unpinned site of the same function is never absorbed.
+    """
+    root = Path(__file__).resolve().parents[2]
+    install = root / "artifacts/phase2/install"
+    dso = install / "lib/libssl.so.3"
+    if not dso.is_file():
+        return [], "e7prov controls: skipped (candidate absent)"
+    if not (shutil.which("nm") and shutil.which("objdump")):
+        return [], "e7prov controls: skipped (nm/objdump absent)"
+    workdir = root / "court/tmp/e7prov-selftest-work"
+    workdir.mkdir(parents=True, exist_ok=True)
+    _EVIDENCE_ENV["repo"] = str(root)
+    _EVIDENCE_ENV["install"] = str(install)
+    failures = []
+
+    def chk(name, got, want):
+        if got != want:
+            failures.append(f"{name}: got {got!r}, want {want!r}")
+
+    try:
+        g = DsoGraph(dso, workdir)
+    except Exception as e:  # noqa: BLE001 -- absent tooling is a skip
+        return [], f"e7prov controls: skipped (graph unavailable: {e})"
+    g.source_root = str(root)
+    g.install_prefix = str(install)
+    g.precision = PrecisionResolver(g)
+
+    def site_at(addr):
+        for fstart, insns in g.precision.insns_by_func.items():
+            for a, text in insns:
+                if a == addr:
+                    return {"func": fstart, "addr": a, "text": text,
+                            "kind": "call", "unresolved": True}
+        return None
+
+    def run(fn, site, mut=None, graph=None):
+        saved = set(_MUTED)
+        try:
+            _MUTED.clear()
+            if mut:
+                _MUTED.add(mut)
+            return fn(graph or g, site, g.funcs[site["func"]])
+        finally:
+            _MUTED.clear()
+            _MUTED.update(saved)
+
+    cases = (
+        (provider_entry_witness, 0x51BED4,
+         ("e7pe-wrong-offset", "e7pe-second-writer",
+          "e7pe-non-parameter")),
+        (provider_parent_up_ref_witness, 0x3B0069,
+         ("e7pu-wrong-offset", "e7pu-second-writer",
+          "e7pu-no-dispatch-id")),
+    )
+    for fn, addr, muts in cases:
+        site = site_at(addr)
+        chk(f"{fn.__name__} real site present", site is not None, True)
+        if site is None:
+            continue
+        base = run(fn, site)
+        chk(f"{fn.__name__} real accept",
+            bool(base and base.get("schema") == WITNESS_SCHEMA), True)
+        for m in muts:
+            got = run(fn, site, m)
+            chk(f"{fn.__name__} {m} refuses",
+                bool(got and got.get("schema") != WITNESS_SCHEMA), True)
+
+    # Guardless fixture: replace each `test %rax,%rax` with `nop`, keeping the
+    # CFG branches.  The baseline must refuse; the switch restores acceptance.
+    class _FakePrecision:
+        def __init__(self, insns):
+            self.insns_by_func = insns
+
+    for fn, addr, mut in (
+            (provider_entry_witness, 0x51BED4, "e7pe-unguarded"),
+            (provider_parent_up_ref_witness, 0x3B0069, "e7pu-unguarded")):
+        site = site_at(addr)
+        fs = site["func"]
+        patched = []
+        for a, text in g.precision.insns_by_func[fs]:
+            mn, _rest, ops = _insn_parts(text)
+            patched.append((a, "nop" if mn == "test" and ops == ["%rax"] * 2
+                            else text))
+        insns = dict(g.precision.insns_by_func)
+        insns[fs] = patched
+        proxy = _RepinProxy(g, precision=_FakePrecision(insns))
+        base = run(fn, site, graph=proxy)
+        chk(f"{fn.__name__} guardless baseline refuses",
+            bool(base and str(base.get("reason", "")).endswith(
+                "not-null-guarded")), True)
+        got = run(fn, site, mut, graph=proxy)
+        chk(f"{fn.__name__} {mut} accepts the guardless fixture",
+            bool(got and got.get("schema") == WITNESS_SCHEMA), True)
+
+    # E7-DSO tail-call result: the same cell as the bound 0x40bbe1, reached
+    # through `call dlsym; mov %rax,cell; jmp *%rax`.
+    tail = site_at(0x40BBCA)
+    chk("dso tail-call site present", tail is not None, True)
+    if tail is not None:
+        w = run(dso_resolved_export_witness, tail)
+        chk("dso tail-call accepts",
+            bool(w and w.get("schema") == WITNESS_SCHEMA), True)
+        got = run(dso_resolved_export_witness, tail, "e7dso-tail-call")
+        chk("dso tail-call switch refuses",
+            bool(got and got.get("schema") != WITNESS_SCHEMA), True)
+
+    # Negative controls: a different call in the same function is not the site.
+    chk("entry foreign site is not absorbed",
+        provider_entry_witness(g, site_at(0x51BE9B),
+                               g.funcs[site_at(0x51BE9B)["func"]]), None)
+    chk("parent foreign site is not absorbed",
+        provider_parent_up_ref_witness(g, site_at(0x3B0027),
+                                       g.funcs[site_at(0x3B0027)["func"]]),
+        None)
+    return failures, (
+        "e7prov controls: both real provider sites bind; wrong-offset, "
+        "second-writer, non-parameter and dispatch-id mutations refuse; a "
+        "guardless fixture refuses and flips under its switch; the DSO "
+        "tail-call twin binds and its switch refuses; unpinned sites are not "
+        "absorbed")
+
+
 def self_test() -> int:
     failures = []
     _PREMISE_UNAVAILABLE.clear()
@@ -45056,6 +45669,9 @@ def self_test() -> int:
     _e7b_failures, _e7b_line = _e7batch_self_test()
     failures.extend(_e7b_failures)
     print(f"[consumer-closure] {_e7b_line}")
+    _e7p_failures, _e7p_line = _e7prov_self_test()
+    failures.extend(_e7p_failures)
+    print(f"[consumer-closure] {_e7p_line}")
 
     if _PREMISE_UNAVAILABLE:
         print("[consumer-closure] SELF-TEST PREMISE_UNAVAILABLE: a control's "
