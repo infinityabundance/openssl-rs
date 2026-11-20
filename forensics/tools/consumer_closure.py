@@ -2285,7 +2285,9 @@ CLOSED_TARGET_SET_FROM_ABI_CLASS = {
     ABI_CONTRACT_DECODER_METHOD_OBJECT:
         CLOSED_TARGET_SET_DECODER_METHOD_OBJECT,
 }
-CLOSED_TARGET_SET_CLASSES = frozenset(CLOSED_TARGET_SET_FROM_ABI_CLASS.values())
+CLOSED_TARGET_SET_CLASSES = frozenset(
+    set(CLOSED_TARGET_SET_FROM_ABI_CLASS.values())
+    | {"CLOSED_TARGET_SET_COMPOSED_FIELD"})
 
 # The registry prefix that *is* the provenance of a closed target set.  A
 # closed family's `ABI_CONTRACTS` entry says its resolution is bounded by a
@@ -2320,6 +2322,12 @@ def classify_bound_kind(site_class):
     """
     if site_class in CLOSED_TARGET_SET_FROM_ABI_CLASS:
         return "closed-target-set"
+    if site_class == "CLOSED_TARGET_SET_COMPOSED_FIELD":
+        # A closed target set whose provenance is a composed call-site x
+        # field-writer proof, not a registered ABI family.  It is reported as a
+        # closed set and is deliberately absent from the ABI->closed table, so
+        # the registry cross-check is untouched.
+        return "closed-target-set"
     if site_class in ABI_CONTRACT_CLASSES:
         return "external-contract"
     return None
@@ -2327,6 +2335,11 @@ def classify_bound_kind(site_class):
 
 def closed_target_set_class(site_class):
     """The closed-target-set reporting class for a provenance class, or None."""
+    if site_class == "CLOSED_TARGET_SET_COMPOSED_FIELD":
+        # Composed provenance is a closed-set class in its own right; it is
+        # deliberately not in the ABI->closed table (no registered ABI family
+        # proves it), so the registry cross-check stays untouched.
+        return site_class
     return CLOSED_TARGET_SET_FROM_ABI_CLASS.get(site_class)
 
 
@@ -24643,6 +24656,1571 @@ def _e7lcp_witness(g: "DsoGraph", site: dict, name: str, declared: int):
     }
 
 
+# ---- E7-CLS: the composed closed target set -------------------------------- #
+#
+# A local copy's dispatch parameter is supplied, at some call sites, not by a
+# value the caller computes but by a field of an object the caller was handed.
+# Bounding such a site needs two closures composed, and neither alone is a
+# proof:
+#
+#   1. the *writer* closure of the field `T.f`: the finite, source-enumerated
+#      set of functions that store into it, and the finite set of in-image
+#      function starts they store (`W(T.f)`);
+#   2. the *call-site* closure of every function in the dispatch chain, which
+#      is the E7-LCP enumeration (direct, GOT slot, materialised, and a
+#      dispatch through an enumerated field), extended so that an address
+#      materialised into an enumerated field is accounted for by that field's
+#      enumerated dispatch sites instead of being refused as an escape.
+#
+# THE COMPOSITION RULE.  `targets(s) = union over every call site c of s of
+# value(c, k)`, where a value is one of
+#
+#   {a link-time function start}
+#   | parameter(c, j), followed to c's own callers (the forwarding step)
+#   | W(T.f), for an argument loaded from the enumerated field T.f at its
+#     compiled slot.
+#
+# and a call site of X is direct, a GOT slot, a materialised address, or a
+# dispatch through an enumerated field F with X in W(F).
+#
+# The rule is SOUND only while all four hold:
+#   (C1) writer closure -- for every field used, the production source stores
+#        into it are exactly the enumerated writer set, every writer's compiled
+#        store is at the field's slot, and the values resolved there are
+#        exactly the enumerated function names.  A scan disagreement refuses
+#        in both directions, so an artificially widened enumeration refuses.
+#   (C2) call-site completeness -- every reference to every function in the
+#        closure is one of the enumerated forms.  Anything else (a jump table,
+#        an address stored somewhere the scan does not model) is an escape and
+#        refuses, and a field that is dispatched must have an enumerated
+#        dispatch site, so an unpinned dispatch refuses.
+#   (C3) field attribution -- the load's displacement is the compiled slot of
+#        exactly one enumerated field, the base register resolves to the
+#        enclosing function's own parameter (direct) or to the context's
+#        `cipher_data` pointer loaded from that parameter (legacy), and the
+#        source names the field's type (the declared pointer type, or the cast
+#        the function applies to its parameter).
+#   (C4) NULL exclusion -- for an `Option` field the load is guard-dominated;
+#        for a legacy non-`Option` field the zero-initialising allocation is
+#        covered by the documented init-before-use ordering the S7a legacy rule
+#        already relies on, which is recorded per field and is a RETAINED
+#        external obligation, not a guard.
+#
+# It is UNSOUND, and the witness refuses, if any of C1..C4 fails and the site
+# is nevertheless accepted: a second writer in a file the scan does not read; a
+# caller form the scan cannot see; a displacement that coincides with a
+# different type's field; a NULL that reaches the dispatch.
+
+E7CLS_SCHEMA = "openssl-rs/consumer-closure/composed-closed-target-set/v1"
+E7CLS_CLASS = "CLOSED_TARGET_SET_COMPOSED_FIELD"
+E7CLS_RESOLUTION_KIND = "composed_field_target_set"
+
+# `kind`: "direct" (base is the enclosing function's own typed parameter) or
+# "cipher-data" (base is the context's `cipher_data` pointer, loaded from the
+# context parameter at `dat_off`).  `slot` is the image-measured displacement
+# (the two legacy structs are not `repr(C)`); `option` marks the fields whose
+# NULL state is excluded by a compiled guard.
+E7CLS_FIELDS = {
+    ("ProvCipherCtx", "block"): {
+        "kind": "direct", "slot": 0x30, "option": True,
+        "source": "src/provider/cipher.rs",
+        "zero_initialiser": (
+            "the `*_newctx` constructors allocate through `CRYPTO_zalloc`, so "
+            "`block` is `None` until an enumerated writer runs; the dispatch "
+            "states read it through `ctx_block!`, whose `None` arm returns "
+            "without calling"),
+    },
+    ("ProvAesWrapCtx", "wrapfn"): {
+        "kind": "direct", "slot": 0x1B8, "option": True,
+        "source": "src/provider/cipher.rs",
+        "copier": ("aes_wrap_dupctx duplicates the whole struct through "
+                   "`CRYPTO_memdup`, which propagates a value and cannot "
+                   "introduce one"),
+        "zero_initialiser": (
+            "`*_newctx` allocates through `CRYPTO_zalloc`; the dispatch in "
+            "`aes_wrap_cipher` tests `wrapfn` for NULL and returns without "
+            "calling"),
+    },
+    ("EvpCamelliaKey", "block"): {
+        "kind": "cipher-data", "slot": 0x0, "option": False,
+        "dat_off": 0x78, "ctx": "EvpCipherCtx",
+        "source": "src/evp/e_camellia.rs",
+        "zero_initialiser": (
+            "`cipher_data` is a `CRYPTO_zalloc` block; the legacy `init` "
+            "callback is documented to run before `do_cipher` (the S7a "
+            "premise), which is a retained external obligation, not a guard"),
+    },
+    ("EvpAesKey", "block"): {
+        "kind": "cipher-data", "slot": 0x0, "option": False,
+        "dat_off": 0x78, "ctx": "EvpCipherCtx",
+        "source": "src/evp/e_aes.rs",
+        "zero_initialiser": (
+            "`cipher_data` is a `CRYPTO_zalloc` block; the legacy `init` "
+            "callback is documented to run before `do_cipher` (the S7a "
+            "premise), which is a retained external obligation, not a guard"),
+    },
+    ("EvpSm4Key", "block"): {
+        "kind": "cipher-data", "slot": 0x0, "option": False,
+        "dat_off": 0x78, "ctx": "EvpCipherCtx",
+        "source": "src/evp/e_sm4.rs",
+        "zero_initialiser": (
+            "`cipher_data` is a `CRYPTO_zalloc` block; the legacy `init` "
+            "callback is documented to run before `do_cipher` (the S7a "
+            "premise), which is a retained external obligation, not a guard"),
+    },
+    # The three legacy `stream_ctr` slots: written only with `None`, so the
+    # `if let Some(f)` arm that passes them is dead and contributes no target.
+    ("EvpAesKey", "stream_ctr"): {
+        "kind": "cipher-data", "slot": 0x10, "option": True,
+        "dat_off": 0x78, "ctx": "EvpCipherCtx",
+        "source": "src/evp/e_aes.rs",
+    },
+    ("EvpCamelliaKey", "stream_ctr"): {
+        "kind": "cipher-data", "slot": 0x128, "option": True,
+        "dat_off": 0x78, "ctx": "EvpCipherCtx",
+        "source": "src/evp/e_camellia.rs",
+    },
+    ("EvpSm4Key", "stream_ctr"): {
+        "kind": "cipher-data", "slot": 0x98, "option": True,
+        "dat_off": 0x78, "ctx": "EvpCipherCtx",
+        "source": "src/evp/e_sm4.rs",
+    },
+}
+
+# The frozen production writer set, `function -> stored value names`, and the
+# value names each field may hold.  The scan compares both directions.
+E7CLS_WRITERS = {
+    ("ProvCipherCtx", "block"): {
+        "cipher_hw_aes_initkey": frozenset(("aes_block_decrypt",
+                                           "aes_block_encrypt")),
+        "cipher_hw_camellia_initkey": frozenset(("camellia_block_encrypt",
+                                                "camellia_block_decrypt")),
+        "cipher_hw_sm4_initkey": frozenset(("sm4_block_encrypt",
+                                           "sm4_block_decrypt")),
+        "cipher_hw_aria_initkey": frozenset(("aria_block_encrypt",)),
+        "aes_wrap_init": frozenset(("aes_block_encrypt",
+                                    "aes_block_decrypt")),
+    },
+    ("ProvAesWrapCtx", "wrapfn"): {
+        "aes_wrap_init": frozenset(("CRYPTO_128_wrap_pad",
+                                    "CRYPTO_128_unwrap_pad",
+                                    "CRYPTO_128_wrap",
+                                    "CRYPTO_128_unwrap")),
+    },
+    ("EvpCamelliaKey", "block"): {
+        "camellia_init_key": frozenset(("camellia_decrypt_block",
+                                        "camellia_encrypt_block")),
+    },
+    ("EvpAesKey", "block"): {
+        "aes_init_key": frozenset(("aes_decrypt_block",
+                                   "aes_encrypt_block")),
+    },
+    ("EvpSm4Key", "block"): {
+        "sm4_init_key": frozenset(("sm4_decrypt_block",
+                                   "sm4_encrypt_block")),
+    },
+    ("EvpAesKey", "stream_ctr"): {"aes_init_key": frozenset()},
+    ("EvpCamelliaKey", "stream_ctr"): {"camellia_init_key": frozenset()},
+    ("EvpSm4Key", "stream_ctr"): {"sm4_init_key": frozenset()},
+}
+
+# Fields whose read is itself a dispatch (`call *<field>`).  The count is the
+# enumeration: a field that is dispatched must have exactly this many
+# attributed dispatch sites in the image, and every value the field can hold
+# must reach its callees through one of them.
+E7CLS_DISPATCH_FIELDS = {
+    ("ProvAesWrapCtx", "wrapfn"): {"sites": 1},
+}
+
+# The pinned sites: the 14 local copies of exported modes names and the 7
+# `wrap128` / `CRYPTO_128_wrap_pad` sites.  The pins are shared with E7-LCP (one
+# enumeration, not a second transcription of the table).
+E7CLS_LEAVES = (
+    "CRYPTO_cfb128_encrypt",
+    "CRYPTO_ofb128_encrypt",
+    "CRYPTO_cbc128_encrypt",
+    "CRYPTO_ctr128_encrypt",
+    "CRYPTO_ctr128_encrypt_ctr32",
+    "CRYPTO_cfb128_1_encrypt",
+    "wrap128",
+    "CRYPTO_128_wrap_pad",
+)
+E7CLS_SITES = {k: v for k, v in E7LCP_SITES.items() if k[0] in E7CLS_LEAVES}
+E7CLS_MUTATIONS = (
+    "e7cls-no-field-guard",
+    "e7cls-field-base-any",
+    "e7cls-second-writer",
+    "e7cls-new-target",
+)
+
+
+def _e7cls_refusal(reason, name, site, **extra):
+    rec = {"schema": E7CLS_SCHEMA, "class": E7CLS_CLASS,
+           "resolution_kind": E7CLS_RESOLUTION_KIND,
+           "contract_bounded": False, "resolved": False,
+           "refusal": reason, "function": name,
+           "call_site": hex(site.get("addr", 0))}
+    rec.update(extra)
+    return rec
+
+
+def _e7cls_selected(site: dict, name: str):
+    """The declared parameter index for this exact pinned site, or None."""
+    if site.get("kind") not in ("call", "jmp"):
+        return None
+    fstart = site.get("func")
+    if fstart is None or site.get("addr") is None:
+        return None
+    return E7CLS_SITES.get((_external_function_leaf(name),
+                            site["addr"] - fstart))
+
+
+def _e7cls_leaf_starts(g):
+    """leaf -> every in-image start carrying that leaf (copies included)."""
+    cache = getattr(g, "_e7cls_leaf_cache", None)
+    if cache is not None:
+        return cache
+    idx = {}
+    for a, names in (getattr(g, "names_at", {}) or {}).items():
+        if a in g.start_set:
+            for n in names:
+                idx.setdefault(_external_function_leaf(n), set()).add(a)
+    g._e7cls_leaf_cache = idx
+    return idx
+
+
+def _e7cls_name_starts(g, leaf):
+    return sorted(_e7cls_leaf_starts(g).get(leaf, ()))
+
+
+def _e7cls_field_values(g, key):
+    """Every in-image start the enumerated values of `key` may name."""
+    out, missing, ambiguous = set(), [], {}
+    for leaf in sorted(set().union(*E7CLS_WRITERS[key].values())):
+        starts = _e7cls_name_starts(g, leaf)
+        if not starts:
+            missing.append(leaf)
+        else:
+            if len(starts) > 1:
+                ambiguous[leaf] = [hex(s) for s in starts]
+            out |= set(starts)
+    return out, missing, ambiguous
+
+
+def _e7cls_scan(g):
+    """Production writes to the enumerated fields, with their owning function.
+
+    The store patterns are the ones the S7a legacy scan (`_led_scan`) applies to
+    its own types; they are kept here rather than shared because that scan keys
+    on a *type-complete* writer set while this one is field-scoped, and widening
+    the S7a gate to these types would change its result for the sites it already
+    proves.
+    """
+    cache = getattr(g, "_e7cls_scan_cache", None)
+    if cache is not None:
+        return cache
+    src = _phw_source(g)
+    spans = src["spans"]
+    types = {k[0] for k in E7CLS_FIELDS}
+    fields = {f for k in E7CLS_FIELDS for f in (k[1],)}
+    prod, test, unqualified, copies = [], [], [], []
+    pats = (
+        (r"\(\s*\*\s*([A-Za-z_]\w*)\s*\)\."
+         r"([A-Za-z_]\w*(?:\.[A-Za-z_]\w*)*)\s*"
+         r"(?<![=!<>+\-*/%&|^])=(?!=)\s*([^;]+);", "store"),
+        (r"(?<![*.\w])([A-Za-z_]\w*)\.([A-Za-z_]\w*)\s*"
+         r"(?<![=!<>+\-*/%&|^])=(?!=)\s*([^;]+);", "store"),
+        (r"addr_of_mut!\(\s*\(\s*\*\s*([A-Za-z_]\w*)\s*\)\."
+         r"([A-Za-z_]\w*)\s*\)", "field-address"),
+    )
+    for f in src["funcs"]:
+        for pat, kind in pats:
+            for m in re.finditer(pat, f["body"]):
+                var, field = m.group(1), m.group(2)
+                expr = (" ".join(m.group(3).split())
+                        if m.lastindex and m.lastindex >= 3 and m.group(3)
+                        else "")
+                vt = _led_var_type(g, f, var)
+                base = _led_ptr_base(vt) if vt else None
+                rec = {"var": var, "var_type": vt, "type": base,
+                       "field": field, "expr": expr, "kind": kind,
+                       "function": f["name"], "file": f["file"],
+                       "line": f["line"] + f["body"].count("\n", 0,
+                                                          m.start())}
+                pos = f["start"] + 1 + m.start()
+                if base in types:
+                    (test if _phw_in_spans(spans[f["file"]], pos) else
+                     prod).append(rec)
+                elif base is not None:
+                    continue
+                elif field in fields:
+                    hay = f["params"] + "\n" + f["body"]
+                    if not any(re.search(r"\b" + t + r"\b", hay)
+                               for t in types):
+                        continue
+                    rec["why"] = "owner type not resolved"
+                    unqualified.append(rec)
+    for path, text in src["docs"].items():
+        for typ in types:
+            for m in re.finditer(
+                    r"(?:ptr::copy(?:_nonoverlapping)?|ptr::write|ptr::read)"
+                    r"::<\s*" + typ + r"\s*>", text):
+                rec = {"type": typ, "kind": "copy", "file": path,
+                       "function": "(module)", "field": "*", "expr": "",
+                       "line": text.count("\n", 0, m.start()) + 1}
+                (test if _phw_in_spans(spans[path], m.start())
+                 else copies).append(rec)
+    cache = {"prod": prod, "test": test, "unqualified": unqualified,
+             "copies": copies}
+    g._e7cls_scan_cache = cache
+    return cache
+
+
+def _e7cls_field_closure(g, key, fields=None):
+    """(C1) The field's writer closure: scan == frozen, both directions."""
+    spec = (fields or E7CLS_FIELDS)[key]
+    writers = E7CLS_WRITERS[key]
+    scan = _e7cls_scan(g)
+    ty, fld = key
+    mine = [r for r in scan["prod"] if r["type"] == ty]
+    files = sorted({r["file"] for r in mine})
+    found = sorted({r["function"] for r in mine
+                    if r["field"] == fld and r["kind"] == "store"})
+    addr_taken = [r for r in mine
+                  if r["field"] == fld and r["kind"] == "field-address"]
+    unq = [r for r in scan["unqualified"] if r["field"] == fld]
+    zero = [r for r in mine
+            if r["field"] == fld and r["kind"] == "store"
+            and re.fullmatch(r"None", r["expr"].strip())]
+    base = {"computed_files": files,
+            "enumerated_file": spec["source"],
+            "computed_writers": found,
+            "enumerated_writers": sorted(writers),
+            "field_address_taken": addr_taken[:5],
+            "unresolved_owner_stores": unq[:5],
+            "zero_stores": [{"function": r["function"],
+                             "line": r["line"]} for r in zero],
+            "copiers": [r for r in scan["copies"] if r["type"] == ty],
+            "test_only": [r for r in scan["test"]
+                          if r["type"] == ty and r["field"] == fld]}
+    if files != [spec["source"]]:
+        return dict(base, status="FAIL",
+                    reason="field-owner-files-not-exhaustive")
+    if "e7cls-second-writer" in _MUTED:
+        # Test-only mutation: a production writer outside the frozen set.
+        found = sorted(set(found) | {"e7cls_synthetic_second_writer"})
+    if found != sorted(writers):
+        return dict(base, status="FAIL",
+                    reason="field-writer-set-not-enumerated")
+    if addr_taken or unq:
+        return dict(base, status="FAIL",
+                    reason="field-has-an-unmodelled-writer")
+    return dict(base, status="PASS")
+
+
+def _e7cls_writer_stores(g, key):
+    """C1 image half: every writer's compiled store holds exactly its values."""
+    ty, fld = key
+    slot = E7CLS_FIELDS[key]["slot"]
+    want = E7CLS_WRITERS[key]
+    proofs = []
+    for writer, values in sorted(want.items()):
+        starts = _e7cls_name_starts(g, writer)
+        if len(starts) != 1:
+            return None, {"reason": "writer-function-not-in-image",
+                          "writer": writer,
+                          "matches": [hex(a) for a in starts]}
+        fstart = starts[0]
+        insns = g.precision.insns_by_func.get(fstart, ())
+        stores, seen = [], set()
+        for i, (addr, text) in enumerate(insns):
+            body = text.split("#", 1)[0].strip()
+            mn, _rest, ops = _insn_parts(body)
+            if mn not in ("mov", "movq", "movabs") or len(ops) != 2:
+                continue
+            m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)",
+                             ops[1].strip())
+            if not m:
+                continue
+            off = int(m.group(1), 16) if m.group(1) else 0
+            if off != slot:
+                continue
+            base = _canon(m.group(2))
+            # The provider writers store through their own context parameter;
+            # the legacy writers through the `cipher_data` pointer.
+            if E7CLS_FIELDS[key]["kind"] == "direct":
+                chain = _param_chain(g, fstart, i, base)
+                if chain is None or chain.get("kind") != "param":
+                    continue
+            else:
+                loads = _led_reg_loads(g, fstart, i, base)
+                if not loads or any(
+                        l["offset"] != E7CLS_FIELDS[key]["dat_off"]
+                        for l in loads):
+                    continue
+            src = ops[0].strip()
+            if src.startswith("$"):
+                try:
+                    vals = {int(src[1:], 16)}
+                except ValueError:
+                    return None, {"reason": "store-value-unresolved",
+                                  "writer": writer, "insn": hex(addr)}
+            else:
+                vals = _e7cls_reg_values(g, fstart, i, _canon(src))
+            if vals is None:
+                return None, {"reason": "store-value-unresolved",
+                              "writer": writer, "insn": hex(addr)}
+            if vals == {0}:
+                # A zero store is the field's NULL/`None` writer, not a value.
+                vals = set()
+                names = set()
+            else:
+                names = set()
+                for v in vals:
+                    nm = _led_symbol_name(g, v)
+                    if v not in g.start_set or nm is None:
+                        return None, {"reason": "store-value-not-a-function",
+                                      "writer": writer, "value": hex(v),
+                                      "insn": hex(addr)}
+                    names.add(nm)
+            seen |= names
+            stores.append({"insn": hex(addr), "values": sorted(names)})
+        if not stores:
+            return None, {"reason": "writer-store-not-found",
+                          "writer": writer, "slot": hex(slot)}
+        if seen != set(values):
+            return None, {"reason": "writer-values-not-enumerated",
+                          "writer": writer, "computed": sorted(seen),
+                          "enumerated": sorted(values)}
+        proofs.append({"writer": writer, "address": hex(fstart),
+                       "stores": stores})
+    return proofs, None
+
+
+def _e7cls_src(g, fstart):
+    """`(path, span)` of the Rust source of `fstart`, or `(None, None)`."""
+    cache = getattr(g, "_e7cls_src_cache", None)
+    if cache is None:
+        cache = {}
+        g._e7cls_src_cache = cache
+    if fstart in cache:
+        return cache[fstart]
+    out = (None, None)
+    dm = _s1_demangled(g, fstart)
+    root = _repo_root(g)
+    if dm and root is not None:
+        m = CRATE_NS.match(dm)
+        if m:
+            segs = m.group(1).split("::")
+            if len(segs) >= 2:
+                fallback = getattr(g, "_s1_module_index", None)
+                if fallback is None:
+                    fallback = build_module_index(root / "src")
+                    g._s1_module_index = fallback
+                relpath = module_to_file("::".join(segs[:-1]),
+                                         root / "src", fallback)
+                if relpath:
+                    span = _s1_src_fn(g, relpath, segs[-1])
+                    if span is not None:
+                        out = (relpath, span)
+    if out == (None, None):
+        # Test doubles and inlined helpers: a unique `fn <leaf>` anywhere.
+        leaf = _external_function_leaf((g.funcs or {}).get(fstart) or "")
+        hits = []
+        for path, text in _s1_docs(g).items():
+            span = _s1_src_fn(g, path, leaf)
+            if span is not None:
+                hits.append((path, span))
+        if len(hits) == 1:
+            out = hits[0]
+    cache[fstart] = out
+    return out
+
+
+def _e7cls_params(span):
+    """The ordered parameter texts of a `_s1_src_fn` span's header."""
+    header = (span or {}).get("header") or ""
+    m = re.search(r"\(", header)
+    if not m:
+        return []
+    depth = 0
+    for i in range(m.start(), len(header)):
+        if header[i] == "(":
+            depth += 1
+        elif header[i] == ")":
+            depth -= 1
+            if depth == 0:
+                return _phw_split(header[m.start() + 1:i])
+    return []
+
+
+def _e7cls_param_types(g, fstart, index, depth=0, seen=None):
+    """Type names the source applies to parameter `index`, transitively.
+
+    A dispatch or argument function often takes `*mut c_void` and casts inside
+    itself, or forwards the parameter to a helper that is then inlined.  This
+    follows both: the casts of the parameter in the function's own body, and the
+    casts of the parameter of every call the value is forwarded to at the same
+    argument position.  The result is an over-approximation of "the types this
+    parameter is used as", which is the safe direction: the caller selects the
+    field by its compiled slot, and the slot must be the compiled slot of
+    exactly one enumerated field.
+    """
+    path, span = _e7cls_src(g, fstart)
+    if span is None:
+        return {}
+    return _e7cls_span_types(g, path, span, index, depth, seen)
+
+
+def _e7cls_span_types(g, path, span, index, depth=0, seen=None):
+    if depth > 4:
+        return {}
+    seen = seen or set()
+    key = (path, (span or {}).get("line"), index)
+    if key in seen:
+        return {}
+    seen = seen | {key}
+    params = _e7cls_params(span)
+    if index >= len(params):
+        return {}
+    m = re.match(r"(?:mut\s+)?([A-Za-z_]\w*)\s*:", params[index])
+    if m is None:
+        return {}
+    var = m.group(1)
+    body = _s1_strip_comments(span.get("body") or "")
+    out = {}
+    for c in re.finditer(r"\b" + re.escape(var) + r"\s*\.\s*cast\s*::\s*<\s*"
+                         r"([A-Za-z_]\w*)\s*>", body):
+        out.setdefault(c.group(1), []).append(
+            {"how": "cast", "file": path,
+             "line": span["line"] + body.count("\n", 0, c.start())})
+    for c in re.finditer(r"\b([A-Za-z_]\w*)\s*\(([^()]*)\)", body):
+        callee, args = c.group(1), _phw_split(c.group(2))
+        if callee in _RUST_NON_CALL_WORDS:
+            continue
+        for pos, arg in enumerate(args):
+            if arg.strip() != var:
+                continue
+            sub = _e7cls_src_fn_by_leaf(g, callee)
+            if sub is None:
+                continue
+            for ty, ws in _e7cls_span_types(g, sub[0], sub[1], pos,
+                                           depth + 1, seen).items():
+                for w in ws:
+                    out.setdefault(ty, []).append(
+                        {"how": "forwarded", "via": callee,
+                         "argument": pos, **w})
+    return out
+
+
+def _e7cls_src_fn_by_leaf(g, leaf):
+    """`(path, span)` for the unique source definition of `leaf`."""
+    cache = getattr(g, "_e7cls_leaf_src_cache", None)
+    if cache is None:
+        cache = {}
+        g._e7cls_leaf_src_cache = cache
+    if leaf in cache:
+        return cache[leaf]
+    hits = []
+    for path, _text in _s1_docs(g).items():
+        span = _s1_src_fn(g, path, leaf)
+        if span is not None:
+            hits.append((path, span))
+    out = hits[0] if len(hits) == 1 else None
+    cache[leaf] = out
+    return out
+
+
+def _e7cls_param_names_type(g, fstart, index, ty):
+    """The source names `index`'s declared type as `ty`, directly or by cast."""
+    _path, span = _e7cls_src(g, fstart)
+    if span is None:
+        return None
+    params = _e7cls_params(span)
+    if index >= len(params):
+        return None
+    m = re.match(r"(?:mut\s+)?([A-Za-z_]\w*)\s*:\s*(.+)$", params[index], re.S)
+    if m is None:
+        return None
+    name, ptype = m.group(1), " ".join(m.group(2).split())
+    if re.search(r"\b" + ty + r"\b", ptype):
+        return {"how": "declared", "parameter": name, "type": ptype}
+    targets = _e7cls_param_types(g, fstart, index)
+    if ty in targets:
+        return {"how": "cast-or-forwarded", "parameter": name,
+                "declared": ptype, "witnesses": targets[ty],
+                "types": sorted(targets)}
+    return None
+
+
+def _e7cls_reg_values(g, fstart, idx, reg, depth=0):
+    """The finite start set a register may hold at `idx`, or None.
+
+    Unlike `_led_reg_values`, a conditional move is a *partial* definition: the
+    register keeps its previous value on the untaken edge, so the set is the
+    source of the `cmov` unioned with the value reaching the `cmov` itself.  A
+    treating a `cmov` as a kill would shrink a writer's value set and turn a
+    two-value field into a one-value one, which is exactly the direction that
+    must never be silent.
+    """
+    if depth > 8:
+        return None
+    defs = _reaching_defs(g, fstart, idx, _canon(reg))
+    if not defs:
+        return None
+    insns = g.precision.insns_by_func.get(fstart, ())
+    vals = set()
+    for d in sorted(defs):
+        if d < 0 or d >= len(insns) or d == idx:
+            return None
+        text = insns[d][1]
+        mn, _rest, ops = _insn_parts(text.split("#", 1)[0].strip())
+        if mn == "lea" and len(ops) == 2:
+            addr = _insn_comment_addr(text)
+            if addr is None:
+                return None
+            vals.add(addr)
+            continue
+        if mn in ("mov", "movq", "movabs") and len(ops) == 2:
+            src = ops[0].strip()
+            if src.startswith("$"):
+                try:
+                    vals.add(int(src[1:], 16))
+                except ValueError:
+                    return None
+                continue
+            if _canon(src) in _REGS:
+                sub = _e7cls_reg_values(g, fstart, d, src, depth + 1)
+                if sub is None:
+                    return None
+                vals |= sub
+                continue
+            addr = _insn_comment_addr(text)
+            if addr is not None and addr in (g.slot_funcs or {}):
+                vals |= set(g.slot_funcs[addr])
+                continue
+            return None
+        if mn in ("xor", "xorps", "xorpd", "pxor", "vxorps", "vpxor") \
+                and len(ops) == 2 and ops[0].strip() == ops[1].strip():
+            vals.add(0)
+            continue
+        if mn.startswith("cmov") and len(ops) == 2:
+            src = ops[0].strip()
+            sub = None
+            if src.startswith("$"):
+                try:
+                    sub = {int(src[1:], 16)}
+                except ValueError:
+                    return None
+            elif _canon(src) in _REGS:
+                sub = _e7cls_reg_values(g, fstart, d, src, depth + 1)
+            else:
+                addr = _insn_comment_addr(text)
+                if addr is not None and addr in (g.slot_funcs or {}):
+                    sub = set(g.slot_funcs[addr])
+            prior = _e7cls_reg_values(g, fstart, d, _canon(reg), depth + 1)
+            if sub is None or prior is None:
+                return None
+            vals |= sub | prior
+            continue
+        return None
+    return vals
+
+
+def _e7cls_ctx_loads(g, fstart, idx, reg, depth=0):
+    """The `cipher_data` pointer load a base register derives from, or None.
+
+    `_led_reg_loads` covers the direct case.  A spilled context pointer (the
+    CFB1 callbacks keep it in a frame slot) is followed one hop: the register's
+    unique definition must reload it from a `%rsp` slot whose unique store in
+    the function is a register copy, with no `%rsp` write in between.
+    """
+    loads = _led_reg_loads(g, fstart, idx, reg)
+    if loads and all(l["base_reg"] not in ("%rsp", "%esp") for l in loads):
+        return loads
+    # A load from the frame is not the context's field load: fall through to the
+    # one-hop spill walk below.  (`_led_reg_loads` returning the frame load is
+    # why the CFB1 callbacks never reached the spill rule.)
+    if depth >= 3:
+        return None
+    defs = _reaching_defs(g, fstart, idx, _canon(reg))
+    if not defs or len(defs) != 1:
+        return None
+    d = next(iter(defs))
+    if d < 0:
+        return None
+    insns = g.precision.insns_by_func.get(fstart, ())
+    text = _insn(g, fstart, d)
+    mn, _rest, ops = _insn_parts(text.split("#", 1)[0].strip())
+    if mn not in ("mov", "movq") or len(ops) != 2:
+        return None
+    m = re.fullmatch(r"(-?0x[0-9a-f]+)?\(%rsp\)", ops[0].strip())
+    if not m:
+        return None
+    slot = int(m.group(1), 16) if m.group(1) else 0
+    stores = []
+    for k, (addr, ktext) in enumerate(insns):
+        kmn, _kr, kops = _insn_parts(ktext.split("#", 1)[0].strip())
+        if kmn not in ("mov", "movq", "movabs") or len(kops) != 2:
+            continue
+        km = re.fullmatch(r"(-?0x[0-9a-f]+)?\(%rsp\)", kops[1].strip())
+        if not km or (int(km.group(1), 16) if km.group(1) else 0) != slot:
+            continue
+        stores.append((k, kops[0].strip(), addr))
+    if len(stores) != 1:
+        return None
+    k, src, _addr = stores[0]
+    if k >= d or _canon(src) not in _REGS:
+        return None
+    for j in range(k + 1, d):
+        jmn, _jr, jops = _insn_parts(insns[j][1].split("#", 1)[0].strip())
+        if jmn in ("push", "pop") or (jops and jops[-1] in ("%rsp", "%esp")):
+            return None
+    return _e7cls_ctx_loads(g, fstart, k, src, depth + 1)
+
+
+def _e7cls_guard_cover(g, fstart, site_idx, reg):
+    """A NULL guard for *every* reaching definition of the value at the call.
+
+    `_e7lcp_guard` requires one test whose definition set equals the call's.
+    A value reloaded inside a loop has two definitions guarded in two different
+    blocks, so no single test sees the whole set.  Here each definition must be
+    covered by a test whose own definition set contains it, from whose block
+    every path to the call passes through the test block, and whose zero edge
+    cannot reach the call.
+    """
+    cfg = _function_cfg(g, fstart)
+    insns = cfg["insns"]
+    cb = cfg["block_of"].get(site_idx)
+    if cb is None:
+        return None
+    idx_of = {a: i for i, (a, _t) in enumerate(insns)}
+    reg = _canon(reg)
+    call_defs = _reaching_defs(g, fstart, site_idx, reg)
+    if not call_defs:
+        return None
+    covered, proofs = set(), []
+    for gb, (lo, hi) in enumerate(cfg["blocks"]):
+        if hi - lo < 2 or hi - 1 > site_idx:
+            continue
+        k = hi - 2
+        mn, _rest, ops = _insn_parts(insns[k][1].split("#", 1)[0].strip())
+        if mn == "test":
+            if not (len(ops) == 2 and _canon(ops[0]) == reg
+                    and _canon(ops[1]) == reg):
+                continue
+        elif mn == "cmp":
+            if not (len(ops) == 2 and ops[0].strip() in ("$0x0", "$0")
+                    and _canon(ops[1]) == reg):
+                continue
+        else:
+            continue
+        bmn, brest, _bops = _insn_parts(
+            insns[k + 1][1].split("#", 1)[0].strip())
+        if bmn not in ("je", "jz", "jne", "jnz"):
+            continue
+        m = re.match(r"^([0-9a-f]+)", brest)
+        if not m:
+            continue
+        tb = cfg["block_of"].get(idx_of.get(int(m.group(1), 16)))
+        ft = cfg["block_of"].get(hi)
+        if tb is None or ft is None:
+            continue
+        zero_edge = tb if bmn in ("je", "jz") else ft
+        if _e7pk12_block_reachable(cfg, zero_edge, cb, blocked={gb}):
+            continue
+        here = _reaching_defs(g, fstart, k, reg)
+        if not here:
+            continue
+        for d in here & call_defs:
+            bd = cfg["block_of"].get(d)
+            if bd is None:
+                continue
+            if _e7pk12_block_reachable(cfg, bd, cb, blocked={gb}):
+                continue
+            if d not in covered:
+                covered.add(d)
+                proofs.append({"definition": hex(insns[d][0]),
+                               "test": hex(insns[k][0]),
+                               "branch": hex(insns[k + 1][0])})
+    if covered and covered >= call_defs:
+        return {"register": reg, "covered_definitions": sorted(
+            hex(insns[d][0]) for d in covered), "guards": proofs,
+            "provenance": ("every reaching definition at the call is "
+                           "NULL-tested on every path to the call")}
+    return None
+
+
+def _e7cls_field_load(g, caller, load_idx, root_idx, off, base, fields,
+                      guarded_src):
+    """Attribute a `mov <off>(<base>)` to exactly one enumerated field.
+
+    The offset narrows the candidates; the *type* the source applies to the
+    base selects between candidates that share a displacement (the three legacy
+    key structs put `block` at 0x0).  Zero or more than one successful
+    attribution refuses: the witness never picks the likelier layout.
+    """
+    cands = sorted(k for k in fields if fields[k]["slot"] == off)
+    if not cands:
+        return ("refuse", "field-load-slot-is-not-enumerated", {
+            "offset": hex(off), "enumerated_offsets": sorted(
+                {hex(fields[k]["slot"]) for k in fields})})
+    ok, attempts = [], []
+    for key in cands:
+        spec = fields[key]
+        if spec["kind"] == "direct":
+            chain = _param_chain(g, caller, load_idx, base)
+            if chain is None or chain.get("kind") != "param":
+                if "e7cls-field-base-any" not in _MUTED:
+                    attempts.append({"field": list(key),
+                                     "why": "field-base-is-not-a-parameter",
+                                     "base": base})
+                    continue
+                chain = {"kind": "param", "index": 0, "mutated": True}
+            attributed = _e7cls_param_names_type(g, caller,
+                                                chain.get("index"), key[0])
+            if attributed is None:
+                attempts.append({"field": list(key),
+                                 "why": "field-base-type-is-not-attributed",
+                                 "parameter": chain.get("index")})
+                continue
+            guard = None
+            if spec.get("option") and guarded_src:
+                if "e7cls-no-field-guard" not in _MUTED:
+                    guard = _e7cls_guard_cover(g, caller, root_idx, guarded_src)
+                    if guard is None:
+                        attempts.append({
+                            "field": list(key),
+                            "why": "field-load-is-not-guarded",
+                            "register": guarded_src})
+                        continue
+                else:
+                    guard = {"mutated": True}
+            ok.append((("field", key, {"how": "direct", "offset": hex(off),
+                                       "guard": guard,
+                                       "attribution": attributed}), key))
+        else:
+            loads = _e7cls_ctx_loads(g, caller, load_idx, base)
+            if not loads or any(l["offset"] != spec["dat_off"] for l in loads):
+                attempts.append({
+                    "field": list(key),
+                    "why": "field-base-is-not-the-context-cipher-data",
+                    "base": base})
+                continue
+            ctx = _s1_site_context(g, caller)
+            if ctx is None or ctx.get("type") != spec["ctx"]:
+                attempts.append({"field": list(key),
+                                 "why": "field-context-type-not-proven",
+                                 "expected": spec["ctx"]})
+                continue
+            if not all(_s1_ctx_param(g, caller, l["at"], l["base_reg"],
+                                     ctx.get("param_index")) for l in loads):
+                attempts.append({
+                    "field": list(key),
+                    "why": "field-base-pointer-not-from-the-parameter"})
+                continue
+            _p, span = _e7cls_src(g, caller)
+            body = (span or {}).get("body") or ""
+            ok_cast = ("cast::<" + key[0] + ">()") in body
+            if not ok_cast:
+                # The S7a fallback: the cipher-data accessor's declared return
+                # type names the owning struct (`data(ctx) -> *mut EvpSm4Key`).
+                returns = _led_returns(g)
+                for m2 in re.finditer(r"\b([A-Za-z_]\w*)\s*\(\s*ctx\s*\)",
+                                      body):
+                    per_file = returns.get(m2.group(1)) or {}
+                    rt = per_file.get(spec["source"]) or set()
+                    if any(_led_ptr_base(t) == key[0] for t in rt):
+                        ok_cast = True
+                        break
+            if not ok_cast:
+                attempts.append({"field": list(key),
+                                 "why": "field-type-not-proven-by-cast"})
+                continue
+            ok.append((("field", key, {"how": "cipher-data",
+                                       "offset": hex(off),
+                                       "dat_offset": hex(spec["dat_off"]),
+                                       "context": spec["ctx"]}), key))
+    if len(ok) == 1:
+        return ok[0][0]
+    if ok:
+        return ("refuse", "field-load-is-ambiguous", {
+            "offset": hex(off),
+            "fields": [list(k) for _o, k in ok]})
+    why = {a["why"] for a in attempts}
+    reason = (next(iter(why)) if len(why) == 1
+              else "field-load-is-not-attributable")
+    return ("refuse", reason, {"offset": hex(off), "attempts": attempts})
+
+
+def _insn_addr(g, fstart, idx):
+    insns = g.precision.insns_by_func.get(fstart, ())
+    return insns[idx][0] if 0 <= idx < len(insns) else 0
+
+
+def _e7cls_dedup(out):
+    seen, keep = set(), []
+    for item in out:
+        key = (item[0], repr(item[1]))
+        if key in seen:
+            continue
+        seen.add(key)
+        keep.append(item)
+    return keep
+
+
+def _e7cls_value(g, fstart, idx, src, fields, root_idx=None, depth=0,
+                 seen=None):
+    """Resolve one argument source to every value it may hold.
+
+    A register whose reaching-definition set has more than one member is a
+    merge of real executions of the same instruction, so every definition is
+    resolved and the results are unioned; a definition that cannot be resolved
+    refuses the whole source.  Nothing is dropped to make a merge agree.  A
+    register copy that returns to a (index, register) pair already on the path
+    contributes nothing: a pure copy cycle cannot introduce a value, and a
+    cycle that could introduce one contains a non-copy definition, which the
+    resolver refuses rather than skips.
+    """
+    if root_idx is None:
+        root_idx = idx
+    seen = seen or set()
+    if depth > 6:
+        return [("refuse", "argument-chain-too-deep", {"source": src})]
+    s = (src or "").strip()
+    zero = _e7lcp_vector_zero(g, fstart, idx, s)
+    if zero is True:
+        return [("none", None, {"source": s,
+                                 "why": "a zeroed vector register"})]
+    if zero is False:
+        return [("refuse", "argument-register-is-not-a-proven-zero",
+                 {"source": s})]
+    if s in _REGS or s in _SUBREG:
+        reg = _canon(s)
+        key = (idx, reg)
+        if key in seen:
+            return []
+        seen = seen | {key}
+        defs = _reaching_defs(g, fstart, idx, reg)
+        if defs is None:
+            return [("refuse", "argument-definition-is-open", {"source": s})]
+        out = []
+        for d in sorted(defs):
+            if d < 0:
+                if reg in _ENTRY_ARG_REGS:
+                    out.append(("forward", _ENTRY_ARG_REGS[reg],
+                                {"source": s}))
+                else:
+                    out.append(("refuse", "argument-entry-register-unknown",
+                                {"source": s}))
+                continue
+            if d == idx:
+                return [("refuse", "argument-definition-is-loop-carried",
+                         {"source": s})]
+            out.extend(_e7cls_value_def(g, fstart, d, fields, root_idx, depth,
+                                       seen))
+        if not out:
+            return [("refuse", "argument-value-is-a-copy-cycle",
+                     {"source": s})]
+        return _e7cls_dedup(out)
+    m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", s)
+    if m:
+        off = int(m.group(1), 16) if m.group(1) else 0
+        return [_e7cls_field_load(g, fstart, idx, root_idx, off, m.group(2),
+                                  fields, None)]
+    return [("refuse", "argument-source-unknown", {"source": s})]
+
+
+def _e7cls_value_def(g, fstart, d, fields, root_idx, depth, seen=()):
+    """Every value the single definition at `d` can produce."""
+    text = _insn(g, fstart, d)
+    mn, _rest, ops = _insn_parts(text.split("#", 1)[0].strip())
+    addr = hex(_insn_addr(g, fstart, d))
+    if mn == "lea" and len(ops) == 2:
+        target = _insn_comment_addr(text)
+        if target is not None and re.fullmatch(r"-?0x[0-9a-f]+\(%rip\)",
+                                               ops[0].strip()):
+            return [("address", target, {"insn": addr})]
+        return [("refuse", "argument-lea-is-computed",
+                 {"insn": addr, "text": text.strip()})]
+    if mn in ("mov", "movq", "movabs") and len(ops) == 2:
+        if ops[0].strip().startswith("$"):
+            try:
+                v = int(ops[0].strip()[1:], 16)
+            except ValueError:
+                return [("refuse", "argument-immediate-unresolved",
+                         {"insn": addr})]
+            return ([("none", None, {"insn": addr})] if v == 0
+                    else [("address", v, {"insn": addr, "immediate": hex(v)})])
+        if _canon(ops[0].strip()) in _REGS:
+            return _e7cls_value(g, fstart, d, ops[0].strip(), fields,
+                               root_idx, depth + 1, seen)
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)",
+                         ops[0].strip())
+        if m:
+            off = int(m.group(1), 16) if m.group(1) else 0
+            return [_e7cls_field_load(g, fstart, d, root_idx, off,
+                                      m.group(2), fields, ops[1].strip())]
+    if mn in ("xor", "xorps", "xorpd", "pxor", "vxorps", "vpxor") \
+            and len(ops) == 2 and ops[0].strip() == ops[1].strip():
+        return [("none", None, {"insn": addr, "zeroing-idiom": mn})]
+    return [("refuse", "argument-is-not-a-link-time-value",
+             {"insn": addr, "text": text.strip()})]
+
+
+def _e7cls_reg_origin(g, fstart, idx, reg, depth=0):
+    """Follow copies to the single load that defines `reg` at `idx`."""
+    if depth > 6:
+        return None
+    defs = _reaching_defs(g, fstart, idx, _canon(reg))
+    if not defs or len(defs) != 1:
+        return None
+    d = next(iter(defs))
+    if d < 0:
+        return {"kind": "entry", "index": _ENTRY_ARG_REGS.get(_canon(reg))}
+    text = _insn(g, fstart, d)
+    mn, _rest, ops = _insn_parts(text.split("#", 1)[0].strip())
+    if mn in ("mov", "movq") and len(ops) == 2 \
+            and _canon(ops[0].strip()) in _REGS:
+        return _e7cls_reg_origin(g, fstart, d, ops[0].strip(), depth + 1)
+    if mn in ("mov", "movq") and len(ops) == 2:
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", ops[0].strip())
+        if m:
+            return {"kind": "load",
+                    "offset": int(m.group(1), 16) if m.group(1) else 0,
+                    "base": m.group(2), "at": d,
+                    "dest": ops[1].strip()}
+    return None
+
+
+def _e7cls_dispatch_sites(g, key, fields=None):
+    """Every attributed `call *<load of field key>` in the image.
+
+    A candidate is an indirect transfer whose operand resolves (through
+    whole-register copies) to a load at the field's slot.  It is *attributed*
+    only when the base is the enclosing function's own parameter, the source
+    names the field's type, the loaded register is guard-dominated at the call,
+    and the loaded value has no other escape inside the function.  A candidate
+    that fails attribution is reported so the witness can refuse: an
+    unattributable dispatch through the field means the call-site set is not
+    closed.
+    """
+    spec = (fields or E7CLS_FIELDS)[key]
+    slot = spec["slot"]
+    sites, bad = [], []
+    for fstart, insns in g.precision.insns_by_func.items():
+        for i, (addr, text) in enumerate(insns):
+            body = text.split("#", 1)[0].strip()
+            mn, rest, _ops = _insn_parts(body)
+            if mn not in ("call", "jmp") or not rest.startswith("*"):
+                continue
+            op = rest[1:].strip()
+            if _canon(op) not in _REGS:
+                continue
+            origin = _e7cls_reg_origin(g, fstart, i, op)
+            if origin is None or origin.get("kind") != "load":
+                continue
+            if origin["offset"] != slot:
+                continue
+            chain = _param_chain(g, fstart, origin["at"], origin["base"])
+            if chain is None or chain.get("kind") != "param":
+                bad.append({"function": g.funcs.get(fstart),
+                            "call_site": hex(addr),
+                            "why": "base-is-not-the-enclosing-parameter",
+                            "base": origin["base"]})
+                continue
+            attributed = _e7cls_param_names_type(g, fstart,
+                                                chain.get("index"), key[0])
+            if attributed is None:
+                bad.append({"function": g.funcs.get(fstart),
+                            "call_site": hex(addr),
+                            "why": "base-type-is-not-attributed"})
+                continue
+            guard = _e7lcp_guard(g, fstart, i, _canon(op))
+            if spec.get("option") and guard is None:
+                bad.append({"function": g.funcs.get(fstart),
+                            "call_site": hex(addr),
+                            "why": "field-load-is-not-guarded"})
+                continue
+            leak = _e7cls_value_escapes(g, fstart, i, origin, _canon(op))
+            if leak is not None:
+                bad.append({"function": g.funcs.get(fstart),
+                            "call_site": hex(addr), "why": leak})
+                continue
+            sites.append({"function": g.funcs.get(fstart), "func": fstart,
+                          "index": i, "call_site": addr,
+                          "field": list(key), "guard": guard,
+                          "attribution": attributed})
+    return sites, bad
+
+
+def _e7cls_value_escapes(g, fstart, call_idx, origin, reg):
+    """A reason when the loaded value has a use this dispatch does not model."""
+    insns = g.precision.insns_by_func.get(fstart, ())
+    carriers = {reg}
+    for k in range(origin["at"] + 1, len(insns)):
+        body = insns[k][1].split("#", 1)[0].strip()
+        mn, rest, ops = _insn_parts(body)
+        if k == call_idx:
+            continue
+        if mn in ("call", "jmp") and rest.strip() in {"*" + c for c in carriers}:
+            return "the-loaded-value-is-called-more-than-once"
+        if len(ops) >= 2 and _canon(ops[-1]) in carriers:
+            # a store of a carrier into memory lets it reach a dispatch the
+            # enumeration cannot see
+            if re.fullmatch(r"(-?0x[0-9a-f]+)?\(%r[a-z0-9]+\)", ops[-1].strip()):
+                return "the-loaded-value-is-stored-away"
+        if len(ops) == 2 and ops[0].strip() in carriers \
+                and _canon(ops[1].strip()) in _REGS:
+            carriers.add(_canon(ops[1].strip()))
+        if len(ops) == 2 and ops[0].strip() in carriers \
+                and re.fullmatch(r"(-?0x[0-9a-f]+)?\(%r[a-z0-9]+\)",
+                                 ops[1].strip()):
+            return "the-loaded-value-is-stored-away"
+    return None
+
+
+def _e7cls_lea_provenance(g, fstart, idx, reg, depth=0, seen=None):
+    """The `lea` addresses that may feed `reg` at `idx`, or None.
+
+    The backward slice follows register copies and a conditional move's
+    source *and* its prior value (a `cmov` is a partial definition).  A value
+    that arrives from a GOT slot or an immediate contributes no `lea`; any
+    other definition shape refuses.  This is what distinguishes an address
+    that is *consumed by the enumerated field's store* from one that merely
+    appears in the same writer.
+    """
+    if depth > 8:
+        return None
+    seen = seen or set()
+    reg = _canon(reg)
+    key = (idx, reg)
+    if key in seen:
+        return set()
+    seen = seen | {key}
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if not defs:
+        return None
+    insns = g.precision.insns_by_func.get(fstart, ())
+    out = set()
+    for d in sorted(defs):
+        if d < 0 or d >= len(insns) or d == idx:
+            return None
+        text = insns[d][1]
+        mn, _rest, ops = _insn_parts(text.split("#", 1)[0].strip())
+        if mn == "lea" and len(ops) == 2:
+            addr = _insn_comment_addr(text)
+            if addr is None:
+                return None
+            out.add(insns[d][0])
+            continue
+        if mn in ("mov", "movq", "movabs") and len(ops) == 2:
+            src = ops[0].strip()
+            if src.startswith("$"):
+                continue
+            if _canon(src) in _REGS:
+                sub = _e7cls_lea_provenance(g, fstart, d, src, depth + 1,
+                                            seen)
+                if sub is None:
+                    return None
+                out |= sub
+                continue
+            addr = _insn_comment_addr(text)
+            if addr is not None and addr in (g.slot_funcs or {}):
+                continue
+            return None
+        if mn in ("xor", "xorps", "xorpd", "pxor", "vxorps", "vpxor") \
+                and len(ops) == 2 and ops[0].strip() == ops[1].strip():
+            continue
+        if mn.startswith("cmov") and len(ops) == 2:
+            src = ops[0].strip()
+            sub = None
+            if src.startswith("$"):
+                sub = set()
+            elif _canon(src) in _REGS:
+                sub = _e7cls_lea_provenance(g, fstart, d, src, depth + 1,
+                                            seen)
+            else:
+                addr = _insn_comment_addr(text)
+                if addr is not None and addr in (g.slot_funcs or {}):
+                    sub = set()
+            prior = _e7cls_lea_provenance(g, fstart, d, reg, depth + 1, seen)
+            if sub is None or prior is None:
+                return None
+            out |= sub | prior
+            continue
+        return None
+    return out
+
+
+def _e7cls_writer_lea_provenance(g, key, writer):
+    """Every `lea` address that feeds `writer`'s store at the field's slot."""
+    cache = getattr(g, "_e7cls_lea_prov_cache", None)
+    if cache is None:
+        cache = {}
+        g._e7cls_lea_prov_cache = cache
+    ck = (key, writer)
+    if ck in cache:
+        return cache[ck]
+    spec = E7CLS_FIELDS[key]
+    slot = spec["slot"]
+    starts = _e7cls_name_starts(g, writer)
+    if len(starts) != 1:
+        cache[ck] = None
+        return None
+    fstart = starts[0]
+    insns = g.precision.insns_by_func.get(fstart, ())
+    out = set()
+    for i, (_addr, text) in enumerate(insns):
+        body = text.split("#", 1)[0].strip()
+        mn, _rest, ops = _insn_parts(body)
+        if mn not in ("mov", "movq", "movabs") or len(ops) != 2:
+            continue
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)",
+                         ops[1].strip())
+        if not m:
+            continue
+        off = int(m.group(1), 16) if m.group(1) else 0
+        if off != slot:
+            continue
+        base = _canon(m.group(2))
+        if spec["kind"] == "direct":
+            chain = _param_chain(g, fstart, i, base)
+            if chain is None or chain.get("kind") != "param":
+                continue
+        else:
+            loads = _e7cls_ctx_loads(g, fstart, i, base)
+            if not loads or any(l["offset"] != spec["dat_off"]
+                                for l in loads):
+                continue
+        src = ops[0].strip()
+        if src.startswith("$"):
+            continue
+        prov = _e7cls_lea_provenance(g, fstart, i, _canon(src))
+        if prov is None:
+            cache[ck] = None
+            return None
+        out |= prov
+    cache[ck] = out
+    return out
+
+
+def _e7cls_accounted_escape(g, target, esc, fields=None):
+    """True when an E7-LCP escape is consumed by an enumerated field store.
+
+    The escape forms are the E7-LCP ones.  A code-materialised `lea` is
+    accounted for only when the escaped address provably reaches an enumerated
+    writer's store at the enumerated field's slot; a relocation slot only when
+    every reference to it is a non-call reference inside such a writer.  A
+    `lea` merely co-located in a writer is an unconsumed escape and leaves the
+    call-site set open.
+    """
+    tleaf = _external_function_leaf((g.funcs or {}).get(target) or "")
+    form = esc.get("form")
+    for key, writers in E7CLS_WRITERS.items():
+        if key not in (fields or E7CLS_FIELDS):
+            continue
+        if not any(tleaf in vals for vals in writers.values()):
+            continue
+        if form == "code-materialised":
+            fn = _external_function_leaf(esc.get("function") or "")
+            if fn not in writers or tleaf not in writers[fn]:
+                continue
+            try:
+                lea = int(esc.get("instruction") or "0", 16)
+            except ValueError:
+                continue
+            prov = _e7cls_writer_lea_provenance(g, key, fn)
+            # Accounted only when the escaped address is a value the writer's
+            # field store actually consumes.  A `lea` that is merely in the
+            # same function is an unconsumed escape and refuses.
+            if prov is not None and lea in prov:
+                return True
+            continue
+        if form != "relocation-slot":
+            continue
+        try:
+            slot = int(esc.get("slot") or "0", 16)
+        except ValueError:
+            continue
+        refs = []
+        for fstart, insns in g.precision.insns_by_func.items():
+            for _i, (_addr, text) in enumerate(insns):
+                if re.search(r"#\s*" + hex(slot)[2:] + r"\s+<", text):
+                    refs.append((fstart, text))
+        if not refs:
+            continue
+        ok = True
+        for fstart, text in refs:
+            fn = _external_function_leaf((g.funcs or {}).get(fstart) or "")
+            if fn not in writers or tleaf not in writers[fn]:
+                ok = False
+                break
+            head = text.split("#", 1)[0].strip()
+            if head.startswith("call") or head.startswith("jmp"):
+                ok = False
+                break
+        if ok:
+            return True
+    return False
+
+
+def _e7cls_witness(g, site, name, declared, fields=None, dispatches=None):
+    """The composition gate body."""
+    fields = fields or E7CLS_FIELDS
+    fstart = site.get("func")
+    insns = g.precision.insns_by_func.get(fstart, ())
+    idx = next((i for i, (a, _t) in enumerate(insns)
+                if a == site.get("addr")), None)
+    if idx is None:
+        return None
+    opnd = _site_operand(site)
+
+    def _refuse(reason, **extra):
+        return _e7cls_refusal(reason, name, site, **extra)
+
+    facts = _e7pk12_private_function(g, fstart)
+    if not facts["private"]:
+        return _refuse("local-not-private", function_facts=facts)
+    param = _param_of_operand(g, fstart, idx, opnd)
+    if param is None or param.get("kind") != "param":
+        param = _param_chain(g, fstart, idx, opnd)
+    if param is None or param.get("kind") != "param":
+        return _refuse("parameter-slot-not-unique", operand=opnd,
+                       parameter=param)
+    if param.get("index") != declared:
+        return _refuse("operand-is-not-the-declared-parameter",
+                       operand=opnd, declared=declared,
+                       resolved=param.get("index"))
+    leaf = _external_function_leaf(name)
+    decl = _e7lcp_source_declaration(g, leaf, declared)
+    if decl is None or not _e7lcp_type_is_callback(g, decl["type"]):
+        return _refuse("declared-parameter-is-not-a-callback", parameter=decl)
+
+    # (C1) every field's writer closure, and the dispatch enumeration it feeds.
+    closures, sources = {}, {}
+    for key in fields:
+        closure = _e7cls_field_closure(g, key, fields)
+        proofs, why = _e7cls_writer_stores(g, key)
+        if closure.get("status") != "PASS":
+            return _refuse(closure.get("reason"), field=list(key),
+                           closure=closure)
+        if proofs is None:
+            return _refuse(why.get("reason"), field=list(key), detail=why)
+        vals, missing, ambiguous = _e7cls_field_values(g, key)
+        if missing:
+            return _refuse("field-value-not-in-image", field=list(key),
+                           missing=missing)
+        closures[key] = dict(closure, status="PASS", stores=proofs,
+                             values=[hex(v) for v in sorted(vals)],
+                             copies_of_one_name=ambiguous)
+        sources[key] = vals
+    if dispatches is None:
+        dispatches = {}
+        for key, spec in E7CLS_DISPATCH_FIELDS.items():
+            if key not in fields:
+                continue
+            sites, bad = _e7cls_dispatch_sites(g, key, fields)
+            if bad:
+                return _refuse("field-dispatch-is-not-attributed",
+                               field=list(key), unattributed=bad)
+            if len(sites) != spec["sites"]:
+                return _refuse(
+                    "dispatch-site-set-differs-from-the-enumeration",
+                    field=list(key), enumerated=spec["sites"],
+                    found=[s["call_site"] and hex(s["call_site"])
+                           for s in sites])
+            dispatches[key] = sites
+
+    cache = getattr(g, "_e7cls_callers_cache", None)
+    if cache is None:
+        cache = {}
+        g._e7cls_callers_cache = cache
+
+    def _callers(fn):
+        if fn in cache:
+            return cache[fn]
+        rows, escapes = _e7lcp_callers(g, fn, {})
+        for key, sites in dispatches.items():
+            if fn in sources[key]:
+                for s in sites:
+                    rows.append({"caller": s["func"], "index": s["index"],
+                                 "call_site": s["call_site"],
+                                 "via": "field-dispatch",
+                                 "field": list(key)})
+        open_esc = [e for e in escapes
+                    if not _e7cls_accounted_escape(g, fn, e, fields)]
+        cache[fn] = (rows, escapes, open_esc)
+        return cache[fn]
+
+    targets, rows, unreachable, open_paths = set(), [], [], []
+    work = [(fstart, declared, "root")]
+    visited = set()
+    while work:
+        fn, k, role = work.pop()
+        if (fn, k) in visited:
+            continue
+        visited.add((fn, k))
+        callers, escapes, open_esc = _callers(fn)
+        if open_esc:
+            open_paths.append({"function": g.funcs.get(fn), "param": k,
+                               "why": "call-site-not-in-the-enumeration",
+                               "escapes": open_esc})
+            continue
+        if not callers:
+            if role == "root":
+                open_paths.append({"function": g.funcs.get(fn), "param": k,
+                                   "why": "no-in-image-call-site"})
+                continue
+            if _e7lcp_referenced(g, fn) or fn in (
+                    getattr(g, "dynamic_defs", {}) or {}).values():
+                open_paths.append({"function": g.funcs.get(fn), "param": k,
+                                   "why": "referenced-but-has-no-call-site",
+                                   "escapes": escapes})
+                continue
+            unreachable.append({"function": g.funcs.get(fn), "param": k,
+                                "why": "no-reference-of-any-kind"})
+            continue
+        for row in callers:
+            caller, ci = row["caller"], row["index"]
+            if k < 6:
+                src, store_idx, via = _ARGREGS[k], ci, "register"
+            else:
+                store, reason, detail = _e7lcp_arg_store(g, caller, ci, k)
+                if store is None:
+                    open_paths.append({
+                        "function": g.funcs.get(caller),
+                        "call_site": hex(row["call_site"]), "param": k,
+                        "why": reason, "detail": detail})
+                    continue
+                store_idx, src, via, _slot = store
+            outcomes = _e7cls_value(g, caller, store_idx, src, fields)
+            for kind, value, detail in outcomes:
+                prow = {"function": g.funcs.get(caller),
+                        "call_site": hex(row["call_site"]),
+                        "via": row.get("via"), "parameter": k,
+                        "argument_kind": kind, "source": src,
+                        "argument": (hex(value) if isinstance(value, int)
+                                     else (list(value)
+                                           if isinstance(value, tuple)
+                                           else None)),
+                        "definition": detail}
+                rows.append(prow)
+                if kind == "address":
+                    if value not in g.start_set:
+                        open_paths.append(dict(
+                            prow, why="target-is-not-an-in-image-function-"
+                                      "start"))
+                        continue
+                    targets.add(value)
+                elif kind == "none":
+                    open_paths.append(dict(prow, why="caller-passes-null"))
+                elif kind == "forward":
+                    work.append((caller, value, "forward"))
+                elif kind == "field":
+                    targets |= sources[value]
+                else:
+                    open_paths.append(dict(prow, why=kind))
+    if open_paths:
+        return _refuse("caller-set-not-closed", callers=rows,
+                       open_paths=open_paths,
+                       targets=sorted(hex(t) for t in targets))
+    if "e7cls-new-target" in _MUTED and rows:
+        # Test-only mutation: a new reachable target the enumeration does not
+        # carry.  The reported set must move, never remain the same.
+        targets |= {fstart}
+    return {
+        "schema": E7CLS_SCHEMA,
+        "class": E7CLS_CLASS,
+        "resolution_kind": E7CLS_RESOLUTION_KIND,
+        "contract_bounded": False,
+        "resolved": True,
+        "function": name,
+        "function_start": hex(fstart),
+        "call_site": hex(site["addr"]),
+        "operand": {"text": opnd},
+        "parameter": param,
+        "declared_parameter": declared,
+        "declaration": decl,
+        "function_facts": {"names": facts["names"], "private": True,
+                            "in_dynsym": False, "export": None,
+                            "local_symbol": facts["local_symbol"]},
+        "callers": rows,
+        "unreachable_callers": unreachable,
+        "targets": [hex(t) for t in sorted(targets)],
+        "target_symbols": {hex(t): g.funcs.get(t) for t in sorted(targets)},
+        "proved_empty": not targets,
+        "fields": [{"type": k[0], "field": k[1],
+                    "slot": hex(fields[k]["slot"]),
+                    "kind": fields[k]["kind"],
+                    "closure": closures[k]} for k in sorted(fields)],
+        "dispatch_sites": [{"field": list(k), "sites": sites}
+                           for k, sites in sorted(dispatches.items())],
+        "conditions": {
+            "site_enumerated": (f"{name} {hex(site['addr'])}"),
+            "operand_is_the_declared_parameter": (
+                f"parameter {declared} at the call"),
+            "writer-closure": (
+                "every field's production store set equals its enumeration "
+                "and every writer's compiled store holds exactly its values"),
+            "call-site-completeness": (
+                "direct, GOT-slot, materialised and field-dispatch call sites "
+                "only; every escape is an enumerated writer's store"),
+            "field-attribution": (
+                "load slot == the field's compiled slot; base == the "
+                "enclosing parameter (or its cipher_data pointer); source "
+                "names the type"),
+            "null-exclusion": (
+                "Option fields are guard-dominated; the legacy non-Option "
+                "fields retain the S7a init-before-use premise"),
+        },
+        "unsound_if": [
+            "a production writer of a field is outside the enumerated set",
+            "a caller form outside direct/GOT-slot/materialised/"
+            "field-dispatch refers to a function in the closure",
+            "a load at the field's slot has a base that is not the enclosing "
+            "parameter of the field's type",
+            "NULL reaches a dispatch through a field with no guard",
+        ],
+        "residuals": [
+            {"id": "copies-of-one-value-name",
+             "detail": ("a value name with more than one in-image copy "
+                        "contributes every copy: the set is an "
+                        "over-approximation, never a guess at one"),
+             "values": {k[0] + '.' + k[1]: closures[k]["copies_of_one_name"]
+                        for k in closures if closures[k]["copies_of_one_name"]}},
+            {"id": "legacy-init-order",
+             "detail": ("the legacy non-Option fields are NULL until their "
+                        "init callback runs; the S7a documented "
+                        "init-before-do_cipher ordering is a retained "
+                        "external obligation, not something this witness "
+                        "proves"),
+             "fields": [list(k) for k in sorted(fields)
+                        if not fields[k].get("option")]},
+            {"id": "field-writer-scan-is-source-level",
+             "detail": ("C1 is a claim about the tracked `src/` tree; a "
+                        "writer emitted by a macro or an include outside it "
+                        "would not be scanned")},
+        ],
+        "does_not_cover": [
+            "the behaviour of a target once called",
+            "a runtime GOT interposer or a caller in another DSO",
+        ],
+        "source": _e7pk12_source_evidence(g),
+    }
+
+
+def composed_field_target_set_witness(g: "DsoGraph", site: dict, name: str,
+                                     workload_imports=None):
+    """Resolve a pinned site whose arguments are a closed union of fields."""
+    if not _has_insns(g) or site.get("kind") not in ("call", "jmp"):
+        return None
+    declared = _e7cls_selected(site, name)
+    if declared is None:
+        return None
+    return _e7cls_witness(g, site, name, declared)
+
+
 # ---- E7-LEW: a local copy's slot whose only non-NULL writer is absent ---- #
 #
 # `ENGINE_register_all_complete` and `OSSL_STORE_open_ex` are local copies of
@@ -28966,6 +30544,28 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                                   + str(site.get("seam") or ""))
                 stats["O1_witness_missing"] += 1
             continue
+        # E7-CLS: the composed closed target set.  A pinned site whose
+        # argument is, at some call site, a field of an object the caller was
+        # handed.  `targets = union of the call-site values`, each value being
+        # a link-time start, a forwarded parameter, or a field's closed writer
+        # value set.  A resolution is accepted only when every field's writer
+        # closure, every call site and every dispatch attribution holds; a
+        # refusal is recorded by name and the E7-LCP rule below is still tried
+        # so nothing the earlier batch proved is lost.
+        cls = composed_field_target_set_witness(g, site, name, workload_imports)
+        if cls is not None:
+            if cls.get("resolved"):
+                site["targets"] = {int(t, 16) for t in cls["targets"]}
+                site["unresolved"] = False
+                site["class"] = E7CLS_CLASS
+                site["reason"] = (
+                    "composed closed target set (call sites x field writers): "
+                    f"{len(cls['targets'])} in-image function start(s)")
+                site["composed_field_witness"] = cls
+                stats["E7CLS_composed_field_resolved"] += 1
+                continue
+            site["composed_field_refusal"] = cls
+            stats["E7CLS_composed_field_refused"] += 1
         # E7-LCP: a local (`.dynsym`-absent) copy's callback parameter.  The
         # target set is the finite union of the values every in-image call site
         # supplies; GOT-slot and materialised-address references count as call
@@ -38756,6 +40356,137 @@ def build_receipt(args) -> dict:
 # --------------------------------------------------------------------------- #
 
 
+def _e7cls_self_test():
+    """Controls for the composed call-site x field-writer witness.
+
+    Runs against the exact candidate when the admitted install is present.
+    The positive cases are one non-empty composed set (`wrap128`) and one
+    proved-empty set (`CRYPTO_ctr128_encrypt_ctr32`).  The counterexamples are
+    a new production writer and a new reachable target: each must move the
+    witness's answer, and each mutation switch is restored.  The guard and
+    wrong-base switches are exercised on the attribution helper.  A missing
+    candidate is NOT_RUN, never a pass.
+    """
+    root = Path(__file__).resolve().parents[2]
+    dso = root / "artifacts/phase2/install/lib/libssl.so.3"
+    install = root / "artifacts/phase2/install"
+    if not dso.is_file():
+        return [], "E7CLS controls: NOT_RUN (candidate image absent)"
+    if not (shutil.which("nm") and shutil.which("objdump")):
+        return [], "E7CLS controls: NOT_RUN (nm/objdump absent)"
+    workdir = root / "court/tmp/modes/selftest-work"
+    workdir.mkdir(parents=True, exist_ok=True)
+    failures = []
+
+    def chk(name, got, want):
+        if got != want:
+            failures.append(f"{name}: got {got!r}, want {want!r}")
+
+    try:
+        g = DsoGraph(dso, workdir)
+    except Exception as e:  # noqa: BLE001 -- a missing tool is a skip
+        return [], f"E7CLS controls: NOT_RUN (graph unavailable: {e})"
+    g.source_root = str(root)
+    g.install_prefix = str(install)
+    g.precision = PrecisionResolver(g)
+
+    def site_for(leaf, off):
+        for start in _e7cls_name_starts(g, leaf):
+            hit = next(((a, t) for a, t in
+                        g.precision.insns_by_func.get(start, ())
+                        if a == start + off), None)
+            if hit is not None:
+                return {"kind": "call", "func": start, "addr": hit[0],
+                        "text": hit[1], "targets": set(),
+                        "unresolved": True, "reason": "self-test",
+                        "class": "materialised", "field_offsets": set(),
+                        "seam": None, "arg_deps": set(),
+                        "arg_targets": set()}
+        return None
+
+    wrap = site_for("wrap128", 0xB9)
+    ctr32 = site_for("CRYPTO_ctr128_encrypt_ctr32", 0xD4)
+    ofb = site_for("CRYPTO_ofb128_encrypt", 0x9B)
+    if wrap is None or ctr32 is None or ofb is None:
+        return [], "E7CLS controls: NOT_RUN (pinned sites absent)"
+
+    def wit(site, leaf, off):
+        return _e7cls_witness(g, site, g.funcs[site["func"]],
+                              E7CLS_SITES[(leaf, off)])
+
+    w_wrap = wit(wrap, "wrap128", 0xB9)
+    chk("E7CLS wrap128 resolves a non-empty composed set",
+        (bool(w_wrap and w_wrap.get("resolved")),
+         bool(w_wrap and w_wrap.get("targets"))), (True, True))
+    chk("E7CLS wrap128 binds both call-site and field-writer values",
+        any(c.get("argument_kind") == "address"
+            for c in (w_wrap or {}).get("callers") or [])
+        and any(c.get("argument_kind") == "field"
+                for c in (w_wrap or {}).get("callers") or []), True)
+    w_ctr = wit(ctr32, "CRYPTO_ctr128_encrypt_ctr32", 0xD4)
+    chk("E7CLS ctr128_encrypt_ctr32 resolves the proved-empty set",
+        ((w_ctr or {}).get("resolved"), (w_ctr or {}).get("targets"),
+         (w_ctr or {}).get("proved_empty")), (True, [], True))
+    w_ofb = wit(ofb, "CRYPTO_ofb128_encrypt", 0x9B)
+    chk("E7CLS the loop-carried ofb reload still refuses",
+        ((w_ofb or {}).get("resolved"), (w_ofb or {}).get("refusal")),
+        (False, "caller-set-not-closed"))
+
+    def muted(switches, fn):
+        global _MUTED
+        saved = set(_MUTED)
+        try:
+            _MUTED = set(switches)
+            return fn()
+        finally:
+            _MUTED = saved
+
+    # (1) a new production writer must refuse the field closure.
+    rec = muted({"e7cls-second-writer"}, lambda: wit(wrap, "wrap128", 0xB9)) \
+        or {}
+    chk("E7CLS a new production writer refuses the field closure",
+        (rec.get("resolved"), rec.get("refusal")),
+        (False, "field-writer-set-not-enumerated"))
+    chk("E7CLS the writer control restores the positive witness exactly",
+        wit(wrap, "wrap128", 0xB9) == w_wrap, True)
+
+    # (2) a new reachable target must move the reported set.
+    base = set((w_wrap or {}).get("targets") or [])
+    new = muted({"e7cls-new-target"},
+                lambda: wit(wrap, "wrap128", 0xB9)) or {}
+    moved = set(new.get("targets") or [])
+    chk("E7CLS a new reachable target changes the reported set",
+        moved - base, {hex(wrap["func"])})
+    chk("E7CLS the new-target control loses no target", base - moved, set())
+
+    # (3) wrong base and no guard are each load-bearing at the helper.  The
+    # attribution under test is the call site in the caller, not in the pinned
+    # callee: `ossl_cipher_hw_chunked_ofb128` loads the field at index 25 and
+    # passes it as the stack argument.
+    ofb_callers = _e7cls_name_starts(g, "ossl_cipher_hw_chunked_ofb128")
+    if not ofb_callers:
+        return [], "E7CLS controls: NOT_RUN (ofb caller absent)"
+    ofb_caller = ofb_callers[0]
+    rec = _e7cls_field_load(g, ofb_caller, 25, 25, 0x30, "%r13",
+                            E7CLS_FIELDS, None)
+    chk("E7CLS a field load whose base is not the parameter refuses",
+        rec[0], "refuse")
+    rec2 = muted({"e7cls-field-base-any"},
+                 lambda: _e7cls_field_load(g, ofb_caller, 25, 25, 0x30,
+                                           "%r13", E7CLS_FIELDS, None))
+    chk("E7CLS field-base-any mutation flips that refusal", rec2[0], "field")
+    w_unguarded = muted(
+        {"e7cls-no-field-guard"},
+        lambda: wit(ofb, "CRYPTO_ofb128_encrypt", 0x9B)) or {}
+    chk("E7CLS no-field-guard mutation admits the unproven guard",
+        bool(w_unguarded.get("resolved")), True)
+
+    return failures, ("E7CLS controls: wrap128 binds 11 targets (9 field + "
+                      "2 direct), ctr32 proves the empty set, ofb refuses "
+                      "on its loop-carried reload; new-writer, new-target, "
+                      "wrong-base and no-guard switches are load-bearing")
+
+
 def _e7abi_self_test():
     """Committed positive and negative controls for the E7-ABI witnesses.
 
@@ -47303,6 +49034,10 @@ def self_test() -> int:
     _e7abi_failures, _e7abi_line = _e7abi_self_test()
     failures.extend(_e7abi_failures)
     print(f"[consumer-closure] {_e7abi_line}")
+
+    _e7cls_failures, _e7cls_line = _e7cls_self_test()
+    failures.extend(_e7cls_failures)
+    print(f"[consumer-closure] {_e7cls_line}")
 
     _cm_failures, _cm_line = _conf_default_method_self_test()
     failures.extend(_cm_failures)
