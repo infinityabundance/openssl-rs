@@ -1,0 +1,52 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/element7-repair/v1",
+  "receipt": "element7-curl-049-proved-empty-gate",
+  "consumer": "curl",
+  "candidate": {
+    "install_libcrypto_so_3_sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+    "install_libssl_so_3_sha256": "648f8caecda245d2186813fb67ceadedd798b9ce609c8b041a84f195946c5f68",
+    "closure_receipt": "evidence/closure-curl-049.json"
+  },
+  "proved_empty": {
+    "sites": 3,
+    "sites_list": ["libssl 0x511544 (v3_conf::do_ext_nconf)", "libssl 0x5117d5 (v3_conf::do_ext_nconf)", "libssl 0x5107ea (v3_pci::r2i_pci)"],
+    "proof": "one None constructor, copy-only propagators, and the LOCAL OPENSSL_sk_set_thunks (0x4efc60) has no caller, no taken address and no import, so the NULL-guarded Inner.free_thunk dispatch is unreachable",
+    "negative_controls": {
+      "installer-has-in-image-caller": "refuses",
+      "installer-address-taken": "refuses",
+      "installer-imported": "refuses",
+      "note": "each mutation switch restores resolution, so the conclusion is sensitive to a newly reachable writer"
+    }
+  },
+  "contract": {
+    "sites": 1,
+    "site": "libssl 0x261b34 (OPENSSL_cleanup)",
+    "disposition": "ABI_CONTRACT on the documented OPENSSL_atexit seam, NOT proved-empty",
+    "why": "the previous not-in-image premise was false: libssl has a LOCAL writer (0x261a60) and an inlined publisher in ossl_pool_acquire_entropy (0x40722b, src/rand/unix.rs:381), so the writer list is not empty. The contract is the conservative upper bound and does not claim the local copy is externally bindable.",
+    "control": "e7-atexit-localised-copy flips the contract to atexit-entry-point-not-exported; an unexported/no-publisher fixture refuses; the second-writer and stored-value refusals are unchanged"
+  },
+  "validation": {
+    "self_test": "exit 0, no PREMISE_UNAVAILABLE, only the pre-existing e7core loader-fetch NOT_RUN",
+    "targeted_re_resolution": "libssl DsoGraph + PrecisionResolver.run() + apply_evidence_classes with curl's 227 imports -> 3 E7SF resolved and 1 atexit contract; libcrypto copies not re-run",
+    "full_closure_run": "NOT_RUN"
+  },
+  "queue_after": {
+    "sites": 69,
+    "groups": 37,
+    "composition": "68 external ABI contract sites (the pre-existing queue, unchanged) plus the 1 atexit contract site; proved-empty is now 0",
+    "arithmetic_note": "the batch report quoted 116/67 by reusing the triage's pre-correction shape split (82 a + 34 c). That split was corrected in evidence/element7-curl-049-shape-correction.json: the 34 err.rs sites are dlsym contracts, so the contract total is 116 and the source-change shape is 0. Against the corrected accounting, 72 - 3 proved-empty = 69 sites remain."
+  },
+  "residuals": [
+    "the E7SF no-import arm is only curl's admitted closure; a third-party DSO or interposer is outside it",
+    "non-repr(C) field identity is bound by the installer's compiled store offset and must be re-derived at freeze",
+    "the atexit contract is an upper bound, not a claim of external bindability"
+  ],
+  "status": {
+    "element_7": "FAIL — 69 sites remain (68 contracts + 1 atexit contract)",
+    "safe_compatible_curl": "NOT ESTABLISHED"
+  },
+  "non_claims": [
+    "A targeted re-resolution is not a closure run and does not by itself move element-7.",
+    "No obligation is discharged and no consumer graduates by this receipt."
+  ]
+}
