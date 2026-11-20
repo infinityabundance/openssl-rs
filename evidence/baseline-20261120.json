@@ -1,0 +1,602 @@
+{
+  "schema": "openssl-rs/campaign/baseline/v1",
+  "kind": "phase1-baseline",
+  "generated_utc": "2026-11-20T23:33:45Z",
+  "task": "Phase 1 baseline: identity, existing Phase-18 timing evidence, reproduction, reachability, OpenSSH population reconciliation",
+  "modifications": "read-only reconnaissance plus probe reproduction; no file under src/, Cargo.toml or Cargo.lock was modified; nothing committed or pushed",
+  "identity": {
+    "commit": "0500fa9ef30865a929a3c75c6365ac110e475939",
+    "branch": "staging",
+    "worktree_dirty_tracked_files": 0,
+    "source_tree_digest": {
+      "rule": "forensics/tools/phase7_courts.py::_source_tree_digest: sha256 over sorted (relpath, size, sha256) of src/, Cargo.toml, Cargo.lock, build.rs, then atlas_common.content_hash (canonical JSON, sort_keys, separators ',' ':')",
+      "paths": [
+        "src",
+        "Cargo.toml",
+        "Cargo.lock",
+        "build.rs"
+      ],
+      "file_count": 888,
+      "sha256": "ca7d39b9bcfbe9827ded8b255a66980d32f16a9fbd15902f80dc1b921839d1c4"
+    },
+    "crate": {
+      "name": "openssl-rs",
+      "version": "0.0.49"
+    },
+    "install_artifacts": {
+      "libcrypto.so.3": {
+        "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+        "size": 16863992,
+        "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9"
+      },
+      "libssl.so.3": {
+        "path": "artifacts/phase2/install/lib/libssl.so.3",
+        "size": 16572968,
+        "sha256": "648f8caecda245d2186813fb67ceadedd798b9ce609c8b041a84f195946c5f68"
+      }
+    },
+    "toolchain": {
+      "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+      "rustc_llvm": "22.1.8",
+      "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+      "cc": "cc (Debian 12.2.0-14+deb12u1) 12.2.0 (gcc)",
+      "clang": "Debian clang version 14.0.6 (Target: x86_64-pc-linux-gnu)",
+      "linker": "GNU ld (GNU Binutils for Debian) 2.40",
+      "nm": "GNU nm (GNU Binutils for Debian) 2.40",
+      "readelf": "GNU readelf (GNU Binutils for Debian) 2.40",
+      "python": "Python 3.11.2",
+      "perl": "5.036000",
+      "target_triple": "x86_64-unknown-linux-gnu",
+      "source": "artifacts/phase2/install recorded toolchain and live `rustc -vV` / `clang --version` inside docker/openssl-rs-court.sh"
+    },
+    "os": {
+      "name": "CachyOS Linux",
+      "id": "cachyos",
+      "id_like": "arch",
+      "kernel": "Linux 7.3.4-1-cachyos",
+      "arch": "x86_64"
+    },
+    "cpu": {
+      "model": "13th Gen Intel(R) Core(TM) i9-13900K",
+      "family": 6,
+      "model_number": 183,
+      "stepping": 1,
+      "microcode": "0x137",
+      "logical_cpus": 30,
+      "threads_per_core": 1,
+      "l3_cache": "16 MiB"
+    },
+    "court": {
+      "name": "openssl-rs-court",
+      "image": "openssl-rs-court:1",
+      "running": true,
+      "memory_max_bytes": 17179869184,
+      "memory_reservation_bytes": 17179869184,
+      "memory_swap_bytes": 17179869184,
+      "nano_cpus": 8000000000,
+      "pids_limit": 2048,
+      "default_rlimit_data_kib": 4194304,
+      "rlimit_data_kib_used_for_probe": 8388608,
+      "memory_events_at_start": {
+        "oom": 0,
+        "oom_kill": 0
+      },
+      "host_free_g_before_heavy_commands": {
+        "total": 45,
+        "used": 13,
+        "available": 32
+      }
+    }
+  },
+  "analysis_tools": {
+    "present": {
+      "objdump": "/usr/bin/objdump (binutils 2.40)",
+      "readelf": "/usr/bin/readelf (binutils 2.40)",
+      "nm": "/usr/bin/nm (binutils 2.40)",
+      "clang": "/usr/bin/clang (14.0.6)",
+      "cc": "/usr/bin/cc (gcc 12.2.0)",
+      "ld": "/usr/bin/ld (binutils 2.40)"
+    },
+    "absent": [
+      "valgrind",
+      "perf",
+      "binsec",
+      "timecop",
+      "ctgrind",
+      "dudect"
+    ],
+    "vendored": "no vendored dudect, ctgrind, timecop or binsec tree found (`find . -iname '*dudect*' -o -iname '*ctgrind*' -o -iname '*timecop*' -o -iname '*binsec*'` returned nothing)",
+    "note": "absence is observed inside the court, not inferred; the probe requires only clang, which is present"
+  },
+  "existing_timing_evidence": {
+    "sources": {
+      "artifacts/phase18/COURTS.json": {
+        "sha256": "487ac096ccc16b2a2730046075ddad7a8a700903442e84a44e03face402e6f4b",
+        "note": "this is the live file and it matches the input hash recorded by forensics/phase18-obligations.json"
+      },
+      "forensics/phase18-obligations.json": {
+        "sha256": "ea80de501862a3d0770078eac792eaef37f6010825debc79c06b20cddf652850"
+      },
+      "docs/PHASE-18-HARDENING-SEAL.md": {
+        "sha256": "f4b14d197ec039f6b54907e7d3a7bc62b395a50ca1a6d89ec54f6663c68ee52a"
+      },
+      "courts/phase18/ct_primitives_probe.c": {
+        "sha256": "883c329e0f194b23a7b3ada26eed76287f246b4206d30bb540a59a4378428dcf",
+        "matches_recorded_input": true
+      },
+      "artifacts/phase18/probes/ct_primitives_probe.candidate": {
+        "sha256": "1623792e472fc83ac1e35f88905d88050b4582a7611184c84bcefff1d46edc2a",
+        "size": 31112,
+        "runpath": "/work/artifacts/phase2",
+        "needed": [
+          "libssl.so.3",
+          "libcrypto.so.3",
+          "libc.so.6"
+        ]
+      }
+    },
+    "measured_primitives_verbatim": [
+      {
+        "path": "bn-modexp",
+        "unit": "BN",
+        "class": "separated",
+        "what": "BN_mod_exp_mont_consttime over a fixed 255-bit prime, two 255-bit secret exponents of the same public length and different Hamming weight"
+      },
+      {
+        "path": "bn-inverse",
+        "unit": "BN",
+        "class": "separated",
+        "what": "BN_mod_inverse over a fixed 255-bit prime modulus, two fixed coprime secret operands"
+      },
+      {
+        "path": "rsa-private",
+        "unit": "RSA",
+        "class": "independent",
+        "what": "RSA_private_decrypt on a fixed ciphertext, two 1024-bit private keys whose CRT exponents differ in Hamming weight"
+      },
+      {
+        "path": "ec-scalar-mul",
+        "unit": "EC",
+        "class": "independent",
+        "what": "EC_POINT_mul on P-256 against the generator, two 256-bit secret scalars (the constant-time ladder path)"
+      },
+      {
+        "path": "aead-tag-memcmp",
+        "unit": "AEAD",
+        "class": "independent",
+        "what": "CRYPTO_memcmp over an aligned 4 KiB tag, mismatch at the first versus the last byte -- the comparison AES-GCM's finish and the Poly1305 check are built on"
+      },
+      {
+        "path": "tls-key-schedule-hkdf",
+        "unit": "TLS key schedule",
+        "class": "independent",
+        "what": "EVP_KDF HKDF extract+expand, the TLS 1.3 schedule's core, two 32-byte secret IKMs"
+      }
+    ],
+    "control_verbatim": {
+      "path": "control-branchy-tag",
+      "class": "separated",
+      "reference": "aead-tag-memcmp",
+      "reference_class": "independent",
+      "honest": true
+    },
+    "findings": [
+      "bn-modexp",
+      "bn-inverse"
+    ],
+    "method_verbatim": "candidate-only; each path is driven under two secret classes with a serialising timestamp counter, 320 samples per class after 32 warmups, and classified `separated` when the ratio of the two minimum batch times exceeds 150 percent. A ratio of minima is a bounded work-independence screen at that resolution, not a timing-attack claim and not a proof of constant-time behaviour.",
+    "recorded_parameters": {
+      "samples_per_class": 320,
+      "warmup": 32,
+      "threshold_percent_courts_json": 150,
+      "probe_source_SEP_PCT": 150,
+      "verdict": "pass",
+      "candidate_exit_code": 0,
+      "staged_candidate_binary": "artifacts/phase18/probes/ct_primitives_probe.candidate"
+    },
+    "measured_binary_and_optimization": {
+      "binary": "artifacts/phase18/probes/ct_primitives_probe.candidate",
+      "binary_sha256": "1623792e472fc83ac1e35f88905d88050b4582a7611184c84bcefff1d46edc2a",
+      "compiler": "clang",
+      "optimization": "-O1",
+      "compile_flags_verbatim": "clang -std=c11 -Wall -Wno-deprecated-declarations -Werror=implicit-function-declaration -O1 -D_GNU_SOURCE -I <candidate>/include -o <out> <probe>.c -L <candidate> -lssl -lcrypto -Wl,-rpath,<candidate>",
+      "candidate_side": "compiled once, candidate-only; no authority transcript exists for a secret-independence property"
+    },
+    "seal_stated_limitations_verbatim": [
+      "The constant-time screen has a 50 percent floor, and a pass is not constant-time achieved. `CT-PRIMITIVES` reports a path `separated` only when the ratio of the two minimum batch times exceeds 150 percent; a smaller secret dependence is reported `independent` and is outside its resolution. A passing `CT-PRIMITIVES` is the instrument's proven sensitivity plus a bounded screen at that resolution -- never a proof of constant-time behaviour, never a wall-clock claim and never an attack claim. The `bn-modexp`/`bn-inverse` findings read `NOT_CLAIMED`, not \"independent\".",
+      "A path below the screen's 50 percent floor reads `independent` and is outside its resolution.",
+      "The separation is expected rather than a surprise -- `src/bn/exp.rs` documents a square-and-multiply core -- and the court's job is to record it with a *proven-sensitive* instrument: the `control-branchy-tag` control is `separated` exactly where the real tag-memcmp path is `independent`. **This is an instrument result, not a constant-time claim**.",
+      "It is a bounded work-independence screen: it can only see a secret dependence that changes the executed work by more than the calibrated threshold on this host, and a path it does not drive it says nothing about. It is not a proof of constant-time behaviour."
+    ],
+    "documented_threshold_inconsistency": {
+      "probe_source_and_courts_json": "150 percent (SEP_PCT 150; COURTS.json method and threshold_percent)",
+      "seal_built_section": "110 percent (docs/PHASE-18-HARDENING-SEAL.md section 2: 'classifies `separated` when the ratio of the two minimum batch times exceeds 110 percent')",
+      "seal_non_claims_section": "headline says '50 percent floor' while the same paragraph says 'exceeds 150 percent'",
+      "courts_json_claim_field": "'a path is `separated` when the ratio of the two minima exceeds 50 percent'",
+      "authoritative_value": "the probe source and the generated court record agree on 150 percent; the 50/110 percent prose is inconsistent and is recorded, not resolved by inference"
+    },
+    "current_registry_drift_vs_seal": {
+      "seal_document_says": "five courts, all_pass true, summary pass 5 of 5, pending_courts empty; ledger owned 5, implemented 5, open_in_this_stratum 0",
+      "current_artifacts_phase18_COURTS_json": {
+        "all_pass": false,
+        "summary": {
+          "pass": 4,
+          "fail": 1,
+          "total": 5
+        },
+        "failing_court": "HOSTILE-BOUNDARY-REGISTER",
+        "failure_reason_count": 56,
+        "examples": [
+          "core module 'bn' grew unsafe_sites: 1170 -> 1357 (recorded bound 1170)",
+          "core module 'evp' grew unsafe_sites: 8029 -> 8798 (recorded bound 8029)",
+          "core module 'ssl' grew unsafe_sites: 3503 -> 4407 (recorded bound 3503)"
+        ],
+        "unsafe_footprint_measured_in_current_file": {
+          "unsafe_sites": 62824,
+          "extern_c_fns": 11013,
+          "core_unsafe_sites": 56239,
+          "boundary_unsafe_sites": 6585
+        },
+        "seal_document_unsafe_footprint": {
+          "unsafe_sites": 58826,
+          "extern_c_fns": 10866
+        }
+      },
+      "current_ledger": {
+        "owned": 5,
+        "implemented": 4,
+        "open_in_this_stratum": 1,
+        "hostile-boundary-register_state": "open"
+      },
+      "conclusion": "the seal document describes a historical state; the live Phase-18 artifacts are not internally consistent with it. CT-PRIMITIVES itself still passes, so the BN separation result is unaffected by the register failure."
+    }
+  },
+  "reproduction": {
+    "result": "reproduced",
+    "layout_drift": "the sealed runner compiled with include=artifacts/phase2 and libdir=artifacts/phase2 (`-L artifacts/phase2`, `-Wl,-rpath,artifacts/phase2`, LD_LIBRARY_PATH=artifacts/phase2). `artifacts/phase2/lib` no longer exists; the libraries are at artifacts/phase2/install/lib. The reproduction therefore used the current install prefix for -I/-L/rpath/LD_LIBRARY_PATH. All other flags, source, fixtures, geometry and environment names are unchanged.",
+    "compile_command": "OPENSSL_RS_COURT_DATA=8388608 bash docker/openssl-rs-court.sh exec sh -c 'mkdir -p /tmp/ctprobe && clang -std=c11 -Wall -Wno-deprecated-declarations -Werror=implicit-function-declaration -O1 -D_GNU_SOURCE -I /work/artifacts/phase2/install/include -o /tmp/ctprobe/ct_primitives_probe.candidate /work/courts/phase18/ct_primitives_probe.c -L /work/artifacts/phase2/install/lib -lssl -lcrypto -Wl,-rpath,/work/artifacts/phase2/install/lib'",
+    "compile_exit_code": 0,
+    "run_command_rebuilt": "OPENSSL_RS_COURT_DATA=8388608 bash docker/openssl-rs-court.sh exec sh -c 'cd /work && LD_LIBRARY_PATH=/work/artifacts/phase2/install/lib OPENSSL_MODULES=/work/artifacts/phase2/install/lib/ossl-modules OPENSSL_CONF=/dev/null CT_PRIMITIVES_DEBUG=1 timeout 900 /tmp/ctprobe/ct_primitives_probe.candidate'",
+    "run_command_staged_seal_binary": "OPENSSL_RS_COURT_DATA=8388608 bash docker/openssl-rs-court.sh exec sh -c 'cd /work && LD_LIBRARY_PATH=/work/artifacts/phase2/install/lib OPENSSL_MODULES=/work/artifacts/phase2/install/lib/ossl-modules OPENSSL_CONF=/dev/null CT_PRIMITIVES_DEBUG=1 timeout 900 /work/artifacts/phase18/probes/ct_primitives_probe.candidate'",
+    "exit_code": 0,
+    "fixtures": {
+      "rsa-ct-lo.pem": "703634a15e004ffbb8e0819369528ea8b6d8dd5b6914fe03b3d7ae68eff9baba",
+      "rsa-ct-hi.pem": "739a4d4e7d8c93cf42f1dd9b091bc9939c6d3659f598cbc13a3a43c2ef8495c0",
+      "directory": "courts/phase18/fixtures",
+      "resolution": "run with cwd=/work and no argv, so the probe's default /work/courts/phase18/fixtures applies"
+    },
+    "measured_numbers": {
+      "rebuilt_from_current_source_against_current_install": {
+        "bn-modexp": {
+          "min_cycles": 132948,
+          "max_cycles": 265844,
+          "ratio": 2.0,
+          "class": "separated"
+        },
+        "bn-inverse": {
+          "min_cycles": 1748,
+          "max_cycles": 8336,
+          "ratio": 4.769,
+          "class": "separated"
+        },
+        "rsa-private": {
+          "min_cycles": 4670350,
+          "max_cycles": 4821220,
+          "ratio": 1.032,
+          "class": "independent"
+        },
+        "ec-scalar-mul": {
+          "min_cycles": 3297088,
+          "max_cycles": 3388808,
+          "ratio": 1.028,
+          "class": "independent"
+        },
+        "aead-tag-memcmp": {
+          "min_cycles": 4604,
+          "max_cycles": 4624,
+          "ratio": 1.004,
+          "class": "independent"
+        },
+        "tls-key-schedule-hkdf": {
+          "min_cycles": 9228,
+          "max_cycles": 9232,
+          "ratio": 1.0,
+          "class": "independent"
+        },
+        "control-branchy-tag": {
+          "min_cycles": 70,
+          "max_cycles": 6593004,
+          "ratio": 94185.771,
+          "class": "separated"
+        }
+      },
+      "staged_seal_binary_against_current_install": {
+        "bn-modexp": {
+          "min_cycles": 133608,
+          "max_cycles": 266674,
+          "ratio": 1.996,
+          "class": "separated"
+        },
+        "bn-inverse": {
+          "min_cycles": 1736,
+          "max_cycles": 8306,
+          "ratio": 4.785,
+          "class": "separated"
+        },
+        "rsa-private": {
+          "min_cycles": 4676368,
+          "max_cycles": 4812098,
+          "ratio": 1.029,
+          "class": "independent"
+        },
+        "ec-scalar-mul": {
+          "min_cycles": 3316270,
+          "max_cycles": 3403308,
+          "ratio": 1.026,
+          "class": "independent"
+        },
+        "aead-tag-memcmp": {
+          "min_cycles": 4616,
+          "max_cycles": 4628,
+          "ratio": 1.003,
+          "class": "independent"
+        },
+        "tls-key-schedule-hkdf": {
+          "min_cycles": 9176,
+          "max_cycles": 9262,
+          "ratio": 1.009,
+          "class": "independent"
+        },
+        "control-branchy-tag": {
+          "min_cycles": 70,
+          "max_cycles": 6593288,
+          "ratio": 94189.829,
+          "class": "separated"
+        }
+      }
+    },
+    "separations_persist": true,
+    "verdict_comparison": {
+      "historical_classes": {
+        "bn-modexp": "separated",
+        "bn-inverse": "separated",
+        "rsa-private": "independent",
+        "ec-scalar-mul": "independent",
+        "aead-tag-memcmp": "independent",
+        "tls-key-schedule-hkdf": "independent",
+        "control-branchy-tag": "separated"
+      },
+      "reproduced_classes": "identical to the historical classes in both runs",
+      "threshold": 150
+    },
+    "debug_env_note": "CT_PRIMITIVES_DEBUG=1 was set to print the per-class minima and ratio to stderr; it is the probe's documented debug switch and does not alter the timed region or the classification."
+  },
+  "reachability": {
+    "question": "are BN_mod_exp_mont_consttime and BN_mod_inverse actually reachable from the ssh/sshd closures, or is that assumed?",
+    "receipts": {
+      "ssh": {
+        "path": "evidence/closure-ssh-b85c.json",
+        "sha256": "45e3b48d5d6ce1ea19a6cd5248a194922f1b572858f8d556c2361dde98b02402",
+        "candidate_libcrypto_sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+        "candidate_source_head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+        "artifact": "court/tmp/openssh-closure/client-b85/openssh-9.9p1/ssh",
+        "artifact_sha256": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b",
+        "reachable_functions_sha256": "73eb3362704e9ebf5fab09f545a817e6c1c5e6daaf857eec6d13b4cce78dad23",
+        "rows": [
+          {
+            "container": "graph.closure.reachable_functions",
+            "index": 2728,
+            "row": "libcrypto.so.3:0x2771f0:BN_mod_inverse"
+          },
+          {
+            "container": "graph.closure.reachable_functions",
+            "index": 7373,
+            "row": "libcrypto.so.3:0x536ff0:BN_mod_exp_mont_consttime"
+          }
+        ],
+        "defining_files_in_reachable_files": [
+          "src/bn/arith.rs (defines BN_mod_inverse at line 708)",
+          "src/bn/mont.rs (defines BN_mod_exp_mont_consttime at line 508)"
+        ]
+      },
+      "sshd": {
+        "path": "evidence/closure-sshd-b85c.json",
+        "sha256": "a3bd7376d9f906a46b93bea2c5feffd4a17f388fb81482d8ad09aa66ca9377e6",
+        "candidate_libcrypto_sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+        "candidate_source_head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+        "artifact": "court/tmp/openssh-closure/server-b85/openssh-9.9p1/sshd",
+        "artifact_sha256": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1",
+        "reachable_functions_sha256": "a90856947bc0857111e74089b13d59f9a9129faecf236a77d3b58b64158d0a36",
+        "rows": [
+          {
+            "container": "graph.closure.reachable_functions",
+            "index": 2721,
+            "row": "libcrypto.so.3:0x2771f0:BN_mod_inverse"
+          },
+          {
+            "container": "graph.closure.reachable_functions",
+            "index": 7339,
+            "row": "libcrypto.so.3:0x536ff0:BN_mod_exp_mont_consttime"
+          }
+        ],
+        "defining_files_in_reachable_files": [
+          "src/bn/arith.rs (defines BN_mod_inverse at line 708)",
+          "src/bn/mont.rs (defines BN_mod_exp_mont_consttime at line 508)"
+        ]
+      }
+    },
+    "imported_symbol_evidence": {
+      "ssh_BN_imports": [
+        "BN_CTX_free",
+        "BN_CTX_new",
+        "BN_bin2bn",
+        "BN_bn2bin",
+        "BN_clear_free",
+        "BN_cmp",
+        "BN_div",
+        "BN_dup",
+        "BN_free",
+        "BN_hex2bn",
+        "BN_is_bit_set",
+        "BN_is_negative",
+        "BN_new",
+        "BN_num_bits",
+        "BN_print_fp",
+        "BN_set_flags",
+        "BN_sub",
+        "BN_value_one"
+      ],
+      "sshd_BN_imports": [
+        "BN_CTX_free",
+        "BN_CTX_new",
+        "BN_bin2bn",
+        "BN_bn2bin",
+        "BN_clear_free",
+        "BN_cmp",
+        "BN_div",
+        "BN_dup",
+        "BN_new",
+        "BN_num_bits",
+        "BN_print_fp",
+        "BN_set_flags",
+        "BN_sub",
+        "BN_value_one"
+      ],
+      "neither_imports_BN_mod_exp_mont_consttime": true,
+      "neither_imports_BN_mod_inverse": true
+    },
+    "graph_semantics": {
+      "method": "function-level static graph over the exact candidate DSOs: nm-defined functions; objdump direct call edges; and an intraprocedural abstract interpreter that resolves indirect control transfers from relocations (GOT/PLT), immutable dispatch tables, relative jump tables, literal callback stores, field-offset stores in reachable code, and an interprocedural argument summary.",
+      "upper_bound_rule": "least fixed point of a monotone transfer function: direct edges + resolver per-site target sets +, for every unresolved site whose containing function is reachable, the class-independent evidence union; a class-specific set is precision reporting only and can never narrow the bound",
+      "direct_reachable_functions_count": 2565,
+      "upper_bound_reachable_functions_count": 8823,
+      "address_taken_functions": 6627,
+      "converged": true,
+      "closure_rounds": 2,
+      "observed_trace": {
+        "available": false,
+        "note": "no observed execution trace was supplied; the closure is the static upper bound alone"
+      },
+      "limits_verbatim": [
+        "the resolver is an over-approximation: an unresolved site is admitted at its evidence class, and every unclassified site is listed rather than silently dropped",
+        "the residual bound is class-independent and therefore monotone, but it is still a may-bound: a function that no materialised-address source names is not admitted, so monotonicity is not completeness",
+        "a dynamic trace proves execution, not unreachability, and never narrowed this graph",
+        "function-level reachability is not a proof that a site is safe; it bounds which obligations apply"
+      ]
+    },
+    "l7_consumer_execution": {
+      "receipt": "evidence/b85-l7-replay.json",
+      "sha256": "32960470219bd71e04a9bfab455efa70e82cce932b22313398f0bfcba2920837",
+      "workload": "w2_live_sshd_and_login.forced_algorithm_matrix",
+      "rows": [
+        {
+          "label": "dh-group14-sha256(bn)/ed25519/aes128-ctr",
+          "kex": "diffie-hellman-group14-sha256"
+        },
+        {
+          "label": "dh-group16-sha512(bn)",
+          "kex": "diffie-hellman-group16-sha512"
+        },
+        {
+          "label": "dh-group18-sha512(bn)",
+          "kex": "diffie-hellman-group18-sha512"
+        },
+        {
+          "label": "dh-gex-sha256(bn,moduli)",
+          "kex": "diffie-hellman-group-exchange-sha256"
+        }
+      ],
+      "residual_verbatim": "OpenSSH 9.9p1 omits finite-field DH from its default kex list; the probe re-enables group14/16/18 and gex explicitly, so those cases are not default 9.9p1 negotiation.",
+      "what_this_proves": "the consumer executed finite-field Diffie-Hellman at L7, which exercises BN modular exponentiation work at the consumer level",
+      "what_this_does_not_prove": "the receipt names kex algorithms, not BN_mod_exp_mont_consttime; it names no call to BN_mod_inverse at all"
+    },
+    "verdict": "BN_mod_exp_mont_consttime and BN_mod_inverse are established only as members of the conservative static upper-bound reachable set (the receipt rows above), and their defining files src/bn/mont.rs and src/bn/arith.rs are in graph.reachable_files. Neither is imported by ssh or sshd. No per-call-site witness or observed execution trace ties either symbol to a concrete ssh/sshd operation. L7 proves the consumer executed finite-field DH (BN exponentiation work) but does not name BN_mod_exp_mont_consttime and never names BN_mod_inverse. Therefore: 'actually reachable from a concrete operation' is NOT established for BN_mod_inverse, and is established only at consumer-work level (not symbol level) for BN_mod_exp_mont_consttime; treating either as actually reachable at symbol level is an assumption, not a receipt fact.",
+    "candidate_identity_mismatch": {
+      "b85c_receipts_libcrypto_sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+      "current_install_libcrypto_sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+      "equal": false,
+      "note": "the b85c closure and L7 receipts do not describe the current install; the current install is newer (crate 0.0.49 vs the b85c candidate)"
+    }
+  },
+  "openssh_population_reconciliation": {
+    "does_not_treat_results_as_interchangeable": true,
+    "populations": {
+      "closure_and_l7": {
+        "version": "9.9p1",
+        "url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.9p1.tar.gz",
+        "sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+        "recipe": "forensics/tools/build_openssh_closure.sh",
+        "recipe_sha256": "a046975a61b87be5dc1cf325cdaf823d69cfb6e1cc66927afeab48f64e8cb20c",
+        "what_it_executes": "fetch + sha256-verify tarball; ./configure --with-ssl-dir=<candidate> with LDFLAGS rpath; make -j; make install; prints ssh -V, ldd for ssh/sshd/ssh-keygen, sha256 for ssh/sshd/sshd-session. It runs no functional probe and no unit suite.",
+        "artifacts_bound": [
+          "evidence/closure-ssh-b85c.json (artifact .../client-b85/openssh-9.9p1/ssh)",
+          "evidence/closure-sshd-b85c.json (artifact .../server-b85/openssh-9.9p1/sshd)",
+          "evidence/b85-l7-replay.json (same 9.9p1 tree paths)"
+        ]
+      },
+      "phase17_downstream_court": {
+        "version": "10.5p1",
+        "url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.5p1.tar.gz",
+        "sha256": "d44d28a839ea9daf969cc69150fde59910b2b39361dad81a3bd6cbd19218db11",
+        "files": {
+          "build.sh": {
+            "sha256": "223ceff528a47a0c733e296c92398ca32f834db0d95600c45cd2f4c64801b5e4",
+            "what_it_executes": "fetch + sha256-verify; ./configure with the same --with-ssl-dir and rpath flags; make -j; make install; requires sbin/sshd and libexec/sshd-session; prints ssh -V and ldd for ssh/sshd/ssh-keygen/ssh-agent/ssh-add"
+          },
+          "probe.sh": {
+            "sha256": "decfab60aafeac1e89ab436506af3174bae906151a159e8beb3b27db3fe91a52",
+            "what_it_executes": "ssh-keygen RSA/ECDSA/Ed25519 host and user keys and fingerprints; sshd -t; live sshd + ssh login; forced kex/cipher/MAC/host-key matrix including DH group14/16/18/gex; ssh-keygen -Y sign/verify for RSA/ECDSA/Ed25519; ssh-agent login; 16 concurrent logins; sshd log scan. Always exits 0 and prints a pass/fail summary."
+          },
+          "regress_unit.sh": {
+            "sha256": "692741d6ef19bd383433b9d56f5ae0445168a158625c7e60c17de216cd8e3b68",
+            "what_it_executes": "13 OpenSSH unit-test binaries one by one: sshbuf sshkey kex hostkeys crypto sshsig authopt bitmap conversion match misc servconf utf8"
+          },
+          "result.json": {
+            "sha256": "842f19ceb046df7b2063d111a66912c2b8ec1c1375b61336ddfc0965dc50b5e7",
+            "version": "10.5p1",
+            "candidate": "0.0.46",
+            "functional_evidence": [
+              "probe SUMMARY: 31 pass, 0 fail",
+              "regress unit 12 pass, 1 fail",
+              "concurrent_logins=16/16"
+            ],
+            "known_residual": "regress/unittests/utf8 aborts on both candidate and authority because the court image lacks en_US.UTF-8"
+          }
+        }
+      }
+    },
+    "disagreements": [
+      "Different upstream versions: 9.9p1 (closure/L7) vs 10.5p1 (Phase-17 downstream court).",
+      "Different executed populations: the closure recipe only builds and prints version/ldd/digests; probe.sh and regress_unit.sh run the functional matrix, the unit suite and concurrency, and only under 10.5p1.",
+      "Different candidate identities: the Phase-17 result.json records candidate 0.0.46; the b85c closures record source 17042ccf2 and libcrypto 06b5f338; the current install is crate 0.0.49 and libcrypto fd25cc9e.",
+      "The 10.5p1 probe re-enables finite-field DH because OpenSSH's default kex list omits it; the 9.9p1 L7 replay records the same residual. The DH rows therefore come from non-default negotiation in both populations, but at different versions.",
+      "No receipt reconciles the 9.9p1 and 10.5p1 populations; their PASS results are not interchangeable and neither is evidence about the 10.5p1 build's behaviour under the other harness."
+    ]
+  },
+  "not_run": [
+    "valgrind (tool absent)",
+    "perf (tool absent)",
+    "binsec (tool absent)",
+    "timecop (tool absent)",
+    "ctgrind (tool absent)",
+    "dudect (tool absent, not vendored)",
+    "ASan/Miri/TSan/UBSan/MSan for this batch",
+    "full Phase-18 court suite (RT-HOSTILE-TLS, RT-HOSTILE-X509, RT-MEM-HARDENING, HOSTILE-BOUNDARY-REGISTER) regeneration",
+    "OpenSSH 9.9p1 and 10.5p1 rebuilds in this batch",
+    "any functional/unit replay of either OpenSSH population",
+    "call-path witness extraction for BN_mod_exp_mont_consttime or BN_mod_inverse",
+    "measurement of the authority against the same CT probe (no authority transcript exists for this property)"
+  ],
+  "non_claims": [
+    "Not a constant-time claim. A `separated` or `independent` class is the result of a bounded work-independence screen at a 150 percent ratio-of-minima threshold on this host, not a proof of constant-time behaviour and not a wall-clock or attack claim.",
+    "Not evidence about secret dependence below the screen's resolution.",
+    "Not a parity claim: the CT probe is candidate-only and has no authority transcript.",
+    "Not a memory-safety claim: the reproduction ran no sanitizer and no Miri.",
+    "Not a statement about the b85c candidate: the reproduction measured the current install (libcrypto fd25cc9e), while the b85c receipts name libcrypto 06b5f338.",
+    "Not a claim that BN_mod_exp_mont_consttime or BN_mod_inverse are actually executed by a concrete ssh/sshd operation: only static upper-bound membership and consumer-level DH execution are evidenced.",
+    "Not a reconciliation of the 9.9p1 and 10.5p1 OpenSSH populations; their results are recorded separately and are not interchangeable.",
+    "Not a resolution of the 50/110/150 percent prose inconsistency in the Phase-18 seal; the probe source and COURTS.json agree on 150 percent and that is what was run.",
+    "Not a claim that the live Phase-18 registry passes: it currently reports all_pass false (4 pass, 1 fail, HOSTILE-BOUNDARY-REGISTER unsafe-footprint growth).",
+    "No value in this file is inferred or invented; unobserved fields are recorded as absent/not_run."
+  ]
+}
