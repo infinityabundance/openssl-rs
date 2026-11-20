@@ -1,0 +1,107 @@
+{
+  "schema": "openssl-rs/campaign/safe-c33/element7-repair/v1",
+  "receipt": "element7-curl-049-local-copies",
+  "consumer": "curl",
+  "source_identity": {
+    "repository_head_start": "377e66a85048526a509ad50589451cf14d8ae4fe",
+    "worktree": "no commit; forensics/tools/consumer_closure.py modified only",
+    "install_libssl_so_3_sha256": "648f8caecda245d2186813fb67ceadedd798b9ce609c8b041a84f195946c5f68",
+    "install_libcrypto_so_3_sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+    "disassembly": "court/tmp/e7pe-selftest-work/libssl.so.3.648f8caecda245d2.dis"
+  },
+  "scope": {
+    "sites": 35,
+    "arithmetic": "modes 21 (mod.rs 14 + wrap.rs 7) + engine 4 + store 3 + http 4 + p12 3 = 35. The brief's 21 + 15 does not exist in element7-curl-049-triage.json; those four files hold 14 sites, not 15.",
+    "files": ["src/modes/mod.rs", "src/modes/wrap.rs", "src/engine/eng_fat.rs",
+              "src/store/store_lib.rs", "src/http/http_client.rs",
+              "src/pkcs12/p12_crt.rs"]
+  },
+  "new_gates": {
+    "E7-LCP": {
+      "class": "local-copy-parameter-set",
+      "resolution_kind": "local_copy_parameter_set",
+      "shape": "private local copy; the operand is its own callback parameter; the target set is the finite union of every in-image call-site value",
+      "caller_enumeration": ["direct call", "call/jmp *GOT-slot (R_X86_64_RELATIVE to the same copy)", "lea <fn> whose register is called in the same function"],
+      "refusals": ["local-not-private", "parameter-slot-not-unique",
+                   "operand-is-not-the-declared-parameter",
+                   "declared-parameter-is-not-a-callback",
+                   "slot-not-null-guarded", "caller-set-not-closed",
+                   "caller-supplies-an-object-field",
+                   "caller-value-escapes-into-an-object-field"],
+      "soundness_fix": "an address reference not consumed by a call the scan can see (lea stored away, or a relocation slot nothing calls through) refuses; this withdrew the earlier CRYPTO_128_wrap_pad result"
+    },
+    "E7-LEW": {
+      "class": "local-copy-empty-writer-slot",
+      "resolution_kind": "local_copy_empty_writer",
+      "shape": "NULL-guarded field load whose only non-NULL writer has no reference of any kind in the image; the field is NULL for every object the image constructs",
+      "conjuncts": ["field declared in the type", "field offset bound to the installer's single compiled store",
+                    "source writer set = constructor(None) + clearer(s) + copier(s) + one installer(its parameter)",
+                    "no writer outside the enumerated set anywhere in src/ outside #[cfg(test)]",
+                    "installer: no direct caller, no GOT slot, no code materialisation, no data slot, no dlsym literal, no admitted import, no production source caller",
+                    "no constructor/registry/setter of the type is exported by this DSO",
+                    "NULL guard dominates the call"],
+      "refusals": ["installer-has-a-reference-in-this-image",
+                   "installer-has-a-source-caller",
+                   "installer-imported-by-workload",
+                   "field-has-a-writer-outside-the-enumerated-set",
+                   "slot-is-not-the-declared-field", "slot-not-null-guarded",
+                   "exported-entry-point-can-populate-the-slot"]
+    }
+  },
+  "results": {
+    "bound": 9,
+    "refused": 26,
+    "by_family": {
+      "modes.exports": {"sites": 14, "bound": 0, "refused": 14,
+                        "reason": "caller-supplies-an-object-field"},
+      "modes.wrap": {"sites": 7, "bound": 0, "refused": 7,
+                     "reason": "caller-value-escapes-into-an-object-field"},
+      "engine": {"sites": 4, "bound": 4, "refused": 0,
+                 "targets": "empty", "fields": ["ciphers", "digests", "pkey_meths", "pkey_asn1_meths"]},
+      "store": {"sites": 3, "bound": 3, "refused": 0, "targets": "empty",
+                "fields": ["open", "closefn", "open_ex"]},
+      "p12": {"sites": 3, "bound": 2, "refused": 1, "targets": "empty",
+              "refusal": "slot-not-null-guarded (0x2686e8, frame-slot operand)"},
+      "http": {"sites": 4, "bound": 0, "refused": 4,
+               "reason": "installer-has-a-source-caller (http_client.rs:2362)"}
+    },
+    "resolved_sites": ["libssl 0x42c297", "libssl 0x42c2d8", "libssl 0x42c3fa",
+                       "libssl 0x42c43b", "libssl 0x329358", "libssl 0x32944d",
+                       "libssl 0x3298c3", "libssl 0x268526", "libssl 0x268b2c"]
+  },
+  "controls": {
+    "E7LCP": ["e7lcp-export-function", "e7lcp-address-taken",
+              "e7lcp-no-null-guard", "e7lcp-open-caller",
+              "e7lcp-forwarded-open", "e7lcp-new-target"],
+    "E7LEW": ["e7lew-installer-reachable", "e7lew-installer-addressed",
+              "e7lew-second-writer", "e7lew-wrong-offset",
+              "e7lew-no-guard", "e7lew-entry-point-exported"],
+    "fixture_refusals": ["a stored-away lea", "an escaping forwarding caller",
+                         "an exported copy", "an unguarded Option parameter",
+                         "an address-taken installer", "a foreign field writer",
+                         "a wrong installer store offset",
+                         "an exported registry constructor", "an unguarded slot"],
+    "sensitivity": "the target set changes when a caller supplies a new in-image function start (e7lcp-new-target); every writer/reference mutation flips the corresponding refusal",
+    "self_test": "rc=0, 'self-test ok', no FAIL, no new PREMISE_UNAVAILABLE"
+  },
+  "validation": {
+    "self_test": "exit 0 (court/tmp/closedset/selftest.log)",
+    "targeted_re_resolution": "libssl DsoGraph + PrecisionResolver; 35 sites seeded; apply_evidence_classes with curl's admitted imports; 9 resolved / 26 refused (court/tmp/closedset/reresolve.json)",
+    "full_closure_run": "NOT_RUN",
+    "src_changes": "none"
+  },
+  "does_not_cover": [
+    "an interposer rewriting a GOT slot at run time",
+    "a caller in another DSO (the copies are local and unexported, so none can name them)",
+    "an object of the dispatcher's type constructed outside the image and handed in (no such constructor/registry entry point is exported by this DSO)",
+    "composing the cipher-context `block` field's provider hw-table writer set with the call-site values (the S5 mechanism); this is why the 14 exported-name copies refuse"
+  ],
+  "status": {
+    "element_7": "FAIL — 9 of this batch's 35 sites leave the queue; the rest stay refused by name",
+    "safe_compatible_curl": "NOT ESTABLISHED"
+  },
+  "non_claims": [
+    "A targeted re-resolution is not a closure run and does not by itself move element-7.",
+    "No consumer graduates and no obligation is discharged by this receipt."
+  ]
+}

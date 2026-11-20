@@ -23954,6 +23954,1187 @@ def private_parameter_assignment_witness(g: "DsoGraph", site: dict,
     }
 
 
+# ---- E7-LCP: a local copy's callback-parameter target set --------------- #
+#
+# `CRYPTO_cfb128_encrypt` and its siblings are *local copies*: this image
+# carries a `t` (local) definition and no `.dynsym` definition of the name.
+# Nothing outside the image can name them -- the exported surface does not
+# define the name, the admitted workload does not import it, and `dlsym`
+# cannot resolve a local symbol.  Their callback parameter is therefore
+# supplied only by in-image call sites, and the target set is the finite union
+# of the values those sites pass.  The same shape covers `wrap128` (a private
+# Rust function) and `PKCS12_create_ex2`'s passphrase-callback parameter.
+#
+# The caller set is the union of three reference forms, each enumerated from
+# the instruction stream:
+#
+#   * a direct `call <fn>`;
+#   * `call`/`jmp` `*<slot>` where `<slot>` carries an `R_X86_64_RELATIVE`
+#     relocation to `<fn>` (a GOT-mediated intra-image call, which binds to
+#     exactly that address and is not interposable);
+#   * a `lea <fn>` in code whose register is consumed by exactly one indirect
+#     `call`/`jmp` in the same function (the materialised-address form).
+#
+# Every call site's argument is resolved.  A caller that forwards its own
+# parameter is followed transitively; a caller with no reference of any kind
+# at all is unreachable and contributes no value; a caller that passes an
+# in-image function start contributes that start; anything else -- a computed
+# value, a cipher-context field, a frame slot the caller did not store in the
+# call's own block -- is a named refusal.  No refusal widens a target set.
+
+E7LCP_SCHEMA = (
+    "openssl-rs/consumer-closure/local-copy-parameter-set/v1")
+E7LCP_CLASS = "local-copy-parameter-set"
+E7LCP_RESOLUTION_KIND = "local_copy_parameter_set"
+# (function leaf, call-site offset) -> declared parameter index.  The pin is
+# what selects a site; every conjunct is re-derived at the called function.
+E7LCP_SITES = {
+    ("CRYPTO_cfb128_encrypt", 0x139): 7,
+    ("CRYPTO_cfb128_encrypt", 0x2AD): 7,
+    ("CRYPTO_cfb128_encrypt", 0x309): 7,
+    ("CRYPTO_cfb128_encrypt", 0x4AD): 7,
+    ("CRYPTO_ofb128_encrypt", 0x9B): 6,
+    ("CRYPTO_ofb128_encrypt", 0x1BB): 6,
+    ("CRYPTO_ofb128_encrypt", 0x2E8): 6,
+    ("CRYPTO_cbc128_encrypt", 0x131): 5,
+    ("CRYPTO_cbc128_encrypt", 0x29D): 5,
+    ("CRYPTO_ctr128_encrypt", 0xC9): 7,
+    ("CRYPTO_ctr128_encrypt", 0x2C9): 7,
+    ("CRYPTO_ctr128_encrypt_ctr32", 0xD4): 7,
+    ("CRYPTO_ctr128_encrypt_ctr32", 0x1DA): 7,
+    ("CRYPTO_cfb128_1_encrypt", 0x70): 7,
+    ("wrap128", 0xB9): 5,
+    ("wrap128", 0x14A): 5,
+    ("wrap128", 0x1DA): 5,
+    ("wrap128", 0x26A): 5,
+    ("wrap128", 0x2FA): 5,
+    ("wrap128", 0x38A): 5,
+    ("CRYPTO_128_wrap_pad", 0xA6): 5,
+    ("PKCS12_create_ex2", 0x226): 12,
+    ("PKCS12_create_ex2", 0x3E8): 12,
+    ("PKCS12_create_ex2", 0x82C): 12,
+}
+E7LCP_MUTATIONS = (
+    "e7lcp-export-function",
+    "e7lcp-address-taken",
+    "e7lcp-no-null-guard",
+    "e7lcp-new-target",
+    "e7lcp-open-caller",
+    "e7lcp-forwarded-open",
+)
+E7LCP_LIMITS = (
+    {
+        "id": "caller-set-is-the-image",
+        "detail": (
+            "the caller set is the three in-image reference forms; an "
+            "interposer that rewrites a GOT slot, or a caller in another "
+            "DSO, is outside it.  The function is local and unexported, so "
+            "no other DSO can name it, and the RELATIVE slot binds to this "
+            "copy"),
+    },
+    {
+        "id": "admitted-closure-import-account",
+        "detail": (
+            "the no-import arm is a claim about the admitted workload's "
+            "import set; a different consumer importing the exported twin "
+            "reads a different function in a different module"),
+    },
+    {
+        "id": "candidate-bound-offsets",
+        "detail": (
+            "sites are selected by this candidate's (leaf, offset) pins and "
+            "must be re-derived at every re-freeze"),
+    },
+)
+
+
+def _e7lcp_refusal(reason, name, site, **extra):
+    rec = {"schema": E7LCP_SCHEMA, "class": E7LCP_CLASS,
+           "resolution_kind": E7LCP_RESOLUTION_KIND,
+           "contract_bounded": False, "resolved": False,
+           "refusal": reason, "function": name,
+           "call_site": hex(site.get("addr", 0))}
+    rec.update(extra)
+    return rec
+
+
+def _e7lcp_selected(site: dict, name: str):
+    """The declared parameter index for this exact pinned site, or None."""
+    if site.get("kind") not in ("call", "jmp"):
+        return None
+    fstart = site.get("func")
+    if fstart is None or site.get("addr") is None:
+        return None
+    leaf = _external_function_leaf(name)
+    return E7LCP_SITES.get((leaf, site["addr"] - fstart))
+
+
+def _e7lcp_callers(g, target, cache):
+    """Every in-image call site of ``target``, and every unaccounted escape.
+
+    Returns ``(rows, escapes)``.  A reference that is not consumed by a call
+    this scan can see -- a ``lea`` whose value is stored somewhere, or a
+    relocation slot nothing calls through -- means the call set may miss an
+    indirect dispatch, so it is an escape and refuses.
+    """
+    if target in cache:
+        return cache[target]
+    out = []
+    seen = set()
+
+    def _add(caller, idx, addr, via, extra=None):
+        key = (caller, addr)
+        if key in seen:
+            return
+        seen.add(key)
+        row = {"caller": caller, "index": idx, "call_site": addr, "via": via}
+        if extra:
+            row.update(extra)
+        out.append(row)
+
+    for caller, idx, addr in _callers_of(g, target):
+        _add(caller, idx, addr, "direct")
+
+    slots = {slot for slot, values in (getattr(g, "slot_funcs", {}) or {}).items()
+             if target in values}
+    called_slots, lea_sites, materialised = set(), {}, []
+    for fstart, insns in g.precision.insns_by_func.items():
+        for i, (addr, text) in enumerate(insns):
+            mn, rest, ops = _insn_parts(text)
+            comments = [int(m.group(1), 16)
+                        for m in re.finditer(r"#\s*([0-9a-f]+)\s+<", text)]
+            if (mn in ("call", "jmp") and rest.startswith("*")
+                    and any(c in slots for c in comments)):
+                slot = next(c for c in comments if c in slots)
+                called_slots.add(slot)
+                _add(fstart, i, addr, "got-slot", {"slot": hex(slot)})
+                continue
+            if mn != "lea" or not ops:
+                continue
+            if not any(c == target for c in comments):
+                continue
+            lea_sites[(fstart, i)] = hex(addr)
+            dst = ops[-1]
+            if dst not in _REGS:
+                continue
+            reg = _canon(dst)
+            for k in range(i + 1, len(insns)):
+                kmn, krest, _kops = _insn_parts(insns[k][1])
+                if kmn in ("call", "jmp") and krest.strip() == "*" + reg:
+                    if _reaching_defs(g, fstart, k, reg) == {i}:
+                        _add(fstart, k, insns[k][0], "materialised",
+                             {"lea": hex(addr)})
+                        materialised.append((fstart, i))
+                if reg in _defined_regs_at(insns[k][1]):
+                    break
+    escapes = []
+    for key, lea in lea_sites.items():
+        if key not in materialised:
+            escapes.append({"form": "code-materialised", "function":
+                            g.funcs.get(key[0]), "instruction": lea})
+    for slot in sorted(slots - called_slots):
+        escapes.append({"form": "relocation-slot", "slot": hex(slot)})
+    result = (out, escapes)
+    cache[target] = result
+    return result
+
+
+def _e7lcp_referenced(g, target) -> bool:
+    """True when anything in this image references the function at all."""
+    if target in getattr(g, "taken_code", set()):
+        return True
+    if target in getattr(g, "taken_data", set()):
+        return True
+    if _callers_of(g, target):
+        return True
+    for slot, values in (getattr(g, "slot_funcs", {}) or {}).items():
+        if target in values:
+            return True
+    return False
+
+
+def _e7lcp_arg_store(g, caller, ci, k):
+    """``(store_index, source, via, slot)`` for argument ``k`` at a call.
+
+    The precise entry-relative walk is tried first.  When the caller's rsp
+    delta is not decidable, the literal form is used: at the call instruction
+    argument ``k >= 6`` is at ``[rsp + 8*(k-6)]`` by the ABI, so a store with
+    that exact rsp displacement in the call's own block, with no rsp change in
+    between, defines it.  A push/pop or any rsp write in between refuses.
+    """
+    store, reason, detail = _e7pk12_arg_store(g, caller, ci, k)
+    if store is not None:
+        return store, None, None
+    if k < 6:
+        return None, reason, detail
+    off = 8 * (k - 6)
+    insns = g.precision.insns_by_func.get(caller, ())
+    cfg = _function_cfg(g, caller)
+    bi = cfg["block_of"].get(ci)
+    if bi is None:
+        return None, "caller-set-not-closed", {
+            "why": "the call is not in a decoded block"}
+    lo = cfg["blocks"][bi][0]
+    pat = re.compile(r"(-?0x[0-9a-f]+)?\(%rsp\)")
+    for i in range(ci - 1, lo - 1, -1):
+        mn, _rest, ops = _insn_parts(insns[i][1])
+        if not ops:
+            continue
+        if (mn in ("push", "pop")
+                or (len(ops) >= 1 and ops[-1] in ("%rsp", "%esp"))
+                or (mn == "lea" and ops[0] == "%rsp")):
+            return None, "caller-set-not-closed", {
+                "why": "an rsp change lies between the argument store and "
+                       "the call"}
+        m = pat.fullmatch(ops[-1])
+        if m is None:
+            continue
+        slot = int(m.group(1), 16) if m.group(1) else 0
+        if slot == off:
+            return (i, ops[0], "store-literal", off), None, None
+    return None, "caller-set-not-closed", {
+        "why": "no store in the call's basic block defines the argument slot"}
+
+
+_E7LCP_VECTOR_ZERO = ("xorps", "xorpd", "pxor", "vxorps", "vxorpd",
+                      "vpxor", "vpxord", "vpxorq")
+
+
+def _e7lcp_guard(g, fstart, site_idx, reg):
+    """A NULL test on ``reg`` whose zero edge cannot reach the call.
+
+    The test must dominate the call block.  The register's reaching
+    definitions at the test and at the call must be the *same* non-empty set,
+    so the guard tests exactly the value the call consumes; an entry parameter,
+    a unique copy and a merge of copies are all admitted, a redefinition
+    between the test and the call is not.
+    """
+    cfg = _function_cfg(g, fstart)
+    insns = cfg["insns"]
+    cb = cfg["block_of"].get(site_idx)
+    if cb is None:
+        return None
+    idx_of = {a: i for i, (a, _t) in enumerate(insns)}
+    reg = _canon(reg)
+    call_defs = _reaching_defs(g, fstart, site_idx, reg)
+    if not call_defs:
+        return None
+    for gb, (lo, hi) in enumerate(cfg["blocks"]):
+        if hi - lo < 2:
+            continue
+        k = hi - 2
+        mn, _rest, ops = _insn_parts(insns[k][1].split("#", 1)[0].strip())
+        if mn == "test":
+            if not (len(ops) == 2 and _canon(ops[0]) == reg
+                    and _canon(ops[1]) == reg):
+                continue
+        elif mn == "cmp":
+            if not (len(ops) == 2 and ops[0].strip() in ("$0x0", "$0")
+                    and _canon(ops[1]) == reg):
+                continue
+        else:
+            continue
+        bmn, brest, _bops = _insn_parts(
+            insns[k + 1][1].split("#", 1)[0].strip())
+        if bmn not in ("je", "jz", "jne", "jnz"):
+            continue
+        m = re.match(r"^([0-9a-f]+)", brest)
+        if not m:
+            continue
+        tb = cfg["block_of"].get(idx_of.get(int(m.group(1), 16)))
+        ft = cfg["block_of"].get(hi)
+        if tb is None or ft is None:
+            continue
+        if bmn in ("je", "jz"):
+            zero_edge, nonzero_edge = tb, ft
+        else:
+            zero_edge, nonzero_edge = ft, tb
+        if not _e7pk12_dominates(cfg, gb, cb):
+            continue
+        if _reaching_defs(g, fstart, k, reg) != call_defs:
+            continue
+        if k >= site_idx:
+            continue
+        if not _e7pk12_block_reachable(cfg, nonzero_edge, cb):
+            continue
+        # Every path from the zero edge back to the call must pass through the
+        # guard block again (a loop re-test) -- otherwise the call can be
+        # reached with the tested-zero value.
+        if _e7pk12_block_reachable(cfg, zero_edge, cb, blocked={gb}):
+            continue
+        return {
+            "register": reg,
+            "test": hex(insns[k][0]),
+            "text": insns[k][1].strip(),
+            "branch": hex(insns[k + 1][0]),
+            "branch_text": insns[k + 1][1].strip(),
+            "zero_edge": zero_edge,
+            "nonzero_edge": nonzero_edge,
+            "call_block": cb,
+            "provenance": (
+                "the guard block dominates the call block; the zero edge does "
+                "not reach it and the non-zero edge does; the reaching "
+                "definition set at the guard equals the one at the call"),
+        }
+    return None
+
+
+def _e7lcp_source_declaration(g, leaf, index):
+    """The declared parameter ``index`` of the source function ``leaf``."""
+    for rel, text in _s1_docs(g).items():
+        for m in re.finditer(r"\bfn\s+" + re.escape(leaf) + r"\s*\(", text):
+            start = text.find("(", m.end() - 1)
+            depth, end = 0, None
+            for off in range(start, len(text)):
+                ch = text[off]
+                if ch == "(":
+                    depth += 1
+                elif ch == ")":
+                    depth -= 1
+                    if depth == 0:
+                        end = off + 1
+                        break
+            if end is None:
+                continue
+            params = _e7pk12_split_params(
+                _e7pk12_strip_comments(text[start + 1:end - 1]))
+            if index >= len(params):
+                continue
+            p = params[index]
+            nm = re.match(r"\s*([A-Za-z_]\w*)\s*:\s*(.*)$", p, re.S)
+            if nm is None:
+                continue
+            tname = " ".join(nm.group(2).split())
+            inner = (tname[len("Option<"):-1].strip()
+                     if tname.startswith("Option<") else tname)
+            alias = None
+            for _rel, _text in _s1_docs(g).items():
+                alias = _e7bs_type_alias_in_file(_text, inner)
+                if alias is not None:
+                    break
+            return {"file": rel, "line": text.count("\n", 0, m.start()) + 1,
+                    "parameter_count": len(params), "name": nm.group(1),
+                    "type": tname, "alias": alias,
+                    "is_option": ("Option<" in tname
+                                  or bool(alias and "Option<" in alias))}
+    return None
+
+
+def _e7lcp_type_is_callback(g, type_text):
+    """True when the declared parameter type is a function pointer."""
+    t = type_text or ""
+    if "fn" in t:
+        return True
+    inner = t[len("Option<"):-1].strip() if t.startswith("Option<") else t
+    for rel, text in _s1_docs(g).items():
+        alias = _e7bs_type_alias_in_file(text, inner)
+        if alias is not None and "fn" in alias:
+            return True
+    return False
+
+
+def _e7lcp_vector_zero(g, caller, idx, src):
+    """True when ``src`` is a proven-zero vector register, False otherwise.
+
+    ``None`` means ``src`` is not a vector register.  The register model tracks
+    the general-purpose set only, so the vector register is followed by a
+    block-local backward scan: the first writer in the call's own block must be
+    a zeroing idiom of that same register, and a call clobbers it.
+    """
+    if not re.fullmatch(r"%[xy]mm[0-9]+", src or ""):
+        return None
+    cfg = _function_cfg(g, caller)
+    bi = cfg["block_of"].get(idx)
+    if bi is None:
+        return False
+    lo = cfg["blocks"][bi][0]
+    for i in range(idx - 1, lo - 1, -1):
+        mn, _rest, ops = _insn_parts(_insn(g, caller, i).split("#", 1)[0].strip())
+        if not ops:
+            continue
+        if mn.startswith("call"):
+            return False
+        if ops[-1].strip() != src:
+            continue
+        return (mn in _E7LCP_VECTOR_ZERO and len(ops) == 2
+                and ops[0].strip() == ops[1].strip() == src)
+    return False
+
+
+def _e7lcp_arg_value(g, caller, idx, src):
+    """``(kind, value, detail)`` for one argument source."""
+    zero = _e7lcp_vector_zero(g, caller, idx, src)
+    if zero is True:
+        return "none", None, {"source": src,
+                               "why": "a zeroed vector register"}
+    if zero is False:
+        return "caller-argument-is-computed", None, {
+            "source": src,
+            "why": "the vector argument register is not a proven zero"}
+    if src.strip() in _REGS:
+        # A register copy or frame spill of the caller's own parameter is a
+        # forwarding step, never a value: follow it before deciding.
+        chain = _param_chain(g, caller, idx, src.strip())
+        if chain is not None and chain.get("kind") == "param":
+            return ("caller-forwards-its-own-parameter", None,
+                    {"source": src, "parameter_index": chain["index"],
+                     "provenance": chain.get("provenance")})
+    return _e7pk12_argument_value(g, caller, idx, src)
+
+
+def _e7lcp_classify_open(open_paths):
+    """Name the refusal by the one shape every open path shares."""
+    kinds, why = set(), []
+    for p in open_paths:
+        reason = p.get("why")
+        if reason == "referenced but has no call site":
+            kinds.add("escape")
+        elif reason in ("caller-argument-is-computed",
+                        "the stored value is not a link-time function address"):
+            detail = (p.get("definition") or {}).get("why") or reason
+            if detail == "the stored value is not a link-time function address":
+                kinds.add("field")
+            else:
+                kinds.add("computed")
+        elif reason == "caller-set-not-closed":
+            kinds.add("slot")
+        else:
+            kinds.add("other")
+        why.append(reason)
+    if kinds == {"field"}:
+        return "caller-supplies-an-object-field"
+    if kinds == {"escape"}:
+        return "caller-value-escapes-into-an-object-field"
+    if "escape" in kinds:
+        return "caller-value-escapes-into-an-object-field"
+    if "field" in kinds:
+        return "caller-supplies-an-object-field"
+    return "caller-set-not-closed"
+
+
+def local_copy_parameter_set_witness(g: "DsoGraph", site: dict, name: str,
+                                     workload_imports=None):
+    """Resolve a pinned local copy's callback parameter to its finite set.
+
+    Returns None outside the pins, a named refusal when a conjunct fails, or a
+    resolved witness whose ``targets`` are the finite in-image call-site
+    values.  A caller that forwards its own parameter is followed; a caller
+    with no reference at all is unreachable and contributes nothing.
+    """
+    if not _has_insns(g) or site.get("kind") not in ("call", "jmp"):
+        return None
+    declared = _e7lcp_selected(site, name)
+    if declared is None:
+        return None
+    return _e7lcp_witness(g, site, name, declared)
+
+
+def _e7lcp_witness(g: "DsoGraph", site: dict, name: str, declared: int):
+    """The gate body; ``declared`` is the parameter index for this site."""
+    fstart = site.get("func")
+    insns = g.precision.insns_by_func.get(fstart, ())
+    idx = next((i for i, (a, _t) in enumerate(insns)
+                if a == site.get("addr")), None)
+    if idx is None:
+        return None
+    opnd = _site_operand(site)
+
+    def _refuse(reason, **extra):
+        return _e7lcp_refusal(reason, name, site, **extra)
+
+    facts = _e7pk12_private_function(g, fstart)
+    if "e7lcp-export-function" in _MUTED:
+        facts = dict(facts, private=False, export="mutated:exported")
+    if not facts["private"]:
+        return _refuse("local-not-private", function_facts=facts)
+    taken = {
+        "taken_code": fstart in getattr(g, "taken_code", set()),
+        "taken_data": fstart in getattr(g, "taken_data", set()),
+        "relocated_slot": fstart in getattr(g, "slot_func_targets", set()),
+    }
+    if "e7lcp-address-taken" in _MUTED:
+        return _refuse("local-not-private", function_facts=facts,
+                       address_taken=dict(taken, mutated=True),
+                       why="mutation: an address escape is admitted as a "
+                           "new indirect caller")
+    param = _param_of_operand(g, fstart, idx, opnd)
+    if param is None or param.get("kind") != "param":
+        param = _param_chain(g, fstart, idx, opnd)
+    if param is None or param.get("kind") != "param":
+        return _refuse("parameter-slot-not-unique", operand=opnd,
+                       parameter=param)
+    if param.get("index") != declared:
+        return _refuse("operand-is-not-the-declared-parameter",
+                       operand=opnd, declared=declared,
+                       resolved=param.get("index"))
+    leaf = _external_function_leaf(name)
+    decl = _e7lcp_source_declaration(g, leaf, declared)
+    if decl is None or not _e7lcp_type_is_callback(g, decl["type"]):
+        return _refuse("declared-parameter-is-not-a-callback",
+                       parameter=decl)
+    guard = None
+    if opnd in _REGS:
+        guard = _e7lcp_guard(g, fstart, idx, opnd)
+    if "e7lcp-no-null-guard" in _MUTED:
+        guard = None
+    # `Block128F` is a plain `extern "C" fn` type: the authority's callers
+    # must supply a non-NULL value, and the source carries no check.  An
+    # `Option<...>` parameter is checked before every call, so the guard is a
+    # conjunct there.
+    if decl["is_option"]:
+        if opnd not in _REGS:
+            return _refuse("slot-not-null-guarded", operand=opnd,
+                           why="the operand is a frame slot; a NULL guard on "
+                               "the call instruction's own value is not "
+                               "proven here")
+        if guard is None:
+            return _refuse("slot-not-null-guarded", operand=opnd)
+
+    cache = getattr(g, "_e7lcp_callers_cache", None)
+    if cache is None:
+        cache = {}
+        g._e7lcp_callers_cache = cache
+    targets, rows, unreachable, open_paths = set(), [], [], []
+    work = [(fstart, declared, (), "root")]
+    visited = set()
+    while work:
+        fn, k, path, role = work.pop()
+        if (fn, k) in visited:
+            continue
+        visited.add((fn, k))
+        callers, escapes = _e7lcp_callers(g, fn, cache)
+        if escapes:
+            open_paths.append({"function": g.funcs.get(fn), "param": k,
+                               "why": "referenced but has no call site",
+                               "escapes": escapes})
+            continue
+        if not callers:
+            if role == "root":
+                open_paths.append({"function": g.funcs.get(fn), "param": k,
+                                   "why": "no in-image call site"})
+                continue
+            if _e7lcp_referenced(g, fn) or fn in (
+                    getattr(g, "dynamic_defs", {}) or {}).values():
+                open_paths.append({"function": g.funcs.get(fn), "param": k,
+                                   "why": "referenced but has no call site"})
+                continue
+            unreachable.append({"function": g.funcs.get(fn), "param": k,
+                                "why": "no reference of any kind in the image"})
+            continue
+        if "e7lcp-open-caller" in _MUTED and role == "root":
+            open_paths.append({"function": g.funcs.get(fn), "param": k,
+                                "why": "mutation: an unenumerated writer"})
+            continue
+        for row in callers:
+            caller, ci, k2 = row["caller"], row["index"], k
+            if k2 < 6:
+                src = _ARGREGS[k2]
+                store_idx = ci
+                via = "register"
+            else:
+                store, reason, detail = _e7lcp_arg_store(g, caller, ci, k2)
+                if store is None:
+                    open_paths.append({
+                        "function": g.funcs.get(caller),
+                        "call_site": hex(row["call_site"]),
+                        "param": k2, "why": reason, "detail": detail})
+                    continue
+                store_idx, src, via, _slot = store
+            kind, value, vdetail = _e7lcp_arg_value(g, caller, store_idx, src)
+            prow = {"function": g.funcs.get(caller),
+                    "call_site": hex(row["call_site"]),
+                    "via": row["via"], "parameter": k2,
+                    "argument_kind": kind,
+                    "argument": (hex(value) if isinstance(value, int) else None),
+                    "argument_symbol": (g.funcs.get(value)
+                                        if isinstance(value, int) else None),
+                    "store": via, "source": src, "definition": vdetail}
+            rows.append(prow)
+            if kind == "none":
+                if not decl["is_option"]:
+                    open_paths.append(dict(
+                        prow, why="caller-passes-null-to-a-non-option-"
+                                 "callback"))
+                continue
+            if kind in ("address", "immediate"):
+                if value not in g.start_set:
+                    open_paths.append(dict(prow, why="target-is-not-an-"
+                                           "in-image-function-start"))
+                    continue
+                targets.add(value)
+                continue
+            if kind == "caller-forwards-its-own-parameter":
+                if "e7lcp-forwarded-open" in _MUTED:
+                    open_paths.append(dict(prow, why="mutation: the forwarded "
+                                           "caller set is treated as open"))
+                    continue
+                work.append((caller, (vdetail or {}).get("parameter_index"),
+                             path + (fn,), "forward"))
+                continue
+            open_paths.append(dict(prow, why=kind))
+    if open_paths:
+        return _refuse(_e7lcp_classify_open(open_paths), callers=rows,
+                       open_paths=open_paths,
+                       targets=sorted(hex(t) for t in targets))
+    if "e7lcp-new-target" in _MUTED and rows:
+        targets |= {fstart}
+    source = _e7pk12_source_evidence(g)
+    return {
+        "schema": E7LCP_SCHEMA,
+        "class": E7LCP_CLASS,
+        "resolution_kind": E7LCP_RESOLUTION_KIND,
+        "contract_bounded": False,
+        "resolved": True,
+        "function": name,
+        "function_start": hex(fstart),
+        "call_site": hex(site["addr"]),
+        "operand": {"kind": "reg" if opnd in _REGS else "memory",
+                    "text": opnd},
+        "parameter": param,
+        "declared_parameter": declared,
+        "declaration": decl,
+        "null_guard": guard,
+        "function_facts": {"names": facts["names"], "private": True,
+                           "in_dynsym": False, "export": None,
+                           "local_symbol": facts["local_symbol"]},
+        "callers": rows,
+        "unreachable_callers": unreachable,
+        "targets": [hex(t) for t in sorted(targets)],
+        "target_symbols": {hex(t): g.funcs.get(t) for t in sorted(targets)},
+        "proved_empty": not targets,
+        "conditions": {
+            "site_enumerated": (f"{name} {hex(site['addr'])} "
+                                f"`{(site.get('text') or '').strip()}`"),
+            "target_is_a_parameter_of_a_local_copy": (
+                f"{name} at {hex(fstart)} has a local (`t`) symbol and no "
+                ".dynsym definition"),
+            "operand_is_the_declared_parameter": (
+                f"parameter {declared} at the call; the relocation-slot and "
+                "code-materialised reference forms both bind to this copy"),
+            "call_is_on_the_non_null_path": guard,
+            "caller_set_is_closed": (
+                f"{len(rows)} call site(s) across direct, GOT-slot and "
+                "materialised forms; callers that forward their parameter "
+                "were followed; "
+                f"{len(unreachable)} forwarded chain(s) carry no reference at "
+                "all"),
+            "every_argument_is_none_or_one_function_start": (
+                f"{sum(1 for r in rows if r['argument'] is None)} None, "
+                f"{sum(1 for r in rows if r['argument'] is not None)} "
+                "in-image function start(s)"),
+            "nonnull_target_set_is_finite": (
+                f"{len(targets)} target(s): "
+                + (", ".join(hex(t) for t in sorted(targets)) or "empty")),
+        },
+        "residuals": [dict(r) for r in E7LCP_LIMITS],
+        "does_not_cover": [
+            "the behaviour of a target once called",
+            "a caller in another DSO: the function is local and unexported, "
+            "so no other DSO can name it",
+            "a runtime GOT interposer rewriting the RELATIVE slot",
+        ],
+        "source": source,
+    }
+
+
+# ---- E7-LEW: a local copy's slot whose only non-NULL writer is absent ---- #
+#
+# `ENGINE_register_all_complete` and `OSSL_STORE_open_ex` are local copies of
+# names libcrypto exports.  Their pinned call sites dispatch through a field of
+# an object this image constructs:
+#
+#   * `Engine.ciphers` / `digests` / `pkey_meths` / `pkey_asn1_meths` at
+#     `0x38` / `0x40` / `0x48` / `0x50`;
+#   * `OsslStoreLoader.open` / `closefn` / `open_ex` at `0x10` / `0x50` / `0x58`.
+#
+# In source each field has exactly three writer shapes: a zero-initialising
+# constructor (or an explicit `None` clearer), copiers that propagate the field
+# from another object of the same type, and one installer that stores its own
+# parameter.  The installer is a local (`t`) function with no reference of any
+# kind in this image: no direct caller, no GOT slot, no code materialisation, no
+# `dlsym` literal, no admitted import and no production source caller.  A copier
+# cannot introduce a value the installer never stored, so the field is NULL for
+# every object the image constructs and the NULL-guarded dispatch is
+# unreachable -- a proved-empty target set, not a contract.
+#
+# The exported-entry-point account: this DSO exports none of the type's
+# constructors, registry or setters, so another DSO or the application cannot
+# obtain or register an object of this registry.  A sibling DSO's exported twin
+# is a different function that writes objects reachable through its own
+# registry, which is the residual recorded with every resolved witness.
+
+E7LEW_SCHEMA = (
+    "openssl-rs/consumer-closure/local-copy-empty-writer-slot/v1")
+E7LEW_CLASS = "local-copy-empty-writer-slot"
+E7LEW_RESOLUTION_KIND = "local_copy_empty_writer"
+E7LEW_FIELDS = {
+    "engine.ciphers": {
+        "type": "Engine", "field": "ciphers", "slot": 0x38,
+        "layout_source": "src/engine/eng_lib.rs",
+        "constructor": "ENGINE_new",
+        "constructor_marker": "CRYPTO_zalloc(size_of::<Engine>()",
+        "installer": "ENGINE_set_ciphers",
+        "clearers": ("engine_set_all_null",), "copiers": ("engine_cpy",),
+        "entry_points": ("ENGINE_new", "ENGINE_add", "ENGINE_get_first",
+                         "ENGINE_set_ciphers", "ENGINE_set_digests"),
+    },
+    "engine.digests": {
+        "type": "Engine", "field": "digests", "slot": 0x40,
+        "layout_source": "src/engine/eng_lib.rs",
+        "constructor": "ENGINE_new",
+        "constructor_marker": "CRYPTO_zalloc(size_of::<Engine>()",
+        "installer": "ENGINE_set_digests",
+        "clearers": ("engine_set_all_null",), "copiers": ("engine_cpy",),
+        "entry_points": ("ENGINE_new", "ENGINE_add", "ENGINE_get_first",
+                         "ENGINE_set_ciphers", "ENGINE_set_digests"),
+    },
+    "engine.pkey_meths": {
+        "type": "Engine", "field": "pkey_meths", "slot": 0x48,
+        "layout_source": "src/engine/eng_lib.rs",
+        "constructor": "ENGINE_new",
+        "constructor_marker": "CRYPTO_zalloc(size_of::<Engine>()",
+        "installer": "ENGINE_set_pkey_meths",
+        "clearers": (), "copiers": ("engine_cpy",),
+        "entry_points": ("ENGINE_new", "ENGINE_add", "ENGINE_get_first",
+                         "ENGINE_set_pkey_meths"),
+    },
+    "engine.pkey_asn1_meths": {
+        "type": "Engine", "field": "pkey_asn1_meths", "slot": 0x50,
+        "layout_source": "src/engine/eng_lib.rs",
+        "constructor": "ENGINE_new",
+        "constructor_marker": "CRYPTO_zalloc(size_of::<Engine>()",
+        "installer": "ENGINE_set_pkey_asn1_meths",
+        "clearers": (), "copiers": (),
+        "entry_points": ("ENGINE_new", "ENGINE_add", "ENGINE_get_first",
+                         "ENGINE_set_pkey_asn1_meths"),
+    },
+    "store.open": {
+        "type": "OsslStoreLoader", "field": "open", "slot": 0x10,
+        "layout_source": "src/store/mod.rs",
+        "constructor": "OSSL_STORE_LOADER_new",
+        "constructor_marker": "OwnedCtx::<OsslStoreLoader>::zalloc()",
+        "installer": "OSSL_STORE_LOADER_set_open",
+        "clearers": (), "copiers": (),
+        "entry_points": ("OSSL_STORE_LOADER_new",
+                         "OSSL_STORE_register_loader",
+                         "OSSL_STORE_LOADER_set_open"),
+    },
+    "store.closefn": {
+        "type": "OsslStoreLoader", "field": "closefn", "slot": 0x50,
+        "layout_source": "src/store/mod.rs",
+        "constructor": "OSSL_STORE_LOADER_new",
+        "constructor_marker": "OwnedCtx::<OsslStoreLoader>::zalloc()",
+        "installer": "OSSL_STORE_LOADER_set_close",
+        "clearers": (), "copiers": (),
+        "entry_points": ("OSSL_STORE_LOADER_new",
+                         "OSSL_STORE_register_loader",
+                         "OSSL_STORE_LOADER_set_close"),
+    },
+    "store.open_ex": {
+        "type": "OsslStoreLoader", "field": "open_ex", "slot": 0x58,
+        "layout_source": "src/store/mod.rs",
+        "constructor": "OSSL_STORE_LOADER_new",
+        "constructor_marker": "OwnedCtx::<OsslStoreLoader>::zalloc()",
+        "installer": "OSSL_STORE_LOADER_set_open_ex",
+        "clearers": (), "copiers": (),
+        "entry_points": ("OSSL_STORE_LOADER_new",
+                         "OSSL_STORE_register_loader",
+                         "OSSL_STORE_LOADER_set_open_ex"),
+    },
+    "http.upd_fn": {
+        "type": "OsslHttpReqCtx", "field": "upd_fn", "slot": 0x28,
+        "layout_source": "src/http/http_client.rs",
+        "constructor": "OSSL_HTTP_REQ_CTX_new",
+        "constructor_marker": "zalloc",
+        "installer": "http_req_ctx_new",
+        "clearers": (), "copiers": (),
+        "entry_points": ("OSSL_HTTP_REQ_CTX_new", "OSSL_HTTP_open",
+                         "OSSL_HTTP_get"),
+    },
+}
+# (function leaf, call-site offset) -> field key.
+E7LEW_SITES = {
+    ("ENGINE_register_all_complete", 0x87): "engine.ciphers",
+    ("ENGINE_register_all_complete", 0xC8): "engine.digests",
+    ("ENGINE_register_all_complete", 0x1EA): "engine.pkey_meths",
+    ("ENGINE_register_all_complete", 0x22B): "engine.pkey_asn1_meths",
+    ("OSSL_STORE_open_ex", 0x488): "store.open_ex",
+    ("OSSL_STORE_open_ex", 0x57D): "store.open",
+    ("OSSL_STORE_open_ex", 0x9F3): "store.closefn",
+    ("OSSL_HTTP_get", 0x38D): "http.upd_fn",
+    ("OSSL_HTTP_get", 0x4C5): "http.upd_fn",
+    ("OSSL_HTTP_get", 0x5BE): "http.upd_fn",
+    ("OSSL_HTTP_open", 0x158): "http.upd_fn",
+}
+E7LEW_MUTATIONS = (
+    "e7lew-installer-reachable",
+    "e7lew-installer-addressed",
+    "e7lew-second-writer",
+    "e7lew-wrong-offset",
+    "e7lew-no-guard",
+    "e7lew-entry-point-exported",
+)
+E7LEW_LIMITS = (
+    {
+        "id": "in-image-construction",
+        "detail": (
+            "the empty writer set is a claim about objects this image "
+            "constructs; an object constructed by another DSO and handed to "
+            "this dispatcher would need an exported constructor or registry "
+            "entry point, and this DSO exports none (checked per witness)"),
+    },
+    {
+        "id": "admitted-closure-import-account",
+        "detail": (
+            "the no-import arm is the admitted workload's import set; a "
+            "different consumer importing the exported twin binds a different "
+            "function in a different module"),
+    },
+    {
+        "id": "zero-initialisation-is-a-declared-type-fact",
+        "detail": (
+            "the constructor's zeroed allocation is a valid value for the "
+            "declared type: every field is a pointer, an integer, or an "
+            "`Option` of a function pointer, whose NULL is `None`.  The "
+            "witness binds this to the constructor's own allocation call"),
+    },
+    {
+        "id": "candidate-bound-offsets",
+        "detail": (
+            "sites are selected by this candidate's (leaf, offset) pins and "
+            "the field offset is bound to the installer's compiled store"),
+    },
+)
+
+
+def _e7lew_refusal(reason, name, site, **extra):
+    rec = {"schema": E7LEW_SCHEMA, "class": E7LEW_CLASS,
+           "resolution_kind": E7LEW_RESOLUTION_KIND,
+           "contract_bounded": False, "resolved": False,
+           "refusal": reason, "function": name,
+           "call_site": hex(site.get("addr", 0))}
+    rec.update(extra)
+    return rec
+
+
+def _e7lew_selected(site: dict, name: str):
+    """The declared field key for this exact pinned site, or None."""
+    if site.get("kind") not in ("call", "jmp"):
+        return None
+    fstart = site.get("func")
+    if fstart is None or site.get("addr") is None:
+        return None
+    return E7LEW_SITES.get((_external_function_leaf(name),
+                            site["addr"] - fstart))
+
+
+def _e7lew_field_writers(g, spec):
+    """Classify every source writer of the declared field.
+
+    The scan covers every tracked source document; an occurrence outside the
+    declared writer functions is returned as unknown, which refuses.  A test
+    module is not production code (the E7BS test-span rule).
+    """
+    docs = _s1_docs(g)
+    pat = re.compile(r"\.\s*" + re.escape(spec["field"])
+                     + r"\s*=\s*(?!=)([^;]*);")
+    known, unknown = [], []
+    for rel, text in docs.items():
+        spans = _e7bs_test_spans(text)
+        for m in pat.finditer(text):
+            if any(lo <= m.start() < hi for lo, hi in spans):
+                continue
+            if _pe_line_is_comment(text, m.start()):
+                continue
+            fn = _e7bs_enclosing_fn(text, m.start())
+            stored = " ".join(m.group(1).split())
+            # The assignment is usually the tail of a block: `= f };` yields
+            # `f }`.  Strip the closing brace so the value is comparable.
+            stored = re.sub(r"\s*\}\s*$", "", stored).strip()
+            row = {"file": rel,
+                   "line": text.count("\n", 0, m.start()) + 1,
+                   "function": fn,
+                   "stored": stored}
+            if (fn == spec["installer"] or fn in spec["clearers"]
+                    or fn in spec["copiers"]):
+                known.append(row)
+            else:
+                unknown.append(row)
+    return known, unknown
+
+
+def _e7lew_field_declaration(g, spec):
+    """The declaring struct's field row, or a named refusal.
+
+    The offset is bound later by the installer's *compiled* store, which is the
+    stronger image fact; `Engine` carries an `AtomicI32` whose size the layout
+    helper cannot decide, so a full `repr(C)` layout is not required here.
+    """
+    text = _s1_docs(g).get(spec["layout_source"])
+    if text is None:
+        return None, "source-unavailable"
+    defs = _e7bs_struct_defs(text, spec["type"])
+    if len(defs) != 1:
+        return None, ("type-definition-not-unique" if defs
+                      else "type-definition-absent")
+    fields = _s1_split_fields(defs[0]["body"])
+    row = next((f for f in fields if f[0] == spec["field"]), None)
+    if row is None:
+        return None, "field-absent"
+    if not _e7mt_type_is_callable(g, row[1]):
+        return None, "field-not-callable"
+    return {"type": spec["type"], "field": spec["field"],
+            "declared": " ".join(row[1].split()),
+            "file": spec["layout_source"], "line": defs[0]["line"]}, None
+
+
+def _e7lew_installer_parameter(g, installer):
+    """Every declared parameter name of the installer, and its document."""
+    for rel, text in _s1_docs(g).items():
+        span = _pe_fn_span(text, installer)
+        if span is None:
+            continue
+        close = text.find(")", span["start"])
+        if close < 0:
+            continue
+        params = _e7pk12_split_params(
+            text[text.find("(", span["start"]) + 1:close])
+        names = []
+        for p in params:
+            m = re.match(r"\s*([A-Za-z_]\w*)\s*:", p)
+            if m is not None:
+                names.append(m.group(1))
+        return names, rel
+    return None, None
+
+
+def local_copy_empty_writer_witness(g: "DsoGraph", site: dict, name: str,
+                                    workload_imports=None):
+    """Resolve a pinned local copy's field dispatch to the empty set.
+
+    Returns None outside the pins, a named refusal when a conjunct fails, or a
+    resolved witness with an empty target set.  No refusal changes the site's
+    class or targets; the caller records it and keeps the conservative bound.
+    """
+    if not _has_insns(g) or site.get("kind") not in ("call", "jmp"):
+        return None
+    key = _e7lew_selected(site, name)
+    if key is None:
+        return None
+    return _e7lew_witness(g, site, name, key, E7LEW_FIELDS[key],
+                          workload_imports)
+
+
+def _e7lew_witness(g: "DsoGraph", site: dict, name: str, key: str, spec: dict,
+                   workload_imports=None):
+    """The gate body; ``spec`` is the declared field/writer record."""
+    fstart = site.get("func")
+    insns = g.precision.insns_by_func.get(fstart, ())
+    idx = next((i for i, (a, _t) in enumerate(insns)
+                if a == site.get("addr")), None)
+    if idx is None:
+        return None
+
+    def _refuse(reason, **extra):
+        return _e7lew_refusal(reason, name, site, field=key, **extra)
+
+    known, unknown = _e7lew_field_writers(g, spec)
+    if "e7lew-second-writer" in _MUTED and known:
+        unknown = unknown + [dict(known[0], function="mutated_second_writer")]
+    if unknown:
+        return _refuse("field-has-a-writer-outside-the-enumerated-set",
+                       unexpected=unknown)
+    param_names, param_file = _e7lew_installer_parameter(
+        g, spec["installer"])
+    if not param_names:
+        return _refuse("installer-source-absent",
+                       installer=spec["installer"], file=param_file)
+    inst_rows = [r for r in known if r["function"] == spec["installer"]]
+    if (len(inst_rows) != 1
+            or inst_rows[0]["stored"] not in param_names):
+        return _refuse("installer-does-not-store-its-parameter",
+                       installer=spec["installer"], parameters=param_names,
+                       writers=inst_rows)
+    for name_row in spec["clearers"]:
+        rows = [r for r in known if r["function"] == name_row]
+        if not rows or any(r["stored"] != "None" for r in rows):
+            return _refuse("clearer-does-not-write-none", writer=name_row,
+                           writers=rows)
+    for copy_row in spec["copiers"]:
+        rows = [r for r in known if r["function"] == copy_row]
+        expected = f"(*src).{spec['field']}"
+        if not rows or any(r["stored"] != expected for r in rows):
+            return _refuse("copier-does-not-propagate-the-field",
+                           writer=copy_row, expected=expected, writers=rows)
+    exported = [n for n in spec["entry_points"]
+                if n in (getattr(g, "dynamic_defs", {}) or {})]
+    if "e7lew-entry-point-exported" in _MUTED and not exported:
+        exported = [spec["entry_points"][0]]
+    if exported:
+        return _refuse("exported-entry-point-can-populate-the-slot",
+                       exported=exported)
+
+    hit = _e7bs_function_symbol(g, spec["installer"])
+    refs = _e7bs_source_references(g, (spec["installer"],))
+    if refs:
+        return _refuse("installer-has-a-source-caller", references=refs[:4])
+    if hit is None:
+        return _refuse("installer-not-emitted", installer=spec["installer"])
+    inst_addr = hit[0]
+    inst_name = hit[1]
+    stores = []
+    for addr, text in g.precision.insns_by_func.get(inst_addr, ()):
+        mn, _rest, ops = _insn_parts(text.split("#", 1)[0].strip())
+        if mn not in ("mov", "movq", "movl") or len(ops) != 2:
+            continue
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", ops[1].strip())
+        if m is None or m.group(2) in ("%rsp", "%rbp"):
+            continue
+        stores.append({"offset": int(m.group(1), 16) if m.group(1) else 0,
+                       "address": hex(addr), "text": text.strip()})
+    mutated_load = None
+    if "e7lew-wrong-offset" in _MUTED:
+        mutated_load = True
+    if "e7lew-wrong-offset" in _MUTED and stores:
+        stores[0] = dict(stores[0], offset=stores[0]["offset"] + 8)
+    if len(stores) != 1 or stores[0]["offset"] != spec["slot"]:
+        return _refuse("slot-is-not-the-declared-field",
+                       installer=inst_name, installer_address=hex(inst_addr),
+                       installer_stores=stores,
+                       declared_slot=hex(spec["slot"]))
+
+    referenced = _e7lcp_referenced(g, inst_addr)
+    if "e7lew-installer-reachable" in _MUTED:
+        referenced = True
+    if referenced:
+        return _refuse("installer-has-a-reference-in-this-image",
+                       installer=inst_name, installer_address=hex(inst_addr),
+                       direct_callers=[{"caller": g.funcs.get(cf),
+                                        "call_site": hex(ca)}
+                                       for cf, _ci, ca in
+                                       _direct_call_index(g).get(inst_addr, [])],
+                       taken_code=inst_addr in getattr(g, "taken_code", set()),
+                       taken_data=inst_addr in getattr(g, "taken_data", set()),
+                       relocated_slot=inst_addr in getattr(
+                           g, "slot_func_targets", set()))
+    if "e7lew-installer-addressed" in _MUTED:
+        return _refuse("installer-has-a-reference-in-this-image",
+                       installer=inst_name, installer_address=hex(inst_addr),
+                       taken_code=True, mutation=True)
+    if spec["installer"] in (getattr(g, "dlsym_literals", {}) or {}):
+        return _refuse("installer-resolved-by-dlsym")
+    if spec["installer"] in set(workload_imports or ()):
+        return _refuse("installer-imported-by-workload")
+
+    layout, why = _e7lew_field_declaration(g, spec)
+    if layout is None:
+        return _refuse("field-declaration-witness-missing", detail=why)
+    docs = _s1_docs(g)
+    marker = spec["constructor_marker"]
+    if marker not in "\n".join(docs.values()):
+        return _refuse("constructor-is-not-a-zeroed-allocation",
+                       constructor=spec["constructor"], marker=marker)
+
+    opnd = _site_operand(site)
+    if opnd not in _REGS:
+        return _refuse("operand-is-not-a-register-call", operand=opnd)
+    reg = _canon(opnd)
+    defs = _reaching_defs(g, fstart, idx, reg)
+    mutated_load = None
+    if "e7lew-wrong-offset" in _MUTED:
+        mutated_load = True
+    if defs is None or len(defs) != 1 or _ENTRY_DEF in defs:
+        return _refuse("slot-load-not-unique",
+                       reaching_defs=(None if defs is None else sorted(defs)))
+    load_idx = next(iter(defs))
+    lmn, _lrest, lops = _insn_parts(_insn(g, fstart, load_idx)
+                                    .split("#", 1)[0].strip())
+    lm = (re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)", lops[0].strip())
+          if len(lops) == 2 else None)
+    if lmn not in ("mov", "movq") or lm is None or _canon(lops[1]) != reg:
+        return _refuse("slot-is-not-a-field-load",
+                       instruction=_insn(g, fstart, load_idx).strip())
+    load_off = int(lm.group(1), 16) if lm.group(1) else 0
+    base_reg = lm.group(2)
+    if base_reg in ("%rsp", "%rbp"):
+        return _refuse("slot-is-a-frame-read", base_reg=base_reg)
+    if load_off != spec["slot"] or mutated_load:
+        return _refuse("slot-load-is-not-the-declared-field",
+                       load_offset=hex(load_off),
+                       declared_slot=hex(spec["slot"]))
+    guard = _e7lcp_guard(g, fstart, idx, reg)
+    if "e7lew-no-guard" in _MUTED:
+        guard = None
+    if guard is None:
+        return _refuse("slot-not-null-guarded", slot_register=reg,
+                       load=hex(insns[load_idx][0]))
+
+    return {
+        "schema": E7LEW_SCHEMA,
+        "class": E7LEW_CLASS,
+        "resolution_kind": E7LEW_RESOLUTION_KIND,
+        "contract_bounded": False,
+        "resolved": True,
+        "function": name,
+        "call_site": hex(site["addr"]),
+        "field_key": key,
+        "field": {"type": spec["type"], "name": spec["field"],
+                  "offset": hex(spec["slot"]),
+                  "declared": layout["declared"],
+                  "layout_source": layout["file"],
+                  "declaration_line": layout["line"]},
+        "operand": {"register": reg,
+                    "load": hex(insns[load_idx][0]),
+                    "base_reg": base_reg},
+        "targets": [], "proved_empty": True,
+        "null_guard": guard,
+        "image_facts": {
+            "installer": {"symbol": spec["installer"],
+                          "address": hex(inst_addr),
+                          "exported_here": False,
+                          "admitted_import": False,
+                          "dlsym_literal": False,
+                          "direct_callers": [],
+                          "address_taken": False,
+                          "store": stores[0]},
+            "source_writers": known,
+            "constructor": spec["constructor"],
+            "zero_allocation": marker,
+            "entry_points_exported_here": exported,
+        },
+        "conditions": {
+            "site_enumerated": (f"{name} {hex(site['addr'])} "
+                                f"`{(site.get('text') or '').strip()}`"),
+            "slot_is_the_declared_field": (
+                f"{spec['type']}.{spec['field']} at {hex(spec['slot'])} -- the "
+                f"field the installer stores at {stores[0]['address']}"),
+            "constructor_zeroes_the_field": (
+                f"{spec['constructor']} allocates zeroed storage "
+                f"(`{marker}`), so every field starts as `None`/NULL"),
+            "only_the_installer_and_field_copies_write_the_field": (
+                f"{spec['installer']} stores its "
+                f"{inst_rows[0]['stored']!r} parameter; clearers "
+                f"{list(spec['clearers'])} write None; copiers "
+                f"{list(spec['copiers'])} propagate the field"),
+            "installer_has_no_reachable_reference": (
+                f"{hex(inst_addr)}: no direct caller, no GOT slot, no code "
+                "materialisation, no dlsym literal, no production source "
+                "caller"),
+            "installer_not_a_workload_import": (
+                "exported_here=False; admitted_import=False"),
+            "no_registry_entry_point_is_exported": (
+                f"none of {list(spec['entry_points'])} is in .dynsym"),
+            "slot_is_null_guarded": guard,
+        },
+        "residuals": [dict(r) for r in E7LEW_LIMITS],
+        "does_not_cover": [
+            "an object constructed outside this image: no constructor or "
+            "registry entry point of this type is exported by this DSO",
+            "a runtime GOT interposer or dlsym call the image does not name",
+        ],
+    }
+
+
 # ---- E7-PMETH: the closed `standard_methods[]` accessor table ----------- #
 #
 # `EVP_PKEY_meth_find` asks `OBJ_bsearch_ex_` for a slot in
@@ -27763,6 +28944,48 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                 site["reason"] = ("allocator-seam-without-witness:"
                                   + str(site.get("seam") or ""))
                 stats["O1_witness_missing"] += 1
+            continue
+        # E7-LCP: a local (`.dynsym`-absent) copy's callback parameter.  The
+        # target set is the finite union of the values every in-image call site
+        # supplies; GOT-slot and materialised-address references count as call
+        # sites, a forwarding caller is followed, and an unreferenced caller
+        # contributes nothing.  A refusal is named and keeps the conservative
+        # bound; it never unions.
+        lcp = local_copy_parameter_set_witness(g, site, name, workload_imports)
+        if lcp is not None:
+            if lcp.get("resolved"):
+                site["targets"] = {int(t, 16) for t in lcp["targets"]}
+                site["unresolved"] = False
+                site["class"] = E7LCP_CLASS
+                site["reason"] = (
+                    "local copy parameter assignment set: "
+                    f"{len(lcp['targets'])} in-image function start(s)"
+                    + (" (proved empty)" if lcp.get("proved_empty") else ""))
+                site["local_copy_parameter_witness"] = lcp
+                stats["E7LCP_local_copy_parameter_resolved"] += 1
+            else:
+                site["local_copy_parameter_refusal"] = lcp
+                stats["E7LCP_local_copy_parameter_refused"] += 1
+            continue
+        # E7-LEW: a local copy's NULL-guarded dispatch through a field whose
+        # only non-NULL writer has no reference in this image.  The field is
+        # NULL for every object the image constructs, so the target set is
+        # empty.  A refusal is named and keeps the conservative bound.
+        lew = local_copy_empty_writer_witness(g, site, name, workload_imports)
+        if lew is not None:
+            if lew.get("resolved"):
+                site["targets"] = set()
+                site["unresolved"] = False
+                site["class"] = E7LEW_CLASS
+                site["reason"] = (
+                    "local copy proved-empty slot: "
+                    + lew["field"]["type"] + "." + lew["field"]["name"]
+                    + " has no reachable non-NULL writer in this image")
+                site["local_copy_empty_writer_witness"] = lew
+                stats["E7LEW_local_copy_empty_writer_resolved"] += 1
+            else:
+                site["local_copy_empty_writer_refusal"] = lew
+                stats["E7LEW_local_copy_empty_writer_refused"] += 1
             continue
         # E7-ABI: the eight external application/provider/DSO-registerable
         # callbacks.  Each witness is enumerated by (function, call address)
@@ -45424,6 +46647,353 @@ def self_test() -> int:
     check("E7PKCS12 first site still resolves when only the second guard is "
           "removed", (_w_nb1 or {}).get("targets"), ["0x531fe0"])
 
+    # ---- E7-LCP: the local-copy parameter target set -------------------- #
+    # The fixture is a private function whose fourth parameter is an
+    # `Option<fn>` entry argument, called through a register copy after a NULL
+    # guard.  Two in-image callers pass link-time function starts: one direct
+    # and one through a `R_X86_64_RELATIVE` GOT slot; a third forwards its own
+    # parameter and has no reference at all, so it contributes nothing.  Every
+    # refusal is exercised by a fixture or a named switch, and restoring the
+    # fixture reproduces the positive witness exactly.
+    _E7LCP_FUNC = 0x4000
+    _E7LCP_SITE = 0x4110
+    _E7LCP_DIRECT = 0x5000
+    _E7LCP_GOT = 0x5100
+    _E7LCP_FORWARD = 0x5200
+    _E7LCP_BLOCK_A = 0x6000
+    _E7LCP_BLOCK_B = 0x6100
+    _E7LCP_SLOT = 0x7000
+
+    _E7LCP_SOURCE = (
+        "type FixtureBlockF = unsafe extern \"C\" fn(\n"
+        "    input: *const u8,\n"
+        "    out: *mut u8,\n"
+        "    key: *const c_void,\n"
+        ");\n\n"
+        "unsafe fn fixture_block_cipher(\n"
+        "    input: *const u8,\n"
+        "    out: *mut u8,\n"
+        "    len: usize,\n"
+        "    block: Option<FixtureBlockF>,\n"
+        ") -> c_int {\n"
+        "    0\n"
+        "}\n"
+    )
+
+    def _e7lcp_fixture(*, exported=False, escaping=False, guarded=True,
+                       forward_escaping=False, func=_E7LCP_FUNC):
+        root = Path(tempfile.mkdtemp())
+        srcdir = root / "src" / "modes"
+        srcdir.mkdir(parents=True, exist_ok=True)
+        (srcdir / "fixture.rs").write_text(_E7LCP_SOURCE)
+        funcs = {
+            func: "fixture_block_cipher",
+            _E7LCP_DIRECT: "fixture_direct_caller",
+            _E7LCP_GOT: "fixture_got_caller",
+            _E7LCP_FORWARD: "fixture_forwarder",
+            _E7LCP_BLOCK_A: "fixture_block_a",
+            _E7LCP_BLOCK_B: "fixture_block_b",
+        }
+        test = "test   %rbx,%rbx" if guarded else "nop"
+        je = "je     4050 <skip>" if guarded else "nop"
+        site_addr = func + (_E7LCP_SITE - _E7LCP_FUNC)
+        forward = [
+            (_E7LCP_FORWARD, "call   4000 <fixture_block_cipher>"),
+            (_E7LCP_FORWARD + 5, "ret"),
+        ]
+        if escaping:
+            forward = [
+                (_E7LCP_FORWARD,
+                 "lea    0x15f9(%rip),%rax        # 4000 <fn>"),
+                (_E7LCP_FORWARD + 7, "mov    %rax,(%rdi)"),
+                (_E7LCP_FORWARD + 0xA, "call   4000 <fixture_block_cipher>"),
+                (_E7LCP_FORWARD + 0xF, "ret"),
+            ]
+        insns = {
+            func: [
+                (func, "mov    %rcx,%rbx"),
+                (func + 3, test),
+                (func + 6, je),
+                (func + 8, "mov    %rdi,%rdi"),
+                (site_addr, "call   *%rbx"),
+                (site_addr + 2, "ret"),
+                (0x4050, "ret"),
+            ],
+            _E7LCP_DIRECT: [
+                (_E7LCP_DIRECT,
+                 "lea    0xfa4(%rip),%rcx        # 6000 <block_a>"),
+                (_E7LCP_DIRECT + 7, "call   4000 <fixture_block_cipher>"),
+                (_E7LCP_DIRECT + 0xC, "ret"),
+            ],
+            _E7LCP_GOT: [
+                (_E7LCP_GOT,
+                 "lea    0xfa1(%rip),%rcx        # 6100 <block_b>"),
+                (_E7LCP_GOT + 7,
+                 "call   *0x1ef9(%rip)        # 7000 <slot>"),
+                (_E7LCP_GOT + 0xD, "ret"),
+            ],
+            _E7LCP_FORWARD: forward,
+        }
+        dynamic = {funcs[func]: func} if exported else {}
+        taken_data = ({_E7LCP_FORWARD} if forward_escaping else set())
+        g = _E7PK12G(insns, funcs, source_root=root, dynamic_defs=dynamic,
+                     local_starts={func},
+                     slot_funcs={_E7LCP_SLOT: {func}}, taken_data=taken_data)
+        site = {"kind": "call", "func": func, "addr": site_addr,
+                "text": "call   *%rbx", "targets": set(),
+                "unresolved": True, "reason": "reg-top",
+                "class": "materialised", "field_offsets": set(),
+                "seam": None, "arg_deps": set(), "arg_targets": set()}
+        return g, site
+
+    _g_lc, _s_lc = _e7lcp_fixture()
+    _w_lc = _e7lcp_witness(_g_lc, _s_lc, _g_lc.funcs[_E7LCP_FUNC], 3)
+    check("E7LCP positive resolves exactly the two call-site functions",
+          ((_w_lc or {}).get("resolved"), (_w_lc or {}).get("targets")),
+          (True, [hex(_E7LCP_BLOCK_A), hex(_E7LCP_BLOCK_B)]))
+    check("E7LCP positive resolution kind",
+          (_w_lc or {}).get("resolution_kind"),
+          "local_copy_parameter_set")
+    check("E7LCP positive enumerates the direct, GOT and forwarding callers",
+          sorted((r["via"], r["argument_kind"])
+                 for r in (_w_lc or {}).get("callers") or []),
+          sorted([("direct", "address"), ("got-slot", "address"),
+                  ("direct", "caller-forwards-its-own-parameter")]))
+    check("E7LCP the unreferenced forwarding caller is recorded, not unioned",
+          [u["function"] for u in (_w_lc or {}).get(
+              "unreachable_callers") or []], ["fixture_forwarder"])
+    check("E7LCP positive proves the NULL guard",
+          bool((_w_lc or {}).get("null_guard")), True)
+    check("E7LCP positive declares the callback parameter",
+          ((_w_lc or {}).get("declaration") or {}).get("is_option"), True)
+
+    for _kw, _want, _label in [
+            ({"escaping": True}, "caller-value-escapes-into-an-object-field",
+             "a materialised address is stored away"),
+            ({"forward_escaping": True},
+             "caller-value-escapes-into-an-object-field",
+             "a forwarding caller's address escapes"),
+            ({"exported": True}, "local-not-private",
+             "the copy is exported"),
+            ({"guarded": False}, "slot-not-null-guarded",
+             "the Option parameter is not guarded")]:
+        _g_c, _s_c = _e7lcp_fixture(**_kw)
+        _rec = _e7lcp_witness(_g_c, _s_c, _g_c.funcs[_E7LCP_FUNC], 3) or {}
+        check(f"E7LCP fixture refusal: {_label}",
+              (_rec.get("resolved"), _rec.get("refusal")), (False, _want))
+
+    _g_foreign, _s_foreign = _e7lcp_fixture(func=0x4400)
+    _s_foreign = dict(_s_foreign, addr=0x4510)
+    check("E7LCP non-widening: an unpinned site is not selected",
+          _e7lcp_selected(_s_foreign,
+                          _g_foreign.funcs[0x4400]), None)
+
+    e7lcp_mutation_matrix = []
+    e7lcp_mutation_wants = {
+        "e7lcp-export-function": "local-not-private",
+        "e7lcp-address-taken": "local-not-private",
+        "e7lcp-no-null-guard": "slot-not-null-guarded",
+        "e7lcp-open-caller": "caller-set-not-closed",
+        "e7lcp-forwarded-open": "caller-set-not-closed",
+    }
+    check("E7LCP mutation switches match the declared set",
+          sorted(list(e7lcp_mutation_wants) + ["e7lcp-new-target"]),
+          sorted(E7LCP_MUTATIONS))
+    for _name, _want in e7lcp_mutation_wants.items():
+        _rec = _mutation(
+            _name, lambda: _e7lcp_witness(
+                _g_lc, _s_lc, _g_lc.funcs[_E7LCP_FUNC], 3)) or {}
+        _restored = _e7lcp_witness(
+            _g_lc, _s_lc, _g_lc.funcs[_E7LCP_FUNC], 3)
+        e7lcp_mutation_matrix.append({
+            "mutation": _name,
+            "case_fails": (_rec.get("refusal") == _want
+                            and not _rec.get("resolved")),
+            "expected": True})
+        check(f"E7LCP {_name} refusal", _rec.get("refusal"), _want)
+        check(f"E7LCP {_name} restores exactly", _restored == _w_lc, True)
+    _rec_new = _mutation(
+        "e7lcp-new-target", lambda: _e7lcp_witness(
+            _g_lc, _s_lc, _g_lc.funcs[_E7LCP_FUNC], 3)) or {}
+    check("E7LCP a new reachable target changes the reported set",
+          sorted(_rec_new.get("targets") or []),
+          sorted([hex(_E7LCP_BLOCK_A), hex(_E7LCP_BLOCK_B),
+                  hex(_E7LCP_FUNC)]))
+    e7lcp_mutation_matrix.append({
+        "mutation": "e7lcp-new-target",
+        "case_fails": (sorted(_rec_new.get("targets") or [])
+                       == sorted([hex(_E7LCP_BLOCK_A), hex(_E7LCP_BLOCK_B),
+                                  hex(_E7LCP_FUNC)])),
+        "expected": True})
+    check("E7LCP mutation matrix: every mutation is load-bearing",
+          [row["case_fails"] == row["expected"]
+           for row in e7lcp_mutation_matrix],
+          [True] * len(e7lcp_mutation_matrix))
+    print("[consumer-closure] E7LCP mutation matrix: " + "; ".join(
+        f"{r['mutation']} "
+        f"{'fails as required' if r['case_fails'] else 'STILL PASSES'}"
+        for r in e7lcp_mutation_matrix))
+
+    # ---- E7-LEW: the local copy's proved-empty writer slot --------------- #
+    _E7LEW_FUNC = 0x2000
+    _E7LEW_SITE = 0x2110
+    _E7LEW_INST = 0x1000
+    _E7LEW_SOURCE = (
+        "type FixtureOpenFn = unsafe extern \"C\" fn(*mut c_void) -> c_int;\n\n"
+        "#[repr(C)]\n"
+        "pub struct FixtureLoader {\n"
+        "    pub(crate) open: Option<FixtureOpenFn>,\n"
+        "}\n\n"
+        "unsafe fn fixture_loader_new() -> *mut FixtureLoader {\n"
+        "    let p = OwnedCtx::<FixtureLoader>::zalloc();\n"
+        "    p\n"
+        "}\n\n"
+        "pub unsafe extern \"C\" fn Fixture_set_open(\n"
+        "    loader: *mut FixtureLoader,\n"
+        "    open_function: Option<FixtureOpenFn>,\n"
+        ") -> c_int {\n"
+        "    unsafe { (*loader).open = open_function };\n"
+        "    1\n"
+        "}\n"
+    )
+    _E7LEW_SPEC = {
+        "type": "FixtureLoader", "field": "open", "slot": 0x10,
+        "layout_source": "src/store/fixture_lew.rs",
+        "constructor": "fixture_loader_new",
+        "constructor_marker": "OwnedCtx::<FixtureLoader>::zalloc()",
+        "installer": "Fixture_set_open",
+        "clearers": (), "copiers": (),
+        "entry_points": ("Fixture_loader_new",),
+    }
+
+    def _e7lew_fixture(*, exported_entry=False, installer_taken=False,
+                       extra_writer=False, installer_store=0x10,
+                       guarded=True, site_addr=_E7LEW_SITE):
+        root = Path(tempfile.mkdtemp())
+        srcdir = root / "src" / "store"
+        srcdir.mkdir(parents=True, exist_ok=True)
+        source = _E7LEW_SOURCE
+        if extra_writer:
+            source += (
+                "\npub unsafe extern \"C\" fn Fixture_second_writer(\n"
+                "    loader: *mut FixtureLoader,\n"
+                ") -> c_int {\n"
+                "    unsafe { (*loader).open = None };\n"
+                "    1\n"
+                "}\n")
+        (srcdir / "fixture_lew.rs").write_text(source)
+        funcs = {_E7LEW_FUNC: "fixture_dispatch",
+                 _E7LEW_INST: "Fixture_set_open",
+                 0x3000: "fixture_other"}
+        test = "test   %rax,%rax" if guarded else "nop"
+        je = "je     2050 <skip>" if guarded else "nop"
+        insns = {
+            _E7LEW_FUNC: [
+                (_E7LEW_FUNC, "mov    0x10(%rdi),%rax"),
+                (_E7LEW_FUNC + 3, test),
+                (_E7LEW_FUNC + 6, je),
+                (_E7LEW_FUNC + 8, "mov    %rdi,%rdi"),
+                (site_addr, "call   *%rax"),
+                (site_addr + 2, "ret"),
+                (0x2050, "ret"),
+            ],
+            _E7LEW_INST: [
+                (_E7LEW_INST, f"mov    %rsi,{hex(installer_store)}(%rdi)"),
+                (_E7LEW_INST + 4, "mov    $0x1,%eax"),
+                (_E7LEW_INST + 9, "ret"),
+            ],
+            0x3000: [(0x3000, "ret")],
+        }
+        dynamic = ({"Fixture_loader_new": 0x3100}
+                   if exported_entry else {})
+        taken = {_E7LEW_INST} if installer_taken else set()
+        g = _E7PK12G(insns, funcs, source_root=root, dynamic_defs=dynamic,
+                     taken_code=taken)
+        site = {"kind": "call", "func": _E7LEW_FUNC, "addr": site_addr,
+                "text": "call   *%rax", "targets": set(),
+                "unresolved": True, "reason": "reg-top",
+                "class": "field", "field_offsets": {0x10}, "seam": None,
+                "arg_deps": set(), "arg_targets": set()}
+        return g, site
+
+    _g_lw, _s_lw = _e7lew_fixture()
+    _w_lw = _e7lew_witness(_g_lw, _s_lw, _g_lw.funcs[_E7LEW_FUNC],
+                           "fixture.open", _E7LEW_SPEC)
+    check("E7LEW positive resolves to the empty set",
+          ((_w_lw or {}).get("resolved"), (_w_lw or {}).get("targets"),
+           (_w_lw or {}).get("proved_empty")), (True, [], True))
+    check("E7LEW positive binds the field offset to the installer's store",
+          ((_w_lw or {}).get("image_facts") or {}).get(
+              "installer", {}).get("store", {}).get("offset"), 0x10)
+    check("E7LEW positive proves the NULL guard",
+          bool((_w_lw or {}).get("null_guard")), True)
+
+    for _kw, _want, _label in [
+            ({"installer_taken": True},
+             "installer-has-a-reference-in-this-image",
+             "the installer address is taken"),
+            ({"extra_writer": True},
+             "field-has-a-writer-outside-the-enumerated-set",
+             "a foreign writer installs the field"),
+            ({"installer_store": 0x18},
+             "slot-is-not-the-declared-field",
+             "the installer stores at another offset"),
+            ({"exported_entry": True},
+             "exported-entry-point-can-populate-the-slot",
+             "the registry's constructor is exported"),
+            ({"guarded": False}, "slot-not-null-guarded",
+             "the slot is not NULL-guarded")]:
+        _g_c, _s_c = _e7lew_fixture(**_kw)
+        _rec = _e7lew_witness(_g_c, _s_c, _g_c.funcs[_E7LEW_FUNC],
+                              "fixture.open", _E7LEW_SPEC) or {}
+        check(f"E7LEW fixture refusal: {_label}",
+              (_rec.get("resolved"), _rec.get("refusal")), (False, _want))
+
+    _g_ws, _s_ws = _e7lew_fixture(site_addr=_E7LEW_SITE + 0x20)
+    check("E7LEW non-widening: an unpinned site is not selected",
+          _e7lew_selected(_s_ws, _g_ws.funcs[_E7LEW_FUNC]), None)
+
+    e7lew_mutation_matrix = []
+    e7lew_mutation_wants = {
+        "e7lew-installer-reachable":
+            "installer-has-a-reference-in-this-image",
+        "e7lew-installer-addressed":
+            "installer-has-a-reference-in-this-image",
+        "e7lew-second-writer":
+            "field-has-a-writer-outside-the-enumerated-set",
+        "e7lew-wrong-offset": "slot-is-not-the-declared-field",
+        "e7lew-no-guard": "slot-not-null-guarded",
+        "e7lew-entry-point-exported":
+            "exported-entry-point-can-populate-the-slot",
+    }
+    check("E7LEW mutation switches match the declared matrix",
+          sorted(e7lew_mutation_wants), sorted(E7LEW_MUTATIONS))
+    for _name, _want in e7lew_mutation_wants.items():
+        _rec = _mutation(
+            _name, lambda: _e7lew_witness(
+                _g_lw, _s_lw, _g_lw.funcs[_E7LEW_FUNC], "fixture.open",
+                _E7LEW_SPEC)) or {}
+        _restored = _e7lew_witness(
+            _g_lw, _s_lw, _g_lw.funcs[_E7LEW_FUNC], "fixture.open",
+            _E7LEW_SPEC)
+        e7lew_mutation_matrix.append({
+            "mutation": _name,
+            "case_fails": (_rec.get("refusal") == _want
+                            and not _rec.get("resolved")),
+            "expected": True})
+        check(f"E7LEW {_name} refusal", _rec.get("refusal"), _want)
+        check(f"E7LEW {_name} restores exactly", _restored == _w_lw, True)
+    check("E7LEW mutation matrix: every mutation is load-bearing",
+          [row["case_fails"] == row["expected"]
+           for row in e7lew_mutation_matrix],
+          [True] * len(e7lew_mutation_matrix))
+    print("[consumer-closure] E7LEW mutation matrix: " + "; ".join(
+        f"{r['mutation']} "
+        f"{'fails as required' if r['case_fails'] else 'STILL PASSES'}"
+        for r in e7lew_mutation_matrix))
+    check("E7LEW every pinned field key has a declared spec",
+          sorted(set(E7LEW_SITES.values()) - set(E7LEW_FIELDS)), [])
+
     # ---- E7-PMETH: the closed `standard_methods[]` accessor table -------- #
     # The fixture reproduces the real shape: a static accessor array, a
     # zero-flag `OBJ_bsearch_ex_` search whose returned slot is NULL-guarded
@@ -45752,7 +47322,15 @@ def self_test() -> int:
           f"2; the plain keygen site and the eight b65 ABI sites are "
           f"unchanged), and the carry-forward coordinate-tolerance controls "
           f"(a moved definition is re-enrolled; a recycled line is recorded as "
-          f"removed, never reported present)")
+          f"removed, never reported present), and the E7-LCP local-copy "
+          f"parameter-set gate (direct, GOT-slot and materialised-address "
+          f"caller enumeration; forwarding callers followed; unreferenced "
+          f"callers and unconsumed address references refused; the finite "
+          f"target set and its sensitivity to a new target), and the E7-LEW "
+          f"proved-empty writer-slot gate (declared field bound to the "
+          f"installer's compiled store, closed source writer set, an installer "
+          f"with no reference, and the exported-entry-point account); every "
+          f"refusal in both gates is mutation- or fixture-tested")
     return 0
 
 
