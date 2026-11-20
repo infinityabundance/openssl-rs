@@ -17001,6 +17001,51 @@ def _registration_atexit_scan(root: Path):
     return node_writers, list_writes, errors
 
 
+def _atexit_image_publishers(g):
+    """Functions that publish a non-NULL handler into `STOP_HANDLERS`.
+
+    The drain's NULL swap/store and the canonical `OPENSSL_atexit` writer are
+    excluded; every other store is a localised (usually inlined) copy of the
+    registration writer.  A reader-only reference is not a publisher.
+    """
+    sl = None
+    for a, names in (getattr(g, "names_at", {}) or {}).items():
+        if any(REGISTRATION_ATEXIT_LIST in (n or "") for n in names):
+            if sl is not None and a != sl:
+                return None, "list-symbol-ambiguous"
+            sl = a
+    if sl is None:
+        return {"address": None, "refs": [], "publishers": []}, None
+    refs = []
+    for f, insns in (getattr(g.precision, "insns_by_func", {}) or {}).items():
+        for a, t in insns:
+            if ("# %x" % sl) not in t and ("# %s" % format(sl, "x")) not in t:
+                continue
+            refs.append({"function": (getattr(g, "funcs", {}) or {}).get(f),
+                         "function_start": hex(f), "address": hex(a),
+                         "text": t.strip()})
+    publishers = []
+    for r in refs:
+        fn = (r["function"] or "").split("@")[0]
+        if fn in (REGISTRATION_ATEXIT_SITE, REGISTRATION_ATEXIT_DRAIN):
+            continue
+        body = r["text"].split("#", 1)[0].strip()
+        if body.startswith("lock "):
+            body = body[len("lock "):].strip()
+        _mn, _rest, ops = _insn_parts(body)
+        if not ops:
+            continue
+        dst = ops[-1]
+        if "(%rip)" not in dst:
+            continue
+        src = ops[0].strip()
+        if src in ("$0x0", "$0"):
+            continue
+        if src in _REGS or src in _SUBREG:
+            publishers.append(r)
+    return {"address": sl, "refs": refs, "publishers": publishers}, None
+
+
 def registration_atexit_witness(g: "DsoGraph", site: dict, name: str):
     """Witness for the `OPENSSL_atexit` -> `OPENSSL_cleanup` handler dispatch.
 
@@ -17157,16 +17202,50 @@ def registration_atexit_witness(g: "DsoGraph", site: dict, name: str):
             declaration=cb)
     export = (getattr(g, "dynamic_defs", {}) or {}).get(
         REGISTRATION_ATEXIT_SYMBOL)
+    localised = []
+    writer_hit = _e7bs_function_symbol(g, REGISTRATION_ATEXIT_SYMBOL)
     if export is None:
-        return None, _registration_atexit_refusal(
-            name, site, "atexit-entry-point-not-exported")
-    names = set((getattr(g, "names_at", {}) or {}).get(export, ()))
-    names.add((getattr(g, "funcs", {}) or {}).get(export, ""))
-    if not any((n or "").split("@")[0] == REGISTRATION_ATEXIT_SYMBOL
-               for n in names):
-        return None, _registration_atexit_refusal(
-            name, site, "exported-address-is-not-the-atexit-function",
-            export=hex(export), names=sorted(n for n in names if n))
+        # The DSO may hide its copy of the entry point while still containing
+        # an inlined registration writer.  "No .dynsym entry" is not the same
+        # claim as "no writer": only the second could support an empty list.
+        image, why = _atexit_image_publishers(g)
+        if image is None:
+            return None, _registration_atexit_refusal(
+                name, site, "handler-list-symbol-ambiguous", detail=why)
+        localised = [p for p in image["publishers"]
+                     if (p.get("function") or "").split("@")[0]
+                     != REGISTRATION_ATEXIT_SYMBOL]
+        if not localised and writer_hit is None:
+            return None, _registration_atexit_refusal(
+                name, site, "atexit-entry-point-not-exported",
+                handler_list=image)
+        if not localised:
+            return None, _registration_atexit_refusal(
+                name, site, "atexit-entry-point-not-exported",
+                in_image_writer=(hex(writer_hit[0]) if writer_hit else None),
+                handler_list=image)
+        if "e7-atexit-localised-copy" in _MUTED:
+            return None, _registration_atexit_refusal(
+                name, site, "atexit-entry-point-not-exported",
+                in_image_writer=(hex(writer_hit[0]) if writer_hit else None),
+                handler_list=image)
+        export_info = {
+            "symbol": REGISTRATION_ATEXIT_SYMBOL, "in_dynsym": False,
+            "in_image": True,
+            "address": (hex(writer_hit[0]) if writer_hit else None),
+            "published_by": localised,
+        }
+    else:
+        names = set((getattr(g, "names_at", {}) or {}).get(export, ()))
+        names.add((getattr(g, "funcs", {}) or {}).get(export, ""))
+        if not any((n or "").split("@")[0] == REGISTRATION_ATEXIT_SYMBOL
+                   for n in names):
+            return None, _registration_atexit_refusal(
+                name, site, "exported-address-is-not-the-atexit-function",
+                export=hex(export), names=sorted(n for n in names if n))
+        export_info = {"symbol": REGISTRATION_ATEXIT_SYMBOL,
+                       "in_dynsym": True, "in_image": True,
+                       "address": hex(export)}
 
     witness = _witness(
         ABI_CONTRACT_REGISTRATION_ATEXIT, name, site,
@@ -17184,8 +17263,12 @@ def registration_atexit_witness(g: "DsoGraph", site: dict, name: str):
                "field at offset 0; a scan of `src/` finds exactly one "
                "handler-field writer (OPENSSL_atexit, forwarding its parameter "
                "unchanged), exactly one non-NULL list publication "
-               "(OPENSSL_atexit), and no other writer; the entry point is in "
-               ".dynsym and the admitted header declares it"))
+               "(OPENSSL_atexit), and no other writer; the admitted header "
+               "declares the interface; "
+               + ("the entry point is in .dynsym" if export is not None else
+                  "the entry point is not in .dynsym, but a localised "
+                  "in-image copy publishes into this DSO's list, so the "
+                  "contract is retained as the conservative upper bound")))
     witness.update({
         "source": {"file": REGISTRATION_ATEXIT_SOURCE,
                    "registration_line": sig_idx + 1,
@@ -17203,8 +17286,8 @@ def registration_atexit_witness(g: "DsoGraph", site: dict, name: str):
         "stored_value": {"parameter": param,
                          "call": f"OwnedInitStop::new({param}, ...)",
                          "node_literal": lit_text.strip()[:200]},
-        "export": {"symbol": REGISTRATION_ATEXIT_SYMBOL,
-                   "in_dynsym": True, "address": hex(export)},
+        "export": export_info,
+        "localised_copy": bool(localised),
         "header": cb,
         "dispatch": {"operand": opnd, "offset": 0,
                      "instruction": (site.get("text") or "").strip()[:120]},
@@ -17218,8 +17301,12 @@ def registration_atexit_witness(g: "DsoGraph", site: dict, name: str):
                 f"OwnedInitStop::new({param}, ...) -> "
                 f"OpenSslInitStop {{ {param}, next }}"),
             "entry_point_exported_and_declared": (
-                f"{REGISTRATION_ATEXIT_SYMBOL} in .dynsym at "
-                f"{hex(export)}; {cb['declaration']}"),
+                (f"{REGISTRATION_ATEXIT_SYMBOL} in .dynsym at "
+                 f"{hex(export)}; {cb['declaration']}") if export is not None
+                else (f"{REGISTRATION_ATEXIT_SYMBOL} not in .dynsym; "
+                      f"localised writer(s) "
+                      f"{', '.join(p['function'] for p in localised)} "
+                      f"publish into this list; {cb['declaration']}")),
             "dispatch_reads_the_registration_slot": (
                 f"offset 0 ({opnd}) is "
                 f"{REGISTRATION_ATEXIT_NODE}.{REGISTRATION_ATEXIT_FIELD}"),
@@ -17232,6 +17319,9 @@ def registration_atexit_witness(g: "DsoGraph", site: dict, name: str):
             "a NULL handler: OPENSSL_atexit refuses it (a recorded divergence)",
             "a node not produced by OPENSSL_atexit",
             "the reachability of the target from the consumer workload",
+            "a localised writer is not externally bindable: the contract is a "
+            "conservative upper bound, not a claim that a consumer can "
+            "register a handler through this DSO",
         ],
     })
     return witness, None
@@ -21306,6 +21396,58 @@ def _e7bs_proved_empty_record(rec: dict) -> bool:
     return _e7bs_proved_empty_witness(rec.get("e7bs_witness"))
 
 
+def _e7sf_proved_empty_witness(w) -> bool:
+    """True only for the witness-backed empty `Inner.free_thunk` set."""
+    if not isinstance(w, dict):
+        return False
+    if w.get("schema") != E7SF_SCHEMA:
+        return False
+    if w.get("resolution_kind") != E7SF_RESOLUTION_KIND:
+        return False
+    if w.get("resolved") is not True or w.get("proved_empty") is not True:
+        return False
+    if w.get("targets") not in ([], ()):
+        return False
+    conditions = w.get("conditions")
+    if not isinstance(conditions, dict):
+        return False
+    if not all(conditions.get(k) for k in E7SF_CONDITIONS):
+        return False
+    facts = w.get("image_facts") or {}
+    installer = facts.get("installer") or {}
+    if installer.get("direct_callers") or installer.get("address_taken"):
+        return False
+    if installer.get("exported_here") and installer.get("imported"):
+        return False
+    if facts.get("source_references"):
+        return False
+    return True
+
+
+def _e7sf_proved_empty_site(site: dict) -> bool:
+    w = site.get("e7sf_witness")
+    return (_e7sf_proved_empty_witness(w)
+            and site.get("class") == E7SF_CLASS
+            and not site.get("unresolved")
+            and not (site.get("targets") or ())
+            and _e7sf_selected(site, (w or {}).get("function") or "") is not None)
+
+
+def _e7sf_proved_empty_record(rec: dict) -> bool:
+    return _e7sf_proved_empty_witness(rec.get("e7sf_witness"))
+
+
+def _proved_empty_site(site: dict) -> bool:
+    """Either mechanism's gate; each validates its own schema and pins."""
+    return (_e7bs_proved_empty_site(site)
+            or _e7sf_proved_empty_site(site))
+
+
+def _proved_empty_record(rec: dict) -> bool:
+    return (_e7bs_proved_empty_record(rec)
+            or _e7sf_proved_empty_record(rec))
+
+
 def _e7bs_refusal(schema, klass, resolution_kind, reason, name, site, **extra):
     rec = {"schema": schema, "class": klass,
            "resolution_kind": resolution_kind,
@@ -22423,6 +22565,449 @@ def internal_closed_writer_list_witness(g: "DsoGraph", site: dict,
         return _refuse("constructor-emitted", emitted=absences["emitted"],
                        chain=chain)
     return _resolved(set(), {"enumerated_from_reachable_callers": False})
+
+
+# --------------------------------------------------------------------------- #
+# E7-SF: the `OpenSslStack::Inner.free_thunk` empty target set
+# --------------------------------------------------------------------------- #
+#
+# `do_ext_nconf` (two sites) and `r2i_pci` (one site) dispatch through
+# `Inner.free_thunk`.  The field is module-private.  In source only three
+# shapes touch it: `from_boxes` initialises it to `None`, the exported
+# `OPENSSL_sk_set_thunks` stores its `f_thunk` parameter, and
+# `OPENSSL_sk_dup`/`OPENSSL_sk_deep_copy` copy it from an existing stack.
+# The copies propagate `None`; the installer is the only source of a non-NULL
+# value.  This gate resolves the site to the empty set only when the installer
+# has no reachable reference in this image and is not admitted by the workload:
+#
+#   * a local (non-.dynsym) installer with no in-image direct caller, no
+#     code/data-materialised address, no relocation slot and no source caller;
+#   * or an exported installer that the admitted workload does not import and
+#     that has no in-image caller/address use.
+#
+# The site's load offset is bound to the installer's compiled store offset, so
+# the slot is the same field the installer writes even though `Inner` is not
+# `repr(C)`.  A NULL guard on the loaded register is required; the empty set is
+# a claim about the dispatch, not merely a missing target list.
+
+E7SF_CLASS = "internal-null-initialised-slot"
+E7SF_SCHEMA = ("openssl-rs/consumer-closure/e7-stack-free-thunk-empty/v1")
+E7SF_RESOLUTION_KIND = "stack_free_thunk_empty"
+E7SF_SOURCE = "src/runtime/stack.rs"
+E7SF_TYPE = "Inner"
+E7SF_FIELD = "free_thunk"
+E7SF_INSTALLER = "OPENSSL_sk_set_thunks"
+E7SF_CONSTRUCTOR = "from_boxes"
+E7SF_COPIERS = ("OPENSSL_sk_dup", "OPENSSL_sk_deep_copy")
+# (function leaf, call offset) for this candidate.  Only the pin selects a
+# site; the proof at the site is the operand walk and the writer-set closure.
+E7SF_SITES = {
+    ("do_ext_nconf", 0x1E4),
+    ("do_ext_nconf", 0x475),
+    ("r2i_pci", 0x49A),
+}
+E7SF_CONDITIONS = (
+    "site_enumerated",
+    "slot_is_the_module_private_free_thunk",
+    "constructor_initialises_none",
+    "only_the_installer_and_field_copies_write_the_field",
+    "installer_has_no_reachable_reference",
+    "installer_not_a_workload_import",
+    "slot_is_null_guarded",
+    "copiers_propagate_the_field",
+)
+
+
+def _e7sf_selected(site: dict, name: str):
+    """The pin for this exact site, or None.  Pins only; no literal VAs."""
+    if site.get("kind") != "call":
+        return None
+    fstart = site.get("func")
+    if fstart is None:
+        return None
+    pin = (_external_function_leaf(name), site.get("addr", 0) - fstart)
+    return pin if pin in E7SF_SITES else None
+
+
+def _e7sf_refusal(reason, name, site, **extra):
+    rec = {"schema": E7SF_SCHEMA, "class": E7SF_CLASS,
+           "resolution_kind": E7SF_RESOLUTION_KIND,
+           "contract_bounded": False, "resolved": False,
+           "refusal": reason, "function": name,
+           "call_site": hex(site.get("addr", 0))}
+    rec.update(extra)
+    return rec
+
+
+def _pe_fn_span(text, name):
+    """The body span of the Rust function ``name`` in one document."""
+    pat = re.compile(r"\bfn\s+" + re.escape(name) + r"\s*\(")
+    for m in pat.finditer(text):
+        brace = text.find("{", m.end())
+        if brace < 0:
+            continue
+        semi = text.find(";", m.end(), brace)
+        if semi >= 0:
+            continue
+        end = _e7bs_brace_end(text, brace)
+        if end is None:
+            continue
+        return {"start": m.start(), "brace": brace, "end": end,
+                "body": text[brace + 1:end - 1],
+                "line": text.count("\n", 0, m.start()) + 1}
+    return None
+
+
+def _pe_line_is_comment(text, pos):
+    start = text.rfind("\n", 0, pos) + 1
+    return text[start:pos].lstrip().startswith(("//", "*", "/*"))
+
+
+def _e7sf_source(g):
+    """The module-private field's constructor/installer/copy writer set."""
+    text = _s1_docs(g).get(E7SF_SOURCE)
+    if text is None:
+        return None, "source-unavailable"
+    defs = _e7bs_struct_defs(text, E7SF_TYPE)
+    if len(defs) != 1:
+        return None, "inner-definition-not-unique"
+    fields = _s1_split_fields(defs[0]["body"])
+    row = next((f for f in fields if f[0] == E7SF_FIELD), None)
+    if row is None:
+        return None, "free-thunk-field-absent"
+    if not _e7mt_type_is_callable(g, row[1]):
+        return None, "free-thunk-not-callable"
+
+    literals = []
+    for m in re.finditer(r"\b" + re.escape(E7SF_TYPE) + r"\s*\{", text):
+        prefix = text[max(0, m.start() - 40):m.start()]
+        if re.search(r"\bstruct\s*$", prefix):
+            continue
+        end = _e7bs_brace_end(text, text.find("{", m.end() - 1))
+        if end is None:
+            continue
+        literals.append({"fn": _e7bs_enclosing_fn(text, m.start()),
+                         "body": text[text.find("{", m.end() - 1) + 1:end - 1],
+                         "line": text.count("\n", 0, m.start()) + 1})
+    if len(literals) != 1:
+        return None, "inner-literal-not-unique"
+    lit = literals[0]
+    if lit["fn"] != E7SF_CONSTRUCTOR:
+        return None, "constructor-is-not-from-boxes"
+    if not re.search(r"\b" + E7SF_FIELD + r"\s*:\s*None\b", lit["body"]):
+        if "e7sf-no-none-constructor" not in _MUTED:
+            return None, "constructor-does-not-initialise-none"
+
+    installer = _pe_fn_span(text, E7SF_INSTALLER)
+    if installer is None:
+        return None, "installer-source-absent"
+    sig_end = text.find(")", installer["start"])
+    sig = text[installer["start"]:sig_end + 1]
+    pm = re.search(r",\s*([A-Za-z_]\w*)\s*:\s*Option\s*<", sig)
+    if pm is None:
+        return None, "installer-parameter-not-found"
+    param = pm.group(1)
+
+    writes = []
+    for m in re.finditer(r"\.\s*" + E7SF_FIELD + r"\s*=\s*(?!=)([^;]*);",
+                         text):
+        if _pe_line_is_comment(text, m.start()):
+            continue
+        writes.append({"fn": _e7bs_enclosing_fn(text, m.start()),
+                       "rhs": " ".join(m.group(1).split()),
+                       "line": text.count("\n", 0, m.start()) + 1})
+    inst = [w for w in writes if w["fn"] == E7SF_INSTALLER]
+    if len(inst) != 1 or inst[0]["rhs"] != param:
+        return None, "installer-does-not-store-its-parameter"
+    others = [w for w in writes
+              if w["fn"] not in (E7SF_INSTALLER,) + E7SF_COPIERS]
+    if others and "e7sf-second-installer" not in _MUTED:
+        return None, "unexpected-free-thunk-writer"
+    copies = [w for w in writes if w["fn"] in E7SF_COPIERS]
+    if not copies:
+        return None, "field-copy-writers-absent"
+    for w in copies:
+        span = _pe_fn_span(text, w["fn"])
+        if (span is None
+                or not re.search(r"\blet\s+" + re.escape(w["rhs"])
+                                 + r"\s*=\s*s\." + E7SF_FIELD + r"\s*;",
+                                 span["body"])):
+            if "e7sf-copy-not-a-field-read" not in _MUTED:
+                return None, "copy-does-not-propagate-the-field"
+    return {"type": E7SF_TYPE, "field": E7SF_FIELD,
+            "field_type": " ".join(row[1].split()),
+            "constructor": E7SF_CONSTRUCTOR,
+            "constructor_line": lit["line"],
+            "installer": E7SF_INSTALLER, "parameter": param,
+            "installer_line": installer["line"],
+            "copies": copies, "writes": writes}, None
+
+
+def _e7sf_installer_store(g):
+    """The installer's single compiled store into the owner object."""
+    hit = _e7bs_function_symbol(g, E7SF_INSTALLER)
+    if hit is None:
+        return None, "installer-not-emitted"
+    stores = []
+    for a, t in g.precision.insns_by_func.get(hit[0], ()):
+        mn, _rest, ops = _insn_parts(t.split("#", 1)[0].strip())
+        if mn not in ("mov", "movq", "movl") or len(ops) != 2:
+            continue
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)",
+                         ops[1].strip())
+        if m is None or m.group(2) in ("%rsp", "%rbp"):
+            continue
+        stores.append({"offset": int(m.group(1), 16) if m.group(1) else 0,
+                       "address": hex(a), "text": t.strip()})
+    if len(stores) != 1:
+        return None, "installer-store-not-unique"
+    return {"address": hit[0], "symbol": hit[1], "store": stores[0]}, None
+
+
+def _pe_null_guard(g, fstart, load_idx, site_idx, reg):
+    """A NULL test on the loaded value whose NULL edge skips the call.
+
+    The reaching-definition walk already established that this load is the
+    call register's only definition, so every path that reaches the call with a
+    defined value passes through it.  The test must be in the load's own block
+    (so it tests that value), the branch's NULL edge must not reach the call,
+    and the register must not be redefined on the way to the call.  This is
+    deliberately not a whole-function dominator claim: an unreachable padding
+    block in this candidate makes the load block fail a textbook dominator
+    check even though it is the only definition.
+    """
+    cfg = _function_cfg(g, fstart)
+    lb = cfg["block_of"].get(load_idx)
+    sb = cfg["block_of"].get(site_idx)
+    if lb is None or sb is None:
+        return None
+    lo, hi = cfg["blocks"][lb]
+    if not (lo <= load_idx < hi):
+        return None
+    test_k = None
+    for k in range(load_idx + 1, hi):
+        mn, _rest, ops = _insn_parts(cfg["insns"][k][1])
+        if (mn.startswith("test") and len(ops) == 2
+                and _canon(ops[0]) == reg and _canon(ops[1]) == reg):
+            test_k = k
+            break
+        if (mn.startswith("cmp") and len(ops) == 2
+                and ops[0] in ("$0x0", "$0") and _canon(ops[1]) == reg):
+            test_k = k
+            break
+        if reg in _defined_regs_at(cfg["insns"][k][1]):
+            return None
+    if test_k is None:
+        return None
+    j = None
+    for k in range(test_k + 1, hi):
+        mn, rest, _ops = _insn_parts(cfg["insns"][k][1])
+        if mn.startswith("j") and not rest.startswith("*"):
+            j = k
+            break
+        if reg in _defined_regs_at(cfg["insns"][k][1]):
+            return None
+    if j is None:
+        return None
+    mn, rest, _ops = _insn_parts(cfg["insns"][j][1])
+    m = re.match(r"^([0-9a-f]+)", rest)
+    if m is None:
+        return None
+    ti = next((i for i, (a, _t) in enumerate(cfg["insns"])
+               if a == int(m.group(1), 16)), None)
+    if ti is None:
+        return None
+    if mn in ("je", "jz"):
+        null_block = cfg["block_of"].get(ti)
+    elif mn in ("jne", "jnz"):
+        null_block = cfg["block_of"].get(j + 1)
+    else:
+        return None
+    if null_block is None:
+        return None
+    if sb in _cfg_reachable_from(cfg, null_block):
+        return None
+    for k in range(j + 1, site_idx):
+        if reg in _defined_regs_at(cfg["insns"][k][1]):
+            return None
+    return {"guard_block": hex(cfg["insns"][lo][0]),
+            "test": cfg["insns"][test_k][1],
+            "test_address": hex(cfg["insns"][test_k][0]),
+            "branch": cfg["insns"][j][1],
+            "branch_address": hex(cfg["insns"][j][0]),
+            "null_edge": ("taken" if mn in ("je", "jz")
+                          else "fall-through"),
+            "load_is_the_only_reaching_definition": True,
+            "null_edge_does_not_reach_the_call": True}
+
+
+def _e7sf_materialised_adapter(g, fstart, site_idx):
+    """The first argument is a code-materialised in-image adapter."""
+    reg, idx = "%rdi", site_idx
+    for _ in range(4):
+        defs = _reaching_defs(g, fstart, idx, reg)
+        if defs is None or len(defs) != 1 or _ENTRY_DEF in defs:
+            return None
+        d = next(iter(defs))
+        text = _insn(g, fstart, d).split("#", 1)[0].strip()
+        mn, _rest, ops = _insn_parts(text)
+        if mn == "lea":
+            addr = _insn_comment_addr(_insn(g, fstart, d))
+            if addr is not None and addr in g.start_set:
+                return {"register": reg, "address": hex(addr),
+                        "instruction": _insn(g, fstart, d).strip()}
+            return None
+        if (mn in ("mov", "movq") and len(ops) == 2
+                and ops[0] in _REGS):
+            reg, idx = _canon(ops[0]), d
+            continue
+        return None
+    return None
+
+
+def stack_free_thunk_empty_witness(g, site, name, workload_imports=None):
+    """Resolve the `Inner.free_thunk` dispatch to the proved-empty set.
+
+    Returns None outside the pinned sites.  Every conjunct has a named
+    refusal; a refusal never changes the site's existing class or targets.
+    """
+    if not _has_insns(g) or site.get("kind") != "call":
+        return None
+    if _e7sf_selected(site, name) is None:
+        return None
+    fstart = site.get("func")
+    insns = g.precision.insns_by_func.get(fstart, ()) if fstart is not None else ()
+    idx = next((i for i, (a, _t) in enumerate(insns)
+                if a == site.get("addr")), None)
+    if idx is None:
+        return None
+
+    def _refuse(reason, **extra):
+        return _e7sf_refusal(reason, name, site, **extra)
+
+    m = re.search(r"call\w*\s+\*(%r[a-z0-9]+)$",
+                  (site.get("text") or "").split("#", 1)[0].strip())
+    if m is None:
+        return _refuse("operand-is-not-a-register-call")
+    reg = _canon(m.group(1))
+    defs = _reaching_defs(g, fstart, idx, reg)
+    if defs is None or len(defs) != 1 or _ENTRY_DEF in defs:
+        return _refuse("slot-load-not-unique",
+                       reaching_defs=(None if defs is None else sorted(defs)))
+    load_idx = next(iter(defs))
+    load_text = _insn(g, fstart, load_idx)
+    lmn, _lrest, lops = _insn_parts(load_text.split("#", 1)[0].strip())
+    lm = (re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)",
+                       lops[0].strip()) if len(lops) == 2 else None)
+    if lmn not in ("mov", "movq") or lm is None or _canon(lops[1]) != reg:
+        return _refuse("slot-is-not-a-field-load", instruction=load_text.strip())
+    load_off = int(lm.group(1), 16) if lm.group(1) else 0
+    base_reg = lm.group(2)
+    if base_reg in ("%rsp", "%rbp"):
+        return _refuse("slot-is-a-frame-read", base_reg=base_reg)
+
+    source, why = _e7sf_source(g)
+    if source is None:
+        return _refuse(why)
+    installer, why = _e7sf_installer_store(g)
+    if installer is None:
+        return _refuse(why)
+    if load_off != installer["store"]["offset"]:
+        if "e7sf-field-outside-module" not in _MUTED:
+            return _refuse("slot-is-not-the-private-free-thunk",
+                           load_offset=hex(load_off),
+                           installer_store_offset=hex(
+                               installer["store"]["offset"]))
+
+    guard = _pe_null_guard(g, fstart, load_idx, idx, reg)
+    if guard is None and "e7sf-no-guard" not in _MUTED:
+        return _refuse("slot-not-null-guarded",
+                       slot_register=reg, load=hex(insns[load_idx][0]))
+    adapter = _e7sf_materialised_adapter(g, fstart, idx)
+    if adapter is None:
+        return _refuse("adapter-argument-not-materialised")
+
+    addr = installer["address"]
+    callers = _direct_call_index(g).get(addr, [])
+    if callers and "e7sf-installer-reachable" not in _MUTED:
+        return _refuse("installer-has-in-image-caller",
+                       callers=[{"caller": g.funcs.get(cf, hex(cf)),
+                                 "call_site": hex(ca)} for cf, _ci, ca in callers])
+    taken = (addr in getattr(g, "taken_code", set())
+             or addr in getattr(g, "taken_data", set())
+             or addr in getattr(g, "slot_func_targets", set()))
+    if taken and "e7sf-installer-addressed" not in _MUTED:
+        return _refuse("installer-address-taken", address=hex(addr))
+    exported = E7SF_INSTALLER in (getattr(g, "dynamic_defs", {}) or {})
+    imported = E7SF_INSTALLER in set(workload_imports or ())
+    if exported and imported and "e7sf-installer-imported" not in _MUTED:
+        return _refuse("installer-imported-by-workload", address=hex(addr))
+    if E7SF_INSTALLER in (getattr(g, "dlsym_literals", {}) or {}):
+        return _refuse("installer-resolved-by-dlsym")
+    refs = _e7bs_source_references(g, (E7SF_INSTALLER,))
+    if refs and "e7sf-installer-source-caller" not in _MUTED:
+        return _refuse("installer-has-a-source-caller", references=refs[:4])
+
+    def _conditions():
+        return {
+            "site_enumerated": (f"{name} {hex(site['addr'])} "
+                                f"`{(site.get('text') or '').strip()}`"),
+            "slot_is_the_module_private_free_thunk": (
+                f"{E7SF_TYPE}.{E7SF_FIELD} at {hex(load_off)} -- the field the "
+                f"installer stores at {installer['store']['address']}"),
+            "constructor_initialises_none": (
+                f"{E7SF_SOURCE}:{source['constructor_line']} "
+                f"{E7SF_TYPE} {{ {E7SF_FIELD}: None }}"),
+            "only_the_installer_and_field_copies_write_the_field": (
+                f"{E7SF_INSTALLER} stores `{source['parameter']}`; "
+                f"{', '.join(E7SF_COPIERS)} copy `s.{E7SF_FIELD}`"),
+            "installer_has_no_reachable_reference": (
+                f"{hex(addr)}: no direct caller, no code/data-materialised "
+                "address, no relocation slot, no source caller"),
+            "installer_not_a_workload_import": (
+                f"exported_here={exported}; admitted_import={imported}"),
+            "slot_is_null_guarded": guard or "guard switch disabled",
+            "copiers_propagate_the_field": [w for w in source["copies"]],
+        }
+
+    return {
+        "schema": E7SF_SCHEMA, "class": E7SF_CLASS,
+        "resolution_kind": E7SF_RESOLUTION_KIND,
+        "contract_bounded": False, "resolved": True,
+        "function": name, "call_site": hex(site["addr"]),
+        "operand": {"register": reg, "load": hex(insns[load_idx][0]),
+                    "member_offset": hex(load_off), "base_reg": base_reg},
+        "targets": [], "proved_empty": True,
+        "adapter": adapter, "null_guard": guard,
+        "field": {"type": E7SF_TYPE, "name": E7SF_FIELD,
+                  "offset": hex(load_off), "declared": source["field_type"]},
+        "image_facts": {
+            "installer": {"symbol": E7SF_INSTALLER, "address": hex(addr),
+                          "exported_here": exported, "imported": imported,
+                          "direct_callers": callers,
+                          "address_taken": taken,
+                          "store": installer["store"]},
+            "source_references": refs,
+            "constructor": source["constructor"],
+            "copies": source["copies"],
+        },
+        "conditions": _conditions(),
+        "residuals": {
+            "candidate_bound_address_gate": (
+                "the site is selected by this candidate's (function, offset) "
+                "pin and must be re-derived at every re-freeze"),
+            "installer_inlining": (
+                "an inlined installer would have no symbol; the source caller "
+                "scan is empty, so no inlining site exists in this build"),
+            "admitted_consumer_closure": (
+                "the no-import arm is a claim about the admitted workload "
+                "import set; another loaded DSO that imports an exported "
+                "installer is outside it"),
+            "runtime_interposer": (
+                "an LD_PRELOAD interposer that calls the exported installer "
+                "is outside the in-image GOT-binding policy"),
+        },
+    }
 
 
 # ---- E7-PKCS12: a private function's private-parameter assignment set --- #
@@ -26831,6 +27416,28 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
                 continue
             site["decoder_method_refusal"] = dec
             stats["S7_decoder_method_object_refused"] += 1
+        # E7-SF: the `OpenSslStack::Inner.free_thunk` dispatch.  The field is
+        # module-private, every constructor initialises it to None, and the
+        # only non-None source is the installer.  The gate resolves to the
+        # empty set only when the installer has no reachable reference and is
+        # not admitted by the workload; a refusal is named and keeps the
+        # site's existing conservative bound.
+        sf = stack_free_thunk_empty_witness(g, site, name, workload_imports)
+        if sf is not None:
+            if sf.get("resolved"):
+                site["targets"] = set()
+                site["unresolved"] = False
+                site["class"] = E7SF_CLASS
+                site["reason"] = (
+                    "internal proved-empty slot: " + E7SF_TYPE + "."
+                    + E7SF_FIELD + " is None for every constructed stack; "
+                    "the installer has no reachable reference")
+                site["e7sf_witness"] = sf
+                stats["E7SF_stack_free_thunk_resolved"] += 1
+            else:
+                site["e7sf_refusal"] = sf
+                stats["E7SF_stack_free_thunk_refused"] += 1
+            continue
         # E7-BS: the two `base-slot-partial` sites.  This block precedes S1
         # because S1 rewrites `reason` on a refusal.  Each witness is
         # site-enumerated by (function, call address), so a differently-typed
@@ -27646,7 +28253,7 @@ def _edge_disposition(site: dict, name=None):
                 "the containing function has no symbol, so a target set "
                 "cannot be attributed to a function")
     if not (site.get("targets") or ()):
-        if _e7bs_proved_empty_site(site):
+        if _proved_empty_site(site):
             return DISPOSITION_PROVED, None, None
         return (DISPOSITION_UNRESOLVED, "empty-target-set",
                 site.get("reason") or
@@ -27698,6 +28305,9 @@ def _edge_record(g, site: dict, ordinal: int, oracle=None, seen_ids=None) -> dic
                     or site.get("e7bs_writer_list_refusal"))
     if e7bs_witness is not None:
         extra["e7bs_witness"] = e7bs_witness
+    e7sf_witness = site.get("e7sf_witness") or site.get("e7sf_refusal")
+    if e7sf_witness is not None:
+        extra["e7sf_witness"] = e7sf_witness
     e7pmeth_witness = (site.get("e7pmeth_witness")
                        or site.get("e7pmeth_refusal"))
     if e7pmeth_witness is not None:
@@ -28254,6 +28864,51 @@ def e7bs_receipt_section(graphs: dict) -> dict:
             "by_refusal": dict(sorted(collections.Counter(
                 str(r.get("refusal")) for r in refused).items())),
         },
+        "resolved_sites": resolved,
+        "refused_sites": refused,
+    }
+
+
+def e7sf_receipt_section(graphs: dict) -> dict:
+    """Persist the E7-SF proved-empty witness evidence."""
+    resolved, refused = [], []
+    for dso, g in graphs.items():
+        for site in getattr(g, "sites", {}).values():
+            w = site.get("e7sf_witness")
+            r = site.get("e7sf_refusal")
+            if w:
+                resolved.append({"dso": dso, "function": w.get("function"),
+                                 "call_site": w.get("call_site"),
+                                 "proved_empty": w.get("proved_empty"),
+                                 "operand": w.get("operand"),
+                                 "field": w.get("field"),
+                                 "null_guard": w.get("null_guard"),
+                                 "conditions": w.get("conditions"),
+                                 "image_facts": w.get("image_facts"),
+                                 "residuals": w.get("residuals")})
+            if r:
+                refused.append({"dso": dso, "function": r.get("function"),
+                                "call_site": r.get("call_site"),
+                                "refusal": r.get("refusal"),
+                                "detail": {k: v for k, v in r.items()
+                                           if k not in ("schema", "class",
+                                                        "resolution_kind",
+                                                        "contract_bounded",
+                                                        "resolved", "refusal",
+                                                        "function",
+                                                        "call_site")}})
+    return {
+        "schema": E7SF_SCHEMA,
+        "rule": ("the pinned dispatch loads `OpenSslStack::Inner.free_thunk` "
+                 "at the installer's own compiled store offset; the one "
+                 "constructor stores None, the copiers propagate the field, "
+                 "and the installer has no direct caller, materialised "
+                 "address, relocation slot, source caller, or admitted "
+                 "workload import, so the field is None and the NULL-guarded "
+                 "call is not dispatched"),
+        "summary": {"resolved": len(resolved), "refused": len(refused),
+                    "proved_empty": sum(1 for r in resolved
+                                        if r.get("proved_empty") is True)},
         "resolved_sites": resolved,
         "refused_sites": refused,
     }
@@ -29349,7 +30004,7 @@ def _validate_record(rec: dict, oracle=None) -> list:
             f"{rid}: {disposition} has no defining function symbol "
             f"({defining!r}); a target set cannot be attributed")
     if (disposition == DISPOSITION_PROVED and not rec.get("target_set")
-            and not _e7bs_proved_empty_record(rec)):
+            and not _proved_empty_record(rec)):
         defects.append(f"{rid}: PROVED_TARGET_SET with an empty target set")
     if disposition == DISPOSITION_CONTRACT and not rec.get("witness_id"):
         defects.append(f"{rid}: CONTRACT_BOUNDED without a witness id")
@@ -35928,6 +36583,7 @@ def build_receipt(args) -> dict:
                     if w],
             },
             "e7bs_witnesses": e7bs_receipt_section(graphs),
+            "e7sf_witnesses": e7sf_receipt_section(graphs),
             "pbe_outparam_witnesses": pbe_outparam_receipt_section(graphs),
             "private_parameter_assignment": (
                 private_parameter_assignment_section(graphs)),
@@ -38573,6 +39229,317 @@ def _e7mt_self_test():
         "mutation, a mutable-section row, a non-function member, an all-NULL "
         "member, an imported registry setter, an unpinned shape and a memory "
         "operand each refuse (the four mutation switches flip their arm)")
+
+
+def _e7pe_self_test():
+    """Controls for the E7-SF empty gate and the localised atexit contract."""
+    root = Path(__file__).resolve().parents[2]
+    install = root / "artifacts/phase2/install"
+    dso = install / "lib/libssl.so.3"
+    if not dso.is_file():
+        return [], "e7pe controls: skipped (candidate absent)"
+    if not (shutil.which("nm") and shutil.which("objdump")):
+        return [], "e7pe controls: skipped (nm/objdump absent)"
+    workdir = root / "court/tmp/e7pe-selftest-work"
+    workdir.mkdir(parents=True, exist_ok=True)
+    _EVIDENCE_ENV["repo"] = str(root)
+    _EVIDENCE_ENV["install"] = str(install)
+    failures = []
+
+    def chk(name, got, want):
+        if got != want:
+            failures.append(f"{name}: got {got!r}, want {want!r}")
+
+    try:
+        g = DsoGraph(dso, workdir)
+    except Exception as e:  # noqa: BLE001 -- absent tooling is a skip
+        return [], f"e7pe controls: skipped (graph unavailable: {e})"
+    g.source_root = str(root)
+    g.install_prefix = str(install)
+    g.precision = PrecisionResolver(g)  # insns_by_func only; no resolver run
+    imports = {s["name"] for s in json.load(open(
+        root / "evidence/closure-curl-049.json"))[
+            "symbol_evidence"]["imported_symbols"]}
+
+    def site_for(leaf, off):
+        for a, n in g.funcs.items():
+            if _external_function_leaf(n) != leaf:
+                continue
+            addr = a + off
+            text = next((t for ia, t in g.precision.insns_by_func.get(
+                a, ()) if ia == addr), None)
+            if text is not None:
+                return {"kind": "call", "func": a, "addr": addr,
+                        "text": text, "targets": set(), "unresolved": True,
+                        "reason": "reg-top", "class": "materialised",
+                        "field_offsets": set(), "seam": None,
+                        "arg_deps": set(), "arg_targets": set()}
+        return None
+
+    # Real positive: the three pinned libssl sites resolve to the empty set.
+    seen = []
+    for leaf, off in sorted(E7SF_SITES):
+        site = site_for(leaf, off)
+        if site is None:
+            continue
+        w = stack_free_thunk_empty_witness(g, site, g.funcs[site["func"]],
+                                           imports)
+        chk(f"e7sf positive {leaf}+{off:#x} resolved",
+            bool((w or {}).get("resolved")), True)
+        chk(f"e7sf positive {leaf}+{off:#x} empty",
+            ((w or {}).get("targets"), (w or {}).get("proved_empty")),
+            ([], True))
+        chk(f"e7sf positive {leaf}+{off:#x} conditions",
+            [k for k in E7SF_CONDITIONS
+             if not (w or {}).get("conditions", {}).get(k)], [])
+        seen.append((leaf, off))
+    chk("e7sf real site count", len(seen), 3)
+    chk("e7sf installer is local and unreferenced in libssl",
+        ((g.dynamic_defs.get(E7SF_INSTALLER),
+          _direct_call_index(g).get(_e7bs_function_symbol(
+              g, E7SF_INSTALLER)[0])),
+         (None, None)), ((None, None), (None, None)))
+
+    # The rcu and E7-SF gates are independent: neither record accepts the other.
+    _empty_site = site_for("do_ext_nconf", 0x1E4)
+    _sf_w = stack_free_thunk_empty_witness(
+        g, _empty_site, g.funcs[_empty_site["func"]], imports)
+    _rcu_w = {"schema": E7BS_WRITER_LIST_SCHEMA,
+              "resolution_kind": "internal_closed_writer_list",
+              "resolved": True, "proved_empty": True, "targets": [],
+              "conditions": {k: True for k in E7BS_PROVED_EMPTY_CONDITIONS},
+              "image_facts": {"absent_symbols": [E7BS_RCU_WRITER,
+                                                  E7BS_RCU_CTOR]}}
+    chk("e7sf record rejects the rcu witness",
+        _e7sf_proved_empty_record({"e7sf_witness": _rcu_w}), False)
+    chk("rcu record rejects the e7sf witness",
+        _e7bs_proved_empty_record({"e7bs_witness": _sf_w}), False)
+    chk("e7sf record accepts its own witness",
+        _e7sf_proved_empty_record({"e7sf_witness": _sf_w}), True)
+
+    # Real atexit: the localised inlined writer makes this a contract, not an
+    # empty set.  The old `not-exported` refusal must be gone.
+    _atexit_site = site_for("OPENSSL_cleanup", 0x64)
+    _aw, _ar = registration_atexit_witness(g, _atexit_site, "OPENSSL_cleanup")
+    chk("e7pe atexit real witness accepted", bool(_aw), True)
+    chk("e7pe atexit real refusal", (_ar or {}).get("reason"), None)
+    chk("e7pe atexit real localised copy",
+        ((_aw or {}).get("localised_copy"),
+         ((_aw or {}).get("export") or {}).get("in_dynsym"),
+         ((_aw or {}).get("export") or {}).get("in_image")),
+        (True, False, True))
+    chk("e7pe atexit real publisher is the inlined rand writer",
+        any("ossl_pool_acquire_entropy" in (p.get("function") or "")
+            for p in ((_aw or {}).get("export") or {}).get("published_by", [])),
+        True)
+
+    # Fixture controls: a newly reachable writer must refuse.  The same
+    # fixture resolves when the matching test-only switch removes exactly that
+    # conjunct, so each refusal is load-bearing.
+    class _Prec:
+        def __init__(self, d):
+            self.insns_by_func = d
+
+    class _PEG:
+        def __init__(self, insns, funcs, root):
+            self.name = "e7sf.so"
+            self.funcs = dict(funcs)
+            self.start_set = set(funcs)
+            self.names_at = {a: {n} for a, n in funcs.items()}
+            self.all_syms = dict(funcs)
+            self.sections = {".text": (0, 0, 0x200000)}
+            self.precision = _Prec(
+                {f: list(v) for f, v in insns.items()})
+            self.functions = [(f, list(v)) for f, v in insns.items()]
+            self.source_root = root
+            self.install_prefix = None
+            self.dynamic_defs = {}
+            self.taken_code = set()
+            self.taken_data = set()
+            self.slot_funcs = {}
+            self.slot_data = {}
+            self.slot_syms = {}
+            self.dlsym_literals = {}
+            self.sites = {}
+
+        def containing(self, a):
+            return max((f for f in self.funcs if f <= a), default=None)
+
+        def section_of(self, a):
+            return ".text"
+
+        def static_slot(self, a):
+            return None
+
+    _sf_funcs = {
+        0x511360: "_RNvNtNtCs1234_10openssl_rs4x5097v3_conf12do_ext_nconf",
+        0x4EFC60: "OPENSSL_sk_set_thunks",
+        0x5101C0: "conf_value_free_thunk",
+        0x40C9C0: "default_free",
+    }
+    _sf_insns = {
+        0x511360: [
+            (0x511360, "push   %rbp"),
+            (0x5114F8, "mov    0x10(%r14),%r14"),
+            (0x511505, "mov    0x18(%rsp),%rax"),
+            (0x51150A, "mov    0x20(%rax),%r13"),
+            (0x51150E, "mov    0x8(%rax),%r15"),
+            (0x511516, "xor    %r12d,%r12d"),
+            (0x511519, "test   %r13,%r13"),
+            (0x51151C, "jne    511534 <body>"),
+            (0x511525, "jmp    51157c <join>"),
+            (0x511527, "add    $0x8,%r12"),
+            (0x51152B, "cmp    %r12,%r14"),
+            (0x51152E, "je     51157c <join>"),
+            (0x511534, "mov    (%r15,%r12,1),%rsi"),
+            (0x511538, "test   %rsi,%rsi"),
+            (0x51153B, "je     511527 <loop>"),
+            (0x51153D, "lea    -0x1384(%rip),%rdi        # 5101c0 <thunk>"),
+            (0x511544, "call   *%r13"),
+            (0x511547, "jmp    511527 <loop>"),
+            (0x51157C, "ret"),
+        ],
+        0x4EFC60: [
+            (0x4EFC60, "mov    %rdi,%rax"),
+            (0x4EFC63, "test   %rdi,%rdi"),
+            (0x4EFC66, "je     4efc6c <ret>"),
+            (0x4EFC68, "mov    %rsi,0x20(%rax)"),
+            (0x4EFC6C, "ret"),
+        ],
+        0x5101C0: [(0x5101C0, "ret")],
+        0x40C9C0: [(0x40C9C0, "ret")],
+    }
+    _sf_site = {"kind": "call", "func": 0x511360, "addr": 0x511544,
+                "text": "call   *%r13", "targets": set(),
+                "unresolved": True, "reason": "materialised",
+                "class": "materialised", "field_offsets": set(),
+                "seam": None, "arg_deps": set(), "arg_targets": set()}
+
+    def _sf_w(extra_funcs=None, extra_insns=None, taken=None, dyn=None,
+              imports=None):
+        funcs = dict(_sf_funcs)
+        funcs.update(extra_funcs or {})
+        insns = {f: [list(x) for x in v] for f, v in _sf_insns.items()}
+        insns.update(extra_insns or {})
+        fg = _PEG(insns, funcs, root)
+        fg.taken_code = set(taken or ())
+        fg.dynamic_defs = dict(dyn or {})
+        return stack_free_thunk_empty_witness(
+            fg, _sf_site, _sf_funcs[0x511360], set(imports or ()))
+
+    _sf_pos = _sf_w()
+    chk("e7sf fixture positive",
+        ((_sf_pos or {}).get("resolved"), (_sf_pos or {}).get("targets")),
+        (True, []))
+    _sf_matrix = []
+    _cases = [
+        ("e7sf-installer-reachable",
+         dict(extra_funcs={0x600000: "caller"},
+              extra_insns={0x600000: [
+                  (0x600000, "call   4efc60 <OPENSSL_sk_set_thunks>"),
+                  (0x600005, "ret")]}),
+         "installer-has-in-image-caller"),
+        ("e7sf-installer-addressed", dict(taken={0x4EFC60}),
+         "installer-address-taken"),
+        ("e7sf-installer-imported",
+         dict(dyn={E7SF_INSTALLER: 0x4EFC60}, imports={E7SF_INSTALLER}),
+         "installer-imported-by-workload"),
+    ]
+    for _name, _kw, _want in _cases:
+        _neg = _sf_w(**_kw) or {}
+        chk(f"e7sf {_name} refuses", (_neg.get("resolved"),
+                                      _neg.get("refusal")),
+            (False, _want))
+        _MUTED.add(_name)
+        try:
+            _flip = _sf_w(**_kw) or {}
+        finally:
+            _MUTED.discard(_name)
+        _sf_matrix.append({"mutation": _name,
+                           "case_fails": (not _neg.get("resolved")
+                                          and _neg.get("refusal") == _want
+                                          and _flip.get("resolved") is True)})
+    chk("e7sf mutation matrix: every mutation is load-bearing",
+        [r["case_fails"] for r in _sf_matrix], [True] * len(_sf_matrix))
+
+    # Atexit fixtures: an unexported entry point is a contract only when an
+    # in-image (inlined) publisher exists.  Without one the named refusal stays.
+    class _PAEG(_PEG):
+        def __init__(self, insns, funcs, dyn=()):
+            super().__init__(insns, funcs, root)
+            self.names_at[0x9000] = {
+                "_RNvNtNtCs1234_10openssl_rs7runtime4init13STOP_HANDLERS.llvm.1"}
+            self.dynamic_defs = {n: a for a, n in funcs.items() if n in dyn}
+
+    def _atexit_fixture(publish=False, exported=False):
+        funcs = {0x3DC8B0: "OPENSSL_cleanup", 0x3DA000: "OPENSSL_atexit"}
+        insns = {
+            0x3DC8B0: [
+                (0x3DC900, "xchg   %rbx,0x1(%rip)        # 9000 <STOP_HANDLERS>"),
+                (0x3DC908, "test   %rbx,%rbx"),
+                (0x3DC90A, "je     3dc990 <exit>"),
+                (REGISTRATION_ATEXIT_CALL_SITE, "call   *(%rbx)"),
+                (0x3DC990, "ret"),
+            ],
+            0x3DA000: [
+                (0x3DA020, "mov    %r14,(%rax)"),
+                (0x3DA030, "lock cmpxchg %rcx,0x1(%rip)        # 9000 <STOP_HANDLERS>"),
+                (0x3DA040, "ret"),
+            ],
+        }
+        if publish:
+            funcs[0x3DB000] = "publisher"
+            insns[0x3DB000] = [
+                (0x3DB000, "lock cmpxchg %rcx,0x1(%rip)        # 9000 <STOP_HANDLERS>"),
+                (0x3DB010, "ret"),
+            ]
+        fg = _PAEG(insns, funcs, dyn={"OPENSSL_atexit"} if exported else ())
+        fg.install_prefix = str(install)
+        return fg, {"kind": "call", "func": 0x3DC8B0,
+                    "addr": REGISTRATION_ATEXIT_CALL_SITE,
+                    "text": "call   *(%rbx)", "arg_deps": set()}
+
+    _pa_rows = []
+    _ag, _as = _atexit_fixture(exported=True)
+    _aw2, _ar2 = registration_atexit_witness(_ag, _as, "OPENSSL_cleanup")
+    chk("e7pe atexit exported fixture", (bool(_aw2),
+        (_aw2 or {}).get("localised_copy")), (True, False))
+    _ag, _as = _atexit_fixture(publish=False)
+    _aw3, _ar3 = registration_atexit_witness(_ag, _as, "OPENSSL_cleanup")
+    chk("e7pe atexit unexported+dead refuses as not-exported",
+        (_aw3, (_ar3 or {}).get("reason")),
+        (None, "atexit-entry-point-not-exported"))
+    _pa_rows.append({"mutation": "e7pe-atexit-no-publisher",
+                     "case_fails": (not _aw3 and
+                                    (_ar3 or {}).get("reason") ==
+                                    "atexit-entry-point-not-exported")})
+    _ag, _as = _atexit_fixture(publish=True)
+    _aw4, _ar4 = registration_atexit_witness(_ag, _as, "OPENSSL_cleanup")
+    chk("e7pe atexit unexported+published is a contract",
+        (bool(_aw4), (_aw4 or {}).get("localised_copy"),
+         ((_aw4 or {}).get("export") or {}).get("in_dynsym")),
+        (True, True, False))
+    _MUTED.add("e7-atexit-localised-copy")
+    try:
+        _aw5, _ar5 = registration_atexit_witness(_ag, _as, "OPENSSL_cleanup")
+    finally:
+        _MUTED.discard("e7-atexit-localised-copy")
+    chk("e7pe atexit localised-copy switch is load-bearing",
+        (bool(_aw5), (_ar5 or {}).get("reason")),
+        (False, "atexit-entry-point-not-exported"))
+    _pa_rows.append({"mutation": "e7pe-atexit-localised-copy",
+                     "case_fails": (not _aw5 and
+                                    (_ar5 or {}).get("reason") ==
+                                    "atexit-entry-point-not-exported")})
+    chk("e7pe atexit mutation matrix",
+        [r["case_fails"] for r in _pa_rows], [True] * len(_pa_rows))
+
+    return failures, (
+        "e7pe controls: the three pinned `Inner.free_thunk` sites resolve to "
+        "the empty proved set (installer local/unreferenced, one None "
+        "constructor, copy-only propagators, NULL guard); the atexit site is "
+        "a contract with a localised inlined writer, not an empty set; the "
+        "two proved-empty gates reject each other's records")
 
 
 def _e7batch_self_test():
@@ -44081,6 +45048,10 @@ def self_test() -> int:
     _e7mt_failures, _e7mt_line = _e7mt_self_test()
     failures.extend(_e7mt_failures)
     print(f"[consumer-closure] {_e7mt_line}")
+
+    _e7pe_failures, _e7pe_line = _e7pe_self_test()
+    failures.extend(_e7pe_failures)
+    print(f"[consumer-closure] {_e7pe_line}")
 
     _e7b_failures, _e7b_line = _e7batch_self_test()
     failures.extend(_e7b_failures)
