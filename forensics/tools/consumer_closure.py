@@ -2230,6 +2230,14 @@ ABI_CONTRACT_PROVIDER_ENTRY = "ABI_CONTRACT_PROVIDER_ENTRY"
 # `OSSL_FUNC_PROVIDER_UP_REF` implementation.  Site-enumerated.
 ABI_CONTRACT_PROVIDER_PARENT_UP_REF = \
     "ABI_CONTRACT_PROVIDER_PARENT_UP_REF"
+# The `OSSL_HTTP_bio_cb_t` callback of the HTTP client entry points.  The
+# application supplies it as the `bio_update_fn` parameter of the exported
+# `OSSL_HTTP_open`/`OSSL_HTTP_get`; `http_req_ctx_new` (inlined into
+# `OSSL_HTTP_open`) stores that parameter into `OsslHttpReqCtx.upd_fn` at
+# offset 0x28, and every call site NULL-tests the stored value.  NULL is
+# admitted and not called.  Site-enumerated: a different displacement, a
+# second writer, or an unexported entry point refuses.
+ABI_CONTRACT_HTTP_BIO_CB = "ABI_CONTRACT_HTTP_BIO_CB"
 
 ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR,
                                   ABI_CONTRACT_CORE_DISPATCH,
@@ -2250,7 +2258,8 @@ ABI_CONTRACT_CLASSES = frozenset({ABI_CONTRACT_PROVIDER, ABI_CONTRACT_ALLOCATOR,
                                   ABI_CONTRACT_PEM_PASSWORD_CB,
                                   ABI_CONTRACT_X509_CTX_CALLBACK,
                                   ABI_CONTRACT_PROVIDER_ENTRY,
-                                  ABI_CONTRACT_PROVIDER_PARENT_UP_REF})
+                                  ABI_CONTRACT_PROVIDER_PARENT_UP_REF,
+                                  ABI_CONTRACT_HTTP_BIO_CB})
 
 # --------------------------------------------------------------------------- #
 # closed target sets (a bounded, enumerated in-image set, not an external ABI)
@@ -3268,6 +3277,51 @@ ABI_CONTRACTS = {
             "another callback field (verify_cb, check_issued, ...) or a "
             "displacement that is not the declared cleanup offset; the "
             "witness refuses each",
+        ],
+    },
+    ABI_CONTRACT_HTTP_BIO_CB: {
+        "resolution_kind": "contract-bounded (target set unbounded)",
+        "contract": (
+            "the `OSSL_HTTP_bio_cb_t bio_update_fn` parameter of the exported "
+            "`OSSL_HTTP_open`/`OSSL_HTTP_get`, stored unchanged in "
+            "`OsslHttpReqCtx.upd_fn` and called at the connect/disconnect "
+            "states"
+        ),
+        "citation": [
+            "include/openssl/http.h:73 -- typedef BIO *(*OSSL_HTTP_bio_cb_t)("
+            "BIO *bio, void *arg, int connect, int detail)",
+            "include/openssl/http.h -- OSSL_HTTP_open(..., "
+            "OSSL_HTTP_bio_cb_t bio_update_fn, void *arg, ...) and "
+            "OSSL_HTTP_get(..., OSSL_HTTP_bio_cb_t bio_update_fn, ...)",
+            "src/http/http_client.rs:1347 -- `http_req_ctx_new` is the sole "
+            "source writer of `(*rctx).upd_fn`, storing its own "
+            "`bio_update_fn` parameter",
+            "src/http/http_client.rs:2362-2374 -- the call from "
+            "OSSL_HTTP_open forwards its own `bio_update_fn` parameter",
+            "src/http/http_client.rs:2642-2654 -- OSSL_HTTP_get forwards its "
+            "own `bio_update_fn` parameter to OSSL_HTTP_open",
+            "src/http/http_client.rs:2878 -- OSSL_HTTP_close calls the stored "
+            "slot only after the `if let Some(f)` test",
+        ],
+        "provider_obligation": (
+            "the application supplies a callback of the declared signature "
+            "that stays valid while the request context lives; NULL is "
+            "admitted and is never called"
+        ),
+        "covers": (
+            "the four enumerated call sites in this DSO copy, the "
+            "`OsslHttpReqCtx.upd_fn` field at offset 0x28, its single source "
+            "writer, the NULL test at each site, and the exported entry "
+            "points' declared parameter type"
+        ),
+        "does_not_cover": [
+            "which callback the application supplies; the target set is "
+            "unbounded",
+            "the callback's behaviour or lifetime",
+            "a load at another displacement, a second writer of `upd_fn`, a "
+            "site whose value is not NULL-guarded, or an entry point that is "
+            "not exported with the declared typedef; the witness refuses each",
+            "a runtime GOT interposer or a caller in another DSO",
         ],
     },
     ABI_CONTRACT_PROVIDER_ENTRY: {
@@ -24219,6 +24273,17 @@ _E7LCP_VECTOR_ZERO = ("xorps", "xorpd", "pxor", "vxorps", "vxorpd",
                       "vpxor", "vpxord", "vpxorq")
 
 
+# Instructions that do not write the x86 flags.  A NULL guard may have such an
+# instruction between its test and the conditional branch (e.g. `test %rbp,%rbp;
+# mov 0x24(%rsp),%eax; je ...`); the scan stops at any other instruction.
+_E7LCP_FLAG_PRESERVING = frozenset({
+    "mov", "movq", "movl", "movw", "movb", "movabs", "movups", "movaps",
+    "movdqa", "movdqu", "movd", "movs", "movz", "lea", "push", "pop",
+    "nop", "nopw", "nopl", "data16", "cs", "xchg", "pxor", "xorps",
+    "xorpd", "vxorps", "vxorpd", "vpxor", "vpxord", "vpxorq", "ret",
+})
+
+
 def _e7lcp_guard(g, fstart, site_idx, reg):
     """A NULL test on ``reg`` whose zero edge cannot reach the call.
 
@@ -24241,21 +24306,29 @@ def _e7lcp_guard(g, fstart, site_idx, reg):
     for gb, (lo, hi) in enumerate(cfg["blocks"]):
         if hi - lo < 2:
             continue
-        k = hi - 2
-        mn, _rest, ops = _insn_parts(insns[k][1].split("#", 1)[0].strip())
-        if mn == "test":
-            if not (len(ops) == 2 and _canon(ops[0]) == reg
-                    and _canon(ops[1]) == reg):
-                continue
-        elif mn == "cmp":
-            if not (len(ops) == 2 and ops[0].strip() in ("$0x0", "$0")
-                    and _canon(ops[1]) == reg):
-                continue
-        else:
-            continue
+        branch_idx = hi - 1
         bmn, brest, _bops = _insn_parts(
-            insns[k + 1][1].split("#", 1)[0].strip())
+            insns[branch_idx][1].split("#", 1)[0].strip())
         if bmn not in ("je", "jz", "jne", "jnz"):
+            continue
+        k = None
+        for j in range(branch_idx - 1, lo - 1, -1):
+            jmn, _jr, jops = _insn_parts(
+                insns[j][1].split("#", 1)[0].strip())
+            if jmn == "test" and len(jops) == 2 \
+                    and _canon(jops[0]) == reg and _canon(jops[1]) == reg:
+                k = j
+                break
+            if jmn == "cmp" and len(jops) == 2 \
+                    and jops[0].strip() in ("$0x0", "$0") \
+                    and _canon(jops[1]) == reg:
+                k = j
+                break
+            if jmn in _E7LCP_FLAG_PRESERVING or jmn.startswith(
+                    ("cmov", "set")):
+                continue
+            break
+        if k is None:
             continue
         m = re.match(r"^([0-9a-f]+)", brest)
         if not m:
@@ -24499,14 +24572,15 @@ def _e7lcp_witness(g: "DsoGraph", site: dict, name: str, declared: int):
     # `Block128F` is a plain `extern "C" fn` type: the authority's callers
     # must supply a non-NULL value, and the source carries no check.  An
     # `Option<...>` parameter is checked before every call, so the guard is a
-    # conjunct there.
+    # conjunct there.  A frame-slot operand cannot be tested by the
+    # register guard; its guard is deferred until the caller set is known: if
+    # every caller passes NULL the call site is unreachable and the guard is
+    # vacuous, otherwise the site refuses.
+    guard_deferred = False
     if decl["is_option"]:
         if opnd not in _REGS:
-            return _refuse("slot-not-null-guarded", operand=opnd,
-                           why="the operand is a frame slot; a NULL guard on "
-                               "the call instruction's own value is not "
-                               "proven here")
-        if guard is None:
+            guard_deferred = True
+        elif guard is None:
             return _refuse("slot-not-null-guarded", operand=opnd)
 
     cache = getattr(g, "_e7lcp_callers_cache", None)
@@ -24597,6 +24671,10 @@ def _e7lcp_witness(g: "DsoGraph", site: dict, name: str, declared: int):
                        targets=sorted(hex(t) for t in targets))
     if "e7lcp-new-target" in _MUTED and rows:
         targets |= {fstart}
+    if guard_deferred and targets:
+        return _refuse("slot-not-null-guarded", operand=opnd,
+                       why="the operand is a frame slot and the caller set "
+                           "contains a non-NULL target")
     source = _e7pk12_source_evidence(g)
     return {
         "schema": E7LCP_SCHEMA,
@@ -24613,6 +24691,7 @@ def _e7lcp_witness(g: "DsoGraph", site: dict, name: str, declared: int):
         "declared_parameter": declared,
         "declaration": decl,
         "null_guard": guard,
+        "guard_deferred": guard_deferred,
         "function_facts": {"names": facts["names"], "private": True,
                            "in_dynsym": False, "export": None,
                            "local_symbol": facts["local_symbol"]},
@@ -24631,6 +24710,10 @@ def _e7lcp_witness(g: "DsoGraph", site: dict, name: str, declared: int):
                 f"parameter {declared} at the call; the relocation-slot and "
                 "code-materialised reference forms both bind to this copy"),
             "call_is_on_the_non_null_path": guard,
+            "frame_slot_guard_deferred": (
+                "the operand is a frame slot; every in-image caller passes "
+                "NULL, so the call site is unreachable and no NULL guard is "
+                "required" if guard_deferred else None),
             "caller_set_is_closed": (
                 f"{len(rows)} call site(s) across direct, GOT-slot and "
                 "materialised forms; callers that forward their parameter "
@@ -24851,6 +24934,8 @@ E7CLS_MUTATIONS = (
     "e7cls-field-base-any",
     "e7cls-second-writer",
     "e7cls-new-target",
+    "e7cls-no-loop-guard",
+    "e7cls-no-frame-stability",
 )
 
 
@@ -25333,7 +25418,10 @@ def _e7cls_ctx_loads(g, fstart, idx, reg, depth=0):
     `_led_reg_loads` covers the direct case.  A spilled context pointer (the
     CFB1 callbacks keep it in a frame slot) is followed one hop: the register's
     unique definition must reload it from a `%rsp` slot whose unique store in
-    the function is a register copy, with no `%rsp` write in between.
+    the function is a register copy.  The frame slot is stable when the `%rsp`
+    delta returns to zero between the store and the reload and no access at a
+    shifted displacement aliases the slot; a `push`/`pop` pair with no net
+    change is admitted on that proof, an unmodelled `%rsp` write refuses.
     """
     loads = _led_reg_loads(g, fstart, idx, reg)
     if loads and all(l["base_reg"] not in ("%rsp", "%esp") for l in loads):
@@ -25372,10 +25460,64 @@ def _e7cls_ctx_loads(g, fstart, idx, reg, depth=0):
     k, src, _addr = stores[0]
     if k >= d or _canon(src) not in _REGS:
         return None
+    if "e7cls-no-frame-stability" in _MUTED:
+        for j in range(k + 1, d):
+            jmn, _jr, jops = _insn_parts(
+                insns[j][1].split("#", 1)[0].strip())
+            if jmn in ("push", "pop") or (jops and jops[-1] in
+                                           ("%rsp", "%esp")):
+                return None
+    delta = 0
     for j in range(k + 1, d):
-        jmn, _jr, jops = _insn_parts(insns[j][1].split("#", 1)[0].strip())
-        if jmn in ("push", "pop") or (jops and jops[-1] in ("%rsp", "%esp")):
+        jtext = insns[j][1].split("#", 1)[0].strip()
+        jmn, _jr, jops = _insn_parts(jtext)
+        if not jops:
+            continue
+        if jmn.startswith("push"):
+            if delta - 8 == slot:
+                return None
+            delta -= 8
+            continue
+        if jmn.startswith("pop"):
+            if jops and jops[0].strip() in ("%rsp", "%esp"):
+                return None
+            delta += 8
+            continue
+        if jmn in ("add", "sub") and len(jops) == 2 \
+                and jops[-1].strip() in ("%rsp", "%esp"):
+            m2 = re.fullmatch(r"\$(-?0x[0-9a-f]+)", jops[0].strip())
+            if not m2:
+                return None
+            v = int(m2.group(1), 16)
+            delta += v if jmn == "add" else -v
+            continue
+        if jmn == "lea" and len(jops) == 2 \
+                and jops[-1].strip() in ("%rsp", "%esp"):
+            m2 = re.fullmatch(r"(-?0x[0-9a-f]+)?\(%rsp\)",
+                              jops[0].strip())
+            if not m2:
+                return None
+            delta += int(m2.group(1), 16) if m2.group(1) else 0
+            continue
+        if len(jops) >= 2 and jops[-1].strip() in ("%rsp", "%esp") \
+                and jmn not in ("cmp", "test"):
             return None
+        if len(jops) == 2:
+            m2 = re.fullmatch(r"(-?0x[0-9a-f]+)?\(%rsp\)",
+                              jops[-1].strip())
+            if m2 is not None:
+                disp = int(m2.group(1), 16) if m2.group(1) else 0
+                if delta + disp == slot:
+                    return None
+        elif jmn not in ("call", "jmp", "callq"):
+            m2 = re.fullmatch(r"(-?0x[0-9a-f]+)?\(%rsp\)",
+                              jops[0].strip())
+            if m2 is not None:
+                disp = int(m2.group(1), 16) if m2.group(1) else 0
+                if delta + disp == slot:
+                    return None
+    if delta != 0:
+        return None
     return _e7cls_ctx_loads(g, fstart, k, src, depth + 1)
 
 
@@ -25401,7 +25543,7 @@ def _e7cls_guard_cover(g, fstart, site_idx, reg):
         return None
     covered, proofs = set(), []
     for gb, (lo, hi) in enumerate(cfg["blocks"]):
-        if hi - lo < 2 or hi - 1 > site_idx:
+        if hi - lo < 2:
             continue
         k = hi - 2
         mn, _rest, ops = _insn_parts(insns[k][1].split("#", 1)[0].strip())
@@ -25415,6 +25557,13 @@ def _e7cls_guard_cover(g, fstart, site_idx, reg):
                 continue
         else:
             continue
+        # The old rule required the test to precede the site in instruction
+        # order.  A loop-carried reload is tested at the back edge, which is
+        # *after* the call in linear order but still dominates the next
+        # iteration's call; the CFG checks below establish that.  The switch
+        # restores the linear rule for the control.
+        if "e7cls-no-loop-guard" in _MUTED and k >= site_idx:
+            continue
         bmn, brest, _bops = _insn_parts(
             insns[k + 1][1].split("#", 1)[0].strip())
         if bmn not in ("je", "jz", "jne", "jnz"):
@@ -25426,8 +25575,15 @@ def _e7cls_guard_cover(g, fstart, site_idx, reg):
         ft = cfg["block_of"].get(hi)
         if tb is None or ft is None:
             continue
-        zero_edge = tb if bmn in ("je", "jz") else ft
+        if bmn in ("je", "jz"):
+            zero_edge, nonzero_edge = tb, ft
+        else:
+            zero_edge, nonzero_edge = ft, tb
+        if zero_edge == cb:
+            continue
         if _e7pk12_block_reachable(cfg, zero_edge, cb, blocked={gb}):
+            continue
+        if not _e7pk12_block_reachable(cfg, nonzero_edge, cb):
             continue
         here = _reaching_defs(g, fstart, k, reg)
         if not here:
@@ -25436,7 +25592,17 @@ def _e7cls_guard_cover(g, fstart, site_idx, reg):
             bd = cfg["block_of"].get(d)
             if bd is None:
                 continue
-            if _e7pk12_block_reachable(cfg, bd, cb, blocked={gb}):
+            if bd == cb:
+                # The test is in the call's own block: it must sit strictly
+                # between the definition and the call.
+                if gb != cb or not (d < k < site_idx):
+                    continue
+            elif bd == gb:
+                # The definition precedes the test in the guard block; the
+                # block's only exit is the tested branch.
+                if d >= k:
+                    continue
+            elif _e7pk12_block_reachable(cfg, bd, cb, blocked={gb}):
                 continue
             if d not in covered:
                 covered.add(d)
@@ -30032,6 +30198,260 @@ def x509_ctx_callback_witness(g, site, name):
     return w
 
 
+# ---- E7-HTTPCB: the HTTP client's application BIO callback ----------------- #
+#
+# The exported `OSSL_HTTP_open`/`OSSL_HTTP_get` take an `OSSL_HTTP_bio_cb_t`
+# (`include/openssl/http.h:73`).  `http_req_ctx_new` (inlined into
+# `OSSL_HTTP_open`) stores that parameter unchanged into `OsslHttpReqCtx.upd_fn`
+# at offset 0x28, and every call site reads the slot only after a NULL test.
+# The value therefore crosses the C ABI at the exported entry point; the target
+# set is unbounded.  A second source writer, a store of a non-parameter value, a
+# load at another displacement, or an unguarded call refuses.
+
+E7HTTPCB_SCHEMA = "openssl-rs/consumer-closure/http-bio-update-cb/v1"
+E7HTTPCB_CLASS = ABI_CONTRACT_HTTP_BIO_CB
+E7HTTPCB_SOURCE = "src/http/http_client.rs"
+E7HTTPCB_TYPE = "OsslHttpReqCtx"
+E7HTTPCB_FIELD = "upd_fn"
+E7HTTPCB_SLOT = 0x28
+E7HTTPCB_INSTALLER = "http_req_ctx_new"
+E7HTTPCB_PARAM = "bio_update_fn"
+E7HTTPCB_TYPEDEF = "OSSL_HTTP_bio_cb_t"
+E7HTTPCB_SITES = {
+    ("OSSL_HTTP_get", 0x38D),
+    ("OSSL_HTTP_get", 0x4C5),
+    ("OSSL_HTTP_get", 0x5BE),
+    ("OSSL_HTTP_open", 0x158),
+}
+E7HTTPCB_MUTATIONS = (
+    "e7httpcb-second-writer",
+    "e7httpcb-non-parameter",
+    "e7httpcb-wrong-offset",
+    "e7httpcb-no-guard",
+)
+
+
+def _e7httpcb_selected(site, name):
+    """True for one of the four pinned HTTP callback sites."""
+    if site.get("kind") not in ("call", "jmp"):
+        return False
+    fstart, addr = site.get("func"), site.get("addr")
+    if fstart is None or addr is None:
+        return False
+    return (_external_function_leaf(name), addr - fstart) in E7HTTPCB_SITES
+
+
+def _e7httpcb_writers(g):
+    """Every production source writer of `OsslHttpReqCtx.upd_fn`.
+
+    Only the assignment whose enclosing function is the inlined installer and
+    whose value is the installer's own parameter is enumerated.  Anything else
+    is returned as unknown, which refuses.
+    """
+    pat = re.compile(r"\.\s*" + re.escape(E7HTTPCB_FIELD)
+                     + r"\s*=\s*(?!=)([^;]*);")
+    known, unknown = [], []
+    for rel, text in _s1_docs(g).items():
+        spans = _e7bs_test_spans(text)
+        for m in pat.finditer(text):
+            if any(lo <= m.start() < hi for lo, hi in spans):
+                continue
+            if _pe_line_is_comment(text, m.start()):
+                continue
+            stored = " ".join(m.group(1).split())
+            stored = re.sub(r"\s*\}\s*$", "", stored).strip()
+            row = {"file": rel,
+                   "line": text.count("\n", 0, m.start()) + 1,
+                   "function": _e7bs_enclosing_fn(text, m.start()),
+                   "stored": stored}
+            if row["function"] == E7HTTPCB_INSTALLER \
+                    and stored == E7HTTPCB_PARAM:
+                known.append(row)
+            else:
+                unknown.append(row)
+    return known, unknown
+
+
+def _e7httpcb_call_leaf(g, fstart, idx, reg, depth=0):
+    """The leaf of the call whose result defines `reg` at `idx`, or None."""
+    if depth > 5:
+        return None
+    defs = _reaching_defs(g, fstart, idx, _canon(reg))
+    if not defs or len(defs) != 1:
+        return None
+    d = next(iter(defs))
+    if d < 0:
+        return None
+    text = _insn(g, fstart, d)
+    mn, rest, ops = _insn_parts(text.split("#", 1)[0].strip())
+    if mn in ("call", "callq"):
+        op = rest.strip()
+        if op.startswith("*") and _canon(op[1:]) in _REGS:
+            prov = _e7cls_lea_provenance(g, fstart, d, op[1:])
+            if prov:
+                leaves = {_external_function_leaf(
+                    _led_symbol_name(g, a) or "") for a in prov}
+                if len(leaves) == 1:
+                    return next(iter(leaves))
+        try:
+            sym = _s1_call_symbol(g, fstart, d, resolve_slot=True)
+        except Exception:  # noqa: BLE001 -- an unresolvable slot is a refusal
+            return None
+        return _external_function_leaf(sym)
+    if mn in ("mov", "movq") and len(ops) == 2 \
+            and _canon(ops[0].strip()) in _REGS:
+        return _e7httpcb_call_leaf(g, fstart, d, ops[0], depth + 1)
+    return None
+
+
+def http_bio_update_cb_witness(g, site, name):
+    """The HTTP client's application-supplied `OSSL_HTTP_bio_cb_t`."""
+    if not _has_insns(g) or not _e7httpcb_selected(site, name):
+        return None
+    fstart = site.get("func")
+    insns = g.precision.insns_by_func.get(fstart, ())
+    idx = next((i for i, (a, _t) in enumerate(insns)
+                if a == site.get("addr")), None)
+    if idx is None:
+        return None
+
+    def refuse(reason, **extra):
+        rec = {"class": E7HTTPCB_CLASS, "resolved": False,
+               "refusal": reason, "function": name,
+               "call_site": hex(site.get("addr") or 0)}
+        rec.update(extra)
+        return rec
+
+    slot = 0x30 if "e7httpcb-wrong-offset" in _MUTED else E7HTTPCB_SLOT
+    known, unknown = _e7httpcb_writers(g)
+    if "e7httpcb-second-writer" in _MUTED:
+        unknown = unknown + [{"file": E7HTTPCB_SOURCE, "line": 0,
+                              "function": "an_injected_writer",
+                              "stored": "foreign"}]
+    if unknown:
+        return refuse("field-has-a-writer-outside-the-enumerated-set",
+                      unexpected=unknown[:6])
+    if len(known) != 1:
+        return refuse("field-writer-set-is-not-exactly-the-installer",
+                      writers=known)
+
+    # The exported entry point and its declared callback parameter.
+    open_start = _e7cls_name_starts(g, "OSSL_HTTP_open")
+    if len(open_start) != 1:
+        return refuse("entry-point-is-not-unique-in-the-image",
+                      addresses=[hex(a) for a in open_start])
+    open_start = open_start[0]
+    if _external_exported(g, "OSSL_HTTP_open") is None:
+        return refuse("entry-point-is-not-exported-in-this-image")
+    open_index, open_decl = _external_header_cb_index(
+        g, "OSSL_HTTP_open", E7HTTPCB_TYPEDEF)
+    if open_index is None or open_decl is None:
+        return refuse("header-does-not-declare-the-callback-parameter")
+    get_index, get_decl = _external_header_cb_index(
+        g, "OSSL_HTTP_get", E7HTTPCB_TYPEDEF)
+    if _external_exported(g, "OSSL_HTTP_get") is not None \
+            and (get_index is None or get_decl is None):
+        return refuse("header-does-not-declare-the-get-callback-parameter")
+
+    # The compiled writer: exactly one store of the parameter to the slot.
+    stores = []
+    for i, (addr, text) in enumerate(
+            g.precision.insns_by_func.get(open_start, ())):
+        mn, _rest, ops = _insn_parts(text.split("#", 1)[0].strip())
+        if mn not in ("mov", "movq", "movabs") or len(ops) != 2:
+            continue
+        m = re.fullmatch(r"(-?0x[0-9a-f]+)?\((%r[a-z0-9]+)\)",
+                         ops[1].strip())
+        if m is None:
+            continue
+        off = int(m.group(1), 16) if m.group(1) else 0
+        if off != slot:
+            continue
+        base = m.group(2)
+        if base in ("%rsp", "%rbp"):
+            continue
+        if "e7httpcb-non-parameter" in _MUTED:
+            continue
+        chain = _param_chain(g, open_start, i, ops[0].strip())
+        if chain is None or chain.get("kind") != "param" \
+                or chain.get("index") != open_index:
+            continue
+        origin = _e7httpcb_call_leaf(g, open_start, i, base)
+        if origin not in ("OSSL_HTTP_REQ_CTX_new", "http_req_ctx_new"):
+            continue
+        stores.append({"insn": hex(addr), "text": text.strip(),
+                       "base": base, "origin": origin})
+    if len(stores) != 1:
+        return refuse("installer-store-is-not-the-callback-parameter",
+                      stores=stores, declared_index=open_index)
+    store = stores[0]
+
+    # The site: a direct exported parameter, or a NULL-guarded load of the slot.
+    opnd = _site_operand(site)
+    load, why = _external_operand_load(g, site, opnd)
+    direct = (load is None or load.get("offset") != slot
+              or load.get("base_reg") in ("%rsp", "%rbp"))
+    guard = None
+    if direct:
+        param = _param_chain(g, fstart, idx, opnd)
+        if param is None or param.get("kind") != "param":
+            return refuse("operand-is-not-a-parameter-or-a-field-load",
+                          operand=opnd, load=why)
+        root_index, root_decl = _external_header_cb_index(
+            g, _external_function_leaf(name), E7HTTPCB_TYPEDEF)
+        if root_index is None or param.get("index") != root_index:
+            return refuse("operand-is-not-the-declared-callback-parameter",
+                          operand=opnd, resolved=param.get("index"),
+                          declared=root_index)
+    else:
+        if load.get("base_reg") in ("%rsp", "%rbp"):
+            return refuse("slot-base-is-a-frame-read",
+                          base_reg=load.get("base_reg"))
+        origin = _e7httpcb_call_leaf(g, fstart, load["def"],
+                                     load["base_reg"])
+        if origin not in ("OSSL_HTTP_open", "OSSL_HTTP_REQ_CTX_new",
+                          "http_req_ctx_new"):
+            return refuse("slot-base-is-not-a-request-context",
+                          base_reg=load.get("base_reg"), origin=origin)
+    if "e7httpcb-no-guard" not in _MUTED:
+        guard = _e7lcp_guard(g, fstart, idx, _canon(opnd))
+        if guard is None:
+            return refuse("slot-not-null-guarded", operand=opnd)
+
+    roots = [{"symbol": "OSSL_HTTP_open", "parameter": open_index,
+              "declaration": open_decl}]
+    if get_index is not None and _external_exported(g, "OSSL_HTTP_get"):
+        roots.append({"symbol": "OSSL_HTTP_get", "parameter": get_index,
+                      "declaration": get_decl})
+    w = _witness(
+        E7HTTPCB_CLASS, name, site,
+        slot=(f"{E7HTTPCB_TYPE}.{E7HTTPCB_FIELD} at "
+              f"{E7HTTPCB_SLOT:#x}, called at *{opnd}"),
+        writer=(f"{E7HTTPCB_INSTALLER} stores its own `{E7HTTPCB_PARAM}` "
+                f"parameter ({E7HTTPCB_SOURCE}:1347); the only production "
+                "writer of the field"),
+        interface=(f"{E7HTTPCB_TYPEDEF} -- include/openssl/http.h:73; the "
+                   "exported OSSL_HTTP_open / OSSL_HTTP_get parameter"),
+        basis=("the value is the application's callback at the exported C "
+               "ABI; the field has exactly one source writer, the compiled "
+               "store is that writer's parameter, and every call site "
+               "NULL-tests the slot"),
+    )
+    w["conditions"] = {
+        "site_enumerated": f"{name} {hex(site.get('addr') or 0)}",
+        "field_offset": E7HTTPCB_SLOT,
+        "source_writers": known,
+        "compiled_store": store,
+        "roots": roots,
+        "null_guard": guard,
+        "target_set_unbounded": True,
+    }
+    w["targets"] = []
+    w["target_set"] = []
+    w["does_not_cover"] = ABI_CONTRACTS[E7HTTPCB_CLASS]["does_not_cover"]
+    return w
+
+
 def _gate_refusal(g, symbol, index, typedef):
     """None when ``symbol``'s parameter ``index`` is declared ``typedef``."""
     decl, why = _header_callback_param(g, symbol, index)
@@ -30498,6 +30918,23 @@ def apply_evidence_classes(g: "DsoGraph", workload_imports: set,
             else:
                 site["x509_ctx_callback_refusal"] = xctx
                 stats["E7XCTX_refused"] += 1
+            continue
+        # E7-HTTPCB: the HTTP client's application BIO callback.  The value is
+        # the exported entry point's `OSSL_HTTP_bio_cb_t` parameter stored in
+        # the request context; a second writer, a non-parameter store or an
+        # unguarded site refuses.
+        httpcb = http_bio_update_cb_witness(g, site, name)
+        if httpcb is not None:
+            if httpcb.get("schema") == WITNESS_SCHEMA:
+                site["class"] = E7HTTPCB_CLASS
+                site["unresolved"] = True
+                site["reason"] = ("HTTP bio-update callback ABI contract: "
+                                  + httpcb["slot"])
+                site["witness"] = httpcb
+                stats["E7HTTPCB_contract_bounded"] += 1
+            else:
+                site["http_bio_cb_refusal"] = httpcb
+                stats["E7HTTPCB_refused"] += 1
             continue
         # E7-PMCMP: the PMETH_STANDARD_METHODS comparator, a closed target set.
         pmcmp = pmeth_comparator_witness(g, site, name)
@@ -40428,9 +40865,17 @@ def _e7cls_self_test():
         ((w_ctr or {}).get("resolved"), (w_ctr or {}).get("targets"),
          (w_ctr or {}).get("proved_empty")), (True, [], True))
     w_ofb = wit(ofb, "CRYPTO_ofb128_encrypt", 0x9B)
-    chk("E7CLS the loop-carried ofb reload still refuses",
-        ((w_ofb or {}).get("resolved"), (w_ofb or {}).get("refusal")),
-        (False, "caller-set-not-closed"))
+    chk("E7CLS the loop-carried ofb reload resolves",
+        (bool(w_ofb and w_ofb.get("resolved")),
+         bool(w_ofb and w_ofb.get("targets"))), (True, True))
+    cfb1 = site_for("CRYPTO_cfb128_1_encrypt", 0x70)
+    if cfb1 is None:
+        return [], "E7CLS controls: NOT_RUN (cfb1 site absent)"
+    w_cfb = wit(cfb1, "CRYPTO_cfb128_1_encrypt", 0x70)
+    chk("E7CLS the spilled cfb1 context resolves",
+        (bool(w_cfb and w_cfb.get("resolved")),
+         any(c.get("argument_kind") == "field"
+             for c in (w_cfb or {}).get("callers") or [])), (True, True))
 
     def muted(switches, fn):
         global _MUTED
@@ -40441,6 +40886,33 @@ def _e7cls_self_test():
         finally:
             _MUTED = saved
 
+    # The p12 frame-slot callback: the deferred guard is vacuous only while
+    # every caller passes NULL; a new reachable target must refuse it.
+    p12 = site_for("PKCS12_create_ex2", 0x3E8)
+    if p12 is None:
+        return [], "E7CLS controls: NOT_RUN (p12 frame-slot site absent)"
+    w_p12 = _e7lcp_witness(g, p12, g.funcs[p12["func"]], 12)
+    chk("E7LCP the frame-slot p12 callback resolves proved-empty",
+        ((w_p12 or {}).get("resolved"), (w_p12 or {}).get("targets"),
+         (w_p12 or {}).get("guard_deferred")), (True, [], True))
+    p12_new = muted(
+        {"e7lcp-new-target"},
+        lambda: _e7lcp_witness(g, p12, g.funcs[p12["func"]], 12)) or {}
+    chk("E7LCP a new p12 target refuses the unguarded frame slot",
+        (p12_new.get("resolved"), p12_new.get("refusal")),
+        (False, "slot-not-null-guarded"))
+
+    # The HTTP callback contract is unavailable for this DSO's copy: the
+    # documented entry point is not in .dynsym, so the value is an in-image
+    # caller's, not an exported-ABI caller's.  The witness records that.
+    http_site = site_for("OSSL_HTTP_get", 0x38D)
+    if http_site is not None:
+        w_http = http_bio_update_cb_witness(
+            g, http_site, g.funcs[http_site["func"]])
+        chk("E7HTTPCB the libssl copy is not exported, so the contract refuses",
+            ((w_http or {}).get("resolved"), (w_http or {}).get("refusal")),
+            (False, "entry-point-is-not-exported-in-this-image"))
+
     # (1) a new production writer must refuse the field closure.
     rec = muted({"e7cls-second-writer"}, lambda: wit(wrap, "wrap128", 0xB9)) \
         or {}
@@ -40449,6 +40921,14 @@ def _e7cls_self_test():
         (False, "field-writer-set-not-enumerated"))
     chk("E7CLS the writer control restores the positive witness exactly",
         wit(wrap, "wrap128", 0xB9) == w_wrap, True)
+    for label, site, leaf, off in (
+            ("ofb", ofb, "CRYPTO_ofb128_encrypt", 0x9B),
+            ("cfb1", cfb1, "CRYPTO_cfb128_1_encrypt", 0x70)):
+        rec = muted({"e7cls-second-writer"},
+                    lambda s=site, l=leaf, o=off: wit(s, l, o)) or {}
+        chk(f"E7CLS a new writer refuses the {label} site",
+            (rec.get("resolved"), rec.get("refusal")),
+            (False, "field-writer-set-not-enumerated"))
 
     # (2) a new reachable target must move the reported set.
     base = set((w_wrap or {}).get("targets") or [])
@@ -40458,8 +40938,19 @@ def _e7cls_self_test():
     chk("E7CLS a new reachable target changes the reported set",
         moved - base, {hex(wrap["func"])})
     chk("E7CLS the new-target control loses no target", base - moved, set())
+    for label, site, leaf, off, base_w in (
+            ("ofb", ofb, "CRYPTO_ofb128_encrypt", 0x9B, w_ofb),
+            ("cfb1", cfb1, "CRYPTO_cfb128_1_encrypt", 0x70, w_cfb)):
+        base_s = set((base_w or {}).get("targets") or [])
+        new_s = muted({"e7cls-new-target"},
+                      lambda s=site, l=leaf, o=off: wit(s, l, o)) or {}
+        moved_s = set(new_s.get("targets") or [])
+        chk(f"E7CLS a new target moves the {label} set",
+            moved_s - base_s, {hex(site["func"])})
+        chk(f"E7CLS the {label} new-target control loses none",
+            base_s - moved_s, set())
 
-    # (3) wrong base and no guard are each load-bearing at the helper.  The
+    # (3) wrong base is load-bearing at the attribution helper.  The
     # attribution under test is the call site in the caller, not in the pinned
     # callee: `ossl_cipher_hw_chunked_ofb128` loads the field at index 25 and
     # passes it as the stack argument.
@@ -40475,16 +40966,34 @@ def _e7cls_self_test():
                  lambda: _e7cls_field_load(g, ofb_caller, 25, 25, 0x30,
                                            "%r13", E7CLS_FIELDS, None))
     chk("E7CLS field-base-any mutation flips that refusal", rec2[0], "field")
-    w_unguarded = muted(
-        {"e7cls-no-field-guard"},
+
+    # (4) the two new proof steps are load-bearing: removing each restores the
+    # pre-batch refusal at exactly its site.
+    w_no_loop = muted(
+        {"e7cls-no-loop-guard"},
         lambda: wit(ofb, "CRYPTO_ofb128_encrypt", 0x9B)) or {}
-    chk("E7CLS no-field-guard mutation admits the unproven guard",
-        bool(w_unguarded.get("resolved")), True)
+    chk("E7CLS the loop-aware guard is load-bearing",
+        (w_no_loop.get("resolved"), w_no_loop.get("refusal")),
+        (False, "caller-set-not-closed"))
+    chk("E7CLS the loop-guard control restores exactly",
+        wit(ofb, "CRYPTO_ofb128_encrypt", 0x9B) == w_ofb, True)
+    w_no_frame = muted(
+        {"e7cls-no-frame-stability"},
+        lambda: wit(cfb1, "CRYPTO_cfb128_1_encrypt", 0x70)) or {}
+    chk("E7CLS the frame-slot stability proof is load-bearing",
+        (w_no_frame.get("resolved"), w_no_frame.get("refusal")),
+        (False, "caller-set-not-closed"))
+    chk("E7CLS the frame-stability control restores exactly",
+        wit(cfb1, "CRYPTO_cfb128_1_encrypt", 0x70) == w_cfb, True)
 
     return failures, ("E7CLS controls: wrap128 binds 11 targets (9 field + "
-                      "2 direct), ctr32 proves the empty set, ofb refuses "
-                      "on its loop-carried reload; new-writer, new-target, "
-                      "wrong-base and no-guard switches are load-bearing")
+                      "2 direct), ctr32 proves the empty set, ofb and cfb1 "
+                      "resolve through the loop-aware guard and the stable "
+                      "frame slot; p12 proves the frame-slot callback empty "
+                      "and refuses a new target; http refuses because the "
+                      "libssl copy is not exported; new-writer, new-target, "
+                      "wrong-base, no-loop-guard and no-frame-stability are "
+                      "load-bearing")
 
 
 def _e7abi_self_test():
