@@ -22663,10 +22663,10 @@ def internal_closed_writer_list_witness(g: "DsoGraph", site: dict,
 # E7-SF: the `OpenSslStack::Inner.free_thunk` empty target set
 # --------------------------------------------------------------------------- #
 #
-# `do_ext_nconf` (two sites) and `r2i_pci` (one site) dispatch through
-# `Inner.free_thunk`.  The field is module-private.  In source only three
-# shapes touch it: `from_boxes` initialises it to `None`, the exported
-# `OPENSSL_sk_set_thunks` stores its `f_thunk` parameter, and
+# `do_ext_nconf` (two sites), `r2i_pci` (one site) and `check_msg_all_certs`
+# (one site) dispatch through `Inner.free_thunk`.  The field is module-private.
+# In source only three shapes touch it: `from_boxes` initialises it to `None`,
+# the exported `OPENSSL_sk_set_thunks` stores its `f_thunk` parameter, and
 # `OPENSSL_sk_dup`/`OPENSSL_sk_deep_copy` copy it from an existing stack.
 # The copies propagate `None`; the installer is the only source of a non-NULL
 # value.  This gate resolves the site to the empty set only when the installer
@@ -22697,6 +22697,12 @@ E7SF_SITES = {
     ("do_ext_nconf", 0x1E4),
     ("do_ext_nconf", 0x475),
     ("r2i_pci", 0x49A),
+    # `check_msg_all_certs`'s inlined `sk_pop_free` thunk arm: the same
+    # `Inner.free_thunk` load at the installer's compiled offset (0x20), the
+    # same NULL guard, and a materialised in-image adapter (`x509_free_void`)
+    # as the first argument.  The writer-set closure is a property of the field,
+    # not of the site, so the empty set applies here by the same proof.
+    ("check_msg_all_certs", 0x1D6),
 }
 E7SF_CONDITIONS = (
     "site_enumerated",
@@ -27171,10 +27177,25 @@ E7DSO_SCHEMA = "openssl-rs/consumer-closure/dso-resolved-export/v1"
 E7DSO_DLSYM = "dlsym"
 # (cell symbol fragment, documented export).  A cell outside this set is refused
 # rather than classified: this is one mechanism, not a generic dlsym class.
+#
+# The four `CONF_SSL_*`/`OPENSSL_INIT_CRYPTO` cells were added for the
+# `ssl_mcnf` and `SSL_CTX_new_ex` sites: each is the same `LazySymbol`
+# publication shape as the original three (inlined: `dlsym(RTLD_DEFAULT, <the
+# documented export>)`, `mov %rax,<cell>`, PRESENT state store, NULL guard, and
+# an in-image fallback arm).  The exports are documented process-global
+# `libcrypto` entry points (`conf_ssl_name_find`, `conf_ssl_get`,
+# `conf_ssl_get_cmd`, `OPENSSL_init_crypto`), so the target is the other DSO's
+# implementation, not an in-image function.  Adding a cell is an enumeration
+# extension, not a class widening; the same witness and the same writer/defect
+# rules apply, and an unlisted cell is still refused.
 E7DSO_CELLS = (
     ("dso_shared13ERR_GET_STATE", "ERR_get_state"),
     ("dso_shared17CRYPTO_MALLOC_SYM", "CRYPTO_malloc"),
     ("dso_shared18CRYPTO_REALLOC_SYM", "CRYPTO_realloc"),
+    ("dso_shared18CONF_SSL_NAME_FIND", "conf_ssl_name_find"),
+    ("dso_shared12CONF_SSL_GET", "conf_ssl_get"),
+    ("dso_shared16CONF_SSL_GET_CMD", "conf_ssl_get_cmd"),
+    ("dso_shared19OPENSSL_INIT_CRYPTO", "OPENSSL_init_crypto"),
 )
 
 
@@ -41002,7 +41023,52 @@ def _e7pe_self_test():
             [k for k in E7SF_CONDITIONS
              if not (w or {}).get("conditions", {}).get(k)], [])
         seen.append((leaf, off))
-    chk("e7sf real site count", len(seen), 3)
+    chk("e7sf real site count", len(seen), 4)
+
+    # The new `check_msg_all_certs` pin is an independent dispatch of the same
+    # field, not an absorbed same-shaped call: it resolves on its own shape, and
+    # a newly reachable installer reference flips that exact site to a refusal.
+    _sf_new = site_for("check_msg_all_certs", 0x1D6)
+    chk("e7sf new pin present", _sf_new is not None, True)
+    if _sf_new is not None:
+        _npos = stack_free_thunk_empty_witness(
+            g, dict(_sf_new), g.funcs[_sf_new["func"]], imports) or {}
+        chk("e7sf new pin resolves empty",
+            (_npos.get("resolved"), _npos.get("targets"),
+             _npos.get("proved_empty")), (True, [], True))
+        chk("e7sf new pin binds the installer offset",
+            (_npos.get("field") or {}).get("offset"),
+            hex((_npos.get("image_facts") or {}).get(
+                "installer", {}).get("store", {}).get("offset", -1)))
+
+        class _PrecSF:
+            def __init__(self, real, extra):
+                self.insns_by_func = dict(real.insns_by_func)
+                self.insns_by_func.update(extra)
+
+        class _GraphSF:
+            def __init__(self, real, extra):
+                object.__setattr__(self, "real", real)
+                object.__setattr__(self, "precision",
+                                   _PrecSF(real.precision, extra))
+
+            def __getattr__(self, name):
+                if name in ("_direct_call_index_cache",
+                            "_e7sf_source_cache"):
+                    return None
+                return getattr(self.real, name)
+
+        _inst = _e7bs_function_symbol(g, E7SF_INSTALLER)[0]
+        _foreign = {0xDEAD5000: [
+            (0xDEAD5000,
+             f"call   {_inst:x} <{E7SF_INSTALLER}>"),
+            (0xDEAD5005, "ret")]}
+        _nneg = stack_free_thunk_empty_witness(
+            _GraphSF(g, _foreign), dict(_sf_new), g.funcs[_sf_new["func"]],
+            imports) or {}
+        chk("e7sf new pin refuses a newly reachable installer",
+            (_nneg.get("resolved"), _nneg.get("refusal")),
+            (False, "installer-has-in-image-caller"))
     chk("e7sf installer is local and unreferenced in libssl",
         ((g.dynamic_defs.get(E7SF_INSTALLER),
           _direct_call_index(g).get(_e7bs_function_symbol(
@@ -41244,9 +41310,11 @@ def _e7pe_self_test():
         [r["case_fails"] for r in _pa_rows], [True] * len(_pa_rows))
 
     return failures, (
-        "e7pe controls: the three pinned `Inner.free_thunk` sites resolve to "
+        "e7pe controls: the four pinned `Inner.free_thunk` sites resolve to "
         "the empty proved set (installer local/unreferenced, one None "
-        "constructor, copy-only propagators, NULL guard); the atexit site is "
+        "constructor, copy-only propagators, NULL guard; the fourth pin is "
+        "controlled separately and refuses when a new installer reference "
+        "appears); the atexit site is "
         "a contract with a localised inlined writer, not an empty set; the "
         "two proved-empty gates reject each other's records")
 
@@ -41404,6 +41472,46 @@ def _e7batch_self_test():
         w2 = dso_resolved_export_witness(px2, dict(a_site), a_fn)
         chk("e7dso overlap artifact is ignored",
             bool((w2 or {}).get("schema") == WITNESS_SCHEMA), True)
+
+    # The four newly enumerated cells are controlled per site: each resolves on
+    # its own cell, a foreign writer of that cell refuses it, and removing the
+    # cell from the enumeration refuses it (the enumeration, not the site
+    # shape, is what admits the target).
+    _dso_new = (("ssl_do_config", 0xE7), ("ssl_do_config", 0x220),
+                ("ssl_do_config", 0x504), ("SSL_CTX_new_ex", 0xB6))
+    for _leaf, _off in _dso_new:
+        _hit = _e7bs_function_symbol(gs, _leaf)
+        chk(f"e7dso new pin {_leaf}+{_off:#x} found", _hit is not None, True)
+        if _hit is None:
+            continue
+        _s = site_at(gs, _hit[0] + _off)
+        chk(f"e7dso new pin {_leaf}+{_off:#x} site found",
+            _s is not None, True)
+        if _s is None:
+            continue
+        _b = dso_resolved_export_witness(gs, dict(_s), _hit[1]) or {}
+        chk(f"e7dso new pin {_leaf}+{_off:#x} resolves",
+            (_b.get("class"), _b.get("conditions", {}).get(
+                "writer_set_closed")),
+            (ABI_CONTRACT_DSO_EXPORT, True))
+        _g2, _base2 = mutated(
+            "e7dso-second-writer",
+            lambda: dso_resolved_export_witness(gs, dict(_s), _hit[1]))
+        chk(f"e7dso new pin {_leaf}+{_off:#x} second-writer refuses",
+            (_g2 or {}).get("refusal"),
+            "cell-has-a-writer-outside-the-enumerated-seam")
+        _cell = ((_b.get("conditions") or {}).get("cells") or [{}])[0]
+        _sym = _cell.get("cell") or ""
+        _saved = E7DSO_CELLS
+        try:
+            globals()["E7DSO_CELLS"] = tuple(
+                row for row in _saved if row[0] not in _sym)
+            _off_w = dso_resolved_export_witness(gs, dict(_s), _hit[1]) or {}
+        finally:
+            globals()["E7DSO_CELLS"] = _saved
+        chk(f"e7dso new pin {_leaf}+{_off:#x} unlisted cell refuses",
+            (_off_w.get("resolved"), bool(_off_w.get("refusal"))),
+            (False, True))
 
     # --- E7-PAS ---
     pas_ok = []
