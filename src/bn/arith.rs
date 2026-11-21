@@ -415,6 +415,14 @@ pub unsafe extern "C" fn BN_sqr(r: *mut BigNum, a: *const BigNum, _ctx: *mut BnC
 /// `BN_R_DIV_BY_ZERO` at the authority's own coordinate in `BN_div`, which is
 /// observable through `ERR_peek_error_all`.
 ///
+/// **Dispatch.** A caller that stamps `BN_FLG_CONSTTIME` on `a` or `b` — the
+/// authority's own signal, and what `ossl_rsa_check_private_exponent` and
+/// `ossl_rsa_multiprime_derive` already do to their secret operands — gets the
+/// fixed-pattern binary division in [`limbs::div_rem_ct_fallible`]. Every other
+/// caller keeps the variable-time Knuth division it had, which is the authority's
+/// behaviour for an unflagged operand. The dispatch itself is a branch on a
+/// public flag, not on a secret value.
+///
 /// # Safety
 ///
 /// `dv` and `rem` must each be null or a live, uniquely-owned `BIGNUM`; `a` and `b`
@@ -452,9 +460,18 @@ pub unsafe extern "C" fn BN_div(
             unsafe { raise_site(&BN_DIV_217) };
             return 0;
         }
+        // SAFETY: `a` and `b` are null-or-live per this function's `# Safety`
+        // section, and the flags are plain values.
+        let consttime =
+            unsafe { BN_get_flags(a, BN_FLG_CONSTTIME) | BN_get_flags(b, BN_FLG_CONSTTIME) } != 0;
         // A zero divisor raises `BN_R_DIV_BY_ZERO` above; an allocation failure
         // here is only the ordinary failure answer and raises nothing.
-        let Some((q, r)) = limbs::div_rem_fallible(&ad, &bd) else {
+        let divided = if consttime {
+            limbs::div_rem_ct_fallible(&ad, &bd)
+        } else {
+            limbs::div_rem_fallible(&ad, &bd)
+        };
+        let Some((q, r)) = divided else {
             return 0;
         };
         // The quotient is negative exactly when the signs differ, and the remainder
@@ -480,10 +497,14 @@ pub unsafe extern "C" fn BN_div(
 /// `int BN_nnmod(BIGNUM *r, const BIGNUM *a, const BIGNUM *m, BN_CTX *ctx)`
 ///
 /// The non-negative remainder, which the rest of the `mod` family is defined
-/// through. `BN_mod` is deliberately **not** exported: the authority declares it as
+/// `BN_mod` is deliberately **not** exported: the authority declares it as
 /// a macro over `BN_div`, so a library that exported it would be reachable through
 /// `dlsym` where the authority is not — an observable ABI difference in the wrong
 /// direction.
+///
+/// **Dispatch.** As [`BN_div`]: a flagged `a` or `m` selects the fixed-pattern
+/// division, because in the authority `BN_mod` *is* `BN_div`'s remainder slot and a
+/// caller that stamps the flag expects both to behave the same way.
 ///
 /// # Safety
 ///
@@ -520,7 +541,16 @@ pub unsafe extern "C" fn BN_nnmod(
             unsafe { raise_site(&BN_DIV_217) };
             return 0;
         }
-        let Some((q, mut rem)) = limbs::div_rem_fallible(&ad, &md) else {
+        // SAFETY: `a` and `m` are null-or-live per this function's `# Safety`
+        // section, and the flags are plain values.
+        let consttime =
+            unsafe { BN_get_flags(a, BN_FLG_CONSTTIME) | BN_get_flags(m, BN_FLG_CONSTTIME) } != 0;
+        let divided = if consttime {
+            limbs::div_rem_ct_fallible(&ad, &md)
+        } else {
+            limbs::div_rem_fallible(&ad, &md)
+        };
+        let Some((q, mut rem)) = divided else {
             return 0;
         };
         // The quotient is an intermediate with no reader and can derive from a
@@ -2284,6 +2314,142 @@ mod tests {
             BN_free(a);
             BN_free(b);
             BN_free(out);
+        }
+    }
+
+    /// T28: a `BN_div` whose operands carry `BN_FLG_CONSTTIME` takes the
+    /// fixed-pattern division.
+    ///
+    /// The dispatch is asserted through the entry counter, because two correct
+    /// divisions of the same operands produce the same answer and value comparison
+    /// alone cannot distinguish the arms. The values are then checked twice: against
+    /// the variable-time arm, and against the division identity `q*b + r == a`,
+    /// `r < b`, which does not restate either implementation.
+    #[test]
+    fn div_honours_the_consttime_flag() {
+        type Case = (Vec<Limb>, Vec<Limb>);
+        let cases: &[Case] = &[
+            (vec![u64::MAX, u64::MAX], vec![0, 1]),
+            (vec![1, 0x8000_0000_0000_0000], vec![u64::MAX]),
+            (vec![1], vec![u64::MAX, u64::MAX]),
+            (
+                vec![0x0123_4567_89ab_cdef, 0x1122_3344_5566_7788, 0x99aa_bbcc],
+                vec![0x0fed_cba9_8765_4321, 0x0000_0000_0000_0001],
+            ),
+            (vec![3], vec![3]),
+            (vec![4], vec![3]),
+        ];
+        let entries = crate::bn::limbs::ct_div_entries;
+
+        for (ad, bd) in cases {
+            // SAFETY: every `new_owned` below answers a fresh live object, and each
+            // object is freed exactly once before the iteration ends.
+            unsafe {
+                let a = new_owned(ad.clone(), 0);
+                let flagged = new_owned(bd.clone(), 0);
+                let plain = new_owned(bd.clone(), 0);
+                BN_set_flags(flagged, BN_FLG_CONSTTIME);
+                let q_ct = BN_new();
+                let r_ct = BN_new();
+                let q_vt = BN_new();
+                let r_vt = BN_new();
+                let prod = BN_new();
+                let sum = BN_new();
+                assert!(
+                    !a.is_null()
+                        && !flagged.is_null()
+                        && !plain.is_null()
+                        && !q_ct.is_null()
+                        && !r_ct.is_null()
+                        && !q_vt.is_null()
+                        && !r_vt.is_null()
+                        && !prod.is_null()
+                        && !sum.is_null()
+                );
+
+                let before = entries();
+                assert_eq!(BN_div(q_ct, r_ct, a, flagged, core::ptr::null_mut()), 1);
+                assert!(
+                    entries() > before,
+                    "a flagged divisor must reach the constant-pattern division"
+                );
+
+                let before = entries();
+                assert_eq!(BN_div(q_vt, r_vt, a, plain, core::ptr::null_mut()), 1);
+                assert_eq!(
+                    entries(),
+                    before,
+                    "an unflagged call must keep the variable-time division"
+                );
+
+                assert_eq!(BN_ucmp(q_ct, q_vt), 0, "quotient differs: {ad:?}/{bd:?}");
+                assert_eq!(BN_ucmp(r_ct, r_vt), 0, "remainder differs: {ad:?}/{bd:?}");
+                assert_eq!(BN_mul(prod, q_ct, plain, core::ptr::null_mut()), 1);
+                assert_eq!(BN_add(sum, prod, r_ct), 1);
+                assert_eq!(BN_ucmp(sum, a), 0, "q*b+r != a for {ad:?}/{bd:?}");
+                assert_eq!(BN_ucmp(r_ct, plain), -1, "r >= b for {ad:?}/{bd:?}");
+
+                // The flag on the dividend is the dispatch's other arm.
+                let flagged_a = new_owned(ad.clone(), 0);
+                BN_set_flags(flagged_a, BN_FLG_CONSTTIME);
+                let before = entries();
+                assert_eq!(
+                    BN_div(q_ct, r_ct, flagged_a, plain, core::ptr::null_mut()),
+                    1
+                );
+                assert!(
+                    entries() > before,
+                    "a flagged dividend must reach the constant-pattern division"
+                );
+                assert_eq!(BN_ucmp(q_ct, q_vt), 0);
+
+                for p in [
+                    a, flagged, plain, flagged_a, q_ct, r_ct, q_vt, r_vt, prod, sum,
+                ] {
+                    BN_free(p);
+                }
+            }
+        }
+    }
+
+    /// T28: `BN_nnmod` is `BN_mod` in the authority — `BN_div`'s remainder slot —
+    /// so it takes the same flag dispatch. The remainder must be the same value and
+    /// must be reduced (`r < m`).
+    #[test]
+    fn nnmod_honours_the_consttime_flag() {
+        let entries = crate::bn::limbs::ct_div_entries;
+        // SAFETY: every object below is a fresh live allocation owned by this test
+        // and freed exactly once.
+        unsafe {
+            let a = new_owned(vec![0xffff_ffff_ffff_ffff, 0xffff_ffff_ffff_ffff], 0);
+            let flagged = copy_of(a);
+            BN_set_flags(flagged, BN_FLG_CONSTTIME);
+            let m = new_owned(vec![0xffff_ffff_ffff_ffc5, 0x0123_4567_89ab_cdef], 0);
+            let r_ct = BN_new();
+            let r_vt = BN_new();
+            assert!(!r_ct.is_null() && !r_vt.is_null());
+
+            let before = entries();
+            assert_eq!(BN_nnmod(r_ct, flagged, m, core::ptr::null_mut()), 1);
+            assert!(
+                entries() > before,
+                "a flagged dividend must reach the constant-pattern division"
+            );
+
+            let before = entries();
+            assert_eq!(BN_nnmod(r_vt, a, m, core::ptr::null_mut()), 1);
+            assert_eq!(
+                entries(),
+                before,
+                "an unflagged call must keep the variable-time division"
+            );
+
+            assert_eq!(BN_ucmp(r_ct, r_vt), 0, "the two arms must agree");
+            assert_eq!(BN_ucmp(r_ct, m), -1, "the remainder is reduced");
+
+            for p in [a, flagged, m, r_ct, r_vt] {
+                BN_free(p);
+            }
         }
     }
 
