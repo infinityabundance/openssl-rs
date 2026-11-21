@@ -1,0 +1,18 @@
+{
+  "schema": "openssl-rs/interop-detection-receipt/1",
+  "item": "O3 of docs/ETP-TODO.md",
+  "generated": "2026-11-21T18:31:51Z",
+  "openssh_tree": "/home/user/openssl-rs/court/tmp/o2/openssh-9.9p1",
+  "prefix": "/home/user/openssl-rs/court/tmp/o3/prefix",
+  "mechanism": "regress/test-exec.sh defaults to /usr/local/bin/* and overrides from TEST_SSH_*; configure fills those from AC_PATH_PROG and the generated Makefile's interop-tests target carries them into the harness",
+  "counts": {"tools": 6, "failed": 0},
+  "tools": [
+  {"role": "plink", "status": "ok", "detected": "/home/user/openssl-rs/court/tmp/o3/prefix/bin/plink", "version": "plink: Release 0.85"},
+  {"role": "puttygen", "status": "ok", "detected": "/home/user/openssl-rs/court/tmp/o3/prefix/bin/puttygen", "version": "puttygen: Release 0.85"},
+  {"role": "dropbear", "status": "ok", "detected": "/home/user/openssl-rs/court/tmp/o3/prefix/sbin/dropbear", "version": "Dropbear v2026.94"},
+  {"role": "dbclient", "status": "ok", "detected": "/home/user/openssl-rs/court/tmp/o3/prefix/bin/dbclient", "version": "Dropbear v2026.94"},
+  {"role": "dropbearkey", "status": "ok", "detected": "/home/user/openssl-rs/court/tmp/o3/prefix/bin/dropbearkey", "version": "Unknown argument -V"},
+  {"role": "dropbearconvert", "status": "ok", "detected": "/home/user/openssl-rs/court/tmp/o3/prefix/bin/dropbearconvert", "version": "All arguments must be specified"},
+  {"role": "conch", "status": "absent", "note": "not pinned by this campaign; harness tests that require it must be recorded skipped, never passed"}
+  ]
+}
