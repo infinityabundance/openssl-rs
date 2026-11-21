@@ -329,6 +329,25 @@ pub(crate) fn magnitude(b: Option<&BigNum>) -> &[Limb] {
     }
 }
 
+/// [`parts_fallible`] without the operand copy: magnitude borrowed in place, plus
+/// the sign.
+///
+/// Every arithmetic entry point that only *reads* its operands can use this: the
+/// slice's last use is the limb operation, which returns an owned vector, and the
+/// output is not borrowed until that operation is over. Copying the operand instead
+/// costs one heap allocation per operand per call, which is the dominant cost of a
+/// field operation (T29 measured 30 950 operand copies in one P-256 signature).
+///
+/// A caller must still sequence the read before the store: an aliased output would
+/// otherwise mutate the storage this slice borrows. The `store`/`store_consttime`
+/// call is the last statement of each such function for exactly that reason.
+pub(crate) fn parts_borrowed(b: Option<&BigNum>) -> (&[Limb], bool) {
+    match b {
+        Some(b) => (&b.d, b.neg != 0),
+        None => (&[], false),
+    }
+}
+
 /// Release the magnitude a [`store`] is about to replace, when it is secret storage.
 ///
 /// `store`/`store_consttime` hand the destination a freshly built `Vec`, so the
