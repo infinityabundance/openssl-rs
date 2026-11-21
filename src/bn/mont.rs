@@ -43,7 +43,7 @@
 
 use core::ffi::{c_int, c_ulong};
 
-use crate::bn::arith::{mod_exp_core, mod_exp_core_consttime_width};
+use crate::bn::arith::{mod_exp_core, mod_exp_core_consttime_from_parts};
 use crate::bn::bignum::{as_mut, as_ref, parts, store, store_consttime, BigNum};
 use crate::bn::ctx::BnCtx;
 use crate::bn::limbs::{self, Limb};
@@ -482,6 +482,8 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
         let (pd, _) = parts(y);
         // Secret on the constant-time path: adopt the copied temporary into a
         // cleansed owner before any early return can release it as a plain `Vec`.
+        // It is only the source of the public-width exponent copy: the
+        // constant-time branch below cleanses and releases it before the ladder.
         let pd = SecretBuf::from_vec(pd);
         // SAFETY: `m` is null-or-live per this function's `# Safety` section.
         let z = unsafe { as_ref(m) };
@@ -499,7 +501,7 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
             // modulus is odd here (the refusal above), so the Montgomery-form
             // ladder is available. Its width is the modulus' limb count — a
             // public parameter — never the exponent's normalised length.
-            mod_exp_core_consttime_width(&ad, &pd, &md, md.len())
+            mod_exp_core_consttime_from_parts(&ad, pd, &md, md.len())
         } else {
             mod_exp_core(&ad, &pd, &md)
         };
@@ -547,6 +549,8 @@ pub unsafe extern "C" fn BN_mod_exp_mont_consttime(
         let (pd, _) = parts(y);
         // This entry point is always constant-time, so the exponent copy is
         // secret: adopt it into a cleansed owner before the even-modulus return.
+        // The ladder stages it at the public modulus width and releases this
+        // secret-sized copy before the fixed-pattern loop begins.
         let pd = SecretBuf::from_vec(pd);
         // SAFETY: `m` is null-or-live per this function's `# Safety` section.
         let z = unsafe { as_ref(m) };
@@ -559,7 +563,7 @@ pub unsafe extern "C" fn BN_mod_exp_mont_consttime(
         // This entry point's name is the promise: always the fixed-pattern ladder.
         // The modulus is odd (refused above), so Montgomery form exists. The
         // loop width is the modulus' limb count, a public parameter.
-        match mod_exp_core_consttime_width(&ad, &pd, &md, md.len()) {
+        match mod_exp_core_consttime_from_parts(&ad, pd, &md, md.len()) {
             // SAFETY: `r` is null-or-live per this function's `# Safety` section;
             // the result may derive from a secret exponent, so it is stored
             // without a value-dependent trim branch.

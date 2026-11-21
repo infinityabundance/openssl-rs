@@ -169,6 +169,14 @@ mod drop_probe {
 
 #[cfg(test)]
 impl<T: SecretElement> SecretBuf<T> {
+    /// The allocation's element capacity: the extent `Drop` cleanses.
+    ///
+    /// Exposed only under `cfg(test)` so a test can assert that capacity is
+    /// fixed by public geometry rather than by the input's normalised length.
+    pub(crate) fn capacity(&self) -> usize {
+        self.inner.capacity()
+    }
+
     /// Read the storage after `Drop`'s cleanse and record whether any byte
     /// survived. Runs only when the allocation was armed by a test on this
     /// thread, so unrelated `SecretBuf` drops are ignored.
