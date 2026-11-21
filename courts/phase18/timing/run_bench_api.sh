@@ -37,7 +37,7 @@ AUTH_DSO="$AUTH_LIB/libcrypto.so.3"
 WORK="${T21_WORK:-$ROOT/court/tmp/t21}"
 FIX_DIR="$ROOT/courts/phase18/timing/fixtures"
 RSA_DER="${RSA_DER:-$FIX_DIR/rsa2048.der}"
-ARCHIVE="$ROOT/target/release/libopenssl_rs.a"
+ARCHIVE="${ARCHIVE:-$ROOT/target/release/libopenssl_rs.a}"
 CAND_DSO="${CANDIDATE_DSO:-$WORK/libcrypto.so.3}"
 
 mkdir -p "$WORK" "$FIX_DIR"

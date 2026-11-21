@@ -474,9 +474,20 @@ pub unsafe extern "C" fn BN_div(
 /// `dlsym` where the authority is not — an observable ABI difference in the wrong
 /// direction.
 ///
-/// **Dispatch.** As [`BN_div`]: a flagged `a` or `m` selects the fixed-pattern
-/// division, because in the authority `BN_mod` *is* `BN_div`'s remainder slot and a
-/// caller that stamps the flag expects both to behave the same way.
+/// **No `BN_FLG_CONSTTIME` dispatch, deliberately, and measured.** The RSA CRT
+/// sites T28 is about call `BN_div`'s remainder slot directly (the authority's
+/// `BN_mod` macro), so the dispatch lives there. Routing this function's reduction
+/// through the fixed-pattern division as well was implemented and then withdrawn:
+/// the EC ladder stamps `BN_FLG_CONSTTIME` on every point coordinate, so the flag
+/// propagates into the field arithmetic and the generic binary division was used
+/// for the ladder's reductions. Measured on candidate `HEAD` with the same
+/// harness: `ecdsa256` 1 722 µs / 136.4x the authority **with** the dispatch here
+/// and 632 µs / 50.1x **without** it, every other workload unchanged and the six
+/// cross-implementation checks identical. A field reduction needs a
+/// constant-pattern *field* reduction (the sibling of `T27`), not a
+/// bit-at-a-time long division; the flag is therefore honoured in [`BN_div`] and
+/// not here, and the mod family's secret-operand timing is recorded as open in
+/// T28 rather than paid for with a 2.7x signing cost.
 ///
 /// # Safety
 ///
@@ -509,21 +520,12 @@ pub unsafe extern "C" fn BN_nnmod(
             unsafe { raise_site(&BN_DIV_217) };
             return 0;
         }
-        // SAFETY: `a` and `m` are null-or-live per this function's `# Safety`
-        // section, and the flags are plain values.
-        let consttime =
-            unsafe { BN_get_flags(a, BN_FLG_CONSTTIME) | BN_get_flags(m, BN_FLG_CONSTTIME) } != 0;
         // A remainder-only call: the quotient has no reader here (it can derive from
         // a secret dividend, which is why an earlier version adopted it in a
         // `SecretBuf` and discarded it), and the T29 census showed that allocation was
         // one of the per-reduction costs paid on every field multiplication. The loop
         // does not build it at all.
-        let remainder = if consttime {
-            limbs::div_rem_ct_fallible(ad, md).map(|(_, r)| r)
-        } else {
-            limbs::rem_fallible(ad, md)
-        };
-        let Some(mut rem) = remainder else {
+        let Some(mut rem) = limbs::rem_fallible(ad, md) else {
             return 0;
         };
         // A remainder that came out negative is made non-negative by adding the
@@ -2376,47 +2378,6 @@ mod tests {
                 ] {
                     BN_free(p);
                 }
-            }
-        }
-    }
-
-    /// T28: `BN_nnmod` is `BN_mod` in the authority — `BN_div`'s remainder slot —
-    /// so it takes the same flag dispatch. The remainder must be the same value and
-    /// must be reduced (`r < m`).
-    #[test]
-    fn nnmod_honours_the_consttime_flag() {
-        let entries = crate::bn::limbs::ct_div_entries;
-        // SAFETY: every object below is a fresh live allocation owned by this test
-        // and freed exactly once.
-        unsafe {
-            let a = new_owned(vec![0xffff_ffff_ffff_ffff, 0xffff_ffff_ffff_ffff], 0);
-            let flagged = copy_of(a);
-            BN_set_flags(flagged, BN_FLG_CONSTTIME);
-            let m = new_owned(vec![0xffff_ffff_ffff_ffc5, 0x0123_4567_89ab_cdef], 0);
-            let r_ct = BN_new();
-            let r_vt = BN_new();
-            assert!(!r_ct.is_null() && !r_vt.is_null());
-
-            let before = entries();
-            assert_eq!(BN_nnmod(r_ct, flagged, m, core::ptr::null_mut()), 1);
-            assert!(
-                entries() > before,
-                "a flagged dividend must reach the constant-pattern division"
-            );
-
-            let before = entries();
-            assert_eq!(BN_nnmod(r_vt, a, m, core::ptr::null_mut()), 1);
-            assert_eq!(
-                entries(),
-                before,
-                "an unflagged call must keep the variable-time division"
-            );
-
-            assert_eq!(BN_ucmp(r_ct, r_vt), 0, "the two arms must agree");
-            assert_eq!(BN_ucmp(r_ct, m), -1, "the remainder is reduced");
-
-            for p in [a, flagged, m, r_ct, r_vt] {
-                BN_free(p);
             }
         }
     }
