@@ -50,10 +50,10 @@ Rules that bind this queue (from AGENTS.md, extended by the ETP mandate):
 
 | id | item | status |
 |---|---|---|
-| T1 | Infallible allocations in `limbs::rem`/`limbs::mul`; `base_plain`, `rr`, `one_mont`, `product` still plain `Vec`s (`OBL-BN-ALLOCATOR`) | TODO |
+| T1 | Infallible allocations in `limbs::rem`/`limbs::mul`; `base_plain`, `rr`, `one_mont`, `product` still plain `Vec`s (`OBL-BN-ALLOCATOR`) | PARTIAL: `limbs::{rem,mul,shl,shr,div_rem,div_rem_small,from_u64}_fallible`; the consttime ladder (`base_plain`/`rr`/`one_mont` in `SecretBuf`, `product` fallible) returns `None`/0 on failure, with a forced-failure test. Residual: C-ABI `bignum::parts` clones and the variable-time `limbs::{rem,mul}` wrappers still allocate infallibly; `OBL-BN-ALLOCATOR` stays open. |
 | T2 | `SecretBuf::from_vec` cleanses initialised length only; spare capacity may retain secret bytes — establish a storage invariant or cleanse the whole allocation | DONE: `Drop` cleanses the whole allocation (`capacity * size_of`), writes only; invariant documented in `bn/secret.rs`; capacity test fails when disabled |
 | T3 | Destructor cleansing is proportional to normalised (secret) length; representation-level fix needed, not a normalisation tweak | TODO |
-| T4 | Mutate only `cleanse_now()` while keeping the observer, to prove the tests detect uncleansed bytes rather than only the absence of the destructor | DONE: cleanse-only mutation → 1 passed/4 failed; whole-body removal → 1 passed/4 failed (all "Drop did not observe") |
+| T4 | Mutate only `cleanse_now()` while keeping the observer, to prove the tests detect uncleansed bytes rather than only the absence of the destructor | DONE: cleanse-only mutation re-observed at `ce86f2aab` → **0 passed / 5 failed**; restored → 5 passed. The implementation arrived inside commit `d9fa09689` whose message describes only documentation; that provenance defect is recorded here rather than rewritten. |
 | T5 | EC secret-base reduction: `ecdsa_sign_setup` inverts nonce `k` via `ec_field_inverse_mod_ord`; `ossl_ec_GFp_mont_field_inv` takes field elements; initial `limbs::rem` is variable-time | TODO |
 | T6 | RSA CRT moduli are secret (only the width is public); Montgomery precomputation runs on them — taint CRT modulus contents, not just exponents | TODO |
 | T7 | `BN_mod_inverse`: 171 branches + 38 secret-derived addresses + 28 allocator branches; needs a domain-correct constant-time inversion, with a separate variable-time public path | TODO |
