@@ -144,13 +144,13 @@ impl<T: SecretElement> Drop for SecretBuf<T> {
 /// cleansing and before the backing `Vec` is released — the strongest point that
 /// is still a live, soundly readable allocation.
 #[cfg(test)]
-mod drop_probe {
+pub(crate) mod drop_probe {
     use core::cell::Cell;
 
     /// What `Drop` saw on an armed allocation.
-    pub(super) struct Observation {
-        pub(super) ptr: usize,
-        pub(super) nonzero_bytes: usize,
+    pub(crate) struct Observation {
+        pub(crate) ptr: usize,
+        pub(crate) nonzero_bytes: usize,
     }
 
     thread_local! {
@@ -160,7 +160,7 @@ mod drop_probe {
         static SEEN: Cell<Option<Observation>> = const { Cell::new(None) };
     }
 
-    pub(super) fn arm(ptr: *const u64) {
+    pub(crate) fn arm(ptr: *const u64) {
         TARGET.with(|t| t.set(ptr as usize));
         SEEN.with(|s| s.set(None));
     }
@@ -173,7 +173,7 @@ mod drop_probe {
         SEEN.with(|s| s.set(Some(Observation { ptr, nonzero_bytes })));
     }
 
-    pub(super) fn take() -> Option<Observation> {
+    pub(crate) fn take() -> Option<Observation> {
         SEEN.with(|s| s.take())
     }
 }
