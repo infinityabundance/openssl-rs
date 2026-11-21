@@ -13,9 +13,12 @@
 //!
 //! ## `value_barrier_32` is the crate's `black_box`
 //!
-//! `coeff_from_nibble_4`/`_2` guard their range tests with `value_barrier_32(...)` so the compiler
-//! cannot turn the branch into a value select. The crate's spelling for that barrier is
-//! [`core::hint::black_box`], the same substitution `src/ec/curve448.rs` records (D371's sibling).
+//! `coeff_from_nibble_4`/`_2` guard their range tests with the authority's barrier, spelled
+//! [`core::hint::black_box`] here (`src/ec/curve448.rs` records the same substitution). The barrier
+//! stops the compiler reasoning about the nibble's value. It does **not** make this path constant
+//! time — the authority says outright that it is not — and it does not guarantee that the test is
+//! lowered to a branch rather than a value select. The leak is the acceptance or rejection of a
+//! sampled nibble, which the authority accepts because the value is either chosen or thrown away.
 //!
 //! SPDX-License-Identifier: Apache-2.0
 
