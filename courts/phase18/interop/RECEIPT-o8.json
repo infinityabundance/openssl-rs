@@ -1,0 +1,100 @@
+{
+ "schema": "openssl-rs/interop-directions-receipt/1",
+ "item": "O8 of docs/ETP-TODO.md",
+ "generated": "2026-11-21T19:18:36Z",
+ "source_logs": [
+  "/tmp/o6-a-k.log",
+  "/tmp/o6-b-k.log",
+  "court/tmp/o4/tree-A/regress/dbclient.log"
+ ],
+ "directions": {
+  "putty_plink_to_openssh_sshd": {
+   "covered": true,
+   "scripts": [
+    "putty-transfer",
+    "putty-ciphers",
+    "putty-kex"
+   ],
+   "result": "ok on both subjects"
+  },
+  "dropbear_dbclient_to_openssh_sshd": {
+   "covered": true,
+   "scripts": [
+    "dropbear-ciphers",
+    "dropbear-kex"
+   ],
+   "result": "9/9 cipher combos ok; 3 of 4 KEX ok; the fourth is UNSUPPORTED, see below"
+  },
+  "openssh_client_to_dropbear_server": {
+   "covered": false,
+   "reason": "the harness's dropbear scripts use dbclient as the client against the local sshd; there is no OpenSSH-client-to-Dropbear-server cell upstream and none is claimed here"
+  }
+ },
+ "transcripts": {
+  "putty_kex": [
+   "putty KEX: kex diffie-hellman-group1-sha1",
+   "putty KEX: kex diffie-hellman-group14-sha1",
+   "putty KEX: kex diffie-hellman-group14-sha256",
+   "putty KEX: kex diffie-hellman-group16-sha512",
+   "putty KEX: kex diffie-hellman-group18-sha512",
+   "putty KEX: kex diffie-hellman-group-exchange-sha1",
+   "putty KEX: kex diffie-hellman-group-exchange-sha256",
+   "putty KEX: kex ecdh-sha2-nistp256",
+   "putty KEX: kex ecdh-sha2-nistp384",
+   "putty KEX: kex ecdh-sha2-nistp521",
+   "putty KEX: kex curve25519-sha256",
+   "putty KEX: kex curve25519-sha256@libssh.org",
+   "putty KEX: kex sntrup761x25519-sha512",
+   "putty KEX: kex sntrup761x25519-sha512@openssh.com",
+   "putty KEX: kex mlkem768x25519-sha256"
+  ],
+  "putty_ciphers": {
+   "combinations": 121,
+   "sample": [
+    "putty ciphers: cipher default mac default",
+    "putty ciphers: cipher default mac hmac-sha1",
+    "putty ciphers: cipher default mac hmac-sha1-96",
+    "putty ciphers: cipher default mac hmac-sha2-256",
+    "putty ciphers: cipher default mac hmac-sha2-512",
+    "putty ciphers: cipher default mac hmac-md5"
+   ]
+  },
+  "putty_transfer": [
+   "putty transfer data: compression 0",
+   "putty transfer data: compression 1"
+  ],
+  "dropbear_ciphers": [
+   "dropbear ciphers: cipher chacha20-poly1305@openssh.com mac hmac-sha2-256 kt id_ecdsa",
+   "dropbear ciphers: cipher chacha20-poly1305@openssh.com mac hmac-sha2-256 kt id_ed25519",
+   "dropbear ciphers: cipher chacha20-poly1305@openssh.com mac hmac-sha2-256 kt id_rsa",
+   "dropbear ciphers: cipher aes256-ctr mac hmac-sha2-256 kt id_ecdsa",
+   "dropbear ciphers: cipher aes256-ctr mac hmac-sha2-256 kt id_ed25519",
+   "dropbear ciphers: cipher aes256-ctr mac hmac-sha2-256 kt id_rsa",
+   "dropbear ciphers: cipher aes128-ctr mac hmac-sha2-256 kt id_ecdsa",
+   "dropbear ciphers: cipher aes128-ctr mac hmac-sha2-256 kt id_ed25519",
+   "dropbear ciphers: cipher aes128-ctr mac hmac-sha2-256 kt id_rsa"
+  ],
+  "dropbear_kex": [
+   "dropbear kex: kex curve25519-sha256",
+   "dropbear kex: kex curve25519-sha256@libssh.org",
+   "dropbear kex: kex diffie-hellman-group14-sha256",
+   "dropbear kex: kex diffie-hellman-group14-sha1"
+  ],
+  "dbclient_unsupported": "dbclient: Connection to user@somehost:22 exited: No matching algo kex"
+ },
+ "classification": {
+  "dropbear kex / diffie-hellman-group14-sha1": {
+   "harness_verdict": "failed (regress/dropbear-kex.sh treats any non-zero dbclient exit as a failure)",
+   "evidence": "dbclient's own transcript: 'No matching algo kex'",
+   "classification": "unsupported",
+   "reason": "Dropbear 2026.94's client does not offer diffie-hellman-group14-sha1; the harness forces it on the server and never asks the client what it offers",
+   "candidate_specific": false,
+   "identical_on_both_subjects": true
+  },
+  "sftp commands / lls": {
+   "classification": "upstream-common, cause not isolated (O6)"
+  }
+ },
+ "interop_transcripts_identical_between_subjects": true,
+ "note": "A classification is not a pass: the unsupported cell stays in the failure count of the upstream suite, and this receipt only records what the client itself reported."
+}
