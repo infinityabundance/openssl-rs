@@ -77,6 +77,7 @@ Rules that bind this queue (from AGENTS.md, extended by the ETP mandate):
 | T25 | The `runtime::secure` init-order instability: one run showed 17 failures and an identical rerun was clean. A release gate must be deterministic; establish whether this is a genuine race or a test-isolation defect. | TODO |
 | T26 | Move the `SecretBuf` implementation from `bn::secret` into `runtime::secret` so the runtime-wide abstraction does not depend on the BN subsystem; keep the BN alias and re-run the mutation controls. | TODO |
 | T27 | Constant-time modular addition and a fixed-width secret store: the `bn_mod_add_fixed_top`→`BN_mod_add` substitution is the largest single residue in the ECDSA taint result (~90 of 128 contexts). | TODO |
+| T28 | `BN_div` ignores `BN_FLG_CONSTTIME`: the RSA CRT path has 10 indirect `BN_div` callsites on flagged (secret) operands, and the crate's `div_rem_fallible` branches on a value comparison. Measured at DSO `5d0f9098` with `courts/phase18/timing/binary_branch_audit.py`. Non-smooth and tail error paths, so narrow — but it is a variable-time path on secret operands. | TODO |
 
 ---
 
