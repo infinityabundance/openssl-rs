@@ -39,14 +39,14 @@
 use core::ffi::{c_int, c_ulong};
 
 use crate::bn::bignum::{
-    as_mut, as_ref, new_owned, new_owned_consttime, parts, store, store_consttime, BN_copy,
-    BN_get_flags, BigNum, BN_FLG_CONSTTIME,
+    as_mut, as_ref, magnitude, new_owned, new_owned_consttime, parts, store, store_consttime,
+    BN_copy, BN_get_flags, BigNum, BN_FLG_CONSTTIME,
 };
 use crate::bn::ctx::BnCtx;
 use crate::bn::limbs::{self, Limb};
 use crate::bn::secret::SecretBuf;
 use crate::ffi::guard_ffi;
-use crate::runtime::constant_time::constant_time_select;
+use crate::runtime::constant_time::{constant_time_lt_s, constant_time_select};
 use crate::runtime::err::err_sites::{
     BN_ADD_142, BN_DIV_217, BN_EXP_1324, BN_GCD_532, BN_MOD_194, BN_MOD_22, BN_MOD_307,
     BN_SQRT_352, BN_SQRT_43,
@@ -1152,20 +1152,18 @@ pub unsafe extern "C" fn BN_mod_exp(
 ) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `a`, `p` and `m` are null-or-live per this function's `# Safety`
-        // section. Each shared borrow ends at its `parts` call, before `r` is
+        // section. The base and modulus are copied; the exponent is borrowed only
+        // across the staging copy / ladder, and that borrow ends before `r` is
         // borrowed for the store.
         let x = unsafe { as_ref(a) };
         let (ad, _) = parts(x);
         // SAFETY: as above for `p`.
         let y = unsafe { as_ref(p) };
-        let (pd, _) = parts(y);
-        // The exponent's magnitude is secret on the constant-time path. The copied
-        // temporary is owned by a `SecretBuf` so it is cleansed on every exit, but
-        // it is deliberately *not* the long-lived protected buffer: its capacity
-        // follows the exponent's secret normalised length. The constant-time branch
-        // copies it into a buffer sized by the public modulus width and releases
-        // this temporary before the ladder starts.
-        let pd = SecretBuf::from_vec(pd);
+        // The exponent's magnitude is secret on the constant-time path. It is not
+        // cloned at its own length: `magnitude` borrows the caller's storage and
+        // the constant-time branch stages it directly into a buffer sized by the
+        // public modulus width. See `mod_exp_core_consttime_from_parts`.
+        let pd = magnitude(y);
         // SAFETY: as above for `m`.
         let z = unsafe { as_ref(m) };
         let (md, _) = parts(z);
@@ -1189,17 +1187,16 @@ pub unsafe extern "C" fn BN_mod_exp(
             // private exponent is < p, RSA's is < n, EC's is < the group order),
             // so the ladder's geometry is fixed from public data alone.
             //
-            // `from_parts` stages the exponent into a buffer whose allocation is
-            // that public width before running the ladder, then cleanses and
-            // releases this secret-sized `parts()` copy. A wider exponent is
-            // refused inside, never truncated; an allocation failure is the
-            // ordinary failure answer.
+            // `from_parts` stages the borrowed exponent into a buffer whose
+            // allocation is that public width before running the ladder. A wider
+            // exponent is refused inside, never truncated; an allocation failure
+            // is the ordinary failure answer.
             match mod_exp_core_consttime_from_parts(&ad, pd, &md, md.len()) {
                 Some(v) => Some(v),
                 None => return 0,
             }
         } else {
-            mod_exp_core(&ad, &pd, &md)
+            mod_exp_core(&ad, pd, &md)
         };
         match result {
             Some(v) => {
@@ -1302,24 +1299,49 @@ fn try_zeroed_limbs(n: usize) -> Option<Vec<Limb>> {
     crate::bn::alloc::try_zeroed(n, 0u64)
 }
 
-/// Zero-extend the exponent to exactly `width` limbs, **once**, before the ladder.
+/// Stage the exponent at exactly `width` limbs with a **fixed-width, masked**
+/// extension, **once**, before the ladder.
+///
+/// The destination is written `width` times — the loop bound is the public
+/// width, never `pd.len()` — so the copy's work and the staged buffer's
+/// allocation are fixed by public geometry. A destination limb whose source is
+/// absent is written as zero: the presence test is an all-ones/all-zeros mask
+/// (`constant_time_lt_s(i, n)`), not a select of the limb's value.
 ///
 /// After this copy every exponent read inside the ladder is an indexed load from
-/// a buffer whose length is the public `width`: no iteration consults the
-/// exponent's normalised length, and none branches on a limb's presence. The
-/// copy is the single use of that metadata; the ctgrind `modexp_len` control in
-/// `courts/phase18/timing/ct_bn.c` taints the length field so that this one use
-/// is reported rather than hidden.
+/// a buffer whose length is the public `width`; no iteration consults the
+/// exponent's normalised length.
 ///
-/// The buffer is **allocated** at `width` before any limb is copied in, so its
-/// capacity is fixed by the public width and not by the exponent's normalised
-/// length. That is what makes the `SecretBuf` destructor's cleanse run over a
-/// publicly known extent: the allocation cannot encode the secret length.
-fn fixed_width_exponent(pd: &[Limb], width: usize) -> Option<SecretBuf<Limb>> {
+/// **Residual, stated rather than hidden.** The source binds `pd`'s usable
+/// extent to the exponent's own (secret) normalised length, so `pd.get(i)` must
+/// test `i < pd.len()` to avoid an out-of-bounds read; ctgrind reports that one
+/// bounds test under length taint. It is irreducible at this generic ABI: the
+/// caller's `BIGNUM` stores only `len` limbs, so a public-width read would either
+/// index out of bounds or read uninitialised spare storage. What is removed here
+/// is the *work* dependence — the duplicate secret-sized clone, the `min()`
+/// length check and the length-sized memmove are gone; only a single presence
+/// test remains, and the destination extent is public.
+///
+/// Returns the number of destination limbs written so a test can prove the copy
+/// length is the public width even when two inputs differ in length.
+fn stage_fixed_width_exponent(pd: &[Limb], width: usize) -> Option<(SecretBuf<Limb>, usize)> {
     let mut view = SecretBuf::try_zeroed(width)?;
-    let take = pd.len().min(width);
-    view[..take].copy_from_slice(&pd[..take]);
-    Some(view)
+    let n = pd.len();
+    let mut written = 0usize;
+    for (i, dst) in view.iter_mut().enumerate() {
+        // All-ones exactly when limb `i` is present. The mask is a value, not a
+        // branch on the limb, and the destination index is public.
+        let present = constant_time_lt_s(i, n) as Limb;
+        let limb = pd.get(i).copied().unwrap_or(0);
+        *dst = limb & present;
+        written += 1;
+    }
+    Some((view, written))
+}
+
+/// [`stage_fixed_width_exponent`], discarding the work count.
+fn fixed_width_exponent(pd: &[Limb], width: usize) -> Option<SecretBuf<Limb>> {
+    stage_fixed_width_exponent(pd, width).map(|(view, _)| view)
 }
 
 /// Montgomery multiplication `a * b * R^-1 mod m` with fixed loop counts,
@@ -1476,9 +1498,9 @@ pub(crate) fn mont_mul_fallible(a: &[Limb], b: &[Limb], m: &[Limb], n0: Limb) ->
 /// and in `BN_mod_exp` (constant-time flag and odd modulus). The variable-time
 /// [`mod_exp_core`] is retained for inputs proven public by their callers.
 /// Test-only convenience wrapper: the default public width is the modulus' limb
-/// count. The C entry points stage the exponent through
+/// count. The C entry points stage the borrowed exponent through
 /// [`mod_exp_core_consttime_from_parts`] so the public width is stated at each
-/// call site and the secret-sized boundary copy is released before the ladder.
+/// call site; the staging copy is the only transfer and it is public-width.
 #[cfg(test)]
 pub(crate) fn mod_exp_core_consttime(ad: &[Limb], pd: &[Limb], md: &[Limb]) -> Option<Vec<Limb>> {
     mod_exp_core_consttime_width(ad, pd, md, md.len())
@@ -1488,10 +1510,11 @@ pub(crate) fn mod_exp_core_consttime(ad: &[Limb], pd: &[Limb], md: &[Limb]) -> O
 ///
 /// The decision reads the modulus' limb count (public), the caller's
 /// `declared_limbs` (public) and the exponent's normalised limb count. That last
-/// read is the **only** use of the exponent's length: it decides refusal, and the
-/// limbs are then copied into a buffer whose allocation is fixed by the public
-/// terms alone. The ctgrind `modexp_len` control taints it so this one read is
-/// reported rather than hidden.
+/// read is an **admission decision** — an exponent wider than the public width is
+/// refused, not truncated — and the limbs are then staged into a buffer whose
+/// allocation and write count are fixed by the public terms alone. The ctgrind
+/// `modexp_len` control taints it so this admission read is reported rather than
+/// hidden.
 enum LadderGeometry {
     /// `x mod 1 == 0` for every exponent; no ladder is needed.
     Zero,
@@ -1557,34 +1580,29 @@ pub(crate) fn mod_exp_core_consttime_width(
     }
 }
 
-/// Constant-pattern exponentiation for the C entry points, which already own the
-/// exponent as a cleansed [`SecretBuf`].
+/// Constant-pattern exponentiation for the C entry points, staging the exponent
+/// directly from the caller's borrowed magnitude.
 ///
 /// This is the representation-level fix for the destructor-timing finding. The
 /// protected buffer is built at the **public** width before any secret limb is
 /// copied into it, so its allocation — and therefore the extent its `Drop`
-/// cleanse touches — is fixed by public geometry. `pd` is the C-ABI `parts()`
-/// clone, whose capacity follows the exponent's secret normalised length; it is
-/// only the source for that copy, and is cleansed and released before the ladder
-/// starts instead of becoming the long-lived protected buffer. The short-lived
-/// clone's own cleanse still runs over a secret-sized allocation; that residual
-/// observable is recorded as an open finding in `docs/ETP-TODO.md` (T3/T9).
+/// cleanse touches — is fixed by public geometry. `pd` is the caller's own limb
+/// storage, not a length-sized clone: the staging copy is the only transfer, and
+/// the temporary it produces is public-width. The borrow ends when this function
+/// returns, so a caller may alias the output with the exponent afterwards.
 pub(crate) fn mod_exp_core_consttime_from_parts(
     ad: &[Limb],
-    pd: SecretBuf<Limb>,
+    pd: &[Limb],
     md: &[Limb],
     declared_limbs: usize,
 ) -> Option<Vec<Limb>> {
-    match ladder_geometry(&pd, md, declared_limbs)? {
+    match ladder_geometry(pd, md, declared_limbs)? {
         LadderGeometry::Zero => Some(Vec::new()),
-        LadderGeometry::VariableTime => mod_exp_core(ad, &pd, md),
+        LadderGeometry::VariableTime => mod_exp_core(ad, pd, md),
         LadderGeometry::Fixed(width) => {
             // The protected buffer: its allocation is the declared public width,
             // so its capacity cannot encode the exponent's normalised length.
-            let exponent = fixed_width_exponent(&pd, width)?;
-            // The secret-sized `parts()` copy has done its only job. Cleanse and
-            // release it now, leaving only the public-width buffer for the ladder.
-            drop(pd);
+            let exponent = fixed_width_exponent(pd, width)?;
             mod_exp_core_consttime_staged(ad, &exponent, md, width)
         }
     }
@@ -1593,9 +1611,8 @@ pub(crate) fn mod_exp_core_consttime_from_parts(
 /// The ladder proper, on an exponent already staged at `width` limbs.
 ///
 /// `exponent.len() == width`, and `width` is public. Splitting this from
-/// [`mod_exp_core_consttime_width`] is what lets the C entry points build the
-/// protected buffer themselves and release the secret-sized boundary copy before
-/// the `64 * width` loop begins.
+/// [`mod_exp_core_consttime_width`] is what lets the C entry points stage the
+/// exponent before the `64 * width` loop begins.
 fn mod_exp_core_consttime_staged(
     ad: &[Limb],
     exponent: &SecretBuf<Limb>,
@@ -2280,7 +2297,7 @@ mod tests {
         let Some(staged) = pad_to(&exponent, order.len()).map(SecretBuf::from_vec) else {
             unreachable!("the exponent fits the public width")
         };
-        let out = mod_exp_core_consttime_from_parts(&base, staged, &order, order.len());
+        let out = mod_exp_core_consttime_from_parts(&base, &staged, &order, order.len());
         // Only the `Option` discriminant is inspected: the value itself is
         // secret-derived and must never be branched on.
         assert!(out.is_some(), "a nonzero modulus always answers");
@@ -2544,6 +2561,47 @@ mod tests {
         );
         assert_eq!(short_view.capacity(), width);
         // The secret limbs are still staged in the low positions.
+        assert_eq!(&short_view[..short.len()], &short[..]);
+        assert_eq!(&long_view[..], &long[..]);
+    }
+
+    /// T9 mutation control: the staging copy must write exactly the public
+    /// width, whatever the input's normalised length. Two exponents of different
+    /// lengths under one width must report the same write count (`width`).
+    ///
+    /// This is the fixture the batch asks for: a copy whose length follows the
+    /// input length — `for i in 0..pd.len().min(width)`, or the old
+    /// `min`+`copy_from_slice` body — makes the counts differ (2 and 4, or 0),
+    /// so the test fails rather than silently reporting a public width it did not
+    /// use.
+    #[test]
+    fn the_staging_copy_writes_the_public_width_not_the_input_length() {
+        let width = 4;
+        let short = vec![0x0123_4567_89ab_cdefu64, 0xfeed_face_dead_beefu64];
+        let long = vec![
+            0x0123_4567_89ab_cdefu64,
+            0xfeed_face_dead_beefu64,
+            0x0f0f_0f0f_0f0f_0f0fu64,
+            0xdead_beef_dead_beefu64,
+        ];
+        assert_ne!(short.len(), long.len(), "the inputs must differ in length");
+
+        let Some((short_view, short_written)) = stage_fixed_width_exponent(&short, width) else {
+            unreachable!("a four-limb allocation succeeds")
+        };
+        let Some((long_view, long_written)) = stage_fixed_width_exponent(&long, width) else {
+            unreachable!("a four-limb allocation succeeds")
+        };
+
+        assert_eq!(short_view.len(), width);
+        assert_eq!(long_view.len(), width);
+        assert_eq!(
+            short_written, long_written,
+            "the copy length must not follow the input length"
+        );
+        assert_eq!(short_written, width, "the copy must write the public width");
+        // Absent limbs are zero, present limbs are staged unchanged.
+        assert_eq!(&short_view[short.len()..], &[0u64; 2]);
         assert_eq!(&short_view[..short.len()], &short[..]);
         assert_eq!(&long_view[..], &long[..]);
     }
