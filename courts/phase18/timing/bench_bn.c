@@ -149,23 +149,34 @@ int main(int argc, char **argv)
     int failure = (argc > 1 && strcmp(argv[1], "fail") == 0);
 
     if (failure) {
-        /* Allocate the operands first, then fail the allocation the ladder asks
-         * for after a fixed count.  The point is the behaviour on a failed
-         * allocation inside the ladder, not on a failed setup. */
+        /* Allocate the operands first, then fail the Nth allocation after arming
+         * (default 64).  The point is the behaviour on a failed allocation inside
+         * the call, not on a failed setup.  The ordinal is an argument so the
+         * probe can distinguish an infallible `vec!` (SIGABRT) from the ladder's
+         * fallible scratch (a 0 return) instead of assuming which one it hit. */
         BN_CTX *ctx = BN_CTX_new();
         BIGNUM *m = NULL, *e = NULL, *base = BN_new(), *r = BN_new();
+        unsigned long ordinal = 64;
+        int rc;
 
+        if (argc > 2)
+            ordinal = strtoul(argv[2], NULL, 10);
         if (ctx == NULL || base == NULL || r == NULL || !make_operands(2048, &m, &e)) {
             fprintf(stderr, "fail setup failed\n");
             return 2;
         }
         if (allocprobe_fail_after != NULL)
-            allocprobe_fail_after(64);
-        fprintf(stderr, "fail: calling with allocation 64 forced to fail\n");
+            allocprobe_fail_after(ordinal);
+        fprintf(stderr, "fail: calling with allocation %lu forced to fail\n", ordinal);
         fflush(stderr);
-        (void)BN_mod_exp_mont_consttime(r, base, e, m, ctx, NULL);
-        fprintf(stderr, "fail: call returned without an allocation failure\n");
-        return 1;
+        rc = BN_mod_exp_mont_consttime(r, base, e, m, ctx, NULL);
+        fprintf(stderr, "fail: call returned %d without aborting\n", rc);
+        BN_free(m);
+        BN_free(e);
+        BN_free(base);
+        BN_free(r);
+        BN_CTX_free(ctx);
+        return rc == 0 ? 0 : 1;
     }
 
     if (!bench_one(2048, 50))

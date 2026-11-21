@@ -12,7 +12,7 @@ directory is the apparatus, not the conclusion.
 
 | file | role |
 |---|---|
-| `ct_bn.c` | ctgrind harness. Marks a secret buffer with `VALGRIND_MAKE_MEM_UNDEFINED`, calls the BN primitive, and lets stock Valgrind memcheck report secret-dependent branches and address uses. Also contains the negative control (`CRYPTO_memcmp`, expected clean) and the positive control (a deliberately leaky comparator, expected to fire). |
+| `ct_bn.c` | ctgrind harness. Marks a secret buffer with `VALGRIND_MAKE_MEM_UNDEFINED`, calls the BN primitive, and lets stock Valgrind memcheck report secret-dependent branches and address uses. Also contains the negative control (`CRYPTO_memcmp`, expected clean) and the positive control (a deliberately leaky comparator, expected to fire). Mode `modexp_len` additionally taints the exponent's normalised length (the limb-count field at `+0x10` in this build, verified from `BN_num_bits`), because the contents-only `modexp` mode cannot see a length-dependent path. |
 | `dudect_bn.c` | dudect-style statistical harness: two contrasting secret classes, warmup, batched measurement, Welch t-test. Carries the same two controls. It prints the executed measurement count (`dudect.executed ... total_measurements=N`) so the receipt quotes the instrument's own figure. |
 | `bench_bn.c` | Wall-clock cost of `BN_mod_exp_mont_consttime` at 2048/3072/8192 bits and the RSA-2048 CRT shape, plus the allocation-failure behaviour when paired with `alloc_probe.so`. |
 | `alloc_probe.c` | `LD_PRELOAD` probe that counts `malloc`/`calloc`/`realloc`/`free` and can force a chosen allocation to fail, for the allocation numbers and the failure test. |
@@ -45,7 +45,17 @@ cc -D_GNU_SOURCE -O1 -g -I<valgrind includes> -Iartifacts/phase2/install/include
    -Wl,-rpath,$PWD/artifacts/phase2/install/lib -o /tmp/ct_bn
 LD_LIBRARY_PATH=$PWD/artifacts/phase2/install/lib \
   valgrind --tool=memcheck --error-exitcode=99 /tmp/ct_bn modexp
+LD_LIBRARY_PATH=$PWD/artifacts/phase2/install/lib \
+  valgrind --tool=memcheck --error-exitcode=99 /tmp/ct_bn modexp_len
 ```
+
+`modexp` (contents tainted, length defined) is the measurement that the ladder
+has no secret-contents branch. `modexp_len` taints the length as well and is
+**expected to fire**: the exponent's length is read once, to copy its value into
+the fixed-width view, so it cannot be a zero-error run. Its value is to show that
+the instrument *can* report a length-dependent path, and to check that any report
+sits at that copy rather than inside the ladder loop. Neither mode covers
+microarchitectural effects, and no memcheck run proves constant time.
 
 dudect geometry as executed: `config.number_measurements = 20000` per batch,
 3 batches, so **60 000 measurements per run** (~30 000 per class). The harness
@@ -65,6 +75,11 @@ LD_LIBRARY_PATH=$PWD/artifacts/phase2/install/lib /tmp/bench_bn
 LD_PRELOAD=/tmp/alloc_probe.so LD_LIBRARY_PATH=$PWD/artifacts/phase2/install/lib /tmp/bench_bn
 LD_PRELOAD=/tmp/alloc_probe.so LD_LIBRARY_PATH=$PWD/artifacts/phase2/install/lib /tmp/bench_bn fail
 ```
+
+`bench_bn fail [N]` forces the Nth allocation (default 64) to fail and prints the
+return value. That separates an infallible `vec!` (the process aborts) from the
+ladder's `try_reserve_exact` scratch (the call returns 0), instead of assuming
+which one the ordinal hit.
 
 ## Interpreting the results
 

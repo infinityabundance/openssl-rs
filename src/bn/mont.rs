@@ -694,8 +694,8 @@ pub unsafe extern "C" fn BN_mod_exp2_mont(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bn::arith::BN_ucmp;
-    use crate::bn::bignum::{BN_copy, BN_free, BN_new, BN_set_flags, BN_set_word};
+    use crate::bn::arith::{BN_mod_exp, BN_ucmp};
+    use crate::bn::bignum::{new_owned, BN_copy, BN_free, BN_new, BN_set_flags, BN_set_word};
 
     /// A `BIGNUM` holding a machine word.
     fn word(w: c_ulong) -> *mut BigNum {
@@ -901,6 +901,36 @@ mod tests {
             BN_free(a);
             BN_free(m);
             BN_free(p);
+        }
+    }
+
+    /// An exponent wider than the public modulus limb count is refused on the
+    /// constant-time path — it is neither widened on its own (secret) length nor
+    /// truncated — while the variable-time path keeps answering it.
+    #[test]
+    fn an_exponent_wider_than_the_public_width_is_refused_not_truncated() {
+        // SAFETY: every object here is allocated by this test and live.
+        unsafe {
+            let a = word(3);
+            let m = word(7);
+            let p = new_owned(vec![1, 1], 0);
+            let ct = BN_new();
+            let vt = BN_new();
+            assert_eq!(
+                BN_mod_exp_mont_consttime(
+                    ct,
+                    a,
+                    p,
+                    m,
+                    core::ptr::null_mut(),
+                    core::ptr::null_mut()
+                ),
+                0
+            );
+            assert_eq!(BN_mod_exp(vt, a, p, m, core::ptr::null_mut()), 1);
+            for b in [ct, vt, a, m, p] {
+                BN_free(b);
+            }
         }
     }
 }
