@@ -200,7 +200,7 @@ mod tests {
     /// state, so the exclusion is crate-wide:
     /// [`crate::test_support::lock_global_state`] is the one lock every
     /// global-touching test shares, not a lock local to this module.
-    fn lock() -> std::sync::MutexGuard<'static, ()> {
+    fn lock() -> crate::test_support::GlobalStateGuard {
         crate::test_support::lock_global_state()
     }
 

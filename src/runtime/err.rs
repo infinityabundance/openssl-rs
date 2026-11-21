@@ -2794,7 +2794,7 @@ mod tests {
     ///
     /// `generated_tables_are_complete_and_sorted` is deliberately **not** locked:
     /// it reads only the immutable generated `err_strings` tables.
-    fn lock() -> std::sync::MutexGuard<'static, ()> {
+    fn lock() -> crate::test_support::GlobalStateGuard {
         crate::test_support::lock_global_state()
     }
 

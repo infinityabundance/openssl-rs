@@ -1296,7 +1296,7 @@ mod tests {
     /// global-touching test shares. The other tests in this module only allocate
     /// and free through whatever allocator is installed, so they stay unlocked
     /// and parallel.
-    fn lock() -> std::sync::MutexGuard<'static, ()> {
+    fn lock() -> crate::test_support::GlobalStateGuard {
         crate::test_support::lock_global_state()
     }
 

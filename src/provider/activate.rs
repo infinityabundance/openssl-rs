@@ -1654,7 +1654,7 @@ mod tests {
     ///
     /// `null_is_reported_and_never_dereferenced` is deliberately **not** locked:
     /// every call it makes returns before touching global state.
-    fn lock() -> std::sync::MutexGuard<'static, ()> {
+    fn lock() -> crate::test_support::GlobalStateGuard {
         crate::test_support::lock_global_state()
     }
 

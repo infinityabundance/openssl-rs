@@ -1629,8 +1629,8 @@ unsafe extern "C" fn unused_free(_method: *mut c_void) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::GlobalStateGuard;
     use core::sync::atomic::{AtomicI32, Ordering};
-    use std::sync::MutexGuard;
 
     /// Takes the crate-wide global-state lock. These tests share the
     /// process-global method-store state they exercise (the `SAW`/`VISITS`/`NIDS` counters and
@@ -1639,7 +1639,7 @@ mod tests {
     /// every global-touching test shares, not a lock local to this module. Without it two tests
     /// here interleave their `reset()` and their callbacks, and a count is observed from the wrong
     /// test: a defect in the instrument, not in the store.
-    fn lock() -> MutexGuard<'static, ()> {
+    fn lock() -> GlobalStateGuard {
         crate::test_support::lock_global_state()
     }
 

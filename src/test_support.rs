@@ -22,6 +22,15 @@
 //! * A test that additionally depends on a `#[cfg(test)]` fault, or on a
 //!   sibling test not having run, says so at its lock: that is the explicit
 //!   classification a reviewer asked for.
+//!
+//! One global cannot be classified this way: the **secure heap**, because a
+//! large set of tests reaches `CRYPTO_secure_*` indirectly (X25519/ECDH key
+//! generation, ML-DSA/ML-KEM, SM2, TLS handshakes) and some of that work happens
+//! on worker threads that could not hold a `MutexGuard` at all. Those callers
+//! are correct in production; they only make the secure-heap *fixtures* wrong.
+//! The lock therefore also claims the heap for the holding thread (see
+//! `runtime::secure::test_lease`), so a fixture's arena accounting cannot be
+//! disturbed by a concurrent test that never asked for the lock.
 
 use std::sync::{Mutex, MutexGuard};
 
@@ -31,6 +40,16 @@ use std::sync::{Mutex, MutexGuard};
 /// mutually exclusive with a test in any other module.
 static GLOBAL_STATE_LOCK: Mutex<()> = Mutex::new(());
 
+/// What [`lock_global_state`] hands back.
+///
+/// The fields are declared lease-first so the secure-heap lease is released
+/// *before* the crate-wide lock: the heap returns to other threads only while
+/// the caller still owns the lock.
+pub(crate) struct GlobalStateGuard {
+    _lease: crate::runtime::secure::test_lease::Lease,
+    _lock: MutexGuard<'static, ()>,
+}
+
 /// Acquire the crate-wide global-state lock, recovering from poisoning.
 ///
 /// A test that panics while holding the lock poisons it, but the process-global
@@ -38,8 +57,21 @@ static GLOBAL_STATE_LOCK: Mutex<()> = Mutex::new(());
 /// regardless, so the guard is recovered through `into_inner` rather than
 /// cascading panics into every later test. This is the same discipline the
 /// per-module locks used.
-pub(crate) fn lock_global_state() -> MutexGuard<'static, ()> {
-    GLOBAL_STATE_LOCK
+///
+/// The guard also claims the process-global secure heap for this thread: while
+/// it is alive, another thread's `CRYPTO_secure_*` allocation takes the
+/// allocator's documented plain fallback rather than a chunk in an arena the
+/// test may be asserting about. A chunk allocated *before* the claim still
+/// releases into the arena, because release routes by arena containment. See
+/// `runtime::secure::test_lease` for the defect this closes and why the callers
+/// cannot all be given this lock instead.
+pub(crate) fn lock_global_state() -> GlobalStateGuard {
+    let lock = GLOBAL_STATE_LOCK
         .lock()
-        .unwrap_or_else(|poisoned| poisoned.into_inner())
+        .unwrap_or_else(|poisoned| poisoned.into_inner());
+    let lease = crate::runtime::secure::test_lease::acquire();
+    GlobalStateGuard {
+        _lease: lease,
+        _lock: lock,
+    }
 }

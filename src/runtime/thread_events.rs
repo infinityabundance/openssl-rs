@@ -916,7 +916,7 @@ pub extern "C" fn OPENSSL_thread_stop() {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::MutexGuard;
+    use crate::test_support::GlobalStateGuard;
 
     /// Takes the crate-wide global-state lock. These tests share the
     /// process-global thread-event handler register, the `CALLS`/`LAST_ARG`/`FIRST_SAW`
@@ -924,7 +924,7 @@ mod tests {
     /// it -- so the exclusion is crate-wide: [`crate::test_support::lock_global_state`] is the one
     /// lock every global-touching test shares, not a lock local to this module. Without it two
     /// tests interleave `reset` and a handler invocation and observe each other's counts.
-    fn lock() -> MutexGuard<'static, ()> {
+    fn lock() -> GlobalStateGuard {
         crate::test_support::lock_global_state()
     }
 

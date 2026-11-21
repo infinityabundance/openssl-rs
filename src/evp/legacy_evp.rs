@@ -435,7 +435,7 @@ mod tests {
     /// global-touching test shares, not a lock local to this module. Without it a
     /// concurrent `runtime::obj` test would advance the same NID counter and see
     /// this module's objects.
-    fn lock() -> std::sync::MutexGuard<'static, ()> {
+    fn lock() -> crate::test_support::GlobalStateGuard {
         crate::test_support::lock_global_state()
     }
 

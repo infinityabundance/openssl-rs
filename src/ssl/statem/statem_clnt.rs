@@ -6072,7 +6072,7 @@ mod dhe_tests {
     const RSA_PKCS1_PSS_PADDING: c_int = 6;
     const RSA_PSS_SALTLEN_DIGEST: c_int = -1;
 
-    fn lock() -> std::sync::MutexGuard<'static, ()> {
+    fn lock() -> crate::test_support::GlobalStateGuard {
         crate::test_support::lock_global_state()
     }
 
