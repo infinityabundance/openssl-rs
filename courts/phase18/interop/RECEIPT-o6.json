@@ -1,0 +1,223 @@
+{
+ "schema": "openssl-rs/interop-upstream-tests-receipt/1",
+ "item": "O6 of docs/ETP-TODO.md",
+ "generated": "2026-11-21T18:58:55Z",
+ "subjects": {
+  "A": "/tmp/o6-a-k.log",
+  "B": "/tmp/o6-b-k.log"
+ },
+ "runs": {
+  "A": {
+   "scripts_run": [
+    "connect.sh",
+    "proxy-connect.sh",
+    "sshfp-connect.sh",
+    "connect-privsep.sh",
+    "connect-uri.sh",
+    "proto-version.sh",
+    "proto-mismatch.sh",
+    "exit-status.sh",
+    "exit-status-signal.sh",
+    "envpass.sh",
+    "transfer.sh",
+    "banner.sh",
+    "rekey.sh",
+    "dhgex.sh",
+    "stderr-data.sh",
+    "stderr-after-eof.sh",
+    "broken-pipe.sh",
+    "try-ciphers.sh",
+    "yes-head.sh",
+    "login-timeout.sh",
+    "agent.sh",
+    "agent-getpeereid.sh",
+    "agent-timeout.sh",
+    "agent-ptrace.sh",
+    "agent-subprocess.sh",
+    "keyscan.sh",
+    "keygen-change.sh",
+    "keygen-comment.sh",
+    "keygen-convert.sh",
+    "keygen-knownhosts.sh",
+    "keygen-moduli.sh",
+    "keygen-sshfp.sh",
+    "key-options.sh",
+    "scp.sh",
+    "scp3.sh",
+    "scp-uri.sh",
+    "sftp.sh",
+    "sftp-chroot.sh",
+    "sftp-cmds.sh",
+    "putty-transfer.sh",
+    "putty-ciphers.sh",
+    "putty-kex.sh",
+    "conch-ciphers.sh",
+    "dropbear-ciphers.sh",
+    "dropbear-kex.sh",
+    "agent-pkcs11.sh"
+   ],
+   "failures": [
+    {
+     "script": "sftp commands",
+     "after": "sftp-cmds.sh"
+    },
+    {
+     "script": "dropbear kex",
+     "after": "dropbear-kex.sh"
+    }
+   ],
+   "skipped": [
+    {
+     "script": "sshfp-connect.sh",
+     "reason": "TEST_SSH_SSHFP_DOMAIN not set."
+    },
+    {
+     "script": "agent-getpeereid.sh",
+     "reason": "need SUDO to switch to uid nobody"
+    },
+    {
+     "script": "sftp-chroot.sh",
+     "reason": "need SUDO to create file in /var/run, test won't work without"
+    },
+    {
+     "script": "conch-ciphers.sh",
+     "reason": "conch interop tests not enabled"
+    },
+    {
+     "script": "agent-pkcs11.sh",
+     "reason": "No PKCS#11 library found"
+    }
+   ],
+   "unit_tests_passed": {
+    "test_sshbuf": 103,
+    "test_sshkey": 84,
+    "test_sshsig": 7,
+    "test_authopt": 146,
+    "test_bitmap": 2,
+    "test_conversion": 1,
+    "test_hostkeys": 18,
+    "test_match": 6,
+    "test_misc": 43
+   },
+   "counts": {
+    "scripts": 46,
+    "failures": 2,
+    "skipped": 5,
+    "unit_assertions": 410
+   }
+  },
+  "B": {
+   "scripts_run": [
+    "connect.sh",
+    "proxy-connect.sh",
+    "sshfp-connect.sh",
+    "connect-privsep.sh",
+    "connect-uri.sh",
+    "proto-version.sh",
+    "proto-mismatch.sh",
+    "exit-status.sh",
+    "exit-status-signal.sh",
+    "envpass.sh",
+    "transfer.sh",
+    "banner.sh",
+    "rekey.sh",
+    "dhgex.sh",
+    "stderr-data.sh",
+    "stderr-after-eof.sh",
+    "broken-pipe.sh",
+    "try-ciphers.sh",
+    "yes-head.sh",
+    "login-timeout.sh",
+    "agent.sh",
+    "agent-getpeereid.sh",
+    "agent-timeout.sh",
+    "agent-ptrace.sh",
+    "agent-subprocess.sh",
+    "keyscan.sh",
+    "keygen-change.sh",
+    "keygen-comment.sh",
+    "keygen-convert.sh",
+    "keygen-knownhosts.sh",
+    "keygen-moduli.sh",
+    "keygen-sshfp.sh",
+    "key-options.sh",
+    "scp.sh",
+    "scp3.sh",
+    "scp-uri.sh",
+    "sftp.sh",
+    "sftp-chroot.sh",
+    "sftp-cmds.sh",
+    "putty-transfer.sh",
+    "putty-ciphers.sh",
+    "putty-kex.sh",
+    "conch-ciphers.sh",
+    "dropbear-ciphers.sh",
+    "dropbear-kex.sh",
+    "agent-pkcs11.sh"
+   ],
+   "failures": [
+    {
+     "script": "sftp commands",
+     "after": "sftp-cmds.sh"
+    },
+    {
+     "script": "dropbear kex",
+     "after": "dropbear-kex.sh"
+    }
+   ],
+   "skipped": [
+    {
+     "script": "sshfp-connect.sh",
+     "reason": "TEST_SSH_SSHFP_DOMAIN not set."
+    },
+    {
+     "script": "agent-getpeereid.sh",
+     "reason": "need SUDO to switch to uid nobody"
+    },
+    {
+     "script": "sftp-chroot.sh",
+     "reason": "need SUDO to create file in /var/run, test won't work without"
+    },
+    {
+     "script": "conch-ciphers.sh",
+     "reason": "conch interop tests not enabled"
+    },
+    {
+     "script": "agent-pkcs11.sh",
+     "reason": "No PKCS#11 library found"
+    }
+   ],
+   "unit_tests_passed": {
+    "test_sshbuf": 103,
+    "test_sshkey": 84,
+    "test_sshsig": 7,
+    "test_authopt": 146,
+    "test_bitmap": 2,
+    "test_conversion": 1,
+    "test_hostkeys": 18,
+    "test_match": 6,
+    "test_misc": 43
+   },
+   "counts": {
+    "scripts": 46,
+    "failures": 2,
+    "skipped": 5,
+    "unit_assertions": 410
+   }
+  }
+ },
+ "failure_sets_equal": true,
+ "failures": [
+  {
+   "failed_in": "both",
+   "script": "dropbear kex",
+   "classification": "upstream-common"
+  },
+  {
+   "failed_in": "both",
+   "script": "sftp commands",
+   "classification": "upstream-common"
+  }
+ ],
+ "unclassified_failures": 0
+}
