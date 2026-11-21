@@ -43,7 +43,9 @@
 
 use core::ffi::{c_int, c_ulong};
 
-use crate::bn::arith::{mod_exp_core, mod_exp_core_consttime_from_parts};
+use crate::bn::arith::{
+    mod_exp_core, mod_exp_core_consttime_from_parts, mont_mul_fallible, pad_to,
+};
 use crate::bn::bignum::{as_mut, as_ref, parts, store, store_consttime, BigNum};
 use crate::bn::ctx::BnCtx;
 use crate::bn::limbs::{self, Limb};
@@ -144,13 +146,29 @@ fn mont_set(mont: &mut MontCtx, m: &[Limb]) -> bool {
     if refuses(m) {
         return false;
     }
+    // `ri = ceil(bits / 64) * 64`, the authority's own rounding. For a normalised
+    // modulus that is exactly `64 * m.len()`: its top limb is non-zero, so the
+    // bit length lies in `((len-1)*64, len*64]` and the ceiling is `len`. Computing
+    // it from the public limb count rather than `limbs::bit_len` is what keeps a
+    // secret CRT modulus' top-limb leading zeros out of a branch.
+    let Some(ri) = m.len().checked_mul(64) else {
+        return false;
+    };
+    // `RR = R^2 mod m` with `R = 2^ri`. Fixed-pattern doubling from public
+    // geometry; the contents of a secret modulus never select a branch, an index
+    // or a loop bound (T6).
+    let Some(rr) = ri
+        .checked_mul(2)
+        .and_then(|bits| limbs::pow2_mod_consttime(bits, m))
+    else {
+        return false;
+    };
     mont.n = m.to_vec();
-    // `ri = ceil(bits / 64) * 64`, the authority's own rounding.
-    mont.ri = (limbs::bit_len(m).div_ceil(64) * 64) as c_int;
+    mont.ri = ri as c_int;
     mont.n0 = [inverse_word(m[0]), 0];
     mont.ni = Vec::new();
     mont.flags = 0;
-    mont.rr = limbs::rem(&limbs::shl(&[1u64], (2 * mont.ri) as usize), m);
+    mont.rr = rr;
     true
 }
 
@@ -159,6 +177,11 @@ fn mont_set(mont: &mut MontCtx, m: &[Limb]) -> bool {
 /// The classic word algorithm — add `m * n` until `R` divides the accumulator, then
 /// shift. The result is below `2n`, so one conditional subtraction finishes it, which
 /// is exactly what the authority's `bn_from_montgomery_word` does.
+///
+/// Every loop is bounded by the public limb count `n.len()`, the carry runs over a
+/// fixed range, and the final subtraction is a mask select. The CRT moduli reach
+/// this through `BN_from_montgomery`/`BN_to_montgomery`, so the accumulation and
+/// the reduction must not branch on the modulus' limbs (T6).
 fn mont_reduce(r: &[Limb], n: &[Limb], n0: Limb) -> Vec<Limb> {
     let nl = n.len();
     if nl == 0 {
@@ -170,22 +193,42 @@ fn mont_reduce(r: &[Limb], n: &[Limb], n0: Limb) -> Vec<Limb> {
         let m = t[i].wrapping_mul(n0);
         let mut carry: Limb = 0;
         for j in 0..nl {
-            let prod = (m as u128) * (n[j] as u128) + (t[i + j] as u128) + (carry as u128);
+            // The bound is `(2^64-1)^2 + 2*(2^64-1) = 2^128-1`; `wrapping_*`
+            // keeps the profile's overflow check — a conditional jump on the high
+            // bits of a modulus-derived product — out of the loop.
+            let prod = (m as u128)
+                .wrapping_mul(n[j] as u128)
+                .wrapping_add(t[i + j] as u128)
+                .wrapping_add(carry as u128);
             t[i + j] = prod as Limb;
             carry = (prod >> 64) as Limb;
         }
-        let mut k = i + nl;
-        while carry != 0 && k < t.len() {
-            let s = (t[k] as u128) + (carry as u128);
-            t[k] = s as Limb;
-            carry = (s >> 64) as Limb;
-            k += 1;
+        // Carry through a fixed range instead of `while carry != 0`: the total
+        // value is below `2 * B^(2n)`, so it never leaves `t`.
+        let mut c = carry;
+        for limb in t[(i + nl)..=(2 * nl)].iter_mut() {
+            let (s, overflow) = limb.overflowing_add(c);
+            *limb = s;
+            c = u64::from(overflow);
         }
     }
-    let mut out: Vec<Limb> = t[nl..].to_vec();
-    limbs::normalise(&mut out);
-    if !out.is_empty() && limbs::cmp(&out, n) != core::cmp::Ordering::Less {
-        out = limbs::sub(&out, n);
+    // One masked conditional subtraction; `high` is the limb above the result's
+    // `nl` limbs and `borrow` the final borrow of `t[nl..2nl] - n`. Keep the
+    // difference when the value is at least `n`: `high != 0` or no borrow.
+    let high = t[2 * nl];
+    let mut diff = vec![0u64; nl];
+    let mut borrow = 0u64;
+    for j in 0..nl {
+        let (d1, b1) = t[nl + j].overflowing_sub(n[j]);
+        let (d2, b2) = d1.overflowing_sub(borrow);
+        diff[j] = d2;
+        borrow = u64::from(b1) | u64::from(b2);
+    }
+    let take = high | (borrow ^ 1);
+    let mask = 0u64.wrapping_sub(take);
+    let mut out = vec![0u64; nl];
+    for j in 0..nl {
+        out[j] = (t[nl + j] & !mask) | (diff[j] & mask);
     }
     out
 }
@@ -370,9 +413,21 @@ pub unsafe extern "C" fn BN_to_montgomery(
             return 0;
         }
         // `a * RR`, reduced: the authority reaches this through
-        // `BN_mod_mul_montgomery(r, a, &mont->RR, mont, ctx)`.
-        let prod = limbs::mul(&ad, &mc.rr);
-        let value = mont_reduce(&prod, &mc.n, mc.n0[0]);
+        // `BN_mod_mul_montgomery(r, a, &mont->RR, mont, ctx)`. For `a < R` the
+        // product is below `m * R`, so REDC's fixed-pattern form applies directly;
+        // a wider operand — outside every crate caller — keeps the general
+        // reduction. The dispatch is on the public limb count.
+        let value = if ad.len() <= mc.n.len() {
+            let Some(padded) = pad_to(&ad, mc.n.len()) else {
+                return 0;
+            };
+            let Some(v) = mont_mul_fallible(&padded, &mc.rr, &mc.n, mc.n0[0]) else {
+                return 0;
+            };
+            v
+        } else {
+            mont_reduce(&limbs::mul(&ad, &mc.rr), &mc.n, mc.n0[0])
+        };
         // SAFETY: `r` is null-or-live per this function's `# Safety` section.
         c_int::from(store(unsafe { as_mut(r) }, value, false))
     })
@@ -437,8 +492,27 @@ pub unsafe extern "C" fn BN_mod_mul_montgomery(
         if mc.n.is_empty() {
             return 0;
         }
-        let prod = limbs::mul(&ad, &bd);
-        let value = mont_reduce(&prod, &mc.n, mc.n0[0]);
+        // Both operands are below the modulus by this function's contract, so
+        // REDC's `a * b < m * R` bound holds and the fixed-pattern product-plus-
+        // reduction can serve directly. An operand wider than the modulus is
+        // outside every crate caller (blinding, ECDSA and the RSA CRT path all
+        // pass reduced values) and keeps the general reduction; the dispatch is
+        // on the public limb count, never on a value.
+        let value = if ad.len() <= mc.n.len() && bd.len() <= mc.n.len() {
+            let Some(pa) = pad_to(&ad, mc.n.len()) else {
+                return 0;
+            };
+            let Some(pb) = pad_to(&bd, mc.n.len()) else {
+                return 0;
+            };
+            let Some(v) = mont_mul_fallible(&pa, &pb, &mc.n, mc.n0[0]) else {
+                return 0;
+            };
+            v
+        } else {
+            let prod = limbs::mul(&ad, &bd);
+            mont_reduce(&prod, &mc.n, mc.n0[0])
+        };
         // SAFETY: `r` is null-or-live per this function's `# Safety` section.
         c_int::from(store(unsafe { as_mut(r) }, value, false))
     })

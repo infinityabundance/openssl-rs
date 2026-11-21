@@ -1185,7 +1185,7 @@ fn mont_n0(m0: Limb) -> Limb {
 
 /// Copy `v` into a zero-padded vector of exactly `n` limbs, or `None` when the
 /// allocation fails.
-fn pad_to(v: &[Limb], n: usize) -> Option<Vec<Limb>> {
+pub(crate) fn pad_to(v: &[Limb], n: usize) -> Option<Vec<Limb>> {
     let mut out = crate::bn::alloc::try_zeroed(n, 0u64)?;
     let take = v.len().min(n);
     out[..take].copy_from_slice(&v[..take]);
@@ -1316,12 +1316,14 @@ fn mont_mul_into(
     }
 }
 
-/// Allocating wrapper over [`mont_mul_into`], for the one-shot pre-ladder
-/// conversion. The ladder itself reuses fixed scratch instead. `out` is returned
-/// as a plain vector because the caller adopts it into a [`SecretBuf`]; the
-/// intermediate product and REDC storage can be secret when the inputs are, so
-/// they are cleansed on every exit.
-fn mont_mul_fallible(a: &[Limb], b: &[Limb], m: &[Limb], n0: Limb) -> Option<Vec<Limb>> {
+/// Allocating wrapper over [`mont_mul_into`], for one-shot conversions outside the
+/// ladder. `out` is returned as a plain vector because the caller adopts it into
+/// a [`SecretBuf`]; the intermediate product and REDC storage can be secret when
+/// the inputs are, so they are cleansed on every exit.
+///
+/// The input bound is `a, b < R = 2^(64 * m.len())` (each at most `n` limbs);
+/// the result is then below `2m` and the single masked subtraction finishes it.
+pub(crate) fn mont_mul_fallible(a: &[Limb], b: &[Limb], m: &[Limb], n0: Limb) -> Option<Vec<Limb>> {
     let n = m.len();
     let mut out = try_zeroed_limbs(n)?;
     let mut t = SecretBuf::try_zeroed(n.checked_mul(2)?.checked_add(1)?)?;
@@ -1511,16 +1513,15 @@ fn mod_exp_core_consttime_staged(
     let n0 = mont_n0(md[0]);
     // `R` and `R^2` derive from the modulus. Their limb count is public, but the
     // modulus contents are not automatically public: RSA CRT precomputation runs
-    // on the secret primes (T6). They are therefore adopted into `SecretBuf` for
-    // every caller; the requests are fallible.
-    let one_mont = SecretBuf::from_vec(pad_to(
-        &limbs::rem_fallible(&limbs::shl_fallible(&[1u64], n.checked_mul(64)?)?, md)?,
-        n,
-    )?);
-    let rr = SecretBuf::from_vec(pad_to(
-        &limbs::rem_fallible(&limbs::mul_fallible(&one_mont, &one_mont)?, md)?,
-        n,
-    )?);
+    // on the secret primes (T6). They are computed from `n` (the public limb
+    // count) by fixed-pattern doubling — `R = 2^(64n)`, `R^2 = 2^(128n)` — so no
+    // division or value-dependent loop touches the modulus contents. `R` is then
+    // one Montgomery multiply away (`R^2 * R^-1`), so only one conversion exists.
+    let ri = n.checked_mul(64)?;
+    let rr = SecretBuf::from_vec(limbs::pow2_mod_consttime(ri.checked_mul(2)?, md)?);
+    let mut one_plain = try_zeroed_limbs(n)?;
+    one_plain[0] = 1;
+    let one_mont = SecretBuf::from_vec(mont_mul_fallible(&rr, &one_plain, md, n0)?);
 
     // Base reduction. The EC reaches this with a secret base: the nonce through
     // `ec_field_inverse_mod_ord` (`ecdsa_sign_setup`) and a field element through

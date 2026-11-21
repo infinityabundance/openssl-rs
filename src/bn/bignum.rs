@@ -666,6 +666,24 @@ pub unsafe extern "C" fn BN_num_bits(a: *const BigNum) -> c_int {
     })
 }
 
+/// [`BN_num_bits`] without a branch or a value-dependent loop bound.
+///
+/// The RSA CRT `smooth` decision compares the two primes' bit lengths. Those are
+/// the same for a balanced key, but a scan that stops at the top non-zero limb
+/// makes the *path* depend on the top limbs' leading zeros. This form visits
+/// every limb under a mask instead. The result is identical to `BN_num_bits`.
+///
+/// # Safety
+///
+/// `a` must be null or point to a live `BIGNUM`.
+pub(crate) unsafe fn bn_num_bits_consttime(a: *const BigNum) -> c_int {
+    // SAFETY: null-or-live per this function's `# Safety` section.
+    match unsafe { as_ref(a) } {
+        Some(b) => limbs::bit_len_consttime(&b.d) as c_int,
+        None => 0,
+    }
+}
+
 /// `int BN_num_bits_word(BN_ULONG w)`
 ///
 /// # Safety

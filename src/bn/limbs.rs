@@ -115,6 +115,58 @@ pub(crate) fn bit_len(v: &[Limb]) -> usize {
     }
 }
 
+/// [`bit_len`] without a branch or a value-dependent loop bound.
+///
+/// Every limb is visited in order and contributes its width under an all-ones
+/// mask only while it is the most significant non-zero limb. `leading_zeros` on
+/// zero answers 64, so a zero limb contributes nothing. The iteration count is
+/// the slice's length, which is the value's normalised limb count — public for
+/// the CRT moduli (16 limbs each at RSA-2048).
+pub(crate) fn bit_len_consttime(v: &[Limb]) -> usize {
+    let mut top = 0usize;
+    for (i, &l) in v.iter().enumerate() {
+        // All-ones when `l != 0`: `l | -l` has its top bit set exactly then.
+        let nonzero = ((l | l.wrapping_neg()) >> 63) as usize;
+        let mask = 0usize.wrapping_sub(nonzero);
+        let width = i.wrapping_mul(64).wrapping_add(bit_len_word_consttime(l));
+        top = (top & !mask) | (width & mask);
+    }
+    top
+}
+
+/// The significant bit count of one limb, without a data-dependent branch or a
+/// conditional move on its value.
+///
+/// `leading_zeros` lowers to `bsr` plus a conditional move, which memcheck
+/// reports as a secret-dependent move. The six halving steps below ask "is any
+/// bit at or above `2^k` set" with a mask, and shift by a literal constant;
+/// neither a branch nor a shift-amount check reads the limb.
+#[inline(always)]
+fn bit_len_word_consttime(w: Limb) -> usize {
+    let mut x = w;
+    let mut n = 0usize;
+    // Six fixed comparisons against literal shifts. A variable shift would emit
+    // Rust's shift-amount check — a conditional jump on a tainted count — so the
+    // shifts are literals and the choice is a mask select.
+    macro_rules! step {
+        ($k:expr) => {{
+            let hi = x >> $k;
+            let mask = 0u64.wrapping_sub((hi | hi.wrapping_neg()) >> 63);
+            n = n.wrapping_add(($k as usize) & (mask as usize));
+            x = (x & !mask) | (hi & mask);
+        }};
+    }
+    step!(32);
+    step!(16);
+    step!(8);
+    step!(4);
+    step!(2);
+    step!(1);
+    // After all six steps `x` is 1 for a non-zero limb and 0 for zero, which is
+    // the one bit the floor did not count.
+    n.wrapping_add(x as usize)
+}
+
 /// The number of significant bits in a single limb, or `0` for zero.
 pub(crate) fn bit_len_word(w: Limb) -> usize {
     if w == 0 {
@@ -122,6 +174,48 @@ pub(crate) fn bit_len_word(w: Limb) -> usize {
     } else {
         64 - w.leading_zeros() as usize
     }
+}
+
+/// `2^bits mod m` for a non-empty odd `m`, in fixed time.
+///
+/// Both buffers are exactly `m.len()` limbs and every iteration does the same
+/// work, so no allocation size, loop bound, branch or index depends on a limb
+/// value. `bits` is public: its callers derive it from the modulus' limb count
+/// (`ri = 64 * m.len()`, so `2 * ri = 128 * m.len()`), not from its contents.
+///
+/// The representative stays below `m`: doubling gives `2r < 2m`, and one masked
+/// conditional subtraction finishes each step. `carry` is 0 or 1 because
+/// `2r < 2 * 2^(64n)`. `take` is the "value >= m" decision: a carry out of the
+/// top limb, or no borrow from `r - m`.
+pub(crate) fn pow2_mod_consttime(bits: usize, m: &[Limb]) -> Option<Vec<Limb>> {
+    let n = m.len();
+    if n == 0 {
+        return None;
+    }
+    let mut r = crate::bn::alloc::try_zeroed(n, 0u64)?;
+    let mut diff = crate::bn::alloc::try_zeroed(n, 0u64)?;
+    r[0] = 1;
+    for _ in 0..bits {
+        let mut carry = 0u64;
+        for slot in r.iter_mut() {
+            let v = (*slot as u128).wrapping_mul(2).wrapping_add(carry as u128);
+            *slot = v as Limb;
+            carry = (v >> 64) as Limb;
+        }
+        let mut borrow = 0u64;
+        for ((slot, &rv), &mv) in diff.iter_mut().zip(r.iter()).zip(m.iter()) {
+            let (d1, b1) = rv.overflowing_sub(mv);
+            let (d2, b2) = d1.overflowing_sub(borrow);
+            *slot = d2;
+            borrow = u64::from(b1) | u64::from(b2);
+        }
+        let take = carry | (borrow ^ 1);
+        let mask = 0u64.wrapping_sub(take);
+        for (slot, &d) in r.iter_mut().zip(diff.iter()) {
+            *slot = (*slot & !mask) | (d & mask);
+        }
+    }
+    Some(r)
 }
 
 /// Whether bit `n` is set. Bits above the value are zero.
@@ -752,5 +846,47 @@ mod tests {
         let (q, r) = div_rem_small(&a, 1000);
         assert_eq!(add(&mul(&q, &[1000]), &from_u64(r)), a);
         assert_eq!(rem(&a, &[1000]), from_u64(r));
+    }
+
+    /// The constant-time scans agree with the variable-time ones on every limb
+    /// pattern that can occur in a magnitude, including zero and top-bit-set
+    /// limbs.
+    #[test]
+    fn the_constant_time_bit_lengths_agree_with_the_variable_time_ones() {
+        let words = [
+            0u64,
+            1,
+            2,
+            3,
+            u64::MAX,
+            0x8000_0000_0000_0000,
+            0x0000_0001_0000_0000,
+            0x00ff_0000_0000_00ff,
+        ];
+        for &w in &words {
+            assert_eq!(bit_len_word_consttime(w), bit_len_word(w), "word={w:#x}");
+            assert_eq!(bit_len_consttime(&[w]), bit_len(&[w]), "word={w:#x}");
+        }
+        let v = [0u64, 0, 0x0123_4567_89ab_cdef, 0, 0xfedc_ba98_7654_3210];
+        assert_eq!(bit_len_consttime(&v), bit_len(&v));
+        assert_eq!(bit_len_consttime(&[]), 0);
+        assert_eq!(bit_len_consttime(&[0, 0, 0]), 0);
+    }
+
+    /// `2^bits mod m` agrees with the variable-time shift-and-remainder it
+    /// replaced, for the shapes the Montgomery contexts use.
+    #[test]
+    fn pow2_mod_consttime_agrees_with_rem() {
+        let m = [0x0123_4567_89ab_cdefu64, 0xfedc_ba98_7654_3211];
+        for bits in [0usize, 1, 63, 64, 65, 127, 128, 256] {
+            let expected = if bits == 0 {
+                vec![1u64]
+            } else {
+                rem(&shl(&[1u64], bits), &m)
+            };
+            let mut got = pow2_mod_consttime(bits, &m).unwrap_or_default();
+            normalise(&mut got);
+            assert_eq!(got, expected, "bits={bits}");
+        }
     }
 }
