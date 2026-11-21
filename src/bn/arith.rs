@@ -573,6 +573,81 @@ pub unsafe extern "C" fn BN_mod_add(
     })
 }
 
+/// `r = (a + b) mod m` for operands already reduced in `[0, m)`, in a constant
+/// pattern over the public width `m.len()`.
+///
+/// This exists because the generic `BN_mod_add` reduces with `BN_nnmod`, whose
+/// work follows the operands' values. The callers that need this one know their
+/// operands are reduced; there is deliberately **no** value-dependent dispatch
+/// here, because deciding whether an operand is reduced would itself compare
+/// secrets.
+///
+/// The sum is formed over a fixed `n + 1` limbs; the conditional subtraction is
+/// a masked select over the same width, with no trimming by value. Returns
+/// `false` on allocation failure, leaving `r` untouched.
+/// The arithmetic behind [`mod_add_reduced_ct`], on limb slices, so it can be
+/// tested without a `BIGNUM` and without unsafe pointer handling.
+///
+/// Preconditions: `ad` and `bd` are each shorter than or equal to `md`, and both
+/// represent values in `[0, md)`. The result is a fresh vector shorter than or
+/// equal to `md`.
+pub(crate) fn mod_add_reduced_ct_limbs(ad: &[Limb], bd: &[Limb], md: &[Limb]) -> Option<Vec<Limb>> {
+    let n = md.len();
+    if n == 0 || ad.len() > n || bd.len() > n {
+        return None;
+    }
+
+    let mut sum = crate::runtime::alloc::try_zeroed(n + 1, 0u64)?;
+    let mut carry = 0u64;
+    for (i, slot) in sum.iter_mut().enumerate().take(n) {
+        let s = ad.get(i).copied().unwrap_or(0) as u128
+            + bd.get(i).copied().unwrap_or(0) as u128
+            + carry as u128;
+        *slot = s as u64;
+        carry = (s >> 64) as u64;
+    }
+    sum[n] = carry;
+
+    let mut reduced = crate::runtime::secret::SecretBuf::<u64>::try_zeroed(n + 1)?;
+    let mut borrow = 0u64;
+    for i in 0..n {
+        let d = (sum[i] as u128)
+            .wrapping_sub(md[i] as u128)
+            .wrapping_sub(borrow as u128);
+        reduced[i] = d as u64;
+        borrow = ((d >> 127) & 1) as u64;
+    }
+    let top = (sum[n] as u128).wrapping_sub(borrow as u128);
+    reduced[n] = top as u64;
+    let underflow = ((top >> 127) & 1) as u64;
+
+    // `underflow == 1` means `a + b < md`, so the unreduced sum is the answer.
+    let mask = underflow.wrapping_neg();
+    for i in 0..=n {
+        sum[i] = (sum[i] & mask) | (reduced[i] & !mask);
+    }
+
+    Some(sum)
+}
+
+#[allow(dead_code)] // wiring waits on a caller with provably reduced operands; see T27
+pub(crate) fn mod_add_reduced_ct(
+    r: Option<&mut BigNum>,
+    a: &BigNum,
+    b: &BigNum,
+    m: &BigNum,
+) -> bool {
+    let md = magnitude(Some(m));
+    if md.is_empty() {
+        return false;
+    }
+    let Some(sum) = mod_add_reduced_ct_limbs(magnitude(Some(a)), magnitude(Some(b)), md) else {
+        return false;
+    };
+
+    store_consttime(r, sum, false, md.len())
+}
+
 /// `int BN_mod_sub(BIGNUM *r, const BIGNUM *a, const BIGNUM *b, const BIGNUM *m, BN_CTX *ctx)`
 ///
 /// As `BN_mod_add`: the difference keeps its sign and the reduction happens last.
@@ -2059,6 +2134,51 @@ fn finish_sqrt(dst: Option<&mut BigNum>, inp: *mut BigNum, value: Vec<Limb>) -> 
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn mod_add_reduced_ct_handles_carry_and_the_conditional_subtract() {
+        // (a, b, m, expected) with every operand already reduced mod `m`.
+        type Case<'a> = (&'a [u64], &'a [u64], &'a [u64], &'a [u64]);
+        let cases: &[Case<'_>] = &[
+            (&[3], &[4], &[5], &[2]),
+            (&[4], &[4], &[5], &[3]),
+            (&[0], &[0], &[5], &[0]),
+            (&[2], &[2], &[4], &[0]), // sum equals the modulus
+            (&[1], &[0], &[5], &[1]), // trivial identity
+            (
+                &[u64::MAX],
+                &[u64::MAX],
+                &[1, 1],
+                &[u64::MAX - 2], // 2*(2^64-1) mod (2^64+1)
+            ),
+        ];
+
+        for (a, b, m, want) in cases {
+            let produced = mod_add_reduced_ct_limbs(a, b, m);
+            assert!(produced.is_some(), "a small allocation must succeed");
+            let Some(mut got) = produced else {
+                return;
+            };
+            while got.last() == Some(&0) {
+                got.pop();
+            }
+            let mut want_v = want.to_vec();
+            while want_v.last() == Some(&0) {
+                want_v.pop();
+            }
+            assert_eq!(
+                &got[..],
+                &want_v[..],
+                "a={a:?} b={b:?} m={m:?} produced {got:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn mod_add_reduced_ct_refuses_when_an_operand_is_wider_than_the_modulus() {
+        assert!(mod_add_reduced_ct_limbs(&[1, 2, 3], &[1], &[5, 6]).is_none());
+        assert!(mod_add_reduced_ct_limbs(&[1], &[1], &[]).is_none());
+    }
+
     use super::*;
     use crate::bn::bignum::{BN_copy, BN_free, BN_get_word, BN_new, BN_set_flags, BN_set_word};
 
