@@ -3,8 +3,11 @@
   "receipt": "bn-modexp-consttime-049",
   "candidate": {
     "branch_head": "20ee9dc90",
+    "repair_batch_base_head": "53ad82779",
+    "repair_batch_worktree": "uncommitted at measurement time; this receipt names the tested working tree, not a commit",
     "crate_version_before": "0.0.49",
     "instrumented_libcrypto_sha256": "a8cb37f8134f05546ac18957e673a068f5f880106ebe07f4ea577742d632ae1b",
+    "rebuilt_libcrypto_sha256": "5318fc08c398f4161a9652596667097c151c19e567fec70fcfe7f70843a3b2fc",
     "tracked_install_note": "the rebuilt install artefacts were produced for instrumentation and are NOT committed; the tracked install remains the 0.0.49 build until the next release rebuild. The measured DSO is identified by the digest above."
   },
   "defect": {
@@ -16,28 +19,53 @@
     }
   },
   "repair": {
-    "design": "fixed-width LSB-first ladder with exactly 64 * p.len() iterations, Montgomery REDC, and masked selection through the crate's existing constant_time_select; dispatch is explicit in BN_mod_exp_mont, BN_mod_exp_mont_consttime and BN_mod_exp (flag set, odd modulus). The variable-time path is retained for inputs their callers prove public.",
+    "design": "fixed-pattern LSB-first ladder with 64 * public_width iterations, Montgomery REDC, and masked selection through the crate's existing constant_time_select; dispatch is explicit in BN_mod_exp_mont, BN_mod_exp_mont_consttime and BN_mod_exp (flag set, odd modulus). The loop width is the modulus' limb count (a public parameter) and never the exponent's normalised len(). The result is stored through a fixed-pass, mask-based trim (limbs::normalise_consttime / bignum::store_consttime) instead of the branching store. The variable-time path is retained for inputs their callers prove public.",
     "diff": "src/bn/arith.rs +251/-2, src/bn/mont.rs +61/-4, two new tests",
     "no_camouflage": "no sleeps, no dummy work sized to mask; core::hint::black_box is not used as a constant-time mechanism"
   },
   "correctness": {
-    "library_tests": "2344 passed, 0 failed, 54 ignored",
-    "bn_filter": "94 passed",
+    "library_tests": "2346 passed, 0 failed, 54 ignored",
+    "bn_filter": "96 passed",
     "authority_differential": "RT-BN: 1510 observations per side, 0 residuals",
     "fmt": "exit 0",
     "clippy_all_targets_deny_warnings": "exit 0"
   },
   "evidence_after": {
-    "ctgrind": "4 errors from 1 context; zero in the ladder. The residual is BN_mod_exp_mont_consttime+0x377 (0x4848a6), inlined limbs::normalise trimming leading zero limbs of the result — output normalisation, not an exponent branch, and not removable without changing the crate's normalised BIGNUM representation.",
+    "ctgrind": "0 errors from 0 contexts on the rebuilt DSO, modexp mode (ladder and output normalisation clean). Controls on the same DSO: CRYPTO_memcmp 0 errors, deliberate early-exit comparator 4096 errors from 1 context. BN_mod_inverse remains 620 errors from 209 contexts and is not part of this batch.",
     "dudect": {
-      "geometry": "class 0 e=2^254+1 vs class 1 e=2^255-1; 40 000 measurements per run (~20 000 per class); 3 batches; taskset -c 1",
-      "t": [2.37, 1.59, 1.58, 1.89],
+      "geometry": "class 0 e=2^254+1 vs class 1 e=2^255-1; 20 000 measurements per batch; 3 batches => 60 000 measurements per run (~30 000 per class), from the harness' dudect.executed line; taskset -c 1",
+      "t_per_batch_observed": [[0.84, 1.35], [1.34, 1.69], [1.74, 1.60]],
+      "max_t_observed": 1.74,
+      "count_note": "the former 40 000 figure was 2 batches x 20 000 from the pre-repair leak-detected run (dudect stops early on a leak); the post-repair run completes 3 batches, so the executed count is 60 000",
       "verdict": "NO_LEAKAGE_EVIDENCE at the stated geometry (state 1)"
+    },
+    "width": {
+      "public_source": "modulus limb count (md.len()) at BN_mod_exp_mont, BN_mod_exp_mont_consttime and BN_mod_exp; the width-taking core also accepts an explicit declared_limbs for a caller whose exponent may exceed its modulus",
+      "callers": {
+        "DH (ossl_dh_compute_key, ossl_dh_generate_public_key)": "modulus p is public; exponent priv_key < p",
+        "RSA private / CRT (rsa_ossl_private_encrypt/decrypt, rsa_ossl_mod_exp)": "modulus n (or p/q) has a public limb count; d/dmp1/dmq1 < it",
+        "EC (ec_field_inverse_mod_ord via bn_mod_exp_mont_fixed_top)": "modulus is the public group order; exponent order-2 is public"
+      },
+      "residual": "if an exponent's normalised limb count exceeds declared width, the ladder widens to that count (max) to keep the answer correct; the excess is observable. No reachable DH/RSA CRT/EC caller exceeds its modulus/order, so this fires only for an arbitrary C caller with an out-of-bound exponent."
+    },
+    "base": {
+      "DH": "public (generator g)",
+      "RSA private / CRT": "public (ciphertext, or the encoded message being signed)",
+      "EC field_inverse_mod_ord": "potentially secret: ecdsa_sign_setup inverts the secret nonce k; OPEN FINDING (initial limbs::rem is variable-time)",
+      "EC ossl_ec_GFp_mont_field_inv": "potentially secret: field elements are not automatically public; OPEN FINDING"
+    },
+    "allocation": {
+      "counts_per_call": {"2048": 14365, "3072": 21533, "8192": 57373, "rsa2048_crt": 14394},
+      "us_per_call": {"2048": 5968.6, "3072": 19210.2, "8192": 368490.8, "rsa2048_crt": 1702.1},
+      "structural": "7 allocations per ladder bit (two mont_mul calls with 3 allocations each, plus the ct_select result)",
+      "failure_behaviour": "forced malloc failure inside the ladder aborts the process (SIGABRT, exit 134, `memory allocation of 256 bytes failed`); there is no graceful error return. This is the recorded OBL-BN-ALLOCATOR divergence, not a new one."
     },
     "verdict_note": "a low t is bounded evidence at a stated geometry, not proof of constant-time behaviour, and it does not cover microarchitectural effects"
   },
   "not_established": [
-    "the initial base reduction remains variable-time; bases are public in the reaching callers, which is an assumption to re-check per call site",
+    "the initial base reduction remains variable-time; DH and RSA bases are public, but EC field elements (notably ecdsa_sign_setup's secret nonce k through ec_field_inverse_mod_ord) are potentially secret. That is a live open finding, not a discharged obligation.",
+    "the constant-pattern trim removes the branch but not the length: the trimmed limb count of a secret result is still observable to whatever reads the returned BIGNUM, and it is value-dependent.",
+    "an exponent whose normalised limb count exceeds the declared public width widens the ladder to that count (max) so the answer stays correct; the excess length is then observable. No reachable DH/RSA CRT/EC caller has such an exponent.",
     "an even modulus with a consttime flag deliberately stays on the variable-time path, because no Montgomery form exists for it",
     "the new secret temporaries are not cleansed",
     "ctgrind models data-flow branches and address use only",

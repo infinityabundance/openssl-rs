@@ -263,6 +263,32 @@ pub(crate) fn store(r: Option<&mut BigNum>, mut d: Vec<Limb>, neg: bool) -> bool
     }
 }
 
+/// Store a result whose magnitude may be secret, trimming it without a branch.
+///
+/// This is [`store`] with the trim performed by [`limbs::normalise_consttime`], and
+/// with the "is the magnitude zero" test written as a mask rather than an
+/// `is_empty()` branch. It exists for the constant-time exponentiation paths:
+/// `store`'s `while v.last() == Some(&0)` and `d.is_empty()` both take a
+/// secret-dependent branch when the magnitude is a function of a secret.
+///
+/// The representation still records the trimmed length, as it must for a
+/// normalised `BIGNUM`; see [`limbs::normalise_consttime`] for what remains
+/// observable.
+pub(crate) fn store_consttime(r: Option<&mut BigNum>, mut d: Vec<Limb>, neg: bool) -> bool {
+    let keep = limbs::normalise_consttime(&mut d);
+    match r {
+        None => false,
+        Some(dst) => {
+            // All-ones when `keep != 0`, so `neg` survives only for a non-zero
+            // magnitude. No comparison is in control position.
+            let not_zero = !crate::runtime::constant_time::constant_time_is_zero_s(keep);
+            dst.d = d;
+            dst.neg = (((neg as usize) & not_zero) & 1) as c_int;
+            true
+        }
+    }
+}
+
 /// Copy `s` into a NUL-terminated block the caller owns.
 ///
 /// This is the caller-ownership ABI edge: the block is one `CRYPTO_malloc(n, FILE, LINE)`

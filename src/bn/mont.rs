@@ -43,8 +43,8 @@
 
 use core::ffi::{c_int, c_ulong};
 
-use crate::bn::arith::{mod_exp_core, mod_exp_core_consttime};
-use crate::bn::bignum::{as_mut, as_ref, parts, store, BigNum};
+use crate::bn::arith::{mod_exp_core, mod_exp_core_consttime_width};
+use crate::bn::bignum::{as_mut, as_ref, parts, store, store_consttime, BigNum};
 use crate::bn::ctx::BnCtx;
 use crate::bn::limbs::{self, Limb};
 use crate::ffi::guard_ffi;
@@ -493,14 +493,24 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
         let result = if consttime {
             // The authority's `BN_mod_exp` dispatches on the same flags. The
             // modulus is odd here (the refusal above), so the Montgomery-form
-            // ladder is available.
-            mod_exp_core_consttime(&ad, &pd, &md)
+            // ladder is available. Its width is the modulus' limb count — a
+            // public parameter — never the exponent's normalised length.
+            mod_exp_core_consttime_width(&ad, &pd, &md, md.len())
         } else {
             mod_exp_core(&ad, &pd, &md)
         };
         match result {
-            // SAFETY: `r` is null-or-live per this function's `# Safety` section.
-            Some(v) => c_int::from(store(unsafe { as_mut(r) }, v, false)),
+            Some(v) => {
+                // SAFETY: `r` is null-or-live per this function's `# Safety` section.
+                let dst = unsafe { as_mut(r) };
+                // The consttime path may carry a secret-derived result, so it is
+                // stored without a value-dependent trim branch.
+                c_int::from(if consttime {
+                    store_consttime(dst, v, false)
+                } else {
+                    store(dst, v, false)
+                })
+            }
             None => 0,
         }
     })
@@ -540,10 +550,13 @@ pub unsafe extern "C" fn BN_mod_exp_mont_consttime(
             return 0;
         }
         // This entry point's name is the promise: always the fixed-pattern ladder.
-        // The modulus is odd (refused above), so Montgomery form exists.
-        match mod_exp_core_consttime(&ad, &pd, &md) {
-            // SAFETY: `r` is null-or-live per this function's `# Safety` section.
-            Some(v) => c_int::from(store(unsafe { as_mut(r) }, v, false)),
+        // The modulus is odd (refused above), so Montgomery form exists. The
+        // loop width is the modulus' limb count, a public parameter.
+        match mod_exp_core_consttime_width(&ad, &pd, &md, md.len()) {
+            // SAFETY: `r` is null-or-live per this function's `# Safety` section;
+            // the result may derive from a secret exponent, so it is stored
+            // without a value-dependent trim branch.
+            Some(v) => c_int::from(store_consttime(unsafe { as_mut(r) }, v, false)),
             None => 0,
         }
     })

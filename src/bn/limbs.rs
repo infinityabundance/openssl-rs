@@ -42,6 +42,44 @@ pub(crate) fn normalise(v: &mut Vec<Limb>) {
     }
 }
 
+/// Drop trailing zero limbs without branching on a limb value.
+///
+/// The trim is the same operation as [`normalise`], but the significant length is
+/// computed in one fixed pass over the whole slice with [`constant_time_select`]
+/// masks and then installed with `set_len`. There is no early exit, no
+/// `while last() == 0` loop and no comparison of a limb in control position, so a
+/// secret-bearing result does not acquire a data-dependent branch merely by being
+/// stored.
+///
+/// The resulting `Vec` length still depends on the value — that is inherent in
+/// this crate's normalised `BIGNUM` representation, which cannot express a fixed
+/// top (see `bignum.rs`'s `BN_FLG_FIXED_TOP` note). What this function removes is
+/// the branch, not the length: the length remains observable to a caller that
+/// asks for it.
+///
+/// [`constant_time_select`]: crate::runtime::constant_time::constant_time_select
+pub(crate) fn normalise_consttime(v: &mut Vec<Limb>) -> usize {
+    use crate::runtime::constant_time::{constant_time_is_zero_s, constant_time_select};
+
+    let mut keep: usize = 0;
+    let mut trimming: usize = usize::MAX;
+    for (i, &limb) in v.iter().enumerate().rev() {
+        // All-ones when the limb is non-zero. The first one found (scanning from
+        // the most significant limb) fixes `keep`; every lower limb leaves it
+        // alone because `trimming` is then all-zeros.
+        let nonzero = !constant_time_is_zero_s(limb as usize);
+        let take = trimming & nonzero;
+        keep = constant_time_select(take, i + 1, keep);
+        trimming &= !nonzero;
+    }
+    // SAFETY: `keep <= v.len()`, and every element below `keep` is initialised
+    // because `keep` is either zero or the index after a limb that was read in
+    // this pass. `Limb` is `Copy` with no destructor, so shrinking the length
+    // drops nothing.
+    unsafe { v.set_len(keep) };
+    keep
+}
+
 /// True when the value is zero.
 pub(crate) fn is_zero(v: &[Limb]) -> bool {
     v.iter().all(|&l| l == 0)
@@ -609,6 +647,33 @@ mod tests {
             unreachable!("coprime operands have an inverse")
         };
         assert_eq!(rem(&mul(&a, &inv), &m), vec![1u64], "a * a^-1 == 1 mod m");
+    }
+
+    #[test]
+    fn the_branchless_normalise_is_the_same_function() {
+        let mut seed = 0x0123_4567_89ab_cdefu64;
+        for len in 0..12 {
+            for _ in 0..32 {
+                let mut v: Vec<Limb> = (0..len)
+                    .map(|_| {
+                        seed = seed
+                            .wrapping_mul(6_364_136_223_846_793_005)
+                            .wrapping_add(1_442_695_040_888_963_407);
+                        // Mostly zeros, so several leading limbs are trimmed.
+                        if seed & 3 == 0 {
+                            seed
+                        } else {
+                            0
+                        }
+                    })
+                    .collect();
+                let mut expected = v.clone();
+                normalise(&mut expected);
+                let keep = normalise_consttime(&mut v);
+                assert_eq!(v, expected, "len={len}");
+                assert_eq!(keep, expected.len(), "len={len}");
+            }
+        }
     }
 
     #[test]

@@ -39,7 +39,8 @@
 use core::ffi::{c_int, c_ulong};
 
 use crate::bn::bignum::{
-    as_mut, as_ref, new_owned, parts, store, BN_copy, BN_get_flags, BigNum, BN_FLG_CONSTTIME,
+    as_mut, as_ref, new_owned, parts, store, store_consttime, BN_copy, BN_get_flags, BigNum,
+    BN_FLG_CONSTTIME,
 };
 use crate::bn::ctx::BnCtx;
 use crate::bn::limbs::{self, Limb};
@@ -1079,7 +1080,12 @@ pub unsafe extern "C" fn BN_mod_exp(
         // no Montgomery form, so it stays on the variable-time path here — the two
         // Montgomery entry points refuse that modulus before they get this far.
         let result = if consttime && !limbs::is_even(&md) {
-            mod_exp_core_consttime(&ad, &pd, &md)
+            // The public width is the modulus' limb count. The exponent in every
+            // constant-time reachable caller is bounded by that modulus (DH's
+            // private exponent is < p, RSA's is < n, EC's is < the group order),
+            // so no part of the loop geometry depends on the exponent's own
+            // normalised length.
+            mod_exp_core_consttime_width(&ad, &pd, &md, md.len())
         } else {
             mod_exp_core(&ad, &pd, &md)
         };
@@ -1087,7 +1093,15 @@ pub unsafe extern "C" fn BN_mod_exp(
             Some(v) => {
                 // SAFETY: `r` is null-or-live per this function's `# Safety` section;
                 // the shared reads above have ended.
-                c_int::from(store(unsafe { as_mut(r) }, v, false))
+                let dst = unsafe { as_mut(r) };
+                // A consttime result may be a function of the secret exponent, so
+                // it is stored without a value-dependent trim branch.
+                let stored = if consttime {
+                    store_consttime(dst, v, false)
+                } else {
+                    store(dst, v, false)
+                };
+                c_int::from(stored)
             }
             None => {
                 // A zero modulus reaches `BN_div` inside the authority's ladder, so
@@ -1246,13 +1260,17 @@ fn mont_mul(a: &[Limb], b: &[Limb], m: &[Limb], n0: Limb) -> Vec<Limb> {
 ///
 /// ## Design and why it has no secret-dependent branch
 ///
-/// A fixed-width ladder: the loop runs exactly `64 * p.len()` times — the
-/// exponent's *declared* limb width — with no early exit, no skip, and no
-/// `bit_len` query. The exponent's value is read as `(limb >> bit) & 1` and turned
-/// into an all-ones/all-zeros mask; every iteration computes both the multiply
-/// and the square and blends the multiply into the accumulator with
-/// [`ct_select`]. There is no secret index: a table would be indexed by a
-/// secret, whereas this ladder selects between two register-shaped candidates.
+/// A fixed-width ladder: the loop runs exactly `64 * width` times, where `width`
+/// is a **public** limb count supplied by the caller — the modulus' limb count for
+/// the C entry points, or an explicitly declared width for a caller whose exponent
+/// is legitimately wider than its modulus. It never uses the exponent's normalised
+/// `len()` as the geometry: the exponent is only read through its bits. There is
+/// no early exit, no skip, and no `bit_len` query. The exponent's value is read as
+/// `(limb >> bit) & 1` and turned into an all-ones/all-zeros mask; every iteration
+/// computes both the multiply and the square and blends the multiply into the
+/// accumulator with [`ct_select`]. There is no secret index: a table would be
+/// indexed by a secret, whereas this ladder selects between two register-shaped
+/// candidates.
 ///
 /// The reduction is Montgomery REDC ([`mont_mul`]) because it has a fixed loop
 /// count, unlike [`limbs::rem`]. `R`, `R^2` and `n0` depend only on the public
@@ -1263,8 +1281,9 @@ fn mont_mul(a: &[Limb], b: &[Limb], m: &[Limb], n0: Limb) -> Vec<Limb> {
 ///
 /// Every intermediate is `n = m.len()` limbs wide, so no allocation size or
 /// limb count depends on a secret bit. The returned vector is `n` limbs wide
-/// (not trimmed); the caller's normal store trims it, which is the one remaining
-/// secret-dependent normalisation and lives outside this ladder.
+/// (not trimmed); a constant-time caller stores it through
+/// [`store_consttime`], which trims with a fixed-pass mask instead of a
+/// value-dependent branch.
 ///
 /// ## When it is used
 ///
@@ -1274,7 +1293,33 @@ fn mont_mul(a: &[Limb], b: &[Limb], m: &[Limb], n0: Limb) -> Vec<Limb> {
 /// modulus carries `BN_FLG_CONSTTIME`), in `BN_mod_exp_mont_consttime` (always),
 /// and in `BN_mod_exp` (constant-time flag and odd modulus). The variable-time
 /// [`mod_exp_core`] is retained for inputs proven public by their callers.
+/// Test-only convenience wrapper: the default public width is the modulus' limb
+/// count. The entry points call [`mod_exp_core_consttime_width`] directly so the
+/// public width is stated at each call site.
+#[cfg(test)]
 pub(crate) fn mod_exp_core_consttime(ad: &[Limb], pd: &[Limb], md: &[Limb]) -> Option<Vec<Limb>> {
+    mod_exp_core_consttime_width(ad, pd, md, md.len())
+}
+
+/// Constant-pattern exponentiation with an explicit **public** limb width.
+///
+/// `declared_limbs` is the width the caller's public contract fixes: the modulus'
+/// limb count for the C entry points, or a larger declared value when a caller's
+/// exponent may legitimately exceed its modulus. The loop count is `64 * width`
+/// with `width = max(declared_limbs, pd.len())`. The `max` is there only to avoid
+/// truncating an exponent that exceeds its declared width; when it fires (the
+/// exponent is wider than the public bound), the loop geometry follows the
+/// exponent's limb count and that excess length is observable. Every reachable
+/// DH, RSA CRT and EC caller keeps the exponent inside the modulus/order, so the
+/// `max` does not fire on those paths. This residual is recorded rather than
+/// silently claimed away; a caller that cannot bound its exponent must supply a
+/// declared width that covers it.
+pub(crate) fn mod_exp_core_consttime_width(
+    ad: &[Limb],
+    pd: &[Limb],
+    md: &[Limb],
+    declared_limbs: usize,
+) -> Option<Vec<Limb>> {
     if md.is_empty() {
         return None;
     }
@@ -1296,14 +1341,21 @@ pub(crate) fn mod_exp_core_consttime(ad: &[Limb], pd: &[Limb], md: &[Limb]) -> O
     let one_mont = pad_to(&limbs::rem(&limbs::shl(&[1u64], 64 * n), md), n);
     let rr = pad_to(&limbs::rem(&limbs::mul(&one_mont, &one_mont), md), n);
 
+    // The base reduction is variable-time. It is sound for a public base (DH's
+    // generator, RSA's encoded message); an EC field element is not automatically
+    // public, and `ossl_ec_group_do_inverse_ord` is reached with a secret nonce
+    // from `ecdsa_sign_setup`. That call site is recorded as an open finding in
+    // the timing receipt, not papered over here.
     let base = pad_to(&limbs::rem(ad, md), n);
     // `base * R^2 * R^-1 == base * R`: convert into the Montgomery domain.
     let mut base = mont_mul(&base, &rr, md, n0);
     let mut acc = one_mont;
 
-    let exp_limbs = pd.len();
-    for i in 0..64 * exp_limbs {
-        let bit = (pd[i >> 6] >> (i & 63)) & 1;
+    let width = declared_limbs.max(pd.len()).max(1);
+    for i in 0..64 * width {
+        // Bits beyond the exponent's own limbs are zero. The index is public; the
+        // exponent's limb count is not used to stop the loop.
+        let bit = pd.get(i >> 6).map_or(0, |&limb| (limb >> (i & 63)) & 1);
         let mask = 0u64.wrapping_sub(bit);
         let product = mont_mul(&acc, &base, md, n0);
         acc = ct_select(&product, &acc, mask);
@@ -1846,6 +1898,33 @@ mod tests {
                         assert_eq!(got, expected, "a={a:?} e={e:?} m={m:?}");
                     }
                 }
+            }
+        }
+    }
+
+    /// A declared width is a *public* lower bound on the ladder, not a truncation:
+    /// the width variant must agree with the variable-time ladder both when the
+    /// exponent is shorter than the declaration and when it is wider than it.
+    #[test]
+    fn a_declared_width_never_changes_the_answer() {
+        let m = vec![0x0123_4567_89ab_cdefu64, 0xfedc_ba98_7654_3211];
+        let a = vec![0xdead_beef_0bad_f00du64, 0x0f0f_0f0f_0f0f_0f0fu64];
+        let exponents: Vec<Vec<Limb>> = vec![
+            Vec::new(),
+            vec![1],
+            vec![0x8000_0000_0000_0001],
+            vec![0x8000_0000_0000_0001, 0x0000_0000_0000_0003],
+        ];
+        for e in &exponents {
+            let Some(expected) = mod_exp_core(&a, e, &m) else {
+                unreachable!("a nonzero modulus answers")
+            };
+            for declared in 1..=4 {
+                let Some(mut got) = mod_exp_core_consttime_width(&a, e, &m, declared) else {
+                    unreachable!("a nonzero modulus answers")
+                };
+                limbs::normalise(&mut got);
+                assert_eq!(got, expected, "e={e:?} declared={declared}");
             }
         }
     }

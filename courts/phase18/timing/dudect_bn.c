@@ -149,6 +149,14 @@ int main(int argc, char **argv)
         fflush(stdout);
     }
     dudect_free(&ctx);
+    /* The executed count is derived from the instrument's own configuration and
+     * the number of batches it actually ran (`batches`), not assumed.  A leak
+     * verdict stops the loop early, so the total is printed rather than inferred
+     * from "3 batches" in the receipt. */
+    fprintf(stderr,
+            "dudect.executed mode=%s per_batch=%zu batches_run=%d total_measurements=%zu\n",
+            m, config.number_measurements, batches,
+            (size_t)batches * config.number_measurements);
     fprintf(stderr, "dudect.done mode=%s batches=%d state=%d\n", m, batches, (int)state);
     return (int)state;
 }
