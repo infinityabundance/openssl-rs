@@ -48,8 +48,20 @@ export PATH="$TOOLS/bin:$TOOLS/sbin:$PATH"
 echo "=== candidate prefix (fresh DSO from the archive) ==="
 rm -rf "$WORK/b-prefix"
 mkdir -p "$WORK/b-prefix/lib" "$WORK/b-prefix/include"
+# The authority's libcrypto carries an OPENSSL_* version script, and the Phase-2
+# court's DSO is linked with one (artifacts/phase2/libcrypto.ld). A bare
+# `cc -shared` link does not, and the loader then warns
+# "libcrypto.so.3: no version information available" for any consumer built
+# against the authority -- observed in O5. The script is used when it is
+# present, and the receipt says whether it was.
+VERSION_SCRIPT="${VERSION_SCRIPT:-$ROOT/artifacts/phase2/libcrypto.ld}"
+version_arg=()
+if [ -f "$VERSION_SCRIPT" ]; then
+    version_arg=(-Wl,--version-script="$VERSION_SCRIPT")
+fi
 cc -shared -Wl,--whole-archive "$ARCHIVE" -Wl,--no-whole-archive \
-   -Wl,-soname,libcrypto.so.3 -o "$WORK/b-prefix/lib/libcrypto.so.3" \
+   "${version_arg[@]}" -Wl,-soname,libcrypto.so.3 \
+   -o "$WORK/b-prefix/lib/libcrypto.so.3" \
    || die "linking the candidate DSO failed"
 ln -sf libcrypto.so.3 "$WORK/b-prefix/lib/libcrypto.so"
 cp -a "$B_INCLUDE/." "$WORK/b-prefix/include/"
