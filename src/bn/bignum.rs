@@ -278,6 +278,60 @@ pub(crate) fn magnitude(b: Option<&BigNum>) -> &[Limb] {
     }
 }
 
+/// Release the magnitude a [`store`] is about to replace, when it is secret storage.
+///
+/// `store`/`store_consttime` hand the destination a freshly built `Vec`, so the
+/// assignment releases the old allocation. `BN_FLG_SECURE` is what marks the crate's
+/// secret-material objects (`BN_secure_new`: EC/DSA private scalars, the ECDSA nonce,
+/// the ASN.1 private-integer type), and both `BN_clear_free` and `BN_free` cleanse
+/// such an allocation on release. Replacing the storage is a release too, so the same
+/// obligation applies: without this wipe the limbs of the value being overwritten are
+/// handed back to the allocator intact — for the ECDSA nonce, the nonce itself when
+/// `k` is overwritten by `k⁻¹`, and a rejected candidate when the range draw retries.
+/// [`assign_limbs`] already discharges the obligation on its growth path; this is the
+/// assignment path's half of it.
+fn cleanse_replaced(dst: &mut BigNum) {
+    if (dst.flags & BN_FLG_SECURE) == 0 {
+        return;
+    }
+    cleanse_storage(&mut dst.d);
+    #[cfg(test)]
+    replace_probe::record();
+}
+
+/// Test-only observation seam for [`cleanse_replaced`].
+///
+/// Records how many times a store wiped the allocation it replaced, so a test can
+/// assert that the `BN_FLG_SECURE` decision — not the value or the magnitude's
+/// length — is what selects the wipe. Compiled out of every non-test build.
+#[cfg(test)]
+pub(crate) mod replace_probe {
+    use core::cell::Cell;
+
+    thread_local! {
+        static ARMED: Cell<bool> = const { Cell::new(false) };
+        static WIPES: Cell<usize> = const { Cell::new(0) };
+    }
+
+    /// Start a fresh observation on this thread.
+    pub(crate) fn arm() {
+        ARMED.with(|a| a.set(true));
+        WIPES.with(|c| c.set(0));
+    }
+
+    /// Stop observing and answer how many replacements were cleansed.
+    pub(crate) fn disarm() -> usize {
+        ARMED.with(|a| a.set(false));
+        WIPES.with(Cell::get)
+    }
+
+    pub(super) fn record() {
+        if ARMED.with(Cell::get) {
+            WIPES.with(|c| c.set(c.get() + 1));
+        }
+    }
+}
+
 /// Store a magnitude and sign into an optional destination.
 ///
 /// Answers `false` only for a null destination, which is how the entry points
@@ -287,6 +341,7 @@ pub(crate) fn store(r: Option<&mut BigNum>, mut d: Vec<Limb>, neg: bool) -> bool
     match r {
         None => false,
         Some(dst) => {
+            cleanse_replaced(dst);
             let zero = d.is_empty();
             dst.d = d;
             dst.neg = if zero { 0 } else { c_int::from(neg) };
@@ -325,6 +380,10 @@ pub(crate) fn store_consttime(
     match r {
         None => false,
         Some(dst) => {
+            // The constant-time entry points are exactly where a secret-flagged
+            // destination is overwritten (the nonce's `k -> k⁻¹` among them), so the
+            // replaced magnitude is cleansed before the assignment releases it.
+            cleanse_replaced(dst);
             // All-ones when `keep != 0`, so `neg` survives only for a non-zero
             // magnitude. No comparison is in control position.
             let not_zero = !crate::runtime::constant_time::constant_time_is_zero_s(keep);
@@ -2298,6 +2357,62 @@ mod tests {
             // SAFETY: `a` is live and owned by this test.
             BN_free(a);
         }
+    }
+
+    /// A store into `BN_FLG_SECURE` storage cleanses the magnitude it replaces;
+    /// a store into ordinary storage does not. The flag is the only difference
+    /// between the two destinations, and both stores are otherwise identical.
+    #[test]
+    fn a_secure_store_cleanses_the_magnitude_it_replaces() {
+        let mut secure = BigNum {
+            d: vec![0xDEAD_BEEF_0000_0001; 4],
+            neg: 0,
+            flags: BN_FLG_SECURE,
+        };
+        let mut plain = BigNum {
+            d: vec![0xDEAD_BEEF_0000_0001; 4],
+            neg: 0,
+            flags: 0,
+        };
+
+        replace_probe::arm();
+        assert!(store(Some(&mut secure), vec![5], false));
+        assert!(store(Some(&mut plain), vec![5], false));
+        assert_eq!(
+            replace_probe::disarm(),
+            1,
+            "only the BN_FLG_SECURE replacement is cleansed"
+        );
+        assert_eq!(secure.d, vec![5]);
+        assert_eq!(plain.d, vec![5]);
+    }
+
+    /// The constant-time store carries the same obligation: it is the path the
+    /// ECDSA nonce inversion writes through, so replacing `k`'s storage releases
+    /// the nonce and must cleanse it first.
+    #[test]
+    fn a_secure_store_consttime_cleanses_the_magnitude_it_replaces() {
+        let mut secure = BigNum {
+            d: vec![0xDEAD_BEEF_0000_0001; 4],
+            neg: 0,
+            flags: BN_FLG_SECURE,
+        };
+        let mut plain = BigNum {
+            d: vec![0xDEAD_BEEF_0000_0001; 4],
+            neg: 0,
+            flags: 0,
+        };
+
+        replace_probe::arm();
+        assert!(store_consttime(Some(&mut secure), vec![5], false, 4));
+        assert!(store_consttime(Some(&mut plain), vec![5], false, 4));
+        assert_eq!(
+            replace_probe::disarm(),
+            1,
+            "only the BN_FLG_SECURE replacement is cleansed"
+        );
+        assert_eq!(secure.d, vec![5]);
+        assert_eq!(plain.d, vec![5]);
     }
 
     /// `BN_secure_new` carries `BN_FLG_SECURE`, which is what makes a plain `BN_free`
