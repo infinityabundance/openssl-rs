@@ -22,6 +22,11 @@ directory is the apparatus, not the conclusion.
 | `frontier.py`, `slots.py`, `tables.py` | helpers used to enumerate indirect slots and method tables during the reachability work. |
 | `classify_ct.py`, `summarize_ct.py` | turn raw memcheck output into the branch/address classification quoted in the receipts. |
 | `binary_branch_audit.py` | T14 optimised-code review aid: extracts a named function's compiler-emitted range from the built `libcrypto.so.3` (symbol table, not a hand-picked window), then tabulates conditional jumps by condition provenance and guarded action, plus `div`/`idiv`, `cmov`/`setcc`, `jo`/`jno`, calls and `cpuid`. It does **not** establish secret-dependence; that needs binary-level taint analysis (T16). |
+| `pmu_probe.c` | T17 CPUID probe: prints CPUID.0AH (architectural PMU version/counters), CPUID.1.ECX[31] (hypervisor present), and AMD `PerfCtrExtCore`. Used to explain why no `cpu` event source exists, rather than assuming capability. |
+| `tsc_clock.c` | T17 serialised RDTSC harness: calibrates the TSC against `CLOCK_MONOTONIC`, measures the empty read-pair resolution, a deterministic xorshift workload, and the crate's 2048-bit modexp and RSA-2048 CRT. RDTSC is a reference-clock substitute, **not** a PMU counter. |
+| `run_pmu_substitutes.sh` | T17 runner: discovers event sources and `perf_event_paranoid`, runs the CPUID probe, shows `perf stat -e cycles` failing, runs `perf stat -e task-clock,context-switches,page-faults,minor-faults` on `bench_bn`, then runs `tsc_clock`. Writes under `court/tmp/t1718/t17/` by default. |
+| `run_timecop_supercop.sh` | T18 runner: verifies SUPERCOP 20190816 and the upstream TIMECOP patch by sha256, applies the patch to a pristine tree, installs the Valgrind/`poison.h` headers, adds a test-only leaky control, runs `do-part init` and `do-part crypto_verify 16`, and prints the deduplicated `valgrind_pass`/`valgrind_fail` verdicts. |
+| `fixtures/timecop/` | T18 inputs: verbatim public-domain `poison.h` (the TIMECOP page embeds it; there is no separate URL) and `zz-leaky-control/`, a test-only early-exit comparator that TIMECOP must flag. |
 
 ## Build and run
 
@@ -109,6 +114,48 @@ full-width private exponent (exponentiation cost, not a MODP group); the RSA
 row is a raw `RSA_NO_PADDING` private operation with blinding on; the ECDSA row
 includes nonce generation and inversion. See `court/tmp/t21/NOTES.md` for the
 batch's numbers and caveats.
+
+## PMU substitutes (T17)
+
+There is no hardware PMU at this guest's interface: `hypervisor` is present,
+CPUID.0AH returns version 0 with 0 counters, `/sys/bus/event_source/devices`
+has no `cpu`, and `perf stat -e cycles` prints `<not supported>`. The two
+substitutes that do work must be named as such, never presented as PMU
+counters:
+
+```sh
+OPENSSL_RS_COURT_IMAGE=openssl-rs-court-tools:1 \
+  bash docker/openssl-rs-court.sh exec \
+  bash courts/phase18/timing/run_pmu_substitutes.sh
+```
+
+`perf stat -e task-clock,context-switches,page-faults,minor-faults` is a kernel
+software-event path. `tsc_clock` reports reference-clock ticks: it cannot
+count instructions, branches or cache events, it cannot attribute kernel vs
+user, and the guest does not advertise `constant_tsc`/`nonstop_tsc`. The
+resolution is the serialised empty read pair (median 34 ticks ≈ 11.4 ns), not
+the ~0.334 ns tick. Numbers and limits: `court/tmp/t1718/NOTES.md`.
+
+## TIMECOP SUPERCOP harness (T18)
+
+This is the real TIMECOP patch to SUPERCOP (not the distro `timecop-bin`
+desktop application). Upstream supports SUPERCOP 20181113, 20190110 and
+20190816; the runner uses 20190816 and verifies both the tarball and the patch
+by sha256 before applying them.
+
+```sh
+OPENSSL_RS_COURT_IMAGE=openssl-rs-court-tools:1 \
+  bash docker/openssl-rs-court.sh exec \
+  bash courts/phase18/timing/run_timecop_supercop.sh
+```
+
+The run measured here applied 22 files / 45 hunks with 0 rejects; `crypto_verify/16/ref`
+was `valgrind_pass` in 121/121 compiler configurations, and the test-only
+early-exit control was `valgrind_fail` in 121/121, reporting a conditional
+jump rooted in `timecop_doit`'s client request. A run where the control does
+not fire is not evidence. `do-part` exits non-zero after the analysis because
+it unconditionally `cat`s a missing `work/errors`; judge by the verdict table,
+not that exit code.
 
 ## Interpreting the results
 
