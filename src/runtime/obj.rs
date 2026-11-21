@@ -2036,11 +2036,44 @@ impl NameDb {
 
 static NAMES: Mutex<NameDb> = Mutex::new(NameDb::new());
 
-fn lock_names() -> MutexGuard<'static, NameDb> {
-    match NAMES.lock() {
+/// The registry lock, plus — in test builds — this thread's lock depth.
+///
+/// The depth is not a second lock: it is an observation of *this thread's* state that a
+/// destructor can read. A destructor must never run while the registry lock is held by
+/// the thread running it (a re-entrant lookup would deadlock), and the previous test
+/// for that asked whether the mutex was free *at that instant*, which another test
+/// thread holding it makes false. Reading the depth answers the question the property
+/// actually states, independently of what other threads are doing (T31).
+struct NamesGuard {
+    guard: MutexGuard<'static, NameDb>,
+    #[cfg(test)]
+    _depth: lock_depth::Held,
+}
+
+impl core::ops::Deref for NamesGuard {
+    type Target = NameDb;
+
+    fn deref(&self) -> &NameDb {
+        &self.guard
+    }
+}
+
+impl core::ops::DerefMut for NamesGuard {
+    fn deref_mut(&mut self) -> &mut NameDb {
+        &mut self.guard
+    }
+}
+
+fn lock_names() -> NamesGuard {
+    let guard = match NAMES.lock() {
         Ok(guard) => guard,
         // Poisoning records a defect; the registry is never left half-written.
         Err(poisoned) => poisoned.into_inner(),
+    };
+    NamesGuard {
+        guard,
+        #[cfg(test)]
+        _depth: lock_depth::enter(),
     }
 }
 
@@ -2343,6 +2376,10 @@ pub unsafe extern "C" fn OBJ_NAME_do_all(
     arg: *mut c_void,
 ) {
     guard_ffi((), || {
+        // Test-only: hold the walk lease so `active_walks` is this walk's alone and
+        // the deferral boundary its callbacks observe is deterministic (T31).
+        #[cfg(test)]
+        let _walk_lease = walk_lease::acquire();
         let Some(f) = f else {
             return;
         };
@@ -2396,6 +2433,8 @@ pub unsafe extern "C" fn OBJ_NAME_do_all_sorted(
         };
         // As in `OBJ_NAME_do_all`: a snapshot plus a live walk, with the lock
         // released before the first callback.
+        #[cfg(test)]
+        let _walk_lease = walk_lease::acquire();
         let mut list: Vec<NameRec> = {
             let mut db = lock_names();
             let list: Vec<NameRec> = db
@@ -3127,11 +3166,21 @@ mod tests {
         );
     }
 
+    /// The registered destructor must run with the registry lock released, so a
+    /// destructor that re-enters the registry cannot deadlock. It must also run *at
+    /// all*: a removal made while a walk is live is deferred to the end of that walk,
+    /// which may be a different test thread, so the assertion waits for the
+    /// observation instead of assuming the two threads are ordered.
+    ///
+    /// The lock observation is this thread's own registry-lock depth rather than
+    /// `try_lock`: another test thread holding the process-global mutex is not the
+    /// defect this test is about (T31).
     #[test]
     fn name_destructor_runs_outside_the_registry_lock() {
-        use core::sync::atomic::{AtomicBool, Ordering};
-        static UNLOCKED: AtomicBool = AtomicBool::new(false);
+        use core::sync::atomic::{AtomicI32, Ordering};
+        static HELD_AT_DESTRUCTION: AtomicI32 = AtomicI32::new(-1);
         static QUERIES: AtomicI32 = AtomicI32::new(0);
+        static OBSERVED: AtomicI32 = AtomicI32::new(0);
 
         /// # Safety
         /// The registry calls this destructor with the captured name and type; both are
@@ -3142,28 +3191,19 @@ mod tests {
             type_: c_int,
             _data: *const c_char,
         ) {
-            // Negative control for the old ordering: with the registry lock held,
-            // `try_lock` answers `WouldBlock` immediately, so this fails instead of
-            // deadlocking. Retry briefly because an unrelated thread may hold the
-            // lock at the instant the destructor runs.
-            let mut unlocked = false;
-            for _ in 0..1000 {
-                if NAMES.try_lock().is_ok() {
-                    unlocked = true;
-                    break;
-                }
-                std::thread::yield_now();
-            }
-            UNLOCKED.store(unlocked, Ordering::SeqCst);
-            // A destructor that re-enters the registry must not deadlock. The
-            // re-entry is exercised only when the control proves the lock is
-            // released, so a regression fails the assertion instead of hanging.
-            if unlocked && !name.is_null() {
+            // Negative control for the old ordering: with the lock held this records 1,
+            // and the re-entrant lookup below would deadlock.
+            let held = super::lock_depth::held_here();
+            HELD_AT_DESTRUCTION.store(c_int::from(held), Ordering::SeqCst);
+            if !held && !name.is_null() {
                 // SAFETY: `name` is the entry's recorded, NUL-terminated name and is still
                 // live at destruction time (the registry borrowed it until now).
                 let _ = unsafe { OBJ_NAME_get(name, type_) };
                 QUERIES.fetch_add(1, Ordering::SeqCst);
             }
+            // Last, so the test's wait observes a finished destructor rather than one
+            // that has only just started.
+            OBSERVED.fetch_add(1, Ordering::SeqCst);
         }
 
         let _g = lock();
@@ -3175,8 +3215,19 @@ mod tests {
             assert_eq!(OBJ_NAME_add(name.as_ptr(), idx, data.as_ptr()), 1);
             assert_eq!(OBJ_NAME_remove(name.as_ptr(), idx), 1);
         }
+        // Bounded: a destructor that never runs fails the first assertion rather than
+        // hanging the suite.
+        let deadline = std::time::Instant::now() + std::time::Duration::from_secs(30);
+        while OBSERVED.load(Ordering::SeqCst) == 0 && std::time::Instant::now() < deadline {
+            std::thread::yield_now();
+        }
         assert!(
-            UNLOCKED.load(Ordering::SeqCst),
+            OBSERVED.load(Ordering::SeqCst) > 0,
+            "the destructor never ran"
+        );
+        assert_eq!(
+            HELD_AT_DESTRUCTION.load(Ordering::SeqCst),
+            0,
             "the destructor ran with the registry lock held"
         );
         assert_eq!(QUERIES.load(Ordering::SeqCst), 1, "no re-entrant read");
@@ -3260,6 +3311,98 @@ mod tests {
             assert!(OBJ_get0_data(core::ptr::null()).is_null());
             assert_eq!(OBJ_cmp(core::ptr::null(), core::ptr::null()), 0);
             assert_eq!(OBJ_add_object(core::ptr::null()), NID_undef);
+        }
+    }
+}
+
+/// Test-only per-thread registry-lock depth.
+#[cfg(test)]
+mod lock_depth {
+    use core::cell::Cell;
+
+    thread_local! {
+        static DEPTH: Cell<usize> = const { Cell::new(0) };
+    }
+
+    pub(super) struct Held;
+
+    impl Held {
+        fn take() -> Held {
+            DEPTH.with(|d| d.set(d.get() + 1));
+            Held
+        }
+    }
+
+    impl Drop for Held {
+        fn drop(&mut self) {
+            DEPTH.with(|d| d.set(d.get() - 1));
+        }
+    }
+
+    /// Whether the current thread holds the registry lock.
+    pub(super) fn held_here() -> bool {
+        DEPTH.with(|d| d.get()) != 0
+    }
+
+    /// Take the depth for a guard that is about to be constructed.
+    pub(super) fn enter() -> Held {
+        Held::take()
+    }
+}
+
+/// Test-only serialisation of registry walks (T31).
+///
+/// `NameDb::active_walks` is process-global and a removal made while any walk is
+/// live is deferred to the end of the *last* walk. That is the production
+/// contract, and it is what a callback that removes an entry relies on. It also
+/// means one test's `EVP_*_do_all` can defer another test's destructor past that
+/// test's own assertion, which is a test-isolation defect rather than an
+/// implementation defect.
+///
+/// The lease makes a walk the only walk in the process for the duration of the
+/// walk, so a test that measures the deferral boundary measures exactly one walk.
+/// It is a mutex plus a per-thread "already held" flag, because a walk issued
+/// from inside a walk's own callback must not deadlock: re-entrancy is the
+/// behaviour the registry promises, and the nested walk inherits the lease.
+#[cfg(test)]
+mod walk_lease {
+    use core::cell::Cell;
+    use std::sync::{Mutex, MutexGuard};
+
+    static WALK: Mutex<()> = Mutex::new(());
+
+    thread_local! {
+        static HELD: Cell<bool> = const { Cell::new(false) };
+    }
+
+    pub(super) struct Lease {
+        _guard: Option<MutexGuard<'static, ()>>,
+        owned: bool,
+    }
+
+    impl Drop for Lease {
+        fn drop(&mut self) {
+            if self.owned {
+                HELD.with(|h| h.set(false));
+            }
+        }
+    }
+
+    pub(super) fn acquire() -> Lease {
+        if HELD.with(|h| h.get()) {
+            return Lease {
+                _guard: None,
+                owned: false,
+            };
+        }
+        let guard = match WALK.lock() {
+            Ok(g) => g,
+            Err(poisoned) => poisoned.into_inner(),
+        };
+        HELD.with(|h| h.set(true));
+        Lease {
+            _guard: Some(guard),
+            owned: true,
         }
     }
 }

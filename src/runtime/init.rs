@@ -1762,8 +1762,47 @@ mod tests {
         });
     }
 
+    /// The authority's contract is that `OPENSSL_cleanup` "must not run
+    /// concurrently with any other library call", and afterwards the process is
+    /// terminal: `stopped` is set for the life of the process and every later `ERR_*`
+    /// call is a no-op. Running that inside a test binary therefore poisons every test
+    /// scheduled beside it — measured as the T32 failure, where the integer-overflow
+    /// raise in `runtime::mem` was silently dropped whenever this test overlapped it.
+    /// The body runs in a child process instead, so "terminal" is terminal only for
+    /// the child.
     #[test]
+    #[allow(clippy::expect_used)]
     fn cleanup_is_idempotent_and_terminal() {
+        let exe = std::env::current_exe().expect("the test binary has a path");
+        let out = std::process::Command::new(exe)
+            .args([
+                "--exact",
+                "runtime::init::tests::cleanup_is_idempotent_and_terminal_child",
+                "--nocapture",
+            ])
+            .env("OPENSSL_RS_CLEANUP_CHILD", "1")
+            .output()
+            .expect("the test binary can be re-executed");
+        let stdout = String::from_utf8_lossy(&out.stdout);
+        assert!(
+            out.status.success(),
+            "the child process failed:\nstdout:\n{stdout}\nstderr:\n{}",
+            String::from_utf8_lossy(&out.stderr)
+        );
+        assert!(
+            stdout.contains("1 passed"),
+            "the child must have run the case, not skipped it:\n{stdout}"
+        );
+    }
+
+    /// The child half of [`cleanup_is_idempotent_and_terminal`]. It is a normal test
+    /// that does nothing unless the parent named it, so a whole-suite run cannot set
+    /// `stopped` in the process that owns the other tests.
+    #[test]
+    fn cleanup_is_idempotent_and_terminal_child() {
+        if std::env::var_os("OPENSSL_RS_CLEANUP_CHILD").is_none() {
+            return;
+        }
         with_init_lock(|| {
             // SAFETY: NULL settings throughout; `opts` carries no pointer.
             unsafe {
