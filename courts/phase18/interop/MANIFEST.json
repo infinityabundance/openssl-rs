@@ -1,0 +1,66 @@
+{
+  "schema": "openssl-rs/interop-pins/1",
+  "campaign": "OpenSSH interoperability, item O2 of docs/ETP-TODO.md",
+  "created": "2026-11-21",
+  "cohorts": {
+    "A": "portable OpenSSH 9.9p1 - primary; the version the SAFE_COMPATIBLE graduation, the closure receipts and the L7 atlas rows name (docs/OPENSSH-COHORT.md)",
+    "B": "portable OpenSSH 10.5p1 - separate; the Phase-17 driver record, the CVE-2026-123158 court and the probe rows. Never pooled with A."
+  },
+  "pins": [
+    {
+      "role": "openssh",
+      "cohort": "A",
+      "version": "9.9p1",
+      "filename": "openssh-9.9p1.tar.gz",
+      "url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-9.9p1.tar.gz",
+      "sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+      "digest_source": "recorded in forensics/downstream/authority-baselines.jsonl (specimen:openssh:9.9p1) and forensics/downstream/candidate-freeze.json; re-derived from a fresh download at O2 and identical",
+      "required_locally": true
+    },
+    {
+      "role": "openssh",
+      "cohort": "B",
+      "version": "10.5p1",
+      "filename": "openssh-10.5p1.tar.gz",
+      "url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.5p1.tar.gz",
+      "sha256": "d44d28a839ea9daf969cc69150fde59910b2b39361dad81a3bd6cbd19218db11",
+      "digest_source": "recorded in forensics/atlas/downstream-corpus.json (openssh 10.5p1 program record); re-derived from a fresh download at O2 and identical",
+      "required_locally": true
+    },
+    {
+      "role": "putty",
+      "cohort": "A",
+      "version": "0.85",
+      "filename": "putty-0.85.tar.gz",
+      "url": "https://the.earth.li/~sgtatham/putty/0.85/putty-0.85.tar.gz",
+      "sha256": "13fd4db2936d03b73812a7bcc2a658e4dd29cc776a56c3670a7fc6f1a0ee8af8",
+      "digest_source": "publisher list https://the.earth.li/~sgtatham/putty/0.85/sha256sums (a signed sha256sums.asc exists; that signature is not verified here, see open_obligations)",
+      "required_locally": true
+    },
+    {
+      "role": "dropbear",
+      "cohort": "A",
+      "version": "2026.94",
+      "filename": "dropbear-2026.94.tar.bz2",
+      "url": "https://matt.ucc.asn.au/dropbear/releases/dropbear-2026.94.tar.bz2",
+      "sha256": "e098034a843699200c8c977a991fff73159735bf795d5f72ef672c41a6b1ae81",
+      "digest_source": "first-fetch value computed at O2; the site publishes a detached .asc signature and no checksum list, so this is a recorded pin, not an independently published one",
+      "required_locally": true
+    },
+    {
+      "role": "openssl-authority",
+      "cohort": "A",
+      "version": "3.6.4",
+      "filename": "openssl-3.6.4.tar.gz",
+      "url": "https://github.com/openssl/openssl/releases/download/openssl-3.6.4/openssl-3.6.4.tar.gz",
+      "sha256": "9bffaa1ad1e07b354c21bd3324ec02fa15579f45a7d0494b3e74bc449b7333ef",
+      "digest_source": "forensics/authorities/AUTHORITIES.json, artifact.checksum_verified = true (published_sha256 equals the observed sha256)",
+      "required_locally": false
+    }
+  ],
+  "open_obligations": [
+    "Dropbear's archive digest is a first-fetch pin. Its detached .asc is published but the signing key is not pinned in this repository, so the digest is not yet independently authenticated. Pinning the key and verifying the signature belongs to O3.",
+    "PuTTY's sha256sums list is itself signed (sha256sums.asc) and that signature is likewise not verified here.",
+    "The OpenSSL authority archive is verified by the authorities registry, not by this manifest; the manifest repeats its digest so a build can bind to one value."
+  ]
+}

@@ -1,0 +1,68 @@
+{
+ "schema": "openssl-rs/interop-pin-receipt/1",
+ "campaign": "OpenSSH interoperability, item O2 of docs/ETP-TODO.md",
+ "manifest": "courts/phase18/interop/MANIFEST.json",
+ "generated": "2026-11-21T18:19:57Z",
+ "work": "court/tmp/o2",
+ "counts": {
+  "pins": 5,
+  "verified": 4,
+  "absent_recorded": 1,
+  "failed": 0
+ },
+ "pins": [
+  {
+   "role": "openssh",
+   "cohort": "A",
+   "version": "9.9p1",
+   "filename": "openssh-9.9p1.tar.gz",
+   "expected_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+   "required_locally": true,
+   "observed_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+   "size_bytes": 1964864,
+   "status": "verified"
+  },
+  {
+   "role": "openssh",
+   "cohort": "B",
+   "version": "10.5p1",
+   "filename": "openssh-10.5p1.tar.gz",
+   "expected_sha256": "d44d28a839ea9daf969cc69150fde59910b2b39361dad81a3bd6cbd19218db11",
+   "required_locally": true,
+   "observed_sha256": "d44d28a839ea9daf969cc69150fde59910b2b39361dad81a3bd6cbd19218db11",
+   "size_bytes": 2333659,
+   "status": "verified"
+  },
+  {
+   "role": "putty",
+   "cohort": "A",
+   "version": "0.85",
+   "filename": "putty-0.85.tar.gz",
+   "expected_sha256": "13fd4db2936d03b73812a7bcc2a658e4dd29cc776a56c3670a7fc6f1a0ee8af8",
+   "required_locally": true,
+   "observed_sha256": "13fd4db2936d03b73812a7bcc2a658e4dd29cc776a56c3670a7fc6f1a0ee8af8",
+   "size_bytes": 3023114,
+   "status": "verified"
+  },
+  {
+   "role": "dropbear",
+   "cohort": "A",
+   "version": "2026.94",
+   "filename": "dropbear-2026.94.tar.bz2",
+   "expected_sha256": "e098034a843699200c8c977a991fff73159735bf795d5f72ef672c41a6b1ae81",
+   "required_locally": true,
+   "observed_sha256": "e098034a843699200c8c977a991fff73159735bf795d5f72ef672c41a6b1ae81",
+   "size_bytes": 2386978,
+   "status": "verified"
+  },
+  {
+   "role": "openssl-authority",
+   "cohort": "A",
+   "version": "3.6.4",
+   "filename": "openssl-3.6.4.tar.gz",
+   "expected_sha256": "9bffaa1ad1e07b354c21bd3324ec02fa15579f45a7d0494b3e74bc449b7333ef",
+   "required_locally": false,
+   "status": "absent-recorded"
+  }
+ ]
+}
