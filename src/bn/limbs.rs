@@ -35,6 +35,8 @@
 /// A limb. 64-bit because the crate has one build profile, `x86_64-linux`.
 pub(crate) type Limb = u64;
 
+use crate::runtime::secret::SecretLimbs;
+
 /// Drop trailing zero limbs, restoring the "no leading zeros" invariant.
 pub(crate) fn normalise(v: &mut Vec<Limb>) {
     while v.last() == Some(&0) {
@@ -924,6 +926,31 @@ fn ct_halve_mod_into(
 /// A zero `u` only occurs once `v` is already the gcd, so the remaining fixed
 /// iterations are harmless (they halve `u` and `x1` only).
 ///
+/// ## Storage and width
+///
+/// Every scratch buffer is a [`SecretLimbs`] (the crate's heap secret-owner
+/// policy), allocated once before the loop through the fallible seam. `Drop`
+/// volatile-wipes each allocation on every exit path — the normal return, an
+/// early `?` allocation failure and an unwind — so no intermediate is released
+/// intact. The returned coefficient is the one allocation that crosses the
+/// boundary: it is copied out, after the loop, into the ordinary (result-transfer)
+/// vector the caller stores, exactly as the ladder transfers its product.
+///
+/// Two widths occur. `m.len()` sizes the coefficient buffers (`x1 x2 nx1 nx2 dtmp
+/// h1 h2 haux` and `sum = m.len() + 1`), because the coefficients are kept reduced
+/// modulo `m`. `wide = max(m.len(), a.len())` sizes `u v nu nv cu cv diff_uv
+/// diff_vu`, because the operand may be wider than the modulus. `a` is
+/// zero-extended into `u` at `wide` limbs, so no buffer is sized by a limb
+/// **value**. The widths are the operands' normalised limb counts: the modulus'
+/// length is public on every constant-time caller (field, group order, RSA
+/// modulus, or a prime of the requested key size), and the operand's length is
+/// the length metadata a normalised `BIGNUM` already exposes through
+/// `BN_num_bits` (the recorded T8 residual), not a new value-dependent branch.
+/// Removing it would require a public-width parameter at the C ABI (an API/ABI
+/// change) or a constant-time reduction of an arbitrarily wide secret operand
+/// (not implemented; the variable-time `rem` would leak). It is therefore
+/// recorded, not reclassified.
+///
 /// Answers `None` for an empty or even modulus: that is a domain refusal, visible
 /// from the modulus alone, not a value-dependent branch on `a`.
 pub(crate) fn mod_inverse_consttime_with_mask(a: &[Limb], m: &[Limb]) -> Option<(Vec<Limb>, Limb)> {
@@ -937,30 +964,39 @@ pub(crate) fn mod_inverse_consttime_with_mask(a: &[Limb], m: &[Limb]) -> Option<
 
     // All scratch is allocated once, before the fixed-iteration loop, through the
     // fallible seam: an allocation failure is the entry point's ordinary error
-    // answer, not `handle_alloc_error`. (The width is still `max(a.len(), m.len())`;
-    // making that public geometry is T24, not this batch.)
-    let mut u = crate::bn::alloc::try_zeroed(wide, 0u64)?;
+    // answer, not `handle_alloc_error`. Each buffer is owned by `SecretLimbs`, so
+    // its `Drop` cleanses it on the normal return, an early `?` and an unwind.
+    let mut u = SecretLimbs::try_zeroed(wide)?;
     u[..a.len()].copy_from_slice(a);
-    let mut v = crate::bn::alloc::try_zeroed(wide, 0u64)?;
+    let mut v = SecretLimbs::try_zeroed(wide)?;
     v[..w].copy_from_slice(m);
-    let mut x1 = crate::bn::alloc::try_zeroed(w, 0u64)?;
+    let mut x1 = SecretLimbs::try_zeroed(w)?;
     x1[0] = 1;
-    let mut x2 = crate::bn::alloc::try_zeroed(w, 0u64)?;
+    let mut x2 = SecretLimbs::try_zeroed(w)?;
 
-    let mut nu = crate::bn::alloc::try_zeroed(wide, 0u64)?;
-    let mut nv = crate::bn::alloc::try_zeroed(wide, 0u64)?;
-    let mut cu = crate::bn::alloc::try_zeroed(wide, 0u64)?;
-    let mut cv = crate::bn::alloc::try_zeroed(wide, 0u64)?;
-    let mut diff_uv = crate::bn::alloc::try_zeroed(wide, 0u64)?;
-    let mut diff_vu = crate::bn::alloc::try_zeroed(wide, 0u64)?;
+    let mut nu = SecretLimbs::try_zeroed(wide)?;
+    let mut nv = SecretLimbs::try_zeroed(wide)?;
+    let mut cu = SecretLimbs::try_zeroed(wide)?;
+    let mut cv = SecretLimbs::try_zeroed(wide)?;
+    let mut diff_uv = SecretLimbs::try_zeroed(wide)?;
+    let mut diff_vu = SecretLimbs::try_zeroed(wide)?;
 
-    let mut nx1 = crate::bn::alloc::try_zeroed(w, 0u64)?;
-    let mut nx2 = crate::bn::alloc::try_zeroed(w, 0u64)?;
-    let mut dtmp = crate::bn::alloc::try_zeroed(w, 0u64)?;
-    let mut h1 = crate::bn::alloc::try_zeroed(w, 0u64)?;
-    let mut h2 = crate::bn::alloc::try_zeroed(w, 0u64)?;
-    let mut haux = crate::bn::alloc::try_zeroed(w, 0u64)?;
-    let mut sum = crate::bn::alloc::try_zeroed(w.checked_add(1)?, 0u64)?;
+    let mut nx1 = SecretLimbs::try_zeroed(w)?;
+    let mut nx2 = SecretLimbs::try_zeroed(w)?;
+    let mut dtmp = SecretLimbs::try_zeroed(w)?;
+    let mut h1 = SecretLimbs::try_zeroed(w)?;
+    let mut h2 = SecretLimbs::try_zeroed(w)?;
+    let mut haux = SecretLimbs::try_zeroed(w)?;
+    let mut sum = SecretLimbs::try_zeroed(w.checked_add(1)?)?;
+
+    // Test-only hook: the scratch is local to this function, so a test cannot hold
+    // a pointer to it. A caller asks the probe to arm `sum` (which holds the
+    // non-zero `x + m` after the loop) and then reads what `Drop` observed. `sum`
+    // is never swapped, so the armed address stays the same allocation.
+    #[cfg(test)]
+    if crate::bn::secret::drop_probe::take_request() {
+        crate::bn::secret::drop_probe::arm(sum.as_ptr());
+    }
 
     for _ in 0..iterations {
         let u_odd = 0u64.wrapping_sub(u[0] & 1);
@@ -1008,7 +1044,12 @@ pub(crate) fn mod_inverse_consttime_with_mask(a: &[Limb], m: &[Limb]) -> Option<
     for &limb in &v[1..] {
         diff |= limb;
     }
-    Some((x2, ct_mask_is_zero(diff)))
+    // The coefficient is the result-transfer allocation: it is copied out of the
+    // cleansed `x2` into the ordinary vector the caller stores (and whose `BIGNUM`
+    // release cleanses), so no secret intermediate is returned alive.
+    let mut inverse = crate::bn::alloc::try_zeroed(w, 0u64)?;
+    inverse.copy_from_slice(&x2);
+    Some((inverse, ct_mask_is_zero(diff)))
 }
 
 /// Constant-time `a^-1 mod m` for odd `m`, or `None` when no inverse exists.
@@ -1336,6 +1377,41 @@ mod tests {
                 }
             }
         }
+    }
+
+    /// T24: the inversion's scratch is owned by [`SecretLimbs`], so `Drop`
+    /// volatile-wipes every buffer before release, including the early-`?` and
+    /// unwind paths.
+    ///
+    /// The buffers are local, so the test asks the inversion (test-only hook) to
+    /// arm the drop probe on `sum`, which holds `x + m` — non-zero for an odd
+    /// modulus — and then asserts the probe observed non-zero contents *before*
+    /// the wipe and **zero** non-zero bytes after it. Removing the `SecretLimbs`
+    /// ownership fails the test either with no observation or with surviving
+    /// bytes.
+    #[test]
+    fn constant_time_inverse_scratch_is_cleansed_on_release() {
+        use crate::bn::secret::drop_probe;
+
+        let m = from_hex("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc5");
+        let a = from_hex("123456789abcdef123456789abcdef12345");
+
+        drop_probe::request();
+        let result = mod_inverse_consttime_with_mask(&a, &m);
+        assert!(result.is_some(), "the operand is invertible");
+
+        let observed = match drop_probe::take() {
+            Some(observed) => observed,
+            None => unreachable!("the inversion armed and released its scratch"),
+        };
+        assert!(
+            observed.nonzero_before > 0,
+            "the armed scratch holds non-zero secret-derived data before the wipe"
+        );
+        assert_eq!(
+            observed.nonzero_bytes, 0,
+            "the inversion scratch was released uncleansed"
+        );
     }
 
     #[test]
