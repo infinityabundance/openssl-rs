@@ -1,0 +1,227 @@
+{
+ "schema": "openssl-rs/interop-coverage-receipt/1",
+ "item": "O9 of docs/ETP-TODO.md",
+ "generated": "2026-11-21T19:38:30Z",
+ "runs": {
+  "A": {
+   "log": "/tmp/o9-a.log",
+   "scripts": 73,
+   "ok": 64
+  },
+  "B": {
+   "log": "/tmp/o9-b.log",
+   "scripts": 73,
+   "ok": 64
+  }
+ },
+ "identical_between_subjects": true,
+ "failures": {
+  "A": [
+   "failed integrity",
+   "failed dropbear kex"
+  ],
+  "B": [
+   "failed integrity",
+   "failed dropbear kex"
+  ]
+ },
+ "skips": [
+  "SKIPPED: No PKCS#11 library found",
+  "SKIPPED: TEST_SSH_SSHFP_DOMAIN not set.",
+  "SKIPPED: conch interop tests not enabled",
+  "SKIPPED: need SUDO to create file in /var/run, test won't work without",
+  "SKIPPED: need SUDO to switch to uid nobody"
+ ],
+ "items": [
+  {
+   "item": "Ed25519 / RSA / ECDSA authentication",
+   "evidence": "connect.sh, keytype.sh, keyscan.sh, agent.sh, hostkey tests; key-type lines in the dropbear cells",
+   "ok_lines": [
+    "ok simple connect",
+    "ok proxy connect",
+    "ok proxy connect with privsep",
+    "ok uri connect",
+    "ok connect after login grace timeout",
+    "ok simple connect after reconfigure",
+    "ok connection multiplexing",
+    "ok login with different key types"
+   ],
+   "counts": {
+    "ed25519": 115,
+    "rsa-sha2-256": 36,
+    "ecdsa-sha2-nistp256": 72
+   },
+   "status": "covered"
+  },
+  {
+   "item": "X25519 and NIST ECDH",
+   "evidence": "kextype.sh; putty/dropbear KEX lists",
+   "ok_lines": [
+    "ok login with different key exchange algorithms"
+   ],
+   "counts": {
+    "curve25519": 7,
+    "ecdh-sha2-nistp256": 3
+   },
+   "status": "covered"
+  },
+  {
+   "item": "FFDH",
+   "evidence": "dhgex.sh; group14/16/18 KEX cells",
+   "ok_lines": [
+    "ok dhgex"
+   ],
+   "counts": {
+    "diffie-hellman-group14": 9,
+    "group16": 3,
+    "group18": 3
+   },
+   "status": "covered"
+  },
+  {
+   "item": "PQ hybrid",
+   "evidence": "putty-kex against this build's sshd",
+   "ok_lines": [
+    "ok putty KEX"
+   ],
+   "counts": {
+    "sntrup761x25519-sha512": 6,
+    "mlkem768x25519-sha256": 3
+   },
+   "status": "covered"
+  },
+  {
+   "item": "AES-CTR / AES-GCM",
+   "evidence": "try-ciphers.sh; putty-ciphers; dropbear-ciphers",
+   "ok_lines": [
+    "ok try ciphers",
+    "ok putty ciphers",
+    "ok dropbear ciphers"
+   ],
+   "counts": {
+    "aes256-gcm": 37,
+    "aes*-ctr": 96
+   },
+   "status": "covered"
+  },
+  {
+   "item": "ChaCha20-Poly1305",
+   "evidence": "try-ciphers.sh; putty-ciphers; dropbear-ciphers",
+   "ok_lines": [
+    "ok try ciphers",
+    "ok putty ciphers",
+    "ok dropbear ciphers"
+   ],
+   "counts": {
+    "chacha20-poly1305@openssh.com": 40
+   },
+   "status": "covered"
+  },
+  {
+   "item": "HMAC integrity failures",
+   "evidence": "integrity.sh ran and FAILED on both subjects: it corrupts the stream at byte 2909 and expects 10 MAC errors, but with the current KEX the corruption lands during identification, so the chacha20-poly1305 arm reports 0 MAC errors",
+   "ok_lines": [
+    "hmac-sha1: expected 10 mac errors, got 0",
+    "hmac-sha1-96: expected 10 mac errors, got 0",
+    "hmac-sha2-256: expected 10 mac errors, got 0",
+    "hmac-sha2-512: expected 10 mac errors, got 0",
+    "hmac-md5: expected 10 mac errors, got 0",
+    "hmac-md5-96: expected 10 mac errors, got 0",
+    "umac-64@openssh.com: expected 10 mac errors, got 0",
+    "umac-128@openssh.com: expected 10 mac errors, got 0",
+    "hmac-sha1-etm@openssh.com: expected 10 mac errors, got 0",
+    "hmac-sha1-96-etm@openssh.com: expected 10 mac errors, got 0",
+    "hmac-sha2-256-etm@openssh.com: expected 10 mac errors, got 0",
+    "hmac-sha2-512-etm@openssh.com: expected 10 mac errors, got 0",
+    "hmac-md5-etm@openssh.com: expected 10 mac errors, got 0",
+    "hmac-md5-96-etm@openssh.com: expected 10 mac errors, got 0",
+    "umac-64-etm@openssh.com: expected 10 mac errors, got 0",
+    "umac-128-etm@openssh.com: expected 10 mac errors, got 0",
+    "aes128-gcm@openssh.com: expected 10 mac errors, got 0",
+    "aes256-gcm@openssh.com: expected 10 mac errors, got 0",
+    "chacha20-poly1305@openssh.com: expected 10 mac errors, got 0",
+    "failed integrity"
+   ],
+   "counts": {
+    "mac": 0
+   },
+   "status": "failed (upstream-common)"
+  },
+  {
+   "item": "Host-key rejection",
+   "evidence": "NOT COVERED in this configuration: knownhosts.sh, knownhosts-command.sh and hostkey-rotate.sh exist upstream but are not in this release's LTESTS default set; keygen-knownhosts.sh (editing known_hosts) did run",
+   "ok_lines": [
+    "ok ssh-keygen known_hosts"
+   ],
+   "counts": {},
+   "status": "not covered"
+  },
+  {
+   "item": "Certificates",
+   "evidence": "cert-hostkey.sh and cert-userkey.sh; cert-file.sh is available upstream but was not run",
+   "ok_lines": [
+    "ok certified host keys",
+    "ok certified user keys"
+   ],
+   "counts": {},
+   "status": "covered"
+  },
+  {
+   "item": "Rekeying",
+   "evidence": "rekey.sh",
+   "ok_lines": [
+    "ok rekey"
+   ],
+   "counts": {},
+   "status": "covered"
+  },
+  {
+   "item": "Agent",
+   "evidence": "agent.sh, agent-timeout, agent-subprocess, agent-ptrace (skipped: needs ptrace), agent-pkcs11 (skipped: no PKCS#11 library)",
+   "ok_lines": [
+    "ok simple agent test",
+    "ok agent timeout test",
+    "ok agent subprocess"
+   ],
+   "counts": {
+    "agent_skipped_pkcs11": 1
+   },
+   "status": "covered"
+  },
+  {
+   "item": "Concurrent sessions",
+   "evidence": "multiplex.sh (connection multiplexing); channel-timeout.sh and match-subsystem.sh are upstream but not in the default set",
+   "ok_lines": [
+    "ok connection multiplexing"
+   ],
+   "counts": {},
+   "status": "covered"
+  }
+ ],
+ "upstream_scripts_present_but_not_run": [
+  "agent-pkcs11-cert",
+  "agent-pkcs11-restrict",
+  "agent-restrict",
+  "allow-deny-users",
+  "authinfo",
+  "cert-file",
+  "cfginclude",
+  "channel-timeout",
+  "connection-timeout",
+  "hostbased",
+  "hostkey-agent",
+  "hostkey-rotate",
+  "knownhosts",
+  "knownhosts-command",
+  "krl",
+  "limit-keytype",
+  "match-subsystem",
+  "multipubkey",
+  "penalty",
+  "penalty-expire",
+  "principals-command",
+  "servcfginclude",
+  "sshsig"
+ ],
+ "note": "Every 'covered' row names the script that ran and its ok line in this log; nothing is inferred from a script's existence. A row marked 'not covered' is a gap, not a pass."
+}
