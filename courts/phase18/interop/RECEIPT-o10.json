@@ -1,0 +1,18 @@
+{
+  "schema": "openssl-rs/interop-negative-controls-receipt/1",
+  "item": "O10 of docs/ETP-TODO.md",
+  "generated": "2026-11-21T19:54:29Z",
+  "subject_tree": "/home/user/openssl-rs/court/tmp/o4/tree-A",
+  "mechanism": "make -k t-exec LTESTS=<script> in a throwaway copy, with ssh or sshd replaced by a wrapper that is wrong in one specific way",
+  "principle": "a control that does not trigger fails this script, and a control whose harness never started is reported VACUOUS rather than counted",
+  "controls": [
+    {"control": "wrong client binary", "expected": "failed", "verdict": "TRIGGERED"},
+    {"control": "wrong crypto library", "expected": "failed", "verdict": "TRIGGERED"},
+    {"control": "failed authentication", "expected": "failed", "verdict": "TRIGGERED"},
+    {"control": "dead server", "expected": "failed", "verdict": "TRIGGERED"},
+    {"control": "unsupported algorithm", "expected": "failed", "verdict": "TRIGGERED"},
+    {"control": "missing third-party tool", "expected": "no ok, skip or fail", "verdict": "TRIGGERED"},
+    {"control": "timeout / signal kill", "expected": "failed", "verdict": "TRIGGERED"}
+  ],
+  "not_triggered": 0
+}

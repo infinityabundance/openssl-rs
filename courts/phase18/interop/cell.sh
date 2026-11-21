@@ -45,14 +45,23 @@ CTREE="${TREE[$server_cell]}"
 CELLDIR="$WORK/cell-$CELL"
 rm -rf "$CELLDIR"
 cp -a "$CTREE" "$CELLDIR" || { echo "cell: copy failed" >&2; exit 2; }
+# The copy carries the source tree's previous regress state -- known_hosts,
+# generated host keys, copies of test data. Carrying it forward makes a cell fail
+# on its own history instead of on the other cell's library (observed: dbclient
+# reporting a host-key mismatch from a stale $OBJ/.ssh/known_hosts), so the
+# regress state is cleared before the cell runs.
+( cd "$CELLDIR" && make regressclean >/dev/null 2>&1 ) || true
 
 wrap() {  # <name> <tree> <lib>
-    local name="$1" tree="$2" lib="$3"
+    local name="$1"
+    local tree="$2"
+    local lib="$3"
     [ -x "$tree/$name" ] || return 0
-    cat > "$CELLDIR/$name" <<EOF
-#!/bin/sh
-LD_LIBRARY_PATH="$lib" exec "$tree/$name" "\\\$@"
-EOF
+    # printf, not a heredoc: the wrapper must end up containing a literal "$@",
+    # and a heredoc both expands and eats the escaping. The first version wrote
+    # "\$@" into the wrapper, so every argument was dropped.
+    printf '#!/bin/sh\nLD_LIBRARY_PATH=%s exec %s "$@"\n' \
+        "$lib" "$tree/$name" > "$CELLDIR/$name"
     chmod +x "$CELLDIR/$name"
 }
 
@@ -107,8 +116,14 @@ if [ "${O7_PROBE_ONLY:-0}" = 1 ]; then
 fi
 
 echo "=== cell $CELL: client $client_cell, server $server_cell ==="
+# BUILDDIR must be the cell's own directory: configure wrote an absolute
+# BUILDDIR into the Makefile, so a copy still points at the tree it came from and
+# the harness would launch *that* tree's binaries -- the wrappers would never be
+# reached and a "cross" cell would silently be a same-cell run. The first version
+# of this script did exactly that; the override is the fix.
 ( cd "$CELLDIR" \
-  && TEST_SSH_PORT="${O7_PORT:-22422}" make -k tests > "$WORK/cell-$CELL.log" 2>&1 )
+  && TEST_SSH_PORT="${O7_PORT:-22422}" make -k tests BUILDDIR="$CELLDIR" \
+       > "$WORK/cell-$CELL.log" 2>&1 )
 rc=$?
 echo "make -k tests exit=$rc"
 
