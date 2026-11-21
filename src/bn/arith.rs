@@ -39,8 +39,8 @@
 use core::ffi::{c_int, c_ulong};
 
 use crate::bn::bignum::{
-    as_mut, as_ref, new_owned, parts, store, store_consttime, BN_copy, BN_get_flags, BigNum,
-    BN_FLG_CONSTTIME,
+    as_mut, as_ref, new_owned, new_owned_consttime, parts, store, store_consttime, BN_copy,
+    BN_get_flags, BigNum, BN_FLG_CONSTTIME,
 };
 use crate::bn::ctx::BnCtx;
 use crate::bn::limbs::{self, Limb};
@@ -701,20 +701,28 @@ pub unsafe extern "C" fn BN_mod_sub_quick(
     })
 }
 
-/// `int BN_mod_inverse(BIGNUM *r, const BIGNUM *a, const BIGNUM *n, BN_CTX *ctx)`
+/// Shared body of [`BN_mod_inverse`] and [`BN_mod_inverse_consttime`].
 ///
-/// Writes to `r` and returns `r`, or allocates and returns the new object when `r`
-/// is null; `NULL` when no inverse exists.
+/// `request_consttime` is the caller's classification: the public entry point sets
+/// it from `BN_FLG_CONSTTIME` on `a` or `n` (the authority's own dispatch, its
+/// `int_bn_mod_inverse`), while an internal caller that knows its operands are
+/// secret sets it directly. `strict_consttime` makes a domain refusal a failure
+/// rather than a fallback: the explicit constant-time entry point refuses an even
+/// or zero modulus instead of silently taking the variable-time path.
+///
+/// Both paths raise `BN_R_NO_INVERSE` on failure, so the reason code a caller can
+/// observe is the same for either.
 ///
 /// # Safety
 ///
-/// As `BN_mod_add`.
-#[no_mangle]
-pub unsafe extern "C" fn BN_mod_inverse(
+/// As `BN_mod_add`: `r` is null or live and uniquely owned, and `a` and `n` are
+/// null or live.
+unsafe fn mod_inverse_impl(
     r: *mut BigNum,
     a: *const BigNum,
     n: *const BigNum,
-    _ctx: *mut BnCtx,
+    request_consttime: bool,
+    strict_consttime: bool,
 ) -> *mut BigNum {
     guard_ffi(core::ptr::null_mut(), || {
         // SAFETY: `a` and `n` are null-or-live per this function's `# Safety`
@@ -725,7 +733,25 @@ pub unsafe extern "C" fn BN_mod_inverse(
         // SAFETY: as above for `n`.
         let y = unsafe { as_ref(n) };
         let (nd, _) = parts(y);
-        let inv = match limbs::mod_inverse(&ad, &nd) {
+
+        // The constant-time binary EEA's domain is a non-zero odd modulus. The
+        // parity and emptiness of the modulus are public geometry, not a secret
+        // value, so this dispatch is not a secret-dependent branch.
+        let eligible = !nd.is_empty() && !limbs::is_even(&nd);
+        if request_consttime && strict_consttime && !eligible {
+            // Enforced precondition, not an assumption: the explicit entry point
+            // is only for callers that can prove an odd modulus. No reachable
+            // caller supplies an even one; failing closed here keeps a future
+            // caller from silently getting the variable-time algorithm.
+            return core::ptr::null_mut();
+        }
+        let consttime = request_consttime && eligible;
+        let inv = if consttime {
+            limbs::mod_inverse_consttime(&ad, &nd)
+        } else {
+            limbs::mod_inverse(&ad, &nd)
+        };
+        let inv = match inv {
             Some(v) => v,
             None => {
                 // The authority's `BN_mod_inverse` raises this itself, after its
@@ -738,9 +764,17 @@ pub unsafe extern "C" fn BN_mod_inverse(
         // SAFETY: `r` is null-or-live per this function's `# Safety` section; the
         // shared reads above have ended, so an aliased `r` is not borrowed twice.
         match unsafe { as_mut(r) } {
+            // A constant-time result is trimmed and tested with a mask; the
+            // variable-time result keeps the authority's normalising copy.
+            None if consttime => new_owned_consttime(inv, 0),
             None => new_owned(inv, 0),
             Some(dst) => {
-                if store(Some(dst), inv, false) {
+                let stored = if consttime {
+                    store_consttime(Some(dst), inv, false)
+                } else {
+                    store(Some(dst), inv, false)
+                };
+                if stored {
                     r
                 } else {
                     core::ptr::null_mut()
@@ -748,6 +782,61 @@ pub unsafe extern "C" fn BN_mod_inverse(
             }
         }
     })
+}
+
+/// `int BN_mod_inverse(BIGNUM *r, const BIGNUM *a, const BIGNUM *n, BN_CTX *ctx)`
+///
+/// Writes to `r` and returns `r`, or allocates and returns the new object when `r`
+/// is null; `NULL` when no inverse exists.
+///
+/// **Dispatch.** A caller that stamps `BN_FLG_CONSTTIME` on `a` or `n` — the
+/// authority's own signal, and what `dsa_sign_setup` does to its blinding factor
+/// — gets the fixed-iteration binary extended GCD when the modulus is odd. Every
+/// other caller, and every even-modulus caller, keeps the variable-time
+/// extended Euclidean path. This is the public, compatibility-preserving
+/// dispatch; internal callers that know their operands secret and their modulus
+/// odd use [`BN_mod_inverse_consttime`] instead.
+///
+/// # Safety
+///
+/// As `BN_mod_add`.
+#[no_mangle]
+pub unsafe extern "C" fn BN_mod_inverse(
+    r: *mut BigNum,
+    a: *const BigNum,
+    n: *const BigNum,
+    _ctx: *mut BnCtx,
+) -> *mut BigNum {
+    // SAFETY: `a` and `n` are null-or-live per this function's `# Safety`
+    // section; `BN_get_flags` accepts null (no flags).
+    let consttime =
+        unsafe { BN_get_flags(a, BN_FLG_CONSTTIME) | BN_get_flags(n, BN_FLG_CONSTTIME) } != 0;
+    // SAFETY: this function's contract is `mod_inverse_impl`'s contract, and a
+    // non-strict request preserves the public fallback for an even modulus.
+    unsafe { mod_inverse_impl(r, a, n, consttime, false) }
+}
+
+/// Crate-internal constant-time inversion, for callers whose operands are secret
+/// and whose modulus is proved odd.
+///
+/// The returned value and its error semantics are `BN_mod_inverse`'s; the only
+/// difference is that an even or zero modulus is **refused** (answers `NULL`
+/// without raising) rather than falling back to the variable-time algorithm. That
+/// is deliberate: a caller that has classified its operands as secret must not be
+/// able to reach a value-dependent algorithm by supplying a modulus outside the
+/// constant-time domain.
+///
+/// # Safety
+///
+/// As `BN_mod_add`.
+#[allow(non_snake_case)] // the crate's BN entry points keep the authority's spelling
+pub(crate) unsafe fn BN_mod_inverse_consttime(
+    r: *mut BigNum,
+    a: *const BigNum,
+    n: *const BigNum,
+) -> *mut BigNum {
+    // SAFETY: this function's contract is `mod_inverse_impl`'s contract.
+    unsafe { mod_inverse_impl(r, a, n, true, true) }
 }
 
 /// `int BN_lshift(BIGNUM *r, const BIGNUM *a, int n)`
@@ -1078,12 +1167,17 @@ pub unsafe extern "C" fn BN_mod_exp(
         // SAFETY: as above for `m`.
         let z = unsafe { as_ref(m) };
         let (md, _) = parts(z);
-        // SAFETY: `p` and `m` are null-or-live per this function's `# Safety`
-        // section; `BN_get_flags` treats null as no flags.
-        let consttime =
-            unsafe { BN_get_flags(p, BN_FLG_CONSTTIME) | BN_get_flags(m, BN_FLG_CONSTTIME) } != 0;
-        // The dispatch is explicit: a caller that stamped the exponent (or the
-        // modulus) with `BN_FLG_CONSTTIME` gets the fixed-pattern ladder; every
+        // SAFETY: `a`, `p` and `m` are null-or-live per this function's
+        // `# Safety` section; `BN_get_flags` treats null as no flags. The
+        // authority tests all three operands, and a marked base is how
+        // `dsa_sign_setup`'s Fermat inversion asks for the fixed-pattern path.
+        let consttime = unsafe {
+            BN_get_flags(a, BN_FLG_CONSTTIME)
+                | BN_get_flags(p, BN_FLG_CONSTTIME)
+                | BN_get_flags(m, BN_FLG_CONSTTIME)
+        } != 0;
+        // The dispatch is explicit: a caller that stamped the base, exponent or
+        // modulus with `BN_FLG_CONSTTIME` gets the fixed-pattern ladder; every
         // other caller keeps the variable-time ladder it had. An even modulus has
         // no Montgomery form, so it stays on the variable-time path here — the two
         // Montgomery entry points refuse that modulus before they get this far.
@@ -1807,7 +1901,7 @@ fn finish_sqrt(dst: Option<&mut BigNum>, inp: *mut BigNum, value: Vec<Limb>) -> 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::bn::bignum::{BN_copy, BN_free, BN_get_word, BN_new, BN_set_word};
+    use crate::bn::bignum::{BN_copy, BN_free, BN_get_word, BN_new, BN_set_flags, BN_set_word};
 
     /// A `BIGNUM` holding a machine word.
     fn word(w: c_ulong) -> *mut BigNum {
@@ -2190,6 +2284,139 @@ mod tests {
         assert!(out.is_some(), "a nonzero modulus always answers");
     }
 
+    /// `BN_mod_inverse`'s constant-time dispatch keeps the authority's documented
+    /// aliases, and the explicit entry point refuses an even modulus instead of
+    /// silently taking the variable-time path.
+    #[test]
+    fn the_consttime_inverse_supports_aliases_and_refuses_even_moduli() {
+        let a = vec![0x0123_4567_89ab_cdefu64, 0x0f0f_0f0f_0f0f_0f0fu64];
+        let m = vec![0xffff_ffff_ffff_ffc5u64, 0xffff_ffff_ffff_ffff];
+        let even = vec![0xffff_ffff_ffff_ffc4u64, 0xffff_ffff_ffff_ffff];
+        // SAFETY: every object is a fresh object this test owns.
+        unsafe {
+            let reference = BN_new();
+            // `d` is little-endian: `d[0]` is the low limb.
+            let mk = |d: &[u64]| {
+                let dst = BN_new();
+                assert_eq!(BN_set_word(dst, d[1]), 1);
+                assert_eq!(BN_lshift(dst, dst, 64), 1);
+                let lo = BN_new();
+                assert_eq!(BN_set_word(lo, d[0]), 1);
+                assert_eq!(BN_add(dst, dst, lo), 1);
+                BN_free(lo);
+                dst
+            };
+            let ma = mk(&a);
+            let mm = mk(&m);
+            let me = mk(&even);
+
+            assert_eq!(
+                BN_mod_inverse(reference, ma, mm, core::ptr::null_mut()),
+                reference
+            );
+
+            let alias_a = mk(&a);
+            BN_set_flags(alias_a, BN_FLG_CONSTTIME);
+            assert_eq!(
+                BN_mod_inverse(alias_a, alias_a, mm, core::ptr::null_mut()),
+                alias_a
+            );
+            assert_same(alias_a, reference, "consttime mod_inverse r == a");
+
+            let alias_n = mk(&m);
+            BN_set_flags(alias_n, BN_FLG_CONSTTIME);
+            assert_eq!(
+                BN_mod_inverse(alias_n, ma, alias_n, core::ptr::null_mut()),
+                alias_n
+            );
+            assert_same(alias_n, reference, "consttime mod_inverse r == n");
+
+            // The explicit entry point is for odd moduli only and fails closed.
+            let refused = BN_new();
+            assert!(
+                BN_mod_inverse_consttime(refused, ma, me).is_null(),
+                "an even modulus is outside the constant-time domain"
+            );
+
+            BN_free(refused);
+            BN_free(alias_a);
+            BN_free(alias_n);
+            BN_free(ma);
+            BN_free(mm);
+            BN_free(me);
+            BN_free(reference);
+        }
+    }
+
+    /// ctgrind case for the secret inversion path.
+    ///
+    /// An odd RSA-shaped composite modulus is used, with a secret base marked
+    /// undefined through valgrind's client request. The algorithm's loop count is
+    /// fixed by limb counts and every value test is a mask select, so memcheck must
+    /// report no conditional jump inside `mod_inverse_consttime_with_mask`. The
+    /// returned coefficient and gcd mask are marked **defined** before the
+    /// assertions, so the case covers the algorithm, not the caller's authorised
+    /// no-inverse decision. `CTGRIND_CONTROL=1` branches on a marked limb as the
+    /// negative control.
+    #[test]
+    fn ctgrind_secret_mod_inverse() {
+        // Two 128-bit odd factors; their product is an odd 256-bit composite, the
+        // shape of an RSA modulus.
+        let p = vec![0xffff_ffff_ffff_ff61u64, 0xffff_ffff_ffff_ffff];
+        let q = vec![0xffff_ffff_ffff_ff53u64, 0xffff_ffff_ffff_ffff];
+        let m = limbs::mul(&p, &q);
+        let mut a = vec![
+            0x0123_4567_89ab_cdefu64,
+            0x1122_3344_5566_7788,
+            0x99aa_bbcc_ddee_ff00,
+            0x0fed_cba9_8765_4321,
+        ];
+        while limbs::gcd(&a, &m) != vec![1u64] {
+            a[0] = a[0].wrapping_add(2);
+        }
+        let a_plain = a.clone();
+
+        #[cfg(target_arch = "x86_64")]
+        {
+            // SAFETY: `a` is a live, uniquely borrowed buffer and the
+            // client-request sequence only marks its bytes' definedness.
+            unsafe {
+                valgrind_make_mem_undefined(a.as_mut_ptr().cast::<u8>(), a.len() * 8);
+            }
+            if std::env::var_os("CTGRIND_CONTROL").is_some() {
+                // Negative control: memcheck must flag this branch on a marked
+                // limb.
+                let mut acc = 0u64;
+                for &limb in &a {
+                    if limb & 1 == 1 {
+                        acc = acc.wrapping_add(1);
+                    }
+                }
+                core::hint::black_box(acc);
+            }
+        }
+
+        let Some((mut inverse, mut invertible)) = limbs::mod_inverse_consttime_with_mask(&a, &m)
+        else {
+            unreachable!("the test modulus is odd")
+        };
+        #[cfg(target_arch = "x86_64")]
+        {
+            // Declassify only for the assertions below.
+            // SAFETY: both are live, uniquely borrowed locals.
+            unsafe {
+                valgrind_make_mem_defined(inverse.as_mut_ptr().cast::<u8>(), inverse.len() * 8);
+                valgrind_make_mem_defined((&mut invertible as *mut u64).cast::<u8>(), 8);
+            }
+        }
+        assert_ne!(invertible, 0, "the test value is coprime with the modulus");
+        assert_eq!(
+            limbs::rem(&limbs::mul(&a_plain, &inverse), &m),
+            vec![1u64],
+            "a * a^-1 == 1"
+        );
+    }
+
     /// `VALGRIND_MAKE_MEM_UNDEFINED` as the amd64 client request.
     ///
     /// The instruction sequence is `valgrind.h`'s
@@ -2200,6 +2427,29 @@ mod tests {
     #[cfg(target_arch = "x86_64")]
     unsafe fn valgrind_make_mem_undefined(addr: *mut u8, len: usize) {
         let args: [usize; 6] = [0x4D43_0001, addr as usize, len, 0, 0, 0];
+        let _result: usize;
+        // SAFETY: the sequence is the documented valgrind client-request
+        // pattern; `args` lives for the duration of the asm and is only read.
+        unsafe {
+            core::arch::asm!(
+                "rol rdi, 3",
+                "rol rdi, 13",
+                "rol rdi, 61",
+                "rol rdi, 51",
+                "xchg rbx, rbx",
+                in("rax") args.as_ptr(),
+                inout("rdx") 0usize => _result,
+                out("rdi") _,
+                options(nostack),
+            );
+        }
+    }
+
+    /// `VALGRIND_MAKE_MEM_DEFINED`, the counterpart used to declassify a result
+    /// after the algorithm has run (request code `0x4D43_0002`).
+    #[cfg(target_arch = "x86_64")]
+    unsafe fn valgrind_make_mem_defined(addr: *mut u8, len: usize) {
+        let args: [usize; 6] = [0x4D43_0002, addr as usize, len, 0, 0, 0];
         let _result: usize;
         // SAFETY: the sequence is the documented valgrind client-request
         // pattern; `args` lives for the duration of the asm and is only read.

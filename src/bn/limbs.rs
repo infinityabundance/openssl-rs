@@ -630,6 +630,252 @@ pub(crate) fn mod_inverse(a: &[Limb], m: &[Limb]) -> Option<Vec<Limb>> {
     Some(rem(&t0, m))
 }
 
+// ---------------------------------------------------------------------------------------------
+// Fixed-iteration binary extended GCD for secret operands
+// ---------------------------------------------------------------------------------------------
+//
+// [`mod_inverse_consttime_with_mask`] implements the binary extended Euclidean
+// algorithm with a loop count fixed by the *limb counts* of its operands. Every
+// branch on an operand value is replaced by an all-ones/all-zeros mask and a
+// select, and the coefficient is kept reduced modulo `m` so its width never
+// depends on the value. It is a different function from the variable-time
+// [`mod_inverse`] above: this one must never be described as the ordinary
+// extended Euclidean algorithm, whose quotient sequence is data-dependent.
+//
+// **Domain.** The modulus must be non-zero and **odd**. Oddness is what makes the
+// coefficient update `(x + m) / 2` the correct modular halving; an even modulus is
+// refused rather than computed wrongly (the caller keeps the variable-time path,
+// which handles that domain). The modulus' limb count and the operand's limb count
+// are treated as public geometry: they size the iteration count and the buffers,
+// never a value. The operand may be wider than the modulus (for example
+// `(p - 1)^-1 mod e` in RSA key generation), in which case the wider limb count is
+// the public width.
+
+/// All-ones when `x == 0`, all-zeros otherwise.
+#[inline(always)]
+fn ct_mask_is_zero(x: Limb) -> Limb {
+    // `x | -x` has the high bit set exactly when `x != 0`; subtracting one from
+    // that bit gives the mask. No comparison is in control position.
+    let non_zero = x | x.wrapping_neg();
+    (non_zero >> (Limb::BITS - 1)).wrapping_sub(1)
+}
+
+/// `out = a - b` at the width of `out`, answering an all-ones borrow mask when
+/// `a < b`. Missing limbs of either operand are zero.
+#[inline(always)]
+fn ct_sub_into(out: &mut [Limb], a: &[Limb], b: &[Limb]) -> Limb {
+    let mut borrow: Limb = 0;
+    for (i, o) in out.iter_mut().enumerate() {
+        let ai = a.get(i).copied().unwrap_or(0);
+        let bi = b.get(i).copied().unwrap_or(0);
+        let (d1, b1) = ai.overflowing_sub(bi);
+        let (d2, b2) = d1.overflowing_sub(borrow);
+        *o = d2;
+        borrow = Limb::from(b1) | Limb::from(b2);
+    }
+    0u64.wrapping_sub(borrow)
+}
+
+/// `out = a + b` at the width of `out`; a carry out of the last limb is stored in
+/// `out` only when the caller supplies a wider `out` than its operands (as
+/// [`ct_halve_mod_into`] does with `m.len() + 1` limbs).
+#[inline(always)]
+fn ct_add_into(out: &mut [Limb], a: &[Limb], b: &[Limb]) {
+    let mut carry: Limb = 0;
+    for (i, o) in out.iter_mut().enumerate() {
+        let ai = a.get(i).copied().unwrap_or(0);
+        let bi = b.get(i).copied().unwrap_or(0);
+        let (s1, c1) = ai.overflowing_add(bi);
+        let (s2, c2) = s1.overflowing_add(carry);
+        *o = s2;
+        carry = Limb::from(c1) | Limb::from(c2);
+    }
+}
+
+/// `out = a >> 1`, with `carry_in` shifted into the most significant bit.
+#[inline(always)]
+fn ct_shr1_into(out: &mut [Limb], a: &[Limb], carry_in: Limb) {
+    let mut next = carry_in & 1;
+    for (i, o) in out.iter_mut().enumerate().rev() {
+        let v = a.get(i).copied().unwrap_or(0);
+        *o = (v >> 1) | (next << (Limb::BITS - 1));
+        next = v & 1;
+    }
+}
+
+/// `out = select(m2, a2, select(m1, a1, base))`, which is how one of four
+/// mutually exclusive candidates is chosen without aliasing an input slice.
+#[inline(always)]
+fn ct_select2_into(out: &mut [Limb], m1: Limb, a1: &[Limb], m2: Limb, a2: &[Limb], base: &[Limb]) {
+    let m1 = core::hint::black_box(m1);
+    let m2 = core::hint::black_box(m2);
+    for (i, o) in out.iter_mut().enumerate() {
+        let bv = base.get(i).copied().unwrap_or(0);
+        let av1 = a1.get(i).copied().unwrap_or(0);
+        let v1 = (m1 & av1) | (!m1 & bv);
+        let av2 = a2.get(i).copied().unwrap_or(0);
+        *o = (m2 & av2) | (!m2 & v1);
+    }
+}
+
+/// `out = (a - b) mod m`, for `a, b < m` and odd `m`. `tmp` is `m.len()` limbs of
+/// scratch.
+#[inline(always)]
+fn ct_sub_mod_into(out: &mut [Limb], a: &[Limb], b: &[Limb], m: &[Limb], tmp: &mut [Limb]) {
+    let borrow = ct_sub_into(tmp, a, b);
+    // When the subtraction borrowed, `tmp` holds `2^w + a - b`; adding `m` and
+    // discarding the carry out of the width gives `a - b + m`, which is in
+    // `[0, m)`. `borrow` is all-ones exactly in that case.
+    let mut carry: Limb = 0;
+    for (i, o) in out.iter_mut().enumerate() {
+        let add = m.get(i).copied().unwrap_or(0) & borrow;
+        let (s1, c1) = tmp.get(i).copied().unwrap_or(0).overflowing_add(add);
+        let (s2, c2) = s1.overflowing_add(carry);
+        *o = s2;
+        carry = Limb::from(c1) | Limb::from(c2);
+    }
+}
+
+/// `out = x / 2 mod m` for odd `m` and `x < m`: `x >> 1` when `x` is even and
+/// `(x + m) >> 1` when it is odd. `sum` is `m.len() + 1` limbs and `half` is
+/// `m.len()` limbs of scratch.
+#[inline(always)]
+fn ct_halve_mod_into(
+    out: &mut [Limb],
+    x: &[Limb],
+    m: &[Limb],
+    sum: &mut [Limb],
+    half: &mut [Limb],
+) {
+    let odd = core::hint::black_box(0u64.wrapping_sub(x.first().copied().unwrap_or(0) & 1));
+    ct_shr1_into(out, x, 0);
+    ct_add_into(sum, x, m);
+    // `sum` has `m.len() + 1` limbs, so `sum[m.len()]` is `x + m`'s carry bit.
+    ct_shr1_into(half, &sum[..m.len()], sum[m.len()]);
+    // Select in place: `out` already holds the even candidate, `half` the odd one.
+    for (i, o) in out.iter_mut().enumerate() {
+        let odd_value = half.get(i).copied().unwrap_or(0);
+        *o = (odd & odd_value) | (!odd & *o);
+    }
+}
+
+/// Constant-time `a^-1 mod m` for **odd** `m`, answering the coefficient and an
+/// all-ones invertibility mask.
+///
+/// The loop runs exactly `2 * 64 * max(a.len(), m.len()) + 2` times, a function of
+/// the public limb counts alone. It maintains
+///
+/// ```text
+///     u == a * x1 (mod m)        v == a * x2 (mod m)
+/// ```
+///
+/// starting from `(u, v, x1, x2) = (a, m, 1, 0)` and applying, per iteration, the
+/// first applicable of: halve `u`; halve `v`; subtract the smaller odd value from
+/// the larger and halve; until `u == 0`. Then `v == gcd(a, m)` and `x2` is
+/// `a^-1 * gcd(a, m) mod m`; the mask is all-ones exactly when that gcd is one.
+/// A zero `u` only occurs once `v` is already the gcd, so the remaining fixed
+/// iterations are harmless (they halve `u` and `x1` only).
+///
+/// Answers `None` for an empty or even modulus: that is a domain refusal, visible
+/// from the modulus alone, not a value-dependent branch on `a`.
+pub(crate) fn mod_inverse_consttime_with_mask(a: &[Limb], m: &[Limb]) -> Option<(Vec<Limb>, Limb)> {
+    if m.is_empty() || is_even(m) {
+        return None;
+    }
+    let w = m.len();
+    let wide = w.max(a.len());
+    let bits = wide.checked_mul(Limb::BITS as usize)?;
+    let iterations = bits.checked_mul(2)?.checked_add(2)?;
+
+    let mut u = vec![0u64; wide];
+    u[..a.len()].copy_from_slice(a);
+    let mut v = vec![0u64; wide];
+    v[..w].copy_from_slice(m);
+    let mut x1 = vec![0u64; w];
+    x1[0] = 1;
+    let mut x2 = vec![0u64; w];
+
+    let mut nu = vec![0u64; wide];
+    let mut nv = vec![0u64; wide];
+    let mut cu = vec![0u64; wide];
+    let mut cv = vec![0u64; wide];
+    let mut diff_uv = vec![0u64; wide];
+    let mut diff_vu = vec![0u64; wide];
+
+    let mut nx1 = vec![0u64; w];
+    let mut nx2 = vec![0u64; w];
+    let mut dtmp = vec![0u64; w];
+    let mut h1 = vec![0u64; w];
+    let mut h2 = vec![0u64; w];
+    let mut haux = vec![0u64; w];
+    let mut sum = vec![0u64; w + 1];
+
+    for _ in 0..iterations {
+        let u_odd = 0u64.wrapping_sub(u[0] & 1);
+        let v_odd = 0u64.wrapping_sub(v[0] & 1);
+        let u_even = !u_odd;
+        let borrow_uv = ct_sub_into(&mut diff_uv, &u, &v);
+        let u_ge_v = !borrow_uv;
+        ct_sub_into(&mut diff_vu, &v, &u);
+
+        // Exactly one of the four cases is selected; `c1`/`c3` are disjoint and
+        // so are `c2`/`c4`.
+        let c1 = u_even;
+        let c2 = u_odd & !v_odd;
+        let both_odd = u_odd & v_odd;
+        let c3 = both_odd & u_ge_v;
+        let c4 = both_odd & borrow_uv;
+
+        ct_shr1_into(&mut cu, &u, 0);
+        ct_shr1_into(&mut cv, &diff_uv, 0);
+        ct_select2_into(&mut nu, c1, &cu, c3, &cv, &u);
+
+        ct_shr1_into(&mut cu, &v, 0);
+        ct_shr1_into(&mut cv, &diff_vu, 0);
+        ct_select2_into(&mut nv, c2, &cu, c4, &cv, &v);
+
+        ct_halve_mod_into(&mut h1, &x1, m, &mut sum, &mut haux);
+        ct_sub_mod_into(&mut dtmp, &x1, &x2, m, &mut haux);
+        ct_halve_mod_into(&mut h2, &dtmp, m, &mut sum, &mut haux);
+        ct_select2_into(&mut nx1, c1, &h1, c3, &h2, &x1);
+
+        ct_halve_mod_into(&mut h1, &x2, m, &mut sum, &mut haux);
+        ct_sub_mod_into(&mut dtmp, &x2, &x1, m, &mut haux);
+        ct_halve_mod_into(&mut h2, &dtmp, m, &mut sum, &mut haux);
+        ct_select2_into(&mut nx2, c2, &h1, c4, &h2, &x2);
+
+        core::mem::swap(&mut u, &mut nu);
+        core::mem::swap(&mut v, &mut nv);
+        core::mem::swap(&mut x1, &mut nx1);
+        core::mem::swap(&mut x2, &mut nx2);
+    }
+
+    // `v == 1` iff the inverse exists. The comparison is mask arithmetic; the
+    // returned mask is the declassification value the caller decides on.
+    let mut diff = v[0] ^ 1;
+    for &limb in &v[1..] {
+        diff |= limb;
+    }
+    Some((x2, ct_mask_is_zero(diff)))
+}
+
+/// Constant-time `a^-1 mod m` for odd `m`, or `None` when no inverse exists.
+///
+/// The returned vector is the fixed width `m.len()`: it is **not** trimmed, so a
+/// caller storing it must use a branch-free store (`store_consttime` in
+/// `bn::bignum`) rather than `normalise`. The single branch on the invertibility
+/// mask below is the authorised declassification point for the error result; the
+/// algorithm itself never branches on a value.
+///
+pub(crate) fn mod_inverse_consttime(a: &[Limb], m: &[Limb]) -> Option<Vec<Limb>> {
+    let (inverse, invertible) = mod_inverse_consttime_with_mask(a, m)?;
+    if invertible == 0 {
+        None
+    } else {
+        Some(inverse)
+    }
+}
+
 /// Whether `a` is even.
 pub(crate) fn is_even(a: &[Limb]) -> bool {
     a.first().map(|&l| l & 1 == 0).unwrap_or(true)
@@ -804,6 +1050,140 @@ mod tests {
             unreachable!("coprime operands have an inverse")
         };
         assert_eq!(rem(&mul(&a, &inv), &m), vec![1u64], "a * a^-1 == 1 mod m");
+    }
+
+    #[test]
+    fn fixed_iteration_inverse_matches_the_variable_time_result() {
+        let moduli = vec![
+            Vec::<Limb>::new(),
+            vec![1],
+            vec![2],
+            vec![3],
+            vec![9],
+            vec![11],
+            vec![15],
+            vec![35],
+            vec![3233], // 61 * 53, an odd composite RSA-sized shape
+            from_hex("ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffc5"),
+        ];
+        let values = vec![
+            Vec::<Limb>::new(),
+            vec![1],
+            vec![2],
+            vec![3],
+            vec![6],
+            vec![7],
+            vec![9],
+            vec![10],
+            vec![11],
+            vec![15],
+            vec![20],
+            vec![61],
+            from_hex("123456789abcdef123456789abcdef12345"),
+        ];
+        for m in &moduli {
+            for a in &values {
+                let variable = mod_inverse(a, m);
+                let constant = mod_inverse_consttime(a, m);
+                if m.is_empty() || is_even(m) {
+                    assert!(
+                        constant.is_none(),
+                        "the constant-time path refuses an even or zero modulus: a={a:?} m={m:?}"
+                    );
+                    continue;
+                }
+                match (variable, constant) {
+                    (Some(mut want), Some(mut got)) => {
+                        normalise(&mut want);
+                        normalise(&mut got);
+                        assert_eq!(got, want, "a={a:?} m={m:?}");
+                        // Modulo one every residue is zero; the established
+                        // answer is zero and `a * 0 == 0`, not one.
+                        if !(m.len() == 1 && m[0] == 1) {
+                            assert_eq!(rem(&mul(a, &got), m), vec![1u64], "a * a^-1 == 1");
+                        }
+                    }
+                    (None, None) => {}
+                    (want, got) => {
+                        unreachable!("disagreement: a={a:?} m={m:?} want={want:?} got={got:?}")
+                    }
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn fixed_iteration_inverse_covers_the_edge_domains() {
+        // Zero modulus: no inverse, and no panic.
+        assert_eq!(mod_inverse_consttime(&[3], &[]), None);
+        // Modulus one keeps this crate's established answer (zero), which the
+        // authority-compatible public wrapper has always produced here.
+        assert_eq!(
+            mod_inverse_consttime(&[7], &[1]).map(|mut v| {
+                normalise(&mut v);
+                v
+            }),
+            Some(Vec::new())
+        );
+        // Zero is not invertible modulo any modulus greater than one.
+        assert_eq!(mod_inverse_consttime(&[], &[7]), None);
+        // A value congruent to zero is not invertible either.
+        assert_eq!(mod_inverse_consttime(&[14], &[7]), None);
+        // A value at or above the modulus is reduced by the algorithm itself.
+        let Some(inv) = mod_inverse_consttime(&[20], &[7]) else {
+            unreachable!("6 is coprime with 7")
+        };
+        assert_eq!(rem(&mul(&[20], &inv), &[7]), vec![1u64]);
+        // Even moduli are outside the binary EEA's domain and are refused.
+        assert_eq!(mod_inverse_consttime(&[3], &[8]), None);
+        // Odd composite modulus: both an invertible and a non-invertible value.
+        assert!(mod_inverse_consttime(&[7], &[15]).is_some());
+        assert_eq!(mod_inverse_consttime(&[6], &[15]), None);
+        // The smallest even modulus and a composite with a repeated factor.
+        assert_eq!(mod_inverse_consttime(&[1], &[2]), None);
+        assert_eq!(mod_inverse_consttime(&[6], &[9]), None);
+        // An operand wider than a small odd modulus: RSA key generation's
+        // `(p - 1)^-1 mod e` shape.
+        let wide = from_hex("deadbeefcafebabe0123456789abcdefdeadbeef");
+        let Some(inv) = mod_inverse_consttime(&wide, &[65537]) else {
+            unreachable!("the test value is coprime with 65537")
+        };
+        assert_eq!(rem(&mul(&wide, &inv), &[65537]), vec![1u64]);
+    }
+
+    #[test]
+    fn fixed_iteration_inverse_agrees_on_random_shapes() {
+        let mut seed = 0x9e37_79b9_7f4a_7c15u64;
+        let mut next = || {
+            seed = seed
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            seed
+        };
+        for case in 0..256 {
+            let m_len = 1 + (next() as usize % 8);
+            let mut m: Vec<Limb> = (0..m_len).map(|_| next()).collect();
+            m[0] |= 1; // odd domain
+            let top = m.len() - 1;
+            m[top] |= 1; // a non-zero top limb, so `m.len()` is the width
+            let a_len = 1 + (next() as usize % (m_len + 2));
+            let a: Vec<Limb> = (0..a_len).map(|_| next()).collect();
+
+            let mut variable = mod_inverse(&a, &m);
+            let mut constant = mod_inverse_consttime(&a, &m);
+            if let Some(v) = variable.as_mut() {
+                normalise(v);
+            }
+            if let Some(v) = constant.as_mut() {
+                normalise(v);
+            }
+            assert_eq!(constant, variable, "case {case}: a={a:?} m={m:?}");
+            if let Some(inv) = variable {
+                if !(m.len() == 1 && m[0] == 1) {
+                    assert_eq!(rem(&mul(&a, &inv), &m), vec![1u64], "case {case}");
+                }
+            }
+        }
     }
 
     #[test]

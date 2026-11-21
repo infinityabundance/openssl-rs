@@ -65,7 +65,9 @@
 use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
 use core::sync::atomic::AtomicI32;
 
-use crate::bn::arith::{BN_cmp, BN_div, BN_gcd, BN_mod_inverse, BN_mod_mul, BN_mul, BN_sub};
+use crate::bn::arith::{
+    BN_cmp, BN_div, BN_gcd, BN_mod_inverse, BN_mod_inverse_consttime, BN_mod_mul, BN_mul, BN_sub,
+};
 use crate::bn::bignum::{
     BN_dup, BN_free, BN_is_odd, BN_is_one, BN_new, BN_num_bits, BN_value_one, BigNum,
 };
@@ -2906,7 +2908,11 @@ pub unsafe extern "C" fn RSA_X931_derive_ex(
                 break 'body;
             }
 
-            (*rsa).iqmp = BN_mod_inverse(core::ptr::null_mut(), (*rsa).q, (*rsa).p, ctx2);
+            // `q^-1 mod p`: both are secret prime factors and `p` is odd, so the
+            // fixed-iteration binary EEA is inside its domain. `d` above is
+            // `e^-1 mod phi` with an **even** modulus and stays variable-time;
+            // that exclusion is recorded in `court/tmp/t7/NOTES.md`.
+            (*rsa).iqmp = BN_mod_inverse_consttime(core::ptr::null_mut(), (*rsa).q, (*rsa).p);
             if (*rsa).iqmp.is_null() {
                 break 'body;
             }
@@ -3278,8 +3284,16 @@ unsafe fn rsa_validate_keypair_multiprime(key: *const Rsa, cb: *mut BnGencb) -> 
                     raise_site(&err_sites::RSA_CHK_186);
                 }
 
-                // iqmp = q^-1 mod p?
-                if BN_mod_inverse(i, q, p, ctx).is_null() {
+                // iqmp = q^-1 mod p? Both are secret factors. For a valid key
+                // `p` is odd and the constant-time EEA applies; a malformed even
+                // `p` keeps the authority's variable-time route so its error
+                // result is unchanged.
+                let inverse = if BN_is_odd(p) != 0 {
+                    BN_mod_inverse_consttime(i, q, p)
+                } else {
+                    BN_mod_inverse(i, q, p, ctx)
+                };
+                if inverse.is_null() {
                     ret = -1;
                     break 'body;
                 }
@@ -3306,8 +3320,13 @@ unsafe fn rsa_validate_keypair_multiprime(key: *const Rsa, cb: *mut BnGencb) -> 
                     ret = 0;
                     raise_site(&err_sites::RSA_CHK_213);
                 }
-                // t_i = R_i ^ -1 mod r_i?
-                if BN_mod_inverse(i, (*pinfo).pp, (*pinfo).r, ctx).is_null() {
+                // t_i = R_i ^ -1 mod r_i? Same domain and dispatch as iqmp.
+                let inverse = if BN_is_odd((*pinfo).r) != 0 {
+                    BN_mod_inverse_consttime(i, (*pinfo).pp, (*pinfo).r)
+                } else {
+                    BN_mod_inverse(i, (*pinfo).pp, (*pinfo).r, ctx)
+                };
+                if inverse.is_null() {
                     ret = -1;
                     break 'body;
                 }

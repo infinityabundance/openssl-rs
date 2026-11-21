@@ -44,8 +44,8 @@ use core::ffi::{c_int, c_ulong};
 
 use crate::bn::arith::{BN_mod_exp, BN_mod_mul};
 use crate::bn::bignum::{
-    as_mut, as_ref, parts, store, BN_copy, BN_dup, BN_free, BN_get_flags, BN_new, BN_set_flags,
-    BigNum,
+    as_mut, as_ref, parts, store, store_consttime, BN_copy, BN_dup, BN_free, BN_get_flags, BN_new,
+    BN_set_flags, BigNum,
 };
 use crate::bn::ctx::BnCtx;
 use crate::bn::limbs;
@@ -664,10 +664,13 @@ pub unsafe extern "C" fn BN_BLINDING_convert_ex(
 /// That is a recorded divergence, not a silent one.
 ///
 /// The consttime branch (`bn_mod_inverse_no_branch`, `crypto/bn/bn_gcd.c:215`) is
-/// not a separate branch here: both authority branches compute the same residue, and
-/// what the flag buys there is constant *time*, which no value-level observation can
-/// see. `BN_FLG_CONSTTIME` is still carried onto the modulus by `BN_BLINDING_new`,
-/// because that is the flag's only reader in this file.
+/// the path taken here whenever the modulus is non-zero and odd: the blinding
+/// factor `A` is a secret random draw and the modulus is the RSA modulus, so the
+/// value of `A` must not choose the work. An even modulus (which RSA never has)
+/// keeps the variable-time path, and that dispatch reads only the modulus'
+/// parity. `BN_FLG_CONSTTIME` is still carried onto the modulus by
+/// `BN_BLINDING_new` for observability parity, but this helper no longer depends
+/// on it to find the constant-time algorithm.
 ///
 /// # Safety
 ///
@@ -681,10 +684,23 @@ unsafe fn int_bn_mod_inverse(dst: *mut BigNum, a: *const BigNum, n: *const BigNu
     if nd.is_empty() || (nd.len() == 1 && nd[0] == 1) {
         return true;
     }
-    match limbs::mod_inverse(&ad, &nd) {
+    // `A` is secret and the RSA modulus is odd, so the fixed-iteration binary EEA
+    // is used. `mod_inverse_consttime` refuses an even modulus, which is why the
+    // variable-time call remains for that (unreachable for RSA) arm.
+    if limbs::is_even(&nd) {
+        return match limbs::mod_inverse(&ad, &nd) {
+            Some(inv) => {
+                // SAFETY: `dst` is live per this function's `# Safety` section.
+                unsafe { store(as_mut(dst), inv, false) };
+                false
+            }
+            None => true,
+        };
+    }
+    match limbs::mod_inverse_consttime(&ad, &nd) {
         Some(inv) => {
             // SAFETY: `dst` is live per this function's `# Safety` section.
-            unsafe { store(as_mut(dst), inv, false) };
+            unsafe { store_consttime(as_mut(dst), inv, false) };
             false
         }
         None => true,

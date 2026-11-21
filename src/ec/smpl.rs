@@ -30,7 +30,7 @@ use core::ffi::c_int;
 use core::ptr;
 
 use crate::bn::arith::{
-    BN_add, BN_add_word, BN_cmp, BN_lshift, BN_mod_add, BN_mod_add_quick, BN_mod_inverse,
+    BN_add, BN_add_word, BN_cmp, BN_lshift, BN_mod_add, BN_mod_add_quick, BN_mod_inverse_consttime,
     BN_mod_lshift1_quick, BN_mod_lshift_quick, BN_mod_mul, BN_mod_sqr, BN_mod_sub_quick,
     BN_mul_word, BN_nnmod, BN_rshift1, BN_ucmp, BN_usub,
 };
@@ -2143,7 +2143,13 @@ pub(crate) unsafe extern "C" fn ossl_ec_GFp_simple_field_inv(
                 break 'err;
             }
             /* r := 1/(a * e) */
-            if BN_mod_inverse(r, r, (*group).field, ctx).is_null() {
+            // `r` is `a * e`, with `a` the (secret on signing) field element and
+            // `e` the authority's random blinding factor; `group->field` is the
+            // public prime modulus and is odd, so this is inside the
+            // fixed-iteration binary EEA's domain. The authority's structure —
+            // blind, invert, unblind — is preserved; only the inversion's
+            // execution is made independent of the field element's value.
+            if BN_mod_inverse_consttime(r, r, (*group).field).is_null() {
                 raise_site(&err_sites::ECP_SMPL_1405);
                 break 'err;
             }

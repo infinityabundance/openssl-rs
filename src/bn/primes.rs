@@ -58,7 +58,7 @@ use core::ffi::{c_char, c_int, c_ulong, c_void};
 use core::sync::atomic::{AtomicPtr, Ordering};
 
 use crate::bn::arith::{
-    BN_add, BN_add_word, BN_cmp, BN_div, BN_gcd, BN_mod_inverse, BN_mod_mul, BN_mod_sub,
+    BN_add, BN_add_word, BN_cmp, BN_div, BN_gcd, BN_mod_inverse_consttime, BN_mod_mul, BN_mod_sub,
     BN_mod_word, BN_mul, BN_rshift, BN_rshift1, BN_sub, BN_sub_word,
 };
 use crate::bn::bignum::{
@@ -1666,13 +1666,15 @@ pub unsafe extern "C" fn BN_X931_derive_prime_ex(
                 }
 
                 /* First set p to value of Rp */
-                if BN_mod_inverse(p, p2, p1, ctx).is_null() {
+                // The X9.31 derived primes are secret and odd, so both inverses
+                // use the fixed-iteration binary EEA.
+                if BN_mod_inverse_consttime(p, p2, p1).is_null() {
                     break 'body;
                 }
                 if BN_mul(p, p, p2, ctx) == 0 {
                     break 'body;
                 }
-                if BN_mod_inverse(t, p1, p2, ctx).is_null() {
+                if BN_mod_inverse_consttime(t, p1, p2).is_null() {
                     break 'body;
                 }
                 if BN_mul(t, t, p1, ctx) == 0 {
@@ -2673,9 +2675,9 @@ mod tests {
         let y = unsafe { BN_new() };
         // SAFETY: every pointer is live per this function's contract.
         unsafe {
-            assert!(!BN_mod_inverse(x, p2, p1, ctx).is_null());
+            assert!(!crate::bn::arith::BN_mod_inverse(x, p2, p1, ctx).is_null());
             assert_eq!(BN_mul(x, x, p2, ctx), 1);
-            assert!(!BN_mod_inverse(y, p1, p2, ctx).is_null());
+            assert!(!crate::bn::arith::BN_mod_inverse(y, p1, p2, ctx).is_null());
             assert_eq!(BN_mul(y, y, p1, ctx), 1);
             assert_eq!(BN_mod_sub(rp, x, y, p1p2, ctx), 1);
             BN_free(x);

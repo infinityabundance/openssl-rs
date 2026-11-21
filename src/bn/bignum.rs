@@ -143,6 +143,23 @@ pub(crate) fn new_owned(mut d: Vec<Limb>, neg: c_int) -> *mut BigNum {
     }))
 }
 
+/// [`new_owned`] with the trim performed by [`limbs::normalise_consttime`].
+///
+/// The caller's magnitude may be secret-derived (for example the inverse computed
+/// on the constant-time path), so neither the length trim nor the "is zero" test
+/// may be a value-dependent branch. The length itself remains observable, as it
+/// must for a normalised [`BigNum`]; that residual is tracked with T8.
+pub(crate) fn new_owned_consttime(mut d: Vec<Limb>, neg: c_int) -> *mut BigNum {
+    let keep = limbs::normalise_consttime(&mut d);
+    let not_zero = !crate::runtime::constant_time::constant_time_is_zero_s(keep);
+    let neg = (((neg as usize) & not_zero) & 1) as c_int;
+    Box::into_raw(Box::new(BigNum {
+        d,
+        neg,
+        flags: BN_FLG_MALLOCED,
+    }))
+}
+
 /// A heap `BIGNUM` carrying `BN_FLG_STATIC_DATA`, the crate's model of the authority's
 /// `const BIGNUM` objects in `.rodata`.
 ///

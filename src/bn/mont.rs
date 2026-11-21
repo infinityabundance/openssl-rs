@@ -567,9 +567,14 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
             unsafe { raise_site(&BN_EXP_327) };
             return 0;
         }
-        // SAFETY: `p` and `m` are null-or-live per this function's `# Safety`
-        // section, which is `BN_get_flags`'s contract.
-        let consttime = unsafe { gets_consttime(p) || gets_consttime(m) };
+        // SAFETY: `a`, `p` and `m` are null-or-live per this function's
+        // `# Safety` section, which is `BN_get_flags`'s contract.
+        //
+        // The authority tests all three operands (`bn_exp.c:331-335`): a marked
+        // base is what routes `dsa_sign_setup`'s `k` through the fixed-pattern
+        // ladder in `dsa_mod_inverse_fermat`. Omitting `a` left the secret-base
+        // Fermat inversion on the variable-time path.
+        let consttime = unsafe { gets_consttime(a) || gets_consttime(p) || gets_consttime(m) };
         let result = if consttime {
             // The authority's `BN_mod_exp` dispatches on the same flags. The
             // modulus is odd here (the refusal above), so the Montgomery-form
