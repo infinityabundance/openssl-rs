@@ -700,7 +700,7 @@ unsafe fn int_bn_mod_inverse(dst: *mut BigNum, a: *const BigNum, n: *const BigNu
     match limbs::mod_inverse_consttime(&ad, &nd) {
         Some(inv) => {
             // SAFETY: `dst` is live per this function's `# Safety` section.
-            unsafe { store_consttime(as_mut(dst), inv, false) };
+            unsafe { store_consttime(as_mut(dst), inv, false, nd.len()) };
             false
         }
         None => true,

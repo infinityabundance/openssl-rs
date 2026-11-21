@@ -591,7 +591,7 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
                 // The consttime path may carry a secret-derived result, so it is
                 // stored without a value-dependent trim branch.
                 c_int::from(if consttime {
-                    store_consttime(dst, v, false)
+                    store_consttime(dst, v, false, md.len())
                 } else {
                     store(dst, v, false)
                 })
@@ -646,7 +646,7 @@ pub unsafe extern "C" fn BN_mod_exp_mont_consttime(
             // SAFETY: `r` is null-or-live per this function's `# Safety` section;
             // the result may derive from a secret exponent, so it is stored
             // without a value-dependent trim branch.
-            Some(v) => c_int::from(store_consttime(unsafe { as_mut(r) }, v, false)),
+            Some(v) => c_int::from(store_consttime(unsafe { as_mut(r) }, v, false, md.len())),
             None => 0,
         }
     })
