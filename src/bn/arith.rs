@@ -766,11 +766,13 @@ unsafe fn mod_inverse_impl(
         match unsafe { as_mut(r) } {
             // A constant-time result is trimmed and tested with a mask; the
             // variable-time result keeps the authority's normalising copy.
-            None if consttime => new_owned_consttime(inv, 0),
+            None if consttime => new_owned_consttime(inv, 0, nd.len()),
             None => new_owned(inv, 0),
             Some(dst) => {
                 let stored = if consttime {
-                    store_consttime(Some(dst), inv, false)
+                    // The modulus limb count is the public width the inverse was
+                    // produced at; the trim costs exactly that many limbs.
+                    store_consttime(Some(dst), inv, false, nd.len())
                 } else {
                     store(Some(dst), inv, false)
                 };
@@ -1207,7 +1209,7 @@ pub unsafe extern "C" fn BN_mod_exp(
                 // A consttime result may be a function of the secret exponent, so
                 // it is stored without a value-dependent trim branch.
                 let stored = if consttime {
-                    store_consttime(dst, v, false)
+                    store_consttime(dst, v, false, md.len())
                 } else {
                     store(dst, v, false)
                 };

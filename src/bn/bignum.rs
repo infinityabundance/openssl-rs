@@ -149,8 +149,8 @@ pub(crate) fn new_owned(mut d: Vec<Limb>, neg: c_int) -> *mut BigNum {
 /// on the constant-time path), so neither the length trim nor the "is zero" test
 /// may be a value-dependent branch. The length itself remains observable, as it
 /// must for a normalised [`BigNum`]; that residual is tracked with T8.
-pub(crate) fn new_owned_consttime(mut d: Vec<Limb>, neg: c_int) -> *mut BigNum {
-    let keep = limbs::normalise_consttime(&mut d);
+pub(crate) fn new_owned_consttime(mut d: Vec<Limb>, neg: c_int, width: usize) -> *mut BigNum {
+    let keep = limbs::normalise_consttime(&mut d, width);
     let not_zero = !crate::runtime::constant_time::constant_time_is_zero_s(keep);
     let neg = (((neg as usize) & not_zero) & 1) as c_int;
     Box::into_raw(Box::new(BigNum {
@@ -288,11 +288,25 @@ pub(crate) fn store(r: Option<&mut BigNum>, mut d: Vec<Limb>, neg: bool) -> bool
 /// `store`'s `while v.last() == Some(&0)` and `d.is_empty()` both take a
 /// secret-dependent branch when the magnitude is a function of a secret.
 ///
+/// `width` is the **public** limb width the magnitude was produced at (the
+/// modulus or operand limb count the caller already uses as public geometry).
+/// The trim scans exactly `width` limbs, so its cost cannot reveal the result's
+/// normalised length even when a variable-time fallback hands over a shorter
+/// vector.
+///
 /// The representation still records the trimmed length, as it must for a
 /// normalised `BIGNUM`; see [`limbs::normalise_consttime`] for what remains
-/// observable.
-pub(crate) fn store_consttime(r: Option<&mut BigNum>, mut d: Vec<Limb>, neg: bool) -> bool {
-    let keep = limbs::normalise_consttime(&mut d);
+/// observable. That residual is deliberate and recorded as T8: a caller that
+/// asks for `BN_num_bits`, `BN_bn2bin` or `d.len()` observes the result's bit
+/// length, because a fixed-width representation would report a width OpenSSL's
+/// normalised `BIGNUM` does not.
+pub(crate) fn store_consttime(
+    r: Option<&mut BigNum>,
+    mut d: Vec<Limb>,
+    neg: bool,
+    width: usize,
+) -> bool {
+    let keep = limbs::normalise_consttime(&mut d, width);
     match r {
         None => false,
         Some(dst) => {
@@ -2282,6 +2296,116 @@ mod tests {
             assert_eq!(BN_get_flags(s, BN_FLG_MALLOCED), BN_FLG_MALLOCED);
             // SAFETY: `s` is live; `BN_free` is the secure-aware release path.
             BN_free(s);
+        }
+    }
+
+    /// T8: results of different bit lengths under the same public width are
+    /// trimmed with the identical fixed pattern.
+    ///
+    /// The stored `BIGNUM`s keep their normalised lengths (1 and 4 limbs), which
+    /// is the residual this batch records: a caller can still read them. What the
+    /// probe proves is that the **store** does not turn that length into work or
+    /// a branch — both scans visit exactly the four declared public limbs.
+    #[test]
+    fn store_consttime_trims_different_result_lengths_in_the_same_pattern() {
+        let width = 4usize;
+        let mut kept = Vec::new();
+        let mut patterns = Vec::new();
+        for d in [
+            // Normalised length 1: the top three public limbs are zero.
+            vec![0x8000_0000_0000_0000u64, 0, 0, 0],
+            // Full public width.
+            vec![0x1234, 0x5678, 0x9abc, 0x8000_0000_0000_0000],
+        ] {
+            let mut dst = BigNum {
+                d: Vec::new(),
+                neg: 0,
+                flags: 0,
+            };
+            crate::bn::limbs::trim_probe::arm();
+            assert!(store_consttime(Some(&mut dst), d, false, width));
+            patterns.push(crate::bn::limbs::trim_probe::disarm());
+            kept.push(dst.d.len());
+        }
+        assert_eq!(
+            patterns[0], patterns[1],
+            "the same public width, the same work"
+        );
+        assert_eq!(patterns[0], (width, width));
+        assert_eq!(kept, vec![1, width], "the result lengths remain visible");
+    }
+
+    /// ctgrind case for T8: the constant-time store's trim must not branch on the
+    /// secret-derived result length.
+    ///
+    /// A magnitude of the public width whose limbs — and therefore the
+    /// significant length and the top limb's value — are secret is marked
+    /// undefined. The store must run the fixed-width scan without a conditional
+    /// jump or secret-derived address. The resulting `BIGNUM` is never inspected
+    /// here (its length is the declassified residual), only the public "store
+    /// succeeded" answer is. `CTGRIND_CONTROL=1` branches on a marked limb as the
+    /// negative control.
+    ///
+    /// Gate: `valgrind --tool=memcheck --error-exitcode=99 <test-bin> --exact
+    /// bn::bignum::tests::ctgrind_store_consttime_result_length --nocapture`.
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn ctgrind_store_consttime_result_length() {
+        let width = 4usize;
+        let mut d = vec![
+            0x0123_4567_89ab_cdefu64,
+            0x1122_3344_5566_7788,
+            0x99aa_bbcc_ddee_ff00,
+            0x0fed_cba9_8765_4321,
+        ];
+        // SAFETY: `d` is a live, uniquely borrowed buffer and the client-request
+        // sequence only marks its bytes' definedness.
+        unsafe {
+            valgrind_make_mem_undefined(d.as_mut_ptr().cast::<u8>(), d.len() * 8);
+        }
+        if std::env::var_os("CTGRIND_CONTROL").is_some() {
+            // Negative control: an address derived from a marked limb. Memcheck
+            // must report it. A branch on the same limb is not enough in the
+            // release profile: the optimiser is free to flatten `if` into a
+            // select, and memcheck tracks data flow, not source branches.
+            let haystack = [0u8; 8];
+            let index = (d[0] & 1) as usize;
+            // SAFETY: `index` is 0 or 1, inside `haystack`.
+            let byte = unsafe { core::ptr::read_volatile(haystack.as_ptr().add(index)) };
+            core::hint::black_box(byte);
+        }
+        let mut dst = BigNum {
+            d: Vec::new(),
+            neg: 0,
+            flags: 0,
+        };
+        // Only the public answer is asserted; `dst`'s length is secret-derived and
+        // deliberately not read here.
+        assert!(store_consttime(Some(&mut dst), d, false, width));
+        core::hint::black_box(&dst);
+    }
+
+    /// `VALGRIND_MAKE_MEM_UNDEFINED` as the amd64 client request (the same sequence
+    /// as `bn::arith`'s test helper). Outside valgrind it is a few harmless register
+    /// rotations, so the test also runs in the ordinary suite.
+    #[cfg(target_arch = "x86_64")]
+    unsafe fn valgrind_make_mem_undefined(addr: *mut u8, len: usize) {
+        let args: [usize; 6] = [0x4D43_0001, addr as usize, len, 0, 0, 0];
+        let _result: usize;
+        // SAFETY: the sequence is the documented valgrind client-request pattern;
+        // `args` lives for the duration of the asm and is only read.
+        unsafe {
+            core::arch::asm!(
+                "rol rdi, 3",
+                "rol rdi, 13",
+                "rol rdi, 61",
+                "rol rdi, 51",
+                "xchg rbx, rbx",
+                in("rax") args.as_ptr(),
+                inout("rdx") 0usize => _result,
+                out("rdi") _,
+                options(nostack),
+            );
         }
     }
 }

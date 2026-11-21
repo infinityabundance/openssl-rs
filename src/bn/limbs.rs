@@ -45,39 +45,103 @@ pub(crate) fn normalise(v: &mut Vec<Limb>) {
 /// Drop trailing zero limbs without branching on a limb value.
 ///
 /// The trim is the same operation as [`normalise`], but the significant length is
-/// computed in one fixed pass over the whole slice with [`constant_time_select`]
+/// computed in one **fixed** pass over `width` limbs with [`constant_time_select`]
 /// masks and then installed with `set_len`. There is no early exit, no
 /// `while last() == 0` loop and no comparison of a limb in control position, so a
 /// secret-bearing result does not acquire a data-dependent branch merely by being
 /// stored.
 ///
+/// `width` is the **public** limb width the caller produced the magnitude at (the
+/// modulus/operand limb count for every constant-time caller). The scan always
+/// costs exactly `width` iterations, whatever the magnitude's normalised length,
+/// so the pass does not become a length oracle. A shorter vector — only a
+/// variable-time fallback result that already arrived trimmed — is zero-extended
+/// to `width` first; the extension is empty on every fixed-pattern path.
+///
 /// The resulting `Vec` length still depends on the value — that is inherent in
 /// this crate's normalised `BIGNUM` representation, which cannot express a fixed
 /// top (see `bignum.rs`'s `BN_FLG_FIXED_TOP` note). What this function removes is
-/// the branch, not the length: the length remains observable to a caller that
-/// asks for it.
+/// the branch and the length-proportional work, not the length: the length
+/// remains observable to a caller that asks for it.
 ///
 /// [`constant_time_select`]: crate::runtime::constant_time::constant_time_select
-pub(crate) fn normalise_consttime(v: &mut Vec<Limb>) -> usize {
+pub(crate) fn normalise_consttime(v: &mut Vec<Limb>, width: usize) -> usize {
     use crate::runtime::constant_time::{constant_time_is_zero_s, constant_time_select};
 
+    debug_assert!(
+        v.len() <= width,
+        "a constant-time magnitude cannot be wider than its declared public width"
+    );
+    if v.len() < width {
+        v.resize(width, 0);
+    }
     let mut keep: usize = 0;
     let mut trimming: usize = usize::MAX;
-    for (i, &limb) in v.iter().enumerate().rev() {
+    for i in (0..width).rev() {
+        // Indexing by the public `width`, never by the magnitude's normalised
+        // length, is what bounds this pass to public geometry.
+        #[cfg(test)]
+        trim_probe::record_iteration();
+        let limb = v[i];
         // All-ones when the limb is non-zero. The first one found (scanning from
         // the most significant limb) fixes `keep`; every lower limb leaves it
         // alone because `trimming` is then all-zeros.
         let nonzero = !constant_time_is_zero_s(limb as usize);
         let take = trimming & nonzero;
+        #[cfg(test)]
+        trim_probe::record_select();
         keep = constant_time_select(take, i + 1, keep);
         trimming &= !nonzero;
     }
-    // SAFETY: `keep <= v.len()`, and every element below `keep` is initialised
-    // because `keep` is either zero or the index after a limb that was read in
-    // this pass. `Limb` is `Copy` with no destructor, so shrinking the length
-    // drops nothing.
+    // SAFETY: `keep <= width == v.len()`, and every element below `keep` is
+    // initialised because `keep` is either zero or the index after a limb that
+    // was read in this pass. `Limb` is `Copy` with no destructor, so shrinking
+    // the length drops nothing.
     unsafe { v.set_len(keep) };
     keep
+}
+
+/// Test-only observation seam for [`normalise_consttime`].
+///
+/// Records how many limbs the fixed-pattern scan visited and how many masked
+/// selects it performed, so a test can assert that two magnitudes with the same
+/// **public** width and different normalised lengths produce the identical
+/// pattern. Compiled out of every non-test build; recording is a no-op unless a
+/// test armed the probe on this thread.
+#[cfg(test)]
+pub(crate) mod trim_probe {
+    use core::cell::Cell;
+
+    thread_local! {
+        static ARMED: Cell<bool> = const { Cell::new(false) };
+        static ITERATIONS: Cell<usize> = const { Cell::new(0) };
+        static SELECTS: Cell<usize> = const { Cell::new(0) };
+    }
+
+    /// Start a fresh observation on this thread.
+    pub(crate) fn arm() {
+        ARMED.with(|a| a.set(true));
+        ITERATIONS.with(|c| c.set(0));
+        SELECTS.with(|c| c.set(0));
+    }
+
+    /// Stop observing and answer `(limbs scanned, masked selects)`.
+    pub(crate) fn disarm() -> (usize, usize) {
+        ARMED.with(|a| a.set(false));
+        (ITERATIONS.with(Cell::get), SELECTS.with(Cell::get))
+    }
+
+    pub(super) fn record_iteration() {
+        if ARMED.with(Cell::get) {
+            ITERATIONS.with(|c| c.set(c.get() + 1));
+        }
+    }
+
+    pub(super) fn record_select() {
+        if ARMED.with(Cell::get) {
+            SELECTS.with(|c| c.set(c.get() + 1));
+        }
+    }
 }
 
 /// True when the value is zero.
@@ -1206,11 +1270,53 @@ mod tests {
                     .collect();
                 let mut expected = v.clone();
                 normalise(&mut expected);
-                let keep = normalise_consttime(&mut v);
+                let keep = normalise_consttime(&mut v, len);
                 assert_eq!(v, expected, "len={len}");
                 assert_eq!(keep, expected.len(), "len={len}");
             }
         }
+    }
+
+    /// T8: two results with the same declared public width but different bit
+    /// lengths must trim in exactly the same pattern.
+    ///
+    /// The first magnitude's top limb is zero, so its normalised length is one;
+    /// the second is full width; the third arrives already trimmed, which is the
+    /// variable-time fallback shape and must still be scanned at the declared
+    /// width. An implementation that scanned `v.len()` or used [`normalise`]
+    /// would report a different iteration count for at least one case — this is
+    /// the regression the probe exists to catch.
+    #[test]
+    fn the_consttime_trim_scans_the_public_width_not_the_result_length() {
+        let width = 4usize;
+        let mut cases = [
+            vec![0x8000_0000_0000_0000u64, 0, 0, 0],
+            vec![0x1234, 0x5678, 0x9abc, 0x8000_0000_0000_0000],
+            vec![7u64],
+        ];
+        let mut keeps = Vec::new();
+        for (case, v) in cases.iter_mut().enumerate() {
+            trim_probe::arm();
+            let keep = normalise_consttime(v, width);
+            let (iterations, selects) = trim_probe::disarm();
+            assert_eq!(
+                iterations, width,
+                "case {case}: the scan must visit every public limb"
+            );
+            assert_eq!(
+                selects, width,
+                "case {case}: one masked select per public limb"
+            );
+            assert_eq!(
+                v.len(),
+                keep,
+                "case {case}: the trim reports what it installed"
+            );
+            keeps.push(keep);
+        }
+        assert_eq!(keeps[0], 1, "the first result is one limb long");
+        assert_eq!(keeps[1], width, "the second result is full width");
+        assert_ne!(keeps[0], keeps[1], "the two results have different lengths");
     }
 
     #[test]
