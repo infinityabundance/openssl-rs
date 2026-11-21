@@ -1068,10 +1068,12 @@ pub unsafe extern "C" fn BN_mod_exp(
         // SAFETY: as above for `p`.
         let y = unsafe { as_ref(p) };
         let (pd, _) = parts(y);
-        // The exponent's magnitude is secret on the constant-time path. Adopt the
-        // copied temporary into a `SecretBuf` immediately, so it is cleansed on
-        // every exit — including the width-refusal `return` below and the early
-        // `None` return from the ladder — instead of being freed as a plain `Vec`.
+        // The exponent's magnitude is secret on the constant-time path. The copied
+        // temporary is owned by a `SecretBuf` so it is cleansed on every exit, but
+        // it is deliberately *not* the long-lived protected buffer: its capacity
+        // follows the exponent's secret normalised length. The constant-time branch
+        // copies it into a buffer sized by the public modulus width and releases
+        // this temporary before the ladder starts.
         let pd = SecretBuf::from_vec(pd);
         // SAFETY: as above for `m`.
         let z = unsafe { as_ref(m) };
@@ -1090,16 +1092,14 @@ pub unsafe extern "C" fn BN_mod_exp(
             // constant-time reachable caller is bounded by that modulus (DH's
             // private exponent is < p, RSA's is < n, EC's is < the group order),
             // so the ladder's geometry is fixed from public data alone.
-            let width = md.len().max(1);
-            if pd.len() > width {
-                // An exponent wider than the only public bound available. Refuse
-                // rather than widen the ladder to the exponent's own (secret)
-                // length or truncate the answer.
-                return 0;
-            }
-            match mod_exp_core_consttime_width(&ad, &pd, &md, width) {
+            //
+            // `from_parts` stages the exponent into a buffer whose allocation is
+            // that public width before running the ladder, then cleanses and
+            // releases this secret-sized `parts()` copy. A wider exponent is
+            // refused inside, never truncated; an allocation failure is the
+            // ordinary failure answer.
+            match mod_exp_core_consttime_from_parts(&ad, pd, &md, md.len()) {
                 Some(v) => Some(v),
-                // Allocation failure: the entry point's ordinary failure answer.
                 None => return 0,
             }
         } else {
@@ -1214,6 +1214,11 @@ fn try_zeroed_limbs(n: usize) -> Option<Vec<Limb>> {
 /// copy is the single use of that metadata; the ctgrind `modexp_len` control in
 /// `courts/phase18/timing/ct_bn.c` taints the length field so that this one use
 /// is reported rather than hidden.
+///
+/// The buffer is **allocated** at `width` before any limb is copied in, so its
+/// capacity is fixed by the public width and not by the exponent's normalised
+/// length. That is what makes the `SecretBuf` destructor's cleanse run over a
+/// publicly known extent: the allocation cannot encode the secret length.
 fn fixed_width_exponent(pd: &[Limb], width: usize) -> Option<SecretBuf<Limb>> {
     let mut view = SecretBuf::try_zeroed(width)?;
     let take = pd.len().min(width);
@@ -1354,11 +1359,51 @@ fn mont_mul_fallible(a: &[Limb], b: &[Limb], m: &[Limb], n0: Limb) -> Option<Vec
 /// and in `BN_mod_exp` (constant-time flag and odd modulus). The variable-time
 /// [`mod_exp_core`] is retained for inputs proven public by their callers.
 /// Test-only convenience wrapper: the default public width is the modulus' limb
-/// count. The entry points call [`mod_exp_core_consttime_width`] directly so the
-/// public width is stated at each call site.
+/// count. The C entry points stage the exponent through
+/// [`mod_exp_core_consttime_from_parts`] so the public width is stated at each
+/// call site and the secret-sized boundary copy is released before the ladder.
 #[cfg(test)]
 pub(crate) fn mod_exp_core_consttime(ad: &[Limb], pd: &[Limb], md: &[Limb]) -> Option<Vec<Limb>> {
     mod_exp_core_consttime_width(ad, pd, md, md.len())
+}
+
+/// What the ladder should do for an exponent/modulus pair.
+///
+/// The decision reads the modulus' limb count (public), the caller's
+/// `declared_limbs` (public) and the exponent's normalised limb count. That last
+/// read is the **only** use of the exponent's length: it decides refusal, and the
+/// limbs are then copied into a buffer whose allocation is fixed by the public
+/// terms alone. The ctgrind `modexp_len` control taints it so this one read is
+/// reported rather than hidden.
+enum LadderGeometry {
+    /// `x mod 1 == 0` for every exponent; no ladder is needed.
+    Zero,
+    /// No Montgomery form for an even modulus: the variable-time path answers.
+    VariableTime,
+    /// Run the fixed-pattern ladder with this public limb width.
+    Fixed(usize),
+}
+
+fn ladder_geometry(pd: &[Limb], md: &[Limb], declared_limbs: usize) -> Option<LadderGeometry> {
+    if md.is_empty() {
+        return None;
+    }
+    // `x mod 1` is zero for every exponent, and Montgomery form needs an odd
+    // modulus greater than one. Modulus limbs are public, so this test is not a
+    // leak.
+    if md.len() == 1 && md[0] == 1 {
+        return Some(LadderGeometry::Zero);
+    }
+    if limbs::is_even(md) {
+        return Some(LadderGeometry::VariableTime);
+    }
+    // Both terms are public: the caller's declared width and the modulus' limb
+    // count. The exponent's length is not consulted beyond the refusal below.
+    let width = declared_limbs.max(md.len()).max(1);
+    if pd.len() > width {
+        return None;
+    }
+    Some(LadderGeometry::Fixed(width))
 }
 
 /// Constant-pattern exponentiation with an explicit **public** limb width.
@@ -1375,38 +1420,74 @@ pub(crate) fn mod_exp_core_consttime(ad: &[Limb], pd: &[Limb], md: &[Limb]) -> O
 /// RSA CRT and EC caller keeps the exponent inside the modulus/order, so this
 /// refusal is a contract check for an out-of-contract C caller, recorded as a
 /// compatibility deviation rather than hidden.
+#[cfg(test)]
 pub(crate) fn mod_exp_core_consttime_width(
     ad: &[Limb],
     pd: &[Limb],
     md: &[Limb],
     declared_limbs: usize,
 ) -> Option<Vec<Limb>> {
-    if md.is_empty() {
-        return None;
-    }
-    // `x mod 1` is zero for every exponent, and Montgomery form needs an odd
-    // modulus greater than one. Modulus limbs are public, so this test is not a
-    // leak.
-    if md.len() == 1 && md[0] == 1 {
-        return Some(Vec::new());
-    }
-    if limbs::is_even(md) {
+    match ladder_geometry(pd, md, declared_limbs)? {
+        LadderGeometry::Zero => Some(Vec::new()),
         // No Montgomery form. The two Montgomery entry points refuse this case
         // before dispatch; keeping a total answer here prevents an accidental
         // even modulus from producing a wrong result.
-        return mod_exp_core(ad, pd, md);
+        LadderGeometry::VariableTime => mod_exp_core(ad, pd, md),
+        LadderGeometry::Fixed(width) => {
+            let exponent = fixed_width_exponent(pd, width)?;
+            mod_exp_core_consttime_staged(ad, &exponent, md, width)
+        }
     }
+}
 
-    let n = md.len();
-    // Both terms are public: the caller's declared width and the modulus' limb
-    // count. The exponent's length is not consulted here.
-    let width = declared_limbs.max(n).max(1);
-    if pd.len() > width {
-        return None;
+/// Constant-pattern exponentiation for the C entry points, which already own the
+/// exponent as a cleansed [`SecretBuf`].
+///
+/// This is the representation-level fix for the destructor-timing finding. The
+/// protected buffer is built at the **public** width before any secret limb is
+/// copied into it, so its allocation — and therefore the extent its `Drop`
+/// cleanse touches — is fixed by public geometry. `pd` is the C-ABI `parts()`
+/// clone, whose capacity follows the exponent's secret normalised length; it is
+/// only the source for that copy, and is cleansed and released before the ladder
+/// starts instead of becoming the long-lived protected buffer. The short-lived
+/// clone's own cleanse still runs over a secret-sized allocation; that residual
+/// observable is recorded as an open finding in `docs/ETP-TODO.md` (T3/T9).
+pub(crate) fn mod_exp_core_consttime_from_parts(
+    ad: &[Limb],
+    pd: SecretBuf<Limb>,
+    md: &[Limb],
+    declared_limbs: usize,
+) -> Option<Vec<Limb>> {
+    match ladder_geometry(&pd, md, declared_limbs)? {
+        LadderGeometry::Zero => Some(Vec::new()),
+        LadderGeometry::VariableTime => mod_exp_core(ad, &pd, md),
+        LadderGeometry::Fixed(width) => {
+            // The protected buffer: its allocation is the declared public width,
+            // so its capacity cannot encode the exponent's normalised length.
+            let exponent = fixed_width_exponent(&pd, width)?;
+            // The secret-sized `parts()` copy has done its only job. Cleanse and
+            // release it now, leaving only the public-width buffer for the ladder.
+            drop(pd);
+            mod_exp_core_consttime_staged(ad, &exponent, md, width)
+        }
     }
+}
+
+/// The ladder proper, on an exponent already staged at `width` limbs.
+///
+/// `exponent.len() == width`, and `width` is public. Splitting this from
+/// [`mod_exp_core_consttime_width`] is what lets the C entry points build the
+/// protected buffer themselves and release the secret-sized boundary copy before
+/// the `64 * width` loop begins.
+fn mod_exp_core_consttime_staged(
+    ad: &[Limb],
+    exponent: &SecretBuf<Limb>,
+    md: &[Limb],
+    width: usize,
+) -> Option<Vec<Limb>> {
+    let n = md.len();
     let bits = width.checked_mul(64)?;
     let t_len = n.checked_mul(2)?.checked_add(1)?;
-    let exponent = fixed_width_exponent(pd, width)?;
 
     let n0 = mont_n0(md[0]);
     // `R` and `R^2` derive from the modulus. Their limb count is public, but the
@@ -2048,6 +2129,45 @@ mod tests {
                 assert_eq!(got, expected, "e={e:?} declared={declared}");
             }
         }
+    }
+
+    /// T3: the protected exponent buffer's capacity is fixed by the declared
+    /// **public** width, not by the input's normalised length. Two exponents of
+    /// different lengths, staged under one width, must have identical capacity.
+    ///
+    /// This would fail if the buffer were built by adopting the input (a clone
+    /// has capacity == its length, so the two would report 2 and 4): the
+    /// destructor's cleanse extent would then encode the secret length.
+    #[test]
+    fn exponent_buffer_capacity_follows_the_public_width() {
+        let width = 4;
+        let short = vec![0x0123_4567_89ab_cdefu64, 0xfeed_face_dead_beefu64];
+        let long = vec![
+            0x0123_4567_89ab_cdefu64,
+            0xfeed_face_dead_beefu64,
+            0x0f0f_0f0f_0f0f_0f0fu64,
+            0xdead_beef_dead_beefu64,
+        ];
+        assert_ne!(short.len(), long.len(), "the inputs must differ in length");
+
+        let Some(short_view) = fixed_width_exponent(&short, width) else {
+            unreachable!("a four-limb allocation succeeds")
+        };
+        let Some(long_view) = fixed_width_exponent(&long, width) else {
+            unreachable!("a four-limb allocation succeeds")
+        };
+
+        assert_eq!(short_view.len(), width);
+        assert_eq!(long_view.len(), width);
+        assert_eq!(
+            short_view.capacity(),
+            long_view.capacity(),
+            "capacity must come from the public width, not the input length"
+        );
+        assert_eq!(short_view.capacity(), width);
+        // The secret limbs are still staged in the low positions.
+        assert_eq!(&short_view[..short.len()], &short[..]);
+        assert_eq!(&long_view[..], &long[..]);
     }
 
     /// Allocation failure is a return value on this path, not an abort: an
