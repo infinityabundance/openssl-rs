@@ -1,0 +1,28 @@
+{
+  "schema": "openssl-rs/interop-build-receipt/1",
+  "item": "O4 of docs/ETP-TODO.md",
+  "generated": "2026-11-21T18:34:42Z",
+  "source": {"tarball": "openssh-9.9p1.tar.gz", "sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02", "version": "9.9p1"},
+  "trees": {"A": "/home/user/openssl-rs/court/tmp/o4/tree-A", "B": "/home/user/openssl-rs/court/tmp/o4/tree-B", "separate_copies": true},
+  "build_against": {
+    "A": {"ssl_dir": "/home/user/openssl-rs/forensics/authorities/prefix/openssl-3.6.4-production", "libcrypto_sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2"},
+    "B": {"ssl_dir": "/home/user/openssl-rs/court/tmp/o4/b-prefix", "libcrypto_sha256": "d389a456bfdbcf8c46d8dac77c83292b46b7ecf95a9f79b0b84be4c8d72ff50b",
+          "include_source": "/home/user/openssl-rs/artifacts/phase2/include", "dso_from_archive": "/var/tmp/t29-target/release/libopenssl_rs.a"}
+  },
+  "ld_library_path_used_at_build": false,
+  "exit_codes": {"A": 0, "B": 0},
+  "binaries": [
+    {"cell": "tree-A", "binary": "ssh", "needed_crypto": "libcrypto.so.3", "rpath": "-"},
+    {"cell": "tree-A", "binary": "sshd", "needed_crypto": "libcrypto.so.3", "rpath": "-"},
+    {"cell": "tree-A", "binary": "sshd-session", "needed_crypto": "libcrypto.so.3", "rpath": "-"},
+    {"cell": "tree-A", "binary": "ssh-keygen", "needed_crypto": "libcrypto.so.3", "rpath": "-"},
+    {"cell": "tree-A", "binary": "ssh-agent", "needed_crypto": "libcrypto.so.3", "rpath": "-"},
+    {"cell": "tree-A", "binary": "sftp-server", "needed_crypto": "", "rpath": "-"},
+    {"cell": "tree-B", "binary": "ssh", "needed_crypto": "libcrypto.so.3", "rpath": "-"},
+    {"cell": "tree-B", "binary": "sshd", "needed_crypto": "libcrypto.so.3", "rpath": "-"},
+    {"cell": "tree-B", "binary": "sshd-session", "needed_crypto": "libcrypto.so.3", "rpath": "-"},
+    {"cell": "tree-B", "binary": "ssh-keygen", "needed_crypto": "libcrypto.so.3", "rpath": "-"},
+    {"cell": "tree-B", "binary": "ssh-agent", "needed_crypto": "libcrypto.so.3", "rpath": "-"},
+    {"cell": "tree-B", "binary": "sftp-server", "needed_crypto": "", "rpath": "-"}
+  ]
+}
