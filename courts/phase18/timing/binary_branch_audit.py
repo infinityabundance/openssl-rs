@@ -95,14 +95,18 @@ def symbol_table(dso: str) -> list[tuple[int, int, str]]:
     return out
 
 
-def find_symbol(symtab: list[tuple[int, int, str]], name: str):
-    """Rust v0 mangling length-prefixes the final identifier, so the exact
-    suffix is unambiguous (`mod_inverse_consttime` vs `BN_mod_inverse_consttime`)."""
+def find_symbols(symtab: list[tuple[int, int, str]], name: str):
+    """All defined .text symbols whose v0-mangled final identifier is exactly
+    `name`.
+
+    The suffix is length-prefixed, so `mod_inverse_consttime` cannot match
+    `BN_mod_inverse_consttime`. Every match is returned: this auditor is a gate,
+    so an ambiguous name must be refused rather than resolved to whichever
+    symbol happened to be first in the table.
+    """
     suffix = f"{len(name)}{name}"
-    for addr, size, sym in symtab:
-        if sym.endswith(suffix):
-            return addr, size, sym
-    return None
+    return [(addr, size, sym) for addr, size, sym in symtab
+            if sym.endswith(suffix)]
 
 
 def disassemble(dso: str, start: int, stop: int) -> list[Insn]:
@@ -180,19 +184,25 @@ def guarded_window(insns: list[Insn], i: int) -> tuple[str, list[Insn]]:
 
 
 def audit(dso: str, family: str, short: str, symtab) -> tuple[str, dict, list[dict]]:
-    found = find_symbol(symtab, short)
-    if found is None:
-        return family, {"missing": True, "short": short}, []
-    addr, size, sym = found
+    matches = find_symbols(symtab, short)
+    if not matches:
+        return family, {"failure": "missing", "short": short}, []
+    if len(matches) > 1:
+        return family, {"failure": "ambiguous", "short": short,
+                        "candidates": [s for _, _, s in matches]}, []
+    addr, size, sym = matches[0]
     if size == 0:
         size = 16
     insns = disassemble(dso, addr, addr + size)
+    if not insns:
+        return family, {"failure": "empty-disassembly", "short": short,
+                        "symbol": sym, "addr": addr, "size": size}, []
     rows: list[dict] = []
     counts = {
         "symbol": sym, "addr": addr, "size": size, "insns": len(insns),
         "jcc": 0, "div": 0, "cmov": 0, "setcc": 0, "jo": 0, "loop": 0,
         "calls": 0, "cpuid": 0, "dispatch_calls": [], "div_rows": [],
-        "missing": False,
+        "missing": False, "failure": None,
     }
     for i, insn in enumerate(insns):
         if insn.mnem == "cpuid":
@@ -273,12 +283,29 @@ def main() -> int:
     print("| function | symbol @ offset | bytes | insns | jcc | div/idiv | cmov | setcc | jo/jno | loop | calls | cpuid |")
     print("|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|")
     for fam, c, _ in results:
-        if c["missing"]:
-            print(f"| {fam} | **missing** (`{c['short']}`) | | | | | | | | | | |")
+        if c.get("failure"):
+            if c["failure"] == "ambiguous":
+                cand = ", ".join(f"`{s}`" for s in c.get("candidates", [])[:3])
+                print(f"| {fam} | **ambiguous** (`{c['short']}`: {cand}) | | | | | | | | | | |")
+            else:
+                print(f"| {fam} | **{c['failure']}** (`{c['short']}`) | | | | | | | | | | |")
             continue
         print(f"| {fam} | `{c['symbol']}` @ 0x{c['addr']:x} | {c['size']} | "
               f"{c['insns']} | {c['jcc']} | {c['div']} | {c['cmov']} | "
               f"{c['setcc']} | {c['jo']} | {c['loop']} | {c['calls']} | {c['cpuid']} |")
+
+    failures = [(fam, c) for fam, c, _ in results if c.get("failure")]
+    print()
+    print("## Coverage")
+    print()
+    print(f"- expected targets: {len(TARGETS)}")
+    print(f"- resolved uniquely and disassembled: {len(TARGETS) - len(failures)}")
+    print(f"- failed: {len(failures)}")
+    for fam, c in failures:
+        extra = ""
+        if c["failure"] == "ambiguous":
+            extra = " candidates: " + ", ".join(c.get("candidates", []))
+        print(f"  - {fam} (`{c['short']}`): {c['failure']}{extra}")
 
     print()
     print("## Divisions")
@@ -306,7 +333,7 @@ def main() -> int:
         n, addrs = scan_cpuid(args.dso)
         in_range = []
         for fam, c, _ in results:
-            if c["missing"]:
+            if c.get("failure"):
                 continue
             for a in addrs:
                 if c["addr"] <= a < c["addr"] + c["size"]:
@@ -333,6 +360,13 @@ def main() -> int:
         for r in rows:
             print(f"| {fam} | +0x{r['off']:x} | {r['jcc']} | {r['src']} | "
                   f"`{r['setter']}` | {r['guarded']} | {r['target']} | {r['dir']} |")
+    if failures:
+        print()
+        print("FAIL-CLOSED: one or more named targets were not resolved to a "
+              "single non-empty function. This report is not a gate result.",
+              file=sys.stderr)
+        return 1
+
     return 0
 
 
