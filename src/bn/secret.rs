@@ -12,6 +12,18 @@
 //! released, so a normal return, an early return and an unwind all behave
 //! identically.
 //!
+//! Cleansing covers the **whole allocation**, not just the initialised prefix.
+//! A `Vec` adopted through [`SecretBuf::from_vec`] may have been grown and then
+//! shrunk, leaving earlier secret limbs in its spare capacity; `len()` does not
+//! describe them, but they are still part of the block that is released.
+//!
+//! Whole-allocation cleansing is chosen over forcing `capacity == len` because
+//! `from_vec` must adopt whatever vector its caller already produced: shrinking
+//! to exact capacity can reallocate and would copy the secret through a second,
+//! uncleansed temporary (leaving the old block behind), and it can fail. The
+//! capacity is therefore read at release time, and every byte the vector owns is
+//! zeroed before the release.
+//!
 //! This is containment, not an ownership reconstruction: the buffer contents
 //! are still readable by the holder, and the infallible allocations in
 //! `limbs::rem`/`limbs::mul` that feed the ladder are untouched. The residual
@@ -58,7 +70,9 @@ impl<T: SecretElement> SecretBuf<T> {
     /// Adopt an existing vector as secret-bearing storage.
     ///
     /// Ownership moves inwards; the buffer is cleansed when it is released like
-    /// any other [`SecretBuf`].
+    /// any other [`SecretBuf`]. The adopted vector may carry spare capacity: the
+    /// visible secret is `[..len()]`, but `Drop` zeroes every byte the vector's
+    /// allocation owns, so nothing still in the buffer survives the release.
     pub(crate) fn from_vec(inner: Vec<T>) -> Self {
         Self { inner }
     }
@@ -72,14 +86,14 @@ impl<T: SecretElement> SecretBuf<T> {
         Some(Self { inner })
     }
 
-    /// The release sequence: volatile-zero the storage.
+    /// The release sequence: volatile-zero the whole allocation.
     ///
     /// `Drop` calls this immediately before the backing `Vec` is released, so it
     /// is the only cleansing a `SecretBuf` ever needs. It is idempotent, which is
     /// what lets a test run it explicitly on a still-live buffer and then read the
     /// cleared bytes soundly.
     fn cleanse_now(&mut self) {
-        cleanse_slice(&mut self.inner);
+        cleanse_allocation(&mut self.inner);
     }
 }
 
@@ -164,14 +178,19 @@ impl<T: SecretElement> SecretBuf<T> {
         if !drop_probe::is_armed(addr) {
             return;
         }
+        let Some(bytes) = self.inner.capacity().checked_mul(core::mem::size_of::<T>()) else {
+            return;
+        };
         let base = self.inner.as_ptr().cast::<u8>();
-        let bytes = core::mem::size_of_val(&self.inner[..]);
         let mut nonzero = 0usize;
         for i in 0..bytes {
-            // SAFETY: `i < bytes`, so `base.add(i)` lies inside `self.inner`'s
-            // live allocation. `Drop::drop` runs before the field's release, so
-            // the block is still owned and readable here; the volatile read has
-            // no side effects and cannot be optimised away.
+            // SAFETY: `i < bytes` covers the allocation, so `base.add(i)` lies
+            // inside `self.inner`'s live allocation. `Drop::drop` runs before the
+            // field's release, so the block is still owned and readable here; the
+            // volatile read has no side effects and cannot be optimised away.
+            // Every byte of the allocation was initialised by the test that armed
+            // the probe (it stages, or stages then shrinks, all capacity slots),
+            // so no uninitialised byte is read.
             if unsafe { base.add(i).read_volatile() } != 0 {
                 nonzero += 1;
             }
@@ -180,18 +199,36 @@ impl<T: SecretElement> SecretBuf<T> {
     }
 }
 
-/// Zero a secret-bearing slice through volatile writes.
-fn cleanse_slice<T: SecretElement>(v: &mut [T]) {
-    // `size_of_val` of a live slice cannot overflow: a slice's byte length is
-    // bounded by `isize::MAX` at construction.
-    let bytes = core::mem::size_of_val(v);
+/// Zero a secret-bearing allocation through volatile writes.
+///
+/// # Storage invariant
+///
+/// Every byte a [`SecretBuf`] can still expose at release time lies inside its
+/// vector's live allocation: the range
+/// `[as_mut_ptr(), as_mut_ptr() + capacity * size_of::<T>())`. That range is
+/// exactly what the `Vec` owns and releases, so cleansing it is complete for the
+/// buffer — and, unlike cleansing `[..len()]`, it also covers spare capacity
+/// that was populated before a shrink. Bytes left in a block that an earlier
+/// reallocation already released are outside any destructor's reach; the
+/// invariant is scoped to the allocation the buffer still owns.
+///
+/// The writes are stores, never loads, so a spare slot that is not currently
+/// initialised is initialised by the cleanse rather than read as if it were.
+fn cleanse_allocation<T: SecretElement>(v: &mut Vec<T>) {
+    // A `Vec`'s capacity can never make this product overflow (`capacity * size`
+    // is bounded by `isize::MAX`), but the checked form keeps the arithmetic
+    // obligation explicit instead of relying on that invariant.
+    let Some(bytes) = v.capacity().checked_mul(core::mem::size_of::<T>()) else {
+        return;
+    };
     if bytes == 0 {
         return;
     }
-    // SAFETY: `v` is a live slice of `v.len()` `T`s, so its elements are exactly
-    // `bytes` writable bytes. `T: SecretElement` guarantees no destructor and no
-    // all-zero-pattern validity hazard, so the volatile writes leave the slice
-    // valid and the later `Vec` release well-formed.
+    // SAFETY: `v.capacity()` slots are allocated from `v.as_mut_ptr()`, so
+    // `bytes` writable bytes lie inside the allocation `v` owns. `T:
+    // SecretElement` guarantees no destructor and no all-zero-pattern validity
+    // hazard, so overwriting the slot bytes with zero leaves the `Vec`
+    // well-formed and its later release valid. `cleanse` only stores.
     unsafe { crate::runtime::mem::cleanse(v.as_mut_ptr().cast::<u8>(), bytes) };
 }
 
@@ -267,8 +304,9 @@ mod tests {
     }
 
     /// The armed allocation must have been observed by `Drop` and released with
-    /// no non-zero byte left. Removing the `Drop` body therefore fails the test
-    /// twice over: no observation is recorded at all.
+    /// no non-zero byte left — over the whole allocation, spare capacity
+    /// included. Removing the `Drop` body therefore fails the test twice over:
+    /// no observation is recorded at all.
     fn assert_released_cleansed(ptr: *const u64) {
         let obs = match drop_probe::take() {
             Some(obs) => obs,
@@ -299,6 +337,33 @@ mod tests {
     #[allow(clippy::panic)]
     fn drop_on_unwind(_buf: SecretBuf<u64>) {
         panic!("unwind after staging the secret");
+    }
+
+    /// Spare capacity can retain earlier secret material: stage eight patterned
+    /// limbs, cut the logical length back to four, and adopt the vector. Only a
+    /// cleanse of the whole allocation reaches the four spare slots.
+    #[test]
+    fn automatic_drop_cleanses_spare_capacity() {
+        // Grow from empty so the backing vector really is over-allocated, then
+        // shrink only the logical length.
+        let mut backing = Vec::new();
+        backing.extend_from_slice(&PATTERN);
+        backing.extend_from_slice(&PATTERN);
+        let capacity = backing.capacity();
+        // Initialise every capacity slot, so the probe's whole-allocation read
+        // is of initialised bytes even if the allocator rounded the growth up.
+        backing.resize(capacity, PATTERN[0]);
+        backing.truncate(PATTERN.len());
+        assert!(
+            capacity > backing.len(),
+            "the test requires spare capacity: {capacity} slots for {} limbs",
+            backing.len()
+        );
+        let ptr = backing.as_ptr();
+        let buf = SecretBuf::from_vec(backing);
+        drop_probe::arm(ptr);
+        drop(buf);
+        assert_released_cleansed(ptr);
     }
 
     #[test]

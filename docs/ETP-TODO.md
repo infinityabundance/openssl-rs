@@ -51,9 +51,9 @@ Rules that bind this queue (from AGENTS.md, extended by the ETP mandate):
 | id | item | status |
 |---|---|---|
 | T1 | Infallible allocations in `limbs::rem`/`limbs::mul`; `base_plain`, `rr`, `one_mont`, `product` still plain `Vec`s (`OBL-BN-ALLOCATOR`) | TODO |
-| T2 | `SecretBuf::from_vec` cleanses initialised length only; spare capacity may retain secret bytes — establish a storage invariant or cleanse the whole allocation | TODO |
+| T2 | `SecretBuf::from_vec` cleanses initialised length only; spare capacity may retain secret bytes — establish a storage invariant or cleanse the whole allocation | DONE: `Drop` cleanses the whole allocation (`capacity * size_of`), writes only; invariant documented in `bn/secret.rs`; capacity test fails when disabled |
 | T3 | Destructor cleansing is proportional to normalised (secret) length; representation-level fix needed, not a normalisation tweak | TODO |
-| T4 | Mutate only `cleanse_now()` while keeping the observer, to prove the tests detect uncleansed bytes rather than only the absence of the destructor | TODO |
+| T4 | Mutate only `cleanse_now()` while keeping the observer, to prove the tests detect uncleansed bytes rather than only the absence of the destructor | DONE: cleanse-only mutation → 1 passed/4 failed; whole-body removal → 1 passed/4 failed (all "Drop did not observe") |
 | T5 | EC secret-base reduction: `ecdsa_sign_setup` inverts nonce `k` via `ec_field_inverse_mod_ord`; `ossl_ec_GFp_mont_field_inv` takes field elements; initial `limbs::rem` is variable-time | TODO |
 | T6 | RSA CRT moduli are secret (only the width is public); Montgomery precomputation runs on them — taint CRT modulus contents, not just exponents | TODO |
 | T7 | `BN_mod_inverse`: 171 branches + 38 secret-derived addresses + 28 allocator branches; needs a domain-correct constant-time inversion, with a separate variable-time public path | TODO |
@@ -171,16 +171,23 @@ Rules that bind this queue (from AGENTS.md, extended by the ETP mandate):
 
 ---
 
-## G. Highest-value next actions (ordered)
+## G. Execution sequence (fixed)
 
-1. `T4` — mutate only `cleanse_now()` (cheapest falsification of the current test).
-2. `T2`, `T1` — storage invariant for spare capacity, then the remaining infallible allocations.
-3. `T19`, `T20` — fresh binary-bound measurement and a reproducible instrumentation build.
-4. `T6`, `T5` — taint RSA CRT moduli, then the EC nonce path.
-5. `T7` — domain-correct constant-time inversion.
-6. `O1`–`O11` — the interoperability matrix.
-7. `A1`, `A9`, `A10`, `A20`, `A22` — the SARIF/DSSE vertical slice and its eight refusals.
-8. `C1`–`C5` — finish curl honestly.
+Work proceeds strictly in item order. No choosing, no reordering, no skipping an
+item to take a convenient one. Each item is finished (proof, controls, gates,
+receipt) before the next begins, and each is pushed before the next starts.
+
+| order | section | items |
+|---|---|---|
+| 1 | B — timing safety | `T1`, `T2`, `T3`, `T4`, `T5`, … `T22` |
+| 2 | C — OpenSSH interoperability | `O1`, `O2`, … `O12` |
+| 3 | E — ETP constitution and claim integrity | `ETP-0`, `ETP-1`, … `ETP-T15` |
+| 4 | F — SARIF / DSSE addendum | `A0`, `A1`, … `A27` |
+| 5 | D — curl | `C1` … `C5`, **last** |
+
+An item that is `BLOCKED` is recorded with its blocker and the next item in the
+same section begins; it is revisited when the blocker changes. Nothing is
+declared complete without the evidence named in its row.
 
 ## H. Non-claims that bind this queue
 
