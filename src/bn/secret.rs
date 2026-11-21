@@ -92,6 +92,11 @@ impl<T: SecretElement> SecretBuf<T> {
 
     /// A zero-filled buffer of `n` elements, or `None` when `n` cannot be
     /// reserved. Allocation failure is reported, never aborted.
+    ///
+    /// `#[track_caller]` keeps the allocation-failure seam's site identity at the
+    /// caller (for example each scratch buffer in the constant-time inversion)
+    /// instead of collapsing every `SecretBuf` request onto this line.
+    #[track_caller]
     pub(crate) fn try_zeroed(n: usize) -> Option<Self> {
         crate::bn::alloc::try_zeroed(n, T::ZERO).map(Self::from_vec)
     }
@@ -123,6 +128,11 @@ impl<T: SecretElement> DerefMut for SecretBuf<T> {
 
 impl<T: SecretElement> Drop for SecretBuf<T> {
     fn drop(&mut self) {
+        // Test-only: count the non-zero bytes first, so the observation says both
+        // that the buffer held live secret data and that the wipe removed it.
+        // Compiled out of every non-test build.
+        #[cfg(test)]
+        let nonzero_before = self.observe_before_for_test();
         // The `Vec` is released by ordinary field drop *after* this returns, so
         // the block is cleansed before it is freed, on success, early return and
         // unwind alike.
@@ -131,7 +141,7 @@ impl<T: SecretElement> Drop for SecretBuf<T> {
         // the field drop releases it, so a test can prove that automatic
         // destruction cleansed. Compiled out of every non-test build.
         #[cfg(test)]
-        self.observe_release_for_test();
+        self.observe_release_for_test(nonzero_before);
     }
 }
 
@@ -150,6 +160,9 @@ pub(crate) mod drop_probe {
     /// What `Drop` saw on an armed allocation.
     pub(crate) struct Observation {
         pub(crate) ptr: usize,
+        /// Non-zero bytes immediately **before** the wipe.
+        pub(crate) nonzero_before: usize,
+        /// Non-zero bytes immediately **after** the wipe (expected `0`).
         pub(crate) nonzero_bytes: usize,
     }
 
@@ -158,6 +171,21 @@ pub(crate) mod drop_probe {
         static TARGET: Cell<usize> = const { Cell::new(0) };
         /// What the last armed `Drop` recorded on this thread.
         static SEEN: Cell<Option<Observation>> = const { Cell::new(None) };
+        /// A one-shot request for a code path that owns its scratch privately to
+        /// arm the probe on its next buffer.
+        static REQUEST: Cell<bool> = const { Cell::new(false) };
+    }
+
+    /// Ask a cooperating code path to arm the probe on the scratch it is about to
+    /// create and release. Used by call sites whose buffers are local, so a test
+    /// cannot hold the pointer itself.
+    pub(crate) fn request() {
+        REQUEST.with(|r| r.set(true));
+    }
+
+    /// Consume a pending [`request`].
+    pub(crate) fn take_request() -> bool {
+        REQUEST.with(|r| r.replace(false))
     }
 
     pub(crate) fn arm(ptr: *const u64) {
@@ -169,8 +197,14 @@ pub(crate) mod drop_probe {
         TARGET.with(|t| t.get() == ptr)
     }
 
-    pub(super) fn record(ptr: usize, nonzero_bytes: usize) {
-        SEEN.with(|s| s.set(Some(Observation { ptr, nonzero_bytes })));
+    pub(super) fn record(ptr: usize, nonzero_before: usize, nonzero_bytes: usize) {
+        SEEN.with(|s| {
+            s.set(Some(Observation {
+                ptr,
+                nonzero_before,
+                nonzero_bytes,
+            }))
+        });
     }
 
     pub(crate) fn take() -> Option<Observation> {
@@ -188,32 +222,50 @@ impl<T: SecretElement> SecretBuf<T> {
         self.inner.capacity()
     }
 
+    /// Count non-zero bytes *before* `Drop`'s cleanse. Runs only when the
+    /// allocation was armed by a test on this thread.
+    fn observe_before_for_test(&self) -> usize {
+        if !drop_probe::is_armed(self.inner.as_ptr() as usize) {
+            return 0;
+        }
+        self.nonzero_bytes()
+    }
+
     /// Read the storage after `Drop`'s cleanse and record whether any byte
     /// survived. Runs only when the allocation was armed by a test on this
     /// thread, so unrelated `SecretBuf` drops are ignored.
-    fn observe_release_for_test(&self) {
+    fn observe_release_for_test(&self, nonzero_before: usize) {
         let addr = self.inner.as_ptr() as usize;
         if !drop_probe::is_armed(addr) {
             return;
         }
+        drop_probe::record(addr, nonzero_before, self.nonzero_bytes());
+    }
+
+    /// Count the non-zero bytes across the allocation the vector owns.
+    ///
+    /// # Safety-relevant precondition
+    ///
+    /// The caller reads every byte of the allocation, so every one of them must
+    /// be initialised. The probe is only armed by tests that stage (or stage then
+    /// shrink, after initialising all capacity slots) the buffer, which is the
+    /// same precondition the release observation already relied on.
+    fn nonzero_bytes(&self) -> usize {
         let Some(bytes) = self.inner.capacity().checked_mul(core::mem::size_of::<T>()) else {
-            return;
+            return 0;
         };
         let base = self.inner.as_ptr().cast::<u8>();
         let mut nonzero = 0usize;
         for i in 0..bytes {
             // SAFETY: `i < bytes` covers the allocation, so `base.add(i)` lies
-            // inside `self.inner`'s live allocation. `Drop::drop` runs before the
-            // field's release, so the block is still owned and readable here; the
-            // volatile read has no side effects and cannot be optimised away.
-            // Every byte of the allocation was initialised by the test that armed
-            // the probe (it stages, or stages then shrinks, all capacity slots),
-            // so no uninitialised byte is read.
+            // inside `self.inner`'s live allocation. The block is still owned and
+            // readable here (this runs inside `Drop`, before the field release);
+            // the volatile read has no side effects and cannot be optimised away.
             if unsafe { base.add(i).read_volatile() } != 0 {
                 nonzero += 1;
             }
         }
-        drop_probe::record(addr, nonzero);
+        nonzero
     }
 }
 
