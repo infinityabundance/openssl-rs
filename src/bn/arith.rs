@@ -1236,6 +1236,22 @@ fn fixed_width_exponent(pd: &[Limb], width: usize) -> Option<SecretBuf<Limb>> {
 /// its trailing-zero `normalise`, and the data-dependent loops of
 /// [`limbs::div_rem`] are all avoided. The final conditional subtraction is a mask
 /// select, not a branch.
+/// `a * b + c + d` for 64-bit terms, as a 128-bit value.
+///
+/// The maximum is `(2^64-1)^2 + 2*(2^64-1) = 2^128 - 1`, so the arithmetic
+/// cannot overflow. `wrapping_*` states that and keeps the profile's overflow
+/// check — a conditional jump on the product's high bits — out of the
+/// secret-bearing Montgomery loop. The check is never taken, but its *condition*
+/// depends on secret limbs, which is exactly what ctgrind reports and what
+/// §5 forbids after optimisation.
+#[inline(always)]
+fn mul_add_carry(a: u64, b: u64, c: u64, d: u64) -> u128 {
+    (a as u128)
+        .wrapping_mul(b as u128)
+        .wrapping_add(c as u128)
+        .wrapping_add(d as u128)
+}
+
 fn mont_mul_into(
     a: &[Limb],
     b: &[Limb],
@@ -1255,7 +1271,7 @@ fn mont_mul_into(
     for i in 0..n {
         let mut carry = 0u64;
         for j in 0..n {
-            let v = (a[i] as u128) * (b[j] as u128) + (t[i + j] as u128) + (carry as u128);
+            let v = mul_add_carry(a[i], b[j], t[i + j], carry);
             t[i + j] = v as u64;
             carry = (v >> 64) as u64;
         }
@@ -1269,7 +1285,7 @@ fn mont_mul_into(
         let u = t[i].wrapping_mul(n0);
         let mut carry = 0u64;
         for j in 0..n {
-            let v = (u as u128) * (m[j] as u128) + (t[i + j] as u128) + (carry as u128);
+            let v = mul_add_carry(u, m[j], t[i + j], carry);
             t[i + j] = v as u64;
             carry = (v >> 64) as u64;
         }
@@ -1336,12 +1352,15 @@ fn mont_mul_fallible(a: &[Limb], b: &[Limb], m: &[Limb], n0: Limb) -> Option<Vec
 /// their size is public, but their contents are not automatically public (RSA
 /// CRT precomputation runs on secret primes), so `R` and `R^2` are kept in
 /// [`SecretBuf`] and are still computed with variable-time helpers. The base is
-/// reduced once, with the fallible [`limbs::rem_fallible`]; its secrecy is per
-/// caller (DH's generator and RSA's message are public; an EC field element,
-/// notably `ecdsa_sign_setup`'s nonce through `ec_field_inverse_mod_ord`, is
-/// potentially secret), so it is adopted into [`SecretBuf`] unconditionally.
-/// The variable-time reduction itself remains an open finding in the timing
-/// receipt.
+/// folded into Montgomery form once, without a division: a base of at most `n`
+/// limbs is below `R = 2^(64n)`, so `base * R^2 < R * m` satisfies REDC's
+/// precondition and the fixed-loop [`mont_mul_into`] performs the reduction.
+/// Its secrecy is per caller (DH's generator and RSA's message are public; an EC
+/// field element, notably `ecdsa_sign_setup`'s nonce through
+/// `ec_field_inverse_mod_ord`, is secret), so the fold is unconditional and
+/// fixed-pattern. Only a base wider than `n` limbs — outside every EC caller's
+/// domain — keeps the variable-time [`limbs::rem_fallible`], and that width is
+/// public geometry.
 ///
 /// Every intermediate is `n = m.len()` limbs wide, so no allocation size or
 /// limb count depends on a secret bit. All ladder scratch is allocated once, before
@@ -1503,14 +1522,26 @@ fn mod_exp_core_consttime_staged(
         n,
     )?);
 
-    // The base reduction is variable-time, so secrecy is classified per caller:
-    // DH's generator and RSA's encoded message/ciphertext are public, but an EC
-    // field element is not automatically public — `ossl_ec_group_do_inverse_ord`
-    // is reached with a secret nonce from `ecdsa_sign_setup`. `base_plain` is
-    // therefore adopted into a `SecretBuf` unconditionally, and the variable-time
-    // reduction itself stays an open finding in the timing receipt rather than
-    // being papered over here.
-    let base_plain = SecretBuf::from_vec(pad_to(&limbs::rem_fallible(ad, md)?, n)?);
+    // Base reduction. The EC reaches this with a secret base: the nonce through
+    // `ec_field_inverse_mod_ord` (`ecdsa_sign_setup`) and a field element through
+    // `ossl_ec_GFp_mont_field_inv`. A division here would be variable-time and
+    // leak the base, so it is folded into Montgomery form directly instead.
+    // Zero-extended to `n` limbs the base is below `R = 2^(64n)`, and `rr < m`,
+    // so `base * rr < R * m` is exactly REDC's precondition: the fixed-loop
+    // `mont_mul_into` answers `base * R mod m` — the Montgomery form of
+    // `base mod m` — with no division.
+    //
+    // Precondition relied on: `ad.len() <= n` (a public limb count), so
+    // `base < R`. Both EC callers satisfy it (the nonce is below the order, a
+    // field element below the field). A C caller passing a base of more than
+    // `n` limbs — `base >= R`, which the authority's `BN_mod_exp_mont_consttime`
+    // accepts — keeps the variable-time reduction; that input is outside the EC
+    // secret domain, and the width dispatch is on public geometry.
+    let base_plain = if ad.len() <= n {
+        SecretBuf::from_vec(pad_to(ad, n)?)
+    } else {
+        SecretBuf::from_vec(pad_to(&limbs::rem_fallible(ad, md)?, n)?)
+    };
     // `base * R^2 * R^-1 == base * R`: convert into the Montgomery domain.
     let mut base = SecretBuf::from_vec(mont_mul_fallible(&base_plain, &rr, md, n0)?);
     let mut acc = one_mont;
@@ -2089,6 +2120,100 @@ mod tests {
                     }
                 }
             }
+        }
+    }
+
+    /// ctgrind taint case for the secret-base reduction.
+    ///
+    /// This is the arithmetic of `ec_field_inverse_mod_ord`, which
+    /// `ecdsa_sign_setup` reaches with the secret nonce: the P-256 order is the
+    /// modulus and `order - 2` the public Fermat exponent, with a
+    /// signing-sized value as the base. The base's limbs are marked undefined
+    /// with valgrind's client request, so memcheck reports any conditional jump
+    /// or secret-derived address inside the fixed-pattern ladder and its
+    /// initial base fold. Without valgrind the request is a harmless no-op, so
+    /// the same test also runs in the ordinary suite.
+    ///
+    /// Coverage: the ladder core and the base fold. Not covered: the C-ABI
+    /// `parts()` copy, the `ec_field_inverse_mod_ord` wrapper, `BN_CTX`
+    /// allocation, and the public exponent's own timing.
+    ///
+    /// Gate: `valgrind --tool=memcheck --error-exitcode=99 <test-bin> --exact
+    /// bn::arith::tests::ctgrind_secret_base_fold_and_ladder --nocapture`.
+    /// `CTGRIND_CONTROL=1` adds a deliberate branch on a marked limb, which
+    /// memcheck must report (negative control).
+    #[test]
+    fn ctgrind_secret_base_fold_and_ladder() {
+        let order = vec![
+            0xf3b9_cac2_fc63_2551u64,
+            0xbce6_faad_a717_9e84,
+            0xffff_ffff_ffff_ffff,
+            0xffff_ffff_0000_0000,
+        ];
+        let mut exponent = order.clone();
+        exponent[0] -= 2; // order - 2, public
+
+        let mut base = vec![
+            0x0123_4567_89ab_cdefu64,
+            0x1122_3344_5566_7788,
+            0x99aa_bbcc_ddee_ff00,
+            0x0fed_cba9_8765_4321,
+        ];
+
+        #[cfg(target_arch = "x86_64")]
+        {
+            // SAFETY: `base` is a live, uniquely borrowed buffer and the
+            // client-request sequence only marks its bytes' definedness.
+            unsafe {
+                valgrind_make_mem_undefined(base.as_mut_ptr().cast::<u8>(), base.len() * 8);
+            }
+            if std::env::var_os("CTGRIND_CONTROL").is_some() {
+                // Negative control: memcheck must flag this branch on a
+                // marked limb.
+                let mut acc = 0u64;
+                for &limb in &base {
+                    if limb & 1 == 1 {
+                        acc = acc.wrapping_add(1);
+                    }
+                }
+                core::hint::black_box(acc);
+            }
+        }
+
+        let Some(staged) = pad_to(&exponent, order.len()).map(SecretBuf::from_vec) else {
+            unreachable!("the exponent fits the public width")
+        };
+        let out = mod_exp_core_consttime_from_parts(&base, staged, &order, order.len());
+        // Only the `Option` discriminant is inspected: the value itself is
+        // secret-derived and must never be branched on.
+        assert!(out.is_some(), "a nonzero modulus always answers");
+    }
+
+    /// `VALGRIND_MAKE_MEM_UNDEFINED` as the amd64 client request.
+    ///
+    /// The instruction sequence is `valgrind.h`'s
+    /// `__SPECIAL_INSTRUCTION_PREAMBLE` followed by `xchgq rbx, rbx`; valgrind
+    /// replaces it during translation and reads the request word and arguments
+    /// from the array `rax` points at. Outside valgrind it is a few harmless
+    /// register rotations.
+    #[cfg(target_arch = "x86_64")]
+    unsafe fn valgrind_make_mem_undefined(addr: *mut u8, len: usize) {
+        let args: [usize; 6] = [0x4D43_0001, addr as usize, len, 0, 0, 0];
+        let _result: usize;
+        // SAFETY: the sequence is the documented valgrind client-request
+        // pattern; `args` lives for the duration of the asm and is only read.
+        unsafe {
+            core::arch::asm!(
+                "rol rdi, 3",
+                "rol rdi, 13",
+                "rol rdi, 61",
+                "rol rdi, 51",
+                "xchg rbx, rbx",
+                in("rax") args.as_ptr(),
+                inout("rdx") 0usize => _result,
+                out("rdi") _,
+                options(nostack),
+            );
         }
     }
 

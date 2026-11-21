@@ -2356,6 +2356,13 @@ pub unsafe extern "C" fn ossl_ec_group_simple_order_bits(group: *const EcGroup) 
 /// through `bn_mod_exp_mont_fixed_top` so the result is fixed-top. No Montgomery data or no
 /// context is a failure, not a fallback.
 ///
+/// Secret classification: the modulus and the exponent (`order-2`) are public curve
+/// parameters, while `x` is the ECDSA nonce in `ecdsa_sign_setup` (and the SM2 nonce in
+/// `sm2_sig_gen`), so it is secret on the signing reach; the verify reach passes the
+/// public signature value `s`. The fixed-top ladder treats the base as secret
+/// unconditionally, and its base reduction is a fixed-loop Montgomery REDC rather than the
+/// variable-time `limbs::rem`.
+///
 /// # Safety
 ///
 /// `group` is live with live `order` and `mont_data`; `r` and `x` are live; `ctx` is NULL or a
