@@ -1267,6 +1267,48 @@ mod tests {
         }
     }
 
+    /// T29 census: where one P-256 signature's allocations come from.
+    ///
+    /// The seam sees only requests that go through the fallible helpers, so this
+    /// explains part of the per-signature total that `alloc_probe.so` measures; the
+    /// ordering is the result, not the total. A fix should target the site that
+    /// dominates, and the census is re-run afterwards to show the change moved.
+    ///
+    /// `cargo test --lib -- --exact ec::ecdsa_ossl::tests::ecdsa_signing_allocation_census
+    /// --nocapture` prints the table.
+    #[test]
+    fn ecdsa_signing_allocation_census() {
+        let dgst = [0x3cu8; 32];
+        // SAFETY: every pointer below is a fresh object this test owns and null-checks.
+        unsafe {
+            let ec = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+            assert!(!ec.is_null());
+            assert_eq!(EC_KEY_generate_key(ec), 1);
+
+            let guard = crate::runtime::alloc::test_fail::tally_start();
+            let sig = ECDSA_do_sign(dgst.as_ptr(), dgst.len() as c_int, ec);
+            assert!(!sig.is_null(), "the sign must succeed");
+            let census = crate::runtime::alloc::test_fail::tally_take();
+            drop(guard);
+
+            let total: usize = census.iter().map(|&(_, n)| n).sum();
+            println!(
+                "T29 census: {total} seam-visible allocations, {} sites",
+                census.len()
+            );
+            for (site, count) in census.iter().take(12) {
+                println!("  {count:>7}  {}", site);
+            }
+            assert!(
+                total > 0,
+                "the signature must reach the allocation seam, or the census measures nothing"
+            );
+
+            ECDSA_SIG_free(sig);
+            EC_KEY_free(ec);
+        }
+    }
+
     /// ctgrind case for T12: the *caller-supplied* nonce inverse arm of `sign_sig`.
     ///
     /// `ECDSA_sign_setup` on this profile passes `dgst == NULL`, so its draw is

@@ -39,8 +39,8 @@
 use core::ffi::{c_int, c_ulong};
 
 use crate::bn::bignum::{
-    as_mut, as_ref, magnitude, new_owned, new_owned_consttime, parts, parts_fallible, store,
-    store_consttime, BN_copy, BN_get_flags, BigNum, BN_FLG_CONSTTIME,
+    as_mut, as_ref, magnitude, new_owned, new_owned_consttime, parts, parts_borrowed,
+    parts_fallible, store, store_consttime, BN_copy, BN_get_flags, BigNum, BN_FLG_CONSTTIME,
 };
 use crate::bn::ctx::BnCtx;
 use crate::bn::limbs::{self, Limb};
@@ -63,25 +63,21 @@ use crate::runtime::secret::{SecretBuf, SecretLimbs, SecretRef};
 pub unsafe extern "C" fn BN_add(r: *mut BigNum, a: *const BigNum, b: *const BigNum) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `a` and `b` are null-or-live per this function's `# Safety`
-        // section. Each shared borrow ends at its `parts` call, before `r` is
+        // section. Each shared borrow ends at its limb operation, before `r` is
         // borrowed for the store.
         let x = unsafe { as_ref(a) };
-        let Some((ad, an)) = parts_fallible(x) else {
-            return 0;
-        };
+        let (ad, an) = parts_borrowed(x);
         // SAFETY: as above for `b`.
         let y = unsafe { as_ref(b) };
-        let Some((bd, bn)) = parts_fallible(y) else {
-            return 0;
-        };
+        let (bd, bn) = parts_borrowed(y);
         let built = (|| -> Option<(Vec<Limb>, bool)> {
             if an == bn {
-                Some((limbs::add_fallible(&ad, &bd)?, an))
+                Some((limbs::add_fallible(ad, bd)?, an))
             } else {
-                match limbs::cmp(&ad, &bd) {
+                match limbs::cmp(ad, bd) {
                     core::cmp::Ordering::Equal => Some((Vec::new(), false)),
-                    core::cmp::Ordering::Greater => Some((limbs::sub_fallible(&ad, &bd)?, an)),
-                    core::cmp::Ordering::Less => Some((limbs::sub_fallible(&bd, &ad)?, bn)),
+                    core::cmp::Ordering::Greater => Some((limbs::sub_fallible(ad, bd)?, an)),
+                    core::cmp::Ordering::Less => Some((limbs::sub_fallible(bd, ad)?, bn)),
                 }
             }
         })();
@@ -103,25 +99,21 @@ pub unsafe extern "C" fn BN_add(r: *mut BigNum, a: *const BigNum, b: *const BigN
 pub unsafe extern "C" fn BN_sub(r: *mut BigNum, a: *const BigNum, b: *const BigNum) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `a` and `b` are null-or-live per this function's `# Safety`
-        // section. Each shared borrow ends at its `parts` call, before `r` is
+        // section. Each shared borrow ends at its limb operation, before `r` is
         // borrowed for the store.
         let x = unsafe { as_ref(a) };
-        let Some((ad, an)) = parts_fallible(x) else {
-            return 0;
-        };
+        let (ad, an) = parts_borrowed(x);
         // SAFETY: as above for `b`.
         let y = unsafe { as_ref(b) };
-        let Some((bd, bn)) = parts_fallible(y) else {
-            return 0;
-        };
+        let (bd, bn) = parts_borrowed(y);
         let built = (|| -> Option<(Vec<Limb>, bool)> {
             if an != bn {
-                Some((limbs::add_fallible(&ad, &bd)?, an))
+                Some((limbs::add_fallible(ad, bd)?, an))
             } else {
-                match limbs::cmp(&ad, &bd) {
+                match limbs::cmp(ad, bd) {
                     core::cmp::Ordering::Equal => Some((Vec::new(), false)),
-                    core::cmp::Ordering::Greater => Some((limbs::sub_fallible(&ad, &bd)?, an)),
-                    core::cmp::Ordering::Less => Some((limbs::sub_fallible(&bd, &ad)?, !bn)),
+                    core::cmp::Ordering::Greater => Some((limbs::sub_fallible(ad, bd)?, an)),
+                    core::cmp::Ordering::Less => Some((limbs::sub_fallible(bd, ad)?, !bn)),
                 }
             }
         })();
@@ -144,18 +136,14 @@ pub unsafe extern "C" fn BN_sub(r: *mut BigNum, a: *const BigNum, b: *const BigN
 pub unsafe extern "C" fn BN_uadd(r: *mut BigNum, a: *const BigNum, b: *const BigNum) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `a` and `b` are null-or-live per this function's `# Safety`
-        // section. Each shared borrow ends at its `parts` call, before `r` is
+        // section. Each shared borrow ends at its limb operation, before `r` is
         // borrowed for the store.
         let x = unsafe { as_ref(a) };
-        let Some((ad, _)) = parts_fallible(x) else {
-            return 0;
-        };
+        let (ad, _) = parts_borrowed(x);
         // SAFETY: as above for `b`.
         let y = unsafe { as_ref(b) };
-        let Some((bd, _)) = parts_fallible(y) else {
-            return 0;
-        };
-        let Some(mag) = limbs::add_fallible(&ad, &bd) else {
+        let (bd, _) = parts_borrowed(y);
+        let Some(mag) = limbs::add_fallible(ad, bd) else {
             return 0;
         };
         // SAFETY: `r` is null-or-live per this function's `# Safety` section; the
@@ -181,23 +169,19 @@ pub unsafe extern "C" fn BN_uadd(r: *mut BigNum, a: *const BigNum, b: *const Big
 pub unsafe extern "C" fn BN_usub(r: *mut BigNum, a: *const BigNum, b: *const BigNum) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `a` and `b` are null-or-live per this function's `# Safety`
-        // section. Each shared borrow ends at its `parts` call, before `r` is
+        // section. Each shared borrow ends at its limb operation, before `r` is
         // borrowed for the store.
         let x = unsafe { as_ref(a) };
-        let Some((ad, _)) = parts_fallible(x) else {
-            return 0;
-        };
+        let (ad, _) = parts_borrowed(x);
         // SAFETY: as above for `b`.
         let y = unsafe { as_ref(b) };
-        let Some((bd, _)) = parts_fallible(y) else {
-            return 0;
-        };
+        let (bd, _) = parts_borrowed(y);
         if ad.len() < bd.len() {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BN_ADD_142) };
             return 0;
         }
-        let Some(mag) = limbs::sub_fallible(&ad, &bd) else {
+        let Some(mag) = limbs::sub_fallible(ad, bd) else {
             return 0;
         };
         // SAFETY: `r` is null-or-live per this function's `# Safety` section; the
@@ -365,18 +349,14 @@ pub unsafe extern "C" fn BN_mul(
 ) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `a` and `b` are null-or-live per this function's `# Safety`
-        // section. Each shared borrow ends at its `parts` call, before `r` is
+        // section. Each shared borrow ends at its limb operation, before `r` is
         // borrowed for the store.
         let x = unsafe { as_ref(a) };
-        let Some((ad, an)) = parts_fallible(x) else {
-            return 0;
-        };
+        let (ad, an) = parts_borrowed(x);
         // SAFETY: as above for `b`.
         let y = unsafe { as_ref(b) };
-        let Some((bd, bn)) = parts_fallible(y) else {
-            return 0;
-        };
-        let Some(mag) = limbs::mul_fallible(&ad, &bd) else {
+        let (bd, bn) = parts_borrowed(y);
+        let Some(mag) = limbs::mul_fallible(ad, bd) else {
             return 0;
         };
         // SAFETY: `r` is null-or-live per this function's `# Safety` section; the
@@ -394,12 +374,10 @@ pub unsafe extern "C" fn BN_mul(
 pub unsafe extern "C" fn BN_sqr(r: *mut BigNum, a: *const BigNum, _ctx: *mut BnCtx) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `a` is null-or-live per this function's `# Safety` section; its
-        // shared borrow ends at `parts`, before the output is borrowed.
+        // shared borrow ends at the limb operation, before the output is borrowed.
         let x = unsafe { as_ref(a) };
-        let Some((ad, _)) = parts_fallible(x) else {
-            return 0;
-        };
-        let Some(mag) = limbs::mul_fallible(&ad, &ad) else {
+        let (ad, _) = parts_borrowed(x);
+        let Some(mag) = limbs::mul_fallible(ad, ad) else {
             return 0;
         };
         // A square is never negative, whatever the operand's sign.
@@ -442,18 +420,12 @@ pub unsafe extern "C" fn BN_div(
         let (ad, an) = {
             // SAFETY: `a` is null-or-live per this function's `# Safety` section.
             let x = unsafe { as_ref(a) };
-            let Some(p) = parts_fallible(x) else {
-                return 0;
-            };
-            p
+            parts_borrowed(x)
         };
         let (bd, bn) = {
             // SAFETY: `b` is null-or-live per this function's `# Safety` section.
             let y = unsafe { as_ref(b) };
-            let Some(p) = parts_fallible(y) else {
-                return 0;
-            };
-            p
+            parts_borrowed(y)
         };
         if bd.is_empty() {
             // SAFETY: the site is a compile-time constant.
@@ -467,9 +439,9 @@ pub unsafe extern "C" fn BN_div(
         // A zero divisor raises `BN_R_DIV_BY_ZERO` above; an allocation failure
         // here is only the ordinary failure answer and raises nothing.
         let divided = if consttime {
-            limbs::div_rem_ct_fallible(&ad, &bd)
+            limbs::div_rem_ct_fallible(ad, bd)
         } else {
-            limbs::div_rem_fallible(&ad, &bd)
+            limbs::div_rem_fallible(ad, bd)
         };
         let Some((q, r)) = divided else {
             return 0;
@@ -518,17 +490,13 @@ pub unsafe extern "C" fn BN_nnmod(
 ) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `a` and `m` are null-or-live per this function's `# Safety`
-        // section. Each shared borrow ends at its `parts` call, before `r` is
+        // section. Each shared borrow ends at its limb operation, before `r` is
         // borrowed for the store.
         let x = unsafe { as_ref(a) };
-        let Some((ad, an)) = parts_fallible(x) else {
-            return 0;
-        };
+        let (ad, an) = parts_borrowed(x);
         // SAFETY: as above for `m`.
         let y = unsafe { as_ref(m) };
-        let Some((md, _)) = parts_fallible(y) else {
-            return 0;
-        };
+        let (md, _) = parts_borrowed(y);
         if core::ptr::eq(r.cast_const(), m) {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BN_MOD_22) };
@@ -545,23 +513,23 @@ pub unsafe extern "C" fn BN_nnmod(
         // section, and the flags are plain values.
         let consttime =
             unsafe { BN_get_flags(a, BN_FLG_CONSTTIME) | BN_get_flags(m, BN_FLG_CONSTTIME) } != 0;
-        let divided = if consttime {
-            limbs::div_rem_ct_fallible(&ad, &md)
+        // A remainder-only call: the quotient has no reader here (it can derive from
+        // a secret dividend, which is why an earlier version adopted it in a
+        // `SecretBuf` and discarded it), and the T29 census showed that allocation was
+        // one of the per-reduction costs paid on every field multiplication. The loop
+        // does not build it at all.
+        let remainder = if consttime {
+            limbs::div_rem_ct_fallible(ad, md).map(|(_, r)| r)
         } else {
-            limbs::div_rem_fallible(&ad, &md)
+            limbs::rem_fallible(ad, md)
         };
-        let Some((q, mut rem)) = divided else {
+        let Some(mut rem) = remainder else {
             return 0;
         };
-        // The quotient is an intermediate with no reader and can derive from a
-        // secret dividend (the ECDSA nonce's affine coordinate). Adopting it as
-        // soon as it exists cleanses the block on release; the remainder is the
-        // value the caller observes and is stored below (T23).
-        drop(SecretBuf::from_vec(q));
         // A remainder that came out negative is made non-negative by adding the
         // modulus, which is the definition of `nnmod` rather than a fix-up.
         if an && !rem.is_empty() {
-            let Some(v) = limbs::sub_fallible(&md, &rem) else {
+            let Some(v) = limbs::sub_fallible(md, &rem) else {
                 return 0;
             };
             rem = v;

@@ -732,20 +732,21 @@ pub(crate) fn rem(a: &[Limb], m: &[Limb]) -> Vec<Limb> {
 
 /// `a mod m`, for a non-zero `m`, or `None` when the reduction cannot be
 /// allocated.
+///
+/// The quotient is not built: a remainder-only caller has no reader for it, and
+/// the T29 census showed the discarded quotient was one of the five allocations a
+/// field reduction made. The loop is the same one [`div_rem_fallible`] runs; only
+/// the quotient write is omitted.
 pub(crate) fn rem_fallible(a: &[Limb], m: &[Limb]) -> Option<Vec<Limb>> {
     if m.len() == 1 {
         let (q, r) = div_rem_small_fallible(a, m[0])?;
         // The quotient has no reader here and derives from the (possibly secret)
         // dividend. Adopting it immediately makes its release cleanse the block;
         // no fallible step runs between the return and this adoption.
-        drop(crate::bn::secret::SecretBuf::from_vec(q));
+        drop(SecretLimbs::from_vec(q));
         return from_u64_fallible(r);
     }
-    let (q, r) = div_rem_fallible(a, m)?;
-    // As above: under the T23 chains the dividend is secret, and this quotient is
-    // an intermediate the remainder-only caller never observes.
-    drop(crate::bn::secret::SecretBuf::from_vec(q));
-    Some(r)
+    divide_fallible(a, m, false).map(|(_, r)| r)
 }
 
 /// `(a, b) -> (quotient, remainder)`. `b` must be non-zero.
@@ -765,36 +766,64 @@ pub(crate) fn div_rem(a: &[Limb], b: &[Limb]) -> (Vec<Limb>, Vec<Limb>) {
 /// `(a, b) -> (quotient, remainder)`, or `None` when an intermediate cannot be
 /// allocated. `b` must be non-zero.
 pub(crate) fn div_rem_fallible(a: &[Limb], b: &[Limb]) -> Option<(Vec<Limb>, Vec<Limb>)> {
+    divide_fallible(a, b, true)
+}
+
+/// The one division loop, with the quotient optional.
+///
+/// `want_quotient == false` is the remainder-only reduction: the quotient limb is
+/// computed either way (it falls out of the estimate) but its buffer is neither
+/// allocated nor written, so a call costs two scratch allocations instead of three
+/// and the caller that discards the quotient stops paying for it (T29).
+fn divide_fallible(a: &[Limb], b: &[Limb], want_quotient: bool) -> Option<(Vec<Limb>, Vec<Limb>)> {
     assert!(!b.is_empty(), "division by zero");
     if cmp(a, b) == core::cmp::Ordering::Less {
-        return Some((Vec::new(), crate::bn::alloc::try_clone_slice(a)?));
+        let r = crate::bn::alloc::try_clone_slice(a)?;
+        return Some((Vec::new(), r));
     }
     if b.len() == 1 {
         let (q, r) = div_rem_small_fallible(a, b[0])?;
-        return Some((q, from_u64_fallible(r)?));
+        let r = from_u64_fallible(r)?;
+        return Some((if want_quotient { q } else { Vec::new() }, r));
     }
 
-    // D1: normalise so the divisor's top limb has its high bit set.
+    // D1: normalise so the divisor's top limb has its high bit set. `shift` is the
+    // leading-zero count of one limb, so it is at most 63 and a shift never needs a
+    // whole-limb move.
     let shift = b[b.len() - 1].leading_zeros() as usize;
-    // The shifted dividend, divisor and accumulator all derive from the operands.
-    // On the T23 chains at least one operand is secret (an EC nonce's coordinate,
-    // an RSA CRT prime), so these scratch buffers are secret-bearing and are
-    // cleansed on every exit rather than released intact.
-    let u = crate::bn::secret::SecretBuf::from_vec(if shift == 0 {
-        crate::bn::alloc::try_clone_slice(a)?
+    // The divisor is either a shifted copy or the caller's own slice: when the top
+    // limb is already normalised (`shift == 0`, which is the case for every NIST
+    // prime's modulus) the copy would be a pure duplicate, so the borrow is used
+    // directly. The accumulator is always a copy because the loop mutates it, and it
+    // derives from the operands: on the T23 chains at least one of them is secret (an
+    // EC nonce's coordinate, an RSA CRT prime), so it is secret-bearing and cleansed
+    // on every exit.
+    let v_shifted = if shift == 0 {
+        None
     } else {
-        shl_fallible(a, shift)?
-    });
-    let v = crate::bn::secret::SecretBuf::from_vec(if shift == 0 {
-        crate::bn::alloc::try_clone_slice(b)?
-    } else {
-        shl_fallible(b, shift)?
-    });
+        Some(SecretLimbs::from_vec(shl_fallible(b, shift)?))
+    };
+    let v: &[Limb] = v_shifted.as_deref().unwrap_or(b);
     let n = v.len();
-    let m = u.len() - n;
-    let mut un = crate::bn::secret::SecretBuf::try_zeroed(u.len().checked_add(1)?)?;
-    un[..u.len()].copy_from_slice(&u);
-    let mut q = crate::bn::alloc::try_zeroed(m.checked_add(1)?, 0u64)?;
+    let m = a.len().checked_sub(n)?;
+    let mut un = SecretLimbs::try_zeroed(a.len().checked_add(1)?)?;
+    if shift == 0 {
+        un[..a.len()].copy_from_slice(a);
+    } else {
+        // The shift lands in the accumulator itself rather than in a second buffer
+        // that would be copied and dropped.
+        let mut back = 0u64;
+        for (k, &l) in a.iter().enumerate() {
+            un[k] = (l << shift) | back;
+            back = l >> (64 - shift);
+        }
+        un[a.len()] = back;
+    }
+    let mut q = if want_quotient {
+        Some(crate::bn::alloc::try_zeroed(m.checked_add(1)?, 0u64)?)
+    } else {
+        None
+    };
     let vtop = v[n - 1] as u128;
     let vnext = v[n - 2] as u128;
 
@@ -833,7 +862,9 @@ pub(crate) fn div_rem_fallible(a: &[Limb], b: &[Limb]) -> Option<(Vec<Limb>, Vec
             }
             un[j + n] = (un[j + n] as u128).wrapping_add(c) as u64;
         }
-        q[j] = qhat as u64;
+        if let Some(q) = q.as_mut() {
+            q[j] = qhat as u64;
+        }
     }
 
     // D8: the remainder is the shifted-back low limbs.
@@ -842,8 +873,13 @@ pub(crate) fn div_rem_fallible(a: &[Limb], b: &[Limb]) -> Option<(Vec<Limb>, Vec
         r = shr_fallible(&r, shift)?;
     }
     normalise(&mut r);
-    normalise(&mut q);
-    Some((q, r))
+    match q {
+        Some(mut q) => {
+            normalise(&mut q);
+            Some((q, r))
+        }
+        None => Some((Vec::new(), r)),
+    }
 }
 
 // Test-only evidence that the constant-pattern division was actually entered on

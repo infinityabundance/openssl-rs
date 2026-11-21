@@ -136,6 +136,9 @@ pub(crate) mod test_fail {
         static RECORD: RefCell<Option<Vec<&'static Location<'static>>>> = const { RefCell::new(None) };
         /// Allocation occurrences seen while the counter is armed.
         static COUNT: Cell<Option<usize>> = const { Cell::new(None) };
+        /// Per-site occurrence counts while a census is armed.
+        static TALLY: RefCell<Option<Vec<(&'static Location<'static>, usize)>>> =
+            const { RefCell::new(None) };
     }
 
     /// Fail the allocation that follows `successes` successful ones.
@@ -234,11 +237,46 @@ pub(crate) mod test_fail {
         }
     }
 
+    /// Count every seam-visible allocation **per source site** until the guard drops.
+    ///
+    /// This answers the question a total cannot: which site to attack. The T29
+    /// census uses it to order one P-256 signature's allocations by count instead of
+    /// guessing from the code shape.
+    pub(crate) fn tally_start() -> TallyGuard {
+        TALLY.with(|t| *t.borrow_mut() = Some(Vec::new()));
+        TallyGuard
+    }
+
+    /// The per-site counts collected since [`tally_start`], most frequent first.
+    /// Taking them disarms the census.
+    pub(crate) fn tally_take() -> Vec<(&'static Location<'static>, usize)> {
+        let mut sites = TALLY.with(|t| t.borrow_mut().take().unwrap_or_default());
+        sites.sort_by_key(|a| core::cmp::Reverse(a.1));
+        sites
+    }
+
+    /// Disarms the census when the test leaves scope, including on a panic.
+    pub(crate) struct TallyGuard;
+
+    impl Drop for TallyGuard {
+        fn drop(&mut self) {
+            TALLY.with(|t| *t.borrow_mut() = None);
+        }
+    }
+
     /// Consume one allocation from the armed mode; true when this one must fail.
     pub(crate) fn should_fail(site: &'static Location<'static>) -> bool {
         COUNT.with(|c| {
             if let Some(n) = c.get() {
                 c.set(Some(n + 1));
+            }
+        });
+        TALLY.with(|t| {
+            if let Some(sites) = t.borrow_mut().as_mut() {
+                match sites.iter_mut().find(|(s, _)| *s == site) {
+                    Some((_, n)) => *n += 1,
+                    None => sites.push((site, 1)),
+                }
             }
         });
         RECORD.with(|r| {
