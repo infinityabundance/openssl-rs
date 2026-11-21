@@ -1,0 +1,80 @@
+{
+ "schema": "openssl-rs/interop-population-reconciliation/1",
+ "item": "O12 of docs/ETP-TODO.md",
+ "generated": "2026-11-21T19:55:33Z",
+ "why": "two portable-OpenSSH populations exist in this repository's evidence; their results must never be read as interchangeable (docs/OPENSSH-COHORT.md)",
+ "populations": {
+  "A": {
+   "version": "9.9p1",
+   "source_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+   "what_it_backs": [
+    "the ssh/sshd SAFE_COMPATIBLE graduation and its element-7 closure (closure receipts name recipe:openssh:9.9p1; artifact paths .../openssh-9.9p1/ssh)",
+    "the L7-functional rows in forensics/downstream/runtime-functional-atlas.json",
+    "the authority baseline specimen:openssh:9.9p1 in forensics/downstream/authority-baselines.jsonl",
+    "the O2-O11 interoperability work in this campaign"
+   ],
+   "records_read": {
+    "authority_baseline": {
+     "level": "L5-loaded",
+     "log_tail": "OpenSSH_9.9p1, OpenSSL 3.6.4 25 Aug 2026",
+     "imported_openssl_symbols_count": 179
+    },
+    "l7_manifest": "courts/phase18/interop/MANIFEST-o11-A.json"
+   }
+  },
+  "B": {
+   "version": "10.5p1",
+   "source_sha256": "d44d28a839ea9daf969cc69150fde59910b2b39361dad81a3bd6cbd19218db11",
+   "what_it_backs": [
+    "the Phase-17 downstream driver record (courts/phase17/downstream/openssh/result.json)",
+    "the CVE-2026-123158 authentication-code court (a property of the version, not of the candidate)",
+    "the probe/unit-probe rows that name 10.5p1"
+   ],
+   "records_read": {
+    "phase17": {
+     "link": {
+      "detail": "libcrypto.so.3 -> /work/artifacts/phase2/install/lib/libcrypto.so.3 (no libssl)",
+      "libs": [
+       "libcrypto.so.3"
+      ],
+      "ok": true
+     },
+     "start": {
+      "detail": "the candidate-linked sshd starts on a high port",
+      "ok": true
+     },
+     "known_residuals": [
+      "`regress/unittests/utf8` aborts on both the candidate and the authority: the court image ships only C/C.utf8/POSIX locales and the test setlocale()s en_US.UTF-8"
+     ],
+     "historical_failures": [
+      {
+       "commit": "45095bfe",
+       "fixed_by": "52b61567 (evp: legacy-origin EVP_PKEY signs/verifies -- OpenSSH RSA/ECDSA fixed)",
+       "summary": "OpenSSH's RSA and ECDSA signing/verification and the parsing of native openssh-key-v1 RSA/ECDSA private keys failed with `error in libcrypto: initialization error`, so RSA/ECDSA host keys and user keys were rejected and the handshake fell back to Ed25519"
+      }
+     ]
+    },
+    "corpus_program": {
+     "source_url": "https://cdn.openbsd.org/pub/OpenBSD/OpenSSH/portable/openssh-10.5p1.tar.gz",
+     "source_sha256": "d44d28a839ea9daf969cc69150fde59910b2b39361dad81a3bd6cbd19218db11",
+     "known_residuals": [
+      "`regress/unittests/utf8` aborts on both the candidate and the authority: the court image ships only C/C.utf8/POSIX locales and the test setlocale()s en_US.UTF-8"
+     ]
+    }
+   }
+  }
+ },
+ "contradiction": {
+  "where": "forensics/memory-safety/campaign/safe-c33/PROGRESS.md, CVE-2026-123158 paragraph",
+  "claim": "the campaign's OpenSSH L7 evidence was measured on 10.5p1",
+  "against": "every closure-ssh-* receipt names recipe:openssh:9.9p1 and every openssh L7-functional atlas row carries the 9.9p1 recipe",
+  "resolution": "PROVENANCE_CONTRADICTION, resolved by the primary records: the L7 cohort is 9.9p1. The PROGRESS.md sentence describes the CVE court's version (10.5p1) and attaches it to the L7 closure, which the receipts do not support.",
+  "action_taken": "recorded, not silently corrected: the receipts and the atlas are unchanged, no verdict changes, and the sentence is flagged for correction in the campaign document rather than edited here by the same agent that wrote the reconciliation."
+ },
+ "non_interchangeable": [
+  "no result measured on B is evidence for A, and none measured on A is evidence for B",
+  "the two versions' binaries differ (different source digests), so their behaviour, symbol imports and residuals are separate observations",
+  "B's recorded residuals (openssh-key-v1 RSA/ECDSA private keys rejected with 'initialization error'; utf8 unit abort from a missing en_US.UTF-8 locale on both subjects; pre-10.6p2 crypt(3) authentication defect) are never read as A failures"
+ ],
+ "counts_policy": "counts are per population; adding a 9.9p1 count to a 10.5p1 count is not a result"
+}

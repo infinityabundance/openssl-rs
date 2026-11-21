@@ -68,15 +68,22 @@ What it backs today:
 
 Recorded residuals of that cohort, which must not be read as cohort A failures:
 
-* `ssh-keygen`/`ssh` reject native `openssh-key-v1` RSA/ECDSA private keys with
-  `error in libcrypto: initialization error`, so those host/user keys fall back
-  to Ed25519 (`forensics/atlas/downstream-corpus.json`);
 * `regress/unittests/utf8` aborts on **both** the candidate and the authority
   because the court image ships no `en_US.UTF-8` locale — a harness limitation,
-  recorded as such, in both subjects;
+  recorded in the 10.5p1 corpus record and in `courts/phase17/downstream/openssh/result.json`;
 * 10.5p1 predates the upstream fix for the `crypt(3)` `*`-prefix authentication
   defect (fixed in 10.6p2), so it says nothing about the authentication code's
   security. That is a property of the *version*, not of the candidate.
+
+**Correction (O12).** An earlier version of this document listed a second
+residual — `openssh-key-v1` RSA/ECDSA private keys rejected with
+`error in libcrypto: initialization error`. That text appears in
+`forensics/atlas/downstream-corpus.json` but **not** in the 10.5p1 record's
+`known_residuals`, and `courts/phase17/downstream/openssh/result.json` lists it
+as a *historical* failure fixed by commit `52b61567` ("evp: legacy-origin
+EVP_PKEY signs/verifies — OpenSSH RSA/ECDSA fixed"). It was therefore a
+witnessed-and-repaired defect, not an open residual of either cohort, and it is
+withdrawn here rather than carried forward.
 
 **Decision:** cohort B stays a separate cohort. Its results are reported with
 their own version and digest and are never pooled with cohort A's. It is not
