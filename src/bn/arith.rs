@@ -520,9 +520,14 @@ pub unsafe extern "C" fn BN_nnmod(
             unsafe { raise_site(&BN_DIV_217) };
             return 0;
         }
-        let Some((_, mut rem)) = limbs::div_rem_fallible(&ad, &md) else {
+        let Some((q, mut rem)) = limbs::div_rem_fallible(&ad, &md) else {
             return 0;
         };
+        // The quotient is an intermediate with no reader and can derive from a
+        // secret dividend (the ECDSA nonce's affine coordinate). Adopting it as
+        // soon as it exists cleanses the block on release; the remainder is the
+        // value the caller observes and is stored below (T23).
+        drop(SecretBuf::from_vec(q));
         // A remainder that came out negative is made non-negative by adding the
         // modulus, which is the definition of `nnmod` rather than a fix-up.
         if an && !rem.is_empty() {
@@ -1391,6 +1396,20 @@ pub(crate) fn pad_to(v: &[Limb], n: usize) -> Option<Vec<Limb>> {
     Some(out)
 }
 
+/// Copy `v` into exactly `n` limbs of a [`SecretLimbs`] buffer.
+///
+/// This is the protected counterpart of [`pad_to`] for the constant-time ladder's
+/// base: the destination is allocated as secret-bearing storage *first*, so a
+/// secret value is never staged in an ordinary `Vec` whose release would leave the
+/// contents behind. Used with a [`SecretBuf`] remainder (see
+/// [`mod_exp_core_consttime_staged`]) and with the caller's base limbs.
+fn pad_secret(v: &[Limb], n: usize) -> Option<SecretLimbs> {
+    let mut out = SecretBuf::try_zeroed(n)?;
+    let take = v.len().min(n);
+    out[..take].copy_from_slice(&v[..take]);
+    Some(out)
+}
+
 /// A zeroed limb vector of exactly `n` limbs, or `None` if the allocator refuses.
 ///
 /// The ladder's scratch is allocated once, through `try_reserve_exact`, so an
@@ -1761,10 +1780,17 @@ fn mod_exp_core_consttime_staged(
     // `n` limbs — `base >= R`, which the authority's `BN_mod_exp_mont_consttime`
     // accepts — keeps the variable-time reduction; that input is outside the EC
     // secret domain, and the width dispatch is on public geometry.
+    // The base is secret on the EC reach, so it is copied straight into protected
+    // storage. In the wide case the remainder is adopted as soon as it is produced
+    // (no fallible step intervenes), so the plain vector `rem_fallible` returns never
+    // becomes an uncleansed temporary; `pad_secret` then writes it into a second
+    // `SecretBuf` rather than taking a slice of the adopted one through an ordinary
+    // `Vec` (T23).
     let base_plain = if ad.len() <= n {
-        SecretBuf::from_vec(pad_to(ad, n)?)
+        pad_secret(ad, n)?
     } else {
-        SecretBuf::from_vec(pad_to(&limbs::rem_fallible(ad, md)?, n)?)
+        let rem = SecretBuf::from_vec(limbs::rem_fallible(ad, md)?);
+        pad_secret(&rem, n)?
     };
     // `base * R^2 * R^-1 == base * R`: convert into the Montgomery domain.
     let mut base = SecretBuf::from_vec(mont_mul_fallible(&base_plain, &rr, md, n0)?);
@@ -1797,7 +1823,11 @@ fn mod_exp_core_consttime_staged(
 
     // The exponent and every secret-derived intermediate live in `SecretBuf`, so
     // the normal return, an early `?` return and an unwind all cleanse them in
-    // `Drop` before the blocks are freed. `product` is the result and is returned.
+    // `Drop` before the blocks are freed. `product` is the result and is returned;
+    // the destination `store_consttime` moves that same allocation into the
+    // caller's `BIGNUM`, whose release cleanses it, so it is not a disposable
+    // intermediate. The two `one` buffers hold the public constant 1 and are
+    // deliberately ordinary.
     Some(product)
 }
 
@@ -2055,6 +2085,62 @@ mod tests {
     fn assert_same(aliased: *const BigNum, reference: *const BigNum, what: &str) {
         // SAFETY: both objects are live.
         assert_eq!(unsafe { BN_ucmp(aliased, reference) }, 0, "{what}");
+    }
+
+    /// T23: the ladder's base preparation writes a secret remainder into protected
+    /// storage instead of an ordinary `Vec` temporary.
+    ///
+    /// A base wider than the modulus takes the remainder arm of
+    /// [`mod_exp_core_consttime_staged`]. The remainder is adopted as a
+    /// [`SecretBuf`] the moment it exists and padded directly into a second
+    /// protected buffer, so when the padding operation's owner goes out of scope
+    /// its storage is zeroised before release. The drop probe reads the live
+    /// allocation from inside `Drop`, after the wipe and before the free.
+    #[test]
+    fn a_secret_base_remainder_is_padded_into_cleansed_storage() {
+        use crate::bn::secret::drop_probe;
+
+        let md = vec![
+            0xffff_ffff_ffff_ffc5u64,
+            0xffff_ffff_ffff_ffff,
+            0xffff_ffff_ffff_ffff,
+        ];
+        let ad = vec![
+            0x0123_4567_89ab_cdefu64,
+            0x1122_3344_5566_7788,
+            0x99aa_bbcc_ddee_ff00,
+            0x0fed_cba9_8765_4321,
+        ];
+        let n = md.len();
+        assert!(ad.len() > n, "the base must take the remainder arm");
+
+        let rem = SecretBuf::from_vec(match limbs::rem_fallible(&ad, &md) {
+            Some(rem) => rem,
+            None => unreachable!("the remainder allocation succeeds"),
+        });
+        assert!(
+            rem.iter().any(|&limb| limb != 0),
+            "the test needs a non-zero secret remainder"
+        );
+        let padded = match pad_secret(&rem, n) {
+            Some(padded) => padded,
+            None => unreachable!("the protected padding allocation succeeds"),
+        };
+        assert_eq!(&padded[..], &rem[..n], "the remainder is padded unchanged");
+
+        let ptr = padded.as_ptr();
+        drop_probe::arm(ptr);
+        drop(padded);
+
+        let observed = match drop_probe::take() {
+            Some(observed) => observed,
+            None => unreachable!("Drop observed the armed allocation"),
+        };
+        assert_eq!(observed.ptr, ptr as usize, "Drop observed the padded base");
+        assert_eq!(
+            observed.nonzero_bytes, 0,
+            "the padded secret base was released uncleansed"
+        );
     }
 
     /// One object used for both `BN_div` outputs must stay defined: the two output

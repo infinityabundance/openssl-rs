@@ -257,7 +257,10 @@ pub(crate) fn pow2_mod_consttime(bits: usize, m: &[Limb]) -> Option<Vec<Limb>> {
         return None;
     }
     let mut r = crate::bn::alloc::try_zeroed(n, 0u64)?;
-    let mut diff = crate::bn::alloc::try_zeroed(n, 0u64)?;
+    // The conditional-subtraction scratch derives from the modulus' contents. For
+    // RSA CRT the modulus is a secret prime, so the scratch is secret-bearing and
+    // must not be released intact; `r` is the result and is adopted by the caller.
+    let mut diff = crate::bn::secret::SecretBuf::try_zeroed(n)?;
     r[0] = 1;
     for _ in 0..bits {
         let mut carry = 0u64;
@@ -588,10 +591,18 @@ pub(crate) fn rem(a: &[Limb], m: &[Limb]) -> Vec<Limb> {
 /// allocated.
 pub(crate) fn rem_fallible(a: &[Limb], m: &[Limb]) -> Option<Vec<Limb>> {
     if m.len() == 1 {
-        let (_, r) = div_rem_small_fallible(a, m[0])?;
+        let (q, r) = div_rem_small_fallible(a, m[0])?;
+        // The quotient has no reader here and derives from the (possibly secret)
+        // dividend. Adopting it immediately makes its release cleanse the block;
+        // no fallible step runs between the return and this adoption.
+        drop(crate::bn::secret::SecretBuf::from_vec(q));
         return from_u64_fallible(r);
     }
-    Some(div_rem_fallible(a, m)?.1)
+    let (q, r) = div_rem_fallible(a, m)?;
+    // As above: under the T23 chains the dividend is secret, and this quotient is
+    // an intermediate the remainder-only caller never observes.
+    drop(crate::bn::secret::SecretBuf::from_vec(q));
+    Some(r)
 }
 
 /// `(a, b) -> (quotient, remainder)`. `b` must be non-zero.
@@ -622,19 +633,23 @@ pub(crate) fn div_rem_fallible(a: &[Limb], b: &[Limb]) -> Option<(Vec<Limb>, Vec
 
     // D1: normalise so the divisor's top limb has its high bit set.
     let shift = b[b.len() - 1].leading_zeros() as usize;
-    let u = if shift == 0 {
+    // The shifted dividend, divisor and accumulator all derive from the operands.
+    // On the T23 chains at least one operand is secret (an EC nonce's coordinate,
+    // an RSA CRT prime), so these scratch buffers are secret-bearing and are
+    // cleansed on every exit rather than released intact.
+    let u = crate::bn::secret::SecretBuf::from_vec(if shift == 0 {
         crate::bn::alloc::try_clone_slice(a)?
     } else {
         shl_fallible(a, shift)?
-    };
-    let v = if shift == 0 {
+    });
+    let v = crate::bn::secret::SecretBuf::from_vec(if shift == 0 {
         crate::bn::alloc::try_clone_slice(b)?
     } else {
         shl_fallible(b, shift)?
-    };
+    });
     let n = v.len();
     let m = u.len() - n;
-    let mut un = crate::bn::alloc::try_zeroed(u.len().checked_add(1)?, 0u64)?;
+    let mut un = crate::bn::secret::SecretBuf::try_zeroed(u.len().checked_add(1)?)?;
     un[..u.len()].copy_from_slice(&u);
     let mut q = crate::bn::alloc::try_zeroed(m.checked_add(1)?, 0u64)?;
     let vtop = v[n - 1] as u128;

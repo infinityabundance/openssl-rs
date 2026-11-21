@@ -51,6 +51,7 @@ use crate::bn::bignum::{
 };
 use crate::bn::ctx::BnCtx;
 use crate::bn::limbs::{self, Limb};
+use crate::bn::secret::SecretBuf;
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites::{
     BN_EXP2_35, BN_EXP_1187, BN_EXP_1195, BN_EXP_327, BN_EXP_622, BN_GCD_532,
@@ -194,9 +195,13 @@ fn mont_reduce(r: &[Limb], n: &[Limb], n0: Limb) -> Option<Vec<Limb>> {
     }
     // One allocation for the accumulator, sized by the public limb count, and two
     // for the conditional-subtraction scratch; all three are fallible so a caller
-    // on a secret path can report the failure rather than abort.
+    // on a secret path can report the failure rather than abort. The accumulator and
+    // the subtraction scratch derive from the operands, which are secret on the RSA
+    // CRT reach (`BN_to_montgomery`/`BN_from_montgomery`/`BN_mod_mul_montgomery`),
+    // so they are `SecretBuf`s; the returned `out` is moved into the caller's
+    // `BIGNUM`, whose release cleanses it.
     let t_len = nl.checked_mul(2)?.checked_add(2)?;
-    let mut t: Vec<Limb> = crate::bn::alloc::try_zeroed(t_len, 0u64)?;
+    let mut t = SecretBuf::try_zeroed(t_len)?;
     let take = r.len().min(t_len);
     t[..take].copy_from_slice(&r[..take]);
     for i in 0..nl {
@@ -226,7 +231,7 @@ fn mont_reduce(r: &[Limb], n: &[Limb], n0: Limb) -> Option<Vec<Limb>> {
     // `nl` limbs and `borrow` the final borrow of `t[nl..2nl] - n`. Keep the
     // difference when the value is at least `n`: `high != 0` or no borrow.
     let high = t[2 * nl];
-    let mut diff = crate::bn::alloc::try_zeroed(nl, 0u64)?;
+    let mut diff = SecretBuf::try_zeroed(nl)?;
     let mut borrow = 0u64;
     for j in 0..nl {
         let (d1, b1) = t[nl + j].overflowing_sub(n[j]);
