@@ -1,0 +1,194 @@
+# Earned Trust Protocol — work queue
+
+Single tracked queue for the assurance programme. Nothing in this file is a
+claim: `DONE` means the artefact exists in Git at the named commit, `PARTIAL`
+means a bounded piece exists with named residues, everything else is open.
+
+Status vocabulary for each item: `TODO`, `IN_PROGRESS`, `PARTIAL`, `DONE`,
+`BLOCKED` (with the blocker), `NOT_APPLICABLE` (with the reason).
+
+Rules that bind this queue (from AGENTS.md, extended by the ETP mandate):
+
+- a claim may never exceed its evidence; an implementation is not a specification;
+- a test is not a proof; source-level verification is not binary-level verification;
+- compatibility is not security; memory safety is not constant-time execution;
+- a reproducible build is not a correct build; a signature establishes provenance,
+  not truth;
+- an independent agent is not an independent organisation;
+- absence of observed failure is not universal absence;
+- an undocumented assumption is an unresolved obligation;
+- a counterexample outranks a thousand successes within its scope;
+- an instrument must demonstrate sensitivity to the defect it claims to detect;
+- historical evidence is never fresh evidence;
+- no authority, including the project principal, may promote a contradicted claim
+  by declaration;
+- **do not omit, do not stop, push often.**
+
+---
+
+## A. Already landed (this programme)
+
+| item | commit | scope, honestly stated |
+|---|---|---|
+| Timing toolchain installed and validated | `32a4b7828` | valgrind 3.19, ctgrind technique (stock valgrind + client requests), dudect @ `dc269651`, BINSEC 0.11.3 + `unisim_archisec`, TIMECOP method; controls fire. perf BLOCKED on capability at that commit. |
+| perf unblocked + toolchain persisted | `18d12e1d5` | `--cap-add=CAP_PERFMON` (seccomp untouched, CapEff delta exactly bit 38); derived image `openssl-rs-court-tools:1`; all instruments re-validated; capability negative control reproduces the old `EPERM`. |
+| BN separations have a measured mechanism | `20ee9dc90` | ctgrind: 771 errors/9 contexts (branches on secret exponent bits); inverse 620/209 incl. 38 secret-derived address uses; dudect t 3855/2464/3262/3698. Reachability: both symbols may-bound only; DH reaches the same core via `BN_mod_exp_mont`. |
+| Constant-pattern exponentiation | `968fa281a` | fixed-width ladder, Montgomery REDC, masked select; ctgrind 771 → 4; dudect → 1.59–2.37; 2344 tests, RT-BN 1510/0. |
+| Public loop width + constant normalise | `d3c6d4210` | width from modulus limb count; `normalise_consttime`/`store_consttime`; ctgrind 0/0; EC secret base recorded open. |
+| Public geometry + length-taint control | `b7d5ff745` | loop reads only `exponent[i>>6]`; length-taint control fires with 19 errors, none in the ladder; allocations 14 365 → 31. |
+| Timing receipt bound to binary | `0c5f10f1e` | `revision_3` in `evidence/timing-bn-repair.json`; earlier fields marked `superseded`, not deleted. |
+| `SecretBuf` cleanses on all exit paths | `8e6c539ae` | volatile zeroise in `Drop`; no `Copy`/`Clone`/`into_inner`; wired into the consttime ladder only. |
+| Destructor proven by mutation; boundary copy cleansed | `3f9369878` | removing the `Drop` body → 1 passed/3 failed; exponent adopted via `SecretBuf::from_vec`; full DSO digest recorded. |
+| Timing harnesses tracked | `53ad82779` | `courts/phase18/timing/` with README, geometry, result vocabulary. |
+| Campaign baseline | `0433aa40c` | identity, Phase-18 reproduction, 9.9p1 vs 10.5p1 reconciliation, absent-tool inventory. |
+| Curl closure | `07f9f1bb9` | ACCEPTED, 0 BLOCKED, 0 UNKNOWN, 644 files, 7/7 discharged. |
+| Curl element-7 queue | `2e74a2ec0` | 219 → 27 named refusals; every reduction mutation-controlled; element-7 still **FAIL**. |
+
+---
+
+## B. Timing safety — open work
+
+| id | item | status |
+|---|---|---|
+| T1 | Infallible allocations in `limbs::rem`/`limbs::mul`; `base_plain`, `rr`, `one_mont`, `product` still plain `Vec`s (`OBL-BN-ALLOCATOR`) | TODO |
+| T2 | `SecretBuf::from_vec` cleanses initialised length only; spare capacity may retain secret bytes — establish a storage invariant or cleanse the whole allocation | TODO |
+| T3 | Destructor cleansing is proportional to normalised (secret) length; representation-level fix needed, not a normalisation tweak | TODO |
+| T4 | Mutate only `cleanse_now()` while keeping the observer, to prove the tests detect uncleansed bytes rather than only the absence of the destructor | TODO |
+| T5 | EC secret-base reduction: `ecdsa_sign_setup` inverts nonce `k` via `ec_field_inverse_mod_ord`; `ossl_ec_GFp_mont_field_inv` takes field elements; initial `limbs::rem` is variable-time | TODO |
+| T6 | RSA CRT moduli are secret (only the width is public); Montgomery precomputation runs on them — taint CRT modulus contents, not just exponents | TODO |
+| T7 | `BN_mod_inverse`: 171 branches + 38 secret-derived addresses + 28 allocator branches; needs a domain-correct constant-time inversion, with a separate variable-time public path | TODO |
+| T8 | Observable result bit length survives in the returned `BIGNUM` (`store_consttime`) | TODO |
+| T9 | Secret-length-dependent boundary copy and admission checks (the 19 length-taint sites) | TODO |
+| T10 | Unify `CleansedScratch<const N>` and `SecretBuf<T>` into one secret-storage policy (`SecretArray<N>`, `SecretBuf<T>`, `SecretLimbs`, `SecretRef`) | TODO |
+| T11 | RSA blinding lifecycle and CRT recombination review; padding implicit-rejection consistency; error paths not disclosing secret validation state | TODO |
+| T12 | ECDSA nonce generation, inversion and scalar arithmetic reviewed end to end | TODO |
+| T13 | `core::hint::black_box` audit — it guarantees nothing; audit every use and every secret-bearing caller of `constant_time.rs` | TODO |
+| T14 | Optimised-code review: LTO/inlining/cmov-vs-branch, division latency, CPU feature dispatch; automated binary inspection rather than assembly snapshots | TODO |
+| T15 | Compiler-upgrade policy that invalidates code-generation assurance until rechecked | TODO |
+| T16 | BINSEC `-checkct` with a validated `-sse-script`; currently exits 0 with **no output** — a non-result | BLOCKED (config unvalidated) |
+| T17 | Hardware PMU counters absent in this environment (`cpu-cycles` ENOENT; `/sys/bus/event_source/devices` has no `cpu`) | BLOCKED (environment) |
+| T18 | TIMECOP SUPERCOP harness (dormant, pinned to 2018–2019 trees); client-request method available | BLOCKED (unmaintained) |
+| T19 | Fresh binary-bound measurement of the **final** candidate (all current measurements precede the latest source changes) | TODO |
+| T20 | Byte-reproducible instrumentation build (D255 `.symtab` difference); preserve measured binaries as content-addressed artefacts | TODO |
+| T21 | Benchmark against reference OpenSSL for RSA/DH/EC workloads; 8192-bit at ~370 ms is a throughput concern | TODO |
+| T22 | Allocation-failure behaviour for the whole secret-bearing operation, not just ladder scratch | PARTIAL |
+
+---
+
+## C. OpenSSH interoperability — open work
+
+| id | item | status |
+|---|---|---|
+| O1 | Choose and justify the primary version (9.9p1 backs closures/L7; 10.5p1 backs probe/unit probe); keep the other as a separate cohort | TODO |
+| O2 | Hermetic environment: pin and verify OpenSSL source, OpenSSH tarball, PuTTY, Dropbear by digest | TODO |
+| O3 | Install plink/puttygen/dropbear/dbclient/dropbearkey/dropbearconvert **before** configure; verify detection from the generated Makefile and `regress/test-exec.sh` rather than assuming | TODO |
+| O4 | Build A (reference OpenSSL) and Build B (OpenSSL-RS) from the same unmodified source in isolated trees, no shared `LD_LIBRARY_PATH` | TODO |
+| O5 | Per-executable runtime identity (`ssh`, `sshd`, `sshd-session`, `ssh-keygen`, `ssh-agent`, `sftp-server`): `readelf -d`, resolved `ldd`, live `/proc/<pid>/maps`; fail closed on mixed linkage | TODO |
+| O6 | Full upstream `make tests` on both builds; classify every failure as upstream-common / candidate-specific / harness; keep upstream-common failures as failures | TODO |
+| O7 | Four-cell matrix (A-A, B-B, B-A, A-B) using the upstream harness and `TEST_SSH_SSH`, with isolated ports/config/keys per cell | TODO |
+| O8 | PuTTY client → OpenSSH server and Dropbear client → OpenSSH server; OpenSSH client → Dropbear server where the harness supports it; record negotiated algorithms from transcripts; distinguish unsupported from failed | TODO |
+| O9 | Coverage: Ed25519/RSA/ECDSA auth, X25519 and NIST ECDH, FFDH, PQ hybrid, AES-CTR/GCM, ChaCha20-Poly1305, HMAC integrity failures, host-key rejection, certificates, rekeying, agent, concurrent sessions | TODO |
+| O10 | Harness negative controls: wrong client binary, wrong crypto library, failed auth, dead server, unsupported algorithm, missing third-party tool, timeout/signal kill; harness must fail if a control does not trigger | TODO |
+| O11 | Machine-readable manifests, exact executed/skipped/blocked counts, reproduction commands; no hand-authored totals | TODO |
+| O12 | Reconcile the historical 9.9p1/10.5p1 populations in one receipt so their results are never treated as interchangeable | TODO |
+
+---
+
+## D. Curl consumer — open work
+
+| id | item | status |
+|---|---|---|
+| C1 | Close or honestly hold the 27 named element-7 refusals (`http` 4 local-copy sites; `provider/rand`, `confmod`, `evp_pbe`, `encoder_meth`, `rand_lib`, PEM pair, `passphrase`, `store_result`, `obj`, `stack`, `ui_read`, `check_crl`, `dh/check`) | IN_PROGRESS |
+| C2 | Reconcile the running site count against the named rows (the ±1/±2 discrepancies recorded in the batch notes) | TODO |
+| C3 | One frozen census → freeze → closure run at a single identity after the tool changes | TODO |
+| C4 | Independent adversarial review of the ~9,600 new lines in `consumer_closure.py` (CFG dominance, frame-slot scans, DSO-local copies, callback writers) | TODO |
+| C5 | Curl L7 replay at the final candidate; element-7 PASS; graduation record; counter 2/33 only if the safety argument survives independent review | TODO |
+
+---
+
+## E. ETP — assurance constitution and claim integrity
+
+| id | item | status |
+|---|---|---|
+| ETP-0 | Baseline and trust-gap inventory: freeze the staging identity; inventory claims, evidence, assumptions, contradictions, missing reconstruction inputs; initial threat model; inspect binary reproducibility | PARTIAL (`evidence/baseline-20261120.json` covers identity and timing; trust-gap inventory outstanding) |
+| ETP-1 | Claim algebra: typed claims with property, interpretation, quantification, scope, threat/leakage model, source/build identities, artefact digests, authority, target, assumptions, evidence, TCB, obligations, invalidation deps. Modalities (`DOCUMENTED`…`BINARY_REFINEMENT_VERIFIED`), reproduction status, verdicts — orthogonal, never a scalar score | TODO |
+| ETP-2 | Artefact reproduction: pristine offline builds; two independently initialised clean builds; variation matrix; resolve every byte difference or record it; no byte-normalisation to manufacture a PASS | TODO |
+| ETP-3 | Instrument qualification (DO-330-inspired): intended use, failure modes, soundness limits, version validation, sensitivity controls; fail closed on truncation, missing artefacts, timeouts, unsupported instructions | TODO |
+| ETP-4 | Foundational verification pilot on production code: start with `SecretBuf`/cleansing and fixed-width Montgomery arithmetic; bind proof to source; record the missing binary bridge | TODO |
+| ETP-5 | Consumer validation under the new machinery: reconstruct OpenSSH and curl identities, re-execute closures, reconcile the historical adjudications; the machinery must refuse the known unresolved conditions | TODO |
+| ETP-6 | External reproduction readiness: frozen self-contained package, replay from an environment with no private state, documented external procedure; report `EXTERNAL_REVIEW_PENDING` until it actually happens | TODO |
+| ETP-7 | Continuous enforcement in CI and release tooling | TODO |
+| ETP-T1 | Requirements traceability: threat/hazard → requirement → spec → implementation → artefact → obligation → evidence → adjudication → release claim; orphan detection; MC/DC where appropriate | TODO |
+| ETP-T2 | Security hazard register: fault trees, FMEA, STPA-Sec, attack graphs; distinguish legal API input from adversarial input from ABI-contract violation; never claim arbitrary invalid C pointers are safe | TODO |
+| ETP-T3 | Refinement architecture: abstract spec vs executable reference vs Rust vs ABI contracts vs machine code vs consumer composition; avoid implementation-shaped specifications | TODO |
+| ETP-T4 | Foundational Rust verification: classify unsafe sites by obligation and impact, not keyword count; inventory every axiom and admitted result; refuse vacuous proofs | TODO |
+| ETP-T5 | Cryptographic correctness independent of OpenSSL: normative specs, independent reference implementations, differential observations; classify authority disagreements | TODO |
+| ETP-T6 | Binary-level assurance: TCB includes compiler, linker, assembler, runtime, CPU dispatch, loader; per-architecture and per-profile claims; no inheritance across targets | TODO |
+| ETP-T7 | Side-channel and erasure verification: define secret classification incl. lengths/capacities/allocation sizes; pre-register geometry, controls, exclusion rules, stopping conditions; never claim constant-time from a low t | IN_PROGRESS |
+| ETP-T8 | Independence: role separation (author, proof producer, instrument author, evidence producer, adjudicator, reproducer, release authority); never fabricate external reviewers; preserve dissent | TODO |
+| ETP-T9 | Evidence freshness and automatic revocation: dependency-aware invalidation; car-forward only as explicit history or with a verified preservation argument | TODO |
+| ETP-T10 | Consumer closure discipline: every omitted edge needs an independently checkable exclusion argument; every opaque external op needs a scoped contract; no aggregation hiding a blocked row | PARTIAL (mechanism exists; curl queue open) |
+| ETP-T11 | Scheduling: FAST/BATCH/BOUNDARY/SEAL/EXTERNAL, content-addressed caching by full applicability identity; resource exhaustion is BLOCKED, never PASS | PARTIAL |
+| ETP-T12 | Public verification interface (`verify manifest|rebuild|proofs|instruments|controls|receipts|consumer-*|claims|all`) from a clean checkout with no private state | TODO |
+| ETP-T13 | Long-term preservation: open formats, schema migration, digest agility, archival of source/recipes/proofs/checkers; the proof must outlive the agent | TODO |
+| ETP-T14 | `EARNED-TRUST.md` constitution + integrate the rules into `AGENTS.md` and release policy | TODO |
+| ETP-T15 | Reconciliation of the OpenSSH b85c graduation and the `NOT ESTABLISHED` adjudication, as distinct records with their actual provenance | TODO |
+
+---
+
+## F. ETP Addendum A — SARIF / DSSE / in-toto / SLSA / Sigstore
+
+| id | item | status |
+|---|---|---|
+| A0 | Evidence and trust audit: inventory formats, receipts, identities, adjudications, release tooling; find every truncation, silent suppression, summary-without-reconstruction and wrong-candidate application | TODO |
+| A1 | SARIF 2.1.0 (+ Errata 01) interoperability profile; deterministic adapter for representative real findings (BN timing, unsafe-boundary obligations, curl element-7 refusals, OpenSSH adjudication) | TODO |
+| A2 | Lossless evidence preservation: original output, args, instrument identity, candidate identity, population, counts, unsupported ops, timeouts; content-addressed; reconciliation of native vs exported populations | TODO |
+| A3 | Identity model: rule identity / logical finding identity / exact occurrence identity; fingerprints never authorise reuse across artefacts; conservative on collisions and code movement | TODO |
+| A4 | Rust/FFI/binary location fidelity: macro expansion, monomorphisation, C ABI, indirect dispatch, optimised code; no fabricated line precision for machine-code findings | TODO |
+| A5 | Completeness and execution admission: expected vs examined population, unsupported constructs, skips, timeouts, truncation; an absent population is not an empty population; exit code is not completeness | TODO |
+| A6 | Suppression governance: a suppressed finding remains a finding; justification, scope, evidence, reviewer, independence, expiry, consequences; auto-invalidate on change | TODO |
+| A7 | Baselines and honest regression tracking: distinguish root-cause elimination and proved unreachable from tool-stopped-reporting; no artificial monotonicity | TODO |
+| A8 | GitHub code-scanning integration without GitHub dependency: full local artefacts authoritative; shard manifest when export limits truncate (5 000-result limit) | TODO |
+| A9 | in-toto Statement v1 typed attestations; SLSA provenance predicate only for genuine SLSA statements; versioned project predicate types for everything else | TODO |
+| A10 | DSSE authentication with the exact PAE over the received bytes; never reparse/reserialise before verification; `keyid` is an unauthenticated hint only | TODO |
+| A11 | DSSE parser hardening: duplicate JSON keys, invalid encodings, oversized payloads, signature-count bounds, algorithm downgrade refusal, forward-extension discipline | TODO |
+| A12 | Independent cryptographic verification of envelopes: the root of trust must not be the unverified candidate; keep verification deps out of `libcrypto`/`libssl` | TODO |
+| A13 | Signature reproducibility vs artefact reproducibility kept separate; never seed production randomness for reproducible signatures | TODO |
+| A14 | Role-bound authorisation: maintainer, source/build/analysis/proof producer, instrument reviewer, adjudicator, external reproducer, release authority, revocation authority; wrong-role signature insufficient | TODO |
+| A15 | Thresholds over distinct authorised keys and distinct trust domains; repeated signatures and aliases cannot satisfy independence | TODO |
+| A16 | Sigstore bundle profile with certificates, transparency entries, inclusion proofs, timestamps; offline verification with stated trust-root/freshness assumptions | TODO |
+| A17 | Transparency and omission resistance: freeze an expected evidence manifest before execution; close with a signed reconciliation manifest; a producer cannot PASS by omitting a failed result | TODO |
+| A18 | Survivable key compromise (TUF principles): rotation, delegation, expiry, revocation, anti-rollback, anti-freeze; old signatures never authorise a stale release | TODO |
+| A19 | Authenticated corrections and retractions: append-only, bound to the original attestation, propagating invalidation; preserve what was believed and what was disproved | TODO |
+| A20 | Deterministic policy engine: conjunction of obligations, not a score; denial-by-default; a candidate may not choose a permissive policy for itself | TODO |
+| A21 | Verification-summary attestations after policy evaluation; a summary never replaces the evidence for independent reconstruction | TODO |
+| A22 | Adversarial qualification: the eight mandatory experiments (stripped results, wrong-binary proof, self-signed independence, crashed-but-empty report, one-person-two-credentials, withdrawn claim, reproducible-but-defective binary, complete-and-independent evidence) | TODO |
+| A23 | Formal verification of the verifier: the smallest evidence-processing core; verify that required evidence cannot be omitted, signatures cannot imply semantic correctness, substitution cannot preserve acceptance | TODO |
+| A24 | External verification package: frozen manifest, provenance, full SARIF, native evidence, reconciliation, envelopes, statements, bundles, policy, controls, rebuild instructions; treat remote evidence as hostile | TODO |
+| A25 | Extended public verifier surface (`verify sarif|sarif-completeness|evidence-manifest|envelopes|attestations|signer-roles|provenance|transparency|freshness|revocations|policy|controls|release|all`) | TODO |
+| A26 | Verification economics: FAST/BATCH/BOUNDARY/SEAL/EXTERNAL; sign immutable manifests rather than every report; never trade completeness for cost | TODO |
+| A27 | Vertical slice first: real frozen finding → native evidence → SARIF → content-addressed manifest → in-toto statement → DSSE → independent verification → policy adjudication → reproducible result; then the deliberately corrupted counterpart | TODO |
+
+---
+
+## G. Highest-value next actions (ordered)
+
+1. `T4` — mutate only `cleanse_now()` (cheapest falsification of the current test).
+2. `T2`, `T1` — storage invariant for spare capacity, then the remaining infallible allocations.
+3. `T19`, `T20` — fresh binary-bound measurement and a reproducible instrumentation build.
+4. `T6`, `T5` — taint RSA CRT moduli, then the EC nonce path.
+5. `T7` — domain-correct constant-time inversion.
+6. `O1`–`O11` — the interoperability matrix.
+7. `A1`, `A9`, `A10`, `A20`, `A22` — the SARIF/DSSE vertical slice and its eight refusals.
+8. `C1`–`C5` — finish curl honestly.
+
+## H. Non-claims that bind this queue
+
+SARIF compliance does not prove absence of vulnerabilities. A clean scanner
+output is not memory safety. A signed report is not necessarily true. DSSE does
+not establish independence. A transparency entry does not establish
+completeness. SLSA provenance alone does not establish a reproducible build. A
+reproducible build is not a correct build. Two signatures are not necessarily
+two independent verifications. A cryptographically valid historical signature
+does not establish present authorisation. A signed summary does not replace the
+underlying proof. A successful CI workflow is not regulatory certification.
