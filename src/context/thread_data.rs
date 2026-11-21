@@ -378,7 +378,7 @@ mod tests {
     /// global-touching test shares, rather than a lock local to this module.
     /// The other tests here use only fresh, non-default contexts and stay
     /// unlocked.
-    fn lock() -> std::sync::MutexGuard<'static, ()> {
+    fn lock() -> crate::test_support::GlobalStateGuard {
         crate::test_support::lock_global_state()
     }
 

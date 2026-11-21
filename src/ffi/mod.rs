@@ -126,7 +126,7 @@ mod tests {
     /// with each other or with any other panicking path:
     /// [`crate::test_support::lock_global_state`] is the one lock every
     /// global-touching test shares, not a lock local to this module.
-    fn lock() -> std::sync::MutexGuard<'static, ()> {
+    fn lock() -> crate::test_support::GlobalStateGuard {
         crate::test_support::lock_global_state()
     }
 

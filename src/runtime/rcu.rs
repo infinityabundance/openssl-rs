@@ -1043,8 +1043,8 @@ pub(crate) unsafe fn ossl_rcu_lock_free(lock: *mut RcuLockSt) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::GlobalStateGuard;
     use core::sync::atomic::{AtomicBool, AtomicI32};
-    use std::sync::MutexGuard;
     use std::thread;
     use std::time::Duration;
 
@@ -1056,7 +1056,7 @@ mod tests {
     /// global-touching test shares, not a lock local to this module. Without it
     /// two tests interleave `reset` and a callback and observe each other's
     /// counts.
-    fn lock() -> MutexGuard<'static, ()> {
+    fn lock() -> GlobalStateGuard {
         crate::test_support::lock_global_state()
     }
 

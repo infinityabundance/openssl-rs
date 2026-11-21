@@ -231,6 +231,65 @@ fn with_heap<R>(f: impl FnOnce(&mut Option<Heap>) -> R) -> R {
     f(&mut guard)
 }
 
+/// The test-only exclusive lease over the process-global heap.
+///
+/// The heap below is process-global, so the tests that exercise it cannot run
+/// concurrently with *any* other test that allocates from the secure allocator —
+/// and that is a large set, reached indirectly through X25519/ECDH key
+/// generation, ML-DSA/ML-KEM key handling, SM2 and the TLS handshake, including
+/// worker threads a test spawns. Those callers are correct in production (the
+/// allocator is thread-safe) and cannot all be given the crate-wide test lock,
+/// so the fixture claims the heap instead of assuming it: while a test holds
+/// [`crate::test_support::lock_global_state`], every *other* thread's secure
+/// allocation takes the allocator's documented plain fallback, exactly as it
+/// would if no heap were initialised. Releases are deliberately not leased out —
+/// they route by arena containment, so a block allocated before the lease is
+/// still returned to the arena.
+///
+/// This is a test-only bypass (`#[cfg(test)]`, never in a release build) and it
+/// does not change the allocator's production behaviour.
+#[cfg(test)]
+pub(crate) mod test_lease {
+    use core::cell::Cell;
+    use core::sync::atomic::{AtomicBool, Ordering};
+
+    /// Set while some thread owns the heap. `Acquire`/`Release` pair with
+    /// [`MINE`], which is read on the same thread that sets it.
+    static HELD: AtomicBool = AtomicBool::new(false);
+
+    thread_local! {
+        static MINE: Cell<bool> = const { Cell::new(false) };
+    }
+
+    /// The lease. Dropping it releases the heap to foreign threads again.
+    /// Declared before the global-state lock guard wherever both are held, so it
+    /// is released while the lock is still held.
+    #[must_use]
+    pub(crate) struct Lease {
+        _private: (),
+    }
+
+    impl Drop for Lease {
+        fn drop(&mut self) {
+            MINE.with(|m| m.set(false));
+            HELD.store(false, Ordering::Release);
+        }
+    }
+
+    /// Claim the heap for the calling thread.
+    pub(crate) fn acquire() -> Lease {
+        MINE.with(|m| m.set(true));
+        HELD.store(true, Ordering::Release);
+        Lease { _private: () }
+    }
+
+    /// True when another thread owns the heap, so this thread's secure
+    /// allocation must take the plain fallback.
+    pub(crate) fn is_foreign() -> bool {
+        HELD.load(Ordering::Acquire) && !MINE.with(|m| m.get())
+    }
+}
+
 /// The OS page size, with the authority's 4096 fallback.
 fn page_size() -> usize {
     // SAFETY: `getpagesize` has no preconditions and no side effects.
@@ -536,6 +595,11 @@ pub unsafe extern "C" fn CRYPTO_secure_malloc(
     guard_ffi(core::ptr::null_mut(), || {
         let outcome = with_heap(|slot| match slot {
             None => SecureAlloc::Uninitialized,
+            // Test-only lease (see `test_lease`): while another test owns the
+            // heap, this thread gets the documented plain fallback instead of a
+            // chunk in an arena the owner is asserting about.
+            #[cfg(test)]
+            Some(_) if test_lease::is_foreign() => SecureAlloc::Uninitialized,
             Some(h) => match h.alloc(num) {
                 Some((off, _size)) => SecureAlloc::Ok((h.arena + off) as *mut c_void),
                 None => SecureAlloc::Failed,
@@ -574,6 +638,9 @@ pub unsafe extern "C" fn CRYPTO_secure_zalloc(
     guard_ffi(core::ptr::null_mut(), || {
         let outcome = with_heap(|slot| match slot {
             None => SecureAlloc::Uninitialized,
+            // Test-only lease: as `CRYPTO_secure_malloc`.
+            #[cfg(test)]
+            Some(_) if test_lease::is_foreign() => SecureAlloc::Uninitialized,
             Some(h) => match h.alloc(num) {
                 Some((off, size)) => {
                     let addr = h.arena + off;
@@ -840,7 +907,13 @@ mod tests {
     /// process-global, so a test here must not run concurrently with any other
     /// test that touches a global. [`crate::test_support::lock_global_state`] is
     /// the one lock every such test shares, not a lock local to this module.
-    fn lock() -> std::sync::MutexGuard<'static, ()> {
+    ///
+    /// The lock also claims the heap for this thread (`test_lease`): other tests
+    /// *cannot* be excluded by it, because the allocator is reached indirectly
+    /// from X25519/ECDH keygen, ML-DSA/ML-KEM and the TLS handshake, sometimes on
+    /// worker threads. While the claim is held those callers take the documented
+    /// plain fallback, so `used` and `done()` here answer for this test alone.
+    fn lock() -> crate::test_support::GlobalStateGuard {
         crate::test_support::lock_global_state()
     }
 
@@ -1326,11 +1399,63 @@ mod tests {
         assert_eq!(CRYPTO_secure_malloc_done(), 1);
     }
 
+    /// Regression for the isolation defect T25 recorded: one run of the suite
+    /// failed seventeen tests in this module and an identical rerun was clean.
+    /// The mechanism was a *foreign* allocation. A concurrent test that reaches
+    /// the allocator indirectly (an X25519/ECDH keygen, an ML-KEM KAT, a TLS
+    /// handshake) charged its chunk to this fixture's arena, so `used` stopped
+    /// being the fixture's own; when the fixture then failed while holding a
+    /// chunk, `done()` refused for the rest of the run and every later test here
+    /// saw `init()` answer 0. The lease makes that caller take the documented
+    /// plain fallback, so the arena answers for this test alone.
+    ///
+    /// Negative control: with the lease check removed from
+    /// `CRYPTO_secure_malloc`/`CRYPTO_secure_zalloc`, the foreign chunk is secure
+    /// and `used` is 64 at the first assertion.
+    #[test]
+    fn a_foreign_thread_takes_the_plain_fallback_while_the_fixture_owns_the_heap() {
+        let _guard = lock();
+        reset();
+        init_ok(1 << 20, 16);
+
+        let (classified, charged) = std::thread::spawn(|| {
+            let p = sm(64);
+            assert!(!p.is_null(), "the fallback must still allocate");
+            let classified = CRYPTO_secure_allocated(p);
+            let charged = CRYPTO_secure_used();
+            sf(p);
+            (classified, charged)
+        })
+        .join()
+        .unwrap();
+        assert_eq!(
+            classified, 0,
+            "a foreign allocation must not land in the fixture's arena"
+        );
+        assert_eq!(
+            charged, 0,
+            "the fixture's accounting must exclude a foreign allocation"
+        );
+        assert_eq!(CRYPTO_secure_used(), 0);
+
+        // The owner still gets real secure chunks, accounted to itself.
+        let own = sm(64);
+        assert!(!own.is_null());
+        assert_eq!(
+            CRYPTO_secure_allocated(own),
+            1,
+            "the owner's chunk is secure"
+        );
+        assert_eq!(CRYPTO_secure_used(), 64);
+        sf(own);
+        assert_eq!(CRYPTO_secure_used(), 0);
+        assert_eq!(CRYPTO_secure_malloc_done(), 1);
+    }
+
     #[test]
     fn invalid_init_arguments_return_zero_instead_of_aborting() {
         let _guard = lock();
         reset();
-
         assert_eq!(CRYPTO_secure_malloc_init(0, 16), 0, "zero size");
         assert_eq!(
             CRYPTO_secure_malloc_init(1000, 16),

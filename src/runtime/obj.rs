@@ -2622,7 +2622,7 @@ mod tests {
     /// global-touching test shares, not a lock local to this module. The
     /// static-table tests could run in parallel, but one lock keeps the
     /// reasoning trivial.
-    fn lock() -> MutexGuard<'static, ()> {
+    fn lock() -> crate::test_support::GlobalStateGuard {
         crate::test_support::lock_global_state()
     }
 

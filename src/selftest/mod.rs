@@ -472,7 +472,7 @@ mod tests {
     /// the NULL-context arm reads the process-global default object, so the test
     /// takes [`crate::test_support::lock_global_state`], the one lock every
     /// global-touching test shares, rather than a lock local to this module.
-    fn lock() -> std::sync::MutexGuard<'static, ()> {
+    fn lock() -> crate::test_support::GlobalStateGuard {
         crate::test_support::lock_global_state()
     }
 
