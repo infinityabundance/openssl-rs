@@ -2,33 +2,99 @@
   "schema": "openssl-rs/timing-tools-inventory/v1",
   "purpose": "Phase 1 of the timing campaign: prove the timing-analysis instruments exist and are functional (with a sensitivity control), rather than classifying them absent.",
   "recorded_at": "2026-11-20",
+  "revision": 2,
+  "revision_note": "Revision 2 makes the toolchain survive court recreation and unblocks perf. The revision-1 record described a hand-installed toolchain living in a running container's writable layer, with perf BLOCKED by a missing capability. Both are fixed by docker/openssl-rs-court-tools.Dockerfile (the toolchain as an image layer) and --cap-add=CAP_PERFMON at container creation. Revision-1 negatives are preserved (see tools[].historical_status, venue_history and install_replay_ephemeral); nothing was deleted to make the new result look better.",
   "source": {
     "repository": "openssl-rs",
     "branch": "staging",
-    "head": "0433aa40cdaff10eed3b3cd5c50ed0be208ca562",
-    "head_subject": "baseline: OpenSSH interop and timing-safety campaign, Phase 1",
-    "changes_to_src_cargo": "none (src/, Cargo.toml, Cargo.lock untouched)"
+    "head": "32a4b78280cd565949d8c4205942c35b18520401",
+    "head_subject": "timing tools: install and validate the analysis instrument set",
+    "changes_to_src_cargo": "none (src/, Cargo.toml, Cargo.lock untouched)",
+    "pending_changes": "The docker/ and evidence/ changes of this revision were uncommitted when the image was built; the binding identity of the toolchain is the image digest below, not the commit hash."
   },
   "venue": {
     "container": "openssl-rs-court",
-    "image": "openssl-rs-court:1",
+    "container_id": "81be97dcaa1e8c60a74dc5d27764bf8c086a8c9f457a9a4ee6c166d528079c67",
+    "image": "openssl-rs-court-tools:1",
+    "image_digest": "sha256:0f4a1b1414c55da6c5f0365fe4588e9300ac79837bea234e59c1655d4eb2fc4d",
+    "image_size": "4.58GB",
+    "image_build_command": "OPENSSL_RS_COURT_IMAGE=openssl-rs-court-tools:1 docker/openssl-rs-court.sh build-tools",
+    "base_image": "openssl-rs-court:1",
+    "base_image_digest": "sha256:4971bb7af4bcdbc667aba9bae081bac85b4480ed0498d8375f4a11cc90c2cd23",
+    "created_with": "OPENSSL_RS_COURT_IMAGE=openssl-rs-court-tools:1 OPENSSL_RS_COURT_MEM=16g OPENSSL_RS_COURT_MEMSWAP=16g docker/openssl-rs-court.sh up",
     "os": "Debian GNU/Linux 12 (bookworm)",
     "kernel": "7.3.4-1-cachyos",
     "memory_max_bytes": 17179869184,
     "cpus": 8,
+    "nproc_reported": 30,
     "seccomp_mode": 2,
     "seccomp_filters": 1,
     "no_new_privs": true,
-    "host_available_gib_at_start": 30,
-    "note": "Court was already running at the 16 GiB cap and was not recreated."
+    "cap_add": ["CAP_PERFMON"],
+    "cap_effective": "0x00000040a80425fb",
+    "perf_event_paranoid": 2,
+    "host_available_gib_before_recreation": 32,
+    "note": "Court recreated on the tools image. `status` prints cap_add, the effective CapEff of the container init process and whether capability 38 (CAP_PERFMON) is set, so the capability is observed rather than assumed."
+  },
+  "venue_history": [
+    {
+      "container": "openssl-rs-court",
+      "image": "openssl-rs-court:1",
+      "image_digest": "sha256:4971bb7af4bcdbc667aba9bae081bac85b4480ed0498d8375f4a11cc90c2cd23",
+      "os": "Debian GNU/Linux 12 (bookworm)",
+      "kernel": "7.3.4-1-cachyos",
+      "memory_max_bytes": 17179869184,
+      "cpus": 8,
+      "seccomp_mode": 2,
+      "seccomp_filters": 1,
+      "no_new_privs": true,
+      "cap_effective": "0x00000000a80425fb",
+      "host_available_gib_at_start": 30,
+      "note": "Revision-1 venue: already running and not recreated, with the instruments hand-installed into its writable layer. That layer (and /court/opam) was discarded by `down` during this revision; nothing from it is relied upon."
+    }
+  ],
+  "capability_change": {
+    "change": "docker/openssl-rs-court.sh now passes --cap-add=CAP_PERFMON at container creation, controlled by OPENSSL_RS_COURT_CAP_PERFMON (default 1; 0 reproduces the previous, perf-denied venue).",
+    "why_creation_time": "--cap-add cannot be applied by `docker update` to a running container, and CAP_PERFMON is not in docker's default capability set, so perf_event_open(2) returned EPERM no matter what was installed inside",
+    "observed_delta": {
+      "cap_add": ["CAP_PERFMON"],
+      "cap_eff_before": "0x00000000a80425fb",
+      "cap_eff_after": "0x00000040a80425fb",
+      "delta": "exactly bit 38 (CAP_PERFMON); no other bit changed"
+    },
+    "grants": "Only the kernel capability checks that perf_event_open(2) and perf's related privileged accesses consult, so that unprivileged-in-capability terms perf measurement of this container's own processes becomes permitted.",
+    "does_not_grant": [
+      "CAP_SYS_ADMIN, CAP_SYS_PTRACE or any other capability: CapDrop is unchanged and CapBnd/CapEff differ from the default set only in bit 38",
+      "seccomp relief: --security-opt seccomp=unconfined was NOT added and the profile was NOT replaced; /proc/self/status still reports Seccomp: 2 with 1 filter, and perf_event_open is permitted by docker's default profile already (a 1 filter count is what it was in revision 1)",
+      "a weaker no-new-privileges setting: --security-opt no-new-privileges is still passed, NoNewPrivs: 1",
+      "any change to kernel.perf_event_paranoid: it stays 2 and read-only in the container, so it cannot be lowered from inside",
+      "access to kernel-inclusive hardware counters where the paranoid gate or the absence of a PMU denies them",
+      "anything on the host: the capability is scoped to this container's own processes"
+    ],
+    "seccomp_profile": "unchanged: docker's default profile, seccomp mode 2 with 1 filter, exactly as in revision 1",
+    "measured_effect": "perf_event_open(2) for software events went from EPERM to success; hardware 'cycles'/'instructions' are still unavailable, but for a different reason (no PMU exposed to this virtualised host), recorded under tools[perf].",
+    "negative_control": {
+      "how": "same image, same court script, same 16g-style caps, but OPENSSL_RS_COURT_CAP_PERFMON=0 on a throwaway 1g container (name openssl-rs-court-capprobe, removed afterwards)",
+      "status_output": "cap_add=null; 'cap_effective ... 0x00000000a80425fb; CAP_PERFMON (capability 38): ABSENT'",
+      "perf_output": "perf stat -e task-clock /tmp/trivial -> 'No permission to enable task-clock event.' (revision-1 failure reproduced)",
+      "conclusion": "the capability is what changed the outcome: the launcher's default adds exactly the bit that turns EPERM into a measurement, and `status` distinguishes the two venues without being told which one it is looking at"
+    }
   },
   "tools": [
     {
       "name": "valgrind",
       "version": "3.19.0 (Debian 1:3.19.0-1)",
-      "install_command": "apt-get update -qq && DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends valgrind",
+      "install_command": "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends valgrind=1:3.19.0-1",
       "url": "https://deb.debian.org/debian bookworm/main (package valgrind)",
-      "status": "FUNCTIONAL",
+      "historical_status": "FUNCTIONAL (ephemeral court, revision 1)",
+      "status_in_persisted_image": "FUNCTIONAL",
+      "persisted_image": {
+        "image": "openssl-rs-court-tools:1",
+        "image_digest": "sha256:0f4a1b1414c55da6c5f0365fe4588e9300ac79837bea234e59c1655d4eb2fc4d",
+        "path": "/usr/bin/valgrind; client-request headers in /usr/include/valgrind/",
+        "pin_verified_at_build": "dpkg-query version equality asserted by openssl-rs-court-tools-install.sh",
+        "revalidated_in_recreated_court": "yes"
+      },
       "validation_command": "gcc -g -O0 -o trivial court/tmp/tools/trivial.c && valgrind --quiet --error-exitcode=99 ./trivial",
       "observed_output_signature": "stdout 'trivial ok', no memcheck diagnostics, exit 0",
       "limitations": [
@@ -39,14 +105,22 @@
     {
       "name": "ctgrind (technique, not the abandoned patched-valgrind fork)",
       "version": "stock valgrind 3.19.0 + client requests from /usr/include/valgrind/memcheck.h",
-      "install_command": "no separate install; the valgrind package ships memcheck.h/valgrind.h (the legacy ctgrind fork was NOT built)",
+      "install_command": "no separate install; the pinned valgrind package ships memcheck.h/valgrind.h (the legacy ctgrind fork was NOT built)",
       "url": "https://github.com/agl/ctgrind (technique reference only; not built)",
-      "status": "FUNCTIONAL",
-      "validation_command": "gcc -g -O0 -o ctgrind_probe court/tmp/tools/ctgrind_probe.c && valgrind --tool=memcheck --error-exitcode=99 ./ctgrind_probe",
-      "observed_output_signature": "==NNNN== Conditional jump or move depends on uninitialised value(s)\\n==NNNN==    at 0x109412: main (ctgrind_probe.c:26)\\n...\\n==NNNN== ERROR SUMMARY: 16 errors from 1 contexts (suppressed: 0 from 0), exit 99",
+      "historical_status": "FUNCTIONAL (ephemeral court, revision 1)",
+      "status_in_persisted_image": "FUNCTIONAL",
+      "persisted_image": {
+        "image": "openssl-rs-court-tools:1",
+        "image_digest": "sha256:0f4a1b1414c55da6c5f0365fe4588e9300ac79837bea234e59c1655d4eb2fc4d",
+        "path": "inherits valgrind; headers asserted present at build (/usr/include/valgrind/{valgrind,memcheck}.h)",
+        "revalidated_in_recreated_court": "yes"
+      },
+      "validation_command": "cc -g -O0 -o ctgrind_probe court/tmp/tools/ctgrind_probe.c && valgrind --tool=memcheck --error-exitcode=99 ./ctgrind_probe",
+      "observed_output_signature_revision_1": "==NNNN== Conditional jump or move depends on uninitialised value(s)\\n==NNNN==    at 0x109412: main (ctgrind_probe.c:26)\\n...\\n==NNNN== ERROR SUMMARY: 16 errors from 1 contexts (suppressed: 0 from 0), exit 99",
+      "observed_output_signature_revision_2": "identical: 'Conditional jump or move depends on uninitialised value(s) at 0x109412: main (ctgrind_probe.c:26)', 'ERROR SUMMARY: 16 errors from 1 contexts (suppressed: 0 from 0)', exit 99",
       "sensitivity_control": {
         "positive": "16 errors from 1 contexts (one per loop iteration) for the buffer marked via VALGRIND_MAKE_MEM_UNDEFINED; exit 99",
-        "negative": "identical program without the taint marker: 'ERROR SUMMARY: 0 errors from 0 contexts', exit 0",
+        "negative": "identical program without the taint marker: 'ERROR SUMMARY: 0 errors from 0 contexts', exit 0 (re-observed in the recreated court)",
         "conclusion": "the tool reports the deliberate secret-dependent branch and stays silent without the taint, so the detector is sensitive, not merely silent"
       },
       "limitations": [
@@ -59,35 +133,75 @@
     {
       "name": "perf",
       "version": "6.1.192 (Debian linux-perf 6.1.192-2)",
-      "install_command": "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends linux-perf",
+      "install_command": "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends linux-perf=6.1.192-2",
       "url": "https://deb.debian.org/debian bookworm-security/main (package linux-perf)",
       "status": "BLOCKED",
-      "validation_command": "perf stat -e task-clock ./trivial ; perf stat -e cycles ./trivial ; court/tmp/tools/perf_probe (direct perf_event_open(2))",
-      "observed_output_signature": "perf: 'Error: No permission to enable task-clock event.' / 'No permission to enable cycles event.'; direct syscall: 'sw/task-clock exclude_kernel: FAIL errno=1 (Operation not permitted)' for task-clock, cpu-clock and cpu-cycles alike",
-      "blocker": {
+      "status_scope": "HISTORICAL. This is the revision-1 verdict, in the ephemeral court with docker's default capability set. It is preserved verbatim as negative evidence and is superseded (not deleted) by resolved_by.",
+      "historical_status": "BLOCKED (ephemeral court, revision 1)",
+      "resolved_by": {
+        "change": "--cap-add=CAP_PERFMON at container creation (docker/openssl-rs-court.sh, OPENSSL_RS_COURT_CAP_PERFMON default 1)",
+        "see": "capability_change",
+        "status_in_persisted_image": "FUNCTIONAL for software events"
+      },
+      "status_in_persisted_image": "FUNCTIONAL for software events (task-clock, cpu-clock, page-faults, context-switches); hardware PMU counters are UNAVAILABLE in this venue for a non-capability reason (see hardware_counters)",
+      "persisted_image": {
+        "image": "openssl-rs-court-tools:1",
+        "image_digest": "sha256:0f4a1b1414c55da6c5f0365fe4588e9300ac79837bea234e59c1655d4eb2fc4d",
+        "path": "/usr/bin/perf",
+        "pin_verified_at_build": "dpkg-query version equality asserted by openssl-rs-court-tools-install.sh",
+        "revalidated_in_recreated_court": "yes"
+      },
+      "validation_command_revision_1": "perf stat -e task-clock ./trivial ; perf stat -e cycles ./trivial ; court/tmp/tools/perf_probe (direct perf_event_open(2))",
+      "observed_output_signature_revision_1": "perf: 'Error: No permission to enable task-clock event.' / 'No permission to enable cycles event.'; direct syscall: 'sw/task-clock exclude_kernel: FAIL errno=1 (Operation not permitted)' for task-clock, cpu-clock and cpu-cycles alike",
+      "blocker_revision_1": {
         "kind": "capability restriction of the court container, not a missing install",
         "evidence": "perf_event_open(2) returns EPERM even with exclude_kernel=1, which precedes the kernel's paranoid gate (that path returns EACCES); /proc/self/status reports Seccomp: 2 with 1 filter and NoNewPrivs: 1",
         "secondary": "kernel.perf_event_paranoid=2 for kernel-inclusive events, and CapEff=0x00000000a80425fb includes neither CAP_PERFMON nor CAP_SYS_ADMIN; /proc/sys/kernel/perf_event_paranoid is read-only in the container, so it cannot be raised from inside",
-        "what_would_unblock": "docker run with a seccomp profile that permits perf_event_open (or seccomp=unconfined) plus CAP_PERFMON, and perf_event_paranoid<=1 for kernel events; this is a docker/ change, out of scope for this batch"
+        "what_would_unblock": "docker run with a seccomp profile that permits perf_event_open (or seccomp=unconfined) plus CAP_PERFMON, and perf_event_paranoid<=1 for kernel events; this is a docker/ change, out of scope for this batch",
+        "correction_in_revision_2": "The seccomp half of that guess was wrong: docker's default profile does permit perf_event_open(2). The capability was the whole blocker. seccomp was therefore left untouched (no unconfined, no custom profile), and CAP_SYS_ADMIN was not needed."
       },
-      "capability_note": "'perf list' succeeds and enumerates 1353 events; that exercises the binary's event tables only and proves no measurement capability.",
+      "capability_note_revision_1": "'perf list' succeeds and enumerates 1353 events; that exercises the binary's event tables only and proves no measurement capability.",
+      "validation_command_revision_2": "perf stat -e task-clock,page-faults,minor-faults,context-switches /tmp/trivial ; court/tmp/tools/perf_probe",
+      "observed_counters_revision_2": "task-clock 0.33 msec (0.771 CPUs utilized), page-faults 54, minor-faults 54, context-switches 0; elapsed 0.000433209 s; perf exit 0. A second run reported task-clock 0.47 msec, 0.801 CPUs utilized, exit 0.",
+      "direct_syscall_probe_revision_2": "sw/task-clock exclude_kernel: OK fd=3; sw/cpu-clock kernel-incl: OK fd=3; hw/cpu-cycles exclude_kernel: FAIL errno=2 (No such file or directory) — the syscall is now permitted; the hardware event type does not exist in this venue",
+      "hardware_counters": {
+        "status": "UNAVAILABLE",
+        "evidence": "perf stat -e cycles,instructions reports '<not supported>'; /sys/bus/event_source/devices lists breakpoint, kprobe, msr, power, software, tracepoint, uprobe but NOT 'cpu', i.e. no hardware PMU is exposed to this virtualised host; hw/cpu-cycles fails perf_event_open with ENOENT rather than EPERM",
+        "consequence": "instruction/cycle counts and IPC are not obtainable here; time-like software events are. This is an environment limit, not a permission that another flag can grant.",
+        "not_attempted": "CAP_SYS_ADMIN or a host-side PMU/paranoid change; neither would create a PMU device that the hypervisor does not expose, and CAP_SYS_ADMIN is explicitly out of scope."
+      },
+      "tracepoints": {
+        "status": "UNAVAILABLE",
+        "evidence": "perf stat -e sched:sched_process_exec -> 'Unable to find debugfs/tracefs' (debugfs is not mounted in the container)"
+      },
       "limitations": [
-        "Installed perf is 6.1.x while the kernel is 7.3.4; version skew is an additional (untested) risk even once the syscall is permitted."
+        "Installed perf is 6.1.x while the kernel is 7.3.4; version skew remains an untested risk, though software-event measurement succeeds.",
+        "Software events only in this venue: no PMU, no tracepoints."
       ]
     },
     {
       "name": "dudect",
       "version": "0.2.0-25-gdc26965 (upstream master at pinned commit)",
-      "install_command": "git clone https://github.com/oreparaz/dudect.git && cd dudect && make dut_simple && make dut_donnabad",
+      "install_command": "git clone https://github.com/oreparaz/dudect.git /opt/dudect && git -C /opt/dudect checkout --detach dc269651fb2567e46755cfb2a13d3875592968b5 && make -C /opt/dudect dut_simple dut_donnabad",
       "url": "https://github.com/oreparaz/dudect.git",
       "commit": "dc269651fb2567e46755cfb2a13d3875592968b5",
       "commit_date": "2024-03-19",
-      "status": "FUNCTIONAL",
-      "validation_command": "make dut_donnabad && timeout 90 ./dudect_donnabad_O2",
-      "observed_output_signature": "meas:    0.01 M, max t:  +67.38, max tau: 6.46e-01, (5/tau)^2: 5.99e+01. Probably not constant time.",
+      "historical_status": "FUNCTIONAL (ephemeral court, revision 1)",
+      "status_in_persisted_image": "FUNCTIONAL",
+      "persisted_image": {
+        "image": "openssl-rs-court-tools:1",
+        "image_digest": "sha256:0f4a1b1414c55da6c5f0365fe4588e9300ac79837bea234e59c1655d4eb2fc4d",
+        "path": "/opt/dudect (on PATH); binaries dudect_simple_O0, dudect_simple_O2, dudect_donnabad_O2",
+        "pin_verified_at_build": "checkout asserted before and after build (git rev-parse HEAD = pinned commit)",
+        "revalidated_in_recreated_court": "yes"
+      },
+      "validation_command": "timeout 90 dudect_donnabad_O2",
+      "observed_output_signature_revision_1": "meas:    0.01 M, max t:  +67.38, max tau: 6.46e-01, (5/tau)^2: 5.99e+01. Probably not constant time.",
+      "observed_output_signature_revision_2": "meas:    0.01 M, max t:  +65.29, max tau: 6.26e-01, (5/tau)^2: 6.38e+01. Probably not constant time.",
       "sensitivity_control": {
-        "positive": "dut_donnabad (upstream's deliberately leaky curve25519) terminates with max t=+67.38, far above the |t|>5 threshold",
-        "negative": "dudect_simple_O2 (memcmp example) kept reporting 'max t: +1.1x ... maybe constant time' until killed by timeout(1) at 133.8 M measurements; this is a NON-DETECTION, not evidence that memcmp is constant-time (both input classes in that example diverge at the first byte)"
+        "positive": "dut_donnabad (upstream's deliberately leaky curve25519) terminates with max t=+65.29 (revision 1: +67.38), far above the |t|>5 threshold",
+        "negative": "dudect_simple_O2 (memcmp example) kept reporting 'max t: +1.1x ... maybe constant time' until killed by timeout(1) at 133.8 M measurements; this is a NON-DETECTION, not evidence that memcmp is constant-time (both input classes in that example diverge at the first byte)",
+        "conclusion": "the leaky control still separates cleanly from the t-test noise floor; max t varies run to run, as the statistic requires"
       },
       "limitations": [
         "Welch's t-test is statistical: absence of a detected difference is not a proof of constant-time behaviour.",
@@ -98,7 +212,7 @@
     {
       "name": "BINSEC",
       "version": "0.11.3 (ocaml-base-compiler 4.14.2, dune 3.25.0, unisim_archisec 0.0.14)",
-      "install_command": "apt-get install -y --no-install-recommends opam bubblewrap patch m4 pkg-config unzip rsync libgmp-dev; export OPAMROOT=/court/opam; opam init --bare --disable-sandboxing -n; opam switch create 4.14.2 --jobs=4; opam install -y --assume-depexts binsec.0.11.3 unisim_archisec",
+      "install_command": "opam init --bare --disable-sandboxing -n; opam switch create 4.14.2 ocaml-base-compiler.4.14.2 --jobs=4; opam switch import --switch 4.14.2 docker/openssl-rs-court-tools.opam-switch.export",
       "url": "https://opam.ocaml.org (package binsec.0.11.3)",
       "source_archive": "https://github.com/binsec/binsec/releases/download/0.11.3/binsec-0.11.3.tbz",
       "sha256": "93f6fe439d486b166062ef6dd92c4ce3aa0947b5e18b1c3aa7de2fc3003aa6d9",
@@ -108,9 +222,19 @@
         "sha256": "4618bf579da50064a4b03988b5cc5d0796ede6717f76e47e1928ab2427d9ab04",
         "why": "without it, symbolic execution fails with '[sse:fatal] Can not resolve decoder for x86-64'"
       },
-      "status": "FUNCTIONAL",
-      "validation_command": "binsec -version; gcc -nostdlib -static -no-pie -o tiny court/tmp/tools/tiny.s; printf 'starting from 0x401000\\nreach 0x40100c\\n' > /tmp/sse.cfg; binsec -sse -sse-script /tmp/sse.cfg -sse-depth 20 ./tiny",
-      "observed_output_signature": "version: 'Binsec version 0.11.3'; SSE summary: 'total paths 1 / branching points 1 / discontinued paths 1 / visited instructions (static) 9 / max path depth 8'",
+      "historical_status": "FUNCTIONAL (ephemeral court, revision 1; opam root was /court/opam)",
+      "status_in_persisted_image": "FUNCTIONAL",
+      "persisted_image": {
+        "image": "openssl-rs-court-tools:1",
+        "image_digest": "sha256:0f4a1b1414c55da6c5f0365fe4588e9300ac79837bea234e59c1655d4eb2fc4d",
+        "path": "OPAMROOT=/opt/opam, switch 4.14.2, binary on PATH at /opt/opam/4.14.2/bin/binsec",
+        "binary_sha256": "001fb47bd66cd91d62d88476f06c52e9c99294e365820625acda9c89b193d694",
+        "pin_verified_at_build": "opam switch export --full --freeze (35 packages, URLs and archive checksums embedded) imported; installed set diffed against the export's installed list and required identical",
+        "revalidated_in_recreated_court": "yes"
+      },
+      "validation_command": "gcc -nostdlib -static -no-pie -o tiny court/tmp/tools/tiny.s; printf 'starting from 0x401000\\nreach 0x40100c\\n' > /tmp/sse.cfg; binsec -sse -sse-script /tmp/sse.cfg -sse-depth 20 ./tiny",
+      "observed_output_signature_revision_1": "version: 'Binsec version 0.11.3'; SSE summary: 'total paths 1 / branching points 1 / discontinued paths 1 / visited instructions (static) 9 / max path depth 8'",
+      "observed_output_signature_revision_2": "version: 'Binsec version 0.11.3'; SSE summary: total paths 1, branching points 1, discontinued paths 1, visited instructions (static) 9, max path depth 8, exit 0 — identical to revision 1",
       "limitations": [
         "The checkct constant-time plugin is NOT validated: 'binsec -checkct [-sse-script ...] ./tiny' exited 0 with no output at all, which is not a result; its configuration contract was not established in this batch.",
         "'binsec -disasm ./trivial_static' (large static glibc ELF) aborted with an assertion failure in src/cli/command/disasm/disasm_core.ml:124 after printing a linear disassembly range; small freestanding ELFs are fine.",
@@ -123,11 +247,19 @@
       "version": "poison.h method (upstream project dormant; no tagged release; SUPERCOP patches pinned to supercop-20181113/20190110/20190816)",
       "install_command": "no install: the TIMECOP method is stock valgrind + poison.h (public-domain header from the project page); no patched valgrind was built",
       "url": "https://www.post-apocalyptic-crypto.org/timecop/",
-      "status": "FUNCTIONAL",
+      "historical_status": "FUNCTIONAL (ephemeral court, revision 1)",
+      "status_in_persisted_image": "FUNCTIONAL",
+      "persisted_image": {
+        "image": "openssl-rs-court-tools:1",
+        "image_digest": "sha256:0f4a1b1414c55da6c5f0365fe4588e9300ac79837bea234e59c1655d4eb2fc4d",
+        "path": "inherits valgrind; the header and example are the repository's court/tmp/tools/timecop_repro/{poison.h,example.c}",
+        "revalidated_in_recreated_court": "yes"
+      },
       "method_validated": "poison.h (VALGRIND_MAKE_MEM_UNDEFINED wrappers) over stock valgrind 3.19.0 with --track-origins=yes",
       "not_validated": "the SUPERCOP-integrated TIMECOP harness (patch -p1 over a pinned SUPERCOP tree) was NOT attempted; see timecop_supercop_harness",
-      "validation_command": "gcc -O0 -g -Wall -I/usr/include/valgrind -o example court/tmp/tools/timecop_repro/example.c && valgrind --track-origins=yes ./example",
-      "observed_output_signature": "two contexts: 'Conditional jump or move depends on uninitialised value(s) at ... modular_pow (example.c:14)' and '... (example.c:15)', each with 'Uninitialised value was created by a client request at ... main (example.c:29)'; 'ERROR SUMMARY: 61 errors from 2 contexts (suppressed: 0 from 0)'",
+      "validation_command": "cc -O0 -g -Wall -I/usr/include/valgrind -o example court/tmp/tools/timecop_repro/example.c && valgrind --track-origins=yes ./example",
+      "observed_output_signature_revision_1": "two contexts: 'Conditional jump or move depends on uninitialised value(s) at ... modular_pow (example.c:14)' and '... (example.c:15)', each with 'Uninitialised value was created by a client request at ... main (example.c:29)'; 'ERROR SUMMARY: 61 errors from 2 contexts (suppressed: 0 from 0)'",
+      "observed_output_signature_revision_2": "identical: 2 'Conditional jump or move depends on uninitialised value(s)' contexts, both origins 'Uninitialised value was created by a client request', 'ERROR SUMMARY: 61 errors from 2 contexts (suppressed: 0 from 0)', valgrind error exit 93",
       "agreement_with_upstream": "the upstream page documents the same result for this example (both secret-dependent branches reported, origin traced to the poison() call, 61 errors from 2 contexts)",
       "limitations": [
         "Same property and same blind spots as the ctgrind technique: control flow and memory addresses only, no variable-time instructions.",
@@ -143,43 +275,87 @@
   },
   "network_urls_used": [
     "http://deb.debian.org/debian/ (apt: valgrind, linux-perf, opam, bubblewrap, patch, m4, pkg-config, unzip, rsync, libgmp-dev)",
-    "https://opam.ocaml.org (opam repository index and package cache)",
+    "https://opam.ocaml.org (opam repository index and package cache; the package set itself comes from the embedded switch export)",
     "https://github.com/oreparaz/dudect.git",
     "https://github.com/binsec/binsec/releases/download/0.11.3/binsec-0.11.3.tbz",
     "https://github.com/binsec/unisim_archisec/releases/download/0.0.14/unisim_archisec-0.0.14.tbz",
     "https://www.post-apocalyptic-crypto.org/timecop/ (poison.h and documented example, transcribed)",
     "https://github.com/constant-time-tools/timecop.git (attempted; does not exist — clone prompted for GitHub credentials)"
   ],
-  "install_replay": [
-    "apt-get update -qq",
-    "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends valgrind linux-perf opam bubblewrap patch m4 pkg-config unzip rsync libgmp-dev",
-    "export OPAMROOT=/court/opam OPAMYES=1 OPAMJOBS=4",
-    "opam init --bare --disable-sandboxing -n",
-    "opam switch create 4.14.2 --jobs=4",
-    "opam install -y --assume-depexts binsec.0.11.3 unisim_archisec",
-    "git clone https://github.com/oreparaz/dudect.git && cd dudect && git checkout dc269651fb2567e46755cfb2a13d3875592968b5 && make dut_simple dut_donnabad",
-    "gcc -O0 -g -Wall -I/usr/include/valgrind -o example court/tmp/tools/timecop_repro/example.c"
-  ],
+  "rebuild": {
+    "kind": "image",
+    "command": "OPENSSL_RS_COURT_IMAGE=openssl-rs-court-tools:1 docker/openssl-rs-court.sh build-tools",
+    "dockerfile": "docker/openssl-rs-court-tools.Dockerfile",
+    "dockerfile_sha256": "7bd7d470d510bb82e72fa14a5f54248b00066ad6b5688d87c1e55529509f79c8",
+    "launcher": "docker/openssl-rs-court.sh (adds --cap-add=CAP_PERFMON at creation and the build-tools target)",
+    "launcher_sha256": "77f530bcfff252a3af229b0032f00b0afcb53f0021f6aa19f2caec8fb6af529c",
+    "build_memory_cap": "8g, passed to BuildKit as --resource memory=8g by OPENSSL_RS_COURT_BUILD_MEM (the build runs outside the court, so it cannot be inside the court's cgroup)",
+    "install_script": "docker/openssl-rs-court-tools-install.sh (copied into the image at /opt/timing-tools/install.sh, so the image carries its own recipe)",
+    "install_script_sha256": "9b2bd817f66e217cd9ae9459669fa76848961f4443b5ea931e801b12dc6f808e",
+    "install_script_identity": "the repository file and the copy inside the built image (/opt/timing-tools/install.sh) hash identically, so the shipped script is the one this image was built from; an earlier attempt failed on opam 2.1.2's lack of --no-header and on `opam switch create NAME` needing an explicit compiler, and was rebuilt after those corrections",
+    "opam_pin_file": "docker/openssl-rs-court-tools.opam-switch.export",
+    "opam_pin_file_sha256": "1c95502dee3f2a10825a0172960c4eaa070e1f7b8f0b1fa3bf47d19b32fab7f5",
+    "determinism": [
+      "apt packages pinned to exact bookworm versions and re-verified with dpkg-query after install; an unavailable pin fails the build",
+      "dudect pinned to a commit and asserted before and after build",
+      "the opam package set comes from `opam switch export --full --freeze`, which embeds every package definition with its archive URL and checksum; the installed set is diffed against the export's installed list and must be identical (35 packages)",
+      "the compiler package (ocaml-base-compiler.4.14.2) is requested explicitly and still comes from the opam repository index at build time; if that index stops offering 4.14.2 the build fails instead of silently substituting"
+    ],
+    "build_result": {
+      "exit": 0,
+      "duration_wall": "4m13s (opam import/compile step 199s)",
+      "warnings": "none from the build itself; the second apt opam run printed opam's 'Running as root is not recommended' warning inside the build log, which is informational",
+      "earlier_failed_attempt": "exit 2 on the first attempt at the run-time verification step (opam 2.1.2 has no --no-header); fixed in the install script, then rebuilt from a clean RUN layer"
+    }
+  },
+  "install_replay_ephemeral": {
+    "note": "HISTORICAL (revision 1): the exact ordered commands that recreated the toolchain by hand from a fresh openssl-rs-court:1 container. Superseded by the image at rebuild, kept because it is the record of what the ephemeral venue actually ran.",
+    "commands": [
+      "apt-get update -qq",
+      "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends valgrind linux-perf opam bubblewrap patch m4 pkg-config unzip rsync libgmp-dev",
+      "export OPAMROOT=/court/opam OPAMYES=1 OPAMJOBS=4",
+      "opam init --bare --disable-sandboxing -n",
+      "opam switch create 4.14.2 --jobs=4",
+      "opam install -y --assume-depexts binsec.0.11.3 unisim_archisec",
+      "git clone https://github.com/oreparaz/dudect.git && cd dudect && git checkout dc269651fb2567e46755cfb2a13d3875592968b5 && make dut_simple dut_donnabad",
+      "gcc -O0 -g -Wall -I/usr/include/valgrind -o example court/tmp/tools/timecop_repro/example.c"
+    ]
+  },
   "persistence": {
-    "state": "EPHEMERAL",
-    "statement": "All installs above live in the running court container's writable layer and are lost on `docker/openssl-rs-court.sh down`, which also removes /court (the opam root). Nothing here is persisted in an image.",
-    "replay": "install_replay is the exact, ordered command list that recreates this toolchain from a fresh openssl-rs-court:1 container.",
-    "durable_route": "Persisting these tools requires a change to docker/ (a Dockerfile layer installing the apt packages, plus an opam switch and a pinned dudect checkout), which is out of scope for this batch.",
-    "not_done": "no image was built, committed or retagged, and no container state is being relied upon."
+    "state": "PERSISTED_IN_IMAGE",
+    "statement": "Every instrument above is now a layer of openssl-rs-court-tools:1 (digest in venue), built from docker/openssl-rs-court-tools.Dockerfile. `docker/openssl-rs-court.sh down` still removes the container and its /court scratch space, but a court recreated with OPENSSL_RS_COURT_IMAGE=openssl-rs-court-tools:1 starts with valgrind/ctgrind headers, perf, dudect (/opt/dudect), BINSEC (OPAMROOT=/opt/opam, switch 4.14.2) and the TIMECOP poison.h headers already installed.",
+    "replaces": "BINSEC's opam root moved from /court/opam (scratch, destroyed by `down`) to /opt/opam (image layer).",
+    "not_persisted": "Nothing from the discarded container was carried over: the image was rebuilt from openssl-rs-court:1 plus the pinned install, not committed from the old container. The small test programs used for validation (trivial.c, ctgrind_probe.c, tiny.s, timecop_repro/) live in the repository bind mount under court/tmp/tools/ and are not part of the image.",
+    "scope": "Separate tag, never selected implicitly. Conversion gates, forensic regeneration and the OOM-bounded Rust test loop keep running the minimal openssl-rs-court:1 unless the caller opts in.",
+    "known_consequence": "`docker/openssl-rs-court.sh exec` records PHASE24_IMAGE/PHASE25_IMAGE from OPENSSL_RS_COURT_IMAGE, and forensics/downstream/container.json and forensics/memory-safety/container.json name openssl-rs-court:1. A court running the tools image is therefore not an admitted venue for the Phase-24/25 guards; timing-instrument runs must not invoke them."
+  },
+  "revalidation": {
+    "when": "2026-11-20, after the court was recreated on openssl-rs-court-tools:1 with --cap-add=CAP_PERFMON",
+    "host_available_gib_before_heavy_steps": 32,
+    "court_memory_cap": "16g (memory.max 17179869184), memory.events oom=0 oom_kill=0",
+    "results": [
+      "perf stat -e task-clock,page-faults,minor-faults,context-switches ./trivial -> exit 0, counters reported (see tools[perf].observed_counters_revision_2)",
+      "ctgrind positive control -> 16 errors from 1 context, exit 99; untagged twin -> 0 errors from 0 contexts, exit 0",
+      "dudect dut_donnabad -> max t +65.29, 'Probably not constant time'",
+      "BINSEC -sse on the freestanding ELF -> 1 path, 1 branching point, 9 static instructions, exit 0",
+      "TIMECOP example.c -> 2 contexts, 61 errors from 2 contexts, origins from the client request"
+    ]
   },
   "not_run": [
     "BINSEC checkct constant-time plugin (invocation produced no output; configuration contract not established).",
     "TIMECOP SUPERCOP patch harness (unmaintained, version-pinned).",
-    "perf measurement of any kind (perf_event_open denied by seccomp).",
+    "Hardware PMU events (cycles/instructions) in this venue: no PMU device is exposed to the virtualised host; not attempted with CAP_SYS_ADMIN, which cannot create one.",
+    "perf tracepoints (debugfs/tracefs is not mounted in the container).",
     "Any timing measurement of openssl-rs code: no dudect, valgrind or BINSEC run was performed against the crate or its test suite.",
     "Release-profile builds, full test suite, clippy, fmt (no source change was made, so the §6 local gate was not invoked).",
-    "Persistence in the court image (requires a docker/ Dockerfile change)."
+    "Persistence in the court image was the subject of revision 1's not_run list; it is now done and recorded above."
   ],
   "non_claims": [
     "This inventory is not evidence about the constant-timeness of any openssl-rs implementation; it records tool availability and detector sensitivity only.",
     "The ctgrind/TIMECOP technique cannot see variable-latency instructions, and a clean run is not a constant-time proof.",
     "dudect's t-test is statistical; a single run on a shared/virtualised CPU is not a timing verdict.",
-    "The presence of the perf binary and its 1353-entry 'perf list' output is not measurement capability.",
+    "The presence of the perf binary and its 1353-entry 'perf list' output is not measurement capability; the capability is demonstrated only by the reported counters.",
+    "CAP_PERFMON is not a general privilege grant: it does not add CAP_SYS_ADMIN, does not weaken seccomp, does not weaken no-new-privileges, does not change perf_event_paranoid, and does not affect the host.",
     "No claim is made that these tools behave identically to the pinned OpenSSL authority or to a quiet machine.",
     "Nothing here is a §7 SAFETY_DISCHARGED or SAFE_COMPATIBLE promotion."
   ]

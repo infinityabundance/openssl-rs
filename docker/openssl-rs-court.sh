@@ -36,6 +36,34 @@
 #                                runner failed to start the court at all. A clamp is
 #                                announced, never silent.
 #   --restart=no                 a killed court stays dead; it never silently restarts
+#   --security-opt no-new-privileges
+#                                setuid/setgid binaries cannot raise privilege, exactly
+#                                as before; adding a capability does not weaken it (the
+#                                container's capability sets are applied by runc before
+#                                no_new_privs takes effect, and no_new_privs stops a
+#                                *process* from gaining more)
+#   --cap-add=CAP_PERFMON        the ONLY capability added, and only when
+#                                OPENSSL_RS_COURT_CAP_PERFMON is 1 (the default). It is
+#                                what makes perf_event_open(2) succeed: docker's default
+#                                capability set excludes CAP_PERFMON, so `perf stat`
+#                                failed with EPERM even with exclude_kernel=1, and
+#                                `docker update` cannot add capabilities to a running
+#                                container, so it must be set at creation (§6.1 of
+#                                AGENTS.md applies unchanged: memory/pids are untouched).
+#                                CAP_PERFMON grants exactly the performance-monitoring
+#                                privilege checks (perf_event_open and the perf-related
+#                                accesses it gates); it does NOT grant CAP_SYS_ADMIN, it
+#                                does NOT disable or weaken seccomp (docker's default profile
+#                                still filters -- perf_event_open is allowed by that profile,
+#                                and the EPERM recorded in the inventory was the capability
+#                                check, not the filter), and it does NOT lower
+#                                kernel.perf_event_paranoid, which is read-only in the
+#                                container: kernel-inclusive events stay denied at
+#                                paranoid=2, userspace events (exclude_kernel=1) are what
+#                                the added capability unlocks. Set
+#                                OPENSSL_RS_COURT_CAP_PERFMON=0 to reproduce the previous
+#                                (perf-denied) venue; `status` prints the effective set so
+#                                the difference is observed, never assumed.
 #
 # The memory cap is clamped to the host's MemTotal the same announced way, and a
 # collective budget keeps the three venues from declaring more between them than the
@@ -59,6 +87,29 @@ NAME="${OPENSSL_RS_COURT_NAME:-openssl-rs-court}"
 # with OPENSSL_RS_COURT_IMAGE. It must not be used for conversion gates or forensics.
 EXPAND_IMAGE="${OPENSSL_RS_COURT_EXPAND_IMAGE:-openssl-rs-court-expand:1}"
 EXPAND_BASE="${OPENSSL_RS_COURT_EXPAND_BASE:-openssl-rs-court:1}"
+# Timing-tools image (docker/openssl-rs-court-tools.Dockerfile): the minimal image
+# plus valgrind/ctgrind, perf, dudect, BINSEC and the TIMECOP poison.h headers, so a
+# recreated court no longer loses them with its writable layer. Like the expansion
+# image it is a separate tag, never selected implicitly, and must not be used for
+# conversion gates or forensics. See evidence/timing-tools-inventory.json.
+TOOLS_IMAGE="${OPENSSL_RS_COURT_TOOLS_IMAGE:-openssl-rs-court-tools:1}"
+TOOLS_BASE="${OPENSSL_RS_COURT_TOOLS_BASE:-openssl-rs-court:1}"
+# Memory cap for the image build itself, which cannot run inside the court container.
+BUILD_MEM="${OPENSSL_RS_COURT_BUILD_MEM:-8g}"
+
+# perf_event_open(2) needs CAP_PERFMON, which docker's default capability set does
+# not include, and `docker update` cannot add it to a running container. It is
+# therefore a creation-time flag, on by default so the timing instruments work in a
+# fresh court, and reported by `status` rather than assumed.
+CAP_PERFMON="${OPENSSL_RS_COURT_CAP_PERFMON:-1}"
+case "${CAP_PERFMON}" in
+  0 | 1) ;;
+  *) echo "openssl-rs-court: OPENSSL_RS_COURT_CAP_PERFMON must be 0 or 1 (got '${CAP_PERFMON}')" >&2; exit 2 ;;
+esac
+CAP_PERFMON_OPT=""
+if [ "${CAP_PERFMON}" = 1 ]; then
+  CAP_PERFMON_OPT="--cap-add=CAP_PERFMON"
+fi
 
 # Shared host-side budget / OOM helpers. Sourced so the three venues all see the
 # same running openssl-rs-* set and the budget cannot drift between them.
@@ -139,6 +190,9 @@ usage: openssl-rs-court.sh <command>
   build-expand  build the expansion image from docker/openssl-rs-court-expand.Dockerfile
                 (FROM ${EXPAND_BASE}); opt in at run time with
                 OPENSSL_RS_COURT_IMAGE=${EXPAND_IMAGE}
+  build-tools   build the timing-tools image from docker/openssl-rs-court-tools.Dockerfile
+                (FROM ${TOOLS_BASE}); opt in at run time with
+                OPENSSL_RS_COURT_IMAGE=${TOOLS_IMAGE}
   up            (re)create and start the court container with resource caps
   down          stop and remove the court container
   status        show container state and effective resource caps
@@ -151,6 +205,12 @@ env overrides:
   OPENSSL_RS_COURT_NAME            default ${NAME}
   OPENSSL_RS_COURT_EXPAND_IMAGE    default ${EXPAND_IMAGE}, tag 'build-expand' writes
   OPENSSL_RS_COURT_EXPAND_BASE     default ${EXPAND_BASE}, base image 'build-expand' uses
+  OPENSSL_RS_COURT_TOOLS_IMAGE     default ${TOOLS_IMAGE}, tag 'build-tools' writes
+  OPENSSL_RS_COURT_TOOLS_BASE      default ${TOOLS_BASE}, base image 'build-tools' uses
+  OPENSSL_RS_COURT_BUILD_MEM       default ${BUILD_MEM}, BuildKit --resource memory cap for
+                                   'build-tools' (the build runs outside the court)
+  OPENSSL_RS_COURT_CAP_PERFMON     default ${CAP_PERFMON}; 1 adds --cap-add=CAP_PERFMON at
+                                   creation (perf_event_open(2)), 0 omits it
   OPENSSL_RS_COURT_MEM             default ${MEM}, clamped to the host's MemTotal
   OPENSSL_RS_COURT_MEMRES          default ${MEMRES}, the soft limit
   OPENSSL_RS_COURT_MEMSWAP         default ${MEMSWAP}
@@ -161,7 +221,7 @@ env overrides:
 
 shared with the other venues (docker/openssl-rs-resource-guard.sh):
   OPENSSL_RS_CONTAINER_BUDGET      collective cap for all openssl-rs-* containers,
-                                   default the host's MemTotal; `up` refuses when the
+                                   default the host's MemTotal; \`up\` refuses when the
                                    running set plus the request would exceed it
   OPENSSL_RS_CONTAINER_HEADROOM    headroom for the MemAvailable warning, default 2g
   OPENSSL_RS_CONTAINER_PREFIX      counted container-name prefix, default openssl-rs-
@@ -173,12 +233,16 @@ EOF
 }
 
 do_build() {
-  # Refuse to overwrite an expansion tag with the minimal image. The two venues have
-  # different purposes (conversion gates vs. downstream-family expansion) and a
-  # mis-tagged image would silently change what a court is running under the tag a
-  # receipt names.
+  # Refuse to overwrite an expansion or tools tag with the minimal image. The venues
+  # have different purposes (conversion gates vs. downstream-family expansion vs.
+  # timing instruments) and a mis-tagged image would silently change what a court is
+  # running under the tag a receipt names.
   if [ "${IMAGE}" = "${EXPAND_IMAGE}" ]; then
     echo "openssl-rs-court: '${IMAGE}' is the expansion image; use 'build-expand' for it" >&2
+    exit 2
+  fi
+  if [ "${IMAGE}" = "${TOOLS_IMAGE}" ]; then
+    echo "openssl-rs-court: '${IMAGE}' is the timing-tools image; use 'build-tools' for it" >&2
     exit 2
   fi
   docker build -f "${PROJECT_DIR}/docker/openssl-rs-court.Dockerfile" -t "${IMAGE}" "${PROJECT_DIR}/docker"
@@ -193,6 +257,31 @@ do_build_expand() {
     -f "${PROJECT_DIR}/docker/openssl-rs-court-expand.Dockerfile" \
     --build-arg BASE_IMAGE="${EXPAND_BASE}" \
     -t "${EXPAND_IMAGE}" \
+    "${PROJECT_DIR}/docker"
+}
+
+do_build_tools() {
+  if [ "${TOOLS_IMAGE}" = "${IMAGE}" ] || [ "${TOOLS_IMAGE}" = "${EXPAND_IMAGE}" ]; then
+    echo "openssl-rs-court: the tools image must be its own tag (got '${TOOLS_IMAGE}')" >&2
+    exit 2
+  fi
+  if [ "${TOOLS_BASE}" = "${TOOLS_IMAGE}" ]; then
+    echo "openssl-rs-court: OPENSSL_RS_COURT_TOOLS_BASE must not be the tools image itself" >&2
+    exit 2
+  fi
+  # The build is a heavy command that cannot itself run inside the court, so it is
+  # capped at the build level instead (AGENTS.md §6.1: no command runs without a memory
+  # cap). Docker 29 forwards --resource to BuildKit; a value docker cannot parse is
+  # refused here rather than silently dropped.
+  if ! guard_mem_to_bytes "${BUILD_MEM}" >/dev/null 2>&1; then
+    echo "openssl-rs-court: OPENSSL_RS_COURT_BUILD_MEM must be a memory size like 8g (got '${BUILD_MEM}')" >&2
+    exit 2
+  fi
+  docker build \
+    --resource "memory=${BUILD_MEM}" \
+    -f "${PROJECT_DIR}/docker/openssl-rs-court-tools.Dockerfile" \
+    --build-arg BASE_IMAGE="${TOOLS_BASE}" \
+    -t "${TOOLS_IMAGE}" \
     "${PROJECT_DIR}/docker"
 }
 
@@ -215,6 +304,7 @@ do_up() {
     --pids-limit="${PIDS}" \
     --cpus="${CPUS}" \
     --restart=no \
+    ${CAP_PERFMON_OPT} \
     --security-opt no-new-privileges \
     -v "${PROJECT_DIR}:/work" \
     -w /work \
@@ -226,8 +316,25 @@ do_down() {
 }
 
 do_status() {
+  # cap_add / security_opt are the creation-time request; the effective CapEff below is
+  # what the kernel actually gave the container's init process. Printing both means the
+  # perf capability is observed rather than assumed -- and a court created with
+  # OPENSSL_RS_COURT_CAP_PERFMON=0 is visibly different from one where the capability
+  # was added and something else (e.g. seccomp) is denying perf_event_open.
   docker inspect "${NAME}" \
-    --format 'name={{.Name}} image={{.Config.Image}} running={{.State.Running}} memory={{.HostConfig.Memory}} memory_reservation={{.HostConfig.MemoryReservation}} memory_swap={{.HostConfig.MemorySwap}} memory_swappiness={{.HostConfig.MemorySwappiness}} oom_score_adj={{.HostConfig.OomScoreAdj}} pids={{.HostConfig.PidsLimit}} nanocpus={{.HostConfig.NanoCpus}}'
+    --format 'name={{.Name}} image={{.Config.Image}} running={{.State.Running}} memory={{.HostConfig.Memory}} memory_reservation={{.HostConfig.MemoryReservation}} memory_swap={{.HostConfig.MemorySwap}} memory_swappiness={{.HostConfig.MemorySwappiness}} oom_score_adj={{.HostConfig.OomScoreAdj}} pids={{.HostConfig.PidsLimit}} nanocpus={{.HostConfig.NanoCpus}} cap_add={{json .HostConfig.CapAdd}} security_opt={{json .HostConfig.SecurityOpt}}'
+  local pid cap_eff
+  pid="$(docker inspect --format '{{.State.Pid}}' "${NAME}" 2>/dev/null || echo 0)"
+  if [ -n "${pid}" ] && [ "${pid}" != 0 ] && [ -r "/proc/${pid}/status" ]; then
+    cap_eff="$(awk '/^CapEff:/ { print $2 }' "/proc/${pid}/status")"
+    echo "  cap_effective (container init, CapEff): 0x${cap_eff}"
+    case "$(( (16#${cap_eff} >> 38) & 1 ))" in
+      1) echo "  CAP_PERFMON (capability 38): present -- perf_event_open(2) is capability-permitted" ;;
+      0) echo "  CAP_PERFMON (capability 38): ABSENT -- perf_event_open(2) will be denied (EPERM)" ;;
+    esac
+  else
+    echo "  cap_effective (container init, CapEff): n/a (container not running)"
+  fi
   guard_report_oom "${NAME}"
 }
 
@@ -281,6 +388,10 @@ do_verify() {
     echo "cgroup memory.events:"; cat /sys/fs/cgroup/memory.events 2>/dev/null || echo "  n/a"
     echo "nproc:             $(nproc)"
     echo "RLIMIT_DATA:       $(ulimit -d)"
+    echo "CapEff:            $(cat /proc/self/status | grep -m1 CapEff | cut -f2)"
+    echo "CapBnd:            $(cat /proc/self/status | grep -m1 CapBnd | cut -f2)"
+    echo "NoNewPrivs:        $(cat /proc/self/status | grep -m1 NoNewPrivs | cut -f2)"
+    echo "Seccomp:           $(cat /proc/self/status | grep -m1 Seccomp | cut -f2) (mode 2 = filter, docker default profile)"
     if command -v openssl >/dev/null 2>&1; then
       echo "system openssl CLI: PRESENT (FAIL) at $(command -v openssl)"
       exit 1
@@ -288,12 +399,14 @@ do_verify() {
       echo "system openssl CLI: absent (ok)"
     fi
     echo "toolchain record:"; cat /court/toolchain.txt 2>/dev/null || true
+    echo "timing-tools record:"; cat /court/timing-tools.txt 2>/dev/null || echo "  (not the timing-tools image)"
   '
 }
 
 case "${1:-}" in
   build)  do_build ;;
   build-expand) do_build_expand ;;
+  build-tools)  do_build_tools ;;
   up)     do_up ;;
   down)   do_down ;;
   status) do_status ;;
