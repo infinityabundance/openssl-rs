@@ -94,6 +94,8 @@
 use core::cell::UnsafeCell;
 use core::ffi::{c_char, c_int, c_uchar, c_uint, c_void};
 use core::ptr;
+#[cfg(test)]
+use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::{AtomicPtr, Ordering};
 
 use crate::bn::arith::{
@@ -169,6 +171,16 @@ const FILE_RSA_CRPT: *const c_char = c"../../src/openssl-3.6.4/crypto/rsa/rsa_cr
 
 /// `__LINE__`, inert under `OPENSSL_NO_CRYPTO_MDEBUG`.
 const LINE: c_int = 0;
+
+/// Test-only counter of entries to the CRT tail's congruence fallback — the raw `d`
+/// exponentiation taken when the per-prime result does not re-exponentiate to the input.
+///
+/// T6 found that a missing `goto tail` made this fallback run on every private operation while
+/// still returning the right answer, so no value comparison could see it. This counter lets a
+/// test observe the path itself. It exists only under `cfg(test)`, writes only a relaxed atomic,
+/// and never changes the value the operation returns.
+#[cfg(test)]
+static TAIL_FALLBACK_COUNT: AtomicUsize = AtomicUsize::new(0);
 
 /// `RSA_FLAG_FIPS_METHOD` — `include/openssl/rsa.h:468`. The word `rsa_pkcs1_ossl_meth` carries as
 /// its `flags` member.
@@ -2193,6 +2205,13 @@ unsafe extern "C" fn rsa_ossl_mod_exp(
                          * 'I' and 'vrfy' aren't congruent mod n. Don't leak miscalculated CRT
                          * output, just do a raw (slower) mod_exp and return that instead.
                          */
+                        // Test-only observation point for the T11 regression case: the fallback
+                        // below is the path T6 found being taken on *every* private operation.
+                        // It is compiled out of every non-test build, has no effect on the
+                        // computation, and the test reads it with a single-threaded `Relaxed`
+                        // load/store, so it cannot change exported behaviour.
+                        #[cfg(test)]
+                        TAIL_FALLBACK_COUNT.fetch_add(1, Ordering::Relaxed);
                         // SAFETY: `BN_new` takes no pointers.
                         let d = BN_new();
                         if d.is_null() {
@@ -2636,6 +2655,117 @@ mod tests {
             );
             assert_eq!(&back[..], &pt[..], "the CRT result is m^d mod n");
 
+            RSA_free(rsa);
+            BN_free(e);
+        }
+    }
+
+    /// **A normal private operation with blinding on never takes the CRT tail's congruence
+    /// fallback.**
+    ///
+    /// T6 found the smooth arm's result being overwritten because the transcription was missing
+    /// the authority's `goto tail`: every private operation then silently fell back to the raw
+    /// unblinded `d` exponentiation. The existing value-parity test cannot see that because the
+    /// fallback returns the same answer. This test observes the fallback itself through the
+    /// test-only `TAIL_FALLBACK_COUNT` (see its comment) with blinding left **on**, which is the
+    /// lifecycle the ctgrind case deliberately removes with `RSA_FLAG_NO_BLINDING`.
+    ///
+    /// The negative control corrupts `dmp1` by one limb-value so the per-prime result is
+    /// genuinely non-congruent: the tail must then take the fallback (the counter fires), repair
+    /// the answer through `d`, and still return `m^d mod n`. That is both the documented recovery
+    /// behaviour and the proof that the observation point can observe.
+    #[test]
+    fn a_blinded_private_operation_does_not_take_the_crt_tail_fallback() {
+        use crate::bn::bignum::{BN_dup, BN_free as BN_release};
+        use crate::evp::pkey_ctx::RSA_NO_PADDING;
+        use crate::rsa::gen::RSA_generate_key_ex;
+        use crate::rsa::object::{
+            RSA_free, RSA_new, RSA_private_encrypt, RSA_public_decrypt, RSA_size,
+        };
+
+        // SAFETY: every object is created and released here, every buffer is its own length, and
+        // `dmp1` is restored before the object is released.
+        unsafe {
+            let e = BN_new();
+            assert!(!e.is_null());
+            assert_eq!(BN_set_word(e, 65537), 1);
+            let rsa = RSA_new();
+            assert!(!rsa.is_null());
+            assert_eq!(RSA_generate_key_ex(rsa, 1024, e, ptr::null_mut()), 1);
+
+            assert_eq!(
+                (*rsa).flags & RSA_FLAG_NO_BLINDING,
+                0,
+                "blinding is on by default"
+            );
+
+            let n = RSA_size(rsa) as usize;
+            let mut pt = vec![0u8; n];
+            pt[n - 1] = 0x42;
+
+            // The real lifecycle: blinding on, a fresh per-thread blinding created lazily, the
+            // CRT path taken and the tail verification satisfied. The fallback must not run.
+            TAIL_FALLBACK_COUNT.store(0, Ordering::Relaxed);
+            let mut ct = vec![0u8; n];
+            assert_eq!(
+                RSA_private_encrypt(
+                    n as c_int,
+                    pt.as_ptr(),
+                    ct.as_mut_ptr(),
+                    rsa,
+                    RSA_NO_PADDING
+                ),
+                n as c_int
+            );
+            assert!(
+                !ossl_rsa_get_thread_bn_blinding(rsa).is_null(),
+                "the operation ran with a blinding"
+            );
+            assert_eq!(
+                TAIL_FALLBACK_COUNT.load(Ordering::Relaxed),
+                0,
+                "a valid CRT operation must not fall back to the raw `d` exponentiation"
+            );
+
+            // Negative control: break the per-prime exponent so the CRT answer is wrong, and
+            // confirm the fallback is reachable and repairs the result.
+            let saved_dmp1 = (*rsa).dmp1;
+            let wrong = BN_dup(saved_dmp1);
+            assert!(!wrong.is_null());
+            assert_eq!(crate::bn::arith::BN_add_word(wrong, 1), 1);
+            (*rsa).dmp1 = wrong;
+
+            TAIL_FALLBACK_COUNT.store(0, Ordering::Relaxed);
+            let mut ct_bad = vec![0u8; n];
+            assert_eq!(
+                RSA_private_encrypt(
+                    n as c_int,
+                    pt.as_ptr(),
+                    ct_bad.as_mut_ptr(),
+                    rsa,
+                    RSA_NO_PADDING
+                ),
+                n as c_int
+            );
+            assert!(
+                TAIL_FALLBACK_COUNT.load(Ordering::Relaxed) > 0,
+                "a corrupted CRT result takes the raw-`d` fallback"
+            );
+            let mut back = vec![0u8; n];
+            assert_eq!(
+                RSA_public_decrypt(
+                    n as c_int,
+                    ct_bad.as_ptr(),
+                    back.as_mut_ptr(),
+                    rsa,
+                    RSA_NO_PADDING
+                ),
+                n as c_int
+            );
+            assert_eq!(&back[..], &pt[..], "the fallback returns m^d mod n anyway");
+
+            (*rsa).dmp1 = saved_dmp1;
+            BN_release(wrong);
             RSA_free(rsa);
             BN_free(e);
         }
