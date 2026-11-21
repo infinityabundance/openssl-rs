@@ -10,8 +10,8 @@
 //! Transcribing those and naming the rest as absent is the same call the project makes everywhere
 //! else: a name that a *later* unit needs is that unit's to land, with its own caller named.
 //!
-//! **`value_barrier` is `core::hint::black_box`, and that equivalence is the whole reason these
-//! functions are worth transcribing at all.** The header's barrier is
+//! **`value_barrier` is `core::hint::black_box`, and it is what keeps a masked select from being
+//! recognised as one on this build.** The header's barrier is
 //!
 //! ```c
 //! #if !defined(OPENSSL_NO_ASM) && defined(__GNUC__)
@@ -21,13 +21,23 @@
 //! #endif
 //! ```
 //!
-//! — an empty asm block that *consumes* its input and *produces* an output through a register, which
-//! is an optimisation barrier rather than a computation. `black_box` is the standard-library
-//! spelling of the same thing: the value is forced through an opaque operation, so the compiler may
-//! not fold, reorder or reason about it. Without it, `(mask & a) | (~mask & b)` is legal for LLVM to
-//! turn into a branch on `mask`, and a constant-time select becomes a secret-dependent branch. The
-//! this profile's build has `OPENSSL_NO_ASM` **unset** and is GNU C, so the asm form is the one in
-//! force; `black_box` is its equivalent and the divergence is recorded here rather than assumed.
+//! — an empty asm block that *consumes* its input and *produces* an output through a register: an
+//! optimisation barrier rather than a computation. [`core::hint::black_box`] is the standard
+//! library's spelling of that barrier. It tells the compiler that nothing may be assumed about the
+//! value, which is what stops `(mask & a) | (~mask & b)` from being recognised as a select and
+//! rewritten as a conditional branch on `mask`.
+//!
+//! **This is a best-effort optimisation barrier, not a constant-time guarantee.** `black_box` is
+//! documented as an opaque identity function applied on a best-effort basis. It does not promise any
+//! particular machine instruction, it is not a CPU-level timing barrier, and it cannot prevent an
+//! optimisation the compiler performs for reasons of its own. The C inline asm and `black_box` are
+//! equivalent in intent, not by specification, and the divergence is recorded rather than assumed.
+//! The compiled form is therefore **checked, not assumed**: the test
+//! `the_select_family_is_branchless_in_optimised_machine_code` compiles this file at
+//! `-C opt-level=3` with `overflow-checks=on` and rejects a conditional jump (or a call) in a wrapper
+//! around each select helper. That evidence is bound to the pinned toolchain (`rustc 1.98.1`) and
+//! x86-64; a compiler change, a different target or LTO invalidates it and requires `T14`/`T15` to
+//! re-run the check.
 //!
 //! **Every mask is all-ones or all-zeros, never 1 or 0.** `constant_time_ge_s` is written
 //! `!constant_time_lt_s(a, b)` and `constant_time_msb_s(a)` is `0 - (a >> 63)`, so the arithmetic is
@@ -96,7 +106,8 @@ pub(crate) fn constant_time_eq_8_s(a: usize, b: usize) -> u8 {
 }
 
 /// `value_barrier(unsigned int a)` — `constant_time.h:278-288`, the optimisation barrier every
-/// `select` is written through. See the module note for why `black_box` is its equivalent here.
+/// `select` is written through. `black_box` is the crate's spelling of it (see the module note):
+/// best-effort, constraining optimisation but not the emitted instruction or its timing.
 #[inline(always)]
 fn value_barrier(a: usize) -> usize {
     core::hint::black_box(a)
@@ -104,6 +115,10 @@ fn value_barrier(a: usize) -> usize {
 
 /// `constant_time_select(size_t mask, size_t a, size_t b)` — `constant_time.h:348-353`. `mask` must
 /// be all-ones or all-zeros; a caller that passes `1` gets a wrong answer that looks right.
+///
+/// The barrier is load-bearing: without it LLVM may lower the expression as a conditional branch
+/// on `mask`, which is secret in every caller. Its compiled form is checked by
+/// `the_select_family_is_branchless_in_optimised_machine_code`.
 #[inline(always)]
 pub(crate) fn constant_time_select(mask: usize, a: usize, b: usize) -> usize {
     (value_barrier(mask) & a) | (value_barrier(!mask) & b)
@@ -198,7 +213,8 @@ pub(crate) fn constant_time_eq_int_8(a: i32, b: i32) -> u8 {
 }
 
 /// `constant_time_select(unsigned int mask, unsigned int a, unsigned int b)` —
-/// `constant_time.h:348-353`. `mask` must be all-ones or all-zeros.
+/// `constant_time.h:348-353`. `mask` must be all-ones or all-zeros. The barrier is load-bearing,
+/// exactly as in the `size_t` form; the compiled form is checked by the same machine-code test.
 #[inline(always)]
 #[allow(dead_code)] // as above
 pub(crate) fn constant_time_select_u32(mask: u32, a: u32, b: u32) -> u32 {
@@ -492,5 +508,192 @@ mod tests {
         assert_eq!(constant_time_ge_8_s(usize::MAX, 0), 0xff);
         assert_eq!(constant_time_ge_8_s(0, usize::MAX), 0x00);
         assert_eq!(constant_time_lt_s(usize::MAX, 0), 0);
+    }
+
+    /// **Machine-code check for the select family (T13).** The module note states that
+    /// `black_box` is a best-effort optimisation barrier rather than a constant-time guarantee, so
+    /// the compiled form of a select must be *checked*, not inferred from the source.
+    ///
+    /// This compiles **this file** (`include_str!`, so the checked source is exactly the helpers
+    /// above) at `-C opt-level=3` with `overflow-checks=on` (the crate's `[profile.release]`) into a
+    /// standalone object, then disassembles one exported, `#[inline(never)]` wrapper per helper. A
+    /// conditional jump in a wrapper body means the select was lowered to a branch on the mask; a
+    /// call means the body is not visible to this check. Both are failures.
+    ///
+    /// The evidence is bound to the pinned toolchain (`rustc 1.98.1`) and x86-64. LTO, a compiler
+    /// upgrade, or a different target invalidates it; T14/T15 must re-run the check. The build is
+    /// deliberately not incremental, and the object is the only artefact inspected.
+    #[test]
+    fn the_select_family_is_branchless_in_optimised_machine_code() {
+        const PROBES: &str = r#"
+#[no_mangle]
+#[inline(never)]
+pub extern "C" fn probe_select(mask: usize, a: usize, b: usize) -> usize {
+    constant_time_select(mask, a, b)
+}
+#[no_mangle]
+#[inline(never)]
+pub extern "C" fn probe_select_8(mask: u8, a: u8, b: u8) -> u8 {
+    constant_time_select_8(mask, a, b)
+}
+#[no_mangle]
+#[inline(never)]
+pub extern "C" fn probe_select_u32(mask: u32, a: u32, b: u32) -> u32 {
+    constant_time_select_u32(mask, a, b)
+}
+#[no_mangle]
+#[inline(never)]
+pub extern "C" fn probe_lt(m: usize, a: usize, b: usize) -> usize {
+    constant_time_lt_s(a, b ^ m)
+}
+#[no_mangle]
+#[inline(never)]
+pub extern "C" fn probe_eq(m: usize, a: usize, b: usize) -> usize {
+    constant_time_eq_s(a, b ^ m)
+}
+#[no_mangle]
+#[inline(never)]
+pub extern "C" fn probe_is_zero(m: usize, a: usize, b: usize) -> usize {
+    constant_time_is_zero_s(a ^ b ^ m)
+}
+#[no_mangle]
+#[inline(never)]
+pub extern "C" fn probe_lt_u32(m: u32, a: u32, b: u32) -> u32 {
+    constant_time_lt_u32(a, b ^ m)
+}
+#[no_mangle]
+#[inline(never)]
+pub extern "C" fn probe_eq_u32(m: u32, a: u32, b: u32) -> u32 {
+    constant_time_eq_u32(a, b ^ m)
+}
+#[no_mangle]
+#[inline(never)]
+pub extern "C" fn probe_is_zero_u32(m: u32, a: u32, b: u32) -> u32 {
+    constant_time_is_zero_u32(a ^ b ^ m)
+}
+fn main() {}
+"#;
+
+        let manifest = env!("CARGO_MANIFEST_DIR");
+        let dir =
+            std::env::temp_dir().join(format!("openssl-rs-ct-codegen-{}", std::process::id()));
+        let created = std::fs::create_dir_all(&dir);
+        assert!(
+            created.is_ok(),
+            "create the codegen probe directory: {created:?}"
+        );
+        let source = dir.join("ct_probe.rs");
+        let object = dir.join("ct_probe.o");
+
+        let mut probe = String::from("#![allow(dead_code, unused_attributes)]\n");
+        probe.push_str(include_str!("constant_time.rs"));
+        probe.push_str(PROBES);
+        let written = std::fs::write(&source, probe);
+        assert!(
+            written.is_ok(),
+            "write the codegen probe source: {written:?}"
+        );
+
+        let spawned = std::process::Command::new("rustc")
+            .current_dir(manifest)
+            .args([
+                "--edition=2021",
+                "-C",
+                "opt-level=3",
+                "-C",
+                "overflow-checks=on",
+                "-C",
+                "debug-assertions=off",
+                "--emit=obj",
+                "-o",
+            ])
+            .arg(&object)
+            .arg(&source)
+            .output();
+        assert!(
+            spawned.is_ok(),
+            "run rustc for the codegen probe: {spawned:?}"
+        );
+        let Ok(compiled) = spawned else { return };
+        assert!(
+            compiled.status.success(),
+            "rustc failed on the codegen probe:\n{}",
+            String::from_utf8_lossy(&compiled.stderr)
+        );
+
+        let dumped = std::process::Command::new("objdump")
+            .args(["-d", "--no-show-raw-insn"])
+            .arg(&object)
+            .output();
+        assert!(
+            dumped.is_ok(),
+            "run objdump for the codegen probe: {dumped:?}"
+        );
+        let Ok(dumped) = dumped else { return };
+        assert!(
+            dumped.status.success(),
+            "objdump failed on the codegen probe:\n{}",
+            String::from_utf8_lossy(&dumped.stderr)
+        );
+        let disassembly = String::from_utf8_lossy(&dumped.stdout);
+
+        let expected = [
+            "probe_select",
+            "probe_select_8",
+            "probe_select_u32",
+            "probe_lt",
+            "probe_eq",
+            "probe_is_zero",
+            "probe_lt_u32",
+            "probe_eq_u32",
+            "probe_is_zero_u32",
+        ];
+        let mut found = std::collections::BTreeSet::new();
+        let mut current: Option<&str> = None;
+        for line in disassembly.lines() {
+            if let Some(name) = symbol_name(line) {
+                current = Some(name);
+                continue;
+            }
+            if line.trim().is_empty() {
+                current = None;
+                continue;
+            }
+            let Some(name) = current else { continue };
+            if !expected.contains(&name) {
+                continue;
+            }
+            let Some((_, rest)) = line.split_once(':') else {
+                continue;
+            };
+            let mnemonic = rest.split_whitespace().next().unwrap_or("");
+            assert!(
+                !mnemonic.starts_with("call"),
+                "{name} calls out in optimised code, so its body is not checked:\n{disassembly}"
+            );
+            assert!(
+                !(mnemonic.starts_with('j') && mnemonic != "jmp") && mnemonic != "loop",
+                "{name} contains the conditional branch `{mnemonic}` in optimised code:\n{disassembly}"
+            );
+            found.insert(name);
+        }
+
+        let _ = std::fs::remove_dir_all(&dir);
+
+        for name in expected {
+            assert!(
+                found.contains(name),
+                "the disassembly has no checked body for {name}:\n{disassembly}"
+            );
+        }
+    }
+
+    /// `0000 <probe_select>:` → `probe_select`; anything else is not a symbol header.
+    fn symbol_name(line: &str) -> Option<&str> {
+        let (address, rest) = line.split_once(" <")?;
+        if address.is_empty() || !address.chars().all(|c| c.is_ascii_hexdigit()) {
+            return None;
+        }
+        rest.strip_suffix(">:")
     }
 }

@@ -771,6 +771,10 @@ fn ct_shr1_into(out: &mut [Limb], a: &[Limb], carry_in: Limb) {
 /// mutually exclusive candidates is chosen without aliasing an input slice.
 #[inline(always)]
 fn ct_select2_into(out: &mut [Limb], m1: Limb, a1: &[Limb], m2: Limb, a2: &[Limb], base: &[Limb]) {
+    // The authority's `value_barrier_bn` on the two secret masks: a best-effort
+    // optimisation barrier that keeps the nested selects from being recognised and
+    // lowered to branches. It is not a guarantee about the emitted code or its
+    // timing (see `runtime::constant_time`'s module note).
     let m1 = core::hint::black_box(m1);
     let m2 = core::hint::black_box(m2);
     for (i, o) in out.iter_mut().enumerate() {
@@ -811,6 +815,8 @@ fn ct_halve_mod_into(
     sum: &mut [Limb],
     half: &mut [Limb],
 ) {
+    // `value_barrier_bn` on a mask derived from a secret limb's low bit; the same
+    // best-effort barrier, and the same non-guarantee, as in `ct_select2_into`.
     let odd = core::hint::black_box(0u64.wrapping_sub(x.first().copied().unwrap_or(0) & 1));
     ct_shr1_into(out, x, 0);
     ct_add_into(sum, x, m);

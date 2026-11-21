@@ -20,9 +20,12 @@
 //! Two shapes a reader should know before comparing this file with the C:
 //!
 //! * `value_barrier_64` is OpenSSL's optimisation barrier, an empty inline-asm statement whose
-//!   job is to stop the compiler turning a masked select into a branch. The Rust equivalent is
-//!   [`core::hint::black_box`], and it is used at exactly the two sites the C uses the barrier
-//!   (`constant_time_select_64` and `constant_time_cond_swap_64`, plus `scalar_halve`).
+//!   job is to stop the compiler turning a masked select into a branch. The Rust spelling is
+//!   [`core::hint::black_box`], used at exactly the sites the C uses the barrier (`ct_select_64`,
+//!   `ct_cond_swap_64` and `scalar_halve`). `black_box` is a **best-effort** optimisation barrier,
+//!   not a constant-time guarantee and not a statement about the emitted instruction; these three
+//!   sites have not been machine-checked. (`runtime::constant_time`'s select family has been — see
+//!   its codegen test — and is the same substitution.)
 //! * `constant_time_lookup` copies a table row byte by byte. [`ct_lookup_niels`] selects
 //!   limb by limb over the `niels_t` fields instead — the same masked selection over the same
 //!   bytes, with the same fixed iteration count and no secret-dependent branch.
@@ -220,7 +223,9 @@ fn ct_is_zero_64(a: u64) -> u64 {
     ct_msb_64((!a) & a.wrapping_sub(1))
 }
 
-/// `value_barrier_64(a)` — `constant_time.h:300`; the Rust barrier is [`black_box`].
+/// `value_barrier_64(a)` — `constant_time.h:300`; the Rust barrier is [`black_box`]. It is a
+/// best-effort optimisation barrier, not a guarantee about the emitted instruction or its timing
+/// (see the module note).
 fn value_barrier_64(a: u64) -> u64 {
     black_box(a)
 }
