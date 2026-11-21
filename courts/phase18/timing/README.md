@@ -19,6 +19,7 @@ directory is the apparatus, not the conclusion.
 | `reach.py`, `reach2.py` | static reachability walks over `libcrypto.so.3`, from the ssh/sshd imported-symbol roots to the BN symbols, distinguishing direct/GOT edges from may-bound provider-dispatch routes. |
 | `frontier.py`, `slots.py`, `tables.py` | helpers used to enumerate indirect slots and method tables during the reachability work. |
 | `classify_ct.py`, `summarize_ct.py` | turn raw memcheck output into the branch/address classification quoted in the receipts. |
+| `binary_branch_audit.py` | T14 optimised-code review aid: extracts a named function's compiler-emitted range from the built `libcrypto.so.3` (symbol table, not a hand-picked window), then tabulates conditional jumps by condition provenance and guarded action, plus `div`/`idiv`, `cmov`/`setcc`, `jo`/`jno`, calls and `cpuid`. It does **not** establish secret-dependence; that needs binary-level taint analysis (T16). |
 
 ## Build and run
 
@@ -93,3 +94,18 @@ microarchitectural effects that neither instrument models.
 An instrument that reports nothing on the positive control has failed. Both
 harnesses carry the positive control for exactly this reason; a run without it
 is not evidence.
+
+## Binary branch audit (T14)
+
+Runs on the DSO produced by `forensics/tools/build_phase2.sh`; no Rust build is
+needed. It prints the DSO's SHA-256 so the measurement is bound to one artefact.
+
+```sh
+python3 courts/phase18/timing/binary_branch_audit.py \
+    artifacts/phase2/install/lib/libcrypto.so.3 > court/tmp/t14/branch-audit.md
+```
+
+The output is a review aid, not a proof: it lists the branches the compiler
+emitted in the named ranges and their condition provenance, but it cannot say
+which conditions depend on secret data. BINSEC `-checkct` (T16) is unvalidated,
+and `cmov` presence is not a constant-time result.
