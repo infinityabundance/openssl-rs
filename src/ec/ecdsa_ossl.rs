@@ -1044,3 +1044,277 @@ pub unsafe extern "C" fn ossl_ecdsa_simple_verify_sig(
         ret
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::bn::bignum::{BN_free, BN_get_flags};
+    use crate::ec::ecdsa::{ECDSA_SIG_get0, ECDSA_do_sign, ECDSA_sign_setup};
+    use crate::ec::key::{
+        EC_KEY_free, EC_KEY_generate_key, EC_KEY_get0_private_key, EC_KEY_new_by_curve_name,
+    };
+    use crate::runtime::obj::NID_X9_62_prime256v1;
+
+    /// `VALGRIND_MAKE_MEM_UNDEFINED` as the amd64 client request.
+    ///
+    /// Same sequence as `bn::arith`'s and `rsa::ossl`'s test helpers: `valgrind.h`'s
+    /// preamble and an `xchgq rbx, rbx`, which valgrind replaces during translation.
+    /// Outside valgrind it is a few harmless register rotations.
+    #[cfg(target_arch = "x86_64")]
+    unsafe fn valgrind_make_mem_undefined(addr: *mut u8, len: usize) {
+        let args: [usize; 6] = [0x4D43_0001, addr as usize, len, 0, 0, 0];
+        let _result: usize;
+        // SAFETY: the sequence is the documented valgrind client-request pattern; `args`
+        // lives for the duration of the asm and is only read.
+        unsafe {
+            core::arch::asm!(
+                "rol rdi, 3",
+                "rol rdi, 13",
+                "rol rdi, 61",
+                "rol rdi, 51",
+                "xchg rbx, rbx",
+                in("rax") args.as_ptr(),
+                inout("rdx") 0usize => _result,
+                out("rdi") _,
+                options(nostack),
+            );
+        }
+    }
+
+    /// `VALGRIND_MAKE_MEM_DEFINED` as the amd64 client request (client request 2).
+    ///
+    /// The authorised declassification point: it marks a produced signature public, so
+    /// the case measures the signing interior and not the encoding of its output.
+    #[cfg(target_arch = "x86_64")]
+    unsafe fn valgrind_make_mem_defined(addr: *mut u8, len: usize) {
+        let args: [usize; 6] = [0x4D43_0002, addr as usize, len, 0, 0, 0];
+        let _result: usize;
+        // SAFETY: as `valgrind_make_mem_undefined`.
+        unsafe {
+            core::arch::asm!(
+                "rol rdi, 3",
+                "rol rdi, 13",
+                "rol rdi, 61",
+                "rol rdi, 51",
+                "xchg rbx, rbx",
+                in("rax") args.as_ptr(),
+                inout("rdx") 0usize => _result,
+                out("rdi") _,
+                options(nostack),
+            );
+        }
+    }
+
+    /// Taint the limb storage of a live `BIGNUM`'s magnitude.
+    ///
+    /// # Safety
+    ///
+    /// `b` is a live `BIGNUM` this test owns and it is not mutated between the taint
+    /// and the operation the case measures.
+    #[cfg(target_arch = "x86_64")]
+    unsafe fn taint_magnitude(b: *const BigNum) {
+        // SAFETY: `b` is live per this helper's contract; only the initialised limbs
+        // are marked, never the spare capacity.
+        unsafe {
+            let d = &(*b).d;
+            valgrind_make_mem_undefined(d.as_ptr() as *mut u8, d.len() * 8);
+        }
+    }
+
+    /// Declare a produced signature's two components public.
+    ///
+    /// # Safety
+    ///
+    /// `sig` is a live signature this test owns.
+    #[cfg(target_arch = "x86_64")]
+    unsafe fn declare_signature_public(sig: *const EcdsaSig) {
+        // SAFETY: `sig` is a live signature per this helper's contract, so both component
+        // pointers it holds are live `BIGNUM`s of that signature.
+        let components = unsafe { [(*sig).r, (*sig).s] };
+        for b in components {
+            // SAFETY: `b` is one of the signature's live components; only the initialised
+            // limbs are marked.
+            unsafe {
+                let d = &(*b).d;
+                valgrind_make_mem_defined(d.as_ptr() as *mut u8, d.len() * 8);
+            }
+        }
+    }
+
+    /// The signature satisfies the equation that defines it: `s ≡ (m + r·d)·k⁻¹ (mod q)`.
+    ///
+    /// `ECDSA_sign_setup` produces `k⁻¹` and `r` (the supplied-nonce arm), so the two
+    /// secret sides of the signing arithmetic are available to the test and the published
+    /// definition can be evaluated independently of `ossl_ecdsa_simple_sign_sig`'s own
+    /// Montgomery sequence. This is the arithmetic the ctgrind cases above measure, so
+    /// the correctness of the converted sequence is pinned next to their timing result.
+    #[test]
+    fn the_signature_satisfies_its_defining_equation() {
+        let dgst = [0x3cu8; 32];
+        // SAFETY: every pointer below is a fresh object this test owns, null-checked.
+        unsafe {
+            let ec = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+            assert!(!ec.is_null());
+            assert_eq!(EC_KEY_generate_key(ec), 1);
+            let priv_key = EC_KEY_get0_private_key(ec);
+            assert!(!priv_key.is_null());
+
+            let mut kinv: *mut BigNum = ptr::null_mut();
+            let mut r: *mut BigNum = ptr::null_mut();
+            assert_eq!(ECDSA_sign_setup(ec, ptr::null_mut(), &mut kinv, &mut r), 1);
+
+            let sig = ECDSA_do_sign_ex(dgst.as_ptr(), dgst.len() as c_int, kinv, r, ec);
+            assert!(!sig.is_null());
+            let s = (*sig).s;
+            // The supplied-nonce arm copies `r` straight into the signature.
+            assert_eq!(BN_ucmp((*sig).r, r), 0, "r is the supplied value");
+
+            let ctx = BN_CTX_new_ex(ptr::null_mut());
+            assert!(!ctx.is_null());
+            let order = EC_GROUP_get0_order(EC_KEY_get0_group(ec));
+            let m = BN_bin2bn(dgst.as_ptr(), dgst.len() as c_int, ptr::null_mut());
+            let t = BN_new();
+            let expected = BN_new();
+            assert!(!m.is_null() && !t.is_null() && !expected.is_null());
+
+            assert_eq!(BN_mod_mul(t, r, priv_key, order, ctx), 1);
+            assert_eq!(BN_mod_add(t, t, m, order, ctx), 1);
+            assert_eq!(BN_mod_mul(expected, t, kinv, order, ctx), 1);
+            assert_eq!(BN_ucmp(expected, s), 0, "s == (m + r*d) * k^-1 mod q");
+            assert_eq!(
+                ECDSA_do_verify(dgst.as_ptr(), dgst.len() as c_int, sig, ec),
+                1,
+                "and the signature verifies"
+            );
+
+            ECDSA_SIG_free(sig);
+            BN_free(m);
+            BN_free(t);
+            BN_free(expected);
+            BN_CTX_free(ctx);
+            BN_clear_free(kinv);
+            BN_clear_free(r);
+            EC_KEY_free(ec);
+        }
+    }
+
+    /// ctgrind case for T12: the ECDSA nonce and the private scalar must not reach a
+    /// branch, an address, a loop bound, an allocation size or a distinguishable error
+    /// path through one complete sign.
+    ///
+    /// The nonce in this arm is drawn by `ossl_bn_gen_dsa_nonce_fixed_top`, whose every
+    /// candidate is `SHA-512(i || priv_padded || dgst || random)`; tainting the private
+    /// key's limbs therefore taints the nonce as well, and the private scalar's second
+    /// use — `s = k⁻¹ (m + r·d)` — is covered by the same taint. The digest is public
+    /// and stays defined, so this case does not conflate the two axes.
+    ///
+    /// The signature is declassified before the assertions, so the case measures the
+    /// signing interior; `ECDSA_do_verify` on the declassified output is the
+    /// correctness half of the same run.
+    ///
+    /// Gate: `valgrind --tool=memcheck --error-exitcode=99 <test-bin> --exact
+    /// ec::ecdsa_ossl::tests::ctgrind_ecdsa_sign_taints_nonce_and_key --nocapture`.
+    /// `CTGRIND_CONTROL=1` adds a deliberate branch on a marked key limb, which
+    /// memcheck must report (negative control).
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn ctgrind_ecdsa_sign_taints_nonce_and_key() {
+        let dgst = [0x5au8; 32];
+        // SAFETY: every pointer below is a fresh object this test owns, null-checked,
+        // and every length is the buffer's own.
+        unsafe {
+            let ec = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+            assert!(!ec.is_null());
+            assert_eq!(EC_KEY_generate_key(ec), 1);
+            let priv_key = EC_KEY_get0_private_key(ec);
+            assert!(!priv_key.is_null());
+            assert!(
+                BN_get_flags(priv_key, crate::bn::bignum::BN_FLG_SECURE) != 0,
+                "the private scalar is secure-flagged storage"
+            );
+
+            taint_magnitude(priv_key);
+            if std::env::var_os("CTGRIND_CONTROL").is_some() {
+                // Negative control: memcheck must flag this branch on a marked limb.
+                let mut acc = 0u64;
+                for &limb in &(*priv_key).d {
+                    if limb & 1 == 1 {
+                        acc = acc.wrapping_add(1);
+                    }
+                }
+                core::hint::black_box(acc);
+            }
+
+            let sig = ECDSA_do_sign(dgst.as_ptr(), dgst.len() as c_int, ec);
+            assert!(!sig.is_null(), "the sign over a tainted key must succeed");
+            declare_signature_public(sig);
+
+            let mut r: *const BigNum = ptr::null();
+            let mut s: *const BigNum = ptr::null();
+            ECDSA_SIG_get0(sig, &mut r, &mut s);
+            assert!(!r.is_null() && !s.is_null());
+            assert_eq!(BN_is_zero(r), 0, "r is non-zero");
+            assert_eq!(BN_is_zero(s), 0, "s is non-zero");
+            assert_eq!(
+                ECDSA_do_verify(dgst.as_ptr(), dgst.len() as c_int, sig, ec),
+                1,
+                "the declassified signature verifies against its key"
+            );
+
+            ECDSA_SIG_free(sig);
+            EC_KEY_free(ec);
+        }
+    }
+
+    /// ctgrind case for T12: the *caller-supplied* nonce inverse arm of `sign_sig`.
+    ///
+    /// `ECDSA_sign_setup` on this profile passes `dgst == NULL`, so its draw is
+    /// `ossl_bn_priv_rand_range_fixed_top` and the nonce inverse is independent of the
+    /// private key; tainting it explicitly is the only way to cover this arm's nonce.
+    /// Both secrets — `kinv` and the private scalar — are marked, and the same
+    /// declassify-then-verify pattern closes the case.
+    ///
+    /// Gate: `valgrind --tool=memcheck --error-exitcode=99 <test-bin> --exact
+    /// ec::ecdsa_ossl::tests::ctgrind_ecdsa_sign_ex_taints_nonce_inverse
+    /// --nocapture`.
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn ctgrind_ecdsa_sign_ex_taints_nonce_inverse() {
+        let dgst = [0xa5u8; 32];
+        // SAFETY: as the complete-sign case above.
+        unsafe {
+            let ec = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+            assert!(!ec.is_null());
+            assert_eq!(EC_KEY_generate_key(ec), 1);
+
+            let mut kinv: *mut BigNum = ptr::null_mut();
+            let mut rp: *mut BigNum = ptr::null_mut();
+            assert_eq!(
+                ECDSA_sign_setup(ec, ptr::null_mut(), &mut kinv, &mut rp),
+                1,
+                "the nonce draw succeeds"
+            );
+            assert!(!kinv.is_null() && !rp.is_null());
+
+            let priv_key = EC_KEY_get0_private_key(ec);
+            assert!(!priv_key.is_null());
+            taint_magnitude(priv_key);
+            taint_magnitude(kinv);
+
+            let sig = ECDSA_do_sign_ex(dgst.as_ptr(), dgst.len() as c_int, kinv, rp, ec);
+            assert!(!sig.is_null(), "the sign over tainted secrets must succeed");
+            declare_signature_public(sig);
+            assert_eq!(
+                ECDSA_do_verify(dgst.as_ptr(), dgst.len() as c_int, sig, ec),
+                1,
+                "the declassified signature verifies against its key"
+            );
+
+            ECDSA_SIG_free(sig);
+            BN_clear_free(kinv);
+            BN_clear_free(rp);
+            EC_KEY_free(ec);
+        }
+    }
+}
