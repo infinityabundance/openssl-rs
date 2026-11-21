@@ -46,7 +46,9 @@ use core::ffi::{c_int, c_ulong};
 use crate::bn::arith::{
     mod_exp_core, mod_exp_core_consttime_from_parts, mont_mul_fallible, pad_to,
 };
-use crate::bn::bignum::{as_mut, as_ref, magnitude, parts, store, store_consttime, BigNum};
+use crate::bn::bignum::{
+    as_mut, as_ref, magnitude, parts, parts_fallible, store, store_consttime, BigNum,
+};
 use crate::bn::ctx::BnCtx;
 use crate::bn::limbs::{self, Limb};
 use crate::ffi::guard_ffi;
@@ -109,14 +111,15 @@ unsafe fn as_ref_mont<'a>(p: *const MontCtx) -> Option<&'a MontCtx> {
 
 /// A fresh, unset context.
 fn new_mont() -> *mut MontCtx {
-    Box::into_raw(Box::new(MontCtx {
+    crate::bn::alloc::try_boxed(MontCtx {
         rr: Vec::new(),
         n: Vec::new(),
         ni: Vec::new(),
         n0: [0, 0],
         ri: 0,
         flags: 0,
-    }))
+    })
+    .unwrap_or(core::ptr::null_mut())
 }
 
 /// `-n^-1 mod 2^64`, the word the authority keeps in `n0[0]`.
@@ -162,7 +165,10 @@ fn mont_set(mont: &mut MontCtx, m: &[Limb]) -> bool {
     else {
         return false;
     };
-    mont.n = m.to_vec();
+    let Some(n) = crate::bn::alloc::try_clone_slice(m) else {
+        return false;
+    };
+    mont.n = n;
     mont.ri = ri as c_int;
     mont.n0 = [inverse_word(m[0]), 0];
     mont.ni = Vec::new();
@@ -181,13 +187,18 @@ fn mont_set(mont: &mut MontCtx, m: &[Limb]) -> bool {
 /// fixed range, and the final subtraction is a mask select. The CRT moduli reach
 /// this through `BN_from_montgomery`/`BN_to_montgomery`, so the accumulation and
 /// the reduction must not branch on the modulus' limbs (T6).
-fn mont_reduce(r: &[Limb], n: &[Limb], n0: Limb) -> Vec<Limb> {
+fn mont_reduce(r: &[Limb], n: &[Limb], n0: Limb) -> Option<Vec<Limb>> {
     let nl = n.len();
     if nl == 0 {
-        return Vec::new();
+        return Some(Vec::new());
     }
-    let mut t: Vec<Limb> = r.to_vec();
-    t.resize(2 * nl + 2, 0);
+    // One allocation for the accumulator, sized by the public limb count, and two
+    // for the conditional-subtraction scratch; all three are fallible so a caller
+    // on a secret path can report the failure rather than abort.
+    let t_len = nl.checked_mul(2)?.checked_add(2)?;
+    let mut t: Vec<Limb> = crate::bn::alloc::try_zeroed(t_len, 0u64)?;
+    let take = r.len().min(t_len);
+    t[..take].copy_from_slice(&r[..take]);
     for i in 0..nl {
         let m = t[i].wrapping_mul(n0);
         let mut carry: Limb = 0;
@@ -215,7 +226,7 @@ fn mont_reduce(r: &[Limb], n: &[Limb], n0: Limb) -> Vec<Limb> {
     // `nl` limbs and `borrow` the final borrow of `t[nl..2nl] - n`. Keep the
     // difference when the value is at least `n`: `high != 0` or no borrow.
     let high = t[2 * nl];
-    let mut diff = vec![0u64; nl];
+    let mut diff = crate::bn::alloc::try_zeroed(nl, 0u64)?;
     let mut borrow = 0u64;
     for j in 0..nl {
         let (d1, b1) = t[nl + j].overflowing_sub(n[j]);
@@ -225,11 +236,11 @@ fn mont_reduce(r: &[Limb], n: &[Limb], n0: Limb) -> Vec<Limb> {
     }
     let take = high | (borrow ^ 1);
     let mask = 0u64.wrapping_sub(take);
-    let mut out = vec![0u64; nl];
+    let mut out = crate::bn::alloc::try_zeroed(nl, 0u64)?;
     for j in 0..nl {
         out[j] = (t[nl + j] & !mask) | (diff[j] & mask);
     }
-    out
+    Some(out)
 }
 
 /// `BN_MONT_CTX *BN_MONT_CTX_new(void)`
@@ -403,7 +414,9 @@ pub unsafe extern "C" fn BN_to_montgomery(
     guard_ffi(0, || {
         // SAFETY: `a` is null-or-live per this function's `# Safety` section.
         let x = unsafe { as_ref(a) };
-        let (ad, _) = parts(x);
+        let Some((ad, _)) = parts_fallible(x) else {
+            return 0;
+        };
         // SAFETY: `mont` is null-or-live per this function's `# Safety` section.
         let Some(mc) = (unsafe { as_ref_mont(mont) }) else {
             return 0;
@@ -425,7 +438,13 @@ pub unsafe extern "C" fn BN_to_montgomery(
             };
             v
         } else {
-            mont_reduce(&limbs::mul(&ad, &mc.rr), &mc.n, mc.n0[0])
+            let Some(prod) = limbs::mul_fallible(&ad, &mc.rr) else {
+                return 0;
+            };
+            match mont_reduce(&prod, &mc.n, mc.n0[0]) {
+                Some(v) => v,
+                None => return 0,
+            }
         };
         // SAFETY: `r` is null-or-live per this function's `# Safety` section.
         c_int::from(store(unsafe { as_mut(r) }, value, false))
@@ -448,7 +467,9 @@ pub unsafe extern "C" fn BN_from_montgomery(
     guard_ffi(0, || {
         // SAFETY: `a` is null-or-live per this function's `# Safety` section.
         let x = unsafe { as_ref(a) };
-        let (ad, _) = parts(x);
+        let Some((ad, _)) = parts_fallible(x) else {
+            return 0;
+        };
         // SAFETY: `mont` is null-or-live per this function's `# Safety` section.
         let Some(mc) = (unsafe { as_ref_mont(mont) }) else {
             return 0;
@@ -456,7 +477,9 @@ pub unsafe extern "C" fn BN_from_montgomery(
         if mc.n.is_empty() {
             return 0;
         }
-        let value = mont_reduce(&ad, &mc.n, mc.n0[0]);
+        let Some(value) = mont_reduce(&ad, &mc.n, mc.n0[0]) else {
+            return 0;
+        };
         // SAFETY: `r` is null-or-live per this function's `# Safety` section.
         c_int::from(store(unsafe { as_mut(r) }, value, false))
     })
@@ -480,10 +503,14 @@ pub unsafe extern "C" fn BN_mod_mul_montgomery(
     guard_ffi(0, || {
         // SAFETY: `a` is null-or-live per this function's `# Safety` section.
         let x = unsafe { as_ref(a) };
-        let (ad, _) = parts(x);
+        let Some((ad, _)) = parts_fallible(x) else {
+            return 0;
+        };
         // SAFETY: `b` is null-or-live per this function's `# Safety` section.
         let y = unsafe { as_ref(b) };
-        let (bd, _) = parts(y);
+        let Some((bd, _)) = parts_fallible(y) else {
+            return 0;
+        };
         // SAFETY: `mont` is null-or-live per this function's `# Safety` section.
         let Some(mc) = (unsafe { as_ref_mont(mont) }) else {
             return 0;
@@ -509,8 +536,13 @@ pub unsafe extern "C" fn BN_mod_mul_montgomery(
             };
             v
         } else {
-            let prod = limbs::mul(&ad, &bd);
-            mont_reduce(&prod, &mc.n, mc.n0[0])
+            let Some(prod) = limbs::mul_fallible(&ad, &bd) else {
+                return 0;
+            };
+            match mont_reduce(&prod, &mc.n, mc.n0[0]) {
+                Some(v) => v,
+                None => return 0,
+            }
         };
         // SAFETY: `r` is null-or-live per this function's `# Safety` section.
         c_int::from(store(unsafe { as_mut(r) }, value, false))
@@ -549,7 +581,9 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
     guard_ffi(0, || {
         // SAFETY: `a` is null-or-live per this function's `# Safety` section.
         let x = unsafe { as_ref(a) };
-        let (ad, _) = parts(x);
+        let Some((ad, _)) = parts_fallible(x) else {
+            return 0;
+        };
         // SAFETY: `p` is null-or-live per this function's `# Safety` section.
         let y = unsafe { as_ref(p) };
         // Secret on the constant-time path. Borrowed, not cloned: the staging
@@ -557,7 +591,9 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
         let pd = magnitude(y);
         // SAFETY: `m` is null-or-live per this function's `# Safety` section.
         let z = unsafe { as_ref(m) };
-        let (md, _) = parts(z);
+        let Some((md, _)) = parts_fallible(z) else {
+            return 0;
+        };
         if refuses(&md) {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BN_EXP_327) };
@@ -618,7 +654,9 @@ pub unsafe extern "C" fn BN_mod_exp_mont_consttime(
     guard_ffi(0, || {
         // SAFETY: `a` is null-or-live per this function's `# Safety` section.
         let x = unsafe { as_ref(a) };
-        let (ad, _) = parts(x);
+        let Some((ad, _)) = parts_fallible(x) else {
+            return 0;
+        };
         // SAFETY: `p` is null-or-live per this function's `# Safety` section.
         let y = unsafe { as_ref(p) };
         // This entry point is always constant-time, so the exponent is secret.
@@ -627,7 +665,9 @@ pub unsafe extern "C" fn BN_mod_exp_mont_consttime(
         let pd = magnitude(y);
         // SAFETY: `m` is null-or-live per this function's `# Safety` section.
         let z = unsafe { as_ref(m) };
-        let (md, _) = parts(z);
+        let Some((md, _)) = parts_fallible(z) else {
+            return 0;
+        };
         if refuses(&md) {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BN_EXP_622) };
@@ -705,8 +745,12 @@ pub unsafe extern "C" fn BN_mod_exp_mont_word(
     guard_ffi(0, || {
         // SAFETY: null-or-live per this function's `# Safety` section.
         let (y, z) = unsafe { (as_ref(p), as_ref(m)) };
-        let (pd, _) = parts(y);
-        let (md, _) = parts(z);
+        let Some((pd, _)) = parts_fallible(y) else {
+            return 0;
+        };
+        let Some((md, _)) = parts_fallible(z) else {
+            return 0;
+        };
         // SAFETY: the null checks are `BN_get_flags`'s own contract, and the sites
         // are compile-time constants.
         unsafe {
@@ -719,7 +763,12 @@ pub unsafe extern "C" fn BN_mod_exp_mont_word(
                 return 0;
             }
         }
-        let base = limbs::rem(&limbs::from_u64(a), &md);
+        let Some(word) = limbs::from_u64_fallible(a) else {
+            return 0;
+        };
+        let Some(base) = limbs::rem_fallible(&word, &md) else {
+            return 0;
+        };
         match mod_exp_core(&base, &pd, &md) {
             // SAFETY: null-or-live per this function's `# Safety` section.
             Some(v) => c_int::from(store(unsafe { as_mut(r) }, v, false)),
@@ -752,9 +801,15 @@ pub unsafe extern "C" fn BN_mod_exp2_mont(
     guard_ffi(0, || {
         // SAFETY: null-or-live per this function's `# Safety` section.
         let (x, y, z) = unsafe { (as_ref(a1), as_ref(p1), as_ref(m)) };
-        let (a1d, _) = parts(x);
-        let (p1d, _) = parts(y);
-        let (md, _) = parts(z);
+        let Some((a1d, _)) = parts_fallible(x) else {
+            return 0;
+        };
+        let Some((p1d, _)) = parts_fallible(y) else {
+            return 0;
+        };
+        let Some((md, _)) = parts_fallible(z) else {
+            return 0;
+        };
         if refuses(&md) {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BN_EXP2_35) };
@@ -762,14 +817,23 @@ pub unsafe extern "C" fn BN_mod_exp2_mont(
         }
         // SAFETY: null-or-live per this function's `# Safety` section.
         let (u, v) = unsafe { (as_ref(a2), as_ref(p2)) };
-        let (a2d, _) = parts(u);
-        let (p2d, _) = parts(v);
+        let Some((a2d, _)) = parts_fallible(u) else {
+            return 0;
+        };
+        let Some((p2d, _)) = parts_fallible(v) else {
+            return 0;
+        };
         let (Some(first), Some(second)) =
             (mod_exp_core(&a1d, &p1d, &md), mod_exp_core(&a2d, &p2d, &md))
         else {
             return 0;
         };
-        let product = limbs::rem(&limbs::mul(&first, &second), &md);
+        let Some(prod) = limbs::mul_fallible(&first, &second) else {
+            return 0;
+        };
+        let Some(product) = limbs::rem_fallible(&prod, &md) else {
+            return 0;
+        };
         // SAFETY: null-or-live per this function's `# Safety` section.
         c_int::from(store(unsafe { as_mut(r) }, product, false))
     })

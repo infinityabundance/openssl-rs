@@ -1049,7 +1049,7 @@ pub unsafe extern "C" fn ossl_ecdsa_simple_verify_sig(
 mod tests {
     use super::*;
 
-    use crate::bn::bignum::{BN_free, BN_get_flags};
+    use crate::bn::bignum::{BN_dup, BN_free, BN_get_flags, BN_set_flags, BN_FLG_CONSTTIME};
     use crate::ec::ecdsa::{ECDSA_SIG_get0, ECDSA_do_sign, ECDSA_sign_setup};
     use crate::ec::key::{
         EC_KEY_free, EC_KEY_generate_key, EC_KEY_get0_private_key, EC_KEY_new_by_curve_name,
@@ -1314,6 +1314,125 @@ mod tests {
             ECDSA_SIG_free(sig);
             BN_clear_free(kinv);
             BN_clear_free(rp);
+            EC_KEY_free(ec);
+        }
+    }
+
+    /// Sweep every seam-visible allocation in ECDSA signing's two halves — the
+    /// scalar multiplication and inversion of `ECDSA_sign_setup`, and the scalar
+    /// arithmetic of `ossl_ecdsa_sign_sig` — and in a standalone constant-time
+    /// `EC_POINT_mul`. Each injected failure must be reported, never abort.
+    #[test]
+    fn every_allocation_failure_in_ecdsa_operations_returns_an_error() {
+        use crate::ec::key::EC_KEY_free;
+        use crate::ec::lib::{EC_GROUP_get0_order, EC_POINT_free, EC_POINT_mul, EC_POINT_new};
+
+        let dgst = [0x5au8; 32];
+        // SAFETY: every object and buffer is created and released here.
+        unsafe {
+            let ec = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+            assert!(!ec.is_null());
+            assert_eq!(EC_KEY_generate_key(ec), 1);
+            let group = EC_KEY_get0_group(ec);
+
+            // Fixed, consttime-flagged scalar for the standalone multiplication.
+            let scalar = EC_KEY_get0_private_key(ec);
+            assert!(!scalar.is_null());
+            let k = BN_dup(scalar);
+            assert!(!k.is_null());
+            BN_set_flags(k, BN_FLG_CONSTTIME);
+            let point = EC_POINT_new(group);
+            assert!(!point.is_null());
+            // A NULL context makes each run build and release its own `BN_CTX`, so
+            // the pool-growth sites are reached from the same initial state every
+            // time rather than only on the recording run.
+            let mul_allocations = crate::bn::alloc::test_fail::sweep_sites(|| {
+                EC_POINT_mul(
+                    group,
+                    point,
+                    k,
+                    core::ptr::null(),
+                    core::ptr::null(),
+                    core::ptr::null_mut(),
+                ) == 1
+            });
+            assert!(mul_allocations > 0, "the seam must see the scalar ladder");
+
+            // Signing, first half: nonce scalar multiplication and inversion.
+            let mut kinv: *mut BigNum = core::ptr::null_mut();
+            let mut r: *mut BigNum = core::ptr::null_mut();
+            let setup_allocations = crate::bn::alloc::test_fail::sweep_sites(|| {
+                ossl_ecdsa_sign_setup(ec, core::ptr::null_mut(), &mut kinv, &mut r) == 1
+            });
+            assert!(setup_allocations > 0, "the seam must see sign setup");
+            assert!(!kinv.is_null() && !r.is_null());
+
+            // Signing, second half: the deterministic `(m + r*d)*k^-1` sequence.
+            let sign_allocations = crate::bn::alloc::test_fail::sweep_sites(|| {
+                let sig = ossl_ecdsa_sign_sig(dgst.as_ptr(), dgst.len() as c_int, kinv, r, ec);
+                if sig.is_null() {
+                    false
+                } else {
+                    ECDSA_SIG_free(sig);
+                    true
+                }
+            });
+            assert!(
+                sign_allocations > 0,
+                "the seam must see the signature arithmetic"
+            );
+            assert_eq!(
+                ossl_ecdsa_sign_setup(ec, core::ptr::null_mut(), &mut kinv, &mut r),
+                1,
+                "the setup succeeds once the seam is disarmed"
+            );
+            assert!(
+                !ossl_ecdsa_sign_sig(dgst.as_ptr(), dgst.len() as c_int, kinv, r, ec).is_null()
+            );
+
+            // Occurrence counts (not distinct sites) feed T29: each ladder iteration
+            // repeats the same field-op sites, so the total is per-bit, and the
+            // signature arithmetic repeats them per field operation.
+            let count = crate::bn::alloc::test_fail::count_start();
+            assert_eq!(
+                EC_POINT_mul(
+                    group,
+                    point,
+                    k,
+                    core::ptr::null(),
+                    core::ptr::null(),
+                    core::ptr::null_mut()
+                ),
+                1
+            );
+            let mul_occurrences = crate::bn::alloc::test_fail::counted();
+            drop(count);
+            let count = crate::bn::alloc::test_fail::count_start();
+            assert_eq!(
+                ossl_ecdsa_sign_setup(ec, core::ptr::null_mut(), &mut kinv, &mut r),
+                1
+            );
+            let setup_occurrences = crate::bn::alloc::test_fail::counted();
+            drop(count);
+            let count = crate::bn::alloc::test_fail::count_start();
+            let sig = ossl_ecdsa_sign_sig(dgst.as_ptr(), dgst.len() as c_int, kinv, r, ec);
+            let sign_occurrences = crate::bn::alloc::test_fail::counted();
+            drop(count);
+            assert!(!sig.is_null());
+            ECDSA_SIG_free(sig);
+
+            let order_bits = BN_num_bits(EC_GROUP_get0_order(group)) as usize;
+            eprintln!(
+                "T22 sites: mul={mul_allocations} setup={setup_allocations} sign_sig={sign_allocations}; \
+                 occurrences: mul={mul_occurrences} setup={setup_occurrences} sign_sig={sign_occurrences}; \
+                 order_bits={order_bits} per_bit={}",
+                mul_occurrences / order_bits.max(1)
+            );
+
+            BN_free(k);
+            EC_POINT_free(point);
+            BN_clear_free(kinv);
+            BN_clear_free(r);
             EC_KEY_free(ec);
         }
     }

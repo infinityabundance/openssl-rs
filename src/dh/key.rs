@@ -948,4 +948,44 @@ mod tests {
             DH_free(dh);
         }
     }
+
+    /// Sweep every seam-visible allocation in a full finite-field DH agreement
+    /// (`ossl_dh_compute_key`: the context, the temporaries, the fixed-pattern
+    /// exponentiation and the encoding). Each injected failure must be reported as
+    /// the entry point's error, never as an abort.
+    #[test]
+    fn every_allocation_failure_in_dh_compute_key_returns_an_error() {
+        use crate::dh::group_params::DH_new_by_nid;
+        use crate::dh::object::{DH_free, DH_size};
+        use crate::runtime::obj::NID_ffdhe2048;
+
+        // SAFETY: every object and buffer below is this test's own and live.
+        unsafe {
+            let dh = DH_new_by_nid(NID_ffdhe2048);
+            assert!(!dh.is_null());
+            assert_eq!(DH_generate_key(dh), 1);
+            let mut pub_key: *const BigNum = core::ptr::null();
+            DH_get0_key(dh, &mut pub_key, core::ptr::null_mut());
+            assert!(!pub_key.is_null());
+            let len = DH_size(dh) as usize;
+            let mut out = vec![0u8; len];
+
+            // A warm-up fixes the object's caches and context pool, so the sweep sees
+            // one stable allocation pattern.
+            assert!(ossl_dh_compute_key(out.as_mut_ptr(), pub_key, dh) > 0);
+            let allocations = crate::bn::alloc::test_fail::sweep_sites(|| {
+                ossl_dh_compute_key(out.as_mut_ptr(), pub_key, dh) > 0
+            });
+            assert!(
+                allocations > 0,
+                "the seam must see the DH path's allocations"
+            );
+            eprintln!("T22 sites: dh_compute_key={allocations}");
+            assert!(
+                ossl_dh_compute_key(out.as_mut_ptr(), pub_key, dh) > 0,
+                "the same call succeeds once the seam is disarmed"
+            );
+            DH_free(dh);
+        }
+    }
 }

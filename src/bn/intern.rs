@@ -422,7 +422,12 @@ pub(crate) unsafe fn bn_set_words(a: *mut BigNum, words: *const Limb, num_words:
         Vec::new()
     } else {
         // SAFETY: `words` is readable for `n` limbs per this function's `# Safety` section.
-        unsafe { core::slice::from_raw_parts(words, n) }.to_vec()
+        let Some(v) =
+            crate::bn::alloc::try_clone_slice(unsafe { core::slice::from_raw_parts(words, n) })
+        else {
+            return 0;
+        };
+        v
     };
     limbs::normalise(&mut d);
     dst.d = d;
