@@ -48,6 +48,17 @@
       "required_locally": true
     },
     {
+      "role": "cmake",
+      "cohort": "A",
+      "version": "3.31.4",
+      "filename": "cmake-3.31.4-linux-x86_64.tar.gz",
+      "url": "https://github.com/Kitware/CMake/releases/download/v3.31.4/cmake-3.31.4-linux-x86_64.tar.gz",
+      "sha256": "e8c096779b25acf006190b79b42a09f350e6d3c33ab7d395ed86a0871a9f8e96",
+      "digest_source": "publisher list https://github.com/Kitware/CMake/releases/download/v3.31.4/cmake-3.31.4-SHA-256.txt",
+      "required_locally": true,
+      "note": "A build tool for the Unix PuTTY build, not an SSH implementation. It is a prebuilt binary distribution and is pulled into the toolchain directory rather than installed system-wide."
+    },
+    {
       "role": "openssl-authority",
       "cohort": "A",
       "version": "3.6.4",

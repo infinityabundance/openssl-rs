@@ -2,11 +2,11 @@
  "schema": "openssl-rs/interop-pin-receipt/1",
  "campaign": "OpenSSH interoperability, item O2 of docs/ETP-TODO.md",
  "manifest": "courts/phase18/interop/MANIFEST.json",
- "generated": "2026-11-21T18:19:57Z",
+ "generated": "2026-11-21T18:31:59Z",
  "work": "court/tmp/o2",
  "counts": {
-  "pins": 5,
-  "verified": 4,
+  "pins": 6,
+  "verified": 5,
   "absent_recorded": 1,
   "failed": 0
  },
@@ -53,6 +53,17 @@
    "required_locally": true,
    "observed_sha256": "e098034a843699200c8c977a991fff73159735bf795d5f72ef672c41a6b1ae81",
    "size_bytes": 2386978,
+   "status": "verified"
+  },
+  {
+   "role": "cmake",
+   "cohort": "A",
+   "version": "3.31.4",
+   "filename": "cmake-3.31.4-linux-x86_64.tar.gz",
+   "expected_sha256": "e8c096779b25acf006190b79b42a09f350e6d3c33ab7d395ed86a0871a9f8e96",
+   "required_locally": true,
+   "observed_sha256": "e8c096779b25acf006190b79b42a09f350e6d3c33ab7d395ed86a0871a9f8e96",
+   "size_bytes": 55007592,
    "status": "verified"
   },
   {
