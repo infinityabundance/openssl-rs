@@ -380,6 +380,28 @@ unsafe fn free_bn_blinding(_idx: OsslUintMax, b: *mut c_void, _arg: *mut c_void)
     unsafe { BN_BLINDING_free(b.cast()) };
 }
 
+/// [`free_bn_blinding`]'s clearing twin: release the value **and** remove its slot.
+///
+/// `rsa_ossl_finish` uses this rather than `free_bn_blinding` because a method transition must
+/// leave the store empty. Every stored blinding borrows `rsa->_method_mod_n` as its `m_ctx`
+/// (`RSA_setup_blinding` passes it to `BN_BLINDING_create_param`), and the same hook releases
+/// that context; a blinding left behind would hand the next private operation a released
+/// pointer. A NULL value is `ossl_sa_set`'s removal, and `ossl_sa_doall_arg` snapshots the
+/// leaves before it calls back, so re-entering the array here is sound.
+///
+/// # Safety
+///
+/// `b` must be NULL or a live `BN_BLINDING` this array owns, and `arg` must be the live
+/// `OpenSslSa` the walk is over.
+unsafe fn free_bn_blinding_and_clear(idx: OsslUintMax, b: *mut c_void, arg: *mut c_void) {
+    // SAFETY: `arg` is the live array the walk is over and `idx` is a slot the snapshot found
+    // non-NULL; a NULL value removes it.
+    unsafe { ossl_sa_set(arg.cast::<OpenSslSa>(), idx, ptr::null_mut()) };
+    // SAFETY: `b` is the value the snapshot found in the array, so it is a `BN_BLINDING *` this
+    // array owns; `BN_BLINDING_free` accepts NULL.
+    unsafe { BN_BLINDING_free(b.cast()) };
+}
+
 /// `void ossl_rsa_free_blinding(RSA *rsa)` — `crypto/rsa/rsa_ossl.c:250-256`.
 ///
 /// Reads `rsa->blindings_sa` into a local, walks it releasing every context, then releases
@@ -2250,6 +2272,13 @@ unsafe extern "C" fn rsa_ossl_init(rsa: *mut Rsa) -> c_int {
 /// divergence from `rsa_ossl.c:1179-1195` (§17: do not reproduce the authority's UB) and is not
 /// observable to any caller that uses a released context correctly.
 ///
+/// **The blinding store is emptied for the same reason.** Each stored `BN_BLINDING` borrows
+/// `_method_mod_n` as its `m_ctx`, so leaving the store populated across the release above would
+/// let the next private operation dereference a released Montgomery context. The values are
+/// released and their slots cleared in place (no allocation can fail during a transition); the
+/// next operation draws a fresh blinding. This is the same §17 divergence, applied to the second
+/// alias of the released cache.
+///
 /// The extra-prime loop is `#ifndef FIPS_MODULE`'s, which holds on this profile. `RSA_MAX_PRIME_NUM`
 /// bounds nothing here: the loop runs to the stack's own count, and `RSA_set0_multi_prime_params`
 /// is what refused an over-long stack.
@@ -2260,6 +2289,16 @@ unsafe extern "C" fn rsa_ossl_finish(rsa: *mut Rsa) -> c_int {
     // SAFETY: `rsa` is live per this function's `# Safety` section, so its `prime_infos` is NULL or
     // a live stack of `RSA_PRIME_INFO` records this object owns.
     unsafe {
+        // Release the blindings before the `n` cache they borrow. `rsa_get_blinding` finds them
+        // again only if they are still in the store, and every one holds `_method_mod_n` as its
+        // `m_ctx`; see the doc comment on this hook.
+        let blindings = (*rsa).blindings_sa.cast::<OpenSslSa>();
+        ossl_sa_doall_arg(
+            blindings,
+            Some(free_bn_blinding_and_clear),
+            blindings.cast(),
+        );
+
         let mut n: c_int = 0;
         while n < OPENSSL_sk_num((*rsa).prime_infos) {
             let pinfo = OPENSSL_sk_value((*rsa).prime_infos, n).cast::<super::RsaPrimeInfo>();
@@ -2437,6 +2476,168 @@ mod tests {
             assert!(rsa._method_mod_n.is_null());
             // The negative control: before the repair this second call released the same block.
             assert_eq!(rsa_ossl_finish(&mut rsa), 1);
+        }
+    }
+
+    /// **A method transition empties the blinding store.**
+    ///
+    /// Every stored `BN_BLINDING` borrows `rsa->_method_mod_n` as its `m_ctx`
+    /// (`RSA_setup_blinding` hands that context to `BN_BLINDING_create_param`), and
+    /// `RSA_set_method` runs `rsa_ossl_finish`, which releases it. A blinding that survived the
+    /// transition would hand the next private operation a released pointer. The lookup is the
+    /// observable: before the fix it still answered the old blinding after the transition.
+    #[test]
+    fn a_method_transition_drops_blindings_that_borrow_the_released_cache() {
+        use crate::evp::pkey_ctx::RSA_NO_PADDING;
+        use crate::rsa::gen::RSA_generate_key_ex;
+        use crate::rsa::object::{
+            RSA_free, RSA_new, RSA_private_encrypt, RSA_set_method, RSA_size,
+        };
+
+        // SAFETY: every object is created and released here, and every buffer is its own length.
+        unsafe {
+            let e = BN_new();
+            assert!(!e.is_null());
+            assert_eq!(BN_set_word(e, 65537), 1);
+            let rsa = RSA_new();
+            assert!(!rsa.is_null());
+            assert_eq!(RSA_generate_key_ex(rsa, 1024, e, ptr::null_mut()), 1);
+
+            let n = RSA_size(rsa) as usize;
+            let mut pt = vec![0u8; n];
+            pt[n - 1] = 0x42;
+            let mut ct = vec![0u8; n];
+            assert_eq!(
+                RSA_private_encrypt(
+                    n as c_int,
+                    pt.as_ptr(),
+                    ct.as_mut_ptr(),
+                    rsa,
+                    RSA_NO_PADDING
+                ),
+                n as c_int
+            );
+            assert!(
+                !ossl_rsa_get_thread_bn_blinding(rsa).is_null(),
+                "the private operation left a per-thread blinding"
+            );
+
+            assert_eq!(RSA_set_method(rsa, RSA_PKCS1_OpenSSL()), 1);
+            assert!(
+                ossl_rsa_get_thread_bn_blinding(rsa).is_null(),
+                "a blinding must not outlive the cache it borrows as `m_ctx`"
+            );
+
+            // The next operation draws a fresh blinding and still answers `m^d mod n`.
+            let mut ct2 = vec![0u8; n];
+            assert_eq!(
+                RSA_private_encrypt(
+                    n as c_int,
+                    pt.as_ptr(),
+                    ct2.as_mut_ptr(),
+                    rsa,
+                    RSA_NO_PADDING
+                ),
+                n as c_int
+            );
+            assert_eq!(ct, ct2, "the fresh blinding cancels to the same value");
+
+            RSA_free(rsa);
+            BN_free(e);
+        }
+    }
+
+    /// **The smooth and slow CRT arms agree, with and without blinding, and the tail's public
+    /// verification accepts both.**
+    ///
+    /// The default method and equal-width primes select the `smooth` arm; clearing
+    /// `RSA_FLAG_CACHE_PRIVATE` skips the cache arm so `smooth` stays 0 and the generic
+    /// per-prime exponentiation and combine run. The raw result is deterministic, so all three
+    /// paths must answer the same octets, and re-exponentiating with the public exponent must
+    /// recover the message. This pins the two arms' value parity; the distinct T6 gate (the
+    /// `smooth` test before the generic combine) is what stops the smooth result being
+    /// overwritten, which no value comparison can see because the tail verification falls back
+    /// to the unblinded exponentiation when it is.
+    #[test]
+    fn the_smooth_and_slow_crt_arms_agree_and_the_blinding_cancels() {
+        use crate::evp::pkey_ctx::RSA_NO_PADDING;
+        use crate::rsa::gen::RSA_generate_key_ex;
+        use crate::rsa::object::{
+            RSA_free, RSA_new, RSA_private_encrypt, RSA_public_decrypt, RSA_size,
+        };
+
+        // SAFETY: every object is created and released here, and every buffer is its own length.
+        unsafe {
+            let e = BN_new();
+            assert!(!e.is_null());
+            assert_eq!(BN_set_word(e, 65537), 1);
+            let rsa = RSA_new();
+            assert!(!rsa.is_null());
+            assert_eq!(RSA_generate_key_ex(rsa, 1024, e, ptr::null_mut()), 1);
+
+            let n = RSA_size(rsa) as usize;
+            let mut pt = vec![0u8; n];
+            pt[n - 1] = 0x42;
+
+            // Smooth arm with the object's blinding.
+            let mut ct_blinded = vec![0u8; n];
+            assert_eq!(
+                RSA_private_encrypt(
+                    n as c_int,
+                    pt.as_ptr(),
+                    ct_blinded.as_mut_ptr(),
+                    rsa,
+                    RSA_NO_PADDING
+                ),
+                n as c_int
+            );
+
+            // Smooth arm unblinded: the blinding must cancel to the same value.
+            (*rsa).flags |= RSA_FLAG_NO_BLINDING;
+            let mut ct_smooth = vec![0u8; n];
+            assert_eq!(
+                RSA_private_encrypt(
+                    n as c_int,
+                    pt.as_ptr(),
+                    ct_smooth.as_mut_ptr(),
+                    rsa,
+                    RSA_NO_PADDING
+                ),
+                n as c_int
+            );
+            assert_eq!(ct_blinded, ct_smooth, "blinding cancels");
+
+            // Slow arm: no private cache arm, so `smooth` stays 0.
+            (*rsa).flags &= !RSA_FLAG_CACHE_PRIVATE;
+            let mut ct_slow = vec![0u8; n];
+            assert_eq!(
+                RSA_private_encrypt(
+                    n as c_int,
+                    pt.as_ptr(),
+                    ct_slow.as_mut_ptr(),
+                    rsa,
+                    RSA_NO_PADDING
+                ),
+                n as c_int
+            );
+            assert_eq!(ct_smooth, ct_slow, "smooth and slow CRT arms agree");
+
+            // Public reference: ct^e == m mod n.
+            let mut back = vec![0u8; n];
+            assert_eq!(
+                RSA_public_decrypt(
+                    n as c_int,
+                    ct_slow.as_ptr(),
+                    back.as_mut_ptr(),
+                    rsa,
+                    RSA_NO_PADDING
+                ),
+                n as c_int
+            );
+            assert_eq!(&back[..], &pt[..], "the CRT result is m^d mod n");
+
+            RSA_free(rsa);
+            BN_free(e);
         }
     }
 
