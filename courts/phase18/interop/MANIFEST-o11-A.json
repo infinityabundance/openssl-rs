@@ -2,17 +2,17 @@
  "schema": "openssl-rs/interop-manifest/1",
  "item": "O11 of docs/ETP-TODO.md",
  "subject": "A",
- "generated": "2026-11-21T19:55:09Z",
+ "generated": "2026-11-21T19:56:10Z",
  "identity": {
   "openssh_tarball_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
   "libcrypto_sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2"
  },
  "reproduction": [
   "cd court/tmp/o4/tree-A && PATH=court/tmp/o3/prefix/bin:court/tmp/o3/prefix/sbin:$PATH make -k tests SKIP_LTESTS=sftp-cmds",
-  "python3 courts/phase18/interop/manifest.py --log /tmp/o9-a.log --subject A --out courts/phase18/interop/MANIFEST-o11-A.json"
+  "python3 courts/phase18/interop/manifest.py --log court/tmp/o4/o9-a.log --subject A --out courts/phase18/interop/MANIFEST-o11-A.json"
  ],
  "result": {
-  "log": "/tmp/o9-a.log",
+  "log": "court/tmp/o4/o9-a.log",
   "counts": {
    "scripts_executed": 73,
    "ok_assertions": 64,
