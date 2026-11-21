@@ -1118,7 +1118,7 @@ const MSG_FLOW_ERROR_13: c_int = 1;
 /// `s` is live.
 unsafe fn client_derive_and_install(s: *mut Ssl) -> c_int {
     use crate::ssl::tls13_enc as k;
-    let mut pms = crate::runtime::mem::CleansedScratch::<64>::new();
+    let mut pms = crate::runtime::secret::SecretArray::<64>::new();
     let mut pmslen = 0usize;
     // SAFETY: `s` is live; the keys are the connection's ephemerals.
     if unsafe {
@@ -3145,39 +3145,6 @@ pub(crate) unsafe fn tls12_process_cert_verify(s: *mut Ssl, msg: &[u8], _is_serv
     unsafe { crate::ssl::tls13_enc::transcript_update(s, msg.as_ptr(), msg.len()) }
 }
 
-/// A heap-allocated secret scratch whose single release cleanses the bytes first.
-///
-/// A DHE premaster is the size of the negotiated prime (up to 1250 bytes at the authority's
-/// 10000-bit ceiling), too large for the fixed 80-byte stack frame the ECDHE and RSA arms use. The
-/// allocation is this owner's; `Drop` wipes the whole extent with the crate's volatile cleanse
-/// before the `Vec` releases it, so no failure path can leave a copy behind.
-struct CleansedHeap(Vec<u8>);
-
-impl CleansedHeap {
-    fn new(len: usize) -> Self {
-        Self(vec![0u8; len])
-    }
-
-    fn as_ptr(&self) -> *const u8 {
-        self.0.as_ptr()
-    }
-
-    fn as_mut_ptr(&mut self) -> *mut u8 {
-        self.0.as_mut_ptr()
-    }
-
-    fn len(&self) -> usize {
-        self.0.len()
-    }
-}
-
-impl Drop for CleansedHeap {
-    fn drop(&mut self) {
-        // SAFETY: the vector owns `len` writable bytes for the whole call and is not aliased here.
-        unsafe { crate::runtime::mem::cleanse(self.0.as_mut_ptr(), self.0.len()) }
-    }
-}
-
 /// `CON_FUNC_RETURN tls_construct_client_key_exchange(...)` (`statem_clnt.c:3622-3671`): the RSA,
 /// DHE and ECDHE arms — generate the client ephemeral, send the arm's `ClientKeyExchange` body,
 /// and derive the master secret and key block.
@@ -3191,7 +3158,7 @@ impl Drop for CleansedHeap {
 /// `s` is live.
 unsafe fn tls12_construct_client_key_exchange(s: *mut Ssl) -> c_int {
     use crate::evp::pkey::{EVP_PKEY_free, EVP_PKEY_get1_encoded_public_key, EVP_PKEY_get_size};
-    use crate::runtime::mem::CleansedScratch;
+    use crate::runtime::secret::{SecretArray, SecretBuf};
     use crate::ssl::ssl_ciph_table as ct;
     use crate::ssl::statem::statem_srvr::TLS12_MAX_RSA_BYTES;
     use crate::ssl::tls13_enc::write_handshake_message;
@@ -3200,9 +3167,9 @@ unsafe fn tls12_construct_client_key_exchange(s: *mut Ssl) -> c_int {
     let mkey = unsafe { (*(*s).pending_cipher).algorithm_mkey as u64 };
     // The premaster is a secret stack copy; the guard wipes it on every return path, not only on
     // success. 80 bytes covers an X25519/X448 secret and a P-521 x-coordinate (66).
-    let mut pms = CleansedScratch::<80>::new();
+    let mut pms = SecretArray::<80>::new();
     // A DHE premaster is the size of the prime, so it is heap-allocated and owned by this guard.
-    let mut dhe_pms: Option<CleansedHeap> = None;
+    let mut dhe_pms: Option<SecretBuf<u8>> = None;
     let pms_ptr: *const u8;
     let pmslen: usize;
     // The authority's `OPENSSL_RSA_MAX_MODULUS_BITS` is 16384 (`rsa.h:39`), so the largest
@@ -3335,7 +3302,9 @@ unsafe fn tls12_construct_client_key_exchange(s: *mut Ssl) -> c_int {
             return 0;
         }
         let prime_len = prime_len as usize;
-        let mut buf = CleansedHeap::new(prime_len);
+        let Some(mut buf) = SecretBuf::<u8>::try_zeroed(prime_len) else {
+            return 0;
+        };
         let mut got = 0usize;
         // SAFETY: `s` is live; both keys are live; `buf` is `prime_len` writable bytes.
         if unsafe {

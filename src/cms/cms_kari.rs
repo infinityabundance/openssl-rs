@@ -28,7 +28,9 @@ use crate::x509::x509_cmp::X509_get0_pubkey;
 use crate::x509::x_x509::X509;
 
 use super::cms_asn1::*;
-use super::cms_env::{declared_update_extent, reported_extent, SecretScratch};
+use crate::runtime::secret::SecretBuf;
+
+use super::cms_env::{declared_update_extent, reported_extent};
 use super::cms_lib::{
     ossl_cms_ctx_get0_libctx, ossl_cms_ctx_get0_propq, ossl_cms_ias_cert_cmp,
     ossl_cms_keyid_cert_cmp, ossl_cms_set1_ias, ossl_cms_set1_keyid, raise_cms,
@@ -582,7 +584,7 @@ unsafe fn cipher_output(
     // SAFETY: `ctx` is live per this function's contract.
     let block_size = unsafe { EVP_CIPHER_CTX_get_block_size(ctx) };
     let stage_capacity = declared_update_extent(in_len, block_size)?;
-    let mut stage = SecretScratch::new(stage_capacity)?;
+    let mut stage = SecretBuf::<u8>::try_zeroed(stage_capacity)?;
 
     let in_len = in_len as c_int;
     let mut reported: c_int = 0;

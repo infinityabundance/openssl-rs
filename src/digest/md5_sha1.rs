@@ -20,7 +20,7 @@ use core::ptr;
 
 use crate::digest::md5::{MD5_Final, MD5_Init, MD5_Update, Md5Ctx};
 use crate::digest::sha1::{SHA1_Final, SHA1_Init, SHA1_Update, ShaCtx};
-use crate::runtime::mem::CleansedScratch;
+use crate::runtime::secret::SecretArray;
 
 /// `MD5_DIGEST_LENGTH` — `include/openssl/md5.h`.
 pub(crate) const MD5_DIGEST_LENGTH: usize = 16;
@@ -113,9 +113,9 @@ pub(crate) unsafe fn ossl_md5_sha1_ctrl(
     /// The authority's `unsigned char padtmp[48]`.
     const PAD_LENGTH: usize = 48;
 
-    let mut padtmp = CleansedScratch::<PAD_LENGTH>::new();
-    let mut md5tmp = CleansedScratch::<MD5_DIGEST_LENGTH>::new();
-    let mut sha1tmp = CleansedScratch::<SHA_DIGEST_LENGTH>::new();
+    let mut padtmp = SecretArray::<PAD_LENGTH>::new();
+    let mut md5tmp = SecretArray::<MD5_DIGEST_LENGTH>::new();
+    let mut sha1tmp = SecretArray::<SHA_DIGEST_LENGTH>::new();
 
     if cmd != EVP_CTRL_SSL3_MASTER_SECRET {
         return -2;
@@ -188,7 +188,7 @@ pub(crate) unsafe fn ossl_md5_sha1_ctrl(
         }
     }
 
-    // `md5tmp` and `sha1tmp` are secret-derived; `CleansedScratch::drop` wipes them (and the
+    // `md5tmp` and `sha1tmp` are secret-derived; `SecretArray::drop` wipes them (and the
     // pad temporary) on this success path and on every early return, exactly once each.
     1
 }
@@ -301,20 +301,20 @@ mod tests {
     /// The ctrl's three secret temporaries are cleansed on the early-failure return that follows
     /// the two inner finalisations: the reinitialisation is refused, so `padtmp`, `md5tmp` and
     /// `sha1tmp` still hold master-secret-derived state when the function returns. The
-    /// observation is the test-only hook in `CleansedScratch::drop`, which reads the owner's
+    /// observation is the test-only hook in `SecretArray::drop`, which reads the owner's
     /// live storage, never freed stack.
     #[test]
     fn md5_sha1_ctrl_cleanses_on_early_failure() {
         let mut c = ctx();
         let secret = [0xa5u8; 48];
-        crate::runtime::mem::cleanse_hooks::reset();
+        crate::runtime::secret::cleanse_hooks::reset();
         test_hooks::set_fail_init();
         // SAFETY: every pointer is a live local and `secret` is 48 bytes.
         let ret =
             unsafe { ossl_md5_sha1_ctrl(&mut c, 0x1d, 48, secret.as_ptr().cast_mut().cast()) };
         assert_eq!(ret, 0, "the injected reinitialisation failure answers 0");
 
-        let events = crate::runtime::mem::cleanse_hooks::events();
+        let events = crate::runtime::secret::cleanse_hooks::events();
         assert_eq!(
             events.len(),
             3,
@@ -350,13 +350,13 @@ mod tests {
     fn md5_sha1_ctrl_cleanses_on_success() {
         let mut c = ctx();
         let secret = [0xa5u8; 48];
-        crate::runtime::mem::cleanse_hooks::reset();
+        crate::runtime::secret::cleanse_hooks::reset();
         // SAFETY: every pointer is a live local and `secret` is 48 bytes.
         let ret =
             unsafe { ossl_md5_sha1_ctrl(&mut c, 0x1d, 48, secret.as_ptr().cast_mut().cast()) };
         assert_eq!(ret, 1);
 
-        let events = crate::runtime::mem::cleanse_hooks::events();
+        let events = crate::runtime::secret::cleanse_hooks::events();
         assert_eq!(events.len(), 3, "wiped exactly once each: {events:?}");
         assert!(
             events.iter().all(|e| e.zero_after),

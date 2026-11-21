@@ -77,6 +77,7 @@ pub mod rdtsc;
 // The shared `CRYPTO_REF_COUNT` gate protocol. The destroying sentinel and its
 // compare-and-swap live in the object's existing atomic count; see the module docs.
 pub(crate) mod refcount;
+pub(crate) mod secret;
 pub mod secure;
 pub mod sparse_array;
 // Phase 25.8's differential harness over the sparse array. Test-only tooling: it is a no-op

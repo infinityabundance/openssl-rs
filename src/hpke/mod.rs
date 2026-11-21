@@ -109,6 +109,7 @@ use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
 use crate::runtime::mem::{CRYPTO_clear_free, CRYPTO_free, CRYPTO_malloc};
 use crate::runtime::mem_coords::SeamFile;
+use crate::runtime::secret::SecretArray;
 
 // ---------------------------------------------------------------------------------------------
 // The constants — `include/openssl/hpke.h`, `include/internal/hpke_util.h` and `core_names.h`.
@@ -926,54 +927,6 @@ pub(crate) unsafe fn hpke_labeled_expand(
 unsafe fn cleanse_ptr(p: *mut c_uchar, len: usize) {
     // SAFETY: `p` is writable for `len` per the contract.
     unsafe { crate::runtime::mem::cleanse(p, len) };
-}
-
-/// A secret-bearing scratch buffer that cleanses itself when the frame ends.
-///
-/// The authority reaches its `err:` label on success as well as failure and cleanses both key
-/// schedule buffers there (`hpke.c:800-801`). A `Drop` guard gives the same guarantee for every exit
-/// from this frame — early returns included — without repeating the cleanse at each one.
-struct CleansedScratch<const N: usize>([c_uchar; N]);
-
-impl<const N: usize> CleansedScratch<N> {
-    fn new() -> Self {
-        Self([0; N])
-    }
-
-    fn as_ptr(&self) -> *const c_uchar {
-        self.0.as_ptr()
-    }
-
-    fn as_mut_ptr(&mut self) -> *mut c_uchar {
-        self.0.as_mut_ptr()
-    }
-
-    /// Zero the whole buffer through the crate's volatile cleanse.
-    fn cleanse(&mut self) {
-        // SAFETY: `self.0` is this guard's own array of exactly `N` bytes, writable for its whole
-        // extent for as long as the guard is live.
-        unsafe { cleanse_ptr(self.0.as_mut_ptr(), N) }
-    }
-}
-
-impl<const N: usize> core::ops::Deref for CleansedScratch<N> {
-    type Target = [c_uchar; N];
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<const N: usize> core::ops::DerefMut for CleansedScratch<N> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl<const N: usize> Drop for CleansedScratch<N> {
-    fn drop(&mut self) {
-        self.cleanse();
-    }
 }
 
 /// `EVP_KDF_CTX *ossl_kdf_ctx_create(const char *kdfname, const char *mdname,
@@ -2164,8 +2117,8 @@ unsafe fn hpke_decap(
 /// `ctx` NULL or live; `info` readable for `infolen` unless 0.
 unsafe fn hpke_do_middle(ctx: *mut OsslHpkeCtx, info: *const c_uchar, infolen: usize) -> c_int {
     let mut erv = 0;
-    let mut ks_context = CleansedScratch::<OSSL_HPKE_MAXSIZE>::new();
-    let mut secret = CleansedScratch::<OSSL_HPKE_MAXSIZE>::new();
+    let mut ks_context = SecretArray::<OSSL_HPKE_MAXSIZE>::new();
+    let mut secret = SecretArray::<OSSL_HPKE_MAXSIZE>::new();
     let mut suitebuf = [0 as c_uchar; 6];
 
     if ctx.is_null() {
@@ -3778,13 +3731,23 @@ mod tests {
     /// call to this method, so every exit from the key schedule (success and failure) cleanses.
     #[test]
     fn secret_scratch_cleanse_zeroes_the_whole_buffer() {
-        let mut scratch = CleansedScratch::<OSSL_HPKE_MAXSIZE>::new();
-        assert_eq!(scratch.len(), OSSL_HPKE_MAXSIZE);
-        for b in scratch.iter_mut() {
-            *b = 0xA5;
+        crate::runtime::secret::cleanse_hooks::reset();
+        {
+            let mut scratch = SecretArray::<OSSL_HPKE_MAXSIZE>::new();
+            assert_eq!(scratch.len(), OSSL_HPKE_MAXSIZE);
+            for b in scratch.iter_mut() {
+                *b = 0xA5;
+            }
         }
-        scratch.cleanse();
-        assert!(scratch.iter().all(|&b| b == 0));
+        let events = crate::runtime::secret::cleanse_hooks::events();
+        assert_eq!(
+            events.len(),
+            1,
+            "the scratch wipe is observed once: {events:?}"
+        );
+        assert_eq!(events[0].len, OSSL_HPKE_MAXSIZE);
+        assert_eq!(events[0].nonzero_before, OSSL_HPKE_MAXSIZE);
+        assert!(events[0].zero_after, "every byte reads zero after the wipe");
     }
 
     /// The shared-secret cleanse extent is the allocation the KEM was given, and the reported

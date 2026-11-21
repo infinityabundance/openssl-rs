@@ -3406,7 +3406,7 @@ unsafe fn tls13_server_finish_flight(s: *mut Ssl) -> c_int {
 /// `s` is live.
 unsafe fn tls13_server_post_server_hello(s: *mut Ssl) -> c_int {
     use crate::ssl::tls13_enc as k;
-    let mut pms = crate::runtime::mem::CleansedScratch::<64>::new();
+    let mut pms = crate::runtime::secret::SecretArray::<64>::new();
     let mut pmslen = 0usize;
     // SAFETY: `s` is live; the server ephemeral (`pkey`) and client share (`peer_tmp`) are set.
     if unsafe {
@@ -5026,7 +5026,7 @@ unsafe fn tls12_process_client_key_exchange(s: *mut Ssl, msg: &[u8]) -> c_int {
     let mkey = unsafe { (*(*s).pending_cipher).algorithm_mkey as u64 };
     // The premaster is a secret stack copy; the guard wipes it on every return path, not only on
     // success. 80 bytes covers an X25519/X448 secret and a P-521 x-coordinate (66).
-    let mut pms = crate::runtime::mem::CleansedScratch::<80>::new();
+    let mut pms = crate::runtime::secret::SecretArray::<80>::new();
     let pmslen = if (mkey & ct::SSL_kRSA) != 0 && (mkey & ct::SSL_kECDHE) == 0 {
         // `tls_process_cke_rsa` (`statem_srvr.c:3157-3250`). TLS1.2 prefixes the encrypted
         // pre-master with its two-byte length; the reduced state machine never negotiates SSLv3.
