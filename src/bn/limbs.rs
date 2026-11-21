@@ -846,6 +846,92 @@ pub(crate) fn div_rem_fallible(a: &[Limb], b: &[Limb]) -> Option<(Vec<Limb>, Vec
     Some((q, r))
 }
 
+// Test-only evidence that the constant-pattern division was actually entered on
+// **this thread**.
+//
+// Two correct implementations of the same operation cannot be told apart by
+// their values, so a test that only compares results would pass even if
+// `BN_div` never dispatched on the flag. The counter is thread-local so a
+// concurrently running test cannot satisfy the assertion on this one's behalf.
+#[cfg(test)]
+thread_local! {
+    static CT_DIV_ENTRIES: core::cell::Cell<usize> = const { core::cell::Cell::new(0) };
+}
+
+/// Test-only: how many times this thread has entered [`div_rem_ct_fallible`].
+#[cfg(test)]
+pub(crate) fn ct_div_entries() -> usize {
+    CT_DIV_ENTRIES.with(|c| c.get())
+}
+
+/// `(a, b) -> (quotient, remainder)` in a **constant pattern over the operands'
+/// public limb widths**; `b` must be non-zero.
+///
+/// Binary shift-and-subtract long division: `a.len() * 64` iterations, each of
+/// which shifts the running remainder left by one bit, compares it with `b`, and
+/// subtracts conditionally through a mask. There is no value comparison, no
+/// early return and no division instruction, so the instruction sequence and the
+/// memory-access pattern are the same for every operand pair with the same limb
+/// counts. It is the same discipline as [`crate::bn::arith::mod_add_reduced_ct_limbs`]
+/// and the T3/T24 public-width buffers: the geometry follows `len()`, which is
+/// already observable through `BN_num_bits` and is treated as public here.
+///
+/// The quotient is formed over `a.len()` limbs and the remainder over
+/// `b.len() + 1`; both are trimmed by value once, at the end, because a `BIGNUM`
+/// magnitude has no fixed width. That final normalisation is the residual
+/// value-dependent step (the T9 boundary), not the division itself.
+///
+/// The running remainder and the subtraction scratch are secret-bearing: they are
+/// `SecretBuf`s, so every exit path — success, refused allocation and unwind —
+/// wipes the whole allocation. The returned quotient and remainder are plain
+/// vectors with the same transfer-window obligation every limb result in this
+/// module carries (T23).
+pub(crate) fn div_rem_ct_fallible(a: &[Limb], b: &[Limb]) -> Option<(Vec<Limb>, Vec<Limb>)> {
+    #[cfg(test)]
+    CT_DIV_ENTRIES.with(|c| c.set(c.get() + 1));
+    assert!(!b.is_empty(), "division by zero");
+    let width = b.len().checked_add(1)?;
+    let bits = a.len().checked_mul(64)?;
+    let mut q = crate::bn::alloc::try_zeroed(a.len(), 0u64)?;
+    let mut rem = crate::bn::secret::SecretBuf::<u64>::try_zeroed(width)?;
+    let mut diff = crate::bn::secret::SecretBuf::<u64>::try_zeroed(width)?;
+
+    for i in (0..bits).rev() {
+        // `rem = (rem << 1) | bit_i(a)`, over the fixed public width.
+        let mut carry = (a[i / 64] >> (i % 64)) & 1;
+        for slot in rem.iter_mut() {
+            let next = *slot >> 63;
+            *slot = (*slot << 1) | carry;
+            carry = next;
+        }
+
+        // `rem - b` zero-extended to the same width. Before the shift `rem < b`,
+        // so afterwards `rem < 2b` and the difference never needs a wider limb;
+        // a final borrow of one is exactly the `rem < b` outcome.
+        let mut borrow = 0u64;
+        for j in 0..width {
+            let d = (rem[j] as u128)
+                .wrapping_sub(*b.get(j).unwrap_or(&0) as u128)
+                .wrapping_sub(borrow as u128);
+            diff[j] = d as u64;
+            borrow = ((d >> 127) & 1) as u64;
+        }
+
+        // `take` is all-ones when the subtraction did not borrow (`rem >= b`).
+        let take = borrow.wrapping_sub(1);
+        let keep = !take;
+        for j in 0..width {
+            rem[j] = (diff[j] & take) | (rem[j] & keep);
+        }
+        q[i / 64] |= (take & 1) << (i % 64);
+    }
+
+    let mut r = crate::bn::alloc::try_clone_slice(&rem[..b.len()])?;
+    normalise(&mut r);
+    normalise(&mut q);
+    Some((q, r))
+}
+
 /// Greatest common divisor, by the binary method.
 pub(crate) fn gcd(a: &[Limb], b: &[Limb]) -> Vec<Limb> {
     let mut x = a.to_vec();
@@ -1330,6 +1416,113 @@ mod tests {
         let (q, r) = div_rem(&from_hex("1000000000000000000000000"), &from_hex("1000"));
         assert_eq!(to_hex(&q), "1000000000000000000000");
         assert!(r.is_empty());
+    }
+
+    /// T28: the constant-pattern division must satisfy the same definition as the
+    /// variable-time one — `q*b + r == a` with `r < b` — over the operand shapes
+    /// that exercise the D3 estimate and the D6 add-back, and it must agree limb
+    /// for limb with `div_rem`. Agreement with `div_rem` alone would not be enough
+    /// (two transcriptions of the same mistake agree), so the identity is checked
+    /// independently as well.
+    #[test]
+    fn div_rem_ct_satisfies_its_definition_on_awkward_shapes() {
+        let cases = [
+            ("ffffffffffffffffffffffffffffffff", "10000000000000000"),
+            ("80000000000000000000000000000001", "ffffffffffffffff"),
+            ("ffffffffffffffff0000000000000001", "fffffffffffffffe"),
+            ("1", "ffffffffffffffffffffffffffffffff"),
+            ("10000000000000000000000000000000000000000", "3"),
+            (
+                "ffffffffffffffffffffffffffffffffffffffff",
+                "ffffffffffffffff",
+            ),
+            // Dividend exactly equal to the divisor, and one more: the boundary
+            // the variable-time path answers with its `cmp` early return.
+            (
+                "123456789abcdef0fedcba9876543210",
+                "123456789abcdef0fedcba9876543210",
+            ),
+            (
+                "123456789abcdef0fedcba9876543211",
+                "123456789abcdef0fedcba9876543210",
+            ),
+        ];
+        for (a, b) in cases {
+            let (av, bv) = (from_hex(a), from_hex(b));
+            let Some((q, r)) = div_rem_ct_fallible(&av, &bv) else {
+                unreachable!("a small allocation must succeed")
+            };
+            assert_eq!(cmp(&r, &bv), core::cmp::Ordering::Less, "r < b for {a}/{b}");
+            assert_eq!(
+                to_hex(&add(&mul(&q, &bv), &r)),
+                a.trim_start_matches('0'),
+                "q*b+r == a for {a}/{b}"
+            );
+            let (vq, vr) = div_rem(&av, &bv);
+            assert_eq!(to_hex(&q), to_hex(&vq), "quotient differs for {a}/{b}");
+            assert_eq!(to_hex(&r), to_hex(&vr), "remainder differs for {a}/{b}");
+        }
+    }
+
+    /// A zero dividend and a single-limb divisor both take the same fixed pattern:
+    /// the loop runs `a.len() * 64` times whether the value is zero or all ones, and
+    /// no operand length change is needed to reach the single-limb case.
+    #[test]
+    fn div_rem_ct_covers_zero_dividends_and_single_limb_divisors() {
+        let empty: &[Limb] = &[];
+        let Some((q, r)) = div_rem_ct_fallible(empty, &[7]) else {
+            unreachable!("a small allocation must succeed")
+        };
+        assert!(q.is_empty() && r.is_empty(), "0/7 is 0 remainder 0");
+
+        let a = from_hex("ffffffffffffffff0000000000000001");
+        let Some((q, r)) = div_rem_ct_fallible(&a, &[3]) else {
+            unreachable!("a small allocation must succeed")
+        };
+        assert_eq!(to_hex(&add(&mul(&q, &[3]), &r)), to_hex(&a));
+        assert!(r.len() <= 1 && r.first().copied().unwrap_or(0) < 3);
+    }
+
+    /// 256 pseudo-random operand pairs, up to five limbs each, must agree with the
+    /// variable-time division and satisfy the division identity. The table test
+    /// pins the shapes that break naive transcriptions; this one covers widths and
+    /// carries that a table would not anticipate.
+    #[test]
+    fn div_rem_ct_agrees_on_random_shapes() {
+        let mut seed = 0x243f_6a88_85a3_08d3u64;
+        let mut next = || {
+            seed = seed
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            seed
+        };
+        for case in 0..256usize {
+            let alen = 1 + (next() as usize % 5);
+            let blen = 1 + (next() as usize % alen);
+            let mut av: Vec<Limb> = (0..alen).map(|_| next()).collect();
+            let mut bv: Vec<Limb> = (0..blen).map(|_| next()).collect();
+            normalise(&mut av);
+            normalise(&mut bv);
+            if bv.is_empty() {
+                bv.push(1);
+            }
+            let Some((q, r)) = div_rem_ct_fallible(&av, &bv) else {
+                unreachable!("a small allocation must succeed")
+            };
+            assert_eq!(
+                cmp(&r, &bv),
+                core::cmp::Ordering::Less,
+                "case {case}: r < b"
+            );
+            assert_eq!(
+                to_hex(&add(&mul(&q, &bv), &r)),
+                to_hex(&av),
+                "case {case}: q*b+r == a"
+            );
+            let (vq, vr) = div_rem(&av, &bv);
+            assert_eq!(to_hex(&q), to_hex(&vq), "case {case}: quotient");
+            assert_eq!(to_hex(&r), to_hex(&vr), "case {case}: remainder");
+        }
     }
 
     #[test]
