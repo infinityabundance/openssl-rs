@@ -1183,12 +1183,13 @@ fn mont_n0(m0: Limb) -> Limb {
     inv.wrapping_neg()
 }
 
-/// Copy `v` into a zero-padded vector of exactly `n` limbs.
-fn pad_to(v: &[Limb], n: usize) -> Vec<Limb> {
-    let mut out = vec![0u64; n];
+/// Copy `v` into a zero-padded vector of exactly `n` limbs, or `None` when the
+/// allocation fails.
+fn pad_to(v: &[Limb], n: usize) -> Option<Vec<Limb>> {
+    let mut out = crate::bn::alloc::try_zeroed(n, 0u64)?;
     let take = v.len().min(n);
     out[..take].copy_from_slice(&v[..take]);
-    out
+    Some(out)
 }
 
 /// A zeroed limb vector of exactly `n` limbs, or `None` if the allocator refuses.
@@ -1199,10 +1200,7 @@ fn pad_to(v: &[Limb], n: usize) -> Vec<Limb> {
 /// inputs with [`limbs::rem`]/[`limbs::mul`] still allocate infallibly; that
 /// residual is recorded as `OBL-BN-ALLOCATOR`.
 fn try_zeroed_limbs(n: usize) -> Option<Vec<Limb>> {
-    let mut v: Vec<Limb> = Vec::new();
-    v.try_reserve_exact(n).ok()?;
-    v.resize(n, 0);
-    Some(v)
+    crate::bn::alloc::try_zeroed(n, 0u64)
 }
 
 /// Zero-extend the exponent to exactly `width` limbs, **once**, before the ladder.
@@ -1295,14 +1293,17 @@ fn mont_mul_into(
 }
 
 /// Allocating wrapper over [`mont_mul_into`], for the one-shot pre-ladder
-/// conversion. The ladder itself reuses fixed scratch instead.
-fn mont_mul(a: &[Limb], b: &[Limb], m: &[Limb], n0: Limb) -> Vec<Limb> {
+/// conversion. The ladder itself reuses fixed scratch instead. `out` is returned
+/// as a plain vector because the caller adopts it into a [`SecretBuf`]; the
+/// intermediate product and REDC storage can be secret when the inputs are, so
+/// they are cleansed on every exit.
+fn mont_mul_fallible(a: &[Limb], b: &[Limb], m: &[Limb], n0: Limb) -> Option<Vec<Limb>> {
     let n = m.len();
-    let mut out = vec![0u64; n];
-    let mut t = vec![0u64; 2 * n + 1];
-    let mut diff = vec![0u64; n];
+    let mut out = try_zeroed_limbs(n)?;
+    let mut t = SecretBuf::try_zeroed(n.checked_mul(2)?.checked_add(1)?)?;
+    let mut diff = SecretBuf::try_zeroed(n)?;
     mont_mul_into(a, b, &mut out, m, n0, &mut t, &mut diff);
-    out
+    Some(out)
 }
 
 /// Constant-pattern exponentiation `a^|p| mod m` for a secret exponent.
@@ -1400,17 +1401,27 @@ pub(crate) fn mod_exp_core_consttime_width(
     let exponent = fixed_width_exponent(pd, width)?;
 
     let n0 = mont_n0(md[0]);
-    let one_mont = pad_to(&limbs::rem(&limbs::shl(&[1u64], n.checked_mul(64)?), md), n);
-    let rr = pad_to(&limbs::rem(&limbs::mul(&one_mont, &one_mont), md), n);
+    // `R` and `R^2` are functions of the public modulus alone, so their storage
+    // need not be secret; the requests are still fallible.
+    let one_mont = pad_to(
+        &limbs::rem_fallible(&limbs::shl_fallible(&[1u64], n.checked_mul(64)?)?, md)?,
+        n,
+    )?;
+    let rr = pad_to(
+        &limbs::rem_fallible(&limbs::mul_fallible(&one_mont, &one_mont)?, md)?,
+        n,
+    )?;
 
-    // The base reduction is variable-time. It is sound for a public base (DH's
-    // generator, RSA's encoded message); an EC field element is not automatically
-    // public, and `ossl_ec_group_do_inverse_ord` is reached with a secret nonce
-    // from `ecdsa_sign_setup`. That call site is recorded as an open finding in
-    // the timing receipt, not papered over here.
-    let base_plain = pad_to(&limbs::rem(ad, md), n);
+    // The base reduction is variable-time, so secrecy is classified per caller:
+    // DH's generator and RSA's encoded message/ciphertext are public, but an EC
+    // field element is not automatically public — `ossl_ec_group_do_inverse_ord`
+    // is reached with a secret nonce from `ecdsa_sign_setup`. `base_plain` is
+    // therefore adopted into a `SecretBuf` unconditionally, and the variable-time
+    // reduction itself stays an open finding in the timing receipt rather than
+    // being papered over here.
+    let base_plain = SecretBuf::from_vec(pad_to(&limbs::rem_fallible(ad, md)?, n)?);
     // `base * R^2 * R^-1 == base * R`: convert into the Montgomery domain.
-    let mut base = SecretBuf::from_vec(mont_mul(&base_plain, &rr, md, n0));
+    let mut base = SecretBuf::from_vec(mont_mul_fallible(&base_plain, &rr, md, n0)?);
     let mut acc = SecretBuf::from_vec(one_mont);
 
     // One allocation per buffer, before the first iteration. An allocation failure
