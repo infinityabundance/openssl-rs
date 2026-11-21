@@ -263,6 +263,21 @@ pub(crate) fn parts(b: Option<&BigNum>) -> (Vec<Limb>, bool) {
     }
 }
 
+/// The magnitude of an optional object as a **borrowed** slice; empty for null.
+///
+/// The constant-time exponentiation entry points use this instead of the
+/// length-sized [`parts`] clone: the exponent is copied exactly once, directly
+/// from the caller's storage into the public-width staging buffer, so the
+/// secret-length allocation and its duplicate copy do not exist. The borrow
+/// must end before the output is borrowed; each caller sequences the staging
+/// (which copies) ahead of the store.
+pub(crate) fn magnitude(b: Option<&BigNum>) -> &[Limb] {
+    match b {
+        Some(b) => &b.d,
+        None => &[],
+    }
+}
+
 /// Store a magnitude and sign into an optional destination.
 ///
 /// Answers `false` only for a null destination, which is how the entry points

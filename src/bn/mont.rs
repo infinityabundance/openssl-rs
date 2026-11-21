@@ -46,10 +46,9 @@ use core::ffi::{c_int, c_ulong};
 use crate::bn::arith::{
     mod_exp_core, mod_exp_core_consttime_from_parts, mont_mul_fallible, pad_to,
 };
-use crate::bn::bignum::{as_mut, as_ref, parts, store, store_consttime, BigNum};
+use crate::bn::bignum::{as_mut, as_ref, magnitude, parts, store, store_consttime, BigNum};
 use crate::bn::ctx::BnCtx;
 use crate::bn::limbs::{self, Limb};
-use crate::bn::secret::SecretBuf;
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites::{
     BN_EXP2_35, BN_EXP_1187, BN_EXP_1195, BN_EXP_327, BN_EXP_622, BN_GCD_532,
@@ -553,12 +552,9 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
         let (ad, _) = parts(x);
         // SAFETY: `p` is null-or-live per this function's `# Safety` section.
         let y = unsafe { as_ref(p) };
-        let (pd, _) = parts(y);
-        // Secret on the constant-time path: adopt the copied temporary into a
-        // cleansed owner before any early return can release it as a plain `Vec`.
-        // It is only the source of the public-width exponent copy: the
-        // constant-time branch below cleanses and releases it before the ladder.
-        let pd = SecretBuf::from_vec(pd);
+        // Secret on the constant-time path. Borrowed, not cloned: the staging
+        // copy below is the only transfer and it is public-width.
+        let pd = magnitude(y);
         // SAFETY: `m` is null-or-live per this function's `# Safety` section.
         let z = unsafe { as_ref(m) };
         let (md, _) = parts(z);
@@ -582,7 +578,7 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
             // public parameter — never the exponent's normalised length.
             mod_exp_core_consttime_from_parts(&ad, pd, &md, md.len())
         } else {
-            mod_exp_core(&ad, &pd, &md)
+            mod_exp_core(&ad, pd, &md)
         };
         match result {
             Some(v) => {
@@ -625,12 +621,10 @@ pub unsafe extern "C" fn BN_mod_exp_mont_consttime(
         let (ad, _) = parts(x);
         // SAFETY: `p` is null-or-live per this function's `# Safety` section.
         let y = unsafe { as_ref(p) };
-        let (pd, _) = parts(y);
-        // This entry point is always constant-time, so the exponent copy is
-        // secret: adopt it into a cleansed owner before the even-modulus return.
-        // The ladder stages it at the public modulus width and releases this
-        // secret-sized copy before the fixed-pattern loop begins.
-        let pd = SecretBuf::from_vec(pd);
+        // This entry point is always constant-time, so the exponent is secret.
+        // It is borrowed, not cloned; the ladder stages it at the public modulus
+        // width, so the only copy's extent is public geometry.
+        let pd = magnitude(y);
         // SAFETY: `m` is null-or-live per this function's `# Safety` section.
         let z = unsafe { as_ref(m) };
         let (md, _) = parts(z);
