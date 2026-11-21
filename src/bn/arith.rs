@@ -1068,6 +1068,11 @@ pub unsafe extern "C" fn BN_mod_exp(
         // SAFETY: as above for `p`.
         let y = unsafe { as_ref(p) };
         let (pd, _) = parts(y);
+        // The exponent's magnitude is secret on the constant-time path. Adopt the
+        // copied temporary into a `SecretBuf` immediately, so it is cleansed on
+        // every exit — including the width-refusal `return` below and the early
+        // `None` return from the ladder — instead of being freed as a plain `Vec`.
+        let pd = SecretBuf::from_vec(pd);
         // SAFETY: as above for `m`.
         let z = unsafe { as_ref(m) };
         let (md, _) = parts(z);

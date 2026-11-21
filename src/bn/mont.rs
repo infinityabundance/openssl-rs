@@ -47,6 +47,7 @@ use crate::bn::arith::{mod_exp_core, mod_exp_core_consttime_width};
 use crate::bn::bignum::{as_mut, as_ref, parts, store, store_consttime, BigNum};
 use crate::bn::ctx::BnCtx;
 use crate::bn::limbs::{self, Limb};
+use crate::bn::secret::SecretBuf;
 use crate::ffi::guard_ffi;
 use crate::runtime::err::err_sites::{
     BN_EXP2_35, BN_EXP_1187, BN_EXP_1195, BN_EXP_327, BN_EXP_622, BN_GCD_532,
@@ -479,6 +480,9 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
         // SAFETY: `p` is null-or-live per this function's `# Safety` section.
         let y = unsafe { as_ref(p) };
         let (pd, _) = parts(y);
+        // Secret on the constant-time path: adopt the copied temporary into a
+        // cleansed owner before any early return can release it as a plain `Vec`.
+        let pd = SecretBuf::from_vec(pd);
         // SAFETY: `m` is null-or-live per this function's `# Safety` section.
         let z = unsafe { as_ref(m) };
         let (md, _) = parts(z);
@@ -541,6 +545,9 @@ pub unsafe extern "C" fn BN_mod_exp_mont_consttime(
         // SAFETY: `p` is null-or-live per this function's `# Safety` section.
         let y = unsafe { as_ref(p) };
         let (pd, _) = parts(y);
+        // This entry point is always constant-time, so the exponent copy is
+        // secret: adopt it into a cleansed owner before the even-modulus return.
+        let pd = SecretBuf::from_vec(pd);
         // SAFETY: `m` is null-or-live per this function's `# Safety` section.
         let z = unsafe { as_ref(m) };
         let (md, _) = parts(z);
