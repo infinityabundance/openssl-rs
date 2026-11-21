@@ -93,6 +93,18 @@ section "perf software events on bench_bn (this is the path that works)"
 perf stat -e task-clock,context-switches,page-faults,minor-faults \
     "${OUT}/bench_bn" 2>&1 | tee "${OUT}/perf-software-events.txt"
 
+section "hardware PMU events (runs only if the vCPU exposes a PMU)"
+# CPUID.0AH is the deciding evidence: version 0 / 0 counters means the
+# hypervisor exposes no architectural PMU, and no capability can recover it.
+pmu_version=$(sed -n 's/.*version=\([0-9]*\).*/\1/p' "${OUT}/cpuid.txt" | head -1)
+if [ "${pmu_version:-0}" -ge 1 ]; then
+    perf stat -e cycles,instructions,branches,branch-misses,cache-misses \
+        "${OUT}/bench_bn" 2>&1 | tee "${OUT}/perf-hardware-events.txt"
+    echo "pmu: PRESENT (CPUID.0AH version ${pmu_version}) -- hardware counters recorded above"
+else
+    echo "pmu: ABSENT (CPUID.0AH version ${pmu_version:-0}) -- TSC and software events are the only counters available"
+fi
+
 section "TSC measurement (serialised lfence;rdtsc / rdtscp;lfence)"
 if command -v taskset >/dev/null 2>&1; then
     taskset -c 1 "${OUT}/tsc_clock" | tee "${OUT}/tsc.txt"
