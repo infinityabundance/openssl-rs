@@ -38,10 +38,13 @@
 
 use core::ffi::{c_int, c_ulong};
 
-use crate::bn::bignum::{as_mut, as_ref, new_owned, parts, store, BN_copy, BigNum};
+use crate::bn::bignum::{
+    as_mut, as_ref, new_owned, parts, store, BN_copy, BN_get_flags, BigNum, BN_FLG_CONSTTIME,
+};
 use crate::bn::ctx::BnCtx;
 use crate::bn::limbs::{self, Limb};
 use crate::ffi::guard_ffi;
+use crate::runtime::constant_time::constant_time_select;
 use crate::runtime::err::err_sites::{
     BN_ADD_142, BN_DIV_217, BN_EXP_1324, BN_GCD_532, BN_MOD_194, BN_MOD_22, BN_MOD_307,
     BN_SQRT_352, BN_SQRT_43,
@@ -1066,7 +1069,21 @@ pub unsafe extern "C" fn BN_mod_exp(
         // SAFETY: as above for `m`.
         let z = unsafe { as_ref(m) };
         let (md, _) = parts(z);
-        match mod_exp_core(&ad, &pd, &md) {
+        // SAFETY: `p` and `m` are null-or-live per this function's `# Safety`
+        // section; `BN_get_flags` treats null as no flags.
+        let consttime =
+            unsafe { BN_get_flags(p, BN_FLG_CONSTTIME) | BN_get_flags(m, BN_FLG_CONSTTIME) } != 0;
+        // The dispatch is explicit: a caller that stamped the exponent (or the
+        // modulus) with `BN_FLG_CONSTTIME` gets the fixed-pattern ladder; every
+        // other caller keeps the variable-time ladder it had. An even modulus has
+        // no Montgomery form, so it stays on the variable-time path here — the two
+        // Montgomery entry points refuse that modulus before they get this far.
+        let result = if consttime && !limbs::is_even(&md) {
+            mod_exp_core_consttime(&ad, &pd, &md)
+        } else {
+            mod_exp_core(&ad, &pd, &md)
+        };
+        match result {
             Some(v) => {
                 // SAFETY: `r` is null-or-live per this function's `# Safety` section;
                 // the shared reads above have ended.
@@ -1118,6 +1135,185 @@ pub(crate) fn mod_exp_core(ad: &[Limb], pd: &[Limb], md: &[Limb]) -> Option<Vec<
         }
     }
     Some(acc)
+}
+
+/// `-m^-1 mod 2^64` for an odd `m`, by Newton's iteration.
+///
+/// Only the modulus is an input, and the modulus is public on every path that
+/// reaches the constant-time ladder, so this precomputation is deliberately
+/// variable-time.
+fn mont_n0(m0: Limb) -> Limb {
+    // For odd `m0`, `m0 * m0 == 1 (mod 8)`, so `inv = m0` is correct in three
+    // bits and each iteration doubles the correct width (3 * 2^6 = 192 bits).
+    let mut inv = m0;
+    for _ in 0..6 {
+        inv = inv.wrapping_mul(2u64.wrapping_sub(m0.wrapping_mul(inv)));
+    }
+    inv.wrapping_neg()
+}
+
+/// Copy `v` into a zero-padded vector of exactly `n` limbs.
+fn pad_to(v: &[Limb], n: usize) -> Vec<Limb> {
+    let mut out = vec![0u64; n];
+    let take = v.len().min(n);
+    out[..take].copy_from_slice(&v[..take]);
+    out
+}
+
+/// Branch-free select: `mask` all-ones chooses `a`, all-zeros chooses `b`.
+///
+/// `mask` is derived from a secret exponent bit by `0u64.wrapping_sub(bit)`, so
+/// the operation is a bitwise blend with no comparison, index or jump on the
+/// secret. It is written through the crate's existing
+/// [`constant_time_select`], whose `value_barrier` stops LLVM from recognising
+/// the blend as a `select` and re-materialising it as a conditional branch — the
+/// compiler did exactly that to the unaided form of this function. The barrier is
+/// an optimisation barrier, **not** a correctness or constant-time guarantee: the
+/// ctgrind run over the release DSO is the evidence that the emitted code has no
+/// secret-dependent jump.
+fn ct_select(a: &[Limb], b: &[Limb], mask: Limb) -> Vec<Limb> {
+    a.iter()
+        .zip(b.iter())
+        .map(|(&x, &y)| constant_time_select(mask as usize, x as usize, y as usize) as Limb)
+        .collect()
+}
+
+/// Montgomery multiplication `a * b * R^-1 mod m` with fixed loop counts.
+///
+/// `a`, `b` and `m` are all exactly `n = m.len()` limbs, `a, b < m`, and `m` is
+/// odd. The schoolbook product and the REDC pass have iteration counts that
+/// depend only on `n` (public): the value-dependent `if x == 0 { continue }` of
+/// [`limbs::mul`], its trailing-zero `normalise`, and the data-dependent loops of
+/// [`limbs::div_rem`] are all avoided. The final conditional subtraction is a
+/// mask select, not a branch.
+fn mont_mul(a: &[Limb], b: &[Limb], m: &[Limb], n0: Limb) -> Vec<Limb> {
+    let n = m.len();
+    let mut t = vec![0u64; 2 * n + 1];
+
+    // Schoolbook product into t[0..2n]. `t[i + n]` is untouched when row `i`
+    // runs, so the carry may be stored directly.
+    for i in 0..n {
+        let mut carry = 0u64;
+        for j in 0..n {
+            let v = (a[i] as u128) * (b[j] as u128) + (t[i + j] as u128) + (carry as u128);
+            t[i + j] = v as u64;
+            carry = (v >> 64) as u64;
+        }
+        t[i + n] = carry;
+    }
+
+    // REDC: add `u * m * B^i` so limb `i` becomes zero, for every `i`. The carry
+    // runs through a fixed range; the total value is below `2 * B^(2n)`, so it
+    // never leaves `t`.
+    for i in 0..n {
+        let u = t[i].wrapping_mul(n0);
+        let mut carry = 0u64;
+        for j in 0..n {
+            let v = (u as u128) * (m[j] as u128) + (t[i + j] as u128) + (carry as u128);
+            t[i + j] = v as u64;
+            carry = (v >> 64) as u64;
+        }
+        let mut c = carry;
+        for limb in t[(i + n)..=(2 * n)].iter_mut() {
+            let (s, overflow) = limb.overflowing_add(c);
+            *limb = s;
+            c = u64::from(overflow);
+        }
+    }
+
+    // One masked conditional subtraction: the REDC value is in `[0, 2m)`. `high`
+    // is the possible bit above `n` limbs; `borrow` is the final borrow of
+    // `t[n..2n] - m`. Keep `t` only when `high == 0 && borrow == 1`.
+    let high = t[2 * n];
+    let mut diff = vec![0u64; n];
+    let mut borrow = 0u64;
+    for j in 0..n {
+        let (d1, b1) = t[n + j].overflowing_sub(m[j]);
+        let (d2, b2) = d1.overflowing_sub(borrow);
+        diff[j] = d2;
+        borrow = u64::from(b1) | u64::from(b2);
+    }
+    let keep = (high ^ 1) & borrow;
+    let keep_mask = 0u64.wrapping_sub(keep);
+    (0..n)
+        .map(|j| {
+            constant_time_select(keep_mask as usize, t[n + j] as usize, diff[j] as usize) as Limb
+        })
+        .collect()
+}
+
+/// Constant-pattern exponentiation `a^|p| mod m` for a secret exponent.
+///
+/// ## Design and why it has no secret-dependent branch
+///
+/// A fixed-width ladder: the loop runs exactly `64 * p.len()` times — the
+/// exponent's *declared* limb width — with no early exit, no skip, and no
+/// `bit_len` query. The exponent's value is read as `(limb >> bit) & 1` and turned
+/// into an all-ones/all-zeros mask; every iteration computes both the multiply
+/// and the square and blends the multiply into the accumulator with
+/// [`ct_select`]. There is no secret index: a table would be indexed by a
+/// secret, whereas this ladder selects between two register-shaped candidates.
+///
+/// The reduction is Montgomery REDC ([`mont_mul`]) because it has a fixed loop
+/// count, unlike [`limbs::rem`]. `R`, `R^2` and `n0` depend only on the public
+/// modulus and are computed with the ordinary variable-time helpers. The base is
+/// reduced with [`limbs::rem`] once; the base is public in every caller that
+/// reaches this function (DH's generator, RSA's encoded message, EC's field
+/// element), and this function makes no claim about a secret base.
+///
+/// Every intermediate is `n = m.len()` limbs wide, so no allocation size or
+/// limb count depends on a secret bit. The returned vector is `n` limbs wide
+/// (not trimmed); the caller's normal store trims it, which is the one remaining
+/// secret-dependent normalisation and lives outside this ladder.
+///
+/// ## When it is used
+///
+/// Only for an odd modulus: Montgomery form does not exist otherwise, and both
+/// `BN_mod_exp_mont` and `BN_mod_exp_mont_consttime` refuse an even modulus
+/// before reaching here. The dispatch is in `BN_mod_exp_mont` (the exponent or
+/// modulus carries `BN_FLG_CONSTTIME`), in `BN_mod_exp_mont_consttime` (always),
+/// and in `BN_mod_exp` (constant-time flag and odd modulus). The variable-time
+/// [`mod_exp_core`] is retained for inputs proven public by their callers.
+pub(crate) fn mod_exp_core_consttime(ad: &[Limb], pd: &[Limb], md: &[Limb]) -> Option<Vec<Limb>> {
+    if md.is_empty() {
+        return None;
+    }
+    // `x mod 1` is zero for every exponent, and Montgomery form needs an odd
+    // modulus greater than one. Modulus limbs are public, so this test is not a
+    // leak.
+    if md.len() == 1 && md[0] == 1 {
+        return Some(Vec::new());
+    }
+    if limbs::is_even(md) {
+        // No Montgomery form. The two Montgomery entry points refuse this case
+        // before dispatch; keeping a total answer here prevents an accidental
+        // even modulus from producing a wrong result.
+        return mod_exp_core(ad, pd, md);
+    }
+
+    let n = md.len();
+    let n0 = mont_n0(md[0]);
+    let one_mont = pad_to(&limbs::rem(&limbs::shl(&[1u64], 64 * n), md), n);
+    let rr = pad_to(&limbs::rem(&limbs::mul(&one_mont, &one_mont), md), n);
+
+    let base = pad_to(&limbs::rem(ad, md), n);
+    // `base * R^2 * R^-1 == base * R`: convert into the Montgomery domain.
+    let mut base = mont_mul(&base, &rr, md, n0);
+    let mut acc = one_mont;
+
+    let exp_limbs = pd.len();
+    for i in 0..64 * exp_limbs {
+        let bit = (pd[i >> 6] >> (i & 63)) & 1;
+        let mask = 0u64.wrapping_sub(bit);
+        let product = mont_mul(&acc, &base, md, n0);
+        acc = ct_select(&product, &acc, mask);
+        // Squared on the last iteration too: the pattern must not depend on the
+        // exponent's value or on which iteration is last.
+        base = mont_mul(&base, &base, md, n0);
+    }
+
+    let one = pad_to(&[1u64], n);
+    Some(mont_mul(&acc, &one, md, n0))
 }
 
 /// `int BN_mod_exp_simple(BIGNUM *r, const BIGNUM *a, const BIGNUM *p, const BIGNUM *m, BN_CTX *ctx)`
@@ -1597,6 +1793,59 @@ mod tests {
 
             for x in [a, b, m, p, base, sqrt_a, sqrt_p] {
                 BN_free(x);
+            }
+        }
+    }
+
+    /// The constant-pattern ladder must be a value-for-value substitution for the
+    /// variable-time ladder on every shape both accept: exponent zero and modulus
+    /// one (the special cases), one-limb and multi-limb moduli and exponents, an
+    /// even modulus (where the constant-time function falls back and must still
+    /// agree), and bases at and above the modulus.
+    #[test]
+    fn the_constant_time_ladder_matches_the_variable_time_ladder() {
+        let moduli: Vec<Vec<Limb>> = vec![
+            vec![1],
+            vec![2],
+            vec![3],
+            vec![0xffff_ffff_ffff_ffff],
+            vec![0x0123_4567_89ab_cdef, 0xfedc_ba98_7654_3211],
+        ];
+        let exponents: Vec<Vec<Limb>> = vec![
+            Vec::new(),
+            vec![1],
+            vec![2],
+            vec![0xffff_ffff_ffff_ffff],
+            vec![0x8000_0000_0000_0001, 0x0000_0000_0000_0002],
+        ];
+        let mut seed = 0x9e37_79b9_7f4a_7c15u64;
+        let mut next = || {
+            seed = seed
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            seed
+        };
+        let bases: Vec<Vec<Limb>> = vec![
+            Vec::new(),
+            vec![1],
+            vec![2],
+            vec![next()],
+            vec![next(), next()],
+            vec![0xffff_ffff_ffff_ffff, 0xffff_ffff_ffff_ffff],
+        ];
+        for m in &moduli {
+            for e in &exponents {
+                for a in &bases {
+                    let (expected, got) = (mod_exp_core(a, e, m), mod_exp_core_consttime(a, e, m));
+                    assert!(
+                        expected.is_some() && got.is_some(),
+                        "a nonzero modulus always answers"
+                    );
+                    if let (Some(expected), Some(mut got)) = (expected, got) {
+                        limbs::normalise(&mut got);
+                        assert_eq!(got, expected, "a={a:?} e={e:?} m={m:?}");
+                    }
+                }
             }
         }
     }
