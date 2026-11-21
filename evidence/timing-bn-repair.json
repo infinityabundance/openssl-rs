@@ -113,8 +113,9 @@
     },
     "candidate": {
       "branch_head": "b7d5ff745",
-      "measured_libcrypto_sha256": "7cf30069",
-      "measured_libcrypto_sha256_note": "rebuilt for instrumentation and NOT committed; the tracked install remains 0.0.49. Bind by digest, not by version string."
+      "measured_libcrypto_sha256": "7cf30069a0aef2dc5ee15218a0fbe3801bfecfa0406c41561d33f1b8d2b02323",
+      "measured_libcrypto_build_id": "678d23d9823bd093e923a705148d90a496a73f5f",
+      "measured_libcrypto_sha256_note": "Full digest of the retained measured DSO (gitignored artifacts/phase2/libcrypto.so.3, whose prefix matched the previously recorded 7cf30069). A fresh build is not byte-reproducible (D255: .symtab differs across runs), so the measured binary is identified from the retained artefact and its GNU build-id, not from a substitute rebuild. Rebuilt for instrumentation and NOT committed; the tracked install remains 0.0.49."
     },
     "controls": {
       "ctgrind_memcmp": "0 errors",

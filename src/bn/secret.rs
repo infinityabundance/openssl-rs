@@ -103,6 +103,80 @@ impl<T: SecretElement> Drop for SecretBuf<T> {
         // the block is cleansed before it is freed, on success, early return and
         // unwind alike.
         self.cleanse_now();
+        // Test-only: read the allocation now, while it is still live and before
+        // the field drop releases it, so a test can prove that automatic
+        // destruction cleansed. Compiled out of every non-test build.
+        #[cfg(test)]
+        self.observe_release_for_test();
+    }
+}
+
+/// Test-only observation seam for [`SecretBuf`]'s `Drop`.
+///
+/// A test-only global allocator would observe the real release, but installing
+/// one `#[global_allocator]` would apply to the whole library test binary and
+/// change allocation behaviour for every unrelated test. This seam instead
+/// observes the last state of the armed allocation from inside `Drop`, after
+/// cleansing and before the backing `Vec` is released — the strongest point that
+/// is still a live, soundly readable allocation.
+#[cfg(test)]
+mod drop_probe {
+    use core::cell::Cell;
+
+    /// What `Drop` saw on an armed allocation.
+    pub(super) struct Observation {
+        pub(super) ptr: usize,
+        pub(super) nonzero_bytes: usize,
+    }
+
+    thread_local! {
+        /// Address a test has armed, or 0 for none.
+        static TARGET: Cell<usize> = const { Cell::new(0) };
+        /// What the last armed `Drop` recorded on this thread.
+        static SEEN: Cell<Option<Observation>> = const { Cell::new(None) };
+    }
+
+    pub(super) fn arm(ptr: *const u64) {
+        TARGET.with(|t| t.set(ptr as usize));
+        SEEN.with(|s| s.set(None));
+    }
+
+    pub(super) fn is_armed(ptr: usize) -> bool {
+        TARGET.with(|t| t.get() == ptr)
+    }
+
+    pub(super) fn record(ptr: usize, nonzero_bytes: usize) {
+        SEEN.with(|s| s.set(Some(Observation { ptr, nonzero_bytes })));
+    }
+
+    pub(super) fn take() -> Option<Observation> {
+        SEEN.with(|s| s.take())
+    }
+}
+
+#[cfg(test)]
+impl<T: SecretElement> SecretBuf<T> {
+    /// Read the storage after `Drop`'s cleanse and record whether any byte
+    /// survived. Runs only when the allocation was armed by a test on this
+    /// thread, so unrelated `SecretBuf` drops are ignored.
+    fn observe_release_for_test(&self) {
+        let addr = self.inner.as_ptr() as usize;
+        if !drop_probe::is_armed(addr) {
+            return;
+        }
+        let base = self.inner.as_ptr().cast::<u8>();
+        let bytes = core::mem::size_of_val(&self.inner[..]);
+        let mut nonzero = 0usize;
+        for i in 0..bytes {
+            // SAFETY: `i < bytes`, so `base.add(i)` lies inside `self.inner`'s
+            // live allocation. `Drop::drop` runs before the field's release, so
+            // the block is still owned and readable here; the volatile read has
+            // no side effects and cannot be optimised away.
+            if unsafe { base.add(i).read_volatile() } != 0 {
+                nonzero += 1;
+            }
+        }
+        drop_probe::record(addr, nonzero);
     }
 }
 
@@ -178,5 +252,79 @@ mod tests {
             let limb = unsafe { ptr.add(i).read_volatile() };
             assert_eq!(limb, 0, "limb {i} was released uncleansed");
         }
+    }
+
+    /// A staged buffer and its allocation address, with the drop probe armed.
+    fn armed_staged() -> (SecretBuf<u64>, *const u64) {
+        let mut buf = match SecretBuf::<u64>::try_zeroed(PATTERN.len()) {
+            Some(buf) => buf,
+            None => unreachable!("a four-limb allocation succeeds"),
+        };
+        buf.copy_from_slice(&PATTERN);
+        let ptr = buf.as_ptr();
+        drop_probe::arm(ptr);
+        (buf, ptr)
+    }
+
+    /// The armed allocation must have been observed by `Drop` and released with
+    /// no non-zero byte left. Removing the `Drop` body therefore fails the test
+    /// twice over: no observation is recorded at all.
+    fn assert_released_cleansed(ptr: *const u64) {
+        let obs = match drop_probe::take() {
+            Some(obs) => obs,
+            None => unreachable!("Drop did not observe the armed allocation"),
+        };
+        assert_eq!(
+            obs.ptr, ptr as usize,
+            "Drop observed a different allocation"
+        );
+        assert_eq!(
+            obs.nonzero_bytes, 0,
+            "automatic destruction released uncleansed storage"
+        );
+    }
+
+    /// Normal return: the parameter is dropped at the end of the function.
+    fn drop_on_normal_return(_buf: SecretBuf<u64>) {}
+
+    /// Early `?` return: the parameter is dropped on the way out.
+    fn drop_on_early_return(_buf: SecretBuf<u64>) -> Option<()> {
+        let _later = SecretBuf::<u64>::try_zeroed(usize::MAX / 2)?;
+        Some(())
+    }
+
+    /// Unwind: the parameter is dropped while the panic propagates. The panic
+    /// is the point of the test, so the lint that forbids panics in production
+    /// code is explicitly waived for this helper.
+    #[allow(clippy::panic)]
+    fn drop_on_unwind(_buf: SecretBuf<u64>) {
+        panic!("unwind after staging the secret");
+    }
+
+    #[test]
+    fn automatic_drop_cleanses_on_normal_return() {
+        let (buf, ptr) = armed_staged();
+        drop_on_normal_return(buf);
+        assert_released_cleansed(ptr);
+    }
+
+    #[test]
+    fn automatic_drop_cleanses_on_early_return() {
+        let (buf, ptr) = armed_staged();
+        assert_eq!(
+            drop_on_early_return(buf),
+            None,
+            "the impossible later allocation must fail"
+        );
+        assert_released_cleansed(ptr);
+    }
+
+    #[test]
+    fn automatic_drop_cleanses_on_unwind() {
+        let (buf, ptr) = armed_staged();
+        let outcome =
+            std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| drop_on_unwind(buf)));
+        assert!(outcome.is_err(), "the helper must unwind");
+        assert_released_cleansed(ptr);
     }
 }
