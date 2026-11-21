@@ -91,9 +91,10 @@ use crate::bn::mont::{BN_mod_exp_mont_consttime, MontCtx};
 /// `rr` must be null or a live, uniquely-owned `BIGNUM`; `a`, `p` and `m` must each be null
 /// or live; `in_mont` must be null or a live `BN_MONT_CTX`. This is
 /// `BN_mod_exp_mont_consttime`'s contract, whose body answers this call.
-// The caller is `crypto/ec/ec_lib.c`'s `ossl_ec_group_do_inverse_ord`, which lands with the
-// rest of the EC layer; nothing in the tree calls this yet.
-#[allow(dead_code)]
+// The callers are `crypto/ec/ec_lib.c`'s `ossl_ec_group_do_inverse_ord`
+// (`src/ec/lib.rs`) and `ossl_ec_GFp_mont_field_inv` (`src/ec/mont.rs`), which
+// routes a secret field element through the fixed-pattern ladder while keeping
+// the public exponent.
 pub(crate) unsafe fn bn_mod_exp_mont_fixed_top(
     rr: *mut BigNum,
     a: *const BigNum,

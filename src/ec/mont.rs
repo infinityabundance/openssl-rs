@@ -20,9 +20,10 @@ use crate::bn::bignum::{
 use crate::bn::ctx::{
     BN_CTX_end, BN_CTX_free, BN_CTX_get, BN_CTX_new_ex, BN_CTX_secure_new_ex, BN_CTX_start, BnCtx,
 };
+use crate::bn::exp::bn_mod_exp_mont_fixed_top;
 use crate::bn::mont::{
     BN_MONT_CTX_copy, BN_MONT_CTX_free, BN_MONT_CTX_new, BN_MONT_CTX_set, BN_from_montgomery,
-    BN_mod_exp_mont, BN_mod_mul_montgomery, BN_to_montgomery, MontCtx,
+    BN_mod_mul_montgomery, BN_to_montgomery, MontCtx,
 };
 use crate::ec::ecdh_ossl::ossl_ecdh_simple_compute_key;
 use crate::ec::ecdsa_ossl::{
@@ -412,10 +413,20 @@ pub(crate) unsafe extern "C" fn ossl_ec_GFp_mont_field_inv(
                 break 'err;
             }
             /*-
-             * Exponent e is public.
-             * No need for scatter-gather or BN_FLG_CONSTTIME.
+             * Exponent e is public, but the base `a` is a field element and is
+             * secret on signing and key-agreement paths (for example the
+             * Jacobian Z coordinate inverted during `ecdsa_sign_setup`'s point
+             * multiplication). The authority uses `BN_mod_exp_mont` here, which
+             * is variable-time in the base through its division-based
+             * reductions. Route the same public exponent through the
+             * fixed-pattern ladder instead, so the base reduction is REDC with a
+             * public iteration count. Result is unchanged (`a^(p-2) mod p`);
+             * this is a deliberate safety improvement over the authority. The
+             * variable-time exponentiation remains available to callers that
+             * prove their base public, through `BN_mod_exp_mont` without
+             * `BN_FLG_CONSTTIME`.
              */
-            if BN_mod_exp_mont(
+            if bn_mod_exp_mont_fixed_top(
                 r,
                 a,
                 e,
