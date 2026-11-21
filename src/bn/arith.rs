@@ -44,6 +44,7 @@ use crate::bn::bignum::{
 };
 use crate::bn::ctx::BnCtx;
 use crate::bn::limbs::{self, Limb};
+use crate::bn::secret::SecretBuf;
 use crate::ffi::guard_ffi;
 use crate::runtime::constant_time::constant_time_select;
 use crate::runtime::err::err_sites::{
@@ -1199,17 +1200,6 @@ fn try_zeroed_limbs(n: usize) -> Option<Vec<Limb>> {
     Some(v)
 }
 
-/// Zero a secret-bearing scratch slice through volatile writes.
-fn cleanse_limbs(v: &mut [Limb]) {
-    let Some(bytes) = v.len().checked_mul(core::mem::size_of::<Limb>()) else {
-        return;
-    };
-    // SAFETY: `v` is a live slice of `v.len()` `Limb`s, so its elements are
-    // exactly `bytes` writable bytes; `Limb` is `Copy` with no destructor, and the
-    // volatile writes leave the slice and its length intact.
-    unsafe { crate::runtime::mem::cleanse(v.as_mut_ptr().cast::<u8>(), bytes) };
-}
-
 /// Zero-extend the exponent to exactly `width` limbs, **once**, before the ladder.
 ///
 /// After this copy every exponent read inside the ladder is an indexed load from
@@ -1218,8 +1208,8 @@ fn cleanse_limbs(v: &mut [Limb]) {
 /// copy is the single use of that metadata; the ctgrind `modexp_len` control in
 /// `courts/phase18/timing/ct_bn.c` taints the length field so that this one use
 /// is reported rather than hidden.
-fn fixed_width_exponent(pd: &[Limb], width: usize) -> Option<Vec<Limb>> {
-    let mut view = try_zeroed_limbs(width)?;
+fn fixed_width_exponent(pd: &[Limb], width: usize) -> Option<SecretBuf<Limb>> {
+    let mut view = SecretBuf::try_zeroed(width)?;
     let take = pd.len().min(width);
     view[..take].copy_from_slice(&pd[..take]);
     Some(view)
@@ -1402,7 +1392,7 @@ pub(crate) fn mod_exp_core_consttime_width(
     }
     let bits = width.checked_mul(64)?;
     let t_len = n.checked_mul(2)?.checked_add(1)?;
-    let mut exponent = fixed_width_exponent(pd, width)?;
+    let exponent = fixed_width_exponent(pd, width)?;
 
     let n0 = mont_n0(md[0]);
     let one_mont = pad_to(&limbs::rem(&limbs::shl(&[1u64], n.checked_mul(64)?), md), n);
@@ -1415,15 +1405,15 @@ pub(crate) fn mod_exp_core_consttime_width(
     // the timing receipt, not papered over here.
     let base_plain = pad_to(&limbs::rem(ad, md), n);
     // `base * R^2 * R^-1 == base * R`: convert into the Montgomery domain.
-    let mut base = mont_mul(&base_plain, &rr, md, n0);
-    let mut acc = one_mont;
+    let mut base = SecretBuf::from_vec(mont_mul(&base_plain, &rr, md, n0));
+    let mut acc = SecretBuf::from_vec(one_mont);
 
     // One allocation per buffer, before the first iteration. An allocation failure
     // is the entry points' ordinary failure answer, not an abort.
     let mut product = try_zeroed_limbs(n)?;
-    let mut squared = try_zeroed_limbs(n)?;
-    let mut t = try_zeroed_limbs(t_len)?;
-    let mut diff = try_zeroed_limbs(n)?;
+    let mut squared = SecretBuf::try_zeroed(n)?;
+    let mut t = SecretBuf::try_zeroed(t_len)?;
+    let mut diff = SecretBuf::try_zeroed(n)?;
     let mut one = try_zeroed_limbs(n)?;
     one[0] = 1;
 
@@ -1443,14 +1433,9 @@ pub(crate) fn mod_exp_core_consttime_width(
 
     mont_mul_into(&acc, &one, &mut product, md, n0, &mut t, &mut diff);
 
-    // The exponent and every secret-derived intermediate are cleansed; `product`
-    // is the result and is returned.
-    cleanse_limbs(&mut exponent);
-    cleanse_limbs(&mut acc);
-    cleanse_limbs(&mut base);
-    cleanse_limbs(&mut squared);
-    cleanse_limbs(&mut t);
-    cleanse_limbs(&mut diff);
+    // The exponent and every secret-derived intermediate live in `SecretBuf`, so
+    // the normal return, an early `?` return and an unwind all cleanse them in
+    // `Drop` before the blocks are freed. `product` is the result and is returned.
     Some(product)
 }
 
