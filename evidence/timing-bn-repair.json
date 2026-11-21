@@ -113,8 +113,8 @@
     },
     "candidate": {
       "branch_head": "b7d5ff745",
-      "measured_libcrypto_sha256": "7cf30069a0aef2dc5ee15218a0fbe3801bfecfa0406c41561d33f1b8d2b02323",
       "measured_libcrypto_build_id": "678d23d9823bd093e923a705148d90a496a73f5f",
+      "measured_libcrypto_sha256": "7cf30069a0aef2dc5ee15218a0fbe3801bfecfa0406c41561d33f1b8d2b02323",
       "measured_libcrypto_sha256_note": "Full digest of the retained measured DSO (gitignored artifacts/phase2/libcrypto.so.3, whose prefix matched the previously recorded 7cf30069). A fresh build is not byte-reproducible (D255: .symtab differs across runs), so the measured binary is identified from the retained artefact and its GNU build-id, not from a substitute rebuild. Rebuilt for instrumentation and NOT committed; the tracked install remains 0.0.49."
     },
     "controls": {
@@ -158,6 +158,170 @@
       "note": "8192 within run-to-run noise of the previous figure"
     },
     "why": "the arithmetic changed twice after this receipt was written; the numbers were recorded only in commit messages. This block binds them to the measured binary."
+  },
+  "revision_4": {
+    "allocations_per_call": {
+      "2048": 18,
+      "3072": 18,
+      "8192": 18,
+      "rsa2048_crt": 36,
+      "was": {
+        "2048": 31,
+        "3072": 31,
+        "8192": 31,
+        "rsa2048_crt": 62
+      }
+    },
+    "candidate": {
+      "build": "cargo clean -p openssl-rs --release && CARGO_BUILD_JOBS=4 cargo build --release --lib (21.92 s; the first cargo build was a 0.09 s no-op, so the crate was cleaned to force a real build). Court openssl-rs-court-tools:1, existing container, Mem/Swap 16 GiB, 8 CPUs.",
+      "crate_archive_sha256": "acbef482d6a814fa6624ae143dec493e6c202fea2a10c7b9f0fefdad8095651a",
+      "differs_from_note": "No digest in evidence/timing-bn-findings.json or evidence/timing-bn-repair.json matches. It also differs from the current artifacts/phase2/libcrypto.so.3 (5d0f9098, named by T28) and from the tracked install (fd25cc9e). The revision_3 artefact (7cf30069) is no longer present.",
+      "differs_from_recorded_digests": [
+        "a8cb37f8134f05546ac18957e673a068f5f880106ebe07f4ea577742d632ae1b",
+        "5318fc08c398f4161a9652596667097c151c19e567fec70fcfe7f70843a3b2fc",
+        "7cf30069a0aef2dc5ee15218a0fbe3801bfecfa0406c41561d33f1b8d2b02323",
+        "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9"
+      ],
+      "dso_build_command": "cc -shared -Wl,--whole-archive target/release/libopenssl_rs.a -Wl,--no-whole-archive -Wl,-soname,libcrypto.so.3 -o court/tmp/t19/libcrypto.so.3",
+      "dudect_commit": "dc269651fb2567e46755cfb2a13d3875592968b5",
+      "harness_sha256": {
+        "courts/phase18/timing/bench_bn.c": "aa7715c422fcf0c39648233a8e2fd537886b59645875b97f7988a9c2da5a2028",
+        "courts/phase18/timing/ct_bn.c": "9a3f5a045fa9cedce1e559f5d77854217a71948290bc668d299ca5fce0a55452",
+        "courts/phase18/timing/dudect_bn.c": "440b8fcb21674f3e8eeb5ce49210051ff7f5f53ff51eef605c7ded6caa2bccb2"
+      },
+      "measured_libcrypto_build_id": "97ebf329e5f43114df7d67a656d3c43399f318be",
+      "measured_libcrypto_path": "court/tmp/t19/libcrypto.so.3 (gitignored scratch, retained for this measurement)",
+      "measured_libcrypto_sha256": "aaa32f21f5ae47d4f8ca4f154638f78325e6c8a44c02d86e0e0cecd3679b0ddb",
+      "measured_libcrypto_sha256_note": "Linked from the crate archive alone, with no Phase-2 shell and no version script: this is a measurement DSO, not the distribution artefact. No distribution digest exists for this candidate; the tracked install remains 0.0.49 (fd25cc9e). Byte-reproducibility is not claimed (D255: .symtab varies), so the digest and GNU build-id bind this exact artefact.",
+      "source_head": "36fae14be",
+      "source_state": "clean staging worktree at measurement"
+    },
+    "controls": {
+      "ctgrind_memcmp": "0 errors from 0 contexts",
+      "ctgrind_naive_comparator": "4096 errors from 1 context",
+      "dudect_cmpnaive": "state=0 (leakage), max t 7408.26, executed 40000 (stopped after 2 batches)",
+      "note": "a detector silent on its own positive control is not evidence; both positive controls fired"
+    },
+    "ctgrind": {
+      "established": "the ladder geometry is public; on the contents-only run no branch or address use depends on the secret exponent's limbs",
+      "instrument": "stock valgrind 3.19 memcheck, ctgrind technique (client requests), --error-exitcode=99",
+      "inverse": "856 errors from 274 contexts; returned=1",
+      "inverse_breakdown": "215 conditional jumps and 59 'Use of uninitialised value of size 8' (address uses; the earlier record counted 38); top frames div_rem_fallible 104, memset 32, memmove 22, shl_fallible 21, mod_inverse 19. The variable-time division remains the open finding.",
+      "modexp_contents_only": "0 errors from 0 contexts; returned=1",
+      "modexp_length_taint": "5 errors from 5 contexts, all conditional jumps in mod_exp_core_consttime_from_parts; returned=1",
+      "modexp_length_taint_sites": "1 at the pd.len() > width admission check in ladder_geometry (offset 0x1ea0a7); 4 at compiler-emitted copy-loop bound branches in stage_fixed_width_exponent (0x1ea1b5, 0x1ea1c5, 0x1ea204, 0x1ea215), where the source masks with constant_time_lt_s(i, n) over the public width but the optimised code copies n = pd.len() limbs and then fills. None in mont_mul_into or the 64*width ladder loop.",
+      "not_established": "that the length-boundary admission/copy work is constant-time in the secret length, or that base reduction/inversion is constant-time"
+    },
+    "deltas_vs_last_recorded": {
+      "allocations_per_call": {
+        "against": "revision_3 (7cf30069)",
+        "current": "18/18/18/36",
+        "direction": "lower",
+        "previous": "31/31/31/62"
+      },
+      "bench_2048": {
+        "against": "revision_3 (7cf30069)",
+        "current": 5623.3,
+        "direction": "higher (+3.7%)",
+        "previous": 5421.8
+      },
+      "bench_3072": {
+        "against": "revision_3 (7cf30069)",
+        "current": 18592.4,
+        "direction": "higher (+1.9%)",
+        "previous": 18241.6
+      },
+      "bench_8192": {
+        "against": "revision_3 (7cf30069)",
+        "current": 370254.1,
+        "direction": "unchanged within run-to-run noise (-0.1%)",
+        "previous": 370606.2
+      },
+      "bench_rsa2048_crt": {
+        "against": "evidence_after (5318fc08); revision_3 had no CRT time",
+        "current": 1497.9,
+        "direction": "lower",
+        "previous": 1702.1
+      },
+      "ctgrind_inverse": {
+        "against": "evidence_after (5318fc08); revision_3 did not record it",
+        "current": "856 errors/274 contexts, 59 address uses",
+        "direction": "higher raw count",
+        "previous": "620 errors/209 contexts, 38 address uses"
+      },
+      "ctgrind_modexp": {
+        "against": "revision_3 (7cf30069) and evidence_after (5318fc08)",
+        "current": "0/0",
+        "direction": "unchanged",
+        "previous": "0/0"
+      },
+      "ctgrind_modexp_len": {
+        "against": "revision_3 (7cf30069)",
+        "current": "5/5",
+        "direction": "lower raw count; site set changed to admission + optimised copy bound, still not the ladder",
+        "previous": "19/19"
+      },
+      "dudect_modexp": {
+        "against": "revision_3 (7cf30069)",
+        "current": "max t 2.18; per-run 1.95/1.38/1.51",
+        "direction": "lower raw statistic; the recorded array basis is not identical (two reported batches per run after warmup)",
+        "previous": "max t 3.04; per-run 2.62/1.66/3.04"
+      },
+      "note": "direction is arithmetic on the recorded numbers only; it is not a security verdict"
+    },
+    "dudect": {
+      "batches_run": 3,
+      "executed_total_per_run": 60000,
+      "geometry": "class 0 e=2^254+1 vs class 1 e=2^255-1; per_batch 20000; 3 batches; taskset -c 1; three independent runs",
+      "max_t": 2.18,
+      "per_run_final_max_t": [
+        1.95,
+        1.38,
+        1.51
+      ],
+      "per_run_reported_max_t": [
+        [
+          0.53,
+          1.95
+        ],
+        [
+          2.18,
+          1.38
+        ],
+        [
+          0.92,
+          1.51
+        ]
+      ],
+      "reported_measured_total_per_run": 40000,
+      "verdict": "NO_LEAKAGE_EVIDENCE at the stated geometry (state 1)",
+      "warmup_note": "the harness prints max t only for the two batches after the discarded warmup batch, so the t-statistic uses 40000 measurements per run (~20000 per class), not the 60000 executed. The printed total_measurements=60000 is an executed count."
+    },
+    "not_measured": [
+      "BINSEC -checkct / binary-level secret-dependence (T16): unvalidated instrument, not run",
+      "microarchitectural leakage (cache, branch predictor): neither instrument models it",
+      "RSA-object private-op timing, blinded or with RSA_FLAG_NO_BLINDING: no timing harness exists; only the BN CRT primitive was measured",
+      "a positive constant-time proof for base reduction or inversion: ctgrind reports data-flow branches and address uses only",
+      "a distribution DSO digest for this candidate: only the measurement DSO was linked; the tracked install remains 0.0.49 (fd25cc9e)",
+      "byte-reproducible rebuild: D255 (.symtab varies), so the digest binds this artefact, not a recipe"
+    ],
+    "provisional": false,
+    "provisional_scope": "All instruments requested for T19 ran: ctgrind modexp, modexp_len, inverse and both controls; dudect modexp (three runs) and its positive control; bench_bn RSA CRT. BINSEC -checkct (T16, unvalidated) and microarchitectural tools were not run and are enumerated in not_measured; no claim rests on them.",
+    "rsa_crt": {
+      "allocs_per_call": 36,
+      "case": "bench_bn rsa2048_crt, BN_mod_exp_mont_consttime_x2 (two 1024-bit halves)",
+      "no_blinding_flag": "The case constructs no RSA object and sets no flags; it does not set RSA_FLAG_NO_BLINDING because there is no RSA blinding path in the measured call. The probe that sets RSA_FLAG_NO_BLINDING (courts/phase8/rt_rsa_probe.c) is a functional differential, not a timing instrument.",
+      "us_per_call": 1497.9
+    },
+    "status": "measured",
+    "time_per_call_us": {
+      "2048": 5623.3,
+      "3072": 18592.4,
+      "8192": 370254.1,
+      "note": "single bench_bn run per mode; us/call is wall clock and not noise-corrected",
+      "rsa2048_crt": 1497.9
+    },
+    "why": "T19: the final candidate's source changed after revision_3, so every earlier timing number was bound to a superseded binary. This block re-measures the requested instruments against one freshly built DSO and records the digest with the numbers."
   },
   "schema": "openssl-rs/campaign/timing/repair/v1",
   "superseded": {
