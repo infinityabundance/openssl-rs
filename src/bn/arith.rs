@@ -1196,9 +1196,12 @@ fn pad_to(v: &[Limb], n: usize) -> Option<Vec<Limb>> {
 ///
 /// The ladder's scratch is allocated once, through `try_reserve_exact`, so an
 /// allocation failure becomes the entry points' ordinary `None`/0 answer instead
-/// of `handle_alloc_error`'s process abort. The helpers that reduce the public
-/// inputs with [`limbs::rem`]/[`limbs::mul`] still allocate infallibly; that
-/// residual is recorded as `OBL-BN-ALLOCATOR`.
+/// of `handle_alloc_error`'s process abort. The pre-ladder reductions use the
+/// fallible [`limbs::rem_fallible`]/[`limbs::mul_fallible`] family. What remains
+/// infallible on the way in is the C-ABI argument copies in
+/// [`crate::bn::bignum::parts`], plus the [`limbs::rem`]/[`limbs::mul`] wrappers
+/// that the variable-time public path still calls; that residual keeps
+/// `OBL-BN-ALLOCATOR` open.
 fn try_zeroed_limbs(n: usize) -> Option<Vec<Limb>> {
     crate::bn::alloc::try_zeroed(n, 0u64)
 }
@@ -1324,11 +1327,16 @@ fn mont_mul_fallible(a: &[Limb], b: &[Limb], m: &[Limb], n0: Limb) -> Option<Vec
 /// register-shaped candidates.
 ///
 /// The reduction is Montgomery REDC ([`mont_mul`]) because it has a fixed loop
-/// count, unlike [`limbs::rem`]. `R`, `R^2` and `n0` depend only on the public
-/// modulus and are computed with the ordinary variable-time helpers. The base is
-/// reduced with [`limbs::rem`] once; the base is public in every caller that
-/// reaches this function (DH's generator, RSA's encoded message, EC's field
-/// element), and this function makes no claim about a secret base.
+/// count, unlike [`limbs::rem`]. `R`, `R^2` and `n0` derive from the modulus;
+/// their size is public, but their contents are not automatically public (RSA
+/// CRT precomputation runs on secret primes), so `R` and `R^2` are kept in
+/// [`SecretBuf`] and are still computed with variable-time helpers. The base is
+/// reduced once, with the fallible [`limbs::rem_fallible`]; its secrecy is per
+/// caller (DH's generator and RSA's message are public; an EC field element,
+/// notably `ecdsa_sign_setup`'s nonce through `ec_field_inverse_mod_ord`, is
+/// potentially secret), so it is adopted into [`SecretBuf`] unconditionally.
+/// The variable-time reduction itself remains an open finding in the timing
+/// receipt.
 ///
 /// Every intermediate is `n = m.len()` limbs wide, so no allocation size or
 /// limb count depends on a secret bit. All ladder scratch is allocated once, before
@@ -1401,16 +1409,18 @@ pub(crate) fn mod_exp_core_consttime_width(
     let exponent = fixed_width_exponent(pd, width)?;
 
     let n0 = mont_n0(md[0]);
-    // `R` and `R^2` are functions of the public modulus alone, so their storage
-    // need not be secret; the requests are still fallible.
-    let one_mont = pad_to(
+    // `R` and `R^2` derive from the modulus. Their limb count is public, but the
+    // modulus contents are not automatically public: RSA CRT precomputation runs
+    // on the secret primes (T6). They are therefore adopted into `SecretBuf` for
+    // every caller; the requests are fallible.
+    let one_mont = SecretBuf::from_vec(pad_to(
         &limbs::rem_fallible(&limbs::shl_fallible(&[1u64], n.checked_mul(64)?)?, md)?,
         n,
-    )?;
-    let rr = pad_to(
+    )?);
+    let rr = SecretBuf::from_vec(pad_to(
         &limbs::rem_fallible(&limbs::mul_fallible(&one_mont, &one_mont)?, md)?,
         n,
-    )?;
+    )?);
 
     // The base reduction is variable-time, so secrecy is classified per caller:
     // DH's generator and RSA's encoded message/ciphertext are public, but an EC
@@ -1422,7 +1432,7 @@ pub(crate) fn mod_exp_core_consttime_width(
     let base_plain = SecretBuf::from_vec(pad_to(&limbs::rem_fallible(ad, md)?, n)?);
     // `base * R^2 * R^-1 == base * R`: convert into the Montgomery domain.
     let mut base = SecretBuf::from_vec(mont_mul_fallible(&base_plain, &rr, md, n0)?);
-    let mut acc = SecretBuf::from_vec(one_mont);
+    let mut acc = one_mont;
 
     // One allocation per buffer, before the first iteration. An allocation failure
     // is the entry points' ordinary failure answer, not an abort.
@@ -2042,8 +2052,7 @@ mod tests {
 
     /// Allocation failure is a return value on this path, not an abort: an
     /// impossible reservation answers `None`, which the entry points turn into
-    /// their ordinary failure. (The pre-ladder `limbs::*` helpers still allocate
-    /// infallibly; that residual is `OBL-BN-ALLOCATOR`.)
+    /// their ordinary failure.
     #[test]
     fn try_zeroed_limbs_reports_an_impossible_size() {
         assert!(try_zeroed_limbs(usize::MAX / 2).is_none());
@@ -2051,5 +2060,100 @@ mod tests {
             unreachable!("a small allocation succeeds")
         };
         assert_eq!(v, vec![0, 0, 0]);
+    }
+
+    /// Fail every fallible allocation in the constant-pattern ladder in turn
+    /// through the test allocation seam. Each failure must surface as `None`, and
+    /// the ladder must succeed once the budget exceeds the number of seam-visible
+    /// allocations.
+    ///
+    /// The seam intercepts `crate::bn::alloc`'s reservations only. It does not
+    /// prove that no allocation exists elsewhere on the path (the C-ABI argument
+    /// copies in `parts` are infallible `Vec::clone`s), and it does not model the
+    /// allocator's own failure modes.
+    #[test]
+    fn a_failed_allocation_in_the_constant_time_ladder_returns_none() {
+        let a = vec![0x0123_4567_89ab_cdefu64, 0x0f0f_0f0f_0f0f_0f0f];
+        let e = vec![0x8000_0000_0000_0001u64, 0x0000_0000_0000_0002];
+        let m = vec![0xffff_ffff_ffff_ffc5u64, 0x0123_4567_89ab_cdef];
+        assert!(!limbs::is_even(&m));
+
+        let Some(mut expected) = mod_exp_core(&a, &e, &m) else {
+            unreachable!("a nonzero modulus answers")
+        };
+        limbs::normalise(&mut expected);
+
+        let Some(mut baseline) = mod_exp_core_consttime(&a, &e, &m) else {
+            unreachable!("the ladder answers")
+        };
+        limbs::normalise(&mut baseline);
+        assert_eq!(baseline, expected);
+
+        let mut intercepted = None;
+        for successes in 0..64 {
+            let _guard = crate::bn::alloc::test_fail::fail_after(successes);
+            if mod_exp_core_consttime(&a, &e, &m).is_some() {
+                intercepted = Some(successes);
+                break;
+            }
+        }
+        let allocations = match intercepted {
+            Some(n) => n,
+            None => unreachable!("the ladder must eventually stop failing"),
+        };
+        assert!(
+            allocations > 0,
+            "the seam must intercept at least one allocation"
+        );
+    }
+
+    /// The C entry point turns a failed ladder allocation into its ordinary `0`
+    /// return rather than aborting. The seam fails the first reservation, which
+    /// is the fixed-width exponent buffer allocated before the ladder.
+    #[test]
+    fn a_failed_allocation_at_the_montgomery_entry_point_returns_zero() {
+        let a = word(3);
+        let p = word(5);
+        let m = word(7);
+        let r = word(0);
+        {
+            let _guard = crate::bn::alloc::test_fail::fail_after(0);
+            assert_eq!(
+                unsafe {
+                    // SAFETY: every object is live and uniquely owned by this test.
+                    crate::bn::mont::BN_mod_exp_mont_consttime(
+                        r,
+                        a,
+                        p,
+                        m,
+                        core::ptr::null_mut(),
+                        core::ptr::null_mut(),
+                    )
+                },
+                0,
+                "allocation failure must be reported, not abort"
+            );
+        }
+        assert_eq!(
+            unsafe {
+                // SAFETY: as above; the seam is disarmed and the same call now succeeds.
+                crate::bn::mont::BN_mod_exp_mont_consttime(
+                    r,
+                    a,
+                    p,
+                    m,
+                    core::ptr::null_mut(),
+                    core::ptr::null_mut(),
+                )
+            },
+            1
+        );
+        // SAFETY: the objects are live and owned here.
+        unsafe {
+            BN_free(a);
+            BN_free(p);
+            BN_free(m);
+            BN_free(r);
+        }
     }
 }
