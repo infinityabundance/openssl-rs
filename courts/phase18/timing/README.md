@@ -15,6 +15,8 @@ directory is the apparatus, not the conclusion.
 | `ct_bn.c` | ctgrind harness. Marks a secret buffer with `VALGRIND_MAKE_MEM_UNDEFINED`, calls the BN primitive, and lets stock Valgrind memcheck report secret-dependent branches and address uses. Also contains the negative control (`CRYPTO_memcmp`, expected clean) and the positive control (a deliberately leaky comparator, expected to fire). Mode `modexp_len` additionally taints the exponent's normalised length (the limb-count field at `+0x10` in this build, verified from `BN_num_bits`), because the contents-only `modexp` mode cannot see a length-dependent path. |
 | `dudect_bn.c` | dudect-style statistical harness: two contrasting secret classes, warmup, batched measurement, Welch t-test. Carries the same two controls. It prints the executed measurement count (`dudect.executed ... total_measurements=N`) so the receipt quotes the instrument's own figure. |
 | `bench_bn.c` | Wall-clock cost of `BN_mod_exp_mont_consttime` at 2048/3072/8192 bits and the RSA-2048 CRT shape, plus the allocation-failure behaviour when paired with `alloc_probe.so`. |
+| `bench_api.c` | T21 cross-library workload harness. Opens exactly one `libcrypto.so.3` per process with `dlopen` and runs deterministic `BN_mod_exp_mont_consttime`, `DH_compute_key`, `RSA_private_encrypt` (CRT, `RSA_NO_PADDING`) and `ECDSA_do_sign` (P-256) through the common C API. Prints result digests for cross-library comparison, median/min/max over batches, and allocation counts when preloaded with `alloc_probe.so`. |
+| `run_bench_api.sh` | T21 runner: links the candidate measurement DSO from `target/release/libopenssl_rs.a`, builds the harness, runs the candidate and the pinned OpenSSL 3.6.4 authority in separate processes, and requires their result lines to agree byte-for-byte. |
 | `alloc_probe.c` | `LD_PRELOAD` probe that counts `malloc`/`calloc`/`realloc`/`free` and can force a chosen allocation to fail, for the allocation numbers and the failure test. |
 | `reach.py`, `reach2.py` | static reachability walks over `libcrypto.so.3`, from the ssh/sshd imported-symbol roots to the BN symbols, distinguishing direct/GOT edges from may-bound provider-dispatch routes. |
 | `frontier.py`, `slots.py`, `tables.py` | helpers used to enumerate indirect slots and method tables during the reachability work. |
@@ -81,6 +83,32 @@ LD_PRELOAD=/tmp/alloc_probe.so LD_LIBRARY_PATH=$PWD/artifacts/phase2/install/lib
 return value. That separates an infallible `vec!` (the process aborts) from the
 ladder's `try_reserve_exact` scratch (the call returns 0), instead of assuming
 which one the ordinal hit.
+
+## Cross-library workloads (T21)
+
+`bench_api.c` and `run_bench_api.sh` compare the same operation through this
+crate's measurement DSO and the pinned authority. The harness is **not** linked
+against libcrypto: each process `dlopen`s the one library named by `--lib`, so
+two libcrypto mappings never coexist, and the runner prints the DSO that
+actually served the calls. Inputs are deterministic (no `BN_rand`), and the
+runner fails unless every result line is byte-identical between the two
+processes. `modexp2048`, `dh2048`, `dh3072`, `rsa2048`, `ecdsa256` and the
+T21-concern `modexp8192` are covered. Run it inside the court:
+
+```sh
+OPENSSL_RS_COURT_IMAGE=openssl-rs-court-tools:1 \
+OPENSSL_RS_COURT_MEM=8g OPENSSL_RS_COURT_MEMSWAP=8g \
+  bash docker/openssl-rs-court.sh exec \
+    env CARGO_BUILD_JOBS=4 REBUILD_CANDIDATE=1 \
+    bash courts/phase18/timing/run_bench_api.sh
+```
+
+The ratios are throughput on one host/container/CPU, not constant-time or
+security evidence. The DH rows use a fixed odd composite modulus and a
+full-width private exponent (exponentiation cost, not a MODP group); the RSA
+row is a raw `RSA_NO_PADDING` private operation with blinding on; the ECDSA row
+includes nonce generation and inversion. See `court/tmp/t21/NOTES.md` for the
+batch's numbers and caveats.
 
 ## Interpreting the results
 
