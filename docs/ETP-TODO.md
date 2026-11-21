@@ -72,6 +72,7 @@ Rules that bind this queue (from AGENTS.md, extended by the ETP mandate):
 | T20 | Byte-reproducible instrumentation build (D255 `.symtab` difference); preserve measured binaries as content-addressed artefacts | TODO |
 | T21 | Benchmark against reference OpenSSL for RSA/DH/EC workloads; 8192-bit at ~370 ms is a throughput concern | TODO |
 | T22 | Allocation-failure behaviour for the whole secret-bearing operation, not just ladder scratch | PARTIAL |
+| T23 | Secret ownership does not propagate through the arithmetic itself: the final allocation is protected but the intermediate is not (e.g. `pad_to(&limbs::rem_fallible(ad, md)?, n)?` — the `rem_fallible` result is ordinary; likewise the Montgomery constant intermediates and `div_rem_fallible` temporaries). For secret EC inputs and RSA CRT moduli these hold confidential values. Fallible allocation establishes neither value-independence nor erasure. | TODO |
 
 ---
 
