@@ -93,3 +93,4 @@ __pycache__/
 
 # Phase-25 in-container toolchain/scratch homes (bind-mounted at /work; must never be committed)
 /.phase25-*/
+/target*/

@@ -37,7 +37,7 @@
 use core::ffi::{c_char, c_int, c_ulong};
 use core::sync::atomic::{AtomicPtr, Ordering};
 
-use crate::bn::limbs::{self, Limb};
+use crate::bn::limbs::{self, cleanse_storage, Limb};
 use crate::ffi::guard_ffi;
 
 /// The allocating site reported to `CRYPTO_malloc`.
@@ -144,14 +144,22 @@ pub(crate) fn new_owned(d: Vec<Limb>, neg: c_int) -> *mut BigNum {
 pub(crate) fn try_new_owned(mut d: Vec<Limb>, neg: c_int) -> Option<*mut BigNum> {
     limbs::normalise(&mut d);
     let zero = d.is_empty();
-    crate::bn::alloc::try_boxed(BigNum {
+    match crate::bn::alloc::try_boxed(BigNum {
         d,
         // The authority never leaves `neg` set on zero, and neither may we:
         // `BN_is_negative(BN_new())` is 0, and a negative zero would print a sign
         // no authority path prints.
         neg: if zero { 0 } else { neg },
         flags: BN_FLG_MALLOCED,
-    })
+    }) {
+        Ok(p) => Some(p),
+        // Boxing failed and returns the value we built. Its magnitude may be
+        // secret, so an ordinary `Vec` drop would release it uncleansed.
+        Err(mut value) => {
+            cleanse_storage(&mut value.d);
+            None
+        }
+    }
 }
 
 /// [`new_owned`] with the trim performed by [`limbs::normalise_consttime`].
@@ -161,15 +169,26 @@ pub(crate) fn try_new_owned(mut d: Vec<Limb>, neg: c_int) -> Option<*mut BigNum>
 /// may be a value-dependent branch. The length itself remains observable, as it
 /// must for a normalised [`BigNum`]; that residual is tracked with T8.
 pub(crate) fn new_owned_consttime(mut d: Vec<Limb>, neg: c_int, width: usize) -> *mut BigNum {
-    let keep = limbs::normalise_consttime(&mut d, width);
+    let Some(keep) = limbs::normalise_consttime(&mut d, width) else {
+        // The trim's zero-extension could not be allocated; `d` still holds the
+        // secret magnitude and would otherwise be freed by an ordinary drop.
+        cleanse_storage(&mut d);
+        return core::ptr::null_mut();
+    };
     let not_zero = !crate::runtime::constant_time::constant_time_is_zero_s(keep);
     let neg = (((neg as usize) & not_zero) & 1) as c_int;
-    crate::bn::alloc::try_boxed(BigNum {
+    match crate::bn::alloc::try_boxed(BigNum {
         d,
         neg,
         flags: BN_FLG_MALLOCED,
-    })
-    .unwrap_or(core::ptr::null_mut())
+    }) {
+        Ok(p) => p,
+        // Boxing failed and handed the secret value back; cleanse before release.
+        Err(mut value) => {
+            cleanse_storage(&mut value.d);
+            core::ptr::null_mut()
+        }
+    }
 }
 
 /// A heap `BIGNUM` carrying `BN_FLG_STATIC_DATA`, the crate's model of the authority's
@@ -228,30 +247,6 @@ pub(crate) fn static_data_bignum(cache: &AtomicPtr<BigNum>, bytes: &[u8]) -> *co
     }
 }
 
-/// Zero every limb of `d`'s allocation, not merely its current length.
-///
-/// This is the representation's analogue of the authority's
-/// `OPENSSL_cleanse(a->d, sizeof(*a->d) * a->dmax)` in `BN_clear` and
-/// `OPENSSL_clear_free(a->d, a->dmax * sizeof(*a->d))` in `BN_clear_free`: `capacity()`
-/// is the allocated limb extent, whereas `len()` is only the normalised top. The spare
-/// capacity can still hold limbs from a larger earlier value, because `Vec::clear`,
-/// `truncate` and `limbs::normalise` discard the length without writing the storage.
-/// Volatile writes plus the fence are what stop the optimiser eliding the wipe.
-///
-/// The loop mirrors `runtime::mem::cleanse` element-wise rather than asking it to wipe
-/// `capacity() * size_of::<Limb>()` bytes, so no size multiplication has to be trusted
-/// not to overflow (§3).
-fn cleanse_storage(d: &mut Vec<Limb>) {
-    let p = d.as_mut_ptr();
-    for i in 0..d.capacity() {
-        // SAFETY: `i < capacity`, so `p.add(i)` lies inside the allocation `d` owns.
-        // `Limb` is `Copy` with no destructor, so zeroing spare (still uninitialised)
-        // capacity is sound and does not change the length or drop anything.
-        unsafe { core::ptr::write_volatile(p.add(i), 0) };
-    }
-    core::sync::atomic::compiler_fence(Ordering::SeqCst);
-}
-
 /// Replace `dst`'s magnitude with `src`, keeping `dst`'s allocation where it fits.
 ///
 /// In-place reuse is what the authority does (`BN_copy` writes through `bn_wexpand`),
@@ -271,15 +266,28 @@ fn assign_limbs(dst: &mut Vec<Limb>, src: &[Limb]) {
 
 /// [`assign_limbs`], answering `false` instead of aborting when the destination
 /// must grow and the allocator refuses.
+///
+/// Growth never goes through `Vec`'s reallocation path. That path may move the
+/// allocation and free the old block as part of the reservation, so a secret
+/// magnitude would be released before any cleanse could reach it. Instead the
+/// replacement is built in a separate fallible allocation, the complete old
+/// allocation is cleansed while `dst` still owns it, and only then is the old
+/// block swapped out and released. A refused allocation leaves `dst`'s value
+/// valid and untouched.
 fn try_assign_limbs(dst: &mut Vec<Limb>, src: &[Limb]) -> bool {
     if dst.capacity() < src.len() {
-        // Reserve *before* cleansing, so a refused reservation leaves the
-        // destination's existing value intact and no secret has been wiped from a
-        // value the caller may still use.
-        if dst.try_reserve_exact(src.len() - dst.len()).is_err() {
+        // The fresh block is empty, so `try_reserve_exact` here cannot release an
+        // old allocation; the *destination's* old block is cleansed below before
+        // the swap. (Its direct use keeps the allocation-failure seam's coverage
+        // unchanged: this site was seam-invisible before the repair too.)
+        let mut fresh: Vec<Limb> = Vec::new();
+        if fresh.try_reserve_exact(src.len()).is_err() {
             return false;
         }
+        fresh.extend_from_slice(src);
         cleanse_storage(dst);
+        limbs::release_cleansed(core::mem::replace(dst, fresh));
+        return true;
     }
     dst.clear();
     dst.extend_from_slice(src);
@@ -419,9 +427,19 @@ pub(crate) fn store_consttime(
     neg: bool,
     width: usize,
 ) -> bool {
-    let keep = limbs::normalise_consttime(&mut d, width);
+    let Some(keep) = limbs::normalise_consttime(&mut d, width) else {
+        // The zero-extension allocation was refused; the magnitude is still ours
+        // and may be secret, so cleanse it before the ordinary drop.
+        cleanse_storage(&mut d);
+        return false;
+    };
     match r {
-        None => false,
+        None => {
+            // No destination to receive a secret-derived magnitude: cleanse it
+            // rather than let the `Vec` drop release it intact.
+            cleanse_storage(&mut d);
+            false
+        }
         Some(dst) => {
             // The constant-time entry points are exactly where a secret-flagged
             // destination is overwritten (the nonce's `k -> k⁻¹` among them), so the
@@ -1189,6 +1207,14 @@ pub unsafe extern "C" fn BN_consttime_swap(
         };
         let mask = 0u64.wrapping_sub((condition != 0) as u64);
         let n = nwords.max(0) as usize;
+        // Both operands may be secret. Ensure capacity through the separate
+        // allocation path first; the `resize`s below then cannot reallocate, so no
+        // old block is released before it can be cleansed.
+        if !limbs::reserve_cleansed(&mut x.d, n) || !limbs::reserve_cleansed(&mut y.d, n) {
+            // The authority's `BN_consttime_swap` also returns without swapping
+            // when `bn_wexpand` fails.
+            return;
+        }
         x.d.resize(x.d.len().max(n), 0);
         y.d.resize(y.d.len().max(n), 0);
         for i in 0..n {
@@ -2110,11 +2136,13 @@ pub(crate) unsafe fn bn_wexpand(a: *mut BigNum, words: c_int) -> *mut BigNum {
     // SAFETY: `a` is live per this function's `# Safety` section.
     if let Some(b) = unsafe { as_mut(a) } {
         let words = words as usize;
-        if words > b.d.capacity() {
-            let additional = words - b.d.len().min(words);
-            if !crate::bn::alloc::try_reserve(&mut b.d, additional) {
-                return core::ptr::null_mut();
-            }
+        // Capacity-only growth: `reserve_cleansed` allocates separately, copies the
+        // live limbs and cleanses the old block before releasing it, and it leaves
+        // `d.len()`, the value, the sign and the flags untouched. `Vec::try_reserve`
+        // cannot be used here because it may free the old secret block as part of
+        // the reservation.
+        if words > b.d.capacity() && !limbs::reserve_cleansed(&mut b.d, words) {
+            return core::ptr::null_mut();
         }
     }
     a
@@ -2417,6 +2445,64 @@ mod tests {
             // SAFETY: `a` is live and owned by this test.
             BN_free(a);
         }
+    }
+
+    /// Growth must never hand the allocator an old block before it is cleansed.
+    ///
+    /// The staging capacity is deliberately too small, so `try_assign_limbs` must
+    /// relocate. The deallocation observer reads the old block at the release
+    /// point. This fails against the previous in-place `try_reserve_exact` order:
+    /// that freed the old block during the reservation, so the observer never saw
+    /// it at all.
+    #[test]
+    fn a_forced_growth_cleanses_the_old_block_before_release() {
+        const SECRET: Limb = 0xDEAD_BEEF_CAFE_BABE;
+        let mut dst: Vec<Limb> = Vec::new();
+        dst.try_reserve_exact(2)
+            .unwrap_or_else(|_| unreachable!("a two-limb staging allocation succeeds"));
+        dst.resize(2, SECRET);
+        let old_capacity = dst.capacity();
+        let old_ptr = dst.as_ptr();
+        assert_eq!(
+            old_capacity, 2,
+            "capacity must be exactly the staged length"
+        );
+        let src = [SECRET ^ 1, SECRET ^ 2, SECRET ^ 3, SECRET ^ 4];
+        assert!(old_capacity < src.len(), "growth must relocate");
+
+        limbs::realloc_probe::arm(old_ptr);
+        assert!(try_assign_limbs(&mut dst, &src));
+
+        let Some(obs) = limbs::realloc_probe::take() else {
+            unreachable!("the old allocation must be observed at release")
+        };
+        assert_eq!(obs.ptr, old_ptr as usize, "observed a different allocation");
+        assert_eq!(obs.capacity, old_capacity);
+        assert_eq!(
+            obs.nonzero_limbs, 0,
+            "the old block was released uncleansed"
+        );
+        assert_eq!(&dst[..], &src[..], "the replacement is intact");
+    }
+
+    /// Negative control for the forced-move test: the observer must see a block
+    /// released without cleansing, otherwise `nonzero_limbs == 0` proves nothing.
+    #[test]
+    fn the_reallocation_control_detects_an_uncleansed_block() {
+        const SECRET: Limb = 0xDEAD_BEEF_CAFE_BABE;
+        let mut storage: Vec<Limb> = Vec::new();
+        storage
+            .try_reserve_exact(2)
+            .unwrap_or_else(|_| unreachable!("a two-limb staging allocation succeeds"));
+        storage.resize(2, SECRET);
+        let ptr = storage.as_ptr();
+        limbs::realloc_probe::arm(ptr);
+        limbs::release_cleansed(storage);
+        let Some(obs) = limbs::realloc_probe::take() else {
+            unreachable!("the observer must see the armed allocation")
+        };
+        assert_eq!(obs.ptr, ptr as usize);
+        assert_eq!(obs.nonzero_limbs, 2, "the control block was not cleansed");
     }
 
     /// Negative control for the test above: the pre-repair reset (`Vec::clear` alone)

@@ -44,6 +44,145 @@ pub(crate) fn normalise(v: &mut Vec<Limb>) {
     }
 }
 
+/// Zero every limb of `d`'s allocation, not merely its current length.
+///
+/// This is the representation's analogue of the authority's
+/// `OPENSSL_cleanse(a->d, sizeof(*a->d) * a->dmax)` in `BN_clear` and
+/// `OPENSSL_clear_free(a->d, a->dmax * sizeof(*a->d))` in `BN_clear_free`: `capacity()`
+/// is the allocated limb extent, whereas `len()` is only the normalised top. The spare
+/// capacity can still hold limbs from a larger earlier value, because `Vec::clear`,
+/// `truncate` and `normalise` discard the length without writing the storage.
+/// Volatile writes plus the fence are what stop the optimiser eliding the wipe.
+///
+/// The loop mirrors `runtime::mem::cleanse` element-wise rather than asking it to wipe
+/// `capacity() * size_of::<Limb>()` bytes, so no size multiplication has to be trusted
+/// not to overflow (§3).
+pub(crate) fn cleanse_storage(d: &mut Vec<Limb>) {
+    let p = d.as_mut_ptr();
+    for i in 0..d.capacity() {
+        // SAFETY: `i < capacity`, so `p.add(i)` lies inside the allocation `d` owns.
+        // `Limb` is `Copy` with no destructor, so zeroing spare (still uninitialised)
+        // capacity is sound and does not change the length or drop anything.
+        unsafe { core::ptr::write_volatile(p.add(i), 0) };
+    }
+    core::sync::atomic::compiler_fence(core::sync::atomic::Ordering::SeqCst);
+}
+
+/// Release a limb allocation whose storage has already been cleansed.
+///
+/// The only release path used by the growth helpers below: the old block is wiped
+/// while the vector still owns it, then handed here. In a test that armed
+/// [`realloc_probe`] on this allocation, the observer reads the block just before
+/// the `Vec` releases it.
+pub(crate) fn release_cleansed(storage: Vec<Limb>) {
+    #[cfg(test)]
+    realloc_probe::observe(&storage);
+    drop(storage);
+}
+
+/// Ensure `v` can hold at least `words` limbs without letting `Vec`'s own
+/// reallocation path release an uncleansed block.
+///
+/// `Vec::try_reserve`/`try_reserve_exact` may move the allocation and free the old
+/// block as part of the request, before any caller can cleanse it. This helper
+/// instead allocates a separate block, copies the live limbs, cleanses the complete
+/// old allocation while it is still owned, and only then swaps and releases it. On
+/// success `v`'s length and contents are unchanged; on refusal `v` is untouched.
+pub(crate) fn reserve_cleansed(v: &mut Vec<Limb>, words: usize) -> bool {
+    if v.capacity() >= words {
+        return true;
+    }
+    let Some(mut fresh) = crate::bn::alloc::try_zeroed(words, 0u64) else {
+        return false;
+    };
+    let len = v.len();
+    fresh[..len].copy_from_slice(v);
+    fresh.truncate(len);
+    cleanse_storage(v);
+    release_cleansed(core::mem::replace(v, fresh));
+    true
+}
+
+/// Grow `v` to `new_len` limbs through a fresh allocation, cleansing the old block
+/// before it is released.
+///
+/// Returns `false` — leaving `v` unchanged — when the separate allocation is
+/// refused. The in-capacity case is an ordinary `resize`, which cannot release
+/// anything.
+pub(crate) fn grow_cleansed(v: &mut Vec<Limb>, new_len: usize) -> bool {
+    if new_len <= v.len() {
+        return true;
+    }
+    if !reserve_cleansed(v, new_len) {
+        return false;
+    }
+    v.resize(new_len, 0);
+    true
+}
+
+/// Test-only deallocation observer for the growth helpers.
+///
+/// Records what an armed allocation still contained immediately before
+/// [`release_cleansed`] handed it to the allocator. This is the point the old
+/// implementation could not observe: it reserved in place, so the old block was
+/// already gone. Compiled out of every non-test build.
+#[cfg(test)]
+pub(crate) mod realloc_probe {
+    use core::cell::Cell;
+
+    use super::Limb;
+
+    /// What the observer saw on the armed allocation.
+    pub(crate) struct Observation {
+        pub(crate) ptr: usize,
+        /// The allocation's capacity.
+        pub(crate) capacity: usize,
+        /// Non-zero limbs across the whole allocation (expected `0`).
+        pub(crate) nonzero_limbs: usize,
+    }
+
+    thread_local! {
+        static TARGET: Cell<usize> = const { Cell::new(0) };
+        static SEEN: Cell<Option<Observation>> = const { Cell::new(None) };
+    }
+
+    /// Arm the observer on the allocation at `ptr`.
+    pub(crate) fn arm(ptr: *const Limb) {
+        TARGET.with(|t| t.set(ptr as usize));
+        SEEN.with(|s| s.set(None));
+    }
+
+    /// Take the recorded observation, if the armed allocation was released.
+    pub(crate) fn take() -> Option<Observation> {
+        SEEN.with(|s| s.take())
+    }
+
+    pub(super) fn observe(v: &Vec<Limb>) {
+        let addr = v.as_ptr() as usize;
+        if TARGET.with(|t| t.get()) != addr {
+            return;
+        }
+        // The armed test initialises every capacity slot, and the growth path
+        // cleanses the whole allocation before calling here, so every slot read
+        // below is initialised. Reading an unarmed allocation never happens.
+        let mut nonzero_limbs = 0usize;
+        for i in 0..v.capacity() {
+            // SAFETY: `i < capacity` covers the live allocation `v` still owns;
+            // the observer runs before the field is released.
+            if unsafe { core::ptr::read_volatile(v.as_ptr().add(i)) } != 0 {
+                nonzero_limbs += 1;
+            }
+        }
+        SEEN.with(|s| {
+            s.set(Some(Observation {
+                ptr: addr,
+                capacity: v.capacity(),
+                nonzero_limbs,
+            }))
+        });
+    }
+}
+
 /// Drop trailing zero limbs without branching on a limb value.
 ///
 /// The trim is the same operation as [`normalise`], but the significant length is
@@ -67,15 +206,17 @@ pub(crate) fn normalise(v: &mut Vec<Limb>) {
 /// remains observable to a caller that asks for it.
 ///
 /// [`constant_time_select`]: crate::runtime::constant_time::constant_time_select
-pub(crate) fn normalise_consttime(v: &mut Vec<Limb>, width: usize) -> usize {
+pub(crate) fn normalise_consttime(v: &mut Vec<Limb>, width: usize) -> Option<usize> {
     use crate::runtime::constant_time::{constant_time_is_zero_s, constant_time_select};
 
     debug_assert!(
         v.len() <= width,
         "a constant-time magnitude cannot be wider than its declared public width"
     );
-    if v.len() < width {
-        v.resize(width, 0);
+    if v.len() < width && !grow_cleansed(v, width) {
+        // The separate zero-extension allocation was refused. `v` is unchanged, so
+        // the caller still owns its secret contents and must cleanse them.
+        return None;
     }
     let mut keep: usize = 0;
     let mut trimming: usize = usize::MAX;
@@ -100,7 +241,7 @@ pub(crate) fn normalise_consttime(v: &mut Vec<Limb>, width: usize) -> usize {
     // was read in this pass. `Limb` is `Copy` with no destructor, so shrinking
     // the length drops nothing.
     unsafe { v.set_len(keep) };
-    keep
+    Some(keep)
 }
 
 /// Test-only observation seam for [`normalise_consttime`].
@@ -300,11 +441,11 @@ pub(crate) fn bit(v: &[Limb], n: usize) -> bool {
 pub(crate) fn set_bit(v: &mut Vec<Limb>, n: usize) -> bool {
     let (limb, off) = (n / 64, n % 64);
     if v.len() <= limb {
-        let need = limb + 1;
-        if !crate::bn::alloc::try_reserve(v, need - v.len()) {
+        // The value may be secret: growth must not let `Vec` free the old block
+        // before it can be cleansed.
+        if !grow_cleansed(v, limb + 1) {
             return false;
         }
-        v.resize(need, 0);
     }
     v[limb] |= 1 << off;
     true
@@ -1434,7 +1575,9 @@ mod tests {
                     .collect();
                 let mut expected = v.clone();
                 normalise(&mut expected);
-                let keep = normalise_consttime(&mut v, len);
+                let Some(keep) = normalise_consttime(&mut v, len) else {
+                    unreachable!("the zero-extension allocation succeeds")
+                };
                 assert_eq!(v, expected, "len={len}");
                 assert_eq!(keep, expected.len(), "len={len}");
             }
@@ -1461,7 +1604,9 @@ mod tests {
         let mut keeps = Vec::new();
         for (case, v) in cases.iter_mut().enumerate() {
             trim_probe::arm();
-            let keep = normalise_consttime(v, width);
+            let Some(keep) = normalise_consttime(v, width) else {
+                unreachable!("the zero-extension allocation succeeds")
+            };
             let (iterations, selects) = trim_probe::disarm();
             assert_eq!(
                 iterations, width,
