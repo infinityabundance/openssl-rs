@@ -68,6 +68,23 @@ section "CPUID probe"
 "${CC}" -O2 -Wall -o "${OUT}/pmu_probe" "${HERE}/pmu_probe.c"
 "${OUT}/pmu_probe" | tee "${OUT}/cpuid.txt"
 
+section "PMU MSR probe (are the counters real, not just masked?)"
+# CPUID can be masked while counters exist, so this programs a counter and
+# checks whether the configuration is retained and the counter advances.
+# The court has no /dev/cpu and no privilege, so this runs only when the caller
+# has already provided one; otherwise the command to run outside is printed.
+PMU_PROBE="${HERE}/pmu_msr_probe.c"
+if [ -r /dev/cpu/0/msr ]; then
+    "${CC}" -O2 -Wall -o "${OUT}/pmu_msr_probe" "${PMU_PROBE}"
+    "${OUT}/pmu_msr_probe" 0 | tee "${OUT}/pmu-msr-probe.txt"
+    echo "pmu_msr_probe_exit=${PIPESTATUS:-$?}"
+else
+    echo "/dev/cpu/0/msr is not readable in this venue; run outside the court:"
+    echo "  cc -O2 -o pmu_msr_probe ${PMU_PROBE}"
+    echo "  docker run --rm --privileged -v /dev/cpu:/dev/cpu \\"
+    echo "    -v \$PWD/pmu_msr_probe:/pmu_msr_probe:ro debian:bookworm-slim /pmu_msr_probe 0"
+fi
+
 section "perf stat -e cycles (expected to fail: no PMU)"
 set +e
 perf stat -e cycles true >"${OUT}/perf-cycles.txt" 2>&1
