@@ -102,7 +102,22 @@ if [ "${pmu_version:-0}" -ge 1 ]; then
         "${OUT}/bench_bn" 2>&1 | tee "${OUT}/perf-hardware-events.txt"
     echo "pmu: PRESENT (CPUID.0AH version ${pmu_version}) -- hardware counters recorded above"
 else
-    echo "pmu: ABSENT (CPUID.0AH version ${pmu_version:-0}) -- TSC and software events are the only counters available"
+    echo "pmu: ABSENT (CPUID.0AH version ${pmu_version:-0}) -- no architectural PMU"
+    # The kernel's msr PMU still exposes hardware MSR counters even when the
+    # architectural PMU is absent.  tsc is a real hardware counter; smi shows
+    # whether system-management interrupts perturbed the measurement.  It must
+    # be counted system-wide (-a) and pinned (-C) to the CPU running the work.
+    if [ -d /sys/bus/event_source/devices/msr/events ]; then
+        msr_cpu=${OPENSSL_RS_PMU_CPU:-1}
+        echo "msr pmu: PRESENT -- counting msr/tsc/ and msr/smi/ on cpu ${msr_cpu}"
+        perf stat -C "${msr_cpu}" -a -e msr/tsc/,msr/smi/ \
+            taskset -c "${msr_cpu}" "${OUT}/bench_bn" \
+            2>&1 | tee "${OUT}/perf-msr-tsc.txt"
+        echo "msr pmu: hardware TSC counted; NOT retired core cycles, because"
+        echo "  CPUID.0AH reports no architectural counters in this guest"
+    else
+        echo "msr pmu: ABSENT -- falling back to userspace rdtsc only"
+    fi
 fi
 
 section "TSC measurement (serialised lfence;rdtsc / rdtscp;lfence)"
