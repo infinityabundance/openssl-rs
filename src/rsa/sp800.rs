@@ -32,7 +32,9 @@
 
 use core::ffi::{c_int, c_void};
 
-use crate::bn::arith::{BN_cmp, BN_div, BN_mod_exp, BN_mod_inverse, BN_mul};
+use crate::bn::arith::{
+    BN_cmp, BN_div, BN_mod_exp, BN_mod_inverse, BN_mod_inverse_consttime, BN_mul,
+};
 use crate::bn::bignum::{
     BN_clear, BN_clear_free, BN_dup, BN_free, BN_new, BN_num_bits, BN_secure_new, BN_set_flags,
     BN_set_word, BigNum,
@@ -378,7 +380,11 @@ pub(crate) unsafe fn ossl_rsa_sp800_56b_derive_params_from_pq(
                         good = !(*rsa).iqmp.is_null();
                         if good {
                             BN_set_flags((*rsa).iqmp, BN_FLG_CONSTTIME);
-                            good = !BN_mod_inverse((*rsa).iqmp, (*rsa).q, (*rsa).p, ctx).is_null();
+                            // Odd secret modulus `p`: fixed-iteration binary EEA.
+                            // The flag above is on the output object and is kept for
+                            // observability; the dispatch is explicit here.
+                            good = !BN_mod_inverse_consttime((*rsa).iqmp, (*rsa).q, (*rsa).p)
+                                .is_null();
                         }
                     }
 

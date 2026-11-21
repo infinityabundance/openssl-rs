@@ -37,8 +37,8 @@ use core::ffi::c_int;
 use core::sync::atomic::{AtomicPtr, Ordering};
 
 use crate::bn::arith::{
-    BN_add, BN_add_word, BN_are_coprime, BN_lshift, BN_lshift1, BN_mod_inverse, BN_mod_sub, BN_mul,
-    BN_sub, BN_sub_word,
+    BN_add, BN_add_word, BN_are_coprime, BN_lshift, BN_lshift1, BN_mod_inverse,
+    BN_mod_inverse_consttime, BN_mod_sub, BN_mul, BN_sub, BN_sub_word,
 };
 use crate::bn::bignum::{
     new_owned, BN_clear, BN_copy, BN_free, BN_is_negative, BN_num_bits, BN_set_flags, BN_value_one,
@@ -435,8 +435,10 @@ pub(crate) unsafe fn ossl_bn_rsa_fips186_4_derive_prime(
                  * [the authority's note that the gcd test was folded into the inversions]
                  */
                 if !(BN_lshift1(r1x2, r1) != 0
-                    && !BN_mod_inverse(tmp, r1x2, r2, ctx).is_null()
+                    // `(2*r1)^-1 mod r2`: odd prime modulus `r2`, secret operands.
+                    && !BN_mod_inverse_consttime(tmp, r1x2, r2).is_null()
                     /* (Step 2) R = ((r2^-1 mod 2r1) * r2) - ((2r1^-1 mod r2)*2r1) */
+                    // Modulus `2*r1` is even, so this one stays variable-time.
                     && !BN_mod_inverse(r, r2, r1x2, ctx).is_null()
                     && BN_mul(r, r, r2, ctx) != 0 /* R = (r2^-1 mod 2r1) * r2 */
                     && BN_mul(tmp, tmp, r1x2, ctx) != 0 /* tmp = (2r1^-1 mod r2)*2r1 */

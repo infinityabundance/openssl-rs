@@ -1008,6 +1008,11 @@ unsafe extern "C" fn dsa_finish(dsa: *mut Dsa) -> c_int {
 /// and `BN_mod_exp_mont(r, k, e, q, ctx, NULL)` succeed, so a `BN_CTX_get` that answers NULL falls
 /// into the release arm rather than dereferencing the NULL.
 ///
+/// `k` carries `BN_FLG_CONSTTIME` (set by `dsa_sign_setup`), and `BN_mod_exp_mont`
+/// dispatches on a marked **base** as well as a marked exponent or modulus
+/// (`bn_exp.c:331-335`), so this path runs the fixed-pattern ladder and does not
+/// leak the nonce's value. The exponent `q - 2` and the modulus `q` are public.
+///
 /// # Safety
 ///
 /// `k` and `q` are live; `ctx` is live.

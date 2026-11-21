@@ -30,7 +30,9 @@
 
 use core::ffi::{c_char, c_int, c_uchar, c_ulong, c_void};
 
-use crate::bn::arith::{BN_cmp, BN_div, BN_mod_inverse, BN_mul, BN_rshift, BN_sub};
+use crate::bn::arith::{
+    BN_cmp, BN_div, BN_mod_inverse, BN_mod_inverse_consttime, BN_mul, BN_rshift, BN_sub,
+};
 use crate::bn::bignum::{
     BN_clear_free, BN_copy, BN_dup, BN_free, BN_get_word, BN_new, BN_num_bits, BN_secure_new,
     BN_set_bit, BN_set_flags, BN_value_one, BigNum,
@@ -440,11 +442,13 @@ pub(crate) unsafe fn ossl_rsa_multiprime_derive(
                     if iqmp.is_null() {
                         break 'body false;
                     }
-                    if BN_mod_inverse(
+                    // Secret factor inverse modulo a secret odd factor: the
+                    // constant-time binary EEA. (The `d` inversion above has an
+                    // even lambda modulus and stays on the public path.)
+                    if BN_mod_inverse_consttime(
                         iqmp,
                         OPENSSL_sk_value(factors, 1).cast::<BigNum>(),
                         OPENSSL_sk_value(factors, 0).cast::<BigNum>(),
-                        ctx,
                     )
                     .is_null()
                         || OPENSSL_sk_insert(coeffs, iqmp.cast(), OPENSSL_sk_num(coeffs)) == 0
@@ -460,11 +464,10 @@ pub(crate) unsafe fn ossl_rsa_multiprime_derive(
                         if newcoeff.is_null() {
                             break 'body false;
                         }
-                        if BN_mod_inverse(
+                        if BN_mod_inverse_consttime(
                             newcoeff,
                             newpp,
                             OPENSSL_sk_value(factors, j).cast::<BigNum>(),
-                            ctx,
                         )
                         .is_null()
                             || OPENSSL_sk_insert(coeffs, newcoeff.cast(), OPENSSL_sk_num(coeffs))
