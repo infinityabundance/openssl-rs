@@ -68,6 +68,7 @@ use crate::evp::pkey_ctx::{EVP_PKEY_CTX_free, EVP_PKEY_CTX_new_from_pkey};
 use crate::mac::hmac::HMAC;
 use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
+use crate::runtime::secret::SecretArray;
 use crate::ssl::ssl_lib::{Ssl, TLS13_HS_BUF_LEN};
 
 // --- `ssl3.h` change-cipher-state selectors ------------------------------------------------
@@ -135,75 +136,14 @@ const HKDF_LABEL_MAX: usize = 2 + 1 + u8::MAX as usize + 1 + u8::MAX as usize;
 /// The largest `HKDF-Expand` HMAC input: `T(i-1) | info | i`.
 const HKDF_EXPAND_INPUT_MAX: usize = HASH_MAX + HKDF_LABEL_MAX + 1;
 
-/// A fixed block of secret-bearing key-schedule state whose contents are
-/// cleansed when it leaves scope.
-///
-/// This is the single owner for every stack copy of key-schedule material:
-/// HKDF scratch (`T(i-1)` and the HMAC input), the early/binder/finished
-/// intermediates, traffic keys and IVs, transcript hashes, and the hex line the
-/// keylog callback receives. `Drop` is the only release, so every early return
-/// (a failed HMAC, an over-long label, an uninitialised transcript) wipes the
-/// material, matching and extending the authority's `OPENSSL_cleanse` calls.
-///
-/// The crate's cleaned-free instrument (`ssl::adv_alloc`) observes heap
-/// releases, so it cannot see this stack block; the wipe is structural (volatile
-/// stores plus a compiler fence).
-struct CleansedBlock<const N: usize>([u8; N]);
-
-// Test-only observation of the cleanse hook: `(drops, drops that held a
-// non-zero byte)`. Thread-local, because the test harness runs one test per
-// thread; a failure-path test can therefore attribute the events to itself.
-#[cfg(test)]
-std::thread_local! {
-    static CLEANSE_EVENTS: core::cell::Cell<(usize, usize)> =
-        const { core::cell::Cell::new((0, 0)) };
-}
-
-#[cfg(test)]
-fn reset_cleanse_events() {
-    CLEANSE_EVENTS.with(|cell| cell.set((0, 0)));
-}
-
+// Test-only view of the shared stack wipe: `(drops, drops that held a non-zero
+// byte)`. Thread-local, because the test harness runs one test per thread; a
+// failure-path test can therefore attribute the events to itself.
 #[cfg(test)]
 fn cleanse_events() -> (usize, usize) {
-    CLEANSE_EVENTS.with(core::cell::Cell::get)
-}
-
-impl<const N: usize> CleansedBlock<N> {
-    fn new() -> Self {
-        Self([0u8; N])
-    }
-
-    fn as_slice(&self) -> &[u8] {
-        &self.0
-    }
-
-    fn as_mut_slice(&mut self) -> &mut [u8] {
-        &mut self.0
-    }
-
-    fn as_ptr(&self) -> *const u8 {
-        self.0.as_ptr()
-    }
-
-    fn as_mut_ptr(&mut self) -> *mut u8 {
-        self.0.as_mut_ptr()
-    }
-}
-
-impl<const N: usize> Drop for CleansedBlock<N> {
-    fn drop(&mut self) {
-        #[cfg(test)]
-        {
-            let non_zero = self.0.iter().any(|&byte| byte != 0);
-            CLEANSE_EVENTS.with(|cell| {
-                let (drops, non_zero_drops) = cell.get();
-                cell.set((drops + 1, non_zero_drops + usize::from(non_zero)));
-            });
-        }
-        // SAFETY: `self.0` is a live array of exactly `N` writable bytes.
-        unsafe { crate::runtime::mem::cleanse(self.0.as_mut_ptr(), N) }
-    }
+    let events = crate::runtime::secret::cleanse_hooks::events();
+    let non_zero = events.iter().filter(|e| e.nonzero_before > 0).count();
+    (events.len(), non_zero)
 }
 
 /// Bounds-checked writer for the `HkdfLabel` fields; the analogue of the
@@ -341,14 +281,14 @@ unsafe fn hkdf_expand(md: *const EvpMd, prk: &[u8], info: &[u8], out: &mut [u8])
     if prk.len() > c_int::MAX as usize {
         return 0;
     }
-    let mut t = CleansedBlock::<HASH_MAX>::new();
+    let mut t = SecretArray::<HASH_MAX>::new();
     let mut done: usize = 0;
     // Wider than `u8`: the final increment after the 255th iteration must not
     // overflow (the counter itself is always at most 255 because `n <= 255`).
     let mut i: u16 = 1;
     while done < out.len() {
         let ctr = i as u8;
-        let mut buf = CleansedBlock::<HKDF_EXPAND_INPUT_MAX>::new();
+        let mut buf = SecretArray::<HKDF_EXPAND_INPUT_MAX>::new();
         let mut p = 0usize;
         if i > 1 {
             buf.as_mut_slice()[..hash_len].copy_from_slice(&t.as_slice()[..hash_len]);
@@ -540,9 +480,9 @@ pub(crate) unsafe fn tls13_generate_secret_md(
         return 0;
     }
     let zeros = [0u8; crate::ssl::ssl_lib::EVP_MAX_MD_SIZE];
-    let mut salt = CleansedBlock::<HASH_MAX>::new();
+    let mut salt = SecretArray::<HASH_MAX>::new();
     let salt: &[u8] = if let Some(prev) = prevsecret {
-        let mut empty_hash = CleansedBlock::<HASH_MAX>::new();
+        let mut empty_hash = SecretArray::<HASH_MAX>::new();
         // SAFETY: `md` is live; the buffers are this frame's.
         if unsafe { hash_empty(md, empty_hash.as_mut_slice()) } == 0 {
             return 0;
@@ -818,7 +758,7 @@ pub(crate) unsafe fn tls13_derive_handshake_traffic(s: *mut Ssl) -> c_int {
         if hash_len == 0 || hash_len > HASH_MAX {
             return 0;
         }
-        let mut hash = CleansedBlock::<HASH_MAX>::new();
+        let mut hash = SecretArray::<HASH_MAX>::new();
         if transcript_hash(s, hash.as_mut_ptr(), ptr::null_mut()) == 0 {
             return 0;
         }
@@ -867,7 +807,7 @@ pub(crate) unsafe fn tls13_derive_application_traffic(s: *mut Ssl) -> c_int {
         if hash_len == 0 || hash_len > HASH_MAX {
             return 0;
         }
-        let mut hash = CleansedBlock::<HASH_MAX>::new();
+        let mut hash = SecretArray::<HASH_MAX>::new();
         if transcript_hash(s, hash.as_mut_ptr(), ptr::null_mut()) == 0 {
             return 0;
         }
@@ -902,7 +842,7 @@ pub(crate) unsafe fn tls13_derive_application_traffic(s: *mut Ssl) -> c_int {
             b"SERVER_TRAFFIC_SECRET_0",
             &(&(*s).server_app_traffic)[..hash_len],
         );
-        let mut exporter = CleansedBlock::<HASH_MAX>::new();
+        let mut exporter = SecretArray::<HASH_MAX>::new();
         if derive_secret(
             md,
             ms,
@@ -934,7 +874,7 @@ pub(crate) unsafe fn tls13_derive_resumption_master_secret(s: *mut Ssl) -> c_int
         if hash_len == 0 || hash_len > HASH_MAX {
             return 0;
         }
-        let mut hash = CleansedBlock::<HASH_MAX>::new();
+        let mut hash = SecretArray::<HASH_MAX>::new();
         if transcript_hash(s, hash.as_mut_ptr(), ptr::null_mut()) == 0 {
             return 0;
         }
@@ -1020,7 +960,7 @@ pub(crate) unsafe fn tls13_psk_do_binder(
         return 0;
     }
     // `tls13_generate_secret(s, md, NULL, sess->master_key, sess->master_key_length, early)`.
-    let mut early = CleansedBlock::<HASH_MAX>::new();
+    let mut early = SecretArray::<HASH_MAX>::new();
     // SAFETY: `md` is live; `psk` is the caller's slice; the output is the digest-sized prefix.
     if unsafe {
         tls13_generate_secret_md(md, None, Some(psk), &mut early.as_mut_slice()[..hashsize])
@@ -1029,13 +969,13 @@ pub(crate) unsafe fn tls13_psk_do_binder(
         return 0;
     }
     // `hash = Hash("")` (`extensions.c:1526-1533`).
-    let mut empty_hash = CleansedBlock::<HASH_MAX>::new();
+    let mut empty_hash = SecretArray::<HASH_MAX>::new();
     // SAFETY: `md` is live; the buffer is this frame's.
     if unsafe { hash_empty(md, empty_hash.as_mut_slice()) } == 0 {
         return 0;
     }
     // `binderkey = HKDF-Expand-Label(early_secret, "res binder", hash, hashsize)`.
-    let mut binderkey = CleansedBlock::<HASH_MAX>::new();
+    let mut binderkey = SecretArray::<HASH_MAX>::new();
     // SAFETY: `md` is live; every buffer is this frame's with its actual extent.
     if unsafe {
         hkdf_expand_label(
@@ -1050,7 +990,7 @@ pub(crate) unsafe fn tls13_psk_do_binder(
         return 0;
     }
     // `finishedkey = HKDF-Expand-Label(binderkey, "finished", "", hashsize)`.
-    let mut finishedkey = CleansedBlock::<HASH_MAX>::new();
+    let mut finishedkey = SecretArray::<HASH_MAX>::new();
     // SAFETY: `md` is live; every buffer is this frame's with its actual extent.
     if unsafe {
         tls13_derive_finishedkey(
@@ -1068,7 +1008,7 @@ pub(crate) unsafe fn tls13_psk_do_binder(
     if ctx.is_null() {
         return 0;
     }
-    let mut th = CleansedBlock::<HASH_MAX>::new();
+    let mut th = SecretArray::<HASH_MAX>::new();
     // SAFETY: `ctx` is this frame's; `transcript` is the caller's slice.
     let ok = unsafe {
         let mut r = EVP_DigestInit_ex(ctx, md, ptr::null_mut()) > 0;
@@ -1166,7 +1106,7 @@ unsafe fn ssl_log_secret(s: *mut Ssl, label: &[u8], secret: &[u8]) {
     };
     // The formatted line contains the secret in hexadecimal; it is a cleansed owner so the bytes
     // are wiped after the callback returns, on the no-callback path too.
-    let mut line = CleansedBlock::<256>::new();
+    let mut line = SecretArray::<256>::new();
     let out = line.as_mut_slice();
     let mut n = 0usize;
     let hex = b"0123456789abcdef";
@@ -1221,11 +1161,11 @@ pub(crate) unsafe fn tls13_finished_mac(s: *mut Ssl, secret: &[u8], out: &mut [u
         {
             return 0;
         }
-        let mut finsecret = CleansedBlock::<HASH_MAX>::new();
+        let mut finsecret = SecretArray::<HASH_MAX>::new();
         if tls13_derive_finishedkey(md, secret, &mut finsecret.as_mut_slice()[..hash_len]) == 0 {
             return 0;
         }
-        let mut hash = CleansedBlock::<HASH_MAX>::new();
+        let mut hash = SecretArray::<HASH_MAX>::new();
         if transcript_hash(s, hash.as_mut_ptr(), ptr::null_mut()) == 0 {
             return 0;
         }
@@ -1277,8 +1217,8 @@ pub(crate) unsafe fn tls13_change_cipher_state(s: *mut Ssl, which: c_int, cipher
         if hash_len == 0 || hash_len > HASH_MAX {
             return 0;
         }
-        let mut key = CleansedBlock::<32>::new();
-        let mut iv = CleansedBlock::<16>::new();
+        let mut key = SecretArray::<32>::new();
+        let mut iv = SecretArray::<16>::new();
         if key_len == 0
             || iv_len == 0
             || key_len > key.as_slice().len()
@@ -1937,7 +1877,7 @@ pub(crate) unsafe fn tls13_construct_finished(s: *mut Ssl, secret: *const u8) ->
     }
     // SAFETY: `secret` is readable for the hash length per the contract.
     let secret: &[u8] = unsafe { core::slice::from_raw_parts(secret, hash_len) };
-    let mut out = CleansedBlock::<HASH_MAX>::new();
+    let mut out = SecretArray::<HASH_MAX>::new();
     // SAFETY: `s` is live; `out` is the hash-sized writable prefix.
     let n = unsafe { tls13_finished_mac(s, secret, out.as_mut_slice()) };
     let Some(verify_data) = out.as_slice().get(..n).filter(|data| !data.is_empty()) else {
@@ -1987,7 +1927,7 @@ pub(crate) unsafe fn tls13_process_finished(s: *mut Ssl, msg: &[u8], secret: *co
     }
     // SAFETY: `secret` is readable for the hash length per the contract.
     let secret: &[u8] = unsafe { core::slice::from_raw_parts(secret, hash_len) };
-    let mut expected = CleansedBlock::<HASH_MAX>::new();
+    let mut expected = SecretArray::<HASH_MAX>::new();
     // SAFETY: `s` is live; `expected` is the hash-sized writable prefix.
     let n = unsafe { tls13_finished_mac(s, secret, expected.as_mut_slice()) };
     let Some(verify_data) = expected.as_slice().get(..n).filter(|data| !data.is_empty()) else {
@@ -2595,7 +2535,7 @@ mod tests {
     /// drops on this test thread, not freed memory.
     #[test]
     fn tls13_enc_failure_path_cleanses_intermediate_secrets() {
-        reset_cleanse_events();
+        crate::runtime::secret::cleanse_hooks::reset();
         let secret = [0xA5u8; 32];
         let mut out = [0u8; HASH_MAX];
         // SAFETY: `s` is a live zeroed connection owned here; `hs_md_ctx` stays NULL so
@@ -2617,6 +2557,12 @@ mod tests {
         assert!(
             non_zero_drops > 0,
             "an intermediate secret was non-zero when it was cleansed"
+        );
+        assert!(
+            crate::runtime::secret::cleanse_hooks::events()
+                .iter()
+                .all(|e| e.zero_after),
+            "every observed stack wipe actually zeroed its block"
         );
         std::println!(
             "tls13_enc cleanse hook: {drops} block(s) cleansed on the failure path, \

@@ -1,5 +1,9 @@
 //! Secret-bearing heap scratch that is cleansed on **every** release path.
 //!
+//! The storage policy — this heap form, the fixed-size stack form, the limb alias
+//! and the borrowed view — is documented in [`crate::runtime::secret`]. This
+//! module keeps the heap owner's implementation and its mutation controls.
+//!
 //! The constant-time exponentiation ladder in [`crate::bn::arith`] stages the
 //! fixed-width exponent copy and its secret-derived intermediates in heap
 //! scratch. Cleansing those buffers with explicit calls at the end of the
@@ -53,6 +57,13 @@ pub(crate) unsafe trait SecretElement: Copy {
 // the all-zero pattern is a valid `u64`), and `ZERO` is that pattern.
 unsafe impl SecretElement for u64 {
     const ZERO: u64 = 0;
+}
+
+// SAFETY: `u8` is `Copy`, has no destructor, has no invalid bit patterns (so the
+// all-zero pattern is a valid `u8`), and `ZERO` is that pattern. This is what lets
+// byte-sized secret staging use `SecretBuf<u8>` instead of a local `Vec` guard.
+unsafe impl SecretElement for u8 {
+    const ZERO: u8 = 0;
 }
 
 /// A heap buffer of [`SecretElement`]s that zeroes its storage when released.

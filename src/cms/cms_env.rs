@@ -47,6 +47,7 @@ use crate::runtime::obj::{
     NID_pkcs7_enveloped, NID_undef, OBJ_nid2obj, OBJ_nid2sn, OBJ_obj2nid, OBJ_obj2txt,
 };
 use crate::runtime::owned_buf::OwnedBuf;
+use crate::runtime::secret::SecretBuf;
 use crate::runtime::stack::{
     OPENSSL_sk_new_null, OPENSSL_sk_num, OPENSSL_sk_push, OPENSSL_sk_value, OpenSslStack,
 };
@@ -66,7 +67,7 @@ use super::cms_sd::{
     ossl_cms_set1_SignerIdentifier,
 };
 use crate::runtime::err::{err_sites, raise_site};
-use crate::runtime::mem::OPENSSL_cleanse;
+
 use crate::runtime::mem_coords::SeamFile;
 
 /// `CMS_ENVELOPED_STANDARD` — `cms_env.c:33`.
@@ -2299,48 +2300,6 @@ pub(crate) fn reported_extent(reported: c_int, capacity: usize) -> Option<usize>
     unwrap_length_fits(reported, capacity).then_some(reported as usize)
 }
 
-/// A frame-private staging block for one key unwrap.
-///
-/// `EVP_DecryptUpdate` is given a buffer extent larger than the content key CMS allocates
-/// (`in_len + block_size` versus `in_len - 8`), so the provider is staged here and the validated
-/// prefix is copied into the authority's exact content-key block at `cms_env.c:995`. A Rust
-/// allocation keeps the authority's `CRYPTO_*` seam event stream unchanged (there is still one
-/// seam allocation for the key, at the same size/`file`/`line`); `Drop` cleanses the whole extent
-/// because it held the unwrapped key (AGENTS.md §5).
-pub(crate) struct SecretScratch {
-    bytes: Vec<u8>,
-}
-
-impl SecretScratch {
-    /// A zero-initialised block of `len` bytes, or `None` when the allocation is refused.
-    pub(crate) fn new(len: usize) -> Option<Self> {
-        let mut bytes = Vec::new();
-        bytes.try_reserve_exact(len).ok()?;
-        bytes.resize(len, 0);
-        Some(Self { bytes })
-    }
-
-    pub(crate) fn capacity(&self) -> usize {
-        self.bytes.len()
-    }
-
-    pub(crate) fn as_mut_ptr(&mut self) -> *mut c_uchar {
-        self.bytes.as_mut_ptr()
-    }
-
-    pub(crate) fn as_ptr(&self) -> *const c_uchar {
-        self.bytes.as_ptr()
-    }
-}
-
-impl Drop for SecretScratch {
-    fn drop(&mut self) {
-        // SAFETY: `bytes` is this owner's live, exclusively owned allocation of `len` writable
-        // bytes.
-        unsafe { OPENSSL_cleanse(self.bytes.as_mut_ptr().cast(), self.bytes.len()) };
-    }
-}
-
 /// Run one staged key unwrap and return the produced content-key length.
 ///
 /// The update's declared output extent is `stage`'s extent, and the final call receives the
@@ -2354,7 +2313,7 @@ impl Drop for SecretScratch {
 /// block's extent; `data` is readable for `in_len`.
 unsafe fn unwrap_staged(
     ctx: *mut EvpCipherCtx,
-    stage: &mut SecretScratch,
+    stage: &mut SecretBuf<u8>,
     key_capacity: usize,
     data: *const c_uchar,
     in_len: c_int,
@@ -2364,13 +2323,13 @@ unsafe fn unwrap_staged(
     if unsafe { EVP_DecryptUpdate(ctx, stage.as_mut_ptr(), &mut update_len, data, in_len) } == 0 {
         return None;
     }
-    let written = reported_extent(update_len, stage.capacity())?;
+    let written = reported_extent(update_len, stage.len())?;
     // The unwrapped key can never be longer than the block CMS gives `ec.key`, whose extent its
     // destructor cleanses. Refuse before constructing the final write pointer.
     if written > key_capacity {
         return None;
     }
-    let final_capacity = stage.capacity().checked_sub(written)?;
+    let final_capacity = stage.len().checked_sub(written)?;
     let mut final_len: c_int = 0;
     // SAFETY: `written` is within `stage`, so `stage + written` begins `final_capacity` writable
     // bytes.
@@ -2487,7 +2446,7 @@ unsafe fn cms_RecipientInfo_kekri_decrypt(
         return r;
     };
     // A refused staging allocation is reported like a failed unwrap, before any provider write.
-    let Some(mut stage) = SecretScratch::new(stage_capacity) else {
+    let Some(mut stage) = SecretBuf::<u8>::try_zeroed(stage_capacity) else {
         return r;
     };
 
@@ -4656,7 +4615,7 @@ mod tests {
                 report: key_capacity + 8,
             };
             let (cipher, mut ctx) = provider_ctx(&mut state);
-            let mut stage = SecretScratch::new(stage_capacity).unwrap();
+            let mut stage = SecretBuf::<u8>::try_zeroed(stage_capacity).unwrap();
             assert!(
                 unwrap_staged(
                     &mut ctx,
@@ -4680,7 +4639,7 @@ mod tests {
                 report: stage_capacity + 1,
             };
             let (cipher, mut ctx) = provider_ctx(&mut state);
-            let mut stage = SecretScratch::new(stage_capacity).unwrap();
+            let mut stage = SecretBuf::<u8>::try_zeroed(stage_capacity).unwrap();
             assert!(
                 unwrap_staged(
                     &mut ctx,
@@ -4693,7 +4652,7 @@ mod tests {
                 "a report past the declared output extent is refused"
             );
             assert_eq!(
-                stage.capacity(),
+                stage.len(),
                 stage_capacity,
                 "the staging block was not enlarged to accommodate the lie"
             );
@@ -4702,7 +4661,7 @@ mod tests {
         }
 
         // A staging allocation that cannot be represented is refused rather than wrapped.
-        assert!(SecretScratch::new(usize::MAX).is_none());
+        assert!(SecretBuf::<u8>::try_zeroed(usize::MAX).is_none());
     }
 
     /// §16 negative control (test-only): the pre-fix buffer pairing -- a provider told it may

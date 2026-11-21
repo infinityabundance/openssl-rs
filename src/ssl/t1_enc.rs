@@ -43,6 +43,7 @@ use crate::evp::legacy_sha::{EVP_sha256, EVP_sha384};
 use crate::mac::hmac::HMAC;
 use crate::runtime::mem_coords::SeamFile;
 use crate::runtime::owned_buf::OwnedBuf;
+use crate::runtime::secret::SecretArray;
 use crate::ssl::ssl_lib::{Ssl, SSL_MAX_MASTER_KEY_LENGTH};
 use crate::ssl::tls13_enc::{tls13_init_transcript, transcript_hash};
 
@@ -62,33 +63,6 @@ const TLS12_EXPLICIT_IV_LEN: usize = 8;
 const HASH_MAX: usize = 64;
 /// The largest `P_hash` HMAC input: `A(i) | seed`.
 const P_HASH_INPUT_MAX: usize = HASH_MAX + 255;
-
-/// A fixed scratch block whose contents are cleansed on every exit, including the
-/// early returns an HMAC failure takes. The PRF state and its HMAC inputs are
-/// secret-derived, so they are wiped with the same volatile primitive the rest of
-/// the crate uses.
-struct CleansedBlock<const N: usize>([u8; N]);
-
-impl<const N: usize> CleansedBlock<N> {
-    fn new() -> Self {
-        Self([0u8; N])
-    }
-
-    fn as_slice(&self) -> &[u8] {
-        &self.0
-    }
-
-    fn as_mut_slice(&mut self) -> &mut [u8] {
-        &mut self.0
-    }
-}
-
-impl<const N: usize> Drop for CleansedBlock<N> {
-    fn drop(&mut self) {
-        // SAFETY: `self.0` is a live array of exactly `N` writable bytes.
-        unsafe { crate::runtime::mem::cleanse(self.0.as_mut_ptr(), N) }
-    }
-}
 
 /// The reduced TLS1.2 record cipher: `(name, key_len, tag_len, md_kind)` for the four
 /// `ECDHE-{RSA,ECDSA}-AES{128,256}-GCM` suites (`ssl_cipher_get_evp`, `t1_enc.c`).
@@ -179,7 +153,7 @@ unsafe fn p_hash(
         return 0;
     }
     // `A(1) = HMAC_hash(secret, seed)`.
-    let mut a = CleansedBlock::<HASH_MAX>::new();
+    let mut a = SecretArray::<HASH_MAX>::new();
     let mut alen: c_uint = 0;
     // SAFETY: `md` is live and `secret`/`seed` are slices; `a` is writable for the digest.
     let r = unsafe {
@@ -202,11 +176,11 @@ unsafe fn p_hash(
         if blen > HASH_MAX {
             return 0;
         }
-        let mut buf = CleansedBlock::<P_HASH_INPUT_MAX>::new();
+        let mut buf = SecretArray::<P_HASH_INPUT_MAX>::new();
         buf.as_mut_slice()[..blen].copy_from_slice(&a.as_slice()[..blen]);
         buf.as_mut_slice()[blen..blen + seed.len()].copy_from_slice(seed);
         blen += seed.len();
-        let mut h = CleansedBlock::<HASH_MAX>::new();
+        let mut h = SecretArray::<HASH_MAX>::new();
         let mut hlen: c_uint = 0;
         // SAFETY: `md` is live; `secret`/`buf` are readable for their lengths; `h` is writable.
         let r = unsafe {

@@ -44,7 +44,6 @@ use crate::bn::bignum::{
 };
 use crate::bn::ctx::BnCtx;
 use crate::bn::limbs::{self, Limb};
-use crate::bn::secret::SecretBuf;
 use crate::ffi::guard_ffi;
 use crate::runtime::constant_time::{constant_time_lt_s, constant_time_select};
 use crate::runtime::err::err_sites::{
@@ -52,6 +51,7 @@ use crate::runtime::err::err_sites::{
     BN_SQRT_352, BN_SQRT_43,
 };
 use crate::runtime::err::raise_site;
+use crate::runtime::secret::{SecretBuf, SecretLimbs, SecretRef};
 
 /// The truncated quotient and remainder magnitudes of `a / b`.
 ///
@@ -1324,7 +1324,7 @@ fn try_zeroed_limbs(n: usize) -> Option<Vec<Limb>> {
 ///
 /// Returns the number of destination limbs written so a test can prove the copy
 /// length is the public width even when two inputs differ in length.
-fn stage_fixed_width_exponent(pd: &[Limb], width: usize) -> Option<(SecretBuf<Limb>, usize)> {
+fn stage_fixed_width_exponent(pd: &[Limb], width: usize) -> Option<(SecretLimbs, usize)> {
     let mut view = SecretBuf::try_zeroed(width)?;
     let n = pd.len();
     let mut written = 0usize;
@@ -1340,7 +1340,7 @@ fn stage_fixed_width_exponent(pd: &[Limb], width: usize) -> Option<(SecretBuf<Li
 }
 
 /// [`stage_fixed_width_exponent`], discarding the work count.
-fn fixed_width_exponent(pd: &[Limb], width: usize) -> Option<SecretBuf<Limb>> {
+fn fixed_width_exponent(pd: &[Limb], width: usize) -> Option<SecretLimbs> {
     stage_fixed_width_exponent(pd, width).map(|(view, _)| view)
 }
 
@@ -1615,11 +1615,15 @@ pub(crate) fn mod_exp_core_consttime_from_parts(
 /// exponent before the `64 * width` loop begins.
 fn mod_exp_core_consttime_staged(
     ad: &[Limb],
-    exponent: &SecretBuf<Limb>,
+    exponent: &SecretLimbs,
     md: &[Limb],
     width: usize,
 ) -> Option<Vec<Limb>> {
     let n = md.len();
+    // Read the staged exponent through the borrowed secret view: a signature can
+    // say "this is secret" without borrowing the owner and without implying any
+    // ownership or cleansing claim.
+    let exponent = SecretRef::new(exponent);
     let bits = width.checked_mul(64)?;
     let t_len = n.checked_mul(2)?.checked_add(1)?;
 
