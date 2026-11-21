@@ -44,8 +44,8 @@ use core::ffi::{c_int, c_ulong};
 
 use crate::bn::arith::{BN_mod_exp, BN_mod_mul};
 use crate::bn::bignum::{
-    as_mut, as_ref, parts, store, store_consttime, BN_copy, BN_dup, BN_free, BN_get_flags, BN_new,
-    BN_set_flags, BigNum,
+    as_mut, as_ref, parts_fallible, store, store_consttime, BN_copy, BN_dup, BN_free, BN_get_flags,
+    BN_new, BN_set_flags, BigNum,
 };
 use crate::bn::ctx::BnCtx;
 use crate::bn::limbs;
@@ -679,8 +679,12 @@ pub unsafe extern "C" fn BN_BLINDING_convert_ex(
 unsafe fn int_bn_mod_inverse(dst: *mut BigNum, a: *const BigNum, n: *const BigNum) -> bool {
     // SAFETY: null-or-live per this function's `# Safety` section.
     let (x, y) = unsafe { (as_ref(a), as_ref(n)) };
-    let (ad, _) = parts(x);
-    let (nd, _) = parts(y);
+    let Some((ad, _)) = parts_fallible(x) else {
+        return true;
+    };
+    let Some((nd, _)) = parts_fallible(y) else {
+        return true;
+    };
     if nd.is_empty() || (nd.len() == 1 && nd[0] == 1) {
         return true;
     }

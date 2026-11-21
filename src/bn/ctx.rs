@@ -66,13 +66,14 @@ pub(crate) unsafe fn as_mut_ctx<'a>(p: *mut BnCtx) -> Option<&'a mut BnCtx> {
 
 /// A fresh context carrying `libctx`, the way the authority's `BN_CTX_new_ex` does.
 fn new_ctx(libctx: *mut c_void) -> *mut BnCtx {
-    Box::into_raw(Box::new(BnCtx {
+    crate::bn::alloc::try_boxed(BnCtx {
         pool: Vec::new(),
         used: 0,
         marks: Vec::new(),
         mont: core::ptr::null_mut(),
         libctx,
-    }))
+    })
+    .unwrap_or(core::ptr::null_mut())
 }
 
 /// `OSSL_LIB_CTX *ossl_bn_get_libctx(BN_CTX *ctx)` — `crypto/bn/bn_ctx.c:243`, declared
@@ -239,6 +240,14 @@ pub unsafe extern "C" fn BN_CTX_get(ctx: *mut BnCtx) -> *mut BigNum {
             // SAFETY: `BN_new` allocates without touching any caller pointer.
             let fresh = unsafe { BN_new() };
             if fresh.is_null() {
+                return core::ptr::null_mut();
+            }
+            // The pool slot and the object are separate allocations: the `Vec`
+            // growth must be fallible too, or a pool that cannot grow would abort
+            // after the object was already created.
+            if !crate::bn::alloc::try_reserve(&mut c.pool, 1) {
+                // SAFETY: `fresh` is this call's own object and not yet in the pool.
+                unsafe { crate::bn::bignum::BN_free(fresh) };
                 return core::ptr::null_mut();
             }
             c.pool.push(fresh);

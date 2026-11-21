@@ -317,7 +317,9 @@ pub unsafe extern "C" fn BN_GF2m_arr2poly(p: *const c_int, a: *mut BigNum) -> c_
             if e < 0 {
                 return 0;
             }
-            limbs::set_bit(&mut limbs_out, e as usize);
+            if !limbs::set_bit(&mut limbs_out, e as usize) {
+                return 0;
+            }
             i += 1;
         }
         // SAFETY: null-or-live per this function's `# Safety` section.

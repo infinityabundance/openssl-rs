@@ -2981,4 +2981,70 @@ mod tests {
             BN_free(e);
         }
     }
+
+    /// Sweep every seam-visible allocation in the CRT private operation
+    /// (`rsa_ossl_mod_exp`) through both arms: the smooth combined exponentiation
+    /// and the generic per-prime arm. Each injected failure must return the
+    /// operation's error rather than aborting.
+    #[test]
+    fn every_allocation_failure_in_rsa_crt_returns_an_error() {
+        use crate::bn::bignum::{BN_new, BN_set_word};
+        use crate::bn::ctx::{BN_CTX_free, BN_CTX_new};
+        use crate::rsa::gen::RSA_generate_key_ex;
+        use crate::rsa::object::{RSA_free, RSA_new};
+
+        // SAFETY: every object below is created and released here and is live for
+        // each call.
+        unsafe {
+            let e = BN_new();
+            let rsa = RSA_new();
+            assert!(!e.is_null() && !rsa.is_null());
+            assert_eq!(BN_set_word(e, 65537), 1);
+            assert_eq!(RSA_generate_key_ex(rsa, 1024, e, core::ptr::null_mut()), 1);
+
+            let r0 = BN_new();
+            let input = BN_new();
+            assert!(!r0.is_null() && !input.is_null());
+            assert_eq!(BN_set_word(input, 0x42), 1);
+
+            // Each run starts from cleared caches and a fresh context, so every
+            // stateful allocation site (the Montgomery contexts included) is
+            // reachable from the same state rather than only on the first run.
+            let op = |slow: bool| -> bool {
+                BN_MONT_CTX_free((*rsa)._method_mod_p);
+                (*rsa)._method_mod_p = core::ptr::null_mut();
+                BN_MONT_CTX_free((*rsa)._method_mod_q);
+                (*rsa)._method_mod_q = core::ptr::null_mut();
+                BN_MONT_CTX_free((*rsa)._method_mod_n);
+                (*rsa)._method_mod_n = core::ptr::null_mut();
+                if slow {
+                    (*rsa).flags &= !RSA_FLAG_CACHE_PRIVATE;
+                } else {
+                    (*rsa).flags |= RSA_FLAG_CACHE_PRIVATE;
+                }
+                let ctx = BN_CTX_new();
+                if ctx.is_null() {
+                    return false;
+                }
+                let ok = rsa_ossl_mod_exp(r0, input, rsa, ctx) == 1;
+                BN_CTX_free(ctx);
+                ok
+            };
+
+            assert!(op(false));
+            let smooth = crate::bn::alloc::test_fail::sweep_sites(|| op(false));
+            assert!(smooth > 0, "the seam must see the smooth CRT arm");
+
+            assert!(op(true));
+            let slow = crate::bn::alloc::test_fail::sweep_sites(|| op(true));
+            assert!(slow > 0, "the seam must see the generic CRT arm");
+            eprintln!("T22 sites: rsa_crt smooth={smooth} generic={slow}");
+
+            assert!(op(false));
+            BN_free(r0);
+            BN_free(input);
+            RSA_free(rsa);
+            BN_free(e);
+        }
+    }
 }

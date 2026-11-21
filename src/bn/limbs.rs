@@ -290,13 +290,19 @@ pub(crate) fn bit(v: &[Limb], n: usize) -> bool {
     }
 }
 
-/// Set bit `n` in place, growing the vector as needed.
-pub(crate) fn set_bit(v: &mut Vec<Limb>, n: usize) {
+/// Set bit `n` in place, growing the vector as needed; `false` when that growth
+/// cannot be allocated.
+pub(crate) fn set_bit(v: &mut Vec<Limb>, n: usize) -> bool {
     let (limb, off) = (n / 64, n % 64);
     if v.len() <= limb {
-        v.resize(limb + 1, 0);
+        let need = limb + 1;
+        if !crate::bn::alloc::try_reserve(v, need - v.len()) {
+            return false;
+        }
+        v.resize(need, 0);
     }
     v[limb] |= 1 << off;
+    true
 }
 
 /// Clear bit `n` in place, normalising afterwards.
@@ -309,46 +315,82 @@ pub(crate) fn clear_bit(v: &mut Vec<Limb>, n: usize) {
 }
 
 /// `a + b`.
+///
+/// Infallible wrapper for the variable-time public path; the secret-bearing entry
+/// points call [`add_fallible`] so an allocation failure is their ordinary error
+/// answer rather than an abort.
+#[allow(clippy::expect_used)]
 pub(crate) fn add(a: &[Limb], b: &[Limb]) -> Vec<Limb> {
-    let mut out = Vec::with_capacity(a.len().max(b.len()) + 1);
+    add_fallible(a, b).expect("limbs::add: allocation failed")
+}
+
+/// `a + b`, or `None` when the result cannot be allocated.
+pub(crate) fn add_fallible(a: &[Limb], b: &[Limb]) -> Option<Vec<Limb>> {
+    let n = a.len().max(b.len());
+    let len = n.checked_add(1)?;
+    let mut out = crate::bn::alloc::try_zeroed(len, 0u64)?;
     let mut carry = 0u64;
-    for i in 0..a.len().max(b.len()) {
+    for (i, slot) in out.iter_mut().enumerate().take(n) {
         let s =
             (*a.get(i).unwrap_or(&0) as u128) + (*b.get(i).unwrap_or(&0) as u128) + (carry as u128);
-        out.push(s as u64);
+        *slot = s as u64;
         carry = (s >> 64) as u64;
     }
-    if carry != 0 {
-        out.push(carry);
-    }
-    out
+    out[n] = carry;
+    normalise(&mut out);
+    Some(out)
 }
 
 /// `a - b`, which requires `a >= b`. The public entry points check before calling.
+///
+/// Infallible wrapper for the variable-time public path; [`sub_fallible`] is the
+/// form the secret-bearing entry points use.
+#[allow(clippy::expect_used)]
 pub(crate) fn sub(a: &[Limb], b: &[Limb]) -> Vec<Limb> {
-    let mut out = Vec::with_capacity(a.len());
+    sub_fallible(a, b).expect("limbs::sub: allocation failed")
+}
+
+/// `a - b`, or `None` when the result cannot be allocated.
+pub(crate) fn sub_fallible(a: &[Limb], b: &[Limb]) -> Option<Vec<Limb>> {
+    let mut out = crate::bn::alloc::try_zeroed(a.len(), 0u64)?;
     let mut borrow = 0i128;
     for (i, &limb) in a.iter().enumerate() {
         let d = (limb as i128) - (*b.get(i).unwrap_or(&0) as i128) - borrow;
-        out.push((d & 0xffff_ffff_ffff_ffff) as u64);
+        out[i] = (d & 0xffff_ffff_ffff_ffff) as u64;
         borrow = i128::from(d < 0);
     }
     normalise(&mut out);
-    out
+    Some(out)
 }
 
 /// `a + w` for a single limb.
+///
+/// Test-only convenience wrapper; the entry points use [`add_word_fallible`].
+#[cfg(test)]
 pub(crate) fn add_word(a: &[Limb], w: Limb) -> Vec<Limb> {
     add(a, &[w])
 }
 
+/// `a + w`, or `None` when the result cannot be allocated.
+pub(crate) fn add_word_fallible(a: &[Limb], w: Limb) -> Option<Vec<Limb>> {
+    add_fallible(a, &[w])
+}
+
 /// `a - w` for a single limb, or `None` when that would go negative.
+///
+/// Test-only convenience wrapper; the entry points use [`sub_word_fallible`].
+#[cfg(test)]
 pub(crate) fn sub_word(a: &[Limb], w: Limb) -> Option<Vec<Limb>> {
-    let word = if w == 0 { Vec::new() } else { vec![w] };
-    if cmp(a, &word) == core::cmp::Ordering::Less {
+    sub_word_fallible(a, w)
+}
+
+/// `a - w`, or `None` when that would go negative or the result cannot be
+/// allocated.
+pub(crate) fn sub_word_fallible(a: &[Limb], w: Limb) -> Option<Vec<Limb>> {
+    if cmp(a, &[w]) == core::cmp::Ordering::Less {
         return None;
     }
-    Some(sub(a, &word))
+    sub_fallible(a, &[w])
 }
 
 /// `a * b`.
@@ -395,8 +437,16 @@ pub(crate) fn mul_fallible(a: &[Limb], b: &[Limb]) -> Option<Vec<Limb>> {
 }
 
 /// `a * w` for a single limb.
+///
+/// Test-only convenience wrapper; the entry points use [`mul_word_fallible`].
+#[cfg(test)]
 pub(crate) fn mul_word(a: &[Limb], w: Limb) -> Vec<Limb> {
     mul(a, &[w])
+}
+
+/// `a * w`, or `None` when the product cannot be allocated.
+pub(crate) fn mul_word_fallible(a: &[Limb], w: Limb) -> Option<Vec<Limb>> {
+    mul_fallible(a, &[w])
 }
 
 /// `a << bits`.
@@ -464,10 +514,23 @@ pub(crate) fn shr_fallible(a: &[Limb], bits: usize) -> Option<Vec<Limb>> {
 }
 
 /// `a & b`, limbwise.
+///
+/// Test-only convenience wrapper; the entry points use [`and_fallible`].
+#[cfg(test)]
+#[allow(clippy::expect_used)]
 pub(crate) fn and(a: &[Limb], b: &[Limb]) -> Vec<Limb> {
-    let mut out: Vec<Limb> = (0..a.len().min(b.len())).map(|i| a[i] & b[i]).collect();
+    and_fallible(a, b).expect("limbs::and: allocation failed")
+}
+
+/// `a & b`, limbwise, or `None` when the result cannot be allocated.
+pub(crate) fn and_fallible(a: &[Limb], b: &[Limb]) -> Option<Vec<Limb>> {
+    let n = a.len().min(b.len());
+    let mut out = crate::bn::alloc::try_zeroed(n, 0u64)?;
+    for (i, slot) in out.iter_mut().enumerate() {
+        *slot = a[i] & b[i];
+    }
     normalise(&mut out);
-    out
+    Some(out)
 }
 
 /// The low limb, or zero.
@@ -857,28 +920,32 @@ pub(crate) fn mod_inverse_consttime_with_mask(a: &[Limb], m: &[Limb]) -> Option<
     let bits = wide.checked_mul(Limb::BITS as usize)?;
     let iterations = bits.checked_mul(2)?.checked_add(2)?;
 
-    let mut u = vec![0u64; wide];
+    // All scratch is allocated once, before the fixed-iteration loop, through the
+    // fallible seam: an allocation failure is the entry point's ordinary error
+    // answer, not `handle_alloc_error`. (The width is still `max(a.len(), m.len())`;
+    // making that public geometry is T24, not this batch.)
+    let mut u = crate::bn::alloc::try_zeroed(wide, 0u64)?;
     u[..a.len()].copy_from_slice(a);
-    let mut v = vec![0u64; wide];
+    let mut v = crate::bn::alloc::try_zeroed(wide, 0u64)?;
     v[..w].copy_from_slice(m);
-    let mut x1 = vec![0u64; w];
+    let mut x1 = crate::bn::alloc::try_zeroed(w, 0u64)?;
     x1[0] = 1;
-    let mut x2 = vec![0u64; w];
+    let mut x2 = crate::bn::alloc::try_zeroed(w, 0u64)?;
 
-    let mut nu = vec![0u64; wide];
-    let mut nv = vec![0u64; wide];
-    let mut cu = vec![0u64; wide];
-    let mut cv = vec![0u64; wide];
-    let mut diff_uv = vec![0u64; wide];
-    let mut diff_vu = vec![0u64; wide];
+    let mut nu = crate::bn::alloc::try_zeroed(wide, 0u64)?;
+    let mut nv = crate::bn::alloc::try_zeroed(wide, 0u64)?;
+    let mut cu = crate::bn::alloc::try_zeroed(wide, 0u64)?;
+    let mut cv = crate::bn::alloc::try_zeroed(wide, 0u64)?;
+    let mut diff_uv = crate::bn::alloc::try_zeroed(wide, 0u64)?;
+    let mut diff_vu = crate::bn::alloc::try_zeroed(wide, 0u64)?;
 
-    let mut nx1 = vec![0u64; w];
-    let mut nx2 = vec![0u64; w];
-    let mut dtmp = vec![0u64; w];
-    let mut h1 = vec![0u64; w];
-    let mut h2 = vec![0u64; w];
-    let mut haux = vec![0u64; w];
-    let mut sum = vec![0u64; w + 1];
+    let mut nx1 = crate::bn::alloc::try_zeroed(w, 0u64)?;
+    let mut nx2 = crate::bn::alloc::try_zeroed(w, 0u64)?;
+    let mut dtmp = crate::bn::alloc::try_zeroed(w, 0u64)?;
+    let mut h1 = crate::bn::alloc::try_zeroed(w, 0u64)?;
+    let mut h2 = crate::bn::alloc::try_zeroed(w, 0u64)?;
+    let mut haux = crate::bn::alloc::try_zeroed(w, 0u64)?;
+    let mut sum = crate::bn::alloc::try_zeroed(w.checked_add(1)?, 0u64)?;
 
     for _ in 0..iterations {
         let u_odd = 0u64.wrapping_sub(u[0] & 1);

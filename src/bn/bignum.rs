@@ -130,17 +130,28 @@ pub(crate) unsafe fn as_mut<'a>(p: *mut BigNum) -> Option<&'a mut BigNum> {
 }
 
 /// A fresh heap `BIGNUM`, with the magnitude normalised and `neg` cleared on zero.
-pub(crate) fn new_owned(mut d: Vec<Limb>, neg: c_int) -> *mut BigNum {
+///
+/// Infallible convenience form; the allocation is the process-allocator `Box`, so
+/// failure aborts. Entry points that must report allocation failure use
+/// [`try_new_owned`].
+pub(crate) fn new_owned(d: Vec<Limb>, neg: c_int) -> *mut BigNum {
+    #[allow(clippy::expect_used)]
+    try_new_owned(d, neg).expect("new_owned: allocation failed")
+}
+
+/// [`new_owned`], answering `NULL` instead of aborting when the object cannot be
+/// allocated.
+pub(crate) fn try_new_owned(mut d: Vec<Limb>, neg: c_int) -> Option<*mut BigNum> {
     limbs::normalise(&mut d);
     let zero = d.is_empty();
-    Box::into_raw(Box::new(BigNum {
+    crate::bn::alloc::try_boxed(BigNum {
         d,
         // The authority never leaves `neg` set on zero, and neither may we:
         // `BN_is_negative(BN_new())` is 0, and a negative zero would print a sign
         // no authority path prints.
         neg: if zero { 0 } else { neg },
         flags: BN_FLG_MALLOCED,
-    }))
+    })
 }
 
 /// [`new_owned`] with the trim performed by [`limbs::normalise_consttime`].
@@ -153,11 +164,12 @@ pub(crate) fn new_owned_consttime(mut d: Vec<Limb>, neg: c_int, width: usize) ->
     let keep = limbs::normalise_consttime(&mut d, width);
     let not_zero = !crate::runtime::constant_time::constant_time_is_zero_s(keep);
     let neg = (((neg as usize) & not_zero) & 1) as c_int;
-    Box::into_raw(Box::new(BigNum {
+    crate::bn::alloc::try_boxed(BigNum {
         d,
         neg,
         flags: BN_FLG_MALLOCED,
-    }))
+    })
+    .unwrap_or(core::ptr::null_mut())
 }
 
 /// A heap `BIGNUM` carrying `BN_FLG_STATIC_DATA`, the crate's model of the authority's
@@ -247,19 +259,50 @@ fn cleanse_storage(d: &mut Vec<Limb>) {
 /// it. If the copy forces a reallocation the old block is released here instead, so it
 /// is cleansed first — the obligation `bn_expand2`'s `bn_free_d(b, 1)` discharges when
 /// the authority grows a limb array.
+#[allow(clippy::panic)] // guard_ffi turns this into the exported call's error answer
 fn assign_limbs(dst: &mut Vec<Limb>, src: &[Limb]) {
+    if !try_assign_limbs(dst, src) {
+        // Preserve the pre-existing value (the reservation was attempted before any
+        // mutation). The exported `void` callers cannot report the failure, so this
+        // panic is caught by `guard_ffi` and becomes their ordinary error answer.
+        panic!("assign_limbs: allocation failed");
+    }
+}
+
+/// [`assign_limbs`], answering `false` instead of aborting when the destination
+/// must grow and the allocator refuses.
+fn try_assign_limbs(dst: &mut Vec<Limb>, src: &[Limb]) -> bool {
     if dst.capacity() < src.len() {
+        // Reserve *before* cleansing, so a refused reservation leaves the
+        // destination's existing value intact and no secret has been wiped from a
+        // value the caller may still use.
+        if dst.try_reserve_exact(src.len() - dst.len()).is_err() {
+            return false;
+        }
         cleanse_storage(dst);
     }
     dst.clear();
     dst.extend_from_slice(src);
+    true
 }
 
 /// The magnitude and sign of an optional object; `(empty, false)` for null.
+///
+/// Infallible form for callers on the variable-time public path. The secret-bearing
+/// entry points use [`parts_fallible`] so the operand copy's allocation failure is
+/// their ordinary error answer.
 pub(crate) fn parts(b: Option<&BigNum>) -> (Vec<Limb>, bool) {
     match b {
         Some(b) => (b.d.clone(), b.neg != 0),
         None => (Vec::new(), false),
+    }
+}
+
+/// [`parts`], answering `None` when the operand copy cannot be allocated.
+pub(crate) fn parts_fallible(b: Option<&BigNum>) -> Option<(Vec<Limb>, bool)> {
+    match b {
+        Some(b) => Some((crate::bn::alloc::try_clone_slice(&b.d)?, b.neg != 0)),
+        None => Some((Vec::new(), false)),
     }
 }
 
@@ -522,7 +565,9 @@ fn dec_of(b: &BigNum) -> String {
 /// per-function exception.
 #[no_mangle]
 pub unsafe extern "C" fn BN_new() -> *mut BigNum {
-    guard_ffi(core::ptr::null_mut(), || new_owned(Vec::new(), 0))
+    guard_ffi(core::ptr::null_mut(), || {
+        try_new_owned(Vec::new(), 0).unwrap_or(core::ptr::null_mut())
+    })
 }
 
 /// `BIGNUM *BN_secure_new(void)`
@@ -533,10 +578,10 @@ pub unsafe extern "C" fn BN_new() -> *mut BigNum {
 #[no_mangle]
 pub unsafe extern "C" fn BN_secure_new() -> *mut BigNum {
     guard_ffi(core::ptr::null_mut(), || {
-        let p = new_owned(Vec::new(), 0);
-        // SAFETY: `p` is a live object this call just created. `new_owned` never
-        // answers NULL (an allocation failure aborts, which `OBL-BN-ALLOCATOR`
-        // records), so the pointer is valid here.
+        let Some(p) = try_new_owned(Vec::new(), 0) else {
+            return core::ptr::null_mut();
+        };
+        // SAFETY: `p` is a live object this call just created.
         unsafe { (*p).flags |= BN_FLG_SECURE };
         p
     })
@@ -677,7 +722,9 @@ pub unsafe extern "C" fn BN_zero_ex(a: *mut BigNum) {
 /// Takes no pointers.
 #[no_mangle]
 pub unsafe extern "C" fn BN_value_one() -> *const BigNum {
-    guard_ffi(core::ptr::null(), || new_owned(vec![1], 0))
+    guard_ffi(core::ptr::null(), || {
+        try_new_owned(vec![1], 0).unwrap_or(core::ptr::null_mut())
+    })
 }
 
 /// `BIGNUM *BN_dup(const BIGNUM *a)`
@@ -694,7 +741,9 @@ pub unsafe extern "C" fn BN_dup(a: *const BigNum) -> *mut BigNum {
         // read of the pointer.
         match unsafe { as_ref(a) } {
             None => core::ptr::null_mut(),
-            Some(b) => new_owned(b.d.clone(), b.neg),
+            Some(b) => crate::bn::alloc::try_clone_slice(&b.d)
+                .and_then(|d| try_new_owned(d, b.neg))
+                .unwrap_or(core::ptr::null_mut()),
         }
     })
 }
@@ -719,7 +768,9 @@ pub unsafe extern "C" fn BN_copy(a: *mut BigNum, b: *const BigNum) -> *mut BigNu
         let (dst, src) = unsafe { (as_mut(a), as_ref(b)) };
         match (dst, src) {
             (Some(dst), Some(src)) => {
-                assign_limbs(&mut dst.d, &src.d);
+                if !try_assign_limbs(&mut dst.d, &src.d) {
+                    return core::ptr::null_mut();
+                }
                 dst.neg = src.neg;
                 a
             }
@@ -938,6 +989,12 @@ pub unsafe extern "C" fn BN_set_word(a: *mut BigNum, w: c_ulong) -> c_int {
                 // limbs above the new top remain in the retained allocation and are
                 // cleansed by `BN_clear`/`BN_clear_free` at teardown, exactly as the
                 // authority leaves them until `dmax` is cleared.
+                //
+                // Reserve before clearing: a refused reservation must leave the old
+                // value intact, and after it the `push` cannot allocate.
+                if w != 0 && b.d.capacity() == 0 && !crate::bn::alloc::try_reserve(&mut b.d, 1) {
+                    return 0;
+                }
                 b.d.clear();
                 if w != 0 {
                     b.d.push(w as Limb);
@@ -987,10 +1044,7 @@ pub unsafe extern "C" fn BN_set_bit(a: *mut BigNum, n: c_int) -> c_int {
         }
         // SAFETY: null-or-live per this function's `# Safety` section.
         match unsafe { as_mut(a) } {
-            Some(b) => {
-                limbs::set_bit(&mut b.d, n as usize);
-                1
-            }
+            Some(b) => c_int::from(limbs::set_bit(&mut b.d, n as usize)),
             None => 0,
         }
     })
@@ -1157,26 +1211,38 @@ pub unsafe extern "C" fn BN_consttime_swap(
 /// Decode big- or little-endian bytes into an optional destination, clearing the
 /// sign because a byte string is a magnitude.
 fn from_bytes(bytes: &[u8], bn: Option<&mut BigNum>, little: bool) -> bool {
-    let ordered: Vec<u8> = if little {
-        bytes.to_vec()
+    let Some(ordered) = (if little {
+        crate::bn::alloc::try_clone_slice(bytes)
     } else {
-        bytes.iter().rev().copied().collect()
+        let mut v = Vec::new();
+        crate::bn::alloc::try_reserve(&mut v, bytes.len()).then(|| {
+            v.extend(bytes.iter().rev().copied());
+            v
+        })
+    }) else {
+        return false;
     };
-    let mut d: Vec<Limb> = Vec::with_capacity(ordered.len() / 8 + 1);
+    let Some(mut d) = crate::bn::alloc::try_zeroed(ordered.len() / 8 + 1, 0u64) else {
+        return false;
+    };
     let mut acc: u128 = 0;
     let mut have = 0usize;
+    let mut used = 0usize;
     for &byte in &ordered {
         acc |= (byte as u128) << (8 * have);
         have += 1;
         if have == 8 {
-            d.push(acc as Limb);
+            d[used] = acc as Limb;
+            used += 1;
             acc = 0;
             have = 0;
         }
     }
     if have != 0 {
-        d.push(acc as Limb);
+        d[used] = acc as Limb;
+        used += 1;
     }
+    d.truncate(used);
     store(bn, d, false)
 }
 
@@ -1227,9 +1293,13 @@ pub unsafe extern "C" fn BN_bin2bn(s: *const u8, len: c_int, ret: *mut BigNum) -
             None => return core::ptr::null_mut(),
         };
         if ret.is_null() {
-            let fresh = new_owned(Vec::new(), 0);
+            let Some(fresh) = try_new_owned(Vec::new(), 0) else {
+                return core::ptr::null_mut();
+            };
             // SAFETY: `fresh` is a live object this function owns.
             if !unsafe { as_mut(fresh) }.is_some_and(|d| from_bytes(bytes, Some(d), false)) {
+                // SAFETY: `fresh` is this call's own object and was never handed out.
+                unsafe { BN_free(fresh) };
                 return core::ptr::null_mut();
             }
             return fresh;
@@ -1257,9 +1327,13 @@ pub unsafe extern "C" fn BN_lebin2bn(s: *const u8, len: c_int, ret: *mut BigNum)
             None => return core::ptr::null_mut(),
         };
         if ret.is_null() {
-            let fresh = new_owned(Vec::new(), 0);
+            let Some(fresh) = try_new_owned(Vec::new(), 0) else {
+                return core::ptr::null_mut();
+            };
             // SAFETY: `fresh` is a live object this function owns.
             if !unsafe { as_mut(fresh) }.is_some_and(|d| from_bytes(bytes, Some(d), true)) {
+                // SAFETY: `fresh` is this call's own object and was never handed out.
+                unsafe { BN_free(fresh) };
                 return core::ptr::null_mut();
             }
             return fresh;
@@ -2037,7 +2111,10 @@ pub(crate) unsafe fn bn_wexpand(a: *mut BigNum, words: c_int) -> *mut BigNum {
     if let Some(b) = unsafe { as_mut(a) } {
         let words = words as usize;
         if words > b.d.capacity() {
-            b.d.reserve(words - b.d.len().min(words));
+            let additional = words - b.d.len().min(words);
+            if !crate::bn::alloc::try_reserve(&mut b.d, additional) {
+                return core::ptr::null_mut();
+            }
         }
     }
     a
@@ -2074,8 +2151,15 @@ pub(crate) unsafe fn ossl_bn_mask_bits_fixed_top(a: *mut BigNum, n: c_int) -> c_
     if (n as usize) / 64 >= dst.d.len() {
         return 0;
     }
-    let mask = limbs::sub(&limbs::shl(&[1u64], n as usize), &[1u64]);
-    let masked = limbs::and(&dst.d, &mask);
+    let Some(pow) = limbs::shl_fallible(&[1u64], n as usize) else {
+        return 0;
+    };
+    let Some(mask) = limbs::sub_fallible(&pow, &[1u64]) else {
+        return 0;
+    };
+    let Some(masked) = limbs::and_fallible(&dst.d, &mask) else {
+        return 0;
+    };
     let neg = dst.neg != 0;
     if !store(Some(dst), masked, neg) {
         return 0;
