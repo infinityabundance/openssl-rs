@@ -43,7 +43,7 @@
 
 use core::ffi::{c_int, c_ulong};
 
-use crate::bn::arith::mod_exp_core;
+use crate::bn::arith::{mod_exp_core, mod_exp_core_consttime};
 use crate::bn::bignum::{as_mut, as_ref, parts, store, BigNum};
 use crate::bn::ctx::BnCtx;
 use crate::bn::limbs::{self, Limb};
@@ -487,7 +487,18 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
             unsafe { raise_site(&BN_EXP_327) };
             return 0;
         }
-        match mod_exp_core(&ad, &pd, &md) {
+        // SAFETY: `p` and `m` are null-or-live per this function's `# Safety`
+        // section, which is `BN_get_flags`'s contract.
+        let consttime = unsafe { gets_consttime(p) || gets_consttime(m) };
+        let result = if consttime {
+            // The authority's `BN_mod_exp` dispatches on the same flags. The
+            // modulus is odd here (the refusal above), so the Montgomery-form
+            // ladder is available.
+            mod_exp_core_consttime(&ad, &pd, &md)
+        } else {
+            mod_exp_core(&ad, &pd, &md)
+        };
+        match result {
             // SAFETY: `r` is null-or-live per this function's `# Safety` section.
             Some(v) => c_int::from(store(unsafe { as_mut(r) }, v, false)),
             None => 0,
@@ -528,7 +539,9 @@ pub unsafe extern "C" fn BN_mod_exp_mont_consttime(
             unsafe { raise_site(&BN_EXP_622) };
             return 0;
         }
-        match mod_exp_core(&ad, &pd, &md) {
+        // This entry point's name is the promise: always the fixed-pattern ladder.
+        // The modulus is odd (refused above), so Montgomery form exists.
+        match mod_exp_core_consttime(&ad, &pd, &md) {
             // SAFETY: `r` is null-or-live per this function's `# Safety` section.
             Some(v) => c_int::from(store(unsafe { as_mut(r) }, v, false)),
             None => 0,
@@ -669,7 +682,7 @@ pub unsafe extern "C" fn BN_mod_exp2_mont(
 mod tests {
     use super::*;
     use crate::bn::arith::BN_ucmp;
-    use crate::bn::bignum::{BN_copy, BN_new, BN_set_word};
+    use crate::bn::bignum::{BN_copy, BN_free, BN_new, BN_set_flags, BN_set_word};
 
     /// A `BIGNUM` holding a machine word.
     fn word(w: c_ulong) -> *mut BigNum {
@@ -832,5 +845,49 @@ mod tests {
         );
         // SAFETY: both are live.
         assert_eq!(unsafe { BN_ucmp(word_out, power) }, 0, "mont_word alias");
+    }
+
+    /// `BN_mod_exp_mont` dispatches on `BN_FLG_CONSTTIME`: the flagged call must
+    /// take the fixed-pattern ladder and still answer the same value as the
+    /// unflagged call, which keeps the variable-time ladder.
+    #[test]
+    fn a_consttime_flagged_exponent_agrees_with_the_unflagged_form() {
+        let a = word(5);
+        let m = word(497);
+        let p = word(117);
+        // SAFETY: every object is live and owned by this test.
+        unsafe {
+            let reference = BN_new();
+            assert_eq!(
+                BN_mod_exp_mont(
+                    reference,
+                    a,
+                    p,
+                    m,
+                    core::ptr::null_mut(),
+                    core::ptr::null_mut()
+                ),
+                1
+            );
+            BN_set_flags(p, BN_FLG_CONSTTIME);
+            let flagged = BN_new();
+            assert_eq!(
+                BN_mod_exp_mont(
+                    flagged,
+                    a,
+                    p,
+                    m,
+                    core::ptr::null_mut(),
+                    core::ptr::null_mut()
+                ),
+                1
+            );
+            assert_eq!(BN_ucmp(flagged, reference), 0, "flagged dispatch");
+            BN_free(flagged);
+            BN_free(reference);
+            BN_free(a);
+            BN_free(m);
+            BN_free(p);
+        }
     }
 }
