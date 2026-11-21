@@ -3421,13 +3421,14 @@ pub unsafe extern "C" fn RSA_check_key(key: *const Rsa) -> c_int {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use core::ptr;
     // The PSS pair moved to its own module with D351, so the arms below name it explicitly.
     use crate::evp::pkey_ctx::{RSA_PSS_SALTLEN_AUTO, RSA_PSS_SALTLEN_DIGEST, RSA_PSS_SALTLEN_MAX};
     use crate::rsa::pss::{
         ossl_rsa_padding_add_PKCS1_PSS_mgf1, RSA_padding_add_PKCS1_PSS,
         RSA_padding_add_PKCS1_PSS_mgf1,
     };
-    use crate::runtime::err::{ERR_clear_error, ERR_get_error};
+    use crate::runtime::err::{ERR_clear_error, ERR_get_error, ERR_peek_error};
 
     /// **`RSA_METHOD`, field for field.** The numbers are `courts/layout/measure-rsa-ctx.c`'s: 120
     /// bytes with `name` 0, the four crypt entry points at 8/16/24/32, the two mod-exp members at
@@ -3659,6 +3660,106 @@ mod tests {
             unsafe { RSA_padding_check_PKCS1_type_2(out.as_mut_ptr(), 64, block.as_ptr(), 16, 16) },
             -1
         );
+    }
+
+    /// **The implicit-rejection check answers a bad padding instead of refusing it.**
+    ///
+    /// `ossl_rsa_padding_check_PKCS1_type_2` is the check the `RSA_PKCS1_PADDING` decrypt path
+    /// uses; a malformed block answers a synthetic message -- a pure function of the KDK and the
+    /// ciphertext -- rather than `-1`, and raises nothing, so a caller cannot tell bad padding
+    /// from good through the return value or the error queue. The refusing form is the
+    /// *external-key* arm (`RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING`), exercised here against the
+    /// same block; the two policies are distinct by design, not inconsistent.
+    #[test]
+    fn the_implicit_rejection_answers_instead_of_refusing() {
+        let mut good = [0u8; 32];
+        let mut out = [0u8; 32];
+        let kdk = [0x5au8; 32];
+        let other_kdk = [0xa5u8; 32];
+
+        // SAFETY: every buffer is its own length and every call passes the block and KDK it reads.
+        unsafe {
+            assert_eq!(
+                RSA_padding_add_PKCS1_type_2(good.as_mut_ptr(), 32, MSG.as_ptr(), 8),
+                1
+            );
+
+            ERR_clear_error();
+            let r_good = ossl_rsa_padding_check_PKCS1_type_2(
+                ptr::null_mut(),
+                out.as_mut_ptr(),
+                32,
+                good.as_ptr(),
+                32,
+                32,
+                kdk.as_ptr().cast_mut(),
+            );
+            assert_eq!(r_good, 8, "a good block yields the real message length");
+            assert_eq!(&out[..8], &MSG[..8], "and the real message");
+            assert_eq!(ERR_peek_error(), 0, "with no error left on the queue");
+
+            // The same block with the block-type octet changed: no refusal, no raise.
+            let mut bad = good;
+            bad[1] = 3;
+            let mut synth_a = [0u8; 32];
+            ERR_clear_error();
+            let r_bad = ossl_rsa_padding_check_PKCS1_type_2(
+                ptr::null_mut(),
+                synth_a.as_mut_ptr(),
+                32,
+                bad.as_ptr(),
+                32,
+                32,
+                kdk.as_ptr().cast_mut(),
+            );
+            assert!(r_bad > 0, "implicit rejection answers a synthetic message");
+            assert_eq!(
+                ERR_peek_error(),
+                0,
+                "and raises nothing on the bad path either"
+            );
+            assert_ne!(
+                &synth_a[..r_bad as usize],
+                &out[..r_good as usize],
+                "the synthetic message is not the real one"
+            );
+
+            // A function of the KDK and the ciphertext: the same pair is deterministic, and a
+            // different key answers different bytes.
+            let mut synth_b = [0u8; 32];
+            let r_bad_b = ossl_rsa_padding_check_PKCS1_type_2(
+                ptr::null_mut(),
+                synth_b.as_mut_ptr(),
+                32,
+                bad.as_ptr(),
+                32,
+                32,
+                kdk.as_ptr().cast_mut(),
+            );
+            assert_eq!(r_bad, r_bad_b);
+            assert_eq!(&synth_a[..r_bad as usize], &synth_b[..r_bad_b as usize]);
+
+            let mut synth_c = [0u8; 32];
+            let r_bad_c = ossl_rsa_padding_check_PKCS1_type_2(
+                ptr::null_mut(),
+                synth_c.as_mut_ptr(),
+                32,
+                bad.as_ptr(),
+                32,
+                32,
+                other_kdk.as_ptr().cast_mut(),
+            );
+            assert_ne!(&synth_a[..r_bad as usize], &synth_c[..r_bad_c as usize]);
+
+            // The refusing form, which the external-key arm selects, answers -1 for the same
+            // block and leaves its error on the queue.
+            ERR_clear_error();
+            assert_eq!(
+                RSA_padding_check_PKCS1_type_2(out.as_mut_ptr(), 32, bad.as_ptr(), 32, 32),
+                -1
+            );
+            assert_ne!(ERR_peek_error(), 0);
+        }
     }
 
     /// **The OAEP adds round-trip through the already-landed OAEP checks.**
