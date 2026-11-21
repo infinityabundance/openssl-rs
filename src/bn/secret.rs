@@ -228,7 +228,9 @@ impl<T: SecretElement> SecretBuf<T> {
         if !drop_probe::is_armed(self.inner.as_ptr() as usize) {
             return 0;
         }
-        self.nonzero_bytes()
+        // Only the initialised slice is readable before the wipe: spare capacity
+        // may still be uninitialised, and reading it would be undefined.
+        self.nonzero_bytes_initialised()
     }
 
     /// Read the storage after `Drop`'s cleanse and record whether any byte
@@ -239,18 +241,36 @@ impl<T: SecretElement> SecretBuf<T> {
         if !drop_probe::is_armed(addr) {
             return;
         }
-        drop_probe::record(addr, nonzero_before, self.nonzero_bytes());
+        drop_probe::record(addr, nonzero_before, self.nonzero_bytes_after_cleanse());
     }
 
-    /// Count the non-zero bytes across the allocation the vector owns.
+    /// Count the non-zero bytes across the initialised slice, `[..len()]`.
     ///
-    /// # Safety-relevant precondition
+    /// This is the read used **before** the wipe. Every byte of the slice is
+    /// initialised by construction, whereas spare capacity may not be; the
+    /// whole-capacity read is reserved for after the wipe has written zeros.
+    fn nonzero_bytes_initialised(&self) -> usize {
+        let Some(bytes) = self.inner.len().checked_mul(core::mem::size_of::<T>()) else {
+            return 0;
+        };
+        let base = self.inner.as_ptr().cast::<u8>();
+        let mut nonzero = 0usize;
+        for i in 0..bytes {
+            // SAFETY: `i < len * size_of`, which covers only the initialised
+            // slice of the live allocation.
+            if unsafe { base.add(i).read_volatile() } != 0 {
+                nonzero += 1;
+            }
+        }
+        nonzero
+    }
+
+    /// Count the non-zero bytes across the whole allocation the vector owns.
     ///
-    /// The caller reads every byte of the allocation, so every one of them must
-    /// be initialised. The probe is only armed by tests that stage (or stage then
-    /// shrink, after initialising all capacity slots) the buffer, which is the
-    /// same precondition the release observation already relied on.
-    fn nonzero_bytes(&self) -> usize {
+    /// Only called after `cleanse_now` has written zeros to every capacity slot,
+    /// so the full-capacity read is of initialised bytes even when spare capacity
+    /// was never written by the caller.
+    fn nonzero_bytes_after_cleanse(&self) -> usize {
         let Some(bytes) = self.inner.capacity().checked_mul(core::mem::size_of::<T>()) else {
             return 0;
         };

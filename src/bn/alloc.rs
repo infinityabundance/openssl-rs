@@ -69,31 +69,36 @@ pub(crate) fn try_reserve<T>(v: &mut Vec<T>, additional: usize) -> bool {
     v.try_reserve(additional).is_ok()
 }
 
-/// Box `value` on the heap, or `None` when the allocator refuses.
+/// Box `value` on the heap, or give it back when the allocator refuses.
 ///
 /// This is the fallible form of `Box::new` for the `BIGNUM`, `BN_CTX` and
 /// `BN_MONT_CTX` objects the secret-bearing entry points allocate. A `Box` built
 /// this way is released with `Box::from_raw` exactly like one built with
 /// `Box::new`, because both use the `Global` allocator. The layout is a single
 /// `T`, so no size arithmetic can overflow.
+///
+/// On failure the value is returned rather than dropped here. A value such as a
+/// `BIGNUM` owns a limb vector that may contain secret material, and dropping it
+/// normally would free that block uncleansed; the caller must cleanse the value
+/// before releasing it.
 #[track_caller]
-pub(crate) fn try_boxed<T>(value: T) -> Option<*mut T> {
+pub(crate) fn try_boxed<T>(value: T) -> Result<*mut T, T> {
     #[cfg(test)]
     if test_fail::should_fail(core::panic::Location::caller()) {
-        return None;
+        return Err(value);
     }
     let layout = core::alloc::Layout::new::<T>();
     // SAFETY: `layout` has non-zero size (`T` is a struct, never a ZST here) and
     // is correctly aligned, which are `alloc`'s preconditions. A null result is
-    // reported as `None` instead of aborting.
+    // reported as the refused value instead of aborting.
     let p = unsafe { std::alloc::alloc(layout) }.cast::<T>();
     if p.is_null() {
-        return None;
+        return Err(value);
     }
     // SAFETY: `p` is a fresh, sufficiently large, correctly aligned allocation for
     // one `T`, and `value` has not been moved or dropped.
     unsafe { p.write(value) };
-    Some(p)
+    Ok(p)
 }
 
 /// Test-only allocation-failure seam.
