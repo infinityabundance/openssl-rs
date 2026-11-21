@@ -118,6 +118,22 @@ it is explained, "no unexplained symbol drift" in the CI invariant list (§6) mu
 be read as *no dynamic-export drift*; a binary reproduction claim would need a
 dedicated path-remapping and codegen-partitioning investigation first.
 
+### Update: compiled binaries are now byte-reproducible under the current toolchain
+
+That investigation has been done, and the 0.0.40/0.0.41 differential does not
+reproduce on rustc 1.98.1: `.symtab` is byte-identical across builds, including
+the 9 403 local `anon.*.llvm.*` symbols whose naming the recorded signature
+implied. Two builds from clean state in different directories, with different
+locale, `TMPDIR` and hostname, and with `SOURCE_DATE_EPOCH` set, produced a
+byte-identical `.a` and a byte-identical `.so`; the distribution DSO rebuilds to
+the committed digest exactly.
+
+The recipe is `forensics/tools/build_reproducibility.sh`. What it establishes is
+scoped: one host, one image, rustc 1.98.1 / cc 12.2.0 / ar 2.40, and equality per
+recipe. It does not establish reproducibility on other infrastructure, and it
+does not make the historical 0.0.41 claim wrong — that claim was about a
+different toolchain and remains unexplained for that toolchain.
+
 ## 3. What a run record contains
 
 Every evidence run records:
