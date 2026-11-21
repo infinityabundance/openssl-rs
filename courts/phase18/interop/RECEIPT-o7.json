@@ -1,0 +1,73 @@
+{
+ "schema": "openssl-rs/interop-matrix-receipt/1",
+ "item": "O7 of docs/ETP-TODO.md",
+ "generated": "2026-11-21T19:16:08Z",
+ "cells": {
+  "AA": {
+   "cell": "AA",
+   "client": "A",
+   "server": "A",
+   "expected": "/home/user/openssl-rs/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 ",
+   "mapped": "/home/user/openssl-rs/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 ",
+   "status": "ok"
+  },
+  "BB": {
+   "cell": "BB",
+   "client": "B",
+   "server": "B",
+   "expected": "/home/user/openssl-rs/court/tmp/o4/b-prefix/lib/libcrypto.so.3 ",
+   "mapped": "/home/user/openssl-rs/court/tmp/o4/b-prefix/lib/libcrypto.so.3 ",
+   "status": "ok"
+  },
+  "BA": {
+   "cell": "BA",
+   "client": "B",
+   "server": "A",
+   "expected": "/home/user/openssl-rs/court/tmp/o4/b-prefix/lib/libcrypto.so.3 /home/user/openssl-rs/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 ",
+   "mapped": "/home/user/openssl-rs/court/tmp/o4/b-prefix/lib/libcrypto.so.3 /home/user/openssl-rs/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 ",
+   "status": "ok"
+  },
+  "AB": {
+   "cell": "AB",
+   "client": "A",
+   "server": "B",
+   "expected": "/home/user/openssl-rs/court/tmp/o4/b-prefix/lib/libcrypto.so.3 /home/user/openssl-rs/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 ",
+   "mapped": "/home/user/openssl-rs/court/tmp/o4/b-prefix/lib/libcrypto.so.3 /home/user/openssl-rs/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 ",
+   "status": "ok"
+  }
+ },
+ "failure_sets": {
+  "AA": [
+   "sftp commands",
+   "dropbear kex"
+  ],
+  "BB": [
+   "sftp commands",
+   "dropbear kex"
+  ],
+  "BA": [
+   "sftp commands",
+   "dropbear kex"
+  ],
+  "AB": [
+   "sftp commands",
+   "dropbear kex"
+  ]
+ },
+ "note": "AA and BB are the O6 runs; BA and AB are courts/phase18/interop/cell.sh runs whose per-cell receipts are RECEIPT-o7-<cell>.json. All four produce the same two upstream-common failures and no other.",
+ "client_binaries": [
+  "ssh",
+  "sftp",
+  "scp",
+  "ssh-agent",
+  "ssh-add",
+  "ssh-keyscan",
+  "ssh-keygen"
+ ],
+ "server_binaries": [
+  "sshd",
+  "sshd-session",
+  "sftp-server",
+  "ssh-keygen"
+ ]
+}
