@@ -25,9 +25,11 @@
 //! zeroed before the release.
 //!
 //! This is containment, not an ownership reconstruction: the buffer contents
-//! are still readable by the holder, and the infallible allocations in
-//! `limbs::rem`/`limbs::mul` that feed the ladder are untouched. The residual
-//! `OBL-BN-ALLOCATOR` obligation remains open.
+//! are still readable by the holder. The constant-time ladder's arithmetic and
+//! scratch allocations now use the fallible helpers in [`crate::bn::alloc`], but
+//! the copies made by [`crate::bn::bignum::parts`] on every entry-point argument
+//! are still infallible `Vec` clones, so the residual `OBL-BN-ALLOCATOR`
+//! obligation remains open.
 
 use core::ops::{Deref, DerefMut};
 
@@ -80,10 +82,7 @@ impl<T: SecretElement> SecretBuf<T> {
     /// A zero-filled buffer of `n` elements, or `None` when `n` cannot be
     /// reserved. Allocation failure is reported, never aborted.
     pub(crate) fn try_zeroed(n: usize) -> Option<Self> {
-        let mut inner: Vec<T> = Vec::new();
-        inner.try_reserve_exact(n).ok()?;
-        inner.resize(n, T::ZERO);
-        Some(Self { inner })
+        crate::bn::alloc::try_zeroed(n, T::ZERO).map(Self::from_vec)
     }
 
     /// The release sequence: volatile-zero the whole allocation.

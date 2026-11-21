@@ -195,13 +195,25 @@ pub(crate) fn sub_word(a: &[Limb], w: Limb) -> Option<Vec<Limb>> {
 
 /// `a * b`.
 ///
-/// Schoolbook. Intermediates are `u128` and each column accumulator holds at most
-/// `2^128-1`, so nothing here can overflow.
+/// Infallible wrapper for the variable-time public path. Allocation failure is a
+/// panic here, which the C ABI boundary reports as an ordinary failure; the
+/// constant-time path calls [`mul_fallible`] instead.
+#[allow(clippy::expect_used)]
 pub(crate) fn mul(a: &[Limb], b: &[Limb]) -> Vec<Limb> {
+    mul_fallible(a, b).expect("limbs::mul: allocation failed")
+}
+
+/// `a * b`, or `None` when the product cannot be allocated.
+///
+/// Schoolbook. Intermediates are `u128` and each column accumulator holds at most
+/// `2^128-1`, so nothing here can overflow. The output length is computed with
+/// `checked_add` before it is used as an allocation size.
+pub(crate) fn mul_fallible(a: &[Limb], b: &[Limb]) -> Option<Vec<Limb>> {
     if a.is_empty() || b.is_empty() {
-        return Vec::new();
+        return Some(Vec::new());
     }
-    let mut out = vec![0u64; a.len() + b.len()];
+    let len = a.len().checked_add(b.len())?;
+    let mut out = crate::bn::alloc::try_zeroed(len, 0u64)?;
     for (i, &x) in a.iter().enumerate() {
         if x == 0 {
             continue;
@@ -221,7 +233,7 @@ pub(crate) fn mul(a: &[Limb], b: &[Limb]) -> Vec<Limb> {
         }
     }
     normalise(&mut out);
-    out
+    Some(out)
 }
 
 /// `a * w` for a single limb.
@@ -230,48 +242,67 @@ pub(crate) fn mul_word(a: &[Limb], w: Limb) -> Vec<Limb> {
 }
 
 /// `a << bits`.
+///
+/// Infallible wrapper for the variable-time public path; the constant-time path
+/// uses [`shl_fallible`].
+#[allow(clippy::expect_used)]
 pub(crate) fn shl(a: &[Limb], bits: usize) -> Vec<Limb> {
+    shl_fallible(a, bits).expect("limbs::shl: allocation failed")
+}
+
+/// `a << bits`, or `None` when the result cannot be allocated.
+pub(crate) fn shl_fallible(a: &[Limb], bits: usize) -> Option<Vec<Limb>> {
     if a.is_empty() {
-        return Vec::new();
+        return Some(Vec::new());
     }
     let (whole, part) = (bits / 64, bits % 64);
-    let mut out = vec![0u64; whole];
     if part == 0 {
-        out.extend_from_slice(a);
+        let len = whole.checked_add(a.len())?;
+        let mut out = crate::bn::alloc::try_zeroed(len, 0u64)?;
+        out[whole..].copy_from_slice(a);
         normalise(&mut out);
-        return out;
+        return Some(out);
     }
+    let len = whole.checked_add(a.len())?.checked_add(1)?;
+    let mut out = crate::bn::alloc::try_zeroed(len, 0u64)?;
     let mut carry = 0u64;
-    for &l in a {
-        out.push((l << part) | carry);
+    for (k, &l) in a.iter().enumerate() {
+        out[whole + k] = (l << part) | carry;
         carry = l >> (64 - part);
     }
-    if carry != 0 {
-        out.push(carry);
-    }
+    out[whole + a.len()] = carry;
     normalise(&mut out);
-    out
+    Some(out)
 }
 
 /// `a >> bits` — a floor division by a power of two on the magnitude.
+///
+/// Infallible wrapper for the variable-time public path; the constant-time path
+/// uses [`shr_fallible`].
+#[allow(clippy::expect_used)]
 pub(crate) fn shr(a: &[Limb], bits: usize) -> Vec<Limb> {
+    shr_fallible(a, bits).expect("limbs::shr: allocation failed")
+}
+
+/// `a >> bits`, or `None` when the result cannot be allocated.
+pub(crate) fn shr_fallible(a: &[Limb], bits: usize) -> Option<Vec<Limb>> {
     let (whole, part) = (bits / 64, bits % 64);
     if whole >= a.len() {
-        return Vec::new();
+        return Some(Vec::new());
     }
     let src = &a[whole..];
-    let mut out = Vec::with_capacity(src.len());
     if part == 0 {
-        out.extend_from_slice(src);
+        let mut out = crate::bn::alloc::try_clone_slice(src)?;
         normalise(&mut out);
-        return out;
+        return Some(out);
     }
+    let mut out = crate::bn::alloc::try_zeroed(src.len(), 0u64)?;
     for i in 0..src.len() {
         let hi = if i + 1 < src.len() { src[i + 1] } else { 0 };
-        out.push((src[i] >> part) | (hi << (64 - part)));
+        out[i] = (src[i] >> part) | (hi << (64 - part));
     }
     normalise(&mut out);
-    out
+    Some(out)
 }
 
 /// `a & b`, limbwise.
@@ -287,19 +318,32 @@ pub(crate) fn low_u64(v: &[Limb]) -> u64 {
 }
 
 /// A single limb as a value.
+#[allow(clippy::expect_used)]
 pub(crate) fn from_u64(w: u64) -> Vec<Limb> {
+    from_u64_fallible(w).expect("limbs::from_u64: allocation failed")
+}
+
+/// A single limb as a value, or `None` when the one-element allocation fails.
+pub(crate) fn from_u64_fallible(w: u64) -> Option<Vec<Limb>> {
     if w == 0 {
-        Vec::new()
+        Some(Vec::new())
     } else {
-        vec![w]
+        crate::bn::alloc::try_zeroed(1, w)
     }
 }
 
 /// Divide by a single limb, returning `(quotient, remainder)`.
 ///
-/// The caller must not pass zero.
+/// The caller must not pass zero. Infallible wrapper for the variable-time
+/// public path; the constant-time path uses [`div_rem_small_fallible`].
+#[allow(clippy::expect_used)]
 pub(crate) fn div_rem_small(a: &[Limb], d: Limb) -> (Vec<Limb>, Limb) {
-    let mut out = vec![0u64; a.len()];
+    div_rem_small_fallible(a, d).expect("limbs::div_rem_small: allocation failed")
+}
+
+/// Divide by a single limb, or `None` when the quotient cannot be allocated.
+pub(crate) fn div_rem_small_fallible(a: &[Limb], d: Limb) -> Option<(Vec<Limb>, Limb)> {
+    let mut out = crate::bn::alloc::try_zeroed(a.len(), 0u64)?;
     let mut rem = 0u128;
     for i in (0..a.len()).rev() {
         let cur = (rem << 64) | (a[i] as u128);
@@ -307,16 +351,26 @@ pub(crate) fn div_rem_small(a: &[Limb], d: Limb) -> (Vec<Limb>, Limb) {
         rem = cur % (d as u128);
     }
     normalise(&mut out);
-    (out, rem as u64)
+    Some((out, rem as u64))
 }
 
 /// `a mod m`, for a non-zero `m`.
+///
+/// Infallible wrapper for the variable-time public path; the constant-time path
+/// uses [`rem_fallible`].
+#[allow(clippy::expect_used)]
 pub(crate) fn rem(a: &[Limb], m: &[Limb]) -> Vec<Limb> {
+    rem_fallible(a, m).expect("limbs::rem: allocation failed")
+}
+
+/// `a mod m`, for a non-zero `m`, or `None` when the reduction cannot be
+/// allocated.
+pub(crate) fn rem_fallible(a: &[Limb], m: &[Limb]) -> Option<Vec<Limb>> {
     if m.len() == 1 {
-        let (_, r) = div_rem_small(a, m[0]);
-        return from_u64(r);
+        let (_, r) = div_rem_small_fallible(a, m[0])?;
+        return from_u64_fallible(r);
     }
-    div_rem(a, m).1
+    Some(div_rem_fallible(a, m)?.1)
 }
 
 /// `(a, b) -> (quotient, remainder)`. `b` must be non-zero.
@@ -326,33 +380,42 @@ pub(crate) fn rem(a: &[Limb], m: &[Limb]) -> Vec<Limb> {
 /// because the classic failure of this algorithm is a quotient-digit estimate that
 /// is occasionally too large, and the add-back in `D6` is what makes the estimate
 /// safe rather than approximate.
+/// Infallible wrapper for the variable-time public path; the constant-time path
+/// uses [`div_rem_fallible`].
+#[allow(clippy::expect_used)]
 pub(crate) fn div_rem(a: &[Limb], b: &[Limb]) -> (Vec<Limb>, Vec<Limb>) {
+    div_rem_fallible(a, b).expect("limbs::div_rem: allocation failed")
+}
+
+/// `(a, b) -> (quotient, remainder)`, or `None` when an intermediate cannot be
+/// allocated. `b` must be non-zero.
+pub(crate) fn div_rem_fallible(a: &[Limb], b: &[Limb]) -> Option<(Vec<Limb>, Vec<Limb>)> {
     assert!(!b.is_empty(), "division by zero");
     if cmp(a, b) == core::cmp::Ordering::Less {
-        return (Vec::new(), a.to_vec());
+        return Some((Vec::new(), crate::bn::alloc::try_clone_slice(a)?));
     }
     if b.len() == 1 {
-        let (q, r) = div_rem_small(a, b[0]);
-        return (q, from_u64(r));
+        let (q, r) = div_rem_small_fallible(a, b[0])?;
+        return Some((q, from_u64_fallible(r)?));
     }
 
     // D1: normalise so the divisor's top limb has its high bit set.
     let shift = b[b.len() - 1].leading_zeros() as usize;
     let u = if shift == 0 {
-        a.to_vec()
+        crate::bn::alloc::try_clone_slice(a)?
     } else {
-        shl(a, shift)
+        shl_fallible(a, shift)?
     };
     let v = if shift == 0 {
-        b.to_vec()
+        crate::bn::alloc::try_clone_slice(b)?
     } else {
-        shl(b, shift)
+        shl_fallible(b, shift)?
     };
     let n = v.len();
     let m = u.len() - n;
-    let mut un = u.clone();
-    un.push(0);
-    let mut q = vec![0u64; m + 1];
+    let mut un = crate::bn::alloc::try_zeroed(u.len().checked_add(1)?, 0u64)?;
+    un[..u.len()].copy_from_slice(&u);
+    let mut q = crate::bn::alloc::try_zeroed(m.checked_add(1)?, 0u64)?;
     let vtop = v[n - 1] as u128;
     let vnext = v[n - 2] as u128;
 
@@ -395,13 +458,13 @@ pub(crate) fn div_rem(a: &[Limb], b: &[Limb]) -> (Vec<Limb>, Vec<Limb>) {
     }
 
     // D8: the remainder is the shifted-back low limbs.
-    let mut r: Vec<Limb> = un[..n].to_vec();
+    let mut r = crate::bn::alloc::try_clone_slice(&un[..n])?;
     if shift != 0 {
-        r = shr(&r, shift);
+        r = shr_fallible(&r, shift)?;
     }
     normalise(&mut r);
     normalise(&mut q);
-    (q, r)
+    Some((q, r))
 }
 
 /// Greatest common divisor, by the binary method.

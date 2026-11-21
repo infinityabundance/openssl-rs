@@ -32,6 +32,9 @@
 //! records the difference, and `forensics/tools/phase5_obligations.py` reports
 //! which exports remain open.
 
+// Fallible zeroed allocation shared by the constant-time ladder's scratch and
+// helpers. Crate-internal; defines no export, so no ledger row moves.
+pub(crate) mod alloc;
 pub mod arith;
 pub mod bignum;
 pub mod blinding;

@@ -94,19 +94,7 @@ Rules that bind this queue (from AGENTS.md, extended by the ETP mandate):
 
 ---
 
-## D. Curl consumer — open work
-
-| id | item | status |
-|---|---|---|
-| C1 | Close or honestly hold the 27 named element-7 refusals (`http` 4 local-copy sites; `provider/rand`, `confmod`, `evp_pbe`, `encoder_meth`, `rand_lib`, PEM pair, `passphrase`, `store_result`, `obj`, `stack`, `ui_read`, `check_crl`, `dh/check`) | IN_PROGRESS |
-| C2 | Reconcile the running site count against the named rows (the ±1/±2 discrepancies recorded in the batch notes) | TODO |
-| C3 | One frozen census → freeze → closure run at a single identity after the tool changes | TODO |
-| C4 | Independent adversarial review of the ~9,600 new lines in `consumer_closure.py` (CFG dominance, frame-slot scans, DSO-local copies, callback writers) | TODO |
-| C5 | Curl L7 replay at the final candidate; element-7 PASS; graduation record; counter 2/33 only if the safety argument survives independent review | TODO |
-
----
-
-## E. ETP — assurance constitution and claim integrity
+## D. ETP — assurance constitution and claim integrity
 
 | id | item | status |
 |---|---|---|
@@ -136,7 +124,7 @@ Rules that bind this queue (from AGENTS.md, extended by the ETP mandate):
 
 ---
 
-## F. ETP Addendum A — SARIF / DSSE / in-toto / SLSA / Sigstore
+## E. ETP Addendum A — SARIF / DSSE / in-toto / SLSA / Sigstore
 
 | id | item | status |
 |---|---|---|
@@ -171,6 +159,18 @@ Rules that bind this queue (from AGENTS.md, extended by the ETP mandate):
 
 ---
 
+## F. Curl consumer — open work
+
+| id | item | status |
+|---|---|---|
+| C1 | Close or honestly hold the 27 named element-7 refusals (`http` 4 local-copy sites; `provider/rand`, `confmod`, `evp_pbe`, `encoder_meth`, `rand_lib`, PEM pair, `passphrase`, `store_result`, `obj`, `stack`, `ui_read`, `check_crl`, `dh/check`) | IN_PROGRESS |
+| C2 | Reconcile the running site count against the named rows (the ±1/±2 discrepancies recorded in the batch notes) | TODO |
+| C3 | One frozen census → freeze → closure run at a single identity after the tool changes | TODO |
+| C4 | Independent adversarial review of the ~9,600 new lines in `consumer_closure.py` (CFG dominance, frame-slot scans, DSO-local copies, callback writers) | TODO |
+| C5 | Curl L7 replay at the final candidate; element-7 PASS; graduation record; counter 2/33 only if the safety argument survives independent review | TODO |
+
+---
+
 ## G. Execution sequence (fixed)
 
 Work proceeds strictly in item order. No choosing, no reordering, no skipping an
@@ -181,9 +181,9 @@ receipt) before the next begins, and each is pushed before the next starts.
 |---|---|---|
 | 1 | B — timing safety | `T1`, `T2`, `T3`, `T4`, `T5`, … `T22` |
 | 2 | C — OpenSSH interoperability | `O1`, `O2`, … `O12` |
-| 3 | E — ETP constitution and claim integrity | `ETP-0`, `ETP-1`, … `ETP-T15` |
-| 4 | F — SARIF / DSSE addendum | `A0`, `A1`, … `A27` |
-| 5 | D — curl | `C1` … `C5`, **last** |
+| 3 | D — ETP constitution and claim integrity | `ETP-0`, `ETP-1`, … `ETP-T15` |
+| 4 | E — SARIF / DSSE addendum | `A0`, `A1`, … `A27` |
+| 5 | F — curl consumer | `C1` … `C5`, **last** |
 
 An item that is `BLOCKED` is recorded with its blocker and the next item in the
 same section begins; it is revisited when the blocker changes. Nothing is
