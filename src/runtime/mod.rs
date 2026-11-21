@@ -23,6 +23,9 @@
 //! else, and `docs/PARITY_MODEL.md` for what a symbol must prove before it stops
 //! being `SCAFFOLDED`.
 
+// Fallible `Vec` reservation with an explicit `None` on refusal, shared by the
+// secret-bearing BN paths and `runtime::secret`'s heap owner.
+pub(crate) mod alloc;
 pub mod bio;
 pub mod bsearch;
 pub mod buffer;
