@@ -61,3 +61,7 @@ pub mod primes;
 pub mod rand;
 pub mod recp;
 pub(crate) mod rsa_fips186_4;
+// Secret-bearing heap scratch for the constant-time exponentiation ladder: it
+// cleanses on `Drop`, so an early `?` return cannot free staged secret material
+// uncleansed. Crate-internal; defines no export, so no ledger row moves.
+pub(crate) mod secret;
