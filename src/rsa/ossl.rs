@@ -100,8 +100,8 @@ use crate::bn::arith::{
     BN_add, BN_cmp, BN_div, BN_mod_add, BN_mod_inverse, BN_mul, BN_sub, BN_ucmp,
 };
 use crate::bn::bignum::{
-    BN_bin2bn, BN_bn2binpad, BN_free, BN_is_negative, BN_is_zero, BN_new, BN_num_bits,
-    BN_set_flags, BN_value_one, BN_with_flags, BigNum,
+    bn_num_bits_consttime, BN_bin2bn, BN_bn2binpad, BN_free, BN_is_negative, BN_is_zero, BN_new,
+    BN_num_bits, BN_set_flags, BN_value_one, BN_with_flags, BigNum,
 };
 use crate::bn::blinding::{
     BN_BLINDING_convert_ex, BN_BLINDING_create_param, BN_BLINDING_free, BN_BLINDING_invert_ex,
@@ -1769,7 +1769,7 @@ unsafe extern "C" fn rsa_ossl_mod_exp(
                     // helper that says why the comparison is meaningful.
                     let smooth_now = is_mont_bn_mod_exp((*rsa).meth)
                         && ex_primes == 0
-                        && BN_num_bits((*rsa).q) == BN_num_bits((*rsa).p);
+                        && bn_num_bits_consttime((*rsa).q) == bn_num_bits_consttime((*rsa).p);
                     if smooth_now {
                         smooth = 1;
                     }
@@ -1924,7 +1924,12 @@ unsafe extern "C" fn rsa_ossl_mod_exp(
             }
         }
 
-        if !failed {
+        // Upstream's smooth arm ends with `goto tail`: the combine above is the whole
+        // CRT computation for that path, so the generic per-prime exponentiation and
+        // combine below are for the non-smooth path only. Without this gate the smooth
+        // result was overwritten and the tail verification would fall back to the
+        // unblinded `d` exponentiation on every private operation.
+        if !failed && smooth == 0 {
             // SAFETY: `BN_new` takes no pointers.
             let dmp1 = BN_new();
             if dmp1.is_null() {
@@ -2009,7 +2014,7 @@ unsafe extern "C" fn rsa_ossl_mod_exp(
             }
         }
 
-        if !failed {
+        if !failed && smooth == 0 {
             let combine = 'combine: {
                 if BN_sub(r0, r0, m1) == 0 {
                     break 'combine false;
@@ -2527,6 +2532,122 @@ mod tests {
             assert_ne!(kdk_a, kdk_b);
 
             BN_free(d);
+        }
+    }
+
+    /// `VALGRIND_MAKE_MEM_UNDEFINED` as the amd64 client request.
+    ///
+    /// Same sequence as `bn::arith`'s test helper: `valgrind.h`'s preamble and
+    /// an `xchgq rbx, rbx`, which valgrind replaces during translation. Outside
+    /// valgrind it is a few harmless register rotations.
+    #[cfg(target_arch = "x86_64")]
+    unsafe fn valgrind_make_mem_undefined(addr: *mut u8, len: usize) {
+        let args: [usize; 6] = [0x4D43_0001, addr as usize, len, 0, 0, 0];
+        let _result: usize;
+        // SAFETY: the sequence is the documented valgrind client-request
+        // pattern; `args` lives for the duration of the asm and is only read.
+        unsafe {
+            core::arch::asm!(
+                "rol rdi, 3",
+                "rol rdi, 13",
+                "rol rdi, 61",
+                "rol rdi, 51",
+                "xchg rbx, rbx",
+                in("rax") args.as_ptr(),
+                inout("rdx") 0usize => _result,
+                out("rdi") _,
+                options(nostack),
+            );
+        }
+    }
+
+    /// ctgrind case for T6: the RSA CRT moduli are secret (only their width is
+    /// public), so the Montgomery precomputation `rsa_ossl_mod_exp` runs on
+    /// `p` and `q` must not branch on, index memory by, or size a loop from
+    /// their *contents*.
+    ///
+    /// The key is generated (so no constant is embedded), its prime Montgomery
+    /// caches are cleared because `RSA_generate_key_ex`'s pairwise test already
+    /// built them, and then the limb storage of `rsa->p` and `rsa->q` is marked
+    /// undefined. Only the modulus contents are tainted: `d`, `dmp1`, `dmq1`,
+    /// `iqmp` and the message stay defined, which is what distinguishes this
+    /// case from the exponent-only runs. `RSA_FLAG_NO_BLINDING` keeps the DRBG
+    /// out of the workload; the CRT path is the same either way.
+    ///
+    /// Gate: `valgrind --tool=memcheck --error-exitcode=99 <test-bin> --exact
+    /// rsa::ossl::tests::ctgrind_rsa_crt_secret_moduli --nocapture`.
+    /// `CTGRIND_CONTROL=1` adds a deliberate branch on a marked modulus limb,
+    /// which memcheck must report (negative control).
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn ctgrind_rsa_crt_secret_moduli() {
+        use crate::evp::pkey_ctx::RSA_NO_PADDING;
+        use crate::rsa::gen::RSA_generate_key_ex;
+        use crate::rsa::object::{
+            RSA_free, RSA_get0_factors, RSA_new, RSA_private_encrypt, RSA_size,
+        };
+
+        // SAFETY: every pointer below is a fresh object this test owns, null-
+        // checked, and every length is the buffer's own.
+        unsafe {
+            let e = BN_new();
+            assert!(!e.is_null());
+            assert_eq!(BN_set_word(e, 65537), 1);
+            let rsa = RSA_new();
+            assert!(!rsa.is_null());
+            assert_eq!(RSA_generate_key_ex(rsa, 2048, e, core::ptr::null_mut()), 1);
+
+            // The keygen pairwise test runs a private operation, which caches a
+            // Montgomery context for each prime. Clear them so the
+            // precomputation we want to watch runs after the taint is applied.
+            BN_MONT_CTX_free((*rsa)._method_mod_p);
+            (*rsa)._method_mod_p = ptr::null_mut();
+            BN_MONT_CTX_free((*rsa)._method_mod_q);
+            (*rsa)._method_mod_q = ptr::null_mut();
+            (*rsa).flags |= RSA_FLAG_NO_BLINDING;
+
+            let mut p: *const BigNum = ptr::null();
+            let mut q: *const BigNum = ptr::null();
+            RSA_get0_factors(rsa, &mut p, &mut q);
+            assert!(!p.is_null() && !q.is_null());
+            assert_eq!(BN_num_bits(p), 1024);
+            assert_eq!(BN_num_bits(q), 1024);
+
+            // Taint the modulus *contents* only.
+            for m in [p, q] {
+                let limbs = &(*m).d;
+                valgrind_make_mem_undefined(limbs.as_ptr() as *mut u8, limbs.len() * 8);
+            }
+            if std::env::var_os("CTGRIND_CONTROL").is_some() {
+                // Negative control: memcheck must flag this branch on a marked
+                // modulus limb.
+                let mut acc = 0u64;
+                for &limb in &(*p).d {
+                    if limb & 1 == 1 {
+                        acc += 1;
+                    }
+                }
+                assert!(acc > 0);
+            }
+
+            let n = RSA_size(rsa) as usize;
+            assert_eq!(n, 256);
+            let mut pt = [0u8; 256];
+            pt[255] = 0x42;
+            let mut ct = [0u8; 256];
+            assert_eq!(
+                RSA_private_encrypt(
+                    n as c_int,
+                    pt.as_ptr(),
+                    ct.as_mut_ptr(),
+                    rsa,
+                    RSA_NO_PADDING
+                ),
+                n as c_int
+            );
+
+            RSA_free(rsa);
+            BN_free(e);
         }
     }
 }
