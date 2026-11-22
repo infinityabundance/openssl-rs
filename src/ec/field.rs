@@ -16,10 +16,12 @@
 //! unwind paths — and the ladder's intermediates stop living in `BN_CTX` scratch
 //! that the context does not cleanse (AGENTS §5).
 //!
-//! The ladder step stages its four input coordinates into fixed slots, runs the
-//! authority's dataflow over those slots and writes the four outputs back into
-//! the point objects. Nothing in the per-bit path allocates, and no loop bound
-//! depends on a limb value or on a secret-derived length.
+//! The ladder's live state is the workspace. Its four coordinate slots (`r->X`,
+//! `r->Z`, `s->X`, `s->Z`) are staged once after `ec_point_ladder_pre`, mutated in
+//! place by every step and exchanged by a masked select instead of
+//! `BN_consttime_swap`, and written back into the point objects exactly once after
+//! the loop. Nothing in the per-bit path allocates, and no loop bound depends on a
+//! limb value or on a secret-derived length.
 //!
 //! ## Width source
 //!
@@ -50,13 +52,24 @@
 //!
 //! Addition, subtraction and doubling are masked selects rather than the
 //! authority's `BN_ucmp`/sign comparisons, so they do not branch on an operand
-//! value. The reduction keeps the authority's Knuth D quotient-digit estimate,
-//! which is value-dependent in the same places as `limbs::divide_fallible`; it is
-//! the reduction the pre-change path reached through `BN_nnmod`, run over
-//! public-width scratch instead of freshly allocated vectors. Staging a coordinate
-//! reads `src.get(i)` for `i in 0..n`, one residual length test per staged
-//! coordinate (the class `stage_fixed_width_exponent` records). Every later read
-//! indexes a fixed-width slot whose length is public.
+//! value.
+//!
+//! The reduction has two kernels, selected **once** from the public modulus when
+//! the scratch is built (never per operation, never from a value):
+//!
+//! - a fixed-sequence Solinas fold for P-256, whose modulus shape
+//!   `2^256 - 2^224 + 2^192 + 2^96 - 1` turns each fold into shifts, additions and
+//!   subtractions with a fixed iteration count, and finishes with masked
+//!   subtractions. It contains no division, no loop whose bound depends on a
+//!   dividend and no value-dependent add-back;
+//! - the authority's Knuth D reduction for every other modulus (P-384, P-521, and
+//!   anything else the scratch is built for). That kernel keeps the
+//!   quotient-digit estimate `limbs::divide_fallible` runs and is reachable and
+//!   tested through those widths.
+//!
+//! Staging a coordinate reads `src.get(i)` for `i in 0..n`, one residual length
+//! test per staged coordinate (the class `stage_fixed_width_exponent` records).
+//! Every later read indexes a fixed-width slot whose length is public.
 
 use crate::bn::limbs::Limb;
 use crate::runtime::secret::SecretLimbs;
@@ -115,16 +128,84 @@ impl LadderSlots {
             t6: SecretLimbs::try_zeroed(n)?,
         })
     }
+
+    /// Exchange the `r` and `s` coordinates when `c` is 1, leave them when it is 0.
+    ///
+    /// This is `EC_POINT_CSWAP`'s effect on the two X/Z pairs, written as a masked
+    /// select over the fixed-width slots instead of `BN_consttime_swap` over the
+    /// `BIGNUM` pairs. `c` is a ladder bit; the mask is `0 - c`, and every limb of
+    /// both slots is touched whatever the mask, so the work and the addresses do not
+    /// depend on it. The slot lengths are the public modulus width.
+    pub(crate) fn cswap(&mut self, c: u64) {
+        let mask = c.wrapping_neg();
+        for (a, b) in [(&mut self.rx, &mut self.sx), (&mut self.rz, &mut self.sz)] {
+            swap_masked(a, b, mask);
+        }
+    }
 }
+
+/// Exchange `a` and `b` limb-wise under a full-width `mask` (all-ones exchanges).
+fn swap_masked(a: &mut [Limb], b: &mut [Limb], mask: u64) {
+    debug_assert_eq!(a.len(), b.len());
+    for (x, y) in a.iter_mut().zip(b.iter_mut()) {
+        let t = mask & (*x ^ *y);
+        *x ^= t;
+        *y ^= t;
+    }
+}
+
+/// Which reduction kernel this scratch uses.
+///
+/// Chosen in [`FieldScratch::try_new`] from the modulus slice, i.e. from a public
+/// curve parameter, and read only as a dispatch selector thereafter. No code path
+/// selects a kernel from a limb value.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub(crate) enum Reduction {
+    /// Knuth D, as `limbs::divide_fallible` runs it. The form for every modulus
+    /// without a specialised kernel.
+    Knuth,
+    /// The fixed-sequence Solinas fold for P-256's modulus.
+    SolinasP256,
+}
+
+/// P-256's modulus, `2^256 - 2^224 + 2^192 + 2^96 - 1`, little-endian limbs.
+///
+/// The Solinas kernel is valid for exactly this value; [`FieldScratch::try_new`]
+/// compares the requested modulus against it and refuses the kernel otherwise. A
+/// test pins the constant against `BN_get0_nist_prime_256` and the P-256 group's
+/// field.
+const P256_MODULUS: [Limb; 4] = [
+    0xFFFF_FFFF_FFFF_FFFF,
+    0x0000_0000_FFFF_FFFF,
+    0x0000_0000_0000_0000,
+    0xFFFF_FFFF_0000_0001,
+];
+
+/// Fold applications before the masked correction. See
+/// [`FieldScratch::reduce_solinas_p256`] for how the count follows from the
+/// modulus' shape.
+const P256_FOLDS: usize = 9;
+
+/// Limbs in the Solinas accumulator: `2n + 1` for P-256's four-limb modulus.
+const P256_ACC: usize = 9;
+
+/// Masked subtractions of the modulus after the folds. Two suffice because each
+/// fold below the ninth brings the intermediate under `2^257`, and `2^257 < 3p`.
+const P256_SUBTRACTIONS: usize = 2;
 
 /// The modulus-width scratch every field operation of one size shares.
 ///
-/// `product` holds a schoolbook product (`2n` limbs), `acc` the division
+/// `product` holds a schoolbook product (`2n` limbs), `acc` the reduction
 /// accumulator (`2n + 1`), `divisor` the normalised modulus (`n` limbs) and
 /// `sum`/`diff` the conditional add/subtract working values (`n + 1` each).
+///
+/// `reduction` is the kernel chosen from the modulus at construction; `divisor` and
+/// `shift` are read by the Knuth kernel only, and stay allocated for every width so
+/// one scratch layout serves both kernels.
 pub(crate) struct FieldScratch {
     n: usize,
     shift: u32,
+    reduction: Reduction,
     divisor: SecretLimbs,
     product: SecretLimbs,
     acc: SecretLimbs,
@@ -135,7 +216,20 @@ pub(crate) struct FieldScratch {
 impl FieldScratch {
     /// Allocate the scratch at `md`'s public limb count, or `None` when the
     /// allocator refuses one of the buffers.
+    ///
+    /// The reduction kernel is selected here, once, from `md` itself: a public curve
+    /// parameter that no operation can change. Nothing later inspects a limb to
+    /// choose a path.
     fn try_new(md: &[Limb]) -> Option<Self> {
+        Self::try_new_with(md, reduction_for(md))
+    }
+
+    /// [`Self::try_new`] with the kernel supplied by the caller.
+    ///
+    /// The only non-test caller passes [`reduction_for`]'s answer, so the selection
+    /// point stays in one place. The test-only caller forces [`Reduction::Knuth`]
+    /// for a P-256 modulus, which is how the fallback stays exercised at that width.
+    fn try_new_with(md: &[Limb], reduction: Reduction) -> Option<Self> {
         let n = md.len();
         // A normalised modulus has a non-zero top limb; a zero one would leave the
         // widening shift undefined rather than merely wrong.
@@ -157,12 +251,26 @@ impl FieldScratch {
         Some(Self {
             n,
             shift,
+            reduction,
             divisor,
             product: SecretLimbs::try_zeroed(two_n)?,
             acc: SecretLimbs::try_zeroed(two_n.checked_add(1)?)?,
             sum: SecretLimbs::try_zeroed(wide)?,
             diff: SecretLimbs::try_zeroed(wide)?,
         })
+    }
+
+    /// The reduction kernel this scratch was built with.
+    #[cfg(test)]
+    pub(crate) fn reduction(&self) -> Reduction {
+        self.reduction
+    }
+
+    /// A scratch at the same width with the generic Knuth kernel, for the
+    /// differential test that keeps the fallback exercised at P-256's width.
+    #[cfg(test)]
+    pub(crate) fn try_new_knuth(md: &[Limb]) -> Option<Self> {
+        Self::try_new_with(md, Reduction::Knuth)
     }
 
     /// The public modulus width in limbs.
@@ -307,14 +415,88 @@ impl FieldScratch {
 
     /// Reduce `self.product` (at most `2n` limbs, zero-padded) modulo `md`.
     ///
-    /// Knuth's Algorithm D with the dividend padded to the public `2n` limbs, so
-    /// the quotient-digit count is public. The estimate and the add-back are the
-    /// same arithmetic `limbs::divide_fallible` runs; the quotient is not stored,
-    /// because no caller reads it.
+    /// The kernel was selected from the modulus when the scratch was built; the
+    /// dispatch below reads that stored selector, never a limb.
     fn reduce(&mut self, out: &mut [Limb], md: &[Limb]) {
         let n = self.n;
         debug_assert_eq!(out.len(), n);
         debug_assert_eq!(md.len(), n);
+        match self.reduction {
+            Reduction::SolinasP256 => self.reduce_solinas_p256(out, md),
+            Reduction::Knuth => self.reduce_knuth(out, md),
+        }
+    }
+
+    /// P-256's fixed-sequence Solinas reduction.
+    ///
+    /// The modulus satisfies `2^256 = 2^224 - 2^192 - 2^96 + 1 (mod p)`, so a value
+    /// `lo + hi·2^256` with `hi` four limbs is congruent to
+    /// `lo + hi·(2^224 - 2^192 - 2^96 + 1)`. One application of that identity is a
+    /// fold: `lo`, `hi`, `hi·2^224` and the two subtractions `hi·2^192` and `hi·2^96`
+    /// combined by additions and subtractions alone. `P256_FOLDS` applications suffice
+    /// because `hi·2^224 < 2^480`, so a fold leaves the working value below
+    /// `2^256 + 2^{bits(hi)+224}` and therefore shrinks the part above bit 256 by 31
+    /// bits: 256, 225, 194, 163, 132, 101, 70, 39, 8, and after the ninth fold the
+    /// value is below `2^257`. Two masked subtractions then bring it below `p`,
+    /// because `2^257 < 3p` and one subtraction of `p` leaves a value below `2p`.
+    ///
+    /// **Bounds of each fold.** `hi` is four limbs, so `hi < 2^256`, and the value the
+    /// fold forms is non-negative (`lo + hi·(2^224 - 2^192 - 2^96 + 1)` with
+    /// `2^224 > 2^192 + 2^96`) and below `2^256 + 2^480 < 2^481`. The fold's lane sums
+    /// are therefore bounded: a lane receives at most the five contributions `lo`,
+    /// `hi`, `hi·2^224`, `-hi·2^192` and `-hi·2^96`, so with `hi`, `lo < 2^256` each
+    /// lane is below `5·2^64` in magnitude. The lanes are carried in `i128` — 63 bits
+    /// of headroom — and a single carry pass per fold restores radix `2^64`. Because
+    /// the fold's total is non-negative and below `2^481`, that pass produces the
+    /// exact digits and the ninth limb stays zero.
+    ///
+    /// The lane sums make the fold's work independent of the values: no carry chain
+    /// runs between contributions, and the only dependency is the nine steps of the
+    /// carry pass, which is a public-length loop.
+    fn reduce_solinas_p256(&mut self, out: &mut [Limb], md: &[Limb]) {
+        let n = self.n;
+        debug_assert_eq!(n, 4);
+        debug_assert_eq!(md, P256_MODULUS.as_slice());
+        let mut acc = [0u64; P256_ACC];
+        acc[..2 * n].copy_from_slice(&self.product);
+
+        for _ in 0..P256_FOLDS {
+            fold_p256(&mut acc);
+        }
+
+        // `acc` is below `2^257`, so at most one of its limbs above the fourth is
+        // set; two masked subtractions are complete. The mask is all-ones when the
+        // subtraction borrowed, i.e. when `acc < p`, and the value is kept then.
+        for _ in 0..P256_SUBTRACTIONS {
+            let mut diff = [0u64; 5];
+            let mut borrow = 0u64;
+            for i in 0..n {
+                let (d, b1) = acc[i].overflowing_sub(md[i]);
+                let (d, b2) = d.overflowing_sub(borrow);
+                diff[i] = d;
+                borrow = u64::from(b1) | u64::from(b2);
+            }
+            let (d, b) = acc[n].overflowing_sub(borrow);
+            diff[n] = d;
+            let keep_mask = u64::from(b).wrapping_neg();
+            for i in 0..=n {
+                acc[i] = (acc[i] & keep_mask) | (diff[i] & !keep_mask);
+            }
+        }
+
+        // The two masked subtractions leave a residue below `p`; `acc[n]` is zero
+        // there, which the bound argument above establishes. It is not asserted: the
+        // limb is secret-derived, and a debug-profile assertion on it would be a
+        // secret-dependent branch.
+        out.copy_from_slice(&acc[..n]);
+    }
+
+    /// Knuth's Algorithm D with the dividend padded to the public `2n` limbs, so
+    /// the quotient-digit count is public. The estimate and the add-back are the
+    /// same arithmetic `limbs::divide_fallible` runs; the quotient is not stored,
+    /// because no caller reads it.
+    fn reduce_knuth(&mut self, out: &mut [Limb], md: &[Limb]) {
+        let n = self.n;
         if n < 2 {
             // A one-limb modulus: the whole product is two limbs.
             let d = md[0] as u128;
@@ -475,11 +657,81 @@ impl FieldScratch {
     }
 }
 
+/// The kernel a modulus of this shape gets.
+///
+/// The only inputs are the modulus' public limb count and limb values. P-256 is the
+/// one modulus with a specialised kernel on this profile; every other width and
+/// every other value takes the generic Knuth reduction.
+fn reduction_for(md: &[Limb]) -> Reduction {
+    if md == P256_MODULUS.as_slice() {
+        Reduction::SolinasP256
+    } else {
+        Reduction::Knuth
+    }
+}
+
+/// One P-256 fold of the nine-limb accumulator, in place.
+///
+/// Replaces `lo + hi·2^256` by `lo + hi·(2^224 - 2^192 - 2^96 + 1)`, where `lo` is
+/// limbs 0..4 and `hi` limbs 4..8. `hi·2^32` is formed once as a five-limb value, so
+/// the 224- and 96-bit shifts are whole-limb offsets from it: `hi·2^224` is that
+/// value at limb 3, `hi·2^192` is `hi` at limb 3, and `hi·2^96` is that value at
+/// limb 1.
+///
+/// The five contributions are accumulated into `i128` lanes and carried once. A lane
+/// receives at most five contributions each below `2^64` in magnitude, so no lane can
+/// overflow and no carry chain runs between contributions; the single carry pass is a
+/// fixed nine-step loop. Because the fold's total is non-negative and below `2^481`
+/// (see [`FieldScratch::reduce_solinas_p256`]), the pass reconstructs its exact radix
+/// `2^64` digits and the ninth limb is zero.
+#[inline(always)]
+fn fold_p256(acc: &mut [Limb; P256_ACC]) {
+    let lo = [acc[0], acc[1], acc[2], acc[3]];
+    let hi = [acc[4], acc[5], acc[6], acc[7]];
+    // `hi · 2^32`, five limbs. The shifts below are offsets from this value.
+    let hi32 = [
+        hi[0] << 32,
+        (hi[1] << 32) | (hi[0] >> 32),
+        (hi[2] << 32) | (hi[1] >> 32),
+        (hi[3] << 32) | (hi[2] >> 32),
+        hi[3] >> 32,
+    ];
+
+    let mut lane = [0i128; P256_ACC];
+    for i in 0..4 {
+        lane[i] = lane[i]
+            .wrapping_add(lo[i] as i128)
+            .wrapping_add(hi[i] as i128);
+    }
+    for i in 0..5 {
+        lane[3 + i] = lane[3 + i].wrapping_add(hi32[i] as i128);
+    }
+    for i in 0..4 {
+        lane[3 + i] = lane[3 + i].wrapping_sub(hi[i] as i128);
+    }
+    for i in 0..5 {
+        lane[1 + i] = lane[1 + i].wrapping_sub(hi32[i] as i128);
+    }
+
+    // One carry pass: `lane[i] + carry` splits into a radix-`2^64` digit and the
+    // next lane's carry, with the arithmetic shift supplying the floor division.
+    // `wrapping_*` states the lane bound above and keeps the debug profile's
+    // overflow check — a conditional jump on secret-derived lanes — out of the fold.
+    let mut carry = 0i128;
+    for i in 0..P256_ACC {
+        let v = lane[i].wrapping_add(carry);
+        acc[i] = v as u64;
+        carry = v >> 64;
+    }
+}
+
 /// One scalar multiplication's fixed-width field workspace.
 ///
 /// Created by [`ScalarLadderWorkspace::new`] from public curve parameters and the
-/// affine input point, borrowed by the ladder step for the whole ladder, and
-/// dropped (cleansing every buffer) when the scalar multiplication returns.
+/// affine input point, borrowed by the ladder for the whole scalar multiplication
+/// (its `rx`/`rz` and `sx`/`sz` slots **are** the ladder's live `r` and `s`
+/// coordinates between the initial staging and the single write-back), and dropped
+/// (cleansing every buffer) when the scalar multiplication returns.
 pub(crate) struct ScalarLadderWorkspace {
     /// The shared product/division/conditional scratch.
     pub(crate) scratch: FieldScratch,
@@ -678,6 +930,190 @@ mod tests {
         one_case(nist_256());
         one_case(nist_384());
         one_case(nist_521());
+    }
+
+    /// The P-256 kernel's compile-time modulus is the curve's own, not a copy that
+    /// has drifted: `BN_get0_nist_prime_256` and the P-256 group's field are both
+    /// compared against the constant the selection predicate reads.
+    #[test]
+    fn the_p256_kernel_constant_is_the_curves_modulus() {
+        use crate::bn::primes::BN_get0_nist_prime_256;
+        use crate::ec::curve::EC_GROUP_new_by_curve_name;
+        use crate::ec::lib::EC_GROUP_free;
+        use crate::runtime::obj::NID_X9_62_prime256v1;
+
+        // SAFETY: the prime getter borrows a static; the group is created and
+        // released here.
+        unsafe {
+            let prime = BN_get0_nist_prime_256();
+            assert_eq!(&(*prime).d, P256_MODULUS.as_slice());
+            let group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
+            assert!(!group.is_null());
+            assert_eq!(&(*(*group).field).d, P256_MODULUS.as_slice());
+            EC_GROUP_free(group);
+        }
+    }
+
+    /// The kernel is chosen from the modulus alone: P-256 takes the Solinas fold,
+    /// every other width takes Knuth, and a modulus one limb away from P-256 is not
+    /// P-256.
+    #[test]
+    fn the_reduction_kernel_is_selected_from_the_modulus() {
+        let solinas = FieldScratch::try_new(nist_256()).expect("P-256 scratch");
+        assert_eq!(solinas.reduction(), Reduction::SolinasP256);
+        for md in [nist_384(), nist_521()] {
+            let scratch = FieldScratch::try_new(md).expect("scratch");
+            assert_eq!(scratch.reduction(), Reduction::Knuth);
+        }
+        let forced = FieldScratch::try_new_knuth(nist_256()).expect("forced scratch");
+        assert_eq!(forced.reduction(), Reduction::Knuth);
+        let mut near = P256_MODULUS;
+        near[0] -= 1;
+        assert_eq!(reduction_for(&near), Reduction::Knuth);
+    }
+
+    /// Deterministic pseudo-random limbs (xorshift64), so the sweep is reproducible.
+    struct XorShift(u64);
+
+    impl XorShift {
+        fn next(&mut self) -> Limb {
+            let mut x = self.0;
+            x ^= x << 13;
+            x ^= x >> 7;
+            x ^= x << 17;
+            self.0 = x;
+            x
+        }
+
+        fn limbs(&mut self, n: usize) -> Vec<Limb> {
+            let mut v: Vec<Limb> = (0..n).map(|_| self.next()).collect();
+            limbs::normalise(&mut v);
+            v
+        }
+
+        fn below(&mut self, limit: usize) -> usize {
+            (self.next() as usize) % limit
+        }
+    }
+
+    /// Feed `x` (at most `2n` limbs) through one scratch's reduction.
+    fn reduce_with(ws: &mut FieldScratch, x: &[Limb], md: &[Limb]) -> Vec<Limb> {
+        let width = ws.product.len();
+        assert!(x.len() <= width, "an input wider than the accumulator");
+        ws.product.fill(0);
+        ws.product[..x.len()].copy_from_slice(x);
+        let mut out = vec![0u64; ws.width()];
+        ws.reduce(&mut out, md);
+        normalised(&out)
+    }
+
+    /// Reduce `x` through the crate's `BN_nnmod` entry point.
+    ///
+    /// This is the reference that is not common-mode with the kernel under test:
+    /// `BN_nnmod` runs `limbs::rem_fallible`, i.e. Knuth's Algorithm D, and never
+    /// reaches the Solinas fold. Passing a null context is what the C ABI accepts,
+    /// because the function has no context use.
+    fn bn_nnmod_reference(md: &[Limb], x: &[Limb]) -> Vec<Limb> {
+        use crate::bn::arith::BN_nnmod;
+        use crate::bn::bignum::BigNum;
+
+        let a = BigNum {
+            d: normalised(x),
+            neg: 0,
+            flags: 0,
+        };
+        let m = BigNum {
+            d: md.to_vec(),
+            neg: 0,
+            flags: 0,
+        };
+        let mut r = BigNum {
+            d: Vec::new(),
+            neg: 0,
+            flags: 0,
+        };
+        // SAFETY: all three objects are live and owned by this call, and `_ctx` is
+        // unused by `BN_nnmod`.
+        let ok = unsafe { BN_nnmod(&mut r, &a, &m, core::ptr::null_mut()) };
+        assert_eq!(ok, 1, "BN_nnmod refused the reference reduction");
+        normalised(&r.d)
+    }
+
+    /// The Solinas kernel and the generic Knuth kernel must agree with `BN_nnmod`
+    /// bit for bit, over the shapes the fold's bounds are argued about and over a
+    /// deterministic sweep.
+    #[test]
+    fn the_solinas_reduction_is_exactly_the_generic_reduction() {
+        let md = nist_256();
+        let p = P256_MODULUS.to_vec();
+        let mut solinas = FieldScratch::try_new(md).expect("P-256 scratch");
+        let mut knuth = FieldScratch::try_new_knuth(md).expect("forced Knuth scratch");
+
+        let mut p_minus_1 = p.clone();
+        p_minus_1[0] -= 1;
+        let p_plus_1 = limbs::add_fallible(&p, &[1]).expect("p + 1");
+        let two_p_minus_1 =
+            limbs::sub_fallible(&limbs::add_fallible(&p, &p).expect("2p"), &[1]).expect("2p - 1");
+        let two_p = limbs::add_fallible(&p, &p).expect("2p");
+        let p_sq_minus_1 =
+            limbs::sub_fallible(&limbs::mul_fallible(&p, &p).expect("p^2"), &[1]).expect("p^2 - 1");
+        let pm1_sq = limbs::mul_fallible(&p_minus_1, &p_minus_1).expect("(p-1)^2");
+        let p_times_pm1 = limbs::mul_fallible(&p, &p_minus_1).expect("p(p-1)");
+
+        let mut cases: Vec<Vec<Limb>> = vec![
+            Vec::new(),
+            vec![0],
+            vec![1],
+            vec![2],
+            limbs::sub_fallible(&p, &[2]).expect("p - 2"),
+            p_minus_1,
+            p.clone(),
+            p_plus_1,
+            two_p_minus_1,
+            two_p,
+            vec![u64::MAX; 4],
+            vec![u64::MAX; 8],
+            {
+                // 2^448: only the top limb of the high half is set.
+                let mut v = vec![0u64; 8];
+                v[7] = 1;
+                v
+            },
+            {
+                let mut v = vec![0u64; 8];
+                v[7] = 1 << 63;
+                v
+            },
+            p_sq_minus_1,
+            pm1_sq,
+            p_times_pm1,
+        ];
+
+        // 4 096 values of varying width, plus 2 048 genuine four-by-four limb
+        // products: the second family is what the kernel actually sees.
+        let mut rng = XorShift(0x9E37_79B9_7F4A_7C15);
+        for _ in 0..4096 {
+            let width = rng.below(9);
+            cases.push(rng.limbs(width));
+        }
+        for _ in 0..2048 {
+            let a = rng.limbs(4);
+            let b = rng.limbs(4);
+            cases.push(limbs::mul_fallible(&a, &b).expect("product"));
+        }
+
+        let mut checked = 0usize;
+        for x in &cases {
+            let got = reduce_with(&mut solinas, x, md);
+            assert!(
+                limbs::cmp(&got, &p) == core::cmp::Ordering::Less,
+                "not reduced"
+            );
+            assert_eq!(got, reduce_with(&mut knuth, x, md), "Knuth disagrees");
+            assert_eq!(got, bn_nnmod_reference(md, x), "BN_nnmod disagrees");
+            checked += 1;
+        }
+        assert!(checked >= 4096, "the sweep must cover at least 4096 values");
     }
 
     /// The T29 claim itself: the workspace is allocated once per scalar

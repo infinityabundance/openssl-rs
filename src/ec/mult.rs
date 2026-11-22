@@ -30,8 +30,8 @@ use crate::ec::lib::{
     EC_POINT_is_at_infinity, EC_POINT_new, EC_POINT_set_to_infinity, EC_pre_comp_free,
 };
 use crate::ec::smpl::{
-    ec_method_field_is_plain, ossl_ec_GFp_simple_ladder_step,
-    ossl_ec_GFp_simple_ladder_step_workspace,
+    ec_method_field_is_plain, ladder_load_coordinates, ladder_store_coordinates,
+    ossl_ec_GFp_simple_ladder_step, ossl_ec_GFp_simple_ladder_step_workspace,
 };
 use crate::ec::{EcGroup, EcLadderFn, EcPoint, Pct};
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
@@ -491,6 +491,27 @@ pub(crate) unsafe extern "C" fn ossl_ec_scalar_mul_ladder(
                 break 'err;
             }
 
+            // `ladder_pre` has produced the initial `r` and `s`. When the fixed-width
+            // workspace serves this method, their four live coordinates move into it
+            // here and stay there for the whole loop: the per-step state is the
+            // workspace, the point objects' X/Z are stale until the single write-back
+            // after the loop, and the conditional swap is a masked select over the
+            // slots rather than `BN_consttime_swap` over the `BIGNUM`s.
+            if let Some(ws) = ladder_ws.as_mut() {
+                if ladder_load_coordinates(r, s, ws) == 0 {
+                    raise_site(&err_sites::EC_MULT_353);
+                    break 'err;
+                }
+            }
+            // `EC_POINT_CSWAP` also exchanges the two `Z_is_one` flags. The workspace
+            // path keeps that bookkeeping in locals with the authority's own masked
+            // expression and installs it after the loop. The Y coordinates are not
+            // exchanged there: the plain ladder step neither reads nor writes Y, and
+            // `ossl_ec_GFp_simple_ladder_post` recomputes `r->Y` from `p->Y` (or copies
+            // `p` in the `s->Z == 0` arm), while `s` is released before returning.
+            let mut ws_r_z_is_one = (*r).z_is_one;
+            let mut ws_s_z_is_one = (*s).z_is_one;
+
             /* top bit is a 1, in a fixed pos */
             let mut pbit = 1;
 
@@ -555,16 +576,26 @@ pub(crate) unsafe extern "C" fn ossl_ec_scalar_mul_ladder(
             let mut i = cardinality_bits - 1;
             while i >= 0 {
                 let kbit = BN_is_bit_set(k, i) ^ pbit;
-                let _z_is_one = ec_point_cswap(kbit, r, s, group_top);
 
                 /* Perform a single step of the Montgomery ladder */
-                let stepped = match ladder_ws.as_mut() {
-                    Some(ws) => ossl_ec_GFp_simple_ladder_step_workspace(group, r, s, ws),
-                    None => ec_point_ladder_step(group, r, s, p, ctx),
-                };
-                if stepped == 0 {
-                    raise_site(&err_sites::EC_MULT_353);
-                    break 'err;
+                match ladder_ws.as_mut() {
+                    Some(ws) => {
+                        ws.slots.cswap(kbit as u64);
+                        let exchanged = (ws_r_z_is_one ^ ws_s_z_is_one) & kbit;
+                        ws_r_z_is_one ^= exchanged;
+                        ws_s_z_is_one ^= exchanged;
+                        if ossl_ec_GFp_simple_ladder_step_workspace(group, ws) == 0 {
+                            raise_site(&err_sites::EC_MULT_353);
+                            break 'err;
+                        }
+                    }
+                    None => {
+                        let _z_is_one = ec_point_cswap(kbit, r, s, group_top);
+                        if ec_point_ladder_step(group, r, s, p, ctx) == 0 {
+                            raise_site(&err_sites::EC_MULT_353);
+                            break 'err;
+                        }
+                    }
                 }
                 /*
                  * pbit logic merges this cswap with that of the
@@ -574,7 +605,28 @@ pub(crate) unsafe extern "C" fn ossl_ec_scalar_mul_ladder(
                 i -= 1;
             }
             /* one final cswap to move the right value into r */
-            let _z_is_one = ec_point_cswap(pbit, r, s, group_top);
+            match ladder_ws.as_mut() {
+                Some(ws) => {
+                    ws.slots.cswap(pbit as u64);
+                    let exchanged = (ws_r_z_is_one ^ ws_s_z_is_one) & pbit;
+                    ws_r_z_is_one ^= exchanged;
+                    ws_s_z_is_one ^= exchanged;
+                }
+                None => {
+                    let _z_is_one = ec_point_cswap(pbit, r, s, group_top);
+                }
+            }
+
+            // The single crossing back into the normalised `BIGNUM` representation:
+            // four coordinates, once per scalar multiplication.
+            if let Some(ws) = ladder_ws.as_ref() {
+                (*r).z_is_one = ws_r_z_is_one;
+                (*s).z_is_one = ws_s_z_is_one;
+                if ladder_store_coordinates(r, s, ws) == 0 {
+                    raise_site(&err_sites::EC_MULT_353);
+                    break 'err;
+                }
+            }
 
             /* Finalize ladder (and recover full point coordinates) */
             if ec_point_ladder_post(group, r, s, p, ctx) == 0 {
@@ -1336,3 +1388,239 @@ pub(crate) unsafe extern "C" fn ossl_ec_wNAF_have_precompute_mult(group: *const 
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(EcPreCompSt => zero_state_sweep_ec_pre_comp_st);
+
+#[cfg(test)]
+#[allow(clippy::expect_used)] // test-only failure assertions
+mod tests {
+    use super::*;
+    use crate::bn::bignum::BN_num_bits;
+    use crate::bn::ctx::BN_CTX_new;
+    use crate::ec::curve::EC_GROUP_new_by_curve_name;
+    use crate::ec::lib::{EC_GROUP_free, EC_POINT_mul};
+    use crate::runtime::obj::NID_X9_62_prime256v1;
+
+    /// The driver that preceded the fixed-width workspace, reconstructed verbatim:
+    /// the authority's scalar padding, `BN_consttime_swap` over the point objects and
+    /// `ossl_ec_GFp_simple_ladder_step` (the `BIGNUM` step) on every iteration.
+    ///
+    /// The difference from [`ossl_ec_scalar_mul_ladder`] is exactly the boundary this
+    /// batch moved: here the four coordinates are written back into `BIGNUM` storage
+    /// after every step, there once after the loop. The scalar padding is copied
+    /// unchanged, so the comparison is of representations, not of scalar encodings.
+    ///
+    /// # Safety
+    ///
+    /// `group` is live with a non-zero order and cofactor; `r` is live; `scalar` and
+    /// `point` are null or live; `ctx` is live.
+    unsafe fn previous_ladder_point_mul(
+        group: *const EcGroup,
+        r: *mut EcPoint,
+        scalar: *const BigNum,
+        point: *const EcPoint,
+        ctx: *mut BnCtx,
+    ) -> c_int {
+        // SAFETY: the caller supplies the live objects; every temporary here is
+        // created and released in this function.
+        unsafe {
+            BN_CTX_start(ctx);
+            let p = EC_POINT_new(group);
+            let s = EC_POINT_new(group);
+            let cardinality = BN_CTX_get(ctx);
+            let lambda = BN_CTX_get(ctx);
+            let k = BN_CTX_get(ctx);
+            let mut ret = 0;
+
+            'err: {
+                if p.is_null() || s.is_null() || k.is_null() {
+                    break 'err;
+                }
+                if point.is_null() {
+                    if EC_POINT_copy(p, (*group).generator) == 0 {
+                        break 'err;
+                    }
+                } else if EC_POINT_copy(p, point) == 0 {
+                    break 'err;
+                }
+
+                if BN_mul(cardinality, (*group).order, (*group).cofactor, ctx) == 0 {
+                    break 'err;
+                }
+                let cardinality_bits = BN_num_bits(cardinality);
+                let mut group_top = bn_get_top(cardinality);
+                if bn_wexpand(k, group_top + 2).is_null()
+                    || bn_wexpand(lambda, group_top + 2).is_null()
+                {
+                    break 'err;
+                }
+                if BN_copy(k, scalar).is_null() {
+                    break 'err;
+                }
+                BN_set_flags(k, BN_FLG_CONSTTIME);
+                if (BN_num_bits(k) > cardinality_bits || BN_is_negative(k) != 0)
+                    && BN_nnmod(k, k, cardinality, ctx) == 0
+                {
+                    break 'err;
+                }
+                if BN_add(lambda, k, cardinality) == 0 {
+                    break 'err;
+                }
+                BN_set_flags(lambda, BN_FLG_CONSTTIME);
+                if BN_add(k, lambda, cardinality) == 0 {
+                    break 'err;
+                }
+                let high_bit = BN_is_bit_set(lambda, cardinality_bits);
+                BN_consttime_swap(high_bit as core::ffi::c_ulong, k, lambda, group_top + 2);
+
+                group_top = bn_get_top((*group).field);
+                if (*p).z_is_one == 0 {
+                    match (*(*group).meth).make_affine {
+                        Some(make_affine) => {
+                            if make_affine(group, p, ctx) == 0 {
+                                break 'err;
+                            }
+                        }
+                        None => break 'err,
+                    }
+                }
+
+                if ec_point_ladder_pre(group, r, s, p, ctx) == 0 {
+                    break 'err;
+                }
+                let mut pbit = 1;
+                let mut i = cardinality_bits - 1;
+                while i >= 0 {
+                    let kbit = BN_is_bit_set(k, i) ^ pbit;
+                    let _z_is_one = ec_point_cswap(kbit, r, s, group_top);
+                    if ossl_ec_GFp_simple_ladder_step(group, r, s, p, ctx) == 0 {
+                        break 'err;
+                    }
+                    pbit ^= kbit;
+                    i -= 1;
+                }
+                let _z_is_one = ec_point_cswap(pbit, r, s, group_top);
+                if ec_point_ladder_post(group, r, s, p, ctx) == 0 {
+                    break 'err;
+                }
+                ret = 1;
+            }
+
+            EC_POINT_free(p);
+            EC_POINT_clear_free(s);
+            BN_CTX_end(ctx);
+            ret
+        }
+    }
+
+    /// Deterministic pseudo-random limbs (xorshift64), so the sweep is reproducible.
+    struct XorShift(u64);
+
+    impl XorShift {
+        fn next(&mut self) -> u64 {
+            let mut x = self.0;
+            x ^= x << 13;
+            x ^= x >> 7;
+            x ^= x << 17;
+            self.0 = x;
+            x
+        }
+
+        fn limbs(&mut self, n: usize) -> Vec<u64> {
+            let mut v: Vec<u64> = (0..n).map(|_| self.next()).collect();
+            crate::bn::limbs::normalise(&mut v);
+            v
+        }
+    }
+
+    /// The restructured ladder against the previous per-step-store ladder, over
+    /// deterministic scalar/point combinations that include zero, one, small scalars,
+    /// a full-width scalar and a scalar above the group order.
+    ///
+    /// The authority comparison is the court's: `bench_api`'s cross-implementation
+    /// check and `court/tmp`'s ladder differential run the same C API against the
+    /// pinned OpenSSL. This test pins the candidate against its own previous
+    /// implementation.
+    #[test]
+    fn the_workspace_ladder_matches_the_previous_ladder() {
+        // The previous ladder runs the allocating `BIGNUM` step once per bit, so this
+        // sweep is sized for the debug-profile suite; the court runs thousands of
+        // cases against the authority in the release DSO.
+        const CASES: usize = 96;
+
+        // SAFETY: every object below is created and released here.
+        unsafe {
+            let group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
+            assert!(!group.is_null());
+            let ctx = BN_CTX_new();
+            assert!(!ctx.is_null());
+            let generator = EC_GROUP_get0_generator(group);
+            let r_new = EC_POINT_new(group);
+            let r_old = EC_POINT_new(group);
+            let pt = EC_POINT_new(group);
+            assert!(!r_new.is_null() && !r_old.is_null() && !pt.is_null());
+
+            // The group order, so the sweep can include a scalar above it (the
+            // driver then reduces it with `BN_nnmod` before the ladder).
+            let order = (*group).order;
+            let mut above_order = (*order).d.clone();
+            above_order.push(1);
+
+            let mut rng = XorShift(0xD1B5_4A32_D192_ED03);
+            let mut checked = 0usize;
+            for case in 0..CASES {
+                let scalar_limbs = match case % 8 {
+                    0 => Vec::new(),
+                    1 => vec![1],
+                    2 => vec![2],
+                    3 => vec![u64::MAX; 4],
+                    4 => above_order.clone(),
+                    _ => rng.limbs(4),
+                };
+                let scalar = BigNum {
+                    d: scalar_limbs,
+                    neg: 0,
+                    flags: 0,
+                };
+
+                let point: *const EcPoint = if case % 3 == 0 {
+                    generator
+                } else {
+                    let multiple = BigNum {
+                        d: vec![case as u64 + 3],
+                        neg: 0,
+                        flags: 0,
+                    };
+                    assert_eq!(
+                        EC_POINT_mul(group, pt, &multiple, ptr::null(), ptr::null_mut(), ctx),
+                        1,
+                        "case {case}: point construction"
+                    );
+                    pt
+                };
+
+                assert_eq!(
+                    EC_POINT_mul(group, r_new, ptr::null(), point, &scalar, ctx),
+                    1,
+                    "case {case}: workspace ladder"
+                );
+                assert_eq!(
+                    previous_ladder_point_mul(group, r_old, &scalar, point, ctx),
+                    1,
+                    "case {case}: previous ladder"
+                );
+                assert_eq!(
+                    EC_POINT_cmp(group, r_new, r_old, ctx),
+                    0,
+                    "case {case}: the workspace ladder moved the result"
+                );
+                checked += 1;
+            }
+            assert_eq!(checked, CASES);
+
+            EC_POINT_free(r_new);
+            EC_POINT_free(r_old);
+            EC_POINT_free(pt);
+            BN_CTX_free(ctx);
+            EC_GROUP_free(group);
+        }
+    }
+}

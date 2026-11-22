@@ -2480,35 +2480,34 @@ pub(crate) unsafe fn ec_method_field_is_plain(meth: *const EcMethod) -> bool {
 }
 
 /// The same ladder step as [`ossl_ec_GFp_simple_ladder_step`], with every field
-/// operation served from one fixed-width workspace instead of allocating a
-/// `BIGNUM` magnitude per call (T29).
+/// operation served from one fixed-width workspace and the ladder's live
+/// coordinates already resident in it (T29, T30).
 ///
 /// The authority's dataflow at `crypto/ec/ecp_smpl.c:1560-1623` is reproduced
 /// step for step: the same thirteen multiplications, seven squarings, six modular
 /// additions, six modular subtractions and three shifts, over the same operand
-/// pairs. Only the storage differs — `t0`..`t6` and the four coordinates the step
-/// reads and writes are `n`-limb slots of [`ScalarLadderWorkspace`], and the four
-/// coordinate outputs are written back into the point objects at the end.
+/// pairs. `t0`..`t6` are `n`-limb slots of [`ScalarLadderWorkspace`], and so are the
+/// four coordinates: `rx`/`rz` are the current `r->X`/`r->Z` and `sx`/`sz` the
+/// current `s->X`/`s->Z` on entry, and the step replaces them with its outputs.
+/// Nothing is staged or stored here; the driver stages once after
+/// `ec_point_ladder_pre` and writes back once after the loop
+/// ([`ladder_load_coordinates`], [`ladder_store_coordinates`]).
 ///
 /// `p` is not a parameter here: its `X` is loop invariant and was staged into the
 /// workspace when the scalar multiplication created it.
 ///
 /// # Safety
 ///
-/// `group` is live with a live `field`, `a` and `b`; `r` and `s` are distinct
-/// live points whose coordinates are live `BIGNUM`s. `ws` was built from this
-/// same group's modulus and must still have that width. Each coordinate value is
-/// in `[0, group->field)` and therefore at most `ws.width()` limbs.
+/// `group` is live with a live `field`; `ws` was built from this same group's
+/// modulus and must still have that width. Every slot's length is the workspace
+/// width, and each coordinate value in it is in `[0, group->field)`.
 #[allow(non_snake_case)] // named after the authority's step it mirrors
 pub(crate) unsafe fn ossl_ec_GFp_simple_ladder_step_workspace(
     group: *const EcGroup,
-    r: *mut EcPoint,
-    s: *mut EcPoint,
     ws: &mut ScalarLadderWorkspace,
 ) -> c_int {
     // SAFETY: the enclosing function's `# Safety` section is the contract for the
-    // group and point dereferences; `r` and `s` are distinct objects, so their
-    // coordinate borrows cannot overlap.
+    // group dereference; the slots are the workspace's own fields.
     unsafe {
         let md: &[limbs::Limb] = &(*(*group).field).d;
         let n = ws.width();
@@ -2534,20 +2533,6 @@ pub(crate) unsafe fn ossl_ec_GFp_simple_ladder_step_workspace(
             t5,
             t6,
         } = slots;
-
-        // Each staged coordinate must fit the public width; a wider one is outside
-        // the plain-field contract and is refused rather than truncated.
-        if (*(*r).x).d.len() > n
-            || (*(*r).z).d.len() > n
-            || (*(*s).x).d.len() > n
-            || (*(*s).z).d.len() > n
-        {
-            return 0;
-        }
-        copy_fixed(rx, &(*(*r).x).d);
-        copy_fixed(rz, &(*(*r).z).d);
-        copy_fixed(sx, &(*(*s).x).d);
-        copy_fixed(sz, &(*(*s).z).d);
 
         scratch.mul(t6, rx, sx, md);
         scratch.mul(t0, rz, sz, md);
@@ -2585,27 +2570,90 @@ pub(crate) unsafe fn ossl_ec_GFp_simple_ladder_step_workspace(
         scratch.double(t1, md);
         scratch.add(rz, t4, t1, md);
 
-        if !store_coordinate((*r).x, rx)
-            || !store_coordinate((*r).z, rz)
-            || !store_coordinate((*s).x, sx)
-            || !store_coordinate((*s).z, sz)
-        {
+        1
+    }
+}
+
+/// Stage the ladder's four live coordinates (`r->X`, `r->Z`, `s->X`, `s->Z`) into
+/// the workspace's fixed-width slots.
+///
+/// Called once per scalar multiplication, immediately after
+/// `ec_point_ladder_pre` has produced the initial `r` and `s`. From here until
+/// [`ladder_store_coordinates`] the point objects' X and Z magnitudes are stale; the
+/// slots are the state the ladder mutates.
+///
+/// A coordinate wider than the public modulus is outside the plain-field contract
+/// this workspace serves and is refused rather than truncated, answering 0.
+///
+/// # Safety
+///
+/// `r` and `s` are distinct live points whose `x` and `z` are live `BIGNUM`s; `ws`
+/// was built from the same group's modulus and still has that width.
+pub(crate) unsafe fn ladder_load_coordinates(
+    r: *const EcPoint,
+    s: *const EcPoint,
+    ws: &mut ScalarLadderWorkspace,
+) -> c_int {
+    let n = ws.width();
+    // SAFETY: the caller guarantees `r` and `s` are live with live coordinates.
+    unsafe {
+        let rx = &(*(*r).x).d;
+        let rz = &(*(*r).z).d;
+        let sx = &(*(*s).x).d;
+        let sz = &(*(*s).z).d;
+        if rx.len() > n || rz.len() > n || sx.len() > n || sz.len() > n {
             return 0;
         }
+        copy_fixed(&mut ws.slots.rx, rx);
+        copy_fixed(&mut ws.slots.rz, rz);
+        copy_fixed(&mut ws.slots.sx, sx);
+        copy_fixed(&mut ws.slots.sz, sz);
+    }
+    1
+}
 
-        1
+/// Write the workspace's four coordinates back into `r` and `s`'s normalised
+/// `BIGNUM` storage.
+///
+/// This is the one point at which the ladder's fixed-width state crosses into the
+/// `BIGNUM` representation: the magnitudes have been reduced below the modulus at
+/// every step, and this call fixes each recorded length with one fixed-pattern scan
+/// (`limbs::normalise_consttime`) over the public width. Answers 0 only when a
+/// coordinate's storage cannot be grown, i.e. an allocation refusal.
+///
+/// # Safety
+///
+/// `r` and `s` are distinct live points whose `x` and `z` are live, uniquely owned
+/// `BIGNUM`s; `ws` was built from the same group's modulus.
+pub(crate) unsafe fn ladder_store_coordinates(
+    r: *mut EcPoint,
+    s: *mut EcPoint,
+    ws: &ScalarLadderWorkspace,
+) -> c_int {
+    // SAFETY: the caller guarantees the four coordinates are live and distinct.
+    unsafe {
+        let ok = store_coordinate((*r).x, &ws.slots.rx)
+            && store_coordinate((*r).z, &ws.slots.rz)
+            && store_coordinate((*s).x, &ws.slots.sx)
+            && store_coordinate((*s).z, &ws.slots.sz);
+        c_int::from(ok)
     }
 }
 
 /// Replace a coordinate's magnitude with a fixed-width slot's value, reusing the
 /// coordinate's own allocation when it can hold `src`.
 ///
-/// The value is written into `[0, src.len())` — the whole public width — before
-/// the normalised trim, so no limb of the previous value survives in the live
-/// region. A coordinate whose capacity is still too small takes
-/// `reserve_cleansed`'s separate fallible allocation, which cleanses the old
-/// block before releasing it; a refusal leaves the coordinate unchanged and
-/// answers `false`.
+/// The value is written into `[0, src.len())` — the whole public width — and then
+/// trimmed by `limbs::normalise_consttime`, a fixed-pattern scan over that same
+/// width. The recorded length therefore still depends on the value (the normalised
+/// `BIGNUM` representation, T8's residual), but no branch and no length-proportional
+/// work depend on it: the trimmed result has exactly the magnitude and the
+/// normalised length the value-trimming `normalise` would have produced. No limb of
+/// the previous value survives in the live region.
+///
+/// A coordinate whose capacity is still too small takes `reserve_cleansed`'s
+/// separate fallible allocation, which cleanses the old block before releasing it;
+/// a refusal leaves the coordinate unchanged and answers `false`.
 ///
 /// # Safety
 ///
@@ -2621,7 +2669,11 @@ unsafe fn store_coordinate(dst: *mut BigNum, src: &[limbs::Limb]) -> bool {
     }
     bn.d.clear();
     bn.d.extend_from_slice(src);
-    limbs::normalise(&mut bn.d);
+    // `bn.d.len() == src.len()`, so this scan cannot grow the vector and cannot
+    // allocate; it only installs the trimmed length.
+    if limbs::normalise_consttime(&mut bn.d, src.len()).is_none() {
+        return false;
+    }
     bn.neg = 0;
     true
 }
@@ -2818,10 +2870,9 @@ mod tests {
                 &(*(*p).x).d,
             )
             .expect("workspace allocation");
-            assert_eq!(
-                ossl_ec_GFp_simple_ladder_step_workspace(group, r_new, s_new, &mut ws),
-                1
-            );
+            assert_eq!(ladder_load_coordinates(r_new, s_new, &mut ws), 1);
+            assert_eq!(ossl_ec_GFp_simple_ladder_step_workspace(group, &mut ws), 1);
+            assert_eq!(ladder_store_coordinates(r_new, s_new, &ws), 1);
 
             for (old, new, what) in [
                 ((*r_old).x, (*r_new).x, "r->X"),
