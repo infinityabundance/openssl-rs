@@ -1,0 +1,140 @@
+{
+ "schema": "openssl-rs/timing-unified-identity-receipt/1",
+ "item": "review item: bind interoperability, timing and reproducibility results to one candidate",
+ "generated": "2026-11-22T03:25:20Z",
+ "candidate": {
+  "libcrypto_sha256": "ee7fa27c79f5a679d5b229429d53dc7c3b510695db9c74d11b4b6783a735ebe9",
+  "archive_sha256": "62c9cf027121ae56b4a089498036855b8cc5a72840c65a091f5ddceaa6c84ab5",
+  "link": "cc -shared --whole-archive + -Wl,--version-script=artifacts/phase2/libcrypto.ld",
+  "why": "this is byte-identical to the DSO the four OpenSSH interop matrix cells link, so one artefact now carries the interop result, the ctgrind matrix, the dudect matrix and the branch audit",
+  "previously_reported_artifact": {
+   "libcrypto_sha256": "a67305b1dcb297b19a12078caf55cb6ad2acdf3dfb332b89c97ee7e1f1d4db34",
+   "difference": "the timing link omitted libcrypto.ld's version script; linking the same archive with the script reproduces ee7fa27c exactly, so the difference was the link only"
+  }
+ },
+ "ctgrind": {
+  "toolchain": "rustc 1.98.1, valgrind 3.19.0, in the same court invocation",
+  "cases": [
+   {
+    "case": "bn::arith::tests::ctgrind_secret_base_fold_and_ladder",
+    "exit": 0,
+    "summary": "0 errors from 0 contexts"
+   },
+   {
+    "case": "bn::arith::tests::ctgrind_secret_mod_inverse",
+    "exit": 0,
+    "summary": "0 errors from 0 contexts"
+   },
+   {
+    "case": "bn::bignum::tests::ctgrind_store_consttime_result_length",
+    "exit": 99,
+    "summary": "1 errors from 1 contexts"
+   },
+   {
+    "case": "ec::ecdsa_ossl::tests::ctgrind_ecdsa_sign_taints_nonce_and_key",
+    "exit": 99,
+    "summary": "812959 errors from 128 contexts"
+   },
+   {
+    "case": "ec::ecdsa_ossl::tests::ctgrind_ecdsa_sign_ex_taints_nonce_inverse",
+    "exit": 99,
+    "summary": "53 errors from 20 contexts"
+   },
+   {
+    "case": "rsa::ossl::tests::ctgrind_rsa_crt_secret_moduli",
+    "exit": 99,
+    "summary": "97626 errors from 111 contexts (a repeat run gave 96155 / 105)"
+   }
+  ],
+  "variance": "the ECDSA tests generate a key per run and the RSA test calls RSA_generate_key_ex, so the raw error totals vary; the stable quantities are the context counts (128, 20, 1, 0, 0) and the RSA contexts reproduced the reference 105 on a repeat run"
+ },
+ "dudect": {
+  "modes": [
+   {
+    "mode": "modexp",
+    "max_abs_t": 1.15,
+    "ops": "60000/0",
+    "state": 1
+   },
+   {
+    "mode": "inverse_vt",
+    "max_abs_t": 941.93,
+    "ops": "40000/0",
+    "state": 0
+   },
+   {
+    "mode": "inverse_ct",
+    "max_abs_t": 1.36,
+    "ops": "60000/0",
+    "state": 1
+   },
+   {
+    "mode": "inverse_ct_len",
+    "max_abs_t": 0.93,
+    "ops": "60000/0",
+    "state": 1
+   },
+   {
+    "mode": "inverse_ec",
+    "max_abs_t": 2.15,
+    "ops": "60000/0",
+    "state": 1
+   }
+  ],
+  "flags_read_back": "a0=0x4 a1=0x4 modulus=0x4 in all three flagged modes",
+  "controls_this_run": "not run (no anomalous result required them); the controls from the previous run at a67305b1 are recorded in RECEIPT-dudect-modes.json"
+ },
+ "branch_audit": {
+  "exit": 0,
+  "resolved": 7,
+  "failed": 0,
+  "functions": {
+   "mont_mul_into": {
+    "jcc": 24,
+    "div": 0,
+    "cmov": 0
+   },
+   "mont_mul_fallible": {
+    "jcc": 13,
+    "div": 0,
+    "cmov": 0
+   },
+   "mod_exp_core_consttime_from_parts": {
+    "jcc": 73,
+    "div": 0,
+    "cmov": 3
+   },
+   "mod_inverse_consttime": {
+    "jcc": 217,
+    "div": 0,
+    "cmov": 3
+   },
+   "ossl_ec_scalar_mul_ladder": {
+    "jcc": 113,
+    "div": 0,
+    "cmov": 5
+   },
+   "ossl_ec_GFp_simple_ladder_step": {
+    "jcc": 61,
+    "div": 0,
+    "cmov": 0
+   },
+   "rsa_ossl_mod_exp": {
+    "jcc": 133,
+    "div": 0,
+    "cmov": 0
+   }
+  },
+  "divisions": "none in any audited range",
+  "in_range_cpuid": 0
+ },
+ "venue": {
+  "court": "docker/openssl-rs-court-tools:1, existing container, hard cap 6g/6g, 8 CPUs",
+  "guard_note": "host `available` was 21 GiB, below the 24 GiB line in AGENTS.md 6.1; the run used the already-capped court and reports the guard as not met rather than silently"
+ },
+ "limits": [
+  "dudect state 1 is 'no leakage evidence yet', not a constant-time proof",
+  "the ECDSA signing ctgrind finding (128 contexts) and the RSA CRT finding (105-111 contexts) are unchanged by this re-measurement and remain the open findings",
+  "the branch audit establishes instruction shape in the audited ranges, not secret dependence"
+ ]
+}
