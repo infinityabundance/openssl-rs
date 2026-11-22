@@ -1,0 +1,150 @@
+{
+ "schema": "openssl-rs/dudect-modes-receipt/1",
+ "item": "review item: correct the dudect inversion harness and measure the flagged implementation",
+ "generated": "2026-11-22T02:36:27Z",
+ "candidate": {
+  "libcrypto_sha256": "a67305b1dcb297b19a12078caf55cb6ad2acdf3dfb332b89c97ee7e1f1d4db34",
+  "build_id": "7cdf5b9c090a242f3e86e543ffc4534ce7803c3f",
+  "venue": "docker/openssl-rs-court-tools:1, cap 6g/6g, taskset -c 1",
+  "note": "the same DSO the ctgrind matrix and the branch audit used, so those instruments and this one are bound to one artefact; the OpenSSH matrix cell DSO ee7fa27c is a different link (build_trees.sh passes libcrypto.ld's version script, the timing link did not) and no claim is combined across the two"
+ },
+ "harness_change": {
+  "before": "one `inverse` mode, no BN_FLG_CONSTTIME set, operands of differing length; it measured the variable-time dispatch and its leak verdict was read against the constant-time kernel",
+  "after": "inverse_vt (unflagged, differing lengths), inverse_ct (flagged, equal lengths), inverse_ct_len (flagged, differing lengths), inverse_ec (flagged, modulo the P-256 order obtained from EC_GROUP_get_order); each prints the flag read back and counts operation success, and a failed operation rejects the measurement (exit 3)",
+  "what_the_harness_can_establish": "that the flag was stored and that the inversion succeeded; which implementation ran is witnessed by the ctgrind case bn::arith::tests::ctgrind_secret_mod_inverse (taint), not by this timing harness. The two instruments are presented together; neither alone is evidence of constant-time behaviour."
+ },
+ "exit_code_semantics": {
+  "pinned_dudect_commit": "dc269651fb2567e46755cfb2a13d3875592968b5",
+  "0": "DUDECT_LEAKAGE_FOUND",
+  "1": "DUDECT_NO_LEAKAGE_EVIDENCE_YET",
+  "3": "this harness: a measured operation failed, so the timings are rejected"
+ },
+ "modes": {
+  "modexp": {
+   "batch_max_t": [
+    0.45,
+    2.09
+   ],
+   "state": 1,
+   "exit": 1,
+   "ops": "60000/0",
+   "run2": {
+    "batch_max_t": [
+     0.77,
+     1.05
+    ],
+    "state": 1,
+    "exit": 1
+   },
+   "log": {
+    "path": "courts/phase18/interop/logs/50d3a6c44807b7ac7b614ffb532d8decbf6b9d009aabf78bc9ca904de09d2609.log",
+    "sha256": "50d3a6c44807b7ac7b614ffb532d8decbf6b9d009aabf78bc9ca904de09d2609"
+   }
+  },
+  "inverse_vt": {
+   "batch_max_t": [
+    1002.46
+   ],
+   "state": 0,
+   "exit": 0,
+   "ops": "40000/0",
+   "flags": {
+    "a0": "0x0",
+    "a1": "0x0",
+    "modulus": "0x0"
+   },
+   "log": {
+    "path": "courts/phase18/interop/logs/f4a4675fff3ba8f08cf5c85a15e139840153178b930231d92947e2856bb17af2.log",
+    "sha256": "f4a4675fff3ba8f08cf5c85a15e139840153178b930231d92947e2856bb17af2"
+   }
+  },
+  "inverse_ct": {
+   "batch_max_t": [
+    0.07,
+    1.38
+   ],
+   "state": 1,
+   "exit": 1,
+   "ops": "60000/0",
+   "flags": {
+    "a0": "0x4",
+    "a1": "0x4",
+    "modulus": "0x4"
+   },
+   "log": {
+    "path": "courts/phase18/interop/logs/3ad9cf98d083dd2804ba09b4b76b368fdc6295c1a03c072caf5fb820c81d8054.log",
+    "sha256": "3ad9cf98d083dd2804ba09b4b76b368fdc6295c1a03c072caf5fb820c81d8054"
+   }
+  },
+  "inverse_ct_len": {
+   "batch_max_t": [
+    0.04,
+    1.91
+   ],
+   "state": 1,
+   "exit": 1,
+   "ops": "60000/0",
+   "flags": {
+    "a0": "0x4",
+    "a1": "0x4",
+    "modulus": "0x4"
+   },
+   "log": {
+    "path": "courts/phase18/interop/logs/a4f1a7107e41a1fff99eb61220ab0173738d9a5439969a81b761ab58608b89fe.log",
+    "sha256": "a4f1a7107e41a1fff99eb61220ab0173738d9a5439969a81b761ab58608b89fe"
+   }
+  },
+  "inverse_ec": {
+   "batch_max_t": [
+    2.17,
+    1.35
+   ],
+   "state": 1,
+   "exit": 1,
+   "ops": "60000/0",
+   "flags": {
+    "a0": "0x4",
+    "a1": "0x4",
+    "modulus": "0x4"
+   },
+   "log": {
+    "path": "courts/phase18/interop/logs/243b0970f7c54c63b4ef45d65fbf223750b8643f3680d82c62fd5509052ab958.log",
+    "sha256": "243b0970f7c54c63b4ef45d65fbf223750b8643f3680d82c62fd5509052ab958"
+   }
+  },
+  "cmpcmp": {
+   "batch_max_t": [
+    0.02,
+    2.04
+   ],
+   "state": 1,
+   "exit": 1,
+   "log": {
+    "path": "courts/phase18/interop/logs/6e6eb30ffb3718ab3cb89e57637b4341d47032373a5ac0b4ad9b031ec228088f.log",
+    "sha256": "6e6eb30ffb3718ab3cb89e57637b4341d47032373a5ac0b4ad9b031ec228088f"
+   }
+  },
+  "cmpnaive": {
+   "batch_max_t": [
+    7212.68
+   ],
+   "state": 0,
+   "exit": 0,
+   "log": {
+    "path": "courts/phase18/interop/logs/caab5148ff4bf533480d1fc2a3a1f197f3a4925283fa391d86f90cc4dfdbbe6f.log",
+    "sha256": "caab5148ff4bf533480d1fc2a3a1f197f3a4925283fa391d86f90cc4dfdbbe6f"
+   }
+  }
+ },
+ "observations": [
+  "the earlier inverse result (max |t| 485, leak) is reproduced as inverse_vt at 1002.46: it was the variable-time path, exactly as the review suspected",
+  "the flagged inversion shows no leakage evidence at these sample sizes: inverse_ct 1.38, inverse_ct_len 1.91, inverse_ec 2.17, all state 1 \u2014 the same order as modexp (2.09 / 1.05)",
+  "inverse_ct_len compares two operand lengths (200 vs 254 bits) and did not separate them at this sample size; the crate documents the normalised length as public metadata regardless",
+  "no mode exited 3 and every BN mode reports 0 failed inversions, so no measurement was taken on a failure path"
+ ],
+ "limits": [
+  "dudect state 1 is 'no leakage evidence yet', not a constant-time proof; absence of detected leakage is not proof of constant-time behaviour",
+  "sample size 20 000 per batch, three batches, one host, one build",
+  "the harness measures the inversion call; it does not measure the surrounding ECDSA arithmetic, whose ctgrind counts (813 061 errors over 128 contexts) remain the open finding"
+ ]
+}

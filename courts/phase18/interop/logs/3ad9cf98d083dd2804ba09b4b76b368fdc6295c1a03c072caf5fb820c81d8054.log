@@ -1,0 +1,4 @@
+dudect.flags mode=inverse_ct a0=0x4 a1=0x4 modulus=0x4 consttime_bits=0x4
+dudect.executed mode=inverse_ct per_batch=20000 batches_run=3 total_measurements=60000
+dudect.done mode=inverse_ct batches=3 state=1
+dudect.ops mode=inverse_ct successes=60000 failures=0
