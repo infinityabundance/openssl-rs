@@ -4,9 +4,10 @@
 # Two *independent* release builds are made from the same committed source
 # (`HEAD`) with every environment difference that must not matter varied:
 #
-#     build A: <out>/build-a            LC_ALL=C.UTF-8  TMPDIR=<out>/tmp-a  HOSTNAME=repro-a
-#     build B: <out>/build-b/nested     LC_ALL=C        TMPDIR=<out>/tmp-b  HOSTNAME=repro-b
+#     build A: <out>/build-a            LC_ALL=C.UTF-8  TMPDIR=<out>/tmp-a  HOME=<out>/home-a  HOSTNAME=repro-a
+#     build B: <out>/build-b/nested     LC_ALL=C        TMPDIR=<out>/tmp-b  HOME=<out>/home-b  HOSTNAME=repro-b
 #
+# The distinct build roots give distinct `CARGO_TARGET_DIR`s (`<root>/target`).
 # Both builds pin SOURCE_DATE_EPOCH, remap the (different) absolute source and
 # target roots to the same `/build/src` and `/build/target` prefixes, compile the
 # C adapters with `-ffile-prefix-map`, and archive with `ar` in deterministic
@@ -29,9 +30,10 @@
 #   --keep           keep both build trees after comparison (default: keep them;
 #                    pass --clean to remove, for CI disk economy)
 #   --clean          remove both build trees before exiting
-#   --distribution   also link the distribution DSO twice from the committed
-#                    Phase-2 shell source (the artefact D255 is about) and
-#                    compare it, closing the `.symtab` question as well.
+#   --distribution   also link the distribution DSO twice from the Phase-2 shell
+#                    source regenerated from its tracked generator and tracked
+#                    inputs (the artefact D255 is about) and compare it, closing
+#                    the `.symtab` question as well.
 #
 # Exit status: 0 iff both the `.a` and the `.so` are byte-identical; 1 otherwise.
 # 97 when run outside the court. Nothing here executes on the host.
@@ -73,7 +75,8 @@ SRC_PATHS=(Cargo.toml Cargo.lock build.rs rust-toolchain.toml README.md src docs
            forensics/multitrack/abi-facades.json)
 
 rm -rf "$OUT"
-mkdir -p "$OUT/build-a" "$OUT/build-b/nested" "$OUT/tmp-a" "$OUT/tmp-b" "$OUT/artefacts"
+mkdir -p "$OUT/build-a" "$OUT/build-b/nested" "$OUT/tmp-a" "$OUT/tmp-b" \
+         "$OUT/home-a" "$OUT/home-b" "$OUT/artefacts"
 
 # Two extractions from the committed tree, at deliberately different depths.
 git -C "$REPO_ROOT" archive HEAD -- "${SRC_PATHS[@]}" | tar -x -C "$OUT/build-a"
@@ -100,13 +103,13 @@ make_cc_wrapper "$OUT/build-a" "$OUT/cc-a.sh"
 make_cc_wrapper "$OUT/build-b/nested" "$OUT/cc-b.sh"
 make_ar_wrapper "$OUT/ar.sh"
 
-build() { # root tag locale tmpdir hostname ccwrap
-  local root=$1 tag=$2 locale=$3 tmp=$4 hostn=$5 ccwrap=$6
+build() { # root tag locale tmpdir hostname ccwrap home
+  local root=$1 tag=$2 locale=$3 tmp=$4 hostn=$5 ccwrap=$6 home=$7
   (
     cd "$root"
     env -i \
       PATH="${PATH:-/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin}" \
-      HOME="${HOME:-/root}" \
+      HOME="$home" \
       CARGO_HOME="${CARGO_HOME:-/usr/local/cargo}" \
       RUSTUP_HOME="${RUSTUP_HOME:-/usr/local/rustup}" \
       SOURCE_DATE_EPOCH="$SDE" \
@@ -127,8 +130,8 @@ build() { # root tag locale tmpdir hostname ccwrap
 
 echo "=== release reproducibility: SOURCE_DATE_EPOCH=$SDE build-id=$BUILD_ID jobs=$JOBS"
 echo "MemAvailable: $(awk '/MemAvailable/{print $2 " kB"}' /proc/meminfo)"
-build "$OUT/build-a"       a C.UTF-8 "$OUT/tmp-a" repro-a "$OUT/cc-a.sh"
-build "$OUT/build-b/nested" b C      "$OUT/tmp-b" repro-b "$OUT/cc-b.sh"
+build "$OUT/build-a"       a C.UTF-8 "$OUT/tmp-a" repro-a "$OUT/cc-a.sh" "$OUT/home-a"
+build "$OUT/build-b/nested" b C      "$OUT/tmp-b" repro-b "$OUT/cc-b.sh" "$OUT/home-b"
 
 report_diff() { # label pathA pathB
   local label=$1 A=$2 B=$3
@@ -175,14 +178,18 @@ done
 # archive. That shell object is where LLVM-internalised local names
 # (`anon.<hash>.<n>.llvm.<hash>`) enter `.symtab`; D255 recorded a `.symtab`
 # difference with identical `.text`/`.dynsym`/build-id there. Two independent
-# compiles + links are made here from the *same* committed shell source.
+# compiles + links are made here from the same shell regenerated from tracked
+# inputs. The shell directory is gitignored, so copying it would leave this arm
+# unable to run from a clean checkout; `phase2_shell.py --emit-shell` derives it
+# from `forensics/atlas/implemented-surface.json` and the authority symbol atlas.
 if [ "$DISTRIBUTION" = 1 ]; then
   for tag in a b; do
     dir=$OUT/dist-$tag
     [ "$tag" = b ] && dir=$OUT/dist-b/nested
     mkdir -p "$dir"
     cp "$REPO_ROOT/artifacts/phase2/libcrypto.ld" "$dir/"
-    cp "$REPO_ROOT/artifacts/phase2/shell/libcrypto.shell.rs" "$dir/"
+    python3 "$REPO_ROOT/forensics/tools/phase2_shell.py" --emit-shell "$dir" \
+      >"$OUT/dist-$tag.shell.log" 2>&1
     ( cd "$dir" && rustc --edition 2021 --emit=obj --crate-type lib -O \
         --remap-path-prefix="$dir"=/build/src \
         --crate-name libcrypto_shell -o libcrypto.shell.o libcrypto.shell.rs ) \

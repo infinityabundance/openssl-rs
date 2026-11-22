@@ -305,6 +305,26 @@ def load_implemented(authority_id: str) -> dict[str, set[str]]:
     return {lib: set(libs[lib]["implemented_symbols"]) for lib in LIBRARIES}
 
 
+def emit_shell_only(dest: Path, authority_id: str) -> None:
+    """Write only `shell/<lib>.shell.rs` into `dest` and return.
+
+    `forensics/tools/build_reproducibility.sh` links the distribution DSO from the
+    libcrypto shell object, and `artifacts/phase2/shell/` is gitignored. Copying a
+    working-tree file would mean that arm cannot run from a clean checkout, so it
+    regenerates the shell instead. This reads only tracked inputs (`symbols-<lib>
+    .json` and `forensics/atlas/implemented-surface.json`) and writes outside the
+    repository, making the distribution input a function of committed content.
+    """
+    resolve_authority(authority_id)
+    adir = authority_atlas_dir(authority_id)
+    implemented = load_implemented(authority_id)
+    dest.mkdir(parents=True, exist_ok=True)
+    for lib in sorted(LIBRARIES):
+        doc = json.loads((adir / f"symbols-{lib}.json").read_text())
+        rs = generate_shell_rs(doc, lib, implemented[lib], STANDALONE[lib])
+        write_text(dest / f"{lib}.shell.rs", rs)
+
+
 def generate_pkgconfig(lib: str, version: str) -> str:
     soname = LIBRARIES[lib]
     other = "libssl" if lib == "libcrypto" else None
@@ -549,7 +569,18 @@ def generate(authority_id: str) -> None:
 def main(argv: list[str]) -> int:
     ap = argparse.ArgumentParser(description="Generate the Phase 2 ABI shell.")
     ap.add_argument("--authority", default=PRODUCTION_AUTHORITY)
+    ap.add_argument(
+        "--emit-shell",
+        metavar="DIR",
+        default=None,
+        help="write only the generated shell sources into DIR and exit; used by "
+             "the reproducibility recipe so the distribution arm runs from a "
+             "clean checkout",
+    )
     args = ap.parse_args(argv)
+    if args.emit_shell is not None:
+        emit_shell_only(Path(args.emit_shell), args.authority)
+        return 0
     generate(args.authority)
     return 0
 

@@ -1,0 +1,247 @@
+{
+  "item": "ETP-2",
+  "title": "Artefact reproduction: two independently initialised clean builds, variation matrix, every byte difference resolved or recorded",
+  "date_utc": "2026-11-22",
+  "branch": "staging",
+  "head_at_start": "e9d492b0df707c22d772cbead5eaac4f93f3200e",
+  "worktree_at_start": "clean",
+  "recipe": "forensics/tools/build_reproducibility.sh",
+  "recipe_digest": "67660a5933bf52e1fee82c5ca817b6e73c50f2894f77faa74c089569c443e4e7",
+
+  "candidate": {
+    "id": "S-prime",
+    "identity_status": "UNCOMMITTED_PENDING_ORCHESTRATOR_COMMIT",
+    "commit": null,
+    "parent_freeze": {
+      "id": "S",
+      "commit": "9372bb28b2fbe2f71cf2aa2ab501414d45e87d42",
+      "record": "evidence/etp0/RECEIPT.md"
+    },
+    "measurement_basis": "Crate build inputs are byte-identical to S: the recipe extracts them from HEAD e9d492b0d with git archive, and their tree hashes equal the S values. The only deltas from S are ETP evidence, two ETP-1 claim-algebra tool files, and the two ETP-2 tool edits listed under delta_from_S. S-prime is the commit the orchestrator makes from this working tree; its crate-input trees are unchanged.",
+    "tree_hash_rule": "sha256 over canonical JSON (sort_keys, separators ',' and ':') of the sorted [relpath, size, sha256] entries restricted to tracked files (git ls-files) under the named path",
+    "tree_hashes_at_S": {
+      "src+Cargo.toml+Cargo.lock+build.rs": {"files": 893, "sha256": "51568028bc902bee1fe3e4cdb5f401c9cf4a66aef501d95a42e2f35bfbd19981"},
+      "src": {"files": 890, "sha256": "942e89754a4f28eafea9bb05b6d2bddd757810f56c31488c598d2354bcd537ff"},
+      "Cargo.toml+Cargo.lock+build.rs+rust-toolchain.toml": {"files": 4, "sha256": "f06a5e1f53a30e661df75a30ab845deb3b598a669db8ba295cd2ceb40dd4f2fc"},
+      "forensics/tools": {"files": 309, "sha256": "a5fefdc660c6d8289519828402a67e0a595cb4721b930611f685fde0ef9520c9"},
+      "courts/phase18/timing": {"files": 27, "sha256": "fd3c31747b9ebfe699f4346f89d6e027f75e3bb447d9c4e6dcc9a99c455a3745"},
+      "courts/phase18/interop": {"files": 48, "sha256": "036c83fbf70b08e88bc7341e1fc5d0b306568121aa91dc0d4d9854c362425e39"},
+      "courts/phase18": {"files": 303, "sha256": "83245ade509cbde30c5c16821e54244985fe8a1f2404c91ce430fd3abe5c4337"},
+      "artifacts/phase2/libcrypto.ld": {"files": 1, "sha256": "a358415aced62fd9cf4f64c7b0661c19ed2f0b2a25ed8f517f9eb248a59807cb"},
+      "tests": {"files": 2, "sha256": "60838cd01afe6529ee322bbd28445cb85159b45465e6bb8a7d9f8c26775afeeb"},
+      "docker": {"files": 15, "sha256": "1bd35f44fd06a894eb89a5494f2f1b4ce7edc810bd9433c82b9a431142e4899c"},
+      "docs_constitution_REQUIRED_CONSTITUTION": {"files": 13, "sha256": "cbd60c73e050eaf1112c69539267446d51f1a8c6e4759fc45e3c83175765fa48"},
+      "forensics/authorities/AUTHORITIES.json": {"files": 1, "sha256": "707ec86933107eae941f74c727cb677aefd36424428c510c686140b9f12ba12b"}
+    },
+    "tree_hashes_at_S_prime": {
+      "src+Cargo.toml+Cargo.lock+build.rs": {"files": 893, "sha256": "51568028bc902bee1fe3e4cdb5f401c9cf4a66aef501d95a42e2f35bfbd19981"},
+      "src": {"files": 890, "sha256": "942e89754a4f28eafea9bb05b6d2bddd757810f56c31488c598d2354bcd537ff"},
+      "Cargo.toml+Cargo.lock+build.rs+rust-toolchain.toml": {"files": 4, "sha256": "f06a5e1f53a30e661df75a30ab845deb3b598a669db8ba295cd2ceb40dd4f2fc"},
+      "forensics/tools": {"files": 311, "sha256": "be7872fd58937027079107cb1d366350e0b5fb8465e706b464a6ef2679f6a200"},
+      "courts/phase18/timing": {"files": 27, "sha256": "fd3c31747b9ebfe699f4346f89d6e027f75e3bb447d9c4e6dcc9a99c455a3745"},
+      "courts/phase18/interop": {"files": 48, "sha256": "036c83fbf70b08e88bc7341e1fc5d0b306568121aa91dc0d4d9854c362425e39"},
+      "courts/phase18": {"files": 303, "sha256": "83245ade509cbde30c5c16821e54244985fe8a1f2404c91ce430fd3abe5c4337"},
+      "artifacts/phase2/libcrypto.ld": {"files": 1, "sha256": "a358415aced62fd9cf4f64c7b0661c19ed2f0b2a25ed8f517f9eb248a59807cb"},
+      "tests": {"files": 2, "sha256": "60838cd01afe6529ee322bbd28445cb85159b45465e6bb8a7d9f8c26775afeeb"},
+      "docker": {"files": 15, "sha256": "1bd35f44fd06a894eb89a5494f2f1b4ce7edc810bd9433c82b9a431142e4899c"},
+      "docs_constitution_REQUIRED_CONSTITUTION": {"files": 13, "sha256": "cbd60c73e050eaf1112c69539267446d51f1a8c6e4759fc45e3c83175765fa48"},
+      "forensics/authorities/AUTHORITIES.json": {"files": 1, "sha256": "707ec86933107eae941f74c727cb677aefd36424428c510c686140b9f12ba12b"}
+    },
+    "delta_from_S": [
+      {"path": "docs/ETP-CLAIM-ALGEBRA.md", "change": "added", "commit": "f93766a62/e9d492b0d", "build_relevant": false},
+      {"path": "docs/ETP-TODO.md", "change": "modified", "commit": "f93766a62/e9d492b0d", "build_relevant": false},
+      {"path": "evidence/etp/claim.schema.json", "change": "added", "build_relevant": false},
+      {"path": "evidence/etp/claims.json", "change": "added", "build_relevant": false},
+      {"path": "evidence/etp0/CLAIMS.json", "change": "added", "build_relevant": false},
+      {"path": "evidence/etp0/RECEIPT.md", "change": "added", "build_relevant": false},
+      {"path": "evidence/etp0/TRUST-GAPS.json", "change": "added", "build_relevant": false},
+      {"path": "forensics/tools/etp_claims.py", "change": "added", "commit": "e9d492b0d", "build_relevant": false, "note": "ETP-1 claim-algebra validator; not read by build.rs, src or tests"},
+      {"path": "forensics/tools/tests/test_etp_claims.py", "change": "added", "commit": "e9d492b0d", "build_relevant": false, "note": "ETP-1 validator tests; not read by the crate build"},
+      {"path": "forensics/tools/build_reproducibility.sh", "change": "modified", "build_relevant": true, "note": "ETP-2 clean-checkout fix and distinct HOME per build"},
+      {"path": "forensics/tools/phase2_shell.py", "change": "modified", "build_relevant": true, "note": "ETP-2 --emit-shell mode"},
+      {"path": "evidence/etp2/reproducibility.json", "change": "added", "build_relevant": false},
+      {"path": "evidence/etp2/RECEIPT.md", "change": "added", "build_relevant": false}
+    ],
+    "tool_file_digests": {
+      "forensics/tools/build_reproducibility.sh": "67660a5933bf52e1fee82c5ca817b6e73c50f2894f77faa74c089569c443e4e7",
+      "forensics/tools/phase2_shell.py": "151d703f30c9d4437258680a5dfc2bf67a2bd360dc84a61a76e9159c30b80ed7"
+    }
+  },
+
+  "clean_checkout_gap": {
+    "gap_id": "GAP-032",
+    "artefact": "artifacts/phase2/shell/libcrypto.shell.rs",
+    "tracked": false,
+    "gitignore_rule": ".gitignore:44:/artifacts/phase2/shell/",
+    "classification": "GENERATED_FROM_TRACKED_INPUTS",
+    "generator": "forensics/tools/phase2_shell.py",
+    "generator_tracked": true,
+    "tracked_inputs": [
+      "forensics/atlas/implemented-surface.json (ac5ef804666f2d81ae93f7f64a4c52c4239a9d832717b97ef5a08f3255454c36)",
+      "forensics/atlas/openssl-3.6.4-production/symbols-libcrypto.json",
+      "forensics/atlas/openssl-3.6.4-production/symbols-libssl.json"
+    ],
+    "regenerated_libcrypto_shell_sha256": "efa0fbce5c0e96ab7ddd539f7b798f4ad893f5c120c99cb44077f7c74ea65606",
+    "manifest_recorded_sha256": "efa0fbce5c0e96ab7ddd539f7b798f4ad893f5c120c99cb44077f7c74ea65606",
+    "regenerated_matches_manifest": true,
+    "regenerated_libssl_shell_sha256": "05f4d1586d832fe2e9a78f3c8c9810fc1bcb29e2e67bd10c263038bd4279c815",
+    "recipe_change": "build_reproducibility.sh now runs phase2_shell.py --emit-shell into each distribution build directory instead of copying the gitignored working-tree file",
+    "deterministic_in_both_arms": true,
+    "both_arms_observed_digest": "efa0fbce5c0e96ab7ddd539f7b798f4ad893f5c120c99cb44077f7c74ea65606",
+    "disposition": "CLOSED_BY_REGENERATION_FROM_TRACKED_INPUTS"
+  },
+
+  "initialisation": {
+    "recipe_invocations": 1,
+    "release_builds": 2,
+    "note": "The tracked recipe performs the two release builds (A and B) in one invocation. AGENTS.md section 6.1 and the ETP-2 hard constraint bound the experiment to two release builds; a second recipe invocation would have been four builds and was not run. Each build starts from its own git archive extraction, so target directories, HOME and TMPDIR are fresh for both.",
+    "source_extraction": "git -C <repo> archive HEAD -- SRC_PATHS | tar -x into two trees at different depths",
+    "variation_matrix": {
+      "build_root": ["/court/etp2-repro/build-a", "/court/etp2-repro/build-b/nested"],
+      "build_depth_below_out": [1, 2],
+      "CARGO_TARGET_DIR_effective": ["/court/etp2-repro/build-a/target", "/court/etp2-repro/build-b/nested/target"],
+      "HOME": ["/court/etp2-repro/home-a", "/court/etp2-repro/home-b"],
+      "TMPDIR": ["/court/etp2-repro/tmp-a", "/court/etp2-repro/tmp-b"],
+      "HOSTNAME": ["repro-a", "repro-b"],
+      "LC_ALL": ["C.UTF-8", "C"],
+      "LANG": ["C.UTF-8", "C"],
+      "CC": ["/court/etp2-repro/cc-a.sh", "/court/etp2-repro/cc-b.sh"],
+      "RUSTFLAGS_remap_prefix": [
+        "--remap-path-prefix=/court/etp2-repro/build-a=/build/src --remap-path-prefix=/court/etp2-repro/build-a/target=/build/target",
+        "--remap-path-prefix=/court/etp2-repro/build-b/nested=/build/src --remap-path-prefix=/court/etp2-repro/build-b/nested/target=/build/target"
+      ]
+    },
+    "pinned_shared": {
+      "SOURCE_DATE_EPOCH": "1609459200",
+      "CARGO_BUILD_JOBS": "4",
+      "CARGO_HOME": "/usr/local/cargo",
+      "RUSTUP_HOME": "/usr/local/rustup",
+      "AR": "/court/etp2-repro/ar.sh (forces ar D: zero timestamps, uid/gid, stable member order)",
+      "PATH": "/usr/local/cargo/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+      "toolchain": "shared, image-pinned"
+    },
+    "source_date_epoch_pinned": true,
+    "path_remapping_applied": true,
+    "byte_normalisation": "none"
+  },
+
+  "toolchain": {
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+    "rustc_commit": "48a229ceaefd4985c50990b14116b6d856af0985",
+    "llvm": "22.1.8",
+    "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+    "cc": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+    "ar": "GNU ar (GNU Binutils for Debian) 2.40",
+    "ld": "GNU ld (GNU Binutils for Debian) 2.40",
+    "target_triple": "x86_64-unknown-linux-gnu",
+    "profile": "release (--lib, --offline)",
+    "kernel": "Linux 7.3.5-2-cachyos x86_64",
+    "court_image": "openssl-rs-court-tools:1"
+  },
+
+  "venue": {
+    "court_container_memory_limit_bytes": 6442450944,
+    "court_container_memory_swap_limit_bytes": 6442450944,
+    "host_available_before_gib": 28,
+    "host_available_after_gib": 28,
+    "memory_guard": "PASS: available 28 GiB >= 24 GiB; cap = min(8g, 28g-16g) = 8g; used 6g <= cap",
+    "cgroup_memory_events_after": {"low": 0, "high": 0, "max": 29253, "oom": 0, "oom_kill": 0, "oom_group_kill": 0, "sock_throttled": 0},
+    "oom_occurred": false
+  },
+
+  "command": {
+    "invocation": "OPENSSL_RS_COURT_IMAGE=openssl-rs-court-tools:1 OPENSSL_RS_COURT_MEM=6g OPENSSL_RS_COURT_MEMSWAP=6g bash docker/openssl-rs-court.sh exec bash -c 'bash forensics/tools/build_reproducibility.sh --out /court/etp2-repro --distribution'",
+    "exit_status": 0,
+    "wall_time_seconds_total": 44,
+    "wall_time_seconds_build_a": 20.78,
+    "wall_time_seconds_build_b": 20.47
+  },
+
+  "artefacts": [
+    {
+      "name": "libopenssl_rs.a",
+      "kind": "crate static archive",
+      "path_a": "/court/etp2-repro/artefacts/a.a",
+      "path_b": "/court/etp2-repro/artefacts/b.a",
+      "size_bytes": 44824264,
+      "sha256_a": "64147144320989f5b1ac1e3491c68fb971d87a8c1c7db228cb526b497f2a1d8d",
+      "sha256_b": "64147144320989f5b1ac1e3491c68fb971d87a8c1c7db228cb526b497f2a1d8d",
+      "comparison": "IDENTICAL",
+      "differing_bytes": 0,
+      "archive_member_count": 351
+    },
+    {
+      "name": "libcrypto.so.3",
+      "kind": "measurement DSO (whole-archive link of the crate archive)",
+      "path_a": "/court/etp2-repro/artefacts/a.libcrypto.so.3",
+      "path_b": "/court/etp2-repro/artefacts/b.libcrypto.so.3",
+      "size_bytes": 17381552,
+      "sha256_a": "85395dcf7b7670503dc617b45801a85877b5884f543120a0fca711ca6c7a240a",
+      "sha256_b": "85395dcf7b7670503dc617b45801a85877b5884f543120a0fca711ca6c7a240a",
+      "comparison": "IDENTICAL",
+      "differing_bytes": 0,
+      "build_id": "77bbdedc819b0ab7bd66eb7c8e064e4a05ffc803"
+    },
+    {
+      "name": "distribution libcrypto.so.3",
+      "kind": "distribution DSO (crate archive + regenerated Phase-2 shell object, version script)",
+      "path_a": "/court/etp2-repro/artefacts/a-distribution.libcrypto.so.3",
+      "path_b": "/court/etp2-repro/artefacts/b-distribution.libcrypto.so.3",
+      "size_bytes": 17005192,
+      "sha256_a": "139966033ac9e935efc76290a9df9e91441aa2ea9f183a00089eb95e32093c0c",
+      "sha256_b": "139966033ac9e935efc76290a9df9e91441aa2ea9f183a00089eb95e32093c0c",
+      "comparison": "IDENTICAL",
+      "differing_bytes": 0,
+      "build_id": "39bfc4588d3fa6cbee2b9821663fd669d7651b33",
+      "symtab_symbols_total": 36630,
+      "dynsym_symbols": 6167,
+      "anon_llvm_local_symbols": 9620
+    }
+  ],
+
+  "comparison_outcome": "ALL_IDENTICAL",
+  "difference_inventory": [],
+
+  "previous_record": {
+    "candidate_commit": "abb315a01",
+    "archive": {
+      "recorded": "acbef482d6a814fa6624ae143dec493e6c202fea2a10c7b9f0fefdad8095651a",
+      "note": "T20 also recorded a8190593b96a490adc712ec81fce3b8decc125d9ac1f1a978013e1a02bd23a84 for the remapped (hermetic) recipe; acbef482 was the plain, unremapped archive"
+    },
+    "measurement_dso": "aaa32f21f5ae47d4f8ca4f154638f78325e6c8a44c02d86e0e0cecd3679b0ddb",
+    "distribution_dso": "5d0f9098de4433f64c9f17c51efc36cb6d33d0c293c6921e22c4230566059aeb",
+    "comparison": "ALL_THREE_DIFFER",
+    "reason": "The previous record was taken at abb315a01; S is 40 commits and 39 source files later, so the crate inputs differ and the linked artefacts must differ too.",
+    "disposition": "SUPERSEDED_NOT_DELETED",
+    "stale_working_tree_artefacts": {
+      "artifacts/phase2/libcrypto.so.3": {"sha256": "5d0f9098de4433f64c9f17c51efc36cb6d33d0c293c6921e22c4230566059aeb", "tracked": false, "status": "stale untracked distribution DSO from the previous candidate"},
+      "artifacts/phase2/install/lib/libcrypto.so.3": {"sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9", "tracked": true, "status": "tracked install DSO, last rebuilt before S; not reproduced by this recipe"}
+    }
+  },
+
+  "scope_limits": [
+    "One host, one court image, one toolchain, one target triple (x86_64-unknown-linux-gnu).",
+    "No cross-infrastructure, cross-machine, cross-architecture or cross-container-image reproduction is claimed.",
+    "Two release builds from the tracked recipe, bounded by AGENTS.md section 6.1; a second recipe invocation was not run.",
+    "The distribution arm regenerates the shell from tracked inputs; it does not establish that the historical untracked working-tree copy was produced by the same generator, only that the generator's output matches the digest recorded in the tracked SHELL_MANIFEST.json.",
+    "A post-commit rebuild from the orchestrator's S-prime commit is NOT_RUN; the measurement is bound to recorded content digests, and the commit is expected to change no crate input.",
+    "Reproducibility is not correctness; it is not evidence about memory safety, constant-time behaviour, compatibility or cryptographic assurance.",
+    "The tracked install DSO (artifacts/phase2/install/lib/libcrypto.so.3) and the OpenSSL authority were not rebuilt or compared by this item."
+  ],
+
+  "what_this_does_not_establish": [
+    "That the built library is correct or secure.",
+    "That the build is free of undefined behaviour, data races or timing leakage.",
+    "That any consumer (curl, nginx, OpenSSH, HAProxy, Redis) graduates.",
+    "That the artefacts match the OpenSSL authority's behaviour.",
+    "That the build is reproducible outside this host, image, toolchain and target.",
+    "That the previous record at abb315a01 was wrong; it described its own candidate and is superseded, not refuted."
+  ],
+
+  "deferred_gates": {
+    "post_commit_rebuild_of_S_prime": "NOT_RUN",
+    "cross_arch_reproduction": "NOT_RUN",
+    "cross_image_reproduction": "NOT_RUN",
+    "authority_differential": "NOT_RUN"
+  }
+}
