@@ -206,9 +206,45 @@ alias.
 | `EG_DERIVED_PROPERTY_MISMATCH` | conversion changed the recorded ETP-0 property |
 | `EG_ASSUMPTION_UNCHECKABLE` | an assumption has no independently checkable procedure |
 | `EG_EXCLUSION_UNCHECKABLE` | an exclusion argument or procedure is absent or vacuous |
+| `EG_EXCLUSION_WITNESS_MISSING` | an exclusion has no witness record |
+| `EG_EXCLUSION_WITNESS_UNBOUND` | a witness does not name its obligation, candidate or procedure |
+| `EG_EXCLUSION_WITNESS_CANDIDATE` | a witness is bound to a candidate the claim does not name |
+| `EG_EXCLUSION_WITNESS_SELF_AUTHORED` | a witness reviewer is the claim author, or the claim names no author |
+| `EG_EXCLUSION_WITNESS_RESULT_ABSENT` | a witness result is not present, has no digest, or cannot be re-derived |
+| `EG_EXCLUSION_WITNESS_DIGEST` | a witness result's bytes do not match its recorded digest |
+| `EG_JSON_DUPLICATE_KEY` | a claim document repeats an object key |
+| `EG_JSON_NON_FINITE` | a claim document carries `NaN` or `Infinity` |
+| `EG_JSON_MALFORMED` | a claim document is not parseable JSON |
 | `EG_MEASURE_AGGREGATION` | a measure does not declare aggregation forbidden |
 | `EG_DUPLICATE_CLAIM_ID` | two claims share an id |
 | `EG_AUTHORITY_MISSING_VERSION` | an OpenSSL authority claim names no version |
+
+### 4.2.1 Admitted exclusion witnesses
+
+An exclusion argument and a non-placeholder `checkable_by` establish only that an
+explanation was written. The exclusion is admitted only when it carries a
+`witness` record that binds:
+
+1. the **obligation identifier** the exclusion is about;
+2. the **candidate identity**, which must be one of the claim's declared source
+   identities;
+3. the **verification procedure**;
+4. an independently produced **result** with its own path, SHA-256 digest and
+   `S`/`E` digest identity, marked present; the tree check re-derives the digest;
+5. a **reviewer** whose declared role and identity differ from the claim
+   author's. A claim that uses an exclusion must declare an `author`, because
+   reviewer independence cannot otherwise be established.
+
+`propagate` applies the same structural admission: an unadmitted exclusion does not
+stop an obligation. The CLI validates the document — including re-deriving each
+witness result digest — before invoking propagation. The witness proves that a
+digest-bound result exists and that the declared reviewer is distinct; it does
+not prove organisational independence or that the procedure ran as named.
+
+All operations (`conjoin`, `invalidate`, `propagate`, `contradictions`) validate
+the whole document with the schema, laws and Git-bound digest check before
+answering. An invalid document is refused with the same rule identifiers as
+`validate`; no operation payload is produced from it.
 
 ### 4.3 Tree check
 

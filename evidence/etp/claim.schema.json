@@ -209,6 +209,22 @@
           "type": "string",
           "pattern": "^[A-Z][A-Z0-9]*-CLM-[0-9]{3}$"
         },
+        "author": {
+          "description": "Who authored the claim. Required only when the claim uses an exclusion, whose reviewer must be distinct.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["role", "identity"],
+          "properties": {
+            "role": {
+              "type": "string",
+              "minLength": 1
+            },
+            "identity": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
         "derived_from": {
           "$ref": "#/$defs/derived_claim"
         },
@@ -957,7 +973,8 @@
       "required": [
         "claim",
         "argument",
-        "checkable_by"
+        "checkable_by",
+        "witness"
       ],
       "properties": {
         "claim": {
@@ -971,6 +988,86 @@
         "checkable_by": {
           "type": "string",
           "minLength": 1
+        },
+        "witness": {
+          "$ref": "#/$defs/exclusion_witness"
+        }
+      }
+    },
+    "exclusion_witness": {
+      "description": "An admitted record that an exclusion was verified: bound to one obligation, one candidate, one procedure, one present result with its own digest, and a reviewer distinct from the claim author.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "obligation",
+        "candidate",
+        "procedure",
+        "result",
+        "reviewer"
+      ],
+      "properties": {
+        "obligation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate": {
+          "type": "string",
+          "minLength": 1
+        },
+        "procedure": {
+          "type": "string",
+          "minLength": 1
+        },
+        "result": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "sha256",
+            "digest_identity",
+            "present",
+            "producer"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "digest_identity": {
+              "enum": [
+                "S",
+                "E"
+              ]
+            },
+            "present": {
+              "type": "boolean"
+            },
+            "producer": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
+        },
+        "reviewer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "role",
+            "identity"
+          ],
+          "properties": {
+            "role": {
+              "type": "string",
+              "minLength": 1
+            },
+            "identity": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
         }
       }
     },
