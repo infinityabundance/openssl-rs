@@ -988,4 +988,64 @@ mod tests {
             DH_free(dh);
         }
     }
+
+    /// Reuse is causal on the DH path rather than a cold-start artefact.
+    ///
+    /// The same live object, key, parameters, context pool and method are used for
+    /// both counts; only parameter reuse is toggled. The first count takes the
+    /// cached Montgomery context. The second clears `DH_FLAG_CACHE_MONT_P` and the
+    /// cached slot, so `BN_mod_exp_mont` recomputes `R`, `R^2` and `R mod p` inside
+    /// the timed operation. Nothing about the object's lifecycle changes between
+    /// the two counts, so the difference isolates the reuse mechanism instead of
+    /// a fresh-object setup cost.
+    #[test]
+    fn disabling_dh_parameter_reuse_on_a_warm_object_adds_the_precomputation_allocations() {
+        use crate::bn::alloc::test_fail;
+        use crate::dh::group_params::DH_new_by_nid;
+        use crate::dh::object::{DH_free, DH_size};
+        use crate::runtime::obj::NID_ffdhe2048;
+
+        // SAFETY: every object and buffer below is this test's own and live.
+        unsafe {
+            let dh = DH_new_by_nid(NID_ffdhe2048);
+            assert!(!dh.is_null());
+            assert_eq!(DH_generate_key(dh), 1);
+            let mut pub_key: *const BigNum = core::ptr::null();
+            DH_get0_key(dh, &mut pub_key, core::ptr::null_mut());
+            assert!(!pub_key.is_null());
+            let len = DH_size(dh) as usize;
+            let mut out = vec![0u8; len];
+
+            // Warm the object and publish the cached Montgomery context.
+            assert!(ossl_dh_compute_key(out.as_mut_ptr(), pub_key, dh) > 0);
+            assert!(
+                !(*dh).method_mont_p.is_null(),
+                "the warm-up must leave a cached context"
+            );
+
+            let reused = {
+                let _count = test_fail::count_start();
+                assert!(ossl_dh_compute_key(out.as_mut_ptr(), pub_key, dh) > 0);
+                test_fail::counted()
+            };
+
+            // Disable reuse on the same object: remove the flag and release the
+            // cached context. The key, parameters, pool and method stay as they are.
+            (*dh).flags &= !DH_FLAG_CACHE_MONT_P;
+            BN_MONT_CTX_free((*dh).method_mont_p);
+            (*dh).method_mont_p = ptr::null_mut();
+
+            let rebuilt = {
+                let _count = test_fail::count_start();
+                assert!(ossl_dh_compute_key(out.as_mut_ptr(), pub_key, dh) > 0);
+                test_fail::counted()
+            };
+            eprintln!("DH reuse mutation: reused={reused} rebuilt={rebuilt}");
+            assert!(
+                rebuilt > reused,
+                "disabling reuse must add the precomputation allocations: reused={reused} rebuilt={rebuilt}"
+            );
+            DH_free(dh);
+        }
+    }
 }
