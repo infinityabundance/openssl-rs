@@ -1,10 +1,17 @@
 /*
- * LD_PRELOAD allocation probe for the BN ladder measurements.
+ * LD_PRELOAD allocation probe for the BN ladder measurements and the PFP-0
+ * cross-subject population.
  *
- * Counts malloc/calloc/realloc/free calls so bench_bn can report how many
- * allocations one exponentiation performs, and can force the Nth allocation
- * after allocprobe_fail_after() to return NULL so the caller's allocation-
- * failure behaviour is observed rather than assumed.
+ * Counts every allocation entry point a workload can reach through libc
+ * (`malloc`, `calloc`, `realloc`, `aligned_alloc`, `posix_memalign`, `memalign`)
+ * and `free` calls.  `allocprobe_alloc_calls()` is the unified count used by
+ * PFP-0 for both subjects; `allocprobe_mallocs()` keeps the older
+ * malloc/calloc/realloc meaning so a new measurement can be compared with the
+ * earlier candidate-only rows without pretending the two counters are equal.
+ *
+ * It can also force the Nth allocation after allocprobe_fail_after() to return
+ * NULL so the caller's allocation-failure behaviour is observed rather than
+ * assumed.
  *
  * The bootstrap arena exists because dlsym may itself allocate while the real
  * symbols are being resolved.  Anything served from the arena is recognised by
@@ -15,6 +22,7 @@
  */
 #define _GNU_SOURCE
 #include <dlfcn.h>
+#include <errno.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -25,8 +33,12 @@ static void *(*real_malloc)(size_t);
 static void *(*real_calloc)(size_t, size_t);
 static void *(*real_realloc)(void *, size_t);
 static void (*real_free)(void *);
+static void *(*real_aligned_alloc)(size_t, size_t);
+static int (*real_posix_memalign)(void **, size_t, size_t);
+static void *(*real_memalign)(size_t, size_t);
 
-static unsigned long g_mallocs;
+static unsigned long g_malloc_class;
+static unsigned long g_alloc_calls;
 static unsigned long g_frees;
 static unsigned long g_fail_countdown;
 
@@ -63,6 +75,9 @@ static void resolve(void)
     real_calloc = dlsym(RTLD_NEXT, "calloc");
     real_realloc = dlsym(RTLD_NEXT, "realloc");
     real_free = dlsym(RTLD_NEXT, "free");
+    real_aligned_alloc = dlsym(RTLD_NEXT, "aligned_alloc");
+    real_posix_memalign = dlsym(RTLD_NEXT, "posix_memalign");
+    real_memalign = dlsym(RTLD_NEXT, "memalign");
     resolving = 0;
 }
 
@@ -77,7 +92,8 @@ static int should_fail(void)
 
 void allocprobe_reset(void)
 {
-    g_mallocs = 0;
+    g_malloc_class = 0;
+    g_alloc_calls = 0;
     g_frees = 0;
 }
 
@@ -88,7 +104,13 @@ void allocprobe_fail_after(unsigned long n)
 
 unsigned long allocprobe_mallocs(void)
 {
-    return g_mallocs;
+    return g_malloc_class;
+}
+
+/* PFP-0 unified count: every allocation entry point this probe observes. */
+unsigned long allocprobe_alloc_calls(void)
+{
+    return g_alloc_calls;
 }
 
 unsigned long allocprobe_frees(void)
@@ -106,7 +128,8 @@ void *malloc(size_t n)
         resolving = 0;
         return p;
     }
-    g_mallocs++;
+    g_malloc_class++;
+    g_alloc_calls++;
     if (should_fail())
         return NULL;
     return real_malloc(n);
@@ -128,7 +151,8 @@ void *calloc(size_t a, size_t b)
             memset(p, 0, n);
         return p;
     }
-    g_mallocs++;
+    g_malloc_class++;
+    g_alloc_calls++;
     if (should_fail())
         return NULL;
     return real_calloc(a, b);
@@ -145,10 +169,47 @@ void *realloc(void *p, size_t n)
             memcpy(q, p, n);
         return q;
     }
-    g_mallocs++;
+    g_malloc_class++;
+    g_alloc_calls++;
     if (should_fail())
         return NULL;
     return real_realloc(p, n);
+}
+
+void *aligned_alloc(size_t alignment, size_t n)
+{
+    if (real_malloc == NULL && !resolving)
+        resolve();
+    if (resolving || real_aligned_alloc == NULL)
+        return NULL;
+    g_alloc_calls++;
+    if (should_fail())
+        return NULL;
+    return real_aligned_alloc(alignment, n);
+}
+
+int posix_memalign(void **memptr, size_t alignment, size_t n)
+{
+    if (real_malloc == NULL && !resolving)
+        resolve();
+    if (resolving || real_posix_memalign == NULL)
+        return ENOMEM;
+    g_alloc_calls++;
+    if (should_fail())
+        return ENOMEM;
+    return real_posix_memalign(memptr, alignment, n);
+}
+
+void *memalign(size_t alignment, size_t n)
+{
+    if (real_malloc == NULL && !resolving)
+        resolve();
+    if (resolving || real_memalign == NULL)
+        return NULL;
+    g_alloc_calls++;
+    if (should_fail())
+        return NULL;
+    return real_memalign(alignment, n);
 }
 
 void free(void *p)

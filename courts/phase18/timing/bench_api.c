@@ -1,5 +1,5 @@
 /*
- * bench_api.c — T21 cross-library workload benchmark.
+ * bench_api.c — PFP-0 cross-library workload benchmark (successor to T21).
  *
  * Runs one OpenSSL-compatible workload through exactly one `libcrypto.so.3`
  * per process. The library is selected at run time with `--lib <absolute path>`
@@ -9,11 +9,16 @@
  *     link-time symbol-version requirement that could couple it to one build;
  *   * a process never has two libcrypto mappings (one invocation, one library);
  *   * the library that actually served the calls is printed (`LIB ...`, taken
- *     from dladdr(BN_new)), so the runner can prove which DSO ran.
+ *     from dladdr(BN_new)), and `LOADED ...` records the real path, device and
+ *     inode from `/proc/self/maps`.  The runner compares those fields with
+ *     `stat(2)` on the on-disk DSO, so a replaced or mismatched artefact is a
+ *     refusal rather than a warning.
  *
  * Workloads (identical byte inputs on both sides — no BN_rand):
  *   modexp2048 / modexp8192  BN_mod_exp_mont_consttime, full-width exponent
- *   dh2048 / dh3072          DH_compute_key, full-width private exponent
+ *   dh-synth2048 / dh-synth3072  synthetic odd composite modulus (labelled)
+ *   dh-ffdhe2048 / dh-ffdhe3072  real RFC 7919 group fixtures (params file)
+ *   dh-modp2048                  real RFC 3526 group 14 fixture (params file)
  *   rsa2048                  RSA_private_encrypt(RSA_NO_PADDING), CRT key
  *   ecdsa256                 ECDSA_do_sign on P-256
  *
@@ -25,16 +30,22 @@
  *   * modexp/dh: the deterministic result is printed; the runner requires the
  *     candidate and authority lines to be byte-identical (the authority's value
  *     is the known answer);
- *   * every printed CHECK line is compared between the two processes.
+ *   * every printed CHECK line is compared between the two processes;
+ *   * `--cross-sign FILE` / `--cross-verify FILE` move a DER signature between
+ *     two processes, so the campaign can sign with one library and verify with
+ *     the other in both directions.
  *
  * Timing method: one warm-up pass of iters/4, then `runs` timed batches of
  * `iters` calls each. Each sample is a batch mean in microseconds per call;
- * the reported figure is the median sample, with min/max and relative spread.
+ * the printed figure is the median sample, with min/max and relative spread.
+ * The campaign runner treats one process as one independent repetition: the
+ * same process-level sample is never counted as more than one replication.
  *
  * Allocation counts: in `--alloc` mode the harness calls the weak
- * `allocprobe_reset`/`allocprobe_mallocs` hooks exported by alloc_probe.so
- * (LD_PRELOAD), does one short batch, and reports mallocs per call. Without the
- * preload the hooks are NULL and the line says `n/a`.
+ * `allocprobe_reset`/`allocprobe_mallocs`/`allocprobe_alloc_calls` hooks
+ * exported by alloc_probe.so (LD_PRELOAD), does one short batch, and reports
+ * both the unified allocation-entry count and the legacy malloc-class count
+ * per call. Without the preload the hooks are NULL and both fields say `n/a`.
  */
 
 #define _GNU_SOURCE
@@ -46,14 +57,17 @@
 #include <openssl/rsa.h>
 
 #include <dlfcn.h>
+#include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <time.h>
 
 extern void allocprobe_reset(void) __attribute__((weak));
 extern unsigned long allocprobe_mallocs(void) __attribute__((weak));
+extern unsigned long allocprobe_alloc_calls(void) __attribute__((weak));
 
 typedef struct {
     BIGNUM *(*BN_new)(void);
@@ -97,9 +111,14 @@ typedef struct {
     int (*ECDSA_do_verify)(const unsigned char *, int, const ECDSA_SIG *,
                            EC_KEY *);
     void (*ECDSA_SIG_free)(ECDSA_SIG *);
+    int (*i2d_ECDSA_SIG)(const ECDSA_SIG *, unsigned char **);
+    ECDSA_SIG *(*d2i_ECDSA_SIG)(ECDSA_SIG **, const unsigned char **, long);
 } api_t;
 
 static api_t api;
+
+static int report_loaded(void *sym, const char *requested);
+static unsigned char *read_file(const char *path, long *out_len);
 
 static double now_us(void)
 {
@@ -194,6 +213,8 @@ static int load_api(const char *path)
     LOAD(ECDSA_do_sign, "ECDSA_do_sign");
     LOAD(ECDSA_do_verify, "ECDSA_do_verify");
     LOAD(ECDSA_SIG_free, "ECDSA_SIG_free");
+    LOAD(i2d_ECDSA_SIG, "i2d_ECDSA_SIG");
+    LOAD(d2i_ECDSA_SIG, "d2i_ECDSA_SIG");
 #undef LOAD
 
     {
@@ -205,6 +226,60 @@ static int load_api(const char *path)
             printf("LIB %s\n", info.dli_fname);
         else
             printf("LIB %s\n", path);
+        fflush(stdout);
+        if (!report_loaded(sym, path))
+            return 0;
+    }
+    return 1;
+}
+
+/*
+ * Prove which file the process actually mapped.  `LOADED` carries the resolved
+ * path plus the device and inode the kernel reports for the mapping; `MAPS`
+ * carries the number of `/proc/self/maps` entries for that path.  The runner
+ * compares the device/inode with `stat(2)` on the expected on-disk DSO and
+ * refuses a mismatch.  A path alone is not identity: a replaced file with the
+ * same name would still print the same path.
+ */
+static int report_loaded(void *sym, const char *requested)
+{
+    Dl_info info;
+    const char *name = requested;
+    char resolved[PATH_MAX];
+    struct stat st;
+    FILE *maps;
+    char line[4096];
+    int entries = 0;
+
+    if (sym != NULL && dladdr(sym, &info) != 0 && info.dli_fname != NULL)
+        name = info.dli_fname;
+    if (realpath(name, resolved) == NULL) {
+        fprintf(stderr, "bench_api: realpath(%s) failed\n", name);
+        return 0;
+    }
+    if (stat(resolved, &st) != 0) {
+        fprintf(stderr, "bench_api: stat(%s) failed\n", resolved);
+        return 0;
+    }
+    printf("LOADED realpath=%s dev=%ju ino=%ju size=%lld\n", resolved,
+           (uintmax_t)st.st_dev, (uintmax_t)st.st_ino, (long long)st.st_size);
+
+    maps = fopen("/proc/self/maps", "r");
+    if (maps == NULL) {
+        fprintf(stderr, "bench_api: cannot read /proc/self/maps\n");
+        return 0;
+    }
+    while (fgets(line, sizeof(line), maps) != NULL) {
+        if (strstr(line, resolved) != NULL)
+            entries++;
+    }
+    fclose(maps);
+    printf("MAPS realpath=%s entries=%d\n", resolved, entries);
+    fflush(stdout);
+    if (entries < 1) {
+        fprintf(stderr, "bench_api: %s is not present in /proc/self/maps\n",
+                resolved);
+        return 0;
     }
     return 1;
 }
@@ -235,11 +310,19 @@ static int measure(const char *name, int iters, int runs, int (*step)(void),
                 return 0;
             }
         }
-        if (probe)
-            printf("ALLOC %s allocs_per_op=%.3f iters=%d\n", name,
-                   (double)allocprobe_mallocs() / (double)iters, iters);
-        else
-            printf("ALLOC %s allocs_per_op=n/a iters=%d\n", name, iters);
+        if (probe) {
+            unsigned long malloc_class = allocprobe_mallocs();
+            unsigned long all_calls = (allocprobe_alloc_calls != NULL)
+                                          ? allocprobe_alloc_calls()
+                                          : malloc_class;
+
+            printf("ALLOC %s allocs_per_op=%.3f malloc_per_op=%.3f iters=%d\n",
+                   name, (double)all_calls / (double)iters,
+                   (double)malloc_class / (double)iters, iters);
+        } else {
+            printf("ALLOC %s allocs_per_op=n/a malloc_per_op=n/a iters=%d\n",
+                   name, iters);
+        }
         fflush(stdout);
         return 1;
     }
@@ -366,32 +449,148 @@ static int dh_step(void)
     return api.DH_compute_key(dh_out, dh_peer, dh) > 0;
 }
 
-static int run_dh(const char *name, int bits, int iters, int runs,
-                  int alloc_mode)
+static int hex_nibble(char c)
+{
+    if (c >= '0' && c <= '9')
+        return c - '0';
+    if (c >= 'a' && c <= 'f')
+        return c - 'a' + 10;
+    if (c >= 'A' && c <= 'F')
+        return c - 'A' + 10;
+    return -1;
+}
+
+static int parse_hex_alloc(const char *s, unsigned char **out, size_t *n)
+{
+    size_t len = strlen(s), i;
+    unsigned char *buf;
+
+    if (len == 0 || (len & 1u) != 0)
+        return 0;
+    buf = malloc(len / 2);
+    if (buf == NULL)
+        return 0;
+    for (i = 0; i < len / 2; i++) {
+        int hi = hex_nibble(s[2 * i]);
+        int lo = hex_nibble(s[2 * i + 1]);
+
+        if (hi < 0 || lo < 0) {
+            free(buf);
+            return 0;
+        }
+        buf[i] = (unsigned char)((hi << 4) | lo);
+    }
+    *out = buf;
+    *n = len / 2;
+    return 1;
+}
+
+/*
+ * Read a tracked group fixture: one `p=<hex>` line and one `q=<hex>` line.
+ * The bytes are not invented here; extract_dh_fixtures.py derives them from
+ * src/bn/dh_data.rs, whose arrays are themselves regenerated from the admitted
+ * authority.
+ */
+static int read_dh_params(const char *path, unsigned char **p, size_t *pn,
+                          unsigned char **q, size_t *qn)
+{
+    long len = 0;
+    unsigned char *raw = read_file(path, &len);
+    char *text, *line, *save = NULL;
+    int have_p = 0, have_q = 0;
+
+    if (raw == NULL)
+        return 0;
+    text = malloc((size_t)len + 1);
+    if (text == NULL) {
+        free(raw);
+        return 0;
+    }
+    memcpy(text, raw, (size_t)len);
+    text[len] = '\0';
+    free(raw);
+
+    for (line = strtok_r(text, "\n", &save); line != NULL;
+         line = strtok_r(NULL, "\n", &save)) {
+        while (*line == ' ' || *line == '\t')
+            line++;
+        if (strncmp(line, "p=", 2) == 0) {
+            if (have_p || !parse_hex_alloc(line + 2, p, pn)) {
+                free(text);
+                return 0;
+            }
+            have_p = 1;
+        } else if (strncmp(line, "q=", 2) == 0) {
+            if (have_q || !parse_hex_alloc(line + 2, q, qn)) {
+                free(text);
+                return 0;
+            }
+            have_q = 1;
+        }
+    }
+    free(text);
+    if (!have_p || !have_q || *pn == 0 || *qn == 0) {
+        free(*p);
+        free(*q);
+        *p = NULL;
+        *q = NULL;
+        return 0;
+    }
+    return 1;
+}
+
+static int run_dh(const char *name, int bits, const char *params_path, int iters,
+                  int runs, int alloc_mode)
 {
     size_t n = (size_t)bits / 8;
-    unsigned char *pb = malloc(n), *vb = malloc(n), *qb = malloc(n);
-    BIGNUM *p = NULL, *g = NULL, *priv = NULL, *peer = NULL;
+    unsigned char *pb = NULL, *qb = NULL;
+    size_t pn = 0, qn = 0;
+    BIGNUM *p = NULL, *q = NULL, *g = NULL, *priv = NULL, *peer = NULL;
     int dh_len, r, i, ok = 0;
 
-    if (pb == NULL || vb == NULL || qb == NULL)
-        goto out;
-    make_operand(pb, n, UINT64_C(0x44485000) + (uint64_t)bits, 1, 1);
-    make_operand(vb, n, UINT64_C(0x50524900) + (uint64_t)bits, 0, 1);
-    make_operand(qb, n, UINT64_C(0x50454500) + (uint64_t)bits, 0, 1);
+    if (params_path != NULL) {
+        if (!read_dh_params(params_path, &pb, &pn, &qb, &qn))
+            return 0;
+        n = pn;
+    } else {
+        pb = malloc(n);
+        if (pb == NULL)
+            goto out;
+        make_operand(pb, n, UINT64_C(0x44485000) + (uint64_t)bits, 1, 1);
+        pn = n;
+    }
 
-    p = api.BN_bin2bn(pb, (int)n, NULL);
-    priv = api.BN_bin2bn(vb, (int)n, NULL);
-    peer = api.BN_bin2bn(qb, (int)n, NULL);
+    {
+        unsigned char *vb = malloc(n), *peer_b = malloc(n);
+
+        if (vb == NULL || peer_b == NULL) {
+            free(vb);
+            free(peer_b);
+            goto out;
+        }
+        make_operand(vb, n, UINT64_C(0x50524900) + (uint64_t)bits, 0, 1);
+        make_operand(peer_b, n, UINT64_C(0x50454500) + (uint64_t)bits, 0, 1);
+        priv = api.BN_bin2bn(vb, (int)n, NULL);
+        peer = api.BN_bin2bn(peer_b, (int)n, NULL);
+        free(vb);
+        free(peer_b);
+    }
+
+    p = api.BN_bin2bn(pb, (int)pn, NULL);
+    if (qb != NULL)
+        q = api.BN_bin2bn(qb, (int)qn, NULL);
     g = api.BN_new();
     dh = api.DH_new();
     if (p == NULL || priv == NULL || peer == NULL || g == NULL || dh == NULL)
         goto out;
+    if (qb != NULL && q == NULL)
+        goto out;
     if (!api.BN_set_word(g, 2))
         goto out;
-    if (!api.DH_set0_pqg(dh, p, NULL, g))
+    if (!api.DH_set0_pqg(dh, p, q, g))
         goto out;
     p = NULL;
+    q = NULL;
     g = NULL;
     if (!api.DH_set0_key(dh, NULL, priv))
         goto out;
@@ -418,6 +617,8 @@ static int run_dh(const char *name, int bits, int iters, int runs,
 out:
     if (p)
         api.BN_free(p);
+    if (q)
+        api.BN_free(q);
     if (g)
         api.BN_free(g);
     if (priv)
@@ -427,7 +628,6 @@ out:
     if (dh)
         api.DH_free(dh);
     free(pb);
-    free(vb);
     free(qb);
     free(dh_out);
     dh = NULL;
@@ -550,16 +750,21 @@ static int ec_step(void)
     return 1;
 }
 
-static int run_ecdsa(int iters, int runs, int alloc_mode)
+/*
+ * Build the fixed P-256 key used by the timing row and the cross-verification
+ * rows. The private scalar comes from the same deterministic byte source on both
+ * sides; the public key is derived through the library under test, so the
+ * printed compressed point is an observable the runner can compare.
+ */
+static int ecdsa_setup(BIGNUM **priv_out, EC_POINT **pub_out, BN_CTX **ctx_out,
+                       unsigned char *pubbuf, size_t *plen_out)
 {
     BIGNUM *priv = NULL;
     EC_POINT *pub = NULL;
     BN_CTX *ctx = NULL;
-    ECDSA_SIG *s = NULL;
-    unsigned char sb[32], pubbuf[65];
     const EC_GROUP *grp;
-    size_t plen, i;
-    int ok = 0;
+    unsigned char sb[32];
+    size_t plen;
 
     eck = api.EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
     if (eck == NULL)
@@ -567,22 +772,70 @@ static int run_ecdsa(int iters, int runs, int alloc_mode)
 
     make_operand(sb, sizeof(sb), UINT64_C(0x45434400), 0, 1);
     priv = api.BN_bin2bn(sb, (int)sizeof(sb), NULL);
-    if (priv == NULL)
-        goto out;
-    if (!api.EC_KEY_set_private_key(eck, priv))
-        goto out;
+    if (priv == NULL || !api.EC_KEY_set_private_key(eck, priv))
+        goto fail;
 
     grp = api.EC_KEY_get0_group(eck);
     if (grp == NULL)
-        goto out;
+        goto fail;
     pub = api.EC_POINT_new(grp);
     ctx = api.BN_CTX_new();
     if (pub == NULL || ctx == NULL)
-        goto out;
+        goto fail;
     if (!api.EC_POINT_mul(grp, pub, priv, NULL, NULL, ctx))
-        goto out;
+        goto fail;
     if (!api.EC_KEY_set_public_key(eck, pub))
-        goto out;
+        goto fail;
+
+    plen = api.EC_POINT_point2oct(grp, pub, POINT_CONVERSION_COMPRESSED,
+                                  pubbuf, 65, ctx);
+    if (plen == 0)
+        goto fail;
+
+    *priv_out = priv;
+    *pub_out = pub;
+    *ctx_out = ctx;
+    *plen_out = plen;
+    return 1;
+
+fail:
+    if (priv)
+        api.BN_free(priv);
+    if (pub)
+        api.EC_POINT_free(pub);
+    if (ctx)
+        api.BN_CTX_free(ctx);
+    if (eck)
+        api.EC_KEY_free(eck);
+    eck = NULL;
+    return 0;
+}
+
+static void ecdsa_teardown(BIGNUM *priv, EC_POINT *pub, BN_CTX *ctx)
+{
+    if (priv)
+        api.BN_free(priv);
+    if (pub)
+        api.EC_POINT_free(pub);
+    if (ctx)
+        api.BN_CTX_free(ctx);
+    if (eck)
+        api.EC_KEY_free(eck);
+    eck = NULL;
+}
+
+static int run_ecdsa(int iters, int runs, int alloc_mode)
+{
+    BIGNUM *priv = NULL;
+    EC_POINT *pub = NULL;
+    BN_CTX *ctx = NULL;
+    ECDSA_SIG *s = NULL;
+    unsigned char pubbuf[65];
+    size_t plen, i;
+    int ok = 0;
+
+    if (!ecdsa_setup(&priv, &pub, &ctx, pubbuf, &plen))
+        return 0;
 
     make_operand(ec_dgst, sizeof(ec_dgst), UINT64_C(0x44494700), 0, 0);
 
@@ -596,10 +849,6 @@ static int run_ecdsa(int iters, int runs, int alloc_mode)
         goto out;
     }
 
-    plen = api.EC_POINT_point2oct(grp, pub, POINT_CONVERSION_COMPRESSED,
-                                  pubbuf, sizeof(pubbuf), ctx);
-    if (plen == 0)
-        goto out;
     printf("CHECK ecdsa256 pub=");
     for (i = 0; i < plen; i++)
         printf("%02x", pubbuf[i]);
@@ -611,21 +860,142 @@ static int run_ecdsa(int iters, int runs, int alloc_mode)
 out:
     if (s)
         api.ECDSA_SIG_free(s);
-    if (priv)
-        api.BN_free(priv);
-    if (pub)
-        api.EC_POINT_free(pub);
-    if (ctx)
-        api.BN_CTX_free(ctx);
-    if (eck)
-        api.EC_KEY_free(eck);
-    eck = NULL;
+    ecdsa_teardown(priv, pub, ctx);
+    return ok;
+}
+
+/* ---- ECDSA cross-library sign/verify ----------------------------------- */
+
+static int write_file(const char *path, const unsigned char *buf, size_t len)
+{
+    FILE *f = fopen(path, "wb");
+
+    if (f == NULL)
+        return 0;
+    if (fwrite(buf, 1, len, f) != len) {
+        fclose(f);
+        return 0;
+    }
+    return fclose(f) == 0;
+}
+
+static int run_cross_sign(const char *path)
+{
+    BIGNUM *priv = NULL;
+    EC_POINT *pub = NULL;
+    BN_CTX *ctx = NULL;
+    ECDSA_SIG *s = NULL;
+    unsigned char pubbuf[65], dgst[32], *der = NULL, *q;
+    size_t plen, i;
+    int len, ok = 0;
+
+    if (!ecdsa_setup(&priv, &pub, &ctx, pubbuf, &plen))
+        return 0;
+    make_operand(dgst, sizeof(dgst), UINT64_C(0x44494700), 0, 0);
+    s = api.ECDSA_do_sign(dgst, (int)sizeof(dgst), eck);
+    if (s == NULL)
+        goto out;
+    len = api.i2d_ECDSA_SIG(s, NULL);
+    if (len <= 0)
+        goto out;
+    der = malloc((size_t)len);
+    if (der == NULL)
+        goto out;
+    q = der;
+    if (api.i2d_ECDSA_SIG(s, &q) != len)
+        goto out;
+    if (!write_file(path, der, (size_t)len))
+        goto out;
+
+    printf("CROSS sign path=%s bytes=%d pub=", path, len);
+    for (i = 0; i < plen; i++)
+        printf("%02x", pubbuf[i]);
+    printf("\n");
+    fflush(stdout);
+    ok = 1;
+
+out:
+    if (s)
+        api.ECDSA_SIG_free(s);
+    free(der);
+    ecdsa_teardown(priv, pub, ctx);
+    return ok;
+}
+
+static int run_cross_verify(const char *path)
+{
+    BIGNUM *priv = NULL;
+    EC_POINT *pub = NULL;
+    BN_CTX *ctx = NULL;
+    ECDSA_SIG *s = NULL;
+    unsigned char pubbuf[65], dgst[32], *der;
+    const unsigned char *q;
+    long len = 0;
+    size_t plen, i;
+    int verified = 0;
+
+    der = read_file(path, &len);
+    if (der == NULL)
+        return 0;
+    q = der;
+    s = api.d2i_ECDSA_SIG(NULL, &q, len);
+    if (s == NULL)
+        goto out;
+    if (!ecdsa_setup(&priv, &pub, &ctx, pubbuf, &plen))
+        goto out;
+    make_operand(dgst, sizeof(dgst), UINT64_C(0x44494700), 0, 0);
+    verified = (api.ECDSA_do_verify(dgst, (int)sizeof(dgst), s, eck) == 1);
+    printf("CROSS verify path=%s ok=%d pub=", path, verified);
+    for (i = 0; i < plen; i++)
+        printf("%02x", pubbuf[i]);
+    printf("\n");
+    fflush(stdout);
+
+out:
+    if (s)
+        api.ECDSA_SIG_free(s);
+    free(der);
+    ecdsa_teardown(priv, pub, ctx);
+    return verified;
+}
+
+/* ---- whole population -------------------------------------------------- */
+
+static int run_population(const char *rsa_der, const char *ffdhe2048,
+                          const char *ffdhe3072, const char *modp2048,
+                          int alloc_mode)
+{
+    int ok = 1;
+
+    if (alloc_mode) {
+        ok &= run_modexp("modexp2048", 2048, 5, 1, 1);
+        ok &= run_dh("dh-synth2048", 2048, NULL, 5, 1, 1);
+        ok &= run_dh("dh-synth3072", 3072, NULL, 5, 1, 1);
+        ok &= run_dh("dh-ffdhe2048", 2048, ffdhe2048, 5, 1, 1);
+        ok &= run_dh("dh-ffdhe3072", 3072, ffdhe3072, 3, 1, 1);
+        ok &= run_dh("dh-modp2048", 2048, modp2048, 5, 1, 1);
+        ok &= run_rsa(rsa_der, 5, 1, 1);
+        ok &= run_ecdsa(5, 1, 1);
+        ok &= run_modexp("modexp8192", 8192, 3, 1, 1);
+    } else {
+        ok &= run_modexp("modexp2048", 2048, 20, 5, 0);
+        ok &= run_dh("dh-synth2048", 2048, NULL, 20, 5, 0);
+        ok &= run_dh("dh-synth3072", 3072, NULL, 10, 5, 0);
+        ok &= run_dh("dh-ffdhe2048", 2048, ffdhe2048, 20, 5, 0);
+        ok &= run_dh("dh-ffdhe3072", 3072, ffdhe3072, 10, 5, 0);
+        ok &= run_dh("dh-modp2048", 2048, modp2048, 20, 5, 0);
+        ok &= run_rsa(rsa_der, 20, 5, 0);
+        ok &= run_ecdsa(500, 5, 0);
+        ok &= run_modexp("modexp8192", 8192, 2, 5, 0);
+    }
     return ok;
 }
 
 int main(int argc, char **argv)
 {
     const char *lib = NULL, *rsa_der = NULL;
+    const char *ffdhe2048 = NULL, *ffdhe3072 = NULL, *modp2048 = NULL;
+    const char *cross_sign = NULL, *cross_verify = NULL;
     int alloc_mode = 0;
     int i, ok = 1;
 
@@ -634,37 +1004,51 @@ int main(int argc, char **argv)
             lib = argv[++i];
         } else if (strcmp(argv[i], "--rsa-der") == 0 && i + 1 < argc) {
             rsa_der = argv[++i];
+        } else if (strcmp(argv[i], "--dh-ffdhe2048") == 0 && i + 1 < argc) {
+            ffdhe2048 = argv[++i];
+        } else if (strcmp(argv[i], "--dh-ffdhe3072") == 0 && i + 1 < argc) {
+            ffdhe3072 = argv[++i];
+        } else if (strcmp(argv[i], "--dh-modp2048") == 0 && i + 1 < argc) {
+            modp2048 = argv[++i];
+        } else if (strcmp(argv[i], "--cross-sign") == 0 && i + 1 < argc) {
+            cross_sign = argv[++i];
+        } else if (strcmp(argv[i], "--cross-verify") == 0 && i + 1 < argc) {
+            cross_verify = argv[++i];
         } else if (strcmp(argv[i], "--alloc") == 0) {
             alloc_mode = 1;
         } else {
             fprintf(stderr,
-                    "usage: %s --lib <libcrypto.so.3> --rsa-der <pkcs1.der> "
-                    "[--alloc]\n",
+                    "usage: %s --lib <libcrypto.so.3> [--rsa-der <pkcs1.der> "
+                    "--dh-ffdhe2048 <p/q> --dh-ffdhe3072 <p/q> "
+                    "--dh-modp2048 <p/q>] [--alloc] "
+                    "[--cross-sign <file> | --cross-verify <file>]\n",
                     argv[0]);
             return 2;
         }
     }
-    if (lib == NULL || rsa_der == NULL) {
-        fprintf(stderr, "bench_api: --lib and --rsa-der are required\n");
+    if (lib == NULL) {
+        fprintf(stderr, "bench_api: --lib is required\n");
         return 2;
     }
     if (!load_api(lib))
         return 2;
 
-    if (alloc_mode) {
-        ok &= run_modexp("modexp2048", 2048, 5, 1, 1);
-        ok &= run_dh("dh2048", 2048, 5, 1, 1);
-        ok &= run_dh("dh3072", 3072, 5, 1, 1);
-        ok &= run_rsa(rsa_der, 5, 1, 1);
-        ok &= run_ecdsa(5, 1, 1);
-        ok &= run_modexp("modexp8192", 8192, 3, 1, 1);
-    } else {
-        ok &= run_modexp("modexp2048", 2048, 20, 5, 0);
-        ok &= run_dh("dh2048", 2048, 20, 5, 0);
-        ok &= run_dh("dh3072", 3072, 10, 5, 0);
-        ok &= run_rsa(rsa_der, 20, 5, 0);
-        ok &= run_ecdsa(500, 5, 0);
-        ok &= run_modexp("modexp8192", 8192, 2, 5, 0);
+    if (cross_sign != NULL || cross_verify != NULL) {
+        if (cross_sign != NULL && cross_verify != NULL) {
+            fprintf(stderr, "bench_api: choose one cross mode\n");
+            return 2;
+        }
+        return (cross_sign != NULL) ? (run_cross_sign(cross_sign) ? 0 : 1)
+                                    : (run_cross_verify(cross_verify) ? 0 : 1);
     }
+
+    if (rsa_der == NULL || ffdhe2048 == NULL || ffdhe3072 == NULL ||
+        modp2048 == NULL) {
+        fprintf(stderr, "bench_api: --rsa-der and the three --dh-* fixtures "
+                        "are required\n");
+        return 2;
+    }
+
+    ok = run_population(rsa_der, ffdhe2048, ffdhe3072, modp2048, alloc_mode);
     return ok ? 0 : 1;
 }

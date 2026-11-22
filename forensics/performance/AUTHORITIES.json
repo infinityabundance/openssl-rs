@@ -1,0 +1,167 @@
+{
+  "schema": "openssl-rs/performance/authorities/v1",
+  "campaign": "PFP-0",
+  "policy": {
+    "measurement_rule": "Only a subject actually built and executed in this environment may appear in a measurement row. An absent comparator is UNAVAILABLE or NOT_APPLICABLE with the reason recorded; it is not a win and no placeholder number is invented.",
+    "authority_classes": {
+      "compatibility_authority": "the admitted OpenSSL version and build profile the candidate targets",
+      "performance_authority": "a contemporary stable implementation measured as a comparator, with its own identity and provider configuration"
+    },
+    "row_status_vocabulary": ["MEASURED", "UNAVAILABLE", "NOT_APPLICABLE_FOR_C_API_HARNESS"]
+  },
+  "compatibility_authority": {
+    "id": "openssl-3.6.4-production",
+    "product": "OpenSSL",
+    "version": "3.6.4",
+    "role": "compatibility_authority",
+    "row_status": "MEASURED",
+    "measured": true,
+    "source": {
+      "archive": "openssl-3.6.4.tar.gz",
+      "archive_sha256": "9bffaa1ad1e07b354c21bd3324ec02fa15579f45a7d0494b3e74bc449b7333ef",
+      "source_tree": "forensics/authorities/src/openssl-3.6.4",
+      "source_tree_root_hash": "27d9917bd7c63d9bb056e674cc08c809b44cde50f9e474cd30041b8b66385432",
+      "registry": "forensics/authorities/AUTHORITIES.json"
+    },
+    "build_profile": {
+      "configure": "perl Configure linux-x86_64 --prefix=/work/forensics/authorities/prefix/openssl-3.6.4-production --openssldir=/work/forensics/authorities/prefix/openssl-3.6.4-production/ssl --libdir=lib shared enable-legacy no-tests",
+      "target": "linux-x86_64",
+      "compiler": "gcc -fPIC -pthread -m64 -Wa,--noexecstack -Wall -O3 -DOPENSSL_USE_NODELETE -DL_ENDIAN -DOPENSSL_PIC -DOPENSSL_BUILDING_OPENSSL -DNDEBUG",
+      "assembly": "enabled (default configuration for linux-x86_64)",
+      "shared": true,
+      "legacy_provider": true,
+      "tests": false
+    },
+    "artefact": {
+      "path": "forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+      "size_bytes": 7295816,
+      "sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2",
+      "build_id": "5b4871ce9d78edeafc96f143d7d6697d943ad804",
+      "version_text": "OpenSSL 3.6.4 25 Aug 2026"
+    },
+    "loaded_artefact_verification": {
+      "method": "bench_api.c resolves dladdr(BN_new), then reads the mapping's realpath, device and inode from /proc/self/maps; the runner compares them with stat(2) on the on-disk DSO",
+      "result": "all PFP-0 processes mapped the digest 611e511d and the on-disk device/inode recorded in the campaign identity file"
+    },
+    "measured_rows": [
+      "modexp2048",
+      "modexp8192",
+      "dh-synth2048",
+      "dh-synth3072",
+      "dh-ffdhe2048",
+      "dh-ffdhe3072",
+      "dh-modp2048",
+      "rsa2048",
+      "ecdsa256"
+    ]
+  },
+  "performance_authorities": [
+    {
+      "id": "aws-lc",
+      "product": "AWS-LC",
+      "role": "performance_authority",
+      "version_intended": "NOT_PINNED_IN_THIS_REPOSITORY",
+      "version_observed": null,
+      "build_profile_requirements": "CMake or the repository's build recipe, release build, assembly enabled for the target, OpenSSL-compatible libcrypto ABI, provider/engine configuration recorded",
+      "api_surface": "OpenSSL-compatible libcrypto C ABI (usable by bench_api.c with the same dlopen/dlsym discipline)",
+      "availability": "UNAVAILABLE",
+      "row_status": "UNAVAILABLE",
+      "measured": false,
+      "reason": "No AWS-LC source archive, installed library, header tree or offline cargo source exists in this environment. The court's ldconfig, pkg-config, /usr and /usr/local searches and /usr/local/cargo registry search returned no AWS-LC artefact.",
+      "acquisition_path": "Pin an aws/aws-lc commit in forensics/authorities/AUTHORITIES.json, fetch the source into forensics/authorities/src, build a release libcrypto in the court with the recorded CMake flags, and benchmark the resulting DSO with the same harness. Network access or a tracked source archive is a prerequisite; neither is available here."
+    },
+    {
+      "id": "boringssl",
+      "product": "BoringSSL",
+      "role": "performance_authority",
+      "version_intended": "NOT_PINNED_IN_THIS_REPOSITORY",
+      "version_observed": null,
+      "build_profile_requirements": "CMake/Ninja release build, assembly enabled, the commit recorded; BoringSSL does not promise a stable ABI, so the adapter symbol set must be checked against the harness",
+      "api_surface": "C library with OpenSSL-derived libcrypto symbols; the harness symbol set must be verified for the pinned commit",
+      "availability": "UNAVAILABLE",
+      "row_status": "UNAVAILABLE",
+      "measured": false,
+      "reason": "No BoringSSL source or built library exists in this environment; no offline cargo source is present.",
+      "acquisition_path": "Pin a chromium/boringssl commit, fetch the source, build with CMake in the court, record the commit and flags, then run the harness after confirming every required symbol is exported."
+    },
+    {
+      "id": "rustls",
+      "product": "rustls",
+      "role": "performance_authority",
+      "version_intended": "NO_PROVIDER_PINNED_IN_THIS_REPOSITORY",
+      "version_observed": null,
+      "build_profile_requirements": "A pinned rustls version and a named crypto provider (for example aws-lc-rs or ring), with the provider version and feature set recorded as part of the identity",
+      "api_surface": "Rust API only; rustls does not expose an OpenSSL C ABI",
+      "availability": "UNAVAILABLE",
+      "row_status": "NOT_APPLICABLE_FOR_C_API_HARNESS",
+      "measured": false,
+      "reason": "No rustls, aws-lc-rs or ring source exists in the offline cargo registry in this environment, and rustls exposes no OpenSSL C ABI, so bench_api.c cannot host it even if the source were present.",
+      "acquisition_path": "Pin rustls and its provider crate, add a separate Rust benchmark harness that calls the same primitive shapes, and record the provider as part of the identity. This is a different harness from the C-API court and cannot be merged into the current rows without a recorded instrument difference."
+    },
+    {
+      "id": "wolfssl",
+      "product": "wolfSSL",
+      "role": "performance_authority",
+      "version_intended": "NOT_PINNED_IN_THIS_REPOSITORY",
+      "version_observed": null,
+      "build_profile_requirements": "Release build with the OpenSSL compatibility layer enabled (for example --enable-opensslextra), assembly enabled, the exact configure line recorded",
+      "api_surface": "C library with an OpenSSL compatibility layer; the harness symbol set must be verified for the configured compatibility surface",
+      "availability": "UNAVAILABLE",
+      "row_status": "UNAVAILABLE",
+      "measured": false,
+      "reason": "No wolfSSL source archive, installed library or header tree exists in this environment.",
+      "acquisition_path": "Pin a wolfSSL release, fetch and verify the archive, build with --enable-opensslextra in the court, record the configure line, and confirm the required symbols before running the harness."
+    },
+    {
+      "id": "research-frontier-kernel",
+      "product": "research-frontier arithmetic kernel",
+      "role": "performance_authority",
+      "version_intended": "NO_KERNEL_SELECTED_OR_PINNED",
+      "version_observed": null,
+      "build_profile_requirements": "A specific kernel (for example s2n-bignum or fiat-crypto output) plus a small driver that exposes the same operation; the kernel identity and build flags are part of the identity",
+      "api_surface": "Kernel-level API, not a complete OpenSSL-compatible libcrypto",
+      "availability": "UNAVAILABLE",
+      "row_status": "NOT_APPLICABLE_FOR_C_API_HARNESS",
+      "measured": false,
+      "reason": "No such kernel source is present or pinned in this repository, and a kernel does not provide the libcrypto operation the harness measures.",
+      "acquisition_path": "Select and pin a kernel, build it for the target, write a driver for the exact operation, and record it as a separate research-frontier row with its own instrument; it is not a drop-in OpenSSL comparator."
+    }
+  ],
+  "observed_but_not_admitted": [
+    {
+      "id": "system-openssl-3.0.22",
+      "product": "OpenSSL (distribution build)",
+      "version_observed": "OpenSSL 3.0.22 25 Aug 2026",
+      "path": "/lib/x86_64-linux-gnu/libcrypto.so.3",
+      "size_bytes": 4742424,
+      "sha256": "aa01e614af634bc7c8b678c9250b5c4f613c61989bacf0a5d6aed6570e7dcabd",
+      "build_id": "4ca7b79d949e1c4379081367a69a3fa442a0dcba",
+      "admitted": false,
+      "measured": false,
+      "reason": "The distribution library is not the declared compatibility authority, its compiler/configure profile is not the admitted profile, and it must not be substituted for the pinned 3.6.4 build."
+    }
+  ],
+  "availability_observations": [
+    {
+      "command": "pkg-config --list-all | grep -Ei 'openssl|wolf|boring|aws|rustls|libcrypto'",
+      "result": "no matching package found"
+    },
+    {
+      "command": "ldconfig -p | grep -Ei 'libcrypto|libssl|aws-lc|boring|wolfssl|rustls'",
+      "result": "only the distribution libssl.so.3 and libcrypto.so.3"
+    },
+    {
+      "command": "find /usr/lib /usr/local/lib /lib -maxdepth 3 \\( -iname '*aws-lc*' -o -iname '*boring*' -o -iname '*wolfssl*' -o -iname '*rustls*' \\)",
+      "result": "no matches"
+    },
+    {
+      "command": "find /usr/local/cargo -maxdepth 4 -type d \\( -iname 'rustls*' -o -iname 'aws-lc*' -o -iname 'ring-*' -o -iname 'boring*' -o -iname 'wolfssl*' \\)",
+      "result": "no matches; the offline registry has no comparator crate source"
+    },
+    {
+      "command": "ls forensics/authorities/src",
+      "result": "openssl-3.6.4 only"
+    }
+  ],
+  "environment_note": "The court is a virtualised host with no exposed PMU. All measured rows therefore use wall-clock ratios only and are SCOPED_OBSERVATION; no row is a frontier result."
+}
