@@ -4,10 +4,12 @@
 Run directly (`python3 forensics/tools/tests/test_etp_claims.py`) or with
 `python3 -m unittest discover -s forensics/tools/tests -p 'test_*.py'`.
 
-The ten negative controls each mutate one field of a well-formed claim and
-require the named rule to fire against the named field. The positive controls
-prove the validator accepts a well-formed document, that the committed typed
-claims validate, and that the schema is not vacuous.
+The negative controls each mutate one field of a well-formed claim and require
+the named rule to fire against the named field. The integrity-hardening controls
+add admitted-exclusion witnesses, CLI operation validation, and strict JSON
+loading (duplicate keys and non-finite numbers), each with its own rule. The
+positive controls prove the validator accepts a well-formed document, that the
+committed typed claims validate, and that the schema is not vacuous.
 """
 
 from __future__ import annotations
@@ -139,6 +141,50 @@ def base_document(claim: dict | None = None) -> dict:
         },
         "claims": [claim if claim is not None else base_claim()],
     }
+
+
+def witness() -> dict:
+    """A structurally complete exclusion witness, bound to base_claim()."""
+    return {
+        "obligation": "OBL-EX",
+        "candidate": "a" * 40,
+        "procedure": "python3 courts/review_exclusion.py --obligation OBL-EX",
+        "result": {
+            "path": "courts/review-exclusion.json",
+            "sha256": "1" * 64,
+            "digest_identity": "E",
+            "present": True,
+            "producer": "courts/review_exclusion.py",
+        },
+        "reviewer": {
+            "role": "evidence-adjudicator",
+            "identity": "reviewer-1",
+        },
+    }
+
+
+def exclusion_claim() -> dict:
+    claim = base_claim()
+    claim["author"] = {"role": "conversion-engineer", "identity": "author-1"}
+    claim["obligations"] = [
+        {
+            "id": "OBL-EX",
+            "statement": "a synthetic open obligation used to exercise exclusions",
+            "state": "OPEN",
+            "blocks": ["graduation"],
+            "settled_by": "the independent review result",
+            "evidence": ["EV-01"],
+            "exclusions": [
+                {
+                    "claim": "ETP-CLM-902",
+                    "argument": "the dependent uses an independently measured replacement",
+                    "checkable_by": "courts/review-exclusion.json",
+                    "witness": witness(),
+                }
+            ],
+        }
+    ]
+    return claim
 
 
 def refusals(doc: dict) -> list[dict]:
@@ -521,9 +567,11 @@ class AlgebraOperations(unittest.TestCase):
             etp_claims.invalidated_claims([claim], ["a" * 40])["invalidated"],
         )
 
-    def test_obligation_propagation_honours_only_checkable_exclusions(self) -> None:
+    def test_obligation_propagation_honours_only_admitted_exclusion_witnesses(self) -> None:
         dependency = {
             "id": "ETP-CLM-903",
+            "author": {"role": "conversion-engineer", "identity": "author-9"},
+            "identity": {"source": {"candidate": "a" * 40, "commit": "a" * 40}},
             "obligations": [
                 {
                     "id": "OBL-X",
@@ -533,6 +581,22 @@ class AlgebraOperations(unittest.TestCase):
                             "claim": "ETP-CLM-902",
                             "argument": "the dependent uses an independently measured replacement",
                             "checkable_by": "courts/replacement.json",
+                            "witness": {
+                                "obligation": "OBL-X",
+                                "candidate": "a" * 40,
+                                "procedure": "python3 courts/replacement.py",
+                                "result": {
+                                    "path": "courts/replacement.json",
+                                    "sha256": "1" * 64,
+                                    "digest_identity": "E",
+                                    "present": True,
+                                    "producer": "courts/replacement.py",
+                                },
+                                "reviewer": {
+                                    "role": "evidence-adjudicator",
+                                    "identity": "reviewer-2",
+                                },
+                            },
                         }
                     ],
                 }
@@ -555,6 +619,71 @@ class AlgebraOperations(unittest.TestCase):
         result = etp_claims.propagated_obligations([dependency, direct, excluded])
         self.assertIn("ETP-CLM-901", result["propagated"])
         self.assertNotIn("ETP-CLM-902", result["propagated"])
+
+    def test_exclusion_without_a_witness_does_not_stop_propagation(self) -> None:
+        dependency = {
+            "id": "ETP-CLM-903",
+            "obligations": [
+                {
+                    "id": "OBL-X",
+                    "state": "OPEN",
+                    "exclusions": [
+                        {
+                            "claim": "ETP-CLM-902",
+                            "argument": "the dependent uses an independently measured replacement",
+                            "checkable_by": "courts/replacement.json",
+                        }
+                    ],
+                }
+            ],
+        }
+        dependent = {
+            "id": "ETP-CLM-902",
+            "invalidation": {
+                "depends_on": [{"kind": "claim", "id": "ETP-CLM-903"}],
+                "rationale": "synthetic",
+            },
+        }
+        result = etp_claims.propagated_obligations([dependency, dependent])
+        self.assertIn("ETP-CLM-902", result["propagated"])
+
+    def test_exclusion_bound_to_another_candidate_does_not_stop_propagation(self) -> None:
+        exclusion = {
+            "claim": "ETP-CLM-902",
+            "argument": "the dependent uses an independently measured replacement",
+            "checkable_by": "courts/replacement.json",
+            "witness": {
+                "obligation": "OBL-X",
+                "candidate": "b" * 40,
+                "procedure": "python3 courts/replacement.py",
+                "result": {
+                    "path": "courts/replacement.json",
+                    "sha256": "1" * 64,
+                    "digest_identity": "E",
+                    "present": True,
+                    "producer": "courts/replacement.py",
+                },
+                "reviewer": {
+                    "role": "evidence-adjudicator",
+                    "identity": "reviewer-2",
+                },
+            },
+        }
+        dependency = {
+            "id": "ETP-CLM-903",
+            "author": {"role": "conversion-engineer", "identity": "author-9"},
+            "identity": {"source": {"candidate": "a" * 40, "commit": "a" * 40}},
+            "obligations": [{"id": "OBL-X", "state": "OPEN", "exclusions": [exclusion]}],
+        }
+        dependent = {
+            "id": "ETP-CLM-902",
+            "invalidation": {
+                "depends_on": [{"kind": "claim", "id": "ETP-CLM-903"}],
+                "rationale": "synthetic",
+            },
+        }
+        result = etp_claims.propagated_obligations([dependency, dependent])
+        self.assertIn("ETP-CLM-902", result["propagated"])
 
     def test_uncheckable_exclusion_does_not_stop_propagation(self) -> None:
         dependency = {
@@ -657,6 +786,207 @@ class TypedClaims(unittest.TestCase):
     def test_typed_claims_contain_no_first_person(self) -> None:
         text = CLAIMS_PATH.read_text(encoding="utf-8")
         self.assertEqual(re.findall(r"\b(I|we|my|our|us)\b", text), [])
+
+
+class ExclusionWitnessControls(unittest.TestCase):
+    """An exclusion is admitted only by a bound, candidate-specific witness."""
+
+    def test_complete_witness_is_accepted(self) -> None:
+        self.assertEqual(refusals(base_document(exclusion_claim())), [])
+
+    def test_absent_witness_is_refused(self) -> None:
+        claim = exclusion_claim()
+        claim["obligations"][0]["exclusions"][0].pop("witness")
+        assert_rule(
+            self,
+            base_document(claim),
+            "EG_EXCLUSION_WITNESS_MISSING",
+            "witness",
+        )
+
+    def test_unbound_obligation_is_refused(self) -> None:
+        claim = exclusion_claim()
+        claim["obligations"][0]["exclusions"][0]["witness"]["obligation"] = "OBL-OTHER"
+        assert_rule(
+            self,
+            base_document(claim),
+            "EG_EXCLUSION_WITNESS_UNBOUND",
+            "witness",
+        )
+
+    def test_witness_bound_to_another_candidate_is_refused(self) -> None:
+        claim = exclusion_claim()
+        claim["obligations"][0]["exclusions"][0]["witness"]["candidate"] = "b" * 40
+        assert_rule(
+            self,
+            base_document(claim),
+            "EG_EXCLUSION_WITNESS_CANDIDATE",
+            "witness",
+        )
+
+    def test_self_authored_witness_is_refused(self) -> None:
+        claim = exclusion_claim()
+        claim["obligations"][0]["exclusions"][0]["witness"]["reviewer"] = {
+            "role": "conversion-engineer",
+            "identity": "author-1",
+        }
+        assert_rule(
+            self,
+            base_document(claim),
+            "EG_EXCLUSION_WITNESS_SELF_AUTHORED",
+            "witness",
+        )
+
+    def test_absent_witness_result_is_refused(self) -> None:
+        claim = exclusion_claim()
+        claim["obligations"][0]["exclusions"][0]["witness"]["result"]["present"] = False
+        assert_rule(
+            self,
+            base_document(claim),
+            "EG_EXCLUSION_WITNESS_RESULT_ABSENT",
+            "witness",
+        )
+
+    def test_witness_result_digest_is_re_derived(self) -> None:
+        claim = exclusion_claim()
+        exclusion = claim["obligations"][0]["exclusions"][0]
+        exclusion["witness"]["result"]["sha256"] = "0" * 64
+        document = base_document(claim)
+        document["claims"][0]["evidence"] = []
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "courts").mkdir()
+            (root / "courts/review-exclusion.json").write_text("{}\n", encoding="utf-8")
+            found = etp_claims.validate_document(document, SCHEMA, repo_root=root)
+        rules_found = {item["rule"] for item in found}
+        self.assertIn("EG_EXCLUSION_WITNESS_DIGEST", rules_found)
+
+    def test_witness_result_must_be_present_in_the_tree(self) -> None:
+        claim = exclusion_claim()
+        exclusion = claim["obligations"][0]["exclusions"][0]
+        exclusion["witness"]["result"]["path"] = "courts/absent.json"
+        document = base_document(claim)
+        document["claims"][0]["evidence"] = []
+        with tempfile.TemporaryDirectory() as directory:
+            found = etp_claims.validate_document(
+                document, SCHEMA, repo_root=Path(directory)
+            )
+        rules_found = {item["rule"] for item in found}
+        self.assertIn("EG_EXCLUSION_WITNESS_RESULT_ABSENT", rules_found)
+
+
+class CliValidationControls(unittest.TestCase):
+    """conjoin, invalidate and propagate refuse a document validate refuses."""
+
+    def _run(self, command: str, document: dict) -> subprocess.CompletedProcess:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "doc.json"
+            path.write_text(json.dumps(document), encoding="utf-8")
+            return subprocess.run(
+                [
+                    sys.executable,
+                    str(TOOLS / "etp_claims.py"),
+                    command,
+                    "--document",
+                    str(path),
+                    "--no-tree-check",
+                ],
+                capture_output=True,
+                check=False,
+            )
+
+    def test_operations_refuse_an_invalid_document(self) -> None:
+        document = base_document()
+        document["policy"] = {"acceptance": "anything with a citation"}
+        for command, operation_key in (
+            ("conjoin", "verdict"),
+            ("invalidate", "invalidated"),
+            ("propagate", "propagated"),
+        ):
+            with self.subTest(command=command):
+                completed = self._run(command, document)
+                self.assertEqual(completed.returncode, 1)
+                payload = json.loads(completed.stdout)
+                self.assertEqual(payload["valid"], False)
+                self.assertIn("EG_SELF_DECLARED_POLICY", payload["refusals_by_rule"])
+                self.assertNotIn(operation_key, payload)
+
+    def test_operations_refuse_a_schema_violation(self) -> None:
+        document = base_document()
+        document["claims"][0]["unexpressible_axis"] = "not in the type"
+        for command in ("conjoin", "invalidate", "propagate"):
+            with self.subTest(command=command):
+                completed = self._run(command, document)
+                self.assertEqual(completed.returncode, 1)
+                payload = json.loads(completed.stdout)
+                self.assertIn("EG_SCHEMA_VIOLATION", payload["refusals_by_rule"])
+
+    def test_conjoin_still_answers_a_valid_document(self) -> None:
+        completed = self._run("conjoin", base_document())
+        self.assertEqual(completed.returncode, 0)
+        payload = json.loads(completed.stdout)
+        self.assertEqual(payload["verdict"], "ESTABLISHED")
+        self.assertEqual(payload["aggregation"], "forbidden")
+
+
+class JsonIntegrityControls(unittest.TestCase):
+    """Ambiguous or non-finite JSON is refused with the offending key path."""
+
+    def test_duplicate_object_key_is_refused_with_path(self) -> None:
+        with self.assertRaises(etp_claims.JsonIntegrityError) as caught:
+            etp_claims.loads_strict('{"claims": [{"id": "A", "id": "B"}]}')
+        finding = caught.exception.findings[0]
+        self.assertEqual(finding["rule"], "EG_JSON_DUPLICATE_KEY")
+        self.assertEqual(finding["path"], "$/claims/0/id")
+
+    def test_non_finite_number_is_refused_with_path(self) -> None:
+        with self.assertRaises(etp_claims.JsonIntegrityError) as caught:
+            etp_claims.loads_strict('{"quantification": {"measure": NaN}}')
+        finding = caught.exception.findings[0]
+        self.assertEqual(finding["rule"], "EG_JSON_NON_FINITE")
+        self.assertEqual(finding["path"], "$/quantification/measure")
+
+    def test_infinite_number_is_refused(self) -> None:
+        with self.assertRaises(etp_claims.JsonIntegrityError) as caught:
+            etp_claims.loads_strict('[Infinity]')
+        self.assertEqual(caught.exception.findings[0]["rule"], "EG_JSON_NON_FINITE")
+
+    def test_overflowing_number_is_refused(self) -> None:
+        with self.assertRaises(etp_claims.JsonIntegrityError) as caught:
+            etp_claims.loads_strict('{"n": 1e999}')
+        finding = caught.exception.findings[0]
+        self.assertEqual(finding["rule"], "EG_JSON_NON_FINITE")
+        self.assertEqual(finding["path"], "$/n")
+
+    def test_valid_document_still_loads(self) -> None:
+        loaded = etp_claims.loads_strict('{"a": 1, "b": [true, null]}')
+        self.assertEqual(loaded, {"a": 1, "b": [True, None]})
+
+    def test_cli_refuses_duplicate_key_with_path(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "doc.json"
+            path.write_text('{"claims": [], "claims": []}', encoding="utf-8")
+            completed = subprocess.run(
+                [
+                    sys.executable,
+                    str(TOOLS / "etp_claims.py"),
+                    "validate",
+                    "--document",
+                    str(path),
+                    "--no-tree-check",
+                ],
+                capture_output=True,
+                check=False,
+            )
+        self.assertEqual(completed.returncode, 1)
+        payload = json.loads(completed.stdout)
+        self.assertIn("EG_JSON_DUPLICATE_KEY", payload["refusals_by_rule"])
+        self.assertTrue(
+            any(
+                refusal["path"] == "$/claims"
+                for refusal in payload["refusals"]
+            )
+        )
 
 
 if __name__ == "__main__":

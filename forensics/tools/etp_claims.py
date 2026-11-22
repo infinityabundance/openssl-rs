@@ -75,6 +75,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import re
 import subprocess
 import sys
@@ -196,14 +197,121 @@ class AlgebraError(Exception):
     """A hard algebra error that no preference may resolve."""
 
 
+class JsonIntegrityError(Exception):
+    """A document was read with an ambiguous or non-finite JSON encoding."""
+
+    def __init__(self, findings: list[Refusal]) -> None:
+        ordered = sorted(
+            findings, key=lambda item: (item["path"], item["rule"], item["detail"])
+        )
+        super().__init__("; ".join(item["detail"] for item in ordered))
+        self.findings = ordered
+
+
 # ---------------------------------------------------------------------------
 # JSON loading and canonical helpers
 # ---------------------------------------------------------------------------
 
 
+class _JsonPairs:
+    """An object's ordered key/value pairs, kept before duplicate keys collapse."""
+
+    __slots__ = ("pairs",)
+
+    def __init__(self, pairs: list[tuple[str, Any]]) -> None:
+        self.pairs = pairs
+
+
+class _JsonNonFinite:
+    """A NaN or Infinity token, retained so its JSON pointer can be reported."""
+
+    __slots__ = ("token",)
+
+    def __init__(self, token: str) -> None:
+        self.token = token
+
+
+def _normalise_json(value: Any, path: str, findings: list[Refusal]) -> Any:
+    """Rebuild plain JSON values, refusing duplicate keys and non-finite numbers."""
+    if isinstance(value, _JsonPairs):
+        rebuilt: dict[str, Any] = {}
+        for key, item in value.pairs:
+            if key in rebuilt:
+                findings.append(
+                    Refusal(
+                        "EG_JSON_DUPLICATE_KEY",
+                        _ptr(path, key),
+                        key,
+                        f"duplicate object key '{key}' at {_ptr(path, key)}; "
+                        "a repeated key makes the document ambiguous",
+                    )
+                )
+            rebuilt[key] = _normalise_json(item, _ptr(path, key), findings)
+        return rebuilt
+    if isinstance(value, list):
+        return [
+            _normalise_json(item, _ptr(path, str(index)), findings)
+            for index, item in enumerate(value)
+        ]
+    if isinstance(value, _JsonNonFinite):
+        findings.append(
+            Refusal(
+                "EG_JSON_NON_FINITE",
+                path,
+                _field_name(path),
+                f"non-finite number {value.token!r} at {path}; "
+                "JSON numbers must be finite",
+            )
+        )
+        return None
+    if isinstance(value, float) and not math.isfinite(value):
+        findings.append(
+            Refusal(
+                "EG_JSON_NON_FINITE",
+                path,
+                _field_name(path),
+                f"non-finite number {value!r} at {path}; "
+                "JSON numbers must be finite",
+            )
+        )
+        return None
+    return value
+
+
+def loads_strict(text: str, *, source: str = "<string>") -> Any:
+    """Parse JSON without duplicate keys or non-finite numbers.
+
+    Python's standard decoder silently keeps the last of two identical keys and
+    accepts `NaN`/`Infinity`, either of which would let a document mean different
+    things to different readers. Both are refused with the offending key path.
+    """
+    try:
+        parsed = json.loads(
+            text,
+            object_pairs_hook=_JsonPairs,
+            parse_constant=_JsonNonFinite,
+        )
+    except json.JSONDecodeError as exc:
+        raise JsonIntegrityError(
+            [
+                Refusal(
+                    "EG_JSON_MALFORMED",
+                    "$",
+                    "document",
+                    f"{source}: malformed JSON at line {exc.lineno} column "
+                    f"{exc.colno}: {exc.msg}",
+                )
+            ]
+        ) from exc
+    findings: list[Refusal] = []
+    document = _normalise_json(parsed, "$", findings)
+    if findings:
+        raise JsonIntegrityError(findings)
+    return document
+
+
 def load_json(path: Path) -> Any:
-    with open(path, "r", encoding="utf-8") as handle:
-        return json.load(handle)
+    return loads_strict(path.read_text(encoding="utf-8"), source=str(path))
 
 
 def canonical(value: Any) -> str:
@@ -628,6 +736,153 @@ def _present_evidence(claim: dict) -> list[dict]:
     ]
 
 
+def _claim_candidate_tokens(claim: dict) -> set[str]:
+    """The candidate identities a claim states, used to bind an exclusion witness."""
+    identity = claim.get("identity", {})
+    source = identity.get("source", {}) if isinstance(identity, dict) else {}
+    tokens: set[str] = set()
+    if isinstance(source, dict):
+        for key in ("candidate", "commit"):
+            value = source.get(key)
+            if isinstance(value, str) and value:
+                tokens.add(value)
+    return tokens
+
+
+def _witness_findings(
+    claim: dict, obligation: dict, exclusion: dict, path: str
+) -> list[Refusal]:
+    """Check an exclusion witness binds the obligation, candidate and reviewer.
+
+    A discussion string plus a procedure name is not evidence that the exclusion
+    was verified. The witness must name the obligation, the candidate, the
+    procedure, an independently produced result with its own digest, and a
+    reviewer whose declared role and identity are not the claim author's.
+    """
+    findings: list[Refusal] = []
+
+    def refuse(rule: str, field: str, detail: str) -> None:
+        findings.append(Refusal(rule, path, field, detail))
+
+    witness = exclusion.get("witness")
+    if not isinstance(witness, dict):
+        refuse(
+            "EG_EXCLUSION_WITNESS_MISSING",
+            "witness",
+            "an exclusion needs an admitted witness record, not only an argument",
+        )
+        return findings
+
+    obligation_id = obligation.get("id")
+    if witness.get("obligation") != obligation_id:
+        refuse(
+            "EG_EXCLUSION_WITNESS_UNBOUND",
+            "obligation",
+            f"witness names obligation {witness.get('obligation')!r}, "
+            f"not {obligation_id!r}",
+        )
+
+    candidate = witness.get("candidate")
+    allowed = _claim_candidate_tokens(claim)
+    if not isinstance(candidate, str) or not candidate:
+        refuse(
+            "EG_EXCLUSION_WITNESS_UNBOUND",
+            "candidate",
+            "witness does not state the candidate identity it was produced against",
+        )
+    elif not allowed:
+        refuse(
+            "EG_EXCLUSION_WITNESS_UNBOUND",
+            "candidate",
+            "the claim states no candidate identity for the witness to bind to",
+        )
+    elif candidate not in allowed:
+        refuse(
+            "EG_EXCLUSION_WITNESS_CANDIDATE",
+            "candidate",
+            f"witness is bound to candidate {candidate!r}, not this claim's "
+            + ", ".join(sorted(allowed)),
+        )
+
+    procedure = str(witness.get("procedure", "")).strip()
+    if not procedure or procedure.lower() in UNCHECKABLE_MARKERS:
+        refuse(
+            "EG_EXCLUSION_WITNESS_UNBOUND",
+            "procedure",
+            "witness names no verification procedure",
+        )
+
+    reviewer = witness.get("reviewer")
+    author = claim.get("author")
+    if (
+        not isinstance(reviewer, dict)
+        or not str(reviewer.get("role", "")).strip()
+        or not str(reviewer.get("identity", "")).strip()
+    ):
+        refuse(
+            "EG_EXCLUSION_WITNESS_UNBOUND",
+            "reviewer",
+            "witness needs a reviewer role and identity",
+        )
+    elif (
+        not isinstance(author, dict)
+        or not str(author.get("role", "")).strip()
+        or not str(author.get("identity", "")).strip()
+    ):
+        refuse(
+            "EG_EXCLUSION_WITNESS_SELF_AUTHORED",
+            "reviewer",
+            "the claim states no author, so reviewer independence cannot be established",
+        )
+    elif (
+        str(reviewer.get("role")).strip().lower()
+        == str(author.get("role")).strip().lower()
+        or str(reviewer.get("identity")).strip().lower()
+        == str(author.get("identity")).strip().lower()
+    ):
+        refuse(
+            "EG_EXCLUSION_WITNESS_SELF_AUTHORED",
+            "reviewer",
+            "the reviewer role or identity is the claim author's; an exclusion "
+            "cannot review itself",
+        )
+
+    result = witness.get("result")
+    if not isinstance(result, dict):
+        refuse(
+            "EG_EXCLUSION_WITNESS_RESULT_ABSENT",
+            "result",
+            "the witness carries no independently produced result",
+        )
+        return findings
+    if result.get("present") is not True:
+        refuse(
+            "EG_EXCLUSION_WITNESS_RESULT_ABSENT",
+            "result",
+            "the witness result is not present",
+        )
+    if not isinstance(result.get("path"), str) or not result.get("path"):
+        refuse(
+            "EG_EXCLUSION_WITNESS_RESULT_ABSENT",
+            "path",
+            "the witness result has no path, so its presence cannot be established",
+        )
+    digest = result.get("sha256")
+    if not isinstance(digest, str) or re.fullmatch(r"[0-9a-f]{64}", digest) is None:
+        refuse(
+            "EG_EXCLUSION_WITNESS_RESULT_ABSENT",
+            "sha256",
+            "the witness result has no SHA-256 digest of its own",
+        )
+    if result.get("digest_identity") not in ("S", "E"):
+        refuse(
+            "EG_EXCLUSION_WITNESS_RESULT_ABSENT",
+            "digest_identity",
+            "the witness result does not declare the identity its digest binds",
+        )
+    return findings
+
+
 def check_claim_laws(claim: dict, base: str) -> list[Refusal]:
     refusals: list[Refusal] = []
 
@@ -905,6 +1160,7 @@ def check_claim_laws(claim: dict, base: str) -> list[Refusal]:
         for e_index, exclusion in enumerate(obligation.get("exclusions", [])):
             if not isinstance(exclusion, dict):
                 continue
+            location = f"obligations/{o_index}/exclusions/{e_index}"
             if (
                 str(exclusion.get("argument", "")).strip().lower() in UNCHECKABLE_MARKERS
                 or str(exclusion.get("checkable_by", "")).strip().lower()
@@ -912,10 +1168,15 @@ def check_claim_laws(claim: dict, base: str) -> list[Refusal]:
             ):
                 refuse(
                     "EG_EXCLUSION_UNCHECKABLE",
-                    f"obligations/{o_index}/exclusions/{e_index}",
+                    location,
                     "argument",
                     "an exclusion needs an argument and an independently checkable procedure",
                 )
+            refusals.extend(
+                _witness_findings(
+                    claim, obligation, exclusion, f"{base}/{location}/witness"
+                )
+            )
 
     # 11. Measure is an observation, never a score.
     measure = quantification.get("measure") if isinstance(quantification, dict) else None
@@ -1078,6 +1339,54 @@ def check_evidence_tree(doc: dict, repo_root: Path) -> list[Refusal]:
                         f"'{path}' hashes to {actual}, not the recorded {digest}",
                     )
                 )
+        for o_index, obligation in enumerate(claim.get("obligations", [])):
+            if not isinstance(obligation, dict):
+                continue
+            for x_index, exclusion in enumerate(obligation.get("exclusions", [])):
+                if not isinstance(exclusion, dict):
+                    continue
+                witness = exclusion.get("witness")
+                result = witness.get("result") if isinstance(witness, dict) else None
+                if not isinstance(result, dict):
+                    continue
+                path = result.get("path")
+                digest = result.get("sha256")
+                identity = result.get("digest_identity")
+                if not isinstance(path, str) or not path or not isinstance(digest, str):
+                    continue
+                actual: str | None = None
+                if identity == "S" and isinstance(source_commit, str):
+                    actual = _git_blob_sha256(repo_root, source_commit, path)
+                elif identity == "E":
+                    target = repo_root / path
+                    if target.is_file():
+                        actual = hashlib.sha256(target.read_bytes()).hexdigest()
+                else:
+                    continue
+                location = (
+                    f"$.claims/{c_index}/obligations/{o_index}/exclusions/"
+                    f"{x_index}/witness/result"
+                )
+                if actual is None:
+                    refusals.append(
+                        Refusal(
+                            "EG_EXCLUSION_WITNESS_RESULT_ABSENT",
+                            location,
+                            "path",
+                            f"cannot re-derive the witness result '{path}' under "
+                            f"identity {identity!r}",
+                        )
+                    )
+                elif actual != digest:
+                    refusals.append(
+                        Refusal(
+                            "EG_EXCLUSION_WITNESS_DIGEST",
+                            location,
+                            "sha256",
+                            f"witness result '{path}' hashes to {actual}, not the "
+                            f"recorded {digest}",
+                        )
+                    )
     return refusals
 
 
@@ -1315,22 +1624,24 @@ def propagated_obligations(claims: list[dict]) -> dict:
                 dependents.setdefault(str(dependency.get("id")), []).append(str(claim.get("id")))
 
     propagated: dict[str, list[dict]] = {claim_id: [] for claim_id in by_id}
-    # Fixpoint: an obligation travels along each non-excluded edge.
+    # Fixpoint: an obligation travels along each non-excluded edge. The owning
+    # claim travels with it, because the exclusion witness binds that claim's
+    # author and candidate, not the dependent's.
     frontier = [
-        (claim_id, obligation)
+        (claim_id, obligation, claim_id)
         for claim_id, claim in by_id.items()
         for obligation in claim.get("obligations", [])
         if isinstance(obligation, dict) and obligation.get("state") == "OPEN"
     ]
     seen: set[tuple[str, str, str]] = set()
     while frontier:
-        source_id, obligation = frontier.pop()
+        source_id, obligation, owner_id = frontier.pop()
         for dependent in sorted(dependents.get(source_id, [])):
             key = (source_id, dependent, str(obligation.get("id")))
             if key in seen:
                 continue
             seen.add(key)
-            if _excluded(obligation, dependent):
+            if _excluded(obligation, dependent, by_id.get(owner_id, {})):
                 continue
             propagated[dependent].append(
                 {
@@ -1338,7 +1649,7 @@ def propagated_obligations(claims: list[dict]) -> dict:
                     "obligation": obligation,
                 }
             )
-            frontier.append((dependent, obligation))
+            frontier.append((dependent, obligation, owner_id))
     def sort_key(item: dict) -> tuple[str, str]:
         return (str(item["from_claim"]), str(item["obligation"].get("id")))
 
@@ -1352,14 +1663,23 @@ def propagated_obligations(claims: list[dict]) -> dict:
     }
 
 
-def _excluded(obligation: dict, dependent: str) -> bool:
+def _excluded(obligation: dict, dependent: str, claim: dict) -> bool:
+    """An exclusion stops propagation only when its witness is admitted.
+
+    The argument and procedure strings are necessary but not sufficient: the
+    witness must be bound to this obligation and this candidate, carry a present
+    result with its own digest, and name a reviewer other than the claim author.
+    """
     for exclusion in obligation.get("exclusions", []):
         if not isinstance(exclusion, dict) or exclusion.get("claim") != dependent:
             continue
         argument = str(exclusion.get("argument", "")).strip()
         checkable = str(exclusion.get("checkable_by", "")).strip().lower()
-        if argument and checkable not in UNCHECKABLE_MARKERS:
-            return True
+        if not argument or checkable in UNCHECKABLE_MARKERS:
+            continue
+        if _witness_findings(claim, obligation, exclusion, "$"):
+            continue
+        return True
     return False
 
 
@@ -1410,31 +1730,34 @@ def _emit(payload: dict) -> None:
     sys.stdout.write(json.dumps(payload, sort_keys=True, separators=(",", ":")) + "\n")
 
 
-def _load_document(path: Path) -> dict:
-    doc = load_json(path)
-    if not isinstance(doc, dict):
-        raise ValueError("the claim document must be a JSON object")
-    return doc
-
-
-def _validate(args: argparse.Namespace) -> int:
-    document = Path(args.document).resolve()
-    schema = load_json(Path(args.schema).resolve())
-    doc = load_json(document)
-    repo_root = Path(args.repo_root).resolve() if args.repo_root else None
-    refusals = validate_document(doc, schema, repo_root=repo_root)
+def _payload(document: str, refusals: list[Refusal], claim_count: int) -> dict:
     by_rule: dict[str, int] = {}
     for refusal in refusals:
         by_rule[refusal["rule"]] = by_rule.get(refusal["rule"], 0) + 1
-    payload = {
-        "document": str(document),
+    return {
+        "document": document,
         "valid": not refusals,
         "refusal_count": len(refusals),
         "refusals_by_rule": by_rule,
         "refusals": refusals,
-        "claims": len(doc.get("claims", [])) if isinstance(doc, dict) else 0,
+        "claims": claim_count,
     }
-    _emit(payload)
+
+
+def _validate(args: argparse.Namespace) -> int:
+    document = Path(args.document).resolve()
+    try:
+        schema = load_json(Path(args.schema).resolve())
+        doc = load_json(document)
+    except JsonIntegrityError as exc:
+        _emit(_payload(str(document), exc.findings, 0))
+        return 1
+    repo_root = None
+    if not args.no_tree_check:
+        repo_root = Path(args.repo_root).resolve() if args.repo_root else REPO_ROOT
+    refusals = validate_document(doc, schema, repo_root=repo_root)
+    claim_count = len(doc.get("claims", [])) if isinstance(doc, dict) else 0
+    _emit(_payload(str(document), refusals, claim_count))
     return 0 if not refusals else 1
 
 
@@ -1446,14 +1769,13 @@ def main(argv: list[str]) -> int:
         command.add_argument("--document", default=str(DEFAULT_CLAIMS))
         command.add_argument("--schema", default=str(DEFAULT_SCHEMA))
         command.add_argument("--repo-root", default=None)
+        command.add_argument(
+            "--no-tree-check",
+            action="store_true",
+            help="do not re-derive cited digests from the stated identities",
+        )
         if name == "invalidate":
             command.add_argument("--changed", action="append", default=[])
-        if name == "validate":
-            command.add_argument(
-                "--no-tree-check",
-                action="store_true",
-                help="do not re-derive cited digests from the stated identities",
-            )
     args = parser.parse_args(argv)
     if args.command in (None, "validate"):
         if args.command is None:
@@ -1461,12 +1783,29 @@ def main(argv: list[str]) -> int:
             args.schema = str(DEFAULT_SCHEMA)
             args.repo_root = str(REPO_ROOT)
             args.no_tree_check = False
-        if args.repo_root is None and not args.no_tree_check:
-            args.repo_root = str(REPO_ROOT)
         return _validate(args)
 
-    doc = _load_document(Path(args.document))
-    claims = doc.get("claims", [])
+    # Every operation answers only about a document that passed the same schema
+    # and law validation as `validate`; an invalid document is refused, not
+    # interpreted. Otherwise a subcommand could report a verdict from bytes the
+    # validator would have rejected.
+    document = Path(args.document).resolve()
+    try:
+        schema = load_json(Path(args.schema).resolve())
+        doc = load_json(document)
+    except JsonIntegrityError as exc:
+        _emit(_payload(str(document), exc.findings, 0))
+        return 1
+    repo_root = None
+    if not args.no_tree_check:
+        repo_root = Path(args.repo_root).resolve() if args.repo_root else REPO_ROOT
+    refusals = validate_document(doc, schema, repo_root=repo_root)
+    if refusals:
+        claim_count = len(doc.get("claims", [])) if isinstance(doc, dict) else 0
+        _emit(_payload(str(document), refusals, claim_count))
+        return 1
+
+    claims = doc.get("claims", []) if isinstance(doc, dict) else []
     if args.command == "conjoin":
         _emit(conjoin(claims))
     elif args.command == "invalidate":
