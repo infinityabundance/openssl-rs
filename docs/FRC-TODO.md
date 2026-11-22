@@ -57,7 +57,16 @@ Rules that bind this queue:
 - `FRC-10` is the demonstration that the chain composes; it does not require
   `FRC-8`, and `FRC-8` does not require `FRC-10`.
 
-`PFP` and `FRC` interact in one direction only: an optimisation is admitted under
-PFP only when the FRC evidence for the property it could affect remains valid at
-the new digest, and an FRC claim is invalidated by any change to the kernel,
-specification or toolchain it names.
+`PFP` and `FRC` interact in one direction only, and the interaction is tiered so
+that neither programme is blocked by the other:
+
+| tier | requirement |
+|---|---|
+| **exploratory optimisation** | may proceed on the existing correctness, timing and interoperability controls; its results are `SCOPED_OBSERVATION` and are not a verified candidate |
+| **formally verified optimised candidate** | additionally requires the applicable FRC-1, FRC-2 and FRC-4 evidence at the new digest, plus the FRC-5 call-site obligations for the kernels it changes |
+| **final frontier release** | additionally requires the applicable FRC and ETP acceptance conditions at the exact shipped artefact |
+
+An FRC claim is invalidated by any change to the kernel, specification or
+toolchain it names. Before any FRC evidence exists for a property, the middle
+tier is simply unavailable for that property — it is not a reason to stop
+exploratory work, and it is not a licence to call the result verified.
