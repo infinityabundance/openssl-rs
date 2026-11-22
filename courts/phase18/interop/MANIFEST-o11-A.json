@@ -9,10 +9,10 @@
  },
  "reproduction": [
   "cd court/tmp/o4/tree-A && PATH=court/tmp/o3/prefix/bin:court/tmp/o3/prefix/sbin:$PATH make -k tests SKIP_LTESTS=sftp-cmds",
-  "python3 courts/phase18/interop/manifest.py --log court/tmp/o4/o9-a.log --subject A --out courts/phase18/interop/MANIFEST-o11-A.json"
+  "python3 courts/phase18/interop/manifest.py --log courts/phase18/interop/logs/0b1705155292e12ef961489f996039b05a3ead8fab0a9d96865b8b2cbd7dee39.log --subject A --out courts/phase18/interop/MANIFEST-o11-A.json"
  ],
  "result": {
-  "log": "court/tmp/o4/o9-a.log",
+  "log": "courts/phase18/interop/logs/0b1705155292e12ef961489f996039b05a3ead8fab0a9d96865b8b2cbd7dee39.log",
   "counts": {
    "scripts_executed": 73,
    "ok_assertions": 64,
@@ -396,7 +396,9 @@
    "failed": "a `failed <description>` line",
    "skipped": "a `SKIPPED: <reason>` line or the lower-case `skipped (reason)` some scripts print; both dialects are counted and neither is a pass",
    "blocked": "announced, with no ok/failed/SKIPPED line of its own"
-  }
+  },
+  "log_sha256": "0b1705155292e12ef961489f996039b05a3ead8fab0a9d96865b8b2cbd7dee39",
+  "log_bytes": 244607
  },
  "note": "Every count is derived from the log by the rules recorded here; none is hand-authored. A skipped script is not a pass and a blocked script is not a skip."
 }
