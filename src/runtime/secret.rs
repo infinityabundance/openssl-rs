@@ -651,4 +651,209 @@ mod tests {
         assert!(outcome.is_err(), "the helper must unwind");
         assert_released_cleansed(ptr);
     }
+
+    // ------------------------------------------------------------------
+    // ETP-4: whole-allocation cleansing over an enumerated domain.
+    //
+    // The tests above establish the exit paths for a buffer whose logical
+    // length equals the staged pattern. The harness below enumerates the
+    // capacity/initialised boundary instead: every byte of the allocation,
+    // spare capacity included, is initialised to a non-zero pattern before
+    // release, so a wipe that stops at `len()` leaves observable non-zero
+    // bytes behind. Each case is an independent allocation observed from
+    // inside `Drop` by the drop probe, which is the last point at which the
+    // block is live.
+    // ------------------------------------------------------------------
+
+    /// Lengths spanning empty, sub-word, word-boundary and multi-word shapes.
+    const ETP4_LENGTHS: [usize; 12] = [0, 1, 2, 3, 4, 7, 8, 15, 16, 17, 64, 65];
+
+    /// Spare-capacity margins applied to every length.
+    const ETP4_SPARE: [usize; 3] = [1, 3, 8];
+
+    /// A vector whose capacity equals its length, every element non-zero.
+    fn etp4_exact_backing(len: usize) -> Vec<u64> {
+        let mut v: Vec<u64> = (0..len).map(|i| PATTERN[i % PATTERN.len()]).collect();
+        v.shrink_to_fit();
+        assert_eq!(
+            v.capacity(),
+            v.len(),
+            "exact-fit construction must leave no spare capacity"
+        );
+        v
+    }
+
+    /// A vector with at least `extra` spare slots, with **all** capacity slots
+    /// initialised to a non-zero element before the logical length is cut back.
+    fn etp4_spare_backing(len: usize, extra: usize) -> Vec<u64> {
+        let mut v: Vec<u64> = Vec::with_capacity(len + extra);
+        v.extend((0..len).map(|i| PATTERN[i % PATTERN.len()]));
+        let capacity = v.capacity();
+        assert!(capacity >= len + extra, "reserve must satisfy the request");
+        // Initialise every capacity slot, then restore the logical length. The
+        // spare bytes remain initialised, so reading them is defined and the
+        // pre-wipe state genuinely holds secret-shaped data.
+        v.resize(capacity, PATTERN[0]);
+        v.truncate(len);
+        assert!(capacity > len, "the case must carry spare capacity");
+        v
+    }
+
+    /// Count non-zero bytes in the spare capacity `[len..capacity]`.
+    ///
+    /// Every capacity slot was initialised by the constructor above, so the
+    /// volatile byte read covers initialised storage.
+    fn etp4_spare_nonzero(v: &[u64], len: usize, capacity: usize) -> usize {
+        assert!(capacity >= v.len(), "capacity covers the logical length");
+        let start = len * core::mem::size_of::<u64>();
+        let end = capacity * core::mem::size_of::<u64>();
+        let base = v.as_ptr().cast::<u8>();
+        let mut nonzero = 0usize;
+        for i in start..end {
+            // SAFETY: `i` lies in `[len, capacity)` bytes of the live allocation
+            // and every byte there was initialised by `resize`.
+            if unsafe { base.add(i).read_volatile() } != 0 {
+                nonzero += 1;
+            }
+        }
+        nonzero
+    }
+
+    /// Arm the probe, release the buffer, and require that `Drop` observed the
+    /// whole allocation as zero, with the expected non-zero state beforehand.
+    fn etp4_assert_cleansed(buf: SecretBuf<u64>, ptr: *const u64, nonzero_before: usize) {
+        drop_probe::arm(ptr);
+        drop(buf);
+        let Some(obs) = drop_probe::take() else {
+            unreachable!("Drop did not observe the armed allocation")
+        };
+        assert_eq!(
+            obs.ptr, ptr as usize,
+            "Drop observed a different allocation"
+        );
+        assert_eq!(
+            obs.nonzero_before, nonzero_before,
+            "the secret-shaped pre-state was not staged as expected"
+        );
+        assert_eq!(
+            obs.nonzero_bytes, 0,
+            "automatic destruction left non-zero bytes in the allocation"
+        );
+    }
+
+    /// Exhaust the declared domain: every length in [`ETP4_LENGTHS`] at the
+    /// exact-fit boundary and with each spare margin in [`ETP4_SPARE`]. The
+    /// zero-length cases include both the empty allocation (capacity zero) and
+    /// an allocation whose whole capacity is spare.
+    #[test]
+    fn etp4_whole_allocation_cleanse_domain() {
+        let mut exact_cases = 0usize;
+        let mut spare_cases = 0usize;
+        let mut observed_bytes = 0usize;
+        for &len in &ETP4_LENGTHS {
+            let v = etp4_exact_backing(len);
+            let ptr = v.as_ptr();
+            let before = len * core::mem::size_of::<u64>();
+            etp4_assert_cleansed(SecretBuf::from_vec(v), ptr, before);
+            exact_cases += 1;
+            observed_bytes += len * core::mem::size_of::<u64>();
+        }
+        for &len in &ETP4_LENGTHS {
+            for &extra in &ETP4_SPARE {
+                let v = etp4_spare_backing(len, extra);
+                let capacity = v.capacity();
+                let spare_nonzero = etp4_spare_nonzero(&v, len, capacity);
+                assert!(
+                    spare_nonzero > 0,
+                    "len={len} capacity={capacity}: spare capacity was not staged"
+                );
+                let ptr = v.as_ptr();
+                let before = len * core::mem::size_of::<u64>();
+                etp4_assert_cleansed(SecretBuf::from_vec(v), ptr, before);
+                spare_cases += 1;
+                observed_bytes += capacity * core::mem::size_of::<u64>();
+            }
+        }
+        let cases = exact_cases + spare_cases;
+        std::eprintln!(
+            "ETP4 cleanse: cases={cases} exact={exact_cases} spare={spare_cases} observed_bytes={observed_bytes}"
+        );
+        assert_eq!(cases, ETP4_LENGTHS.len() * (1 + ETP4_SPARE.len()));
+    }
+
+    /// A buffer with a staged non-zero prefix **and** staged spare capacity.
+    fn etp4_armed_with_spare(len: usize, extra: usize) -> (SecretBuf<u64>, *const u64, usize) {
+        let v = etp4_spare_backing(len, extra);
+        let capacity = v.capacity();
+        assert!(etp4_spare_nonzero(&v, len, capacity) > 0);
+        let ptr = v.as_ptr();
+        let before = len * core::mem::size_of::<u64>();
+        drop_probe::arm(ptr);
+        (SecretBuf::from_vec(v), ptr, before)
+    }
+
+    /// Spare capacity is covered on every exit path the module exposes.
+    #[test]
+    fn etp4_spare_capacity_cleansed_on_every_exit_path() {
+        let mut cases = 0usize;
+        for &len in &ETP4_LENGTHS {
+            let (buf, ptr, before) = etp4_armed_with_spare(len, 8);
+            drop_on_normal_return(buf);
+            let Some(obs) = drop_probe::take() else {
+                unreachable!("normal return skipped Drop")
+            };
+            assert_eq!(obs.ptr, ptr as usize);
+            assert_eq!(obs.nonzero_before, before);
+            assert_eq!(obs.nonzero_bytes, 0, "normal return left spare bytes");
+            cases += 1;
+
+            let (buf, ptr, before) = etp4_armed_with_spare(len, 8);
+            assert_eq!(drop_on_early_return(buf), None);
+            let Some(obs) = drop_probe::take() else {
+                unreachable!("early return skipped Drop")
+            };
+            assert_eq!(obs.ptr, ptr as usize);
+            assert_eq!(obs.nonzero_before, before);
+            assert_eq!(obs.nonzero_bytes, 0, "early return left spare bytes");
+            cases += 1;
+
+            let (buf, ptr, before) = etp4_armed_with_spare(len, 8);
+            let outcome =
+                std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| drop_on_unwind(buf)));
+            assert!(outcome.is_err(), "the helper must unwind");
+            let Some(obs) = drop_probe::take() else {
+                unreachable!("unwind skipped Drop")
+            };
+            assert_eq!(obs.ptr, ptr as usize);
+            assert_eq!(obs.nonzero_before, before);
+            assert_eq!(obs.nonzero_bytes, 0, "unwind left spare bytes");
+            cases += 1;
+        }
+        std::eprintln!("ETP4 cleanse exit paths: cases={cases}");
+        assert_eq!(cases, ETP4_LENGTHS.len() * 3);
+    }
+
+    /// A buffer that grew by reallocation, with the reallocated block's spare
+    /// capacity staged before adoption.
+    #[test]
+    fn etp4_reallocated_buffer_cleanses_whole_allocation() {
+        let mut v: Vec<u64> = Vec::new();
+        v.extend_from_slice(&PATTERN);
+        let first_ptr = v.as_ptr();
+        v.reserve(64);
+        let capacity = v.capacity();
+        assert!(capacity > v.len(), "reserve must leave spare capacity");
+        assert_ne!(
+            v.as_ptr(),
+            first_ptr,
+            "the reserve must have reallocated the block"
+        );
+        v.resize(capacity, PATTERN[1]);
+        v.truncate(PATTERN.len());
+        assert!(etp4_spare_nonzero(&v, PATTERN.len(), capacity) > 0);
+        let ptr = v.as_ptr();
+        let before = PATTERN.len() * core::mem::size_of::<u64>();
+        etp4_assert_cleansed(SecretBuf::from_vec(v), ptr, before);
+        std::eprintln!("ETP4 cleanse reallocated: cases=1 capacity={capacity}");
+    }
 }

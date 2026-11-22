@@ -2119,3 +2119,353 @@ mod tests {
         }
     }
 }
+
+// ----------------------------------------------------------------------
+// ETP-4: bounded verification of the fixed-width REDC kernels.
+//
+// This module is compiled only under `cfg(test)`. It exercises the two
+// production REDC implementations directly:
+//
+//   * `mont_mul_fallible` (schoolbook product + REDC; the kernel behind
+//     `BN_to_montgomery`, `BN_mod_mul_montgomery`, `BN_MONT_CTX_set` and the
+//     constant-time ladder), whose contract is `a, b < m`;
+//   * `mont_reduce` (the general reduction behind `BN_from_montgomery` and the
+//     wide-operand branches), whose contract is `r < m * R`.
+//
+// The oracle is an independent path through `limbs::{mul, rem}` — the
+// variable-time bignum reference — never REDC itself. Correctness is checked
+// as the defining congruence `out * R == input (mod m)` plus the canonical
+// bound `out < m`. That is exactly the property REDC must establish; it does
+// not assume a particular quotient or intermediate.
+//
+// Exhaustive domain: every one-limb modulus in `ETP4_EXHAUSTIVE_MODULI` with
+// every ordered pair of residues, i.e. the *whole* residue range for those
+// moduli. Sampled domain: the boundary moduli at one and two limbs, with the
+// declared populations enumerated in the methods below.
+// ----------------------------------------------------------------------
+
+#[cfg(test)]
+mod etp4_verification {
+    use super::*;
+    use crate::bn::arith::mont_mul_fallible;
+    use crate::bn::limbs;
+
+    /// Deterministic pseudo-random limb source for the sampled populations.
+    fn xorshift(state: &mut u64) -> u64 {
+        let mut x = *state;
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        *state = x;
+        x
+    }
+
+    fn seed_from(limbs: &[Limb]) -> u64 {
+        let mut state = 0x9e37_79b9_7f4a_7c15u64;
+        for &l in limbs {
+            state ^= l;
+            state = state.wrapping_mul(0x100_0000_01b3);
+        }
+        state | 1
+    }
+
+    /// A little-endian limb vector padded to `n` limbs.
+    fn pad(value: &[Limb], n: usize) -> Vec<Limb> {
+        let mut out = vec![0u64; n];
+        let take = value.len().min(n);
+        out[..take].copy_from_slice(&value[..take]);
+        out
+    }
+
+    /// `v * R` with `R = B^n`, as a limb vector.
+    fn times_r(v: &[Limb], n: usize) -> Vec<Limb> {
+        let mut out = vec![0u64; n];
+        out.extend_from_slice(v);
+        out
+    }
+
+    /// The canonical bound plus the defining congruence, for one REDC output.
+    fn assert_reduced(out: &[Limb], m: &[Limb], input: &[Limb], context: &str) {
+        assert_eq!(
+            limbs::cmp(out, m),
+            core::cmp::Ordering::Less,
+            "{context}: output is not canonical (out={out:?} m={m:?})"
+        );
+        let lhs = limbs::rem(&times_r(out, m.len()), m);
+        let rhs = limbs::rem(input, m);
+        assert_eq!(
+            limbs::cmp(&lhs, &rhs),
+            core::cmp::Ordering::Equal,
+            "{context}: out * R != input (mod m); out={out:?} input={input:?} m={m:?}"
+        );
+    }
+
+    /// One-limb moduli whose *whole* residue square is enumerated.
+    const ETP4_EXHAUSTIVE_MODULI: [u64; 16] = [
+        3, 5, 7, 9, 11, 13, 15, 17, 31, 33, 63, 65, 127, 129, 255, 257,
+    ];
+
+    /// One-limb boundary moduli: top bit set, top bit clear, near-maximum and
+    /// mixed patterns, all odd.
+    const ETP4_ONE_LIMB_BOUNDARY: [u64; 7] = [
+        0x7fff_ffff_ffff_ffff,
+        0x8000_0000_0000_0001,
+        0x8000_0000_0000_0003,
+        0xffff_0000_0000_0001,
+        0xffff_ffff_ffff_fffd,
+        0x1234_5678_9abc_def1,
+        0xffff_ffff_ffff_ffff,
+    ];
+
+    /// Two-limb boundary moduli: padded one-limb, limb boundary, top bit clear,
+    /// top bit set, near-maximum, mixed and all-ones. All odd.
+    fn etp4_two_limb_moduli() -> Vec<Vec<Limb>> {
+        // Every modulus is normalised (non-zero top limb), odd and greater than
+        // one, which is the representation invariant the bignum reference and the
+        // Montgomery domain both require.
+        vec![
+            vec![1, 1],
+            vec![0xffff_ffff_ffff_ffff, 0x7fff_ffff_ffff_ffff],
+            vec![0x8000_0000_0000_0001, 0x8000_0000_0000_0000],
+            vec![0xffff_ffff_ffff_fffd, 0xffff_ffff_ffff_ffff],
+            vec![0x0123_4567_89ab_cdef, 0xfedc_ba98_7654_3211],
+            vec![0xffff_ffff_ffff_ffff, 0xffff_ffff_ffff_ffff],
+        ]
+    }
+
+    /// A one-limb operand population: the declared boundary values followed by
+    /// a deterministic pseudo-random sweep reduced into `[0, m)`.
+    fn one_limb_population(m: u64) -> Vec<u64> {
+        let mut values = vec![0, 1, 2, m - 1, m - 2, m >> 1];
+        let mut state = seed_from(&[m]);
+        for _ in 0..26 {
+            values.push(xorshift(&mut state) % m);
+        }
+        values
+    }
+
+    /// Exhaustive one-limb Montgomery multiplication: every ordered pair of
+    /// residues for every modulus in `ETP4_EXHAUSTIVE_MODULI`.
+    #[test]
+    fn etp4_mont_mul_one_limb_exhaustive() {
+        let mut cases = 0usize;
+        for &m in &ETP4_EXHAUSTIVE_MODULI {
+            assert!(m > 1 && m & 1 == 1, "admission: m must be odd and > 1");
+            let n0 = inverse_word(m);
+            let modulus = [m];
+            for a in 0..m {
+                for b in 0..m {
+                    let Some(out) = mont_mul_fallible(&[a], &[b], &modulus, n0) else {
+                        unreachable!("a one-limb allocation succeeds")
+                    };
+                    assert_eq!(out.len(), 1, "one-limb result width");
+                    assert_reduced(
+                        &out,
+                        &modulus,
+                        &limbs::mul(&[a], &[b]),
+                        "mont_mul exhaustive",
+                    );
+                    // The same congruence over u128, independent of `limbs`.
+                    let lhs = ((out[0] as u128) << 64) % (m as u128);
+                    let rhs = ((a as u128) * (b as u128)) % (m as u128);
+                    assert_eq!(lhs, rhs, "mont_mul exhaustive u128 congruence");
+                    cases += 1;
+                }
+            }
+        }
+        std::eprintln!("ETP4 mont_mul one-limb exhaustive: cases={cases}");
+        assert_eq!(cases, 175_056, "the declared exhaustive domain changed");
+    }
+
+    /// Sampled one-limb Montgomery multiplication over the boundary moduli.
+    #[test]
+    fn etp4_mont_mul_one_limb_boundary() {
+        let mut cases = 0usize;
+        for &m in &ETP4_ONE_LIMB_BOUNDARY {
+            assert!(m & 1 == 1);
+            let n0 = inverse_word(m);
+            let modulus = [m];
+            let values = one_limb_population(m);
+            assert_eq!(values.len(), 32);
+            for &a in &values {
+                for &b in &values {
+                    let Some(out) = mont_mul_fallible(&[a], &[b], &modulus, n0) else {
+                        unreachable!("a one-limb allocation succeeds")
+                    };
+                    assert_reduced(&out, &modulus, &limbs::mul(&[a], &[b]), "mont_mul boundary");
+                    let lhs = ((out[0] as u128) << 64) % (m as u128);
+                    let rhs = ((a as u128) * (b as u128)) % (m as u128);
+                    assert_eq!(lhs, rhs);
+                    cases += 1;
+                }
+            }
+        }
+        std::eprintln!("ETP4 mont_mul one-limb boundary: cases={cases}");
+        assert_eq!(cases, 7 * 32 * 32);
+    }
+
+    /// One-limb `mont_reduce` population, including non-canonical inputs `m`
+    /// and `m + 1`, the top of the admitted range (`m * R - 1`), and operands
+    /// spanning the final conditional subtraction.
+    fn one_limb_reduce_population(m: u64) -> Vec<Vec<Limb>> {
+        let r_minus_1 = u64::MAX;
+        let m_times_r_minus_1 = (m as u128) * (1u128 << 64) - 1;
+        // `m + 1` is one limb unless the modulus is the largest one-limb value,
+        // in which case it is `R` and needs a second limb.
+        let m_plus_1 = if m == u64::MAX {
+            vec![0, 1]
+        } else {
+            vec![m + 1]
+        };
+        let mut values: Vec<Vec<Limb>> = vec![
+            vec![0],
+            vec![1],
+            vec![2],
+            vec![m - 1],
+            vec![m],
+            m_plus_1,
+            vec![r_minus_1, 0],
+            vec![0, 1],
+            vec![1, 1],
+            vec![m - 1, 1],
+            vec![m_times_r_minus_1 as u64, (m_times_r_minus_1 >> 64) as u64],
+        ];
+        let mut state = seed_from(&[m, 0x5eed]);
+        let highs = [0u64, 1, 2, m - 2, m - 1];
+        for &high in &highs {
+            let low = xorshift(&mut state);
+            values.push(vec![low, high]);
+        }
+        for _ in 0..15 {
+            let low = xorshift(&mut state);
+            let high = xorshift(&mut state) % m;
+            values.push(vec![low, high]);
+        }
+        values
+    }
+
+    /// Sampled one-limb general reduction over the full admitted input range.
+    #[test]
+    fn etp4_mont_reduce_one_limb() {
+        let mut cases = 0usize;
+        let moduli: Vec<u64> = ETP4_EXHAUSTIVE_MODULI
+            .iter()
+            .chain(ETP4_ONE_LIMB_BOUNDARY.iter())
+            .copied()
+            .collect();
+        for &m in &moduli {
+            let n0 = inverse_word(m);
+            let modulus = [m];
+            for input in one_limb_reduce_population(m) {
+                // The declared precondition is `input < m * R`.
+                let value = (input.first().copied().unwrap_or(0) as u128)
+                    + ((input.get(1).copied().unwrap_or(0) as u128) << 64);
+                assert!(value < (m as u128) * (1u128 << 64));
+                let Some(out) = mont_reduce(&input, &modulus, n0) else {
+                    unreachable!("a one-limb allocation succeeds")
+                };
+                assert_reduced(&out, &modulus, &input, "mont_reduce one-limb");
+                cases += 1;
+            }
+        }
+        std::eprintln!("ETP4 mont_reduce one-limb: cases={cases}");
+        assert_eq!(cases, moduli.len() * 31);
+    }
+
+    /// Two-limb operand population, every value reduced into `[0, m)`.
+    fn two_limb_population(m: &[Limb]) -> Vec<Vec<Limb>> {
+        let mut values = vec![
+            vec![0, 0],
+            vec![1, 0],
+            vec![2, 0],
+            pad(&limbs::sub(m, &[1]), 2),
+            pad(&limbs::sub(m, &[2]), 2),
+            pad(&limbs::div_rem_small(m, 2).0, 2),
+        ];
+        let mut state = seed_from(m);
+        for _ in 0..16 {
+            let raw = vec![xorshift(&mut state), xorshift(&mut state)];
+            let Some(reduced) = limbs::rem_fallible(&raw, m) else {
+                unreachable!("a two-limb remainder succeeds")
+            };
+            values.push(pad(&reduced, 2));
+        }
+        values
+    }
+
+    /// Sampled two-limb Montgomery multiplication.
+    #[test]
+    fn etp4_mont_mul_two_limb() {
+        let mut cases = 0usize;
+        for modulus in etp4_two_limb_moduli() {
+            assert_eq!(modulus.len(), 2);
+            assert!(modulus[0] & 1 == 1, "admission: m must be odd");
+            let n0 = inverse_word(modulus[0]);
+            let values = two_limb_population(&modulus);
+            assert_eq!(values.len(), 22);
+            for a in &values {
+                for b in &values {
+                    assert_eq!(limbs::cmp(a, &modulus), core::cmp::Ordering::Less);
+                    assert_eq!(limbs::cmp(b, &modulus), core::cmp::Ordering::Less);
+                    let Some(out) = mont_mul_fallible(a, b, &modulus, n0) else {
+                        unreachable!("a two-limb allocation succeeds")
+                    };
+                    let product = limbs::mul(a, b);
+                    assert_reduced(&out, &modulus, &product, "mont_mul two-limb");
+                    cases += 1;
+                }
+            }
+        }
+        std::eprintln!("ETP4 mont_mul two-limb: cases={cases}");
+        assert_eq!(cases, 6 * 22 * 22);
+    }
+
+    /// Two-limb reduction population over the admitted range `r < m * R`.
+    fn two_limb_reduce_population(m: &[Limb]) -> Vec<Vec<Limb>> {
+        let m_minus_1 = limbs::sub(m, &[1]);
+        let mut values: Vec<Vec<Limb>> = vec![
+            vec![0, 0, 0, 0],
+            vec![1, 0, 0, 0],
+            vec![2, 0, 0, 0],
+            pad(&m_minus_1, 4),
+            pad(m, 4),
+            vec![u64::MAX, u64::MAX, 0, 0],
+            vec![0, 0, 1, 0],
+            vec![1, 0, 1, 0],
+        ];
+        // `m * R - 1`
+        let mut top = vec![u64::MAX, u64::MAX];
+        top.extend_from_slice(&m_minus_1);
+        values.push(top);
+        let mut state = seed_from(&[m[0], m[1], 0xbeef]);
+        for _ in 0..20 {
+            let raw_high = vec![xorshift(&mut state), xorshift(&mut state)];
+            let Some(high) = limbs::rem_fallible(&raw_high, m) else {
+                unreachable!("a two-limb remainder succeeds")
+            };
+            let mut r = vec![xorshift(&mut state), xorshift(&mut state)];
+            r.extend_from_slice(&pad(&high, 2));
+            values.push(r);
+        }
+        values
+    }
+
+    /// Sampled two-limb general reduction.
+    #[test]
+    fn etp4_mont_reduce_two_limb() {
+        let mut cases = 0usize;
+        for modulus in etp4_two_limb_moduli() {
+            let n0 = inverse_word(modulus[0]);
+            for input in two_limb_reduce_population(&modulus) {
+                assert_eq!(input.len(), 4);
+                let Some(out) = mont_reduce(&input, &modulus, n0) else {
+                    unreachable!("a two-limb allocation succeeds")
+                };
+                assert_reduced(&out, &modulus, &input, "mont_reduce two-limb");
+                cases += 1;
+            }
+        }
+        std::eprintln!("ETP4 mont_reduce two-limb: cases={cases}");
+        assert_eq!(cases, 6 * 29);
+    }
+}

@@ -1,0 +1,294 @@
+{
+  "schema": "openssl-rs/etp4-verification/1",
+  "item": "ETP-4",
+  "title": "Foundational verification pilot: SecretBuf cleansing and fixed-width Montgomery arithmetic",
+  "generated_at": "2026-11-22",
+  "verification_status": "BOUNDED_MECHANICALLY_CHECKED",
+  "claim_scope": "source-level Rust tests over the declared finite domains; not a binary result and not a theorem-prover proof",
+  "source": {
+    "branch": "staging",
+    "base_commit": "85583cd9ae6cf4fc163fcb5d247dd36be6cc1c12",
+    "worktree_at_start": "clean",
+    "delivered_change": "test-only harness modules appended to src/runtime/secret.rs and src/bn/mont.rs; no production path altered",
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+    "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+    "toolchain_pin": "rust-toolchain.toml channel = 1.98.1",
+    "files_sha256": {
+      "src/runtime/secret.rs": "9174a878e9f4d05960e7780c1e4ea39039646d1f44982275991e5839949d887d",
+      "src/bn/mont.rs": "ed6d9738c8ae4afaf2870b825a5de18849f41bbd0a1615d8aa3166b8d7484f3c",
+      "src/bn/arith.rs": "edf456e6b38ee48c43bf42e2b7c167906d2675a2b18820358f9dcc04779dafdc",
+      "Cargo.toml": "1bb7439f60d126d414fd3a67e87e029bb6bfac570ce2d19a05e075c4b3d09c60",
+      "rust-toolchain.toml": "51b89aac2174179a4470434e6666f9f54d52309005332324154cdeeb1f66dd58",
+      "evidence/etp4/kani/kani_admission.rs": "ecd3503b0a59c5c75cf1c714de6f7573fc950679ab553885f2a5590040caa38f"
+    },
+    "unchanged_kernel_binding": {
+      "path": "src/bn/arith.rs",
+      "sha256": "edf456e6b38ee48c43bf42e2b7c167906d2675a2b18820358f9dcc04779dafdc",
+      "matches_base_commit": true,
+      "note": "contains mont_mul_into, the REDC kernel under test; identical to the base commit"
+    }
+  },
+  "environment": {
+    "venue": "docker/openssl-rs-court.sh exec, image openssl-rs-court-tools:1",
+    "memory_cap": "OPENSSL_RS_COURT_MEM=6g OPENSSL_RS_COURT_MEMSWAP=6g",
+    "host_available_gib_at_start": 27,
+    "host_available_gib_before_full_gate": 24,
+    "oom_observed": false,
+    "parallelism": "CARGO_BUILD_JOBS=4; tests with --test-threads=4 (and a serial run)",
+    "notes": [
+      "free(1) is absent inside the court image; availability was read on the host before each build.",
+      "The court container already existed (openssl-rs-court, up 47 minutes); no concurrent heavy command was observed.",
+      "The tool installs below are in the running court container, not in the pinned image; a fresh image does not contain them."
+    ]
+  },
+  "tools": {
+    "initial_availability": {
+      "command": "for t in verus kani cargo-kani creusot aeneas charon z3 cvc5 cbmc smtinterpol boogie hax; do command -v \"$t\"; done",
+      "present": [],
+      "absent": ["verus", "kani", "cargo-kani", "creusot", "aeneas", "charon", "z3", "cvc5", "cbmc", "smtinterpol", "boogie", "hax"],
+      "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+      "python": "Python 3.11.2"
+    },
+    "network_observation": {
+      "measured": true,
+      "commands": [
+        "getent hosts crates.io",
+        "curl -sSI https://static.crates.io/",
+        "curl -sSI https://github.com/",
+        "curl -sSI https://static.rust-lang.org/dist/channel-rust-nightly.toml",
+        "apt-get update"
+      ],
+      "observed": "DNS resolution and HTTPS/HTTP routes are reachable; apt-get update exited 0; GitHub and static.rust-lang.org answered HTTP/2 200; static.crates.io answered HTTP/2 404 for the bare host.",
+      "register_discrepancy": "docs/INSTRUMENT-QUALIFICATION.md section 2 records 'network absent' for this venue. The session contradicted that line. The register was not edited; the discrepancy is reported for the instrument owner."
+    },
+    "z3": {
+      "installed": true,
+      "command": "apt-get install -y --no-install-recommends z3",
+      "exit": 0,
+      "version": "Z3 version 4.8.12 - 64 bit",
+      "sha256": "5def71f04f8df16e633c084f611a7cd9fbe633cd87d5016e980ee18949e769b5",
+      "admitted_for": "nothing in this item",
+      "reason": "an SMT solver has no Rust front-end; it cannot establish a property of the crate without a separate verified encoding, which was not built"
+    },
+    "kani": {
+      "installed": true,
+      "driver_install": {
+        "command": "CARGO_BUILD_JOBS=4 cargo install kani-verifier --locked",
+        "exit": 0,
+        "version": "kani-verifier v0.68.0",
+        "build_time_s": 3.78
+      },
+      "setup": {
+        "command": "kani setup",
+        "exit": 0,
+        "verifier": "Kani Rust Verifier 0.68.0 (standalone)",
+        "backend": "CBMC 6.11.0",
+        "toolchain": "nightly-2026-08-21-x86_64-unknown-linux-gnu (rustc 1.100.0-nightly, 8925ea358 2026-08-20)"
+      },
+      "driver_sha256": {
+        "/usr/local/cargo/bin/kani": "1bbdab14d231b24474e7ccbc306d619cb4205601ac7db71eb9f3cd4bbe364ca0",
+        "/usr/local/cargo/bin/cargo-kani": "a262fbecf63abb280c87bbe5cb772b24786f58cb0dc2b0cce148c16a0214dcf6"
+      },
+      "admission_controls": {
+        "positive": {
+          "command": "kani evidence/etp4/kani/kani_admission.rs --harness admission_positive",
+          "exit": 0,
+          "observed": "VERIFICATION:- SUCCESSFUL; Complete - 1 successfully verified harnesses, 0 failures, 1 total."
+        },
+        "negative": {
+          "command": "kani evidence/etp4/kani/kani_admission.rs --harness admission_negative_must_fail",
+          "exit": 1,
+          "observed": "VERIFICATION:- FAILED; Status: FAILURE on the assertion at line 28; Complete - 0 successfully verified harnesses, 1 failures, 1 total."
+        }
+      },
+      "crate_compatibility_probe": {
+        "command": "CARGO_BUILD_JOBS=4 cargo kani --lib",
+        "exit": 0,
+        "observed": "Finished dev profile in 15.05s; 'No proof harnesses (functions with #[kani::proof]) were found to verify.'",
+        "meaning": "Kani's compiler accepted the crate source under its own toolchain; no property was verified by this command"
+      },
+      "supports_pinned_rustc_1_98_1": false,
+      "pinned_toolchain_blocker": "Kani runs on its bundled nightly-2026-08-21 (rustc 1.100.0-nightly), not on the pinned stable 1.98.1. A Kani proof would describe a different compilation unit, so no Kani result is claimed for the pinned candidate.",
+      "used_for_property_in_this_item": false
+    },
+    "verus_creusot_aeneas_charon": {
+      "installed": false,
+      "admission_attempted": false,
+      "contribution": "none; absence is measured, capability is not measured, and no claim rests on these tools"
+    }
+  },
+  "domains": {
+    "cleansing": {
+      "test": "runtime::secret::tests::etp4_whole_allocation_cleanse_domain",
+      "kind": "exhaustive over a declared finite domain",
+      "lengths": [0, 1, 2, 3, 4, 7, 8, 15, 16, 17, 64, 65],
+      "spare_margins": [1, 3, 8],
+      "exact_fit_cases": 12,
+      "spare_capacity_cases": 36,
+      "cases": 48,
+      "observed_bytes": 7616,
+      "property": "after Drop, every byte of [as_ptr, as_ptr + capacity*size_of::<u64>()) reads zero; the initialised prefix held a non-zero pattern before release and the spare capacity was initialised non-zero before release",
+      "covers": ["zero length with zero capacity", "zero length with non-zero capacity", "len == capacity", "len < capacity", "word and multi-word lengths"]
+    },
+    "cleansing_exit_paths": {
+      "test": "runtime::secret::tests::etp4_spare_capacity_cleansed_on_every_exit_path",
+      "kind": "exhaustive over the declared length set and three exit paths",
+      "exit_paths": ["normal return", "early ? return", "unwind"],
+      "cases": 36,
+      "property": "Drop runs and zeroes the whole allocation on each ordinary exit path the type exposes, with staged non-zero spare capacity"
+    },
+    "cleansing_reallocated": {
+      "test": "runtime::secret::tests::etp4_reallocated_buffer_cleanses_whole_allocation",
+      "kind": "single reallocation witness",
+      "cases": 1,
+      "capacity": 68,
+      "property": "a vector that grew by reallocation and then shrank its logical length is cleansed over the reallocated block's whole capacity"
+    },
+    "mont_mul_one_limb_exhaustive": {
+      "test": "bn::mont::etp4_verification::etp4_mont_mul_one_limb_exhaustive",
+      "kind": "exhaustive over the whole residue square for each declared modulus",
+      "moduli": [3, 5, 7, 9, 11, 13, 15, 17, 31, 33, 63, 65, 127, 129, 255, 257],
+      "operand_rule": "every ordered pair (a, b) with 0 <= a, b < m",
+      "cases": 175056,
+      "property": "out < m and out * 2^64 == a * b (mod m)"
+    },
+    "mont_mul_one_limb_boundary": {
+      "test": "bn::mont::etp4_verification::etp4_mont_mul_one_limb_boundary",
+      "kind": "sampled over boundary moduli",
+      "moduli_hex": ["0x7fffffffffffffff", "0x8000000000000001", "0x8000000000000003", "0xffff000000000001", "0xfffffffffffffffd", "0x123456789abcdef1", "0xffffffffffffffff"],
+      "operand_population": "0, 1, 2, m-1, m-2, m>>1, then 26 deterministic pseudo-random residues",
+      "per_modulus_operands": 32,
+      "cases": 7168,
+      "property": "out < m and out * 2^64 == a * b (mod m)"
+    },
+    "mont_reduce_one_limb": {
+      "test": "bn::mont::etp4_verification::etp4_mont_reduce_one_limb",
+      "kind": "sampled over the full admitted input range r < m*R",
+      "moduli_count": 23,
+      "per_modulus_inputs": 31,
+      "cases": 713,
+      "input_population": ["0", "1", "2", "m-1", "m", "m+1", "R-1", "R", "R+1", "R+m-1", "m*R-1", "high in {0,1,2,m-2,m-1} x fixed low", "15 deterministic high < m with random low"],
+      "non_canonical_inputs": ["m", "m+1", "R", "R+1", "m*R-1"],
+      "property": "out < m and out * 2^64 == r (mod m)"
+    },
+    "mont_mul_two_limb": {
+      "test": "bn::mont::etp4_verification::etp4_mont_mul_two_limb",
+      "kind": "sampled over boundary moduli",
+      "moduli_hex": ["0x1_0000000000000001", "0x7fffffffffffffff_ffffffffffffffff", "0x8000000000000000_8000000000000001", "0xffffffffffffffff_fffffffffffffffd", "0xfedcba9876543211_0123456789abcdef", "0xffffffffffffffff_ffffffffffffffff"],
+      "operand_population": "0, 1, 2, m-1, m-2, m>>1, then 16 deterministic residues",
+      "per_modulus_operands": 22,
+      "cases": 2904,
+      "property": "out < m and out * R == a * b (mod m), R = 2^128"
+    },
+    "mont_reduce_two_limb": {
+      "test": "bn::mont::etp4_verification::etp4_mont_reduce_two_limb",
+      "kind": "sampled over the full admitted input range r < m*R",
+      "moduli_count": 6,
+      "per_modulus_inputs": 29,
+      "cases": 174,
+      "input_population": ["0", "1", "2", "m-1", "m", "R-1", "R", "R+1", "m*R-1", "20 deterministic inputs with high half < m"],
+      "non_canonical_inputs": ["m", "R", "R+1", "m*R-1"],
+      "property": "out < m and out * R == r (mod m), R = 2^128"
+    },
+    "totals": {
+      "cleansing_allocation_observations": 85,
+      "montgomery_cases": 186015,
+      "verified_bound": "every REDC output is strictly below the modulus"
+    }
+  },
+  "controls": [
+    {
+      "id": "ETP4-C1",
+      "target": "SecretBuf cleansing",
+      "mutation": "cleanse_allocation computes its byte count from v.len() instead of v.capacity(), so spare capacity is not wiped",
+      "file": "src/runtime/secret.rs",
+      "test": "runtime::secret::tests::etp4_whole_allocation_cleanse_domain",
+      "exit": 101,
+      "observed": "assertion `left == right` failed: automatic destruction left non-zero bytes in the allocation",
+      "instrument_fired": true
+    },
+    {
+      "id": "ETP4-C2",
+      "target": "SecretBuf cleansing",
+      "mutation": "Drop no longer calls cleanse_now(), so destruction is skipped",
+      "file": "src/runtime/secret.rs",
+      "test": "runtime::secret::tests::etp4_whole_allocation_cleanse_domain",
+      "exit": 101,
+      "observed": "assertion `left == right` failed: automatic destruction left non-zero bytes in the allocation",
+      "instrument_fired": true
+    },
+    {
+      "id": "ETP4-M1",
+      "target": "REDC",
+      "mutation": "mont_mul_into sets keep = 1, omitting the final conditional subtraction",
+      "file": "src/bn/arith.rs",
+      "test": "bn::mont::etp4_verification::etp4_mont_mul_one_limb_exhaustive",
+      "exit": 101,
+      "observed": "assertion `left == right` failed: mont_mul exhaustive: output is not canonical (out=[9] m=[9])",
+      "instrument_fired": true
+    },
+    {
+      "id": "ETP4-M2",
+      "target": "REDC",
+      "mutation": "mont_mul_into sets keep = borrow, ignoring the high limb (the top-bit-set carry-out)",
+      "file": "src/bn/arith.rs",
+      "test": "bn::mont::etp4_verification::etp4_mont_mul_one_limb_boundary",
+      "exit": 101,
+      "observed": "assertion `left == right` failed: mont_mul boundary: out * R != input (mod m); out=[18445618182392643584] input=[281474976710656, 18446181128051097599] m=[18446462598732840961]",
+      "instrument_fired": true
+    }
+  ],
+  "restored_after_controls": {
+    "focused_tests": "8 passed; 0 failed",
+    "fmt": "cargo fmt --all -- --check exit 0",
+    "clippy": "cargo clippy --all-targets -- -D warnings exit 0",
+    "library_serial": "2422 passed; 0 failed; 54 ignored",
+    "library_threads_4": "2422 passed; 0 failed; 54 ignored"
+  },
+  "not_established": [
+    "No result is a statement about the compiled binary, the release DSO, or the output of rustc 1.98.1: the harnesses run in the debug test profile.",
+    "No theorem-prover proof is claimed. Kani was installed and admitted with positive and negative controls, but it runs on nightly-2026-08-21, not the pinned 1.98.1, and was not used for either property.",
+    "Bounded exhaustion is not a universal statement: 16 one-limb moduli have their whole residue square covered, but two-limb moduli are sampled, widths above two limbs are untested, and the cleansing lengths/capacities are an enumerated subset of the type's domain.",
+    "Drop cannot be made unavoidable for safe Rust's mem::forget, ManuallyDrop, process abort or std::process::exit; no Rust type can prevent those. The claim is scoped to every ordinary scope exit the type's API reaches.",
+    "The cleansing probe observes storage inside Drop, before the backing Vec releases it. It does not prove that libc or the allocator retains no copy in allocator metadata or a free-list header; the module's storage invariant is scoped to the allocation the buffer still owns.",
+    "No constant-time, side-channel or timing property is established; the harnesses introduce no secret-dependent control flow into production code.",
+    "The two-limb oracle excludes a non-normalised modulus representation (zero top limb) because limbs::divide_fallible requires a non-zero top limb. Production BIGNUMs are normalised, so this is a domain exclusion, not an implementation finding.",
+    "The installed z3/Kani/nightly toolchains exist only in the running court container, not in the pinned image; a clean court cannot reproduce the tool admission without the recorded install commands."
+  ],
+  "theorem_shapes": [
+    {
+      "property": "SecretBuf whole-allocation cleansing",
+      "bounded_result": "48 + 36 + 1 cases over the declared lengths, capacities and the three ordinary exit paths",
+      "universal_shape": "For every T: SecretElement and every allocation b owned by SecretBuf<T>, every ordinary scope exit leaves each byte of [as_ptr, as_ptr + capacity*size_of::<T>()) equal to 0, and the Drop path is reached on normal return, early return and unwind.",
+      "discharge_class": "source-level separation logic with a volatile-store semantics (RustBelt/RefinedRust class), or bounded model checking for fixed T and capacity; then a compiler/LLVM refinement or binary dataflow check for the emitted write pattern"
+    },
+    {
+      "property": "Fixed-width REDC correctness and output bound",
+      "bounded_result": "186015 cases; out < m and out * R == input (mod m) over the declared one- and two-limb domains",
+      "universal_shape": "For every n >= 1, every odd m with 2^(64(n-1)) <= m < 2^(64n), and every a, b < m (or r < m*R for the general reduction), REDC returns the unique x with x < m and x * R == input (mod m).",
+      "discharge_class": "SMT-backed bounded model checking (Kani class) for fixed n and machine width; a proof assistant with machine-integer semantics for all n; either must be followed by compiler-correctness or translation validation for the pinned build"
+    },
+    {
+      "property": "Binary bridge",
+      "bounded_result": "none; the bridge is absent",
+      "universal_shape": "The source-level theorems above compose with a semantics-preservation theorem for rustc 1.98.1, LLVM, the assembler and linker, keyed to the exact candidate artefact hashes.",
+      "discharge_class": "translation validation or a verified-compiler chain for the exact toolchain; this is the FRC tool admission named in the item, not something this pilot asserts"
+    }
+  ],
+  "reproduction": {
+    "focused": "OPENSSL_RS_COURT_IMAGE=openssl-rs-court-tools:1 OPENSSL_RS_COURT_MEM=6g OPENSSL_RS_COURT_MEMSWAP=6g bash docker/openssl-rs-court.sh exec sh -c 'CARGO_BUILD_JOBS=4 cargo test --lib etp4_ -- --nocapture --test-threads=4'",
+    "gates": [
+      "cargo fmt --all -- --check",
+      "cargo clippy --all-targets -- -D warnings",
+      "cargo test --lib -- --test-threads=1",
+      "cargo test --lib -- --test-threads=4"
+    ],
+    "kani_admission": [
+      "cargo install kani-verifier --locked",
+      "kani setup",
+      "kani evidence/etp4/kani/kani_admission.rs --harness admission_positive",
+      "kani evidence/etp4/kani/kani_admission.rs --harness admission_negative_must_fail",
+      "cargo kani --lib"
+    ]
+  }
+}
