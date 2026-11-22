@@ -2,22 +2,24 @@
  "schema": "openssl-rs/interop-cell-receipt/1",
  "item": "O7 of docs/ETP-TODO.md",
  "cell": "BA",
- "generated": "2026-11-21T19:53:48Z",
+ "generated": "2026-11-22T02:10:32Z",
  "client": {
   "build": "B",
-  "libcrypto_sha256": "3c3a68c1baeb304adf2fc3af827e49b14529556008429bd11dda784a2c6cdfd1"
+  "libcrypto_sha256": "ee7fa27c79f5a679d5b229429d53dc7c3b510695db9c74d11b4b6783a735ebe9"
  },
  "server": {
   "build": "A",
   "libcrypto_sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2"
  },
  "separate_library_paths": true,
- "mapped_libraries": "/home/user/openssl-rs/court/tmp/o4/b-prefix/lib/libcrypto.so.3 /home/user/openssl-rs/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 ",
+ "scripts": "same set as O9 (SKIP_LTESTS=sftp-cmds)",
+ "client_mapped": "/work/court/tmp/o4/b-prefix/lib/libcrypto.so.3",
+ "server_mapped": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
  "mapping_status": "ok",
  "make_k_tests_exit": 2,
- "log": "/home/user/openssl-rs/court/tmp/o4/cell-BA.log",
- "failed_scripts": "2",
- "withdrawn": true,
- "withdrawn_reason": "produced before the BUILDDIR override, the wrapper fix and the per-process mapping check; the cell did not necessarily run the libraries it claims",
- "superseded_by": "the next RECEIPT-o7-BA.json written by the fixed cell.sh"
+ "log": "courts/phase18/interop/logs/c68bac29f439fe886b4e24ccd4dcfccbbd8af255feebcf7a121c6d90c40badb5.log",
+ "failed_scripts": "1",
+ "withdrawn": false,
+ "log_sha256": "c68bac29f439fe886b4e24ccd4dcfccbbd8af255feebcf7a121c6d90c40badb5",
+ "venue": "docker/openssl-rs-court-tools:1, 6g/6g"
 }

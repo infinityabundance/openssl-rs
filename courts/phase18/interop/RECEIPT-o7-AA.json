@@ -2,7 +2,7 @@
  "schema": "openssl-rs/interop-cell-receipt/1",
  "item": "O7 of docs/ETP-TODO.md",
  "cell": "AA",
- "generated": "2026-11-22T00:57:03Z",
+ "generated": "2026-11-22T01:41:22Z",
  "client": {
   "build": "A",
   "libcrypto_sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2"
@@ -13,13 +13,13 @@
  },
  "separate_library_paths": false,
  "scripts": "same set as O9 (SKIP_LTESTS=sftp-cmds)",
- "client_mapped": "/home/user/openssl-rs/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
- "server_mapped": "/home/user/openssl-rs/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+ "client_mapped": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+ "server_mapped": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
  "mapping_status": "ok",
  "make_k_tests_exit": 2,
- "log": "/home/user/openssl-rs/court/tmp/o4/cell-AA.log",
- "failed_scripts": "2",
- "withdrawn": true,
- "withdrawn_reason": "produced before the BUILDDIR override, the wrapper fix and the per-process mapping check; the cell did not necessarily run the libraries it claims",
- "superseded_by": "the next RECEIPT-o7-AA.json written by the fixed cell.sh"
+ "log": "courts/phase18/interop/logs/a84df93b764eebbabc563e5d07e24a0f14dd4523546a50f193e008e4c43ba054.log",
+ "failed_scripts": "1",
+ "withdrawn": false,
+ "log_sha256": "a84df93b764eebbabc563e5d07e24a0f14dd4523546a50f193e008e4c43ba054",
+ "venue": "docker/openssl-rs-court-tools:1, 6g/6g"
 }
