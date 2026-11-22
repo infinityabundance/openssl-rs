@@ -15,6 +15,7 @@ committed typed claims validate, and that the schema is not vacuous.
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import re
 import subprocess
@@ -189,6 +190,43 @@ def exclusion_claim() -> dict:
 
 def refusals(doc: dict) -> list[dict]:
     return etp_claims.validate_document(doc, SCHEMA, repo_root=None)
+
+
+def typed_counter_measure(name: str, numerator: int, denominator: int) -> dict:
+    return {
+        "name": name,
+        "counter": {"numerator": numerator, "denominator": denominator},
+        "aggregation": "forbidden",
+    }
+
+
+def counter_claim(claim_id: str, value: str) -> dict:
+    """An ESTABLISHED claim over one named, typed Safe-33 counter reading."""
+    claim = base_claim()
+    claim["id"] = claim_id
+    claim["property"] = "consumer-graduation"
+    claim["interpretation"] = (
+        "Type one reading of the single-valued cohort counter as an established fact."
+    )
+    claim["quantification"] = {
+        "kind": "universal",
+        "population": "33 admitted cohort families",
+        "population_size": None,
+        "measure": {
+            "name": "safe_compatible_counter",
+            "counter": {"numerator": int(value.split("/")[0]), "denominator": 33},
+            "aggregation": "forbidden",
+        },
+    }
+    claim["scope"] = {
+        "kind": "ledger",
+        "subject": "Safe-33 cohort counter",
+        "venue": "ledger",
+        "locations": ["src/synthetic.rs"],
+        "excludes": [],
+    }
+    claim["verdict"]["basis"] = f"The tracked ledger records {value}."
+    return claim
 
 
 def rules(doc: dict) -> dict[str, list[dict]]:
@@ -986,6 +1024,249 @@ class JsonIntegrityControls(unittest.TestCase):
                 refusal["path"] == "$/claims"
                 for refusal in payload["refusals"]
             )
+        )
+
+
+class EvidenceStateControls(unittest.TestCase):
+    """F1: an evidence record's declared state governs what it can support."""
+
+    @staticmethod
+    def _with_state(value: str) -> dict:
+        claim = base_claim()
+        claim["evidence"][0]["state"] = {
+            "value": value,
+            "artefact": "src/synthetic.rs",
+            "revision": "a" * 40,
+        }
+        return base_document(claim)
+
+    def test_withdrawn_evidence_over_established_is_refused(self) -> None:
+        assert_rule(
+            self,
+            self._with_state("WITHDRAWN"),
+            "EG_EVIDENCE_CONTRADICTS_VERDICT",
+            "evidence/0/state",
+        )
+
+    def test_refuted_evidence_over_established_is_refused(self) -> None:
+        assert_rule(
+            self,
+            self._with_state("REFUTED"),
+            "EG_EVIDENCE_CONTRADICTS_VERDICT",
+            "evidence/0/state",
+        )
+
+    def test_not_established_evidence_over_established_is_refused(self) -> None:
+        assert_rule(
+            self,
+            self._with_state("NOT_ESTABLISHED"),
+            "EG_EVIDENCE_CONTRADICTS_VERDICT",
+            "evidence/0/state",
+        )
+
+    def test_graduation_modality_over_withdrawn_evidence_is_refused(self) -> None:
+        document = self._with_state("WITHDRAWN")
+        document["claims"][0]["modality"] = "BINARY_REFINEMENT_VERIFIED"
+        assert_rule(
+            self,
+            document,
+            "EG_EVIDENCE_CONTRADICTS_VERDICT",
+            "evidence/0/state",
+        )
+
+    def test_no_non_current_evidence_over_positive_verdict_is_refused(self) -> None:
+        # SUPERSEDED is not itself a contradiction, but it is not current
+        # support either: with no other current entry the positive verdict has
+        # no non-withdrawn evidence.
+        assert_rule(
+            self,
+            self._with_state("SUPERSEDED"),
+            "EG_EVIDENCE_CONTRADICTS_VERDICT",
+            "evidence",
+        )
+
+    def test_positive_evidence_state_is_accepted(self) -> None:
+        self.assertEqual(refusals(self._with_state("ESTABLISHED")), [])
+
+    def test_state_requires_the_artefact_and_revision(self) -> None:
+        document = self._with_state("WITHDRAWN")
+        document["claims"][0]["evidence"][0]["state"].pop("revision")
+        self.assertIn("EG_SCHEMA_VIOLATION", rules(document))
+
+
+class MultipleCandidateControls(unittest.TestCase):
+    """F2: a schema-valid multi-candidate identity is refused unless related."""
+
+    @staticmethod
+    def _document(relationship: str | None) -> dict:
+        claim = base_claim()
+        source = claim["identity"]["source"]
+        source["candidates"] = ["a" * 40, "b" * 40]
+        if relationship is not None:
+            source["candidate_relationship"] = relationship
+        return base_document(claim)
+
+    def test_two_candidates_without_a_relationship_is_refused(self) -> None:
+        found = rules(self._document(None))
+        self.assertEqual(set(found), {"EG_MULTIPLE_CANDIDATES"})
+        self.assertIn(
+            "candidates",
+            " ".join(refusal["path"] + refusal["field"] for refusal in found["EG_MULTIPLE_CANDIDATES"]),
+        )
+
+    def test_two_candidates_with_a_stated_relationship_are_accepted(self) -> None:
+        self.assertEqual(
+            refusals(self._document("one archive built twice in two venues")), []
+        )
+
+
+class AggregateControls(unittest.TestCase):
+    """F3: an aggregate claim must name the cell receipts it summarises."""
+
+    @staticmethod
+    def _document(aggregate: dict) -> dict:
+        claim = base_claim()
+        # The aggregate check is the subject of these controls; the unrelated
+        # evidence digest is not tree-bound here so only aggregate rules fire.
+        claim["evidence"][0]["digest_identity"] = None
+        claim["aggregate_cells"] = aggregate
+        return {"claims": [claim]} | {
+            key: value for key, value in base_document().items() if key != "claims"
+        }
+
+    def test_unbound_aggregate_without_cells_is_refused(self) -> None:
+        assert_rule(
+            self,
+            self._document({"summarises_cells": True}),
+            "EG_AGGREGATE_UNBOUND",
+            "aggregate_cells/cells",
+        )
+
+    def test_unbound_aggregate_with_an_empty_cell_list_is_refused(self) -> None:
+        assert_rule(
+            self,
+            self._document({"summarises_cells": True, "cells": []}),
+            "EG_AGGREGATE_UNBOUND",
+            "aggregate_cells/cells",
+        )
+
+    def test_cell_digest_that_disagrees_with_the_tracked_receipt_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "cells").mkdir()
+            (root / "cells/AA.json").write_text("{}\n", encoding="utf-8")
+            document = self._document(
+                {
+                    "summarises_cells": True,
+                    "cells": [
+                        {
+                            "id": "AA",
+                            "receipt_path": "cells/AA.json",
+                            "receipt_sha256": "0" * 64,
+                        }
+                    ],
+                }
+            )
+            found = etp_claims.validate_document(document, SCHEMA, repo_root=root)
+        rules_found = {item["rule"] for item in found}
+        self.assertIn("EG_AGGREGATE_DIGEST_MISMATCH", rules_found)
+
+    def test_cell_digest_that_matches_the_tracked_receipt_is_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "cells").mkdir()
+            receipt = root / "cells/AA.json"
+            receipt.write_text("{}\n", encoding="utf-8")
+            digest = hashlib.sha256(receipt.read_bytes()).hexdigest()
+            document = self._document(
+                {
+                    "summarises_cells": True,
+                    "cells": [
+                        {
+                            "id": "AA",
+                            "receipt_path": "cells/AA.json",
+                            "receipt_sha256": digest,
+                        }
+                    ],
+                }
+            )
+            found = etp_claims.validate_document(document, SCHEMA, repo_root=root)
+        self.assertEqual(found, [])
+
+
+class TypedMeasureControls(unittest.TestCase):
+    """F4: a comparative measure must be typed and single-valued."""
+
+    def test_equal_typed_counters_are_accepted(self) -> None:
+        document = base_document(counter_claim("ETP-CLM-901", "1/33"))
+        document["claims"].append(counter_claim("ETP-CLM-902", "1/33"))
+        self.assertEqual(refusals(document), [])
+
+    def test_different_typed_counters_are_refused(self) -> None:
+        document = base_document(counter_claim("ETP-CLM-901", "1/33"))
+        document["claims"].append(counter_claim("ETP-CLM-902", "0/33"))
+        assert_rule(
+            self, document, "EG_CONTRADICTION_UNRESOLVED", "quantification/measure"
+        )
+
+    def test_free_text_compared_measure_is_refused(self) -> None:
+        first = counter_claim("ETP-CLM-901", "1/33")
+        first["quantification"]["measure"] = {
+            "name": "safe_compatible_counter",
+            "value": "counter = 1/33",
+            "aggregation": "forbidden",
+        }
+        second = counter_claim("ETP-CLM-902", "0/33")
+        second["quantification"]["measure"] = {
+            "name": "safe_compatible_counter",
+            "value": "counter = 0/33",
+            "aggregation": "forbidden",
+        }
+        document = base_document(first)
+        document["claims"].append(second)
+        assert_rule(self, document, "EG_MEASURE_UNTYPED", "quantification/measure")
+
+    def test_numeric_measures_with_different_values_are_refused(self) -> None:
+        first = counter_claim("ETP-CLM-901", "1/33")
+        first["quantification"]["measure"] = {
+            "name": "safe_compatible_counter",
+            "value": 1,
+            "unit": "families",
+            "aggregation": "forbidden",
+        }
+        second = counter_claim("ETP-CLM-902", "0/33")
+        second["quantification"]["measure"] = {
+            "name": "safe_compatible_counter",
+            "value": 0,
+            "unit": "families",
+            "aggregation": "forbidden",
+        }
+        document = base_document(first)
+        document["claims"].append(second)
+        assert_rule(
+            self, document, "EG_CONTRADICTION_UNRESOLVED", "quantification/measure"
+        )
+
+    def test_conjoin_blocks_conflicting_counters(self) -> None:
+        result = etp_claims.conjoin(
+            [counter_claim("ETP-CLM-901", "1/33"), counter_claim("ETP-CLM-902", "0/33")]
+        )
+        self.assertEqual(result["verdict"], "CONTRADICTED")
+        self.assertIn("measure_conflicts", result)
+        self.assertEqual(result["aggregation"], "forbidden")
+
+    def test_contradictions_operation_reports_conflicting_counters(self) -> None:
+        conflicts = etp_claims.contradiction_conflicts(
+            [counter_claim("ETP-CLM-901", "1/33"), counter_claim("ETP-CLM-902", "0/33")]
+        )
+        self.assertTrue(conflicts)
+        self.assertTrue(
+            any(
+                conflict.get("measure") == "safe_compatible_counter"
+                and conflict.get("kind") == "value"
+                for conflict in conflicts
+            ),
+            conflicts,
         )
 
 

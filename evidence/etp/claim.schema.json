@@ -319,6 +319,9 @@
         },
         "closure": {
           "$ref": "#/$defs/closure"
+        },
+        "aggregate_cells": {
+          "$ref": "#/$defs/aggregate"
         }
       },
       "allOf": [
@@ -487,32 +490,123 @@
       ]
     },
     "measure": {
-      "type": "object",
-      "additionalProperties": false,
-      "description": "A recorded observation, carried as a string. It is never parsed into arithmetic, never weighted, and never combined with another axis. The const field makes that refusal explicit in the data.",
-      "required": [
-        "form",
-        "value",
-        "aggregation"
-      ],
-      "properties": {
-        "form": {
-          "enum": [
-            "count",
-            "ratio",
-            "set",
-            "boolean",
-            "digest-list"
-          ]
+      "description": "A recorded observation. The opaque forms carry the observation as a string and are never parsed. The typed forms make a comparative measure expressible: a named `counter` (integer numerator and denominator) or a named numeric value with a unit. Every form declares `aggregation: forbidden`, so no axis is ever combined into a score.",
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "form",
+            "value",
+            "aggregation"
+          ],
+          "properties": {
+            "form": {
+              "enum": [
+                "count",
+                "ratio",
+                "set",
+                "boolean",
+                "digest-list"
+              ]
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1
+            },
+            "aggregation": {
+              "const": "forbidden"
+            }
+          }
         },
-        "value": {
-          "type": "string",
-          "minLength": 1
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "A named free-text measure. It is schema-valid but not comparative: the algebra refuses it with EG_MEASURE_UNTYPED when another claim shares its property, scope and measure name.",
+          "required": [
+            "name",
+            "value",
+            "aggregation"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "value": {
+              "type": "string",
+              "minLength": 1
+            },
+            "aggregation": {
+              "const": "forbidden"
+            }
+          }
         },
-        "aggregation": {
-          "const": "forbidden"
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "A typed counter: a single-valued observation that two claims may compare.",
+          "required": [
+            "name",
+            "counter",
+            "aggregation"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "counter": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "numerator",
+                "denominator"
+              ],
+              "properties": {
+                "numerator": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "denominator": {
+                  "type": "integer",
+                  "minimum": 1
+                }
+              }
+            },
+            "aggregation": {
+              "const": "forbidden"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "A typed numeric observation with a unit.",
+          "required": [
+            "name",
+            "value",
+            "unit",
+            "aggregation"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "minLength": 1
+            },
+            "value": {
+              "type": "number"
+            },
+            "unit": {
+              "type": "string",
+              "minLength": 1
+            },
+            "aggregation": {
+              "const": "forbidden"
+            }
+          }
         }
-      }
+      ]
     },
     "scope": {
       "type": "object",
@@ -645,6 +739,21 @@
             "multiple",
             "unbound"
           ]
+        },
+        "candidates": {
+          "description": "An explicit multi-candidate identity. It is permitted only when the claim also states the relationship among the candidates; the algebra refuses more than one candidate without a stated relationship (EG_MULTIPLE_CANDIDATES).",
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 2,
+          "uniqueItems": true
+        },
+        "candidate_relationship": {
+          "description": "What joins the named candidates (for example, one archive built twice, or two digests of one source), so a multi-candidate identity is a stated relationship rather than an unexplained disjunction.",
+          "type": "string",
+          "minLength": 1
         },
         "tree_sha256": {
           "oneOf": [
@@ -881,6 +990,36 @@
         },
         "note": {
           "type": "string"
+        },
+        "state": {
+          "description": "The machine-readable state the tracked artefact declares for itself, with the artefact and revision it applies to. Absence records that the artefact's state is unknown; the algebra never infers it and the claim must carry an obligation naming the unknown state.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "value",
+            "artefact",
+            "revision"
+          ],
+          "properties": {
+            "value": {
+              "enum": [
+                "WITHDRAWN",
+                "ESTABLISHED",
+                "NOT_ESTABLISHED",
+                "SUPERSEDED",
+                "REFUTED",
+                "PARTIAL"
+              ]
+            },
+            "artefact": {
+              "type": "string",
+              "minLength": 1
+            },
+            "revision": {
+              "type": "string",
+              "minLength": 1
+            }
+          }
         }
       }
     },
@@ -1283,6 +1422,57 @@
         },
         "complete": {
           "type": "boolean"
+        }
+      }
+    },
+    "aggregate": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "An aggregate claim that claims to summarise per-cell receipts. It must name each cell's receipt digest so the aggregate is bound to the cells it summarises; a claim that claims to aggregate without naming any cell is refused with EG_AGGREGATE_UNBOUND, and a named digest that disagrees with the tracked receipt is refused with EG_AGGREGATE_DIGEST_MISMATCH.",
+      "required": [
+        "summarises_cells"
+      ],
+      "properties": {
+        "summarises_cells": {
+          "const": true
+        },
+        "cells": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/aggregate_cell"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "aggregate_cell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "receipt_path",
+        "receipt_sha256"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "receipt_path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "receipt_sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/sha256"
+            }
+          ]
         }
       }
     }

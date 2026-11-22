@@ -1,0 +1,306 @@
+{
+ "committed": {
+  "claims": 35,
+  "document": "evidence/etp/claims.json",
+  "refusal_count": 0,
+  "refusals_by_rule": {},
+  "valid": true
+ },
+ "derived": {
+  "F1-element7-not-established": {
+   "expected_rule": "EG_EVIDENCE_CONTRADICTS_VERDICT",
+   "fired": true,
+   "refusal_count": 1,
+   "refusals": [
+    {
+     "detail": "evidence 'EV-02' at 'evidence/element7-curl-049-triage.json' declares state NOT_ESTABLISHED, which cannot support ESTABLISHED",
+     "field": "state",
+     "path": "$.claims/0/evidence/1/state",
+     "rule": "EG_EVIDENCE_CONTRADICTS_VERDICT"
+    }
+   ],
+   "refusals_by_rule": {
+    "EG_EVIDENCE_CONTRADICTS_VERDICT": 1
+   },
+   "source": "evidence/etp5/probes/p6-curl-element7-closed.json",
+   "valid": false
+  },
+  "F1-withdrawn-o7": {
+   "expected_rule": "EG_EVIDENCE_CONTRADICTS_VERDICT",
+   "fired": true,
+   "refusal_count": 1,
+   "refusals": [
+    {
+     "detail": "evidence 'EV-01' at 'courts/phase18/interop/RECEIPT-o7.json' declares state WITHDRAWN, which cannot support ESTABLISHED",
+     "field": "state",
+     "path": "$.claims/0/evidence/0/state",
+     "rule": "EG_EVIDENCE_CONTRADICTS_VERDICT"
+    }
+   ],
+   "refusals_by_rule": {
+    "EG_EVIDENCE_CONTRADICTS_VERDICT": 1
+   },
+   "source": "evidence/etp5/probes/p4a-withdrawn-o7-historical-accepted.json",
+   "valid": false
+  },
+  "F3-aggregate-bound": {
+   "cell_receipts": {
+    "AA": "053037d324b7f87dc272ad1063354e930993d820b1b9c238ff1dc421cb65fe02",
+    "AB": "02df1f09763997953e5cb2c941d9d9f0fa3ba34ebaf0afed56d1bb12eafdd5ee",
+    "BA": "82191db9956f22e66b7fc60bbd8334ae910ce95c864a34f10a096bfc8073d3f0",
+    "BB": "341f836a636e087e2f5b38aaca3daac35d25cf7ff618843b6b58f7067fa77015"
+   },
+   "expected_rule": null,
+   "fired": false,
+   "refusal_count": 0,
+   "refusals": [],
+   "refusals_by_rule": {},
+   "source": "courts/phase18/interop/RECEIPT-o7-{AA,AB,BA,BB}.json",
+   "valid": true
+  },
+  "F3-aggregate-digest-mismatch": {
+   "expected_rule": "EG_AGGREGATE_DIGEST_MISMATCH",
+   "fired": true,
+   "refusal_count": 1,
+   "refusals": [
+    {
+     "detail": "cell 'BB' receipt 'courts/phase18/interop/RECEIPT-o7-BB.json' hashes to 341f836a636e087e2f5b38aaca3daac35d25cf7ff618843b6b58f7067fa77015, not the recorded 1a23987ae2ea2bee94eb68f3946e7751c03322ea5d0586cb6ac154c349fdc317",
+     "field": "receipt_sha256",
+     "path": "$.claims/0/aggregate_cells/cells/0",
+     "rule": "EG_AGGREGATE_DIGEST_MISMATCH"
+    }
+   ],
+   "refusals_by_rule": {
+    "EG_AGGREGATE_DIGEST_MISMATCH": 1
+   },
+   "source": "courts/phase18/interop/RECEIPT-o7.json cells.BB.log_sha256",
+   "valid": false
+  },
+  "F3-aggregate-unbound": {
+   "expected_rule": "EG_AGGREGATE_UNBOUND",
+   "fired": true,
+   "refusal_count": 1,
+   "refusals": [
+    {
+     "detail": "an aggregate claim names no cell receipt digests, so it is not bound to the cells it summarises",
+     "field": "cells",
+     "path": "$.claims/0/aggregate_cells/cells",
+     "rule": "EG_AGGREGATE_UNBOUND"
+    }
+   ],
+   "refusals_by_rule": {
+    "EG_AGGREGATE_UNBOUND": 1
+   },
+   "source": "courts/phase18/interop/RECEIPT-o7.json",
+   "valid": false
+  },
+  "F4-counter-typed": {
+   "conjoin": {
+    "aggregation": "forbidden",
+    "blocked_by": [
+     {
+      "id": "ETP5-CLM-014",
+      "measure_conflict": true,
+      "open_obligations": [],
+      "verdict": "ESTABLISHED"
+     },
+     {
+      "id": "ETP5-CLM-015",
+      "measure_conflict": true,
+      "open_obligations": [],
+      "verdict": "ESTABLISHED"
+     }
+    ],
+    "measure_conflicts": [
+     {
+      "candidate": "b85c graduation",
+      "claims": [
+       "ETP5-CLM-014",
+       "ETP5-CLM-015"
+      ],
+      "commit": "1e7c221f0",
+      "kind": "value",
+      "measure": "safe_compatible_counter",
+      "property": "consumer-graduation",
+      "resolution": "hard error: preference may not resolve it",
+      "scope_subject": "Safe-33 cohort counter",
+      "values": [
+       [
+        "counter",
+        0,
+        33
+       ],
+       [
+        "counter",
+        1,
+        33
+       ]
+      ]
+     }
+    ],
+    "members": [
+     {
+      "id": "ETP5-CLM-014",
+      "modality": "DOCUMENTED",
+      "verdict": "ESTABLISHED"
+     },
+     {
+      "id": "ETP5-CLM-015",
+      "modality": "DOCUMENTED",
+      "verdict": "ESTABLISHED"
+     }
+    ],
+    "obligations": [],
+    "verdict": "CONTRADICTED",
+    "weakest": [
+     "ETP5-CLM-014",
+     "ETP5-CLM-015"
+    ]
+   },
+   "expected_rule": "EG_CONTRADICTION_UNRESOLVED",
+   "fired": true,
+   "ledger_path": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+   "ledger_readings": {
+    "consumers.families_total": 33,
+    "consumers.note": "SAFE_COMPATIBLE remains 0/33",
+    "consumers.safe_compatible": 1
+   },
+   "refusal_count": 2,
+   "refusals": [
+    {
+     "detail": "claim ETP5-CLM-014 and the other claim(s) ETP5-CLM-015 share property, scope, identity and measure 'safe_compatible_counter' but assert different values [('counter', 0, 33), ('counter', 1, 33)]",
+     "field": "measure",
+     "path": "$.claims/0/quantification/measure",
+     "rule": "EG_CONTRADICTION_UNRESOLVED"
+    },
+    {
+     "detail": "claim ETP5-CLM-015 and the other claim(s) ETP5-CLM-014 share property, scope, identity and measure 'safe_compatible_counter' but assert different values [('counter', 0, 33), ('counter', 1, 33)]",
+     "field": "measure",
+     "path": "$.claims/1/quantification/measure",
+     "rule": "EG_CONTRADICTION_UNRESOLVED"
+    }
+   ],
+   "refusals_by_rule": {
+    "EG_CONTRADICTION_UNRESOLVED": 2
+   },
+   "source": "evidence/etp5/probes/p3c-counter-two-established.json",
+   "typed_readings": [
+    "1/33",
+    "0/33"
+   ],
+   "valid": false
+  },
+  "F4-counter-untyped": {
+   "expected_rule": "EG_MEASURE_UNTYPED",
+   "fired": true,
+   "refusal_count": 2,
+   "refusals": [
+    {
+     "detail": "measure 'safe_compatible_counter' is compared across claims ETP5-CLM-014, ETP5-CLM-015 but carries no typed counter or numeric value",
+     "field": "measure",
+     "path": "$.claims/0/quantification/measure",
+     "rule": "EG_MEASURE_UNTYPED"
+    },
+    {
+     "detail": "measure 'safe_compatible_counter' is compared across claims ETP5-CLM-014, ETP5-CLM-015 but carries no typed counter or numeric value",
+     "field": "measure",
+     "path": "$.claims/1/quantification/measure",
+     "rule": "EG_MEASURE_UNTYPED"
+    }
+   ],
+   "refusals_by_rule": {
+    "EG_MEASURE_UNTYPED": 2
+   },
+   "source": "evidence/etp5/probes/p3c-counter-two-established.json",
+   "valid": false
+  }
+ },
+ "probes": {
+  "p1-openssh-graduation-promotion.json": {
+   "refusal_count": 2,
+   "refusals_by_rule": {
+    "EG_GRADUATED_WITHOUT_CLOSURE": 1,
+    "EG_GRADUATED_WITH_OPEN_OBLIGATION": 1
+   },
+   "valid": false
+  },
+  "p2-openssh-two-records.json": {
+   "refusal_count": 1,
+   "refusals_by_rule": {
+    "EG_CONTRADICTION_UNRESOLVED": 1
+   },
+   "valid": false
+  },
+  "p3-counter-single-source.json": {
+   "refusal_count": 1,
+   "refusals_by_rule": {
+    "EG_CONTRADICTION_PARTIES": 1
+   },
+   "valid": false
+  },
+  "p3b-counter-promotion.json": {
+   "refusal_count": 2,
+   "refusals_by_rule": {
+    "EG_GRADUATED_WITHOUT_CLOSURE": 1,
+    "EG_GRADUATED_WITH_OPEN_OBLIGATION": 1
+   },
+   "valid": false
+  },
+  "p3c-counter-two-established.json": {
+   "refusal_count": 0,
+   "refusals_by_rule": {},
+   "valid": true
+  },
+  "p4a-withdrawn-o7-historical-accepted.json": {
+   "refusal_count": 0,
+   "refusals_by_rule": {},
+   "valid": true
+  },
+  "p4b-withdrawn-o7-current-identity.json": {
+   "refusal_count": 1,
+   "refusals_by_rule": {
+    "EG_EVIDENCE_DIGEST_MISMATCH": 1
+   },
+   "valid": false
+  },
+  "p4c-withdrawn-o7-nonpromotion.json": {
+   "refusal_count": 0,
+   "refusals_by_rule": {},
+   "valid": true
+  },
+  "p5-build-b-identity-split.json": {
+   "refusal_count": 1,
+   "refusals_by_rule": {
+    "EG_MULTIPLE_CANDIDATES": 1
+   },
+   "valid": false
+  },
+  "p6-curl-element7-closed.json": {
+   "refusal_count": 0,
+   "refusals_by_rule": {},
+   "valid": true
+  },
+  "p6b-curl-graduation-promotion.json": {
+   "refusal_count": 2,
+   "refusals_by_rule": {
+    "EG_GRADUATED_WITHOUT_CLOSURE": 1,
+    "EG_GRADUATED_WITH_OPEN_OBLIGATION": 1
+   },
+   "valid": false
+  },
+  "p6c-curl-element7-typed.json": {
+   "refusal_count": 0,
+   "refusals_by_rule": {},
+   "valid": true
+  }
+ },
+ "schema": "openssl-rs/etp/omission/revalidation/v1",
+ "source_identity": {
+  "claims_document": "evidence/etp/claims.json",
+  "claims_source_commit": "9372bb28b2fbe2f71cf2aa2ab501414d45e87d42",
+  "ledger": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+  "probe_inputs": "evidence/etp5/probes (read-only)"
+ },
+ "validator": "forensics/tools/etp_claims.py",
+ "validator_sha256": "fde564ada4eb7ccbc2dc0f3a869c2520f6bec0ca164c8daf9810091ede810c2d"
+}

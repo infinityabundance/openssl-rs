@@ -50,16 +50,16 @@ distinct role.
 |---|---|---|---|
 | property | `property` | what is asserted: identity, provenance, compatibility, memory-safety, timing, cryptographic-assurance, reproducibility, consumer-graduation, claim-governance | it selects the threat-model requirement; it never strengthens evidence |
 | interpretation | `interpretation` | the operational meaning of the assertion in this scope | prose is never evidence |
-| quantification | `quantification` | universal / existential / statistical / enumerated, the population, and an opaque `measure` | a measure is not a score and is never combined |
+| quantification | `quantification` | universal / existential / statistical / enumerated, the population, and a `measure` that is opaque or typed | an opaque measure is not a score and is never combined; a typed measure is comparable only within one property, scope and measure name |
 | scope | `scope` | the exact code, artefact, ABI surface or consumer family, with explicit exclusions | a location list does not establish coverage completeness |
 | threat / leakage model | `threat_model` | the adversary and observation model under which the claim is asserted | required for security-relevant properties; never establishes adequacy |
-| source identity | `identity.source` | candidate, commit, binding state and tree digest | an exact binding does not prove execution |
+| source identity | `identity.source` | candidate, commit, binding state and tree digest, with an optional explicit `candidates` list and `candidate_relationship` | an exact binding does not prove execution; several candidates without a stated relationship are refused |
 | build identity | `identity.build` | toolchain, profile, target | a null build identity is an unstated premise, not a default |
 | artefact digests | `identity.artefacts` | labelled digests, with a path where one exists | a label and a digest do not identify the producing toolchain |
 | authority | `authority` | the OpenSSL authority version or other normative source | a normative source is not measured evidence |
 | target | `target` | the object the claim is about | the target is not the scope |
 | assumptions | `assumptions` | named premises, each with an independently checkable procedure | an assumption is never discharged by the claim that uses it |
-| evidence | `evidence` | artefacts with type, path, digest class, presence and reconstructability | presence is not support |
+| evidence | `evidence` | artefacts with type, path, digest class, presence, reconstructability and an optional declared `state` with its artefact and revision | presence is not support; an unknown declared state is an obligation, never inferred |
 | TCB | `tcb` | compiler, linker, loader, instruments, unverified dependencies | `verified: false` is honest; qualification is ETP-3's job |
 | obligations | `obligations` | open items that block a verdict or a graduation until settled | an open item never silently lowers a verdict, and is never hidden |
 | invalidation dependencies | `invalidation` | the exact identities whose change invalidates the claim | a dependency does not assert equivalence |
@@ -73,13 +73,22 @@ encoded in the schema.
 
 ### 2.1 `measure` is an observation, not a score
 
-`measure` carries `form` (`count`, `ratio`, `set`, `boolean`, `digest-list`), a
-string `value`, and the constant `"aggregation": "forbidden"`. The string form
-is deliberate: no tool can average two axes by accident. The validator refuses
-a measure whose aggregation is not forbidden, and the pre-scan refuses
-`score`, `weight`, `confidence`, `modality_rank`, `modality_order`, `ranking`,
-`aggregate`, `composite`, `grade` and `level_score` anywhere in a claim
-document.
+`measure` has two opaque forms and two typed forms. The opaque forms carry
+`form` (`count`, `ratio`, `set`, `boolean`, `digest-list`) and a string `value`,
+optionally with a `name`. The typed forms are a named `counter` with integer
+`numerator` and `denominator`, or a named numeric `value` with a `unit`. Every
+form carries the constant `"aggregation": "forbidden"`.
+
+The string form of an opaque measure is deliberate: no tool can average two axes
+by accident. A typed measure is still never combined; it exists only so that two
+claims that name the **same** measure over the same property, scope and identity
+can be compared, and a disagreement refused. A named free-text measure that is
+compared is refused as untyped. The validator refuses a measure whose
+aggregation is not forbidden, and the pre-scan refuses `score`, `weight`,
+`confidence`, `modality_rank`, `modality_order`, `ranking`, `aggregate`,
+`composite`, `grade` and `level_score` anywhere in a claim document. The
+aggregate binding for cell receipts is therefore named `aggregate_cells`; the
+word `aggregate` remains forbidden as a score key.
 
 ### 2.2 `PARTIAL` is a verdict, not a level
 
@@ -108,6 +117,13 @@ The result also returns `members` (every member's own verdict and modality),
 `ESTABLISHED`), `weakest` (the members at the meet) and the obligations by
 name. There is no summarised strength, no percentage and no count of "passing"
 members that could stand in for the decision.
+
+A conjunction also carries the members' comparable measures. If two members
+share a property, scope, identity and measure name but assert different typed
+values, the conjunction is `CONTRADICTED`: they cannot both be true, so the meet
+may not remain `ESTABLISHED`. The conflicting claims are returned in
+`measure_conflicts` and named in `blocked_by`; no member's positive verdict
+absorbs the conflict.
 
 ### 3.2 Invalidation
 
@@ -140,8 +156,12 @@ propagation and is itself a refusal (`EG_EXCLUSION_UNCHECKABLE`).
 
 Two claims with the same `property`, the same `scope.subject` and the same
 source candidate and commit, but different verdicts, are a hard error. No
-preference, ordering or later timestamp resolves them. A single claim whose
-verdict is `CONTRADICTED` must instead name at least two distinct sources in
+preference, ordering or later timestamp resolves them. The same rule applies to
+a comparative measure: two claims that name the same measure over the same
+property, scope and identity but assert different typed values are a hard error
+(`EG_CONTRADICTION_UNRESOLVED`), and a named free-text measure that is compared
+is refused as untyped (`EG_MEASURE_UNTYPED`). A single claim whose verdict is
+`CONTRADICTED` must instead name at least two distinct sources in
 `contradiction.parties`; both sides are preserved in the record.
 
 ### 3.5 Denial by default
@@ -179,7 +199,7 @@ separators, so the same input produces byte-identical output.
 | 6 | an alias or duplicate key presented as two independent pieces of evidence | `EG_EVIDENCE_ALIAS` |
 | 7 | a dependency cycle in invalidation | `EG_INVALIDATION_CYCLE` |
 | 8 | a modality ranking that would silently promote a claim | `EG_MODALITY_RANKING` |
-| 9 | a claim that names two different candidate identities | `EG_MULTIPLE_CANDIDATES` |
+| 9 | a claim that names two different candidate identities without a stated relationship | `EG_MULTIPLE_CANDIDATES` |
 | 10 | a cohort whose member list does not cover its population | `EG_QUANTIFICATION_COVERAGE` |
 
 An evidence entry whose `kind` is `commit` and whose `note` names the commit
@@ -195,13 +215,17 @@ alias.
 | `EG_SCHEMA_VIOLATION` | the closed type is not satisfied |
 | `EG_EVIDENCE_ABSENT_NO_OBLIGATION` | evidence is absent or not reconstructable and no obligation names it |
 | `EG_EVIDENCE_DIGEST_MISMATCH` | a cited digest cannot be re-derived at the stated identity |
+| `EG_EVIDENCE_CONTRADICTS_VERDICT` | a positive verdict or graduation modality rests on evidence whose declared state is `WITHDRAWN`, `REFUTED` or `NOT_ESTABLISHED`, or on no present evidence that is current (not withdrawn, refuted, not established or superseded) |
+| `EG_AGGREGATE_UNBOUND` | an aggregate claim names no cell receipt digests, or a cell names no receipt path and digest, while claiming to summarise cells |
+| `EG_AGGREGATE_DIGEST_MISMATCH` | an aggregate names a cell receipt digest that disagrees with the tracked receipt |
+| `EG_MEASURE_UNTYPED` | a named free-text measure is compared across two claims that share a property, scope and identity |
 | `EG_EVIDENCE_CHECK_UNAVAILABLE` | a cited digest cannot be checked and the document claims one |
 | `EG_INVALIDATION_CYCLE` | the claim-level invalidation graph contains a cycle |
 | `EG_UNKNOWN_CLAIM_DEPENDENCY` | a claim depends on a claim id that is absent |
 | `EG_PARTIAL_NO_OBLIGATION` | `PARTIAL` with no recorded obligation |
 | `EG_VERDICT_MISSING_SETTLING_OBLIGATION` | `UNKNOWN` or `NOT_ESTABLISHED` with no open obligation naming what would settle it |
 | `EG_CONTRADICTION_PARTIES` | `CONTRADICTED` with fewer than two distinct sources |
-| `EG_CONTRADICTION_UNRESOLVED` | two claims share property, scope and identity but disagree |
+| `EG_CONTRADICTION_UNRESOLVED` | two claims share property, scope and identity but disagree in verdict, or share a measure name but assert different typed values |
 | `EG_DERIVED_VERDICT_MISMATCH` | conversion changed the recorded ETP-0 verdict |
 | `EG_DERIVED_PROPERTY_MISMATCH` | conversion changed the recorded ETP-0 property |
 | `EG_ASSUMPTION_UNCHECKABLE` | an assumption has no independently checkable procedure |
@@ -245,6 +269,47 @@ All operations (`conjoin`, `invalidate`, `propagate`, `contradictions`) validate
 the whole document with the schema, laws and Git-bound digest check before
 answering. An invalid document is refused with the same rule identifiers as
 `validate`; no operation payload is produced from it.
+
+### 4.2.2 Evidence state, aggregate binding and comparative measures
+
+**Evidence state.** An evidence record may carry `state`, a closed object with
+`value` (`WITHDRAWN`, `ESTABLISHED`, `NOT_ESTABLISHED`, `SUPERSEDED`, `REFUTED`,
+`PARTIAL`), the `artefact` it is about, and the `revision` it applies to. The
+state is copied from the tracked artefact; it is not inferred from the claim's
+verdict, the path name or the claim's own prose. A positive verdict
+(`ESTABLISHED`, `SAFE_COMPATIBLE`) or a graduation modality
+(`PROOF_OBLIGATIONS_DISCHARGED`, `BINARY_REFINEMENT_VERIFIED`) over a present
+entry whose declared state is `WITHDRAWN`, `REFUTED` or `NOT_ESTABLISHED` is
+refused as `EG_EVIDENCE_CONTRADICTS_VERDICT`, naming the entry and its state. A
+positive verdict with no evidence that is present and not withdrawn, refuted,
+not established or superseded is refused by the same rule. Where the tracked
+artefact does not declare a state, the claim records the unknown as an
+obligation; the validator does not supply one.
+
+**Multiple candidates.** `identity.source.candidates` is permitted by the closed
+type as an array of at least two distinct identities, but only together with
+`candidate_relationship`, which states how the candidates relate (for example,
+one archive built twice in two venues). More than one candidate without that
+relationship is refused as `EG_MULTIPLE_CANDIDATES`; the refusal is reachable
+for a schema-valid document and does not depend on an unpermitted field. The
+candidate/commit mismatch check is gated by the same condition, because a stated
+relationship can legitimately bind a candidate token and a commit that differ.
+
+**Aggregate cells.** A claim that describes an aggregate of per-cell receipts
+carries `aggregate_cells` with `summarises_cells: true` and a `cells` list. Each
+cell names its `id`, the `receipt_path` of the per-cell receipt, and that
+receipt's `receipt_sha256`. An aggregate that names no cell is refused as
+`EG_AGGREGATE_UNBOUND`; a named digest that disagrees with the tracked receipt
+is refused as `EG_AGGREGATE_DIGEST_MISMATCH`. The rule binds the aggregate to the
+cells' receipts; it does not compare log contents.
+
+**Comparative measures.** A `measure` may be opaque (string `value`) or typed (a
+named `counter`, or a named numeric `value` with a `unit`). Two claims with the
+same property, scope, identity and measure name are compared: identical typed
+values are one observation repeated, different typed values are
+`EG_CONTRADICTION_UNRESOLVED`, and a named free-text measure is
+`EG_MEASURE_UNTYPED`. A single claim may still carry an opaque measure, because
+the algebra does not turn it into arithmetic.
 
 ### 4.3 Tree check
 
@@ -323,6 +388,14 @@ the earlier claim remains a historical record with its own identity.
 ## 7. What the algebra deliberately does not decide
 
 - whether a cited experiment occurred as described;
+- whether a producer declared the state a tracked artefact actually bears. A
+  record that omits `state` is not evidence of a positive state, and the
+  validator never infers one; the omission must be carried as an obligation and
+  is not mechanically detectable from a claim that cites only the record's path;
+- whether a producer published an aggregate at all. A claim that exists and
+  claims to aggregate is bound by the cell-receipt rule, but a producer that
+  never publishes the aggregate, never publishes a cell, or publishes a claim
+  outside the validator's view is not detected by this machinery;
 - whether an instrument is sensitive to the defect it claims to detect
   (ETP-3);
 - whether two different identities are the same source or the same binary;

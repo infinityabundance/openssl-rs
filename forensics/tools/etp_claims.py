@@ -33,7 +33,11 @@ What the tool decides
     an open obligation or an incomplete dependency closure, unreconstructable
     evidence, missing threat model, self-declared acceptance policy, evidence
     aliasing, invalidation cycles, modality ranking, multiple candidate
-    identities in one claim, and incomplete population coverage;
+    identities in one claim without a stated relationship, incomplete
+    population coverage, an evidence record whose declared state contradicts a
+    positive verdict, an aggregate claim that does not name its cell receipt
+    digests, and a comparative measure that is untyped or contradicts another
+    claim's value;
   * `conjoin`: the cohort verdict is the meet of member verdicts plus the
     union of their obligations, with every blocked member named;
   * `invalidate`: transitive, conservative invalidation from a changed
@@ -149,6 +153,22 @@ VERDICT_STRENGTH = {
 # these cannot be better than that state, and a stronger neighbour cannot hide
 # it.
 ABSORBING_VERDICTS = ("CONTRADICTED", "REFUTED", "WITHDRAWN", "SUPERSEDED")
+
+# Verdicts that assert a positive result. A graduation modality is also a
+# positive assertion even when the verdict is weaker, because it claims a
+# discharged proof obligation or a verified binary refinement.
+POSITIVE_VERDICTS = frozenset({"ESTABLISHED", "SAFE_COMPATIBLE"})
+
+# An evidence record's declared state that contradicts a positive verdict. The
+# state comes from the tracked artefact and is copied into the claim; it is
+# never inferred from the claim's own verdict or from the artefact's name.
+CONTRADICTING_EVIDENCE_STATES = frozenset(
+    {"WITHDRAWN", "REFUTED", "NOT_ESTABLISHED"}
+)
+# States that are not a current assertion of the cited artefact. `SUPERSEDED`
+# is not itself a contradiction (the artefact was once current); it only means
+# the entry cannot be the sole support for a positive verdict.
+NON_CURRENT_EVIDENCE_STATES = CONTRADICTING_EVIDENCE_STATES | {"SUPERSEDED"}
 
 # Keys that would introduce a permissive acceptance policy chosen by the
 # candidate, or a modality ranking that could promote a claim. The schema is
@@ -670,6 +690,14 @@ def prescan_forbidden(doc: dict) -> list[Refusal]:
 
 
 def prescan_multiple_candidates(doc: dict) -> list[Refusal]:
+    """Refuse more than one candidate identity with no stated relationship.
+
+    A multi-candidate identity is permitted by the closed type only when the
+    claim also states how the candidates relate (for example, two digests of
+    one archive, or one source built twice). Naming two candidates without that
+    relationship is an unexplained disjunction: a reader may substitute one for
+    the other, so the claim is refused.
+    """
     refusals: list[Refusal] = []
     for index, claim in enumerate(doc.get("claims", []) if isinstance(doc, dict) else []):
         if not isinstance(claim, dict):
@@ -681,24 +709,28 @@ def prescan_multiple_candidates(doc: dict) -> list[Refusal]:
         source = source.get("source", {})
         if not isinstance(source, dict):
             continue
+        relationship = source.get("candidate_relationship")
+        stated = isinstance(relationship, str) and bool(relationship.strip())
         declared = source.get("candidates")
         if isinstance(declared, list):
             distinct = {item for item in declared if isinstance(item, str) and item}
-            if len(distinct) > 1:
+            if len(distinct) > 1 and not stated:
                 refusals.append(
                     Refusal(
                         "EG_MULTIPLE_CANDIDATES",
                         _ptr(_ptr(base, "identity"), "source"),
                         "candidates",
                         "the claim names "
-                        f"{len(distinct)} different candidate identities: "
+                        f"{len(distinct)} different candidate identities without a "
+                        "stated relationship: "
                         + ", ".join(sorted(distinct)),
                     )
                 )
         candidate = source.get("candidate")
         commit = source.get("commit")
         if (
-            isinstance(candidate, str)
+            not stated
+            and isinstance(candidate, str)
             and isinstance(commit, str)
             and re.fullmatch(r"[0-9a-f]{40}", candidate)
             and re.fullmatch(r"[0-9a-f]{40}", commit)
@@ -709,7 +741,8 @@ def prescan_multiple_candidates(doc: dict) -> list[Refusal]:
                     "EG_MULTIPLE_CANDIDATES",
                     _ptr(_ptr(base, "identity"), "source"),
                     "candidate",
-                    "candidate and commit are two different full commit identities",
+                    "candidate and commit are two different full commit identities "
+                    "without a stated relationship",
                 )
             )
     return refusals
@@ -734,6 +767,149 @@ def _present_evidence(claim: dict) -> list[dict]:
         for entry in claim.get("evidence", [])
         if isinstance(entry, dict) and entry.get("present") is True
     ]
+
+
+def _declared_evidence_state(entry: dict) -> str | None:
+    """The state the tracked artefact declares, as copied into the evidence record.
+
+    Absence is not a state: it means the producer did not record what the
+    artefact says, so the validator neither infers a state nor treats the entry
+    as current support for a positive verdict beyond the ordinary presence rule.
+    """
+    state = entry.get("state")
+    if isinstance(state, dict):
+        value = state.get("value")
+        if isinstance(value, str) and value:
+            return value
+    return None
+
+
+def _measure_name(claim: dict) -> str | None:
+    quantification = claim.get("quantification")
+    if not isinstance(quantification, dict):
+        return None
+    measure = quantification.get("measure")
+    if not isinstance(measure, dict):
+        return None
+    name = measure.get("name")
+    if isinstance(name, str) and name:
+        return name
+    return None
+
+
+def _typed_measure_value(measure: dict) -> tuple | None:
+    """The comparable value of a named measure, or None when it is free text.
+
+    A `counter` is a typed single-valued observation. A numeric `value` with a
+    `unit` is typed as well. A named free-text `value` is schema-valid but not
+    comparable: the algebra refuses it when another claim names the same
+    measure.
+    """
+    counter = measure.get("counter")
+    if isinstance(counter, dict):
+        numerator = counter.get("numerator")
+        denominator = counter.get("denominator")
+        if (
+            isinstance(numerator, int)
+            and not isinstance(numerator, bool)
+            and isinstance(denominator, int)
+            and not isinstance(denominator, bool)
+        ):
+            return ("counter", numerator, denominator)
+        return None
+    value = measure.get("value")
+    unit = measure.get("unit")
+    if (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and isinstance(unit, str)
+        and unit
+    ):
+        return ("numeric", value, unit)
+    return None
+
+
+def _measure_observations(claims: list[dict]) -> list[dict]:
+    observations: list[dict] = []
+    for index, claim in enumerate(claims):
+        if not isinstance(claim, dict):
+            continue
+        name = _measure_name(claim)
+        if name is None:
+            continue
+        identity = claim.get("identity", {})
+        source = identity.get("source", {}) if isinstance(identity, dict) else {}
+        scope = claim.get("scope", {})
+        key = (
+            str(claim.get("property")),
+            str(scope.get("subject")) if isinstance(scope, dict) else "",
+            str(source.get("candidate")) if isinstance(source, dict) else "",
+            str(source.get("commit")) if isinstance(source, dict) else "",
+            name,
+        )
+        quantification = claim.get("quantification", {})
+        measure = (
+            quantification.get("measure")
+            if isinstance(quantification, dict)
+            else None
+        )
+        observations.append(
+            {
+                "index": index,
+                "id": str(claim.get("id")),
+                "key": key,
+                "name": name,
+                "typed": _typed_measure_value(measure) if isinstance(measure, dict) else None,
+            }
+        )
+    return observations
+
+
+def _measure_conflicts(claims: list[dict]) -> list[dict]:
+    """Same property, scope, identity and measure name with incompatible values.
+
+    A single-valued counter cannot hold two values. Two named measures with the
+    same value are one observation repeated, not a contradiction. A compared
+    measure that is free text cannot be compared at all, so it is refused
+    rather than treated as equal.
+    """
+    grouped: dict[tuple, list[dict]] = {}
+    for observation in _measure_observations(claims):
+        grouped.setdefault(observation["key"], []).append(observation)
+    conflicts: list[dict] = []
+    for key in sorted(grouped):
+        members = grouped[key]
+        if len(members) < 2:
+            continue
+        claim_ids = sorted({member["id"] for member in members})
+        base = {
+            "property": key[0],
+            "scope_subject": key[1],
+            "candidate": key[2],
+            "commit": key[3],
+            "measure": key[4],
+            "claims": claim_ids,
+        }
+        if any(member["typed"] is None for member in members):
+            conflicts.append(
+                {
+                    **base,
+                    "kind": "untyped",
+                    "resolution": "hard error: a compared measure must be typed",
+                }
+            )
+            continue
+        values = sorted({member["typed"] for member in members}, key=repr)
+        if len(values) > 1:
+            conflicts.append(
+                {
+                    **base,
+                    "kind": "value",
+                    "values": values,
+                    "resolution": "hard error: preference may not resolve it",
+                }
+            )
+    return conflicts
 
 
 def _claim_candidate_tokens(claim: dict) -> set[str]:
@@ -912,6 +1088,45 @@ def check_claim_laws(claim: dict, base: str) -> list[Refusal]:
             "modality",
             f"{modality} requires at least one evidence entry with present=true",
         )
+
+    # 1b. An evidence record's declared state must agree with a positive verdict.
+    # The state is read from the tracked artefact and copied into the record; it
+    # is never inferred. A present entry declaring WITHDRAWN, REFUTED or
+    # NOT_ESTABLISHED cannot support an ESTABLISHED or SAFE_COMPATIBLE verdict or
+    # a graduation modality.
+    positive = state in POSITIVE_VERDICTS or modality in GRADUATED_MODALITIES
+    if positive:
+        usable: list[dict] = []
+        has_contradicting = False
+        has_non_current = False
+        for index, entry in enumerate(evidence):
+            if not isinstance(entry, dict) or entry.get("present") is not True:
+                continue
+            declared = _declared_evidence_state(entry)
+            if declared in CONTRADICTING_EVIDENCE_STATES:
+                has_contradicting = True
+                refuse(
+                    "EG_EVIDENCE_CONTRADICTS_VERDICT",
+                    f"evidence/{index}/state",
+                    "state",
+                    f"evidence {entry.get('id')!r} at {entry.get('path')!r} declares "
+                    f"state {declared}, which cannot support "
+                    f"{state if state in POSITIVE_VERDICTS else modality}",
+                )
+                continue
+            if declared in NON_CURRENT_EVIDENCE_STATES:
+                has_non_current = True
+                continue
+            usable.append(entry)
+        if not usable and has_non_current and not has_contradicting:
+            refuse(
+                "EG_EVIDENCE_CONTRADICTS_VERDICT",
+                "evidence",
+                "state",
+                f"{state if state in POSITIVE_VERDICTS else modality} requires at least "
+                "one present evidence entry whose declared state is not withdrawn, "
+                "refuted, not established or superseded",
+            )
 
     # 2. A graduated verdict is a §7 graduation: complete closure, no open item.
     if state in GRADUATED_VERDICTS:
@@ -1202,6 +1417,96 @@ def check_claim_laws(claim: dict, base: str) -> list[Refusal]:
     return refusals
 
 
+def check_aggregates(doc: dict, repo_root: Path | None = None) -> list[Refusal]:
+    """Bind an aggregate claim to the per-cell receipts it claims to summarise.
+
+    An aggregate that claims to summarise cells must name each cell's receipt
+    path and digest. A named digest is re-derived from the tracked receipt when
+    the tree check is enabled; a disagreement is refused. An aggregate that
+    names no cell at all is unbound: its summary cannot be reconstructed from
+    the cells, so it is refused rather than trusted. Log contents are not
+    compared here; the defect this rule closes is an unbound aggregate.
+    """
+    refusals: list[Refusal] = []
+    for index, claim in enumerate(doc.get("claims", []) if isinstance(doc, dict) else []):
+        if not isinstance(claim, dict):
+            continue
+        aggregate = claim.get("aggregate_cells")
+        if not isinstance(aggregate, dict):
+            continue
+        if aggregate.get("summarises_cells") is not True:
+            continue
+        base = f"$.claims/{index}/aggregate_cells"
+        cells = aggregate.get("cells")
+        if not isinstance(cells, list) or not cells:
+            refusals.append(
+                Refusal(
+                    "EG_AGGREGATE_UNBOUND",
+                    f"{base}/cells",
+                    "cells",
+                    "an aggregate claim names no cell receipt digests, so it is not "
+                    "bound to the cells it summarises",
+                )
+            )
+            continue
+        for c_index, cell in enumerate(cells):
+            location = f"{base}/cells/{c_index}"
+            if not isinstance(cell, dict):
+                refusals.append(
+                    Refusal(
+                        "EG_AGGREGATE_UNBOUND",
+                        location,
+                        "cells",
+                        "a cell entry is not an object, so the aggregate is unbound",
+                    )
+                )
+                continue
+            path = cell.get("receipt_path")
+            digest = cell.get("receipt_sha256")
+            if (
+                not isinstance(path, str)
+                or not path
+                or not isinstance(digest, str)
+                or not digest
+            ):
+                refusals.append(
+                    Refusal(
+                        "EG_AGGREGATE_UNBOUND",
+                        location,
+                        "receipt_sha256",
+                        f"cell {cell.get('id')!r} names no receipt path and digest, "
+                        "so the aggregate is unbound",
+                    )
+                )
+                continue
+            if repo_root is None:
+                continue
+            target = repo_root / path
+            if not target.is_file():
+                refusals.append(
+                    Refusal(
+                        "EG_AGGREGATE_UNBOUND",
+                        location,
+                        "receipt_path",
+                        f"cell {cell.get('id')!r} names receipt '{path}', which is "
+                        "absent from the tracked tree",
+                    )
+                )
+                continue
+            actual = hashlib.sha256(target.read_bytes()).hexdigest()
+            if actual != digest:
+                refusals.append(
+                    Refusal(
+                        "EG_AGGREGATE_DIGEST_MISMATCH",
+                        location,
+                        "receipt_sha256",
+                        f"cell {cell.get('id')!r} receipt '{path}' hashes to {actual}, "
+                        f"not the recorded {digest}",
+                    )
+                )
+    return refusals
+
+
 def check_document_laws(doc: dict, *, repo_root: Path | None = None) -> list[Refusal]:
     refusals: list[Refusal] = []
     claims = doc.get("claims", [])
@@ -1290,6 +1595,40 @@ def check_document_laws(doc: dict, *, repo_root: Path | None = None) -> list[Ref
             )
         else:
             keys[key] = (str(claim.get("id")), str(state))
+
+    # A comparative measure with the same property, scope, identity and name is
+    # a single-valued observation. Two typed values that differ are a
+    # contradiction; a named free-text measure cannot be compared at all.
+    index_by_id = {str(claim.get("id")): index for index, claim in enumerate(claims) if isinstance(claim, dict)}
+    for conflict in _measure_conflicts(claims):
+        for claim_id in conflict["claims"]:
+            index = index_by_id.get(claim_id)
+            if index is None:
+                continue
+            if conflict["kind"] == "untyped":
+                refusals.append(
+                    Refusal(
+                        "EG_MEASURE_UNTYPED",
+                        f"$.claims/{index}/quantification/measure",
+                        "measure",
+                        f"measure '{conflict['measure']}' is compared across claims "
+                        f"{', '.join(conflict['claims'])} but carries no typed counter "
+                        "or numeric value",
+                    )
+                )
+            else:
+                refusals.append(
+                    Refusal(
+                        "EG_CONTRADICTION_UNRESOLVED",
+                        f"$.claims/{index}/quantification/measure",
+                        "measure",
+                        f"claim {claim_id} and the other claim(s) "
+                        f"{', '.join(other for other in conflict['claims'] if other != claim_id)} "
+                        f"share property, scope, identity and measure "
+                        f"'{conflict['measure']}' but assert different values "
+                        f"{conflict['values']}",
+                    )
+                )
 
     if repo_root is not None:
         refusals.extend(check_evidence_tree(doc, repo_root))
@@ -1457,6 +1796,7 @@ def validate_document(
     for index, claim in enumerate(doc.get("claims", [])):
         if isinstance(claim, dict):
             refusals.extend(check_claim_laws(claim, f"$.claims/{index}"))
+    refusals.extend(check_aggregates(doc, repo_root))
     refusals.extend(check_document_laws(doc, repo_root=repo_root))
     return sorted(refusals, key=lambda item: (item["path"], item["rule"], item["detail"]))
 
@@ -1497,6 +1837,7 @@ def conjoin(claims: list[dict]) -> dict:
     obligations: dict[str, dict] = {}
     blocked: list[dict] = []
     members: list[dict] = []
+    measure_conflicts = _measure_conflicts(claims)
     for claim in claims:
         verdict = claim.get("verdict", {})
         state = str(verdict.get("state"))
@@ -1524,13 +1865,36 @@ def conjoin(claims: list[dict]) -> dict:
                     "open_obligations": sorted(str(item) for item in open_for_claim),
                 }
             )
+    conflicted_ids = sorted(
+        {claim_id for conflict in measure_conflicts for claim_id in conflict["claims"]}
+    )
+    if measure_conflicts:
+        # Two members assert incompatible values for one single-valued measure.
+        # Their conjunction is a contradiction; a member's positive verdict may
+        # not absorb it.
+        states.append("CONTRADICTED")
+        for claim_id in conflicted_ids:
+            if not any(str(item["id"]) == claim_id for item in blocked):
+                member = next(
+                    (item for item in members if str(item["id"]) == claim_id), None
+                )
+                blocked.append(
+                    {
+                        "id": claim_id,
+                        "verdict": member["verdict"] if member else "UNKNOWN",
+                        "open_obligations": [],
+                        "measure_conflict": True,
+                    }
+                )
     result = _meet_verdicts(states)
     weakest = sorted(
         member["id"]
         for member in members
-        if member["verdict"] == result or member["verdict"] in ABSORBING_VERDICTS
+        if member["verdict"] == result
+        or member["verdict"] in ABSORBING_VERDICTS
+        or str(member["id"]) in conflicted_ids
     )
-    return {
+    payload = {
         "verdict": result,
         "obligations": [obligations[key] for key in sorted(obligations)],
         "blocked_by": sorted(blocked, key=lambda item: str(item["id"])),
@@ -1538,6 +1902,9 @@ def conjoin(claims: list[dict]) -> dict:
         "members": sorted(members, key=lambda item: str(item["id"])),
         "aggregation": "forbidden",
     }
+    if measure_conflicts:
+        payload["measure_conflicts"] = measure_conflicts
+    return payload
 
 
 def invalidated_claims(claims: list[dict], changed: Iterable[str]) -> dict:
@@ -1718,7 +2085,8 @@ def contradiction_conflicts(claims: list[dict]) -> list[dict]:
             )
         else:
             keys[key] = {"id": claim.get("id"), "verdict": state}
-    return conflicts
+    conflicts.extend(_measure_conflicts(claims))
+    return sorted(conflicts, key=lambda item: canonical(item))
 
 
 # ---------------------------------------------------------------------------
