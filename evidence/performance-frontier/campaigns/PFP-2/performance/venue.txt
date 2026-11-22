@@ -1,0 +1,14 @@
+campaign=PFP-2
+inside_court=true
+court_image=unknown
+container_hostname=f28784ba7e47
+kernel=7.3.5-2-cachyos
+machine=x86_64
+nproc=30
+cpu_model=13th Gen Intel(R) Core(TM) i9-13900K
+build_jobs=1
+taskset_cpu=1
+cgroup_memory_max=8589934592
+cgroup_cpu_max=800000 100000
+mem_available_kb=29966440
+pmu=cpu event source absent (recorded by PFP-0); no hardware counters
