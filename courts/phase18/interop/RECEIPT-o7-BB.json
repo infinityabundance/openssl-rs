@@ -2,7 +2,7 @@
  "schema": "openssl-rs/interop-cell-receipt/1",
  "item": "O7 of docs/ETP-TODO.md",
  "cell": "BB",
- "generated": "2026-11-22T01:56:41Z",
+ "generated": "2026-11-22T02:43:52Z",
  "client": {
   "build": "B",
   "libcrypto_sha256": "ee7fa27c79f5a679d5b229429d53dc7c3b510695db9c74d11b4b6783a735ebe9"
@@ -17,9 +17,26 @@
  "server_mapped": "/work/court/tmp/o4/b-prefix/lib/libcrypto.so.3",
  "mapping_status": "ok",
  "make_k_tests_exit": 2,
- "log": "courts/phase18/interop/logs/1a23987ae2ea2bee94eb68f3946e7751c03322ea5d0586cb6ac154c349fdc317.log",
- "failed_scripts": "1",
+ "log": "courts/phase18/interop/logs/03dc64dfa4c95082584361e1a15f23dc05e26d7edbbd45f7385e1ab63825e3b7.log",
+ "failed_scripts": [
+  "dropbear kex"
+ ],
  "withdrawn": false,
- "log_sha256": "1a23987ae2ea2bee94eb68f3946e7751c03322ea5d0586cb6ac154c349fdc317",
- "venue": "docker/openssl-rs-court-tools:1, 6g/6g"
+ "venue": "docker/openssl-rs-court-tools:1, cap 6g/6g, run under the tracked subreaper with the tracked openssl shim on PATH",
+ "log_sha256": "03dc64dfa4c95082584361e1a15f23dc05e26d7edbbd45f7385e1ab63825e3b7",
+ "log_bytes": 196302,
+ "counts": {
+  "run_test_lines": 96,
+  "ok": 87,
+  "skipped_upper": 7,
+  "skipped_any_case": 8,
+  "failed": 1
+ },
+ "deterministic_selection": "cell.sh touches regress/*.sh before the run, because t-exec iterates $? and the set depended on mtimes (73 on one tree, 96 on another)",
+ "venue_aids_tracked": [
+  "courts/phase18/interop/subreaper.c",
+  "courts/phase18/interop/openssl-shim.sh"
+ ],
+ "defect_found_and_fixed": "the first version of the shim wrapper exec'd openssl-shim.sh directly; the file had no execute bit, so ssh2putty.sh received rc 126, wrote an empty key and plink refused the host key (91 scripts, 'failed putty transfer data'). The wrapper now invokes it through `sh`, and the file is executable.",
+ "skip_dialect_finding": "agent-ptrace.sh prints `Skipped: running as root`, a third spelling; the O11 parser now accepts any `skipped` line case-insensitively, which is why that script is counted as skipped rather than blocked"
 }

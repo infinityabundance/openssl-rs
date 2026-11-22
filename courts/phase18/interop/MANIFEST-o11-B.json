@@ -2,14 +2,13 @@
  "schema": "openssl-rs/interop-manifest/1",
  "item": "O11 of docs/ETP-TODO.md",
  "subject": "B",
- "generated": "2026-11-21T19:56:10Z",
+ "generated": "2026-11-22T03:20:25Z",
  "identity": {
   "openssh_tarball_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
   "libcrypto_sha256": "3c3a68c1baeb304adf2fc3af827e49b14529556008429bd11dda784a2c6cdfd1"
  },
  "reproduction": [
-  "cd court/tmp/o4/tree-B && PATH=court/tmp/o3/prefix/bin:court/tmp/o3/prefix/sbin:$PATH make -k tests SKIP_LTESTS=sftp-cmds",
-  "python3 courts/phase18/interop/manifest.py --log courts/phase18/interop/logs/e89dc3ed076ffcc498ace60419895b548905f351ce4e96ab3420fab85c1679bc.log --subject B --out courts/phase18/interop/MANIFEST-o11-B.json"
+  "cd court/tmp/o4/tree-B && PATH=court/tmp/o3/prefix/bin:court/tmp/o3/prefix/sbin:$PATH make -k tests SKIP_LTESTS=sftp-cmds"
  ],
  "result": {
   "log": "courts/phase18/interop/logs/e89dc3ed076ffcc498ace60419895b548905f351ce4e96ab3420fab85c1679bc.log",
@@ -394,7 +393,7 @@
    "executed": "a `run test <script> ...` line",
    "ok": "an `ok <description>` line (assertions, not scripts)",
    "failed": "a `failed <description>` line",
-   "skipped": "a `SKIPPED: <reason>` line or the lower-case `skipped (reason)` some scripts print; both dialects are counted and neither is a pass",
+   "skipped": "any line beginning `skipped` in any case (`SKIPPED: reason`, `skipped (reason)`, `Skipped: reason`); every dialect is counted and none is a pass",
    "blocked": "announced, with no ok/failed/SKIPPED line of its own"
   },
   "log_sha256": "e89dc3ed076ffcc498ace60419895b548905f351ce4e96ab3420fab85c1679bc",

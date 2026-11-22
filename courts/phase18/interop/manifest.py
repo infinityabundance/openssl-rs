@@ -20,6 +20,7 @@ Usage:
 """
 
 import argparse
+import hashlib
 import json
 import pathlib
 import re
@@ -29,9 +30,11 @@ import time
 RUN = re.compile(r"^run test (\S+) \.\.\.\s*$")
 OK = re.compile(r"^ok (.+?)\s*$")
 FAILED = re.compile(r"^failed (.+?)\s*$")
-SKIPPED = re.compile(r"^SKIPPED: (.*)$")
-# A second dialect: some scripts print `skipped (reason)` in lower case.
-SKIPPED_LOWER = re.compile(r"^skipped \((.*)\)\s*$")
+# The harness has at least three spellings of a skip, all of them observed in
+# published logs: `SKIPPED: reason`, `skipped (reason)` and `Skipped: reason`.
+# One case-insensitive rule covers them; a script that prints none of the three
+# is `blocked`, which is not the same claim as a skip.
+SKIPPED_ANY = re.compile(r"^skipped\b.*$", re.I)
 UNIT = re.compile(r"^(\w+): [.]+ (\d+) tests ok\s*$")
 
 
@@ -57,7 +60,7 @@ def parse(path):
             per_script[current]["ok"] += 1
         elif FAILED.match(line):
             per_script[current]["failed"] += 1
-        elif SKIPPED.match(line) or SKIPPED_LOWER.match(line):
+        elif SKIPPED_ANY.match(line):
             per_script[current]["skipped"] += 1
     blocked = [s for s, c in per_script.items() if c["ok"] == 0 and c["failed"] == 0 and c["skipped"] == 0]
     return {
@@ -77,7 +80,7 @@ def parse(path):
             "executed": "a `run test <script> ...` line",
             "ok": "an `ok <description>` line (assertions, not scripts)",
             "failed": "a `failed <description>` line",
-            "skipped": "a `SKIPPED: <reason>` line or the lower-case `skipped (reason)` some scripts print; both dialects are counted and neither is a pass",
+            "skipped": "any line beginning `skipped` in any case (`SKIPPED: reason`, `skipped (reason)`, `Skipped: reason`); every dialect is counted and none is a pass",
             "blocked": "announced, with no ok/failed/SKIPPED line of its own",
         },
     }
@@ -94,6 +97,11 @@ def main():
     args = ap.parse_args()
 
     body = parse(args.log)
+    # The manifest carries the digest of the bytes it was derived from, so a
+    # verifier can check the log it reads is the log that was counted.
+    raw = pathlib.Path(args.log).read_bytes()
+    body["log_sha256"] = hashlib.sha256(raw).hexdigest()
+    body["log_bytes"] = len(raw)
     manifest = {
         "schema": "openssl-rs/interop-manifest/1",
         "item": "O11 of docs/ETP-TODO.md",
