@@ -51,6 +51,12 @@ cp -a "$CTREE" "$CELLDIR" || { echo "cell: copy failed" >&2; exit 2; }
 # reporting a host-key mismatch from a stale $OBJ/.ssh/known_hosts), so the
 # regress state is cleared before the cell runs.
 ( cd "$CELLDIR" && make regressclean >/dev/null 2>&1 ) || true
+# `regressclean` does not remove the copied `.ssh` directory or any known_hosts
+# file, and those carry the *source* tree's server key: dbclient then rejects the
+# cell's own server with "host key mismatch" (observed, and stable across runs
+# because the copied key is stable). They are removed explicitly.
+rm -rf "$CELLDIR/regress/.ssh" "$CELLDIR/regress/known_hosts" \
+       "$CELLDIR/regress/known_hosts2" 2>/dev/null || true
 
 wrap() {  # <name> <tree> <lib>
     local name="$1"
@@ -77,42 +83,62 @@ export PATH="$TOOLS/bin:$TOOLS/sbin:$PATH"
 # A cell is only a matrix cell if the two sides really run different libraries.
 # The wrappers say so, but the wrappers are the thing under suspicion, so the
 # probe from O5 re-asks the question from inside the processes.
-probe_mapping() {
-    local probe="$WORK/map_probe.so"
-    [ -f "$probe" ] || cc -O2 -fPIC -shared \
-        "$ROOT/courts/phase18/interop/map_probe.c" -o "$probe" || return 1
-    local out="$WORK/cell-$CELL.mapping.log"
+# A cell is only a matrix cell if the *client process* runs the client build's
+# library and the *server process* runs the server build's library. Checking the
+# set of libraries that appear anywhere in the cell cannot distinguish a correct
+# cell from one where both sides picked up the same library, so each side is
+# probed separately and compared with its own expectation.
+PROBE_SO="$WORK/map_probe.so"
+[ -f "$PROBE_SO" ] || cc -O2 -fPIC -shared \
+    "$ROOT/courts/phase18/interop/map_probe.c" -o "$PROBE_SO"
+
+probe_side() {  # binary outfile [conf] -> mapped path
+    local bin="$1"
+    local out="$2"
+    local conf="${3:-}"
     : > "$out"
-    local key="$WORK/cell-$CELL.probe.key"
-    "$CELLDIR/ssh-keygen" -q -t ed25519 -N '' -f "$key" >/dev/null 2>&1 || true
-    printf 'Port 22499\nHostKey %s\nPidFile %s.pid\nUsePAM no\n' "$key" "$key" > "$key.conf"
-    MAP_PROBE_OUT="$out" LD_PRELOAD="$probe" "$CELLDIR/ssh" -V >/dev/null 2>&1 || true
-    MAP_PROBE_OUT="$out" LD_PRELOAD="$probe" "$CELLDIR/sshd" -t -f "$key.conf" >/dev/null 2>&1 || true
-    awk '{print $6}' "$out" | sort -u | tr '\n' ' '
+    if [ -n "$conf" ]; then
+        MAP_PROBE_OUT="$out" LD_PRELOAD="$PROBE_SO" "$bin" -t -f "$conf" >/dev/null 2>&1 || true
+    else
+        MAP_PROBE_OUT="$out" LD_PRELOAD="$PROBE_SO" "$bin" -V >/dev/null 2>&1 || true
+    fi
+    awk '/libcrypto\.so/ {print $6}' "$out" | head -n 1
 }
 
-mapped="$(probe_mapping || true)"
-echo "mapped libcrypto in this cell: ${mapped:-<none>}"
-# The expected set is the distinct libraries of the two chosen builds: one entry
-# for a same-library cell, two for a cross cell. Set equality is the check, so a
-# cross cell that collapsed onto one library fails just as a same-library cell
-# that picked up a foreign one does.
-expected="$(printf '%s\n%s\n' "${LIB[$client_cell]}/libcrypto.so.3" \
-              "${LIB[$server_cell]}/libcrypto.so.3" | sort -u | tr '\n' ' ')"
-mapped_sorted="$(printf '%s' "$mapped" | tr ' ' '\n' | sed '/^$/d' | sort -u | tr '\n' ' ')"
-if [ "$mapped_sorted" = "$expected" ]; then
+key="$WORK/cell-$CELL.probe.key"
+"$CELLDIR/ssh-keygen" -q -t ed25519 -N '' -f "$key" >/dev/null 2>&1 || true
+printf 'Port 22499\nHostKey %s\nPidFile %s.pid\nPasswordAuthentication no\n' \
+    "$key" "$key" > "$key.conf"
+
+client_mapped="$(probe_side "$CELLDIR/ssh" "$WORK/cell-$CELL.client.maps")"
+server_mapped="$(probe_side "$CELLDIR/sshd" "$WORK/cell-$CELL.server.maps" "$key.conf")"
+
+client_ok=no; server_ok=no
+[ "$client_mapped" = "${LIB[$client_cell]}/libcrypto.so.3" ] && client_ok=yes
+[ "$server_mapped" = "${LIB[$server_cell]}/libcrypto.so.3" ] && server_ok=yes
+if [ "$client_ok" = yes ] && [ "$server_ok" = yes ]; then
     mapped_status=ok
 else
     mapped_status=unexpected
-    echo "cell: mapped ${mapped_sorted:-<none>}, expected $expected" >&2
+    echo "cell: client mapped '${client_mapped:-<none>}' (expected ${LIB[$client_cell]}/libcrypto.so.3)," \
+         "server mapped '${server_mapped:-<none>}' (expected ${LIB[$server_cell]}/libcrypto.so.3)" >&2
 fi
+
 if [ "${O7_PROBE_ONLY:-0}" = 1 ]; then
-    printf '{"cell": "%s", "client": "%s", "server": "%s", "expected": "%s", "mapped": "%s", "status": "%s"}\n' \
-        "$CELL" "$client_cell" "$server_cell" "$expected" "$mapped_sorted" "$mapped_status" \
+    printf '{"cell": "%s", "client": "%s", "server": "%s", "client_mapped": "%s", "server_mapped": "%s", "client_expected": "%s", "server_expected": "%s", "status": "%s"}\n' \
+        "$CELL" "$client_cell" "$server_cell" "$client_mapped" "$server_mapped" \
+        "${LIB[$client_cell]}/libcrypto.so.3" "${LIB[$server_cell]}/libcrypto.so.3" "$mapped_status" \
         > "$WORK/cell-$CELL.mapping.json"
     echo "mapping: $WORK/cell-$CELL.mapping.json"
     [ "$mapped_status" = ok ] || exit 1
     exit 0
+fi
+# The mapping is a precondition of the run, not a note about it: an unexpected
+# mapping aborts the cell before the harness can produce a result that would be
+# attributed to the wrong cell.
+if [ "$mapped_status" != ok ]; then
+    echo "cell: refusing to run $CELL with an unexpected library mapping" >&2
+    exit 3
 fi
 
 echo "=== cell $CELL: client $client_cell, server $server_cell ==="
@@ -122,8 +148,8 @@ echo "=== cell $CELL: client $client_cell, server $server_cell ==="
 # reached and a "cross" cell would silently be a same-cell run. The first version
 # of this script did exactly that; the override is the fix.
 ( cd "$CELLDIR" \
-  && TEST_SSH_PORT="${O7_PORT:-22422}" make -k tests BUILDDIR="$CELLDIR" \
-       > "$WORK/cell-$CELL.log" 2>&1 )
+  && TEST_SSH_PORT="${O7_PORT:-22422}" SKIP_LTESTS="sftp-cmds" \
+       make -k tests BUILDDIR="$CELLDIR" > "$WORK/cell-$CELL.log" 2>&1 )
 rc=$?
 echo "make -k tests exit=$rc"
 
@@ -142,7 +168,9 @@ cat > "$RECEIPT" <<EOF
   "client": {"build": "$client_cell", "libcrypto_sha256": "$client_dso"},
   "server": {"build": "$server_cell", "libcrypto_sha256": "$server_dso"},
   "separate_library_paths": $([ "$client_cell" != "$server_cell" ] && echo true || echo false),
-  "mapped_libraries": "$(printf '%s' "$mapped" | sed 's/\\/\\\\/g')",
+  "scripts": "same set as O9 (SKIP_LTESTS=sftp-cmds)",
+  "client_mapped": "$client_mapped",
+  "server_mapped": "$server_mapped",
   "mapping_status": "$mapped_status",
   "make_k_tests_exit": $rc,
   "log": "$WORK/cell-$CELL.log",

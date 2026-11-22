@@ -1,12 +1,21 @@
 {
-  "schema": "openssl-rs/interop-cell-receipt/1",
-  "item": "O7 of docs/ETP-TODO.md",
-  "cell": "AB",
-  "generated": "2026-11-21T19:10:09Z",
-  "client": {"build": "A", "libcrypto_sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2"},
-  "server": {"build": "B", "libcrypto_sha256": "3c3a68c1baeb304adf2fc3af827e49b14529556008429bd11dda784a2c6cdfd1"},
-  "separate_library_paths": true,
-  "make_k_tests_exit": 2,
-  "log": "/home/user/openssl-rs/court/tmp/o4/cell-AB.log",
-  "failed_scripts": "2"
+ "schema": "openssl-rs/interop-cell-receipt/1",
+ "item": "O7 of docs/ETP-TODO.md",
+ "cell": "AB",
+ "generated": "2026-11-21T19:10:09Z",
+ "client": {
+  "build": "A",
+  "libcrypto_sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2"
+ },
+ "server": {
+  "build": "B",
+  "libcrypto_sha256": "3c3a68c1baeb304adf2fc3af827e49b14529556008429bd11dda784a2c6cdfd1"
+ },
+ "separate_library_paths": true,
+ "make_k_tests_exit": 2,
+ "log": "/home/user/openssl-rs/court/tmp/o4/cell-AB.log",
+ "failed_scripts": "2",
+ "withdrawn": true,
+ "withdrawn_reason": "produced before the BUILDDIR override, the wrapper fix and the per-process mapping check; the cell did not necessarily run the libraries it claims",
+ "superseded_by": "the next RECEIPT-o7-AB.json written by the fixed cell.sh"
 }

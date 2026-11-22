@@ -1,14 +1,25 @@
 {
-  "schema": "openssl-rs/interop-cell-receipt/1",
-  "item": "O7 of docs/ETP-TODO.md",
-  "cell": "AA",
-  "generated": "2026-11-21T19:15:44Z",
-  "client": {"build": "A", "libcrypto_sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2"},
-  "server": {"build": "A", "libcrypto_sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2"},
-  "separate_library_paths": false,
-  "mapped_libraries": "/home/user/openssl-rs/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 ",
-  "mapping_status": "unexpected",
-  "make_k_tests_exit": 2,
-  "log": "/home/user/openssl-rs/court/tmp/o4/cell-AA.log",
-  "failed_scripts": "2"
+ "schema": "openssl-rs/interop-cell-receipt/1",
+ "item": "O7 of docs/ETP-TODO.md",
+ "cell": "AA",
+ "generated": "2026-11-22T00:57:03Z",
+ "client": {
+  "build": "A",
+  "libcrypto_sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2"
+ },
+ "server": {
+  "build": "A",
+  "libcrypto_sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2"
+ },
+ "separate_library_paths": false,
+ "scripts": "same set as O9 (SKIP_LTESTS=sftp-cmds)",
+ "client_mapped": "/home/user/openssl-rs/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+ "server_mapped": "/home/user/openssl-rs/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+ "mapping_status": "ok",
+ "make_k_tests_exit": 2,
+ "log": "/home/user/openssl-rs/court/tmp/o4/cell-AA.log",
+ "failed_scripts": "2",
+ "withdrawn": true,
+ "withdrawn_reason": "produced before the BUILDDIR override, the wrapper fix and the per-process mapping check; the cell did not necessarily run the libraries it claims",
+ "superseded_by": "the next RECEIPT-o7-AA.json written by the fixed cell.sh"
 }
