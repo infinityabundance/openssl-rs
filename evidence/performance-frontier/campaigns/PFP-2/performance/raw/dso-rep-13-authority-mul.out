@@ -1,0 +1,5 @@
+LIB /work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+LOADED realpath=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3 dev=57 ino=325854 size=7295816
+MAPS entries=5
+CHECK p256-mul ok=1
+RESULT p256-mul	median_us=4.849	iters=200	runs=5	samples=4.835,4.848,4.849,4.851,4.857

@@ -1,0 +1,26 @@
+    Finished `release` profile [optimized] target(s) in 0.00s
+     Running unittests src/lib.rs (target/release/deps/openssl_rs-e1a9da8d91fb8797)
+
+running 1 test
+RESULT	MONT	mul	20.998	19.857,20.998,21.001,21.103,20.605	rep=12	unit=ns_per_op
+RESULT	MONT	sqr	18.880	18.513,22.838,22.658,18.633,18.880	rep=12	unit=ns_per_op
+RESULT	MONT	add	2.876	2.227,2.950,2.895,2.876,2.844	rep=12	unit=ns_per_op
+RESULT	MONT	sub	1.928	1.288,1.930,1.890,1.928,1.934	rep=12	unit=ns_per_op
+RESULT	MONT	reduce	17.405	17.410,17.385,17.405,17.358,17.439	rep=12	unit=ns_per_op
+RESULT	SOLINAS	mul	82.637	82.637,82.542,82.518,84.302,84.512	rep=12	unit=ns_per_op
+RESULT	SOLINAS	sqr	82.099	83.273,82.099,81.928,81.965,82.643	rep=12	unit=ns_per_op
+RESULT	SOLINAS	add	2.894	2.159,2.885,2.922,2.894,2.895	rep=12	unit=ns_per_op
+RESULT	SOLINAS	sub	1.936	1.295,1.936,1.925,1.964,1.953	rep=12	unit=ns_per_op
+RESULT	SOLINAS	reduce	82.041	83.130,82.041,81.248,81.137,82.550	rep=12	unit=ns_per_op
+RESULT	ARCH	mul	21.181	21.118,21.181,21.163,21.455,21.216	rep=12	unit=ns_per_op
+RESULT	ARCH	sqr	20.366	20.651,20.366,20.376,19.958,20.076	rep=12	unit=ns_per_op
+RESULT	ARCH	add	2.837	2.133,2.838,2.878,2.837,2.790	rep=12	unit=ns_per_op
+RESULT	ARCH	sub	1.860	1.258,1.896,1.860,1.898,1.832	rep=12	unit=ns_per_op
+RESULT	ARCH	reduce	17.061	17.061,17.094,17.063,16.999,17.038	rep=12	unit=ns_per_op
+RESULT	MONT	ladder	224.890	rep=12	unit=us_per_call
+RESULT	SOLINAS	ladder	554.654	rep=12	unit=us_per_call
+RESULT	ARCH	ladder	233.698	rep=12	unit=us_per_call
+test ec::p256::tests::pfp2_kernel_measurement ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 2484 filtered out; finished in 0.54s
+

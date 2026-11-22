@@ -527,3 +527,51 @@ pub(crate) unsafe extern "C" fn ossl_ec_GFp_mont_field_set_to_one(
         1
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::bn::bignum::{new_owned, BN_free};
+    use crate::bn::secret::drop_probe;
+    use crate::ec::lib::{EC_GROUP_free, EC_GROUP_new};
+
+    /// Releasing a Montgomery-method group releases `field_data1`, and that release
+    /// cleanses the modulus the cached context owns.
+    ///
+    /// The cached context belongs to the group; the test holds the group alive until
+    /// the release and arms the drop probe on the buffer that release must cleanse.
+    #[test]
+    fn releasing_a_mont_group_cleanses_the_cached_field_context() {
+        // SAFETY: every object is created, used and released inside this test under the
+        // entry points' documented contracts.
+        unsafe {
+            let group = EC_GROUP_new(EC_GFp_mont_method());
+            assert!(!group.is_null());
+            let p = new_owned(vec![23], 0);
+            let a = new_owned(vec![1], 0);
+            let b = new_owned(vec![1], 0);
+            assert_eq!(
+                ossl_ec_GFp_mont_group_set_curve(group, p, a, b, core::ptr::null_mut()),
+                1
+            );
+            let cached = (*group).field_data1.cast::<MontCtx>();
+            assert!(!cached.is_null(), "the Montgomery method caches a context");
+            drop_probe::arm((*cached).modulus_ptr());
+            EC_GROUP_free(group);
+            let Some(observed) = drop_probe::take() else {
+                unreachable!("the released field context must be observed");
+            };
+            assert!(
+                observed.nonzero_before > 0,
+                "the cached modulus must hold live data"
+            );
+            assert_eq!(
+                observed.nonzero_bytes, 0,
+                "the cached modulus must be cleansed"
+            );
+            BN_free(p);
+            BN_free(a);
+            BN_free(b);
+        }
+    }
+}

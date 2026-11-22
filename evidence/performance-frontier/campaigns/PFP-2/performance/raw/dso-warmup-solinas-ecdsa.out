@@ -1,0 +1,5 @@
+LIB /work/court/tmp/pfp2-build/solinas/libcrypto.so.3
+LOADED realpath=/work/court/tmp/pfp2-build/solinas/libcrypto.so.3 dev=57 ino=1695120 size=17024160
+MAPS entries=5
+CHECK ecdsa256 pub=02c5b17d076d8e27f07ea9f82d7eeb92c5f994e7d285ee083452ab244d3c54128f verify=1
+RESULT ecdsa256	median_us=554.962	iters=500	runs=5	samples=542.945,546.492,554.962,558.650,566.415

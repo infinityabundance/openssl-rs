@@ -1,0 +1,7 @@
+LIB /work/court/tmp/pfp2-build/candidate/libcrypto.so.3
+LOADED realpath=/work/court/tmp/pfp2-build/candidate/libcrypto.so.3 dev=57 ino=1685402 size=17033600
+MAPS entries=5
+CHECK ecdsa256 verify=1
+RESULT ecdsa256	median_us=237.213	iters=8	runs=5	samples=237.039,237.128,237.213,238.263,239.732
+RESULT p256-mul	median_us=214.621	iters=8	runs=5	samples=212.999,213.020,214.621,214.995,215.171
+CHECK p256-mul ok=1

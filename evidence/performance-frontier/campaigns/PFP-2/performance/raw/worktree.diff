@@ -1,0 +1,2148 @@
+diff --git a/courts/performance-frontier/pfp2/analyse_pfp2.py b/courts/performance-frontier/pfp2/analyse_pfp2.py
+index f44eff624..989ff40f5 100644
+--- a/courts/performance-frontier/pfp2/analyse_pfp2.py
++++ b/courts/performance-frontier/pfp2/analyse_pfp2.py
+@@ -1,16 +1,27 @@
+ #!/usr/bin/env python3
+-"""analyse_pfp2.py — PFP-2 paired ratios and bootstrap intervals.
++"""analyse_pfp2.py — PFP-2 paired ratios, intervals and population checks.
+ 
+ Reads the raw samples written by `run_pfp2_perf.sh` and applies the PFP-0
+ statistic: one median per process (already computed by the harness), a paired
+ ratio per repetition, the median of the paired ratios, a percentile bootstrap
+ interval (20 000 resamples, seed 0x50465030) and an exact two-sided sign test.
+ 
+-Two evidence families are produced:
++Evidence families:
+ 
+   * kernels: SOLINAS/MONT and ARCH/MONT for each of mul, sqr, add, sub, reduce
+     and the end-to-end ladder.
+-  * mutation control: candidate/before for `ecdsa256` and `p256-mul`.
++  * end to end: each candidate DSO (default and one per forced kernel) against
++    the admitted authority for `ecdsa256` and `p256-mul`, with the PFP-0
++    `ecdsa256` ratio named as the comparator.
++  * mutation control: the before-control (the pre-engine generic ladder) against
++    the authority and against the default candidate.
++
++Population rules, mirroring the hardened PFP-0 analyser: the repetition set must
++be exactly 0..N-1 once each, every repetition must carry every arm and both
++workloads, every file must contain exactly one RESULT line for its workload and a
++non-empty CHECK population, all arms' CHECK lines within a repetition must be
++identical, and the realised order must be the preregistered balanced one. A
++violation is a refusal, not a warning.
+ 
+ The output is a description of this sample. It is not a proof, and no row is a
+ frontier claim.
+@@ -22,12 +33,29 @@ import argparse
+ import json
+ import random
+ import statistics
++import sys
++from math import comb
+ from pathlib import Path
+ 
+ 
+ SEED = 0x50465030
+ RESAMPLES = 20000
+ OPS = ["mul", "sqr", "add", "sub", "reduce", "ladder"]
++ARM_VARIANTS = ["default", "mont", "solinas", "arch", "before"]
++ARMS = ARM_VARIANTS + ["authority"]
++WORKLOADS = {"ecdsa": "ecdsa256", "mul": "p256-mul"}
++
++# PFP-0 `ecdsa256` row: candidate/authority median ratio and its unadjusted
++# bootstrap interval, plus the candidate allocations measured there.
++PFP0_ECDSA = {"ratio": 34.651, "ci": [34.563, 34.716], "allocations": 277}
++
++
++class Refusal(Exception):
++    pass
++
++
++def refuse(message: str) -> None:
++    raise Refusal(message)
+ 
+ 
+ def median(values):
+@@ -54,20 +82,58 @@ def sign_test_p(values):
+     negatives = sum(1 for v in values if v < 1.0)
+     if positives + negatives == 0:
+         return 1.0
+-    # Exact binomial with p = 1/2 on the smaller tail, doubled.
+-    from math import comb
+-
+     k = min(positives, negatives)
+     tail = sum(comb(n, i) for i in range(0, k + 1)) / (2**n)
+     return min(1.0, 2 * tail)
+ 
+ 
++def summarise(ratios):
++    if not ratios:
++        return None
++    lo, hi = bootstrap_ci(ratios)
++    return {
++        "n": len(ratios),
++        "per_repetition": ratios,
++        "median_ratio": median(ratios),
++        "ci95": [lo, hi],
++        "sign_test_p": sign_test_p(ratios),
++    }
++
++
++def read_order(work: Path, reps: int):
++    path = work / "raw" / "run-order.tsv"
++    if not path.exists():
++        refuse(f"missing {path}")
++    rows = []
++    for line in path.read_text().splitlines():
++        if not line.strip():
++            continue
++        parts = line.split("\t")
++        if len(parts) != 3:
++            refuse(f"{path}: malformed row {line!r}")
++        rows.append((int(parts[0]), parts[1], int(parts[2])))
++    ids = [r[0] for r in rows]
++    if ids != list(range(reps)):
++        refuse(f"{path}: repetition population {ids} != 0..{reps - 1}")
++    firsts = [r[1] for r in rows]
++    if any(f not in ("candidate", "authority") for f in firsts):
++        refuse(f"{path}: unexpected first-subject label")
++    expected_authority_first = reps // 2 + reps % 2
++    if firsts.count("authority") != expected_authority_first:
++        refuse(
++            f"{path}: {firsts.count('authority')} authority-first repetitions, "
++            f"expected {expected_authority_first}"
++        )
++    return rows
++
++
+ def read_kernels(work: Path, reps: int):
+     samples = {}
+     for rep in range(reps):
+         path = work / "raw" / f"kernels-rep-{rep:02d}.tsv"
+         if not path.exists():
+-            raise SystemExit(f"missing {path}")
++            refuse(f"missing {path}")
++        seen = set()
+         for line in path.read_text().splitlines():
+             if not line.strip():
+                 continue
+@@ -75,42 +141,86 @@ def read_kernels(work: Path, reps: int):
+             if len(parts) < 5:
+                 continue
+             _, label, op, med, raw = parts[:5]
+-            samples.setdefault((label, op), {})[rep] = {
++            key = (label, op)
++            if key in seen:
++                refuse(f"{path}: duplicate {label}/{op}")
++            seen.add(key)
++            samples.setdefault(key, {})[rep] = {
+                 "median": float(med),
+                 "samples": [float(v) for v in raw.split(",") if v],
+             }
++    for op in OPS:
++        for label in ("MONT", "SOLINAS", "ARCH"):
++            key = (label, op)
++            if key in samples and len(samples[key]) != reps:
++                refuse(f"kernel population {label}/{op} has {len(samples[key])} repetitions")
+     return samples
+ 
+ 
+ def read_dso(work: Path, reps: int):
+     out = {}
++    checks = {}
+     for rep in range(reps):
+-        for arm in ("candidate", "before"):
+-            path = work / "raw" / f"dso-rep-{rep:02d}-{arm}.out"
+-            if not path.exists():
+-                raise SystemExit(f"missing {path}")
+-            for line in path.read_text().splitlines():
+-                if not line.startswith("RESULT "):
+-                    continue
+-                fields = line.split("\t")
+-                workload = fields[0].split()[1]
+-                med = None
+-                raw = None
+-                for field in fields[1:]:
+-                    if field.startswith("median_us="):
+-                        med = float(field.split("=", 1)[1])
+-                    elif field.startswith("samples="):
+-                        raw = [float(v) for v in field.split("=", 1)[1].split(",") if v]
+-                if med is not None:
+-                    out.setdefault((workload, arm), {})[rep] = {
+-                        "median": med,
+-                        "samples": raw or [],
+-                    }
+-    return out
++        check_sets = {}
++        for arm in ARMS:
++            for wl, expected_name in WORKLOADS.items():
++                path = work / "raw" / f"dso-rep-{rep:02d}-{arm}-{wl}.out"
++                if not path.exists():
++                    refuse(f"missing {path}")
++                result = None
++                check_lines = []
++                for line in path.read_text().splitlines():
++                    if line.startswith("CHECK "):
++                        check_lines.append(line)
++                    if not line.startswith("RESULT "):
++                        continue
++                    fields = line.split("\t")
++                    name = fields[0].split()[1]
++                    if name != expected_name:
++                        refuse(f"{path}: RESULT {name}, expected {expected_name}")
++                    if result is not None:
++                        refuse(f"{path}: duplicate RESULT line")
++                    med = None
++                    raw = None
++                    for field in fields[1:]:
++                        if field.startswith("median_us="):
++                            med = float(field.split("=", 1)[1])
++                        elif field.startswith("samples="):
++                            raw = [float(v) for v in field.split("=", 1)[1].split(",") if v]
++                    result = {"median": med, "samples": raw or []}
++                if result is None:
++                    refuse(f"{path}: no RESULT line")
++                if not check_lines:
++                    refuse(f"{path}: empty CHECK population")
++                out.setdefault((wl, arm), {})[rep] = result
++                check_sets[(arm, wl)] = check_lines
++        for wl in WORKLOADS:
++            reference = check_sets[("authority", wl)]
++            for arm in ARM_VARIANTS:
++                if check_sets[(arm, wl)] != reference:
++                    refuse(f"rep-{rep:02d} {arm} {wl}: CHECK population differs from the authority")
++        checks[rep] = {f"{arm}/{wl}": check_sets[(arm, wl)] for arm in ARMS for wl in WORKLOADS}
++    return out, checks
++
++
++def read_alloc(work: Path, arm: str):
++    path = work / "raw" / f"alloc-{arm}.out"
++    if not path.exists():
++        return None
++    for line in path.read_text().splitlines():
++        if line.startswith("ALLOC "):
++            fields = line.split()
++            name = fields[1]
++            values = {}
++            for field in fields[2:]:
++                if "=" in field:
++                    k, v = field.split("=", 1)
++                    values[k] = v
++            return {"workload": name, **values}
++    return None
+ 
+ 
+ def paired(dict_a, dict_b, reps):
+-    """Per-repetition ratios a/b, dropping a pair if a sample is absent."""
+     ratios = []
+     for rep in range(reps):
+         if rep in dict_a and rep in dict_b:
+@@ -118,19 +228,6 @@ def paired(dict_a, dict_b, reps):
+     return ratios
+ 
+ 
+-def summarise(ratios):
+-    if not ratios:
+-        return None
+-    lo, hi = bootstrap_ci(ratios)
+-    return {
+-        "n": len(ratios),
+-        "per_repetition": ratios,
+-        "median_ratio": median(ratios),
+-        "ci95": [lo, hi],
+-        "sign_test_p": sign_test_p(ratios),
+-    }
+-
+-
+ def main():
+     ap = argparse.ArgumentParser()
+     ap.add_argument("--work", required=True)
+@@ -139,8 +236,13 @@ def main():
+     args = ap.parse_args()
+ 
+     work = Path(args.work)
+-    kernels = read_kernels(work, args.reps)
+-    dso = read_dso(work, args.reps)
++    try:
++        order = read_order(work, args.reps)
++        kernels = read_kernels(work, args.reps)
++        dso, checks = read_dso(work, args.reps)
++    except Refusal as exc:
++        print(f"analyse_pfp2: REFUSED: {exc}", file=sys.stderr)
++        return 2
+ 
+     doc = {
+         "schema": "openssl-rs/performance/pfp2/v1",
+@@ -148,15 +250,27 @@ def main():
+         "claim_class": "SCOPED_OBSERVATION",
+         "repetitions": args.reps,
+         "bootstrap": {"resamples": RESAMPLES, "seed": hex(SEED)},
++        "ordering": [
++            {"repetition": r, "first": f, "rotation": k} for r, f, k in order
++        ],
++        "population": {
++            "repetitions": args.reps,
++            "arms": ARMS,
++            "workloads": sorted(WORKLOADS.values()),
++            "checks_equal_across_arms": True,
++        },
+         "kernels": {},
++        "end_to_end": {},
+         "mutation_control": {},
++        "allocations": {},
++        "pfp0_comparator": PFP0_ECDSA,
+     }
+ 
+     for op in OPS:
+         mont = kernels.get(("MONT", op), {})
+         solinas = kernels.get(("SOLINAS", op), {})
+         arch = kernels.get(("ARCH", op), {})
+-        entry = {
++        doc["kernels"][op] = {
+             "MONT_median": median([v["median"] for v in mont.values()]) if mont else None,
+             "SOLINAS_median": median([v["median"] for v in solinas.values()])
+             if solinas
+@@ -165,9 +279,7 @@ def main():
+             "SOLINAS_over_MONT": summarise(paired(solinas, mont, args.reps)),
+             "ARCH_over_MONT": summarise(paired(arch, mont, args.reps)),
+         }
+-        doc["kernels"][op] = entry
+ 
+-    # Per-repetition raw medians, retained so a reader can recompute everything.
+     doc["raw_kernel_medians"] = {
+         f"{label}/{op}": {str(rep): v["median"] for rep, v in by_rep.items()}
+         for (label, op), by_rep in kernels.items()
+@@ -177,27 +289,65 @@ def main():
+         for (label, op), by_rep in kernels.items()
+     }
+ 
+-    for workload in ("ecdsa256", "p256-mul"):
+-        cand = dso.get((workload, "candidate"), {})
+-        before = dso.get((workload, "before"), {})
+-        doc["mutation_control"][workload] = {
+-            "candidate_median_us": median([v["median"] for v in cand.values()])
+-            if cand
+-            else None,
+-            "before_median_us": median([v["median"] for v in before.values()])
+-            if before
+-            else None,
+-            "candidate_over_before": summarise(paired(cand, before, args.reps)),
+-            "candidate_samples": {
+-                str(rep): v for rep, v in cand.items()
+-            },
+-            "before_samples": {str(rep): v for rep, v in before.items()},
++    authority = {wl: dso.get((wl, "authority"), {}) for wl in WORKLOADS}
++    for wl in WORKLOADS:
++        entry = {}
++        for arm in ARM_VARIANTS:
++            candidate = dso.get((wl, arm), {})
++            ratios = paired(candidate, authority[wl], args.reps)
++            entry[arm] = {
++                "arm_median_us": median([v["median"] for v in candidate.values()])
++                if candidate
++                else None,
++                "authority_median_us": median(
++                    [v["median"] for v in authority[wl].values()]
++                )
++                if authority[wl]
++                else None,
++                "ratio_over_authority": summarise(ratios),
++            }
++        doc["end_to_end"][wl] = entry
++
++    # Mutation control: the default (engine) against the before-control (generic
++    # ladder). A ratio above one means the engine is faster.
++    for wl in WORKLOADS:
++        default = dso.get((wl, "default"), {})
++        before = dso.get((wl, "before"), {})
++        doc["mutation_control"][wl] = {
++            "default_over_before": summarise(paired(default, before, args.reps)),
++            "before_over_default": summarise(paired(before, default, args.reps)),
++        }
++
++    for arm in ("default", "before"):
++        doc["allocations"][arm] = read_alloc(work, arm)
++
++    # The PFP-0 comparator applies to the default arm's `ecdsa256` ratio.
++    ecdsa_default = doc["end_to_end"]["ecdsa256"]["default"]["ratio_over_authority"]
++    if ecdsa_default is not None:
++        ratio = ecdsa_default["median_ratio"]
++        lo, hi = ecdsa_default["ci95"]
++        doc["pfp0_comparison"] = {
++            "row": "ecdsa256 default/authority",
++            "pfp0_ratio": PFP0_ECDSA["ratio"],
++            "pfp0_ci": PFP0_ECDSA["ci"],
++            "measured_ratio": ratio,
++            "measured_ci": [lo, hi],
++            "delta_vs_pfp0": ratio - PFP0_ECDSA["ratio"],
++            "pfp0_inside_measured_ci": lo <= PFP0_ECDSA["ratio"] <= hi,
++            "candidate_allocations": doc["allocations"].get("default"),
++            "pfp0_candidate_allocations": PFP0_ECDSA["allocations"],
+         }
+ 
+     Path(args.out).write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n")
+-    print(json.dumps({k: v for k, v in doc.items() if k != "raw_kernel_samples"},
+-                     indent=2, sort_keys=True))
++    print(
++        json.dumps(
++            {k: v for k, v in doc.items() if k not in ("raw_kernel_samples",)},
++            indent=2,
++            sort_keys=True,
++        )
++    )
++    return 0
+ 
+ 
+ if __name__ == "__main__":
+-    main()
++    sys.exit(main())
+diff --git a/courts/performance-frontier/pfp2/bench_pfp2.c b/courts/performance-frontier/pfp2/bench_pfp2.c
+index c86cfb792..3a84da303 100644
+--- a/courts/performance-frontier/pfp2/bench_pfp2.c
++++ b/courts/performance-frontier/pfp2/bench_pfp2.c
+@@ -1,5 +1,5 @@
+ /*
+- * bench_pfp2.c — PFP-2 end-to-end mutation control.
++ * bench_pfp2.c — PFP-2 end-to-end comparison and mutation control.
+  *
+  * Runs one workload through exactly one `libcrypto.so.3` per process, selected
+  * at run time with `--lib <absolute path>` and opened with
+@@ -7,13 +7,25 @@
+  * mapped and the mapping's realpath, device, inode and size, so the runner can
+  * refuse a stale or substituted artefact.
+  *
+- * Workloads (byte-identical inputs on both sides):
+- *   ecdsa256   ECDSA_do_sign on P-256 with a fixed key
++ * Workloads (byte-identical inputs on every side):
++ *   ecdsa256   ECDSA_do_sign on P-256 with the PFP-0 fixed key and digest
+  *   p256-mul   EC_POINT_mul of the generator by a fixed scalar
+  *
+- * Timing: an unrecorded warm-up call, then `runs` timed batches of `iters`
+- * calls. The printed figure is the median batch mean plus every sample. One
+- * process is one independent repetition; operations inside a batch are not.
++ * The `ecdsa256` operand derivation, setup and CHECK line reproduce
++ * `courts/phase18/timing/bench_api.c`: the private scalar is
++ * `make_operand(0x45434400, top_clear, odd)` and the digest is
++ * `make_operand(0x44494700, top_clear, even)`, so the PFP-0 `ecdsa256` ratio is
++ * the comparator for this row.
++ *
++ * Timing: an unrecorded warm-up pass of `iters/4`, then `runs` timed batches of
++ * `iters` calls. The printed figure is the median batch mean plus every sample.
++ * One process is one independent repetition; operations inside a batch are not.
++ *
++ * Allocation counts: in `--alloc` mode the harness calls the weak
++ * `allocprobe_reset`/`allocprobe_mallocs`/`allocprobe_alloc_calls` hooks exported
++ * by alloc_probe.so (LD_PRELOAD), does one short batch, and reports both the
++ * unified allocation-entry count and the legacy malloc-class count per call,
++ * matching `bench_api.c`.
+  *
+  * This harness measures the end-to-end consequence of the field engine. It does
+  * not measure field kernels directly; that is done in-process by
+@@ -34,11 +46,16 @@
+ #include <sys/stat.h>
+ #include <time.h>
+ 
++extern void allocprobe_reset(void) __attribute__((weak));
++extern unsigned long allocprobe_mallocs(void) __attribute__((weak));
++extern unsigned long allocprobe_alloc_calls(void) __attribute__((weak));
++
+ typedef struct {
+     void *handle;
+     EC_KEY *(*EC_KEY_new_by_curve_name)(int);
+     void (*EC_KEY_free)(EC_KEY *);
+-    int (*EC_KEY_generate_key)(EC_KEY *);
++    int (*EC_KEY_set_private_key)(EC_KEY *, const BIGNUM *);
++    int (*EC_KEY_set_public_key)(EC_KEY *, const EC_POINT *);
+     const EC_GROUP *(*EC_KEY_get0_group)(const EC_KEY *);
+     ECDSA_SIG *(*ECDSA_do_sign)(const unsigned char *, int, EC_KEY *);
+     void (*ECDSA_SIG_free)(ECDSA_SIG *);
+@@ -47,19 +64,26 @@ typedef struct {
+     void (*EC_POINT_free)(EC_POINT *);
+     int (*EC_POINT_mul)(const EC_GROUP *, EC_POINT *, const BIGNUM *,
+                         const EC_POINT *, const BIGNUM *, BN_CTX *);
++    size_t (*EC_POINT_point2oct)(const EC_GROUP *, const EC_POINT *,
++                                 point_conversion_form_t, unsigned char *, size_t,
++                                 BN_CTX *);
+     BN_CTX *(*BN_CTX_new)(void);
+     void (*BN_CTX_free)(BN_CTX *);
+     BIGNUM *(*BN_bin2bn)(const unsigned char *, int, BIGNUM *);
+     void (*BN_free)(BIGNUM *);
+ } api_t;
+ 
++static api_t a;
++static EC_KEY *eck;
++static unsigned char ec_dgst[32];
++
+ static void die(const char *what) {
+     fprintf(stderr, "bench_pfp2: %s\n", what);
+     exit(2);
+ }
+ 
+-static void *need(api_t *a, const char *name) {
+-    void *p = dlsym(a->handle, name);
++static void *need(void *handle, const char *name) {
++    void *p = dlsym(handle, name);
+     if (p == NULL) {
+         fprintf(stderr, "bench_pfp2: missing symbol %s\n", name);
+         exit(2);
+@@ -78,12 +102,37 @@ static int cmp_double(const void *a, const void *b) {
+     return (x > y) - (x < y);
+ }
+ 
++/* The PFP-0 operand derivation, byte for byte. */
++static void fill_seeded(uint64_t seed, unsigned char *p, size_t n) {
++    uint64_t s = seed ? seed : UINT64_C(0x9e3779b97f4a7c15);
++    size_t i;
++    for (i = 0; i < n; i++) {
++        s ^= s >> 12;
++        s ^= s << 25;
++        s ^= s >> 27;
++        p[i] = (unsigned char)(s >> 56);
++    }
++}
++
++static void make_operand(unsigned char *p, size_t n, uint64_t seed, int top_set,
++                         int odd) {
++    fill_seeded(seed, p, n);
++    if (top_set)
++        p[0] |= 0x80;
++    else
++        p[0] &= 0x7f;
++    if (odd)
++        p[n - 1] |= 1;
++    else
++        p[n - 1] &= 0xfe;
++}
++
+ /* Print the loaded object's realpath, device, inode and size, and the number of
+  * /proc/self/maps entries whose path is that realpath. The runner compares every
+  * field with `stat(2)` on the on-disk DSO. */
+-static void report_loaded(api_t *a) {
++static void report_loaded(void) {
+     Dl_info info;
+-    if (dladdr((void *)a->EC_KEY_new_by_curve_name, &info) == 0 ||
++    if (dladdr((void *)a.EC_KEY_new_by_curve_name, &info) == 0 ||
+         info.dli_fname == NULL) {
+         printf("LOADED realpath=unknown\n");
+         printf("MAPS entries=0\n");
+@@ -115,10 +164,125 @@ static void report_loaded(api_t *a) {
+     printf("MAPS entries=%d\n", entries);
+ }
+ 
++static int ec_step(void) {
++    ECDSA_SIG *s = a.ECDSA_do_sign(ec_dgst, (int)sizeof(ec_dgst), eck);
++    if (s == NULL) return 0;
++    a.ECDSA_SIG_free(s);
++    return 1;
++}
++
++static int ec_setup(unsigned char *pubbuf, size_t *plen_out, EC_POINT **pub_out,
++                    BIGNUM **priv_out, BN_CTX **ctx_out) {
++    BIGNUM *priv = NULL;
++    EC_POINT *pub = NULL;
++    BN_CTX *ctx = NULL;
++    const EC_GROUP *grp;
++    unsigned char sb[32];
++    size_t plen;
++
++    eck = a.EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
++    if (eck == NULL) return 0;
++
++    make_operand(sb, sizeof(sb), UINT64_C(0x45434400), 0, 1);
++    priv = a.BN_bin2bn(sb, (int)sizeof(sb), NULL);
++    if (priv == NULL || !a.EC_KEY_set_private_key(eck, priv)) goto fail;
++
++    grp = a.EC_KEY_get0_group(eck);
++    if (grp == NULL) goto fail;
++    pub = a.EC_POINT_new(grp);
++    ctx = a.BN_CTX_new();
++    if (pub == NULL || ctx == NULL) goto fail;
++    if (!a.EC_POINT_mul(grp, pub, priv, NULL, NULL, ctx)) goto fail;
++    if (!a.EC_KEY_set_public_key(eck, pub)) goto fail;
++
++    plen = a.EC_POINT_point2oct(grp, pub, POINT_CONVERSION_COMPRESSED, pubbuf, 65,
++                                ctx);
++    if (plen == 0) goto fail;
++
++    *pub_out = pub;
++    *priv_out = priv;
++    *ctx_out = ctx;
++    *plen_out = plen;
++    return 1;
++
++fail:
++    if (priv) a.BN_free(priv);
++    if (pub) a.EC_POINT_free(pub);
++    if (ctx) a.BN_CTX_free(ctx);
++    if (eck) a.EC_KEY_free(eck);
++    eck = NULL;
++    return 0;
++}
++
++static void ec_teardown(EC_POINT *pub, BIGNUM *priv, BN_CTX *ctx) {
++    if (priv) a.BN_free(priv);
++    if (pub) a.EC_POINT_free(pub);
++    if (ctx) a.BN_CTX_free(ctx);
++    if (eck) a.EC_KEY_free(eck);
++    eck = NULL;
++}
++
++/* One timed batch mean plus every sample, in microseconds per call. */
++static void timed(const char *name, int iters, int runs, int alloc_mode,
++                  int (*step)(void)) {
++    int warm = iters / 4;
++    int i, r;
++    if (warm < 1) warm = 1;
++    for (i = 0; i < warm; i++)
++        if (!step()) die("warm-up step failed");
++
++    if (alloc_mode) {
++        int probe = (allocprobe_reset != NULL && allocprobe_mallocs != NULL);
++        if (probe) allocprobe_reset();
++        for (i = 0; i < iters; i++)
++            if (!step()) die("allocation step failed");
++        if (probe) {
++            unsigned long malloc_class = allocprobe_mallocs();
++            unsigned long all_calls = (allocprobe_alloc_calls != NULL)
++                                          ? allocprobe_alloc_calls()
++                                          : malloc_class;
++            printf("ALLOC %s allocs_per_op=%.3f malloc_per_op=%.3f iters=%d\n",
++                   name, (double)all_calls / (double)iters,
++                   (double)malloc_class / (double)iters, iters);
++        } else {
++            printf("ALLOC %s allocs_per_op=n/a malloc_per_op=n/a iters=%d\n",
++                   name, iters);
++        }
++        fflush(stdout);
++        return;
++    }
++
++    {
++        double samples[64];
++        for (r = 0; r < runs; r++) {
++            uint64_t start = now_ns();
++            for (i = 0; i < iters; i++)
++                if (!step()) die("timed step failed");
++            uint64_t end = now_ns();
++            samples[r] = (double)(end - start) / (double)iters / 1000.0;
++        }
++        qsort(samples, (size_t)runs, sizeof(double), cmp_double);
++        printf("RESULT %s\tmedian_us=%.3f\titers=%d\truns=%d\tsamples=", name,
++               samples[runs / 2], iters, runs);
++        for (r = 0; r < runs; r++) printf("%s%.3f", r ? "," : "", samples[r]);
++        printf("\n");
++    }
++}
++
++static unsigned char mul_scalar[32];
++static const EC_GROUP *mul_group;
++static EC_POINT *mul_point;
++static BN_CTX *mul_ctx;
++static BIGNUM *mul_bn;
++
++static int mul_step(void) {
++    return a.EC_POINT_mul(mul_group, mul_point, mul_bn, NULL, NULL, mul_ctx);
++}
++
+ int main(int argc, char **argv) {
+     const char *lib = NULL;
+-    int iters = 16, runs = 5;
+-    int mode_ecdsa = 1, mode_mul = 1;
++    int iters = 500, runs = 5, alloc_mode = 0;
++    int mode_ecdsa = 1, mode_mul = 0;
+ 
+     for (int i = 1; i < argc; i++) {
+         if (strcmp(argv[i], "--lib") == 0 && i + 1 < argc) {
+@@ -127,6 +291,8 @@ int main(int argc, char **argv) {
+             iters = atoi(argv[++i]);
+         } else if (strcmp(argv[i], "--runs") == 0 && i + 1 < argc) {
+             runs = atoi(argv[++i]);
++        } else if (strcmp(argv[i], "--alloc") == 0) {
++            alloc_mode = 1;
+         } else if (strcmp(argv[i], "--ecdsa") == 0) {
+             mode_ecdsa = 1;
+             mode_mul = 0;
+@@ -135,7 +301,8 @@ int main(int argc, char **argv) {
+             mode_mul = 1;
+         } else {
+             fprintf(stderr,
+-                    "usage: %s --lib <libcrypto.so.3> [--iters N] [--runs R] [--ecdsa|--mul]\n",
++                    "usage: %s --lib <libcrypto.so.3> [--iters N] [--runs R] "
++                    "[--alloc] [--ecdsa|--mul]\n",
+                     argv[0]);
+             return 2;
+         }
+@@ -143,101 +310,87 @@ int main(int argc, char **argv) {
+     if (lib == NULL) die("--lib is required");
+     if (iters < 1 || runs < 1 || runs > 64) die("invalid iteration or run count");
+ 
+-    api_t a;
+     memset(&a, 0, sizeof a);
+     a.handle = dlopen(lib, RTLD_NOW | RTLD_LOCAL);
+     if (a.handle == NULL) {
+         fprintf(stderr, "bench_pfp2: dlopen: %s\n", dlerror());
+         return 2;
+     }
+-    a.EC_KEY_new_by_curve_name = need(&a, "EC_KEY_new_by_curve_name");
+-    a.EC_KEY_free = need(&a, "EC_KEY_free");
+-    a.EC_KEY_generate_key = need(&a, "EC_KEY_generate_key");
+-    a.EC_KEY_get0_group = need(&a, "EC_KEY_get0_group");
+-    a.ECDSA_do_sign = need(&a, "ECDSA_do_sign");
+-    a.ECDSA_SIG_free = need(&a, "ECDSA_SIG_free");
+-    a.ECDSA_do_verify = need(&a, "ECDSA_do_verify");
+-    a.EC_POINT_new = need(&a, "EC_POINT_new");
+-    a.EC_POINT_free = need(&a, "EC_POINT_free");
+-    a.EC_POINT_mul = need(&a, "EC_POINT_mul");
+-    a.BN_CTX_new = need(&a, "BN_CTX_new");
+-    a.BN_CTX_free = need(&a, "BN_CTX_free");
+-    a.BN_bin2bn = need(&a, "BN_bin2bn");
+-    a.BN_free = need(&a, "BN_free");
++#define LOAD(field, symbol) a.field = need(a.handle, symbol)
++    LOAD(EC_KEY_new_by_curve_name, "EC_KEY_new_by_curve_name");
++    LOAD(EC_KEY_free, "EC_KEY_free");
++    LOAD(EC_KEY_set_private_key, "EC_KEY_set_private_key");
++    LOAD(EC_KEY_set_public_key, "EC_KEY_set_public_key");
++    LOAD(EC_KEY_get0_group, "EC_KEY_get0_group");
++    LOAD(ECDSA_do_sign, "ECDSA_do_sign");
++    LOAD(ECDSA_SIG_free, "ECDSA_SIG_free");
++    LOAD(ECDSA_do_verify, "ECDSA_do_verify");
++    LOAD(EC_POINT_new, "EC_POINT_new");
++    LOAD(EC_POINT_free, "EC_POINT_free");
++    LOAD(EC_POINT_mul, "EC_POINT_mul");
++    LOAD(EC_POINT_point2oct, "EC_POINT_point2oct");
++    LOAD(BN_CTX_new, "BN_CTX_new");
++    LOAD(BN_CTX_free, "BN_CTX_free");
++    LOAD(BN_bin2bn, "BN_bin2bn");
++    LOAD(BN_free, "BN_free");
++#undef LOAD
+ 
+     printf("LIB %s\n", lib);
+-    report_loaded(&a);
+-
+-    unsigned char dgst[32];
+-    for (int i = 0; i < 32; i++) dgst[i] = (unsigned char)(0x5a ^ i);
++    report_loaded();
+ 
+-    EC_KEY *key = a.EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+-    if (key == NULL) die("P-256 key");
+-    if (a.EC_KEY_generate_key(key) != 1) die("key generation");
+-    const EC_GROUP *group = a.EC_KEY_get0_group(key);
++    if (mode_ecdsa) {
++        unsigned char pubbuf[65];
++        size_t plen, i;
++        EC_POINT *pub = NULL;
++        BIGNUM *priv = NULL;
++        BN_CTX *ctx = NULL;
+ 
+-    unsigned char scalar_bytes[32];
+-    for (int i = 0; i < 32; i++) scalar_bytes[i] = (unsigned char)(0x11 * (i + 1));
+-    BIGNUM *scalar = a.BN_bin2bn(scalar_bytes, 32, NULL);
+-    if (scalar == NULL) die("scalar");
+-    BN_CTX *ctx = a.BN_CTX_new();
+-    if (ctx == NULL) die("BN_CTX");
+-    EC_POINT *point = a.EC_POINT_new(group);
+-    if (point == NULL) die("point");
++        if (!ec_setup(pubbuf, &plen, &pub, &priv, &ctx)) die("P-256 key setup");
++        make_operand(ec_dgst, sizeof(ec_dgst), UINT64_C(0x44494700), 0, 0);
+ 
+-    if (mode_ecdsa) {
+-        ECDSA_SIG *sig = a.ECDSA_do_sign(dgst, 32, key);
+-        if (sig == NULL) die("ECDSA_do_sign");
+-        int ok = a.ECDSA_do_verify(dgst, 32, sig, key);
+-        a.ECDSA_SIG_free(sig);
+-        printf("CHECK ecdsa256 verify=%d\n", ok);
++        ECDSA_SIG *s = a.ECDSA_do_sign(ec_dgst, (int)sizeof(ec_dgst), eck);
++        if (s == NULL) die("ECDSA_do_sign");
++        int ok = a.ECDSA_do_verify(ec_dgst, (int)sizeof(ec_dgst), s, eck);
++        a.ECDSA_SIG_free(s);
+         if (ok != 1) die("the signature did not verify");
+ 
+-        double samples[64];
+-        for (int r = 0; r < runs; r++) {
+-            uint64_t start = now_ns();
+-            for (int i = 0; i < iters; i++) {
+-                ECDSA_SIG *s = a.ECDSA_do_sign(dgst, 32, key);
+-                if (s == NULL) die("ECDSA_do_sign in batch");
+-                a.ECDSA_SIG_free(s);
+-            }
+-            uint64_t end = now_ns();
+-            samples[r] = (double)(end - start) / (double)iters / 1000.0;
+-        }
+-        qsort(samples, (size_t)runs, sizeof(double), cmp_double);
+-        double med = samples[runs / 2];
+-        printf("RESULT ecdsa256\tmedian_us=%.3f\titers=%d\truns=%d\tsamples=", med, iters,
+-               runs);
+-        for (int r = 0; r < runs; r++) printf("%s%.3f", r ? "," : "", samples[r]);
+-        printf("\n");
++        printf("CHECK ecdsa256 pub=");
++        for (i = 0; i < plen; i++) printf("%02x", pubbuf[i]);
++        printf(" verify=1\n");
++        fflush(stdout);
++
++        timed("ecdsa256", iters, runs, alloc_mode, ec_step);
++        ec_teardown(pub, priv, ctx);
+     }
+ 
+     if (mode_mul) {
+-        if (a.EC_POINT_mul(group, point, scalar, NULL, NULL, ctx) != 1) die("EC_POINT_mul");
+-        double samples[64];
+-        for (int r = 0; r < runs; r++) {
+-            uint64_t start = now_ns();
+-            for (int i = 0; i < iters; i++) {
+-                if (a.EC_POINT_mul(group, point, scalar, NULL, NULL, ctx) != 1) {
+-                    die("EC_POINT_mul in batch");
+-                }
+-            }
+-            uint64_t end = now_ns();
+-            samples[r] = (double)(end - start) / (double)iters / 1000.0;
+-        }
+-        qsort(samples, (size_t)runs, sizeof(double), cmp_double);
+-        double med = samples[runs / 2];
+-        printf("RESULT p256-mul\tmedian_us=%.3f\titers=%d\truns=%d\tsamples=", med, iters,
+-               runs);
+-        for (int r = 0; r < runs; r++) printf("%s%.3f", r ? "," : "", samples[r]);
+-        printf("\n");
++        unsigned char pubbuf[65];
++        size_t plen;
++        EC_POINT *pub = NULL;
++        BIGNUM *priv = NULL;
++        BN_CTX *ctx = NULL;
++
++        if (!ec_setup(pubbuf, &plen, &pub, &priv, &ctx)) die("P-256 key setup");
++        (void)plen;
++        mul_group = a.EC_KEY_get0_group(eck);
++
++        make_operand(mul_scalar, sizeof(mul_scalar), UINT64_C(0x5343414c), 0, 1);
++        mul_bn = a.BN_bin2bn(mul_scalar, (int)sizeof(mul_scalar), NULL);
++        mul_ctx = a.BN_CTX_new();
++        mul_point = a.EC_POINT_new(mul_group);
++        if (mul_bn == NULL || mul_ctx == NULL || mul_point == NULL) die("mul setup");
++        if (!mul_step()) die("EC_POINT_mul");
+         printf("CHECK p256-mul ok=1\n");
++        fflush(stdout);
++
++        timed("p256-mul", iters, runs, alloc_mode, mul_step);
++
++        a.EC_POINT_free(mul_point);
++        a.BN_CTX_free(mul_ctx);
++        a.BN_free(mul_bn);
++        ec_teardown(pub, priv, ctx);
+     }
+ 
+-    a.EC_POINT_free(point);
+-    a.BN_CTX_free(ctx);
+-    a.BN_free(scalar);
+-    a.EC_KEY_free(key);
+     dlclose(a.handle);
+     return 0;
+ }
+diff --git a/courts/performance-frontier/pfp2/run_pfp2_perf.sh b/courts/performance-frontier/pfp2/run_pfp2_perf.sh
+index cacc5401a..290af7bc8 100644
+--- a/courts/performance-frontier/pfp2/run_pfp2_perf.sh
++++ b/courts/performance-frontier/pfp2/run_pfp2_perf.sh
+@@ -1,8 +1,9 @@
+ #!/usr/bin/env bash
+ #
+-# run_pfp2_perf.sh — PFP-2 kernel comparison and end-to-end mutation control.
++# run_pfp2_perf.sh — PFP-2 kernel comparison, end-to-end measurement and
++# mutation control.
+ #
+-# Two instruments, both inside the court:
++# Three instruments, all inside the court:
+ #
+ #   1. in-process kernel measurement (`ec::p256::tests::pfp2_kernel_measurement`)
+ #      measures mul, sqr, add, sub and reduce for MONT, SOLINAS and ARCH on a
+@@ -10,28 +11,43 @@
+ #      forced. One process per repetition, 15 repetitions, kernel order rotated
+ #      by the repetition.
+ #
+-#   2. `bench_pfp2` measures ECDSA signing and `EC_POINT_mul` through the
+-#      distribution DSO built from the working tree and from the before-control
+-#      source (`git archive a3f7b277c`, the PFP-2 base commit). The paired
+-#      candidate/before ratio is the mutation control: the before-control's
+-#      P-256 ladder is the generic fixed-width workspace with the Knuth
+-#      reduction, so the delta is the engine's contribution.
++#   2. `bench_pfp2` measures the PFP-0 `ecdsa256` workload (the same fixed key,
++#      digest, iteration count and CHECK line as `bench_api.c`) and a `p256-mul`
++#      ladder workload, through one distribution DSO per process. The candidate
++#      is built four ways from the same source: the unforced default, and one
++#      DSO per kernel with `OPENSSL_RS_PFP2_MEASURE_KERNEL` fixed at compile
++#      time. The authority is the admitted OpenSSL 3.6.4 production DSO, so the
++#      candidate/authority ratio is directly comparable with the PFP-0
++#      `ecdsa256` row.
++#
++#   3. the before-control (`git archive a3f7b277c`, the PFP-2 base commit) is
++#      the pre-engine generic fixed-width ladder, so candidate/before is the
++#      mutation control: forcing the generic implementation must undo the win.
+ #
+ # The statistic is the PFP-0 one: 15 repetitions fixed before execution, one
+-# process per arm per repetition, median of five batch means, median of the
+-# paired ratios, percentile bootstrap interval (20 000 resamples, seed
+-# 0x50465030). No row is excluded.
++# process per arm per repetition, median of five batch means, paired ratios by
++# repetition, median of the paired ratios, percentile bootstrap interval (20 000
++# resamples, seed 0x50465030), exact sign test. No row is excluded.
++#
++# Evidence population: every repetition must produce one ecdsa256 and one
++# p256-mul RESULT line for every arm, and every arm's CHECK lines must be
++# non-empty and identical to the authority's. A missing, duplicate or extra
++# identifier makes the campaign BLOCKED.
+ #
+-# OOM note: the release test binary's LLVM peak exceeded the 6g court cap once
+-# (`rustc-LLVM ERROR: out of memory`). The court was recreated at the §6.1
+-# computed cap of 8g and the build runs with CARGO_BUILD_JOBS=1, which bounds
+-# rustc's parallel codegen. Both facts are recorded in the receipt.
++# OOM note: the release test binary's LLVM peak exceeded a 6g court cap
++# (`rustc-LLVM ERROR: out of memory`). The court runs at the §6.1 computed cap
++# (8g here) and every build uses CARGO_BUILD_JOBS=1, which bounds rustc's
++# parallel codegen. The runner refuses to start below 24 GiB available.
+ 
+ set -euo pipefail
+ 
+ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+ . "$ROOT/forensics/tools/require_court.sh"
+ 
++AUTH_PREFIX="${AUTH_PREFIX:-$ROOT/forensics/authorities/prefix/openssl-3.6.4-production}"
++AUTH_INC="$AUTH_PREFIX/include"
++AUTH_DSO="$AUTH_PREFIX/lib/libcrypto.so.3"
++
+ CAMPAIGN="$ROOT/evidence/performance-frontier/campaigns/PFP-2"
+ WORK="${PFP2_WORK:-$CAMPAIGN/performance}"
+ BUILD="${PFP2_BUILD_DIR:-$ROOT/court/tmp/pfp2-build}"
+@@ -41,8 +57,8 @@ JOBS="${CARGO_BUILD_JOBS:-1}"
+ REPS=15
+ ORDER_SEED=0x50465030
+ PIN_CPU="${PFP2_PIN_CPU:-1}"
++VARIANTS=(default mont solinas arch before)
+ 
+-AUTH_INC="$ROOT/forensics/authorities/prefix/openssl-3.6.4-production/include"
+ VERSION_SCRIPT="$ROOT/artifacts/phase2/libcrypto.ld"
+ 
+ fail() {
+@@ -58,23 +74,26 @@ avail_kb="$(awk '/MemAvailable/{print $2}' /proc/meminfo)"
+ [ "${avail_kb:-0}" -ge 25165824 ] || fail "MemAvailable ${avail_kb} KiB is below the 24 GiB floor"
+ 
+ rm -rf "$WORK/raw" "$WORK/results.json" "$WORK/BLOCKED"
+-mkdir -p "$WORK/raw"
++mkdir -p "$WORK/raw" "$BUILD"
+ 
+ [ -f "$AUTH_INC/openssl/bn.h" ] || fail "missing authority headers"
++[ -f "$AUTH_DSO" ] || fail "missing authority DSO"
+ [ -f "$VERSION_SCRIPT" ] || fail "missing $VERSION_SCRIPT"
+ 
+-# --- build both DSOs ------------------------------------------------------
++# --- build the harness and the allocation probe ------------------------------
++
++cc -O2 -g -Wall -Wextra -I "$AUTH_INC" \
++   "$ROOT/courts/performance-frontier/pfp2/bench_pfp2.c" -ldl -lm \
++   -o "$BUILD/bench_pfp2"
++cc -O2 -fPIC -shared "$ROOT/courts/phase18/timing/alloc_probe.c" -ldl \
++   -o "$BUILD/alloc_probe.so"
++HARNESS="$BUILD/bench_pfp2"
++
++# --- link one distribution DSO from a static archive -------------------------
+ 
+-build_side() { # source-dir target-dir output-dir
+-    local src=$1 target=$2 outdir=$3
++link_dso() { # archive outdir
++    local archive=$1 outdir=$2
+     mkdir -p "$outdir"
+-    (
+-        cd "$src"
+-        env CARGO_BUILD_JOBS="$JOBS" CARGO_TARGET_DIR="$target" \
+-            cargo build --release --lib --offline
+-    ) >"$outdir/build.log" 2>&1 || { tail -n 30 "$outdir/build.log" >&2; fail "build in $src"; }
+-    local archive="$target/release/libopenssl_rs.a"
+-    [ -f "$archive" ] || fail "no archive from $src"
+     python3 "$ROOT/forensics/tools/implemented_surface.py" \
+         --archive "$archive" --out "$outdir/implemented-surface.json" \
+         >"$outdir/implemented-surface.log" 2>&1
+@@ -94,37 +113,65 @@ build_side() { # source-dir target-dir output-dir
+     sha256sum "$outdir/libcrypto.so.3" >"$outdir/libcrypto.so.3.sha256"
+ }
+ 
+-if [ "${PFP2_SKIP_BUILD:-0}" != 1 ] || [ ! -f "$BUILD/candidate/libcrypto.so.3" ]; then
+-    rm -rf "$BUILD"
+-    mkdir -p "$BUILD/before-src"
+-    git -C "$ROOT" archive "$BEFORE_COMMIT" | tar -x -C "$BUILD/before-src"
+-    build_side "$ROOT" "$BUILD/candidate-target" "$BUILD/candidate"
+-    build_side "$BUILD/before-src" "$BUILD/before-target" "$BUILD/before"
+-fi
++# --- build the candidate variants --------------------------------------------
++#
++# The kernel variants differ only in `option_env!`, which cargo does not track as
++# a fingerprint input. `cargo clean -p openssl-rs` between variants removes the
++# crate's own artifacts (dependencies stay cached) so each compile sees its own
++# value. The source is never edited.
+ 
+-DSO_CAND="$BUILD/candidate/libcrypto.so.3"
+-DSO_BEFORE="$BUILD/before/libcrypto.so.3"
+-HARNESS="$BUILD/bench_pfp2"
+-[ -f "$DSO_CAND" ] || fail "missing candidate DSO"
+-[ -f "$DSO_BEFORE" ] || fail "missing before-control DSO"
++CAND_TARGET="$BUILD/candidate-target"
++build_variant() { # name force
++    local name=$1 force=$2
++    local outdir="$BUILD/$name"
++    if [ "$name" != default ]; then
++        env CARGO_TARGET_DIR="$CAND_TARGET" \
++            cargo clean -p openssl-rs --release >"$outdir.clean.log" 2>&1 || true
++    fi
++    (
++        cd "$ROOT"
++        env CARGO_BUILD_JOBS="$JOBS" CARGO_TARGET_DIR="$CAND_TARGET" \
++            OPENSSL_RS_PFP2_MEASURE_KERNEL="$force" \
++            cargo build --release --lib --offline
++    ) >"$outdir.build.log" 2>&1 || { tail -n 30 "$outdir.build.log" >&2; fail "build $name"; }
++    link_dso "$CAND_TARGET/release/libopenssl_rs.a" "$outdir"
++}
+ 
+-cc -O2 -g -Wall -Wextra -I "$AUTH_INC" \
+-   "$ROOT/courts/performance-frontier/pfp2/bench_pfp2.c" -ldl -lm -o "$HARNESS"
++build_variant default ""
++build_variant mont MONT
++build_variant solinas SOLINAS
++build_variant arch ARCH
+ 
+-# --- identity and venue ---------------------------------------------------
++# --- build the before-control (the pre-engine generic ladder) ----------------
++
++mkdir -p "$BUILD/before-src"
++git -C "$ROOT" archive "$BEFORE_COMMIT" | tar -x -C "$BUILD/before-src"
++(
++    cd "$BUILD/before-src"
++    env CARGO_BUILD_JOBS="$JOBS" CARGO_TARGET_DIR="$BUILD/before-target" \
++        cargo build --release --lib --offline
++) >"$BUILD/before.build.log" 2>&1 || { tail -n 30 "$BUILD/before.build.log" >&2; fail "build before"; }
++link_dso "$BUILD/before-target/release/libopenssl_rs.a" "$BUILD/before"
++
++# --- identity and venue ------------------------------------------------------
+ 
+ git -C "$ROOT" rev-parse HEAD >"$WORK/raw/source-head.txt"
+ git -C "$ROOT" status --porcelain >"$WORK/raw/worktree-status.txt" || true
++git -C "$ROOT" diff >"$WORK/raw/worktree.diff"
++sha256sum "$WORK/raw/worktree.diff" >"$WORK/raw/worktree-diff.sha256"
++sha256sum "$ROOT/src/ec/p256.rs" "$ROOT/src/ec/p256/tests.rs" \
++         "$ROOT/src/ec/mult.rs" "$ROOT/src/ec/smpl.rs" \
++         "$ROOT/courts/performance-frontier/pfp2/bench_pfp2.c" \
++         "$ROOT/courts/performance-frontier/pfp2/analyse_pfp2.py" \
++         >"$WORK/raw/patch-files.sha256"
+ git -C "$ROOT" rev-parse "$BEFORE_COMMIT" >"$WORK/raw/before-commit.txt"
+-{
+-    sha256sum "$ROOT/src/ec/p256.rs" "$ROOT/src/ec/p256/tests.rs" \
+-             "$ROOT/src/ec/mult.rs" "$ROOT/src/ec/smpl.rs" \
+-             "$ROOT/courts/performance-frontier/pfp2/bench_pfp2.c" \
+-             "$ROOT/courts/performance-frontier/pfp2/analyse_pfp2.py"
+-} >"$WORK/raw/patch-files.sha256"
+-sha256sum "$DSO_CAND" >"$WORK/raw/candidate-dso.sha256"
+-sha256sum "$DSO_BEFORE" >"$WORK/raw/before-dso.sha256"
++
++for arm in "${VARIANTS[@]}"; do
++    sha256sum "$BUILD/$arm/libcrypto.so.3" >"$WORK/raw/$arm-dso.sha256"
++done
++sha256sum "$AUTH_DSO" >"$WORK/raw/authority-dso.sha256"
+ sha256sum "$HARNESS" >"$WORK/raw/harness.sha256"
++sha256sum "$BUILD/alloc_probe.so" >"$WORK/raw/alloc-probe.sha256"
+ 
+ {
+     echo "campaign=PFP-2"
+@@ -141,27 +188,32 @@ sha256sum "$HARNESS" >"$WORK/raw/harness.sha256"
+     echo "cgroup_cpu_max=$(cat /sys/fs/cgroup/cpu.max 2>/dev/null || echo unknown)"
+     echo "mem_available_kb=$(awk '/MemAvailable/{print $2}' /proc/meminfo)"
+     echo "pmu=cpu event source absent (recorded by PFP-0); no hardware counters"
++    echo "authority_dso=$AUTH_DSO"
++    echo "authority_sha256=$(sha256sum "$AUTH_DSO" | cut -d' ' -f1)"
+ } >"$WORK/venue.txt"
+ 
+-# --- balanced order, fixed before measurement -----------------------------
++# --- balanced order, fixed before measurement --------------------------------
+ 
+-python3 - "$REPS" "$ORDER_SEED" >"$WORK/raw/run-order.tsv" <<'PY'
++python3 - "$REPS" "$ORDER_SEED" "${#VARIANTS[@]}" >"$WORK/raw/run-order.tsv" <<'PY'
+ import random, sys
+-reps, seed = int(sys.argv[1]), int(sys.argv[2], 0)
++reps, seed, width = int(sys.argv[1]), int(sys.argv[2], 0), int(sys.argv[3])
+ rng = random.Random(seed)
+-firsts = ["candidate"] * (reps // 2 + reps % 2) + ["before"] * (reps // 2)
++firsts = ["authority"] * (reps // 2 + reps % 2) + ["candidate"] * (reps // 2)
+ rng.shuffle(firsts)
+ for i, first in enumerate(firsts):
+-    second = "before" if first == "candidate" else "candidate"
+-    print(f"{i:02d}\t{first}\t{second}")
++    print(f"{i:02d}\t{first}\t{i % width}")
+ PY
+ 
+-printf 'label\tarm\tdso_sha256\texpected_realpath\treported_realpath\texpected_dev\treported_dev\texpected_ino\treported_ino\texpected_size\treported_size\tstatus\n' \
++printf 'arm\tdso_sha256\texpected_realpath\treported_realpath\texpected_dev\treported_dev\texpected_ino\treported_ino\texpected_size\treported_size\tstatus\n' \
+     >"$WORK/raw/identity-check.tsv"
+ 
+ dso_sha() { sha256sum "$1" | cut -d' ' -f1; }
+-CAND_SHA="$(dso_sha "$DSO_CAND")"
+-BEFORE_SHA="$(dso_sha "$DSO_BEFORE")"
++arm_dso() {
++    case "$1" in
++        authority) echo "$AUTH_DSO" ;;
++        *) echo "$BUILD/$1/libcrypto.so.3" ;;
++    esac
++}
+ 
+ verify_loaded() { # file arm dso
+     local file=$1 arm=$2 dso=$3 rp dev ino size entries
+@@ -180,66 +232,108 @@ verify_loaded() { # file arm dso
+              }
+              END { print r, d, n, s, e }' "$file"
+     )
+-    local real expected_sha
++    local real
+     real="$(realpath "$dso")"
+-    expected_sha="$(dso_sha "$dso")"
+     read -r e_dev e_ino e_size < <(stat -c '%d %i %s' "$real")
+-    [ -n "${rp:-}" ] || fail "$arm: no LOADED line"
++    [ -n "${rp:-}" ] || fail "$arm: no LOADED line in $file"
+     [ "$rp" = "$real" ] || fail "$arm: mapped $rp, expected $real"
+     [ "$dev" = "$e_dev" ] || fail "$arm: device $dev != $e_dev"
+     [ "$ino" = "$e_ino" ] || fail "$arm: inode $ino != $e_ino"
+     [ "$size" = "$e_size" ] || fail "$arm: size $size != $e_size"
+     [ "${entries:-0}" -ge 1 ] || fail "$arm: no /proc/self/maps entry"
+-    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\tok\n' \
+-        "$arm" "$arm" "$expected_sha" "$real" "$rp" "$e_dev" "$dev" "$e_ino" "$ino" \
++    printf '%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\tok\n' \
++        "$arm" "$(dso_sha "$dso")" "$real" "$rp" "$e_dev" "$dev" "$e_ino" "$ino" \
+         "$e_size" "$size" >>"$WORK/raw/identity-check.tsv"
+ }
+ 
+-run_dso() { # arm dso label
+-    local arm=$1 dso=$2 label=$3
+-    local out="$WORK/raw/dso-$label-$arm.out"
+-    LD_LIBRARY_PATH="$(dirname "$dso")" taskset -c "$PIN_CPU" \
+-        "$HARNESS" --lib "$dso" --iters 8 --runs 5 >"$out"
++run_dso() { # arm tag
++    local arm=$1 tag=$2 dso out
++    dso="$(arm_dso "$arm")"
++    for wl in ecdsa mul; do
++        out="$WORK/raw/dso-$tag-$arm-$wl.out"
++        if [ "$wl" = ecdsa ]; then
++            LD_LIBRARY_PATH="$(dirname "$dso")" taskset -c "$PIN_CPU" \
++                "$HARNESS" --lib "$dso" --ecdsa --iters 500 --runs 5 >"$out"
++        else
++            LD_LIBRARY_PATH="$(dirname "$dso")" taskset -c "$PIN_CPU" \
++                "$HARNESS" --lib "$dso" --mul --iters 200 --runs 5 >"$out"
++        fi
++        verify_loaded "$out" "$arm" "$dso"
++    done
++}
++
++run_alloc() { # arm
++    local arm=$1 dso out
++    dso="$(arm_dso "$arm")"
++    out="$WORK/raw/alloc-$arm.out"
++    LD_PRELOAD="$BUILD/alloc_probe.so" LD_LIBRARY_PATH="$(dirname "$dso")" \
++        taskset -c "$PIN_CPU" "$HARNESS" --lib "$dso" --ecdsa --alloc \
++        --iters 5 --runs 1 >"$out"
+     verify_loaded "$out" "$arm" "$dso"
++    grep -q '^ALLOC ecdsa256 allocs_per_op=[0-9]' "$out" \
++        || fail "$arm: allocation probe produced no numeric count"
+ }
+ 
+-run_kernels() { # label
+-    local label=$1
+-    local out="$WORK/raw/kernels-$label.out"
+-    local tsv="$WORK/raw/kernels-$label.tsv"
+-    : >"$tsv"
++run_kernels() { # tag rep
++    local tag=$1 rep=$2 out="$WORK/raw/kernels-$1.out"
++    : >"$WORK/raw/kernels-$1.tsv"
+     (
+         cd "$ROOT"
+-        env CARGO_BUILD_JOBS="$JOBS" PFP2_MEASURE=1 PFP2_MEASURE_REP="${label#rep-}" \
+-            PFP2_MEASURE_OUT="$tsv" \
++        env -u OPENSSL_RS_PFP2_MEASURE_KERNEL CARGO_BUILD_JOBS="$JOBS" \
++            PFP2_MEASURE=1 PFP2_MEASURE_REP="$rep" \
++            PFP2_MEASURE_OUT="$WORK/raw/kernels-$1.tsv" \
+             cargo test --release --lib --offline \
+                 ec::p256::tests::pfp2_kernel_measurement -- --exact --nocapture
+     ) >"$out" 2>&1
+-    grep -q '^RESULT' "$out" || fail "$label: kernel measurement produced no RESULT line"
++    grep -q '^RESULT' "$out" || fail "$tag: kernel measurement produced no RESULT line"
+ }
+ 
+-# --- warm-up (excluded) ---------------------------------------------------
++# --- warm-up (excluded from every statistic) ---------------------------------
+ 
+ echo "=== warm-up (excluded) ==="
+-run_kernels warmup
+-run_dso candidate "$DSO_CAND" warmup
+-run_dso before "$DSO_BEFORE" warmup
++run_kernels warmup 0
++for arm in "${VARIANTS[@]}" authority; do
++    run_dso "$arm" warmup
++done
+ 
+-# --- measured repetitions -------------------------------------------------
++# --- measured repetitions ----------------------------------------------------
+ 
+ echo "=== measured repetitions ($REPS) ==="
+-while IFS=$'\t' read -r rep first second; do
+-    echo "--- repetition $rep: $first then $second"
+-    run_kernels "rep-$rep"
+-    run_dso "$first" "$( [ "$first" = candidate ] && echo "$DSO_CAND" || echo "$DSO_BEFORE" )" "rep-$rep"
+-    run_dso "$second" "$( [ "$second" = candidate ] && echo "$DSO_CAND" || echo "$DSO_BEFORE" )" "rep-$rep"
+-    diff -u <(grep '^CHECK ' "$WORK/raw/dso-rep-$rep-candidate.out" | sort) \
+-            <(grep '^CHECK ' "$WORK/raw/dso-rep-$rep-before.out" | sort) \
+-        >"$WORK/raw/dso-rep-$rep-checks.diff" \
+-        || fail "rep-$rep: CHECK lines differ between the arms"
++while IFS=$'\t' read -r rep first rotation; do
++    echo "--- repetition $rep: first=$first rotation=$rotation"
++    ordered=()
++    for k in 0 1 2 3 4; do
++        ordered+=("${VARIANTS[$(( (rotation + k) % ${#VARIANTS[@]} ))]}")
++    done
++    if [ "$first" = authority ]; then
++        run_dso authority "rep-$rep"
++        for arm in "${ordered[@]}"; do run_dso "$arm" "rep-$rep"; done
++    else
++        for arm in "${ordered[@]}"; do run_dso "$arm" "rep-$rep"; done
++        run_dso authority "rep-$rep"
++    fi
++    # Every arm's CHECK population must be non-empty and byte-identical to the
++    # authority's, for both workloads.
++    for arm in "${VARIANTS[@]}"; do
++        for wl in ecdsa mul; do
++            auth_out="$WORK/raw/dso-rep-$rep-authority-$wl.out"
++            cand_out="$WORK/raw/dso-rep-$rep-$arm-$wl.out"
++            grep -q '^CHECK ' "$cand_out" || fail "rep-$rep $arm $wl: empty CHECK population"
++            diff -u <(grep '^CHECK ' "$auth_out") \
++                    <(grep '^CHECK ' "$cand_out") \
++                >"$WORK/raw/dso-rep-$rep-$arm-$wl-checks.diff" \
++                || fail "rep-$rep $arm $wl: CHECK lines differ from the authority"
++        done
++    done
++    run_kernels "rep-$rep" "$rep"
+ done <"$WORK/raw/run-order.tsv"
+ 
+-# --- analysis -------------------------------------------------------------
++# --- allocation probe --------------------------------------------------------
++
++echo "=== allocation probe ==="
++for arm in default before; do run_alloc "$arm"; done
++
++# --- analysis ----------------------------------------------------------------
+ 
+ echo "=== analyse ==="
+ python3 "$ROOT/courts/performance-frontier/pfp2/analyse_pfp2.py" \
+@@ -247,4 +341,4 @@ python3 "$ROOT/courts/performance-frontier/pfp2/analyse_pfp2.py" \
+     >"$WORK/raw/analysis.stdout"
+ python3 -m json.tool "$WORK/results.json" >/dev/null
+ 
+-echo "PASS: PFP-2 performance campaign completed; results in $WORK/results.json"
++echo "PASS: PFP-2 campaign completed; results in $WORK/results.json"
+diff --git a/docs/ETP-CLAIM-ALGEBRA.md b/docs/ETP-CLAIM-ALGEBRA.md
+index adec745cd..5d4c30767 100644
+--- a/docs/ETP-CLAIM-ALGEBRA.md
++++ b/docs/ETP-CLAIM-ALGEBRA.md
+@@ -206,10 +206,46 @@ alias.
+ | `EG_DERIVED_PROPERTY_MISMATCH` | conversion changed the recorded ETP-0 property |
+ | `EG_ASSUMPTION_UNCHECKABLE` | an assumption has no independently checkable procedure |
+ | `EG_EXCLUSION_UNCHECKABLE` | an exclusion argument or procedure is absent or vacuous |
++| `EG_EXCLUSION_WITNESS_MISSING` | an exclusion has no witness record |
++| `EG_EXCLUSION_WITNESS_UNBOUND` | a witness does not name its obligation, candidate or procedure |
++| `EG_EXCLUSION_WITNESS_CANDIDATE` | a witness is bound to a candidate the claim does not name |
++| `EG_EXCLUSION_WITNESS_SELF_AUTHORED` | a witness reviewer is the claim author, or the claim names no author |
++| `EG_EXCLUSION_WITNESS_RESULT_ABSENT` | a witness result is not present, has no digest, or cannot be re-derived |
++| `EG_EXCLUSION_WITNESS_DIGEST` | a witness result's bytes do not match its recorded digest |
++| `EG_JSON_DUPLICATE_KEY` | a claim document repeats an object key |
++| `EG_JSON_NON_FINITE` | a claim document carries `NaN` or `Infinity` |
++| `EG_JSON_MALFORMED` | a claim document is not parseable JSON |
+ | `EG_MEASURE_AGGREGATION` | a measure does not declare aggregation forbidden |
+ | `EG_DUPLICATE_CLAIM_ID` | two claims share an id |
+ | `EG_AUTHORITY_MISSING_VERSION` | an OpenSSL authority claim names no version |
+ 
++### 4.2.1 Admitted exclusion witnesses
++
++An exclusion argument and a non-placeholder `checkable_by` establish only that an
++explanation was written. The exclusion is admitted only when it carries a
++`witness` record that binds:
++
++1. the **obligation identifier** the exclusion is about;
++2. the **candidate identity**, which must be one of the claim's declared source
++   identities;
++3. the **verification procedure**;
++4. an independently produced **result** with its own path, SHA-256 digest and
++   `S`/`E` digest identity, marked present; the tree check re-derives the digest;
++5. a **reviewer** whose declared role and identity differ from the claim
++   author's. A claim that uses an exclusion must declare an `author`, because
++   reviewer independence cannot otherwise be established.
++
++`propagate` applies the same structural admission: an unadmitted exclusion does not
++stop an obligation. The CLI validates the document — including re-deriving each
++witness result digest — before invoking propagation. The witness proves that a
++digest-bound result exists and that the declared reviewer is distinct; it does
++not prove organisational independence or that the procedure ran as named.
++
++All operations (`conjoin`, `invalidate`, `propagate`, `contradictions`) validate
++the whole document with the schema, laws and Git-bound digest check before
++answering. An invalid document is refused with the same rule identifiers as
++`validate`; no operation payload is produced from it.
++
+ ### 4.3 Tree check
+ 
+ With `--check` (the default when no `--no-tree-check` is given), every cited
+diff --git a/evidence/etp/claim.schema.json b/evidence/etp/claim.schema.json
+index 7749b35aa..a7d5e3803 100644
+--- a/evidence/etp/claim.schema.json
++++ b/evidence/etp/claim.schema.json
+@@ -209,6 +209,22 @@
+           "type": "string",
+           "pattern": "^[A-Z][A-Z0-9]*-CLM-[0-9]{3}$"
+         },
++        "author": {
++          "description": "Who authored the claim. Required only when the claim uses an exclusion, whose reviewer must be distinct.",
++          "type": "object",
++          "additionalProperties": false,
++          "required": ["role", "identity"],
++          "properties": {
++            "role": {
++              "type": "string",
++              "minLength": 1
++            },
++            "identity": {
++              "type": "string",
++              "minLength": 1
++            }
++          }
++        },
+         "derived_from": {
+           "$ref": "#/$defs/derived_claim"
+         },
+@@ -957,7 +973,8 @@
+       "required": [
+         "claim",
+         "argument",
+-        "checkable_by"
++        "checkable_by",
++        "witness"
+       ],
+       "properties": {
+         "claim": {
+@@ -971,6 +988,86 @@
+         "checkable_by": {
+           "type": "string",
+           "minLength": 1
++        },
++        "witness": {
++          "$ref": "#/$defs/exclusion_witness"
++        }
++      }
++    },
++    "exclusion_witness": {
++      "description": "An admitted record that an exclusion was verified: bound to one obligation, one candidate, one procedure, one present result with its own digest, and a reviewer distinct from the claim author.",
++      "type": "object",
++      "additionalProperties": false,
++      "required": [
++        "obligation",
++        "candidate",
++        "procedure",
++        "result",
++        "reviewer"
++      ],
++      "properties": {
++        "obligation": {
++          "type": "string",
++          "minLength": 1
++        },
++        "candidate": {
++          "type": "string",
++          "minLength": 1
++        },
++        "procedure": {
++          "type": "string",
++          "minLength": 1
++        },
++        "result": {
++          "type": "object",
++          "additionalProperties": false,
++          "required": [
++            "path",
++            "sha256",
++            "digest_identity",
++            "present",
++            "producer"
++          ],
++          "properties": {
++            "path": {
++              "type": "string",
++              "minLength": 1
++            },
++            "sha256": {
++              "$ref": "#/$defs/sha256"
++            },
++            "digest_identity": {
++              "enum": [
++                "S",
++                "E"
++              ]
++            },
++            "present": {
++              "type": "boolean"
++            },
++            "producer": {
++              "type": "string",
++              "minLength": 1
++            }
++          }
++        },
++        "reviewer": {
++          "type": "object",
++          "additionalProperties": false,
++          "required": [
++            "role",
++            "identity"
++          ],
++          "properties": {
++            "role": {
++              "type": "string",
++              "minLength": 1
++            },
++            "identity": {
++              "type": "string",
++              "minLength": 1
++            }
++          }
+         }
+       }
+     },
+diff --git a/src/ec/mult.rs b/src/ec/mult.rs
+index 3a7489047..06591342d 100644
+--- a/src/ec/mult.rs
++++ b/src/ec/mult.rs
+@@ -647,6 +647,11 @@ unsafe fn p256_ladder_run<K: FieldKernel<FieldDomain>>(
+     // SAFETY: the enclosing function's `# Safety` section is the contract for
+     // every pointer below, and every coordinate read is a live `BIGNUM`.
+     unsafe {
++        // Test-only dispatch observation: records which kernel the production
++        // ladder actually executed. Compiled out of every non-test build.
++        #[cfg(test)]
++        p256::dispatch_probe::record(K::ID);
++
+         let Some(ca) = p256::limbs_from_slice(&(*(*group).a).d) else {
+             return 0;
+         };
+@@ -1732,4 +1737,75 @@ mod pfp2_tests {
+             EC_GROUP_free(group);
+         }
+     }
++
++    /// For every kernel, a P-256 signature signs and verifies through the
++    /// production entry points, and the public key derived by the engine
++    /// satisfies the curve's defining equation. Each kernel is forced, so the
++    /// sign path (which performs `k·G` through the ladder) really is the one
++    /// under test.
++    #[test]
++    fn every_kernel_signs_and_verifies_a_p256_signature() {
++        use crate::ec::ecdsa::{ECDSA_SIG_free, ECDSA_do_sign, ECDSA_do_verify};
++        use crate::ec::key::{
++            EC_KEY_free, EC_KEY_get0_group, EC_KEY_new_by_curve_name, EC_KEY_set_private_key,
++            EC_KEY_set_public_key,
++        };
++        use crate::ec::lib::EC_POINT_is_on_curve;
++
++        let digest: [u8; 32] = core::array::from_fn(|i| (0x5a ^ i) as u8);
++        let private = BigNum {
++            d: vec![
++                0x0f1e_2d3c_4b5a_6978,
++                0x8796_a5b4_c3d2_e1f0,
++                0x1122_3344_5566_7788,
++                0x09aa_bbcc_ddee_ff00,
++            ],
++            neg: 0,
++            flags: 0,
++        };
++
++        let mut kernels = vec![KernelId::Mont, KernelId::Solinas];
++        if Arch::new().is_some() {
++            kernels.push(KernelId::Arch);
++        }
++
++        // SAFETY: every object is created, used and released here.
++        unsafe {
++            let key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
++            assert!(!key.is_null());
++            let group = EC_KEY_get0_group(key);
++            let ctx = BN_CTX_new();
++            let pubkey = EC_POINT_new(group);
++            assert!(!ctx.is_null() && !pubkey.is_null());
++
++            assert_eq!(EC_KEY_set_private_key(key, &private), 1);
++            assert_eq!(
++                EC_POINT_mul(group, pubkey, &private, ptr::null(), ptr::null_mut(), ctx),
++                1,
++                "public key derivation"
++            );
++            assert_eq!(
++                EC_POINT_is_on_curve(group, pubkey, ctx),
++                1,
++                "the derived public key satisfies y^2 = x^3 - 3x + b"
++            );
++            assert_eq!(EC_KEY_set_public_key(key, pubkey), 1);
++
++            for id in kernels {
++                let _guard = test_force::Guard::new(id);
++                let sig = ECDSA_do_sign(digest.as_ptr(), digest.len() as c_int, key);
++                assert!(!sig.is_null(), "{id:?}: ECDSA_do_sign");
++                assert_eq!(
++                    ECDSA_do_verify(digest.as_ptr(), digest.len() as c_int, sig, key),
++                    1,
++                    "{id:?}: ECDSA_do_verify"
++                );
++                ECDSA_SIG_free(sig);
++            }
++
++            EC_POINT_free(pubkey);
++            BN_CTX_free(ctx);
++            EC_KEY_free(key);
++        }
++    }
+ }
+diff --git a/src/ec/p256.rs b/src/ec/p256.rs
+index 9b8382e63..a521771cb 100644
+--- a/src/ec/p256.rs
++++ b/src/ec/p256.rs
+@@ -16,7 +16,7 @@
+ //! |---|---|---|---|
+ //! | [`Mont`] | Montgomery, `R = 2^256` | schoolbook | REDC |
+ //! | [`Solinas`] | ordinary canonical | schoolbook | nine-fold Solinas |
+-//! | [`Arch`] | ordinary canonical | `mulx`/`adcx` (x86-64), `u128` (AArch64) | nine-fold Solinas |
++//! | [`Arch`] | Montgomery, `R = 2^256` | `mulx`/`adcx` (x86-64), `u128` (AArch64) | REDC |
+ //!
+ //! [`P256Scalar`] uses [`Mont`] over the order domain; the order has no Solinas
+ //! shape, and inventing one would be a second unproved reduction. The field and
+@@ -46,24 +46,25 @@
+ //!
+ //! ## Kernel selection
+ //!
+-//! [`select_field_kernel`] chooses once per scalar multiplication from public
+-//! data only. The modulus identity is fixed by this engine (P-256), and the CPU
+-//! capability bits are the authority's `nistz256` predicate; no value is ever
+-//! read. The measured comparison selects [`Mont`] as the default on the admitted
+-//! venue, where it beat both [`Solinas`] and [`Arch`] on `mul`, `sqr`, `reduce`
+-//! and the end-to-end ladder. [`Arch`] is admissible only after [`Arch::new`] has
+-//! verified BMI2 and ADX, so the intrinsic call's target-feature precondition is
+-//! established by construction; it is measured but not selected, because a
+-//! selection that publishes a measured regression would violate the programme's
+-//! §11 admission rule. Evidence does not inherit across targets: changing the
+-//! policy for another target requires that target's own measurement.
++//! [`select_field_kernel`] chooses once per process from public data only. The
++//! modulus identity is fixed by this engine (P-256), and the CPU capability word
++//! is the very word the authority's `nistz256` predicate reads, after applying
++//! the `OPENSSL_ia32cap` environment mask with `OPENSSL_cpuid_setup`'s semantics
++//! ([`ia32cap_word2`], [`masked_extended_caps`]). No value is ever read. When the
++//! masked word has BMI2 and ADX set, the accelerated [`Arch`] arm is selected and
++//! the intrinsic call's target-feature precondition is established by
++//! construction; otherwise the portable [`Mont`] arm is selected. That is the
++//! same accelerated/portable partition the authority makes for the same mask.
++//! [`Solinas`] stays admissible and is measured, but it is not the policy default
++//! on any target: a reduction that is slower than REDC must not be selected, and
++//! the programme's §11 admission rule forbids publishing a measured regression.
++//! Evidence does not inherit across targets: changing the policy for another
++//! target requires that target's own measurement.
+ //!
+-//! **Recorded divergence.** The authority masks its capability words by the
+-//! `OPENSSL_ia32cap` environment variable in `OPENSSL_cpuid_setup`. This crate
+-//! reads the same CPUID bits directly and does not model that mask; the
+-//! divergence is recorded by `RT-CPU-CAPABILITY` and is not introduced here. On
+-//! a masked host the two sides may therefore select different arms, which is a
+-//! selection difference, not an arithmetic one.
++//! **Recording scope.** Other subsystems still read CPUID without modelling the
++//! `OPENSSL_ia32cap` mask, which `RT-CPU-CAPABILITY` records. This module models
++//! the mask at its own selection point only; it narrows that divergence for
++//! P-256 and claims nothing for the other readers.
+ //!
+ //! ## Bounds, per kernel
+ //!
+@@ -90,13 +91,15 @@
+ //! which the `u128` accumulator holds exactly; the carry-out of the propagation
+ //! loop is bounded by the 9-limb accumulator's spare top limb.
+ //!
+-//! The architecture kernel uses the same Solinas reduction, so only its multiply
+-//! needs a bound. On x86-64 `multiply` composes a 64×64→128 product with two
+-//! `addcarry` chains; the column total is the ordinary schoolbook sum, which is
+-//! below `2^512`, and the high word `hi + c1 + c2` cannot overflow because that
+-//! total is below `2^128` for each column. On AArch64 the `u128` product is the
+-//! same arithmetic the portable path uses, lowered by the compiler to `mul` and
+-//! `umulh`.
++//! The architecture kernel uses the same Montgomery reduction as [`Mont`], so its
++//! reduction bound is the one above. Only its multiply needs a bound. On x86-64
++//! `wide_mul_x86` composes a 64×64→128 product with two `addcarry` chains; the
++//! column total is `a·b + t + carry` with each term below `2^64`, hence below
++//! `2^128 - 1`, so the high word `hi + c1 + c2` cannot overflow and the two final
++//! `addcarry` carries are zero. Because `a, b < p < R`, the product is below
++//! `p·R`, so one masked REDC subtraction is complete, exactly as for [`Mont`]. On
++//! AArch64 the `u128` product is the same arithmetic the portable path uses,
++//! lowered by the compiler to `mul` and `umulh`.
+ //!
+ //! ## What this module is not
+ //!
+@@ -210,9 +213,11 @@ impl Drop for SecretLimbs4 {
+         #[cfg(test)]
+         let armed = drop_probe::armed();
+         #[cfg(test)]
+-        let nonzero_before = armed
+-            .then(|| self.0.iter().map(|&v| usize::from(v != 0)).sum::<usize>())
+-            .unwrap_or(0);
++        let nonzero_before = if armed {
++            self.0.iter().map(|&v| usize::from(v != 0)).sum::<usize>()
++        } else {
++            0
++        };
+         // SAFETY: `self.0` is a live array of four `u64`, i.e. 32 writable bytes
+         // for the duration of `Drop`, and `drop` has exclusive access to it.
+         unsafe { cleanse(self.0.as_mut_ptr().cast::<u8>(), LIMBS * 8) }
+@@ -863,19 +868,96 @@ impl ArchProof {
+     }
+ }
+ 
++/// The authority's `nistz256` capability predicate: BMI2 (bit 8) and ADX
++/// (bit 19) of `OPENSSL_ia32cap_P[2]`, which the authority tests as
++/// `(OPENSSL_ia32cap_P[2] & 0x80100) == 0x80100`.
++const NISTZ256_CAPABLE: u32 = 0x8_0100;
++
++/// `OPENSSL_ia32cap_P[2]` — the extended capability word the authority's
++/// `nistz256` predicate reads — after the `OPENSSL_ia32cap` mask.
++///
++/// On x86-64 the word starts as `CPUID.(EAX=7,ECX=0).EBX`. The environment
++/// variable is applied by [`masked_extended_caps`] with the semantics of
++/// `OPENSSL_cpuid_setup`
++/// (`forensics/authorities/src/openssl-3.6.4/crypto/cpuid.c:106-155`): the
++/// second colon-separated 64-bit word controls `OPENSSL_ia32cap_P[2..4]`. The
++/// CPUID read and the environment read happen once per process, so the answer
++/// cannot change between two operations and is never derived from a residual
++/// value.
++fn ia32cap_word2() -> u32 {
++    static WORD: std::sync::OnceLock<u32> = std::sync::OnceLock::new();
++    *WORD.get_or_init(|| {
++        #[cfg(target_arch = "x86_64")]
++        {
++            // SAFETY: `__cpuid_count` is a pure register read of a leaf this CPU
++            // defines; it has no memory or privileged-state precondition.
++            let raw = core::arch::x86_64::__cpuid_count(7, 0).ebx;
++            let env = std::env::var_os("OPENSSL_ia32cap");
++            let env = env.as_deref().and_then(|s| s.to_str());
++            masked_extended_caps(raw, env)
++        }
++        #[cfg(not(target_arch = "x86_64"))]
++        {
++            // No extended capability word exists on this target; the portable
++            // arm is the only arm.
++            0
++        }
++    })
++}
++
++/// Apply the `OPENSSL_ia32cap` environment mask to the extended capability word.
++///
++/// `raw` is `CPUID.(EAX=7,ECX=0).EBX`. `OPENSSL_cpuid_setup` splits the variable
++/// on `:`; the first word controls `OPENSSL_ia32cap_P[0..2]` and the second the
++/// extended pair `P[2..4]`. A word beginning with `~` clears the named bits; any
++/// other word assigns them; a missing word (no second delimiter, or an empty
++/// remainder) zeroes the pair; and an empty word (`::`) leaves it unchanged.
++/// Only the low 32 bits of the second word reach `P[2]`. Decimal and `0x`
++/// hexadecimal words are accepted with `strtoull`'s prefix rules; anything else
++/// parses as zero.
++fn masked_extended_caps(raw: u32, env: Option<&str>) -> u32 {
++    let Some(env) = env else {
++        return raw;
++    };
++    let Some(rest) = env.split_once(':').map(|(_, rest)| rest) else {
++        // No second word: the extended pair is zeroed.
++        return 0;
++    };
++    if rest.is_empty() {
++        return 0;
++    }
++    if rest.starts_with(':') {
++        // `::` — the word is skipped and the pair is left unchanged.
++        return raw;
++    }
++    let word = rest.split(':').next().unwrap_or("");
++    let (clear, digits) = match word.strip_prefix('~') {
++        Some(digits) => (true, digits),
++        None => (false, word),
++    };
++    let value = parse_cap_word(digits) as u32;
++    if clear {
++        raw & !value
++    } else {
++        value
++    }
++}
++
++/// `strtoull`'s numeric prefix for the forms the capability variable documents.
++fn parse_cap_word(s: &str) -> u64 {
++    let s = s.trim_start();
++    if let Some(hex) = s.strip_prefix("0x").or_else(|| s.strip_prefix("0X")) {
++        u64::from_str_radix(hex, 16).unwrap_or(0)
++    } else {
++        s.parse::<u64>().unwrap_or(0)
++    }
++}
++
+ /// Whether the architecture multiply is available on this target and CPU.
+ fn arch_supported() -> bool {
+     #[cfg(target_arch = "x86_64")]
+     {
+-        if !std::is_x86_feature_detected!("bmi2") || !std::is_x86_feature_detected!("adx") {
+-            return false;
+-        }
+-        // The authority's `nistz256` predicate is
+-        // `OPENSSL_ia32cap_P[2] & 0x80100 == 0x80100`: BMI2 (bit 8) and ADX
+-        // (bit 19) of `CPUID.(EAX=7,ECX=0).EBX`. This crate reads those bits
+-        // directly; the `OPENSSL_ia32cap` environment mask is not modelled
+-        // (recorded divergence `RT-CPU-CAPABILITY`).
+-        core::arch::x86_64::__cpuid_count(7, 0).ebx & 0x8_0100 == 0x8_0100
++        ia32cap_word2() & NISTZ256_CAPABLE == NISTZ256_CAPABLE
+     }
+     #[cfg(target_arch = "aarch64")]
+     {
+@@ -889,10 +971,12 @@ fn arch_supported() -> bool {
+     }
+ }
+ 
+-/// Architecture-tuned multiply: `mulx`/`adcx` on x86-64, `u128` on AArch64.
++/// Architecture-tuned Montgomery arithmetic: `mulx`/`adcx` on x86-64, `u128` on
++/// AArch64.
+ ///
+-/// The reduction is the same fixed-sequence Solinas fold as [`Solinas`], so the
+-/// measured difference between the two kernels is the multiply alone.
++/// The representation and reduction are [`Mont`]'s; only the wide multiply is
++/// architecture-specialised, so the measured difference between [`Mont`] and
++/// [`Arch`] is the multiply alone.
+ pub(crate) struct Arch {
+     _proof: ArchProof,
+ }
+@@ -908,11 +992,13 @@ impl Arch {
+         #[cfg(target_arch = "x86_64")]
+         {
+             // SAFETY: `self` can only be constructed by `Arch::new`, which called
+-            // `ArchProof::new`; that returned `Some` only after `arch_supported`
+-            // verified BMI2 and ADX on this CPU. `wide_mul_x86` has exactly those
+-            // two target features, so the call cannot execute an unsupported
+-            // instruction. The pointer arguments are two live four-limb arrays
+-            // and one live nine-limb accumulator owned by this call.
++            // `ArchProof::new`; that returned `Some` only when
++            // `ia32cap_word2` had the authority's masked BMI2+ADX bits set on this
++            // CPU, so no environment mask can hide an unsupported instruction.
++            // `wide_mul_x86` has exactly those two target features, so the call
++            // cannot execute an unsupported instruction. The pointer arguments are
++            // two live four-limb arrays and one live nine-limb accumulator owned
++            // by this call.
+             unsafe { wide_mul_x86(a, b, out) };
+         }
+         #[cfg(not(target_arch = "x86_64"))]
+@@ -928,28 +1014,31 @@ impl FieldKernel<FieldDomain> for Arch {
+     const ID: KernelId = KernelId::Arch;
+ 
+     fn from_limbs(&self, out: &mut [Limb; LIMBS], ordinary: &[Limb; LIMBS]) {
++        // `x < R` and `R^2 mod p < p`, so the product is below `R·p` and one
++        // masked subtraction is complete.
+         let mut acc = SecretWords::<9>::zero();
+-        acc.0[..LIMBS].copy_from_slice(ordinary);
+-        let mut lanes = SecretLanes::zero();
+-        solinas_reduce_into(out, &mut acc.0, &mut lanes);
++        self.wide_mul_into(&mut acc.0, ordinary, &FIELD_R2);
++        mont_reduce_into(out, &mut acc.0, &FIELD_MODULUS, FIELD_N0, 1);
+     }
+ 
+     fn to_limbs(&self, out: &mut [Limb; LIMBS], repr: &[Limb; LIMBS]) {
+-        out.copy_from_slice(repr);
++        let mut acc = SecretWords::<9>::zero();
++        acc.0[..LIMBS].copy_from_slice(repr);
++        mont_reduce_into(out, &mut acc.0, &FIELD_MODULUS, FIELD_N0, 1);
+     }
+ 
+     fn mul(&self, out: &mut [Limb; LIMBS], a: &[Limb; LIMBS], b: &[Limb; LIMBS]) {
+         let mut acc = SecretWords::<9>::zero();
+         self.wide_mul_into(&mut acc.0, a, b);
+-        let mut lanes = SecretLanes::zero();
+-        solinas_reduce_into(out, &mut acc.0, &mut lanes);
++        mont_reduce_into(out, &mut acc.0, &FIELD_MODULUS, FIELD_N0, 1);
+     }
+ 
+     fn sqr(&self, out: &mut [Limb; LIMBS], a: &[Limb; LIMBS]) {
++        // The full product, exact for a long run of identical limbs (PFP-6
++        // compares symmetry-expanded schedules).
+         let mut acc = SecretWords::<9>::zero();
+         self.wide_mul_into(&mut acc.0, a, a);
+-        let mut lanes = SecretLanes::zero();
+-        solinas_reduce_into(out, &mut acc.0, &mut lanes);
++        mont_reduce_into(out, &mut acc.0, &FIELD_MODULUS, FIELD_N0, 1);
+     }
+ 
+     fn add(&self, out: &mut [Limb; LIMBS], a: &[Limb; LIMBS], b: &[Limb; LIMBS]) {
+@@ -961,10 +1050,10 @@ impl FieldKernel<FieldDomain> for Arch {
+     }
+ 
+     fn reduce(&self, out: &mut [Limb; LIMBS], wide: &[Limb; 8]) {
++        // REDC of an arbitrary 512-bit value is below `2^256 + p < 3p`.
+         let mut acc = SecretWords::<9>::zero();
+         acc.0[..8].copy_from_slice(wide);
+-        let mut lanes = SecretLanes::zero();
+-        solinas_reduce_into(out, &mut acc.0, &mut lanes);
++        mont_reduce_into(out, &mut acc.0, &FIELD_MODULUS, FIELD_N0, 2);
+     }
+ 
+     fn select(&self, out: &mut [Limb; LIMBS], mask: Limb, a: &[Limb; LIMBS], b: &[Limb; LIMBS]) {
+@@ -1019,23 +1108,41 @@ unsafe fn wide_mul_x86(a: &[Limb; LIMBS], b: &[Limb; LIMBS], out: &mut [Limb; 9]
+ 
+ /// The kernel selected once for this process.
+ pub(crate) enum SelectedFieldKernel {
+-    #[allow(dead_code)] // measured and available; selected only on a non-arch target
+     Mont(Mont<FieldDomain>),
+     Solinas(Solinas),
+     Arch(Arch),
+ }
+ 
++/// A build-time measurement control.
++///
++/// The PFP-2 campaign builds one DSO per kernel with
++/// `OPENSSL_RS_PFP2_MEASURE_KERNEL` set at compile time; every ordinary build
++/// leaves it unset, so [`policy_kernel_id`] is the only shipping selection. It is
++/// a compile-time constant, not a runtime environment read, so a running process
++/// cannot change its kernel and no secret value reaches the selector.
++fn measurement_kernel() -> Option<KernelId> {
++    match option_env!("OPENSSL_RS_PFP2_MEASURE_KERNEL") {
++        Some("MONT") => Some(KernelId::Mont),
++        Some("SOLINAS") => Some(KernelId::Solinas),
++        Some("ARCH") => Some(KernelId::Arch),
++        _ => None,
++    }
++}
++
+ /// Select the field kernel from public data.
+ ///
+-/// The modulus is fixed by this engine's construction (P-256). The default is
+-/// [`Mont`]: the PFP-2 measurement (`evidence/performance-frontier/campaigns/PFP-2/`)
+-/// found it the fastest of the three admissible kernels on the admitted venue for
+-/// `mul`, `sqr`, `reduce` and the end-to-end ladder, so selecting another would
+-/// publish a measured regression. [`Arch`] remains admissible only when
+-/// [`Arch::new`] has verified BMI2 and ADX — that predicate is the kernel's
+-/// construction precondition, never a value — and is retained as a measured arm.
+-/// [`Solinas`] is the portable arm with the same evidence. The answer is cached in
+-/// an atomic, so selection happens once per process and never per operation.
++/// The modulus is fixed by this engine's construction (P-256), so the only
++/// public input is the CPU capability word. The accelerated [`Arch`] arm is
++/// selected exactly when the masked word carries the authority's `nistz256`
++/// predicate (BMI2 and ADX), and the portable [`Mont`] arm otherwise — the same
++/// accelerated/portable partition the authority makes for the same
++/// `OPENSSL_ia32cap` mask. [`Arch`] is constructible only after [`Arch::new`] has
++/// verified that predicate, so the intrinsic call's target-feature precondition
++/// is established by construction and never by a value. [`Solinas`] stays
++/// admissible and measured but is not the policy default: its fold was slower
++/// than REDC on the admitted venue, and selecting it would publish a measured
++/// regression. The answer is cached in an atomic, so selection happens once per
++/// process and never per operation.
+ pub(crate) fn select_field_kernel() -> SelectedFieldKernel {
+     #[cfg(test)]
+     if let Some(id) = test_force::forced() {
+@@ -1044,14 +1151,14 @@ pub(crate) fn select_field_kernel() -> SelectedFieldKernel {
+             KernelId::Solinas => SelectedFieldKernel::Solinas(Solinas),
+             KernelId::Arch => match Arch::new() {
+                 Some(k) => SelectedFieldKernel::Arch(k),
+-                None => SelectedFieldKernel::Solinas(Solinas),
++                None => SelectedFieldKernel::Mont(Mont::default()),
+             },
+         };
+     }
+     match default_kernel_id() {
+         KernelId::Arch => match Arch::new() {
+             Some(k) => SelectedFieldKernel::Arch(k),
+-            None => SelectedFieldKernel::Solinas(Solinas),
++            None => SelectedFieldKernel::Mont(Mont::default()),
+         },
+         KernelId::Mont => SelectedFieldKernel::Mont(Mont::default()),
+         KernelId::Solinas => SelectedFieldKernel::Solinas(Solinas),
+@@ -1060,21 +1167,40 @@ pub(crate) fn select_field_kernel() -> SelectedFieldKernel {
+ 
+ /// The process-wide default, computed once.
+ ///
+-/// The measured result, not an architectural preference, decides this. ARCH was
+-/// slower than MONT on every measured operation and on the ladder, so the
+-/// capability-gated arm is not the default; its admission check stays where it
+-/// belongs, in [`Arch::new`].
++/// This is a policy, not an assertion: the accelerated arm is chosen when the
++/// masked capability predicate admits it (the authority's own condition for
++/// `nistz256`), and the portable arm otherwise. The kernel comparison in
++/// `evidence/performance-frontier/campaigns/PFP-2/` reports both arms so the
++/// choice is challengeable rather than assumed.
+ fn default_kernel_id() -> KernelId {
+     static SELECTED: AtomicU8 = AtomicU8::new(u8::MAX);
+     let cached = SELECTED.load(Ordering::Relaxed);
+     if cached != u8::MAX {
+         return kernel_from_u8(cached);
+     }
+-    let id = KernelId::Mont;
++    let id = policy_kernel_id();
+     SELECTED.store(kernel_to_u8(id), Ordering::Relaxed);
+     id
+ }
+ 
++/// The selection policy: the build-time measurement control if set, else the
++/// masked capability predicate.
++fn policy_kernel_id() -> KernelId {
++    if let Some(id) = measurement_kernel() {
++        return id;
++    }
++    if arch_supported() {
++        KernelId::Arch
++    } else {
++        KernelId::Mont
++    }
++}
++
++/// The authority's `nistz256` predicate on an already-masked capability word.
++fn nistz256_eligible(word2: u32) -> bool {
++    word2 & NISTZ256_CAPABLE == NISTZ256_CAPABLE
++}
++
+ fn kernel_to_u8(id: KernelId) -> u8 {
+     match id {
+         KernelId::Mont => 0,
+@@ -1130,6 +1256,49 @@ pub(crate) mod test_force {
+     }
+ }
+ 
++/// Test-only observation that a forced kernel actually reached the ladder.
++///
++/// Selection returning a variant is not dispatch. The production ladder records
++/// the kernel it ran here, so a test can force each kernel, call the production
++/// entry point, and observe that the corresponding arm executed. The counter is
++/// compiled out of every non-test build.
++#[cfg(test)]
++pub(crate) mod dispatch_probe {
++    use core::cell::Cell;
++
++    use super::KernelId;
++
++    thread_local! {
++        static COUNTS: Cell<[u64; 3]> = const { Cell::new([0; 3]) };
++    }
++
++    fn index(id: KernelId) -> usize {
++        match id {
++            KernelId::Mont => 0,
++            KernelId::Solinas => 1,
++            KernelId::Arch => 2,
++        }
++    }
++
++    pub(crate) fn record(id: KernelId) {
++        COUNTS.with(|counts| {
++            let mut all = counts.get();
++            all[index(id)] += 1;
++            counts.set(all);
++        });
++    }
++
++    pub(crate) fn take(id: KernelId) -> u64 {
++        COUNTS.with(|counts| {
++            let mut all = counts.get();
++            let value = all[index(id)];
++            all[index(id)] = 0;
++            counts.set(all);
++            value
++        })
++    }
++}
++
+ // ---------------------------------------------------------------------------
+ // Representation types
+ // ---------------------------------------------------------------------------
+diff --git a/src/ec/p256/tests.rs b/src/ec/p256/tests.rs
+index 2e18e555a..0594f7d61 100644
+--- a/src/ec/p256/tests.rs
++++ b/src/ec/p256/tests.rs
+@@ -391,9 +391,18 @@ fn every_reduction_matches_the_generic_reduction() {
+         );
+ 
+         if let Some(arch) = arch.as_ref() {
+-            let mut got = [0u64; LIMBS];
+-            arch.reduce(&mut got, &padded);
+-            assert_eq!(as_vec(&got), expected, "arch reduce");
++            // ARCH now shares MONT's representation, so its raw reduction is
++            // `wide·R^-1` and is observed through `to_limbs` the same way.
++            let mut reduced = [0u64; LIMBS];
++            arch.reduce(&mut reduced, &padded);
++            assert_canonical(&reduced, &FIELD_MODULUS, "arch reduce");
++            let mut ordinary = [0u64; LIMBS];
++            arch.to_limbs(&mut ordinary, &reduced);
++            assert_eq!(
++                as_vec(&ordinary),
++                oracle_mul(&to_array4(&expected), &r_inverse_squared, &p),
++                "arch reduce"
++            );
+         }
+         checked += 1;
+     }
+@@ -805,14 +814,25 @@ fn the_engine_allocates_nothing() {
+ // Selection
+ // ---------------------------------------------------------------------------
+ 
+-/// Selection is a function of the public modulus identity and the measured
+-/// kernel comparison, never of a value; the test-only override is thread-local
+-/// and restores itself.
++/// Selection is a function of the public modulus identity and the masked CPU
++/// capability word, never of a value; the test-only override is thread-local and
++/// restores itself.
+ #[test]
+ fn kernel_selection_is_from_public_data_only() {
+-    assert!(
+-        matches!(select_field_kernel(), SelectedFieldKernel::Mont(_)),
+-        "the measured policy selects MONT"
++    let expected = if nistz256_eligible(ia32cap_word2()) {
++        "ARCH"
++    } else {
++        "MONT"
++    };
++    let selected = select_field_kernel();
++    assert_eq!(
++        match selected {
++            SelectedFieldKernel::Mont(_) => "MONT",
++            SelectedFieldKernel::Solinas(_) => "SOLINAS",
++            SelectedFieldKernel::Arch(_) => "ARCH",
++        },
++        expected,
++        "the default follows the masked nistz256 predicate"
+     );
+ 
+     for id in [KernelId::Mont, KernelId::Solinas] {
+@@ -832,6 +852,131 @@ fn kernel_selection_is_from_public_data_only() {
+     assert_eq!(FIELD_MODULUS[3], 0xFFFF_FFFF_0000_0001u64);
+ }
+ 
++/// The `OPENSSL_ia32cap` mask has the authority's `OPENSSL_cpuid_setup`
++/// semantics for the extended word, and the same mask produces the same
++/// accelerated/portable arm decision.
++#[test]
++fn ia32cap_mask_matches_the_authority_semantics() {
++    const BMI2: u32 = 1 << 8;
++    const ADX: u32 = 1 << 19;
++    let both = BMI2 | ADX;
++    let raw = both | (1 << 5);
++
++    // No variable: the raw CPUID word.
++    assert_eq!(masked_extended_caps(raw, None), raw);
++    // A single word (no second delimiter) zeroes the extended pair.
++    assert_eq!(masked_extended_caps(raw, Some("0x1234")), 0);
++    assert_eq!(masked_extended_caps(raw, Some("~0x100")), 0);
++    assert_eq!(masked_extended_caps(raw, Some("")), 0);
++    // The second word assigns or clears, per `~`.
++    assert_eq!(masked_extended_caps(raw, Some(":0x1234")), 0x1234);
++    assert_eq!(masked_extended_caps(raw, Some(":~0x80000")), raw & !ADX);
++    assert_eq!(masked_extended_caps(raw, Some(":~0x80100")), raw & !both);
++    assert_eq!(masked_extended_caps(raw, Some(":~0")), raw);
++    // `::` skips the word and leaves the pair unchanged.
++    assert_eq!(masked_extended_caps(raw, Some("::")), raw);
++    // An empty second word zeroes the pair.
++    assert_eq!(masked_extended_caps(raw, Some(":")), 0);
++
++    // The arm decision is the authority's predicate on the masked word.
++    assert!(nistz256_eligible(masked_extended_caps(raw, None)));
++    assert!(nistz256_eligible(masked_extended_caps(raw, Some("::"))));
++    assert!(!nistz256_eligible(masked_extended_caps(
++        raw,
++        Some(":~0x80000")
++    )));
++    assert!(!nistz256_eligible(masked_extended_caps(
++        raw,
++        Some(":~0x100")
++    )));
++    assert!(!nistz256_eligible(masked_extended_caps(
++        raw,
++        Some(":0x100")
++    )));
++}
++
++/// A forced kernel is not merely selectable: the production ladder executes it.
++/// Each forced arm must advance only its own dispatch counter.
++#[test]
++fn selection_dispatches_the_forced_kernel() {
++    use crate::bn::bignum::BigNum;
++    use crate::bn::ctx::{BN_CTX_free, BN_CTX_new};
++    use crate::ec::curve::EC_GROUP_new_by_curve_name;
++    use crate::ec::lib::{EC_GROUP_free, EC_POINT_free, EC_POINT_mul, EC_POINT_new};
++    use crate::runtime::obj::NID_X9_62_prime256v1;
++
++    let scalar = BigNum {
++        d: vec![0x0f1e_2d3c_4b5a_6978, 0x1234_5678_9abc_def0],
++        neg: 0,
++        flags: 0,
++    };
++
++    // SAFETY: every object is created, used and released in this function.
++    unsafe {
++        let group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
++        assert!(!group.is_null());
++        let ctx = BN_CTX_new();
++        assert!(!ctx.is_null());
++        let r = EC_POINT_new(group);
++        assert!(!r.is_null());
++
++        for id in [KernelId::Mont, KernelId::Solinas] {
++            for counter in [KernelId::Mont, KernelId::Solinas, KernelId::Arch] {
++                let _ = dispatch_probe::take(counter);
++            }
++            {
++                let _guard = test_force::Guard::new(id);
++                assert_eq!(
++                    EC_POINT_mul(
++                        group,
++                        r,
++                        &scalar,
++                        core::ptr::null(),
++                        core::ptr::null_mut(),
++                        ctx
++                    ),
++                    1,
++                    "{id:?}: scalar multiplication"
++                );
++            }
++            assert_eq!(dispatch_probe::take(id), 1, "{id:?} did not run");
++            for other in [KernelId::Mont, KernelId::Solinas, KernelId::Arch] {
++                if other != id {
++                    assert_eq!(dispatch_probe::take(other), 0, "{id:?} ran {other:?}");
++                }
++            }
++        }
++
++        if Arch::new().is_some() {
++            for counter in [KernelId::Mont, KernelId::Solinas, KernelId::Arch] {
++                let _ = dispatch_probe::take(counter);
++            }
++            {
++                let _guard = test_force::Guard::new(KernelId::Arch);
++                assert_eq!(
++                    EC_POINT_mul(
++                        group,
++                        r,
++                        &scalar,
++                        core::ptr::null(),
++                        core::ptr::null_mut(),
++                        ctx
++                    ),
++                    1,
++                    "ARCH: scalar multiplication"
++                );
++            }
++            assert_eq!(dispatch_probe::take(KernelId::Arch), 1, "ARCH did not run");
++            assert_eq!(dispatch_probe::take(KernelId::Mont), 0);
++            assert_eq!(dispatch_probe::take(KernelId::Solinas), 0);
++        }
++
++        EC_POINT_free(r);
++        BN_CTX_free(ctx);
++        EC_GROUP_free(group);
++    }
++}
++
+ // ---------------------------------------------------------------------------
+ // Measurement harness
+ // ---------------------------------------------------------------------------

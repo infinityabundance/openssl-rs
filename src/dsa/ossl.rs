@@ -1052,22 +1052,43 @@ mod tests {
     use crate::dsa::object::{DSA_free, DSA_new, DSA_set_method};
 
     /// `DSA_set_method` runs the outgoing `finish`, and a later `DSA_free` runs it again. The
-    /// first pass must clear the cache so the second cannot release the same context twice.
+    /// first pass must clear the cache so the second cannot release the same context twice, and
+    /// the release must cleanse the cached modulus.
     #[test]
     fn the_finish_hook_clears_the_mont_cache_it_releases() {
+        use crate::bn::bignum::{new_owned, BN_free};
+        use crate::bn::mont::BN_MONT_CTX_set;
+        use crate::bn::secret::drop_probe;
+
         // SAFETY: the object and the cached context are this test's own; all three calls are the
         // public lifecycle entry points under their documented contracts.
         unsafe {
             let d = DSA_new();
             assert!(!d.is_null());
-            (*d).method_mont_p = BN_MONT_CTX_new();
-            assert!(!(*d).method_mont_p.is_null());
+            let m = new_owned(vec![0xffff_ffff_ffff_ffc5], 0);
+            let cached = BN_MONT_CTX_new();
+            assert!(!cached.is_null());
+            assert_eq!(BN_MONT_CTX_set(cached, m, core::ptr::null_mut()), 1);
+            (*d).method_mont_p = cached;
+            drop_probe::arm((*cached).modulus_ptr());
             assert_eq!(DSA_set_method(d, DSA_OpenSSL()), 1);
             assert!(
                 (*d).method_mont_p.is_null(),
                 "the finished cache must not remain installed"
             );
+            let Some(observed) = drop_probe::take() else {
+                unreachable!("the released cache must be observed");
+            };
+            assert!(
+                observed.nonzero_before > 0,
+                "the cached modulus must hold live data"
+            );
+            assert_eq!(
+                observed.nonzero_bytes, 0,
+                "the cached modulus must be cleansed"
+            );
             DSA_free(d);
+            BN_free(m);
         }
     }
 }

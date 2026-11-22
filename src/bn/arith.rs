@@ -1375,13 +1375,13 @@ pub unsafe extern "C" fn BN_mod_exp(
 ) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `a`, `p` and `m` are null-or-live per this function's `# Safety`
-        // section. The base and modulus are copied; the exponent is borrowed only
-        // across the staging copy / ladder, and that borrow ends before `r` is
+        // section. The base and modulus are borrowed, not copied, so no
+        // secret-bearing operand duplicate is released on any path; the exponent is
+        // borrowed only across the staging copy / ladder. The modulus width the
+        // store needs is captured first, so every shared borrow ends before `r` is
         // borrowed for the store.
         let x = unsafe { as_ref(a) };
-        let Some((ad, _)) = parts_fallible(x) else {
-            return 0;
-        };
+        let ad = magnitude(x);
         // SAFETY: as above for `p`.
         let y = unsafe { as_ref(p) };
         // The exponent's magnitude is secret on the constant-time path. It is not
@@ -1391,9 +1391,7 @@ pub unsafe extern "C" fn BN_mod_exp(
         let pd = magnitude(y);
         // SAFETY: as above for `m`.
         let z = unsafe { as_ref(m) };
-        let Some((md, _)) = parts_fallible(z) else {
-            return 0;
-        };
+        let md = magnitude(z);
         // SAFETY: `a`, `p` and `m` are null-or-live per this function's
         // `# Safety` section; `BN_get_flags` treats null as no flags. The
         // authority tests all three operands, and a marked base is how
@@ -1403,12 +1401,15 @@ pub unsafe extern "C" fn BN_mod_exp(
                 | BN_get_flags(p, BN_FLG_CONSTTIME)
                 | BN_get_flags(m, BN_FLG_CONSTTIME)
         } != 0;
+        // Captured before the output borrow: `store_consttime` needs the public
+        // width after the modulus' last use.
+        let md_len = md.len();
         // The dispatch is explicit: a caller that stamped the base, exponent or
         // modulus with `BN_FLG_CONSTTIME` gets the fixed-pattern ladder; every
         // other caller keeps the variable-time ladder it had. An even modulus has
         // no Montgomery form, so it stays on the variable-time path here — the two
         // Montgomery entry points refuse that modulus before they get this far.
-        let result = if consttime && !limbs::is_even(&md) {
+        let result = if consttime && !limbs::is_even(md) {
             // The public width is the modulus' limb count. The exponent in every
             // constant-time reachable caller is bounded by that modulus (DH's
             // private exponent is < p, RSA's is < n, EC's is < the group order),
@@ -1418,22 +1419,23 @@ pub unsafe extern "C" fn BN_mod_exp(
             // allocation is that public width before running the ladder. A wider
             // exponent is refused inside, never truncated; an allocation failure
             // is the ordinary failure answer.
-            match mod_exp_core_consttime_from_parts(&ad, pd, &md, md.len()) {
+            match mod_exp_core_consttime_from_parts(ad, pd, md, md_len) {
                 Some(v) => Some(v),
                 None => return 0,
             }
         } else {
-            mod_exp_core(&ad, pd, &md)
+            mod_exp_core(ad, pd, md)
         };
         match result {
             Some(v) => {
                 // SAFETY: `r` is null-or-live per this function's `# Safety` section;
-                // the shared reads above have ended.
+                // the shared reads above have ended, so an aliased `r` is not
+                // mutably borrowed while a shared borrow of it is live.
                 let dst = unsafe { as_mut(r) };
                 // A consttime result may be a function of the secret exponent, so
                 // it is stored without a value-dependent trim branch.
                 let stored = if consttime {
-                    store_consttime(dst, v, false, md.len())
+                    store_consttime(dst, v, false, md_len)
                 } else {
                     store(dst, v, false)
                 };
@@ -1885,6 +1887,14 @@ pub(crate) fn mod_exp_core_consttime_from_parts_prepared(
             // The protected buffer: its allocation is the declared public width,
             // so its capacity cannot encode the exponent's normalised length.
             let exponent = fixed_width_exponent(pd, width)?;
+            // Test-only: a test cannot hold a pointer to this function's local
+            // owner, so a pending request arms the drop probe on the staged
+            // exponent. A later allocation failure drops this buffer, and the probe
+            // reports from inside `Drop` that the release cleansed.
+            #[cfg(test)]
+            if crate::bn::secret::drop_probe::take_request() {
+                crate::bn::secret::drop_probe::arm(exponent.as_ptr());
+            }
             match prepared {
                 Some(params) => mod_exp_core_consttime_prepared(ad, &exponent, md, width, params),
                 None => mod_exp_core_consttime_staged(ad, &exponent, md, width),

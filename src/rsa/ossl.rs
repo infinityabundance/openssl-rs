@@ -2370,6 +2370,46 @@ mod tests {
         }
     }
 
+    /// The finish hook releases each cached prime context, and the release cleanses
+    /// the secret modulus that context owns.
+    ///
+    /// `_method_mod_p` is used; `_method_mod_q` and `pinfo->m` are released by the
+    /// same loop and slot code in [`rsa_ossl_finish`], so the release mechanism is
+    /// the one this test witnesses.
+    #[test]
+    fn the_finish_hook_cleanses_the_cached_prime_modulus() {
+        use crate::bn::bignum::{new_owned, BN_free};
+        use crate::bn::mont::{BN_MONT_CTX_new, BN_MONT_CTX_set};
+        use crate::bn::secret::drop_probe;
+        use crate::rsa::object::{RSA_free, RSA_new};
+
+        // SAFETY: the object and the cached context are this test's own, and they are
+        // released once through the documented lifecycle entry point.
+        unsafe {
+            let rsa = RSA_new();
+            assert!(!rsa.is_null());
+            let m = new_owned(vec![0xffff_ffff_ffff_ffc5, 0x0123_4567_89ab_cdef], 0);
+            let cached = BN_MONT_CTX_new();
+            assert!(!cached.is_null());
+            assert_eq!(BN_MONT_CTX_set(cached, m, core::ptr::null_mut()), 1);
+            (*rsa)._method_mod_p = cached;
+            drop_probe::arm((*cached).modulus_ptr());
+            RSA_free(rsa);
+            let Some(observed) = drop_probe::take() else {
+                unreachable!("the released prime cache must be observed");
+            };
+            assert!(
+                observed.nonzero_before > 0,
+                "the cached prime must hold live data"
+            );
+            assert_eq!(
+                observed.nonzero_bytes, 0,
+                "the cached prime must be cleansed"
+            );
+            BN_free(m);
+        }
+    }
+
     /// A NULL member is not a fault: `ossl_sa_doall_arg` and `ossl_sa_free` both accept
     /// NULL, so an object that was never blinded is released correctly.
     #[test]

@@ -144,11 +144,58 @@ const _: () =
 /// prime. It is a scalar in the context rather than a [`SecretBuf`], so the two
 /// places that overwrite it — preparation and copy — and the context's own
 /// destructor must wipe it explicitly.
+///
+/// ## What the wipe establishes, and what it does not
+///
+/// The stored field is wiped on every replacement ([`mont_set`], `BN_MONT_CTX_copy`)
+/// and on destruction ([`Drop`]); the local pair [`mont_set`] commits is wiped after
+/// the commit. That is the whole extent source-level code controls. `inverse_word`
+/// keeps its Newton intermediates in registers or in stack slots the compiler
+/// chooses, and each assignment may leave further copies in registers or a red zone.
+/// Proving those gone needs the generated code for a named target and optimisation
+/// profile, which this file neither emits nor can inspect; the residual is recorded
+/// rather than claimed erased. A test-only observer ([`n0_probe`]) witnesses the
+/// writes that *are* made.
 fn cleanse_n0(n0: &mut [Limb; 2]) {
     let bytes = core::mem::size_of_val(n0);
+    #[cfg(test)]
+    let nonzero_before = n0.iter().filter(|&&limb| limb != 0).count();
     // SAFETY: `n0` is a live, uniquely borrowed array of `bytes` writable bytes;
     // `cleanse` only stores zeros through it.
     unsafe { crate::runtime::mem::cleanse(n0.as_mut_ptr().cast::<u8>(), bytes) };
+    #[cfg(test)]
+    n0_probe::record(nonzero_before, n0.iter().filter(|&&limb| limb != 0).count());
+}
+
+/// Test-only observation of the `n0` wipe.
+///
+/// `n0` lives inline in its owner, so the [`SecretBuf`] drop probe cannot see it.
+/// This records, from inside [`cleanse_n0`] while the storage is still live, how
+/// many limbs were non-zero before the wipe and how many remain after it.
+#[cfg(test)]
+pub(crate) mod n0_probe {
+    use core::cell::RefCell;
+
+    /// `(non-zero limbs before, non-zero limbs after)` for one wipe.
+    pub(crate) type Observed = (usize, usize);
+
+    thread_local! {
+        static EVENTS: RefCell<Vec<Observed>> = const { RefCell::new(Vec::new()) };
+    }
+
+    /// Forget every wipe recorded on this thread.
+    pub(crate) fn reset() {
+        EVENTS.with(|events| events.borrow_mut().clear());
+    }
+
+    /// Every wipe recorded on this thread since the last [`reset`].
+    pub(crate) fn take() -> Vec<Observed> {
+        EVENTS.with(|events| events.borrow_mut().drain(..).collect())
+    }
+
+    pub(super) fn record(before: usize, after: usize) {
+        EVENTS.with(|events| events.borrow_mut().push((before, after)));
+    }
 }
 
 impl Drop for MontCtx {
@@ -277,7 +324,12 @@ fn mont_set(mont: &mut MontCtx, m: &[Limb]) -> bool {
     let Some(n) = clone_secret(m) else {
         return false;
     };
-    let n0 = inverse_word(m[0]);
+    // `n0` is derived from the secret modulus' low word. It is held in an array so
+    // the local copy can be wiped after it is committed; the destination field is
+    // wiped on replacement and on drop. See [`cleanse_n0`] for the temporaries this
+    // cannot reach.
+    let mut n0 = [0 as Limb; 2];
+    n0[0] = inverse_word(m[0]);
     // `R mod m` is one Montgomery multiply from the other prepared values:
     // `R^2 * 1 * R^-1`. The one is a public constant; the result derives from the
     // modulus and is adopted at production, before any further fallible step.
@@ -285,7 +337,7 @@ fn mont_set(mont: &mut MontCtx, m: &[Limb]) -> bool {
         return false;
     };
     one_plain[0] = 1;
-    let Some(one) = mont_mul_fallible(&rr, &one_plain, m, n0).map(SecretBuf::from_vec) else {
+    let Some(one) = mont_mul_fallible(&rr, &one_plain, m, n0[0]).map(SecretBuf::from_vec) else {
         return false;
     };
     // Commit only after every fallible step has succeeded, so a failure leaves the
@@ -294,7 +346,10 @@ fn mont_set(mont: &mut MontCtx, m: &[Limb]) -> bool {
     cleanse_n0(&mut mont.n0);
     mont.n = n;
     mont.ri = ri;
-    mont.n0 = [n0, 0];
+    mont.n0 = n0;
+    // The local pair has been copied into the context; wipe it before the
+    // remaining non-secret commits.
+    cleanse_n0(&mut n0);
     mont.ni = Vec::new();
     mont.flags = 0;
     mont.radix_bits = MONT_RADIX_BITS;
@@ -319,6 +374,18 @@ impl MontCtx {
             rr: &self.rr[..],
             one: &self.one[..],
         }
+    }
+}
+
+#[cfg(test)]
+impl MontCtx {
+    /// The modulus buffer's address, so a release test can arm the drop probe.
+    ///
+    /// The field is private to this module; tests in the owner modules (RSA, DH,
+    /// DSA, EC) need the address without a second accessor that release builds
+    /// would carry.
+    pub(crate) fn modulus_ptr(&self) -> *const u64 {
+        self.n.as_ptr()
     }
 }
 
@@ -850,8 +917,11 @@ unsafe fn gets_consttime(b: *const BigNum) -> bool {
 /// # Safety
 ///
 /// `r` must be null or a live `BIGNUM`; `a`, `p` and `m` must each be null or live;
-/// `ctx` is unused. `r` may alias any of `a`, `p` and `m`; all three are copied
-/// before `r` is borrowed. `in_mont` must be null or a live `BN_MONT_CTX`.
+/// `ctx` is unused. `r` may alias any of `a`, `p` and `m`. The three operands are
+/// read through shared borrows only while the ladder runs; the modulus width the
+/// store needs is captured first, so every shared borrow has ended before `r` is
+/// borrowed for the store. `in_mont` must be null or a live `BN_MONT_CTX`; it is a
+/// distinct object type and cannot alias a `BIGNUM`.
 #[no_mangle]
 pub unsafe extern "C" fn BN_mod_exp_mont(
     r: *mut BigNum,
@@ -864,9 +934,11 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
     guard_ffi(0, || {
         // SAFETY: `a` is null-or-live per this function's `# Safety` section.
         let x = unsafe { as_ref(a) };
-        let Some((ad, _)) = parts_fallible(x) else {
-            return 0;
-        };
+        // Borrowed, not cloned. On the EC field-inversion reach the base is a secret
+        // field element, so an ordinary `Vec` copy would be a secret duplicate
+        // released uncleansed. The ladder reads the caller's storage directly and
+        // returns an owned answer; no base limb is read after it returns.
+        let ad = magnitude(x);
         // SAFETY: `p` is null-or-live per this function's `# Safety` section.
         let y = unsafe { as_ref(p) };
         // Secret on the constant-time path. Borrowed, not cloned: the staging
@@ -874,14 +946,16 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
         let pd = magnitude(y);
         // SAFETY: `m` is null-or-live per this function's `# Safety` section.
         let z = unsafe { as_ref(m) };
-        let Some((md, _)) = parts_fallible(z) else {
-            return 0;
-        };
-        if refuses(&md) {
+        // Borrowed for the same reason, and here it is the private prime on the RSA
+        // CRT reach. Its width is captured before the output is borrowed, because
+        // `store_consttime` needs the public width after `md`'s last use.
+        let md = magnitude(z);
+        if refuses(md) {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BN_EXP_327) };
             return 0;
         }
+        let md_len = md.len();
         // A supplied context is validated before dispatch. Present-but-stale is
         // refused, never silently ignored: the authority would use it and return
         // a wrong answer.
@@ -890,7 +964,7 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
         let prepared = match unsafe { as_ref_mont(in_mont) } {
             None => None,
             Some(mc) => {
-                if !context_matches(mc, &md) {
+                if !context_matches(mc, md) {
                     refuse_context();
                     return 0;
                 }
@@ -910,18 +984,20 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
             // modulus is odd here (the refusal above), so the Montgomery-form
             // ladder is available. Its width is the modulus' limb count — a
             // public parameter — never the exponent's normalised length.
-            mod_exp_core_consttime_from_parts_prepared(&ad, pd, &md, md.len(), prepared.as_ref())
+            mod_exp_core_consttime_from_parts_prepared(ad, pd, md, md_len, prepared.as_ref())
         } else {
-            mod_exp_core(&ad, pd, &md)
+            mod_exp_core(ad, pd, md)
         };
         match result {
             Some(v) => {
-                // SAFETY: `r` is null-or-live per this function's `# Safety` section.
+                // SAFETY: `r` is null-or-live per this function's `# Safety` section;
+                // the operand borrows above have ended, so an aliased `r` is not
+                // mutably borrowed while a shared borrow of it is live.
                 let dst = unsafe { as_mut(r) };
                 // The consttime path may carry a secret-derived result, so it is
                 // stored without a value-dependent trim branch.
                 c_int::from(if consttime {
-                    store_consttime(dst, v, false, md.len())
+                    store_consttime(dst, v, false, md_len)
                 } else {
                     store(dst, v, false)
                 })
@@ -954,9 +1030,11 @@ pub unsafe extern "C" fn BN_mod_exp_mont_consttime(
     guard_ffi(0, || {
         // SAFETY: `a` is null-or-live per this function's `# Safety` section.
         let x = unsafe { as_ref(a) };
-        let Some((ad, _)) = parts_fallible(x) else {
-            return 0;
-        };
+        // Borrowed, not cloned. This entry point is always constant-time, so the
+        // base is treated as secret; on the EC field-inversion reach it is one.
+        // The ladder reads the caller's storage directly and returns an owned
+        // answer, so the shared borrow ends before the output is borrowed.
+        let ad = magnitude(x);
         // SAFETY: `p` is null-or-live per this function's `# Safety` section.
         let y = unsafe { as_ref(p) };
         // This entry point is always constant-time, so the exponent is secret.
@@ -965,14 +1043,16 @@ pub unsafe extern "C" fn BN_mod_exp_mont_consttime(
         let pd = magnitude(y);
         // SAFETY: `m` is null-or-live per this function's `# Safety` section.
         let z = unsafe { as_ref(m) };
-        let Some((md, _)) = parts_fallible(z) else {
-            return 0;
-        };
-        if refuses(&md) {
+        // Borrowed for the same reason: on the RSA CRT reach this is a private
+        // prime, and an ordinary `Vec` copy would be an uncleansed duplicate. Its
+        // width is captured before the output borrow for `store_consttime`.
+        let md = magnitude(z);
+        if refuses(md) {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BN_EXP_622) };
             return 0;
         }
+        let md_len = md.len();
         // Validate the supplied context once, before the ladder. A context for a
         // different modulus, width, radix or backend is an error, not a reason
         // to recompute: silently ignoring it would hide a caller's stale cache.
@@ -981,7 +1061,7 @@ pub unsafe extern "C" fn BN_mod_exp_mont_consttime(
         let prepared = match unsafe { as_ref_mont(in_mont) } {
             None => None,
             Some(mc) => {
-                if !context_matches(mc, &md) {
+                if !context_matches(mc, md) {
                     refuse_context();
                     return 0;
                 }
@@ -991,12 +1071,13 @@ pub unsafe extern "C" fn BN_mod_exp_mont_consttime(
         // This entry point's name is the promise: always the fixed-pattern ladder.
         // The modulus is odd (refused above), so Montgomery form exists. The
         // loop width is the modulus' limb count, a public parameter.
-        match mod_exp_core_consttime_from_parts_prepared(&ad, pd, &md, md.len(), prepared.as_ref())
-        {
+        match mod_exp_core_consttime_from_parts_prepared(ad, pd, md, md_len, prepared.as_ref()) {
             // SAFETY: `r` is null-or-live per this function's `# Safety` section;
-            // the result may derive from a secret exponent, so it is stored
-            // without a value-dependent trim branch.
-            Some(v) => c_int::from(store_consttime(unsafe { as_mut(r) }, v, false, md.len())),
+            // the operand borrows above have ended, so an aliased `r` is not
+            // mutably borrowed while a shared borrow of it is live. The result may
+            // derive from a secret exponent, so it is stored without a
+            // value-dependent trim branch.
+            Some(v) => c_int::from(store_consttime(unsafe { as_mut(r) }, v, false, md_len)),
             None => 0,
         }
     })
@@ -1414,6 +1495,122 @@ mod tests {
         ERR_clear_error();
         // SAFETY: `m` is this test's own object.
         unsafe { BN_free(m) };
+    }
+
+    /// A wipe of the stored modulus-derived word is observable on replacement and
+    /// on destruction.
+    ///
+    /// `n0` lives inline in the context, so the [`SecretBuf`] drop probe cannot see
+    /// it; [`n0_probe`] records the before/after state from inside [`cleanse_n0`].
+    /// The test establishes that the long-lived copy is wiped. It does **not**
+    /// establish anything about the compiler's temporaries, which are recorded as a
+    /// residual in [`cleanse_n0`]'s documentation.
+    #[test]
+    fn the_modulus_derived_word_is_wiped_on_replacement_and_on_release() {
+        use crate::bn::mont::n0_probe;
+
+        const NULL: *mut BnCtx = core::ptr::null_mut();
+        // Two odd moduli, so each preparation derives a non-zero low word.
+        let first = new_owned(vec![0xffff_ffff_ffff_ffc5, 0x0123_4567_89ab_cdef], 0);
+        let second = new_owned(vec![0xffff_ffff_ffff_ffed, 0x0fed_cba9_8765_4321], 0);
+        // SAFETY: every object is created, used and released inside this test.
+        unsafe {
+            let mont = BN_MONT_CTX_new();
+            assert!(!mont.is_null());
+            assert_eq!(BN_MONT_CTX_set(mont, first, NULL), 1);
+
+            // Replacement: the previous word is wiped before the new one is stored.
+            n0_probe::reset();
+            assert_eq!(BN_MONT_CTX_set(mont, second, NULL), 1);
+            let events = n0_probe::take();
+            assert!(
+                events
+                    .iter()
+                    .any(|&(before, after)| before > 0 && after == 0),
+                "the replaced n0 must be wiped"
+            );
+
+            // Destruction: the stored word is wiped on release.
+            n0_probe::reset();
+            BN_MONT_CTX_free(mont);
+            let events = n0_probe::take();
+            assert!(
+                events
+                    .iter()
+                    .any(|&(before, after)| before > 0 && after == 0),
+                "the stored n0 must be wiped on release"
+            );
+
+            BN_free(first);
+            BN_free(second);
+        }
+    }
+
+    /// Every allocation failure after the ladder's staged exponent exists releases
+    /// that secret buffer cleansed.
+    ///
+    /// The seam records the allocation sites one successful constant-time
+    /// exponentiation reaches; the test then fails each site in turn. The ladder
+    /// arms the drop probe on the staged exponent when the test requests it (the
+    /// buffer is local, so the test cannot hold its pointer). A site before the
+    /// staging allocation has no earlier secret buffer to observe, so only observed
+    /// sites are asserted; at least one must reach it.
+    #[test]
+    fn an_allocation_failure_in_the_ladder_cleanses_the_staged_exponent() {
+        use crate::bn::alloc::test_fail;
+        use crate::bn::secret::drop_probe;
+
+        const NULL: *mut BnCtx = core::ptr::null_mut();
+        let a = word(3);
+        let p = word(0x8000_0000_0000_0001);
+        let m = new_owned(vec![0xffff_ffff_ffff_ffc5, 0x0123_4567_89ab_cdef], 0);
+        let r = word(0);
+
+        let sites = test_fail::sites_reached(|| unsafe {
+            // SAFETY: every object is live and uniquely owned by this test.
+            BN_mod_exp_mont_consttime(r, a, p, m, NULL, core::ptr::null_mut()) == 1
+        });
+        assert!(!sites.is_empty(), "the ladder must reach the seam");
+
+        let mut observed = 0usize;
+        for site in &sites {
+            drop_probe::request();
+            let guard = test_fail::fail_at_site(site);
+            // SAFETY: every object is live and uniquely owned by this test.
+            let result =
+                unsafe { BN_mod_exp_mont_consttime(r, a, p, m, NULL, core::ptr::null_mut()) };
+            drop(guard);
+            // A site before the staging allocation leaves the request pending; clear
+            // it so it cannot arm a later, unrelated allocation.
+            drop_probe::take_request();
+            if let Some(observed_drop) = drop_probe::take() {
+                observed += 1;
+                assert!(
+                    observed_drop.nonzero_before > 0,
+                    "the staged exponent must hold live data before the failure"
+                );
+                assert_eq!(
+                    observed_drop.nonzero_bytes, 0,
+                    "the staged exponent was released uncleansed at {site}"
+                );
+                assert_eq!(result, 0, "the injected failure must be reported at {site}");
+            }
+            // The address may be reused by a later buffer; disarm so its drop cannot
+            // be mistaken for this observation.
+            drop_probe::arm(core::ptr::null());
+        }
+        assert!(
+            observed > 0,
+            "no allocation-failure site exercised the staged exponent"
+        );
+
+        // SAFETY: every object is this test's own.
+        unsafe {
+            BN_free(a);
+            BN_free(p);
+            BN_free(m);
+            BN_free(r);
+        }
     }
 
     /// Concurrent publication, concurrent failure, replacement after publication

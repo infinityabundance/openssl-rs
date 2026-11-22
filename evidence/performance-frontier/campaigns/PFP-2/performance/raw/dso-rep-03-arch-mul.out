@@ -1,0 +1,5 @@
+LIB /work/court/tmp/pfp2-build/arch/libcrypto.so.3
+LOADED realpath=/work/court/tmp/pfp2-build/arch/libcrypto.so.3 dev=57 ino=1695219 size=17024160
+MAPS entries=5
+CHECK p256-mul ok=1
+RESULT p256-mul	median_us=216.154	iters=200	runs=5	samples=214.202,214.759,216.154,218.873,242.686

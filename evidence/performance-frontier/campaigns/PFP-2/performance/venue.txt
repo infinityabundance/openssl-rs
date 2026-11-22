@@ -1,0 +1,16 @@
+campaign=PFP-2
+inside_court=true
+court_image=unknown
+container_hostname=bd6756d1bb72
+kernel=7.3.5-2-cachyos
+machine=x86_64
+nproc=30
+cpu_model=13th Gen Intel(R) Core(TM) i9-13900K
+build_jobs=1
+taskset_cpu=1
+cgroup_memory_max=8589934592
+cgroup_cpu_max=800000 100000
+mem_available_kb=29455952
+pmu=cpu event source absent (recorded by PFP-0); no hardware counters
+authority_dso=/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3
+authority_sha256=611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2

@@ -29,9 +29,10 @@ use crate::ec::lib::{
     EC_POINT_clear_free, EC_POINT_cmp, EC_POINT_copy, EC_POINT_dbl, EC_POINT_free, EC_POINT_invert,
     EC_POINT_is_at_infinity, EC_POINT_new, EC_POINT_set_to_infinity, EC_pre_comp_free,
 };
+use crate::ec::p256::{self, FieldDomain, FieldKernel, SelectedFieldKernel};
 use crate::ec::smpl::{
     ec_method_field_is_plain, ossl_ec_GFp_simple_ladder_step,
-    ossl_ec_GFp_simple_ladder_step_workspace,
+    ossl_ec_GFp_simple_ladder_step_workspace, store_coordinate,
 };
 use crate::ec::{EcGroup, EcLadderFn, EcPoint, Pct};
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
@@ -455,20 +456,23 @@ pub(crate) unsafe extern "C" fn ossl_ec_scalar_mul_ladder(
                 }
             }
 
-            // One fixed-width field workspace per scalar multiplication (T29). It
-            // serves a step only when the method's field columns are the plain
-            // `EC_GFp_simple` pair with no encoding (P-256 on this profile) **and**
-            // that method's ladder step is the straight-line dataflow `smpl.rs`
-            // reproduces. The Montgomery method also names this same step but keeps
-            // its coordinates and curve constants encoded, so the plain workspace
-            // must not serve it. A refused buffer is reported as the step's own
-            // failure (`EC_R_LADDER_STEP_FAILURE`), which is exactly what the
-            // authority's step raises when the `BN_CTX_get` allocations this
-            // workspace replaces are refused.
-            let mut ladder_ws = if ec_method_field_is_plain((*group).meth)
+            // The plain-field ladder methods this file can serve fixed-width: P-256
+            // takes the §3.2 engine (PFP-2), every other plain width takes the
+            // generic workspace (T29). Both are gated on the same plainness and
+            // step-identity predicates as before.
+            let plain_ladder = ec_method_field_is_plain((*group).meth)
                 && (*(*group).meth).ladder_step.is_some_and(|step| {
                     core::ptr::fn_addr_eq(step, ossl_ec_GFp_simple_ladder_step as EcLadderFn)
-                }) {
+                });
+            let is_p256 = (*(*group).field).d.as_slice() == p256::FIELD_MODULUS.as_slice();
+            // Kernel selection happens once, here, from the public modulus identity
+            // and the CPU capability bits. No operation below consults a value.
+            let mut p256_kernel = if plain_ladder && is_p256 {
+                Some(p256::select_field_kernel())
+            } else {
+                None
+            };
+            let mut ladder_ws = if plain_ladder && !is_p256 {
                 match ScalarLadderWorkspace::new(
                     &(*(*group).field).d,
                     &(*(*group).a).d,
@@ -492,7 +496,6 @@ pub(crate) unsafe extern "C" fn ossl_ec_scalar_mul_ladder(
             }
 
             /* top bit is a 1, in a fixed pos */
-            let mut pbit = 1;
 
             /*-
              * The ladder step, with branches, is
@@ -552,29 +555,51 @@ pub(crate) unsafe extern "C" fn ossl_ec_scalar_mul_ladder(
              * This is XOR. pbit tracks the previous bit of k.
              */
 
-            let mut i = cardinality_bits - 1;
-            while i >= 0 {
-                let kbit = BN_is_bit_set(k, i) ^ pbit;
-                let _z_is_one = ec_point_cswap(kbit, r, s, group_top);
-
-                /* Perform a single step of the Montgomery ladder */
-                let stepped = match ladder_ws.as_mut() {
-                    Some(ws) => ossl_ec_GFp_simple_ladder_step_workspace(group, r, s, ws),
-                    None => ec_point_ladder_step(group, r, s, p, ctx),
-                };
-                if stepped == 0 {
-                    raise_site(&err_sites::EC_MULT_353);
-                    break 'err;
+            let ladder_ok = match p256_kernel.take() {
+                Some(SelectedFieldKernel::Arch(kernel)) => {
+                    p256_ladder_run(kernel, group, r, s, p, k, cardinality_bits)
                 }
-                /*
-                 * pbit logic merges this cswap with that of the
-                 * next iteration
-                 */
-                pbit ^= kbit;
-                i -= 1;
+                Some(SelectedFieldKernel::Solinas(kernel)) => {
+                    p256_ladder_run(kernel, group, r, s, p, k, cardinality_bits)
+                }
+                Some(SelectedFieldKernel::Mont(kernel)) => {
+                    p256_ladder_run(kernel, group, r, s, p, k, cardinality_bits)
+                }
+                None => {
+                    let mut pbit = 1;
+                    let mut i = cardinality_bits - 1;
+                    let mut ok = 1;
+                    while i >= 0 {
+                        let kbit = BN_is_bit_set(k, i) ^ pbit;
+                        let _z_is_one = ec_point_cswap(kbit, r, s, group_top);
+
+                        /* Perform a single step of the Montgomery ladder */
+                        let stepped = match ladder_ws.as_mut() {
+                            Some(ws) => ossl_ec_GFp_simple_ladder_step_workspace(group, r, s, ws),
+                            None => ec_point_ladder_step(group, r, s, p, ctx),
+                        };
+                        if stepped == 0 {
+                            ok = 0;
+                            break;
+                        }
+                        /*
+                         * pbit logic merges this cswap with that of the
+                         * next iteration
+                         */
+                        pbit ^= kbit;
+                        i -= 1;
+                    }
+                    if ok != 0 {
+                        /* one final cswap to move the right value into r */
+                        let _z_is_one = ec_point_cswap(pbit, r, s, group_top);
+                    }
+                    ok
+                }
+            };
+            if ladder_ok == 0 {
+                raise_site(&err_sites::EC_MULT_353);
+                break 'err;
             }
-            /* one final cswap to move the right value into r */
-            let _z_is_one = ec_point_cswap(pbit, r, s, group_top);
 
             /* Finalize ladder (and recover full point coordinates) */
             if ec_point_ladder_post(group, r, s, p, ctx) == 0 {
@@ -590,6 +615,95 @@ pub(crate) unsafe extern "C" fn ossl_ec_scalar_mul_ladder(
         BN_CTX_end(ctx);
     }
     ret
+}
+
+/// Run the whole P-256 ladder inside the fixed-width engine and write the four
+/// coordinates back once.
+///
+/// The loop is the driver's: the same scalar bits, the same merged conditional
+/// swap, the same number of iterations. `ladder_pre` has already produced `r`
+/// and `s`; from the staging call until the single write-back the workspace is
+/// the live state. The authority's `EC_POINT_CSWAP` also exchanges the `Y`
+/// coordinates, but the plain step neither reads nor writes them and
+/// `ladder_post` recomputes `r->Y`, so the engine moves only the X/Z pairs — an
+/// observational equivalence stated here rather than assumed.
+///
+/// # Safety
+///
+/// `group` is live with a live `a`, `b` and `field`; `r` and `s` are distinct
+/// live points whose X/Z are live `BIGNUM`s; `p` is the affine input with a live
+/// `X`; `scalar` is the const-time scalar the caller padded; `cardinality_bits`
+/// is the public bit count the caller computed. The modulus is P-256's, which
+/// the caller checked before selecting a kernel.
+unsafe fn p256_ladder_run<K: FieldKernel<FieldDomain>>(
+    kernel: K,
+    group: *const EcGroup,
+    r: *mut EcPoint,
+    s: *mut EcPoint,
+    p: *const EcPoint,
+    scalar: *const BigNum,
+    cardinality_bits: c_int,
+) -> c_int {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for
+    // every pointer below, and every coordinate read is a live `BIGNUM`.
+    unsafe {
+        // Test-only dispatch observation: records which kernel the production
+        // ladder actually executed. Compiled out of every non-test build.
+        #[cfg(test)]
+        p256::dispatch_probe::record(K::ID);
+
+        let Some(ca) = p256::limbs_from_slice(&(*(*group).a).d) else {
+            return 0;
+        };
+        let Some(cb) = p256::limbs_from_slice(&(*(*group).b).d) else {
+            return 0;
+        };
+        let Some(px) = p256::limbs_from_slice(&(*(*p).x).d) else {
+            return 0;
+        };
+        let Some(rx) = p256::limbs_from_slice(&(*(*r).x).d) else {
+            return 0;
+        };
+        let Some(rz) = p256::limbs_from_slice(&(*(*r).z).d) else {
+            return 0;
+        };
+        let Some(sx) = p256::limbs_from_slice(&(*(*s).x).d) else {
+            return 0;
+        };
+        let Some(sz) = p256::limbs_from_slice(&(*(*s).z).d) else {
+            return 0;
+        };
+
+        let mut ladder = p256::P256Ladder::new(kernel, &ca, &cb, &px);
+        ladder.load(&rx, &rz, &sx, &sz);
+
+        let mut r_z_is_one = (*r).z_is_one;
+        let mut s_z_is_one = (*s).z_is_one;
+        let mut pbit = 1;
+        let mut i = cardinality_bits - 1;
+        while i >= 0 {
+            let kbit = BN_is_bit_set(scalar, i) ^ pbit;
+            ladder.cswap(kbit as u64);
+            let exchanged = (r_z_is_one ^ s_z_is_one) & kbit;
+            r_z_is_one ^= exchanged;
+            s_z_is_one ^= exchanged;
+            ladder.step();
+            pbit ^= kbit;
+            i -= 1;
+        }
+        ladder.cswap(pbit as u64);
+        let exchanged = (r_z_is_one ^ s_z_is_one) & pbit;
+        r_z_is_one ^= exchanged;
+        s_z_is_one ^= exchanged;
+        (*r).z_is_one = r_z_is_one;
+        (*s).z_is_one = s_z_is_one;
+
+        let stored = store_coordinate((*r).x, ladder.rx_canonical().as_limbs())
+            && store_coordinate((*r).z, ladder.rz_canonical().as_limbs())
+            && store_coordinate((*s).x, ladder.sx_canonical().as_limbs())
+            && store_coordinate((*s).z, ladder.sz_canonical().as_limbs());
+        c_int::from(stored)
+    }
 }
 
 /// `EC_window_bits_for_scalar_size(b)` — `crypto/ec/ec_mult.c:389-394`.
@@ -1336,3 +1450,362 @@ pub(crate) unsafe extern "C" fn ossl_ec_wNAF_have_precompute_mult(group: *const 
 // OB-3 obligation (b): execute every shared `CtxDestroy` body on an all-zero block.
 #[cfg(test)]
 crate::runtime::bio::zero_state::zero_state_sweep!(EcPreCompSt => zero_state_sweep_ec_pre_comp_st);
+
+#[cfg(test)]
+#[allow(clippy::expect_used)] // test-only failure assertions
+mod pfp2_tests {
+    use super::*;
+    use crate::bn::bignum::{BN_num_bits, BN_set_flags, BN_FLG_CONSTTIME};
+    use crate::bn::ctx::{BN_CTX_free, BN_CTX_new};
+    use crate::ec::curve::EC_GROUP_new_by_curve_name;
+    use crate::ec::lib::{EC_GROUP_free, EC_POINT_cmp, EC_POINT_free, EC_POINT_mul, EC_POINT_new};
+    use crate::ec::p256::{test_force, Arch, KernelId};
+    use crate::runtime::obj::NID_X9_62_prime256v1;
+
+    /// The driver that preceded the fixed-width engine, reconstructed verbatim:
+    /// the authority's scalar padding, `BN_consttime_swap` over the point objects
+    /// and `ossl_ec_GFp_simple_ladder_step` (the `BIGNUM` step) on every
+    /// iteration. The difference from the engine path is exactly the boundary
+    /// this batch moved: the engine keeps the four coordinates in fixed-width
+    /// storage and writes them back once.
+    ///
+    /// # Safety
+    ///
+    /// `group` is live with a non-zero order and cofactor; `r` is live; `scalar`
+    /// and `point` are live; `ctx` is live.
+    unsafe fn previous_ladder_point_mul(
+        group: *const EcGroup,
+        r: *mut EcPoint,
+        scalar: *const BigNum,
+        point: *const EcPoint,
+        ctx: *mut BnCtx,
+    ) -> c_int {
+        // SAFETY: the caller supplies the live objects; every temporary here is
+        // created and released in this function.
+        unsafe {
+            BN_CTX_start(ctx);
+            let p = EC_POINT_new(group);
+            let s = EC_POINT_new(group);
+            let cardinality = BN_CTX_get(ctx);
+            let lambda = BN_CTX_get(ctx);
+            let k = BN_CTX_get(ctx);
+            let mut ret = 0;
+
+            'err: {
+                if p.is_null() || s.is_null() || k.is_null() {
+                    break 'err;
+                }
+                if point.is_null() {
+                    if EC_POINT_copy(p, (*group).generator) == 0 {
+                        break 'err;
+                    }
+                } else if EC_POINT_copy(p, point) == 0 {
+                    break 'err;
+                }
+
+                if BN_mul(cardinality, (*group).order, (*group).cofactor, ctx) == 0 {
+                    break 'err;
+                }
+                let cardinality_bits = BN_num_bits(cardinality);
+                let mut group_top = bn_get_top(cardinality);
+                if bn_wexpand(k, group_top + 2).is_null()
+                    || bn_wexpand(lambda, group_top + 2).is_null()
+                {
+                    break 'err;
+                }
+                if BN_copy(k, scalar).is_null() {
+                    break 'err;
+                }
+                BN_set_flags(k, BN_FLG_CONSTTIME);
+                if (BN_num_bits(k) > cardinality_bits || BN_is_negative(k) != 0)
+                    && BN_nnmod(k, k, cardinality, ctx) == 0
+                {
+                    break 'err;
+                }
+                if BN_add(lambda, k, cardinality) == 0 {
+                    break 'err;
+                }
+                BN_set_flags(lambda, BN_FLG_CONSTTIME);
+                if BN_add(k, lambda, cardinality) == 0 {
+                    break 'err;
+                }
+                let high_bit = BN_is_bit_set(lambda, cardinality_bits);
+                BN_consttime_swap(high_bit as core::ffi::c_ulong, k, lambda, group_top + 2);
+
+                group_top = bn_get_top((*group).field);
+                if (*p).z_is_one == 0 {
+                    match (*(*group).meth).make_affine {
+                        Some(make_affine) => {
+                            if make_affine(group, p, ctx) == 0 {
+                                break 'err;
+                            }
+                        }
+                        None => break 'err,
+                    }
+                }
+
+                if ec_point_ladder_pre(group, r, s, p, ctx) == 0 {
+                    break 'err;
+                }
+                let mut pbit = 1;
+                let mut i = cardinality_bits - 1;
+                while i >= 0 {
+                    let kbit = BN_is_bit_set(k, i) ^ pbit;
+                    let _z_is_one = ec_point_cswap(kbit, r, s, group_top);
+                    if ossl_ec_GFp_simple_ladder_step(group, r, s, p, ctx) == 0 {
+                        break 'err;
+                    }
+                    pbit ^= kbit;
+                    i -= 1;
+                }
+                let _z_is_one = ec_point_cswap(pbit, r, s, group_top);
+                if ec_point_ladder_post(group, r, s, p, ctx) == 0 {
+                    break 'err;
+                }
+                ret = 1;
+            }
+
+            EC_POINT_free(p);
+            EC_POINT_clear_free(s);
+            BN_CTX_end(ctx);
+            ret
+        }
+    }
+
+    /// Deterministic pseudo-random limbs (xorshift64), so the sweep is
+    /// reproducible.
+    struct XorShift(u64);
+
+    impl XorShift {
+        fn next(&mut self) -> u64 {
+            let mut x = self.0;
+            x ^= x << 13;
+            x ^= x >> 7;
+            x ^= x << 17;
+            self.0 = x;
+            x
+        }
+
+        fn limbs(&mut self, n: usize) -> Vec<u64> {
+            let mut v: Vec<u64> = (0..n).map(|_| self.next()).collect();
+            crate::bn::limbs::normalise(&mut v);
+            v
+        }
+    }
+
+    /// The engine ladder against the previous `BIGNUM` ladder, for every kernel
+    /// the CPU can run. The scalar population includes zero, one, two, a
+    /// full-width all-ones value, a value above the group order and random
+    /// values, and the point is both the generator and a non-generator multiple.
+    #[test]
+    fn the_engine_ladder_matches_the_bignum_ladder_for_every_kernel() {
+        const CASES: usize = 48;
+
+        // SAFETY: every object below is created and released here.
+        unsafe {
+            let group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
+            assert!(!group.is_null());
+            let ctx = BN_CTX_new();
+            assert!(!ctx.is_null());
+            let generator = EC_GROUP_get0_generator(group);
+            let r_new = EC_POINT_new(group);
+            let r_old = EC_POINT_new(group);
+            let pt = EC_POINT_new(group);
+            assert!(!r_new.is_null() && !r_old.is_null() && !pt.is_null());
+
+            let order = (*group).order;
+            let mut above_order = (*order).d.clone();
+            above_order.push(1);
+
+            let mut kernels = vec![KernelId::Mont, KernelId::Solinas];
+            if Arch::new().is_some() {
+                kernels.push(KernelId::Arch);
+            }
+
+            let mut rng = XorShift(0xD1B5_4A32_D192_ED03);
+            for case in 0..CASES {
+                let scalar_limbs = match case % 8 {
+                    0 => Vec::new(),
+                    1 => vec![1],
+                    2 => vec![2],
+                    3 => vec![u64::MAX; 4],
+                    4 => above_order.clone(),
+                    _ => rng.limbs(4),
+                };
+                let scalar = BigNum {
+                    d: scalar_limbs,
+                    neg: 0,
+                    flags: 0,
+                };
+
+                let point: *const EcPoint = if case % 3 == 0 {
+                    generator
+                } else {
+                    let multiple = BigNum {
+                        d: vec![case as u64 + 3],
+                        neg: 0,
+                        flags: 0,
+                    };
+                    assert_eq!(
+                        EC_POINT_mul(group, pt, &multiple, ptr::null(), ptr::null_mut(), ctx),
+                        1,
+                        "case {case}: point construction"
+                    );
+                    pt
+                };
+
+                assert_eq!(
+                    previous_ladder_point_mul(group, r_old, &scalar, point, ctx),
+                    1,
+                    "case {case}: previous ladder"
+                );
+
+                for id in &kernels {
+                    let _guard = test_force::Guard::new(*id);
+                    assert_eq!(
+                        EC_POINT_mul(group, r_new, ptr::null(), point, &scalar, ctx),
+                        1,
+                        "case {case}/{id:?}: engine ladder"
+                    );
+                    assert_eq!(
+                        EC_POINT_cmp(group, r_new, r_old, ctx),
+                        0,
+                        "case {case}/{id:?}: the engine moved the result"
+                    );
+                }
+            }
+
+            EC_POINT_free(r_new);
+            EC_POINT_free(r_old);
+            EC_POINT_free(pt);
+            BN_CTX_free(ctx);
+            EC_GROUP_free(group);
+        }
+    }
+
+    /// The engine path is the one P-256's scalar multiplication takes, and its
+    /// per-signature allocation count is lower than the previous ladder's: the
+    /// four coordinates no longer cross into `BIGNUM` on every bit.
+    #[test]
+    fn the_engine_removes_the_per_bit_bignum_crossing() {
+        use crate::runtime::alloc::test_fail::{tally_start, tally_take};
+
+        fn total(sites: &[(&'static core::panic::Location<'static>, usize)]) -> usize {
+            sites.iter().map(|&(_, n)| n).sum()
+        }
+
+        // SAFETY: every object is created and released here.
+        unsafe {
+            let group = EC_GROUP_new_by_curve_name(NID_X9_62_prime256v1);
+            assert!(!group.is_null());
+            let ctx = BN_CTX_new();
+            assert!(!ctx.is_null());
+            let generator = EC_GROUP_get0_generator(group);
+            let r_new = EC_POINT_new(group);
+            let r_old = EC_POINT_new(group);
+            let scalar = BigNum {
+                d: vec![0x1122_3344_5566_7788, 0x99aa_bbcc_ddee_ff00],
+                neg: 0,
+                flags: 0,
+            };
+
+            let guard = tally_start();
+            assert_eq!(
+                previous_ladder_point_mul(group, r_old, &scalar, generator, ctx),
+                1
+            );
+            let old = total(&tally_take());
+            drop(guard);
+
+            let _force = test_force::Guard::new(KernelId::Solinas);
+            let guard = tally_start();
+            assert_eq!(
+                EC_POINT_mul(group, r_new, ptr::null(), generator, &scalar, ctx),
+                1
+            );
+            let new = total(&tally_take());
+            drop(guard);
+            assert_eq!(EC_POINT_cmp(group, r_new, r_old, ctx), 0);
+            assert!(
+                new < old,
+                "the engine path allocated {new} times against the previous ladder's {old}"
+            );
+
+            EC_POINT_free(r_new);
+            EC_POINT_free(r_old);
+            BN_CTX_free(ctx);
+            EC_GROUP_free(group);
+        }
+    }
+
+    /// For every kernel, a P-256 signature signs and verifies through the
+    /// production entry points, and the public key derived by the engine
+    /// satisfies the curve's defining equation. Each kernel is forced, so the
+    /// sign path (which performs `k·G` through the ladder) really is the one
+    /// under test.
+    #[test]
+    fn every_kernel_signs_and_verifies_a_p256_signature() {
+        use crate::ec::ecdsa::{ECDSA_SIG_free, ECDSA_do_sign, ECDSA_do_verify};
+        use crate::ec::key::{
+            EC_KEY_free, EC_KEY_get0_group, EC_KEY_new_by_curve_name, EC_KEY_set_private_key,
+            EC_KEY_set_public_key,
+        };
+        use crate::ec::lib::EC_POINT_is_on_curve;
+
+        let digest: [u8; 32] = core::array::from_fn(|i| (0x5a ^ i) as u8);
+        let private = BigNum {
+            d: vec![
+                0x0f1e_2d3c_4b5a_6978,
+                0x8796_a5b4_c3d2_e1f0,
+                0x1122_3344_5566_7788,
+                0x09aa_bbcc_ddee_ff00,
+            ],
+            neg: 0,
+            flags: 0,
+        };
+
+        let mut kernels = vec![KernelId::Mont, KernelId::Solinas];
+        if Arch::new().is_some() {
+            kernels.push(KernelId::Arch);
+        }
+
+        // SAFETY: every object is created, used and released here.
+        unsafe {
+            let key = EC_KEY_new_by_curve_name(NID_X9_62_prime256v1);
+            assert!(!key.is_null());
+            let group = EC_KEY_get0_group(key);
+            let ctx = BN_CTX_new();
+            let pubkey = EC_POINT_new(group);
+            assert!(!ctx.is_null() && !pubkey.is_null());
+
+            assert_eq!(EC_KEY_set_private_key(key, &private), 1);
+            assert_eq!(
+                EC_POINT_mul(group, pubkey, &private, ptr::null(), ptr::null_mut(), ctx),
+                1,
+                "public key derivation"
+            );
+            assert_eq!(
+                EC_POINT_is_on_curve(group, pubkey, ctx),
+                1,
+                "the derived public key satisfies y^2 = x^3 - 3x + b"
+            );
+            assert_eq!(EC_KEY_set_public_key(key, pubkey), 1);
+
+            for id in kernels {
+                let _guard = test_force::Guard::new(id);
+                let sig = ECDSA_do_sign(digest.as_ptr(), digest.len() as c_int, key);
+                assert!(!sig.is_null(), "{id:?}: ECDSA_do_sign");
+                assert_eq!(
+                    ECDSA_do_verify(digest.as_ptr(), digest.len() as c_int, sig, key),
+                    1,
+                    "{id:?}: ECDSA_do_verify"
+                );
+                ECDSA_SIG_free(sig);
+            }
+
+            EC_POINT_free(pubkey);
+            BN_CTX_free(ctx);
+            EC_KEY_free(key);
+        }
+    }
+}
