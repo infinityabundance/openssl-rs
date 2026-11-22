@@ -13,9 +13,13 @@
 //!   `bn_to_mont_fixed_top`, `bn_mul_mont_fixed_top` and `bn_mod_add_fixed_top`
 //!   (`crypto/bn/bn_mont.c`, `crypto/bn/bn_mod.c`), which this crate models through the public
 //!   wrappers the authority itself puts around them — `BN_to_montgomery`, `BN_mod_mul_montgomery`
-//!   and `BN_mod_add`. The substitution is the one `src/rsa/ossl.rs:1652-1660` already records for
-//!   `rsa_ossl_mod_exp`, and the reason is the same: the fixed-top discipline is a *representation*
-//!   the crate's normalised `BIGNUM` does not have, not a different value.
+//!   and `bn::arith::mod_add_reduced_ct`. The substitution is the one `src/rsa/ossl.rs:1652-1660`
+//!   already records for `rsa_ossl_mod_exp`, and the reason is the same: the fixed-top discipline
+//!   is a *representation* the crate's normalised `BIGNUM` does not have, not a different value.
+//!   Unlike `BN_mod_add`, the substitute requires both addends reduced, so the digest is reduced
+//!   into `[0, q)` before the add; the digest is public, so that reduction's control flow is
+//!   public (see the site comment), while the add itself is fixed-pattern over the order's
+//!   limb count.
 //! * **The DER codec.** `ossl_ecdsa_sign` and `ossl_ecdsa_verify` reach `ECDSA_size`,
 //!   `i2d_ECDSA_SIG` and `d2i_ECDSA_SIG`, all three of which are `crypto/ec/ec_asn1.c`'s — 8.8's
 //!   stratum, and outside the plan's closure. They are **imported from their eventual crate path**
@@ -39,7 +43,7 @@ use core::ffi::{c_char, c_int, c_long, c_uchar, c_uint, c_void};
 use core::ptr;
 
 use crate::asn1::owned::OwnedBlock;
-use crate::bn::arith::{BN_mod_add, BN_mod_mul, BN_nnmod, BN_rshift, BN_ucmp};
+use crate::bn::arith::{mod_add_reduced_ct, BN_mod_mul, BN_nnmod, BN_rshift, BN_ucmp};
 use crate::bn::bignum::{
     ossl_bn_is_word_fixed_top, BN_bin2bn, BN_clear_free, BN_copy, BN_is_negative, BN_is_zero,
     BN_new, BN_num_bits, BN_secure_new, BN_set_bit, BigNum,
@@ -677,6 +681,28 @@ pub unsafe extern "C" fn ossl_ecdsa_simple_sign_sig(
             raise_site(&err_sites::ECDSA_OSSL_334);
             return sign_sig_err(ret, ctx, m, kinv, ok);
         }
+        /*
+         * Precondition of the fixed-pattern addition inside the loop: both addends
+         * must be reduced into `[0, order)`. `s` already is, being a Montgomery
+         * product; the digest is not, so it is reduced once here rather than on
+         * every retry.
+         *
+         * SECRET CLASSIFICATION: the digest is `PUBLIC_DATA` — the hash of the
+         * message — so this reduction's work and control flow depend only on public
+         * values, `m` and the curve order, and on no part of `s`, `k` or `d`. A
+         * value-dependent path here is therefore not a secret-dependent path. The
+         * addition that follows has a secret-derived addend and is the operation
+         * that must be fixed-pattern.
+         *
+         * The site is the authority's own add coordinate: there the digest enters
+         * `bn_mod_add_fixed_top` unreduced and that call's width check is what can
+         * refuse it, so a refused reduction is reported at the same coordinate.
+         */
+        if BN_nnmod(m, m, order, ctx) == 0 {
+            // SAFETY: a compile-time-constant site (`ecdsa_ossl.c:366`, ERR_R_BN_LIB).
+            raise_site(&err_sites::ECDSA_OSSL_366);
+            return sign_sig_err(ret, ctx, m, kinv, ok);
+        }
         loop {
             let ckinv: *const BigNum;
             if in_kinv.is_null() || in_r.is_null() {
@@ -718,8 +744,9 @@ pub unsafe extern "C" fn ossl_ecdsa_simple_sign_sig(
              * user-visible value with removed zero padding.
              *
              * `bn_to_mont_fixed_top`/`bn_mul_mont_fixed_top`/`bn_mod_add_fixed_top` are modelled
-             * by `BN_to_montgomery`/`BN_mod_mul_montgomery`/`BN_mod_add`; see the module
-             * documentation.
+             * by `BN_to_montgomery`/`BN_mod_mul_montgomery`/`mod_add_reduced_ct`; see the module
+             * documentation. The fixed-pattern add writes `s` in place, so it is handed the same
+             * object as its first operand.
              */
             if BN_to_montgomery(s, (*ret).r, (*group).mont_data, ctx) == 0
                 || BN_mod_mul_montgomery(s, s, priv_key, (*group).mont_data, ctx) == 0
@@ -728,7 +755,11 @@ pub unsafe extern "C" fn ossl_ecdsa_simple_sign_sig(
                 raise_site(&err_sites::ECDSA_OSSL_362);
                 return sign_sig_err(ret, ctx, m, kinv, ok);
             }
-            if BN_mod_add(s, s, m, order, ctx) == 0 {
+            // SAFETY: `s`, `m` and `order` are live objects this function owns and
+            // `s` is uniquely owned here; `mod_add_reduced_ct` supports `r == a`, and
+            // both addends are in `[0, order)` by the reduction above and by the
+            // Montgomery product's range. `m` remains a read-only operand.
+            if !mod_add_reduced_ct(s, s, m, order) {
                 // SAFETY: a compile-time-constant site (`ecdsa_ossl.c:366`, ERR_R_BN_LIB).
                 raise_site(&err_sites::ECDSA_OSSL_366);
                 return sign_sig_err(ret, ctx, m, kinv, ok);
@@ -1049,6 +1080,7 @@ pub unsafe extern "C" fn ossl_ecdsa_simple_verify_sig(
 mod tests {
     use super::*;
 
+    use crate::bn::arith::BN_mod_add;
     use crate::bn::bignum::{BN_dup, BN_free, BN_get_flags, BN_set_flags, BN_FLG_CONSTTIME};
     use crate::ec::ecdsa::{ECDSA_SIG_get0, ECDSA_do_sign, ECDSA_sign_setup};
     use crate::ec::key::{
