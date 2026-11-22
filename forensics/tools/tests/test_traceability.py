@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Negative controls for the requirements-traceability checker.
 
-The graph claims that it fails closed on eight named orphan classes.  These
+The graph claims that it fails closed on twelve named orphan classes.  These
 tests mutate a copy of the committed graph, one mutation per class, and require
 the checker to refuse with the exact orphan identifier the mutation creates.
 A positive control requires the committed graph to validate, and a determinism
@@ -73,13 +73,15 @@ class TraceabilityControls(unittest.TestCase):
         self.assertIn("0 undeclared, 0 stale", result.stdout)
         declared = load_graph()["orphans"]
         # ETP-T3 adds three class-11 orphans: edges RFE-1, RFE-2 and RFE-4 are
-        # honestly recorded as NONE.  No other class grows, and no control is
-        # relaxed: the refinement chain is a new omission surface, not a way to
-        # remove an existing declaration.
-        self.assertEqual(len(declared), 24)
+        # honestly recorded as NONE.  ETP-T4 adds three class-8 orphans for the
+        # inventory and axiom files that do not yet exist at the bound commit,
+        # and eleven class-12 orphans: every obligation class in the inventory
+        # still has sites with no validity argument and no control.  No class
+        # shrinks and no control is relaxed.
+        self.assertEqual(len(declared), 38)
         self.assertEqual(
             sorted({entry["class"] for entry in declared}),
-            [1, 3, 6, 8, 11],
+            [1, 3, 6, 8, 11, 12],
         )
 
     def test_validate_output_is_byte_identical_across_runs(self) -> None:
@@ -264,6 +266,26 @@ class TraceabilityControls(unittest.TestCase):
         ]
         result = self.run_checker(document)
         self.assert_refused(result, "ORPHAN-11:RFE-1")
+
+    # ---------------------------------------------------------------- class 12
+    def test_class_12_unsafe_class_without_contract_or_control(self) -> None:
+        document = load_graph()
+        document["orphans"] = [
+            entry for entry in document["orphans"]
+            if entry["id"] != "ORPHAN-12:OBL-T4-RAW-DEREFERENCE"
+        ]
+        result = self.run_checker(document)
+        self.assert_refused(result, "ORPHAN-12:OBL-T4-RAW-DEREFERENCE")
+        self.assertIn("neither a validity argument nor a control", result.stderr)
+
+    def test_class_12_forged_zero_uncovered_is_refused(self) -> None:
+        document = load_graph()
+        node = next(
+            n for n in document["nodes"] if n["id"] == "OBL-T4-RAW-DEREFERENCE"
+        )
+        node["unsafe_site_inventory"]["sites_without_contract_or_control"] = 0
+        result = self.run_checker(document)
+        self.assert_refused(result, "ORPHAN-12:OBL-T4-RAW-DEREFERENCE")
 
     def test_class_11_claimed_discharge_without_artefact(self) -> None:
         document = load_graph()
