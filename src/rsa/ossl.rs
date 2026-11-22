@@ -3047,4 +3047,74 @@ mod tests {
             BN_free(e);
         }
     }
+
+    /// PFP-1: the CRT path with cached prepared domains (`RSA_FLAG_CACHE_PRIVATE`
+    /// set) answers exactly what the path with every context rebuilt answers.
+    /// The uncached arm is the mutation control: the reuse is removed, not the
+    /// operation.
+    #[test]
+    fn the_prepared_crt_path_answers_what_the_unprepared_path_answers() {
+        use crate::bn::arith::BN_ucmp;
+        use crate::bn::bignum::{BN_new, BN_set_word};
+        use crate::bn::ctx::{BN_CTX_free, BN_CTX_new};
+        use crate::rsa::gen::RSA_generate_key_ex;
+        use crate::rsa::object::{RSA_free, RSA_new};
+
+        // SAFETY: every object below is created and released here and is live for
+        // each call.
+        unsafe {
+            let e = BN_new();
+            let rsa = RSA_new();
+            assert!(!e.is_null() && !rsa.is_null());
+            assert_eq!(BN_set_word(e, 65537), 1);
+            assert_eq!(RSA_generate_key_ex(rsa, 2048, e, core::ptr::null_mut()), 1);
+
+            let input = BN_new();
+            assert!(!input.is_null());
+            assert_eq!(BN_set_word(input, 0x42), 1);
+
+            let run = |cache_private: bool, out: *mut BigNum| -> bool {
+                BN_MONT_CTX_free((*rsa)._method_mod_p);
+                (*rsa)._method_mod_p = core::ptr::null_mut();
+                BN_MONT_CTX_free((*rsa)._method_mod_q);
+                (*rsa)._method_mod_q = core::ptr::null_mut();
+                BN_MONT_CTX_free((*rsa)._method_mod_n);
+                (*rsa)._method_mod_n = core::ptr::null_mut();
+                if cache_private {
+                    (*rsa).flags |= RSA_FLAG_CACHE_PRIVATE;
+                } else {
+                    (*rsa).flags &= !RSA_FLAG_CACHE_PRIVATE;
+                }
+                let ctx = BN_CTX_new();
+                if ctx.is_null() {
+                    return false;
+                }
+                let ok = rsa_ossl_mod_exp(out, input, rsa, ctx) == 1;
+                BN_CTX_free(ctx);
+                ok
+            };
+
+            let prepared = BN_new();
+            let unprepared = BN_new();
+            assert!(!prepared.is_null() && !unprepared.is_null());
+            assert!(run(true, prepared), "the prepared CRT arm must succeed");
+            // The prepared arm cached p and q; the unprepared arm clears them and
+            // disables the cache, forcing the precomputation on every operation.
+            assert!(
+                run(false, unprepared),
+                "the unprepared CRT arm must succeed"
+            );
+            assert_eq!(
+                BN_ucmp(prepared, unprepared),
+                0,
+                "prepared vs unprepared CRT"
+            );
+
+            BN_free(prepared);
+            BN_free(unprepared);
+            BN_free(input);
+            RSA_free(rsa);
+            BN_free(e);
+        }
+    }
 }

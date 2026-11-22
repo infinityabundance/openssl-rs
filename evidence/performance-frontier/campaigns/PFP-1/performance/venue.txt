@@ -1,0 +1,12 @@
+campaign=PFP-1
+inside_court=true
+court_image=openssl-rs-court-tools:1
+container_hostname=c61c1a25df26
+kernel=7.3.5-2-cachyos
+machine=x86_64
+nproc=30
+cpu_model=13th Gen Intel(R) Core(TM) i9-13900K
+taskset_cpu=1
+cgroup_memory_max=6442450944
+cgroup_cpu_max=800000 100000
+mem_available_kb=29639584

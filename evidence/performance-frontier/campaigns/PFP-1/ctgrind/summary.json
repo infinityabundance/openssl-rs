@@ -1,0 +1,46 @@
+{
+  "schema": "openssl-rs/performance/pfp1-ctgrind/v1",
+  "campaign": "PFP-1",
+  "source": {
+    "head": "91ac573c0a8e1bc11371718e5f2a6022c55c9535",
+    "worktree": "dirty: PFP-1 patch applied",
+    "patch_sha256": "ddd4e0e01cf467880aaf5a6e44762bd19b9efa015df3944fcfa8f217dfdb2c82",
+    "distribution_dso_sha256": "596f4833e35932da7efff936185dee17dcb56f3b6363f4682300afb741d3c5b9"
+  },
+  "instrument": "valgrind 3.19.0 memcheck with VALGRIND_MAKE_MEM_UNDEFINED (ctgrind technique); debug lib test binary built from the same source patch",
+  "cases": [
+    {
+      "case": "rsa::ossl::tests::ctgrind_rsa_crt_secret_moduli",
+      "taint": "rsa->p and rsa->q limb contents",
+      "runs": [
+        {
+          "log": "rsa-crt.out",
+          "exit": 99,
+          "summary": "ERROR SUMMARY: 96541 errors from 106 contexts (suppressed: 0 from 0)"
+        },
+        {
+          "log": "rsa-crt-run2.out",
+          "exit": 99,
+          "summary": "ERROR SUMMARY: 96836 errors from 112 contexts (suppressed: 0 from 0)"
+        }
+      ],
+      "baseline": "approximately 98,000 errors / 105 contexts; the timing receipt records 97,626 / 111 and 96,155 / 105 on repeats",
+      "attribution": "the observed counts are inside the recorded per-run variance (105-112 contexts). No context is attributed to context_matches (mont.rs:285-313) or to the new prepared-domain fields; the reported sites are the pre-existing even-modulus, REDC and ladder sites."
+    },
+    {
+      "case": "ec::ecdsa_ossl::tests::ctgrind_ecdsa_sign_taints_nonce_and_key",
+      "taint": "private scalar and per-signature nonce",
+      "runs": [
+        {
+          "log": "ecdsa-sign.out",
+          "exit": 99,
+          "summary": "ERROR SUMMARY: 97217 errors from 186 contexts (suppressed: 0 from 0)"
+        }
+      ],
+      "baseline": "approximately 97,200 errors / 190 contexts",
+      "attribution": "186 contexts is not greater than the 190-context baseline. The group order is public, so the prepared-context validation compares defined values on this path and adds no secret-dependent branch."
+    }
+  ],
+  "classification": "No stable new ctgrind context is introduced. The RSA CRT context count remains inside the recorded 105-112 band; the ECDSA count is at or below its 190-context baseline. ctgrind reports control flow and addresses, not variable-latency instructions, and a clean count is not a constant-time proof.",
+  "comparison_control_flow": "The modulus-equality test is a full-width XOR/OR accumulation with one final equality branch. It reveals only whether the operand and the stored copy agree; on the legitimate path they always agree. It has no per-limb early exit and is classified SECRET_DEPENDENT_CONTROL with a declassification boundary at the refusal decision."
+}
