@@ -10,6 +10,55 @@ implementation, weakens a probe, or reopens an obligation, nothing *fails* — t
 is simply less evidence than before. So the gate is not a test suite; it is a
 comparison against a committed baseline.
 
+## The FAST tier (every push)
+
+`ci.yml` runs on every push to every branch and on every pull request. The FAST
+items from `AGENTS.md` section 6 are mapped to jobs as follows. There is no
+single job because the Rust and Python gates need different toolchains, and no
+step is optional: a missing prerequisite fails the job.
+
+| tier item | job | exact command |
+|---|---|---|
+| formatting | `lint` | `cargo fmt --all -- --check` |
+| lints / `SAFETY:` contracts | `lint` | `cargo clippy --all-targets -- -D warnings` (the crate denies `unsafe_op_in_unsafe_fn`, `undocumented_unsafe_blocks` and `missing_safety_doc`) |
+| library tests, tier thread count | `static` | `cargo test --lib -- --test-threads=4`, after the authoritative serial run |
+| claim algebra | `assurance` | `python3 forensics/tools/etp_claims.py validate`; the conjunction is recorded, not release-gating |
+| interop receipts | `assurance` | `python3 courts/phase18/interop/check_receipts.py` |
+| documentation consistency | `assurance` | `python3 forensics/tools/docs_consistency.py` and `--self-test` |
+| benchmark reconstruction | `assurance` | `python3 forensics/tools/tests/test_analyse_bench_api.py` |
+| claim-algebra controls | `assurance` | `python3 forensics/tools/tests/test_etp_claims.py` |
+| release-gate self-test | `assurance` | `python3 forensics/tools/release_gate.py --self-test` |
+| structural (lint attributes only) | `assurance` | the inline `Cargo.toml` / `src/lib.rs` assertion |
+
+The conjunction is printed on every push and is expected to read
+`CONTRADICTED` while the ETP-T15 contradictions are open. That is a recorded
+fact, not a green signal, and the `assurance` job does not fail on it: the
+**release gate** refuses it, which is where a positive verdict would be
+misleading.
+
+### What the FAST tier does not run, and why
+
+- **The instrument register (`instrument_qualify.py validate`/`check`).** The
+  register is venue-bound: every version probe and executable control must run
+  in the qualified toolkit (`openssl-rs-court-tools:1`). On a bare runner both
+  commands fail closed with `IQ_VERSION_COMMAND` (for example `binsec: command
+  not found`), so a workflow claiming to run them there would be false. The
+  check runs in the release gate, which is executed in the court. Closing the CI
+  half needs the tools image provisioned for CI — infrastructure work, named as
+  a gap rather than approximated.
+- **The full section 6 structural guards.** `cargo clippy` is the authority for
+  a `SAFETY:` contract on every unsafe op, and the inline assertion keeps the
+  enabling lint attributes from being weakened. There is no FAST-frequency
+  standalone tool for the allocator seam, `#[repr(C)]` layouts or exported
+  symbols: the authoritative checks are the seal-tier `ownership_audit.py`,
+  `prototype_court.py` and the Phase-2 ABI courts, which need the authority and
+  a built artefact. Their absence from FAST is recorded here, not implied to be
+  covered.
+- **The release gate itself.** It refuses the current tree by design (see
+  `docs/RELEASE_GATES.md`), so running it as a push gate would make every push
+  red without adding information. It is a release step and its output is
+  retained.
+
 ## The regression guard
 
 `forensics/tools/regression_guard.py` reads the derived evidence and the committed
@@ -48,13 +97,22 @@ merely late. Read the file.
 
 ### `lint` — a required gate
 
-`cargo clippy --all-targets -- -D warnings`. This carried `continue-on-error: true`
+`cargo fmt --all -- --check` and `cargo clippy --all-targets -- -D warnings`.
+Clippy carried `continue-on-error: true`
 while the Phase 4 BIO and CONF modules did not satisfy it (201 diagnostics, all of the
 form "`unsafe` function's docs are missing a `# Safety` section" or "`unsafe` block
 missing a safety comment"). The debt was paid, the line was removed, and it is now a
 hard gate. Suppressing the lint with an `allow` was rejected along the way and stays
 rejected: the `docs/UNSAFE.md` policy is real, and an `allow` with no written reason is
 exactly what this project treats as a defect.
+
+### `assurance` — the Python FAST gates
+
+Runs the claim algebra, the interop receipt checker, documentation consistency,
+the benchmark-reconstruction analyser's controls, the claim algebra's controls,
+the release gate's self-test, and the lint-attribute structural assertion. All
+read committed evidence; none builds the authority. See the table above for the
+exact commands and the list of checks this job deliberately does not run.
 
 ### `static` — no authority required
 
@@ -199,7 +257,12 @@ developer's machine and fails in CI, CI is right and the commit is not.
 - It covers one platform (Linux x86-64) and one build profile. A green CI run says
   nothing about any other.
 - It does not gate publishing. Publishing is a deliberate, manual act; this gate
-  exists so that every pushed commit is at least not a step backwards.
+  exists so that every pushed commit is at least not a step backwards. The
+  release decision is `forensics/tools/release_gate.py`, documented in
+  `docs/RELEASE_GATES.md`; CI does not run it, and no tag or `cargo publish`
+  path invokes it automatically. That is a named gap: a release can still be
+  published without a green gate, and the change that closes it is a
+  tag-triggered workflow in the qualified venue plus protection on the tag.
 
 ## Container start-up
 
@@ -210,3 +273,13 @@ rejects a `--cpus` above the machine's count
 made the job fail at `Start court container` rather than in a court. The cap is
 therefore clamped to `nproc` when the machine is smaller than the requested 8, and
 the clamp is announced. See `docs/DECISIONS.md` D31.
+
+## Unapplied workflow patch (ETP-7)
+
+The `assurance` job described above is tracked as
+`forensics/etp7/ci-assurance-job.patch` and is **not** present in
+`.github/workflows/ci.yml`: the credential that pushed it is an OAuth app without
+the `workflow` scope, and GitHub refuses a workflow update from such a token.
+Apply the patch with a credential that has that scope, then run the workflow once
+and record the first execution. Until then the Python assurance gates on this page
+run only when invoked by hand.

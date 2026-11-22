@@ -178,6 +178,11 @@ attempt skipped step 3 and the `static gates` job's
 `gen_frf_courts.py --check` is what caught it — the gate working, and a reminder
 that a gate is not a procedure.
 
+Step 0 is `python3 forensics/tools/release_gate.py --candidate "$(git rev-parse
+HEAD)" --require-clean --package <etp6-unpacked>` in the court venue. A refusal
+stops the sequence; the output is retained. The later steps make the candidate
+green on its own account; they do not substitute for the gate.
+
 1. Land the stratum on `main` with the pipeline green (`court/pipeline.sh`, or the
    two CI jobs, which run the same steps).
 2. Bump `version` in `Cargo.toml` **and** regenerate `Cargo.lock`, which records the
@@ -205,6 +210,83 @@ that a gate is not a procedure.
 OpenSSL 4.x is a major-family transition and gets a **new compatibility
 profile**. An OpenSSL 3 receipt is never silently reinterpreted as evidence for
 OpenSSL 4.
+
+## The release gate (ETP-7)
+
+`forensics/tools/release_gate.py` is the one machine decision a release is
+required to pass. It is standard-library Python and refuses by default: an item
+whose checker cannot run, whose package was not supplied, or whose evidence does
+not exist is a refusal with a named rule, never a skip.
+
+A release candidate passes only when all six items pass:
+
+1. **candidate identity** — `HEAD` is the commit named by `--candidate`, and
+   under `--require-clean` the worktree has no uncommitted tracked or untracked
+   path (ignored paths excluded), because `cargo publish` packages the working
+   tree;
+2. **claim set** — `evidence/etp/claims.json` validates under the claim algebra
+   and no claim is `CONTRADICTED`, `REFUTED`, or `WITHDRAWN`; no claim is
+   `NOT_ESTABLISHED` while a graduation is requested; and no positive verdict
+   rests on evidence whose declared state is `WITHDRAWN`, `REFUTED` or
+   `NOT_ESTABLISHED`;
+3. **interop receipts** — `courts/phase18/interop/check_receipts.py` holds over
+   the evidence (rules R1–R5);
+4. **instrument register** — `forensics/tools/instrument_qualify.py check`
+   validates the register and every executable control passes in the venue that
+   ran it;
+5. **external package** — a built ETP-6 package is present and its own
+   `verify.sh` (or `etp6_verify.py`) passes; `--package` accepts the unpacked
+   root or the `.tar.gz`, and an absent package is `RG_PACKAGE_MISSING` rather
+   than "not applicable";
+6. **documentation consistency** — `forensics/tools/docs_consistency.py` holds.
+
+```bash
+python3 forensics/tools/release_gate.py \
+  --candidate "$(git rev-parse HEAD)" --require-clean \
+  --package /tmp/etp6-unpacked --json > release-gate.json
+```
+
+The command exits `0` only when nothing is refused. Otherwise it prints one line
+per refused item naming the rule and the artefact, and exits `1`:
+
+```
+REFUSED RG_CLAIM_CONTRADICTED ETP0-CLM-004: verdict CONTRADICTED -- <basis>
+REFUSED RG_PACKAGE_MISSING -: no --package was supplied; ...
+```
+
+The gate's real output on the tree that introduced it is recorded verbatim in
+`evidence/etp7/RECEIPT.md`. It refuses, because the committed claim set conjoins
+to `CONTRADICTED`; that refusal is the gate working, not a defect in it.
+
+`--self-test` proves the gate refuses each failure class it claims to cover: a
+contradicted claim, a positive verdict over withdrawn evidence, a failing
+receipt, an invalid register, a missing package, a failing package verifier and a
+documentation inconsistency, plus a positive control that runs the real
+documentation checker. The self-test calls the real checkers on constructed
+fixtures; it does not assert against the current evidence state.
+
+### Release policy
+
+> **A release published without a passing `release_gate.py` run is a policy
+> violation.** The gate's output — the identity line, the recorded checks and
+> every `REFUSED` line — is retained with the release record (`--json` for the
+> machine-readable form). A green CI run is not a release gate; CI is not a
+> release and this gate is not a test suite.
+>
+> The gate is run in the qualified court venue. Its instrument item is
+> venue-bound and fails closed elsewhere; running it on a bare host does not
+> produce a weaker pass, it produces a refusal.
+
+### Known gap: no automatic enforcement
+
+There is no release script and no tag-triggered `cargo publish` path in this
+repository, so the gate is a documented, mandatory **manual** step in the
+release sequence above. Nothing in automation currently prevents a maintainer from
+publishing without it. The change that would close the gap is a tag-triggered
+workflow that (a) runs `release_gate.py` in the qualified court image, (b)
+requires the ETP-6 package as an uploaded artefact, and (c) protects the release
+tag on the gate's check. That is CI/infrastructure work with its own
+justification, and it is recorded here rather than implied to exist.
 
 ## 9. Definition of success
 

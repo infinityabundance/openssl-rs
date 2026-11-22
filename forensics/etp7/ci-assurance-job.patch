@@ -1,0 +1,161 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index f98183cc4..94af6e440 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -87,6 +87,11 @@ jobs:
+     steps:
+       - uses: actions/checkout@v4
+ 
++      # FAST tier, first gate: formatting. It is cheap, needs no authority and
++      # fails before any compilation is paid for. See docs/CI.md.
++      - name: Formatting
++        run: cargo fmt --all -- --check
++
+       # `--all-targets` compiles the crate's `#[cfg(test)]` code, and three test modules
+       # embed the authority's own vector files with `include_str!` rather than retyping
+       # them -- `src/ml_kem/tests.rs`, `src/slh_dsa/tests.rs` and `src/provider/kdf.rs`'s
+@@ -124,6 +129,121 @@ jobs:
+       - name: Run adversarial probes (one process per probe)
+         run: bash scripts/adv-probe.sh
+ 
++  assurance:
++    # FAST tier, assurance half: the Python policy gates and the analyser test
++    # suites. These read committed evidence and need no authority build, so they
++    # run on every push beside the Rust gates. See docs/CI.md.
++    #
++    # The instrument register is deliberately NOT checked here. Its register is
++    # venue-bound: every version probe and executable control must run in the
++    # qualified toolkit (`openssl-rs-court-tools:1`), and on a bare runner both
++    # `instrument_qualify.py validate` and `check` fail closed with
++    # IQ_VERSION_COMMAND. That check runs in the release gate, in the court. The
++    # CI gap is named in docs/CI.md rather than covered by a step that cannot be
++    # true.
++    name: assurance FAST gates (claims, receipts, docs, analysers)
++    runs-on: ubuntu-latest
++    timeout-minutes: 30
++    steps:
++      - uses: actions/checkout@v4
++        with:
++          # Claim digests are re-derived from the Git object store at the frozen
++          # source identity, which is an ancestor of this branch.
++          fetch-depth: 0
++
++      # Every claim must validate under the algebra: schema, cross-field laws,
++      # and evidence digests re-derived from Git. Truth is not decided here.
++      - name: Claim algebra
++        run: python3 forensics/tools/etp_claims.py validate
++
++      # The conjunction is recorded even when it is not green. The release gate
++      # is what refuses a CONTRADICTED conjunction; this step proves the
++      # document can be conjoined and prints the verdict so a red release is
++      # visible on every push rather than discovered at tag time.
++      - name: Claim conjunction (recorded, not release-gating)
++        run: |
++          set -euo pipefail
++          python3 forensics/tools/etp_claims.py conjoin \
++            --document evidence/etp/claims.json > "${RUNNER_TEMP}/claim-conjunction.json"
++          python3 - "${RUNNER_TEMP}/claim-conjunction.json" <<'PY'
++          import json, sys
++          d = json.load(open(sys.argv[1]))
++          print(f"claim conjunction: {d.get('verdict')} ({len(d.get('blocked_by', []))} blocked, "
++                f"{len(d.get('obligations', []))} open obligations)")
++          PY
++
++      # The interop receipts and manifests against rules R1-R5. A manifest that
++      # points at a gitignored log fails here in a clean checkout, which is the
++      # point.
++      - name: Interop receipt checker
++        run: python3 courts/phase18/interop/check_receipts.py
++
++      # Hand-written document claims against their generated sources.
++      #
++      # The `--self-test` arm is reported, not assumed: when its ledger has an
++      # empty side it prints `self-test: skipped` with the reason. That is
++      # recorded as NOT_RUN and the job continues; calling it a pass would be the
++      # silent-skip failure this job exists to avoid.
++      - name: Documentation consistency
++        run: |
++          set -euo pipefail
++          python3 forensics/tools/docs_consistency.py
++          self_test=$(python3 forensics/tools/docs_consistency.py --self-test || true)
++          printf '%s\n' "$self_test"
++          case "$self_test" in
++            *"self-test: ok"*) ;;
++            *"self-test skipped"*) echo "::warning::docs_consistency self-test NOT_RUN (reason above)" ;;
++            *) echo "::error::docs_consistency self-test produced no recognised verdict" >&2; exit 1 ;;
++          esac
++
++      # The benchmark-reconstruction analyser refuses a malformed population.
++      - name: Benchmark reconstruction analyser controls
++        run: python3 forensics/tools/tests/test_analyse_bench_api.py
++
++      # The claim algebra's own negative controls.
++      - name: Claim algebra controls
++        run: python3 forensics/tools/tests/test_etp_claims.py
++
++      # The release gate's self-test: one case per failure class it claims to
++      # refuse. It calls the real claim/receipt/instrument/package checkers on
++      # fixtures, so a gate that stops refusing fails here on the first push.
++      - name: Release gate self-test
++        run: python3 forensics/tools/release_gate.py --self-test
++
++      # The only structural guard in section 6 that is cheap and unambiguous at
++      # FAST: the lint attributes that make every `unsafe` op carry a SAFETY
++      # contract. The allocator seam, #[repr(C)] layouts and exported symbols
++      # have no FAST-frequency standalone tool; their authoritative checks are
++      # the seal-tier `ownership_audit.py`, `prototype_court.py` and the Phase-2
++      # ABI courts. That absence is recorded in docs/CI.md and
++      # evidence/etp7/RECEIPT.md rather than papered over here.
++      - name: Structural guard (unsafe lint attributes)
++        run: |
++          set -euo pipefail
++          python3 - <<'PY'
++          import pathlib, sys, tomllib
++
++          doc = tomllib.loads(pathlib.Path("Cargo.toml").read_text(encoding="utf-8"))
++          want = {
++              ("rust", "unsafe_op_in_unsafe_fn"): "deny",
++              ("clippy", "undocumented_unsafe_blocks"): "deny",
++              ("clippy", "missing_safety_doc"): "deny",
++          }
++          problems = []
++          for (group, key), value in want.items():
++              got = (doc.get("lints", {}).get(group) or {}).get(key)
++              if got != value:
++                  problems.append(f"lints.{group}.{key} is {got!r}, must be {value!r}")
++          if "#![deny(unsafe_op_in_unsafe_fn)]" not in pathlib.Path("src/lib.rs").read_text(encoding="utf-8"):
++              problems.append("src/lib.rs does not deny unsafe_op_in_unsafe_fn")
++          if problems:
++              print("structural lint-attribute guard: REFUSED")
++              for problem in problems:
++                  print(f"  {problem}")
++              sys.exit(1)
++          print("structural lint-attribute guard: unsafe lint attributes preserved")
++          PY
++
+   static:
+     name: static gates (build, tests, determinism, no-regression)
+     runs-on: ubuntu-latest
+@@ -170,12 +290,16 @@ jobs:
+       - name: Unit tests
+         run: cargo test --lib -- --test-threads=1
+ 
+-      # The serial run above is the authoritative one. This second run at the default thread count
+-      # is the parallel-safety gate: a test that mutates process-global state is supposed to take
+-      # `test_support::lock_global_state`, and one that does not surfaces here rather than hiding
+-      # behind the serialisation that protects the legitimate cases. Both runs must be green.
+-      - name: Unit tests (parallel-safety gate)
+-        run: cargo test --lib
++      # The serial run above is the authoritative one. This second run is the
++      # FAST-tier parallel-safety gate at the thread count the tier names
++      # (`--test-threads=4`). A test that mutates process-global state is supposed to
++      # take `test_support::lock_global_state`, and one that does not surfaces here
++      # rather than hiding behind the serialisation that protects the legitimate
++      # cases. The count is explicit rather than the runner default: the tier is
++      # defined by the command, not by whatever CPU count a runner happens to have.
++      # Both runs must be green.
++      - name: Unit tests (FAST tier, parallel-safety gate, --test-threads=4)
++        run: cargo test --lib -- --test-threads=4
+ 
+       - name: Stand the authority back down
+         run: rm -rf forensics/authorities/src forensics/authorities/downloads
