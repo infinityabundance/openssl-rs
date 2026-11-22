@@ -1,0 +1,510 @@
+{
+  "schema": "openssl-rs/etp0/claims/v1",
+  "kind": "etp0-claim-inventory",
+  "generated_utc": "2026-11-22T06:00:25Z",
+  "task": "ETP-0 of docs/ETP-TODO.md: claim inventory",
+  "method": "Read-only inventory. Each claim id corresponds to a tracked artefact that was opened and read. Fields are orthogonal: property (what is asserted), scope (what it ranges over), quantification (measurable form), identity (which candidate/artefacts it binds to), evidence (what is cited and whether it is present and reconstructable), verdict (what the present tree supports). No prose claim is upgraded above the evidence cited for it.",
+  "field_definitions": {
+    "property": [
+      "identity",
+      "compatibility",
+      "memory-safety",
+      "timing",
+      "cryptographic-assurance",
+      "reproducibility",
+      "consumer-graduation",
+      "claim-governance"
+    ],
+    "binding_state": [
+      "exact",
+      "ancestor",
+      "stale",
+      "different-candidate",
+      "multiple",
+      "unbound"
+    ],
+    "verdict_state": [
+      "SUPPORTED",
+      "PARTIAL",
+      "CONTRADICTED",
+      "SUPERSEDED",
+      "WITHDRAWN",
+      "UNKNOWN"
+    ],
+    "evidence_presence": [
+      "true",
+      "false",
+      "partial"
+    ]
+  },
+  "source_identity": {
+    "commit": "9372bb28b2fbe2f71cf2aa2ab501414d45e87d42",
+    "branch": "staging",
+    "worktree_dirty_tracked_files": 0,
+    "tracked_file_count": 13708,
+    "tree_hash_rule": "sha256 over canonical JSON (sort_keys, separators ',', ':') of sorted [relpath, size, sha256] entries, restricted to tracked files (git ls-files) under the named paths; this is the atlas_common.content_hash / phase7_courts._source_tree_digest rule applied to tracked files only",
+    "trees": {
+      "source_core_src_cargo_lock_build": {"paths": ["src", "Cargo.toml", "Cargo.lock", "build.rs"], "file_count": 893, "sha256": "51568028bc902bee1fe3e4cdb5f401c9cf4a66aef501d95a42e2f35bfbd19981"},
+      "src": {"file_count": 890, "sha256": "942e89754a4f28eafea9bb05b6d2bddd757810f56c31488c598d2354bcd537ff"},
+      "forensics_tools_build_scripts_verification_recipes": {"file_count": 309, "sha256": "a5fefdc660c6d8289519828402a67e0a595cb4721b930611f685fde0ef9520c9"},
+      "courts_phase18_timing": {"file_count": 27, "sha256": "fd3c31747b9ebfe699f4346f89d6e027f75e3bb447d9c4e6dcc9a99c455a3745"},
+      "courts_phase18_interop": {"file_count": 48, "sha256": "036c83fbf70b08e88bc7341e1fc5d0b306568121aa91dc0d4d9854c362425e39"},
+      "courts_phase18_all": {"file_count": 303, "sha256": "83245ade509cbde30c5c16821e54244985fe8a1f2404c91ce430fd3abe5c4337"},
+      "phase2_version_script": {"paths": ["artifacts/phase2/libcrypto.ld"], "file_count": 1, "sha256": "a358415aced62fd9cf4f64c7b0661c19ed2f0b2a25ed8f517f9eb248a59807cb"},
+      "tests": {"file_count": 2, "sha256": "60838cd01afe6529ee322bbd28445cb85159b45465e6bb8a7d9f8c26775afeeb"},
+      "docker": {"file_count": 15, "sha256": "1bd35f44fd06a894eb89a5494f2f1b4ce7edc810bd9433c82b9a431142e4899c"},
+      "docs_constitution_build_inputs": {"paths": ["docs/CUSTODIAN_CONTRACT.md", "docs/PARITY_MODEL.md", "docs/AUTHORITY_POLICY.md", "docs/SECURITY_DIVERGENCE_POLICY.md", "docs/OWNERSHIP_MODEL.md", "docs/ABI_POLICY.md", "docs/PROVIDER_MODEL.md", "docs/FIPS_CLAIMS.md", "docs/CONCURRENCY_MODEL.md", "docs/RELEASE_GATES.md", "docs/NON_CLAIMS.md", "docs/REPRODUCIBILITY.md", "docs/UNSAFE.md"], "file_count": 13, "sha256": "cbd60c73e050eaf1112c69539267446d51f1a8c6e4759fc45e3c83175765fa48"},
+      "build_files": {"paths": ["Cargo.toml", "Cargo.lock", "build.rs", "rust-toolchain.toml"], "file_count": 4, "sha256": "f06a5e1f53a30e661df75a30ab845deb3b598a669db8ba295cd2ceb40dd4f2fc"}
+    },
+    "authority_registry": {"path": "forensics/authorities/AUTHORITIES.json", "file_count": 1, "sha256": "707ec86933107eae941f74c727cb677aefd36424428c510c686140b9f12ba12b"}
+  },
+  "known_item_resolutions": {
+    "o7_withdrawal": {
+      "state": "RESOLVED",
+      "finding": "The pre-fix four-cell claim was withdrawn in a machine-readable revision. At commit cc2e5fa32, courts/phase18/interop/RECEIPT-o7.json carried status WITHDRAWN and withdrawn true. The current receipt (last changed at 5b04fa06f) records status ESTABLISHED, withdrawn false, and states that it supersedes the withdrawn revision 2 and the three pre-fix per-cell receipts. The current four per-cell receipts (RECEIPT-o7-AA/AB/BA/BB.json) record withdrawn false and carry the cell-level DSO digests. The old claim was not silently restored; it was replaced by a new run whose cells map the intended library.",
+      "evidence": ["courts/phase18/interop/RECEIPT-o7.json", "courts/phase18/interop/RECEIPT-o7-AA.json", "courts/phase18/interop/RECEIPT-o7-BB.json", "git show cc2e5fa32:courts/phase18/interop/RECEIPT-o7.json"]
+    },
+    "court_tmp_log_paths": {
+      "state": "OPEN",
+      "finding": "1,929 references to court/tmp/ appear in tracked JSON and Markdown; git ls-files court/tmp returns 0 files. The directory is excluded by .gitignore. Every such reference names evidence that cannot be reconstructed from a clean checkout unless the cited run is re-executed.",
+      "evidence": [".gitignore", "court/tmp/t20/NOTES.md"]
+    },
+    "openssh_graduation_vs_adjudication": {
+      "state": "CONTRADICTION_PRESERVED",
+      "finding": "evidence/SAFE-COMPATIBLE-openssh-b85c.json records a principal-decided SAFE_COMPATIBLE verdict for ssh and sshd at b85c. evidence/b85c-adjudication.json records NOT ESTABLISHED at the same candidate, and the graduation record itself preserves that dissent. The closure receipts cited by the graduation record carry verdict.safe_compatible=false, and evidence/FREEZE-b85c.json records the L7 replay as not_graduated. The pair is not a silent conflict: the graduation is a governance act over evidence whose own machine records say the candidate is not graduated.",
+      "evidence": ["evidence/SAFE-COMPATIBLE-openssh-b85c.json", "evidence/b85c-adjudication.json", "evidence/closure-ssh-b85c.json", "evidence/closure-sshd-b85c.json", "evidence/FREEZE-b85c.json"]
+    },
+    "t27_t29_receipts": {
+      "state": "OPEN",
+      "finding": "docs/ETP-TODO.md marks T27 and T29 DONE but neither row names a receipt file. T27 names no evidence path at all; T29 names courts/phase18/timing/run_bench_api.sh and court/tmp/t21/libcrypto.so.3, the latter untracked. Their evidence is the row prose (a commit-message-shaped narrative), not a committed receipt.",
+      "evidence": ["docs/ETP-TODO.md"]
+    },
+    "dso_digest_divergence": {
+      "state": "OPEN",
+      "finding": "The interop matrix cells link build B as ee7fa27c, while RECEIPT-o4.json, RECEIPT-o5.json and MANIFEST-o11-B.json name build B as 3c3a68c1. Other claim families name aaa32f21 (T19/T20 measurement DSO), 5d0f9098 (distribution DSO), fd25cc9e (tracked install), 06b5f338 (b85c candidate) and 1c03ec0a (runtime atlas). These are not interchangeable and the tree does not bind them to one build record.",
+      "evidence": ["courts/phase18/interop/RECEIPT-o7-BB.json", "courts/phase18/interop/RECEIPT-o4.json", "courts/phase18/interop/RECEIPT-o5.json", "courts/phase18/interop/MANIFEST-o11-B.json", "courts/phase18/timing/RECEIPT-timing-unified.json", "artifacts/phase2/install/lib/libcrypto.so.3", "forensics/downstream/runtime-functional-atlas.json"]
+    }
+  },
+  "claims": [
+    {
+      "id": "ETP0-CLM-001",
+      "artefact": {"path": "docs/NON_CLAIMS.md", "introduced_commit": "e3de1695c", "introduced_date": "2026-09-14", "last_changed_commit": "e3de1695c"},
+      "property": "claim-governance",
+      "assertion": "The project does not claim universal OpenSSL compatibility, a drop-in replacement, FIPS validation, constant-time behaviour from timing tests, platform/profile/version universality, downstream completeness, or coverage from a passing court or fuzz finding.",
+      "scope": {"subject": "all project claims", "population": "every later receipt and document", "venue": "documentation"},
+      "quantification": {"kind": "set", "value": "eight named non-claim families"},
+      "identity": {"bound_candidate": null, "commit": null, "artefact_digests": {}, "binding_state": "unbound"},
+      "evidence": {"cited": ["docs/NON_CLAIMS.md"], "present_in_git": true, "reconstructable": true},
+      "verdict": {"state": "SUPPORTED", "basis": "A governance document that limits claims rather than asserting measured facts. Its limits are consistent with the receipt and timing limits recorded elsewhere."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-002",
+      "artefact": {"path": "docs/RELEASE_GATES.md", "introduced_commit": "e3de1695c", "introduced_date": "2026-09-14", "last_changed_commit": "0b78a26b0"},
+      "property": "claim-governance",
+      "assertion": "A phase ends on ten named evidence items, not on implementation presence; any open residual intersecting the claim scope blocks the claim; maturity is L0-L9; no Rust panic may unwind across the C ABI.",
+      "scope": {"subject": "phase exit and release gating", "population": "every phase and release", "venue": "documentation"},
+      "quantification": {"kind": "set", "value": "ten exit items; ten maturity levels"},
+      "identity": {"bound_candidate": null, "commit": null, "artefact_digests": {}, "binding_state": "unbound"},
+      "evidence": {"cited": ["docs/RELEASE_GATES.md"], "present_in_git": true, "reconstructable": true},
+      "verdict": {"state": "SUPPORTED", "basis": "A policy document; no measured result is asserted."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-003",
+      "artefact": {"path": "docs/FIPS_CLAIMS.md", "introduced_commit": "e3de1695c", "introduced_date": "2026-09-14", "last_changed_commit": "e3de1695c"},
+      "property": "claim-governance",
+      "assertion": "FIPS behavioural parity is distinct from FIPS validation; the candidate is labelled NOT FIPS VALIDATED; OpenSSL's own certification is never used to imply certification of openssl-rs.",
+      "scope": {"subject": "FIPS-related claims", "population": "all profiles", "venue": "documentation"},
+      "quantification": {"kind": "boolean", "value": "NOT FIPS VALIDATED"},
+      "identity": {"bound_candidate": null, "commit": null, "artefact_digests": {}, "binding_state": "unbound"},
+      "evidence": {"cited": ["docs/FIPS_CLAIMS.md"], "present_in_git": true, "reconstructable": true},
+      "verdict": {"state": "SUPPORTED", "basis": "A policy document that withholds a certification claim."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-004",
+      "artefact": {"path": "docs/PHASE-18-HARDENING-SEAL.md", "introduced_commit": "5fc283cd4", "introduced_date": "2026-10-05", "last_changed_commit": "16e6dc7e1"},
+      "property": "compatibility",
+      "assertion": "The Phase-18 court registry records five courts, all_pass true, summary pass 5 of 5, pending_courts empty; the obligation ledger records owned 5, implemented 5, deferred 0, open_in_this_stratum 0.",
+      "scope": {"subject": "Phase-18 hostile-hardening stratum", "population": "five courts and five contract units", "venue": "hostile fuzz / security / side-channel stratum"},
+      "quantification": {"kind": "count", "value": "5 of 5 courts pass; 5 of 5 obligations implemented"},
+      "identity": {"bound_candidate": "openssl-3.6.4-production as named by artifacts/phase18/COURTS.json", "commit": null, "artefact_digests": {"artifacts/phase18/COURTS.json": "487ac096ccc16b2a2730046075ddad7a8a700903442e84a44e03face402e6f4b", "forensics/phase18-obligations.json": "ea80de501862a3d0770078eac792eaef37f6010825debc79c06b20cddf652850"}, "binding_state": "stale"},
+      "evidence": {"cited": ["artifacts/phase18/COURTS.json", "forensics/phase18-obligations.json", "forensics/phase7_courts.py"], "present_in_git": true, "reconstructable": true},
+      "verdict": {"state": "CONTRADICTED", "basis": "artifacts/phase18/COURTS.json at S records all_pass false, summary pass 4 / fail 1, with HOSTILE-BOUNDARY-REGISTER failing on 56 unsafe-footprint bounds. forensics/phase18-obligations.json at S records implemented 4 and open_in_this_stratum 1 (hostile-boundary-register, state open, measurement not_measured)."},
+      "contradicted_by": ["artifacts/phase18/COURTS.json", "forensics/phase18-obligations.json"]
+    },
+    {
+      "id": "ETP0-CLM-005",
+      "artefact": {"path": "docs/PHASE-18-HARDENING-SEAL.md", "introduced_commit": "5fc283cd4", "introduced_date": "2026-10-05", "last_changed_commit": "16e6dc7e1"},
+      "property": "timing",
+      "assertion": "CT-PRIMITIVES classifies a path separated when the ratio of the two minimum batch times exceeds a stated threshold; the seal prose states 110 percent in section 2, and section 6 says both a 50 percent floor and a 150 percent threshold.",
+      "scope": {"subject": "Phase-18 CT-PRIMITIVES court", "population": "seven measured primitive classes and one control", "venue": "bounded work-independence screen"},
+      "quantification": {"kind": "ratio", "value": "110 / 150 / 50 percent stated in prose; 150 percent in probe and machine record"},
+      "identity": {"bound_candidate": "Phase-18 candidate install", "commit": null, "artefact_digests": {"courts/phase18/ct_primitives_probe.c": "883c329e0f194b23a7b3ada26eed76287f246b4206d30bb540a59a4378428dcf", "artifacts/phase18/COURTS.json": "487ac096ccc16b2a2730046075ddad7a8a700903442e84a44e03face402e6f4b"}, "binding_state": "stale"},
+      "evidence": {"cited": ["courts/phase18/ct_primitives_probe.c", "artifacts/phase18/COURTS.json", "docs/PHASE-18-HARDENING-SEAL.md"], "present_in_git": true, "reconstructable": true},
+      "verdict": {"state": "CONTRADICTED", "basis": "courts/phase18/ct_primitives_probe.c defines SEP_PCT 150; artifacts/phase18/COURTS.json records threshold_percent 150; the seal prose is internally inconsistent (110 vs 50 vs 150). The probe source and machine record agree; the prose does not."},
+      "contradicted_by": ["courts/phase18/ct_primitives_probe.c", "artifacts/phase18/COURTS.json"]
+    },
+    {
+      "id": "ETP0-CLM-006",
+      "artefact": {"path": "artifacts/phase18/COURTS.json", "introduced_commit": "fd63e62f8", "introduced_date": "2026-10-05", "last_changed_commit": "b83a74d30"},
+      "property": "timing",
+      "assertion": "Five Phase-18 courts are recorded; four pass and HOSTILE-BOUNDARY-REGISTER fails, so all_pass is false; CT-PRIMITIVES uses threshold_percent 150.",
+      "scope": {"subject": "Phase-18 live court registry", "population": "five courts", "venue": "machine-generated registry"},
+      "quantification": {"kind": "count", "value": "4 pass / 1 fail / 5 total"},
+      "identity": {"bound_candidate": "openssl-3.6.4-production", "commit": null, "artefact_digests": {"self": "487ac096ccc16b2a2730046075ddad7a8a700903442e84a44e03face402e6f4b"}, "binding_state": "stale"},
+      "evidence": {"cited": ["artifacts/phase18/COURTS.json"], "present_in_git": true, "reconstructable": true},
+      "verdict": {"state": "SUPPORTED", "basis": "The file is the machine record of its own current values; it supports the current-state reading and contradicts the seal's historical reading."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-007",
+      "artefact": {"path": "forensics/phase18-obligations.json", "introduced_commit": "fd63e62f8", "introduced_date": "2026-10-05", "last_changed_commit": "ea70331c2"},
+      "property": "memory-safety",
+      "assertion": "The Phase-18 obligation ledger owns five contract units, implements four, and leaves one open in the stratum; the open unit is hostile-boundary-register with measurement_state not_measured.",
+      "scope": {"subject": "Phase-18 hostile hardening contract", "population": "five contract units", "venue": "obligation ledger"},
+      "quantification": {"kind": "count", "value": "owned 5, implemented 4, open 1"},
+      "identity": {"bound_candidate": "openssl-3.6.4-production", "commit": null, "artefact_digests": {"self": "ea80de501862a3d0770078eac792eaef37f6010825debc79c06b20cddf652850"}, "binding_state": "stale"},
+      "evidence": {"cited": ["forensics/phase18-obligations.json"], "present_in_git": true, "reconstructable": true},
+      "verdict": {"state": "SUPPORTED", "basis": "The machine ledger records the open unit; it contradicts the seal's 5/5 statement."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-008",
+      "artefact": {"path": "evidence/baseline-20261120.json", "introduced_commit": "0433aa40c", "introduced_date": "2026-11-20", "last_changed_commit": "0433aa40c"},
+      "property": "identity",
+      "assertion": "The project baseline is commit 0500fa9ef on staging with a clean worktree; the source tree digest is ca7d39b9 over 888 files; the install artefacts are libcrypto fd25cc9e and libssl 648f8cae; the toolchain is rustc 1.98.1 / cc 12.2.0 / GNU ld 2.40; the court is 16 GiB.",
+      "scope": {"subject": "project-wide identity and Phase-18 timing baseline", "population": "identity, timing, reachability, OpenSSH population reconciliation", "venue": "host and court"},
+      "quantification": {"kind": "set", "value": "commit, two DSO digests, one source digest, toolchain versions"},
+      "identity": {"bound_candidate": "0500fa9ef30865a929a3c75c6365ac110e475939", "commit": "0500fa9ef30865a929a3c75c6365ac110e475939", "artefact_digests": {"libcrypto.so.3": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9", "libssl.so.3": "648f8caecda245d2186813fb67ceadedd798b9ce609c8b041a84f195946c5f68", "source_tree": "ca7d39b9bcfbe9827ded8b255a66980d32f16a9fbd15902f80dc1b921839d1c4"}, "binding_state": "ancestor"},
+      "evidence": {"cited": ["evidence/baseline-20261120.json"], "present_in_git": true, "reconstructable": true},
+      "verdict": {"state": "PARTIAL", "basis": "Accurate for commit 0500fa9ef. That commit is an ancestor of S 72 commits behind, with a different source-tree digest and different install artefacts; the baseline is not an identity for S."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-009",
+      "artefact": {"path": "evidence/baseline-20261120.json", "introduced_commit": "0433aa40c", "introduced_date": "2026-11-20", "last_changed_commit": "0433aa40c"},
+      "property": "timing",
+      "assertion": "Rebuilding courts/phase18/ct_primitives_probe.c against the current install and re-running it reproduces the historical seven class verdicts; separations persist; the threshold used is 150 percent.",
+      "scope": {"subject": "Phase-18 CT-PRIMITIVES class verdicts", "population": "seven classes and one control", "venue": "docker/openssl-rs-court.sh, current install prefix"},
+      "quantification": {"kind": "set", "value": "seven class verdicts reproduced identically"},
+      "identity": {"bound_candidate": "install libcrypto fd25cc9e", "commit": "0500fa9ef30865a929a3c75c6365ac110e475939", "artefact_digests": {"libcrypto.so.3": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9", "probe_source": "883c329e0f194b23a7b3ada26eed76287f246b4206d30bb540a59a4378428dcf"}, "binding_state": "stale"},
+      "evidence": {"cited": ["evidence/baseline-20261120.json", "courts/phase18/ct_primitives_probe.c", "courts/phase18/fixtures/rsa-ct-lo.pem", "courts/phase18/fixtures/rsa-ct-hi.pem"], "present_in_git": true, "reconstructable": "partial"},
+      "verdict": {"state": "PARTIAL", "basis": "The probe source and fixtures are tracked and the commands are recorded; the rebuilt binary and its logs are not tracked. The result is bound to install fd25cc9e, which is 32 source-touching commits older than S, so it is not a measurement of S."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-010",
+      "artefact": {"path": "evidence/baseline-20261120.json", "introduced_commit": "0433aa40c", "introduced_date": "2026-11-20", "last_changed_commit": "0433aa40c"},
+      "property": "memory-safety",
+      "assertion": "BN_mod_exp_mont_consttime and BN_mod_inverse are established only as members of a conservative static upper-bound reachable set; neither is imported by ssh or sshd; no per-call-site witness ties either to a concrete ssh/sshd operation; actual symbol-level reachability of BN_mod_inverse is NOT established.",
+      "scope": {"subject": "BN reachability from the OpenSSH consumers", "population": "ssh and sshd closure receipts", "venue": "static graph plus consumer execution"},
+      "quantification": {"kind": "boolean", "value": "upper-bound membership established; symbol-level actual reachability not established"},
+      "identity": {"bound_candidate": "b85c receipts (libcrypto 06b5f338)", "commit": "0500fa9ef", "artefact_digests": {"libcrypto.so.3": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71"}, "binding_state": "different-candidate"},
+      "evidence": {"cited": ["evidence/closure-ssh-b85.json", "evidence/closure-sshd-b85.json", "evidence/b85-l7-replay.json"], "present_in_git": true, "reconstructable": "partial"},
+      "verdict": {"state": "SUPPORTED", "basis": "The baseline states the limit explicitly and does not upgrade the static upper bound to symbol-level reachability. The underlying closure sidecars include untracked court/ data, so the graph is only partly reconstructable."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-011",
+      "artefact": {"path": "docs/ETP-TODO.md", "introduced_commit": "2e2401875", "introduced_date": "2026-11-21", "last_changed_commit": "9372bb28b"},
+      "property": "timing",
+      "assertion": "T19 records a fresh binary-bound timing measurement at DSO aaa32f21 (build-id 97ebf329, clean build from 36fae14be), then a second candidate a67305b1, then a unified re-measurement at ee7fa27c; ctgrind, dudect and branch-audit results are stated for each.",
+      "scope": {"subject": "BN timing and side-channel measurements", "population": "six ctgrind cases, dudect modes, seven branch-audit functions", "venue": "court, taskset -c 1"},
+      "quantification": {"kind": "set", "value": "three candidate DSO digests with per-case counts"},
+      "identity": {"bound_candidate": "aaa32f21 / a67305b1 / ee7fa27c", "commit": "36fae14be (first), later candidates unnamed in the row", "artefact_digests": {"aaa32f21": "aaa32f21f5ae47d4f8ca4f154638f78325e6c8a44c02d86e0e0cecd3679b0ddb", "a67305b1": "a67305b1dcb297b19a12078caf55cb6ad2acdf3dfb332b89c97ee7e1f1d4db34", "ee7fa27c": "ee7fa27c79f5a679d5b229429d53dc7c3b510695db9c74d11b4b6783a735ebe9"}, "binding_state": "multiple"},
+      "evidence": {"cited": ["evidence/timing-bn-repair.json", "courts/phase18/timing/RECEIPT-timing-unified.json", "courts/phase18/timing/RECEIPT-dudect-modes.json"], "present_in_git": true, "reconstructable": "partial"},
+      "verdict": {"state": "PARTIAL", "basis": "The row names three candidates and says the later measurement supersedes nothing. The earliest figures cite court/tmp/t19 (untracked); the unified receipt binds the latest figures to ee7fa27c. The row is not a single-candidate claim."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-012",
+      "artefact": {"path": "forensics/tools/build_reproducibility.sh", "introduced_commit": "3ea7a3c77", "introduced_date": "2026-11-21", "last_changed_commit": "3ea7a3c77"},
+      "property": "reproducibility",
+      "assertion": "Two independent release builds from HEAD at different absolute depths, with different LC_ALL/LANG, TMPDIR and HOSTNAME, SOURCE_DATE_EPOCH pinned, source and target roots remapped, C adapters compiled with -ffile-prefix-map and ar in deterministic mode, produce a byte-identical libopenssl_rs.a and libcrypto.so.3; with --distribution the distribution DSO is compared too; no byte is normalised or stripped.",
+      "scope": {"subject": "release archive and linked DSO", "population": "two builds; optionally two distribution links", "venue": "forensic court"},
+      "quantification": {"kind": "boolean", "value": "byte-identical .a and .so per the tracked recipe"},
+      "identity": {"bound_candidate": "HEAD at run time (measured at abb315a01)", "commit": "abb315a01", "artefact_digests": {"libopenssl_rs.a": "acbef482d6a814fa6624ae143dec493e6c202fea2a10c7b9f0fefdad8095651a", "libcrypto.so.3": "aaa32f21f5ae47d4f8ca4f154638f78325e6c8a44c02d86e0e0cecd3679b0ddb", "distribution DSO": "5d0f9098de4433f64c9f17c51efc36cb6d33d0c293c6921e22c4230566059aeb"}, "binding_state": "stale"},
+      "evidence": {"cited": ["forensics/tools/build_reproducibility.sh", "court/tmp/t20/NOTES.md"], "present_in_git": "partial", "reconstructable": "partial"},
+      "verdict": {"state": "PARTIAL", "basis": "The recipe is tracked and its variation matrix is explicit. The recorded result is in court/tmp/t20/NOTES.md, which is untracked, and was measured at abb315a01. S is 40 commits later with 39 source files changed, so the recorded digests are stale at S. The distribution DSO named as committed is artifacts/phase2/libcrypto.so.3, which .gitignore:41 excludes and git does not track. The --distribution arm also compiles artifacts/phase2/shell/libcrypto.shell.rs, and that whole directory is excluded by .gitignore:44 and is not tracked; only the version script artifacts/phase2/libcrypto.ld is tracked (digest recorded in artifacts/phase2/SHELL_MANIFEST.json)."},
+      "contradicted_by": [".gitignore"]
+    },
+    {
+      "id": "ETP0-CLM-013",
+      "artefact": {"path": "docs/ETP-TODO.md", "introduced_commit": "2e2401875", "introduced_date": "2026-11-21", "last_changed_commit": "9372bb28b"},
+      "property": "timing",
+      "assertion": "T27 marks constant-time modular addition and a fixed-width secret store DONE, with a ctgrind result and a differential test against BN_mod_add.",
+      "scope": {"subject": "ECDSA s = s + m modular addition", "population": "one arithmetic helper and its tests", "venue": "crate tests and ctgrind"},
+      "quantification": {"kind": "count", "value": "stated test result; no receipt count"},
+      "identity": {"bound_candidate": "not stated in the row", "commit": null, "artefact_digests": {}, "binding_state": "unbound"},
+      "evidence": {"cited": ["docs/ETP-TODO.md"], "present_in_git": "partial", "reconstructable": "false"},
+      "verdict": {"state": "PARTIAL", "basis": "The row names no receipt or log. Its evidence is the row prose; the implementation may be present in src/, but no committed receipt binds the stated ctgrind result to a candidate."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-014",
+      "artefact": {"path": "docs/ETP-TODO.md", "introduced_commit": "2e2401875", "introduced_date": "2026-11-21", "last_changed_commit": "9372bb28b"},
+      "property": "timing",
+      "assertion": "T29 marks the ECDSA allocation attribution DONE: a per-site census, three allocation-reduction changes, and a re-measurement; allocations fall from 67,878 to 22,276.",
+      "scope": {"subject": "ECDSA P-256 signing allocations", "population": "52 allocation sites", "venue": "crate tests and bench harness"},
+      "quantification": {"kind": "count", "value": "67,878 -> 22,276 seam-visible allocations"},
+      "identity": {"bound_candidate": "not stated in the row; one cited binary court/tmp/t21/libcrypto.so.3", "commit": null, "artefact_digests": {}, "binding_state": "unbound"},
+      "evidence": {"cited": ["courts/phase18/timing/run_bench_api.sh", "court/tmp/t21/libcrypto.so.3"], "present_in_git": "partial", "reconstructable": "false"},
+      "verdict": {"state": "PARTIAL", "basis": "No receipt is named; the cited measured binary is untracked. The census test may be in src/, but the measured result is not bound to a committed artefact."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-015",
+      "artefact": {"path": "courts/phase18/interop/RECEIPT-o2.json", "introduced_commit": "8380fc806", "introduced_date": "2026-11-21", "last_changed_commit": "5c5788aa8"},
+      "property": "identity",
+      "assertion": "Six campaign inputs are pinned by digest in courts/phase18/interop/MANIFEST.json; five verify and one (the OpenSSL authority archive) is absent-recorded; no pin fails; Dropbear's digest is a first-fetch pin and the Dropbear and PuTTY signatures are not verified.",
+      "scope": {"subject": "OpenSSH interoperability inputs", "population": "OpenSSH 9.9p1 and 10.5p1, PuTTY 0.85, Dropbear 2026.94, OpenSSL 3.6.4", "venue": "pin verifier"},
+      "quantification": {"kind": "count", "value": "6 pins: 5 verified, 1 absent-recorded, 0 failed"},
+      "identity": {"bound_candidate": "authority openssl-3.6.4-production and the pinned tarball digests", "commit": null, "artefact_digests": {"openssh-9.9p1.tar.gz": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02", "openssh-10.5p1.tar.gz": "d44d28a839ea9daf969cc69150fde59910b2b39361dad81a3bd6cbd19218db11", "putty-0.85.tar.gz": "13fd4db2936d03b73812a7bcc2a658e4dd29cc776a56c3670a7fc6f1a0ee8af8", "dropbear-2026.94.tar.bz2": "e098034a843699200c8c977a991fff73159735bf795d5f72ef672c41a6b1ae81"}, "binding_state": "exact"},
+      "evidence": {"cited": ["courts/phase18/interop/MANIFEST.json", "courts/phase18/interop/RECEIPT-o2.json", "courts/phase18/interop/verify_pins.py"], "present_in_git": true, "reconstructable": true},
+      "verdict": {"state": "PARTIAL", "basis": "The digest pins verify as recorded. The two signature obligations are explicitly open, and the OpenSSL archive is verified by forensics/authorities/AUTHORITIES.json rather than by this manifest."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-016",
+      "artefact": {"path": "courts/phase18/interop/RECEIPT-o3.json", "introduced_commit": "5c5788aa8", "introduced_date": "2026-11-21", "last_changed_commit": "5c5788aa8"},
+      "property": "compatibility",
+      "assertion": "Six third-party/harness tools are detected from the generated Makefile's substituted TEST_SSH_* values, with 0 failures; detection is read from the Makefile rather than re-run from PATH.",
+      "scope": {"subject": "OpenSSH harness tool detection", "population": "plink, puttygen, dropbear, dbclient, dropbearkey, dropbearconvert", "venue": "host toolchain under court/tmp/o3"},
+      "quantification": {"kind": "count", "value": "6 tools, 0 failed"},
+      "identity": {"bound_candidate": "OpenSSH 9.9p1 tree under court/tmp/o2", "commit": null, "artefact_digests": {}, "binding_state": "unbound"},
+      "evidence": {"cited": ["courts/phase18/interop/RECEIPT-o3.json", "courts/phase18/interop/verify_detection.sh", "courts/phase18/interop/build_tools.sh"], "present_in_git": "partial", "reconstructable": "partial"},
+      "verdict": {"state": "PARTIAL", "basis": "The receipt records the counts and the mechanism; the tree and prefix it names are under court/tmp, which is untracked. The script and the mechanism are tracked."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-017",
+      "artefact": {"path": "courts/phase18/interop/RECEIPT-o4.json", "introduced_commit": "6415ece60", "introduced_date": "2026-11-21", "last_changed_commit": "066b350e3"},
+      "property": "compatibility",
+      "assertion": "Build A (authority) and build B (candidate) are made from the same OpenSSH 9.9p1 source in isolated trees with no shared LD_LIBRARY_PATH; both exit 0; A binds libcrypto 611e511d and B binds libcrypto 3c3a68c1; neither binary carries RUNPATH/RPATH.",
+      "scope": {"subject": "OpenSSH build/link cells", "population": "ssh, sshd, sshd-session, ssh-keygen, ssh-agent, sftp-server", "venue": "host (deviation recorded)"},
+      "quantification": {"kind": "count", "value": "2 builds, 0 non-zero exits, 12 per-binary NEEDED/RUNPATH rows"},
+      "identity": {"bound_candidate": "B = libcrypto 3c3a68c1", "commit": null, "artefact_digests": {"A": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2", "B": "3c3a68c1baeb304adf2fc3af827e49b14529556008429bd11dda784a2c6cdfd1"}, "binding_state": "exact"},
+      "evidence": {"cited": ["courts/phase18/interop/RECEIPT-o4.json", "courts/phase18/interop/build_trees.sh"], "present_in_git": "partial", "reconstructable": "partial"},
+      "verdict": {"state": "PARTIAL", "basis": "The build receipt is internally consistent and names both DSO digests. It records that the build ran on the host, not the court, and its logs are under court/tmp/o4 (untracked). Its B digest differs from the court matrix's B digest."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-018",
+      "artefact": {"path": "courts/phase18/interop/RECEIPT-o5.json", "introduced_commit": "066b350e3", "introduced_date": "2026-11-21", "last_changed_commit": "066b350e3"},
+      "property": "compatibility",
+      "assertion": "Per-executable runtime identity is established for six binaries across both cells: readelf -d, resolved ldd, and an in-process /proc/self/maps witness in an LD_PRELOAD constructor; 20 live/resolved checks pass, 2 binaries have no crypto dependency, 0 fail; a mixed-linkage negative control is rejected.",
+      "scope": {"subject": "OpenSSH per-executable library mapping", "population": "six binaries in two cells", "venue": "host builds, explicit per-cell LD_LIBRARY_PATH"},
+      "quantification": {"kind": "count", "value": "20 ok, 2 no_crypto_dependency, 0 failed"},
+      "identity": {"bound_candidate": "A = 611e511d; B = 3c3a68c1", "commit": null, "artefact_digests": {"A": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2", "B": "3c3a68c1baeb304adf2fc3af827e49b14529556008429bd11dda784a2c6cdfd1"}, "binding_state": "exact"},
+      "evidence": {"cited": ["courts/phase18/interop/RECEIPT-o5.json", "courts/phase18/interop/verify_runtime_identity.sh", "courts/phase18/interop/map_probe.c"], "present_in_git": true, "reconstructable": "partial"},
+      "verdict": {"state": "SUPPORTED", "basis": "The instruments and their negative control are described and the scripts are tracked. The claim is bound to B = 3c3a68c1, which is not the B DSO the O7 matrix executed."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-019",
+      "artefact": {"path": "courts/phase18/interop/RECEIPT-o6.json", "introduced_commit": "dd0bee3a7", "introduced_date": "2026-11-21", "last_changed_commit": "dd0bee3a7"},
+      "property": "compatibility",
+      "assertion": "The upstream OpenSSH shell suite runs 46 scripts and 410 unit assertions on each subject; both subjects have the same two failing scripts (sftp commands, dropbear kex) and five skips; no candidate-specific failure is observed; the failures are kept as failures.",
+      "scope": {"subject": "OpenSSH upstream test suite", "population": "two subjects, 46 scripts each", "venue": "host (deviation recorded)"},
+      "quantification": {"kind": "count", "value": "46 scripts, 410 unit assertions, 2 failures, 5 skips on each subject"},
+      "identity": {"bound_candidate": "A/B built at RECEIPT-o4", "commit": null, "artefact_digests": {}, "binding_state": "unbound"},
+      "evidence": {"cited": ["courts/phase18/interop/RECEIPT-o6.json", "courts/phase18/interop/summarize_tests.py"], "present_in_git": "partial", "reconstructable": "partial"},
+      "verdict": {"state": "SUPPORTED", "basis": "The classification and count equality are recorded, and the failures are not folded into a pass. The receipt names no log path, so its raw evidence is not bound by the receipt; the tracked O11 logs are not cited here."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-020",
+      "artefact": {"path": "courts/phase18/interop/RECEIPT-o7.json", "introduced_commit": "485032710", "introduced_date": "2026-11-21", "last_changed_commit": "5b04fa06f"},
+      "property": "compatibility",
+      "assertion": "The four-cell matrix AA, BB, BA, AB is genuine after the withdrawal: the in-process probe maps client/server to the intended libraries; every cell records 96 run_test_lines, 87 ok, 7 skipped and the single failing script dropbear kex; the host-key mismatch was the stale copied known_hosts, not a library difference.",
+      "scope": {"subject": "four-cell OpenSSH interoperability matrix", "population": "four cells, two builds", "venue": "court, 6g/6g cap"},
+      "quantification": {"kind": "count", "value": "4 cells, 96 run_test_lines, 87 ok, 7 skipped, 1 failed each"},
+      "identity": {"bound_candidate": "A = 611e511d; B = ee7fa27c", "commit": null, "artefact_digests": {"A": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2", "B": "ee7fa27c79f5a679d5b229429d53dc7c3b510695db9c74d11b4b6783a735ebe9"}, "binding_state": "exact"},
+      "evidence": {"cited": ["courts/phase18/interop/RECEIPT-o7.json", "courts/phase18/interop/RECEIPT-o7-AA.json", "courts/phase18/interop/RECEIPT-o7-AB.json", "courts/phase18/interop/RECEIPT-o7-BA.json", "courts/phase18/interop/RECEIPT-o7-BB.json", "courts/phase18/interop/cell.sh"], "present_in_git": true, "reconstructable": "partial"},
+      "verdict": {"state": "SUPPORTED", "basis": "The matrix receipt and all four cell receipts are present, the four logs are tracked with matching sha256, and the withdrawal/supersession chain is explicit. The matrix receipt itself records mapped paths rather than DSO digests; the cell receipts carry the digests. The mtime-dependent script selection is recorded as a hazard, partly fixed by cell.sh touching regress/*.sh."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-021",
+      "artefact": {"path": "courts/phase18/interop/RECEIPT-o7.json", "introduced_commit": "485032710", "introduced_date": "2026-11-21", "last_changed_commit": "5b04fa06f"},
+      "property": "claim-governance",
+      "assertion": "The first four-cell result was withdrawn because configure wrote an absolute BUILDDIR, the wrappers dropped arguments, and the mapping check was set-based, so the BA/AB cells were silently AA runs; the machine-readable receipt was set to WITHDRAWN before a corrected run replaced it.",
+      "scope": {"subject": "O7 first result", "population": "the withdrawn revision and three pre-fix cell receipts", "venue": "version control"},
+      "quantification": {"kind": "boolean", "value": "withdrawal record present at cc2e5fa32"},
+      "identity": {"bound_candidate": "pre-fix host build", "commit": "cc2e5fa32", "artefact_digests": {}, "binding_state": "exact"},
+      "evidence": {"cited": ["courts/phase18/interop/RECEIPT-o7.json", "git show cc2e5fa32:courts/phase18/interop/RECEIPT-o7.json"], "present_in_git": true, "reconstructable": true},
+      "verdict": {"state": "SUPPORTED", "basis": "The revision at cc2e5fa32 carries status WITHDRAWN and withdrawn true. The current receipt names that revision as superseded. The withdrawal was machine-readable, not only prose."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-022",
+      "artefact": {"path": "courts/phase18/interop/RECEIPT-o8.json", "introduced_commit": "4da8b738a", "introduced_date": "2026-11-21", "last_changed_commit": "4da8b738a"},
+      "property": "compatibility",
+      "assertion": "PuTTY client to OpenSSH server and Dropbear client to OpenSSH server are covered; OpenSSH client to Dropbear server is not covered upstream; diffie-hellman-group14-sha1 is unsupported by Dropbear 2026.94, not a candidate failure; A and B transcripts are identical modulo the tree path.",
+      "scope": {"subject": "interoperability directions", "population": "PuTTY 0.85, Dropbear 2026.94, OpenSSH 9.9p1", "venue": "harness transcripts"},
+      "quantification": {"kind": "count", "value": "PuTTY: 121 cipher/MAC combinations, 15 KEX; Dropbear: 9 cipher combos, 3 of 4 KEX"},
+      "identity": {"bound_candidate": "build B at O6/O9", "commit": null, "artefact_digests": {}, "binding_state": "different-candidate"},
+      "evidence": {"cited": ["courts/phase18/interop/RECEIPT-o8.json"], "present_in_git": "partial", "reconstructable": "partial"},
+      "verdict": {"state": "PARTIAL", "basis": "The receipt carries the verbatim algorithm lists and the dbclient transcript, and the classification is honest (unsupported stays a failure in the upstream suite). Its source_logs are /tmp/o6-a-k.log, /tmp/o6-b-k.log and court/tmp/o4/tree-A/regress/dbclient.log, none tracked."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-023",
+      "artefact": {"path": "courts/phase18/interop/RECEIPT-o9.json", "introduced_commit": "d5c4e9c50", "introduced_date": "2026-11-21", "last_changed_commit": "d5c4e9c50"},
+      "property": "compatibility",
+      "assertion": "With SKIP_LTESTS=sftp-cmds the harness runs 73 scripts, 64 print ok, and the two failures and five skips are identical on both subjects; coverage is recorded for auth, X25519/NIST ECDH, FFDH, PQ hybrid, AES-CTR/GCM, ChaCha20-Poly1305, certificates, rekeying, agent and multiplexing; HMAC-integrity fails on both; host-key rejection is NOT COVERED.",
+      "scope": {"subject": "OpenSSH coverage matrix", "population": "73 scripts", "venue": "harness"},
+      "quantification": {"kind": "count", "value": "73 scripts, 64 ok, 2 failed, 7 skipped"},
+      "identity": {"bound_candidate": "build B = 3c3a68c1 (per MANIFEST-o11-B)", "commit": null, "artefact_digests": {"B": "3c3a68c1baeb304adf2fc3af827e49b14529556008429bd11dda784a2c6cdfd1"}, "binding_state": "exact"},
+      "evidence": {"cited": ["courts/phase18/interop/RECEIPT-o9.json", "courts/phase18/interop/MANIFEST-o11-A.json", "courts/phase18/interop/MANIFEST-o11-B.json"], "present_in_git": "partial", "reconstructable": "partial"},
+      "verdict": {"state": "PARTIAL", "basis": "The coverage table is explicit about what is absent. The receipt cites /tmp/o9-a.log and /tmp/o9-b.log, which are not tracked; the O11 manifests are derived from tracked logs but the O9 receipt does not name them. The bound B digest is the host build, not the O7 court build."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-024",
+      "artefact": {"path": "courts/phase18/interop/RECEIPT-o10.json", "introduced_commit": "63fca4cc4", "introduced_date": "2026-11-21", "last_changed_commit": "63fca4cc4"},
+      "property": "compatibility",
+      "assertion": "Seven harness negative controls (wrong client binary, wrong crypto library, failed auth, dead server, unsupported algorithm, missing third-party tool, timeout/signal kill) all trigger; a control whose harness never announced the script is reported VACUOUS, not counted; the missing-tool control shows the harness exits 0 with a SKIPPED line, so exit status cannot distinguish skip from pass.",
+      "scope": {"subject": "harness sensitivity", "population": "seven controls", "venue": "throwaway copy of a built tree"},
+      "quantification": {"kind": "count", "value": "7/7 TRIGGERED, 0 vacuous"},
+      "identity": {"bound_candidate": "subject tree court/tmp/o4/tree-A", "commit": null, "artefact_digests": {}, "binding_state": "unbound"},
+      "evidence": {"cited": ["courts/phase18/interop/RECEIPT-o10.json", "courts/phase18/interop/negative_controls.sh"], "present_in_git": true, "reconstructable": "partial"},
+      "verdict": {"state": "SUPPORTED", "basis": "The controls and their vacuity rule are recorded, and the finding about the missing-tool control is a genuine limitation. The subject tree is under court/tmp and is untracked."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-025",
+      "artefact": {"path": "courts/phase18/interop/MANIFEST-o11-B.json", "introduced_commit": "702dd94e8", "introduced_date": "2026-11-21", "last_changed_commit": "9a61bd84d"},
+      "property": "compatibility",
+      "assertion": "Every count is derived from a harness log under stated rules (a run test line is executed, ok/failed are assertion lines, any case-insensitive skipped line is skipped, an announced script with none of these is blocked); the manifests record the log digest and byte length, so a manifest is self-verifying against the published bytes; observed 73 scripts, 64 ok, 2 failed, 7 skipped, 0 blocked, 410 unit assertions.",
+      "scope": {"subject": "OpenSSH harness manifests", "population": "two subjects A and B", "venue": "log parser"},
+      "quantification": {"kind": "count", "value": "73 executed, 64 ok, 2 failed, 7 skipped, 0 blocked, 410 unit assertions"},
+      "identity": {"bound_candidate": "A = 611e511d; B = 3c3a68c1", "commit": null, "artefact_digests": {"A": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2", "B": "3c3a68c1baeb304adf2fc3af827e49b14529556008429bd11dda784a2c6cdfd1", "A_log": "0b1705155292e12ef961489f996039b05a3ead8fab0a9d96865b8b2cbd7dee39", "B_log": "e89dc3ed076ffcc498ace60419895b548905f351ce4e96ab3420fab85c1679bc"}, "binding_state": "exact"},
+      "evidence": {"cited": ["courts/phase18/interop/MANIFEST-o11-A.json", "courts/phase18/interop/MANIFEST-o11-B.json", "courts/phase18/interop/manifest.py"], "present_in_git": true, "reconstructable": true},
+      "verdict": {"state": "SUPPORTED", "basis": "The derivation rules and log digests are present and the logs are tracked. The manifests bind B = 3c3a68c1, which differs from the O7 matrix's ee7fa27c; the two populations are not reconciled."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-026",
+      "artefact": {"path": "courts/phase18/interop/RECEIPT-o12.json", "introduced_commit": "1bb9f2593", "introduced_date": "2026-11-21", "last_changed_commit": "1bb9f2593"},
+      "property": "compatibility",
+      "assertion": "The 9.9p1 and 10.5p1 OpenSSH populations are reconciled by provenance: 9.9p1 is the L7/closure cohort, 10.5p1 stays separate, PROGRESS.md's sentence that the L7 evidence was measured on 10.5p1 is flagged rather than edited, and one openssh-key-v1 residual is withdrawn as unsupported.",
+      "scope": {"subject": "OpenSSH population reconciliation", "population": "9.9p1 and 10.5p1", "venue": "primary records"},
+      "quantification": {"kind": "boolean", "value": "populations separated; one PROGRESS sentence flagged; one residual withdrawn"},
+      "identity": {"bound_candidate": "9.9p1 b343fbcd; 10.5p1 d44d28a8", "commit": null, "artefact_digests": {"9.9p1": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02", "10.5p1": "d44d28a839ea9daf969cc69150fde59910b2b39361dad81a3bd6cbd19218db11"}, "binding_state": "exact"},
+      "evidence": {"cited": ["courts/phase18/interop/RECEIPT-o12.json", "docs/OPENSSH-COHORT.md", "forensics/memory-safety/campaign/safe-c33/PROGRESS.md"], "present_in_git": true, "reconstructable": true},
+      "verdict": {"state": "SUPPORTED", "basis": "The reconciliation reads the primary records and preserves the contradiction instead of rewriting it. It states that the populations are not re-measured at one candidate."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-027",
+      "artefact": {"path": "docs/OPENSSH-COHORT.md", "introduced_commit": "f20c48302", "introduced_date": "2026-11-21", "last_changed_commit": "1bb9f2593"},
+      "property": "compatibility",
+      "assertion": "Cohort A (OpenSSH 9.9p1) is primary for closures, L7 and SAFE_COMPATIBLE; cohort B (10.5p1) is separate and backs the Phase-17 driver, the CVE-2026-123158 court and probe rows; results are never pooled or averaged; PROGRESS.md's 10.5p1 sentence is a provenance contradiction resolved by O12.",
+      "scope": {"subject": "OpenSSH version cohorts", "population": "two cohorts", "venue": "documentation"},
+      "quantification": {"kind": "set", "value": "two cohorts with disjoint evidence roles"},
+      "identity": {"bound_candidate": "9.9p1 and 10.5p1", "commit": null, "artefact_digests": {}, "binding_state": "exact"},
+      "evidence": {"cited": ["docs/OPENSSH-COHORT.md", "courts/phase18/interop/RECEIPT-o12.json"], "present_in_git": true, "reconstructable": true},
+      "verdict": {"state": "SUPPORTED", "basis": "The cohort rule is explicit and the contradiction it records is resolved by O12 without pooling."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-028",
+      "artefact": {"path": "forensics/downstream/runtime-functional-atlas.json", "introduced_commit": "0c5f96e22", "introduced_date": "2026-10-07", "last_changed_commit": "4ecae854c"},
+      "property": "compatibility",
+      "assertion": "The runtime-functional atlas records 307 recipe-backed families, of which 209 are L7-functional and all 33 cohort families are L7-functional; 301 of 307 rows are carried forward from a superseded identity with candidate_identity_match=false.",
+      "scope": {"subject": "downstream consumer families", "population": "307 recipe-backed families; 33-family cohort", "venue": "downstream runtime atlas"},
+      "quantification": {"kind": "count", "value": "307 families; 209 L7-functional; 33/33 cohort at L7-functional"},
+      "identity": {"bound_candidate": "candidate libcrypto 1c03ec0a / libssl d2165444", "commit": null, "artefact_digests": {"libcrypto.so.3": "1c03ec0a8925f43dc891aa8e4121c57420dc4d4c4c65ce399d9a9cece0766ed3", "libssl.so.3": "d2165444b16ea37649e415c314cfb304ac9da75a5623383adf69cc0746d040b9"}, "binding_state": "different-candidate"},
+      "evidence": {"cited": ["forensics/downstream/runtime-functional-atlas.json"], "present_in_git": true, "reconstructable": "partial"},
+      "verdict": {"state": "PARTIAL", "basis": "The level counts are the atlas's own; the atlas also records that 301/307 rows are carried forward at candidate_identity_match=false, so the 33/33 is an atlas fact with an evidence-reuse caveat, not a fresh measurement at S. The bound candidate 1c03ec0a is neither the interop DSO nor the tracked install."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-029",
+      "artefact": {"path": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json", "introduced_commit": "65c4bd0ad", "introduced_date": "2026-10-20", "last_changed_commit": "1e7c221f0"},
+      "property": "memory-safety",
+      "assertion": "The campaign ledger records the v1r closure as 312 obligations with 90 DISCHARGED, 222 BLOCKED and 0 UNKNOWN; element 7 is FAIL on 81 target-bounded reachable sites; safe_compatible is false; six mechanism-scope discharges (RC-1, OB-1, OB-2, OB-3, ERR-1, GEN-1) are recorded and are never summed into a consumer graduation.",
+      "scope": {"subject": "Safe-33 campaign ledger", "population": "v1r closure over ssh/sshd", "venue": "machine ledger"},
+      "quantification": {"kind": "count", "value": "312 obligations: 90 discharged / 222 blocked / 0 unknown; element 7 FAIL"},
+      "identity": {"bound_candidate": "release/0.0.44, source_head afcfdc47e", "commit": "afcfdc47e", "artefact_digests": {"self": "abb8a6cb6ae4e430bbc8104683909664fad3dfa2dd5dcbc1f8aa69229d16606f"}, "binding_state": "stale"},
+      "evidence": {"cited": ["forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json", "forensics/memory-safety/campaign/safe-c33/CLOSURE.md"], "present_in_git": true, "reconstructable": "partial"},
+      "verdict": {"state": "SUPPORTED", "basis": "The ledger's closure figures and element-7 failure are explicit, and the mechanism discharges are marked mechanism-scope. The ledger is dated 2026-10-30 at afcfdc47e / 0.0.44 and is not a current ledger for S."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-030",
+      "artefact": {"path": "evidence/SAFE-COMPATIBLE-openssh-b85c.json", "introduced_commit": "36f31c64b", "introduced_date": "2026-11-17", "last_changed_commit": "1daa86591"},
+      "property": "consumer-graduation",
+      "assertion": "SAFE_COMPATIBLE is issued for the ssh and sshd consumer binaries at candidate b85c; both closures are ACCEPTED with 290/290 obligations discharged, 0 BLOCKED, 0 UNKNOWN and element 7 PASS; all seven mechanisms are SAFETY_DISCHARGED at the measured OpenSSH scope; the verdict is a principal-decided risk acceptance over two named residuals.",
+      "scope": {"subject": "OpenSSH ssh and sshd", "population": "one admitted cohort family (openssh), two binaries", "venue": "b85c frozen artefacts"},
+      "quantification": {"kind": "count", "value": "290/290 discharged, 0 blocked, 0 unknown; element 7 PASS"},
+      "identity": {"bound_candidate": "b85c, source_head 17042ccf2", "commit": "17042ccf29bc39df638c63e69d3be6c6f965eef7", "artefact_digests": {"freeze": "b08131b1ca7849a3e7f801b87f427774df346366344a2b24bd8207fcb847ec4e", "libcrypto.so.3": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71", "ssh": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b", "sshd": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1"}, "binding_state": "exact"},
+      "evidence": {"cited": ["evidence/SAFE-COMPATIBLE-openssh-b85c.json", "evidence/FREEZE-b85c.json", "evidence/closure-ssh-b85c.json", "evidence/closure-sshd-b85c.json", "evidence/b85-l7-replay.json", "evidence/b85c-safety-argument.json"], "present_in_git": true, "reconstructable": "partial"},
+      "verdict": {"state": "CONTRADICTED", "basis": "The claim's own cited closure receipts record verdict.safe_compatible=false; FREEZE-b85c.json records the L7 replay as not_graduated; the independent b85c adjudication (also preserved by this record) records NOT ESTABLISHED. The graduation is a principal risk acceptance, not an evidence-derived SAFE_COMPATIBLE verdict, and the record says so."},
+      "contradicted_by": ["evidence/closure-ssh-b85c.json", "evidence/closure-sshd-b85c.json", "evidence/FREEZE-b85c.json", "evidence/b85c-adjudication.json"]
+    },
+    {
+      "id": "ETP0-CLM-031",
+      "artefact": {"path": "evidence/b85c-adjudication.json", "introduced_commit": "fc1a1e8df", "introduced_date": "2026-11-17", "last_changed_commit": "fc1a1e8df"},
+      "property": "memory-safety",
+      "assertion": "SAFE_COMPATIBLE for ssh and sshd is NOT ESTABLISHED at b85c: five of seven applicable mechanisms are NOT_ESTABLISHED, both scoped discharges retain un-established caller preconditions, all four cross-cutting obligations are NOT_ESTABLISHED, and the closure's 0 BLOCKED is receipt coverage that still counts rows the ledger records as reopened/BLOCKED.",
+      "scope": {"subject": "b85c assurance case", "population": "seven mechanisms, four cross-cutting obligations, ledger rows", "venue": "stored evidence and predicate re-execution; no build, Miri, ASan or TSan"},
+      "quantification": {"kind": "count", "value": "five of seven mechanisms NOT_ESTABLISHED; four of four cross-cutting obligations NOT_ESTABLISHED"},
+      "identity": {"bound_candidate": "b85c, source content 5edca576b / src sha bc6815c2", "commit": "bfa39a6c3", "artefact_digests": {"freeze": "b08131b1ca7849a3e7f801b87f427774df346366344a2b24bd8207fcb847ec4e", "src_content": "bc6815c2120e4c440af264b22280fc379d30176e8e5d2f5ee3f3d466364a7a22"}, "binding_state": "exact"},
+      "evidence": {"cited": ["evidence/b85c-adjudication.json", "evidence/b85c-row-reconciliation.json", "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json"], "present_in_git": "partial", "reconstructable": "partial"},
+      "verdict": {"state": "SUPPORTED", "basis": "The verdict is derived from stored evidence and a re-executed acceptance predicate; it states that no build, Miri, ASan or TSan ran. Several of its supporting artefacts are under court/ and are untracked."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-032",
+      "artefact": {"path": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json", "introduced_commit": "65c4bd0ad", "introduced_date": "2026-10-20", "last_changed_commit": "1e7c221f0"},
+      "property": "consumer-graduation",
+      "assertion": "The cohort SAFE_COMPATIBLE counter is 1/33 after openssh was admitted; the same ledger's non-claim says no consumer family is SAFE_COMPATIBLE and consumers remain 0/33; PROGRESS.md says the counter is not advanced.",
+      "scope": {"subject": "Safe-33 cohort counter", "population": "33 admitted cohort families", "venue": "ledger and prose"},
+      "quantification": {"kind": "ratio", "value": "1/33 and 0/33 both recorded"},
+      "identity": {"bound_candidate": "b85c graduation", "commit": "1e7c221f0", "artefact_digests": {"CAMPAIGN-STATUS.json": "abb8a6cb6ae4e430bbc8104683909664fad3dfa2dd5dcbc1f8aa69229d16606f"}, "binding_state": "exact"},
+      "evidence": {"cited": ["forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json", "forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md", "forensics/memory-safety/campaign/safe-c33/PROGRESS.md"], "present_in_git": true, "reconstructable": true},
+      "verdict": {"state": "CONTRADICTED", "basis": "CAMPAIGN-STATUS.json records consumers.safe_compatible = 1 and safe_compatible_graduation.verdict = SAFE_COMPATIBLE, while its own consumers.note says SAFE_COMPATIBLE remains 0/33 and non_claims[0] says no consumer family is SAFE_COMPATIBLE. PROGRESS.md says the counter is not advanced. STATUS-2026-10-20.md says 1/33."},
+      "contradicted_by": ["forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json", "forensics/memory-safety/campaign/safe-c33/PROGRESS.md"]
+    },
+    {
+      "id": "ETP0-CLM-033",
+      "artefact": {"path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/graduation-openssh.json", "introduced_commit": "14cd5f8e5", "introduced_date": "2026-10-26", "last_changed_commit": "9e90e9ba2"},
+      "property": "consumer-graduation",
+      "assertion": "The earlier OpenSSH graduation is REJECTED at HEAD b004a99d5: the accepting closure was derived against libcrypto c2d73687, while the candidate rebuilds to be578c86; one of 28 contract-bounded sites is an internal in-image callback mislabelled under the OSSL_provider_init contract; and the closure and L7 consumer binary identities differ.",
+      "scope": {"subject": "OpenSSH ssh and sshd", "population": "earlier candidate b004a99d5", "venue": "adjudication"},
+      "quantification": {"kind": "boolean", "value": "safe_compatible false; rejection on candidate identity and one mislabelled site"},
+      "identity": {"bound_candidate": "b004a99d5", "commit": "b004a99d5b3ffcd67dc5c8172d13972cfd049420", "artefact_digests": {"candidate libcrypto": "be578c866e20f78e4f2241ced9e9c1b0d7283d2e3aa3d3d99e26c0635beb16d3", "receipts libcrypto": "c2d7368777e8bef776ea5106913855f881ed923d126b567cb52a7a17e05af326"}, "binding_state": "exact"},
+      "evidence": {"cited": ["forensics/memory-safety/campaign/safe-c33/atlas-refresh/graduation-openssh.json"], "present_in_git": true, "reconstructable": "partial"},
+      "verdict": {"state": "SUPERSEDED", "basis": "The rejection is a record about an older candidate. It is not the current graduation state, and its consumer-identity mismatch is a finding about b004a99d5, not about the later b85c receipts (which record matching ssh c2db343d and sshd 8af50952)."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-034",
+      "artefact": {"path": "artifacts/phase25/summary.json", "introduced_commit": "8c52ffdd3", "introduced_date": "2026-10-13", "last_changed_commit": "fef36fc7e"},
+      "property": "memory-safety",
+      "assertion": "The Phase-25 memory-safety seal does not pass: passed is false, parity_status is WITHHELD, 183 externally reachable sites are UNSUPPORTED, 664 open residuals remain, and the CVE-mechanism plane records 3 eliminated / 3 hidden / 1 unresolved.",
+      "scope": {"subject": "Phase-25 memory-safety TCB", "population": "21 courts, candidate 0.0.27", "venue": "machine summary"},
+      "quantification": {"kind": "count", "value": "18/21 courts pass; passed false; 183 UNSUPPORTED; 664 open residuals"},
+      "identity": {"bound_candidate": "openssl-rs 0.0.27", "commit": null, "artefact_digests": {}, "binding_state": "different-candidate"},
+      "evidence": {"cited": ["artifacts/phase25/summary.json"], "present_in_git": true, "reconstructable": "partial"},
+      "verdict": {"state": "SUPPORTED", "basis": "The summary withholds the claim and names the open counts. It is bound to 0.0.27, not to S."},
+      "contradicted_by": []
+    },
+    {
+      "id": "ETP0-CLM-035",
+      "artefact": {"path": "artifacts/phase2/install/lib/libcrypto.so.3", "introduced_commit": "14756fc5f", "introduced_date": "2026-09-14", "last_changed_commit": "1e7c221f0"},
+      "property": "identity",
+      "assertion": "The tracked install artefacts identify the candidate: libcrypto.so.3 is fd25cc9e and libssl.so.3 is 648f8cae.",
+      "scope": {"subject": "install tree", "population": "libcrypto and libssl shared objects", "venue": "tracked binaries"},
+      "quantification": {"kind": "set", "value": "two digests"},
+      "identity": {"bound_candidate": "release 0.0.49 at 1e7c221f0", "commit": "1e7c221f0", "artefact_digests": {"libcrypto.so.3": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9", "libssl.so.3": "648f8caecda245d2186813fb67ceadedd798b9ce609c8b041a84f195946c5f68"}, "binding_state": "stale"},
+      "evidence": {"cited": ["artifacts/phase2/install/lib/libcrypto.so.3", "artifacts/phase2/install/lib/libssl.so.3"], "present_in_git": true, "reconstructable": true},
+      "verdict": {"state": "PARTIAL", "basis": "The digests are the tracked bytes. They were last rebuilt at 1e7c221f0 on 2026-11-17, and 32 commits touching src/, Cargo.toml, Cargo.lock or build.rs have landed since (last at 79c98c607). The tracked binaries therefore do not identify the S source tree."},
+      "contradicted_by": []
+    }
+  ]
+}

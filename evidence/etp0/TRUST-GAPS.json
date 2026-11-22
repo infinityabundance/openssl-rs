@@ -1,0 +1,322 @@
+{
+  "schema": "openssl-rs/etp0/trust-gaps/v1",
+  "kind": "etp0-trust-gap-inventory",
+  "generated_utc": "2026-11-22T06:00:25Z",
+  "task": "ETP-0 of docs/ETP-TODO.md: trust-gap inventory",
+  "method": "Every gap is classified into exactly one class. Each cites the tracked artefact that exhibits it and the claim id from evidence/etp0/CLAIMS.json it affects. A gap classified UNKNOWN names the evidence that would settle it.",
+  "class_definitions": {
+    "asserted_without_evidence": "prose claim with no artefact",
+    "evidence_not_reconstructable": "cites a path, digest or tool run that cannot be reproduced from a clean checkout",
+    "identity_mismatch": "evidence bound to a different DSO, commit or candidate than the claim implies",
+    "assumption_not_stated": "a claim that only holds under an unstated premise",
+    "contradiction": "two tracked artefacts that disagree",
+    "UNKNOWN": "cannot be classified without evidence not present; the settling evidence is named"
+  },
+  "counts": {
+    "asserted_without_evidence": 3,
+    "evidence_not_reconstructable": 8,
+    "identity_mismatch": 8,
+    "assumption_not_stated": 5,
+    "contradiction": 7,
+    "UNKNOWN": 6,
+    "total": 37
+  },
+  "gaps": [
+    {
+      "id": "ETP0-GAP-001",
+      "class": "contradiction",
+      "claim_ids": ["ETP0-CLM-004", "ETP0-CLM-006"],
+      "artefacts": ["docs/PHASE-18-HARDENING-SEAL.md", "artifacts/phase18/COURTS.json"],
+      "observation": "The seal states that artifacts/phase18/COURTS.json records five courts, all_pass true, summary pass 5 of 5 and empty pending_courts. The tracked file at S records all_pass false, summary pass 4 / fail 1, with HOSTILE-BOUNDARY-REGISTER failing on 56 unsafe-footprint bound violations (for example bn 1170 -> 1357, evp 8029 -> 8798, ssl 3503 -> 4407).",
+      "what_would_settle": "Not applicable: the disagreement is direct. A future seal must name the commit and date of the registry it describes."
+    },
+    {
+      "id": "ETP0-GAP-002",
+      "class": "contradiction",
+      "claim_ids": ["ETP0-CLM-004", "ETP0-CLM-007"],
+      "artefacts": ["docs/PHASE-18-HARDENING-SEAL.md", "forensics/phase18-obligations.json"],
+      "observation": "The seal states the obligation ledger records owned 5, implemented 5, deferred 0, open_in_this_stratum 0. The tracked ledger records owned 5, implemented 4, open_in_this_stratum 1, with hostile-boundary-register in state open and measurement_state not_measured.",
+      "what_would_settle": "Not applicable: the counts disagree in the tracked files."
+    },
+    {
+      "id": "ETP0-GAP-003",
+      "class": "contradiction",
+      "claim_ids": ["ETP0-CLM-005"],
+      "artefacts": ["docs/PHASE-18-HARDENING-SEAL.md", "courts/phase18/ct_primitives_probe.c", "artifacts/phase18/COURTS.json"],
+      "observation": "The CT-PRIMITIVES threshold is stated as 110 percent in the seal's section 2, as a 50 percent floor and a 150 percent threshold in the seal's section 6, as 50 percent in the COURTS.json claim field, and as 150 percent in both the probe source (SEP_PCT 150) and the COURTS.json threshold_percent. The probe source and the machine threshold agree at 150 percent; the prose does not.",
+      "what_would_settle": "Not applicable: the prose is internally inconsistent. The authoritative value is the probe source plus the generated record."
+    },
+    {
+      "id": "ETP0-GAP-004",
+      "class": "contradiction",
+      "claim_ids": ["ETP0-CLM-030", "ETP0-CLM-031"],
+      "artefacts": ["evidence/SAFE-COMPATIBLE-openssh-b85c.json", "evidence/closure-ssh-b85c.json", "evidence/closure-sshd-b85c.json", "evidence/FREEZE-b85c.json", "evidence/b85c-adjudication.json"],
+      "observation": "The graduation record issues SAFE_COMPATIBLE and says every reachable obligation is discharged. The two closure receipts it cites record verdict.safe_compatible=false. The freeze it cites records the L7 replay as not_graduated. The independent adjudication it also cites records NOT ESTABLISHED. The graduation record labels its own verdict a principal-decided risk acceptance and preserves the dissent.",
+      "what_would_settle": "Not applicable as an evidence question. Resolution is a governance decision: either withdraw the SAFE_COMPATIBLE label, or state a policy that a principal risk acceptance may override the §7 evidence criteria, with the dissent retained."
+    },
+    {
+      "id": "ETP0-GAP-005",
+      "class": "contradiction",
+      "claim_ids": ["ETP0-CLM-032"],
+      "artefacts": ["forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json"],
+      "observation": "One tracked JSON file records consumers.safe_compatible = 1 and safe_compatible_graduation.verdict = SAFE_COMPATIBLE, and in the same file consumers.note says SAFE_COMPATIBLE remains 0/33 and non_claims[0] says no consumer family is SAFE_COMPATIBLE and consumers remain 0/33.",
+      "what_would_settle": "Not applicable: the file contradicts itself. A later ledger edit must reconcile the counter and the non-claim in one record."
+    },
+    {
+      "id": "ETP0-GAP-006",
+      "class": "contradiction",
+      "claim_ids": ["ETP0-CLM-032"],
+      "artefacts": ["forensics/memory-safety/campaign/safe-c33/PROGRESS.md", "forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md", "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json"],
+      "observation": "PROGRESS.md says the cohort counter is not advanced by the b85c record. STATUS-2026-10-20.md says the counter is now 1/33, and CAMPAIGN-STATUS.json records 1. The three tracked artefacts disagree on the counter.",
+      "what_would_settle": "Not applicable: the counter is a single number with three tracked statements."
+    },
+    {
+      "id": "ETP0-GAP-007",
+      "class": "contradiction",
+      "claim_ids": ["ETP0-CLM-026", "ETP0-CLM-027"],
+      "artefacts": ["forensics/memory-safety/campaign/safe-c33/PROGRESS.md", "courts/phase18/interop/RECEIPT-o12.json", "docs/OPENSSH-COHORT.md"],
+      "observation": "PROGRESS.md states that the campaign's OpenSSH L7 evidence was measured on 10.5p1. The closure receipts and the runtime-functional atlas name 9.9p1. O12 resolves the conflict by provenance: the sentence describes the CVE court's version and is attached to the L7 closure; the sentence is flagged, not edited. The contradiction therefore remains in the tracked text.",
+      "what_would_settle": "Not applicable as a provenance question: O12 records the resolution. The sentence remains a visible conflict until PROGRESS.md is corrected."
+    },
+    {
+      "id": "ETP0-GAP-008",
+      "class": "evidence_not_reconstructable",
+      "claim_ids": ["ETP0-CLM-010", "ETP0-CLM-011", "ETP0-CLM-012", "ETP0-CLM-018", "ETP0-CLM-022", "ETP0-CLM-024"],
+      "artefacts": [".gitignore", "court/tmp/t20/NOTES.md", "docs/ETP-TODO.md"],
+      "observation": "Tracked JSON and Markdown contain 1,929 references to court/tmp/. git ls-files court/tmp returns 0 files; the directory is excluded by .gitignore. The referenced logs, notes and binaries are reproducible only by re-running the cited experiments, and in several rows the row itself is the only surviving description.",
+      "what_would_settle": "Publish the named logs and notes under a tracked evidence path, or re-execute each run and record a tracked receipt with the output digest."
+    },
+    {
+      "id": "ETP0-GAP-009",
+      "class": "evidence_not_reconstructable",
+      "claim_ids": ["ETP0-CLM-012"],
+      "artefacts": ["forensics/tools/build_reproducibility.sh", "court/tmp/t20/NOTES.md", "docs/ETP-TODO.md"],
+      "observation": "The T20 byte-reproducibility result exists only in court/tmp/t20/NOTES.md, which is untracked. The recipe is tracked, but the measurement record, the variation matrix as executed, the per-member archive comparison and the content-addressed binaries are not in Git.",
+      "what_would_settle": "Re-run the tracked recipe at S in the court and commit a receipt containing the two build logs, the comparison output and the verified digests."
+    },
+    {
+      "id": "ETP0-GAP-010",
+      "class": "evidence_not_reconstructable",
+      "claim_ids": ["ETP0-CLM-012"],
+      "artefacts": ["docs/ETP-TODO.md", ".gitignore", "artifacts/phase2/libcrypto.so.3"],
+      "observation": "T20 says the distribution DSO rebuilds to the committed artifacts/phase2/libcrypto.so.3 digest 5d0f9098. That path is excluded by .gitignore:41 and is not tracked; the digest is a local build output. The tracked distribution binary is artifacts/phase2/install/lib/libcrypto.so.3 (fd25cc9e), which is a different file.",
+      "what_would_settle": "Either track the distribution DSO under a content-addressed path, or state the digest as a recipe output rather than a committed artefact. Then re-derive it at S."
+    },
+    {
+      "id": "ETP0-GAP-011",
+      "class": "evidence_not_reconstructable",
+      "claim_ids": ["ETP0-CLM-019", "ETP0-CLM-022", "ETP0-CLM-023"],
+      "artefacts": ["courts/phase18/interop/RECEIPT-o6.json", "courts/phase18/interop/RECEIPT-o9.json", "courts/phase18/interop/RECEIPT-o8.json"],
+      "observation": "O6 names no log path at all. O9 names /tmp/o9-a.log and /tmp/o9-b.log. O8 names /tmp/o6-a-k.log, /tmp/o6-b-k.log and court/tmp/o4/tree-A/regress/dbclient.log. None of these is tracked. The O11 manifests do name tracked logs and record their digests, but the O6/O8/O9 receipts do not cite the O11 logs as their source.",
+      "what_would_settle": "Rebind O6/O8/O9 to the tracked O11 logs with their sha256 values, or commit the /tmp logs under courts/phase18/interop/logs/ with a manifest."
+    },
+    {
+      "id": "ETP0-GAP-012",
+      "class": "evidence_not_reconstructable",
+      "claim_ids": ["ETP0-CLM-030", "ETP0-CLM-031"],
+      "artefacts": ["evidence/b85c-adjudication.json", "evidence/b85c-safety-argument.json", "evidence/closure-ssh-b85c.json", "evidence/closure-sshd-b85c.json"],
+      "observation": "The b85c case depends on sidecars, predicate controls, a self-test log, Miri transcripts and freeze generators under court/freeze-b85 and court/freeze-b85c. The b85c adjudication records that git ls-files returns 0 tracked files for those directories, so the acceptance predicate and the instrument canaries are reproducible only while the working tree survives.",
+      "what_would_settle": "Commit the instrument, its self-test log, the predicate controls and the Miri transcripts under a tracked evidence path, with their digests bound to the freeze."
+    },
+    {
+      "id": "ETP0-GAP-013",
+      "class": "evidence_not_reconstructable",
+      "claim_ids": ["ETP0-CLM-016", "ETP0-CLM-024"],
+      "artefacts": ["courts/phase18/interop/RECEIPT-o3.json", "courts/phase18/interop/RECEIPT-o10.json"],
+      "observation": "O3 names its OpenSSH tree at court/tmp/o2/openssh-9.9p1 and its prefix at court/tmp/o3/prefix; O10 names its subject tree at court/tmp/o4/tree-A. All are untracked. The scripts are tracked, but the exact trees the receipts examined are not.",
+      "what_would_settle": "Record the tree/prefix digests in the receipts and rebuild them from the O2 pins, or commit the built trees under a content-addressed evidence path."
+    },
+    {
+      "id": "ETP0-GAP-014",
+      "class": "evidence_not_reconstructable",
+      "claim_ids": ["ETP0-CLM-011"],
+      "artefacts": ["docs/ETP-TODO.md", "evidence/timing-bn-repair.json"],
+      "observation": "T19's first-candidate ctgrind, dudect and allocation figures cite court/tmp/t19 and court/tmp/t21. Those logs and binaries are untracked. The later unified figures are in a tracked receipt, but the row presents all three candidates together.",
+      "what_would_settle": "Commit the t19/t21 logs and the measured binaries under a content-addressed path, or mark the first-candidate figures as superseded and non-citable."
+    },
+    {
+      "id": "ETP0-GAP-015",
+      "class": "asserted_without_evidence",
+      "claim_ids": ["ETP0-CLM-013"],
+      "artefacts": ["docs/ETP-TODO.md"],
+      "observation": "T27 is marked DONE and describes a ctgrind result and a differential test, but the row names no receipt, log, test name or digest. The row prose is the whole evidence record.",
+      "what_would_settle": "Add a tracked receipt naming the test, the candidate DSO, the ctgrind output and the mutation control result."
+    },
+    {
+      "id": "ETP0-GAP-016",
+      "class": "asserted_without_evidence",
+      "claim_ids": ["ETP0-CLM-014"],
+      "artefacts": ["docs/ETP-TODO.md", "court/tmp/t21/libcrypto.so.3"],
+      "observation": "T29 is marked DONE with a precise 67,878 -> 22,276 allocation census, but names no receipt. Its one named measured binary, court/tmp/t21/libcrypto.so.3, is untracked.",
+      "what_would_settle": "Add a tracked receipt bound to a DSO digest, with the census output and the benchmark log."
+    },
+    {
+      "id": "ETP0-GAP-017",
+      "class": "asserted_without_evidence",
+      "claim_ids": ["ETP0-CLM-001", "ETP0-CLM-002"],
+      "artefacts": ["docs/NON_CLAIMS.md", "docs/RELEASE_GATES.md"],
+      "observation": "The constitution says claims are generated from evidence and that headline percentages are never typed by hand. Several claim-bearing records are hand-authored JSON (for example the SAFE_COMPATIBLE record), and no tracked checker binds a prose receipt to a generator. The governance statement is therefore a convention, not an enforced property.",
+      "what_would_settle": "A tracked checker that rejects a claim-bearing receipt without a generator identity and an evidence digest, run in CI."
+    },
+    {
+      "id": "ETP0-GAP-018",
+      "class": "identity_mismatch",
+      "claim_ids": ["ETP0-CLM-017", "ETP0-CLM-018", "ETP0-CLM-020", "ETP0-CLM-023", "ETP0-CLM-025"],
+      "artefacts": ["courts/phase18/interop/RECEIPT-o4.json", "courts/phase18/interop/RECEIPT-o5.json", "courts/phase18/interop/MANIFEST-o11-B.json", "courts/phase18/interop/RECEIPT-o7-BB.json"],
+      "observation": "O4, O5 and the O11 B manifest bind build B to libcrypto 3c3a68c1, built on the host from /var/tmp/t29-target/release/libopenssl_rs.a. The O7 matrix and its per-cell B receipts bind build B to libcrypto ee7fa27c, rebuilt in the court. No tracked record states whether these are the same source and toolchain or two builds.",
+      "what_would_settle": "One build record naming both archive and DSO digests, or a rebuild of both in one venue from the O2 pins with toolchain and archive digests recorded."
+    },
+    {
+      "id": "ETP0-GAP-019",
+      "class": "identity_mismatch",
+      "claim_ids": ["ETP0-CLM-008"],
+      "artefacts": ["evidence/baseline-20261120.json"],
+      "observation": "The baseline names commit 0500fa9ef and source-tree digest ca7d39b9. Commit 0500fa9ef is an ancestor of S and is 72 commits behind it; the source-tree digest at S is 51568028. The baseline is not an identity for S.",
+      "what_would_settle": "A fresh baseline at S with the tree hashes in evidence/etp0/RECEIPT.md."
+    },
+    {
+      "id": "ETP0-GAP-020",
+      "class": "identity_mismatch",
+      "claim_ids": ["ETP0-CLM-035"],
+      "artefacts": ["artifacts/phase2/install/lib/libcrypto.so.3", "artifacts/phase2/install/lib/libssl.so.3"],
+      "observation": "The tracked install DSOs were last rebuilt at commit 1e7c221f0 on 2026-11-17. Since then 32 commits touching src/, Cargo.toml, Cargo.lock or build.rs have landed (the last at 79c98c607, 2026-11-21). The tracked binaries therefore cannot be the build of the S source tree.",
+      "what_would_settle": "Rebuild the install at S in the court, record the new digests, and either replace the tracked artefacts or mark them as a historical release build."
+    },
+    {
+      "id": "ETP0-GAP-021",
+      "class": "identity_mismatch",
+      "claim_ids": ["ETP0-CLM-012"],
+      "artefacts": ["court/tmp/t20/NOTES.md", "docs/ETP-TODO.md"],
+      "observation": "The reproducibility result was measured at HEAD abb315a01 on 2026-11-21. S is 9372bb28b, 40 commits later, with 39 source files changed (+4356/-839). The recorded digests aaa32f21 and 5d0f9098 cannot be the digests of an S build.",
+      "what_would_settle": "Re-run the recipe at S."
+    },
+    {
+      "id": "ETP0-GAP-022",
+      "class": "identity_mismatch",
+      "claim_ids": ["ETP0-CLM-030", "ETP0-CLM-031"],
+      "artefacts": ["evidence/b85c-safety-argument.json", "evidence/b85c-adjudication.json"],
+      "observation": "The b85c adjudication records two binding defects: the safety argument still cites the superseded no-flag Miri tree arm rather than the corrected review15 run with -Zmiri-tree-borrows, and closure_receipts_repository_head is stated as 17042ccf2 while both receipts record b14923bda. The receipts' own sha256 bindings are correct.",
+      "what_would_settle": "Point the safety argument at the corrected Miri transcript and correct the repository-head field; then re-verify the receipt digests."
+    },
+    {
+      "id": "ETP0-GAP-023",
+      "class": "identity_mismatch",
+      "claim_ids": ["ETP0-CLM-028"],
+      "artefacts": ["forensics/downstream/runtime-functional-atlas.json", "courts/phase18/interop/RECEIPT-o7.json"],
+      "observation": "The runtime-functional atlas binds its consumer rows to candidate libcrypto 1c03ec0a and libssl d2165444. The interop matrix binds build B to ee7fa27c; the tracked install is fd25cc9e. The atlas also records 301 of 307 rows carried forward at candidate_identity_match=false.",
+      "what_would_settle": "Re-measure the affected consumer rows at one named candidate, or label every carried-forward row with its own source identity in the summary used for the 33/33 claim."
+    },
+    {
+      "id": "ETP0-GAP-024",
+      "class": "identity_mismatch",
+      "claim_ids": ["ETP0-CLM-029"],
+      "artefacts": ["forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json"],
+      "observation": "The campaign ledger is dated 2026-10-30 at source_head afcfdc47e and release/0.0.44. S is 9372bb28b with crate 0.0.49 and 32 source-touching commits since the tracked install. The ledger's closure figures are not a measurement of S.",
+      "what_would_settle": "Regenerate the ledger at S and record the closure and element-7 state at that candidate."
+    },
+    {
+      "id": "ETP0-GAP-025",
+      "class": "identity_mismatch",
+      "claim_ids": ["ETP0-CLM-034"],
+      "artefacts": ["artifacts/phase25/summary.json"],
+      "observation": "The Phase-25 summary is bound to openssl-rs 0.0.27. S is 0.0.49 with substantially different source. Its passed=false and 183 UNSUPPORTED figures describe an older candidate.",
+      "what_would_settle": "Regenerate the Phase-25 summary at S, or mark the existing summary as a historical-candidate record wherever it is cited."
+    },
+    {
+      "id": "ETP0-GAP-026",
+      "class": "assumption_not_stated",
+      "claim_ids": ["ETP0-CLM-030", "ETP0-CLM-031"],
+      "artefacts": ["evidence/SAFE-COMPATIBLE-openssh-b85c.json", "evidence/closure-ssh-b85c.json", "evidence/b85c-adjudication.json"],
+      "observation": "The graduation's safety premise treats the closure's 290 DISCHARGED rows as establishing the mechanism discharges. The closure tool's DISCHARGED means an existing committed receipt covers the exact site; the tool hard-codes safe_compatible=false, and the adjudication records 65 REVIEW_REQUIRED rows still counted as discharged. The graduation record does not state that its premise depends on receipt coverage rather than re-audit.",
+      "what_would_settle": "State the premise explicitly, and either re-audit the REVIEW_REQUIRED rows or exclude them from the discharge count."
+    },
+    {
+      "id": "ETP0-GAP-027",
+      "class": "assumption_not_stated",
+      "claim_ids": ["ETP0-CLM-028"],
+      "artefacts": ["forensics/downstream/runtime-functional-atlas.json", "AGENTS.md", "forensics/memory-safety/campaign/safe-c33/CLOSURE.md"],
+      "observation": "The 33/33 L7 statement is read as current consumer evidence. The atlas records that 301 of 307 recipe-backed rows are carried forward from a superseded identity with candidate_identity_match=false and that no family was upgraded. The 33/33 sentence does not restate that reuse premise.",
+      "what_would_settle": "Restate the reuse caveat wherever 33/33 is used as current evidence, or re-run the 33 workloads at the named candidate."
+    },
+    {
+      "id": "ETP0-GAP-028",
+      "class": "assumption_not_stated",
+      "claim_ids": ["ETP0-CLM-020", "ETP0-CLM-035"],
+      "artefacts": ["courts/phase18/interop/RECEIPT-o7.json", "courts/phase18/interop/RECEIPT-o4.json"],
+      "observation": "The matrix's four genuine cells are read as a statement about the candidate consumer build. The matrix's build B is a court rebuild (ee7fa27c) whose relationship to the tracked install or to the O4/O5 host build (3c3a68c1) is not recorded. The cell mapping is proven; the identity of the candidate behind it is not bound to the tracked artefact.",
+      "what_would_settle": "Bind the matrix's B build to a tracked archive/DSO digest and to the O4 build record, or state that the matrix is a rebuild-specific result."
+    },
+    {
+      "id": "ETP0-GAP-029",
+      "class": "assumption_not_stated",
+      "claim_ids": ["ETP0-CLM-015"],
+      "artefacts": ["courts/phase18/interop/RECEIPT-o2.json", "courts/phase18/interop/MANIFEST.json"],
+      "observation": "Digest pinning is read as supply-chain authentication. The receipt states that Dropbear's digest is a first-fetch pin and that neither the Dropbear nor the PuTTY signature is verified. The manifest's open_obligations state the same. Downstream prose that cites the pins as verified inputs does not always carry that premise.",
+      "what_would_settle": "Pin the signing keys and verify both detached signatures, or restate the unauthenticated-first-fetch premise wherever the pins are used."
+    },
+    {
+      "id": "ETP0-GAP-030",
+      "class": "assumption_not_stated",
+      "claim_ids": ["ETP0-CLM-004"],
+      "artefacts": ["docs/PHASE-18-HARDENING-SEAL.md"],
+      "observation": "The seal states court results as all_pass true without naming the commit or date of the registry it describes. The statement is therefore read as current even though the tracked registry has since drifted to all_pass false. The temporal premise is unstated.",
+      "what_would_settle": "Bind every seal statement to the commit and digest of the registry it describes, and mark it historical when the registry moves."
+    },
+    {
+      "id": "ETP0-GAP-031",
+      "class": "UNKNOWN",
+      "claim_ids": ["ETP0-CLM-017", "ETP0-CLM-018", "ETP0-CLM-020"],
+      "artefacts": ["courts/phase18/interop/RECEIPT-o4.json", "courts/phase18/interop/RECEIPT-o7-BB.json"],
+      "observation": "It is unknown whether the O4/O5 host build (3c3a68c1) and the O7 court rebuild (ee7fa27c) are the same source and toolchain built twice, or different source or configuration. No tracked record joins the two digests to one archive digest or one toolchain record.",
+      "what_would_settle": "One record naming the source commit, archive digest, toolchain and both DSO digests, or a rebuild of both in one venue from the O2 pins."
+    },
+    {
+      "id": "ETP0-GAP-032",
+      "class": "UNKNOWN",
+      "claim_ids": ["ETP0-CLM-012"],
+      "artefacts": ["forensics/tools/build_reproducibility.sh"],
+      "observation": "Whether the tracked reproducibility recipe produces byte-identical artefacts at S is unknown: it was not run at S, and the recorded result is for abb315a01.",
+      "what_would_settle": "Run 'bash docker/openssl-rs-court.sh exec bash forensics/tools/build_reproducibility.sh --distribution' at S and record the digests, the two build logs and the comparison output."
+    },
+    {
+      "id": "ETP0-GAP-033",
+      "class": "UNKNOWN",
+      "claim_ids": ["ETP0-CLM-035"],
+      "artefacts": ["artifacts/phase2/install/lib/libcrypto.so.3", "artifacts/phase2/COURTS.json"],
+      "observation": "Whether the tracked install DSO's ABI and behaviour match the S source is unknown: the tracked binary predates 32 source-touching commits, and no ABI court at S is bound to it.",
+      "what_would_settle": "Rebuild the install at S in the court, hash it, and run the ABI courts (ABI-SYMBOL, ABI-VERSION, ABI-LAYOUT, ABI-LINK, ABI-LOAD, ABI-SUBSTITUTION) against the rebuilt tree."
+    },
+    {
+      "id": "ETP0-GAP-034",
+      "class": "UNKNOWN",
+      "claim_ids": ["ETP0-CLM-030", "ETP0-CLM-031"],
+      "artefacts": ["evidence/closure-ssh-b85c.json", "evidence/b85c-adjudication.json"],
+      "observation": "Whether the 116 contract-bounded sites in the b85c closure are individually sound is unknown. The adjudication found one mislabelled contract-bounded site at an earlier candidate; the b85c record does not present a per-site witness for all 116.",
+      "what_would_settle": "An independent per-site witness for each contract-bounded site, or an exclusion argument for each under the playbook's per-call-site witness rule."
+    },
+    {
+      "id": "ETP0-GAP-035",
+      "class": "UNKNOWN",
+      "claim_ids": ["ETP0-CLM-020"],
+      "artefacts": ["courts/phase18/interop/RECEIPT-o7.json", "courts/phase18/interop/RECEIPT-o7-BB.json", "courts/phase18/interop/cell.sh"],
+      "observation": "Whether all four O7 cells ran the same script set is not established by the matrix receipt. The receipt records the mtime hazard: t-exec iterates $? and the same tree ran 73 scripts on the host and 96 in the court. The BB receipt records that cell.sh now touches regress/*.sh; the AA/AB/BA receipts do not state the selection rule.",
+      "what_would_settle": "Re-run all four cells with the deterministic selection and record the per-cell script list, or record the script list in each cell receipt."
+    },
+    {
+      "id": "ETP0-GAP-036",
+      "class": "UNKNOWN",
+      "claim_ids": ["ETP0-CLM-030"],
+      "artefacts": ["evidence/SAFE-COMPATIBLE-openssh-b85c.json", "src/context/dispatch.rs"],
+      "observation": "Whether the external provider pointer-type obligation is the only ABI residual is not independently established. The graduation record asserts that the OsllDispatch fields are crate-private, that every production read goes through function_for::<T>/function_ptr_for, that twenty-one caller-side transmutes were removed, and that a compile_fail doctest proves external safe construction is impossible. No independent review of that surface at b85c is recorded.",
+      "what_would_settle": "An independent review of src/context/dispatch.rs at the b85c source content, plus execution of the compile_fail doctest and the caller audit."
+    },
+    {
+      "id": "ETP0-GAP-037",
+      "class": "evidence_not_reconstructable",
+      "claim_ids": ["ETP0-CLM-012"],
+      "artefacts": ["forensics/tools/build_reproducibility.sh", "artifacts/phase2/SHELL_MANIFEST.json", ".gitignore"],
+      "observation": "The --distribution arm of the reproducibility recipe compiles artifacts/phase2/shell/libcrypto.shell.rs. That directory is excluded by .gitignore:44 and no shell source is tracked; git ls-files artifacts/phase2/shell returns 0. The tracked artifacts/phase2/SHELL_MANIFEST.json records the shell source digests, and the tracked version script artifacts/phase2/libcrypto.ld matches its recorded digest, but the source the link compiles is absent from a clean checkout.",
+      "what_would_settle": "Track the phase-2 shell sources (or a generator that reproduces them) with their manifest digests, then run the distribution arm from a clean checkout at S."
+    }
+  ]
+}
