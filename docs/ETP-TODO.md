@@ -238,10 +238,19 @@ Addendum B was admitted ahead of the remaining B/E items on instruction, and its
 was interrupted on. The override does not move the curl consumer, which stays
 last, and it does not discharge any open item in sections B–E.
 
-The Addendum B position was then superseded again on instruction: the Performance
-Frontier Programme (section J) executes next, ahead of the remaining D, E and F
-items, and the queue resumes at the item it was interrupted on (`ETP-3`). Each
-override is recorded here rather than implied, because a normative execution
+The Addendum B position was then superseded again on instruction. The ordering
+that now binds, and that is the authoritative one in this file, is:
+
+1. sections B and C — timing safety and OpenSSH interoperability;
+2. section D — ETP constitution and claim integrity;
+3. section E — Addendum A (SARIF / DSSE);
+4. section F — Addendum B (Rekor v2) and its `B0`–`B8`;
+5. section J — the Performance Frontier Programme;
+6. section K — Formal Refinement and Certification, **last**;
+7. section G — the curl consumer, which remains the final consumer item.
+
+The queue resumes at the item it was interrupted on (`ETP-3`). Each ordering
+change is recorded here rather than implied, because a normative execution
 policy needs an authoritative inventory and a traceable history of its own
 changes; the enumerations in this file are reconciled against the affected rows
 at every checkpoint.
@@ -323,6 +332,8 @@ with its own standard. Its bindings on this queue:
   affect remains valid at the new digest, and any change to a named kernel,
   specification or toolchain invalidates the claim.
 
-Section K executes next, ahead of the remaining D, E, F and J items, and the
-queue then resumes at the item it was interrupted on. The curl consumer remains
-last.
+Section K runs after every item in sections D, E, F and J. It is the final
+assurance track, not an interleaved one, because its frontier-gap register and
+specification hierarchy consume their outputs. The FRC queue therefore starts
+empty of execution and is picked up when sections D, E, F and J are complete.
+The curl consumer remains the final consumer item.
