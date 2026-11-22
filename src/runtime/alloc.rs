@@ -184,6 +184,15 @@ pub(crate) mod test_fail {
     }
 
     /// Distinct allocation sites reached by one successful `op` run.
+    ///
+    /// This is the recording half of [`sweep_sites`] without the failure sweep. A
+    /// caller that must observe the *state* a later failure releases can first
+    /// learn which sites exist, then fail one at a time with [`fail_at_site`].
+    pub(crate) fn sites_reached(mut op: impl FnMut() -> bool) -> Vec<&'static Location<'static>> {
+        record_sites(&mut op)
+    }
+
+    /// Distinct allocation sites reached by one successful `op` run.
     fn record_sites(op: &mut impl FnMut() -> bool) -> Vec<&'static Location<'static>> {
         RECORD.with(|r| *r.borrow_mut() = Some(Vec::new()));
         let _guard = RecordGuard;

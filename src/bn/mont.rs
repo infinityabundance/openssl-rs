@@ -42,13 +42,14 @@
 //! parity); it is retained, not claimed discharged.
 
 use core::ffi::{c_int, c_ulong};
+use core::sync::atomic::{AtomicPtr, Ordering};
 
 use crate::bn::arith::{
     mod_exp_core, mod_exp_core_consttime_from_parts_prepared, mont_mul_fallible, pad_to,
     PreparedMontParams,
 };
 use crate::bn::bignum::{
-    as_mut, as_ref, magnitude, parts, parts_fallible, store, store_consttime, BigNum,
+    as_mut, as_ref, magnitude, parts_fallible, store, store_consttime, BigNum,
 };
 use crate::bn::ctx::BnCtx;
 use crate::bn::limbs::{self, Limb};
@@ -103,8 +104,8 @@ enum MontBackend {
 /// * `n0` — `-N^-1 mod 2^64`.
 ///
 /// A prepared context is immutable after [`mont_set`]. `Drop` therefore cleanses
-/// the modulus and both derived residues through [`SecretBuf`] on every exit,
-/// including an early return and an unwind in the owning object's lifecycle.
+/// the modulus, both derived residues and the `n0` word on every exit, including
+/// an early return and an unwind in the owning object's lifecycle.
 pub struct MontCtx {
     /// `RR` — `R^2 mod N`, which is what makes conversion a single multiply.
     rr: SecretLimbs,
@@ -112,7 +113,7 @@ pub struct MontCtx {
     n: SecretLimbs,
     /// `R mod N` — the prepared Montgomery form of one.
     one: SecretLimbs,
-    /// `Ni` — the authority's word-based path leaves this empty, and so do we.
+    /// `Ni` — the authority's word-based path leaves this empty, and so does the crate.
     ni: Vec<Limb>,
     /// `n0` — `-N^-1 mod 2^64`, in the low word.
     n0: [Limb; 2],
@@ -124,6 +125,39 @@ pub struct MontCtx {
     radix_bits: u32,
     /// The reduction kernel the residues were prepared for.
     backend: MontBackend,
+}
+
+// The cached-context slot is a caller-owned `*mut MontCtx` in the ABI structs
+// (`DH`, `DSA`, `RSA`, `RSA_PRIME_INFO`). `BN_MONT_CTX_set_locked` reads and
+// publishes it through an `AtomicPtr` view of that same slot. That view is only
+// sound when it has exactly the slot's size and alignment; a target where an
+// atomic pointer is larger or more aligned must fail to compile rather than
+// silently reinterpret the slot.
+const _: () =
+    assert!(core::mem::size_of::<AtomicPtr<MontCtx>>() == core::mem::size_of::<*mut MontCtx>());
+const _: () =
+    assert!(core::mem::align_of::<AtomicPtr<MontCtx>>() == core::mem::align_of::<*mut MontCtx>());
+
+/// Volatile-wipe the modulus-derived `n0` word in place.
+///
+/// `n0` is `-N^-1 mod 2^64`, so on the RSA CRT reach it is derived from a secret
+/// prime. It is a scalar in the context rather than a [`SecretBuf`], so the two
+/// places that overwrite it — preparation and copy — and the context's own
+/// destructor must wipe it explicitly.
+fn cleanse_n0(n0: &mut [Limb; 2]) {
+    let bytes = core::mem::size_of_val(n0);
+    // SAFETY: `n0` is a live, uniquely borrowed array of `bytes` writable bytes;
+    // `cleanse` only stores zeros through it.
+    unsafe { crate::runtime::mem::cleanse(n0.as_mut_ptr().cast::<u8>(), bytes) };
+}
+
+impl Drop for MontCtx {
+    fn drop(&mut self) {
+        // The `SecretBuf` fields cleanse themselves; `n0` is a scalar field and
+        // needs its own wipe. This runs on every release, including one reached
+        // through `Box::from_raw` in `BN_MONT_CTX_free`.
+        cleanse_n0(&mut self.n0);
+    }
 }
 
 /// Read a `*mut MontCtx` as a mutable reference.
@@ -193,54 +227,80 @@ fn refuses(md: &[Limb]) -> bool {
 ///
 /// The even case is the caller's to report, because the authority reports it from
 /// inside `BN_mod_inverse` rather than here.
+///
+/// **Ordering of the preparation.** Every check that can refuse on public
+/// geometry — the zero/even test, the `c_int` radix range and the doubling of
+/// `R`'s bit length — runs before the first secret-bearing allocation, so a
+/// refusal costs no secret lifetime. The modulus is normalised by the `BigNum`
+/// representation the only caller reads (`normalise` trims the magnitude), and
+/// `MONT_RADIX_BITS` is a constant; neither needs a value-dependent check.
+///
+/// **Adoption at production.** Each value that derives from the modulus is moved
+/// into [`SecretBuf`] at the statement that produces it. An ordinary `Vec` never
+/// holds a modulus-derived intermediate across a later fallible step, so an
+/// allocation failure cannot release one uncleansed.
 fn mont_set(mont: &mut MontCtx, m: &[Limb]) -> bool {
     if refuses(m) {
         return false;
     }
-    // `ri = ceil(bits / 64) * 64`, the authority's own rounding. For a normalised
-    // modulus that is exactly `64 * m.len()`: its top limb is non-zero, so the
-    // bit length lies in `((len-1)*64, len*64]` and the ceiling is `len`. Computing
-    // it from the public limb count rather than `limbs::bit_len` is what keeps a
-    // secret CRT modulus' top-limb leading zeros out of a branch.
-    let Some(ri) = m.len().checked_mul(64) else {
+    // Public geometry first. `ri = ceil(bits / 64) * 64`; for a normalised modulus
+    // that is exactly `64 * m.len()`: its top limb is non-zero, so the bit length
+    // lies in `((len-1)*64, len*64]` and the ceiling is `len`. Computing it from
+    // the public limb count rather than `limbs::bit_len` keeps a secret CRT
+    // modulus' top-limb leading zeros out of a branch.
+    let Some(ri_bits) = m.len().checked_mul(64) else {
+        return false;
+    };
+    let Ok(ri) = c_int::try_from(ri_bits) else {
+        return false;
+    };
+    let Some(rr_bits) = ri_bits.checked_mul(2) else {
         return false;
     };
     // `RR = R^2 mod m` with `R = 2^ri`. Fixed-pattern doubling from public
     // geometry; the contents of a secret modulus never select a branch, an index
-    // or a loop bound (T6).
-    let Some(rr) = ri
-        .checked_mul(2)
-        .and_then(|bits| limbs::pow2_mod_consttime(bits, m))
-    else {
+    // or a loop bound (T6). The returned vector is adopted at the call that
+    // produces it, so no ordinary `Vec` owns it beyond the producing statement.
+    let Some(rr) = limbs::pow2_mod_consttime(rr_bits, m).map(SecretBuf::from_vec) else {
         return false;
     };
-    let Some(n) = crate::bn::alloc::try_clone_slice(m) else {
+    // Test-only: a test cannot hold a pointer to this function's local owner, so a
+    // pending request arms the drop probe on `R^2 mod N`, the first secret-derived
+    // buffer. A later allocation failure then drops this buffer on the failure
+    // path, and the probe reports, from inside `Drop`, that the release cleansed.
+    #[cfg(test)]
+    if crate::bn::secret::drop_probe::take_request() {
+        crate::bn::secret::drop_probe::arm(rr.as_ptr());
+    }
+    // The modulus is cloned directly into secret storage. `try_clone_slice` would
+    // leave an ordinary modulus copy that a later failure releases intact.
+    let Some(n) = clone_secret(m) else {
         return false;
     };
     let n0 = inverse_word(m[0]);
     // `R mod m` is one Montgomery multiply from the other prepared values:
-    // `R^2 * 1 * R^-1`. Preparing it here is what lets the exponentiation reuse
-    // the accumulator instead of converting one afresh. Both allocations are
-    // fallible and neither value is observable through the C API.
+    // `R^2 * 1 * R^-1`. The one is a public constant; the result derives from the
+    // modulus and is adopted at production, before any further fallible step.
     let Some(mut one_plain) = crate::bn::alloc::try_zeroed(m.len(), 0u64) else {
         return false;
     };
     one_plain[0] = 1;
-    let Some(one) = mont_mul_fallible(&rr, &one_plain, m, n0) else {
+    let Some(one) = mont_mul_fallible(&rr, &one_plain, m, n0).map(SecretBuf::from_vec) else {
         return false;
     };
-    let Ok(ri) = c_int::try_from(ri) else {
-        return false;
-    };
-    mont.n = SecretBuf::from_vec(n);
+    // Commit only after every fallible step has succeeded, so a failure leaves the
+    // destination exactly as it was. The replaced `n0` is wiped before the new
+    // value overwrites it.
+    cleanse_n0(&mut mont.n0);
+    mont.n = n;
     mont.ri = ri;
     mont.n0 = [n0, 0];
     mont.ni = Vec::new();
     mont.flags = 0;
     mont.radix_bits = MONT_RADIX_BITS;
     mont.backend = MontBackend::PortableRedc;
-    mont.rr = SecretBuf::from_vec(rr);
-    mont.one = SecretBuf::from_vec(one);
+    mont.rr = rr;
+    mont.one = one;
     true
 }
 
@@ -448,7 +508,11 @@ pub unsafe extern "C" fn BN_MONT_CTX_set(
     guard_ffi(0, || {
         // SAFETY: `m` is null-or-live per this function's `# Safety` section.
         let x = unsafe { as_ref(m) };
-        let (md, _) = parts(x);
+        // The magnitude is borrowed, not copied into an ordinary `Vec`: the modulus
+        // is secret on the RSA CRT reach, and `mont_set` is the single transfer
+        // point into protected storage. A plain `parts` clone would be an ordinary
+        // temporary that a later failure released uncleansed.
+        let md = magnitude(x);
         // SAFETY: `mont` is null-or-live per this function's `# Safety` section.
         let Some(dst) = (unsafe { as_mut_mont(mont) }) else {
             return 0;
@@ -458,7 +522,7 @@ pub unsafe extern "C" fn BN_MONT_CTX_set(
         if md.is_empty() {
             return 0;
         }
-        if !mont_set(dst, &md) {
+        if !mont_set(dst, md) {
             // SAFETY: the site is a compile-time constant.
             unsafe { raise_site(&BN_GCD_532) };
             return 0;
@@ -511,6 +575,9 @@ pub unsafe extern "C" fn BN_MONT_CTX_copy(to: *mut MontCtx, from: *mut MontCtx) 
         dst.n = n;
         dst.one = one;
         dst.ni = ni;
+        // The replaced word is modulus-derived; wipe it before the copy of `src`'s
+        // value overwrites it.
+        cleanse_n0(&mut dst.n0);
         dst.n0 = src.n0;
         dst.ri = src.ri;
         dst.flags = src.flags;
@@ -527,10 +594,34 @@ pub unsafe extern "C" fn BN_MONT_CTX_copy(to: *mut MontCtx, from: *mut MontCtx) 
 /// that is already there is returned as it is, so a caller that keeps the result in a
 /// shared slot pays for the setup once.
 ///
+/// ## Publication and ownership rule
+///
+/// The slot is read and written through an [`AtomicPtr`] view of the caller's
+/// `*mut MontCtx` storage. The fast path is an `Acquire` load; the publication is a
+/// `Release` store performed while the write lock is held. A reader that observes a
+/// non-null pointer therefore also observes the fully initialised [`MontCtx`] it
+/// names, and the null-to-context transition has exactly one writer, so every
+/// waiting caller receives the same immutable context.
+///
+/// This function **never frees or replaces a published context**. The context is
+/// owned by the enclosing object (`DH`, `DSA`, `RSA` or `RSA_PRIME_INFO`) and is
+/// released once by that object's `finish` hook. The reader's obligation is the
+/// same lifetime precondition as the authority's: the enclosing object must outlive
+/// every operation that uses the returned pointer and must not be freed or have its
+/// method changed concurrently. Those transitions perform non-atomic writes to the
+/// slot, which is sound only under that exclusive-access precondition; the atomic
+/// publication removes the data race between the fast-path read and the
+/// null-to-context store, and does not extend the context's lifetime.
+///
 /// # Safety
 ///
-/// `pmont` must point to a writable `*mut MontCtx` slot; `lock` must be null or a
-/// live `CRYPTO_RWLOCK`; `mod` must be null or live; `ctx` is unused.
+/// `pmont` must point to a writable `*mut MontCtx` slot that is suitably aligned and
+/// remains valid for the duration of the call and of the returned pointer's use;
+/// no non-atomic access to it may run concurrently with this call (`lock` is what
+/// excludes them). `lock` must be null or a live `CRYPTO_RWLOCK`; `mod` must be null
+/// or live; `ctx` is unused. A null `lock` leaves concurrent initialisation to the
+/// caller's own exclusion: the atomic slot access is still race-free, but two
+/// callers without exclusion may each create a context.
 #[no_mangle]
 pub unsafe extern "C" fn BN_MONT_CTX_set_locked(
     pmont: *mut *mut MontCtx,
@@ -542,20 +633,24 @@ pub unsafe extern "C" fn BN_MONT_CTX_set_locked(
         if pmont.is_null() {
             return core::ptr::null_mut();
         }
-        // SAFETY: the caller guarantees `pmont` is a writable slot.
-        if !unsafe { *pmont }.is_null() {
-            // SAFETY: as above, and the slot's value is a live context the caller
-            // owns.
-            return unsafe { *pmont };
+        // SAFETY: the caller guarantees `pmont` is a writable slot of a pointer's
+        // size and alignment, and that non-atomic accesses to it are excluded by
+        // the lock or by the caller's own exclusive access. The const assertions
+        // above make the size/alignment equivalence a compile-time property of the
+        // ABI slot, and the slot remains live for the duration of the borrow.
+        let slot = unsafe { AtomicPtr::<MontCtx>::from_ptr(pmont) };
+        let cached = slot.load(Ordering::Acquire);
+        if !cached.is_null() {
+            return cached;
         }
         if !lock.is_null() {
             // SAFETY: the caller guarantees `lock` is live; the status the authority
             // ignores is ignored here too.
             unsafe { crate::runtime::thread::CRYPTO_THREAD_write_lock(lock) };
         }
-        // SAFETY: the slot is still writable, and the re-read under the lock is the
-        // second half of the double check.
-        let mut out = unsafe { *pmont };
+        // Second half of the double check. Holding the write lock makes this the
+        // only null-to-context writer, so every waiter observes the same pointer.
+        let mut out = slot.load(Ordering::Acquire);
         if out.is_null() {
             // SAFETY: `BN_MONT_CTX_new` takes no pointers; `BN_MONT_CTX_set` and
             // `BN_MONT_CTX_free` have `m`'s and the fresh context's contracts, both
@@ -563,7 +658,9 @@ pub unsafe extern "C" fn BN_MONT_CTX_set_locked(
             unsafe {
                 let fresh = BN_MONT_CTX_new();
                 if BN_MONT_CTX_set(fresh, m, ctx) == 1 {
-                    *pmont = fresh;
+                    // Release: the initialised, immutable context is visible to the
+                    // acquiring fast path before the pointer naming it.
+                    slot.store(fresh, Ordering::Release);
                     out = fresh;
                 } else {
                     BN_MONT_CTX_free(fresh);
@@ -1082,6 +1179,432 @@ mod tests {
         // SAFETY: `dst` is live and `src` is live for the duration of the call.
         assert!(!unsafe { BN_copy(dst, src) }.is_null());
         dst
+    }
+
+    /// The deliberately broken comparator the negative control borrows: it answers
+    /// the same on defined inputs, but its per-limb early exit reveals the first
+    /// differing position. It exists only so a tainted run can show that the
+    /// instrument sees such a comparator; the production `context_matches` never
+    /// takes that shape.
+    fn context_matches_early_exit(mc: &MontCtx, md: &[Limb]) -> bool {
+        let width = md.len();
+        if width == 0 {
+            return false;
+        }
+        let Some(expected_ri) = width.checked_mul(64) else {
+            return false;
+        };
+        let Ok(expected_ri) = c_int::try_from(expected_ri) else {
+            return false;
+        };
+        if mc.radix_bits != MONT_RADIX_BITS
+            || mc.backend != MontBackend::PortableRedc
+            || mc.ri != expected_ri
+            || mc.n.len() != width
+            || mc.rr.len() != width
+            || mc.one.len() != width
+        {
+            return false;
+        }
+        for (stored, operand) in mc.n.iter().zip(md.iter()) {
+            if stored != operand {
+                return false;
+            }
+        }
+        mc.n0[0] == inverse_word(md[0])
+    }
+
+    /// `VALGRIND_MAKE_MEM_UNDEFINED` as the amd64 client request.
+    ///
+    /// Same sequence as the helpers in `bn::arith`, `rsa::ossl` and
+    /// `ec::ecdsa_ossl`: `valgrind.h`'s preamble and an `xchg rbx, rbx`, which
+    /// valgrind replaces during translation. Outside valgrind it is a few harmless
+    /// register rotations, so the same test runs in the ordinary suite.
+    #[cfg(target_arch = "x86_64")]
+    unsafe fn valgrind_make_mem_undefined(addr: *mut u8, len: usize) {
+        let args: [usize; 6] = [0x4D43_0001, addr as usize, len, 0, 0, 0];
+        let _result: usize;
+        // SAFETY: the sequence is the documented valgrind client-request pattern;
+        // `args` lives for the duration of the asm and is only read.
+        unsafe {
+            core::arch::asm!(
+                "rol rdi, 3",
+                "rol rdi, 13",
+                "rol rdi, 61",
+                "rol rdi, 51",
+                "xchg rbx, rbx",
+                in("rax") args.as_ptr(),
+                inout("rdx") 0usize => _result,
+                out("rdi") _,
+                options(nostack),
+            );
+        }
+    }
+
+    /// `VALGRIND_MAKE_MEM_DEFINED`, used to declassify only the authorised
+    /// equality decision so the test's own assertion is not a second tainted
+    /// branch.
+    #[cfg(target_arch = "x86_64")]
+    unsafe fn valgrind_make_mem_defined(addr: *mut u8, len: usize) {
+        let args: [usize; 6] = [0x4D43_0002, addr as usize, len, 0, 0, 0];
+        let _result: usize;
+        // SAFETY: as `valgrind_make_mem_undefined`.
+        unsafe {
+            core::arch::asm!(
+                "rol rdi, 3",
+                "rol rdi, 13",
+                "rol rdi, 61",
+                "rol rdi, 51",
+                "xchg rbx, rbx",
+                in("rax") args.as_ptr(),
+                inout("rdx") 0usize => _result,
+                out("rdi") _,
+                options(nostack),
+            );
+        }
+    }
+
+    /// `context_matches` is exercised directly, with no context insertion or
+    /// exponentiation around it: an equal operand is accepted and a one-bit
+    /// difference is refused. The broken early-exit comparator answers the same on
+    /// these defined inputs, which is why the tainted run below is what
+    /// distinguishes the two shapes.
+    #[test]
+    fn context_matches_compares_the_whole_modulus_and_refuses_a_difference() {
+        const NULL: *mut BnCtx = core::ptr::null_mut();
+        // SAFETY: every object is created, used and released inside this test.
+        unsafe {
+            let m = new_owned(vec![0xffff_ffff_ffff_ffc5, 0xffff_ffff_ffff_ffff], 0);
+            let mont = BN_MONT_CTX_new();
+            assert_eq!(BN_MONT_CTX_set(mont, m, NULL), 1);
+            let mc = &*mont;
+            let equal = (*m).d.clone();
+            assert!(context_matches(mc, &equal));
+            let mut unequal = equal.clone();
+            unequal[0] ^= 1;
+            assert!(!context_matches(mc, &unequal));
+
+            // The negative control is semantically equivalent on defined data; the
+            // difference is only its per-limb early exit.
+            assert!(context_matches_early_exit(mc, &equal));
+            assert!(!context_matches_early_exit(mc, &unequal));
+
+            BN_MONT_CTX_free(mont);
+            BN_free(m);
+        }
+    }
+
+    /// ctgrind case for the declassification boundary in `context_matches`.
+    ///
+    /// The stored modulus is defined; the operand's limbs are marked undefined.
+    /// The production comparison reads the whole width into one accumulation, so
+    /// the only tainted decision is the final equality test — the authorised
+    /// declassification point. The equal and unequal calls exercise both outcomes
+    /// of that decision. `CTGRIND_CONTROL=1` additionally runs the deliberately
+    /// broken early-exit comparator on tainted data; memcheck must report its
+    /// per-limb branch, which is what shows the instrument can see a comparator of
+    /// that shape.
+    ///
+    /// Gate: `valgrind --tool=memcheck --error-exitcode=99 <test-bin> --exact
+    /// bn::mont::tests::ctgrind_context_matches_declassifies_at_the_equality_decision
+    /// --test-threads=1 --nocapture`.
+    #[cfg(target_arch = "x86_64")]
+    #[test]
+    fn ctgrind_context_matches_declassifies_at_the_equality_decision() {
+        const NULL: *mut BnCtx = core::ptr::null_mut();
+        // SAFETY: every object and buffer is this test's own, and each client
+        // request only marks the definedness of live storage.
+        unsafe {
+            let m = new_owned(vec![0xffff_ffff_ffff_ffc5, 0xffff_ffff_ffff_ffff], 0);
+            let mont = BN_MONT_CTX_new();
+            assert_eq!(BN_MONT_CTX_set(mont, m, NULL), 1);
+            let mc = &*mont;
+
+            let mut equal = (*m).d.clone();
+            valgrind_make_mem_undefined(equal.as_mut_ptr().cast::<u8>(), equal.len() * 8);
+            let mut eq = context_matches(mc, &equal);
+            valgrind_make_mem_defined((&mut eq as *mut bool).cast::<u8>(), 1);
+            assert!(eq, "equal tainted operands must declassify to true");
+
+            let mut unequal = equal.clone();
+            unequal[0] ^= 1;
+            let mut ne = context_matches(mc, &unequal);
+            valgrind_make_mem_defined((&mut ne as *mut bool).cast::<u8>(), 1);
+            assert!(!ne, "a tainted difference must declassify to false");
+
+            if std::env::var_os("CTGRIND_CONTROL").is_some() {
+                let mut tainted = (*m).d.clone();
+                valgrind_make_mem_undefined(tainted.as_mut_ptr().cast::<u8>(), tainted.len() * 8);
+                let mut control = context_matches_early_exit(mc, &tainted);
+                valgrind_make_mem_defined((&mut control as *mut bool).cast::<u8>(), 1);
+                assert!(control);
+            }
+
+            BN_MONT_CTX_free(mont);
+            BN_free(m);
+        }
+    }
+
+    /// Every allocation failure after the first secret-derived buffer exists
+    /// releases that buffer cleansed.
+    ///
+    /// The seam records the allocation sites a successful preparation reaches;
+    /// the test then fails each site in turn. `mont_set` arms the drop probe on
+    /// `R^2 mod N`, the first secret-derived buffer, when the test requests it; a
+    /// later allocation failure drops that buffer and the probe reads its still-live
+    /// allocation from inside `Drop`. The assertions are only made for sites that
+    /// reached the probe, and at least one must, because sites before `R^2 mod N`
+    /// exists have no earlier secret buffer to observe. A return-code-only check
+    /// would not see an uncleansed release.
+    #[test]
+    fn an_allocation_failure_during_preparation_cleanses_the_derived_values() {
+        use crate::bn::alloc::test_fail;
+        use crate::bn::secret::drop_probe;
+
+        const NULL: *mut BnCtx = core::ptr::null_mut();
+        let m = new_owned(vec![0xffff_ffff_ffff_ffc5, 0xffff_ffff_ffff_ffff], 0);
+
+        let sites = test_fail::sites_reached(|| {
+            // SAFETY: each object is created, used and released in this closure.
+            unsafe {
+                let mont = BN_MONT_CTX_new();
+                let ok = BN_MONT_CTX_set(mont, m, NULL);
+                BN_MONT_CTX_free(mont);
+                ok == 1
+            }
+        });
+        assert!(!sites.is_empty(), "the preparation must reach the seam");
+
+        let mut observed = 0usize;
+        for site in &sites {
+            drop_probe::request();
+            let guard = test_fail::fail_at_site(site);
+            // SAFETY: each object is created, used and released in this block.
+            let result = unsafe {
+                let mont = BN_MONT_CTX_new();
+                let ok = BN_MONT_CTX_set(mont, m, NULL);
+                BN_MONT_CTX_free(mont);
+                ok
+            };
+            drop(guard);
+            // A site before the first secret buffer leaves the request pending;
+            // clear it so it cannot arm a later, unrelated allocation.
+            drop_probe::take_request();
+            if let Some(observed_drop) = drop_probe::take() {
+                observed += 1;
+                assert!(
+                    observed_drop.nonzero_before > 0,
+                    "the derived buffer must hold live data before the failure"
+                );
+                assert_eq!(
+                    observed_drop.nonzero_bytes, 0,
+                    "the derived buffer was released uncleansed at {site}"
+                );
+                assert_eq!(result, 0, "the injected failure must be reported at {site}");
+            }
+            // The address may be reused by a later buffer; disarm so its drop
+            // cannot be mistaken for this observation.
+            drop_probe::arm(core::ptr::null());
+        }
+        assert!(
+            observed > 0,
+            "no allocation-failure site exercised the earlier secret buffer"
+        );
+
+        ERR_clear_error();
+        // SAFETY: `m` is this test's own object.
+        unsafe { BN_free(m) };
+    }
+
+    /// Concurrent publication, concurrent failure, replacement after publication
+    /// and the owner-sequenced release.
+    ///
+    /// The test runs real threads (no test-only serialisation), so it can detect a
+    /// fast-path read that observes a partially published context, a second
+    /// context created for the same slot, or a replacement of a published pointer.
+    /// It **cannot** detect a concurrent free of the context while a reader holds
+    /// it: that is outside the documented lifetime precondition, so the test frees
+    /// only after every reader has joined. It also cannot detect a compiler or CPU
+    /// reordering that the abstract `Acquire`/`Release` pair permits; it observes
+    /// the abstract machine, not arbitrary optimisation.
+    #[test]
+    fn the_locked_publication_is_atomic_and_publishes_once() {
+        use crate::runtime::thread::{CRYPTO_THREAD_lock_free, CRYPTO_THREAD_lock_new};
+        use std::sync::atomic::{AtomicPtr, Ordering};
+        use std::sync::{Arc, Barrier};
+
+        const THREADS: usize = 4;
+        const ROUNDS: usize = 25;
+
+        struct SendLock(*mut CryptoRwlock);
+        // SAFETY: the lock is a process-owned synchronisation object; the test
+        // shares it only through `Arc` and every use is inside the lock API.
+        unsafe impl Send for SendLock {}
+        // SAFETY: as above.
+        unsafe impl Sync for SendLock {}
+
+        struct SendNum(*mut BigNum);
+        // SAFETY: the modulus is read-only after construction, and the test keeps
+        // every thread's use on one raw pointer it owns.
+        unsafe impl Send for SendNum {}
+        // SAFETY: as above.
+        unsafe impl Sync for SendNum {}
+
+        const NULL: *mut BnCtx = core::ptr::null_mut();
+        // SAFETY: the lock and both moduli are this test's own objects.
+        let lock = Arc::new(SendLock(CRYPTO_THREAD_lock_new()));
+        assert!(!lock.0.is_null());
+        let odd = Arc::new(SendNum(new_owned(
+            vec![0xffff_ffff_ffff_ffc5, 0xffff_ffff_ffff_ffff],
+            0,
+        )));
+        let even = Arc::new(SendNum(new_owned(
+            vec![0xffff_ffff_ffff_ffc4, 0xffff_ffff_ffff_ffff],
+            0,
+        )));
+
+        // Phase 1: concurrent initialisation. Every caller must receive the one
+        // context published under the lock.
+        let slot = Arc::new(AtomicPtr::<MontCtx>::new(core::ptr::null_mut()));
+        let barrier = Arc::new(Barrier::new(THREADS));
+        let mut handles = Vec::new();
+        for _ in 0..THREADS {
+            let slot = Arc::clone(&slot);
+            let lock = Arc::clone(&lock);
+            let odd = Arc::clone(&odd);
+            let barrier = Arc::clone(&barrier);
+            handles.push(std::thread::spawn(move || {
+                let pmont = Arc::as_ptr(&slot).cast_mut().cast::<*mut MontCtx>();
+                barrier.wait();
+                let mut seen = Vec::with_capacity(ROUNDS);
+                for _ in 0..ROUNDS {
+                    // SAFETY: the slot is the shared atomic this test owns, the
+                    // lock is live, and the modulus is read-only for the run.
+                    let got = unsafe {
+                        BN_MONT_CTX_set_locked(pmont, lock.0, odd.0, core::ptr::null_mut())
+                    };
+                    seen.push(got as usize);
+                }
+                seen
+            }));
+        }
+        let mut published: Option<usize> = None;
+        for handle in handles {
+            let Ok(seen) = handle.join() else {
+                unreachable!("initialisation worker panicked");
+            };
+            for got in seen {
+                match published {
+                    None => published = Some(got),
+                    Some(first) => assert_eq!(first, got, "publication must be a single context"),
+                }
+            }
+        }
+        let Some(published) = published else {
+            unreachable!("at least one caller ran");
+        };
+        assert_ne!(published, 0, "a successful publication must be non-null");
+        assert_eq!(slot.load(Ordering::Acquire) as usize, published);
+
+        // Phase 2: concurrent failure. Failure leaves the slot null, and every
+        // caller reports null rather than publishing a half-built context.
+        let barrier = Arc::new(Barrier::new(THREADS));
+        let mut handles = Vec::new();
+        let fresh_slot = Arc::new(AtomicPtr::<MontCtx>::new(core::ptr::null_mut()));
+        for _ in 0..THREADS {
+            let slot = Arc::clone(&fresh_slot);
+            let lock = Arc::clone(&lock);
+            let even = Arc::clone(&even);
+            let barrier = Arc::clone(&barrier);
+            handles.push(std::thread::spawn(move || {
+                let pmont = Arc::as_ptr(&slot).cast_mut().cast::<*mut MontCtx>();
+                barrier.wait();
+                for _ in 0..ROUNDS {
+                    // SAFETY: as in phase 1; the modulus is even, so preparation
+                    // refuses it and the entry point reports null.
+                    let got = unsafe {
+                        BN_MONT_CTX_set_locked(pmont, lock.0, even.0, core::ptr::null_mut())
+                    };
+                    assert!(got.is_null(), "an even modulus must not publish a context");
+                }
+            }));
+        }
+        for handle in handles {
+            assert!(handle.join().is_ok(), "failure worker panicked");
+        }
+        assert!(fresh_slot.load(Ordering::Acquire).is_null());
+        // SAFETY: the error queue is this thread's; the workers' refusals are
+        // discarded the same way the authority's callers discard them.
+        ERR_clear_error();
+
+        // Phase 3: replacement. A published context is returned unchanged by every
+        // concurrent caller and is never freed by this function.
+        let barrier = Arc::new(Barrier::new(THREADS));
+        let mut handles = Vec::new();
+        let keep = published;
+        for _ in 0..THREADS {
+            let slot = Arc::clone(&slot);
+            let lock = Arc::clone(&lock);
+            let odd = Arc::clone(&odd);
+            let barrier = Arc::clone(&barrier);
+            handles.push(std::thread::spawn(move || {
+                let pmont = Arc::as_ptr(&slot).cast_mut().cast::<*mut MontCtx>();
+                barrier.wait();
+                for _ in 0..ROUNDS {
+                    // SAFETY: as in phase 1.
+                    let got = unsafe {
+                        BN_MONT_CTX_set_locked(pmont, lock.0, odd.0, core::ptr::null_mut())
+                    };
+                    assert_eq!(
+                        got as usize, keep,
+                        "a published context must not be replaced"
+                    );
+                }
+            }));
+        }
+        for handle in handles {
+            assert!(handle.join().is_ok(), "replacement worker panicked");
+        }
+
+        // Phase 4: destruction after every reader has joined, which is the only
+        // lifetime the ownership rule permits. A fresh cycle proves the slot can be
+        // republished after the owner releases it; the address may differ, so the
+        // republished pointer is checked for non-null rather than identity.
+        for _ in 0..ROUNDS {
+            // SAFETY: no reader remains, and the slot names the context this test
+            // owns.
+            let cached = slot.load(Ordering::Acquire);
+            assert!(!cached.is_null());
+            // SAFETY: `cached` was published by this test and is freed exactly once.
+            unsafe {
+                BN_MONT_CTX_free(cached);
+                slot.store(core::ptr::null_mut(), Ordering::Release);
+                let again = BN_MONT_CTX_set_locked(
+                    Arc::as_ptr(&slot).cast_mut().cast::<*mut MontCtx>(),
+                    lock.0,
+                    odd.0,
+                    NULL,
+                );
+                assert!(!again.is_null());
+            }
+        }
+        // Release the final cycle's context.
+        // SAFETY: as above.
+        unsafe {
+            BN_MONT_CTX_free(slot.load(Ordering::Acquire));
+            slot.store(core::ptr::null_mut(), Ordering::Release);
+        }
+
+        // SAFETY: the remaining contexts and the lock are this test's own, and no
+        // thread is running.
+        unsafe {
+            for n in [odd.0, even.0] {
+                BN_free(n);
+            }
+            let lock_ptr = lock.0;
+            drop(lock);
+            CRYPTO_THREAD_lock_free(lock_ptr);
+        }
     }
 
     /// The M18-D1 regression control for this file: every entry point that writes
