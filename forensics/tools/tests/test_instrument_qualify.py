@@ -82,6 +82,36 @@ class RegistryMutationControls(unittest.TestCase):
             "objdump from a different decade"
         self.assert_refused(self.run_validate(document), "IQ_VERSION_MISMATCH")
 
+    def _nonzero_probe(self, document) -> dict:
+        version = self.instrument(document, "binary-branch-audit")["version_validation"]
+        version["command"] = (
+            "printf '%s\\n' 'GNU objdump (GNU Binutils for Debian) 2.40'; exit 7"
+        )
+        return version
+
+    def test_undeclared_nonzero_version_probe_is_refused(self) -> None:
+        document = load_registry()
+        self._nonzero_probe(document)
+        self.assert_refused(self.run_validate(document), "IQ_VERSION_NONZERO")
+
+    def test_declared_justified_nonzero_version_probe_passes(self) -> None:
+        document = load_registry()
+        version = self._nonzero_probe(document)
+        version["accept_nonzero_exit"] = True
+        version["nonzero_exit_justification"] = (
+            "control: this probe prints its version and then exits nonzero"
+        )
+        result = self.run_validate(document)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("REGISTER ok", result.stdout)
+
+    def test_declared_nonzero_probe_without_justification_is_refused(self) -> None:
+        document = load_registry()
+        version = self._nonzero_probe(document)
+        version["accept_nonzero_exit"] = True
+        version["nonzero_exit_justification"] = ""
+        self.assert_refused(self.run_validate(document), "IQ_VERSION_JUSTIFICATION")
+
     def test_missing_instrument_path_is_refused(self) -> None:
         document = load_registry()
         self.instrument(document, "dudect")["paths"] = ["courts/phase18/timing/absent.c"]

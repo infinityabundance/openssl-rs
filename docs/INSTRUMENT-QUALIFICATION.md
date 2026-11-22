@@ -1,8 +1,8 @@
 # Instrument qualification (ETP-3)
 
 **Status:** normative register for the assurance instruments named below, at
-`staging` = `72aee5630`. The machine-readable form is
-`evidence/etp3/instruments.json`; the executable check is
+`staging` = `342934733` (ETP-3 hardening 2, 2026-11-22). The machine-readable
+form is `evidence/etp3/instruments.json`; the executable check is
 `forensics/tools/instrument_qualify.py`. This document states what each
 instrument may be cited for and what it may not. It does not restate the
 code-generation binding rules in `docs/CODE-GENERATION-ASSURANCE.md` or the
@@ -45,6 +45,8 @@ The checker refuses, with a named code on stderr, when:
 | code | condition |
 |---|---|
 | `IQ_VERSION_MISMATCH` | the recorded version string is no longer produced by the tool |
+| `IQ_VERSION_NONZERO` | a version command printed the recorded string but exited nonzero, and the instrument did not declare the allowance |
+| `IQ_VERSION_JUSTIFICATION` | an instrument declared `accept_nonzero_exit` without a non-empty justification |
 | `IQ_PATH_MISSING` | a named instrument path does not exist |
 | `IQ_CONTROL_UNKNOWN` | a control id has no implementation |
 | `IQ_CONTROL_PREREQUISITE` | a declared prerequisite is absent or its digest changed |
@@ -57,6 +59,15 @@ The checker refuses, with a named code on stderr, when:
 `check` also compares the live `(case, exit)` table to the table recorded in the
 register. A control whose behaviour changed cannot leave the register silently
 green: the run is refused as `CONTROL_STALE` until the entry is re-qualified.
+
+A nonzero version probe is **not** the default contract. An instrument that
+legitimately prints its version and then exits nonzero must declare
+`version_validation.accept_nonzero_exit: true` **and** a non-empty
+`version_validation.nonzero_exit_justification`; any other nonzero probe is
+refused as `IQ_VERSION_NONZERO`, even when the expected string is present.
+No instrument in the current register declares the allowance; the two checker
+controls (an undeclared nonzero probe must fail, and a declared justified probe
+must pass) are in `forensics/tools/tests/test_instrument_qualify.py`.
 
 Two statuses are distinct and are never conflated:
 
@@ -74,6 +85,7 @@ Two statuses are distinct and are never conflated:
 | kernel / CPU | `7.3.5-2-cachyos` / 13th Gen Intel Core i9-13900K |
 | hardware PMU | **absent**: `cpuid.0A.version=0`, `num_general_counters=0`, `cpuid.1 hypervisor_present=1`, no `cpu` event source, `perf stat -e cycles` prints `<not supported>` |
 | network | **present** (corrected at ETP-4): `getent hosts crates.io` resolves; `curl -sSI https://static.crates.io/` returns HTTP/2 404 (host reachable), GitHub and `static.rust-lang.org` return 200, `apt-get update` exits 0. The earlier entry recorded "absent", which ETP-4's tool-availability probe falsified |
+| pinned prerequisites | `dudect.h` is vendored at `courts/phase18/timing/third_party/dudect/dudect.h` (digest-checked). The pinned solver is Z3 4.13.0 at `/opt/z3-solver/z3-4.13.0-x64-glibc-2.35/bin/z3`, installed by `forensics/tools/install_z3_pinned.sh` with archive and binary digests. The image's `/usr/bin/z3` is 4.8.12 and is *not* the pinned solver. No second instruction decoder is present |
 
 The missing PMU is a **venue limitation, not an instrument property**. It is
 the reason performance rows are `SCOPED_OBSERVATION`; it is not a defect of
@@ -90,8 +102,8 @@ probe checks the text. This is recorded in the register's `failure_modes` for
 | id | instrument | intended use | version identified |
 |---|---|---|---|
 | `valgrind-ctgrind` | Valgrind memcheck + client requests | secret-dependent branch/address use on an executed path | `valgrind-3.19.0` |
-| `dudect` | dudect-style t-test harness | timing difference between two input classes at a stated geometry | pinned commit + `dudect.h` digest |
-| `binsec-checkct` | BINSEC `-checkct` + SSE script | control-flow/memory dependence on a declared secret split | `Binsec version 0.11.3` |
+| `dudect` | dudect-style t-test harness | timing difference between two input classes at a stated geometry | pinned commit + vendored `dudect.h` digest |
+| `binsec-checkct` | BINSEC `-checkct` + SSE script | control-flow/memory dependence on a declared secret split | `Binsec version 0.11.3`, pinned Z3 4.13.0 |
 | `timecop-supercop` | TIMECOP patch on SUPERCOP | method-level secret-dependent-flow detection on SUPERCOP trees | tarball digest `e4fe70eb…` |
 | `perf-pmu` | perf + CPUID probe | whether this venue exposes architectural counters | `perf version 6.1.192` |
 | `tsc-smi-fallbacks` | kernel `msr` PMU + serialised RDTSC | reference-clock/SMI measurement when no PMU exists | `cc` 12.2.0, source-bound |
@@ -174,6 +186,27 @@ tracked JSON receipt cites this exit status; the T16 row is updated. A
 historical run that returned `insecure` with status 0 must be re-read as a
 refusal, not a verdict of either kind.
 
+#### 5.1.1 Complete verdict population (hardening 2)
+
+The first repair still tested for the secure line **before** the insecure line,
+so a transcript containing both was accepted as secure when the tool exited
+zero. The wrapper now classifies the complete status population before deciding:
+
+- the canonical line is `[checkct:result] Program status is : <verdict>`, with an
+  optional ` (<seconds>)` field that is BINSEC's own elapsed time;
+- the grammar is anchored to the whole line, so a verdict followed by any other
+  text is refused as `verdict-trailing-text` (exit 3);
+- zero well-formed verdicts is `no-verdict-line` (exit 3);
+- two or more is refused: `mixed-verdicts` when secure and insecure coexist,
+  `duplicate-secure` when secure is repeated, and `multiple-verdicts` otherwise
+  (all exit 6);
+- exactly one verdict is then dispatched under the existing `0/1/4/8` contract.
+
+Controls: a secure verdict carrying BINSEC's timing suffix is accepted; a mixed
+transcript, a duplicated secure transcript, a multiple transcript and a verdict
+line with additional text are refused. The stand-in-tool control does not
+exercise the solver; the live solver rows are in §7.
+
 ### 5.2 `courts/phase18/timing/binary_branch_audit.py`
 
 At `72aee5630` the missing/ambiguous-target exits were already nonzero (commit
@@ -186,16 +219,26 @@ can exit 0" **did not reproduce**. The residual fail-opens were:
 | symbol whose final identifier has a malformed length prefix | accepted as the target and exited **0** | refused `reason=missing`, exit **1** |
 | truncated disassembly of the recorded candidate | 7/7 "resolved", exit **0** | refused `reason=disassembly-truncated`, exit **1** |
 | hole in the decoded stream | not detected | refused `reason=disassembly-hole`, exit **1** |
+| a one-byte instruction omitted, every remaining address step ≤ 15 bytes | accepted, exit **0** | refused `reason=disassembly-hole`, exit **1** |
+| overlapping decoded instruction | not detected | refused `reason=disassembly-overlap`, exit **1** |
+| disassembly ending past the symbol boundary | not detected | refused `reason=disassembly-overrun`, exit **1** |
 | hung `objdump` | unbounded wait | bounded refusal, exit **1** |
 | wrong candidate | digest printed only | `--expect-sha256` mismatch, exit **3** |
 | missing target | exit 1, generic stderr | exit 1, one `REFUSED target=… reason=…` line per target |
 
 Symbol resolution is now exact by construction: the digits immediately before
 the final identifier must parse to exactly its length, so a symbol that merely
-*ends* with `<len><name>` is not a match. Ambiguity is refused. The disassembly
-must start at the symbol address, contain no step larger than the 15-byte
-maximum instruction length, and leave no more than 15 undecoded bytes at the
-end of the declared extent.
+*ends* with `<len><name>` is not a match. Ambiguity is refused. The coverage
+invariant is **byte coverage**, not an address-gap bound: every instruction's
+decoded length is taken from its raw byte field, each instruction must start
+where the previous one ended, the first must start at the symbol address, and
+the last must end exactly at the declared extent. A gap, overlap, truncation,
+overrun or decoded-byte-count mismatch is a refusal. An address step of at most
+15 bytes is not evidence that the intervening bytes were decoded; the
+address-gap test of the first repair accepted a transcript that omitted a
+one-byte instruction. The omission control now exits 1 with
+`disassembly-hole:gap=+0x1@+0xe` where the pre-repair script exits 0 with
+1/1 "resolved".
 
 ```
 $ python3 courts/phase18/timing/binary_branch_audit.py \
@@ -205,6 +248,7 @@ binary_branch_audit: 7 expected targets resolved uniquely with complete disassem
 $ echo $?
 0
 
+# earlier ETP-3 run on the stale tracked DSO; not re-run in hardening 2
 $ python3 courts/phase18/timing/binary_branch_audit.py \
     artifacts/phase2/install/lib/libcrypto.so.3
 REFUSED target="Montgomery multiply (core)" symbol="mont_mul_into" reason=missing
@@ -216,16 +260,23 @@ $ echo $?
 
 **Interpretation change.** `courts/phase18/timing/RECEIPT-timing-unified.json`
 records `branch_audit.exit = 0` with 7/7 resolved on
-`ee7fa27c…`. The hardened script re-run on that same digest still exits 0 with
-7/7 and the same per-function figures, so that receipt's interpretation is
-unchanged. A run whose exit status was 0 with a truncated or zero-size
-population would now be a refusal; no such run is recorded.
+`ee7fa27c…`. The byte-coverage script re-run on that same digest still exits 0
+with 7/7 and the same per-function figures, so that receipt's interpretation is
+unchanged and the stricter invariant found **no coverage defect** in the
+recorded run. A run whose exit status was 0 with a truncated, holed, overlapping
+or overrunning population would now be a refusal; no such run is recorded.
+
+**Single-decoder limit.** The tools image has no second instruction decoder
+(`llvm-objdump`, `ndisasm`, `gdb` and Python `capstone` are absent). Byte
+coverage is therefore established with GNU objdump alone. A decoder defect that
+omitted an instruction while preserving contiguity would not be cross-checked;
+this is recorded as an open limit, not as a passed check.
 
 ## 6. Adversarial controls
 
-Every control asserts a **nonzero** exit and a named refusal. Commands run in
-the court; `python3 forensics/tools/instrument_qualify.py controls` executes all
-of them.
+Every **refusal** control asserts a nonzero exit and a named refusal; the
+positive controls assert the exit-0 path. Commands run in the court;
+`python3 forensics/tools/instrument_qualify.py controls` executes all of them.
 
 | control | input | refusal observed | exit |
 |---|---|---|---|
@@ -235,10 +286,18 @@ of them.
 | branch audit, truncated | objdump shim printing the first four instructions | `reason=disassembly-truncated` | 1 |
 | branch audit, empty | objdump shim printing no instruction lines | `reason=empty-disassembly` | 1 |
 | branch audit, hole | shim printing first and last instructions only | `reason=disassembly-hole` | 1 |
+| branch audit, omitted short instruction | shim removing a one-byte `nop`, all address steps ≤ 15 bytes | `reason=disassembly-hole` (`gap=+0x1`) | 1 |
+| branch audit, overlap | shim printing one instruction line twice | `reason=disassembly-overlap` | 1 |
+| branch audit, overrun | shim appending an instruction at the stop address | `reason=disassembly-overrun` | 1 |
 | branch audit, timeout | shim that sleeps, `--timeout 1` | `reason=timeout` | 1 |
 | branch audit, unsupported format | a text file | `unsupported format … not an ELF file` | 2 |
 | branch audit, wrong candidate | `--expect-sha256` of a different DSO | `candidate-identity-mismatch` | 3 |
 | BINSEC, insecure | tool prints `insecure`, exits 0 | `T16 verdict: insecure` | 1 |
+| BINSEC, timed secure | tool prints `secure (0.030)`, exits 0 | `T16 verdict: secure` | 0 |
+| BINSEC, mixed | tool prints `secure` then `insecure`, exits 0 | `reason=mixed-verdicts` | 6 |
+| BINSEC, duplicated secure | tool prints `secure` twice, exits 0 | `reason=duplicate-secure` | 6 |
+| BINSEC, multiple | tool prints `insecure` twice, exits 0 | `reason=multiple-verdicts` | 6 |
+| BINSEC, trailing text | `secure (0.030) but the exploration was incomplete` | `reason=verdict-trailing-text` | 3 |
 | BINSEC, unknown | tool prints `unknown` | `unknown (incomplete; NOT a pass)` | 4 |
 | BINSEC, `--require-secure` | insecure or unknown | `reason=required-secure but verdict=…` | 8 |
 | BINSEC, silence | tool exits 0 with no output | `reason=no-output` | 3 |
@@ -253,16 +312,17 @@ of them.
 The BINSEC control uses stand-in `binsec` and `z3` executables. It qualifies the
 wrapper's exit-status contract; it does **not** exercise the solver's verdicts.
 That separation is deliberate: a wrapper control cannot stand in for a solver
-result, and the solver is `UNKNOWN` at this venue (§7).
+result. The solver's live verdicts are recorded separately in the register's
+`live_solver` list and in §7.
 
 ## 7. Sensitivity controls and `UNKNOWN` entries
 
 | instrument | positive control | negative control | observed in this session |
 |---|---|---|---|
 | ctgrind | `cmpnaive` reports errors | `cmpcmp` is clean | 99 / 0 |
-| dudect | `cmpnaive` state 0 | `cmpcmp` state 1 | 0 / 1 (exit 0 / 1) |
-| branch audit | fixtures resolve, exit 0 | every malformed inventory refused | 10 cases |
-| BINSEC wrapper | secure exits 0 | insecure/unknown/silence refused | 14 cases |
+| dudect | `cmpnaive` state 0 | `cmpcmp` state 1 | 0 / 1 (exit 0 / 1; 40000 / 60000 measurements) |
+| branch audit | fixtures resolve, exit 0 | every malformed inventory refused | 13 cases |
+| BINSEC wrapper | secure exits 0; timed secure exits 0 | insecure, unknown, mixed, duplicate, multiple, trailing text and silence refused | 19 cases |
 | differential analyser | well-formed campaign accepted | malformed populations refused | 34 tests |
 | alloc probe | two mallocs counted | forced failure hits the second | 2 cases |
 | build reproducibility | identical archives equal | a different object detected | self-test |
@@ -272,13 +332,24 @@ result, and the solver is `UNKNOWN` at this venue (§7).
 Not established in this session, recorded as `UNKNOWN` with its settling
 method rather than as a pass:
 
-- **z3 solver version.** No z3 exists in the tools image and the pinned
-  `/opt/z3-solver` directory is absent. `binsec_checkct.sh` refuses with exit 2
-  rather than falling back to the incomplete internal solver. Settling method:
-  restore the pinned `z3-4.13.0` or set `BINSEC_Z3`; the wrapper prints the
-  solver version at run time. Consequently **no live BINSEC secure verdict was
-  produced in this session**; the T16 `CRYPTO_memcmp` result remains bound to
-  its earlier record.
+- **BINSEC live verdicts (now reachable).** The pinned Z3 4.13.0 is installed by
+  `forensics/tools/install_z3_pinned.sh` (archive `884e3a41…`, binary
+  `0be0492e…`, both verified) and the wrapper was run with `BINSEC_Z3` pointing
+  at it. The targets produced:
+
+  | target | SSE script | verdict | wrapper exit |
+  |---|---|---|---:|
+  | `court/tmp/t16/ka_ct` | `ka.cfg` | `secure` | 0 |
+  | `court/tmp/t16/ka_leaky` | `ka.cfg` | `insecure` | 1 |
+  | `court/tmp/t16/memcmp_probe` | `memcmp.cfg` | `secure` | 0 |
+  | `court/tmp/t16/real_rs` | `real_rs.cfg` | `unknown` | 4 |
+  | `court/tmp/t16/inv_rs` | `inv.cfg` | `unknown` | 4 |
+
+  The two `unknown` rows are real results at the 240 s exploration bound, not a
+  failure of the repair: the standard library's allocator dispatch and
+  `rust_oom` remain unresolved indirects in a statically linked binary. `unknown`
+  is not a pass. The `secure` rows are model-relative to their declared
+  secret/public splits and do not establish constant time.
 - **TIMECOP/SUPERCOP (`RECORDED`).** The SUPERCOP 20190816 tarball is
   not present, which is why the control was not re-executed at ETP-3. The
   network entry above is corrected: reachability was established at ETP-4, so
@@ -290,20 +361,30 @@ method rather than as a pass:
 - **TSC/SMI fallbacks (`RECORDED`).** The recorded numbers
   (7 931 483 421 ticks, 0 SMI) came from a root-capable host outside the court.
   Re-execution where `/dev/cpu/0/msr` is readable is the settling method.
-- **dudect header provenance.** `dudect.h` is not vendored in the repository;
-  the pinned tree at commit `dc269651…` exists only as untracked scratch. The
-  control declares the header digest as a prerequisite and refuses when it is
-  absent, so a clean checkout cannot re-qualify dudect. This is an open
-  reproducibility gap, not a passing entry.
+- **Single-decoder instruction boundary.** No second decoder is available in the
+  tools image, so the branch audit's byte coverage is not cross-checked. A
+  decoder defect that preserved contiguity would be invisible. This is an open
+  limit of the venue, not a passing check.
 - **The live two-library differential.** PFP-0's measured campaign is bound to
   its own candidate and is not re-run here; the executable control qualifies
   the analyser's refusals, not a new measurement.
+
+**Closed at hardening 2.** The dudect header is now vendored at
+`courts/phase18/timing/third_party/dudect/dudect.h` with the pinned digest, so a
+clean checkout re-qualifies the control; the z3 entry is no longer `UNKNOWN`
+because the pinned solver is installed by a tracked, digest-verified script.
+Changing the vendored dudect digest is a register refusal until the control is
+re-qualified; the z3 archive and binary digests are checked by the installer on
+every install and fail closed on a mismatch.
 
 ## 8. What this register does not establish
 
 - It does not establish that any instrument is complete for its defect class.
   A control demonstrates that the instrument *can* detect the class it is
   pointed at; it does not bound what the instrument misses.
+- It does not establish that the branch audit's single decoder is correct. A
+  second decoder is not available in the venue, so a contiguity-preserving
+  decoder error would not be detected.
 - It does not establish constant-time behaviour, memory safety, compatibility
   or correctness for any artefact.
 - It does not make a recorded control current. `RECORDED` is not `PASS`, and an
@@ -322,7 +403,8 @@ The register is stale, and the checker refuses, when:
 - an instrument path disappears;
 - a control's live `(case, exit)` table differs from the recorded table;
 - a recorded control's bound file digest, or an asserted string in it, changes;
-- a declared prerequisite (the dudect header) is absent or changed;
+- a declared prerequisite (the vendored dudect header, or the pinned z3 binary)
+  is absent or changed;
 - the venue's PMU answer changes. A venue with a usable PMU requires a new
   register entry and new sensitivity controls, not an edited `pmu_present`.
 

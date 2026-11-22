@@ -48,13 +48,29 @@
 #      failure and exited 0 was the fail-open defect this closes.
 #   2  invocation/venue refusal: bad arguments, unreadable input, not an ELF
 #      file, binsec or z3 absent, `timeout` absent
-#   3  no [checkct:result] line: silence, a crash before the verdict, or a
-#      truncated result line.  NOT a pass.
+#   3  no single well-formed [checkct:result] status line: silence, a crash
+#      before the verdict, a truncated/malformed result line, or an ambiguous
+#      verdict line carrying additional text.  NOT a pass.
 #   4  unknown: the exploration did not finish.  NOT a pass.
 #   5  BINSEC_EXPECT_SHA256 did not match the binary
-#   6  tool or wall-clock failure (timeout, or a secure verdict with a nonzero
-#      tool status)
+#   6  inconsistent transcript: two or more verdicts, mixed secure/insecure,
+#      a duplicated secure verdict, a secure verdict with a nonzero tool
+#      status, or a wall-clock timeout
 #   8  --require-secure was given and the verdict was not secure
+#
+# The complete verdict population is parsed before any verdict is accepted.
+# The canonical status line is
+#
+#   [checkct:result] Program status is : <verdict>[ (<seconds>)]
+#
+# where the optional parenthesised field is BINSEC's own elapsed time.  This
+# is an exact full-line grammar: a status line with any other trailing text is
+# refused (reason `verdict-trailing-text`), not matched as a prefix.  Exactly
+# one verdict is required.  Zero verdicts is `no-verdict-line`; two or more is
+# `multiple-verdicts`; both secure and insecure is `mixed-verdicts`; two secure
+# verdicts is `duplicate-secure`.  The earlier parser searched for the secure
+# line first, so a transcript containing both a secure and an insecure line was
+# accepted as secure when the tool exited zero.
 #
 # Every refusal names the target binary and the reason on stderr.
 #
@@ -169,7 +185,49 @@ if [ "$rc" -eq 124 ] || [ "$rc" -eq 137 ]; then
     refuse 6 "timeout: wall bound ${wall_timeout}s exceeded (binsec status $rc)"
 fi
 
-if grep -Fq '[checkct:result] Program status is : secure' "$tmp/out"; then
+# Parse the COMPLETE verdict population before deciding anything.  A
+# transcript with two status lines is not resolved by the order in which they
+# appear; `grep -Fq secure` accepted a mixed transcript as soon as a secure
+# line existed.  The grammar below is anchored to the whole line, with only
+# BINSEC's parenthesised elapsed-time field permitted after the verdict.
+verdict_counts=$(awk '
+  /^\[checkct:result\] Program status is : secure( \([0-9]+(\.[0-9]+)?\))?$/   { s++; next }
+  /^\[checkct:result\] Program status is : insecure( \([0-9]+(\.[0-9]+)?\))?$/ { i++; next }
+  /^\[checkct:result\] Program status is : unknown( \([0-9]+(\.[0-9]+)?\))?$/  { u++; next }
+  /^\[checkct:result\] Program status is : (secure|insecure|unknown)/        { t++; next }
+  /^\[checkct:result\] Program status is :/                                  { m++; next }
+  END { printf "%d %d %d %d %d\n", s+0, i+0, u+0, t+0, m+0 }
+' "$tmp/out")
+read -r n_secure n_insecure n_unknown n_trailing n_malformed <<EOF
+$verdict_counts
+EOF
+
+if [ "$n_trailing" -gt 0 ]; then
+    refuse 3 "verdict-trailing-text:${n_trailing}-line(s): a status line carries text after the verdict"
+fi
+if [ "$n_malformed" -gt 0 ]; then
+    refuse 3 "no-verdict-line:malformed-verdict-line:${n_malformed}-line(s)"
+fi
+
+verdict_total=$((n_secure + n_insecure + n_unknown))
+if [ "$verdict_total" -eq 0 ]; then
+    if [ ! -s "$tmp/out" ] && [ ! -s "$tmp/err" ]; then
+        refuse 3 "no-output: binsec produced nothing on stdout or stderr (status $rc)"
+    fi
+    refuse 3 "no-verdict-line: no [checkct:result] result on stdout (status $rc)"
+fi
+
+if [ "$verdict_total" -gt 1 ]; then
+    if [ "$n_secure" -gt 0 ] && [ "$n_insecure" -gt 0 ]; then
+        refuse 6 "mixed-verdicts: secure=$n_secure insecure=$n_insecure"
+    fi
+    if [ "$n_secure" -gt 1 ]; then
+        refuse 6 "duplicate-secure: secure=$n_secure"
+    fi
+    refuse 6 "multiple-verdicts: secure=$n_secure insecure=$n_insecure unknown=$n_unknown"
+fi
+
+if [ "$n_secure" -eq 1 ]; then
     if [ "$rc" -ne 0 ]; then
         refuse 6 "secure-verdict-with-tool-status-$rc: inconsistent output"
     fi
@@ -177,7 +235,7 @@ if grep -Fq '[checkct:result] Program status is : secure' "$tmp/out"; then
     exit 0
 fi
 
-if grep -Fq '[checkct:result] Program status is : insecure' "$tmp/out"; then
+if [ "$n_insecure" -eq 1 ]; then
     echo "T16 verdict: insecure" >&2
     if [ "$require_secure" = 1 ]; then
         refuse 8 "required-secure but verdict=insecure"
@@ -185,15 +243,8 @@ if grep -Fq '[checkct:result] Program status is : insecure' "$tmp/out"; then
     exit 1
 fi
 
-if grep -Fq '[checkct:result] Program status is : unknown' "$tmp/out"; then
-    echo "T16 verdict: unknown (incomplete; NOT a pass)" >&2
-    if [ "$require_secure" = 1 ]; then
-        refuse 8 "required-secure but verdict=unknown"
-    fi
-    exit 4
+echo "T16 verdict: unknown (incomplete; NOT a pass)" >&2
+if [ "$require_secure" = 1 ]; then
+    refuse 8 "required-secure but verdict=unknown"
 fi
-
-if [ ! -s "$tmp/out" ] && [ ! -s "$tmp/err" ]; then
-    refuse 3 "no-output: binsec produced nothing on stdout or stderr (status $rc)"
-fi
-refuse 3 "no-verdict-line: no [checkct:result] result on stdout (status $rc)"
+exit 4

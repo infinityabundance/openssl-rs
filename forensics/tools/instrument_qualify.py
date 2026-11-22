@@ -226,6 +226,8 @@ def manifest(tmp: Path, entries: list[tuple[str, str]], name: str = "targets.jso
 
 AUDIT = "courts/phase18/timing/binary_branch_audit.py"
 BINSEC = "courts/phase18/timing/binsec_checkct.sh"
+VENDORED_DUDECT_HEADER = "courts/phase18/timing/third_party/dudect/dudect.h"
+VENDORED_DUDECT_SHA256 = "3fb3b2bd7f9e17ae34b7c92518c1311c67342c56facc80da925d85f121b649da"
 
 GOOD_ASM = """
     .text
@@ -238,6 +240,7 @@ _RNvNtCx_8fixture13mont_mul_into:
     je 1f
     xorl %eax, %eax
     addl $1, %eax
+    nop
     subl $2, %eax
     imull $3, %eax, %eax
     andl $255, %eax
@@ -371,6 +374,43 @@ done
 echo "file format elf64-x86-64"
 exit 0
 """)
+    # A one-byte instruction is removed and every remaining address step stays
+    # within the 15-byte maximum instruction length.  The old address-gap test
+    # accepts this transcript; decoded instruction lengths expose the 1-byte
+    # hole.
+    omitting = write_executable(tmp / "objdump-omit-short", f"""#!/bin/sh
+for a in "$@"; do
+  case "$a" in
+    -t|--version) exec {real_objdump} "$@" ;;
+  esac
+done
+{real_objdump} "$@" | awk '!/^[[:space:]]*[0-9a-f]+:.*[[:space:]]nop[[:space:]]*$/'
+""")
+    overlapping = write_executable(tmp / "objdump-overlap", f"""#!/bin/sh
+for a in "$@"; do
+  case "$a" in
+    -t|--version) exec {real_objdump} "$@" ;;
+  esac
+done
+{real_objdump} "$@" | awk 'BEGIN{{dup=0}} {{print}} /^[[:space:]]*[0-9a-f]+:/ && dup==0 {{print; dup=1}}'
+""")
+    overrunning = write_executable(tmp / "objdump-overrun", f"""#!/bin/bash
+for a in "$@"; do
+  case "$a" in
+    -t|--version) exec {real_objdump} "$@" ;;
+  esac
+done
+stop=
+for a in "$@"; do
+  case "$a" in
+    --stop-address=*) stop=${{a#*=}} ;;
+  esac
+done
+{real_objdump} "$@"
+if [ -n "$stop" ]; then
+  printf '  %x:\\t90\\t\\tnop\\n' "$((stop))"
+fi
+""")
 
     result.cases.append(case(
         "truncated disassembly is refused, not counted as resolved",
@@ -388,12 +428,30 @@ exit 0
               env={"OBJDUMP": str(holing)}),
         (1,), "disassembly-hole"))
     result.cases.append(case(
+        "an omitted short instruction is refused (byte coverage, not address gaps)",
+        audit("--targets-file", str(manifest_one), str(good),
+              env={"OBJDUMP": str(omitting)}),
+        (1,), "disassembly-hole"))
+    result.cases.append(case(
+        "an overlap in the decoded stream is refused",
+        audit("--targets-file", str(manifest_one), str(good),
+              env={"OBJDUMP": str(overlapping)}),
+        (1,), "disassembly-overlap"))
+    result.cases.append(case(
+        "a disassembly ending past the declared boundary is refused",
+        audit("--targets-file", str(manifest_one), str(good),
+              env={"OBJDUMP": str(overrunning)}),
+        (1,), "disassembly-overrun"))
+    result.cases.append(case(
         "a hung tool is a bounded refusal",
         audit("--targets-file", str(manifest_one), "--timeout", "1", str(good),
               env={"OBJDUMP": str(hanging)}),
         (1,), "reason=timeout"))
     result.summary.append("fixtures: 3 shared objects built from assembly; "
-                          "truncation, hole and hang injected through an objdump shim")
+                          "truncation, omission of a one-byte instruction, "
+                          "hole, overlap, overrun and hang injected through "
+                          "objdump shims; the coverage test uses decoded "
+                          "instruction lengths")
     return result
 
 
@@ -407,10 +465,15 @@ case " $* " in
 esac
 case "$EQ_MODE" in
   secure)          echo '[checkct:result] Program status is : secure' ; exit 0 ;;
+  secure_timed)    echo '[checkct:result] Program status is : secure (0.030)' ; exit 0 ;;
   secure_nonzero)  echo '[checkct:result] Program status is : secure' ; exit 1 ;;
   insecure_zero)   echo '[checkct:result] Program status is : insecure' ; exit 0 ;;
   insecure_nonzero) echo '[checkct:result] Program status is : insecure' ; exit 1 ;;
   unknown)         echo '[checkct:result] Program status is : unknown' ; exit 0 ;;
+  mixed)           printf '%s\\n' '[checkct:result] Program status is : secure' '[checkct:result] Program status is : insecure' ; exit 0 ;;
+  duplicate_secure) printf '%s\\n' '[checkct:result] Program status is : secure' '[checkct:result] Program status is : secure' ; exit 0 ;;
+  multiple_insecure) printf '%s\\n' '[checkct:result] Program status is : insecure' '[checkct:result] Program status is : insecure' ; exit 0 ;;
+  trailing_text)   echo '[checkct:result] Program status is : secure (0.030) but the exploration was incomplete' ; exit 0 ;;
   silent)          exit 0 ;;
   crash)           echo 'fatal: unsupported instruction' >&2 ; exit 2 ;;
   truncated)       echo '[checkct:result] Program status is : sec' ; exit 0 ;;
@@ -448,6 +511,9 @@ def control_binsec_gate(tmp: Path) -> ControlResult:
         "secure verdict exits 0",
         run_binsec("secure"), (0,), "T16 verdict: secure"))
     result.cases.append(case(
+        "a secure verdict carrying BINSEC's timing suffix is accepted",
+        run_binsec("secure_timed"), (0,), "T16 verdict: secure"))
+    result.cases.append(case(
         "insecure verdict exits nonzero even when the tool exits zero",
         run_binsec("insecure_zero"), (1,), "T16 verdict: insecure"))
     result.cases.append(case(
@@ -456,6 +522,18 @@ def control_binsec_gate(tmp: Path) -> ControlResult:
     result.cases.append(case(
         "unknown verdict is not a pass",
         run_binsec("unknown"), (4,), "unknown (incomplete; NOT a pass)"))
+    result.cases.append(case(
+        "mixed secure and insecure verdicts are refused when the tool exits zero",
+        run_binsec("mixed"), (6,), "mixed-verdicts"))
+    result.cases.append(case(
+        "two secure verdicts are refused as duplicated",
+        run_binsec("duplicate_secure"), (6,), "duplicate-secure"))
+    result.cases.append(case(
+        "two non-secure verdicts are refused as multiple",
+        run_binsec("multiple_insecure"), (6,), "multiple-verdicts"))
+    result.cases.append(case(
+        "a verdict line with additional text is refused",
+        run_binsec("trailing_text"), (3,), "verdict-trailing-text"))
     result.cases.append(case(
         "--require-secure refuses insecure",
         run_binsec("insecure_zero", "--require-secure"), (8,), "required-secure"))
@@ -545,19 +623,19 @@ def control_dudect_sensitivity(tmp: Path) -> ControlResult:
     include = REPO_ROOT / "artifacts/phase2/install/include"
     libdir = REPO_ROOT / "artifacts/phase2/install/lib"
     binary = tmp / "dudect_bn"
-    header_dir = None
-    for candidate in (os.environ.get("DUDECT_INCLUDE", ""),
-                      str(REPO_ROOT / "court/tmp/tools/dudect/src")):
-        if candidate and (Path(candidate) / "dudect.h").is_file():
-            header_dir = Path(candidate)
-            break
-    if header_dir is None:
+    header = REPO_ROOT / VENDORED_DUDECT_HEADER
+    header_dir = header.parent
+    if not header.is_file():
         raise Refusal(
             "IQ_CONTROL_PREREQUISITE",
-            "dudect.h is not vendored in the repository; the pinned dudect tree "
-            "(commit dc269651fb2567e46755cfb2a13d3875592968b5, dudect.h sha256 "
-            "3fb3b2bd7f9e17ae34b7c92518c1311c67342c56facc80da925d85f121b649da) "
-            "is required at court/tmp/tools/dudect/src or via DUDECT_INCLUDE",
+            f"vendored dudect header is absent: {VENDORED_DUDECT_HEADER}",
+        )
+    observe = sha256_file(header)
+    if observe != VENDORED_DUDECT_SHA256:
+        raise Refusal(
+            "IQ_CONTROL_PREREQUISITE",
+            f"vendored dudect header {VENDORED_DUDECT_HEADER} changed: "
+            f"recorded {VENDORED_DUDECT_SHA256[:12]}..., observed {observe[:12]}...",
         )
     rc, out, err = run_cmd([
         "cc", "-O2", "-g", f"-I{include}", f"-I{header_dir}",
@@ -597,7 +675,9 @@ def control_dudect_sensitivity(tmp: Path) -> ControlResult:
         detail=f"state={state} tail={text[-300:]!r}",
     ))
     result.summary.append("20000 measurements per batch at the recorded geometry, "
-                          "pinned with taskset -c 1; the harness's own exit status "
+                          "pinned with taskset -c 1; the vendored header is the "
+                          "pinned dc269651 copy with its digest checked before "
+                          "the harness is built; the harness's own exit status "
                           "is inverted (0 = leakage), so the state line is the "
                           "observation that is checked")
     return result
@@ -820,13 +900,39 @@ def validate_instrument(index: int, entry: dict, root: Path) -> None:
     for key in ("command", "observed", "identity_method"):
         require(isinstance(version.get(key), str) and version.get(key),
                 "IQ_VERSION", f"{where} ({ident}): version_validation.{key} must be text")
+
+    # A nonzero version probe is not the default contract.  One tool may
+    # legitimately print its version and then exit nonzero, but an instrument
+    # must declare that allowance per entry, with a justification, or the
+    # checker refuses the nonzero probe.
+    accept_nonzero = version.get("accept_nonzero_exit", False)
+    require(isinstance(accept_nonzero, bool), "IQ_VERSION",
+            f"{where} ({ident}): version_validation.accept_nonzero_exit must be a boolean")
+    justification = version.get("nonzero_exit_justification")
+    if accept_nonzero:
+        require(isinstance(justification, str) and justification.strip(),
+                "IQ_VERSION_JUSTIFICATION",
+                f"{where} ({ident}): accept_nonzero_exit requires a non-empty "
+                f"version_validation.nonzero_exit_justification")
+
     rc, out, err = run_cmd(["bash", "-c", version["command"]], timeout=60)
     text = out + err
-    require(rc == 0 or version["observed"] in text, "IQ_VERSION_COMMAND",
-            f"{where} ({ident}): version command failed: rc={rc} {text.strip()[:200]}")
+    if rc != 0 and version["observed"] not in text:
+        raise Refusal(
+            "IQ_VERSION_COMMAND",
+            f"{where} ({ident}): version command failed: rc={rc} {text.strip()[:200]}",
+        )
     require(version["observed"] in text, "IQ_VERSION_MISMATCH",
             f"{where} ({ident}): recorded version {version['observed']!r} not produced "
             f"by {version['command']!r}; observed: {text.strip()[:200]!r}")
+    if rc != 0 and not accept_nonzero:
+        raise Refusal(
+            "IQ_VERSION_NONZERO",
+            f"{where} ({ident}): version command exited {rc} while printing the "
+            f"recorded string; this instrument does not declare "
+            f"accept_nonzero_exit, so a nonzero probe is refused "
+            f"({version['command']!r})",
+        )
 
     modes = entry["failure_modes"]
     require(isinstance(modes, dict), "IQ_FAILURE_MODES",

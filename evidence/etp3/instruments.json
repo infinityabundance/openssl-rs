@@ -24,7 +24,9 @@
    "no hardware PMU, no frequency/turbo/SMT control, no core isolation beyond taskset -c 1: timing rows are SCOPED_OBSERVATION",
    "the absence of a PMU is a property of this venue, not of perf, tsc_clock or the crate",
    "the SUPERCOP tarball is absent, so the TIMECOP control is RECORDED, not re-executed. Corrected at ETP-4: the network is present (crates.io, GitHub and static.rust-lang.org all reachable, apt-get update exits 0), so this is a missing artefact and not a missing route",
-   "the dudect header is not vendored in the repository; its pinned tree must be present as a declared prerequisite or the dudect control refuses"
+   "the dudect header is vendored at courts/phase18/timing/third_party/dudect/dudect.h (pinned dc269651, sha256 3fb3b2bd7f9e17ae34b7c92518c1311c67342c56facc80da925d85f121b649da); the register refuses an absent or changed copy",
+   "the tools image carries z3 4.8.12 at /usr/bin/z3 and does not ship the pinned 4.13.0 tree; forensics/tools/install_z3_pinned.sh installs and digest-verifies the pinned solver, and BINSEC must be pointed at it explicitly",
+   "no second instruction decoder is present in openssl-rs-court-tools:1 (llvm-objdump, ndisasm, gdb and Python capstone are absent), so the branch audit's byte coverage is single-decoder"
   ]
  },
  "instruments": [
@@ -98,9 +100,10 @@
    "kind": "harness",
    "paths": [
     "courts/phase18/timing/dudect_bn.c",
+    "courts/phase18/timing/third_party/dudect/dudect.h",
     "courts/phase18/timing/RECEIPT-dudect-modes.json"
    ],
-   "invocation": "cc -O2 -g -Iartifacts/phase2/install/include -I<dudect src> courts/phase18/timing/dudect_bn.c -Lartifacts/phase2/install/lib -lcrypto -lm -o /tmp/dudect_bn && taskset -c 1 env LD_LIBRARY_PATH=artifacts/phase2/install/lib /tmp/dudect_bn <mode> 20000",
+   "invocation": "cc -O2 -g -Iartifacts/phase2/install/include -Icourts/phase18/timing/third_party/dudect courts/phase18/timing/dudect_bn.c -Lartifacts/phase2/install/lib -lcrypto -lm -o /tmp/dudect_bn && taskset -c 1 env LD_LIBRARY_PATH=artifacts/phase2/install/lib /tmp/dudect_bn <mode> 20000",
    "intended_use": "Detect a timing difference between two input classes for one operation at a stated sample size, on this venue, using Welch's t-test with the upstream thresholds.",
    "not_its_use": [
     "constant-time proof or a proof of absence of leakage",
@@ -109,13 +112,13 @@
     "microarchitectural attribution"
    ],
    "version_validation": {
-    "command": "sha256sum court/tmp/tools/dudect/src/dudect.h",
+    "command": "sha256sum courts/phase18/timing/third_party/dudect/dudect.h",
     "observed": "3fb3b2bd7f9e17ae34b7c92518c1311c67342c56facc80da925d85f121b649da",
-    "identity_method": "dudect has no version string. The pinned tree is commit dc269651fb2567e46755cfb2a13d3875592968b5 and the header digest above identifies the vendored copy actually compiled. The harness prints dudect.executed with the measurement count and dudect.flags with the BN flags it read back, and the receipt records the DSO digest.",
+    "identity_method": "dudect has no version string. The pinned tree is commit dc269651fb2567e46755cfb2a13d3875592968b5 and the vendored header below is the only copy the harness compiles: the register checks its digest, and the control checks it again before invoking cc. The harness prints dudect.executed with the measurement count and dudect.flags with the BN flags it read back, and the receipt records the DSO digest.",
     "components": {
      "pinned_commit": "dc269651fb2567e46755cfb2a13d3875592968b5",
      "cc": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
-     "header_location": "court/tmp/tools/dudect/src/dudect.h (untracked scratch; not vendored in the repository)"
+     "header_location": "courts/phase18/timing/third_party/dudect/dudect.h (vendored, sha256 3fb3b2bd7f9e17ae34b7c92518c1311c67342c56facc80da925d85f121b649da; verified against the session-local /opt/dudect/src/dudect.h before vendoring)"
     }
    },
    "failure_modes": {
@@ -148,12 +151,12 @@
       {"name": "positive control (naive comparator) reports leakage", "exit": 0},
       {"name": "negative control (constant-time comparator) reports no leakage evidence", "exit": 1}
      ],
-     "detail": "20000 measurements per batch at the recorded geometry; exit 0 is DUDECT_LEAKAGE_FOUND and exit 1 is DUDECT_NO_LEAKAGE_EVIDENCE_YET"
+     "detail": "20000 measurements per batch at the recorded geometry; exit 0 is DUDECT_LEAKAGE_FOUND and exit 1 is DUDECT_NO_LEAKAGE_EVIDENCE_YET. Re-run with the vendored header on 2026-11-22: cmpnaive exit 0, dudect.done state=0, 40000 measurements; cmpcmp exit 1, dudect.done state=1, 60000 measurements."
     },
     "prerequisite": {
-     "path": "court/tmp/tools/dudect/src/dudect.h",
+     "path": "courts/phase18/timing/third_party/dudect/dudect.h",
      "sha256": "3fb3b2bd7f9e17ae34b7c92518c1311c67342c56facc80da925d85f121b649da",
-     "settling_method": "restore the pinned dudect tree at commit dc269651 into court/tmp/tools/dudect, or set DUDECT_INCLUDE; the header is not tracked, which is recorded as an open reproducibility gap"
+     "settling_method": "the header is tracked at the vendored path; its digest is checked by the register and again by the control before the harness is compiled, so a clean checkout re-qualifies without an external tree"
     }
    },
    "fail_closed": {
@@ -167,7 +170,8 @@
    "kind": "tool",
    "paths": [
     "courts/phase18/timing/binsec_checkct.sh",
-    "courts/phase18/timing/ct_bn.c"
+    "courts/phase18/timing/ct_bn.c",
+    "forensics/tools/install_z3_pinned.sh"
    ],
    "invocation": "bash courts/phase18/timing/binsec_checkct.sh [--require-secure] <sse-script.cfg> <elf>; the wrapper runs binsec -sse -checkct -sse-script <cfg> -smt-solver z3",
    "intended_use": "Decide, for one entry point and one declared secret/public split, whether the symbolic exploration finds a control-flow or memory-address dependence on the secret.",
@@ -182,7 +186,7 @@
     "observed": "Binsec version 0.11.3",
     "identity_method": "the wrapper prints the binsec version, the solver version, the SSE-script path and the SHA-256 of the ELF it is about to explore; BINSEC_EXPECT_SHA256 refuses a different binary before the tool runs",
     "components": {
-     "z3": "UNKNOWN in this session: no z3 is present in the tools image and the pinned /opt/z3-solver directory is absent. The wrapper refuses (exit 2) rather than running with the incomplete internal solver. Settling method: restore the pinned z3-4.13.0 or set BINSEC_Z3; the wrapper prints the solver version at run time. A session-local z3 4.8.12 was installed at ETP-4 for a tool-availability probe; the pinned image is unchanged, so this entry stays UNKNOWN for the image.",
+     "z3": "Z3 version 4.13.0 - 64 bit at /opt/z3-solver/z3-4.13.0-x64-glibc-2.35/bin/z3, installed by forensics/tools/install_z3_pinned.sh. The archive digest 884e3a411fa11b125522fc35eba3391b772517c047f8064fb4b656d92a73b38c and the extracted binary digest 0be0492eb59745e31e77a510ce50c8b940617b87647757bdb1ba6c856301f712 are both verified before the tree is used. The image's /usr/bin/z3 is 4.8.12 and is not the pinned solver; the wrapper is run with BINSEC_Z3 set to the pinned binary.",
      "opam_switch": "4.14.2"
     }
    },
@@ -192,14 +196,15 @@
     "silent_truncation": "without -sse there is no engine and the tool exits 0 with zero bytes; without a script nothing is reachable; without a solver the internal fallback reports an incomplete answer",
     "unsupported_target": "an unsupported instruction or file format aborts the analysis; the wrapper then sees no verdict line",
     "crash": "a tool crash leaves no verdict; the wrapper exits 3 and names the binary",
-    "partial_output": "a result line without the exact status token (for example a truncated line) is not a verdict",
+    "partial_output": "a result line without the exact status grammar (truncated, or carrying text after the verdict other than BINSEC's parenthesised elapsed time) is not a verdict; a transcript with two or more status lines is refused rather than resolved by the first matching line",
     "wrong_candidate": "the wrapper can bind the run to BINSEC_EXPECT_SHA256 and refuses a mismatch with exit 5"
    },
    "soundness_limits": [
     "secure means no secret-dependent control flow or memory address was found in the explored model, under the declared secret/public split",
     "the default feature set is control flow and memory access; multiplication/division checks are experimental and off",
     "microarchitectural timing and value-only constant-latency effects are outside the model",
-    "at this venue the real solver is absent, so no live secure verdict was produced in this session; the wrapper's contract is qualified, the solver is UNKNOWN"
+    "the pinned z3 4.13.0 is installed by the tracked prerequisite script and the wrapper reaches live verdicts; each verdict is still model-relative to the SSE script and the declared secret/public split",
+    "the ladder and constant-time inversion harnesses returned unknown at the recorded 240 s exploration bound; unknown is not a pass"
    ],
    "scope": {
     "profile": "the ELF given to the wrapper, symbolic model",
@@ -209,14 +214,19 @@
     "mode": "executable",
     "status": "PASS",
     "control_id": "binsec-gate",
-    "positive": "a stand-in tool reporting insecure must make the wrapper exit nonzero",
-    "negative": "a stand-in tool reporting secure must make the wrapper exit 0",
+    "positive": "a stand-in tool reporting exactly one secure verdict exits 0; a secure verdict carrying BINSEC's own timing suffix is accepted",
+    "negative": "insecure, unknown, silence, truncation, a secure verdict with a nonzero tool status, mixed secure/insecure verdicts, duplicated secure verdicts, multiple verdicts and a verdict line with additional text must all be refused nonzero and named",
     "observed": {
      "cases": [
       {"name": "secure verdict exits 0", "exit": 0},
+      {"name": "a secure verdict carrying BINSEC's timing suffix is accepted", "exit": 0},
       {"name": "insecure verdict exits nonzero even when the tool exits zero", "exit": 1},
       {"name": "insecure verdict with a nonzero tool status still exits nonzero", "exit": 1},
       {"name": "unknown verdict is not a pass", "exit": 4},
+      {"name": "mixed secure and insecure verdicts are refused when the tool exits zero", "exit": 6},
+      {"name": "two secure verdicts are refused as duplicated", "exit": 6},
+      {"name": "two non-secure verdicts are refused as multiple", "exit": 6},
+      {"name": "a verdict line with additional text is refused", "exit": 3},
       {"name": "--require-secure refuses insecure", "exit": 8},
       {"name": "--require-secure refuses unknown", "exit": 8},
       {"name": "silent tool is refused (zero bytes on both streams)", "exit": 3},
@@ -228,7 +238,14 @@
       {"name": "non-ELF input is refused before the tool runs", "exit": 2},
       {"name": "missing script is refused", "exit": 2}
      ],
-     "detail": "the stand-in tool validates the wrapper's exit-status contract; the solver's verdicts are not exercised by this control"
+     "live_solver": [
+      {"target": "court/tmp/t16/ka_ct", "verdict": "secure", "exit": 0},
+      {"target": "court/tmp/t16/ka_leaky", "verdict": "insecure", "exit": 1},
+      {"target": "court/tmp/t16/memcmp_probe", "verdict": "secure", "exit": 0},
+      {"target": "court/tmp/t16/real_rs", "verdict": "unknown", "exit": 4},
+      {"target": "court/tmp/t16/inv_rs", "verdict": "unknown", "exit": 4}
+     ],
+     "detail": "the stand-in tool validates the wrapper's exit-status contract, including the complete verdict population; the live_solver rows were produced with the pinned z3 4.13.0 and report each target's exact exit status"
     }
    },
    "fail_closed": {
@@ -443,23 +460,25 @@
     "identity_method": "the script prints the SHA-256 of the DSO it opened and the objdump version it used; --expect-sha256 refuses a different candidate with exit 3",
     "components": {
      "python": "Python 3.11.2",
+     "decoder_cross_check": "none available in openssl-rs-court-tools:1: llvm-objdump, ndisasm, gdb and Python capstone are absent, so byte coverage is single-decoder GNU objdump 2.40",
      "profile_binding": "docs/CODE-GENERATION-ASSURANCE.md binds a result to rustc 1.98.1, the release profile, the linker and the DSO digest"
     }
    },
    "failure_modes": {
     "false_positive": "a branch in a non-secret path inside a secret-bearing function is listed; the row is not a leak report",
     "false_negative": "a branch lowered to cmov or an indirect jump is not a conditional jump and does not appear as one",
-    "silent_truncation": "a tool that prints a prefix of the range, or skips bytes, used to leave a shorter population counted as resolved; the script now refuses a misaligned start, a hole over 15 bytes, or more than 15 undecoded trailing bytes",
-    "unsupported_target": "a non-ELF file is refused before objdump; an unknown mnemonic leaves a gap and is refused as a hole",
+    "silent_truncation": "a tool that prints a prefix of the range, skips bytes, or omits a short instruction while keeping every remaining address step under 15 bytes is refused: the decoded instruction lengths must satisfy end(I_i) == start(I_i+1), the first instruction must start at the symbol address, and the last must end exactly at the symbol boundary; a gap, overlap, truncation, overrun or byte-count mismatch is a distinct refusal",
+    "unsupported_target": "a non-ELF file is refused before objdump; a decoder that omits a line leaves a gap and is refused as a hole",
     "crash": "an objdump failure or timeout is a refusal; a per-target failure names the target",
-    "partial_output": "a zero-size symbol has no declared extent; it is refused instead of inventing a 16-byte window",
+    "partial_output": "a zero-size symbol has no declared extent; it is refused instead of inventing a 16-byte window; a disassembly that ends before or past the declared boundary is refused rather than rounded to the extent",
     "wrong_candidate": "--expect-sha256 refuses a mismatch; without it the digest is printed for the receipt to bind"
    },
    "soundness_limits": [
     "the report is an instruction-shape inventory, not a taint or timing analysis",
     "symbol-declared extents exclude inlined callees and post-LTO rearrangement",
     "absence of a division or a conditional jump in a range is not evidence of constant time",
-    "the secret classification lives in the Rust source, not in this instrument"
+    "the secret classification lives in the Rust source, not in this instrument",
+    "instruction boundaries come from one decoder (GNU objdump 2.40); no second decoder is available in the tools image, so a decoder defect that preserved contiguity would not be cross-checked"
    ],
    "scope": {
     "profile": "release DSO, opt-level 3, codegen-units 16, no LTO, overflow-checks on",
@@ -469,8 +488,8 @@
     "mode": "executable",
     "status": "PASS",
     "control_id": "branch-audit-gate",
-    "positive": "a fixture with exact, unique, non-empty target functions must exit 0",
-    "negative": "missing, ambiguous, zero-size, truncated, holed, timed-out, non-ELF and wrong-digest inputs must all be refused nonzero and named",
+    "positive": "a fixture with exact, unique, non-empty target functions whose decoded bytes start at the symbol address and end at the symbol boundary must exit 0",
+    "negative": "missing, ambiguous, zero-size, truncated, holed, short-instruction-omitted, overlapping, overrunning, timed-out, non-ELF and wrong-digest inputs must all be refused nonzero and named",
     "observed": {
      "cases": [
       {"name": "resolves exact unique symbols and exits 0", "exit": 0},
@@ -482,9 +501,12 @@
       {"name": "truncated disassembly is refused, not counted as resolved", "exit": 1},
       {"name": "empty disassembly is refused", "exit": 1},
       {"name": "a hole in the decoded stream is refused", "exit": 1},
+      {"name": "an omitted short instruction is refused (byte coverage, not address gaps)", "exit": 1},
+      {"name": "an overlap in the decoded stream is refused", "exit": 1},
+      {"name": "a disassembly ending past the declared boundary is refused", "exit": 1},
       {"name": "a hung tool is a bounded refusal", "exit": 1}
      ],
-     "detail": "fixtures built from assembly; truncation, hole and hang injected through an objdump shim; exactness checked with a malformed length prefix"
+     "detail": "fixtures built from assembly; truncation, omission of a one-byte instruction, gap, overlap, overrun and hang injected through objdump shims; the coverage test compares decoded instruction lengths, not address deltas"
     }
    },
    "fail_closed": {

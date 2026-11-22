@@ -44,11 +44,12 @@ convenience):
 
   0  every target in the inventory resolved to exactly one symbol with a
      non-zero size, and its disassembly was non-empty, aligned to the symbol
-     start, contiguous, and covered the declared extent.
+     start, byte-contiguous, and ended exactly at the declared extent.
   1  one or more targets were refused: missing, ambiguous symbol, zero-size
-     (unknown extent), empty disassembly, misaligned start, a hole in the
-     decoded stream, or a truncated range.  The specific target and reason are
-     named on stderr.
+     (unknown extent), empty disassembly, misaligned start, a gap, an overlap,
+     a disassembly that ends before or past the declared extent, or a decoded
+     byte count that does not equal the extent.  The specific target and
+     reason are named on stderr.
   2  the invocation or the tool failed: unreadable/unsupported DSO, objdump
      absent, objdump failure or timeout, malformed targets inventory.
   3  --expect-sha256 did not match the DSO that was about to be audited.
@@ -94,14 +95,22 @@ FLAG_SETTERS = {
 
 SYMBOL_RE = re.compile(r"^([0-9a-f]+)\s+[lg]\s+F\s+\.text\s+([0-9a-f]+)\s+(\S+)\s*$")
 INSN_RE = re.compile(r"^\s*([0-9a-f]+):\s+([a-z][a-z0-9.]*)\s*(.*)$")
+# Raw-bytes form emitted by `objdump -d --insn-width=16`:
+#   4a0000:\teb 07 ...\tjmp 4a0009 <...>
+# The decoded length is the number of byte pairs, not the step to the next
+# address.  A step of at most 15 bytes only says the next instruction starts
+# within the maximum instruction length; it does not say the intervening bytes
+# were decoded.
+DISASM_RE = re.compile(r"^\s*([0-9a-f]+):\s+([0-9a-f]{2}(?:\s+[0-9a-f]{2})*)\s+(\S.*)$")
 
 EXIT_OK = 0
 EXIT_TARGET = 1
 EXIT_USAGE = 2
 EXIT_IDENTITY = 3
 
-# Longest x86-64 instruction is 15 bytes.  A larger step between two decoded
-# instruction addresses means bytes in the declared range were never decoded.
+# Longest x86-64 instruction is 15 bytes.  This is a sanity bound on a
+# decoded length, not the coverage test: coverage requires every byte between
+# consecutive instruction boundaries to have been decoded.
 MAX_INSN_BYTES = 15
 
 
@@ -117,8 +126,13 @@ class Refusal(Exception):
 @dataclass
 class Insn:
     addr: int
+    size: int
     mnem: str
     ops: str
+
+    @property
+    def end(self) -> int:
+        return self.addr + self.size
 
     @property
     def text(self) -> str:
@@ -204,37 +218,70 @@ def find_symbols(symtab: list[tuple[int, int, str]], name: str):
 
 
 def disassemble(dso: str, start: int, stop: int, timeout: float) -> list[Insn]:
+    """Decode [start, stop) with the raw bytes retained.
+
+    The decoded length of each instruction comes from its byte field, so the
+    audit can require `end(I_i) == start(I_{i+1})` rather than inferring
+    coverage from address deltas.
+    """
     text = run([
-        objdump_bin(), "-d", "--no-show-raw-insn",
+        objdump_bin(), "-d", "--insn-width=16",
         f"--start-address=0x{start:x}", f"--stop-address=0x{stop:x}", dso,
     ], timeout, f"objdump -d 0x{start:x}-0x{stop:x}")
     insns: list[Insn] = []
     for line in text.splitlines():
-        m = INSN_RE.match(line)
+        m = DISASM_RE.match(line)
         if not m:
             continue
-        insns.append(Insn(int(m.group(1), 16), m.group(2), m.group(3).strip()))
+        raw = m.group(2).split()
+        body = m.group(3).strip()
+        if not raw or not body:
+            continue
+        parts = body.split(None, 1)
+        mnem = parts[0]
+        ops = parts[1] if len(parts) > 1 else ""
+        insns.append(Insn(int(m.group(1), 16), len(raw), mnem, ops))
     return insns
 
 
 def disassembly_problem(insns: list[Insn], start: int, size: int) -> str | None:
     """Why the decoded stream cannot stand in for the declared range, or None.
 
-    Silent truncation is the failure this guards against: a tool that prints
-    a prefix of the function, or skips bytes it cannot decode, must not leave
-    a shorter population that is then counted as resolved.
+    The invariant is byte coverage, not an address-gap bound.  Each decoded
+    instruction must start where the previous one ended, the first must start
+    at the symbol address, and the last must end exactly at the admitted
+    function boundary.  Silent truncation, a skipped short instruction, an
+    overlap and an overrun are all named refusals.
     """
     if not insns:
         return "empty-disassembly"
     if insns[0].addr != start:
         return f"misaligned-start:+0x{insns[0].addr - start:x}"
-    steps = [b.addr - a.addr for a, b in zip(insns, insns[1:])]
-    if any(step <= 0 or step > MAX_INSN_BYTES for step in steps):
-        worst = max(steps) if steps else 0
-        return f"disassembly-hole:largest-step={worst}"
-    uncovered = start + size - insns[-1].addr
-    if uncovered > MAX_INSN_BYTES:
-        return f"disassembly-truncated:{uncovered}-bytes-undecoded"
+
+    boundary = start + size
+    previous_end = start
+    decoded = 0
+    for insn in insns:
+        offset = insn.addr - start
+        if insn.size <= 0:
+            return f"zero-length-instruction:+0x{offset:x}"
+        if insn.size > MAX_INSN_BYTES:
+            return f"invalid-instruction-length:{insn.size}-bytes@+0x{offset:x}"
+        if insn.addr > previous_end:
+            gap = insn.addr - previous_end
+            return f"disassembly-hole:gap=+0x{gap:x}@+0x{previous_end - start:x}"
+        if insn.addr < previous_end:
+            overlap = previous_end - insn.addr
+            return f"disassembly-overlap:overlap=0x{overlap:x}@+0x{offset:x}"
+        previous_end = insn.end
+        decoded += insn.size
+
+    if previous_end < boundary:
+        return f"disassembly-truncated:{boundary - previous_end}-bytes-undecoded"
+    if previous_end > boundary:
+        return f"disassembly-overrun:{previous_end - boundary}-bytes-past-boundary"
+    if decoded != size:
+        return f"byte-count-mismatch:decoded={decoded}:extent={size}"
     return None
 
 
