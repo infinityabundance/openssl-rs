@@ -23,12 +23,17 @@ use crate::bn::bignum::{
 };
 use crate::bn::ctx::{BN_CTX_end, BN_CTX_free, BN_CTX_get, BN_CTX_new, BN_CTX_start, BnCtx};
 use crate::bn::intern::bn_compute_wNAF;
+use crate::ec::field::ScalarLadderWorkspace;
 use crate::ec::lib::{
     ossl_ec_point_blind_coordinates, EC_GROUP_get0_generator, EC_GROUP_get0_order, EC_POINT_add,
     EC_POINT_clear_free, EC_POINT_cmp, EC_POINT_copy, EC_POINT_dbl, EC_POINT_free, EC_POINT_invert,
     EC_POINT_is_at_infinity, EC_POINT_new, EC_POINT_set_to_infinity, EC_pre_comp_free,
 };
-use crate::ec::{EcGroup, EcPoint, Pct};
+use crate::ec::smpl::{
+    ec_method_field_is_plain, ossl_ec_GFp_simple_ladder_step,
+    ossl_ec_GFp_simple_ladder_step_workspace,
+};
+use crate::ec::{EcGroup, EcLadderFn, EcPoint, Pct};
 use crate::runtime::bio::owned::{CtxDestroy, OwnedCtx};
 use crate::runtime::err::err_sites;
 use crate::runtime::err::raise_site;
@@ -450,6 +455,36 @@ pub(crate) unsafe extern "C" fn ossl_ec_scalar_mul_ladder(
                 }
             }
 
+            // One fixed-width field workspace per scalar multiplication (T29). It
+            // serves a step only when the method's field columns are the plain
+            // `EC_GFp_simple` pair with no encoding (P-256 on this profile) **and**
+            // that method's ladder step is the straight-line dataflow `smpl.rs`
+            // reproduces. The Montgomery method also names this same step but keeps
+            // its coordinates and curve constants encoded, so the plain workspace
+            // must not serve it. A refused buffer is reported as the step's own
+            // failure (`EC_R_LADDER_STEP_FAILURE`), which is exactly what the
+            // authority's step raises when the `BN_CTX_get` allocations this
+            // workspace replaces are refused.
+            let mut ladder_ws = if ec_method_field_is_plain((*group).meth)
+                && (*(*group).meth).ladder_step.is_some_and(|step| {
+                    core::ptr::fn_addr_eq(step, ossl_ec_GFp_simple_ladder_step as EcLadderFn)
+                }) {
+                match ScalarLadderWorkspace::new(
+                    &(*(*group).field).d,
+                    &(*(*group).a).d,
+                    &(*(*group).b).d,
+                    &(*(*p).x).d,
+                ) {
+                    Some(ws) => Some(ws),
+                    None => {
+                        raise_site(&err_sites::EC_MULT_353);
+                        break 'err;
+                    }
+                }
+            } else {
+                None
+            };
+
             /* Initialize the Montgomery ladder */
             if ec_point_ladder_pre(group, r, s, p, ctx) == 0 {
                 raise_site(&err_sites::EC_MULT_272);
@@ -523,7 +558,11 @@ pub(crate) unsafe extern "C" fn ossl_ec_scalar_mul_ladder(
                 let _z_is_one = ec_point_cswap(kbit, r, s, group_top);
 
                 /* Perform a single step of the Montgomery ladder */
-                if ec_point_ladder_step(group, r, s, p, ctx) == 0 {
+                let stepped = match ladder_ws.as_mut() {
+                    Some(ws) => ossl_ec_GFp_simple_ladder_step_workspace(group, r, s, ws),
+                    None => ec_point_ladder_step(group, r, s, p, ctx),
+                };
+                if stepped == 0 {
                     raise_site(&err_sites::EC_MULT_353);
                     break 'err;
                 }

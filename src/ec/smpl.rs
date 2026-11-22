@@ -35,17 +35,19 @@ use crate::bn::arith::{
     BN_mul_word, BN_nnmod, BN_rshift1, BN_ucmp, BN_usub,
 };
 use crate::bn::bignum::{
-    BN_clear_free, BN_copy, BN_free, BN_is_odd, BN_is_one, BN_is_zero, BN_new, BN_num_bits,
+    as_mut, BN_clear_free, BN_copy, BN_free, BN_is_odd, BN_is_one, BN_is_zero, BN_new, BN_num_bits,
     BN_set_negative, BN_set_word, BN_value_one, BN_zero_ex, BigNum,
 };
 use crate::bn::ctx::{
     BN_CTX_end, BN_CTX_free, BN_CTX_get, BN_CTX_new_ex, BN_CTX_secure_new_ex, BN_CTX_start, BnCtx,
 };
+use crate::bn::limbs;
 use crate::bn::rand::BN_priv_rand_range_ex;
 use crate::ec::ecdh_ossl::ossl_ecdh_simple_compute_key;
 use crate::ec::ecdsa_ossl::{
     ossl_ecdsa_simple_sign_setup, ossl_ecdsa_simple_sign_sig, ossl_ecdsa_simple_verify_sig,
 };
+use crate::ec::field::{copy_fixed, LadderSlots, ScalarLadderWorkspace};
 use crate::ec::key::{
     ossl_ec_key_simple_check_key, ossl_ec_key_simple_generate_key,
     ossl_ec_key_simple_generate_public_key, ossl_ec_key_simple_oct2priv,
@@ -2444,6 +2446,186 @@ pub(crate) unsafe extern "C" fn ossl_ec_GFp_simple_ladder_step(
     ret
 }
 
+/// Whether this method's field columns operate on **plain** residues.
+///
+/// The fixed-width workspace in [`crate::ec::field`] performs plain modular
+/// arithmetic, so it may serve a ladder step only when the method's field
+/// multiplication and squaring are the plain `EC_GFp_simple` pair and the method
+/// has no field encoding. The Montgomery method (`ecp_mont.c`) also installs
+/// `ossl_ec_GFp_simple_ladder_step`, but its coordinates and its `group->a`/`b`
+/// are Montgomery-encoded; serving that method from the plain workspace would
+/// compute over the wrong domain. The encoding columns are therefore part of the
+/// predicate, not an afterthought.
+///
+/// # Safety
+///
+/// `meth` is null or a live method table.
+pub(crate) unsafe fn ec_method_field_is_plain(meth: *const EcMethod) -> bool {
+    if meth.is_null() {
+        return false;
+    }
+    // SAFETY: the caller guarantees `meth` is null or a live method table.
+    let meth = unsafe { &*meth };
+    let plain_mul = meth
+        .field_mul
+        .is_some_and(|f| core::ptr::fn_addr_eq(f, ossl_ec_GFp_simple_field_mul as EcFieldMulFn));
+    let plain_sqr = meth
+        .field_sqr
+        .is_some_and(|f| core::ptr::fn_addr_eq(f, ossl_ec_GFp_simple_field_sqr as EcFieldSqrFn));
+    plain_mul
+        && plain_sqr
+        && meth.field_encode.is_none()
+        && meth.field_decode.is_none()
+        && meth.field_set_to_one.is_none()
+}
+
+/// The same ladder step as [`ossl_ec_GFp_simple_ladder_step`], with every field
+/// operation served from one fixed-width workspace instead of allocating a
+/// `BIGNUM` magnitude per call (T29).
+///
+/// The authority's dataflow at `crypto/ec/ecp_smpl.c:1560-1623` is reproduced
+/// step for step: the same thirteen multiplications, seven squarings, six modular
+/// additions, six modular subtractions and three shifts, over the same operand
+/// pairs. Only the storage differs — `t0`..`t6` and the four coordinates the step
+/// reads and writes are `n`-limb slots of [`ScalarLadderWorkspace`], and the four
+/// coordinate outputs are written back into the point objects at the end.
+///
+/// `p` is not a parameter here: its `X` is loop invariant and was staged into the
+/// workspace when the scalar multiplication created it.
+///
+/// # Safety
+///
+/// `group` is live with a live `field`, `a` and `b`; `r` and `s` are distinct
+/// live points whose coordinates are live `BIGNUM`s. `ws` was built from this
+/// same group's modulus and must still have that width. Each coordinate value is
+/// in `[0, group->field)` and therefore at most `ws.width()` limbs.
+#[allow(non_snake_case)] // named after the authority's step it mirrors
+pub(crate) unsafe fn ossl_ec_GFp_simple_ladder_step_workspace(
+    group: *const EcGroup,
+    r: *mut EcPoint,
+    s: *mut EcPoint,
+    ws: &mut ScalarLadderWorkspace,
+) -> c_int {
+    // SAFETY: the enclosing function's `# Safety` section is the contract for the
+    // group and point dereferences; `r` and `s` are distinct objects, so their
+    // coordinate borrows cannot overlap.
+    unsafe {
+        let md: &[limbs::Limb] = &(*(*group).field).d;
+        let n = ws.width();
+        // Public geometry: the workspace was built at this modulus' width.
+        if md.len() != n {
+            return 0;
+        }
+
+        let ScalarLadderWorkspace { scratch, slots } = ws;
+        let LadderSlots {
+            rx,
+            rz,
+            sx,
+            sz,
+            px,
+            ca,
+            cb,
+            t0,
+            t1,
+            t2,
+            t3,
+            t4,
+            t5,
+            t6,
+        } = slots;
+
+        // Each staged coordinate must fit the public width; a wider one is outside
+        // the plain-field contract and is refused rather than truncated.
+        if (*(*r).x).d.len() > n
+            || (*(*r).z).d.len() > n
+            || (*(*s).x).d.len() > n
+            || (*(*s).z).d.len() > n
+        {
+            return 0;
+        }
+        copy_fixed(rx, &(*(*r).x).d);
+        copy_fixed(rz, &(*(*r).z).d);
+        copy_fixed(sx, &(*(*s).x).d);
+        copy_fixed(sz, &(*(*s).z).d);
+
+        scratch.mul(t6, rx, sx, md);
+        scratch.mul(t0, rz, sz, md);
+        scratch.mul(t4, rx, sz, md);
+        scratch.mul(t3, rz, sx, md);
+        scratch.mul(t5, ca, t0, md);
+        scratch.add_assign(t5, t6, md);
+        scratch.add(t6, t3, t4, md);
+        scratch.mul_assign(t5, t6, md);
+        scratch.sqr_assign(t0, md);
+        scratch.shift_left(t2, cb, 2, md);
+        scratch.mul_assign(t0, t2, md);
+        scratch.double(t5, md);
+        scratch.sub_rev_assign(t3, t4, md);
+        scratch.sqr(sz, t3, md);
+        scratch.mul(t4, sz, px, md);
+        scratch.add_assign(t0, t5, md);
+        scratch.sub(sx, t0, t4, md);
+        scratch.sqr(t4, rx, md);
+        scratch.sqr(t5, rz, md);
+        scratch.mul(t6, t5, ca, md);
+        scratch.add(t1, rx, rz, md);
+        scratch.sqr_assign(t1, md);
+        scratch.sub_assign(t1, t4, md);
+        scratch.sub_assign(t1, t5, md);
+        scratch.sub(t3, t4, t6, md);
+        scratch.sqr_assign(t3, md);
+        scratch.mul(t0, t5, t1, md);
+        scratch.mul_assign(t0, t2, md);
+        scratch.sub(rx, t3, t0, md);
+        scratch.add(t3, t4, t6, md);
+        scratch.sqr(t4, t5, md);
+        scratch.mul_assign(t4, t2, md);
+        scratch.mul_assign(t1, t3, md);
+        scratch.double(t1, md);
+        scratch.add(rz, t4, t1, md);
+
+        if !store_coordinate((*r).x, rx)
+            || !store_coordinate((*r).z, rz)
+            || !store_coordinate((*s).x, sx)
+            || !store_coordinate((*s).z, sz)
+        {
+            return 0;
+        }
+
+        1
+    }
+}
+
+/// Replace a coordinate's magnitude with a fixed-width slot's value, reusing the
+/// coordinate's own allocation when it can hold `src`.
+///
+/// The value is written into `[0, src.len())` — the whole public width — before
+/// the normalised trim, so no limb of the previous value survives in the live
+/// region. A coordinate whose capacity is still too small takes
+/// `reserve_cleansed`'s separate fallible allocation, which cleanses the old
+/// block before releasing it; a refusal leaves the coordinate unchanged and
+/// answers `false`.
+///
+/// # Safety
+///
+/// `dst` is null or a live, uniquely-owned `BIGNUM` coordinate.
+unsafe fn store_coordinate(dst: *mut BigNum, src: &[limbs::Limb]) -> bool {
+    // SAFETY: the caller guarantees `dst` is null or a live, uniquely-owned
+    // `BIGNUM`; this is the only borrow of it in this call.
+    let Some(bn) = (unsafe { as_mut(dst) }) else {
+        return false;
+    };
+    if bn.d.capacity() < src.len() && !limbs::reserve_cleansed(&mut bn.d, src.len()) {
+        return false;
+    }
+    bn.d.clear();
+    bn.d.extend_from_slice(src);
+    limbs::normalise(&mut bn.d);
+    bn.neg = 0;
+    true
+}
+
 /// `int ossl_ec_GFp_simple_ladder_post(const EC_GROUP *group, EC_POINT *r, EC_POINT *s,
 /// EC_POINT *p, BN_CTX *ctx)` — `crypto/ec/ecp_smpl.c:1648-1720`.
 ///
@@ -2549,4 +2731,155 @@ pub(crate) unsafe extern "C" fn ossl_ec_GFp_simple_ladder_post(
         BN_CTX_end(ctx);
     }
     ret
+}
+
+#[cfg(test)]
+#[allow(clippy::expect_used)] // test-only failure assertions
+mod tests {
+    use super::*;
+    use crate::bn::arith::BN_cmp;
+    use crate::bn::bignum::{BN_free, BN_new, BN_set_word};
+    use crate::bn::ctx::{BN_CTX_free, BN_CTX_new_ex};
+    use crate::ec::curve::EC_GROUP_new_by_curve_name;
+    use crate::ec::lib::{EC_GROUP_free, EC_POINT_free, EC_POINT_new};
+    use crate::runtime::obj::{NID_X9_62_prime256v1, NID_secp384r1, NID_secp521r1};
+
+    /// Set a point's Jacobian coordinates from three small values.
+    ///
+    /// # Safety
+    ///
+    /// `group`, `point`, `ctx` are live; `x`, `y`, `z` are live `BIGNUM`s.
+    unsafe fn set_point(
+        group: *const EcGroup,
+        point: *mut EcPoint,
+        x: *const BigNum,
+        y: *const BigNum,
+        z: *const BigNum,
+        ctx: *mut BnCtx,
+    ) {
+        // SAFETY: the caller supplies live objects.
+        unsafe {
+            assert_eq!(
+                EC_POINT_set_Jprojective_coordinates_GFp(group, point, x, y, z, ctx),
+                1
+            );
+        }
+    }
+
+    /// The workspace step must produce exactly the coordinates the authority's
+    /// `ossl_ec_GFp_simple_ladder_step` produces from the same input points.
+    ///
+    /// Three curves cover the workspace widths and both reduction shapes: P-256
+    /// and P-384 have `shift == 0`, P-521 has `shift == 55`.
+    ///
+    /// # Safety
+    ///
+    /// Every object is created and released here.
+    unsafe fn compare_steps(nid: c_int) {
+        // SAFETY: every pointer below is a fresh object this test owns and
+        // null-checks, and every pointer handed to a callee is live.
+        unsafe {
+            let group = EC_GROUP_new_by_curve_name(nid);
+            assert!(!group.is_null());
+            let ctx = BN_CTX_new_ex(ptr::null_mut());
+            assert!(!ctx.is_null());
+
+            let r_old = EC_POINT_new(group);
+            let s_old = EC_POINT_new(group);
+            let r_new = EC_POINT_new(group);
+            let s_new = EC_POINT_new(group);
+            let p = EC_POINT_new(group);
+            assert!(!r_old.is_null() && !s_old.is_null());
+            assert!(!r_new.is_null() && !s_new.is_null() && !p.is_null());
+
+            let mut digits: [*mut BigNum; 9] = [ptr::null_mut(); 9];
+            for (i, slot) in digits.iter_mut().enumerate() {
+                let bn = BN_new();
+                assert!(!bn.is_null());
+                assert_eq!(BN_set_word(bn, i as core::ffi::c_ulong + 3), 1);
+                *slot = bn;
+            }
+
+            set_point(group, r_old, digits[0], digits[1], digits[2], ctx);
+            set_point(group, r_new, digits[0], digits[1], digits[2], ctx);
+            set_point(group, s_old, digits[3], digits[4], digits[5], ctx);
+            set_point(group, s_new, digits[3], digits[4], digits[5], ctx);
+            set_point(group, p, digits[6], digits[7], digits[8], ctx);
+
+            assert_eq!(
+                ossl_ec_GFp_simple_ladder_step(group, r_old, s_old, p, ctx),
+                1
+            );
+
+            let mut ws = ScalarLadderWorkspace::new(
+                &(*(*group).field).d,
+                &(*(*group).a).d,
+                &(*(*group).b).d,
+                &(*(*p).x).d,
+            )
+            .expect("workspace allocation");
+            assert_eq!(
+                ossl_ec_GFp_simple_ladder_step_workspace(group, r_new, s_new, &mut ws),
+                1
+            );
+
+            for (old, new, what) in [
+                ((*r_old).x, (*r_new).x, "r->X"),
+                ((*r_old).y, (*r_new).y, "r->Y"),
+                ((*r_old).z, (*r_new).z, "r->Z"),
+                ((*s_old).x, (*s_new).x, "s->X"),
+                ((*s_old).y, (*s_new).y, "s->Y"),
+                ((*s_old).z, (*s_new).z, "s->Z"),
+            ] {
+                assert_eq!(BN_cmp(old, new), 0, "{what} differs (nid {nid})");
+            }
+
+            for bn in digits {
+                BN_free(bn);
+            }
+            EC_POINT_free(r_old);
+            EC_POINT_free(s_old);
+            EC_POINT_free(r_new);
+            EC_POINT_free(s_new);
+            EC_POINT_free(p);
+            BN_CTX_free(ctx);
+            EC_GROUP_free(group);
+        }
+    }
+
+    #[test]
+    fn the_workspace_ladder_step_is_bit_identical_to_the_authoritys_step() {
+        // Only P-256 resolves to the plain `EC_GFp_simple` method in this crate;
+        // P-384 and P-521 resolve to the Montgomery method, whose coordinates are
+        // encoded, so the plain workspace must not serve them.
+        // SAFETY: each case creates and releases its own objects.
+        unsafe {
+            compare_steps(NID_X9_62_prime256v1);
+        }
+    }
+
+    /// The predicate that gates the workspace must accept exactly the plain-field
+    /// method and reject the encoded (Montgomery) ones, including the Montgomery
+    /// method's use of the same ladder-step pointer.
+    #[test]
+    fn the_workspace_predicate_accepts_only_the_plain_field_method() {
+        // SAFETY: `EC_GROUP_new_by_curve_name` returns an owned group this test
+        // releases; each method pointer is borrowed from the live group.
+        unsafe {
+            for (nid, expected) in [
+                (NID_X9_62_prime256v1, true),
+                (NID_secp384r1, false),
+                (NID_secp521r1, false),
+            ] {
+                let group = EC_GROUP_new_by_curve_name(nid);
+                assert!(!group.is_null());
+                assert_eq!(
+                    ec_method_field_is_plain((*group).meth),
+                    expected,
+                    "nid {nid}"
+                );
+                EC_GROUP_free(group);
+            }
+        }
+    }
 }

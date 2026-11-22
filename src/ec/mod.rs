@@ -92,6 +92,7 @@ pub mod ecdsa_ossl;
 pub mod ecx_backend;
 pub mod ecx_key;
 pub mod ecx_meth;
+pub(crate) mod field;
 pub mod kdf;
 pub mod key;
 pub mod kmeth;
