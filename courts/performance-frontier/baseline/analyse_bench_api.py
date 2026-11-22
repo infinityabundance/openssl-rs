@@ -3,8 +3,24 @@
 
 Reads only the raw outputs written by `courts/phase18/timing/run_bench_api.sh`
 and the frozen population in `forensics/performance/WORKLOADS.json`.  It refuses
-to emit `results.json` if the population, correctness, identity or
+to emit `results.json` if the population, correctness, identity, ordering or
 cross-verification checks fail; a failed campaign is BLOCKED, never PASS.
+
+Every refusal names a stable rule identifier and the specific gap:
+
+  * `PFP_IDENTITY_POPULATION`  the process identity rows are not exactly the
+    preregistered repetition x subject x phase population;
+  * `PFP_ORDERING_IDENTITY`    the realised repetitions are not exactly the
+    preregistered identifiers, once each;
+  * `PFP_ORDERING_PAIR`        a repetition is not one candidate/authority pair;
+  * `PFP_ORDERING_BALANCE`     the realised first-subject counts are not the
+    preregistered balanced sequence;
+  * `PFP_CHECK_POPULATION`     a side has no CHECK lines, or does not carry every
+    declared workload check exactly the declared number of times;
+  * `PFP_CROSS_POPULATION`     the cross-verification rows are not exactly the
+    declared (repetition, signer, verifier) tuples;
+  * `PFP_JSON_DUPLICATE_KEY` / `PFP_JSON_NON_FINITE`  a campaign or workload
+    document is ambiguous or carries a non-finite number.
 
 Statistics are the preregistered ones:
 
@@ -31,6 +47,7 @@ import re
 import statistics
 import sys
 from pathlib import Path
+from typing import Any
 
 RESULT_RE = re.compile(
     r"^RESULT (\S+) median_us=([0-9.]+) min_us=([0-9.]+) max_us=([0-9.]+) "
@@ -45,14 +62,26 @@ LOADED_RE = re.compile(
 )
 CROSS_RE = re.compile(r"^CROSS (sign|verify) path=\S+ (?:bytes=\d+ )?pub=([0-9a-f]+)$")
 CROSS_VERIFY_RE = re.compile(r"^CROSS verify path=\S+ ok=([01]) pub=([0-9a-f]+)$")
+CHECK_RE = re.compile(r"^CHECK (\S+)(?:[ \t].*)?$")
 
 BOOTSTRAP_SEED = 0x50465030
 BOOTSTRAP_RESAMPLES = 20000
 FAMILY_ALPHA = 0.05
 
+SUBJECTS = ("candidate", "authority")
 
-def fail(message: str) -> None:
-    print(f"analyse_bench_api: FAIL: {message}", file=sys.stderr)
+
+class CampaignRefusal(Exception):
+    """A campaign reconstruction refusal with a stable rule identifier."""
+
+    def __init__(self, rule: str, detail: str) -> None:
+        super().__init__(f"{rule}: {detail}")
+        self.rule = rule
+        self.detail = detail
+
+
+def fail(rule: str, message: str) -> None:
+    print(f"analyse_bench_api: FAIL: {rule}: {message}", file=sys.stderr)
     raise SystemExit(1)
 
 
@@ -70,7 +99,7 @@ def median(values: list[float]) -> float:
 
 def percentile(sorted_values: list[float], pct: float) -> float:
     if not sorted_values:
-        fail("percentile of an empty sample")
+        raise CampaignRefusal("PFP_STATISTIC", "percentile of an empty sample")
     if len(sorted_values) == 1:
         return sorted_values[0]
     rank = (len(sorted_values) - 1) * (pct / 100.0)
@@ -119,6 +148,103 @@ def holm(p_values: list[float]) -> list[float]:
     return adjusted
 
 
+# ---------------------------------------------------------------------------
+# Strict JSON: duplicate object keys and non-finite numbers are refusals
+# ---------------------------------------------------------------------------
+
+
+class _JsonPairs:
+    """An object's ordered key/value pairs, kept before duplicate keys collapse."""
+
+    __slots__ = ("pairs",)
+
+    def __init__(self, pairs: list[tuple[str, Any]]) -> None:
+        self.pairs = pairs
+
+
+class _JsonNonFinite:
+    """A NaN or Infinity token, retained so its JSON pointer can be reported."""
+
+    __slots__ = ("token",)
+
+    def __init__(self, token: str) -> None:
+        self.token = token
+
+
+def _ptr(path: str, token: str) -> str:
+    return f"{path}/{token}"
+
+
+def _normalise_json(
+    value: Any, path: str, findings: list[tuple[str, str, str]]
+) -> Any:
+    if isinstance(value, _JsonPairs):
+        rebuilt: dict[str, Any] = {}
+        for key, item in value.pairs:
+            if key in rebuilt:
+                findings.append(
+                    (
+                        "PFP_JSON_DUPLICATE_KEY",
+                        _ptr(path, key),
+                        f"duplicate object key at {_ptr(path, key)}; a repeated "
+                        "key makes the document ambiguous",
+                    )
+                )
+            rebuilt[key] = _normalise_json(item, _ptr(path, key), findings)
+        return rebuilt
+    if isinstance(value, list):
+        return [
+            _normalise_json(item, _ptr(path, str(index)), findings)
+            for index, item in enumerate(value)
+        ]
+    if isinstance(value, _JsonNonFinite):
+        findings.append(
+            (
+                "PFP_JSON_NON_FINITE",
+                path,
+                f"non-finite number {value.token!r} at {path}; JSON numbers must "
+                "be finite",
+            )
+        )
+        return None
+    if isinstance(value, float) and not math.isfinite(value):
+        findings.append(
+            (
+                "PFP_JSON_NON_FINITE",
+                path,
+                f"non-finite number {value!r} at {path}; JSON numbers must be finite",
+            )
+        )
+        return None
+    return value
+
+
+def load_json_strict(path: Path) -> Any:
+    try:
+        parsed = json.loads(
+            path.read_text(),
+            object_pairs_hook=_JsonPairs,
+            parse_constant=_JsonNonFinite,
+        )
+    except json.JSONDecodeError as exc:
+        raise CampaignRefusal(
+            "PFP_JSON_MALFORMED",
+            f"{path}: malformed JSON at line {exc.lineno} column {exc.colno}: "
+            f"{exc.msg}",
+        ) from exc
+    findings: list[tuple[str, str, str]] = []
+    document = _normalise_json(parsed, "$", findings)
+    if findings:
+        rule, location, detail = sorted(findings)[0]
+        raise CampaignRefusal(rule, f"{path}: {detail} ({location})")
+    return document
+
+
+# ---------------------------------------------------------------------------
+# Parsing
+# ---------------------------------------------------------------------------
+
+
 def parse_results(path: Path) -> dict[str, dict]:
     parsed = {}
     for line in path.read_text().splitlines():
@@ -127,7 +253,9 @@ def parse_results(path: Path) -> dict[str, dict]:
             continue
         name = match.group(1)
         if name in parsed:
-            fail(f"{path}: duplicate RESULT line for {name}")
+            raise CampaignRefusal(
+                "PFP_RESULT_POPULATION", f"{path}: duplicate RESULT line for {name}"
+            )
         parsed[name] = {
             "median_us": float(match.group(2)),
             "min_us": float(match.group(3)),
@@ -147,7 +275,9 @@ def parse_allocs(path: Path) -> dict[str, dict]:
             continue
         name = match.group(1)
         if name in parsed:
-            fail(f"{path}: duplicate ALLOC line for {name}")
+            raise CampaignRefusal(
+                "PFP_ALLOCATION", f"{path}: duplicate ALLOC line for {name}"
+            )
         parsed[name] = {
             "allocs_per_op": None
             if match.group(2) == "n/a"
@@ -160,12 +290,55 @@ def parse_allocs(path: Path) -> dict[str, dict]:
     return parsed
 
 
-def parse_tsv(path: Path) -> list[dict]:
+def parse_tsv(path: Path, columns: tuple[str, ...]) -> list[dict]:
     lines = path.read_text().splitlines()
     if not lines:
-        fail(f"{path}: empty")
+        raise CampaignRefusal("PFP_POPULATION", f"{path}: empty")
     header = lines[0].split("\t")
-    return [dict(zip(header, line.split("\t"))) for line in lines[1:]]
+    missing = [name for name in columns if name not in header]
+    if missing:
+        raise CampaignRefusal(
+            "PFP_POPULATION", f"{path}: missing column(s) {missing}"
+        )
+    rows = []
+    for number, line in enumerate(lines[1:], start=2):
+        fields = line.split("\t")
+        if len(fields) != len(header):
+            raise CampaignRefusal(
+                "PFP_POPULATION",
+                f"{path}:{number}: expected {len(header)} tab-separated fields, "
+                f"got {len(fields)}",
+            )
+        rows.append(dict(zip(header, fields)))
+    return rows
+
+
+def parse_order(path: Path) -> list[dict]:
+    rows = []
+    for number, line in enumerate(path.read_text().splitlines(), start=1):
+        fields = line.split("\t")
+        if len(fields) != 3:
+            raise CampaignRefusal(
+                "PFP_ORDERING_IDENTITY",
+                f"{path}:{number}: expected repetition, first, second",
+            )
+        rows.append(
+            {"repetition": fields[0], "first": fields[1], "second": fields[2]}
+        )
+    return rows
+
+
+def parse_check_ids(path: Path) -> list[str]:
+    identifiers = []
+    for number, line in enumerate(path.read_text().splitlines(), start=1):
+        match = CHECK_RE.match(line)
+        if not match:
+            raise CampaignRefusal(
+                "PFP_CHECK_POPULATION",
+                f"{path}:{number}: line is not a CHECK record",
+            )
+        identifiers.append(match.group(1))
+    return identifiers
 
 
 def read_env(path: Path) -> dict:
@@ -179,48 +352,275 @@ def read_env(path: Path) -> dict:
     return doc
 
 
-def check_population(
-    parsed: dict, expected: list[str], label: str
+# ---------------------------------------------------------------------------
+# Preregistered populations
+# ---------------------------------------------------------------------------
+
+
+def expected_repetition_ids(preregistration: dict) -> list[str]:
+    count = preregistration.get("repetitions")
+    if not isinstance(count, int) or isinstance(count, bool) or count < 1:
+        raise CampaignRefusal(
+            "PFP_PREREGISTRATION", "repetitions must be a positive integer"
+        )
+    return [f"{index:02d}" for index in range(count)]
+
+
+def cross_repetitions(preregistration: dict, repetitions: list[str]) -> list[str]:
+    declared = preregistration.get("cross_verification_repetitions")
+    if (
+        not isinstance(declared, list)
+        or not declared
+        or not all(isinstance(item, str) and item for item in declared)
+        or len(set(declared)) != len(declared)
+    ):
+        raise CampaignRefusal(
+            "PFP_PREREGISTRATION",
+            "cross_verification_repetitions must be distinct non-empty identifiers",
+        )
+    unknown = sorted(set(declared) - set(repetitions))
+    if unknown:
+        raise CampaignRefusal(
+            "PFP_PREREGISTRATION",
+            f"cross-verification names repetition(s) not declared as measured: {unknown}",
+        )
+    return list(declared)
+
+
+def expected_identity_population(preregistration: dict) -> list[tuple[str, str]]:
+    """Every process identity the preregistered phases require, once each."""
+    repetitions = expected_repetition_ids(preregistration)
+    cross = cross_repetitions(preregistration, repetitions)
+    labels = ["warmup", *[f"rep-{rep}" for rep in repetitions], "alloc"]
+    for rep in cross:
+        for signer in SUBJECTS:
+            labels.append(f"cross-{rep}-{signer}")
+    return [(label, subject) for label in labels for subject in SUBJECTS]
+
+
+def check_identity_population(preregistration: dict, rows: list[dict]) -> None:
+    expected = expected_identity_population(preregistration)
+    actual = [(row.get("label"), row.get("subject")) for row in rows]
+    counts: dict[tuple, int] = {}
+    for pair in actual:
+        counts[pair] = counts.get(pair, 0) + 1
+    duplicated = sorted(pair for pair, count in counts.items() if count > 1)
+    expected_set = set(expected)
+    actual_set = set(actual)
+    missing = sorted(expected_set - actual_set)
+    extra = sorted(actual_set - expected_set)
+    substituted = []
+    for label in sorted({label for label, _ in expected}):
+        expected_subjects = {s for item, s in expected if item == label}
+        actual_subjects = {s for item, s in actual if item == label}
+        if actual_subjects and actual_subjects != expected_subjects:
+            substituted.append(
+                (label, sorted(expected_subjects), sorted(actual_subjects))
+            )
+    if missing or duplicated or extra or substituted:
+        raise CampaignRefusal(
+            "PFP_IDENTITY_POPULATION",
+            "process identity population mismatch; "
+            f"missing={missing} duplicated={duplicated} extra={extra} "
+            f"substituted={substituted}",
+        )
+
+
+def check_order(preregistration: dict, order: list[dict]) -> None:
+    repetitions = expected_repetition_ids(preregistration)
+    actual = [row.get("repetition") for row in order]
+    counts: dict[str, int] = {}
+    for rep in actual:
+        counts[rep] = counts.get(rep, 0) + 1
+    duplicated = sorted(rep for rep, count in counts.items() if count > 1)
+    missing = sorted(set(repetitions) - set(actual))
+    extra = sorted(set(actual) - set(repetitions))
+    if sorted(actual) != repetitions:
+        raise CampaignRefusal(
+            "PFP_ORDERING_IDENTITY",
+            "realised repetition population mismatch; "
+            f"missing={missing} duplicated={duplicated} extra={extra} "
+            f"count={len(actual)} expected={len(repetitions)}",
+        )
+    for row in order:
+        pair = (row.get("first"), row.get("second"))
+        if pair not in (
+            ("candidate", "authority"),
+            ("authority", "candidate"),
+        ):
+            raise CampaignRefusal(
+                "PFP_ORDERING_PAIR",
+                f"repetition {row.get('repetition')}: order {pair} is not one "
+                "candidate/authority pair",
+            )
+    ordering = preregistration.get("ordering")
+    if not isinstance(ordering, dict):
+        raise CampaignRefusal(
+            "PFP_PREREGISTRATION", "ordering must be a declared object"
+        )
+    if ordering.get("kind") != "balanced pseudo-random within each repetition":
+        raise CampaignRefusal(
+            "PFP_ORDERING_BALANCE",
+            "declared ordering property is not a balanced within-repetition sequence",
+        )
+    candidate_declared = ordering.get("candidate_first_blocks")
+    authority_declared = ordering.get("authority_first_blocks")
+    if (
+        not isinstance(candidate_declared, int)
+        or isinstance(candidate_declared, bool)
+        or not isinstance(authority_declared, int)
+        or isinstance(authority_declared, bool)
+    ):
+        raise CampaignRefusal(
+            "PFP_ORDERING_BALANCE",
+            "candidate_first_blocks and authority_first_blocks must be integers",
+        )
+    if candidate_declared + authority_declared != len(repetitions):
+        raise CampaignRefusal(
+            "PFP_ORDERING_BALANCE",
+            "declared first-subject counts do not partition the repetition count",
+        )
+    if abs(candidate_declared - authority_declared) > 1:
+        raise CampaignRefusal(
+            "PFP_ORDERING_BALANCE",
+            "declared sequence is not balanced; the blocks differ by more than one",
+        )
+    candidate_first = sum(1 for row in order if row.get("first") == "candidate")
+    authority_first = len(order) - candidate_first
+    if (
+        candidate_first != candidate_declared
+        or authority_first != authority_declared
+    ):
+        raise CampaignRefusal(
+            "PFP_ORDERING_BALANCE",
+            "realised per-repetition order does not match the declared balanced "
+            f"sequence; candidate_first={candidate_first} (declared "
+            f"{candidate_declared}), authority_first={authority_first} (declared "
+            f"{authority_declared})",
+        )
+
+
+def expected_check_counts(workloads_document: dict) -> dict[str, int]:
+    workloads = workloads_document.get("workloads")
+    if not isinstance(workloads, list) or not workloads:
+        raise CampaignRefusal("PFP_PREREGISTRATION", "no workloads are declared")
+    counts: dict[str, int] = {}
+    for workload in workloads:
+        name = workload.get("id")
+        count = workload.get("check_line_count_per_process")
+        if not isinstance(name, str) or not name:
+            raise CampaignRefusal(
+                "PFP_PREREGISTRATION", "a workload has no identifier"
+            )
+        if not isinstance(count, int) or isinstance(count, bool) or count < 1:
+            raise CampaignRefusal(
+                "PFP_PREREGISTRATION",
+                f"workload {name} does not declare a positive check population",
+            )
+        counts[name] = count
+    return counts
+
+
+def check_check_population(
+    repetition: str, side: str, identifiers: list[str], expected: dict[str, int]
 ) -> None:
+    path = f"repetition {repetition} {side}"
+    if not identifiers:
+        raise CampaignRefusal(
+            "PFP_CHECK_POPULATION", f"{path}: no CHECK lines; an empty side is empty"
+        )
+    observed: dict[str, int] = {}
+    for identifier in identifiers:
+        observed[identifier] = observed.get(identifier, 0) + 1
+    missing = sorted(name for name, count in expected.items() if observed.get(name, 0) < count)
+    duplicated = sorted(name for name, count in expected.items() if observed.get(name, 0) > count)
+    extra = sorted(set(identifiers) - set(expected))
+    if missing or duplicated or extra:
+        raise CampaignRefusal(
+            "PFP_CHECK_POPULATION",
+            f"{path}: population mismatch; missing={missing} "
+            f"duplicated={duplicated} extra={extra}",
+        )
+
+
+def expected_cross_population(preregistration: dict) -> set[tuple[str, str, str]]:
+    repetitions = expected_repetition_ids(preregistration)
+    cross = cross_repetitions(preregistration, repetitions)
+    tuples = set()
+    for rep in cross:
+        tuples.add((rep, "candidate", "authority"))
+        tuples.add((rep, "authority", "candidate"))
+    return tuples
+
+
+def check_cross_population(preregistration: dict, rows: list[dict]) -> None:
+    expected = expected_cross_population(preregistration)
+    actual = []
+    for index, row in enumerate(rows):
+        try:
+            actual.append(
+                (row["repetition"], row["signer"], row["verifier"])
+            )
+        except KeyError:
+            raise CampaignRefusal(
+                "PFP_CROSS_POPULATION",
+                f"cross-verification row {index} lacks a repetition, signer or verifier",
+            )
+    counts: dict[tuple, int] = {}
+    for item in actual:
+        counts[item] = counts.get(item, 0) + 1
+    duplicated = sorted(item for item, count in counts.items() if count > 1)
+    missing = sorted(expected - set(actual))
+    extra = sorted(set(actual) - expected)
+    substituted = sorted(
+        item for item in set(actual) if item not in expected
+    )
+    if missing or duplicated or extra:
+        raise CampaignRefusal(
+            "PFP_CROSS_POPULATION",
+            "cross-verification population mismatch; "
+            f"missing={missing} duplicated={duplicated} extra={extra} "
+            f"substituted={substituted}",
+        )
+
+
+def check_population(parsed: dict, expected: list[str], label: str) -> None:
     if sorted(parsed) != expected:
         missing = sorted(set(expected) - set(parsed))
         extra = sorted(set(parsed) - set(expected))
-        fail(f"{label}: population mismatch; missing={missing} extra={extra}")
+        raise CampaignRefusal(
+            "PFP_POPULATION", f"{label}: population mismatch; missing={missing} extra={extra}"
+        )
 
 
-def main(argv: list[str]) -> int:
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--work", type=Path, required=True)
-    parser.add_argument("--workloads", type=Path, required=True)
-    parser.add_argument("--out", type=Path, required=True)
-    args = parser.parse_args(argv)
+# ---------------------------------------------------------------------------
+# Campaign
+# ---------------------------------------------------------------------------
 
+
+def analyse(args: argparse.Namespace) -> dict:
     work = args.work
     raw = work / "raw"
     if (work / "BLOCKED").exists():
-        fail("campaign has a BLOCKED marker")
+        raise CampaignRefusal(
+            "PFP_BLOCKED", "campaign has a BLOCKED marker; a blocked run is not a pass"
+        )
 
-    workloads_doc = json.loads(args.workloads.read_text())
+    workloads_doc = load_json_strict(args.workloads)
     workloads = {item["id"]: item for item in workloads_doc["workloads"]}
     expected = sorted(workloads)
-    build_identity = json.loads((work / "build-identity.json").read_text())
-    preregistration = json.loads((work / "preregistration.json").read_text())
+    check_counts = expected_check_counts(workloads_doc)
+    build_identity = load_json_strict(work / "build-identity.json")
+    preregistration = load_json_strict(work / "preregistration.json")
 
-    order = []
-    for line in (raw / "run-order.tsv").read_text().splitlines():
-        rep, first, second = line.split("\t")
-        order.append({"repetition": rep, "first": first, "second": second})
-    if len(order) != preregistration["repetitions"]:
-        fail(f"order has {len(order)} repetitions, preregistered "
-             f"{preregistration['repetitions']}")
-    candidate_first = sum(1 for row in order if row["first"] == "candidate")
-    if candidate_first != preregistration["ordering"]["candidate_first_blocks"]:
-        fail("order is not the preregistered balanced sequence")
+    order = parse_order(raw / "run-order.tsv")
+    check_order(preregistration, order)
 
     # --- identity ---------------------------------------------------------
-    identity_rows = parse_tsv(raw / "identity-check.tsv")
-    if not identity_rows:
-        fail("no loaded-artefact checks")
+    identity_rows = parse_tsv(
+        raw / "identity-check.tsv", ("label", "subject")
+    )
+    check_identity_population(preregistration, identity_rows)
     artefact_digests = {
         "candidate": build_identity["artefacts"]["distribution_dso"]["sha256"],
         "authority": build_identity["artefacts"]["authority_dso"]["sha256"],
@@ -229,18 +629,28 @@ def main(argv: list[str]) -> int:
     for row in identity_rows:
         subject = row["subject"]
         expected_digest = artefact_digests.get(subject)
+        try:
+            maps_entries = int(row["maps_entries"])
+        except (KeyError, ValueError):
+            raise CampaignRefusal(
+                "PFP_IDENTITY_MISMATCH",
+                f"identity row {row.get('label')}/{subject} has no integer maps entry count",
+            )
         ok = (
-            row["status"] == "ok"
-            and int(row["maps_entries"]) >= 1
-            and row["expected_realpath"] == row["reported_realpath"]
-            and row["expected_dev"] == row["reported_dev"]
-            and row["expected_ino"] == row["reported_ino"]
-            and (expected_digest is None or row["dso_sha256"] == expected_digest)
+            row.get("status") == "ok"
+            and maps_entries >= 1
+            and row.get("expected_realpath") == row.get("reported_realpath")
+            and row.get("expected_dev") == row.get("reported_dev")
+            and row.get("expected_ino") == row.get("reported_ino")
+            and (expected_digest is None or row.get("dso_sha256") == expected_digest)
         )
         if not ok:
             identity_failures.append(row)
     if identity_failures:
-        fail(f"loaded-artefact verification failed: {identity_failures[:3]}")
+        raise CampaignRefusal(
+            "PFP_IDENTITY_MISMATCH",
+            f"loaded-artefact verification failed: {identity_failures[:3]}",
+        )
 
     # --- repetitions ------------------------------------------------------
     sample_table = []
@@ -253,17 +663,26 @@ def main(argv: list[str]) -> int:
         rep = row["repetition"]
         entry = {"repetition": rep, "order": [row["first"], row["second"]],
                  "subjects": {}}
-        for subject in ("candidate", "authority"):
+        for subject in SUBJECTS:
             out = raw / f"rep-{rep}-{subject}.out"
             if not out.is_file():
-                fail(f"missing {out}")
+                raise CampaignRefusal("PFP_POPULATION", f"missing {out}")
             parsed = parse_results(out)
             check_population(parsed, expected, f"{out.name}")
             entry["subjects"][subject] = parsed
-        cand_checks = (raw / f"rep-{rep}-candidate.check").read_text().splitlines()
-        auth_checks = (raw / f"rep-{rep}-authority.check").read_text().splitlines()
+        cand_check_path = raw / f"rep-{rep}-candidate.check"
+        auth_check_path = raw / f"rep-{rep}-authority.check"
+        for side, path in (
+            ("candidate", cand_check_path),
+            ("authority", auth_check_path),
+        ):
+            check_check_population(rep, side, parse_check_ids(path), check_counts)
+        cand_checks = cand_check_path.read_text().splitlines()
+        auth_checks = auth_check_path.read_text().splitlines()
         if cand_checks != auth_checks:
-            fail(f"repetition {rep}: CHECK lines differ")
+            raise CampaignRefusal(
+                "PFP_CHECK_CONTENT", f"repetition {rep}: CHECK lines differ"
+            )
         entry["checks_match"] = True
         entry["check_lines"] = len(cand_checks)
         sample_table.append(entry)
@@ -272,7 +691,10 @@ def main(argv: list[str]) -> int:
             c = entry["subjects"]["candidate"][name]["median_us"]
             a = entry["subjects"]["authority"][name]["median_us"]
             if a <= 0:
-                fail(f"repetition {rep}: non-positive authority time for {name}")
+                raise CampaignRefusal(
+                    "PFP_RESULT_VALUE",
+                    f"repetition {rep}: non-positive authority time for {name}",
+                )
             per_workload_candidate[name].append(c)
             per_workload_authority[name].append(a)
             per_workload_ratios[name].append(c / a)
@@ -284,20 +706,31 @@ def main(argv: list[str]) -> int:
     check_population(alloc_authority, expected, "alloc-authority")
     for name in expected:
         if alloc_candidate[name]["allocs_per_op"] is None:
-            fail(f"allocation probe did not observe {name} for the candidate")
+            raise CampaignRefusal(
+                "PFP_ALLOCATION",
+                f"allocation probe did not observe {name} for the candidate",
+            )
         if alloc_authority[name]["allocs_per_op"] is None:
-            fail(f"allocation probe did not observe {name} for the authority")
+            raise CampaignRefusal(
+                "PFP_ALLOCATION",
+                f"allocation probe did not observe {name} for the authority",
+            )
 
     # --- cross verification ----------------------------------------------
-    cross_rows = parse_tsv(work / "cross-verification.tsv")
-    expected_cross = len(preregistration["cross_verification_repetitions"]) * 2
-    if len(cross_rows) != expected_cross:
-        fail(f"cross-verification has {len(cross_rows)} rows, expected {expected_cross}")
+    cross_rows = parse_tsv(
+        work / "cross-verification.tsv",
+        ("repetition", "signer", "verifier", "verified", "public_key"),
+    )
+    check_cross_population(preregistration, cross_rows)
     if any(row["verified"] != "1" for row in cross_rows):
-        fail("a cross-library signature was rejected")
+        raise CampaignRefusal(
+            "PFP_CROSS_VERIFICATION", "a cross-library signature was rejected"
+        )
     pubs = {row["public_key"] for row in cross_rows}
     if len(pubs) != 1:
-        fail("cross-library public keys differ")
+        raise CampaignRefusal(
+            "PFP_CROSS_VERIFICATION", "cross-library public keys differ"
+        )
 
     # --- statistics -------------------------------------------------------
     rng = random.Random(BOOTSTRAP_SEED)
@@ -505,7 +938,10 @@ def main(argv: list[str]) -> int:
             candidate = Path("/work") / rel
         if candidate.is_file():
             if sha256_file(candidate) != build_identity["artefacts"][key]["sha256"]:
-                fail(f"{key} on disk no longer matches build-identity.json")
+                raise CampaignRefusal(
+                    "PFP_ARTEFACT",
+                    f"{key} on disk no longer matches build-identity.json",
+                )
 
     args.out.write_text(json.dumps(doc, indent=2, sort_keys=False) + "\n")
     print(f"results: {args.out}")
@@ -521,6 +957,19 @@ def main(argv: list[str]) -> int:
             f"{a['candidate']['malloc_class_per_op']:7.2f}/"
             f"{a['authority']['malloc_class_per_op']:6.2f}"
         )
+    return doc
+
+
+def main(argv: list[str]) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--work", type=Path, required=True)
+    parser.add_argument("--workloads", type=Path, required=True)
+    parser.add_argument("--out", type=Path, required=True)
+    args = parser.parse_args(argv)
+    try:
+        analyse(args)
+    except CampaignRefusal as exc:
+        fail(exc.rule, exc.detail)
     return 0
 
 
