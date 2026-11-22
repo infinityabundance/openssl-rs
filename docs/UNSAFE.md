@@ -16,7 +16,10 @@ Only where the contract requires it:
 
 ## 2. Structure
 
-`unsafe` is **measured, not asserted**. `forensics/tools/unsafe_footprint.py`
+`unsafe` is **measured, not asserted**. The ETP-T4 classification of every
+unsafe construct by obligation class, impact, contract, boundary and coverage is
+`docs/UNSAFE-OBLIGATIONS.md`; this document remains the policy statement.
+`forensics/tools/unsafe_footprint.py`
 scans `src/**/*.rs` and records, per module, the `unsafe` sites, the
 `extern "C" fn` declarations and the `SAFETY:` comments; it classifies each
 module as **boundary** (the FFI/ABI translation layer: `ffi`, `runtime`, `dso`,

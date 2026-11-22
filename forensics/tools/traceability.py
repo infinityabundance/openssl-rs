@@ -25,7 +25,7 @@ discovered orphan is not declared in the graph's own `orphans` register.  A
 declared orphan that no longer reproduces is also refused: a gap register that
 drifts away from the graph is not evidence.
 
-The eleven orphan classes are fixed:
+The twelve orphan classes are fixed:
 
   1  requirement without an implementation edge                 ORPHAN-1:<req>
   2  implementation without an artefact                          ORPHAN-2:<impl>
@@ -39,6 +39,8 @@ The eleven orphan classes are fixed:
   9  refinement level with no obligation                         ORPHAN-9:<level>
   10 refinement obligation with no artefact                     ORPHAN-10:<edge>
   11 refinement edge with no discharge                          ORPHAN-11:<edge>
+  12 unsafe obligation node whose inventory has a site with no   ORPHAN-12:<obligation>
+     validity argument and no control
 
 Every refusal names the node, the edge rule and the artefact.  Output is sorted
 and serialised with sorted keys and fixed separators, so two runs over the same
@@ -150,6 +152,7 @@ CLASS_NAMES = {
     9: "refinement_level_without_obligation",
     10: "refinement_obligation_without_artefact",
     11: "refinement_edge_without_discharge",
+    12: "unsafe_site_without_contract_or_control",
 }
 
 # A positive release claim needs a positive adjudication verdict.  A negative
@@ -374,7 +377,7 @@ def _index(graph: Graph) -> None:
 
 
 def _check_structural(graph: Graph) -> None:
-    """Referential and field rules that are not the eleven orphan classes."""
+    """Referential and field rules that are not the twelve orphan classes."""
     for nid, node in graph.nodes.items():
         source = node.get("source")
         if not isinstance(source, dict) or not isinstance(source.get("path"), str):
@@ -423,6 +426,26 @@ def _check_structural(graph: Graph) -> None:
             blocks = node.get("blocks_release_claims", [])
             if not isinstance(blocks, list):
                 raise Refusal("TG_SCHEMA", f"obligation {nid!r} blocks_release_claims is not an array")
+            inventory = node.get("unsafe_site_inventory")
+            if inventory is not None:
+                if not isinstance(inventory, dict):
+                    raise Refusal(
+                        "TG_UNSAFE_INVENTORY",
+                        f"obligation {nid!r} unsafe_site_inventory is not an object",
+                    )
+                for key in ("sites", "sites_without_contract_or_control"):
+                    value = inventory.get(key)
+                    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                        raise Refusal(
+                            "TG_UNSAFE_INVENTORY",
+                            f"obligation {nid!r} unsafe_site_inventory.{key} is not a "
+                            "non-negative integer",
+                        )
+                if inventory.get("sites_without_contract_or_control", 0) > inventory.get("sites", 0):
+                    raise Refusal(
+                        "TG_UNSAFE_INVENTORY",
+                        f"obligation {nid!r} claims more uncovered sites than sites",
+                    )
             for cid in blocks:
                 target = graph.nodes.get(cid)
                 if target is None:
@@ -757,6 +780,7 @@ def detect_orphans(graph: Graph, repo: Path = REPO_ROOT) -> list[Orphan]:
     orphans.extend(_class_9(graph))
     orphans.extend(_class_10(graph))
     orphans.extend(_class_11(graph))
+    orphans.extend(_class_12(graph))
     orphans.sort(key=lambda o: (o.cls, o.id))
     unique: dict[str, Orphan] = {}
     for orphan in orphans:
@@ -1041,6 +1065,41 @@ def _class_10(graph: Graph) -> Iterable[Orphan]:
                 detail=(
                     f"obligation {obligation} on edge {nid} names no resolvable "
                     f"artefact ({artefact!r})"
+                ),
+            )
+
+
+def _class_12(graph: Graph) -> Iterable[Orphan]:
+    """An unsafe-obligation node whose inventory still holds uncovered sites.
+
+    ETP-T4's inventory records, per obligation class, how many sites have a
+    validity argument or a control that could fail and how many do not.  A class
+    with at least one site in the second set is an omission from the graph, not
+    a satisfied obligation.
+    """
+    for nid, node in graph.nodes.items():
+        if node["type"] != "obligation":
+            continue
+        inventory = node.get("unsafe_site_inventory")
+        if not isinstance(inventory, dict):
+            continue
+        uncovered = inventory.get("sites_without_contract_or_control")
+        if not isinstance(uncovered, int) or isinstance(uncovered, bool):
+            raise Refusal(
+                "TG_UNSAFE_INVENTORY",
+                f"obligation {nid!r} unsafe_site_inventory.sites_without_contract_or_control "
+                "is not an integer",
+            )
+        if uncovered > 0:
+            yield Orphan(
+                id=f"ORPHAN-12:{nid}",
+                cls=12,
+                node=nid,
+                reason="no_contract_or_control",
+                detail=(
+                    f"obligation {nid} covers {inventory.get('sites')} site(s) of class "
+                    f"{inventory.get('class')}; {uncovered} have neither a validity argument "
+                    "nor a control that could fail"
                 ),
             )
 

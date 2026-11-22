@@ -8,7 +8,7 @@
 **Tests:** `forensics/tools/tests/test_traceability.py`.
 **Receipt:** `evidence/etp-t1/RECEIPT.md`.
 
-This document defines the traceability model, the eleven orphan classes, and
+This document defines the traceability model, the twelve orphan classes, and
 what the graph deliberately does not decide. It is not a hazard analysis
 (ETP-T2), a reconciliation of the OpenSSH adjudication (ETP-T15), or an
 independent specification hierarchy (FRC-0).
@@ -131,6 +131,7 @@ what it discovers.
 | 9 | `ORPHAN-9:<level>` | a non-source `refinement_level` has no incoming `discharges`, or a non-terminal level has no outgoing `refines_to` | the level is connected to its edge |
 | 10 | `ORPHAN-10:<edge>` | a `refinement_edge`'s `obligation` does not resolve to an obligation node, or `obligation_artefact` does not resolve to an artefact | the obligation and the artefact that records it exist |
 | 11 | `ORPHAN-11:<edge>` | a `refinement_edge` is `NONE`; or claims `BOUNDED`/`PARTIAL` with no discharger or no resolvable discharge artefact; or claims `BOUNDED` with no named population | the discharge exists, is named and is recorded |
+| 12 | `ORPHAN-12:<obligation>` | an ETP-T4 unsafe-obligation node's inventory records at least one site with no validity argument and no control that could fail | every site in the class has a validity argument or a control, and the inventory is regenerated |
 
 Class 3's allowed verdict set depends on the claim. A positive claim
 (`SAFE_COMPATIBLE`, `ESTABLISHED`, `PASS`, `ACCEPTED`) is supported only by a
@@ -192,8 +193,8 @@ It is a view, not an acceptance: only `validate` exits 0.
 
 ## 6. The seeded graph
 
-At `S = 21bea3188`, after the ETP-T2 hazard projection, and after the ETP-T3
-refinement projection:
+At `S = 21bea3188`, after the ETP-T2 hazard projection, after the ETP-T3
+refinement projection, and after the ETP-T4 unsafe-obligation projection:
 
 | type | count |
 |---|---|
@@ -201,31 +202,41 @@ refinement projection:
 | hazard | 20 |
 | requirement | 22 |
 | specification | 0 |
-| implementation | 20 |
-| artefact | 26 |
-| obligation | 86 |
-| evidence | 101 |
+| implementation | 21 |
+| artefact | 28 |
+| obligation | 97 |
+| evidence | 103 |
 | adjudication | 41 |
 | release_claim | 6 |
 | refinement_level | 6 |
 | refinement_edge | 5 |
-| **total** | **342** |
+| **total** | **357** |
 
 | edge | count |
 |---|---|
 | `motivates` | 45 |
 | `refines` | 0 |
 | `satisfied_by` | 46 |
-| `realised_by` | 29 |
-| `raises` | 51 |
-| `evidenced_by` | 61 |
+| `realised_by` | 30 |
+| `raises` | 67 |
+| `evidenced_by` | 72 |
 | `assessed_by` | 130 |
 | `releases` | 8 |
-| `constrains` | 33 |
+| `constrains` | 55 |
 | `refines_to` | 5 |
 | `discharges` | 5 |
 | `obligates` | 5 |
-| **total** | **423** |
+| **total** | **468** |
+
+ETP-T4 adds 15 nodes and 45 edges: `IMP-UNSAFE-SURFACE` (the crate's unsafe
+surface at `07b776d68`), `ART-UNSAFE-SITES`, `EV-ETP-T4-SITES`,
+`EV-ETP-T4-AXIOMS`, and eleven `OBL-T4-*` obligation nodes, one per obligation
+class in `evidence/etp-t4/SAFETY-SITES.json`. Each obligation carries its
+class-level `unsafe_site_inventory` and constrains `REL-OPENSSH-B85C` and
+`REL-L7-ATLAS-33-33`. Three class-8 orphans declare that the inventory and axiom
+files do not exist at the candidate commit; they settle when a later commit
+binds the evidence to itself. Eleven class-12 orphans record that every class
+still has sites with neither a validity argument nor a control that could fail.
 
 Provenance of the seed:
 
@@ -257,11 +268,13 @@ Provenance of the seed:
   13 obligations from the independent b85c adjudication (five mechanisms, two
   scoped discharges, four cross-cutting premises, and B54-F1/B55-F1), and three
   obligations ETP-T2 raises (`OBL-RSA-EXTKEY-ORACLE`, `OBL-PANIC-ATOMICITY`,
-  `OBL-VERIFY-RETURN-POLARITY`). All 81 are `OPEN`.
+  `OBL-VERIFY-RETURN-POLARITY`), and eleven ETP-T4 class obligations. All 92 are
+  `OPEN`.
 - **Evidence** is 66 records cited by the typed claims, 7 queue-status prose
   records bound to `S`, 11 instrument results from the ETP-3 register with
-  their qualification status (`PASS` or `RECORDED`), and 17 consumer,
-  performance, reproducibility and governance records.
+  their qualification status (`PASS` or `RECORDED`), 17 consumer,
+  performance, reproducibility and governance records, and the two ETP-T4
+  records (the unsafe-site inventory and the axiom register).
 - **Adjudications** are the 35 typed claims (17 `ESTABLISHED`, 13 `PARTIAL`,
   4 `CONTRADICTED`, 1 `SUPERSEDED`), the independent b85c adjudication
   (`NOT_ESTABLISHED`, `INDEPENDENT`), and the five ETP-5 refusals
@@ -274,10 +287,11 @@ Identity binding is explicit, because the records are not all bound to `S`:
 
 | bound commit | nodes | what it is |
 |---|---|---|
-| `21bea3188` | 258 | implementations, artefacts, hazards and records at this candidate |
+| `21bea3188` | 269 | implementations, artefacts, hazards, records and the eleven ETP-T4 obligations at this candidate |
 | `9372bb28b` | 66 | the evidence records cited by the ETP-1 typed claims, bound to the ETP-0 source identity |
 | `cc2e5fa32` | 1 | the withdrawn O7 revision, read at the commit the claim names |
 | `794a7c549` | 17 | the ETP-T3 refinement chain: six levels, five edges, five obligations and the refinement record artefact |
+| `07b776d68` | 4 | the ETP-T4 implementation, artefact and two evidence nodes; the inventory and axiom files are declared class-8 because they do not exist at that commit |
 
 The two populations are not silently merged. The claim tier is evidence about
 `9372bb28b`; the implementation tier is `21bea3188`. No
@@ -321,7 +335,7 @@ correctly refuse it as class 4. The consequence is stated in section 7.
 9. **The implementation tier has no fresh receipt evidence.** The records cited
    by the typed claims are bound to `9372bb28b`, and the implementation is at
    `21bea3188`. The graph draws no support edge across that boundary. This is
-   not one of the eleven orphan classes; it is the freshness problem ETP-T9
+   not one of the twelve orphan classes; it is the freshness problem ETP-T9
    owns, and it is visible in the bound-commit table rather than hidden.
 10. **The ETP-T2 hazards are nodes, not prose.** Twenty hazards carry a scope, a
    trigger classification and a barrier state. Four have no barrier at all
@@ -330,7 +344,15 @@ correctly refuse it as class 4. The consequence is stated in section 7.
    release claim because no claim declares a memory requirement in scope. The
    projection is checked against the register's digest and fields, so a hazard
    cannot be softened in one artefact and left unchanged in the other.
-11. **The refinement chain is missing three of five discharges.** The six levels
+11. **The unsafe surface is a register, not a clean bill.** ETP-T4 classifies
+   62,178 unsafe constructs by obligation and impact. 51,586 are `UNCONFINED`
+   by the inventory's boundary rule; 44,303 have only a restatement of the
+   operation, not a validity argument; 41,648 have neither a test nor an
+   instrument bearing on them. Every obligation class still has uncovered
+   sites, so all eleven classes are class-12 orphans. The graph records the
+   omission; it does not record a discharge.
+
+12. **The refinement chain is missing three of five discharges.** The six levels
    and five edges are nodes and edges, so the chain cannot be described in prose
    while an edge is absent from the graph. Three edges are `NONE` (class 11):
    there is no independent executable reference (`RFE-1`), no reference-to-Rust
@@ -353,10 +375,10 @@ correctly refuse it as class 4. The consequence is stated in section 7.
   that exists, population coverage is `UNKNOWN`.
 - MC/DC applies to executable decision logic, not to a graph. No MC/DC result is
   claimed for `forensics/tools/traceability.py`, for the crate, or for any
-  court. The 24 checks in `test_traceability.py` are behavioural controls: four
-  positive, determinism, seed-reproduction and report controls; fourteen controls
-  covering the eleven orphan classes (class 4, class 6 and class 11 have two
-  branches each); and six structural and register controls. They demonstrate
+  court. The 26 checks in `test_traceability.py` are behavioural controls: four
+  positive, determinism, seed-reproduction and report controls; sixteen controls
+  covering the twelve orphan classes (class 4, class 6, class 11 and class 12
+  have two branches each); and six structural and register controls. They demonstrate
   that the named refusal fires on a mutation; they are not a control-flow
   coverage measurement.
 - If a release claim ever cites MC/DC or structural coverage, it must name the
@@ -376,7 +398,7 @@ defect classes it names, and nothing is claimed about decision coverage.
   compatibility or cryptographic correctness.
 - A specification node's independence is a claim about provenance, not about
   correctness, and there are no specification nodes at this candidate.
-- The checker detects the eleven named omissions. It does not detect stale
+- The checker detects the twelve named omissions. It does not detect stale
   evidence, an incorrect measurement, a false claim that cites a real record, a
   requirement that was never written down, or an implementation-derived
   specification whose provenance is concealed.
