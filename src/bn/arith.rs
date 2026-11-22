@@ -1826,6 +1826,21 @@ pub(crate) fn mod_exp_core_consttime_width(
     }
 }
 
+/// The precomputed parameters of one Montgomery domain, borrowed from a
+/// prepared context.
+///
+/// The owner (`MontCtx`) establishes that every field belongs to the same
+/// modulus and that the modulus matches the exponentiation's operand before a
+/// value of this type is built. `rr` and `one` are exactly `md.len()` limbs.
+pub(crate) struct PreparedMontParams<'a> {
+    /// `-m^-1 mod 2^64`, the REDC word.
+    pub(crate) n0: Limb,
+    /// `R^2 mod m`.
+    pub(crate) rr: &'a [Limb],
+    /// `R mod m`, the Montgomery form of one.
+    pub(crate) one: &'a [Limb],
+}
+
 /// Constant-pattern exponentiation for the C entry points, staging the exponent
 /// directly from the caller's borrowed magnitude.
 ///
@@ -1842,19 +1857,43 @@ pub(crate) fn mod_exp_core_consttime_from_parts(
     md: &[Limb],
     declared_limbs: usize,
 ) -> Option<Vec<Limb>> {
+    mod_exp_core_consttime_from_parts_prepared(ad, pd, md, declared_limbs, None)
+}
+
+/// Constant-pattern exponentiation with optional precomputed Montgomery
+/// parameters.
+///
+/// `prepared` is `Some` only when the caller holds a prepared context whose
+/// modulus and representation were checked against `md`; the ladder then reuses
+/// `R`, `R^2` and `n0` instead of deriving them from the modulus again. A
+/// `None` keeps the recomputation, so an unprepared caller has exactly the
+/// previous behaviour. The ladder's work, iteration count and memory access
+/// pattern are otherwise identical in both arms.
+pub(crate) fn mod_exp_core_consttime_from_parts_prepared(
+    ad: &[Limb],
+    pd: &[Limb],
+    md: &[Limb],
+    declared_limbs: usize,
+    prepared: Option<&PreparedMontParams<'_>>,
+) -> Option<Vec<Limb>> {
     match ladder_geometry(pd, md, declared_limbs)? {
         LadderGeometry::Zero => Some(Vec::new()),
+        // No Montgomery form. The prepared parameters cannot be used here; the
+        // two Montgomery entry points refuse this case before dispatch.
         LadderGeometry::VariableTime => mod_exp_core(ad, pd, md),
         LadderGeometry::Fixed(width) => {
             // The protected buffer: its allocation is the declared public width,
             // so its capacity cannot encode the exponent's normalised length.
             let exponent = fixed_width_exponent(pd, width)?;
-            mod_exp_core_consttime_staged(ad, &exponent, md, width)
+            match prepared {
+                Some(params) => mod_exp_core_consttime_prepared(ad, &exponent, md, width, params),
+                None => mod_exp_core_consttime_staged(ad, &exponent, md, width),
+            }
         }
     }
 }
 
-/// The ladder proper, on an exponent already staged at `width` limbs.
+/// The ladder with `R^2`, `R` and `n0` recomputed from the modulus.
 ///
 /// `exponent.len() == width`, and `width` is public. Splitting this from
 /// [`mod_exp_core_consttime_width`] is what lets the C entry points stage the
@@ -1866,13 +1905,6 @@ fn mod_exp_core_consttime_staged(
     width: usize,
 ) -> Option<Vec<Limb>> {
     let n = md.len();
-    // Read the staged exponent through the borrowed secret view: a signature can
-    // say "this is secret" without borrowing the owner and without implying any
-    // ownership or cleansing claim.
-    let exponent = SecretRef::new(exponent);
-    let bits = width.checked_mul(64)?;
-    let t_len = n.checked_mul(2)?.checked_add(1)?;
-
     let n0 = mont_n0(md[0]);
     // `R` and `R^2` derive from the modulus. Their limb count is public, but the
     // modulus contents are not automatically public: RSA CRT precomputation runs
@@ -1885,6 +1917,46 @@ fn mod_exp_core_consttime_staged(
     let mut one_plain = try_zeroed_limbs(n)?;
     one_plain[0] = 1;
     let one_mont = SecretBuf::from_vec(mont_mul_fallible(&rr, &one_plain, md, n0)?);
+    run_mont_ladder(ad, exponent, md, width, n0, &rr, one_mont)
+}
+
+/// The ladder reusing a prepared domain's `R`, `R^2` and `n0`.
+///
+/// The caller has checked that the prepared parameters belong to `md`; the only
+/// per-call work on the modulus is the base reduction and the conversions the
+/// ladder already performs. `acc` starts as a private copy of the prepared
+/// `R mod m`, because the ladder mutates its accumulator.
+fn mod_exp_core_consttime_prepared(
+    ad: &[Limb],
+    exponent: &SecretLimbs,
+    md: &[Limb],
+    width: usize,
+    params: &PreparedMontParams<'_>,
+) -> Option<Vec<Limb>> {
+    let acc = pad_secret(params.one, md.len())?;
+    run_mont_ladder(ad, exponent, md, width, params.n0, params.rr, acc)
+}
+
+/// The fixed-pattern Montgomery ladder, given its precomputed parameters.
+///
+/// `exponent.len() == width`, `width` is public, `rr` is `R^2 mod m` and `acc`
+/// is a fresh buffer holding `R mod m`. Everything else is derived here.
+fn run_mont_ladder(
+    ad: &[Limb],
+    exponent: &SecretLimbs,
+    md: &[Limb],
+    width: usize,
+    n0: Limb,
+    rr: &[Limb],
+    mut acc: SecretLimbs,
+) -> Option<Vec<Limb>> {
+    let n = md.len();
+    // Read the staged exponent through the borrowed secret view: a signature can
+    // say "this is secret" without borrowing the owner and without implying any
+    // ownership or cleansing claim.
+    let exponent = SecretRef::new(exponent);
+    let bits = width.checked_mul(64)?;
+    let t_len = n.checked_mul(2)?.checked_add(1)?;
 
     // Base reduction. The EC reaches this with a secret base: the nonce through
     // `ec_field_inverse_mod_ord` (`ecdsa_sign_setup`) and a field element through
@@ -1914,8 +1986,7 @@ fn mod_exp_core_consttime_staged(
         pad_secret(&rem, n)?
     };
     // `base * R^2 * R^-1 == base * R`: convert into the Montgomery domain.
-    let mut base = SecretBuf::from_vec(mont_mul_fallible(&base_plain, &rr, md, n0)?);
-    let mut acc = one_mont;
+    let mut base = SecretBuf::from_vec(mont_mul_fallible(&base_plain, rr, md, n0)?);
 
     // One allocation per buffer, before the first iteration. An allocation failure
     // is the entry points' ordinary failure answer, not an abort.

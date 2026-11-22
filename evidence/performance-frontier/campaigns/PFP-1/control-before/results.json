@@ -1,0 +1,228 @@
+{
+  "campaign": "PFP-1",
+  "classification": "SCOPED_OBSERVATION",
+  "family": [
+    "dh-ffdhe2048",
+    "dh-ffdhe3072",
+    "dh-modp2048",
+    "dh-synth2048",
+    "dh-synth3072",
+    "ecdsa256",
+    "modexp2048",
+    "modexp8192",
+    "rsa2048"
+  ],
+  "note": "a performance result never discharges a timing obligation; see the receipt",
+  "protocol": "docs/PERFORMANCE-METHODOLOGY.md \u00a76 applied to a within-candidate paired comparison",
+  "repetitions": 5,
+  "rows": [
+    {
+      "direction": "setup slower",
+      "id": "dh-ffdhe2048",
+      "kind": "paired",
+      "paired_ratio_bootstrap_95": [
+        0.9958553077370731,
+        1.0365610770751927
+      ],
+      "paired_ratio_median": 1.0227765128649626,
+      "paired_ratios": [
+        1.025978971615396,
+        1.0365610770751927,
+        1.0195092223792597,
+        0.9958553077370731,
+        1.0227765128649626
+      ],
+      "prepared_iqr_us": 30.07300000000032,
+      "prepared_median_us": 5598.528,
+      "ratio_of_medians": 1.0204619857219612,
+      "repetitions": 5,
+      "setup_iqr_us": 38.70299999999952,
+      "setup_median_us": 5713.085,
+      "sign_test_p_ratio_eq_1": 0.375
+    },
+    {
+      "direction": "setup slower",
+      "id": "dh-ffdhe3072",
+      "kind": "paired",
+      "paired_ratio_bootstrap_95": [
+        1.0203502148073431,
+        1.0458969244002843
+      ],
+      "paired_ratio_median": 1.0304248117658417,
+      "paired_ratios": [
+        1.0356949843343157,
+        1.0203502148073431,
+        1.0222431425697394,
+        1.0304248117658417,
+        1.0458969244002843
+      ],
+      "prepared_iqr_us": 28.315999999998894,
+      "prepared_median_us": 18490.215,
+      "ratio_of_medians": 1.0315305690063636,
+      "repetitions": 5,
+      "setup_iqr_us": 239.4399999999987,
+      "setup_median_us": 19073.222,
+      "sign_test_p_ratio_eq_1": 0.0625
+    },
+    {
+      "direction": "setup slower",
+      "id": "dh-modp2048",
+      "kind": "paired",
+      "paired_ratio_bootstrap_95": [
+        1.0070709011282146,
+        1.0343927294690576
+      ],
+      "paired_ratio_median": 1.0133113861166048,
+      "paired_ratios": [
+        1.0070709011282146,
+        1.0343927294690576,
+        1.031269870215573,
+        1.0116793031941105,
+        1.0133113861166048
+      ],
+      "prepared_iqr_us": 26.975000000000364,
+      "prepared_median_us": 5596.738,
+      "ratio_of_medians": 1.0116793031941105,
+      "repetitions": 5,
+      "setup_iqr_us": 122.39000000000033,
+      "setup_median_us": 5662.104,
+      "sign_test_p_ratio_eq_1": 0.0625
+    },
+    {
+      "direction": "setup slower",
+      "id": "dh-synth2048",
+      "kind": "paired",
+      "paired_ratio_bootstrap_95": [
+        1.0133546827415152,
+        1.0261546640408894
+      ],
+      "paired_ratio_median": 1.0168055206895579,
+      "paired_ratios": [
+        1.0168055206895579,
+        1.0261546640408894,
+        1.0135574131549157,
+        1.0246689217239273,
+        1.0133546827415152
+      ],
+      "prepared_iqr_us": 7.7719999999999345,
+      "prepared_median_us": 5573.925,
+      "ratio_of_medians": 1.0213768574209376,
+      "repetitions": 5,
+      "setup_iqr_us": 60.4369999999999,
+      "setup_median_us": 5693.078,
+      "sign_test_p_ratio_eq_1": 0.0625
+    },
+    {
+      "direction": "setup slower",
+      "id": "dh-synth3072",
+      "kind": "paired",
+      "paired_ratio_bootstrap_95": [
+        1.0175701570768991,
+        1.0360010250812042
+      ],
+      "paired_ratio_median": 1.0203008878705342,
+      "paired_ratios": [
+        1.0290040235734745,
+        1.0175701570768991,
+        1.0193615766942536,
+        1.0203008878705342,
+        1.0360010250812042
+      ],
+      "prepared_iqr_us": 10.804000000000087,
+      "prepared_median_us": 18486.232,
+      "ratio_of_medians": 1.0231802240716226,
+      "repetitions": 5,
+      "setup_iqr_us": 159.75600000000122,
+      "setup_median_us": 18914.747,
+      "sign_test_p_ratio_eq_1": 0.0625
+    },
+    {
+      "id": "ecdsa256",
+      "kind": "control",
+      "note": "no prepared/setup distinction in PFP-1; both processes run the same operation",
+      "paired_ratio_setup_over_prepared": 1.0,
+      "prepared_median_us": 442.815,
+      "setup_median_us": 442.815
+    },
+    {
+      "direction": "prepared slower",
+      "id": "modexp2048",
+      "kind": "paired",
+      "paired_ratio_bootstrap_95": [
+        0.9978945932053301,
+        1.0018685662620619
+      ],
+      "paired_ratio_median": 0.9996158407778679,
+      "paired_ratios": [
+        1.0009905626525046,
+        1.0018685662620619,
+        0.9996158407778679,
+        0.9978945932053301,
+        0.9987323374833549
+      ],
+      "prepared_iqr_us": 25.3179999999993,
+      "prepared_median_us": 5583.505,
+      "ratio_of_medians": 1.0000297304291839,
+      "repetitions": 5,
+      "setup_iqr_us": 8.009000000000015,
+      "setup_median_us": 5583.671,
+      "sign_test_p_ratio_eq_1": 1.0
+    },
+    {
+      "direction": "prepared slower",
+      "id": "modexp8192",
+      "kind": "paired",
+      "paired_ratio_bootstrap_95": [
+        0.9927361826914997,
+        1.0004956764832333
+      ],
+      "paired_ratio_median": 0.9997383350016921,
+      "paired_ratios": [
+        0.9997532626798655,
+        0.9997383350016921,
+        0.9927361826914997,
+        0.9987492829440376,
+        1.0004956764832333
+      ],
+      "prepared_iqr_us": 503.1790000000037,
+      "prepared_median_us": 370469.878,
+      "ratio_of_medians": 0.9995504303861378,
+      "repetitions": 5,
+      "setup_iqr_us": 56.42299999995157,
+      "setup_median_us": 370303.326,
+      "sign_test_p_ratio_eq_1": 0.375
+    },
+    {
+      "direction": "setup slower",
+      "id": "rsa2048",
+      "kind": "paired",
+      "paired_ratio_bootstrap_95": [
+        4.894199708606515,
+        5.948463290097902
+      ],
+      "paired_ratio_median": 4.932836597660758,
+      "paired_ratios": [
+        5.948463290097902,
+        4.932836597660758,
+        4.976916664585259,
+        4.929979556188741,
+        4.894199708606515
+      ],
+      "prepared_iqr_us": 0.07699999999999818,
+      "prepared_median_us": 1921.8,
+      "ratio_of_medians": 4.932010094702883,
+      "repetitions": 5,
+      "setup_iqr_us": 89.82300000000032,
+      "setup_median_us": 9478.337,
+      "sign_test_p_ratio_eq_1": 0.0625
+    }
+  ],
+  "schema": "openssl-rs/performance/pfp1/v1",
+  "statistic": "median over repetitions of setup_us / prepared_us",
+  "uncertainty": {
+    "method": "percentile bootstrap over the realised paired ratios",
+    "resamples": 20000,
+    "seed": "0x50465030"
+  },
+  "venue_has_pmu": false
+}

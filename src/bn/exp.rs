@@ -194,4 +194,46 @@ mod tests {
             }
         }
     }
+
+    /// The fixed-top entry point, which is the call shape `ec_lib.c`'s order
+    /// inversion and `ecp_mont.c`'s field inversion use, must answer the same
+    /// value whether or not the caller's prepared Montgomery context is supplied.
+    #[test]
+    fn the_fixed_top_answer_is_unchanged_by_a_prepared_context() {
+        use crate::bn::mont::{BN_MONT_CTX_free, BN_MONT_CTX_new, BN_MONT_CTX_set};
+
+        // SAFETY: the test owns every object it passes.
+        unsafe {
+            let a = new_owned(vec![0x0123_4567_89ab_cdef, 0x0fed_cba9_8765_4321], 0);
+            let p = new_owned(vec![0x1111_2222_3333_4445, 0x0555_6666_7777_8889], 0);
+            let m = new_owned(vec![0xffff_ffff_ffff_fffd, 0x0123_4567_89ab_cdef], 0);
+            let without = new_owned(vec![0], 0);
+            let with = new_owned(vec![0], 0);
+            let mont = BN_MONT_CTX_new();
+            assert!(!mont.is_null());
+            assert_eq!(BN_MONT_CTX_set(mont, m, core::ptr::null_mut()), 1);
+
+            assert_eq!(
+                bn_mod_exp_mont_fixed_top(
+                    without,
+                    a,
+                    p,
+                    m,
+                    core::ptr::null_mut(),
+                    core::ptr::null_mut()
+                ),
+                1
+            );
+            assert_eq!(
+                bn_mod_exp_mont_fixed_top(with, a, p, m, core::ptr::null_mut(), mont),
+                1
+            );
+            assert_eq!(parts(as_ref(without)).0, parts(as_ref(with)).0);
+
+            BN_MONT_CTX_free(mont);
+            for b in [a, p, m, without, with] {
+                BN_free(b);
+            }
+        }
+    }
 }

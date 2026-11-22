@@ -44,7 +44,8 @@
 use core::ffi::{c_int, c_ulong};
 
 use crate::bn::arith::{
-    mod_exp_core, mod_exp_core_consttime_from_parts, mont_mul_fallible, pad_to,
+    mod_exp_core, mod_exp_core_consttime_from_parts_prepared, mont_mul_fallible, pad_to,
+    PreparedMontParams,
 };
 use crate::bn::bignum::{
     as_mut, as_ref, magnitude, parts, parts_fallible, store, store_consttime, BigNum,
@@ -53,24 +54,64 @@ use crate::bn::ctx::BnCtx;
 use crate::bn::limbs::{self, Limb};
 use crate::bn::secret::SecretBuf;
 use crate::ffi::guard_ffi;
+use crate::runtime::err::err_reasons::BN_R_INVALID_RANGE;
 use crate::runtime::err::err_sites::{
     BN_EXP2_35, BN_EXP_1187, BN_EXP_1195, BN_EXP_327, BN_EXP_622, BN_GCD_532,
 };
-use crate::runtime::err::raise_site;
+use crate::runtime::err::{raise_site, raise_with};
+use crate::runtime::secret::SecretLimbs;
 use crate::runtime::thread::CryptoRwlock;
 
 /// `BN_FLG_CONSTTIME`, as the authority's `bn.h` defines it.
 const BN_FLG_CONSTTIME: c_int = 0x04;
 
-/// The authority's `BN_MONT_CTX`.
+/// `ERR_LIB_BN` — `include/openssl/err.h.in`.
+const ERR_LIB_BN: c_int = 3;
+
+/// The radix a prepared domain is expressed in. The authority's word-based path
+/// (`MONT_WORD`) is radix 2^64, so the value is both the authority's and this
+/// implementation's; the observable `BN_to_montgomery` result fixes it.
+const MONT_RADIX_BITS: u32 = 64;
+
+/// The reduction kernel a prepared domain was built for.
+///
+/// PFP-1 has one portable REDC kernel. The identity is still recorded and
+/// checked on use so a future backend cannot be paired with parameters from a
+/// different one; a mismatch is refused rather than silently reinterpreted.
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum MontBackend {
+    /// Schoolbook product plus word-wise REDC ([`crate::bn::arith::mont_mul_fallible`]).
+    PortableRedc,
+    /// Never constructed in a release build; it exists so the refusal test can
+    /// prove a context from another kernel is rejected.
+    #[cfg(test)]
+    TestMismatch,
+}
+
+/// The authority's `BN_MONT_CTX`, and the crate's prepared Montgomery domain.
 ///
 /// The field names follow `crypto/bn/bn_local.h` so the structure stays reviewable
-/// against its origin, even though no caller can see it.
+/// against its origin, even though no caller can see it. Every field below the
+/// authority's `flags` binds one prepared domain to a single modulus:
+///
+/// * `n` — the modulus, as secret storage because RSA CRT prepares on the secret
+///   primes (T6);
+/// * `rr` — `R^2 mod N`;
+/// * `one` — `R mod N`, the Montgomery form of one;
+/// * `ri` — the radix width, `64 * N.len()`;
+/// * `radix_bits` and `backend` — the representation and kernel identity;
+/// * `n0` — `-N^-1 mod 2^64`.
+///
+/// A prepared context is immutable after [`mont_set`]. `Drop` therefore cleanses
+/// the modulus and both derived residues through [`SecretBuf`] on every exit,
+/// including an early return and an unwind in the owning object's lifecycle.
 pub struct MontCtx {
     /// `RR` — `R^2 mod N`, which is what makes conversion a single multiply.
-    rr: Vec<Limb>,
+    rr: SecretLimbs,
     /// `N` — the modulus.
-    n: Vec<Limb>,
+    n: SecretLimbs,
+    /// `R mod N` — the prepared Montgomery form of one.
+    one: SecretLimbs,
     /// `Ni` — the authority's word-based path leaves this empty, and so do we.
     ni: Vec<Limb>,
     /// `n0` — `-N^-1 mod 2^64`, in the low word.
@@ -79,6 +120,10 @@ pub struct MontCtx {
     ri: c_int,
     /// `flags` — carried so a copied context reads back the same value.
     flags: c_int,
+    /// The radix the residues are expressed in.
+    radix_bits: u32,
+    /// The reduction kernel the residues were prepared for.
+    backend: MontBackend,
 }
 
 /// Read a `*mut MontCtx` as a mutable reference.
@@ -113,12 +158,15 @@ unsafe fn as_ref_mont<'a>(p: *const MontCtx) -> Option<&'a MontCtx> {
 /// A fresh, unset context.
 fn new_mont() -> *mut MontCtx {
     crate::bn::alloc::try_boxed(MontCtx {
-        rr: Vec::new(),
-        n: Vec::new(),
+        rr: SecretBuf::from_vec(Vec::new()),
+        n: SecretBuf::from_vec(Vec::new()),
+        one: SecretBuf::from_vec(Vec::new()),
         ni: Vec::new(),
         n0: [0, 0],
         ri: 0,
         flags: 0,
+        radix_bits: 0,
+        backend: MontBackend::PortableRedc,
     })
     .unwrap_or(core::ptr::null_mut())
 }
@@ -169,13 +217,120 @@ fn mont_set(mont: &mut MontCtx, m: &[Limb]) -> bool {
     let Some(n) = crate::bn::alloc::try_clone_slice(m) else {
         return false;
     };
-    mont.n = n;
-    mont.ri = ri as c_int;
-    mont.n0 = [inverse_word(m[0]), 0];
+    let n0 = inverse_word(m[0]);
+    // `R mod m` is one Montgomery multiply from the other prepared values:
+    // `R^2 * 1 * R^-1`. Preparing it here is what lets the exponentiation reuse
+    // the accumulator instead of converting one afresh. Both allocations are
+    // fallible and neither value is observable through the C API.
+    let Some(mut one_plain) = crate::bn::alloc::try_zeroed(m.len(), 0u64) else {
+        return false;
+    };
+    one_plain[0] = 1;
+    let Some(one) = mont_mul_fallible(&rr, &one_plain, m, n0) else {
+        return false;
+    };
+    let Ok(ri) = c_int::try_from(ri) else {
+        return false;
+    };
+    mont.n = SecretBuf::from_vec(n);
+    mont.ri = ri;
+    mont.n0 = [n0, 0];
     mont.ni = Vec::new();
     mont.flags = 0;
-    mont.rr = rr;
+    mont.radix_bits = MONT_RADIX_BITS;
+    mont.backend = MontBackend::PortableRedc;
+    mont.rr = SecretBuf::from_vec(rr);
+    mont.one = SecretBuf::from_vec(one);
     true
+}
+
+/// Copy a limb slice into fresh secret storage, or `None` on allocation failure.
+fn clone_secret(v: &[Limb]) -> Option<SecretLimbs> {
+    let mut out = SecretBuf::try_zeroed(v.len())?;
+    out.copy_from_slice(v);
+    Some(out)
+}
+
+/// The prepared parameters, borrowed from a validated context.
+impl MontCtx {
+    fn prepared(&self) -> PreparedMontParams<'_> {
+        PreparedMontParams {
+            n0: self.n0[0],
+            rr: &self.rr[..],
+            one: &self.one[..],
+        }
+    }
+}
+
+/// Whether `mc` is a prepared domain for exactly `md`.
+///
+/// The structural half compares public geometry — limb width, radix, reduction
+/// kernel, the declared radix width and the prepared buffers' extents — and can
+/// refuse early without reading any modulus limb, because those values are
+/// public. The content half compares the whole modulus with a full-width
+/// accumulation and a single equality test; there is no per-limb early exit, so
+/// the loop's control flow depends only on the public width.
+///
+/// **Classification of the comparison's control flow.** It reveals only whether
+/// two stored copies of the same modulus agree, and on the legitimate path they
+/// always agree. The modulus is not being checked against attacker-chosen data:
+/// it is the operand already supplied by the caller and the copy this context
+/// was prepared from. A disagreement means the caller handed a stale context,
+/// which is a correctness fault, not secret information.
+fn context_matches(mc: &MontCtx, md: &[Limb]) -> bool {
+    let width = md.len();
+    if width == 0 {
+        return false;
+    }
+    let Some(expected_ri) = width.checked_mul(64) else {
+        return false;
+    };
+    let Ok(expected_ri) = c_int::try_from(expected_ri) else {
+        return false;
+    };
+    // Public structure. A context that was never prepared, was prepared for a
+    // different width/radix/backend, or lost a derived buffer is refused here.
+    if mc.radix_bits != MONT_RADIX_BITS
+        || mc.backend != MontBackend::PortableRedc
+        || mc.ri != expected_ri
+        || mc.n.len() != width
+        || mc.rr.len() != width
+        || mc.one.len() != width
+    {
+        return false;
+    }
+    // Contents. The loop bound is the public width and the accumulator is read
+    // in full on every call; only the final comparison consults the result. The
+    // two buffers have the same checked length, so `zip` visits the whole width.
+    let mut diff = 0u64;
+    for (stored, operand) in mc.n.iter().zip(md.iter()) {
+        diff |= stored ^ operand;
+    }
+    // `n0` is derived from `md[0]`, so a context whose modulus matches but whose
+    // prepared word does not is still inconsistent. `inverse_word` is a fixed
+    // six-round iteration with no data-dependent branch.
+    diff |= mc.n0[0] ^ inverse_word(md[0]);
+    diff == 0
+}
+
+/// Refuse a supplied context whose prepared domain does not match the operand.
+///
+/// The authority does not validate `in_mont`; a stale context silently produces
+/// a wrong answer, which programme §11 lists as a refused shortcut. This raise
+/// is therefore a recorded correctness/safety divergence with **no authority
+/// coordinate**: `raise_with` at line 0 names the authority file the context
+/// belongs to and makes the absence of a real site explicit rather than
+/// inventing one.
+fn refuse_context() {
+    // SAFETY: the file pointer is a static NUL-terminated C string.
+    unsafe {
+        raise_with(
+            ERR_LIB_BN,
+            BN_R_INVALID_RANGE,
+            c"crypto/bn/bn_mont.c".as_ptr(),
+            0,
+        )
+    };
 }
 
 /// Montgomery reduction: `(r * R^-1) mod n`, for `0 <= r < n * R`.
@@ -314,6 +469,11 @@ pub unsafe extern "C" fn BN_MONT_CTX_set(
 
 /// `BN_MONT_CTX *BN_MONT_CTX_copy(BN_MONT_CTX *to, BN_MONT_CTX *from)`
 ///
+/// A copy allocates its own modulus, `R^2`, `R mod N` and `Ni`; an allocation
+/// failure returns NULL and leaves `to` unchanged. The authority's copy cannot
+/// fail on allocation because it aborts instead; returning the ordinary failure
+/// answer is the crate's recorded memory-safety improvement.
+///
 /// # Safety
 ///
 /// `to` must be null or a live, uniquely-owned `BN_MONT_CTX`; `from` must be null or
@@ -333,12 +493,29 @@ pub unsafe extern "C" fn BN_MONT_CTX_copy(to: *mut MontCtx, from: *mut MontCtx) 
         let (Some(dst), Some(src)) = (dst, src) else {
             return core::ptr::null_mut();
         };
-        dst.rr = src.rr.clone();
-        dst.n = src.n.clone();
-        dst.ni = src.ni.clone();
+        // Allocate every buffer before assigning any, so a failure leaves `dst`
+        // exactly as it was rather than half-copied.
+        let Some(rr) = clone_secret(&src.rr) else {
+            return core::ptr::null_mut();
+        };
+        let Some(n) = clone_secret(&src.n) else {
+            return core::ptr::null_mut();
+        };
+        let Some(one) = clone_secret(&src.one) else {
+            return core::ptr::null_mut();
+        };
+        let Some(ni) = crate::bn::alloc::try_clone_slice(&src.ni) else {
+            return core::ptr::null_mut();
+        };
+        dst.rr = rr;
+        dst.n = n;
+        dst.one = one;
+        dst.ni = ni;
         dst.n0 = src.n0;
         dst.ri = src.ri;
         dst.flags = src.flags;
+        dst.radix_bits = src.radix_bits;
+        dst.backend = src.backend;
         to
     })
 }
@@ -568,12 +745,16 @@ unsafe fn gets_consttime(b: *const BigNum) -> bool {
 /// `int BN_mod_exp_mont(BIGNUM *r, const BIGNUM *a, const BIGNUM *p,`
 /// `const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *in_mont)`
 ///
+/// A non-NULL `in_mont` is validated against `m` before use. The Montgomery
+/// dispatch reuses its prepared `R`, `R^2` and `n0` when the constant-time flag
+/// selects that ladder; a context for any other modulus, width, radix or backend
+/// is refused with `BN_R_INVALID_RANGE` instead of producing a wrong answer.
+///
 /// # Safety
 ///
 /// `r` must be null or a live `BIGNUM`; `a`, `p` and `m` must each be null or live;
 /// `ctx` is unused. `r` may alias any of `a`, `p` and `m`; all three are copied
-/// before `r` is borrowed. `in_mont` is an optimisation the authority may precompute;
-/// this implementation is exact without one and does not read it.
+/// before `r` is borrowed. `in_mont` must be null or a live `BN_MONT_CTX`.
 #[no_mangle]
 pub unsafe extern "C" fn BN_mod_exp_mont(
     r: *mut BigNum,
@@ -581,7 +762,7 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
     p: *const BigNum,
     m: *const BigNum,
     _ctx: *mut BnCtx,
-    _in_mont: *mut MontCtx,
+    in_mont: *mut MontCtx,
 ) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `a` is null-or-live per this function's `# Safety` section.
@@ -604,6 +785,21 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
             unsafe { raise_site(&BN_EXP_327) };
             return 0;
         }
+        // A supplied context is validated before dispatch. Present-but-stale is
+        // refused, never silently ignored: the authority would use it and return
+        // a wrong answer.
+        //
+        // SAFETY: `in_mont` is null-or-live per this function's `# Safety` section.
+        let prepared = match unsafe { as_ref_mont(in_mont) } {
+            None => None,
+            Some(mc) => {
+                if !context_matches(mc, &md) {
+                    refuse_context();
+                    return 0;
+                }
+                Some(mc.prepared())
+            }
+        };
         // SAFETY: `a`, `p` and `m` are null-or-live per this function's
         // `# Safety` section, which is `BN_get_flags`'s contract.
         //
@@ -617,7 +813,7 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
             // modulus is odd here (the refusal above), so the Montgomery-form
             // ladder is available. Its width is the modulus' limb count — a
             // public parameter — never the exponent's normalised length.
-            mod_exp_core_consttime_from_parts(&ad, pd, &md, md.len())
+            mod_exp_core_consttime_from_parts_prepared(&ad, pd, &md, md.len(), prepared.as_ref())
         } else {
             mod_exp_core(&ad, pd, &md)
         };
@@ -642,7 +838,9 @@ pub unsafe extern "C" fn BN_mod_exp_mont(
 /// `const BIGNUM *m, BN_CTX *ctx, BN_MONT_CTX *in_mont)`
 ///
 /// The even-modulus refusal is raised at `bn_mod_exp_mont_fixed_top`'s coordinate,
-/// which is the function the authority's public entry point forwards to.
+/// which is the function the authority's public entry point forwards to. A non-NULL
+/// `in_mont` is validated against `m` and its prepared parameters are reused; a
+/// stale context is refused rather than used.
 ///
 /// # Safety
 ///
@@ -654,7 +852,7 @@ pub unsafe extern "C" fn BN_mod_exp_mont_consttime(
     p: *const BigNum,
     m: *const BigNum,
     _ctx: *mut BnCtx,
-    _in_mont: *mut MontCtx,
+    in_mont: *mut MontCtx,
 ) -> c_int {
     guard_ffi(0, || {
         // SAFETY: `a` is null-or-live per this function's `# Safety` section.
@@ -678,10 +876,26 @@ pub unsafe extern "C" fn BN_mod_exp_mont_consttime(
             unsafe { raise_site(&BN_EXP_622) };
             return 0;
         }
+        // Validate the supplied context once, before the ladder. A context for a
+        // different modulus, width, radix or backend is an error, not a reason
+        // to recompute: silently ignoring it would hide a caller's stale cache.
+        //
+        // SAFETY: `in_mont` is null-or-live per this function's `# Safety` section.
+        let prepared = match unsafe { as_ref_mont(in_mont) } {
+            None => None,
+            Some(mc) => {
+                if !context_matches(mc, &md) {
+                    refuse_context();
+                    return 0;
+                }
+                Some(mc.prepared())
+            }
+        };
         // This entry point's name is the promise: always the fixed-pattern ladder.
         // The modulus is odd (refused above), so Montgomery form exists. The
         // loop width is the modulus' limb count, a public parameter.
-        match mod_exp_core_consttime_from_parts(&ad, pd, &md, md.len()) {
+        match mod_exp_core_consttime_from_parts_prepared(&ad, pd, &md, md.len(), prepared.as_ref())
+        {
             // SAFETY: `r` is null-or-live per this function's `# Safety` section;
             // the result may derive from a secret exponent, so it is stored
             // without a value-dependent trim branch.
@@ -849,6 +1063,7 @@ mod tests {
     use super::*;
     use crate::bn::arith::{BN_mod_exp, BN_ucmp};
     use crate::bn::bignum::{new_owned, BN_copy, BN_free, BN_new, BN_set_flags, BN_set_word};
+    use crate::runtime::err::{ERR_clear_error, ERR_peek_error};
 
     /// A `BIGNUM` holding a machine word.
     fn word(w: c_ulong) -> *mut BigNum {
@@ -1084,6 +1299,300 @@ mod tests {
             for b in [ct, vt, a, m, p] {
                 BN_free(b);
             }
+        }
+    }
+
+    /// A deterministic pseudo-random limb generator for the sweep.
+    fn xorshift(state: &mut u64) -> u64 {
+        let mut x = *state;
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        *state = x;
+        x
+    }
+
+    /// Moduli whose shapes exercise one limb, an exact limb boundary, a
+    /// secret-shaped two-limb prime and full four-limb storage. Every value is
+    /// odd and greater than one, which is the Montgomery domain's admission
+    /// condition.
+    fn adversarial_moduli() -> Vec<Vec<Limb>> {
+        vec![
+            vec![0xffff_ffff_ffff_fffd],
+            vec![0xffff_ffff_ffff_ffff],
+            vec![1, 1],
+            vec![0x0123_4567_89ab_cdef, 0xfedc_ba98_7654_3211],
+            vec![0xffff_ffff_ffff_ffff; 4],
+        ]
+    }
+
+    /// Exponent shapes at a modulus' public width: zero, one, all-ones and a
+    /// full-width top bit, followed by a pseudorandom sweep.
+    fn adversarial_exponents(width: usize) -> Vec<Vec<Limb>> {
+        let mut out = vec![
+            vec![0u64; width],
+            {
+                let mut e = vec![0u64; width];
+                e[0] = 1;
+                e
+            },
+            vec![u64::MAX; width],
+            {
+                let mut e = vec![0u64; width];
+                e[width - 1] = 1 << 63;
+                e
+            },
+        ];
+        let mut state = 0x9e37_79b9_7f4a_7c15u64 ^ width as u64;
+        for _ in 0..4 {
+            let mut e: Vec<Limb> = (0..width).map(|_| xorshift(&mut state)).collect();
+            e[width - 1] |= 1 << 63;
+            out.push(e);
+        }
+        out
+    }
+
+    /// Base shapes: zero, one, two and the widest value the public width admits.
+    fn adversarial_bases(width: usize) -> Vec<Vec<Limb>> {
+        vec![vec![0u64], vec![1u64], vec![2u64], vec![u64::MAX; width]]
+    }
+
+    /// PFP-1's correctness differential: over an adversarial operand population,
+    /// a prepared context answers exactly what the unprepared ladder and the
+    /// variable-time core answer, for both Montgomery entry points.
+    #[test]
+    fn a_prepared_domain_matches_the_unprepared_ladder_over_adversarial_operands() {
+        const NULL: *mut BnCtx = core::ptr::null_mut();
+        let mut cases = 0usize;
+        for m_limbs in adversarial_moduli() {
+            let width = m_limbs.len();
+            // SAFETY: every object is created, used and released inside this test.
+            unsafe {
+                let m = new_owned(m_limbs.clone(), 0);
+                BN_set_flags(m, BN_FLG_CONSTTIME);
+                let mont = BN_MONT_CTX_new();
+                assert!(!mont.is_null());
+                assert_eq!(BN_MONT_CTX_set(mont, m, NULL), 1);
+                for e_limbs in adversarial_exponents(width) {
+                    let e = new_owned(e_limbs.clone(), 0);
+                    for a_limbs in adversarial_bases(width) {
+                        let a = new_owned(a_limbs.clone(), 0);
+                        let Some(expected_limbs) = mod_exp_core(&a_limbs, &e_limbs, &m_limbs)
+                        else {
+                            unreachable!("the variable-time oracle answers every case");
+                        };
+                        let expected = new_owned(expected_limbs, 0);
+                        for consttime_only in [false, true] {
+                            let unprepared = BN_new();
+                            let prepared = BN_new();
+                            let ok_unprepared = if consttime_only {
+                                BN_mod_exp_mont_consttime(
+                                    unprepared,
+                                    a,
+                                    e,
+                                    m,
+                                    NULL,
+                                    core::ptr::null_mut(),
+                                )
+                            } else {
+                                BN_mod_exp_mont(unprepared, a, e, m, NULL, core::ptr::null_mut())
+                            };
+                            let ok_prepared = if consttime_only {
+                                BN_mod_exp_mont_consttime(prepared, a, e, m, NULL, mont)
+                            } else {
+                                BN_mod_exp_mont(prepared, a, e, m, NULL, mont)
+                            };
+                            assert_eq!(ok_unprepared, 1, "unprepared m={m_limbs:?}");
+                            assert_eq!(ok_prepared, 1, "prepared m={m_limbs:?}");
+                            assert_eq!(BN_ucmp(prepared, unprepared), 0, "prepared vs unprepared");
+                            assert_eq!(BN_ucmp(prepared, expected), 0, "prepared vs oracle");
+                            cases += 1;
+                            BN_free(unprepared);
+                            BN_free(prepared);
+                        }
+                        BN_free(expected);
+                        BN_free(a);
+                    }
+                    BN_free(e);
+                }
+                BN_MONT_CTX_free(mont);
+                BN_free(m);
+            }
+        }
+        assert!(
+            cases >= 100,
+            "the population must be exercised, got {cases}"
+        );
+    }
+
+    /// The packed code `ERR_peek_error` reports for the local refusal site.
+    fn refusal_packed() -> c_ulong {
+        ((ERR_LIB_BN as c_ulong) << 23) | (BN_R_INVALID_RANGE as c_ulong & 0x7f_ffff)
+    }
+
+    /// A supplied context whose modulus differs — at the same width and at a
+    /// different width — is refused, and the refusal is observable on the error
+    /// queue rather than a silent recomputation.
+    #[test]
+    fn a_context_for_another_modulus_is_refused() {
+        const NULL: *mut BnCtx = core::ptr::null_mut();
+        // SAFETY: every object is created, used and released inside this test.
+        unsafe {
+            let a = word(3);
+            let p = word(5);
+            let m = word(0xffff_ffff_ffff_fffd);
+            let other_same_width = word(0xffff_ffff_ffff_fffb);
+            let other_narrow = word(0xffff_fff9);
+            let mont = BN_MONT_CTX_new();
+            assert_eq!(BN_MONT_CTX_set(mont, other_same_width, NULL), 1);
+            let r = BN_new();
+
+            for wrong in [m, other_narrow] {
+                ERR_clear_error();
+                assert_eq!(
+                    BN_mod_exp_mont_consttime(r, a, p, wrong, NULL, mont),
+                    0,
+                    "a context for another modulus must be refused"
+                );
+                assert_eq!(ERR_peek_error(), refusal_packed());
+            }
+
+            // `BN_mod_exp_mont` validates a supplied context even when its
+            // dispatch would not use Montgomery form.
+            ERR_clear_error();
+            assert_eq!(BN_mod_exp_mont(r, a, p, m, NULL, mont), 0);
+            assert_eq!(ERR_peek_error(), refusal_packed());
+
+            for b in [r, m, a, p, other_same_width, other_narrow] {
+                BN_free(b);
+            }
+            BN_MONT_CTX_free(mont);
+        }
+    }
+
+    /// A context whose recorded radix or reduction-kernel identity differs is
+    /// refused before any modulus limb is read.
+    #[test]
+    fn a_context_for_another_representation_is_refused() {
+        const NULL: *mut BnCtx = core::ptr::null_mut();
+        // SAFETY: every object is created, used and released inside this test.
+        unsafe {
+            let a = word(3);
+            let p = word(5);
+            let m = word(0xffff_ffff_ffff_fffd);
+            let r = BN_new();
+
+            let mont = BN_MONT_CTX_new();
+            assert_eq!(BN_MONT_CTX_set(mont, m, NULL), 1);
+            (*mont).radix_bits = 32;
+            ERR_clear_error();
+            assert_eq!(BN_mod_exp_mont_consttime(r, a, p, m, NULL, mont), 0);
+            assert_eq!(ERR_peek_error(), refusal_packed());
+            BN_MONT_CTX_free(mont);
+
+            let mont = BN_MONT_CTX_new();
+            assert_eq!(BN_MONT_CTX_set(mont, m, NULL), 1);
+            (*mont).backend = MontBackend::TestMismatch;
+            ERR_clear_error();
+            assert_eq!(BN_mod_exp_mont_consttime(r, a, p, m, NULL, mont), 0);
+            assert_eq!(ERR_peek_error(), refusal_packed());
+            BN_MONT_CTX_free(mont);
+
+            // A fresh, never-prepared context is not a prepared domain.
+            let unset = BN_MONT_CTX_new();
+            ERR_clear_error();
+            assert_eq!(BN_mod_exp_mont_consttime(r, a, p, m, NULL, unset), 0);
+            assert_eq!(ERR_peek_error(), refusal_packed());
+            BN_MONT_CTX_free(unset);
+
+            for b in [r, m, a, p] {
+                BN_free(b);
+            }
+        }
+    }
+
+    /// Reuse is load-bearing: the prepared path reaches fewer fallible-allocation
+    /// sites than the unprepared path for the same operation (the mutation-control
+    /// direction).
+    #[test]
+    fn a_prepared_domain_removes_the_precomputation_allocations() {
+        const NULL: *mut BnCtx = core::ptr::null_mut();
+        // SAFETY: every object is created, used and released inside this test.
+        unsafe {
+            let m = new_owned(vec![0x0123_4567_89ab_cdef, 0xfedc_ba98_7654_3211], 0);
+            let a = new_owned(vec![0xdead_beef_0bad_f00d, 1], 0);
+            let p = new_owned(vec![0x0123_4567_89ab_cdef, 0x7edc_ba98_7654_3211], 0);
+            let mont = BN_MONT_CTX_new();
+            assert_eq!(BN_MONT_CTX_set(mont, m, NULL), 1);
+            let r = BN_new();
+
+            let unprepared = {
+                let _count = crate::bn::alloc::test_fail::count_start();
+                assert_eq!(
+                    BN_mod_exp_mont_consttime(r, a, p, m, NULL, core::ptr::null_mut()),
+                    1
+                );
+                crate::bn::alloc::test_fail::counted()
+            };
+            let prepared = {
+                let _count = crate::bn::alloc::test_fail::count_start();
+                assert_eq!(BN_mod_exp_mont_consttime(r, a, p, m, NULL, mont), 1);
+                crate::bn::alloc::test_fail::counted()
+            };
+            assert!(
+                prepared < unprepared,
+                "reuse must remove allocations: prepared={prepared} unprepared={unprepared}"
+            );
+
+            for b in [r, a, p, m] {
+                BN_free(b);
+            }
+            BN_MONT_CTX_free(mont);
+        }
+    }
+
+    /// The prepared modulus is secret-owned: releasing the context cleanses it,
+    /// and a copied context is an independent, equally usable domain.
+    #[test]
+    fn a_prepared_domain_is_cleansed_on_release_and_survives_a_copy() {
+        use crate::bn::secret::drop_probe;
+        const NULL: *mut BnCtx = core::ptr::null_mut();
+        // SAFETY: every object is created, used and released inside this test.
+        unsafe {
+            let m = new_owned(vec![0x0123_4567_89ab_cdef, 0xfedc_ba98_7654_3211], 0);
+            let a = word(3);
+            let p = word(5);
+            let mont = BN_MONT_CTX_new();
+            assert_eq!(BN_MONT_CTX_set(mont, m, NULL), 1);
+
+            let copy = BN_MONT_CTX_new();
+            assert_eq!(BN_MONT_CTX_copy(copy, mont), copy);
+            let with_copy = BN_new();
+            let with_original = BN_new();
+            assert_eq!(BN_mod_exp_mont_consttime(with_copy, a, p, m, NULL, copy), 1);
+            assert_eq!(
+                BN_mod_exp_mont_consttime(with_original, a, p, m, NULL, mont),
+                1
+            );
+            assert_eq!(BN_ucmp(with_copy, with_original), 0);
+
+            // The copy's modulus is a separately allocated, cleansed buffer.
+            let ptr = (*copy).n.as_ptr();
+            drop_probe::arm(ptr);
+            BN_MONT_CTX_free(copy);
+            let Some(observed) = drop_probe::take() else {
+                unreachable!("the modulus Drop must be observed");
+            };
+            assert!(
+                observed.nonzero_before > 0,
+                "the modulus must hold live data"
+            );
+            assert_eq!(observed.nonzero_bytes, 0, "the modulus must be cleansed");
+
+            for b in [with_copy, with_original, a, p, m] {
+                BN_free(b);
+            }
+            BN_MONT_CTX_free(mont);
         }
     }
 }
