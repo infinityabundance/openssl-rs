@@ -414,3 +414,41 @@ env $COURT bash docker/openssl-rs-court.sh exec sh -c '
   kani evidence/etp4/kani/kani_admission.rs --harness admission_negative_must_fail
   cargo kani --lib'
 ```
+
+---
+
+## 11. Portability repair — the reallocation witness (2026-11-22)
+
+**Defect.** `runtime::secret::tests::etp4_reallocated_buffer_cleanses_whole_allocation`
+asserted that `v.reserve(64)` changed `v.as_ptr()`. `Vec::reserve` may grow the
+allocation in place, so the assertion encoded an allocator placement decision,
+not the cleansing property, and a conforming allocator could fail it.
+
+**Repair.** The two claims that were conflated are separated, and the address
+assertion is removed:
+
+| claim | test | established by |
+|---|---|---|
+| capacity growth | `runtime::secret::tests::etp4_capacity_growth_initialises_spare_capacity` | capacity strictly grows (observed 4 to 72 in this run; `reserve` is asked for more than the pre-growth capacity, so its documented postcondition forces growth), spare slots exist, and every spare byte is initialised non-zero before destruction (544 bytes staged) |
+| cleansing of the final allocation | `runtime::secret::tests::etp4_reallocated_buffer_cleanses_whole_allocation` | the payload is moved into a distinct, larger allocation constructed deterministically; `Drop` observes every byte of `capacity * size_of::<u64>()` zero, with the initialised prefix staged non-zero before the wipe |
+
+The relocation witness now constructs a second allocation and moves the payload
+into it while the source is still live, so it does not depend on `reserve`
+relocating. A source comment records why a pointer-inequality requirement must
+not be reintroduced.
+
+**Counts.** Library tests, before to after: 2422 passed / 0 failed / 54 ignored
+to 2423 passed / 0 failed / 54 ignored, in both the serial and `--test-threads=4`
+runs. The net change is one test: the single reallocated witness became a
+deterministic growth test plus the same-named cleansing witness. The cleansing
+observation total is unchanged at 85 (domain 48 + exit paths 36 + relocated
+allocation 1); the growth test stages spare capacity but does not observe a
+cleanse.
+
+**Gates for this repair.** `cargo fmt --all -- --check` exit 0;
+`cargo clippy --all-targets -- -D warnings` exit 0; serial run 2423 passed /
+0 failed / 54 ignored (328.25 s); `--test-threads=4` run 2423 passed / 0 failed /
+54 ignored (111.56 s); `spec_guard.py check` exit 0; `docs_consistency.py` exit 0.
+
+The repair changes test and documentation text only; no production cleansing
+code changed. It removes a non-portable assertion and adds no safety claim.

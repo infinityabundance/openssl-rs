@@ -833,27 +833,75 @@ mod tests {
         assert_eq!(cases, ETP4_LENGTHS.len() * 3);
     }
 
-    /// A buffer that grew by reallocation, with the reallocated block's spare
-    /// capacity staged before adoption.
+    /// Capacity growth is established deterministically: the allocation gains
+    /// spare slots beyond the initialised length, and those slots can be staged
+    /// with non-zero bytes before destruction.
+    ///
+    /// The buffer's address is deliberately **not** asserted to change.
+    /// `Vec::reserve` is permitted to grow the allocation in place, so a
+    /// pointer-inequality requirement would encode one allocator's placement
+    /// decision rather than the property under test. The relocation witness is
+    /// `etp4_reallocated_buffer_cleanses_whole_allocation`, which obtains a
+    /// distinct allocation by construction instead.
     #[test]
-    fn etp4_reallocated_buffer_cleanses_whole_allocation() {
+    fn etp4_capacity_growth_initialises_spare_capacity() {
         let mut v: Vec<u64> = Vec::new();
         v.extend_from_slice(&PATTERN);
-        let first_ptr = v.as_ptr();
-        v.reserve(64);
+        let initial_capacity = v.capacity();
+        // `reserve` guarantees `capacity >= len + additional`, so requesting
+        // `initial_capacity + 64` forces growth whatever the allocator reserved
+        // initially. Growth therefore follows from the documented postcondition,
+        // not from an assumption about allocation geometry.
+        v.reserve(initial_capacity + 64);
         let capacity = v.capacity();
-        assert!(capacity > v.len(), "reserve must leave spare capacity");
-        assert_ne!(
-            v.as_ptr(),
-            first_ptr,
-            "the reserve must have reallocated the block"
+        assert!(
+            capacity > initial_capacity,
+            "growth must increase capacity: {initial_capacity} -> {capacity}"
         );
+        assert!(capacity > v.len(), "growth must leave spare capacity");
         v.resize(capacity, PATTERN[1]);
         v.truncate(PATTERN.len());
-        assert!(etp4_spare_nonzero(&v, PATTERN.len(), capacity) > 0);
+        let staged = etp4_spare_nonzero(&v, PATTERN.len(), capacity);
+        assert!(
+            staged > 0,
+            "the grown allocation's spare capacity was not initialised non-zero"
+        );
+        std::eprintln!(
+            "ETP4 capacity growth: initial={initial_capacity} capacity={capacity} staged={staged}"
+        );
+    }
+
+    /// A buffer whose payload was moved into a fresh, larger allocation has its
+    /// whole final allocation cleansed, including spare capacity.
+    ///
+    /// The relocation is obtained **deterministically**: a distinct, larger
+    /// allocation is constructed and the payload is moved into it, rather than
+    /// assuming that `Vec::reserve` relocates. That assumption is not a `Vec`
+    /// guarantee — growth may happen in place — so it was removed together with
+    /// an `assert_ne!` on `as_ptr()` that had encoded allocator placement instead
+    /// of the cleansing property. Do not reintroduce a pointer-inequality
+    /// requirement here.
+    #[test]
+    fn etp4_reallocated_buffer_cleanses_whole_allocation() {
+        let source: Vec<u64> = PATTERN.to_vec();
+        // The destination is a second allocation while `source` is still live, so
+        // it is a distinct block regardless of how the allocator places it.
+        let mut v: Vec<u64> = Vec::with_capacity(source.len() + 64);
+        v.extend_from_slice(&source);
+        let capacity = v.capacity();
+        assert!(
+            capacity > v.len(),
+            "the grown buffer must carry spare capacity"
+        );
+        v.resize(capacity, PATTERN[1]);
+        v.truncate(source.len());
+        assert!(
+            etp4_spare_nonzero(&v, source.len(), capacity) > 0,
+            "spare capacity was not staged before adoption"
+        );
         let ptr = v.as_ptr();
-        let before = PATTERN.len() * core::mem::size_of::<u64>();
+        let before = source.len() * core::mem::size_of::<u64>();
         etp4_assert_cleansed(SecretBuf::from_vec(v), ptr, before);
-        std::eprintln!("ETP4 cleanse reallocated: cases=1 capacity={capacity}");
+        std::eprintln!("ETP4 cleanse relocated: cases=1 capacity={capacity}");
     }
 }

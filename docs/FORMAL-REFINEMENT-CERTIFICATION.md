@@ -189,6 +189,33 @@ is entitled to establish; its TCB; a positive control (a true theorem it proves)
 and a negative control (a false near-miss it refuses); and the rustc/target
 compatibility it actually supports.
 
+### 5.1 Three proof categories, kept separate
+
+A proof is a claim about a model at a stated level. The three categories below
+are independent: a result in one establishes nothing in the next without an
+explicit refinement argument.
+
+| category | what it establishes | what it does **not** establish |
+|---|---|---|
+| mathematical correctness | the algorithm satisfies an independently defined specification, as a theorem about the algorithm | that the Rust source implements it, or that the shipped binary does |
+| Rust source correctness | the Rust implementation refines the specification under stated Rust semantics, including unsafe contracts | anything about the compiled instructions |
+| exact binary correctness | the deployed instructions preserve the source properties, or translation validation ties source to binary | that the toolchain, linker or loader preserved it beyond the stated checks |
+
+These categories are the §3 chain, not a second taxonomy: mathematical
+correctness is the FRC-1 claim, Rust source correctness is FRC-2 (with FRC-3 for
+the timing relation it names), and exact binary correctness is FRC-4. A result
+is recorded against the link it actually discharges; it is not promoted across a
+link without the refinement argument that link requires.
+
+A proof produced with a compiler other than the pinned one can still establish
+the first two categories while establishing nothing about the shipped binary.
+That is why the ETP-4 Kani result — run on `nightly-2026-08-21`
+(`rustc 1.100.0-nightly`), not the pinned `1.98.1` — is recorded in
+`evidence/etp4/VERIFICATION-RECEIPT.md` and is not cited. The same distinction
+applies to a bounded test result: it is source-level evidence at one identity,
+not a statement about the deployed instructions. Citable binary evidence requires
+the exact pinned toolchain and the exact artefact identity named at FRC-4.
+
 **Unverified claim to settle at FRC-0:** SAW 1.5 (reported February 2026) is
 reported to support Rust MIR verification beyond experimental status, with a
 supported rustc range that may not include this project's pinned 1.98.1. The
