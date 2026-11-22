@@ -2,14 +2,19 @@
 """traceability.py -- validate the requirements traceability graph and detect orphans.
 
 The graph (`evidence/etp-t1/TRACEABILITY.json`, ETP-T1) is a typed directed graph
-over ten node types:
+over twelve node types:
 
     threat | hazard -> requirement -> specification -> implementation
         -> artefact -> obligation -> evidence -> adjudication -> release_claim
 
+and, since ETP-T3, a refinement chain over six adjacent levels:
+
+    refinement_level -> refinement_edge -> refinement_level -> ...
+
 Every edge points along that trace direction and states the provider-to-candidate
 relation it records (`motivates`, `refines`, `satisfied_by`, `realised_by`,
-`raises`, `evidenced_by`, `assessed_by`, `releases`, `constrains`).  The graph
+`raises`, `evidenced_by`, `assessed_by`, `releases`, `constrains`, and the
+refinement relations `refines_to`, `discharges`, `obligates`).  The graph
 is bound to an exact commit; node source digests and evidence digests are read
 from that commit, never from the working tree, so later documentation commits
 cannot silently rebind the evidence.
@@ -20,7 +25,7 @@ discovered orphan is not declared in the graph's own `orphans` register.  A
 declared orphan that no longer reproduces is also refused: a gap register that
 drifts away from the graph is not evidence.
 
-The eight orphan classes are fixed:
+The eleven orphan classes are fixed:
 
   1  requirement without an implementation edge                 ORPHAN-1:<req>
   2  implementation without an artefact                          ORPHAN-2:<impl>
@@ -31,6 +36,9 @@ The eight orphan classes are fixed:
                                                                  ORPHAN-6:REQ:<id>
   7  cycle in the support direction                              ORPHAN-7:<scc>
   8  dangling artefact or evidence path                          ORPHAN-8:<node>:<path>
+  9  refinement level with no obligation                         ORPHAN-9:<level>
+  10 refinement obligation with no artefact                     ORPHAN-10:<edge>
+  11 refinement edge with no discharge                          ORPHAN-11:<edge>
 
 Every refusal names the node, the edge rule and the artefact.  Output is sorted
 and serialised with sorted keys and fixed separators, so two runs over the same
@@ -76,6 +84,8 @@ NODE_TYPES = {
     "evidence",
     "adjudication",
     "release_claim",
+    "refinement_level",
+    "refinement_edge",
 }
 
 # edge type -> (allowed source types, allowed target types)
@@ -92,7 +102,15 @@ EDGE_RULES: dict[str, tuple[set[str], set[str]]] = {
     "assessed_by": ({"evidence", "requirement"}, {"adjudication"}),
     "releases": ({"adjudication"}, {"release_claim"}),
     "constrains": ({"obligation"}, {"release_claim"}),
+    "refines_to": ({"refinement_level"}, {"refinement_edge"}),
+    "discharges": ({"refinement_edge"}, {"refinement_level"}),
+    "obligates": ({"refinement_edge"}, {"obligation"}),
 }
+
+# A refinement edge's discharge state.  NONE is the honest "no discharge"; a
+# bounded population is named only when one was actually checked; PARTIAL names
+# what is missing.
+REFINEMENT_STATUSES = {"NONE", "BOUNDED", "PARTIAL"}
 
 # ETP-T2's three-way input classification.  A hazard is scoped by the API family
 # it belongs to and by the most adversarial input class that can trigger it.
@@ -129,6 +147,9 @@ CLASS_NAMES = {
     6: "specification_coverage_gap",
     7: "support_cycle",
     8: "dangling_artefact_reference",
+    9: "refinement_level_without_obligation",
+    10: "refinement_obligation_without_artefact",
+    11: "refinement_edge_without_discharge",
 }
 
 # A positive release claim needs a positive adjudication verdict.  A negative
@@ -353,7 +374,7 @@ def _index(graph: Graph) -> None:
 
 
 def _check_structural(graph: Graph) -> None:
-    """Referential and field rules that are not the eight orphan classes."""
+    """Referential and field rules that are not the eleven orphan classes."""
     for nid, node in graph.nodes.items():
         source = node.get("source")
         if not isinstance(source, dict) or not isinstance(source.get("path"), str):
@@ -424,6 +445,8 @@ def _check_structural(graph: Graph) -> None:
 
         if node["type"] == "hazard":
             _check_hazard(graph, nid, node)
+
+    _check_refinement(graph)
 
     # A `constrains` edge must be justified by the obligation's own register.
     for edge in graph.edges:
@@ -586,6 +609,130 @@ def _check_hazard(graph: Graph, nid: str, node: dict[str, Any]) -> None:
         )
 
 
+def _check_refinement(graph: Graph) -> None:
+    """The refinement chain: six levels and five ordered edges.
+
+    The structure is checked here; the three refinement orphan classes check the
+    connections that the structure permits to be absent.  A level's rank is the
+    only ordering fact: an edge connects rank ``n`` to rank ``n+1``.  An
+    ``obligation`` and an ``obligation_artefact`` that do not resolve are class
+    10, not a structural refusal, so the omission is named as an orphan.
+    """
+    levels = {
+        nid: node for nid, node in graph.nodes.items()
+        if node["type"] == "refinement_level"
+    }
+    if not levels:
+        if any(node["type"] == "refinement_edge" for node in graph.nodes.values()):
+            raise Refusal(
+                "TG_REFINEMENT_SHAPE",
+                "a refinement_edge exists but no refinement_level does",
+            )
+        return
+
+    by_rank: dict[int, str] = {}
+    for nid, node in levels.items():
+        rank = node.get("rank")
+        if not isinstance(rank, int) or isinstance(rank, bool) or rank < 1:
+            raise Refusal("TG_REFINEMENT_LEVEL", f"level {nid!r} has no positive integer rank")
+        if rank in by_rank:
+            raise Refusal(
+                "TG_REFINEMENT_LEVEL",
+                f"levels {by_rank[rank]!r} and {nid!r} share rank {rank}",
+            )
+        by_rank[rank] = nid
+        if not isinstance(node.get("name"), str) or not node["name"].strip():
+            raise Refusal("TG_REFINEMENT_LEVEL", f"level {nid!r} has no name")
+    if sorted(by_rank) != list(range(1, len(by_rank) + 1)):
+        raise Refusal(
+            "TG_REFINEMENT_LEVEL",
+            f"ranks {sorted(by_rank)} are not the consecutive set 1..{len(by_rank)}",
+        )
+
+    for nid, node in graph.nodes.items():
+        if node["type"] != "refinement_edge":
+            continue
+        src = node.get("from_level")
+        dst = node.get("to_level")
+        if src not in levels or dst not in levels:
+            raise Refusal(
+                "TG_REFINEMENT_SHAPE",
+                f"refinement edge {nid!r} names an absent level ({src!r} -> {dst!r})",
+            )
+        if levels[src]["rank"] + 1 != levels[dst]["rank"]:
+            raise Refusal(
+                "TG_REFINEMENT_SHAPE",
+                f"refinement edge {nid!r} connects rank {levels[src]['rank']} to "
+                f"rank {levels[dst]['rank']}; adjacent ranks are required",
+            )
+        if node.get("status") not in REFINEMENT_STATUSES:
+            raise Refusal(
+                "TG_REFINEMENT_EDGE",
+                f"refinement edge {nid!r} status {node.get('status')!r} is not "
+                f"one of {', '.join(sorted(REFINEMENT_STATUSES))}",
+            )
+        if not isinstance(node.get("discharged_by"), str):
+            raise Refusal("TG_REFINEMENT_EDGE", f"edge {nid!r} has no discharged_by string")
+        for key in ("invalidation_rule", "does_not_establish"):
+            value = node.get(key)
+            if not isinstance(value, str) or not value.strip():
+                raise Refusal(
+                    "TG_REFINEMENT_EDGE",
+                    f"edge {nid!r} must state {key} as a non-empty string",
+                )
+        if not isinstance(node.get("bounded_population", []), list):
+            raise Refusal("TG_REFINEMENT_EDGE", f"edge {nid!r} bounded_population is not an array")
+        for key in ("obligation", "obligation_artefact"):
+            if key in node and not isinstance(node[key], str):
+                raise Refusal("TG_REFINEMENT_OBLIGATION", f"edge {nid!r} {key} is not a string")
+        if node.get("discharge_artefact") is not None and not isinstance(
+            node.get("discharge_artefact"), str
+        ):
+            raise Refusal(
+                "TG_REFINEMENT_EDGE", f"edge {nid!r} discharge_artefact is neither a string nor null"
+            )
+
+    # Edge/level consistency and cardinality.
+    out_refines: dict[str, list[str]] = {lvl: [] for lvl in levels}
+    in_discharges: dict[str, list[str]] = {lvl: [] for lvl in levels}
+    for edge in graph.edges:
+        if edge["type"] == "refines_to":
+            level = edge["from"]
+            target = graph.nodes[edge["to"]]
+            if target["type"] != "refinement_edge" or target.get("from_level") != level:
+                raise Refusal(
+                    "TG_REFINEMENT_SHAPE",
+                    f"refines_to {level} -> {edge['to']} disagrees with the edge's from_level",
+                )
+            out_refines.setdefault(level, []).append(edge["to"])
+        elif edge["type"] == "discharges":
+            level = edge["to"]
+            source = graph.nodes[edge["from"]]
+            if source["type"] != "refinement_edge" or source.get("to_level") != level:
+                raise Refusal(
+                    "TG_REFINEMENT_SHAPE",
+                    f"discharges {edge['from']} -> {level} disagrees with the edge's to_level",
+                )
+            in_discharges.setdefault(level, []).append(edge["from"])
+        elif edge["type"] == "obligates":
+            source = graph.nodes[edge["from"]]
+            if source.get("obligation") != edge["to"]:
+                raise Refusal(
+                    "TG_REFINEMENT_OBLIGATION",
+                    f"obligates {edge['from']} -> {edge['to']} disagrees with the edge's obligation",
+                )
+    for level, edges in out_refines.items():
+        if len(edges) > 1:
+            raise Refusal(
+                "TG_REFINEMENT_SHAPE", f"level {level!r} has {len(edges)} outgoing refines_to edges"
+            )
+    for level, edges in in_discharges.items():
+        if len(edges) > 1:
+            raise Refusal(
+                "TG_REFINEMENT_SHAPE", f"level {level!r} has {len(edges)} incoming discharges edges"
+            )
+
+
 def _is_sha256(value: Any) -> bool:
     return isinstance(value, str) and len(value) == 64 and all(
         c in "0123456789abcdef" for c in value
@@ -607,6 +754,9 @@ def detect_orphans(graph: Graph, repo: Path = REPO_ROOT) -> list[Orphan]:
     orphans.extend(_class_5(graph))
     orphans.extend(_class_6(graph))
     orphans.extend(_class_7(graph))
+    orphans.extend(_class_9(graph))
+    orphans.extend(_class_10(graph))
+    orphans.extend(_class_11(graph))
     orphans.sort(key=lambda o: (o.cls, o.id))
     unique: dict[str, Orphan] = {}
     for orphan in orphans:
@@ -826,6 +976,125 @@ def _reaches_type(graph: Graph, start: str, wanted: str) -> bool:
             seen.add(target)
             stack.append(target)
     return False
+
+
+def _class_9(graph: Graph) -> Iterable[Orphan]:
+    """A level with no obligation: the chain does not connect it."""
+    levels = {
+        nid: node for nid, node in graph.nodes.items()
+        if node["type"] == "refinement_level"
+    }
+    if not levels:
+        return
+    ranks = sorted(node["rank"] for node in levels.values())
+    low, high = ranks[0], ranks[-1]
+    for nid, node in levels.items():
+        rank = node["rank"]
+        if rank > low and not _in(graph, nid, "discharges"):
+            yield Orphan(
+                id=f"ORPHAN-9:{nid}",
+                cls=9,
+                node=nid,
+                reason="level_without_obligation",
+                detail=(
+                    f"level {nid} (rank {rank}) has no incoming discharges edge, so the "
+                    "obligation that connects it to the previous level is absent"
+                ),
+            )
+        if rank < high and not _out(graph, nid, "refines_to"):
+            yield Orphan(
+                id=f"ORPHAN-9:{nid}",
+                cls=9,
+                node=nid,
+                reason="level_without_obligation",
+                detail=(
+                    f"level {nid} (rank {rank}) has no outgoing refines_to edge, so no "
+                    "refinement obligation leaves it"
+                ),
+            )
+
+
+def _class_10(graph: Graph) -> Iterable[Orphan]:
+    """A refinement obligation with no artefact that records it."""
+    for nid, node in graph.nodes.items():
+        if node["type"] != "refinement_edge":
+            continue
+        obligation = node.get("obligation")
+        target = graph.nodes.get(obligation) if isinstance(obligation, str) else None
+        if target is None or target["type"] != "obligation":
+            yield Orphan(
+                id=f"ORPHAN-10:{nid}",
+                cls=10,
+                node=nid,
+                reason="obligation_without_artefact",
+                detail=f"refinement edge {nid} names no resolvable obligation ({obligation!r})",
+            )
+            continue
+        artefact = node.get("obligation_artefact")
+        artefact_node = graph.nodes.get(artefact) if isinstance(artefact, str) else None
+        if artefact_node is None or artefact_node["type"] != "artefact":
+            yield Orphan(
+                id=f"ORPHAN-10:{nid}",
+                cls=10,
+                node=nid,
+                reason="obligation_without_artefact",
+                detail=(
+                    f"obligation {obligation} on edge {nid} names no resolvable "
+                    f"artefact ({artefact!r})"
+                ),
+            )
+
+
+def _class_11(graph: Graph) -> Iterable[Orphan]:
+    """A refinement edge with no discharge of its obligation."""
+    for nid, node in graph.nodes.items():
+        if node["type"] != "refinement_edge":
+            continue
+        status = node.get("status")
+        if status == "NONE":
+            yield Orphan(
+                id=f"ORPHAN-11:{nid}",
+                cls=11,
+                node=nid,
+                reason="edge_without_discharge",
+                detail=(
+                    f"refinement edge {nid} is recorded as NONE; no discharge of its "
+                    "obligation exists"
+                ),
+            )
+            continue
+        if status not in ("BOUNDED", "PARTIAL"):
+            continue
+        discharged_by = node.get("discharged_by", "")
+        artefact = node.get("discharge_artefact")
+        target = graph.nodes.get(artefact) if isinstance(artefact, str) else None
+        if not discharged_by.strip() or discharged_by == "UNASSIGNED":
+            yield Orphan(
+                id=f"ORPHAN-11:{nid}",
+                cls=11,
+                node=nid,
+                reason="edge_without_discharge",
+                detail=f"refinement edge {nid} claims {status} but names no discharger",
+            )
+        elif target is None or target["type"] != "artefact":
+            yield Orphan(
+                id=f"ORPHAN-11:{nid}",
+                cls=11,
+                node=nid,
+                reason="edge_without_discharge",
+                detail=(
+                    f"refinement edge {nid} claims {status} but names no resolvable "
+                    f"discharge artefact ({artefact!r})"
+                ),
+            )
+        elif status == "BOUNDED" and not node.get("bounded_population"):
+            yield Orphan(
+                id=f"ORPHAN-11:{nid}",
+                cls=11,
+                node=nid,
+                reason="edge_without_population",
+                detail=f"refinement edge {nid} claims BOUNDED but names no bounded population",
+            )
 
 
 def _class_7(graph: Graph) -> Iterable[Orphan]:

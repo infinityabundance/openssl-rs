@@ -8,7 +8,7 @@
 **Tests:** `forensics/tools/tests/test_traceability.py`.
 **Receipt:** `evidence/etp-t1/RECEIPT.md`.
 
-This document defines the traceability model, the eight orphan classes, and
+This document defines the traceability model, the eleven orphan classes, and
 what the graph deliberately does not decide. It is not a hazard analysis
 (ETP-T2), a reconciliation of the OpenSSH adjudication (ETP-T15), or an
 independent specification hierarchy (FRC-0).
@@ -51,6 +51,8 @@ detection runs.
 | `evidence` | a receipt, record, court run, instrument result or status prose | none | at least one `evidenced_by` |
 | `adjudication` | a verdict with its authority and independence status, including a typed ETP claim's recorded verdict | none | at least one `assessed_by` |
 | `release_claim` | a consumer graduation, compatibility claim or performance classification | none | at least one `releases` and every declared `constrains` (classes 3, 5) |
+| `refinement_level` | one of the six adjacent levels of the ETP-T3 refinement architecture, with a unique rank | one outgoing `refines_to` unless it is the terminal level (class 9) | one incoming `discharges` unless it is the source level (class 9) |
+| `refinement_edge` | the obligation that connects two adjacent levels, its discharger, its artefact, its invalidation rule and its status (`NONE`, `BOUNDED`, `PARTIAL`) | one `obligates` and one `discharges` | one `refines_to` |
 
 A `requirement` declares `specification_required`. When it is `true`, the model
 states that an independent specification must refine it; the absence of that
@@ -89,6 +91,17 @@ these fields, and the graph records its digest.
 | `assessed_by` | evidence \| requirement -> adjudication | the evidence or requirement is assessed by the adjudication | many-to-many | the adjudicator is the same party that produced the evidence, where independence is required (class 3) |
 | `releases` | adjudication -> release_claim | the adjudication is the recorded verdict for the claim | at least one per claim (class 3) | the verdict does not support the claimed verdict, or the adjudicator is not independent where required |
 | `constrains` | obligation -> release_claim | the open obligation blocks the release claim | at least one per declared blocking relation (class 5) | the obligation does not declare that it blocks the claim |
+| `refines_to` | refinement_level -> refinement_edge | the level is refined through this edge | exactly one per non-terminal level | the edge's `from_level` is a different level |
+| `discharges` | refinement_edge -> refinement_level | the edge produces this level | exactly one per non-source level | the edge's `to_level` is a different level |
+| `obligates` | refinement_edge -> obligation | the edge carries the named refinement obligation | exactly one per edge | the target disagrees with the edge's `obligation` field |
+
+A `refinement_edge` declares `from_level`, `to_level`, `status`, `discharged_by`,
+`obligation`, `obligation_artefact`, `discharge_artefact` (or `null`),
+`bounded_population`, `invalidation_rule` and `does_not_establish`. Its
+`from_level` and `to_level` must be adjacent ranks. A `NONE` edge is an honest
+"no discharge"; a `BOUNDED` edge names a finite population and the artefact that
+checked it; a `PARTIAL` edge names what is missing. No edge inherits a
+neighbouring edge's result.
 
 `assessed_by` from a `requirement` to an `adjudication` records a typed claim
 that asserts a property of that requirement. The ETP-1 claim inventory is typed
@@ -115,6 +128,9 @@ what it discovers.
 | 6 | `ORPHAN-6:REQ:<requirement>` and `ORPHAN-6:SPEC:<specification>` | a requirement with `specification_required: true` has no refining specification; or a specification reaches no implementation | a refining specification exists, or the requirement does not require one; or the specification reaches an implementation |
 | 7 | `ORPHAN-7:<sorted members>` | a strongly connected component of size greater than one, or a self-loop, in the support direction | the cycle no longer exists |
 | 8 | `ORPHAN-8:<node>:<path>` | a node's source path does not exist at its `bound_commit` | the path exists at the named commit |
+| 9 | `ORPHAN-9:<level>` | a non-source `refinement_level` has no incoming `discharges`, or a non-terminal level has no outgoing `refines_to` | the level is connected to its edge |
+| 10 | `ORPHAN-10:<edge>` | a `refinement_edge`'s `obligation` does not resolve to an obligation node, or `obligation_artefact` does not resolve to an artefact | the obligation and the artefact that records it exist |
+| 11 | `ORPHAN-11:<edge>` | a `refinement_edge` is `NONE`; or claims `BOUNDED`/`PARTIAL` with no discharger or no resolvable discharge artefact; or claims `BOUNDED` with no named population | the discharge exists, is named and is recorded |
 
 Class 3's allowed verdict set depends on the claim. A positive claim
 (`SAFE_COMPATIBLE`, `ESTABLISHED`, `PASS`, `ACCEPTED`) is supported only by a
@@ -160,6 +176,10 @@ with the declared register. It exits non-zero when:
 | `TG_HAZARD_BARRIER_UNEVIDENCED` | `EVIDENCED` has no evidence id, or a claimed/absent barrier cites one |
 | `TG_HAZARD_UNMOTIVATED` | a hazard has no `motivates` edge |
 | `TG_HAZARD_CLAIM_UNRELATED` | a hazard names a release claim its requirements and obligations do not reach |
+| `TG_REFINEMENT_LEVEL` | a refinement level has no positive integer rank, a duplicate rank, or a rank set that is not consecutive |
+| `TG_REFINEMENT_EDGE` | a refinement edge has an unknown status, no `discharged_by`, or no `invalidation_rule`/`does_not_establish` |
+| `TG_REFINEMENT_OBLIGATION` | a refinement obligation field is the wrong type, or an `obligates` edge disagrees with it |
+| `TG_REFINEMENT_SHAPE` | a refinement edge joins non-adjacent ranks, a level has two outgoing/incoming edges, or an edge/level endpoint disagrees |
 
 `TG_UNDECLARED_ORPHAN` is the omission case: a new gap cannot enter the graph
 without being named. `TG_STALE_ORPHAN` is its converse: a gap cannot remain
@@ -172,7 +192,8 @@ It is a view, not an acceptance: only `validate` exits 0.
 
 ## 6. The seeded graph
 
-At `S = 21bea3188`, after the ETP-T2 hazard projection:
+At `S = 21bea3188`, after the ETP-T2 hazard projection, and after the ETP-T3
+refinement projection:
 
 | type | count |
 |---|---|
@@ -182,11 +203,13 @@ At `S = 21bea3188`, after the ETP-T2 hazard projection:
 | specification | 0 |
 | implementation | 20 |
 | artefact | 26 |
-| obligation | 81 |
+| obligation | 86 |
 | evidence | 101 |
 | adjudication | 41 |
 | release_claim | 6 |
-| **total** | **325** |
+| refinement_level | 6 |
+| refinement_edge | 5 |
+| **total** | **342** |
 
 | edge | count |
 |---|---|
@@ -199,7 +222,10 @@ At `S = 21bea3188`, after the ETP-T2 hazard projection:
 | `assessed_by` | 130 |
 | `releases` | 8 |
 | `constrains` | 33 |
-| **total** | **403** |
+| `refines_to` | 5 |
+| `discharges` | 5 |
+| `obligates` | 5 |
+| **total** | **423** |
 
 Provenance of the seed:
 
@@ -251,6 +277,7 @@ Identity binding is explicit, because the records are not all bound to `S`:
 | `21bea3188` | 258 | implementations, artefacts, hazards and records at this candidate |
 | `9372bb28b` | 66 | the evidence records cited by the ETP-1 typed claims, bound to the ETP-0 source identity |
 | `cc2e5fa32` | 1 | the withdrawn O7 revision, read at the commit the claim names |
+| `794a7c549` | 17 | the ETP-T3 refinement chain: six levels, five edges, five obligations and the refinement record artefact |
 
 The two populations are not silently merged. The claim tier is evidence about
 `9372bb28b`; the implementation tier is `21bea3188`. No
@@ -260,7 +287,7 @@ correctly refuse it as class 4. The consequence is stated in section 7.
 
 ## 7. What the graph shows that was not visible before
 
-1. **No specification exists.** Eleven safety and functional requirements
+1. **No specification exists.** Twelve safety and functional requirements
    declare that an independent specification is required, and none has one.
    The graph makes the absence a node-level fact (`ORPHAN-6:REQ:*`) rather than
    a sentence in a queue.
@@ -294,7 +321,7 @@ correctly refuse it as class 4. The consequence is stated in section 7.
 9. **The implementation tier has no fresh receipt evidence.** The records cited
    by the typed claims are bound to `9372bb28b`, and the implementation is at
    `21bea3188`. The graph draws no support edge across that boundary. This is
-   not one of the eight orphan classes; it is the freshness problem ETP-T9
+   not one of the eleven orphan classes; it is the freshness problem ETP-T9
    owns, and it is visible in the bound-commit table rather than hidden.
 10. **The ETP-T2 hazards are nodes, not prose.** Twenty hazards carry a scope, a
    trigger classification and a barrier state. Four have no barrier at all
@@ -303,6 +330,14 @@ correctly refuse it as class 4. The consequence is stated in section 7.
    release claim because no claim declares a memory requirement in scope. The
    projection is checked against the register's digest and fields, so a hazard
    cannot be softened in one artefact and left unchanged in the other.
+11. **The refinement chain is missing three of five discharges.** The six levels
+   and five edges are nodes and edges, so the chain cannot be described in prose
+   while an edge is absent from the graph. Three edges are `NONE` (class 11):
+   there is no independent executable reference (`RFE-1`), no reference-to-Rust
+   differential (`RFE-2`), and no source-to-binary correspondence (`RFE-4`). The
+   other two are `PARTIAL`: the ABI contract is not established for ownership,
+   error queue and callbacks (`RFE-3`), and the consumer closures do not establish
+   the `Pre(c) ⇒ P` obligation (`RFE-5`).
 
 ## 8. Coverage, stated honestly
 
@@ -318,11 +353,12 @@ correctly refuse it as class 4. The consequence is stated in section 7.
   that exists, population coverage is `UNKNOWN`.
 - MC/DC applies to executable decision logic, not to a graph. No MC/DC result is
   claimed for `forensics/tools/traceability.py`, for the crate, or for any
-  court. The 17 checks in `test_traceability.py` are behavioural controls: one
-  positive control, ten controls covering the eight orphan classes (class 4 and
-  class 6 have two branches each), and six structural, register and
-  reproducibility controls. They demonstrate that the named refusal fires on a
-  mutation; they are not a control-flow coverage measurement.
+  court. The 24 checks in `test_traceability.py` are behavioural controls: four
+  positive, determinism, seed-reproduction and report controls; fourteen controls
+  covering the eleven orphan classes (class 4, class 6 and class 11 have two
+  branches each); and six structural and register controls. They demonstrate
+  that the named refusal fires on a mutation; they are not a control-flow
+  coverage measurement.
 - If a release claim ever cites MC/DC or structural coverage, it must name the
   instrument, the decision population, the condition/decision table and the
   measured result under `REQ-EVID-02`. No such record exists, so no claim may
@@ -340,10 +376,15 @@ defect classes it names, and nothing is claimed about decision coverage.
   compatibility or cryptographic correctness.
 - A specification node's independence is a claim about provenance, not about
   correctness, and there are no specification nodes at this candidate.
-- The checker detects the eight named omissions. It does not detect stale
+- The checker detects the eleven named omissions. It does not detect stale
   evidence, an incorrect measurement, a false claim that cites a real record, a
   requirement that was never written down, or an implementation-derived
   specification whose provenance is concealed.
+- Classes 9-11 check the refinement chain's connectivity, obligation artefact and
+  discharge status. They do not establish that a discharge is correct, that a
+  `BOUNDED` population is representative, or that a `PARTIAL` statement names
+  every missing piece. A `NONE` edge is the honest default and is never
+  upgraded by this model.
 - Class 6 can only flag the requirement-side and specification-side absence of a
   specification. It cannot decide whether a specification that exists is
   independent; that is a reviewer judgment under FRC-0.
@@ -366,9 +407,13 @@ python3 forensics/tools/traceability.py validate
 python3 forensics/tools/traceability.py report
 python3 forensics/tools/traceability.py report --json
 python3 forensics/tools/etp_t1_seed.py            # regenerate the committed graph
+python3 forensics/tools/spec_guard.py check
+python3 forensics/tools/spec_guard.py inventory
+python3 forensics/tools/spec_guard.py self-test
 python3 forensics/tools/hazard_register.py validate
 python3 forensics/tools/hazard_register.py report
 python3 forensics/tools/tests/test_traceability.py
+python3 forensics/tools/tests/test_spec_guard.py
 python3 forensics/tools/tests/test_hazard_register.py
 ```
 

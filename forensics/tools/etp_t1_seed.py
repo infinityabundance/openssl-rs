@@ -22,6 +22,9 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 S = "21bea318819a56f641b3aa2f25027216b97a1c4d"
+# The ETP-T3 analysis candidate.  The refinement nodes cite documents and
+# evidence that exist here; the rest of the graph remains bound to S.
+A = "794a7c5491e6095992744f1ab624f5183ca3457d"
 S0 = "9372bb28b2fbe2f71cf2aa2ab501414d45e87d42"  # ETP-0/ETP-1 claims identity
 DEFAULT_OUTPUT = REPO / "evidence" / "etp-t1" / "TRACEABILITY.json"
 
@@ -852,6 +855,119 @@ for path in ["court/tmp/t20/NOTES.md", "court/tmp/t21/libcrypto.so.3",
         "would_close": "Track the artefact (or a content-addressed copy) at the commit the typed "
                        "claim names, or convert the claim's obligation into a tracked replacement.",
     })
+
+# ---------------------------------------------------------------- refinement
+# ETP-T3 owns the refinement architecture.  The six adjacent levels and the five
+# edges between them are nodes in this graph so the orphan machinery covers the
+# chain.  The obligation and status text projected here is the ETP-T3 record;
+# the normative statement of the chain is docs/FORMAL-REFINEMENT-CERTIFICATION.md
+# section 3 and docs/REFINEMENT-ARCHITECTURE.md.
+REFINEMENT_SOURCE = src(
+    "docs/FORMAL-REFINEMENT-CERTIFICATION.md", "§3",
+    "Each link is a separate claim with its own evidence, TCB and invalidation rule.",
+    bound=A,
+)
+
+LEVELS = [
+    ("LVL-L1", 1, "abstract specification",
+     "The normative statement of the operation, independent of any implementation."),
+    ("LVL-L2", 2, "executable reference",
+     "An independent executable implementation of the abstract specification."),
+    ("LVL-L3", 3, "Rust implementation",
+     "The crate under src/, whose safe interior refines the executable reference."),
+    ("LVL-L4", 4, "ABI contract",
+     "The observable C surface: signatures, ownership, error queue and callback semantics."),
+    ("LVL-L5", 5, "machine code",
+     "The exact compiled artefact deployed to a consumer."),
+    ("LVL-L6", 6, "consumer composition",
+     "The loaded DSO in a real consumer, with every reachable call site's precondition."),
+]
+for lid, rank, name, title in LEVELS:
+    node(lid, "refinement_level", f"Level {rank}: {name}", REFINEMENT_SOURCE,
+         rank=rank, name=name, description=title)
+
+# The artefact that records every refinement obligation and its status.  It does
+# not exist at the graph's bound commits yet, so its own digest is deferred to
+# the ETP-T3 evidence commit while the node's source is the tracked document
+# that states the chain.
+node("ART-RFE-RECORD", "artefact", "ETP-T3 refinement architecture record",
+     REFINEMENT_SOURCE,
+     kind="refinement_record", path="evidence/etp-t3/REFINEMENT.json",
+     digest="UNKNOWN", digest_identity="evidence commit E",
+     settling_method="sha256 of evidence/etp-t3/REFINEMENT.json at the ETP-T3 evidence commit")
+
+REFINEMENT_EDGES = [
+    ("RFE-1", "LVL-L1", "LVL-L2", "NONE", "UNASSIGNED (ETP-T5 / FRC-1)", None,
+     [],
+     "OBL-RFE-1",
+     "No independent executable reference exists; ETP-T5 is TODO.",
+     "A change to the abstract specification, the reference, or the ETP-T5 conformance tool invalidates it.",
+     "A proof about the abstract specification says nothing about whether the reference implements it; the reference can be wrong in the same way as any implementation."),
+    ("RFE-2", "LVL-L2", "LVL-L3", "NONE", "UNASSIGNED (ETP-T5 differential)", None,
+     [],
+     "OBL-RFE-2",
+     "No differential comparison against an independent executable reference exists; the differential courts compare against the OpenSSL authority, not against a reference derived from the abstract specification.",
+     "A change to the reference, the Rust implementation, or the differential harness invalidates it.",
+     "Agreement on a finite input population is not a refinement proof; a passing differential court is not evidence about inputs outside the population or about failure behaviour it did not exercise."),
+    ("RFE-3", "LVL-L3", "LVL-L4", "PARTIAL",
+     "ABI symbol, layout and version-script checks at the candidate",
+     "ART-FILE-ABI-LAYOUT",
+     ["the exported symbol set and the public layout probes; ownership, error-queue and callback semantics are not established"],
+     "OBL-RFE-3",
+     "The exported symbol set and public layouts are checked, but ownership, error-queue ordering and callback semantics are not established at the ABI contract.",
+     "A change to any exported symbol, #[repr(C)] layout, error path or callback signature invalidates it; the contract must be re-measured at the new candidate.",
+     "Checking the exported symbol set and layouts does not establish ownership, error-queue ordering or callback semantics; an ABI match is not a semantic or memory-safety result."),
+    ("RFE-4", "LVL-L4", "LVL-L5", "NONE", "UNASSIGNED (ETP-T6 / FRC-4)", None,
+     [],
+     "OBL-RFE-4",
+     "No object-code correspondence exists between the Rust source and the deployed DSO; reproducibility is a build-identity result, not a refinement argument.",
+     "A change to the compiler, linker, assembler, target, profile or any build input invalidates it; no result carries across targets.",
+     "A proof about the source is not a proof about the binary; build reproducibility shows the binary is deterministic, not that it refines the source, and source-level constant-time intent is not binary timing."),
+    ("RFE-5", "LVL-L5", "LVL-L6", "PARTIAL",
+     "consumer reachability closure at the loaded DSO",
+     "ART-CURL-DSO-FD25",
+     ["curl closure at fd25cc9e: 644 reachable files, 7/7 reachable production obligations",
+      "ssh closure at b85c: 625 reachable files, 290/290 reachable production obligations"],
+     "OBL-RFE-5",
+     "The consumer closures classify reachability but do not establish Pre(c) => P at every reachable call site; the b85c graduation is NOT_ESTABLISHED and the curl element-7 refusal population remains open.",
+     "A change to the DSO, the loader resolution or the consumer binary invalidates it; the closure is re-run at the new identities.",
+     "A reachability classification is not a memory-safety proof and not a SAFE_COMPATIBLE promotion; the closure's own non-claims state that a discharged obligation means an existing receipt covers a site, not that the site's precondition is established."),
+]
+
+for eid, src_lvl, dst_lvl, status, discharger, discharge_artefact, population, obl, statement, invalidation, not_established in REFINEMENT_EDGES:
+    node(eid, "refinement_edge", f"Refinement edge {src_lvl} -> {dst_lvl}",
+         REFINEMENT_SOURCE,
+         from_level=src_lvl, to_level=dst_lvl, status=status,
+         discharged_by=discharger, discharge_artefact=discharge_artefact,
+         bounded_population=population, obligation=obl,
+         obligation_artefact="ART-RFE-RECORD",
+         obligation_statement=statement,
+         invalidation_rule=invalidation,
+         does_not_establish=not_established)
+    edge(src_lvl, "refines_to", eid, f"{src_lvl} is refined through {eid}")
+    edge(eid, "discharges", dst_lvl, f"{eid} produces {dst_lvl}")
+
+    if obl in obligation_ids:
+        raise SystemExit(f"duplicate obligation {obl}")
+    obligation_ids.add(obl)
+    node(obl, "obligation", f"Refinement obligation on {eid}", REFINEMENT_SOURCE,
+         statement=statement, state="OPEN",
+         settled_by={
+             "OBL-RFE-1": "An independent executable reference and a conformance run at a named candidate (ETP-T5, FRC-1).",
+             "OBL-RFE-2": "A differential run against that reference over a frozen input population, including failure behaviour (ETP-T5).",
+             "OBL-RFE-3": "Ownership, error-queue and callback semantics measured at the ABI contract, with the mechanisms' obligations discharged.",
+             "OBL-RFE-4": "Object-code correspondence for the exact artefact, including the reassembly question (ETP-T6, FRC-4).",
+             "OBL-RFE-5": "Every reachable consumer call site's precondition established at the loaded DSO identity (ETP-T10), and the ETP-T15 reconciliation closed.",
+         }[obl],
+         blocks_release_claims=[])
+    edge(eid, "obligates", obl, f"{eid} carries the refinement obligation {obl}")
+    edge("ART-RFE-RECORD", "raises", obl, f"the refinement record states {obl}")
+
+for eid, _src, _dst, status, _by, _art, _pop, _obl, _st, _inv, _not in REFINEMENT_EDGES:
+    if status == "NONE":
+        orphan(f"ORPHAN-11:{eid}", 11, eid, "edge_without_discharge",
+               "An independent reference, differential run or object-code correspondence is produced at a "
+               "named candidate and the edge status is raised to BOUNDED or PARTIAL with the evidence recorded.")
 
 # ---------------------------------------------------------------- output
 nodes_out = [nodes[k] for k in sorted(nodes)]

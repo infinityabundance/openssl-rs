@@ -72,12 +72,14 @@ class TraceabilityControls(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("0 undeclared, 0 stale", result.stdout)
         declared = load_graph()["orphans"]
-        # ETP-T2 adds REQ-CORR-01, whose independent specification does not exist,
-        # so the declared population grows from 20 to 21 without relaxing a control.
-        self.assertEqual(len(declared), 21)
+        # ETP-T3 adds three class-11 orphans: edges RFE-1, RFE-2 and RFE-4 are
+        # honestly recorded as NONE.  No other class grows, and no control is
+        # relaxed: the refinement chain is a new omission surface, not a way to
+        # remove an existing declaration.
+        self.assertEqual(len(declared), 24)
         self.assertEqual(
             sorted({entry["class"] for entry in declared}),
-            [1, 3, 6, 8],
+            [1, 3, 6, 8, 11],
         )
 
     def test_validate_output_is_byte_identical_across_runs(self) -> None:
@@ -232,6 +234,69 @@ class TraceabilityControls(unittest.TestCase):
         self.assert_refused(
             result, "ORPHAN-8:EVD-ETP0-RECEIPT:evidence/etp0/RECEIPT-absent.md"
         )
+
+    # ---------------------------------------------------------------- class 9
+    def test_class_9_refinement_level_without_obligation(self) -> None:
+        document = load_graph()
+        self.drop_edges(
+            document,
+            lambda e: e["type"] == "refines_to" and e["from"] == "LVL-L3",
+        )
+        result = self.run_checker(document)
+        self.assert_refused(result, "ORPHAN-9:LVL-L3")
+        self.assertIn("no outgoing refines_to", result.stderr)
+
+    # ---------------------------------------------------------------- class 10
+    def test_class_10_refinement_obligation_without_artefact(self) -> None:
+        document = load_graph()
+        node = next(n for n in document["nodes"] if n["id"] == "RFE-1")
+        node["obligation_artefact"] = "ART-ABSENT"
+        result = self.run_checker(document)
+        self.assert_refused(result, "ORPHAN-10:RFE-1")
+        self.assertIn("names no resolvable artefact", result.stderr)
+
+    # ---------------------------------------------------------------- class 11
+    def test_class_11_refinement_edge_without_discharge(self) -> None:
+        document = load_graph()
+        document["orphans"] = [
+            entry for entry in document["orphans"]
+            if entry["id"] != "ORPHAN-11:RFE-1"
+        ]
+        result = self.run_checker(document)
+        self.assert_refused(result, "ORPHAN-11:RFE-1")
+
+    def test_class_11_claimed_discharge_without_artefact(self) -> None:
+        document = load_graph()
+        node = next(n for n in document["nodes"] if n["id"] == "RFE-3")
+        node["discharge_artefact"] = None
+        result = self.run_checker(document)
+        self.assert_refused(result, "ORPHAN-11:RFE-3")
+        self.assertIn("names no resolvable discharge artefact", result.stderr)
+
+    # ------------------------------------------------- refinement structure
+    def test_refinement_rank_must_be_unique(self) -> None:
+        document = load_graph()
+        node = next(n for n in document["nodes"] if n["id"] == "LVL-L2")
+        node["rank"] = 1
+        result = self.run_checker(document)
+        self.assert_refused(result, "TG_REFINEMENT_LEVEL")
+
+    def test_refinement_edge_must_join_adjacent_ranks(self) -> None:
+        document = load_graph()
+        node = next(n for n in document["nodes"] if n["id"] == "RFE-1")
+        node["to_level"] = "LVL-L3"
+        result = self.run_checker(document)
+        self.assert_refused(result, "TG_REFINEMENT_SHAPE")
+
+    def test_refinement_obligates_edge_must_agree_with_the_field(self) -> None:
+        document = load_graph()
+        edge = next(
+            e for e in document["edges"]
+            if e["type"] == "obligates" and e["from"] == "RFE-1"
+        )
+        edge["to"] = "OBL-RFE-2"
+        result = self.run_checker(document)
+        self.assert_refused(result, "TG_REFINEMENT_OBLIGATION")
 
     def test_dangling_edge_is_a_structural_refusal(self) -> None:
         document = load_graph()

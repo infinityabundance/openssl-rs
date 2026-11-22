@@ -625,6 +625,24 @@
       "note": "the PFP-1 measured candidate; built under court/tmp"
     },
     {
+      "id": "ART-RFE-RECORD",
+      "type": "artefact",
+      "title": "ETP-T3 refinement architecture record",
+      "source": {
+        "path": "docs/FORMAL-REFINEMENT-CERTIFICATION.md",
+        "span": "\u00a73",
+        "quote": "Each link is a separate claim with its own evidence, TCB and invalidation rule.",
+        "quote_kind": "fragment",
+        "sha256": "85aa9734b4ee0f34ae5572f1b65f7cf075f437964c2cdd90467c02f54aa7e6ee",
+        "bound_commit": "794a7c5491e6095992744f1ab624f5183ca3457d"
+      },
+      "kind": "refinement_record",
+      "path": "evidence/etp-t3/REFINEMENT.json",
+      "digest": "UNKNOWN",
+      "digest_identity": "evidence commit E",
+      "settling_method": "sha256 of evidence/etp-t3/REFINEMENT.json at the ETP-T3 evidence commit"
+    },
+    {
       "id": "ETP0-CLM-001",
       "type": "adjudication",
       "title": "Typed claim ETP0-CLM-001 (claim-governance)",
@@ -4238,6 +4256,102 @@
       "location": "src/runtime/secret.rs"
     },
     {
+      "id": "LVL-L1",
+      "type": "refinement_level",
+      "title": "Level 1: abstract specification",
+      "source": {
+        "path": "docs/FORMAL-REFINEMENT-CERTIFICATION.md",
+        "span": "\u00a73",
+        "quote": "Each link is a separate claim with its own evidence, TCB and invalidation rule.",
+        "quote_kind": "fragment",
+        "sha256": "85aa9734b4ee0f34ae5572f1b65f7cf075f437964c2cdd90467c02f54aa7e6ee",
+        "bound_commit": "794a7c5491e6095992744f1ab624f5183ca3457d"
+      },
+      "rank": 1,
+      "name": "abstract specification",
+      "description": "The normative statement of the operation, independent of any implementation."
+    },
+    {
+      "id": "LVL-L2",
+      "type": "refinement_level",
+      "title": "Level 2: executable reference",
+      "source": {
+        "path": "docs/FORMAL-REFINEMENT-CERTIFICATION.md",
+        "span": "\u00a73",
+        "quote": "Each link is a separate claim with its own evidence, TCB and invalidation rule.",
+        "quote_kind": "fragment",
+        "sha256": "85aa9734b4ee0f34ae5572f1b65f7cf075f437964c2cdd90467c02f54aa7e6ee",
+        "bound_commit": "794a7c5491e6095992744f1ab624f5183ca3457d"
+      },
+      "rank": 2,
+      "name": "executable reference",
+      "description": "An independent executable implementation of the abstract specification."
+    },
+    {
+      "id": "LVL-L3",
+      "type": "refinement_level",
+      "title": "Level 3: Rust implementation",
+      "source": {
+        "path": "docs/FORMAL-REFINEMENT-CERTIFICATION.md",
+        "span": "\u00a73",
+        "quote": "Each link is a separate claim with its own evidence, TCB and invalidation rule.",
+        "quote_kind": "fragment",
+        "sha256": "85aa9734b4ee0f34ae5572f1b65f7cf075f437964c2cdd90467c02f54aa7e6ee",
+        "bound_commit": "794a7c5491e6095992744f1ab624f5183ca3457d"
+      },
+      "rank": 3,
+      "name": "Rust implementation",
+      "description": "The crate under src/, whose safe interior refines the executable reference."
+    },
+    {
+      "id": "LVL-L4",
+      "type": "refinement_level",
+      "title": "Level 4: ABI contract",
+      "source": {
+        "path": "docs/FORMAL-REFINEMENT-CERTIFICATION.md",
+        "span": "\u00a73",
+        "quote": "Each link is a separate claim with its own evidence, TCB and invalidation rule.",
+        "quote_kind": "fragment",
+        "sha256": "85aa9734b4ee0f34ae5572f1b65f7cf075f437964c2cdd90467c02f54aa7e6ee",
+        "bound_commit": "794a7c5491e6095992744f1ab624f5183ca3457d"
+      },
+      "rank": 4,
+      "name": "ABI contract",
+      "description": "The observable C surface: signatures, ownership, error queue and callback semantics."
+    },
+    {
+      "id": "LVL-L5",
+      "type": "refinement_level",
+      "title": "Level 5: machine code",
+      "source": {
+        "path": "docs/FORMAL-REFINEMENT-CERTIFICATION.md",
+        "span": "\u00a73",
+        "quote": "Each link is a separate claim with its own evidence, TCB and invalidation rule.",
+        "quote_kind": "fragment",
+        "sha256": "85aa9734b4ee0f34ae5572f1b65f7cf075f437964c2cdd90467c02f54aa7e6ee",
+        "bound_commit": "794a7c5491e6095992744f1ab624f5183ca3457d"
+      },
+      "rank": 5,
+      "name": "machine code",
+      "description": "The exact compiled artefact deployed to a consumer."
+    },
+    {
+      "id": "LVL-L6",
+      "type": "refinement_level",
+      "title": "Level 6: consumer composition",
+      "source": {
+        "path": "docs/FORMAL-REFINEMENT-CERTIFICATION.md",
+        "span": "\u00a73",
+        "quote": "Each link is a separate claim with its own evidence, TCB and invalidation rule.",
+        "quote_kind": "fragment",
+        "sha256": "85aa9734b4ee0f34ae5572f1b65f7cf075f437964c2cdd90467c02f54aa7e6ee",
+        "bound_commit": "794a7c5491e6095992744f1ab624f5183ca3457d"
+      },
+      "rank": 6,
+      "name": "consumer composition",
+      "description": "The loaded DSO in a real consumer, with every reachable call site's precondition."
+    },
+    {
       "id": "OBL-A17-RESIDUAL",
       "type": "obligation",
       "title": "Open queue item A17: OBL-A17-RESIDUAL",
@@ -5309,6 +5423,91 @@
       "blocks_release_claims": []
     },
     {
+      "id": "OBL-RFE-1",
+      "type": "obligation",
+      "title": "Refinement obligation on RFE-1",
+      "source": {
+        "path": "docs/FORMAL-REFINEMENT-CERTIFICATION.md",
+        "span": "\u00a73",
+        "quote": "Each link is a separate claim with its own evidence, TCB and invalidation rule.",
+        "quote_kind": "fragment",
+        "sha256": "85aa9734b4ee0f34ae5572f1b65f7cf075f437964c2cdd90467c02f54aa7e6ee",
+        "bound_commit": "794a7c5491e6095992744f1ab624f5183ca3457d"
+      },
+      "statement": "No independent executable reference exists; ETP-T5 is TODO.",
+      "state": "OPEN",
+      "settled_by": "An independent executable reference and a conformance run at a named candidate (ETP-T5, FRC-1).",
+      "blocks_release_claims": []
+    },
+    {
+      "id": "OBL-RFE-2",
+      "type": "obligation",
+      "title": "Refinement obligation on RFE-2",
+      "source": {
+        "path": "docs/FORMAL-REFINEMENT-CERTIFICATION.md",
+        "span": "\u00a73",
+        "quote": "Each link is a separate claim with its own evidence, TCB and invalidation rule.",
+        "quote_kind": "fragment",
+        "sha256": "85aa9734b4ee0f34ae5572f1b65f7cf075f437964c2cdd90467c02f54aa7e6ee",
+        "bound_commit": "794a7c5491e6095992744f1ab624f5183ca3457d"
+      },
+      "statement": "No differential comparison against an independent executable reference exists; the differential courts compare against the OpenSSL authority, not against a reference derived from the abstract specification.",
+      "state": "OPEN",
+      "settled_by": "A differential run against that reference over a frozen input population, including failure behaviour (ETP-T5).",
+      "blocks_release_claims": []
+    },
+    {
+      "id": "OBL-RFE-3",
+      "type": "obligation",
+      "title": "Refinement obligation on RFE-3",
+      "source": {
+        "path": "docs/FORMAL-REFINEMENT-CERTIFICATION.md",
+        "span": "\u00a73",
+        "quote": "Each link is a separate claim with its own evidence, TCB and invalidation rule.",
+        "quote_kind": "fragment",
+        "sha256": "85aa9734b4ee0f34ae5572f1b65f7cf075f437964c2cdd90467c02f54aa7e6ee",
+        "bound_commit": "794a7c5491e6095992744f1ab624f5183ca3457d"
+      },
+      "statement": "The exported symbol set and public layouts are checked, but ownership, error-queue ordering and callback semantics are not established at the ABI contract.",
+      "state": "OPEN",
+      "settled_by": "Ownership, error-queue and callback semantics measured at the ABI contract, with the mechanisms' obligations discharged.",
+      "blocks_release_claims": []
+    },
+    {
+      "id": "OBL-RFE-4",
+      "type": "obligation",
+      "title": "Refinement obligation on RFE-4",
+      "source": {
+        "path": "docs/FORMAL-REFINEMENT-CERTIFICATION.md",
+        "span": "\u00a73",
+        "quote": "Each link is a separate claim with its own evidence, TCB and invalidation rule.",
+        "quote_kind": "fragment",
+        "sha256": "85aa9734b4ee0f34ae5572f1b65f7cf075f437964c2cdd90467c02f54aa7e6ee",
+        "bound_commit": "794a7c5491e6095992744f1ab624f5183ca3457d"
+      },
+      "statement": "No object-code correspondence exists between the Rust source and the deployed DSO; reproducibility is a build-identity result, not a refinement argument.",
+      "state": "OPEN",
+      "settled_by": "Object-code correspondence for the exact artefact, including the reassembly question (ETP-T6, FRC-4).",
+      "blocks_release_claims": []
+    },
+    {
+      "id": "OBL-RFE-5",
+      "type": "obligation",
+      "title": "Refinement obligation on RFE-5",
+      "source": {
+        "path": "docs/FORMAL-REFINEMENT-CERTIFICATION.md",
+        "span": "\u00a73",
+        "quote": "Each link is a separate claim with its own evidence, TCB and invalidation rule.",
+        "quote_kind": "fragment",
+        "sha256": "85aa9734b4ee0f34ae5572f1b65f7cf075f437964c2cdd90467c02f54aa7e6ee",
+        "bound_commit": "794a7c5491e6095992744f1ab624f5183ca3457d"
+      },
+      "statement": "The consumer closures classify reachability but do not establish Pre(c) => P at every reachable call site; the b85c graduation is NOT_ESTABLISHED and the curl element-7 refusal population remains open.",
+      "state": "OPEN",
+      "settled_by": "Every reachable consumer call site's precondition established at the loaded DSO identity (ETP-T10), and the ETP-T15 reconciliation closed.",
+      "blocks_release_claims": []
+    },
+    {
       "id": "OBL-RSA-EXTKEY-ORACLE",
       "type": "obligation",
       "title": "ETP-T2 HAZ-15 obligation: OBL-RSA-EXTKEY-ORACLE",
@@ -6152,6 +6351,131 @@
       "externally_observable": true
     },
     {
+      "id": "RFE-1",
+      "type": "refinement_edge",
+      "title": "Refinement edge LVL-L1 -> LVL-L2",
+      "source": {
+        "path": "docs/FORMAL-REFINEMENT-CERTIFICATION.md",
+        "span": "\u00a73",
+        "quote": "Each link is a separate claim with its own evidence, TCB and invalidation rule.",
+        "quote_kind": "fragment",
+        "sha256": "85aa9734b4ee0f34ae5572f1b65f7cf075f437964c2cdd90467c02f54aa7e6ee",
+        "bound_commit": "794a7c5491e6095992744f1ab624f5183ca3457d"
+      },
+      "from_level": "LVL-L1",
+      "to_level": "LVL-L2",
+      "status": "NONE",
+      "discharged_by": "UNASSIGNED (ETP-T5 / FRC-1)",
+      "discharge_artefact": null,
+      "bounded_population": [],
+      "obligation": "OBL-RFE-1",
+      "obligation_artefact": "ART-RFE-RECORD",
+      "obligation_statement": "No independent executable reference exists; ETP-T5 is TODO.",
+      "invalidation_rule": "A change to the abstract specification, the reference, or the ETP-T5 conformance tool invalidates it.",
+      "does_not_establish": "A proof about the abstract specification says nothing about whether the reference implements it; the reference can be wrong in the same way as any implementation."
+    },
+    {
+      "id": "RFE-2",
+      "type": "refinement_edge",
+      "title": "Refinement edge LVL-L2 -> LVL-L3",
+      "source": {
+        "path": "docs/FORMAL-REFINEMENT-CERTIFICATION.md",
+        "span": "\u00a73",
+        "quote": "Each link is a separate claim with its own evidence, TCB and invalidation rule.",
+        "quote_kind": "fragment",
+        "sha256": "85aa9734b4ee0f34ae5572f1b65f7cf075f437964c2cdd90467c02f54aa7e6ee",
+        "bound_commit": "794a7c5491e6095992744f1ab624f5183ca3457d"
+      },
+      "from_level": "LVL-L2",
+      "to_level": "LVL-L3",
+      "status": "NONE",
+      "discharged_by": "UNASSIGNED (ETP-T5 differential)",
+      "discharge_artefact": null,
+      "bounded_population": [],
+      "obligation": "OBL-RFE-2",
+      "obligation_artefact": "ART-RFE-RECORD",
+      "obligation_statement": "No differential comparison against an independent executable reference exists; the differential courts compare against the OpenSSL authority, not against a reference derived from the abstract specification.",
+      "invalidation_rule": "A change to the reference, the Rust implementation, or the differential harness invalidates it.",
+      "does_not_establish": "Agreement on a finite input population is not a refinement proof; a passing differential court is not evidence about inputs outside the population or about failure behaviour it did not exercise."
+    },
+    {
+      "id": "RFE-3",
+      "type": "refinement_edge",
+      "title": "Refinement edge LVL-L3 -> LVL-L4",
+      "source": {
+        "path": "docs/FORMAL-REFINEMENT-CERTIFICATION.md",
+        "span": "\u00a73",
+        "quote": "Each link is a separate claim with its own evidence, TCB and invalidation rule.",
+        "quote_kind": "fragment",
+        "sha256": "85aa9734b4ee0f34ae5572f1b65f7cf075f437964c2cdd90467c02f54aa7e6ee",
+        "bound_commit": "794a7c5491e6095992744f1ab624f5183ca3457d"
+      },
+      "from_level": "LVL-L3",
+      "to_level": "LVL-L4",
+      "status": "PARTIAL",
+      "discharged_by": "ABI symbol, layout and version-script checks at the candidate",
+      "discharge_artefact": "ART-FILE-ABI-LAYOUT",
+      "bounded_population": [
+        "the exported symbol set and the public layout probes; ownership, error-queue and callback semantics are not established"
+      ],
+      "obligation": "OBL-RFE-3",
+      "obligation_artefact": "ART-RFE-RECORD",
+      "obligation_statement": "The exported symbol set and public layouts are checked, but ownership, error-queue ordering and callback semantics are not established at the ABI contract.",
+      "invalidation_rule": "A change to any exported symbol, #[repr(C)] layout, error path or callback signature invalidates it; the contract must be re-measured at the new candidate.",
+      "does_not_establish": "Checking the exported symbol set and layouts does not establish ownership, error-queue ordering or callback semantics; an ABI match is not a semantic or memory-safety result."
+    },
+    {
+      "id": "RFE-4",
+      "type": "refinement_edge",
+      "title": "Refinement edge LVL-L4 -> LVL-L5",
+      "source": {
+        "path": "docs/FORMAL-REFINEMENT-CERTIFICATION.md",
+        "span": "\u00a73",
+        "quote": "Each link is a separate claim with its own evidence, TCB and invalidation rule.",
+        "quote_kind": "fragment",
+        "sha256": "85aa9734b4ee0f34ae5572f1b65f7cf075f437964c2cdd90467c02f54aa7e6ee",
+        "bound_commit": "794a7c5491e6095992744f1ab624f5183ca3457d"
+      },
+      "from_level": "LVL-L4",
+      "to_level": "LVL-L5",
+      "status": "NONE",
+      "discharged_by": "UNASSIGNED (ETP-T6 / FRC-4)",
+      "discharge_artefact": null,
+      "bounded_population": [],
+      "obligation": "OBL-RFE-4",
+      "obligation_artefact": "ART-RFE-RECORD",
+      "obligation_statement": "No object-code correspondence exists between the Rust source and the deployed DSO; reproducibility is a build-identity result, not a refinement argument.",
+      "invalidation_rule": "A change to the compiler, linker, assembler, target, profile or any build input invalidates it; no result carries across targets.",
+      "does_not_establish": "A proof about the source is not a proof about the binary; build reproducibility shows the binary is deterministic, not that it refines the source, and source-level constant-time intent is not binary timing."
+    },
+    {
+      "id": "RFE-5",
+      "type": "refinement_edge",
+      "title": "Refinement edge LVL-L5 -> LVL-L6",
+      "source": {
+        "path": "docs/FORMAL-REFINEMENT-CERTIFICATION.md",
+        "span": "\u00a73",
+        "quote": "Each link is a separate claim with its own evidence, TCB and invalidation rule.",
+        "quote_kind": "fragment",
+        "sha256": "85aa9734b4ee0f34ae5572f1b65f7cf075f437964c2cdd90467c02f54aa7e6ee",
+        "bound_commit": "794a7c5491e6095992744f1ab624f5183ca3457d"
+      },
+      "from_level": "LVL-L5",
+      "to_level": "LVL-L6",
+      "status": "PARTIAL",
+      "discharged_by": "consumer reachability closure at the loaded DSO",
+      "discharge_artefact": "ART-CURL-DSO-FD25",
+      "bounded_population": [
+        "curl closure at fd25cc9e: 644 reachable files, 7/7 reachable production obligations",
+        "ssh closure at b85c: 625 reachable files, 290/290 reachable production obligations"
+      ],
+      "obligation": "OBL-RFE-5",
+      "obligation_artefact": "ART-RFE-RECORD",
+      "obligation_statement": "The consumer closures classify reachability but do not establish Pre(c) => P at every reachable call site; the b85c graduation is NOT_ESTABLISHED and the curl element-7 refusal population remains open.",
+      "invalidation_rule": "A change to the DSO, the loader resolution or the consumer binary invalidates it; the closure is re-run at the new identities.",
+      "does_not_establish": "A reachability classification is not a memory-safety proof and not a SAFE_COMPATIBLE promotion; the closure's own non-claims state that a discharged obligation means an existing receipt covers a site, not that the site's precondition is established."
+    },
+    {
       "id": "THR-01",
       "type": "threat",
       "title": "operator error",
@@ -6304,6 +6628,36 @@
       "type": "releases",
       "to": "REL-CURL-049",
       "basis": "ADJ-ETP5-R5 is the recorded verdict for REL-CURL-049"
+    },
+    {
+      "from": "ART-RFE-RECORD",
+      "type": "raises",
+      "to": "OBL-RFE-1",
+      "basis": "the refinement record states OBL-RFE-1"
+    },
+    {
+      "from": "ART-RFE-RECORD",
+      "type": "raises",
+      "to": "OBL-RFE-2",
+      "basis": "the refinement record states OBL-RFE-2"
+    },
+    {
+      "from": "ART-RFE-RECORD",
+      "type": "raises",
+      "to": "OBL-RFE-3",
+      "basis": "the refinement record states OBL-RFE-3"
+    },
+    {
+      "from": "ART-RFE-RECORD",
+      "type": "raises",
+      "to": "OBL-RFE-4",
+      "basis": "the refinement record states OBL-RFE-4"
+    },
+    {
+      "from": "ART-RFE-RECORD",
+      "type": "raises",
+      "to": "OBL-RFE-5",
+      "basis": "the refinement record states OBL-RFE-5"
     },
     {
       "from": "ETP0-CLM-028",
@@ -7680,6 +8034,36 @@
       "basis": "ART-FILE-SECRET-OWNER is the tracked file that realises IMP-SECRET-OWNER"
     },
     {
+      "from": "LVL-L1",
+      "type": "refines_to",
+      "to": "RFE-1",
+      "basis": "LVL-L1 is refined through RFE-1"
+    },
+    {
+      "from": "LVL-L2",
+      "type": "refines_to",
+      "to": "RFE-2",
+      "basis": "LVL-L2 is refined through RFE-2"
+    },
+    {
+      "from": "LVL-L3",
+      "type": "refines_to",
+      "to": "RFE-3",
+      "basis": "LVL-L3 is refined through RFE-3"
+    },
+    {
+      "from": "LVL-L4",
+      "type": "refines_to",
+      "to": "RFE-4",
+      "basis": "LVL-L4 is refined through RFE-4"
+    },
+    {
+      "from": "LVL-L5",
+      "type": "refines_to",
+      "to": "RFE-5",
+      "basis": "LVL-L5 is refined through RFE-5"
+    },
+    {
       "from": "OBL-A17-RESIDUAL",
       "type": "constrains",
       "to": "REL-CURL-049",
@@ -8598,6 +8982,66 @@
       "basis": "IMP-RSA is the implementation named for REQ-TIM-02"
     },
     {
+      "from": "RFE-1",
+      "type": "discharges",
+      "to": "LVL-L2",
+      "basis": "RFE-1 produces LVL-L2"
+    },
+    {
+      "from": "RFE-1",
+      "type": "obligates",
+      "to": "OBL-RFE-1",
+      "basis": "RFE-1 carries the refinement obligation OBL-RFE-1"
+    },
+    {
+      "from": "RFE-2",
+      "type": "discharges",
+      "to": "LVL-L3",
+      "basis": "RFE-2 produces LVL-L3"
+    },
+    {
+      "from": "RFE-2",
+      "type": "obligates",
+      "to": "OBL-RFE-2",
+      "basis": "RFE-2 carries the refinement obligation OBL-RFE-2"
+    },
+    {
+      "from": "RFE-3",
+      "type": "discharges",
+      "to": "LVL-L4",
+      "basis": "RFE-3 produces LVL-L4"
+    },
+    {
+      "from": "RFE-3",
+      "type": "obligates",
+      "to": "OBL-RFE-3",
+      "basis": "RFE-3 carries the refinement obligation OBL-RFE-3"
+    },
+    {
+      "from": "RFE-4",
+      "type": "discharges",
+      "to": "LVL-L5",
+      "basis": "RFE-4 produces LVL-L5"
+    },
+    {
+      "from": "RFE-4",
+      "type": "obligates",
+      "to": "OBL-RFE-4",
+      "basis": "RFE-4 carries the refinement obligation OBL-RFE-4"
+    },
+    {
+      "from": "RFE-5",
+      "type": "discharges",
+      "to": "LVL-L6",
+      "basis": "RFE-5 produces LVL-L6"
+    },
+    {
+      "from": "RFE-5",
+      "type": "obligates",
+      "to": "OBL-RFE-5",
+      "basis": "RFE-5 carries the refinement obligation OBL-RFE-5"
+    },
+    {
       "from": "THR-02",
       "type": "motivates",
       "to": "REQ-COMPAT-02",
@@ -8847,6 +9291,27 @@
       "node": "EVD-C022",
       "reason": "path_absent",
       "would_close": "Track the artefact (or a content-addressed copy) at the commit the typed claim names, or convert the claim's obligation into a tracked replacement."
+    },
+    {
+      "id": "ORPHAN-11:RFE-1",
+      "class": 11,
+      "node": "RFE-1",
+      "reason": "edge_without_discharge",
+      "would_close": "An independent reference, differential run or object-code correspondence is produced at a named candidate and the edge status is raised to BOUNDED or PARTIAL with the evidence recorded."
+    },
+    {
+      "id": "ORPHAN-11:RFE-2",
+      "class": 11,
+      "node": "RFE-2",
+      "reason": "edge_without_discharge",
+      "would_close": "An independent reference, differential run or object-code correspondence is produced at a named candidate and the edge status is raised to BOUNDED or PARTIAL with the evidence recorded."
+    },
+    {
+      "id": "ORPHAN-11:RFE-4",
+      "class": 11,
+      "node": "RFE-4",
+      "reason": "edge_without_discharge",
+      "would_close": "An independent reference, differential run or object-code correspondence is produced at a named candidate and the edge status is raised to BOUNDED or PARTIAL with the evidence recorded."
     }
   ],
   "non_claims": [

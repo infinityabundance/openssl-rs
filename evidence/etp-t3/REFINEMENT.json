@@ -1,0 +1,236 @@
+{
+  "schema": "openssl-rs/etp/refinement/1",
+  "item": "ETP-T3 of docs/ETP-TODO.md",
+  "kind": "refinement-architecture",
+  "generated_utc": "2026-11-22",
+  "source_identity": {
+    "branch": "staging",
+    "head": "794a7c5491e6095992744f1ab624f5183ca3457d",
+    "worktree_at_start": "clean",
+    "t1_graph_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d",
+    "refinement_nodes_bound_to": "794a7c5491e6095992744f1ab624f5183ca3457d"
+  },
+  "levels": [
+    {
+      "id": "LVL-L1",
+      "rank": 1,
+      "name": "abstract specification",
+      "obligation": "States the operation and its normative properties independently of any implementation.",
+      "artefact": "the normative source (RFC, FIPS, or the project constitution) named by the requirement node",
+      "status_of_level": "POPULATED"
+    },
+    {
+      "id": "LVL-L2",
+      "rank": 2,
+      "name": "executable reference",
+      "obligation": "An executable implementation of the abstract specification that the Rust implementation can be compared against.",
+      "artefact": "an independently written reference program and its conformance run",
+      "status_of_level": "NONE"
+    },
+    {
+      "id": "LVL-L3",
+      "rank": 3,
+      "name": "Rust implementation",
+      "obligation": "The crate under src/ implements the reference's observable behaviour and its safe interior enforces the memory-safety invariants.",
+      "artefact": "the tracked src/ tree at the candidate",
+      "status_of_level": "POPULATED"
+    },
+    {
+      "id": "LVL-L4",
+      "rank": 4,
+      "name": "ABI contract",
+      "obligation": "The observable C surface matches the authority: exported symbols and versions, repr(C) layouts, ownership, error-queue behaviour and callback semantics.",
+      "artefact": "docs/ABI_POLICY.md, docs/OWNERSHIP_MODEL.md, docs/PARITY_MODEL.md, artifacts/phase2/libcrypto.ld",
+      "status_of_level": "PARTIAL"
+    },
+    {
+      "id": "LVL-L5",
+      "rank": 5,
+      "name": "machine code",
+      "obligation": "The exact compiled artefact implements the ABI contract and preserves the verified source properties.",
+      "artefact": "the DSO digests recorded by evidence/etp2/reproducibility.json",
+      "status_of_level": "POPULATED_IDENTITY_ONLY"
+    },
+    {
+      "id": "LVL-L6",
+      "rank": 6,
+      "name": "consumer composition",
+      "obligation": "For every reachable call site c in the loaded DSO, Pre(c) implies the kernel precondition P, and Q satisfies the next consumer.",
+      "artefact": "evidence/closure-curl-049.json, evidence/closure-ssh-b85c.json, evidence/etp5/REFUSALS.json",
+      "status_of_level": "PARTIAL"
+    }
+  ],
+  "edges": [
+    {
+      "id": "RFE-1",
+      "from": "LVL-L1",
+      "to": "LVL-L2",
+      "obligation_id": "OBL-RFE-1",
+      "obligation": "The executable reference implements every normative statement of the abstract specification, for the declared input population, and is independent of the Rust implementation.",
+      "discharged_by": "UNASSIGNED (ETP-T5 / FRC-1)",
+      "discharge_artefact": null,
+      "invalidation_rule": "A change to the abstract specification, the reference, or the ETP-T5 conformance tool invalidates the discharge; a new candidate requires a new reference run.",
+      "does_not_establish": "A proof about the abstract specification says nothing about whether the reference implements it; the reference can be wrong in the same way as any implementation.",
+      "status": "NONE",
+      "bounded_population": [],
+      "missing": "No independent executable reference exists; ETP-T5 is TODO and FRC-1 is open."
+    },
+    {
+      "id": "RFE-2",
+      "from": "LVL-L2",
+      "to": "LVL-L3",
+      "obligation_id": "OBL-RFE-2",
+      "obligation": "The Rust implementation agrees with the executable reference at the declared interface, including failure behaviour, over a frozen input population.",
+      "discharged_by": "UNASSIGNED (ETP-T5 differential)",
+      "discharge_artefact": null,
+      "invalidation_rule": "A change to the reference, the Rust implementation, or the differential harness invalidates it; the population is bound to the candidate identity.",
+      "does_not_establish": "Agreement on a finite input population is not a refinement proof; a passing differential court is not evidence about inputs outside the population or about failure behaviour it did not exercise.",
+      "status": "NONE",
+      "bounded_population": [],
+      "missing": "There is no independent reference to compare against. The ETP-4 REDC congruence check compares two computations inside the same crate; the differential courts compare against the OpenSSL authority. Neither is an executable reference derived from the abstract specification."
+    },
+    {
+      "id": "RFE-3",
+      "from": "LVL-L3",
+      "to": "LVL-L4",
+      "obligation_id": "OBL-RFE-3",
+      "obligation": "The observable C surface matches the contract: exported symbols and their versions, repr(C) layouts, ownership transfer and refcount conventions, error-queue classification and ordering, and callback semantics.",
+      "discharged_by": "ABI symbol, layout and version-script checks at the candidate",
+      "discharge_artefact": "ART-FILE-ABI-LAYOUT",
+      "invalidation_rule": "A change to any exported symbol, repr(C) layout, error path or callback signature invalidates it; the contract must be re-measured at the new candidate.",
+      "does_not_establish": "Checking the exported symbol set and layouts does not establish ownership, error-queue ordering or callback semantics; an ABI match is not a semantic or memory-safety result.",
+      "status": "PARTIAL",
+      "bounded_population": [
+        "the exported symbol set and the public layout probes at the candidate"
+      ],
+      "missing": "Ownership, error-queue ordering and callback semantics are not established. OBL-MECH-C-ABI-CONTRACT (5 obligations) is NOT_ESTABLISHED, and OBL-XCUT-CALLBACKS is open. The parity model's OWNERSHIP_PASS, ERROR_PASS and STATE_PASS columns are not proved for the candidate."
+    },
+    {
+      "id": "RFE-4",
+      "from": "LVL-L4",
+      "to": "LVL-L5",
+      "obligation_id": "OBL-RFE-4",
+      "obligation": "The exact compiled artefact implements the ABI contract and preserves the verified source properties, including the reassembly question.",
+      "discharged_by": "UNASSIGNED (ETP-T6 / FRC-4)",
+      "discharge_artefact": null,
+      "invalidation_rule": "A change to the compiler, linker, assembler, target, profile or any build input invalidates it; no result carries across targets.",
+      "does_not_establish": "A proof about the source is not a proof about the binary; build reproducibility shows the binary is deterministic, not that it refines the source, and source-level constant-time intent is not binary timing.",
+      "status": "NONE",
+      "bounded_population": [],
+      "missing": "No object-code correspondence exists. ETP-2 shows that two clean builds are byte-identical (archive 641471443209, measurement DSO 85395dcf7b76, distribution DSO 139966033ac9), which is a build-identity result. The branch audit is a review aid. ETP-T6 and FRC-4 are open."
+    },
+    {
+      "id": "RFE-5",
+      "from": "LVL-L5",
+      "to": "LVL-L6",
+      "obligation_id": "OBL-RFE-5",
+      "obligation": "For every reachable call site c in the loaded DSO, Pre(c) implies the kernel precondition P, and Q satisfies the next consumer.",
+      "discharged_by": "consumer reachability closure at the loaded DSO",
+      "discharge_artefact": "ART-CURL-DSO-FD25",
+      "invalidation_rule": "A change to the DSO, the loader resolution or the consumer binary invalidates it; the closure is re-run at the new identities.",
+      "does_not_establish": "A reachability classification is not a memory-safety proof and not a SAFE_COMPATIBLE promotion; the closure's own non-claims state that a discharged obligation means an existing receipt covers a site, not that the site's precondition is established.",
+      "status": "PARTIAL",
+      "bounded_population": [
+        "curl closure at fd25cc9e: 644 reachable files, 7/7 reachable production obligations",
+        "ssh closure at b85c: 625 reachable files, 290/290 reachable production obligations"
+      ],
+      "missing": "The Pre(c) implication is not established at every reachable site. The b85c graduation is NOT_ESTABLISHED, both closures report safe_compatible=false, and the curl element-7 refusal population remains open (ETP-5 R5)."
+    }
+  ],
+  "anti_implementation_shaped": {
+    "rule": "A specification artefact declares its refinement level and must not reference an internal identifier of the implementation level it refines: no internal function name, type name, field name or src/crate/super/self path.",
+    "tool": "forensics/tools/spec_guard.py",
+    "register": "evidence/etp-t3/SPECIFICATIONS.json",
+    "population_derivation": "The distinct source documents of the T1 requirement nodes, union the contract documents named in the register.",
+    "population_size": 15,
+    "registered_specifications": 10,
+    "known_nonconformances": 5,
+    "failing": 5,
+    "inventory": [
+      {
+        "path": "docs/ETP-TODO.md",
+        "level": "L1-abstract-specification",
+        "tokens": 87,
+        "top_tokens": ["SecretBuf", "SecretRef", "ScalarLadderWorkspace", "NameDb", "normalise_consttime", "store_consttime"],
+        "would_close": "Move the implementation-shaped residual statements into a review record and keep the requirement text independent of the type and function names."
+      },
+      {
+        "path": "AGENTS.md",
+        "level": "L1-abstract-specification",
+        "tokens": 17,
+        "top_tokens": ["OwnedBlock", "OwnedBuf", "OwnedCtx", "OwnedNode", "OwnedRaw", "OwnedStr", "OwnedTree", "CtxDestroy", "guard_ffi"],
+        "would_close": "Restate the standing standard in terms of the observable obligations and cite the adopted constructors from a review record, or record a reviewed exemption for each named identifier."
+      },
+      {
+        "path": "docs/HAZARD-REGISTER.md",
+        "level": "L1-abstract-specification",
+        "tokens": 14,
+        "top_tokens": ["SecretBuf", "OwnedBuf", "OwnedTree", "OwnedLevels", "ChainSnapshot", "guard_ffi", "ecdsa_sign_setup", "rsa_get_blinding"],
+        "would_close": "Restate each barrier in terms of its observable control and cite the mechanism from the T1 implementation nodes, or record a reviewed exemption."
+      },
+      {
+        "path": "docs/OWNERSHIP_MODEL.md",
+        "level": "L4-abi-contract",
+        "tokens": 1,
+        "top_tokens": ["up_ref"],
+        "would_close": "Use the C-visible accessor convention rather than the wrapper method name, or record a reviewed exemption."
+      },
+      {
+        "path": "docs/PARITY_MODEL.md",
+        "level": "L4-abi-contract",
+        "tokens": 1,
+        "top_tokens": ["up_ref"],
+        "would_close": "Use the C-visible ownership convention rather than the wrapper method name, or record a reviewed exemption."
+      }
+    ],
+    "exemption_rule": "A needed internal identifier may be named only through an exemption that records a justification, a reviewer and a review identity. An exemption that is incomplete is refused as unjustified; an exemption whose token no longer appears is refused as stale.",
+    "fail_closed": [
+      "a population member that is neither registered, recorded as a known nonconformance, nor explicitly excluded",
+      "a specification with no declared level, or with a level outside the registry",
+      "an internal identifier inside a code span or a src/crate/super/self path",
+      "an incomplete or stale exemption",
+      "a known nonconformance whose token set changes or no longer reproduces",
+      "an unreadable register, an unreadable graph, or a duplicate JSON key"
+    ],
+    "known_limits": [
+      "Detection covers code spans and explicit source or Rust paths; an internal concept restated in prose without naming it is not detected.",
+      "The lexicon is a static scan of tracked src/**/*.rs and the exported-symbol records; a name that is both an authority observable and a Rust shim (OPENSSL_clear_free) is flagged by name and needs a reviewed exemption.",
+      "The guard checks naming, not semantic independence; a specification that rephrases the implementation in different words passes."
+    ]
+  },
+  "t1_projection": {
+    "graph": "evidence/etp-t1/TRACEABILITY.json",
+    "seed": "forensics/tools/etp_t1_seed.py",
+    "validator": "forensics/tools/traceability.py",
+    "nodes_before": 325,
+    "nodes_after": 342,
+    "edges_before": 403,
+    "edges_after": 423,
+    "declared_orphans_before": 21,
+    "declared_orphans_after": 24,
+    "node_types_added": ["refinement_level", "refinement_edge"],
+    "edge_types_added": ["refines_to", "discharges", "obligates"],
+    "orphan_classes_added": [
+      {"class": 9, "id": "ORPHAN-9:<level>", "name": "refinement_level_without_obligation"},
+      {"class": 10, "id": "ORPHAN-10:<edge>", "name": "refinement_obligation_without_artefact"},
+      {"class": 11, "id": "ORPHAN-11:<edge>", "name": "refinement_edge_without_discharge"}
+    ],
+    "class_11_population": ["ORPHAN-11:RFE-1", "ORPHAN-11:RFE-2", "ORPHAN-11:RFE-4"],
+    "structural_refusals_added": [
+      "TG_REFINEMENT_LEVEL",
+      "TG_REFINEMENT_EDGE",
+      "TG_REFINEMENT_OBLIGATION",
+      "TG_REFINEMENT_SHAPE"
+    ],
+    "controls": "forensics/tools/tests/test_traceability.py is 24/24; the three refinement orphan classes and the four refinement structural refusals each have a control."
+  },
+  "non_claims": [
+    "This architecture does not establish any refinement relation. Four of five edges are NONE or PARTIAL, and no edge is DISCHARGED.",
+    "A proof in a model is not a proof about the binary: no level above L4 has an object-code result.",
+    "A passing differential court is not a refinement proof: it is bounded to its population and its harness.",
+    "A reproducibility result is a build-identity result, not a source-to-binary refinement argument.",
+    "A consumer reachability closure is not a memory-safety proof and not a SAFE_COMPATIBLE promotion.",
+    "The anti-implementation-shaped guard checks naming, not semantic independence; a paraphrase in prose is outside its detection.",
+    "The known-nonconformance population is a recorded finding, not a licence: the five documents are not repaired by this item."
+  ]
+}
