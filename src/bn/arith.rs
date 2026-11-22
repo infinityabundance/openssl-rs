@@ -573,18 +573,6 @@ pub unsafe extern "C" fn BN_mod_add(
     })
 }
 
-/// `r = (a + b) mod m` for operands already reduced in `[0, m)`, in a constant
-/// pattern over the public width `m.len()`.
-///
-/// This exists because the generic `BN_mod_add` reduces with `BN_nnmod`, whose
-/// work follows the operands' values. The callers that need this one know their
-/// operands are reduced; there is deliberately **no** value-dependent dispatch
-/// here, because deciding whether an operand is reduced would itself compare
-/// secrets.
-///
-/// The sum is formed over a fixed `n + 1` limbs; the conditional subtraction is
-/// a masked select over the same width, with no trimming by value. Returns
-/// `false` on allocation failure, leaving `r` untouched.
 /// The arithmetic behind [`mod_add_reduced_ct`], on limb slices, so it can be
 /// tested without a `BIGNUM` and without unsafe pointer handling.
 ///
@@ -600,11 +588,14 @@ pub(crate) fn mod_add_reduced_ct_limbs(ad: &[Limb], bd: &[Limb], md: &[Limb]) ->
     let mut sum = crate::runtime::alloc::try_zeroed(n + 1, 0u64)?;
     let mut carry = 0u64;
     for (i, slot) in sum.iter_mut().enumerate().take(n) {
-        let s = ad.get(i).copied().unwrap_or(0) as u128
-            + bd.get(i).copied().unwrap_or(0) as u128
-            + carry as u128;
-        *slot = s as u64;
-        carry = (s >> 64) as u64;
+        // `overflowing_add` rather than `u128` sums: the debug profile's overflow
+        // check is a conditional jump whose condition is derived from the operands'
+        // values, which is exactly the branch this function exists to keep off a
+        // secret-derived addend.
+        let (low, carry_a) = ad.get(i).copied().unwrap_or(0).overflowing_add(carry);
+        let (value, carry_b) = low.overflowing_add(bd.get(i).copied().unwrap_or(0));
+        *slot = value;
+        carry = u64::from(carry_a) | u64::from(carry_b);
     }
     sum[n] = carry;
 
@@ -627,25 +618,80 @@ pub(crate) fn mod_add_reduced_ct_limbs(ad: &[Limb], bd: &[Limb], md: &[Limb]) ->
         sum[i] = (sum[i] & mask) | (reduced[i] & !mask);
     }
 
+    // Both selected candidates are below `md`, so the limb at index `n` is zero
+    // whichever one the mask picked: a sum below `md` has no carry into it, and a
+    // sum at or above `md` is below `2*md < 2^(64n+1)`, hence its difference with
+    // `md` cannot need that limb. Dropping it is a fixed length change, not a
+    // value test, and it keeps the result within the public width the store
+    // scans.
+    sum.truncate(n);
     Some(sum)
 }
 
-#[allow(dead_code)] // wiring waits on a caller with provably reduced operands; see T27
-pub(crate) fn mod_add_reduced_ct(
-    r: Option<&mut BigNum>,
-    a: &BigNum,
-    b: &BigNum,
-    m: &BigNum,
+/// `r = (a + b) mod m` for operands already reduced in `[0, m)`, in a constant
+/// pattern over the public width `m.len()`.
+///
+/// This exists because the generic `BN_mod_add` reduces with `BN_nnmod`, whose
+/// work follows the operands' values. The callers that need this one know their
+/// operands are reduced; there is deliberately **no** value-dependent dispatch
+/// here, because deciding whether an operand is reduced would itself compare
+/// secrets.
+///
+/// The sum is formed over a fixed `n + 1` limbs; the conditional subtraction is
+/// a masked select over the same width, with no trimming by value. A refused
+/// allocation answers `false` without touching `r`; so do a null `r` and an
+/// operand wider than the modulus, the latter two being caller-contract violations
+/// rather than runtime outcomes.
+///
+/// The result is stored through [`store_consttime`], so its recorded limb length
+/// remains value-dependent in the way every constant-time store in this crate is
+/// (the T8 residual). What the fixed pattern removes is the branch on the addends' values
+/// — including the reduction a generic add would run over the secret-derived sum — not the
+/// normalised-length residual the representation imposes on every result.
+///
+/// # Precondition (arithmetic, not memory safety)
+///
+/// `a` and `b` are each in `[0, m)`. That is the caller's obligation, because
+/// testing it here would compare secrets. The one wired caller,
+/// `ossl_ecdsa_simple_sign_sig`'s `s = s + m`, establishes it by reducing the
+/// digest into `[0, q)` first (the digest is `PUBLIC_DATA`, so the reduction's
+/// control flow is public) and by taking `s` from a Montgomery product that is
+/// already reduced. An operand outside the range is not a soundness problem: the
+/// result is simply not the reduced sum.
+///
+/// # Safety
+///
+/// `r` must be null or a live, uniquely-owned `BIGNUM`; `a`, `b` and `m` must each
+/// be null or live. `r` may alias `a` or `b`: every shared read of the operands
+/// ends before `r` is borrowed for the store, which is the aliasing the signing
+/// path uses for its in-place add.
+pub(crate) unsafe fn mod_add_reduced_ct(
+    r: *mut BigNum,
+    a: *const BigNum,
+    b: *const BigNum,
+    m: *const BigNum,
 ) -> bool {
-    let md = magnitude(Some(m));
-    if md.is_empty() {
+    // SAFETY: `a`, `b` and `m` are null-or-live per this function's `# Safety`
+    // section. The three shared reads end at the limb operation below, before `r`
+    // is borrowed for the store, so an `r` aliasing `a` or `b` is never borrowed
+    // twice.
+    let (ad, bd, md) = unsafe {
+        (
+            magnitude(as_ref(a)),
+            magnitude(as_ref(b)),
+            magnitude(as_ref(m)),
+        )
+    };
+    let width = md.len();
+    if width == 0 {
         return false;
     }
-    let Some(sum) = mod_add_reduced_ct_limbs(magnitude(Some(a)), magnitude(Some(b)), md) else {
+    let Some(sum) = mod_add_reduced_ct_limbs(ad, bd, md) else {
         return false;
     };
-
-    store_consttime(r, sum, false, md.len())
+    // SAFETY: `r` is null-or-live per this function's `# Safety` section, and every
+    // shared borrow above has ended.
+    store_consttime(unsafe { as_mut(r) }, sum, false, width)
 }
 
 /// `int BN_mod_sub(BIGNUM *r, const BIGNUM *a, const BIGNUM *b, const BIGNUM *m, BN_CTX *ctx)`
@@ -2179,8 +2225,167 @@ mod tests {
         assert!(mod_add_reduced_ct_limbs(&[1], &[1], &[]).is_none());
     }
 
+    /// One differential case for the wired signing sequence: reduce each operand
+    /// into `[0, q)`, run [`mod_add_reduced_ct`], and compare with the generic
+    /// `BN_mod_add` on the *unreduced* operands, which is what the signing path ran
+    /// before the wiring. The two in-place forms are checked too, because the
+    /// signing path writes `s` in place.
+    fn assert_wired_add_matches_generic(
+        a: *const BigNum,
+        b: *const BigNum,
+        q: *mut BigNum,
+        label: &str,
+    ) {
+        // SAFETY: every object is created and released here; `a`, `b` and `q` are
+        // live for the call because the calling test owns them.
+        unsafe {
+            let a_red = BN_new();
+            let b_red = BN_new();
+            let got = BN_new();
+            let want = BN_new();
+            assert!(!a_red.is_null() && !b_red.is_null());
+            assert!(!got.is_null() && !want.is_null());
+            assert_eq!(BN_nnmod(a_red, a, q, core::ptr::null_mut()), 1, "{label}");
+            assert_eq!(BN_nnmod(b_red, b, q, core::ptr::null_mut()), 1, "{label}");
+            assert!(BN_ucmp(a_red, q) < 0, "{label}: first reduction is below q");
+            assert!(
+                BN_ucmp(b_red, q) < 0,
+                "{label}: second reduction is below q"
+            );
+
+            assert!(mod_add_reduced_ct(got, a_red, b_red, q), "{label}");
+            assert_eq!(
+                BN_mod_add(want, a, b, q, core::ptr::null_mut()),
+                1,
+                "{label}: the generic form accepts the operands"
+            );
+            assert_eq!(
+                BN_ucmp(got, want),
+                0,
+                "{label}: the wired add disagrees with BN_mod_add"
+            );
+            assert!(BN_ucmp(got, q) < 0, "{label}: the result is below q");
+
+            let in_place_a = copy_of(a_red);
+            assert!(
+                mod_add_reduced_ct(in_place_a, in_place_a, b_red, q),
+                "{label}"
+            );
+            assert_same(in_place_a, want, "{label}: in-place r == a");
+            let in_place_b = copy_of(b_red);
+            assert!(
+                mod_add_reduced_ct(in_place_b, a_red, in_place_b, q),
+                "{label}"
+            );
+            assert_same(in_place_b, want, "{label}: in-place r == b");
+
+            BN_free(a_red);
+            BN_free(b_red);
+            BN_free(got);
+            BN_free(want);
+            BN_free(in_place_a);
+            BN_free(in_place_b);
+        }
+    }
+
+    /// splitmix64, so the pseudo-random sweep is deterministic and needs no
+    /// external dependency.
+    fn next_limb(state: &mut u64) -> u64 {
+        *state = state.wrapping_add(0x9e37_79b9_7f4a_7c15);
+        let mut z = *state;
+        z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+        z ^ (z >> 31)
+    }
+
+    /// The wired sequence — reduce into `[0, q)`, then the fixed-pattern add — must
+    /// agree exactly with the generic `BN_mod_add` on the unreduced operands, for
+    /// the operand shapes the signing path can be handed, and every result must be
+    /// below the order.
+    ///
+    /// Shapes sit at and around the order: `0`, `1`, `q-2`, `q-1`, `q`, `q+1`,
+    /// `2q-1`, `2^256` (one bit longer than the 256-bit order), `q + 2^256`, and
+    /// five- and six-limb values (wider than the order's four limbs). The sweep
+    /// then covers 256 deterministic pseudo-random pairs of widths `0..=6` limbs.
+    #[test]
+    fn mod_add_reduced_ct_matches_bn_mod_add_over_boundary_shapes() {
+        // P-256's order, big-endian:
+        // FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551.
+        const Q: [u8; 32] = [
+            0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff, 0xbc, 0xe6, 0xfa, 0xad, 0xa7, 0x17, 0x9e, 0x84, 0xf3, 0xb9, 0xca, 0xc2,
+            0xfc, 0x63, 0x25, 0x51,
+        ];
+
+        // SAFETY: every object is created, used and released in this function.
+        unsafe {
+            let q = BN_bin2bn(Q.as_ptr(), Q.len() as c_int, core::ptr::null_mut());
+            assert!(!q.is_null());
+
+            let zero = word(0);
+            let one = word(1);
+            let two = word(2);
+            let q_minus_1 = BN_new();
+            let q_minus_2 = BN_new();
+            let q_plus_1 = BN_new();
+            let twice_q_minus_1 = BN_new();
+            assert!(!q_minus_1.is_null() && !q_minus_2.is_null());
+            assert!(!q_plus_1.is_null() && !twice_q_minus_1.is_null());
+            assert_eq!(BN_sub(q_minus_1, q, one), 1);
+            assert_eq!(BN_sub(q_minus_2, q, two), 1);
+            assert_eq!(BN_add(q_plus_1, q, one), 1);
+            assert_eq!(BN_add(twice_q_minus_1, q, q_minus_1), 1);
+
+            let bit_256 = new_owned(vec![0, 0, 0, 0, 1], 0);
+            let q_plus_bit_256 = BN_new();
+            assert!(!q_plus_bit_256.is_null());
+            assert_eq!(BN_add(q_plus_bit_256, q, bit_256), 1);
+            let five_limbs = new_owned(vec![0x0123_4567_89ab_cdef, 0, 0, 0, 0x00ff_00ff], 0);
+            let six_limbs = new_owned(vec![1, 2, 3, 4, 5, 6], 0);
+
+            let shapes = [
+                zero,
+                one,
+                q_minus_2,
+                q_minus_1,
+                q,
+                q_plus_1,
+                twice_q_minus_1,
+                bit_256,
+                q_plus_bit_256,
+                five_limbs,
+                six_limbs,
+            ];
+            for (ai, &a) in shapes.iter().enumerate() {
+                for (bi, &b) in shapes.iter().enumerate() {
+                    assert_wired_add_matches_generic(a, b, q, &format!("shapes {ai}/{bi}"));
+                }
+            }
+
+            let mut state: u64 = 0x1234_5678_9abc_def0;
+            for case in 0..256usize {
+                let alen = (next_limb(&mut state) % 7) as usize;
+                let blen = (next_limb(&mut state) % 7) as usize;
+                let al: Vec<Limb> = (0..alen).map(|_| next_limb(&mut state)).collect();
+                let bl: Vec<Limb> = (0..blen).map(|_| next_limb(&mut state)).collect();
+                let a = new_owned(al, 0);
+                let b = new_owned(bl, 0);
+                assert_wired_add_matches_generic(a, b, q, &format!("sweep {case}"));
+                BN_free(a);
+                BN_free(b);
+            }
+
+            // `q` is one of the shapes, so this releases every object exactly once.
+            for shape in shapes {
+                BN_free(shape);
+            }
+        }
+    }
+
     use super::*;
-    use crate::bn::bignum::{BN_copy, BN_free, BN_get_word, BN_new, BN_set_flags, BN_set_word};
+    use crate::bn::bignum::{
+        BN_bin2bn, BN_copy, BN_free, BN_get_word, BN_new, BN_set_flags, BN_set_word,
+    };
 
     /// A `BIGNUM` holding a machine word.
     fn word(w: c_ulong) -> *mut BigNum {
