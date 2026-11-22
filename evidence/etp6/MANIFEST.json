@@ -2,17 +2,17 @@
   "schema": "openssl-rs/etp6/package-manifest/1",
   "kind": "etp6-self-contained-reproduction-package",
   "task": "ETP-6: external reproduction readiness",
-  "generated_utc": "2026-11-22T07:40:17-05:00",
+  "generated_utc": "2026-11-22T07:52:00-05:00",
   "candidate": {
-    "commit": "b400a4e5e3a66d25d8c9e0c1012e1e7af8660741",
+    "commit": "98c7b5d290a8e40a1bd4d979ed34599038733e4d",
     "branch": "staging",
-    "provisional": true,
-    "parent_commit": "3951f0f5eef630d36fc5f8ffc3a49087ec6e3920",
-    "tree": "a19b353e3aac96e9797e524466cb15f7356fffb2",
-    "worktree_tracked_dirty_files": 1,
+    "provisional": false,
+    "parent_commit": null,
+    "tree": "64f796e906bd7317b7f2fffbbea88bc171b3620b",
+    "worktree_tracked_dirty_files": 0,
     "frozen_source_commit": "9372bb28b2fbe2f71cf2aa2ab501414d45e87d42",
-    "tracked_file_count_at_commit": 14080,
-    "note": "A provisional commit object is not on any branch: it was created by git commit-tree from a temporary index of HEAD plus the worktree selection paths, because the ETP-6 tooling was not yet committed when the package was built. The orchestrator's commit carries the identical tree; re-running --refreeze binds the published commit hash."
+    "tracked_file_count_at_commit": 14082,
+    "note": "The package is built by git archive from this commit."
   },
   "toolchain": {
     "pin_file": "rust-toolchain.toml",
@@ -31,7 +31,7 @@
     "note": "The reproducibility figure this identity records was measured at e9d492b0d, not at this package's commit; see evidence/etp2/RECEIPT.md."
   },
   "selection": {
-    "method": "git archive b400a4e5e3a66d25d8c9e0c1012e1e7af8660741 -- <paths> (never a copy of the working tree)",
+    "method": "git archive 98c7b5d290a8e40a1bd4d979ed34599038733e4d -- <paths> (never a copy of the working tree)",
     "paths": [
       "src",
       "Cargo.toml",
@@ -99,11 +99,11 @@
     ],
     "object_count": 91,
     "pack": "freeze-git/objects/pack/pack-etp6.pack",
-    "pack_sha256": "e18a64a6f7ba398bd93c5388023a8c0af2eeb7197cfda969d5d7701f57e4956f",
-    "pack_bytes": 9210369,
+    "pack_sha256": "3268fee40e9ee54aaa0cc097a88bfd457e27a861585b12950801eddcd64777f1",
+    "pack_bytes": 9035329,
     "note": "Partial bare repository: the frozen commit, the cited tree chains and the cited blobs, copied from the development repository.  Parent commits are absent by design; git show <commit>:<path> needs no ancestry."
   },
-  "input_count": 1635,
+  "input_count": 1633,
   "inputs": [
     {
       "path": ".git",
@@ -4416,8 +4416,8 @@
     {
       "path": "freeze-git/HEAD",
       "role": "object-store",
-      "bytes": 21,
-      "sha256": "28d25bf82af4c0e2b72f50959b2beb859e3e60b9630a5e8c603dad4ddb2b6e80"
+      "bytes": 23,
+      "sha256": "f6f2b945f6c411b02ba3da9c7ace88dcf71b6af65ba2e0d89aa82900042b5a10"
     },
     {
       "path": "freeze-git/config",
@@ -4440,14 +4440,14 @@
     {
       "path": "freeze-git/hooks/commit-msg.sample",
       "role": "object-store",
-      "bytes": 1972,
-      "sha256": "efc1401b0e99d1ff51494d154d98b46c1e99059bcd8bf9f73cecde19fd3eb23b"
+      "bytes": 896,
+      "sha256": "1f74d5e9292979b573ebd59741d46cb93ff391acdd083d340b94370753d92437"
     },
     {
       "path": "freeze-git/hooks/fsmonitor-watchman.sample",
       "role": "object-store",
-      "bytes": 4611,
-      "sha256": "9159720099ad5595b8e66645cbfd47763c1e920f46e0b50ae75e642bbec57ef0"
+      "bytes": 4726,
+      "sha256": "e0549964e93897b519bd8e333c037e51fff0f88ba13e086a331592bf801fa1d0"
     },
     {
       "path": "freeze-git/hooks/post-update.sample",
@@ -4464,8 +4464,8 @@
     {
       "path": "freeze-git/hooks/pre-commit.sample",
       "role": "object-store",
-      "bytes": 1649,
-      "sha256": "57185b7b9f05239d7ab52db045f5b89eb31348d7b2177eab214f5eb872e1971b"
+      "bytes": 1643,
+      "sha256": "f9af7d95eb1231ecf2eba9770fedfa8d4797a12b02d7240e98d568201251244a"
     },
     {
       "path": "freeze-git/hooks/pre-merge-commit.sample",
@@ -4504,12 +4504,6 @@
       "sha256": "a53d0741798b287c6dd7afa64aee473f305e65d3f49463bb9d7408ec3b12bf5f"
     },
     {
-      "path": "freeze-git/hooks/sendemail-validate.sample",
-      "role": "object-store",
-      "bytes": 2308,
-      "sha256": "44ebfc923dc5466bc009602f0ecf067b9c65459abfe8868ddc49b78e6ced7a92"
-    },
-    {
       "path": "freeze-git/hooks/update.sample",
       "role": "object-store",
       "bytes": 3650,
@@ -4525,19 +4519,13 @@
       "path": "freeze-git/objects/pack/pack-etp6.idx",
       "role": "object-store",
       "bytes": 3620,
-      "sha256": "d1a8baf2a2355500c71f9fdcf036e3fd04145c0c2fd7555700d0e254b5623208"
+      "sha256": "0a6f6f22cdb95370816277ce1ebe33cd5731d0341ce3f1569ec639ebe84ad53a"
     },
     {
       "path": "freeze-git/objects/pack/pack-etp6.pack",
       "role": "object-store",
-      "bytes": 9210369,
-      "sha256": "e18a64a6f7ba398bd93c5388023a8c0af2eeb7197cfda969d5d7701f57e4956f"
-    },
-    {
-      "path": "freeze-git/objects/pack/pack-etp6.rev",
-      "role": "object-store",
-      "bytes": 416,
-      "sha256": "592e44ce10fc24826134f4e8807ab4f52475643da957a2e4d7954478b928289e"
+      "bytes": 9035329,
+      "sha256": "3268fee40e9ee54aaa0cc097a88bfd457e27a861585b12950801eddcd64777f1"
     },
     {
       "path": "freeze-git/refs/heads/frozen",
@@ -9959,8 +9947,8 @@
     }
   ],
   "court_tmp_reference_audit": {
-    "tracked_files_referencing_court_tmp": 547,
-    "tracked_textual_occurrences": 7409,
+    "tracked_files_referencing_court_tmp": 549,
+    "tracked_textual_occurrences": 7425,
     "tracked_files_under_court_tmp": 0,
     "note": "No court/tmp/ file is packaged.  The references live in evidence records that cite experiments whose logs and binaries were never tracked; the package can re-verify only the digest-bound artefacts it carries."
   },
