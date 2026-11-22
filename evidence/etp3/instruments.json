@@ -1,0 +1,735 @@
+{
+ "schema": "openssl-rs/instrument-qualification/1",
+ "generated": "2026-11-22",
+ "governing_documents": [
+  "AGENTS.md sections 8, 11, 16 and 6.1",
+  "docs/INSTRUMENT-QUALIFICATION.md",
+  "docs/CODE-GENERATION-ASSURANCE.md",
+  "docs/PERFORMANCE-METHODOLOGY.md"
+ ],
+ "disclaimer": "Instrument qualification states the one question an instrument may answer, what it must never be cited for, and which refusal controls it has passed. It is not a security result: a qualified instrument can still miss a defect class its controls do not exercise, and no combination of instrument results proves constant-time behaviour, memory safety or compatibility. A PASS here means the instrument's own controls fired in the executing session; it is never evidence about the crate.",
+ "venue": {
+  "court_image": "openssl-rs-court-tools:1",
+  "platform": "linux",
+  "kernel": "7.3.5-2-cachyos",
+  "cpu": "13th Gen Intel Core i9-13900K",
+  "pmu_present": false,
+  "pmu_evidence": [
+   "cpuid.0A.version=0 with num_general_counters=0",
+   "cpuid.1 hypervisor_present=1",
+   "/sys/bus/event_source/devices lists breakpoint, kprobe, msr, power, software, tracepoint, uprobe and no cpu source",
+   "perf stat -e cycles true prints <not supported> and still exits 0, so perf's exit status is not the signal; the text is"
+  ],
+  "limitations": [
+   "no hardware PMU, no frequency/turbo/SMT control, no core isolation beyond taskset -c 1: timing rows are SCOPED_OBSERVATION",
+   "the absence of a PMU is a property of this venue, not of perf, tsc_clock or the crate",
+   "the court has no network: TIMECOP/SUPERCOP cannot be re-fetched, so that control is RECORDED, not re-executed",
+   "the dudect header is not vendored in the repository; its pinned tree must be present as a declared prerequisite or the dudect control refuses"
+  ]
+ },
+ "instruments": [
+  {
+   "id": "valgrind-ctgrind",
+   "name": "Valgrind memcheck with client requests (ctgrind)",
+   "kind": "tool",
+   "paths": [
+    "courts/phase18/timing/ct_bn.c",
+    "courts/phase18/timing/classify_ct.py",
+    "courts/phase18/timing/summarize_ct.py"
+   ],
+   "invocation": "cc -D_GNU_SOURCE -O1 -g -I<valgrind includes> -Iartifacts/phase2/install/include courts/phase18/timing/ct_bn.c -Lartifacts/phase2/install/lib -lcrypto -o /tmp/ct_bn && LD_LIBRARY_PATH=artifacts/phase2/install/lib valgrind --tool=memcheck --error-exitcode=99 /tmp/ct_bn <mode>",
+   "intended_use": "Detect secret-dependent control flow and secret-dependent memory addresses inside one function reached by a tainted input, at the source/IR level executed by memcheck.",
+   "not_its_use": [
+    "constant-time behaviour under optimisation, or timing at all",
+    "microarchitectural leakage (caches, branch predictors, port contention)",
+    "a claim about the release DSO from a debug-profile test binary",
+    "coverage of paths the harness does not call"
+   ],
+   "version_validation": {
+    "command": "valgrind --version",
+    "observed": "valgrind-3.19.0",
+    "identity_method": "the harness is linked into a named binary and memcheck reports that binary's path; the crate's Rust ctgrind cases report the debug test binary SHA-256 in their receipts. The instrument does not itself identify the measured DSO, so each receipt records the DSO digest it linked and the test-binary digest.",
+    "components": {
+     "cc": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+     "phase2_dso_sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9"
+    }
+   },
+   "failure_modes": {
+    "false_positive": "a tainted byte read for a non-secret reason (length normalisation, scratch reuse) is reported; the receipts classify each report rather than counting it as a leak",
+    "false_negative": "a leaked path not executed by the harness, or a leak through an operation memcheck does not model is invisible; memcheck does not taint machine registers across an uninstrumented call",
+    "silent_truncation": "memcheck continues after errors and its exit status is only 99 because --error-exitcode was set; without it a run with errors exits 0",
+    "unsupported_target": "a binary compiled without debug information still runs, but the reported frames degrade to addresses",
+    "crash": "valgrind itself can fail on an unsupported instruction or an unusual mapping; the run then has no classification and must not be counted",
+    "partial_output": "a killed run leaves a prefix of the error list; the count is not a population",
+    "wrong_candidate": "the harness links whatever library is on LD_LIBRARY_PATH; the receipt must record the DSO digest"
+   },
+   "soundness_limits": [
+    "absence of reported errors means no secret-dependent branch or address use was observed on the executed path, at the sensitivity of memcheck's definedness model",
+    "it does not model value-only constant-latency effects, division latency, or microarchitecture",
+    "the crate-level ctgrind matrix runs a debug test binary: it establishes source-level dynamic observation, not release-binary timing assurance",
+    "the C harness is compiled -O1 -g for the control; it is not the shipped profile"
+   ],
+   "scope": {
+    "profile": "debug test binary for the crate cases; -O1 -g C harness for the control",
+    "statement": "These runs establish source-level dynamic observation of secret-dependent branches and addresses. They do not establish release-binary timing behaviour, and they are not a constant-time result."
+   },
+   "sensitivity_control": {
+    "mode": "executable",
+    "status": "PASS",
+    "control_id": "ctgrind-sensitivity",
+    "positive": "cmpnaive: a deliberately early-exit comparator over a tainted buffer must report errors",
+    "negative": "cmpcmp: the constant-time comparator over the same buffers must report no errors",
+    "observed": {
+     "cases": [
+      {"name": "positive control (deliberately leaky comparator) fires", "exit": 99},
+      {"name": "negative control (constant-time comparator) is clean", "exit": 0}
+     ],
+     "detail": "valgrind --tool=memcheck --error-exitcode=99; 99 is the configured error status, 0 is a clean run"
+    }
+   },
+   "fail_closed": {
+    "exit_statuses": {"0": "clean", "99": "errors reported", "other": "instrument failure: not a classification"},
+    "refusal_text": "a run whose harness did not execute (compile failure, missing DSO, valgrind failure) has no classification and is excluded from the matrix rather than reported as zero errors"
+   }
+  },
+  {
+   "id": "dudect",
+   "name": "dudect-style statistical timing harness",
+   "kind": "harness",
+   "paths": [
+    "courts/phase18/timing/dudect_bn.c",
+    "courts/phase18/timing/RECEIPT-dudect-modes.json"
+   ],
+   "invocation": "cc -O2 -g -Iartifacts/phase2/install/include -I<dudect src> courts/phase18/timing/dudect_bn.c -Lartifacts/phase2/install/lib -lcrypto -lm -o /tmp/dudect_bn && taskset -c 1 env LD_LIBRARY_PATH=artifacts/phase2/install/lib /tmp/dudect_bn <mode> 20000",
+   "intended_use": "Detect a timing difference between two input classes for one operation at a stated sample size, on this venue, using Welch's t-test with the upstream thresholds.",
+   "not_its_use": [
+    "constant-time proof or a proof of absence of leakage",
+    "any statement about another CPU, another build profile or another optimisation level",
+    "a claim that a specific implementation ran: the harness records the flag it read back, not the dispatch",
+    "microarchitectural attribution"
+   ],
+   "version_validation": {
+    "command": "sha256sum court/tmp/tools/dudect/src/dudect.h",
+    "observed": "3fb3b2bd7f9e17ae34b7c92518c1311c67342c56facc80da925d85f121b649da",
+    "identity_method": "dudect has no version string. The pinned tree is commit dc269651fb2567e46755cfb2a13d3875592968b5 and the header digest above identifies the vendored copy actually compiled. The harness prints dudect.executed with the measurement count and dudect.flags with the BN flags it read back, and the receipt records the DSO digest.",
+    "components": {
+     "pinned_commit": "dc269651fb2567e46755cfb2a13d3875592968b5",
+     "cc": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+     "header_location": "court/tmp/tools/dudect/src/dudect.h (untracked scratch; not vendored in the repository)"
+    }
+   },
+   "failure_modes": {
+    "false_positive": "a class imbalance or a real measurement effect at the chosen sample size can cross the threshold; the harness crops, warms up and uses the upstream thresholds but the t statistic is still a sample statistic",
+    "false_negative": "a small leak below the stated geometry is invisible; state 1 means only that no leakage evidence was found yet",
+    "silent_truncation": "a run that rejects measurements prints dudect.rejected and exits 3; without reading the ops count a truncated run looks like a result",
+    "unsupported_target": "requires the crate DSO's BN_* ABI; a different library yields failed operations, which are counted and rejected",
+    "crash": "an operation failure is counted, and any failure makes the timings invalid (exit 3)",
+    "partial_output": "fewer batches than configured leaves the batch list short; the printed batches_run and total_measurements are the evidence",
+    "wrong_candidate": "the harness loads whatever LD_LIBRARY_PATH names; the receipt binds the measured DSO digest and the flag read-back"
+   },
+   "soundness_limits": [
+    "absence of detected leakage is bounded evidence at the stated geometry, not proof of constant-time behaviour",
+    "no PMU and no frequency/SMT control at this venue: a null result is a null result on a virtualised host",
+    "the instrument measures wall-clock timing of one operation shape; it does not establish which implementation was dispatched",
+    "the harness's exit status is inverted relative to a gate: 0 means leakage found, 1 means no leakage evidence"
+   ],
+   "scope": {
+    "profile": "release DSO (artifacts/phase2/install/lib/libcrypto.so.3), harness -O2, taskset -c 1",
+    "statement": "Statistical timing of a release library on a virtualised host without a PMU. State 1 is no leakage evidence at this geometry, never constant time."
+   },
+   "sensitivity_control": {
+    "mode": "executable",
+    "status": "PASS",
+    "control_id": "dudect-sensitivity",
+    "positive": "cmpnaive: a branchy comparator must produce dudect.done state=0 (leakage found)",
+    "negative": "cmpcmp: the constant-time comparator must produce state=1 (no leakage evidence)",
+    "observed": {
+     "cases": [
+      {"name": "positive control (naive comparator) reports leakage", "exit": 0},
+      {"name": "negative control (constant-time comparator) reports no leakage evidence", "exit": 1}
+     ],
+     "detail": "20000 measurements per batch at the recorded geometry; exit 0 is DUDECT_LEAKAGE_FOUND and exit 1 is DUDECT_NO_LEAKAGE_EVIDENCE_YET"
+    },
+    "prerequisite": {
+     "path": "court/tmp/tools/dudect/src/dudect.h",
+     "sha256": "3fb3b2bd7f9e17ae34b7c92518c1311c67342c56facc80da925d85f121b649da",
+     "settling_method": "restore the pinned dudect tree at commit dc269651 into court/tmp/tools/dudect, or set DUDECT_INCLUDE; the header is not tracked, which is recorded as an open reproducibility gap"
+    }
+   },
+   "fail_closed": {
+    "exit_statuses": {"0": "leakage found", "1": "no leakage evidence yet", "3": "measurements rejected (an operation failed)", "other": "harness or build failure"},
+    "refusal_text": "a run without the pinned header, without a successful operation count, or without dudect.done is not a result and is excluded"
+   }
+  },
+  {
+   "id": "binsec-checkct",
+   "name": "BINSEC -checkct with a validated SSE script",
+   "kind": "tool",
+   "paths": [
+    "courts/phase18/timing/binsec_checkct.sh",
+    "courts/phase18/timing/ct_bn.c"
+   ],
+   "invocation": "bash courts/phase18/timing/binsec_checkct.sh [--require-secure] <sse-script.cfg> <elf>; the wrapper runs binsec -sse -checkct -sse-script <cfg> -smt-solver z3",
+   "intended_use": "Decide, for one entry point and one declared secret/public split, whether the symbolic exploration finds a control-flow or memory-address dependence on the secret.",
+   "not_its_use": [
+    "a verdict about paths the SSE script does not reach",
+    "a timing or microarchitectural result",
+    "a statement about a function it did not explore (unknown is not secure)",
+    "a claim about a binary other than the one hashed into the run"
+   ],
+   "version_validation": {
+    "command": "binsec -version",
+    "observed": "Binsec version 0.11.3",
+    "identity_method": "the wrapper prints the binsec version, the solver version, the SSE-script path and the SHA-256 of the ELF it is about to explore; BINSEC_EXPECT_SHA256 refuses a different binary before the tool runs",
+    "components": {
+     "z3": "UNKNOWN in this session: no z3 is present in the tools image and the pinned /opt/z3-solver directory is absent. The wrapper refuses (exit 2) rather than running with the incomplete internal solver. Settling method: restore the pinned z3-4.13.0 or set BINSEC_Z3; the wrapper prints the solver version at run time.",
+     "opam_switch": "4.14.2"
+    }
+   },
+   "failure_modes": {
+    "false_positive": "a leak on a symbolic branch the script makes reachable but that the real caller cannot reach is still a leak in the model; the script declares its own inputs",
+    "false_negative": "an unreachable call, an unresolved indirect jump or a bounded exploration yields no leak report; that is why unknown is refused",
+    "silent_truncation": "without -sse there is no engine and the tool exits 0 with zero bytes; without a script nothing is reachable; without a solver the internal fallback reports an incomplete answer",
+    "unsupported_target": "an unsupported instruction or file format aborts the analysis; the wrapper then sees no verdict line",
+    "crash": "a tool crash leaves no verdict; the wrapper exits 3 and names the binary",
+    "partial_output": "a result line without the exact status token (for example a truncated line) is not a verdict",
+    "wrong_candidate": "the wrapper can bind the run to BINSEC_EXPECT_SHA256 and refuses a mismatch with exit 5"
+   },
+   "soundness_limits": [
+    "secure means no secret-dependent control flow or memory address was found in the explored model, under the declared secret/public split",
+    "the default feature set is control flow and memory access; multiplication/division checks are experimental and off",
+    "microarchitectural timing and value-only constant-latency effects are outside the model",
+    "at this venue the real solver is absent, so no live secure verdict was produced in this session; the wrapper's contract is qualified, the solver is UNKNOWN"
+   ],
+   "scope": {
+    "profile": "the ELF given to the wrapper, symbolic model",
+    "statement": "A secure verdict is model-relative: it bounds the explored paths of one declared input split. It is not a timing result and not a statement about the release binary's microarchitecture."
+   },
+   "sensitivity_control": {
+    "mode": "executable",
+    "status": "PASS",
+    "control_id": "binsec-gate",
+    "positive": "a stand-in tool reporting insecure must make the wrapper exit nonzero",
+    "negative": "a stand-in tool reporting secure must make the wrapper exit 0",
+    "observed": {
+     "cases": [
+      {"name": "secure verdict exits 0", "exit": 0},
+      {"name": "insecure verdict exits nonzero even when the tool exits zero", "exit": 1},
+      {"name": "insecure verdict with a nonzero tool status still exits nonzero", "exit": 1},
+      {"name": "unknown verdict is not a pass", "exit": 4},
+      {"name": "--require-secure refuses insecure", "exit": 8},
+      {"name": "--require-secure refuses unknown", "exit": 8},
+      {"name": "silent tool is refused (zero bytes on both streams)", "exit": 3},
+      {"name": "crash before a verdict is refused", "exit": 3},
+      {"name": "truncated result line is refused", "exit": 3},
+      {"name": "a secure verdict with a nonzero tool status is inconsistent", "exit": 6},
+      {"name": "wall-clock timeout is a bounded refusal", "exit": 6},
+      {"name": "wrong-candidate digest is refused", "exit": 5},
+      {"name": "non-ELF input is refused before the tool runs", "exit": 2},
+      {"name": "missing script is refused", "exit": 2}
+     ],
+     "detail": "the stand-in tool validates the wrapper's exit-status contract; the solver's verdicts are not exercised by this control"
+    }
+   },
+   "fail_closed": {
+    "exit_statuses": {"0": "secure", "1": "insecure", "2": "invocation or venue refusal", "3": "no verdict line", "4": "unknown", "5": "candidate identity mismatch", "6": "tool or wall-clock failure", "8": "--require-secure not satisfied"},
+    "refusal_text": "binsec_checkct: REFUSED target='<elf>' reason=<reason>; every refusal names the binary and the reason on stderr"
+   }
+  },
+  {
+   "id": "timecop-supercop",
+   "name": "TIMECOP patch on SUPERCOP (Valgrind client-request measurement)",
+   "kind": "tool",
+   "paths": [
+    "courts/phase18/timing/run_timecop_supercop.sh",
+    "courts/phase18/timing/fixtures/timecop/poison.h",
+    "courts/phase18/timing/fixtures/timecop/zz-leaky-control/verify.c"
+   ],
+   "invocation": "bash courts/phase18/timing/run_timecop_supercop.sh (inside a network-enabled venue with the pinned SUPERCOP tarball and TIMECOP patch)",
+   "intended_use": "Report, for a SUPERCOP primitive and a compiler configuration, whether Valgrind observes a secret-dependent branch or address use under the TIMECOP client-request protocol.",
+   "not_its_use": [
+    "constant-time behaviour of this crate: the measured trees are the SUPERCOP reference implementations",
+    "a verdict for a compiler configuration that was not run",
+    "a timing result; TIMECOP is a Valgrind-based detector, not a statistical timer"
+   ],
+   "version_validation": {
+    "command": "grep -m1 -o 'e4fe70eb[0-9a-f]*' courts/phase18/timing/run_timecop_supercop.sh",
+    "observed": "e4fe70eb2a24928a7bbd3fb133787f982f7fead959dd6521c2d42c52b69e96ac",
+    "identity_method": "the runner pins the SUPERCOP 20190816 tarball and the TIMECOP patch by SHA-256 and verifies both before applying; the patch digest is cc22f39dce8dba449dff9bbe6aaeb7d538102b0e083283bc44fcfc85cda1fbdf"
+   },
+   "failure_modes": {
+    "false_positive": "a branch reported inside the TIMECOP client request itself is a harness effect, not a primitive leak; the control exists to locate that class",
+    "false_negative": "a primitive not exercised by do-part crypto_verify is not measured",
+    "silent_truncation": "do-part exits nonzero after the analysis because it cats a missing work/errors file; the verdict table, not the exit status, is the evidence",
+    "unsupported_target": "the patch applies only to the three listed SUPERCOP versions",
+    "crash": "a failed patch application is fatal and prints rejects",
+    "partial_output": "a configuration that produced no valgrind verdict is missing from the table; the table must be complete",
+    "wrong_candidate": "the tarball and patch are digest-pinned; a substituted tree fails sha256sum -c"
+   },
+   "soundness_limits": [
+    "the recorded result is about SUPERCOP 20190816's implementations, not about this crate",
+    "its value here is the method and the negative control: the test-only leaky comparator is flagged in every configuration",
+    "the control was not re-executed in this session: the court has no network"
+   ],
+   "scope": {
+    "profile": "SUPERCOP 20190816 reference implementations under Valgrind",
+    "statement": "A recorded method-level qualification. It says the TIMECOP client-request method detects a deliberately leaky comparator; it says nothing about the crate."
+   },
+   "sensitivity_control": {
+    "mode": "recorded",
+    "status": "RECORDED",
+    "positive": "crypto_verify/16/ref is valgrind_pass in 121/121 configurations",
+    "negative": "the test-only early-exit comparator is valgrind_fail in 121/121 configurations, reporting a conditional jump rooted in timecop_doit's client request",
+    "binding": {
+     "path": "courts/phase18/timing/run_timecop_supercop.sh",
+     "sha256": "7073e83d3970781801df286148cc0028f85c20b053c4b70488d5882d96cabf4d"
+    },
+    "assertions": [
+     "valgrind_pass",
+     "valgrind_fail",
+     "zz-leaky-control"
+    ],
+    "settling_method": "re-run bash courts/phase18/timing/run_timecop_supercop.sh in a network-enabled court with the pinned tarball and patch; the numbers stay bound to the ETP-TODO T18 row until then",
+    "observed": {
+     "detail": "recorded in docs/ETP-TODO.md T18: 22 files / 45 hunks, 0 rejects, ref 121/121 valgrind_pass, control 121/121 valgrind_fail"
+    }
+   },
+   "fail_closed": {
+    "exit_statuses": {"0": "analysis completed (judge by the verdict table)", "non-zero": "do-part's trailing cat of work/errors; not a verdict"},
+    "refusal_text": "a configuration with no valgrind verdict is absent from the table and is not counted as a pass"
+   }
+  },
+  {
+   "id": "perf-pmu",
+   "name": "perf with the CPU-side PMU (and its absence)",
+   "kind": "tool",
+   "paths": [
+    "courts/phase18/timing/pmu_probe.c",
+    "courts/phase18/timing/run_pmu_substitutes.sh"
+   ],
+   "invocation": "cc -O2 -o /tmp/pmu_probe courts/phase18/timing/pmu_probe.c && /tmp/pmu_probe; perf stat -e cycles true; perf stat -e task-clock true",
+   "intended_use": "Establish whether this venue exposes an architectural PMU, and count hardware events only when it does.",
+   "not_its_use": [
+    "reporting software-event or TSC numbers as hardware counters",
+    "comparing this venue's absolute times with a non-virtualised host",
+    "a constant-time result"
+   ],
+   "version_validation": {
+    "command": "perf --version",
+    "observed": "perf version 6.1.192",
+    "identity_method": "the CPUID probe reports CPUID.0A version and general-counter count, CPUID.1 hypervisor-present and the AMD extended counter bit; perf's own version does not describe the venue, so the CPUID output is the identity of the counter budget"
+   },
+   "failure_modes": {
+    "false_positive": "treating task-clock or TSC ticks as hardware cycles",
+    "false_negative": "a masked-but-present PMU looks absent; the probe distinguishes architectural reporting from MSR access",
+    "silent_truncation": "perf prints <not supported> for an unavailable event and may still exit 0, so the exit status alone is not the signal",
+    "unsupported_target": "an event unsupported by the kernel is reported as such, not silently dropped",
+    "crash": "perf_event_paranoid or capability refusal makes an event unavailable; that is a venue restriction, not a counter result",
+    "partial_output": "a multiplexed group reports a scaled estimate; the run must say so",
+    "wrong_candidate": "the probe is about the venue, not a binary"
+   },
+   "soundness_limits": [
+    "no PMU, no frequency/turbo/SMT control, hypervisor present: this is a venue limitation",
+    "the absence explains why performance rows are SCOPED_OBSERVATION; it is not a property of the crate or of perf",
+    "software events and TSC ticks are not hardware performance counters"
+   ],
+   "scope": {
+    "profile": "venue capability probe",
+    "statement": "A venue probe. It establishes that no architectural PMU is exposed here; it makes no claim about the measured code."
+   },
+   "sensitivity_control": {
+    "mode": "executable",
+    "status": "PASS",
+    "control_id": "pmu-venue-probe",
+    "positive": "CPUID must report version 0 with zero general counters",
+    "negative": "perf software events must work, so the cycles failure is attributable to the venue and not to a broken tool",
+    "observed": {
+     "cases": [
+      {"name": "CPUID reports no architectural PMU at this venue", "exit": 0},
+      {"name": "perf cannot count cycles (no PMU counter)", "exit": 0},
+      {"name": "perf software events work (so the cycles failure is the venue, not a broken tool)", "exit": 0}
+     ],
+     "detail": "perf stat -e cycles true prints <not supported> before a zero exit; the control checks the text, not the status"
+    }
+   },
+   "fail_closed": {
+    "exit_statuses": {"0": "probe completed", "other": "probe or perf failure: no venue statement"},
+    "refusal_text": "an unavailable event is reported as <not supported>; a run that does not print the CPUID fields is not a venue statement"
+   }
+  },
+  {
+   "id": "tsc-smi-fallbacks",
+   "name": "TSC and SMI fallbacks (kernel msr PMU and serialised RDTSC)",
+   "kind": "harness",
+   "paths": [
+    "courts/phase18/timing/tsc_clock.c",
+    "courts/phase18/timing/pmu_msr_probe.c",
+    "courts/phase18/timing/run_pmu_substitutes.sh"
+   ],
+   "invocation": "bash courts/phase18/timing/run_pmu_substitutes.sh (compiles and runs tsc_clock, and perf stat -e msr/tsc/,msr/smi/ when the msr PMU is available)",
+   "intended_use": "Provide a reference-clock and SMI count when the architectural PMU is absent, with the substitute named as a substitute.",
+   "not_its_use": [
+    "instructions, branches, cache events or retired core cycles",
+    "kernel/user attribution or an exact tick period",
+    "a constant-time result"
+   ],
+   "version_validation": {
+    "command": "cc --version | head -n 1",
+    "observed": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+    "identity_method": "the harnesses are source files in the repository; the runner prints the kernel, the CPU flags and the perf event-source listing, and the receipts bind the observed tick count and SMI count"
+   },
+   "failure_modes": {
+    "false_positive": "reading a TSC delta as elapsed cycles",
+    "false_negative": "msr/tsc counts the reference clock, so a frequency change is invisible to it",
+    "silent_truncation": "/dev/cpu/N/msr unreadable silently removes the hardware arm; the runner prints that it did",
+    "unsupported_target": "rdtscp absent or not serialising gives an unusable serialisation; the runner records the resolution it measured",
+    "crash": "an MSR write that the hypervisor traps is reported as a failed probe, not as zero",
+    "partial_output": "a run without the empty-read-pair resolution has no usable resolution figure",
+    "wrong_candidate": "the harness measures the workload it is given; it does not identify the DSO"
+   },
+   "soundness_limits": [
+    "the recorded TSC/SMI observation is from a root-capable host outside the court; it was not re-executed in this session",
+    "a reference-clock tick is not a PMU counter, and the guest does not advertise constant_tsc/nonstop_tsc",
+    "the numeric observation stays bound to the ETP-TODO T17 record"
+   ],
+   "scope": {
+    "profile": "venue measurement harness",
+    "statement": "A substitute measurement path, recorded. It never substitutes for a PMU counter and makes no claim about the measured code's timing properties."
+   },
+   "sensitivity_control": {
+    "mode": "recorded",
+    "status": "RECORDED",
+    "positive": "the msr PMU path counts TSC ticks and SMI events when the kernel exposes them (T17: 7931483421 ticks, 0 SMI)",
+    "negative": "the CPUID probe and perf report no architectural counters, so the msr/TSC path is labelled a substitute",
+    "binding": {
+     "path": "courts/phase18/timing/run_pmu_substitutes.sh",
+     "sha256": "7b97d517913c11b555162c00ec252abf44f1d3998f1aeb4e4fbbedab203f198b"
+    },
+    "assertions": [
+     "msr/tsc",
+     "msr/smi",
+     "tsc_clock",
+     "pmu_msr_probe"
+    ],
+    "settling_method": "re-run the runner on a host where /dev/cpu/0/msr is readable and record the new counts; until then the numbers stay bound to the ETP-TODO T17 row",
+    "observed": {
+     "detail": "recorded in docs/ETP-TODO.md T17: msr/tsc 7931483421 ticks, 0 SMI; task-clock 2643.02 ms at 0.999 CPUs; serialised rdtsc resolution 34 ticks, ~11.4 ns"
+    }
+   },
+   "fail_closed": {
+    "exit_statuses": {"0": "runner completed", "other": "runner failure: no substitute statement"},
+    "refusal_text": "an unreadable msr interface is printed as unavailable; the run does not report a zero counter for it"
+   }
+  },
+  {
+   "id": "binary-branch-audit",
+   "name": "binary_branch_audit.py (per-function emitted-instruction audit)",
+   "kind": "script",
+   "paths": [
+    "courts/phase18/timing/binary_branch_audit.py",
+    "docs/CODE-GENERATION-ASSURANCE.md"
+   ],
+   "invocation": "python3 courts/phase18/timing/binary_branch_audit.py [--expect-sha256 HEX] [--targets-file JSON] [--timeout SECONDS] <dso>",
+   "intended_use": "Report the conditional jumps, divisions, cmov/setcc, overflow-check branches, dispatch-looking calls and cpuid that the compiler emitted in a named function's symbol-declared range of one identified DSO.",
+   "not_its_use": [
+    "secret dependence of any branch: the reviewer maps conditions to the source's secret classification",
+    "a constant-time result; cmov presence is not fixed latency",
+    "a claim about a function not in the inventory, or about a DSO whose digest is not the one recorded",
+    "post-LTO inlined callers or callees outside the audited ranges"
+   ],
+   "version_validation": {
+    "command": "objdump --version | head -n 1",
+    "observed": "GNU objdump (GNU Binutils for Debian) 2.40",
+    "identity_method": "the script prints the SHA-256 of the DSO it opened and the objdump version it used; --expect-sha256 refuses a different candidate with exit 3",
+    "components": {
+     "python": "Python 3.11.2",
+     "profile_binding": "docs/CODE-GENERATION-ASSURANCE.md binds a result to rustc 1.98.1, the release profile, the linker and the DSO digest"
+    }
+   },
+   "failure_modes": {
+    "false_positive": "a branch in a non-secret path inside a secret-bearing function is listed; the row is not a leak report",
+    "false_negative": "a branch lowered to cmov or an indirect jump is not a conditional jump and does not appear as one",
+    "silent_truncation": "a tool that prints a prefix of the range, or skips bytes, used to leave a shorter population counted as resolved; the script now refuses a misaligned start, a hole over 15 bytes, or more than 15 undecoded trailing bytes",
+    "unsupported_target": "a non-ELF file is refused before objdump; an unknown mnemonic leaves a gap and is refused as a hole",
+    "crash": "an objdump failure or timeout is a refusal; a per-target failure names the target",
+    "partial_output": "a zero-size symbol has no declared extent; it is refused instead of inventing a 16-byte window",
+    "wrong_candidate": "--expect-sha256 refuses a mismatch; without it the digest is printed for the receipt to bind"
+   },
+   "soundness_limits": [
+    "the report is an instruction-shape inventory, not a taint or timing analysis",
+    "symbol-declared extents exclude inlined callees and post-LTO rearrangement",
+    "absence of a division or a conditional jump in a range is not evidence of constant time",
+    "the secret classification lives in the Rust source, not in this instrument"
+   ],
+   "scope": {
+    "profile": "release DSO, opt-level 3, codegen-units 16, no LTO, overflow-checks on",
+    "statement": "Emitted-instruction shape in one identified release DSO. It is a review aid under docs/CODE-GENERATION-ASSURANCE.md, not a constant-time result."
+   },
+   "sensitivity_control": {
+    "mode": "executable",
+    "status": "PASS",
+    "control_id": "branch-audit-gate",
+    "positive": "a fixture with exact, unique, non-empty target functions must exit 0",
+    "negative": "missing, ambiguous, zero-size, truncated, holed, timed-out, non-ELF and wrong-digest inputs must all be refused nonzero and named",
+    "observed": {
+     "cases": [
+      {"name": "resolves exact unique symbols and exits 0", "exit": 0},
+      {"name": "ambiguous symbol is refused", "exit": 1},
+      {"name": "missing target is refused", "exit": 1},
+      {"name": "zero-size symbol is refused (no invented extent)", "exit": 1},
+      {"name": "non-ELF input is refused", "exit": 2},
+      {"name": "wrong-candidate digest is refused", "exit": 3},
+      {"name": "truncated disassembly is refused, not counted as resolved", "exit": 1},
+      {"name": "empty disassembly is refused", "exit": 1},
+      {"name": "a hole in the decoded stream is refused", "exit": 1},
+      {"name": "a hung tool is a bounded refusal", "exit": 1}
+     ],
+     "detail": "fixtures built from assembly; truncation, hole and hang injected through an objdump shim; exactness checked with a malformed length prefix"
+    }
+   },
+   "fail_closed": {
+    "exit_statuses": {"0": "all expected targets resolved with complete disassembly", "1": "one or more targets refused", "2": "invocation, format, tool failure or timeout", "3": "candidate identity mismatch"},
+    "refusal_text": "REFUSED target=\"<family>\" symbol=\"<short>\" reason=<reason> on stderr for every refused target, plus a FAIL-CLOSED summary"
+   }
+  },
+  {
+   "id": "differential-bench-court",
+   "name": "Cross-library differential benchmark court (bench_api, run_bench_api, analyse_bench_api)",
+   "kind": "harness",
+   "paths": [
+    "courts/phase18/timing/bench_api.c",
+    "courts/phase18/timing/run_bench_api.sh",
+    "courts/performance-frontier/baseline/analyse_bench_api.py",
+    "courts/performance-frontier/baseline/extract_dh_fixtures.py"
+   ],
+   "invocation": "bash courts/phase18/timing/run_bench_api.sh inside the court; the analyser validates the raw population and writes results.json",
+   "intended_use": "Compare the candidate and the pinned OpenSSL authority on the same deterministic workload population, at the same time and with the same allocation probe, and refuse an incomplete or substituted population.",
+   "not_its_use": [
+    "a frontier or absolute-performance claim",
+    "a constant-time or safety result",
+    "a throughput, tail-latency, scaling or memory claim",
+    "a comparison across venues, images or workload definitions"
+   ],
+   "version_validation": {
+    "command": "python3 --version",
+    "observed": "Python 3.11.2",
+    "identity_method": "each process resolves dladdr(BN_new) and prints the mapped DSO's realpath, device and inode from /proc/self/maps; the runner compares them with stat(2) on the expected file and refuses a mismatch. Candidate and authority identities are recorded separately.",
+    "components": {
+     "cc": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+     "candidate_dso_sha256": "ee7fa27c79f5a679d5b229429d53dc7c3b510695db9c74d11b4b6783a735ebe9",
+     "authority": "OpenSSL 3.6.4 production, 611e511d"
+    }
+   },
+   "failure_modes": {
+    "false_positive": "a timing difference caused by the venue is reported as a ratio; the paired ordering and the stated venue limit are what bound it",
+    "false_negative": "a difference smaller than the measured spread is not distinguished",
+    "silent_truncation": "a process that stops early prints fewer result lines; the analyser matches exact identifiers, not line counts",
+    "unsupported_target": "a workload the library cannot run fails its CHECK line and blocks the campaign",
+    "crash": "a failed or resource-exhausted process makes the campaign BLOCKED, never a pass",
+    "partial_output": "a missing repetition, direction or CHECK identifier is refused by the analyser",
+    "wrong_candidate": "the mapped file is proven per process against the on-disk identity"
+   },
+   "soundness_limits": [
+    "ratios on one virtualised venue with no PMU are SCOPED_OBSERVATION",
+    "the allocation probe observes the entry points it interposes, not total memory",
+    "the live two-library exchange is bound to PFP-0; the executable control exercises the analyser's refusals, not a new measurement"
+   ],
+   "scope": {
+    "profile": "release distribution DSO, taskset -c 1, 15 paired repetitions",
+    "statement": "A measured ratio and correctness exchange on this venue. It establishes neither constant time nor compatibility graduation."
+   },
+   "sensitivity_control": {
+    "mode": "executable",
+    "status": "PASS",
+    "control_id": "differential-analysis-controls",
+    "positive": "the analyser accepts a well-formed campaign document",
+    "negative": "missing, duplicated, substituted and extra identities, repetitions, CHECK identifiers and cross directions are refused, as are duplicate JSON keys and non-finite numbers",
+    "observed": {
+     "cases": [
+      {"name": "forensics/tools/tests/test_analyse_bench_api.py passes with at least 34 tests", "exit": 0}
+     ],
+     "detail": "34 tests including the CLI refusal controls"
+    }
+   },
+   "fail_closed": {
+    "exit_statuses": {"0": "campaign accepted", "non-zero": "refused with a PFP_* rule identifier"},
+    "refusal_text": "the analyser raises CampaignRefusal with a rule name and a JSON pointer; a blocked campaign is BLOCKED, never PASS"
+   }
+  },
+  {
+   "id": "alloc-probe",
+   "name": "alloc_probe.c (LD_PRELOAD allocation counter and failure injector)",
+   "kind": "harness",
+   "paths": [
+    "courts/phase18/timing/alloc_probe.c",
+    "courts/phase18/timing/bench_api.c"
+   ],
+   "invocation": "cc -O2 -fPIC -shared courts/phase18/timing/alloc_probe.c -ldl -o alloc_probe.so && LD_PRELOAD=alloc_probe.so <subject>",
+   "intended_use": "Count allocation entry points per operation for both subjects, and force a chosen allocation to fail so the subject's failure behaviour is observed rather than assumed.",
+   "not_its_use": [
+    "peak RSS or total bytes allocated",
+    "allocator internals or fragmentation",
+    "a claim about allocations that bypass the interposed entry points (custom arenas, stack, mmap by the allocator itself)"
+   ],
+   "version_validation": {
+    "command": "cc --version | head -n 1",
+    "observed": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+    "identity_method": "the probe is compiled from the tracked source into the preloaded object; the campaign records the object's role and applies it to both subjects"
+   },
+   "failure_modes": {
+    "false_positive": "an allocation inside the probe or the C library is counted",
+    "false_negative": "an allocation through a symbol the probe does not interpose is invisible",
+    "silent_truncation": "a counter read before the operation completes undercounts; the harness reads after the operation",
+    "unsupported_target": "a statically linked subject does not consult LD_PRELOAD",
+    "crash": "the forced-failure path can make the subject abort (an infallible allocation); that is an observation",
+    "partial_output": "a process that dies mid-operation leaves a partial count",
+    "wrong_candidate": "the probe is applied to both subjects with the same accounting; a difference is recorded, never normalised"
+   },
+   "soundness_limits": [
+    "counts entry points, not bytes or live memory",
+    "the legacy malloc/calloc/realloc count and the unified count are different instruments and are not merged"
+   ],
+   "scope": {
+    "profile": "preloaded into both subjects in the release campaign",
+    "statement": "An allocation-entry-point count and a failure-injection path. It says nothing about memory safety or about allocation sizes."
+   },
+   "sensitivity_control": {
+    "mode": "executable",
+    "status": "PASS",
+    "control_id": "alloc-probe-control",
+    "positive": "two mallocs are counted as two allocation calls",
+    "negative": "the second allocation is forced to fail while the first succeeds",
+    "observed": {
+     "cases": [
+      {"name": "the probe counts every allocation entry point it interposes", "exit": 0},
+      {"name": "the forced-failure path fails exactly the requested allocation", "exit": 0}
+     ],
+     "detail": "a fixture allocates twice, then repeats with allocprobe_fail_after(2)"
+    }
+   },
+   "fail_closed": {
+    "exit_statuses": {"0": "control or measurement completed", "other": "build or subject failure"},
+    "refusal_text": "a count is used only when the operation completed; a failed process is not reported as zero allocations"
+   }
+  },
+  {
+   "id": "build-reproducibility",
+   "name": "build_reproducibility.sh (two clean builds, byte comparison)",
+   "kind": "script",
+   "paths": [
+    "forensics/tools/build_reproducibility.sh",
+    "forensics/tools/phase2_shell.py"
+   ],
+   "invocation": "bash forensics/tools/build_reproducibility.sh [--out DIR] [--build-id auto|none] [--distribution] [--self-test]",
+   "intended_use": "Decide whether two independently initialised builds of the same committed source produce byte-identical archives and DSOs, and name the first differing byte and section when they do not.",
+   "not_its_use": [
+    "a correct build or a safe build",
+    "bit-for-bit equality with a different toolchain, host or image",
+    "a safety, constant-time or compatibility result"
+   ],
+   "version_validation": {
+    "command": "ar --version | head -n 1",
+    "observed": "GNU ar (GNU Binutils for Debian) 2.40",
+    "identity_method": "the recipe records the source commit, the build-relevant tree hashes, the toolchain and the resulting artefact SHA-256 for each arm; equality is per-recipe, not universal",
+    "components": {
+     "rustc": "1.98.1",
+     "cc": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+     "etp2_artifacts": "archive 641471443209..., measurement DSO 85395dcf7b76..., distribution DSO 139966033ac9..."
+    }
+   },
+   "failure_modes": {
+    "false_positive": "an environment difference that was normalised away makes unequal builds look equal; the recipe forbids normalisation",
+    "false_negative": "an unvaried input leaves a hidden dependence unexercised",
+    "silent_truncation": "a build that failed is not compared; set -e and the log capture make a failure fatal",
+    "unsupported_target": "a missing toolchain or a non-court environment refuses (97) rather than building on the host",
+    "crash": "a failed build aborts with its log",
+    "partial_output": "the comparison list is fixed; a missing artefact is a failure, not a skipped row",
+    "wrong_candidate": "the recipe builds from the committed source only; an externally supplied archive bypasses the frozen-build rule and is not accepted"
+   },
+   "soundness_limits": [
+    "reproducibility is not correctness and says nothing about safety, constant time or compatibility",
+    "the recorded result is for one host, one image and one toolchain",
+    "the self-test control exercises the archive and comparison primitives on a tiny fixture, not the two cargo builds; the full recipe is bound to ETP-2"
+   ],
+   "scope": {
+    "profile": "release, opt-level 3, codegen-units 16, no LTO",
+    "statement": "A byte-equality property of two builds at one toolchain. It is not a functional or security result."
+   },
+   "sensitivity_control": {
+    "mode": "executable",
+    "status": "PASS",
+    "control_id": "reproducibility-comparison-control",
+    "positive": "two deterministic archives from the same object compare equal",
+    "negative": "an archive from a different object is detected as different",
+    "observed": {
+     "cases": [
+      {"name": "identical archives compare equal and a differing byte is detected", "exit": 0}
+     ],
+     "detail": "build_reproducibility.sh --self-test; the full two-build recipe was executed for ETP-2 and is not re-run here"
+    }
+   },
+   "fail_closed": {
+    "exit_statuses": {"0": "byte-identical", "1": "a difference was found and named", "2": "usage error", "97": "outside the court: refused"},
+    "refusal_text": "NOT REPRODUCIBLE: see the differing sections above; a host invocation is refused with 97"
+   }
+  },
+  {
+   "id": "etp-claims",
+   "name": "etp_claims.py (claim algebra, schema and tree validator)",
+   "kind": "suite",
+   "paths": [
+    "forensics/tools/etp_claims.py",
+    "evidence/etp/claim.schema.json",
+    "forensics/tools/tests/test_etp_claims.py"
+   ],
+   "invocation": "python3 forensics/tools/etp_claims.py validate|conjoin|invalidate|propagate|contradictions [--document ...] [--schema ...]",
+   "intended_use": "Decide whether a claim document is well typed under the closed schema, whether its laws hold, whether cited digests re-derive at the stated identity, and what a conjunction or invalidation entails.",
+   "not_its_use": [
+    "whether the claim is true",
+    "whether an instrument is sensitive to the defect it claims to detect (this register's job)",
+    "a verdict promotion: the algebra propagates verdicts, it does not create evidence",
+    "independence beyond the declared reviewer roles"
+   ],
+   "version_validation": {
+    "command": "python3 --version",
+    "observed": "Python 3.11.2",
+    "identity_method": "the tool is self-contained (the court image has no jsonschema); it re-derives cited digests from the Git object at the stated candidate and refuses non-finite numbers and duplicate keys"
+   },
+   "failure_modes": {
+    "false_positive": "a document can be accepted while a premise it cites is false; acceptance is typing and algebra, not truth",
+    "false_negative": "an obligation with no independently checkable procedure is still an obligation; the tool reports it rather than discharging it",
+    "silent_truncation": "a claim set with a missing member is accepted as the smaller set; population completeness is the caller's obligation and is recorded in the document",
+    "unsupported_target": "a claim naming an identity the tree check cannot resolve gets an obligation, not a pass",
+    "crash": "a malformed document is refused with a JSON pointer",
+    "partial_output": "an exclusion witness that is absent, unbound or self-authored is refused",
+    "wrong_candidate": "a witness bound to a different candidate identity is refused"
+   },
+   "soundness_limits": [
+    "no axis implies another: evidence, assumptions, TCB and obligations are orthogonal",
+    "denial by default is a typing rule, not a safety proof",
+    "reviewer identity and role are declared, not authenticated"
+   ],
+   "scope": {
+    "profile": "claim documents under evidence/etp/",
+    "statement": "A typing and algebra checker for claims. It never promotes a claim and never substitutes for instrument qualification."
+   },
+   "sensitivity_control": {
+    "mode": "executable",
+    "status": "PASS",
+    "control_id": "etp-claims-controls",
+    "positive": "the committed 35-claim document validates",
+    "negative": "admitted exclusion witnesses without a valid binding, operation gating, malformed populations, duplicate keys and non-finite numbers are refused",
+    "observed": {
+     "cases": [
+      {"name": "forensics/tools/tests/test_etp_claims.py passes with at least 59 tests", "exit": 0}
+     ],
+     "detail": "59 tests including end-to-end CLI controls"
+    }
+   },
+   "fail_closed": {
+    "exit_statuses": {"0": "accepted", "1": "refused with EG_* identifiers"},
+    "refusal_text": "each refusal carries a named code (EG_*) and a JSON pointer; a refused document is not interpreted by any subcommand"
+   }
+  }
+ ]
+}

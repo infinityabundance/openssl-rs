@@ -34,9 +34,16 @@
 #                    source regenerated from its tracked generator and tracked
 #                    inputs (the artefact D255 is about) and compare it, closing
 #                    the `.symtab` question as well.
+#   --self-test      exercise only the archive/comparison machinery on a tiny
+#                    fixture: two archives built from the same object must be
+#                    byte-identical, and an archive built from a different object
+#                    must be detected as different. It does not build the crate
+#                    and makes no reproducibility claim about it; the qualification
+#                    control uses it to show that the comparison can fail.
 #
-# Exit status: 0 iff both the `.a` and the `.so` are byte-identical; 1 otherwise.
-# 97 when run outside the court. Nothing here executes on the host.
+# Exit status: 0 iff both the `.a` and the `.so` are byte-identical (or, with
+# --self-test, if the comparison behaves correctly in both directions); 1
+# otherwise. 97 when run outside the court. Nothing here executes on the host.
 set -euo pipefail
 
 . "$(dirname "$0")/require_court.sh"
@@ -46,6 +53,7 @@ OUT=/court/repro
 BUILD_ID=auto
 KEEP=1
 DISTRIBUTION=0
+SELFTEST=0
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -54,11 +62,38 @@ while [ $# -gt 0 ]; do
     --keep) KEEP=1; shift ;;
     --clean) KEEP=0; shift ;;
     --distribution) DISTRIBUTION=1; shift ;;
+    --self-test) SELFTEST=1; shift ;;
     *) echo "build_reproducibility: unknown argument: $1" >&2; exit 2 ;;
   esac
 done
 
 case "$BUILD_ID" in auto|none) ;; *) echo "--build-id must be auto or none" >&2; exit 2 ;; esac
+
+if [ "$SELFTEST" = 1 ]; then
+  d=$(mktemp -d)
+  trap 'rm -rf "$d"' EXIT
+  printf '.text\n.globl F\nF:\n ret\n' >"$d/a.S"
+  printf '.text\n.globl F\nF:\n xorl %%eax,%%eax\n ret\n' >"$d/b.S"
+  cc -c -o "$d/a.o" "$d/a.S"
+  cc -c -o "$d/b.o" "$d/b.S"
+  mkdir -p "$d/x" "$d/y" "$d/z"
+  cp "$d/a.o" "$d/x/a.o"; cp "$d/a.o" "$d/y/a.o"; cp "$d/b.o" "$d/z/a.o"
+  ( cd "$d/x" && ar rcsD ../one.a a.o )
+  ( cd "$d/y" && ar rcsD ../one2.a a.o )
+  ( cd "$d/z" && ar rcsD ../two.a a.o )
+  status=0
+  if cmp -s "$d/one.a" "$d/one2.a"; then
+    echo "SELFTEST identical-archives OK"
+  else
+    echo "SELFTEST identical-archives FAILED" >&2; status=1
+  fi
+  if cmp -s "$d/one.a" "$d/two.a"; then
+    echo "SELFTEST differing-archives NOT detected" >&2; status=1
+  else
+    echo "SELFTEST differing-archives detected"
+  fi
+  exit "$status"
+fi
 
 SDE=${SOURCE_DATE_EPOCH:-1609459200}
 JOBS=${CARGO_BUILD_JOBS:-4}
