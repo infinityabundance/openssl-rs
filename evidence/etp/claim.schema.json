@@ -1,0 +1,1193 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://openssl-rs.invalid/etp/claim.schema.json",
+  "title": "openssl-rs ETP typed claim document",
+  "description": "Normative shape of a typed-claim document. Every axis is a separate property; no property is derived from another, and no numeric field is a score. The cross-field rules of the claim algebra (docs/ETP-CLAIM-ALGEBRA.md) are checked by forensics/tools/etp_claims.py, not expressed as JSON Schema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "kind",
+    "generated_utc",
+    "source_identity",
+    "derived_from",
+    "claims"
+  ],
+  "properties": {
+    "schema": {
+      "const": "openssl-rs/etp/claims/v1",
+      "description": "Type version. A different version is a different type, not a compatible extension."
+    },
+    "kind": {
+      "const": "etp-typed-claims"
+    },
+    "generated_utc": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+    },
+    "source_identity": {
+      "$ref": "#/$defs/source_identity"
+    },
+    "derived_from": {
+      "$ref": "#/$defs/document_lineage"
+    },
+    "claims": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/claim"
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "source_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "commit",
+        "branch",
+        "worktree_dirty_tracked_files",
+        "tracked_file_count",
+        "tree_hash_rule",
+        "trees",
+        "authority_registry"
+      ],
+      "properties": {
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "worktree_dirty_tracked_files": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tracked_file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tree_hash_rule": {
+          "type": "string",
+          "minLength": 1
+        },
+        "trees": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "$ref": "#/$defs/tree_digest"
+          }
+        },
+        "authority_registry": {
+          "$ref": "#/$defs/file_digest"
+        }
+      }
+    },
+    "tree_digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "file_count",
+        "sha256"
+      ],
+      "properties": {
+        "paths": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "file_digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "file_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "document_lineage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "document",
+        "sha256",
+        "input_evidence_commit",
+        "claim_count",
+        "trust_gaps"
+      ],
+      "properties": {
+        "document": {
+          "const": "evidence/etp0/CLAIMS.json"
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "input_evidence_commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$"
+        },
+        "claim_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "trust_gaps": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "sha256",
+            "gap_count"
+          ],
+          "properties": {
+            "path": {
+              "const": "evidence/etp0/TRUST-GAPS.json"
+            },
+            "sha256": {
+              "$ref": "#/$defs/sha256"
+            },
+            "gap_count": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    },
+    "claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "property",
+        "interpretation",
+        "quantification",
+        "scope",
+        "threat_model",
+        "identity",
+        "authority",
+        "target",
+        "assumptions",
+        "evidence",
+        "tcb",
+        "obligations",
+        "invalidation",
+        "modality",
+        "reproduction",
+        "verdict"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Z][A-Z0-9]*-CLM-[0-9]{3}$"
+        },
+        "derived_from": {
+          "$ref": "#/$defs/derived_claim"
+        },
+        "property": {
+          "enum": [
+            "identity",
+            "provenance",
+            "compatibility",
+            "memory-safety",
+            "timing",
+            "cryptographic-assurance",
+            "reproducibility",
+            "consumer-graduation",
+            "claim-governance"
+          ]
+        },
+        "interpretation": {
+          "type": "string",
+          "minLength": 20
+        },
+        "quantification": {
+          "$ref": "#/$defs/quantification"
+        },
+        "scope": {
+          "$ref": "#/$defs/scope"
+        },
+        "threat_model": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/threat_model"
+            }
+          ]
+        },
+        "identity": {
+          "$ref": "#/$defs/identity"
+        },
+        "authority": {
+          "$ref": "#/$defs/authority"
+        },
+        "target": {
+          "$ref": "#/$defs/target"
+        },
+        "assumptions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/assumption"
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/evidence"
+          }
+        },
+        "tcb": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/tcb_entry"
+          }
+        },
+        "obligations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/obligation"
+          }
+        },
+        "invalidation": {
+          "$ref": "#/$defs/invalidation"
+        },
+        "modality": {
+          "enum": [
+            "DOCUMENTED",
+            "IMPLEMENTED",
+            "TESTED",
+            "INSTRUMENTED",
+            "PROOF_OBLIGATIONS_DISCHARGED",
+            "BINARY_REFINEMENT_VERIFIED"
+          ]
+        },
+        "reproduction": {
+          "$ref": "#/$defs/reproduction"
+        },
+        "verdict": {
+          "$ref": "#/$defs/verdict"
+        },
+        "contradiction": {
+          "$ref": "#/$defs/contradiction"
+        },
+        "closure": {
+          "$ref": "#/$defs/closure"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "verdict": {
+                "properties": {
+                  "state": {
+                    "const": "CONTRADICTED"
+                  }
+                },
+                "required": [
+                  "state"
+                ]
+              }
+            },
+            "required": [
+              "verdict"
+            ]
+          },
+          "then": {
+            "required": [
+              "contradiction"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "contradiction"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "verdict": {
+                "properties": {
+                  "state": {
+                    "const": "SAFE_COMPATIBLE"
+                  }
+                },
+                "required": [
+                  "state"
+                ]
+              }
+            },
+            "required": [
+              "verdict"
+            ]
+          },
+          "then": {
+            "required": [
+              "closure"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "closure"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "derived_claim": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "document",
+        "id",
+        "property",
+        "verdict"
+      ],
+      "properties": {
+        "document": {
+          "const": "evidence/etp0/CLAIMS.json"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^ETP0-CLM-[0-9]{3}$"
+        },
+        "property": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verdict": {
+          "enum": [
+            "SUPPORTED",
+            "PARTIAL",
+            "CONTRADICTED",
+            "SUPERSEDED",
+            "WITHDRAWN",
+            "UNKNOWN"
+          ]
+        }
+      }
+    },
+    "quantification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "population"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "universal",
+            "existential",
+            "statistical",
+            "enumerated"
+          ]
+        },
+        "population": {
+          "type": "string",
+          "minLength": 1
+        },
+        "population_size": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "measure": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/measure"
+            }
+          ]
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "kind": {
+                "const": "enumerated"
+              }
+            },
+            "required": [
+              "kind"
+            ]
+          },
+          "then": {
+            "required": [
+              "population_size",
+              "members"
+            ]
+          }
+        }
+      ]
+    },
+    "measure": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "A recorded observation, carried as a string. It is never parsed into arithmetic, never weighted, and never combined with another axis. The const field makes that refusal explicit in the data.",
+      "required": [
+        "form",
+        "value",
+        "aggregation"
+      ],
+      "properties": {
+        "form": {
+          "enum": [
+            "count",
+            "ratio",
+            "set",
+            "boolean",
+            "digest-list"
+          ]
+        },
+        "value": {
+          "type": "string",
+          "minLength": 1
+        },
+        "aggregation": {
+          "const": "forbidden"
+        }
+      }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "subject",
+        "locations"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "code",
+            "artefact",
+            "abi",
+            "consumer-family",
+            "documentation",
+            "ledger",
+            "record",
+            "measurement"
+          ]
+        },
+        "subject": {
+          "type": "string",
+          "minLength": 1
+        },
+        "venue": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locations": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "excludes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "threat_model": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "adversary",
+        "observation_model",
+        "out_of_scope"
+      ],
+      "properties": {
+        "adversary": {
+          "type": "string",
+          "minLength": 1
+        },
+        "observation_model": {
+          "type": "string",
+          "minLength": 1
+        },
+        "out_of_scope": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "build",
+        "artefacts"
+      ],
+      "properties": {
+        "source": {
+          "$ref": "#/$defs/source_binding"
+        },
+        "build": {
+          "$ref": "#/$defs/build_identity"
+        },
+        "artefacts": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/artefact_digest"
+          }
+        }
+      }
+    },
+    "source_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate",
+        "commit",
+        "binding",
+        "tree_sha256"
+      ],
+      "properties": {
+        "candidate": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "commit": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9a-f]{7,40}$"
+        },
+        "binding": {
+          "enum": [
+            "exact",
+            "ancestor",
+            "stale",
+            "different-candidate",
+            "multiple",
+            "unbound"
+          ]
+        },
+        "tree_sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/sha256"
+            }
+          ]
+        }
+      }
+    },
+    "build_identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "toolchain",
+        "profile",
+        "target"
+      ],
+      "properties": {
+        "toolchain": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "profile": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "target": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "artefact_digest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "label",
+        "sha256",
+        "path"
+      ],
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/sha256"
+            }
+          ]
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "version",
+        "path"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "openssl-authority",
+            "repository-policy",
+            "machine-record",
+            "normative-standard",
+            "source-tree",
+            "none"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "target": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "name",
+        "path"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "document",
+            "artefact",
+            "code",
+            "ledger",
+            "record",
+            "consumer-binary",
+            "dependency"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "assumption": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "statement",
+        "checkable_by"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Z0-9][A-Z0-9-]*$"
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "checkable_by": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "path",
+        "kind",
+        "sha256",
+        "digest_identity",
+        "present",
+        "reconstructable"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^EV-[A-Za-z0-9._-]+$"
+        },
+        "path": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "kind": {
+          "enum": [
+            "file",
+            "record",
+            "log",
+            "binary",
+            "commit",
+            "test-output",
+            "prose",
+            "tool",
+            "external-input"
+          ]
+        },
+        "sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/sha256"
+            }
+          ]
+        },
+        "digest_identity": {
+          "enum": [
+            "S",
+            "E",
+            "historical",
+            null
+          ]
+        },
+        "present": {
+          "enum": [
+            true,
+            false,
+            "partial"
+          ]
+        },
+        "reconstructable": {
+          "enum": [
+            true,
+            false,
+            "partial"
+          ]
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    },
+    "tcb_entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "component",
+        "trusted_for",
+        "verified"
+      ],
+      "properties": {
+        "component": {
+          "type": "string",
+          "minLength": 1
+        },
+        "trusted_for": {
+          "type": "string",
+          "minLength": 1
+        },
+        "verified": {
+          "type": "boolean"
+        }
+      }
+    },
+    "obligation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "statement",
+        "state",
+        "blocks",
+        "settled_by",
+        "evidence"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^OBL-[A-Za-z0-9._-]+$"
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1
+        },
+        "state": {
+          "enum": [
+            "OPEN",
+            "DISCHARGED"
+          ]
+        },
+        "blocks": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": [
+              "verdict",
+              "graduation",
+              "reproduction",
+              "evidence",
+              "identity",
+              "compatibility"
+            ]
+          },
+          "uniqueItems": true
+        },
+        "settled_by": {
+          "type": "string",
+          "minLength": 1
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "exclusions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/exclusion"
+          }
+        }
+      }
+    },
+    "exclusion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "claim",
+        "argument",
+        "checkable_by"
+      ],
+      "properties": {
+        "claim": {
+          "type": "string",
+          "minLength": 1
+        },
+        "argument": {
+          "type": "string",
+          "minLength": 1
+        },
+        "checkable_by": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "invalidation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "depends_on",
+        "rationale"
+      ],
+      "properties": {
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/dependency"
+          }
+        },
+        "rationale": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "dependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "id"
+      ],
+      "properties": {
+        "kind": {
+          "enum": [
+            "claim",
+            "commit",
+            "tree",
+            "artefact",
+            "authority",
+            "path",
+            "instrument",
+            "toolchain"
+          ]
+        },
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "$ref": "#/$defs/sha256"
+            }
+          ]
+        }
+      }
+    },
+    "reproduction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "procedure",
+        "at"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "NOT_ATTEMPTED",
+            "ATTEMPTED",
+            "REPRODUCED",
+            "FAILED",
+            "UNKNOWN",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "procedure": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "verdict": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "basis"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "UNKNOWN",
+            "REFUTED",
+            "CONTRADICTED",
+            "NOT_ESTABLISHED",
+            "ESTABLISHED",
+            "SAFE_COMPATIBLE",
+            "PARTIAL",
+            "SUPERSEDED",
+            "WITHDRAWN"
+          ]
+        },
+        "basis": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "contradiction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "parties",
+        "resolution_owner"
+      ],
+      "properties": {
+        "parties": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/party"
+          }
+        },
+        "resolution_owner": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "party": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "source",
+        "assertion",
+        "asserted_verdict",
+        "evidence"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+        },
+        "source": {
+          "type": "string",
+          "minLength": 1
+        },
+        "assertion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "asserted_verdict": {
+          "enum": [
+            "UNKNOWN",
+            "REFUTED",
+            "CONTRADICTED",
+            "NOT_ESTABLISHED",
+            "ESTABLISHED",
+            "SAFE_COMPATIBLE",
+            "PARTIAL",
+            "SUPERSEDED",
+            "WITHDRAWN"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "closure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dependencies",
+        "unresolved_dependencies",
+        "complete"
+      ],
+      "properties": {
+        "dependencies": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "unresolved_dependencies": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "complete": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
