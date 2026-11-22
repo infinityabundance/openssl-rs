@@ -169,7 +169,43 @@ Rules that bind this queue (from AGENTS.md, extended by the ETP mandate):
 
 ---
 
-## F. Curl consumer — open work
+## F. ETP Addendum B — Rekor v2 public transparency
+
+Normative text: `docs/ETP-ADDENDUM-B.md` (clauses B.1–B.33). The queue below is
+§B.30 of that addendum. Identifiers `B0`–`B8` are the addendum's own and are
+distinct from the `Tn` timing items in section B.
+
+Pinned baseline, read from upstream on 2026-11-22 and recorded in the addendum's
+§B.3.2: `rekor-tiles` v2.4.2 (2026-11-10, `a30bd31`), v2.3.0 (DSSE entry type
+dropped, DSSE published as `hashedrekord`), v2.1.0 (POSIX backend), v2.0.1 (log
+witnessing); C2SP `tlog-tiles` v1.0.0, `tlog-checkpoint` v1.1.0 and
+`tlog-cosignature` v1.1.0, all dated 2026-10-07. Three tensions are recorded in
+§B.3.3 and are not resolved by preference: C2SP recommends ML-DSA-44 while the
+implementation labels it experimental; a client version does not imply a v2
+service (the inspected `signing_config` still advertised a v1 endpoint); and the
+DSSE-to-`hashedrekord` digest must be the admitted client's, not a substitute
+preimage.
+
+| id | item | status |
+|---|---|---|
+| B0 | Protocol and infrastructure audit: inspect the current ETP, SARIF, DSSE and release infrastructure; pin admitted Rekor, Sigstore, timestamping and C2SP versions; identify actual client support, signing configuration, witness availability and trust assumptions. Evidence: a tracked registry naming each admitted version, digest and unsupported feature, plus the recorded service-configuration finding | TODO |
+| B1 | Local vertical slice: pinned POSIX-backed Rekor v2 instance; publish one real frozen ETP statement through the supported `hashedrekord` path; verify binding, inclusion and checkpoint; archive the complete evidence; execute the relevant corruption controls (§B.24 items 1–12, 14–16, 18–20) | TODO |
+| B2 | Trusted timestamping and offline verification: RFC 3161 timestamp evidence integrated; verification demonstrated without the original live service; the nine separate times of §B.9 recorded distinctly | TODO |
+| B3 | Campaign accountability: opening, amendment, closure and abandonment records; omission-sensitive reconciliation that refuses a closure omitting an applicable failure (§B.13–B.14) | TODO |
+| B4 | Public transparency: admitted public-good Rekor v2 profile; only classified release-critical material published; independently executable verification demonstrated | TODO |
+| B5 | Consistency, monitoring and witnesses: persistent checkpoint state, consistency verification and monitoring; genuinely independent witnesses admitted when available; split-view controls demonstrated (§B.7, §B.11–B.12) | TODO |
+| B6 | Archival and revocation: durable evidence reconstruction, current-state metadata, authenticated correction and anti-rollback controls; a withdrawn claim refused by current-state policy while its original inclusion proof stays valid (§B.17, §B.19) | TODO |
+| B7 | Formal assurance: transparency-policy invariants of §B.23 verified in a small model; tool assumptions and the refinement gap recorded | TODO |
+| B8 | Continuous enforcement: admitted profile integrated into `AGENTS.md`, release gates, ETP claim schemas, CI and public non-claims; silent regression prevented | TODO |
+
+`BLOCKED` here requires a named blocker with its evidence, not a preference. The
+admission gate of §B.31 binds before expansion into further downstream consumer
+families; the mandatory non-claims of §B.32 bind every report written under this
+section.
+
+---
+
+## G. Curl consumer — open work
 
 | id | item | status |
 |---|---|---|
@@ -181,7 +217,7 @@ Rules that bind this queue (from AGENTS.md, extended by the ETP mandate):
 
 ---
 
-## G. Execution sequence (fixed)
+## H. Execution sequence (fixed)
 
 Work proceeds strictly in item order. No choosing, no reordering, no skipping an
 item to take a convenient one. Each item is finished (proof, controls, gates,
@@ -193,13 +229,20 @@ receipt) before the next begins, and each is pushed before the next starts.
 | 2 | C — OpenSSH interoperability | `O1`, `O2`, … `O12` |
 | 3 | D — ETP constitution and claim integrity | `ETP-0`, `ETP-1`, … `ETP-T15` |
 | 4 | E — SARIF / DSSE addendum | `A0`, `A1`, … `A27` |
-| 5 | F — curl consumer | `C1` … `C5`, **last** |
+| 5 | F — ETP Addendum B (Rekor v2 transparency) | `B0`, `B1`, … `B8` |
+| 6 | G — curl consumer | `C1` … `C5`, **last** |
+
+The position of section F is an explicit override, recorded rather than implied:
+Addendum B was admitted ahead of the remaining B/E items on instruction, and its
+`B0`–`B8` run to completion in that order before the queue resumes at the item it
+was interrupted on. The override does not move the curl consumer, which stays
+last, and it does not discharge any open item in sections B–E.
 
 An item that is `BLOCKED` is recorded with its blocker and the next item in the
 same section begins; it is revisited when the blocker changes. Nothing is
 declared complete without the evidence named in its row.
 
-## H. Non-claims that bind this queue
+## I. Non-claims that bind this queue
 
 SARIF compliance does not prove absence of vulnerabilities. A clean scanner
 output is not memory safety. A signed report is not necessarily true. DSSE does
@@ -209,3 +252,13 @@ reproducible build is not a correct build. Two signatures are not necessarily
 two independent verifications. A cryptographically valid historical signature
 does not establish present authorisation. A signed summary does not replace the
 underlying proof. A successful CI workflow is not regulatory certification.
+
+Addendum B (§B.32) adds: transparency inclusion does not prove software
+correctness; one signed checkpoint is not a globally consistent history; two log
+instances are not two independent operators; a witness has not reviewed the
+implementation; witnessing does not prove all evidence was disclosed; a
+timestamp does not prove an experiment occurred; a public commitment does not
+establish availability of its payload; a transparency log is not a revocation
+system; an authentic historical assertion may be currently invalid; experimental
+post-quantum features are not production post-quantum security; registration in a
+public-good log is not endorsement by its operator.
