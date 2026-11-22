@@ -56,7 +56,7 @@ cp -a "$CTREE" "$CELLDIR" || { echo "cell: copy failed" >&2; exit 2; }
 # cell's own server with "host key mismatch" (observed, and stable across runs
 # because the copied key is stable). They are removed explicitly.
 rm -rf "$CELLDIR/regress/.ssh" "$CELLDIR/regress/known_hosts" \
-       "$CELLDIR/regress/known_hosts2" 2>/dev/null || true
+       "$CELLDIR/regress/known_hosts2" "$CELLDIR/regress/.putty" 2>/dev/null || true
 
 wrap() {  # <name> <tree> <lib>
     local name="$1"
@@ -78,7 +78,25 @@ for b in sshd sshd-session sftp-server ssh-keygen; do
     wrap "$b" "${TREE[$server_cell]}" "${LIB[$server_cell]}"
 done
 
-export PATH="$TOOLS/bin:$TOOLS/sbin:$PATH"
+# Venue aids, now tracked and built here rather than borrowed from a work
+# directory:
+#   * a child subreaper, because container PID 1 does not reap orphans and a
+#     zombie ssh-agent stalls `agent-subprocess` (the 96-script run depended on
+#     this and it was previously untracked);
+#   * the authority `openssl` CLI on PATH, which `ssh2putty.sh` calls by name.
+AIDS="$WORK/cell-aids"
+mkdir -p "$AIDS"
+cc -O2 "$ROOT/courts/phase18/interop/subreaper.c" -o "$AIDS/subreaper" \
+    || { echo "cell: building the subreaper failed" >&2; exit 2; }
+# Invoke the shim through `sh` so the wrapper does not depend on the tracked
+# file's execute bit surviving a checkout or a copy: the first attempt at this
+# produced a wrapper that failed with "Permission denied" (rc 126), and
+# ssh2putty.sh ignored the failure and wrote an empty key cache.
+printf '#!/bin/sh\nOSR_AUTHORITY_PREFIX=%s exec sh %s "$@"\n' \
+    "$AUTH" "$ROOT/courts/phase18/interop/openssl-shim.sh" > "$AIDS/openssl"
+chmod +x "$AIDS/openssl"
+
+export PATH="$TOOLS/bin:$TOOLS/sbin:$AIDS:$PATH"
 
 # A cell is only a matrix cell if the two sides really run different libraries.
 # The wrappers say so, but the wrappers are the thing under suspicion, so the
@@ -142,6 +160,13 @@ if [ "$mapped_status" != ok ]; then
 fi
 
 echo "=== cell $CELL: client $client_cell, server $server_cell ==="
+# Deterministic script selection: `t-exec` iterates `$?` (the prerequisites newer
+# than the target), so which scripts run depends on file mtimes. The same target
+# ran 73 scripts on one tree and 96 on another. Touching every regression script
+# before the run makes the selection maximal and repeatable instead of a function
+# of when the tree was last used.
+find "$CELLDIR/regress" -maxdepth 1 -name '*.sh' -exec touch {} + 2>/dev/null || true
+
 # BUILDDIR must be the cell's own directory: configure wrote an absolute
 # BUILDDIR into the Makefile, so a copy still points at the tree it came from and
 # the harness would launch *that* tree's binaries -- the wrappers would never be
@@ -149,7 +174,8 @@ echo "=== cell $CELL: client $client_cell, server $server_cell ==="
 # of this script did exactly that; the override is the fix.
 ( cd "$CELLDIR" \
   && TEST_SSH_PORT="${O7_PORT:-22422}" SKIP_LTESTS="sftp-cmds" \
-       make -k tests BUILDDIR="$CELLDIR" > "$WORK/cell-$CELL.log" 2>&1 )
+       "$AIDS/subreaper" make -k tests BUILDDIR="$CELLDIR" \
+       > "$WORK/cell-$CELL.log" 2>&1 )
 rc=$?
 echo "make -k tests exit=$rc"
 

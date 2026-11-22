@@ -28,6 +28,13 @@
    "published": "2026-11-22T02:25:35Z",
    "sha256": "1a23987ae2ea2bee94eb68f3946e7751c03322ea5d0586cb6ac154c349fdc317"
   },
+  "cell-BB-v2": {
+   "bytes": 196302,
+   "origin": "cell-BB-v2 (copied from the run's work directory; the bytes are verbatim)",
+   "path": "courts/phase18/interop/logs/03dc64dfa4c95082584361e1a15f23dc05e26d7edbbd45f7385e1ab63825e3b7.log",
+   "published": "2026-11-22T03:20:27Z",
+   "sha256": "03dc64dfa4c95082584361e1a15f23dc05e26d7edbbd45f7385e1ab63825e3b7"
+  },
   "dudect-cmpcmp.err": {
    "bytes": 125,
    "origin": "dudect-cmpcmp.err (copied from the run's work directory; the bytes are verbatim)",
