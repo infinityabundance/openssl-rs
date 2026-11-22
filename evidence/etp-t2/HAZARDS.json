@@ -1,0 +1,782 @@
+{
+  "schema": "openssl-rs/etp/hazards/1",
+  "kind": "security-hazard-register",
+  "item": "ETP-T2 of docs/ETP-TODO.md",
+  "identity": {
+    "analysis_candidate": "6da02233f94152b865c9d02cdcfe5adeb34952e7",
+    "analysis_candidate_note": "The mechanism analysis was performed at this commit. The mechanisms named by the hazard leaves are unchanged from the graph commit below.",
+    "graph": "evidence/etp-t1/TRACEABILITY.json",
+    "graph_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d",
+    "branch": "staging",
+    "worktree_state": "clean at the start of the item",
+    "evidence_commit": "UNKNOWN",
+    "settling_method": "the commit that adds evidence/etp-t2/ and the ETP-T2 row; settled by git log -1 --format=%H -- evidence/etp-t2/HAZARDS.json"
+  },
+  "input_model": {
+    "classes": [
+      {
+        "id": "legal",
+        "definition": "The value satisfies the documented contract, including documented optionality: NULL where the header permits NULL, an operation on a live object, non-overlapping buffers where aliasing is forbidden, a length within the buffer.",
+        "implementation_guarantee": "The documented behaviour, including a defined error where the operation fails. Memory safety is claimed only for paths the safety inventory covers; this register does not extend that coverage."
+      },
+      {
+        "id": "adversarial_contract_valid",
+        "definition": "An attacker controls the value but the value still satisfies the contract: a hostile TLS record, a malformed certificate, a hostile peer public key, an attacker-chosen ciphertext or signature, a caller-chosen public geometry.",
+        "implementation_guarantee": "A defined refusal or a defined result. The operation must not form an invalid reference, free the wrong object, or produce a silent wrong result. Panic safety is bounded by the barriers recorded here; where a barrier is absent the class-2 guarantee is not claimed."
+      },
+      {
+        "id": "contract_violation",
+        "definition": "An invalid pointer, a wrong lifetime, overlapping buffers where aliasing is forbidden, a size that exceeds the buffer, NULL where the header requires non-NULL, a callback that frees the object it was invoked on, or a re-entry the external contract forbids.",
+        "implementation_guarantee": "NO_MEMORY_SAFETY_CLAIM. No class-3 input is ever claimed memory-safe. The practical behaviour is recorded per hazard as DEFINED_ERROR, ABORT, UB_NOT_CLAIMED_SAFE, DEFERRED_CRYPTOGRAPHIC_FAILURE or NOT_REACHABLE_FROM_CLASS_3, and whether that behaviour is a deliberate recorded divergence or an accident is stated."
+      }
+    ],
+    "class_3_rule": "A hazard whose trigger set contains contract_violation may not set memory_safe_claim. The API does not enforce the contract, so the caller's obligation cannot reduce the severity; the traceability validator refuses such a hazard with TG_HAZARD_CLASS3_SAFE_CLAIM and the register validator refuses it with HR_CLASS3_SAFE_CLAIM.",
+    "families": [
+      {
+        "id": "bn",
+        "entry_points": ["BN_mod_exp_mont_consttime", "BN_mod_exp_mont", "BN_MONT_CTX_set_locked", "BN_div", "BN_mod_inverse", "BN_CTX_get", "BN_rand_range"],
+        "legal": "A live BIGNUM, a non-zero odd modulus where the entry point requires one, operands within the documented ranges, NULL only where the header permits it. Guaranteed: checked allocation arithmetic, refusal of an even or zero modulus where documented, fallible arithmetic returning 0.",
+        "class2": "A hostile peer public key or an attacker-chosen ciphertext expressed as a BIGNUM, and a caller-chosen public width. Guaranteed: a defined result or refusal; the prepared-domain mismatch is refused rather than silently used.",
+        "class3": "A freed or aliased BIGNUM, a BN_CTX used outside start/end, or a width inconsistent with the buffer. UB_NOT_CLAIMED_SAFE; partial NULL tests return 0 by authority parity, the rest is an unchecked C contract."
+      },
+      {
+        "id": "rsa",
+        "entry_points": ["RSA_private_encrypt", "RSA_private_decrypt", "RSA_sign", "RSA_blinding_on", "RSA_blinding_off", "RSA_set_method"],
+        "legal": "A well-formed RSA object, a documented padding selector, a message no longer than the modulus, and an output buffer of RSA_size bytes. Guaranteed: blinding on by default, implicit rejection for an internal key on PKCS#1 v1.5, a defined error on failure.",
+        "class2": "An attacker-chosen ciphertext of any length up to the modulus, a hostile signature, or a message chosen to probe padding. Guaranteed: the ciphertext is reduced and the padding check is attempted; the external-key path has no implicit rejection (HAZ-15).",
+        "class3": "A freed RSA object, a concurrent method or key mutation, an output buffer shorter than RSA_size, or flen exceeding the input buffer. UB_NOT_CLAIMED_SAFE; the pointer contract is the authority's C contract and is not enforced."
+      },
+      {
+        "id": "ec",
+        "entry_points": ["ECDSA_do_sign", "ECDSA_sign_setup", "ECDSA_do_verify", "EC_KEY_set_method"],
+        "legal": "A live EC_KEY on a signing-capable curve, a digest, and a documented nonce_type. Guaranteed: a secure scalar for k, rejection of k == 0 and r == 0, a defined error when the deterministic arm is unavailable.",
+        "class2": "An attacker-chosen digest or message, a hostile peer point, or a hostile signature. Guaranteed: the point is validated by the group method and the signature check is a defined result.",
+        "class3": "A freed EC_KEY or group, a point from a different group, or a nonce buffer of the wrong size. UB_NOT_CLAIMED_SAFE."
+      },
+      {
+        "id": "evp",
+        "entry_points": ["EVP_DigestVerifyFinal", "EVP_DigestVerify", "EVP_PKEY_verify", "EVP_CipherUpdate", "EVP_CipherFinal_ex", "EVP_CIPHER_fetch"],
+        "legal": "An initialised context, documented parameter order, lengths within the buffers, and a returned value read as documented. Guaranteed: a defined return and a defined error; the IV uniqueness obligation is the caller's and is documented, not enforced.",
+        "class2": "A hostile ciphertext, tag or AAD, malformed parameters, or a malformed certificate handed to a decoder. Guaranteed: authentication failure or a defined error; no plaintext is claimed for a failed tag.",
+        "class3": "A reused context where reset is required, a freed context, a lying output length, overlapping input and output where the mode forbids it, or a non-zero test of a return value that can be -1. UB_NOT_CLAIMED_SAFE or DEFERRED_CRYPTOGRAPHIC_FAILURE as recorded per hazard."
+      },
+      {
+        "id": "bio",
+        "entry_points": ["BIO_set_callback_ex", "BIO_read", "BIO_write", "BIO_ctrl", "BIO_free", "BIO_debug_callback_ex"],
+        "legal": "A live BIO, the documented callback protocol, and a cb_arg that is NULL or a BIO*. Guaranteed: the callback is invoked before and after the method, and a non-positive pre-call result vetoes the operation.",
+        "class2": "Hostile stream contents and callback behaviour supplied by an untrusted application layer. Guaranteed: a defined return; the library does not sandbox the callback.",
+        "class3": "A cb_arg that is not a BIO*, a callback that frees the BIO it is running on, or a freed BIO. UB_NOT_CLAIMED_SAFE; the cast to BIO* and the write through it are deliberate authority parity."
+      },
+      {
+        "id": "x509",
+        "entry_points": ["X509_verify_cert", "X509_STORE_CTX_set_verify_cb", "X509_policy_check", "d2i_X509", "X509V3_EXT_d2i"],
+        "legal": "Well-formed DER, a live store context, and a verify_cb that follows the documented API. Guaranteed: bounded constructed nesting, owned chain snapshots before a callback, defined verification errors.",
+        "class2": "A malformed or hostile certificate, a deeply nested constructed value, a very large extension, or a certificate chosen to drive policy-tree growth. Guaranteed: a defined parse or verification error; depth and length limits are applied.",
+        "class3": "A freed context or certificate, a callback that mutates cached extension contents in place, or a certificate replaced without the ownership protocol. UB_NOT_CLAIMED_SAFE; the chain itself is protected by a snapshot, extension contents are not."
+      },
+      {
+        "id": "runtime_mem",
+        "entry_points": ["CRYPTO_malloc", "CRYPTO_zalloc", "CRYPTO_realloc", "CRYPTO_free", "CRYPTO_set_mem_functions", "OPENSSL_cleanse"],
+        "legal": "A non-zero size where the documented branch requires it, and an installed hook that obeys the external contract. Guaranteed: a NULL return and an error on exhaustion, checked size multiplication, whole-allocation cleansing on the covered owners.",
+        "class2": "An attacker-controlled length that reaches an allocation through a parsed field, or memory exhaustion. Guaranteed: an overflow is a checked failure, not a wrapped request; exhaustion returns NULL where the call site is fallible.",
+        "class3": "A hook that re-enters the ERR API on the same thread, a hook that returns a misaligned pointer, or a free of a foreign pointer. UB_NOT_CLAIMED_SAFE; the same-thread ERR re-entry is additionally refused by the B34 guard, which is a recorded safety divergence."
+      },
+      {
+        "id": "provider_dispatch",
+        "entry_points": ["OSSL_PROVIDER_load", "OSSL_PROVIDER_unload", "EVP_CIPHER_fetch", "EVP_MD_fetch", "EVP_PKEY_fetch", "EVP_set_default_properties"],
+        "legal": "A fetched method used while its provider is loaded, with the documented reference-count discipline. Guaranteed: reference counting and a defined fetch failure.",
+        "class2": "An attacker-chosen algorithm name or property query, and hostile parameters handed to a fetched implementation. Guaranteed: a defined fetch failure or a defined operation error.",
+        "class3": "A method pointer used after the provider is unloaded or down-referenced, or a method table replaced concurrently. UB_NOT_CLAIMED_SAFE."
+      }
+    ]
+  },
+  "top_events": [
+    {"id": "TE-1", "title": "Private-key disclosure"},
+    {"id": "TE-2", "title": "Signature forgery or verification bypass"},
+    {"id": "TE-3", "title": "Plaintext disclosure"},
+    {"id": "TE-4", "title": "Memory corruption reachable from a class-1 or class-2 input"},
+    {"id": "TE-5", "title": "Denial of service by resource exhaustion"},
+    {"id": "TE-6", "title": "Silent wrong result in a cryptographic operation"},
+    {"id": "TE-7", "title": "Loss of constant-time behaviour"},
+    {"id": "TE-8", "title": "Memory corruption reachable only from a contract-violating input (never claimed memory-safe)"}
+  ],
+  "hazards": [
+    {
+      "id": "HAZ-01",
+      "title": "Secret-bearing storage is freed or abandoned without cleansing",
+      "description": "A secret-bearing owner releases or abandons its storage without cleansing it, so the secret survives in allocator-recycled memory.",
+      "source": {"path": "AGENTS.md", "span": "§5.1", "quote": "Release and cleansing are separate obligations: a destructor that merely frees memory is not a secret-safe destructor.", "quote_kind": "fragment"},
+      "scope": {"api_family": "runtime_mem", "input_class": "legal", "also_applies_to": ["rsa", "ec", "evp"], "entry_points": ["OPENSSL_cleanse", "CRYPTO_clear_free", "BN_clear_free"]},
+      "trigger_classes": ["legal", "adversarial_contract_valid"],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "SecretBuf and OwnedBuf cleanse the whole allocation on the covered exit paths; the ETP-4 probe observed 85 cleanse sites.",
+        "evidence": [],
+        "would_close": "A receipt-bound whole-allocation cleanse court at the analysis candidate, including failure and unwind paths, for every secret-bearing owner in the admitted families."
+      },
+      "top_events": ["TE-1", "TE-3"],
+      "t1_edges": {"motivates": ["REQ-SEC-01"], "obligations": ["OBL-T12-RESIDUAL", "OBL-T30-RESIDUAL"], "evidence": [], "release_claims": ["REL-OPENSSH-B85C"]}
+    },
+    {
+      "id": "HAZ-02",
+      "title": "A secret-dependent branch, address or early exit survives optimisation",
+      "description": "A branch, memory index or early exit depends on a secret value and survives optimisation, so timing reveals secret bits.",
+      "source": {"path": "AGENTS.md", "span": "§5.2", "quote": "Never claim constant-time behaviour from source inspection alone.", "quote_kind": "fragment"},
+      "scope": {"api_family": "bn", "input_class": "adversarial_contract_valid", "also_applies_to": ["rsa", "ec"], "entry_points": ["BN_mod_exp_mont_consttime", "BN_div", "BN_mod_inverse"]},
+      "trigger_classes": ["adversarial_contract_valid"],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "The constant-pattern ladder and the consttime division are selected on public geometry; BINSEC and the emitted-instruction audit exist as instruments.",
+        "evidence": [],
+        "would_close": "A validated secret-dependence argument and a BINSEC verdict at the analysis candidate; both are open (OBL-T14, OBL-T16)."
+      },
+      "top_events": ["TE-1", "TE-7"],
+      "t1_edges": {"motivates": ["REQ-SEC-02", "REQ-TIM-02"], "obligations": ["OBL-T14-RESIDUAL", "OBL-T16-RESIDUAL"], "evidence": ["EVD-INST-BINSEC_CHECKCT", "EVD-INST-VALGRIND_CTGRIND"], "release_claims": ["REL-OPENSSH-B85C"]}
+    },
+    {
+      "id": "HAZ-03",
+      "title": "A secret-bearing allocation aborts or overflows instead of failing",
+      "description": "An allocation on the secret-bearing path is infallible: exhaustion aborts the process, and an unchecked size product overflows into a too-small request.",
+      "source": {"path": "docs/ETP-TODO.md", "span": "row T1", "quote": "Infallible allocations in limbs::rem/limbs::mul; ... still plain Vecs (OBL-BN-ALLOCATOR)", "quote_kind": "fragment"},
+      "scope": {"api_family": "runtime_mem", "input_class": "legal", "also_applies_to": ["bn"], "entry_points": ["CRYPTO_malloc", "limbs::mul", "limbs::rem", "BN_CTX_get"]},
+      "trigger_classes": ["legal"],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "The allocation seam is fallible and many BN sites return 0 on exhaustion; the alloc_probe failure-injection instrument is qualified.",
+        "evidence": [],
+        "would_close": "A complete enumeration of infallible allocation sites on the secret-bearing path with a failure-injection court on each (OBL-BN-ALLOCATOR, OBL-T22)."
+      },
+      "top_events": ["TE-5"],
+      "t1_edges": {"motivates": ["REQ-MEM-03", "REQ-TIM-01"], "obligations": ["OBL-BN-ALLOCATOR", "OBL-T22-RESIDUAL"], "evidence": ["EVD-INST-ALLOC_PROBE", "EVD-ROW-T1", "EVD-ROW-T22"], "release_claims": ["REL-OPENSSH-B85C"]}
+    },
+    {
+      "id": "HAZ-04",
+      "title": "An ownership boundary triggers an invalid free or a double release",
+      "description": "A pointer adopted or escaped across the ownership boundary is released twice, or released by the wrong mechanism.",
+      "source": {"path": "AGENTS.md", "span": "§1", "quote": "A safe fn whose body can trigger an invalid free is a soundness bug even if today's call sites are correct.", "quote_kind": "fragment"},
+      "scope": {"api_family": "runtime_mem", "input_class": "contract_violation", "also_applies_to": ["x509", "evp", "bio"], "entry_points": ["OwnedBlock::from_raw", "OwnedBuf::from_raw", "OwnedRaw::adopt", "CRYPTO_free"]},
+      "trigger_classes": ["contract_violation"],
+      "class3_disposition": "UB_NOT_CLAIMED_SAFE",
+      "memory_safe_claim": false,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "The adoption constructors are unsafe functions with provenance contracts, and Drop is the single release of an owning handle.",
+        "evidence": [],
+        "would_close": "A cross-caller provenance audit at the analysis candidate plus Miri over the admitted owners and their adoption sites."
+      },
+      "top_events": ["TE-8"],
+      "t1_edges": {"motivates": ["REQ-MEM-01"], "obligations": ["OBL-XCUT-ALIASING"], "evidence": [], "release_claims": ["REL-OPENSSH-B85C"]}
+    },
+    {
+      "id": "HAZ-05",
+      "title": "A reference or destructor runs over a partially initialised value",
+      "description": "An allocation-failure or early-return path runs a reference, an initialised read or a full destructor over a value whose initialisation invariants do not yet hold. A legal out-of-memory condition is enough to reach this state.",
+      "source": {"path": "AGENTS.md", "span": "§2", "quote": "No &T, &mut T, initialized read, or full destructor is permitted before the required initialization invariants hold.", "quote_kind": "fragment"},
+      "scope": {"api_family": "runtime_mem", "input_class": "legal", "also_applies_to": ["x509", "asn1"], "entry_points": ["OwnedRaw::new", "OwnedCtx::new", "X509_policy_tree_free", "asn1_item_ex_d2i"]},
+      "trigger_classes": ["legal"],
+      "memory_safe_claim": false,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "OwnedRaw distinguishes uninitialised storage from OwnedCtx, and a destructor releases only the resources actually acquired.",
+        "evidence": [],
+        "would_close": "A failure-injection and Miri run over every partially initialised owner at the analysis candidate."
+      },
+      "top_events": ["TE-4"],
+      "t1_edges": {"motivates": ["REQ-MEM-02"], "obligations": ["OBL-T30-RESIDUAL"], "evidence": ["EVD-ROW-T30"], "release_claims": []}
+    },
+    {
+      "id": "HAZ-06",
+      "title": "An application callback re-enters and invalidates a borrow or lock",
+      "description": "An application callback invoked inside an operation frees, replaces or mutates the object the operation is reading, so the operation continues with a dangling pointer or a stale borrow.",
+      "source": {"path": "AGENTS.md", "span": "§21", "quote": "Treat FFI callbacks and hooks as reentrancy edges.", "quote_kind": "fragment"},
+      "scope": {"api_family": "x509", "input_class": "contract_violation", "also_applies_to": ["bio", "evp", "runtime_mem"], "entry_points": ["X509_STORE_CTX_set_verify_cb", "BIO_set_callback_ex", "CRYPTO_set_mem_functions"]},
+      "trigger_classes": ["legal", "contract_violation"],
+      "class3_disposition": "UB_NOT_CLAIMED_SAFE",
+      "memory_safe_claim": false,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "v3_addr snapshots the chain and up-references each certificate before verify_cb; the BIO and allocator callback paths have no equivalent snapshot.",
+        "evidence": [],
+        "would_close": "A per-call-site callback map with a reentrancy court for x509, BIO, EVP and allocator hooks (OBL-XCUT-CALLBACKS)."
+      },
+      "top_events": ["TE-4", "TE-3"],
+      "t1_edges": {"motivates": ["REQ-MEM-02", "REQ-PANIC-01"], "obligations": ["OBL-XCUT-CALLBACKS"], "evidence": ["EVD-B85C-ADJUDICATION"], "release_claims": ["REL-OPENSSH-B85C"]}
+    },
+    {
+      "id": "HAZ-07",
+      "title": "A secret-derived length or capability survives into a copy or allocation",
+      "description": "A length, capacity or allocated width derived from a secret value reaches a copy, an allocation or an admission check, so the secret length is observable.",
+      "source": {"path": "docs/ETP-TODO.md", "span": "row T9", "quote": "Secret-length-dependent boundary copy and admission checks (the 19 length-taint sites)", "quote_kind": "fragment"},
+      "scope": {"api_family": "bn", "input_class": "legal", "also_applies_to": ["rsa", "ec"], "entry_points": ["store_consttime", "limbs::shl", "BN_bn2binpad"]},
+      "trigger_classes": ["legal", "adversarial_contract_valid"],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "The staging transfer reads a public width; the remaining secret-length presence test is stated rather than removed.",
+        "evidence": [],
+        "would_close": "A public-width transfer with no secret-length branch and a timing court at the analysis candidate (OBL-T9)."
+      },
+      "top_events": ["TE-7"],
+      "t1_edges": {"motivates": ["REQ-SEC-02", "REQ-TIM-02"], "obligations": ["OBL-T9-RESIDUAL"], "evidence": [], "release_claims": ["REL-OPENSSH-B85C"]}
+    },
+    {
+      "id": "HAZ-08",
+      "title": "An RSA private operation runs without blinding",
+      "description": "Blinding is disabled by the application or fails to be constructed, so the private exponentiation runs with a secret-dependent pattern an observer can correlate with the message.",
+      "source": {"path": "src/rsa/ossl.rs", "span": "rsa_ossl_private_encrypt", "quote": "The blinding is skipped for `RSA_FLAG_NO_BLINDING`", "quote_kind": "fragment"},
+      "scope": {"api_family": "rsa", "input_class": "legal", "also_applies_to": [], "entry_points": ["RSA_private_encrypt", "RSA_private_decrypt", "RSA_blinding_off", "RSA_set_method"]},
+      "trigger_classes": ["legal"],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "Blinding is on by default, and a NULL blinding aborts the operation; RSA_blinding_off and RSA_FLAG_NO_BLINDING are documented optionality.",
+        "evidence": [],
+        "would_close": "A measured timing court at the analysis candidate with blinding enabled and disabled, plus a consumer audit of blinding disabling."
+      },
+      "top_events": ["TE-1", "TE-7"],
+      "t1_edges": {"motivates": ["REQ-SEC-02", "REQ-TIM-02"], "obligations": ["OBL-T11-RESIDUAL"], "evidence": ["EVD-INST-DUDECT"], "release_claims": ["REL-OPENSSH-B85C"]}
+    },
+    {
+      "id": "HAZ-09",
+      "title": "A fault during CRT produces a faulty signature or key recovery",
+      "description": "A fault injected into one CRT half produces a result that is not congruent; the tail's check is the only defence and the fallback is itself a secret operation.",
+      "source": {"path": "src/rsa/ossl.rs", "span": "rsa_ossl_mod_exp", "quote": "falls back to the unblinded `d` exponentiation when the CRT answer does not check out", "quote_kind": "fragment"},
+      "scope": {"api_family": "rsa", "input_class": "adversarial_contract_valid", "also_applies_to": [], "entry_points": ["RSA_private_encrypt", "RSA_private_decrypt", "rsa_ossl_mod_exp"]},
+      "trigger_classes": ["adversarial_contract_valid"],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "The CRT tail re-exponentiates with the public exponent and compares congruently, falling back to the raw-d exponentiation on a mismatch.",
+        "evidence": [],
+        "would_close": "A receipt-bound fault-injection court at the analysis candidate showing the check fires and the fallback repairs, with a timing argument for the fallback."
+      },
+      "top_events": ["TE-2", "TE-6"],
+      "t1_edges": {"motivates": ["REQ-SEC-02", "REQ-TIM-02"], "obligations": ["OBL-T6-RESIDUAL"], "evidence": [], "release_claims": ["REL-OPENSSH-B85C"]}
+    },
+    {
+      "id": "HAZ-10",
+      "title": "A stale or mismatched Montgomery context yields a wrong-modulus result",
+      "description": "A caller-supplied prepared context belongs to a different modulus or width. The authority does not validate it and silently produces a wrong answer; this crate refuses it, which is a recorded divergence.",
+      "source": {"path": "src/bn/mont.rs", "span": "refuse_context", "quote": "The authority does not validate `in_mont`; a stale context silently produces", "quote_kind": "fragment"},
+      "scope": {"api_family": "bn", "input_class": "legal", "also_applies_to": ["rsa", "dh", "dsa"], "entry_points": ["BN_mod_exp_mont_consttime", "BN_mod_exp_mont", "BN_MONT_CTX_set_locked"]},
+      "trigger_classes": ["legal"],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "BN_mod_exp_mont_consttime validates a supplied context against the operand and refuses a mismatch instead of reproducing the authority's silent wrong answer.",
+        "evidence": [],
+        "would_close": "A differential court at the analysis candidate for prepared-domain reuse across moduli, including the cached RSA CRT context."
+      },
+      "top_events": ["TE-6"],
+      "t1_edges": {"motivates": ["REQ-CORR-01"], "obligations": [], "evidence": [], "release_claims": ["REL-OPENSSH-B85C"]}
+    },
+    {
+      "id": "HAZ-11",
+      "title": "An ECDSA nonce is biased or reused",
+      "description": "The signing scalar k is drawn from a weak, biased or repeated source, so two signatures reveal the private key. The RFC 6979 arm is not landed and refuses rather than silently substituting the random arm.",
+      "source": {"path": "src/ec/ecdsa_ossl.rs", "span": "ecdsa_sign_setup", "quote": "The nonce's two nested loops: the inner one redraws while `k == 0`", "quote_kind": "fragment"},
+      "scope": {"api_family": "ec", "input_class": "legal", "also_applies_to": ["dsa"], "entry_points": ["ECDSA_do_sign", "ECDSA_sign_setup", "ossl_bn_priv_rand_range_fixed_top"]},
+      "trigger_classes": ["legal"],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "k is drawn into a BN_secure_new scalar, k == 0 and r == 0 are rejected, and the deterministic arm refuses with an error rather than falling through.",
+        "evidence": [],
+        "would_close": "A nonce-distribution and repetition court at the analysis candidate, and a recorded decision on landing RFC 6979 (D333)."
+      },
+      "top_events": ["TE-1", "TE-7"],
+      "t1_edges": {"motivates": ["REQ-SEC-02"], "obligations": ["OBL-T14-RESIDUAL"], "evidence": [], "release_claims": ["REL-OPENSSH-B85C"]}
+    },
+    {
+      "id": "HAZ-12",
+      "title": "Allocation arithmetic overflows on an attacker-controlled length",
+      "description": "A count product or length sum derived from a parsed field overflows and reaches the allocator as a too-small request, or is treated as unbounded.",
+      "source": {"path": "src/asn1/owned.rs", "span": "OwnedBlock::malloc", "quote": "The product is `checked_mul`-guarded: an overflow is the", "quote_kind": "fragment"},
+      "scope": {"api_family": "runtime_mem", "input_class": "adversarial_contract_valid", "also_applies_to": ["x509", "asn1"], "entry_points": ["OwnedBlock::malloc", "OwnedBlock::zalloc", "CRYPTO_zalloc", "d2i_X509"]},
+      "trigger_classes": ["adversarial_contract_valid"],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "OwnedBlock and OwnedBuf compute count*size with checked_mul and answer None on overflow; an over-aligned type is refused before the allocator is asked.",
+        "evidence": [],
+        "would_close": "A fuzz court that drives parsed lengths into every allocation helper and observes the failure arm at the analysis candidate."
+      },
+      "top_events": ["TE-4", "TE-5"],
+      "t1_edges": {"motivates": ["REQ-MEM-03"], "obligations": ["OBL-T22-RESIDUAL"], "evidence": [], "release_claims": []}
+    },
+    {
+      "id": "HAZ-13",
+      "title": "An allocator hook re-enters the error subsystem on the same thread",
+      "description": "A caller-installed allocation hook calls ERR_raise or any entry point that takes the thread's error state while the allocator already holds it, forming a second mutable borrow.",
+      "source": {"path": "src/runtime/mem.rs", "span": "CRYPTO_set_mem_functions", "quote": "so a hook that violates the contract fails closed rather than causing UB.", "quote_kind": "fragment"},
+      "scope": {"api_family": "runtime_mem", "input_class": "contract_violation", "also_applies_to": [], "entry_points": ["CRYPTO_set_mem_functions", "CRYPTO_malloc", "ERR_raise"]},
+      "trigger_classes": ["contract_violation"],
+      "class3_disposition": "DEFINED_ERROR",
+      "memory_safe_claim": false,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "with_state refuses a same-thread re-entry with a thread-local guard and returns the no-state outcome; this is a recorded safety divergence (B34).",
+        "evidence": [],
+        "would_close": "A negative-control court that installs a re-entering allocator hook and observes the fail-closed outcome at the analysis candidate."
+      },
+      "top_events": ["TE-8"],
+      "t1_edges": {"motivates": ["REQ-MEM-02", "REQ-PANIC-01"], "obligations": [], "evidence": [], "release_claims": ["REL-OPENSSH-B85C"]}
+    },
+    {
+      "id": "HAZ-14",
+      "title": "A verify callback mutates state the walk is reading",
+      "description": "An application verify_cb releases or replaces the chain, or mutates a cached extension in place, while the validation walk still reads it.",
+      "source": {"path": "src/x509/v3_addr.rs", "span": "addr_validate_path_internal", "quote": "What cannot be guaranteed: a callback that mutates the *contents* of a live cached extension in", "quote_kind": "fragment"},
+      "scope": {"api_family": "x509", "input_class": "contract_violation", "also_applies_to": [], "entry_points": ["X509_STORE_CTX_set_verify_cb", "X509_verify_cert", "addr_validate_path_internal"]},
+      "trigger_classes": ["contract_violation"],
+      "class3_disposition": "UB_NOT_CLAIMED_SAFE",
+      "memory_safe_claim": false,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "v3_addr snapshots the chain, up-references each certificate and re-reads the cached extension after a callback; in-place mutation of a cached extension is stated as unprotected.",
+        "evidence": [],
+        "would_close": "A reentrancy court for verify_cb and an ownership model for cached extension contents (OBL-XCUT-CALLBACKS)."
+      },
+      "top_events": ["TE-8"],
+      "t1_edges": {"motivates": ["REQ-MEM-02"], "obligations": ["OBL-XCUT-CALLBACKS"], "evidence": ["EVD-B85C-ADJUDICATION"], "release_claims": ["REL-OPENSSH-B85C"]}
+    },
+    {
+      "id": "HAZ-15",
+      "title": "External-key PKCS#1 v1.5 decryption has no implicit rejection",
+      "description": "For a key with RSA_FLAG_EXT_PKEY the KDK cannot be derived, so the selector is rewritten to the refusing check. An attacker measuring the refusal distinguishes padding validity.",
+      "source": {"path": "src/rsa/ossl.rs", "span": "rsa_ossl_private_decrypt", "quote": "an external key does not hold the", "quote_kind": "fragment"},
+      "scope": {"api_family": "rsa", "input_class": "adversarial_contract_valid", "also_applies_to": [], "entry_points": ["RSA_private_decrypt", "EVP_PKEY_decrypt", "RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING"]},
+      "trigger_classes": ["adversarial_contract_valid"],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "BARRIER_ABSENT",
+        "control": "None on the external-key path: implicit rejection exists only where the private exponent is held by the library.",
+        "evidence": [],
+        "would_close": "An external-key implicit-rejection design, or a recorded consumer exclusion for every in-scope external-key PKCS#1 v1.5 decryption path (OBL-RSA-EXTKEY-ORACLE)."
+      },
+      "top_events": ["TE-3"],
+      "t1_edges": {"motivates": ["REQ-SEC-02"], "obligations": ["OBL-RSA-EXTKEY-ORACLE"], "evidence": [], "release_claims": ["REL-OPENSSH-B85C"]}
+    },
+    {
+      "id": "HAZ-16",
+      "title": "A panic at the FFI boundary leaves partially mutated state",
+      "description": "A panic is caught and never unwinds into C, but the interrupted operation has already mutated the context; the caller's next operation sees the half-applied change.",
+      "source": {"path": "src/ffi/mod.rs", "span": "guard_ffi", "quote": "panicking FFI call is itself the defect to fix, not something this boundary", "quote_kind": "fragment"},
+      "scope": {"api_family": "runtime_mem", "input_class": "adversarial_contract_valid", "also_applies_to": ["evp", "rsa", "ec", "x509"], "entry_points": ["guard_ffi", "EVP_DigestVerifyFinal", "RSA_private_decrypt", "ECDSA_do_sign"]},
+      "trigger_classes": ["adversarial_contract_valid"],
+      "memory_safe_claim": false,
+      "barrier": {
+        "state": "BARRIER_ABSENT",
+        "control": "guard_ffi catches and never resumes, so no panic unwinds into C; it does not repair partially mutated state.",
+        "evidence": [],
+        "would_close": "Failure-atomic mutation, explicit rollback or explicit poisoning for every stateful FFI context that can panic (OBL-PANIC-ATOMICITY, OBL-XCUT-PANIC)."
+      },
+      "top_events": ["TE-4", "TE-6"],
+      "t1_edges": {"motivates": ["REQ-PANIC-01"], "obligations": ["OBL-PANIC-ATOMICITY", "OBL-XCUT-PANIC"], "evidence": ["EVD-B85C-ADJUDICATION"], "release_claims": ["REL-OPENSSH-B85C"]}
+    },
+    {
+      "id": "HAZ-17",
+      "title": "A hostile certificate exhausts stack, time or memory",
+      "description": "A constructed ASN.1 value nested to the limit, or an extension whose parsed representation grows with the input, consumes resources in proportion to attacker-chosen input.",
+      "source": {"path": "src/asn1/d2i.rs", "span": "MAX_CONSTRUCTED_NEST", "quote": "`ASN1_MAX_CONSTRUCTED_NEST` — how deeply a constructed value may nest.", "quote_kind": "fragment"},
+      "scope": {"api_family": "x509", "input_class": "adversarial_contract_valid", "also_applies_to": ["asn1"], "entry_points": ["d2i_X509", "ASN1_item_ex_d2i", "X509V3_EXT_d2i"]},
+      "trigger_classes": ["adversarial_contract_valid"],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "ASN1_MAX_CONSTRUCTED_NEST (30), ASN1_GEN_SEQ_MAX_DEPTH and MAX_STRING_NEST bound constructed nesting; length checks use checked arithmetic.",
+        "evidence": [],
+        "would_close": "A hostile-certificate fuzz court that measures peak depth, time and memory at the analysis candidate."
+      },
+      "top_events": ["TE-5"],
+      "t1_edges": {"motivates": ["REQ-MEM-03"], "obligations": [], "evidence": [], "release_claims": []}
+    },
+    {
+      "id": "HAZ-18",
+      "title": "A consumer confuses a verification error with a valid signature",
+      "description": "EVP_DigestVerifyFinal answers 0 for an invalid signature and -1 for an error. A consumer that tests non-zero as success accepts the error as a valid signature; the C ABI cannot force the distinction.",
+      "source": {"path": "src/evp/digest.rs", "span": "EVP_DigestSign / EVP_DigestVerifyFinal return polarity", "quote": "with 0** — where `EVP_DigestVerify` answers `-1` for the same state", "quote_kind": "fragment"},
+      "scope": {"api_family": "evp", "input_class": "contract_violation", "also_applies_to": ["rsa", "ec"], "entry_points": ["EVP_DigestVerifyFinal", "EVP_DigestVerify", "EVP_PKEY_verify"]},
+      "trigger_classes": ["contract_violation"],
+      "class3_disposition": "DEFERRED_CRYPTOGRAPHIC_FAILURE",
+      "memory_safe_claim": false,
+      "barrier": {
+        "state": "BARRIER_ABSENT",
+        "control": "The return contract is documented (1 valid, 0 invalid, -1 error); the C ABI provides no type that forces a consumer to test it exactly.",
+        "evidence": [],
+        "would_close": "A consumer audit that every in-scope verification call site tests exactly 1 (OBL-VERIFY-RETURN-POLARITY)."
+      },
+      "top_events": ["TE-2"],
+      "t1_edges": {"motivates": ["REQ-CORR-01"], "obligations": ["OBL-VERIFY-RETURN-POLARITY"], "evidence": [], "release_claims": ["REL-OPENSSH-B85C"]}
+    },
+    {
+      "id": "HAZ-19",
+      "title": "A shared object is freed or has its method changed under a live operation",
+      "description": "The cached Montgomery slot and the method table are read without an enforced lifetime: another thread may free the enclosing object or change its method while the operation uses the published context.",
+      "source": {"path": "src/bn/mont.rs", "span": "BN_MONT_CTX_set_locked", "quote": "This function **never frees or replaces a published context**. The context is", "quote_kind": "fragment"},
+      "scope": {"api_family": "bn", "input_class": "contract_violation", "also_applies_to": ["rsa", "dh", "dsa"], "entry_points": ["BN_MONT_CTX_set_locked", "RSA_set_method", "RSA_free"]},
+      "trigger_classes": ["contract_violation"],
+      "class3_disposition": "UB_NOT_CLAIMED_SAFE",
+      "memory_safe_claim": false,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "Publication is a Release store and the slot fast path an Acquire load; the enclosing object's exclusive-access precondition is documented but not enforced.",
+        "evidence": [],
+        "would_close": "A concurrency court that exercises method change and object free against a live operation, and a scoped caller precondition (OBL-MECH-RUNTIME-CONCURRENCY)."
+      },
+      "top_events": ["TE-8"],
+      "t1_edges": {"motivates": ["REQ-MEM-01", "REQ-ABI-01"], "obligations": ["OBL-MECH-RUNTIME-CONCURRENCY"], "evidence": ["EVD-B85C-ADJUDICATION"], "release_claims": ["REL-OPENSSH-B85C"]}
+    },
+    {
+      "id": "HAZ-20",
+      "title": "A BIO callback writes through a cb_arg that is not a BIO",
+      "description": "BIO_debug_callback_ex treats cb_arg as char* and casts it to BIO*; a caller that sets a non-BIO argument gets the authority's behaviour, a write into whatever the pointer addresses.",
+      "source": {"path": "src/runtime/bio/bio_cb.rs", "span": "BIO_debug_callback_ex destination selection", "quote": "non-BIO argument gets the authority's behaviour (a write into whatever the", "quote_kind": "fragment"},
+      "scope": {"api_family": "bio", "input_class": "contract_violation", "also_applies_to": [], "entry_points": ["BIO_set_callback_ex", "BIO_debug_callback_ex", "BIO_write"]},
+      "trigger_classes": ["contract_violation"],
+      "class3_disposition": "UB_NOT_CLAIMED_SAFE",
+      "memory_safe_claim": false,
+      "barrier": {
+        "state": "BARRIER_ABSENT",
+        "control": "None: cb_arg is typed char* in the header and cast to BIO*; the authority writes through whatever the pointer addresses and this is reproduced deliberately.",
+        "evidence": [],
+        "would_close": "A typed callback-argument contract, or an explicit refusal of a non-BIO cb_arg recorded as a safety divergence (OBL-XCUT-CALLBACKS)."
+      },
+      "top_events": ["TE-8"],
+      "t1_edges": {"motivates": ["REQ-MEM-01"], "obligations": ["OBL-XCUT-CALLBACKS"], "evidence": [], "release_claims": ["REL-OPENSSH-B85C"]}
+    }
+  ],
+  "assumptions": [
+    {"id": "ASM-TIMING-OBSERVER", "statement": "The adversary can measure the operation's timing at the granularity the blinding or constant-time defence targets.", "source": {"path": "AGENTS.md", "span": "§5.2"}},
+    {"id": "ASM-DRBG-COMPROMISE", "statement": "The DRBG state or its entropy source can be compromised (THR-08); no library-level countermeasure compensates for a fully known DRBG state.", "source": {"path": "evidence/etp0/RECEIPT.md", "span": "initial threat model"}},
+    {"id": "ASM-SIGNATURES-OBSERVED", "statement": "The adversary observes the signatures a signer produces, including two signatures under a repeated or biased nonce.", "source": {"path": "src/ec/ecdsa_ossl.rs", "span": "ecdsa_sign_setup"}},
+    {"id": "ASM-FAULT-INJECTION", "statement": "A local adversary can induce a fault in one CRT half while the exponentiation runs.", "source": {"path": "src/rsa/ossl.rs", "span": "rsa_ossl_mod_exp"}},
+    {"id": "ASM-CONSUMER-NONZERO-TEST", "statement": "An in-scope consumer tests the verification return value as non-zero rather than exactly 1.", "source": {"path": "src/evp/digest.rs", "span": "EVP_DigestVerifyFinal"}},
+    {"id": "ASM-ATTACKER-CHOSEN-CIPHERTEXT", "statement": "The attacker submits ciphertexts of its choice to a PKCS#1 v1.5 decryption oracle and observes the success or failure.", "source": {"path": "src/rsa/ossl.rs", "span": "rsa_ossl_private_decrypt"}},
+    {"id": "ASM-AEAD-NONCE-REUSE", "statement": "The AEAD caller supplies a unique IV per key; the library documents this obligation and does not enforce it.", "source": {"path": "src/provider/cipher_gcm.rs", "span": "GCM_IV_DEFAULT_SIZE"}},
+    {"id": "ASM-ATTACKER-OBSERVES-CIPHERTEXTS", "statement": "The adversary observes the ciphertexts and tags the application produces.", "source": {"path": "src/provider/cipher_gcm.rs", "span": "GCM_TAG_MAX_SIZE"}},
+    {"id": "ASM-CALLER-CONTROLLED-CERTIFICATE", "statement": "The attacker supplies the certificate bytes a consumer parses or verifies.", "source": {"path": "src/asn1/d2i.rs", "span": "MAX_CONSTRUCTED_NEST"}},
+    {"id": "ASM-UNBOUNDED-REQUEST", "statement": "The library applies no process-wide cap on a single request's allocation size; the deployment supplies the memory bound.", "source": {"path": "src/runtime/mem.rs", "span": "CRYPTO_malloc"}},
+    {"id": "ASM-PREPARED-DOMAIN-REUSED", "statement": "A caller can supply or cache a prepared Montgomery context across a modulus change.", "source": {"path": "src/bn/mont.rs", "span": "BN_MONT_CTX_set_locked"}},
+    {"id": "ASM-CRT-CHECK-IS-THE-ONLY-ORACLE", "statement": "The public-exponent congruence check is the only cross-check on a CRT result before it is returned.", "source": {"path": "src/rsa/ossl.rs", "span": "rsa_ossl_mod_exp"}},
+    {"id": "ASM-PANIC-REACHABLE-FROM-CLASS2", "statement": "A class-2 input reaches a panic only through an internal defect; the register does not certify that no such defect exists.", "source": {"path": "src/ffi/mod.rs", "span": "guard_ffi"}},
+    {"id": "ASM-CALLER-CONTROLS-PUBLIC-GEOMETRY", "statement": "The caller chooses the modulus and exponent sizes, so the ladder width and the operation count are attacker-influenced public geometry.", "source": {"path": "src/bn/arith.rs", "span": "mod_exp_core_consttime"}},
+    {"id": "ASM-CONSUMER-RETURN-TEST", "statement": "A consumer that tests a verification result for success uses exactly the documented success value.", "source": {"path": "src/evp/digest.rs", "span": "EVP_DigestVerifyFinal"}},
+    {"id": "ASM-NO-INDEPENDENT-ORACLE", "statement": "No independent implementation re-derives these results at the analysis candidate; the authority differential is the only oracle.", "source": {"path": "docs/NON_CLAIMS.md", "span": "§3"}}
+  ],
+  "fault_trees": [
+    {
+      "id": "TE-1",
+      "top_event": "TE-1",
+      "description": "A private key is disclosed through a nonce, a timing channel, residual secret storage or a compromised DRBG.",
+      "diagram": "TE-1 = OR( AND(HAZ-08 blinding skipped, ASM-TIMING-OBSERVER), AND(HAZ-11 nonce biased/reused, ASM-SIGNATURES-OBSERVED), AND(HAZ-02 secret branch, ASM-TIMING-OBSERVER), HAZ-01 un-cleansed storage, ASM-DRBG-COMPROMISE )",
+      "root": "TE1-ROOT",
+      "nodes": [
+        {"id": "TE1-ROOT", "kind": "gate", "gate": "OR", "inputs": ["TE1-G-BLIND", "TE1-G-NONCE", "TE1-G-BRANCH", "TE1-L-RESIDUE", "TE1-L-DRBG"]},
+        {"id": "TE1-G-BLIND", "kind": "gate", "gate": "AND", "inputs": ["TE1-L-BLIND", "TE1-L-OBSERVER"]},
+        {"id": "TE1-G-NONCE", "kind": "gate", "gate": "AND", "inputs": ["TE1-L-NONCE", "TE1-L-SIGS"]},
+        {"id": "TE1-G-BRANCH", "kind": "gate", "gate": "AND", "inputs": ["TE1-L-BRANCH", "TE1-L-OBSERVER"]},
+        {"id": "TE1-L-BLIND", "kind": "leaf", "leaf_type": "mechanism", "statement": "Blinding is skipped when RSA_FLAG_NO_BLINDING is set or RSA_blinding_off was called.", "hazard": "HAZ-08", "mechanism": "src/rsa/ossl.rs:rsa_ossl_private_encrypt"},
+        {"id": "TE1-L-NONCE", "kind": "leaf", "leaf_type": "mechanism", "statement": "The signing scalar k comes from ossl_bn_priv_rand_range_fixed_top, or from the DSA-style nonce derived from the private key and digest.", "hazard": "HAZ-11", "mechanism": "src/ec/ecdsa_ossl.rs:ecdsa_sign_setup"},
+        {"id": "TE1-L-BRANCH", "kind": "leaf", "leaf_type": "mechanism", "statement": "The exponentiation ladder and the reduction kernels are the constant-pattern code in bn, but the branch audit has no verdict at the candidate.", "hazard": "HAZ-02", "mechanism": "src/bn/limbs.rs:mod_exp_core_consttime"},
+        {"id": "TE1-L-RESIDUE", "kind": "leaf", "leaf_type": "mechanism", "statement": "A secret-bearing owner frees storage after the last use without a whole-allocation cleanse.", "hazard": "HAZ-01", "mechanism": "src/runtime/secret.rs:Drop"},
+        {"id": "TE1-L-DRBG", "kind": "leaf", "leaf_type": "assumption", "statement": "A fully compromised DRBG state discloses the key directly; the register records this as an assumption rather than a barrier.", "assumption_id": "ASM-DRBG-COMPROMISE"},
+        {"id": "TE1-L-OBSERVER", "kind": "leaf", "leaf_type": "assumption", "statement": "The adversary measures timing at the granularity the defence targets.", "assumption_id": "ASM-TIMING-OBSERVER"},
+        {"id": "TE1-L-SIGS", "kind": "leaf", "leaf_type": "assumption", "statement": "The adversary obtains signatures produced under the biased or repeated nonce.", "assumption_id": "ASM-SIGNATURES-OBSERVED"}
+      ]
+    },
+    {
+      "id": "TE-2",
+      "top_event": "TE-2",
+      "description": "A signature is forged, or a verification failure is read as success.",
+      "diagram": "TE-2 = OR( AND(HAZ-09 CRT fault, ASM-FAULT-INJECTION), AND(HAZ-18 return-value confusion, ASM-CONSUMER-NONZERO-TEST) )",
+      "root": "TE2-ROOT",
+      "nodes": [
+        {"id": "TE2-ROOT", "kind": "gate", "gate": "OR", "inputs": ["TE2-G-FAULT", "TE2-G-POLARITY"]},
+        {"id": "TE2-G-FAULT", "kind": "gate", "gate": "AND", "inputs": ["TE2-L-FAULT", "TE2-L-INJECT"]},
+        {"id": "TE2-G-POLARITY", "kind": "gate", "gate": "AND", "inputs": ["TE2-L-POLARITY", "TE2-L-TEST"]},
+        {"id": "TE2-L-FAULT", "kind": "leaf", "leaf_type": "mechanism", "statement": "A fault in one CRT half yields a non-congruent result; the tail's check and the raw-d fallback are the only defence.", "hazard": "HAZ-09", "mechanism": "src/rsa/ossl.rs:rsa_ossl_mod_exp"},
+        {"id": "TE2-L-POLARITY", "kind": "leaf", "leaf_type": "mechanism", "statement": "EVP_DigestVerifyFinal returns 0 for invalid and -1 for error; the ABI cannot force a consumer to test exactly 1.", "hazard": "HAZ-18", "mechanism": "src/evp/digest.rs:EVP_DigestVerifyFinal"},
+        {"id": "TE2-L-INJECT", "kind": "leaf", "leaf_type": "assumption", "statement": "A local adversary can inject a fault during the CRT exponentiations.", "assumption_id": "ASM-FAULT-INJECTION"},
+        {"id": "TE2-L-TEST", "kind": "leaf", "leaf_type": "assumption", "statement": "The consumer tests the verification return value as non-zero rather than exactly 1.", "assumption_id": "ASM-CONSUMER-NONZERO-TEST"}
+      ]
+    },
+    {
+      "id": "TE-3",
+      "top_event": "TE-3",
+      "description": "Plaintext or the confidentiality key is disclosed through a padding oracle, residual storage, or AEAD nonce reuse.",
+      "diagram": "TE-3 = OR( AND(HAZ-15 external-key oracle, ASM-ATTACKER-CHOSEN-CIPHERTEXT), HAZ-01 un-cleansed storage, AND(GCM encrypt without a uniqueness check, ASM-AEAD-NONCE-REUSE, ASM-ATTACKER-OBSERVES-CIPHERTEXTS) )",
+      "root": "TE3-ROOT",
+      "nodes": [
+        {"id": "TE3-ROOT", "kind": "gate", "gate": "OR", "inputs": ["TE3-G-ORACLE", "TE3-L-RESIDUE", "TE3-G-AEAD"]},
+        {"id": "TE3-G-ORACLE", "kind": "gate", "gate": "AND", "inputs": ["TE3-L-ORACLE", "TE3-L-CIPHERTEXT"]},
+        {"id": "TE3-G-AEAD", "kind": "gate", "gate": "AND", "inputs": ["TE3-L-GCM", "TE3-L-NONCE", "TE3-L-OBSERVE"]},
+        {"id": "TE3-L-ORACLE", "kind": "leaf", "leaf_type": "mechanism", "statement": "An external key substitutes RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING and takes the refusing padding check, so refusal is observable.", "hazard": "HAZ-15", "mechanism": "src/rsa/ossl.rs:rsa_ossl_private_decrypt"},
+        {"id": "TE3-L-RESIDUE", "kind": "leaf", "leaf_type": "mechanism", "statement": "Plaintext or key material survives in freed storage without a whole-allocation cleanse.", "hazard": "HAZ-01", "mechanism": "src/runtime/secret.rs:Drop"},
+        {"id": "TE3-L-GCM", "kind": "leaf", "leaf_type": "mechanism", "statement": "The GCM engine encrypts with the caller's IV and does not check uniqueness.", "mechanism": "src/provider/cipher_gcm.rs:ossl_gcm_stream_update"},
+        {"id": "TE3-L-CIPHERTEXT", "kind": "leaf", "leaf_type": "assumption", "statement": "The attacker submits ciphertexts of its choice and observes success or failure.", "assumption_id": "ASM-ATTACKER-CHOSEN-CIPHERTEXT"},
+        {"id": "TE3-L-NONCE", "kind": "leaf", "leaf_type": "assumption", "statement": "The caller reuses an IV under one key.", "assumption_id": "ASM-AEAD-NONCE-REUSE"},
+        {"id": "TE3-L-OBSERVE", "kind": "leaf", "leaf_type": "assumption", "statement": "The adversary observes the ciphertexts and tags produced under the reused nonce.", "assumption_id": "ASM-ATTACKER-OBSERVES-CIPHERTEXTS"}
+      ]
+    },
+    {
+      "id": "TE-4",
+      "top_event": "TE-4",
+      "description": "Memory corruption reached with a legal or adversarial-but-contract-valid input. Class-3-only hazards are excluded from this top event by construction.",
+      "diagram": "TE-4 = OR( HAZ-05 partial initialisation on OOM, HAZ-12 allocation-arithmetic overflow, HAZ-06 callback invalidates a legal-view, AND(HAZ-16 panic caught but state half-applied, ASM-PANIC-REACHABLE-FROM-CLASS2) )",
+      "root": "TE4-ROOT",
+      "nodes": [
+        {"id": "TE4-ROOT", "kind": "gate", "gate": "OR", "inputs": ["TE4-L-PARTIAL", "TE4-L-OVERFLOW", "TE4-L-CALLBACK", "TE4-G-PANIC"]},
+        {"id": "TE4-G-PANIC", "kind": "gate", "gate": "AND", "inputs": ["TE4-L-PANIC", "TE4-L-PANIC-REACH"]},
+        {"id": "TE4-L-PARTIAL", "kind": "leaf", "leaf_type": "mechanism", "statement": "An allocation failure mid-construction leaves a partially initialised owner that a reference or full destructor then touches.", "hazard": "HAZ-05", "mechanism": "src/x509/pcy_tree.rs:tree_init"},
+        {"id": "TE4-L-OVERFLOW", "kind": "leaf", "leaf_type": "mechanism", "statement": "A parsed count product reaches an allocation helper without checked arithmetic.", "hazard": "HAZ-12", "mechanism": "src/asn1/owned.rs:OwnedBlock::malloc"},
+        {"id": "TE4-L-CALLBACK", "kind": "leaf", "leaf_type": "mechanism", "statement": "A documented callback replaces the chain or an extension the walk is reading; only the chain is snapshotted.", "hazard": "HAZ-06", "mechanism": "src/x509/v3_addr.rs:addr_validate_path_internal"},
+        {"id": "TE4-L-PANIC", "kind": "leaf", "leaf_type": "mechanism", "statement": "A caught panic leaves the context partially mutated; guard_ffi does not roll back or poison.", "hazard": "HAZ-16", "mechanism": "src/ffi/mod.rs:guard_ffi"},
+        {"id": "TE4-L-PANIC-REACH", "kind": "leaf", "leaf_type": "assumption", "statement": "A class-2 input reaches a panic through an internal defect; no such defect is certified absent.", "assumption_id": "ASM-PANIC-REACHABLE-FROM-CLASS2"}
+      ]
+    },
+    {
+      "id": "TE-5",
+      "top_event": "TE-5",
+      "description": "Resource exhaustion from an unbounded allocation, hostile nesting, or a caller-chosen public geometry.",
+      "diagram": "TE-5 = OR( AND(HAZ-03 infallible allocation aborts, ASM-UNBOUNDED-REQUEST), AND(HAZ-17 hostile nesting, ASM-CALLER-CONTROLLED-CERTIFICATE), AND(ladder width from caller geometry, ASM-CALLER-CONTROLS-PUBLIC-GEOMETRY) )",
+      "root": "TE5-ROOT",
+      "nodes": [
+        {"id": "TE5-ROOT", "kind": "gate", "gate": "OR", "inputs": ["TE5-G-ALLOC", "TE5-G-NEST", "TE5-G-GEOM"]},
+        {"id": "TE5-G-ALLOC", "kind": "gate", "gate": "AND", "inputs": ["TE5-L-ALLOC", "TE5-L-UNBOUNDED"]},
+        {"id": "TE5-G-NEST", "kind": "gate", "gate": "AND", "inputs": ["TE5-L-NEST", "TE5-L-CERT"]},
+        {"id": "TE5-G-GEOM", "kind": "gate", "gate": "AND", "inputs": ["TE5-L-GEOM", "TE5-L-GEOM-CTRL"]},
+        {"id": "TE5-L-ALLOC", "kind": "leaf", "leaf_type": "mechanism", "statement": "An infallible allocation on the BN path aborts the process on exhaustion.", "hazard": "HAZ-03", "mechanism": "src/bn/limbs.rs:mul"},
+        {"id": "TE5-L-NEST", "kind": "leaf", "leaf_type": "mechanism", "statement": "A constructed value nested to the depth cap consumes a stack frame per level.", "hazard": "HAZ-17", "mechanism": "src/asn1/d2i.rs:asn1_item_ex_d2i"},
+        {"id": "TE5-L-GEOM", "kind": "leaf", "leaf_type": "mechanism", "statement": "The ladder width and operation count follow the caller-supplied modulus and exponent size.", "mechanism": "src/bn/arith.rs:mod_exp_core_consttime"},
+        {"id": "TE5-L-UNBOUNDED", "kind": "leaf", "leaf_type": "assumption", "statement": "The library applies no process-wide request cap; the deployment supplies the bound.", "assumption_id": "ASM-UNBOUNDED-REQUEST"},
+        {"id": "TE5-L-CERT", "kind": "leaf", "leaf_type": "assumption", "statement": "The attacker supplies the certificate bytes.", "assumption_id": "ASM-CALLER-CONTROLLED-CERTIFICATE"},
+        {"id": "TE5-L-GEOM-CTRL", "kind": "leaf", "leaf_type": "assumption", "statement": "The caller chooses the public geometry.", "assumption_id": "ASM-CALLER-CONTROLS-PUBLIC-GEOMETRY"}
+      ]
+    },
+    {
+      "id": "TE-6",
+      "top_event": "TE-6",
+      "description": "A cryptographic operation returns a wrong result instead of failing.",
+      "diagram": "TE-6 = OR( AND(HAZ-10 stale Montgomery context, ASM-PREPARED-DOMAIN-REUSED), AND(HAZ-09 CRT result trusted after the fallback, ASM-CRT-CHECK-IS-THE-ONLY-ORACLE) )",
+      "root": "TE6-ROOT",
+      "nodes": [
+        {"id": "TE6-ROOT", "kind": "gate", "gate": "OR", "inputs": ["TE6-G-MONT", "TE6-G-CRT"]},
+        {"id": "TE6-G-MONT", "kind": "gate", "gate": "AND", "inputs": ["TE6-L-MONT", "TE6-L-REUSED"]},
+        {"id": "TE6-G-CRT", "kind": "gate", "gate": "AND", "inputs": ["TE6-L-CRT", "TE6-L-ONLY"]},
+        {"id": "TE6-L-MONT", "kind": "leaf", "leaf_type": "mechanism", "statement": "A supplied Montgomery context is used without a modulus match in the authority; this crate refuses it instead.", "hazard": "HAZ-10", "mechanism": "src/bn/mont.rs:refuse_context"},
+        {"id": "TE6-L-CRT", "kind": "leaf", "leaf_type": "mechanism", "statement": "The CRT result is repaired by a raw-d fallback whose own result is returned without a second congruence check.", "hazard": "HAZ-09", "mechanism": "src/rsa/ossl.rs:rsa_ossl_mod_exp"},
+        {"id": "TE6-L-REUSED", "kind": "leaf", "leaf_type": "assumption", "statement": "A caller reuses or caches a prepared context across a modulus change.", "assumption_id": "ASM-PREPARED-DOMAIN-REUSED"},
+        {"id": "TE6-L-ONLY", "kind": "leaf", "leaf_type": "assumption", "statement": "The public-exponent check is the only cross-check on the CRT result.", "assumption_id": "ASM-CRT-CHECK-IS-THE-ONLY-ORACLE"}
+      ]
+    },
+    {
+      "id": "TE-7",
+      "top_event": "TE-7",
+      "description": "A secret-dependent operation loses its constant-time or fixed-pattern property.",
+      "diagram": "TE-7 = OR( AND(HAZ-02 secret branch, ASM-TIMING-OBSERVER), AND(HAZ-07 secret length, ASM-TIMING-OBSERVER), AND(HAZ-08 blinding skipped, ASM-TIMING-OBSERVER), AND(HAZ-11 nonce source, ASM-SIGNATURES-OBSERVED) )",
+      "root": "TE7-ROOT",
+      "nodes": [
+        {"id": "TE7-ROOT", "kind": "gate", "gate": "OR", "inputs": ["TE7-G-BRANCH", "TE7-G-LENGTH", "TE7-G-BLIND", "TE7-G-NONCE"]},
+        {"id": "TE7-G-BRANCH", "kind": "gate", "gate": "AND", "inputs": ["TE7-L-BRANCH", "TE7-L-OBSERVER"]},
+        {"id": "TE7-G-LENGTH", "kind": "gate", "gate": "AND", "inputs": ["TE7-L-LENGTH", "TE7-L-OBSERVER"]},
+        {"id": "TE7-G-BLIND", "kind": "gate", "gate": "AND", "inputs": ["TE7-L-BLIND", "TE7-L-OBSERVER"]},
+        {"id": "TE7-G-NONCE", "kind": "gate", "gate": "AND", "inputs": ["TE7-L-NONCE", "TE7-L-SIGS"]},
+        {"id": "TE7-L-BRANCH", "kind": "leaf", "leaf_type": "mechanism", "statement": "A secret-dependent branch or index survives optimisation in the ladder, inversion or division.", "hazard": "HAZ-02", "mechanism": "src/bn/limbs.rs:mod_exp_core_consttime"},
+        {"id": "TE7-L-LENGTH", "kind": "leaf", "leaf_type": "mechanism", "statement": "A secret-derived length reaches a copy or an allocation and is observable.", "hazard": "HAZ-07", "mechanism": "src/bn/bignum.rs:store_consttime"},
+        {"id": "TE7-L-BLIND", "kind": "leaf", "leaf_type": "mechanism", "statement": "The private exponentiation runs unblinded when the caller disables blinding.", "hazard": "HAZ-08", "mechanism": "src/rsa/ossl.rs:rsa_ossl_private_encrypt"},
+        {"id": "TE7-L-NONCE", "kind": "leaf", "leaf_type": "mechanism", "statement": "The nonce source's output distribution is observable through the signatures it produces.", "hazard": "HAZ-11", "mechanism": "src/ec/ecdsa_ossl.rs:ecdsa_sign_setup"},
+        {"id": "TE7-L-OBSERVER", "kind": "leaf", "leaf_type": "assumption", "statement": "The adversary measures timing at the defence's granularity.", "assumption_id": "ASM-TIMING-OBSERVER"},
+        {"id": "TE7-L-SIGS", "kind": "leaf", "leaf_type": "assumption", "statement": "The adversary obtains the signatures.", "assumption_id": "ASM-SIGNATURES-OBSERVED"}
+      ]
+    },
+    {
+      "id": "TE-8",
+      "top_event": "TE-8",
+      "description": "Memory corruption reachable only when the caller violates the documented contract. This tree is deliberately disjoint from TE-4: nothing here is reachable from a legal or adversarial-but-contract-valid input, and nothing here is claimed memory-safe.",
+      "diagram": "TE-8 = OR( HAZ-04 invalid free/double release, HAZ-13 allocator-hook re-entry, HAZ-14 verify_cb mutates a cached extension, HAZ-19 object freed or method changed under an operation, HAZ-20 BIO cb_arg is not a BIO )",
+      "root": "TE8-ROOT",
+      "nodes": [
+        {"id": "TE8-ROOT", "kind": "gate", "gate": "OR", "inputs": ["TE8-L-INVALID-FREE", "TE8-L-HOOK", "TE8-L-CALLBACK", "TE8-L-LIFETIME", "TE8-L-CBARG"]},
+        {"id": "TE8-L-INVALID-FREE", "kind": "leaf", "leaf_type": "mechanism", "statement": "A raw pointer is adopted with the wrong provenance or released twice.", "hazard": "HAZ-04", "mechanism": "src/asn1/owned.rs:OwnedBlock::from_raw"},
+        {"id": "TE8-L-HOOK", "kind": "leaf", "leaf_type": "mechanism", "statement": "An installed allocation hook re-enters the ERR API on the same thread.", "hazard": "HAZ-13", "mechanism": "src/runtime/mem.rs:CRYPTO_set_mem_functions"},
+        {"id": "TE8-L-CALLBACK", "kind": "leaf", "leaf_type": "mechanism", "statement": "verify_cb mutates the contents of a cached extension in place while the walk reads it.", "hazard": "HAZ-14", "mechanism": "src/x509/v3_addr.rs:addr_validate_path_internal"},
+        {"id": "TE8-L-LIFETIME", "kind": "leaf", "leaf_type": "mechanism", "statement": "The enclosing object is freed or its method changed while a published Montgomery slot is in use.", "hazard": "HAZ-19", "mechanism": "src/bn/mont.rs:BN_MONT_CTX_set_locked"},
+        {"id": "TE8-L-CBARG", "kind": "leaf", "leaf_type": "mechanism", "statement": "cb_arg is not a BIO* and the callback writes through it.", "hazard": "HAZ-20", "mechanism": "src/runtime/bio/bio_cb.rs:BIO_debug_callback_ex"}
+      ]
+    }
+  ],
+  "fmea": [
+    {"id": "FMEA-01", "component": "CRYPTO_malloc", "api_family": "runtime_mem", "failure_mode": "Allocation fails on an installed or default allocator.", "local_effect": "NULL return and an error raised.", "top_events": ["TE-5"], "severity": "MEDIUM", "control": "Every caller on the fallible seam tests the NULL return and takes its error path.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "The infallible BN Vec sites take the abort path instead (OBL-BN-ALLOCATOR).", "hazards": ["HAZ-03"]},
+    {"id": "FMEA-02", "component": "CRYPTO_zalloc", "api_family": "runtime_mem", "failure_mode": "count*size overflows size_t.", "local_effect": "The product is checked and the call answers NULL instead of a wrapped request.", "top_events": ["TE-4", "TE-5"], "severity": "HIGH", "control": "ossl_size_mul and OwnedBlock/OwnedBuf checked_mul guards.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "No fuzz court drives parsed lengths through every helper.", "hazards": ["HAZ-12"]},
+    {"id": "FMEA-03", "component": "CRYPTO_set_mem_functions hook", "api_family": "runtime_mem", "failure_mode": "Installed hook re-enters ERR on the same thread.", "local_effect": "A second mutable borrow of ERR_STATE would be formed without the guard.", "top_events": ["TE-8"], "severity": "HIGH", "control": "with_state refuses a same-thread re-entry with a thread-local guard; a recorded safety divergence (B34).", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "No negative-control court at the candidate installs a re-entering hook.", "hazards": ["HAZ-13"]},
+    {"id": "FMEA-04", "component": "OPENSSL_cleanse", "api_family": "runtime_mem", "failure_mode": "The write is elided because the storage is about to be freed.", "local_effect": "Secret residue survives in recycled memory.", "top_events": ["TE-1", "TE-3"], "severity": "HIGH", "control": "The value barrier in the cleanse path prevents the elision.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "No receipt binds the emitted code at the analysis candidate.", "hazards": ["HAZ-01"]},
+    {"id": "FMEA-05", "component": "OBL-T12 BN_CTX scratch", "api_family": "ec", "failure_mode": "Scratch temporaries are released without cleansing.", "local_effect": "Nonce and scalar intermediates remain in the pool.", "top_events": ["TE-1"], "severity": "MEDIUM", "control": "None recorded.", "evidence_status": "NONE", "control_evidence": [], "residual": "OBL-T12-RESIDUAL remains open.", "hazards": ["HAZ-01"]},
+    {"id": "FMEA-06", "component": "BN_MONT_CTX_set_locked", "api_family": "bn", "failure_mode": "A stale or mismatched context is supplied for the operand.", "local_effect": "The authority's silent wrong answer would be reproduced if the check were absent.", "top_events": ["TE-6"], "severity": "HIGH", "control": "context_matches validates modulus, word and backend; a mismatch raises and returns 0.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "The refusal has no authority coordinate; no differential court exercises reuse.", "hazards": ["HAZ-10"]},
+    {"id": "FMEA-07", "component": "BN_MONT_CTX shared slot", "api_family": "bn", "failure_mode": "The enclosing object is freed or its method changed while the context is in use.", "local_effect": "The published context is read after its owner released it.", "top_events": ["TE-8"], "severity": "HIGH", "control": "Atomic Acquire/Release publication; the object's exclusive-access precondition is documented.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "The precondition is not enforced; OBL-MECH-RUNTIME-CONCURRENCY is open.", "hazards": ["HAZ-19"]},
+    {"id": "FMEA-08", "component": "limbs division", "api_family": "bn", "failure_mode": "Division runs a variable-time path on a secret operand.", "local_effect": "Quotient bits are observable in timing.", "top_events": ["TE-7"], "severity": "HIGH", "control": "BN_FLG_CONSTTIME routes a flagged call to div_rem_ct_fallible.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "The routing is not measured at the candidate; row T28 records the mechanism only.", "hazards": ["HAZ-02"]},
+    {"id": "FMEA-09", "component": "limbs::mul / limbs::rem", "api_family": "bn", "failure_mode": "A Vec allocation on the secret-bearing path is infallible.", "local_effect": "Exhaustion aborts the process.", "top_events": ["TE-5"], "severity": "HIGH", "control": "Partially fallible wrappers; OBL-BN-ALLOCATOR tracks the remaining sites.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "One allocation per limb operation remains (row T29).", "hazards": ["HAZ-03"]},
+    {"id": "FMEA-10", "component": "constant-pattern ladder", "api_family": "bn", "failure_mode": "A secret-dependent branch survives optimisation.", "local_effect": "Timing reveals exponent bits.", "top_events": ["TE-7"], "severity": "HIGH", "control": "BINSEC -checkct and binary_branch_audit are qualified instruments.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "BINSEC returns unknown on the ladder; OBL-T16-RESIDUAL.", "hazards": ["HAZ-02"]},
+    {"id": "FMEA-11", "component": "staging transfer", "api_family": "bn", "failure_mode": "A secret-length presence or bounds test branches.", "local_effect": "The secret's length is observable.", "top_events": ["TE-7"], "severity": "HIGH", "control": "The transfer reads a public width; the remaining secret-length test is stated.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "OBL-T9-RESIDUAL remains open.", "hazards": ["HAZ-07"]},
+    {"id": "FMEA-12", "component": "rsa_ossl_private_encrypt", "api_family": "rsa", "failure_mode": "The caller disables blinding.", "local_effect": "The private exponentiation runs with a message-correlated pattern.", "top_events": ["TE-1", "TE-7"], "severity": "HIGH", "control": "Blinding is on by default; disabling it is documented optionality.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "No timing court distinguishes the blinding-disabled path.", "hazards": ["HAZ-08"]},
+    {"id": "FMEA-13", "component": "rsa_get_blinding", "api_family": "rsa", "failure_mode": "No blinding can be constructed for the key.", "local_effect": "The operation raises and returns failure; it does not proceed unblinded.", "top_events": ["TE-1"], "severity": "MEDIUM", "control": "A NULL blinding takes the error path and breaks the operation.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "The error path is source-only; no failure-injection receipt.", "hazards": ["HAZ-08"]},
+    {"id": "FMEA-14", "component": "rsa_ossl_mod_exp CRT tail", "api_family": "rsa", "failure_mode": "A fault makes the CRT result non-congruent.", "local_effect": "The result is repaired by the raw-d fallback, or an unpredicted value is returned if the check itself is wrong.", "top_events": ["TE-2", "TE-6"], "severity": "CRITICAL", "control": "Re-exponentiation with e and a congruence comparison, then the fallback.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "A unit test exercises the fallback; no receipt-bound fault court exists.", "hazards": ["HAZ-09"]},
+    {"id": "FMEA-15", "component": "rsa_ossl_private_decrypt external key", "api_family": "rsa", "failure_mode": "RSA_FLAG_EXT_PKEY forces the refusing PKCS#1 v1.5 check.", "local_effect": "The refusal is observable; implicit rejection is unavailable.", "top_events": ["TE-3"], "severity": "CRITICAL", "control": "None on this path.", "evidence_status": "NONE", "control_evidence": [], "residual": "OBL-RSA-EXTKEY-ORACLE is open and blocks the b85c claim.", "hazards": ["HAZ-15"]},
+    {"id": "FMEA-16", "component": "BN_BLINDING release", "api_family": "rsa", "failure_mode": "The blinding factor is released with BN_free rather than cleansed.", "local_effect": "The blinding factor survives in freed storage.", "top_events": ["TE-1"], "severity": "MEDIUM", "control": "None recorded.", "evidence_status": "NONE", "control_evidence": [], "residual": "OBL-T11-RESIDUAL remains open.", "hazards": ["HAZ-01"]},
+    {"id": "FMEA-17", "component": "RSA recombination", "api_family": "rsa", "failure_mode": "Recombination reads p/q, zero limbs and carries.", "local_effect": "Factors and their shape are observable in timing.", "top_events": ["TE-7"], "severity": "HIGH", "control": "None recorded.", "evidence_status": "NONE", "control_evidence": [], "residual": "OBL-T6-RESIDUAL remains open.", "hazards": ["HAZ-02"]},
+    {"id": "FMEA-18", "component": "ecdsa_sign_setup", "api_family": "ec", "failure_mode": "k is biased or repeated by the DRBG or the nonce derivation.", "local_effect": "Two signatures reveal the private key.", "top_events": ["TE-1"], "severity": "CRITICAL", "control": "BN_secure_new scalar, zero rejection, and the deterministic arm refuses instead of substituting.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "No nonce-distribution court and no RFC 6979 decision at the candidate.", "hazards": ["HAZ-11"]},
+    {"id": "FMEA-19", "component": "EVP_DigestVerifyFinal", "api_family": "evp", "failure_mode": "A consumer treats -1 (error) as a valid result.", "local_effect": "An unverified signature is accepted.", "top_events": ["TE-2"], "severity": "HIGH", "control": "The documented return contract; the ABI cannot enforce it.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "No consumer audit of return-value tests (OBL-VERIFY-RETURN-POLARITY).", "hazards": ["HAZ-18"]},
+    {"id": "FMEA-20", "component": "provider method store", "api_family": "provider_dispatch", "failure_mode": "A fetched method is used after the provider is unloaded.", "local_effect": "The method table pointer is dangling.", "top_events": ["TE-8"], "severity": "HIGH", "control": "Provider and method reference counts.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "No unload-race court at the candidate.", "hazards": ["HAZ-19"]},
+    {"id": "FMEA-21", "component": "EVP fetch", "api_family": "provider_dispatch", "failure_mode": "No implementation matches the name and properties.", "local_effect": "A defined NULL result and a fetch error.", "top_events": ["TE-5"], "severity": "LOW", "control": "A defined fetch failure.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "No receipt for the property-query failure matrix.", "hazards": []},
+    {"id": "FMEA-22", "component": "GCM engine IV handling", "api_family": "evp", "failure_mode": "The caller reuses an IV under one key.", "local_effect": "The authentication key and plaintext are recoverable.", "top_events": ["TE-3"], "severity": "CRITICAL", "control": "None: uniqueness is a documented caller obligation and is not enforced.", "evidence_status": "NONE", "control_evidence": [], "residual": "Recorded as an assumption, not a barrier.", "hazards": []},
+    {"id": "FMEA-23", "component": "BIO_debug_callback_ex", "api_family": "bio", "failure_mode": "cb_arg is not a BIO*, and the callback writes through it.", "local_effect": "A write to an arbitrary address.", "top_events": ["TE-8"], "severity": "CRITICAL", "control": "None: the cast is deliberate authority parity.", "evidence_status": "NONE", "control_evidence": [], "residual": "Class-3 only; never claimed memory-safe.", "hazards": ["HAZ-20"]},
+    {"id": "FMEA-24", "component": "BIO operation callback", "api_family": "bio", "failure_mode": "The callback frees the BIO the operation is running on.", "local_effect": "The method continues with a dangling BIO.", "top_events": ["TE-4"], "severity": "HIGH", "control": "None: no snapshot or up-ref around the BIO callback path.", "evidence_status": "NONE", "control_evidence": [], "residual": "Class-2 application behaviour is not sandboxed.", "hazards": ["HAZ-06"]},
+    {"id": "FMEA-25", "component": "addr_validate_path_internal", "api_family": "x509", "failure_mode": "verify_cb releases or replaces the chain.", "local_effect": "The walk would read a freed stack or certificate.", "top_events": ["TE-8"], "severity": "HIGH", "control": "ChainSnapshot duplicates the stack and up-references every certificate.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "No reentrancy court exercises the snapshot.", "hazards": ["HAZ-14"]},
+    {"id": "FMEA-26", "component": "cached extension contents", "api_family": "x509", "failure_mode": "verify_cb mutates a cached extension in place.", "local_effect": "Elements already contributed to the child stack change under the walk.", "top_events": ["TE-8"], "severity": "HIGH", "control": "None; the module states the residual explicitly.", "evidence_status": "NONE", "control_evidence": [], "residual": "IPAddressFamily has no shared-ownership handle.", "hazards": ["HAZ-14"]},
+    {"id": "FMEA-27", "component": "ASN.1 decoder nesting", "api_family": "x509", "failure_mode": "A constructed value nests to the depth cap or an extension expands with the input.", "local_effect": "High stack or time consumption relative to the input length.", "top_events": ["TE-5"], "severity": "MEDIUM", "control": "MAX_CONSTRUCTED_NEST (30), ASN1_GEN_SEQ_MAX_DEPTH and MAX_STRING_NEST.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "No hostile-certificate resource measurement at the candidate.", "hazards": ["HAZ-17"]},
+    {"id": "FMEA-28", "component": "X509 policy tree", "api_family": "x509", "failure_mode": "An allocation failure mid-construction publishes a partial tree.", "local_effect": "A destructor or a reference touches an uninitialised member.", "top_events": ["TE-4"], "severity": "HIGH", "control": "OwnedTree/OwnedLevels release only acquired members; failure-injection refuses the first node request.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "The failure-injection is a unit test, not a receipt at the candidate.", "hazards": ["HAZ-05"]},
+    {"id": "FMEA-29", "component": "guard_ffi", "api_family": "runtime_mem", "failure_mode": "A panic interrupts a stateful operation.", "local_effect": "The context is left half-mutated; the documented failure value is returned.", "top_events": ["TE-4", "TE-6"], "severity": "HIGH", "control": "Non-unwinding only; no rollback or poison.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "Failure-atomicity is absent (OBL-PANIC-ATOMICITY, OBL-XCUT-PANIC).", "hazards": ["HAZ-16"]},
+    {"id": "FMEA-30", "component": "OwnedBlock/OwnedBuf adoption", "api_family": "runtime_mem", "failure_mode": "A raw pointer is adopted with the wrong allocator, extent or release mechanism.", "local_effect": "A double release, an invalid free or a leak.", "top_events": ["TE-8"], "severity": "HIGH", "control": "Adoption constructors are unsafe with provenance contracts; Drop is the single release.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "No cross-caller provenance audit or Miri run at the candidate (OBL-XCUT-ALIASING).", "hazards": ["HAZ-04"]}
+  ],
+  "stpa": {
+    "control_structure": {
+      "nodes": [
+        {"id": "CS-APP", "role": "controller", "description": "Application or protocol consumer."},
+        {"id": "CS-API", "role": "controller", "description": "OpenSSL-compatible C ABI entry points in libcrypto."},
+        {"id": "CS-EVP", "role": "controller", "description": "EVP dispatch and provider fetch/method-store layer."},
+        {"id": "CS-KERNEL", "role": "controlled process", "description": "BN, RSA, EC and cipher kernels."},
+        {"id": "CS-X509", "role": "controlled process", "description": "ASN.1 parse and X.509 verification walk."},
+        {"id": "CS-ALLOC", "role": "controlled process", "description": "Allocator seam and installed hooks."},
+        {"id": "CS-OS", "role": "controlled process", "description": "libc allocator, OS entropy and the process boundary."},
+        {"id": "CS-CB", "role": "actuator", "description": "Application callbacks: verify_cb, BIO callbacks, allocator hooks, ex_data."},
+        {"id": "CS-RNG", "role": "controlled process", "description": "DRBG and entropy source."}
+      ],
+      "edges": [
+        {"from": "CS-APP", "to": "CS-API", "action": "call an exported entry point"},
+        {"from": "CS-API", "to": "CS-EVP", "action": "dispatch to a fetched method"},
+        {"from": "CS-EVP", "to": "CS-KERNEL", "action": "invoke the algorithm implementation"},
+        {"from": "CS-API", "to": "CS-X509", "action": "parse a certificate and run the verification walk"},
+        {"from": "CS-X509", "to": "CS-ALLOC", "action": "allocate a policy tree or an extension copy"},
+        {"from": "CS-X509", "to": "CS-CB", "action": "invoke verify_cb during the walk"},
+        {"from": "CS-KERNEL", "to": "CS-ALLOC", "action": "request or release storage"},
+        {"from": "CS-ALLOC", "to": "CS-OS", "action": "malloc/realloc/free or an installed hook"},
+        {"from": "CS-KERNEL", "to": "CS-RNG", "action": "draw a nonce, blinding factor or key"},
+        {"from": "CS-APP", "to": "CS-CB", "action": "register a callback and its argument"},
+        {"from": "CS-CB", "to": "CS-API", "action": "re-enter the library from a callback"},
+        {"from": "CS-API", "to": "CS-APP", "action": "return a status code and the ERR queue"}
+      ]
+    },
+    "ucas": [
+      {"id": "UCA-01", "controller": "CS-API", "control_action": "Publish an owning handle whose lifetime is the caller's.", "context": "Another thread frees the enclosing object or changes its method while an operation holds the handle.", "loss": "Use after free or a data race.", "top_events": ["TE-4"], "hazard": "HAZ-19", "barrier": "Atomic slot publication only; the exclusive-access precondition is not enforced."},
+      {"id": "UCA-02", "controller": "CS-API", "control_action": "Invoke an application callback while an operation holds a reference into a stack or an extension.", "context": "The callback releases, replaces or mutates that object, which the documented API permits.", "loss": "Dangling view or corrupted element.", "top_events": ["TE-4"], "hazard": "HAZ-06", "barrier": "Chain snapshot for verify_cb; no barrier for BIO and no protection for extension contents."},
+      {"id": "UCA-03", "controller": "CS-ALLOC", "control_action": "Call the installed allocation hook while ERR holds the thread's error state.", "context": "The hook calls ERR_raise or ERR_get_error on the same thread, contrary to the external contract.", "loss": "A second mutable borrow of ERR_STATE.", "top_events": ["TE-4"], "hazard": "HAZ-13", "barrier": "B34 thread-local re-entry guard fails closed (recorded safety divergence)."},
+      {"id": "UCA-04", "controller": "CS-KERNEL", "control_action": "Run the private exponentiation with blinding disabled.", "context": "The application called RSA_blinding_off or set RSA_FLAG_NO_BLINDING, or blinding construction failed.", "loss": "A timing channel on the private exponent.", "top_events": ["TE-1", "TE-7"], "hazard": "HAZ-08", "barrier": "Blinding is on by default; disabling is not measured."},
+      {"id": "UCA-05", "controller": "CS-KERNEL", "control_action": "Return the PKCS#1 v1.5 padding verdict for an external key.", "context": "The key has RSA_FLAG_EXT_PKEY and the caller requested PKCS#1 padding.", "loss": "A padding oracle on the private key.", "top_events": ["TE-3"], "hazard": "HAZ-15", "barrier": "None on this path."},
+      {"id": "UCA-06", "controller": "CS-KERNEL", "control_action": "Return the result of a prepared-domain operation.", "context": "The supplied context belongs to a different modulus and the check is bypassed or absent.", "loss": "A silent wrong result.", "top_events": ["TE-6"], "hazard": "HAZ-10", "barrier": "context_matches refuses a mismatch in this crate."},
+      {"id": "UCA-07", "controller": "CS-KERNEL", "control_action": "Return a CRT private-key result.", "context": "A fault occurs in one CRT half.", "loss": "A faulty signature or factor recovery.", "top_events": ["TE-2", "TE-6"], "hazard": "HAZ-09", "barrier": "Congruence check and raw-d fallback; no fault court."},
+      {"id": "UCA-08", "controller": "CS-API", "control_action": "Catch a panic and return the documented failure value.", "context": "The interrupted operation had already mutated a stateful context.", "loss": "A half-applied state reused by the next call.", "top_events": ["TE-4", "TE-6"], "hazard": "HAZ-16", "barrier": "Non-unwinding only; no rollback or poison."},
+      {"id": "UCA-09", "controller": "CS-EVP", "control_action": "Return the verification status.", "context": "A consumer tests the result as non-zero instead of exactly 1.", "loss": "Acceptance of an unverified signature.", "top_events": ["TE-2"], "hazard": "HAZ-18", "barrier": "The documented contract; the ABI cannot enforce it."},
+      {"id": "UCA-10", "controller": "CS-CB", "control_action": "Write the debug trace through cb_arg.", "context": "The application set cb_arg to a pointer that is not a BIO*.", "loss": "A write through an arbitrary pointer.", "top_events": ["TE-4"], "hazard": "HAZ-20", "barrier": "None; deliberate authority parity."},
+      {"id": "UCA-11", "controller": "CS-ALLOC", "control_action": "Abort the process when an infallible allocation fails.", "context": "The secret-bearing BN path allocates through Vec while memory is exhausted.", "loss": "Denial of service for every connection in the process.", "top_events": ["TE-5"], "hazard": "HAZ-03", "barrier": "Partially fallible; OBL-BN-ALLOCATOR is open."},
+      {"id": "UCA-12", "controller": "CS-X509", "control_action": "Continue the validation walk after a callback.", "context": "The callback mutated a cached extension in place.", "loss": "Stale elements already contributed to the child stack.", "top_events": ["TE-4"], "hazard": "HAZ-14", "barrier": "None for extension contents; the module states the residual."}
+    ]
+  },
+  "attack_graphs": [
+    {
+      "id": "AG-1",
+      "title": "Biased or reused ECDSA nonce to private-key recovery",
+      "top_events": ["TE-1"],
+      "preconditions": ["The signer uses the DSA-style nonce or a DRBG whose output is biased or repeated.", "The adversary obtains the signatures."],
+      "steps": ["Sign two messages whose nonces are equal or related.", "Recover k from the two signature equations.", "Recover the private scalar from k and one signature."],
+      "barrier": "BN_secure_new for k, rejection of k == 0 and r == 0, and refusal of the deterministic arm instead of a silent fallback.",
+      "barrier_evidenced": false,
+      "evidence": ["EVD-INST-DUDECT"],
+      "residual": "No nonce-distribution or repetition court at the analysis candidate, and D333 leaves RFC 6979 unlanded.",
+      "hazards": ["HAZ-11"]
+    },
+    {
+      "id": "AG-2",
+      "title": "Blinding removal or blinding failure to a timing attack",
+      "top_events": ["TE-1", "TE-7"],
+      "preconditions": ["The application disables blinding or blinding construction fails.", "The adversary measures the private operation."],
+      "steps": ["Force the no-blinding path.", "Collect timings for chosen messages.", "Correlate the pattern with the private exponent."],
+      "barrier": "Blinding is on by default and a NULL blinding aborts the operation.",
+      "barrier_evidenced": false,
+      "evidence": ["EVD-INST-DUDECT"],
+      "residual": "Disabling blinding is documented optionality with no measured consequence at the candidate.",
+      "hazards": ["HAZ-08"]
+    },
+    {
+      "id": "AG-3",
+      "title": "CRT fault to a faulty signature and factor recovery",
+      "top_events": ["TE-2", "TE-6"],
+      "preconditions": ["The adversary can inject a fault in one CRT half.", "The library returns a signature without a congruence check."],
+      "steps": ["Induce a fault during one per-prime exponentiation.", "Obtain the faulty signature.", "Compute gcd of the faulty and correct signatures to recover a factor."],
+      "barrier": "Re-exponentiation with the public exponent, a congruence comparison, and the raw-d fallback.",
+      "barrier_evidenced": false,
+      "evidence": [],
+      "residual": "A unit test exercises the fallback; no receipt-bound fault-injection court exists at the candidate.",
+      "hazards": ["HAZ-09"]
+    },
+    {
+      "id": "AG-4",
+      "title": "Allocation failure mid-operation to a partial or inconsistent state",
+      "top_events": ["TE-4", "TE-5", "TE-6"],
+      "preconditions": ["The caller installs a failing allocator or the process is exhausted.", "An operation has already acquired some resources."],
+      "steps": ["Fail the Nth allocation inside a construction or a private operation.", "The call returns its documented failure value.", "A destructor or the next call touches the partially initialised state."],
+      "barrier": "The fallible allocation seam, OwnedBuf/OwnedTree release-only-acquired destructors, and error returns before publication.",
+      "barrier_evidenced": false,
+      "evidence": ["EVD-INST-ALLOC_PROBE"],
+      "residual": "Infallible BN Vec allocations and the absence of a failure-injection court at the candidate (OBL-BN-ALLOCATOR, OBL-T22).",
+      "hazards": ["HAZ-03", "HAZ-05", "HAZ-12"]
+    },
+    {
+      "id": "AG-5",
+      "title": "A stale cached Montgomery context to a wrong-modulus result",
+      "top_events": ["TE-6"],
+      "preconditions": ["A caller reuses or shares a prepared context across a modulus change.", "The operation trusts the supplied context."],
+      "steps": ["Supply a context prepared for modulus m1 to an operation on m2.", "The authority computes with the wrong parameters and returns a plausible value.", "The caller uses the wrong result."],
+      "barrier": "context_matches compares modulus, word and backend, and refuse_context raises instead of computing.",
+      "barrier_evidenced": false,
+      "evidence": [],
+      "residual": "The refusal has no authority coordinate and no differential court for reuse at the candidate.",
+      "hazards": ["HAZ-10"]
+    },
+    {
+      "id": "AG-6",
+      "title": "A callback re-enters and mutates state under an operation",
+      "top_events": ["TE-4"],
+      "preconditions": ["The application registered a callback through a documented entry point.", "The callback frees or replaces the object the operation is reading."],
+      "steps": ["The operation invokes the callback.", "The callback frees the chain, replaces the BIO or mutates a cached extension.", "The operation continues with the stale pointer or borrow."],
+      "barrier": "ChainSnapshot and per-certificate up-refs for x509; the B34 guard for same-thread ERR re-entry; no barrier for BIO cb_arg or extension contents.",
+      "barrier_evidenced": false,
+      "evidence": ["EVD-B85C-ADJUDICATION"],
+      "residual": "OBL-XCUT-CALLBACKS remains NOT_ESTABLISHED; in-place extension mutation is explicitly unprotected.",
+      "hazards": ["HAZ-06", "HAZ-13", "HAZ-14", "HAZ-20"]
+    },
+    {
+      "id": "AG-7",
+      "title": "External-key PKCS#1 v1.5 padding oracle to plaintext disclosure",
+      "top_events": ["TE-3"],
+      "preconditions": ["A private key is held externally (RSA_FLAG_EXT_PKEY).", "The application decrypts attacker-supplied PKCS#1 v1.5 ciphertexts and reports success or failure."],
+      "steps": ["Submit a modified ciphertext.", "Observe whether the padding check refuses.", "Iterate to recover the plaintext (Bleichenbacher/ROBOT)."],
+      "barrier": "None on the external-key path; implicit rejection exists only for a key whose private exponent the library holds.",
+      "barrier_evidenced": false,
+      "evidence": [],
+      "residual": "OBL-RSA-EXTKEY-ORACLE is open and blocks the b85c graduation.",
+      "hazards": ["HAZ-15"]
+    }
+  ],
+  "non_claims": [
+    "This register does not establish that any listed hazard is unreachable. It records a scope, a trigger classification and a barrier state.",
+    "A barrier recorded as CLAIMED_NO_EVIDENCE is not a discharged control; a hazard recorded as BARRIER_ABSENT is not mitigated.",
+    "No class-3 input is claimed memory-safe, and no caller obligation is used to reduce a hazard's severity.",
+    "No constant-time claim is made from source inspection; ASM-TIMING-OBSERVER is an assumption the register records, not a measurement.",
+    "The register does not replace the T1 traceability graph. It projects its hazards into that graph and does not fork a second model.",
+    "Population completeness is UNKNOWN: no frozen expected-hazard manifest exists, so the register cannot prove it lists every hazard in the admitted surfaces.",
+    "The register does not adjudicate a release claim. A hazard that reaches a claim adds an obligation; it does not decide the claim."
+  ]
+}

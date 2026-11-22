@@ -84,15 +84,41 @@ EDGE_RULES: dict[str, tuple[set[str], set[str]]] = {
     "refines": ({"requirement"}, {"specification"}),
     "satisfied_by": ({"requirement", "specification"}, {"implementation"}),
     "realised_by": ({"implementation"}, {"artefact"}),
-    "raises": ({"implementation", "artefact"}, {"obligation"}),
+    "raises": ({"hazard", "implementation", "artefact"}, {"obligation"}),
     "evidenced_by": (
-        {"requirement", "implementation", "artefact", "obligation", "adjudication"},
+        {"hazard", "requirement", "implementation", "artefact", "obligation", "adjudication"},
         {"evidence"},
     ),
     "assessed_by": ({"evidence", "requirement"}, {"adjudication"}),
     "releases": ({"adjudication"}, {"release_claim"}),
     "constrains": ({"obligation"}, {"release_claim"}),
 }
+
+# ETP-T2's three-way input classification.  A hazard is scoped by the API family
+# it belongs to and by the most adversarial input class that can trigger it.
+INPUT_CLASSES = {
+    "legal",
+    "adversarial_contract_valid",
+    "contract_violation",
+}
+API_FAMILIES = {
+    "bn",
+    "rsa",
+    "ec",
+    "evp",
+    "bio",
+    "x509",
+    "runtime_mem",
+    "provider_dispatch",
+}
+CLASS3_DISPOSITIONS = {
+    "DEFINED_ERROR",
+    "ABORT",
+    "UB_NOT_CLAIMED_SAFE",
+    "DEFERRED_CRYPTOGRAPHIC_FAILURE",
+    "NOT_REACHABLE_FROM_CLASS_3",
+}
+BARRIER_STATES = {"EVIDENCED", "CLAIMED_NO_EVIDENCE", "BARRIER_ABSENT"}
 
 CLASS_NAMES = {
     1: "requirement_without_implementation",
@@ -396,6 +422,9 @@ def _check_structural(graph: Graph) -> None:
                     f"requirement {nid!r} must state specification_required as a boolean",
                 )
 
+        if node["type"] == "hazard":
+            _check_hazard(graph, nid, node)
+
     # A `constrains` edge must be justified by the obligation's own register.
     for edge in graph.edges:
         if edge["type"] != "constrains":
@@ -407,6 +436,154 @@ def _check_structural(graph: Graph) -> None:
                 f"obligation {edge['from']!r} -> {edge['to']!r}: the obligation does not "
                 "declare that it blocks the claim",
             )
+
+
+def _check_hazard(graph: Graph, nid: str, node: dict[str, Any]) -> None:
+    """ETP-T2 hazard contract: a scope, an input classification, a barrier.
+
+    A hazard that is reachable only through a contract-violating input may not
+    claim memory safety: the API does not enforce the contract, so no caller
+    obligation can reduce the severity.  A barrier that is claimed but has no
+    evidence must be recorded as ``CLAIMED_NO_EVIDENCE`` rather than silently
+    upgraded to ``EVIDENCED``.
+    """
+    scope = node.get("scope")
+    if not isinstance(scope, dict):
+        raise Refusal("TG_HAZARD_UNSCOPED", f"hazard {nid!r} has no scope")
+    family = scope.get("api_family")
+    if family not in API_FAMILIES:
+        raise Refusal(
+            "TG_HAZARD_UNSCOPED",
+            f"hazard {nid!r} names api_family {family!r}, not one of "
+            f"{', '.join(sorted(API_FAMILIES))}",
+        )
+    if scope.get("input_class") not in INPUT_CLASSES:
+        raise Refusal(
+            "TG_HAZARD_UNSCOPED",
+            f"hazard {nid!r} scope.input_class {scope.get('input_class')!r} is not an "
+            "input class",
+        )
+    if not isinstance(scope.get("entry_points"), list) or not scope["entry_points"]:
+        raise Refusal(
+            "TG_HAZARD_UNSCOPED", f"hazard {nid!r} names no scoped entry point"
+        )
+
+    triggers = node.get("trigger_classes")
+    if (
+        not isinstance(triggers, list)
+        or not triggers
+        or len(set(triggers)) != len(triggers)
+        or any(t not in INPUT_CLASSES for t in triggers)
+    ):
+        raise Refusal(
+            "TG_HAZARD_NO_INPUT_CLASS",
+            f"hazard {nid!r} must name a non-empty, duplicate-free set of input "
+            f"classes from {', '.join(sorted(INPUT_CLASSES))}",
+        )
+
+    memory_safe = node.get("memory_safe_claim")
+    if not isinstance(memory_safe, bool):
+        raise Refusal(
+            "TG_HAZARD_NO_INPUT_CLASS",
+            f"hazard {nid!r} must state memory_safe_claim as a boolean",
+        )
+    if "contract_violation" in triggers:
+        disposition = node.get("class3_disposition")
+        if disposition not in CLASS3_DISPOSITIONS:
+            raise Refusal(
+                "TG_HAZARD_CLASS3_DISPOSITION",
+                f"hazard {nid!r} is reachable from a contract-violating input and must "
+                f"state a class-3 disposition from {', '.join(sorted(CLASS3_DISPOSITIONS))}",
+            )
+        if memory_safe:
+            raise Refusal(
+                "TG_HAZARD_CLASS3_SAFE_CLAIM",
+                f"hazard {nid!r} claims memory safety while a contract-violating input "
+                "can trigger it; the API does not enforce the contract",
+            )
+
+    barrier = node.get("barrier")
+    if not isinstance(barrier, dict) or barrier.get("state") not in BARRIER_STATES:
+        raise Refusal(
+            "TG_HAZARD_BARRIER",
+            f"hazard {nid!r} must state a barrier state from "
+            f"{', '.join(sorted(BARRIER_STATES))}",
+        )
+    evidence = barrier.get("evidence", [])
+    if not isinstance(evidence, list):
+        raise Refusal("TG_HAZARD_BARRIER", f"hazard {nid!r} barrier.evidence is not an array")
+    if barrier["state"] == "EVIDENCED":
+        if not evidence:
+            raise Refusal(
+                "TG_HAZARD_BARRIER_UNEVIDENCED",
+                f"hazard {nid!r} records an EVIDENCED barrier with no evidence id",
+            )
+        for eid in evidence:
+            target = graph.nodes.get(eid)
+            if target is None or target["type"] != "evidence":
+                raise Refusal(
+                    "TG_HAZARD_BARRIER_UNEVIDENCED",
+                    f"hazard {nid!r} barrier cites {eid!r}, which is not an evidence node",
+                )
+    else:
+        if evidence:
+            raise Refusal(
+                "TG_HAZARD_BARRIER_UNEVIDENCED",
+                f"hazard {nid!r} records a {barrier['state']} barrier but cites evidence "
+                f"{evidence!r}; a claimed or absent barrier is not evidenced by definition",
+            )
+        if not isinstance(barrier.get("would_close"), str) or not barrier["would_close"]:
+            raise Refusal(
+                "TG_HAZARD_BARRIER",
+                f"hazard {nid!r} records a {barrier['state']} barrier without stating "
+                "what would close it",
+            )
+
+    if not isinstance(barrier.get("control"), str) or not barrier["control"]:
+        raise Refusal("TG_HAZARD_BARRIER", f"hazard {nid!r} does not name its control")
+
+    motivated = {
+        edge["to"] for edge in graph.out.get(nid, []) if edge["type"] == "motivates"
+    }
+    if not motivated:
+        raise Refusal(
+            "TG_HAZARD_UNMOTIVATED",
+            f"hazard {nid!r} motivates no requirement; a hazard may not sit beside the model",
+        )
+
+    derived_claims: set[str] = set()
+    for cid, cnode in graph.nodes.items():
+        if cnode["type"] != "release_claim":
+            continue
+        if motivated & set(cnode.get("scope_requirements", [])):
+            derived_claims.add(cid)
+    for obligation in [
+        edge["to"] for edge in graph.out.get(nid, []) if edge["type"] == "raises"
+    ]:
+        derived_claims.update(
+            edge["to"]
+            for edge in graph.out.get(obligation, [])
+            if edge["type"] == "constrains"
+        )
+
+    affected = node.get("affected_release_claims")
+    if not isinstance(affected, list) or len(set(affected)) != len(affected):
+        raise Refusal(
+            "TG_HAZARD_CLAIM_UNRELATED",
+            f"hazard {nid!r} must name affected_release_claims as a duplicate-free array",
+        )
+    unknown = [cid for cid in affected if cid not in graph.nodes]
+    if unknown:
+        raise Refusal(
+            "TG_HAZARD_CLAIM_UNRELATED",
+            f"hazard {nid!r} names absent release claim {unknown[0]!r}",
+        )
+    if set(affected) != derived_claims:
+        raise Refusal(
+            "TG_HAZARD_CLAIM_UNRELATED",
+            f"hazard {nid!r} names release claims {sorted(affected)} but its motivated "
+            f"requirements and raised obligations reach {sorted(derived_claims)}",
+        )
 
 
 def _is_sha256(value: Any) -> bool:

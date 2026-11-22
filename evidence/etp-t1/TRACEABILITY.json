@@ -28,8 +28,8 @@
       "refines": "requirement -> specification (the requirement is refined by an independent specification)",
       "satisfied_by": "requirement|specification -> implementation",
       "realised_by": "implementation -> artefact",
-      "raises": "implementation|artefact -> obligation",
-      "evidenced_by": "requirement|implementation|artefact|obligation|adjudication -> evidence",
+      "raises": "hazard|implementation|artefact -> obligation",
+      "evidenced_by": "hazard|requirement|implementation|artefact|obligation|adjudication -> evidence",
       "assessed_by": "evidence|requirement -> adjudication",
       "releases": "adjudication -> release_claim",
       "constrains": "obligation -> release_claim"
@@ -42,8 +42,14 @@
       "release_claim": "at least one releases adjudication (class 3), independent where required",
       "obligation": "every blocks_release_claims target must have a constrains edge (class 5)",
       "evidence": "one source path and bound commit; a digest that disagrees is class 4",
+      "hazard": "a scope naming one API family and one input class, a non-empty trigger class set, at least one motivates edge, an affected_release_claims list derived from its requirements and obligations, and a barrier state; a contract-violation trigger forbids a memory-safety claim",
       "node": "one source path that exists at its bound commit (class 8)"
     }
+  },
+  "hazard_register": {
+    "path": "evidence/etp-t2/HAZARDS.json",
+    "sha256": "29eef96025144fa408ab4ae8d417cf1ecebc470e36bb621c5a2422f5c35472ab",
+    "settling_method": "sha256 of the register file the graph projects; the register is the ETP-T2 deliverable and the graph projects its hazard entries"
   },
   "tool": {
     "path": "forensics/tools/traceability.py",
@@ -344,6 +350,23 @@
       "kind": "file",
       "path": "src/bn/limbs.rs",
       "digest": "6ab551596bd50d3e0ee112ad8d7cd43f277ea424183ecbb693e68613e0037305",
+      "digest_identity": "21bea318819a56f641b3aa2f25027216b97a1c4d"
+    },
+    {
+      "id": "ART-FILE-BN-MONT",
+      "type": "artefact",
+      "title": "Tracked file src/bn/mont.rs",
+      "source": {
+        "path": "src/bn/mont.rs",
+        "span": "file",
+        "quote": "file digest of src/bn/mont.rs",
+        "quote_kind": "fragment",
+        "sha256": "ed6d9738c8ae4afaf2870b825a5de18849f41bbd0a1615d8aa3166b8d7484f3c",
+        "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
+      },
+      "kind": "file",
+      "path": "src/bn/mont.rs",
+      "digest": "ed6d9738c8ae4afaf2870b825a5de18849f41bbd0a1615d8aa3166b8d7484f3c",
       "digest_identity": "21bea318819a56f641b3aa2f25027216b97a1c4d"
     },
     {
@@ -3130,7 +3153,35 @@
         "sha256": "fb03af3ad5d3c59da20e6224350772f7f58afb04c22cf20adfdd2a8fa03b87fa",
         "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
       },
-      "characterization": "named at the cited row or section; quantified by ETP-T2, which is open"
+      "characterization": "A secret-bearing owner releases or abandons its storage without cleansing it, so the secret survives in allocator-recycled memory.",
+      "scope": {
+        "api_family": "runtime_mem",
+        "input_class": "legal",
+        "also_applies_to": [
+          "rsa",
+          "ec",
+          "evp"
+        ],
+        "entry_points": [
+          "OPENSSL_cleanse",
+          "CRYPTO_clear_free",
+          "BN_clear_free"
+        ]
+      },
+      "trigger_classes": [
+        "legal",
+        "adversarial_contract_valid"
+      ],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "SecretBuf and OwnedBuf cleanse the whole allocation on the covered exit paths; the ETP-4 probe observed 85 cleanse sites.",
+        "evidence": [],
+        "would_close": "A receipt-bound whole-allocation cleanse court at the analysis candidate, including failure and unwind paths, for every secret-bearing owner in the admitted families."
+      },
+      "affected_release_claims": [
+        "REL-OPENSSH-B85C"
+      ]
     },
     {
       "id": "HAZ-02",
@@ -3144,7 +3195,33 @@
         "sha256": "fb03af3ad5d3c59da20e6224350772f7f58afb04c22cf20adfdd2a8fa03b87fa",
         "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
       },
-      "characterization": "named at the cited row or section; quantified by ETP-T2, which is open"
+      "characterization": "A branch, memory index or early exit depends on a secret value and survives optimisation, so timing reveals secret bits.",
+      "scope": {
+        "api_family": "bn",
+        "input_class": "adversarial_contract_valid",
+        "also_applies_to": [
+          "rsa",
+          "ec"
+        ],
+        "entry_points": [
+          "BN_mod_exp_mont_consttime",
+          "BN_div",
+          "BN_mod_inverse"
+        ]
+      },
+      "trigger_classes": [
+        "adversarial_contract_valid"
+      ],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "The constant-pattern ladder and the consttime division are selected on public geometry; BINSEC and the emitted-instruction audit exist as instruments.",
+        "evidence": [],
+        "would_close": "A validated secret-dependence argument and a BINSEC verdict at the analysis candidate; both are open (OBL-T14, OBL-T16)."
+      },
+      "affected_release_claims": [
+        "REL-OPENSSH-B85C"
+      ]
     },
     {
       "id": "HAZ-03",
@@ -3158,7 +3235,33 @@
         "sha256": "59bad5736455912733d3a62ed11564cf67015e275ea3d884081d7e620db6b676",
         "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
       },
-      "characterization": "named at the cited row or section; quantified by ETP-T2, which is open"
+      "characterization": "An allocation on the secret-bearing path is infallible: exhaustion aborts the process, and an unchecked size product overflows into a too-small request.",
+      "scope": {
+        "api_family": "runtime_mem",
+        "input_class": "legal",
+        "also_applies_to": [
+          "bn"
+        ],
+        "entry_points": [
+          "CRYPTO_malloc",
+          "limbs::mul",
+          "limbs::rem",
+          "BN_CTX_get"
+        ]
+      },
+      "trigger_classes": [
+        "legal"
+      ],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "The allocation seam is fallible and many BN sites return 0 on exhaustion; the alloc_probe failure-injection instrument is qualified.",
+        "evidence": [],
+        "would_close": "A complete enumeration of infallible allocation sites on the secret-bearing path with a failure-injection court on each (OBL-BN-ALLOCATOR, OBL-T22)."
+      },
+      "affected_release_claims": [
+        "REL-OPENSSH-B85C"
+      ]
     },
     {
       "id": "HAZ-04",
@@ -3172,7 +3275,36 @@
         "sha256": "fb03af3ad5d3c59da20e6224350772f7f58afb04c22cf20adfdd2a8fa03b87fa",
         "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
       },
-      "characterization": "named at the cited row or section; quantified by ETP-T2, which is open"
+      "characterization": "A pointer adopted or escaped across the ownership boundary is released twice, or released by the wrong mechanism.",
+      "scope": {
+        "api_family": "runtime_mem",
+        "input_class": "contract_violation",
+        "also_applies_to": [
+          "x509",
+          "evp",
+          "bio"
+        ],
+        "entry_points": [
+          "OwnedBlock::from_raw",
+          "OwnedBuf::from_raw",
+          "OwnedRaw::adopt",
+          "CRYPTO_free"
+        ]
+      },
+      "trigger_classes": [
+        "contract_violation"
+      ],
+      "memory_safe_claim": false,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "The adoption constructors are unsafe functions with provenance contracts, and Drop is the single release of an owning handle.",
+        "evidence": [],
+        "would_close": "A cross-caller provenance audit at the analysis candidate plus Miri over the admitted owners and their adoption sites."
+      },
+      "affected_release_claims": [
+        "REL-OPENSSH-B85C"
+      ],
+      "class3_disposition": "UB_NOT_CLAIMED_SAFE"
     },
     {
       "id": "HAZ-05",
@@ -3186,7 +3318,32 @@
         "sha256": "fb03af3ad5d3c59da20e6224350772f7f58afb04c22cf20adfdd2a8fa03b87fa",
         "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
       },
-      "characterization": "named at the cited row or section; quantified by ETP-T2, which is open"
+      "characterization": "An allocation-failure or early-return path runs a reference, an initialised read or a full destructor over a value whose initialisation invariants do not yet hold. A legal out-of-memory condition is enough to reach this state.",
+      "scope": {
+        "api_family": "runtime_mem",
+        "input_class": "legal",
+        "also_applies_to": [
+          "x509",
+          "asn1"
+        ],
+        "entry_points": [
+          "OwnedRaw::new",
+          "OwnedCtx::new",
+          "X509_policy_tree_free",
+          "asn1_item_ex_d2i"
+        ]
+      },
+      "trigger_classes": [
+        "legal"
+      ],
+      "memory_safe_claim": false,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "OwnedRaw distinguishes uninitialised storage from OwnedCtx, and a destructor releases only the resources actually acquired.",
+        "evidence": [],
+        "would_close": "A failure-injection and Miri run over every partially initialised owner at the analysis candidate."
+      },
+      "affected_release_claims": []
     },
     {
       "id": "HAZ-06",
@@ -3200,7 +3357,36 @@
         "sha256": "fb03af3ad5d3c59da20e6224350772f7f58afb04c22cf20adfdd2a8fa03b87fa",
         "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
       },
-      "characterization": "named at the cited row or section; quantified by ETP-T2, which is open"
+      "characterization": "An application callback invoked inside an operation frees, replaces or mutates the object the operation is reading, so the operation continues with a dangling pointer or a stale borrow.",
+      "scope": {
+        "api_family": "x509",
+        "input_class": "contract_violation",
+        "also_applies_to": [
+          "bio",
+          "evp",
+          "runtime_mem"
+        ],
+        "entry_points": [
+          "X509_STORE_CTX_set_verify_cb",
+          "BIO_set_callback_ex",
+          "CRYPTO_set_mem_functions"
+        ]
+      },
+      "trigger_classes": [
+        "legal",
+        "contract_violation"
+      ],
+      "memory_safe_claim": false,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "v3_addr snapshots the chain and up-references each certificate before verify_cb; the BIO and allocator callback paths have no equivalent snapshot.",
+        "evidence": [],
+        "would_close": "A per-call-site callback map with a reentrancy court for x509, BIO, EVP and allocator hooks (OBL-XCUT-CALLBACKS)."
+      },
+      "affected_release_claims": [
+        "REL-OPENSSH-B85C"
+      ],
+      "class3_disposition": "UB_NOT_CLAIMED_SAFE"
     },
     {
       "id": "HAZ-07",
@@ -3214,7 +3400,542 @@
         "sha256": "59bad5736455912733d3a62ed11564cf67015e275ea3d884081d7e620db6b676",
         "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
       },
-      "characterization": "named at the cited row or section; quantified by ETP-T2, which is open"
+      "characterization": "A length, capacity or allocated width derived from a secret value reaches a copy, an allocation or an admission check, so the secret length is observable.",
+      "scope": {
+        "api_family": "bn",
+        "input_class": "legal",
+        "also_applies_to": [
+          "rsa",
+          "ec"
+        ],
+        "entry_points": [
+          "store_consttime",
+          "limbs::shl",
+          "BN_bn2binpad"
+        ]
+      },
+      "trigger_classes": [
+        "legal",
+        "adversarial_contract_valid"
+      ],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "The staging transfer reads a public width; the remaining secret-length presence test is stated rather than removed.",
+        "evidence": [],
+        "would_close": "A public-width transfer with no secret-length branch and a timing court at the analysis candidate (OBL-T9)."
+      },
+      "affected_release_claims": [
+        "REL-OPENSSH-B85C"
+      ]
+    },
+    {
+      "id": "HAZ-08",
+      "type": "hazard",
+      "title": "An RSA private operation runs without blinding",
+      "source": {
+        "path": "src/rsa/ossl.rs",
+        "span": "rsa_ossl_private_encrypt",
+        "quote": "The blinding is skipped for `RSA_FLAG_NO_BLINDING`",
+        "quote_kind": "fragment",
+        "sha256": "3d5eded77e1346550dd6d94432038710659ecf7ea8fd22629d13db67d63e77ff",
+        "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
+      },
+      "characterization": "Blinding is disabled by the application or fails to be constructed, so the private exponentiation runs with a secret-dependent pattern an observer can correlate with the message.",
+      "scope": {
+        "api_family": "rsa",
+        "input_class": "legal",
+        "also_applies_to": [],
+        "entry_points": [
+          "RSA_private_encrypt",
+          "RSA_private_decrypt",
+          "RSA_blinding_off",
+          "RSA_set_method"
+        ]
+      },
+      "trigger_classes": [
+        "legal"
+      ],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "Blinding is on by default, and a NULL blinding aborts the operation; RSA_blinding_off and RSA_FLAG_NO_BLINDING are documented optionality.",
+        "evidence": [],
+        "would_close": "A measured timing court at the analysis candidate with blinding enabled and disabled, plus a consumer audit of blinding disabling."
+      },
+      "affected_release_claims": [
+        "REL-OPENSSH-B85C"
+      ]
+    },
+    {
+      "id": "HAZ-09",
+      "type": "hazard",
+      "title": "A fault during CRT produces a faulty signature or key recovery",
+      "source": {
+        "path": "src/rsa/ossl.rs",
+        "span": "rsa_ossl_mod_exp",
+        "quote": "falls back to the unblinded `d` exponentiation when the CRT answer does not check out",
+        "quote_kind": "fragment",
+        "sha256": "3d5eded77e1346550dd6d94432038710659ecf7ea8fd22629d13db67d63e77ff",
+        "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
+      },
+      "characterization": "A fault injected into one CRT half produces a result that is not congruent; the tail's check is the only defence and the fallback is itself a secret operation.",
+      "scope": {
+        "api_family": "rsa",
+        "input_class": "adversarial_contract_valid",
+        "also_applies_to": [],
+        "entry_points": [
+          "RSA_private_encrypt",
+          "RSA_private_decrypt",
+          "rsa_ossl_mod_exp"
+        ]
+      },
+      "trigger_classes": [
+        "adversarial_contract_valid"
+      ],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "The CRT tail re-exponentiates with the public exponent and compares congruently, falling back to the raw-d exponentiation on a mismatch.",
+        "evidence": [],
+        "would_close": "A receipt-bound fault-injection court at the analysis candidate showing the check fires and the fallback repairs, with a timing argument for the fallback."
+      },
+      "affected_release_claims": [
+        "REL-OPENSSH-B85C"
+      ]
+    },
+    {
+      "id": "HAZ-10",
+      "type": "hazard",
+      "title": "A stale or mismatched Montgomery context yields a wrong-modulus result",
+      "source": {
+        "path": "src/bn/mont.rs",
+        "span": "refuse_context",
+        "quote": "The authority does not validate `in_mont`; a stale context silently produces",
+        "quote_kind": "fragment",
+        "sha256": "ed6d9738c8ae4afaf2870b825a5de18849f41bbd0a1615d8aa3166b8d7484f3c",
+        "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
+      },
+      "characterization": "A caller-supplied prepared context belongs to a different modulus or width. The authority does not validate it and silently produces a wrong answer; this crate refuses it, which is a recorded divergence.",
+      "scope": {
+        "api_family": "bn",
+        "input_class": "legal",
+        "also_applies_to": [
+          "rsa",
+          "dh",
+          "dsa"
+        ],
+        "entry_points": [
+          "BN_mod_exp_mont_consttime",
+          "BN_mod_exp_mont",
+          "BN_MONT_CTX_set_locked"
+        ]
+      },
+      "trigger_classes": [
+        "legal"
+      ],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "BN_mod_exp_mont_consttime validates a supplied context against the operand and refuses a mismatch instead of reproducing the authority's silent wrong answer.",
+        "evidence": [],
+        "would_close": "A differential court at the analysis candidate for prepared-domain reuse across moduli, including the cached RSA CRT context."
+      },
+      "affected_release_claims": [
+        "REL-OPENSSH-B85C"
+      ]
+    },
+    {
+      "id": "HAZ-11",
+      "type": "hazard",
+      "title": "An ECDSA nonce is biased or reused",
+      "source": {
+        "path": "src/ec/ecdsa_ossl.rs",
+        "span": "ecdsa_sign_setup",
+        "quote": "The nonce's two nested loops: the inner one redraws while `k == 0`",
+        "quote_kind": "fragment",
+        "sha256": "0629f20e7e47d25b7e28f08ede1071df775b7a1e638b7cb328782141bf4afd47",
+        "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
+      },
+      "characterization": "The signing scalar k is drawn from a weak, biased or repeated source, so two signatures reveal the private key. The RFC 6979 arm is not landed and refuses rather than silently substituting the random arm.",
+      "scope": {
+        "api_family": "ec",
+        "input_class": "legal",
+        "also_applies_to": [
+          "dsa"
+        ],
+        "entry_points": [
+          "ECDSA_do_sign",
+          "ECDSA_sign_setup",
+          "ossl_bn_priv_rand_range_fixed_top"
+        ]
+      },
+      "trigger_classes": [
+        "legal"
+      ],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "k is drawn into a BN_secure_new scalar, k == 0 and r == 0 are rejected, and the deterministic arm refuses with an error rather than falling through.",
+        "evidence": [],
+        "would_close": "A nonce-distribution and repetition court at the analysis candidate, and a recorded decision on landing RFC 6979 (D333)."
+      },
+      "affected_release_claims": [
+        "REL-OPENSSH-B85C"
+      ]
+    },
+    {
+      "id": "HAZ-12",
+      "type": "hazard",
+      "title": "Allocation arithmetic overflows on an attacker-controlled length",
+      "source": {
+        "path": "src/asn1/owned.rs",
+        "span": "OwnedBlock::malloc",
+        "quote": "The product is `checked_mul`-guarded: an overflow is the",
+        "quote_kind": "fragment",
+        "sha256": "505b40f1eaeea50914d473200e79c9855ae4665bcd5f17412aaa632be6ffb703",
+        "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
+      },
+      "characterization": "A count product or length sum derived from a parsed field overflows and reaches the allocator as a too-small request, or is treated as unbounded.",
+      "scope": {
+        "api_family": "runtime_mem",
+        "input_class": "adversarial_contract_valid",
+        "also_applies_to": [
+          "x509",
+          "asn1"
+        ],
+        "entry_points": [
+          "OwnedBlock::malloc",
+          "OwnedBlock::zalloc",
+          "CRYPTO_zalloc",
+          "d2i_X509"
+        ]
+      },
+      "trigger_classes": [
+        "adversarial_contract_valid"
+      ],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "OwnedBlock and OwnedBuf compute count*size with checked_mul and answer None on overflow; an over-aligned type is refused before the allocator is asked.",
+        "evidence": [],
+        "would_close": "A fuzz court that drives parsed lengths into every allocation helper and observes the failure arm at the analysis candidate."
+      },
+      "affected_release_claims": []
+    },
+    {
+      "id": "HAZ-13",
+      "type": "hazard",
+      "title": "An allocator hook re-enters the error subsystem on the same thread",
+      "source": {
+        "path": "src/runtime/mem.rs",
+        "span": "CRYPTO_set_mem_functions",
+        "quote": "so a hook that violates the contract fails closed rather than causing UB.",
+        "quote_kind": "fragment",
+        "sha256": "85a642955901f0b779c63e61935b365f13569ab4abc574b87ae8bfbfd40bd293",
+        "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
+      },
+      "characterization": "A caller-installed allocation hook calls ERR_raise or any entry point that takes the thread's error state while the allocator already holds it, forming a second mutable borrow.",
+      "scope": {
+        "api_family": "runtime_mem",
+        "input_class": "contract_violation",
+        "also_applies_to": [],
+        "entry_points": [
+          "CRYPTO_set_mem_functions",
+          "CRYPTO_malloc",
+          "ERR_raise"
+        ]
+      },
+      "trigger_classes": [
+        "contract_violation"
+      ],
+      "memory_safe_claim": false,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "with_state refuses a same-thread re-entry with a thread-local guard and returns the no-state outcome; this is a recorded safety divergence (B34).",
+        "evidence": [],
+        "would_close": "A negative-control court that installs a re-entering allocator hook and observes the fail-closed outcome at the analysis candidate."
+      },
+      "affected_release_claims": [
+        "REL-OPENSSH-B85C"
+      ],
+      "class3_disposition": "DEFINED_ERROR"
+    },
+    {
+      "id": "HAZ-14",
+      "type": "hazard",
+      "title": "A verify callback mutates state the walk is reading",
+      "source": {
+        "path": "src/x509/v3_addr.rs",
+        "span": "addr_validate_path_internal",
+        "quote": "What cannot be guaranteed: a callback that mutates the *contents* of a live cached extension in",
+        "quote_kind": "fragment",
+        "sha256": "ae82369e155720f0acfee24bc38da8ce55e19c7030a7c38f869985aa285ede4a",
+        "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
+      },
+      "characterization": "An application verify_cb releases or replaces the chain, or mutates a cached extension in place, while the validation walk still reads it.",
+      "scope": {
+        "api_family": "x509",
+        "input_class": "contract_violation",
+        "also_applies_to": [],
+        "entry_points": [
+          "X509_STORE_CTX_set_verify_cb",
+          "X509_verify_cert",
+          "addr_validate_path_internal"
+        ]
+      },
+      "trigger_classes": [
+        "contract_violation"
+      ],
+      "memory_safe_claim": false,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "v3_addr snapshots the chain, up-references each certificate and re-reads the cached extension after a callback; in-place mutation of a cached extension is stated as unprotected.",
+        "evidence": [],
+        "would_close": "A reentrancy court for verify_cb and an ownership model for cached extension contents (OBL-XCUT-CALLBACKS)."
+      },
+      "affected_release_claims": [
+        "REL-OPENSSH-B85C"
+      ],
+      "class3_disposition": "UB_NOT_CLAIMED_SAFE"
+    },
+    {
+      "id": "HAZ-15",
+      "type": "hazard",
+      "title": "External-key PKCS#1 v1.5 decryption has no implicit rejection",
+      "source": {
+        "path": "src/rsa/ossl.rs",
+        "span": "rsa_ossl_private_decrypt",
+        "quote": "an external key does not hold the",
+        "quote_kind": "fragment",
+        "sha256": "3d5eded77e1346550dd6d94432038710659ecf7ea8fd22629d13db67d63e77ff",
+        "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
+      },
+      "characterization": "For a key with RSA_FLAG_EXT_PKEY the KDK cannot be derived, so the selector is rewritten to the refusing check. An attacker measuring the refusal distinguishes padding validity.",
+      "scope": {
+        "api_family": "rsa",
+        "input_class": "adversarial_contract_valid",
+        "also_applies_to": [],
+        "entry_points": [
+          "RSA_private_decrypt",
+          "EVP_PKEY_decrypt",
+          "RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING"
+        ]
+      },
+      "trigger_classes": [
+        "adversarial_contract_valid"
+      ],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "BARRIER_ABSENT",
+        "control": "None on the external-key path: implicit rejection exists only where the private exponent is held by the library.",
+        "evidence": [],
+        "would_close": "An external-key implicit-rejection design, or a recorded consumer exclusion for every in-scope external-key PKCS#1 v1.5 decryption path (OBL-RSA-EXTKEY-ORACLE)."
+      },
+      "affected_release_claims": [
+        "REL-OPENSSH-B85C"
+      ]
+    },
+    {
+      "id": "HAZ-16",
+      "type": "hazard",
+      "title": "A panic at the FFI boundary leaves partially mutated state",
+      "source": {
+        "path": "src/ffi/mod.rs",
+        "span": "guard_ffi",
+        "quote": "panicking FFI call is itself the defect to fix, not something this boundary",
+        "quote_kind": "fragment",
+        "sha256": "25317ab0404a01d2da22bff600602034887f5c44468dcb67e5609a97d575c049",
+        "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
+      },
+      "characterization": "A panic is caught and never unwinds into C, but the interrupted operation has already mutated the context; the caller's next operation sees the half-applied change.",
+      "scope": {
+        "api_family": "runtime_mem",
+        "input_class": "adversarial_contract_valid",
+        "also_applies_to": [
+          "evp",
+          "rsa",
+          "ec",
+          "x509"
+        ],
+        "entry_points": [
+          "guard_ffi",
+          "EVP_DigestVerifyFinal",
+          "RSA_private_decrypt",
+          "ECDSA_do_sign"
+        ]
+      },
+      "trigger_classes": [
+        "adversarial_contract_valid"
+      ],
+      "memory_safe_claim": false,
+      "barrier": {
+        "state": "BARRIER_ABSENT",
+        "control": "guard_ffi catches and never resumes, so no panic unwinds into C; it does not repair partially mutated state.",
+        "evidence": [],
+        "would_close": "Failure-atomic mutation, explicit rollback or explicit poisoning for every stateful FFI context that can panic (OBL-PANIC-ATOMICITY, OBL-XCUT-PANIC)."
+      },
+      "affected_release_claims": [
+        "REL-OPENSSH-B85C"
+      ]
+    },
+    {
+      "id": "HAZ-17",
+      "type": "hazard",
+      "title": "A hostile certificate exhausts stack, time or memory",
+      "source": {
+        "path": "src/asn1/d2i.rs",
+        "span": "MAX_CONSTRUCTED_NEST",
+        "quote": "`ASN1_MAX_CONSTRUCTED_NEST` \u2014 how deeply a constructed value may nest.",
+        "quote_kind": "fragment",
+        "sha256": "97a9534737611bad9a969ca84c6aaf8fd8971d25901a6c93c2a4d2af4ae73f99",
+        "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
+      },
+      "characterization": "A constructed ASN.1 value nested to the limit, or an extension whose parsed representation grows with the input, consumes resources in proportion to attacker-chosen input.",
+      "scope": {
+        "api_family": "x509",
+        "input_class": "adversarial_contract_valid",
+        "also_applies_to": [
+          "asn1"
+        ],
+        "entry_points": [
+          "d2i_X509",
+          "ASN1_item_ex_d2i",
+          "X509V3_EXT_d2i"
+        ]
+      },
+      "trigger_classes": [
+        "adversarial_contract_valid"
+      ],
+      "memory_safe_claim": true,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "ASN1_MAX_CONSTRUCTED_NEST (30), ASN1_GEN_SEQ_MAX_DEPTH and MAX_STRING_NEST bound constructed nesting; length checks use checked arithmetic.",
+        "evidence": [],
+        "would_close": "A hostile-certificate fuzz court that measures peak depth, time and memory at the analysis candidate."
+      },
+      "affected_release_claims": []
+    },
+    {
+      "id": "HAZ-18",
+      "type": "hazard",
+      "title": "A consumer confuses a verification error with a valid signature",
+      "source": {
+        "path": "src/evp/digest.rs",
+        "span": "EVP_DigestSign / EVP_DigestVerifyFinal return polarity",
+        "quote": "with 0** \u2014 where `EVP_DigestVerify` answers `-1` for the same state",
+        "quote_kind": "fragment",
+        "sha256": "268f224f7655b25813b4ab322293a152fe666d6bf616c6f389bc941317f6d920",
+        "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
+      },
+      "characterization": "EVP_DigestVerifyFinal answers 0 for an invalid signature and -1 for an error. A consumer that tests non-zero as success accepts the error as a valid signature; the C ABI cannot force the distinction.",
+      "scope": {
+        "api_family": "evp",
+        "input_class": "contract_violation",
+        "also_applies_to": [
+          "rsa",
+          "ec"
+        ],
+        "entry_points": [
+          "EVP_DigestVerifyFinal",
+          "EVP_DigestVerify",
+          "EVP_PKEY_verify"
+        ]
+      },
+      "trigger_classes": [
+        "contract_violation"
+      ],
+      "memory_safe_claim": false,
+      "barrier": {
+        "state": "BARRIER_ABSENT",
+        "control": "The return contract is documented (1 valid, 0 invalid, -1 error); the C ABI provides no type that forces a consumer to test it exactly.",
+        "evidence": [],
+        "would_close": "A consumer audit that every in-scope verification call site tests exactly 1 (OBL-VERIFY-RETURN-POLARITY)."
+      },
+      "affected_release_claims": [
+        "REL-OPENSSH-B85C"
+      ],
+      "class3_disposition": "DEFERRED_CRYPTOGRAPHIC_FAILURE"
+    },
+    {
+      "id": "HAZ-19",
+      "type": "hazard",
+      "title": "A shared object is freed or has its method changed under a live operation",
+      "source": {
+        "path": "src/bn/mont.rs",
+        "span": "BN_MONT_CTX_set_locked",
+        "quote": "This function **never frees or replaces a published context**. The context is",
+        "quote_kind": "fragment",
+        "sha256": "ed6d9738c8ae4afaf2870b825a5de18849f41bbd0a1615d8aa3166b8d7484f3c",
+        "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
+      },
+      "characterization": "The cached Montgomery slot and the method table are read without an enforced lifetime: another thread may free the enclosing object or change its method while the operation uses the published context.",
+      "scope": {
+        "api_family": "bn",
+        "input_class": "contract_violation",
+        "also_applies_to": [
+          "rsa",
+          "dh",
+          "dsa"
+        ],
+        "entry_points": [
+          "BN_MONT_CTX_set_locked",
+          "RSA_set_method",
+          "RSA_free"
+        ]
+      },
+      "trigger_classes": [
+        "contract_violation"
+      ],
+      "memory_safe_claim": false,
+      "barrier": {
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "Publication is a Release store and the slot fast path an Acquire load; the enclosing object's exclusive-access precondition is documented but not enforced.",
+        "evidence": [],
+        "would_close": "A concurrency court that exercises method change and object free against a live operation, and a scoped caller precondition (OBL-MECH-RUNTIME-CONCURRENCY)."
+      },
+      "affected_release_claims": [
+        "REL-OPENSSH-B85C"
+      ],
+      "class3_disposition": "UB_NOT_CLAIMED_SAFE"
+    },
+    {
+      "id": "HAZ-20",
+      "type": "hazard",
+      "title": "A BIO callback writes through a cb_arg that is not a BIO",
+      "source": {
+        "path": "src/runtime/bio/bio_cb.rs",
+        "span": "BIO_debug_callback_ex destination selection",
+        "quote": "non-BIO argument gets the authority's behaviour (a write into whatever the",
+        "quote_kind": "fragment",
+        "sha256": "85807fba4aee4a18cfffc1e177db900005d5648c110d0c2b2574d1902ce19646",
+        "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
+      },
+      "characterization": "BIO_debug_callback_ex treats cb_arg as char* and casts it to BIO*; a caller that sets a non-BIO argument gets the authority's behaviour, a write into whatever the pointer addresses.",
+      "scope": {
+        "api_family": "bio",
+        "input_class": "contract_violation",
+        "also_applies_to": [],
+        "entry_points": [
+          "BIO_set_callback_ex",
+          "BIO_debug_callback_ex",
+          "BIO_write"
+        ]
+      },
+      "trigger_classes": [
+        "contract_violation"
+      ],
+      "memory_safe_claim": false,
+      "barrier": {
+        "state": "BARRIER_ABSENT",
+        "control": "None: cb_arg is typed char* in the header and cast to BIO*; the authority writes through whatever the pointer addresses and this is reproduced deliberately.",
+        "evidence": [],
+        "would_close": "A typed callback-argument contract, or an explicit refusal of a non-BIO cb_arg recorded as a safety divergence (OBL-XCUT-CALLBACKS)."
+      },
+      "affected_release_claims": [
+        "REL-OPENSSH-B85C"
+      ],
+      "class3_disposition": "UB_NOT_CLAIMED_SAFE"
     },
     {
       "id": "IMP-ABI-LAYOUT",
@@ -3320,6 +4041,21 @@
       },
       "mechanism": "Fallible limb arithmetic, constant-pattern ladder, inversion and division",
       "location": "src/bn/limbs.rs"
+    },
+    {
+      "id": "IMP-BN-MONT",
+      "type": "implementation",
+      "title": "Montgomery domain construction, validation and prepared parameters",
+      "source": {
+        "path": "src/bn/mont.rs",
+        "span": "file",
+        "quote": "Montgomery domain construction, validation and prepared parameters",
+        "quote_kind": "fragment",
+        "sha256": "ed6d9738c8ae4afaf2870b825a5de18849f41bbd0a1615d8aa3166b8d7484f3c",
+        "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
+      },
+      "mechanism": "Montgomery domain construction, validation and prepared parameters",
+      "location": "src/bn/mont.rs"
     },
     {
       "id": "IMP-BRANCH-AUDIT",
@@ -4537,6 +5273,25 @@
       ]
     },
     {
+      "id": "OBL-PANIC-ATOMICITY",
+      "type": "obligation",
+      "title": "ETP-T2 HAZ-16 obligation: OBL-PANIC-ATOMICITY",
+      "source": {
+        "path": "docs/ETP-TODO.md",
+        "span": "row ETP-T2",
+        "quote": "guard_ffi prevents a panic from unwinding into C but does not make the interrupted operation failure-atomic; no rollback or poison evidence exists for a stateful context.",
+        "quote_kind": "paraphrase",
+        "sha256": "59bad5736455912733d3a62ed11564cf67015e275ea3d884081d7e620db6b676",
+        "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
+      },
+      "statement": "guard_ffi prevents a panic from unwinding into C but does not make the interrupted operation failure-atomic; no rollback or poison evidence exists for a stateful context.",
+      "state": "OPEN",
+      "settled_by": "Failure-atomicity, rollback or poisoning evidence for every stateful FFI context that can panic, at a named candidate.",
+      "blocks_release_claims": [
+        "REL-OPENSSH-B85C"
+      ]
+    },
+    {
       "id": "OBL-PFP-17",
       "type": "obligation",
       "title": "Open queue item PFP-17: OBL-PFP-17",
@@ -4552,6 +5307,25 @@
       "state": "OPEN",
       "settled_by": "An external party's receipt at the frozen population.",
       "blocks_release_claims": []
+    },
+    {
+      "id": "OBL-RSA-EXTKEY-ORACLE",
+      "type": "obligation",
+      "title": "ETP-T2 HAZ-15 obligation: OBL-RSA-EXTKEY-ORACLE",
+      "source": {
+        "path": "docs/ETP-TODO.md",
+        "span": "row ETP-T2",
+        "quote": "PKCS#1 v1.5 decryption on an external key (RSA_FLAG_EXT_PKEY) substitutes RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING and takes the refusing padding check, so the implicit-rejection countermeasure is absent on that path.",
+        "quote_kind": "paraphrase",
+        "sha256": "59bad5736455912733d3a62ed11564cf67015e275ea3d884081d7e620db6b676",
+        "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
+      },
+      "statement": "PKCS#1 v1.5 decryption on an external key (RSA_FLAG_EXT_PKEY) substitutes RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING and takes the refusing padding check, so the implicit-rejection countermeasure is absent on that path.",
+      "state": "OPEN",
+      "settled_by": "A recorded justification that no in-scope consumer uses external keys on an attacker-facing PKCS#1 v1.5 decryption path, or an external-key implicit-rejection design.",
+      "blocks_release_claims": [
+        "REL-OPENSSH-B85C"
+      ]
     },
     {
       "id": "OBL-T11-RESIDUAL",
@@ -4812,6 +5586,23 @@
       "blocks_release_claims": []
     },
     {
+      "id": "OBL-VERIFY-RETURN-POLARITY",
+      "type": "obligation",
+      "title": "ETP-T2 HAZ-18 obligation: OBL-VERIFY-RETURN-POLARITY",
+      "source": {
+        "path": "docs/ETP-TODO.md",
+        "span": "row ETP-T2",
+        "quote": "EVP_DigestVerifyFinal answers 0 for an invalid signature and -1 for an error, and the C ABI cannot enforce that a consumer tests exactly 1 for success.",
+        "quote_kind": "paraphrase",
+        "sha256": "59bad5736455912733d3a62ed11564cf67015e275ea3d884081d7e620db6b676",
+        "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
+      },
+      "statement": "EVP_DigestVerifyFinal answers 0 for an invalid signature and -1 for an error, and the C ABI cannot enforce that a consumer tests exactly 1 for success.",
+      "state": "OPEN",
+      "settled_by": "Consumer evidence that every in-scope verification call site distinguishes 1 from 0 and -1.",
+      "blocks_release_claims": []
+    },
+    {
       "id": "OBL-XCUT-ALIASING",
       "type": "obligation",
       "title": "b85c adjudication obligation: OBL-XCUT-ALIASING",
@@ -4966,7 +5757,8 @@
         "REQ-TIM-01",
         "REQ-TIM-02",
         "REQ-ABI-01",
-        "REQ-PANIC-01"
+        "REQ-PANIC-01",
+        "REQ-CORR-01"
       ]
     },
     {
@@ -5052,6 +5844,22 @@
         "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
       },
       "statement": "Every reachable edge is classified; an omitted edge needs an independently checkable exclusion, and no aggregation hides a blocked row.",
+      "specification_required": true,
+      "externally_observable": true
+    },
+    {
+      "id": "REQ-CORR-01",
+      "type": "requirement",
+      "title": "A cryptographic result is correct or the operation fails",
+      "source": {
+        "path": "AGENTS.md",
+        "span": "\u00a78",
+        "quote": "are results, protocol decisions, secret handling and timing protections correct?",
+        "quote_kind": "fragment",
+        "sha256": "fb03af3ad5d3c59da20e6224350772f7f58afb04c22cf20adfdd2a8fa03b87fa",
+        "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
+      },
+      "statement": "Every cryptographic operation returns the arithmetic result the operation defines or a defined failure; a silent wrong result is not conserved from the authority.",
       "specification_required": true,
       "externally_observable": true
     },
@@ -6095,67 +6903,373 @@
       "from": "HAZ-01",
       "type": "motivates",
       "to": "REQ-SEC-01",
-      "basis": "the hazard/threat is the stated reason for REQ-SEC-01"
+      "basis": "HAZ-01 is the stated hazard behind REQ-SEC-01"
+    },
+    {
+      "from": "HAZ-01",
+      "type": "raises",
+      "to": "OBL-T12-RESIDUAL",
+      "basis": "HAZ-01 raises the open obligation OBL-T12-RESIDUAL"
+    },
+    {
+      "from": "HAZ-01",
+      "type": "raises",
+      "to": "OBL-T30-RESIDUAL",
+      "basis": "HAZ-01 raises the open obligation OBL-T30-RESIDUAL"
+    },
+    {
+      "from": "HAZ-02",
+      "type": "evidenced_by",
+      "to": "EVD-INST-BINSEC_CHECKCT",
+      "basis": "EVD-INST-BINSEC_CHECKCT bears on HAZ-02; it does not by itself discharge it"
+    },
+    {
+      "from": "HAZ-02",
+      "type": "evidenced_by",
+      "to": "EVD-INST-VALGRIND_CTGRIND",
+      "basis": "EVD-INST-VALGRIND_CTGRIND bears on HAZ-02; it does not by itself discharge it"
     },
     {
       "from": "HAZ-02",
       "type": "motivates",
       "to": "REQ-SEC-02",
-      "basis": "the hazard/threat is the stated reason for REQ-SEC-02"
+      "basis": "HAZ-02 is the stated hazard behind REQ-SEC-02"
     },
     {
       "from": "HAZ-02",
       "type": "motivates",
       "to": "REQ-TIM-02",
-      "basis": "the hazard/threat is the stated reason for REQ-TIM-02"
+      "basis": "HAZ-02 is the stated hazard behind REQ-TIM-02"
+    },
+    {
+      "from": "HAZ-02",
+      "type": "raises",
+      "to": "OBL-T14-RESIDUAL",
+      "basis": "HAZ-02 raises the open obligation OBL-T14-RESIDUAL"
+    },
+    {
+      "from": "HAZ-02",
+      "type": "raises",
+      "to": "OBL-T16-RESIDUAL",
+      "basis": "HAZ-02 raises the open obligation OBL-T16-RESIDUAL"
+    },
+    {
+      "from": "HAZ-03",
+      "type": "evidenced_by",
+      "to": "EVD-INST-ALLOC_PROBE",
+      "basis": "EVD-INST-ALLOC_PROBE bears on HAZ-03; it does not by itself discharge it"
+    },
+    {
+      "from": "HAZ-03",
+      "type": "evidenced_by",
+      "to": "EVD-ROW-T1",
+      "basis": "EVD-ROW-T1 bears on HAZ-03; it does not by itself discharge it"
+    },
+    {
+      "from": "HAZ-03",
+      "type": "evidenced_by",
+      "to": "EVD-ROW-T22",
+      "basis": "EVD-ROW-T22 bears on HAZ-03; it does not by itself discharge it"
     },
     {
       "from": "HAZ-03",
       "type": "motivates",
       "to": "REQ-MEM-03",
-      "basis": "the hazard/threat is the stated reason for REQ-MEM-03"
+      "basis": "HAZ-03 is the stated hazard behind REQ-MEM-03"
     },
     {
       "from": "HAZ-03",
       "type": "motivates",
       "to": "REQ-TIM-01",
-      "basis": "the hazard/threat is the stated reason for REQ-TIM-01"
+      "basis": "HAZ-03 is the stated hazard behind REQ-TIM-01"
+    },
+    {
+      "from": "HAZ-03",
+      "type": "raises",
+      "to": "OBL-BN-ALLOCATOR",
+      "basis": "HAZ-03 raises the open obligation OBL-BN-ALLOCATOR"
+    },
+    {
+      "from": "HAZ-03",
+      "type": "raises",
+      "to": "OBL-T22-RESIDUAL",
+      "basis": "HAZ-03 raises the open obligation OBL-T22-RESIDUAL"
     },
     {
       "from": "HAZ-04",
       "type": "motivates",
       "to": "REQ-MEM-01",
-      "basis": "the hazard/threat is the stated reason for REQ-MEM-01"
+      "basis": "HAZ-04 is the stated hazard behind REQ-MEM-01"
+    },
+    {
+      "from": "HAZ-04",
+      "type": "raises",
+      "to": "OBL-XCUT-ALIASING",
+      "basis": "HAZ-04 raises the open obligation OBL-XCUT-ALIASING"
+    },
+    {
+      "from": "HAZ-05",
+      "type": "evidenced_by",
+      "to": "EVD-ROW-T30",
+      "basis": "EVD-ROW-T30 bears on HAZ-05; it does not by itself discharge it"
     },
     {
       "from": "HAZ-05",
       "type": "motivates",
       "to": "REQ-MEM-02",
-      "basis": "the hazard/threat is the stated reason for REQ-MEM-02"
+      "basis": "HAZ-05 is the stated hazard behind REQ-MEM-02"
+    },
+    {
+      "from": "HAZ-05",
+      "type": "raises",
+      "to": "OBL-T30-RESIDUAL",
+      "basis": "HAZ-05 raises the open obligation OBL-T30-RESIDUAL"
+    },
+    {
+      "from": "HAZ-06",
+      "type": "evidenced_by",
+      "to": "EVD-B85C-ADJUDICATION",
+      "basis": "EVD-B85C-ADJUDICATION bears on HAZ-06; it does not by itself discharge it"
+    },
+    {
+      "from": "HAZ-06",
+      "type": "motivates",
+      "to": "REQ-MEM-02",
+      "basis": "HAZ-06 is the stated hazard behind REQ-MEM-02"
     },
     {
       "from": "HAZ-06",
       "type": "motivates",
       "to": "REQ-PANIC-01",
-      "basis": "the hazard/threat is the stated reason for REQ-PANIC-01"
+      "basis": "HAZ-06 is the stated hazard behind REQ-PANIC-01"
+    },
+    {
+      "from": "HAZ-06",
+      "type": "raises",
+      "to": "OBL-XCUT-CALLBACKS",
+      "basis": "HAZ-06 raises the open obligation OBL-XCUT-CALLBACKS"
     },
     {
       "from": "HAZ-07",
       "type": "motivates",
       "to": "REQ-SEC-02",
-      "basis": "the hazard/threat is the stated reason for REQ-SEC-02"
+      "basis": "HAZ-07 is the stated hazard behind REQ-SEC-02"
     },
     {
       "from": "HAZ-07",
       "type": "motivates",
       "to": "REQ-TIM-02",
-      "basis": "the hazard/threat is the stated reason for REQ-TIM-02"
+      "basis": "HAZ-07 is the stated hazard behind REQ-TIM-02"
+    },
+    {
+      "from": "HAZ-07",
+      "type": "raises",
+      "to": "OBL-T9-RESIDUAL",
+      "basis": "HAZ-07 raises the open obligation OBL-T9-RESIDUAL"
+    },
+    {
+      "from": "HAZ-08",
+      "type": "evidenced_by",
+      "to": "EVD-INST-DUDECT",
+      "basis": "EVD-INST-DUDECT bears on HAZ-08; it does not by itself discharge it"
+    },
+    {
+      "from": "HAZ-08",
+      "type": "motivates",
+      "to": "REQ-SEC-02",
+      "basis": "HAZ-08 is the stated hazard behind REQ-SEC-02"
+    },
+    {
+      "from": "HAZ-08",
+      "type": "motivates",
+      "to": "REQ-TIM-02",
+      "basis": "HAZ-08 is the stated hazard behind REQ-TIM-02"
+    },
+    {
+      "from": "HAZ-08",
+      "type": "raises",
+      "to": "OBL-T11-RESIDUAL",
+      "basis": "HAZ-08 raises the open obligation OBL-T11-RESIDUAL"
+    },
+    {
+      "from": "HAZ-09",
+      "type": "motivates",
+      "to": "REQ-SEC-02",
+      "basis": "HAZ-09 is the stated hazard behind REQ-SEC-02"
+    },
+    {
+      "from": "HAZ-09",
+      "type": "motivates",
+      "to": "REQ-TIM-02",
+      "basis": "HAZ-09 is the stated hazard behind REQ-TIM-02"
+    },
+    {
+      "from": "HAZ-09",
+      "type": "raises",
+      "to": "OBL-T6-RESIDUAL",
+      "basis": "HAZ-09 raises the open obligation OBL-T6-RESIDUAL"
+    },
+    {
+      "from": "HAZ-10",
+      "type": "motivates",
+      "to": "REQ-CORR-01",
+      "basis": "HAZ-10 is the stated hazard behind REQ-CORR-01"
+    },
+    {
+      "from": "HAZ-11",
+      "type": "motivates",
+      "to": "REQ-SEC-02",
+      "basis": "HAZ-11 is the stated hazard behind REQ-SEC-02"
+    },
+    {
+      "from": "HAZ-11",
+      "type": "raises",
+      "to": "OBL-T14-RESIDUAL",
+      "basis": "HAZ-11 raises the open obligation OBL-T14-RESIDUAL"
+    },
+    {
+      "from": "HAZ-12",
+      "type": "motivates",
+      "to": "REQ-MEM-03",
+      "basis": "HAZ-12 is the stated hazard behind REQ-MEM-03"
+    },
+    {
+      "from": "HAZ-12",
+      "type": "raises",
+      "to": "OBL-T22-RESIDUAL",
+      "basis": "HAZ-12 raises the open obligation OBL-T22-RESIDUAL"
+    },
+    {
+      "from": "HAZ-13",
+      "type": "motivates",
+      "to": "REQ-MEM-02",
+      "basis": "HAZ-13 is the stated hazard behind REQ-MEM-02"
+    },
+    {
+      "from": "HAZ-13",
+      "type": "motivates",
+      "to": "REQ-PANIC-01",
+      "basis": "HAZ-13 is the stated hazard behind REQ-PANIC-01"
+    },
+    {
+      "from": "HAZ-14",
+      "type": "evidenced_by",
+      "to": "EVD-B85C-ADJUDICATION",
+      "basis": "EVD-B85C-ADJUDICATION bears on HAZ-14; it does not by itself discharge it"
+    },
+    {
+      "from": "HAZ-14",
+      "type": "motivates",
+      "to": "REQ-MEM-02",
+      "basis": "HAZ-14 is the stated hazard behind REQ-MEM-02"
+    },
+    {
+      "from": "HAZ-14",
+      "type": "raises",
+      "to": "OBL-XCUT-CALLBACKS",
+      "basis": "HAZ-14 raises the open obligation OBL-XCUT-CALLBACKS"
+    },
+    {
+      "from": "HAZ-15",
+      "type": "motivates",
+      "to": "REQ-SEC-02",
+      "basis": "HAZ-15 is the stated hazard behind REQ-SEC-02"
+    },
+    {
+      "from": "HAZ-15",
+      "type": "raises",
+      "to": "OBL-RSA-EXTKEY-ORACLE",
+      "basis": "HAZ-15 raises the open obligation OBL-RSA-EXTKEY-ORACLE"
+    },
+    {
+      "from": "HAZ-16",
+      "type": "evidenced_by",
+      "to": "EVD-B85C-ADJUDICATION",
+      "basis": "EVD-B85C-ADJUDICATION bears on HAZ-16; it does not by itself discharge it"
+    },
+    {
+      "from": "HAZ-16",
+      "type": "motivates",
+      "to": "REQ-PANIC-01",
+      "basis": "HAZ-16 is the stated hazard behind REQ-PANIC-01"
+    },
+    {
+      "from": "HAZ-16",
+      "type": "raises",
+      "to": "OBL-PANIC-ATOMICITY",
+      "basis": "HAZ-16 raises the open obligation OBL-PANIC-ATOMICITY"
+    },
+    {
+      "from": "HAZ-16",
+      "type": "raises",
+      "to": "OBL-XCUT-PANIC",
+      "basis": "HAZ-16 raises the open obligation OBL-XCUT-PANIC"
+    },
+    {
+      "from": "HAZ-17",
+      "type": "motivates",
+      "to": "REQ-MEM-03",
+      "basis": "HAZ-17 is the stated hazard behind REQ-MEM-03"
+    },
+    {
+      "from": "HAZ-18",
+      "type": "motivates",
+      "to": "REQ-CORR-01",
+      "basis": "HAZ-18 is the stated hazard behind REQ-CORR-01"
+    },
+    {
+      "from": "HAZ-18",
+      "type": "raises",
+      "to": "OBL-VERIFY-RETURN-POLARITY",
+      "basis": "HAZ-18 raises the open obligation OBL-VERIFY-RETURN-POLARITY"
+    },
+    {
+      "from": "HAZ-19",
+      "type": "evidenced_by",
+      "to": "EVD-B85C-ADJUDICATION",
+      "basis": "EVD-B85C-ADJUDICATION bears on HAZ-19; it does not by itself discharge it"
+    },
+    {
+      "from": "HAZ-19",
+      "type": "motivates",
+      "to": "REQ-ABI-01",
+      "basis": "HAZ-19 is the stated hazard behind REQ-ABI-01"
+    },
+    {
+      "from": "HAZ-19",
+      "type": "motivates",
+      "to": "REQ-MEM-01",
+      "basis": "HAZ-19 is the stated hazard behind REQ-MEM-01"
+    },
+    {
+      "from": "HAZ-19",
+      "type": "raises",
+      "to": "OBL-MECH-RUNTIME-CONCURRENCY",
+      "basis": "HAZ-19 raises the open obligation OBL-MECH-RUNTIME-CONCURRENCY"
+    },
+    {
+      "from": "HAZ-20",
+      "type": "motivates",
+      "to": "REQ-MEM-01",
+      "basis": "HAZ-20 is the stated hazard behind REQ-MEM-01"
+    },
+    {
+      "from": "HAZ-20",
+      "type": "raises",
+      "to": "OBL-XCUT-CALLBACKS",
+      "basis": "HAZ-20 raises the open obligation OBL-XCUT-CALLBACKS"
     },
     {
       "from": "IMP-ABI-LAYOUT",
       "type": "realised_by",
       "to": "ART-FILE-ABI-LAYOUT",
       "basis": "ART-FILE-ABI-LAYOUT is the tracked file that realises IMP-ABI-LAYOUT"
+    },
+    {
+      "from": "IMP-ABI-SYMBOLS",
+      "type": "raises",
+      "to": "OBL-VERIFY-RETURN-POLARITY",
+      "basis": "OBL-VERIFY-RETURN-POLARITY is the open obligation ETP-T2 records for ETP-T2 HAZ-18"
     },
     {
       "from": "IMP-ABI-SYMBOLS",
@@ -6344,6 +7458,12 @@
       "basis": "ART-FILE-BN-LIMBS is the tracked file that realises IMP-BN-LIMBS"
     },
     {
+      "from": "IMP-BN-MONT",
+      "type": "realised_by",
+      "to": "ART-FILE-BN-MONT",
+      "basis": "ART-FILE-BN-MONT is the tracked file that realises IMP-BN-MONT"
+    },
+    {
       "from": "IMP-BRANCH-AUDIT",
       "type": "raises",
       "to": "OBL-T14-RESIDUAL",
@@ -6477,6 +7597,12 @@
     },
     {
       "from": "IMP-PANIC-GUARD",
+      "type": "raises",
+      "to": "OBL-PANIC-ATOMICITY",
+      "basis": "OBL-PANIC-ATOMICITY is the open obligation ETP-T2 records for ETP-T2 HAZ-16"
+    },
+    {
+      "from": "IMP-PANIC-GUARD",
       "type": "realised_by",
       "to": "ART-FILE-PANIC-GUARD",
       "basis": "ART-FILE-PANIC-GUARD is the tracked file that realises IMP-PANIC-GUARD"
@@ -6498,6 +7624,12 @@
       "type": "evidenced_by",
       "to": "EVD-ROW-T19",
       "basis": "row T19 records the current state of IMP-RSA; the row is prose, not a receipt"
+    },
+    {
+      "from": "IMP-RSA",
+      "type": "raises",
+      "to": "OBL-RSA-EXTKEY-ORACLE",
+      "basis": "OBL-RSA-EXTKEY-ORACLE is the open obligation ETP-T2 records for ETP-T2 HAZ-15"
     },
     {
       "from": "IMP-RSA",
@@ -6698,6 +7830,18 @@
       "basis": "the independent b85c adjudication records that this item blocks SAFE_COMPATIBLE"
     },
     {
+      "from": "OBL-PANIC-ATOMICITY",
+      "type": "constrains",
+      "to": "REL-OPENSSH-B85C",
+      "basis": "OBL-PANIC-ATOMICITY is the open obligation ETP-T2 records for ETP-T2 HAZ-16"
+    },
+    {
+      "from": "OBL-RSA-EXTKEY-ORACLE",
+      "type": "constrains",
+      "to": "REL-OPENSSH-B85C",
+      "basis": "OBL-RSA-EXTKEY-ORACLE is the open obligation ETP-T2 records for ETP-T2 HAZ-15"
+    },
+    {
       "from": "OBL-T15-RESOLUTION",
       "type": "constrains",
       "to": "REL-COHORT-COUNTER-1-33",
@@ -6870,6 +8014,18 @@
       "type": "satisfied_by",
       "to": "IMP-CONSUMER-CLOSURE",
       "basis": "IMP-CONSUMER-CLOSURE is the implementation named for REQ-COMPAT-02"
+    },
+    {
+      "from": "REQ-CORR-01",
+      "type": "satisfied_by",
+      "to": "IMP-BN-MONT",
+      "basis": "IMP-BN-MONT is the implementation named for REQ-CORR-01"
+    },
+    {
+      "from": "REQ-CORR-01",
+      "type": "satisfied_by",
+      "to": "IMP-RSA",
+      "basis": "IMP-RSA is the implementation named for REQ-CORR-01"
     },
     {
       "from": "REQ-EVID-01",
@@ -7420,6 +8576,12 @@
     {
       "from": "REQ-TIM-02",
       "type": "satisfied_by",
+      "to": "IMP-BN-MONT",
+      "basis": "IMP-BN-MONT is the implementation named for REQ-TIM-02"
+    },
+    {
+      "from": "REQ-TIM-02",
+      "type": "satisfied_by",
       "to": "IMP-BRANCH-AUDIT",
       "basis": "IMP-BRANCH-AUDIT is the implementation named for REQ-TIM-02"
     },
@@ -7434,12 +8596,6 @@
       "type": "satisfied_by",
       "to": "IMP-RSA",
       "basis": "IMP-RSA is the implementation named for REQ-TIM-02"
-    },
-    {
-      "from": "THR-01",
-      "type": "motivates",
-      "to": "REQ-PANIC-01",
-      "basis": "the hazard/threat is the stated reason for REQ-PANIC-01"
     },
     {
       "from": "THR-02",
@@ -7605,6 +8761,13 @@
       "id": "ORPHAN-6:REQ:REQ-COMPAT-02",
       "class": 6,
       "node": "REQ-COMPAT-02",
+      "reason": "requirement_without_specification",
+      "would_close": "ETP-T1 does not create the specification; FRC-0 establishes the independent specification hierarchy, and the requirement is then refined by a specification node."
+    },
+    {
+      "id": "ORPHAN-6:REQ:REQ-CORR-01",
+      "class": 6,
+      "node": "REQ-CORR-01",
       "reason": "requirement_without_specification",
       "would_close": "ETP-T1 does not create the specification; FRC-0 establishes the independent specification hierarchy, and the requirement is then refined by a specification node."
     },

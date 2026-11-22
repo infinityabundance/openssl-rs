@@ -42,7 +42,7 @@ detection runs.
 | type | what the node records | minimum outgoing | minimum incoming |
 |---|---|---|---|
 | `threat` | an adversarial class the architecture must resist | many `motivates` | none |
-| `hazard` | a technical state that can cause harm | many `motivates` | none |
+| `hazard` | a technical state that can cause harm, scoped by API family and input class (ETP-T2) | at least one `motivates` (structural) | none |
 | `requirement` | an externally observable functional or safety requirement, quoted from a tracked normative document | at least one `satisfied_by` (class 1) | at least one `motivates` |
 | `specification` | an independent specification refined from a requirement | at least one reachable implementation (class 6) | at least one `refines` |
 | `implementation` | a source location or mechanism | at least one `realised_by` (class 2) | at least one `satisfied_by` |
@@ -66,6 +66,16 @@ An `obligation` declares `blocks_release_claims`. Every named claim must be a
 refused as `TG_UNJUSTIFIED_BLOCK_EDGE`: an edge may not be manufactured to make
 the graph look connected.
 
+A `hazard` is the ETP-T2 projection. It declares `scope` (one `api_family` and
+one primary `input_class`), `trigger_classes`, `memory_safe_claim`, an optional
+`class3_disposition`, `barrier` (state, control, evidence, `would_close`) and
+`affected_release_claims`. A hazard that is reachable from `contract_violation`
+may not claim memory safety; a barrier recorded as `CLAIMED_NO_EVIDENCE` or
+`BARRIER_ABSENT` may not cite evidence; and `affected_release_claims` must equal
+the claims reached by the hazard's motivated requirements and raised
+obligations. The register (`evidence/etp-t2/HAZARDS.json`) is the source of
+these fields, and the graph records its digest.
+
 ## 3. Edge types
 
 | edge | from -> to | meaning | cardinality | an edge is invalid when |
@@ -74,8 +84,8 @@ the graph look connected.
 | `refines` | requirement -> specification | an independent specification refines the requirement | many-to-many; mandatory where `specification_required` | the "specification" restates the implementation (not mechanically detectable; a provenance failure, not an orphan) |
 | `satisfied_by` | requirement \| specification -> implementation | the implementation is offered as satisfying the requirement or specification | many-to-many; each requirement needs at least one (class 1) | the implementation does not address the requirement's stated scope |
 | `realised_by` | implementation -> artefact | the implementation is realised by a tracked file or shipped artefact | many-to-many; each implementation needs at least one (class 2) | the artefact digest belongs to a different implementation or candidate |
-| `raises` | implementation \| artefact -> obligation | the implementation or artefact carries the obligation | many-to-many | no tracked record states the obligation |
-| `evidenced_by` | requirement \| implementation \| artefact \| obligation \| adjudication -> evidence | the record is cited as evidence for the source | many-to-many | the evidence is bound to a different identity than the implementation it supports (class 4) |
+| `raises` | hazard \| implementation \| artefact -> obligation | the hazard, implementation or artefact carries the obligation | many-to-many | no tracked record states the obligation |
+| `evidenced_by` | hazard \| requirement \| implementation \| artefact \| obligation \| adjudication -> evidence | the record is cited as evidence for the source | many-to-many | the evidence is bound to a different identity than the implementation it supports (class 4) |
 | `assessed_by` | evidence \| requirement -> adjudication | the evidence or requirement is assessed by the adjudication | many-to-many | the adjudicator is the same party that produced the evidence, where independence is required (class 3) |
 | `releases` | adjudication -> release_claim | the adjudication is the recorded verdict for the claim | at least one per claim (class 3) | the verdict does not support the claimed verdict, or the adjudicator is not independent where required |
 | `constrains` | obligation -> release_claim | the open obligation blocks the release claim | at least one per declared blocking relation (class 5) | the obligation does not declare that it blocks the claim |
@@ -142,6 +152,14 @@ with the declared register. It exits non-zero when:
 | `TG_STALE_ORPHAN` | a declared orphan no longer reproduces |
 | `TG_ORPHAN_REASON` | a declaration's reason disagrees with the discovered reason |
 | `TG_ORPHAN_UNSETTLED` | a declaration does not state what would close it |
+| `TG_HAZARD_UNSCOPED` | a hazard has no API-family scope, no primary input class, or no entry point |
+| `TG_HAZARD_NO_INPUT_CLASS` | a hazard's trigger set is empty, duplicated or names an unknown class |
+| `TG_HAZARD_CLASS3_DISPOSITION` | a class-3-reachable hazard states no valid disposition |
+| `TG_HAZARD_CLASS3_SAFE_CLAIM` | a class-3-reachable hazard claims memory safety |
+| `TG_HAZARD_BARRIER` | a hazard barrier state, control or `would_close` is missing |
+| `TG_HAZARD_BARRIER_UNEVIDENCED` | `EVIDENCED` has no evidence id, or a claimed/absent barrier cites one |
+| `TG_HAZARD_UNMOTIVATED` | a hazard has no `motivates` edge |
+| `TG_HAZARD_CLAIM_UNRELATED` | a hazard names a release claim its requirements and obligations do not reach |
 
 `TG_UNDECLARED_ORPHAN` is the omission case: a new gap cannot enter the graph
 without being named. `TG_STALE_ORPHAN` is its converse: a gap cannot remain
@@ -154,48 +172,51 @@ It is a view, not an acceptance: only `validate` exits 0.
 
 ## 6. The seeded graph
 
-At `S = 21bea3188`:
+At `S = 21bea3188`, after the ETP-T2 hazard projection:
 
 | type | count |
 |---|---|
 | threat | 8 |
-| hazard | 7 |
-| requirement | 21 |
+| hazard | 20 |
+| requirement | 22 |
 | specification | 0 |
-| implementation | 19 |
-| artefact | 25 |
-| obligation | 78 |
+| implementation | 20 |
+| artefact | 26 |
+| obligation | 81 |
 | evidence | 101 |
 | adjudication | 41 |
 | release_claim | 6 |
-| **total** | **306** |
+| **total** | **325** |
 
 | edge | count |
 |---|---|
-| `motivates` | 28 |
+| `motivates` | 45 |
 | `refines` | 0 |
-| `satisfied_by` | 43 |
-| `realised_by` | 28 |
-| `raises` | 27 |
-| `evidenced_by` | 50 |
+| `satisfied_by` | 46 |
+| `realised_by` | 29 |
+| `raises` | 51 |
+| `evidenced_by` | 61 |
 | `assessed_by` | 130 |
 | `releases` | 8 |
-| `constrains` | 31 |
-| **total** | **345** |
+| `constrains` | 33 |
+| **total** | **403** |
 
 Provenance of the seed:
 
 - **Threats** are the eight adversary classes in `evidence/etp0/RECEIPT.md`,
   with the mechanism each does and does not cover.
-- **Hazards** are named by `AGENTS.md` §§1–5 and §21 and by queue rows T1 and
-  T9. They are characterisations, not a hazard analysis; ETP-T2 is the item
-  that quantifies them, and it is open (`OBL-ETP-T2`).
+- **Hazards** are the ETP-T2 register's 20 hazards, projected from
+  `evidence/etp-t2/HAZARDS.json`. Sections 1-5 and 21 of `AGENTS.md` and queue
+  rows T1 and T9 named the original seven characterisations; ETP-T2 quantifies
+  them and adds 13 mechanism hazards, each with a scope, an input
+  classification, a barrier state and declared T1 edges.
 - **Requirements** quote a tracked normative document: `AGENTS.md`,
   `docs/ETP-TODO.md`, `docs/ETP-CLAIM-ALGEBRA.md`, `docs/OPENSSH-COHORT.md`,
   `docs/PERFORMANCE-FRONTIER.md` and
-  `docs/FORMAL-REFINEMENT-CERTIFICATION.md`. The population is a deliberate
-  seed, not a complete extraction of every normative sentence in the corpus;
-  section 8 records that gap.
+  `docs/FORMAL-REFINEMENT-CERTIFICATION.md`. ETP-T2 adds `REQ-CORR-01` because
+  the original population had no requirement for cryptographic correctness.
+  The population is a deliberate seed, not a complete extraction of every
+  normative sentence in the corpus; section 8 records that gap.
 - **Specifications**: zero. No independent specification hierarchy exists at
   `S`; FRC-0 is the item that establishes it. Every safety requirement that
   declares `specification_required: true` therefore carries a class-6 orphan.
@@ -207,9 +228,10 @@ Provenance of the seed:
   node's source.
 - **Obligations** are the 42 distinct obligations in the typed claim inventory,
   16 named T-row residues (including `OBL-BN-ALLOCATOR`), 8 open queue items,
-  and 13 obligations from the independent b85c adjudication (five mechanisms,
-  two scoped discharges, four cross-cutting premises, and B54-F1/B55-F1). All
-  78 are `OPEN`.
+  13 obligations from the independent b85c adjudication (five mechanisms, two
+  scoped discharges, four cross-cutting premises, and B54-F1/B55-F1), and three
+  obligations ETP-T2 raises (`OBL-RSA-EXTKEY-ORACLE`, `OBL-PANIC-ATOMICITY`,
+  `OBL-VERIFY-RETURN-POLARITY`). All 81 are `OPEN`.
 - **Evidence** is 66 records cited by the typed claims, 7 queue-status prose
   records bound to `S`, 11 instrument results from the ETP-3 register with
   their qualification status (`PASS` or `RECORDED`), and 17 consumer,
@@ -226,7 +248,7 @@ Identity binding is explicit, because the records are not all bound to `S`:
 
 | bound commit | nodes | what it is |
 |---|---|---|
-| `21bea3188` | 239 | implementations, artefacts and records as of this candidate |
+| `21bea3188` | 258 | implementations, artefacts, hazards and records at this candidate |
 | `9372bb28b` | 66 | the evidence records cited by the ETP-1 typed claims, bound to the ETP-0 source identity |
 | `cc2e5fa32` | 1 | the withdrawn O7 revision, read at the commit the claim names |
 
@@ -274,6 +296,13 @@ correctly refuse it as class 4. The consequence is stated in section 7.
    `21bea3188`. The graph draws no support edge across that boundary. This is
    not one of the eight orphan classes; it is the freshness problem ETP-T9
    owns, and it is visible in the bound-commit table rather than hidden.
+10. **The ETP-T2 hazards are nodes, not prose.** Twenty hazards carry a scope, a
+   trigger classification and a barrier state. Four have no barrier at all
+   (`HAZ-15`, `HAZ-16`, `HAZ-18`, `HAZ-20`) and 16 are `CLAIMED_NO_EVIDENCE`;
+   none is `EVIDENCED`. Three hazards (`HAZ-05`, `HAZ-12`, `HAZ-17`) reach no
+   release claim because no claim declares a memory requirement in scope. The
+   projection is checked against the register's digest and fields, so a hazard
+   cannot be softened in one artefact and left unchanged in the other.
 
 ## 8. Coverage, stated honestly
 
@@ -321,9 +350,14 @@ defect classes it names, and nothing is claimed about decision coverage.
 - Class 3 checks independence only where the claim declares that it requires an
   independent adjudication. A claim that under-declares the requirement is not
   detected.
-- The graph does not make a hazard analysis (ETP-T2), does not reconcile the
-  OpenSSH records (ETP-T15), and does not decide whether the b85c graduation is
-  a principal risk acceptance or an evidence-derived verdict.
+- The graph records the ETP-T2 hazard projection and refuses a hazard without a
+  scope, without an input class, with a class-3-only trigger claimed memory-safe,
+  or with a barrier state that its evidence does not support. It does not show
+  that a barrier works; `docs/HAZARD-REGISTER.md` records what each barrier's
+  evidence does and does not establish.
+- The graph does not reconcile the OpenSSH records (ETP-T15) and does not decide
+  whether the b85c graduation is a principal risk acceptance or an
+  evidence-derived verdict.
 
 ## 10. Operating instructions
 
@@ -332,7 +366,10 @@ python3 forensics/tools/traceability.py validate
 python3 forensics/tools/traceability.py report
 python3 forensics/tools/traceability.py report --json
 python3 forensics/tools/etp_t1_seed.py            # regenerate the committed graph
+python3 forensics/tools/hazard_register.py validate
+python3 forensics/tools/hazard_register.py report
 python3 forensics/tools/tests/test_traceability.py
+python3 forensics/tools/tests/test_hazard_register.py
 ```
 
 `validate` exits 0 only when the graph is structurally valid, every discovered

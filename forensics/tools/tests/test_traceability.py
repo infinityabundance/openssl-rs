@@ -72,7 +72,9 @@ class TraceabilityControls(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("0 undeclared, 0 stale", result.stdout)
         declared = load_graph()["orphans"]
-        self.assertEqual(len(declared), 20)
+        # ETP-T2 adds REQ-CORR-01, whose independent specification does not exist,
+        # so the declared population grows from 20 to 21 without relaxing a control.
+        self.assertEqual(len(declared), 21)
         self.assertEqual(
             sorted({entry["class"] for entry in declared}),
             [1, 3, 6, 8],

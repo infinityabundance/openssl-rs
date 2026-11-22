@@ -125,32 +125,49 @@ for nid, name, covers, not_covers in THREATS:
          adversary_class=name, covers=covers, does_not_cover=not_covers)
 
 # ---------------------------------------------------------------- hazards
-HAZARDS = [
-    ("HAZ-01", "Secret-bearing storage is freed or abandoned without cleansing",
-     "AGENTS.md", "§5.1",
-     "Release and cleansing are separate obligations: a destructor that merely frees memory is not a secret-safe destructor."),
-    ("HAZ-02", "A secret-dependent branch, address or early exit survives optimisation",
-     "AGENTS.md", "§5.2",
-     "Never claim constant-time behaviour from source inspection alone."),
-    ("HAZ-03", "A secret-bearing allocation aborts or overflows instead of failing",
-     "docs/ETP-TODO.md", "row T1",
-     "Infallible allocations in limbs::rem/limbs::mul; ... still plain Vecs (OBL-BN-ALLOCATOR)"),
-    ("HAZ-04", "An ownership boundary triggers an invalid free or a double release",
-     "AGENTS.md", "§1",
-     "A safe fn whose body can trigger an invalid free is a soundness bug even if today's call sites are correct."),
-    ("HAZ-05", "A reference or destructor runs over a partially initialised value",
-     "AGENTS.md", "§2",
-     "No &T, &mut T, initialized read, or full destructor is permitted before the required initialization invariants hold."),
-    ("HAZ-06", "An application callback re-enters and invalidates a borrow or lock",
-     "AGENTS.md", "§21",
-     "Treat FFI callbacks and hooks as reentrancy edges."),
-    ("HAZ-07", "A secret-derived length or capability survives into a copy or allocation",
-     "docs/ETP-TODO.md", "row T9",
-     "Secret-length-dependent boundary copy and admission checks (the 19 length-taint sites)"),
-]
-for nid, name, path, span, quote in HAZARDS:
-    node(nid, "hazard", name, src(path, span, quote),
-         characterization="named at the cited row or section; quantified by ETP-T2, which is open")
+# ETP-T2 owns the hazard register.  The graph projects every register hazard as
+# a `hazard` node whose scope, input classification and barrier are the ones the
+# register records, and whose edges are the register's declared T1 edges.  The
+# register is read from the working tree and its digest is recorded in the
+# graph, so a register that drifts away from its projection is visible.
+HAZARD_REGISTER = REPO / "evidence" / "etp-t2" / "HAZARDS.json"
+if not HAZARD_REGISTER.is_file():
+    raise SystemExit(f"hazard register {HAZARD_REGISTER} is absent; ETP-T2 is incomplete")
+_hazard_bytes = HAZARD_REGISTER.read_bytes()
+hazard_register = json.loads(_hazard_bytes)
+HAZARD_REGISTER_SHA = hashlib.sha256(_hazard_bytes).hexdigest()
+
+for hazz in hazard_register["hazards"]:
+    hid = hazz["id"]
+    source = hazz["source"]
+    fields = {
+        "characterization": hazz["description"],
+        "scope": hazz["scope"],
+        "trigger_classes": hazz["trigger_classes"],
+        "memory_safe_claim": hazz["memory_safe_claim"],
+        "barrier": hazz["barrier"],
+        "affected_release_claims": hazz["t1_edges"]["release_claims"],
+    }
+    if "class3_disposition" in hazz:
+        fields["class3_disposition"] = hazz["class3_disposition"]
+    node(
+        hid,
+        "hazard",
+        hazz["title"],
+        src(
+            source["path"],
+            source["span"],
+            source["quote"],
+            quote_kind=source.get("quote_kind", "fragment"),
+        ),
+        **fields,
+    )
+    for rid in hazz["t1_edges"]["motivates"]:
+        edge(hid, "motivates", rid, f"{hid} is the stated hazard behind {rid}")
+    for oid in hazz["t1_edges"]["obligations"]:
+        edge(hid, "raises", oid, f"{hid} raises the open obligation {oid}")
+    for eid in hazz["t1_edges"]["evidence"]:
+        edge(hid, "evidenced_by", eid, f"{eid} bears on {hid}; it does not by itself discharge it")
 
 # ---------------------------------------------------------------- requirements
 REQUIREMENTS = [
@@ -217,6 +234,9 @@ REQUIREMENTS = [
     ("REQ-REPRO-01", "Independent builds are byte-identical",
      "Two independently initialised clean builds produce byte-identical artefacts, and a reproducible build is not thereby a correct build.",
      "docs/ETP-TODO.md", "row ETP-2", "two independently initialised clean builds; ... no byte-normalisation to manufacture a PASS", False),
+    ("REQ-CORR-01", "A cryptographic result is correct or the operation fails",
+     "Every cryptographic operation returns the arithmetic result the operation defines or a defined failure; a silent wrong result is not conserved from the authority.",
+     "AGENTS.md", "§8", "are results, protocol decisions, secret handling and timing protections correct?", True),
 ]
 for rid, title, statement, path, span, quote, spec_required in REQUIREMENTS:
     node(rid, "requirement", title, src(path, span, quote),
@@ -225,14 +245,6 @@ for rid, title, statement, path, span, quote, spec_required in REQUIREMENTS:
 
 MOTIVATION = {
     "REQ-ABI-01": ["THR-04", "THR-06"],
-    "REQ-MEM-01": ["HAZ-04"],
-    "REQ-MEM-02": ["HAZ-05"],
-    "REQ-MEM-03": ["HAZ-03"],
-    "REQ-PANIC-01": ["HAZ-06", "THR-01"],
-    "REQ-SEC-01": ["HAZ-01"],
-    "REQ-SEC-02": ["HAZ-02", "HAZ-07"],
-    "REQ-TIM-01": ["HAZ-03"],
-    "REQ-TIM-02": ["HAZ-02", "HAZ-07"],
     "REQ-COMPAT-01": ["THR-06", "THR-04"],
     "REQ-COMPAT-02": ["THR-02"],
     "REQ-EVID-01": ["THR-02"],
@@ -265,7 +277,9 @@ IMPLEMENTATIONS = [
     ("IMP-ECDSA", "ECDSA signing pipeline", "src/ec/ecdsa_ossl.rs",
      ["REQ-SEC-01", "REQ-SEC-02", "REQ-TIM-01", "REQ-TIM-02"]),
     ("IMP-RSA", "RSA private operations and CRT", "src/rsa/ossl.rs",
-     ["REQ-SEC-01", "REQ-SEC-02", "REQ-TIM-01", "REQ-TIM-02"]),
+     ["REQ-SEC-01", "REQ-SEC-02", "REQ-TIM-01", "REQ-TIM-02", "REQ-CORR-01"]),
+    ("IMP-BN-MONT", "Montgomery domain construction, validation and prepared parameters", "src/bn/mont.rs",
+     ["REQ-CORR-01", "REQ-TIM-02"]),
     ("IMP-PANIC-GUARD", "Panic boundary for FFI entry points", "src/ffi/mod.rs",
      ["REQ-PANIC-01"]),
     ("IMP-ABI-SYMBOLS", "Exported library entry points", "src/lib.rs",
@@ -421,7 +435,7 @@ RELEASE = [
     ("REL-OPENSSH-B85C", "OpenSSH ssh/sshd SAFE_COMPATIBLE graduation at b85c",
      "evidence/SAFE-COMPATIBLE-openssh-b85c.json", "verdict", "SAFE_COMPATIBLE", True,
      ["REQ-COMPAT-01", "REQ-GRAD-01", "REQ-SEC-01", "REQ-SEC-02",
-      "REQ-TIM-01", "REQ-TIM-02", "REQ-ABI-01", "REQ-PANIC-01"],
+      "REQ-TIM-01", "REQ-TIM-02", "REQ-ABI-01", "REQ-PANIC-01", "REQ-CORR-01"],
      ["ADJ-B85C", "ADJ-ETP5-R1", "ETP0-CLM-030"]),
     ("REL-COHORT-COUNTER-1-33", "Safe-33 cohort counter recorded as 1/33",
      "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json", "consumers",
@@ -584,6 +598,34 @@ for oid, item, statement, settled, impls, blocks in QUEUE_OBLIGATIONS:
         src("docs/ETP-TODO.md", f"row {item}", statement, quote_kind="paraphrase"),
         statement, settled, blocks, impls,
         f"{oid} is the open state of queue row {item}")
+
+# ETP-T2 hazards whose only honest disposition is an open obligation.
+ETP_T2_OBLIGATIONS = [
+    ("OBL-RSA-EXTKEY-ORACLE", "ETP-T2 HAZ-15",
+     "PKCS#1 v1.5 decryption on an external key (RSA_FLAG_EXT_PKEY) substitutes "
+     "RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING and takes the refusing padding check, so the "
+     "implicit-rejection countermeasure is absent on that path.",
+     "A recorded justification that no in-scope consumer uses external keys on an attacker-facing "
+     "PKCS#1 v1.5 decryption path, or an external-key implicit-rejection design.",
+     ["REL-OPENSSH-B85C"], ["IMP-RSA"]),
+    ("OBL-PANIC-ATOMICITY", "ETP-T2 HAZ-16",
+     "guard_ffi prevents a panic from unwinding into C but does not make the interrupted "
+     "operation failure-atomic; no rollback or poison evidence exists for a stateful context.",
+     "Failure-atomicity, rollback or poisoning evidence for every stateful FFI context that can "
+     "panic, at a named candidate.",
+     ["REL-OPENSSH-B85C"], ["IMP-PANIC-GUARD"]),
+    ("OBL-VERIFY-RETURN-POLARITY", "ETP-T2 HAZ-18",
+     "EVP_DigestVerifyFinal answers 0 for an invalid signature and -1 for an error, and the C "
+     "ABI cannot enforce that a consumer tests exactly 1 for success.",
+     "Consumer evidence that every in-scope verification call site distinguishes 1 from 0 and -1.",
+     [], ["IMP-ABI-SYMBOLS"]),
+]
+for oid, item, statement, settled, blocks, impls in ETP_T2_OBLIGATIONS:
+    add_obligation(
+        oid, f"{item} obligation: {oid}",
+        src("docs/ETP-TODO.md", "row ETP-T2", statement, quote_kind="paraphrase"),
+        statement, settled, blocks, impls,
+        f"{oid} is the open obligation ETP-T2 records for {item}")
 
 B85C_OBLIGATIONS = [
     ("OBL-MECH-EVP-PKEY-PROVIDER", "EVP_PKEY_PROVIDER mechanism is NOT_ESTABLISHED (116 obligations).",
@@ -838,8 +880,8 @@ document = {
             "refines": "requirement -> specification (the requirement is refined by an independent specification)",
             "satisfied_by": "requirement|specification -> implementation",
             "realised_by": "implementation -> artefact",
-            "raises": "implementation|artefact -> obligation",
-            "evidenced_by": "requirement|implementation|artefact|obligation|adjudication -> evidence",
+            "raises": "hazard|implementation|artefact -> obligation",
+            "evidenced_by": "hazard|requirement|implementation|artefact|obligation|adjudication -> evidence",
             "assessed_by": "evidence|requirement -> adjudication",
             "releases": "adjudication -> release_claim",
             "constrains": "obligation -> release_claim",
@@ -854,8 +896,18 @@ document = {
             "release_claim": "at least one releases adjudication (class 3), independent where required",
             "obligation": "every blocks_release_claims target must have a constrains edge (class 5)",
             "evidence": "one source path and bound commit; a digest that disagrees is class 4",
+            "hazard": "a scope naming one API family and one input class, a non-empty trigger "
+                      "class set, at least one motivates edge, an affected_release_claims list "
+                      "derived from its requirements and obligations, and a barrier state; "
+                      "a contract-violation trigger forbids a memory-safety claim",
             "node": "one source path that exists at its bound commit (class 8)",
         },
+    },
+    "hazard_register": {
+        "path": "evidence/etp-t2/HAZARDS.json",
+        "sha256": HAZARD_REGISTER_SHA,
+        "settling_method": "sha256 of the register file the graph projects; the register is the "
+                           "ETP-T2 deliverable and the graph projects its hazard entries",
     },
     "tool": {
         "path": "forensics/tools/traceability.py",
