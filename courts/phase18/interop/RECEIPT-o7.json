@@ -1,30 +1,123 @@
 {
- "schema": "openssl-rs/interop-matrix-receipt/2",
+ "schema": "openssl-rs/interop-matrix-receipt/3",
  "item": "O7 of docs/ETP-TODO.md",
- "status": "WITHDRAWN",
- "withdrawn": true,
- "withdrawn_on": "2026-11-22T01:15:35Z",
- "superseded_by": [
-  "docs/ETP-TODO.md O7 row (PARTIAL, first result withdrawn)",
-  "courts/phase18/interop/RECEIPT-o7-<CELL>.json written by the fixed cell.sh, once the cells have been re-run"
- ],
- "withdrawn_claims": [
-  "that cells AA, BB, BA and AB each produced the same two failures with no cross-cell difference",
-  "that all four cells had been run against the intended pair of libraries"
- ],
- "why_withdrawn": [
-  "configure writes an absolute BUILDDIR into the Makefile, so a copied tree launched the source tree's binaries",
-  "the cell wrappers were generated with an escaped '$@', so every argument was dropped before the binary ran",
-  "the mapping check compared the set of libraries present in the cell rather than which process mapped which",
-  "consequence: BA and AB were silently AA runs, and the mapping check could not have detected it"
- ],
- "what_remains_established": {
-  "AA": "the O6/O9 runs of tree-A (client and server both the reference build), published logs {\"o9-a\": {\"bytes\": 244607, \"path\": \"courts/phase18/interop/logs/0b1705155292e12ef961489f996039b05a3ead8fab0a9d96865b8b2cbd7dee39.log\", \"sha256\": \"0b1705155292e12ef961489f996039b05a3ead8fab0a9d96865b8b2cbd7dee39\"}}",
-  "BB": "the O6/O9 runs of tree-B (client and server both the candidate build), published logs {\"o9-b\": {\"bytes\": 244585, \"path\": \"courts/phase18/interop/logs/e89dc3ed076ffcc498ace60419895b548905f351ce4e96ab3420fab85c1679bc.log\", \"sha256\": \"e89dc3ed076ffcc498ace60419895b548905f351ce4e96ab3420fab85c1679bc\"}}",
-  "note": "AA and BB do not need the cell wrapper at all: the harness launches that tree's own binaries, and BUILDDIR matches the tree."
+ "status": "ESTABLISHED",
+ "withdrawn": false,
+ "generated": "2026-11-22T02:25:53Z",
+ "supersedes": "RECEIPT-o7.json revision 2 (WITHDRAWN) and the three per-cell receipts marked withdrawn",
+ "venue": {
+  "court": "docker/openssl-rs-court-tools:1, cgroup cap 6g/6g (available was 22 GiB)",
+  "why_rebuilt": [
+   "the trees and the third-party tools had been built on the host against a newer glibc and do not run in the court (`GLIBC_2.38`/`GLIBC_2.42` not found, `libcrypt.so.2` missing)",
+   "so build_trees.sh and build_tools.sh were re-run inside the court; both exit 0"
+  ],
+  "court_environment_requirements": [
+   "an `sshd` privilege-separation user and /var/empty",
+   "a subreaper: PID 1 in the container does not reap orphans, so ssh-agent becomes a zombie and `kill -0` stops t-exec advancing past agent-subprocess",
+   "the authority `openssl` CLI on PATH (ssh2putty.sh calls it)"
+  ],
+  "untracked_helpers": "court/tmp/o4/{subreaper,openssl shim} - venue aids, not test changes"
  },
- "not_established": [
-  "BA",
-  "AB"
- ]
+ "cells": {
+  "AA": {
+   "client": {
+    "build": "A",
+    "mapped": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3"
+   },
+   "server": {
+    "build": "A",
+    "mapped": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3"
+   },
+   "mapping_status": "ok",
+   "log": "courts/phase18/interop/logs/a84df93b764eebbabc563e5d07e24a0f14dd4523546a50f193e008e4c43ba054.log",
+   "log_sha256": "a84df93b764eebbabc563e5d07e24a0f14dd4523546a50f193e008e4c43ba054",
+   "make_k_tests_exit": 2,
+   "failed_scripts": [
+    "dropbear kex"
+   ],
+   "ok": 87,
+   "skipped": 7,
+   "run_test_lines": 96
+  },
+  "BB": {
+   "client": {
+    "build": "B",
+    "mapped": "/work/court/tmp/o4/b-prefix/lib/libcrypto.so.3"
+   },
+   "server": {
+    "build": "B",
+    "mapped": "/work/court/tmp/o4/b-prefix/lib/libcrypto.so.3"
+   },
+   "mapping_status": "ok",
+   "log": "courts/phase18/interop/logs/1a23987ae2ea2bee94eb68f3946e7751c03322ea5d0586cb6ac154c349fdc317.log",
+   "log_sha256": "1a23987ae2ea2bee94eb68f3946e7751c03322ea5d0586cb6ac154c349fdc317",
+   "make_k_tests_exit": 2,
+   "failed_scripts": [
+    "dropbear kex"
+   ],
+   "ok": 87,
+   "skipped": 7,
+   "run_test_lines": 96
+  },
+  "BA": {
+   "client": {
+    "build": "B",
+    "mapped": "/work/court/tmp/o4/b-prefix/lib/libcrypto.so.3"
+   },
+   "server": {
+    "build": "A",
+    "mapped": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3"
+   },
+   "mapping_status": "ok",
+   "log": "courts/phase18/interop/logs/c68bac29f439fe886b4e24ccd4dcfccbbd8af255feebcf7a121c6d90c40badb5.log",
+   "log_sha256": "c68bac29f439fe886b4e24ccd4dcfccbbd8af255feebcf7a121c6d90c40badb5",
+   "make_k_tests_exit": 2,
+   "failed_scripts": [
+    "dropbear kex"
+   ],
+   "ok": 87,
+   "skipped": 7,
+   "run_test_lines": 96
+  },
+  "AB": {
+   "client": {
+    "build": "A",
+    "mapped": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3"
+   },
+   "server": {
+    "build": "B",
+    "mapped": "/work/court/tmp/o4/b-prefix/lib/libcrypto.so.3"
+   },
+   "mapping_status": "ok",
+   "log": "courts/phase18/interop/logs/e140180a9b6f369ffe16a2ecb3bdab55b9a797c6eeb2069896bd534b5e4be4c1.log",
+   "log_sha256": "e140180a9b6f369ffe16a2ecb3bdab55b9a797c6eeb2069896bd534b5e4be4c1",
+   "make_k_tests_exit": 2,
+   "failed_scripts": [
+    "dropbear kex"
+   ],
+   "ok": 87,
+   "skipped": 7,
+   "run_test_lines": 96
+  }
+ },
+ "hypothesis_tested": "the BA/AB host-key mismatch seen in the host venue was a stale copied regress .ssh/known_hosts, not a cross-library difference",
+ "hypothesis_result": "confirmed: with the copied known_hosts removed, no host-key mismatch occurs in any cell, and no dropbear ciphers failure occurs either",
+ "result": {
+  "all_four_cells_genuine": true,
+  "only_failing_script": "dropbear kex",
+  "classification": "upstream-common and unsupported, not candidate-specific: dbclient's own transcript says `No matching algo kex` (Dropbear 2026.94 does not offer diffie-hellman-group14-sha1, which dropbear-kex.sh forces on the server)",
+  "counts": {
+   "ok": 87,
+   "skipped": 7,
+   "run_test_lines": 96,
+   "failed": 1,
+   "identical_across_cells": true
+  }
+ },
+ "hazard_recorded": {
+  "what": "`t-exec` iterates `$?` - the prerequisites newer than the target - so the set of scripts it runs depends on file mtimes",
+  "evidence": "the same tree and the same make target ran 73 scripts on the host and 96 in the court, where the tree had just been extracted and built",
+  "consequence": "the two venues' counts are not comparable, and a run can silently cover fewer scripts than intended",
+  "fix_pending": "touch regress/*.sh before the run so the selection is maximal and deterministic; not yet in cell.sh"
+ }
 }

@@ -1,5 +1,33 @@
 {
  "logs": {
+  "cell-AA": {
+   "bytes": 198322,
+   "origin": "cell-AA (copied from the run's work directory; the bytes are verbatim)",
+   "path": "courts/phase18/interop/logs/a84df93b764eebbabc563e5d07e24a0f14dd4523546a50f193e008e4c43ba054.log",
+   "published": "2026-11-22T02:25:35Z",
+   "sha256": "a84df93b764eebbabc563e5d07e24a0f14dd4523546a50f193e008e4c43ba054"
+  },
+  "cell-AB": {
+   "bytes": 196306,
+   "origin": "cell-AB (copied from the run's work directory; the bytes are verbatim)",
+   "path": "courts/phase18/interop/logs/e140180a9b6f369ffe16a2ecb3bdab55b9a797c6eeb2069896bd534b5e4be4c1.log",
+   "published": "2026-11-22T02:25:35Z",
+   "sha256": "e140180a9b6f369ffe16a2ecb3bdab55b9a797c6eeb2069896bd534b5e4be4c1"
+  },
+  "cell-BA": {
+   "bytes": 198318,
+   "origin": "cell-BA (copied from the run's work directory; the bytes are verbatim)",
+   "path": "courts/phase18/interop/logs/c68bac29f439fe886b4e24ccd4dcfccbbd8af255feebcf7a121c6d90c40badb5.log",
+   "published": "2026-11-22T02:25:35Z",
+   "sha256": "c68bac29f439fe886b4e24ccd4dcfccbbd8af255feebcf7a121c6d90c40badb5"
+  },
+  "cell-BB": {
+   "bytes": 196302,
+   "origin": "cell-BB (copied from the run's work directory; the bytes are verbatim)",
+   "path": "courts/phase18/interop/logs/1a23987ae2ea2bee94eb68f3946e7751c03322ea5d0586cb6ac154c349fdc317.log",
+   "published": "2026-11-22T02:25:35Z",
+   "sha256": "1a23987ae2ea2bee94eb68f3946e7751c03322ea5d0586cb6ac154c349fdc317"
+  },
   "o6-a-k": {
    "bytes": 103179,
    "origin": "o6-a-k (copied from the run's work directory; the bytes are verbatim)",
