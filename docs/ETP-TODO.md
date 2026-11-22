@@ -238,6 +238,14 @@ Addendum B was admitted ahead of the remaining B/E items on instruction, and its
 was interrupted on. The override does not move the curl consumer, which stays
 last, and it does not discharge any open item in sections B–E.
 
+The Addendum B position was then superseded again on instruction: the Performance
+Frontier Programme (section J) executes next, ahead of the remaining D, E and F
+items, and the queue resumes at the item it was interrupted on (`ETP-3`). Each
+override is recorded here rather than implied, because a normative execution
+policy needs an authoritative inventory and a traceable history of its own
+changes; the enumerations in this file are reconciled against the affected rows
+at every checkpoint.
+
 An item that is `BLOCKED` is recorded with its blocker and the next item in the
 same section begins; it is revisited when the blocker changes. Nothing is
 declared complete without the evidence named in its row.
@@ -262,3 +270,30 @@ establish availability of its payload; a transparency log is not a revocation
 system; an authentic historical assertion may be currently invalid; experimental
 post-quantum features are not production post-quantum security; registration in a
 public-good log is not endorsement by its operator.
+
+---
+
+## J. Performance Frontier Programme (separate queue)
+
+Normative programme: `docs/PERFORMANCE-FRONTIER.md`. Work queue:
+`docs/PERFORMANCE-FRONTIER-TODO.md`, items `PFP-0` … `PFP-17`.
+
+This is a separate queue because it is a distinct concern with its own governing
+standard, not a re-lettering of sections B–G. Its bindings on this queue are:
+
+- every performance result is an ETP claim under `docs/ETP-CLAIM-ALGEBRA.md` and
+  carries a candidate identity, instrument identity, population, scope, threat
+  model and obligations;
+- performance classifications (`MEASURED`, `COMPETITIVE`, `PARITY_ESTABLISHED`,
+  `AHEAD`, `FRONTIER_LEADING`, `INDEPENDENTLY_REPRODUCED_FRONTIER`) are disjoint
+  from `SAFE_COMPATIBLE` and from semantic assurance;
+- a faster arm without the differential courts and the binary constant-time
+  audit at the same digest is an experiment, not a candidate;
+- `PFP-1` and `PFP-2` overlap the open timing obligations T23, T24 and T29's
+  residuals; a performance result never discharges a timing obligation, and a
+  timing obligation is never traded for speed;
+- a result measured on the virtualised court is `SCOPED_OBSERVATION` and is not
+  a frontier result; `FRONTIER_LEADING` requires bare metal with a PMU on every
+  platform the claim covers.
+
+Nothing in section J alters the curl consumer's position as last.
