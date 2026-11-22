@@ -73,7 +73,7 @@ Two statuses are distinct and are never conflated:
 | court image | `openssl-rs-court-tools:1` |
 | kernel / CPU | `7.3.5-2-cachyos` / 13th Gen Intel Core i9-13900K |
 | hardware PMU | **absent**: `cpuid.0A.version=0`, `num_general_counters=0`, `cpuid.1 hypervisor_present=1`, no `cpu` event source, `perf stat -e cycles` prints `<not supported>` |
-| network | absent |
+| network | **present** (corrected at ETP-4): `getent hosts crates.io` resolves; `curl -sSI https://static.crates.io/` returns HTTP/2 404 (host reachable), GitHub and `static.rust-lang.org` return 200, `apt-get update` exits 0. The earlier entry recorded "absent", which ETP-4's tool-availability probe falsified |
 
 The missing PMU is a **venue limitation, not an instrument property**. It is
 the reason performance rows are `SCOPED_OBSERVATION`; it is not a defect of
@@ -279,8 +279,11 @@ method rather than as a pass:
   solver version at run time. Consequently **no live BINSEC secure verdict was
   produced in this session**; the T16 `CRYPTO_memcmp` result remains bound to
   its earlier record.
-- **TIMECOP/SUPERCOP (`RECORDED`).** The court has no network and the
-  SUPERCOP 20190816 tarball is not present. The register binds the control to
+- **TIMECOP/SUPERCOP (`RECORDED`).** The SUPERCOP 20190816 tarball is
+  not present, which is why the control was not re-executed at ETP-3. The
+  network entry above is corrected: reachability was established at ETP-4, so
+  absence of the tarball is a missing artefact, not a missing route. The
+  register binds the control to
   the tracked runner's digest and asserts the `valgrind_pass` /
   `valgrind_fail` strings and the `zz-leaky-control` fixture. Re-execution is
   the settling method.

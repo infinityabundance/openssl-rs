@@ -23,7 +23,7 @@
   "limitations": [
    "no hardware PMU, no frequency/turbo/SMT control, no core isolation beyond taskset -c 1: timing rows are SCOPED_OBSERVATION",
    "the absence of a PMU is a property of this venue, not of perf, tsc_clock or the crate",
-   "the court has no network: TIMECOP/SUPERCOP cannot be re-fetched, so that control is RECORDED, not re-executed",
+   "the SUPERCOP tarball is absent, so the TIMECOP control is RECORDED, not re-executed. Corrected at ETP-4: the network is present (crates.io, GitHub and static.rust-lang.org all reachable, apt-get update exits 0), so this is a missing artefact and not a missing route",
    "the dudect header is not vendored in the repository; its pinned tree must be present as a declared prerequisite or the dudect control refuses"
   ]
  },
@@ -182,7 +182,7 @@
     "observed": "Binsec version 0.11.3",
     "identity_method": "the wrapper prints the binsec version, the solver version, the SSE-script path and the SHA-256 of the ELF it is about to explore; BINSEC_EXPECT_SHA256 refuses a different binary before the tool runs",
     "components": {
-     "z3": "UNKNOWN in this session: no z3 is present in the tools image and the pinned /opt/z3-solver directory is absent. The wrapper refuses (exit 2) rather than running with the incomplete internal solver. Settling method: restore the pinned z3-4.13.0 or set BINSEC_Z3; the wrapper prints the solver version at run time.",
+     "z3": "UNKNOWN in this session: no z3 is present in the tools image and the pinned /opt/z3-solver directory is absent. The wrapper refuses (exit 2) rather than running with the incomplete internal solver. Settling method: restore the pinned z3-4.13.0 or set BINSEC_Z3; the wrapper prints the solver version at run time. A session-local z3 4.8.12 was installed at ETP-4 for a tool-availability probe; the pinned image is unchanged, so this entry stays UNKNOWN for the image.",
      "opam_switch": "4.14.2"
     }
    },
