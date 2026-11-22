@@ -1,0 +1,2199 @@
+Makefile:702: warning: ignoring prerequisites on suffix rule definition
+/usr/bin/mkdir -p `pwd`/regress/unittests/test_helper
+/usr/bin/mkdir -p `pwd`/regress/unittests/authopt
+/usr/bin/mkdir -p `pwd`/regress/unittests/bitmap
+/usr/bin/mkdir -p `pwd`/regress/unittests/conversion
+/usr/bin/mkdir -p `pwd`/regress/unittests/hostkeys
+/usr/bin/mkdir -p `pwd`/regress/unittests/kex
+/usr/bin/mkdir -p `pwd`/regress/unittests/match
+/usr/bin/mkdir -p `pwd`/regress/unittests/misc
+/usr/bin/mkdir -p `pwd`/regress/unittests/sshbuf
+/usr/bin/mkdir -p `pwd`/regress/unittests/sshkey
+/usr/bin/mkdir -p `pwd`/regress/unittests/sshsig
+/usr/bin/mkdir -p `pwd`/regress/unittests/utf8
+/usr/bin/mkdir -p `pwd`/regress/misc/sk-dummy
+[ -f `pwd`/regress/Makefile ] || \
+    ln -s `cd . && pwd`/regress/Makefile `pwd`/regress/Makefile
+(cd openbsd-compat && make)
+make[1]: Entering directory '/work/court/tmp/o4/cell-BA/openbsd-compat'
+make[1]: Nothing to be done for 'all'.
+make[1]: Leaving directory '/work/court/tmp/o4/cell-BA/openbsd-compat'
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -o regress/modpipe ./regress/modpipe.c \
+-L. -Lopenbsd-compat/ -L/work/forensics/authorities/prefix/openssl-3.6.4-production/lib  -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -fstack-protector-strong -pie  -lssh -lopenbsd-compat -lssh -lopenbsd-compat  -lcrypto  -lz
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -o regress/timestamp ./regress/timestamp.c \
+-L. -Lopenbsd-compat/ -L/work/forensics/authorities/prefix/openssl-3.6.4-production/lib  -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -fstack-protector-strong -pie  -lssh -lopenbsd-compat -lssh -lopenbsd-compat  -lcrypto  -lz
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -o regress/setuid-allowed ./regress/setuid-allowed.c \
+-L. -Lopenbsd-compat/ -L/work/forensics/authorities/prefix/openssl-3.6.4-production/lib  -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -fstack-protector-strong -pie  -lssh -lopenbsd-compat -lssh -lopenbsd-compat  -lcrypto  -lz
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -o regress/netcat ./regress/netcat.c \
+-L. -Lopenbsd-compat/ -L/work/forensics/authorities/prefix/openssl-3.6.4-production/lib  -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -fstack-protector-strong -pie  -lssh -lopenbsd-compat -lssh -lopenbsd-compat  -lcrypto  -lz
+/usr/bin/ld: /tmp/ccxGKb6j.o: in function `main':
+/work/court/tmp/o4/cell-BA/./regress/netcat.c:332: warning: the use of `mktemp' is dangerous, better use `mkstemp' or `mkdtemp'
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -o regress/check-perm ./regress/check-perm.c \
+-L. -Lopenbsd-compat/ -L/work/forensics/authorities/prefix/openssl-3.6.4-production/lib  -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -fstack-protector-strong -pie  -lssh -lopenbsd-compat -lssh -lopenbsd-compat  -lcrypto  -lz
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -o regress/mkdtemp ./regress/mkdtemp.c \
+-L. -Lopenbsd-compat/ -L/work/forensics/authorities/prefix/openssl-3.6.4-production/lib  -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -fstack-protector-strong -pie  -lssh -lopenbsd-compat -lssh -lopenbsd-compat  -lcrypto  -lz
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong   -fPIC -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/misc/sk-dummy/sk-dummy.c -o regress/misc/sk-dummy/sk-dummy.lo
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong   -fPIC -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/misc/sk-dummy/fatal.c -o regress/misc/sk-dummy/fatal.lo
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong   -fPIC -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c ed25519.c -o ed25519.lo
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong   -fPIC -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c hash.c -o hash.lo
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -fPIC -shared -o regress/misc/sk-dummy/sk-dummy.so regress/misc/sk-dummy/sk-dummy.lo regress/misc/sk-dummy/fatal.lo ed25519.lo hash.lo \
+    -L. -Lopenbsd-compat -lopenbsd-compat -L. -Lopenbsd-compat/ -L/work/forensics/authorities/prefix/openssl-3.6.4-production/lib  -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -fstack-protector-strong   -lcrypto  -lz
+cd ./regress || exit $?; \
+EGREP='/usr/bin/grep -E' \
+OPENSSL_BIN='' \
+make \
+	.CURDIR="/work/court/tmp/o4/tree-A/regress" \
+	.OBJDIR="/work/court/tmp/o4/cell-BA/regress" \
+	BUILDDIR="/work/court/tmp/o4/cell-BA" \
+	OBJ="/work/court/tmp/o4/cell-BA/regress" \
+	PATH="/work/court/tmp/o4/cell-BA:${PATH}" \
+	TEST_ENV=MALLOC_OPTIONS="" \
+	TEST_MALLOC_OPTIONS="" \
+	TEST_SSH_SCP="/work/court/tmp/o4/cell-BA/scp" \
+	TEST_SSH_SSH="/work/court/tmp/o4/cell-BA/ssh" \
+	TEST_SSH_SSHD="/work/court/tmp/o4/cell-BA/sshd" \
+	TEST_SSH_SSHD_SESSION="/work/court/tmp/o4/cell-BA/sshd-session" \
+	TEST_SSH_SSHAGENT="/work/court/tmp/o4/cell-BA/ssh-agent" \
+	TEST_SSH_SSHADD="/work/court/tmp/o4/cell-BA/ssh-add" \
+	TEST_SSH_SSHKEYGEN="/work/court/tmp/o4/cell-BA/ssh-keygen" \
+	TEST_SSH_SSHPKCS11HELPER="/work/court/tmp/o4/cell-BA/ssh-pkcs11-helper" \
+	TEST_SSH_SSHKEYSCAN="/work/court/tmp/o4/cell-BA/ssh-keyscan" \
+	TEST_SSH_SFTP="/work/court/tmp/o4/cell-BA/sftp" \
+	TEST_SSH_PKCS11_HELPER="/work/court/tmp/o4/cell-BA/ssh-pkcs11-helper" \
+	TEST_SSH_SK_HELPER="/work/court/tmp/o4/cell-BA/ssh-sk-helper" \
+	TEST_SSH_SFTPSERVER="/work/court/tmp/o4/cell-BA/sftp-server" \
+	TEST_SSH_MODULI_FILE="/work/court/tmp/o4/tree-A/moduli" \
+	TEST_SSH_PLINK="/work/court/tmp/o3/prefix/bin/plink" \
+	TEST_SSH_PUTTYGEN="/work/court/tmp/o3/prefix/bin/puttygen" \
+	TEST_SSH_CONCH="" \
+	TEST_SSH_DROPBEAR="/work/court/tmp/o3/prefix/sbin/dropbear" \
+	TEST_SSH_DROPBEARKEY="/work/court/tmp/o3/prefix/bin/dropbearkey" \
+	TEST_SSH_DROPBEARCONVERT="/work/court/tmp/o3/prefix/bin/dropbearconvert" \
+	TEST_SSH_DBCLIENT="/work/court/tmp/o3/prefix/bin/dbclient" \
+	TEST_SSH_IPV6="yes" \
+	TEST_SSH_UTF8="no" \
+	TEST_SHELL="sh" \
+	EXEEXT="" \
+	file-tests && echo all file-tests passed
+make[1]: Entering directory '/work/court/tmp/o4/cell-BA/regress'
+set -xe ; if /work/court/tmp/o4/cell-BA/ssh -Q key | grep -q "^ssh-rsa" ; then \
+	/work/court/tmp/o4/cell-BA/ssh-keygen -if /work/court/tmp/o4/tree-A/regress/rsa_ssh2.prv | diff - /work/court/tmp/o4/tree-A/regress/rsa_openssh.prv ; \
+	tr '\n' '\r' </work/court/tmp/o4/tree-A/regress/rsa_ssh2.prv > /work/court/tmp/o4/cell-BA/regress/rsa_ssh2_cr.prv ; \
+	/work/court/tmp/o4/cell-BA/ssh-keygen -if /work/court/tmp/o4/cell-BA/regress/rsa_ssh2_cr.prv | diff - /work/court/tmp/o4/tree-A/regress/rsa_openssh.prv ; \
+	awk '{print $0 "\r"}' /work/court/tmp/o4/tree-A/regress/rsa_ssh2.prv > /work/court/tmp/o4/cell-BA/regress/rsa_ssh2_crnl.prv ; \
+	/work/court/tmp/o4/cell-BA/ssh-keygen -if /work/court/tmp/o4/cell-BA/regress/rsa_ssh2_crnl.prv | diff - /work/court/tmp/o4/tree-A/regress/rsa_openssh.prv ; \
+fi
++ /work/court/tmp/o4/cell-BA/ssh -Q key
++ grep -q ^ssh-rsa
++ /work/court/tmp/o4/cell-BA/ssh-keygen -if /work/court/tmp/o4/tree-A/regress/rsa_ssh2.prv
++ diff - /work/court/tmp/o4/tree-A/regress/rsa_openssh.prv
++ tr \n \r
++ diff - /work/court/tmp/o4/tree-A/regress/rsa_openssh.prv
++ /work/court/tmp/o4/cell-BA/ssh-keygen -if /work/court/tmp/o4/cell-BA/regress/rsa_ssh2_cr.prv
++ awk {print $0 "\r"} /work/court/tmp/o4/tree-A/regress/rsa_ssh2.prv
++ /work/court/tmp/o4/cell-BA/ssh-keygen -if /work/court/tmp/o4/cell-BA/regress/rsa_ssh2_crnl.prv
++ diff - /work/court/tmp/o4/tree-A/regress/rsa_openssh.prv
+set -xe ; if /work/court/tmp/o4/cell-BA/ssh -Q key | grep -q "^ssh-rsa" ; then \
+	cat /work/court/tmp/o4/tree-A/regress/rsa_openssh.prv > /work/court/tmp/o4/cell-BA/regress/t2.out ; \
+	chmod 600 /work/court/tmp/o4/cell-BA/regress/t2.out ; \
+	/work/court/tmp/o4/cell-BA/ssh-keygen -yf /work/court/tmp/o4/cell-BA/regress/t2.out | diff - /work/court/tmp/o4/tree-A/regress/rsa_openssh.pub ; \
+fi
++ grep -q ^ssh-rsa
++ /work/court/tmp/o4/cell-BA/ssh -Q key
++ cat /work/court/tmp/o4/tree-A/regress/rsa_openssh.prv
++ chmod 600 /work/court/tmp/o4/cell-BA/regress/t2.out
++ /work/court/tmp/o4/cell-BA/ssh-keygen -yf /work/court/tmp/o4/cell-BA/regress/t2.out
++ diff - /work/court/tmp/o4/tree-A/regress/rsa_openssh.pub
+set -xe ; if /work/court/tmp/o4/cell-BA/ssh -Q key | grep -q "^ssh-rsa" ; then \
+	/work/court/tmp/o4/cell-BA/ssh-keygen -ef /work/court/tmp/o4/tree-A/regress/rsa_openssh.pub >/work/court/tmp/o4/cell-BA/regress/t3.out ; \
+	/work/court/tmp/o4/cell-BA/ssh-keygen -if /work/court/tmp/o4/cell-BA/regress/t3.out | diff - /work/court/tmp/o4/tree-A/regress/rsa_openssh.pub ; \
+fi
++ /work/court/tmp/o4/cell-BA/ssh -Q key
++ grep -q ^ssh-rsa
++ /work/court/tmp/o4/cell-BA/ssh-keygen -ef /work/court/tmp/o4/tree-A/regress/rsa_openssh.pub
++ diff - /work/court/tmp/o4/tree-A/regress/rsa_openssh.pub
++ /work/court/tmp/o4/cell-BA/ssh-keygen -if /work/court/tmp/o4/cell-BA/regress/t3.out
+set -xe ; if /work/court/tmp/o4/cell-BA/ssh -Q key | grep -q "^ssh-rsa" ; then \
+	/work/court/tmp/o4/cell-BA/ssh-keygen -E md5 -lf /work/court/tmp/o4/tree-A/regress/rsa_openssh.pub |\
+		awk '{print $2}' | diff - /work/court/tmp/o4/tree-A/regress/t4.ok ; \
+fi
++ /work/court/tmp/o4/cell-BA/ssh -Q key
++ grep -q ^ssh-rsa
++ /work/court/tmp/o4/cell-BA/ssh-keygen -E+  md5 -lf /work/court/tmp/o4/tree-A/regress/rsa_openssh.pub
+awk {print $2}
++ diff - /work/court/tmp/o4/tree-A/regress/t4.ok
+set -xe ; if /work/court/tmp/o4/cell-BA/ssh -Q key | grep -q "^ssh-rsa" ; then \
+	/work/court/tmp/o4/cell-BA/ssh-keygen -Bf /work/court/tmp/o4/tree-A/regress/rsa_openssh.pub |\
+		awk '{print $2}' | diff - /work/court/tmp/o4/tree-A/regress/t5.ok ; \
+fi
++ /work/court/tmp/o4/cell-BA/ssh+  -Q key
+grep -q ^ssh-rsa
++ + /work/court/tmp/o4/cell-BA/ssh-keygen -Bfawk /work/court/tmp/o4/tree-A/regress/rsa_openssh.pub
+ {print $2}
++ diff - /work/court/tmp/o4/tree-A/regress/t5.ok
+set -xe ; if /work/court/tmp/o4/cell-BA/ssh -Q key | grep -q "^ssh-dss" ; then \
+	/work/court/tmp/o4/cell-BA/ssh-keygen -if /work/court/tmp/o4/tree-A/regress/dsa_ssh2.prv > /work/court/tmp/o4/cell-BA/regress/t6.out1 ; \
+	/work/court/tmp/o4/cell-BA/ssh-keygen -if /work/court/tmp/o4/tree-A/regress/dsa_ssh2.pub > /work/court/tmp/o4/cell-BA/regress/t6.out2 ; \
+	chmod 600 /work/court/tmp/o4/cell-BA/regress/t6.out1 ; \
+	/work/court/tmp/o4/cell-BA/ssh-keygen -yf /work/court/tmp/o4/cell-BA/regress/t6.out1 | diff - /work/court/tmp/o4/cell-BA/regress/t6.out2 ; \
+fi
++ /work/court/tmp/o4/cell-BA/ssh -Q key
++ grep -q ^ssh-dss
+set -xe ; if /work/court/tmp/o4/cell-BA/ssh -Q key | grep -q "^ssh-dss" ; then \
+	/work/court/tmp/o4/cell-BA/ssh-keygen -q -t rsa -N '' -f /work/court/tmp/o4/cell-BA/regress/t7.out ; \
+fi
++ /work/court/tmp/o4/cell-BA/ssh -Q key
++ grep -q ^ssh-dss
+set -xe ; if /work/court/tmp/o4/cell-BA/ssh -Q key | grep -q "^ssh-dss" ; then \
+	/work/court/tmp/o4/cell-BA/ssh-keygen -lf /work/court/tmp/o4/cell-BA/regress/t7.out > /dev/null ; \
+	/work/court/tmp/o4/cell-BA/ssh-keygen -Bf /work/court/tmp/o4/cell-BA/regress/t7.out > /dev/null ; \
+fi
++ /work/court/tmp/o4/cell-BA/ssh -Q key
++ grep -q ^ssh-dss
+set -xe ; if ssh -Q key | grep -q "^ssh-dss" ; then \
+	/work/court/tmp/o4/cell-BA/ssh-keygen -q -t dsa -N '' -f /work/court/tmp/o4/cell-BA/regress/t8.out ; \
+fi
++ ssh -Q key
++ grep -q ^ssh-dss
+set -xe ; if ssh -Q key | grep -q "^ssh-dss" ; then \
+	/work/court/tmp/o4/cell-BA/ssh-keygen -lf /work/court/tmp/o4/cell-BA/regress/t8.out > /dev/null ; \
+	/work/court/tmp/o4/cell-BA/ssh-keygen -Bf /work/court/tmp/o4/cell-BA/regress/t8.out > /dev/null ; \
+fi
++ ssh -Q key
++ grep -q ^ssh-dss
+! /work/court/tmp/o4/cell-BA/ssh -Q key-plain | grep ecdsa >/dev/null || \
+/work/court/tmp/o4/cell-BA/ssh-keygen -q -t ecdsa -N '' -f /work/court/tmp/o4/cell-BA/regress/t9.out
+! /work/court/tmp/o4/cell-BA/ssh -Q key-plain | grep ecdsa >/dev/null || \
+/work/court/tmp/o4/cell-BA/ssh-keygen -lf /work/court/tmp/o4/cell-BA/regress/t9.out > /dev/null
+! /work/court/tmp/o4/cell-BA/ssh -Q key-plain | grep ecdsa >/dev/null || \
+/work/court/tmp/o4/cell-BA/ssh-keygen -Bf /work/court/tmp/o4/cell-BA/regress/t9.out > /dev/null
+/work/court/tmp/o4/cell-BA/ssh-keygen -q -t ed25519 -N '' -f /work/court/tmp/o4/cell-BA/regress/t10.out
+/work/court/tmp/o4/cell-BA/ssh-keygen -lf /work/court/tmp/o4/cell-BA/regress/t10.out > /dev/null
+/work/court/tmp/o4/cell-BA/ssh-keygen -Bf /work/court/tmp/o4/cell-BA/regress/t10.out > /dev/null
+set -xe ; if /work/court/tmp/o4/cell-BA/ssh -Q key | grep -q "^ssh-dss" ; then \
+	/work/court/tmp/o4/cell-BA/ssh-keygen -E sha256 -lf /work/court/tmp/o4/tree-A/regress/rsa_openssh.pub |\
+		awk '{print $2}' | diff - /work/court/tmp/o4/tree-A/regress/t11.ok ; \
+fi
++ /work/court/tmp/o4/cell-BA/ssh -Q key
++ grep -q ^ssh-dss
+/work/court/tmp/o4/cell-BA/ssh-keygen -q -t ed25519 -N '' -C 'test-comment-1234' -f /work/court/tmp/o4/cell-BA/regress/t12.out
+/work/court/tmp/o4/cell-BA/ssh-keygen -lf /work/court/tmp/o4/cell-BA/regress/t12.out.pub | grep test-comment-1234 >/dev/null
+make[1]: Leaving directory '/work/court/tmp/o4/cell-BA/regress'
+all file-tests passed
+cd ./regress || exit $?; \
+EGREP='/usr/bin/grep -E' \
+OPENSSL_BIN='' \
+make \
+	.CURDIR="/work/court/tmp/o4/tree-A/regress" \
+	.OBJDIR="/work/court/tmp/o4/cell-BA/regress" \
+	BUILDDIR="/work/court/tmp/o4/cell-BA" \
+	OBJ="/work/court/tmp/o4/cell-BA/regress" \
+	PATH="/work/court/tmp/o4/cell-BA:${PATH}" \
+	TEST_ENV=MALLOC_OPTIONS="" \
+	TEST_MALLOC_OPTIONS="" \
+	TEST_SSH_SCP="/work/court/tmp/o4/cell-BA/scp" \
+	TEST_SSH_SSH="/work/court/tmp/o4/cell-BA/ssh" \
+	TEST_SSH_SSHD="/work/court/tmp/o4/cell-BA/sshd" \
+	TEST_SSH_SSHD_SESSION="/work/court/tmp/o4/cell-BA/sshd-session" \
+	TEST_SSH_SSHAGENT="/work/court/tmp/o4/cell-BA/ssh-agent" \
+	TEST_SSH_SSHADD="/work/court/tmp/o4/cell-BA/ssh-add" \
+	TEST_SSH_SSHKEYGEN="/work/court/tmp/o4/cell-BA/ssh-keygen" \
+	TEST_SSH_SSHPKCS11HELPER="/work/court/tmp/o4/cell-BA/ssh-pkcs11-helper" \
+	TEST_SSH_SSHKEYSCAN="/work/court/tmp/o4/cell-BA/ssh-keyscan" \
+	TEST_SSH_SFTP="/work/court/tmp/o4/cell-BA/sftp" \
+	TEST_SSH_PKCS11_HELPER="/work/court/tmp/o4/cell-BA/ssh-pkcs11-helper" \
+	TEST_SSH_SK_HELPER="/work/court/tmp/o4/cell-BA/ssh-sk-helper" \
+	TEST_SSH_SFTPSERVER="/work/court/tmp/o4/cell-BA/sftp-server" \
+	TEST_SSH_MODULI_FILE="/work/court/tmp/o4/tree-A/moduli" \
+	TEST_SSH_PLINK="/work/court/tmp/o3/prefix/bin/plink" \
+	TEST_SSH_PUTTYGEN="/work/court/tmp/o3/prefix/bin/puttygen" \
+	TEST_SSH_CONCH="" \
+	TEST_SSH_DROPBEAR="/work/court/tmp/o3/prefix/sbin/dropbear" \
+	TEST_SSH_DROPBEARKEY="/work/court/tmp/o3/prefix/bin/dropbearkey" \
+	TEST_SSH_DROPBEARCONVERT="/work/court/tmp/o3/prefix/bin/dropbearconvert" \
+	TEST_SSH_DBCLIENT="/work/court/tmp/o3/prefix/bin/dbclient" \
+	TEST_SSH_IPV6="yes" \
+	TEST_SSH_UTF8="no" \
+	TEST_SHELL="sh" \
+	EXEEXT="" \
+	t-exec && echo all t-exec passed
+make[1]: Entering directory '/work/court/tmp/o4/cell-BA/regress'
+run test connect.sh ...
+ok simple connect
+run test proxy-connect.sh ...
+plain username comp=no
+plain username comp=yes
+username with style
+ok proxy connect
+run test sshfp-connect.sh ...
+SKIPPED: TEST_SSH_SSHFP_DOMAIN not set.
+run test connect-privsep.sh ...
+ok proxy connect with privsep
+run test connect-uri.sh ...
+uri connect: no trailing slash
+uri connect: trailing slash
+uri connect: with path name
+ok uri connect
+run test proto-version.sh ...
+ok sshd version with different protocol combinations
+run test proto-mismatch.sh ...
+ok protocol version mismatch
+run test exit-status.sh ...
+test remote exit status: status 0
+test remote exit status: status 1
+test remote exit status: status 4
+test remote exit status: status 5
+test remote exit status: status 44
+ok remote exit status
+run test exit-status-signal.sh ...
+ok exit status on signal
+run test envpass.sh ...
+test environment passing: pass env, don't accept
+test environment passing: setenv, don't accept
+test environment passing: don't pass env, accept
+test environment passing: pass single env, accept single env
+test environment passing: pass multiple env, accept multiple env
+test environment passing: setenv, accept
+test environment passing: setenv, first match wins
+test environment passing: server setenv wins
+test environment passing: server setenv wins
+ok environment passing
+run test transfer.sh ...
+ok transfer data
+run test banner.sh ...
+test banner: missing banner file
+test banner: size 0
+test banner: size 10
+test banner: size 100
+test banner: size 1000
+test banner: size 10000
+test banner: size 100000
+test banner: suppress banner (-q)
+ok banner
+run test rekey.sh ...
+client rekey KexAlgorithms=diffie-hellman-group1-sha1
+client rekey KexAlgorithms=diffie-hellman-group14-sha1
+client rekey KexAlgorithms=diffie-hellman-group14-sha256
+client rekey KexAlgorithms=diffie-hellman-group16-sha512
+client rekey KexAlgorithms=diffie-hellman-group18-sha512
+client rekey KexAlgorithms=diffie-hellman-group-exchange-sha1
+client rekey KexAlgorithms=diffie-hellman-group-exchange-sha256
+client rekey KexAlgorithms=ecdh-sha2-nistp256
+client rekey KexAlgorithms=ecdh-sha2-nistp384
+client rekey KexAlgorithms=ecdh-sha2-nistp521
+client rekey KexAlgorithms=curve25519-sha256
+client rekey KexAlgorithms=sntrup761x25519-sha512
+client rekey KexAlgorithms=sntrup761x25519-sha512@openssh.com
+client rekey KexAlgorithms=mlkem768x25519-sha256
+client rekey Ciphers=3des-cbc
+client rekey Ciphers=aes128-cbc
+client rekey Ciphers=aes192-cbc
+client rekey Ciphers=aes256-cbc
+client rekey Ciphers=aes128-ctr
+client rekey Ciphers=aes192-ctr
+client rekey Ciphers=aes256-ctr
+client rekey Ciphers=aes128-gcm@openssh.com
+client rekey Ciphers=aes256-gcm@openssh.com
+client rekey Ciphers=chacha20-poly1305@openssh.com
+client rekey MACs=hmac-sha1
+client rekey MACs=hmac-sha1-96
+client rekey MACs=hmac-sha2-256
+client rekey MACs=hmac-sha2-512
+client rekey MACs=hmac-md5
+client rekey MACs=hmac-md5-96
+client rekey MACs=umac-64@openssh.com
+client rekey MACs=umac-128@openssh.com
+client rekey MACs=hmac-sha1-etm@openssh.com
+client rekey MACs=hmac-sha1-96-etm@openssh.com
+client rekey MACs=hmac-sha2-256-etm@openssh.com
+client rekey MACs=hmac-sha2-512-etm@openssh.com
+client rekey MACs=hmac-md5-etm@openssh.com
+client rekey MACs=hmac-md5-96-etm@openssh.com
+client rekey MACs=umac-64-etm@openssh.com
+client rekey MACs=umac-128-etm@openssh.com
+client rekeylimit 16
+client rekeylimit 1k
+client rekeylimit 128k
+client rekeylimit 256k
+client rekeylimit default 5
+client rekeylimit default 10
+client rekeylimit default 5 no data
+client rekeylimit default 10 no data
+server rekeylimit 16
+server rekeylimit 1k
+server rekeylimit 128k
+server rekeylimit 256k
+server rekeylimit default 5 no data
+server rekeylimit default 10 no data
+rekeylimit parsing: bytes
+rekeylimit parsing: time
+ok rekey
+run test dhgex.sh ...
+dhgex bits 3072 diffie-hellman-group-exchange-sha1 3des-cbc
+dhgex bits 3072 diffie-hellman-group-exchange-sha256 3des-cbc
+dhgex bits 3072 diffie-hellman-group-exchange-sha1 aes128-cbc
+dhgex bits 3072 diffie-hellman-group-exchange-sha256 aes128-cbc
+dhgex bits 3072 diffie-hellman-group-exchange-sha1 aes128-ctr
+dhgex bits 3072 diffie-hellman-group-exchange-sha256 aes128-ctr
+dhgex bits 3072 diffie-hellman-group-exchange-sha1 aes128-gcm@openssh.com
+dhgex bits 3072 diffie-hellman-group-exchange-sha256 aes128-gcm@openssh.com
+dhgex bits 7680 diffie-hellman-group-exchange-sha1 aes192-cbc
+dhgex bits 7680 diffie-hellman-group-exchange-sha256 aes192-cbc
+dhgex bits 7680 diffie-hellman-group-exchange-sha1 aes192-ctr
+dhgex bits 7680 diffie-hellman-group-exchange-sha256 aes192-ctr
+dhgex bits 8192 diffie-hellman-group-exchange-sha1 aes256-cbc
+dhgex bits 8192 diffie-hellman-group-exchange-sha256 aes256-cbc
+dhgex bits 8192 diffie-hellman-group-exchange-sha1 aes256-ctr
+dhgex bits 8192 diffie-hellman-group-exchange-sha256 aes256-ctr
+dhgex bits 8192 diffie-hellman-group-exchange-sha1 aes256-gcm@openssh.com
+dhgex bits 8192 diffie-hellman-group-exchange-sha256 aes256-gcm@openssh.com
+dhgex bits 8192 diffie-hellman-group-exchange-sha1 chacha20-poly1305@openssh.com
+dhgex bits 8192 diffie-hellman-group-exchange-sha256 chacha20-poly1305@openssh.com
+ok dhgex
+run test stderr-data.sh ...
+test stderr data transfer: ()
+test stderr data transfer: (-n)
+ok stderr data transfer
+run test stderr-after-eof.sh ...
+ok stderr data after eof
+run test broken-pipe.sh ...
+ok broken pipe test
+run test try-ciphers.sh ...
+test try ciphers: cipher 3des-cbc mac hmac-sha1
+test try ciphers: cipher 3des-cbc mac hmac-sha1-96
+test try ciphers: cipher 3des-cbc mac hmac-sha2-256
+test try ciphers: cipher 3des-cbc mac hmac-sha2-512
+test try ciphers: cipher 3des-cbc mac hmac-md5
+test try ciphers: cipher 3des-cbc mac hmac-md5-96
+test try ciphers: cipher 3des-cbc mac umac-64@openssh.com
+test try ciphers: cipher 3des-cbc mac umac-128@openssh.com
+test try ciphers: cipher 3des-cbc mac hmac-sha1-etm@openssh.com
+test try ciphers: cipher 3des-cbc mac hmac-sha1-96-etm@openssh.com
+test try ciphers: cipher 3des-cbc mac hmac-sha2-256-etm@openssh.com
+test try ciphers: cipher 3des-cbc mac hmac-sha2-512-etm@openssh.com
+test try ciphers: cipher 3des-cbc mac hmac-md5-etm@openssh.com
+test try ciphers: cipher 3des-cbc mac hmac-md5-96-etm@openssh.com
+test try ciphers: cipher 3des-cbc mac umac-64-etm@openssh.com
+test try ciphers: cipher 3des-cbc mac umac-128-etm@openssh.com
+test try ciphers: cipher aes128-cbc mac hmac-sha1
+test try ciphers: cipher aes128-cbc mac hmac-sha1-96
+test try ciphers: cipher aes128-cbc mac hmac-sha2-256
+test try ciphers: cipher aes128-cbc mac hmac-sha2-512
+test try ciphers: cipher aes128-cbc mac hmac-md5
+test try ciphers: cipher aes128-cbc mac hmac-md5-96
+test try ciphers: cipher aes128-cbc mac umac-64@openssh.com
+test try ciphers: cipher aes128-cbc mac umac-128@openssh.com
+test try ciphers: cipher aes128-cbc mac hmac-sha1-etm@openssh.com
+test try ciphers: cipher aes128-cbc mac hmac-sha1-96-etm@openssh.com
+test try ciphers: cipher aes128-cbc mac hmac-sha2-256-etm@openssh.com
+test try ciphers: cipher aes128-cbc mac hmac-sha2-512-etm@openssh.com
+test try ciphers: cipher aes128-cbc mac hmac-md5-etm@openssh.com
+test try ciphers: cipher aes128-cbc mac hmac-md5-96-etm@openssh.com
+test try ciphers: cipher aes128-cbc mac umac-64-etm@openssh.com
+test try ciphers: cipher aes128-cbc mac umac-128-etm@openssh.com
+test try ciphers: cipher aes192-cbc mac hmac-sha1
+test try ciphers: cipher aes192-cbc mac hmac-sha1-96
+test try ciphers: cipher aes192-cbc mac hmac-sha2-256
+test try ciphers: cipher aes192-cbc mac hmac-sha2-512
+test try ciphers: cipher aes192-cbc mac hmac-md5
+test try ciphers: cipher aes192-cbc mac hmac-md5-96
+test try ciphers: cipher aes192-cbc mac umac-64@openssh.com
+test try ciphers: cipher aes192-cbc mac umac-128@openssh.com
+test try ciphers: cipher aes192-cbc mac hmac-sha1-etm@openssh.com
+test try ciphers: cipher aes192-cbc mac hmac-sha1-96-etm@openssh.com
+test try ciphers: cipher aes192-cbc mac hmac-sha2-256-etm@openssh.com
+test try ciphers: cipher aes192-cbc mac hmac-sha2-512-etm@openssh.com
+test try ciphers: cipher aes192-cbc mac hmac-md5-etm@openssh.com
+test try ciphers: cipher aes192-cbc mac hmac-md5-96-etm@openssh.com
+test try ciphers: cipher aes192-cbc mac umac-64-etm@openssh.com
+test try ciphers: cipher aes192-cbc mac umac-128-etm@openssh.com
+test try ciphers: cipher aes256-cbc mac hmac-sha1
+test try ciphers: cipher aes256-cbc mac hmac-sha1-96
+test try ciphers: cipher aes256-cbc mac hmac-sha2-256
+test try ciphers: cipher aes256-cbc mac hmac-sha2-512
+test try ciphers: cipher aes256-cbc mac hmac-md5
+test try ciphers: cipher aes256-cbc mac hmac-md5-96
+test try ciphers: cipher aes256-cbc mac umac-64@openssh.com
+test try ciphers: cipher aes256-cbc mac umac-128@openssh.com
+test try ciphers: cipher aes256-cbc mac hmac-sha1-etm@openssh.com
+test try ciphers: cipher aes256-cbc mac hmac-sha1-96-etm@openssh.com
+test try ciphers: cipher aes256-cbc mac hmac-sha2-256-etm@openssh.com
+test try ciphers: cipher aes256-cbc mac hmac-sha2-512-etm@openssh.com
+test try ciphers: cipher aes256-cbc mac hmac-md5-etm@openssh.com
+test try ciphers: cipher aes256-cbc mac hmac-md5-96-etm@openssh.com
+test try ciphers: cipher aes256-cbc mac umac-64-etm@openssh.com
+test try ciphers: cipher aes256-cbc mac umac-128-etm@openssh.com
+test try ciphers: cipher aes128-ctr mac hmac-sha1
+test try ciphers: cipher aes128-ctr mac hmac-sha1-96
+test try ciphers: cipher aes128-ctr mac hmac-sha2-256
+test try ciphers: cipher aes128-ctr mac hmac-sha2-512
+test try ciphers: cipher aes128-ctr mac hmac-md5
+test try ciphers: cipher aes128-ctr mac hmac-md5-96
+test try ciphers: cipher aes128-ctr mac umac-64@openssh.com
+test try ciphers: cipher aes128-ctr mac umac-128@openssh.com
+test try ciphers: cipher aes128-ctr mac hmac-sha1-etm@openssh.com
+test try ciphers: cipher aes128-ctr mac hmac-sha1-96-etm@openssh.com
+test try ciphers: cipher aes128-ctr mac hmac-sha2-256-etm@openssh.com
+test try ciphers: cipher aes128-ctr mac hmac-sha2-512-etm@openssh.com
+test try ciphers: cipher aes128-ctr mac hmac-md5-etm@openssh.com
+test try ciphers: cipher aes128-ctr mac hmac-md5-96-etm@openssh.com
+test try ciphers: cipher aes128-ctr mac umac-64-etm@openssh.com
+test try ciphers: cipher aes128-ctr mac umac-128-etm@openssh.com
+test try ciphers: cipher aes192-ctr mac hmac-sha1
+test try ciphers: cipher aes192-ctr mac hmac-sha1-96
+test try ciphers: cipher aes192-ctr mac hmac-sha2-256
+test try ciphers: cipher aes192-ctr mac hmac-sha2-512
+test try ciphers: cipher aes192-ctr mac hmac-md5
+test try ciphers: cipher aes192-ctr mac hmac-md5-96
+test try ciphers: cipher aes192-ctr mac umac-64@openssh.com
+test try ciphers: cipher aes192-ctr mac umac-128@openssh.com
+test try ciphers: cipher aes192-ctr mac hmac-sha1-etm@openssh.com
+test try ciphers: cipher aes192-ctr mac hmac-sha1-96-etm@openssh.com
+test try ciphers: cipher aes192-ctr mac hmac-sha2-256-etm@openssh.com
+test try ciphers: cipher aes192-ctr mac hmac-sha2-512-etm@openssh.com
+test try ciphers: cipher aes192-ctr mac hmac-md5-etm@openssh.com
+test try ciphers: cipher aes192-ctr mac hmac-md5-96-etm@openssh.com
+test try ciphers: cipher aes192-ctr mac umac-64-etm@openssh.com
+test try ciphers: cipher aes192-ctr mac umac-128-etm@openssh.com
+test try ciphers: cipher aes256-ctr mac hmac-sha1
+test try ciphers: cipher aes256-ctr mac hmac-sha1-96
+test try ciphers: cipher aes256-ctr mac hmac-sha2-256
+test try ciphers: cipher aes256-ctr mac hmac-sha2-512
+test try ciphers: cipher aes256-ctr mac hmac-md5
+test try ciphers: cipher aes256-ctr mac hmac-md5-96
+test try ciphers: cipher aes256-ctr mac umac-64@openssh.com
+test try ciphers: cipher aes256-ctr mac umac-128@openssh.com
+test try ciphers: cipher aes256-ctr mac hmac-sha1-etm@openssh.com
+test try ciphers: cipher aes256-ctr mac hmac-sha1-96-etm@openssh.com
+test try ciphers: cipher aes256-ctr mac hmac-sha2-256-etm@openssh.com
+test try ciphers: cipher aes256-ctr mac hmac-sha2-512-etm@openssh.com
+test try ciphers: cipher aes256-ctr mac hmac-md5-etm@openssh.com
+test try ciphers: cipher aes256-ctr mac hmac-md5-96-etm@openssh.com
+test try ciphers: cipher aes256-ctr mac umac-64-etm@openssh.com
+test try ciphers: cipher aes256-ctr mac umac-128-etm@openssh.com
+test try ciphers: cipher aes128-gcm@openssh.com mac hmac-sha1
+test try ciphers: cipher aes256-gcm@openssh.com mac hmac-sha1
+test try ciphers: cipher chacha20-poly1305@openssh.com mac hmac-sha1
+ok try ciphers
+run test yes-head.sh ...
+ok yes pipe head
+run test login-timeout.sh ...
+ok connect after login grace timeout
+run test agent.sh ...
+ok simple agent test
+run test agent-getpeereid.sh ...
+SKIPPED: skipped (running as root)
+run test agent-timeout.sh ...
+ok agent timeout test
+run test agent-ptrace.sh ...
+Skipped: running as root
+run test agent-subprocess.sh ...
+ok agent subprocess
+run test keyscan.sh ...
+ok keyscan
+run test keygen-change.sh ...
+ok change passphrase for key
+run test keygen-comment.sh ...
+ok Comment extraction from private key
+run test keygen-convert.sh ...
+ok convert keys
+run test keygen-knownhosts.sh ...
+/work/court/tmp/o4/cell-BA/regress/kh.hosts updated.
+Original contents retained as /work/court/tmp/o4/cell-BA/regress/kh.hosts.old
+/work/court/tmp/o4/cell-BA/regress/kh.hosts updated.
+Original contents retained as /work/court/tmp/o4/cell-BA/regress/kh.hosts.old
+/work/court/tmp/o4/cell-BA/regress/kh.hosts updated.
+Original contents retained as /work/court/tmp/o4/cell-BA/regress/kh.hosts.old
+/work/court/tmp/o4/cell-BA/regress/kh.hosts updated.
+Original contents retained as /work/court/tmp/o4/cell-BA/regress/kh.hosts.old
+/work/court/tmp/o4/cell-BA/regress/kh.hashed updated.
+Original contents retained as /work/court/tmp/o4/cell-BA/regress/kh.hashed.old
+ok ssh-keygen known_hosts
+run test keygen-moduli.sh ...
+ok keygen moduli
+run test keygen-sshfp.sh ...
+ok keygen-sshfp
+run test key-options.sh ...
+key option command="echo bar"
+key option no-pty,command="echo bar"
+key option pty default
+key option pty no-pty
+key option pty restrict
+key option pty restrict,pty
+key option environment
+key option from="127.0.0.1"
+key option from="127.0.0.0/8"
+key option expiry-time default
+key option expiry-time invalid
+key option expiry-time expired
+key option expiry-time valid
+ok key options
+run test scp.sh ...
+scp: scp mode: simple copy local file to local file
+scp: scp mode: simple copy local file to remote file
+scp: scp mode: simple copy remote file to local file
+scp: scp mode: copy local file to remote file in place
+scp: scp mode: copy remote file to local file in place
+scp: scp mode: copy local file to remote file clobber
+-rw-r--r-- 1 root root 98 Nov 22 12:06 /work/court/tmp/o4/cell-BA/regress/copy
+-rw-r--r-- 1 root root 98 Nov 22 12:06 /work/court/tmp/o4/cell-BA/regress/data
+scp: scp mode: copy remote file to local file clobber
+scp: scp mode: simple copy local file to remote dir
+scp: scp mode: simple copy local file to local dir
+scp: scp mode: simple copy remote file to local dir
+scp: scp mode: recursive local dir to remote dir
+scp: scp mode: recursive local dir to local dir
+scp: scp mode: recursive remote dir to local dir
+scp: scp mode: unmatched glob file local->remote
+scp: scp mode: unmatched glob file remote->local
+scp: scp mode: unmatched glob dir recursive local->remote
+scp: scp mode: unmatched glob dir recursive remote->local
+scp: scp mode: shell metacharacters
+scp: scp mode: disallow bad server #0
+scp: scp mode: disallow bad server #1
+scp: scp mode: disallow bad server #2
+scp: scp mode: disallow bad server #3
+scp: scp mode: disallow bad server #4
+scp: scp mode: disallow bad server #5
+scp: scp mode: disallow bad server #6
+scp: scp mode: disallow bad server #7
+scp: scp mode: detect non-directory target
+/work/court/tmp/o4/cell-BA/regress/copy2: Not a directory
+scp: sftp mode: simple copy local file to local file
+scp: sftp mode: simple copy local file to remote file
+scp: sftp mode: simple copy remote file to local file
+scp: sftp mode: copy local file to remote file in place
+scp: sftp mode: copy remote file to local file in place
+scp: sftp mode: copy local file to remote file clobber
+-rw-r--r-- 1 root root 98 Nov 22 12:06 /work/court/tmp/o4/cell-BA/regress/copy
+-rw-r--r-- 1 root root 98 Nov 22 12:06 /work/court/tmp/o4/cell-BA/regress/data
+scp: sftp mode: copy remote file to local file clobber
+scp: sftp mode: simple copy local file to remote dir
+scp: sftp mode: simple copy local file to local dir
+scp: sftp mode: simple copy remote file to local dir
+scp: sftp mode: recursive local dir to remote dir
+scp: sftp mode: recursive local dir to local dir
+scp: sftp mode: recursive remote dir to local dir
+scp: sftp mode: unmatched glob file local->remote
+scp: sftp mode: unmatched glob file remote->local
+scp: sftp mode: unmatched glob dir recursive local->remote
+scp: sftp mode: unmatched glob dir recursive remote->local
+scp: sftp mode: shell metacharacters
+scp: sftp mode: disallow bad server #0
+scp: sftp mode: disallow bad server #1
+scp: sftp mode: disallow bad server #2
+scp: sftp mode: disallow bad server #3
+scp: sftp mode: disallow bad server #4
+scp: sftp mode: disallow bad server #5
+scp: sftp mode: disallow bad server #6
+scp: sftp mode: disallow bad server #7
+scp: sftp mode: detect non-directory target
+/work/court/tmp/o4/cell-BA/regress/copy2: Not a directory
+ok scp
+run test scp3.sh ...
+scp3: scp mode: simple copy remote file to remote file
+scp3: scp mode: simple copy remote file to remote dir
+scp3: scp mode: recursive remote dir to remote dir
+scp3: scp mode: detect non-directory target
+scp3: sftp mode: simple copy remote file to remote file
+scp3: sftp mode: simple copy remote file to remote dir
+scp3: sftp mode: recursive remote dir to remote dir
+scp3: sftp mode: detect non-directory target
+/work/court/tmp/o4/tree-B/scp: /work/court/tmp/o4/cell-BA/regress/copy2: destination is not a directory
+/work/court/tmp/o4/tree-B/scp: /work/court/tmp/o4/cell-BA/regress/copy2: destination is not a directory
+ok scp3
+run test scp-uri.sh ...
+scp-uri: scp mode: simple copy local file to remote file
+scp-uri: scp mode: simple copy remote file to local file
+scp-uri: scp mode: simple copy local file to remote dir
+scp-uri: scp mode: simple copy remote file to local dir
+scp-uri: scp mode: recursive local dir to remote dir
+scp-uri: scp mode: recursive remote dir to local dir
+scp-uri: sftp mode: simple copy local file to remote file
+scp-uri: sftp mode: simple copy remote file to local file
+scp-uri: sftp mode: simple copy local file to remote dir
+scp-uri: sftp mode: simple copy remote file to local dir
+scp-uri: sftp mode: recursive local dir to remote dir
+scp-uri: sftp mode: recursive remote dir to local dir
+ok scp-uri
+run test sftp.sh ...
+test basic sftp put/get: buffer_size 5 num_requests 1
+test basic sftp put/get: buffer_size 5 num_requests 2
+test basic sftp put/get: buffer_size 5 num_requests 10
+test basic sftp put/get: buffer_size 1000 num_requests 1
+test basic sftp put/get: buffer_size 1000 num_requests 2
+test basic sftp put/get: buffer_size 1000 num_requests 10
+test basic sftp put/get: buffer_size 32000 num_requests 1
+test basic sftp put/get: buffer_size 32000 num_requests 2
+test basic sftp put/get: buffer_size 32000 num_requests 10
+test basic sftp put/get: buffer_size 64000 num_requests 1
+test basic sftp put/get: buffer_size 64000 num_requests 2
+test basic sftp put/get: buffer_size 64000 num_requests 10
+ok basic sftp put/get
+run test sftp-chroot.sh ...
+test sftp in chroot: get
+test sftp in chroot: match
+ok sftp in chroot
+skip test sftp-cmds.sh
+run test sftp-badcmds.sh ...
+sftp invalid commands: get nonexistent
+sftp invalid commands: glob get to nonexistent directory
+sftp invalid commands: put nonexistent
+sftp invalid commands: glob put to nonexistent directory
+sftp invalid commands: rename nonexistent
+sftp invalid commands: rename target exists (directory)
+sftp invalid commands: glob put files to local file
+ok sftp invalid commands
+run test sftp-batch.sh ...
+sftp batchfile: good commands
+sftp batchfile: bad commands
+sftp batchfile: comments and blanks
+sftp batchfile: junk command
+ok sftp batchfile
+run test sftp-glob.sh ...
+sftp glob: file glob
+sftp glob: dir glob
+sftp glob: quoted glob
+sftp glob: escaped glob
+sftp glob: escaped quote
+sftp glob: quoted quote
+sftp glob: single-quoted quote
+sftp glob: escaped space
+sftp glob: quoted space
+sftp glob: escaped slash
+sftp glob: quoted slash
+sftp glob: escaped slash at EOL
+sftp glob: quoted slash at EOL
+sftp glob: escaped slash+quote
+sftp glob: quoted slash+quote
+ok sftp glob
+run test sftp-perm.sh ...
+sftp permissions: read-only upload
+sftp permissions: read-only setstat
+sftp permissions: read-only rm
+sftp permissions: read-only mkdir
+sftp permissions: read-only rmdir
+sftp permissions: read-only posix-rename
+sftp permissions: read-only oldrename
+sftp permissions: read-only symlink
+sftp permissions: read-only hardlink
+sftp permissions: explicit open
+sftp permissions: explicit read
+sftp permissions: explicit write
+sftp permissions: explicit lstat
+sftp permissions: explicit opendir
+sftp permissions: explicit readdir
+sftp permissions: explicit setstat
+sftp permissions: explicit remove
+sftp permissions: explicit mkdir
+sftp permissions: explicit rmdir
+sftp permissions: explicit rename
+sftp permissions: explicit symlink
+sftp permissions: explicit hardlink
+sftp permissions: explicit statvfs
+ok sftp permissions
+run test sftp-uri.sh ...
+sftp-uri: non-interactive fetch to local file
+sftp-uri: non-interactive fetch to local dir
+sftp-uri: put to remote directory (trailing slash)
+sftp-uri: put to remote directory (no slash)
+ok sftp-uri
+run test reconfigure.sh ...
+ok simple connect after reconfigure
+run test dynamic-forward.sh ...
+test -D forwarding
+test -R forwarding
+PermitRemoteOpen=any
+PermitRemoteOpen=none
+PermitRemoteOpen=explicit
+PermitRemoteOpen=disallowed
+ok dynamic forwarding
+run test forwarding.sh ...
+ok local and remote forwarding
+run test multiplex.sh ...
+test connection multiplexing: setenv
+test connection multiplexing: envpass
+test connection multiplexing: transfer 
+test connection multiplexing: transfer -Oproxy
+test connection multiplexing: forward
+test connection multiplexing: status 0 ()
+test connection multiplexing: status 0 (-Oproxy)
+test connection multiplexing: status 1 ()
+test connection multiplexing: status 1 (-Oproxy)
+test connection multiplexing: status 4 ()
+test connection multiplexing: status 4 (-Oproxy)
+test connection multiplexing: status 5 ()
+test connection multiplexing: status 5 (-Oproxy)
+test connection multiplexing: status 44 ()
+test connection multiplexing: status 44 (-Oproxy)
+test connection multiplexing: cmd check
+test connection multiplexing: cmd forward local (TCP)
+test connection multiplexing: cmd forward remote (TCP)
+test connection multiplexing: cmd forward local (UNIX)
+test connection multiplexing: cmd forward remote (UNIX)
+test connection multiplexing: cmd exit
+test connection multiplexing: cmd stop
+ok connection multiplexing
+run test reexec.sh ...
+test config passing
+test reexec fallback
+ok reexec tests
+run test brokenkeys.sh ...
+ok broken keys
+run test sshcfgparse.sh ...
+reparse minimal config
+ssh -W opts
+user first match
+pubkeyacceptedalgorithms
+agentforwarding
+command line override
+ok ssh config parse
+run test cfgparse.sh ...
+reparse minimal config
+reparse regress config
+listenaddress order
+ok sshd config parse
+run test cfgmatch.sh ...
+ok sshd_config match
+run test cfgmatchlisten.sh ...
+ok sshd_config matchlisten
+run test percent.sh ...
+percent expansions matchexec percent
+percent expansions localcommand percent
+percent expansions remotecommand percent
+percent expansions controlpath percent
+percent expansions identityagent percent
+percent expansions forwardagent percent
+percent expansions localforward percent
+percent expansions remoteforward percent
+percent expansions revokedhostkeys percent
+percent expansions userknownhostsfile percent
+percent expansions controlpath dollar
+percent expansions identityagent dollar
+percent expansions forwardagent dollar
+percent expansions localforward dollar
+percent expansions remoteforward dollar
+percent expansions userknownhostsfile dollar
+percent expansions controlpath tilde
+percent expansions identityagent tilde
+percent expansions forwardagent tilde
+ok percent expansions
+run test addrmatch.sh ...
+test first entry for user 192.168.0.1 somehost
+test negative match for user 192.168.30.1 somehost
+test no match for user 19.0.0.1 somehost
+test list middle for user 10.255.255.254 somehost
+test faked IP in hostname for user 192.168.30.1 192.168.0.1
+test bare IP4 address for user 1.1.1.1 somehost.example.com
+test localaddress for user 19.0.0.1 somehost
+test localport for user 19.0.0.1 somehost
+test bare IP6 address for user ::1 somehost.example.com
+test deny IPv6 for user ::2 somehost.example.com
+test IP6 negated for user ::3 somehost
+test IP6 no match for user ::4 somehost
+test IP6 network for user 2000::1 somehost
+test IP6 network for user 2001::1 somehost
+test IP6 localaddress for user ::5 somehost
+test IP6 localport for user ::5 somehost
+test invalid Match address 10.0.1.0/8
+test invalid Match localaddress 10.0.1.0/8
+test invalid Match address 10.0.0.1/24
+test invalid Match localaddress 10.0.0.1/24
+test invalid Match address 2000:aa:bb:01::/56
+test invalid Match localaddress 2000:aa:bb:01::/56
+ok address match
+run test localcommand.sh ...
+test localcommand: proto  localcommand
+ok localcommand
+run test forcecommand.sh ...
+Connection closed.  
+Connection closed
+Connection closed.  
+Connection closed
+ok forced command
+run test portnum.sh ...
+port number parsing: invalid port 0
+port number parsing: invalid port 65536
+port number parsing: invalid port 131073
+port number parsing: invalid port 2000blah
+port number parsing: invalid port blah2000
+port number parsing: valid port 1
+port number parsing: valid port 22
+port number parsing: valid port 2222
+port number parsing: valid port 22222
+port number parsing: valid port 65535
+ok port number parsing
+run test keytype.sh ...
+keygen ed25519, 512 bits
+keygen ed25519-sk, n/a bits
+keygen ecdsa, 256 bits
+keygen ecdsa, 384 bits
+keygen ecdsa, 521 bits
+keygen ecdsa-sk, n/a bits
+keygen rsa, 2048 bits
+keygen rsa, 3072 bits
+userkey ed25519-512, hostkey ed25519-512
+userkey ed25519-512, hostkey ed25519-512
+userkey ed25519-512, hostkey ed25519-512
+userkey ed25519-sk, hostkey ed25519-sk
+userkey ed25519-sk, hostkey ed25519-sk
+userkey ed25519-sk, hostkey ed25519-sk
+userkey ecdsa-256, hostkey ecdsa-256
+userkey ecdsa-256, hostkey ecdsa-256
+userkey ecdsa-256, hostkey ecdsa-256
+userkey ecdsa-384, hostkey ecdsa-384
+userkey ecdsa-384, hostkey ecdsa-384
+userkey ecdsa-384, hostkey ecdsa-384
+userkey ecdsa-521, hostkey ecdsa-521
+userkey ecdsa-521, hostkey ecdsa-521
+userkey ecdsa-521, hostkey ecdsa-521
+userkey ecdsa-sk, hostkey ecdsa-sk
+userkey ecdsa-sk, hostkey ecdsa-sk
+userkey ecdsa-sk, hostkey ecdsa-sk
+userkey rsa-2048, hostkey rsa-2048
+userkey rsa-2048, hostkey rsa-2048
+userkey rsa-2048, hostkey rsa-2048
+userkey rsa-3072, hostkey rsa-3072
+userkey rsa-3072, hostkey rsa-3072
+userkey rsa-3072, hostkey rsa-3072
+ok login with different key types
+run test kextype.sh ...
+kex diffie-hellman-group1-sha1
+kex diffie-hellman-group14-sha1
+kex diffie-hellman-group14-sha256
+kex diffie-hellman-group16-sha512
+kex diffie-hellman-group18-sha512
+kex diffie-hellman-group-exchange-sha1
+kex diffie-hellman-group-exchange-sha256
+kex ecdh-sha2-nistp256
+kex ecdh-sha2-nistp384
+kex ecdh-sha2-nistp521
+kex curve25519-sha256
+kex curve25519-sha256@libssh.org
+kex sntrup761x25519-sha512
+kex sntrup761x25519-sha512@openssh.com
+kex mlkem768x25519-sha256
+ok login with different key exchange algorithms
+run test cert-hostkey.sh ...
+Revoking from /work/court/tmp/o4/cell-BA/regress/host_ca_key.pub
+Revoking from /work/court/tmp/o4/cell-BA/regress/host_ca_key2.pub
+certified host keys: sign host ed25519 cert
+Revoking from /work/court/tmp/o4/cell-BA/regress/cert_host_key_ed25519.pub
+Revoking from /work/court/tmp/o4/cell-BA/regress/cert_host_key_ed25519-cert.pub
+certified host keys: sign host sk-ssh-ed25519@openssh.com cert
+Revoking from /work/court/tmp/o4/cell-BA/regress/cert_host_key_sk-ssh-ed25519@openssh.com.pub
+Revoking from /work/court/tmp/o4/cell-BA/regress/cert_host_key_sk-ssh-ed25519@openssh.com-cert.pub
+certified host keys: sign host ecdsa-sha2-nistp256 cert
+Revoking from /work/court/tmp/o4/cell-BA/regress/cert_host_key_ecdsa-sha2-nistp256.pub
+Revoking from /work/court/tmp/o4/cell-BA/regress/cert_host_key_ecdsa-sha2-nistp256-cert.pub
+certified host keys: sign host ecdsa-sha2-nistp384 cert
+Revoking from /work/court/tmp/o4/cell-BA/regress/cert_host_key_ecdsa-sha2-nistp384.pub
+Revoking from /work/court/tmp/o4/cell-BA/regress/cert_host_key_ecdsa-sha2-nistp384-cert.pub
+certified host keys: sign host ecdsa-sha2-nistp521 cert
+Revoking from /work/court/tmp/o4/cell-BA/regress/cert_host_key_ecdsa-sha2-nistp521.pub
+Revoking from /work/court/tmp/o4/cell-BA/regress/cert_host_key_ecdsa-sha2-nistp521-cert.pub
+certified host keys: sign host sk-ecdsa-sha2-nistp256@openssh.com cert
+Revoking from /work/court/tmp/o4/cell-BA/regress/cert_host_key_sk-ecdsa-sha2-nistp256@openssh.com.pub
+Revoking from /work/court/tmp/o4/cell-BA/regress/cert_host_key_sk-ecdsa-sha2-nistp256@openssh.com-cert.pub
+certified host keys: sign host rsa cert
+Revoking from /work/court/tmp/o4/cell-BA/regress/cert_host_key_rsa.pub
+Revoking from /work/court/tmp/o4/cell-BA/regress/cert_host_key_rsa-cert.pub
+certified host keys: sign host rsa-sha2-256 cert
+Revoking from /work/court/tmp/o4/cell-BA/regress/cert_host_key_rsa-sha2-256.pub
+Revoking from /work/court/tmp/o4/cell-BA/regress/cert_host_key_rsa-sha2-256-cert.pub
+certified host keys: sign host rsa-sha2-512 cert
+Revoking from /work/court/tmp/o4/cell-BA/regress/cert_host_key_rsa-sha2-512.pub
+Revoking from /work/court/tmp/o4/cell-BA/regress/cert_host_key_rsa-sha2-512-cert.pub
+certified host keys: host ed25519 cert connect
+certified host keys: ed25519 basic connect expect success yes
+certified host keys: ed25519 empty KRL expect success yes
+certified host keys: ed25519 KRL w/ plain key revoked expect success no
+certified host keys: ed25519 KRL w/ cert revoked expect success no
+certified host keys: ed25519 KRL w/ CA revoked expect success no
+certified host keys: ed25519 empty plaintext revocation expect success yes
+certified host keys: ed25519 plain key plaintext revocation expect success no
+certified host keys: ed25519 cert plaintext revocation expect success no
+certified host keys: ed25519 CA plaintext revocation expect success no
+certified host keys: host sk-ssh-ed25519@openssh.com cert connect
+certified host keys: sk-ssh-ed25519@openssh.com basic connect expect success yes
+certified host keys: sk-ssh-ed25519@openssh.com empty KRL expect success yes
+certified host keys: sk-ssh-ed25519@openssh.com KRL w/ plain key revoked expect success no
+certified host keys: sk-ssh-ed25519@openssh.com KRL w/ cert revoked expect success no
+certified host keys: sk-ssh-ed25519@openssh.com KRL w/ CA revoked expect success no
+certified host keys: sk-ssh-ed25519@openssh.com empty plaintext revocation expect success yes
+certified host keys: sk-ssh-ed25519@openssh.com plain key plaintext revocation expect success no
+certified host keys: sk-ssh-ed25519@openssh.com cert plaintext revocation expect success no
+certified host keys: sk-ssh-ed25519@openssh.com CA plaintext revocation expect success no
+certified host keys: host ecdsa-sha2-nistp256 cert connect
+certified host keys: ecdsa-sha2-nistp256 basic connect expect success yes
+certified host keys: ecdsa-sha2-nistp256 empty KRL expect success yes
+certified host keys: ecdsa-sha2-nistp256 KRL w/ plain key revoked expect success no
+certified host keys: ecdsa-sha2-nistp256 KRL w/ cert revoked expect success no
+certified host keys: ecdsa-sha2-nistp256 KRL w/ CA revoked expect success no
+certified host keys: ecdsa-sha2-nistp256 empty plaintext revocation expect success yes
+certified host keys: ecdsa-sha2-nistp256 plain key plaintext revocation expect success no
+certified host keys: ecdsa-sha2-nistp256 cert plaintext revocation expect success no
+certified host keys: ecdsa-sha2-nistp256 CA plaintext revocation expect success no
+certified host keys: host ecdsa-sha2-nistp384 cert connect
+certified host keys: ecdsa-sha2-nistp384 basic connect expect success yes
+certified host keys: ecdsa-sha2-nistp384 empty KRL expect success yes
+certified host keys: ecdsa-sha2-nistp384 KRL w/ plain key revoked expect success no
+certified host keys: ecdsa-sha2-nistp384 KRL w/ cert revoked expect success no
+certified host keys: ecdsa-sha2-nistp384 KRL w/ CA revoked expect success no
+certified host keys: ecdsa-sha2-nistp384 empty plaintext revocation expect success yes
+certified host keys: ecdsa-sha2-nistp384 plain key plaintext revocation expect success no
+certified host keys: ecdsa-sha2-nistp384 cert plaintext revocation expect success no
+certified host keys: ecdsa-sha2-nistp384 CA plaintext revocation expect success no
+certified host keys: host ecdsa-sha2-nistp521 cert connect
+certified host keys: ecdsa-sha2-nistp521 basic connect expect success yes
+certified host keys: ecdsa-sha2-nistp521 empty KRL expect success yes
+certified host keys: ecdsa-sha2-nistp521 KRL w/ plain key revoked expect success no
+certified host keys: ecdsa-sha2-nistp521 KRL w/ cert revoked expect success no
+certified host keys: ecdsa-sha2-nistp521 KRL w/ CA revoked expect success no
+certified host keys: ecdsa-sha2-nistp521 empty plaintext revocation expect success yes
+certified host keys: ecdsa-sha2-nistp521 plain key plaintext revocation expect success no
+certified host keys: ecdsa-sha2-nistp521 cert plaintext revocation expect success no
+certified host keys: ecdsa-sha2-nistp521 CA plaintext revocation expect success no
+certified host keys: host sk-ecdsa-sha2-nistp256@openssh.com cert connect
+certified host keys: sk-ecdsa-sha2-nistp256@openssh.com basic connect expect success yes
+certified host keys: sk-ecdsa-sha2-nistp256@openssh.com empty KRL expect success yes
+certified host keys: sk-ecdsa-sha2-nistp256@openssh.com KRL w/ plain key revoked expect success no
+certified host keys: sk-ecdsa-sha2-nistp256@openssh.com KRL w/ cert revoked expect success no
+certified host keys: sk-ecdsa-sha2-nistp256@openssh.com KRL w/ CA revoked expect success no
+certified host keys: sk-ecdsa-sha2-nistp256@openssh.com empty plaintext revocation expect success yes
+certified host keys: sk-ecdsa-sha2-nistp256@openssh.com plain key plaintext revocation expect success no
+certified host keys: sk-ecdsa-sha2-nistp256@openssh.com cert plaintext revocation expect success no
+certified host keys: sk-ecdsa-sha2-nistp256@openssh.com CA plaintext revocation expect success no
+certified host keys: host rsa cert connect
+certified host keys: rsa basic connect expect success yes
+certified host keys: rsa empty KRL expect success yes
+certified host keys: rsa KRL w/ plain key revoked expect success no
+certified host keys: rsa KRL w/ cert revoked expect success no
+certified host keys: rsa KRL w/ CA revoked expect success no
+certified host keys: rsa empty plaintext revocation expect success yes
+certified host keys: rsa plain key plaintext revocation expect success no
+certified host keys: rsa cert plaintext revocation expect success no
+certified host keys: rsa CA plaintext revocation expect success no
+certified host keys: host rsa-sha2-256 cert connect
+certified host keys: rsa-sha2-256 basic connect expect success yes
+certified host keys: rsa-sha2-256 empty KRL expect success yes
+certified host keys: rsa-sha2-256 KRL w/ plain key revoked expect success no
+certified host keys: rsa-sha2-256 KRL w/ cert revoked expect success no
+certified host keys: rsa-sha2-256 KRL w/ CA revoked expect success no
+certified host keys: rsa-sha2-256 empty plaintext revocation expect success yes
+certified host keys: rsa-sha2-256 plain key plaintext revocation expect success no
+certified host keys: rsa-sha2-256 cert plaintext revocation expect success no
+certified host keys: rsa-sha2-256 CA plaintext revocation expect success no
+certified host keys: host rsa-sha2-512 cert connect
+certified host keys: rsa-sha2-512 basic connect expect success yes
+certified host keys: rsa-sha2-512 empty KRL expect success yes
+certified host keys: rsa-sha2-512 KRL w/ plain key revoked expect success no
+certified host keys: rsa-sha2-512 KRL w/ cert revoked expect success no
+certified host keys: rsa-sha2-512 KRL w/ CA revoked expect success no
+certified host keys: rsa-sha2-512 empty plaintext revocation expect success yes
+certified host keys: rsa-sha2-512 plain key plaintext revocation expect success no
+certified host keys: rsa-sha2-512 cert plaintext revocation expect success no
+certified host keys: rsa-sha2-512 CA plaintext revocation expect success no
+certified host keys: host ed25519 revoked cert
+certified host keys: host sk-ssh-ed25519@openssh.com revoked cert
+certified host keys: host ecdsa-sha2-nistp256 revoked cert
+certified host keys: host ecdsa-sha2-nistp384 revoked cert
+certified host keys: host ecdsa-sha2-nistp521 revoked cert
+certified host keys: host sk-ecdsa-sha2-nistp256@openssh.com revoked cert
+certified host keys: host rsa revoked cert
+certified host keys: host rsa-sha2-256 revoked cert
+certified host keys: host rsa-sha2-512 revoked cert
+certified host keys: host ed25519 revoked cert
+certified host keys: host sk-ssh-ed25519@openssh.com revoked cert
+certified host keys: host ecdsa-sha2-nistp256 revoked cert
+certified host keys: host ecdsa-sha2-nistp384 revoked cert
+certified host keys: host ecdsa-sha2-nistp521 revoked cert
+certified host keys: host sk-ecdsa-sha2-nistp256@openssh.com revoked cert
+certified host keys: host rsa revoked cert
+certified host keys: host rsa-sha2-256 revoked cert
+certified host keys: host rsa-sha2-512 revoked cert
+certified host keys: host ed25519  cert downgrade to raw key
+certified host keys: host sk-ssh-ed25519@openssh.com  cert downgrade to raw key
+certified host keys: host ecdsa-sha2-nistp256  cert downgrade to raw key
+certified host keys: host ecdsa-sha2-nistp384  cert downgrade to raw key
+certified host keys: host ecdsa-sha2-nistp521  cert downgrade to raw key
+certified host keys: host sk-ecdsa-sha2-nistp256@openssh.com  cert downgrade to raw key
+certified host keys: host rsa  cert downgrade to raw key
+certified host keys: host rsa-sha2-256  cert downgrade to raw key
+certified host keys: host rsa-sha2-512  cert downgrade to raw key
+certified host keys: host ed25519 connect wrong cert
+certified host keys: host sk-ssh-ed25519@openssh.com connect wrong cert
+certified host keys: host ecdsa-sha2-nistp256 connect wrong cert
+certified host keys: host ecdsa-sha2-nistp384 connect wrong cert
+certified host keys: host ecdsa-sha2-nistp521 connect wrong cert
+certified host keys: host sk-ecdsa-sha2-nistp256@openssh.com connect wrong cert
+certified host keys: host rsa connect wrong cert
+certified host keys: host rsa-sha2-256 connect wrong cert
+certified host keys: host rsa-sha2-512 connect wrong cert
+ok certified host keys
+run test cert-userkey.sh ...
+certified user keys: sign user ed25519 cert
+certified user keys: sign user sk-ssh-ed25519@openssh.com cert
+certified user keys: sign user ecdsa-sha2-nistp256 cert
+certified user keys: sign user ecdsa-sha2-nistp384 cert
+certified user keys: sign user ecdsa-sha2-nistp521 cert
+certified user keys: sign user sk-ecdsa-sha2-nistp256@openssh.com cert
+certified user keys: sign user rsa cert
+certified user keys: sign user rsa-sha2-256 cert
+certified user keys: sign user rsa-sha2-512 cert
+certified user keys: ed25519 missing authorized_principals
+certified user keys: ed25519 empty authorized_principals
+certified user keys: ed25519 wrong authorized_principals
+certified user keys: ed25519 correct authorized_principals
+certified user keys: ed25519 authorized_principals bad key opt
+certified user keys: ed25519 authorized_principals command=false
+certified user keys: ed25519 authorized_principals command=true
+certified user keys: ed25519 wrong principals key option
+certified user keys: ed25519 correct principals key option
+certified user keys: sk-ssh-ed25519@openssh.com missing authorized_principals
+certified user keys: sk-ssh-ed25519@openssh.com empty authorized_principals
+certified user keys: sk-ssh-ed25519@openssh.com wrong authorized_principals
+certified user keys: sk-ssh-ed25519@openssh.com correct authorized_principals
+certified user keys: sk-ssh-ed25519@openssh.com authorized_principals bad key opt
+certified user keys: sk-ssh-ed25519@openssh.com authorized_principals command=false
+certified user keys: sk-ssh-ed25519@openssh.com authorized_principals command=true
+certified user keys: sk-ssh-ed25519@openssh.com wrong principals key option
+certified user keys: sk-ssh-ed25519@openssh.com correct principals key option
+certified user keys: ecdsa-sha2-nistp256 missing authorized_principals
+certified user keys: ecdsa-sha2-nistp256 empty authorized_principals
+certified user keys: ecdsa-sha2-nistp256 wrong authorized_principals
+certified user keys: ecdsa-sha2-nistp256 correct authorized_principals
+certified user keys: ecdsa-sha2-nistp256 authorized_principals bad key opt
+certified user keys: ecdsa-sha2-nistp256 authorized_principals command=false
+certified user keys: ecdsa-sha2-nistp256 authorized_principals command=true
+certified user keys: ecdsa-sha2-nistp256 wrong principals key option
+certified user keys: ecdsa-sha2-nistp256 correct principals key option
+certified user keys: ecdsa-sha2-nistp384 missing authorized_principals
+certified user keys: ecdsa-sha2-nistp384 empty authorized_principals
+certified user keys: ecdsa-sha2-nistp384 wrong authorized_principals
+certified user keys: ecdsa-sha2-nistp384 correct authorized_principals
+certified user keys: ecdsa-sha2-nistp384 authorized_principals bad key opt
+certified user keys: ecdsa-sha2-nistp384 authorized_principals command=false
+certified user keys: ecdsa-sha2-nistp384 authorized_principals command=true
+certified user keys: ecdsa-sha2-nistp384 wrong principals key option
+certified user keys: ecdsa-sha2-nistp384 correct principals key option
+certified user keys: ecdsa-sha2-nistp521 missing authorized_principals
+certified user keys: ecdsa-sha2-nistp521 empty authorized_principals
+certified user keys: ecdsa-sha2-nistp521 wrong authorized_principals
+certified user keys: ecdsa-sha2-nistp521 correct authorized_principals
+certified user keys: ecdsa-sha2-nistp521 authorized_principals bad key opt
+certified user keys: ecdsa-sha2-nistp521 authorized_principals command=false
+certified user keys: ecdsa-sha2-nistp521 authorized_principals command=true
+certified user keys: ecdsa-sha2-nistp521 wrong principals key option
+certified user keys: ecdsa-sha2-nistp521 correct principals key option
+certified user keys: sk-ecdsa-sha2-nistp256@openssh.com missing authorized_principals
+certified user keys: sk-ecdsa-sha2-nistp256@openssh.com empty authorized_principals
+certified user keys: sk-ecdsa-sha2-nistp256@openssh.com wrong authorized_principals
+certified user keys: sk-ecdsa-sha2-nistp256@openssh.com correct authorized_principals
+certified user keys: sk-ecdsa-sha2-nistp256@openssh.com authorized_principals bad key opt
+certified user keys: sk-ecdsa-sha2-nistp256@openssh.com authorized_principals command=false
+certified user keys: sk-ecdsa-sha2-nistp256@openssh.com authorized_principals command=true
+certified user keys: sk-ecdsa-sha2-nistp256@openssh.com wrong principals key option
+certified user keys: sk-ecdsa-sha2-nistp256@openssh.com correct principals key option
+certified user keys: rsa missing authorized_principals
+certified user keys: rsa empty authorized_principals
+certified user keys: rsa wrong authorized_principals
+certified user keys: rsa correct authorized_principals
+certified user keys: rsa authorized_principals bad key opt
+certified user keys: rsa authorized_principals command=false
+certified user keys: rsa authorized_principals command=true
+certified user keys: rsa wrong principals key option
+certified user keys: rsa correct principals key option
+certified user keys: rsa-sha2-256 missing authorized_principals
+certified user keys: rsa-sha2-256 empty authorized_principals
+certified user keys: rsa-sha2-256 wrong authorized_principals
+certified user keys: rsa-sha2-256 correct authorized_principals
+certified user keys: rsa-sha2-256 authorized_principals bad key opt
+certified user keys: rsa-sha2-256 authorized_principals command=false
+certified user keys: rsa-sha2-256 authorized_principals command=true
+certified user keys: rsa-sha2-256 wrong principals key option
+certified user keys: rsa-sha2-256 correct principals key option
+certified user keys: rsa-sha2-512 missing authorized_principals
+certified user keys: rsa-sha2-512 empty authorized_principals
+certified user keys: rsa-sha2-512 wrong authorized_principals
+certified user keys: rsa-sha2-512 correct authorized_principals
+certified user keys: rsa-sha2-512 authorized_principals bad key opt
+certified user keys: rsa-sha2-512 authorized_principals command=false
+certified user keys: rsa-sha2-512 authorized_principals command=true
+certified user keys: rsa-sha2-512 wrong principals key option
+certified user keys: rsa-sha2-512 correct principals key option
+certified user keys: ed25519 authorized_keys connect
+certified user keys: ed25519 authorized_keys revoked key
+certified user keys: ed25519 authorized_keys revoked via KRL
+certified user keys: ed25519 authorized_keys empty KRL
+certified user keys: sk-ssh-ed25519@openssh.com authorized_keys connect
+certified user keys: sk-ssh-ed25519@openssh.com authorized_keys revoked key
+certified user keys: sk-ssh-ed25519@openssh.com authorized_keys revoked via KRL
+certified user keys: sk-ssh-ed25519@openssh.com authorized_keys empty KRL
+certified user keys: ecdsa-sha2-nistp256 authorized_keys connect
+certified user keys: ecdsa-sha2-nistp256 authorized_keys revoked key
+certified user keys: ecdsa-sha2-nistp256 authorized_keys revoked via KRL
+certified user keys: ecdsa-sha2-nistp256 authorized_keys empty KRL
+certified user keys: ecdsa-sha2-nistp384 authorized_keys connect
+certified user keys: ecdsa-sha2-nistp384 authorized_keys revoked key
+certified user keys: ecdsa-sha2-nistp384 authorized_keys revoked via KRL
+certified user keys: ecdsa-sha2-nistp384 authorized_keys empty KRL
+certified user keys: ecdsa-sha2-nistp521 authorized_keys connect
+certified user keys: ecdsa-sha2-nistp521 authorized_keys revoked key
+certified user keys: ecdsa-sha2-nistp521 authorized_keys revoked via KRL
+certified user keys: ecdsa-sha2-nistp521 authorized_keys empty KRL
+certified user keys: sk-ecdsa-sha2-nistp256@openssh.com authorized_keys connect
+certified user keys: sk-ecdsa-sha2-nistp256@openssh.com authorized_keys revoked key
+certified user keys: sk-ecdsa-sha2-nistp256@openssh.com authorized_keys revoked via KRL
+certified user keys: sk-ecdsa-sha2-nistp256@openssh.com authorized_keys empty KRL
+certified user keys: rsa authorized_keys connect
+certified user keys: rsa authorized_keys revoked key
+certified user keys: rsa authorized_keys revoked via KRL
+certified user keys: rsa authorized_keys empty KRL
+certified user keys: rsa-sha2-256 authorized_keys connect
+certified user keys: rsa-sha2-256 authorized_keys revoked key
+certified user keys: rsa-sha2-256 authorized_keys revoked via KRL
+certified user keys: rsa-sha2-256 authorized_keys empty KRL
+certified user keys: rsa-sha2-512 authorized_keys connect
+certified user keys: rsa-sha2-512 authorized_keys revoked key
+certified user keys: rsa-sha2-512 authorized_keys revoked via KRL
+certified user keys: rsa-sha2-512 authorized_keys empty KRL
+certified user keys: rsa-sha2-512 authorized_keys revoked CA key
+certified user keys: authorized_keys CA does not authenticate
+certified user keys: ensure CA key does not authenticate user
+certified user keys: ed25519 TrustedUserCAKeys connect
+certified user keys: ed25519 TrustedUserCAKeys revoked key
+certified user keys: ed25519 TrustedUserCAKeys revoked via KRL
+certified user keys: ed25519 TrustedUserCAKeys empty KRL
+certified user keys: sk-ssh-ed25519@openssh.com TrustedUserCAKeys connect
+certified user keys: sk-ssh-ed25519@openssh.com TrustedUserCAKeys revoked key
+certified user keys: sk-ssh-ed25519@openssh.com TrustedUserCAKeys revoked via KRL
+certified user keys: sk-ssh-ed25519@openssh.com TrustedUserCAKeys empty KRL
+certified user keys: ecdsa-sha2-nistp256 TrustedUserCAKeys connect
+certified user keys: ecdsa-sha2-nistp256 TrustedUserCAKeys revoked key
+certified user keys: ecdsa-sha2-nistp256 TrustedUserCAKeys revoked via KRL
+certified user keys: ecdsa-sha2-nistp256 TrustedUserCAKeys empty KRL
+certified user keys: ecdsa-sha2-nistp384 TrustedUserCAKeys connect
+certified user keys: ecdsa-sha2-nistp384 TrustedUserCAKeys revoked key
+certified user keys: ecdsa-sha2-nistp384 TrustedUserCAKeys revoked via KRL
+certified user keys: ecdsa-sha2-nistp384 TrustedUserCAKeys empty KRL
+certified user keys: ecdsa-sha2-nistp521 TrustedUserCAKeys connect
+certified user keys: ecdsa-sha2-nistp521 TrustedUserCAKeys revoked key
+certified user keys: ecdsa-sha2-nistp521 TrustedUserCAKeys revoked via KRL
+certified user keys: ecdsa-sha2-nistp521 TrustedUserCAKeys empty KRL
+certified user keys: sk-ecdsa-sha2-nistp256@openssh.com TrustedUserCAKeys connect
+certified user keys: sk-ecdsa-sha2-nistp256@openssh.com TrustedUserCAKeys revoked key
+certified user keys: sk-ecdsa-sha2-nistp256@openssh.com TrustedUserCAKeys revoked via KRL
+certified user keys: sk-ecdsa-sha2-nistp256@openssh.com TrustedUserCAKeys empty KRL
+certified user keys: rsa TrustedUserCAKeys connect
+certified user keys: rsa TrustedUserCAKeys revoked key
+certified user keys: rsa TrustedUserCAKeys revoked via KRL
+certified user keys: rsa TrustedUserCAKeys empty KRL
+certified user keys: rsa-sha2-256 TrustedUserCAKeys connect
+certified user keys: rsa-sha2-256 TrustedUserCAKeys revoked key
+certified user keys: rsa-sha2-256 TrustedUserCAKeys revoked via KRL
+certified user keys: rsa-sha2-256 TrustedUserCAKeys empty KRL
+certified user keys: rsa-sha2-512 TrustedUserCAKeys connect
+certified user keys: rsa-sha2-512 TrustedUserCAKeys revoked key
+certified user keys: rsa-sha2-512 TrustedUserCAKeys revoked via KRL
+certified user keys: rsa-sha2-512 TrustedUserCAKeys empty KRL
+certified user keys: rsa-sha2-512 TrustedUserCAKeys revoked CA key
+certified user keys: TrustedUserCAKeys CA does not authenticate
+certified user keys: ensure CA key does not authenticate user
+certified user keys: correct principal auth authorized_keys expect success rsa
+certified user keys: correct principal auth authorized_keys expect success ed25519
+certified user keys: correct principal auth TrustedUserCAKeys expect success rsa
+certified user keys: correct principal auth TrustedUserCAKeys expect success ed25519
+certified user keys: host-certificate auth authorized_keys expect failure rsa
+certified user keys: host-certificate auth authorized_keys expect failure ed25519
+certified user keys: host-certificate auth TrustedUserCAKeys expect failure rsa
+certified user keys: host-certificate auth TrustedUserCAKeys expect failure ed25519
+certified user keys: wrong principals auth authorized_keys expect failure rsa
+certified user keys: wrong principals auth authorized_keys expect failure ed25519
+certified user keys: wrong principals auth TrustedUserCAKeys expect failure rsa
+certified user keys: wrong principals auth TrustedUserCAKeys expect failure ed25519
+certified user keys: cert not yet valid auth authorized_keys expect failure rsa
+certified user keys: cert not yet valid auth authorized_keys expect failure ed25519
+certified user keys: cert not yet valid auth TrustedUserCAKeys expect failure rsa
+certified user keys: cert not yet valid auth TrustedUserCAKeys expect failure ed25519
+certified user keys: cert expired auth authorized_keys expect failure rsa
+certified user keys: cert expired auth authorized_keys expect failure ed25519
+certified user keys: cert expired auth TrustedUserCAKeys expect failure rsa
+certified user keys: cert expired auth TrustedUserCAKeys expect failure ed25519
+certified user keys: cert valid interval auth authorized_keys expect success rsa
+certified user keys: cert valid interval auth authorized_keys expect success ed25519
+certified user keys: cert valid interval auth TrustedUserCAKeys expect success rsa
+certified user keys: cert valid interval auth TrustedUserCAKeys expect success ed25519
+certified user keys: wrong source-address auth authorized_keys expect failure rsa
+certified user keys: wrong source-address auth authorized_keys expect failure ed25519
+certified user keys: wrong source-address auth TrustedUserCAKeys expect failure rsa
+certified user keys: wrong source-address auth TrustedUserCAKeys expect failure ed25519
+certified user keys: force-command auth authorized_keys expect failure rsa
+certified user keys: force-command auth authorized_keys expect failure ed25519
+certified user keys: force-command auth TrustedUserCAKeys expect failure rsa
+certified user keys: force-command auth TrustedUserCAKeys expect failure ed25519
+certified user keys: empty principals auth authorized_keys expect success rsa
+certified user keys: empty principals auth authorized_keys expect success ed25519
+certified user keys: empty principals auth TrustedUserCAKeys expect failure rsa
+certified user keys: empty principals auth TrustedUserCAKeys expect failure ed25519
+certified user keys: AuthorizedPrincipalsFile principals auth TrustedUserCAKeys expect success rsa
+certified user keys: AuthorizedPrincipalsFile principals auth TrustedUserCAKeys expect success ed25519
+certified user keys: AuthorizedPrincipalsFile no principals auth TrustedUserCAKeys expect failure rsa
+certified user keys: AuthorizedPrincipalsFile no principals auth TrustedUserCAKeys expect failure ed25519
+certified user keys: principals key option principals auth authorized_keys expect success rsa
+certified user keys: principals key option principals auth authorized_keys expect success ed25519
+certified user keys: principals key option no principals auth authorized_keys expect failure rsa
+certified user keys: principals key option no principals auth authorized_keys expect failure ed25519
+certified user keys: force-command match true auth authorized_keys expect success rsa
+certified user keys: force-command match true auth authorized_keys expect success ed25519
+certified user keys: force-command match true auth authorized_keys expect failure rsa
+certified user keys: force-command match true auth authorized_keys expect failure ed25519
+certified user keys: force-command mismatch 1 auth authorized_keys expect failure rsa
+certified user keys: force-command mismatch 1 auth authorized_keys expect failure ed25519
+certified user keys: force-command mismatch 2 auth authorized_keys expect failure rsa
+certified user keys: force-command mismatch 2 auth authorized_keys expect failure ed25519
+certified user keys: user ed25519 connect wrong cert
+certified user keys: user sk-ssh-ed25519@openssh.com connect wrong cert
+certified user keys: user ecdsa-sha2-nistp256 connect wrong cert
+certified user keys: user ecdsa-sha2-nistp384 connect wrong cert
+certified user keys: user ecdsa-sha2-nistp521 connect wrong cert
+certified user keys: user sk-ecdsa-sha2-nistp256@openssh.com connect wrong cert
+certified user keys: user rsa connect wrong cert
+certified user keys: user rsa-sha2-256 connect wrong cert
+certified user keys: user rsa-sha2-512 connect wrong cert
+ok certified user keys
+run test host-expand.sh ...
+ok expand %h and %n
+run test keys-command.sh ...
+AuthorizedKeysCommand with arguments
+AuthorizedKeysCommand without arguments
+ok authorized keys from command
+run test forward-control.sh ...
+check_lfwd done (expecting Y): default configuration
+check_rfwd done (expecting Y): default configuration
+check_lfwd done (expecting Y): AllowTcpForwarding=yes
+check_rfwd done (expecting Y): AllowTcpForwarding=yes
+check_lfwd done (expecting N): AllowTcpForwarding=yes, !PermitOpen
+check_rfwd done (expecting Y): AllowTcpForwarding=yes, !PermitOpen
+check_lfwd done (expecting Y): AllowTcpForwarding=yes, PermitOpen
+check_rfwd done (expecting Y): AllowTcpForwarding=yes, PermitOpen
+check_lfwd done (expecting N): AllowTcpForwarding=yes, !permitopen
+check_rfwd done (expecting Y): AllowTcpForwarding=yes, !permitopen
+check_lfwd done (expecting Y): AllowTcpForwarding=yes, permitopen
+check_rfwd done (expecting Y): AllowTcpForwarding=yes, permitopen
+check_lfwd done (expecting N): AllowTcpForwarding=yes, no-port-forwarding
+check_rfwd done (expecting N): AllowTcpForwarding=yes, no-port-forwarding
+check_lfwd done (expecting N): AllowTcpForwarding=yes, restrict
+check_rfwd done (expecting N): AllowTcpForwarding=yes, restrict
+check_lfwd done (expecting Y): AllowTcpForwarding=yes, restrict,port-forwarding
+check_rfwd done (expecting Y): AllowTcpForwarding=yes, restrict,port-forwarding
+check_lfwd done (expecting Y): AllowTcpForwarding=local
+check_rfwd done (expecting N): AllowTcpForwarding=local
+check_lfwd done (expecting N): AllowTcpForwarding=local, !PermitOpen
+check_rfwd done (expecting N): AllowTcpForwarding=local, !PermitOpen
+check_lfwd done (expecting Y): AllowTcpForwarding=local, PermitOpen
+check_rfwd done (expecting N): AllowTcpForwarding=local, PermitOpen
+check_lfwd done (expecting N): AllowTcpForwarding=local, !permitopen
+check_rfwd done (expecting N): AllowTcpForwarding=local, !permitopen
+check_lfwd done (expecting Y): AllowTcpForwarding=local, permitopen
+check_rfwd done (expecting N): AllowTcpForwarding=local, permitopen
+check_lfwd done (expecting N): AllowTcpForwarding=local, no-port-forwarding
+check_rfwd done (expecting N): AllowTcpForwarding=local, no-port-forwarding
+check_lfwd done (expecting N): AllowTcpForwarding=local, restrict
+check_rfwd done (expecting N): AllowTcpForwarding=local, restrict
+check_lfwd done (expecting Y): AllowTcpForwarding=local, restrict,port-forwarding
+check_rfwd done (expecting N): AllowTcpForwarding=local, restrict,port-forwarding
+check_lfwd done (expecting N): AllowTcpForwarding=remote
+check_rfwd done (expecting Y): AllowTcpForwarding=remote
+check_lfwd done (expecting N): AllowTcpForwarding=remote, !PermitOpen
+check_rfwd done (expecting Y): AllowTcpForwarding=remote, !PermitOpen
+check_lfwd done (expecting N): AllowTcpForwarding=remote, PermitOpen
+check_rfwd done (expecting Y): AllowTcpForwarding=remote, PermitOpen
+check_lfwd done (expecting N): AllowTcpForwarding=remote, !permitopen
+check_rfwd done (expecting Y): AllowTcpForwarding=remote, !permitopen
+check_lfwd done (expecting N): AllowTcpForwarding=remote, permitopen
+check_rfwd done (expecting Y): AllowTcpForwarding=remote, permitopen
+check_lfwd done (expecting N): AllowTcpForwarding=remote, no-port-forwarding
+check_rfwd done (expecting N): AllowTcpForwarding=remote, no-port-forwarding
+check_lfwd done (expecting N): AllowTcpForwarding=remote, restrict
+check_rfwd done (expecting N): AllowTcpForwarding=remote, restrict
+check_lfwd done (expecting N): AllowTcpForwarding=remote, restrict,port-forwarding
+check_rfwd done (expecting Y): AllowTcpForwarding=remote, restrict,port-forwarding
+check_lfwd done (expecting N): AllowTcpForwarding=no
+check_rfwd done (expecting N): AllowTcpForwarding=no
+check_lfwd done (expecting N): AllowTcpForwarding=no, !PermitOpen
+check_rfwd done (expecting N): AllowTcpForwarding=no, !PermitOpen
+check_lfwd done (expecting N): AllowTcpForwarding=no, PermitOpen
+check_rfwd done (expecting N): AllowTcpForwarding=no, PermitOpen
+check_lfwd done (expecting N): AllowTcpForwarding=no, !permitopen
+check_rfwd done (expecting N): AllowTcpForwarding=no, !permitopen
+check_lfwd done (expecting N): AllowTcpForwarding=no, permitopen
+check_rfwd done (expecting N): AllowTcpForwarding=no, permitopen
+check_lfwd done (expecting N): AllowTcpForwarding=no, no-port-forwarding
+check_rfwd done (expecting N): AllowTcpForwarding=no, no-port-forwarding
+check_lfwd done (expecting N): AllowTcpForwarding=no, restrict
+check_rfwd done (expecting N): AllowTcpForwarding=no, restrict
+check_lfwd done (expecting N): AllowTcpForwarding=no, restrict,port-forwarding
+check_rfwd done (expecting N): AllowTcpForwarding=no, restrict,port-forwarding
+check_lfwd done (expecting Y): AllowTcpForwarding=yes, !PermitListen
+check_rfwd done (expecting N): AllowTcpForwarding=yes, !PermitListen
+check_lfwd done (expecting Y): AllowTcpForwarding=yes, PermitListen
+check_rfwd done (expecting Y): AllowTcpForwarding=yes, PermitListen
+check_lfwd done (expecting Y): AllowTcpForwarding=local, !PermitListen
+check_rfwd done (expecting N): AllowTcpForwarding=local, !PermitListen
+check_lfwd done (expecting Y): AllowTcpForwarding=local, PermitListen
+check_rfwd done (expecting N): AllowTcpForwarding=local, PermitListen
+check_lfwd done (expecting N): AllowTcpForwarding=remote, !PermitListen
+check_rfwd done (expecting N): AllowTcpForwarding=remote, !PermitListen
+check_lfwd done (expecting N): AllowTcpForwarding=remote, PermitListen
+check_rfwd done (expecting Y): AllowTcpForwarding=remote, PermitListen
+check_lfwd done (expecting N): AllowTcpForwarding=no, !PermitListen
+check_rfwd done (expecting N): AllowTcpForwarding=no, !PermitListen
+check_lfwd done (expecting N): AllowTcpForwarding=no, PermitListen
+check_rfwd done (expecting N): AllowTcpForwarding=no, PermitListen
+ok sshd control of local and remote forwarding
+run test integrity.sh ...
+test integrity: hmac-sha1 @2900
+test integrity: hmac-sha1 @2901
+test integrity: hmac-sha1 @2902
+test integrity: hmac-sha1 @2903
+test integrity: hmac-sha1 @2904
+test integrity: hmac-sha1 @2905
+test integrity: hmac-sha1 @2906
+test integrity: hmac-sha1 @2907
+test integrity: hmac-sha1 @2908
+test integrity: hmac-sha1 @2909
+test integrity: 10 errors: mac 10 padding 0 length 0 timeout 0
+test integrity: hmac-sha1-96 @2900
+test integrity: hmac-sha1-96 @2901
+test integrity: hmac-sha1-96 @2902
+test integrity: hmac-sha1-96 @2903
+test integrity: hmac-sha1-96 @2904
+test integrity: hmac-sha1-96 @2905
+test integrity: hmac-sha1-96 @2906
+test integrity: hmac-sha1-96 @2907
+test integrity: hmac-sha1-96 @2908
+test integrity: hmac-sha1-96 @2909
+test integrity: 10 errors: mac 10 padding 0 length 0 timeout 0
+test integrity: hmac-sha2-256 @2900
+test integrity: hmac-sha2-256 @2901
+test integrity: hmac-sha2-256 @2902
+test integrity: hmac-sha2-256 @2903
+test integrity: hmac-sha2-256 @2904
+test integrity: hmac-sha2-256 @2905
+test integrity: hmac-sha2-256 @2906
+test integrity: hmac-sha2-256 @2907
+test integrity: hmac-sha2-256 @2908
+test integrity: hmac-sha2-256 @2909
+test integrity: 10 errors: mac 10 padding 0 length 0 timeout 0
+test integrity: hmac-sha2-512 @2900
+test integrity: hmac-sha2-512 @2901
+test integrity: hmac-sha2-512 @2902
+test integrity: hmac-sha2-512 @2903
+test integrity: hmac-sha2-512 @2904
+test integrity: hmac-sha2-512 @2905
+test integrity: hmac-sha2-512 @2906
+test integrity: hmac-sha2-512 @2907
+test integrity: hmac-sha2-512 @2908
+test integrity: hmac-sha2-512 @2909
+test integrity: 10 errors: mac 10 padding 0 length 0 timeout 0
+test integrity: hmac-md5 @2900
+test integrity: hmac-md5 @2901
+test integrity: hmac-md5 @2902
+test integrity: hmac-md5 @2903
+test integrity: hmac-md5 @2904
+test integrity: hmac-md5 @2905
+test integrity: hmac-md5 @2906
+test integrity: hmac-md5 @2907
+test integrity: hmac-md5 @2908
+test integrity: hmac-md5 @2909
+test integrity: 10 errors: mac 10 padding 0 length 0 timeout 0
+test integrity: hmac-md5-96 @2900
+test integrity: hmac-md5-96 @2901
+test integrity: hmac-md5-96 @2902
+test integrity: hmac-md5-96 @2903
+test integrity: hmac-md5-96 @2904
+test integrity: hmac-md5-96 @2905
+test integrity: hmac-md5-96 @2906
+test integrity: hmac-md5-96 @2907
+test integrity: hmac-md5-96 @2908
+test integrity: hmac-md5-96 @2909
+test integrity: 10 errors: mac 10 padding 0 length 0 timeout 0
+test integrity: umac-64@openssh.com @2900
+test integrity: umac-64@openssh.com @2901
+test integrity: umac-64@openssh.com @2902
+test integrity: umac-64@openssh.com @2903
+test integrity: umac-64@openssh.com @2904
+test integrity: umac-64@openssh.com @2905
+test integrity: umac-64@openssh.com @2906
+test integrity: umac-64@openssh.com @2907
+test integrity: umac-64@openssh.com @2908
+test integrity: umac-64@openssh.com @2909
+test integrity: 10 errors: mac 10 padding 0 length 0 timeout 0
+test integrity: umac-128@openssh.com @2900
+test integrity: umac-128@openssh.com @2901
+test integrity: umac-128@openssh.com @2902
+test integrity: umac-128@openssh.com @2903
+test integrity: umac-128@openssh.com @2904
+test integrity: umac-128@openssh.com @2905
+test integrity: umac-128@openssh.com @2906
+test integrity: umac-128@openssh.com @2907
+test integrity: umac-128@openssh.com @2908
+test integrity: umac-128@openssh.com @2909
+test integrity: 10 errors: mac 10 padding 0 length 0 timeout 0
+test integrity: hmac-sha1-etm@openssh.com @2900
+test integrity: hmac-sha1-etm@openssh.com @2901
+test integrity: hmac-sha1-etm@openssh.com @2902
+test integrity: hmac-sha1-etm@openssh.com @2903
+test integrity: hmac-sha1-etm@openssh.com @2904
+test integrity: hmac-sha1-etm@openssh.com @2905
+test integrity: hmac-sha1-etm@openssh.com @2906
+test integrity: hmac-sha1-etm@openssh.com @2907
+test integrity: hmac-sha1-etm@openssh.com @2908
+test integrity: hmac-sha1-etm@openssh.com @2909
+test integrity: 10 errors: mac 10 padding 0 length 0 timeout 0
+test integrity: hmac-sha1-96-etm@openssh.com @2900
+test integrity: hmac-sha1-96-etm@openssh.com @2901
+test integrity: hmac-sha1-96-etm@openssh.com @2902
+test integrity: hmac-sha1-96-etm@openssh.com @2903
+test integrity: hmac-sha1-96-etm@openssh.com @2904
+test integrity: hmac-sha1-96-etm@openssh.com @2905
+test integrity: hmac-sha1-96-etm@openssh.com @2906
+test integrity: hmac-sha1-96-etm@openssh.com @2907
+test integrity: hmac-sha1-96-etm@openssh.com @2908
+test integrity: hmac-sha1-96-etm@openssh.com @2909
+test integrity: 10 errors: mac 10 padding 0 length 0 timeout 0
+test integrity: hmac-sha2-256-etm@openssh.com @2900
+test integrity: hmac-sha2-256-etm@openssh.com @2901
+test integrity: hmac-sha2-256-etm@openssh.com @2902
+test integrity: hmac-sha2-256-etm@openssh.com @2903
+test integrity: hmac-sha2-256-etm@openssh.com @2904
+test integrity: hmac-sha2-256-etm@openssh.com @2905
+test integrity: hmac-sha2-256-etm@openssh.com @2906
+test integrity: hmac-sha2-256-etm@openssh.com @2907
+test integrity: hmac-sha2-256-etm@openssh.com @2908
+test integrity: hmac-sha2-256-etm@openssh.com @2909
+test integrity: 10 errors: mac 10 padding 0 length 0 timeout 0
+test integrity: hmac-sha2-512-etm@openssh.com @2900
+test integrity: hmac-sha2-512-etm@openssh.com @2901
+test integrity: hmac-sha2-512-etm@openssh.com @2902
+test integrity: hmac-sha2-512-etm@openssh.com @2903
+test integrity: hmac-sha2-512-etm@openssh.com @2904
+test integrity: hmac-sha2-512-etm@openssh.com @2905
+test integrity: hmac-sha2-512-etm@openssh.com @2906
+test integrity: hmac-sha2-512-etm@openssh.com @2907
+test integrity: hmac-sha2-512-etm@openssh.com @2908
+test integrity: hmac-sha2-512-etm@openssh.com @2909
+test integrity: 10 errors: mac 10 padding 0 length 0 timeout 0
+test integrity: hmac-md5-etm@openssh.com @2900
+test integrity: hmac-md5-etm@openssh.com @2901
+test integrity: hmac-md5-etm@openssh.com @2902
+test integrity: hmac-md5-etm@openssh.com @2903
+test integrity: hmac-md5-etm@openssh.com @2904
+test integrity: hmac-md5-etm@openssh.com @2905
+test integrity: hmac-md5-etm@openssh.com @2906
+test integrity: hmac-md5-etm@openssh.com @2907
+test integrity: hmac-md5-etm@openssh.com @2908
+test integrity: hmac-md5-etm@openssh.com @2909
+test integrity: 10 errors: mac 10 padding 0 length 0 timeout 0
+test integrity: hmac-md5-96-etm@openssh.com @2900
+test integrity: hmac-md5-96-etm@openssh.com @2901
+test integrity: hmac-md5-96-etm@openssh.com @2902
+test integrity: hmac-md5-96-etm@openssh.com @2903
+test integrity: hmac-md5-96-etm@openssh.com @2904
+test integrity: hmac-md5-96-etm@openssh.com @2905
+test integrity: hmac-md5-96-etm@openssh.com @2906
+test integrity: hmac-md5-96-etm@openssh.com @2907
+test integrity: hmac-md5-96-etm@openssh.com @2908
+test integrity: hmac-md5-96-etm@openssh.com @2909
+test integrity: 10 errors: mac 10 padding 0 length 0 timeout 0
+test integrity: umac-64-etm@openssh.com @2900
+test integrity: umac-64-etm@openssh.com @2901
+test integrity: umac-64-etm@openssh.com @2902
+test integrity: umac-64-etm@openssh.com @2903
+test integrity: umac-64-etm@openssh.com @2904
+test integrity: umac-64-etm@openssh.com @2905
+test integrity: umac-64-etm@openssh.com @2906
+test integrity: umac-64-etm@openssh.com @2907
+test integrity: umac-64-etm@openssh.com @2908
+test integrity: umac-64-etm@openssh.com @2909
+test integrity: 10 errors: mac 10 padding 0 length 0 timeout 0
+test integrity: umac-128-etm@openssh.com @2900
+test integrity: umac-128-etm@openssh.com @2901
+test integrity: umac-128-etm@openssh.com @2902
+test integrity: umac-128-etm@openssh.com @2903
+test integrity: umac-128-etm@openssh.com @2904
+test integrity: umac-128-etm@openssh.com @2905
+test integrity: umac-128-etm@openssh.com @2906
+test integrity: umac-128-etm@openssh.com @2907
+test integrity: umac-128-etm@openssh.com @2908
+test integrity: umac-128-etm@openssh.com @2909
+test integrity: 10 errors: mac 10 padding 0 length 0 timeout 0
+test integrity: aes128-gcm@openssh.com @2900
+test integrity: aes128-gcm@openssh.com @2901
+test integrity: aes128-gcm@openssh.com @2902
+test integrity: aes128-gcm@openssh.com @2903
+test integrity: aes128-gcm@openssh.com @2904
+test integrity: aes128-gcm@openssh.com @2905
+test integrity: aes128-gcm@openssh.com @2906
+test integrity: aes128-gcm@openssh.com @2907
+test integrity: aes128-gcm@openssh.com @2908
+test integrity: aes128-gcm@openssh.com @2909
+test integrity: 10 errors: mac 10 padding 0 length 0 timeout 0
+test integrity: aes256-gcm@openssh.com @2900
+test integrity: aes256-gcm@openssh.com @2901
+test integrity: aes256-gcm@openssh.com @2902
+test integrity: aes256-gcm@openssh.com @2903
+test integrity: aes256-gcm@openssh.com @2904
+test integrity: aes256-gcm@openssh.com @2905
+test integrity: aes256-gcm@openssh.com @2906
+test integrity: aes256-gcm@openssh.com @2907
+test integrity: aes256-gcm@openssh.com @2908
+test integrity: aes256-gcm@openssh.com @2909
+test integrity: 10 errors: mac 10 padding 0 length 0 timeout 0
+test integrity: chacha20-poly1305@openssh.com @2900
+test integrity: chacha20-poly1305@openssh.com @2901
+test integrity: chacha20-poly1305@openssh.com @2902
+test integrity: chacha20-poly1305@openssh.com @2903
+test integrity: chacha20-poly1305@openssh.com @2904
+test integrity: chacha20-poly1305@openssh.com @2905
+test integrity: chacha20-poly1305@openssh.com @2906
+test integrity: chacha20-poly1305@openssh.com @2907
+test integrity: chacha20-poly1305@openssh.com @2908
+test integrity: chacha20-poly1305@openssh.com @2909
+test integrity: 10 errors: mac 10 padding 0 length 0 timeout 0
+ok integrity
+run test krl.sh ...
+key revocation lists: generating test keys
+key revocation lists: generating KRLs
+key revocation lists: checking revocations for revoked keys
+key revocation lists: checking revocations for unrevoked keys
+key revocation lists: checking revocations for revoked certs
+key revocation lists: checking revocations for unrevoked certs
+key revocation lists: testing KRL update
+key revocation lists: checking revocations for revoked keys
+key revocation lists: checking revocations for unrevoked keys
+key revocation lists: checking revocations for revoked certs
+key revocation lists: checking revocations for unrevoked certs
+ok key revocation lists
+run test multipubkey.sh ...
+ok multiple pubkey
+run test limit-keytype.sh ...
+allow rsa,ed25519
+allow ed25519
+allow cert only
+match w/ no match
+match w/ matching
+ok restrict pubkey type
+run test hostkey-agent.sh ...
+key type ssh-ed25519
+key type sk-ssh-ed25519@openssh.com
+key type ecdsa-sha2-nistp256
+key type ecdsa-sha2-nistp384
+key type ecdsa-sha2-nistp521
+key type sk-ecdsa-sha2-nistp256@openssh.com
+key type ssh-rsa
+cert type ssh-ed25519-cert-v01@openssh.com
+cert type sk-ssh-ed25519-cert-v01@openssh.com
+cert type ecdsa-sha2-nistp256-cert-v01@openssh.com
+cert type ecdsa-sha2-nistp384-cert-v01@openssh.com
+cert type ecdsa-sha2-nistp521-cert-v01@openssh.com
+cert type sk-ecdsa-sha2-nistp256-cert-v01@openssh.com
+cert type ssh-rsa-cert-v01@openssh.com
+cert type rsa-sha2-256-cert-v01@openssh.com
+cert type rsa-sha2-512-cert-v01@openssh.com
+ok hostkey agent
+run test hostkey-rotate.sh ...
+learn hostkey with StrictHostKeyChecking=no
+learn additional hostkeys
+learn additional hostkeys, type=ssh-ed25519
+learn additional hostkeys, type=sk-ssh-ed25519@openssh.com
+learn additional hostkeys, type=ecdsa-sha2-nistp256
+learn additional hostkeys, type=ecdsa-sha2-nistp384
+learn additional hostkeys, type=ecdsa-sha2-nistp521
+learn additional hostkeys, type=sk-ecdsa-sha2-nistp256@openssh.com
+learn additional hostkeys, type=ssh-rsa
+learn changed non-primary hostkey type=ssh-rsa
+learn new primary hostkey
+rotate primary hostkey
+check rotate primary hostkey
+ok hostkey rotate
+run test principals-command.sh ...
+authorized principals command: empty authorized_principals
+authorized principals command: wrong authorized_principals
+authorized principals command: correct authorized_principals
+authorized principals command: authorized_principals bad key opt
+authorized principals command: authorized_principals command=false
+authorized principals command: authorized_principals command=true
+authorized principals command: wrong principals key option
+authorized principals command: correct principals key option
+ok authorized principals command
+run test cert-file.sh ...
+identity cert with no plain public file
+CertificateFile with no plain public file
+plain keys
+untrusted cert
+good cert, bad key
+single trusted
+multiple trusted
+ok ssh with certificates
+run test cfginclude.sh ...
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+Pseudo-terminal will not be allocated because stdin is not a terminal.
+ok config include
+run test servcfginclude.sh ...
+ok server config include
+run test allow-deny-users.sh ...
+ok AllowUsers/DenyUsers
+run test authinfo.sh ...
+ExposeAuthInfo=no
+ExposeAuthInfo=yes
+ok authinfo
+run test sshsig.sh ...
+sshsig: make certificates
+sshsig: check signature for ssh-ed25519
+sshsig: check signature for sk-ssh-ed25519@openssh.com
+sshsig: check signature for ecdsa-sha2-nistp256
+sshsig: check signature for ecdsa-sha2-nistp384
+sshsig: check signature for ecdsa-sha2-nistp521
+sshsig: check signature for sk-ecdsa-sha2-nistp256@openssh.com
+sshsig: check signature for ssh-rsa
+sshsig: check signature for ssh-ed25519-cert.pub
+sshsig: check signature for sk-ssh-ed25519@openssh.com-cert.pub
+sshsig: check signature for ecdsa-sha2-nistp256-cert.pub
+sshsig: check signature for ecdsa-sha2-nistp384-cert.pub
+sshsig: check signature for ecdsa-sha2-nistp521-cert.pub
+sshsig: check signature for sk-ecdsa-sha2-nistp256@openssh.com-cert.pub
+sshsig: check signature for ssh-rsa-cert.pub
+sshsig: match principals
+sshsig: nomatch principals
+ok sshsig
+run test knownhosts.sh ...
+ok known hosts
+run test knownhosts-command.sh ...
+simple connection
+no keys
+bad exit status
+keytype ssh-ed25519
+keytype sk-ssh-ed25519@openssh.com
+keytype ecdsa-sha2-nistp256
+keytype ecdsa-sha2-nistp384
+keytype ecdsa-sha2-nistp521
+keytype sk-ecdsa-sha2-nistp256@openssh.com
+keytype ssh-rsa
+ok known hosts command
+run test agent-restrict.sh ...
+generate keys
+prepare client config
+prepare known_hosts
+prepare server configs
+authentication w/o agent
+start agent
+authentication with agent (no restrict)
+unrestricted keylist
+authentication with agent (basic restrict)
+authentication with agent incorrect key (basic restrict)
+keylist (basic restrict)
+username
+username wildcard
+username incorrect
+agent restriction honours certificate principal
+multihop without agent
+multihop agent unrestricted
+multihop restricted
+multihop username
+multihop wildcard username
+multihop wrong username
+multihop cycle no agent
+multihop cycle agent unrestricted
+multihop cycle restricted deny
+multihop cycle restricted allow
+ok agent restrictions
+run test hostbased.sh ...
+SKIPPED: TEST_SSH_HOSTBASED_AUTH not set.
+run test channel-timeout.sh ...
+no timeout
+command timeout
+command long timeout
+command wildcard timeout
+command irrelevant timeout
+multiplexed command timeout
+irrelevant multiplexed command timeout
+global command timeout
+sftp no timeout
+sftp timeout
+Connection closed
+sftp irrelevant timeout
+ok channel timeout
+run test connection-timeout.sh ...
+no timeout
+timeout
+session inhibits timeout
+timeout after session
+timeout with listeners
+ok unused connection timeout
+run test match-subsystem.sh ...
+ok sshd_config match subsystem
+run test agent-pkcs11-restrict.sh ...
+SKIPPED: No PKCS#11 library found
+run test agent-pkcs11-cert.sh ...
+SKIPPED: No PKCS#11 library found
+run test penalty.sh ...
+test connect
+penalty for authentication failure
+penalty for no authentication
+ok penalties
+run test penalty-expire.sh ...
+test connect
+penalty expiry
+ok penalties
+make[1]: Leaving directory '/work/court/tmp/o4/cell-BA/regress'
+all t-exec passed
+cd ./regress || exit $?; \
+EGREP='/usr/bin/grep -E' \
+OPENSSL_BIN='' \
+make \
+	.CURDIR="/work/court/tmp/o4/tree-A/regress" \
+	.OBJDIR="/work/court/tmp/o4/cell-BA/regress" \
+	BUILDDIR="/work/court/tmp/o4/cell-BA" \
+	OBJ="/work/court/tmp/o4/cell-BA/regress" \
+	PATH="/work/court/tmp/o4/cell-BA:${PATH}" \
+	TEST_ENV=MALLOC_OPTIONS="" \
+	TEST_MALLOC_OPTIONS="" \
+	TEST_SSH_SCP="/work/court/tmp/o4/cell-BA/scp" \
+	TEST_SSH_SSH="/work/court/tmp/o4/cell-BA/ssh" \
+	TEST_SSH_SSHD="/work/court/tmp/o4/cell-BA/sshd" \
+	TEST_SSH_SSHD_SESSION="/work/court/tmp/o4/cell-BA/sshd-session" \
+	TEST_SSH_SSHAGENT="/work/court/tmp/o4/cell-BA/ssh-agent" \
+	TEST_SSH_SSHADD="/work/court/tmp/o4/cell-BA/ssh-add" \
+	TEST_SSH_SSHKEYGEN="/work/court/tmp/o4/cell-BA/ssh-keygen" \
+	TEST_SSH_SSHPKCS11HELPER="/work/court/tmp/o4/cell-BA/ssh-pkcs11-helper" \
+	TEST_SSH_SSHKEYSCAN="/work/court/tmp/o4/cell-BA/ssh-keyscan" \
+	TEST_SSH_SFTP="/work/court/tmp/o4/cell-BA/sftp" \
+	TEST_SSH_PKCS11_HELPER="/work/court/tmp/o4/cell-BA/ssh-pkcs11-helper" \
+	TEST_SSH_SK_HELPER="/work/court/tmp/o4/cell-BA/ssh-sk-helper" \
+	TEST_SSH_SFTPSERVER="/work/court/tmp/o4/cell-BA/sftp-server" \
+	TEST_SSH_MODULI_FILE="/work/court/tmp/o4/tree-A/moduli" \
+	TEST_SSH_PLINK="/work/court/tmp/o3/prefix/bin/plink" \
+	TEST_SSH_PUTTYGEN="/work/court/tmp/o3/prefix/bin/puttygen" \
+	TEST_SSH_CONCH="" \
+	TEST_SSH_DROPBEAR="/work/court/tmp/o3/prefix/sbin/dropbear" \
+	TEST_SSH_DROPBEARKEY="/work/court/tmp/o3/prefix/bin/dropbearkey" \
+	TEST_SSH_DROPBEARCONVERT="/work/court/tmp/o3/prefix/bin/dropbearconvert" \
+	TEST_SSH_DBCLIENT="/work/court/tmp/o3/prefix/bin/dbclient" \
+	TEST_SSH_IPV6="yes" \
+	TEST_SSH_UTF8="no" \
+	TEST_SHELL="sh" \
+	EXEEXT="" \
+	interop-tests && echo all interop-tests passed
+make[1]: Entering directory '/work/court/tmp/o4/cell-BA/regress'
+run test putty-transfer.sh ...
+plink version 0.85 major 0 minor 85
+putty transfer data: compression 0
+putty transfer data: compression 1
+ok putty transfer data
+run test putty-ciphers.sh ...
+plink version 0.85 major 0 minor 85
+putty ciphers: cipher default mac default
+putty ciphers: cipher default mac hmac-sha1
+putty ciphers: cipher default mac hmac-sha1-96
+putty ciphers: cipher default mac hmac-sha2-256
+putty ciphers: cipher default mac hmac-sha2-512
+putty ciphers: cipher default mac hmac-md5
+putty ciphers: cipher default mac hmac-sha1-etm@openssh.com
+putty ciphers: cipher default mac hmac-sha1-96-etm@openssh.com
+putty ciphers: cipher default mac hmac-sha2-256-etm@openssh.com
+putty ciphers: cipher default mac hmac-sha2-512-etm@openssh.com
+putty ciphers: cipher default mac hmac-md5-etm@openssh.com
+putty ciphers: cipher 3des-cbc mac default
+putty ciphers: cipher 3des-cbc mac hmac-sha1
+putty ciphers: cipher 3des-cbc mac hmac-sha1-96
+putty ciphers: cipher 3des-cbc mac hmac-sha2-256
+putty ciphers: cipher 3des-cbc mac hmac-sha2-512
+putty ciphers: cipher 3des-cbc mac hmac-md5
+putty ciphers: cipher 3des-cbc mac hmac-sha1-etm@openssh.com
+putty ciphers: cipher 3des-cbc mac hmac-sha1-96-etm@openssh.com
+putty ciphers: cipher 3des-cbc mac hmac-sha2-256-etm@openssh.com
+putty ciphers: cipher 3des-cbc mac hmac-sha2-512-etm@openssh.com
+putty ciphers: cipher 3des-cbc mac hmac-md5-etm@openssh.com
+putty ciphers: cipher aes128-cbc mac default
+putty ciphers: cipher aes128-cbc mac hmac-sha1
+putty ciphers: cipher aes128-cbc mac hmac-sha1-96
+putty ciphers: cipher aes128-cbc mac hmac-sha2-256
+putty ciphers: cipher aes128-cbc mac hmac-sha2-512
+putty ciphers: cipher aes128-cbc mac hmac-md5
+putty ciphers: cipher aes128-cbc mac hmac-sha1-etm@openssh.com
+putty ciphers: cipher aes128-cbc mac hmac-sha1-96-etm@openssh.com
+putty ciphers: cipher aes128-cbc mac hmac-sha2-256-etm@openssh.com
+putty ciphers: cipher aes128-cbc mac hmac-sha2-512-etm@openssh.com
+putty ciphers: cipher aes128-cbc mac hmac-md5-etm@openssh.com
+putty ciphers: cipher aes192-cbc mac default
+putty ciphers: cipher aes192-cbc mac hmac-sha1
+putty ciphers: cipher aes192-cbc mac hmac-sha1-96
+putty ciphers: cipher aes192-cbc mac hmac-sha2-256
+putty ciphers: cipher aes192-cbc mac hmac-sha2-512
+putty ciphers: cipher aes192-cbc mac hmac-md5
+putty ciphers: cipher aes192-cbc mac hmac-sha1-etm@openssh.com
+putty ciphers: cipher aes192-cbc mac hmac-sha1-96-etm@openssh.com
+putty ciphers: cipher aes192-cbc mac hmac-sha2-256-etm@openssh.com
+putty ciphers: cipher aes192-cbc mac hmac-sha2-512-etm@openssh.com
+putty ciphers: cipher aes192-cbc mac hmac-md5-etm@openssh.com
+putty ciphers: cipher aes256-cbc mac default
+putty ciphers: cipher aes256-cbc mac hmac-sha1
+putty ciphers: cipher aes256-cbc mac hmac-sha1-96
+putty ciphers: cipher aes256-cbc mac hmac-sha2-256
+putty ciphers: cipher aes256-cbc mac hmac-sha2-512
+putty ciphers: cipher aes256-cbc mac hmac-md5
+putty ciphers: cipher aes256-cbc mac hmac-sha1-etm@openssh.com
+putty ciphers: cipher aes256-cbc mac hmac-sha1-96-etm@openssh.com
+putty ciphers: cipher aes256-cbc mac hmac-sha2-256-etm@openssh.com
+putty ciphers: cipher aes256-cbc mac hmac-sha2-512-etm@openssh.com
+putty ciphers: cipher aes256-cbc mac hmac-md5-etm@openssh.com
+putty ciphers: cipher aes128-ctr mac default
+putty ciphers: cipher aes128-ctr mac hmac-sha1
+putty ciphers: cipher aes128-ctr mac hmac-sha1-96
+putty ciphers: cipher aes128-ctr mac hmac-sha2-256
+putty ciphers: cipher aes128-ctr mac hmac-sha2-512
+putty ciphers: cipher aes128-ctr mac hmac-md5
+putty ciphers: cipher aes128-ctr mac hmac-sha1-etm@openssh.com
+putty ciphers: cipher aes128-ctr mac hmac-sha1-96-etm@openssh.com
+putty ciphers: cipher aes128-ctr mac hmac-sha2-256-etm@openssh.com
+putty ciphers: cipher aes128-ctr mac hmac-sha2-512-etm@openssh.com
+putty ciphers: cipher aes128-ctr mac hmac-md5-etm@openssh.com
+putty ciphers: cipher aes192-ctr mac default
+putty ciphers: cipher aes192-ctr mac hmac-sha1
+putty ciphers: cipher aes192-ctr mac hmac-sha1-96
+putty ciphers: cipher aes192-ctr mac hmac-sha2-256
+putty ciphers: cipher aes192-ctr mac hmac-sha2-512
+putty ciphers: cipher aes192-ctr mac hmac-md5
+putty ciphers: cipher aes192-ctr mac hmac-sha1-etm@openssh.com
+putty ciphers: cipher aes192-ctr mac hmac-sha1-96-etm@openssh.com
+putty ciphers: cipher aes192-ctr mac hmac-sha2-256-etm@openssh.com
+putty ciphers: cipher aes192-ctr mac hmac-sha2-512-etm@openssh.com
+putty ciphers: cipher aes192-ctr mac hmac-md5-etm@openssh.com
+putty ciphers: cipher aes256-ctr mac default
+putty ciphers: cipher aes256-ctr mac hmac-sha1
+putty ciphers: cipher aes256-ctr mac hmac-sha1-96
+putty ciphers: cipher aes256-ctr mac hmac-sha2-256
+putty ciphers: cipher aes256-ctr mac hmac-sha2-512
+putty ciphers: cipher aes256-ctr mac hmac-md5
+putty ciphers: cipher aes256-ctr mac hmac-sha1-etm@openssh.com
+putty ciphers: cipher aes256-ctr mac hmac-sha1-96-etm@openssh.com
+putty ciphers: cipher aes256-ctr mac hmac-sha2-256-etm@openssh.com
+putty ciphers: cipher aes256-ctr mac hmac-sha2-512-etm@openssh.com
+putty ciphers: cipher aes256-ctr mac hmac-md5-etm@openssh.com
+putty ciphers: cipher aes128-gcm@openssh.com mac default
+putty ciphers: cipher aes128-gcm@openssh.com mac hmac-sha1
+putty ciphers: cipher aes128-gcm@openssh.com mac hmac-sha1-96
+putty ciphers: cipher aes128-gcm@openssh.com mac hmac-sha2-256
+putty ciphers: cipher aes128-gcm@openssh.com mac hmac-sha2-512
+putty ciphers: cipher aes128-gcm@openssh.com mac hmac-md5
+putty ciphers: cipher aes128-gcm@openssh.com mac hmac-sha1-etm@openssh.com
+putty ciphers: cipher aes128-gcm@openssh.com mac hmac-sha1-96-etm@openssh.com
+putty ciphers: cipher aes128-gcm@openssh.com mac hmac-sha2-256-etm@openssh.com
+putty ciphers: cipher aes128-gcm@openssh.com mac hmac-sha2-512-etm@openssh.com
+putty ciphers: cipher aes128-gcm@openssh.com mac hmac-md5-etm@openssh.com
+putty ciphers: cipher aes256-gcm@openssh.com mac default
+putty ciphers: cipher aes256-gcm@openssh.com mac hmac-sha1
+putty ciphers: cipher aes256-gcm@openssh.com mac hmac-sha1-96
+putty ciphers: cipher aes256-gcm@openssh.com mac hmac-sha2-256
+putty ciphers: cipher aes256-gcm@openssh.com mac hmac-sha2-512
+putty ciphers: cipher aes256-gcm@openssh.com mac hmac-md5
+putty ciphers: cipher aes256-gcm@openssh.com mac hmac-sha1-etm@openssh.com
+putty ciphers: cipher aes256-gcm@openssh.com mac hmac-sha1-96-etm@openssh.com
+putty ciphers: cipher aes256-gcm@openssh.com mac hmac-sha2-256-etm@openssh.com
+putty ciphers: cipher aes256-gcm@openssh.com mac hmac-sha2-512-etm@openssh.com
+putty ciphers: cipher aes256-gcm@openssh.com mac hmac-md5-etm@openssh.com
+putty ciphers: cipher chacha20-poly1305@openssh.com mac default
+putty ciphers: cipher chacha20-poly1305@openssh.com mac hmac-sha1
+putty ciphers: cipher chacha20-poly1305@openssh.com mac hmac-sha1-96
+putty ciphers: cipher chacha20-poly1305@openssh.com mac hmac-sha2-256
+putty ciphers: cipher chacha20-poly1305@openssh.com mac hmac-sha2-512
+putty ciphers: cipher chacha20-poly1305@openssh.com mac hmac-md5
+putty ciphers: cipher chacha20-poly1305@openssh.com mac hmac-sha1-etm@openssh.com
+putty ciphers: cipher chacha20-poly1305@openssh.com mac hmac-sha1-96-etm@openssh.com
+putty ciphers: cipher chacha20-poly1305@openssh.com mac hmac-sha2-256-etm@openssh.com
+putty ciphers: cipher chacha20-poly1305@openssh.com mac hmac-sha2-512-etm@openssh.com
+putty ciphers: cipher chacha20-poly1305@openssh.com mac hmac-md5-etm@openssh.com
+ok putty ciphers
+run test putty-kex.sh ...
+plink version 0.85 major 0 minor 85
+putty KEX: kex diffie-hellman-group1-sha1
+putty KEX: kex diffie-hellman-group14-sha1
+putty KEX: kex diffie-hellman-group14-sha256
+putty KEX: kex diffie-hellman-group16-sha512
+putty KEX: kex diffie-hellman-group18-sha512
+putty KEX: kex diffie-hellman-group-exchange-sha1
+putty KEX: kex diffie-hellman-group-exchange-sha256
+putty KEX: kex ecdh-sha2-nistp256
+putty KEX: kex ecdh-sha2-nistp384
+putty KEX: kex ecdh-sha2-nistp521
+putty KEX: kex curve25519-sha256
+putty KEX: kex curve25519-sha256@libssh.org
+putty KEX: kex sntrup761x25519-sha512
+putty KEX: kex sntrup761x25519-sha512@openssh.com
+putty KEX: kex mlkem768x25519-sha256
+ok putty KEX
+run test conch-ciphers.sh ...
+SKIPPED: conch interop tests not enabled
+run test dropbear-ciphers.sh ...
+Create dropbear key type ed25519
+Create dropbear key type rsa
+Create dropbear key type ecdsa
+dropbear ciphers: cipher chacha20-poly1305@openssh.com mac hmac-sha2-256 kt id_ecdsa
+dropbear ciphers: cipher chacha20-poly1305@openssh.com mac hmac-sha2-256 kt id_ed25519
+dropbear ciphers: cipher chacha20-poly1305@openssh.com mac hmac-sha2-256 kt id_rsa
+dropbear ciphers: cipher aes256-ctr mac hmac-sha2-256 kt id_ecdsa
+dropbear ciphers: cipher aes256-ctr mac hmac-sha2-256 kt id_ed25519
+dropbear ciphers: cipher aes256-ctr mac hmac-sha2-256 kt id_rsa
+dropbear ciphers: cipher aes128-ctr mac hmac-sha2-256 kt id_ecdsa
+dropbear ciphers: cipher aes128-ctr mac hmac-sha2-256 kt id_ed25519
+dropbear ciphers: cipher aes128-ctr mac hmac-sha2-256 kt id_rsa
+ok dropbear ciphers
+run test dropbear-kex.sh ...
+diffie-hellman-group14-sha1
+dropbear kex: kex curve25519-sha256
+dropbear kex: kex curve25519-sha256@libssh.org
+dropbear kex: kex diffie-hellman-group14-sha256
+dropbear kex: kex diffie-hellman-group14-sha1
+ssh cat /work/court/tmp/o4/cell-BA/regress/data failed
+cmp: EOF on /work/court/tmp/o4/cell-BA/regress/copy which is empty
+corrupted copy
+failed dropbear kex
+make[1]: *** [Makefile:277: t-exec-interop] Error 1
+make[1]: Target 'interop-tests' not remade because of errors.
+make[1]: Leaving directory '/work/court/tmp/o4/cell-BA/regress'
+make: *** [Makefile:742: interop-tests] Error 2
+cd ./regress || exit $?; \
+EGREP='/usr/bin/grep -E' \
+OPENSSL_BIN='' \
+make \
+	.CURDIR="/work/court/tmp/o4/tree-A/regress" \
+	.OBJDIR="/work/court/tmp/o4/cell-BA/regress" \
+	BUILDDIR="/work/court/tmp/o4/cell-BA" \
+	OBJ="/work/court/tmp/o4/cell-BA/regress" \
+	PATH="/work/court/tmp/o4/cell-BA:${PATH}" \
+	TEST_ENV=MALLOC_OPTIONS="" \
+	TEST_MALLOC_OPTIONS="" \
+	TEST_SSH_SCP="/work/court/tmp/o4/cell-BA/scp" \
+	TEST_SSH_SSH="/work/court/tmp/o4/cell-BA/ssh" \
+	TEST_SSH_SSHD="/work/court/tmp/o4/cell-BA/sshd" \
+	TEST_SSH_SSHD_SESSION="/work/court/tmp/o4/cell-BA/sshd-session" \
+	TEST_SSH_SSHAGENT="/work/court/tmp/o4/cell-BA/ssh-agent" \
+	TEST_SSH_SSHADD="/work/court/tmp/o4/cell-BA/ssh-add" \
+	TEST_SSH_SSHKEYGEN="/work/court/tmp/o4/cell-BA/ssh-keygen" \
+	TEST_SSH_SSHPKCS11HELPER="/work/court/tmp/o4/cell-BA/ssh-pkcs11-helper" \
+	TEST_SSH_SSHKEYSCAN="/work/court/tmp/o4/cell-BA/ssh-keyscan" \
+	TEST_SSH_SFTP="/work/court/tmp/o4/cell-BA/sftp" \
+	TEST_SSH_PKCS11_HELPER="/work/court/tmp/o4/cell-BA/ssh-pkcs11-helper" \
+	TEST_SSH_SK_HELPER="/work/court/tmp/o4/cell-BA/ssh-sk-helper" \
+	TEST_SSH_SFTPSERVER="/work/court/tmp/o4/cell-BA/sftp-server" \
+	TEST_SSH_MODULI_FILE="/work/court/tmp/o4/tree-A/moduli" \
+	TEST_SSH_PLINK="/work/court/tmp/o3/prefix/bin/plink" \
+	TEST_SSH_PUTTYGEN="/work/court/tmp/o3/prefix/bin/puttygen" \
+	TEST_SSH_CONCH="" \
+	TEST_SSH_DROPBEAR="/work/court/tmp/o3/prefix/sbin/dropbear" \
+	TEST_SSH_DROPBEARKEY="/work/court/tmp/o3/prefix/bin/dropbearkey" \
+	TEST_SSH_DROPBEARCONVERT="/work/court/tmp/o3/prefix/bin/dropbearconvert" \
+	TEST_SSH_DBCLIENT="/work/court/tmp/o3/prefix/bin/dbclient" \
+	TEST_SSH_IPV6="yes" \
+	TEST_SSH_UTF8="no" \
+	TEST_SHELL="sh" \
+	EXEEXT="" \
+	extra-tests && echo all extra-tests passed
+make[1]: Entering directory '/work/court/tmp/o4/cell-BA/regress'
+run test agent-pkcs11.sh ...
+SKIPPED: No PKCS#11 library found
+make[1]: Leaving directory '/work/court/tmp/o4/cell-BA/regress'
+all extra-tests passed
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/authopt/tests.c -o regress/unittests/authopt/tests.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/test_helper/test_helper.c -o regress/unittests/test_helper/test_helper.o
+regress/unittests/test_helper/test_helper.c: In function ‘siginfo’:
+regress/unittests/test_helper/test_helper.c:232:47: warning: ‘%s’ directive output may be truncated writing up to 511 bytes into a region of size between 234 and 243 [-Wformat-truncation=]
+  232 |         snprintf(s, len, "In test %u: \"%s\"%s%s\n", test_number,
+      |                                               ^~
+  233 |             active_test_name == NULL ? "<none>" : active_test_name,
+  234 |             *subtest_info != '\0' ? " - " : "", subtest_info);
+      |                                                 ~~~~~~~~~~~~
+In file included from /usr/include/stdio.h:906,
+                 from /usr/include/resolv.h:58,
+                 from ./openbsd-compat/getrrsetbyname.h:59,
+                 from ./openbsd-compat/openbsd-compat.h:44,
+                 from ./includes.h:173,
+                 from regress/unittests/test_helper/test_helper.c:20:
+In function ‘snprintf’,
+    inlined from ‘test_info’ at regress/unittests/test_helper/test_helper.c:232:2,
+    inlined from ‘siginfo’ at regress/unittests/test_helper/test_helper.c:242:2:
+/usr/include/x86_64-linux-gnu/bits/stdio2.h:54:10: note: ‘__builtin___snprintf_chk’ output 15 or more bytes (assuming 535) into a destination of size 256
+   54 |   return __builtin___snprintf_chk (__s, __n, __USE_FORTIFY_LEVEL - 1,
+      |          ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   55 |                                    __glibc_objsize (__s), __fmt,
+      |                                    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   56 |                                    __va_arg_pack ());
+      |                                    ~~~~~~~~~~~~~~~~~
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/test_helper/fuzz.c -o regress/unittests/test_helper/fuzz.o
+ar rv regress/unittests/test_helper/libtest_helper.a regress/unittests/test_helper/test_helper.o regress/unittests/test_helper/fuzz.o
+ar: creating regress/unittests/test_helper/libtest_helper.a
+a - regress/unittests/test_helper/test_helper.o
+a - regress/unittests/test_helper/fuzz.o
+ranlib regress/unittests/test_helper/libtest_helper.a
+cc -o regress/unittests/authopt/test_authopt -L. -Lopenbsd-compat/ -L/work/forensics/authorities/prefix/openssl-3.6.4-production/lib  -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -fstack-protector-strong -pie  regress/unittests/authopt/tests.o auth-options.o ssh-sk-client.o \
+    regress/unittests/test_helper/libtest_helper.a \
+    -lssh -lopenbsd-compat -lssh -lopenbsd-compat  -lcrypto  -lz
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/bitmap/tests.c -o regress/unittests/bitmap/tests.o
+cc -o regress/unittests/bitmap/test_bitmap -L. -Lopenbsd-compat/ -L/work/forensics/authorities/prefix/openssl-3.6.4-production/lib  -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -fstack-protector-strong -pie  regress/unittests/bitmap/tests.o \
+    regress/unittests/test_helper/libtest_helper.a \
+    -lssh -lopenbsd-compat -lssh -lopenbsd-compat  -lcrypto  -lz
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/conversion/tests.c -o regress/unittests/conversion/tests.o
+cc -o regress/unittests/conversion/test_conversion -L. -Lopenbsd-compat/ -L/work/forensics/authorities/prefix/openssl-3.6.4-production/lib  -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -fstack-protector-strong -pie  regress/unittests/conversion/tests.o \
+    regress/unittests/test_helper/libtest_helper.a \
+    -lssh -lopenbsd-compat -lssh -lopenbsd-compat  -lcrypto  -lz
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/hostkeys/tests.c -o regress/unittests/hostkeys/tests.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/hostkeys/test_iterate.c -o regress/unittests/hostkeys/test_iterate.o
+cc -o regress/unittests/hostkeys/test_hostkeys -L. -Lopenbsd-compat/ -L/work/forensics/authorities/prefix/openssl-3.6.4-production/lib  -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -fstack-protector-strong -pie  regress/unittests/hostkeys/tests.o regress/unittests/hostkeys/test_iterate.o ssh-sk-client.o \
+    regress/unittests/test_helper/libtest_helper.a \
+    -lssh -lopenbsd-compat -lssh -lopenbsd-compat  -lcrypto  -lz
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/kex/tests.c -o regress/unittests/kex/tests.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/kex/test_kex.c -o regress/unittests/kex/test_kex.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/kex/test_proposal.c -o regress/unittests/kex/test_proposal.o
+cc -o regress/unittests/kex/test_kex -L. -Lopenbsd-compat/ -L/work/forensics/authorities/prefix/openssl-3.6.4-production/lib  -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -fstack-protector-strong -pie  regress/unittests/kex/tests.o regress/unittests/kex/test_kex.o regress/unittests/kex/test_proposal.o ssh-sk-client.o \
+    regress/unittests/test_helper/libtest_helper.a \
+    -lssh -lopenbsd-compat -lssh -lopenbsd-compat  -lcrypto  -lz
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/match/tests.c -o regress/unittests/match/tests.o
+cc -o regress/unittests/match/test_match -L. -Lopenbsd-compat/ -L/work/forensics/authorities/prefix/openssl-3.6.4-production/lib  -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -fstack-protector-strong -pie  regress/unittests/match/tests.o \
+    regress/unittests/test_helper/libtest_helper.a \
+    -lssh -lopenbsd-compat -lssh -lopenbsd-compat  -lcrypto  -lz
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/misc/tests.c -o regress/unittests/misc/tests.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/misc/test_parse.c -o regress/unittests/misc/test_parse.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/misc/test_expand.c -o regress/unittests/misc/test_expand.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/misc/test_convtime.c -o regress/unittests/misc/test_convtime.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/misc/test_argv.c -o regress/unittests/misc/test_argv.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/misc/test_strdelim.c -o regress/unittests/misc/test_strdelim.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/misc/test_hpdelim.c -o regress/unittests/misc/test_hpdelim.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/misc/test_ptimeout.c -o regress/unittests/misc/test_ptimeout.o
+cc -o regress/unittests/misc/test_misc -L. -Lopenbsd-compat/ -L/work/forensics/authorities/prefix/openssl-3.6.4-production/lib  -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -fstack-protector-strong -pie  regress/unittests/misc/tests.o regress/unittests/misc/test_parse.o regress/unittests/misc/test_expand.o regress/unittests/misc/test_convtime.o regress/unittests/misc/test_argv.o regress/unittests/misc/test_strdelim.o regress/unittests/misc/test_hpdelim.o regress/unittests/misc/test_ptimeout.o \
+    regress/unittests/test_helper/libtest_helper.a \
+    -lssh -lopenbsd-compat -lssh -lopenbsd-compat  -lcrypto  -lz
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/sshbuf/tests.c -o regress/unittests/sshbuf/tests.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/sshbuf/test_sshbuf.c -o regress/unittests/sshbuf/test_sshbuf.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/sshbuf/test_sshbuf_getput_basic.c -o regress/unittests/sshbuf/test_sshbuf_getput_basic.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/sshbuf/test_sshbuf_getput_crypto.c -o regress/unittests/sshbuf/test_sshbuf_getput_crypto.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/sshbuf/test_sshbuf_misc.c -o regress/unittests/sshbuf/test_sshbuf_misc.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/sshbuf/test_sshbuf_fuzz.c -o regress/unittests/sshbuf/test_sshbuf_fuzz.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/sshbuf/test_sshbuf_getput_fuzz.c -o regress/unittests/sshbuf/test_sshbuf_getput_fuzz.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/sshbuf/test_sshbuf_fixed.c -o regress/unittests/sshbuf/test_sshbuf_fixed.o
+cc -o regress/unittests/sshbuf/test_sshbuf -L. -Lopenbsd-compat/ -L/work/forensics/authorities/prefix/openssl-3.6.4-production/lib  -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -fstack-protector-strong -pie  regress/unittests/sshbuf/tests.o regress/unittests/sshbuf/test_sshbuf.o regress/unittests/sshbuf/test_sshbuf_getput_basic.o regress/unittests/sshbuf/test_sshbuf_getput_crypto.o regress/unittests/sshbuf/test_sshbuf_misc.o regress/unittests/sshbuf/test_sshbuf_fuzz.o regress/unittests/sshbuf/test_sshbuf_getput_fuzz.o regress/unittests/sshbuf/test_sshbuf_fixed.o \
+    regress/unittests/test_helper/libtest_helper.a \
+    -lssh -lopenbsd-compat -lssh -lopenbsd-compat  -lcrypto  -lz
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/sshkey/test_fuzz.c -o regress/unittests/sshkey/test_fuzz.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/sshkey/tests.c -o regress/unittests/sshkey/tests.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/sshkey/common.c -o regress/unittests/sshkey/common.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/sshkey/test_file.c -o regress/unittests/sshkey/test_file.o
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/sshkey/test_sshkey.c -o regress/unittests/sshkey/test_sshkey.o
+cc -o regress/unittests/sshkey/test_sshkey -L. -Lopenbsd-compat/ -L/work/forensics/authorities/prefix/openssl-3.6.4-production/lib  -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -fstack-protector-strong -pie  regress/unittests/sshkey/test_fuzz.o regress/unittests/sshkey/tests.o regress/unittests/sshkey/common.o regress/unittests/sshkey/test_file.o regress/unittests/sshkey/test_sshkey.o ssh-sk-client.o \
+    regress/unittests/test_helper/libtest_helper.a \
+    -lssh -lopenbsd-compat -lssh -lopenbsd-compat  -lcrypto  -lz
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/sshsig/tests.c -o regress/unittests/sshsig/tests.o
+cc -o regress/unittests/sshsig/test_sshsig -L. -Lopenbsd-compat/ -L/work/forensics/authorities/prefix/openssl-3.6.4-production/lib  -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -fstack-protector-strong -pie  sshsig.o regress/unittests/sshsig/tests.o ssh-sk-client.o \
+    regress/unittests/test_helper/libtest_helper.a \
+    -lssh -lopenbsd-compat -lssh -lopenbsd-compat  -lcrypto  -lz
+cc -g -O2 -pipe -Wno-error=format-truncation -Wall -Wextra -Wpointer-arith -Wuninitialized -Wsign-compare -Wformat-security -Wsizeof-pointer-memaccess -Wno-pointer-sign -Wno-unused-parameter -Wno-unused-result -Wimplicit-fallthrough -Wmisleading-indentation -fno-strict-aliasing -D_FORTIFY_SOURCE=2 -ftrapv -fzero-call-used-regs=used -ftrivial-auto-var-init=zero -fno-builtin-memset -fstack-protector-strong -fPIE   -I. -I. -I/work/forensics/authorities/prefix/openssl-3.6.4-production/include  -D_XOPEN_SOURCE=600 -D_BSD_SOURCE -D_DEFAULT_SOURCE -D_GNU_SOURCE -DOPENSSL_API_COMPAT=0x10100000L -DSSHDIR=\"/usr/local/etc\" -D_PATH_SSH_PROGRAM=\"/usr/local/bin/ssh\" -D_PATH_SSH_ASKPASS_DEFAULT=\"/usr/local/libexec/ssh-askpass\" -D_PATH_SFTP_SERVER=\"/usr/local/libexec/sftp-server\" -D_PATH_SSH_KEY_SIGN=\"/usr/local/libexec/ssh-keysign\" -D_PATH_SSHD_SESSION=\"/usr/local/libexec/sshd-session\" -D_PATH_SSH_PKCS11_HELPER=\"/usr/local/libexec/ssh-pkcs11-helper\" -D_PATH_SSH_SK_HELPER=\"/usr/local/libexec/ssh-sk-helper\" -D_PATH_SSH_PIDDIR=\"/var/run\" -D_PATH_PRIVSEP_CHROOT_DIR=\"/var/empty\" -DHAVE_CONFIG_H -c regress/unittests/utf8/tests.c -o regress/unittests/utf8/tests.o
+cc -o regress/unittests/utf8/test_utf8 -L. -Lopenbsd-compat/ -L/work/forensics/authorities/prefix/openssl-3.6.4-production/lib  -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack -fstack-protector-strong -pie  regress/unittests/utf8/tests.o \
+    regress/unittests/test_helper/libtest_helper.a \
+    -lssh -lopenbsd-compat -lssh -lopenbsd-compat  -lcrypto  -lz
+cd ./regress || exit $?; \
+make \
+	.CURDIR="/work/court/tmp/o4/tree-A/regress" \
+	.OBJDIR="/work/court/tmp/o4/cell-BA/regress" \
+	OBJ="/work/court/tmp/o4/cell-BA/regress" \
+	unit && echo unit tests passed
+make[1]: Entering directory '/work/court/tmp/o4/cell-BA/regress'
+set -e ; if test -z "" ; then \
+	V="" ; \
+	test "x" = "x" || \
+	    V=/work/court/tmp/o4/tree-A/regress/valgrind-unit.sh ; \
+	 $V /work/court/tmp/o4/cell-BA/regress/unittests/sshbuf/test_sshbuf ; \
+	 $V /work/court/tmp/o4/cell-BA/regress/unittests/sshkey/test_sshkey \
+		-d /work/court/tmp/o4/tree-A/regress/unittests/sshkey/testdata ; \
+	$V /work/court/tmp/o4/cell-BA/regress/unittests/sshsig/test_sshsig \
+		-d /work/court/tmp/o4/tree-A/regress/unittests/sshsig/testdata ; \
+	$V /work/court/tmp/o4/cell-BA/regress/unittests/authopt/test_authopt \
+		-d /work/court/tmp/o4/tree-A/regress/unittests/authopt/testdata ; \
+	$V /work/court/tmp/o4/cell-BA/regress/unittests/bitmap/test_bitmap ; \
+	$V /work/court/tmp/o4/cell-BA/regress/unittests/conversion/test_conversion ; \
+	$V /work/court/tmp/o4/cell-BA/regress/unittests/kex/test_kex ; \
+	$V /work/court/tmp/o4/cell-BA/regress/unittests/hostkeys/test_hostkeys \
+		-d /work/court/tmp/o4/tree-A/regress/unittests/hostkeys/testdata ; \
+	$V /work/court/tmp/o4/cell-BA/regress/unittests/match/test_match ; \
+	$V /work/court/tmp/o4/cell-BA/regress/unittests/misc/test_misc ; \
+	if test "x" = "xyes"  ; then \
+		$V /work/court/tmp/o4/cell-BA/regress/unittests/utf8/test_utf8 ; \
+	fi \
+fi
+test_sshbuf: ...................................................................................................... 103 tests ok
+test_sshkey: .................................................................................... 84 tests ok
+test_sshsig: ....... 7 tests ok
+test_authopt: .................................................................................................................................................. 146 tests ok
+test_bitmap: .. 2 tests ok
+test_conversion: . 1 tests ok
+test_kex: ........................................................................................................................................WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+.WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+.WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+...WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+......WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+.WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+.WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+...WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+......WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+.WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+.WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+...WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+......WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+.WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+.WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+...WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+......WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+.WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+.WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+...WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+......WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+.WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+.WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+...WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+WARNING: could not open /usr/local/etc/moduli (No such file or directory), using fixed modulus
+....................................................................................................................................... 332 tests ok
+test_hostkeys: .................. 18 tests ok
+test_match: ...... 6 tests ok
+test_misc: ........................................... 43 tests ok
+make[1]: Leaving directory '/work/court/tmp/o4/cell-BA/regress'
+unit tests passed
+make: Target 'tests' not remade because of errors.

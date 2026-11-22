@@ -1,0 +1,16 @@
+{
+  "schema": "openssl-rs/interop-cell-receipt/1",
+  "item": "O7 of docs/ETP-TODO.md",
+  "cell": "BB",
+  "generated": "2026-11-22T12:01:16Z",
+  "client": {"build": "B", "libcrypto_sha256": "ee7fa27c79f5a679d5b229429d53dc7c3b510695db9c74d11b4b6783a735ebe9"},
+  "server": {"build": "B", "libcrypto_sha256": "ee7fa27c79f5a679d5b229429d53dc7c3b510695db9c74d11b4b6783a735ebe9"},
+  "separate_library_paths": false,
+  "scripts": "same set as O9 (SKIP_LTESTS=sftp-cmds)",
+  "client_mapped": "/work/court/tmp/o4/b-prefix/lib/libcrypto.so.3",
+  "server_mapped": "/work/court/tmp/o4/b-prefix/lib/libcrypto.so.3",
+  "mapping_status": "ok",
+  "make_k_tests_exit": 2,
+  "log": "/work/court/tmp/o4/cell-BB.log",
+  "failed_scripts": "1"
+}

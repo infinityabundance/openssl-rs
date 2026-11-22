@@ -1,0 +1,1404 @@
+{
+ "schema": "openssl-rs/etp5/probe-results/v1",
+ "generated_utc": "2026-11-22T12:30:56Z",
+ "validator": "forensics/tools/etp_claims.py",
+ "validator_sha256": "f4bb8e3b312cc19aa2d8e25c6c431512bc8d648aeea38c3fa8813a7474659b00",
+ "probes": [
+  {
+   "probe": "p1-openssh-graduation-promotion",
+   "document": "evidence/etp5/probes/p1-openssh-graduation-promotion.json",
+   "claims": [
+    "ETP5-CLM-001"
+   ],
+   "valid": false,
+   "refusal_count": 2,
+   "refusals": [
+    {
+     "rule": "EG_GRADUATED_WITHOUT_CLOSURE",
+     "path": "$.claims/0/closure",
+     "field": "closure",
+     "detail": "SAFE_COMPATIBLE requires complete=true, a non-empty dependency list and an empty unresolved_dependencies list"
+    },
+    {
+     "rule": "EG_GRADUATED_WITH_OPEN_OBLIGATION",
+     "path": "$.claims/0/obligations",
+     "field": "obligations",
+     "detail": "SAFE_COMPATIBLE has 1 open obligation(s): OBL-ETP5-OPENSSH-CONTRADICTION"
+    }
+   ]
+  },
+  {
+   "probe": "p2-openssh-two-records",
+   "document": "evidence/etp5/probes/p2-openssh-two-records.json",
+   "claims": [
+    "ETP5-CLM-002",
+    "ETP5-CLM-003"
+   ],
+   "valid": false,
+   "refusal_count": 1,
+   "refusals": [
+    {
+     "rule": "EG_CONTRADICTION_UNRESOLVED",
+     "path": "$.claims/1/verdict/state",
+     "field": "state",
+     "detail": "claim ETP5-CLM-003 and ETP5-CLM-002 share property, scope and identity but assert NOT_ESTABLISHED and SAFE_COMPATIBLE"
+    }
+   ]
+  },
+  {
+   "probe": "p3-counter-single-source",
+   "document": "evidence/etp5/probes/p3-counter-single-source.json",
+   "claims": [
+    "ETP5-CLM-004"
+   ],
+   "valid": false,
+   "refusal_count": 1,
+   "refusals": [
+    {
+     "rule": "EG_CONTRADICTION_PARTIES",
+     "path": "$.claims/0/contradiction/parties",
+     "field": "parties",
+     "detail": "a contradiction needs at least two distinct sources, so both sides are identified rather than one being preferred"
+    }
+   ]
+  },
+  {
+   "probe": "p3b-counter-promotion",
+   "document": "evidence/etp5/probes/p3b-counter-promotion.json",
+   "claims": [
+    "ETP5-CLM-005"
+   ],
+   "valid": false,
+   "refusal_count": 2,
+   "refusals": [
+    {
+     "rule": "EG_GRADUATED_WITHOUT_CLOSURE",
+     "path": "$.claims/0/closure",
+     "field": "closure",
+     "detail": "SAFE_COMPATIBLE requires complete=true, a non-empty dependency list and an empty unresolved_dependencies list"
+    },
+    {
+     "rule": "EG_GRADUATED_WITH_OPEN_OBLIGATION",
+     "path": "$.claims/0/obligations",
+     "field": "obligations",
+     "detail": "SAFE_COMPATIBLE has 1 open obligation(s): OBL-ETP5-COUNTER"
+    }
+   ]
+  },
+  {
+   "probe": "p3c-counter-two-established",
+   "document": "evidence/etp5/probes/p3c-counter-two-established.json",
+   "claims": [
+    "ETP5-CLM-014",
+    "ETP5-CLM-015"
+   ],
+   "valid": true,
+   "refusal_count": 0,
+   "refusals": [],
+   "conjoin": {
+    "verdict": "ESTABLISHED",
+    "obligations": [],
+    "blocked_by": [],
+    "weakest": [
+     "ETP5-CLM-014",
+     "ETP5-CLM-015"
+    ],
+    "members": [
+     {
+      "id": "ETP5-CLM-014",
+      "verdict": "ESTABLISHED",
+      "modality": "DOCUMENTED"
+     },
+     {
+      "id": "ETP5-CLM-015",
+      "verdict": "ESTABLISHED",
+      "modality": "DOCUMENTED"
+     }
+    ],
+    "aggregation": "forbidden"
+   },
+   "contradictions": []
+  },
+  {
+   "probe": "p4a-withdrawn-o7-historical-accepted",
+   "document": "evidence/etp5/probes/p4a-withdrawn-o7-historical-accepted.json",
+   "claims": [
+    "ETP5-CLM-006"
+   ],
+   "valid": true,
+   "refusal_count": 0,
+   "refusals": [],
+   "conjoin": {
+    "verdict": "ESTABLISHED",
+    "obligations": [],
+    "blocked_by": [],
+    "weakest": [
+     "ETP5-CLM-006"
+    ],
+    "members": [
+     {
+      "id": "ETP5-CLM-006",
+      "verdict": "ESTABLISHED",
+      "modality": "TESTED"
+     }
+    ],
+    "aggregation": "forbidden"
+   },
+   "contradictions": []
+  },
+  {
+   "probe": "p4b-withdrawn-o7-current-identity",
+   "document": "evidence/etp5/probes/p4b-withdrawn-o7-current-identity.json",
+   "claims": [
+    "ETP5-CLM-007"
+   ],
+   "valid": false,
+   "refusal_count": 1,
+   "refusals": [
+    {
+     "rule": "EG_EVIDENCE_DIGEST_MISMATCH",
+     "path": "$.claims/0/evidence/0",
+     "field": "sha256",
+     "detail": "'courts/phase18/interop/RECEIPT-o7.json' hashes to 73f4b8038a176dcfcdcf8e2f85de8d724fb1a5c3aec36742c9ba5cd1af5c52c6, not the recorded 2ee7ee4d8fb3b909cc007a14d9dabf511fb90bb2f8f2f32d92b893004e8bd0a0"
+    }
+   ]
+  },
+  {
+   "probe": "p4c-withdrawn-o7-nonpromotion",
+   "document": "evidence/etp5/probes/p4c-withdrawn-o7-nonpromotion.json",
+   "claims": [
+    "ETP5-CLM-008"
+   ],
+   "valid": true,
+   "refusal_count": 0,
+   "refusals": [],
+   "conjoin": {
+    "verdict": "WITHDRAWN",
+    "obligations": [],
+    "blocked_by": [
+     {
+      "id": "ETP5-CLM-008",
+      "verdict": "WITHDRAWN",
+      "open_obligations": []
+     }
+    ],
+    "weakest": [
+     "ETP5-CLM-008"
+    ],
+    "members": [
+     {
+      "id": "ETP5-CLM-008",
+      "verdict": "WITHDRAWN",
+      "modality": "DOCUMENTED"
+     }
+    ],
+    "aggregation": "forbidden"
+   },
+   "contradictions": []
+  },
+  {
+   "probe": "p5-build-b-identity-split",
+   "document": "evidence/etp5/probes/p5-build-b-identity-split.json",
+   "claims": [
+    "ETP5-CLM-009"
+   ],
+   "valid": false,
+   "refusal_count": 2,
+   "refusals": [
+    {
+     "rule": "EG_MULTIPLE_CANDIDATES",
+     "path": "$.claims/0/identity/source",
+     "field": "candidates",
+     "detail": "the claim names 2 different candidate identities: 3c3a68c1baeb304adf2fc3af827e49b14529556008429bd11dda784a2c6cdfd1, ee7fa27c79f5a679d5b229429d53dc7c3b510695db9c74d11b4b6783a735ebe9"
+    },
+    {
+     "rule": "EG_SCHEMA_VIOLATION",
+     "path": "$/claims/0/identity/source/candidates",
+     "field": "candidates",
+     "detail": "additional property is not permitted by the closed type"
+    }
+   ]
+  },
+  {
+   "probe": "p6-curl-element7-closed",
+   "document": "evidence/etp5/probes/p6-curl-element7-closed.json",
+   "claims": [
+    "ETP5-CLM-010"
+   ],
+   "valid": true,
+   "refusal_count": 0,
+   "refusals": [],
+   "conjoin": {
+    "verdict": "ESTABLISHED",
+    "obligations": [],
+    "blocked_by": [],
+    "weakest": [
+     "ETP5-CLM-010"
+    ],
+    "members": [
+     {
+      "id": "ETP5-CLM-010",
+      "verdict": "ESTABLISHED",
+      "modality": "TESTED"
+     }
+    ],
+    "aggregation": "forbidden"
+   },
+   "contradictions": []
+  },
+  {
+   "probe": "p6b-curl-graduation-promotion",
+   "document": "evidence/etp5/probes/p6b-curl-graduation-promotion.json",
+   "claims": [
+    "ETP5-CLM-011"
+   ],
+   "valid": false,
+   "refusal_count": 2,
+   "refusals": [
+    {
+     "rule": "EG_GRADUATED_WITHOUT_CLOSURE",
+     "path": "$.claims/0/closure",
+     "field": "closure",
+     "detail": "SAFE_COMPATIBLE requires complete=true, a non-empty dependency list and an empty unresolved_dependencies list"
+    },
+    {
+     "rule": "EG_GRADUATED_WITH_OPEN_OBLIGATION",
+     "path": "$.claims/0/obligations",
+     "field": "obligations",
+     "detail": "SAFE_COMPATIBLE has 1 open obligation(s): OBL-ETP5-CURL-ELEMENT7"
+    }
+   ]
+  },
+  {
+   "probe": "p6c-curl-element7-typed",
+   "document": "evidence/etp5/probes/p6c-curl-element7-typed.json",
+   "claims": [
+    "ETP5-CLM-012",
+    "ETP5-CLM-013"
+   ],
+   "valid": true,
+   "refusal_count": 0,
+   "refusals": [],
+   "conjoin": {
+    "verdict": "NOT_ESTABLISHED",
+    "obligations": [
+     {
+      "id": "OBL-ETP5-CURL-CLOSURE-NOT-GRADUATED",
+      "statement": "verdict.state is ACCEPTED but verdict.safe_compatible is false; ACCEPTED is a closure-predicate result, not a graduation.",
+      "state": "OPEN",
+      "blocks": [
+       "verdict",
+       "graduation"
+      ],
+      "settled_by": "Establish every applicable mechanism and element 7, then adjudicate SAFE_COMPATIBLE.",
+      "evidence": [
+       "EV-01"
+      ]
+     },
+     {
+      "id": "OBL-ETP5-CURL-ELEMENT7",
+      "statement": "established=false, status FAIL; 27 named rows remain refused; no full closure run after the tool changes.",
+      "state": "OPEN",
+      "blocks": [
+       "verdict",
+       "graduation"
+      ],
+      "settled_by": "A full closure run at a frozen identity, or a bounded contract with a witness for each refusal.",
+      "evidence": [
+       "EV-01",
+       "EV-02"
+      ]
+     }
+    ],
+    "blocked_by": [
+     {
+      "id": "ETP5-CLM-012",
+      "verdict": "PARTIAL",
+      "open_obligations": [
+       "OBL-ETP5-CURL-CLOSURE-NOT-GRADUATED"
+      ]
+     },
+     {
+      "id": "ETP5-CLM-013",
+      "verdict": "NOT_ESTABLISHED",
+      "open_obligations": [
+       "OBL-ETP5-CURL-ELEMENT7"
+      ]
+     }
+    ],
+    "weakest": [
+     "ETP5-CLM-013"
+    ],
+    "members": [
+     {
+      "id": "ETP5-CLM-012",
+      "verdict": "PARTIAL",
+      "modality": "TESTED"
+     },
+     {
+      "id": "ETP5-CLM-013",
+      "verdict": "NOT_ESTABLISHED",
+      "modality": "INSTRUMENTED"
+     }
+    ],
+    "aggregation": "forbidden"
+   },
+   "contradictions": []
+  }
+ ],
+ "committed_record": {
+  "document": "evidence/etp/claims.json",
+  "claims": 35,
+  "validate_refusals": 0,
+  "conjoin": {
+   "verdict": "CONTRADICTED",
+   "obligations": [
+    {
+     "id": "OBL-EVIDENCE-EV-01",
+     "statement": "The cited evidence 'forensics/memory-safety/campaign/safe-c33/atlas-refresh/graduation-openssh.json' is only partially reconstructable; the claim's cited bytes are not fully recoverable from a clean checkout of S.",
+     "state": "OPEN",
+     "blocks": [
+      "evidence"
+     ],
+     "settled_by": "publish the cited bytes under a tracked path with a digest, or re-execute the cited procedure and commit a tracked receipt bound to S",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-EVIDENCE-EV-02",
+     "statement": "The cited evidence 'evidence/b85c-row-reconciliation.json' is only partially reconstructable; the claim's cited bytes are not fully recoverable from a clean checkout of S.",
+     "state": "OPEN",
+     "blocks": [
+      "evidence"
+     ],
+     "settled_by": "publish the cited bytes under a tracked path with a digest, or re-execute the cited procedure and commit a tracked receipt bound to S",
+     "evidence": [
+      "EV-02"
+     ]
+    },
+    {
+     "id": "OBL-EVIDENCE-EV-03",
+     "statement": "The cited evidence 'forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json' is only partially reconstructable; the claim's cited bytes are not fully recoverable from a clean checkout of S.",
+     "state": "OPEN",
+     "blocks": [
+      "evidence"
+     ],
+     "settled_by": "publish the cited bytes under a tracked path with a digest, or re-execute the cited procedure and commit a tracked receipt bound to S",
+     "evidence": [
+      "EV-03"
+     ]
+    },
+    {
+     "id": "OBL-EVIDENCE-EV-04",
+     "statement": "The cited evidence 'courts/phase18/interop/RECEIPT-o7-BA.json' is only partially reconstructable; the claim's cited bytes are not fully recoverable from a clean checkout of S.",
+     "state": "OPEN",
+     "blocks": [
+      "evidence"
+     ],
+     "settled_by": "publish the cited bytes under a tracked path with a digest, or re-execute the cited procedure and commit a tracked receipt bound to S",
+     "evidence": [
+      "EV-04"
+     ]
+    },
+    {
+     "id": "OBL-GAP-001",
+     "statement": "contradiction: The seal states that artifacts/phase18/COURTS.json records five courts, all_pass true, summary pass 5 of 5 and empty pending_courts. The tracked file at S records all_pass false, summary pass 4 / fail 1, with HOSTILE-BOUNDARY-REGISTER failing on 56 unsafe-footprint bound violations (for example bn 1170 -> 1357, evp 8029 -> 8798, ssl 3503 -> 4407).",
+     "state": "OPEN",
+     "blocks": [
+      "verdict",
+      "evidence"
+     ],
+     "settled_by": "Not applicable: the disagreement is direct. A future seal must name the commit and date of the registry it describes.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-GAP-002",
+     "statement": "contradiction: The seal states the obligation ledger records owned 5, implemented 5, deferred 0, open_in_this_stratum 0. The tracked ledger records owned 5, implemented 4, open_in_this_stratum 1, with hostile-boundary-register in state open and measurement_state not_measured.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict",
+      "evidence"
+     ],
+     "settled_by": "Not applicable: the counts disagree in the tracked files.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-GAP-003",
+     "statement": "contradiction: The CT-PRIMITIVES threshold is stated as 110 percent in the seal's section 2, as a 50 percent floor and a 150 percent threshold in the seal's section 6, as 50 percent in the COURTS.json claim field, and as 150 percent in both the probe source (SEP_PCT 150) and the COURTS.json threshold_percent. The probe source and the machine threshold agree at 150 percent; the prose does not.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict",
+      "evidence"
+     ],
+     "settled_by": "Not applicable: the prose is internally inconsistent. The authoritative value is the probe source plus the generated record.",
+     "evidence": [
+      "EV-01",
+      "EV-02",
+      "EV-03"
+     ]
+    },
+    {
+     "id": "OBL-GAP-004",
+     "statement": "contradiction: The graduation record issues SAFE_COMPATIBLE and says every reachable obligation is discharged. The two closure receipts it cites record verdict.safe_compatible=false. The freeze it cites records the L7 replay as not_graduated. The independent adjudication it also cites records NOT ESTABLISHED. The graduation record labels its own verdict a principal-decided risk acceptance and preserves the dissent.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict",
+      "evidence"
+     ],
+     "settled_by": "Not applicable as an evidence question. Resolution is a governance decision: either withdraw the SAFE_COMPATIBLE label, or state a policy that a principal risk acceptance may override the \u00a77 evidence criteria, with the dissent retained.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-GAP-005",
+     "statement": "contradiction: One tracked JSON file records consumers.safe_compatible = 1 and safe_compatible_graduation.verdict = SAFE_COMPATIBLE, and in the same file consumers.note says SAFE_COMPATIBLE remains 0/33 and non_claims[0] says no consumer family is SAFE_COMPATIBLE and consumers remain 0/33.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict",
+      "evidence"
+     ],
+     "settled_by": "Not applicable: the file contradicts itself. A later ledger edit must reconcile the counter and the non-claim in one record.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-GAP-006",
+     "statement": "contradiction: PROGRESS.md says the cohort counter is not advanced by the b85c record. STATUS-2026-10-20.md says the counter is now 1/33, and CAMPAIGN-STATUS.json records 1. The three tracked artefacts disagree on the counter.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict",
+      "evidence"
+     ],
+     "settled_by": "Not applicable: the counter is a single number with three tracked statements.",
+     "evidence": [
+      "EV-01",
+      "EV-02",
+      "EV-03"
+     ]
+    },
+    {
+     "id": "OBL-GAP-007",
+     "statement": "contradiction: PROGRESS.md states that the campaign's OpenSSH L7 evidence was measured on 10.5p1. The closure receipts and the runtime-functional atlas name 9.9p1. O12 resolves the conflict by provenance: the sentence describes the CVE court's version and is attached to the L7 closure; the sentence is flagged, not edited. The contradiction therefore remains in the tracked text.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict",
+      "evidence"
+     ],
+     "settled_by": "Not applicable as a provenance question: O12 records the resolution. The sentence remains a visible conflict until PROGRESS.md is corrected.",
+     "evidence": [
+      "EV-01",
+      "EV-02"
+     ]
+    },
+    {
+     "id": "OBL-GAP-008",
+     "statement": "evidence_not_reconstructable: Tracked JSON and Markdown contain 1,929 references to court/tmp/. git ls-files court/tmp returns 0 files; the directory is excluded by .gitignore. The referenced logs, notes and binaries are reproducible only by re-running the cited experiments, and in several rows the row itself is the only surviving description.",
+     "state": "OPEN",
+     "blocks": [
+      "evidence"
+     ],
+     "settled_by": "Publish the named logs and notes under a tracked evidence path, or re-execute each run and record a tracked receipt with the output digest.",
+     "evidence": []
+    },
+    {
+     "id": "OBL-GAP-009",
+     "statement": "evidence_not_reconstructable: The T20 byte-reproducibility result exists only in court/tmp/t20/NOTES.md, which is untracked. The recipe is tracked, but the measurement record, the variation matrix as executed, the per-member archive comparison and the content-addressed binaries are not in Git.",
+     "state": "OPEN",
+     "blocks": [
+      "evidence"
+     ],
+     "settled_by": "Re-run the tracked recipe at S in the court and commit a receipt containing the two build logs, the comparison output and the verified digests.",
+     "evidence": [
+      "EV-01",
+      "EV-02"
+     ]
+    },
+    {
+     "id": "OBL-GAP-010",
+     "statement": "evidence_not_reconstructable: T20 says the distribution DSO rebuilds to the committed artifacts/phase2/libcrypto.so.3 digest 5d0f9098. That path is excluded by .gitignore:41 and is not tracked; the digest is a local build output. The tracked distribution binary is artifacts/phase2/install/lib/libcrypto.so.3 (fd25cc9e), which is a different file.",
+     "state": "OPEN",
+     "blocks": [
+      "evidence"
+     ],
+     "settled_by": "Either track the distribution DSO under a content-addressed path, or state the digest as a recipe output rather than a committed artefact. Then re-derive it at S.",
+     "evidence": []
+    },
+    {
+     "id": "OBL-GAP-011",
+     "statement": "evidence_not_reconstructable: O6 names no log path at all. O9 names /tmp/o9-a.log and /tmp/o9-b.log. O8 names /tmp/o6-a-k.log, /tmp/o6-b-k.log and court/tmp/o4/tree-A/regress/dbclient.log. None of these is tracked. The O11 manifests do name tracked logs and record their digests, but the O6/O8/O9 receipts do not cite the O11 logs as their source.",
+     "state": "OPEN",
+     "blocks": [
+      "evidence"
+     ],
+     "settled_by": "Rebind O6/O8/O9 to the tracked O11 logs with their sha256 values, or commit the /tmp logs under courts/phase18/interop/logs/ with a manifest.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-GAP-012",
+     "statement": "evidence_not_reconstructable: The b85c case depends on sidecars, predicate controls, a self-test log, Miri transcripts and freeze generators under court/freeze-b85 and court/freeze-b85c. The b85c adjudication records that git ls-files returns 0 tracked files for those directories, so the acceptance predicate and the instrument canaries are reproducible only while the working tree survives.",
+     "state": "OPEN",
+     "blocks": [
+      "evidence"
+     ],
+     "settled_by": "Commit the instrument, its self-test log, the predicate controls and the Miri transcripts under a tracked evidence path, with their digests bound to the freeze.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-GAP-013",
+     "statement": "evidence_not_reconstructable: O3 names its OpenSSH tree at court/tmp/o2/openssh-9.9p1 and its prefix at court/tmp/o3/prefix; O10 names its subject tree at court/tmp/o4/tree-A. All are untracked. The scripts are tracked, but the exact trees the receipts examined are not.",
+     "state": "OPEN",
+     "blocks": [
+      "evidence"
+     ],
+     "settled_by": "Record the tree/prefix digests in the receipts and rebuild them from the O2 pins, or commit the built trees under a content-addressed evidence path.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-GAP-014",
+     "statement": "evidence_not_reconstructable: T19's first-candidate ctgrind, dudect and allocation figures cite court/tmp/t19 and court/tmp/t21. Those logs and binaries are untracked. The later unified figures are in a tracked receipt, but the row presents all three candidates together.",
+     "state": "OPEN",
+     "blocks": [
+      "evidence"
+     ],
+     "settled_by": "Commit the t19/t21 logs and the measured binaries under a content-addressed path, or mark the first-candidate figures as superseded and non-citable.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-GAP-015",
+     "statement": "asserted_without_evidence: T27 is marked DONE and describes a ctgrind result and a differential test, but the row names no receipt, log, test name or digest. The row prose is the whole evidence record.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict",
+      "evidence"
+     ],
+     "settled_by": "Add a tracked receipt naming the test, the candidate DSO, the ctgrind output and the mutation control result.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-GAP-016",
+     "statement": "asserted_without_evidence: T29 is marked DONE with a precise 67,878 -> 22,276 allocation census, but names no receipt. Its one named measured binary, court/tmp/t21/libcrypto.so.3, is untracked.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict",
+      "evidence"
+     ],
+     "settled_by": "Add a tracked receipt bound to a DSO digest, with the census output and the benchmark log.",
+     "evidence": [
+      "EV-02"
+     ]
+    },
+    {
+     "id": "OBL-GAP-017",
+     "statement": "asserted_without_evidence: The constitution says claims are generated from evidence and that headline percentages are never typed by hand. Several claim-bearing records are hand-authored JSON (for example the SAFE_COMPATIBLE record), and no tracked checker binds a prose receipt to a generator. The governance statement is therefore a convention, not an enforced property.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict",
+      "evidence"
+     ],
+     "settled_by": "A tracked checker that rejects a claim-bearing receipt without a generator identity and an evidence digest, run in CI.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-GAP-018",
+     "statement": "identity_mismatch: O4, O5 and the O11 B manifest bind build B to libcrypto 3c3a68c1, built on the host from /var/tmp/t29-target/release/libopenssl_rs.a. The O7 matrix and its per-cell B receipts bind build B to libcrypto ee7fa27c, rebuilt in the court. No tracked record states whether these are the same source and toolchain or two builds.",
+     "state": "OPEN",
+     "blocks": [
+      "identity",
+      "verdict"
+     ],
+     "settled_by": "One build record naming both archive and DSO digests, or a rebuild of both in one venue from the O2 pins with toolchain and archive digests recorded.",
+     "evidence": [
+      "EV-02"
+     ]
+    },
+    {
+     "id": "OBL-GAP-019",
+     "statement": "identity_mismatch: The baseline names commit 0500fa9ef and source-tree digest ca7d39b9. Commit 0500fa9ef is an ancestor of S and is 72 commits behind it; the source-tree digest at S is 51568028. The baseline is not an identity for S.",
+     "state": "OPEN",
+     "blocks": [
+      "identity",
+      "verdict"
+     ],
+     "settled_by": "A fresh baseline at S with the tree hashes in evidence/etp0/RECEIPT.md.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-GAP-020",
+     "statement": "identity_mismatch: The tracked install DSOs were last rebuilt at commit 1e7c221f0 on 2026-11-17. Since then 32 commits touching src/, Cargo.toml, Cargo.lock or build.rs have landed (the last at 79c98c607, 2026-11-21). The tracked binaries therefore cannot be the build of the S source tree.",
+     "state": "OPEN",
+     "blocks": [
+      "identity",
+      "verdict"
+     ],
+     "settled_by": "Rebuild the install at S in the court, record the new digests, and either replace the tracked artefacts or mark them as a historical release build.",
+     "evidence": [
+      "EV-01",
+      "EV-02"
+     ]
+    },
+    {
+     "id": "OBL-GAP-021",
+     "statement": "identity_mismatch: The reproducibility result was measured at HEAD abb315a01 on 2026-11-21. S is 9372bb28b, 40 commits later, with 39 source files changed (+4356/-839). The recorded digests aaa32f21 and 5d0f9098 cannot be the digests of an S build.",
+     "state": "OPEN",
+     "blocks": [
+      "identity",
+      "verdict"
+     ],
+     "settled_by": "Re-run the recipe at S.",
+     "evidence": [
+      "EV-02"
+     ]
+    },
+    {
+     "id": "OBL-GAP-022",
+     "statement": "identity_mismatch: The b85c adjudication records two binding defects: the safety argument still cites the superseded no-flag Miri tree arm rather than the corrected review15 run with -Zmiri-tree-borrows, and closure_receipts_repository_head is stated as 17042ccf2 while both receipts record b14923bda. The receipts' own sha256 bindings are correct.",
+     "state": "OPEN",
+     "blocks": [
+      "identity",
+      "verdict"
+     ],
+     "settled_by": "Point the safety argument at the corrected Miri transcript and correct the repository-head field; then re-verify the receipt digests.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-GAP-023",
+     "statement": "identity_mismatch: The runtime-functional atlas binds its consumer rows to candidate libcrypto 1c03ec0a and libssl d2165444. The interop matrix binds build B to ee7fa27c; the tracked install is fd25cc9e. The atlas also records 301 of 307 rows carried forward at candidate_identity_match=false.",
+     "state": "OPEN",
+     "blocks": [
+      "identity",
+      "verdict"
+     ],
+     "settled_by": "Re-measure the affected consumer rows at one named candidate, or label every carried-forward row with its own source identity in the summary used for the 33/33 claim.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-GAP-024",
+     "statement": "identity_mismatch: The campaign ledger is dated 2026-10-30 at source_head afcfdc47e and release/0.0.44. S is 9372bb28b with crate 0.0.49 and 32 source-touching commits since the tracked install. The ledger's closure figures are not a measurement of S.",
+     "state": "OPEN",
+     "blocks": [
+      "identity",
+      "verdict"
+     ],
+     "settled_by": "Regenerate the ledger at S and record the closure and element-7 state at that candidate.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-GAP-025",
+     "statement": "identity_mismatch: The Phase-25 summary is bound to openssl-rs 0.0.27. S is 0.0.49 with substantially different source. Its passed=false and 183 UNSUPPORTED figures describe an older candidate.",
+     "state": "OPEN",
+     "blocks": [
+      "identity",
+      "verdict"
+     ],
+     "settled_by": "Regenerate the Phase-25 summary at S, or mark the existing summary as a historical-candidate record wherever it is cited.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-GAP-026",
+     "statement": "assumption_not_stated: The graduation's safety premise treats the closure's 290 DISCHARGED rows as establishing the mechanism discharges. The closure tool's DISCHARGED means an existing committed receipt covers the exact site; the tool hard-codes safe_compatible=false, and the adjudication records 65 REVIEW_REQUIRED rows still counted as discharged. The graduation record does not state that its premise depends on receipt coverage rather than re-audit.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict"
+     ],
+     "settled_by": "State the premise explicitly, and either re-audit the REVIEW_REQUIRED rows or exclude them from the discharge count.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-GAP-027",
+     "statement": "assumption_not_stated: The 33/33 L7 statement is read as current consumer evidence. The atlas records that 301 of 307 recipe-backed rows are carried forward from a superseded identity with candidate_identity_match=false and that no family was upgraded. The 33/33 sentence does not restate that reuse premise.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict"
+     ],
+     "settled_by": "Restate the reuse caveat wherever 33/33 is used as current evidence, or re-run the 33 workloads at the named candidate.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-GAP-028",
+     "statement": "assumption_not_stated: The matrix's four genuine cells are read as a statement about the candidate consumer build. The matrix's build B is a court rebuild (ee7fa27c) whose relationship to the tracked install or to the O4/O5 host build (3c3a68c1) is not recorded. The cell mapping is proven; the identity of the candidate behind it is not bound to the tracked artefact.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict"
+     ],
+     "settled_by": "Bind the matrix's B build to a tracked archive/DSO digest and to the O4 build record, or state that the matrix is a rebuild-specific result.",
+     "evidence": []
+    },
+    {
+     "id": "OBL-GAP-029",
+     "statement": "assumption_not_stated: Digest pinning is read as supply-chain authentication. The receipt states that Dropbear's digest is a first-fetch pin and that neither the Dropbear nor the PuTTY signature is verified. The manifest's open_obligations state the same. Downstream prose that cites the pins as verified inputs does not always carry that premise.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict"
+     ],
+     "settled_by": "Pin the signing keys and verify both detached signatures, or restate the unauthenticated-first-fetch premise wherever the pins are used.",
+     "evidence": [
+      "EV-01",
+      "EV-02"
+     ]
+    },
+    {
+     "id": "OBL-GAP-030",
+     "statement": "assumption_not_stated: The seal states court results as all_pass true without naming the commit or date of the registry it describes. The statement is therefore read as current even though the tracked registry has since drifted to all_pass false. The temporal premise is unstated.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict"
+     ],
+     "settled_by": "Bind every seal statement to the commit and digest of the registry it describes, and mark it historical when the registry moves.",
+     "evidence": []
+    },
+    {
+     "id": "OBL-GAP-031",
+     "statement": "UNKNOWN: It is unknown whether the O4/O5 host build (3c3a68c1) and the O7 court rebuild (ee7fa27c) are the same source and toolchain built twice, or different source or configuration. No tracked record joins the two digests to one archive digest or one toolchain record.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict"
+     ],
+     "settled_by": "One record naming the source commit, archive digest, toolchain and both DSO digests, or a rebuild of both in one venue from the O2 pins.",
+     "evidence": [
+      "EV-05"
+     ]
+    },
+    {
+     "id": "OBL-GAP-032",
+     "statement": "UNKNOWN: Whether the tracked reproducibility recipe produces byte-identical artefacts at S is unknown: it was not run at S, and the recorded result is for abb315a01.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict"
+     ],
+     "settled_by": "Run 'bash docker/openssl-rs-court.sh exec bash forensics/tools/build_reproducibility.sh --distribution' at S and record the digests, the two build logs and the comparison output.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-GAP-033",
+     "statement": "UNKNOWN: Whether the tracked install DSO's ABI and behaviour match the S source is unknown: the tracked binary predates 32 source-touching commits, and no ABI court at S is bound to it.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict"
+     ],
+     "settled_by": "Rebuild the install at S in the court, hash it, and run the ABI courts (ABI-SYMBOL, ABI-VERSION, ABI-LAYOUT, ABI-LINK, ABI-LOAD, ABI-SUBSTITUTION) against the rebuilt tree.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-GAP-034",
+     "statement": "UNKNOWN: Whether the 116 contract-bounded sites in the b85c closure are individually sound is unknown. The adjudication found one mislabelled contract-bounded site at an earlier candidate; the b85c record does not present a per-site witness for all 116.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict"
+     ],
+     "settled_by": "An independent per-site witness for each contract-bounded site, or an exclusion argument for each under the playbook's per-call-site witness rule.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-GAP-035",
+     "statement": "UNKNOWN: Whether all four O7 cells ran the same script set is not established by the matrix receipt. The receipt records the mtime hazard: t-exec iterates $? and the same tree ran 73 scripts on the host and 96 in the court. The BB receipt records that cell.sh now touches regress/*.sh; the AA/AB/BA receipts do not state the selection rule.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict"
+     ],
+     "settled_by": "Re-run all four cells with the deterministic selection and record the per-cell script list, or record the script list in each cell receipt.",
+     "evidence": [
+      "EV-01",
+      "EV-05",
+      "EV-06"
+     ]
+    },
+    {
+     "id": "OBL-GAP-036",
+     "statement": "UNKNOWN: Whether the external provider pointer-type obligation is the only ABI residual is not independently established. The graduation record asserts that the OsllDispatch fields are crate-private, that every production read goes through function_for::<T>/function_ptr_for, that twenty-one caller-side transmutes were removed, and that a compile_fail doctest proves external safe construction is impossible. No independent review of that surface at b85c is recorded.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict"
+     ],
+     "settled_by": "An independent review of src/context/dispatch.rs at the b85c source content, plus execution of the compile_fail doctest and the caller audit.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-GAP-037",
+     "statement": "evidence_not_reconstructable: The --distribution arm of the reproducibility recipe compiles artifacts/phase2/shell/libcrypto.shell.rs. That directory is excluded by .gitignore:44 and no shell source is tracked; git ls-files artifacts/phase2/shell returns 0. The tracked artifacts/phase2/SHELL_MANIFEST.json records the shell source digests, and the tracked version script artifacts/phase2/libcrypto.ld matches its recorded digest, but the source the link compiles is absent from a clean checkout.",
+     "state": "OPEN",
+     "blocks": [
+      "evidence"
+     ],
+     "settled_by": "Track the phase-2 shell sources (or a generator that reproduces them) with their manifest digests, then run the distribution arm from a clean checkout at S.",
+     "evidence": [
+      "EV-01"
+     ]
+    },
+    {
+     "id": "OBL-T15-RESOLUTION",
+     "statement": "The two sides of this contradiction are preserved; resolution is a governance act owned by ETP-T15 and may not be recorded as a preference.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict"
+     ],
+     "settled_by": "docs/ETP-TODO.md item ETP-T15, recorded as distinct provenance records",
+     "evidence": [
+      "EV-01",
+      "EV-02",
+      "EV-03"
+     ]
+    }
+   ],
+   "blocked_by": [
+    {
+     "id": "ETP0-CLM-001",
+     "verdict": "ESTABLISHED",
+     "open_obligations": [
+      "OBL-GAP-017"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-002",
+     "verdict": "ESTABLISHED",
+     "open_obligations": [
+      "OBL-GAP-017"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-004",
+     "verdict": "CONTRADICTED",
+     "open_obligations": [
+      "OBL-GAP-001",
+      "OBL-GAP-002",
+      "OBL-GAP-030",
+      "OBL-T15-RESOLUTION"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-005",
+     "verdict": "CONTRADICTED",
+     "open_obligations": [
+      "OBL-GAP-003",
+      "OBL-T15-RESOLUTION"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-006",
+     "verdict": "ESTABLISHED",
+     "open_obligations": [
+      "OBL-GAP-001"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-007",
+     "verdict": "ESTABLISHED",
+     "open_obligations": [
+      "OBL-GAP-002"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-008",
+     "verdict": "PARTIAL",
+     "open_obligations": [
+      "OBL-GAP-019"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-009",
+     "verdict": "PARTIAL",
+     "open_obligations": [
+      "OBL-EVIDENCE-EV-01",
+      "OBL-EVIDENCE-EV-02",
+      "OBL-EVIDENCE-EV-03",
+      "OBL-EVIDENCE-EV-04"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-010",
+     "verdict": "ESTABLISHED",
+     "open_obligations": [
+      "OBL-EVIDENCE-EV-01",
+      "OBL-EVIDENCE-EV-02",
+      "OBL-EVIDENCE-EV-03",
+      "OBL-GAP-008"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-011",
+     "verdict": "PARTIAL",
+     "open_obligations": [
+      "OBL-EVIDENCE-EV-02",
+      "OBL-EVIDENCE-EV-03",
+      "OBL-GAP-008",
+      "OBL-GAP-014"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-012",
+     "verdict": "PARTIAL",
+     "open_obligations": [
+      "OBL-GAP-008",
+      "OBL-GAP-009",
+      "OBL-GAP-010",
+      "OBL-GAP-021",
+      "OBL-GAP-032",
+      "OBL-GAP-037"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-013",
+     "verdict": "PARTIAL",
+     "open_obligations": [
+      "OBL-GAP-015"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-014",
+     "verdict": "PARTIAL",
+     "open_obligations": [
+      "OBL-EVIDENCE-EV-01",
+      "OBL-GAP-016"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-015",
+     "verdict": "PARTIAL",
+     "open_obligations": [
+      "OBL-GAP-029"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-016",
+     "verdict": "PARTIAL",
+     "open_obligations": [
+      "OBL-EVIDENCE-EV-02",
+      "OBL-EVIDENCE-EV-03",
+      "OBL-GAP-013"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-017",
+     "verdict": "PARTIAL",
+     "open_obligations": [
+      "OBL-EVIDENCE-EV-02",
+      "OBL-GAP-018",
+      "OBL-GAP-031"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-018",
+     "verdict": "ESTABLISHED",
+     "open_obligations": [
+      "OBL-EVIDENCE-EV-02",
+      "OBL-EVIDENCE-EV-03",
+      "OBL-GAP-008",
+      "OBL-GAP-018",
+      "OBL-GAP-031"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-019",
+     "verdict": "ESTABLISHED",
+     "open_obligations": [
+      "OBL-EVIDENCE-EV-02",
+      "OBL-GAP-011"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-020",
+     "verdict": "ESTABLISHED",
+     "open_obligations": [
+      "OBL-EVIDENCE-EV-02",
+      "OBL-EVIDENCE-EV-03",
+      "OBL-EVIDENCE-EV-04",
+      "OBL-GAP-018",
+      "OBL-GAP-028",
+      "OBL-GAP-031",
+      "OBL-GAP-035"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-022",
+     "verdict": "PARTIAL",
+     "open_obligations": [
+      "OBL-GAP-008",
+      "OBL-GAP-011"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-023",
+     "verdict": "PARTIAL",
+     "open_obligations": [
+      "OBL-EVIDENCE-EV-02",
+      "OBL-GAP-011",
+      "OBL-GAP-018"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-024",
+     "verdict": "ESTABLISHED",
+     "open_obligations": [
+      "OBL-EVIDENCE-EV-02",
+      "OBL-GAP-008",
+      "OBL-GAP-013"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-025",
+     "verdict": "ESTABLISHED",
+     "open_obligations": [
+      "OBL-GAP-018"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-026",
+     "verdict": "ESTABLISHED",
+     "open_obligations": [
+      "OBL-GAP-007"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-027",
+     "verdict": "ESTABLISHED",
+     "open_obligations": [
+      "OBL-GAP-007"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-028",
+     "verdict": "PARTIAL",
+     "open_obligations": [
+      "OBL-GAP-023",
+      "OBL-GAP-027"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-029",
+     "verdict": "ESTABLISHED",
+     "open_obligations": [
+      "OBL-EVIDENCE-EV-02",
+      "OBL-GAP-024"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-030",
+     "verdict": "CONTRADICTED",
+     "open_obligations": [
+      "OBL-GAP-004",
+      "OBL-GAP-012",
+      "OBL-GAP-022",
+      "OBL-GAP-026",
+      "OBL-GAP-034",
+      "OBL-GAP-036",
+      "OBL-T15-RESOLUTION"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-031",
+     "verdict": "ESTABLISHED",
+     "open_obligations": [
+      "OBL-EVIDENCE-EV-02",
+      "OBL-EVIDENCE-EV-03",
+      "OBL-GAP-004",
+      "OBL-GAP-012",
+      "OBL-GAP-022",
+      "OBL-GAP-026",
+      "OBL-GAP-034"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-032",
+     "verdict": "CONTRADICTED",
+     "open_obligations": [
+      "OBL-GAP-005",
+      "OBL-GAP-006",
+      "OBL-T15-RESOLUTION"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-033",
+     "verdict": "SUPERSEDED",
+     "open_obligations": [
+      "OBL-EVIDENCE-EV-01"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-034",
+     "verdict": "ESTABLISHED",
+     "open_obligations": [
+      "OBL-GAP-025"
+     ]
+    },
+    {
+     "id": "ETP0-CLM-035",
+     "verdict": "PARTIAL",
+     "open_obligations": [
+      "OBL-GAP-020",
+      "OBL-GAP-028",
+      "OBL-GAP-033"
+     ]
+    }
+   ],
+   "weakest": [
+    "ETP0-CLM-004",
+    "ETP0-CLM-005",
+    "ETP0-CLM-030",
+    "ETP0-CLM-032",
+    "ETP0-CLM-033"
+   ],
+   "members": [
+    {
+     "id": "ETP0-CLM-001",
+     "verdict": "ESTABLISHED",
+     "modality": "DOCUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-002",
+     "verdict": "ESTABLISHED",
+     "modality": "DOCUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-003",
+     "verdict": "ESTABLISHED",
+     "modality": "DOCUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-004",
+     "verdict": "CONTRADICTED",
+     "modality": "DOCUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-005",
+     "verdict": "CONTRADICTED",
+     "modality": "DOCUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-006",
+     "verdict": "ESTABLISHED",
+     "modality": "DOCUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-007",
+     "verdict": "ESTABLISHED",
+     "modality": "DOCUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-008",
+     "verdict": "PARTIAL",
+     "modality": "DOCUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-009",
+     "verdict": "PARTIAL",
+     "modality": "INSTRUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-010",
+     "verdict": "ESTABLISHED",
+     "modality": "INSTRUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-011",
+     "verdict": "PARTIAL",
+     "modality": "INSTRUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-012",
+     "verdict": "PARTIAL",
+     "modality": "TESTED"
+    },
+    {
+     "id": "ETP0-CLM-013",
+     "verdict": "PARTIAL",
+     "modality": "INSTRUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-014",
+     "verdict": "PARTIAL",
+     "modality": "INSTRUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-015",
+     "verdict": "PARTIAL",
+     "modality": "TESTED"
+    },
+    {
+     "id": "ETP0-CLM-016",
+     "verdict": "PARTIAL",
+     "modality": "TESTED"
+    },
+    {
+     "id": "ETP0-CLM-017",
+     "verdict": "PARTIAL",
+     "modality": "TESTED"
+    },
+    {
+     "id": "ETP0-CLM-018",
+     "verdict": "ESTABLISHED",
+     "modality": "INSTRUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-019",
+     "verdict": "ESTABLISHED",
+     "modality": "TESTED"
+    },
+    {
+     "id": "ETP0-CLM-020",
+     "verdict": "ESTABLISHED",
+     "modality": "TESTED"
+    },
+    {
+     "id": "ETP0-CLM-021",
+     "verdict": "ESTABLISHED",
+     "modality": "DOCUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-022",
+     "verdict": "PARTIAL",
+     "modality": "TESTED"
+    },
+    {
+     "id": "ETP0-CLM-023",
+     "verdict": "PARTIAL",
+     "modality": "TESTED"
+    },
+    {
+     "id": "ETP0-CLM-024",
+     "verdict": "ESTABLISHED",
+     "modality": "INSTRUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-025",
+     "verdict": "ESTABLISHED",
+     "modality": "TESTED"
+    },
+    {
+     "id": "ETP0-CLM-026",
+     "verdict": "ESTABLISHED",
+     "modality": "DOCUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-027",
+     "verdict": "ESTABLISHED",
+     "modality": "DOCUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-028",
+     "verdict": "PARTIAL",
+     "modality": "DOCUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-029",
+     "verdict": "ESTABLISHED",
+     "modality": "DOCUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-030",
+     "verdict": "CONTRADICTED",
+     "modality": "DOCUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-031",
+     "verdict": "ESTABLISHED",
+     "modality": "INSTRUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-032",
+     "verdict": "CONTRADICTED",
+     "modality": "DOCUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-033",
+     "verdict": "SUPERSEDED",
+     "modality": "DOCUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-034",
+     "verdict": "ESTABLISHED",
+     "modality": "DOCUMENTED"
+    },
+    {
+     "id": "ETP0-CLM-035",
+     "verdict": "PARTIAL",
+     "modality": "DOCUMENTED"
+    }
+   ],
+   "aggregation": "forbidden"
+  },
+  "contradictions": []
+ },
+ "invalidate": {
+  "3c3a68c1baeb304adf2fc3af827e49b14529556008429bd11dda784a2c6cdfd1": {
+   "changed": [
+    "3c3a68c1baeb304adf2fc3af827e49b14529556008429bd11dda784a2c6cdfd1"
+   ],
+   "invalidated": [
+    "ETP0-CLM-017",
+    "ETP0-CLM-018",
+    "ETP0-CLM-019",
+    "ETP0-CLM-020",
+    "ETP0-CLM-022",
+    "ETP0-CLM-023",
+    "ETP0-CLM-025"
+   ],
+   "direct": [
+    "ETP0-CLM-017",
+    "ETP0-CLM-018",
+    "ETP0-CLM-023",
+    "ETP0-CLM-025"
+   ],
+   "transitive_only": [
+    "ETP0-CLM-019",
+    "ETP0-CLM-020",
+    "ETP0-CLM-022"
+   ],
+   "aggregation": "forbidden"
+  },
+  "ee7fa27c79f5a679d5b229429d53dc7c3b510695db9c74d11b4b6783a735ebe9": {
+   "changed": [
+    "ee7fa27c79f5a679d5b229429d53dc7c3b510695db9c74d11b4b6783a735ebe9"
+   ],
+   "invalidated": [
+    "ETP0-CLM-011",
+    "ETP0-CLM-020"
+   ],
+   "direct": [
+    "ETP0-CLM-011",
+    "ETP0-CLM-020"
+   ],
+   "transitive_only": [],
+   "aggregation": "forbidden"
+  }
+ }
+}

@@ -1,0 +1,245 @@
+{
+ "schema": "openssl-rs/etp/claims/v1",
+ "kind": "etp-typed-claims",
+ "generated_utc": "2026-11-22T12:30:56Z",
+ "source_identity": {
+  "commit": "9372bb28b2fbe2f71cf2aa2ab501414d45e87d42",
+  "branch": "staging",
+  "worktree_dirty_tracked_files": 0,
+  "tracked_file_count": 13708,
+  "tree_hash_rule": "sha256 over canonical JSON (sort_keys, separators ',', ':') of sorted [relpath, size, sha256] entries, restricted to tracked files (git ls-files) under the named paths; this is the atlas_common.content_hash / phase7_courts._source_tree_digest rule applied to tracked files only",
+  "trees": {
+   "source_core_src_cargo_lock_build": {
+    "paths": [
+     "src",
+     "Cargo.toml",
+     "Cargo.lock",
+     "build.rs"
+    ],
+    "file_count": 893,
+    "sha256": "51568028bc902bee1fe3e4cdb5f401c9cf4a66aef501d95a42e2f35bfbd19981"
+   },
+   "src": {
+    "file_count": 890,
+    "sha256": "942e89754a4f28eafea9bb05b6d2bddd757810f56c31488c598d2354bcd537ff"
+   },
+   "forensics_tools_build_scripts_verification_recipes": {
+    "file_count": 309,
+    "sha256": "a5fefdc660c6d8289519828402a67e0a595cb4721b930611f685fde0ef9520c9"
+   },
+   "courts_phase18_timing": {
+    "file_count": 27,
+    "sha256": "fd3c31747b9ebfe699f4346f89d6e027f75e3bb447d9c4e6dcc9a99c455a3745"
+   },
+   "courts_phase18_interop": {
+    "file_count": 48,
+    "sha256": "036c83fbf70b08e88bc7341e1fc5d0b306568121aa91dc0d4d9854c362425e39"
+   },
+   "courts_phase18_all": {
+    "file_count": 303,
+    "sha256": "83245ade509cbde30c5c16821e54244985fe8a1f2404c91ce430fd3abe5c4337"
+   },
+   "phase2_version_script": {
+    "paths": [
+     "artifacts/phase2/libcrypto.ld"
+    ],
+    "file_count": 1,
+    "sha256": "a358415aced62fd9cf4f64c7b0661c19ed2f0b2a25ed8f517f9eb248a59807cb"
+   },
+   "tests": {
+    "file_count": 2,
+    "sha256": "60838cd01afe6529ee322bbd28445cb85159b45465e6bb8a7d9f8c26775afeeb"
+   },
+   "docker": {
+    "file_count": 15,
+    "sha256": "1bd35f44fd06a894eb89a5494f2f1b4ce7edc810bd9433c82b9a431142e4899c"
+   },
+   "docs_constitution_build_inputs": {
+    "paths": [
+     "docs/CUSTODIAN_CONTRACT.md",
+     "docs/PARITY_MODEL.md",
+     "docs/AUTHORITY_POLICY.md",
+     "docs/SECURITY_DIVERGENCE_POLICY.md",
+     "docs/OWNERSHIP_MODEL.md",
+     "docs/ABI_POLICY.md",
+     "docs/PROVIDER_MODEL.md",
+     "docs/FIPS_CLAIMS.md",
+     "docs/CONCURRENCY_MODEL.md",
+     "docs/RELEASE_GATES.md",
+     "docs/NON_CLAIMS.md",
+     "docs/REPRODUCIBILITY.md",
+     "docs/UNSAFE.md"
+    ],
+    "file_count": 13,
+    "sha256": "cbd60c73e050eaf1112c69539267446d51f1a8c6e4759fc45e3c83175765fa48"
+   },
+   "build_files": {
+    "paths": [
+     "Cargo.toml",
+     "Cargo.lock",
+     "build.rs",
+     "rust-toolchain.toml"
+    ],
+    "file_count": 4,
+    "sha256": "f06a5e1f53a30e661df75a30ab845deb3b598a669db8ba295cd2ceb40dd4f2fc"
+   }
+  },
+  "authority_registry": {
+   "path": "forensics/authorities/AUTHORITIES.json",
+   "file_count": 1,
+   "sha256": "707ec86933107eae941f74c727cb677aefd36424428c510c686140b9f12ba12b"
+  }
+ },
+ "derived_from": {
+  "document": "evidence/etp0/CLAIMS.json",
+  "sha256": "d4b68f6fbf19333c557c3056e42261ac60bbafc70562b21e5bc08872163d92c6",
+  "input_evidence_commit": "f93766a621530ce05d4061b48fa48211abff1363",
+  "claim_count": 35,
+  "trust_gaps": {
+   "path": "evidence/etp0/TRUST-GAPS.json",
+   "sha256": "a4ac74722bd4308d982f159cbdd090c39106fb1b758cb0f935100c744328270a",
+   "gap_count": 37
+  }
+ },
+ "claims": [
+  {
+   "id": "ETP5-CLM-010",
+   "property": "memory-safety",
+   "interpretation": "Read the element-7 refusal population as closed because no tracked run currently reports a refusal.",
+   "quantification": {
+    "kind": "universal",
+    "population": "curl element-7 target-bounded reachable sites",
+    "population_size": null,
+    "measure": {
+     "form": "count",
+     "value": "no current run reports a refusal",
+     "aggregation": "forbidden"
+    }
+   },
+   "scope": {
+    "kind": "record",
+    "subject": "curl element-7 refusal population",
+    "venue": "tracked curl closure and repair records",
+    "locations": [
+     "evidence/closure-curl-049.json",
+     "evidence/element7-curl-049-triage.json",
+     "evidence/element7-curl-049-last34-notes.md"
+    ],
+    "excludes": []
+   },
+   "threat_model": {
+    "adversary": "candidate/evidence mismatch: a verdict attributed to an identity the record does not bind",
+    "observation_model": "the historical records are read at their own digests; no new measurement is claimed",
+    "out_of_scope": [
+     "behaviour outside the cited records"
+    ]
+   },
+   "identity": {
+    "source": {
+     "candidate": "curl 0.0.49, install libcrypto fd25cc9e",
+     "commit": null,
+     "binding": "exact",
+     "tree_sha256": null
+    },
+    "build": {
+     "toolchain": null,
+     "profile": null,
+     "target": "curl element-7 refusal population"
+    },
+    "artefacts": [
+     {
+      "label": "libcrypto.so.3",
+      "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+      "path": null
+     },
+     {
+      "label": "libssl.so.3",
+      "sha256": "648f8caecda245d2186813fb67ceadedd798b9ce609c8b041a84f195946c5f68",
+      "path": null
+     }
+    ]
+   },
+   "authority": {
+    "kind": "machine-record",
+    "name": "evidence/closure-curl-049.json",
+    "version": null,
+    "path": "evidence/closure-curl-049.json"
+   },
+   "target": {
+    "kind": "record",
+    "name": "curl element-7 refusal population",
+    "path": "evidence/element7-curl-049-triage.json"
+   },
+   "assumptions": [],
+   "evidence": [
+    {
+     "id": "EV-01",
+     "path": "evidence/closure-curl-049.json",
+     "kind": "record",
+     "sha256": "6aedaa4ee6691ba3d09a4c4f655a8001b35252fa4206f30584d87effe748ca16",
+     "digest_identity": "E",
+     "present": true,
+     "reconstructable": "partial"
+    },
+    {
+     "id": "EV-02",
+     "path": "evidence/element7-curl-049-triage.json",
+     "kind": "record",
+     "sha256": "a664b67fa370f920c764dce7c8d33188b1d460096ff9efef704aa56985b44feb",
+     "digest_identity": "E",
+     "present": true,
+     "reconstructable": "partial"
+    },
+    {
+     "id": "EV-03",
+     "path": "evidence/element7-curl-049-last34-notes.md",
+     "kind": "record",
+     "sha256": "c64fa574d2a41b6036ed586c93069dcf020f013ea8e87ba5eaa5dad4160db9de",
+     "digest_identity": "E",
+     "present": true,
+     "reconstructable": "partial"
+    }
+   ],
+   "tcb": [
+    {
+     "component": "Git object store",
+     "trusted_for": "the tracked bytes and commit identities cited",
+     "verified": false
+    },
+    {
+     "component": "court/venue",
+     "trusted_for": "execution of any cited procedure",
+     "verified": false
+    }
+   ],
+   "obligations": [],
+   "invalidation": {
+    "depends_on": [
+     {
+      "kind": "path",
+      "id": "evidence/closure-curl-049.json"
+     },
+     {
+      "kind": "path",
+      "id": "evidence/element7-curl-049-triage.json"
+     },
+     {
+      "kind": "path",
+      "id": "evidence/element7-curl-049-last34-notes.md"
+     }
+    ],
+    "rationale": "a change to any cited record invalidates this claim conservatively"
+   },
+   "modality": "TESTED",
+   "reproduction": {
+    "status": "NOT_ATTEMPTED",
+    "procedure": null,
+    "at": null
+   },
+   "verdict": {
+    "state": "ESTABLISHED",
+    "basis": "A consumer that equates absence of a tracked failure with closure."
+   }
+  }
+ ]
+}

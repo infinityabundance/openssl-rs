@@ -1,0 +1,533 @@
+{
+ "schema": "openssl-rs/etp5/refusals/v1",
+ "item": "ETP-5 of docs/ETP-TODO.md",
+ "generated_utc": "2026-11-22T12:30:56Z",
+ "source_identity": {
+  "repository_head": "933d09189890bf2ba8a6096108c0b11f42c1e84b",
+  "expected_head": "933d09189",
+  "branch": "staging",
+  "worktree_clean_tracked_files": true
+ },
+ "environment": {
+  "host_available_gib_before_runs": 27,
+  "guard_threshold_gib": 24,
+  "court_image": "openssl-rs-court-tools:1",
+  "court_memory_cap_bytes": 8589934592,
+  "court_oom_kill_events": 0,
+  "requested_cap": "OPENSSL_RS_COURT_MEM=6g (the running court was created at 8g by an earlier session; 8g is within min(8g, available-16g) and `exec` does not recreate the container)"
+ },
+ "validator": {
+  "path": "forensics/tools/etp_claims.py",
+  "sha256": "f4bb8e3b312cc19aa2d8e25c6c431512bc8d648aeea38c3fa8813a7474659b00",
+  "committed_record": {
+   "document": "evidence/etp/claims.json",
+   "claims": 35,
+   "refusals": 0,
+   "conjoin_verdict": "CONTRADICTED",
+   "contradiction_conflicts": []
+  },
+  "interpretation": "The committed typed claim set validates 35/35 with 0 refusals, but its cohort meet is CONTRADICTED: form-validity is not promotion, and the four CONTRADICTED claims and the one SUPERSEDED claim absorb the conjunction."
+ },
+ "conditions": [
+  {
+   "id": "ETP5-R1",
+   "condition": "The OpenSSH SAFE_COMPATIBLE graduation coexists with closures reporting safe_compatible=false, a freeze reporting not_graduated, and an adjudication of NOT ESTABLISHED.",
+   "artefacts": [
+    "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
+    "evidence/closure-ssh-b85c.json",
+    "evidence/closure-sshd-b85c.json",
+    "evidence/FREEZE-b85c.json",
+    "evidence/b85c-adjudication.json"
+   ],
+   "rule": [
+    "EG_GRADUATED_WITH_OPEN_OBLIGATION",
+    "EG_GRADUATED_WITHOUT_CLOSURE",
+    "EG_CONTRADICTION_UNRESOLVED"
+   ],
+   "field": [
+    "$.claims/0/obligations",
+    "$.claims/0/closure",
+    "$.claims/1/verdict/state"
+   ],
+   "probes": [
+    {
+     "probe": "p1-openssh-graduation-promotion",
+     "document": "evidence/etp5/probes/p1-openssh-graduation-promotion.json",
+     "claims": [
+      "ETP5-CLM-001"
+     ],
+     "outcome": "REFUSED",
+     "refusal_count": 2,
+     "rules": [
+      {
+       "rule": "EG_GRADUATED_WITHOUT_CLOSURE",
+       "path": "$.claims/0/closure",
+       "field": "closure",
+       "detail": "SAFE_COMPATIBLE requires complete=true, a non-empty dependency list and an empty unresolved_dependencies list"
+      },
+      {
+       "rule": "EG_GRADUATED_WITH_OPEN_OBLIGATION",
+       "path": "$.claims/0/obligations",
+       "field": "obligations",
+       "detail": "SAFE_COMPATIBLE has 1 open obligation(s): OBL-ETP5-OPENSSH-CONTRADICTION"
+      }
+     ]
+    },
+    {
+     "probe": "p2-openssh-two-records",
+     "document": "evidence/etp5/probes/p2-openssh-two-records.json",
+     "claims": [
+      "ETP5-CLM-002",
+      "ETP5-CLM-003"
+     ],
+     "outcome": "REFUSED",
+     "refusal_count": 1,
+     "rules": [
+      {
+       "rule": "EG_CONTRADICTION_UNRESOLVED",
+       "path": "$.claims/1/verdict/state",
+       "field": "state",
+       "detail": "claim ETP5-CLM-003 and ETP5-CLM-002 share property, scope and identity but assert NOT_ESTABLISHED and SAFE_COMPATIBLE"
+      }
+     ]
+    }
+   ],
+   "non_promotion": {
+    "operation": "conjoin over the committed typed claim set (evidence/etp/claims.json)",
+    "verdict": "CONTRADICTED",
+    "weakest": [
+     "ETP0-CLM-004",
+     "ETP0-CLM-005",
+     "ETP0-CLM-030",
+     "ETP0-CLM-032",
+     "ETP0-CLM-033"
+    ],
+    "basis": "ETP0-CLM-030 types the same material as CONTRADICTED with three parties and resolution owner ETP-T15; the cohort meet is CONTRADICTED (an absorbing verdict)."
+   },
+   "provenance": {
+    "graduation_record_source_head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+    "adjudication_head_at_adjudication": "bfa39a6c3",
+    "adjudication_evidence_source_head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+    "closure_receipts_repository_head": "b14923bda",
+    "note": "The graduation and the adjudication share the evidence source head, so at one identity the two verdicts are a hard error; they remain distinct records with the provenance above and are reconciled by ETP-T15, not by this item."
+   },
+   "disposition": "REFUSED"
+  },
+  {
+   "id": "ETP5-R2",
+   "condition": "The Safe-33 cohort counter appears as both 1/33 and 0/33.",
+   "artefacts": [
+    "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+    "forensics/memory-safety/campaign/safe-c33/PROGRESS.md",
+    "forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md"
+   ],
+   "rule": [
+    "EG_CONTRADICTION_PARTIES",
+    "EG_GRADUATED_WITH_OPEN_OBLIGATION",
+    "EG_GRADUATED_WITHOUT_CLOSURE"
+   ],
+   "field": [
+    "$.claims/0/contradiction/parties",
+    "$.claims/0/obligations",
+    "$.claims/0/closure"
+   ],
+   "probes": [
+    {
+     "probe": "p3-counter-single-source",
+     "document": "evidence/etp5/probes/p3-counter-single-source.json",
+     "claims": [
+      "ETP5-CLM-004"
+     ],
+     "outcome": "REFUSED",
+     "refusal_count": 1,
+     "rules": [
+      {
+       "rule": "EG_CONTRADICTION_PARTIES",
+       "path": "$.claims/0/contradiction/parties",
+       "field": "parties",
+       "detail": "a contradiction needs at least two distinct sources, so both sides are identified rather than one being preferred"
+      }
+     ]
+    },
+    {
+     "probe": "p3b-counter-promotion",
+     "document": "evidence/etp5/probes/p3b-counter-promotion.json",
+     "claims": [
+      "ETP5-CLM-005"
+     ],
+     "outcome": "REFUSED",
+     "refusal_count": 2,
+     "rules": [
+      {
+       "rule": "EG_GRADUATED_WITHOUT_CLOSURE",
+       "path": "$.claims/0/closure",
+       "field": "closure",
+       "detail": "SAFE_COMPATIBLE requires complete=true, a non-empty dependency list and an empty unresolved_dependencies list"
+      },
+      {
+       "rule": "EG_GRADUATED_WITH_OPEN_OBLIGATION",
+       "path": "$.claims/0/obligations",
+       "field": "obligations",
+       "detail": "SAFE_COMPATIBLE has 1 open obligation(s): OBL-ETP5-COUNTER"
+      }
+     ]
+    },
+    {
+     "probe": "p3c-counter-two-established",
+     "document": "evidence/etp5/probes/p3c-counter-two-established.json",
+     "claims": [
+      "ETP5-CLM-014",
+      "ETP5-CLM-015"
+     ],
+     "outcome": "ACCEPTED",
+     "refusal_count": 0,
+     "rules": [],
+     "conjoin_verdict": "ESTABLISHED",
+     "conjoin_weakest": [
+      "ETP5-CLM-014",
+      "ETP5-CLM-015"
+     ],
+     "contradictions": []
+    }
+   ],
+   "non_promotion": {
+    "operation": "conjoin over the committed typed claim set",
+    "verdict": "CONTRADICTED",
+    "weakest": [
+     "ETP0-CLM-004",
+     "ETP0-CLM-005",
+     "ETP0-CLM-030",
+     "ETP0-CLM-032",
+     "ETP0-CLM-033"
+    ],
+    "basis": "ETP0-CLM-032 is CONTRADICTED with two parties and resolution owner ETP-T15."
+   },
+   "finding": "F4",
+   "disposition": "REFUSED (single-source contradiction and promotion); one accepted probe is finding F4"
+  },
+  {
+   "id": "ETP5-R3",
+   "condition": "The withdrawn O7 four-cell result: its current machine-readable state and whether a consumer of the JSON alone would accept it.",
+   "artefacts": [
+    "courts/phase18/interop/RECEIPT-o7.json",
+    "courts/phase18/interop/RECEIPT-o7.json@cc2e5fa32 (withdrawn revision)",
+    "courts/phase18/interop/RECEIPT-o7-AA.json",
+    "courts/phase18/interop/RECEIPT-o7-AB.json",
+    "courts/phase18/interop/RECEIPT-o7-BA.json",
+    "courts/phase18/interop/RECEIPT-o7-BB.json",
+    "courts/phase18/interop/logs/"
+   ],
+   "rule": [
+    "EG_EVIDENCE_DIGEST_MISMATCH",
+    "EG_EVIDENCE_CONTRADICTS_VERDICT (missing; finding F1)"
+   ],
+   "field": [
+    "$.claims/0/evidence/0/sha256",
+    "$.claims/0/verdict/state"
+   ],
+   "probes": [
+    {
+     "probe": "p4a-withdrawn-o7-historical-accepted",
+     "document": "evidence/etp5/probes/p4a-withdrawn-o7-historical-accepted.json",
+     "claims": [
+      "ETP5-CLM-006"
+     ],
+     "outcome": "ACCEPTED",
+     "refusal_count": 0,
+     "rules": [],
+     "conjoin_verdict": "ESTABLISHED",
+     "conjoin_weakest": [
+      "ETP5-CLM-006"
+     ],
+     "contradictions": []
+    },
+    {
+     "probe": "p4b-withdrawn-o7-current-identity",
+     "document": "evidence/etp5/probes/p4b-withdrawn-o7-current-identity.json",
+     "claims": [
+      "ETP5-CLM-007"
+     ],
+     "outcome": "REFUSED",
+     "refusal_count": 1,
+     "rules": [
+      {
+       "rule": "EG_EVIDENCE_DIGEST_MISMATCH",
+       "path": "$.claims/0/evidence/0",
+       "field": "sha256",
+       "detail": "'courts/phase18/interop/RECEIPT-o7.json' hashes to 73f4b8038a176dcfcdcf8e2f85de8d724fb1a5c3aec36742c9ba5cd1af5c52c6, not the recorded 2ee7ee4d8fb3b909cc007a14d9dabf511fb90bb2f8f2f32d92b893004e8bd0a0"
+      }
+     ]
+    },
+    {
+     "probe": "p4c-withdrawn-o7-nonpromotion",
+     "document": "evidence/etp5/probes/p4c-withdrawn-o7-nonpromotion.json",
+     "claims": [
+      "ETP5-CLM-008"
+     ],
+     "outcome": "NON_PROMOTION",
+     "refusal_count": 0,
+     "rules": [],
+     "conjoin_verdict": "WITHDRAWN",
+     "conjoin_weakest": [
+      "ETP5-CLM-008"
+     ],
+     "contradictions": []
+    }
+   ],
+   "current_state": {
+    "receipt": "courts/phase18/interop/RECEIPT-o7.json",
+    "status": "ESTABLISHED",
+    "withdrawn": false,
+    "supersedes": "RECEIPT-o7.json revision 2 (WITHDRAWN) and the three per-cell receipts marked withdrawn",
+    "withdrawn_revision": {
+     "commit": "cc2e5fa32",
+     "sha256": "2ee7ee4d8fb3b909cc007a14d9dabf511fb90bb2f8f2f32d92b893004e8bd0a0",
+     "status": "WITHDRAWN",
+     "withdrawn": true,
+     "not_established": [
+      "BA",
+      "AB"
+     ]
+    },
+    "json_only_consumer": "accepts the current file as the ESTABLISHED four-cell result; the current file carries no DSO digest and no per-cell log binding, and its BB log digest differs from the current per-cell BB receipt.",
+    "aggregate_vs_per_cell_bb_log": {
+     "aggregate": "1a23987ae2ea2bee94eb68f3946e7751c03322ea5d0586cb6ac154c349fdc317",
+     "per_cell_receipt": "03dc64dfa4c95082584361e1a15f23dc05e26d7edbbd45f7385e1ab63825e3b7",
+     "both_tracked": true,
+     "both_bytes": 196302,
+     "difference": "one line: the compiler's temporary object name in the ld warning (ccPLmUvk.o vs ccK6DPDJ.o); both logs carry 96 run-test lines"
+    }
+   },
+   "finding": "F1",
+   "disposition": "REFUSED on the current identity and NON-PROMOTED as WITHDRAWN; one accepted probe is finding F1"
+  },
+  {
+   "id": "ETP5-R4",
+   "condition": "Build B is bound to 3c3a68c1 in O4/O5/O11 and to ee7fa27c in O7.",
+   "artefacts": [
+    "courts/phase18/interop/RECEIPT-o4.json",
+    "courts/phase18/interop/RECEIPT-o5.json",
+    "courts/phase18/interop/MANIFEST-o11-B.json",
+    "courts/phase18/interop/RECEIPT-o7-AA.json",
+    "courts/phase18/interop/RECEIPT-o7-AB.json",
+    "courts/phase18/interop/RECEIPT-o7-BA.json",
+    "courts/phase18/interop/RECEIPT-o7-BB.json",
+    "evidence/etp5/REEXECUTION-RECEIPT-o7-BB.json",
+    "evidence/etp5/REEXECUTION-RECEIPT-o7-BA.json"
+   ],
+   "rule": [
+    "EG_MULTIPLE_CANDIDATES",
+    "EG_SCHEMA_VIOLATION (accompanies it; finding F2)"
+   ],
+   "field": [
+    "$.claims/0/identity/source",
+    "$/claims/0/identity/source/candidates"
+   ],
+   "probes": [
+    {
+     "probe": "p5-build-b-identity-split",
+     "document": "evidence/etp5/probes/p5-build-b-identity-split.json",
+     "claims": [
+      "ETP5-CLM-009"
+     ],
+     "outcome": "REFUSED",
+     "refusal_count": 2,
+     "rules": [
+      {
+       "rule": "EG_MULTIPLE_CANDIDATES",
+       "path": "$.claims/0/identity/source",
+       "field": "candidates",
+       "detail": "the claim names 2 different candidate identities: 3c3a68c1baeb304adf2fc3af827e49b14529556008429bd11dda784a2c6cdfd1, ee7fa27c79f5a679d5b229429d53dc7c3b510695db9c74d11b4b6783a735ebe9"
+      },
+      {
+       "rule": "EG_SCHEMA_VIOLATION",
+       "path": "$/claims/0/identity/source/candidates",
+       "field": "candidates",
+       "detail": "additional property is not permitted by the closed type"
+      }
+     ]
+    }
+   ],
+   "non_merge": {
+    "operation": "invalidate --changed <digest> over evidence/etp/claims.json",
+    "changed_to_claims": {
+     "3c3a68c1baeb304adf2fc3af827e49b14529556008429bd11dda784a2c6cdfd1": {
+      "direct": [
+       "ETP0-CLM-017",
+       "ETP0-CLM-018",
+       "ETP0-CLM-023",
+       "ETP0-CLM-025"
+      ],
+      "transitive_only": [
+       "ETP0-CLM-019",
+       "ETP0-CLM-020",
+       "ETP0-CLM-022"
+      ]
+     },
+     "ee7fa27c79f5a679d5b229429d53dc7c3b510695db9c74d11b4b6783a735ebe9": {
+      "direct": [
+       "ETP0-CLM-011",
+       "ETP0-CLM-020"
+      ],
+      "transitive_only": []
+     }
+    },
+    "note": "No digest merge occurs. The two populations are coupled anyway: ETP0-CLM-020 (the O7 matrix) declares a claim dependency on ETP0-CLM-017 (the O4 host build), so changing 3c3a68c1 invalidates the O7 claim transitively. The split is recorded as two artefact rows plus OBL-GAP-018/031, not resolved."
+   },
+   "finding": "F2",
+   "disposition": "REFUSED"
+  },
+  {
+   "id": "ETP5-R5",
+   "condition": "The curl element-7 refusal population must not be reported as closed.",
+   "artefacts": [
+    "evidence/closure-curl-049.json",
+    "evidence/element7-curl-049-triage.json",
+    "evidence/element7-curl-049-shape-correction.json",
+    "evidence/element7-curl-049-last34-notes.md",
+    "evidence/element7-curl-049-closedset-receipt.json",
+    "evidence/element7-curl-049-rest-receipt.json",
+    "evidence/element7-curl-049-proved-empty-gate.json"
+   ],
+   "rule": [
+    "EG_GRADUATED_WITH_OPEN_OBLIGATION",
+    "EG_GRADUATED_WITHOUT_CLOSURE",
+    "EG_EVIDENCE_CONTRADICTS_VERDICT (missing; finding F1)"
+   ],
+   "field": [
+    "$.claims/0/obligations",
+    "$.claims/0/closure",
+    "$.claims/0/verdict/state"
+   ],
+   "probes": [
+    {
+     "probe": "p6-curl-element7-closed",
+     "document": "evidence/etp5/probes/p6-curl-element7-closed.json",
+     "claims": [
+      "ETP5-CLM-010"
+     ],
+     "outcome": "ACCEPTED",
+     "refusal_count": 0,
+     "rules": [],
+     "conjoin_verdict": "ESTABLISHED",
+     "conjoin_weakest": [
+      "ETP5-CLM-010"
+     ],
+     "contradictions": []
+    },
+    {
+     "probe": "p6b-curl-graduation-promotion",
+     "document": "evidence/etp5/probes/p6b-curl-graduation-promotion.json",
+     "claims": [
+      "ETP5-CLM-011"
+     ],
+     "outcome": "REFUSED",
+     "refusal_count": 2,
+     "rules": [
+      {
+       "rule": "EG_GRADUATED_WITHOUT_CLOSURE",
+       "path": "$.claims/0/closure",
+       "field": "closure",
+       "detail": "SAFE_COMPATIBLE requires complete=true, a non-empty dependency list and an empty unresolved_dependencies list"
+      },
+      {
+       "rule": "EG_GRADUATED_WITH_OPEN_OBLIGATION",
+       "path": "$.claims/0/obligations",
+       "field": "obligations",
+       "detail": "SAFE_COMPATIBLE has 1 open obligation(s): OBL-ETP5-CURL-ELEMENT7"
+      }
+     ]
+    },
+    {
+     "probe": "p6c-curl-element7-typed",
+     "document": "evidence/etp5/probes/p6c-curl-element7-typed.json",
+     "claims": [
+      "ETP5-CLM-012",
+      "ETP5-CLM-013"
+     ],
+     "outcome": "NON_PROMOTION",
+     "refusal_count": 0,
+     "rules": [],
+     "conjoin_verdict": "NOT_ESTABLISHED",
+     "conjoin_weakest": [
+      "ETP5-CLM-013"
+     ],
+     "contradictions": []
+    }
+   ],
+   "disposition_record": {
+    "closure_verdict": "ACCEPTED with safe_compatible=false",
+    "element_7_machine_predicate": {
+     "source": "evidence/element7-curl-049-triage.json -> receipt.predicate_element_7",
+     "established": false,
+     "status": "FAIL",
+     "reachable_unresolved_sites": 449,
+     "target_bounded_unresolved_sites": 219,
+     "contract_bounded_sites": 158,
+     "closed_target_set_sites": 72
+    },
+    "repair_batches": {
+     "shape_correction": "element 7 FAIL, 120 sites remain after the err.rs reclassification",
+     "last34_notes": "27 named rows remain refused (http 4 + 23 untouched-family rows); full closure NOT_RUN",
+     "running_count": "the +/-1 and +/-2 accounting discrepancies recorded in ETP-TODO C2 are unchanged"
+    },
+    "disposition": "FAIL. Neither the 219-site machine predicate nor the 27-row repair note is a closure run at one frozen identity after the tool changes; absence of a tracked failure is not closure."
+   },
+   "finding": "F1",
+   "disposition": "REFUSED on the promotion and NON-PROMOTED when typed honestly; one accepted probe is finding F1"
+  }
+ ],
+ "machinery_findings": [
+  {
+   "id": "F1",
+   "finding": "The validator does not bind an evidence record's own machine-readable state to the claim verdict. An ESTABLISHED claim over bytes whose record says WITHDRAWN (probe p4a) and an ESTABLISHED claim over a record whose predicate says established=false (probe p6) both validate with zero refusals.",
+   "rule_that_should_fire": "EG_EVIDENCE_CONTRADICTS_VERDICT (proposed): a present evidence entry whose parsed record declares withdrawn:true, status WITHDRAWN, established:false or safe_compatible:false may not support an equal-or-stronger claim verdict.",
+   "field": "$.claims/<n>/evidence/<m> (against the runner's interpretation)",
+   "accepted_probes": [
+    "p4a-withdrawn-o7-historical-accepted",
+    "p6-curl-element7-closed"
+   ],
+   "consequence": "The machinery is not omission-resistant on its own. A producer can PASS by citing a record whose own fields refute the claim and omitting the obligation. A17's expected evidence manifest and closing reconciliation are the mechanism that must close this; ETP-5 records the gap rather than treating acceptance as a pass.",
+   "not_a_verdict_change": "The accepted probes are synthetic typing harnesses; no committed claim and no consumer verdict changes."
+  },
+  {
+   "id": "F2",
+   "finding": "EG_MULTIPLE_CANDIDATES is unreachable for a schema-valid document. The pre-scan reads identity.source.candidates, but identity.source is a closed object without that field, so the rule fires only together with EG_SCHEMA_VIOLATION.",
+   "rule_that_should_fire": "EG_MULTIPLE_CANDIDATES on a schema-valid carrier (admitting `candidates`), or the dead branch removed and the rule restated as artefact rows plus an obligation.",
+   "field": "$/claims/0/identity/source/candidates",
+   "accepted_probes": [],
+   "evidence": [
+    "p5-build-b-identity-split"
+   ]
+  },
+  {
+   "id": "F3",
+   "finding": "The O7 aggregate receipt carries no DSO digest and its BB log digest differs from the current per-cell BB receipt. check_receipts.py passes (14 receipts, 2 manifests, 0 problems) because both logs exist and both digests match their bytes; no rule requires one cell to name one log or the aggregate to carry its cells' DSO digests.",
+   "rule_that_should_fire": "an interop receipt rule: every cell receipt names its log digest, the aggregate cites the cell receipts (not a second copy of the log), and the aggregate carries the per-cell DSO digests or an explicit reference to them.",
+   "field": "RECEIPT-o7.json cells.BB.log vs RECEIPT-o7-BB.json log_sha256; RECEIPT-o7.json cells.* (no digests)",
+   "accepted_probes": [],
+   "evidence": [
+    "courts/phase18/interop/RECEIPT-o7.json",
+    "courts/phase18/interop/RECEIPT-o7-BB.json"
+   ]
+  },
+  {
+   "id": "F4",
+   "finding": "Two ESTABLISHED claims carrying mutually exclusive counter values (1/33 and 0/33) both validate and conjoin to ESTABLISHED. The counter is carried as an opaque `measure` string, so the type cannot express exclusivity.",
+   "rule_that_should_fire": "an exclusivity rule for single-valued counters (proposed EG_MEASURE_EXCLUSIVE), or a cohort rule that derives the counter from per-member verdicts rather than a free-text measure.",
+   "field": "$.claims/<n>/quantification/measure/value",
+   "accepted_probes": [
+    "p3c-counter-two-established"
+   ],
+   "consequence": "The committed record handles the counter correctly by typing it CONTRADICTED (ETP0-CLM-032), but that is a typing decision, not a validator rule; a producer that omits either side is not detected (see F1/A17)."
+  }
+ ],
+ "summary": {
+  "conditions": 5,
+  "refused": 5,
+  "promoted": 0,
+  "accepting_probes": 4,
+  "machinery_findings": 4,
+  "verdict": "Every listed condition is either refused on a promotion attempt or explicitly non-promoted. No consumer family graduates; no recorded verdict is upgraded."
+ }
+}

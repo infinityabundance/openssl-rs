@@ -1,0 +1,518 @@
+{
+ "schema": "openssl-rs/interop-manifest/1",
+ "item": "O11 of docs/ETP-TODO.md",
+ "subject": "BA",
+ "generated": "2026-11-22T12:14:30Z",
+ "identity": {
+  "openssh_tarball_sha256": "b343fbcdbff87f15b1986e6e15d6d4fc9a7d36066be6b7fb507087ba8f966c02",
+  "libcrypto_sha256": "ee7fa27c79f5a679d5b229429d53dc7c3b510695db9c74d11b4b6783a735ebe9"
+ },
+ "reproduction": [
+  "TEST_SSH_UNSAFE_PERMISSIONS=1 bash courts/phase18/interop/cell.sh BA"
+ ],
+ "result": {
+  "log": "evidence/etp5/logs/etp5-cell-BA-234629128b1fa281f59ac4ec52aa371479c4060072f0e50a1ed1a40fc6d1e651.log",
+  "counts": {
+   "scripts_executed": 96,
+   "ok_assertions": 87,
+   "failed_assertions": 1,
+   "skipped_assertions": 8,
+   "scripts_blocked": 0,
+   "scripts_with_failures": 1,
+   "unit_assertions": 410
+  },
+  "per_script": {
+   "connect.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "proxy-connect.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "sshfp-connect.sh": {
+    "ok": 0,
+    "failed": 0,
+    "skipped": 1
+   },
+   "connect-privsep.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "connect-uri.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "proto-version.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "proto-mismatch.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "exit-status.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "exit-status-signal.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "envpass.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "transfer.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "banner.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "rekey.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "dhgex.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "stderr-data.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "stderr-after-eof.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "broken-pipe.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "try-ciphers.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "yes-head.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "login-timeout.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "agent.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "agent-getpeereid.sh": {
+    "ok": 0,
+    "failed": 0,
+    "skipped": 1
+   },
+   "agent-timeout.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "agent-ptrace.sh": {
+    "ok": 0,
+    "failed": 0,
+    "skipped": 1
+   },
+   "agent-subprocess.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "keyscan.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "keygen-change.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "keygen-comment.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "keygen-convert.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "keygen-knownhosts.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "keygen-moduli.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "keygen-sshfp.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "key-options.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "scp.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "scp3.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "scp-uri.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "sftp.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "sftp-chroot.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "sftp-badcmds.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "sftp-batch.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "sftp-glob.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "sftp-perm.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "sftp-uri.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "reconfigure.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "dynamic-forward.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "forwarding.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "multiplex.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "reexec.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "brokenkeys.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "sshcfgparse.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "cfgparse.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "cfgmatch.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "cfgmatchlisten.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "percent.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "addrmatch.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "localcommand.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "forcecommand.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "portnum.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "keytype.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "kextype.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "cert-hostkey.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "cert-userkey.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "host-expand.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "keys-command.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "forward-control.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "integrity.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "krl.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "multipubkey.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "limit-keytype.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "hostkey-agent.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "hostkey-rotate.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "principals-command.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "cert-file.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "cfginclude.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "servcfginclude.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "allow-deny-users.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "authinfo.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "sshsig.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "knownhosts.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "knownhosts-command.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "agent-restrict.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "hostbased.sh": {
+    "ok": 0,
+    "failed": 0,
+    "skipped": 1
+   },
+   "channel-timeout.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "connection-timeout.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "match-subsystem.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "agent-pkcs11-restrict.sh": {
+    "ok": 0,
+    "failed": 0,
+    "skipped": 1
+   },
+   "agent-pkcs11-cert.sh": {
+    "ok": 0,
+    "failed": 0,
+    "skipped": 1
+   },
+   "penalty.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "penalty-expire.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "putty-transfer.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "putty-ciphers.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "putty-kex.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "conch-ciphers.sh": {
+    "ok": 0,
+    "failed": 0,
+    "skipped": 1
+   },
+   "dropbear-ciphers.sh": {
+    "ok": 1,
+    "failed": 0,
+    "skipped": 0
+   },
+   "dropbear-kex.sh": {
+    "ok": 0,
+    "failed": 1,
+    "skipped": 0
+   },
+   "agent-pkcs11.sh": {
+    "ok": 0,
+    "failed": 0,
+    "skipped": 1
+   }
+  },
+  "blocked_scripts": [],
+  "rules": {
+   "executed": "a `run test <script> ...` line",
+   "ok": "an `ok <description>` line (assertions, not scripts)",
+   "failed": "a `failed <description>` line",
+   "skipped": "any line beginning `skipped` in any case (`SKIPPED: reason`, `skipped (reason)`, `Skipped: reason`); every dialect is counted and none is a pass",
+   "blocked": "announced, with no ok/failed/SKIPPED line of its own"
+  },
+  "log_sha256": "234629128b1fa281f59ac4ec52aa371479c4060072f0e50a1ed1a40fc6d1e651",
+  "log_bytes": 171054
+ },
+ "note": "Every count is derived from the log by the rules recorded here; none is hand-authored. A skipped script is not a pass and a blocked script is not a skip."
+}

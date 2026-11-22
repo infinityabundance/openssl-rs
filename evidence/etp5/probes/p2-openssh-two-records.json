@@ -1,0 +1,389 @@
+{
+ "schema": "openssl-rs/etp/claims/v1",
+ "kind": "etp-typed-claims",
+ "generated_utc": "2026-11-22T12:30:56Z",
+ "source_identity": {
+  "commit": "9372bb28b2fbe2f71cf2aa2ab501414d45e87d42",
+  "branch": "staging",
+  "worktree_dirty_tracked_files": 0,
+  "tracked_file_count": 13708,
+  "tree_hash_rule": "sha256 over canonical JSON (sort_keys, separators ',', ':') of sorted [relpath, size, sha256] entries, restricted to tracked files (git ls-files) under the named paths; this is the atlas_common.content_hash / phase7_courts._source_tree_digest rule applied to tracked files only",
+  "trees": {
+   "source_core_src_cargo_lock_build": {
+    "paths": [
+     "src",
+     "Cargo.toml",
+     "Cargo.lock",
+     "build.rs"
+    ],
+    "file_count": 893,
+    "sha256": "51568028bc902bee1fe3e4cdb5f401c9cf4a66aef501d95a42e2f35bfbd19981"
+   },
+   "src": {
+    "file_count": 890,
+    "sha256": "942e89754a4f28eafea9bb05b6d2bddd757810f56c31488c598d2354bcd537ff"
+   },
+   "forensics_tools_build_scripts_verification_recipes": {
+    "file_count": 309,
+    "sha256": "a5fefdc660c6d8289519828402a67e0a595cb4721b930611f685fde0ef9520c9"
+   },
+   "courts_phase18_timing": {
+    "file_count": 27,
+    "sha256": "fd3c31747b9ebfe699f4346f89d6e027f75e3bb447d9c4e6dcc9a99c455a3745"
+   },
+   "courts_phase18_interop": {
+    "file_count": 48,
+    "sha256": "036c83fbf70b08e88bc7341e1fc5d0b306568121aa91dc0d4d9854c362425e39"
+   },
+   "courts_phase18_all": {
+    "file_count": 303,
+    "sha256": "83245ade509cbde30c5c16821e54244985fe8a1f2404c91ce430fd3abe5c4337"
+   },
+   "phase2_version_script": {
+    "paths": [
+     "artifacts/phase2/libcrypto.ld"
+    ],
+    "file_count": 1,
+    "sha256": "a358415aced62fd9cf4f64c7b0661c19ed2f0b2a25ed8f517f9eb248a59807cb"
+   },
+   "tests": {
+    "file_count": 2,
+    "sha256": "60838cd01afe6529ee322bbd28445cb85159b45465e6bb8a7d9f8c26775afeeb"
+   },
+   "docker": {
+    "file_count": 15,
+    "sha256": "1bd35f44fd06a894eb89a5494f2f1b4ce7edc810bd9433c82b9a431142e4899c"
+   },
+   "docs_constitution_build_inputs": {
+    "paths": [
+     "docs/CUSTODIAN_CONTRACT.md",
+     "docs/PARITY_MODEL.md",
+     "docs/AUTHORITY_POLICY.md",
+     "docs/SECURITY_DIVERGENCE_POLICY.md",
+     "docs/OWNERSHIP_MODEL.md",
+     "docs/ABI_POLICY.md",
+     "docs/PROVIDER_MODEL.md",
+     "docs/FIPS_CLAIMS.md",
+     "docs/CONCURRENCY_MODEL.md",
+     "docs/RELEASE_GATES.md",
+     "docs/NON_CLAIMS.md",
+     "docs/REPRODUCIBILITY.md",
+     "docs/UNSAFE.md"
+    ],
+    "file_count": 13,
+    "sha256": "cbd60c73e050eaf1112c69539267446d51f1a8c6e4759fc45e3c83175765fa48"
+   },
+   "build_files": {
+    "paths": [
+     "Cargo.toml",
+     "Cargo.lock",
+     "build.rs",
+     "rust-toolchain.toml"
+    ],
+    "file_count": 4,
+    "sha256": "f06a5e1f53a30e661df75a30ab845deb3b598a669db8ba295cd2ceb40dd4f2fc"
+   }
+  },
+  "authority_registry": {
+   "path": "forensics/authorities/AUTHORITIES.json",
+   "file_count": 1,
+   "sha256": "707ec86933107eae941f74c727cb677aefd36424428c510c686140b9f12ba12b"
+  }
+ },
+ "derived_from": {
+  "document": "evidence/etp0/CLAIMS.json",
+  "sha256": "d4b68f6fbf19333c557c3056e42261ac60bbafc70562b21e5bc08872163d92c6",
+  "input_evidence_commit": "f93766a621530ce05d4061b48fa48211abff1363",
+  "claim_count": 35,
+  "trust_gaps": {
+   "path": "evidence/etp0/TRUST-GAPS.json",
+   "sha256": "a4ac74722bd4308d982f159cbdd090c39106fb1b758cb0f935100c744328270a",
+   "gap_count": 37
+  }
+ },
+ "claims": [
+  {
+   "id": "ETP5-CLM-002",
+   "property": "consumer-graduation",
+   "interpretation": "Type the b85c graduation record as its own record, at its own provenance.",
+   "quantification": {
+    "kind": "universal",
+    "population": "two consumer binaries",
+    "population_size": null,
+    "measure": {
+     "form": "count",
+     "value": "SAFE_COMPATIBLE per the graduation record",
+     "aggregation": "forbidden"
+    }
+   },
+   "scope": {
+    "kind": "record",
+    "subject": "OpenSSH ssh and sshd",
+    "venue": "graduation record at source_head 17042ccf2",
+    "locations": [
+     "evidence/SAFE-COMPATIBLE-openssh-b85c.json"
+    ],
+    "excludes": []
+   },
+   "threat_model": {
+    "adversary": "candidate/evidence mismatch: a verdict attributed to an identity the record does not bind",
+    "observation_model": "the historical records are read at their own digests; no new measurement is claimed",
+    "out_of_scope": [
+     "behaviour outside the cited records"
+    ]
+   },
+   "identity": {
+    "source": {
+     "candidate": "b85c, source_head 17042ccf2",
+     "commit": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+     "binding": "exact",
+     "tree_sha256": null
+    },
+    "build": {
+     "toolchain": null,
+     "profile": null,
+     "target": "OpenSSH consumer graduation record"
+    },
+    "artefacts": [
+     {
+      "label": "freeze",
+      "sha256": "b08131b1ca7849a3e7f801b87f427774df346366344a2b24bd8207fcb847ec4e",
+      "path": "evidence/FREEZE-b85c.json"
+     },
+     {
+      "label": "libcrypto.so.3",
+      "sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+      "path": null
+     },
+     {
+      "label": "libssl.so.3",
+      "sha256": "1901de061d9d9793849b8c2d2b73847c7feb61339708062aea064a95f0e60b2b",
+      "path": null
+     },
+     {
+      "label": "ssh",
+      "sha256": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b",
+      "path": null
+     },
+     {
+      "label": "sshd",
+      "sha256": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1",
+      "path": null
+     },
+     {
+      "label": "consumer_closure.py",
+      "sha256": "3e86a74dbbe9095ca98ef3b8d889ec67a9447e59ef1caceecaa72152202988a1",
+      "path": null
+     }
+    ]
+   },
+   "authority": {
+    "kind": "machine-record",
+    "name": "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
+    "version": null,
+    "path": "evidence/SAFE-COMPATIBLE-openssh-b85c.json"
+   },
+   "target": {
+    "kind": "record",
+    "name": "OpenSSH consumer graduation record",
+    "path": "evidence/SAFE-COMPATIBLE-openssh-b85c.json"
+   },
+   "assumptions": [],
+   "evidence": [
+    {
+     "id": "EV-01",
+     "path": "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
+     "kind": "record",
+     "sha256": "41e5797d50bff7b62b25e25184f739bc3d68115396f32c4236d00a14e0301dd2",
+     "digest_identity": "E",
+     "present": true,
+     "reconstructable": "partial"
+    }
+   ],
+   "tcb": [
+    {
+     "component": "Git object store",
+     "trusted_for": "the tracked bytes and commit identities cited",
+     "verified": false
+    },
+    {
+     "component": "court/venue",
+     "trusted_for": "execution of any cited procedure",
+     "verified": false
+    }
+   ],
+   "obligations": [],
+   "invalidation": {
+    "depends_on": [
+     {
+      "kind": "path",
+      "id": "evidence/SAFE-COMPATIBLE-openssh-b85c.json"
+     }
+    ],
+    "rationale": "a change to any cited record invalidates this claim conservatively"
+   },
+   "modality": "PROOF_OBLIGATIONS_DISCHARGED",
+   "reproduction": {
+    "status": "NOT_ATTEMPTED",
+    "procedure": null,
+    "at": null
+   },
+   "verdict": {
+    "state": "SAFE_COMPATIBLE",
+    "basis": "What the graduation record asserts about itself."
+   },
+   "closure": {
+    "dependencies": [
+     "evidence/SAFE-COMPATIBLE-openssh-b85c.json"
+    ],
+    "unresolved_dependencies": [],
+    "complete": true
+   }
+  },
+  {
+   "id": "ETP5-CLM-003",
+   "property": "consumer-graduation",
+   "interpretation": "Type the independent b85c adjudication as its own record, at its own provenance.",
+   "quantification": {
+    "kind": "universal",
+    "population": "two consumer binaries",
+    "population_size": null,
+    "measure": {
+     "form": "count",
+     "value": "NOT ESTABLISHED per the adjudication",
+     "aggregation": "forbidden"
+    }
+   },
+   "scope": {
+    "kind": "record",
+    "subject": "OpenSSH ssh and sshd",
+    "venue": "adjudication at head bfa39a6c3 over evidence source head 17042ccf2",
+    "locations": [
+     "evidence/b85c-adjudication.json"
+    ],
+    "excludes": []
+   },
+   "threat_model": {
+    "adversary": "candidate/evidence mismatch: a verdict attributed to an identity the record does not bind",
+    "observation_model": "the historical records are read at their own digests; no new measurement is claimed",
+    "out_of_scope": [
+     "behaviour outside the cited records"
+    ]
+   },
+   "identity": {
+    "source": {
+     "candidate": "b85c, source_head 17042ccf2",
+     "commit": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+     "binding": "exact",
+     "tree_sha256": null
+    },
+    "build": {
+     "toolchain": null,
+     "profile": null,
+     "target": "OpenSSH consumer graduation adjudication"
+    },
+    "artefacts": [
+     {
+      "label": "freeze",
+      "sha256": "b08131b1ca7849a3e7f801b87f427774df346366344a2b24bd8207fcb847ec4e",
+      "path": "evidence/FREEZE-b85c.json"
+     },
+     {
+      "label": "libcrypto.so.3",
+      "sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71",
+      "path": null
+     },
+     {
+      "label": "libssl.so.3",
+      "sha256": "1901de061d9d9793849b8c2d2b73847c7feb61339708062aea064a95f0e60b2b",
+      "path": null
+     },
+     {
+      "label": "ssh",
+      "sha256": "c2db343dfa5135272f2be6960210b3b99af83b9ed181034e976e1c68e98fff8b",
+      "path": null
+     },
+     {
+      "label": "sshd",
+      "sha256": "8af509523ed16f68fe74a75aef923b78e87b047c054ea30fc2aa6d9971485ae1",
+      "path": null
+     },
+     {
+      "label": "consumer_closure.py",
+      "sha256": "3e86a74dbbe9095ca98ef3b8d889ec67a9447e59ef1caceecaa72152202988a1",
+      "path": null
+     }
+    ]
+   },
+   "authority": {
+    "kind": "machine-record",
+    "name": "evidence/b85c-adjudication.json",
+    "version": null,
+    "path": "evidence/b85c-adjudication.json"
+   },
+   "target": {
+    "kind": "record",
+    "name": "OpenSSH consumer graduation adjudication",
+    "path": "evidence/b85c-adjudication.json"
+   },
+   "assumptions": [],
+   "evidence": [
+    {
+     "id": "EV-01",
+     "path": "evidence/b85c-adjudication.json",
+     "kind": "record",
+     "sha256": "24e11717aa72bf0c39425987d826df3cc59da0c4d05e4d280dc4ab99a9f4ab5d",
+     "digest_identity": "E",
+     "present": true,
+     "reconstructable": "partial"
+    }
+   ],
+   "tcb": [
+    {
+     "component": "Git object store",
+     "trusted_for": "the tracked bytes and commit identities cited",
+     "verified": false
+    },
+    {
+     "component": "court/venue",
+     "trusted_for": "execution of any cited procedure",
+     "verified": false
+    }
+   ],
+   "obligations": [
+    {
+     "id": "OBL-ETP5-ADJUDICATION-SETTLE",
+     "statement": "The adjudication records NOT ESTABLISHED: five of seven mechanisms are NOT_ESTABLISHED and all four cross-cutting obligations are NOT_ESTABLISHED.",
+     "state": "OPEN",
+     "blocks": [
+      "verdict",
+      "graduation"
+     ],
+     "settled_by": "Reconcile the two records under ETP-T15, or establish the five NOT_ESTABLISHED mechanisms.",
+     "evidence": [
+      "EV-01"
+     ]
+    }
+   ],
+   "invalidation": {
+    "depends_on": [
+     {
+      "kind": "path",
+      "id": "evidence/b85c-adjudication.json"
+     }
+    ],
+    "rationale": "a change to any cited record invalidates this claim conservatively"
+   },
+   "modality": "INSTRUMENTED",
+   "reproduction": {
+    "status": "NOT_ATTEMPTED",
+    "procedure": null,
+    "at": null
+   },
+   "verdict": {
+    "state": "NOT_ESTABLISHED",
+    "basis": "What the independent adjudication asserts about itself."
+   }
+  }
+ ]
+}
