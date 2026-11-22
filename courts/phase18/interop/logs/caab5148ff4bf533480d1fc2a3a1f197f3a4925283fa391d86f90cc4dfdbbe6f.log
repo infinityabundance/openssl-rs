@@ -1,0 +1,2 @@
+dudect.executed mode=cmpnaive per_batch=20000 batches_run=2 total_measurements=40000
+dudect.done mode=cmpnaive batches=2 state=0
