@@ -1,0 +1,178 @@
+{
+  "artefacts": {
+    "authority_dso": {
+      "build_id": "5b4871ce9d78edeafc96f143d7d6697d943ad804",
+      "path": "forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+      "sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2",
+      "size_bytes": 7295816
+    },
+    "crate_archive": {
+      "build_id": null,
+      "path": "court/tmp/pfp0-build/target/release/libopenssl_rs.a",
+      "sha256": "f8f605857d99bab19623b3302317867d801ec53b8af7b89175c6772dbdda4f1e",
+      "size_bytes": 44824264
+    },
+    "distribution_dso": {
+      "build_id": "39bfc4588d3fa6cbee2b9821663fd669d7651b33",
+      "path": "court/tmp/pfp0-build/distribution/libcrypto.so.3",
+      "sha256": "139966033ac9e935efc76290a9df9e91441aa2ea9f183a00089eb95e32093c0c",
+      "size_bytes": 17005192
+    },
+    "measurement_dso": {
+      "build_id": "77bbdedc819b0ab7bd66eb7c8e064e4a05ffc803",
+      "path": "court/tmp/pfp0-build/measurement/libcrypto.so.3",
+      "sha256": "85395dcf7b7670503dc617b45801a85877b5884f543120a0fca711ca6c7a240a",
+      "size_bytes": 17381552
+    }
+  },
+  "build_recipe": [
+    "cargo build --release --lib --offline (CARGO_BUILD_JOBS=4, fresh CARGO_TARGET_DIR)",
+    "cc -shared -Wl,--whole-archive <archive> -Wl,--no-whole-archive -Wl,-soname,libcrypto.so.3 -o <measurement>/libcrypto.so.3",
+    "python3 forensics/tools/implemented_surface.py --archive <archive> --out <fresh-surface>",
+    "python3 courts/performance-frontier/baseline/emit_shell.py --surface <fresh-surface> --out <shell>",
+    "rustc --edition 2021 --emit=obj --crate-type lib -O --crate-name libcrypto_shell -o <shell>/libcrypto.shell.o <shell>/libcrypto.shell.rs",
+    "cc -shared -o <distribution>/libcrypto.so.3 -Wl,--whole-archive <archive> -Wl,--no-whole-archive <shell>/libcrypto.shell.o -Wl,--version-script=artifacts/phase2/libcrypto.ld -Wl,-soname,libcrypto.so.3 -Wl,--as-needed -lpthread -ldl -lm -lrt -lutil"
+  ],
+  "campaign": "PFP-0",
+  "dh_fixtures": {
+    "groups": {
+      "ffdhe2048": {
+        "bits": 2048,
+        "file": "ffdhe2048.hex",
+        "file_sha256": "282f234f613de65db40d34eab8a6bd44b643b1dd066f371d6e39baab569f1ada",
+        "p_array": "OSSL_BIGNUM_FFDHE2048_P_BYTES",
+        "p_bytes": 256,
+        "p_sha256": "9cd3b7f336872f46c09428d1bbc19877a4d440512cda8d1c1cf0cd6e33698966",
+        "q_array": "OSSL_BIGNUM_FFDHE2048_Q_BYTES",
+        "q_bytes": 256,
+        "q_sha256": "3072ed775345bbd8721aeb890833aa381bf5a19a889fb8c2b71ebd5cead60fe1"
+      },
+      "ffdhe3072": {
+        "bits": 3072,
+        "file": "ffdhe3072.hex",
+        "file_sha256": "6bf9255618857cf8fef1dedff475e7b3c4d9b80ab3b98302c586492a04e1546d",
+        "p_array": "OSSL_BIGNUM_FFDHE3072_P_BYTES",
+        "p_bytes": 384,
+        "p_sha256": "0eaf67db3a839156d5013494a5318a772b5697d270d721f37f092efc69ea5a17",
+        "q_array": "OSSL_BIGNUM_FFDHE3072_Q_BYTES",
+        "q_bytes": 384,
+        "q_sha256": "181f68e06ad73585303cbcab43a6ac96ce2ce8e4927e8dbf2251a469108b72a3"
+      },
+      "modp2048": {
+        "bits": 2048,
+        "file": "modp2048.hex",
+        "file_sha256": "36ac9d9a9a8b3b943d4ebec1f280770b2a6ebef425140ac77a7db1675ddbc352",
+        "p_array": "OSSL_BIGNUM_MODP_2048_P_BYTES",
+        "p_bytes": 256,
+        "p_sha256": "d66436f79bbd6b2e38c0ffbd079be904d2641415e2e67140e09448be9a60890e",
+        "q_array": "OSSL_BIGNUM_MODP_2048_Q_BYTES",
+        "q_bytes": 256,
+        "q_sha256": "a638f55d63c78f6d9ca04f0de138b1699fd6ff9737d926f4c24f318fc1d0f572"
+      }
+    },
+    "schema": "openssl-rs/performance/dh-fixtures/v1",
+    "source": "/work/src/bn/dh_data.rs",
+    "source_sha256": "1887a18b15c7eda2caee4956905fc0d3a8d37d7b2d4c26e6995a14f904a22505"
+  },
+  "harness": [
+    {
+      "build_id": null,
+      "path": "courts/phase18/timing/bench_api.c",
+      "sha256": "e1add483b9bee3158e93e2f7d84296441bb2fc5d715cbf27cfd13f80cfde263f",
+      "size_bytes": 32614
+    },
+    {
+      "build_id": null,
+      "path": "courts/phase18/timing/alloc_probe.c",
+      "sha256": "76b432fd428322e75f068c2d70569a281671207469348628012a389bdae1f446",
+      "size_bytes": 5638
+    },
+    {
+      "build_id": null,
+      "path": "courts/phase18/timing/run_bench_api.sh",
+      "sha256": "653994bf2e8eba9b39bdd64c73b518a8d86aca048e2ddea2c47b69c5924ebf44",
+      "size_bytes": 19567
+    },
+    {
+      "build_id": null,
+      "path": "courts/performance-frontier/baseline/extract_dh_fixtures.py",
+      "sha256": "bbff92ec3d06e948434a8ffa871d60fef43cdc7b8abb5b61bf02490e6413384b",
+      "size_bytes": 4090
+    },
+    {
+      "build_id": null,
+      "path": "courts/performance-frontier/baseline/analyse_bench_api.py",
+      "sha256": "ea71850f5f2b56211f7407371467cafc7d8a7b9299a49a669d5a7e9d11ef7859",
+      "size_bytes": 20583
+    },
+    {
+      "build_id": null,
+      "path": "courts/performance-frontier/baseline/build_identity.py",
+      "sha256": "86dc69de2159521e46736c436fd0e54b6e2790141478306963463de505af5e41",
+      "size_bytes": 6159
+    },
+    {
+      "build_id": null,
+      "path": "courts/performance-frontier/baseline/emit_shell.py",
+      "sha256": "5290bc716600f2ec95d3975437023b370997d43188fb98edb21fb05cb2b5a7d4",
+      "size_bytes": 3079
+    }
+  ],
+  "recorded_at_utc": "2026-11-22T06:43:25.925337+00:00",
+  "schema": "openssl-rs/performance/build-identity/v1",
+  "shell_generation": {
+    "fresh_surface": "/work/court/tmp/pfp0-build/implemented-surface.json",
+    "fresh_surface_body_hash": "75eb00eab8133fc894e6328c03264b3a080f00f1664d85846ee0a3876749cc59",
+    "libraries": {
+      "libcrypto": {
+        "fresh_count": 5896,
+        "sets_match": true,
+        "tracked_count": 5896
+      },
+      "libssl": {
+        "fresh_count": 603,
+        "sets_match": true,
+        "tracked_count": 603
+      }
+    },
+    "schema": "openssl-rs/performance/shell-generation/v1",
+    "shell_used": "fresh",
+    "tracked_surface": "forensics/atlas/implemented-surface.json",
+    "tracked_surface_body_hash": "9142d43a2c462ae820b76e2fb9f9c0eef7d52404c0b0964e440b7b86f21ca2e3",
+    "tracked_surface_matches_fresh": true
+  },
+  "source": {
+    "branch": "staging",
+    "build_relevant_clean": true,
+    "build_relevant_paths": [
+      "src",
+      "Cargo.toml",
+      "Cargo.lock",
+      "build.rs",
+      "rust-toolchain.toml"
+    ],
+    "build_relevant_status": "",
+    "head": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
+    "worktree_status": [
+      "M courts/phase18/timing/README.md",
+      " M courts/phase18/timing/alloc_probe.c",
+      " M courts/phase18/timing/bench_api.c",
+      " M courts/phase18/timing/run_bench_api.sh",
+      "?? courts/performance-frontier/",
+      "?? docs/PERFORMANCE-METHODOLOGY.md",
+      "?? evidence/performance-frontier/",
+      "?? forensics/performance/"
+    ]
+  },
+  "tools": {
+    "cargo": "cargo 1.98.1 (797e8a9bc 2026-08-05)",
+    "cc": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+    "readelf": "GNU readelf (GNU Binutils for Debian) 2.40",
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)"
+  },
+  "venue": {
+    "court_image": "openssl-rs-court-tools:1",
+    "kernel": "7.3.5-2-cachyos",
+    "machine": "x86_64"
+  }
+}

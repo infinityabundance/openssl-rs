@@ -15,9 +15,9 @@ directory is the apparatus, not the conclusion.
 | `ct_bn.c` | ctgrind harness. Marks a secret buffer with `VALGRIND_MAKE_MEM_UNDEFINED`, calls the BN primitive, and lets stock Valgrind memcheck report secret-dependent branches and address uses. Also contains the negative control (`CRYPTO_memcmp`, expected clean) and the positive control (a deliberately leaky comparator, expected to fire). Mode `modexp_len` additionally taints the exponent's normalised length (the limb-count field at `+0x10` in this build, verified from `BN_num_bits`), because the contents-only `modexp` mode cannot see a length-dependent path. |
 | `dudect_bn.c` | dudect-style statistical harness: two contrasting secret classes, warmup, batched measurement, Welch t-test. Carries the same two controls. It prints the executed measurement count (`dudect.executed ... total_measurements=N`) so the receipt quotes the instrument's own figure. |
 | `bench_bn.c` | Wall-clock cost of `BN_mod_exp_mont_consttime` at 2048/3072/8192 bits and the RSA-2048 CRT shape, plus the allocation-failure behaviour when paired with `alloc_probe.so`. |
-| `bench_api.c` | T21 cross-library workload harness. Opens exactly one `libcrypto.so.3` per process with `dlopen` and runs deterministic `BN_mod_exp_mont_consttime`, `DH_compute_key`, `RSA_private_encrypt` (CRT, `RSA_NO_PADDING`) and `ECDSA_do_sign` (P-256) through the common C API. Prints result digests for cross-library comparison, median/min/max over batches, and allocation counts when preloaded with `alloc_probe.so`. |
-| `run_bench_api.sh` | T21 runner: links the candidate measurement DSO from `target/release/libopenssl_rs.a`, builds the harness, runs the candidate and the pinned OpenSSL 3.6.4 authority in separate processes, and requires their result lines to agree byte-for-byte. |
-| `alloc_probe.c` | `LD_PRELOAD` probe that counts `malloc`/`calloc`/`realloc`/`free` and can force a chosen allocation to fail, for the allocation numbers and the failure test. |
+| `bench_api.c` | Cross-library workload harness. Opens exactly one `libcrypto.so.3` per process with `dlopen`, runs deterministic `BN_mod_exp_mont_consttime`, `DH_compute_key` on synthetic and real FFDHE/MODP groups, `RSA_private_encrypt` (CRT, `RSA_NO_PADDING`) and `ECDSA_do_sign` (P-256) through the common C API. Prints result digests for cross-library comparison, median/min/max over batches, allocation counts when preloaded with `alloc_probe.so`, the mapped file's realpath/device/inode from `/proc/self/maps`, and `--cross-sign`/`--cross-verify` exchanges. |
+| `run_bench_api.sh` | PFP-0 campaign runner: builds the crate from the frozen tree into a fresh target directory, links the distribution-shaped DSO and a measurement-only DSO, verifies the loaded artefact per process, matches the exact workload population, runs 15 paired repetitions in a preregistered balanced random order, applies the allocation probe to both subjects, runs ECDSA cross-verification in both directions, and analyses the raw samples into `results.json`. |
+| `alloc_probe.c` | `LD_PRELOAD` probe that counts `malloc`/`calloc`/`realloc`/`aligned_alloc`/`posix_memalign`/`memalign` and `free`, and can force a chosen allocation to fail. `allocprobe_alloc_calls()` is the PFP-0 unified count; `allocprobe_mallocs()` keeps the legacy malloc/calloc/realloc meaning. |
 | `reach.py`, `reach2.py` | static reachability walks over `libcrypto.so.3`, from the ssh/sshd imported-symbol roots to the BN symbols, distinguishing direct/GOT edges from may-bound provider-dispatch routes. |
 | `frontier.py`, `slots.py`, `tables.py` | helpers used to enumerate indirect slots and method tables during the reachability work. |
 | `classify_ct.py`, `summarize_ct.py` | turn raw memcheck output into the branch/address classification quoted in the receipts. |
@@ -89,31 +89,55 @@ return value. That separates an infallible `vec!` (the process aborts) from the
 ladder's `try_reserve_exact` scratch (the call returns 0), instead of assuming
 which one the ordinal hit.
 
-## Cross-library workloads (T21)
+## Cross-library workloads (PFP-0)
 
-`bench_api.c` and `run_bench_api.sh` compare the same operation through this
-crate's measurement DSO and the pinned authority. The harness is **not** linked
-against libcrypto: each process `dlopen`s the one library named by `--lib`, so
-two libcrypto mappings never coexist, and the runner prints the DSO that
-actually served the calls. Inputs are deterministic (no `BN_rand`), and the
-runner fails unless every result line is byte-identical between the two
-processes. `modexp2048`, `dh2048`, `dh3072`, `rsa2048`, `ecdsa256` and the
-T21-concern `modexp8192` are covered. Run it inside the court:
+`bench_api.c` and `run_bench_api.sh` implement the PFP-0 baseline. The harness is
+**not** linked against libcrypto: each process `dlopen`s the one library named by
+`--lib`, so two libcrypto mappings never coexist. Inputs are deterministic (no
+`BN_rand`), and every `CHECK` line is compared between the two processes.
+
+The population is frozen in `forensics/performance/WORKLOADS.json` and matched by
+exact identifier, not by line count: `modexp2048`, `modexp8192`,
+`dh-synth2048`, `dh-synth3072`, `dh-ffdhe2048`, `dh-ffdhe3072`, `dh-modp2048`,
+`rsa2048`, `ecdsa256`. The `dh-synth*` rows keep the synthetic odd composite
+modulus and are labelled synthetic. The `dh-ffdhe*` and `dh-modp2048` rows load
+tracked group parameters extracted from `src/bn/dh_data.rs`; the extractor checks
+`p == 2*q + 1` and `p mod 8 == 7` before writing the fixture.
+
+Each repetition is one process per subject, and the candidate/authority order is
+a balanced pseudo-random sequence fixed before execution. Every process prints
+the realpath, device and inode of the mapped DSO from `/proc/self/maps`; the
+runner compares them with `stat(2)` on the expected on-disk file and refuses a
+mismatch. The distribution-shaped DSO is the benchmarked candidate. The same
+allocation probe is preloaded for both subjects. At six repetitions an ECDSA
+signature is produced by one subject and verified by the other in both
+directions.
 
 ```sh
 OPENSSL_RS_COURT_IMAGE=openssl-rs-court-tools:1 \
-OPENSSL_RS_COURT_MEM=8g OPENSSL_RS_COURT_MEMSWAP=8g \
+OPENSSL_RS_COURT_MEM=6g OPENSSL_RS_COURT_MEMSWAP=6g \
   bash docker/openssl-rs-court.sh exec \
-    env CARGO_BUILD_JOBS=4 REBUILD_CANDIDATE=1 \
+    env CARGO_BUILD_JOBS=4 PFP0_COURT_IMAGE=openssl-rs-court-tools:1 \
     bash courts/phase18/timing/run_bench_api.sh
 ```
 
-The ratios are throughput on one host/container/CPU, not constant-time or
-security evidence. The DH rows use a fixed odd composite modulus and a
-full-width private exponent (exponentiation cost, not a MODP group); the RSA
-row is a raw `RSA_NO_PADDING` private operation with blinding on; the ECDSA row
-includes nonce generation and inversion. See `court/tmp/t21/NOTES.md` for the
-batch's numbers and caveats.
+Outputs go to `evidence/performance-frontier/campaigns/PFP-0/`: raw process
+outputs, the realised order, build identity, venue and PMU probes, and
+`results.json`. The protocol is preregistered in
+`docs/PERFORMANCE-METHODOLOGY.md`.
+
+The PFP-0 runner always builds the crate from the frozen tree into a fresh
+`CARGO_TARGET_DIR`. The older `ARCHIVE` and `REBUILD_CANDIDATE` overrides are no
+longer inputs: an externally supplied archive would bypass the frozen-build rule
+and cannot be bound to the source identity this campaign requires.
+
+These are wall-clock ratios on one virtualised host/container/CPU with no exposed
+PMU. They are `SCOPED_OBSERVATION`, not constant-time or security evidence, and
+not a frontier result. The synthetic DH rows measure exponentiation only; the
+named-group rows measure exponentiation with real parameters but not peer
+validation or key generation. The RSA row is a raw `RSA_NO_PADDING` private
+operation with blinding on; the ECDSA row includes nonce generation and
+inversion.
 
 ## PMU substitutes (T17)
 

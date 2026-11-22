@@ -1,0 +1,351 @@
+{
+  "schema": "openssl-rs/performance/workloads/v1",
+  "campaign": "PFP-0",
+  "frozen_at_source": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
+  "population_policy": {
+    "rule": "The expected population is this file's workload ids. A process is complete only when its RESULT and ALLOC lines match the exact id set, once each. A count of lines is not a completeness test.",
+    "result_lines_per_process": 1,
+    "check_lines_per_process": 1,
+    "allocation_lines_per_process": 1,
+    "dropping_a_workload": "not permitted after execution; a failed workload makes the campaign BLOCKED",
+    "synthetic_and_real_rows": "synthetic DH rows remain, labelled as synthetic; real FFDHE/MODP rows are separate ids and are never merged with them"
+  },
+  "workloads": [
+    {
+      "id": "modexp2048",
+      "operation": "BN_mod_exp_mont_consttime",
+      "sizes": {
+        "modulus_bits": 2048,
+        "exponent_bits": 2048,
+        "base_bits": 2048
+      },
+      "operand_provenance": {
+        "kind": "generated-deterministic",
+        "generator": "xorshift64 in bench_api.c fill_seeded/make_operand; no BN_rand and no random bytes",
+        "seeds": {
+          "modulus": "0x4d4f4400 + modulus_bits, top bit set, odd",
+          "exponent": "0x45585000 + modulus_bits, top bit set, odd",
+          "base": "0x42415300 + modulus_bits, top bit clear, odd"
+        },
+        "notes": "The modulus is a synthetic odd value, not a named group. The row measures full-width constant-time modular exponentiation."
+      },
+      "synthetic": true,
+      "result_line_count_per_process": 1,
+      "check_line_count_per_process": 1,
+      "security_contract": {
+        "classification": "SECRET_DATA",
+        "statement": "The exponent is secret; the modulus and base are public. The operation must be constant time with respect to exponent bit values, with no secret-dependent branch, memory address or early exit.",
+        "tags": ["SECRET_DATA", "CONSTANT_TIME_REQUIRED", "PUBLIC_MODULUS"]
+      },
+      "previous_reported": [
+        {
+          "source": "docs/PERFORMANCE-FRONTIER.md §1",
+          "ratio": 4.63,
+          "candidate_allocations": 18,
+          "authority_allocations": 5
+        },
+        {
+          "source": "court/tmp/t21/NOTES.md at source 3ea7a3c77",
+          "ratio": 4.59,
+          "candidate_allocations": 18,
+          "authority_allocations": 5
+        }
+      ]
+    },
+    {
+      "id": "modexp8192",
+      "operation": "BN_mod_exp_mont_consttime",
+      "sizes": {
+        "modulus_bits": 8192,
+        "exponent_bits": 8192,
+        "base_bits": 8192
+      },
+      "operand_provenance": {
+        "kind": "generated-deterministic",
+        "generator": "xorshift64 in bench_api.c fill_seeded/make_operand",
+        "seeds": {
+          "modulus": "0x4d4f4400 + modulus_bits, top bit set, odd",
+          "exponent": "0x45585000 + modulus_bits, top bit set, odd",
+          "base": "0x42415300 + modulus_bits, top bit clear, odd"
+        },
+        "notes": "Synthetic odd modulus; full-width exponent. The width is the throughput-concern row."
+      },
+      "synthetic": true,
+      "result_line_count_per_process": 1,
+      "check_line_count_per_process": 1,
+      "security_contract": {
+        "classification": "SECRET_DATA",
+        "statement": "The exponent is secret; the modulus and base are public. Constant time with respect to exponent bit values is required.",
+        "tags": ["SECRET_DATA", "CONSTANT_TIME_REQUIRED", "PUBLIC_MODULUS"]
+      },
+      "previous_reported": [
+        {
+          "source": "docs/PERFORMANCE-FRONTIER.md §1",
+          "ratio": 4.9,
+          "candidate_allocations": 18,
+          "authority_allocations": 5
+        },
+        {
+          "source": "court/tmp/t21/NOTES.md at source 3ea7a3c77",
+          "ratio": 5.0,
+          "candidate_allocations": 18,
+          "authority_allocations": 5
+        }
+      ]
+    },
+    {
+      "id": "dh-synth2048",
+      "operation": "DH_compute_key",
+      "sizes": {
+        "modulus_bits": 2048,
+        "private_exponent_bits": 2048,
+        "peer_value_bits": 2047
+      },
+      "operand_provenance": {
+        "kind": "generated-deterministic",
+        "generator": "xorshift64 in bench_api.c; DH_set0_pqg(p, NULL, g=2)",
+        "seeds": {
+          "modulus": "0x44485000 + modulus_bits, top bit set, odd",
+          "private_exponent": "0x50524900 + modulus_bits, top bit clear, odd",
+          "peer_value": "0x50454500 + modulus_bits, top bit clear, odd"
+        },
+        "notes": "Synthetic odd composite modulus. No q and no group validation claim; the row measures DH exponentiation cost only."
+      },
+      "synthetic": true,
+      "result_line_count_per_process": 1,
+      "check_line_count_per_process": 1,
+      "security_contract": {
+        "classification": "SECRET_DATA",
+        "statement": "The private exponent is secret; the peer value is public input. The operation must not branch or address memory on private-exponent bits. This synthetic modulus is not a validated group.",
+        "tags": ["SECRET_DATA", "CONSTANT_TIME_REQUIRED", "SYNTHETIC_MODULUS", "NO_GROUP_VALIDATION_CLAIM"]
+      },
+      "previous_reported": [
+        {
+          "source": "docs/PERFORMANCE-FRONTIER.md §1 (dh2048)",
+          "ratio": 4.64,
+          "candidate_allocations": 27,
+          "authority_allocations": 8
+        },
+        {
+          "source": "court/tmp/t21/NOTES.md at source 3ea7a3c77 (dh2048)",
+          "ratio": 4.64,
+          "candidate_allocations": 32,
+          "authority_allocations": 8
+        }
+      ]
+    },
+    {
+      "id": "dh-synth3072",
+      "operation": "DH_compute_key",
+      "sizes": {
+        "modulus_bits": 3072,
+        "private_exponent_bits": 3072,
+        "peer_value_bits": 3071
+      },
+      "operand_provenance": {
+        "kind": "generated-deterministic",
+        "generator": "xorshift64 in bench_api.c; DH_set0_pqg(p, NULL, g=2)",
+        "seeds": {
+          "modulus": "0x44485000 + modulus_bits, top bit set, odd",
+          "private_exponent": "0x50524900 + modulus_bits, top bit clear, odd",
+          "peer_value": "0x50454500 + modulus_bits, top bit clear, odd"
+        },
+        "notes": "Synthetic odd composite modulus; no q. Separately labelled synthetic row."
+      },
+      "synthetic": true,
+      "result_line_count_per_process": 1,
+      "check_line_count_per_process": 1,
+      "security_contract": {
+        "classification": "SECRET_DATA",
+        "statement": "The private exponent is secret; the peer value is public input. Constant time with respect to the private exponent is required. This synthetic modulus is not a validated group.",
+        "tags": ["SECRET_DATA", "CONSTANT_TIME_REQUIRED", "SYNTHETIC_MODULUS", "NO_GROUP_VALIDATION_CLAIM"]
+      },
+      "previous_reported": [
+        {
+          "source": "docs/PERFORMANCE-FRONTIER.md §1 (dh3072)",
+          "ratio": 4.77,
+          "candidate_allocations": 27,
+          "authority_allocations": 8
+        },
+        {
+          "source": "court/tmp/t21/NOTES.md at source 3ea7a3c77 (dh3072)",
+          "ratio": 4.71,
+          "candidate_allocations": 32,
+          "authority_allocations": 8
+        }
+      ]
+    },
+    {
+      "id": "dh-ffdhe2048",
+      "operation": "DH_compute_key",
+      "sizes": {
+        "modulus_bits": 2048,
+        "private_exponent_bits": 2048,
+        "peer_value_bits": 2047
+      },
+      "operand_provenance": {
+        "kind": "tracked-fixture",
+        "generator": "courts/performance-frontier/baseline/extract_dh_fixtures.py reads OSSL_BIGNUM_FFDHE2048_P_BYTES and _Q_BYTES from src/bn/dh_data.rs, extracts p and q, checks p == 2*q + 1 and p mod 8 == 7, and writes p=<hex>/q=<hex>",
+        "seeds": {
+          "private_exponent": "0x50524900 + modulus_bits, top bit clear, odd",
+          "peer_value": "0x50454500 + modulus_bits, top bit clear, odd"
+        },
+        "notes": "Real RFC 7919 FFDHE-2048 group. Parameters are byte-identical on both subjects because the harness loads the extracted p and q explicitly; they are not read from either library's built-in table.",
+        "group": "RFC 7919 FFDHE-2048",
+        "group_generator": 2
+      },
+      "synthetic": false,
+      "result_line_count_per_process": 1,
+      "check_line_count_per_process": 1,
+      "security_contract": {
+        "classification": "SECRET_DATA",
+        "statement": "The private exponent is secret; the peer value and group parameters are public. Constant time with respect to the private exponent is required. The row measures exponentiation with the named group's parameters, not peer validation or key generation.",
+        "tags": ["SECRET_DATA", "CONSTANT_TIME_REQUIRED", "RFC7919", "NAMED_GROUP"]
+      },
+      "previous_reported": []
+    },
+    {
+      "id": "dh-ffdhe3072",
+      "operation": "DH_compute_key",
+      "sizes": {
+        "modulus_bits": 3072,
+        "private_exponent_bits": 3072,
+        "peer_value_bits": 3071
+      },
+      "operand_provenance": {
+        "kind": "tracked-fixture",
+        "generator": "courts/performance-frontier/baseline/extract_dh_fixtures.py reads OSSL_BIGNUM_FFDHE3072_P_BYTES and _Q_BYTES from src/bn/dh_data.rs, checks p == 2*q + 1 and p mod 8 == 7, and writes p=<hex>/q=<hex>",
+        "seeds": {
+          "private_exponent": "0x50524900 + modulus_bits, top bit clear, odd",
+          "peer_value": "0x50454500 + modulus_bits, top bit clear, odd"
+        },
+        "notes": "Real RFC 7919 FFDHE-3072 group; parameters loaded explicitly so both subjects receive identical bytes.",
+        "group": "RFC 7919 FFDHE-3072",
+        "group_generator": 2
+      },
+      "synthetic": false,
+      "result_line_count_per_process": 1,
+      "check_line_count_per_process": 1,
+      "security_contract": {
+        "classification": "SECRET_DATA",
+        "statement": "The private exponent is secret; the peer value and group parameters are public. Constant time with respect to the private exponent is required. The row measures exponentiation with the named group's parameters, not peer validation or key generation.",
+        "tags": ["SECRET_DATA", "CONSTANT_TIME_REQUIRED", "RFC7919", "NAMED_GROUP"]
+      },
+      "previous_reported": []
+    },
+    {
+      "id": "dh-modp2048",
+      "operation": "DH_compute_key",
+      "sizes": {
+        "modulus_bits": 2048,
+        "private_exponent_bits": 2048,
+        "peer_value_bits": 2047
+      },
+      "operand_provenance": {
+        "kind": "tracked-fixture",
+        "generator": "courts/performance-frontier/baseline/extract_dh_fixtures.py reads OSSL_BIGNUM_MODP_2048_P_BYTES and _Q_BYTES from src/bn/dh_data.rs, checks p == 2*q + 1 and p mod 8 == 7, and writes p=<hex>/q=<hex>",
+        "seeds": {
+          "private_exponent": "0x50524900 + modulus_bits, top bit clear, odd",
+          "peer_value": "0x50454500 + modulus_bits, top bit clear, odd"
+        },
+        "notes": "Real RFC 3526 MODP group 14 (2048-bit). Parameters loaded explicitly so both subjects receive identical bytes.",
+        "group": "RFC 3526 MODP group 14",
+        "group_generator": 2
+      },
+      "synthetic": false,
+      "result_line_count_per_process": 1,
+      "check_line_count_per_process": 1,
+      "security_contract": {
+        "classification": "SECRET_DATA",
+        "statement": "The private exponent is secret; the peer value and group parameters are public. Constant time with respect to the private exponent is required. The row measures exponentiation with the named group's parameters, not peer validation or key generation.",
+        "tags": ["SECRET_DATA", "CONSTANT_TIME_REQUIRED", "RFC3526", "NAMED_GROUP"]
+      },
+      "previous_reported": []
+    },
+    {
+      "id": "rsa2048",
+      "operation": "RSA_private_encrypt with RSA_NO_PADDING",
+      "sizes": {
+        "modulus_bits": 2048,
+        "input_bytes": 256,
+        "crt_parameters_present": true
+      },
+      "operand_provenance": {
+        "kind": "tracked-fixture",
+        "generator": "courts/phase18/timing/fixtures/rsa2048.der, a throwaway PKCS#1 test key generated once by the authority openssl CLI; input bytes from xorshift64 seed 0x52534100 with the top byte cleared",
+        "seeds": {
+          "input": "0x52534100, top bit clear, first byte zero"
+        },
+        "notes": "RSA blinding is left on. The private result is verified in-process through RSA_public_decrypt and compared byte-for-byte with the authority."
+      },
+      "synthetic": false,
+      "result_line_count_per_process": 1,
+      "check_line_count_per_process": 1,
+      "security_contract": {
+        "classification": "SECRET_DATA",
+        "statement": "The private key components are secret. Blinding must remain enabled; the modular exponentiation must be constant time with respect to the private exponent and CRT components. The raw RSA_NO_PADDING operation is a benchmark shape, not a recommended application interface.",
+        "tags": ["SECRET_DATA", "BLINDING_ENABLED", "CONSTANT_TIME_REQUIRED"]
+      },
+      "previous_reported": [
+        {
+          "source": "docs/PERFORMANCE-FRONTIER.md §1",
+          "ratio": 5.43,
+          "candidate_allocations": 173,
+          "authority_allocations": 19
+        },
+        {
+          "source": "court/tmp/t21/NOTES.md at source 3ea7a3c77",
+          "ratio": 5.38,
+          "candidate_allocations": 238.2,
+          "authority_allocations": 19
+        }
+      ]
+    },
+    {
+      "id": "ecdsa256",
+      "operation": "ECDSA_do_sign on P-256",
+      "sizes": {
+        "curve": "NIST P-256 (prime256v1)",
+        "digest_bytes": 32,
+        "private_scalar_bits": 255
+      },
+      "operand_provenance": {
+        "kind": "generated-deterministic-key",
+        "generator": "xorshift64 private scalar 0x45434400 (top bit clear, odd); the public key is derived by the library under test with EC_POINT_mul; digest 0x44494700 (top bit clear)",
+        "seeds": {
+          "private_scalar": "0x45434400, top bit clear, odd",
+          "digest": "0x44494700, top bit clear"
+        },
+        "notes": "The nonce is generated by the library and therefore differs between signatures; signatures are not compared byte-for-byte. Cross-verification at six repetitions signs with one subject and verifies with the other in both directions."
+      },
+      "synthetic": false,
+      "result_line_count_per_process": 1,
+      "check_line_count_per_process": 1,
+      "security_contract": {
+        "classification": "SECRET_DATA",
+        "statement": "The private scalar and per-signature nonce are secret. Scalar multiplication, inversion and the signing equation must be constant time with respect to the scalar and nonce. Signature randomness is expected and is not a compatibility difference.",
+        "tags": ["SECRET_DATA", "CONSTANT_TIME_REQUIRED", "SECRET_NONCE", "CROSS_VERIFICATION"]
+      },
+      "previous_reported": [
+        {
+          "source": "docs/PERFORMANCE-FRONTIER.md §1",
+          "ratio": 34.71,
+          "candidate_allocations": 276,
+          "authority_allocations": 29
+        },
+        {
+          "source": "docs/ETP-TODO.md T29 at candidate DSO 700135fa",
+          "ratio": 34.7,
+          "candidate_allocations": 276.2,
+          "authority_allocations": 29
+        },
+        {
+          "source": "court/tmp/t21/NOTES.md at source 3ea7a3c77",
+          "ratio": 82.76,
+          "candidate_allocations": 75344.2,
+          "authority_allocations": 29
+        }
+      ]
+    }
+  ]
+}
