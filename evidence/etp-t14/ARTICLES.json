@@ -1,0 +1,279 @@
+{
+  "schema": "openssl-rs/etp-t14/articles/1",
+  "document": "docs/EARNED-TRUST.md",
+  "source_candidate": "1e068243d2ec045852bddd3e64c4d6233829eb1d",
+  "branch": "staging",
+  "gate_items": [
+    {"id": "gate-1", "label": "candidate identity"},
+    {"id": "gate-2", "label": "claim set"},
+    {"id": "gate-2b", "label": "identity triage"},
+    {"id": "gate-3", "label": "interop receipts"},
+    {"id": "gate-4", "label": "instrument register"},
+    {"id": "gate-5", "label": "external package"},
+    {"id": "gate-6", "label": "documentation consistency"}
+  ],
+  "articles": [
+    {
+      "id": "ET14-A01",
+      "number": 1,
+      "title": "A claim may never exceed its evidence",
+      "declared_none": false,
+      "enforcement": [
+        {"tool": "forensics/tools/etp_claims.py", "rule": "EG_VERDICT_MODALITY"},
+        {"tool": "forensics/tools/etp_claims.py", "rule": "EG_EVIDENCE_CONTRADICTS_VERDICT"},
+        {"tool": "forensics/tools/etp_claims.py", "rule": "EG_GRADUATED_WITH_OPEN_OBLIGATION"},
+        {"tool": "forensics/tools/etp_claims.py", "rule": "EG_SCHEMA_VIOLATION"},
+        {"tool": "forensics/tools/release_gate.py", "rule": "RG_CLAIM_CONTRADICTED"},
+        {"tool": "forensics/tools/release_gate.py", "rule": "RG_CLAIM_REFUTED"},
+        {"tool": "forensics/tools/release_gate.py", "rule": "RG_CLAIM_WITHDRAWN"}
+      ],
+      "refusals": [
+        "EG_VERDICT_MODALITY",
+        "EG_EVIDENCE_CONTRADICTS_VERDICT",
+        "EG_GRADUATED_WITH_OPEN_OBLIGATION",
+        "EG_SCHEMA_VIOLATION",
+        "RG_CLAIM_CONTRADICTED",
+        "RG_CLAIM_REFUTED",
+        "RG_CLAIM_WITHDRAWN"
+      ],
+      "gate_items": ["gate-2"]
+    },
+    {
+      "id": "ET14-A02",
+      "number": 2,
+      "title": "Evidence is bound to an exact identity",
+      "declared_none": false,
+      "enforcement": [
+        {"tool": "forensics/tools/etp_claims.py", "rule": "EG_EVIDENCE_DIGEST_MISMATCH"},
+        {"tool": "forensics/tools/etp_claims.py", "rule": "EG_MULTIPLE_CANDIDATES"},
+        {"tool": "forensics/tools/freshness.py", "rule": "FR_EVIDENCE_SUPERSEDED"},
+        {"tool": "forensics/tools/freshness.py", "rule": "FR_IDENTITY_UNKNOWN"},
+        {"tool": "forensics/tools/scheduling.py", "rule": "SC_IDENTITY_UNKNOWN_FIELD"},
+        {"tool": "forensics/tools/scheduling.py", "rule": "SC_IDENTITY_MISSING_FIELD"},
+        {"tool": "forensics/tools/release_gate.py", "rule": "RG_TRIAGE_STALE"},
+        {"tool": "forensics/tools/release_gate.py", "rule": "RG_CLAIM_HISTORICAL_EVIDENCE"}
+      ],
+      "refusals": [
+        "EG_EVIDENCE_DIGEST_MISMATCH",
+        "EG_MULTIPLE_CANDIDATES",
+        "FR_EVIDENCE_SUPERSEDED",
+        "FR_IDENTITY_UNKNOWN",
+        "SC_IDENTITY_UNKNOWN_FIELD",
+        "SC_IDENTITY_MISSING_FIELD",
+        "RG_TRIAGE_STALE",
+        "RG_CLAIM_HISTORICAL_EVIDENCE"
+      ],
+      "gate_items": ["gate-1", "gate-2", "gate-2b", "gate-5"]
+    },
+    {
+      "id": "ET14-A03",
+      "number": 3,
+      "title": "Deferred is never pass",
+      "declared_none": false,
+      "enforcement": [
+        {"tool": "forensics/tools/scheduling.py", "rule": "SC_BLOCKED_WITHOUT_BOUND"},
+        {"tool": "forensics/tools/scheduling.py", "rule": "SC_RESULT_EXCEEDS_BOUND"},
+        {"tool": "forensics/tools/etp_claims.py", "rule": "EG_VERDICT_MISSING_SETTLING_OBLIGATION"},
+        {"tool": "forensics/tools/etp_claims.py", "rule": "EG_GRADUATED_WITH_OPEN_OBLIGATION"},
+        {"tool": "forensics/tools/instrument_qualify.py", "rule": "IQ_CONTROL_STATUS"},
+        {"tool": "forensics/tools/release_gate.py", "rule": "RG_CLAIM_NOT_ESTABLISHED"}
+      ],
+      "refusals": [
+        "SC_BLOCKED_WITHOUT_BOUND",
+        "SC_RESULT_EXCEEDS_BOUND",
+        "EG_VERDICT_MISSING_SETTLING_OBLIGATION",
+        "EG_GRADUATED_WITH_OPEN_OBLIGATION",
+        "IQ_CONTROL_STATUS",
+        "RG_CLAIM_NOT_ESTABLISHED"
+      ],
+      "gate_items": ["gate-2", "gate-4"]
+    },
+    {
+      "id": "ET14-A04",
+      "number": 4,
+      "title": "An omission is not a pass",
+      "declared_none": false,
+      "enforcement": [
+        {"tool": "forensics/tools/closure_discipline.py", "rule": "CD_AGGREGATE_PASS_HIDES_BLOCKED_ROW"},
+        {"tool": "forensics/tools/etp_claims.py", "rule": "EG_AGGREGATE_PASS_HIDES_BLOCKED_CELL"},
+        {"tool": "forensics/tools/etp_claims.py", "rule": "EG_AGGREGATE_CELL_STATE_UNDECLARED"},
+        {"tool": "forensics/tools/etp_claims.py", "rule": "EG_SAFE_COMPATIBLE_CLOSURE_UNBOUND"},
+        {"tool": "forensics/tools/etp_claims.py", "rule": "EG_SAFE_COMPATIBLE_EXCLUSION_FAILS_BAR"},
+        {"tool": "forensics/tools/traceability.py", "rule": "TG_UNDECLARED_ORPHAN"},
+        {"tool": "courts/phase18/interop/check_receipts.py", "rule": "R2"},
+        {"tool": "courts/phase18/interop/check_receipts.py", "rule": "R5"}
+      ],
+      "refusals": [
+        "CD_AGGREGATE_PASS_HIDES_BLOCKED_ROW",
+        "EG_AGGREGATE_PASS_HIDES_BLOCKED_CELL",
+        "EG_AGGREGATE_CELL_STATE_UNDECLARED",
+        "EG_SAFE_COMPATIBLE_CLOSURE_UNBOUND",
+        "EG_SAFE_COMPATIBLE_EXCLUSION_FAILS_BAR",
+        "TG_UNDECLARED_ORPHAN",
+        "R2",
+        "R5"
+      ],
+      "gate_items": ["gate-2", "gate-3"]
+    },
+    {
+      "id": "ET14-A05",
+      "number": 5,
+      "title": "Independence is never asserted without a distinct trust domain",
+      "declared_none": false,
+      "enforcement": [
+        {"tool": "forensics/tools/independence.py", "rule": "IND_REVIEW_UNSUPPORTED"},
+        {"tool": "forensics/tools/independence.py", "rule": "IND_ADJUDICATOR_IS_AUTHOR"},
+        {"tool": "forensics/tools/independence.py", "rule": "IND_REVIEWERS_ALIASED"},
+        {"tool": "forensics/tools/independence.py", "rule": "IND_THRESHOLD_ALIASED"},
+        {"tool": "forensics/tools/independence.py", "rule": "IND_REPRODUCER_CONTAMINATED"}
+      ],
+      "refusals": [
+        "IND_REVIEW_UNSUPPORTED",
+        "IND_ADJUDICATOR_IS_AUTHOR",
+        "IND_REVIEWERS_ALIASED",
+        "IND_THRESHOLD_ALIASED",
+        "IND_REPRODUCER_CONTAMINATED"
+      ],
+      "gate_items": []
+    },
+    {
+      "id": "ET14-A06",
+      "number": 6,
+      "title": "A specification is never a restatement of the implementation",
+      "declared_none": false,
+      "enforcement": [
+        {"tool": "forensics/tools/spec_guard.py", "rule": "SP_INTERNAL_IDENTIFIER"},
+        {"tool": "forensics/tools/spec_guard.py", "rule": "SP_EXEMPTION_UNJUSTIFIED"},
+        {"tool": "forensics/tools/spec_guard.py", "rule": "SP_STALE_EXEMPTION"},
+        {"tool": "forensics/tools/spec_guard.py", "rule": "SP_NO_LEVEL"},
+        {"tool": "forensics/tools/spec_guard.py", "rule": "SP_GRAPH_EMPTY"}
+      ],
+      "refusals": [
+        "SP_INTERNAL_IDENTIFIER",
+        "SP_EXEMPTION_UNJUSTIFIED",
+        "SP_STALE_EXEMPTION",
+        "SP_NO_LEVEL",
+        "SP_GRAPH_EMPTY"
+      ],
+      "gate_items": []
+    },
+    {
+      "id": "ET14-A07",
+      "number": 7,
+      "title": "A proof in a model is not a proof about the binary",
+      "declared_none": false,
+      "enforcement": [
+        {"tool": "forensics/tools/binary_assurance.py", "rule": "BA_CROSS_TARGET_INHERITANCE"},
+        {"tool": "forensics/tools/binary_assurance.py", "rule": "BA_CROSS_PROFILE_INHERITANCE"},
+        {"tool": "forensics/tools/binary_assurance.py", "rule": "BA_FORBIDDEN_CLAIM"},
+        {"tool": "forensics/tools/binary_assurance.py", "rule": "BA_UNBOUND_ASSERTED"},
+        {"tool": "forensics/tools/binary_assurance.py", "rule": "BA_TCB_MISMATCH"},
+        {"tool": "forensics/tools/binary_assurance.py", "rule": "BA_EVIDENCE_DIGEST_MISMATCH"}
+      ],
+      "refusals": [
+        "BA_CROSS_TARGET_INHERITANCE",
+        "BA_CROSS_PROFILE_INHERITANCE",
+        "BA_FORBIDDEN_CLAIM",
+        "BA_UNBOUND_ASSERTED",
+        "BA_TCB_MISMATCH",
+        "BA_EVIDENCE_DIGEST_MISMATCH"
+      ],
+      "gate_items": []
+    },
+    {
+      "id": "ET14-A08",
+      "number": 8,
+      "title": "A constant-time result is not a proof of constant time",
+      "declared_none": false,
+      "enforcement": [
+        {"tool": "forensics/tools/side_channel_erasure.py", "rule": "CT_T_WITHOUT_PREREGISTERED_GEOMETRY"},
+        {"tool": "forensics/tools/side_channel_erasure.py", "rule": "DUDECT_STATE_1_TREATED_AS_PROOF"},
+        {"tool": "forensics/tools/side_channel_erasure.py", "rule": "CTGRIND_WITHOUT_HARNESS_IDENTITY_TAINT"},
+        {"tool": "forensics/tools/side_channel_erasure.py", "rule": "SECRET_DEPENDENT_CONTROL_WITHOUT_EVIDENCE"},
+        {"tool": "forensics/tools/instrument_qualify.py", "rule": "IQ_DISCLAIMER"},
+        {"tool": "forensics/tools/instrument_qualify.py", "rule": "IQ_SCOPE"},
+        {"tool": "forensics/tools/instrument_qualify.py", "rule": "IQ_FAILURE_MODES"}
+      ],
+      "refusals": [
+        "CT_T_WITHOUT_PREREGISTERED_GEOMETRY",
+        "DUDECT_STATE_1_TREATED_AS_PROOF",
+        "CTGRIND_WITHOUT_HARNESS_IDENTITY_TAINT",
+        "SECRET_DEPENDENT_CONTROL_WITHOUT_EVIDENCE",
+        "IQ_DISCLAIMER",
+        "IQ_SCOPE",
+        "IQ_FAILURE_MODES"
+      ],
+      "gate_items": ["gate-4"]
+    },
+    {
+      "id": "ET14-A09",
+      "number": 9,
+      "title": "Severity is not a probability",
+      "declared_none": false,
+      "enforcement": [
+        {"tool": "forensics/tools/hazard_register.py", "rule": "HR_FMEA_SEVERITY"},
+        {"tool": "forensics/tools/side_channel_erasure.py", "rule": "ER_BAD_SEVERITY"}
+      ],
+      "refusals": ["HR_FMEA_SEVERITY", "ER_BAD_SEVERITY"],
+      "gate_items": []
+    },
+    {
+      "id": "ET14-A10",
+      "number": 10,
+      "title": "A correction preserves what was believed",
+      "declared_none": false,
+      "enforcement": [
+        {"tool": "forensics/tools/etp_claims.py", "rule": "EG_DERIVED_VERDICT_MISMATCH"},
+        {"tool": "forensics/tools/etp_claims.py", "rule": "EG_DERIVED_PROPERTY_MISMATCH"},
+        {"tool": "forensics/tools/preservation.py", "rule": "PM_MIGRATION_IDENTITY_LOST"},
+        {"tool": "forensics/tools/preservation.py", "rule": "PM_MIGRATION_HISTORY_REWRITTEN"},
+        {"tool": "forensics/tools/preservation.py", "rule": "PM_RENEWAL_BYTES_CHANGED"},
+        {"tool": "forensics/tools/independence.py", "rule": "IND_DISSENT_DROPPED"},
+        {"tool": "forensics/tools/independence.py", "rule": "IND_DISSENT_REMOVED_BY_TARGET"},
+        {"tool": "forensics/tools/independence.py", "rule": "IND_DISSENT_OVERRIDDEN"},
+        {"tool": "forensics/tools/freshness.py", "rule": "FR_HISTORY_CITED_AS_CURRENT"}
+      ],
+      "refusals": [
+        "EG_DERIVED_VERDICT_MISMATCH",
+        "EG_DERIVED_PROPERTY_MISMATCH",
+        "PM_MIGRATION_IDENTITY_LOST",
+        "PM_MIGRATION_HISTORY_REWRITTEN",
+        "PM_RENEWAL_BYTES_CHANGED",
+        "IND_DISSENT_DROPPED",
+        "IND_DISSENT_REMOVED_BY_TARGET",
+        "IND_DISSENT_OVERRIDDEN",
+        "FR_HISTORY_CITED_AS_CURRENT"
+      ],
+      "gate_items": ["gate-2", "gate-2b"]
+    },
+    {
+      "id": "ET14-A11",
+      "number": 11,
+      "title": "No authority may promote a contradicted claim by declaration",
+      "declared_none": false,
+      "enforcement": [
+        {"tool": "forensics/tools/etp_claims.py", "rule": "EG_SELF_DECLARED_POLICY"},
+        {"tool": "forensics/tools/etp_claims.py", "rule": "EG_CONTRADICTION_UNRESOLVED"},
+        {"tool": "forensics/tools/etp_claims.py", "rule": "EG_VERDICT_MODALITY"},
+        {"tool": "forensics/tools/release_gate.py", "rule": "RG_CLAIM_CONTRADICTED"},
+        {"tool": "forensics/tools/release_gate.py", "rule": "RG_CLAIM_REFUTED"},
+        {"tool": "forensics/tools/release_gate.py", "rule": "RG_CLAIM_WITHDRAWN"},
+        {"tool": "forensics/tools/closure_discipline.py", "rule": "CD_AGGREGATE_PASS_HIDES_BLOCKED_ROW"},
+        {"tool": "forensics/tools/independence.py", "rule": "IND_DISSENT_OVERRIDDEN"},
+        {"tool": "forensics/tools/independence.py", "rule": "IND_AGGREGATE_MISMATCH"}
+      ],
+      "refusals": [
+        "EG_SELF_DECLARED_POLICY",
+        "EG_CONTRADICTION_UNRESOLVED",
+        "EG_VERDICT_MODALITY",
+        "RG_CLAIM_CONTRADICTED",
+        "RG_CLAIM_REFUTED",
+        "RG_CLAIM_WITHDRAWN",
+        "CD_AGGREGATE_PASS_HIDES_BLOCKED_ROW",
+        "IND_DISSENT_OVERRIDDEN",
+        "IND_AGGREGATE_MISMATCH"
+      ],
+      "gate_items": ["gate-2"]
+    }
+  ]
+}

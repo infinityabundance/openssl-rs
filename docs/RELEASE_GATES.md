@@ -310,3 +310,42 @@ claim from immutable receipts. Nothing less is a custodian seal.
 
 When behaviour remains unknown, say `UNKNOWN` with precision. Unknown is a
 research result. It is never traded for confidence theatre.
+
+## 10. Earned-trust constitution gate (ETP-T14)
+
+`docs/EARNED-TRUST.md` states the standing commitments this project makes about
+claims, one article each. This section wires the constitution into release
+policy.
+
+**A release is admissible only when every article whose scope the release enters
+is satisfied, and only the gate items below may evidence that satisfaction.** An
+article is *covered* by a gate item when that item refuses a condition the
+article names in its `Refused when` field, for a release artefact. An article is
+not covered by an item that merely mentions the same subject.
+
+| gate item | articles it evidences | what the item refuses |
+|---|---|---|
+| `gate-1` — candidate identity (`release_gate.py` item 1) | Article 2 | `HEAD` is not the commit named by `--candidate` (`RG_CANDIDATE_UNRESOLVED`, `RG_CANDIDATE_NOT_CHECKED_OUT`), or the worktree is dirty under `--require-clean` (`RG_CANDIDATE_DIRTY`) |
+| `gate-2` — claim set (`release_gate.py` item 2) | Article 1, Article 2, Article 3, Article 4, Article 10, Article 11 | the claim set fails its schema or laws (`RG_CLAIMS_INVALID`); a claim is contradicted, refuted or withdrawn (`RG_CLAIM_CONTRADICTED`, `RG_CLAIM_REFUTED`, `RG_CLAIM_WITHDRAWN`); a graduation is requested over `NOT_ESTABLISHED` (`RG_CLAIM_NOT_ESTABLISHED`); a positive verdict rests on withdrawn, uncertifiable or historical evidence (`RG_CLAIM_WITHDRAWN_EVIDENCE`, `RG_CLAIM_UNCERTIFIABLE_EVIDENCE`, `RG_CLAIM_HISTORICAL_EVIDENCE`); the validator also refuses an outrunning verdict, a graduation with an open obligation, a blocked aggregate cell, an unbound or failing `SAFE_COMPATIBLE` closure, a self-declared policy and an unresolved contradiction |
+| `gate-2b` — identity triage (`release_gate.py` item 2b) | Article 2, Article 10 | the triage is absent (`RG_TRIAGE_MISSING`) or bound to another registry, with an out-of-set class or counts that disagree with its records (`RG_TRIAGE_STALE`) |
+| `gate-3` — interop receipts (`release_gate.py` item 3) | Article 4 | a receipt fails rules R1–R5 (`RG_RECEIPT`): a withdrawal that names no successor, a live receipt marked withdrawn, a non-zero harness exit with no failed-script record, a manifest log that is absent or digest-mismatched, or a count the manifest did not derive |
+| `gate-4` — instrument register (`release_gate.py` item 4) | Article 3, Article 8 | the register is absent or invalid (`RG_INSTRUMENT_REGISTRY_MISSING`, `RG_INSTRUMENT`); an executable control fails; a `RECORDED` control is presented as a pass; an instrument entry states no soundness limits, scope, failure modes or disclaimer |
+| `gate-5` — external package (`release_gate.py` item 5) | Article 2 | no package was supplied (`RG_PACKAGE_MISSING`), the package cannot be unpacked or verified (`RG_PACKAGE_INVALID`), or its own `verify.sh` fails (`RG_PACKAGE`) |
+| `gate-6` — documentation consistency (`release_gate.py` item 6) | none | a hand-written document contradicts generated evidence (`RG_DOCS`), and — through `forensics/tools/docs_consistency.py` — a constitution that cites an article that does not exist, an article with no enforcement and no declaration of that, a rule identifier absent from the tool it credits, or a gate section that does not name every uncovered article (`ET_*` rules) |
+
+`gate-6` is the meta-item: it refuses a broken or miscited mapping. It does not
+evidence any article's substance, so it covers no article.
+
+**Articles no gate item covers: 5, 6, 7, 9.** For those, the release gate
+evidences nothing. The tools those articles name — `independence.py`,
+`spec_guard.py`, `binary_assurance.py`, `hazard_register.py` and
+`side_channel_erasure.py` — must be run and their outputs retained with the
+release record, but that run is not a release-gate item today. A release whose
+claim scope enters one of those articles is therefore **not admissible on the
+gate's authority alone**, and closing that gap means adding the tool as a gate
+item, not relaxing the article.
+
+The limits stated in the third column are part of each item's scope. An item
+listed above evidences its articles only in the respect it states; where an
+article names a condition an item does not refuse, the article is enforced by the
+tool it names and not by this gate.

@@ -36,8 +36,13 @@ What it does not do
 -------------------
 It does not check the generated documents (they are compared byte-for-byte elsewhere), the
 `.frf/`, `.gemel/`, `forensics/receipts/` or `forensics/atlas/*.json` evidence (never
-edited), or `docs/DECISIONS.md` (append-only, and every numeral in it is a record of the
-moment it was written).
+edited), or `docs/DECISIONS.md` (append-only, and every numeral in it is a record of
+the moment it was written).
+
+The constitution check is separate: `forensics/tools/earned_trust.py` binds
+`docs/EARNED-TRUST.md` to `evidence/etp-t14/ARTICLES.json`, to the rule identifiers
+the credited tools actually emit, to `AGENTS.md` and to the release-gate table in
+`docs/RELEASE_GATES.md`. It is run here so that release-gate item 6 covers it.
 
 Usage
 -----
@@ -61,6 +66,7 @@ from typing import Callable
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from atlas_common import REPO_ROOT  # noqa: E402
+import earned_trust  # noqa: E402
 import gen_frf_courts  # noqa: E402
 
 
@@ -507,6 +513,8 @@ def main(argv: list[str]) -> int:
         for check in CHECKS:
             exempt = "  [EXEMPT]" if (check.id, check.path) in EXEMPTIONS else ""
             print(f"{check.path}: {check.id}\n    expect from {check.source}{exempt}")
+        print("docs/EARNED-TRUST.md: earned_trust_constitution\n"
+              "    expect from evidence/etp-t14/ARTICLES.json and the tools it credits")
         return 0
 
     problems: list[str] = []
@@ -546,6 +554,8 @@ def main(argv: list[str]) -> int:
     for line in exempt_seen:
         print(f"[docs-consistency] EXEMPT: {line}")
 
+    constitution = earned_trust.check_root(REPO_ROOT)
+
     if problems:
         print(f"[docs-consistency] FAIL: {len(problems)} stale hand-written claim(s)")
         for p in problems:
@@ -553,10 +563,22 @@ def main(argv: list[str]) -> int:
         print("  A hand-written document may not contradict the generated evidence. "
               "Fix the document, or add a reasoned exemption if the quantity is bound to "
               "a past moment (docs/DECISIONS.md D203).")
+
+    if constitution:
+        print(f"[docs-consistency] FAIL: {len(constitution)} earned-trust constitution "
+              f"problem(s)")
+        for p in constitution:
+            print(f"  STALE: {p}")
+        print("  docs/EARNED-TRUST.md is normative and its mapping is machine-checked. "
+              "Fix the article, evidence/etp-t14/ARTICLES.json, AGENTS.md or "
+              "docs/RELEASE_GATES.md; an article with no enforcement must say so rather "
+              "than imply an enforcement that does not exist.")
+
+    if problems or constitution:
         return 1
 
     print(f"[docs-consistency] ok: {len(CHECKS)} hand-written claim(s) agree with "
-          f"their generated sources")
+          f"their generated sources; the earned-trust constitution is wired")
     return 0
 
 

@@ -707,3 +707,34 @@ The bottleneck is verification **finality**, not verification volume. One
 candidate, one coherent evidence set, one independent decision. A rejected
 claim whose refusal names a property is progress; a claim re-attempted without
 changing the procedure is not.
+
+---
+
+## 23. Earned-trust constitution (additive, 2026-11-23)
+
+`docs/EARNED-TRUST.md` is the standing constitution of this project's
+commitments about claims. It is **normative and cumulative** with this standard:
+it adds no permission and withdraws none, and where an article and a clause here
+describe the same commitment, the stricter reading governs. A session re-reads
+the constitution at the point of use, exactly as it must re-read this file.
+
+| article | commitment |
+|---|---|
+| 1 | a claim may never exceed its evidence |
+| 2 | evidence is bound to an exact identity |
+| 3 | deferred is never pass |
+| 4 | an omission is not a pass |
+| 5 | independence is never asserted without a distinct trust domain |
+| 6 | a specification is never a restatement of the implementation |
+| 7 | a proof in a model is not a proof about the binary |
+| 8 | a constant-time result is not a proof of constant time |
+| 9 | severity is not a probability |
+| 10 | a correction preserves what was believed |
+| 11 | no authority may promote a contradicted claim by declaration |
+
+The machine record is `evidence/etp-t14/ARTICLES.json`. The release mapping is
+`docs/RELEASE_GATES.md` §10, which names the four articles no gate item covers.
+The consistency checker is `forensics/tools/earned_trust.py`, invoked from
+`forensics/tools/docs_consistency.py` (release-gate item 6); it refuses an
+article citation that names no article, an article with no enforcement and no
+declaration of that, and a gate mention of an article no gate item covers.
