@@ -1,0 +1,175 @@
+{
+  "boundary": {
+    "covered": [
+      "modular add, sub, mul, inverse and exponentiation over the P-256 prime and group order",
+      "P-256 scalar multiplication in affine and Jacobian coordinates",
+      "ECDSA signing with a supplied nonce (kinv and r through ECDSA_do_sign_ex)",
+      "ECDSA verification in both directions and rejection of a tampered signature",
+      "RSA CRT recombination and the plain private operation for one fixed 2048-bit key",
+      "SHA-256 as a harness control"
+    ],
+    "not_covered": [
+      "any curve other than P-256",
+      "ECDSA nonce generation as an implementation under test (the RFC 6979 path is only a reference cross check)",
+      "RSA key generation by the candidate, signature padding (PKCS #1 v1.5, PSS) and OAEP",
+      "constant-time behaviour",
+      "memory safety, ownership and aliasing",
+      "binary-level refinement between the Rust source and the DSO"
+    ],
+    "proof_status": "a differential observation is bounded evidence, not a proof; a green differential does not establish constant-time behaviour or memory safety",
+    "reference_status": "the reference's own correctness rests on the stated reading of the normative documents",
+    "sampling": "every pseudo-random population is regenerated from the recorded seed; the populations are sampled, not exhaustive"
+  },
+  "cross_checks": [
+    {
+      "detail": "536 inverses over p and n; failures=[]",
+      "name": "arith_inverse_extended_euclid_vs_fermat",
+      "status": "PASS"
+    },
+    {
+      "detail": "536 exponentiations; failures=[]",
+      "name": "arith_square_and_multiply_vs_pow",
+      "status": "PASS"
+    },
+    {
+      "detail": "388 scalars; failures=[]",
+      "name": "ec_affine_vs_jacobian_and_curve_membership",
+      "status": "PASS"
+    },
+    {
+      "detail": "G on curve, nG = infinity, kG + (n-k)G = infinity for sampled k; failures=[]",
+      "name": "ec_group_law_and_order",
+      "status": "PASS"
+    },
+    {
+      "detail": "39 representatives; failures=[]",
+      "name": "rsa_crt_vs_plain_and_public_inverse",
+      "status": "PASS"
+    },
+    {
+      "detail": "4 short vectors plus the 1,000,000-byte vector; failures=[]",
+      "name": "sha256_fips180_4_published_vectors",
+      "status": "PASS"
+    },
+    {
+      "detail": "2 vectors; failures=[]",
+      "name": "hmac_sha256_rfc4231",
+      "status": "PASS"
+    },
+    {
+      "detail": "derived k, r, s and the verification result against RFC 6979 A.2.5",
+      "name": "rfc6979_p256_sha256_sample",
+      "status": "PASS"
+    },
+    {
+      "detail": "n = p*q, e*d = 1 (mod lambda), both factors probable prime",
+      "name": "rsa_fixed_key_invariants",
+      "status": "PASS"
+    }
+  ],
+  "cross_checks_all_pass": true,
+  "differences": {
+    "counts_by_class": {},
+    "items": []
+  },
+  "ecdsa_cross_direction": {
+    "authority_verifies_reference": {
+      "cases": 67,
+      "failures": []
+    },
+    "candidate_verifies_reference": {
+      "cases": 67,
+      "failures": []
+    },
+    "reference_verifies_authority": {
+      "cases": 67,
+      "failures": []
+    },
+    "reference_verifies_candidate": {
+      "cases": 67,
+      "failures": []
+    }
+  },
+  "ecdsa_cross_direction_all_pass": true,
+  "item": "ETP-T5",
+  "notes": [],
+  "populations": {
+    "ecdsa": {
+      "published_vector": "RFC 6979 A.2.5 P-256/SHA-256 \"sample\"",
+      "sign_cases": 67,
+      "vectors": 67,
+      "verify_cases": 134
+    },
+    "field_order": {
+      "by_modulus": {
+        "n": 1811,
+        "p": 1811
+      },
+      "by_op": {
+        "modadd": 850,
+        "modexp": 536,
+        "modinv": 536,
+        "modmul": 850,
+        "modsub": 850
+      },
+      "cases": 3622
+    },
+    "rsa": {
+      "cases": 39,
+      "check_case": 1,
+      "exponent": 65537,
+      "key_bits": 2048
+    },
+    "scalarmul": {
+      "boundary_included": [
+        "0",
+        "1",
+        "2",
+        "n-2",
+        "n-1"
+      ],
+      "cases": 388,
+      "powers_of_two": 256
+    },
+    "sha256": {
+      "cases": 75
+    }
+  },
+  "references": {
+    "modules": [
+      "ref_arith.py",
+      "ref_ec.py",
+      "ref_ecdsa.py",
+      "ref_rsa.py",
+      "ref_symmetric.py"
+    ],
+    "normative_sources": [
+      "SEC 2 v2.0 section 2.4.2 (P-256 parameters)",
+      "FIPS 186-4 Appendix D.1.2.3 (P-256 parameters)",
+      "NIST SP 800-186 section 3.2.1.3 (P-256 parameters)",
+      "FIPS 186-5 sections 6.4.1 and 6.4.2 (ECDSA generation and verification)",
+      "PKCS #1 v2.2 / RFC 8017 section 3.2 (RSA private key and CRT)",
+      "FIPS 180-4 section 6.2 (SHA-256)",
+      "RFC 6979 section 3.2 (deterministic ECDSA nonce)"
+    ]
+  },
+  "schema": "openssl-rs/etp-t5/crypto-differential/1",
+  "seed": "0x45545035",
+  "source": {
+    "authority_dso": "/work/forensics/authorities/prefix/openssl-3.6.4-production/lib/libcrypto.so.3",
+    "authority_dso_sha256": "611e511db4273c4b6b522031fd171efce71b80661bb8310c2a21dfd18ec0efd2",
+    "authority_label": "openssl-3.6.4-production",
+    "candidate_dso": "/work/court/tmp/etp5-build/libcrypto.so.3",
+    "candidate_dso_sha256": "e071ffeebecf326a77131105ba5bd7f56af19341861be78a6976e1b73a9d7ff7",
+    "candidate_link": "distribution-shaped DSO (whole archive, shell object, artifacts/phase2/libcrypto.ld)",
+    "cc": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+    "commit": "ecd01a20fb69dbee972521e94857ab5169b6472d",
+    "court_image": "openssl-rs-court-tools:1",
+    "dirty_porcelain": "",
+    "dirty_scope": "src, Cargo.toml, Cargo.lock, build.rs, rust-toolchain.toml",
+    "harness": "/work/court/tmp/etp5-build/etp5_harness",
+    "harness_sha256": "e81700a9030d87cacf9b85dc1d7dfebfb934ceb8eef9c1a00c968b194cde0d0e",
+    "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)"
+  },
+  "status": "AGREEMENT"
+}
