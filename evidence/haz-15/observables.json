@@ -427,7 +427,7 @@
       "189": [0.000498, 0.004298],
       "244": [0.001657, 0.007039]
     },
-    "probability_statement": "For a fixed expected length in 0..=245 an invalid block returns that length with probability of order 1/246 (about 0.0041). The 48-byte TLS pre-master length matched 9 of 2048 blocks (0.00439; 95% Wilson interval [0.00231, 0.00833]). A valid block returns its message length deterministically, so a single query answering 48 is valid with probability about 0.996 and one answering another length is invalid with the same confidence. The length is therefore a per-query padding-validity channel, not a closed axis.",
+    "probability_statement": "For a fixed expected length in 0..=245 an invalid block returns that length with probability of order 1/246 (about 0.0041). The 48-byte TLS pre-master length matched 9 of 2048 blocks (0.00439; 95% Wilson interval [0.00231, 0.00833]). This is a likelihood, not a posterior: the probability that a reply is valid also depends on the prior probability of a valid ciphertext, P(valid|L=48) = pi / (pi + (1-pi)*0.00439), which is 0.9954 at pi=0.5, 0.958 at pi=0.1 and 0.696 at pi=0.01. An earlier revision quoted 0.996 unconditionally and is withdrawn. The prior-independent quantity is the per-query likelihood ratio of about 1/0.00439 = 228 in favour of invalidity when the answer is not the expected length, which an attacker accumulates across distinct ciphertexts; the same ciphertext gives a stable answer. The length is therefore a per-query padding-validity channel, not a closed axis.",
     "previous_sample": {
       "size": 64,
       "invalid_equal_to_a_valid_length": [],

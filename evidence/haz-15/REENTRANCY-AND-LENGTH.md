@@ -245,13 +245,25 @@ nothing. A zero over 2,048 blocks would have been a different statement
 (`P ≤ e^{-8.3} ≈ 2.5 × 10^{-4}` under the structural value), and the measurement
 instead shows the expected matches.
 
-**Why this is an oracle.** A valid block returns its message length deterministically.
-A single chosen ciphertext whose answer is `48` is therefore valid with probability
-`≈ 99.6%` (`1 - 0.0041`), and one whose answer is not `48` is invalid with the same
-confidence. The determinism per ciphertext (the KDK is a function of the key and the
-ciphertext) means repeating the same query does not change the outcome. The length
-therefore remains a per-query padding-validity signal; it is narrower than the
-authority's refusal but it is not closed.
+**Why this is an oracle.** A valid block returns its message length deterministically, while
+an invalid block returns that same length with probability `p̂ = 0.00439` (95% Wilson
+`[0.00231, 0.00833]`). The measured quantity is a **likelihood**, not a posterior: it says
+nothing on its own about the probability that a reply is valid, which depends on the prior
+probability `π` of receiving a valid ciphertext in the application.
+
+The posterior is
+`P(valid | L=48) = π / (π + (1−π)·0.00439)`. With `π = 0.5` that is `0.9954`; with
+`π = 0.1` it is `0.958`; with `π = 0.01` it is `0.696`. An earlier revision of this
+receipt quoted `99.6%` unconditionally, which silently assumed equal priors; that
+statement is withdrawn.
+
+What does not depend on the prior is the per-query **likelihood ratio**, about
+`1 / 0.00439 ≈ 228`, in favour of invalidity when the answer is not the expected length
+(and symmetrically in favour of validity when it is). An attacker who can submit many
+ciphertexts accumulates that evidence, which is why the channel is exploitable in a
+chosen-ciphertext setting even though a single query is not decisive. Repeating the *same*
+query does not help — the KDK is a function of the key and the ciphertext, so the answer is
+stable — but a fresh ciphertext is a fresh trial.
 
 ### 5.4 Can the library make the length indistinguishable?
 
