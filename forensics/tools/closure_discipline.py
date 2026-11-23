@@ -103,13 +103,18 @@ CONTRACT_REQUIREMENTS = {
 CATEGORY_PRODUCTION = "production-operation-exclusions"
 CATEGORY_ENROLMENT = "documented-enrolment-exclusions"
 CATEGORY_TARGET_DROP = "indirect-target-drops"
+CATEGORY_RESIDUAL = "unresolved-indirect-sites"
 CATEGORY_ANALYSIS = "analysis-limit-omissions"
 EXCLUSION_CATEGORIES = (
     CATEGORY_PRODUCTION,
     CATEGORY_ENROLMENT,
     CATEGORY_TARGET_DROP,
+    CATEGORY_RESIDUAL,
     CATEGORY_ANALYSIS,
 )
+
+CLOSED_TARGET_SET_PREFIX = "CLOSED_TARGET_SET_"
+ABI_CONTRACT_PREFIX = "ABI_CONTRACT_"
 
 DISPOSITION_ARGUMENT = "ARGUMENT"
 DISPOSITION_ASSERTION = "ASSERTION"
@@ -258,7 +263,11 @@ def _evaluate_bar(edge, reason, check) -> dict:
             missing.append("checkable_result")
     if not missing:
         disposition = DISPOSITION_ARGUMENT
-    elif edge is None and (check is None):
+    elif edge is None and check is None and not reason:
+        # No edge, no reason and no check: a global limitation that offers no
+        # exclusion argument at all.  It is recorded as admitted, never as a
+        # passing exclusion.  A row that offers a reason but no checkable
+        # procedure is an assertion, not a limitation.
         disposition = DISPOSITION_ADMITTED
     else:
         disposition = DISPOSITION_ASSERTION
@@ -478,6 +487,26 @@ def _target_drop_rows(receipt, consumer, commit, repo, identity, install) -> lis
             rows[-1]["check"]["result"] = (
                 {"decision": "dropped", "recorded_in": rows[-1]["source"]}
                 if not absent else None)
+    if declared > len(rows):
+        # The receipt declares more dropped targets than its sample records.
+        # An unrecorded drop has no argument at all, so it is counted as a
+        # failing row rather than left out of the population.
+        rows.append({
+            "id": _row_id(f"EX-{consumer.upper()}-DROP", len(rows) + 1),
+            "consumer": consumer,
+            "category": CATEGORY_TARGET_DROP,
+            "edge": None,
+            "statement": (
+                f"{declared - len(rows)} declared target-drop(s) have no record "
+                "in the receipt sample, so no exclusion argument exists for them"),
+            "reason": "",
+            "check": None,
+            "source": (
+                "edge_provenance.exclusion_reasons against "
+                "edge_provenance.records_sample"),
+        })
+        rows[-1]["bar"] = _evaluate_bar(None, "", None)
+        rows[-1]["bar"]["disposition"] = DISPOSITION_ASSERTION
     return rows, declared
 
 
@@ -490,6 +519,120 @@ def _analysis_limit_kind(text: str) -> str:
     if "analysis identity" in lowered and "not a proof of input completeness" in lowered:
         return "analysis-input-completeness"
     return "non-claim"
+
+
+def _residual_site_scoped(site_class: str) -> bool:
+    """Whether a residual site's target set is bounded by a stated argument.
+
+    A ``CLOSED_TARGET_SET_*`` class is bounded by an enumerated in-image set; an
+    ``ABI_CONTRACT_*`` class is bounded by the contract registry.  Any other
+    class (``field``, ``materialised`` or an ``ABI_*`` class with no contract)
+    has no argument, so it is recorded as failing rather than admitted.
+    """
+    if site_class.startswith(CLOSED_TARGET_SET_PREFIX):
+        return True
+    if site_class.startswith(ABI_CONTRACT_PREFIX):
+        contract, missing = _contract_record(site_class)
+        return contract is not None and not missing
+    return False
+
+
+def _residual_rows(receipt, consumer, identity, install) -> list:
+    """Every unresolved reachable indirect site recorded by the receipt."""
+    precision = receipt.get("precision") or {}
+    sites = precision.get("residual_sites") or []
+    rows = []
+    dso = f"{identity.get('install_prefix')}/lib/libcrypto.so.3"
+    for ordinal, site in enumerate(sites, 1):
+        site_class = site.get("class") or "unclassified"
+        scoped = _residual_site_scoped(site_class)
+        edge = {
+            "kind": "unresolved-indirect-site",
+            "identity": "%s:%s:%s" % (site.get("dso"), site.get("function"),
+                                       site.get("call_site")),
+            "dso": site.get("dso"),
+            "function": site.get("function"),
+            "call_site": site.get("call_site"),
+            "site_class": site_class,
+            "text": site.get("text"),
+        }
+        procedure = (
+            "recompute the site class and its target set from the recorded "
+            "candidate DSO with forensics/tools/consumer_closure.py; for a "
+            "contract class confirm the named ABI contract in the registry "
+            "covers this call site; for a closed-target-set class re-enumerate "
+            "the in-image set")
+        inputs = [dso, "forensics/tools/consumer_closure.py"]
+        absent = [] if install["available"] else [dso]
+        source = f"precision.residual_sites[{ordinal - 1}]"
+        row = {
+            "id": _row_id(f"EX-{consumer.upper()}-RESID", ordinal),
+            "consumer": consumer,
+            "category": CATEGORY_RESIDUAL,
+            "edge": edge,
+            "statement": (
+                "the indirect site is bounded by %s" % site_class if scoped
+                else "the indirect site has no contract or closed-target-set bound"),
+            "reason": site.get("reason") if scoped else "",
+            "check": _check_record(procedure, inputs, identity, absent),
+            "source": source,
+            "site_class": site_class,
+        }
+        row["check"]["result"] = (
+            {"decision": "bounded", "recorded_in": source}
+            if (not absent and scoped) else None)
+        rows.append(row)
+    return rows
+
+
+def _coverage_rows(receipt, consumer) -> list:
+    """Omissions the receipt records as counts or lists rather than per edge."""
+    rows = []
+    precision = receipt.get("precision") or {}
+    totals = precision.get("totals") or {}
+    sites = precision.get("residual_sites") or []
+    reachable = totals.get("reachable_unresolved_sites")
+    ordinal = 0
+
+    def add(statement, source, category=CATEGORY_RESIDUAL):
+        nonlocal ordinal
+        ordinal += 1
+        rows.append({
+            "id": _row_id(f"EX-{consumer.upper()}-COV", ordinal),
+            "consumer": consumer,
+            "category": category,
+            "edge": None,
+            "statement": statement,
+            "reason": "",
+            "check": None,
+            "source": source,
+        })
+        rows[-1]["bar"] = _evaluate_bar(None, "", None)
+        rows[-1]["bar"]["disposition"] = DISPOSITION_ASSERTION
+
+    if isinstance(reachable, int) and len(sites) < reachable:
+        add(
+            f"{reachable - len(sites)} of {reachable} reachable unresolved indirect "
+            f"site(s) have no per-site record (the receipt records {len(sites)})",
+            "precision.residual_sites against precision.totals.reachable_unresolved_sites")
+    unclassified = precision.get("unclassified_reachable_sites") or []
+    if unclassified:
+        add(
+            f"{len(unclassified)} reachable indirect site(s) are unclassified",
+            "precision.unclassified_reachable_sites")
+    boundary = receipt.get("boundary_coverage") or {}
+    for index, path in enumerate(boundary.get("reachable_files_without_receipt") or []):
+        add(
+            f"reachable file {path} has no receipt",
+            f"boundary_coverage.reachable_files_without_receipt[{index}]")
+    conflicts = receipt.get("disposition_conflicts") or {}
+    for key in ("unresolved_obligation_count", "unresolved_edge_count"):
+        value = conflicts.get(key)
+        if isinstance(value, int) and value > 0:
+            add(
+                f"{value} unresolved disposition conflict(s) recorded in {key}",
+                f"disposition_conflicts.{key}")
+    return rows
 
 
 def _analysis_rows(receipt, consumer) -> list:
@@ -529,6 +672,8 @@ def audit_receipt_dict(receipt: dict, *, consumer: str, commit=None,
     dropped, declared = _target_drop_rows(
         receipt, consumer, commit, repo, identity, install)
     rows.extend(dropped)
+    rows.extend(_residual_rows(receipt, consumer, identity, install))
+    rows.extend(_coverage_rows(receipt, consumer))
     rows.extend(_analysis_rows(receipt, consumer))
 
     for row in rows:
@@ -802,11 +947,20 @@ def _aggregate_graduation() -> dict:
                 })
     retraction = doc.get("retraction") or {}
     if isinstance(retraction, dict) and retraction.get("status") == "RETRACTED":
+        # A retraction of a *sub-claim* is not a blocked row of the aggregate.
+        # It is recorded as history so it stays visible, but it does not make a
+        # graduation pass hide a not-established row.  A retraction that
+        # withdraws the aggregate's own verdict would be recorded as
+        # ``withdraws_verdict`` by its producer and is handled as blocked.
+        withdrawn_claim = str(retraction.get("withdrawn_claim") or "")
+        withdraws_verdict = bool(retraction.get("withdraws_verdict")) or (
+            "SAFE_COMPATIBLE" in withdrawn_claim.upper())
         rows.append({
             "id": "retraction",
-            "state": "WITHDRAWN",
-            "blocked": True,
+            "state": "WITHDRAWN" if withdraws_verdict else "RETRACTED_SUB_CLAIM",
+            "blocked": withdraws_verdict,
             "locator": "retraction.status",
+            "detail": withdrawn_claim[:300],
         })
     return _aggregate("safe-compatible-openssh-b85c", path, doc, overall,
                       "verdict.value", rows)
@@ -1109,11 +1263,18 @@ def write_documents(commit: str | None = None, repo: Path = REPO_ROOT) -> dict:
 # refusals used by the claim algebra
 # --------------------------------------------------------------------------- #
 
-def closure_receipt_failure(path: Path, *, repo: Path = REPO_ROOT) -> dict:
-    """Audit a closure receipt for the SAFE_COMPATIBLE exclusion requirement."""
-    audit = audit_receipt_path(path, commit=None, repo=repo)
+def closure_receipt_failure(path: Path, *, repo: Path = REPO_ROOT,
+                            commit: str | None = None) -> dict:
+    """Audit a closure receipt for the SAFE_COMPATIBLE exclusion requirement.
+
+    When ``commit`` is named, the candidate DSO and inventory inputs are
+    resolved at that commit, so the audit is bound to the claim's identity
+    rather than to whatever the working tree happens to contain.
+    """
+    audit = audit_receipt_path(path, commit=commit, repo=repo)
     return {
         "path": str(path),
+        "bound_commit": commit,
         "exclusions_failing": audit["exclusions_failing"],
         "failing_ids": audit["failing_ids"][:20],
         "failure_total": len(audit["failing_ids"]),
@@ -1196,8 +1357,32 @@ def self_test() -> int:
     bar = _evaluate_bar(None, "reason", None)
     check("bar-no-edge", not bar["passes"] and "edge_identity" in bar["missing"],
           bar)
-    check("bar-no-edge-disposition", bar["disposition"] == DISPOSITION_ADMITTED,
+    check("bar-no-edge-disposition", bar["disposition"] == DISPOSITION_ASSERTION,
           bar)
+
+    # 1b. A limitation with no edge, no reason and no procedure is admitted,
+    # never counted as a passing exclusion.
+    bar = _evaluate_bar(None, "", None)
+    check("bar-admitted-limitation",
+          not bar["passes"] and bar["disposition"] == DISPOSITION_ADMITTED, bar)
+
+    # 1c. Each individual bar requirement is load-bearing: a row with every
+    # requirement but one must name exactly that requirement.
+    for dropped in ("edge_identity", "reason", "procedure",
+                    "identity_binding", "checkable_result"):
+        edge = {"identity": "x"} if dropped != "edge_identity" else None
+        reason = "" if dropped == "reason" else "a stated reason"
+        if dropped == "procedure":
+            candidate = _check_record("", ["input"], {"x": 1}, [])
+        elif dropped == "identity_binding":
+            candidate = _check_record("proc", ["input"], {}, [])
+        elif dropped == "checkable_result":
+            candidate = _check_record("proc", ["input"], {"x": 1}, ["input"])
+        else:
+            candidate = _check_record("proc", ["input"], {"x": 1}, [])
+        bar = _evaluate_bar(edge, reason, candidate)
+        check(f"bar-requires-{dropped}", not bar["passes"], bar)
+        check(f"bar-names-{dropped}", dropped in bar["missing"], bar)
 
     # 2. The bar refuses an edge whose procedure inputs are absent.
     absent_check = _check_record("proc", ["input"], {"x": 1}, ["input"])
@@ -1261,9 +1446,15 @@ def self_test() -> int:
     commit = _check_commit(REPO_ROOT)
     first = build_documents(commit)
     second = build_documents(commit)
-    check("deterministic",
-          json.dumps(first, sort_keys=True) == json.dumps(second, sort_keys=True),
-          "two builds differ")
+    first_bytes = tuple(
+        json.dumps(doc, indent=2, sort_keys=True).encode() for doc in first)
+    second_bytes = tuple(
+        json.dumps(doc, indent=2, sort_keys=True).encode() for doc in second)
+    check("deterministic", first_bytes == second_bytes, "two builds differ")
+    check("deterministic-aggregates",
+          json.dumps(audit_aggregates(), sort_keys=True)
+          == json.dumps(audit_aggregates(), sort_keys=True),
+          "aggregate audits differ")
 
     if failures:
         for failure in failures:

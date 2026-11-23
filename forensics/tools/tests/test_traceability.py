@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Negative controls for the requirements-traceability checker.
 
-The graph claims that it fails closed on twelve named orphan classes.  These
+The graph claims that it fails closed on thirteen named orphan classes.  These
 tests mutate a copy of the committed graph, one mutation per class, and require
 the checker to refuse with the exact orphan identifier the mutation creates.
 A positive control requires the committed graph to validate, and a determinism
@@ -80,10 +80,13 @@ class TraceabilityControls(unittest.TestCase):
         # correction adds one class-8 orphan for its differential receipt, which
         # exists in the working tree and is bound at the commit that adds it.  No
         # class shrinks and no control is relaxed.
-        self.assertEqual(len(declared), 39)
+        # ETP-T10 adds four class-13 orphans: three consumer-closure obligations
+        # whose recorded omissions fail the independently checkable bar, and the
+        # OpenSSH SAFE_COMPATIBLE release claim they constrain.
+        self.assertEqual(len(declared), 43)
         self.assertEqual(
             sorted({entry["class"] for entry in declared}),
-            [1, 3, 6, 8, 11, 12],
+            [1, 3, 6, 8, 11, 12, 13],
         )
 
     def test_validate_output_is_byte_identical_across_runs(self) -> None:
@@ -296,6 +299,51 @@ class TraceabilityControls(unittest.TestCase):
         result = self.run_checker(document)
         self.assert_refused(result, "ORPHAN-11:RFE-3")
         self.assertIn("names no resolvable discharge artefact", result.stderr)
+
+    # ---------------------------------------------------------------- class 13
+    def test_class_13_failing_exclusion_obligation_is_an_orphan(self) -> None:
+        document = load_graph()
+        document["orphans"] = [
+            entry for entry in document["orphans"]
+            if entry["id"] != "ORPHAN-13:OBL-CLOSURE-CURL-EXCLUSIONS"
+        ]
+        result = self.run_checker(document)
+        self.assert_refused(result, "ORPHAN-13:OBL-CLOSURE-CURL-EXCLUSIONS")
+
+    def test_class_13_positive_release_claim_is_an_orphan(self) -> None:
+        document = load_graph()
+        document["orphans"] = [
+            entry for entry in document["orphans"]
+            if entry["id"] != "ORPHAN-13:CLAIM:REL-OPENSSH-B85C"
+        ]
+        result = self.run_checker(document)
+        self.assert_refused(result, "ORPHAN-13:CLAIM:REL-OPENSSH-B85C")
+        self.assertIn("failing closure", result.stderr)
+
+    def test_class_13_clean_exclusion_does_not_raise_an_orphan(self) -> None:
+        # Negative-direction control: a zero failing count produces no class-13
+        # orphan, so the declaration that said otherwise becomes stale.
+        document = load_graph()
+        node = next(
+            n for n in document["nodes"]
+            if n["id"] == "OBL-CLOSURE-CURL-EXCLUSIONS"
+        )
+        node["closure_exclusions"] = {
+            "rows": 219, "failing_rows": 0, "category": "all", "failing_ids": [],
+        }
+        result = self.run_checker(document)
+        self.assert_refused(result, "TG_STALE_ORPHAN")
+        self.assertIn("ORPHAN-13:OBL-CLOSURE-CURL-EXCLUSIONS", result.stderr)
+
+    def test_class_13_more_failing_than_rows_is_refused(self) -> None:
+        document = load_graph()
+        node = next(
+            n for n in document["nodes"]
+            if n["id"] == "OBL-CLOSURE-CURL-EXCLUSIONS"
+        )
+        node["closure_exclusions"]["failing_rows"] = 9999
+        result = self.run_checker(document)
+        self.assert_refused(result, "TG_CLOSURE_EXCLUSIONS")
 
     # ------------------------------------------------- refinement structure
     def test_refinement_rank_must_be_unique(self) -> None:

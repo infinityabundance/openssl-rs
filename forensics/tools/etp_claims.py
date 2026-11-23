@@ -1547,6 +1547,25 @@ def check_aggregates(doc: dict, repo_root: Path | None = None) -> list[Refusal]:
                             for c in blocked_cells),
                     )
                 )
+            undeclared = [
+                cell for cell in cells
+                if isinstance(cell, dict) and "declared_state" not in cell
+            ]
+            if undeclared:
+                # An undeclared cell state is not evidence that the cell is not
+                # blocked.  A positive aggregate that omits it could otherwise
+                # hide a blocked row by saying nothing, so it is refused.
+                refusals.append(
+                    Refusal(
+                        "EG_AGGREGATE_CELL_STATE_UNDECLARED",
+                        f"{base}/cells",
+                        "declared_state",
+                        f"aggregate claim asserts {claim_state} while "
+                        + ", ".join(
+                            f"cell {c.get('id')!r} declares no state"
+                            for c in undeclared),
+                    )
+                )
     return refusals
 
 
@@ -1599,6 +1618,8 @@ def check_closure_exclusions(
             continue
         if repo_root is None:
             continue
+        source = (claim.get("identity") or {}).get("source") or {}
+        claim_commit = source.get("commit") if isinstance(source, dict) else None
         for dependency in receipts:
             path = repo_root / dependency
             if not path.is_file():
@@ -1612,9 +1633,12 @@ def check_closure_exclusions(
                 )
                 continue
             try:
+                tools = Path(__file__).resolve().parent
+                if str(tools) not in sys.path:
+                    sys.path.insert(0, str(tools))
                 import closure_discipline  # lazy: same tool directory
                 audit = closure_discipline.closure_receipt_failure(
-                    path, repo=repo_root
+                    path, repo=repo_root, commit=claim_commit
                 )
             except Exception as exc:  # fail closed, never silently pass
                 refusals.append(

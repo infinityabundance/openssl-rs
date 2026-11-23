@@ -425,11 +425,64 @@ class PositiveControls(unittest.TestCase):
         claim["modality"] = "PROOF_OBLIGATIONS_DISCHARGED"
         claim["verdict"]["state"] = "SAFE_COMPATIBLE"
         claim["closure"] = {
-            "dependencies": ["ETP-CLM-901"],
+            "dependencies": ["evidence/closure-curl-049.json"],
             "unresolved_dependencies": [],
             "complete": True,
         }
         self.assertEqual(refusals(base_document(claim)), [])
+
+    def test_graduated_claim_without_a_closure_receipt_is_refused(self) -> None:
+        # ETP-T10 section 1d: a SAFE_COMPATIBLE verdict that names no consumer
+        # closure receipt cannot have its exclusions audited, so it is refused.
+        claim = base_claim()
+        claim["modality"] = "PROOF_OBLIGATIONS_DISCHARGED"
+        claim["verdict"]["state"] = "SAFE_COMPATIBLE"
+        claim["closure"] = {
+            "dependencies": ["ETP-CLM-901"],
+            "unresolved_dependencies": [],
+            "complete": True,
+        }
+        self.assertIn(
+            "EG_SAFE_COMPATIBLE_CLOSURE_UNBOUND", rules(base_document(claim))
+        )
+
+    def test_graduated_claim_with_a_failing_exclusion_is_refused(self) -> None:
+        # ETP-T10 section 1d, the tree-bound half: a closure receipt whose
+        # recorded omissions fail the bar refuses the graduated verdict.
+        claim = base_claim()
+        claim["modality"] = "PROOF_OBLIGATIONS_DISCHARGED"
+        claim["verdict"]["state"] = "SAFE_COMPATIBLE"
+        claim["closure"] = {
+            "dependencies": ["cells/closure-synthetic.json"],
+            "unresolved_dependencies": [],
+            "complete": True,
+        }
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "cells").mkdir()
+            receipt = {
+                "family": "synthetic",
+                "candidate_identity": {
+                    "install_prefix": "artifacts/install",
+                    "libcrypto_so_3_sha256": "0" * 64,
+                    "libssl_so_3_sha256": None,
+                },
+                "source_identity": {"inventory_path": "cells/inventory.json"},
+                "closure_scope": {
+                    "excluded_from_upper_bound": [{
+                        "file": "src/x.rs", "line": 1, "kind": "UNSAFE_FN_DEF",
+                        "reason": "not in the reachable set",
+                    }],
+                },
+            }
+            (root / "cells/closure-synthetic.json").write_text(
+                json.dumps(receipt), encoding="utf-8")
+            found = etp_claims.check_closure_exclusions(
+                {"claims": [claim]}, repo_root=root)
+        self.assertIn(
+            "EG_SAFE_COMPATIBLE_EXCLUSION_FAILS_BAR",
+            {item["rule"] for item in found},
+        )
 
     def test_graduated_claim_with_unresolved_dependency_is_refused(self) -> None:
         claim = base_claim()
@@ -1134,6 +1187,33 @@ class AggregateControls(unittest.TestCase):
             key: value for key, value in base_document().items() if key != "claims"
         }
 
+    def test_aggregate_cell_rejects_an_unknown_property(self) -> None:
+        # The parked schema change added ``declared_state`` but kept
+        # ``additionalProperties: false`` on the cell; an extra field is refused.
+        document = self._document({
+            "summarises_cells": True,
+            "cells": [{
+                "id": "AA",
+                "receipt_path": "cells/AA.json",
+                "receipt_sha256": "0" * 64,
+                "declared_state": "PASS",
+                "unmodelled_axis": "not in the closed type",
+            }],
+        })
+        self.assertIn("EG_SCHEMA_VIOLATION", rules(document))
+
+    def test_aggregate_cell_declared_state_must_be_a_known_state(self) -> None:
+        document = self._document({
+            "summarises_cells": True,
+            "cells": [{
+                "id": "AA",
+                "receipt_path": "cells/AA.json",
+                "receipt_sha256": "0" * 64,
+                "declared_state": "PROBABLY_FINE",
+            }],
+        })
+        self.assertIn("EG_SCHEMA_VIOLATION", rules(document))
+
     def test_unbound_aggregate_without_cells_is_refused(self) -> None:
         assert_rule(
             self,
@@ -1163,6 +1243,7 @@ class AggregateControls(unittest.TestCase):
                             "id": "AA",
                             "receipt_path": "cells/AA.json",
                             "receipt_sha256": "0" * 64,
+                            "declared_state": "PASS",
                         }
                     ],
                 }
@@ -1186,12 +1267,101 @@ class AggregateControls(unittest.TestCase):
                             "id": "AA",
                             "receipt_path": "cells/AA.json",
                             "receipt_sha256": digest,
+                            "declared_state": "PASS",
                         }
                     ],
                 }
             )
             found = etp_claims.validate_document(document, SCHEMA, repo_root=root)
         self.assertEqual(found, [])
+
+    def test_positive_aggregate_hiding_a_blocked_cell_is_refused(self) -> None:
+        # ETP-T10 section 1c: a pass may not summarise away a blocked cell.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "cells").mkdir()
+            receipt = root / "cells/AA.json"
+            receipt.write_text("{}\n", encoding="utf-8")
+            digest = hashlib.sha256(receipt.read_bytes()).hexdigest()
+            document = self._document(
+                {
+                    "summarises_cells": True,
+                    "cells": [
+                        {
+                            "id": "AA",
+                            "receipt_path": "cells/AA.json",
+                            "receipt_sha256": digest,
+                            "declared_state": "NOT_ESTABLISHED",
+                        }
+                    ],
+                }
+            )
+            found = etp_claims.validate_document(document, SCHEMA, repo_root=root)
+        self.assertIn(
+            "EG_AGGREGATE_PASS_HIDES_BLOCKED_CELL",
+            {item["rule"] for item in found},
+        )
+
+    def test_positive_aggregate_with_an_undeclared_cell_state_is_refused(
+            self) -> None:
+        # An omitted state is not evidence that the cell is not blocked.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "cells").mkdir()
+            receipt = root / "cells/AA.json"
+            receipt.write_text("{}\n", encoding="utf-8")
+            digest = hashlib.sha256(receipt.read_bytes()).hexdigest()
+            document = self._document(
+                {
+                    "summarises_cells": True,
+                    "cells": [
+                        {
+                            "id": "AA",
+                            "receipt_path": "cells/AA.json",
+                            "receipt_sha256": digest,
+                        }
+                    ],
+                }
+            )
+            found = etp_claims.validate_document(document, SCHEMA, repo_root=root)
+        self.assertIn(
+            "EG_AGGREGATE_CELL_STATE_UNDECLARED",
+            {item["rule"] for item in found},
+        )
+
+    def test_negative_aggregate_may_keep_a_blocked_cell_visible(self) -> None:
+        # The rule refuses a *positive* aggregate that hides a blocked cell; a
+        # non-positive aggregate that reports the blocked cell is accepted.
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "cells").mkdir()
+            receipt = root / "cells/AA.json"
+            receipt.write_text("{}\n", encoding="utf-8")
+            digest = hashlib.sha256(receipt.read_bytes()).hexdigest()
+            claim = base_claim()
+            claim["evidence"][0]["digest_identity"] = None
+            claim["verdict"]["state"] = "PARTIAL"
+            claim["aggregate_cells"] = {
+                "summarises_cells": True,
+                "cells": [
+                    {
+                        "id": "AA",
+                        "receipt_path": "cells/AA.json",
+                        "receipt_sha256": digest,
+                        "declared_state": "NOT_ESTABLISHED",
+                    }
+                ],
+            }
+            document = {"claims": [claim]} | {
+                key: value for key, value in base_document().items()
+                if key != "claims"
+            }
+            found = etp_claims.validate_document(document, SCHEMA, repo_root=root)
+        self.assertEqual(
+            [item for item in found
+             if item["rule"].startswith("EG_AGGREGATE_PASS")],
+            [],
+        )
 
 
 class TypedMeasureControls(unittest.TestCase):

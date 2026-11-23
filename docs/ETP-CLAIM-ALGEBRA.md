@@ -218,6 +218,10 @@ alias.
 | `EG_EVIDENCE_CONTRADICTS_VERDICT` | a positive verdict or graduation modality rests on evidence whose declared state is `WITHDRAWN`, `REFUTED` or `NOT_ESTABLISHED`, or on no present evidence that is current (not withdrawn, refuted, not established or superseded) |
 | `EG_AGGREGATE_UNBOUND` | an aggregate claim names no cell receipt digests, or a cell names no receipt path and digest, while claiming to summarise cells |
 | `EG_AGGREGATE_DIGEST_MISMATCH` | an aggregate names a cell receipt digest that disagrees with the tracked receipt |
+| `EG_AGGREGATE_PASS_HIDES_BLOCKED_CELL` | a positive aggregate claim contains a cell whose `declared_state` is blocked, unresolved or not established (ETP-T10 section 1c) |
+| `EG_AGGREGATE_CELL_STATE_UNDECLARED` | a positive aggregate claim contains a cell that declares no state, so it could hide a blocked row by silence |
+| `EG_SAFE_COMPATIBLE_CLOSURE_UNBOUND` | a `SAFE_COMPATIBLE` verdict names no consumer-closure receipt, or the named receipt is absent, so its exclusions cannot be audited (ETP-T10 section 1d) |
+| `EG_SAFE_COMPATIBLE_EXCLUSION_FAILS_BAR` | a `SAFE_COMPATIBLE` verdict's closure receipt contains an omission that fails the independently checkable exclusion bar |
 | `EG_MEASURE_UNTYPED` | a named free-text measure is compared across two claims that share a property, scope and identity |
 | `EG_EVIDENCE_CHECK_UNAVAILABLE` | a cited digest cannot be checked and the document claims one |
 | `EG_INVALIDATION_CYCLE` | the claim-level invalidation graph contains a cycle |
@@ -302,6 +306,26 @@ receipt's `receipt_sha256`. An aggregate that names no cell is refused as
 `EG_AGGREGATE_UNBOUND`; a named digest that disagrees with the tracked receipt
 is refused as `EG_AGGREGATE_DIGEST_MISMATCH`. The rule binds the aggregate to the
 cells' receipts; it does not compare log contents.
+
+**Aggregation visibility (ETP-T10).** A cell may also declare its own
+`declared_state`. A positive aggregate claim that contains a cell whose state is
+blocked (`BLOCKED`, `UNKNOWN`, `NOT_ESTABLISHED`, `NOT_GRADUATED`, `REFUSED`,
+`CONTRADICTED`, `FAIL`, `FAILED`, `WITHDRAWN`, `PARTIAL`, `NOT_RUN`) is refused as
+`EG_AGGREGATE_PASS_HIDES_BLOCKED_CELL`; the cell is never dropped to let the
+aggregate pass. A positive aggregate that omits the state of any cell is refused
+as `EG_AGGREGATE_CELL_STATE_UNDECLARED`, because silence is not evidence that a
+cell is not blocked. The declaration is optional in the schema, so a non-positive
+aggregate may still record a blocked cell without supplying one.
+
+**Closure discipline (ETP-T10).** A `SAFE_COMPATIBLE` verdict must name at least
+one consumer-closure receipt among its `closure.dependencies`. A verdict with no
+such receipt is refused as `EG_SAFE_COMPATIBLE_CLOSURE_UNBOUND`: a graduation
+whose exclusions cannot be audited is not a graduation. When the closure receipt
+is present, `forensics/tools/closure_discipline.py` audits every recorded
+omission against the five-requirement bar; one failing exclusion refuses the
+verdict as `EG_SAFE_COMPATIBLE_EXCLUSION_FAILS_BAR`. The same audit is projected
+into the traceability graph as class-13 orphans, so an omitted edge is visible
+from the release claim as well as from the closure.
 
 **Comparative measures.** A `measure` may be opaque (string `value`) or typed (a
 named `counter`, or a named numeric `value` with a `unit`). Two claims with the

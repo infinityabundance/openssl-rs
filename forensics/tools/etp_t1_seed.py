@@ -732,6 +732,79 @@ for oid, statement, settled in B85C_OBLIGATIONS:
         statement, settled, ["REL-OPENSSH-B85C"], [],
         "the independent b85c adjudication records that this item blocks SAFE_COMPATIBLE")
 
+# ---------------------------------------------------------------- closure discipline
+# ETP-T10 projects each consumer closure's recorded omissions into the graph.
+# The audit is run at `S`, where the three closure receipts are tracked, so the
+# projection is deterministic and bound to the graph's claim tier.  A consumer
+# whose omissions fail the independently checkable bar raises an obligation that
+# constrains the release claims it supports; class 13 (see traceability.py)
+# turns that obligation, and any positive release claim it constrains, into an
+# orphan.  No exclusion is added to close a gap: the count is projected as it is.
+CLOSURE_CONSUMERS = [
+    ("curl", "evidence/closure-curl-049.json", ["REL-CURL-049"]),
+    ("ssh", "evidence/closure-ssh-b85c.json", ["REL-OPENSSH-B85C"]),
+    ("sshd", "evidence/closure-sshd-b85c.json", ["REL-OPENSSH-B85C"]),
+]
+_RELEASE_POSITIVE = {"ESTABLISHED", "SAFE_COMPATIBLE", "PASS", "ACCEPTED",
+                     "ESTABLISHED (SCOPED)"}
+_closure_claim_orphans: set[str] = set()
+
+for consumer, receipt_path, release_claims in CLOSURE_CONSUMERS:
+    receipt = json.loads(blob(S, receipt_path))
+    audit = closure_discipline.audit_receipt_dict(
+        receipt, consumer=consumer, commit=S, repo=REPO)
+    failing = audit["exclusions_failing"]
+    by_category = ", ".join(
+        f"{name}={data['failing']}/{data['rows']}"
+        for name, data in sorted(audit["categories"].items()))
+    oid = f"OBL-CLOSURE-{consumer.upper()}-EXCLUSIONS"
+    if failing:
+        statement = (
+            f"{failing} of {audit['exclusion_rows']} recorded omissions in the "
+            f"{consumer} consumer closure do not meet the independently checkable "
+            f"exclusion bar ({by_category}).")
+        state = "OPEN"
+    else:
+        statement = (
+            f"All {audit['exclusion_rows']} recorded omissions in the {consumer} "
+            "consumer closure meet the independently checkable exclusion bar "
+            f"({by_category}).")
+        state = "DISCHARGED"
+    add_obligation(
+        oid, f"ETP-T10 exclusion bar for the {consumer} consumer closure",
+        src(receipt_path, "closure_discipline", statement[:200], bound=S,
+            quote_kind="paraphrase"),
+        statement,
+        "Close each failing exclusion with a procedure a third party can run "
+        "against the recorded candidate identity, or accept it explicitly as a "
+        "limitation; ETP-T10 records the bar and never adds an exclusion to close "
+        "a gap.",
+        release_claims, ["IMP-CONSUMER-CLOSURE"],
+        f"ETP-T10 audits the {consumer} closure's recorded omissions")
+    nodes[oid]["closure_exclusions"] = {
+        "rows": audit["exclusion_rows"],
+        "failing_rows": failing,
+        "category": "all",
+        "failing_ids": list(audit["failing_ids"]),
+    }
+    nodes[oid]["state"] = state
+    if failing:
+        orphan(
+            f"ORPHAN-13:{oid}", 13, oid, "exclusion_fails_bar",
+            "Re-run the recorded exclusion procedure against the claimed identity, "
+            "or record the omission as an explicit, accepted limitation; the "
+            "count is never reduced to make a closure pass.")
+        for rid in release_claims:
+            if nodes[rid].get("claimed_verdict") in _RELEASE_POSITIVE:
+                _closure_claim_orphans.add(rid)
+
+for rid in sorted(_closure_claim_orphans):
+    orphan(
+        f"ORPHAN-13:CLAIM:{rid}", 13, rid,
+        "safe_compatible_with_failing_exclusion",
+        "Discharge or explicitly accept every failing exclusion in the closure "
+        f"that supports {rid}, or withdraw the positive verdict.")
+
 # ---------------------------------------------------------------- extra evidence
 EXTRA_EVIDENCE = [
     ("EVD-ETP0-RECEIPT", "ETP-0 baseline and trust-gap receipt", "evidence/etp0/RECEIPT.md",
@@ -1210,12 +1283,15 @@ document = {
         "The graph records what the tracked records state; it does not establish that a requirement is met.",
         "An edge means the cited record states the relation; it is not a proof of the relation.",
         "A specification node's independence is a claim about provenance, not about correctness.",
-        "The orphan machinery detects the twelve named omissions only; it does not detect stale evidence, "
+        "The orphan machinery detects the thirteen named omissions only; it does not detect stale evidence, "
         "an incorrect measurement or a false claim that cites a real record.",
         "MC/DC and structural coverage are not measured for this graph; the coverage gap is recorded in "
         "docs/REQUIREMENTS-TRACEABILITY.md and is not a pass.",
         "An ETP-T4 obligation node records a class-level inventory, not a per-site proof; a class "
         "with uncovered sites is class 12, and a covered class is not thereby SAFETY_DISCHARGED.",
+        "ETP-T10 projects the recorded omission counts of each consumer closure; a passing row means "
+        "the exclusion procedure can be run against the recorded identity, not that it was re-run "
+        "for this graph, and class 13 records a failing row rather than repairing it.",
     ],
 }
 

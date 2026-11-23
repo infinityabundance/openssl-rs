@@ -161,18 +161,16 @@
     {
       "aggregate": "safe-compatible-openssh-b85c",
       "blocked_rows": [
-        "dissent",
-        "retraction"
+        "dissent"
       ],
       "blocked_rows_visible_in_document": true,
       "path": "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
       "refusal": {
         "blocked_rows": [
-          "dissent",
-          "retraction"
+          "dissent"
         ],
         "code": "CD_AGGREGATE_PASS_HIDES_BLOCKED_ROW",
-        "detail": "aggregate safe-compatible-openssh-b85c reports an overall pass (verdict.value) while containing 2 blocked or not-established row(s)"
+        "detail": "aggregate safe-compatible-openssh-b85c reports an overall pass (verdict.value) while containing 1 blocked or not-established row(s)"
       },
       "reported_overall_state": "PASS",
       "reported_state_source": "verdict.value",
@@ -185,10 +183,11 @@
           "state": "NOT_ESTABLISHED"
         },
         {
-          "blocked": true,
+          "blocked": false,
+          "detail": "five mechanisms remain below mechanism-wide grade",
           "id": "retraction",
           "locator": "retraction.status",
-          "state": "WITHDRAWN"
+          "state": "RETRACTED_SUB_CLAIM"
         }
       ],
       "sha256": "41e5797d50bff7b62b25e25184f739bc3d68115396f32c4236d00a14e0301dd2"
@@ -838,18 +837,17 @@
     }
   ],
   "identity": {
-    "commit": "87d0868ef4d3f1a9d0686bd367e790105a820e03"
+    "commit": "7e70b667f107c0f2f1dd297dfa6f7c285934d3e3"
   },
   "refusal_count": 2,
   "refusals": [
     {
       "aggregate": "safe-compatible-openssh-b85c",
       "blocked_rows": [
-        "dissent",
-        "retraction"
+        "dissent"
       ],
       "code": "CD_AGGREGATE_PASS_HIDES_BLOCKED_ROW",
-      "detail": "aggregate safe-compatible-openssh-b85c reports an overall pass (verdict.value) while containing 2 blocked or not-established row(s)"
+      "detail": "aggregate safe-compatible-openssh-b85c reports an overall pass (verdict.value) while containing 1 blocked or not-established row(s)"
     },
     {
       "aggregate": "campaign-status",

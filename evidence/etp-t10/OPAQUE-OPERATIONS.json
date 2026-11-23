@@ -5,7 +5,7 @@
     "scope": "the scope of the assumption"
   },
   "identity": {
-    "commit": "87d0868ef4d3f1a9d0686bd367e790105a820e03",
+    "commit": "7e70b667f107c0f2f1dd297dfa6f7c285934d3e3",
     "digest_rule": "the operation population is read from the closure receipts at the named commit"
   },
   "item": "ETP-T10 of docs/ETP-TODO.md",
@@ -303,14 +303,20 @@
       "contract_missing": [
         "no contract names this literal"
       ],
-      "dso": "libcrypto.so.3",
-      "exported": true,
+      "dsos": [
+        "libcrypto.so.3",
+        "libssl.so.3"
+      ],
+      "exported": [
+        true,
+        false
+      ],
       "id": "OP-CURL-0010",
       "kind": "dlsym-literal-not-covered",
       "operation": "CRYPTO_free",
       "scoped_contract": false,
-      "sites": 4,
-      "source": "precision.dlsym_literals[libcrypto.so.3][CRYPTO_free]"
+      "sites": 8,
+      "source": "precision.dlsym_literals[CRYPTO_free]"
     },
     {
       "consumer": "curl",
@@ -318,14 +324,20 @@
       "contract_missing": [
         "no contract names this literal"
       ],
-      "dso": "libcrypto.so.3",
-      "exported": true,
+      "dsos": [
+        "libcrypto.so.3",
+        "libssl.so.3"
+      ],
+      "exported": [
+        true,
+        false
+      ],
       "id": "OP-CURL-0011",
       "kind": "dlsym-literal-not-covered",
       "operation": "OPENSSL_init_crypto",
       "scoped_contract": false,
-      "sites": 2,
-      "source": "precision.dlsym_literals[libcrypto.so.3][OPENSSL_init_crypto]"
+      "sites": 4,
+      "source": "precision.dlsym_literals[OPENSSL_init_crypto]"
     },
     {
       "consumer": "curl",
@@ -333,14 +345,20 @@
       "contract_missing": [
         "no contract names this literal"
       ],
-      "dso": "libcrypto.so.3",
-      "exported": false,
+      "dsos": [
+        "libcrypto.so.3",
+        "libssl.so.3"
+      ],
+      "exported": [
+        false,
+        false
+      ],
       "id": "OP-CURL-0012",
       "kind": "dlsym-literal-not-covered",
       "operation": "__pthread_get_minstack",
       "scoped_contract": false,
-      "sites": 1,
-      "source": "precision.dlsym_literals[libcrypto.so.3][__pthread_get_minstack]"
+      "sites": 2,
+      "source": "precision.dlsym_literals[__pthread_get_minstack]"
     },
     {
       "consumer": "curl",
@@ -348,14 +366,20 @@
       "contract_missing": [
         "no contract names this literal"
       ],
-      "dso": "libcrypto.so.3",
-      "exported": true,
+      "dsos": [
+        "libcrypto.so.3",
+        "libssl.so.3"
+      ],
+      "exported": [
+        true,
+        false
+      ],
       "id": "OP-CURL-0013",
       "kind": "dlsym-literal-not-covered",
       "operation": "conf_ssl_get",
       "scoped_contract": false,
-      "sites": 2,
-      "source": "precision.dlsym_literals[libcrypto.so.3][conf_ssl_get]"
+      "sites": 4,
+      "source": "precision.dlsym_literals[conf_ssl_get]"
     },
     {
       "consumer": "curl",
@@ -363,14 +387,20 @@
       "contract_missing": [
         "no contract names this literal"
       ],
-      "dso": "libcrypto.so.3",
-      "exported": true,
+      "dsos": [
+        "libcrypto.so.3",
+        "libssl.so.3"
+      ],
+      "exported": [
+        true,
+        false
+      ],
       "id": "OP-CURL-0014",
       "kind": "dlsym-literal-not-covered",
       "operation": "conf_ssl_get_cmd",
       "scoped_contract": false,
-      "sites": 2,
-      "source": "precision.dlsym_literals[libcrypto.so.3][conf_ssl_get_cmd]"
+      "sites": 4,
+      "source": "precision.dlsym_literals[conf_ssl_get_cmd]"
     },
     {
       "consumer": "curl",
@@ -378,104 +408,20 @@
       "contract_missing": [
         "no contract names this literal"
       ],
-      "dso": "libcrypto.so.3",
-      "exported": true,
+      "dsos": [
+        "libcrypto.so.3",
+        "libssl.so.3"
+      ],
+      "exported": [
+        true,
+        false
+      ],
       "id": "OP-CURL-0015",
       "kind": "dlsym-literal-not-covered",
       "operation": "conf_ssl_name_find",
       "scoped_contract": false,
-      "sites": 2,
-      "source": "precision.dlsym_literals[libcrypto.so.3][conf_ssl_name_find]"
-    },
-    {
-      "consumer": "curl",
-      "contract": null,
-      "contract_missing": [
-        "no contract names this literal"
-      ],
-      "dso": "libssl.so.3",
-      "exported": false,
-      "id": "OP-CURL-0016",
-      "kind": "dlsym-literal-not-covered",
-      "operation": "CRYPTO_free",
-      "scoped_contract": false,
       "sites": 4,
-      "source": "precision.dlsym_literals[libssl.so.3][CRYPTO_free]"
-    },
-    {
-      "consumer": "curl",
-      "contract": null,
-      "contract_missing": [
-        "no contract names this literal"
-      ],
-      "dso": "libssl.so.3",
-      "exported": false,
-      "id": "OP-CURL-0017",
-      "kind": "dlsym-literal-not-covered",
-      "operation": "OPENSSL_init_crypto",
-      "scoped_contract": false,
-      "sites": 2,
-      "source": "precision.dlsym_literals[libssl.so.3][OPENSSL_init_crypto]"
-    },
-    {
-      "consumer": "curl",
-      "contract": null,
-      "contract_missing": [
-        "no contract names this literal"
-      ],
-      "dso": "libssl.so.3",
-      "exported": false,
-      "id": "OP-CURL-0018",
-      "kind": "dlsym-literal-not-covered",
-      "operation": "__pthread_get_minstack",
-      "scoped_contract": false,
-      "sites": 1,
-      "source": "precision.dlsym_literals[libssl.so.3][__pthread_get_minstack]"
-    },
-    {
-      "consumer": "curl",
-      "contract": null,
-      "contract_missing": [
-        "no contract names this literal"
-      ],
-      "dso": "libssl.so.3",
-      "exported": false,
-      "id": "OP-CURL-0019",
-      "kind": "dlsym-literal-not-covered",
-      "operation": "conf_ssl_get",
-      "scoped_contract": false,
-      "sites": 2,
-      "source": "precision.dlsym_literals[libssl.so.3][conf_ssl_get]"
-    },
-    {
-      "consumer": "curl",
-      "contract": null,
-      "contract_missing": [
-        "no contract names this literal"
-      ],
-      "dso": "libssl.so.3",
-      "exported": false,
-      "id": "OP-CURL-0020",
-      "kind": "dlsym-literal-not-covered",
-      "operation": "conf_ssl_get_cmd",
-      "scoped_contract": false,
-      "sites": 2,
-      "source": "precision.dlsym_literals[libssl.so.3][conf_ssl_get_cmd]"
-    },
-    {
-      "consumer": "curl",
-      "contract": null,
-      "contract_missing": [
-        "no contract names this literal"
-      ],
-      "dso": "libssl.so.3",
-      "exported": false,
-      "id": "OP-CURL-0021",
-      "kind": "dlsym-literal-not-covered",
-      "operation": "conf_ssl_name_find",
-      "scoped_contract": false,
-      "sites": 2,
-      "source": "precision.dlsym_literals[libssl.so.3][conf_ssl_name_find]"
+      "source": "precision.dlsym_literals[conf_ssl_name_find]"
     },
     {
       "consumer": "curl",
@@ -483,7 +429,7 @@
       "contract_missing": [
         "the resolved module and symbol names are configuration"
       ],
-      "id": "OP-CURL-0022",
+      "id": "OP-CURL-0016",
       "kind": "dynamic-name-lookup",
       "operation": "DSO_bind_func",
       "scoped_contract": false,
@@ -496,7 +442,7 @@
       "contract_missing": [
         "the resolved module and symbol names are configuration"
       ],
-      "id": "OP-CURL-0023",
+      "id": "OP-CURL-0017",
       "kind": "dynamic-name-lookup",
       "operation": "DSO_convert_filename",
       "scoped_contract": false,
@@ -509,7 +455,7 @@
       "contract_missing": [
         "no scoped contract for this dependency"
       ],
-      "id": "OP-CURL-0024",
+      "id": "OP-CURL-0018",
       "kind": "unmodelled-shared-object",
       "operation": "libz.so.1",
       "scoped_contract": false,
@@ -522,7 +468,7 @@
       "contract_missing": [
         "no scoped contract for this dependency"
       ],
-      "id": "OP-CURL-0025",
+      "id": "OP-CURL-0019",
       "kind": "unmodelled-shared-object",
       "operation": "libc.so.6",
       "scoped_contract": false,
@@ -535,7 +481,7 @@
       "contract_missing": [
         "class is named ABI_* but the closure engine has no contract for it"
       ],
-      "id": "OP-CURL-0026",
+      "id": "OP-CURL-0020",
       "kind": "abi-class-without-contract",
       "operation": "ABI_OPEN_METHOD_TABLE",
       "scoped_contract": false,
@@ -812,14 +758,18 @@
       "contract_missing": [
         "no contract names this literal"
       ],
-      "dso": "libcrypto.so.3",
-      "exported": true,
+      "dsos": [
+        "libcrypto.so.3"
+      ],
+      "exported": [
+        true
+      ],
       "id": "OP-SSH-0009",
       "kind": "dlsym-literal-not-covered",
       "operation": "CRYPTO_free",
       "scoped_contract": false,
       "sites": 4,
-      "source": "precision.dlsym_literals[libcrypto.so.3][CRYPTO_free]"
+      "source": "precision.dlsym_literals[CRYPTO_free]"
     },
     {
       "consumer": "ssh",
@@ -827,14 +777,18 @@
       "contract_missing": [
         "no contract names this literal"
       ],
-      "dso": "libcrypto.so.3",
-      "exported": true,
+      "dsos": [
+        "libcrypto.so.3"
+      ],
+      "exported": [
+        true
+      ],
       "id": "OP-SSH-0010",
       "kind": "dlsym-literal-not-covered",
       "operation": "OPENSSL_init_crypto",
       "scoped_contract": false,
       "sites": 2,
-      "source": "precision.dlsym_literals[libcrypto.so.3][OPENSSL_init_crypto]"
+      "source": "precision.dlsym_literals[OPENSSL_init_crypto]"
     },
     {
       "consumer": "ssh",
@@ -842,14 +796,18 @@
       "contract_missing": [
         "no contract names this literal"
       ],
-      "dso": "libcrypto.so.3",
-      "exported": false,
+      "dsos": [
+        "libcrypto.so.3"
+      ],
+      "exported": [
+        false
+      ],
       "id": "OP-SSH-0011",
       "kind": "dlsym-literal-not-covered",
       "operation": "__pthread_get_minstack",
       "scoped_contract": false,
       "sites": 1,
-      "source": "precision.dlsym_literals[libcrypto.so.3][__pthread_get_minstack]"
+      "source": "precision.dlsym_literals[__pthread_get_minstack]"
     },
     {
       "consumer": "ssh",
@@ -857,14 +815,18 @@
       "contract_missing": [
         "no contract names this literal"
       ],
-      "dso": "libcrypto.so.3",
-      "exported": true,
+      "dsos": [
+        "libcrypto.so.3"
+      ],
+      "exported": [
+        true
+      ],
       "id": "OP-SSH-0012",
       "kind": "dlsym-literal-not-covered",
       "operation": "conf_ssl_get",
       "scoped_contract": false,
       "sites": 2,
-      "source": "precision.dlsym_literals[libcrypto.so.3][conf_ssl_get]"
+      "source": "precision.dlsym_literals[conf_ssl_get]"
     },
     {
       "consumer": "ssh",
@@ -872,14 +834,18 @@
       "contract_missing": [
         "no contract names this literal"
       ],
-      "dso": "libcrypto.so.3",
-      "exported": true,
+      "dsos": [
+        "libcrypto.so.3"
+      ],
+      "exported": [
+        true
+      ],
       "id": "OP-SSH-0013",
       "kind": "dlsym-literal-not-covered",
       "operation": "conf_ssl_get_cmd",
       "scoped_contract": false,
       "sites": 2,
-      "source": "precision.dlsym_literals[libcrypto.so.3][conf_ssl_get_cmd]"
+      "source": "precision.dlsym_literals[conf_ssl_get_cmd]"
     },
     {
       "consumer": "ssh",
@@ -887,14 +853,18 @@
       "contract_missing": [
         "no contract names this literal"
       ],
-      "dso": "libcrypto.so.3",
-      "exported": true,
+      "dsos": [
+        "libcrypto.so.3"
+      ],
+      "exported": [
+        true
+      ],
       "id": "OP-SSH-0014",
       "kind": "dlsym-literal-not-covered",
       "operation": "conf_ssl_name_find",
       "scoped_contract": false,
       "sites": 2,
-      "source": "precision.dlsym_literals[libcrypto.so.3][conf_ssl_name_find]"
+      "source": "precision.dlsym_literals[conf_ssl_name_find]"
     },
     {
       "consumer": "ssh",
@@ -1218,14 +1188,18 @@
       "contract_missing": [
         "no contract names this literal"
       ],
-      "dso": "libcrypto.so.3",
-      "exported": true,
+      "dsos": [
+        "libcrypto.so.3"
+      ],
+      "exported": [
+        true
+      ],
       "id": "OP-SSHD-0009",
       "kind": "dlsym-literal-not-covered",
       "operation": "CRYPTO_free",
       "scoped_contract": false,
       "sites": 4,
-      "source": "precision.dlsym_literals[libcrypto.so.3][CRYPTO_free]"
+      "source": "precision.dlsym_literals[CRYPTO_free]"
     },
     {
       "consumer": "sshd",
@@ -1233,14 +1207,18 @@
       "contract_missing": [
         "no contract names this literal"
       ],
-      "dso": "libcrypto.so.3",
-      "exported": true,
+      "dsos": [
+        "libcrypto.so.3"
+      ],
+      "exported": [
+        true
+      ],
       "id": "OP-SSHD-0010",
       "kind": "dlsym-literal-not-covered",
       "operation": "OPENSSL_init_crypto",
       "scoped_contract": false,
       "sites": 2,
-      "source": "precision.dlsym_literals[libcrypto.so.3][OPENSSL_init_crypto]"
+      "source": "precision.dlsym_literals[OPENSSL_init_crypto]"
     },
     {
       "consumer": "sshd",
@@ -1248,14 +1226,18 @@
       "contract_missing": [
         "no contract names this literal"
       ],
-      "dso": "libcrypto.so.3",
-      "exported": false,
+      "dsos": [
+        "libcrypto.so.3"
+      ],
+      "exported": [
+        false
+      ],
       "id": "OP-SSHD-0011",
       "kind": "dlsym-literal-not-covered",
       "operation": "__pthread_get_minstack",
       "scoped_contract": false,
       "sites": 1,
-      "source": "precision.dlsym_literals[libcrypto.so.3][__pthread_get_minstack]"
+      "source": "precision.dlsym_literals[__pthread_get_minstack]"
     },
     {
       "consumer": "sshd",
@@ -1263,14 +1245,18 @@
       "contract_missing": [
         "no contract names this literal"
       ],
-      "dso": "libcrypto.so.3",
-      "exported": true,
+      "dsos": [
+        "libcrypto.so.3"
+      ],
+      "exported": [
+        true
+      ],
       "id": "OP-SSHD-0012",
       "kind": "dlsym-literal-not-covered",
       "operation": "conf_ssl_get",
       "scoped_contract": false,
       "sites": 2,
-      "source": "precision.dlsym_literals[libcrypto.so.3][conf_ssl_get]"
+      "source": "precision.dlsym_literals[conf_ssl_get]"
     },
     {
       "consumer": "sshd",
@@ -1278,14 +1264,18 @@
       "contract_missing": [
         "no contract names this literal"
       ],
-      "dso": "libcrypto.so.3",
-      "exported": true,
+      "dsos": [
+        "libcrypto.so.3"
+      ],
+      "exported": [
+        true
+      ],
       "id": "OP-SSHD-0013",
       "kind": "dlsym-literal-not-covered",
       "operation": "conf_ssl_get_cmd",
       "scoped_contract": false,
       "sites": 2,
-      "source": "precision.dlsym_literals[libcrypto.so.3][conf_ssl_get_cmd]"
+      "source": "precision.dlsym_literals[conf_ssl_get_cmd]"
     },
     {
       "consumer": "sshd",
@@ -1293,14 +1283,18 @@
       "contract_missing": [
         "no contract names this literal"
       ],
-      "dso": "libcrypto.so.3",
-      "exported": true,
+      "dsos": [
+        "libcrypto.so.3"
+      ],
+      "exported": [
+        true
+      ],
       "id": "OP-SSHD-0014",
       "kind": "dlsym-literal-not-covered",
       "operation": "conf_ssl_name_find",
       "scoped_contract": false,
       "sites": 2,
-      "source": "precision.dlsym_literals[libcrypto.so.3][conf_ssl_name_find]"
+      "source": "precision.dlsym_literals[conf_ssl_name_find]"
     },
     {
       "consumer": "sshd",
@@ -1345,10 +1339,10 @@
   "rule": "an opaque operation is scoped only when the closure engine's contract registry supplies an assumption, a scope and a falsifier bound to a documented interface; a site that stays unresolved without such a contract is listed",
   "schema": "openssl-rs/etp-t10/opaque-operations/1",
   "totals": {
-    "operation_rows": 61,
+    "operation_rows": 55,
     "operation_sites": 472,
     "scoped_contract_rows": 24,
-    "unscoped_contract_rows": 37,
+    "unscoped_contract_rows": 31,
     "unscoped_contract_sites": 82
   }
 }
