@@ -191,3 +191,13 @@ for the increase to 2430. No test was removed or newly ignored.
 3. Run Miri over the repaired blinding and stack paths, and an independent
    reviewer over this batch, before any `SAFETY_DISCHARGED` language is used.
 4. No `REL-OPENSSH-B85C` effect: `OBL-PANIC-ATOMICITY` still constrains it.
+
+## 11. Supersession — stack destruction order
+
+The `OPENSSL_sk_pop_free` statements in §3, §5 and §9 describe the batch at
+`5d38094cc`. A later revision switched that repair to end-popping; it was linear
+but destroyed last-to-first. The stack-order follow-up at `4cafcd0ea` detaches
+the element array in constant time, restores the authority's first-to-last order,
+keeps the stack empty at every destructor, and preserves the retry property; see
+`evidence/haz-16/STACK-ORDER.md`. The two blinding repairs in this receipt are
+unchanged.

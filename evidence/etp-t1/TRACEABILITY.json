@@ -67,7 +67,7 @@
   },
   "hazard_register": {
     "path": "evidence/etp-t2/HAZARDS.json",
-    "sha256": "b8755a04b4992414f462231ba2afd13c59c721abd1b770401b9cdd4b81a179e0",
+    "sha256": "2d777b12cf8cd7348d5ddcf6caa78014c77ccc3a3cc4e2ce612ecdc2a7a5173d",
     "settling_method": "sha256 of the register file the graph projects; the register is the ETP-T2 deliverable and the graph projects its hazard entries"
   },
   "tool": {
@@ -3877,7 +3877,7 @@
       "memory_safe_claim": false,
       "barrier": {
         "state": "CLAIMED_NO_EVIDENCE",
-        "control": "guard_ffi catches and never resumes. A bounded measurement classified 79 of 823 mutation candidates in the nine security-relevant object owners; three entries were repaired to failure-atomic publication (BN_BLINDING_update, BN_BLINDING_create_param) or remove-before-release (OPENSSL_sk_pop_free), with test-only panic injection and revert controls (docs/FFI-FAILURE-ATOMICITY.md, evidence/haz-16/).",
+        "control": "guard_ffi catches and never resumes. A bounded measurement classified 79 of 823 mutation candidates in the nine security-relevant object owners; three entries were repaired to failure-atomic publication (BN_BLINDING_update, BN_BLINDING_create_param) or remove-before-release (OPENSSL_sk_pop_free), with test-only panic injection and revert controls (docs/FFI-FAILURE-ATOMICITY.md, evidence/haz-16/). OPENSSL_sk_pop_free additionally detaches the element array in constant time so destructors run first to last, matching the authority, while the stack is empty at every callback (evidence/haz-16/STACK-ORDER.md).",
         "evidence": [],
         "would_close": "Failure-atomic mutation, explicit rollback or explicit poisoning for every stateful FFI context that can panic (OBL-PANIC-ATOMICITY, OBL-XCUT-PANIC), over the whole 823-candidate population and the separate evp/rsa/ec/x509 abort path."
       },

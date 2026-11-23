@@ -136,6 +136,16 @@ injection and a recorded revert control. The remaining 744 candidates are
 boundary and is a different, unanalysed defect class. `OBL-PANIC-ATOMICITY`
 stays open and still blocks `REL-OPENSSH-B85C`.
 
+**HAZ-16 stack-order follow-up.** `OPENSSL_sk_pop_free` now detaches the whole
+element array in constant time before the first destructor. The stack is empty
+at every callback, the destructors run in the authority's first-to-last order,
+and the path remains O(n). A destructor panic leaks only the not-yet-destroyed
+elements; a retry frees the stack and destroys nothing twice. Differential
+callback-order evidence against the pinned authority DSO, the ordering,
+invariant and retry controls, two revert controls and the scaling measurement
+are in `evidence/haz-16/STACK-ORDER.md`. The barrier remains
+`CLAIMED_NO_EVIDENCE` and the 744-candidate residual is unchanged.
+
 ## 4. Fault trees
 
 Each tree is a JSON gate structure in `evidence/etp-t2/HAZARDS.json` and is

@@ -6,7 +6,9 @@ state" (`docs/HAZARD-REGISTER.md`).
 **Obligation:** `OBL-PANIC-ATOMICITY` (`docs/REQUIREMENTS-TRACEABILITY.md`).
 **Authority rule:** `AGENTS.md` §4.
 **Evidence:** `evidence/haz-16/{CLASSIFICATION.json,RECEIPT.md}`, generated from
-`evidence/haz-16/{enumerate_ffi_mutation.py,build_classification.py}`.
+`evidence/haz-16/{enumerate_ffi_mutation.py,build_classification.py}`. The stack
+destruction-order repair and its differential controls are in
+`evidence/haz-16/STACK-ORDER.md`.
 
 `guard_ffi` (`src/ffi/mod.rs`) catches a panic and never resumes. That is a
 non-unwinding guarantee, not a state guarantee: the closure has already run as
@@ -178,7 +180,7 @@ Result for the covered population (`evidence/haz-16/CLASSIFICATION.json`):
 | `src/runtime/stack.rs` | `OPENSSL_sk_free` | `FAILURE_ATOMIC` | one `Box::from_raw` release of the whole object; no intermediate publish |
 | `src/runtime/stack.rs` | `OPENSSL_sk_insert` | `FAILURE_ATOMIC` | `sk_reserve` precedes the insertion; the length and `sorted` flag change only after the insert succeeds |
 | `src/runtime/stack.rs` | `OPENSSL_sk_new_reserve` | `FAILURE_ATOMIC` | the stack is built locally and returned only after `from_boxes` completes; no caller can see a partial object |
-| `src/runtime/stack.rs` | `OPENSSL_sk_pop_free` | `ROLLBACK` | each element is removed from the `Vec` before its destructor runs; a panic leaves only the unreleased remainder, and a retry is legal (fixed in this batch) |
+| `src/runtime/stack.rs` | `OPENSSL_sk_pop_free` | `ROLLBACK` | the element array is detached in constant time before the first destructor; destructors then run first to last; a panic leaves an empty stack and leaks only the not-yet-destroyed elements, and a retry frees the stack without destroying anything twice (HAZ-16 repair plus the stack-order follow-up) |
 | `src/runtime/stack.rs` | `OPENSSL_sk_reserve` | `FAILURE_ATOMIC` | `try_reserve` precedes the `num_alloc` assignment; a refusal leaves the count and the element array unchanged |
 | `src/runtime/stack.rs` | `OPENSSL_sk_set` | `FAILURE_ATOMIC` | one element write plus the `sorted` flag; both are total operations after the index check |
 | `src/runtime/stack.rs` | `OPENSSL_sk_zero` | `FAILURE_ATOMIC` | one pass setting every slot to NULL, with no fallible step inside it |
@@ -249,6 +251,13 @@ assertion `left == right` failed: only the unprocessed element remains
  right: 1
 ```
 
+The first repair removed elements from the end, which preserved the
+empty-stack property but reversed the destruction order. The follow-up in §6.3
+detaches the whole array before the first destructor, so the HAZ-16 property is
+retained **and** the authority's first-to-last order is restored at linear cost.
+`evidence/haz-16/STACK-ORDER.md` records the ordering, panic-path, retry and
+complexity controls.
+
 ### 5.4 Remaining `PARTIAL_EXPOSED` rows
 
 Three `CRYPTO_EX_DATA` entries remain partial: `CRYPTO_new_ex_data`,
@@ -301,15 +310,30 @@ success-path return value changes.
 ### 6.3 `OPENSSL_sk_pop_free`
 
 - **Before:** iterate in place; release the stack after the loop.
-- **After:** each element is removed from the vector **before** its destructor
-  runs. A panic therefore leaves only elements whose destructors have not yet
-  run, in their original order, and the enclosing stack alive. A retry is legal
-  and releases the remainder exactly once.
-- **Compatibility delta:** destruction order is unchanged (front to back). The
-  loop is O(n²) in the number of elements because `Vec::remove(0)` shifts; the
-  element count is already bounded by the stack's `INT_MAX` ceiling, and the
-  alternative — publishing a released element — is the defect. No success-path
-  return value changes (the function returns `void`).
+- **Earlier repair:** remove one element from the end before each destructor.
+  That made the stack's view agree with what had been released, but it destroyed
+  elements last-to-first and the comment that treated the order as unobservable
+  was wrong: a caller-supplied C destructor can record events, touch shared
+  external state, or depend on another object's lifetime.
+- **After:** detach the whole element array with `mem::take` (constant time)
+  before the first destructor, then visit the detached array from index 0 to
+  `n−1`. The stack is empty at every callback, so no released element is
+  reachable and a re-entrant `sk_num`/`sk_value` observes an empty stack. The
+  `Inner` borrow ends before the loop, so the callback does not alias it.
+- **Panic path:** the detached array is a local `Vec`. Unwinding deallocates the
+  array but its elements are raw pointers and are not freed, so the elements
+  whose destructors had not run are **leaked**, never destroyed twice. The stack
+  remains alive and empty; a retry of `pop_free` frees the stack and destroys
+  nothing. This is the recorded behaviour, not an accident.
+- **Complexity:** O(n) — one constant-time detach plus one callback per element.
+  The rejected front-removal shape was O(n²) because `Vec::remove(0)` shifted the
+  prefix; the rejected end-popping shape was O(n) but reversed the order.
+- **Compatibility delta:** destruction order now matches the authority (front to
+  back); each destructor observes an empty stack instead of the authority's
+  populated one, which is the HAZ-16 safety improvement. On an interrupted call
+  the authority would leave released elements reachable and this implementation
+  leaks the unprocessed remainder. No success-path return value changes (the
+  function returns `void`).
 
 ### 6.4 Allocation delta
 
@@ -336,7 +360,7 @@ are the only injected panics; no production path gained a panic.
 |---|---|---|---|
 | `BN_BLINDING_update` | `bn::blinding::tests::a_panic_between_the_blinding_squares_leaves_the_factor_pair_usable` | `bn::blinding::tests::the_blinding_round_trip_cancels_after_the_private_exponentiation` | publishing `ai` before computing the `a` square → the failure-path test fails on `round_trip_cancels` |
 | `BN_BLINDING_create_param` | `bn::blinding::tests::a_panic_after_the_blinding_draw_does_not_publish_the_new_factor` | `bn::blinding::tests::create_param_on_an_existing_context_still_publishes_a_cancelling_pair` | copying the fresh draw into `b->a` before the inverse → the failure-path test fails on `round_trip_cancels` |
-| `OPENSSL_sk_pop_free` | `runtime::stack::tests::a_panic_during_pop_free_leaves_only_unreleased_elements_reachable` | `runtime::stack::tests::pop_free_releases_each_element_once_on_the_success_path` | restoring the in-place iteration → the failure-path test fails with `sk_num == 2` |
+| `OPENSSL_sk_pop_free` | `runtime::stack::tests::a_panic_during_pop_free_leaves_no_reachable_element_and_a_retry_is_safe` | `runtime::stack::tests::pop_free_releases_each_element_once_on_the_success_path`, `runtime::stack::tests::pop_free_destroys_elements_first_to_last` | restoring the end-popping order → `pop_free_destroys_elements_first_to_last` fails on the observed sequence; restoring in-place iteration → the failure-path test fails with `sk_num != 0` and a double release |
 
 The revert controls were executed by temporarily restoring the pre-fix
 ordering in the working tree, running the named tests, recording the failure
