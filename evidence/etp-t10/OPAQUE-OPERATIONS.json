@@ -1,0 +1,1354 @@
+{
+  "contract_requirements": {
+    "assumption": "what the operation is assumed to do",
+    "falsifier": "what would falsify it",
+    "scope": "the scope of the assumption"
+  },
+  "identity": {
+    "commit": "87d0868ef4d3f1a9d0686bd367e790105a820e03",
+    "digest_rule": "the operation population is read from the closure receipts at the named commit"
+  },
+  "item": "ETP-T10 of docs/ETP-TODO.md",
+  "non_claims": [
+    "A scoped contract bounds what the operation is assumed to do; it does not establish the behaviour or memory safety of the external implementation.",
+    "An operation listed without a contract is not thereby unsafe; it is an admission that the closure cannot see into it under a documented interface."
+  ],
+  "operations": [
+    {
+      "consumer": "curl",
+      "contract": {
+        "citation": [
+          "include/openssl/conf.h:107-108 -- typedef conf_init_func and conf_finish_func; conf.h:195 -- CONF_module_add(const char *, conf_init_func *, conf_finish_func *)",
+          "src/runtime/confmod/mod.rs:214-232 -- `#[repr(C)] ConfModule`; `init` is at 0x10 and `finish` at 0x18",
+          "src/runtime/confmod/mod.rs:854-950 -- `module_add` is the only writer of `(*tmod).init` and `(*tmod).finish` (from its `ifunc` and `ffunc` parameters)",
+          "src/runtime/confmod/mod.rs:775-842 -- `module_load_dso` binds `OPENSSL_init` and `OPENSSL_finish` with `DSO_bind_func` and forwards them to `module_add`",
+          "src/runtime/confmod/mod.rs:1392-1414 -- `CONF_module_add` is the exported static-module seam",
+          "src/runtime/confmod/mod.rs:1115,1122 -- `CONF_modules_load` calls `(*pmod).init` and `(*pmod).finish`"
+        ],
+        "contract": "the `CONF_MODULE` `init` and `finish` callbacks registered by `CONF_module_add` or bound from a loaded DSO's `OPENSSL_init`/`OPENSSL_finish`",
+        "covers": "the public `CONF_module_add` seam, the DSO `OPENSSL_init`/`OPENSSL_finish` seam, the `ConfModule.init`/`finish` fields at 0x10/0x18, and every in-image caller of `CONF_module_add` as a documented interface user",
+        "does_not_cover": [
+          "which module an application registers or loads; both seams are public and the target set is unbounded",
+          "the behaviour or lifetime of the module callbacks",
+          "the loaded DSO's own ABI compliance",
+          "a direct or aliasing writer of the fields outside `module_add`; the witness refuses one",
+          "a store through an opaque alias in code that never names `ConfModule` or its accessors; the source scan cannot attribute it (no such store was found in this candidate)",
+          "the in-image built-in module callers as a finite bound: they are enumerated, not used to narrow the set",
+          "a slot store inside a `macro_rules!` body in a file that names `ConfModule` or its accessors; the scan refuses the conservative pattern (`macro-expanded-slot-store-unattributed`), and the scan is file-scoped, so a macro defined in a file that never names the owner or an accessor is outside it",
+          "a `macro_rules!` body whose field name is itself a metavariable (`(*$p).$f = $v;`): the literal-field conservative pattern does not see it and it is not refused; no such macro exists in the candidate's `ConfModule`-naming files",
+          "a call at the enumerated address whose function leaf differs; it falls through to target-bounded with no named refusal (the address is not the identity)"
+        ],
+        "provider_obligation": "the application supplies a `conf_init_func` and optional `conf_finish_func` (directly through `CONF_module_add` or by a DSO exporting `OPENSSL_init`/`OPENSSL_finish`) that are valid for the module's lifetime; the registry copies the pointers unchanged",
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-CURL-0001",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_CONF_MODULE",
+      "scoped_contract": true,
+      "sites": 2,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_CONF_MODULE]"
+    },
+    {
+      "consumer": "curl",
+      "contract": {
+        "citation": [
+          "include/openssl/core.h:186-195 -- typedef int(OSSL_provider_init_fn)(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in, const OSSL_DISPATCH **out, void **provctx); the header's own comment says |in| 'is the array of functions that the Core passes to the provider'",
+          "include/openssl/core_dispatch.h:73-78 -- 'Core function identities, for the two OSSL_DISPATCH tables being passed in the OSSL_provider_init call. ... Functions provided by the Core to the provider, reserved numbers 1-1023'",
+          "include/openssl/core_dispatch.h:153-161 -- the OSSL_FUNC_BIO_* ids (42, 43, 44, 45, 48, 49, 50) with their OSSL_CORE_MAKE_FUNC signatures (BIO_read_ex, BIO_write_ex, BIO_up_ref, BIO_free, BIO_puts, BIO_gets, BIO_ctrl)",
+          "include/openssl/core_dispatch.h:202-227 -- the OSSL_FUNC_PROVIDER_* ids (105-111) and their signatures (provider_register_child_cb, provider_deregister_child_cb, provider_name, provider_get0_provider_ctx, provider_get0_dispatch, provider_up_ref, provider_free)",
+          "include/openssl/crypto.h:601-604 -- OSSL_LIB_CTX_new_from_dispatch(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in) and OSSL_LIB_CTX_new_child(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in): the caller passes the same `in` table on",
+          "src/context/core_bio.rs:402-447 -- `ossl_bio_init_core` is the only writer of BioCoreGlobals, one field per OSSL_FUNC_BIO_* id, from the caller's `fns` array; reached from `OSSL_LIB_CTX_new_from_dispatch` (src/context/mod.rs)",
+          "src/provider/child.rs:470-560 -- `ossl_provider_init_as_child` is the only writer of ChildProvGlobals' callback fields, one field per OSSL_FUNC_* id, from the caller's `in` array; reached from `OSSL_LIB_CTX_new_child` (src/context/mod.rs:1234)"
+        ],
+        "contract": "the core-to-provider `in` dispatch table passed to `OSSL_provider_init` (and forwarded by the provider to `OSSL_LIB_CTX_new_from_dispatch`/`OSSL_LIB_CTX_new_child`)",
+        "covers": "the exact libctx slot objects (slot 17 `BioCoreGlobals`, slot 18 `ChildProvGlobals`), the exact field each enumerated site reads, the single in-image writer of that field, and the documented `OSSL_FUNC_*` id that writer stores into it",
+        "does_not_cover": [
+          "which core/module supplies the `in` table; the target set is unbounded by the C ABI",
+          "the behaviour or lifetime of the supplied upcall, which is the supplying core's obligation",
+          "a site whose base register is not proven to be the slot-17/18 libctx data object",
+          "a site whose offset is not a field of the documented table, or whose in-image writer is not the enumerated init function",
+          "a field with a second source store, a macro-expanded store, or a store under a different `OSSL_FUNC_*` id; the witness refuses it",
+          "reachability from these two workloads, or that a configuration file exists at run time"
+        ],
+        "provider_obligation": "the caller (the Core, or a provider acting as the Core for a nested child) supplies the function for each documented id and owns its correctness and lifetime; the crate forwards the entry and invokes it with the documented signature, and never substitutes an in-image target",
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-CURL-0002",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_CORE_DISPATCH",
+      "scoped_contract": true,
+      "sites": 51,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_CORE_DISPATCH]"
+    },
+    {
+      "consumer": "curl",
+      "contract": {
+        "citation": [
+          "the exact prototype in the admitted install's include/openssl/*.h: the parameter is declared with a function-pointer typedef, so the value is supplied by the caller and the C ABI places no bound on it",
+          "the same symbol is defined in the image's .dynsym, so any process that links libcrypto may call it with any callback",
+          "include/openssl/modes.h:25/69 -- typedef void (*block128_f)(const unsigned char in[16], unsigned char out[16], const void *key); and CRYPTO_cfb128_encrypt(..., int enc, block128_f block)",
+          "include/openssl/types.h:237 -- typedef int pem_password_cb(char *buf, int size, int rwflag, void *userdata); pem.h:537 passes it as b2i_PVK_bio_ex(BIO *in, pem_password_cb *cb, void *u, ...)"
+        ],
+        "contract": "an exported C function's callback parameter",
+        "covers": "the public seam through which a C caller supplies a callback to an exported function; the function name, the parameter index and the declared callback type are the documented interface",
+        "does_not_cover": [
+          "the behaviour or lifetime of the application's callback, which is the application's obligation once supplied",
+          "a NULL argument where the header does not admit one; that is a C-invalid input, not a target",
+          "which callback (if any) an in-image caller installs; the target set is unbounded",
+          "a private wrapper whose callers are all in-image and finite: the witness defers it to reachable-caller-target instead",
+          "reachability from the two workloads, or that an external caller exists at run time"
+        ],
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-CURL-0003",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_EXPORT_CALLBACK",
+      "scoped_contract": true,
+      "sites": 66,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_EXPORT_CALLBACK]"
+    },
+    {
+      "consumer": "curl",
+      "contract": {
+        "citation": [
+          "include/openssl/types.h:237 -- typedef int pem_password_cb(char *buf, int size, int rwflag, void *userdata); include/openssl/pem.h:439-440 -- the default `PEM_def_callback`; pem.h:492-503, 514-521 -- the exported PKCS#8 writer family's `cb` parameter",
+          "src/pem/pem_pk8.rs:87-129 -- `do_pk8pkey` stores the caller's `cb` and installs `PEM_def_callback` when both `kstr` and `cb` are NULL",
+          "src/pem/pem_pk8.rs:175-179 -- the only call through `cb` (`cb.unwrap_or(PEM_def_callback)(...)`)",
+          "src/pem/pem_pk8.rs:337-417 -- the four BIO wrappers forward their own `cb` parameter; pem_pk8.rs:485-507 -- `do_pk8pkey_fp` forwards its `cb` to `do_pk8pkey`; the FILE wrappers call it",
+          "src/pem/pem_lib.rs:282 -- `PEM_def_callback` implements the `pem_password_cb` signature"
+        ],
+        "contract": "an exported PEM PKCS#8 writer's `pem_password_cb *cb` parameter, with the documented NULL-selected in-image default `PEM_def_callback`",
+        "covers": "the exported PEM PKCS#8 writer family's `cb` parameter, the BIO and FILE wrapper forwarding chains, and the NULL-selected `PEM_def_callback` default target",
+        "does_not_cover": [
+          "which callback an application supplies; the target set is unbounded",
+          "the behaviour or lifetime of the application's callback",
+          "a caller that installs a non-parameter in-image callback; the witness refuses one",
+          "any other `pem_password_cb`-bearing site outside the four BIO writers and the FILE wrapper chain",
+          "a NULL default that is absent or not `PEM_def_callback`; the witness refuses it",
+          "a call at the enumerated address whose function leaf differs; it falls through to target-bounded with no named refusal (the address is not the identity)"
+        ],
+        "provider_obligation": "the application supplies a `pem_password_cb` of the declared signature that is valid for the call; a NULL callback with no key string selects the in-image `PEM_def_callback`",
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-CURL-0004",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT",
+      "scoped_contract": true,
+      "sites": 1,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT]"
+    },
+    {
+      "consumer": "curl",
+      "contract": {
+        "citation": [
+          "include/openssl/evp.h:499-503 -- typedef int(EVP_PBE_KEYGEN)(...); evp.h:1592-1595 -- EVP_PBE_alg_add_type(..., EVP_PBE_KEYGEN *keygen) and EVP_PBE_alg_add(..., EVP_PBE_KEYGEN *keygen); evp.h:1598-1599 -- EVP_PBE_find_ex(..., EVP_PBE_KEYGEN **pkeygen, EVP_PBE_KEYGEN_EX **pkeygen_ex)",
+          "src/evp/evp_pbe.rs:133-147 -- `#[repr(C)] EvpPbeCtl` with `pbe_type`, `pbe_nid`, `cipher_nid`, `md_nid`, `keygen`, `keygen_ex`, so `keygen` is at offset 0x10 and `keygen_ex` at 0x18",
+          "src/evp/evp_pbe.rs:154-433 -- `static BUILTIN_PBE: [EvpPbeCtl; 34]`, the link-time rows (six carry both keygens, eighteen carry neither)",
+          "src/evp/evp_pbe.rs:793-847 -- `EVP_PBE_alg_add_type` allocates a zeroed row and stores `(*row).keygen = keygen` (the parameter) and `(*row).keygen_ex = None`",
+          "src/evp/evp_pbe.rs:893-968 -- `EVP_PBE_find_ex` searches the application registry first, then the builtin table, and copies `row.keygen` through `*pkeygen`",
+          "src/evp/evp_pbe.rs:735-741 -- `EVP_PBE_CipherInit_ex` calls the plain `keygen` only when `keygen_ex` is absent (the authority's unconditional call is D-PBE-PKCS12-KEYGEN-1)"
+        ],
+        "contract": "the `EVP_PBE_CTL.keygen` field returned by `EVP_PBE_find_ex` and filled by `EVP_PBE_alg_add_type`/`EVP_PBE_alg_add`",
+        "covers": "the public `EVP_PBE_alg_add_type`/`EVP_PBE_alg_add` seam, the `EvpPbeCtl.keygen` field at offset 0x10, the `EVP_PBE_find_ex` return slot, and the in-image `BUILTIN_PBE` rows",
+        "does_not_cover": [
+          "which keygen an application registers; the exported registry seam makes the target set unbounded",
+          "the behaviour or lifetime of the application keygen, which is the application's obligation once registered",
+          "the finite builtin rows as a target bound: they are recorded, never used to turn the site into a finite target set",
+          "a second or aliasing writer of `EvpPbeCtl.keygen`; the witness refuses one",
+          "a store through an opaque alias in code that never names `EvpPbeCtl`; the source scan cannot attribute it (no such store was found in this candidate)",
+          "NULL where the authority calls only a non-NULL keygen; the crate's `both slots empty -> 0` divergence is D-PBE-PKCS12-KEYGEN-1",
+          "a slot store inside a `macro_rules!` body in a file that names `EvpPbeCtl` or its accessors; the scan refuses the conservative pattern (`macro-expanded-slot-store-unattributed`), and the scan is file-scoped, so a macro defined in a file that never names the owner or an accessor is outside it",
+          "a `macro_rules!` body whose field name is itself a metavariable (`(*$p).$f = $v;`): the literal-field conservative pattern does not see it and it is not refused; no such macro exists in the candidate's `EvpPbeCtl`-naming files",
+          "a call at the enumerated address whose function leaf differs; it falls through to target-bounded with no named refusal (the address is not the identity)"
+        ],
+        "provider_obligation": "the application supplies an `EVP_PBE_KEYGEN` of the declared signature that outlives the registry; `EVP_PBE_alg_add_type` copies the pointer unchanged and the consumer calls it with the documented arguments",
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-CURL-0005",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_PBE_REGISTRY",
+      "scoped_contract": true,
+      "sites": 1,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_PBE_REGISTRY]"
+    },
+    {
+      "consumer": "curl",
+      "contract": {
+        "citation": [
+          "include/openssl/core.h:40-44 -- struct ossl_dispatch_st { int function_id; void (*function)(void); }, and OSSL_DISPATCH_END { 0, NULL }: an array of dispatch elements is always terminated by function_id == 0",
+          "include/openssl/core.h:186-195 -- typedef int OSSL_provider_init_fn(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in, const OSSL_DISPATCH **out, void **provctx); |out| is the base-function array the provider returns to the core; |provctx| is passed to the provider's other context constructors",
+          "include/openssl/core_dispatch.h:30-68 -- function identities start at 1 (0 terminates the table) and each OSSL_FUNC_* extractor names the signature the core will call",
+          "include/openssl/provider.h:78-85 -- OSSL_PROVIDER_add_builtin(OSSL_LIB_CTX *, const char *name, OSSL_provider_init_fn *init_fn); the same entry-point type is what an externally loaded module implements"
+        ],
+        "contract": "OSSL_provider_init",
+        "covers": "the interface by which an out-of-image provider is entered, the shape of the dispatch table it returns, the provider's own allocation correctness, and the store-loader `OsslStoreLoader.p_close` slot (`OSSL_FUNC_STORE_CLOSE`) at the enumerated `OSSL_STORE_open_ex` site",
+        "does_not_cover": [
+          "which module (if any) the effective configuration names; the target set is unbounded",
+          "the memory safety or correctness of the external provider, which is the provider's own obligation after the ABI boundary",
+          "reachability from these two workloads, or that a configuration file exists at run time",
+          "application code not loaded as a provider; it is not a node in this closure",
+          "in-image target completeness for the built-in provider path",
+          "the legacy store-loader `closefn`/`open`/`open_ex` fields, which are `ABI_CONTRACT_STORE_LOADER`",
+          "a call at the enumerated address whose function leaf differs; it falls through to target-bounded with no named refusal (the address is not the identity)",
+          "the store-loader `p_close` writer set when a `macro_rules!` body in an owner-naming file stores a slot; that site refuses on the conservative `macro-expanded-slot-store-unattributed` pattern, and the scan is file-scoped (a macro defined in a file that never names the owner is outside it)",
+          "for the store-loader `p_close` use, a `macro_rules!` body whose field name is itself a metavariable (`(*$p).$f = $v;`): the literal-field conservative pattern does not see it and it is not refused; no such macro exists in the candidate's `OsslStoreLoader`-naming files"
+        ],
+        "provider_obligation": "a provider module returns its own dispatch table and owns the correctness and lifetime of every object it allocates: its provider context, algorithm contexts, key objects, and the memory behind the OSSL_FUNC_* callbacks it publishes; the core only calls those callbacks through the returned table",
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-CURL-0006",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_PROVIDER",
+      "scoped_contract": true,
+      "sites": 33,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_PROVIDER]"
+    },
+    {
+      "consumer": "curl",
+      "contract": {
+        "citation": [
+          "include/openssl/crypto.h:541 -- int OPENSSL_atexit(void (*handler)(void));",
+          "src/runtime/init.rs:867-873 -- `#[repr(C)] struct OpenSslInitStop { handler: extern \"C\" fn(), next: *mut OpenSslInitStop }`; `handler` is the first field, so its slot is offset 0",
+          "src/runtime/init.rs:979 -- `pub unsafe extern \"C\" fn OPENSSL_atexit(handler: Option<extern \"C\" fn()>) -> c_int`",
+          "src/runtime/init.rs:993 -- `OwnedInitStop::new(handler, core::ptr::null_mut())` forwards the parameter unchanged",
+          "src/runtime/init.rs:910 -- the only store to the node's `handler` field: `dst.write(OpenSslInitStop { handler, next })`",
+          "src/runtime/init.rs:1002 -- the only publication: `STOP_HANDLERS.compare_exchange_weak`; 1028 `swap` and 1045 `store` write NULL (drain start / clear)",
+          "src/runtime/init.rs:1033-1034 -- the dispatch reads `(*curr).handler` and calls it; the enumerated image site is OPENSSL_cleanup 0x3dc914 `call *(%rbx)` (the inlined drain)",
+          "the writer set is COMPUTED by scanning `src/` for node literals, `.handler =` stores and `STOP_HANDLERS` writes; any additional writer refuses"
+        ],
+        "contract": "int OPENSSL_atexit(void (*handler)(void)) and the `OPENSSL_cleanup` drain of the handler list",
+        "covers": "the public `OPENSSL_atexit` registration seam, the single `OpenSslInitStop.handler` field it writes at offset 0, and the `OPENSSL_cleanup` dispatch that reads that field",
+        "does_not_cover": [
+          "the application's handler body, which is the caller's obligation (the header admits any `void (*)(void)`)",
+          "a NULL handler: `OPENSSL_atexit` refuses it (a recorded divergence)",
+          "a node not produced by `OPENSSL_atexit`; the writer set must be exactly that function",
+          "the reachability of the target from the consumer workload; that remains the closure's job",
+          "concurrency of the drain; the authority's single-threaded cleanup assumption is unchanged"
+        ],
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-CURL-0007",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_REGISTRATION_ATEXIT",
+      "scoped_contract": true,
+      "sites": 1,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_REGISTRATION_ATEXIT]"
+    },
+    {
+      "consumer": "curl",
+      "contract": {
+        "citation": [
+          "include/openssl/store.h:297-299 -- typedef OSSL_STORE_open_fn, OSSL_STORE_open_ex_fn; store.h:312 -- OSSL_STORE_close_fn; store.h:319-323 -- OSSL_STORE_LOADER_set_open/set_open_ex; store.h:346 -- OSSL_STORE_LOADER_set_close; store.h:353 -- OSSL_STORE_register_loader",
+          "src/store/mod.rs:250-307 -- `#[repr(C)] OsslStoreLoader`; `open` is at 0x10, `closefn` at 0x50, `open_ex` at 0x58, `p_close` at 0xb8",
+          "src/store/store_register.rs:304-332,441-454 -- the three setters store their function parameter into exactly those fields",
+          "src/store/store_register.rs:470-574 -- `ossl_store_register_loader_int` (the only stack push) is called only by the exported `OSSL_STORE_register_loader`",
+          "src/store/store_register.rs:175-185 -- `ossl_store_register_init` creates an empty stack; no in-image code registers a loader",
+          "src/store/store_register.rs:583-620 -- `ossl_store_get0_loader_int` returns the registry's own loader",
+          "src/store/store_lib.rs:800-816 -- `OSSL_STORE_open_ex` calls `loader.open_ex` / `loader.open`; store_lib.rs:666-668 -- the inlined `ossl_store_close_it` calls `loader.closefn` when `fetched_loader` is NULL"
+        ],
+        "contract": "the legacy `OSSL_STORE_LOADER` `open`, `open_ex` and `closefn` callbacks and the exported setters/registration that fill them",
+        "covers": "the public `OSSL_STORE_LOADER_set_open_ex`/`set_open`/`set_close` and `OSSL_STORE_register_loader` seam, the `OsslStoreLoader` fields at 0x10/0x50/0x58, and the `ossl_store_get0_loader_int` base",
+        "does_not_cover": [
+          "which loader an application registers; the exported seam makes the target set unbounded",
+          "the behaviour or lifetime of the registered callbacks",
+          "a second or aliasing writer of the fields; the witness refuses one",
+          "a store through an opaque alias in code that never names `OsslStoreLoader`; the source scan cannot attribute it (no such store was found in this candidate)",
+          "an in-image registration caller; the source scan proves none exists",
+          "the `closefn` base on the fetched_loader == NULL path is established by the source guards (`loader_ctx != NULL`); the machine definition set also carries the provider and failed-fetch definitions, both excluded by those guards",
+          "provider store loaders, which are `ABI_CONTRACT_PROVIDER`",
+          "a slot store inside a `macro_rules!` body in a file that names `OsslStoreLoader` or its accessors; the scan refuses the conservative pattern (`macro-expanded-slot-store-unattributed`), and the scan is file-scoped, so a macro defined in a file that never names the owner or an accessor is outside it",
+          "a `macro_rules!` body whose field name is itself a metavariable (`(*$p).$f = $v;`): the literal-field conservative pattern does not see it and it is not refused; no such macro exists in the candidate's `OsslStoreLoader`-naming files",
+          "a call at the enumerated address whose function leaf differs; it falls through to target-bounded with no named refusal (the address is not the identity)"
+        ],
+        "provider_obligation": "the application registers an `OSSL_STORE_LOADER` whose non-optional callbacks are valid for the loader's lifetime; the setters copy the pointers unchanged and `OSSL_STORE_open_ex` calls them with the documented arguments",
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-CURL-0008",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_STORE_LOADER",
+      "scoped_contract": true,
+      "sites": 3,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_STORE_LOADER]"
+    },
+    {
+      "call_site": "0x51bed4",
+      "consumer": "curl",
+      "contract": null,
+      "contract_missing": [
+        "no per-call-site witness"
+      ],
+      "dso": "libssl.so.3",
+      "function": "_RNvNtNtCsfBoMNNx3tZr_10openssl_rs8provider4init13provider_init",
+      "id": "OP-CURL-0009",
+      "kind": "candidate-contract-without-witness",
+      "operation": "ABI_CONTRACT_PROVIDER",
+      "reason": "provider-contract-witness-missing:an in-image value in this frame; this image carries no documented provider interface that writes it",
+      "scoped_contract": false,
+      "sites": 1,
+      "slot": "register/stack value",
+      "source": "precision.witness_rule.witness_missing[0]",
+      "writer": "an in-image value in this frame; this image carries no documented provider interface that writes it"
+    },
+    {
+      "consumer": "curl",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libcrypto.so.3",
+      "exported": true,
+      "id": "OP-CURL-0010",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "CRYPTO_free",
+      "scoped_contract": false,
+      "sites": 4,
+      "source": "precision.dlsym_literals[libcrypto.so.3][CRYPTO_free]"
+    },
+    {
+      "consumer": "curl",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libcrypto.so.3",
+      "exported": true,
+      "id": "OP-CURL-0011",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "OPENSSL_init_crypto",
+      "scoped_contract": false,
+      "sites": 2,
+      "source": "precision.dlsym_literals[libcrypto.so.3][OPENSSL_init_crypto]"
+    },
+    {
+      "consumer": "curl",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libcrypto.so.3",
+      "exported": false,
+      "id": "OP-CURL-0012",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "__pthread_get_minstack",
+      "scoped_contract": false,
+      "sites": 1,
+      "source": "precision.dlsym_literals[libcrypto.so.3][__pthread_get_minstack]"
+    },
+    {
+      "consumer": "curl",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libcrypto.so.3",
+      "exported": true,
+      "id": "OP-CURL-0013",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "conf_ssl_get",
+      "scoped_contract": false,
+      "sites": 2,
+      "source": "precision.dlsym_literals[libcrypto.so.3][conf_ssl_get]"
+    },
+    {
+      "consumer": "curl",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libcrypto.so.3",
+      "exported": true,
+      "id": "OP-CURL-0014",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "conf_ssl_get_cmd",
+      "scoped_contract": false,
+      "sites": 2,
+      "source": "precision.dlsym_literals[libcrypto.so.3][conf_ssl_get_cmd]"
+    },
+    {
+      "consumer": "curl",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libcrypto.so.3",
+      "exported": true,
+      "id": "OP-CURL-0015",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "conf_ssl_name_find",
+      "scoped_contract": false,
+      "sites": 2,
+      "source": "precision.dlsym_literals[libcrypto.so.3][conf_ssl_name_find]"
+    },
+    {
+      "consumer": "curl",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libssl.so.3",
+      "exported": false,
+      "id": "OP-CURL-0016",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "CRYPTO_free",
+      "scoped_contract": false,
+      "sites": 4,
+      "source": "precision.dlsym_literals[libssl.so.3][CRYPTO_free]"
+    },
+    {
+      "consumer": "curl",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libssl.so.3",
+      "exported": false,
+      "id": "OP-CURL-0017",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "OPENSSL_init_crypto",
+      "scoped_contract": false,
+      "sites": 2,
+      "source": "precision.dlsym_literals[libssl.so.3][OPENSSL_init_crypto]"
+    },
+    {
+      "consumer": "curl",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libssl.so.3",
+      "exported": false,
+      "id": "OP-CURL-0018",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "__pthread_get_minstack",
+      "scoped_contract": false,
+      "sites": 1,
+      "source": "precision.dlsym_literals[libssl.so.3][__pthread_get_minstack]"
+    },
+    {
+      "consumer": "curl",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libssl.so.3",
+      "exported": false,
+      "id": "OP-CURL-0019",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "conf_ssl_get",
+      "scoped_contract": false,
+      "sites": 2,
+      "source": "precision.dlsym_literals[libssl.so.3][conf_ssl_get]"
+    },
+    {
+      "consumer": "curl",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libssl.so.3",
+      "exported": false,
+      "id": "OP-CURL-0020",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "conf_ssl_get_cmd",
+      "scoped_contract": false,
+      "sites": 2,
+      "source": "precision.dlsym_literals[libssl.so.3][conf_ssl_get_cmd]"
+    },
+    {
+      "consumer": "curl",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libssl.so.3",
+      "exported": false,
+      "id": "OP-CURL-0021",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "conf_ssl_name_find",
+      "scoped_contract": false,
+      "sites": 2,
+      "source": "precision.dlsym_literals[libssl.so.3][conf_ssl_name_find]"
+    },
+    {
+      "consumer": "curl",
+      "contract": null,
+      "contract_missing": [
+        "the resolved module and symbol names are configuration"
+      ],
+      "id": "OP-CURL-0022",
+      "kind": "dynamic-name-lookup",
+      "operation": "DSO_bind_func",
+      "scoped_contract": false,
+      "sites": 1,
+      "source": "graph.special_edges.dynamic_name_lookup_reachable[0]"
+    },
+    {
+      "consumer": "curl",
+      "contract": null,
+      "contract_missing": [
+        "the resolved module and symbol names are configuration"
+      ],
+      "id": "OP-CURL-0023",
+      "kind": "dynamic-name-lookup",
+      "operation": "DSO_convert_filename",
+      "scoped_contract": false,
+      "sites": 1,
+      "source": "graph.special_edges.dynamic_name_lookup_reachable[1]"
+    },
+    {
+      "consumer": "curl",
+      "contract": null,
+      "contract_missing": [
+        "no scoped contract for this dependency"
+      ],
+      "id": "OP-CURL-0024",
+      "kind": "unmodelled-shared-object",
+      "operation": "libz.so.1",
+      "scoped_contract": false,
+      "sites": 1,
+      "source": "artifact_identity.dynamic.needed"
+    },
+    {
+      "consumer": "curl",
+      "contract": null,
+      "contract_missing": [
+        "no scoped contract for this dependency"
+      ],
+      "id": "OP-CURL-0025",
+      "kind": "unmodelled-shared-object",
+      "operation": "libc.so.6",
+      "scoped_contract": false,
+      "sites": 1,
+      "source": "artifact_identity.dynamic.needed"
+    },
+    {
+      "consumer": "curl",
+      "contract": null,
+      "contract_missing": [
+        "class is named ABI_* but the closure engine has no contract for it"
+      ],
+      "id": "OP-CURL-0026",
+      "kind": "abi-class-without-contract",
+      "operation": "ABI_OPEN_METHOD_TABLE",
+      "scoped_contract": false,
+      "sites": 18,
+      "source": "precision.unresolved_by_class[ABI_OPEN_METHOD_TABLE]"
+    },
+    {
+      "consumer": "ssh",
+      "contract": {
+        "citation": [
+          "include/openssl/conf.h:107-108 -- typedef conf_init_func and conf_finish_func; conf.h:195 -- CONF_module_add(const char *, conf_init_func *, conf_finish_func *)",
+          "src/runtime/confmod/mod.rs:214-232 -- `#[repr(C)] ConfModule`; `init` is at 0x10 and `finish` at 0x18",
+          "src/runtime/confmod/mod.rs:854-950 -- `module_add` is the only writer of `(*tmod).init` and `(*tmod).finish` (from its `ifunc` and `ffunc` parameters)",
+          "src/runtime/confmod/mod.rs:775-842 -- `module_load_dso` binds `OPENSSL_init` and `OPENSSL_finish` with `DSO_bind_func` and forwards them to `module_add`",
+          "src/runtime/confmod/mod.rs:1392-1414 -- `CONF_module_add` is the exported static-module seam",
+          "src/runtime/confmod/mod.rs:1115,1122 -- `CONF_modules_load` calls `(*pmod).init` and `(*pmod).finish`"
+        ],
+        "contract": "the `CONF_MODULE` `init` and `finish` callbacks registered by `CONF_module_add` or bound from a loaded DSO's `OPENSSL_init`/`OPENSSL_finish`",
+        "covers": "the public `CONF_module_add` seam, the DSO `OPENSSL_init`/`OPENSSL_finish` seam, the `ConfModule.init`/`finish` fields at 0x10/0x18, and every in-image caller of `CONF_module_add` as a documented interface user",
+        "does_not_cover": [
+          "which module an application registers or loads; both seams are public and the target set is unbounded",
+          "the behaviour or lifetime of the module callbacks",
+          "the loaded DSO's own ABI compliance",
+          "a direct or aliasing writer of the fields outside `module_add`; the witness refuses one",
+          "a store through an opaque alias in code that never names `ConfModule` or its accessors; the source scan cannot attribute it (no such store was found in this candidate)",
+          "the in-image built-in module callers as a finite bound: they are enumerated, not used to narrow the set",
+          "a slot store inside a `macro_rules!` body in a file that names `ConfModule` or its accessors; the scan refuses the conservative pattern (`macro-expanded-slot-store-unattributed`), and the scan is file-scoped, so a macro defined in a file that never names the owner or an accessor is outside it",
+          "a `macro_rules!` body whose field name is itself a metavariable (`(*$p).$f = $v;`): the literal-field conservative pattern does not see it and it is not refused; no such macro exists in the candidate's `ConfModule`-naming files",
+          "a call at the enumerated address whose function leaf differs; it falls through to target-bounded with no named refusal (the address is not the identity)"
+        ],
+        "provider_obligation": "the application supplies a `conf_init_func` and optional `conf_finish_func` (directly through `CONF_module_add` or by a DSO exporting `OPENSSL_init`/`OPENSSL_finish`) that are valid for the module's lifetime; the registry copies the pointers unchanged",
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-SSH-0001",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_CONF_MODULE",
+      "scoped_contract": true,
+      "sites": 2,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_CONF_MODULE]"
+    },
+    {
+      "consumer": "ssh",
+      "contract": {
+        "citation": [
+          "include/openssl/core.h:186-195 -- typedef int(OSSL_provider_init_fn)(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in, const OSSL_DISPATCH **out, void **provctx); the header's own comment says |in| 'is the array of functions that the Core passes to the provider'",
+          "include/openssl/core_dispatch.h:73-78 -- 'Core function identities, for the two OSSL_DISPATCH tables being passed in the OSSL_provider_init call. ... Functions provided by the Core to the provider, reserved numbers 1-1023'",
+          "include/openssl/core_dispatch.h:153-161 -- the OSSL_FUNC_BIO_* ids (42, 43, 44, 45, 48, 49, 50) with their OSSL_CORE_MAKE_FUNC signatures (BIO_read_ex, BIO_write_ex, BIO_up_ref, BIO_free, BIO_puts, BIO_gets, BIO_ctrl)",
+          "include/openssl/core_dispatch.h:202-227 -- the OSSL_FUNC_PROVIDER_* ids (105-111) and their signatures (provider_register_child_cb, provider_deregister_child_cb, provider_name, provider_get0_provider_ctx, provider_get0_dispatch, provider_up_ref, provider_free)",
+          "include/openssl/crypto.h:601-604 -- OSSL_LIB_CTX_new_from_dispatch(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in) and OSSL_LIB_CTX_new_child(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in): the caller passes the same `in` table on",
+          "src/context/core_bio.rs:402-447 -- `ossl_bio_init_core` is the only writer of BioCoreGlobals, one field per OSSL_FUNC_BIO_* id, from the caller's `fns` array; reached from `OSSL_LIB_CTX_new_from_dispatch` (src/context/mod.rs)",
+          "src/provider/child.rs:470-560 -- `ossl_provider_init_as_child` is the only writer of ChildProvGlobals' callback fields, one field per OSSL_FUNC_* id, from the caller's `in` array; reached from `OSSL_LIB_CTX_new_child` (src/context/mod.rs:1234)"
+        ],
+        "contract": "the core-to-provider `in` dispatch table passed to `OSSL_provider_init` (and forwarded by the provider to `OSSL_LIB_CTX_new_from_dispatch`/`OSSL_LIB_CTX_new_child`)",
+        "covers": "the exact libctx slot objects (slot 17 `BioCoreGlobals`, slot 18 `ChildProvGlobals`), the exact field each enumerated site reads, the single in-image writer of that field, and the documented `OSSL_FUNC_*` id that writer stores into it",
+        "does_not_cover": [
+          "which core/module supplies the `in` table; the target set is unbounded by the C ABI",
+          "the behaviour or lifetime of the supplied upcall, which is the supplying core's obligation",
+          "a site whose base register is not proven to be the slot-17/18 libctx data object",
+          "a site whose offset is not a field of the documented table, or whose in-image writer is not the enumerated init function",
+          "a field with a second source store, a macro-expanded store, or a store under a different `OSSL_FUNC_*` id; the witness refuses it",
+          "reachability from these two workloads, or that a configuration file exists at run time"
+        ],
+        "provider_obligation": "the caller (the Core, or a provider acting as the Core for a nested child) supplies the function for each documented id and owns its correctness and lifetime; the crate forwards the entry and invokes it with the documented signature, and never substitutes an in-image target",
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-SSH-0002",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_CORE_DISPATCH",
+      "scoped_contract": true,
+      "sites": 26,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_CORE_DISPATCH]"
+    },
+    {
+      "consumer": "ssh",
+      "contract": {
+        "citation": [
+          "the exact prototype in the admitted install's include/openssl/*.h: the parameter is declared with a function-pointer typedef, so the value is supplied by the caller and the C ABI places no bound on it",
+          "the same symbol is defined in the image's .dynsym, so any process that links libcrypto may call it with any callback",
+          "include/openssl/modes.h:25/69 -- typedef void (*block128_f)(const unsigned char in[16], unsigned char out[16], const void *key); and CRYPTO_cfb128_encrypt(..., int enc, block128_f block)",
+          "include/openssl/types.h:237 -- typedef int pem_password_cb(char *buf, int size, int rwflag, void *userdata); pem.h:537 passes it as b2i_PVK_bio_ex(BIO *in, pem_password_cb *cb, void *u, ...)"
+        ],
+        "contract": "an exported C function's callback parameter",
+        "covers": "the public seam through which a C caller supplies a callback to an exported function; the function name, the parameter index and the declared callback type are the documented interface",
+        "does_not_cover": [
+          "the behaviour or lifetime of the application's callback, which is the application's obligation once supplied",
+          "a NULL argument where the header does not admit one; that is a C-invalid input, not a target",
+          "which callback (if any) an in-image caller installs; the target set is unbounded",
+          "a private wrapper whose callers are all in-image and finite: the witness defers it to reachable-caller-target instead",
+          "reachability from the two workloads, or that an external caller exists at run time"
+        ],
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-SSH-0003",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_EXPORT_CALLBACK",
+      "scoped_contract": true,
+      "sites": 66,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_EXPORT_CALLBACK]"
+    },
+    {
+      "consumer": "ssh",
+      "contract": {
+        "citation": [
+          "include/openssl/types.h:237 -- typedef int pem_password_cb(char *buf, int size, int rwflag, void *userdata); include/openssl/pem.h:439-440 -- the default `PEM_def_callback`; pem.h:492-503, 514-521 -- the exported PKCS#8 writer family's `cb` parameter",
+          "src/pem/pem_pk8.rs:87-129 -- `do_pk8pkey` stores the caller's `cb` and installs `PEM_def_callback` when both `kstr` and `cb` are NULL",
+          "src/pem/pem_pk8.rs:175-179 -- the only call through `cb` (`cb.unwrap_or(PEM_def_callback)(...)`)",
+          "src/pem/pem_pk8.rs:337-417 -- the four BIO wrappers forward their own `cb` parameter; pem_pk8.rs:485-507 -- `do_pk8pkey_fp` forwards its `cb` to `do_pk8pkey`; the FILE wrappers call it",
+          "src/pem/pem_lib.rs:282 -- `PEM_def_callback` implements the `pem_password_cb` signature"
+        ],
+        "contract": "an exported PEM PKCS#8 writer's `pem_password_cb *cb` parameter, with the documented NULL-selected in-image default `PEM_def_callback`",
+        "covers": "the exported PEM PKCS#8 writer family's `cb` parameter, the BIO and FILE wrapper forwarding chains, and the NULL-selected `PEM_def_callback` default target",
+        "does_not_cover": [
+          "which callback an application supplies; the target set is unbounded",
+          "the behaviour or lifetime of the application's callback",
+          "a caller that installs a non-parameter in-image callback; the witness refuses one",
+          "any other `pem_password_cb`-bearing site outside the four BIO writers and the FILE wrapper chain",
+          "a NULL default that is absent or not `PEM_def_callback`; the witness refuses it",
+          "a call at the enumerated address whose function leaf differs; it falls through to target-bounded with no named refusal (the address is not the identity)"
+        ],
+        "provider_obligation": "the application supplies a `pem_password_cb` of the declared signature that is valid for the call; a NULL callback with no key string selects the in-image `PEM_def_callback`",
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-SSH-0004",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT",
+      "scoped_contract": true,
+      "sites": 1,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT]"
+    },
+    {
+      "consumer": "ssh",
+      "contract": {
+        "citation": [
+          "include/openssl/evp.h:499-503 -- typedef int(EVP_PBE_KEYGEN)(...); evp.h:1592-1595 -- EVP_PBE_alg_add_type(..., EVP_PBE_KEYGEN *keygen) and EVP_PBE_alg_add(..., EVP_PBE_KEYGEN *keygen); evp.h:1598-1599 -- EVP_PBE_find_ex(..., EVP_PBE_KEYGEN **pkeygen, EVP_PBE_KEYGEN_EX **pkeygen_ex)",
+          "src/evp/evp_pbe.rs:133-147 -- `#[repr(C)] EvpPbeCtl` with `pbe_type`, `pbe_nid`, `cipher_nid`, `md_nid`, `keygen`, `keygen_ex`, so `keygen` is at offset 0x10 and `keygen_ex` at 0x18",
+          "src/evp/evp_pbe.rs:154-433 -- `static BUILTIN_PBE: [EvpPbeCtl; 34]`, the link-time rows (six carry both keygens, eighteen carry neither)",
+          "src/evp/evp_pbe.rs:793-847 -- `EVP_PBE_alg_add_type` allocates a zeroed row and stores `(*row).keygen = keygen` (the parameter) and `(*row).keygen_ex = None`",
+          "src/evp/evp_pbe.rs:893-968 -- `EVP_PBE_find_ex` searches the application registry first, then the builtin table, and copies `row.keygen` through `*pkeygen`",
+          "src/evp/evp_pbe.rs:735-741 -- `EVP_PBE_CipherInit_ex` calls the plain `keygen` only when `keygen_ex` is absent (the authority's unconditional call is D-PBE-PKCS12-KEYGEN-1)"
+        ],
+        "contract": "the `EVP_PBE_CTL.keygen` field returned by `EVP_PBE_find_ex` and filled by `EVP_PBE_alg_add_type`/`EVP_PBE_alg_add`",
+        "covers": "the public `EVP_PBE_alg_add_type`/`EVP_PBE_alg_add` seam, the `EvpPbeCtl.keygen` field at offset 0x10, the `EVP_PBE_find_ex` return slot, and the in-image `BUILTIN_PBE` rows",
+        "does_not_cover": [
+          "which keygen an application registers; the exported registry seam makes the target set unbounded",
+          "the behaviour or lifetime of the application keygen, which is the application's obligation once registered",
+          "the finite builtin rows as a target bound: they are recorded, never used to turn the site into a finite target set",
+          "a second or aliasing writer of `EvpPbeCtl.keygen`; the witness refuses one",
+          "a store through an opaque alias in code that never names `EvpPbeCtl`; the source scan cannot attribute it (no such store was found in this candidate)",
+          "NULL where the authority calls only a non-NULL keygen; the crate's `both slots empty -> 0` divergence is D-PBE-PKCS12-KEYGEN-1",
+          "a slot store inside a `macro_rules!` body in a file that names `EvpPbeCtl` or its accessors; the scan refuses the conservative pattern (`macro-expanded-slot-store-unattributed`), and the scan is file-scoped, so a macro defined in a file that never names the owner or an accessor is outside it",
+          "a `macro_rules!` body whose field name is itself a metavariable (`(*$p).$f = $v;`): the literal-field conservative pattern does not see it and it is not refused; no such macro exists in the candidate's `EvpPbeCtl`-naming files",
+          "a call at the enumerated address whose function leaf differs; it falls through to target-bounded with no named refusal (the address is not the identity)"
+        ],
+        "provider_obligation": "the application supplies an `EVP_PBE_KEYGEN` of the declared signature that outlives the registry; `EVP_PBE_alg_add_type` copies the pointer unchanged and the consumer calls it with the documented arguments",
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-SSH-0005",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_PBE_REGISTRY",
+      "scoped_contract": true,
+      "sites": 1,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_PBE_REGISTRY]"
+    },
+    {
+      "consumer": "ssh",
+      "contract": {
+        "citation": [
+          "include/openssl/core.h:40-44 -- struct ossl_dispatch_st { int function_id; void (*function)(void); }, and OSSL_DISPATCH_END { 0, NULL }: an array of dispatch elements is always terminated by function_id == 0",
+          "include/openssl/core.h:186-195 -- typedef int OSSL_provider_init_fn(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in, const OSSL_DISPATCH **out, void **provctx); |out| is the base-function array the provider returns to the core; |provctx| is passed to the provider's other context constructors",
+          "include/openssl/core_dispatch.h:30-68 -- function identities start at 1 (0 terminates the table) and each OSSL_FUNC_* extractor names the signature the core will call",
+          "include/openssl/provider.h:78-85 -- OSSL_PROVIDER_add_builtin(OSSL_LIB_CTX *, const char *name, OSSL_provider_init_fn *init_fn); the same entry-point type is what an externally loaded module implements"
+        ],
+        "contract": "OSSL_provider_init",
+        "covers": "the interface by which an out-of-image provider is entered, the shape of the dispatch table it returns, the provider's own allocation correctness, and the store-loader `OsslStoreLoader.p_close` slot (`OSSL_FUNC_STORE_CLOSE`) at the enumerated `OSSL_STORE_open_ex` site",
+        "does_not_cover": [
+          "which module (if any) the effective configuration names; the target set is unbounded",
+          "the memory safety or correctness of the external provider, which is the provider's own obligation after the ABI boundary",
+          "reachability from these two workloads, or that a configuration file exists at run time",
+          "application code not loaded as a provider; it is not a node in this closure",
+          "in-image target completeness for the built-in provider path",
+          "the legacy store-loader `closefn`/`open`/`open_ex` fields, which are `ABI_CONTRACT_STORE_LOADER`",
+          "a call at the enumerated address whose function leaf differs; it falls through to target-bounded with no named refusal (the address is not the identity)",
+          "the store-loader `p_close` writer set when a `macro_rules!` body in an owner-naming file stores a slot; that site refuses on the conservative `macro-expanded-slot-store-unattributed` pattern, and the scan is file-scoped (a macro defined in a file that never names the owner is outside it)",
+          "for the store-loader `p_close` use, a `macro_rules!` body whose field name is itself a metavariable (`(*$p).$f = $v;`): the literal-field conservative pattern does not see it and it is not refused; no such macro exists in the candidate's `OsslStoreLoader`-naming files"
+        ],
+        "provider_obligation": "a provider module returns its own dispatch table and owns the correctness and lifetime of every object it allocates: its provider context, algorithm contexts, key objects, and the memory behind the OSSL_FUNC_* callbacks it publishes; the core only calls those callbacks through the returned table",
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-SSH-0006",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_PROVIDER",
+      "scoped_contract": true,
+      "sites": 16,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_PROVIDER]"
+    },
+    {
+      "consumer": "ssh",
+      "contract": {
+        "citation": [
+          "include/openssl/crypto.h:541 -- int OPENSSL_atexit(void (*handler)(void));",
+          "src/runtime/init.rs:867-873 -- `#[repr(C)] struct OpenSslInitStop { handler: extern \"C\" fn(), next: *mut OpenSslInitStop }`; `handler` is the first field, so its slot is offset 0",
+          "src/runtime/init.rs:979 -- `pub unsafe extern \"C\" fn OPENSSL_atexit(handler: Option<extern \"C\" fn()>) -> c_int`",
+          "src/runtime/init.rs:993 -- `OwnedInitStop::new(handler, core::ptr::null_mut())` forwards the parameter unchanged",
+          "src/runtime/init.rs:910 -- the only store to the node's `handler` field: `dst.write(OpenSslInitStop { handler, next })`",
+          "src/runtime/init.rs:1002 -- the only publication: `STOP_HANDLERS.compare_exchange_weak`; 1028 `swap` and 1045 `store` write NULL (drain start / clear)",
+          "src/runtime/init.rs:1033-1034 -- the dispatch reads `(*curr).handler` and calls it; the enumerated image site is OPENSSL_cleanup 0x3dc914 `call *(%rbx)` (the inlined drain)",
+          "the writer set is COMPUTED by scanning `src/` for node literals, `.handler =` stores and `STOP_HANDLERS` writes; any additional writer refuses"
+        ],
+        "contract": "int OPENSSL_atexit(void (*handler)(void)) and the `OPENSSL_cleanup` drain of the handler list",
+        "covers": "the public `OPENSSL_atexit` registration seam, the single `OpenSslInitStop.handler` field it writes at offset 0, and the `OPENSSL_cleanup` dispatch that reads that field",
+        "does_not_cover": [
+          "the application's handler body, which is the caller's obligation (the header admits any `void (*)(void)`)",
+          "a NULL handler: `OPENSSL_atexit` refuses it (a recorded divergence)",
+          "a node not produced by `OPENSSL_atexit`; the writer set must be exactly that function",
+          "the reachability of the target from the consumer workload; that remains the closure's job",
+          "concurrency of the drain; the authority's single-threaded cleanup assumption is unchanged"
+        ],
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-SSH-0007",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_REGISTRATION_ATEXIT",
+      "scoped_contract": true,
+      "sites": 1,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_REGISTRATION_ATEXIT]"
+    },
+    {
+      "consumer": "ssh",
+      "contract": {
+        "citation": [
+          "include/openssl/store.h:297-299 -- typedef OSSL_STORE_open_fn, OSSL_STORE_open_ex_fn; store.h:312 -- OSSL_STORE_close_fn; store.h:319-323 -- OSSL_STORE_LOADER_set_open/set_open_ex; store.h:346 -- OSSL_STORE_LOADER_set_close; store.h:353 -- OSSL_STORE_register_loader",
+          "src/store/mod.rs:250-307 -- `#[repr(C)] OsslStoreLoader`; `open` is at 0x10, `closefn` at 0x50, `open_ex` at 0x58, `p_close` at 0xb8",
+          "src/store/store_register.rs:304-332,441-454 -- the three setters store their function parameter into exactly those fields",
+          "src/store/store_register.rs:470-574 -- `ossl_store_register_loader_int` (the only stack push) is called only by the exported `OSSL_STORE_register_loader`",
+          "src/store/store_register.rs:175-185 -- `ossl_store_register_init` creates an empty stack; no in-image code registers a loader",
+          "src/store/store_register.rs:583-620 -- `ossl_store_get0_loader_int` returns the registry's own loader",
+          "src/store/store_lib.rs:800-816 -- `OSSL_STORE_open_ex` calls `loader.open_ex` / `loader.open`; store_lib.rs:666-668 -- the inlined `ossl_store_close_it` calls `loader.closefn` when `fetched_loader` is NULL"
+        ],
+        "contract": "the legacy `OSSL_STORE_LOADER` `open`, `open_ex` and `closefn` callbacks and the exported setters/registration that fill them",
+        "covers": "the public `OSSL_STORE_LOADER_set_open_ex`/`set_open`/`set_close` and `OSSL_STORE_register_loader` seam, the `OsslStoreLoader` fields at 0x10/0x50/0x58, and the `ossl_store_get0_loader_int` base",
+        "does_not_cover": [
+          "which loader an application registers; the exported seam makes the target set unbounded",
+          "the behaviour or lifetime of the registered callbacks",
+          "a second or aliasing writer of the fields; the witness refuses one",
+          "a store through an opaque alias in code that never names `OsslStoreLoader`; the source scan cannot attribute it (no such store was found in this candidate)",
+          "an in-image registration caller; the source scan proves none exists",
+          "the `closefn` base on the fetched_loader == NULL path is established by the source guards (`loader_ctx != NULL`); the machine definition set also carries the provider and failed-fetch definitions, both excluded by those guards",
+          "provider store loaders, which are `ABI_CONTRACT_PROVIDER`",
+          "a slot store inside a `macro_rules!` body in a file that names `OsslStoreLoader` or its accessors; the scan refuses the conservative pattern (`macro-expanded-slot-store-unattributed`), and the scan is file-scoped, so a macro defined in a file that never names the owner or an accessor is outside it",
+          "a `macro_rules!` body whose field name is itself a metavariable (`(*$p).$f = $v;`): the literal-field conservative pattern does not see it and it is not refused; no such macro exists in the candidate's `OsslStoreLoader`-naming files",
+          "a call at the enumerated address whose function leaf differs; it falls through to target-bounded with no named refusal (the address is not the identity)"
+        ],
+        "provider_obligation": "the application registers an `OSSL_STORE_LOADER` whose non-optional callbacks are valid for the loader's lifetime; the setters copy the pointers unchanged and `OSSL_STORE_open_ex` calls them with the documented arguments",
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-SSH-0008",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_STORE_LOADER",
+      "scoped_contract": true,
+      "sites": 3,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_STORE_LOADER]"
+    },
+    {
+      "consumer": "ssh",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libcrypto.so.3",
+      "exported": true,
+      "id": "OP-SSH-0009",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "CRYPTO_free",
+      "scoped_contract": false,
+      "sites": 4,
+      "source": "precision.dlsym_literals[libcrypto.so.3][CRYPTO_free]"
+    },
+    {
+      "consumer": "ssh",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libcrypto.so.3",
+      "exported": true,
+      "id": "OP-SSH-0010",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "OPENSSL_init_crypto",
+      "scoped_contract": false,
+      "sites": 2,
+      "source": "precision.dlsym_literals[libcrypto.so.3][OPENSSL_init_crypto]"
+    },
+    {
+      "consumer": "ssh",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libcrypto.so.3",
+      "exported": false,
+      "id": "OP-SSH-0011",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "__pthread_get_minstack",
+      "scoped_contract": false,
+      "sites": 1,
+      "source": "precision.dlsym_literals[libcrypto.so.3][__pthread_get_minstack]"
+    },
+    {
+      "consumer": "ssh",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libcrypto.so.3",
+      "exported": true,
+      "id": "OP-SSH-0012",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "conf_ssl_get",
+      "scoped_contract": false,
+      "sites": 2,
+      "source": "precision.dlsym_literals[libcrypto.so.3][conf_ssl_get]"
+    },
+    {
+      "consumer": "ssh",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libcrypto.so.3",
+      "exported": true,
+      "id": "OP-SSH-0013",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "conf_ssl_get_cmd",
+      "scoped_contract": false,
+      "sites": 2,
+      "source": "precision.dlsym_literals[libcrypto.so.3][conf_ssl_get_cmd]"
+    },
+    {
+      "consumer": "ssh",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libcrypto.so.3",
+      "exported": true,
+      "id": "OP-SSH-0014",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "conf_ssl_name_find",
+      "scoped_contract": false,
+      "sites": 2,
+      "source": "precision.dlsym_literals[libcrypto.so.3][conf_ssl_name_find]"
+    },
+    {
+      "consumer": "ssh",
+      "contract": null,
+      "contract_missing": [
+        "the resolved module and symbol names are configuration"
+      ],
+      "id": "OP-SSH-0015",
+      "kind": "dynamic-name-lookup",
+      "operation": "DSO_bind_func",
+      "scoped_contract": false,
+      "sites": 1,
+      "source": "graph.special_edges.dynamic_name_lookup_reachable[0]"
+    },
+    {
+      "consumer": "ssh",
+      "contract": null,
+      "contract_missing": [
+        "the resolved module and symbol names are configuration"
+      ],
+      "id": "OP-SSH-0016",
+      "kind": "dynamic-name-lookup",
+      "operation": "DSO_convert_filename",
+      "scoped_contract": false,
+      "sites": 1,
+      "source": "graph.special_edges.dynamic_name_lookup_reachable[1]"
+    },
+    {
+      "consumer": "ssh",
+      "contract": null,
+      "contract_missing": [
+        "no scoped contract for this dependency"
+      ],
+      "id": "OP-SSH-0017",
+      "kind": "unmodelled-shared-object",
+      "operation": "libz.so.1",
+      "scoped_contract": false,
+      "sites": 1,
+      "source": "artifact_identity.dynamic.needed"
+    },
+    {
+      "consumer": "ssh",
+      "contract": null,
+      "contract_missing": [
+        "no scoped contract for this dependency"
+      ],
+      "id": "OP-SSH-0018",
+      "kind": "unmodelled-shared-object",
+      "operation": "libc.so.6",
+      "scoped_contract": false,
+      "sites": 1,
+      "source": "artifact_identity.dynamic.needed"
+    },
+    {
+      "consumer": "sshd",
+      "contract": {
+        "citation": [
+          "include/openssl/conf.h:107-108 -- typedef conf_init_func and conf_finish_func; conf.h:195 -- CONF_module_add(const char *, conf_init_func *, conf_finish_func *)",
+          "src/runtime/confmod/mod.rs:214-232 -- `#[repr(C)] ConfModule`; `init` is at 0x10 and `finish` at 0x18",
+          "src/runtime/confmod/mod.rs:854-950 -- `module_add` is the only writer of `(*tmod).init` and `(*tmod).finish` (from its `ifunc` and `ffunc` parameters)",
+          "src/runtime/confmod/mod.rs:775-842 -- `module_load_dso` binds `OPENSSL_init` and `OPENSSL_finish` with `DSO_bind_func` and forwards them to `module_add`",
+          "src/runtime/confmod/mod.rs:1392-1414 -- `CONF_module_add` is the exported static-module seam",
+          "src/runtime/confmod/mod.rs:1115,1122 -- `CONF_modules_load` calls `(*pmod).init` and `(*pmod).finish`"
+        ],
+        "contract": "the `CONF_MODULE` `init` and `finish` callbacks registered by `CONF_module_add` or bound from a loaded DSO's `OPENSSL_init`/`OPENSSL_finish`",
+        "covers": "the public `CONF_module_add` seam, the DSO `OPENSSL_init`/`OPENSSL_finish` seam, the `ConfModule.init`/`finish` fields at 0x10/0x18, and every in-image caller of `CONF_module_add` as a documented interface user",
+        "does_not_cover": [
+          "which module an application registers or loads; both seams are public and the target set is unbounded",
+          "the behaviour or lifetime of the module callbacks",
+          "the loaded DSO's own ABI compliance",
+          "a direct or aliasing writer of the fields outside `module_add`; the witness refuses one",
+          "a store through an opaque alias in code that never names `ConfModule` or its accessors; the source scan cannot attribute it (no such store was found in this candidate)",
+          "the in-image built-in module callers as a finite bound: they are enumerated, not used to narrow the set",
+          "a slot store inside a `macro_rules!` body in a file that names `ConfModule` or its accessors; the scan refuses the conservative pattern (`macro-expanded-slot-store-unattributed`), and the scan is file-scoped, so a macro defined in a file that never names the owner or an accessor is outside it",
+          "a `macro_rules!` body whose field name is itself a metavariable (`(*$p).$f = $v;`): the literal-field conservative pattern does not see it and it is not refused; no such macro exists in the candidate's `ConfModule`-naming files",
+          "a call at the enumerated address whose function leaf differs; it falls through to target-bounded with no named refusal (the address is not the identity)"
+        ],
+        "provider_obligation": "the application supplies a `conf_init_func` and optional `conf_finish_func` (directly through `CONF_module_add` or by a DSO exporting `OPENSSL_init`/`OPENSSL_finish`) that are valid for the module's lifetime; the registry copies the pointers unchanged",
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-SSHD-0001",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_CONF_MODULE",
+      "scoped_contract": true,
+      "sites": 2,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_CONF_MODULE]"
+    },
+    {
+      "consumer": "sshd",
+      "contract": {
+        "citation": [
+          "include/openssl/core.h:186-195 -- typedef int(OSSL_provider_init_fn)(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in, const OSSL_DISPATCH **out, void **provctx); the header's own comment says |in| 'is the array of functions that the Core passes to the provider'",
+          "include/openssl/core_dispatch.h:73-78 -- 'Core function identities, for the two OSSL_DISPATCH tables being passed in the OSSL_provider_init call. ... Functions provided by the Core to the provider, reserved numbers 1-1023'",
+          "include/openssl/core_dispatch.h:153-161 -- the OSSL_FUNC_BIO_* ids (42, 43, 44, 45, 48, 49, 50) with their OSSL_CORE_MAKE_FUNC signatures (BIO_read_ex, BIO_write_ex, BIO_up_ref, BIO_free, BIO_puts, BIO_gets, BIO_ctrl)",
+          "include/openssl/core_dispatch.h:202-227 -- the OSSL_FUNC_PROVIDER_* ids (105-111) and their signatures (provider_register_child_cb, provider_deregister_child_cb, provider_name, provider_get0_provider_ctx, provider_get0_dispatch, provider_up_ref, provider_free)",
+          "include/openssl/crypto.h:601-604 -- OSSL_LIB_CTX_new_from_dispatch(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in) and OSSL_LIB_CTX_new_child(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in): the caller passes the same `in` table on",
+          "src/context/core_bio.rs:402-447 -- `ossl_bio_init_core` is the only writer of BioCoreGlobals, one field per OSSL_FUNC_BIO_* id, from the caller's `fns` array; reached from `OSSL_LIB_CTX_new_from_dispatch` (src/context/mod.rs)",
+          "src/provider/child.rs:470-560 -- `ossl_provider_init_as_child` is the only writer of ChildProvGlobals' callback fields, one field per OSSL_FUNC_* id, from the caller's `in` array; reached from `OSSL_LIB_CTX_new_child` (src/context/mod.rs:1234)"
+        ],
+        "contract": "the core-to-provider `in` dispatch table passed to `OSSL_provider_init` (and forwarded by the provider to `OSSL_LIB_CTX_new_from_dispatch`/`OSSL_LIB_CTX_new_child`)",
+        "covers": "the exact libctx slot objects (slot 17 `BioCoreGlobals`, slot 18 `ChildProvGlobals`), the exact field each enumerated site reads, the single in-image writer of that field, and the documented `OSSL_FUNC_*` id that writer stores into it",
+        "does_not_cover": [
+          "which core/module supplies the `in` table; the target set is unbounded by the C ABI",
+          "the behaviour or lifetime of the supplied upcall, which is the supplying core's obligation",
+          "a site whose base register is not proven to be the slot-17/18 libctx data object",
+          "a site whose offset is not a field of the documented table, or whose in-image writer is not the enumerated init function",
+          "a field with a second source store, a macro-expanded store, or a store under a different `OSSL_FUNC_*` id; the witness refuses it",
+          "reachability from these two workloads, or that a configuration file exists at run time"
+        ],
+        "provider_obligation": "the caller (the Core, or a provider acting as the Core for a nested child) supplies the function for each documented id and owns its correctness and lifetime; the crate forwards the entry and invokes it with the documented signature, and never substitutes an in-image target",
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-SSHD-0002",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_CORE_DISPATCH",
+      "scoped_contract": true,
+      "sites": 26,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_CORE_DISPATCH]"
+    },
+    {
+      "consumer": "sshd",
+      "contract": {
+        "citation": [
+          "the exact prototype in the admitted install's include/openssl/*.h: the parameter is declared with a function-pointer typedef, so the value is supplied by the caller and the C ABI places no bound on it",
+          "the same symbol is defined in the image's .dynsym, so any process that links libcrypto may call it with any callback",
+          "include/openssl/modes.h:25/69 -- typedef void (*block128_f)(const unsigned char in[16], unsigned char out[16], const void *key); and CRYPTO_cfb128_encrypt(..., int enc, block128_f block)",
+          "include/openssl/types.h:237 -- typedef int pem_password_cb(char *buf, int size, int rwflag, void *userdata); pem.h:537 passes it as b2i_PVK_bio_ex(BIO *in, pem_password_cb *cb, void *u, ...)"
+        ],
+        "contract": "an exported C function's callback parameter",
+        "covers": "the public seam through which a C caller supplies a callback to an exported function; the function name, the parameter index and the declared callback type are the documented interface",
+        "does_not_cover": [
+          "the behaviour or lifetime of the application's callback, which is the application's obligation once supplied",
+          "a NULL argument where the header does not admit one; that is a C-invalid input, not a target",
+          "which callback (if any) an in-image caller installs; the target set is unbounded",
+          "a private wrapper whose callers are all in-image and finite: the witness defers it to reachable-caller-target instead",
+          "reachability from the two workloads, or that an external caller exists at run time"
+        ],
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-SSHD-0003",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_EXPORT_CALLBACK",
+      "scoped_contract": true,
+      "sites": 66,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_EXPORT_CALLBACK]"
+    },
+    {
+      "consumer": "sshd",
+      "contract": {
+        "citation": [
+          "include/openssl/types.h:237 -- typedef int pem_password_cb(char *buf, int size, int rwflag, void *userdata); include/openssl/pem.h:439-440 -- the default `PEM_def_callback`; pem.h:492-503, 514-521 -- the exported PKCS#8 writer family's `cb` parameter",
+          "src/pem/pem_pk8.rs:87-129 -- `do_pk8pkey` stores the caller's `cb` and installs `PEM_def_callback` when both `kstr` and `cb` are NULL",
+          "src/pem/pem_pk8.rs:175-179 -- the only call through `cb` (`cb.unwrap_or(PEM_def_callback)(...)`)",
+          "src/pem/pem_pk8.rs:337-417 -- the four BIO wrappers forward their own `cb` parameter; pem_pk8.rs:485-507 -- `do_pk8pkey_fp` forwards its `cb` to `do_pk8pkey`; the FILE wrappers call it",
+          "src/pem/pem_lib.rs:282 -- `PEM_def_callback` implements the `pem_password_cb` signature"
+        ],
+        "contract": "an exported PEM PKCS#8 writer's `pem_password_cb *cb` parameter, with the documented NULL-selected in-image default `PEM_def_callback`",
+        "covers": "the exported PEM PKCS#8 writer family's `cb` parameter, the BIO and FILE wrapper forwarding chains, and the NULL-selected `PEM_def_callback` default target",
+        "does_not_cover": [
+          "which callback an application supplies; the target set is unbounded",
+          "the behaviour or lifetime of the application's callback",
+          "a caller that installs a non-parameter in-image callback; the witness refuses one",
+          "any other `pem_password_cb`-bearing site outside the four BIO writers and the FILE wrapper chain",
+          "a NULL default that is absent or not `PEM_def_callback`; the witness refuses it",
+          "a call at the enumerated address whose function leaf differs; it falls through to target-bounded with no named refusal (the address is not the identity)"
+        ],
+        "provider_obligation": "the application supplies a `pem_password_cb` of the declared signature that is valid for the call; a NULL callback with no key string selects the in-image `PEM_def_callback`",
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-SSHD-0004",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT",
+      "scoped_contract": true,
+      "sites": 1,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_EXPORT_CALLBACK_DEFAULT]"
+    },
+    {
+      "consumer": "sshd",
+      "contract": {
+        "citation": [
+          "include/openssl/evp.h:499-503 -- typedef int(EVP_PBE_KEYGEN)(...); evp.h:1592-1595 -- EVP_PBE_alg_add_type(..., EVP_PBE_KEYGEN *keygen) and EVP_PBE_alg_add(..., EVP_PBE_KEYGEN *keygen); evp.h:1598-1599 -- EVP_PBE_find_ex(..., EVP_PBE_KEYGEN **pkeygen, EVP_PBE_KEYGEN_EX **pkeygen_ex)",
+          "src/evp/evp_pbe.rs:133-147 -- `#[repr(C)] EvpPbeCtl` with `pbe_type`, `pbe_nid`, `cipher_nid`, `md_nid`, `keygen`, `keygen_ex`, so `keygen` is at offset 0x10 and `keygen_ex` at 0x18",
+          "src/evp/evp_pbe.rs:154-433 -- `static BUILTIN_PBE: [EvpPbeCtl; 34]`, the link-time rows (six carry both keygens, eighteen carry neither)",
+          "src/evp/evp_pbe.rs:793-847 -- `EVP_PBE_alg_add_type` allocates a zeroed row and stores `(*row).keygen = keygen` (the parameter) and `(*row).keygen_ex = None`",
+          "src/evp/evp_pbe.rs:893-968 -- `EVP_PBE_find_ex` searches the application registry first, then the builtin table, and copies `row.keygen` through `*pkeygen`",
+          "src/evp/evp_pbe.rs:735-741 -- `EVP_PBE_CipherInit_ex` calls the plain `keygen` only when `keygen_ex` is absent (the authority's unconditional call is D-PBE-PKCS12-KEYGEN-1)"
+        ],
+        "contract": "the `EVP_PBE_CTL.keygen` field returned by `EVP_PBE_find_ex` and filled by `EVP_PBE_alg_add_type`/`EVP_PBE_alg_add`",
+        "covers": "the public `EVP_PBE_alg_add_type`/`EVP_PBE_alg_add` seam, the `EvpPbeCtl.keygen` field at offset 0x10, the `EVP_PBE_find_ex` return slot, and the in-image `BUILTIN_PBE` rows",
+        "does_not_cover": [
+          "which keygen an application registers; the exported registry seam makes the target set unbounded",
+          "the behaviour or lifetime of the application keygen, which is the application's obligation once registered",
+          "the finite builtin rows as a target bound: they are recorded, never used to turn the site into a finite target set",
+          "a second or aliasing writer of `EvpPbeCtl.keygen`; the witness refuses one",
+          "a store through an opaque alias in code that never names `EvpPbeCtl`; the source scan cannot attribute it (no such store was found in this candidate)",
+          "NULL where the authority calls only a non-NULL keygen; the crate's `both slots empty -> 0` divergence is D-PBE-PKCS12-KEYGEN-1",
+          "a slot store inside a `macro_rules!` body in a file that names `EvpPbeCtl` or its accessors; the scan refuses the conservative pattern (`macro-expanded-slot-store-unattributed`), and the scan is file-scoped, so a macro defined in a file that never names the owner or an accessor is outside it",
+          "a `macro_rules!` body whose field name is itself a metavariable (`(*$p).$f = $v;`): the literal-field conservative pattern does not see it and it is not refused; no such macro exists in the candidate's `EvpPbeCtl`-naming files",
+          "a call at the enumerated address whose function leaf differs; it falls through to target-bounded with no named refusal (the address is not the identity)"
+        ],
+        "provider_obligation": "the application supplies an `EVP_PBE_KEYGEN` of the declared signature that outlives the registry; `EVP_PBE_alg_add_type` copies the pointer unchanged and the consumer calls it with the documented arguments",
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-SSHD-0005",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_PBE_REGISTRY",
+      "scoped_contract": true,
+      "sites": 1,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_PBE_REGISTRY]"
+    },
+    {
+      "consumer": "sshd",
+      "contract": {
+        "citation": [
+          "include/openssl/core.h:40-44 -- struct ossl_dispatch_st { int function_id; void (*function)(void); }, and OSSL_DISPATCH_END { 0, NULL }: an array of dispatch elements is always terminated by function_id == 0",
+          "include/openssl/core.h:186-195 -- typedef int OSSL_provider_init_fn(const OSSL_CORE_HANDLE *handle, const OSSL_DISPATCH *in, const OSSL_DISPATCH **out, void **provctx); |out| is the base-function array the provider returns to the core; |provctx| is passed to the provider's other context constructors",
+          "include/openssl/core_dispatch.h:30-68 -- function identities start at 1 (0 terminates the table) and each OSSL_FUNC_* extractor names the signature the core will call",
+          "include/openssl/provider.h:78-85 -- OSSL_PROVIDER_add_builtin(OSSL_LIB_CTX *, const char *name, OSSL_provider_init_fn *init_fn); the same entry-point type is what an externally loaded module implements"
+        ],
+        "contract": "OSSL_provider_init",
+        "covers": "the interface by which an out-of-image provider is entered, the shape of the dispatch table it returns, the provider's own allocation correctness, and the store-loader `OsslStoreLoader.p_close` slot (`OSSL_FUNC_STORE_CLOSE`) at the enumerated `OSSL_STORE_open_ex` site",
+        "does_not_cover": [
+          "which module (if any) the effective configuration names; the target set is unbounded",
+          "the memory safety or correctness of the external provider, which is the provider's own obligation after the ABI boundary",
+          "reachability from these two workloads, or that a configuration file exists at run time",
+          "application code not loaded as a provider; it is not a node in this closure",
+          "in-image target completeness for the built-in provider path",
+          "the legacy store-loader `closefn`/`open`/`open_ex` fields, which are `ABI_CONTRACT_STORE_LOADER`",
+          "a call at the enumerated address whose function leaf differs; it falls through to target-bounded with no named refusal (the address is not the identity)",
+          "the store-loader `p_close` writer set when a `macro_rules!` body in an owner-naming file stores a slot; that site refuses on the conservative `macro-expanded-slot-store-unattributed` pattern, and the scan is file-scoped (a macro defined in a file that never names the owner is outside it)",
+          "for the store-loader `p_close` use, a `macro_rules!` body whose field name is itself a metavariable (`(*$p).$f = $v;`): the literal-field conservative pattern does not see it and it is not refused; no such macro exists in the candidate's `OsslStoreLoader`-naming files"
+        ],
+        "provider_obligation": "a provider module returns its own dispatch table and owns the correctness and lifetime of every object it allocates: its provider context, algorithm contexts, key objects, and the memory behind the OSSL_FUNC_* callbacks it publishes; the core only calls those callbacks through the returned table",
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-SSHD-0006",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_PROVIDER",
+      "scoped_contract": true,
+      "sites": 16,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_PROVIDER]"
+    },
+    {
+      "consumer": "sshd",
+      "contract": {
+        "citation": [
+          "include/openssl/crypto.h:541 -- int OPENSSL_atexit(void (*handler)(void));",
+          "src/runtime/init.rs:867-873 -- `#[repr(C)] struct OpenSslInitStop { handler: extern \"C\" fn(), next: *mut OpenSslInitStop }`; `handler` is the first field, so its slot is offset 0",
+          "src/runtime/init.rs:979 -- `pub unsafe extern \"C\" fn OPENSSL_atexit(handler: Option<extern \"C\" fn()>) -> c_int`",
+          "src/runtime/init.rs:993 -- `OwnedInitStop::new(handler, core::ptr::null_mut())` forwards the parameter unchanged",
+          "src/runtime/init.rs:910 -- the only store to the node's `handler` field: `dst.write(OpenSslInitStop { handler, next })`",
+          "src/runtime/init.rs:1002 -- the only publication: `STOP_HANDLERS.compare_exchange_weak`; 1028 `swap` and 1045 `store` write NULL (drain start / clear)",
+          "src/runtime/init.rs:1033-1034 -- the dispatch reads `(*curr).handler` and calls it; the enumerated image site is OPENSSL_cleanup 0x3dc914 `call *(%rbx)` (the inlined drain)",
+          "the writer set is COMPUTED by scanning `src/` for node literals, `.handler =` stores and `STOP_HANDLERS` writes; any additional writer refuses"
+        ],
+        "contract": "int OPENSSL_atexit(void (*handler)(void)) and the `OPENSSL_cleanup` drain of the handler list",
+        "covers": "the public `OPENSSL_atexit` registration seam, the single `OpenSslInitStop.handler` field it writes at offset 0, and the `OPENSSL_cleanup` dispatch that reads that field",
+        "does_not_cover": [
+          "the application's handler body, which is the caller's obligation (the header admits any `void (*)(void)`)",
+          "a NULL handler: `OPENSSL_atexit` refuses it (a recorded divergence)",
+          "a node not produced by `OPENSSL_atexit`; the writer set must be exactly that function",
+          "the reachability of the target from the consumer workload; that remains the closure's job",
+          "concurrency of the drain; the authority's single-threaded cleanup assumption is unchanged"
+        ],
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-SSHD-0007",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_REGISTRATION_ATEXIT",
+      "scoped_contract": true,
+      "sites": 1,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_REGISTRATION_ATEXIT]"
+    },
+    {
+      "consumer": "sshd",
+      "contract": {
+        "citation": [
+          "include/openssl/store.h:297-299 -- typedef OSSL_STORE_open_fn, OSSL_STORE_open_ex_fn; store.h:312 -- OSSL_STORE_close_fn; store.h:319-323 -- OSSL_STORE_LOADER_set_open/set_open_ex; store.h:346 -- OSSL_STORE_LOADER_set_close; store.h:353 -- OSSL_STORE_register_loader",
+          "src/store/mod.rs:250-307 -- `#[repr(C)] OsslStoreLoader`; `open` is at 0x10, `closefn` at 0x50, `open_ex` at 0x58, `p_close` at 0xb8",
+          "src/store/store_register.rs:304-332,441-454 -- the three setters store their function parameter into exactly those fields",
+          "src/store/store_register.rs:470-574 -- `ossl_store_register_loader_int` (the only stack push) is called only by the exported `OSSL_STORE_register_loader`",
+          "src/store/store_register.rs:175-185 -- `ossl_store_register_init` creates an empty stack; no in-image code registers a loader",
+          "src/store/store_register.rs:583-620 -- `ossl_store_get0_loader_int` returns the registry's own loader",
+          "src/store/store_lib.rs:800-816 -- `OSSL_STORE_open_ex` calls `loader.open_ex` / `loader.open`; store_lib.rs:666-668 -- the inlined `ossl_store_close_it` calls `loader.closefn` when `fetched_loader` is NULL"
+        ],
+        "contract": "the legacy `OSSL_STORE_LOADER` `open`, `open_ex` and `closefn` callbacks and the exported setters/registration that fill them",
+        "covers": "the public `OSSL_STORE_LOADER_set_open_ex`/`set_open`/`set_close` and `OSSL_STORE_register_loader` seam, the `OsslStoreLoader` fields at 0x10/0x50/0x58, and the `ossl_store_get0_loader_int` base",
+        "does_not_cover": [
+          "which loader an application registers; the exported seam makes the target set unbounded",
+          "the behaviour or lifetime of the registered callbacks",
+          "a second or aliasing writer of the fields; the witness refuses one",
+          "a store through an opaque alias in code that never names `OsslStoreLoader`; the source scan cannot attribute it (no such store was found in this candidate)",
+          "an in-image registration caller; the source scan proves none exists",
+          "the `closefn` base on the fetched_loader == NULL path is established by the source guards (`loader_ctx != NULL`); the machine definition set also carries the provider and failed-fetch definitions, both excluded by those guards",
+          "provider store loaders, which are `ABI_CONTRACT_PROVIDER`",
+          "a slot store inside a `macro_rules!` body in a file that names `OsslStoreLoader` or its accessors; the scan refuses the conservative pattern (`macro-expanded-slot-store-unattributed`), and the scan is file-scoped, so a macro defined in a file that never names the owner or an accessor is outside it",
+          "a `macro_rules!` body whose field name is itself a metavariable (`(*$p).$f = $v;`): the literal-field conservative pattern does not see it and it is not refused; no such macro exists in the candidate's `OsslStoreLoader`-naming files",
+          "a call at the enumerated address whose function leaf differs; it falls through to target-bounded with no named refusal (the address is not the identity)"
+        ],
+        "provider_obligation": "the application registers an `OSSL_STORE_LOADER` whose non-optional callbacks are valid for the loader's lifetime; the setters copy the pointers unchanged and `OSSL_STORE_open_ex` calls them with the documented arguments",
+        "resolution_kind": "contract-bounded (target set unbounded)"
+      },
+      "contract_missing": [],
+      "id": "OP-SSHD-0008",
+      "kind": "contract-bounded-indirect-site",
+      "operation": "ABI_CONTRACT_STORE_LOADER",
+      "scoped_contract": true,
+      "sites": 3,
+      "source": "precision.predicate_element_7.contract_bounded_by_class[ABI_CONTRACT_STORE_LOADER]"
+    },
+    {
+      "consumer": "sshd",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libcrypto.so.3",
+      "exported": true,
+      "id": "OP-SSHD-0009",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "CRYPTO_free",
+      "scoped_contract": false,
+      "sites": 4,
+      "source": "precision.dlsym_literals[libcrypto.so.3][CRYPTO_free]"
+    },
+    {
+      "consumer": "sshd",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libcrypto.so.3",
+      "exported": true,
+      "id": "OP-SSHD-0010",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "OPENSSL_init_crypto",
+      "scoped_contract": false,
+      "sites": 2,
+      "source": "precision.dlsym_literals[libcrypto.so.3][OPENSSL_init_crypto]"
+    },
+    {
+      "consumer": "sshd",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libcrypto.so.3",
+      "exported": false,
+      "id": "OP-SSHD-0011",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "__pthread_get_minstack",
+      "scoped_contract": false,
+      "sites": 1,
+      "source": "precision.dlsym_literals[libcrypto.so.3][__pthread_get_minstack]"
+    },
+    {
+      "consumer": "sshd",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libcrypto.so.3",
+      "exported": true,
+      "id": "OP-SSHD-0012",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "conf_ssl_get",
+      "scoped_contract": false,
+      "sites": 2,
+      "source": "precision.dlsym_literals[libcrypto.so.3][conf_ssl_get]"
+    },
+    {
+      "consumer": "sshd",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libcrypto.so.3",
+      "exported": true,
+      "id": "OP-SSHD-0013",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "conf_ssl_get_cmd",
+      "scoped_contract": false,
+      "sites": 2,
+      "source": "precision.dlsym_literals[libcrypto.so.3][conf_ssl_get_cmd]"
+    },
+    {
+      "consumer": "sshd",
+      "contract": null,
+      "contract_missing": [
+        "no contract names this literal"
+      ],
+      "dso": "libcrypto.so.3",
+      "exported": true,
+      "id": "OP-SSHD-0014",
+      "kind": "dlsym-literal-not-covered",
+      "operation": "conf_ssl_name_find",
+      "scoped_contract": false,
+      "sites": 2,
+      "source": "precision.dlsym_literals[libcrypto.so.3][conf_ssl_name_find]"
+    },
+    {
+      "consumer": "sshd",
+      "contract": null,
+      "contract_missing": [
+        "the resolved module and symbol names are configuration"
+      ],
+      "id": "OP-SSHD-0015",
+      "kind": "dynamic-name-lookup",
+      "operation": "DSO_bind_func",
+      "scoped_contract": false,
+      "sites": 1,
+      "source": "graph.special_edges.dynamic_name_lookup_reachable[0]"
+    },
+    {
+      "consumer": "sshd",
+      "contract": null,
+      "contract_missing": [
+        "the resolved module and symbol names are configuration"
+      ],
+      "id": "OP-SSHD-0016",
+      "kind": "dynamic-name-lookup",
+      "operation": "DSO_convert_filename",
+      "scoped_contract": false,
+      "sites": 1,
+      "source": "graph.special_edges.dynamic_name_lookup_reachable[1]"
+    },
+    {
+      "consumer": "sshd",
+      "contract": null,
+      "contract_missing": [
+        "no scoped contract for this dependency"
+      ],
+      "id": "OP-SSHD-0017",
+      "kind": "unmodelled-shared-object",
+      "operation": "libc.so.6",
+      "scoped_contract": false,
+      "sites": 1,
+      "source": "artifact_identity.dynamic.needed"
+    }
+  ],
+  "rule": "an opaque operation is scoped only when the closure engine's contract registry supplies an assumption, a scope and a falsifier bound to a documented interface; a site that stays unresolved without such a contract is listed",
+  "schema": "openssl-rs/etp-t10/opaque-operations/1",
+  "totals": {
+    "operation_rows": 61,
+    "operation_sites": 472,
+    "scoped_contract_rows": 24,
+    "unscoped_contract_rows": 37,
+    "unscoped_contract_sites": 82
+  }
+}

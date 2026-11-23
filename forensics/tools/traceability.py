@@ -25,7 +25,7 @@ discovered orphan is not declared in the graph's own `orphans` register.  A
 declared orphan that no longer reproduces is also refused: a gap register that
 drifts away from the graph is not evidence.
 
-The twelve orphan classes are fixed:
+The thirteen orphan classes are fixed:
 
   1  requirement without an implementation edge                 ORPHAN-1:<req>
   2  implementation without an artefact                          ORPHAN-2:<impl>
@@ -41,6 +41,8 @@ The twelve orphan classes are fixed:
   11 refinement edge with no discharge                          ORPHAN-11:<edge>
   12 unsafe obligation node whose inventory has a site with no   ORPHAN-12:<obligation>
      validity argument and no control
+  13 closure exclusion that fails the independently checkable   ORPHAN-13:<obligation>
+     bar, or a SAFE_COMPATIBLE release claim constrained by one ORPHAN-13:CLAIM:<claim>
 
 Every refusal names the node, the edge rule and the artefact.  Output is sorted
 and serialised with sorted keys and fixed separators, so two runs over the same
@@ -153,6 +155,7 @@ CLASS_NAMES = {
     10: "refinement_obligation_without_artefact",
     11: "refinement_edge_without_discharge",
     12: "unsafe_site_without_contract_or_control",
+    13: "closure_exclusion_fails_checkable_bar",
 }
 
 # A positive release claim needs a positive adjudication verdict.  A negative
@@ -377,7 +380,7 @@ def _index(graph: Graph) -> None:
 
 
 def _check_structural(graph: Graph) -> None:
-    """Referential and field rules that are not the twelve orphan classes."""
+    """Referential and field rules that are not the thirteen orphan classes."""
     for nid, node in graph.nodes.items():
         source = node.get("source")
         if not isinstance(source, dict) or not isinstance(source.get("path"), str):
@@ -457,6 +460,38 @@ def _check_structural(graph: Graph) -> None:
                     raise Refusal(
                         "TG_UNKNOWN_BLOCK_TARGET",
                         f"obligation {nid!r} blocks {cid!r} ({target['type']}), not a release claim",
+                    )
+            closure_exclusions = node.get("closure_exclusions")
+            if closure_exclusions is not None:
+                if not isinstance(closure_exclusions, dict):
+                    raise Refusal(
+                        "TG_CLOSURE_EXCLUSIONS",
+                        f"obligation {nid!r} closure_exclusions is not an object",
+                    )
+                for key in ("rows", "failing_rows"):
+                    value = closure_exclusions.get(key)
+                    if not isinstance(value, int) or isinstance(value, bool) or value < 0:
+                        raise Refusal(
+                            "TG_CLOSURE_EXCLUSIONS",
+                            f"obligation {nid!r} closure_exclusions.{key} is not a "
+                            "non-negative integer",
+                        )
+                if (closure_exclusions.get("failing_rows", 0)
+                        > closure_exclusions.get("rows", 0)):
+                    raise Refusal(
+                        "TG_CLOSURE_EXCLUSIONS",
+                        f"obligation {nid!r} claims more failing exclusions than rows",
+                    )
+                ids = closure_exclusions.get("failing_ids") or []
+                if not isinstance(ids, list):
+                    raise Refusal(
+                        "TG_CLOSURE_EXCLUSIONS",
+                        f"obligation {nid!r} closure_exclusions.failing_ids is not an array",
+                    )
+                if len(ids) != closure_exclusions.get("failing_rows", 0):
+                    raise Refusal(
+                        "TG_CLOSURE_EXCLUSIONS",
+                        f"obligation {nid!r} failing_ids does not match failing_rows",
                     )
 
         if node["type"] == "requirement":
@@ -781,6 +816,7 @@ def detect_orphans(graph: Graph, repo: Path = REPO_ROOT) -> list[Orphan]:
     orphans.extend(_class_10(graph))
     orphans.extend(_class_11(graph))
     orphans.extend(_class_12(graph))
+    orphans.extend(_class_13(graph))
     orphans.sort(key=lambda o: (o.cls, o.id))
     unique: dict[str, Orphan] = {}
     for orphan in orphans:
@@ -1102,6 +1138,55 @@ def _class_12(graph: Graph) -> Iterable[Orphan]:
                     "nor a control that could fail"
                 ),
             )
+
+
+def _class_13(graph: Graph) -> Iterable[Orphan]:
+    """A closure omission that fails the independently checkable bar.
+
+    ETP-T10 requires every omitted edge to carry an exclusion argument a third
+    party can check.  An obligation node carrying ``closure_exclusions`` with a
+    positive ``failing_rows`` count names omissions that do not meet the bar; a
+    release claim that asserts ``SAFE_COMPATIBLE`` while such an obligation
+    constrains it is the same failure seen from the claim.  Both are recorded
+    as orphans rather than dropped, so the omission is visible from the claim.
+    """
+    for nid, node in graph.nodes.items():
+        if node["type"] == "obligation":
+            exclusions = node.get("closure_exclusions")
+            if not isinstance(exclusions, dict):
+                continue
+            failing = exclusions.get("failing_rows", 0)
+            if failing > 0:
+                yield Orphan(
+                    id=f"ORPHAN-13:{nid}",
+                    cls=13,
+                    node=nid,
+                    reason="exclusion_fails_bar",
+                    detail=(
+                        f"obligation {nid} records {failing} of "
+                        f"{exclusions.get('rows', 0)} exclusion(s) in category "
+                        f"{exclusions.get('category')!r} that fail the checkable "
+                        "bar"),
+                )
+        elif node["type"] == "release_claim":
+            if node.get("claimed_verdict") not in POSITIVE_VERDICTS:
+                continue
+            failing = [
+                source for source in _in(graph, nid, "constrains")
+                if isinstance(graph.nodes[source].get("closure_exclusions"), dict)
+                and graph.nodes[source]["closure_exclusions"].get("failing_rows", 0) > 0
+            ]
+            if failing:
+                yield Orphan(
+                    id=f"ORPHAN-13:CLAIM:{nid}",
+                    cls=13,
+                    node=nid,
+                    reason="safe_compatible_with_failing_exclusion",
+                    detail=(
+                        f"release claim {nid} asserts {node.get('claimed_verdict')} "
+                        "while constrained by obligations with failing closure "
+                        f"exclusions: {', '.join(sorted(failing))}"),
+                )
 
 
 def _class_11(graph: Graph) -> Iterable[Orphan]:

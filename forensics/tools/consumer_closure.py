@@ -39201,6 +39201,46 @@ def closure_verdict_state(refusals, obligations) -> str:
     return "ACCEPTED" if not refusals and not unsupporting else "REFUSED"
 
 
+def closure_discipline_section(receipt: dict) -> dict:
+    """ETP-T10: audit the receipt's omissions and opaque operations.
+
+    The section is derived from the finished receipt by
+    :mod:`forensics.tools.closure_discipline`, so a receipt carries the
+    exclusion-bar verdict and the unscoped opaque-operation count on the run
+    that produced it.  ``safe_compatible`` is never promoted here; the section
+    records why a promotion would be refused.
+    """
+    import closure_discipline  # same directory; lazy to avoid an import cycle
+
+    consumer = receipt.get("family") or "unknown"
+    exclusions = closure_discipline.audit_receipt_dict(
+        receipt, consumer=consumer)
+    opaque = closure_discipline.audit_opaque_dict(receipt, consumer=consumer)
+    return {
+        "schema": closure_discipline.EXCLUSIONS_SCHEMA,
+        "bar": closure_discipline.BAR_REQUIREMENTS,
+        "exclusion_rows": exclusions["exclusion_rows"],
+        "exclusions_failing": exclusions["exclusions_failing"],
+        "failing_ids": exclusions["failing_ids"],
+        "categories": exclusions["categories"],
+        "candidate_install_available": exclusions[
+            "candidate_install"]["available"],
+        "inventory_available": exclusions[
+            "inventory_availability"]["available"],
+        "opaque_operations": {
+            "rows": opaque["operation_rows"],
+            "sites": opaque["operation_sites"],
+            "unscoped_rows": opaque["unscoped_contract_rows"],
+            "unscoped_sites": opaque["unscoped_contract_sites"],
+            "unscoped_ids": opaque["unscoped_ids"],
+        },
+        "rule": (
+            "AGENTS.md section 7: a SAFE_COMPATIBLE verdict requires that no "
+            "exclusion in its dependency closure fails the independently "
+            "checkable bar.  A failing row is recorded, never dropped."),
+    }
+
+
 def build_receipt(args) -> dict:
     repo = Path(args.repo).resolve()
     tool_identity = _tool_identity()
@@ -40785,6 +40825,7 @@ def build_receipt(args) -> dict:
             "recorded, not treated as evidence.",
         ],
     }
+    receipt["closure_discipline"] = closure_discipline_section(receipt)
     return receipt
 
 

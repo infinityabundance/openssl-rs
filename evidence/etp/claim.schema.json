@@ -1473,6 +1473,27 @@
               "$ref": "#/$defs/sha256"
             }
           ]
+        },
+        "declared_state": {
+          "description": "The machine-readable state the named cell receipt declares for itself. ETP-T10: a positive aggregate claim may not contain a cell in a blocked, unresolved or not-established state (EG_AGGREGATE_PASS_HIDES_BLOCKED_CELL).",
+          "enum": [
+            "PASS",
+            "ACCEPTED",
+            "SAFE_COMPATIBLE",
+            "ESTABLISHED",
+            "DISCHARGED",
+            "BLOCKED",
+            "UNKNOWN",
+            "NOT_ESTABLISHED",
+            "NOT_GRADUATED",
+            "REFUSED",
+            "CONTRADICTED",
+            "FAIL",
+            "FAILED",
+            "WITHDRAWN",
+            "PARTIAL",
+            "NOT_RUN"
+          ]
         }
       }
     }

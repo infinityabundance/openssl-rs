@@ -1,0 +1,869 @@
+{
+  "aggregate_count": 8,
+  "aggregates": [
+    {
+      "aggregate": "freeze-b85c",
+      "blocked_rows": [
+        "not_run[0]",
+        "not_run[1]",
+        "not_run[2]",
+        "not_run[3]",
+        "not_run[4]",
+        "not_run[5]",
+        "not_run[6]",
+        "not_run[7]",
+        "not_run[8]",
+        "not_run[9]",
+        "not_run[10]",
+        "outstanding[0]",
+        "outstanding[1]",
+        "outstanding[2]",
+        "outstanding[3]",
+        "outstanding[4]",
+        "outstanding[5]",
+        "outstanding[6]"
+      ],
+      "blocked_rows_visible_in_document": true,
+      "path": "evidence/FREEZE-b85c.json",
+      "refusal": null,
+      "reported_overall_state": "FAIL",
+      "reported_state_source": "safe_compatible.value",
+      "rows": [
+        {
+          "blocked": true,
+          "detail": "SAFE_COMPATIBLE promotion (no independent adjudication at b85c; the frozen candidate is NOT graduated)",
+          "id": "not_run[0]",
+          "locator": "not_run[0]",
+          "state": "NOT_RUN"
+        },
+        {
+          "blocked": true,
+          "detail": "five of the seven section-7 criterion-3 mechanisms are NOT_ESTABLISHED (see safety_argument)",
+          "id": "not_run[1]",
+          "locator": "not_run[1]",
+          "state": "NOT_RUN"
+        },
+        {
+          "blocked": true,
+          "detail": "BOUNDARY adjudication of the remaining contract-bounded boundaries",
+          "id": "not_run[2]",
+          "locator": "not_run[2]",
+          "state": "NOT_RUN"
+        },
+        {
+          "blocked": true,
+          "detail": "SEAL (release build, full probe suite, full forensic regeneration)",
+          "id": "not_run[3]",
+          "locator": "not_run[3]",
+          "state": "NOT_RUN"
+        },
+        {
+          "blocked": true,
+          "detail": "Loom, dudect and Wycheproof for this candidate",
+          "id": "not_run[4]",
+          "locator": "not_run[4]",
+          "state": "NOT_RUN"
+        },
+        {
+          "blocked": true,
+          "detail": "the L7 replay is reused, not re-executed at b85c (see l7_evidence.reuse); its five workloads PASS at the binaries this freeze re-measures",
+          "id": "not_run[5]",
+          "locator": "not_run[5]",
+          "state": "NOT_RUN"
+        },
+        {
+          "blocked": true,
+          "detail": "the gate (fmt, clippy, library tests, unsafe-fn controls) is carried from the b85 run at S, not re-run: no build-relevant source input changed (measured)",
+          "id": "not_run[6]",
+          "locator": "not_run[6]",
+          "state": "NOT_RUN"
+        },
+        {
+          "blocked": true,
+          "detail": "Miri at b85 ran the six digest tests under both borrow models (0 UB); ASan (b84) and TSan (b80) were not re-run, and the full-suite Miri/ASan/TSan remain NOT_RUN",
+          "id": "not_run[7]",
+          "locator": "not_run[7]",
+          "state": "NOT_RUN"
+        },
+        {
+          "blocked": true,
+          "detail": "ThreadSanitizer for the full library suite (the concurrency-bearing filters ran)",
+          "id": "not_run[8]",
+          "locator": "not_run[8]",
+          "state": "NOT_RUN"
+        },
+        {
+          "blocked": true,
+          "detail": "no tool control is NOT_RUN: --self-test exits 0 with 0 failures at this tool and the 14 predicate controls pass",
+          "id": "not_run[9]",
+          "locator": "not_run[9]",
+          "state": "NOT_RUN"
+        },
+        {
+          "blocked": true,
+          "detail": "65 REVIEW_REQUIRED discharges (campaign status requires a rebuild and re-census)",
+          "id": "not_run[10]",
+          "locator": "not_run[10]",
+          "state": "NOT_RUN"
+        },
+        {
+          "blocked": true,
+          "detail": "SAFE_COMPATIBLE is NOT established: no independent adjudication was run at b85 (the b78/b79/b80/b84 adjudications are NOT reused); the b85 closures are queue measurements",
+          "id": "outstanding[0]",
+          "locator": "safe_compatible.outstanding[0]",
+          "state": "NOT_ESTABLISHED"
+        },
+        {
+          "blocked": true,
+          "detail": "the section-7 criterion-3 safety argument is recorded in evidence/b85-safety-argument.json and its verdict is 2 SAFETY_DISCHARGED under scoped claims (SSL_SESSION; RUNTIME_CONCURRENCY, schedule-bounded) / 0 OWNERSHIP_RECONSTRUCTED / 5 NOT_ESTABLISHED; 26 of 33 drifted obligation rows are re-established at S, and the 7 not re-read at S are named individually (two new EVP digest/conf rows, two v3_cpols rows, two v3_ncons rows and the pkcs7 ri_cb row); each non-discharge names its residual",
+          "id": "outstanding[1]",
+          "locator": "safe_compatible.outstanding[1]",
+          "state": "NOT_ESTABLISHED"
+        },
+        {
+          "blocked": true,
+          "detail": "65 REVIEW_REQUIRED discharges (CAMPAIGN-STATUS current_applied_state.safe_compatible_blockers.projected_after_recensus.REVIEW_REQUIRED); CAMPAIGN-STATUS has no b85 update, so this figure is the campaign-status projection, not a b85 measurement",
+          "id": "outstanding[2]",
+          "locator": "safe_compatible.outstanding[2]",
+          "state": "NOT_ESTABLISHED"
+        },
+        {
+          "blocked": true,
+          "detail": "BOUNDARY adjudication of the remaining contract-bounded boundaries",
+          "id": "outstanding[3]",
+          "locator": "safe_compatible.outstanding[3]",
+          "state": "NOT_ESTABLISHED"
+        },
+        {
+          "blocked": true,
+          "detail": "ThreadSanitizer for the full 2337-test suite (the concurrency-bearing filters ran) and Loom for the free side",
+          "id": "outstanding[4]",
+          "locator": "safe_compatible.outstanding[4]",
+          "state": "NOT_ESTABLISHED"
+        },
+        {
+          "blocked": true,
+          "detail": "drifted obligation rows at S: 33 in 19 changed 26 re-established (content identity or the b80/b81/b82/b83/b84/b85 rebinds), 7 not re-read at S (two EVP digest/conf rows, two v3_cpols rows, two v3_ncons rows and one pkcs7 row)",
+          "id": "outstanding[5]",
+          "locator": "safe_compatible.outstanding[5]",
+          "state": "NOT_ESTABLISHED"
+        },
+        {
+          "blocked": true,
+          "detail": "SEAL (release build, complete probe suite, full forensic regeneration)",
+          "id": "outstanding[6]",
+          "locator": "safe_compatible.outstanding[6]",
+          "state": "NOT_ESTABLISHED"
+        }
+      ],
+      "sha256": "b08131b1ca7849a3e7f801b87f427774df346366344a2b24bd8207fcb847ec4e"
+    },
+    {
+      "aggregate": "safe-compatible-openssh-b85c",
+      "blocked_rows": [
+        "dissent",
+        "retraction"
+      ],
+      "blocked_rows_visible_in_document": true,
+      "path": "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
+      "refusal": {
+        "blocked_rows": [
+          "dissent",
+          "retraction"
+        ],
+        "code": "CD_AGGREGATE_PASS_HIDES_BLOCKED_ROW",
+        "detail": "aggregate safe-compatible-openssh-b85c reports an overall pass (verdict.value) while containing 2 blocked or not-established row(s)"
+      },
+      "reported_overall_state": "PASS",
+      "reported_state_source": "verdict.value",
+      "rows": [
+        {
+          "blocked": true,
+          "detail": "an independent adjudicator returned NOT ESTABLISHED at this candidate, on the grounds that five of seven mechanisms are not discharged mechanism-wide and both scoped discharges retain un-established caller preconditions. That dissent is preserved unchanged. This graduation is a principal-decided ris",
+          "id": "dissent",
+          "locator": "dissent.statement",
+          "state": "NOT_ESTABLISHED"
+        },
+        {
+          "blocked": true,
+          "id": "retraction",
+          "locator": "retraction.status",
+          "state": "WITHDRAWN"
+        }
+      ],
+      "sha256": "41e5797d50bff7b62b25e25184f739bc3d68115396f32c4236d00a14e0301dd2"
+    },
+    {
+      "aggregate": "campaign-status",
+      "blocked_rows": [
+        "b85_adjudication",
+        "b85c_adjudication",
+        "b84_adjudication",
+        "gates.boundary_gate",
+        "gates.seal_gate"
+      ],
+      "blocked_rows_visible_in_document": true,
+      "path": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+      "refusal": {
+        "blocked_rows": [
+          "b85_adjudication",
+          "b85c_adjudication",
+          "b84_adjudication",
+          "gates.boundary_gate",
+          "gates.seal_gate"
+        ],
+        "code": "CD_AGGREGATE_PASS_HIDES_BLOCKED_ROW",
+        "detail": "aggregate campaign-status reports an overall pass (consumers.safe_compatible) while containing 5 blocked or not-established row(s)"
+      },
+      "reported_overall_state": "PASS",
+      "reported_state_source": "consumers.safe_compatible",
+      "rows": [
+        {
+          "blocked": true,
+          "detail": "NOT ESTABLISHED for SAFE_COMPATIBLE (ssh, sshd)",
+          "id": "b85_adjudication",
+          "locator": "b85_adjudication.verdict",
+          "state": "NOT_ESTABLISHED"
+        },
+        {
+          "blocked": true,
+          "detail": "NOT ESTABLISHED for SAFE_COMPATIBLE (ssh, sshd)",
+          "id": "b85c_adjudication",
+          "locator": "b85c_adjudication.verdict",
+          "state": "NOT_ESTABLISHED"
+        },
+        {
+          "blocked": true,
+          "detail": "NOT ESTABLISHED for SAFE_COMPATIBLE (ssh, sshd)",
+          "id": "b84_adjudication",
+          "locator": "b84_adjudication.verdict",
+          "state": "NOT_ESTABLISHED"
+        },
+        {
+          "blocked": true,
+          "id": "gates.boundary_gate",
+          "locator": "gates.boundary_gate.state",
+          "state": "NOT_RUN"
+        },
+        {
+          "blocked": true,
+          "id": "gates.seal_gate",
+          "locator": "gates.seal_gate.state",
+          "state": "NOT_RUN"
+        }
+      ],
+      "sha256": "abb8a6cb6ae4e430bbc8104683909664fad3dfa2dd5dcbc1f8aa69229d16606f"
+    },
+    {
+      "aggregate": "closure-curl",
+      "blocked_rows": [
+        "predicate.element_7"
+      ],
+      "blocked_rows_visible_in_document": true,
+      "path": "evidence/closure-curl-049.json",
+      "refusal": null,
+      "reported_overall_state": "FAIL",
+      "reported_state_source": "verdict.safe_compatible",
+      "rows": [
+        {
+          "blocked": false,
+          "id": "counts.BLOCKED",
+          "locator": "counts.BLOCKED",
+          "state": "BLOCKED"
+        },
+        {
+          "blocked": false,
+          "id": "counts.UNKNOWN",
+          "locator": "counts.UNKNOWN",
+          "state": "UNKNOWN"
+        },
+        {
+          "blocked": true,
+          "detail": "219 reachable unresolved site(s) carry no contract or closed-target-set bound, and/or an unclassified site is reachable",
+          "id": "predicate.element_7",
+          "locator": "precision.predicate_element_7.status",
+          "state": "FAIL"
+        }
+      ],
+      "sha256": "6aedaa4ee6691ba3d09a4c4f655a8001b35252fa4206f30584d87effe748ca16",
+      "summary_counts_hide_blocked_rows": true
+    },
+    {
+      "aggregate": "closure-ssh",
+      "blocked_rows": [
+        "predicate.element_7"
+      ],
+      "blocked_rows_visible_in_document": true,
+      "path": "evidence/closure-ssh-b85c.json",
+      "refusal": null,
+      "reported_overall_state": "FAIL",
+      "reported_state_source": "verdict.safe_compatible",
+      "rows": [
+        {
+          "blocked": false,
+          "id": "counts.BLOCKED",
+          "locator": "counts.BLOCKED",
+          "state": "BLOCKED"
+        },
+        {
+          "blocked": false,
+          "id": "counts.UNKNOWN",
+          "locator": "counts.UNKNOWN",
+          "state": "UNKNOWN"
+        },
+        {
+          "blocked": true,
+          "detail": "116 site(s) are bounded by a documented external ABI contract and 36 by a closed, enumerated in-image target set; no target-bounded unresolved site and no unclassified site remains",
+          "id": "predicate.element_7",
+          "locator": "precision.predicate_element_7.status",
+          "state": "PASS (contract-bounded and closed target sets)"
+        }
+      ],
+      "sha256": "45e3b48d5d6ce1ea19a6cd5248a194922f1b572858f8d556c2361dde98b02402",
+      "summary_counts_hide_blocked_rows": true
+    },
+    {
+      "aggregate": "closure-sshd",
+      "blocked_rows": [
+        "predicate.element_7"
+      ],
+      "blocked_rows_visible_in_document": true,
+      "path": "evidence/closure-sshd-b85c.json",
+      "refusal": null,
+      "reported_overall_state": "FAIL",
+      "reported_state_source": "verdict.safe_compatible",
+      "rows": [
+        {
+          "blocked": false,
+          "id": "counts.BLOCKED",
+          "locator": "counts.BLOCKED",
+          "state": "BLOCKED"
+        },
+        {
+          "blocked": false,
+          "id": "counts.UNKNOWN",
+          "locator": "counts.UNKNOWN",
+          "state": "UNKNOWN"
+        },
+        {
+          "blocked": true,
+          "detail": "116 site(s) are bounded by a documented external ABI contract and 36 by a closed, enumerated in-image target set; no target-bounded unresolved site and no unclassified site remains",
+          "id": "predicate.element_7",
+          "locator": "precision.predicate_element_7.status",
+          "state": "PASS (contract-bounded and closed target sets)"
+        }
+      ],
+      "sha256": "a3bd7376d9f906a46b93bea2c5feffd4a17f388fb81482d8ad09aa66ca9377e6",
+      "summary_counts_hide_blocked_rows": true
+    },
+    {
+      "aggregate": "claims-etp",
+      "blocked_rows": [
+        "ETP0-CLM-004",
+        "ETP0-CLM-005",
+        "ETP0-CLM-008",
+        "ETP0-CLM-009",
+        "ETP0-CLM-011",
+        "ETP0-CLM-012",
+        "ETP0-CLM-013",
+        "ETP0-CLM-014",
+        "ETP0-CLM-015",
+        "ETP0-CLM-016",
+        "ETP0-CLM-017",
+        "ETP0-CLM-022",
+        "ETP0-CLM-023",
+        "ETP0-CLM-028",
+        "ETP0-CLM-030",
+        "ETP0-CLM-032",
+        "ETP0-CLM-035"
+      ],
+      "blocked_rows_visible_in_document": true,
+      "path": "evidence/etp/claims.json",
+      "refusal": null,
+      "reported_overall_state": "FAIL",
+      "reported_state_source": "claims[].verdict.state",
+      "rows": [
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-001",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-001]/verdict/state",
+          "state": "ESTABLISHED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-002",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-002]/verdict/state",
+          "state": "ESTABLISHED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-003",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-003]/verdict/state",
+          "state": "ESTABLISHED"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-004",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-004]/verdict/state",
+          "state": "CONTRADICTED"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-005",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-005]/verdict/state",
+          "state": "CONTRADICTED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-006",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-006]/verdict/state",
+          "state": "ESTABLISHED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-007",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-007]/verdict/state",
+          "state": "ESTABLISHED"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-008",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-008]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-009",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-009]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-010",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-010]/verdict/state",
+          "state": "ESTABLISHED"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-011",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-011]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-012",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-012]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-013",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-013]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-014",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-014]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-015",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-015]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-016",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-016]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-017",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-017]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-018",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-018]/verdict/state",
+          "state": "ESTABLISHED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-019",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-019]/verdict/state",
+          "state": "ESTABLISHED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-020",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-020]/verdict/state",
+          "state": "ESTABLISHED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-021",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-021]/verdict/state",
+          "state": "ESTABLISHED"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-022",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-022]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-023",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-023]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-024",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-024]/verdict/state",
+          "state": "ESTABLISHED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-025",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-025]/verdict/state",
+          "state": "ESTABLISHED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-026",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-026]/verdict/state",
+          "state": "ESTABLISHED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-027",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-027]/verdict/state",
+          "state": "ESTABLISHED"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-028",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-028]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-029",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-029]/verdict/state",
+          "state": "ESTABLISHED"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-030",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-030]/verdict/state",
+          "state": "CONTRADICTED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-031",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-031]/verdict/state",
+          "state": "ESTABLISHED"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-032",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-032]/verdict/state",
+          "state": "CONTRADICTED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-033",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-033]/verdict/state",
+          "state": "SUPERSEDED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-034",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-034]/verdict/state",
+          "state": "ESTABLISHED"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-035",
+          "locator": "evidence/etp/claims.json#/claims[id=ETP0-CLM-035]/verdict/state",
+          "state": "PARTIAL"
+        }
+      ],
+      "sha256": "65d8105b744c80ae01e76af8bf3370c478ab116c7fc9b0f16f63eea5d5c579de"
+    },
+    {
+      "aggregate": "claims-etp0",
+      "blocked_rows": [
+        "ETP0-CLM-004",
+        "ETP0-CLM-005",
+        "ETP0-CLM-008",
+        "ETP0-CLM-009",
+        "ETP0-CLM-011",
+        "ETP0-CLM-012",
+        "ETP0-CLM-013",
+        "ETP0-CLM-014",
+        "ETP0-CLM-015",
+        "ETP0-CLM-016",
+        "ETP0-CLM-017",
+        "ETP0-CLM-022",
+        "ETP0-CLM-023",
+        "ETP0-CLM-028",
+        "ETP0-CLM-030",
+        "ETP0-CLM-032",
+        "ETP0-CLM-035"
+      ],
+      "blocked_rows_visible_in_document": true,
+      "path": "evidence/etp0/CLAIMS.json",
+      "refusal": null,
+      "reported_overall_state": "FAIL",
+      "reported_state_source": "claims[].verdict.state",
+      "rows": [
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-001",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-001]/verdict/state",
+          "state": "SUPPORTED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-002",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-002]/verdict/state",
+          "state": "SUPPORTED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-003",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-003]/verdict/state",
+          "state": "SUPPORTED"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-004",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-004]/verdict/state",
+          "state": "CONTRADICTED"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-005",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-005]/verdict/state",
+          "state": "CONTRADICTED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-006",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-006]/verdict/state",
+          "state": "SUPPORTED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-007",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-007]/verdict/state",
+          "state": "SUPPORTED"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-008",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-008]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-009",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-009]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-010",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-010]/verdict/state",
+          "state": "SUPPORTED"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-011",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-011]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-012",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-012]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-013",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-013]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-014",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-014]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-015",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-015]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-016",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-016]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-017",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-017]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-018",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-018]/verdict/state",
+          "state": "SUPPORTED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-019",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-019]/verdict/state",
+          "state": "SUPPORTED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-020",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-020]/verdict/state",
+          "state": "SUPPORTED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-021",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-021]/verdict/state",
+          "state": "SUPPORTED"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-022",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-022]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-023",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-023]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-024",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-024]/verdict/state",
+          "state": "SUPPORTED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-025",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-025]/verdict/state",
+          "state": "SUPPORTED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-026",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-026]/verdict/state",
+          "state": "SUPPORTED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-027",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-027]/verdict/state",
+          "state": "SUPPORTED"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-028",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-028]/verdict/state",
+          "state": "PARTIAL"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-029",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-029]/verdict/state",
+          "state": "SUPPORTED"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-030",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-030]/verdict/state",
+          "state": "CONTRADICTED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-031",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-031]/verdict/state",
+          "state": "SUPPORTED"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-032",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-032]/verdict/state",
+          "state": "CONTRADICTED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-033",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-033]/verdict/state",
+          "state": "SUPERSEDED"
+        },
+        {
+          "blocked": false,
+          "id": "ETP0-CLM-034",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-034]/verdict/state",
+          "state": "SUPPORTED"
+        },
+        {
+          "blocked": true,
+          "id": "ETP0-CLM-035",
+          "locator": "evidence/etp0/CLAIMS.json#/claims[id=ETP0-CLM-035]/verdict/state",
+          "state": "PARTIAL"
+        }
+      ],
+      "sha256": "d4b68f6fbf19333c557c3056e42261ac60bbafc70562b21e5bc08872163d92c6"
+    }
+  ],
+  "identity": {
+    "commit": "87d0868ef4d3f1a9d0686bd367e790105a820e03"
+  },
+  "refusal_count": 2,
+  "refusals": [
+    {
+      "aggregate": "safe-compatible-openssh-b85c",
+      "blocked_rows": [
+        "dissent",
+        "retraction"
+      ],
+      "code": "CD_AGGREGATE_PASS_HIDES_BLOCKED_ROW",
+      "detail": "aggregate safe-compatible-openssh-b85c reports an overall pass (verdict.value) while containing 2 blocked or not-established row(s)"
+    },
+    {
+      "aggregate": "campaign-status",
+      "blocked_rows": [
+        "b85_adjudication",
+        "b85c_adjudication",
+        "b84_adjudication",
+        "gates.boundary_gate",
+        "gates.seal_gate"
+      ],
+      "code": "CD_AGGREGATE_PASS_HIDES_BLOCKED_ROW",
+      "detail": "aggregate campaign-status reports an overall pass (consumers.safe_compatible) while containing 5 blocked or not-established row(s)"
+    }
+  ],
+  "rule": "an aggregate that reports an overall pass while containing a blocked, unresolved or not-established row is refused with CD_AGGREGATE_PASS_HIDES_BLOCKED_ROW; the aggregate is not edited",
+  "schema": "openssl-rs/etp-t10/aggregates/1"
+}

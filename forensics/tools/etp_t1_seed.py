@@ -18,9 +18,13 @@ import hashlib
 import json
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
+if str(Path(__file__).resolve().parent) not in sys.path:
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+import closure_discipline  # noqa: E402  (ETP-T10 projection)
 S = "21bea318819a56f641b3aa2f25027216b97a1c4d"
 # The ETP-T3 analysis candidate.  The refinement nodes cite documents and
 # evidence that exist here; the rest of the graph remains bound to S.

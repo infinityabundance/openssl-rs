@@ -159,6 +159,23 @@ ABSORBING_VERDICTS = ("CONTRADICTED", "REFUTED", "WITHDRAWN", "SUPERSEDED")
 # discharged proof obligation or a verified binary refinement.
 POSITIVE_VERDICTS = frozenset({"ESTABLISHED", "SAFE_COMPATIBLE"})
 
+# ETP-T10 section 1c: a cell state that a positive aggregate may not summarise
+# away.  A cell that declares any of these states is a blocked row; an
+# aggregate that reports a pass while containing one is refused.
+BLOCKED_CELL_STATES = frozenset({
+    "BLOCKED",
+    "UNKNOWN",
+    "NOT_ESTABLISHED",
+    "NOT_GRADUATED",
+    "REFUSED",
+    "CONTRADICTED",
+    "FAIL",
+    "FAILED",
+    "WITHDRAWN",
+    "PARTIAL",
+    "NOT_RUN",
+})
+
 # An evidence record's declared state that contradicts a positive verdict. The
 # state comes from the tracked artefact and is copied into the claim; it is
 # never inferred from the claim's own verdict or from the artefact's name.
@@ -1504,6 +1521,123 @@ def check_aggregates(doc: dict, repo_root: Path | None = None) -> list[Refusal]:
                         f"not the recorded {digest}",
                     )
                 )
+
+        # ETP-T10 section 1c: a summary may not be stronger than its members.
+        # A positive aggregate claim whose cells declare a blocked, unresolved
+        # or not-established state is refused; the cell is never dropped to let
+        # the aggregate pass.
+        verdict = claim.get("verdict", {})
+        claim_state = verdict.get("state") if isinstance(verdict, dict) else verdict
+        if claim_state in POSITIVE_VERDICTS:
+            blocked_cells = [
+                cell for cell in cells
+                if isinstance(cell, dict)
+                and cell.get("declared_state") in BLOCKED_CELL_STATES
+            ]
+            if blocked_cells:
+                refusals.append(
+                    Refusal(
+                        "EG_AGGREGATE_PASS_HIDES_BLOCKED_CELL",
+                        f"{base}/cells",
+                        "declared_state",
+                        f"aggregate claim asserts {claim_state} while containing "
+                        f"blocked cell(s): "
+                        + ", ".join(
+                            f"{c.get('id')}={c.get('declared_state')}"
+                            for c in blocked_cells),
+                    )
+                )
+    return refusals
+
+
+def _is_closure_receipt(dependency: str) -> bool:
+    name = Path(dependency).name
+    return name.startswith("closure-") and name.endswith(".json")
+
+
+def check_closure_exclusions(
+    doc: dict, *, repo_root: Path | None = None
+) -> list[Refusal]:
+    """ETP-T10 section 1d: a SAFE_COMPATIBLE verdict requires a clean bar.
+
+    A graduated verdict names its dependency closure.  Every dependency that
+    is a consumer-closure receipt must be auditable, and no exclusion in it may
+    fail the independently checkable bar.  This is the claim-algebra half of
+    the rule; the traceability graph projects the same exclusions as nodes and
+    edges, so the same omission is visible there.
+    """
+    refusals: list[Refusal] = []
+    claims = doc.get("claims", []) if isinstance(doc, dict) else []
+    if not isinstance(claims, list):
+        return refusals
+    for index, claim in enumerate(claims):
+        if not isinstance(claim, dict):
+            continue
+        verdict = claim.get("verdict", {})
+        state = verdict.get("state") if isinstance(verdict, dict) else verdict
+        if state not in GRADUATED_VERDICTS:
+            continue
+        closure = claim.get("closure")
+        dependencies = (
+            closure.get("dependencies", []) if isinstance(closure, dict) else []
+        )
+        receipts = [
+            dependency for dependency in dependencies
+            if isinstance(dependency, str) and _is_closure_receipt(dependency)
+        ]
+        base = f"$.claims/{index}/closure/dependencies"
+        if not receipts:
+            refusals.append(
+                Refusal(
+                    "EG_SAFE_COMPATIBLE_CLOSURE_UNBOUND",
+                    base,
+                    "dependencies",
+                    "a SAFE_COMPATIBLE verdict names no consumer-closure receipt, "
+                    "so its exclusions cannot be audited against the bar",
+                )
+            )
+            continue
+        if repo_root is None:
+            continue
+        for dependency in receipts:
+            path = repo_root / dependency
+            if not path.is_file():
+                refusals.append(
+                    Refusal(
+                        "EG_SAFE_COMPATIBLE_CLOSURE_UNBOUND",
+                        base,
+                        dependency,
+                        f"closure receipt '{dependency}' is absent from the tracked tree",
+                    )
+                )
+                continue
+            try:
+                import closure_discipline  # lazy: same tool directory
+                audit = closure_discipline.closure_receipt_failure(
+                    path, repo=repo_root
+                )
+            except Exception as exc:  # fail closed, never silently pass
+                refusals.append(
+                    Refusal(
+                        "EG_SAFE_COMPATIBLE_CLOSURE_UNBOUND",
+                        base,
+                        dependency,
+                        f"closure receipt '{dependency}' could not be audited: {exc}",
+                    )
+                )
+                continue
+            if audit["exclusions_failing"] > 0:
+                sample = ", ".join(audit["failing_ids"][:5])
+                refusals.append(
+                    Refusal(
+                        "EG_SAFE_COMPATIBLE_EXCLUSION_FAILS_BAR",
+                        base,
+                        dependency,
+                        f"closure receipt '{dependency}' has "
+                        f"{audit['exclusions_failing']} exclusion(s) that fail the "
+                        f"independently checkable bar (sample: {sample})",
+                    )
+                )
     return refusals
 
 
@@ -1797,6 +1931,7 @@ def validate_document(
         if isinstance(claim, dict):
             refusals.extend(check_claim_laws(claim, f"$.claims/{index}"))
     refusals.extend(check_aggregates(doc, repo_root))
+    refusals.extend(check_closure_exclusions(doc, repo_root=repo_root))
     refusals.extend(check_document_laws(doc, repo_root=repo_root))
     return sorted(refusals, key=lambda item: (item["path"], item["rule"], item["detail"]))
 
