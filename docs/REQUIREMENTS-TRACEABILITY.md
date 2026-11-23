@@ -338,12 +338,13 @@ correctly refuse it as class 4. The consequence is stated in section 7.
    not one of the twelve orphan classes; it is the freshness problem ETP-T9
    owns, and it is visible in the bound-commit table rather than hidden.
 10. **The ETP-T2 hazards are nodes, not prose.** Twenty hazards carry a scope, a
-   trigger classification and a barrier state. Four have no barrier at all
-   (`HAZ-15`, `HAZ-16`, `HAZ-18`, `HAZ-20`) and 16 are `CLAIMED_NO_EVIDENCE`;
-   none is `EVIDENCED`. Three hazards (`HAZ-05`, `HAZ-12`, `HAZ-17`) reach no
-   release claim because no claim declares a memory requirement in scope. The
-   projection is checked against the register's digest and fields, so a hazard
-   cannot be softened in one artefact and left unchanged in the other.
+   trigger classification and a barrier state. Three have no barrier at all
+   (`HAZ-16`, `HAZ-18`, `HAZ-20`), 16 are `CLAIMED_NO_EVIDENCE`, and one is
+   `EVIDENCED` (`HAZ-15`, by `EV-HAZ-15-DIFFERENTIAL`). Three hazards (`HAZ-05`,
+   `HAZ-12`, `HAZ-17`) reach no release claim because no claim declares a memory
+   requirement in scope. The projection is checked against the register's digest
+   and fields, so a hazard cannot be softened in one artefact and left unchanged
+   in the other.
 11. **The unsafe surface is a register, not a clean bill.** ETP-T4 classifies
    62,178 unsafe constructs by obligation and impact. 51,586 are `UNCONFINED`
    by the inventory's boundary rule; 44,303 have only a restatement of the

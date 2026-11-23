@@ -198,6 +198,31 @@ for hazz in hazard_register["hazards"]:
     for eid in hazz["t1_edges"]["evidence"]:
         edge(hid, "evidenced_by", eid, f"{eid} bears on {hid}; it does not by itself discharge it")
 
+# ETP-T2 HAZ-15: the differential receipt that supports the barrier is in the
+# working tree and is bound at the commit that adds it.  It is declared as a
+# class-8 orphan below rather than silently presented as settled at `S`.
+_HAZ15_EVIDENCE = REPO / "evidence" / "haz-15" / "observables.json"
+node(
+    "EV-HAZ-15-DIFFERENTIAL",
+    "evidence",
+    "HAZ-15 external-key PKCS#1 v1.5 differential receipt",
+    {
+        "path": "evidence/haz-15/observables.json",
+        "span": "finding_prefix/finding_postfix",
+        "quote": "the external-key oracle is demonstrated on both implementations before the "
+                 "correction and is absent from the corrected candidate",
+        "quote_kind": "fragment",
+        "sha256": hashlib.sha256(_HAZ15_EVIDENCE.read_bytes()).hexdigest(),
+        "bound_commit": "478bf17ec1aa9022a784009a999a10e4eb4c07c4",
+        "settling_method": "re-run with the bound commit set to the commit that contains "
+                           "this path",
+    },
+    kind="differential_receipt",
+    present=True,
+    quality="four ciphertexts against the candidate and the pinned authority; return value, "
+            "output bytes and error queue only, no timing measurement",
+)
+
 # ---------------------------------------------------------------- requirements
 REQUIREMENTS = [
     ("REQ-ABI-01", "The exported C ABI surface is preserved",
@@ -631,11 +656,11 @@ for oid, item, statement, settled, impls, blocks in QUEUE_OBLIGATIONS:
 # ETP-T2 hazards whose only honest disposition is an open obligation.
 ETP_T2_OBLIGATIONS = [
     ("OBL-RSA-EXTKEY-ORACLE", "ETP-T2 HAZ-15",
-     "PKCS#1 v1.5 decryption on an external key (RSA_FLAG_EXT_PKEY) substitutes "
-     "RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING and takes the refusing padding check, so the "
-     "implicit-rejection countermeasure is absent on that path.",
-     "A recorded justification that no in-scope consumer uses external keys on an attacker-facing "
-     "PKCS#1 v1.5 decryption path, or an external-key implicit-rejection design.",
+     "The authority's external-key PKCS#1 v1.5 substitution is a padding oracle. The candidate "
+     "corrects it (implicit rejection with the KDK derived from the decrypted block) and records "
+     "a deliberate divergence from the authority (D-RSA-EXTKEY-ORACLE-1).",
+     "An independent adjudication of evidence/haz-15/observables.json at the candidate that "
+     "lands the correction, and a consumer replay of the divergence.",
      ["REL-OPENSSH-B85C"], ["IMP-RSA"]),
     ("OBL-PANIC-ATOMICITY", "ETP-T2 HAZ-16",
      "guard_ffi prevents a panic from unwinding into C but does not make the interrupted "
@@ -881,6 +906,15 @@ for path in ["court/tmp/t20/NOTES.md", "court/tmp/t21/libcrypto.so.3",
         "would_close": "Track the artefact (or a content-addressed copy) at the commit the typed "
                        "claim names, or convert the claim's obligation into a tracked replacement.",
     })
+
+orphans.append({
+    "id": "ORPHAN-8:EV-HAZ-15-DIFFERENTIAL:evidence/haz-15/observables.json",
+    "class": 8,
+    "node": "EV-HAZ-15-DIFFERENTIAL",
+    "reason": "path_absent",
+    "would_close": "Track evidence/haz-15/observables.json at a named commit and re-seed "
+                   "with that commit; the barrier then cites a settled evidence identity.",
+})
 
 # ---------------------------------------------------------------- refinement
 # ETP-T3 owns the refinement architecture.  The six adjacent levels and the five

@@ -345,20 +345,19 @@
     },
     {
       "id": "HAZ-15",
-      "title": "External-key PKCS#1 v1.5 decryption has no implicit rejection",
-      "description": "For a key with RSA_FLAG_EXT_PKEY the KDK cannot be derived, so the selector is rewritten to the refusing check. An attacker measuring the refusal distinguishes padding validity.",
+      "title": "External-key PKCS#1 v1.5 decryption where the authority has no implicit rejection",
+      "description": "The authority substitutes RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING for a key with RSA_FLAG_EXT_PKEY, so a refusal distinguishes padding validity. The candidate keeps the implicit-rejection arm and derives the KDK from the decrypted block when the key holds no private exponent; the substitution is not reproduced (D-RSA-EXTKEY-ORACLE-1).",
       "source": {"path": "src/rsa/ossl.rs", "span": "rsa_ossl_private_decrypt", "quote": "an external key does not hold the", "quote_kind": "fragment"},
       "scope": {"api_family": "rsa", "input_class": "adversarial_contract_valid", "also_applies_to": [], "entry_points": ["RSA_private_decrypt", "EVP_PKEY_decrypt", "RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING"]},
       "trigger_classes": ["adversarial_contract_valid"],
       "memory_safe_claim": true,
       "barrier": {
-        "state": "BARRIER_ABSENT",
-        "control": "None on the external-key path: implicit rejection exists only where the private exponent is held by the library.",
-        "evidence": [],
-        "would_close": "An external-key implicit-rejection design, or a recorded consumer exclusion for every in-scope external-key PKCS#1 v1.5 decryption path (OBL-RSA-EXTKEY-ORACLE)."
+        "state": "EVIDENCED",
+        "control": "The external-key PKCS#1 v1.5 arm takes the implicit-rejection check; when the key holds no private exponent the KDK is derived from the decrypted block (SHA-256), so valid and invalid padding answer a positive length, bytes in the output buffer and an empty error queue. The explicit RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING selector still opts out.",
+        "evidence": ["EV-HAZ-15-DIFFERENTIAL"]
       },
       "top_events": ["TE-3"],
-      "t1_edges": {"motivates": ["REQ-SEC-02"], "obligations": ["OBL-RSA-EXTKEY-ORACLE"], "evidence": [], "release_claims": ["REL-OPENSSH-B85C"]}
+      "t1_edges": {"motivates": ["REQ-SEC-02"], "obligations": ["OBL-RSA-EXTKEY-ORACLE"], "evidence": ["EV-HAZ-15-DIFFERENTIAL"], "release_claims": ["REL-OPENSSH-B85C"]}
     },
     {
       "id": "HAZ-16",
@@ -514,7 +513,7 @@
         {"id": "TE3-ROOT", "kind": "gate", "gate": "OR", "inputs": ["TE3-G-ORACLE", "TE3-L-RESIDUE", "TE3-G-AEAD"]},
         {"id": "TE3-G-ORACLE", "kind": "gate", "gate": "AND", "inputs": ["TE3-L-ORACLE", "TE3-L-CIPHERTEXT"]},
         {"id": "TE3-G-AEAD", "kind": "gate", "gate": "AND", "inputs": ["TE3-L-GCM", "TE3-L-NONCE", "TE3-L-OBSERVE"]},
-        {"id": "TE3-L-ORACLE", "kind": "leaf", "leaf_type": "mechanism", "statement": "An external key substitutes RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING and takes the refusing padding check, so refusal is observable.", "hazard": "HAZ-15", "mechanism": "src/rsa/ossl.rs:rsa_ossl_private_decrypt"},
+        {"id": "TE3-L-ORACLE", "kind": "leaf", "leaf_type": "mechanism", "statement": "The authority substitutes RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING for RSA_FLAG_EXT_PKEY and takes the refusing padding check, so refusal is observable; the candidate keeps the implicit arm and derives the KDK from the decrypted block (D-RSA-EXTKEY-ORACLE-1).", "hazard": "HAZ-15", "mechanism": "src/rsa/ossl.rs:rsa_ossl_private_decrypt"},
         {"id": "TE3-L-RESIDUE", "kind": "leaf", "leaf_type": "mechanism", "statement": "Plaintext or key material survives in freed storage without a whole-allocation cleanse.", "hazard": "HAZ-01", "mechanism": "src/runtime/secret.rs:Drop"},
         {"id": "TE3-L-GCM", "kind": "leaf", "leaf_type": "mechanism", "statement": "The GCM engine encrypts with the caller's IV and does not check uniqueness.", "mechanism": "src/provider/cipher_gcm.rs:ossl_gcm_stream_update"},
         {"id": "TE3-L-CIPHERTEXT", "kind": "leaf", "leaf_type": "assumption", "statement": "The attacker submits ciphertexts of its choice and observes success or failure.", "assumption_id": "ASM-ATTACKER-CHOSEN-CIPHERTEXT"},
@@ -624,7 +623,7 @@
     {"id": "FMEA-12", "component": "rsa_ossl_private_encrypt", "api_family": "rsa", "failure_mode": "The caller disables blinding.", "local_effect": "The private exponentiation runs with a message-correlated pattern.", "top_events": ["TE-1", "TE-7"], "severity": "HIGH", "control": "Blinding is on by default; disabling it is documented optionality.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "No timing court distinguishes the blinding-disabled path.", "hazards": ["HAZ-08"]},
     {"id": "FMEA-13", "component": "rsa_get_blinding", "api_family": "rsa", "failure_mode": "No blinding can be constructed for the key.", "local_effect": "The operation raises and returns failure; it does not proceed unblinded.", "top_events": ["TE-1"], "severity": "MEDIUM", "control": "A NULL blinding takes the error path and breaks the operation.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "The error path is source-only; no failure-injection receipt.", "hazards": ["HAZ-08"]},
     {"id": "FMEA-14", "component": "rsa_ossl_mod_exp CRT tail", "api_family": "rsa", "failure_mode": "A fault makes the CRT result non-congruent.", "local_effect": "The result is repaired by the raw-d fallback, or an unpredicted value is returned if the check itself is wrong.", "top_events": ["TE-2", "TE-6"], "severity": "CRITICAL", "control": "Re-exponentiation with e and a congruence comparison, then the fallback.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "A unit test exercises the fallback; no receipt-bound fault court exists.", "hazards": ["HAZ-09"]},
-    {"id": "FMEA-15", "component": "rsa_ossl_private_decrypt external key", "api_family": "rsa", "failure_mode": "RSA_FLAG_EXT_PKEY forces the refusing PKCS#1 v1.5 check.", "local_effect": "The refusal is observable; implicit rejection is unavailable.", "top_events": ["TE-3"], "severity": "CRITICAL", "control": "None on this path.", "evidence_status": "NONE", "control_evidence": [], "residual": "OBL-RSA-EXTKEY-ORACLE is open and blocks the b85c claim.", "hazards": ["HAZ-15"]},
+    {"id": "FMEA-15", "component": "rsa_ossl_private_decrypt external key", "api_family": "rsa", "failure_mode": "The authority's RSA_FLAG_EXT_PKEY substitution selects the refusing PKCS#1 v1.5 check.", "local_effect": "Before the correction the refusal was observable; the candidate keeps the implicit-rejection arm and derives the KDK from the decrypted block.", "top_events": ["TE-3"], "severity": "CRITICAL", "control": "Implicit rejection on the external-key path; the synthetic answer is deterministic per ciphertext and leaves no error (D-RSA-EXTKEY-ORACLE-1).", "evidence_status": "EVIDENCED", "control_evidence": ["EV-HAZ-15-DIFFERENTIAL"], "residual": "The synthetic message's secrecy rests on the decrypted block, which the attacker does not hold; no timing measurement and no independent adjudication exist yet.", "hazards": ["HAZ-15"]},
     {"id": "FMEA-16", "component": "BN_BLINDING release", "api_family": "rsa", "failure_mode": "The blinding factor is released with BN_free rather than cleansed.", "local_effect": "The blinding factor survives in freed storage.", "top_events": ["TE-1"], "severity": "MEDIUM", "control": "None recorded.", "evidence_status": "NONE", "control_evidence": [], "residual": "OBL-T11-RESIDUAL remains open.", "hazards": ["HAZ-01"]},
     {"id": "FMEA-17", "component": "RSA recombination", "api_family": "rsa", "failure_mode": "Recombination reads p/q, zero limbs and carries.", "local_effect": "Factors and their shape are observable in timing.", "top_events": ["TE-7"], "severity": "HIGH", "control": "None recorded.", "evidence_status": "NONE", "control_evidence": [], "residual": "OBL-T6-RESIDUAL remains open.", "hazards": ["HAZ-02"]},
     {"id": "FMEA-18", "component": "ecdsa_sign_setup", "api_family": "ec", "failure_mode": "k is biased or repeated by the DRBG or the nonce derivation.", "local_effect": "Two signatures reveal the private key.", "top_events": ["TE-1"], "severity": "CRITICAL", "control": "BN_secure_new scalar, zero rejection, and the deterministic arm refuses instead of substituting.", "evidence_status": "CLAIMED_NO_EVIDENCE", "control_evidence": [], "residual": "No nonce-distribution court and no RFC 6979 decision at the candidate.", "hazards": ["HAZ-11"]},
@@ -674,7 +673,7 @@
       {"id": "UCA-02", "controller": "CS-API", "control_action": "Invoke an application callback while an operation holds a reference into a stack or an extension.", "context": "The callback releases, replaces or mutates that object, which the documented API permits.", "loss": "Dangling view or corrupted element.", "top_events": ["TE-4"], "hazard": "HAZ-06", "barrier": "Chain snapshot for verify_cb; no barrier for BIO and no protection for extension contents."},
       {"id": "UCA-03", "controller": "CS-ALLOC", "control_action": "Call the installed allocation hook while ERR holds the thread's error state.", "context": "The hook calls ERR_raise or ERR_get_error on the same thread, contrary to the external contract.", "loss": "A second mutable borrow of ERR_STATE.", "top_events": ["TE-4"], "hazard": "HAZ-13", "barrier": "B34 thread-local re-entry guard fails closed (recorded safety divergence)."},
       {"id": "UCA-04", "controller": "CS-KERNEL", "control_action": "Run the private exponentiation with blinding disabled.", "context": "The application called RSA_blinding_off or set RSA_FLAG_NO_BLINDING, or blinding construction failed.", "loss": "A timing channel on the private exponent.", "top_events": ["TE-1", "TE-7"], "hazard": "HAZ-08", "barrier": "Blinding is on by default; disabling is not measured."},
-      {"id": "UCA-05", "controller": "CS-KERNEL", "control_action": "Return the PKCS#1 v1.5 padding verdict for an external key.", "context": "The key has RSA_FLAG_EXT_PKEY and the caller requested PKCS#1 padding.", "loss": "A padding oracle on the private key.", "top_events": ["TE-3"], "hazard": "HAZ-15", "barrier": "None on this path."},
+      {"id": "UCA-05", "controller": "CS-KERNEL", "control_action": "Return the PKCS#1 v1.5 padding verdict for an external key.", "context": "The key has RSA_FLAG_EXT_PKEY and the caller requested PKCS#1 padding.", "loss": "A padding oracle on the private key.", "top_events": ["TE-3"], "hazard": "HAZ-15", "barrier": "Implicit rejection on the external-key path; the KDK is derived from the decrypted block (D-RSA-EXTKEY-ORACLE-1)."},
       {"id": "UCA-06", "controller": "CS-KERNEL", "control_action": "Return the result of a prepared-domain operation.", "context": "The supplied context belongs to a different modulus and the check is bypassed or absent.", "loss": "A silent wrong result.", "top_events": ["TE-6"], "hazard": "HAZ-10", "barrier": "context_matches refuses a mismatch in this crate."},
       {"id": "UCA-07", "controller": "CS-KERNEL", "control_action": "Return a CRT private-key result.", "context": "A fault occurs in one CRT half.", "loss": "A faulty signature or factor recovery.", "top_events": ["TE-2", "TE-6"], "hazard": "HAZ-09", "barrier": "Congruence check and raw-d fallback; no fault court."},
       {"id": "UCA-08", "controller": "CS-API", "control_action": "Catch a panic and return the documented failure value.", "context": "The interrupted operation had already mutated a stateful context.", "loss": "A half-applied state reused by the next call.", "top_events": ["TE-4", "TE-6"], "hazard": "HAZ-16", "barrier": "Non-unwinding only; no rollback or poison."},
@@ -763,10 +762,10 @@
       "top_events": ["TE-3"],
       "preconditions": ["A private key is held externally (RSA_FLAG_EXT_PKEY).", "The application decrypts attacker-supplied PKCS#1 v1.5 ciphertexts and reports success or failure."],
       "steps": ["Submit a modified ciphertext.", "Observe whether the padding check refuses.", "Iterate to recover the plaintext (Bleichenbacher/ROBOT)."],
-      "barrier": "None on the external-key path; implicit rejection exists only for a key whose private exponent the library holds.",
-      "barrier_evidenced": false,
-      "evidence": [],
-      "residual": "OBL-RSA-EXTKEY-ORACLE is open and blocks the b85c graduation.",
+      "barrier": "Implicit rejection on the external-key path: valid and invalid padding answer a positive length, output bytes and an empty error queue (D-RSA-EXTKEY-ORACLE-1).",
+      "barrier_evidenced": true,
+      "evidence": ["EV-HAZ-15-DIFFERENTIAL"],
+      "residual": "The correction is self-authored evidence; an independent adjudication and a consumer replay are still required before the b85c graduation can rely on it.",
       "hazards": ["HAZ-15"]
     }
   ],

@@ -64,8 +64,10 @@
 //!   both halves would serialise every private operation in the process.
 //! * **`rsa_ossl_private_decrypt` computes the KDK *after* unblinding and *before* the padding
 //!   check**, which is what makes the implicit rejection's synthetic message a function of the
-//!   private exponent and the ciphertext rather than of the blinding.
-//!
+//!   private exponent and the ciphertext rather than of the blinding. **For an external key the
+//!   KDK is derived from the decrypted block instead**, because the library does not hold the
+//!   private exponent; that is the one deliberate divergence from the authority on this path and
+//!   it is recorded in `docs/SECURITY_DIVERGENCE_POLICY.md` (`D-RSA-EXTKEY-ORACLE-1`).
 //! ## What is deliberately not here
 //!
 //! * **`rsa_ossl_s390x_mod_exp`** (`:1198-1206`) is inside `#ifdef S390X_MOD_EXP`, which is not
@@ -204,9 +206,11 @@ const OPENSSL_RSA_SMALL_MODULUS_BITS: c_int = 3072;
 const OPENSSL_RSA_MAX_PUBEXP_BITS: c_int = 64;
 
 /// `RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING` — `include/openssl/rsa.h:204`. The eighth padding
-/// selector, and the one no caller passes: `rsa_ossl_private_decrypt` *substitutes* it for
-/// `RSA_PKCS1_PADDING` when the key is an external one, because a key whose private exponent the
-/// library does not hold cannot derive the implicit rejection's synthetic message.
+/// selector, an explicit opt-out of implicit rejection that `rsa_ossl_private_decrypt` honours for
+/// the caller that passes it. The authority also *substitutes* it for `RSA_PKCS1_PADDING` when the
+/// key is external; this crate does not, because that substitution is the padding oracle recorded
+/// as HAZ-15. An external key now takes the same implicit-rejection arm as an internal one, with
+/// the KDK derived from the decrypted block.
 ///
 /// It is declared here rather than beside the other seven in `src/evp/pkey_ctx.rs` because this
 /// file is its only reader in the crate: the ctrl-string map and the providers never name it.
@@ -1271,17 +1275,63 @@ unsafe fn derive_kdk(
 // `crypto/rsa/rsa_ossl.c:527-800` — the two decryption entry points
 // ---------------------------------------------------------------------------------------------
 
+/// The external-key KDK: SHA-256 over the decrypted block.
+///
+/// [`derive_kdk`] needs `d`; a key with `RSA_FLAG_EXT_PKEY` does not hold it. The decrypted block
+/// `m = c^d mod n` is secret (the attacker cannot compute it), deterministic for a given ciphertext,
+/// and different for a different ciphertext, which is what the implicit rejection needs: a repeated
+/// query of one ciphertext answers the same synthetic bytes, and a different ciphertext answers
+/// different ones. The KDK is used only as the HMAC key of [`ossl_rsa_prf`], so a 32-byte hash is
+/// the required shape.
+///
+/// # Safety
+/// `block` is readable for `num` bytes; `kdk` is writable for `SHA256_DIGEST_LENGTH` bytes.
+unsafe fn derive_external_kdk(
+    libctx: *mut c_void,
+    block: *const c_uchar,
+    num: c_int,
+    kdk: *mut c_uchar,
+) -> c_int {
+    // SAFETY: the caller's contract.
+    unsafe {
+        let md = EVP_MD_fetch(libctx, c"sha256".as_ptr(), ptr::null());
+        if md.is_null() {
+            return 0;
+        }
+        // SAFETY: `block` is readable for `num` bytes and `kdk` is writable for the digest length,
+        // both per this function's `# Safety` section; `md` is the live fetched digest.
+        let ok = EVP_Digest(
+            block.cast::<c_void>(),
+            num as usize,
+            kdk,
+            ptr::null_mut(),
+            md,
+            ptr::null_mut(),
+        ) > 0;
+        // SAFETY: `md` is this call's fetched digest and nothing else holds it.
+        EVP_MD_free(md);
+        if ok {
+            1
+        } else {
+            0
+        }
+    }
+}
+
 /// `static int rsa_ossl_private_decrypt(int flen, const unsigned char *from, unsigned char *to,`
 /// `RSA *rsa, int padding)` — `rsa_ossl.c:527-700`.
 ///
 /// The decryption entry point, and the one the implicit rejection lives in. Five things about it
 /// are contract:
 ///
-/// * **The padding selector is rewritten before anything else happens** when the key is external
-///   (`RSA_FLAG_EXT_PKEY`) and the caller asked for PKCS#1 v1.5: an external key does not hold the
-///   private exponent, so the synthetic message cannot be derived and the check falls back to the
-///   refusing form. The rewritten value is `RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING`, a selector no
-///   caller passes.
+/// * **The implicit-rejection arm is the one an external key takes.** The authority rewrites the
+///   selector when the key is external (`RSA_FLAG_EXT_PKEY`) and the caller asked for PKCS#1 v1.5,
+///   falling back to the refusing check because an external key does not hold the private
+///   exponent. That is the padding oracle recorded as HAZ-15; this crate keeps the implicit arm
+///   and derives the KDK from the decrypted block when `d` is absent, so the observable set does
+///   not distinguish valid from invalid padding. The explicit selector
+///   `RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING` still selects the refusing check for a caller that
+///   passes it.
 /// * **The length refusals raise different reasons**: `RSA_R_DATA_GREATER_THAN_MOD_LEN` for
 ///   `flen > num` and `RSA_R_DATA_TOO_SMALL` for `flen < 1`, and the authority's comment records
 ///   that the first test is not equality because PGP chops leading zero octets.
@@ -1308,13 +1358,15 @@ unsafe extern "C" fn rsa_ossl_private_decrypt(
 ) -> c_int {
     // SAFETY: `rsa` and its fields are live per this function's `# Safety` section.
     unsafe {
-        let mut padding = padding;
         /*
-         * we need the value of the private exponent to perform implicit rejection
+         * The authority substitutes RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING here when the key is
+         * external and the caller asked for PKCS#1 v1.5, because it cannot derive the KDK without
+         * the private exponent. That refusal is observable (a negative return, an untouched output
+         * buffer and `RSA_R_PADDING_CHECK_FAILED` on the queue) and is the padding oracle HAZ-15.
+         * This crate keeps `RSA_PKCS1_PADDING` so the implicit-rejection arm runs; for a key with
+         * no `d` the KDK is derived from the decrypted block below. The divergence is recorded in
+         * `docs/SECURITY_DIVERGENCE_POLICY.md` as `D-RSA-EXTKEY-ORACLE-1`.
          */
-        if (*rsa).flags & RSA_FLAG_EXT_PKEY != 0 && padding == RSA_PKCS1_PADDING {
-            padding = RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING;
-        }
 
         let mut r: c_int = -1;
         let mut kdk = [0u8; SHA256_DIGEST_LENGTH as usize];
@@ -1458,6 +1510,7 @@ unsafe extern "C" fn rsa_ossl_private_decrypt(
              * derive the Key Derivation Key from private exponent and public ciphertext
              */
             if padding == RSA_PKCS1_PADDING
+                && !(*rsa).d.is_null()
                 && derive_kdk(flen, from, rsa, buf, num, kdk.as_mut_ptr()) == 0
             {
                 break 'body;
@@ -1473,6 +1526,18 @@ unsafe extern "C" fn rsa_ossl_private_decrypt(
                     r = RSA_padding_check_PKCS1_type_2(to, num, buf, j, num);
                 }
                 RSA_PKCS1_PADDING => {
+                    /*
+                     * An external key does not hold `d`, so the KDK above was not derived. The
+                     * decrypted block is secret and deterministic for this ciphertext, which is
+                     * exactly the property the synthetic answer needs. Deriving the KDK from it
+                     * keeps the external-key arm's observable set identical to the internal
+                     * key's: a positive return, the synthetic bytes, and no error on the queue.
+                     */
+                    if (*rsa).d.is_null()
+                        && derive_external_kdk((*rsa).libctx, buf, num, kdk.as_mut_ptr()) == 0
+                    {
+                        break 'body;
+                    }
                     r = ossl_rsa_padding_check_PKCS1_type_2(
                         (*rsa).libctx,
                         to,
@@ -2863,6 +2928,278 @@ mod tests {
             assert_ne!(kdk_a, kdk_b);
 
             BN_free(d);
+        }
+    }
+
+    /// A ciphertext whose raw decryption is `block`: `block^e mod n` for `rsa`'s public key.
+    ///
+    /// # Safety
+    /// `rsa` is live and holds `n` and `e`; `block` is no longer than the modulus.
+    #[cfg(test)]
+    unsafe fn ciphertext_for_block(rsa: *mut Rsa, block: &[u8]) -> Vec<u8> {
+        use crate::bn::arith::BN_mod_exp;
+        use crate::rsa::object::{RSA_get0_key, RSA_size};
+
+        // SAFETY: the caller's contract, forwarded; `n` and `e` are borrowed from `rsa` for the
+        // length of this call and every buffer is its own length.
+        unsafe {
+            let (mut n, mut e): (*const BigNum, *const BigNum) = (ptr::null(), ptr::null());
+            RSA_get0_key(rsa, &mut n, &mut e, ptr::null_mut());
+            let num = RSA_size(rsa) as usize;
+            let ctx = BN_CTX_new_ex(ptr::null_mut());
+            let m = BN_bin2bn(block.as_ptr(), block.len() as c_int, ptr::null_mut());
+            let c = BN_new();
+            let mut out = vec![0u8; num];
+            assert!(!ctx.is_null() && !m.is_null() && !c.is_null());
+            assert_eq!(BN_mod_exp(c, m, e, n, ctx), 1);
+            assert_eq!(
+                BN_bn2binpad(c, out.as_mut_ptr(), num as c_int),
+                num as c_int
+            );
+            BN_free(m);
+            BN_free(c);
+            BN_CTX_free(ctx);
+            out
+        }
+    }
+
+    /// **An external key's PKCS#1 v1.5 decryption does not answer a padding verdict.**
+    ///
+    /// A key with `RSA_FLAG_EXT_PKEY` and no private exponent takes the same implicit-rejection
+    /// arm as an internal key: a valid block and an invalid block both answer a positive length,
+    /// both write bytes to the output buffer, and both leave the error queue empty. The synthetic
+    /// answer is deterministic for one ciphertext, which is what keeps a repeated query from
+    /// distinguishing it from a real message.
+    ///
+    /// This fails on the authority's behaviour: the invalid block answers `-1`, leaves the output
+    /// buffer untouched and raises `RSA_R_PADDING_CHECK_FAILED`, which is the HAZ-15 oracle.
+    #[test]
+    fn external_key_pkcs1_decryption_does_not_distinguish_padding() {
+        use crate::bn::bignum::BN_dup;
+        use crate::rsa::gen::RSA_generate_key_ex;
+        use crate::rsa::object::{
+            RSA_free, RSA_get0_crt_params, RSA_get0_factors, RSA_get0_key, RSA_new,
+            RSA_private_decrypt, RSA_set0_crt_params, RSA_set0_factors, RSA_set0_key,
+            RSA_set_flags, RSA_size,
+        };
+        use crate::rsa::RSA_padding_add_PKCS1_type_2;
+        use crate::runtime::err::{ERR_clear_error, ERR_peek_error};
+
+        const MSG: &[u8] = b"HAZ15VAL";
+
+        // SAFETY: every object and buffer is created and released here; the pointers borrowed
+        // from `full` live until the copy has been made.
+        unsafe {
+            let e = BN_new();
+            assert_eq!(BN_set_word(e, 65537), 1);
+            let full = RSA_new();
+            assert!(RSA_generate_key_ex(full, 1024, e, ptr::null_mut()) == 1);
+
+            let (mut n, mut ee, mut _d) = (ptr::null(), ptr::null(), ptr::null());
+            RSA_get0_key(full, &mut n, &mut ee, &mut _d);
+            let (mut p, mut q) = (ptr::null(), ptr::null());
+            RSA_get0_factors(full, &mut p, &mut q);
+            let (mut dmp1, mut dmq1, mut iqmp) = (ptr::null(), ptr::null(), ptr::null());
+            RSA_get0_crt_params(full, &mut dmp1, &mut dmq1, &mut iqmp);
+
+            let ext = RSA_new();
+            assert_eq!(RSA_set0_key(ext, BN_dup(n), BN_dup(ee), ptr::null_mut()), 1);
+            assert_eq!(RSA_set0_factors(ext, BN_dup(p), BN_dup(q)), 1);
+            assert_eq!(
+                RSA_set0_crt_params(ext, BN_dup(dmp1), BN_dup(dmq1), BN_dup(iqmp)),
+                1
+            );
+            RSA_set_flags(ext, RSA_FLAG_EXT_PKEY);
+            assert!(
+                (*ext).d.is_null(),
+                "the external shape holds no private exponent"
+            );
+
+            let num = RSA_size(ext) as usize;
+            let mut good_block = vec![0u8; num];
+            assert_eq!(
+                RSA_padding_add_PKCS1_type_2(
+                    good_block.as_mut_ptr(),
+                    num as c_int,
+                    MSG.as_ptr(),
+                    MSG.len() as c_int
+                ),
+                1
+            );
+
+            let good_ct = ciphertext_for_block(ext, &good_block);
+            let mut out_good = vec![0xAAu8; num];
+            ERR_clear_error();
+            let r_good = RSA_private_decrypt(
+                num as c_int,
+                good_ct.as_ptr(),
+                out_good.as_mut_ptr(),
+                ext,
+                RSA_PKCS1_PADDING,
+            );
+            assert_eq!(
+                r_good,
+                MSG.len() as c_int,
+                "a valid block yields its message"
+            );
+            assert_eq!(&out_good[..MSG.len()], MSG);
+            assert_eq!(ERR_peek_error(), 0);
+
+            // Wrong block type: invalid padding.
+            let mut bad_block = good_block.clone();
+            bad_block[1] = 0x03;
+            let bad_ct = ciphertext_for_block(ext, &bad_block);
+            let mut out_bad = vec![0xAAu8; num];
+            ERR_clear_error();
+            let r_bad = RSA_private_decrypt(
+                num as c_int,
+                bad_ct.as_ptr(),
+                out_bad.as_mut_ptr(),
+                ext,
+                RSA_PKCS1_PADDING,
+            );
+            assert!(
+                r_bad > 0,
+                "an invalid block answers a synthetic message, not -1"
+            );
+            assert_ne!(
+                out_bad,
+                vec![0xAAu8; num],
+                "the synthetic message is written"
+            );
+            assert_eq!(
+                ERR_peek_error(),
+                0,
+                "no error is left for the caller to see"
+            );
+
+            // The padding string below the eight-octet minimum is the length refusal inside the
+            // check; it must take the same synthetic arm.
+            let mut short_block = vec![0u8; num];
+            short_block[0] = 0x00;
+            short_block[1] = 0x02;
+            for byte in short_block.iter_mut().take(7).skip(2) {
+                *byte = 0x11;
+            }
+            short_block[7] = 0x00;
+            for byte in short_block.iter_mut().skip(8) {
+                *byte = 0x22;
+            }
+            let short_ct = ciphertext_for_block(ext, &short_block);
+            let mut out_short = vec![0xAAu8; num];
+            ERR_clear_error();
+            let r_short = RSA_private_decrypt(
+                num as c_int,
+                short_ct.as_ptr(),
+                out_short.as_mut_ptr(),
+                ext,
+                RSA_PKCS1_PADDING,
+            );
+            assert!(
+                r_short > 0,
+                "a short padding string is answered, not refused"
+            );
+            assert_eq!(ERR_peek_error(), 0);
+
+            // Determinism: the same ciphertext answers the same bytes, so a repeated query is
+            // not a distinguisher.
+            let mut out_repeat = vec![0xAAu8; num];
+            assert_eq!(
+                RSA_private_decrypt(
+                    num as c_int,
+                    bad_ct.as_ptr(),
+                    out_repeat.as_mut_ptr(),
+                    ext,
+                    RSA_PKCS1_PADDING,
+                ),
+                r_bad
+            );
+            assert_eq!(out_repeat, out_bad);
+
+            RSA_free(ext);
+            RSA_free(full);
+            BN_free(e);
+        }
+    }
+
+    /// **The internal-key PKCS#1 v1.5 path is unchanged.** The same valid ciphertext that
+    /// `RSA_public_encrypt` builds is decrypted to exactly the submitted message, and an invalid
+    /// block still takes the implicit-rejection arm. This pins the pre-existing behaviour the
+    /// external-key correction must not move.
+    #[test]
+    fn internal_key_pkcs1_decryption_is_unchanged() {
+        use crate::rsa::gen::RSA_generate_key_ex;
+        use crate::rsa::object::{
+            RSA_free, RSA_new, RSA_private_decrypt, RSA_public_encrypt, RSA_size,
+        };
+        use crate::rsa::RSA_padding_add_PKCS1_type_2;
+        use crate::runtime::err::{ERR_clear_error, ERR_peek_error};
+
+        const MSG: &[u8] = b"HAZ15VAL";
+
+        // SAFETY: every object and buffer is created and released here.
+        unsafe {
+            let e = BN_new();
+            assert_eq!(BN_set_word(e, 65537), 1);
+            let rsa = RSA_new();
+            assert!(RSA_generate_key_ex(rsa, 1024, e, ptr::null_mut()) == 1);
+
+            let num = RSA_size(rsa) as usize;
+            let mut ct = vec![0u8; num];
+            assert_eq!(
+                RSA_public_encrypt(
+                    MSG.len() as c_int,
+                    MSG.as_ptr(),
+                    ct.as_mut_ptr(),
+                    rsa,
+                    RSA_PKCS1_PADDING
+                ),
+                num as c_int
+            );
+
+            let mut out = vec![0xAAu8; num];
+            ERR_clear_error();
+            assert_eq!(
+                RSA_private_decrypt(
+                    num as c_int,
+                    ct.as_ptr(),
+                    out.as_mut_ptr(),
+                    rsa,
+                    RSA_PKCS1_PADDING
+                ),
+                MSG.len() as c_int
+            );
+            assert_eq!(&out[..MSG.len()], MSG);
+            assert_eq!(ERR_peek_error(), 0);
+
+            // An invalid block on an internal key is the arm that already existed.
+            let mut bad_block = vec![0u8; num];
+            assert_eq!(
+                RSA_padding_add_PKCS1_type_2(
+                    bad_block.as_mut_ptr(),
+                    num as c_int,
+                    MSG.as_ptr(),
+                    MSG.len() as c_int
+                ),
+                1
+            );
+            bad_block[1] = 0x03;
+            let bad_ct = ciphertext_for_block(rsa, &bad_block);
+            let mut bad_out = vec![0xAAu8; num];
+            ERR_clear_error();
+            assert!(
+                RSA_private_decrypt(
+                    num as c_int,
+                    bad_ct.as_ptr(),
+                    bad_out.as_mut_ptr(),
+                    rsa,
+                    RSA_PKCS1_PADDING
+                ) > 0
+            );
+            assert_eq!(ERR_peek_error(), 0);
+
+            RSA_free(rsa);
+            BN_free(e);
         }
     }
 

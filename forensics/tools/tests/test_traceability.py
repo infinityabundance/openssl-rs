@@ -76,9 +76,11 @@ class TraceabilityControls(unittest.TestCase):
         # honestly recorded as NONE.  ETP-T4 adds three class-8 orphans for the
         # inventory and axiom files that do not yet exist at the bound commit,
         # and eleven class-12 orphans: every obligation class in the inventory
-        # still has sites with no validity argument and no control.  No class
-        # shrinks and no control is relaxed.
-        self.assertEqual(len(declared), 38)
+        # still has sites with no validity argument and no control.  The HAZ-15
+        # correction adds one class-8 orphan for its differential receipt, which
+        # exists in the working tree and is bound at the commit that adds it.  No
+        # class shrinks and no control is relaxed.
+        self.assertEqual(len(declared), 39)
         self.assertEqual(
             sorted({entry["class"] for entry in declared}),
             [1, 3, 6, 8, 11, 12],

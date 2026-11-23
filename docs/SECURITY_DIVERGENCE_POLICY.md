@@ -2054,3 +2054,48 @@ D334's state, when the column was recorded as a NULL rather than resolved.
   recorded length and the same 16 bytes; it then requires the idempotent `(NULL, 16)` call to be
   accepted and the `(NULL, 0)` create path to still succeed on an object that holds no key.
 - **Trigger:** none planned: permanent, deliberate safety divergence.
+
+### D-RSA-EXTKEY-ORACLE-1 — external-key PKCS#1 v1.5 decryption takes the implicit-rejection arm instead of the authority's observable refusal
+
+- **Obligation:** the external-key branch of PKCS#1 v1.5 private decryption
+  (`RSA_private_decrypt`, `EVP_PKEY_decrypt`, the provider's asymmetric cipher) for a key carrying
+  `RSA_FLAG_EXT_PKEY`.
+- **Authority:** rewrites the selector before any operation when the key is external and the
+  caller asked for `RSA_PKCS1_PADDING` — `crypto/rsa/rsa_ossl.c:538-541` — and the rewritten
+  `RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING` arm calls `RSA_padding_check_PKCS1_type_2`
+  (`rsa_ossl.c:669-670`, `rsa_pk1.c:387`). That check answers `-1` on invalid padding, leaves the
+  output buffer untouched and leaves `RSA_R_PADDING_CHECK_FAILED` on the error queue, while valid
+  padding answers the message length and clears the record. The distinction is the
+  Bleichenbacher/ROBOT padding oracle. OpenSSL 3.6.4 has the same behaviour on the same input:
+  `evidence/haz-15/observables.json` records it for the pinned authority DSO.
+- **Crate:** keeps `RSA_PKCS1_PADDING` and takes
+  `ossl_rsa_padding_check_PKCS1_type_2`. When the key holds `d`, the KDK comes from the existing
+  `derive_kdk`; when it does not, `derive_external_kdk` computes SHA-256 over the decrypted block.
+  The block is secret (the attacker cannot compute `c^d mod n`), deterministic for one ciphertext,
+  and different for a different ciphertext, so the synthetic answer is unpredictable and a
+  repeated query of one ciphertext answers the same bytes. Valid and invalid padding then answer
+  the same observable set: a positive return, bytes in the output buffer, an empty error queue.
+- **Reason:** `AGENTS.md` §17 — a known vulnerability mechanism is eliminated and the
+  compatibility consequence recorded, not imitated; §8 — a faithful port of a security defect is
+  not a compatibility result. The differential harness shows the old observable set rather than
+  inferring it, and the two unit tests pin the correction.
+- **Compatibility consequence:** an application that relied on distinguishing an invalid
+  external-key PKCS#1 v1.5 padding from a valid one can no longer do so: the invalid block now
+  returns a positive length and a synthetic message, and no error is left on the queue. This is
+  the behaviour the internal-key path has had since implicit rejection was introduced; the two
+  paths now agree. An application that genuinely needs the refusal can pass the documented
+  `RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING` selector (`include/openssl/rsa.h:204`, value 8), which
+  still selects the refusing check, so the authority's behaviour remains available as an explicit
+  opt-in. Every other selector, the private-encrypt and public-decrypt signature paths, the length
+  and range refusals, the allocator seam and the exported signatures are unchanged.
+- **Not changed:** the range refusal (`ciphertext >= n`) still answers `-1`. Its error queue differs
+  from the authority's for a reason unrelated to this divergence (the authority's `goto err`
+  skips the trailing padding record; the candidate's `break` does not). That difference predates
+  this correction, is independent of padding validity, and is recorded in
+  `evidence/haz-15/REPORT.md` without being repaired here.
+- **Evidence:** `evidence/haz-15/REPORT.md` and `evidence/haz-15/observables.json` (four
+  ciphertexts, candidate before and after, pinned authority); the harness
+  `forensics/haz15/haz15_harness.c`; and the tests
+  `rsa::ossl::tests::external_key_pkcs1_decryption_does_not_distinguish_padding` (fails on the
+  authority's behaviour) and `rsa::ossl::tests::internal_key_pkcs1_decryption_is_unchanged`.
+- **Trigger:** none planned: permanent, deliberate safety divergence.
