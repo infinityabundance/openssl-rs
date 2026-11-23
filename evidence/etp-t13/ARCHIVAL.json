@@ -1,0 +1,354 @@
+{
+  "generated_utc": "2026-11-23T10:13:28Z",
+  "schema": "openssl-rs/etp-t13/archival/1",
+  "kind": "etp-t13-archival-inventory",
+  "candidate": {
+    "commit": "246e30580f909c047eeb04a93a06f9bd05dc65f3",
+    "branch": "staging"
+  },
+  "etp6": {
+    "manifest": "evidence/etp6/MANIFEST.json",
+    "manifest_schema": "openssl-rs/etp6/package-manifest/1",
+    "candidate_commit": "98c7b5d290a8e40a1bd4d979ed34599038733e4d",
+    "input_count": 1633,
+    "selection_paths": [
+      "src",
+      "Cargo.toml",
+      "Cargo.lock",
+      "rust-toolchain.toml",
+      "build.rs",
+      "tests",
+      "examples",
+      "README.md",
+      "AGENTS.md",
+      "docs",
+      "forensics/tools",
+      "forensics/etp6/verify.sh",
+      "forensics/frf/README.md",
+      "forensics/regression-baseline.json",
+      "forensics/phase-state.json",
+      "forensics/atlas/implemented-surface.json",
+      "forensics/atlas/phase1-completeness.json",
+      "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+      "forensics/authorities/AUTHORITIES.json",
+      "forensics/multitrack/default-authority.json",
+      "forensics/multitrack/abi-facades.json",
+      "artifacts/phase2/libcrypto.ld",
+      "artifacts/phase2/SHELL_MANIFEST.json",
+      "artifacts/phase2/install",
+      "courts/phase18/interop",
+      "courts/phase18/timing",
+      "courts/performance-frontier/baseline",
+      "evidence/etp0",
+      "evidence/etp",
+      "evidence/etp2",
+      "evidence/etp3",
+      "evidence/etp4",
+      "evidence/etp5",
+      "forensics/phase10-obligations.json",
+      "forensics/phase11-obligations.json",
+      "forensics/phase12-obligations.json",
+      "forensics/phase13-obligations.json",
+      "forensics/phase14-obligations.json",
+      "forensics/phase15-obligations.json",
+      "forensics/phase16-obligations.json",
+      "forensics/phase17-obligations.json",
+      "forensics/phase18-obligations.json",
+      "forensics/phase19-obligations.json",
+      "forensics/phase20-obligations.json",
+      "forensics/phase21-obligations.json",
+      "forensics/phase22-obligations.json",
+      "forensics/phase23-obligations.json",
+      "forensics/phase24-obligations.json",
+      "forensics/phase25-obligations.json",
+      "forensics/phase3-obligations.json",
+      "forensics/phase4-obligations.json",
+      "forensics/phase5-obligations.json",
+      "forensics/phase6-obligations.json",
+      "forensics/phase7-obligations.json",
+      "forensics/phase8-obligations.json",
+      "forensics/phase9-obligations.json"
+    ]
+  },
+  "classes": [
+    {
+      "id": "source",
+      "required": true,
+      "description": "the crate source and build inputs",
+      "locations": [
+        "src",
+        "tests",
+        "examples",
+        "Cargo.toml",
+        "Cargo.lock",
+        "build.rs",
+        "rust-toolchain.toml"
+      ],
+      "tracked_files": 898,
+      "in_etp6_bundle": 897,
+      "etp6_coverage": "PARTIAL",
+      "inside_repository": true,
+      "externally_durable": false,
+      "archival_status": "IN_REPOSITORY_ONLY",
+      "examples": [
+        "Cargo.lock",
+        "Cargo.toml",
+        "build.rs",
+        "examples/x509_policy_differential.rs",
+        "rust-toolchain.toml"
+      ]
+    },
+    {
+      "id": "recipes",
+      "required": true,
+      "description": "the scripts that build, measure and reproduce the artefacts",
+      "locations": [
+        "forensics/tools",
+        "courts",
+        "docker"
+      ],
+      "tracked_files": 57,
+      "in_etp6_bundle": 22,
+      "etp6_coverage": "PARTIAL",
+      "inside_repository": true,
+      "externally_durable": false,
+      "archival_status": "IN_REPOSITORY_ONLY",
+      "examples": [
+        "courts/performance-frontier/pfp1/run_pfp1_perf.sh",
+        "courts/phase16/rt_cli_probe.sh",
+        "courts/phase17/downstream/curl/build.sh",
+        "courts/phase17/downstream/curl/live_tls_probe.sh",
+        "courts/phase17/downstream/git/build.sh"
+      ]
+    },
+    {
+      "id": "proofs",
+      "required": true,
+      "description": "formal and bounded verification artefacts, specifications and their non-claims",
+      "locations": [
+        "evidence/etp4",
+        "evidence/etp-t3",
+        "evidence/etp-t4",
+        "evidence/etp-t5",
+        "evidence/etp-t6",
+        "forensics/etp5_crypto",
+        "docs/CRYPTOGRAPHIC-REFERENCE.md",
+        "docs/BINARY-ASSURANCE.md"
+      ],
+      "tracked_files": 40,
+      "in_etp6_bundle": 3,
+      "etp6_coverage": "PARTIAL",
+      "inside_repository": true,
+      "externally_durable": false,
+      "archival_status": "IN_REPOSITORY_ONLY",
+      "examples": [
+        "docs/BINARY-ASSURANCE.md",
+        "docs/CRYPTOGRAPHIC-REFERENCE.md",
+        "evidence/etp-t3/RECEIPT.md",
+        "evidence/etp-t3/REFINEMENT.json",
+        "evidence/etp-t3/SPECIFICATIONS.json"
+      ]
+    },
+    {
+      "id": "checkers",
+      "required": true,
+      "description": "the validators, guards and verifiers that read every other class",
+      "locations": [
+        "forensics/tools",
+        "courts"
+      ],
+      "tracked_files": 280,
+      "in_etp6_bundle": 247,
+      "etp6_coverage": "PARTIAL",
+      "inside_repository": true,
+      "externally_durable": false,
+      "archival_status": "IN_REPOSITORY_ONLY",
+      "examples": [
+        "courts/performance-frontier/baseline/analyse_bench_api.py",
+        "courts/performance-frontier/baseline/build_identity.py",
+        "courts/performance-frontier/baseline/emit_shell.py",
+        "courts/performance-frontier/baseline/extract_dh_fixtures.py",
+        "courts/performance-frontier/pfp1/analyse_pfp1.py"
+      ]
+    },
+    {
+      "id": "instrument_identity",
+      "required": true,
+      "description": "the qualified instrument register, toolchain identity and authority pins",
+      "locations": [
+        "docs/INSTRUMENT-QUALIFICATION.md",
+        "evidence/etp3",
+        "forensics/authorities",
+        "forensics/multitrack/default-authority.json",
+        "courts/phase18/timing/third_party"
+      ],
+      "tracked_files": 26,
+      "in_etp6_bundle": 6,
+      "etp6_coverage": "PARTIAL",
+      "inside_repository": true,
+      "externally_durable": false,
+      "archival_status": "IN_REPOSITORY_ONLY",
+      "examples": [
+        "courts/phase18/timing/third_party/dudect/dudect.h",
+        "docs/INSTRUMENT-QUALIFICATION.md",
+        "evidence/etp3/HARDENING-2.md",
+        "evidence/etp3/instruments.json",
+        "forensics/authorities/AUTHORITIES.json"
+      ]
+    },
+    {
+      "id": "trust_metadata",
+      "required": true,
+      "description": "the claim set, trust-gap inventory, independence and freshness records, and the constitution",
+      "locations": [
+        "evidence/etp0",
+        "evidence/etp",
+        "evidence/etp-t8",
+        "evidence/etp-t9",
+        "AGENTS.md",
+        "docs/ETP-TODO.md",
+        "docs/ETP-ADDENDUM-B.md",
+        "docs/ETP-CLAIM-ALGEBRA.md",
+        "docs/EXTERNAL-REPRODUCTION.md",
+        "docs/INDEPENDENCE.md",
+        "docs/EVIDENCE-FRESHNESS.md"
+      ],
+      "tracked_files": 24,
+      "in_etp6_bundle": 14,
+      "etp6_coverage": "PARTIAL",
+      "inside_repository": true,
+      "externally_durable": false,
+      "archival_status": "IN_REPOSITORY_ONLY",
+      "examples": [
+        "AGENTS.md",
+        "docs/ETP-ADDENDUM-B.md",
+        "docs/ETP-CLAIM-ALGEBRA.md",
+        "docs/ETP-TODO.md",
+        "docs/EVIDENCE-FRESHNESS.md"
+      ]
+    },
+    {
+      "id": "receipts",
+      "required": true,
+      "description": "the per-item and per-court receipts, including withdrawals",
+      "locations": [
+        "evidence",
+        "courts"
+      ],
+      "tracked_files": 40,
+      "in_etp6_bundle": 22,
+      "etp6_coverage": "PARTIAL",
+      "inside_repository": true,
+      "externally_durable": false,
+      "archival_status": "IN_REPOSITORY_ONLY",
+      "examples": [
+        "courts/phase18/interop/RECEIPT-o10.json",
+        "courts/phase18/interop/RECEIPT-o12.json",
+        "courts/phase18/interop/RECEIPT-o2.json",
+        "courts/phase18/interop/RECEIPT-o3.json",
+        "courts/phase18/interop/RECEIPT-o4.json"
+      ]
+    },
+    {
+      "id": "schemas",
+      "required": true,
+      "description": "the normative schema documents and the schema modules",
+      "locations": [
+        "evidence/etp/claim.schema.json",
+        "courts/phase17/downstream/schema",
+        "forensics/tools"
+      ],
+      "tracked_files": 5,
+      "in_etp6_bundle": 4,
+      "etp6_coverage": "PARTIAL",
+      "inside_repository": true,
+      "externally_durable": false,
+      "archival_status": "IN_REPOSITORY_ONLY",
+      "examples": [
+        "courts/phase17/downstream/schema/downstream-result.schema.json",
+        "evidence/etp/claim.schema.json",
+        "forensics/tools/downstream_schemas.py",
+        "forensics/tools/memory_safety_schemas.py",
+        "forensics/tools/multitrack_schemas.py"
+      ]
+    },
+    {
+      "id": "raw_observations",
+      "required": true,
+      "description": "raw captures, published logs and tracked court outputs",
+      "locations": [
+        ".frf",
+        "court",
+        "courts/phase18/interop/logs"
+      ],
+      "tracked_files": 7117,
+      "in_etp6_bundle": 17,
+      "etp6_coverage": "PARTIAL",
+      "inside_repository": true,
+      "externally_durable": false,
+      "archival_status": "IN_REPOSITORY_ONLY",
+      "examples": [
+        ".frf/authorities/openssl-3.6.3.json",
+        ".frf/authorities/openssl-3.6.4.json",
+        ".frf/authorities/openssl-abi-3.6.4.json",
+        ".frf/authorities/openssl-cli-3.6.3.json",
+        ".frf/authorities/openssl-rt-3.6.4-r2.json"
+      ]
+    },
+    {
+      "id": "external_review_record",
+      "required": true,
+      "description": "a reproduction receipt from a party outside this project",
+      "locations": [],
+      "tracked_files": 0,
+      "in_etp6_bundle": 0,
+      "etp6_coverage": "NONE",
+      "inside_repository": false,
+      "externally_durable": false,
+      "archival_status": "NOT_ARCHIVED",
+      "examples": []
+    }
+  ],
+  "classes_without_location": [
+    "external_review_record"
+  ],
+  "classes_partially_bundled": [
+    "source",
+    "recipes",
+    "proofs",
+    "checkers",
+    "instrument_identity",
+    "trust_metadata",
+    "receipts",
+    "schemas",
+    "raw_observations"
+  ],
+  "etp6_cross_check": {
+    "statement": "the ETP-6 manifest covers the classes it selects; it is a reproduction bundle, not a complete archive, and it predates the ETP-T1 to ETP-T13 records",
+    "classes_fully_bundled": [],
+    "classes_partially_bundled": [
+      "source",
+      "recipes",
+      "proofs",
+      "checkers",
+      "instrument_identity",
+      "trust_metadata",
+      "receipts",
+      "schemas",
+      "raw_observations"
+    ],
+    "classes_not_bundled": [
+      "external_review_record"
+    ]
+  },
+  "external_durability": {
+    "status": "NONE",
+    "externally_durable_classes": [],
+    "statement": "nothing in this repository is externally archived; every location above is inside this Git repository and is durable only for as long as a copy of that repository survives",
+    "etp6_role": "BUNDLE_NOT_ARCHIVE",
+    "etp6_statement": "the ETP-6 package is a self-contained reproduction bundle built from one commit; it is not an external archive, it has not been deposited with an independent archive, and it carries no external review receipt"
+  },
+  "refusals": {
+    "class_unarchived": "PM_CLASS_UNARCHIVED"
+  }
+}

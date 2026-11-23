@@ -1,0 +1,629 @@
+{
+  "generated_utc": "2026-11-23T10:13:28Z",
+  "schema": "openssl-rs/etp-t13/digests/1",
+  "kind": "etp-t13-digest-agility-record",
+  "candidate": {
+    "commit": "246e30580f909c047eeb04a93a06f9bd05dc65f3",
+    "branch": "staging"
+  },
+  "admitted_algorithms": [
+    {
+      "id": "sha256",
+      "status": "ADMITTED",
+      "renewal_priority": "PRIMARY",
+      "rationale": "the digest used by Git object identity, the package manifest and every current receipt"
+    },
+    {
+      "id": "sha384",
+      "status": "ADMITTED",
+      "renewal_priority": "RENEWAL_CANDIDATE",
+      "rationale": "a longer SHA-2 member already present in recorded vectors"
+    },
+    {
+      "id": "sha512",
+      "status": "ADMITTED",
+      "renewal_priority": "RENEWAL_CANDIDATE",
+      "rationale": "a longer SHA-2 member already present in recorded vectors"
+    },
+    {
+      "id": "sha224",
+      "status": "ADMITTED",
+      "renewal_priority": "LEGACY_VECTOR_ONLY",
+      "rationale": "present only in algorithm test vectors"
+    },
+    {
+      "id": "sha1",
+      "status": "LEGACY_COMPATIBILITY_ONLY",
+      "renewal_priority": "MIGRATE_AWAY",
+      "rationale": "historical compatibility and algorithm test vectors only; never admitted for a new security commitment"
+    },
+    {
+      "id": "md5",
+      "status": "LEGACY_COMPATIBILITY_ONLY",
+      "renewal_priority": "MIGRATE_AWAY",
+      "rationale": "historical compatibility and algorithm test vectors only; never admitted for a new security commitment"
+    },
+    {
+      "id": "sha3_224",
+      "status": "ADMITTED",
+      "renewal_priority": "RENEWAL_CANDIDATE",
+      "rationale": "independent construction, already exercised by test vectors"
+    },
+    {
+      "id": "sha3_256",
+      "status": "ADMITTED",
+      "renewal_priority": "RENEWAL_CANDIDATE",
+      "rationale": "independent construction, already exercised by test vectors"
+    },
+    {
+      "id": "sha3_384",
+      "status": "ADMITTED",
+      "renewal_priority": "RENEWAL_CANDIDATE",
+      "rationale": "independent construction, already exercised by test vectors"
+    },
+    {
+      "id": "sha3_512",
+      "status": "ADMITTED",
+      "renewal_priority": "RENEWAL_CANDIDATE",
+      "rationale": "independent construction, already exercised by test vectors"
+    },
+    {
+      "id": "blake2s",
+      "status": "ADMITTED",
+      "renewal_priority": "RENEWAL_CANDIDATE",
+      "rationale": "already exercised by test vectors"
+    },
+    {
+      "id": "blake2b",
+      "status": "ADMITTED",
+      "renewal_priority": "RENEWAL_CANDIDATE",
+      "rationale": "already exercised by test vectors"
+    },
+    {
+      "id": "sm3",
+      "status": "ADMITTED",
+      "renewal_priority": "RENEWAL_CANDIDATE",
+      "rationale": "already exercised by test vectors"
+    }
+  ],
+  "population": {
+    "documents_scanned": 3115,
+    "named": {
+      "documents": 2403,
+      "occurrences": 361134,
+      "by_algorithm": {
+        "blake2b": 58,
+        "blake2s": 52,
+        "md5": 235,
+        "sha1": 436,
+        "sha224": 112,
+        "sha256": 359204,
+        "sha384": 273,
+        "sha3_224": 64,
+        "sha3_256": 62,
+        "sha3_384": 61,
+        "sha3_512": 62,
+        "sha512": 386,
+        "sm3": 129
+      }
+    },
+    "unnamed": {
+      "documents": 1370,
+      "occurrences": 278655,
+      "by_key": {
+        "span_hash": 219109,
+        "span_current_hash": 47004,
+        "source_root_hash": 2113,
+        "fingerprint": 1525,
+        "implementation_hash": 1176,
+        "runner_hash": 1176,
+        "specification_hash": 1176,
+        "digest": 897,
+        "frf_executable_hash": 882,
+        "pristine_source_root_hash": 838,
+        "current_hash": 627,
+        "recorded_hash": 400,
+        "identity_hash": 306,
+        "raw_candidate_hash": 303,
+        "raw_reference_hash": 303,
+        "hash": 214,
+        "body_hash": 123,
+        "checksum": 123,
+        "root_hash": 67,
+        "manifest_root_hash": 38,
+        "content_hash": 21,
+        "candidate_identity_hash": 20,
+        "digest_identity": 20,
+        "first_run_hash": 20,
+        "aggregate_hash": 15,
+        "tcb_digest": 15,
+        "build_source_tree_digest": 10,
+        "selection_root_hash": 10,
+        "source_tree_digest": 10,
+        "residual_fingerprint": 9,
+        "measured_source_tree_digest": 8,
+        "release_tree_digest": 8,
+        "ancestor_hash_recomputed": 7,
+        "candidate_hash_recomputed": 7,
+        "checkpoint_state_hash": 5,
+        "partition_hash": 5,
+        "partition_root_hash": 5,
+        "src/engine/tb_digest.rs": 5,
+        "selection_input_root_hash": 4,
+        "artifact_body_hash": 3,
+        "fresh_surface_body_hash": 3,
+        "from_root_hash": 3,
+        "phase2_courts_body_hash": 3,
+        "surface_hash": 3,
+        "to_root_hash": 3,
+        "tracked_surface_body_hash": 3,
+        "atlas_body_hash": 2,
+        "development_set_hash": 2,
+        "identity_digest": 2,
+        "p1000_content_hash": 2,
+        "post_build_tree_hash": 2,
+        "set_hash": 2,
+        "src/slh_dsa/hash.rs": 2,
+        "body_hash_after": 1,
+        "body_hash_before": 1,
+        "both_arms_observed_digest": 1,
+        "court/freeze-b83/review11/miri/digest-stacked.log": 1,
+        "differential_body_hash": 1,
+        "lhash.h": 1,
+        "receipt_body_hash": 1,
+        "recipe_digest": 1,
+        "release_tree_digest_recomputed_at": 1,
+        "source_tree_root_hash": 1,
+        "src/digest/mod.rs": 1,
+        "src/digest/sha2.rs": 1,
+        "src/digest/tables.rs": 1,
+        "src/evp/digest.rs": 1,
+        "src/evp/legacy_digest_callback_surface.rs": 1,
+        "src/provider/digest.rs": 1
+      },
+      "examples": {
+        "aggregate_hash": [
+          "forensics/atlas/ATLAS_INDEX.json",
+          "forensics/receipts/EVIDENCE_RECEIPT.0001.json",
+          "forensics/receipts/EVIDENCE_RECEIPT.0002.json"
+        ],
+        "ancestor_hash_recomputed": [
+          "evidence/b78-review-migrated-rows.json"
+        ],
+        "artifact_body_hash": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s52-reverify-196.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s59-reverify-all.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v5-seal-measurement.json"
+        ],
+        "atlas_body_hash": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s31-downstream-reverify.json"
+        ],
+        "body_hash": [
+          "artifacts/phase2/COURTS.json",
+          "artifacts/phase2/SHELL_MANIFEST.json",
+          "artifacts/phase25/asan-msan.json"
+        ],
+        "body_hash_after": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s25-release-prep.json"
+        ],
+        "body_hash_before": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s25-release-prep.json"
+        ],
+        "both_arms_observed_digest": [
+          "evidence/etp2/reproducibility.json"
+        ],
+        "build_source_tree_digest": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/build-0.0.43.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/build-0.0.44.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/build-0.0.45.json"
+        ],
+        "candidate_hash_recomputed": [
+          "evidence/b78-review-migrated-rows.json"
+        ],
+        "candidate_identity_hash": [
+          "artifacts/phase24/COURTS.json",
+          "forensics/downstream/candidate-freeze.json"
+        ],
+        "checkpoint_state_hash": [
+          "artifacts/phase24/COURTS.json",
+          "forensics/atlas/phase22/gemel-checkpoint.json",
+          "forensics/atlas/phase24/frf-closure.json"
+        ],
+        "checksum": [
+          "artifacts/phase21/COURTS.json",
+          "forensics/downstream/ranking/raw/crates-rdepends-304b85deb9c6320408eb3725ff05136aa86461ce675e8f4fd71f741607deb691.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/publish-0.0.34.json"
+        ],
+        "content_hash": [
+          "artifacts/phase23/COURTS.json",
+          "forensics/authority-lineage.json",
+          "forensics/authority-nodes.json"
+        ],
+        "court/freeze-b83/review11/miri/digest-stacked.log": [
+          "evidence/b83-instruments.json"
+        ],
+        "current_hash": [
+          "evidence/closure-ssh-0046.json",
+          "evidence/closure-ssh-0046h.json",
+          "evidence/closure-ssh-311.json"
+        ],
+        "development_set_hash": [
+          "artifacts/phase24/COURTS.json",
+          "forensics/downstream/candidate-freeze.json"
+        ],
+        "differential_body_hash": [
+          "artifacts/phase21/COURTS.json"
+        ],
+        "digest": [
+          ".frf/captures/run-openssl-abi-surface-8b3930840739066fe479b6cee48d02932c7fa667c8c95f6b5a8f8ff8425cadd3/capture.json",
+          ".frf/captures/run-openssl-abi-surface-c41ce792177bb867e45ef4edad3cf136c383e8ba2a583a31e094c08746df066b/capture.json",
+          ".frf/captures/run-openssl-abi-surface-e9317c21258cac089c98e86a1174448070e99eb0cb3abb6e5539b46c9f97cc51/capture.json"
+        ],
+        "digest_identity": [
+          "evidence/etp-t1/TRACEABILITY.json"
+        ],
+        "fingerprint": [
+          ".frf/claims/92fafe2a5524180867a657c4d2de682e873f1c43995128d3dc228af2830fcb0e.json",
+          ".frf/claims/b2f2bbf2901aff5eae4792c3ece078ddc25e7f8d6797d77c3c84145f1d74dfef.json",
+          ".frf/claims/b4bb15eb3d24f3cd9bdd4117aecf12cd216440e8193e2148583c719187d45572.json"
+        ],
+        "first_run_hash": [
+          "artifacts/phase24/COURTS.json",
+          "forensics/downstream/candidate-freeze.json"
+        ],
+        "fresh_surface_body_hash": [
+          "evidence/performance-frontier/campaigns/PFP-0/build-identity.json",
+          "evidence/performance-frontier/campaigns/PFP-0/raw/shell-generation.json",
+          "evidence/performance-frontier/campaigns/PFP-0/results.json"
+        ],
+        "frf_executable_hash": [
+          ".frf/captures/run-openssl-abi-surface-8b3930840739066fe479b6cee48d02932c7fa667c8c95f6b5a8f8ff8425cadd3/capture.json",
+          ".frf/captures/run-openssl-abi-surface-c41ce792177bb867e45ef4edad3cf136c383e8ba2a583a31e094c08746df066b/capture.json",
+          ".frf/captures/run-openssl-abi-surface-e9317c21258cac089c98e86a1174448070e99eb0cb3abb6e5539b46c9f97cc51/capture.json"
+        ],
+        "from_root_hash": [
+          "forensics/atlas/differential/openssl-3.6.3-historical-vs-openssl-3.6.4-production.json"
+        ],
+        "hash": [
+          ".frf/receipts/receipt-run-openssl-abi-surface-c41ce792177bb867e45ef4edad3cf136c383e8ba2a583a31e094c08746df066b-cdf7af10b27910993908005a9f5ef801822f494282fac76d6f066833a1ac8b2f.json",
+          ".frf/receipts/receipt-run-openssl-cli-dgst-07cccecad73c36be47e93eec3fb4e9d72fc8a2955f295801767788fb131ff2f5-74ba898fa13dd2de8476dbe580ff6e6c45311b3b514290c0a156344c96ad71ef.json",
+          ".frf/receipts/receipt-run-openssl-cli-inventory-4282282b636698f95f3a655e75e6c1840f4fc42a2cc72316026e950e3182cca7-4f6a4e663c405d0f71c33f41455933da3333f1ccb3423ec4a0ae4090eb54d461.json"
+        ],
+        "identity_digest": [
+          "evidence/etp-t11/CACHE.json"
+        ],
+        "identity_hash": [
+          ".frf/claims/92fafe2a5524180867a657c4d2de682e873f1c43995128d3dc228af2830fcb0e.json",
+          ".frf/claims/b2f2bbf2901aff5eae4792c3ece078ddc25e7f8d6797d77c3c84145f1d74dfef.json",
+          ".frf/claims/b4bb15eb3d24f3cd9bdd4117aecf12cd216440e8193e2148583c719187d45572.json"
+        ],
+        "implementation_hash": [
+          ".frf/captures/run-openssl-abi-surface-8b3930840739066fe479b6cee48d02932c7fa667c8c95f6b5a8f8ff8425cadd3/capture.json",
+          ".frf/captures/run-openssl-abi-surface-c41ce792177bb867e45ef4edad3cf136c383e8ba2a583a31e094c08746df066b/capture.json",
+          ".frf/captures/run-openssl-abi-surface-e9317c21258cac089c98e86a1174448070e99eb0cb3abb6e5539b46c9f97cc51/capture.json"
+        ],
+        "lhash.h": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/element7-header-question-diagnosis.json"
+        ],
+        "manifest_root_hash": [
+          "forensics/atlas/openssl-0.9.8zh-historical/plane-census.json",
+          "forensics/atlas/openssl-1.0.0t-historical/plane-census.json",
+          "forensics/atlas/openssl-1.0.1u-historical/plane-census.json"
+        ],
+        "measured_source_tree_digest": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/build-0.0.43.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/build-0.0.44.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/build-0.0.45.json"
+        ],
+        "p1000_content_hash": [
+          "artifacts/phase24/COURTS.json",
+          "forensics/downstream/holdout.json"
+        ],
+        "partition_hash": [
+          "artifacts/phase24/COURTS.json",
+          "forensics/downstream/blocker-remediation-baseline.json",
+          "forensics/downstream/blocker-remediation.json"
+        ],
+        "partition_root_hash": [
+          "artifacts/phase24/COURTS.json",
+          "forensics/downstream/candidate-freeze.json",
+          "forensics/downstream/holdout.json"
+        ],
+        "phase2_courts_body_hash": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1r-candidate-freeze.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1s-candidate-freeze.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1t-candidate-freeze.json"
+        ],
+        "post_build_tree_hash": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-obligation-triage-v1p.json",
+          "forensics/memory-safety/campaign/safe-c33/evidence/closure-ssh-fixpoint-v1p-admission.json"
+        ],
+        "pristine_source_root_hash": [
+          "forensics/downstream/build-link-atlas.json",
+          "forensics/downstream/candidate-freeze.json",
+          "forensics/downstream/high-value-tier.json"
+        ],
+        "raw_candidate_hash": [
+          ".frf/receipts/receipt-run-openssl-abi-surface-c41ce792177bb867e45ef4edad3cf136c383e8ba2a583a31e094c08746df066b-cdf7af10b27910993908005a9f5ef801822f494282fac76d6f066833a1ac8b2f.json",
+          ".frf/receipts/receipt-run-openssl-cli-dgst-07cccecad73c36be47e93eec3fb4e9d72fc8a2955f295801767788fb131ff2f5-74ba898fa13dd2de8476dbe580ff6e6c45311b3b514290c0a156344c96ad71ef.json",
+          ".frf/receipts/receipt-run-openssl-cli-inventory-4282282b636698f95f3a655e75e6c1840f4fc42a2cc72316026e950e3182cca7-4f6a4e663c405d0f71c33f41455933da3333f1ccb3423ec4a0ae4090eb54d461.json"
+        ],
+        "raw_reference_hash": [
+          ".frf/receipts/receipt-run-openssl-abi-surface-c41ce792177bb867e45ef4edad3cf136c383e8ba2a583a31e094c08746df066b-cdf7af10b27910993908005a9f5ef801822f494282fac76d6f066833a1ac8b2f.json",
+          ".frf/receipts/receipt-run-openssl-cli-dgst-07cccecad73c36be47e93eec3fb4e9d72fc8a2955f295801767788fb131ff2f5-74ba898fa13dd2de8476dbe580ff6e6c45311b3b514290c0a156344c96ad71ef.json",
+          ".frf/receipts/receipt-run-openssl-cli-inventory-4282282b636698f95f3a655e75e6c1840f4fc42a2cc72316026e950e3182cca7-4f6a4e663c405d0f71c33f41455933da3333f1ccb3423ec4a0ae4090eb54d461.json"
+        ],
+        "receipt_body_hash": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b27-x2.json"
+        ],
+        "recipe_digest": [
+          "evidence/etp2/reproducibility.json"
+        ],
+        "recorded_hash": [
+          "evidence/closure-ssh-b58.json",
+          "evidence/closure-ssh-b73-r2.json",
+          "evidence/closure-ssh-b73.json"
+        ],
+        "release_tree_digest": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/build-0.0.44.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/build-0.0.45.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/build-0.0.46.json"
+        ],
+        "release_tree_digest_recomputed_at": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/build-0.0.49.json"
+        ],
+        "residual_fingerprint": [
+          ".frf/receipts/receipt-run-openssl-cli-version-c9185877fbdd939943c6aeae6313702090bad7d49039881676b92cb7d362b240-1551cb96e062ddbf89b33a5e9b556539ac223fbf6fb3c64c8a5b4cbe66e6c194.json",
+          ".frf/receipts/receipt-run-openssl-rs-rt-cipher-e9f2b5d657c474486cfff179955de948ccc3f07fcdcad9211c543c367f7083e4-5146273b8f30e9664d62fb7569de55542b98deee0bb875a9fdda94adf13c0b93.json",
+          ".frf/receipts/receipt-run-openssl-rs-rt-cpu-capability-b78a162f9eb693a22e1b07cc26fc771c64b128fc94094d80c2e1e7d4f9067502-e7a3ad9b60077fdfa05691c8194f8198b0910cc20021a4c71d261b9a6a7e4188.json"
+        ],
+        "root_hash": [
+          "artifacts/phase2/SHELL_MANIFEST.json",
+          "artifacts/phase21/COURTS.json",
+          "forensics/atlas/openssl-3.6.3-historical/corpus-inventory.json"
+        ],
+        "runner_hash": [
+          ".frf/captures/run-openssl-abi-surface-8b3930840739066fe479b6cee48d02932c7fa667c8c95f6b5a8f8ff8425cadd3/capture.json",
+          ".frf/captures/run-openssl-abi-surface-c41ce792177bb867e45ef4edad3cf136c383e8ba2a583a31e094c08746df066b/capture.json",
+          ".frf/captures/run-openssl-abi-surface-e9317c21258cac089c98e86a1174448070e99eb0cb3abb6e5539b46c9f97cc51/capture.json"
+        ],
+        "selection_input_root_hash": [
+          "artifacts/phase24/COURTS.json",
+          "forensics/downstream/family-freeze.json",
+          "forensics/downstream/ranking-sources.json"
+        ],
+        "selection_root_hash": [
+          "artifacts/phase24/COURTS.json",
+          "forensics/downstream/family-freeze.json",
+          "forensics/downstream/holdout.json"
+        ],
+        "set_hash": [
+          "artifacts/phase24/COURTS.json",
+          "forensics/downstream/candidate-freeze.json"
+        ],
+        "source_root_hash": [
+          "court/freeze-b78/FREEZE-b78.json",
+          "court/freeze-b79/FREEZE-b79.json",
+          "evidence/FREEZE-b85c.json"
+        ],
+        "source_tree_digest": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b48-candidate-freeze.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b49-candidate-freeze.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b50-candidate-freeze.json"
+        ],
+        "source_tree_root_hash": [
+          "forensics/performance/AUTHORITIES.json"
+        ],
+        "span_current_hash": [
+          "evidence/closure-curl-049.json",
+          "evidence/closure-ssh-0046.json",
+          "evidence/closure-ssh-0046h.json"
+        ],
+        "span_hash": [
+          "evidence/closure-curl-049.json",
+          "evidence/closure-ssh-0046.json",
+          "evidence/closure-ssh-0046h.json"
+        ],
+        "specification_hash": [
+          ".frf/captures/run-openssl-abi-surface-8b3930840739066fe479b6cee48d02932c7fa667c8c95f6b5a8f8ff8425cadd3/capture.json",
+          ".frf/captures/run-openssl-abi-surface-c41ce792177bb867e45ef4edad3cf136c383e8ba2a583a31e094c08746df066b/capture.json",
+          ".frf/captures/run-openssl-abi-surface-e9317c21258cac089c98e86a1174448070e99eb0cb3abb6e5539b46c9f97cc51/capture.json"
+        ],
+        "src/digest/mod.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s69-safe-island-compiler-evidence.json"
+        ],
+        "src/digest/sha2.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B56.json"
+        ],
+        "src/digest/tables.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s69-safe-island-compiler-evidence.json"
+        ],
+        "src/engine/tb_digest.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b45-safe-thunks-elimination-sites.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1s-candidate-freeze.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1t-candidate-freeze.json"
+        ],
+        "src/evp/digest.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B48.json"
+        ],
+        "src/evp/legacy_digest_callback_surface.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B48.json"
+        ],
+        "src/provider/digest.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b76-review-v1i-batch3.json"
+        ],
+        "src/slh_dsa/hash.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B53.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/p25-safe-declaration-elimination-sites.json"
+        ],
+        "surface_hash": [
+          "artifacts/phase24/COURTS.json",
+          "forensics/downstream/reconciliation.json"
+        ],
+        "tcb_digest": [
+          "evidence/etp-t6/CLAIM-MATRIX.json",
+          "evidence/etp-t6/TCB.json"
+        ],
+        "to_root_hash": [
+          "forensics/atlas/differential/openssl-3.6.3-historical-vs-openssl-3.6.4-production.json"
+        ],
+        "tracked_surface_body_hash": [
+          "evidence/performance-frontier/campaigns/PFP-0/build-identity.json",
+          "evidence/performance-frontier/campaigns/PFP-0/raw/shell-generation.json",
+          "evidence/performance-frontier/campaigns/PFP-0/results.json"
+        ]
+      }
+    },
+    "both": 1334,
+    "unadmitted": {
+      "documents": 0,
+      "occurrences": 0,
+      "by_algorithm": {}
+    },
+    "mislabelled_length": {
+      "occurrences": 5,
+      "examples": [
+        {
+          "path": "artifacts/phase7/COURTS.json",
+          "field": "artifacts/phase7/COURTS.json/inputs/2/sha256",
+          "algorithm": "sha256",
+          "length": 40
+        },
+        {
+          "path": "artifacts/phase8/COURTS.json",
+          "field": "artifacts/phase8/COURTS.json/inputs/2/sha256",
+          "algorithm": "sha256",
+          "length": 40
+        },
+        {
+          "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B48.json",
+          "field": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B48.json/candidate/files_sha256/src/evp/legacy_md5.rs",
+          "algorithm": "md5",
+          "length": 64
+        },
+        {
+          "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/legacy-init-harden.json",
+          "field": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/legacy-init-harden.json/source_identity/changed_files/src/evp/legacy_md5.rs",
+          "algorithm": "md5",
+          "length": 64
+        },
+        {
+          "path": "forensics/memory-safety/campaign/safe-c33/evidence/legacy-md-init-fix.json",
+          "field": "forensics/memory-safety/campaign/safe-c33/evidence/legacy-md-init-fix.json/source_identity/unchanged_sibling_shape/src/evp/legacy_md5.rs",
+          "algorithm": "md5",
+          "length": 64
+        }
+      ],
+      "statement": "a value whose length cannot be the digest it names is reported, not repaired; some hits are constants that merely contain an algorithm name"
+    }
+  },
+  "migration_population": {
+    "state": "RECORDED_NOT_EDITED",
+    "documents": 1370,
+    "keys": [
+      "span_hash",
+      "span_current_hash",
+      "source_root_hash",
+      "fingerprint",
+      "implementation_hash",
+      "runner_hash",
+      "specification_hash",
+      "digest",
+      "frf_executable_hash",
+      "pristine_source_root_hash",
+      "current_hash",
+      "recorded_hash",
+      "identity_hash",
+      "raw_candidate_hash",
+      "raw_reference_hash",
+      "hash",
+      "body_hash",
+      "checksum",
+      "root_hash",
+      "manifest_root_hash",
+      "content_hash",
+      "candidate_identity_hash",
+      "digest_identity",
+      "first_run_hash",
+      "aggregate_hash",
+      "tcb_digest",
+      "build_source_tree_digest",
+      "selection_root_hash",
+      "source_tree_digest",
+      "residual_fingerprint",
+      "measured_source_tree_digest",
+      "release_tree_digest",
+      "ancestor_hash_recomputed",
+      "candidate_hash_recomputed",
+      "checkpoint_state_hash",
+      "partition_hash",
+      "partition_root_hash",
+      "src/engine/tb_digest.rs",
+      "selection_input_root_hash",
+      "artifact_body_hash",
+      "fresh_surface_body_hash",
+      "from_root_hash",
+      "phase2_courts_body_hash",
+      "surface_hash",
+      "to_root_hash",
+      "tracked_surface_body_hash",
+      "atlas_body_hash",
+      "development_set_hash",
+      "identity_digest",
+      "p1000_content_hash",
+      "post_build_tree_hash",
+      "set_hash",
+      "src/slh_dsa/hash.rs",
+      "body_hash_after",
+      "body_hash_before",
+      "both_arms_observed_digest",
+      "court/freeze-b83/review11/miri/digest-stacked.log",
+      "differential_body_hash",
+      "lhash.h",
+      "receipt_body_hash",
+      "recipe_digest",
+      "release_tree_digest_recomputed_at",
+      "source_tree_root_hash",
+      "src/digest/mod.rs",
+      "src/digest/sha2.rs",
+      "src/digest/tables.rs",
+      "src/evp/digest.rs",
+      "src/evp/legacy_digest_callback_surface.rs",
+      "src/provider/digest.rs"
+    ],
+    "statement": "records that do not name their digest algorithm are recorded here as a population to migrate; no existing record was edited to add an algorithm"
+  },
+  "renewal_plan": {
+    "what_is_rehashed": [
+      "the source tree at a new candidate, with the new algorithm alongside the old digest",
+      "each content-addressed artefact named by a receipt (archive, measurement DSO, distribution DSO, consumer binaries)",
+      "the ETP-6 package manifest and the frozen Git object store it names",
+      "the claim evidence entries that bind an artefact to an identity"
+    ],
+    "how_the_old_relationship_is_preserved": [
+      "the original record is retained byte-for-byte and its original algorithm is named in the renewal record",
+      "the renewal record names renewal_of with the old algorithm and digest, and the new algorithm and digest",
+      "a renewed commitment is a new record; it is never substituted for the original",
+      "the versioned schema identifier is bumped only when the shape changes, not when an algorithm is added"
+    ],
+    "what_is_never_rewritten": [
+      "Git object identities and commit hashes",
+      "historical receipts, including withdrawn ones and their withdrawal records",
+      "the original digest algorithm named by a historical record",
+      "the ETP-0 claim inventory and other source documents of a completed migration",
+      "a timestamp or a signature over old material, which a later signature cannot retroactively validate"
+    ],
+    "renewal_record_fields": [
+      "algorithm",
+      "digest",
+      "renewal_of",
+      "renewal_reason",
+      "recorded_at"
+    ],
+    "trigger": "a new authenticated commitment is recorded before an existing algorithm is treated as inadequate; the original and the renewal are both preserved"
+  },
+  "refusals": {
+    "unnamed": "PM_DIGEST_ALGORITHM_UNNAMED",
+    "unadmitted": "PM_DIGEST_ALGORITHM_UNADMITTED"
+  }
+}
