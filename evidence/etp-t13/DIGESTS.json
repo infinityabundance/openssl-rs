@@ -1,17 +1,29 @@
 {
-  "generated_utc": "2026-11-23T10:13:28Z",
   "schema": "openssl-rs/etp-t13/digests/1",
   "kind": "etp-t13-digest-agility-record",
   "candidate": {
-    "commit": "246e30580f909c047eeb04a93a06f9bd05dc65f3",
-    "branch": "staging"
+    "commit": "0eecec7347527dae03ff8e829709a305a44fc605",
+    "tree": "410f55733ca446c3770cb9efd2e6fe897797f26f",
+    "committer_time_utc": "2026-11-23T10:20:47Z",
+    "object_format": "sha1",
+    "object_id_algorithm": "sha1",
+    "object_id_hex_length": 40,
+    "identity_system": "repository_object_identity"
+  },
+  "admission_rule": {
+    "algorithm_must_be_named": "a recorded digest must state the algorithm that produced it, in the field name or in an adjacent digest_algorithm/hash_algorithm field",
+    "algorithm_must_be_admitted": "a stated algorithm must appear in admitted_algorithms before a record may carry it",
+    "length_must_match": "a value whose length cannot be the digest it names is reported, not repaired",
+    "unnamed_refusal": "PM_DIGEST_ALGORITHM_UNNAMED",
+    "unadmitted_refusal": "PM_DIGEST_ALGORITHM_UNADMITTED",
+    "existing_records": "existing unnamed records are a migration population; no record was edited to add an algorithm"
   },
   "admitted_algorithms": [
     {
       "id": "sha256",
       "status": "ADMITTED",
       "renewal_priority": "PRIMARY",
-      "rationale": "the digest used by Git object identity, the package manifest and every current receipt"
+      "rationale": "the content digest used by the package manifest, the receipts and every evidence record that hashes bytes; it is not a repository object id and is not the object-id algorithm"
     },
     {
       "id": "sha384",
@@ -87,29 +99,18 @@
     }
   ],
   "population": {
-    "documents_scanned": 3115,
+    "documents_scanned": 3123,
     "named": {
-      "documents": 2403,
-      "occurrences": 361134,
+      "documents": 2405,
+      "occurrences": 345091,
       "by_algorithm": {
-        "blake2b": 58,
-        "blake2s": 52,
-        "md5": 235,
-        "sha1": 436,
-        "sha224": 112,
-        "sha256": 359204,
-        "sha384": 273,
-        "sha3_224": 64,
-        "sha3_256": 62,
-        "sha3_384": 61,
-        "sha3_512": 62,
-        "sha512": 386,
-        "sm3": 129
+        "sha1": 52,
+        "sha256": 345039
       }
     },
     "unnamed": {
-      "documents": 1370,
-      "occurrences": 278655,
+      "documents": 1428,
+      "occurrences": 283646,
       "by_key": {
         "span_hash": 219109,
         "span_current_hash": 47004,
@@ -118,7 +119,7 @@
         "implementation_hash": 1176,
         "runner_hash": 1176,
         "specification_hash": 1176,
-        "digest": 897,
+        "digest": 924,
         "frf_executable_hash": 882,
         "pristine_source_root_hash": 838,
         "current_hash": 627,
@@ -126,14 +127,35 @@
         "identity_hash": 306,
         "raw_candidate_hash": 303,
         "raw_reference_hash": 303,
+        "output.0": 289,
+        "output.1": 288,
+        "output.10": 288,
+        "output.11": 288,
+        "output.12": 288,
+        "output.13": 288,
+        "output.14": 288,
+        "output.2": 288,
+        "output.3": 288,
+        "output.4": 288,
+        "output.5": 288,
+        "output.6": 288,
+        "output.7": 288,
+        "output.8": 288,
+        "output.9": 288,
         "hash": 214,
         "body_hash": 123,
         "checksum": 123,
+        "libcrypto.so.3": 93,
+        "libssl.so.3": 86,
         "root_hash": 67,
+        "legacy.so": 46,
+        "digest_identity": 40,
+        "include/openssl/crypto.h": 38,
+        "include/openssl/evp.h": 38,
+        "include/openssl/ssl.h": 38,
         "manifest_root_hash": 38,
         "content_hash": 21,
         "candidate_identity_hash": 20,
-        "digest_identity": 20,
         "first_run_hash": 20,
         "aggregate_hash": 15,
         "tcb_digest": 15,
@@ -141,47 +163,285 @@
         "selection_root_hash": 10,
         "source_tree_digest": 10,
         "residual_fingerprint": 9,
+        "libcrypto.so.4": 8,
+        "libssl.so.4": 8,
         "measured_source_tree_digest": 8,
         "release_tree_digest": 8,
         "ancestor_hash_recomputed": 7,
         "candidate_hash_recomputed": 7,
+        "libcrypto.so.1.0.0": 6,
+        "libssl.so.1.0.0": 6,
         "checkpoint_state_hash": 5,
+        "ossl-modules/legacy.so": 5,
         "partition_hash": 5,
         "partition_root_hash": 5,
-        "src/engine/tb_digest.rs": 5,
+        "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": 4,
+        "libcrypto.so.1.1": 4,
+        "libssl.so.1.1": 4,
         "selection_input_root_hash": 4,
+        "src/runtime/err.rs": 4,
+        "src/store/store_lib.rs": 4,
         "artifact_body_hash": 3,
+        "forensics/memory-safety/campaign/safe-c33/atlas-refresh/r13-coordinate-rebind-sites.json": 3,
         "fresh_surface_body_hash": 3,
         "from_root_hash": 3,
         "phase2_courts_body_hash": 3,
+        "scripts/adv-probe.sh": 3,
+        "src/runtime/err_state.rs": 3,
+        "src/ssl/ssl_lib.rs": 3,
         "surface_hash": 3,
         "to_root_hash": 3,
         "tracked_surface_body_hash": 3,
+        ".data.rel.ro": 2,
+        ".got": 2,
+        ".got.plt": 2,
+        ".rodata": 2,
+        ".text": 2,
+        "README.md": 2,
+        "artifacts/phase18/COURTS.json": 2,
         "atlas_body_hash": 2,
+        "bin/openssl": 2,
+        "build.sh": 2,
+        "consumer_closure.py": 2,
         "development_set_hash": 2,
+        "docs/SECURITY_DIVERGENCE_POLICY.md": 2,
+        "evidence/closure-ssh-b74.json": 2,
+        "evidence/closure-sshd-b73-r2.json": 2,
+        "evidence/sshd-artifact-ledger.json": 2,
+        "forensics/memory-safety/campaign/safe-c33/evidence/b75_readjudicate.py": 2,
         "identity_digest": 2,
+        "libcrypto.so.0.9.8": 2,
+        "libssl.so.0.9.8": 2,
         "p1000_content_hash": 2,
         "post_build_tree_hash": 2,
+        "repro.c": 2,
+        "run.sh": 2,
         "set_hash": 2,
-        "src/slh_dsa/hash.rs": 2,
+        "src/aes.rs": 2,
+        "src/evp/legacy_md5.rs": 2,
+        "src/ml_dsa/encoders.rs": 2,
+        "src/ml_kem/key.rs": 2,
+        "src/modes/wrap.rs": 2,
+        "src/provider/kdf.rs": 2,
+        "src/provider/mac_legacy_kmgmt.rs": 2,
+        "src/runtime/init.rs": 2,
+        "src/runtime/mem.rs": 2,
+        "src/ssl/record/rec_layer_s3.rs": 2,
+        "src/ssl/ssl_rsa.rs": 2,
+        "src/ssl/ssl_sess.rs": 2,
+        "src/store/store_meth.rs": 2,
+        "src/ui/ui_openssl.rs": 2,
+        "10.5p1": 1,
+        "9.9p1": 1,
+        "CAMPAIGN-STATUS.json": 1,
+        "Cargo.lock": 1,
+        "Cargo.toml": 1,
+        "artifacts/phase2/COURTS.json": 1,
+        "asn1.h": 1,
         "body_hash_after": 1,
         "body_hash_before": 1,
         "both_arms_observed_digest": 1,
+        "build-link-atlas.json": 1,
+        "build.rs": 1,
+        "build_phase2.sh": 1,
+        "cert-crlid-invalid.pem": 1,
+        "cert-crlid-invalid.pem.authority.out": 1,
+        "cert-crlid-invalid.pem.candidate.err": 1,
+        "cert-crlid-invalid.pem.candidate.out": 1,
+        "cert-crlid-valid.pem": 1,
+        "cert-crlid-valid.pem.authority.out": 1,
+        "cert-crlid-valid.pem.candidate.err": 1,
+        "cert-crlid-valid.pem.candidate.out": 1,
+        "cert-serviceloc-invalid.pem": 1,
+        "cert-serviceloc-invalid.pem.authority.out": 1,
+        "cert-serviceloc-invalid.pem.candidate.err": 1,
+        "cert-serviceloc-invalid.pem.candidate.out": 1,
+        "cert-serviceloc-valid.pem": 1,
+        "cert-serviceloc-valid.pem.authority.out": 1,
+        "cert-serviceloc-valid.pem.candidate.err": 1,
+        "cert-serviceloc-valid.pem.candidate.out": 1,
+        "court/freeze-b73/FREEZE-b73.json": 1,
+        "court/freeze-b83/review11/asan/build.log": 1,
+        "court/freeze-b83/review11/asan/canary-unlimited.log": 1,
+        "court/freeze-b83/review11/asan/canary.log": 1,
+        "court/freeze-b83/review11/asan/focused-returnnull.log": 1,
+        "court/freeze-b83/review11/asan/focused.log": 1,
+        "court/freeze-b83/review11/miri/cms.log": 1,
         "court/freeze-b83/review11/miri/digest-stacked.log": 1,
+        "court/freeze-b83/review11/miri/miri-nightly-x86_64-unknown-linux-gnu.tar.xz": 1,
+        "court/freeze-b83/review11/miri/native-control.log": 1,
+        "court/freeze-b83/review11/miri/per-test-stacked.tsv": 1,
+        "court/freeze-b83/review11/miri/per-test-stacked.tsv.transcript": 1,
+        "court/freeze-b83/review11/miri/per-test-tree.tsv": 1,
+        "court/freeze-b83/review11/miri/san-alt-rows.log": 1,
+        "court/freeze-b83/review11/miri/three-modules.log": 1,
+        "court/freeze-b84/review12/asan/canary.log": 1,
+        "court/freeze-b84/review12/negative_controls.py": 1,
+        "court/freeze-b84/review12/selftest-after.log": 1,
+        "court/tmp/openssh-closure/closure-ssh-witness.json": 1,
+        "courts/phase18/ct_primitives_probe.c": 1,
+        "courts/phase3/rt_err_strings_cases.h": 1,
+        "courts/phase4/rt_err_borrowed_data_probe.c": 1,
         "differential_body_hash": 1,
+        "docs/DECISIONS.md": 1,
+        "downstream_build_link.py": 1,
+        "downstream_deps.json": 1,
+        "downstream_deps.py": 1,
+        "downstream_runtime.py": 1,
+        "downstream_template_families.json": 1,
+        "downstream_templates.py": 1,
+        "dropbear-2026.94.tar.bz2": 1,
+        "evidence/closure-ssh-b61.json": 1,
+        "evidence/closure-sshd-b61.json": 1,
+        "forensics/atlas/implemented-surface.json": 1,
+        "forensics/downstream/build-link-atlas.json": 1,
+        "forensics/downstream/runtime-functional-atlas.json": 1,
+        "forensics/memory-safety/campaign/safe-c33/atlas-refresh/edge-targets.json": 1,
+        "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-rebind-sites.json": 1,
+        "forensics/memory-safety/campaign/safe-c33/evidence/ocsp-i2r-dispatch-review-2026-11-13.json": 1,
+        "forensics/memory-safety/campaign/safe-c33/state.json": 1,
+        "forensics/phase18-obligations.json": 1,
+        "forensics/tools/build_reproducibility.sh": 1,
+        "forensics/tools/downstream_runtime.py": 1,
+        "forensics/tools/phase17_courts.py": 1,
+        "forensics/tools/phase2_shell.py": 1,
+        "l7_poco_aead.cpp": 1,
         "lhash.h": 1,
+        "lib/libcrypto.so.3": 1,
+        "lib/libssl.so.3": 1,
+        "lib/ossl-modules/legacy.so": 1,
+        "libcrypto.a": 1,
+        "libopenssl_rs.a": 1,
+        "libssl.a": 1,
+        "objects.h": 1,
+        "openssh-10.5p1.tar.gz": 1,
+        "openssh-9.9p1.tar.gz": 1,
+        "openssh-v1i-sites.json": 1,
+        "openssh-v1l-sites.json": 1,
+        "pem.h": 1,
+        "putty-0.85.tar.gz": 1,
         "receipt_body_hash": 1,
         "recipe_digest": 1,
         "release_tree_digest_recomputed_at": 1,
+        "rsa-ct-hi.pem": 1,
+        "rsa-ct-lo.pem": 1,
+        "rust-toolchain.toml": 1,
         "source_tree_root_hash": 1,
+        "src/apps/engine.rs": 1,
+        "src/asn1/owned.rs": 1,
+        "src/asn1/text.rs": 1,
+        "src/async/arch/async_posix.rs": 1,
+        "src/async/async.rs": 1,
+        "src/async/async_wait.rs": 1,
+        "src/async/mod.rs": 1,
+        "src/bn/arith.rs": 1,
+        "src/bn/bignum.rs": 1,
+        "src/bn/gf2m.rs": 1,
+        "src/bn/mont.rs": 1,
+        "src/bn/recp.rs": 1,
+        "src/cipher_tables.rs": 1,
+        "src/context/namemap.rs": 1,
+        "src/dh/key.rs": 1,
         "src/digest/mod.rs": 1,
-        "src/digest/sha2.rs": 1,
         "src/digest/tables.rs": 1,
-        "src/evp/digest.rs": 1,
-        "src/evp/legacy_digest_callback_surface.rs": 1,
-        "src/provider/digest.rs": 1
+        "src/ec/lib.rs": 1,
+        "src/encoder_pkey.rs": 1,
+        "src/engine/eng_all.rs": 1,
+        "src/engine/eng_cnf.rs": 1,
+        "src/engine/eng_ctrl.rs": 1,
+        "src/engine/eng_dyn.rs": 1,
+        "src/engine/eng_table.rs": 1,
+        "src/engine/tb_asnmth.rs": 1,
+        "src/evp/algorithm.rs": 1,
+        "src/evp/bio_enc.rs": 1,
+        "src/evp/cipher_ctx.rs": 1,
+        "src/evp/evp_pbe.rs": 1,
+        "src/evp/legacy_blake2.rs": 1,
+        "src/evp/legacy_md4.rs": 1,
+        "src/evp/legacy_ripemd.rs": 1,
+        "src/evp/legacy_sha.rs": 1,
+        "src/evp/legacy_wp.rs": 1,
+        "src/evp/method_store.rs": 1,
+        "src/evp/pkey_asn1.rs": 1,
+        "src/ffc/params.rs": 1,
+        "src/http/http_client.rs": 1,
+        "src/lib.rs": 1,
+        "src/ml_dsa/key.rs": 1,
+        "src/ml_kem/mod.rs": 1,
+        "src/packet.rs": 1,
+        "src/params/build.rs": 1,
+        "src/pkcs12/p12_crt.rs": 1,
+        "src/property/store.rs": 1,
+        "src/provider/activate.rs": 1,
+        "src/provider/conf.rs": 1,
+        "src/provider/decode_pvk2key.rs": 1,
+        "src/provider/ec_kmgmt.rs": 1,
+        "src/provider/eddsa_sig.rs": 1,
+        "src/provider/init.rs": 1,
+        "src/provider/mod.rs": 1,
+        "src/provider/rsa_kmgmt.rs": 1,
+        "src/provider/slh_dsa_sig.rs": 1,
+        "src/provider/sm2_sig.rs": 1,
+        "src/runtime/bio/bss_bio.rs": 1,
+        "src/runtime/bio/bss_conn.rs": 1,
+        "src/runtime/bio/bss_dgram.rs": 1,
+        "src/runtime/bio/bss_dgram_pair.rs": 1,
+        "src/runtime/conf/conf_ssl.rs": 1,
+        "src/runtime/confmod/mod.rs": 1,
+        "src/runtime/constant_time.rs": 1,
+        "src/runtime/ctype_table.rs": 1,
+        "src/runtime/err_loaders.rs": 1,
+        "src/runtime/err_strings.rs": 1,
+        "src/runtime/err_variadic.c": 1,
+        "src/runtime/miri_tcb.rs": 1,
+        "src/runtime/mod.rs": 1,
+        "src/runtime/thread.rs": 1,
+        "src/runtime/thread_events.rs": 1,
+        "src/ssl/bio_ssl.rs": 1,
+        "src/ssl/ssl_conf.rs": 1,
+        "src/ssl/statem/extensions_clnt.rs": 1,
+        "src/ssl/statem/statem_clnt.rs": 1,
+        "src/ssl/statem/statem_srvr.rs": 1,
+        "src/ssl/tls_srp.rs": 1,
+        "src/status.rs": 1,
+        "src/x509/x509_vpm.rs": 1,
+        "stack.h": 1,
+        "v1_census.py": 1
       },
       "examples": {
+        ".data.rel.ro": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/neutral-control.json"
+        ],
+        ".got": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/neutral-control.json"
+        ],
+        ".got.plt": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/neutral-control.json"
+        ],
+        ".rodata": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/neutral-control.json"
+        ],
+        ".text": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/neutral-control.json"
+        ],
+        "10.5p1": [
+          "evidence/etp0/CLAIMS.json"
+        ],
+        "9.9p1": [
+          "evidence/etp0/CLAIMS.json"
+        ],
+        "CAMPAIGN-STATUS.json": [
+          "evidence/etp0/CLAIMS.json"
+        ],
+        "Cargo.lock": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s69-safe-island-compiler-evidence.json"
+        ],
+        "Cargo.toml": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s69-safe-island-compiler-evidence.json"
+        ],
+        "README.md": [
+          "forensics/downstream/failures.json"
+        ],
         "aggregate_hash": [
           "forensics/atlas/ATLAS_INDEX.json",
           "forensics/receipts/EVIDENCE_RECEIPT.0001.json",
@@ -195,8 +455,21 @@
           "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s59-reverify-all.json",
           "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v5-seal-measurement.json"
         ],
+        "artifacts/phase18/COURTS.json": [
+          "evidence/etp0/CLAIMS.json"
+        ],
+        "artifacts/phase2/COURTS.json": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/freeze-post-merge.json"
+        ],
+        "asn1.h": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/element7-header-question-diagnosis.json"
+        ],
         "atlas_body_hash": [
           "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s31-downstream-reverify.json"
+        ],
+        "bin/openssl": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/freeze-S-prime.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1q-candidate-freeze.json"
         ],
         "body_hash": [
           "artifacts/phase2/COURTS.json",
@@ -212,6 +485,18 @@
         "both_arms_observed_digest": [
           "evidence/etp2/reproducibility.json"
         ],
+        "build-link-atlas.json": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s64-dependency-registry.json"
+        ],
+        "build.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s69-safe-island-compiler-evidence.json"
+        ],
+        "build.sh": [
+          "forensics/downstream/failures.json"
+        ],
+        "build_phase2.sh": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/freeze-S-prime.json"
+        ],
         "build_source_tree_digest": [
           "forensics/memory-safety/campaign/safe-c33/atlas-refresh/build-0.0.43.json",
           "forensics/memory-safety/campaign/safe-c33/atlas-refresh/build-0.0.44.json",
@@ -224,6 +509,54 @@
           "artifacts/phase24/COURTS.json",
           "forensics/downstream/candidate-freeze.json"
         ],
+        "cert-crlid-invalid.pem": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/b75-ocsp-runtime/probe.json"
+        ],
+        "cert-crlid-invalid.pem.authority.out": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/b75-ocsp-runtime/probe.json"
+        ],
+        "cert-crlid-invalid.pem.candidate.err": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/b75-ocsp-runtime/probe.json"
+        ],
+        "cert-crlid-invalid.pem.candidate.out": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/b75-ocsp-runtime/probe.json"
+        ],
+        "cert-crlid-valid.pem": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/b75-ocsp-runtime/probe.json"
+        ],
+        "cert-crlid-valid.pem.authority.out": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/b75-ocsp-runtime/probe.json"
+        ],
+        "cert-crlid-valid.pem.candidate.err": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/b75-ocsp-runtime/probe.json"
+        ],
+        "cert-crlid-valid.pem.candidate.out": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/b75-ocsp-runtime/probe.json"
+        ],
+        "cert-serviceloc-invalid.pem": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/b75-ocsp-runtime/probe.json"
+        ],
+        "cert-serviceloc-invalid.pem.authority.out": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/b75-ocsp-runtime/probe.json"
+        ],
+        "cert-serviceloc-invalid.pem.candidate.err": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/b75-ocsp-runtime/probe.json"
+        ],
+        "cert-serviceloc-invalid.pem.candidate.out": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/b75-ocsp-runtime/probe.json"
+        ],
+        "cert-serviceloc-valid.pem": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/b75-ocsp-runtime/probe.json"
+        ],
+        "cert-serviceloc-valid.pem.authority.out": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/b75-ocsp-runtime/probe.json"
+        ],
+        "cert-serviceloc-valid.pem.candidate.err": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/b75-ocsp-runtime/probe.json"
+        ],
+        "cert-serviceloc-valid.pem.candidate.out": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/b75-ocsp-runtime/probe.json"
+        ],
         "checkpoint_state_hash": [
           "artifacts/phase24/COURTS.json",
           "forensics/atlas/phase22/gemel-checkpoint.json",
@@ -234,13 +567,80 @@
           "forensics/downstream/ranking/raw/crates-rdepends-304b85deb9c6320408eb3725ff05136aa86461ce675e8f4fd71f741607deb691.json",
           "forensics/memory-safety/campaign/safe-c33/atlas-refresh/publish-0.0.34.json"
         ],
+        "consumer_closure.py": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/freeze-S-prime.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1k-candidate-freeze.json"
+        ],
         "content_hash": [
           "artifacts/phase23/COURTS.json",
           "forensics/authority-lineage.json",
           "forensics/authority-nodes.json"
         ],
+        "court/freeze-b73/FREEZE-b73.json": [
+          "evidence/b75-sshd-readjudication.json"
+        ],
+        "court/freeze-b83/review11/asan/build.log": [
+          "evidence/b83-instruments.json"
+        ],
+        "court/freeze-b83/review11/asan/canary-unlimited.log": [
+          "evidence/b83-instruments.json"
+        ],
+        "court/freeze-b83/review11/asan/canary.log": [
+          "evidence/b83-instruments.json"
+        ],
+        "court/freeze-b83/review11/asan/focused-returnnull.log": [
+          "evidence/b83-instruments.json"
+        ],
+        "court/freeze-b83/review11/asan/focused.log": [
+          "evidence/b83-instruments.json"
+        ],
+        "court/freeze-b83/review11/miri/cms.log": [
+          "evidence/b83-instruments.json"
+        ],
         "court/freeze-b83/review11/miri/digest-stacked.log": [
           "evidence/b83-instruments.json"
+        ],
+        "court/freeze-b83/review11/miri/miri-nightly-x86_64-unknown-linux-gnu.tar.xz": [
+          "evidence/b83-instruments.json"
+        ],
+        "court/freeze-b83/review11/miri/native-control.log": [
+          "evidence/b83-instruments.json"
+        ],
+        "court/freeze-b83/review11/miri/per-test-stacked.tsv": [
+          "evidence/b83-instruments.json"
+        ],
+        "court/freeze-b83/review11/miri/per-test-stacked.tsv.transcript": [
+          "evidence/b83-instruments.json"
+        ],
+        "court/freeze-b83/review11/miri/per-test-tree.tsv": [
+          "evidence/b83-instruments.json"
+        ],
+        "court/freeze-b83/review11/miri/san-alt-rows.log": [
+          "evidence/b83-instruments.json"
+        ],
+        "court/freeze-b83/review11/miri/three-modules.log": [
+          "evidence/b83-instruments.json"
+        ],
+        "court/freeze-b84/review12/asan/canary.log": [
+          "evidence/b84-instrument-repair.json"
+        ],
+        "court/freeze-b84/review12/negative_controls.py": [
+          "evidence/b84-instrument-repair.json"
+        ],
+        "court/freeze-b84/review12/selftest-after.log": [
+          "evidence/b84-instrument-repair.json"
+        ],
+        "court/tmp/openssh-closure/closure-ssh-witness.json": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-doall-reachability.json"
+        ],
+        "courts/phase18/ct_primitives_probe.c": [
+          "evidence/etp0/CLAIMS.json"
+        ],
+        "courts/phase3/rt_err_strings_cases.h": [
+          "forensics/atlas/err-strings.json"
+        ],
+        "courts/phase4/rt_err_borrowed_data_probe.c": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B33.json"
         ],
         "current_hash": [
           "evidence/closure-ssh-0046.json",
@@ -260,7 +660,54 @@
           ".frf/captures/run-openssl-abi-surface-e9317c21258cac089c98e86a1174448070e99eb0cb3abb6e5539b46c9f97cc51/capture.json"
         ],
         "digest_identity": [
+          "evidence/etp-controls/history/TRACEABILITY-superseded-t4-07b776d68.json",
           "evidence/etp-t1/TRACEABILITY.json"
+        ],
+        "docs/DECISIONS.md": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v5b-init-and-libs.json"
+        ],
+        "docs/SECURITY_DIVERGENCE_POLICY.md": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/legacy-init-harden.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-final-blockers.json"
+        ],
+        "downstream_build_link.py": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s64-dependency-registry.json"
+        ],
+        "downstream_deps.json": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s64-dependency-registry.json"
+        ],
+        "downstream_deps.py": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s64-dependency-registry.json"
+        ],
+        "downstream_runtime.py": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s65-workload-templates.json"
+        ],
+        "downstream_template_families.json": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s65-workload-templates.json"
+        ],
+        "downstream_templates.py": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s65-workload-templates.json"
+        ],
+        "dropbear-2026.94.tar.bz2": [
+          "evidence/etp0/CLAIMS.json"
+        ],
+        "evidence/closure-ssh-b61.json": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b67-g1-conflict-resolution.json"
+        ],
+        "evidence/closure-ssh-b74.json": [
+          "evidence/b75-ocsp-readjudication.json",
+          "evidence/b75-safe-compatible-gap.json"
+        ],
+        "evidence/closure-sshd-b61.json": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b67-g1-conflict-resolution.json"
+        ],
+        "evidence/closure-sshd-b73-r2.json": [
+          "evidence/b75-safe-compatible-gap.json",
+          "evidence/b75-sshd-readjudication.json"
+        ],
+        "evidence/sshd-artifact-ledger.json": [
+          "evidence/b75-safe-compatible-gap.json",
+          "evidence/b75-sshd-readjudication.json"
         ],
         "fingerprint": [
           ".frf/claims/92fafe2a5524180867a657c4d2de682e873f1c43995128d3dc228af2830fcb0e.json",
@@ -270,6 +717,56 @@
         "first_run_hash": [
           "artifacts/phase24/COURTS.json",
           "forensics/downstream/candidate-freeze.json"
+        ],
+        "forensics/atlas/implemented-surface.json": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/freeze-post-merge.json"
+        ],
+        "forensics/downstream/build-link-atlas.json": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v5b-init-and-libs.json"
+        ],
+        "forensics/downstream/runtime-functional-atlas.json": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v5b-init-and-libs.json"
+        ],
+        "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": [
+          "evidence/b75-ocsp-readjudication.json",
+          "evidence/b75-safe-compatible-gap.json",
+          "evidence/b75-sshd-readjudication.json"
+        ],
+        "forensics/memory-safety/campaign/safe-c33/atlas-refresh/edge-targets.json": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-doall-reachability.json"
+        ],
+        "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-rebind-sites.json": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-final-blockers.json"
+        ],
+        "forensics/memory-safety/campaign/safe-c33/atlas-refresh/r13-coordinate-rebind-sites.json": [
+          "evidence/b75-ocsp-readjudication.json",
+          "evidence/b75-safe-compatible-gap.json",
+          "evidence/b75-sshd-readjudication.json"
+        ],
+        "forensics/memory-safety/campaign/safe-c33/evidence/b75_readjudicate.py": [
+          "evidence/b75-ocsp-readjudication.json",
+          "evidence/b75-sshd-readjudication.json"
+        ],
+        "forensics/memory-safety/campaign/safe-c33/evidence/ocsp-i2r-dispatch-review-2026-11-13.json": [
+          "evidence/b75-ocsp-readjudication.json"
+        ],
+        "forensics/memory-safety/campaign/safe-c33/state.json": [
+          "evidence/b75-ocsp-readjudication.json"
+        ],
+        "forensics/phase18-obligations.json": [
+          "evidence/etp0/CLAIMS.json"
+        ],
+        "forensics/tools/build_reproducibility.sh": [
+          "evidence/etp2/reproducibility.json"
+        ],
+        "forensics/tools/downstream_runtime.py": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v5b-init-and-libs.json"
+        ],
+        "forensics/tools/phase17_courts.py": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v5b-init-and-libs.json"
+        ],
+        "forensics/tools/phase2_shell.py": [
+          "evidence/etp2/reproducibility.json"
         ],
         "fresh_surface_body_hash": [
           "evidence/performance-frontier/campaigns/PFP-0/build-identity.json",
@@ -302,8 +799,88 @@
           ".frf/captures/run-openssl-abi-surface-c41ce792177bb867e45ef4edad3cf136c383e8ba2a583a31e094c08746df066b/capture.json",
           ".frf/captures/run-openssl-abi-surface-e9317c21258cac089c98e86a1174448070e99eb0cb3abb6e5539b46c9f97cc51/capture.json"
         ],
+        "include/openssl/crypto.h": [
+          "forensics/authority-nodes.json",
+          "forensics/multitrack/historical-build-receipts.json"
+        ],
+        "include/openssl/evp.h": [
+          "forensics/authority-nodes.json",
+          "forensics/multitrack/historical-build-receipts.json"
+        ],
+        "include/openssl/ssl.h": [
+          "forensics/authority-nodes.json",
+          "forensics/multitrack/historical-build-receipts.json"
+        ],
+        "l7_poco_aead.cpp": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s65-workload-templates.json"
+        ],
+        "legacy.so": [
+          "evidence/b84-adjudication.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/build-0.0.43.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/freeze-S-double-prime.json"
+        ],
         "lhash.h": [
           "forensics/memory-safety/campaign/safe-c33/atlas-refresh/element7-header-question-diagnosis.json"
+        ],
+        "lib/libcrypto.so.3": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1q-candidate-freeze.json"
+        ],
+        "lib/libssl.so.3": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1q-candidate-freeze.json"
+        ],
+        "lib/ossl-modules/legacy.so": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1q-candidate-freeze.json"
+        ],
+        "libcrypto.a": [
+          "evidence/b84-adjudication.json"
+        ],
+        "libcrypto.so.0.9.8": [
+          "forensics/authority-nodes.json",
+          "forensics/multitrack/historical-build-receipts.json"
+        ],
+        "libcrypto.so.1.0.0": [
+          "forensics/authority-nodes.json",
+          "forensics/multitrack/historical-build-receipts.json"
+        ],
+        "libcrypto.so.1.1": [
+          "forensics/authority-nodes.json",
+          "forensics/multitrack/historical-build-receipts.json"
+        ],
+        "libcrypto.so.3": [
+          "artifacts/phase18/asan-downstream.json",
+          "artifacts/phase18/asan.json",
+          "evidence/b84-adjudication.json"
+        ],
+        "libcrypto.so.4": [
+          "forensics/authority-nodes.json",
+          "forensics/multitrack/historical-build-receipts.json"
+        ],
+        "libopenssl_rs.a": [
+          "evidence/etp0/CLAIMS.json"
+        ],
+        "libssl.a": [
+          "evidence/b84-adjudication.json"
+        ],
+        "libssl.so.0.9.8": [
+          "forensics/authority-nodes.json",
+          "forensics/multitrack/historical-build-receipts.json"
+        ],
+        "libssl.so.1.0.0": [
+          "forensics/authority-nodes.json",
+          "forensics/multitrack/historical-build-receipts.json"
+        ],
+        "libssl.so.1.1": [
+          "forensics/authority-nodes.json",
+          "forensics/multitrack/historical-build-receipts.json"
+        ],
+        "libssl.so.3": [
+          "artifacts/phase18/asan-downstream.json",
+          "artifacts/phase18/asan.json",
+          "evidence/b84-adjudication.json"
+        ],
+        "libssl.so.4": [
+          "forensics/authority-nodes.json",
+          "forensics/multitrack/historical-build-receipts.json"
         ],
         "manifest_root_hash": [
           "forensics/atlas/openssl-0.9.8zh-historical/plane-census.json",
@@ -314,6 +891,71 @@
           "forensics/memory-safety/campaign/safe-c33/atlas-refresh/build-0.0.43.json",
           "forensics/memory-safety/campaign/safe-c33/atlas-refresh/build-0.0.44.json",
           "forensics/memory-safety/campaign/safe-c33/atlas-refresh/build-0.0.45.json"
+        ],
+        "objects.h": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/element7-header-question-diagnosis.json"
+        ],
+        "openssh-10.5p1.tar.gz": [
+          "evidence/etp0/CLAIMS.json"
+        ],
+        "openssh-9.9p1.tar.gz": [
+          "evidence/etp0/CLAIMS.json"
+        ],
+        "openssh-v1i-sites.json": [
+          "evidence/b78-promotion-assessment.json"
+        ],
+        "openssh-v1l-sites.json": [
+          "evidence/b78-promotion-assessment.json"
+        ],
+        "ossl-modules/legacy.so": [
+          "artifacts/phase18/asan-downstream.json",
+          "artifacts/phase18/asan.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/freeze-S-prime.json"
+        ],
+        "output.0": [
+          "forensics/vectors/drbg.json"
+        ],
+        "output.1": [
+          "forensics/vectors/drbg.json"
+        ],
+        "output.10": [
+          "forensics/vectors/drbg.json"
+        ],
+        "output.11": [
+          "forensics/vectors/drbg.json"
+        ],
+        "output.12": [
+          "forensics/vectors/drbg.json"
+        ],
+        "output.13": [
+          "forensics/vectors/drbg.json"
+        ],
+        "output.14": [
+          "forensics/vectors/drbg.json"
+        ],
+        "output.2": [
+          "forensics/vectors/drbg.json"
+        ],
+        "output.3": [
+          "forensics/vectors/drbg.json"
+        ],
+        "output.4": [
+          "forensics/vectors/drbg.json"
+        ],
+        "output.5": [
+          "forensics/vectors/drbg.json"
+        ],
+        "output.6": [
+          "forensics/vectors/drbg.json"
+        ],
+        "output.7": [
+          "forensics/vectors/drbg.json"
+        ],
+        "output.8": [
+          "forensics/vectors/drbg.json"
+        ],
+        "output.9": [
+          "forensics/vectors/drbg.json"
         ],
         "p1000_content_hash": [
           "artifacts/phase24/COURTS.json",
@@ -329,6 +971,9 @@
           "forensics/downstream/candidate-freeze.json",
           "forensics/downstream/holdout.json"
         ],
+        "pem.h": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/element7-header-question-diagnosis.json"
+        ],
         "phase2_courts_body_hash": [
           "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1r-candidate-freeze.json",
           "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1s-candidate-freeze.json",
@@ -342,6 +987,9 @@
           "forensics/downstream/build-link-atlas.json",
           "forensics/downstream/candidate-freeze.json",
           "forensics/downstream/high-value-tier.json"
+        ],
+        "putty-0.85.tar.gz": [
+          "evidence/etp0/CLAIMS.json"
         ],
         "raw_candidate_hash": [
           ".frf/receipts/receipt-run-openssl-abi-surface-c41ce792177bb867e45ef4edad3cf136c383e8ba2a583a31e094c08746df066b-cdf7af10b27910993908005a9f5ef801822f494282fac76d6f066833a1ac8b2f.json",
@@ -372,6 +1020,9 @@
         "release_tree_digest_recomputed_at": [
           "forensics/memory-safety/campaign/safe-c33/atlas-refresh/build-0.0.49.json"
         ],
+        "repro.c": [
+          "forensics/downstream/failures.json"
+        ],
         "residual_fingerprint": [
           ".frf/receipts/receipt-run-openssl-cli-version-c9185877fbdd939943c6aeae6313702090bad7d49039881676b92cb7d362b240-1551cb96e062ddbf89b33a5e9b556539ac223fbf6fb3c64c8a5b4cbe66e6c194.json",
           ".frf/receipts/receipt-run-openssl-rs-rt-cipher-e9f2b5d657c474486cfff179955de948ccc3f07fcdcad9211c543c367f7083e4-5146273b8f30e9664d62fb7569de55542b98deee0bb875a9fdda94adf13c0b93.json",
@@ -382,10 +1033,26 @@
           "artifacts/phase21/COURTS.json",
           "forensics/atlas/openssl-3.6.3-historical/corpus-inventory.json"
         ],
+        "rsa-ct-hi.pem": [
+          "evidence/baseline-20261120.json"
+        ],
+        "rsa-ct-lo.pem": [
+          "evidence/baseline-20261120.json"
+        ],
+        "run.sh": [
+          "forensics/downstream/failures.json"
+        ],
         "runner_hash": [
           ".frf/captures/run-openssl-abi-surface-8b3930840739066fe479b6cee48d02932c7fa667c8c95f6b5a8f8ff8425cadd3/capture.json",
           ".frf/captures/run-openssl-abi-surface-c41ce792177bb867e45ef4edad3cf136c383e8ba2a583a31e094c08746df066b/capture.json",
           ".frf/captures/run-openssl-abi-surface-e9317c21258cac089c98e86a1174448070e99eb0cb3abb6e5539b46c9f97cc51/capture.json"
+        ],
+        "rust-toolchain.toml": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s69-safe-island-compiler-evidence.json"
+        ],
+        "scripts/adv-probe.sh": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B28.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B43.json"
         ],
         "selection_input_root_hash": [
           "artifacts/phase24/COURTS.json",
@@ -429,32 +1096,311 @@
           ".frf/captures/run-openssl-abi-surface-c41ce792177bb867e45ef4edad3cf136c383e8ba2a583a31e094c08746df066b/capture.json",
           ".frf/captures/run-openssl-abi-surface-e9317c21258cac089c98e86a1174448070e99eb0cb3abb6e5539b46c9f97cc51/capture.json"
         ],
-        "src/digest/mod.rs": [
+        "src/aes.rs": [
+          "artifacts/phase25/miri.json"
+        ],
+        "src/apps/engine.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v5b-init-and-libs.json"
+        ],
+        "src/asn1/owned.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B36.json"
+        ],
+        "src/asn1/text.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B38.json"
+        ],
+        "src/async/arch/async_posix.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B34.json"
+        ],
+        "src/async/async.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B18.json"
+        ],
+        "src/async/async_wait.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B18.json"
+        ],
+        "src/async/mod.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v5b-init-and-libs.json"
+        ],
+        "src/bn/arith.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B13.json"
+        ],
+        "src/bn/bignum.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B19.json"
+        ],
+        "src/bn/gf2m.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B12.json"
+        ],
+        "src/bn/mont.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B12.json"
+        ],
+        "src/bn/recp.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B12.json"
+        ],
+        "src/cipher_tables.rs": [
           "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s69-safe-island-compiler-evidence.json"
         ],
-        "src/digest/sha2.rs": [
-          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B56.json"
+        "src/context/namemap.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B9.json"
+        ],
+        "src/dh/key.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B14.json"
+        ],
+        "src/digest/mod.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s69-safe-island-compiler-evidence.json"
         ],
         "src/digest/tables.rs": [
           "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s69-safe-island-compiler-evidence.json"
         ],
-        "src/engine/tb_digest.rs": [
-          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b45-safe-thunks-elimination-sites.json",
-          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1s-candidate-freeze.json",
-          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v1t-candidate-freeze.json"
+        "src/ec/lib.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B36.json"
         ],
-        "src/evp/digest.rs": [
-          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B48.json"
+        "src/encoder_pkey.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B17.json"
         ],
-        "src/evp/legacy_digest_callback_surface.rs": [
-          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B48.json"
+        "src/engine/eng_all.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v5b-init-and-libs.json"
         ],
-        "src/provider/digest.rs": [
-          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/b76-review-v1i-batch3.json"
+        "src/engine/eng_cnf.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B16.json"
         ],
-        "src/slh_dsa/hash.rs": [
-          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B53.json",
-          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/p25-safe-declaration-elimination-sites.json"
+        "src/engine/eng_ctrl.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B15.json"
+        ],
+        "src/engine/eng_dyn.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B20.json"
+        ],
+        "src/engine/eng_table.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B20.json"
+        ],
+        "src/engine/tb_asnmth.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B16.json"
+        ],
+        "src/evp/algorithm.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B21.json"
+        ],
+        "src/evp/bio_enc.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B36.json"
+        ],
+        "src/evp/cipher_ctx.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B36.json"
+        ],
+        "src/evp/evp_pbe.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B17.json"
+        ],
+        "src/evp/legacy_blake2.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-final-blockers.json"
+        ],
+        "src/evp/legacy_md4.rs": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/legacy-md-init-fix.json"
+        ],
+        "src/evp/legacy_md5.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/legacy-init-harden.json",
+          "forensics/memory-safety/campaign/safe-c33/evidence/legacy-md-init-fix.json"
+        ],
+        "src/evp/legacy_ripemd.rs": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/legacy-md-init-fix.json"
+        ],
+        "src/evp/legacy_sha.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/legacy-init-harden.json"
+        ],
+        "src/evp/legacy_wp.rs": [
+          "forensics/memory-safety/campaign/safe-c33/evidence/legacy-md-init-fix.json"
+        ],
+        "src/evp/method_store.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B22.json"
+        ],
+        "src/evp/pkey_asn1.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B10.json"
+        ],
+        "src/ffc/params.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B17.json"
+        ],
+        "src/http/http_client.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B10.json"
+        ],
+        "src/lib.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s69-safe-island-compiler-evidence.json"
+        ],
+        "src/ml_dsa/encoders.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B36.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B5.json"
+        ],
+        "src/ml_dsa/key.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B36.json"
+        ],
+        "src/ml_kem/key.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B36.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/p25-vestigial-elimination-sites.json"
+        ],
+        "src/ml_kem/mod.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B36.json"
+        ],
+        "src/modes/wrap.rs": [
+          "artifacts/phase25/miri.json"
+        ],
+        "src/packet.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B23.json"
+        ],
+        "src/params/build.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B10.json"
+        ],
+        "src/pkcs12/p12_crt.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B11.json"
+        ],
+        "src/property/store.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B9.json"
+        ],
+        "src/provider/activate.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B9.json"
+        ],
+        "src/provider/conf.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B7.json"
+        ],
+        "src/provider/decode_pvk2key.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B17.json"
+        ],
+        "src/provider/ec_kmgmt.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B9.json"
+        ],
+        "src/provider/eddsa_sig.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/p25-vestigial-elimination-sites.json"
+        ],
+        "src/provider/init.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B22.json"
+        ],
+        "src/provider/kdf.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B43.json"
+        ],
+        "src/provider/mac_legacy_kmgmt.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B14.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B36.json"
+        ],
+        "src/provider/mod.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B8.json"
+        ],
+        "src/provider/rsa_kmgmt.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B10.json"
+        ],
+        "src/provider/slh_dsa_sig.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B23.json"
+        ],
+        "src/provider/sm2_sig.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B23.json"
+        ],
+        "src/runtime/bio/bss_bio.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B6.json"
+        ],
+        "src/runtime/bio/bss_conn.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B2.json"
+        ],
+        "src/runtime/bio/bss_dgram.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B2.json"
+        ],
+        "src/runtime/bio/bss_dgram_pair.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B2.json"
+        ],
+        "src/runtime/conf/conf_ssl.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B7.json"
+        ],
+        "src/runtime/confmod/mod.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B6.json"
+        ],
+        "src/runtime/constant_time.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s69-safe-island-compiler-evidence.json"
+        ],
+        "src/runtime/ctype_table.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s69-safe-island-compiler-evidence.json"
+        ],
+        "src/runtime/err.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B10.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B33.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B34.json"
+        ],
+        "src/runtime/err_loaders.rs": [
+          "forensics/atlas/err-strings.json"
+        ],
+        "src/runtime/err_state.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B33.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B34.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B36.json"
+        ],
+        "src/runtime/err_strings.rs": [
+          "forensics/atlas/err-strings.json"
+        ],
+        "src/runtime/err_variadic.c": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B33.json"
+        ],
+        "src/runtime/init.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B15.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/v5b-init-and-libs.json"
+        ],
+        "src/runtime/mem.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B33.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B34.json"
+        ],
+        "src/runtime/miri_tcb.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B34.json"
+        ],
+        "src/runtime/mod.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s69-safe-island-compiler-evidence.json"
+        ],
+        "src/runtime/thread.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B11.json"
+        ],
+        "src/runtime/thread_events.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B15.json"
+        ],
+        "src/ssl/bio_ssl.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B6.json"
+        ],
+        "src/ssl/record/rec_layer_s3.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B25.json"
+        ],
+        "src/ssl/ssl_conf.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B11.json"
+        ],
+        "src/ssl/ssl_lib.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B17.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B3.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B7.json"
+        ],
+        "src/ssl/ssl_rsa.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B7.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B8.json"
+        ],
+        "src/ssl/ssl_sess.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B4.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B7.json"
+        ],
+        "src/ssl/statem/extensions_clnt.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B16.json"
+        ],
+        "src/ssl/statem/statem_clnt.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B4.json"
+        ],
+        "src/ssl/statem/statem_srvr.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B3.json"
+        ],
+        "src/ssl/tls_srp.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B16.json"
+        ],
+        "src/status.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/s69-safe-island-compiler-evidence.json"
+        ],
+        "src/store/store_lib.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B27.json",
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B28.json"
+        ],
+        "src/store/store_meth.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B26.json"
+        ],
+        "src/ui/ui_openssl.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B29.json"
+        ],
+        "src/x509/x509_vpm.rs": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B17.json"
+        ],
+        "stack.h": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/element7-header-question-diagnosis.json"
         ],
         "surface_hash": [
           "artifacts/phase24/COURTS.json",
@@ -471,17 +1417,274 @@
           "evidence/performance-frontier/campaigns/PFP-0/build-identity.json",
           "evidence/performance-frontier/campaigns/PFP-0/raw/shell-generation.json",
           "evidence/performance-frontier/campaigns/PFP-0/results.json"
+        ],
+        "v1_census.py": [
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/freeze-S-prime.json"
         ]
+      },
+      "subject_path_keyed": {
+        "keys": {
+          ".data.rel.ro": 2,
+          ".got": 2,
+          ".got.plt": 2,
+          ".rodata": 2,
+          ".text": 2,
+          "10.5p1": 1,
+          "9.9p1": 1,
+          "CAMPAIGN-STATUS.json": 1,
+          "Cargo.lock": 1,
+          "Cargo.toml": 1,
+          "README.md": 2,
+          "artifacts/phase18/COURTS.json": 2,
+          "artifacts/phase2/COURTS.json": 1,
+          "asn1.h": 1,
+          "bin/openssl": 2,
+          "build-link-atlas.json": 1,
+          "build.rs": 1,
+          "build.sh": 2,
+          "build_phase2.sh": 1,
+          "cert-crlid-invalid.pem": 1,
+          "cert-crlid-invalid.pem.authority.out": 1,
+          "cert-crlid-invalid.pem.candidate.err": 1,
+          "cert-crlid-invalid.pem.candidate.out": 1,
+          "cert-crlid-valid.pem": 1,
+          "cert-crlid-valid.pem.authority.out": 1,
+          "cert-crlid-valid.pem.candidate.err": 1,
+          "cert-crlid-valid.pem.candidate.out": 1,
+          "cert-serviceloc-invalid.pem": 1,
+          "cert-serviceloc-invalid.pem.authority.out": 1,
+          "cert-serviceloc-invalid.pem.candidate.err": 1,
+          "cert-serviceloc-invalid.pem.candidate.out": 1,
+          "cert-serviceloc-valid.pem": 1,
+          "cert-serviceloc-valid.pem.authority.out": 1,
+          "cert-serviceloc-valid.pem.candidate.err": 1,
+          "cert-serviceloc-valid.pem.candidate.out": 1,
+          "consumer_closure.py": 2,
+          "court/freeze-b73/FREEZE-b73.json": 1,
+          "court/freeze-b83/review11/asan/build.log": 1,
+          "court/freeze-b83/review11/asan/canary-unlimited.log": 1,
+          "court/freeze-b83/review11/asan/canary.log": 1,
+          "court/freeze-b83/review11/asan/focused-returnnull.log": 1,
+          "court/freeze-b83/review11/asan/focused.log": 1,
+          "court/freeze-b83/review11/miri/cms.log": 1,
+          "court/freeze-b83/review11/miri/digest-stacked.log": 1,
+          "court/freeze-b83/review11/miri/miri-nightly-x86_64-unknown-linux-gnu.tar.xz": 1,
+          "court/freeze-b83/review11/miri/native-control.log": 1,
+          "court/freeze-b83/review11/miri/per-test-stacked.tsv": 1,
+          "court/freeze-b83/review11/miri/per-test-stacked.tsv.transcript": 1,
+          "court/freeze-b83/review11/miri/per-test-tree.tsv": 1,
+          "court/freeze-b83/review11/miri/san-alt-rows.log": 1,
+          "court/freeze-b83/review11/miri/three-modules.log": 1,
+          "court/freeze-b84/review12/asan/canary.log": 1,
+          "court/freeze-b84/review12/negative_controls.py": 1,
+          "court/freeze-b84/review12/selftest-after.log": 1,
+          "court/tmp/openssh-closure/closure-ssh-witness.json": 1,
+          "courts/phase18/ct_primitives_probe.c": 1,
+          "courts/phase3/rt_err_strings_cases.h": 1,
+          "courts/phase4/rt_err_borrowed_data_probe.c": 1,
+          "docs/DECISIONS.md": 1,
+          "docs/SECURITY_DIVERGENCE_POLICY.md": 2,
+          "downstream_build_link.py": 1,
+          "downstream_deps.json": 1,
+          "downstream_deps.py": 1,
+          "downstream_runtime.py": 1,
+          "downstream_template_families.json": 1,
+          "downstream_templates.py": 1,
+          "dropbear-2026.94.tar.bz2": 1,
+          "evidence/closure-ssh-b61.json": 1,
+          "evidence/closure-ssh-b74.json": 2,
+          "evidence/closure-sshd-b61.json": 1,
+          "evidence/closure-sshd-b73-r2.json": 2,
+          "evidence/sshd-artifact-ledger.json": 2,
+          "forensics/atlas/implemented-surface.json": 1,
+          "forensics/downstream/build-link-atlas.json": 1,
+          "forensics/downstream/runtime-functional-atlas.json": 1,
+          "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json": 4,
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/edge-targets.json": 1,
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-rebind-sites.json": 1,
+          "forensics/memory-safety/campaign/safe-c33/atlas-refresh/r13-coordinate-rebind-sites.json": 3,
+          "forensics/memory-safety/campaign/safe-c33/evidence/b75_readjudicate.py": 2,
+          "forensics/memory-safety/campaign/safe-c33/evidence/ocsp-i2r-dispatch-review-2026-11-13.json": 1,
+          "forensics/memory-safety/campaign/safe-c33/state.json": 1,
+          "forensics/phase18-obligations.json": 1,
+          "forensics/tools/build_reproducibility.sh": 1,
+          "forensics/tools/downstream_runtime.py": 1,
+          "forensics/tools/phase17_courts.py": 1,
+          "forensics/tools/phase2_shell.py": 1,
+          "include/openssl/crypto.h": 38,
+          "include/openssl/evp.h": 38,
+          "include/openssl/ssl.h": 38,
+          "l7_poco_aead.cpp": 1,
+          "legacy.so": 46,
+          "lhash.h": 1,
+          "lib/libcrypto.so.3": 1,
+          "lib/libssl.so.3": 1,
+          "lib/ossl-modules/legacy.so": 1,
+          "libcrypto.a": 1,
+          "libcrypto.so.0.9.8": 2,
+          "libcrypto.so.1.0.0": 6,
+          "libcrypto.so.1.1": 4,
+          "libcrypto.so.3": 93,
+          "libcrypto.so.4": 8,
+          "libopenssl_rs.a": 1,
+          "libssl.a": 1,
+          "libssl.so.0.9.8": 2,
+          "libssl.so.1.0.0": 6,
+          "libssl.so.1.1": 4,
+          "libssl.so.3": 86,
+          "libssl.so.4": 8,
+          "objects.h": 1,
+          "openssh-10.5p1.tar.gz": 1,
+          "openssh-9.9p1.tar.gz": 1,
+          "openssh-v1i-sites.json": 1,
+          "openssh-v1l-sites.json": 1,
+          "ossl-modules/legacy.so": 5,
+          "output.0": 289,
+          "output.1": 288,
+          "output.10": 288,
+          "output.11": 288,
+          "output.12": 288,
+          "output.13": 288,
+          "output.14": 288,
+          "output.2": 288,
+          "output.3": 288,
+          "output.4": 288,
+          "output.5": 288,
+          "output.6": 288,
+          "output.7": 288,
+          "output.8": 288,
+          "output.9": 288,
+          "pem.h": 1,
+          "putty-0.85.tar.gz": 1,
+          "repro.c": 2,
+          "rsa-ct-hi.pem": 1,
+          "rsa-ct-lo.pem": 1,
+          "run.sh": 2,
+          "rust-toolchain.toml": 1,
+          "scripts/adv-probe.sh": 3,
+          "src/aes.rs": 2,
+          "src/apps/engine.rs": 1,
+          "src/asn1/owned.rs": 1,
+          "src/asn1/text.rs": 1,
+          "src/async/arch/async_posix.rs": 1,
+          "src/async/async.rs": 1,
+          "src/async/async_wait.rs": 1,
+          "src/async/mod.rs": 1,
+          "src/bn/arith.rs": 1,
+          "src/bn/bignum.rs": 1,
+          "src/bn/gf2m.rs": 1,
+          "src/bn/mont.rs": 1,
+          "src/bn/recp.rs": 1,
+          "src/cipher_tables.rs": 1,
+          "src/context/namemap.rs": 1,
+          "src/dh/key.rs": 1,
+          "src/digest/mod.rs": 1,
+          "src/digest/tables.rs": 1,
+          "src/ec/lib.rs": 1,
+          "src/encoder_pkey.rs": 1,
+          "src/engine/eng_all.rs": 1,
+          "src/engine/eng_cnf.rs": 1,
+          "src/engine/eng_ctrl.rs": 1,
+          "src/engine/eng_dyn.rs": 1,
+          "src/engine/eng_table.rs": 1,
+          "src/engine/tb_asnmth.rs": 1,
+          "src/evp/algorithm.rs": 1,
+          "src/evp/bio_enc.rs": 1,
+          "src/evp/cipher_ctx.rs": 1,
+          "src/evp/evp_pbe.rs": 1,
+          "src/evp/legacy_blake2.rs": 1,
+          "src/evp/legacy_md4.rs": 1,
+          "src/evp/legacy_md5.rs": 2,
+          "src/evp/legacy_ripemd.rs": 1,
+          "src/evp/legacy_sha.rs": 1,
+          "src/evp/legacy_wp.rs": 1,
+          "src/evp/method_store.rs": 1,
+          "src/evp/pkey_asn1.rs": 1,
+          "src/ffc/params.rs": 1,
+          "src/http/http_client.rs": 1,
+          "src/lib.rs": 1,
+          "src/ml_dsa/encoders.rs": 2,
+          "src/ml_dsa/key.rs": 1,
+          "src/ml_kem/key.rs": 2,
+          "src/ml_kem/mod.rs": 1,
+          "src/modes/wrap.rs": 2,
+          "src/packet.rs": 1,
+          "src/params/build.rs": 1,
+          "src/pkcs12/p12_crt.rs": 1,
+          "src/property/store.rs": 1,
+          "src/provider/activate.rs": 1,
+          "src/provider/conf.rs": 1,
+          "src/provider/decode_pvk2key.rs": 1,
+          "src/provider/ec_kmgmt.rs": 1,
+          "src/provider/eddsa_sig.rs": 1,
+          "src/provider/init.rs": 1,
+          "src/provider/kdf.rs": 2,
+          "src/provider/mac_legacy_kmgmt.rs": 2,
+          "src/provider/mod.rs": 1,
+          "src/provider/rsa_kmgmt.rs": 1,
+          "src/provider/slh_dsa_sig.rs": 1,
+          "src/provider/sm2_sig.rs": 1,
+          "src/runtime/bio/bss_bio.rs": 1,
+          "src/runtime/bio/bss_conn.rs": 1,
+          "src/runtime/bio/bss_dgram.rs": 1,
+          "src/runtime/bio/bss_dgram_pair.rs": 1,
+          "src/runtime/conf/conf_ssl.rs": 1,
+          "src/runtime/confmod/mod.rs": 1,
+          "src/runtime/constant_time.rs": 1,
+          "src/runtime/ctype_table.rs": 1,
+          "src/runtime/err.rs": 4,
+          "src/runtime/err_loaders.rs": 1,
+          "src/runtime/err_state.rs": 3,
+          "src/runtime/err_strings.rs": 1,
+          "src/runtime/err_variadic.c": 1,
+          "src/runtime/init.rs": 2,
+          "src/runtime/mem.rs": 2,
+          "src/runtime/miri_tcb.rs": 1,
+          "src/runtime/mod.rs": 1,
+          "src/runtime/thread.rs": 1,
+          "src/runtime/thread_events.rs": 1,
+          "src/ssl/bio_ssl.rs": 1,
+          "src/ssl/record/rec_layer_s3.rs": 2,
+          "src/ssl/ssl_conf.rs": 1,
+          "src/ssl/ssl_lib.rs": 3,
+          "src/ssl/ssl_rsa.rs": 2,
+          "src/ssl/ssl_sess.rs": 2,
+          "src/ssl/statem/extensions_clnt.rs": 1,
+          "src/ssl/statem/statem_clnt.rs": 1,
+          "src/ssl/statem/statem_srvr.rs": 1,
+          "src/ssl/tls_srp.rs": 1,
+          "src/status.rs": 1,
+          "src/store/store_lib.rs": 4,
+          "src/store/store_meth.rs": 2,
+          "src/ui/ui_openssl.rs": 2,
+          "src/x509/x509_vpm.rs": 1,
+          "stack.h": 1,
+          "v1_census.py": 1
+        },
+        "occurrences": 4959,
+        "statement": "these keys are subjects (file paths); the value is a digest of the subject and the algorithm is unnamed"
       }
     },
-    "both": 1334,
+    "both": 1354,
     "unadmitted": {
       "documents": 0,
       "occurrences": 0,
       "by_algorithm": {}
     },
+    "naming_source": {
+      "key_token": 344763,
+      "parent_field": 328,
+      "sibling_field": 0
+    },
+    "absent_markers": {
+      "occurrences": 11278,
+      "by_algorithm": {
+        "sha256": 11278
+      },
+      "statement": "a field names a digest algorithm but holds an explicit absence marker; the digest was never recorded, which is a gap rather than a migration item"
+    },
     "mislabelled_length": {
-      "occurrences": 5,
+      "occurrences": 2,
       "examples": [
         {
           "path": "artifacts/phase7/COURTS.json",
@@ -494,32 +1697,99 @@
           "field": "artifacts/phase8/COURTS.json/inputs/2/sha256",
           "algorithm": "sha256",
           "length": 40
-        },
-        {
-          "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B48.json",
-          "field": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/boundary-sweep-B48.json/candidate/files_sha256/src/evp/legacy_md5.rs",
-          "algorithm": "md5",
-          "length": 64
-        },
-        {
-          "path": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/legacy-init-harden.json",
-          "field": "forensics/memory-safety/campaign/safe-c33/atlas-refresh/legacy-init-harden.json/source_identity/changed_files/src/evp/legacy_md5.rs",
-          "algorithm": "md5",
-          "length": 64
-        },
-        {
-          "path": "forensics/memory-safety/campaign/safe-c33/evidence/legacy-md-init-fix.json",
-          "field": "forensics/memory-safety/campaign/safe-c33/evidence/legacy-md-init-fix.json/source_identity/unchanged_sibling_shape/src/evp/legacy_md5.rs",
-          "algorithm": "md5",
-          "length": 64
         }
       ],
-      "statement": "a value whose length cannot be the digest it names is reported, not repaired; some hits are constants that merely contain an algorithm name"
+      "statement": "a value whose length cannot be the digest it names is reported, not repaired"
+    },
+    "named_key_with_non_digest_value": {
+      "occurrences": 3224,
+      "examples": [
+        {
+          "path": "artifacts/phase25/COURTS.json",
+          "field": "artifacts/phase25/COURTS.json/body/courts/9/runs/0/command_sha256",
+          "algorithm": "sha256",
+          "value_kind": "not_hex"
+        },
+        {
+          "path": "artifacts/phase25/COURTS.json",
+          "field": "artifacts/phase25/COURTS.json/body/courts/9/runs/1/command_sha256",
+          "algorithm": "sha256",
+          "value_kind": "not_hex"
+        },
+        {
+          "path": "artifacts/phase25/COURTS.json",
+          "field": "artifacts/phase25/COURTS.json/body/courts/9/runs/2/command_sha256",
+          "algorithm": "sha256",
+          "value_kind": "not_hex"
+        },
+        {
+          "path": "artifacts/phase25/COURTS.json",
+          "field": "artifacts/phase25/COURTS.json/body/courts/9/runs/3/command_sha256",
+          "algorithm": "sha256",
+          "value_kind": "not_hex"
+        },
+        {
+          "path": "artifacts/phase25/COURTS.json",
+          "field": "artifacts/phase25/COURTS.json/body/courts/9/runs/4/command_sha256",
+          "algorithm": "sha256",
+          "value_kind": "not_hex"
+        },
+        {
+          "path": "artifacts/phase25/COURTS.json",
+          "field": "artifacts/phase25/COURTS.json/body/courts/9/runs/5/command_sha256",
+          "algorithm": "sha256",
+          "value_kind": "not_hex"
+        },
+        {
+          "path": "artifacts/phase25/COURTS.json",
+          "field": "artifacts/phase25/COURTS.json/body/courts/9/runs/6/command_sha256",
+          "algorithm": "sha256",
+          "value_kind": "not_hex"
+        },
+        {
+          "path": "artifacts/phase25/COURTS.json",
+          "field": "artifacts/phase25/COURTS.json/body/courts/9/runs/7/command_sha256",
+          "algorithm": "sha256",
+          "value_kind": "not_hex"
+        },
+        {
+          "path": "artifacts/phase25/COURTS.json",
+          "field": "artifacts/phase25/COURTS.json/body/courts/10/runs/0/command_sha256",
+          "algorithm": "sha256",
+          "value_kind": "not_hex"
+        },
+        {
+          "path": "artifacts/phase25/COURTS.json",
+          "field": "artifacts/phase25/COURTS.json/body/courts/10/runs/1/command_sha256",
+          "algorithm": "sha256",
+          "value_kind": "not_hex"
+        }
+      ],
+      "statement": "a key naming an algorithm whose value is not a hex digest is reported; it may be a constant or a length, not a digest"
+    },
+    "repository_object_ids": {
+      "documents": 365,
+      "occurrences": 53088,
+      "by_key": {
+        "commit": 39599,
+        "head": 12593,
+        "bound_commit": 720,
+        "source_commit": 86,
+        "tree": 45,
+        "base_commit": 23,
+        "candidate_commit": 8,
+        "head_sha": 7,
+        "revision": 5,
+        "frozen_source_commit": 1,
+        "parent_commit": 1
+      },
+      "statement": "these values are repository object ids under object-identity keys. They belong to the repository-identity system, not the content-digest system, and are excluded from every digest population above. Their length alone does not identify them: a 64-hex value could be either a sha256 object id or a SHA-256 content digest, and only the declaring key separates them"
     }
   },
   "migration_population": {
     "state": "RECORDED_NOT_EDITED",
-    "documents": 1370,
+    "documents": 1428,
+    "occurrences": 283646,
     "keys": [
       "span_hash",
       "span_current_hash",
@@ -536,14 +1806,35 @@
       "identity_hash",
       "raw_candidate_hash",
       "raw_reference_hash",
+      "output.0",
+      "output.1",
+      "output.10",
+      "output.11",
+      "output.12",
+      "output.13",
+      "output.14",
+      "output.2",
+      "output.3",
+      "output.4",
+      "output.5",
+      "output.6",
+      "output.7",
+      "output.8",
+      "output.9",
       "hash",
       "body_hash",
       "checksum",
+      "libcrypto.so.3",
+      "libssl.so.3",
       "root_hash",
+      "legacy.so",
+      "digest_identity",
+      "include/openssl/crypto.h",
+      "include/openssl/evp.h",
+      "include/openssl/ssl.h",
       "manifest_root_hash",
       "content_hash",
       "candidate_identity_hash",
-      "digest_identity",
       "first_run_hash",
       "aggregate_hash",
       "tcb_digest",
@@ -551,45 +1842,250 @@
       "selection_root_hash",
       "source_tree_digest",
       "residual_fingerprint",
+      "libcrypto.so.4",
+      "libssl.so.4",
       "measured_source_tree_digest",
       "release_tree_digest",
       "ancestor_hash_recomputed",
       "candidate_hash_recomputed",
+      "libcrypto.so.1.0.0",
+      "libssl.so.1.0.0",
       "checkpoint_state_hash",
+      "ossl-modules/legacy.so",
       "partition_hash",
       "partition_root_hash",
-      "src/engine/tb_digest.rs",
+      "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+      "libcrypto.so.1.1",
+      "libssl.so.1.1",
       "selection_input_root_hash",
+      "src/runtime/err.rs",
+      "src/store/store_lib.rs",
       "artifact_body_hash",
+      "forensics/memory-safety/campaign/safe-c33/atlas-refresh/r13-coordinate-rebind-sites.json",
       "fresh_surface_body_hash",
       "from_root_hash",
       "phase2_courts_body_hash",
+      "scripts/adv-probe.sh",
+      "src/runtime/err_state.rs",
+      "src/ssl/ssl_lib.rs",
       "surface_hash",
       "to_root_hash",
       "tracked_surface_body_hash",
+      ".data.rel.ro",
+      ".got",
+      ".got.plt",
+      ".rodata",
+      ".text",
+      "README.md",
+      "artifacts/phase18/COURTS.json",
       "atlas_body_hash",
+      "bin/openssl",
+      "build.sh",
+      "consumer_closure.py",
       "development_set_hash",
+      "docs/SECURITY_DIVERGENCE_POLICY.md",
+      "evidence/closure-ssh-b74.json",
+      "evidence/closure-sshd-b73-r2.json",
+      "evidence/sshd-artifact-ledger.json",
+      "forensics/memory-safety/campaign/safe-c33/evidence/b75_readjudicate.py",
       "identity_digest",
+      "libcrypto.so.0.9.8",
+      "libssl.so.0.9.8",
       "p1000_content_hash",
       "post_build_tree_hash",
+      "repro.c",
+      "run.sh",
       "set_hash",
-      "src/slh_dsa/hash.rs",
+      "src/aes.rs",
+      "src/evp/legacy_md5.rs",
+      "src/ml_dsa/encoders.rs",
+      "src/ml_kem/key.rs",
+      "src/modes/wrap.rs",
+      "src/provider/kdf.rs",
+      "src/provider/mac_legacy_kmgmt.rs",
+      "src/runtime/init.rs",
+      "src/runtime/mem.rs",
+      "src/ssl/record/rec_layer_s3.rs",
+      "src/ssl/ssl_rsa.rs",
+      "src/ssl/ssl_sess.rs",
+      "src/store/store_meth.rs",
+      "src/ui/ui_openssl.rs",
+      "10.5p1",
+      "9.9p1",
+      "CAMPAIGN-STATUS.json",
+      "Cargo.lock",
+      "Cargo.toml",
+      "artifacts/phase2/COURTS.json",
+      "asn1.h",
       "body_hash_after",
       "body_hash_before",
       "both_arms_observed_digest",
+      "build-link-atlas.json",
+      "build.rs",
+      "build_phase2.sh",
+      "cert-crlid-invalid.pem",
+      "cert-crlid-invalid.pem.authority.out",
+      "cert-crlid-invalid.pem.candidate.err",
+      "cert-crlid-invalid.pem.candidate.out",
+      "cert-crlid-valid.pem",
+      "cert-crlid-valid.pem.authority.out",
+      "cert-crlid-valid.pem.candidate.err",
+      "cert-crlid-valid.pem.candidate.out",
+      "cert-serviceloc-invalid.pem",
+      "cert-serviceloc-invalid.pem.authority.out",
+      "cert-serviceloc-invalid.pem.candidate.err",
+      "cert-serviceloc-invalid.pem.candidate.out",
+      "cert-serviceloc-valid.pem",
+      "cert-serviceloc-valid.pem.authority.out",
+      "cert-serviceloc-valid.pem.candidate.err",
+      "cert-serviceloc-valid.pem.candidate.out",
+      "court/freeze-b73/FREEZE-b73.json",
+      "court/freeze-b83/review11/asan/build.log",
+      "court/freeze-b83/review11/asan/canary-unlimited.log",
+      "court/freeze-b83/review11/asan/canary.log",
+      "court/freeze-b83/review11/asan/focused-returnnull.log",
+      "court/freeze-b83/review11/asan/focused.log",
+      "court/freeze-b83/review11/miri/cms.log",
       "court/freeze-b83/review11/miri/digest-stacked.log",
+      "court/freeze-b83/review11/miri/miri-nightly-x86_64-unknown-linux-gnu.tar.xz",
+      "court/freeze-b83/review11/miri/native-control.log",
+      "court/freeze-b83/review11/miri/per-test-stacked.tsv",
+      "court/freeze-b83/review11/miri/per-test-stacked.tsv.transcript",
+      "court/freeze-b83/review11/miri/per-test-tree.tsv",
+      "court/freeze-b83/review11/miri/san-alt-rows.log",
+      "court/freeze-b83/review11/miri/three-modules.log",
+      "court/freeze-b84/review12/asan/canary.log",
+      "court/freeze-b84/review12/negative_controls.py",
+      "court/freeze-b84/review12/selftest-after.log",
+      "court/tmp/openssh-closure/closure-ssh-witness.json",
+      "courts/phase18/ct_primitives_probe.c",
+      "courts/phase3/rt_err_strings_cases.h",
+      "courts/phase4/rt_err_borrowed_data_probe.c",
       "differential_body_hash",
+      "docs/DECISIONS.md",
+      "downstream_build_link.py",
+      "downstream_deps.json",
+      "downstream_deps.py",
+      "downstream_runtime.py",
+      "downstream_template_families.json",
+      "downstream_templates.py",
+      "dropbear-2026.94.tar.bz2",
+      "evidence/closure-ssh-b61.json",
+      "evidence/closure-sshd-b61.json",
+      "forensics/atlas/implemented-surface.json",
+      "forensics/downstream/build-link-atlas.json",
+      "forensics/downstream/runtime-functional-atlas.json",
+      "forensics/memory-safety/campaign/safe-c33/atlas-refresh/edge-targets.json",
+      "forensics/memory-safety/campaign/safe-c33/atlas-refresh/openssh-rebind-sites.json",
+      "forensics/memory-safety/campaign/safe-c33/evidence/ocsp-i2r-dispatch-review-2026-11-13.json",
+      "forensics/memory-safety/campaign/safe-c33/state.json",
+      "forensics/phase18-obligations.json",
+      "forensics/tools/build_reproducibility.sh",
+      "forensics/tools/downstream_runtime.py",
+      "forensics/tools/phase17_courts.py",
+      "forensics/tools/phase2_shell.py",
+      "l7_poco_aead.cpp",
       "lhash.h",
+      "lib/libcrypto.so.3",
+      "lib/libssl.so.3",
+      "lib/ossl-modules/legacy.so",
+      "libcrypto.a",
+      "libopenssl_rs.a",
+      "libssl.a",
+      "objects.h",
+      "openssh-10.5p1.tar.gz",
+      "openssh-9.9p1.tar.gz",
+      "openssh-v1i-sites.json",
+      "openssh-v1l-sites.json",
+      "pem.h",
+      "putty-0.85.tar.gz",
       "receipt_body_hash",
       "recipe_digest",
       "release_tree_digest_recomputed_at",
+      "rsa-ct-hi.pem",
+      "rsa-ct-lo.pem",
+      "rust-toolchain.toml",
       "source_tree_root_hash",
+      "src/apps/engine.rs",
+      "src/asn1/owned.rs",
+      "src/asn1/text.rs",
+      "src/async/arch/async_posix.rs",
+      "src/async/async.rs",
+      "src/async/async_wait.rs",
+      "src/async/mod.rs",
+      "src/bn/arith.rs",
+      "src/bn/bignum.rs",
+      "src/bn/gf2m.rs",
+      "src/bn/mont.rs",
+      "src/bn/recp.rs",
+      "src/cipher_tables.rs",
+      "src/context/namemap.rs",
+      "src/dh/key.rs",
       "src/digest/mod.rs",
-      "src/digest/sha2.rs",
       "src/digest/tables.rs",
-      "src/evp/digest.rs",
-      "src/evp/legacy_digest_callback_surface.rs",
-      "src/provider/digest.rs"
+      "src/ec/lib.rs",
+      "src/encoder_pkey.rs",
+      "src/engine/eng_all.rs",
+      "src/engine/eng_cnf.rs",
+      "src/engine/eng_ctrl.rs",
+      "src/engine/eng_dyn.rs",
+      "src/engine/eng_table.rs",
+      "src/engine/tb_asnmth.rs",
+      "src/evp/algorithm.rs",
+      "src/evp/bio_enc.rs",
+      "src/evp/cipher_ctx.rs",
+      "src/evp/evp_pbe.rs",
+      "src/evp/legacy_blake2.rs",
+      "src/evp/legacy_md4.rs",
+      "src/evp/legacy_ripemd.rs",
+      "src/evp/legacy_sha.rs",
+      "src/evp/legacy_wp.rs",
+      "src/evp/method_store.rs",
+      "src/evp/pkey_asn1.rs",
+      "src/ffc/params.rs",
+      "src/http/http_client.rs",
+      "src/lib.rs",
+      "src/ml_dsa/key.rs",
+      "src/ml_kem/mod.rs",
+      "src/packet.rs",
+      "src/params/build.rs",
+      "src/pkcs12/p12_crt.rs",
+      "src/property/store.rs",
+      "src/provider/activate.rs",
+      "src/provider/conf.rs",
+      "src/provider/decode_pvk2key.rs",
+      "src/provider/ec_kmgmt.rs",
+      "src/provider/eddsa_sig.rs",
+      "src/provider/init.rs",
+      "src/provider/mod.rs",
+      "src/provider/rsa_kmgmt.rs",
+      "src/provider/slh_dsa_sig.rs",
+      "src/provider/sm2_sig.rs",
+      "src/runtime/bio/bss_bio.rs",
+      "src/runtime/bio/bss_conn.rs",
+      "src/runtime/bio/bss_dgram.rs",
+      "src/runtime/bio/bss_dgram_pair.rs",
+      "src/runtime/conf/conf_ssl.rs",
+      "src/runtime/confmod/mod.rs",
+      "src/runtime/constant_time.rs",
+      "src/runtime/ctype_table.rs",
+      "src/runtime/err_loaders.rs",
+      "src/runtime/err_strings.rs",
+      "src/runtime/err_variadic.c",
+      "src/runtime/miri_tcb.rs",
+      "src/runtime/mod.rs",
+      "src/runtime/thread.rs",
+      "src/runtime/thread_events.rs",
+      "src/ssl/bio_ssl.rs",
+      "src/ssl/ssl_conf.rs",
+      "src/ssl/statem/extensions_clnt.rs",
+      "src/ssl/statem/statem_clnt.rs",
+      "src/ssl/statem/statem_srvr.rs",
+      "src/ssl/tls_srp.rs",
+      "src/status.rs",
+      "src/x509/x509_vpm.rs",
+      "stack.h",
+      "v1_census.py"
     ],
     "statement": "records that do not name their digest algorithm are recorded here as a population to migrate; no existing record was edited to add an algorithm"
   },
@@ -614,13 +2110,145 @@
       "a timestamp or a signature over old material, which a later signature cannot retroactively validate"
     ],
     "renewal_record_fields": [
-      "algorithm",
-      "digest",
-      "renewal_of",
+      "subject",
+      "old",
+      "new",
+      "subject_content_sha256",
+      "bytes_identical",
       "renewal_reason",
-      "recorded_at"
+      "original_at"
     ],
-    "trigger": "a new authenticated commitment is recorded before an existing algorithm is treated as inadequate; the original and the renewal are both preserved"
+    "trigger": "a new authenticated commitment is recorded before an existing algorithm is treated as inadequate; the original and the renewal are both preserved",
+    "trusted_time_assumption": "a renewal inherits the trust in the old record's time and does not retroactively establish it; the original timestamp and the renewal timestamp are both retained",
+    "status": "PLAN_ONLY",
+    "statement": "the population is not migrated: this is the stated plan for renewing every record, and it never rewrites the old relationship"
+  },
+  "renewal_records": [
+    {
+      "id": "RENEW-evidence/etp0/CLAIMS.json",
+      "subject": "evidence/etp0/CLAIMS.json",
+      "subject_bytes": 61175,
+      "subject_content_sha256": "d4b68f6fbf19333c557c3056e42261ac60bbafc70562b21e5bc08872163d92c6",
+      "subject_object_id": "971c810aa24d5aed3a9e5a213e0475267a727985",
+      "subject_object_id_algorithm": "sha1",
+      "old": {
+        "algorithm": "sha256",
+        "digest": "d4b68f6fbf19333c557c3056e42261ac60bbafc70562b21e5bc08872163d92c6"
+      },
+      "new": {
+        "algorithm": "sha384",
+        "digest": "150257cc9bd18f82e359d3d3dc8d0debd2a26005bafdf1fe0a60df89011d76c811097b82f63393b75871f047ed02e297"
+      },
+      "bytes_identical": true,
+      "original_at": "0eecec7347527dae03ff8e829709a305a44fc605",
+      "renewal_reason": "demonstration of a digest-agility binding; no algorithm is being retired by this record",
+      "trusted_time_assumption": "the renewal inherits the trust placed in the original record's time and does not retroactively establish it; the original timestamp and the renewal time are both recorded",
+      "statement": "old and new digests are computed over the same archived bytes; the old binding is preserved rather than replaced, and the object id is recorded separately because it is not a content digest"
+    },
+    {
+      "id": "RENEW-forensics/etp6/verify.sh",
+      "subject": "forensics/etp6/verify.sh",
+      "subject_bytes": 1398,
+      "subject_content_sha256": "b9d8ccceda7ec274b5e0c47a4b5a06ada7ca438e6e2bf3b6b91cbde2b671355b",
+      "subject_object_id": "214c49b56b0cd62d67e455342fb89fa2a3b4e35d",
+      "subject_object_id_algorithm": "sha1",
+      "old": {
+        "algorithm": "sha256",
+        "digest": "b9d8ccceda7ec274b5e0c47a4b5a06ada7ca438e6e2bf3b6b91cbde2b671355b"
+      },
+      "new": {
+        "algorithm": "sha384",
+        "digest": "00db2200516bf49ce64792c4ba61162bb14df411b4a6973981504cd87d2545de86b5dafc756cce6a593fb0f9d63db477"
+      },
+      "bytes_identical": true,
+      "original_at": "0eecec7347527dae03ff8e829709a305a44fc605",
+      "renewal_reason": "demonstration of a digest-agility binding; no algorithm is being retired by this record",
+      "trusted_time_assumption": "the renewal inherits the trust placed in the original record's time and does not retroactively establish it; the original timestamp and the renewal time are both recorded",
+      "statement": "old and new digests are computed over the same archived bytes; the old binding is preserved rather than replaced, and the object id is recorded separately because it is not a content digest"
+    }
+  ],
+  "renewal_verification": {
+    "method": "verify_renewal recomputes the old and new digest over the archived bytes named by each record",
+    "records_verified": 2,
+    "rule": "PM_RENEWAL_BYTES_CHANGED",
+    "statement": "each renewal binds two algorithms over one identical archived byte sequence. A record whose old or new digest covers different bytes is refused; the verifier cannot tell which side was altered, so it refuses the pair",
+    "demonstration": "EXECUTED_AT_BUILD_AND_AT_VALIDATE",
+    "population_migrated": false
+  },
+  "archive_controls": [
+    {
+      "control": "archive_roundtrip_accepted",
+      "passed": true,
+      "detail": "3 members",
+      "rule": null
+    },
+    {
+      "control": "truncated_archive_refused",
+      "passed": true,
+      "detail": "PM_ARCHIVE_TRUNCATED",
+      "rule": "PM_ARCHIVE_TRUNCATED"
+    },
+    {
+      "control": "byte_flipped_member_refused",
+      "passed": true,
+      "detail": "PM_ARCHIVE_MEMBER_DIGEST",
+      "rule": "PM_ARCHIVE_MEMBER_DIGEST"
+    },
+    {
+      "control": "missing_member_refused",
+      "passed": true,
+      "detail": "PM_ARCHIVE_MEMBER_MISSING",
+      "rule": "PM_ARCHIVE_MEMBER_MISSING"
+    },
+    {
+      "control": "manifest_digest_disagreement_refused",
+      "passed": true,
+      "detail": "PM_ARCHIVE_MEMBER_DIGEST",
+      "rule": "PM_ARCHIVE_MEMBER_DIGEST"
+    },
+    {
+      "control": "unlisted_member_refused",
+      "passed": true,
+      "detail": "PM_ARCHIVE_MEMBER_UNLISTED",
+      "rule": "PM_ARCHIVE_MEMBER_UNLISTED"
+    }
+  ],
+  "identity_separation": {
+    "object_identity_keys": [
+      "base_commit",
+      "bound_commit",
+      "candidate_commit",
+      "commit",
+      "commit_id",
+      "commit_sha",
+      "frozen_source_commit",
+      "git_oid",
+      "head",
+      "head_sha",
+      "object_id",
+      "oid",
+      "parent_commit",
+      "rev",
+      "revision",
+      "source_commit",
+      "tree"
+    ],
+    "content_digest_algorithms": [
+      "blake2b",
+      "blake2s",
+      "md5",
+      "sha1",
+      "sha224",
+      "sha256",
+      "sha384",
+      "sha3_224",
+      "sha3_256",
+      "sha3_384",
+      "sha3_512",
+      "sha512",
+      "sm3"
+    ],
+    "statement": "a repository object id and a content digest are different systems. A value is assigned to the object-identity system only when its key names an object identity; every other digest-shaped value is a content digest claim"
   },
   "refusals": {
     "unnamed": "PM_DIGEST_ALGORITHM_UNNAMED",

@@ -1,0 +1,143 @@
+{
+  "schema": "openssl-rs/etp-t13/identity-systems/1",
+  "kind": "etp-t13-identity-systems",
+  "candidate": {
+    "commit": "0eecec7347527dae03ff8e829709a305a44fc605",
+    "tree": "410f55733ca446c3770cb9efd2e6fe897797f26f",
+    "committer_time_utc": "2026-11-23T10:20:47Z",
+    "object_format": "sha1",
+    "object_id_algorithm": "sha1",
+    "object_id_hex_length": 40,
+    "identity_system": "repository_object_identity"
+  },
+  "systems": {
+    "repository_object_identity": {
+      "system": "repository_object_identity",
+      "object_format": "sha1",
+      "object_id_algorithm": "sha1",
+      "oid_hex_length": 40,
+      "observed_by": "git rev-parse --show-object-format",
+      "subject": "a Git object (commit, tree, blob, tag) inside one object database",
+      "computation": "the object format's hash over a header '<type> <size>\\0' plus the bytes",
+      "not_a_content_digest": true,
+      "format_change_implication": [
+        "a SHA-256 object format produces 64 hexadecimal object ids; a recorded 40-character id does not name an object in such a repository",
+        "the same bytes have different object ids in repositories with different object formats",
+        "a format change rewrites every object id; recorded ids must be re-derived and an old id never compared with a new one as one naming scheme",
+        "the format is read from the repository, never inferred from a digest length"
+      ]
+    },
+    "content_digests": {
+      "system": "content_digests",
+      "subject": "a byte sequence, inside or outside the repository",
+      "algorithms_admitted": [
+        "blake2b",
+        "blake2s",
+        "md5",
+        "sha1",
+        "sha224",
+        "sha256",
+        "sha384",
+        "sha3_224",
+        "sha3_256",
+        "sha3_384",
+        "sha3_512",
+        "sha512",
+        "sm3"
+      ],
+      "naming_rule": "every record names the algorithm in the field name or in an adjacent digest_algorithm/hash_algorithm field; an unnamed digest is a recorded migration population",
+      "relationship_to_object_identity": "none: a content digest can be computed without Git and an object id cannot"
+    },
+    "signature_and_attestation": {
+      "system": "signature_and_attestation",
+      "status": "ABSENT",
+      "algorithms": [],
+      "statement": "no DSSE envelope, Rekor entry, Sigstore bundle, OpenPGP signature or trusted timestamp exists in this repository; Addendum B is a work queue. No signature or attestation algorithm is therefore admitted, recorded or claimed",
+      "non_claim": "the absence of signatures is not evidence of integrity, and this item does not create one"
+    },
+    "digest_renewal": {
+      "system": "digest_renewal",
+      "rule": "a new authenticated commitment over the same archived bytes, preserving the old binding rather than replacing it",
+      "records": [
+        {
+          "id": "RENEW-evidence/etp0/CLAIMS.json",
+          "subject": "evidence/etp0/CLAIMS.json",
+          "subject_bytes": 61175,
+          "subject_content_sha256": "d4b68f6fbf19333c557c3056e42261ac60bbafc70562b21e5bc08872163d92c6",
+          "subject_object_id": "971c810aa24d5aed3a9e5a213e0475267a727985",
+          "subject_object_id_algorithm": "sha1",
+          "old": {
+            "algorithm": "sha256",
+            "digest": "d4b68f6fbf19333c557c3056e42261ac60bbafc70562b21e5bc08872163d92c6"
+          },
+          "new": {
+            "algorithm": "sha384",
+            "digest": "150257cc9bd18f82e359d3d3dc8d0debd2a26005bafdf1fe0a60df89011d76c811097b82f63393b75871f047ed02e297"
+          },
+          "bytes_identical": true,
+          "original_at": "0eecec7347527dae03ff8e829709a305a44fc605",
+          "renewal_reason": "demonstration of a digest-agility binding; no algorithm is being retired by this record",
+          "trusted_time_assumption": "the renewal inherits the trust placed in the original record's time and does not retroactively establish it; the original timestamp and the renewal time are both recorded",
+          "statement": "old and new digests are computed over the same archived bytes; the old binding is preserved rather than replaced, and the object id is recorded separately because it is not a content digest"
+        },
+        {
+          "id": "RENEW-forensics/etp6/verify.sh",
+          "subject": "forensics/etp6/verify.sh",
+          "subject_bytes": 1398,
+          "subject_content_sha256": "b9d8ccceda7ec274b5e0c47a4b5a06ada7ca438e6e2bf3b6b91cbde2b671355b",
+          "subject_object_id": "214c49b56b0cd62d67e455342fb89fa2a3b4e35d",
+          "subject_object_id_algorithm": "sha1",
+          "old": {
+            "algorithm": "sha256",
+            "digest": "b9d8ccceda7ec274b5e0c47a4b5a06ada7ca438e6e2bf3b6b91cbde2b671355b"
+          },
+          "new": {
+            "algorithm": "sha384",
+            "digest": "00db2200516bf49ce64792c4ba61162bb14df411b4a6973981504cd87d2545de86b5dafc756cce6a593fb0f9d63db477"
+          },
+          "bytes_identical": true,
+          "original_at": "0eecec7347527dae03ff8e829709a305a44fc605",
+          "renewal_reason": "demonstration of a digest-agility binding; no algorithm is being retired by this record",
+          "trusted_time_assumption": "the renewal inherits the trust placed in the original record's time and does not retroactively establish it; the original timestamp and the renewal time are both recorded",
+          "statement": "old and new digests are computed over the same archived bytes; the old binding is preserved rather than replaced, and the object id is recorded separately because it is not a content digest"
+        }
+      ],
+      "old_identity_is_never_rewritten": true,
+      "what_a_renewal_cannot_do": [
+        "it cannot retroactively prove that an old signature was valid before a compromise",
+        "it cannot change a repository object id",
+        "it cannot establish the original timestamp; it inherits trust in it"
+      ],
+      "population_migrated": false
+    }
+  },
+  "distinctness_evidence": {
+    "subject_path": "evidence/etp0/CLAIMS.json",
+    "same_bytes": true,
+    "object_id": "971c810aa24d5aed3a9e5a213e0475267a727985",
+    "object_id_algorithm": "sha1",
+    "object_id_hex_length": 40,
+    "object_id_input": "blob header plus bytes",
+    "content_digest": {
+      "algorithm": "sha256",
+      "digest": "d4b68f6fbf19333c557c3056e42261ac60bbafc70562b21e5bc08872163d92c6",
+      "hex_length": 64
+    },
+    "statement": "both values identify the same bytes and are not interchangeable: the object id is the repository format's hash over the object header plus the bytes, while the content digest is SHA-256 over the raw bytes",
+    "object_header_bytes": "blob 61175\u0000"
+  },
+  "separation_rules": [
+    "an object format is read from the repository with git rev-parse --show-object-format",
+    "a record that names an object format different from the observed one is refused (PM_IDENTITY_OBJECT_FORMAT_MISMATCH)",
+    "a content digest is named by its field; its length never implies an object format",
+    "a renewal binds two content-digest algorithms over identical bytes and records the object id separately",
+    "no signature or attestation algorithm is recorded while the system is absent"
+  ],
+  "refusals": {
+    "object_format_mismatch": "PM_IDENTITY_OBJECT_FORMAT_MISMATCH",
+    "object_format_unknown": "PM_IDENTITY_OBJECT_FORMAT_UNKNOWN",
+    "conflation": "PM_IDENTITY_CONFLATION",
+    "signature_claimed": "PM_SIGNATURE_ALGORITHM_CLAIMED",
+    "renewal_bytes_changed": "PM_RENEWAL_BYTES_CHANGED"
+  }
+}

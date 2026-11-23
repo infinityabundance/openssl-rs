@@ -1,10 +1,19 @@
 {
-  "generated_utc": "2026-11-23T10:13:28Z",
   "schema": "openssl-rs/etp-t13/archival/1",
   "kind": "etp-t13-archival-inventory",
   "candidate": {
-    "commit": "246e30580f909c047eeb04a93a06f9bd05dc65f3",
-    "branch": "staging"
+    "commit": "0eecec7347527dae03ff8e829709a305a44fc605",
+    "tree": "410f55733ca446c3770cb9efd2e6fe897797f26f",
+    "committer_time_utc": "2026-11-23T10:20:47Z",
+    "object_format": "sha1",
+    "object_id_algorithm": "sha1",
+    "object_id_hex_length": 40,
+    "identity_system": "repository_object_identity"
+  },
+  "self_document": {
+    "path": "docs/PRESERVATION.md",
+    "present_at_candidate": false,
+    "statement": "this inventory describes the candidate commit; the normative document for this item is added by the evidence commit and is not present at the candidate, so it is not counted in any class"
   },
   "etp6": {
     "manifest": "evidence/etp6/MANIFEST.json",
@@ -68,7 +77,10 @@
       "forensics/phase7-obligations.json",
       "forensics/phase8-obligations.json",
       "forensics/phase9-obligations.json"
-    ]
+    ],
+    "bundle_tracked_in_repository": false,
+    "coverage_method": "path-set comparison against the manifest's input list",
+    "coverage_caveat": "the manifest binds a different candidate commit, so a path present in both is not necessarily identical content; the comparison establishes class coverage, not byte identity"
   },
   "classes": [
     {
@@ -83,6 +95,50 @@
         "Cargo.lock",
         "build.rs",
         "rust-toolchain.toml"
+      ],
+      "location_audit": [
+        {
+          "location": "src",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 891
+        },
+        {
+          "location": "tests",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 2
+        },
+        {
+          "location": "examples",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 1
+        },
+        {
+          "location": "Cargo.toml",
+          "kind": "file",
+          "exists": true,
+          "tracked_files": 1
+        },
+        {
+          "location": "Cargo.lock",
+          "kind": "file",
+          "exists": true,
+          "tracked_files": 1
+        },
+        {
+          "location": "build.rs",
+          "kind": "file",
+          "exists": true,
+          "tracked_files": 1
+        },
+        {
+          "location": "rust-toolchain.toml",
+          "kind": "file",
+          "exists": true,
+          "tracked_files": 1
+        }
       ],
       "tracked_files": 898,
       "in_etp6_bundle": 897,
@@ -106,6 +162,26 @@
         "forensics/tools",
         "courts",
         "docker"
+      ],
+      "location_audit": [
+        {
+          "location": "forensics/tools",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 344
+        },
+        {
+          "location": "courts",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 623
+        },
+        {
+          "location": "docker",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 15
+        }
       ],
       "tracked_files": 57,
       "in_etp6_bundle": 22,
@@ -135,6 +211,56 @@
         "docs/CRYPTOGRAPHIC-REFERENCE.md",
         "docs/BINARY-ASSURANCE.md"
       ],
+      "location_audit": [
+        {
+          "location": "evidence/etp4",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 3
+        },
+        {
+          "location": "evidence/etp-t3",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 9
+        },
+        {
+          "location": "evidence/etp-t4",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 4
+        },
+        {
+          "location": "evidence/etp-t5",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 2
+        },
+        {
+          "location": "evidence/etp-t6",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 4
+        },
+        {
+          "location": "forensics/etp5_crypto",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 16
+        },
+        {
+          "location": "docs/CRYPTOGRAPHIC-REFERENCE.md",
+          "kind": "file",
+          "exists": true,
+          "tracked_files": 1
+        },
+        {
+          "location": "docs/BINARY-ASSURANCE.md",
+          "kind": "file",
+          "exists": true,
+          "tracked_files": 1
+        }
+      ],
       "tracked_files": 40,
       "in_etp6_bundle": 3,
       "etp6_coverage": "PARTIAL",
@@ -157,7 +283,21 @@
         "forensics/tools",
         "courts"
       ],
-      "tracked_files": 280,
+      "location_audit": [
+        {
+          "location": "forensics/tools",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 344
+        },
+        {
+          "location": "courts",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 623
+        }
+      ],
+      "tracked_files": 281,
       "in_etp6_bundle": 247,
       "etp6_coverage": "PARTIAL",
       "inside_repository": true,
@@ -181,6 +321,38 @@
         "forensics/authorities",
         "forensics/multitrack/default-authority.json",
         "courts/phase18/timing/third_party"
+      ],
+      "location_audit": [
+        {
+          "location": "docs/INSTRUMENT-QUALIFICATION.md",
+          "kind": "file",
+          "exists": true,
+          "tracked_files": 1
+        },
+        {
+          "location": "evidence/etp3",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 2
+        },
+        {
+          "location": "forensics/authorities",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 21
+        },
+        {
+          "location": "forensics/multitrack/default-authority.json",
+          "kind": "file",
+          "exists": true,
+          "tracked_files": 1
+        },
+        {
+          "location": "courts/phase18/timing/third_party",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 1
+        }
       ],
       "tracked_files": 26,
       "in_etp6_bundle": 6,
@@ -213,6 +385,74 @@
         "docs/INDEPENDENCE.md",
         "docs/EVIDENCE-FRESHNESS.md"
       ],
+      "location_audit": [
+        {
+          "location": "evidence/etp0",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 3
+        },
+        {
+          "location": "evidence/etp",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 6
+        },
+        {
+          "location": "evidence/etp-t8",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 3
+        },
+        {
+          "location": "evidence/etp-t9",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 5
+        },
+        {
+          "location": "AGENTS.md",
+          "kind": "file",
+          "exists": true,
+          "tracked_files": 1
+        },
+        {
+          "location": "docs/ETP-TODO.md",
+          "kind": "file",
+          "exists": true,
+          "tracked_files": 1
+        },
+        {
+          "location": "docs/ETP-ADDENDUM-B.md",
+          "kind": "file",
+          "exists": true,
+          "tracked_files": 1
+        },
+        {
+          "location": "docs/ETP-CLAIM-ALGEBRA.md",
+          "kind": "file",
+          "exists": true,
+          "tracked_files": 1
+        },
+        {
+          "location": "docs/EXTERNAL-REPRODUCTION.md",
+          "kind": "file",
+          "exists": true,
+          "tracked_files": 1
+        },
+        {
+          "location": "docs/INDEPENDENCE.md",
+          "kind": "file",
+          "exists": true,
+          "tracked_files": 1
+        },
+        {
+          "location": "docs/EVIDENCE-FRESHNESS.md",
+          "kind": "file",
+          "exists": true,
+          "tracked_files": 1
+        }
+      ],
       "tracked_files": 24,
       "in_etp6_bundle": 14,
       "etp6_coverage": "PARTIAL",
@@ -234,6 +474,20 @@
       "locations": [
         "evidence",
         "courts"
+      ],
+      "location_audit": [
+        {
+          "location": "evidence",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 694
+        },
+        {
+          "location": "courts",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 623
+        }
       ],
       "tracked_files": 40,
       "in_etp6_bundle": 22,
@@ -258,6 +512,26 @@
         "courts/phase17/downstream/schema",
         "forensics/tools"
       ],
+      "location_audit": [
+        {
+          "location": "evidence/etp/claim.schema.json",
+          "kind": "file",
+          "exists": true,
+          "tracked_files": 1
+        },
+        {
+          "location": "courts/phase17/downstream/schema",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 1
+        },
+        {
+          "location": "forensics/tools",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 344
+        }
+      ],
       "tracked_files": 5,
       "in_etp6_bundle": 4,
       "etp6_coverage": "PARTIAL",
@@ -281,6 +555,26 @@
         "court",
         "courts/phase18/interop/logs"
       ],
+      "location_audit": [
+        {
+          "location": ".frf",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 6822
+        },
+        {
+          "location": "court",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 278
+        },
+        {
+          "location": "courts/phase18/interop/logs",
+          "kind": "directory",
+          "exists": true,
+          "tracked_files": 17
+        }
+      ],
       "tracked_files": 7117,
       "in_etp6_bundle": 17,
       "etp6_coverage": "PARTIAL",
@@ -300,6 +594,7 @@
       "required": true,
       "description": "a reproduction receipt from a party outside this project",
       "locations": [],
+      "location_audit": [],
       "tracked_files": 0,
       "in_etp6_bundle": 0,
       "etp6_coverage": "NONE",
@@ -323,6 +618,9 @@
     "schemas",
     "raw_observations"
   ],
+  "classes_fully_bundled": [],
+  "classes_not_bundled": [],
+  "missing_declared_locations": [],
   "etp6_cross_check": {
     "statement": "the ETP-6 manifest covers the classes it selects; it is a reproduction bundle, not a complete archive, and it predates the ETP-T1 to ETP-T13 records",
     "classes_fully_bundled": [],
@@ -337,18 +635,132 @@
       "schemas",
       "raw_observations"
     ],
-    "classes_not_bundled": [
-      "external_review_record"
-    ]
+    "classes_not_bundled": []
   },
   "external_durability": {
     "status": "NONE",
     "externally_durable_classes": [],
+    "external_archives": [],
+    "persistent_identifiers": [],
     "statement": "nothing in this repository is externally archived; every location above is inside this Git repository and is durable only for as long as a copy of that repository survives",
     "etp6_role": "BUNDLE_NOT_ARCHIVE",
     "etp6_statement": "the ETP-6 package is a self-contained reproduction bundle built from one commit; it is not an external archive, it has not been deposited with an independent archive, and it carries no external review receipt"
   },
   "refusals": {
-    "class_unarchived": "PM_CLASS_UNARCHIVED"
+    "class_unarchived": "PM_CLASS_UNARCHIVED",
+    "external_durability_claimed": "PM_EXTERNAL_DURABILITY_CLAIMED",
+    "archive_truncated": "PM_ARCHIVE_TRUNCATED",
+    "archive_member_digest": "PM_ARCHIVE_MEMBER_DIGEST",
+    "archive_member_missing": "PM_ARCHIVE_MEMBER_MISSING",
+    "archive_member_unlisted": "PM_ARCHIVE_MEMBER_UNLISTED"
+  },
+  "archive_corruption_controls": {
+    "method": "a deterministic tar.gz fixture and its manifest, verified by verify_archive_bytes",
+    "controls": [
+      {
+        "control": "archive_roundtrip_accepted",
+        "passed": true,
+        "detail": "3 members",
+        "rule": null
+      },
+      {
+        "control": "truncated_archive_refused",
+        "passed": true,
+        "detail": "PM_ARCHIVE_TRUNCATED",
+        "rule": "PM_ARCHIVE_TRUNCATED"
+      },
+      {
+        "control": "byte_flipped_member_refused",
+        "passed": true,
+        "detail": "PM_ARCHIVE_MEMBER_DIGEST",
+        "rule": "PM_ARCHIVE_MEMBER_DIGEST"
+      },
+      {
+        "control": "missing_member_refused",
+        "passed": true,
+        "detail": "PM_ARCHIVE_MEMBER_MISSING",
+        "rule": "PM_ARCHIVE_MEMBER_MISSING"
+      },
+      {
+        "control": "manifest_digest_disagreement_refused",
+        "passed": true,
+        "detail": "PM_ARCHIVE_MEMBER_DIGEST",
+        "rule": "PM_ARCHIVE_MEMBER_DIGEST"
+      },
+      {
+        "control": "unlisted_member_refused",
+        "passed": true,
+        "detail": "PM_ARCHIVE_MEMBER_UNLISTED",
+        "rule": "PM_ARCHIVE_MEMBER_UNLISTED"
+      }
+    ],
+    "real_bundle_checked": false,
+    "real_bundle_statement": "the ETP-6 production archive is not tracked in this repository, so the corruption controls run against a fixture, not against the real bundle"
+  },
+  "verifier_reconstructability": {
+    "interpreter": {
+      "requirement": "CPython 3.11 or another Python 3.11 implementation",
+      "language_contract": "the tool imports only the standard library",
+      "verified_on": "CPython 3.11",
+      "platform_recorded": "Linux"
+    },
+    "standard_library_imports": [
+      "argparse",
+      "datetime",
+      "gzip",
+      "hashlib",
+      "io",
+      "json",
+      "platform",
+      "re",
+      "subprocess",
+      "sys",
+      "tarfile",
+      "tempfile",
+      "zlib",
+      "pathlib",
+      "typing"
+    ],
+    "third_party_dependencies": [],
+    "tools": [
+      {
+        "path": "forensics/tools/preservation.py",
+        "sha256_at_candidate": "56785c4f1a7278bc127255908cd4bdb3f9a1831ef3c4805e2d06f327f5d7d69e",
+        "digest_basis": "CANDIDATE_COMMIT_BLOB"
+      },
+      {
+        "path": "forensics/tools/preservation.py",
+        "sha256_of_working_tree": "d8b6f39ce73dfc585ea102c4e6e5af79d52a682814030895a1d0dd1f3aa8538f",
+        "digest_basis": "WORKING_TREE_AT_EVIDENCE_COMMIT"
+      }
+    ],
+    "supporting_verifiers": [
+      {
+        "path": "forensics/tools/etp6_verify.py",
+        "sha256": "c20fbf3c41f236e99f45e70e7668f444379a3c475c6a163efc761973906e341e"
+      },
+      {
+        "path": "forensics/etp6/verify.sh",
+        "sha256": "b9d8ccceda7ec274b5e0c47a4b5a06ada7ca438e6e2bf3b6b91cbde2b671355b"
+      }
+    ],
+    "recorded": {
+      "interpreter_requirement": true,
+      "standard_library_only": true,
+      "tool_digest": true,
+      "candidate_tool_digest": true,
+      "test_suite": "forensics/tools/tests/test_preservation.py is added by this evidence commit; it is not present at the candidate"
+    },
+    "not_recorded": [
+      "the interpreter binary's own digest; only the language version is recorded",
+      "a reproducible interpreter build recipe; a standard CPython 3.11 installation is assumed and that assumption is not evidenced",
+      "the platform's libc and zlib identities, although gzip and tarfile delegate decompression to zlib"
+    ],
+    "reconstruction_steps": [
+      "install CPython 3.11 from any distribution and its standard library",
+      "obtain forensics/tools/preservation.py and compare its SHA-256 with the recorded working-tree digest",
+      "run --self-test, then validate, against a checkout of the candidate commit"
+    ],
+    "statement": "the verifier is reconstructable from a standard-library Python 3.11 installation and the recorded tool digests. The interpreter binary and its dependencies are not recorded, so a byte-identical verifier executable is not guaranteed"
   }
 }
