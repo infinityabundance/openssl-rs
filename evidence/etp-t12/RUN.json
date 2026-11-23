@@ -1,0 +1,1472 @@
+{
+  "candidate": {
+    "branch": "staging",
+    "clean": true,
+    "commit": "6c174518e9cc38eb5f036ea9071c9be25e35e98a",
+    "tracked_changes": 0,
+    "tree": "0c5fcee3037f32fcc955daeab822f018c67f9b80",
+    "untracked_changes": 2
+  },
+  "counts": {
+    "by_status": {
+      "BLOCKED": 0,
+      "FAIL": 9,
+      "NOT_RUN": 2,
+      "PASS": 8
+    },
+    "selected": 19
+  },
+  "interface": "ETP-T12",
+  "invocation": {
+    "network": false,
+    "steps": [
+      "manifest",
+      "rebuild",
+      "proofs",
+      "differential",
+      "instruments",
+      "controls",
+      "receipts",
+      "claims",
+      "freshness",
+      "independence",
+      "closure",
+      "scheduling",
+      "traceability",
+      "hazards",
+      "binary",
+      "docs",
+      "consumer-curl",
+      "consumer-ssh",
+      "consumer-sshd"
+    ],
+    "tmpdir": "<tmp>"
+  },
+  "non_passing": [
+    "manifest",
+    "rebuild",
+    "differential",
+    "controls",
+    "freshness",
+    "independence",
+    "closure",
+    "scheduling",
+    "consumer-curl",
+    "consumer-ssh",
+    "consumer-sshd"
+  ],
+  "private_state": {
+    "known_roots": {
+      "artifacts/phase2/shell": {
+        "exists": false,
+        "private_entries": 0,
+        "tracked_files": 0
+      },
+      "court": {
+        "exists": true,
+        "private_entries": 0,
+        "tracked_files": 278
+      },
+      "forensics/authorities/downloads": {
+        "exists": false,
+        "private_entries": 0,
+        "tracked_files": 0
+      },
+      "forensics/authorities/prefix": {
+        "exists": false,
+        "private_entries": 0,
+        "tracked_files": 0
+      },
+      "target": {
+        "exists": false,
+        "private_entries": 0,
+        "tracked_files": 0
+      }
+    },
+    "note": "tracked_files counts Git-tracked files under a declared root and is part of the checkout; private_entries counts the untracked or ignored entries Git reports there.  This interface reads no gitignored content, and each step names the private paths its own tool may read",
+    "present": []
+  },
+  "root": "/work/court/tmp/t12/clean",
+  "schema": "openssl-rs/verify/1",
+  "status": "FAIL",
+  "steps": [
+    {
+      "checks": [
+        {
+          "argv": [
+            "python3",
+            "forensics/tools/etp6_package.py",
+            "--commit",
+            "HEAD",
+            "--out",
+            "{tmp}/etp6-package"
+          ],
+          "cwd": ".",
+          "detail": "exit 2",
+          "exit": 2,
+          "index": 0,
+          "status": "FAIL",
+          "summary": [
+            "  HARD  forensics/tools/tests/test_side_channel_erasure.py: input is present but absent from the frozen manifest",
+            "  HARD  forensics/tools/tests/test_spec_guard.py: input is present but absent from the frozen manifest",
+            "  HARD  forensics/tools/tests/test_traceability.py: input is present but absent from the frozen manifest",
+            "  HARD  forensics/tools/tests/test_unsafe_obligations.py: input is present but absent from the frozen manifest",
+            "  HARD  forensics/tools/traceability.py: input is present but absent from the frozen manifest",
+            "  HARD  forensics/tools/unsafe_obligations.py: input is present but absent from the frozen manifest",
+            "  HARD  src/rsa/ext_kdk_model.rs: input is present but absent from the frozen manifest",
+            "  no archive written; review the drift, then --refreeze."
+          ]
+        }
+      ],
+      "does_not": "does not establish that a package was ever built, archived or published, nor any property of its contents",
+      "establishes": "every input the tracked ETP-6 package manifest names is present at this commit with the recorded SHA-256",
+      "evidence_identity": [
+        {
+          "kind": "file",
+          "path": "evidence/etp6/MANIFEST.json",
+          "sha256": "d41a740f57719ab613b6a7f43cc8f566ab132ff599bb46b6c4860243bb76306d",
+          "state": "present"
+        }
+      ],
+      "name": "manifest",
+      "prerequisites": [
+        {
+          "available": true,
+          "detail": "/usr/bin/git",
+          "requirement": "git"
+        },
+        {
+          "available": true,
+          "detail": "present",
+          "requirement": "tool:forensics/tools/etp6_package.py"
+        }
+      ],
+      "private_state_declared": [],
+      "private_state_present": [],
+      "reads_gitignored": [],
+      "reason": "REFUSED: the staged tree does not match the frozen manifest. (56 hard refusal(s) against evidence/etp6/MANIFEST.json at this commit)",
+      "required": true,
+      "status": "FAIL",
+      "title": "the frozen package manifest describes this commit",
+      "tool_digest": [
+        {
+          "kind": "file",
+          "path": "forensics/tools/etp6_package.py",
+          "sha256": "dd8ec33e9d50ba168bff0076b41c7c0361e74473b055998d473b1fdca8a68d05",
+          "state": "present"
+        }
+      ]
+    },
+    {
+      "checks": [],
+      "does_not": "does not establish that the build is correct, nor that another host or toolchain reproduces it; the authority differential is a separate step",
+      "establishes": "that the release library is a function of its inputs in this venue",
+      "evidence_identity": [
+        {
+          "kind": "file",
+          "path": "Cargo.lock",
+          "sha256": "95e8fd837792b69a69798c3884dfc4000bee28d87c58fd3bf4cd5f597e62c2d9",
+          "state": "present"
+        },
+        {
+          "kind": "file",
+          "path": "rust-toolchain.toml",
+          "sha256": "51b89aac2174179a4470434e6666f9f54d52309005332324154cdeeb1f66dd58",
+          "state": "present"
+        }
+      ],
+      "name": "rebuild",
+      "prerequisites": [
+        {
+          "available": true,
+          "detail": "/usr/bin/bash",
+          "requirement": "bash"
+        },
+        {
+          "available": true,
+          "detail": "/usr/local/cargo/bin/rustc",
+          "requirement": "rustc"
+        },
+        {
+          "available": true,
+          "detail": "/usr/local/cargo/bin/cargo",
+          "requirement": "cargo"
+        },
+        {
+          "available": true,
+          "detail": "running inside a container",
+          "requirement": "court"
+        },
+        {
+          "available": false,
+          "detail": "MemAvailable 22 GiB is below the 24 GiB floor AGENTS.md section 6.1 requires before a build",
+          "requirement": "memory:24"
+        }
+      ],
+      "private_state_declared": [],
+      "private_state_present": [],
+      "reads_gitignored": [],
+      "reason": "requires memory:24: MemAvailable 22 GiB is below the 24 GiB floor AGENTS.md section 6.1 requires before a build",
+      "required": true,
+      "status": "NOT_RUN",
+      "title": "two independent release builds agree byte-for-byte",
+      "tool_digest": [
+        {
+          "kind": "file",
+          "path": "forensics/tools/build_reproducibility.sh",
+          "sha256": "914002c0ede77fabb2759b01f0278ee1f03e88355539be105ef23a7dc35be984",
+          "state": "present"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "argv": [
+            "python3",
+            "make_vectors.py",
+            "--check"
+          ],
+          "cwd": "forensics/etp5_crypto",
+          "detail": "",
+          "exit": 0,
+          "index": 0,
+          "status": "PASS",
+          "summary": [
+            "vector check OK: 6 files"
+          ]
+        },
+        {
+          "argv": [
+            "python3",
+            "driver.py",
+            "--self-test"
+          ],
+          "cwd": "forensics/etp5_crypto",
+          "detail": "",
+          "exit": 0,
+          "index": 1,
+          "status": "PASS",
+          "summary": [
+            "SELFTEST OK: 10 classifier controls"
+          ]
+        }
+      ],
+      "does_not": "does not run the reference against the candidate or the authority; that campaign is the differential step and needs a built candidate and the authority prefix",
+      "establishes": "that the independent reference and its classifier are intact and reproducible from the tracked vectors",
+      "evidence_identity": [
+        {
+          "kind": "directory",
+          "path": "forensics/etp5_crypto/vectors",
+          "population": "git-tracked",
+          "sha256": "1f2a44232ee1673b876cbc1b155e55d7f67d0ccceb28f817a37b2de537f6c2f7",
+          "state": "present"
+        },
+        {
+          "kind": "file",
+          "path": "evidence/etp-t5/RESULTS.json",
+          "sha256": "1b859ef426a286532bb7d540e59f164e5a294c9c9aa35bfb7097941fe4fdc971",
+          "state": "present"
+        }
+      ],
+      "name": "proofs",
+      "prerequisites": [
+        {
+          "available": true,
+          "detail": "python3 at /usr/bin/python3",
+          "requirement": "python"
+        },
+        {
+          "available": true,
+          "detail": "present",
+          "requirement": "tool:forensics/etp5_crypto/make_vectors.py"
+        },
+        {
+          "available": true,
+          "detail": "present",
+          "requirement": "tool:forensics/etp5_crypto/driver.py"
+        }
+      ],
+      "private_state_declared": [],
+      "private_state_present": [],
+      "reads_gitignored": [],
+      "reason": "the reference regenerates every tracked vector byte-for-byte and the difference classifier passes its own controls",
+      "required": true,
+      "status": "PASS",
+      "title": "the independent reference reproduces its published populations",
+      "tool_digest": [
+        {
+          "kind": "file",
+          "path": "forensics/etp5_crypto/make_vectors.py",
+          "sha256": "f544fc69120aa18cc3702d827192efc39759c4c16bde20910512a4385149bead",
+          "state": "present"
+        },
+        {
+          "kind": "file",
+          "path": "forensics/etp5_crypto/driver.py",
+          "sha256": "0302c1d700cce243937791ee29f15408c28d45ac98bd2f65aa45175a394f0638",
+          "state": "present"
+        }
+      ]
+    },
+    {
+      "checks": [],
+      "does_not": "does not establish algorithm correctness universally, constant-time behaviour, memory safety or refinement",
+      "establishes": "bounded differential agreement on the sampled populations",
+      "evidence_identity": [
+        {
+          "kind": "directory",
+          "path": "forensics/etp5_crypto/vectors",
+          "population": "git-tracked",
+          "sha256": "1f2a44232ee1673b876cbc1b155e55d7f67d0ccceb28f817a37b2de537f6c2f7",
+          "state": "present"
+        },
+        {
+          "kind": "file",
+          "path": "forensics/authorities/AUTHORITIES.json",
+          "sha256": "8885e8ecfe27c308d97ded8db8b197ff1b46177a1b8932535824d8a7d2b18944",
+          "state": "present"
+        }
+      ],
+      "name": "differential",
+      "prerequisites": [
+        {
+          "available": true,
+          "detail": "/usr/bin/bash",
+          "requirement": "bash"
+        },
+        {
+          "available": true,
+          "detail": "/usr/local/cargo/bin/rustc",
+          "requirement": "rustc"
+        },
+        {
+          "available": true,
+          "detail": "/usr/local/cargo/bin/cargo",
+          "requirement": "cargo"
+        },
+        {
+          "available": true,
+          "detail": "running inside a container",
+          "requirement": "court"
+        },
+        {
+          "available": false,
+          "detail": "MemAvailable 22 GiB is below the 24 GiB floor AGENTS.md section 6.1 requires before a build",
+          "requirement": "memory:24"
+        }
+      ],
+      "private_state_declared": [
+        "forensics/authorities/prefix",
+        "court"
+      ],
+      "private_state_present": [],
+      "reads_gitignored": [
+        "forensics/authorities/prefix",
+        "court"
+      ],
+      "reason": "requires memory:24: MemAvailable 22 GiB is below the 24 GiB floor AGENTS.md section 6.1 requires before a build",
+      "required": true,
+      "status": "NOT_RUN",
+      "title": "candidate and pinned authority agree with the independent reference",
+      "tool_digest": [
+        {
+          "kind": "file",
+          "path": "forensics/etp5_crypto/run_etp5.sh",
+          "sha256": "9e61aa9a5805abe84b8f46fd444919b8ce17c698616e88df4e2b7c152780b14b",
+          "state": "present"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "argv": [
+            "python3",
+            "forensics/tools/instrument_qualify.py",
+            "check"
+          ],
+          "cwd": ".",
+          "detail": "",
+          "exit": 0,
+          "index": 0,
+          "status": "PASS",
+          "summary": [
+            "PASS     perf-pmu (pmu-venue-probe): 3 cases",
+            "RECORDED tsc-smi-fallbacks: bound to courts/phase18/timing/run_pmu_substitutes.sh",
+            "PASS     binary-branch-audit (branch-audit-gate): 13 cases",
+            "PASS     differential-bench-court (differential-analysis-controls): 1 cases",
+            "PASS     alloc-probe (alloc-probe-control): 2 cases",
+            "PASS     build-reproducibility (reproducibility-comparison-control): 1 cases",
+            "PASS     etp-claims (etp-claims-controls): 1 cases",
+            "QUALIFICATION ok: every requested control passed and matched the register"
+          ]
+        }
+      ],
+      "does_not": "does not establish that an instrument is adequate for untested inputs; an absent external tool is NOT_RUN rather than a sensitivity result",
+      "establishes": "that each instrument's identity matches the register and that its control demonstrated sensitivity to the defect class it names",
+      "evidence_identity": [
+        {
+          "kind": "file",
+          "path": "evidence/etp3/instruments.json",
+          "sha256": "2f937a190cd87e71a4fc5fc1d7fa6faa206bb5ef5af6fa9093192ead8a6a38f4",
+          "state": "present"
+        }
+      ],
+      "name": "instruments",
+      "prerequisites": [
+        {
+          "available": true,
+          "detail": "python3 at /usr/bin/python3",
+          "requirement": "python"
+        },
+        {
+          "available": true,
+          "detail": "present",
+          "requirement": "tool:forensics/tools/instrument_qualify.py"
+        }
+      ],
+      "private_state_declared": [
+        "court"
+      ],
+      "private_state_present": [],
+      "reads_gitignored": [
+        "court"
+      ],
+      "reason": "the register validates and every requested executable control passed in the venue that ran it",
+      "required": true,
+      "status": "PASS",
+      "title": "every instrument is registered and its control fires",
+      "tool_digest": [
+        {
+          "kind": "file",
+          "path": "forensics/tools/instrument_qualify.py",
+          "sha256": "0040c19c9baa8cfab92f72fde63184d7fe95e7949fc3027c3e2ba63ec5f5504d",
+          "state": "present"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "argv": [
+            "python3",
+            "-m",
+            "unittest",
+            "discover",
+            "-s",
+            "tests",
+            "-p",
+            "test_*.py"
+          ],
+          "cwd": "forensics/tools",
+          "detail": "exit 1",
+          "exit": 1,
+          "index": 0,
+          "status": "FAIL",
+          "summary": [
+            "'ET4_SOURCE_DRIFT: inventory records b38e0f426c967da4e5433217b6e03b3042bf8773a0cea1dee0d778c637651a7d, tree is ef8678c53feb9ec59e8cc61c6a0b636ae59aeb01b6dbe482ebc463932ae2ed1d'",
+            "+ []",
+            "- ['ET4_SOURCE_DRIFT: inventory records '",
+            "-  'b38e0f426c967da4e5433217b6e03b3042bf8773a0cea1dee0d778c637651a7d, tree is '",
+            "-  'ef8678c53feb9ec59e8cc61c6a0b636ae59aeb01b6dbe482ebc463932ae2ed1d'] : ET4_SOURCE_DRIFT: inventory records b38e0f426c967da4e5433217b6e03b3042bf8773a0cea1dee0d778c637651a7d, tree is ef8678c53feb9ec59e8cc61c6a0b636ae59aeb01b6dbe482ebc463932ae2ed1d",
+            "----------------------------------------------------------------------",
+            "Ran 451 tests in <elapsed>",
+            "FAILED (failures=3)"
+          ]
+        }
+      ],
+      "does_not": "does not establish that a control is complete for its defect class, and does not run the court-level instrument controls",
+      "establishes": "that the verification tools' negative controls, determinism checks and refusal paths pass at this candidate",
+      "evidence_identity": [
+        {
+          "kind": "directory",
+          "path": "forensics/tools/tests",
+          "population": "git-tracked",
+          "sha256": "cc6da83f1a99265ea2845c1edef251c5effe6d39abfdd028fa44311f74416e66",
+          "state": "present"
+        }
+      ],
+      "name": "controls",
+      "prerequisites": [
+        {
+          "available": true,
+          "detail": "python3 at /usr/bin/python3",
+          "requirement": "python"
+        },
+        {
+          "available": true,
+          "detail": "present",
+          "requirement": "tool:forensics/tools/tests"
+        }
+      ],
+      "private_state_declared": [],
+      "private_state_present": [],
+      "reads_gitignored": [],
+      "reason": "Ran 451 tests in <elapsed>; FAILED (failures=3); first: FAIL: test_check_output_is_deterministic (test_spec_guard.SpecGuardControls.test_check_output_is_deterministic)",
+      "required": true,
+      "status": "FAIL",
+      "title": "the verification tools' own controls fire",
+      "tool_digest": [
+        {
+          "kind": "directory",
+          "path": "forensics/tools/tests",
+          "population": "git-tracked",
+          "sha256": "cc6da83f1a99265ea2845c1edef251c5effe6d39abfdd028fa44311f74416e66",
+          "state": "present"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "argv": [
+            "python3",
+            "courts/phase18/interop/check_receipts.py",
+            "--summary"
+          ],
+          "cwd": ".",
+          "detail": "",
+          "exit": 0,
+          "index": 0,
+          "status": "PASS",
+          "summary": [
+            "receipt  RECEIPT-o7-BA.json           live",
+            "receipt  RECEIPT-o7-BB.json           live",
+            "receipt  RECEIPT-o7.json              live",
+            "receipt  RECEIPT-o8.json              live",
+            "receipt  RECEIPT-o9.json              live",
+            "manifest MANIFEST-o11-A.json          log=present",
+            "manifest MANIFEST-o11-B.json          log=present",
+            "receipts=14 manifests=2 problems=0"
+          ]
+        }
+      ],
+      "does_not": "does not establish that a receipt's measurements are true; a manifest that points into court/ fails the log rule in a clean checkout by design",
+      "establishes": "the evidence-integrity rules R1-R5 over the committed interop receipts",
+      "evidence_identity": [
+        {
+          "kind": "directory",
+          "path": "courts/phase18/interop",
+          "population": "git-tracked",
+          "sha256": "f72ffa7ff5c00d56bccd935eb3c20ec3317df12d65935abb7176defad6f155e0",
+          "state": "present"
+        }
+      ],
+      "name": "receipts",
+      "prerequisites": [
+        {
+          "available": true,
+          "detail": "python3 at /usr/bin/python3",
+          "requirement": "python"
+        },
+        {
+          "available": true,
+          "detail": "present",
+          "requirement": "tool:courts/phase18/interop/check_receipts.py"
+        }
+      ],
+      "private_state_declared": [],
+      "private_state_present": [],
+      "reads_gitignored": [],
+      "reason": "every receipt parses, every withdrawal names its successor, and every manifest log exists with the recorded digest",
+      "required": true,
+      "status": "PASS",
+      "title": "interop receipts and manifests are self-consistent",
+      "tool_digest": [
+        {
+          "kind": "file",
+          "path": "courts/phase18/interop/check_receipts.py",
+          "sha256": "23be44b4bdee098d1e4691d28a8b4a31e270230b8ace4e385f96528b582566d0",
+          "state": "present"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "argv": [
+            "python3",
+            "forensics/tools/etp_claims.py",
+            "validate"
+          ],
+          "cwd": ".",
+          "detail": "",
+          "exit": 0,
+          "index": 0,
+          "status": "PASS",
+          "summary": [
+            "{\"claims\":35,\"document\":\"<repo>/evidence/etp/claims.json\",\"refusal_count\":0,\"refusals\":[],\"refusals_by_rule\":{},\"valid\":true}"
+          ]
+        }
+      ],
+      "does_not": "does not establish that any claim is true; a valid claim set may contain CONTRADICTED or NOT_ESTABLISHED members",
+      "establishes": "that no claim cites evidence that cannot be re-derived at the identity it names",
+      "evidence_identity": [
+        {
+          "kind": "file",
+          "path": "evidence/etp/claims.json",
+          "sha256": "65d8105b744c80ae01e76af8bf3370c478ab116c7fc9b0f16f63eea5d5c579de",
+          "state": "present"
+        },
+        {
+          "kind": "file",
+          "path": "evidence/etp/claim.schema.json",
+          "sha256": "8add927ac7e9e5b07eb513932c5151d9d789fd06f42a2636ab3763cee72b8c0c",
+          "state": "present"
+        }
+      ],
+      "name": "claims",
+      "prerequisites": [
+        {
+          "available": true,
+          "detail": "python3 at /usr/bin/python3",
+          "requirement": "python"
+        },
+        {
+          "available": true,
+          "detail": "/usr/bin/git",
+          "requirement": "git"
+        },
+        {
+          "available": true,
+          "detail": "present",
+          "requirement": "tool:forensics/tools/etp_claims.py"
+        }
+      ],
+      "private_state_declared": [],
+      "private_state_present": [],
+      "reads_gitignored": [],
+      "reason": "the committed claim set passes the schema, the cross-field laws and the Git-bound digest re-derivation",
+      "required": true,
+      "status": "PASS",
+      "title": "the claim set validates under the claim algebra",
+      "tool_digest": [
+        {
+          "kind": "file",
+          "path": "forensics/tools/etp_claims.py",
+          "sha256": "1ac714e66b2521feedfc9ee05dd7f78b033fd762a1875e18ede3ff02b2719b89",
+          "state": "present"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "argv": [
+            "python3",
+            "forensics/tools/freshness.py",
+            "check"
+          ],
+          "cwd": ".",
+          "detail": "exit 1",
+          "exit": 1,
+          "index": 0,
+          "status": "FAIL",
+          "summary": [
+            "        \"U5\": 18,",
+            "        \"U6\": 2,",
+            "        \"U7\": 2",
+            "      }",
+            "    }",
+            "  },",
+            "  \"structural_refusals\": []",
+            "}"
+          ]
+        }
+      ],
+      "does_not": "does not establish that an UNAFFECTED verdict is a fresh measurement; the identity triage bounds what the verdict can mean",
+      "establishes": "the per-artefact verdicts and the refusal rules over them",
+      "evidence_identity": [
+        {
+          "kind": "file",
+          "path": "evidence/etp-t9/DEPENDENCIES.json",
+          "sha256": "f48202bfba1f78e5b248d2f8b3c104c6e720ee7104a0cc0d28213aefc7d4e2d8",
+          "state": "present"
+        }
+      ],
+      "name": "freshness",
+      "prerequisites": [
+        {
+          "available": true,
+          "detail": "python3 at /usr/bin/python3",
+          "requirement": "python"
+        },
+        {
+          "available": true,
+          "detail": "/usr/bin/git",
+          "requirement": "git"
+        },
+        {
+          "available": true,
+          "detail": "present",
+          "requirement": "tool:forensics/tools/freshness.py"
+        }
+      ],
+      "private_state_declared": [],
+      "private_state_present": [],
+      "reads_gitignored": [],
+      "reason": "status REFUSED; 331 artefact(s) (HISTORY=81, INVALIDATED=92, UNAFFECTED=31, UNRESOLVED=127); 267 refusal(s); first: FR_CARRY_FORWARD_UNDECLARED at courts/phase17/downstream/curl/result.json",
+      "required": true,
+      "status": "FAIL",
+      "title": "no current evidence carries forward across a changed dependency",
+      "tool_digest": [
+        {
+          "kind": "file",
+          "path": "forensics/tools/freshness.py",
+          "sha256": "f6e00ed477f4a27a3eae60a93f02400a60359c9a2435738d93ff7eb089a573a3",
+          "state": "present"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "argv": [
+            "python3",
+            "forensics/tools/independence.py",
+            "check"
+          ],
+          "cwd": ".",
+          "detail": "exit 1",
+          "exit": 1,
+          "index": 0,
+          "status": "FAIL",
+          "summary": [
+            "REFUSED IND_REPRODUCER_CONTAMINATED assignment=A-ADJ-B85C field=reproduction.used_project_produced_artefact: the reproduction consumed an artefact this project produced",
+            "REFUSED IND_REPRODUCER_CONTAMINATED assignment=A-ADJ-B85C field=reproduction.rebuilt_from_frozen_package: the reproduction does not state a rebuild from the frozen package",
+            "REFUSED IND_ADJUDICATOR_IS_AUTHOR assignment=A-REL-OPENSSH-B85C field=filled.adjudicator|filled.author: adjudicator and author are not distinct at same_agent (recorded same_agent=SAME, same_organisation=SAME, same_infrastructure=SAME, same_key=SAME)",
+            "REFUSED IND_ROLE_NOT_DISTINCT assignment=A-REL-OPENSSH-B85C field=filled.adjudicator|filled.evidence_producer: adjudicator and evidence_producer are not distinct at same_agent (recorded same_agent=SAME, same_organisation=SAME, same_infrastructure=SAME, same_key=SAME)",
+            "REFUSED IND_REQUIRED_ROLE_ABSENT assignment=A-REL-OPENSSH-B85C field=filled.independent_reproducer: SAFE_COMPATIBLE_RELEASE requires a distinct independent_reproducer; the role is absent",
+            "REFUSED IND_ROLE_NOT_DISTINCT assignment=A-REL-OPENSSH-B85C field=filled.release_authority|filled.author: release_authority and author are not distinct at same_agent (recorded same_agent=UNKNOWN, same_organisation=UNKNOWN, same_infrastructure=UNKNOWN, same_key=UNKNOWN)",
+            "REFUSED IND_ROLE_NOT_DISTINCT assignment=A-REL-OPENSSH-B85C field=filled.release_authority|filled.adjudicator: release_authority and adjudicator are not distinct at same_agent (recorded same_agent=UNKNOWN, same_organisation=UNKNOWN, same_infrastructure=UNKNOWN, same_key=UNKNOWN)",
+            "{'status': 'REFUSED', 'assignments': 50, 'refusals': 13, 'same_party_adjudicator': 50, 'external_parties': 0}"
+          ]
+        }
+      ],
+      "does_not": "does not create an external party; an unknown distinctness is reported, never assumed",
+      "establishes": "that assignments claiming independence do not share a party where the class forbids it",
+      "evidence_identity": [
+        {
+          "kind": "file",
+          "path": "evidence/etp-t8/ROLES.json",
+          "sha256": "8abef175cdae34c2da6febea068d82a68cacf88cf042fc8821b432a4cb7d3848",
+          "state": "present"
+        },
+        {
+          "kind": "file",
+          "path": "evidence/etp-t8/ASSIGNMENTS.json",
+          "sha256": "46a46d73495b1d0691c88ef06e900c5f97e3ab2d1840fc2f0d445057850224d3",
+          "state": "present"
+        }
+      ],
+      "name": "independence",
+      "prerequisites": [
+        {
+          "available": true,
+          "detail": "python3 at /usr/bin/python3",
+          "requirement": "python"
+        },
+        {
+          "available": true,
+          "detail": "/usr/bin/git",
+          "requirement": "git"
+        },
+        {
+          "available": true,
+          "detail": "present",
+          "requirement": "tool:forensics/tools/independence.py"
+        }
+      ],
+      "private_state_declared": [],
+      "private_state_present": [],
+      "reads_gitignored": [],
+      "reason": "13 refusal(s); first: REFUSED IND_ADJUDICATOR_IS_AUTHOR assignment=A-ADJ-B85C field=filled.adjudicator|filled.author: adjudicator and author are not distinct at same_agent (recorded same_agent=SAME, same_organisation=SAME, same_infrastructure=SAME, same_key=SAME)",
+      "required": true,
+      "status": "FAIL",
+      "title": "the recorded role assignments satisfy the independence classes",
+      "tool_digest": [
+        {
+          "kind": "file",
+          "path": "forensics/tools/independence.py",
+          "sha256": "4b983c8c8684002d0fdcd390ccd77afa0bba934238a75698cf0f83d1bf13d5b5",
+          "state": "present"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "argv": [
+            "python3",
+            "forensics/tools/closure_discipline.py",
+            "check"
+          ],
+          "cwd": ".",
+          "detail": "exit 1",
+          "exit": 1,
+          "index": 0,
+          "status": "FAIL",
+          "summary": [
+            "  \"exclusions_failing_by_consumer\": {",
+            "    \"curl\": 43,",
+            "    \"ssh\": 374,",
+            "    \"sshd\": 327",
+            "  },",
+            "  \"opaque_unscoped_rows\": 31,",
+            "  \"opaque_unscoped_sites\": 82",
+            "}"
+          ]
+        }
+      ],
+      "does_not": "does not establish that an admitted exclusion is sound, only that its argument is recorded and checkable",
+      "establishes": "the five-requirement bar over the recorded exclusion rows and the aggregate refusal rule",
+      "evidence_identity": [
+        {
+          "kind": "file",
+          "path": "evidence/etp-t10/EXCLUSIONS.json",
+          "sha256": "791c699d3c3f60e5dee0f26563573a988411ad6854a319286b9cc34719e48f90",
+          "state": "present"
+        },
+        {
+          "kind": "file",
+          "path": "evidence/etp-t10/OPAQUE-OPERATIONS.json",
+          "sha256": "6f03c642b914c29ce4576bd47b99120cb176f7345a363f4877ee3cb05dbd2cd2",
+          "state": "present"
+        },
+        {
+          "kind": "file",
+          "path": "evidence/etp-t10/AGGREGATES.json",
+          "sha256": "c7f31e73b67a1b7fcba1a9b8a6307281387303bdc06ed16d76888407cfc93925",
+          "state": "present"
+        }
+      ],
+      "name": "closure",
+      "prerequisites": [
+        {
+          "available": true,
+          "detail": "python3 at /usr/bin/python3",
+          "requirement": "python"
+        },
+        {
+          "available": true,
+          "detail": "/usr/bin/git",
+          "requirement": "git"
+        },
+        {
+          "available": true,
+          "detail": "present",
+          "requirement": "tool:forensics/tools/closure_discipline.py"
+        }
+      ],
+      "private_state_declared": [],
+      "private_state_present": [],
+      "reads_gitignored": [],
+      "reason": "2 aggregate refusal(s) (safe-compatible-openssh-b85c, campaign-status); 31 opaque row(s) unscoped",
+      "required": true,
+      "status": "FAIL",
+      "title": "the closure-discipline evidence holds",
+      "tool_digest": [
+        {
+          "kind": "file",
+          "path": "forensics/tools/closure_discipline.py",
+          "sha256": "2362c045e647159aa764c14e58119a510ebcda1c23bef9d8b61a2063fe0b62b6",
+          "state": "present"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "argv": [
+            "python3",
+            "forensics/tools/scheduling.py",
+            "report",
+            "--change-sets",
+            "evidence/etp-t11/CHANGE-SETS.json",
+            "--runs",
+            "evidence/etp-t11/RUNS.json",
+            "--store",
+            "evidence/etp-t11/CACHE.json"
+          ],
+          "cwd": ".",
+          "detail": "exit 1",
+          "exit": 1,
+          "index": 0,
+          "status": "FAIL",
+          "summary": [
+            "      \"NOT_RUN\": 59,",
+            "      \"FAILED\": 0,",
+            "      \"REFUSED\": 19,",
+            "      \"BLOCKED\": 0",
+            "    }",
+            "  },",
+            "  \"status\": \"REFUSED\"",
+            "}"
+          ]
+        }
+      ],
+      "does_not": "does not run the required checks; a cache hit is evidence bound to its identity, not a fresh measurement",
+      "establishes": "the minimum tier each recorded change set needs and which required evidence is satisfied, NOT_RUN, FAILED, REFUSED or BLOCKED",
+      "evidence_identity": [
+        {
+          "kind": "file",
+          "path": "evidence/etp-t11/CHANGE-SETS.json",
+          "sha256": "bc013a55b5059ea967a56d22f1bf6546898fec4d237ed22f2915780562f86f0f",
+          "state": "present"
+        },
+        {
+          "kind": "file",
+          "path": "evidence/etp-t11/RUNS.json",
+          "sha256": "e74d0cae81d0e41e8eb85f410e89dcd07e9c2217afbe431b33e6c9b9aacf943f",
+          "state": "present"
+        },
+        {
+          "kind": "file",
+          "path": "evidence/etp-t11/CACHE.json",
+          "sha256": "978b9821f449f6fe2f720318e7dd8c70bd2feab4470b94c149832d144474942b",
+          "state": "present"
+        }
+      ],
+      "name": "scheduling",
+      "prerequisites": [
+        {
+          "available": true,
+          "detail": "python3 at /usr/bin/python3",
+          "requirement": "python"
+        },
+        {
+          "available": true,
+          "detail": "/usr/bin/git",
+          "requirement": "git"
+        },
+        {
+          "available": true,
+          "detail": "present",
+          "requirement": "tool:forensics/tools/scheduling.py"
+        }
+      ],
+      "private_state_declared": [],
+      "private_state_present": [],
+      "reads_gitignored": [],
+      "reason": "status REFUSED over 6 change set(s) and 78 requirement(s) (BLOCKED=0, FAILED=0, NOT_RUN=59, REFUSED=19, SATISFIED=0)",
+      "required": true,
+      "status": "FAIL",
+      "title": "each recorded change set carries the evidence its tier requires",
+      "tool_digest": [
+        {
+          "kind": "file",
+          "path": "forensics/tools/scheduling.py",
+          "sha256": "40b954b820f1d6a935f19bb8e80152d0e4d31b828bbf7a0d236564636636a6c3",
+          "state": "present"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "argv": [
+            "python3",
+            "forensics/tools/traceability.py",
+            "validate"
+          ],
+          "cwd": ".",
+          "detail": "",
+          "exit": 0,
+          "index": 0,
+          "status": "PASS",
+          "summary": [
+            "traceability graph at 21bea318819a56f641b3aa2f25027216b97a1c4d: 361 nodes (adjudication=41, artefact=28, evidence=104, hazard=20, implementation=21, obligation=100, refinement_edge=5, refinement_level=6, release_claim=6, requirement=22, threat=8); 475 edges (assessed_by=130, constrains=58, discharges=5, evidenced_by=73, motivates=45, obligates=5, raises=70, realised_by=30, refines_to=5, releases=8, satisfied_by=46)",
+            "orphans: 43 declared and reproduced (43 ids), 0 undeclared, 0 stale"
+          ]
+        }
+      ],
+      "does_not": "does not establish population completeness; the orphan reasons are arguments, not proofs",
+      "establishes": "the typed traceability graph and its declared-orphan register at the identity the nodes name",
+      "evidence_identity": [
+        {
+          "kind": "file",
+          "path": "evidence/etp-t1/TRACEABILITY.json",
+          "sha256": "2fc3298fbe142db81acc51048364f78d8902c82a9598739dde132c3457a1a650",
+          "state": "present"
+        }
+      ],
+      "name": "traceability",
+      "prerequisites": [
+        {
+          "available": true,
+          "detail": "python3 at /usr/bin/python3",
+          "requirement": "python"
+        },
+        {
+          "available": true,
+          "detail": "/usr/bin/git",
+          "requirement": "git"
+        },
+        {
+          "available": true,
+          "detail": "present",
+          "requirement": "tool:forensics/tools/traceability.py"
+        }
+      ],
+      "private_state_declared": [],
+      "private_state_present": [],
+      "reads_gitignored": [],
+      "reason": "the graph validates and every declared orphan is reproduced",
+      "required": true,
+      "status": "PASS",
+      "title": "the requirements graph has no undeclared orphan",
+      "tool_digest": [
+        {
+          "kind": "file",
+          "path": "forensics/tools/traceability.py",
+          "sha256": "cf960ce7bf44338381725450f0b8c4f00733f2b09efa510de15c308e5441d564",
+          "state": "present"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "argv": [
+            "python3",
+            "forensics/tools/hazard_register.py",
+            "validate"
+          ],
+          "cwd": ".",
+          "detail": "",
+          "exit": 0,
+          "index": 0,
+          "status": "PASS",
+          "summary": [
+            "hazard register <repo>/evidence/etp-t2/HAZARDS.json: 20 hazards, 8 fault trees, 30 FMEA rows, 12 UCAs, 7 attack graphs",
+            "barrier states: BARRIER_ABSENT=2, CLAIMED_NO_EVIDENCE=18, EVIDENCED=0; FMEA evidence: CLAIMED_NO_EVIDENCE=23, EVIDENCED=0, NONE=7",
+            "BARRIER_ABSENT: HAZ-18, HAZ-20; no release claim: HAZ-05, HAZ-12, HAZ-17",
+            "register and traceability graph agree"
+          ]
+        }
+      ],
+      "does_not": "does not establish that a barrier works; barriers are classified by the evidence recorded for them",
+      "establishes": "that the register and the graph describe the same hazards, barriers and release claims",
+      "evidence_identity": [
+        {
+          "kind": "file",
+          "path": "evidence/etp-t2/HAZARDS.json",
+          "sha256": "2d777b12cf8cd7348d5ddcf6caa78014c77ccc3a3cc4e2ce612ecdc2a7a5173d",
+          "state": "present"
+        }
+      ],
+      "name": "hazards",
+      "prerequisites": [
+        {
+          "available": true,
+          "detail": "python3 at /usr/bin/python3",
+          "requirement": "python"
+        },
+        {
+          "available": true,
+          "detail": "/usr/bin/git",
+          "requirement": "git"
+        },
+        {
+          "available": true,
+          "detail": "present",
+          "requirement": "tool:forensics/tools/hazard_register.py"
+        }
+      ],
+      "private_state_declared": [],
+      "private_state_present": [],
+      "reads_gitignored": [],
+      "reason": "the register validates and every projected field and edge matches the graph",
+      "required": true,
+      "status": "PASS",
+      "title": "the hazard register agrees with the traceability graph",
+      "tool_digest": [
+        {
+          "kind": "file",
+          "path": "forensics/tools/hazard_register.py",
+          "sha256": "d82379e2f5981864db0c5ee43d3dbaf92366ddb94ee32ccbb14d180b813fa983",
+          "state": "present"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "argv": [
+            "python3",
+            "forensics/tools/binary_assurance.py",
+            "check"
+          ],
+          "cwd": ".",
+          "detail": "",
+          "exit": 0,
+          "index": 0,
+          "status": "PASS",
+          "summary": [
+            "  \"status\": \"PASS\",",
+            "  \"tcb_digest\": \"aa8fbaea85e2fb1e8808121682f6a079ce3c0fd110e3a0750360ba690063bc83\",",
+            "  \"tools_checked\": 22,",
+            "  \"tools_unchecked\": [",
+            "    \"court-image\"",
+            "  ],",
+            "  \"unbound_claims\": 4",
+            "}"
+          ]
+        }
+      ],
+      "does_not": "does not establish source-to-binary correspondence, and an unbound claim is recorded rather than promoted",
+      "establishes": "that every asserted binary claim names an artefact at its own target, profile and TCB",
+      "evidence_identity": [
+        {
+          "kind": "file",
+          "path": "evidence/etp-t6/TCB.json",
+          "sha256": "55e7fe2583cc38547d45b2768dbd61f36193e2deb419a8f324b767c80be138ed",
+          "state": "present"
+        },
+        {
+          "kind": "file",
+          "path": "evidence/etp-t6/CLAIM-MATRIX.json",
+          "sha256": "752e3f656d0049caf35a8328cfa902a59bb621fb9d5cef0d50f152674995f1ec",
+          "state": "present"
+        }
+      ],
+      "name": "binary",
+      "prerequisites": [
+        {
+          "available": true,
+          "detail": "python3 at /usr/bin/python3",
+          "requirement": "python"
+        },
+        {
+          "available": true,
+          "detail": "present",
+          "requirement": "tool:forensics/tools/binary_assurance.py"
+        }
+      ],
+      "private_state_declared": [],
+      "private_state_present": [],
+      "reads_gitignored": [],
+      "reason": "the TCB validates and no claim crosses a target, profile or TCB boundary",
+      "required": true,
+      "status": "PASS",
+      "title": "the recorded TCB and per-target claim matrix are bound",
+      "tool_digest": [
+        {
+          "kind": "file",
+          "path": "forensics/tools/binary_assurance.py",
+          "sha256": "75962cbf299f6e015c3696e56ec6d39eb70169614c24b78f132283f1045c9b8c",
+          "state": "present"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "argv": [
+            "python3",
+            "forensics/tools/docs_consistency.py"
+          ],
+          "cwd": ".",
+          "detail": "",
+          "exit": 0,
+          "index": 0,
+          "status": "PASS",
+          "summary": [
+            "[docs-consistency] EXEMPT: docs/PHASE-7-EVP-SEAL.md: 'phase7_claim_candidate_version' is exempt -- the Phase-7 seal's claim and its measurements are bound to the 0.0.27 candidate (e4f60d8b) at which the FRF store was generated. The seal records that past moment, not the current crate version, so it legitimately contradicts Cargo.toml. Re-created when the 0.0.44/0.0.45 releases advanced the crate version; the same exemption existed before the 0.0.18 FRF regeneration made it unnecessary.",
+            "[docs-consistency] ok: 20 hand-written claim(s) agree with their generated sources"
+          ]
+        }
+      ],
+      "does_not": "does not establish that prose is complete or that an exempt figure is correct",
+      "establishes": "that the documentation's derived figures match the artefacts they cite",
+      "evidence_identity": [
+        {
+          "kind": "directory",
+          "path": "docs",
+          "population": "git-tracked",
+          "sha256": "cd17d72cb8ccec32925e9d4a808d7f16e31285f840c7b4b5004ed2b7b5492ab4",
+          "state": "present"
+        }
+      ],
+      "name": "docs",
+      "prerequisites": [
+        {
+          "available": true,
+          "detail": "python3 at /usr/bin/python3",
+          "requirement": "python"
+        },
+        {
+          "available": true,
+          "detail": "present",
+          "requirement": "tool:forensics/tools/docs_consistency.py"
+        }
+      ],
+      "private_state_declared": [],
+      "private_state_present": [],
+      "reads_gitignored": [],
+      "reason": "every checked quantity in the documents agrees with its generated source",
+      "required": true,
+      "status": "PASS",
+      "title": "hand-written claims agree with their generated sources",
+      "tool_digest": [
+        {
+          "kind": "file",
+          "path": "forensics/tools/docs_consistency.py",
+          "sha256": "d0e2edc55a1c05d57cd45b6c065e7b1e4c0aafc9d21145bf9883e51f0f999c71",
+          "state": "present"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "argv": [
+            "python3",
+            "forensics/tools/closure_discipline.py",
+            "audit",
+            "--receipt",
+            "evidence/closure-curl-049.json"
+          ],
+          "cwd": ".",
+          "detail": "exit 1",
+          "exit": 1,
+          "index": 0,
+          "status": "FAIL",
+          "summary": [
+            "    }",
+            "  ],",
+            "  \"target_drop_sample\": {",
+            "    \"complete\": true,",
+            "    \"declared_in_exclusion_reasons\": 175,",
+            "    \"rows_in_receipt_sample\": 175",
+            "  }",
+            "}"
+          ]
+        }
+      ],
+      "does_not": "does not establish that an admitted exclusion is sound; an absent private inventory makes every dependent row fail",
+      "establishes": "the exclusion bar and opaque-operation scope over the recorded closure receipt for one consumer family",
+      "evidence_identity": [
+        {
+          "kind": "file",
+          "path": "evidence/closure-curl-049.json",
+          "sha256": "6aedaa4ee6691ba3d09a4c4f655a8001b35252fa4206f30584d87effe748ca16",
+          "state": "present"
+        },
+        {
+          "kind": "file",
+          "path": "evidence/etp-t10/EXCLUSIONS.json",
+          "sha256": "791c699d3c3f60e5dee0f26563573a988411ad6854a319286b9cc34719e48f90",
+          "state": "present"
+        }
+      ],
+      "name": "consumer-curl",
+      "prerequisites": [
+        {
+          "available": true,
+          "detail": "python3 at /usr/bin/python3",
+          "requirement": "python"
+        },
+        {
+          "available": true,
+          "detail": "/usr/bin/git",
+          "requirement": "git"
+        },
+        {
+          "available": true,
+          "detail": "present",
+          "requirement": "tool:forensics/tools/closure_discipline.py"
+        }
+      ],
+      "private_state_declared": [
+        "court",
+        "artifacts/phase2/install"
+      ],
+      "private_state_present": [],
+      "reads_gitignored": [
+        "court",
+        "artifacts/phase2/install"
+      ],
+      "reason": "43 of 420 exclusion row(s) fail",
+      "required": true,
+      "status": "FAIL",
+      "title": "the curl closure exclusions pass the ETP-T10 bar",
+      "tool_digest": [
+        {
+          "kind": "file",
+          "path": "forensics/tools/closure_discipline.py",
+          "sha256": "2362c045e647159aa764c14e58119a510ebcda1c23bef9d8b61a2063fe0b62b6",
+          "state": "present"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "argv": [
+            "python3",
+            "forensics/tools/closure_discipline.py",
+            "audit",
+            "--receipt",
+            "evidence/closure-ssh-b85c.json"
+          ],
+          "cwd": ".",
+          "detail": "exit 1",
+          "exit": 1,
+          "index": 0,
+          "status": "FAIL",
+          "summary": [
+            "    }",
+            "  ],",
+            "  \"target_drop_sample\": {",
+            "    \"complete\": true,",
+            "    \"declared_in_exclusion_reasons\": 178,",
+            "    \"rows_in_receipt_sample\": 178",
+            "  }",
+            "}"
+          ]
+        }
+      ],
+      "does_not": "does not establish that an admitted exclusion is sound; an absent private inventory makes every dependent row fail",
+      "establishes": "the exclusion bar and opaque-operation scope over the recorded closure receipt for one consumer family",
+      "evidence_identity": [
+        {
+          "kind": "file",
+          "path": "evidence/closure-ssh-b85c.json",
+          "sha256": "45e3b48d5d6ce1ea19a6cd5248a194922f1b572858f8d556c2361dde98b02402",
+          "state": "present"
+        },
+        {
+          "kind": "file",
+          "path": "evidence/etp-t10/EXCLUSIONS.json",
+          "sha256": "791c699d3c3f60e5dee0f26563573a988411ad6854a319286b9cc34719e48f90",
+          "state": "present"
+        }
+      ],
+      "name": "consumer-ssh",
+      "prerequisites": [
+        {
+          "available": true,
+          "detail": "python3 at /usr/bin/python3",
+          "requirement": "python"
+        },
+        {
+          "available": true,
+          "detail": "/usr/bin/git",
+          "requirement": "git"
+        },
+        {
+          "available": true,
+          "detail": "present",
+          "requirement": "tool:forensics/tools/closure_discipline.py"
+        }
+      ],
+      "private_state_declared": [
+        "court",
+        "artifacts/phase2/install"
+      ],
+      "private_state_present": [],
+      "reads_gitignored": [
+        "court",
+        "artifacts/phase2/install"
+      ],
+      "reason": "374 of 374 exclusion row(s) fail; the recorded inventory court/freeze-b85/census-b85.json is absent (private state)",
+      "required": true,
+      "status": "FAIL",
+      "title": "the ssh closure exclusions pass the ETP-T10 bar",
+      "tool_digest": [
+        {
+          "kind": "file",
+          "path": "forensics/tools/closure_discipline.py",
+          "sha256": "2362c045e647159aa764c14e58119a510ebcda1c23bef9d8b61a2063fe0b62b6",
+          "state": "present"
+        }
+      ]
+    },
+    {
+      "checks": [
+        {
+          "argv": [
+            "python3",
+            "forensics/tools/closure_discipline.py",
+            "audit",
+            "--receipt",
+            "evidence/closure-sshd-b85c.json"
+          ],
+          "cwd": ".",
+          "detail": "exit 1",
+          "exit": 1,
+          "index": 0,
+          "status": "FAIL",
+          "summary": [
+            "    }",
+            "  ],",
+            "  \"target_drop_sample\": {",
+            "    \"complete\": true,",
+            "    \"declared_in_exclusion_reasons\": 131,",
+            "    \"rows_in_receipt_sample\": 131",
+            "  }",
+            "}"
+          ]
+        }
+      ],
+      "does_not": "does not establish that an admitted exclusion is sound; an absent private inventory makes every dependent row fail",
+      "establishes": "the exclusion bar and opaque-operation scope over the recorded closure receipt for one consumer family",
+      "evidence_identity": [
+        {
+          "kind": "file",
+          "path": "evidence/closure-sshd-b85c.json",
+          "sha256": "a3bd7376d9f906a46b93bea2c5feffd4a17f388fb81482d8ad09aa66ca9377e6",
+          "state": "present"
+        },
+        {
+          "kind": "file",
+          "path": "evidence/etp-t10/EXCLUSIONS.json",
+          "sha256": "791c699d3c3f60e5dee0f26563573a988411ad6854a319286b9cc34719e48f90",
+          "state": "present"
+        }
+      ],
+      "name": "consumer-sshd",
+      "prerequisites": [
+        {
+          "available": true,
+          "detail": "python3 at /usr/bin/python3",
+          "requirement": "python"
+        },
+        {
+          "available": true,
+          "detail": "/usr/bin/git",
+          "requirement": "git"
+        },
+        {
+          "available": true,
+          "detail": "present",
+          "requirement": "tool:forensics/tools/closure_discipline.py"
+        }
+      ],
+      "private_state_declared": [
+        "court",
+        "artifacts/phase2/install"
+      ],
+      "private_state_present": [],
+      "reads_gitignored": [
+        "court",
+        "artifacts/phase2/install"
+      ],
+      "reason": "327 of 327 exclusion row(s) fail; the recorded inventory court/freeze-b85/census-b85.json is absent (private state)",
+      "required": true,
+      "status": "FAIL",
+      "title": "the sshd closure exclusions pass the ETP-T10 bar",
+      "tool_digest": [
+        {
+          "kind": "file",
+          "path": "forensics/tools/closure_discipline.py",
+          "sha256": "2362c045e647159aa764c14e58119a510ebcda1c23bef9d8b61a2063fe0b62b6",
+          "state": "present"
+        }
+      ]
+    }
+  ],
+  "warnings": []
+}
