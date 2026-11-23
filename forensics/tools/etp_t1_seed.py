@@ -663,10 +663,13 @@ ETP_T2_OBLIGATIONS = [
      "lands the correction, and a consumer replay of the divergence.",
      ["REL-OPENSSH-B85C"], ["IMP-RSA"]),
     ("OBL-PANIC-ATOMICITY", "ETP-T2 HAZ-16",
-     "guard_ffi prevents a panic from unwinding into C but does not make the interrupted "
-     "operation failure-atomic; no rollback or poison evidence exists for a stateful context.",
+     "guard_ffi prevents a panic from unwinding into C. Three stateful security-relevant "
+     "contexts are now failure-atomic (BN_BLINDING_update, BN_BLINDING_create_param, "
+     "OPENSSL_sk_pop_free) with unit evidence and revert controls; failure-atomicity, rollback "
+     "or poisoning for the remaining mutation candidates is not established.",
      "Failure-atomicity, rollback or poisoning evidence for every stateful FFI context that can "
-     "panic, at a named candidate.",
+     "panic, at a named candidate, including the 744 NOT_AUDITED mutation candidates and the "
+     "evp/rsa/ec/x509 abort path.",
      ["REL-OPENSSH-B85C"], ["IMP-PANIC-GUARD"]),
     ("OBL-VERIFY-RETURN-POLARITY", "ETP-T2 HAZ-18",
      "EVP_DigestVerifyFinal answers 0 for an invalid signature and -1 for an error, and the C "

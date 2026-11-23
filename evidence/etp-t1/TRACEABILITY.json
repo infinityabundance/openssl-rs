@@ -67,7 +67,7 @@
   },
   "hazard_register": {
     "path": "evidence/etp-t2/HAZARDS.json",
-    "sha256": "f3dda0f67b25dc77b7f77bed6e0ff54dcee21024da40c05ec18372cbb76a72b0",
+    "sha256": "351c5c86ea583c1ce469eae5daa144b8a3b4ce62bad820ad907642a890d398f5",
     "settling_method": "sha256 of the register file the graph projects; the register is the ETP-T2 deliverable and the graph projects its hazard entries"
   },
   "tool": {
@@ -3877,10 +3877,10 @@
       ],
       "memory_safe_claim": false,
       "barrier": {
-        "state": "BARRIER_ABSENT",
-        "control": "guard_ffi catches and never resumes, so no panic unwinds into C; it does not repair partially mutated state.",
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "guard_ffi catches and never resumes. A bounded measurement classified 79 of 823 mutation candidates in the nine security-relevant object owners; three entries were repaired to failure-atomic publication (BN_BLINDING_update, BN_BLINDING_create_param) or remove-before-release (OPENSSL_sk_pop_free), with test-only panic injection and revert controls (docs/FFI-FAILURE-ATOMICITY.md, evidence/haz-16/).",
         "evidence": [],
-        "would_close": "Failure-atomic mutation, explicit rollback or explicit poisoning for every stateful FFI context that can panic (OBL-PANIC-ATOMICITY, OBL-XCUT-PANIC)."
+        "would_close": "Failure-atomic mutation, explicit rollback or explicit poisoning for every stateful FFI context that can panic (OBL-PANIC-ATOMICITY, OBL-XCUT-PANIC), over the whole 823-candidate population and the separate evp/rsa/ec/x509 abort path."
       },
       "affected_release_claims": [
         "REL-OPENSSH-B85C"
@@ -5496,14 +5496,14 @@
       "source": {
         "path": "docs/ETP-TODO.md",
         "span": "row ETP-T2",
-        "quote": "guard_ffi prevents a panic from unwinding into C but does not make the interrupted operation failure-atomic; no rollback or poison evidence exists for a stateful context.",
+        "quote": "guard_ffi prevents a panic from unwinding into C. Three stateful security-relevant contexts are now failure-atomic (BN_BLINDING_update, BN_BLINDING_create_param, OPENSSL_sk_pop_free) with unit evidence and revert controls; failure-atomicity, rollback or poisoning for the remaining mutation candidates is not established.",
         "quote_kind": "paraphrase",
         "sha256": "59bad5736455912733d3a62ed11564cf67015e275ea3d884081d7e620db6b676",
         "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
       },
-      "statement": "guard_ffi prevents a panic from unwinding into C but does not make the interrupted operation failure-atomic; no rollback or poison evidence exists for a stateful context.",
+      "statement": "guard_ffi prevents a panic from unwinding into C. Three stateful security-relevant contexts are now failure-atomic (BN_BLINDING_update, BN_BLINDING_create_param, OPENSSL_sk_pop_free) with unit evidence and revert controls; failure-atomicity, rollback or poisoning for the remaining mutation candidates is not established.",
       "state": "OPEN",
-      "settled_by": "Failure-atomicity, rollback or poisoning evidence for every stateful FFI context that can panic, at a named candidate.",
+      "settled_by": "Failure-atomicity, rollback or poisoning evidence for every stateful FFI context that can panic, at a named candidate, including the 744 NOT_AUDITED mutation candidates and the evp/rsa/ec/x509 abort path.",
       "blocks_release_claims": [
         "REL-OPENSSH-B85C"
       ]

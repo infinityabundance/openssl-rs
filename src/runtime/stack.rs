@@ -476,6 +476,17 @@ pub unsafe extern "C" fn OPENSSL_sk_free(st: *mut OpenSslStack) {
 
 /// `void OPENSSL_sk_pop_free(OPENSSL_STACK *st, OPENSSL_sk_freefunc func)`
 ///
+/// ## Failure atomicity (HAZ-16)
+///
+/// Each element is **removed from the stack before** its destructor runs. The
+/// authority iterates the array in place and releases the enclosing stack only
+/// after the loop, so a defect that panics mid-loop leaves elements that have
+/// already been freed still reachable through `sk_value`, and a retry of
+/// `pop_free` (or `sk_pop`/`sk_value`) hands them out again — a double release.
+/// Removing first makes the stack's own view agree with what has actually been
+/// released: a panic leaves only the elements whose destructors have not yet run,
+/// in their original order, so a caller may retry the call safely.
+///
 /// # Safety
 /// `st` must be NULL or a live stack, and `func` (or the installed thunk) must
 /// be a destructor valid for every element on it.
@@ -487,7 +498,14 @@ pub unsafe extern "C" fn OPENSSL_sk_pop_free(st: *mut OpenSslStack, func: Option
         unsafe {
             let Some(s) = inner(st) else { return };
             let thunk = s.free_thunk;
-            for &item in s.items.iter() {
+            // `remove(0)` keeps the remaining elements in the authority's
+            // front-to-back order while making the current element unreachable
+            // before its destructor can fail. The authority's own loop is O(n) in
+            // total; the shift makes this O(n^2), which is bounded by the same
+            // `INT_MAX` element ceiling the stack already enforces and is the
+            // price of not publishing a freed element.
+            while !s.items.is_empty() {
+                let item = s.items.remove(0);
                 if item.is_null() {
                     continue;
                 }
@@ -501,6 +519,8 @@ pub unsafe extern "C" fn OPENSSL_sk_pop_free(st: *mut OpenSslStack, func: Option
                     // the divergence is recorded.
                     (None, None) => {}
                 }
+                #[cfg(test)]
+                test_hooks::maybe_panic_mid_pop_free();
             }
             drop(Box::from_raw(st as *mut Inner));
         }
@@ -611,11 +631,36 @@ pub(crate) mod test_hooks {
 
     std::thread_local! {
         static INSERT_FAILURES: Cell<usize> = const { Cell::new(0) };
+        static POP_FREE_PANIC: Cell<bool> = const { Cell::new(false) };
     }
 
     /// Make the next `OPENSSL_sk_insert` on this thread answer 0 without inserting.
     pub(crate) fn fail_next_insert() {
         INSERT_FAILURES.with(|n| n.set(1));
+    }
+
+    /// Disarms the `pop_free` injection when the test leaves scope, including on
+    /// a panic.
+    pub(crate) struct PopFreeArmed;
+
+    impl Drop for PopFreeArmed {
+        fn drop(&mut self) {
+            POP_FREE_PANIC.with(|f| f.set(false));
+        }
+    }
+
+    /// Panic after the first element's destructor has run in
+    /// `OPENSSL_sk_pop_free` on this thread. Test-only; absent from release.
+    pub(crate) fn arm_mid_pop_free() -> PopFreeArmed {
+        POP_FREE_PANIC.with(|f| f.set(true));
+        PopFreeArmed
+    }
+
+    #[allow(clippy::panic)] // the injected defect is the point of the hook
+    pub(crate) fn maybe_panic_mid_pop_free() {
+        if POP_FREE_PANIC.with(|f| f.replace(false)) {
+            panic!("injected defect: panic after an element was released");
+        }
     }
 
     /// Consume one pending fault, if any.
@@ -1089,6 +1134,98 @@ mod tests {
                 assert_eq!(s.items.capacity(), capacity, "the Vec reallocated");
                 OPENSSL_sk_free(st);
             }
+        }
+    }
+
+    /// What a caller-visible element must observe about its own release.
+    struct Probe {
+        released: core::cell::Cell<u32>,
+    }
+
+    /// A destructor that records the release instead of freeing, so a double release
+    /// is observable as a count of two rather than as undefined behaviour.
+    unsafe extern "C" fn record_release(p: *mut c_void) {
+        // `cast` is safe; the dereference below is the unsafe operation.
+        let probe = p.cast::<Probe>();
+        // SAFETY: every element in the tests below is a live `Probe`.
+        unsafe { (*probe).released.set((*probe).released.get() + 1) };
+    }
+
+    /// A defect that panics after one element has been released must not leave that
+    /// element reachable from the stack. Before the HAZ-16 fix the array was still
+    /// iterated in place, so `sk_num`/`sk_value` exposed a released element and a
+    /// retry of `pop_free` released it a second time.
+    #[test]
+    fn a_panic_during_pop_free_leaves_only_unreleased_elements_reachable() {
+        let _guard = crate::test_support::lock_global_state();
+        // SAFETY: the stack is this test's own allocation and both probes outlive it.
+        unsafe {
+            let first = Probe {
+                released: core::cell::Cell::new(0),
+            };
+            let second = Probe {
+                released: core::cell::Cell::new(0),
+            };
+            let st = OPENSSL_sk_new_null();
+            assert!(!st.is_null());
+            assert_eq!(OPENSSL_sk_push(st, (&raw const first).cast()), 1);
+            assert_eq!(OPENSSL_sk_push(st, (&raw const second).cast()), 2);
+
+            let before = crate::ffi::panics_caught();
+            let hook = test_hooks::arm_mid_pop_free();
+            OPENSSL_sk_pop_free(st, Some(record_release));
+            drop(hook);
+            assert_eq!(
+                crate::ffi::panics_caught(),
+                before + 1,
+                "the panic was caught at the FFI boundary"
+            );
+            assert_eq!(first.released.get(), 1, "the first destructor ran once");
+
+            // The strongest form of the finding would be a released element that
+            // `sk_value` still hands out. With removal before release it is gone.
+            assert_eq!(
+                OPENSSL_sk_num(st),
+                1,
+                "only the unprocessed element remains"
+            );
+            assert_eq!(
+                OPENSSL_sk_value(st, 0),
+                (&raw const second).cast::<c_void>() as *mut c_void,
+                "the reachable element is the one not yet released"
+            );
+            assert_eq!(second.released.get(), 0);
+
+            // A retry is legal and releases the remainder exactly once.
+            OPENSSL_sk_pop_free(st, Some(record_release));
+            assert_eq!(second.released.get(), 1);
+            assert_eq!(
+                first.released.get(),
+                1,
+                "the released element was not re-released"
+            );
+        }
+    }
+
+    /// Success path: without an injection every element is released once and the
+    /// stack itself is released.
+    #[test]
+    fn pop_free_releases_each_element_once_on_the_success_path() {
+        // SAFETY: the stack is this test's own allocation and both probes outlive it.
+        unsafe {
+            let first = Probe {
+                released: core::cell::Cell::new(0),
+            };
+            let second = Probe {
+                released: core::cell::Cell::new(0),
+            };
+            let st = OPENSSL_sk_new_null();
+            assert!(!st.is_null());
+            assert_eq!(OPENSSL_sk_push(st, (&raw const first).cast()), 1);
+            assert_eq!(OPENSSL_sk_push(st, (&raw const second).cast()), 2);
+            OPENSSL_sk_pop_free(st, Some(record_release));
+            assert_eq!(first.released.get(), 1);
+            assert_eq!(second.released.get(), 1);
         }
     }
 

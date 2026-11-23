@@ -44,8 +44,8 @@ use core::ffi::{c_int, c_ulong};
 
 use crate::bn::arith::{BN_mod_exp, BN_mod_mul};
 use crate::bn::bignum::{
-    as_mut, as_ref, parts_fallible, store, store_consttime, BN_copy, BN_dup, BN_free, BN_get_flags,
-    BN_new, BN_set_flags, BigNum,
+    as_mut, as_ref, parts_fallible, store, store_consttime, BN_clear_free, BN_copy, BN_dup,
+    BN_free, BN_get_flags, BN_new, BN_set_flags, BN_swap, BigNum,
 };
 use crate::bn::ctx::BnCtx;
 use crate::bn::limbs;
@@ -145,6 +145,74 @@ unsafe fn as_ref_blinding<'a>(p: *const Blinding) -> Option<&'a Blinding> {
     } else {
         // SAFETY: the caller's contract is exactly that a non-null `p` is live.
         Some(unsafe { &*p })
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// Failure-atomic publication helpers
+// ---------------------------------------------------------------------------------------------
+
+/// A `BIGNUM` this frame owns until it is either published into the blinding
+/// context or released by `Drop`.
+///
+/// The blinding factor and its inverse are secret, so **every** exit (return,
+/// early refusal, or a panic caught at the FFI boundary) has to cleanse the
+/// temporary rather than merely free it. `Drop` is the one exit that covers all
+/// three. A temporary is handed over with [`Self::take`] only at the commit
+/// point, after every fallible step has succeeded.
+struct TempBn(*mut BigNum);
+
+impl TempBn {
+    /// Own a freshly allocated value (ownership of `p` transfers to the guard).
+    fn new(p: *mut BigNum) -> Self {
+        Self(p)
+    }
+
+    /// The value, for the fallible steps that run before publication.
+    fn get(&self) -> *mut BigNum {
+        self.0
+    }
+
+    /// Give the value up to the caller, leaving this guard empty.
+    fn take(&mut self) -> *mut BigNum {
+        let p = self.0;
+        self.0 = core::ptr::null_mut();
+        p
+    }
+}
+
+impl Drop for TempBn {
+    fn drop(&mut self) {
+        // SAFETY: `self.0` is NULL or a value this guard still owns; `BN_clear_free`
+        // accepts NULL and cleanses the limbs it releases.
+        unsafe { BN_clear_free(self.0) };
+    }
+}
+
+/// Publish `src` into the member `slot` points at.
+///
+/// The old value (when there is one) is swapped into `src` and cleansed. The
+/// operation itself cannot fail, so a caller that reaches it has completed every
+/// fallible step and may treat publication as atomic.
+///
+/// # Safety
+///
+/// `slot` points at a `*mut BigNum` member of a live `Blinding`; `src` is a live
+/// `BIGNUM` whose ownership transfers to this function.
+unsafe fn publish_member(slot: *mut *mut BigNum, src: *mut BigNum) {
+    // SAFETY: `slot` is a live member per this function's contract.
+    let old = unsafe { *slot };
+    if old.is_null() {
+        // SAFETY: as above.
+        unsafe { *slot = src };
+    } else {
+        // SAFETY: `old` and `src` are distinct, live values; the swap is total
+        // and cannot panic, so the member never holds a half-written value.
+        unsafe { BN_swap(old, src) };
+        // `src` now holds the value that was published before; it is secret and
+        // is cleansed rather than merely freed.
+        // SAFETY: `src` is still owned by this frame.
+        unsafe { BN_clear_free(src) };
     }
 }
 
@@ -496,9 +564,27 @@ pub unsafe extern "C" fn BN_BLINDING_set_flags(b: *mut Blinding, flags: c_ulong)
 ///   re-creation is suppressed, so a `NO_RECREATE` context squares instead — the
 ///   authority's own shape, kept.
 ///
-/// The trailing `if (b->counter == BN_BLINDING_COUNTER) b->counter = 0;` is on the
-/// `err` path as well as the success path, and it is written here the same way:
-/// a failed re-creation still wraps the counter.
+/// ## Failure atomicity (HAZ-16)
+///
+/// The authority squares `Ai` and then `A` in place. If the second multiplication
+/// fails, or a defect panics between them, `Ai` holds the squared inverse while
+/// `A` still holds the unsquared factor: the pair is no longer an inverse pair,
+/// the factor's square has not been applied to the exponentiation, and the context
+/// still returns success. A later `convert`/`invert` pair then produces a value
+/// that is not the intended one while every call reports success — the strongest
+/// form of the hazard, because the object *looks* usable.
+///
+/// Both squares are therefore computed into temporary `BIGNUM`s and published only
+/// after both have succeeded. A failure or a panic before publication leaves the
+/// pair unchanged and rolls the counter back, so the next call sees the state it
+/// would have seen had this call not been attempted. The temporaries are
+/// `TempBn`s, so all three exits (success publication, early refusal, unwind)
+/// cleanse the secret values.
+///
+/// A failed re-creation is detected through the internal `create_param_impl`
+/// rather than through the exported wrapper's return pointer: for a non-null `b`
+/// the exported wrapper answers `b` even on failure, so the authority's
+/// `== NULL` test cannot see a failed re-creation at all.
 ///
 /// A null `b` is a null dereference in the authority (`b->A`). This crate refuses
 /// it at the site's own `NOT_INITIALIZED`, which is a graceful extension rather
@@ -527,42 +613,62 @@ pub unsafe extern "C" fn BN_BLINDING_update(b: *mut Blinding, ctx: *mut BnCtx) -
                 return 0;
             }
 
-            if (*bp).counter == -1 {
-                (*bp).counter = 0;
-            }
-
-            (*bp).counter += 1;
+            // The counter is a member of the object too, so it is committed (or
+            // rolled back) with the factor rather than before the fallible work.
+            let old_counter = (*bp).counter;
+            let next_counter = if old_counter == -1 { 0 } else { old_counter } + 1;
             let mut ok = true;
-            if (*bp).counter == BN_BLINDING_COUNTER
+            if next_counter == BN_BLINDING_COUNTER
                 && !(*bp).e.is_null()
                 && ((*bp).flags & BN_BLINDING_NO_RECREATE) == 0
             {
                 // The authority's `BN_BLINDING_create_param(b, NULL, NULL, ctx,
                 // NULL, NULL)`: the exponent and modulus stay this context's own.
-                if BN_BLINDING_create_param(
-                    bp,
-                    core::ptr::null(),
-                    core::ptr::null_mut(),
-                    ctx,
-                    None,
-                    core::ptr::null_mut(),
-                )
-                .is_null()
-                {
-                    ok = false;
-                }
+                // The internal form reports failure directly; the exported wrapper
+                // answers `b` for a non-null `b` and so cannot be used here.
+                ok = create_param_impl(bp, core::ptr::null(), None, core::ptr::null_mut(), ctx);
             } else if ((*bp).flags & BN_BLINDING_NO_UPDATE) == 0 {
-                if !(*bp).m_ctx.is_null() {
-                    ok = BN_mod_mul_montgomery((*bp).ai, (*bp).ai, (*bp).ai, (*bp).m_ctx, ctx) != 0
-                        && BN_mod_mul_montgomery((*bp).a, (*bp).a, (*bp).a, (*bp).m_ctx, ctx) != 0;
+                let mut sq = TempBn::new(BN_new());
+                let mut inv_sq = TempBn::new(BN_new());
+                if sq.get().is_null() || inv_sq.get().is_null() {
+                    ok = false;
                 } else {
-                    ok = BN_mod_mul((*bp).ai, (*bp).ai, (*bp).ai, (*bp).mod_, ctx) != 0
-                        && BN_mod_mul((*bp).a, (*bp).a, (*bp).a, (*bp).mod_, ctx) != 0;
+                    let first = if !(*bp).m_ctx.is_null() {
+                        BN_mod_mul_montgomery(inv_sq.get(), (*bp).ai, (*bp).ai, (*bp).m_ctx, ctx)
+                            != 0
+                    } else {
+                        BN_mod_mul(inv_sq.get(), (*bp).ai, (*bp).ai, (*bp).mod_, ctx) != 0
+                    };
+                    #[cfg(test)]
+                    test_hooks::maybe_panic_between_blinding_squares();
+                    let second = first
+                        && if !(*bp).m_ctx.is_null() {
+                            BN_mod_mul_montgomery(sq.get(), (*bp).a, (*bp).a, (*bp).m_ctx, ctx) != 0
+                        } else {
+                            BN_mod_mul(sq.get(), (*bp).a, (*bp).a, (*bp).mod_, ctx) != 0
+                        };
+                    if second {
+                        // Publication is the first observable change; it cannot
+                        // fail, so the pair is never half-updated.
+                        publish_member(core::ptr::addr_of_mut!((*bp).ai), inv_sq.take());
+                        publish_member(core::ptr::addr_of_mut!((*bp).a), sq.take());
+                    } else {
+                        ok = false;
+                    }
                 }
             }
 
-            if (*bp).counter == BN_BLINDING_COUNTER {
-                (*bp).counter = 0;
+            if ok {
+                (*bp).counter = if next_counter == BN_BLINDING_COUNTER {
+                    0
+                } else {
+                    next_counter
+                };
+            } else {
+                // Failure-atomic: the counter did not advance for work that did
+                // not commit. The authority advances it on its error path, which
+                // makes a later retry skip a generation.
+                (*bp).counter = old_counter;
             }
             c_int::from(ok)
         }
@@ -729,8 +835,22 @@ unsafe fn int_bn_mod_inverse(dst: *mut BigNum, a: *const BigNum, n: *const BigNu
 ///   fails the `ret->e == NULL` test. Neither raises anything, so an empty error
 ///   queue is the observable.
 /// * When `b` is non-NULL the context is the caller's and every failure answers
-///   **`b` itself**, partly initialised, with nothing freed. That asymmetry is the
-///   authority's `err: if (b == NULL) {...}` and is kept.
+///   **`b` itself**, with nothing freed. That asymmetry is the authority's
+///   `err: if (b == NULL) {...}` and is kept.
+///
+/// ## Failure atomicity (HAZ-16)
+///
+/// The authority writes the fresh factor into `b->a` before it has computed the
+/// inverse, and replaces `b->e` before the exponentiation. A failure or a panic
+/// in between leaves `a` and `ai` as a non-inverse pair, or an exponent that does
+/// not match the factor, while the function still answers `b` itself — the
+/// partially updated object is what the caller goes on to use.
+///
+/// The conversion therefore computes every fallible step into temporaries and
+/// publishes `a`, `ai` and `e` only after all of them have succeeded. A failure
+/// leaves `b` exactly as it was, which is a deliberate safety improvement over the
+/// authority's partly initialised result; the return value (and therefore the
+/// caller-visible success/failure protocol) is unchanged.
 ///
 /// # Safety
 ///
@@ -763,83 +883,10 @@ pub unsafe extern "C" fn BN_BLINDING_create_param(
             return core::ptr::null_mut();
         }
 
-        let ok = (|| -> bool {
-            // SAFETY: `ret` is non-null and live, either from `BN_BLINDING_new`
-            // above or from the caller; every access below is a read or write of one
-            // of its members, each of which is null-or-live.
-            unsafe {
-                if (*ret).a.is_null() {
-                    (*ret).a = BN_new();
-                }
-                if (*ret).a.is_null() {
-                    return false;
-                }
-                if (*ret).ai.is_null() {
-                    (*ret).ai = BN_new();
-                }
-                if (*ret).ai.is_null() {
-                    return false;
-                }
-
-                if !e.is_null() {
-                    BN_free((*ret).e);
-                    (*ret).e = BN_dup(e);
-                }
-                if (*ret).e.is_null() {
-                    return false;
-                }
-
-                if bn_mod_exp.is_some() {
-                    (*ret).bn_mod_exp = bn_mod_exp;
-                }
-                if !m_ctx.is_null() {
-                    (*ret).m_ctx = m_ctx;
-                }
-
-                let mut retry_counter: c_int = 32;
-                loop {
-                    if BN_priv_rand_range_ex((*ret).a, (*ret).mod_, 0, ctx) == 0 {
-                        return false;
-                    }
-                    if !int_bn_mod_inverse((*ret).ai, (*ret).a, (*ret).mod_) {
-                        break;
-                    }
-                    // The authority's `if (!rv) goto err;`: `pnoinv == 0` with a
-                    // NULL return. See `int_bn_mod_inverse` above — reachable there
-                    // and not here.
-                    if retry_counter == 0 {
-                        raise_site(&BN_BLIND_283);
-                        return false;
-                    }
-                    retry_counter -= 1;
-                }
-
-                let used_mont_exp = match (*ret).bn_mod_exp {
-                    // SAFETY: the pointer was installed by this function from the
-                    // caller's argument, whose contract says it is safe to call with
-                    // these arguments, and `m_ctx` is the caller's live context.
-                    Some(f) if !(*ret).m_ctx.is_null() => {
-                        if f((*ret).a, (*ret).a, (*ret).e, (*ret).mod_, ctx, (*ret).m_ctx) == 0 {
-                            return false;
-                        }
-                        true
-                    }
-                    _ => false,
-                };
-                if !used_mont_exp && BN_mod_exp((*ret).a, (*ret).a, (*ret).e, (*ret).mod_, ctx) == 0
-                {
-                    return false;
-                }
-
-                if !(*ret).m_ctx.is_null()
-                    && (BN_to_montgomery((*ret).ai, (*ret).ai, (*ret).m_ctx, ctx) == 0
-                        || BN_to_montgomery((*ret).a, (*ret).a, (*ret).m_ctx, ctx) == 0)
-                {
-                    return false;
-                }
-                true
-            }
-        })();
+        // SAFETY: `ret` is non-null and live, either from `BN_BLINDING_new` above
+        // or from the caller; `create_param_impl` treats every member as
+        // null-or-live.
+        let ok = unsafe { create_param_impl(ret, e, bn_mod_exp, m_ctx, ctx) };
 
         if !ok && b.is_null() {
             // SAFETY: `ret` is the object `BN_BLINDING_new` returned and nothing
@@ -849,6 +896,180 @@ pub unsafe extern "C" fn BN_BLINDING_create_param(
         }
         ret
     })
+}
+
+/// The body of `BN_BLINDING_create_param`, with a `bool` outcome so callers that
+/// cannot use the exported wrapper's return pointer (see [`BN_BLINDING_update`])
+/// can still tell success from failure.
+///
+/// Every fallible step runs against `TempBn` locals and a fresh `e` duplicate;
+/// nothing in `ret` changes until all of them have succeeded.
+///
+/// # Safety
+///
+/// `ret` is a live `Blinding`; `e` is null or live; `ctx` is null or a live
+/// `BN_CTX`; `bn_mod_exp`, when present, is safe to call with the arguments below;
+/// `m_ctx` is null or a live Montgomery context. Ownership of `ret`'s current
+/// members remains with `ret`.
+unsafe fn create_param_impl(
+    ret: *mut Blinding,
+    e: *const BigNum,
+    bn_mod_exp: BnModExp,
+    m_ctx: *mut MontCtx,
+    ctx: *mut BnCtx,
+) -> bool {
+    // SAFETY: every pointer read below is null-or-live per this function's
+    // contract, and every write is to a member of `ret` this frame may mutate.
+    unsafe {
+        let mut a = TempBn::new(BN_new());
+        let mut ai = TempBn::new(BN_new());
+        if a.get().is_null() || ai.get().is_null() {
+            return false;
+        }
+
+        // The exponent the calculation uses: a fresh duplicate when the caller
+        // supplied one, otherwise the context's existing exponent.
+        let mut new_e = TempBn::new(core::ptr::null_mut());
+        if !e.is_null() {
+            new_e = TempBn::new(BN_dup(e));
+            if new_e.get().is_null() {
+                return false;
+            }
+        }
+        let e_eff = if new_e.get().is_null() {
+            (*ret).e
+        } else {
+            new_e.get()
+        };
+        // The authority's `ret->e == NULL` test: a NULL exponent fails silently
+        // (no site is raised), and it must fail *before* any publication.
+        if e_eff.is_null() {
+            return false;
+        }
+
+        // Effective dispatch: the arguments to this call win when present, and
+        // the context's own members are the fallback. Publishing them is deferred
+        // to the commit point below.
+        let exp_eff = if bn_mod_exp.is_some() {
+            bn_mod_exp
+        } else {
+            (*ret).bn_mod_exp
+        };
+        let mctx_eff = if m_ctx.is_null() { (*ret).m_ctx } else { m_ctx };
+
+        let mut retry_counter: c_int = 32;
+        loop {
+            if BN_priv_rand_range_ex(a.get(), (*ret).mod_, 0, ctx) == 0 {
+                return false;
+            }
+            #[cfg(test)]
+            test_hooks::maybe_panic_after_blinding_draw();
+            if !int_bn_mod_inverse(ai.get(), a.get(), (*ret).mod_) {
+                break;
+            }
+            // The authority's `if (!rv) goto err;`: `pnoinv == 0` with a NULL
+            // return. See `int_bn_mod_inverse` above — reachable there and not
+            // here.
+            if retry_counter == 0 {
+                raise_site(&BN_BLIND_283);
+                return false;
+            }
+            retry_counter -= 1;
+        }
+
+        let used_mont_exp = match exp_eff {
+            // SAFETY: the pointer was installed by the caller, whose contract says
+            // it is safe to call with these arguments, and `mctx_eff` is live.
+            Some(f) if !mctx_eff.is_null() => {
+                if f(a.get(), a.get(), e_eff, (*ret).mod_, ctx, mctx_eff) == 0 {
+                    return false;
+                }
+                true
+            }
+            _ => false,
+        };
+        if !used_mont_exp && BN_mod_exp(a.get(), a.get(), e_eff, (*ret).mod_, ctx) == 0 {
+            return false;
+        }
+
+        if !mctx_eff.is_null()
+            && (BN_to_montgomery(ai.get(), ai.get(), mctx_eff, ctx) == 0
+                || BN_to_montgomery(a.get(), a.get(), mctx_eff, ctx) == 0)
+        {
+            return false;
+        }
+
+        // Commit. Every fallible step has succeeded, and each publication below is
+        // a total operation, so no observer can see a half-updated context.
+        publish_member(core::ptr::addr_of_mut!((*ret).a), a.take());
+        publish_member(core::ptr::addr_of_mut!((*ret).ai), ai.take());
+        if !new_e.get().is_null() {
+            BN_free((*ret).e);
+            (*ret).e = new_e.take();
+        }
+        if bn_mod_exp.is_some() {
+            (*ret).bn_mod_exp = bn_mod_exp;
+        }
+        if !m_ctx.is_null() {
+            (*ret).m_ctx = m_ctx;
+        }
+        true
+    }
+}
+
+/// Test-only panic injection for the two HAZ-16 failure-atomicity controls.
+///
+/// The hooks are thread-local and `#[cfg(test)]`-only, so they are absent from
+/// release behaviour and cannot make one test's injection visible to another.
+/// They model a defect that panics at the point where the authority has already
+/// mutated part of the context; they are not part of any production path.
+#[cfg(test)]
+pub(crate) mod test_hooks {
+    use core::cell::Cell;
+
+    std::thread_local! {
+        static BETWEEN_SQUARES: Cell<bool> = const { Cell::new(false) };
+        static AFTER_DRAW: Cell<bool> = const { Cell::new(false) };
+    }
+
+    /// Disarms the hook when the test leaves scope, including on a panic.
+    pub(crate) struct Armed;
+
+    impl Drop for Armed {
+        fn drop(&mut self) {
+            BETWEEN_SQUARES.with(|f| f.set(false));
+            AFTER_DRAW.with(|f| f.set(false));
+        }
+    }
+
+    /// Panic between the inverse square and the factor square in
+    /// `BN_BLINDING_update`, after the first in-place-style mutation would have
+    /// happened.
+    pub(crate) fn arm_between_squares() -> Armed {
+        BETWEEN_SQUARES.with(|f| f.set(true));
+        Armed
+    }
+
+    /// Panic after the fresh factor draw in `BN_BLINDING_create_param`, before the
+    /// inverse is computed.
+    pub(crate) fn arm_after_draw() -> Armed {
+        AFTER_DRAW.with(|f| f.set(true));
+        Armed
+    }
+
+    #[allow(clippy::panic)] // the injected defect is the point of the hook
+    pub(crate) fn maybe_panic_between_blinding_squares() {
+        if BETWEEN_SQUARES.with(|f| f.replace(false)) {
+            panic!("injected defect: panic between the blinding squares");
+        }
+    }
+
+    #[allow(clippy::panic)] // the injected defect is the point of the hook
+    pub(crate) fn maybe_panic_after_blinding_draw() {
+        if AFTER_DRAW.with(|f| f.replace(false)) {
+            panic!("injected defect: panic after the blinding draw");
+        }
+    }
 }
 
 #[cfg(test)]
@@ -1305,6 +1526,224 @@ mod tests {
             unsafe { BN_BLINDING_new(core::ptr::null(), core::ptr::null(), core::ptr::null_mut()) };
         assert!(b.is_null());
         assert_eq!(ERR_peek_error(), 0, "the failure raises nothing");
+    }
+
+    /// Run one caller-shaped round trip: `convert_ex`, exponentiate by `d`,
+    /// `invert_ex`. Answers true when the blinding cancelled, which is the only
+    /// property a caller of a blinding context depends on.
+    ///
+    /// # Safety
+    /// Every pointer is live; `b` is a live blinding context and `ctx` a live
+    /// `BN_CTX`.
+    unsafe fn round_trip_cancels(
+        b: *mut Blinding,
+        m: *mut BigNum,
+        d: *mut BigNum,
+        ctx: *mut BnCtx,
+        keep: *mut BigNum,
+        expect: *mut BigNum,
+    ) -> bool {
+        // SAFETY: `BN_new` takes no pointers.
+        let n = unsafe { BN_new() };
+        // SAFETY: `BN_new` takes no pointers.
+        let r = unsafe { BN_new() };
+        // SAFETY: every pointer is live per this helper's contract.
+        unsafe {
+            let ok = BN_copy(n, keep) == n
+                && BN_BLINDING_convert_ex(n, r, b, ctx) == 1
+                && BN_mod_exp(n, n, d, m, ctx) == 1
+                && BN_BLINDING_invert_ex(n, r, b, ctx) == 1
+                && BN_cmp(n, expect) == 0;
+            BN_free(r);
+            BN_free(n);
+            ok
+        }
+    }
+
+    /// A defect that panics between the two blinding squares must leave the factor
+    /// and its inverse as they were. Before the HAZ-16 fix the inverse had already
+    /// been replaced, so both `BN_BLINDING_update` and the next `convert`/`invert`
+    /// pair reported success while producing a value that does not cancel.
+    #[test]
+    fn a_panic_between_the_blinding_squares_leaves_the_factor_pair_usable() {
+        let _guard = crate::test_support::lock_global_state();
+        let m = hex(MODULUS);
+        let e = hex("010001");
+        let d = hex(PRIVATE_EXPONENT);
+        let expect = hex("00");
+        let keep = hex("123456789abcdef0fedcba9876543210");
+        // SAFETY: `BN_CTX_new` takes no pointers.
+        let ctx = unsafe { BN_CTX_new() };
+        // SAFETY: every argument is live.
+        let b = unsafe {
+            BN_BLINDING_create_param(
+                core::ptr::null_mut(),
+                e,
+                m,
+                ctx,
+                None,
+                core::ptr::null_mut(),
+            )
+        };
+        assert!(!b.is_null());
+        // SAFETY: all four are live.
+        unsafe { assert_eq!(BN_mod_exp(expect, keep, d, m, ctx), 1) };
+        // The control before the injection: the pair is a working one.
+        // SAFETY: every pointer is live.
+        assert!(unsafe { round_trip_cancels(b, m, d, ctx, keep, expect) });
+
+        let before = crate::ffi::panics_caught();
+        let hook = test_hooks::arm_between_squares();
+        // SAFETY: `b` and `ctx` are live; the hook fires between the two squares.
+        let rc = unsafe { BN_BLINDING_update(b, ctx) };
+        drop(hook);
+        assert_eq!(rc, 0, "the boundary returned the documented failure value");
+        assert_eq!(
+            crate::ffi::panics_caught(),
+            before + 1,
+            "the panic was caught at the FFI boundary"
+        );
+
+        // The strongest form of the finding would be a context that answered 1
+        // here and produced a wrong value. With publication deferred, the pair is
+        // unchanged and the round trip still cancels.
+        // SAFETY: every pointer is live.
+        assert!(unsafe { round_trip_cancels(b, m, d, ctx, keep, expect) });
+        // A retry of the interrupted operation is also legal and succeeds.
+        // SAFETY: `b` and `ctx` are live.
+        assert_eq!(unsafe { BN_BLINDING_update(b, ctx) }, 1);
+
+        // SAFETY: all four were allocated in this test.
+        unsafe {
+            BN_BLINDING_free(b);
+            BN_CTX_free(ctx);
+            BN_free(keep);
+            BN_free(expect);
+            BN_free(d);
+            BN_free(e);
+            BN_free(m);
+        }
+    }
+
+    /// A defect that panics after `BN_BLINDING_create_param` has drawn a fresh
+    /// factor, but before it has computed the inverse, must not publish that
+    /// factor. Before the HAZ-16 fix the caller's context held the new factor with
+    /// the *old* inverse and still answered `b` (and the boundary answered NULL),
+    /// so every later use produced a value that does not cancel.
+    #[test]
+    fn a_panic_after_the_blinding_draw_does_not_publish_the_new_factor() {
+        let _guard = crate::test_support::lock_global_state();
+        let m = hex(MODULUS);
+        let e = hex("010001");
+        let d = hex(PRIVATE_EXPONENT);
+        let expect = hex("00");
+        let keep = hex("123456789abcdef0fedcba9876543210");
+        // SAFETY: `BN_CTX_new` takes no pointers.
+        let ctx = unsafe { BN_CTX_new() };
+        // SAFETY: every argument is live.
+        let b = unsafe {
+            BN_BLINDING_create_param(
+                core::ptr::null_mut(),
+                e,
+                m,
+                ctx,
+                None,
+                core::ptr::null_mut(),
+            )
+        };
+        assert!(!b.is_null());
+        // SAFETY: all four are live.
+        unsafe { assert_eq!(BN_mod_exp(expect, keep, d, m, ctx), 1) };
+        // SAFETY: every pointer is live.
+        assert!(unsafe { round_trip_cancels(b, m, d, ctx, keep, expect) });
+
+        let before = crate::ffi::panics_caught();
+        let hook = test_hooks::arm_after_draw();
+        // SAFETY: `b`, `e` and `ctx` are live; `m` is not used on this arm.
+        let ret = unsafe {
+            BN_BLINDING_create_param(
+                b,
+                e,
+                core::ptr::null_mut(),
+                ctx,
+                None,
+                core::ptr::null_mut(),
+            )
+        };
+        drop(hook);
+        assert!(ret.is_null(), "the boundary returned its failure value");
+        assert_eq!(
+            crate::ffi::panics_caught(),
+            before + 1,
+            "the panic was caught at the FFI boundary"
+        );
+
+        // The caller still owns `b` and may keep using it. The factor it held
+        // before the interrupted call is still the one that cancels.
+        // SAFETY: every pointer is live.
+        assert!(unsafe { round_trip_cancels(b, m, d, ctx, keep, expect) });
+
+        // SAFETY: all four were allocated in this test.
+        unsafe {
+            BN_BLINDING_free(b);
+            BN_CTX_free(ctx);
+            BN_free(keep);
+            BN_free(expect);
+            BN_free(d);
+            BN_free(e);
+            BN_free(m);
+        }
+    }
+
+    /// Success path of `BN_BLINDING_create_param` on a caller-supplied context: it
+    /// answers the same context and installs a factor pair that cancels.
+    #[test]
+    fn create_param_on_an_existing_context_still_publishes_a_cancelling_pair() {
+        let m = hex(MODULUS);
+        let e = hex("010001");
+        let d = hex(PRIVATE_EXPONENT);
+        let expect = hex("00");
+        let keep = hex("123456789abcdef0fedcba9876543210");
+        // SAFETY: `BN_CTX_new` takes no pointers.
+        let ctx = unsafe { BN_CTX_new() };
+        // SAFETY: every argument is live.
+        let b = unsafe {
+            BN_BLINDING_create_param(
+                core::ptr::null_mut(),
+                e,
+                m,
+                ctx,
+                None,
+                core::ptr::null_mut(),
+            )
+        };
+        assert!(!b.is_null());
+        // SAFETY: all four are live.
+        unsafe { assert_eq!(BN_mod_exp(expect, keep, d, m, ctx), 1) };
+        // SAFETY: `b`, `e` and `ctx` are live; `m` is not used on this arm.
+        let ret = unsafe {
+            BN_BLINDING_create_param(
+                b,
+                e,
+                core::ptr::null_mut(),
+                ctx,
+                None,
+                core::ptr::null_mut(),
+            )
+        };
+        assert_eq!(ret, b, "a non-null context is answered unchanged");
+        // SAFETY: every pointer is live.
+        assert!(unsafe { round_trip_cancels(b, m, d, ctx, keep, expect) });
+        // SAFETY: all four were allocated in this test.
+        unsafe {
+            BN_BLINDING_free(b);
+            BN_CTX_free(ctx);
+            BN_free(keep);
+            BN_free(expect);
+            BN_free(d);
+            BN_free(e);
+            BN_free(m);
+        }
     }
 
     /// The consttime flag on the caller's modulus is carried onto the duplicate,

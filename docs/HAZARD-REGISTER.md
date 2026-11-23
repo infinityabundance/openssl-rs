@@ -99,19 +99,33 @@ the difference:
 | `HAZ-13` | Allocator hook re-enters the error subsystem | `runtime_mem` | class 3 | class 3 | `CLAIMED_NO_EVIDENCE` |
 | `HAZ-14` | Verify callback mutates state the walk is reading | `x509` | class 3 | class 3 | `CLAIMED_NO_EVIDENCE` |
 | `HAZ-15` | External-key PKCS#1 v1.5 decryption where the authority has no implicit rejection | `rsa` | class 2 | class 2 | **`EVIDENCED`** |
-| `HAZ-16` | Panic at the FFI boundary leaves partially mutated state | `runtime_mem` | class 2 | class 2 | **`BARRIER_ABSENT`** |
+| `HAZ-16` | Panic at the FFI boundary leaves partially mutated state | `runtime_mem` | class 2 | class 2 | `CLAIMED_NO_EVIDENCE` |
 | `HAZ-17` | Hostile certificate exhausts stack, time or memory | `x509` | class 2 | class 2 | `CLAIMED_NO_EVIDENCE` |
 | `HAZ-18` | Consumer confuses a verification error with a valid signature | `evp` | class 3 | class 3 | **`BARRIER_ABSENT`** |
 | `HAZ-19` | Shared object freed or method changed under a live operation | `bn` | class 3 | class 3 | `CLAIMED_NO_EVIDENCE` |
 | `HAZ-20` | BIO callback writes through a non-BIO `cb_arg` | `bio` | class 3 | class 3 | **`BARRIER_ABSENT`** |
 
 Counts: 20 hazards; 8 legal-triggered, 8 class-2-triggered, 7 class-3-triggered;
-16 `CLAIMED_NO_EVIDENCE`, 3 `BARRIER_ABSENT`, 1 `EVIDENCED`. The one evidenced
+17 `CLAIMED_NO_EVIDENCE`, 2 `BARRIER_ABSENT`, 1 `EVIDENCED`. The one evidenced
 barrier is `HAZ-15`: the external-key PKCS#1 v1.5 arm takes the implicit-rejection
 check and derives the KDK from the decrypted block, so the refusal is no longer
 observable. The receipt is `evidence/haz-15/observables.json`; its evidence
 identity settles at the commit that adds it (a declared class-8 orphan until then),
 and an independent adjudication is still required before the obligation closes.
+
+**HAZ-16 progress.** The barrier is no longer absent, but it is also not
+claimed complete. A reproducible enumeration found 823 `guard_ffi`-wrapped
+mutation candidates across the crate; 79 in the nine security-relevant object
+owners were classified (`docs/FFI-FAILURE-ATOMICITY.md`,
+`evidence/haz-16/CLASSIFICATION.json`): 72 `FAILURE_ATOMIC`, 3 `ROLLBACK`,
+1 `POISONED`, 3 `PARTIAL_EXPOSED`. Three entries were repaired to
+failure-atomic publication (`BN_BLINDING_update`, `BN_BLINDING_create_param`)
+and remove-before-release (`OPENSSL_sk_pop_free`), each with a test-only panic
+injection and a recorded revert control. The remaining 744 candidates are
+`NOT_AUDITED`; the three `CRYPTO_EX_DATA` rows remain partial; `evp`, `rsa`,
+`ec` and `x509` do not call `guard_ffi`, so a panic there aborts at the C
+boundary and is a different, unanalysed defect class. `OBL-PANIC-ATOMICITY`
+stays open and still blocks `REL-OPENSSH-B85C`.
 
 ## 4. Fault trees
 
@@ -262,7 +276,7 @@ but has no receipt (`CLAIMED_NO_EVIDENCE`), and an absent control (`NONE`).
 | FMEA-26 | cached extension | callback mutates in place | TE-8 | HIGH | none | NONE | NONE | stated residual |
 | FMEA-27 | ASN.1 decoder | hostile nesting | TE-5 | MEDIUM | depth caps | NONE | CLAIMED_NO_EVIDENCE | no resource measurement |
 | FMEA-28 | X.509 policy tree | OOM mid-construction | TE-4 | HIGH | `OwnedTree`/`OwnedLevels` | NONE | CLAIMED_NO_EVIDENCE | unit test, not receipt |
-| FMEA-29 | `guard_ffi` | panic interrupts state | TE-4, TE-6 | HIGH | non-unwinding only | NONE | CLAIMED_NO_EVIDENCE | no atomicity |
+| FMEA-29 | `guard_ffi` | panic interrupts state | TE-4, TE-6 | HIGH | non-unwinding plus three failure-atomic repairs (HAZ-16) | NONE | CLAIMED_NO_EVIDENCE | 744 candidates `NOT_AUDITED`; three `CRYPTO_EX_DATA` rows partial; `evp`/`rsa`/`ec`/`x509` abort path unanalysed |
 | FMEA-30 | ownership adoption | wrong provenance or release | TE-8 | HIGH | unsafe adoption contracts | NONE | CLAIMED_NO_EVIDENCE | no provenance audit |
 
 **Population of `CLAIMED_NO_EVIDENCE`:** 22 rows. **Absent controls
@@ -308,7 +322,7 @@ reentrancy edge of `AGENTS.md` §21.
 | UCA-05 | CS-KERNEL | return the v1.5 padding verdict for an external key | the key has `RSA_FLAG_EXT_PKEY` | padding oracle | HAZ-15 | implicit rejection; KDK from the decrypted block (`D-RSA-EXTKEY-ORACLE-1`) |
 | UCA-06 | CS-KERNEL | return a prepared-domain result | the context belongs to another modulus | silent wrong result | HAZ-10 | `context_matches` |
 | UCA-07 | CS-KERNEL | return a CRT result | a fault occurs in one CRT half | faulty signature | HAZ-09 | congruence check + fallback |
-| UCA-08 | CS-API | catch a panic and return the failure value | the operation already mutated a context | half-applied state | HAZ-16 | non-unwinding only |
+| UCA-08 | CS-API | catch a panic and return the failure value | the operation already mutated a context | half-applied state | HAZ-16 | non-unwinding plus the three failure-atomic repairs; the rest of the surface is unclassified |
 | UCA-09 | CS-EVP | return a verification status | a consumer tests non-zero as success | acceptance of an unverified signature | HAZ-18 | documented contract only |
 | UCA-10 | CS-CB | write the debug trace through `cb_arg` | `cb_arg` is not a `BIO *` | write through an arbitrary pointer | HAZ-20 | none |
 | UCA-11 | CS-ALLOC | abort when an infallible allocation fails | the secret-bearing BN path allocates while memory is exhausted | denial of service | HAZ-03 | partially fallible |
