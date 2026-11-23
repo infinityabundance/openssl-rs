@@ -338,7 +338,7 @@ reentrancy edge of `AGENTS.md` §21.
 | id | controller | control action | context | loss | hazards | barrier |
 |---|---|---|---|---|---|---|
 | UCA-01 | CS-API | publish a handle whose lifetime is the caller's | another thread frees the owner or changes its method | use after free / data race | HAZ-19 | atomic slot only; precondition unenforced |
-| UCA-02 | CS-API | invoke an application callback holding a reference into a stack or extension | the callback releases, replaces or mutates that object | dangling view | HAZ-06 | x509 snapshot; no BIO or extension-content barrier |
+| UCA-02 | CS-API | invoke an application callback holding a reference into a stack or extension | the callback releases, replaces or mutates that object | dangling view | HAZ-06 | x509 snapshot; the `OPENSSL_STACK` destructor holds no view because it detaches the element array before the first callback, so a mutation during destruction is defined (its element is leaked), while a destructor that releases the stack it runs on or frees a sibling is class 3 (`UB_NOT_CLAIMED_SAFE`, `evidence/haz-15/CALLBACK-CONTRACT.md`); no BIO or extension-content barrier |
 | UCA-03 | CS-ALLOC | call the installed hook while ERR holds the thread's state | the hook calls the ERR API on the same thread | second mutable borrow | HAZ-13 | B34 guard fails closed |
 | UCA-04 | CS-KERNEL | exponentiate with blinding disabled | the application disabled blinding or it could not be built | timing channel | HAZ-08 | default-on only |
 | UCA-05 | CS-KERNEL | return the v1.5 padding verdict for an external key | the key has `RSA_FLAG_EXT_PKEY` | padding oracle | HAZ-15 | implicit rejection with a secret-keyed KDK; the returned length remains a channel (`D-RSA-EXTKEY-ORACLE-1`) |
@@ -435,6 +435,21 @@ obligation still blocks the b85c graduation until they exist. The first-use
 secret initialisation no longer holds its lock across the application RNG
 callback; that deadlock repair is separate from the oracle.
 
+**Callback contract (2026-11-23, `evidence/haz-15/CALLBACK-CONTRACT.md`).** The
+classes that reach the first-use path and the stack destructor are now
+classified one by one: mutation during `OPENSSL_sk_pop_free` is supported but a
+destructor that inserts leaks its element; a destructor that releases the stack
+it runs on, and a destructor that frees a sibling, are class 3
+(`UB_NOT_CLAIMED_SAFE`) with the caller obligation stated; re-entry for the
+object mid-initialisation and destruction of that object from the RNG callback
+answer defined refusals. Panic injection covers five points of the secret path
+and every destructor position of `pop_free`; it found a guard/lock ordering that
+deadlocked on unwind and the ordering is repaired. The store's reachable
+interleavings are explored by a deterministic model
+(`evidence/haz-15/STATE-MACHINE.md`), not by Loom. None of this changes the
+returned-length channel, so `HAZ-15` stays `CLAIMED_NO_EVIDENCE` and
+`OBL-RSA-EXTKEY-ORACLE` stays open.
+
 ## 8. Register integration with the T1 graph
 
 The register does not fork a second model. Each hazard is a `hazard` node in
@@ -459,7 +474,7 @@ ETP-T2 adds the following nodes and edges to the T1 seed:
 |---|---|
 | `REQ-CORR-01` | "a cryptographic result is correct or the operation fails"; the existing requirement set had no node for correctness, so `HAZ-10` and `HAZ-18` would have had no requirement to motivate |
 | `IMP-BN-MONT` (+ file artefact) | `src/bn/mont.rs` is the mechanism behind `HAZ-10` and had no implementation node |
-| `OBL-RSA-EXTKEY-ORACLE` | `HAZ-15` has no evidenced barrier: the content oracle is corrected, but the returned length remains a channel (2,048-block measurement, per-ciphertext probability of order `1/246`); the obligation stays open for an independent adjudication and the consumer replay, and still blocks `REL-OPENSSH-B85C` |
+| `OBL-RSA-EXTKEY-ORACLE` | `HAZ-15` has no evidenced barrier: the content oracle is corrected, but the returned length remains a channel (2,048-block measurement, per-ciphertext probability of order `1/246`); the obligation stays open for an independent adjudication and the consumer replay, and still blocks `REL-OPENSSH-B85C`. The callback contract and the first-use state-machine exploration of the 2026-11-23 follow-up do not close it |
 | `OBL-PANIC-ATOMICITY` | `HAZ-16` has no barrier; the obligation blocks `REL-OPENSSH-B85C` |
 | `OBL-VERIFY-RETURN-POLARITY` | `HAZ-18` has no barrier; the obligation is recorded without a release block because no in-scope consumer is shown to mishandle the return |
 | `REQ-CORR-01` in the b85c scope | a `SAFE_COMPATIBLE` graduation that does not include correctness is not a safety claim |

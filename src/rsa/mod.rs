@@ -107,6 +107,10 @@ pub(crate) mod backend;
 // Phase 8's `crypto/rsa/rsa_sp800_56b_check.c` (D391): the SP800-56B key validators, ten functions.
 pub(crate) mod check;
 pub mod ctrl;
+// Test-only interleaving model of the external-key first-use secret store; it is
+// never compiled into a release build (see `evidence/haz-15/STATE-MACHINE.md`).
+#[cfg(test)]
+pub(crate) mod ext_kdk_model;
 pub mod gen;
 mod mp;
 pub(crate) mod mp_names;

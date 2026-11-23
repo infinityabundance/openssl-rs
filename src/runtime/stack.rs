@@ -469,6 +469,13 @@ pub unsafe extern "C" fn OPENSSL_sk_free(st: *mut OpenSslStack) {
         // SAFETY: `st` came from this module's constructors and is not used
         // again by the caller.
         unsafe {
+            // Test-only negative control: a release requested for the stack whose
+            // own `pop_free` loop is still running is withheld and recorded.
+            // Unarmed (every ordinary build and test) this is `true`.
+            #[cfg(test)]
+            if !test_hooks::permit_release(st) {
+                return;
+            }
             drop(Box::from_raw(st as *mut Inner));
         }
     })
@@ -526,22 +533,33 @@ pub unsafe extern "C" fn OPENSSL_sk_pop_free(st: *mut OpenSslStack, func: Option
             };
             // Forward iteration over the detached array: the authority's order,
             // with every element already unreachable from the stack.
-            for item in items {
-                if item.is_null() {
-                    continue;
-                }
-                let elem = item as *mut c_void;
-                match (thunk, func) {
-                    // The generated adapter runs the typed destructor.
-                    (Some(t), f) => t(f, elem),
-                    (None, Some(f)) => f(elem),
-                    // The authority calls a NULL function pointer here. That is
-                    // a fault, not a failure: the element is left untouched and
-                    // the divergence is recorded.
-                    (None, None) => {}
-                }
+            {
+                // Test-only: records the stack whose destructor loop is running so
+                // the release canary can recognise a re-entrant release of it.
                 #[cfg(test)]
-                test_hooks::maybe_panic_mid_pop_free();
+                let _scope = test_hooks::PopFreeScope::enter(st);
+                for item in items {
+                    if item.is_null() {
+                        continue;
+                    }
+                    let elem = item as *mut c_void;
+                    match (thunk, func) {
+                        // The generated adapter runs the typed destructor.
+                        (Some(t), f) => t(f, elem),
+                        (None, Some(f)) => f(elem),
+                        // The authority calls a NULL function pointer here. That is
+                        // a fault, not a failure: the element is left untouched and
+                        // the divergence is recorded.
+                        (None, None) => {}
+                    }
+                    #[cfg(test)]
+                    test_hooks::maybe_panic_mid_pop_free();
+                }
+            }
+            // Test-only negative control, inactive unless the canary is armed.
+            #[cfg(test)]
+            if !test_hooks::permit_release(st) {
+                return;
             }
             drop(Box::from_raw(st as *mut Inner));
         }
@@ -652,7 +670,14 @@ pub(crate) mod test_hooks {
 
     std::thread_local! {
         static INSERT_FAILURES: Cell<usize> = const { Cell::new(0) };
-        static POP_FREE_PANIC: Cell<bool> = const { Cell::new(false) };
+        /// Destructors left to run before the injected panic; `None` disables it.
+        static POP_FREE_PANIC: Cell<Option<usize>> = const { Cell::new(None) };
+        /// Set while the release canary is armed on this thread.
+        static CANARY_ARMED: Cell<bool> = const { Cell::new(false) };
+        /// The stack whose `pop_free` loop is running on this thread, if any.
+        static POP_FREE_ACTIVE: Cell<Option<usize>> = const { Cell::new(None) };
+        /// Set when the canary withheld a release that would have been the second.
+        static REENTRANT_RELEASE: Cell<bool> = const { Cell::new(false) };
     }
 
     /// Make the next `OPENSSL_sk_insert` on this thread answer 0 without inserting.
@@ -660,28 +685,113 @@ pub(crate) mod test_hooks {
         INSERT_FAILURES.with(|n| n.set(1));
     }
 
-    /// Disarms the `pop_free` injection when the test leaves scope, including on
-    /// a panic.
+    /// Disarms the injected panic when the test leaves scope, including on a panic.
     pub(crate) struct PopFreeArmed;
 
     impl Drop for PopFreeArmed {
         fn drop(&mut self) {
-            POP_FREE_PANIC.with(|f| f.set(false));
+            POP_FREE_PANIC.with(|f| f.set(None));
         }
     }
 
-    /// Panic after the first element's destructor has run in
-    /// `OPENSSL_sk_pop_free` on this thread. Test-only; absent from release.
-    pub(crate) fn arm_mid_pop_free() -> PopFreeArmed {
-        POP_FREE_PANIC.with(|f| f.set(true));
+    /// Panic immediately after the destructor with zero-based index `index` has run
+    /// in `OPENSSL_sk_pop_free` on this thread. Every destructor before it runs
+    /// normally, so the first, a middle and the last position are all reachable.
+    pub(crate) fn arm_pop_free_panic_after(index: usize) -> PopFreeArmed {
+        POP_FREE_PANIC.with(|f| f.set(Some(index)));
         PopFreeArmed
+    }
+
+    /// The historical name for a panic after the first destructor.
+    pub(crate) fn arm_mid_pop_free() -> PopFreeArmed {
+        arm_pop_free_panic_after(0)
     }
 
     #[allow(clippy::panic)] // the injected defect is the point of the hook
     pub(crate) fn maybe_panic_mid_pop_free() {
-        if POP_FREE_PANIC.with(|f| f.replace(false)) {
-            panic!("injected defect: panic after an element was released");
+        POP_FREE_PANIC.with(|f| match f.get() {
+            None => {}
+            Some(0) => {
+                f.set(None);
+                panic!("injected defect: panic after an element was released");
+            }
+            Some(remaining) => f.set(Some(remaining - 1)),
+        });
+    }
+
+    /// Disarms the release canary when the test leaves scope, including on a
+    /// panic, so an interrupted control cannot defer a later test's release.
+    pub(crate) struct CanaryArmed;
+
+    impl Drop for CanaryArmed {
+        fn drop(&mut self) {
+            CANARY_ARMED.with(|f| f.set(false));
+            POP_FREE_ACTIVE.with(|f| f.set(None));
+            REENTRANT_RELEASE.with(|f| f.set(false));
         }
+    }
+
+    /// Arm the release canary for this thread.
+    ///
+    /// This is the negative control for the class-3 input "a destructor releases the
+    /// stack it is running on". The canary records that a release was requested for
+    /// the stack whose own `pop_free` loop is still on the frame, and withholds it so
+    /// the control can observe the request without performing the second release. It
+    /// changes no behaviour unless armed, and it is absent from release builds.
+    pub(crate) fn arm_release_canary() -> CanaryArmed {
+        CANARY_ARMED.with(|f| f.set(true));
+        POP_FREE_ACTIVE.with(|f| f.set(None));
+        REENTRANT_RELEASE.with(|f| f.set(false));
+        CanaryArmed
+    }
+
+    /// Whether the canary withheld a release during the armed scope.
+    pub(crate) fn reentrant_release_seen() -> bool {
+        REENTRANT_RELEASE.with(Cell::get)
+    }
+
+    /// Records the stack whose destructor loop is running, restoring the previous
+    /// value on drop so a nested `pop_free` (a sibling stack, or the same stack) is
+    /// accounted for by the frame that entered it.
+    pub(crate) struct PopFreeScope {
+        previous: Option<usize>,
+        armed: bool,
+    }
+
+    impl PopFreeScope {
+        pub(crate) fn enter(st: *mut super::OpenSslStack) -> Self {
+            let armed = CANARY_ARMED.with(Cell::get);
+            let previous = POP_FREE_ACTIVE.with(Cell::get);
+            if armed {
+                POP_FREE_ACTIVE.with(|f| f.set(Some(st as usize)));
+            }
+            Self { previous, armed }
+        }
+    }
+
+    impl Drop for PopFreeScope {
+        fn drop(&mut self) {
+            if self.armed {
+                POP_FREE_ACTIVE.with(|f| f.set(self.previous));
+            }
+        }
+    }
+
+    /// Whether the caller may perform the enclosing release now.
+    ///
+    /// `false` means a release for `st` was requested while that same stack's own
+    /// `pop_free` loop was still running: the request is recorded and withheld, so
+    /// the enclosing call performs the single release. Unarmed, this always
+    /// answers `true` and the release path is unchanged.
+    pub(crate) fn permit_release(st: *mut super::OpenSslStack) -> bool {
+        if !CANARY_ARMED.with(Cell::get) {
+            return true;
+        }
+        if POP_FREE_ACTIVE.with(Cell::get) == Some(st as usize) {
+            REENTRANT_RELEASE.with(|f| f.set(true));
+            return false;
+        }
+        true
     }
 
     /// Consume one pending fault, if any.
@@ -1174,6 +1284,25 @@ mod tests {
         /// `(sk_num, sk_value(0) is NULL)` sampled at every destructor.
         static OBSERVED_STATE: core::cell::RefCell<Vec<(c_int, bool)>> =
             const { core::cell::RefCell::new(Vec::new()) };
+        /// Elements a mutating destructor inserts, indexed by the destructor's identity.
+        static PUSH_MARKERS: core::cell::RefCell<Vec<*const c_void>> =
+            const { core::cell::RefCell::new(Vec::new()) };
+        /// `(destructor identity, push result)` for the mutating destructor.
+        static PUSH_RESULTS: core::cell::RefCell<Vec<(u32, c_int)>> =
+            const { core::cell::RefCell::new(Vec::new()) };
+        /// The stack a recursively destroying destructor releases.
+        static RECURSIVE_STACK: core::cell::Cell<*mut OpenSslStack> =
+            const { core::cell::Cell::new(core::ptr::null_mut()) };
+        /// `1` for `sk_free`, `2` for `sk_pop_free`; disarmed after the first call.
+        static RECURSIVE_FORM: core::cell::Cell<u8> = const { core::cell::Cell::new(0) };
+        /// Number of recursive release attempts.
+        static RECURSIVE_ATTEMPTS: core::cell::Cell<u32> = const { core::cell::Cell::new(0) };
+        /// Whether a sibling element has been revoked by an earlier destructor.
+        static SIBLING_INVALIDATED: core::cell::RefCell<Vec<bool>> =
+            const { core::cell::RefCell::new(Vec::new()) };
+        /// `(destructor identity, sibling already invalidated at delivery)`.
+        static SIBLING_DELIVERY: core::cell::RefCell<Vec<(u32, bool)>> =
+            const { core::cell::RefCell::new(Vec::new()) };
     }
 
     /// A destructor that records the release instead of freeing, so a double release
@@ -1209,6 +1338,81 @@ mod tests {
         DESTRUCTION_LOG.with(|log| log.borrow_mut().clear());
         OBSERVED_STACK.with(|st| st.set(core::ptr::null_mut()));
         OBSERVED_STATE.with(|state| state.borrow_mut().clear());
+        PUSH_MARKERS.with(|m| m.borrow_mut().clear());
+        PUSH_RESULTS.with(|r| r.borrow_mut().clear());
+        RECURSIVE_STACK.with(|st| st.set(core::ptr::null_mut()));
+        RECURSIVE_FORM.with(|f| f.set(0));
+        RECURSIVE_ATTEMPTS.with(|c| c.set(0));
+        SIBLING_INVALIDATED.with(|v| v.borrow_mut().clear());
+        SIBLING_DELIVERY.with(|v| v.borrow_mut().clear());
+    }
+
+    /// A destructor that, in addition to counting its own release, inserts a fresh
+    /// element onto the stack it is running for.
+    unsafe extern "C" fn record_and_push(p: *mut c_void) {
+        let probe = p.cast::<Probe>();
+        // SAFETY: every element handed to this destructor is a live `Probe`, and the
+        // markers it inserts are `Probe`s too.
+        unsafe {
+            (*probe).released.set((*probe).released.get() + 1);
+            let st = OBSERVED_STACK.with(core::cell::Cell::get);
+            if st.is_null() {
+                return;
+            }
+            let marker = PUSH_MARKERS.with(|m| {
+                m.borrow()
+                    .get((*probe).id as usize)
+                    .copied()
+                    .unwrap_or(core::ptr::null())
+            });
+            if marker.is_null() {
+                return;
+            }
+            let count = OPENSSL_sk_push(st, marker);
+            PUSH_RESULTS.with(|r| r.borrow_mut().push(((*probe).id, count)));
+        }
+    }
+
+    /// A destructor that releases the stack it is running for, once.
+    unsafe extern "C" fn record_and_release_stack(p: *mut c_void) {
+        let probe = p.cast::<Probe>();
+        // SAFETY: every element handed to this destructor is a live `Probe`, and the
+        // stack is the one the enclosing call owns.
+        unsafe {
+            (*probe).released.set((*probe).released.get() + 1);
+            let form = RECURSIVE_FORM.with(|f| f.replace(0));
+            if form == 0 {
+                return;
+            }
+            RECURSIVE_ATTEMPTS.with(|c| c.set(c.get() + 1));
+            let st = RECURSIVE_STACK.with(core::cell::Cell::get);
+            if form == 1 {
+                OPENSSL_sk_free(st);
+            } else {
+                OPENSSL_sk_pop_free(st, Some(record_destruction));
+            }
+        }
+    }
+
+    /// A destructor that revokes the two elements after it.
+    unsafe extern "C" fn record_and_revoke_siblings(p: *mut c_void) {
+        let probe = p.cast::<Probe>();
+        // SAFETY: every element handed to this destructor is a live `Probe`.
+        unsafe {
+            (*probe).released.set((*probe).released.get() + 1);
+            let id = (*probe).id;
+            let invalidated = SIBLING_INVALIDATED.with(|v| {
+                let mut v = v.borrow_mut();
+                let seen = v.get(id as usize).copied().unwrap_or(false);
+                if id == 0 {
+                    for slot in v.iter_mut().skip(1) {
+                        *slot = true;
+                    }
+                }
+                seen
+            });
+            SIBLING_DELIVERY.with(|v| v.borrow_mut().push((id, invalidated)));
+        }
     }
 
     /// The authority destroys elements in index order. Destroying from the end
@@ -1379,6 +1583,235 @@ mod tests {
             assert_eq!(OPENSSL_sk_num(st), 0);
             assert_eq!(OPENSSL_sk_push(st, p), 1);
             OPENSSL_sk_free(st);
+        }
+    }
+
+    /// The HAZ-16 panic-path claim holds at every destructor position, not only after
+    /// the first: the elements whose destructor had not run are leaked, the ones that
+    /// ran are not revisited, the stack is left alive and empty, and a retry frees it
+    /// without destroying anything twice.
+    ///
+    /// Five elements and the first, a middle and the last position are used, so a
+    /// panic before the release of the last element and a panic after every element
+    /// has been destroyed are both covered.
+    #[test]
+    fn a_panic_at_the_first_middle_and_last_destructor_leaks_only_the_remainder() {
+        let _guard = crate::test_support::lock_global_state();
+        const N: usize = 5;
+        for &after in &[0usize, 2, N - 1] {
+            reset_observers();
+            // SAFETY: the stack is this test's own allocation and every probe outlives it.
+            unsafe {
+                let probes: [Probe; N] = core::array::from_fn(|id| Probe {
+                    id: id as u32,
+                    released: core::cell::Cell::new(0),
+                });
+                let st = OPENSSL_sk_new_null();
+                assert!(!st.is_null());
+                for (i, probe) in probes.iter().enumerate() {
+                    assert_eq!(
+                        OPENSSL_sk_push(st, (&raw const *probe).cast()),
+                        (i + 1) as c_int
+                    );
+                }
+
+                let before = crate::ffi::panics_caught();
+                let hook = test_hooks::arm_pop_free_panic_after(after);
+                OPENSSL_sk_pop_free(st, Some(record_destruction));
+                drop(hook);
+                assert_eq!(
+                    crate::ffi::panics_caught(),
+                    before + 1,
+                    "panic after destructor {after} was caught at the FFI boundary"
+                );
+                for (i, probe) in probes.iter().enumerate() {
+                    assert_eq!(
+                        probe.released.get(),
+                        u32::from(i <= after),
+                        "element {i} with the panic after destructor {after}"
+                    );
+                }
+
+                assert_eq!(OPENSSL_sk_num(st), 0, "the stack is empty after the panic");
+                assert!(
+                    OPENSSL_sk_value(st, 0).is_null(),
+                    "no element is reachable after the panic"
+                );
+
+                // A retry is legal: it frees the stack and destroys nothing twice.
+                OPENSSL_sk_pop_free(st, Some(record_destruction));
+                for (i, probe) in probes.iter().enumerate() {
+                    assert_eq!(
+                        probe.released.get(),
+                        u32::from(i <= after),
+                        "a retry re-destroyed element {i}"
+                    );
+                }
+            }
+        }
+    }
+
+    /// **A destructor may mutate the stack.** The destruction set is the snapshot taken
+    /// before the first callback, so an insert during destruction goes onto the live,
+    /// empty stack and cannot join — or disturb — the elements being destroyed.
+    ///
+    /// The ownership consequence is recorded rather than hidden: an element inserted
+    /// during destruction is **not** destroyed by this call, and because the enclosing
+    /// stack is released when the call returns, that element is leaked.
+    #[test]
+    fn a_destructor_may_push_onto_the_stack_and_the_destruction_set_is_the_entry_snapshot() {
+        reset_observers();
+        // SAFETY: the stack is this test's own allocation; every probe — the three
+        // elements and the three inserted markers — outlives it.
+        unsafe {
+            let markers: [Probe; 3] = core::array::from_fn(|id| Probe {
+                id: 10 + id as u32,
+                released: core::cell::Cell::new(0),
+            });
+            PUSH_MARKERS.with(|m| {
+                let mut m = m.borrow_mut();
+                for marker in &markers {
+                    m.push((&raw const *marker).cast());
+                }
+            });
+            let probes: [Probe; 3] = core::array::from_fn(|id| Probe {
+                id: id as u32,
+                released: core::cell::Cell::new(0),
+            });
+            let st = OPENSSL_sk_new_null();
+            assert!(!st.is_null());
+            for (i, probe) in probes.iter().enumerate() {
+                assert_eq!(
+                    OPENSSL_sk_push(st, (&raw const *probe).cast()),
+                    (i + 1) as c_int
+                );
+            }
+            OBSERVED_STACK.with(|observed| observed.set(st));
+            OPENSSL_sk_pop_free(st, Some(record_and_push));
+            OBSERVED_STACK.with(|observed| observed.set(core::ptr::null_mut()));
+
+            let pushed = PUSH_RESULTS.with(|r| r.borrow().clone());
+            assert_eq!(
+                pushed,
+                vec![(0, 1), (1, 2), (2, 3)],
+                "each insert during destruction succeeded on the live, empty stack"
+            );
+            for (i, probe) in probes.iter().enumerate() {
+                assert_eq!(
+                    probe.released.get(),
+                    1,
+                    "snapshot element {i} was destroyed exactly once"
+                );
+            }
+            for marker in &markers {
+                assert_eq!(
+                    marker.released.get(),
+                    0,
+                    "an element inserted during destruction is not part of the snapshot"
+                );
+            }
+        }
+    }
+
+    /// **A destructor that releases the stack it is running on is outside the contract.**
+    ///
+    /// The enclosing `pop_free` releases the stack after the last callback, so a
+    /// re-entrant `sk_free`/`sk_pop_free` on the same stack would be the first of two
+    /// releases of one allocation (the authority has the same defect: its loop indexes
+    /// `st->num`/`st->data` after the destructor has freed them). This is the recorded
+    /// class-3 input "a callback frees the object it runs on"; the disposition is
+    /// `UB_NOT_CLAIMED_SAFE` and the caller must not do it.
+    ///
+    /// The control demonstrates the request and keeps the test itself well-defined: the
+    /// test-only release canary records a release requested for the stack whose own
+    /// `pop_free` loop is on the frame and withholds it, so the enclosing call performs
+    /// the single release. Every snapshot element is still destroyed exactly once.
+    #[test]
+    fn a_destructor_that_releases_the_owning_stack_is_outside_the_contract() {
+        for form in [1u8, 2] {
+            reset_observers();
+            // SAFETY: the stack is this test's own allocation, every probe outlives it,
+            // and the canary withholds the re-entrant release so exactly one release runs.
+            unsafe {
+                let probes: [Probe; 3] = core::array::from_fn(|id| Probe {
+                    id: id as u32,
+                    released: core::cell::Cell::new(0),
+                });
+                let st = OPENSSL_sk_new_null();
+                assert!(!st.is_null());
+                for (i, probe) in probes.iter().enumerate() {
+                    assert_eq!(
+                        OPENSSL_sk_push(st, (&raw const *probe).cast()),
+                        (i + 1) as c_int
+                    );
+                }
+                RECURSIVE_STACK.with(|cell| cell.set(st));
+                RECURSIVE_FORM.with(|cell| cell.set(form));
+                let _canary = test_hooks::arm_release_canary();
+                OPENSSL_sk_pop_free(st, Some(record_and_release_stack));
+
+                assert_eq!(
+                    RECURSIVE_ATTEMPTS.with(core::cell::Cell::get),
+                    1,
+                    "the destructor attempted the re-entrant release"
+                );
+                assert!(
+                    test_hooks::reentrant_release_seen(),
+                    "the canary recorded a release request for the stack whose loop was running"
+                );
+                for (i, probe) in probes.iter().enumerate() {
+                    assert_eq!(
+                        probe.released.get(),
+                        1,
+                        "form {form}: element {i} was destroyed exactly once"
+                    );
+                }
+            }
+        }
+    }
+
+    /// **Sibling invalidation is outside the contract.** The stack delivers every
+    /// element of the snapshot, in order, without inspecting it, so a destructor that
+    /// revokes another element cannot stop that element's destructor from running.
+    ///
+    /// A caller must therefore give each element independent ownership (or a reference
+    /// of its own); it must not free another element from a destructor. The control
+    /// records the delivery, not the invalidation, and is well-defined because the
+    /// revocation is simulated by a flag rather than a release.
+    #[test]
+    fn a_sibling_revoked_by_an_earlier_destructor_is_still_delivered() {
+        reset_observers();
+        // SAFETY: the stack is this test's own allocation and every probe outlives it.
+        unsafe {
+            let probes: [Probe; 3] = core::array::from_fn(|id| Probe {
+                id: id as u32,
+                released: core::cell::Cell::new(0),
+            });
+            SIBLING_INVALIDATED.with(|v| {
+                let mut v = v.borrow_mut();
+                for _ in 0..probes.len() {
+                    v.push(false);
+                }
+            });
+            let st = OPENSSL_sk_new_null();
+            assert!(!st.is_null());
+            for (i, probe) in probes.iter().enumerate() {
+                assert_eq!(
+                    OPENSSL_sk_push(st, (&raw const *probe).cast()),
+                    (i + 1) as c_int
+                );
+            }
+            OPENSSL_sk_pop_free(st, Some(record_and_revoke_siblings));
+
+            let delivered = SIBLING_DELIVERY.with(|v| v.borrow().clone());
+            assert_eq!(
+                delivered,
+                vec![(0, false), (1, true), (2, true)],
+                "the stack delivers a revoked sibling anyway, and in the snapshot's order"
+            );
+            for (i, probe) in probes.iter().enumerate() {
+                assert_eq!(probe.released.get(), 1, "element {i} was delivered once");
+            }
         }
     }
 }

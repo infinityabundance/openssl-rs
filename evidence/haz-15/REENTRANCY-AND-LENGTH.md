@@ -96,8 +96,11 @@ reservation. A destroyed object's entry is removed before its address can be reu
 the owner's publication then matches no reservation and is refused, so nothing is
 published into a freed object. The reservation is held by a guard whose `Drop`
 removes it unless the secret was published, so an unwind between reservation and
-publication also removes the entry and wakes the waiter; no panic-injection control
-was run for that guard (`NOT_RUN`).
+publication also removes the entry and wakes the waiter. That guard was `NOT_RUN` at
+this batch and is now injected at five points (`PASS`, see `CALLBACK-CONTRACT.md` §5.1);
+the injection found that the guard was dropped before the store's lock was released,
+which deadlocks on the non-reentrant mutex, and the ordering is repaired (the lock is
+released before the guard exists, and the guard is built inside the reservation).
 
 The refusals are internal variants that name the condition:
 
@@ -316,7 +319,9 @@ obligation above stands.
   new derivation; an engine-backed `rsa_ext_pkey` operation (the external shape with
   the CRT primes is exercised, the engine shape at the KDK helper only); a release DSO
   at this candidate (no rebuild); sanitizer/Miri/Loom coverage of the store; and any
-  downstream consumer measurement.
+  downstream consumer measurement. The follow-up in `STATE-MACHINE.md` adds a
+  deterministic interleaving model of the store but explicitly not a Loom run, and
+  `CALLBACK-CONTRACT.md` classifies the callback classes; neither closes these gaps.
 - **Threat model.** An attacker submits chosen ciphertexts to an application that
   decrypts with an externally held PKCS#1 v1.5 RSA key and can observe the returned
   length. The content of the answer no longer distinguishes the classes; the length

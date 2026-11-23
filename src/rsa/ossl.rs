@@ -1587,15 +1587,17 @@ fn wait_ext_kdk_store<'a>(
     }
 }
 
-/// Reserve an `INITIALIZING` entry for `key` under the store's lock and record `owner`.
+/// Reserve an `INITIALIZING` entry for `key` and return its failure-atomic guard.
 ///
 /// Both allocations are fallible: the entry's box and the vector's growth. A failure publishes
-/// nothing and the vector is left as it was.
+/// nothing and the vector is left as it was. The guard is constructed as the last step, after the
+/// entry is installed and with no panic-capable operation between them, so an installation that
+/// succeeded always has an owner that removes it.
 fn reserve_ext_kdk_entry(
     store: &mut ExtKdkStore,
     key: usize,
     owner: ThreadId,
-) -> Result<u64, ExtKdkRefusal> {
+) -> Result<ExtKdkReservation, ExtKdkRefusal> {
     let reservation = store.next_reservation;
     store.next_reservation = store.next_reservation.wrapping_add(1);
     let entry = match crate::runtime::alloc::try_boxed(ExtKdkEntry {
@@ -1611,7 +1613,11 @@ fn reserve_ext_kdk_entry(
         return Err(ExtKdkRefusal::AllocationFailure);
     }
     store.entries.push(entry);
-    Ok(reservation)
+    Ok(ExtKdkReservation {
+        key,
+        reservation,
+        published: false,
+    })
 }
 
 /// Publish `fresh` into the reservation if it is still the exact entry this thread owns.
@@ -1635,9 +1641,13 @@ fn publish_ext_kdk_secret(
     let Some(index) = index else {
         return Err(ExtKdkRefusal::ReservationAbandoned);
     };
+    #[cfg(test)]
+    ext_kdk_hooks::maybe_panic(ext_kdk_hooks::Stage::PublishBeforeInstall);
     let mut out = SecretArray::<EXT_KDK_SECRET_LEN>::new();
     out.as_mut_slice().copy_from_slice(&fresh[..]);
     store.entries[index].state = ExtKdkState::Ready(fresh);
+    #[cfg(test)]
+    ext_kdk_hooks::maybe_panic(ext_kdk_hooks::Stage::PublishAfterInstall);
     EXT_KDK_STORE_CV.notify_all();
     Ok(out)
 }
@@ -1677,6 +1687,62 @@ impl Drop for ExtKdkReservation {
     }
 }
 
+/// Test-only panic injection at the fallible steps of the first-use path.
+///
+/// The hook is thread-local and one-shot, so a control can name the exact step to
+/// interrupt and no other thread is affected. It exists only in test builds; the
+/// release path has no branch to it.
+#[cfg(test)]
+pub(crate) mod ext_kdk_hooks {
+    use core::cell::Cell;
+
+    /// The steps a control can interrupt.
+    #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+    pub(crate) enum Stage {
+        /// The reservation has been installed and the guard exists.
+        AfterReserve,
+        /// The secret has been drawn and is held in a `SecretBuf`, unpublished.
+        AfterDraw,
+        /// The draw failed: the failure path is about to abandon the reservation.
+        DrawFailureAbandon,
+        /// Publication has found its reservation, under the store's lock, and is
+        /// about to install the secret.
+        PublishBeforeInstall,
+        /// The secret has been installed `Ready` and the guard has not yet been
+        /// marked published.
+        PublishAfterInstall,
+    }
+
+    std::thread_local! {
+        static ARMED: Cell<Option<Stage>> = const { Cell::new(None) };
+    }
+
+    /// Disarms the injection when the control leaves scope, including on a panic.
+    pub(crate) struct Armed;
+
+    impl Drop for Armed {
+        fn drop(&mut self) {
+            ARMED.with(|cell| cell.set(None));
+        }
+    }
+
+    /// Arm the injection at `stage` on this thread.
+    pub(crate) fn arm(stage: Stage) -> Armed {
+        ARMED.with(|cell| cell.set(Some(stage)));
+        Armed
+    }
+
+    #[allow(clippy::panic)] // the injected defect is the point of the hook
+    pub(crate) fn maybe_panic(stage: Stage) {
+        ARMED.with(|cell| {
+            if cell.get() == Some(stage) {
+                cell.set(None);
+                panic!("injected defect: panic at {stage:?}");
+            }
+        });
+    }
+}
+
 /// The first-use secret for an `RSA` with no `d`, `p` or `q`.
 ///
 /// The store's lock is held for lookup, reservation, publication and removal only. **It is not
@@ -1702,6 +1768,15 @@ impl Drop for ExtKdkReservation {
 /// secret is a [`SecretBuf`] and is cleansed on every path that does not publish it. The
 /// reservation is held by an [`ExtKdkReservation`] guard, so an unwind between the reservation and
 /// the publication also removes it.
+///
+/// **Lock ordering on the unwind path.** The reservation's guard is created inside the critical
+/// section as its last step, and the lock is released immediately afterwards with no
+/// panic-capable operation in between. The guard's `Drop` takes that same non-reentrant lock, so
+/// this ordering is what makes an unwind reached with the lock held — a panicking application RNG
+/// method called from `RAND_priv_bytes`, or a panic inside publication — release the reservation
+/// on a lock the frame no longer holds instead of deadlocking on it. A panic taken inside a
+/// critical section poisons the lock; [`lock_ext_kdk_store`] recovers the guard from the poison,
+/// which is what keeps a later decryption working.
 fn per_key_ext_kdk_secret(rsa: *mut Rsa) -> Result<SecretArray<EXT_KDK_SECRET_LEN>, ExtKdkRefusal> {
     let key = rsa as usize;
     let me = std::thread::current().id();
@@ -1749,13 +1824,18 @@ fn per_key_ext_kdk_secret(rsa: *mut Rsa) -> Result<SecretArray<EXT_KDK_SECRET_LE
         }
     }
 
-    let reservation = reserve_ext_kdk_entry(&mut store, key, me)?;
-    let mut reservation_guard = ExtKdkReservation {
-        key,
-        reservation,
-        published: false,
-    };
+    let mut reservation_guard = reserve_ext_kdk_entry(&mut store, key, me)?;
+    let reservation = reservation_guard.reservation;
+    // **The guard is never dropped while this frame holds the lock.** Its `Drop` takes the same
+    // non-reentrant lock to remove the reservation, so the lock is released immediately after the
+    // reservation returns; the only statements in between are a field read and this `drop`, neither
+    // of which can panic. Dropping the lock first is what makes every later panic point release the
+    // reservation instead of deadlocking on a lock the frame still holds.
     drop(store);
+    // The reservation is installed and the guard exists: from here every exit, normal
+    // or unwinding, removes the reservation unless it publishes.
+    #[cfg(test)]
+    ext_kdk_hooks::maybe_panic(ext_kdk_hooks::Stage::AfterReserve);
 
     let mut fresh = match SecretBuf::<u8>::try_zeroed(EXT_KDK_SECRET_LEN) {
         Some(buffer) => buffer,
@@ -1768,8 +1848,13 @@ fn per_key_ext_kdk_secret(rsa: *mut Rsa) -> Result<SecretArray<EXT_KDK_SECRET_LE
     // `RAND_priv_bytes`, whose contract is the authority's.
     if unsafe { RAND_priv_bytes(fresh.as_mut_ptr(), EXT_KDK_SECRET_LEN as c_int) } <= 0 {
         // Dropping the guard removes the reservation and wakes any waiter.
+        #[cfg(test)]
+        ext_kdk_hooks::maybe_panic(ext_kdk_hooks::Stage::DrawFailureAbandon);
         return Err(ExtKdkRefusal::RngFailure);
     }
+    // The draw succeeded and the secret is still unpublished.
+    #[cfg(test)]
+    ext_kdk_hooks::maybe_panic(ext_kdk_hooks::Stage::AfterDraw);
     let result = publish_ext_kdk_secret(key, reservation, me, fresh);
     if result.is_ok() {
         reservation_guard.published = true;
@@ -2988,6 +3073,8 @@ mod tests {
         ReenterOther,
         Fail,
         Block,
+        /// Destroy the object whose first-use secret is being drawn.
+        DestroyTarget,
     }
 
     thread_local! {
@@ -3123,6 +3210,15 @@ mod tests {
                 unsafe { default_rng_bytes(buf, num) }
             }
             RngAction::Fail => 0,
+            RngAction::DestroyTarget => {
+                let target = RNG_SAME.with(Cell::get);
+                // SAFETY: the test armed this address for exactly this callback, and the
+                // object is live until this release; the enclosing frame reads no field of
+                // it after the draw returns.
+                unsafe { crate::rsa::object::RSA_free(target as *mut Rsa) };
+                // SAFETY: `buf` is the caller's contract.
+                unsafe { default_rng_bytes(buf, num) }
+            }
             RngAction::Block => {
                 RNG_GATE.enter_and_wait();
                 // SAFETY: `buf` is the caller's contract.
@@ -5164,5 +5260,611 @@ mod tests {
             "a refused secret is an allocation failure"
         );
         assert_eq!(ext_kdk_entry_count(secret_fail_addr as *mut Rsa), 0);
+    }
+
+    /// **A re-entrant call for the object that is mid-initialisation is the defined
+    /// refusal, and the object ends with exactly one published secret.**
+    ///
+    /// The outer call owns the `INITIALIZING` reservation when the application RNG
+    /// callback re-enters RSA decryption for the same object. The inner call must not
+    /// wait on its own reservation; it answers `0` and the internal refusal is
+    /// `ReentrantInitialization`. The outer call then publishes the one secret, and a
+    /// later use of the object returns byte-identical key material.
+    #[test]
+    #[allow(clippy::panic)] // a bounded-wait failure is the test's observation
+    fn a_reentrant_call_for_the_mid_initialisation_object_is_refused() {
+        let (_serial, _installed) = install_rng_script();
+        RNG_GATE.reset();
+
+        let mut key = Box::new(super::super::mp::zeroed_rsa());
+        let addr = (&mut *key) as *mut Rsa as usize;
+
+        let (tx, rx) = mpsc::channel();
+        let start = Instant::now();
+        let worker = std::thread::spawn(move || {
+            arm_rng(RngAction::ReenterSame, addr, 0);
+            let mut kdk = [0u8; SHA256_DIGEST_LENGTH as usize];
+            // SAFETY: the fixture outlives this join; the re-entered target is the same
+            // live object and the ciphertext is this frame's fixed array.
+            let outer = unsafe {
+                derive_external_kdk(
+                    addr as *mut Rsa,
+                    RNG_TEST_CT.as_ptr(),
+                    RNG_TEST_CT.len() as c_int,
+                    kdk.as_mut_ptr(),
+                )
+            };
+            let inner = RNG_REENTRY_RESULT.with(Cell::get);
+            let inner_variant = RNG_REENTRY_VARIANT_OK.with(Cell::get);
+            let _ = tx.send((outer, inner, inner_variant, kdk));
+        });
+        let observed = receive(&rx, "same-object re-entry during initialisation deadlocked");
+        assert!(worker.join().is_ok(), "the worker must not panic");
+        assert!(start.elapsed() < Duration::from_secs(10));
+        assert_eq!(observed.0, 1, "the outer first use completes");
+        assert_eq!(observed.1, 0, "the re-entrant call is refused");
+        assert!(observed.2, "the refusal names ReentrantInitialization");
+        assert_eq!(
+            ext_kdk_initializing_count(addr as *mut Rsa),
+            0,
+            "no reservation survives the completed first use"
+        );
+        assert_eq!(
+            ext_kdk_ready_count(addr as *mut Rsa),
+            1,
+            "exactly one secret is published"
+        );
+
+        // The published secret is the one the outer call derived: a later use copies
+        // the same bytes.
+        arm_rng(RngAction::Delegate, 0, 0);
+        let mut later = [0u8; SHA256_DIGEST_LENGTH as usize];
+        // SAFETY: the fixture is live and every buffer is this frame's.
+        let later_result = unsafe {
+            derive_external_kdk(
+                addr as *mut Rsa,
+                RNG_TEST_CT.as_ptr(),
+                RNG_TEST_CT.len() as c_int,
+                later.as_mut_ptr(),
+            )
+        };
+        assert_eq!(later_result, 1);
+        assert_eq!(
+            later, observed.3,
+            "the published secret is the outer call's"
+        );
+        assert_eq!(ext_kdk_ready_count(addr as *mut Rsa), 1);
+
+        forget_ext_kdk_secret(addr as *mut Rsa);
+        assert_eq!(ext_kdk_entry_count(addr as *mut Rsa), 0);
+    }
+
+    /// **An RNG callback that destroys the object mid-initialisation publishes nothing.**
+    ///
+    /// The callback releases the only reference to the object whose first-use secret is
+    /// being drawn. `RSA_free` removes the side-table reservation before returning; the
+    /// outer publication then matches no reservation and the call answers `0`. The
+    /// initialiser reads no field of the freed object: the refusal is produced before
+    /// `libctx` is touched, and `rsa_ossl_private_decrypt` performs no field access after
+    /// the KDK call returns.
+    ///
+    /// The store must still be usable afterwards, which also shows the destruction did
+    /// not leave a reservation that every later call would see.
+    #[test]
+    #[allow(clippy::panic)] // a bounded-wait failure is the test's observation
+    fn an_rng_callback_that_destroys_the_object_publishes_nothing() {
+        use crate::rsa::object::{RSA_new, RSA_set0_key};
+
+        let (_serial, _installed) = install_rng_script();
+
+        // SAFETY: the object is created here, released by the callback below, and never
+        // dereferenced by this test after that.
+        let rsa = unsafe {
+            let rsa = RSA_new();
+            assert!(!rsa.is_null());
+            let n = BN_new();
+            let e = BN_new();
+            assert!(!n.is_null() && !e.is_null());
+            assert_eq!(BN_set_word(e, 65537), 1);
+            assert_eq!(BN_set_word(n, 0x0100_0001), 1);
+            assert_eq!(RSA_set0_key(rsa, n, e, ptr::null_mut()), 1);
+            rsa
+        };
+        let addr = rsa as usize;
+
+        let (tx, rx) = mpsc::channel();
+        let start = Instant::now();
+        let worker = std::thread::spawn(move || {
+            arm_rng(RngAction::DestroyTarget, addr, 0);
+            let mut kdk = [0u8; SHA256_DIGEST_LENGTH as usize];
+            // SAFETY: the object is live until the callback releases it; the abandoned
+            // path returns before reading it again.
+            let result = unsafe {
+                derive_external_kdk(
+                    addr as *mut Rsa,
+                    RNG_TEST_CT.as_ptr(),
+                    RNG_TEST_CT.len() as c_int,
+                    kdk.as_mut_ptr(),
+                )
+            };
+            let _ = tx.send(result);
+        });
+        let observed = receive(&rx, "the destroying callback deadlocked");
+        assert!(worker.join().is_ok(), "the worker must not panic");
+        assert!(start.elapsed() < Duration::from_secs(10));
+        assert_eq!(
+            observed, 0,
+            "destruction during initialisation is the defined refusal"
+        );
+        assert_eq!(
+            ext_kdk_entry_count(addr as *mut Rsa),
+            0,
+            "no entry survives the destruction"
+        );
+
+        // The store is still usable: a fresh object completes its first use.
+        let mut fresh = Box::new(super::super::mp::zeroed_rsa());
+        let fresh_addr = (&mut *fresh) as *mut Rsa as usize;
+        arm_rng(RngAction::Delegate, 0, 0);
+        let mut kdk = [0u8; SHA256_DIGEST_LENGTH as usize];
+        // SAFETY: the fresh fixture is live and every buffer is this frame's.
+        let fresh_result = unsafe {
+            derive_external_kdk(
+                fresh_addr as *mut Rsa,
+                RNG_TEST_CT.as_ptr(),
+                RNG_TEST_CT.len() as c_int,
+                kdk.as_mut_ptr(),
+            )
+        };
+        assert_eq!(fresh_result, 1, "the store still serves a new object");
+        forget_ext_kdk_secret(fresh_addr as *mut Rsa);
+    }
+
+    /// **A panic at every fallible step of the first-use path removes the reservation,
+    /// publishes nothing and does not poison the store against legitimate use.**
+    ///
+    /// The steps are the reservation install, the draw, the draw-failure abandonment and
+    /// publication before and after the `Ready` install. The confirmation guard is what
+    /// makes the unwinding case safe: every exit that has not published removes the
+    /// reservation by its exact id and wakes any waiter. The guard's removal takes the
+    /// store's lock, which is why the lock is released before the guard exists — without
+    /// that ordering the reservation-install panic deadlocks on the non-reentrant lock.
+    ///
+    /// The whole loop runs on a worker thread and reports each stage through a channel, so
+    /// a deadlock fails this control at its bounded wait instead of hanging the suite.
+    ///
+    /// A panic taken while the store's lock is held poisons it; the store's lock helper
+    /// recovers the guard from the poison, so a later attempt completes. Poisoning is
+    /// therefore tolerated rather than repaired, and this control observes the tolerance,
+    /// not the poison flag (another test may have left the process-wide store poisoned).
+    #[test]
+    #[allow(clippy::panic)] // the injected panic and a deadlock are the observations
+    fn a_panic_at_each_fallible_step_leaves_no_entry_and_the_next_attempt_succeeds() {
+        let (_serial, _installed) = install_rng_script();
+
+        const STAGES: [ext_kdk_hooks::Stage; 5] = [
+            ext_kdk_hooks::Stage::AfterReserve,
+            ext_kdk_hooks::Stage::AfterDraw,
+            ext_kdk_hooks::Stage::DrawFailureAbandon,
+            ext_kdk_hooks::Stage::PublishBeforeInstall,
+            ext_kdk_hooks::Stage::PublishAfterInstall,
+        ];
+
+        let (tx, rx) = mpsc::channel();
+        let worker = std::thread::spawn(move || {
+            for stage in STAGES {
+                let mut key = Box::new(super::super::mp::zeroed_rsa());
+                let addr = (&mut *key) as *mut Rsa as usize;
+                arm_rng(
+                    if stage == ext_kdk_hooks::Stage::DrawFailureAbandon {
+                        RngAction::Fail
+                    } else {
+                        RngAction::Delegate
+                    },
+                    0,
+                    0,
+                );
+
+                let hook = ext_kdk_hooks::arm(stage);
+                let outcome = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                    per_key_ext_kdk_secret(addr as *mut Rsa)
+                }));
+                drop(hook);
+                let unwound = outcome.is_err();
+                let initializing = ext_kdk_initializing_count(addr as *mut Rsa);
+                let entries = ext_kdk_entry_count(addr as *mut Rsa);
+
+                arm_rng(RngAction::Delegate, 0, 0);
+                let mut kdk = [0u8; SHA256_DIGEST_LENGTH as usize];
+                // SAFETY: the fixture is live and every buffer is this frame's.
+                let retried = unsafe {
+                    derive_external_kdk(
+                        addr as *mut Rsa,
+                        RNG_TEST_CT.as_ptr(),
+                        RNG_TEST_CT.len() as c_int,
+                        kdk.as_mut_ptr(),
+                    )
+                };
+                let ready = ext_kdk_ready_count(addr as *mut Rsa);
+                forget_ext_kdk_secret(addr as *mut Rsa);
+                let after = ext_kdk_entry_count(addr as *mut Rsa);
+                let _ = tx.send((stage, unwound, initializing, entries, retried, ready, after));
+            }
+        });
+
+        for stage in STAGES {
+            let message = format!("{stage:?}: the injected panic deadlocked the initialiser");
+            let observed = receive(&rx, &message);
+            assert_eq!(observed.0, stage);
+            assert!(
+                observed.1,
+                "{stage:?}: the injected panic must propagate out of the initialiser"
+            );
+            assert_eq!(
+                observed.2, 0,
+                "{stage:?}: no INITIALIZING entry survives the unwind"
+            );
+            assert_eq!(observed.3, 0, "{stage:?}: no secret survives the unwind");
+            assert_eq!(
+                observed.4, 1,
+                "{stage:?}: a later attempt succeeds after the unwind"
+            );
+            assert_eq!(
+                observed.5, 1,
+                "{stage:?}: exactly one secret is installed by the retry"
+            );
+            assert_eq!(observed.6, 0, "{stage:?}: the release leaves no entry");
+        }
+        assert!(
+            worker.join().is_ok(),
+            "the panic-injection worker must finish"
+        );
+    }
+
+    /// **The store's transitions are explored exhaustively within a stated bound, and no
+    /// reachable interleaving violates the invariants.**
+    ///
+    /// Three actors over up to two objects: a concurrent first use with a destruction, a
+    /// cross-object pair, and three callers on one object. Each exploration enumerates
+    /// every reachable combination of the model's modes and store states and checks at
+    /// every state: at most one entry and one secret per object, every secret published
+    /// under its own (current) reservation, every secret tagged for its own object,
+    /// destruction leaving no entry, and a refused re-entry leaving the store unchanged.
+    /// The bound is `ext_kdk_model::NODE_BUDGET`; the test refuses a truncated run, so
+    /// the claim is completeness inside the bound, not beyond it.
+    #[test]
+    fn the_state_machine_exploration_finds_no_invariant_violation() {
+        use super::super::ext_kdk_model as model;
+
+        let scenarios: [(&str, [model::Mode; model::ACTORS], bool); 3] = [
+            (
+                "a concurrent first use and a destruction",
+                [
+                    model::Mode::Start(0),
+                    model::Mode::Start(0),
+                    model::Mode::Destroying(0),
+                ],
+                true,
+            ),
+            (
+                "two objects and a re-entrant caller",
+                [
+                    model::Mode::Start(0),
+                    model::Mode::Start(1),
+                    model::Mode::Start(0),
+                ],
+                false,
+            ),
+            (
+                "three callers on one object",
+                [
+                    model::Mode::Start(0),
+                    model::Mode::Start(0),
+                    model::Mode::Start(0),
+                ],
+                false,
+            ),
+        ];
+
+        for (name, initial, has_destroyer) in scenarios {
+            let report = model::explore(initial, model::Fault::None);
+            assert!(
+                !report.truncated,
+                "{name}: the exploration exceeded its bound"
+            );
+            assert_eq!(
+                report.violation, None,
+                "{name}: a reachable interleaving violated an invariant"
+            );
+            assert!(
+                report.states > 1,
+                "{name}: the exploration visited one state"
+            );
+            assert!(
+                report.states < 20_000,
+                "{name}: the exploration grew beyond its recorded working size ({})",
+                report.states
+            );
+            for outcome in [
+                model::Outcome::Reserved,
+                model::Outcome::Drawn,
+                model::Outcome::Published,
+                model::Outcome::Reentrant,
+                model::Outcome::Parked,
+                model::Outcome::Abandoned,
+                model::Outcome::WaitTimedOut,
+            ] {
+                assert!(
+                    report.outcomes.contains(&outcome),
+                    "{name}: the transition to {outcome:?} is not reachable"
+                );
+            }
+            if has_destroyer {
+                for outcome in [
+                    model::Outcome::Destroyed,
+                    model::Outcome::PublishRefused,
+                    model::Outcome::ReservationAbandoned,
+                ] {
+                    assert!(
+                        report.outcomes.contains(&outcome),
+                        "{name}: the destruction transition to {outcome:?} is not reachable"
+                    );
+                }
+            } else {
+                assert!(
+                    !report.outcomes.contains(&model::Outcome::Destroyed),
+                    "{name}: a scenario without a destroyer reached destruction"
+                );
+            }
+            assert!(
+                report
+                    .outcomes
+                    .iter()
+                    .any(|outcome| matches!(outcome, model::Outcome::Secret(_))),
+                "{name}: no interleaving serves a secret"
+            );
+        }
+    }
+
+    /// **Every invariant has a negative control the exploration catches.**
+    ///
+    /// Each armed fault is a deliberately wrong transition; the exploration must reach it
+    /// and report the matching violation. Without this, a green exploration would not show
+    /// that the checker is connected to anything.
+    #[test]
+    #[allow(clippy::expect_used)] // a detected fault is the control's expectation
+    fn every_invariant_has_a_fault_the_exploration_catches() {
+        use super::super::ext_kdk_model as model;
+
+        let initial = [
+            model::Mode::Start(0),
+            model::Mode::Start(0),
+            model::Mode::Destroying(0),
+        ];
+        let controls = [
+            (
+                model::Fault::ReserveOverExisting,
+                model::Violation::DuplicateEntry,
+            ),
+            (
+                model::Fault::PublishIgnoresReservation,
+                model::Violation::PublishedIntoStaleReservation,
+            ),
+            (
+                model::Fault::CrossObjectSecret,
+                model::Violation::CrossObjectSecret,
+            ),
+            (
+                model::Fault::DestroyKeepsEntry,
+                model::Violation::DestroyLeftEntry,
+            ),
+            (
+                model::Fault::ReentryPushes,
+                model::Violation::RefusalMutatedStore,
+            ),
+        ];
+
+        for (fault, expected) in controls {
+            let report = model::explore(initial, fault);
+            let (violation, trace) = report
+                .violation
+                .expect("the armed fault must be detected as a violation");
+            assert_eq!(violation, expected, "{fault:?}");
+            assert!(
+                !trace.is_empty(),
+                "{fault:?}: the violation must name the path that reached it"
+            );
+        }
+    }
+
+    /// **A peer wait that is never satisfied answers the bounded timeout.**
+    ///
+    /// The owner parks in the RNG callback and the gate is never released while a peer
+    /// waits, so nothing publishes and nothing is removed. The peer must refuse with
+    /// `WaitTimedOut` after `EXT_KDK_WAIT_LIMIT` rather than waiting without a bound; the
+    /// owner's reservation is then still publishable, and it publishes to exactly one
+    /// secret. The control's own waiting is bounded at 10 s against the store's 5 s.
+    #[test]
+    #[allow(clippy::panic)] // a bounded-wait failure is the test's observation
+    fn a_peer_wait_that_is_never_satisfied_is_the_bounded_timeout() {
+        let (_serial, _installed) = install_rng_script();
+        RNG_GATE.reset();
+
+        let mut key = Box::new(super::super::mp::zeroed_rsa());
+        let addr = (&mut *key) as *mut Rsa as usize;
+
+        let (owner_tx, owner_rx) = mpsc::channel();
+        let start = Instant::now();
+        let owner = std::thread::spawn(move || {
+            arm_rng(RngAction::Block, addr, 0);
+            let mut kdk = [0u8; SHA256_DIGEST_LENGTH as usize];
+            // SAFETY: the fixture outlives this join and the ciphertext is this frame's.
+            let result = unsafe {
+                derive_external_kdk(
+                    addr as *mut Rsa,
+                    RNG_TEST_CT.as_ptr(),
+                    RNG_TEST_CT.len() as c_int,
+                    kdk.as_mut_ptr(),
+                )
+            };
+            let _ = owner_tx.send(result);
+        });
+        assert!(
+            RNG_GATE.wait_entered(Duration::from_secs(10)),
+            "the owner must reach the RNG callback"
+        );
+        assert_eq!(ext_kdk_initializing_count(addr as *mut Rsa), 1);
+
+        let (peer_tx, peer_rx) = mpsc::channel();
+        let peer = std::thread::spawn(move || {
+            let refusal = per_key_ext_kdk_secret(addr as *mut Rsa).err();
+            let _ = peer_tx.send(refusal);
+        });
+        assert!(
+            wait_for_waiter(Duration::from_secs(10)),
+            "the peer must block on the condition variable"
+        );
+        let refusal = receive(&peer_rx, "the peer wait was not bounded");
+        assert_eq!(
+            refusal,
+            Some(ExtKdkRefusal::WaitTimedOut),
+            "an unsatisfied wait is the defined timeout"
+        );
+        assert!(
+            start.elapsed() < Duration::from_secs(30),
+            "the timeout must be bounded, not merely eventual"
+        );
+
+        // The owner's reservation was never removed, so it still publishes.
+        RNG_GATE.release();
+        let owner_result = receive(&owner_rx, "the owner never published");
+        assert!(owner.join().is_ok());
+        assert!(peer.join().is_ok());
+        assert_eq!(owner_result, 1);
+        assert_eq!(ext_kdk_ready_count(addr as *mut Rsa), 1);
+        forget_ext_kdk_secret(addr as *mut Rsa);
+        assert_eq!(ext_kdk_entry_count(addr as *mut Rsa), 0);
+    }
+
+    /// **The model's transition function agrees with the store on the scenarios that can
+    /// be run without a second thread, and its other rows name the controls that
+    /// establish the corresponding store outcome.**
+    ///
+    /// The model is an abstraction, so this is a conformance check on named rows, not a
+    /// proof of equivalence: the refinement gap — what the model omits and which store
+    /// controls establish the remaining rows — is recorded in
+    /// `evidence/haz-15/STATE-MACHINE.md`.
+    #[test]
+    #[allow(clippy::unwrap_used)] // the script is fixed by the test itself
+    fn the_model_agrees_with_the_store_on_the_named_scenarios() {
+        use super::super::ext_kdk_model as model;
+
+        // Same-thread re-entry: the owner's second reserve is the named refusal and the
+        // first publication still completes.
+        let outcomes = model::run_linear(&[
+            (0, model::Event::Reserve(0)),
+            (0, model::Event::DrawSuccess(0)),
+            (0, model::Event::Reserve(0)),
+            (0, model::Event::Publish(0)),
+        ])
+        .unwrap();
+        assert_eq!(
+            outcomes,
+            vec![
+                model::Outcome::Reserved,
+                model::Outcome::Drawn,
+                model::Outcome::Reentrant,
+                model::Outcome::Published
+            ]
+        );
+
+        // Destruction during initialisation: the publication finds no reservation and the
+        // parked waiter sees it removed.
+        let outcomes = model::run_linear(&[
+            (0, model::Event::Reserve(0)),
+            (1, model::Event::Reserve(0)),
+            (0, model::Event::DrawSuccess(0)),
+            (2, model::Event::Destroy(0)),
+            (0, model::Event::Publish(0)),
+            (1, model::Event::Woken(0)),
+        ])
+        .unwrap();
+        assert_eq!(
+            outcomes,
+            vec![
+                model::Outcome::Reserved,
+                model::Outcome::Parked,
+                model::Outcome::Drawn,
+                model::Outcome::Destroyed,
+                model::Outcome::PublishRefused,
+                model::Outcome::ReservationAbandoned
+            ]
+        );
+
+        // A draw failure abandons the reservation; a later attempt reserves afresh.
+        let outcomes = model::run_linear(&[
+            (0, model::Event::Reserve(0)),
+            (0, model::Event::DrawFailure(0)),
+            (0, model::Event::Reserve(0)),
+        ])
+        .unwrap();
+        assert_eq!(
+            outcomes,
+            vec![
+                model::Outcome::Reserved,
+                model::Outcome::Abandoned,
+                model::Outcome::Reserved
+            ]
+        );
+
+        // The bounded wait expires when nothing publishes or removes the reservation.
+        let outcomes = model::run_linear(&[
+            (0, model::Event::Reserve(0)),
+            (1, model::Event::Reserve(0)),
+            (1, model::Event::Timeout(0)),
+        ])
+        .unwrap();
+        assert_eq!(
+            outcomes,
+            vec![
+                model::Outcome::Reserved,
+                model::Outcome::Parked,
+                model::Outcome::WaitTimedOut
+            ]
+        );
+
+        // The two rows the store can execute directly. The draw failure is the model's
+        // `DrawFailure`/`Abandoned` transition and leaves no entry; the retry is the
+        // model's fresh `Reserve`.
+        let (_serial, _installed) = install_rng_script();
+        let mut key = Box::new(super::super::mp::zeroed_rsa());
+        let addr = (&mut *key) as *mut Rsa as usize;
+        arm_rng(RngAction::Fail, 0, 0);
+        assert!(
+            matches!(
+                per_key_ext_kdk_secret(addr as *mut Rsa),
+                Err(ExtKdkRefusal::RngFailure)
+            ),
+            "the store answers the model's abandoned reservation"
+        );
+        assert_eq!(ext_kdk_entry_count(addr as *mut Rsa), 0);
+        arm_rng(RngAction::Delegate, 0, 0);
+        assert!(
+            per_key_ext_kdk_secret(addr as *mut Rsa).is_ok(),
+            "the store's retry reserves afresh, as the model's second Reserve does"
+        );
+        forget_ext_kdk_secret(addr as *mut Rsa);
+
+        // The reservation-allocation failure is the model's abandonment after Reserve.
+        let mut second = Box::new(super::super::mp::zeroed_rsa());
+        let second_addr = (&mut *second) as *mut Rsa as usize;
+        let guard = crate::runtime::alloc::test_fail::fail_after(0);
+        let refused = per_key_ext_kdk_secret(second_addr as *mut Rsa);
+        drop(guard);
+        assert!(
+            matches!(refused, Err(ExtKdkRefusal::AllocationFailure)),
+            "a refused reservation is the model's abandonment"
+        );
+        assert_eq!(ext_kdk_entry_count(second_addr as *mut Rsa), 0);
     }
 }
