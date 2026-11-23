@@ -62,3 +62,15 @@ what was checked, for which binary, and what happens when the binary changes.
 
 Post-LTO inlined callers, the curve448 and `bn/limbs` barrier sites, and callee
 coverage have not been checked and are listed as open in `docs/ETP-TODO.md`.
+
+## Binary-level extension (ETP-T6)
+
+The binding and invalidation rules above cover emitted code for one artefact.
+`docs/BINARY-ASSURANCE.md` extends them to the trusted computing base (compiler,
+LLVM, assembler, linker, archiver, C library, loader, runtime, CPU dispatch and
+venue) and to the per-target claim matrix. It adds the per-target fields this
+document does not carry — target ABI, build profile and flags, artefact digest
+and build id, artefact source identity, TCB digest and instrument-or-`NONE` —
+and it refuses inheritance across targets or profiles. It does not weaken or
+replace any rule here, and it does not turn reproducibility or instruction-shape
+audits into a source-to-binary correspondence argument.

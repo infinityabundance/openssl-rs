@@ -1,0 +1,462 @@
+{
+  "assumptions": [
+    "The court image content id is not recorded; the image name is a declared venue, not a verified identity.",
+    "The CPU microcode revision is not recorded; only the model and the flag set are.",
+    "A component with digest UNKNOWN participates in the TCB digest by its recorded version string and check state, not by bytes."
+  ],
+  "components": [
+    {
+      "check": {
+        "checked": true,
+        "evidence": "`command -v ar` -> /usr/bin/ar; resolved /usr/bin/x86_64-linux-gnu-ar; `ar --version`",
+        "mechanism": "`ar --version` plus sha256 of the resolved binary"
+      },
+      "could_invalidate": "The crate archive is produced by ar; a different ar changes member order, metadata and the archive digest.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "sha256 of the resolved file",
+        "path": "/usr/bin/x86_64-linux-gnu-ar",
+        "value": "3acbee2794e3668a74bcb90f2eaf7d981211fb95288ab940f0e3ac380e8f6023"
+      },
+      "id": "ar",
+      "kind": "archiver",
+      "name": "GNU ar",
+      "version": "GNU ar (GNU Binutils for Debian) 2.40"
+    },
+    {
+      "check": {
+        "checked": true,
+        "evidence": "`command -v as` -> /usr/bin/as; resolved /usr/bin/x86_64-linux-gnu-as; `as --version`",
+        "mechanism": "`as --version` plus sha256 of the resolved binary"
+      },
+      "could_invalidate": "Inline assembly and compiler-emitted assembly are encoded by as; a different assembler can encode a different instruction.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "sha256 of the resolved file",
+        "path": "/usr/bin/x86_64-linux-gnu-as",
+        "value": "41fe4f5a03389ea5cf7c92d6753fa1ecc69b45b12534fd8713c53bba0e2d7e17"
+      },
+      "id": "as",
+      "kind": "assembler",
+      "name": "GNU assembler",
+      "version": "GNU assembler (GNU Binutils for Debian) 2.40"
+    },
+    {
+      "check": {
+        "checked": true,
+        "evidence": "resolved /usr/local/cargo/bin/rustup",
+        "mechanism": "`cargo -V` plus sha256 of the resolved binary"
+      },
+      "could_invalidate": "cargo resolves features, profiles and build scripts; a different cargo can select different inputs.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "sha256 of the resolved file",
+        "path": "/usr/local/cargo/bin/rustup",
+        "value": "b1c8cb14e30889e7e2999e6b69e62d9e9b9ffc0f4df8180564d306d9680e6c55"
+      },
+      "id": "cargo",
+      "kind": "build-driver",
+      "name": "cargo",
+      "version": "cargo 1.98.1 (797e8a9bc 2026-08-05)"
+    },
+    {
+      "check": {
+        "checked": true,
+        "evidence": "`command -v cc` -> /usr/bin/cc; resolved /usr/bin/x86_64-linux-gnu-gcc-12; `cc --version`",
+        "mechanism": "`cc --version` plus sha256 of the resolved binary"
+      },
+      "could_invalidate": "The distribution DSO is linked by cc; its driver decides startup objects, PIE and linker flags.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "sha256 of the resolved file",
+        "path": "/usr/bin/x86_64-linux-gnu-gcc-12",
+        "value": "75e997ec62297a6484f491bae28ab0ccb489daba23e398fd10fe68e9e6f0def8"
+      },
+      "id": "cc",
+      "kind": "compiler-driver",
+      "name": "C compiler driver used for the distribution link and harnesses",
+      "version": "cc (Debian 12.2.0-14+deb12u1) 12.2.0"
+    },
+    {
+      "check": {
+        "checked": false,
+        "evidence": "image name recorded; content id not obtained",
+        "mechanism": "NONE: the container cannot inspect its own image identity without host access"
+      },
+      "could_invalidate": "A different image changes every tool and library in this table at once.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "obtain on the host with `docker image inspect --format '{{.Id}}' openssl-rs-court-tools:1`",
+        "path": null,
+        "value": "UNKNOWN"
+      },
+      "id": "court-image",
+      "kind": "venue",
+      "name": "Court container image",
+      "version": "openssl-rs-court-tools:1"
+    },
+    {
+      "check": {
+        "checked": true,
+        "evidence": "hypervisor=present; flags digest recorded",
+        "mechanism": "read /proc/cpuinfo"
+      },
+      "could_invalidate": "A different CPU or microarchitecture can execute the same instruction stream with different timing and different feature availability.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "sha256 of the flags string",
+        "path": "/proc/cpuinfo",
+        "value": "9bf94b9580cb26b2751bf4fc4476d0de48ef2444fbe0d7a1949eee32c3e6263f"
+      },
+      "id": "cpu",
+      "kind": "hardware",
+      "name": "CPU that executes the artefact",
+      "version": "13th Gen Intel(R) Core(TM) i9-13900K"
+    },
+    {
+      "check": {
+        "checked": true,
+        "evidence": "runtime sites=[]; cfg(target_arch) sites=20; explicit flags=[]",
+        "mechanism": "scan src/**.rs for is_x86_feature_detected/is_aarch64_feature_detected, count cfg(target_arch = \"x86_64\"), and scan Cargo.toml/rust-toolchain.toml/.cargo/config.toml for target-cpu/target-feature"
+      },
+      "could_invalidate": "A runtime feature test or an explicit target-cpu/target-feature can select different code than the audited baseline.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "a dispatch mechanism has no file digest; its identity is the source scan plus the target flags",
+        "path": null,
+        "value": "UNKNOWN"
+      },
+      "id": "cpu-dispatch",
+      "kind": "cpu-dispatch",
+      "name": "CPU feature selection",
+      "version": "compile-time cfg(target_arch) selection; 0 runtime feature-detection site(s)"
+    },
+    {
+      "check": {
+        "checked": true,
+        "evidence": "resolved /usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2",
+        "mechanism": "readlink of /lib64/ld-linux-x86-64.so.2 plus sha256"
+      },
+      "could_invalidate": "The loader resolves symbols and applies relocations; a different loader can bind a call to a different definition.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "sha256 of the resolved file",
+        "path": "/usr/lib/x86_64-linux-gnu/ld-linux-x86-64.so.2",
+        "value": "02bcda52c1a5dfc236f94d9e5255b4a0e26347d8a372a5223b650e31f291ce3c"
+      },
+      "id": "dynamic-loader",
+      "kind": "dynamic-loader",
+      "name": "ELF interpreter for x86-64",
+      "version": "UNKNOWN: the loader has no version command"
+    },
+    {
+      "check": {
+        "checked": true,
+        "evidence": "7.3.5-2-cachyos",
+        "mechanism": "`uname -r`"
+      },
+      "could_invalidate": "The kernel supplies the loader interface, scheduling and the timestamp counter; a different kernel changes the venue.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "`uname -r` reports a version, not a file; a kernel digest would need the boot image path",
+        "path": null,
+        "value": "UNKNOWN"
+      },
+      "id": "kernel",
+      "kind": "operating-system",
+      "name": "Linux kernel",
+      "version": "7.3.5-2-cachyos"
+    },
+    {
+      "check": {
+        "checked": true,
+        "evidence": "`command -v ld` -> /usr/bin/ld; resolved /usr/bin/x86_64-linux-gnu-ld.bfd; `ld --version`",
+        "mechanism": "`ld --version` plus sha256 of the resolved binary"
+      },
+      "could_invalidate": "The linker lays out sections and resolves symbol versions; a different linker changes the artefact digest and can change indirect-call resolution.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "sha256 of the resolved file",
+        "path": "/usr/bin/x86_64-linux-gnu-ld.bfd",
+        "value": "f6d71a1bcd45764550a42dfaa179bc43b63ee879ec6f875bfd39fca013515da7"
+      },
+      "id": "ld",
+      "kind": "linker",
+      "name": "GNU ld",
+      "version": "GNU ld (GNU Binutils for Debian) 2.40"
+    },
+    {
+      "check": {
+        "checked": true,
+        "evidence": "resolved /lib/x86_64-linux-gnu/libc.so.6",
+        "mechanism": "`ldd --version` plus sha256 of the resolved libc"
+      },
+      "could_invalidate": "libc supplies allocation, I/O, threading and the process start state; a different libc changes runtime behaviour even for the same DSO bytes.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "sha256 of the resolved file",
+        "path": "/lib/x86_64-linux-gnu/libc.so.6",
+        "value": "6b4a45352fd0c540a9c7c718f35ce8c8e46a4e482f9d3885a910c32d1a0e1421"
+      },
+      "id": "libc",
+      "kind": "c-library",
+      "name": "GNU C library",
+      "version": "ldd (Debian GLIBC 2.36-9+deb12u14) 2.36"
+    },
+    {
+      "check": {
+        "checked": true,
+        "evidence": "resolved /usr/lib/x86_64-linux-gnu/libgcc_s.so.1",
+        "mechanism": "sha256 of the resolved libgcc_s"
+      },
+      "could_invalidate": "The unwinder is the panic boundary's runtime dependency; a different unwinder changes what happens between a panic and the FFI guard.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "sha256 of the resolved file",
+        "path": "/usr/lib/x86_64-linux-gnu/libgcc_s.so.1",
+        "value": "2bd1552c47799ef67e701e81d4383061fd76059868e446e63560f0dd0d5ec14e"
+      },
+      "id": "libgcc-s",
+      "kind": "runtime",
+      "name": "GCC unwind runtime",
+      "version": "UNKNOWN: libgcc_s has no version command"
+    },
+    {
+      "check": {
+        "checked": true,
+        "evidence": "LLVM version 22.1.8; 2 libLLVM file(s)",
+        "mechanism": "`rustc -vV` for the version; sha256 of the resolved libLLVM"
+      },
+      "could_invalidate": "LLVM lowering, scheduling and inlining decide the emitted instruction shape; an LLVM change can add a branch or remove a cmov.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "sha256 of the resolved file",
+        "path": "/usr/local/rustup/toolchains/1.98.1-x86_64-unknown-linux-gnu/lib/libLLVM-22-rust-1.98.1-stable.so",
+        "value": "24d5732dea500078b4e235a69833ccb20d03bf71659a49d58828af8f13f6726c"
+      },
+      "id": "llvm",
+      "kind": "code-generator",
+      "name": "LLVM shipped with rustc",
+      "version": "LLVM version: 22.1.8"
+    },
+    {
+      "check": {
+        "checked": true,
+        "evidence": "`command -v objdump` -> /usr/bin/objdump; resolved /usr/bin/x86_64-linux-gnu-objdump; `objdump --version`",
+        "mechanism": "`objdump --version` plus sha256 of the resolved binary"
+      },
+      "could_invalidate": "The branch audit sees instructions only through objdump; a different decoder can change the counted branches and cmovs.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "sha256 of the resolved file",
+        "path": "/usr/bin/x86_64-linux-gnu-objdump",
+        "value": "19717049e8ecd98cfbb17fd9eb25e9fd896ecec2fc4af6b931f3dd0bc4e903de"
+      },
+      "id": "objdump",
+      "kind": "disassembler",
+      "name": "GNU objdump, used by the branch audit",
+      "version": "GNU objdump (GNU Binutils for Debian) 2.40"
+    },
+    {
+      "check": {
+        "checked": true,
+        "evidence": "panic=unwind; guard_ffi=True; catch_unwind=True",
+        "mechanism": "read the release profile and scan src/ffi/mod.rs for guard_ffi/catch_unwind"
+      },
+      "could_invalidate": "A profile change from unwind to abort, or a weakened guard, makes the documented failure value unreachable.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "the boundary is repository source (`src/ffi/mod.rs`), not a third-party artefact; its consuming runtime is recorded above",
+        "path": null,
+        "value": "UNKNOWN"
+      },
+      "id": "panic-boundary",
+      "kind": "panic-boundary",
+      "name": "guard_ffi unwind boundary",
+      "version": "panic=unwind"
+    },
+    {
+      "check": {
+        "checked": true,
+        "evidence": "/usr/local/rustup/toolchains/1.98.1-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libpanic_unwind-549498e8b2e4d924.rlib",
+        "mechanism": "sha256 of the resolved libpanic_unwind rlib"
+      },
+      "could_invalidate": "The panic strategy and unwinder back `guard_ffi`; a different runtime changes whether a panic is caught or aborts.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "sha256 of the resolved file",
+        "path": "/usr/local/rustup/toolchains/1.98.1-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libpanic_unwind-549498e8b2e4d924.rlib",
+        "value": "afccbbad6e2b80c3134f0e018a2629f3f08c0c8a9457df774f83ab7e6d73916f"
+      },
+      "id": "panic-unwind",
+      "kind": "rust-runtime",
+      "name": "Rust panic-unwind runtime",
+      "version": "as shipped with rustc 1.98.1"
+    },
+    {
+      "check": {
+        "checked": true,
+        "evidence": "absent: `perf stat -e cycles true` reports `<not supported>`",
+        "mechanism": "`perf stat -e cycles true` and text inspection"
+      },
+      "could_invalidate": "Without a PMU, no cycle or branch-counter claim can be made; a venue change that adds one does not make old results comparable.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "a PMU exposes no file to hash; identity is the venue probe",
+        "path": null,
+        "value": "UNKNOWN"
+      },
+      "id": "perf-pmu",
+      "kind": "venue",
+      "name": "Hardware performance counters",
+      "version": "absent: `perf stat -e cycles true` reports `<not supported>`"
+    },
+    {
+      "check": {
+        "checked": true,
+        "evidence": "`command -v python3` -> /usr/bin/python3; resolved /usr/bin/python3.11; `python3 --version`",
+        "mechanism": "`python3 -V` plus sha256 of the resolved interpreter"
+      },
+      "could_invalidate": "The checker's own result is only as trustworthy as its interpreter; a different Python can change JSON and hashing behaviour.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "sha256 of the resolved file",
+        "path": "/usr/bin/python3.11",
+        "value": "9bee109da0dce17a7c9eeaca9f420cc6770a9fe143b9382d73bd22fe59b21a5f"
+      },
+      "id": "python3",
+      "kind": "verification-runtime",
+      "name": "Python interpreter running this checker",
+      "version": "Python 3.11.2"
+    },
+    {
+      "check": {
+        "checked": true,
+        "evidence": "`command -v readelf` -> /usr/bin/readelf; resolved /usr/bin/x86_64-linux-gnu-readelf; `readelf --version`",
+        "mechanism": "`readelf --version` plus sha256 of the resolved binary"
+      },
+      "could_invalidate": "Build-id and dependency records are read through readelf; a different reader can misreport the artefact identity.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "sha256 of the resolved file",
+        "path": "/usr/bin/x86_64-linux-gnu-readelf",
+        "value": "afa25ff2dc25a71b79e853b9e3a9abb7b4e8c83efac17c0a637cbbb687442a4f"
+      },
+      "id": "readelf",
+      "kind": "elf-reader",
+      "name": "GNU readelf, used for build-id and NEEDED records",
+      "version": "GNU readelf (GNU Binutils for Debian) 2.40"
+    },
+    {
+      "check": {
+        "checked": true,
+        "evidence": "commit-hash 48a229ceaefd4985c50990b14116b6d856af0985; sysroot /usr/local/rustup/toolchains/1.98.1-x86_64-unknown-linux-gnu",
+        "mechanism": "`rustc -vV` plus sha256 of `<sysroot>/bin/rustc`"
+      },
+      "could_invalidate": "A different rustc changes every emitted instruction; optimisation decisions and constant-time code shape can change between patch releases.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "sha256 of the resolved file",
+        "path": "/usr/local/rustup/toolchains/1.98.1-x86_64-unknown-linux-gnu/bin/rustc",
+        "value": "859254978c0a0402c32f949f6de0d99aee73be8d15f45aac00ae1448aac51e74"
+      },
+      "id": "rustc",
+      "kind": "compiler",
+      "name": "rustc toolchain binary (LLVM backend)",
+      "version": "rustc 1.98.1 (48a229cea 2026-09-01)"
+    },
+    {
+      "check": {
+        "checked": true,
+        "evidence": "commit-hash 48a229ceaefd4985c50990b14116b6d856af0985",
+        "mechanism": "`rustc -vV`"
+      },
+      "could_invalidate": "A different rustc commit invalidates every code-generation observation.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "the commit is an identity string, not a file digest",
+        "path": null,
+        "value": "UNKNOWN"
+      },
+      "id": "rustc-commit",
+      "kind": "compiler-identity",
+      "name": "rustc source commit",
+      "version": "commit-hash: 48a229ceaefd4985c50990b14116b6d856af0985"
+    },
+    {
+      "check": {
+        "checked": true,
+        "evidence": "resolved /usr/local/cargo/bin/rustup",
+        "mechanism": "`rustup --version` plus sha256 of the resolved shim"
+      },
+      "could_invalidate": "The shim selects which toolchain runs; a replaced shim can run a different compiler under the recorded version string.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "sha256 of the resolved file",
+        "path": "/usr/local/cargo/bin/rustup",
+        "value": "b1c8cb14e30889e7e2999e6b69e62d9e9b9ffc0f4df8180564d306d9680e6c55"
+      },
+      "id": "rustup",
+      "kind": "toolchain-manager",
+      "name": "rustup shim and toolchain selector",
+      "version": "rustup 1.29.3 (edbc831ce 2026-11-02)"
+    },
+    {
+      "check": {
+        "checked": true,
+        "evidence": "/usr/local/rustup/toolchains/1.98.1-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libstd-64f5f36fb0927694.rlib",
+        "mechanism": "sha256 of the resolved libstd rlib"
+      },
+      "could_invalidate": "std supplies allocation, panicking and platform abstractions; a different std changes runtime behaviour.",
+      "digest": {
+        "algorithm": "sha256",
+        "method": "sha256 of the resolved file",
+        "path": "/usr/local/rustup/toolchains/1.98.1-x86_64-unknown-linux-gnu/lib/rustlib/x86_64-unknown-linux-gnu/lib/libstd-64f5f36fb0927694.rlib",
+        "value": "bf156342c5f849f27d8f53003131bc7c0e675143389d84dd549b2ebbaccfaa2f"
+      },
+      "id": "std",
+      "kind": "rust-runtime",
+      "name": "Rust standard library",
+      "version": "as shipped with rustc 1.98.1"
+    }
+  ],
+  "dispatch": {
+    "compile_time_target_arch_sites": 20,
+    "explicit_target_flags": [],
+    "runtime_feature_detection_sites": []
+  },
+  "item": "ETP-T6",
+  "panic_boundary": {
+    "assert_unwind_safe_present": true,
+    "catch_unwind_present": true,
+    "guard_ffi_present": true,
+    "profile_panic": "unwind"
+  },
+  "profile": {
+    "codegen_units": 16,
+    "debug": 0,
+    "debug_assertions": false,
+    "id": "release",
+    "lto": false,
+    "opt_level": 3,
+    "overflow_checks": true,
+    "panic": "unwind",
+    "rustflags": "not set",
+    "strip": "none",
+    "target": "x86_64-unknown-linux-gnu"
+  },
+  "recorded_at_utc": "2026-11-22T00:00:00Z",
+  "schema": "openssl-rs/etp-t6/tcb/1",
+  "target_triple": "x86_64-unknown-linux-gnu",
+  "tcb_digest": "aa8fbaea85e2fb1e8808121682f6a079ce3c0fd110e3a0750360ba690063bc83",
+  "title": "Trusted computing base for binary-level assurance",
+  "venue": {
+    "court_image": "openssl-rs-court-tools:1",
+    "cpu_flags_sha256": "9bf94b9580cb26b2751bf4fc4476d0de48ef2444fbe0d7a1949eee32c3e6263f",
+    "cpu_model": "13th Gen Intel(R) Core(TM) i9-13900K",
+    "hardware_pmu": "absent: `perf stat -e cycles true` reports `<not supported>`",
+    "hypervisor": "present",
+    "kernel_release": "7.3.5-2-cachyos",
+    "nproc": 30
+  }
+}

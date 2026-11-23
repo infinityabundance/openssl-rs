@@ -1,0 +1,285 @@
+{
+  "schema": "openssl-rs/etp-t6/claim-matrix/1",
+  "item": "ETP-T6",
+  "title": "Per-target claim matrix: every claim bound to a target, profile, artefact and TCB",
+  "date_utc": "2026-11-22",
+  "candidate": {
+    "branch": "staging",
+    "commit": "c28ac7bb94",
+    "identity_status": "WORKING_TREE_PENDING_ORCHESTRATOR_COMMIT",
+    "note": "The matrix describes evidence that already exists on this tree. It does not rebuild any artefact and does not move any recorded result to a new target."
+  },
+  "binding_fields": [
+    "target triple and ABI",
+    "build profile and the flags that matter (opt-level, overflow checks, LTO, codegen units, target features)",
+    "exact artefact sha256 and build id where recorded",
+    "source identity of the artefact's build, or UNKNOWN with an explanation",
+    "the instrument that bears on the claim, or NONE",
+    "the TCB digest of the live toolchain, with the basis on which a historical build is said to match it"
+  ],
+  "refusal_rules": [
+    {"id": "R1", "name": "no inheritance across targets or profiles", "refuses": ["BA_CLAIM_TARGET_UNBOUND", "BA_CROSS_TARGET_INHERITANCE", "BA_CROSS_PROFILE_INHERITANCE"]},
+    {"id": "R2", "name": "artefact digest and build id must match the recorded build", "refuses": ["BA_ARTEFACT_DIGEST_MISMATCH", "BA_ARTEFACT_UNKNOWN"]},
+    {"id": "R3", "name": "TCB must match the recorded TCB for that build", "refuses": ["BA_TCB_MISMATCH", "BA_TCB_SELF_DIGEST"]},
+    {"id": "R4", "name": "source identity must match the artefact's build or carry an explanation", "refuses": ["BA_SOURCE_IDENTITY_MISMATCH", "BA_SOURCE_IDENTITY_UNKNOWN"]},
+    {"id": "R5", "name": "no status vocabulary that asserts a source-to-binary correspondence", "refuses": ["BA_FORBIDDEN_CLAIM"]}
+  ],
+  "builds": [
+    {
+      "id": "B-X86-64-RELEASE-ETP2",
+      "target": "x86_64-unknown-linux-gnu",
+      "abi": "sysv-amd64-elf64",
+      "profile": {"id": "release", "opt_level": 3, "codegen_units": 16, "lto": false, "overflow_checks": true, "panic": "unwind", "debug_assertions": false},
+      "source_identity": {"commit": "e9d492b0df707c22d772cbead5eaac4f93f3200e", "note": "ETP-2 candidate S-prime; crate inputs are byte-identical to S = 9372bb28b"},
+      "tcb_digest": "aa8fbaea85e2fb1e8808121682f6a079ce3c0fd110e3a0750360ba690063bc83",
+      "tcb_basis": "ETP-2 records rustc 1.98.1, cargo 1.98.1, cc 12.2.0 and ar/ld/as 2.40 in the court image; every other component is assumed equal to the recorded TCB.",
+      "tcb_basis_kind": "PARTIAL",
+      "source_explanation": "",
+      "artefacts": [
+        {"id": "A-ETP2-ARCHIVE", "kind": "crate static archive", "sha256": "64147144320989f5b1ac1e3491c68fb971d87a8c1c7db228cb526b497f2a1d8d", "build_id": null, "size_bytes": 44824264, "built_from_source": "e9d492b0df707c22d772cbead5eaac4f93f3200e", "recorded_at": "evidence/etp2/reproducibility.json"},
+        {"id": "A-ETP2-MEASUREMENT-DSO", "kind": "measurement DSO (whole-archive link)", "sha256": "85395dcf7b7670503dc617b45801a85877b5884f543120a0fca711ca6c7a240a", "build_id": "77bbdedc819b0ab7bd66eb7c8e064e4a05ffc803", "size_bytes": 17381552, "built_from_source": "e9d492b0df707c22d772cbead5eaac4f93f3200e", "recorded_at": "evidence/etp2/reproducibility.json"},
+        {"id": "A-ETP2-DISTRIBUTION-DSO", "kind": "distribution DSO (archive + generated shell + version script)", "sha256": "139966033ac9e935efc76290a9df9e91441aa2ea9f183a00089eb95e32093c0c", "build_id": "39bfc4588d3fa6cbee2b9821663fd669d7651b33", "size_bytes": 17005192, "built_from_source": "e9d492b0df707c22d772cbead5eaac4f93f3200e", "recorded_at": "evidence/etp2/reproducibility.json"}
+      ]
+    },
+    {
+      "id": "B-X86-64-RELEASE-TIMING",
+      "target": "x86_64-unknown-linux-gnu",
+      "abi": "sysv-amd64-elf64",
+      "profile": {"id": "release", "opt_level": 3, "codegen_units": 16, "lto": false, "overflow_checks": true, "panic": "unwind", "debug_assertions": false},
+      "source_identity": {"commit": "UNKNOWN", "note": "The timing receipt records the DSO digest and venue but not the source commit."},
+      "tcb_digest": "aa8fbaea85e2fb1e8808121682f6a079ce3c0fd110e3a0750360ba690063bc83",
+      "tcb_basis": "The timing receipt records rustc 1.98.1, valgrind 3.19.0 and the court image; every other component is assumed equal to the recorded TCB.",
+      "tcb_basis_kind": "PARTIAL",
+      "source_explanation": "The timing receipt records the DSO digest (ee7fa27c) and the venue but not the source commit; no source identity is asserted for this build.",
+      "artefacts": [
+        {"id": "A-TIMING-DSO", "kind": "distribution-shaped DSO linked with the version script", "sha256": "ee7fa27c79f5a679d5b229429d53dc7c3b510695db9c74d11b4b6783a735ebe9", "build_id": null, "size_bytes": null, "built_from_source": "UNKNOWN", "recorded_at": "courts/phase18/timing/RECEIPT-timing-unified.json"}
+      ]
+    },
+    {
+      "id": "B-X86-64-RELEASE-ETP5",
+      "target": "x86_64-unknown-linux-gnu",
+      "abi": "sysv-amd64-elf64",
+      "profile": {"id": "release", "opt_level": 3, "codegen_units": 16, "lto": false, "overflow_checks": true, "panic": "unwind", "debug_assertions": false},
+      "source_identity": {"commit": "ecd01a20fb69dbee972521e94857ab5169b6472d", "note": "ETP-T5 candidate; build-relevant tree recorded clean at that commit"},
+      "tcb_digest": "aa8fbaea85e2fb1e8808121682f6a079ce3c0fd110e3a0750360ba690063bc83",
+      "tcb_basis": "ETP-T5 records rustc 1.98.1 and cc 12.2.0 in the court image; every other component is assumed equal to the recorded TCB.",
+      "tcb_basis_kind": "PARTIAL",
+      "source_explanation": "",
+      "artefacts": [
+        {"id": "A-ETP5-DSO", "kind": "distribution-shaped DSO (whole archive, shell object, version script)", "sha256": "e071ffeebecf326a77131105ba5bd7f56af19341861be78a6976e1b73a9d7ff7", "build_id": null, "size_bytes": null, "built_from_source": "ecd01a20fb69dbee972521e94857ab5169b6472d", "recorded_at": "evidence/etp-t5/RESULTS.json"}
+      ]
+    },
+    {
+      "id": "B-X86-64-RELEASE-INSTALL-CURL",
+      "target": "x86_64-unknown-linux-gnu",
+      "abi": "sysv-amd64-elf64",
+      "profile": {"id": "release", "opt_level": 3, "codegen_units": 16, "lto": false, "overflow_checks": true, "panic": "unwind", "debug_assertions": false},
+      "source_identity": {"commit": "UNKNOWN", "note": "The tracked install DSO was last rebuilt before S and is not reproduced by ETP-2."},
+      "tcb_digest": "aa8fbaea85e2fb1e8808121682f6a079ce3c0fd110e3a0750360ba690063bc83",
+      "tcb_basis": "No build record exists for the tracked install DSO; the recorded TCB is assumed to be the venue that produced it. This is a stated assumption, not a witness.",
+      "tcb_basis_kind": "ASSUMED",
+      "source_explanation": "The tracked install DSO (artifacts/phase2/install/lib/libcrypto.so.3) was last rebuilt before S and is not reproduced by ETP-2; its build commit is not recorded. The curl closure binds the consumer inventory to 17e45eec1, not to the DSO's build commit.",
+      "artefacts": [
+        {"id": "A-INSTALL-CURL-DSO", "kind": "tracked install DSO", "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9", "build_id": "592a81d4ae5e7e02bfc635ff8bcd4fbdde37de70", "size_bytes": 16863992, "built_from_source": "UNKNOWN", "recorded_at": "evidence/closure-curl-049.json"}
+      ]
+    },
+    {
+      "id": "B-X86-64-RELEASE-INSTALL-SSH",
+      "target": "x86_64-unknown-linux-gnu",
+      "abi": "sysv-amd64-elf64",
+      "profile": {"id": "release", "opt_level": 3, "codegen_units": 16, "lto": false, "overflow_checks": true, "panic": "unwind", "debug_assertions": false},
+      "source_identity": {"commit": "UNKNOWN", "note": "The OpenSSH closure records its admitted install DSO but not that DSO's build commit."},
+      "tcb_digest": "aa8fbaea85e2fb1e8808121682f6a079ce3c0fd110e3a0750360ba690063bc83",
+      "tcb_basis": "No build record exists for the install DSO the OpenSSH closure admitted; the recorded TCB is assumed to be the venue that produced it. This is a stated assumption, not a witness.",
+      "tcb_basis_kind": "ASSUMED",
+      "source_explanation": "The b85c closure records candidate DSO 06b5f338 and consumer source head b14923bd, but not the DSO's own build commit.",
+      "artefacts": [
+        {"id": "A-INSTALL-SSH-DSO", "kind": "admitted install DSO used by the OpenSSH closure", "sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71", "build_id": null, "size_bytes": null, "built_from_source": "UNKNOWN", "recorded_at": "evidence/closure-ssh-b85c.json"}
+      ]
+    },
+    {
+      "id": "B-X86-64-DEBUG-TEST",
+      "target": "x86_64-unknown-linux-gnu",
+      "abi": "sysv-amd64-elf64",
+      "profile": {"id": "test-debug", "note": "cargo test default profile; the ctgrind receipt does not record the effective flags"},
+      "source_identity": {"commit": "UNKNOWN", "note": "The ctgrind receipt does not record the source commit of the test binary."},
+      "tcb_digest": "UNRECORDED",
+      "tcb_basis": "The ctgrind receipt records rustc 1.98.1 and valgrind 3.19.0, but no test-binary digest or full profile; no TCB is bound to this build.",
+      "tcb_basis_kind": "NONE",
+      "source_explanation": "No test-binary digest or source commit is recorded; the ctgrind observation is therefore not bound to an artefact.",
+      "artefacts": []
+    },
+    {
+      "id": "B-AARCH64-RELEASE",
+      "target": "aarch64-unknown-linux-gnu",
+      "abi": "aapcs64-elf64",
+      "profile": {"id": "release", "opt_level": 3, "codegen_units": 16, "lto": false, "overflow_checks": true, "panic": "unwind", "debug_assertions": false},
+      "source_identity": {"commit": "UNKNOWN", "note": "No aarch64 build exists in this venue."},
+      "tcb_digest": null,
+      "tcb_basis": "No aarch64 toolchain, target or artefact exists in this venue; no TCB is recorded.",
+      "tcb_basis_kind": "NONE",
+      "source_explanation": "No aarch64 build exists.",
+      "artefacts": []
+    }
+  ],
+  "claims": [
+    {
+      "id": "BA-CLM-001",
+      "statement": "Two independently initialised release builds produced a byte-identical crate static archive (sha256 64147144320989f5b1ac1e3491c68fb971d87a8c1c7db228cb526b497f2a1d8d, 0 differing bytes, 351 members).",
+      "build": "B-X86-64-RELEASE-ETP2", "target": "x86_64-unknown-linux-gnu", "abi": "sysv-amd64-elf64", "profile": "release",
+      "source_identity": {"commit": "e9d492b0df707c22d772cbead5eaac4f93f3200e"},
+      "tcb_digest": "aa8fbaea85e2fb1e8808121682f6a079ce3c0fd110e3a0750360ba690063bc83",
+      "artefact": {"id": "A-ETP2-ARCHIVE", "sha256": "64147144320989f5b1ac1e3491c68fb971d87a8c1c7db228cb526b497f2a1d8d", "build_id": null},
+      "instrument": "build-reproducibility", "instrument_registered": true,
+      "evidence": {"path": "evidence/etp2/reproducibility.json", "sha256": "70ff457ee2cf6ed5d57481f21e597f6163b24d659badd5a4d78a22dad3891ed8", "target": "x86_64-unknown-linux-gnu", "profile": "release"},
+      "asserted": true, "status": "IDENTICAL",
+      "does_not_establish": ["that the archive implements its source", "that the build is correct, safe or constant-time", "reproducibility on another host, image, toolchain or target"]
+    },
+    {
+      "id": "BA-CLM-002",
+      "statement": "Two independently initialised release builds produced a byte-identical measurement DSO (sha256 85395dcf7b7670503dc617b45801a85877b5884f543120a0fca711ca6c7a240a, build id 77bbdedc819b0ab7bd66eb7c8e064e4a05ffc803, 0 differing bytes).",
+      "build": "B-X86-64-RELEASE-ETP2", "target": "x86_64-unknown-linux-gnu", "abi": "sysv-amd64-elf64", "profile": "release",
+      "source_identity": {"commit": "e9d492b0df707c22d772cbead5eaac4f93f3200e"},
+      "tcb_digest": "aa8fbaea85e2fb1e8808121682f6a079ce3c0fd110e3a0750360ba690063bc83",
+      "artefact": {"id": "A-ETP2-MEASUREMENT-DSO", "sha256": "85395dcf7b7670503dc617b45801a85877b5884f543120a0fca711ca6c7a240a", "build_id": "77bbdedc819b0ab7bd66eb7c8e064e4a05ffc803"},
+      "instrument": "build-reproducibility", "instrument_registered": true,
+      "evidence": {"path": "evidence/etp2/reproducibility.json", "sha256": "70ff457ee2cf6ed5d57481f21e597f6163b24d659badd5a4d78a22dad3891ed8", "target": "x86_64-unknown-linux-gnu", "profile": "release"},
+      "asserted": true, "status": "IDENTICAL",
+      "does_not_establish": ["that the DSO implements its source", "that the DSO is correct, safe or constant-time", "reproducibility on another target or profile"]
+    },
+    {
+      "id": "BA-CLM-003",
+      "statement": "Two independently initialised release builds produced a byte-identical distribution DSO (sha256 139966033ac9e935efc76290a9df9e91441aa2ea9f183a00089eb95e32093c0c, build id 39bfc4588d3fa6cbee2b9821663fd669d7651b33, 0 differing bytes).",
+      "build": "B-X86-64-RELEASE-ETP2", "target": "x86_64-unknown-linux-gnu", "abi": "sysv-amd64-elf64", "profile": "release",
+      "source_identity": {"commit": "e9d492b0df707c22d772cbead5eaac4f93f3200e"},
+      "tcb_digest": "aa8fbaea85e2fb1e8808121682f6a079ce3c0fd110e3a0750360ba690063bc83",
+      "artefact": {"id": "A-ETP2-DISTRIBUTION-DSO", "sha256": "139966033ac9e935efc76290a9df9e91441aa2ea9f183a00089eb95e32093c0c", "build_id": "39bfc4588d3fa6cbee2b9821663fd669d7651b33"},
+      "instrument": "build-reproducibility", "instrument_registered": true,
+      "evidence": {"path": "evidence/etp2/reproducibility.json", "sha256": "70ff457ee2cf6ed5d57481f21e597f6163b24d659badd5a4d78a22dad3891ed8", "target": "x86_64-unknown-linux-gnu", "profile": "release"},
+      "asserted": true, "status": "IDENTICAL",
+      "does_not_establish": ["that the DSO implements its source", "that the DSO is correct, safe or constant-time", "reproducibility on another target or profile"]
+    },
+    {
+      "id": "BA-CLM-004",
+      "statement": "At the seven audited symbols of DSO ee7fa27c79f5a679d5b229429d53dc7c3b510695db9c74d11b4b6783a735ebe9, the instruction stream contains no division, the counted conditional jumps and cmovs are recorded per function, and the audit resolved 7 functions with 0 failures.",
+      "build": "B-X86-64-RELEASE-TIMING", "target": "x86_64-unknown-linux-gnu", "abi": "sysv-amd64-elf64", "profile": "release",
+      "source_identity": {"commit": "UNKNOWN"},
+      "tcb_digest": "aa8fbaea85e2fb1e8808121682f6a079ce3c0fd110e3a0750360ba690063bc83",
+      "artefact": {"id": "A-TIMING-DSO", "sha256": "ee7fa27c79f5a679d5b229429d53dc7c3b510695db9c74d11b4b6783a735ebe9", "build_id": null},
+      "instrument": "binary-branch-audit", "instrument_registered": true,
+      "evidence": {"path": "courts/phase18/timing/RECEIPT-timing-unified.json", "sha256": "7638710e267fc7721cb83bdfeae8bd7ef80d7c1e70b53e7cb9336e57dc528d76", "target": "x86_64-unknown-linux-gnu", "profile": "release"},
+      "asserted": true, "status": "BRANCH_SHAPE_OBSERVED",
+      "does_not_establish": ["that the instructions are secret-independent", "that the audited symbols execute on a secret-dependent path", "that any other function, callee, inlined caller or target has the same shape"]
+    },
+    {
+      "id": "BA-CLM-005",
+      "statement": "At the sample sizes in the timing receipt, dudect reported no leakage evidence (state 1) for modexp, inverse_ct, inverse_ct_len and inverse_ec, and flagged inverse_vt (state 0).",
+      "build": "B-X86-64-RELEASE-TIMING", "target": "x86_64-unknown-linux-gnu", "abi": "sysv-amd64-elf64", "profile": "release",
+      "source_identity": {"commit": "UNKNOWN"},
+      "tcb_digest": "aa8fbaea85e2fb1e8808121682f6a079ce3c0fd110e3a0750360ba690063bc83",
+      "artefact": {"id": "A-TIMING-DSO", "sha256": "ee7fa27c79f5a679d5b229429d53dc7c3b510695db9c74d11b4b6783a735ebe9", "build_id": null},
+      "instrument": "dudect", "instrument_registered": true,
+      "evidence": {"path": "courts/phase18/timing/RECEIPT-timing-unified.json", "sha256": "7638710e267fc7721cb83bdfeae8bd7ef80d7c1e70b53e7cb9336e57dc528d76", "target": "x86_64-unknown-linux-gnu", "profile": "release"},
+      "asserted": true, "status": "NO_LEAKAGE_EVIDENCE",
+      "does_not_establish": ["constant-time behaviour", "unseen input classes or sample sizes", "timing on a venue with a PMU or frequency/SMT control"]
+    },
+    {
+      "id": "BA-CLM-006",
+      "statement": "The candidate DSO e071ffeebecf326a77131105ba5bd7f56af19341861be78a6976e1b73a9d7ff7 agreed with the OpenSSL 3.6.4 authority DSO 611e511d on 4,326 differential cases with 0 differences, and 9/9 independent reference cross-checks passed.",
+      "build": "B-X86-64-RELEASE-ETP5", "target": "x86_64-unknown-linux-gnu", "abi": "sysv-amd64-elf64", "profile": "release",
+      "source_identity": {"commit": "ecd01a20fb69dbee972521e94857ab5169b6472d"},
+      "tcb_digest": "aa8fbaea85e2fb1e8808121682f6a079ce3c0fd110e3a0750360ba690063bc83",
+      "artefact": {"id": "A-ETP5-DSO", "sha256": "e071ffeebecf326a77131105ba5bd7f56af19341861be78a6976e1b73a9d7ff7", "build_id": null},
+      "instrument": "etp5-reference-differential", "instrument_registered": false,
+      "instrument_note": "The ETP-T5 harness is not in the ETP-3 instrument register; its qualification is the open gap recorded in docs/BINARY-ASSURANCE.md.",
+      "evidence": {"path": "evidence/etp-t5/RESULTS.json", "sha256": "1b859ef426a286532bb7d540e59f164e5a294c9c9aa35bfb7097941fe4fdc971", "target": "x86_64-unknown-linux-gnu", "profile": "release"},
+      "asserted": true, "status": "AGREEMENT",
+      "does_not_establish": ["equivalence or refinement", "exhaustive input coverage", "constant-time behaviour or memory safety", "any curve, key, padding or nonce-generation case outside the recorded population"]
+    },
+    {
+      "id": "BA-CLM-007",
+      "statement": "The curl 8.10.1 closure at install DSO fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9 reached 644 files and discharged 7/7 reachable production obligations; safe_compatible is false.",
+      "build": "B-X86-64-RELEASE-INSTALL-CURL", "target": "x86_64-unknown-linux-gnu", "abi": "sysv-amd64-elf64", "profile": "release",
+      "source_identity": {"commit": "UNKNOWN"},
+      "tcb_digest": "aa8fbaea85e2fb1e8808121682f6a079ce3c0fd110e3a0750360ba690063bc83",
+      "artefact": {"id": "A-INSTALL-CURL-DSO", "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9", "build_id": "592a81d4ae5e7e02bfc635ff8bcd4fbdde37de70"},
+      "instrument": "consumer-closure", "instrument_registered": false,
+      "instrument_note": "The consumer-closure tool is not in the ETP-3 instrument register; it measures reachability, not safety.",
+      "evidence": {"path": "evidence/closure-curl-049.json", "sha256": "6aedaa4ee6691ba3d09a4c4f655a8001b35252fa4206f30584d87effe748ca16", "target": "x86_64-unknown-linux-gnu", "profile": "release"},
+      "asserted": true, "status": "SCOPED_OBSERVATION",
+      "does_not_establish": ["SAFE_COMPATIBLE or any safety graduation", "that a discharged obligation makes the site's precondition true", "Pre(c) => P for every reachable call site"]
+    },
+    {
+      "id": "BA-CLM-008",
+      "statement": "The OpenSSH 9.9p1 b85c closure at install DSO 06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71 reached 625 files and discharged 290/290 reachable production obligations; safe_compatible is false.",
+      "build": "B-X86-64-RELEASE-INSTALL-SSH", "target": "x86_64-unknown-linux-gnu", "abi": "sysv-amd64-elf64", "profile": "release",
+      "source_identity": {"commit": "UNKNOWN"},
+      "tcb_digest": "aa8fbaea85e2fb1e8808121682f6a079ce3c0fd110e3a0750360ba690063bc83",
+      "artefact": {"id": "A-INSTALL-SSH-DSO", "sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71", "build_id": null},
+      "instrument": "consumer-closure", "instrument_registered": false,
+      "instrument_note": "The consumer-closure tool is not in the ETP-3 instrument register; it measures reachability, not safety.",
+      "evidence": {"path": "evidence/closure-ssh-b85c.json", "sha256": "45e3b48d5d6ce1ea19a6cd5248a194922f1b572858f8d556c2361dde98b02402", "target": "x86_64-unknown-linux-gnu", "profile": "release"},
+      "asserted": true, "status": "SCOPED_OBSERVATION",
+      "does_not_establish": ["SAFE_COMPATIBLE or any safety graduation", "that a discharged obligation makes the site's precondition true", "Pre(c) => P for every reachable call site"]
+    },
+    {
+      "id": "BA-CLM-009",
+      "statement": "The independent b85c adjudication refused SAFE_COMPATIBLE for ssh and sshd; its verdict is NOT ESTABLISHED with five of seven mechanisms and all four cross-cutting obligations NOT_ESTABLISHED.",
+      "build": "B-X86-64-RELEASE-INSTALL-SSH", "target": "x86_64-unknown-linux-gnu", "abi": "sysv-amd64-elf64", "profile": "release",
+      "source_identity": {"commit": "UNKNOWN"},
+      "tcb_digest": "aa8fbaea85e2fb1e8808121682f6a079ce3c0fd110e3a0750360ba690063bc83",
+      "artefact": {"id": "A-INSTALL-SSH-DSO", "sha256": "06b5f3384e3480c694ef2735c84b845311e1b86152026c26e50853f89f618f71", "build_id": null},
+      "instrument": "independent-adjudication", "instrument_registered": false,
+      "instrument_note": "The adjudication is a human-reviewed decision record, not an executable instrument; no instrument qualification is claimed.",
+      "evidence": {"path": "evidence/b85c-adjudication.json", "sha256": "24e11717aa72bf0c39425987d826df3cc59da0c4d05e4d280dc4ab99a9f4ab5d", "target": "x86_64-unknown-linux-gnu", "profile": "release"},
+      "asserted": true, "status": "NOT_ESTABLISHED",
+      "does_not_establish": ["that ssh or sshd is safe", "that the closure's coverage is a safety proof", "that the refused graduation may be inferred from the closure"]
+    },
+    {
+      "id": "BA-CLM-010",
+      "statement": "ctgrind observed secret-dependent branching or address use on debug-profile cargo test cases; the test binary's digest and full profile are not recorded.",
+      "build": "B-X86-64-DEBUG-TEST", "target": "x86_64-unknown-linux-gnu", "abi": "sysv-amd64-elf64", "profile": "test-debug",
+      "source_identity": {"commit": "UNKNOWN"},
+      "tcb_digest": "UNRECORDED",
+      "artefact": null, "instrument": "NONE", "instrument_registered": true, "evidence": null,
+      "asserted": false, "status": "UNBINDABLE",
+      "unbindable_reason": "ctgrind ran on a debug-profile cargo test binary; no test-binary digest or full effective profile is recorded, so the observation cannot be bound to an artefact. It is recorded, not promoted.",
+      "does_not_establish": ["release-binary timing behaviour", "constant-time behaviour", "anything about an artefact whose digest is not recorded"]
+    },
+    {
+      "id": "BA-CLM-011",
+      "statement": "No evidence exists that the ABI contract is implemented by the exact machine code of any artefact (the refinement edge RFE-4).",
+      "build": null, "target": "x86_64-unknown-linux-gnu", "abi": "sysv-amd64-elf64", "profile": "release",
+      "source_identity": {"commit": "UNKNOWN"},
+      "tcb_digest": null, "artefact": null, "instrument": "NONE", "instrument_registered": false, "evidence": null,
+      "asserted": false, "status": "NONE",
+      "unbindable_reason": "No ABI-contract-to-machine-code correspondence evidence exists at any target; RFE-4 remains NONE. Reproducibility and instruction-shape audits are different results.",
+      "does_not_establish": ["source-to-binary refinement", "preservation of verified source properties in machine code", "anything about the reassembly question"]
+    },
+    {
+      "id": "BA-CLM-012",
+      "statement": "No aarch64-unknown-linux-gnu artefact, toolchain or evidence exists in this venue.",
+      "build": "B-AARCH64-RELEASE", "target": "aarch64-unknown-linux-gnu", "abi": "aapcs64-elf64", "profile": "release",
+      "source_identity": {"commit": "UNKNOWN"},
+      "tcb_digest": null, "artefact": null, "instrument": "NONE", "instrument_registered": false, "evidence": null,
+      "asserted": false, "status": "NONE",
+      "unbindable_reason": "No aarch64 build exists; no x86-64 result is inherited by this target, and the checker refuses any such inheritance.",
+      "does_not_establish": ["anything about an aarch64 binary", "that x86-64 instruction shape carries to another architecture"]
+    },
+    {
+      "id": "BA-CLM-013",
+      "statement": "No release-profile result is promoted to the debug profile, and no debug-profile result is promoted to release.",
+      "build": null, "target": "x86_64-unknown-linux-gnu", "abi": "sysv-amd64-elf64", "profile": "release",
+      "source_identity": {"commit": "UNKNOWN"},
+      "tcb_digest": null, "artefact": null, "instrument": "NONE", "instrument_registered": false, "evidence": null,
+      "asserted": false, "status": "NONE",
+      "unbindable_reason": "Each result names its own profile; the checker refuses a claim whose evidence profile differs from the claim's build profile.",
+      "does_not_establish": ["that a debug-profile observation holds for release code", "that a release-profile observation holds for debug code"]
+    }
+  ],
+  "unbound_summary": {
+    "count": 4,
+    "claims": ["BA-CLM-010", "BA-CLM-011", "BA-CLM-012", "BA-CLM-013"],
+    "reason": "These are recorded gaps, not passes. A claim marked asserted:false has no artefact binding, names instrument NONE, and states why it cannot be bound."
+  }
+}
