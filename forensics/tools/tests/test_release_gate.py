@@ -158,5 +158,80 @@ class TriageBinding(unittest.TestCase):
         self.assertEqual([item.rule for item in refusals], ["RG_TRIAGE_STALE"])
 
 
+class PackageCandidateControls(unittest.TestCase):
+    """F16: gate-5 binds the package's recorded candidate to the gate's."""
+
+    CANDIDATE = "1" * 40
+    TREE = "2" * 40
+    OTHER = "3" * 40
+    OTHER_TREE = "4" * 40
+    PASSING = "#!/bin/sh\necho 'RESULT: PASS (1/1 required steps PASS)'\nexit 0\n"
+
+    def package(self, root: Path, commit: str, tree: str) -> Path:
+        root.mkdir()
+        (root / "MANIFEST.json").write_text(
+            json.dumps({
+                "schema": "openssl-rs/etp6/package-manifest/1",
+                "candidate": {"commit": commit, "tree": tree},
+            }),
+            encoding="utf-8",
+        )
+        (root / "verify.sh").write_text(self.PASSING, encoding="utf-8")
+        return root
+
+    def test_package_for_another_candidate_is_refused_and_both_are_named(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            package = self.package(Path(temporary) / "package", self.OTHER, self.OTHER_TREE)
+            results = release_gate.check_package(
+                package, self.CANDIDATE, self.TREE
+            )
+        self.assertEqual([item.rule for item in results.refusals], ["RG_PACKAGE_CANDIDATE_MISMATCH"])
+        self.assertIn(self.OTHER, results.refusals[0].detail)
+        self.assertIn(self.CANDIDATE, results.refusals[0].detail)
+
+    def test_package_for_another_tree_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            package = self.package(Path(temporary) / "package", self.CANDIDATE, self.OTHER_TREE)
+            results = release_gate.check_package(
+                package, self.CANDIDATE, self.TREE
+            )
+        self.assertEqual([item.rule for item in results.refusals], ["RG_PACKAGE_CANDIDATE_MISMATCH"])
+        self.assertIn(self.OTHER_TREE, results.refusals[0].detail)
+
+    def test_matching_package_is_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            package = self.package(Path(temporary) / "package", self.CANDIDATE, self.TREE)
+            results = release_gate.check_package(
+                package, self.CANDIDATE, self.TREE
+            )
+        self.assertEqual(results.refusals, [])
+        self.assertTrue(any("matches the gate candidate" in line for line in results.recorded))
+
+    def test_absent_manifest_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            package = Path(temporary) / "package"
+            package.mkdir()
+            (package / "verify.sh").write_text(self.PASSING, encoding="utf-8")
+            results = release_gate.check_package(package, self.CANDIDATE, self.TREE)
+        self.assertEqual([item.rule for item in results.refusals], ["RG_PACKAGE_MANIFEST_ABSENT"])
+
+    def test_explicit_supersession_is_accepted(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            package = self.package(Path(temporary) / "package", self.OTHER, self.OTHER_TREE)
+            results = release_gate.check_package(
+                package, self.CANDIDATE, self.TREE, supersedes=self.OTHER
+            )
+        self.assertEqual(results.refusals, [])
+        self.assertTrue(any("explicit supersession" in line for line in results.recorded))
+
+    def test_supersession_that_does_not_match_is_still_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            package = self.package(Path(temporary) / "package", self.OTHER, self.OTHER_TREE)
+            results = release_gate.check_package(
+                package, self.CANDIDATE, self.TREE, supersedes=self.CANDIDATE
+            )
+        self.assertEqual([item.rule for item in results.refusals], ["RG_PACKAGE_CANDIDATE_MISMATCH"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

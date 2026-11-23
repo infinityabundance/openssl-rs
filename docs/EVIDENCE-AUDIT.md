@@ -248,6 +248,18 @@ identity field is null or names another commit. `reproducibility.json` has
 tracked package manifest is at `98c7b5d29` and `verify manifest` records 56 hard
 refusals at this candidate (`evidence/etp-t12/RECEIPT.md:96`).
 
+### 2.5 Repair status (A0 repairs)
+
+| id | status | record |
+|---|---|---|
+| **F15** | repaired 2026-11-23, commit `TO_BE_FILLED_BY_ORCHESTRATOR` | `ETP0-CLM-032` now cites the live record `EV-04` (`8affeac4…`, `digest_identity: E`, `consumers.safe_compatible = 0/33`) and retains `EV-01` (`abb8a6cb…`, `digest_identity: S`) as labelled history with declared state `SUPERSEDED` and recorded value `1/33`; `OBL-GAP-005` and the verdict basis name both identities. The verdict remains `SUPERSEDED`. The algebra gains `EG_EVIDENCE_CONTRADICTS_ASSERTION` with controls; see `evidence/a0/REPAIRS.md`. |
+| **F16** | repaired 2026-11-23, commit `TO_BE_FILLED_BY_ORCHESTRATOR` | `release_gate.py check_package` reads `candidate.commit` and `candidate.tree` from the package manifest and refuses a different identity as `RG_PACKAGE_CANDIDATE_MISMATCH`, naming both; an explicit `--package-supersedes REF` is the only admitted exception and is recorded. Self-test 16 → 21 cases, including a mismatching package refused and a matching package accepted; see `evidence/a0/REPAIRS.md`. |
+
+`F10` (the `current` 33/33 status row) is **not** repaired by this record; the
+A0 repair brief labelled the release-gate item `F10`, while the audit and
+`evidence/a0/FINDINGS.json` number it `F16`. The finding text above is retained
+unchanged.
+
 ---
 
 ## 3. Ranked by consequence

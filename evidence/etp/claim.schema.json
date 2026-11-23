@@ -1042,6 +1042,10 @@
             "revision": {
               "type": "string",
               "minLength": 1
+            },
+            "measure": {
+              "description": "The typed value the cited revision records for the asserted quantity. A current entry whose recorded value differs from the claim's own named measure is refused as EG_EVIDENCE_CONTRADICTS_ASSERTION; a non-current (for example SUPERSEDED) entry may legitimately record the earlier value.",
+              "$ref": "#/$defs/measure"
             }
           }
         }

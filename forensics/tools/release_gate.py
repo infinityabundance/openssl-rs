@@ -32,8 +32,11 @@ one refused item refuses the release.
   4. instruments          `forensics/tools/instrument_qualify.py check` holds:
                           the register validates and every executable control
                           passes in the venue that ran it;
-  5. external package     a built ETP-6 package is present and its own
-                          `verify.sh` (or `etp6_verify.py`) passes;
+  5. external package     a built ETP-6 package is present, its own
+                          `verify.sh` (or `etp6_verify.py`) passes, and the
+                          package's recorded `candidate.commit`/`candidate.tree`
+                          equal the candidate the gate resolved (or an explicit
+                          `--package-supersedes` identity the gate records);
   6. documentation        `forensics/tools/docs_consistency.py` holds.
 
 Every item is required.  A tool that cannot be found, a package that was not
@@ -70,6 +73,14 @@ The package
 temporary directory with absolute paths, parent traversal, device nodes and
 links refused.  No package means `RG_PACKAGE_MISSING`: the external-reproduction
 item is required, so an absent package is not "not applicable".
+
+The package's own `MANIFEST.json` records the commit and tree it was built from,
+and that identity is compared with `--candidate`: a package for another commit
+is refused as `RG_PACKAGE_CANDIDATE_MISMATCH` naming both identities, because
+reproducing a different commit cannot evidence this release.  A genuinely
+different identity is admitted only through the explicit
+`--package-supersedes REF` flag, whose resolved commit is recorded in the
+decision; the flag is never inferred from the package.
 
 What this gate does not establish
 ---------------------------------
@@ -203,6 +214,27 @@ def _bounded(lines: list[str]) -> list[str]:
 # ---------------------------------------------------------------------------
 # 1. Candidate identity
 # ---------------------------------------------------------------------------
+def resolve_commit(root: Path, ref: str) -> tuple[str | None, str]:
+    """Resolve a ref to a commit without requiring it to be checked out."""
+    run = subprocess.run(
+        ["git", "--no-optional-locks", "rev-parse", "--verify", f"{ref}^{{commit}}"],
+        cwd=str(root), text=True, capture_output=True, timeout=120,
+    )
+    if run.returncode != 0:
+        detail = (run.stderr or run.stdout).strip().splitlines()
+        return None, (detail[-1] if detail else "git rev-parse failed")
+    return run.stdout.strip(), ""
+
+
+def resolve_tree(root: Path, commit: str) -> str | None:
+    """The tree a resolved commit names, or None when it cannot be read."""
+    run = subprocess.run(
+        ["git", "--no-optional-locks", "rev-parse", "--verify", f"{commit}^{{tree}}"],
+        cwd=str(root), text=True, capture_output=True, timeout=120,
+    )
+    return run.stdout.strip() if run.returncode == 0 and run.stdout.strip() else None
+
+
 def resolve_candidate(root: Path, ref: str) -> tuple[str | None, list[Refusal]]:
     def git(*args: str) -> subprocess.CompletedProcess:
         return subprocess.run(
@@ -527,7 +559,42 @@ def _package_runner(package: Path) -> list[str] | None:
     return None
 
 
-def check_package(package: Path | None, timeout: int = 5400) -> Results:
+# The package manifest locations: a built ETP-6 archive places `MANIFEST.json`
+# at its root; this repository keeps the same document under evidence/etp6/
+# until a package is built, so both are read.
+PACKAGE_MANIFESTS = ("MANIFEST.json", "evidence/etp6/MANIFEST.json")
+
+
+def _load_package_manifest(package_root: Path) -> tuple[dict | None, str | None]:
+    """The package manifest and the relative path it was read from."""
+    for relative in PACKAGE_MANIFESTS:
+        path = package_root / relative
+        if not path.is_file():
+            continue
+        try:
+            return json.loads(path.read_text(encoding="utf-8")), relative
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            return None, relative
+    return None, None
+
+
+def check_package(
+    package: Path | None,
+    candidate: str | None,
+    candidate_tree: str | None = None,
+    supersedes: str | None = None,
+    timeout: int = 5400,
+) -> Results:
+    """Verify the package and bind its recorded candidate to the gate's.
+
+    `candidate` is the commit `resolve_candidate` produced, and `candidate_tree`
+    its tree.  A package that records another commit or tree is refused as
+    `RG_PACKAGE_CANDIDATE_MISMATCH` naming both identities.  `supersedes` is an
+    explicitly resolved commit the operator has declared the package was built
+    for; the acceptance is recorded, never inferred.
+    """
+    refusals: list[Refusal] = []
+    recorded: list[str] = []
     if package is None:
         return Results([Refusal(
             "RG_PACKAGE_MISSING", "-",
@@ -554,16 +621,75 @@ def check_package(package: Path | None, timeout: int = 5400) -> Results:
         else:
             package_root = package
 
+        manifest, manifest_path = _load_package_manifest(package_root)
+        if manifest_path is None:
+            refusals.append(Refusal(
+                "RG_PACKAGE_MANIFEST_ABSENT", str(package),
+                "the package root holds no MANIFEST.json (or evidence/etp6/MANIFEST.json), "
+                "so the package's candidate identity cannot be read",
+            ))
+        elif manifest is None:
+            refusals.append(Refusal(
+                "RG_PACKAGE_MANIFEST_INVALID", str(package),
+                f"{manifest_path} does not parse as JSON, so the package's candidate "
+                "identity cannot be read",
+            ))
+        else:
+            identity = manifest.get("candidate") if isinstance(manifest, dict) else None
+            package_commit = identity.get("commit") if isinstance(identity, dict) else None
+            package_tree = identity.get("tree") if isinstance(identity, dict) else None
+            if not isinstance(package_commit, str) or not package_commit:
+                refusals.append(Refusal(
+                    "RG_PACKAGE_MANIFEST_INVALID", str(package),
+                    f"{manifest_path} records no candidate.commit",
+                ))
+            elif not isinstance(candidate, str) or not candidate:
+                refusals.append(Refusal(
+                    "RG_PACKAGE_CANDIDATE_MISMATCH", package_commit,
+                    f"the package was built for {package_commit}, but the gate resolved "
+                    "no candidate to compare it with",
+                ))
+            elif package_commit != candidate:
+                if supersedes is not None and supersedes == package_commit:
+                    recorded.append(
+                        f"package {package}: candidate {package_commit} accepted as an "
+                        f"explicit supersession of the gate candidate {candidate}"
+                    )
+                else:
+                    refusals.append(Refusal(
+                        "RG_PACKAGE_CANDIDATE_MISMATCH", package_commit,
+                        f"the package was built for {package_commit}, but the gate is "
+                        f"gating {candidate}; a package for another commit cannot "
+                        "evidence this release (an explicit --package-supersedes is "
+                        "the only admitted exception)",
+                    ))
+            else:
+                recorded.append(
+                    f"package {package}: candidate {package_commit} matches the gate candidate"
+                )
+                if (
+                    isinstance(package_tree, str) and package_tree
+                    and isinstance(candidate_tree, str) and candidate_tree
+                    and package_tree != candidate_tree
+                ):
+                    refusals.append(Refusal(
+                        "RG_PACKAGE_CANDIDATE_MISMATCH", package_tree,
+                        f"the package records tree {package_tree}, but candidate "
+                        f"{candidate} has tree {candidate_tree}",
+                    ))
+
         runner = _package_runner(package_root)
         if runner is None:
-            return Results([Refusal(
+            refusals.append(Refusal(
                 "RG_PACKAGE_INVALID", str(package),
                 "no verify.sh and no forensics/tools/etp6_verify.py at the package root",
-            )], [])
+            ))
+            return Results(refusals, recorded)
         run = _run(runner, package_root, timeout)
         if run.returncode == 0:
             result = [line for line in run.stdout.splitlines() if line.strip().startswith("RESULT:")]
-            return Results([], [f"package {package}: {result[-1] if result else 'verifier exited 0'}"])
+            recorded.append(f"package {package}: {result[-1] if result else 'verifier exited 0'}")
+            return Results(refusals, recorded)
         problems = _bounded([
             line for line in (run.stdout + "\n" + run.stderr).splitlines()
             if line.strip() and ("FAIL" in line or "REFUSED" in line or "RESULT:" in line
@@ -571,7 +697,8 @@ def check_package(package: Path | None, timeout: int = 5400) -> Results:
         ])
         if not problems:
             problems = [f"verifier exited {run.returncode} with no diagnostic"]
-        return Results([Refusal("RG_PACKAGE", str(package), p) for p in problems], [])
+        refusals.extend(Refusal("RG_PACKAGE", str(package), p) for p in problems)
+        return Results(refusals, recorded)
     finally:
         if temporary is not None:
             temporary.cleanup()
@@ -649,7 +776,20 @@ def evaluate(args: argparse.Namespace) -> Results:
     refusals.extend(result.refusals)
     recorded.extend(result.recorded)
 
-    result = check_package(Path(args.package).resolve() if args.package else None)
+    supersedes: str | None = None
+    if args.package_supersedes:
+        supersedes, detail = resolve_commit(root, args.package_supersedes)
+        if supersedes is None:
+            refusals.append(Refusal(
+                "RG_PACKAGE_SUPERSESSION_UNRESOLVED", args.package_supersedes, detail
+            ))
+    candidate_tree = resolve_tree(root, candidate) if candidate else None
+    result = check_package(
+        Path(args.package).resolve() if args.package else None,
+        candidate,
+        candidate_tree,
+        supersedes,
+    )
     refusals.extend(result.refusals)
     recorded.extend(result.recorded)
 
@@ -884,17 +1024,97 @@ def self_test() -> int:
             "RG_INSTRUMENT",
         )
 
-        # No package at all.
-        expect("missing package", check_package(None), "RG_PACKAGE_MISSING")
+        # Packages: absence, verifier outcome, and the package-to-candidate
+        # binding. The two positive controls show the comparison is connected:
+        # the same package passes when it matches, and passes when the operator
+        # declares an explicit supersession.
+        gate_candidate = "1" * 40
+        gate_tree = "2" * 40
+        other_candidate = "3" * 40
+        other_tree = "4" * 40
+        passing = "#!/bin/sh\necho 'RESULT: PASS (1/1 required steps PASS)'\nexit 0\n"
+        failing = "#!/bin/sh\necho '[1/1] digests FAIL (required) fixture failure'\nexit 1\n"
 
-        # A package whose own verifier refuses.
-        package = tmp / "package"
-        package.mkdir()
-        (package / "verify.sh").write_text(
-            "#!/bin/sh\necho '[1/1] digests FAIL (required) fixture failure'\nexit 1\n",
-            encoding="utf-8",
+        def package_at(name: str, commit: str, tree: str, verifier: str) -> Path:
+            root = tmp / name
+            root.mkdir()
+            (root / "MANIFEST.json").write_text(
+                json.dumps({
+                    "schema": "openssl-rs/etp6/package-manifest/1",
+                    "candidate": {"commit": commit, "tree": tree},
+                }),
+                encoding="utf-8",
+            )
+            (root / "verify.sh").write_text(verifier, encoding="utf-8")
+            return root
+
+        expect("missing package", check_package(None, gate_candidate), "RG_PACKAGE_MISSING")
+
+        expect(
+            "failing package verifier",
+            check_package(
+                package_at("package-failing", gate_candidate, gate_tree, failing),
+                gate_candidate,
+                gate_tree,
+            ),
+            "RG_PACKAGE",
         )
-        expect("failing package verifier", check_package(package), "RG_PACKAGE")
+
+        expect_detail(
+            "package for another candidate",
+            check_package(
+                package_at("package-other", other_candidate, other_tree, passing),
+                gate_candidate,
+                gate_tree,
+            ),
+            "RG_PACKAGE_CANDIDATE_MISMATCH",
+            other_candidate,
+        )
+
+        expect_detail(
+            "package for another tree",
+            check_package(
+                package_at("package-other-tree", gate_candidate, other_tree, passing),
+                gate_candidate,
+                gate_tree,
+            ),
+            "RG_PACKAGE_CANDIDATE_MISMATCH",
+            other_tree,
+        )
+
+        package_no_manifest = tmp / "package-no-manifest"
+        package_no_manifest.mkdir()
+        (package_no_manifest / "verify.sh").write_text(passing, encoding="utf-8")
+        expect(
+            "package without a manifest",
+            check_package(package_no_manifest, gate_candidate, gate_tree),
+            "RG_PACKAGE_MANIFEST_ABSENT",
+        )
+
+        matching = check_package(
+            package_at("package-matching", gate_candidate, gate_tree, passing),
+            gate_candidate,
+            gate_tree,
+        )
+        cases.append(("matching package candidate (positive control)", "no refusal"))
+        if matching.refusals:
+            failures.append(
+                "matching package candidate (positive control): unexpected refusals "
+                f"{[item.rule for item in matching.refusals]}"
+            )
+
+        superseded = check_package(
+            package_at("package-superseded", other_candidate, other_tree, passing),
+            gate_candidate,
+            gate_tree,
+            other_candidate,
+        )
+        cases.append(("explicit package supersession (positive control)", "no refusal"))
+        if superseded.refusals:
+            failures.append(
+                "explicit package supersession (positive control): unexpected refusals "
+                f"{[item.rule for item in superseded.refusals]}"
+            )
 
         # A documentation checker that reports a stale claim.
         stale_checker = tmp / "stale-docs-checker.py"
@@ -952,6 +1172,9 @@ def main(argv: list[str]) -> int:
                         help="instrument mode; check runs the executable controls (default)")
     parser.add_argument("--package", default=None,
                         help="unpacked ETP-6 package root or its .tar.gz")
+    parser.add_argument("--package-supersedes", default=None,
+                        help="explicitly accept a package built for REF rather than "
+                             "--candidate; the resolved identity is recorded")
     parser.add_argument("--json", action="store_true", help="emit one machine-readable decision")
     parser.add_argument("--self-test", action="store_true",
                         help="prove the gate refuses each named failure class")

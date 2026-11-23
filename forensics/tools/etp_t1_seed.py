@@ -422,10 +422,37 @@ claims = claims_doc["claims"]
 claims_sha = sha(S, "evidence/etp/claims.json")
 VERDICT_MAP = {"SUPPORTED": "ESTABLISHED"}
 CLAIM_EVIDENCE: dict[tuple, str] = {}
+# An `E`-identity digest is the working-tree bytes, and the evidence record
+# declares the revision those bytes belong to in `state.revision`.  The graph
+# binds such a node to that revision only when the blob there hashes to the
+# cited digest; otherwise the node keeps its S0 binding and the graph's
+# class-4 check reports the mismatch rather than claiming an identity it cannot
+# show.
+CLAIM_EVIDENCE_REVISION: dict[tuple, str] = {}
 for claim in claims:
     for ev in claim.get("evidence", []):
         key = (ev.get("path"), ev.get("sha256"), ev.get("digest_identity"), ev.get("kind"))
         CLAIM_EVIDENCE.setdefault(key, f"EVD-C{len(CLAIM_EVIDENCE)+1:03d}")
+        state = ev.get("state")
+        revision = state.get("revision") if isinstance(state, dict) else None
+        if isinstance(revision, str) and revision:
+            CLAIM_EVIDENCE_REVISION.setdefault(key, revision)
+
+
+def _evidence_bound_commit(key: tuple, digest: str) -> str | None:
+    """The commit an `E`-identity digest belongs to, when it can be shown."""
+    path = key[0]
+    declared = CLAIM_EVIDENCE_REVISION.get(key)
+    if not declared or not path:
+        return None
+    resolved = git("rev-parse", "--verify", f"{declared}^{{commit}}")
+    if resolved.returncode != 0:
+        return None
+    commit = resolved.stdout.decode("utf-8", "replace").strip()
+    data = blob(commit, path)
+    if data is None or hashlib.sha256(data).hexdigest() != digest:
+        return None
+    return commit
 
 for claim in claims:
     cid = claim["id"]
@@ -458,6 +485,10 @@ for key, evid in sorted(CLAIM_EVIDENCE.items(), key=lambda kv: kv[1]):
                  if e.get("path") == path and e.get("sha256") == digest), ""))
             if match:
                 bound = match.group(1)
+        elif identity == "E":
+            resolved = _evidence_bound_commit(key, digest)
+            if resolved:
+                bound = resolved
         source = {"path": path, "span": kind or "evidence",
                   "quote": "cited by the ETP-1 claim inventory",
                   "quote_kind": "paraphrase",

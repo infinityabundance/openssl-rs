@@ -1429,7 +1429,7 @@
       "source": {
         "path": "evidence/etp/claims.json",
         "span": "ETP0-CLM-032",
-        "quote": "SUPERSEDED by ETP-T15: the ledger now records consumers.safe_compatible = 0 (section 7) and consumers.risk_accepted = 1 for openssh, with the previous 1/33 value and note preserved in its history bloc",
+        "quote": "SUPERSEDED by ETP-T15: the live record (EV-04, sha256 8affeac4d2280289cda17b1716e39bc63535cd893d71642b8cda21735e314e38) records consumers.safe_compatible = 0 (section 7) and consumers.risk_accepted = ",
         "quote_kind": "fragment",
         "sha256": "65d8105b744c80ae01e76af8bf3370c478ab116c7fc9b0f16f63eea5d5c579de",
         "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
@@ -2583,6 +2583,38 @@
     {
       "id": "EVD-C063",
       "type": "evidence",
+      "title": "Evidence forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+      "source": {
+        "path": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+        "span": "commit",
+        "quote": "cited by the ETP-1 claim inventory",
+        "quote_kind": "paraphrase",
+        "sha256": "abb8a6cb6ae4e430bbc8104683909664fad3dfa2dd5dcbc1f8aa69229d16606f",
+        "bound_commit": "9372bb28b2fbe2f71cf2aa2ab501414d45e87d42"
+      },
+      "kind": "commit",
+      "digest_identity": "S",
+      "present": true
+    },
+    {
+      "id": "EVD-C064",
+      "type": "evidence",
+      "title": "Evidence forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+      "source": {
+        "path": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+        "span": "record",
+        "quote": "cited by the ETP-1 claim inventory",
+        "quote_kind": "paraphrase",
+        "sha256": "8affeac4d2280289cda17b1716e39bc63535cd893d71642b8cda21735e314e38",
+        "bound_commit": "e0b727d067b00da65ff66f329a36c725bc2658e5"
+      },
+      "kind": "record",
+      "digest_identity": "E",
+      "present": true
+    },
+    {
+      "id": "EVD-C065",
+      "type": "evidence",
       "title": "Evidence forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md",
       "source": {
         "path": "forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md",
@@ -2597,7 +2629,7 @@
       "present": true
     },
     {
-      "id": "EVD-C064",
+      "id": "EVD-C066",
       "type": "evidence",
       "title": "Evidence forensics/memory-safety/campaign/safe-c33/atlas-refresh/graduation-openssh.json",
       "source": {
@@ -2613,7 +2645,7 @@
       "present": true
     },
     {
-      "id": "EVD-C065",
+      "id": "EVD-C067",
       "type": "evidence",
       "title": "Evidence artifacts/phase25/summary.json",
       "source": {
@@ -2629,7 +2661,7 @@
       "present": true
     },
     {
-      "id": "EVD-C066",
+      "id": "EVD-C068",
       "type": "evidence",
       "title": "Evidence artifacts/phase2/install/lib/libcrypto.so.3",
       "source": {
@@ -2645,7 +2677,7 @@
       "present": true
     },
     {
-      "id": "EVD-C067",
+      "id": "EVD-C069",
       "type": "evidence",
       "title": "Evidence artifacts/phase2/install/lib/libssl.so.3",
       "source": {
@@ -5605,14 +5637,14 @@
       "source": {
         "path": "evidence/etp/claims.json",
         "span": "OBL-GAP-005",
-        "quote": "contradiction: One tracked JSON file records consumers.safe_compatible = 1 and safe_compatible_graduation.verdict = SAFE_COMPATIBLE, and in the same file consumers.note says SAFE_COMPATIBLE remains 0/",
+        "quote": "contradiction at S=9372bb28b: forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json recorded consumers.safe_compatible = 1 and safe_compatible_graduation.verdict = SAFE_COMPATIBLE, while cons",
         "quote_kind": "fragment",
         "sha256": "65d8105b744c80ae01e76af8bf3370c478ab116c7fc9b0f16f63eea5d5c579de",
         "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
       },
-      "statement": "contradiction: One tracked JSON file records consumers.safe_compatible = 1 and safe_compatible_graduation.verdict = SAFE_COMPATIBLE, and in the same file consumers.note says SAFE_COMPATIBLE remains 0/33 and non_claims[0] says no consumer family is SAFE_COMPATIBLE and consumers remain 0/33.",
+      "statement": "contradiction at S=9372bb28b: forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json recorded consumers.safe_compatible = 1 and safe_compatible_graduation.verdict = SAFE_COMPATIBLE, while consumers.note in the same record said SAFE_COMPATIBLE remains 0/33 and non_claims[0] said no consumer family is SAFE_COMPATIBLE. The live record (EV-04) records consumers.safe_compatible = 0 and consumers.risk_accepted = 1 (openssh), and preserves the S reading in consumers.safe_compatible_before_reconciliation and note_before_reconciliation.",
       "state": "OPEN",
-      "settled_by": "ETP-T15: CAMPAIGN-STATUS.json now records 0/33 section 7 and 1 risk-accepted family; the previous 1/33 is preserved in its history block.",
+      "settled_by": "ETP-T15 reconciliation: the live record (EV-04, sha256 8affeac4d2280289cda17b1716e39bc63535cd893d71642b8cda21735e314e38) records consumers.safe_compatible = 0 and consumers.risk_accepted = 1 for openssh; the S record (EV-01, sha256 abb8a6cb6ae4e430bbc8104683909664fad3dfa2dd5dcbc1f8aa69229d16606f) is retained as labelled history with declared state SUPERSEDED.",
       "blocks_release_claims": [
         "REL-COHORT-COUNTER-1-33"
       ]
@@ -8335,12 +8367,6 @@
       "basis": "ETP0-CLM-031 cites this record"
     },
     {
-      "from": "EVD-C054",
-      "type": "assessed_by",
-      "to": "ETP0-CLM-032",
-      "basis": "ETP0-CLM-032 cites this record"
-    },
-    {
       "from": "EVD-C055",
       "type": "assessed_by",
       "to": "ETP0-CLM-029",
@@ -8397,23 +8423,35 @@
     {
       "from": "EVD-C064",
       "type": "assessed_by",
+      "to": "ETP0-CLM-032",
+      "basis": "ETP0-CLM-032 cites this record"
+    },
+    {
+      "from": "EVD-C065",
+      "type": "assessed_by",
+      "to": "ETP0-CLM-032",
+      "basis": "ETP0-CLM-032 cites this record"
+    },
+    {
+      "from": "EVD-C066",
+      "type": "assessed_by",
       "to": "ETP0-CLM-033",
       "basis": "ETP0-CLM-033 cites this record"
     },
     {
-      "from": "EVD-C065",
+      "from": "EVD-C067",
       "type": "assessed_by",
       "to": "ETP0-CLM-034",
       "basis": "ETP0-CLM-034 cites this record"
     },
     {
-      "from": "EVD-C066",
+      "from": "EVD-C068",
       "type": "assessed_by",
       "to": "ETP0-CLM-035",
       "basis": "ETP0-CLM-035 cites this record"
     },
     {
-      "from": "EVD-C067",
+      "from": "EVD-C069",
       "type": "assessed_by",
       "to": "ETP0-CLM-035",
       "basis": "ETP0-CLM-035 cites this record"

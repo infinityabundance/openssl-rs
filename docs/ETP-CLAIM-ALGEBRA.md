@@ -216,6 +216,7 @@ alias.
 | `EG_EVIDENCE_ABSENT_NO_OBLIGATION` | evidence is absent or not reconstructable and no obligation names it |
 | `EG_EVIDENCE_DIGEST_MISMATCH` | a cited digest cannot be re-derived at the stated identity |
 | `EG_EVIDENCE_CONTRADICTS_VERDICT` | a positive verdict or graduation modality rests on evidence whose declared state is `WITHDRAWN`, `REFUTED` or `NOT_ESTABLISHED`, or on no present evidence that is current (not withdrawn, refuted, not established or superseded) |
+| `EG_EVIDENCE_CONTRADICTS_ASSERTION` | a present, non-historical evidence record declares a typed measure with the same name as the claim's own typed `quantification.measure` and a different value |
 | `EG_AGGREGATE_UNBOUND` | an aggregate claim names no cell receipt digests, or a cell names no receipt path and digest, while claiming to summarise cells |
 | `EG_AGGREGATE_DIGEST_MISMATCH` | an aggregate names a cell receipt digest that disagrees with the tracked receipt |
 | `EG_AGGREGATE_PASS_HIDES_BLOCKED_CELL` | a positive aggregate claim contains a cell whose `declared_state` is blocked, unresolved or not established (ETP-T10 section 1c) |
@@ -292,6 +293,16 @@ positive verdict with no evidence that is present and not withdrawn, refuted,
 not established or superseded is refused by the same rule. Where the tracked
 artefact does not declare a state, the claim records the unknown as an
 obligation; the validator does not supply one.
+
+The same `state` object may carry `measure`, the typed value the cited revision
+records for the asserted quantity. When the claim's own
+`quantification.measure` is also named and typed, a present entry whose declared
+measure has the same name and a different value is refused as
+`EG_EVIDENCE_CONTRADICTS_ASSERTION`, naming the entry and both values. A
+non-current entry (for example `SUPERSEDED`) is exempt: it is the pre-change
+bytes, and the record is required to preserve it as labelled history rather
+than hide it. A record that declares no measure is not compared; the absent
+declaration is an obligation, not a pass.
 
 **Multiple candidates.** `identity.source.candidates` is permitted by the closed
 type as an array of at least two distinct identities, but only together with

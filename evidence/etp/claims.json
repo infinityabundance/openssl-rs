@@ -5957,14 +5957,17 @@
         "verdict": "CONTRADICTED"
       },
       "property": "consumer-graduation",
-      "interpretation": "At S the campaign ledger recorded more than one value for the cohort SAFE_COMPATIBLE counter; the operational meaning was that the counter was not a single established fact. After the ETP-T15 reconciliation the ledger records one section 7 counter (0/33) and one risk-accepted family (openssh), and the S disagreement is preserved in history.",
+      "interpretation": "At S=9372bb28b the campaign ledger recorded consumers.safe_compatible = 1 and safe_compatible_graduation.verdict = SAFE_COMPATIBLE while consumers.note in the same file said SAFE_COMPATIBLE remains 0/33, so the counter was not a single established fact. The ETP-T15 reconciliation records one section 7 counter (0/33) and one risk-accepted family (openssh) in the live ledger (EV-04), preserves the S value in consumers.safe_compatible_before_reconciliation and note_before_reconciliation, and the S record remains cited as labelled history (EV-01, declared state SUPERSEDED).",
       "quantification": {
         "kind": "existential",
         "population": "33 admitted cohort families",
         "population_size": null,
         "measure": {
-          "form": "ratio",
-          "value": "0/33 section 7 SAFE_COMPATIBLE families; 1 risk-accepted family (openssh); the S reading was 1/33 and 0/33",
+          "name": "consumers.safe_compatible",
+          "counter": {
+            "numerator": 0,
+            "denominator": 33
+          },
           "aggregation": "forbidden"
         }
       },
@@ -6021,11 +6024,48 @@
         {
           "id": "EV-01",
           "path": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
-          "kind": "record",
+          "kind": "commit",
           "sha256": "abb8a6cb6ae4e430bbc8104683909664fad3dfa2dd5dcbc1f8aa69229d16606f",
           "digest_identity": "S",
           "present": true,
-          "reconstructable": true
+          "reconstructable": true,
+          "note": "Pre-reconciliation history: the Git blob of this path at S=9372bb28b, which declared consumers.safe_compatible = 1. The live record preserves that reading in consumers.safe_compatible_before_reconciliation and note_before_reconciliation, so this digest is retained and labelled SUPERSEDED rather than removed.",
+          "state": {
+            "value": "SUPERSEDED",
+            "artefact": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+            "revision": "9372bb28b2fbe2f71cf2aa2ab501414d45e87d42",
+            "measure": {
+              "name": "consumers.safe_compatible",
+              "counter": {
+                "numerator": 1,
+                "denominator": 33
+              },
+              "aggregation": "forbidden"
+            }
+          }
+        },
+        {
+          "id": "EV-04",
+          "path": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+          "kind": "record",
+          "sha256": "8affeac4d2280289cda17b1716e39bc63535cd893d71642b8cda21735e314e38",
+          "digest_identity": "E",
+          "present": true,
+          "reconstructable": true,
+          "note": "Current record after the ETP-T15 reconciliation: consumers.safe_compatible = 0 and consumers.risk_accepted = 1 (openssh). The E identity is the working-tree bytes the gate reads; the reconciliation record evidence/etp-t15/RECONCILIATION.json is the superseding act.",
+          "state": {
+            "value": "ESTABLISHED",
+            "artefact": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+            "revision": "e0b727d067b00da65ff66f329a36c725bc2658e5",
+            "measure": {
+              "name": "consumers.safe_compatible",
+              "counter": {
+                "numerator": 0,
+                "denominator": 33
+              },
+              "aggregation": "forbidden"
+            }
+          }
         },
         {
           "id": "EV-02",
@@ -6061,15 +6101,16 @@
       "obligations": [
         {
           "id": "OBL-GAP-005",
-          "statement": "contradiction: One tracked JSON file records consumers.safe_compatible = 1 and safe_compatible_graduation.verdict = SAFE_COMPATIBLE, and in the same file consumers.note says SAFE_COMPATIBLE remains 0/33 and non_claims[0] says no consumer family is SAFE_COMPATIBLE and consumers remain 0/33.",
+          "statement": "contradiction at S=9372bb28b: forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json recorded consumers.safe_compatible = 1 and safe_compatible_graduation.verdict = SAFE_COMPATIBLE, while consumers.note in the same record said SAFE_COMPATIBLE remains 0/33 and non_claims[0] said no consumer family is SAFE_COMPATIBLE. The live record (EV-04) records consumers.safe_compatible = 0 and consumers.risk_accepted = 1 (openssh), and preserves the S reading in consumers.safe_compatible_before_reconciliation and note_before_reconciliation.",
           "state": "DISCHARGED",
           "blocks": [
             "verdict",
             "evidence"
           ],
-          "settled_by": "ETP-T15: CAMPAIGN-STATUS.json now records 0/33 section 7 and 1 risk-accepted family; the previous 1/33 is preserved in its history block.",
+          "settled_by": "ETP-T15 reconciliation: the live record (EV-04, sha256 8affeac4d2280289cda17b1716e39bc63535cd893d71642b8cda21735e314e38) records consumers.safe_compatible = 0 and consumers.risk_accepted = 1 for openssh; the S record (EV-01, sha256 abb8a6cb6ae4e430bbc8104683909664fad3dfa2dd5dcbc1f8aa69229d16606f) is retained as labelled history with declared state SUPERSEDED.",
           "evidence": [
-            "EV-01"
+            "EV-01",
+            "EV-04"
           ]
         },
         {
@@ -6110,6 +6151,11 @@
             "sha256": "abb8a6cb6ae4e430bbc8104683909664fad3dfa2dd5dcbc1f8aa69229d16606f"
           },
           {
+            "kind": "artefact",
+            "id": "CAMPAIGN-STATUS.json (live reconciliation)",
+            "sha256": "8affeac4d2280289cda17b1716e39bc63535cd893d71642b8cda21735e314e38"
+          },
+          {
             "kind": "authority",
             "id": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json"
           },
@@ -6144,7 +6190,7 @@
       },
       "verdict": {
         "state": "SUPERSEDED",
-        "basis": "SUPERSEDED by ETP-T15: the ledger now records consumers.safe_compatible = 0 (section 7) and consumers.risk_accepted = 1 for openssh, with the previous 1/33 value and note preserved in its history block and in evidence/etp-t15/history/. PROGRESS.md and STATUS-2026-10-20.md agree."
+        "basis": "SUPERSEDED by ETP-T15: the live record (EV-04, sha256 8affeac4d2280289cda17b1716e39bc63535cd893d71642b8cda21735e314e38) records consumers.safe_compatible = 0 (section 7) and consumers.risk_accepted = 1 for openssh, and preserves the previous 1/33 value and note in its history fields and in evidence/etp-t15/history/. The S record is retained as labelled history (EV-01, declared state SUPERSEDED); EV-02 and EV-03 are cited at S."
       },
       "reconciliation": {
         "resolution_owner": "ETP-T15",

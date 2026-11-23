@@ -35,9 +35,10 @@ What the tool decides
     aliasing, invalidation cycles, modality ranking, multiple candidate
     identities in one claim without a stated relationship, incomplete
     population coverage, an evidence record whose declared state contradicts a
-    positive verdict, an aggregate claim that does not name its cell receipt
-    digests, and a comparative measure that is untyped or contradicts another
-    claim's value;
+    positive verdict, an evidence record whose declared typed measure contradicts
+    the claim's own named measure, an aggregate claim that does not name its cell
+    receipt digests, and a comparative measure that is untyped or contradicts
+    another claim's value;
   * `conjoin`: the cohort verdict is the meet of member verdicts plus the
     union of their obligations, with every blocked member named;
   * `invalidate`: transitive, conservative invalidation from a changed
@@ -810,6 +811,38 @@ def _declared_evidence_state(entry: dict) -> str | None:
     return None
 
 
+def _declared_evidence_measure(entry: dict) -> tuple[str, tuple] | None:
+    """The typed measure a current evidence record says the cited bytes record.
+
+    Only a named typed measure (a `counter` or a numeric value with a unit) can
+    be compared. A free-text or absent measure is not a contradiction because
+    the algebra has nothing to join it to; it remains an obligation to record
+    one, exactly as an undeclared `state` remains unknown.
+    """
+    state = entry.get("state")
+    measure = state.get("measure") if isinstance(state, dict) else None
+    if not isinstance(measure, dict):
+        return None
+    name = measure.get("name")
+    value = _typed_measure_value(measure)
+    if isinstance(name, str) and name and value is not None:
+        return name, value
+    return None
+
+
+def _claim_typed_measure(claim: dict) -> tuple[str, tuple] | None:
+    """The claim's own named typed measure, when it has one to compare."""
+    quantification = claim.get("quantification")
+    measure = quantification.get("measure") if isinstance(quantification, dict) else None
+    if not isinstance(measure, dict):
+        return None
+    name = measure.get("name")
+    value = _typed_measure_value(measure)
+    if isinstance(name, str) and name and value is not None:
+        return name, value
+    return None
+
+
 def _measure_name(claim: dict) -> str | None:
     quantification = claim.get("quantification")
     if not isinstance(quantification, dict):
@@ -1153,6 +1186,34 @@ def check_claim_laws(claim: dict, base: str) -> list[Refusal]:
                 "one present evidence entry whose declared state is not withdrawn, "
                 "refuted, not established or superseded",
             )
+
+    # 1c. A current evidence record may not record a different value for the
+    # same named typed measure than the claim asserts. The record's value is
+    # copied from the tracked artefact, never inferred; a non-current record
+    # (SUPERSEDED, WITHDRAWN, REFUTED, NOT_ESTABLISHED) is history and may
+    # legitimately record the earlier value, which is why the repaired claim
+    # carries both the historical S record and the live record.
+    asserted = _claim_typed_measure(claim)
+    if asserted is not None:
+        asserted_name, asserted_value = asserted
+        for index, entry in enumerate(evidence):
+            if not isinstance(entry, dict) or entry.get("present") is not True:
+                continue
+            if _declared_evidence_state(entry) in NON_CURRENT_EVIDENCE_STATES:
+                continue
+            recorded = _declared_evidence_measure(entry)
+            if recorded is None:
+                continue
+            recorded_name, recorded_value = recorded
+            if recorded_name == asserted_name and recorded_value != asserted_value:
+                refuse(
+                    "EG_EVIDENCE_CONTRADICTS_ASSERTION",
+                    f"evidence/{index}/state/measure",
+                    "measure",
+                    f"evidence {entry.get('id')!r} at {entry.get('path')!r} declares "
+                    f"that its cited revision records {asserted_name} = "
+                    f"{recorded_value}, but the claim asserts {asserted_value}",
+                )
 
     # 2. A graduated verdict is a §7 graduation: complete closure, no open item.
     if state in GRADUATED_VERDICTS:

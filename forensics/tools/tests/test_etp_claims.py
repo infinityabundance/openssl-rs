@@ -1161,6 +1161,50 @@ class EvidenceStateControls(unittest.TestCase):
         self.assertIn("EG_SCHEMA_VIOLATION", rules(document))
 
 
+class EvidenceAssertionControls(unittest.TestCase):
+    """F15: a current evidence record may not record a different asserted value."""
+
+    @staticmethod
+    def _document(value: int, state: str = "ESTABLISHED", verdict: str = "ESTABLISHED") -> dict:
+        claim = counter_claim("ETP-CLM-903", "0/33")
+        claim["verdict"] = {"state": verdict, "basis": "synthetic assertion fixture"}
+        claim["evidence"][0]["state"] = {
+            "value": state,
+            "artefact": "src/synthetic.rs",
+            "revision": "a" * 40,
+            "measure": typed_counter_measure("safe_compatible_counter", value, 33),
+        }
+        return base_document(claim)
+
+    def test_current_evidence_recording_another_value_is_refused(self) -> None:
+        assert_rule(
+            self,
+            self._document(1),
+            "EG_EVIDENCE_CONTRADICTS_ASSERTION",
+            "evidence/0/state/measure",
+        )
+
+    def test_matching_current_value_is_accepted(self) -> None:
+        self.assertEqual(refusals(self._document(0)), [])
+
+    def test_historical_entry_may_record_the_earlier_value(self) -> None:
+        # A SUPERSEDED record is the pre-change bytes; it is cited as history and
+        # may legitimately disagree with the claim's current assertion.
+        document = self._document(1, state="SUPERSEDED", verdict="SUPERSEDED")
+        self.assertEqual(refusals(document), [])
+
+    def test_committed_reconciliation_cites_both_identities(self) -> None:
+        document = etp_claims.load_json(CLAIMS_PATH)
+        claim = next(c for c in document["claims"] if c["id"] == "ETP0-CLM-032")
+        entries = {entry["id"]: entry for entry in claim["evidence"]}
+        self.assertIn("EV-04", entries)
+        self.assertEqual(entries["EV-04"]["digest_identity"], "E")
+        self.assertEqual(entries["EV-01"]["digest_identity"], "S")
+        self.assertEqual(entries["EV-01"]["state"]["value"], "SUPERSEDED")
+        obligation = next(o for o in claim["obligations"] if o["id"] == "OBL-GAP-005")
+        self.assertIn("EV-04", obligation["evidence"])
+
+
 class MultipleCandidateControls(unittest.TestCase):
     """F2: a schema-valid multi-candidate identity is refused unless related."""
 
