@@ -1,0 +1,331 @@
+{
+  "schema": "openssl-rs/etp-addendum-a/evidence-findings/1",
+  "kind": "evidence-and-trust-surface-audit",
+  "item": "A0 of docs/ETP-TODO.md",
+  "date": "2026-11-23",
+  "candidate": {
+    "commit": "e0b727d067b00da65ff66f329a36c725bc2658e5",
+    "branch": "staging",
+    "worktree_tracked_dirty_files": 0
+  },
+  "scope": {
+    "finding_only": true,
+    "no_repair": "A0 records findings; A1-A7 and the owning ETP items repair them.",
+    "rule_cited_not_rederived": "Where freshness, closure discipline or the claim algebra already covers a case, the rule identifier is cited and the finding is limited to what the rule does not detect."
+  },
+  "class_definitions": {
+    "truncation": "a record reports a bounded population as if it were complete: a top-N without its N, a sample as a census, or an aggregate whose members are absent.",
+    "silent_suppression": "a finding, failure, skip or unresolved row disappears between a detail record and a summary, including one reclassified rather than resolved.",
+    "summary_without_reconstruction": "a percentage, verdict or pass that cannot be recomputed from the tracked evidence a reader has.",
+    "wrong_candidate_application": "evidence produced at one identity used to support a claim at another, including a later artefact used for an earlier claim."
+  },
+  "findings": {
+    "truncation": [
+      {
+        "id": "A0-F01",
+        "title": "Curl closure per-site residual list is capped at 200 of 449 with no bound field",
+        "artefact": "evidence/closure-curl-049.json",
+        "locator": "precision.residual_sites (200 rows) against precision.totals.reachable_unresolved_sites (449) and precision.totals.reachable_target_bounded_unresolved_sites (219)",
+        "observed": "precision.residual_sites holds exactly 200 member rows. precision.totals records 449 reachable unresolved sites, of which 219 are target-bounded. No field in the record states a limit, a sample size, a selection rule or a `truncated` flag for the 200.",
+        "expected": "either 449 member rows, or a field naming 200 as a prefix/sample of 449 with the selection rule, so a reader can tell a bound from a census.",
+        "consequence": "An external reader who counts residual_sites concludes the curl closure has 200 unresolved sites and that the remaining population is closed. The record's own blocking predicate is 449 with 219 target-bounded, which is the population element 7 fails on.",
+        "existing_coverage": "docs/CLOSURE-DISCIPLINE.md requires an incomplete residual sample to add a failing row for the unrecorded remainder; ETP-T10 RECEIPT and docs/ETP-TODO.md:128 record the 200-of-449 gap in prose. The closure record itself carries neither the failing row nor the bound, and closure_discipline.py does not read residual_sites length against totals.reachable_unresolved_sites.",
+        "cross_refs": ["A0-F11"],
+        "repair_owner": "A2, A5; C2/C3 for the closure population"
+      },
+      {
+        "id": "A0-F02",
+        "title": "1,999 lint suppressions are recorded only as per-lint totals",
+        "artefact": "evidence/etp-t4/SAFETY-SITES.json",
+        "locator": "suppressions.total=1999, suppressions.by_lint, suppressions.test_modules",
+        "observed": "suppressions carries a total and a by_lint count map (dead_code 703, non_snake_case 460, clippy::too_many_arguments 240, and so on) plus a test-module list. There is no member row for any of the 1,999 suppressions, so the site of a suppression cannot be read from the record.",
+        "expected": "one row per suppression with path, line, lint and any justification, or an indexed table in the same encoding used for sites and operations.",
+        "consequence": "A reader cannot inspect, cite or audit which suppression silences which finding. A6 (suppression governance) has no population to govern, and the record's `sites` table cannot be joined to the suppressions it affects.",
+        "existing_coverage": "none; A6 is TODO and no current rule binds a suppression count to member rows.",
+        "cross_refs": [],
+        "repair_owner": "A2, A6"
+      },
+      {
+        "id": "A0-F03",
+        "title": "External package verifies 1,633 selected inputs with no denominator for the evidence tree",
+        "artefact": "evidence/etp6/MANIFEST.json",
+        "locator": "selection.paths (56 entries), input_count=1633, inputs[], refusals[]",
+        "observed": "The 56 selection paths include `evidence/etp0`, `evidence/etp`, `evidence/etp2`, `evidence/etp3`, `evidence/etp4` and `evidence/etp5`, but not `evidence/etp-t1` … `evidence/etp-t15`, not `evidence/etp6`, not `evidence/etp7`, not the top-level `evidence/closure-*.json`, and not `forensics/downstream/*atlas*.json`. Refusals name five individual paths that a selected record cites; no refusal row names an excluded evidence family.",
+        "expected": "a stated denominator (the tracked population the package is a subset of) and one row per excluded family, so `1,633 inputs` is read as a selection with a named complement.",
+        "consequence": "The ETP-6 receipt's `digests PASS (1,635 inputs)` is read as an external reproduction of the evidence tree. It is a reproduction of the ETP-0…ETP-5 subset: the traceability, hazard, freshness, closure, scheduling, independence, constitution, atlas and release-gate evidence are outside the package and cannot be reconstructed from it.",
+        "existing_coverage": "docs/EXTERNAL-REPRODUCTION.md §4 lists what the package does not establish; the selection itself is machine-readable in `selection.paths`. Neither states the excluded population, and `verify.py manifest` computes completeness against `inputs`, not against the tree.",
+        "cross_refs": ["A0-F18"],
+        "repair_owner": "A2, A24"
+      },
+      {
+        "id": "A0-F04",
+        "title": "The 33/33 L7 aggregate reports 27 carried-forward families as current; only 6 were measured at the atlas candidate",
+        "artefact": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+        "locator": "consumers.l7_functional=33, consumers.l7_families (33 names); compared with forensics/downstream/runtime-functional-atlas.json body.runs[family_id].level and body.runs[].reused_from_candidate_identity",
+        "observed": "For the 33 cohort families the runtime atlas holds 66 L7-functional rows, two subjects each. 54 of those rows carry `reused_from_candidate_identity` and cover 27 families; the remaining 12 rows cover 6 families (curl, haproxy, monit, openssh, pure-ftpd, redis) and carry no marker — the same six named as the `6 runtime-observed measured consumer(s)` at forensics/STATUS.md:522. The atlas candidate is libcrypto 1c03ec0a…; the marker names the superseded 26ba36ff…. CAMPAIGN-STATUS.consumers carries `l7_functional: 33` and no qualifying field for the 27 carried-forward families.",
+        "expected": "the aggregate either reports the split (27 carried forward / 6 measured at the recorded candidate) or restricts the count to rows without the reuse marker.",
+        "consequence": "A reader sees 33 families functionally current. The per-row marker makes the correct partition possible, so this is not a missing mechanism: it is a summary whose qualifying subset (27 of 33) is absent from the count. The `current` label in forensics/STATUS.md:541 completes the misreading.",
+        "existing_coverage": "the atlas records the reuse per row (`reused_from_candidate_identity`) and at body level (`evidence_reuse`); downstream_runtime.py writes and reads the marker. No rule refuses an aggregate that counts marked and unmarked rows together, and CAMPAIGN-STATUS does not consume the marker.",
+        "cross_refs": ["A0-F10"],
+        "repair_owner": "A2, A3, A5"
+      }
+    ],
+    "silent_suppression": [
+      {
+        "id": "A0-F05",
+        "title": "Two hazard barriers changed state after the receipt, with no transition record",
+        "artefact": "evidence/etp-t2/HAZARDS.json",
+        "locator": "hazards[].barrier.state; compared with evidence/etp-t2/RECEIPT.md:171-172 and docs/ETP-TODO.md:120",
+        "observed": "Live register: 18 hazards at barrier.state=CLAIMED_NO_EVIDENCE, 2 at BARRIER_ABSENT (HAZ-18, HAZ-20), 0 EVIDENCED; FMEA 23 CLAIMED_NO_EVIDENCE, 7 NONE, 0 EVIDENCED. RECEIPT.md:171-172 records 16 CLAIMED_NO_EVIDENCE, 4 BARRIER_ABSENT and names HAZ-15, HAZ-16, HAZ-18, HAZ-20 as the absent barriers; the FMEA line records 22/8/0. No field in HAZARDS.json records that HAZ-15 or HAZ-16 moved.",
+        "expected": "a state-transition record per hazard, or a receipt regenerated from the register it cites.",
+        "consequence": "A reader relying on the receipt believes HAZ-15 and HAZ-16 have no barrier at all. The register now says a barrier is claimed but unevidenced, which is a different and weaker claim that is not surfaced. The ETP-TODO row narrates four successive states and never lands on the live counts.",
+        "existing_coverage": "the hazard register and the T1 projection are digest-bound to each other; neither binds the receipt's aggregate text. docs/ETP-TODO.md:120 carries the history in prose across appended updates.",
+        "cross_refs": ["A0-F12"],
+        "repair_owner": "A2, A6; ETP-T2"
+      },
+      {
+        "id": "A0-F06",
+        "title": "The only recorded full release-gate run cannot be reproduced after the claim reclassification",
+        "artefact": "evidence/etp7/RECEIPT.md",
+        "locator": "lines 108-156 (verbatim `release-gate` output), line 216 (conjoin table), line 224 (gate command); compared with the live claim set",
+        "observed": "The receipt records exit 1 with four RG_CLAIM_CONTRADICTED refusals (ETP0-CLM-004, -005, -030, -032), a conjoin verdict of CONTRADICTED, 33 blocked members and 42 open obligations. At the candidate, `python3 forensics/tools/etp_claims.py conjoin` returns verdict SUPERSEDED with 33 blocked and 37 open obligations, and the claim set contains 0 CONTRADICTED members (17 ESTABLISHED, 13 PARTIAL, 4 SUPERSEDED, 1 RISK_ACCEPTED). docs/ETP-TODO.md:118 still says the run `on this tree` exits 1 with four RG_CLAIM_CONTRADICTED items.",
+        "expected": "the receipt names the claim-set digest it read, and a later reclassification either regenerates the run or is recorded in the receipt as superseding it.",
+        "consequence": "The recorded refusal is not the current result. A reader cannot tell whether four contradictions were resolved (with evidence) or reclassified into weaker states, and the present-tense statement in the queue row asserts a gate result the tool no longer produces. Article 11 (no authority promotes a contradicted claim by declaration) is the rule at stake.",
+        "existing_coverage": "ETP-T15 preserved the pre-reconciliation claim set at evidence/etp-t15/history/claims.before-reconciliation.json and the five discharges carry `settled_by`; the ETP-7 receipt was not updated and no rule refuses a receipt whose cited claim verdicts no longer exist.",
+        "cross_refs": ["A0-F13", "A0-F15"],
+        "repair_owner": "A2, A21; ETP-7"
+      },
+      {
+        "id": "A0-F07",
+        "title": "The O7 aggregate names three withdrawn cells that are not withdrawn, and the aggregate's BB log differs from the BB cell's",
+        "artefact": "courts/phase18/interop/RECEIPT-o7.json",
+        "locator": "line 7 (`supersedes`), line 4 (`status`), cells.BB.log_sha256; compared with RECEIPT-o7-AA/AB/BA/BB.json withdrawn fields and RECEIPT-o7-BB.json log_sha256",
+        "observed": "RECEIPT-o7.json line 7 says it supersedes `the three per-cell receipts marked withdrawn`, but all four cell receipts carry `withdrawn: false`. The aggregate's BB log_sha256 is 1a23987a…; the BB cell's log_sha256 is 03dc64df…. docs/ETP-TODO.md:98 describes RECEIPT-o7.json as `now a withdrawal record (status WITHDRAWN, …)`; the file reads `status: ESTABLISHED`, `withdrawn: false`.",
+        "expected": "the aggregate and its cells agree on withdrawal state and on the log digest, or the aggregate names the revision each cell belongs to.",
+        "consequence": "A JSON-only reader of the aggregate concludes a corrected four-cell run supersedes three withdrawn cells, while nothing in the cells records that withdrawal, and the BB transcript the aggregate cites is not the BB transcript that exists. check_receipts.py reports 0 problems, so gate-3 passes a receipt set whose own records disagree.",
+        "existing_coverage": "check_receipts.py R2-R4 (rules at courts/phase18/interop/check_receipts.py:60-93) validate each receipt in isolation: R4 reads only `result.log_sha256`, which the matrix receipt does not have, so the cell logs are never compared across the two encodings.",
+        "cross_refs": ["A0-F11"],
+        "repair_owner": "A2, A5, A6; ETP-5 F3"
+      },
+      {
+        "id": "A0-F08",
+        "title": "The machine record of the constitution omits Article 9's unenforced half",
+        "artefact": "evidence/etp-t14/ARTICLES.json",
+        "locator": "articles[id=ET14-A09] (`declared_none`: false, enforcement: HR_FMEA_SEVERITY, ER_BAD_SEVERITY, gate_items: []); compared with docs/EARNED-TRUST.md:281-288",
+        "observed": "docs/EARNED-TRUST.md states `No tool refuses a reader who treats a severity as a probability; that half of the article has no mechanical enforcement and is a review obligation`, and that no release-gate item runs the two tools. ARTICLES.json has no field for a partially enforced article: ET14-A09 presents two enforcement rules and `declared_none: false`, and the gate-item gap is only an empty list.",
+        "expected": "a per-enforcement-scope declaration, so an article with an unenforced half is not indistinguishable from a fully enforced one.",
+        "consequence": "A consumer of ARTICLES.json, the declared machine record, reads Article 9 as enforced and gate-uncovered only. The stronger warning, that a severity can be multiplied by a guessed probability with no refusal anywhere, exists only in prose. This is the exact summary-artefact defect Article 1 and A21 exist to prevent.",
+        "existing_coverage": "docs_consistency.py refuses an article with no enforcement and no declaration of that; it does not model a partial enforcement, so this passes.",
+        "cross_refs": [],
+        "repair_owner": "A6, A21; ETP-T14"
+      },
+      {
+        "id": "A0-F09",
+        "title": "The scheduling declaration layer reports six SATISFIED runs that the admission layer refuses",
+        "artefact": "evidence/etp-t11/RUNS.json",
+        "locator": "runs[].status; compared with evidence/etp-t11/TIERS.json totals.by_state and docs/SCHEDULING.md:136-146",
+        "observed": "Six runs carry `status: SATISFIED` with `identity: null` (run-etp-t9-focused, run-etp-t10-focused, run-haz-15-gate, run-haz-16-gate, run-haz-16-controls, run-phase2-abi). Each note states that the record carries no source tree, tool digest, instrument configuration, target profile or exact population. TIERS.json records 0 SATISFIED, 59 NOT_RUN and 19 REFUSED over 78 requirements, and its rows carry the refusal text `a SATISFIED declaration needs a complete applicability identity`. CACHE.json has two entries, both with the placeholder identity 1111…/2222….",
+        "expected": "the declaration field either uses a distinct vocabulary (for example `DECLARED`), or carries an `admission` field, so the same word does not denote two different states in two files.",
+        "consequence": "An exporter that reads RUNS.json, as A1/A21 will, emits six SATISFIED scheduling results that the project's own policy resolved to REFUSED. The aggregate in TIERS.json is correct; the defect is that nothing binds the two records and the weaker one uses the stronger word.",
+        "existing_coverage": "docs/SCHEDULING.md:142-146 and :266-269 state the distinction and :279 reports 0 SATISFIED. No automated rule reads RUNS.runs[].status against TIERS.totals.",
+        "cross_refs": [],
+        "repair_owner": "A2, A5, A21"
+      }
+    ],
+    "summary_without_reconstruction": [
+      {
+        "id": "A0-F10",
+        "title": "The `current` 33/33 status row is computed over a population that mixes candidate identities",
+        "artefact": "forensics/STATUS.md",
+        "locator": "line 541 (`current | 207 | 33/33 at L7-functional | … body.counts.by_subject, body.runs`); compared with forensics/downstream/runtime-functional-atlas.json body.evidence_reuse and forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json consumers.l7_functional=33",
+        "observed": "The row names the two atlas fields a reader should use to recompute the figure. Those fields produce 66 L7 rows for the cohort, of which 54 carry `reused_from_candidate_identity` (27 families) and 12 do not (6 families: curl, haproxy, monit, openssh, pure-ftpd, redis). body.evidence_reuse.candidate_identity_match is false and the marker names the superseded 26ba36ff… against the atlas candidate 1c03ec0a…. The table labels the older 223-run row `historical, superseded` while the 207-run row it calls `current` contains the 27 carried-forward families.",
+        "expected": "the row states that the L7 count is a mixture and names the reused population, or gives the count over rows without the reuse marker (6 of 33 here).",
+        "consequence": "An external reader concludes 33 families are functionally verified at the current candidate. The record supports 6 at the recorded candidate and 27 carried forward; the 33/33 is a mixture.",
+        "existing_coverage": "the atlas discloses the reuse per row and at body level, and CAMPAIGN-STATUS carries a note; the status table's `source` column names the atlas and `body.runs`, which does allow the partition, but the row neither states the qualifier nor gives the filtered value. Freshness (`FR_EVIDENCE_SUPERSEDED`) does not read a per-row identity inside one artefact.",
+        "cross_refs": ["A0-F04", "A0-F17"],
+        "repair_owner": "A2, A3, A5"
+      },
+      {
+        "id": "A0-F11",
+        "title": "The curl closure's top-level verdict reads ACCEPTED while its blocking predicate reads FAIL",
+        "artefact": "evidence/closure-curl-049.json",
+        "locator": "verdict.state=`ACCEPTED`, verdict.safe_compatible=false, verdict.reason=`no refusal condition fired`, refusals=[]; precision.predicate_element_7.established=false, precision.predicate_element_7.status=`FAIL`",
+        "observed": "The document's verdict block records acceptance and an empty refusal list. The predicate that the closure-discipline audit uses to fail the record is in a separate precision block and is FAIL with 219 target-bounded unresolved sites named as the basis.",
+        "expected": "one verdict, or an `ACCEPTED` that names the axis it covers (for example `closure_rows`) and a separate element-7 state at the same level.",
+        "consequence": "A reader who stops at `verdict` reads an accepted curl closure with no refusals. The consequence is the one ETP-T10 recorded: the element-7 predicate is what blocks a SAFE_COMPATIBLE promotion, and it is not visible at the verdict.",
+        "existing_coverage": "closure_discipline.py and evidence/etp-t10/AGGREGATES.json read precision.predicate_element_7 and mark the record FAIL; the closure record's own verdict block is not recomputed by any rule.",
+        "cross_refs": ["A0-F01"],
+        "repair_owner": "A2, A21; C3"
+      },
+      {
+        "id": "A0-F12",
+        "title": "Queue-row figures for T1 and T2 do not match the artefacts they cite",
+        "artefact": "docs/ETP-TODO.md",
+        "locator": "line 119 (ETP-T1: 325 nodes / 403 edges / 21 declared orphans; 66 evidence nodes), line 120 (ETP-T2: barrier states and FMEA counts); compared with evidence/etp-t1/TRACEABILITY.json and evidence/etp-t2/HAZARDS.json",
+        "observed": "TRACEABILITY.json at the candidate has 361 nodes, 475 edges, 43 declared orphans and 104 evidence nodes. HAZARDS.json has barriers 18 CLAIMED_NO_EVIDENCE / 2 BARRIER_ABSENT / 0 EVIDENCED and FMEA 23/7/0. The queue rows state 325/403/21/66 and, in the most recent appended update, 2/17/1 with FMEA 22/7/1.",
+        "expected": "a status row either cites a generated table or states the digest and commit its figures describe.",
+        "consequence": "A reader recomputing any of the four figures from the cited artefact gets a different number and cannot tell whether the graph changed (it did), whether the row is stale, or whether one of the two is wrong.",
+        "existing_coverage": "docs_consistency.py checks a bounded set of figures; these four are not among them. traceability.py refuses drift between the graph and its own register, not between the graph and the queue text.",
+        "cross_refs": ["A0-F05"],
+        "repair_owner": "A2, A21"
+      },
+      {
+        "id": "A0-F13",
+        "title": "Three of the aggregate audit's eight recorded document digests no longer match the documents",
+        "artefact": "evidence/etp-t10/AGGREGATES.json",
+        "locator": "aggregates[path=evidence/SAFE-COMPATIBLE-openssh-b85c.json].sha256, aggregates[path=forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json].sha256, aggregates[path=evidence/etp/claims.json].sha256, and the same entries' reported_state_source",
+        "observed": "Three of eight aggregates carry a sha256 that does not match the live file: SAFE-COMPATIBLE-openssh-b85c.json recorded 41e5797d… / live dde0d376…; CAMPAIGN-STATUS.json recorded abb8a6cb… / live 8affeac4…; claims.json recorded 65d8105b… / live ddd70dfb…. For the b85c record, reported_state_source is `verdict.value`, and the live document has no `verdict` key at all (it was reclassified `RISK_ACCEPTED` with a `classification` block and a `dissent`).",
+        "expected": "a per-aggregate identity plus a recorded recomputation, or a refusal when the digest no longer matches, so the audit's PASS/hides-a-blocked-row conclusion is bound to the bytes it read.",
+        "consequence": "The audit's own conclusions cannot be re-derived: a reader who hashes the documents gets different bytes, and for b85c the field the audit read no longer exists. The audit is correct in substance for b85c and CAMPAIGN-STATUS (both still carry blocked rows), but the record cannot demonstrate it.",
+        "existing_coverage": "freshness.py would invalidate a dependent artefact whose dependency digest moved; AGGREGATES.json is not registered as a dependent of the three documents it audits.",
+        "cross_refs": ["A0-F06", "A0-F15"],
+        "repair_owner": "A2, A3; ETP-T10"
+      },
+      {
+        "id": "A0-F14",
+        "title": "Two different court/tmp reference counts are recorded for the same quantity with no shared identity",
+        "artefact": "evidence/etp6/MANIFEST.json",
+        "locator": "court_tmp_reference_audit (549 tracked files, 7,425 textual occurrences); compared with docs/EXTERNAL-REPRODUCTION.md:174-175 (1,929 references, 7,399 textual occurrences in 546 tracked files `at this HEAD`)",
+        "observed": "The manifest audit is scoped to commit 98c7b5d29. The document says `at this HEAD`, which names no commit and no date, and gives 7,399 / 546 against the manifest's 7,425 / 549.",
+        "expected": "one identity-bound count, or two counts each naming its commit.",
+        "consequence": "A reader cannot tell whether the reference population shrank between two commits or whether one count is wrong. `at this HEAD` is not an identity, so the sentence is unreconstructable by construction.",
+        "existing_coverage": "none; no rule binds a prose `at this HEAD` to a commit.",
+        "cross_refs": ["A0-F18"],
+        "repair_owner": "A2, A3"
+      }
+    ],
+    "wrong_candidate_application": [
+      {
+        "id": "A0-F15",
+        "title": "A discharged obligation asserts a later document state while its evidence digest resolves to the earlier bytes with the opposite value",
+        "artefact": "evidence/etp/claims.json",
+        "locator": "claims[id=ETP0-CLM-032].obligations[id=OBL-GAP-005] (`settled_by`) and claims[id=ETP0-CLM-032].evidence[id=EV-01].sha256; claims[].source_identity.commit",
+        "observed": "OBL-GAP-005 is DISCHARGED with `settled_by: ETP-T15: CAMPAIGN-STATUS.json now records 0/33 section 7 and 1 risk-accepted family`. EV-01 in the same claim records sha256 abb8a6cb… with digest_identity `S`. Hashing `forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json` at S=9372bb28b gives abb8a6cb…, and that blob records `consumers.safe_compatible: 1`. The live file is 8affeac4… and records 0.",
+        "expected": "the settlement cites evidence at the identity it describes, or the claim declares a source identity that includes the post-S settlement.",
+        "consequence": "The discharge looks supported to a reader who trusts the `settled_by` text and false to a reader who re-derives the cited digest. This is the record pattern that ETP-T15 exists to prevent, one level down: the reconciliation is real, but the claim's evidence pointer still names the contradicted bytes. Every claim in the set shares `source_identity.commit=9372bb28b` while five verdicts are settled by a later item.",
+        "existing_coverage": "etp_claims.py re-derives every evidence digest at S (80 of 81 match; the one exception is the deliberately withdrawn O7 digest, recorded as a refusal in ETP-5 R3) and therefore cannot see this defect: the digest is correct for S. freshness.py models the claim set as a dependent of S but not the settlement's identity.",
+        "cross_refs": ["A0-F06", "A0-F13"],
+        "repair_owner": "A2, A3; ETP-T15, ETP-1"
+      },
+      {
+        "id": "A0-F16",
+        "title": "The release gate's package item does not bind the package to the candidate under release",
+        "artefact": "forensics/tools/release_gate.py",
+        "locator": "check_package (lines 530-574); manifest field candidate.commit",
+        "observed": "check_package resolves the package root, runs `verify.sh` or `etp6_verify.py`, and reports the verifier's RESULT. It never reads `MANIFEST.json candidate.commit`/`tree` and never compares it with the `--candidate` the gate resolved. A package built from commit 98c7b5d29 therefore satisfies gate-5 for a release at e0b727d06.",
+        "expected": "gate-5 refuses `RG_PACKAGE` when the package's candidate commit or tree differs from the candidate the gate resolved, or records the package candidate as an explicit, separate identity in the decision output.",
+        "consequence": "A passing release gate can be evidenced by reproduction of a different commit. This is the exact `wrong-candidate application` class the release policy exists to refuse, in the tool that enforces it.",
+        "existing_coverage": "the gate's docstring (lines 74-80) disclaims that the package was produced by an independent party and that the claim is true; it does not disclaim, and does not check, package-to-candidate identity. gate-1 binds the gate to HEAD and is unrelated to the package.",
+        "cross_refs": ["A0-F18"],
+        "repair_owner": "A2, A3, A20; ETP-7"
+      },
+      {
+        "id": "A0-F17",
+        "title": "The reproducibility record has no committed candidate identity and its post-commit rebuild is NOT_RUN",
+        "artefact": "evidence/etp2/reproducibility.json",
+        "locator": "candidate.commit=null, candidate.identity_status=`UNCOMMITTED_PENDING_ORCHESTRATOR_COMMIT`, candidate.head_at_start=e9d492b0d, deferred_gates.post_commit_rebuild_of_S_prime=`NOT_RUN`",
+        "observed": "The record that carries the byte-identical build result has no `candidate.commit`. The only identity is `head_at_start` plus crate-input tree hashes, and the rebuild of the committed candidate is recorded NOT_RUN. The `identity_status` still says pending although S' was committed before the candidate under audit existed.",
+        "expected": "after the commit, `candidate.commit` names it and the post-commit rebuild is either run or explicitly deferred with the gate that will run it.",
+        "consequence": "A reader who consumes `candidate.commit` gets null and cannot bind the byte-identical archive to any commit. A reader who consumes the ETP-2 row in the queue gets `S' = e9d492b0d`, which is correct but not present in the record's identity field.",
+        "existing_coverage": "the record names `head_at_start`, the recipe digest and the three artefact digests, so the measurement is reconstructable by re-running the tracked recipe; §22 requires the freeze identity in the record and this record predates the post-commit step.",
+        "cross_refs": [],
+        "repair_owner": "A2, A3; ETP-2"
+      },
+      {
+        "id": "A0-F18",
+        "title": "The tracked external-package record describes a different commit from the candidate under audit",
+        "artefact": "evidence/etp6/MANIFEST.json",
+        "locator": "candidate.commit=98c7b5d29, candidate.frozen_source_commit=9372bb28b; compared with evidence/etp-t12/RECEIPT.md:96",
+        "observed": "The manifest names candidate 98c7b5d29. At this candidate the ETP-T12 clean-checkout run records `manifest FAIL … the staged tree does not match the frozen manifest. (56 hard refusal(s) against evidence/etp6/MANIFEST.json at this commit)`.",
+        "expected": "the package record is regenerated at the candidate it is offered for, or its stale identity is surfaced by gate-5 rather than only by `verify manifest`.",
+        "consequence": "The tree's only external-reproduction record is not of the tree. A reader taking `evidence/etp6/MANIFEST.json` as the candidate's external-reproduction evidence is reading another commit's selection and digests.",
+        "existing_coverage": "verify.py manifest refuses at this commit (recorded in ETP-T12); release_gate.py gate-5 does not (A0-F16).",
+        "cross_refs": ["A0-F03", "A0-F16"],
+        "repair_owner": "A2; ETP-6, ETP-7"
+      }
+    ]
+  },
+  "ranking": [
+    {
+      "rank": 1,
+      "id": "A0-F15",
+      "why": "It is the only finding where a discharged obligation and its own cited evidence record opposite values. Trusting it: an external reader re-deriving the digest concludes the claim set is internally unsound; trusting the settled_by text without re-deriving concludes a contradiction was resolved on evidence that does not show it. Both readings are wrong, and the defect is in the record that adjudicates every other claim."
+    },
+    {
+      "rank": 2,
+      "id": "A0-F01",
+      "why": "It is a live, cited, load-bearing population. Trusting it: a reader counts 200 unresolved sites, finds them contract-bounded, and concludes the curl element-7 blocker is nearly closed. The record's own total is 449 with 219 target-bounded, which is the population that keeps element 7 FAIL and the curl graduation open."
+    },
+    {
+      "rank": 3,
+      "id": "A0-F06",
+      "why": "It is the only recorded full release-gate refusal. Trusting it: a reader concludes the gate still refuses four contradictions at this tree and that nothing changed, or that reclassifying the claims removed the refusals without resolution. The current gate produces neither output, and no record binds the receipt to the claim-set bytes it read."
+    }
+  ],
+  "sound": [
+    {
+      "artefact": "evidence/etp6/MANIFEST.json inputs[] and refusals[]",
+      "why": "1,633 inputs each carry a path and SHA-256, the selection is a 56-path git-archive list, and five refusals name the paths a selected record cites but the commit does not contain. A missing or altered input fails verification with both hashes named (ETP-T6 mutation controls)."
+    },
+    {
+      "artefact": "evidence/etp-t9/DEPENDENCIES.json and forensics/tools/freshness.py",
+      "why": "Population, identity, dependency edges and exclusions are derived from the artefacts and the claim/traceability graphs; 228 exclusions are named with reasons, 189 of them by an explicit 512 KiB bound; an unresolved dependency is never UNAFFECTED, and carry-forward must be an explicit HISTORY declaration."
+    },
+    {
+      "artefact": "evidence/etp-t1/TRACEABILITY.json",
+      "why": "Every node carries a bound_commit and a digest read at that commit, the graph declares its 43 orphans by class with a reason, and the seed reproduces the committed graph byte for byte. The hazard-register projection digest in the graph matches the live HAZARDS.json."
+    },
+    {
+      "artefact": "evidence/etp/claims.json evidence digests",
+      "why": "All 81 evidence digests reconstruct: 80 re-derive from the Git blob at S, and the single exception is the withdrawn O7 revision tagged `digest_identity: historical`, which re-derives from the commit cc2e5fa32 named in its note (2ee7ee4d…). The 81st is therefore preserved history, not absent evidence."
+    },
+    {
+      "artefact": "evidence/etp3/instruments.json with forensics/tools/instrument_qualify.py",
+      "why": "Eleven instruments each carry intended use, failure modes, soundness limits and a paired control. Nine controls are executable and re-run; two are RECORDED and bound to a tracked runner digest. A RECORDED control presented as PASS is refused by gate-4."
+    },
+    {
+      "artefact": "courts/phase18/interop/MANIFEST-o11-A.json and -B.json",
+      "why": "Every count is derived from a named harness log under stated rules, the log digest and byte length are recorded, and check_receipts.py R4/R5 recompute both. The two skip dialects and the third `Skipped:` spelling are handled by refusing to guess rather than by hand-correcting a row."
+    },
+    {
+      "artefact": "evidence/etp-t11/TIERS.json",
+      "why": "Admission is conservative: 0 SATISFIED, 19 REFUSED, 59 NOT_RUN; every REFUSED row names the missing identity fields, and a BLOCKED row without a bound resolves to REFUSED. The defect at A0-F09 is in the separate declaration file, not in this aggregate."
+    },
+    {
+      "artefact": "evidence/etp-t10/AGGREGATES.json method and evidence/etp-t10/EXCLUSIONS.json",
+      "why": "Eight aggregates are audited against their own blocked rows; two are refused with `CD_AGGREGATE_PASS_HIDES_BLOCKED_ROW`. The 1,121 exclusion rows are never dropped: a row missing any of the five requirements is counted as failing, and an incomplete residual sample adds a failing row for the remainder."
+    },
+    {
+      "artefact": "evidence/etp-t15/RECONCILIATION.json and evidence/etp-t15/history/",
+      "why": "The superseded and live bytes of six documents are both preserved with digests, the graduation's original bytes are kept, the dissent is retained unchanged, and the ledger's 1/33 value survives in a history block. A correction preserves what was believed."
+    },
+    {
+      "artefact": "docs/RELEASE_GATES.md §10",
+      "why": "The gate-to-article mapping is explicit about its own limits and names the four articles no gate item covers (5, 6, 7, 9). A reader cannot mistake gate coverage for constitution coverage of those four."
+    },
+    {
+      "artefact": "evidence/etp-t8/ASSIGNMENTS.json",
+      "why": "All 50 assignments are reported as having a same-party adjudicator and zero external trust domains; the b85c independence claim is refused on four named grounds. The adverse result is recorded rather than smoothed."
+    }
+  ],
+  "limits": [
+    "Whether the 200 residual_sites rows are a prefix, a sample or the full contract-bounded subclass of the 449 cannot be determined from the record; determining it requires re-running consumer_closure.py, which A0 did not do.",
+    "The validity of the 301 carried-forward atlas families at the superseded identity (libcrypto 26ba36ff…) cannot be established here: the prior run record is not in the tree.",
+    "The freshness status of the 228 excluded artefacts, including artifacts/phase24/COURTS.json and the five phase25 court records, is unknown; they are excluded from the model by size, not analysed.",
+    "Whether HAZ-15 and HAZ-16 changed barrier state deliberately cannot be established from the register: only file mtimes (HAZARDS.json 22:44, RECEIPT.md 10:30) and the queue-row narrative show the order. No transition field exists.",
+    "The ETP-7 gate transcript cannot be re-derived without re-running release_gate.py against the preserved pre-reconciliation claim set; A0 did not execute the release gate.",
+    "External independence and external reproduction cannot be assessed: no external reviewer or reproducer identity exists, and the ETP-6 status is EXTERNAL_REVIEW_PENDING.",
+    "The 549 tracked files that reference court/tmp, and the untracked court outputs they cite, are outside this audit; their reconstruction status is the ETP-0 finding, not re-measured here.",
+    "SARIF conformance cannot be assessed because no SARIF artefact, writer, reader or profile exists in the tree; the format is absent, not non-conforming.",
+    "The correctness of the 62,297-site heuristic census cannot be assessed: the scanner is lexical, the source tree has changed since the scan, and A0 did not re-run it."
+  ],
+  "handoff": {
+    "A1": "needs a lossless finding model first: A0-F01, A0-F02, A0-F09 and A0-F11 are the populations a SARIF adapter would truncate again.",
+    "A2": "owns A0-F01, A0-F02, A0-F03, A0-F05, A0-F06, A0-F12, A0-F13, A0-F14, A0-F17 and A0-F18: each is a record that must carry original output, arguments, identity, population and remainders.",
+    "A3": "owns the identity model that A0-F04, A0-F10, A0-F15 and A0-F16 require: rule identity, logical finding identity and exact occurrence identity, never reused across artefacts.",
+    "A5": "owns A0-F03, A0-F07, A0-F09 and A0-F11: expected versus examined population, absent population is not an empty population, and exit code is not completeness.",
+    "A6": "owns A0-F02, A0-F05, A0-F07 and A0-F08: a suppressed or reclassified finding remains a finding, with justification, scope, reviewer, independence and expiry.",
+    "A21": "owns the rule that a summary never replaces reconstruction: A0-F06, A0-F09, A0-F10, A0-F11 and A0-F12 are summaries that pass while their members do not.",
+    "A17": "the omission-resistance item already owns the pre-registered expected manifest that would detect A0-F03 and A0-F18; this audit supplies two concrete instances."
+  }
+}

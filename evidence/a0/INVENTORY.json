@@ -1,0 +1,455 @@
+{
+  "schema": "openssl-rs/etp-addendum-a/evidence-inventory/1",
+  "kind": "evidence-and-trust-surface-inventory",
+  "item": "A0 of docs/ETP-TODO.md",
+  "date": "2026-11-23",
+  "candidate": {
+    "commit": "e0b727d067b00da65ff66f329a36c725bc2658e5",
+    "branch": "staging",
+    "worktree_tracked_dirty_files": 0,
+    "tracked_file_count": 14241,
+    "object_format": "sha1"
+  },
+  "method": {
+    "statement": "Each artefact named below was opened at the candidate commit and its declared schema, producer, consumer and identity fields were read from the artefact itself or from the tool that reads it. Population counts were recomputed from the tracked files at the candidate, not copied from a receipt. Where a receipt and the artefact disagree, the recomputed value is recorded here and the disagreement is a finding in FINDINGS.json.",
+    "not_done": [
+      "No artefact was regenerated: A0 inventories identity and reconstructability, it does not rebuild a record.",
+      "No consumer in another repository was inspected: only tools in this tree that read the artefact are named.",
+      "The 228 artefacts excluded from freshness tracking by the 512 KiB bound were not opened; they are listed by the exclusion record, not by this inventory."
+    ]
+  },
+  "summary": {
+    "tracked_files": 14241,
+    "tracked_json": 3131,
+    "tracked_markdown": 225,
+    "distinct_schema_identifiers": 528,
+    "evidence_json_files": 352,
+    "evidence_json_without_schema_key": 8,
+    "forensics_json_without_schema_key": 214,
+    "documents_in_docs_directory": 97,
+    "claim_set_members": 35,
+    "claim_obligations_total": 42,
+    "claim_obligations_open": 37,
+    "claim_obligations_discharged": 5,
+    "interop_receipts": 14,
+    "interop_manifests": 3,
+    "freshness_artefacts": 331,
+    "freshness_dependency_edges": 5183,
+    "freshness_excluded_artefacts": 228,
+    "traceability_nodes": 361,
+    "traceability_edges": 475,
+    "traceability_declared_orphans": 43,
+    "hazards": 20,
+    "fmea_rows": 30,
+    "stpa_ucas": 12,
+    "attack_graphs": 7,
+    "unsafe_sites": 62297,
+    "unsafe_operation_rows": 767,
+    "closure_rows": 1121,
+    "opaque_operation_rows": 55,
+    "scheduling_change_sets": 6,
+    "scheduling_requirements": 78,
+    "aggregates_audited": 8,
+    "aggregates_refused": 2,
+    "instruments": 11,
+    "constitution_articles": 11,
+    "constitution_articles_without_gate_item": 4,
+    "atlas_runs": 2000,
+    "atlas_specimens": 226,
+    "atlas_recipe_rows": 307,
+    "atlas_reused_families": 301,
+    "etp6_package_inputs": 1633,
+    "etp6_package_refusals": 5,
+    "phase_obligation_ledgers": 23
+  },
+  "formats_present": [
+    "JSON object with a versioned `schema` identifier (528 distinct identifiers)",
+    "JSON Schema 2020-12 documents (2 schema documents)",
+    "JSON Lines (forensics/downstream/authority-baselines.jsonl and sibling corpus files)",
+    "Markdown receipt and normative document",
+    "TSV/table in Markdown",
+    "SHA-256 digest lists (MANIFEST.json inputs and .sha256 style records)",
+    "ELF shared objects and static archives (build artefacts, not tracked)"
+  ],
+  "formats_absent": [
+    {
+      "format": "SARIF",
+      "versions": "any (2.1.0 and 2.1.0 Errata 01 both absent)",
+      "evidence": "git ls-files contains no .sarif file; grep for `sarif` in tracked JSON, Python and Markdown matches only docs/ETP-TODO.md and docs/ETP-ADDENDUM-B.md, which are the queue documents that request it."
+    },
+    {
+      "format": "DSSE envelope",
+      "versions": "any",
+      "evidence": "No .dsse file and no DSSE PAE implementation in the tree; references occur only in queue and research documents."
+    },
+    {
+      "format": "in-toto Statement",
+      "versions": "any",
+      "evidence": "No statement payload or predicate type is defined; references occur only in queue and research documents."
+    },
+    {
+      "format": "SLSA provenance",
+      "versions": "any",
+      "evidence": "No provenance attestation is emitted; the Addendum-A queue item A9 is marked TODO."
+    },
+    {
+      "format": "Sigstore bundle / Rekor entry / C2SP tlog",
+      "versions": "any",
+      "evidence": "docs/ETP-ADDENDUM-B.md §B.1 and §B.30 define the requirement; no signed entry, bundle, checkpoint or inclusion proof exists in the tree."
+    },
+    {
+      "format": "RFC 3161 timestamp",
+      "versions": "any",
+      "evidence": "No timestamp token is present; Addendum-B item B2 is TODO."
+    },
+    {
+      "format": "TUF metadata",
+      "versions": "any",
+      "evidence": "No root/targets/snapshot/timestamp metadata is present; Addendum-A item A18 is TODO."
+    },
+    {
+      "format": "SBOM (SPDX or CycloneDX)",
+      "versions": "any",
+      "evidence": "git ls-files contains no SBOM file and no generator."
+    }
+  ],
+  "artefacts": [
+    {
+      "id": "A0-INV-01",
+      "path": "evidence/etp/claims.json",
+      "role": "claim set (35 typed claims)",
+      "schema": "openssl-rs/etp/claims/v1",
+      "producer": "the ETP-1 claim conversion; validated by forensics/tools/etp_claims.py",
+      "consumers": [
+        "forensics/tools/etp_claims.py validate|conjoin",
+        "forensics/tools/release_gate.py gate-2",
+        "forensics/tools/freshness.py",
+        "forensics/tools/verify.py claims"
+      ],
+      "machine_readable": true,
+      "candidate_identity": "source_identity.commit=9372bb28b and a sha256 plus digest_identity on every evidence entry",
+      "reconstructable": "partial: the validator re-derives every digest from the Git blob at S, but five obligations are settled by evidence produced after S (A0-F15)"
+    },
+    {
+      "id": "A0-INV-02",
+      "path": "evidence/etp/claim.schema.json",
+      "role": "closed JSON Schema for the claim set",
+      "schema": "JSON Schema 2020-12",
+      "producer": "hand-written and versioned with the claim set",
+      "consumers": ["forensics/tools/etp_claims.py"],
+      "machine_readable": true,
+      "candidate_identity": "none; the schema is a definition, not a record",
+      "reconstructable": "yes: tracked text, read directly"
+    },
+    {
+      "id": "A0-INV-03",
+      "path": "evidence/etp0/CLAIMS.json",
+      "path_extra": "evidence/etp0/TRUST-GAPS.json",
+      "role": "source claim inventory and trust-gap register; input retained after conversion",
+      "schema": "none declared (unversioned evidence record)",
+      "producer": "ETP-0 baseline",
+      "consumers": ["evidence/etp/claims.json derived_from", "ETP-T15 history comparison"],
+      "machine_readable": true,
+      "candidate_identity": "the containing receipt names S=9372bb28b; the JSON has no identity field",
+      "reconstructable": "yes as history; not a current claim source"
+    },
+    {
+      "id": "A0-INV-04",
+      "path": "evidence/etp-t1/TRACEABILITY.json",
+      "role": "requirements-to-release-claim graph with declared orphans",
+      "schema": "openssl-rs/etp/traceability/1",
+      "producer": "forensics/tools/etp_t1_seed.py",
+      "consumers": [
+        "forensics/tools/traceability.py",
+        "forensics/tools/hazard_register.py",
+        "forensics/tools/verify.py"
+      ],
+      "machine_readable": true,
+      "candidate_identity": "identity.commit=21bea3188 and a per-node bound_commit plus digest",
+      "reconstructable": "yes: the seed reproduces the graph byte for byte"
+    },
+    {
+      "id": "A0-INV-05",
+      "path": "evidence/etp-t2/HAZARDS.json",
+      "role": "security hazard register: 20 hazards, 8 fault trees, 30 FMEA rows, 12 UCAs, 7 attack graphs",
+      "schema": "openssl-rs/etp/hazards/1",
+      "producer": "hand analysis reviewed by forensics/tools/hazard_register.py",
+      "consumers": [
+        "forensics/tools/hazard_register.py",
+        "forensics/tools/etp_t1_seed.py (hazard projection)",
+        "forensics/tools/side_channel_erasure.py (severity vocabulary)"
+      ],
+      "machine_readable": true,
+      "candidate_identity": "identity.analysis_candidate=6da02233f and identity.graph_commit=21bea3188",
+      "reconstructable": "yes from the register itself; the aggregate counts exist only in the receipt (A0-F09)"
+    },
+    {
+      "id": "A0-INV-06",
+      "path": "evidence/etp-t4/SAFETY-SITES.json",
+      "role": "unsafe-site obligation inventory (62,297 sites, indexed row table)",
+      "schema": "openssl-rs/etp/unsafe-sites/1",
+      "producer": "forensics/tools/unsafe_obligations.py (declared heuristic lexical scanner)",
+      "consumers": [
+        "evidence/etp-t1/TRACEABILITY.json etp_t4 projection",
+        "forensics/tools/unknown_obligations_v1l.py",
+        "forensics/tools/unsafe_footprint.py"
+      ],
+      "machine_readable": true,
+      "candidate_identity": "identity.commit=246e30580, source_tree_sha256, scanner_sha256",
+      "reconstructable": "partial: the site and operation tables carry every member row; the 1,999 lint suppressions are aggregate-only (A0-F02), and the heuristic scanner and hash-extended source have both changed since the scan"
+    },
+    {
+      "id": "A0-INV-07",
+      "path": "evidence/etp-t4/AXIOMS.json",
+      "path_extra": "evidence/etp-t4/VACUITY.json",
+      "role": "axiom and admitted-result register; vacuity refusals",
+      "schema": "openssl-rs/etp/axioms/1; VACUITY.json declares no schema",
+      "producer": "ETP-T4 analysis",
+      "consumers": ["ETP-T4 receipt", "forensics/tools/etp_t1_seed.py"],
+      "machine_readable": true,
+      "candidate_identity": "the T1 graph records candidate 246e30580 and a digest for each file",
+      "reconstructable": "yes from the tracked record; the discharge counts are summary fields"
+    },
+    {
+      "id": "A0-INV-08",
+      "path": "evidence/etp3/instruments.json",
+      "role": "instrument qualification register (11 instruments)",
+      "schema": "openssl-rs/instrument-qualification/1",
+      "producer": "hand-written register; forensics/tools/instrument_qualify.py re-validates",
+      "consumers": [
+        "forensics/tools/instrument_qualify.py validate|controls|check",
+        "forensics/tools/release_gate.py gate-4",
+        "forensics/tools/verify.py instruments"
+      ],
+      "machine_readable": true,
+      "candidate_identity": "each instrument carries a version validation and a control binding; the register itself carries no commit",
+      "reconstructable": "yes: 9 executable controls can be re-run, 2 controls are RECORDED and bound to a tracked runner digest"
+    },
+    {
+      "id": "A0-INV-09",
+      "path": "courts/phase18/interop/RECEIPT-*.json",
+      "role": "OpenSSH interoperability receipts (14 files over items O2-O12)",
+      "schema": "openssl-rs/interop-pin-receipt/1, openssl-rs/interop-cell-receipt/1, openssl-rs/interop-matrix-receipt/3",
+      "producer": "courts/phase18/interop/{cell.sh,manifest.py,publish_logs.py,verify_pins.py}",
+      "consumers": [
+        "courts/phase18/interop/check_receipts.py",
+        "forensics/tools/release_gate.py gate-3",
+        "forensics/tools/verify.py receipts"
+      ],
+      "machine_readable": true,
+      "candidate_identity": "harness-log sha256 per cell, mapped library paths; the O7 aggregate carries no DSO digest",
+      "reconstructable": "yes for counts and logs; the binary identity is prose-only at the matrix level (A0-F11)"
+    },
+    {
+      "id": "A0-INV-10",
+      "path": "courts/phase18/interop/MANIFEST.json",
+      "path_extra": "courts/phase18/interop/MANIFEST-o11-A.json, courts/phase18/interop/MANIFEST-o11-B.json",
+      "role": "pinned upstream digests; derived executed/ok/failed/skipped/blocked counts with derivation rules",
+      "schema": "declared per file; the O11 manifests carry value fields, not a `schema` identifier",
+      "producer": "forensics/tools/manifest.py and the O2 pin verifier",
+      "consumers": ["courts/phase18/interop/check_receipts.py (R4, R5)"],
+      "machine_readable": true,
+      "candidate_identity": "source and DSO digests in the O11 manifests; MANIFEST.json pins upstream archives, not the candidate",
+      "reconstructable": "yes from the tracked logs"
+    },
+    {
+      "id": "A0-INV-11",
+      "path": "evidence/closure-curl-049.json",
+      "path_extra": "evidence/closure-ssh-b85c.json, evidence/closure-sshd-b85c.json",
+      "role": "consumer closure: obligation disposition, indirect-site precision, element-7 predicate",
+      "schema": "openssl-rs/campaign/safe-c33/consumer-closure/v2 (210 files use this schema)",
+      "producer": "forensics/tools/consumer_closure.py",
+      "consumers": [
+        "forensics/tools/closure_discipline.py",
+        "evidence/etp-t10/AGGREGATES.json",
+        "forensics/tools/rebind_consumer_artifact.py"
+      ],
+      "machine_readable": true,
+      "candidate_identity": "source_identity, candidate_identity, artifact_identity, ledger_record",
+      "reconstructable": "partial: totals and per-site rows are present, but residual_sites is capped at 200 of 449 without a bound field (A0-F01)"
+    },
+    {
+      "id": "A0-INV-12",
+      "path": "evidence/etp-t10/EXCLUSIONS.json",
+      "path_extra": "evidence/etp-t10/OPAQUE-OPERATIONS.json, evidence/etp-t10/AGGREGATES.json",
+      "role": "closure-discipline audit: 1,121 exclusion rows, 55 opaque-operation rows, 8 audited aggregates",
+      "schema": "declared by the audit tool",
+      "producer": "forensics/tools/closure_discipline.py",
+      "consumers": ["forensics/tools/verify.py closure"],
+      "machine_readable": true,
+      "candidate_identity": "AGGREGATES.json identity.commit=7e70b667f and a per-aggregate sha256",
+      "reconstructable": "rows yes; four of eight recorded digests no longer match the live documents (A0-F13)"
+    },
+    {
+      "id": "A0-INV-13",
+      "path": "evidence/etp-t9/DEPENDENCIES.json",
+      "path_extra": "evidence/etp-t9/IDENTITY-TRIAGE.json, evidence/etp-t9/HISTORY-RUNS.json",
+      "role": "freshness dependency model: 331 artefacts, 5,183 edges, 228 exclusions, 2 history declarations",
+      "schema": "openssl-rs/etp/freshness-dependencies/1; openssl-rs/etp/identity-triage/1",
+      "producer": "forensics/tools/freshness.py record",
+      "consumers": [
+        "forensics/tools/freshness.py check|diff",
+        "forensics/tools/release_gate.py gate-2b",
+        "forensics/tools/verify.py freshness"
+      ],
+      "machine_readable": true,
+      "candidate_identity": "recorded_at_commit=26c127262",
+      "reconstructable": "yes: the population and edges are derived from the artefacts and the claim/traceability graphs"
+    },
+    {
+      "id": "A0-INV-14",
+      "path": "evidence/etp-t11/TIERS.json",
+      "path_extra": "evidence/etp-t11/RUNS.json, evidence/etp-t11/CACHE.json, evidence/etp-t11/CHANGE-SETS.json",
+      "role": "FAST/BATCH/BOUNDARY/SEAL scheduling: 6 change sets, 78 requirements, admission states",
+      "schema": "openssl-rs/etp/scheduling-runs/1, openssl-rs/etp/scheduling-cache/1 and the TIERS schema",
+      "producer": "forensics/tools/scheduling.py",
+      "consumers": ["forensics/tools/verify.py scheduling"],
+      "machine_readable": true,
+      "candidate_identity": "each change set names base and head; admissions require a five-field identity",
+      "reconstructable": "yes: TIERS.json records 0 SATISFIED, 59 NOT_RUN, 19 REFUSED over 78 requirements; the declaration layer in RUNS.json uses the same status word for a weaker state (A0-F10)"
+    },
+    {
+      "id": "A0-INV-15",
+      "path": "evidence/etp-t14/ARTICLES.json",
+      "role": "machine record of the 11 earned-trust articles and their enforcement",
+      "schema": "openssl-rs/etp-t14/articles/1",
+      "producer": "ETP-T14; checked by forensics/tools/earned_trust.py",
+      "consumers": [
+        "forensics/tools/earned_trust.py",
+        "forensics/tools/docs_consistency.py"
+      ],
+      "machine_readable": true,
+      "candidate_identity": "source_candidate=1e068243d",
+      "reconstructable": "partial: the record carries rule identifiers but not each article's unenforced half (A0-F08)"
+    },
+    {
+      "id": "A0-INV-16",
+      "path": "evidence/etp-t8/ASSIGNMENTS.json",
+      "path_extra": "evidence/etp-t8/ROLES.json",
+      "role": "independence: 9 roles, 5 claim classes, 50 assignments",
+      "schema": "openssl-rs/etp-t8/assignments/1, openssl-rs/etp-t8/roles/1",
+      "producer": "ETP-T8; checked by forensics/tools/independence.py",
+      "consumers": ["forensics/tools/independence.py", "forensics/tools/verify.py independence"],
+      "machine_readable": true,
+      "candidate_identity": "source_identity; external_independence_present=false",
+      "reconstructable": "yes from the records and the refusal rules"
+    },
+    {
+      "id": "A0-INV-17",
+      "path": "evidence/etp-t6/CLAIM-MATRIX.json",
+      "path_extra": "evidence/etp-t6/TCB.json",
+      "role": "binary-level assurance: 23 TCB components, 7 build rows, 13 claims, 4 unbound gaps",
+      "schema": "openssl-rs/etp-t6/claim-matrix/1, openssl-rs/etp-t6/tcb/1",
+      "producer": "ETP-T6; checked by forensics/tools/binary_assurance.py",
+      "consumers": ["forensics/tools/binary_assurance.py", "forensics/tools/verify.py"],
+      "machine_readable": true,
+      "candidate_identity": "candidate.commit=c28ac7bb94 with identity_status=WORKING_TREE_PENDING_ORCHESTRATOR_COMMIT",
+      "reconstructable": "yes for the matrix; each asserted claim carries the artefact digest it is bound to"
+    },
+    {
+      "id": "A0-INV-18",
+      "path": "evidence/etp-t13/FORMATS.json",
+      "path_extra": "evidence/etp-t13/DIGESTS.json, evidence/etp-t13/IDENTITY-SYSTEMS.json, evidence/etp-t13/ARCHIVAL.json",
+      "role": "format, digest, identity and archival registries",
+      "schema": "openssl-rs/etp-t13/formats/1 and siblings",
+      "producer": "ETP-T13",
+      "consumers": ["forensics/tools/preservation.py", "forensics/tools/verify.py"],
+      "machine_readable": true,
+      "candidate_identity": "candidate 0eecec734 (and git object format sha1)",
+      "reconstructable": "yes: the format list has 10 entries and no SARIF, DSSE, in-toto, SLSA or Sigstore entry"
+    },
+    {
+      "id": "A0-INV-19",
+      "path": "evidence/etp-t15/RECONCILIATION.json",
+      "path_extra": "evidence/etp-t15/history/ (7 preserved documents)",
+      "role": "reconciliation of the OpenSSH b85c graduation and the NOT ESTABLISHED adjudication",
+      "schema": "openssl-rs/etp-t15/reconciliation/1",
+      "producer": "ETP-T15",
+      "consumers": ["claims.json obligations settled_by", "CAMPAIGN-STATUS history"],
+      "machine_readable": true,
+      "candidate_identity": "source_identity; the history directory preserves the pre-reconciliation bytes",
+      "reconstructable": "yes: the original and live digests are both recorded"
+    },
+    {
+      "id": "A0-INV-20",
+      "path": "evidence/etp6/MANIFEST.json",
+      "path_extra": "forensics/etp6/verify.sh",
+      "role": "external reproduction package manifest: 1,633 selected inputs with SHA-256, 5 refusals, 6 verification steps",
+      "schema": "declared by the builder",
+      "producer": "forensics/tools/etp6_package.py",
+      "consumers": [
+        "forensics/tools/etp6_verify.py",
+        "forensics/tools/release_gate.py gate-5",
+        "forensics/tools/verify.py manifest"
+      ],
+      "machine_readable": true,
+      "candidate_identity": "candidate.commit=98c7b5d29, tree and tracked_file_count",
+      "reconstructable": "partial: the 56 selection paths are named, but the tracked evidence outside them has no population row (A0-F03)"
+    },
+    {
+      "id": "A0-INV-21",
+      "path": "forensics/downstream/runtime-functional-atlas.json",
+      "path_extra": "forensics/downstream/build-link-atlas.json",
+      "role": "downstream runtime and functional atlas: 2,000 runs, 226 specimens, 307 recipes, 223 loaded families",
+      "schema": "openssl-rs/atlas/downstream-runtime-functional-atlas/v1",
+      "producer": "forensics/tools/downstream_runtime.py",
+      "consumers": [
+        "forensics/tools/render_atlas.py",
+        "forensics/STATUS.md",
+        "forensics/tools/phase24_obligations.py and phase25_obligations.py"
+      ],
+      "machine_readable": true,
+      "candidate_identity": "body.candidate_identity (libcrypto/libssl sha256), a per-row reused_from_candidate_identity marker on carried-forward rows, and body.evidence_reuse with candidate_identity_match=false",
+      "reconstructable": "partial: the marker makes the partition possible (54 of the 33-family cohort's 66 L7 rows are marked carried forward), but the aggregate built from it does not report the split (A0-F04, A0-F10)"
+    },
+    {
+      "id": "A0-INV-22",
+      "path": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+      "role": "campaign ledger: 33-family cohort, 0 safe-compatible, 1 risk-accepted",
+      "schema": "openssl-rs/safe-c33/campaign-status/v1",
+      "producer": "campaign ledger, updated by ETP-T15",
+      "consumers": [
+        "evidence/etp-t10/AGGREGATES.json",
+        "evidence/etp/claims.json",
+        "forensics/STATUS.md"
+      ],
+      "machine_readable": true,
+      "candidate_identity": "source_head plus a history block for the superseded 1/33 value",
+      "reconstructable": "partial: the L7 count it consumes inherits the atlas identity defect (A0-F04)"
+    },
+    {
+      "id": "A0-INV-23",
+      "path": "forensics/phase*-obligations.json",
+      "role": "23 per-phase obligation ledgers",
+      "schema": "openssl-rs/atlas/phaseNN-obligations/v1",
+      "producer": "forensics/tools/phaseNN_obligations.py",
+      "consumers": ["forensics/tools/phase_state.py", "docs/phase seals"],
+      "machine_readable": true,
+      "candidate_identity": "each ledger names authority, generator and inputs with digests",
+      "reconstructable": "yes from the tracked generator and inputs"
+    },
+    {
+      "id": "A0-INV-24",
+      "path": "forensics/tools/release_gate.py",
+      "path_extra": "evidence/etp7/RECEIPT.md, evidence/etp-t12/RUN.json",
+      "role": "release decision tool and its recorded runs",
+      "schema": "revealed by the tool's own JSON output; the receipt is prose",
+      "producer": "forensics/tools/release_gate.py",
+      "consumers": ["release procedure", "ETP-7 receipt"],
+      "machine_readable": "tool yes; the ETP-7 receipt is a verbatim transcript, not a structured record",
+      "candidate_identity": "the tool resolves --candidate; gate-5 does not compare the package candidate (A0-F14)",
+      "reconstructable": "partial: the verbatim transcript no longer reproduces (A0-F06)"
+    },
+    {
+      "id": "A0-INV-25",
+      "path": "docs/*.md and forensics/STATUS.md",
+      "role": "normative documents and summary status tables (97 files in docs/, plus the campaign STATUS table)",
+      "schema": "none; prose",
+      "producer": "hand-written, partly rendered by forensics/tools/render_*.py",
+      "consumers": ["human readers", "forensics/tools/docs_consistency.py for a bounded set of claims"],
+      "machine_readable": false,
+      "candidate_identity": "rarely; a document names a commit in prose at best",
+      "reconstructable": "partial: docs_consistency.py checks a bounded set of figures; several status rows are not checked (A0-F09, A0-F12)"
+    }
+  ]
+}
