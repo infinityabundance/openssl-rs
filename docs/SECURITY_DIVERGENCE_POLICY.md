@@ -2090,17 +2090,22 @@ D334's state, when the column was recorded as a NULL rather than resolved.
   assumed absent.
 - **Compatibility consequence:** an application that relied on distinguishing an invalid
   external-key PKCS#1 v1.5 padding from a valid one can no longer do so **through the return sign,
-  the output-buffer state or the error queue**: the invalid block now returns a positive length
-  and a synthetic message, and no error is left on the queue. This is the behaviour the
+  the output-buffer state or the error queue**: the invalid block now returns a non-negative length
+  (the synthetic length may be 0) and a synthetic message, and no error is left on the queue. This is the behaviour the
   internal-key path has had since implicit rejection was introduced. The **returned length** is
-  not made uniform: 64 invalid blocks on the pinned 2048-bit key answered 58 distinct synthetic
-  lengths and none of the valid 8/16/32/48 lengths, so an application that exposes the returned
-  length — a TLS server expecting a 48-byte pre-master secret, for example — still has a
-  distinguisher. That is a finding, not a pass; it is recorded in
-  `evidence/haz-15/KDK-CORRECTION.md` and it is why `HAZ-15` is `CLAIMED_NO_EVIDENCE`, not
-  discharged. The generic check cannot fix it without changing the API's length contract; the
-  authority's own answer for TLS is the fixed-length `ossl_rsa_padding_check_PKCS1_type_2_TLS`.
-  An application that genuinely needs the refusal can pass the documented
+  not made uniform: over 2,048 invalid blocks on the pinned 2048-bit key every protocol-relevant
+  length (8, 16, 32 and the 48-byte TLS pre-master secret) was matched, at a per-ciphertext
+  probability of order `1/246` (the 48-byte length matched 9 of 2,048, 95% Wilson
+  `[0.00231, 0.00833]`). An application that exposes the returned length — a TLS server
+  expecting a 48-byte pre-master secret, for example — still has a per-query distinguisher with
+  about 0.4% error. That is a finding, not a pass; it is recorded in
+  `evidence/haz-15/REENTRANCY-AND-LENGTH.md` §5 and it is why `HAZ-15` is
+  `CLAIMED_NO_EVIDENCE`, not discharged. The earlier 64-block zero-collision sample was a
+  statement about a sample: under the measured per-length probability its probability was about
+  0.35, so it bounded nothing. The generic check cannot fix the length without changing the
+  API's length contract; the authority's own answer for TLS is the fixed-length
+  `ossl_rsa_padding_check_PKCS1_type_2_TLS`, which the generic arm does not select. An
+  application that genuinely needs the refusal can pass the documented
   `RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING` selector (`include/openssl/rsa.h:204`, value 8), which
   still selects the refusing check, so the authority's behaviour remains available as an explicit
   opt-in. Every other selector, the private-encrypt and public-decrypt signature paths, the length
@@ -2111,13 +2116,29 @@ D334's state, when the column was recorded as a NULL rather than resolved.
   this correction, is independent of padding validity, and is recorded in
   `evidence/haz-15/REPORT.md` without being repaired here. The returned length is also unchanged:
   it is the generic check's own synthetic length, and it is the remaining channel.
-- **Evidence:** `evidence/haz-15/KDK-CORRECTION.md` (the retracted argument, the new construction,
-  the length population), `evidence/haz-15/REPORT.md` and `evidence/haz-15/observables.json` (four
-  ciphertexts, candidate before and after, pinned authority, plus the length population); the
-  harness `forensics/haz15/haz15_harness.c`; and the tests
+- **Safety repair in the same path (not a compatibility change):** the first-use secret for a key
+  with no private material was previously drawn while the side table's mutex was held. An
+  application RNG method that re-enters RSA decryption could deadlock on that mutex, and
+  unrelated keys serialised behind it. The store now records an `INITIALIZING` reservation under
+  the lock, releases the lock for `RAND_priv_bytes`, and publishes under a fresh acquisition;
+  same-thread re-entry is a named refusal, peers wait on a condition variable under a fixed
+  bound, and destruction during initialisation publishes nothing. This removes a deadlock and an
+  unrelated-key serialisation; it does not change the padding oracle
+  (`evidence/haz-15/REENTRANCY-AND-LENGTH.md` §2–§3).
+- **Evidence:** `evidence/haz-15/KDK-CORRECTION.md` (the retracted argument, the new construction),
+  `evidence/haz-15/REENTRANCY-AND-LENGTH.md` (the re-entrancy state machine, its controls, and
+  the 2,048-block length population), `evidence/haz-15/REPORT.md` and
+  `evidence/haz-15/observables.json` (four ciphertexts, candidate before and after, pinned
+  authority, plus the extended length population); the harness
+  `forensics/haz15/haz15_harness.c`; and the tests
   `rsa::ossl::tests::the_external_synthetic_answer_is_not_attacker_computable` (fails on the
   withdrawn construction), `the_public_only_key_gets_a_secret_that_is_not_the_public_hash`,
   `the_external_length_channel_is_measured`,
+  `the_tls_shaped_padding_check_answers_one_length`,
+  `a_first_use_rng_callback_may_reenter_rsa_decryption`,
+  `concurrent_first_use_installs_exactly_one_secret`,
+  `destruction_during_initialisation_is_a_defined_refusal`,
+  `rng_and_allocation_failure_publish_nothing`,
   `external_key_pkcs1_decryption_does_not_distinguish_padding` and
   `internal_key_pkcs1_decryption_is_unchanged`.
 - **Trigger:** none planned: permanent, deliberate safety divergence.

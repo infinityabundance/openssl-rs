@@ -64,12 +64,19 @@
 //!   both halves would serialise every private operation in the process.
 //! * **`rsa_ossl_private_decrypt` computes the KDK *after* unblinding and *before* the padding
 //!   check**, which is what makes the implicit rejection's synthetic message a function of the
-//!   private exponent and the ciphertext rather than of the blinding. **For an external key the
-//!   KDK is derived from private key material and the ciphertext** — from the CRT primes when the
-//!   object holds them, otherwise from a per-key random secret established at first use. The
-//!   earlier revision hashed the decrypted block, which is attacker-computable for a
-//!   ciphertext the attacker constructed; that construction is withdrawn. The divergence from the
-//!   authority is recorded in `docs/SECURITY_DIVERGENCE_POLICY.md` (`D-RSA-EXTKEY-ORACLE-1`).
+//!   private key material and the ciphertext rather than of the blinding. There are exactly three
+//!   KDK paths, each resting on its own assumption: `d` when the object holds it (the authority's
+//!   `HMAC-SHA-256(SHA-256(d), ciphertext)`; `d` is private); otherwise `p` and `q` when the
+//!   object holds them (`HMAC-SHA-256(SHA-256(label || p || q), label || ciphertext)`; both primes
+//!   are private); otherwise a 32-byte per-object secret drawn once with `RAND_priv_bytes`
+//!   (`HMAC-SHA-256(secret, label || ciphertext)`; the RNG is unpredictable and the secret never
+//!   leaves the side table). No path hashes the decrypted block: for an attacker-constructed
+//!   ciphertext that value is public, and the withdrawn construction that keyed the PRF with it
+//!   is recorded in `evidence/haz-15/KDK-CORRECTION.md`. The first-use secret initialisation holds
+//!   the side table's lock only for its own state transitions and never across `RAND_priv_bytes`,
+//!   which may reach an application RNG method (`evidence/haz-15/REENTRANCY-AND-LENGTH.md`). The
+//!   divergence from the authority is recorded in `docs/SECURITY_DIVERGENCE_POLICY.md`
+//!   (`D-RSA-EXTKEY-ORACLE-1`).
 //! ## What is deliberately not here
 //!
 //! * **`rsa_ossl_s390x_mod_exp`** (`:1198-1206`) is inside `#ifdef S390X_MOD_EXP`, which is not
@@ -102,7 +109,9 @@ use core::ptr;
 use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::{AtomicPtr, Ordering};
 
-use std::sync::Mutex;
+use std::sync::{Condvar, Mutex, MutexGuard};
+use std::thread::ThreadId;
+use std::time::{Duration, Instant};
 
 use crate::bn::arith::{
     BN_add, BN_cmp, BN_div, BN_mod_add, BN_mod_inverse, BN_mul, BN_sub, BN_ucmp,
@@ -1346,7 +1355,7 @@ unsafe fn derive_external_kdk(
                 0
             };
         }
-        let Some(secret) = per_key_ext_kdk_secret(rsa) else {
+        let Ok(secret) = per_key_ext_kdk_secret(rsa) else {
             return 0;
         };
         if hmac_sha256_kdf(
@@ -1468,14 +1477,54 @@ unsafe fn hmac_sha256_kdf(
     }
 }
 
-/// One per-key secret and the object it belongs to.
+/// How long a thread that finds a peer's `INITIALIZING` reservation will block on the store's
+/// condition variable before answering the defined refusal.
+///
+/// The bound exists so a peer that never publishes — a panicked or wedged initialiser, or a
+/// cross-thread reservation cycle — cannot turn the wait into an unbounded one. A normal `RNG`
+/// draw is a single `RAND_priv_bytes` call.
+const EXT_KDK_WAIT_LIMIT: Duration = Duration::from_secs(5);
+
+/// Why a first-use secret could not be obtained.
+///
+/// Every variant is a refusal: the caller (`derive_external_kdk`) answers `0`, and
+/// `rsa_ossl_private_decrypt` takes its ordinary error path. No variant falls back to a
+/// publicly-derivable value.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ExtKdkRefusal {
+    /// The calling thread already owns this object's `INITIALIZING` reservation. This is the
+    /// same-thread re-entry an application RNG callback can cause; waiting on it would deadlock.
+    ReentrantInitialization,
+    /// The reservation disappeared before the secret could be published or consulted: the object
+    /// was destroyed, or the initialiser abandoned the reservation after a failure.
+    ReservationAbandoned,
+    /// No peer published or abandoned the reservation within [`EXT_KDK_WAIT_LIMIT`].
+    WaitTimedOut,
+    /// `RAND_priv_bytes` refused.
+    RngFailure,
+    /// A reservation or secret allocation was refused.
+    AllocationFailure,
+}
+
+/// One per-object entry: the object it belongs to, the reservation that owns it, and either the
+/// thread initialising it or the published secret.
 ///
 /// The key is the `RSA` pointer's address, which is stable for the object's lifetime and is
 /// removed by [`forget_ext_kdk_secret`] when the object is destroyed. The secret is a
-/// [`SecretBuf`], so releasing the entry wipes the whole allocation.
-struct ExtKdkSecret {
+/// [`SecretBuf`], so releasing the entry wipes the whole allocation; an `Initializing` entry owns
+/// no secret at all.
+struct ExtKdkEntry {
     rsa: usize,
-    secret: SecretBuf<u8>,
+    reservation: u64,
+    state: ExtKdkState,
+}
+
+enum ExtKdkState {
+    /// Reserved by `owner`, which is drawing the secret with the lock released. A peer waits on
+    /// the store's condition variable; the owner re-enters should it call itself.
+    Initializing { owner: ThreadId },
+    /// The one secret for this object.
+    Ready(SecretBuf<u8>),
 }
 
 /// The per-object secret store for external keys with no private material.
@@ -1484,69 +1533,320 @@ struct ExtKdkSecret {
 /// transcription of the authority's `struct rsa_st` whose size and offsets are asserted, and the
 /// hard constraint on this correction is that those layouts are preserved. The table adds no
 /// field to any exported or measured object.
-static EXT_KDK_SECRETS: Mutex<Vec<ExtKdkSecret>> = Mutex::new(Vec::new());
+///
+/// The entries are boxed so the reservation itself is a single fallible allocation independent of
+/// the vector's spare capacity; every growth goes through [`crate::runtime::alloc::try_reserve`],
+/// and the secret through [`SecretBuf::try_zeroed`]. Nothing on the path pushes infallibly.
+struct ExtKdkStore {
+    // The entry is boxed so its allocation is a single fallible step independent of the vector's
+    // spare capacity; that is what makes the reservation's failure injectable and testable.
+    #[allow(clippy::vec_box)]
+    entries: Vec<Box<ExtKdkEntry>>,
+    next_reservation: u64,
+}
+
+static EXT_KDK_STORE: Mutex<ExtKdkStore> = Mutex::new(ExtKdkStore {
+    entries: Vec::new(),
+    next_reservation: 1,
+});
+
+/// Wakes a peer when a reservation is published or abandoned. Always paired with
+/// [`EXT_KDK_STORE`]: a waiter holds the store's lock while it checks the entry and calls
+/// `wait`, so no notification can be lost between the check and the wait.
+static EXT_KDK_STORE_CV: Condvar = Condvar::new();
+
+/// Test-only count of threads blocked on [`EXT_KDK_STORE_CV`]. It lets a control wait until a
+/// peer is genuinely parked rather than sleeping for a guessed interval.
+#[cfg(test)]
+static EXT_KDK_WAITERS: AtomicUsize = AtomicUsize::new(0);
 
 /// Take the store's lock, recovering from a poisoned lock rather than making every later
-/// decryption fail. The vectors are only ever pushed to or removed from under the lock, so a
-/// caught panic cannot leave an inconsistent element behind.
-fn lock_ext_kdk_secrets() -> std::sync::MutexGuard<'static, Vec<ExtKdkSecret>> {
-    match EXT_KDK_SECRETS.lock() {
+/// decryption fail. Every mutation is a single vector operation under the lock, so a caught
+/// panic cannot leave a half-published entry behind.
+fn lock_ext_kdk_store() -> MutexGuard<'static, ExtKdkStore> {
+    match EXT_KDK_STORE.lock() {
         Ok(guard) => guard,
         Err(poisoned) => poisoned.into_inner(),
     }
 }
 
+/// Block on the store's condition variable for at most `timeout`.
+///
+/// `None` means the wait timed out; a spurious wake answers `Some` and the caller re-checks the
+/// entry. A poisoned mutex is recovered exactly as [`lock_ext_kdk_store`] does.
+fn wait_ext_kdk_store<'a>(
+    guard: MutexGuard<'a, ExtKdkStore>,
+    timeout: Duration,
+) -> Option<MutexGuard<'a, ExtKdkStore>> {
+    match EXT_KDK_STORE_CV.wait_timeout(guard, timeout) {
+        Ok((guard, status)) => (!status.timed_out()).then_some(guard),
+        Err(poisoned) => {
+            let (guard, status) = poisoned.into_inner();
+            (!status.timed_out()).then_some(guard)
+        }
+    }
+}
+
+/// Reserve an `INITIALIZING` entry for `key` under the store's lock and record `owner`.
+///
+/// Both allocations are fallible: the entry's box and the vector's growth. A failure publishes
+/// nothing and the vector is left as it was.
+fn reserve_ext_kdk_entry(
+    store: &mut ExtKdkStore,
+    key: usize,
+    owner: ThreadId,
+) -> Result<u64, ExtKdkRefusal> {
+    let reservation = store.next_reservation;
+    store.next_reservation = store.next_reservation.wrapping_add(1);
+    let entry = match crate::runtime::alloc::try_boxed(ExtKdkEntry {
+        rsa: key,
+        reservation,
+        state: ExtKdkState::Initializing { owner },
+    }) {
+        // SAFETY: `try_boxed` returned a fresh allocation for exactly one `ExtKdkEntry`.
+        Ok(raw) => unsafe { Box::from_raw(raw) },
+        Err(_) => return Err(ExtKdkRefusal::AllocationFailure),
+    };
+    if !crate::runtime::alloc::try_reserve(&mut store.entries, 1) {
+        return Err(ExtKdkRefusal::AllocationFailure);
+    }
+    store.entries.push(entry);
+    Ok(reservation)
+}
+
+/// Publish `fresh` into the reservation if it is still the exact entry this thread owns.
+///
+/// The exact reservation id is required, not merely the address: when the object was destroyed
+/// during initialisation the entry is gone, and when the address was reused the new object holds
+/// a different reservation. Neither case may receive this secret. On refusal `fresh` is dropped
+/// here and therefore cleansed.
+fn publish_ext_kdk_secret(
+    key: usize,
+    reservation: u64,
+    owner: ThreadId,
+    fresh: SecretBuf<u8>,
+) -> Result<SecretArray<EXT_KDK_SECRET_LEN>, ExtKdkRefusal> {
+    let mut store = lock_ext_kdk_store();
+    let index = store.entries.iter().position(|entry| {
+        entry.rsa == key
+            && entry.reservation == reservation
+            && matches!(&entry.state, ExtKdkState::Initializing { owner: recorded } if *recorded == owner)
+    });
+    let Some(index) = index else {
+        return Err(ExtKdkRefusal::ReservationAbandoned);
+    };
+    let mut out = SecretArray::<EXT_KDK_SECRET_LEN>::new();
+    out.as_mut_slice().copy_from_slice(&fresh[..]);
+    store.entries[index].state = ExtKdkState::Ready(fresh);
+    EXT_KDK_STORE_CV.notify_all();
+    Ok(out)
+}
+
+/// Remove a reservation this thread owns after a failure, waking any peer waiting on it.
+///
+/// Removal is by the exact reservation id, so a later attempt's entry at the same address is not
+/// disturbed. Retaining in place does not allocate.
+fn abandon_ext_kdk_reservation(key: usize, reservation: u64) {
+    let mut store = lock_ext_kdk_store();
+    let before = store.entries.len();
+    store
+        .entries
+        .retain(|entry| !(entry.rsa == key && entry.reservation == reservation));
+    if store.entries.len() != before {
+        EXT_KDK_STORE_CV.notify_all();
+    }
+}
+
+/// Failure-atomic ownership of a reservation: unless the secret is published, dropping this guard
+/// removes the reservation and wakes any waiter.
+///
+/// The early returns cover allocation and RNG failure; the guard additionally covers unwinding, so
+/// a panic between reservation and publication cannot leave a permanent `INITIALIZING` entry that
+/// every later call for the object would refuse.
+struct ExtKdkReservation {
+    key: usize,
+    reservation: u64,
+    published: bool,
+}
+
+impl Drop for ExtKdkReservation {
+    fn drop(&mut self) {
+        if !self.published {
+            abandon_ext_kdk_reservation(self.key, self.reservation);
+        }
+    }
+}
+
 /// The first-use secret for an `RSA` with no `d`, `p` or `q`.
 ///
-/// A miss draws 32 bytes with [`RAND_priv_bytes`] while the store is locked, so two threads that
-/// miss together install one secret and both receive it; a repeated call for the same object is a
-/// copy out of the stored secret, not a new draw. Allocation failure, an exhausted RNG or a
-/// poisoned store all answer `None`, and the caller refuses the operation rather than falling back
-/// to a publicly-derivable value.
-fn per_key_ext_kdk_secret(rsa: *mut Rsa) -> Option<SecretArray<EXT_KDK_SECRET_LEN>> {
+/// The store's lock is held for lookup, reservation, publication and removal only. **It is not
+/// held across [`RAND_priv_bytes`]**, which may reach an application-provided RNG method; a
+/// callback that re-enters RSA decryption therefore cannot deadlock against this lock.
+///
+/// States and transitions:
+///
+/// * a hit on `Ready` copies the secret out and returns it;
+/// * a miss reserves an `Initializing` entry recording the calling thread, releases the lock,
+///   draws 32 bytes, then re-acquires and publishes them;
+/// * a peer that finds `Initializing` blocks on the condition variable until the entry is
+///   published (and copies the same secret) or removed (and receives [`ReservationAbandoned`]);
+/// * the owning thread that finds its own `Initializing` entry receives
+///   [`ReentrantInitialization`] immediately — it does not wait on itself;
+/// * the wait is bounded by [`EXT_KDK_WAIT_LIMIT`], so a peer that never returns is a refusal,
+///   not an unbounded wait;
+/// * destruction ([`forget_ext_kdk_secret`]) removes the entry and wakes the waiters; a later
+///   publish finds no matching reservation and is refused, so no secret is published into a
+///   freed object.
+///
+/// Allocation, RNG failure and abandonment remove the reservation before returning; the drawn
+/// secret is a [`SecretBuf`] and is cleansed on every path that does not publish it. The
+/// reservation is held by an [`ExtKdkReservation`] guard, so an unwind between the reservation and
+/// the publication also removes it.
+fn per_key_ext_kdk_secret(rsa: *mut Rsa) -> Result<SecretArray<EXT_KDK_SECRET_LEN>, ExtKdkRefusal> {
     let key = rsa as usize;
-    let mut store = lock_ext_kdk_secrets();
-    let mut out = SecretArray::<EXT_KDK_SECRET_LEN>::new();
-    if let Some(entry) = store.iter().find(|entry| entry.rsa == key) {
-        out.as_mut_slice().copy_from_slice(&entry.secret[..]);
-        return Some(out);
+    let me = std::thread::current().id();
+    let deadline = Instant::now() + EXT_KDK_WAIT_LIMIT;
+    let mut store = lock_ext_kdk_store();
+
+    // Serve an existing secret, or wait on a peer's reservation. A waiter accepts only the exact
+    // reservation it observed: a different reservation at the same address means the original
+    // was abandoned or the object destroyed, and it is not adopted.
+    while let Some(index) = store.entries.iter().position(|entry| entry.rsa == key) {
+        let reservation = store.entries[index].reservation;
+        match &store.entries[index].state {
+            ExtKdkState::Ready(secret) => {
+                let mut out = SecretArray::<EXT_KDK_SECRET_LEN>::new();
+                out.as_mut_slice().copy_from_slice(&secret[..]);
+                return Ok(out);
+            }
+            ExtKdkState::Initializing { owner } => {
+                if *owner == me {
+                    return Err(ExtKdkRefusal::ReentrantInitialization);
+                }
+            }
+        }
+        let now = Instant::now();
+        if now >= deadline {
+            return Err(ExtKdkRefusal::WaitTimedOut);
+        }
+        let Some(guard) = ({
+            #[cfg(test)]
+            EXT_KDK_WAITERS.fetch_add(1, Ordering::SeqCst);
+            let waited = wait_ext_kdk_store(store, deadline - now);
+            #[cfg(test)]
+            EXT_KDK_WAITERS.fetch_sub(1, Ordering::SeqCst);
+            waited
+        }) else {
+            return Err(ExtKdkRefusal::WaitTimedOut);
+        };
+        store = guard;
+        if !store
+            .entries
+            .iter()
+            .any(|entry| entry.rsa == key && entry.reservation == reservation)
+        {
+            return Err(ExtKdkRefusal::ReservationAbandoned);
+        }
     }
 
-    let mut fresh = SecretBuf::<u8>::try_zeroed(EXT_KDK_SECRET_LEN)?;
+    let reservation = reserve_ext_kdk_entry(&mut store, key, me)?;
+    let mut reservation_guard = ExtKdkReservation {
+        key,
+        reservation,
+        published: false,
+    };
+    drop(store);
+
+    let mut fresh = match SecretBuf::<u8>::try_zeroed(EXT_KDK_SECRET_LEN) {
+        Some(buffer) => buffer,
+        // Dropping the guard removes the reservation and wakes any waiter.
+        None => return Err(ExtKdkRefusal::AllocationFailure),
+    };
+    // The store's lock is **not** held here: `RAND_priv_bytes` may reach an application RNG
+    // method, which may re-enter RSA decryption.
     // SAFETY: `fresh` is writable for `EXT_KDK_SECRET_LEN` bytes and the call is this crate's
     // `RAND_priv_bytes`, whose contract is the authority's.
     if unsafe { RAND_priv_bytes(fresh.as_mut_ptr(), EXT_KDK_SECRET_LEN as c_int) } <= 0 {
-        return None;
+        // Dropping the guard removes the reservation and wakes any waiter.
+        return Err(ExtKdkRefusal::RngFailure);
     }
-    store.try_reserve(1).ok()?;
-    out.as_mut_slice().copy_from_slice(&fresh);
-    store.push(ExtKdkSecret {
-        rsa: key,
-        secret: fresh,
-    });
-    Some(out)
+    let result = publish_ext_kdk_secret(key, reservation, me, fresh);
+    if result.is_ok() {
+        reservation_guard.published = true;
+    }
+    result
 }
 
-/// Release the per-object secret when the `RSA` object is destroyed.
+/// Release the per-object entry when the `RSA` object is destroyed.
 ///
 /// Removal is unconditional and happens under the store's lock, so an address reused by a later
 /// allocation cannot observe a stale secret. Dropping the entry cleanses the `SecretBuf` before
-/// its allocation is released.
+/// its allocation is released. An `Initializing` entry is removed at the same time: its owner's
+/// publication will find no matching reservation and is refused, and every waiter is woken and
+/// receives [`ExtKdkRefusal::ReservationAbandoned`].
 ///
 /// # Safety
 /// `rsa` is the address of an object whose last reference is being released; it is read only as
 /// an integer and never dereferenced.
 pub(crate) fn forget_ext_kdk_secret(rsa: *mut Rsa) {
     let key = rsa as usize;
-    let mut store = lock_ext_kdk_secrets();
-    let mut i = 0;
-    while i < store.len() {
-        if store[i].rsa == key {
-            store.swap_remove(i);
-        } else {
-            i += 1;
+    let mut store = lock_ext_kdk_store();
+    let before = store.entries.len();
+    let mut removed_initializing = false;
+    store.entries.retain(|entry| {
+        if entry.rsa != key {
+            return true;
         }
+        if matches!(&entry.state, ExtKdkState::Initializing { .. }) {
+            removed_initializing = true;
+        }
+        false
+    });
+    if removed_initializing || store.entries.len() != before {
+        EXT_KDK_STORE_CV.notify_all();
     }
+}
+
+/// The number of threads blocked on the store's condition variable. Test-only.
+#[cfg(test)]
+fn ext_kdk_waiter_count() -> usize {
+    EXT_KDK_WAITERS.load(Ordering::SeqCst)
+}
+
+/// The number of store entries for `rsa`, whatever their state. Test-only observation of the
+/// "exactly one secret per object" invariant.
+#[cfg(test)]
+fn ext_kdk_entry_count(rsa: *mut Rsa) -> usize {
+    let store = lock_ext_kdk_store();
+    store
+        .entries
+        .iter()
+        .filter(|entry| entry.rsa == rsa as usize)
+        .count()
+}
+
+/// The number of `INITIALIZING` entries for `rsa`. Test-only observation of the state machine.
+#[cfg(test)]
+fn ext_kdk_initializing_count(rsa: *mut Rsa) -> usize {
+    let store = lock_ext_kdk_store();
+    store
+        .entries
+        .iter()
+        .filter(|entry| {
+            entry.rsa == rsa as usize && matches!(&entry.state, ExtKdkState::Initializing { .. })
+        })
+        .count()
+}
+
+/// The number of `Ready` entries for `rsa`. Test-only observation of publication.
+#[cfg(test)]
+fn ext_kdk_ready_count(rsa: *mut Rsa) -> usize {
+    let store = lock_ext_kdk_store();
+    store
+        .entries
+        .iter()
+        .filter(|entry| entry.rsa == rsa as usize && matches!(&entry.state, ExtKdkState::Ready(_)))
+        .count()
 }
 
 /// `static int rsa_ossl_private_decrypt(int flen, const unsigned char *from, unsigned char *to,`
@@ -1558,17 +1858,35 @@ pub(crate) fn forget_ext_kdk_secret(rsa: *mut Rsa) {
 /// * **The implicit-rejection arm is the one an external key takes.** The authority rewrites the
 ///   selector when the key is external (`RSA_FLAG_EXT_PKEY`) and the caller asked for PKCS#1 v1.5,
 ///   falling back to the refusing check because an external key does not hold the private
-///   exponent. That is the padding oracle recorded as HAZ-15; this crate keeps the implicit arm
-///   and derives the KDK from the decrypted block when `d` is absent, so the observable set does
-///   not distinguish valid from invalid padding. The explicit selector
+///   exponent. That is the padding oracle recorded as HAZ-15; this crate keeps the implicit arm.
+///   The KDK is constructed on exactly one of three paths, each with its own assumption:
+///   1. **`d` present.** [`derive_kdk`] computes
+///      `HMAC-SHA-256(SHA-256(d padded to the modulus width), ciphertext)`. Assumption: `d` is
+///      private to the key holder and never leaves the object. This is the authority's own
+///      construction, kept unchanged so the internal-key synthetic bytes stay byte-identical.
+///   2. **`d` absent, `p` and `q` present.** [`derive_external_kdk`] derives
+///      `K = SHA-256(CRT_KEY_LABEL || p || q)` and then
+///      `HMAC-SHA-256(K, CRT_MAC_LABEL || ciphertext)`. Assumption: both primes are private to
+///      the key holder.
+///   3. **No private material at all.** A 32-byte secret is drawn once per object with
+///      [`RAND_priv_bytes`] and the synthetic answer is keyed by
+///      `HMAC-SHA-256(secret, RANDOM_MAC_LABEL || ciphertext)`. Assumption: the RNG output is
+///      unpredictable to the attacker and the side table keeps the secret for the object's
+///      lifetime. A draw or allocation failure is a refusal, never a publicly-derivable fallback.
+///
+///   No path hashes the decrypted block, because for an attacker-chosen block that value is
+///   public. The content axes do not distinguish valid from invalid padding on any path; the
+///   returned **length** is a separate, still-open channel
+///   (`evidence/haz-15/REENTRANCY-AND-LENGTH.md`). The explicit selector
 ///   `RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING` still selects the refusing check for a caller that
 ///   passes it.
 /// * **The length refusals raise different reasons**: `RSA_R_DATA_GREATER_THAN_MOD_LEN` for
 ///   `flen > num` and `RSA_R_DATA_TOO_SMALL` for `flen < 1`, and the authority's comment records
 ///   that the first test is not equality because PGP chops leading zero octets.
-/// * **The KDK is derived only for `RSA_PKCS1_PADDING`**, after the unblinding and before the
-///   padding check, and `buf` holds `ret`'s bytes at that moment — the scratch use
-///   [`derive_kdk`] documents.
+/// * **The KDK is derived only for `RSA_PKCS1_PADDING`**, after the unblinding. With `d` present
+///   it is derived by [`derive_kdk`] and `buf` holds `ret`'s bytes at that moment — the scratch
+///   use [`derive_kdk`] documents; with `d` absent it is derived by [`derive_external_kdk`] inside
+///   the switch, from the CRT primes or the first-use secret, and `buf` is only read.
 /// * **`j` is `BN_bn2binpad(ret, buf, num)` and the checks are handed `j`, not `num`**, so a
 ///   leading-zero-stripped result is described by its true length.
 /// * **The final two statements are unconditional**: `RSA_R_PADDING_CHECK_FAILED` is raised on
@@ -1594,9 +1912,12 @@ unsafe extern "C" fn rsa_ossl_private_decrypt(
          * external and the caller asked for PKCS#1 v1.5, because it cannot derive the KDK without
          * the private exponent. That refusal is observable (a negative return, an untouched output
          * buffer and `RSA_R_PADDING_CHECK_FAILED` on the queue) and is the padding oracle HAZ-15.
-         * This crate keeps `RSA_PKCS1_PADDING` so the implicit-rejection arm runs; for a key with
-         * no `d` the KDK is derived from the decrypted block below. The divergence is recorded in
-         * `docs/SECURITY_DIVERGENCE_POLICY.md` as `D-RSA-EXTKEY-ORACLE-1`.
+         * This crate keeps `RSA_PKCS1_PADDING` so the implicit-rejection arm runs. The KDK below
+         * is derived from private key material, never from the decrypted block: `d` when the
+         * object holds it, otherwise the CRT primes, otherwise a first-use RNG secret held in the
+         * side table. See `derive_external_kdk` for the assumption each path relies on. The
+         * divergence is recorded in `docs/SECURITY_DIVERGENCE_POLICY.md` as
+         * `D-RSA-EXTKEY-ORACLE-1`.
          */
 
         let mut r: c_int = -1;
@@ -1738,7 +2059,8 @@ unsafe extern "C" fn rsa_ossl_private_decrypt(
             }
 
             /*
-             * derive the Key Derivation Key from private exponent and public ciphertext
+             * Path 1 (`d` present): derive the Key Derivation Key from the private exponent and
+             * the public ciphertext. The two absent-`d` paths are decided in the switch below.
              */
             if padding == RSA_PKCS1_PADDING
                 && !(*rsa).d.is_null()
@@ -1758,12 +2080,14 @@ unsafe extern "C" fn rsa_ossl_private_decrypt(
                 }
                 RSA_PKCS1_PADDING => {
                     /*
-                     * An external key does not hold `d`, so the KDK above was not derived. Derive
-                     * it from private key material and the ciphertext: the CRT primes when the
-                     * object holds them, otherwise a per-key secret drawn at first use. A hash of
-                     * the decrypted block is *not* used — for an attacker-chosen block that value
-                     * is public, which makes the synthetic answer predictable and restores the
-                     * padding oracle (see `evidence/haz-15/KDK-CORRECTION.md`).
+                     * Paths 2 and 3 (`d` absent). An external key does not hold `d`, so the KDK
+                     * above was not derived. Derive it from private key material and the
+                     * ciphertext: the CRT primes when the object holds them (assumption: both
+                     * primes are private), otherwise a per-key secret drawn at first use
+                     * (assumption: the RNG is unpredictable and the side table keeps the secret).
+                     * A hash of the decrypted block is *not* used — for an attacker-chosen block
+                     * that value is public, which makes the synthetic answer predictable and
+                     * restores the padding oracle (see `evidence/haz-15/KDK-CORRECTION.md`).
                      */
                     if (*rsa).d.is_null()
                         && derive_external_kdk(rsa, from, flen, kdk.as_mut_ptr()) == 0
@@ -2645,6 +2969,270 @@ unsafe extern "C" fn rsa_ossl_finish(rsa: *mut Rsa) -> c_int {
 mod tests {
     use super::*;
     use crate::bn::bignum::BN_set_word;
+    use std::cell::Cell;
+    use std::sync::atomic::{AtomicBool, Ordering as AtomicOrdering};
+    use std::sync::mpsc;
+    use std::sync::OnceLock;
+
+    // ---------------------------------------------------------------------------------------
+    // Test-only control of the process RNG method. The table replaces only the `bytes` callback;
+    // every thread that did not arm a script delegates to the default generator, so unrelated
+    // parallel tests observe identical bytes. The scripts make the application callback a real
+    // re-entrancy edge: it can re-enter RSA decryption or park until the control releases it.
+    // ---------------------------------------------------------------------------------------
+
+    #[derive(Clone, Copy, PartialEq, Eq)]
+    enum RngAction {
+        Delegate,
+        ReenterSame,
+        ReenterOther,
+        Fail,
+        Block,
+    }
+
+    thread_local! {
+        static RNG_ACTION: Cell<RngAction> = const { Cell::new(RngAction::Delegate) };
+        static RNG_SAME: Cell<usize> = const { Cell::new(0) };
+        static RNG_OTHER: Cell<usize> = const { Cell::new(0) };
+        static RNG_DEPTH: Cell<u32> = const { Cell::new(0) };
+        static RNG_REENTRY_RESULT: Cell<c_int> = const { Cell::new(c_int::MIN) };
+        static RNG_REENTRY_VARIANT_OK: Cell<bool> = const { Cell::new(false) };
+    }
+
+    /// Set when the callback could not acquire the store's lock. With the previous implementation
+    /// the lock was held across `RAND_priv_bytes`, so the callback would have found it taken and a
+    /// same-thread re-entry would have deadlocked on it.
+    static RNG_STORE_LOCK_HELD: AtomicBool = AtomicBool::new(false);
+
+    const RNG_TEST_CT: [u8; 8] = *b"haz15ct!";
+
+    struct GateState {
+        entered: bool,
+        released: bool,
+    }
+
+    struct Gate {
+        state: Mutex<GateState>,
+        cv: Condvar,
+    }
+
+    impl Gate {
+        const fn new() -> Self {
+            Self {
+                state: Mutex::new(GateState {
+                    entered: false,
+                    released: false,
+                }),
+                cv: Condvar::new(),
+            }
+        }
+
+        fn lock(&self) -> MutexGuard<'_, GateState> {
+            match self.state.lock() {
+                Ok(guard) => guard,
+                Err(poisoned) => poisoned.into_inner(),
+            }
+        }
+
+        fn reset(&self) {
+            let mut state = self.lock();
+            state.entered = false;
+            state.released = false;
+            self.cv.notify_all();
+        }
+
+        fn enter_and_wait(&self) {
+            let mut state = self.lock();
+            state.entered = true;
+            self.cv.notify_all();
+            while !state.released {
+                state = match self.cv.wait(state) {
+                    Ok(guard) => guard,
+                    Err(poisoned) => poisoned.into_inner(),
+                };
+            }
+        }
+
+        fn wait_entered(&self, limit: Duration) -> bool {
+            let deadline = Instant::now() + limit;
+            let mut state = self.lock();
+            while !state.entered {
+                let now = Instant::now();
+                if now >= deadline {
+                    return false;
+                }
+                state = match self.cv.wait_timeout(state, deadline - now) {
+                    Ok((guard, _)) => guard,
+                    Err(poisoned) => poisoned.into_inner().0,
+                };
+            }
+            true
+        }
+
+        fn release(&self) {
+            let mut state = self.lock();
+            state.released = true;
+            self.cv.notify_all();
+        }
+    }
+
+    static RNG_GATE: Gate = Gate::new();
+    static RNG_TEST_LOCK: Mutex<()> = Mutex::new(());
+    static RNG_METHOD: OnceLock<crate::rand::rand_lib::RandMethod> = OnceLock::new();
+
+    /// The default generator, called directly so a scripted invocation cannot recurse through the
+    /// installed table.
+    unsafe fn default_rng_bytes(buf: *mut c_uchar, num: c_int) -> c_int {
+        let table = crate::rand::rand_lib::ossl_rand_meth();
+        // SAFETY: `table` is the crate's live default method table.
+        match unsafe { (*table).bytes } {
+            // SAFETY: the callback is the default table's own and `buf` is the caller's contract.
+            Some(callback) => unsafe { callback(buf, num) },
+            None => 0,
+        }
+    }
+
+    /// Record whether the store's lock is free while an application callback is running.
+    ///
+    /// A lock held by *this* thread never becomes available; a peer's brief hold does, so a
+    /// bounded retry separates the defect from ordinary contention.
+    fn note_store_lock_state() {
+        for _ in 0..200 {
+            if let Ok(guard) = EXT_KDK_STORE.try_lock() {
+                drop(guard);
+                return;
+            }
+            // Contention from a peer is transient; a lock this thread already holds is not.
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        RNG_STORE_LOCK_HELD.store(true, AtomicOrdering::SeqCst);
+    }
+
+    unsafe extern "C" fn scripted_bytes(buf: *mut c_uchar, num: c_int) -> c_int {
+        let action = RNG_ACTION.with(Cell::get);
+        let depth = RNG_DEPTH.with(Cell::get);
+        if depth > 0 || action == RngAction::Delegate {
+            // SAFETY: `buf` is the caller's contract, forwarded to the default generator.
+            return unsafe { default_rng_bytes(buf, num) };
+        }
+        // One shot: a nested draw from the re-entered call is the default generator's.
+        RNG_ACTION.with(|cell| cell.set(RngAction::Delegate));
+        match action {
+            RngAction::Delegate => {
+                // SAFETY: `buf` is the caller's contract.
+                unsafe { default_rng_bytes(buf, num) }
+            }
+            RngAction::Fail => 0,
+            RngAction::Block => {
+                RNG_GATE.enter_and_wait();
+                // SAFETY: `buf` is the caller's contract.
+                unsafe { default_rng_bytes(buf, num) }
+            }
+            RngAction::ReenterSame | RngAction::ReenterOther => {
+                let target = if action == RngAction::ReenterSame {
+                    RNG_SAME.with(Cell::get)
+                } else {
+                    RNG_OTHER.with(Cell::get)
+                };
+                note_store_lock_state();
+                if action == RngAction::ReenterSame {
+                    // The condition the refusal names: this thread already owns the reservation.
+                    let variant_ok = matches!(
+                        per_key_ext_kdk_secret(target as *mut Rsa),
+                        Err(ExtKdkRefusal::ReentrantInitialization)
+                    );
+                    RNG_REENTRY_VARIANT_OK.with(|cell| cell.set(variant_ok));
+                }
+                RNG_DEPTH.with(|cell| cell.set(depth + 1));
+                let mut kdk = [0u8; SHA256_DIGEST_LENGTH as usize];
+                // SAFETY: `target` is a fixture owned by the test that armed the script and is
+                // live for the whole re-entry; the ciphertext is this frame's fixed array.
+                let result = unsafe {
+                    derive_external_kdk(
+                        target as *mut Rsa,
+                        RNG_TEST_CT.as_ptr(),
+                        RNG_TEST_CT.len() as c_int,
+                        kdk.as_mut_ptr(),
+                    )
+                };
+                RNG_DEPTH.with(|cell| cell.set(depth));
+                RNG_REENTRY_RESULT.with(|cell| cell.set(result));
+                // SAFETY: `buf` is the caller's contract.
+                unsafe { default_rng_bytes(buf, num) }
+            }
+        }
+    }
+
+    fn arm_rng(action: RngAction, same: usize, other: usize) {
+        RNG_ACTION.with(|cell| cell.set(action));
+        RNG_SAME.with(|cell| cell.set(same));
+        RNG_OTHER.with(|cell| cell.set(other));
+        RNG_DEPTH.with(|cell| cell.set(0));
+        RNG_REENTRY_RESULT.with(|cell| cell.set(c_int::MIN));
+        RNG_REENTRY_VARIANT_OK.with(|cell| cell.set(false));
+    }
+
+    struct RngInstalled;
+
+    impl Drop for RngInstalled {
+        fn drop(&mut self) {
+            // SAFETY: removes the table installed by `install_rng_script`; the default table is
+            // restored and every later draw uses it.
+            let _ = unsafe { crate::rand::rand_lib::RAND_set_rand_method(ptr::null()) };
+        }
+    }
+
+    /// Install the scripted method for the duration of one test, serialising those tests.
+    fn install_rng_script() -> (MutexGuard<'static, ()>, RngInstalled) {
+        let serial = match RNG_TEST_LOCK.lock() {
+            Ok(guard) => guard,
+            Err(poisoned) => poisoned.into_inner(),
+        };
+        let table = RNG_METHOD.get_or_init(|| {
+            let default = crate::rand::rand_lib::ossl_rand_meth();
+            // SAFETY: `default` is the crate's live default method table; only `bytes` is
+            // replaced, and every other callback keeps the default generator's behaviour.
+            unsafe {
+                crate::rand::rand_lib::RandMethod {
+                    seed: (*default).seed,
+                    bytes: Some(scripted_bytes),
+                    cleanup: (*default).cleanup,
+                    add: (*default).add,
+                    pseudorand: (*default).pseudorand,
+                    status: (*default).status,
+                }
+            }
+        });
+        assert_eq!(
+            // SAFETY: `table` lives for the process and every thread that did not arm a script
+            // delegates to the default generator.
+            unsafe { crate::rand::rand_lib::RAND_set_rand_method(table as *const _) },
+            1
+        );
+        RNG_STORE_LOCK_HELD.store(false, AtomicOrdering::SeqCst);
+        (serial, RngInstalled)
+    }
+
+    fn wait_for_waiter(limit: Duration) -> bool {
+        let deadline = Instant::now() + limit;
+        while Instant::now() < deadline {
+            if ext_kdk_waiter_count() > 0 {
+                return true;
+            }
+            std::thread::sleep(Duration::from_millis(1));
+        }
+        ext_kdk_waiter_count() > 0
+    }
+
+    /// A WaitTimeout for a `recv_timeout` is a test failure; a hung worker must not hang the
+    /// suite.
+    #[allow(clippy::panic)] // the message is the failure of a bounded wait, not a panic path
+    fn receive<T>(receiver: &mpsc::Receiver<T>, message: &str) -> T {
+        match receiver.recv_timeout(Duration::from_secs(10)) {
+            Ok(value) => value,
+            Err(_) => panic!("{message}"),
+        }
+    }
 
     /// The pair round-trips through the object's member: an array allocated by
     /// [`ossl_rsa_alloc_blinding`] is what [`ossl_rsa_free_blinding`] releases, and the
@@ -3631,16 +4219,24 @@ mod tests {
         p
     }
 
-    /// **The returned length is observable and it distinguishes the two classes.**
+    /// **The returned length is observable and it distinguishes the two classes — measured, not
+    /// illustrated.**
     ///
     /// A valid block answers its message length; an invalid block answers the implicit
-    /// rejection's synthetic length, which is drawn from the KDK and spans the room the modulus
-    /// leaves for a message. Protocol-relevant message lengths (16, 32 and 48) are included on
-    /// the same fixed 2048-bit key the differential harness uses, so the numbers are
-    /// reproducible. Every call must still answer a positive length with an empty error queue —
-    /// that is the property the correction establishes — and the table is printed so the length
-    /// channel is reported rather than assumed absent. If the populations separate, that is a
-    /// finding, not a pass; it is recorded in `evidence/haz-15/KDK-CORRECTION.md`.
+    /// rejection's synthetic length. The synthetic length is selected from 128 candidates reduced
+    /// to the range `0 ..= num - 11`, so each invalid block answers one value in that range with
+    /// probability close to `1 / 2^k` for the range's power-of-two width — not zero. The earlier
+    /// 64-block sample's "no collision with a valid length" was therefore a statement about a
+    /// sample, not a bound. This test extends the population to thousands of attacker-chosen
+    /// blocks on the fixed 2048-bit key the differential harness uses, records the complete
+    /// empirical distribution, and reports the match count for each protocol-relevant length.
+    ///
+    /// An invalid block may answer `0` (the synthetic length is allowed to be zero), which an
+    /// application that tests only `ret > 0` would read as a failure; the population records it
+    /// rather than asserting it away. Every call leaves the error queue empty.
+    ///
+    /// If the distributions overlap, that is a finding, not a pass; it is recorded in
+    /// `evidence/haz-15/REENTRANCY-AND-LENGTH.md`.
     #[test]
     fn the_external_length_channel_is_measured() {
         use crate::rsa::object::{
@@ -3649,6 +4245,11 @@ mod tests {
         };
         use crate::rsa::RSA_padding_add_PKCS1_type_2;
         use crate::runtime::err::{ERR_clear_error, ERR_peek_error};
+
+        /// The synthetic length is the last of 128 candidates below `num - 10`; the population is
+        /// large enough that a per-value probability near `1/256` is visible, while keeping the
+        /// test's wall time within the gate's budget.
+        const INVALID_SAMPLES: usize = 2048;
 
         // SAFETY: every object and buffer is created and released here; the pinned key's
         // components are owned by `ext` after the `set0` calls.
@@ -3715,41 +4316,41 @@ mod tests {
                 valid_lengths.push(ret);
             }
 
-            // 64 distinct invalid blocks: wrong type, a short padding string, no separator, and
-            // a block that does not start with 00. Every one is attacker-chosen and fully known.
-            let mut invalid_lengths = Vec::new();
-            for i in 0..64usize {
+            // Thousands of distinct invalid blocks: wrong type, a short padding string, no
+            // separator, and a block that does not start with 00. Every one is attacker-chosen
+            // and fully known; the body comes from a fixed PRNG so the population is
+            // reproducible and the ciphertexts are distinct.
+            let mut histogram = vec![0usize; 256];
+            let mut invalid_lengths = Vec::with_capacity(INVALID_SAMPLES);
+            for i in 0..INVALID_SAMPLES {
                 let mut block = vec![0u8; num];
-                let tweak = (i as u8).wrapping_mul(37) | 1;
+                let mut state =
+                    0x9e37_79b9_7f4a_7c15u64 ^ (i as u64).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+                for byte in block.iter_mut() {
+                    let value = splitmix64(&mut state) as u8;
+                    *byte = if value == 0 { 1 } else { value };
+                }
                 match i % 4 {
                     0 => {
+                        // Wrong block type.
+                        block[0] = 0x00;
                         block[1] = 0x03;
-                        for byte in block.iter_mut().skip(2) {
-                            *byte = tweak;
-                        }
                     }
                     1 => {
+                        // Padding string shorter than eight octets: the first zero is at 6.
+                        block[0] = 0x00;
                         block[1] = 0x02;
-                        for byte in block.iter_mut().skip(2) {
-                            *byte = 0x11;
-                        }
-                        block[2] = tweak;
-                        block[3] = 0x00;
+                        block[6] = 0x00;
                     }
                     2 => {
+                        // No separator at all: every body octet is non-zero.
+                        block[0] = 0x00;
                         block[1] = 0x02;
-                        for byte in block.iter_mut().skip(2) {
-                            *byte = 0x22;
-                        }
-                        block[2] = tweak;
                     }
                     _ => {
+                        // Does not start with a zero octet.
                         block[0] = 0x01;
                         block[1] = 0x02;
-                        for byte in block.iter_mut().skip(2) {
-                            *byte = 0x33;
-                        }
-                        block[2] = tweak;
                     }
                 }
                 let ct = ciphertext_for_block(ext, &block);
@@ -3762,34 +4363,153 @@ mod tests {
                     ext,
                     RSA_PKCS1_PADDING,
                 );
-                assert!(ret > 0, "invalid block {i} is answered");
+                assert!(
+                    ret >= 0,
+                    "invalid block {i} must not be refused: the whole point is a defined answer"
+                );
                 assert_eq!(ERR_peek_error(), 0, "invalid block {i} leaves no error");
+                histogram[ret as usize] += 1;
                 invalid_lengths.push(ret);
             }
 
-            let matching: Vec<usize> = invalid_lengths
-                .iter()
-                .filter(|len| valid_lengths.contains(len))
-                .map(|len| *len as usize)
-                .collect();
             let mut distinct = invalid_lengths.clone();
             distinct.sort_unstable();
             distinct.dedup();
+            let minimum = *distinct.first().unwrap_or(&0);
+            let maximum = *distinct.last().unwrap_or(&0);
+            // 8 and the valid-case message lengths, then the authority's internal-key synthetic
+            // lengths (`observables.json`: 244 for bad_type, 107 for short_ps) and the
+            // candidate's external synthetic lengths (189, 180).
+            let expected: [usize; 8] = [8, 16, 32, 48, 107, 180, 189, 244];
+            let matches: Vec<(usize, usize)> = expected
+                .iter()
+                .map(|&length| (length, histogram[length]))
+                .collect();
             println!(
-                "HAZ15LENGTH valid={valid_lengths:?} invalid={invalid_lengths:?} \
-                 distinct_invalid_lengths={} invalid_equal_to_a_valid_length={matching:?}",
+                "HAZ15POP samples={INVALID_SAMPLES} valid={valid_lengths:?} distinct={} \
+                 min={minimum} max={maximum} matches={matches:?} histogram={:?}",
+                distinct.len(),
+                &histogram[..num - 10],
+            );
+
+            // The synthetic range is `0 .. num - 10`; anything above it would mean the wrong
+            // check ran.
+            assert!(invalid_lengths
+                .iter()
+                .all(|&length| length >= 0 && (length as usize) < num - 10));
+            // The population covers the range rather than a constant.
+            assert!(
+                distinct.len() >= 230,
+                "the synthetic population must cover the range: distinct={}",
                 distinct.len()
             );
-            // The synthetic lengths are drawn from the KDK and are not a constant; but they are
-            // not the valid lengths either, which is the finding the evidence file records.
+            // The earlier 64-sample zero was not a bound: with thousands of samples, at least one
+            // expected length is matched. The TLS pre-master length (48) is the decisive one.
             assert!(
-                invalid_lengths
-                    .iter()
-                    .any(|len| !valid_lengths.contains(len)),
-                "the synthetic population is not the valid population"
+                matches.iter().any(|&(_, count)| count > 0),
+                "the synthetic lengths must collide with an expected length over this population"
+            );
+            assert!(
+                histogram[48] > 0,
+                "the 48-byte TLS pre-master length must be reachable by the synthetic length"
             );
 
             RSA_free(ext);
+        }
+    }
+
+    /// SplitMix64: a fixed, deterministic filler for the length population's block bodies.
+    /// The test only needs reproducibility, not a cryptographic generator.
+    fn splitmix64(state: &mut u64) -> u64 {
+        *state = state.wrapping_add(0x9e37_79b9_7f4a_7c15);
+        let mut z = *state;
+        z = (z ^ (z >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
+        z = (z ^ (z >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
+        z ^ (z >> 31)
+    }
+
+    /// **The TLS-shaped fixed-length check does not expose a length channel.**
+    ///
+    /// `ossl_rsa_padding_check_PKCS1_type_2_TLS` always answers `SSL_MAX_MASTER_KEY_LENGTH` (48)
+    /// and always writes 48 bytes: a valid TLS-shaped block copies the submitted pre-master
+    /// secret, an invalid one copies a random secret selected under the same constant-time mask.
+    /// The measurement is over thousands of invalid blocks, so a zero in the length axis is a
+    /// statement about the whole population rather than an illustration.
+    ///
+    /// This function is the authority's answer for TLS; the generic `RSA_private_decrypt` arm in
+    /// this file does not call it. The application obligation that follows — select the
+    /// fixed-length check rather than exposing the generic length — is recorded in
+    /// `evidence/haz-15/REENTRANCY-AND-LENGTH.md`.
+    #[test]
+    fn the_tls_shaped_padding_check_answers_one_length() {
+        const INVALID_SAMPLES: usize = 4096;
+        let num = 256usize;
+        let pms = 48usize;
+        let version: c_int = 0x0303;
+
+        // A valid TLS-shaped block: 00 02, a long non-zero padding string, a zero separator,
+        // then the 48-octet pre-master secret whose first two octets are the client version.
+        let mut valid = vec![0x5au8; num];
+        valid[0] = 0x00;
+        valid[1] = 0x02;
+        valid[num - pms - 1] = 0x00;
+        valid[num - pms] = 0x03;
+        valid[num - pms + 1] = 0x03;
+
+        // SAFETY: the function reads exactly `num` bytes from `valid`/`invalid` and writes `pms`
+        // bytes to `out`; every buffer is this frame's own and correctly sized.
+        unsafe {
+            let mut out = vec![0u8; pms];
+            let ret = crate::rsa::ossl_rsa_padding_check_PKCS1_type_2_TLS(
+                ptr::null_mut(),
+                out.as_mut_ptr(),
+                pms,
+                valid.as_ptr(),
+                num,
+                version,
+                0,
+            );
+            assert_eq!(ret, pms as c_int);
+            assert_eq!(
+                &out[..],
+                &valid[num - pms..],
+                "a valid block returns the secret"
+            );
+
+            let mut bad_lengths = Vec::with_capacity(INVALID_SAMPLES);
+            for i in 0..INVALID_SAMPLES {
+                let mut invalid = valid.clone();
+                let mut state = 0x1234_5678_9abc_def0u64 ^ (i as u64);
+                let position = (splitmix64(&mut state) as usize) % num;
+                let flip = (splitmix64(&mut state) as u8) | 1;
+                invalid[position] ^= flip;
+                let mut out = vec![0u8; pms];
+                let ret = crate::rsa::ossl_rsa_padding_check_PKCS1_type_2_TLS(
+                    ptr::null_mut(),
+                    out.as_mut_ptr(),
+                    pms,
+                    invalid.as_ptr(),
+                    num,
+                    version,
+                    0,
+                );
+                assert_eq!(
+                    ret, pms as c_int,
+                    "invalid block {i} answers the fixed length"
+                );
+                bad_lengths.push(ret);
+            }
+            let distinct: std::collections::BTreeSet<c_int> = bad_lengths.iter().copied().collect();
+            println!(
+                "HAZ15TLS samples={INVALID_SAMPLES} distinct_returned_lengths={:?}",
+                distinct
+            );
+            assert_eq!(
+                distinct.len(),
+                1,
+                "the fixed-length check has no length channel"
+            );
+            assert!(distinct.contains(&(pms as c_int)));
         }
     }
 
@@ -4124,5 +4844,325 @@ mod tests {
             RSA_free(rsa);
             BN_free(e);
         }
+    }
+
+    /// **An application RNG callback may re-enter RSA decryption.**
+    ///
+    /// The first-use secret for a key with no private material is drawn by `RAND_priv_bytes`,
+    /// which an application can replace. With the store's lock held across that call, a callback
+    /// that re-enters RSA decryption would deadlock on the non-reentrant mutex. The repair records
+    /// an `INITIALIZING` reservation, releases the lock for the draw, and publishes under a fresh
+    /// acquisition; the same thread that already owns the reservation is refused immediately, and
+    /// a different key's re-entry completes on its own reservation.
+    ///
+    /// The control is bounded: a hang is a test failure, not an outcome. It also checks from
+    /// inside the callback that the store's lock is free, which is the property that makes the
+    /// same-thread refusal possible.
+    #[test]
+    #[allow(clippy::panic)] // a bounded-wait failure is the test's observation
+    fn a_first_use_rng_callback_may_reenter_rsa_decryption() {
+        let (_serial, _installed) = install_rng_script();
+        RNG_GATE.reset();
+
+        let mut same = Box::new(super::super::mp::zeroed_rsa());
+        let mut other = Box::new(super::super::mp::zeroed_rsa());
+        let same_addr = (&mut *same) as *mut Rsa as usize;
+        let other_addr = (&mut *other) as *mut Rsa as usize;
+
+        // Same key: the callback re-enters the object whose reservation the outer call owns.
+        let (tx, rx) = mpsc::channel();
+        let start = Instant::now();
+        let worker = std::thread::spawn(move || {
+            arm_rng(RngAction::ReenterSame, same_addr, other_addr);
+            let mut kdk = [0u8; SHA256_DIGEST_LENGTH as usize];
+            // SAFETY: the fixtures outlive this join; the re-entered target is the same live
+            // object and the ciphertext is this frame's fixed array.
+            let outer = unsafe {
+                derive_external_kdk(
+                    same_addr as *mut Rsa,
+                    RNG_TEST_CT.as_ptr(),
+                    RNG_TEST_CT.len() as c_int,
+                    kdk.as_mut_ptr(),
+                )
+            };
+            let inner = RNG_REENTRY_RESULT.with(Cell::get);
+            let variant_ok = RNG_REENTRY_VARIANT_OK.with(Cell::get);
+            let _ = tx.send((outer, inner, variant_ok));
+        });
+        let observed = receive(
+            &rx,
+            "same-thread re-entry deadlocked across the RNG callback",
+        );
+        assert!(worker.join().is_ok(), "the worker must not panic");
+        assert!(start.elapsed() < Duration::from_secs(10));
+        assert_eq!(observed.0, 1, "the outer first use completes");
+        assert_eq!(observed.1, 0, "same-thread re-entry is the defined refusal");
+        assert!(observed.2, "the refusal names ReentrantInitialization");
+        assert!(
+            !RNG_STORE_LOCK_HELD.load(AtomicOrdering::SeqCst),
+            "the store lock must not be held across the RNG callback"
+        );
+        assert_eq!(ext_kdk_ready_count(same_addr as *mut Rsa), 1);
+        forget_ext_kdk_secret(same_addr as *mut Rsa);
+
+        // A different key: the callback's inner call reserves its own entry and completes.
+        let (tx, rx) = mpsc::channel();
+        let start = Instant::now();
+        let worker = std::thread::spawn(move || {
+            arm_rng(RngAction::ReenterOther, same_addr, other_addr);
+            let mut kdk = [0u8; SHA256_DIGEST_LENGTH as usize];
+            // SAFETY: both fixtures outlive this join.
+            let outer = unsafe {
+                derive_external_kdk(
+                    same_addr as *mut Rsa,
+                    RNG_TEST_CT.as_ptr(),
+                    RNG_TEST_CT.len() as c_int,
+                    kdk.as_mut_ptr(),
+                )
+            };
+            let inner = RNG_REENTRY_RESULT.with(Cell::get);
+            let _ = tx.send((outer, inner));
+        });
+        let observed = receive(&rx, "different-key re-entry deadlocked");
+        assert!(worker.join().is_ok());
+        assert!(start.elapsed() < Duration::from_secs(10));
+        assert_eq!(observed.0, 1, "the outer call completes");
+        assert_eq!(observed.1, 1, "a different key's inner call completes");
+        assert_eq!(ext_kdk_ready_count(same_addr as *mut Rsa), 1);
+        assert_eq!(ext_kdk_ready_count(other_addr as *mut Rsa), 1);
+        forget_ext_kdk_secret(same_addr as *mut Rsa);
+        forget_ext_kdk_secret(other_addr as *mut Rsa);
+        assert_eq!(ext_kdk_entry_count(same_addr as *mut Rsa), 0);
+        assert_eq!(ext_kdk_entry_count(other_addr as *mut Rsa), 0);
+    }
+
+    /// **Concurrent first uses install exactly one secret and agree on it.**
+    ///
+    /// The first thread reserves and parks in the RNG callback; the rest must block on the store's
+    /// condition variable rather than spin or draw their own secret. On publication every caller
+    /// copies the same secret, so the KDK and the synthetic answer are identical, and the store
+    /// holds exactly one `Ready` entry.
+    #[test]
+    #[allow(clippy::panic)] // bounded waits are the observation
+    fn concurrent_first_use_installs_exactly_one_secret() {
+        let (_serial, _installed) = install_rng_script();
+        RNG_GATE.reset();
+
+        let mut key = Box::new(super::super::mp::zeroed_rsa());
+        let addr = (&mut *key) as *mut Rsa as usize;
+        const THREADS: usize = 8;
+
+        let (tx, rx) = mpsc::channel();
+        let mut workers = Vec::new();
+        for _ in 0..THREADS {
+            let tx = tx.clone();
+            workers.push(std::thread::spawn(move || {
+                arm_rng(RngAction::Block, addr, 0);
+                let mut kdk = [0u8; SHA256_DIGEST_LENGTH as usize];
+                // SAFETY: the fixture outlives every join below.
+                let result = unsafe {
+                    derive_external_kdk(
+                        addr as *mut Rsa,
+                        RNG_TEST_CT.as_ptr(),
+                        RNG_TEST_CT.len() as c_int,
+                        kdk.as_mut_ptr(),
+                    )
+                };
+                let _ = tx.send((result, kdk));
+            }));
+        }
+        drop(tx);
+        assert!(
+            RNG_GATE.wait_entered(Duration::from_secs(10)),
+            "the owner must reach the RNG callback"
+        );
+        assert_eq!(
+            ext_kdk_initializing_count(addr as *mut Rsa),
+            1,
+            "exactly one reservation"
+        );
+        // Wait until a peer is genuinely parked on the condition variable, not for a guessed
+        // interval.
+        assert!(
+            wait_for_waiter(Duration::from_secs(10)),
+            "a concurrent caller must block on the condition variable"
+        );
+        assert_eq!(ext_kdk_entry_count(addr as *mut Rsa), 1);
+        assert_eq!(ext_kdk_initializing_count(addr as *mut Rsa), 1);
+        RNG_GATE.release();
+
+        let mut results = Vec::new();
+        for _ in 0..THREADS {
+            results.push(receive(&rx, "a concurrent first use did not complete"));
+        }
+        for worker in workers {
+            assert!(worker.join().is_ok());
+        }
+        let (first_result, first_kdk) = results[0];
+        assert_eq!(first_result, 1);
+        for (result, kdk) in &results {
+            assert_eq!(*result, 1, "every caller gets a secret");
+            assert_eq!(*kdk, first_kdk, "all callers agree on the KDK");
+        }
+        assert_eq!(ext_kdk_ready_count(addr as *mut Rsa), 1);
+        assert_eq!(ext_kdk_initializing_count(addr as *mut Rsa), 0);
+        forget_ext_kdk_secret(addr as *mut Rsa);
+        assert_eq!(ext_kdk_entry_count(addr as *mut Rsa), 0);
+    }
+
+    /// **Destruction during initialisation is defined and publishes nothing.**
+    ///
+    /// The owner is parked in the RNG callback, a second thread is parked on the condition
+    /// variable, and the key is destroyed. Removal wakes the waiter, and the owner's later
+    /// publication finds no matching reservation. Neither path writes into the freed object: the
+    /// waiter never dereferences it, and the owner's abandoned path returns before reading
+    /// `libctx`. No entry survives.
+    #[test]
+    #[allow(clippy::panic)] // bounded waits are the observation
+    fn destruction_during_initialisation_is_a_defined_refusal() {
+        use crate::rsa::object::{RSA_free, RSA_new, RSA_set0_key};
+
+        let (_serial, _installed) = install_rng_script();
+        RNG_GATE.reset();
+
+        // SAFETY: the object is created here; both workers finish before it is freed, and after
+        // the free neither dereferences it.
+        let rsa = unsafe {
+            let rsa = RSA_new();
+            assert!(!rsa.is_null());
+            let n = BN_new();
+            let e = BN_new();
+            assert!(!n.is_null() && !e.is_null());
+            assert_eq!(BN_set_word(e, 65537), 1);
+            assert_eq!(BN_set_word(n, 0x0100_0001), 1);
+            assert_eq!(RSA_set0_key(rsa, n, e, ptr::null_mut()), 1);
+            rsa
+        };
+        let addr = rsa as usize;
+
+        let (owner_tx, owner_rx) = mpsc::channel();
+        let owner = std::thread::spawn(move || {
+            arm_rng(RngAction::Block, addr, 0);
+            let mut kdk = [0u8; SHA256_DIGEST_LENGTH as usize];
+            // SAFETY: the object is live until the free below, and the abandoned path returns
+            // before reading it again.
+            let result = unsafe {
+                derive_external_kdk(
+                    addr as *mut Rsa,
+                    RNG_TEST_CT.as_ptr(),
+                    RNG_TEST_CT.len() as c_int,
+                    kdk.as_mut_ptr(),
+                )
+            };
+            let _ = owner_tx.send(result);
+        });
+        assert!(RNG_GATE.wait_entered(Duration::from_secs(10)));
+        assert_eq!(ext_kdk_initializing_count(addr as *mut Rsa), 1);
+
+        let (waiter_tx, waiter_rx) = mpsc::channel();
+        let waiter = std::thread::spawn(move || {
+            // The waiter only consults the side table; it never dereferences the object.
+            let refusal = per_key_ext_kdk_secret(addr as *mut Rsa).err();
+            let _ = waiter_tx.send(refusal);
+        });
+        assert!(
+            wait_for_waiter(Duration::from_secs(10)),
+            "the waiter must block on the condition variable"
+        );
+        assert_eq!(ext_kdk_entry_count(addr as *mut Rsa), 1);
+
+        // SAFETY: this is the destruction hook `RSA_free` runs; both workers are outside any
+        // dereference of the object and are woken by the removal.
+        unsafe { RSA_free(rsa) };
+        assert_eq!(
+            ext_kdk_entry_count(addr as *mut Rsa),
+            0,
+            "no secret survives destruction"
+        );
+
+        RNG_GATE.release();
+        let owner_result = receive(&owner_rx, "the abandoned initialiser was not refused");
+        let waiter_refusal = receive(&waiter_rx, "the waiter was not woken");
+        assert!(owner.join().is_ok());
+        assert!(waiter.join().is_ok());
+        assert_eq!(owner_result, 0, "the abandoned initialiser refuses");
+        assert_eq!(waiter_refusal, Some(ExtKdkRefusal::ReservationAbandoned));
+        assert_eq!(ext_kdk_entry_count(addr as *mut Rsa), 0);
+    }
+
+    /// **RNG and allocation failure publish nothing and are the defined refusal.**
+    ///
+    /// The RNG is failed through the application callback, the entry reservation through the
+    /// test allocation seam, and the secret's own allocation through the same seam with the
+    /// vector pre-grown. Each case must leave no entry and answer `0`/`AllocationFailure`; the
+    /// RNG case also shows that the abandoned reservation does not poison a later attempt.
+    #[test]
+    fn rng_and_allocation_failure_publish_nothing() {
+        let (_serial, _installed) = install_rng_script();
+
+        let mut key = Box::new(super::super::mp::zeroed_rsa());
+        let addr = (&mut *key) as *mut Rsa as usize;
+        let mut kdk = [0u8; SHA256_DIGEST_LENGTH as usize];
+
+        // RNG failure at the draw.
+        arm_rng(RngAction::Fail, 0, 0);
+        // SAFETY: the fixture is live and every buffer is this frame's.
+        let refused = unsafe {
+            derive_external_kdk(
+                addr as *mut Rsa,
+                RNG_TEST_CT.as_ptr(),
+                RNG_TEST_CT.len() as c_int,
+                kdk.as_mut_ptr(),
+            )
+        };
+        assert_eq!(refused, 0, "an RNG failure is the defined refusal");
+        assert_eq!(ext_kdk_entry_count(addr as *mut Rsa), 0);
+
+        // The reservation was abandoned, so a later attempt succeeds.
+        arm_rng(RngAction::Delegate, 0, 0);
+        // SAFETY: as above.
+        let retried = unsafe {
+            derive_external_kdk(
+                addr as *mut Rsa,
+                RNG_TEST_CT.as_ptr(),
+                RNG_TEST_CT.len() as c_int,
+                kdk.as_mut_ptr(),
+            )
+        };
+        assert_eq!(
+            retried, 1,
+            "the abandoned reservation does not poison the next attempt"
+        );
+        assert_eq!(ext_kdk_ready_count(addr as *mut Rsa), 1);
+        forget_ext_kdk_secret(addr as *mut Rsa);
+
+        // Reservation allocation failure: the entry's box is the first seam-visible allocation.
+        let mut reserve_fail = Box::new(super::super::mp::zeroed_rsa());
+        let reserve_fail_addr = (&mut *reserve_fail) as *mut Rsa as usize;
+        let guard = crate::runtime::alloc::test_fail::fail_after(0);
+        let refused = per_key_ext_kdk_secret(reserve_fail_addr as *mut Rsa);
+        drop(guard);
+        assert!(
+            matches!(refused, Err(ExtKdkRefusal::AllocationFailure)),
+            "a refused reservation is an allocation failure"
+        );
+        assert_eq!(ext_kdk_entry_count(reserve_fail_addr as *mut Rsa), 0);
+
+        // Secret allocation failure: spare vector capacity makes the reservation allocation-free,
+        // so the budget's single success is the entry box and the next failure is the secret.
+        {
+            let mut store = lock_ext_kdk_store();
+            let _ = store.entries.try_reserve(4);
+        }
+        let mut secret_fail = Box::new(super::super::mp::zeroed_rsa());
+        let secret_fail_addr = (&mut *secret_fail) as *mut Rsa as usize;
+        let guard = crate::runtime::alloc::test_fail::fail_after(1);
+        let refused = per_key_ext_kdk_secret(secret_fail_addr as *mut Rsa);
+        drop(guard);
+        assert!(
+            matches!(refused, Err(ExtKdkRefusal::AllocationFailure)),
+            "a refused secret is an allocation failure"
+        );
+        assert_eq!(ext_kdk_entry_count(secret_fail_addr as *mut Rsa), 0);
     }
 }

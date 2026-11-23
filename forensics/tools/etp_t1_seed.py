@@ -660,11 +660,16 @@ ETP_T2_OBLIGATIONS = [
      "The authority's external-key PKCS#1 v1.5 substitution is a padding oracle. The candidate "
      "keeps the implicit-rejection arm and keys the synthetic answer with private CRT material "
      "or a per-key RNG secret (the earlier decrypted-block hash is withdrawn as "
-     "attacker-computable); the returned length still distinguishes the classes, so the hazard "
-     "is only partially mitigated (D-RSA-EXTKEY-ORACLE-1).",
-     "Independent adjudication of evidence/haz-15/{observables.json,KDK-CORRECTION.md} at the "
-     "candidate that lands the correction, a consumer replay of the divergence, and a "
-     "resolution of the returned-length channel.",
+     "attacker-computable). The returned length remains a channel: a 2,048-block population "
+     "matched every protocol-relevant length at a per-ciphertext probability of order 1/246 "
+     "(the 48-byte TLS length matched 9 of 2,048), so the hazard is only partially mitigated "
+     "(D-RSA-EXTKEY-ORACLE-1). The first-use secret initialisation no longer holds its side-table "
+     "lock across the application-reachable RAND callback; same-thread re-entry is a named "
+     "refusal and destruction during initialisation is defined.",
+     "Independent adjudication of evidence/haz-15/{observables.json,KDK-CORRECTION.md,"
+     "REENTRANCY-AND-LENGTH.md} at the candidate that lands the correction, a consumer replay of "
+     "the divergence, and a resolution of the returned-length channel (a fixed-length contract, "
+     "or a documented per-consumer obligation).",
      ["REL-OPENSSH-B85C"], ["IMP-RSA"]),
     ("OBL-PANIC-ATOMICITY", "ETP-T2 HAZ-16",
      "guard_ffi prevents a panic from unwinding into C. Three stateful security-relevant "

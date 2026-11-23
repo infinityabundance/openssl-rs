@@ -110,9 +110,16 @@ Counts: 20 hazards; 8 legal-triggered, 8 class-2-triggered, 7 class-3-triggered;
 `EVIDENCED`. `HAZ-15` is `CLAIMED_NO_EVIDENCE`: the external-key PKCS#1 v1.5
 arm takes the implicit-rejection check and keys the synthetic answer with
 private CRT material or a per-key RNG secret, so the content distinction is
-removed; the returned length still distinguishes valid from invalid padding
-(`evidence/haz-15/KDK-CORRECTION.md`), so the hazard is only partially mitigated
-and the evidence cannot support an `EVIDENCED` barrier. An independent
+removed. The returned length still distinguishes valid from invalid padding:
+the 2,048-block population in `evidence/haz-15/REENTRANCY-AND-LENGTH.md` matched
+every protocol-relevant length, with a per-ciphertext probability of order
+`1/246` (the 48-byte TLS pre-master length matched 9 of 2,048). The hazard is
+only partially mitigated, so the evidence cannot support an `EVIDENCED` barrier.
+The same follow-up repairs a re-entrancy edge in the first-use secret path: the
+side table's lock is no longer held across the application-reachable
+`RAND_priv_bytes` call, same-thread re-entry is a named refusal, peers wait on a
+condition variable under a fixed bound, and destruction during initialisation
+publishes nothing. That repair removes a deadlock, not the oracle. An independent
 adjudication is still required before the obligation closes.
 
 **HAZ-16 progress.** The barrier is no longer absent, but it is also not
@@ -181,8 +188,10 @@ the library documents and does not enforce (`FMEA-22`). The `HAZ-15` leaf names
 the authority's mechanism: on the corrected candidate the external-key arm takes
 the implicit-rejection check and keys the synthetic answer with secret key
 material, so the content refusal that made the oracle observable is gone
-(`D-RSA-EXTKEY-ORACLE-1`); the returned length remains a channel. The leaf stays
-in the tree because it is the mechanism a regression would reintroduce.
+(`D-RSA-EXTKEY-ORACLE-1`); the returned length remains a channel, measured over
+2,048 invalid blocks with a per-ciphertext match probability of order `1/246`
+(`evidence/haz-15/REENTRANCY-AND-LENGTH.md`). The leaf stays in the tree because
+it is the mechanism a regression would reintroduce.
 
 ### TE-4 — memory corruption from a class-1 or class-2 input
 
@@ -405,11 +414,16 @@ Steps: submit a modified ciphertext; observe the refusal; iterate to recover the
 plaintext (Bleichenbacher/ROBOT).
 Barrier: implicit rejection on the external-key path with a secret-keyed KDK
 (`D-RSA-EXTKEY-ORACLE-1`); the content distinction is removed, but the returned
-length still separates valid from invalid padding. Residual:
-`OBL-RSA-EXTKEY-ORACLE` stays open because the length channel remains and the
-receipt is self-authored; an independent adjudication and a consumer replay are
-still required, and the obligation still blocks the b85c graduation until they
-exist.
+length still separates valid from invalid padding. The channel is measured, not
+illustrated: over 2,048 invalid blocks every protocol-relevant length matched,
+with a per-ciphertext probability of order `1/246`
+(`evidence/haz-15/REENTRANCY-AND-LENGTH.md`), so a single query remains a
+padding signal with about 0.4% error. Residual: `OBL-RSA-EXTKEY-ORACLE` stays
+open because the length channel remains and the receipt is self-authored; an
+independent adjudication and a consumer replay are still required, and the
+obligation still blocks the b85c graduation until they exist. The first-use
+secret initialisation no longer holds its lock across the application RNG
+callback; that deadlock repair is separate from the oracle.
 
 ## 8. Register integration with the T1 graph
 
@@ -435,7 +449,7 @@ ETP-T2 adds the following nodes and edges to the T1 seed:
 |---|---|
 | `REQ-CORR-01` | "a cryptographic result is correct or the operation fails"; the existing requirement set had no node for correctness, so `HAZ-10` and `HAZ-18` would have had no requirement to motivate |
 | `IMP-BN-MONT` (+ file artefact) | `src/bn/mont.rs` is the mechanism behind `HAZ-10` and had no implementation node |
-| `OBL-RSA-EXTKEY-ORACLE` | `HAZ-15` has no evidenced barrier: the content oracle is corrected, but the returned length remains a channel; the obligation stays open for an independent adjudication and the consumer replay, and still blocks `REL-OPENSSH-B85C` |
+| `OBL-RSA-EXTKEY-ORACLE` | `HAZ-15` has no evidenced barrier: the content oracle is corrected, but the returned length remains a channel (2,048-block measurement, per-ciphertext probability of order `1/246`); the obligation stays open for an independent adjudication and the consumer replay, and still blocks `REL-OPENSSH-B85C` |
 | `OBL-PANIC-ATOMICITY` | `HAZ-16` has no barrier; the obligation blocks `REL-OPENSSH-B85C` |
 | `OBL-VERIFY-RETURN-POLARITY` | `HAZ-18` has no barrier; the obligation is recorded without a release block because no in-scope consumer is shown to mishandle the return |
 | `REQ-CORR-01` in the b85c scope | a `SAFE_COMPATIBLE` graduation that does not include correctness is not a safety claim |

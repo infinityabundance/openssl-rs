@@ -111,10 +111,17 @@ that key; 58 distinct values were observed in the 64-block population.
   the method's `finish`, the lock release and the key components, so the secret
   is gone on every destruction path and a later allocation at the same address
   cannot inherit it.
-- The store is locked for lookup, insertion and removal only; a hit copies the
-  secret into a stack `SecretArray`, and the HMAC runs outside the lock.
-- The secret is drawn while the store is locked, so two threads that miss
-  together install one secret and both receive it.
+- The store's lock is held for lookup, reservation, publication and removal only. A hit
+  copies the secret into a stack `SecretArray`, and the HMAC runs outside the lock.
+- A miss reserves an `INITIALIZING` entry recording the calling thread, **releases the
+  lock**, draws the secret with `RAND_priv_bytes`, then re-acquires and publishes. The
+  lock is therefore never held across an application-controlled RNG callback. A peer
+  that misses concurrently blocks on the store's condition variable and receives the
+  published secret; a same-thread re-entry is refused (`ReentrantInitialization`)
+  rather than deadlocking; the wait is bounded by a fixed limit; and destruction during
+  initialisation removes the reservation, wakes the waiter, and makes the owner's
+  publication a refusal. The full state machine and its controls are in
+  `evidence/haz-15/REENTRANCY-AND-LENGTH.md` §2–§3.
 - Two further stack copies are wiped that the authority leaves in place:
   `derive_kdk`'s `d_hash` (`SHA-256(d)`, from which the KDK is keyed) and
   `rsa_ossl_private_decrypt`'s `kdk` array. These are deliberate safety
@@ -146,18 +153,25 @@ external shape), the test
 - 58 distinct invalid lengths;
 - **zero** invalid lengths equal to any valid length.
 
-**The lengths distinguish the classes.** For a protocol that expects a 48-byte
-TLS pre-master secret, every invalid block in this sample returned a length other
-than 48, so an application that exposes the returned length still has an oracle.
-This is a finding, not a pass. The generic check cannot make the length uniform
-without changing its contract (valid messages have their own lengths); the
-authority's answer for TLS is the fixed-length
-`ossl_rsa_padding_check_PKCS1_type_2_TLS`, which this path does not use. The
-authority's own internal-key implicit rejection has the same length channel, so
-this correction removes the stronger refusal oracle on the external path but does
-not make the generic path length-safe. The observable set on the other three
-axes — return sign, output-buffer state and error queue — no longer distinguishes:
-both classes return a positive length, write bytes and leave the queue empty.
+**The lengths distinguish the classes.** The 64-block measurement above was the first
+sample; it is superseded by the extended population in
+`evidence/haz-15/REENTRANCY-AND-LENGTH.md` §5, which decrypts 2,048 invalid blocks and
+matches every protocol-relevant length. For a fixed expected length the per-ciphertext
+match probability is of order `1/246` (the 48-byte TLS pre-master length matched 9 of
+2,048, 95% Wilson `[0.00231, 0.00833]`), so an application that exposes the returned
+length still has a per-query oracle: a valid block returns its message length
+deterministically, and an invalid block returns that length only about 0.4% of the
+time. The earlier zero-collision result over 64 blocks had probability about 0.35 under
+this open channel and bounded nothing. This is a finding, not a pass. The generic check
+cannot make the length uniform without changing its contract (valid messages have their
+own lengths); the authority's answer for TLS is the fixed-length
+`ossl_rsa_padding_check_PKCS1_type_2_TLS`, which this path does not use. The authority's
+own internal-key implicit rejection has the same length channel, so this correction
+removes the stronger refusal oracle on the external path but does not make the generic
+path length-safe. The observable set on the other three axes — return sign,
+output-buffer state and error queue — no longer distinguishes: both classes return a
+non-negative length, write bytes and leave the queue empty. An invalid block can return
+`0`, which an application testing only `ret > 0` reads as failure.
 
 The population is recorded in `observables.json` under `length_population`, and
 the per-case rows are regenerated from the rebuilt candidate DSO
@@ -278,25 +292,34 @@ removed or newly ignored.
 that decrypts with an externally held PKCS#1 v1.5 RSA key, and who can observe
 some part of the answer. The content construction no longer gives the attacker a
 padding-validity signal through the returned bytes; it still does through the
-returned length. Timing was not measured. An application that ignores the length
-or uses the fixed-length TLS check has no library-level signal left on the axes
-measured here.
+returned length, at a per-query error of about `1/246`. Timing was not measured.
+An application that ignores the length or uses the fixed-length TLS check has no
+library-level signal left on the axes measured here.
 
 - **`HAZ-15` is not eliminated.** The content oracle is removed on the return
   sign, output-buffer and error-queue axes. The returned length remains a
-  distinguisher, so the register records `CLAIMED_NO_EVIDENCE`, not `EVIDENCED`
-  or `PARTIAL_MITIGATION` (the register's vocabulary has no partial state; the
-  partial nature is stated in the barrier's `control` and in `would_close`).
+  distinguisher, measured over 2,048 invalid blocks in
+  `evidence/haz-15/REENTRANCY-AND-LENGTH.md` §5, so the register records
+  `CLAIMED_NO_EVIDENCE`, not `EVIDENCED` or `PARTIAL_MITIGATION` (the register's
+  vocabulary has no partial state; the partial nature is stated in the barrier's
+  `control` and in `would_close`).
 - **`OBL-RSA-EXTKEY-ORACLE` stays open.** It needs independent adjudication, a
   consumer replay, and a resolution of the length channel.
+- **The first-use lock-across-callback defect is repaired** (this follow-up): the
+  store no longer holds its mutex across `RAND_priv_bytes`; same-thread re-entry is
+  a named refusal, peers wait on a condition variable under a fixed bound, and
+  destruction during initialisation publishes nothing. This is a deadlock repair,
+  not a change to the oracle.
 - **Not established:** timing/leakage of the new derivation; a real
   `ENGINE`/neverbleed remote operation (the external shape is the CRT parameters
   with `d` removed, and the public-only path is exercised at the KDK helper and
   its failure injection, not through an engine-backed private operation); the
   per-object determinism residual for public-only keys; a whole-workload
-  allocation census; and any down-stream consumer measurement.
+  allocation census; sanitizer/Miri/Loom coverage of the new store; and any
+  down-stream consumer measurement.
 - **What is established:** the withdrawn construction is refuted by an executable
   control; the replacement uses only private key material or an RNG secret under
   explicit domain separation; RNG and allocation failure are defined refusals;
   the secret is owned, fallibly allocated, cleansed and released with the key;
-  and the length channel is measured rather than assumed absent.
+  the re-entrancy edge has executable controls with bounded waits; and the length
+  channel is measured over 2,048 blocks rather than assumed absent.

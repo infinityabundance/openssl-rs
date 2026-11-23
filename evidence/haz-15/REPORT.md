@@ -55,8 +55,13 @@ that exposes the returned length — a TLS server expecting a 48-byte pre-master
 secret, for example — therefore still has a distinguisher. The authority's own
 answer for TLS is the fixed-length `ossl_rsa_padding_check_PKCS1_type_2_TLS`;
 the generic check cannot make the length uniform without changing its contract.
-This is a finding, not a pass. Full detail, ownership rules and gate output are
-in `evidence/haz-15/KDK-CORRECTION.md`.
+This is a finding, not a pass. **The 64-block sample is superseded:** the
+2,048-block measurement in `evidence/haz-15/REENTRANCY-AND-LENGTH.md` §5 matched
+every protocol-relevant length, at a per-ciphertext probability of order
+`1/246`, so the earlier zero-collision outcome was a property of a small sample
+rather than of the implementation. Full detail and gate output are in
+`evidence/haz-15/KDK-CORRECTION.md`, and the re-entrancy repair in the same path
+is in `evidence/haz-15/REENTRANCY-AND-LENGTH.md`.
 
 ## 1. Identity and venue
 
