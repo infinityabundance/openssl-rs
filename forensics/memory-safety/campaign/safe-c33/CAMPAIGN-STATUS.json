@@ -120,40 +120,71 @@
  },
  "safe_compatible_graduation": {
   "schema": "openssl-rs/campaign/safe-c33/graduation-record/v1",
-  "receipt": "SAFE-COMPATIBLE-openssh-b85c",
+  "receipt": "RISK-ACCEPTED-openssh-b85c",
   "evidence": "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
   "date": "2026-11-17",
+  "reconciled": "2026-11-23",
+  "reconciliation_item": "ETP-T15",
   "candidate_tag": "b85c",
   "families": [
    "ssh",
    "sshd"
   ],
   "admitted_family": "openssh",
-  "verdict": "SAFE_COMPATIBLE",
+  "verdict": "RISK_ACCEPTED",
+  "original_verdict": "SAFE_COMPATIBLE",
+  "classification": {
+   "state": "RISK_ACCEPTED",
+   "safe_compatible_established": false,
+   "basis": "the record is a principal decision to proceed despite named unresolved obligations; its own cited closure receipts record verdict.safe_compatible=false, the freeze records safe_compatible=false and L7 not_graduated, and the adjudication records NOT ESTABLISHED"
+  },
   "decided_by": "decision-maker (campaign principal)",
-  "basis": "the recorded closure, element-7 and L7 evidence at candidate b85c; all seven mechanisms are SAFETY_DISCHARGED at the scope of the measured OpenSSH consumer closure",
+  "authority": "an authorised principal decision to proceed, not an evidence-derived AGENTS.md section 7 verdict and not an independent acceptance of the assurance case",
+  "basis": "the recorded closure, element-7 and L7 measurements at candidate b85c, read together with the adjudication's NOT ESTABLISHED verdict and the freeze's safe_compatible=false",
   "scope": "the OpenSSH consumer closure at b85c, at the exact artefact digests recorded in evidence/FREEZE-b85c.json",
   "closure": {
    "obligations": 290,
    "discharged": 290,
    "blocked": 0,
    "unknown": 0,
-   "element_7": "PASS"
+   "element_7": "PASS",
+   "what_the_counts_are": "receipt coverage at the named candidate, not a section 7 discharge; DISCHARGED means an existing committed receipt covers the exact site and the tool does not re-audit it"
   },
   "residuals": [
    "a foreign provider may publish a function pointer whose actual type does not match its declared id (external ABI contract)",
    "the recorded instrument runs cover focused subsets rather than every operation in the closure"
   ],
+  "accepted_obligations": [
+   "five mechanisms NOT_ESTABLISHED at mechanism-wide grade: EVP_PKEY_PROVIDER, X509_VERIFY_POLICY, RAND_CMS_STORE_KEYFMT, C_ABI_CONTRACT, BIO",
+   "two scoped discharges with retained caller preconditions: SSL_SESSION (sslconf exclusivity) and RUNTIME_CONCURRENCY (exclusive ownership, schedule-bounded)",
+   "all four cross-cutting obligations NOT_ESTABLISHED: callbacks/reentrancy, aliasing/ownership, panic safety, secret memory",
+   "65 REVIEW_REQUIRED discharges still counted DISCHARGED; BOUNDARY re-adjudication NOT_RUN",
+   "evidence-channel identity defects: the tool change classified E although section 22 places tools in S, the safety argument cites the superseded no-flag Miri tree arm, closure_receipts_repository_head is misstated, and court/ sidecars are untracked",
+   "compatibility reused from b85, not re-executed at b85c; the L4 atlas row digest is not the analysed ssh/sshd",
+   "instrument coverage is a focused subset; Loom, dudect, Wycheproof, panic-safety rollback/poison evidence and secret cleansing are NOT_RUN or unaudited",
+   "B54-F1 and B55-F1 are classified LEDGER_STALE by evidence/b85c-row-reconciliation.json with repairs at S and a mutation control; their BOUNDARY re-adjudication is NOT_RUN and B54-F2 remains open",
+   "the external provider pointer-type obligation is an external ABI contract"
+  ],
   "dissent": {
    "receipt": "evidence/b85c-adjudication.json",
    "verdict": "NOT ESTABLISHED for SAFE_COMPATIBLE (ssh, sshd) at b85c",
-   "status": "preserved unchanged; not withdrawn and not reinterpreted"
+   "status": "preserved unchanged; not withdrawn and not reinterpreted",
+   "independence_established": false,
+   "independence_note": "the adjudication asserts independence; evidence/etp-t8/ASSIGNMENTS.json records it as the same undeclared producing party, with no reviewer identity, no distinct trust domain and a reproduction in this repository's working environment. None is fabricated."
   },
-  "cohort_counter": "consumers.safe_compatible counts the 33 admitted cohort families. This record names two consumer binaries (ssh, sshd) of the single admitted `openssh` family. On the strength of this record the counter was advanced from 0 to 1 on 2026-11-17: `openssh` is counted as the one admitted family with a graduated consumer. The earlier note that the counter was not advanced, and the disagreement it named, are superseded by this entry; the history of that state is kept in the campaign status document.",
+  "cohort_counter": "consumers.safe_compatible counts AGENTS.md section 7 SAFE_COMPATIBLE families and reads 0/33 after the ETP-T15 reconciliation. `openssh` is recorded once as a risk-accepted family (consumers.risk_accepted = 1), not as a graduated one. Between 2026-11-17 and 2026-11-23 the counter read 1/33; that value and the note that carried it are preserved in history below and in evidence/etp-t15/history/.",
+  "history": {
+   "counter_before_reconciliation": 1,
+   "counter_before_2026-11-17": 0,
+   "previous_receipt": "SAFE-COMPATIBLE-openssh-b85c",
+   "previous_note": "consumers.safe_compatible counts the 33 admitted cohort families. This record names two consumer binaries (ssh, sshd) of the single admitted `openssh` family. On the strength of this record the counter was advanced from 0 to 1 on 2026-11-17: `openssh` is counted as the one admitted family with a graduated consumer. The earlier note that the counter was not advanced, and the disagreement it named, are superseded by this entry; the history of that state is kept in the campaign status document.",
+   "historical_copy": "evidence/etp-t15/history/CAMPAIGN-STATUS.before-reconciliation.json",
+   "historical_copy_sha256": "abb8a6cb6ae4e430bbc8104683909664fad3dfa2dd5dcbc1f8aa69229d16606f"
+  },
   "retraction": {
    "withdrawn_claim": "five mechanisms remain below mechanism-wide grade",
    "status": "RETRACTED",
-   "why": "that label was a scope expansion, not a measured finding; every reachable obligation in the measured closure is discharged and no memory-safety defect was demonstrated for any of the five at that scope",
+   "why": "that label was a scope expansion, not a measured finding: every reachable obligation in the measured closure is covered and no memory-safety defect was demonstrated for any of the five at that scope. Retracting the label does not establish the five mechanisms, which the adjudication and the freeze record as NOT_ESTABLISHED.",
    "source": "evidence/SAFE-COMPATIBLE-openssh-b85c.json"
   }
  },
@@ -2139,8 +2170,14 @@
   "families_total": 33,
   "l7_functional": 33,
   "l4_only": 0,
-  "safe_compatible": 1,
-  "note": "The 33-family cohort is a selection, not the 1000-family corpus. All 33 cohort families are L7-functional in the current atlas. The post-CMS no-reuse run at dc17cfdd / 75cc3979 measured 207 candidate / 209 authority L7 over 223 loaded families and 307 recipes; later releases carried every recipe-backed row forward at candidate_identity_match=false and upgraded no family. Each family still needs its whole dependency closure SAFETY_DISCHARGED before any consumer claim. SAFE_COMPATIBLE remains 0/33: the v1r closure is ACCEPTED with zero refusals and measures 312 obligations (90 DISCHARGED / 222 BLOCKED / 0 UNKNOWN) over 624 ssh / 623 sshd reachable files, but element 7 is FAIL on 81 target-bounded reachable sites, so the closure cannot graduate. Since 2026-11-17 a principal-issued SAFE_COMPATIBLE verdict does exist for ssh and sshd at candidate b85c (evidence/SAFE-COMPATIBLE-openssh-b85c.json): all seven mechanisms are SAFETY_DISCHARGED at that measured scope, with the two residuals recorded there (the external provider pointer-type ABI contract and focused instrument coverage); the earlier 'five mechanisms remain below mechanism-wide grade' label is RETRACTED by the record itself as a scope expansion rather than a measurement, and the independent adjudicator's NOT ESTABLISHED verdict (evidence/b85c-adjudication.json) remains in the record as history. The safe_compatible counter above is now 1 of the 33 admitted families: `openssh`, the single admitted cohort family represented by its two consumer binaries `ssh` and `sshd` graduated at candidate b85c, on the strength of evidence/SAFE-COMPATIBLE-openssh-b85c.json and `safe_compatible_graduation`. It read 0/33 before that graduation; the historical sentences above are retained as written.",
+  "safe_compatible": 0,
+  "safe_compatible_before_reconciliation": 1,
+  "risk_accepted": 1,
+  "risk_accepted_families": [
+   "openssh"
+  ],
+  "note": "The 33-family cohort is a selection, not the 1000-family corpus. All 33 cohort families are L7-functional in the current atlas. The post-CMS no-reuse run at dc17cfdd / 75cc3979 measured 207 candidate / 209 authority L7 over 223 loaded families and 307 recipes; later releases carried every recipe-backed row forward at candidate_identity_match=false and upgraded no family. Each family still needs its whole dependency closure SAFETY_DISCHARGED before any consumer claim. SAFE_COMPATIBLE reads 0/33: the v1r closure is ACCEPTED with zero refusals and measures 312 obligations (90 DISCHARGED / 222 BLOCKED / 0 UNKNOWN) over 624 ssh / 623 sshd reachable files, but element 7 is FAIL on 81 target-bounded reachable sites, so the closure cannot graduate. The b85c record was reconciled by ETP-T15 on 2026-11-23: it is a principal risk acceptance (RISK_ACCEPTED), not a SAFE_COMPATIBLE graduation, so it does not advance the section 7 counter. `openssh` is recorded once as a risk-accepted family (risk_accepted = 1), not as a graduated one. The independent adjudicator's NOT ESTABLISHED verdict (evidence/b85c-adjudication.json) is preserved. Between 2026-11-17 and 2026-11-23 the counter read 1/33; that value and the note that carried it are preserved in note_before_reconciliation and in evidence/etp-t15/history/.",
+  "note_before_reconciliation": "The 33-family cohort is a selection, not the 1000-family corpus. All 33 cohort families are L7-functional in the current atlas. The post-CMS no-reuse run at dc17cfdd / 75cc3979 measured 207 candidate / 209 authority L7 over 223 loaded families and 307 recipes; later releases carried every recipe-backed row forward at candidate_identity_match=false and upgraded no family. Each family still needs its whole dependency closure SAFETY_DISCHARGED before any consumer claim. SAFE_COMPATIBLE remains 0/33: the v1r closure is ACCEPTED with zero refusals and measures 312 obligations (90 DISCHARGED / 222 BLOCKED / 0 UNKNOWN) over 624 ssh / 623 sshd reachable files, but element 7 is FAIL on 81 target-bounded reachable sites, so the closure cannot graduate. Since 2026-11-17 a principal-issued SAFE_COMPATIBLE verdict does exist for ssh and sshd at candidate b85c (evidence/SAFE-COMPATIBLE-openssh-b85c.json): all seven mechanisms are SAFETY_DISCHARGED at that measured scope, with the two residuals recorded there (the external provider pointer-type ABI contract and focused instrument coverage); the earlier 'five mechanisms remain below mechanism-wide grade' label is RETRACTED by the record itself as a scope expansion rather than a measurement, and the independent adjudicator's NOT ESTABLISHED verdict (evidence/b85c-adjudication.json) remains in the record as history. The safe_compatible counter above is now 1 of the 33 admitted families: `openssh`, the single admitted cohort family represented by its two consumer binaries `ssh` and `sshd` graduated at candidate b85c, on the strength of evidence/SAFE-COMPATIBLE-openssh-b85c.json and `safe_compatible_graduation`. It read 0/33 before that graduation; the historical sentences above are retained as written.",
   "l7_families": [
    "curl",
    "cyrus-sasl",

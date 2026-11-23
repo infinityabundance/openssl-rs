@@ -189,15 +189,23 @@ class AggregateControls(unittest.TestCase):
         self.assertTrue(freeze["blocked_rows_visible_in_document"])
         self.assertIsNone(freeze["refusal"])
 
-    def test_the_real_graduation_pass_hides_a_dissent(self) -> None:
+    def test_the_real_risk_acceptance_reports_failure_and_is_accepted(self) -> None:
         result = cd.audit_aggregates()
         graduation = next(
             a for a in result["aggregates"]
             if a["aggregate"] == "safe-compatible-openssh-b85c")
-        self.assertEqual(graduation["reported_overall_state"], "PASS")
+        self.assertEqual(graduation["reported_overall_state"], "FAIL")
         self.assertIn("dissent", graduation["blocked_rows"])
+        self.assertTrue(graduation["blocked_rows_visible_in_document"])
+        self.assertIsNone(graduation["refusal"])
+
+    def test_the_historical_graduation_pass_still_refuses(self) -> None:
+        history = cd.REPO_ROOT / "evidence/etp-t15/history/SAFE-COMPATIBLE-openssh-b85c.json"
+        result = cd._aggregate_graduation(history, "safe-compatible-openssh-b85c-history")
+        self.assertEqual(result["reported_overall_state"], "PASS")
+        self.assertIn("dissent", result["blocked_rows"])
         self.assertEqual(
-            graduation["refusal"]["code"],
+            result["refusal"]["code"],
             "CD_AGGREGATE_PASS_HIDES_BLOCKED_ROW")
 
     def test_a_retraction_of_a_sub_claim_is_not_a_blocked_row(self) -> None:

@@ -317,6 +317,9 @@
         "contradiction": {
           "$ref": "#/$defs/contradiction"
         },
+        "reconciliation": {
+          "$ref": "#/$defs/reconciliation"
+        },
         "closure": {
           "$ref": "#/$defs/closure"
         },
@@ -384,6 +387,27 @@
               "required": [
                 "closure"
               ]
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "reconciliation"
+            ]
+          },
+          "then": {
+            "properties": {
+              "verdict": {
+                "properties": {
+                  "state": {
+                    "enum": [
+                      "RISK_ACCEPTED",
+                      "SUPERSEDED"
+                    ]
+                  }
+                }
+              }
             }
           }
         }
@@ -1315,6 +1339,7 @@
             "NOT_ESTABLISHED",
             "ESTABLISHED",
             "SAFE_COMPATIBLE",
+            "RISK_ACCEPTED",
             "PARTIAL",
             "SUPERSEDED",
             "WITHDRAWN"
@@ -1323,6 +1348,53 @@
         "basis": {
           "type": "string",
           "minLength": 1
+        }
+      }
+    },
+    "reconciliation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resolution_owner",
+        "classification",
+        "original_verdict",
+        "original_parties",
+        "historical_record",
+        "superseding_record",
+        "statement"
+      ],
+      "properties": {
+        "resolution_owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "classification": {
+          "enum": [
+            "RISK_ACCEPTED",
+            "SUPERSEDED"
+          ]
+        },
+        "original_verdict": {
+          "enum": [
+            "CONTRADICTED"
+          ]
+        },
+        "original_parties": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "$ref": "#/$defs/party"
+          }
+        },
+        "historical_record": {
+          "$ref": "#/$defs/file_digest"
+        },
+        "superseding_record": {
+          "$ref": "#/$defs/file_digest"
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 20
         }
       }
     },

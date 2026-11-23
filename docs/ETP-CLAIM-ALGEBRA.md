@@ -231,6 +231,9 @@ alias.
 | `EG_CONTRADICTION_PARTIES` | `CONTRADICTED` with fewer than two distinct sources |
 | `EG_CONTRADICTION_UNRESOLVED` | two claims share property, scope and identity but disagree in verdict, or share a measure name but assert different typed values |
 | `EG_DERIVED_VERDICT_MISMATCH` | conversion changed the recorded ETP-0 verdict |
+| `EG_RECONCILIATION_UNBOUND` | a `reconciliation` names no ETP-T15 owner, no original verdict, fewer than two original parties, or a missing/mismatching historical or superseding record digest |
+| `EG_RECONCILIATION_PROMOTION` | a reconciliation attempts to raise a `CONTRADICTED` claim to `ESTABLISHED`, `PARTIAL` or `SAFE_COMPATIBLE` |
+| `EG_RISK_ACCEPTED_WITHOUT_OBLIGATION` | a `RISK_ACCEPTED` verdict names no open obligation, so the acceptance has nothing to accept and reads as a positive claim |
 | `EG_DERIVED_PROPERTY_MISMATCH` | conversion changed the recorded ETP-0 property |
 | `EG_ASSUMPTION_UNCHECKABLE` | an assumption has no independently checkable procedure |
 | `EG_EXCLUSION_UNCHECKABLE` | an exclusion argument or procedure is absent or vacuous |
@@ -370,6 +373,20 @@ with both sides identified:
 | `ETP0-CLM-030` | graduation record vs closure receipts and independent adjudication | `ETP-T15` |
 | `ETP0-CLM-032` | campaign counter vs its own non-claim and `PROGRESS.md` | `ETP-T15` |
 
+**ETP-T15 reconciliation (2026-11-23).** The four contradictions were resolved
+by an explicit reconciliation, not by preference. The typed set now counts 17
+`ESTABLISHED`, 13 `PARTIAL`, 0 `CONTRADICTED`, 4 `SUPERSEDED` and 1
+`RISK_ACCEPTED` at the reconciliation identity. `ETP0-CLM-030` is
+`RISK_ACCEPTED`: the graduation record was reclassified to a principal decision
+to proceed with named unresolved obligations, its original bytes are preserved,
+and `SAFE_COMPATIBLE` remains `NOT_ESTABLISHED`. `ETP0-CLM-004`, `-005` and
+`-032` are `SUPERSEDED`: the seal prose and the counter record were the wrong
+side and the tracked measurements stand. Each claim carries a `reconciliation`
+record naming the resolution owner, the original verdict, both original parties,
+a digest-checked historical copy and a digest-checked superseding record. A
+`CONTRADICTED` claim may move only to `RISK_ACCEPTED` or `SUPERSEDED`; a
+reconciliation that raises it is refused as `EG_RECONCILIATION_PROMOTION`.
+
 Claims whose evidence was incomplete gained obligations instead of being
 silently downgraded: 33 of 35 claims carry at least one open obligation (90 in
 total), including every `PARTIAL` claim and every `ESTABLISHED` claim whose
@@ -429,6 +446,9 @@ the earlier claim remains a historical record with its own identity.
 - whether a consumer family graduates under §7 (the closure rule is checked
   for a `SAFE_COMPATIBLE` verdict, but the underlying mechanism discharges are
   ETP-5's and ETP-T15's);
+- whether a principal risk acceptance was authorised. A `RISK_ACCEPTED` verdict
+  records that a decision was taken and names the obligations it accepts; it is
+  not evidence that any property holds, and it is never a graduation;
 - whether a claim's population is complete beyond a declared enumerated member
   list;
 - freshness beyond the named invalidation inputs;

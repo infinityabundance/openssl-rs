@@ -154,6 +154,19 @@ and the OpenSSH `SAFE_COMPATIBLE` graduation.
 | release-cohort aggregate | `NOT_ESTABLISHED` |
 | overall aggregate | `CONTRADICTED` (the four contradicted claims) |
 
+**ETP-T15 supersession (2026-11-23).** The table above is the ETP-T8 identity.
+After the b85c graduation was reclassified `RISK_ACCEPTED`, the current
+projection is `evidence/etp-t15/INDEPENDENCE.json`: it keeps all 50 assignments,
+parties and the retained dissent, and changes exactly the OpenSSH release entry to
+`ORDINARY_CLAIM` with `asserted_verdict: RISK_ACCEPTED`, `claimed_independence:
+false` and no required distinct party. It asserts no independence, so the check
+produces no finding for `A-REL-OPENSSH-B85C`; `validate` passes (50 assignments,
+0 structural refusals). The adjudication's own independence assertion is not
+retracted and is still refused (8 findings, all `A-ADJ-B85C`). The historical
+ETP-T8 record still yields 13 findings, because it still asserts
+`SAFE_COMPATIBLE_RELEASE` for the same entry. No party, reviewer, organisation or
+key was created.
+
 The b85c adjudication asserts independence and is refused on four grounds: no
 reviewer identity, the same party as the author it judges, a distinct-party
 threshold that collapses to one party, and a reproduction that ran in this

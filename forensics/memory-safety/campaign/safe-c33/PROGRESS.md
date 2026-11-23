@@ -1,6 +1,6 @@
 # Safe-33 unsafe→safe conversion — progress ledger
 
-> **Current state (2026-10-30; graduation record added 2026-11-17).** The working
+> **Current state (2026-10-30; graduation record added 2026-11-17; reconciled 2026-11-23).** The working
 > tree is `openssl-rs 0.0.47`, published on crates.io (
 > 2026-10-30). The figures below were
 > measured at an earlier HEAD and are retained as the measurement they are. Current
@@ -18,6 +18,16 @@
 > APPROVED_WITH_CONDITIONS but still blocked and discharges no obligation. The current
 > file/test/unsafe figures are in
 > `forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md`.
+>
+> **ETP-T15 reconciliation (2026-11-23).** The 2026-11-17 record was reclassified
+> `RISK_ACCEPTED`: it is a principal decision to proceed with named unresolved
+> obligations, not an established `SAFE_COMPATIBLE` property, because the section 7
+> dependency closure is not discharged. The section 7 cohort counter therefore
+> remains **0/33**, and `openssh` is recorded once as a risk-accepted family
+> (`consumers.risk_accepted = 1`). The 1/33 reading that `CAMPAIGN-STATUS.json`
+> carried between 2026-11-17 and 2026-11-23, and the `SAFE_COMPATIBLE` label in the
+> paragraph above, are preserved as the record of that state in
+> `evidence/etp-t15/history/`. See `docs/ADJUDICATION-RECONCILIATION.md`.
 
 Authority: this file records *landed* conversion batches on `integrate/safe-c33`.
 A batch is "landed" only when its local gate is green in the court container and

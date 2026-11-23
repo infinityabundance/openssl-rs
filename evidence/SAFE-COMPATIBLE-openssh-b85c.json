@@ -1,15 +1,36 @@
 {
   "schema": "openssl-rs/campaign/safe-c33/graduation-record/v1",
-  "kind": "safe-compatible-graduation-record",
-  "receipt": "SAFE-COMPATIBLE-openssh-b85c",
+  "kind": "risk-acceptance-record",
+  "receipt": "RISK-ACCEPTED-openssh-b85c",
   "date": "2026-11-17",
-  "verdict": {
-    "value": "SAFE_COMPATIBLE",
-    "families": ["ssh", "sshd"],
-    "candidate": "b85c",
+  "reconciled": "2026-11-23",
+  "reconciliation_item": "ETP-T15",
+  "classification": {
+    "state": "RISK_ACCEPTED",
+    "safe_compatible_established": false,
     "decided_by": "decision-maker (campaign principal)",
-    "basis": "the recorded closure, element-7 and L7 evidence at candidate b85c",
-    "scope": "the OpenSSH consumer closure conservatively established at b85c, at the exact artefact digests recorded in evidence/FREEZE-b85c.json"
+    "authority": "an authorised principal decision to proceed with named unresolved obligations; not an evidence-derived AGENTS.md section 7 verdict and not an independent acceptance of the assurance case",
+    "basis": "the recorded closure, element-7 and L7 measurements at candidate b85c, read together with the independent adjudication's NOT ESTABLISHED verdict and the freeze's safe_compatible=false",
+    "scope": "the OpenSSH consumer closure measured at b85c, at the exact artefact digests recorded in evidence/FREEZE-b85c.json"
+  },
+  "supersedes": {
+    "path": "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
+    "sha256": "41e5797d50bff7b62b25e25184f739bc3d68115396f32c4236d00a14e0301dd2",
+    "note": "the digest is the bytes this path held before reconciliation; the current bytes at the path are this record, and the original bytes are the historical copy named below",
+    "historical_copy": "evidence/etp-t15/history/SAFE-COMPATIBLE-openssh-b85c.json",
+    "historical_copy_sha256": "41e5797d50bff7b62b25e25184f739bc3d68115396f32c4236d00a14e0301dd2",
+    "original_kind": "safe-compatible-graduation-record",
+    "original_verdict": "SAFE_COMPATIBLE",
+    "original_mechanism_verdicts": {
+      "SSL_SESSION": "SAFETY_DISCHARGED; 14/14 obligations discharged",
+      "RUNTIME_CONCURRENCY": "SAFETY_DISCHARGED; 4/4 obligations discharged; ThreadSanitizer 54 tests with 0 races and the lifetime-window probe with its mutations",
+      "EVP_PKEY_PROVIDER": "SAFETY_DISCHARGED; 116/116 obligations discharged; the sole residual is the external provider pointer-type obligation, an ABI contract",
+      "X509_VERIFY_POLICY": "SAFETY_DISCHARGED; 122/122 obligations discharged; condition 3 met, all 69 external safe functions reviewed",
+      "RAND_CMS_STORE_KEYFMT": "SAFETY_DISCHARGED; 27/27 obligations discharged; condition 3 met, 17/17 external safe functions; reference-release contracts corrected",
+      "C_ABI_CONTRACT": "SAFETY_DISCHARGED; 5/5 obligations discharged",
+      "BIO": "SAFETY_DISCHARGED; 2/2 obligations discharged"
+    },
+    "reason": "the original record issued SAFE_COMPATIBLE while its own cited closure receipts record verdict.safe_compatible=false, the freeze it names records safe_compatible=false and L7 not_graduated, and the adjudication it preserves records NOT ESTABLISHED. The original bytes are kept unchanged in the historical copy; this record states the decision they actually describe."
   },
   "identity": {
     "note": "digests are recorded in full in the freeze; this record does not restate them and invents nothing",
@@ -25,7 +46,8 @@
     "closure_receipts": [
       "evidence/closure-ssh-b85c.json",
       "evidence/closure-sshd-b85c.json"
-    ]
+    ],
+    "adjudication": "evidence/b85c-adjudication.json"
   },
   "closure": {
     "source": "evidence/closure-{ssh,sshd}-b85c.json",
@@ -44,7 +66,8 @@
       "closed_target_sets": 36,
       "target_bounded": 0,
       "unclassified": 0
-    }
+    },
+    "what_the_counts_are": "a receipt-coverage measurement at the named candidate. DISCHARGED means an existing committed receipt covers the exact site; the closure tool does not re-audit the receipt and hard-codes safe_compatible=false. Coverage is not a section 7 discharge."
   },
   "compatibility": {
     "source": "evidence/b85-l7-replay.json",
@@ -57,7 +80,8 @@
       "authority_linked_differential": "PASS"
     },
     "authority_differential_cases": 10,
-    "executed_session_digest_recorded_in": "evidence/b85-l7-replay.json"
+    "executed_session_digest_recorded_in": "evidence/b85-l7-replay.json",
+    "status": "reused from the b85 binding, not re-executed at b85c; functional evidence only (AGENTS.md section 8)"
   },
   "gates": {
     "fmt": "pass",
@@ -67,10 +91,10 @@
     "source": "court/freeze-b85c/FREEZE-b85c.json"
   },
   "instruments": {
-    "miri": "six digest tests pass under default and tree-borrows, 0 UB; one pthread_once case UNSUPPORTED under either model (coverage limit, not a defect)",
-    "asan": "focused set clean; both Rust and C use-after-free canaries fire",
-    "tsan": "54 tests across thread/refcount/rcu plus the ignored release probe, 0 races, both canaries fire; schedule-bounded",
-    "coverage_limit": "instruments cover a focused subset, not every operation in the closure"
+    "miri": "six digest tests pass under default and tree-borrows, 0 UB; one pthread_once case UNSUPPORTED under either model (coverage limit, not a defect). The safety argument still cites the superseded no-flag tree arm; the corrected review15 -Zmiri-tree-borrows run is not cited by the b85c evidence chain.",
+    "asan": "focused set clean at b84; both Rust and C use-after-free canaries fire; not re-run at b85c",
+    "tsan": "54 tests across thread/refcount/rcu plus the ignored release probe, 0 races, both canaries fire; schedule-bounded; run at b80, not re-run at b85c",
+    "coverage_limit": "instruments cover a focused subset, not every operation in the closure; Loom, dudect, Wycheproof, panic-safety rollback/poison evidence and secret-memory cleansing are NOT_RUN or unaudited"
   },
   "mechanism_verdicts": {
     "source": [
@@ -79,31 +103,117 @@
       "evidence/closure-ssh-b85c.json",
       "evidence/closure-sshd-b85c.json"
     ],
-    "scope": "each verdict is stated at the scope the graduation is about: the measured OpenSSH consumer closure at candidate b85c, where every reachable obligation is discharged",
-    "SSL_SESSION": "SAFETY_DISCHARGED; 14/14 obligations discharged",
-    "RUNTIME_CONCURRENCY": "SAFETY_DISCHARGED; 4/4 obligations discharged; ThreadSanitizer 54 tests with 0 races and the lifetime-window probe with its mutations",
-    "EVP_PKEY_PROVIDER": "SAFETY_DISCHARGED; 116/116 obligations discharged; the sole residual is the external provider pointer-type obligation, an ABI contract",
-    "X509_VERIFY_POLICY": "SAFETY_DISCHARGED; 122/122 obligations discharged; condition 3 met, all 69 external safe functions reviewed",
-    "RAND_CMS_STORE_KEYFMT": "SAFETY_DISCHARGED; 27/27 obligations discharged; condition 3 met, 17/17 external safe functions; reference-release contracts corrected",
-    "C_ABI_CONTRACT": "SAFETY_DISCHARGED; 5/5 obligations discharged",
-    "BIO": "SAFETY_DISCHARGED; 2/2 obligations discharged"
+    "scope": "each verdict is stated at the scope the measurement addresses: the measured OpenSSH consumer closure at candidate b85c",
+    "SSL_SESSION": "SAFETY_DISCHARGED (scoped)",
+    "RUNTIME_CONCURRENCY": "SAFETY_DISCHARGED (scoped)",
+    "EVP_PKEY_PROVIDER": "NOT_ESTABLISHED",
+    "X509_VERIFY_POLICY": "NOT_ESTABLISHED",
+    "RAND_CMS_STORE_KEYFMT": "NOT_ESTABLISHED",
+    "C_ABI_CONTRACT": "NOT_ESTABLISHED",
+    "BIO": "NOT_ESTABLISHED",
+    "mechanism_detail": {
+      "SSL_SESSION": "14/14 obligations discharged within the stated scope; the sslconf-exclusivity hidden obligation (a second concurrent free, and an entry point racing the release, remain external serialisation) stays RETAINED and un-discharged",
+      "RUNTIME_CONCURRENCY": "4/4 obligations discharged, schedule-bounded; R1 states no test performs the forbidden release shape, so the caller's exclusive-ownership precondition is not established",
+      "EVP_PKEY_PROVIDER": "116 obligations; the external provider pointer-type obligation is an ABI contract; condition 3 is not established mechanism-wide",
+      "X509_VERIFY_POLICY": "122 obligations; all 69 external safe functions reviewed, but the mechanism-wide discharge is not established",
+      "RAND_CMS_STORE_KEYFMT": "27 obligations; 17/17 external safe functions reviewed, but the mechanism-wide discharge is not established",
+      "C_ABI_CONTRACT": "5 obligations; not established mechanism-wide",
+      "BIO": "2 obligations; not established mechanism-wide"
+    },
+    "applicability": "AGENTS.md section 7 requires every applicable mechanism in the conservative dependency closure to be SAFETY_DISCHARGED. All seven carry obligations (290/290 reviewed), so all seven are applicable; five are NOT_ESTABLISHED and the two scoped discharges retain un-established caller preconditions."
   },
+  "cross_cutting": {
+    "callbacks_reentrancy": "NOT_ESTABLISHED",
+    "aliasing_ownership": "NOT_ESTABLISHED",
+    "panic_safety": "NOT_ESTABLISHED; no failure-atomic, rollback or poisoned-state evidence",
+    "secret_memory": "NOT_ESTABLISHED; cleansing is unaudited"
+  },
+  "accepted_obligations": [
+    {
+      "id": "OBL-B85C-MECH-EVP",
+      "statement": "EVP_PKEY_PROVIDER is NOT_ESTABLISHED at mechanism-wide grade; condition 3 is met only for the reviewed external surface.",
+      "source": "evidence/b85c-adjudication.json#item4_mechanisms"
+    },
+    {
+      "id": "OBL-B85C-MECH-X509",
+      "statement": "X509_VERIFY_POLICY is NOT_ESTABLISHED at mechanism-wide grade; 24 X509 orphan definitions remain outside the upper bound.",
+      "source": "evidence/b85c-adjudication.json#item4_mechanisms"
+    },
+    {
+      "id": "OBL-B85C-MECH-RAND",
+      "statement": "RAND_CMS_STORE_KEYFMT is NOT_ESTABLISHED at mechanism-wide grade.",
+      "source": "evidence/b85c-adjudication.json#item4_mechanisms"
+    },
+    {
+      "id": "OBL-B85C-MECH-CABI",
+      "statement": "C_ABI_CONTRACT is NOT_ESTABLISHED at mechanism-wide grade.",
+      "source": "evidence/b85c-adjudication.json#item4_mechanisms"
+    },
+    {
+      "id": "OBL-B85C-MECH-BIO",
+      "statement": "BIO is NOT_ESTABLISHED at mechanism-wide grade.",
+      "source": "evidence/b85c-adjudication.json#item4_mechanisms"
+    },
+    {
+      "id": "OBL-B85C-SCOPED-SSLSESSION",
+      "statement": "SSL_SESSION's discharge is scoped and retains the sslconf-exclusivity caller precondition (a second concurrent free, and an entry point racing the release, remain external serialisation).",
+      "source": "evidence/b85c-adjudication.json#item4_mechanisms.scoped_discharges_fail_too"
+    },
+    {
+      "id": "OBL-B85C-SCOPED-RUNTIME",
+      "statement": "RUNTIME_CONCURRENCY's discharge is scoped and schedule-bounded and retains the caller's exclusive-ownership precondition.",
+      "source": "evidence/b85c-adjudication.json#item4_mechanisms.scoped_discharges_fail_too"
+    },
+    {
+      "id": "OBL-B85C-CROSSCUT",
+      "statement": "All four cross-cutting obligations (callbacks/reentrancy, aliasing/ownership, panic safety, secret memory) are NOT_ESTABLISHED at b85c.",
+      "source": "evidence/b85c-adjudication.json#item4_mechanisms.cross_cutting"
+    },
+    {
+      "id": "OBL-B85C-REVIEW-REQUIRED",
+      "statement": "65 REVIEW_REQUIRED discharges are still counted DISCHARGED by the closure; the BOUNDARY re-adjudication is NOT_RUN.",
+      "source": "evidence/FREEZE-b85c.json#safe_compatible.review_required"
+    },
+    {
+      "id": "OBL-B85C-LEDGER-STALE",
+      "statement": "B54-F1 and B55-F1 are classified LEDGER_STALE by evidence/b85c-row-reconciliation.json, with repairs present at S and a mutation control; the BOUNDARY re-adjudication of those rows is NOT_RUN, and B54-F2 remains open.",
+      "source": "evidence/b85c-row-reconciliation.json#limits"
+    },
+    {
+      "id": "OBL-B85C-INSTRUMENTS",
+      "statement": "Instrument coverage is a focused subset: Miri covers six digest tests, ASan is focused at b84, TSan is b80, none is re-run at b85c; Loom, dudect and Wycheproof are NOT_RUN; panic safety has no rollback/poison evidence; secret cleansing is unaudited.",
+      "source": "evidence/b85c-adjudication.json#ordered_refutations"
+    },
+    {
+      "id": "OBL-B85C-IDENTITY",
+      "statement": "The evidence channel retains identity defects: the evidence-deriving tool change is classified E although section 22 places tools in S; the safety argument cites the superseded no-flag Miri tree arm; closure_receipts_repository_head is misstated as 17042ccf2 against the receipts' b14923bda; court/ sidecars are untracked.",
+      "source": "evidence/b85c-adjudication.json#item1_identity"
+    },
+    {
+      "id": "OBL-B85C-COMPAT-REUSE",
+      "statement": "Compatibility is reused from b85, not re-executed at b85c; the L4 atlas row digest is not the analysed ssh/sshd (build-root difference), and the fmt/clippy/lib-test gate is carried from b85.",
+      "source": "evidence/b85c-adjudication.json#ordered_refutations"
+    },
+    {
+      "id": "OBL-B85C-EXTERNAL-ABI",
+      "statement": "A foreign provider may publish a function pointer whose actual type does not match its declared id. The crate enforces the pairing wherever it controls both sides; the remaining exposure is an external ABI contract.",
+      "source": "evidence/SAFE-COMPATIBLE-openssh-b85c.json#external_abi_contract"
+    },
+    {
+      "id": "OBL-B85C-DEFERRED-GATES",
+      "statement": "BOUNDARY adjudication, SEAL, full-suite Miri/ASan/TSan, Loom, dudect, Wycheproof and forensic regeneration remain NOT_RUN.",
+      "source": "evidence/b85c-adjudication.json#ordered_refutations"
+    }
+  ],
   "retraction": {
     "withdrawn_claim": "five mechanisms remain below mechanism-wide grade",
     "status": "RETRACTED",
-    "why": "that label was a scope expansion, not a measured finding. The reviews and the closures show every reachable obligation in the OpenSSH consumer closure discharged, condition 3 met for the mechanisms where it was raised (X509 69/69, RAND 17/17, EVP external surface), and the residual items were evidence-coverage notes plus one external ABI contract. No memory-safety defect was ever demonstrated for any of the five at the OpenSSH scope. The label must not be cited as a safety finding.",
+    "why": "that label was a scope expansion, not a measured finding: the reviews and the closures show every reachable obligation in the OpenSSH consumer closure covered, and the residual items were evidence-coverage notes plus one external ABI contract. No memory-safety defect was demonstrated for any of the five at the OpenSSH scope. The label must not be cited as a safety finding. Retracting the label does not establish the five mechanisms; the adjudication and the freeze record them as NOT_ESTABLISHED.",
     "what_remains_true": [
       "the external provider pointer-type obligation is an ABI contract, not a crate defect",
-      "the recorded instrument runs cover focused subsets rather than every operation in the closure"
+      "the recorded instrument runs cover focused subsets rather than every operation in the closure",
+      "the five mechanisms are NOT_ESTABLISHED at mechanism-wide grade"
     ]
-  },
-  "risk_accepted": {
-    "by": "decision-maker (campaign principal)",
-    "items": [
-      "a foreign provider may publish a function pointer whose actual type does not match its declared id (external ABI contract)",
-      "the recorded instrument runs cover focused subsets rather than every operation in the closure"
-    ],
-    "statement": "the principal accepts these two named residuals as risk. They are not safety findings against the crate: every reachable obligation in the measured closure is discharged, and the pointer-type obligation belongs to a provider that misdeclares its own table. All seven mechanisms are SAFETY_DISCHARGED at the OpenSSH scope."
   },
   "external_abi_contract": {
     "obligation": "a foreign provider may publish a function pointer whose actual type does not match its declared function id",
@@ -114,12 +224,27 @@
   },
   "dissent": {
     "receipt": "evidence/b85c-adjudication.json",
-    "statement": "an independent adjudicator returned NOT ESTABLISHED at this candidate, on the grounds that five of seven mechanisms are not discharged mechanism-wide and both scoped discharges retain un-established caller preconditions. That dissent is preserved unchanged. This graduation is a principal-decided risk acceptance over the recorded evidence, not an independent acceptance of the assurance case."
+    "statement": "an independent adjudicator returned NOT ESTABLISHED at this candidate, on the grounds that five of seven mechanisms are not discharged mechanism-wide and both scoped discharges retain un-established caller preconditions. That dissent is preserved unchanged. This record is a principal-decided risk acceptance over the recorded evidence, not an independent acceptance of the assurance case.",
+    "independence_established": false,
+    "independence_note": "evidence/etp-t8/ASSIGNMENTS.json records the adjudication as the same undeclared producing party as the record it judges, with no reviewer identity, no distinct trust domain and a reproduction in this repository's working environment. The independence is asserted by the adjudication and is not established here; none is fabricated."
+  },
+  "cohort_counter": {
+    "safe_compatible_families": 0,
+    "safe_compatible_note": "AGENTS.md section 7 SAFE_COMPATIBLE families: none. This record does not graduate openssh.",
+    "risk_accepted_families": 1,
+    "risk_accepted_family": "openssh",
+    "risk_accepted_binaries": [
+      "ssh",
+      "sshd"
+    ],
+    "history": "CAMPAIGN-STATUS.json read consumers.safe_compatible = 1/33 between 2026-11-17 and the ETP-T15 reconciliation; the previous value and the note that carried it are preserved in evidence/etp-t15/history/ and in the ledger's own history block."
   },
   "non_claims": [
     "no new measurement is claimed at HEAD c74d59e72; that commit's dispatch hardening postdates candidate b85c and is unmeasured",
     "no claim is made about mechanisms outside the OpenSSH consumer closure",
     "no claim is made that the instrument coverage extends beyond the focused sets recorded",
-    "the independent adjudicator's NOT ESTABLISHED verdict at b85c is not withdrawn or reinterpreted"
+    "the independent adjudicator's NOT ESTABLISHED verdict at b85c is not withdrawn or reinterpreted",
+    "this record does not establish SAFE_COMPATIBLE for any consumer family, and it does not establish any of the accepted obligations",
+    "a recorded risk acceptance is not a safety result, a compatibility result or a cryptographic result"
   ]
 }

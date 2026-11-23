@@ -1,0 +1,3955 @@
+{
+  "aggregate": {
+    "cohorts": {
+      "INDEPENDENT_ADJUDICATION": {
+        "verdict": "NOT_ESTABLISHED"
+      },
+      "ORDINARY_CLAIM": {
+        "verdict": "NOT_ESTABLISHED"
+      }
+    },
+    "included_dissents": [
+      "D-OPENSSH-B85C"
+    ],
+    "overall": {
+      "verdict": "NOT_ESTABLISHED"
+    },
+    "per_assignment": {
+      "A-ADJ-B85C": {
+        "verdict": "NOT_ESTABLISHED"
+      },
+      "A-ETP0-CLM-001": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-ETP0-CLM-002": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-ETP0-CLM-003": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-ETP0-CLM-004": {
+        "verdict": "NOT_ESTABLISHED"
+      },
+      "A-ETP0-CLM-005": {
+        "verdict": "NOT_ESTABLISHED"
+      },
+      "A-ETP0-CLM-006": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-ETP0-CLM-007": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-ETP0-CLM-008": {
+        "verdict": "PARTIAL"
+      },
+      "A-ETP0-CLM-009": {
+        "verdict": "PARTIAL"
+      },
+      "A-ETP0-CLM-010": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-ETP0-CLM-011": {
+        "verdict": "PARTIAL"
+      },
+      "A-ETP0-CLM-012": {
+        "verdict": "PARTIAL"
+      },
+      "A-ETP0-CLM-013": {
+        "verdict": "PARTIAL"
+      },
+      "A-ETP0-CLM-014": {
+        "verdict": "PARTIAL"
+      },
+      "A-ETP0-CLM-015": {
+        "verdict": "PARTIAL"
+      },
+      "A-ETP0-CLM-016": {
+        "verdict": "PARTIAL"
+      },
+      "A-ETP0-CLM-017": {
+        "verdict": "PARTIAL"
+      },
+      "A-ETP0-CLM-018": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-ETP0-CLM-019": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-ETP0-CLM-020": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-ETP0-CLM-021": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-ETP0-CLM-022": {
+        "verdict": "PARTIAL"
+      },
+      "A-ETP0-CLM-023": {
+        "verdict": "PARTIAL"
+      },
+      "A-ETP0-CLM-024": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-ETP0-CLM-025": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-ETP0-CLM-026": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-ETP0-CLM-027": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-ETP0-CLM-028": {
+        "verdict": "PARTIAL"
+      },
+      "A-ETP0-CLM-029": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-ETP0-CLM-030": {
+        "verdict": "NOT_ESTABLISHED"
+      },
+      "A-ETP0-CLM-031": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-ETP0-CLM-032": {
+        "verdict": "NOT_ESTABLISHED"
+      },
+      "A-ETP0-CLM-033": {
+        "verdict": "NOT_ESTABLISHED"
+      },
+      "A-ETP0-CLM-034": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-ETP0-CLM-035": {
+        "verdict": "PARTIAL"
+      },
+      "A-RCP-ETP-T1": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-RCP-ETP-T2": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-RCP-ETP-T3": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-RCP-ETP-T4": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-RCP-ETP-T5": {
+        "verdict": "PARTIAL"
+      },
+      "A-RCP-ETP-T6": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-RCP-ETP-T7": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-RCP-ETP0": {
+        "verdict": "PARTIAL"
+      },
+      "A-RCP-ETP2": {
+        "verdict": "ESTABLISHED"
+      },
+      "A-RCP-ETP5": {
+        "verdict": "PARTIAL"
+      },
+      "A-RCP-ETP6": {
+        "verdict": "PARTIAL"
+      },
+      "A-RCP-ETP7": {
+        "verdict": "PARTIAL"
+      },
+      "A-RCP-HAZ-16": {
+        "verdict": "PARTIAL"
+      },
+      "A-REL-OPENSSH-B85C": {
+        "verdict": "NOT_ESTABLISHED"
+      }
+    }
+  },
+  "assignments": [
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-001",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-001",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-002",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-002",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-003",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-003",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-004",
+      "asserted_verdict": "SUPERSEDED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-004",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-005",
+      "asserted_verdict": "SUPERSEDED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-005",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-006",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-006",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-007",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-007",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-008",
+      "asserted_verdict": "PARTIAL",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-008",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-009",
+      "asserted_verdict": "PARTIAL",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-009",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-010",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-010",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-011",
+      "asserted_verdict": "PARTIAL",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-011",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-012",
+      "asserted_verdict": "PARTIAL",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-012",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-013",
+      "asserted_verdict": "PARTIAL",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-013",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-014",
+      "asserted_verdict": "PARTIAL",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-014",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-015",
+      "asserted_verdict": "PARTIAL",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-015",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-016",
+      "asserted_verdict": "PARTIAL",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-016",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-017",
+      "asserted_verdict": "PARTIAL",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-017",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-018",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-018",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-019",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-019",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-020",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-020",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-021",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-021",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-022",
+      "asserted_verdict": "PARTIAL",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-022",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-023",
+      "asserted_verdict": "PARTIAL",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-023",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-024",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-024",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-025",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-025",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-026",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-026",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-027",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-027",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-028",
+      "asserted_verdict": "PARTIAL",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-028",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-029",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-029",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-030",
+      "asserted_verdict": "RISK_ACCEPTED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-030",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-031",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-031",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-032",
+      "asserted_verdict": "SUPERSEDED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-032",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-033",
+      "asserted_verdict": "SUPERSEDED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-033",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-034",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-034",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp/claims.json#ETP0-CLM-035",
+      "asserted_verdict": "PARTIAL",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The claim and its verdict are recorded in one document by the same undeclared producing party; no separate adjudicator identity exists.",
+      "id": "A-ETP0-CLM-035",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp0/RECEIPT.md",
+      "asserted_verdict": "PARTIAL",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "Baseline inventory; status PARTIAL. The receipt records no separate adjudicator.",
+      "id": "A-RCP-ETP0",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp2/RECEIPT.md",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "Two independently initialised builds in one venue are independent executions, not distinct parties.",
+      "id": "A-RCP-ETP2",
+      "independence_kind": "EXECUTION",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp5/RECEIPT.md",
+      "asserted_verdict": "PARTIAL",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The receipt states that independence is not claimed.",
+      "id": "A-RCP-ETP5",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp6/RECEIPT.md",
+      "asserted_verdict": "PARTIAL",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The receipt records EXTERNAL_REVIEW_PENDING and states that the clean-room replay is a self-reproduction.",
+      "id": "A-RCP-ETP6",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp7/RECEIPT.md",
+      "asserted_verdict": "PARTIAL",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The release gate records NOT_RUN items and no external release authority.",
+      "id": "A-RCP-ETP7",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp-t1/RECEIPT.md",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The traceability graph is produced and adjudicated by the same party.",
+      "id": "A-RCP-ETP-T1",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp-t2/RECEIPT.md",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The hazard register is produced and adjudicated by the same party.",
+      "id": "A-RCP-ETP-T2",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp-t3/RECEIPT.md",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The refinement architecture is produced and adjudicated by the same party.",
+      "id": "A-RCP-ETP-T3",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp-t4/RECEIPT.md",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The unsafe-site classification is produced and adjudicated by the same party.",
+      "id": "A-RCP-ETP-T4",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp-t5/RECEIPT.md",
+      "asserted_verdict": "PARTIAL",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The independent reference is an independent model written by the same party, not a distinct reviewer.",
+      "id": "A-RCP-ETP-T5",
+      "independence_kind": "REFERENCE_DIVERSITY",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp-t6/RECEIPT.md",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The binary-assurance matrix is produced and adjudicated by the same party.",
+      "id": "A-RCP-ETP-T6",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/etp-t7/RECEIPT.md",
+      "asserted_verdict": "ESTABLISHED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The side-channel receipt is produced and adjudicated by the same party.",
+      "id": "A-RCP-ETP-T7",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/haz-16/RECEIPT.md",
+      "asserted_verdict": "PARTIAL",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The panic-atomicity barrier remains CLAIMED_NO_EVIDENCE; no independent review.",
+      "id": "A-RCP-HAZ-16",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "SAME",
+      "sameness": {
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      }
+    },
+    {
+      "artefact": "evidence/b85c-adjudication.json",
+      "asserted_verdict": "NOT_ESTABLISHED",
+      "claimed_independence": true,
+      "class": "INDEPENDENT_ADJUDICATION",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "reviewer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        }
+      },
+      "finding": "The adjudication asserts independence, names no reviewer identity, organisation or key, ran in this repository's working environment against stored project artefacts, and is filled by the same undeclared party as the source it judges.",
+      "id": "A-ADJ-B85C",
+      "independence_kind": "REVIEW_AND_REPRODUCTION",
+      "independence_required": [
+        "adjudicator",
+        "independent_reproducer"
+      ],
+      "reproduction": {
+        "claimed_independent": true,
+        "procedure": "re-executed the acceptance predicate by importing forensics/tools/consumer_closure.py and re-hashed stored artefacts",
+        "rebuilt_from_frozen_package": false,
+        "trust_domain": "same repository working environment",
+        "used_project_produced_artefact": true,
+        "used_project_working_environment": true
+      },
+      "reviewers": [
+        {
+          "artefact": "evidence/b85c-adjudication.json",
+          "id": "RV-B85C-1",
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "role": "independent adversarial adjudicator",
+          "signing_key": null
+        }
+      ],
+      "same_party": "SAME",
+      "sameness": {
+        "adjudicator|independent_reproducer": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        },
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        },
+        "author|evidence_producer": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        },
+        "author|independent_reproducer": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        }
+      },
+      "threshold": {
+        "required_distinct_parties": 2,
+        "satisfied_by": [
+          "role:author",
+          "role:adjudicator"
+        ]
+      }
+    },
+    {
+      "artefact": "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
+      "asserted_verdict": "RISK_ACCEPTED",
+      "claimed_independence": false,
+      "class": "ORDINARY_CLAIM",
+      "filled": {
+        "adjudicator": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "evidence_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "independent_reproducer": {
+          "declared": false,
+          "identity": null,
+          "party": null,
+          "status": "ABSENT"
+        },
+        "instrument_author": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "proof_producer": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        },
+        "release_authority": {
+          "declared": false,
+          "identity": null,
+          "party": "P-PRINCIPAL",
+          "status": "FILLED"
+        },
+        "revocation_authority": {
+          "declared": false,
+          "identity": null,
+          "party": "P-CAMPAIGN",
+          "status": "FILLED"
+        }
+      },
+      "finding": "Reclassified by ETP-T15: the b85c record is a principal risk acceptance (RISK_ACCEPTED), not a SAFE_COMPATIBLE graduation. It asserts no independence and requires no distinct party. The absence of an independent acceptance is recorded, not repaired, and the adjudication's NOT ESTABLISHED dissent is retained.",
+      "id": "A-REL-OPENSSH-B85C",
+      "independence_kind": "NONE",
+      "independence_required": [],
+      "reproduction": {
+        "claimed_independent": false
+      },
+      "reviewers": [],
+      "same_party": "NOT_ESTABLISHED",
+      "sameness": {
+        "adjudicator|release_authority": {
+          "same_agent": "UNKNOWN",
+          "same_infrastructure": "UNKNOWN",
+          "same_key": "UNKNOWN",
+          "same_organisation": "UNKNOWN"
+        },
+        "author|adjudicator": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        },
+        "author|evidence_producer": {
+          "same_agent": "SAME",
+          "same_infrastructure": "SAME",
+          "same_key": "SAME",
+          "same_organisation": "SAME"
+        },
+        "author|release_authority": {
+          "same_agent": "UNKNOWN",
+          "same_infrastructure": "UNKNOWN",
+          "same_key": "UNKNOWN",
+          "same_organisation": "UNKNOWN"
+        }
+      }
+    }
+  ],
+  "dissents": [
+    {
+      "artefact": "evidence/b85c-adjudication.json",
+      "assignment": "A-REL-OPENSSH-B85C",
+      "dissented_from": "decision-maker (campaign principal)",
+      "id": "D-OPENSSH-B85C",
+      "party": "P-CAMPAIGN",
+      "position": "NOT_ESTABLISHED",
+      "recorded_utc": "2026-11-17T12:54:00Z",
+      "removal_requests": [],
+      "retained": true,
+      "role": "adjudicator",
+      "statement": "The b85c adjudication returned NOT ESTABLISHED against the OpenSSH SAFE_COMPATIBLE graduation. ETP-T15 reclassified the graduation as RISK_ACCEPTED on 2026-11-23; the dissent is retained unchanged in position and is not withdrawn or reinterpreted."
+    }
+  ],
+  "expected_refusal_codes": [
+    "IND_ADJUDICATOR_IS_AUTHOR",
+    "IND_REPRODUCER_CONTAMINATED",
+    "IND_REQUIRED_ROLE_ABSENT",
+    "IND_REVIEW_UNSUPPORTED",
+    "IND_ROLE_NOT_DISTINCT",
+    "IND_THRESHOLD_ALIASED"
+  ],
+  "generated_utc": "2026-11-23T00:00:00Z",
+  "kind": "independence-role-assignments",
+  "parties": {
+    "P-CAMPAIGN": {
+      "account": null,
+      "declared": false,
+      "identity": null,
+      "infrastructure": "repository working environment and openssl-rs-court-tools:1",
+      "infrastructure_operator": "repository working environment",
+      "note": "No identity string, account, organisation or signing key is declared in any artefact. The record does not invent one.",
+      "organisation": null,
+      "signing_key": null,
+      "trust_domain": "project"
+    },
+    "P-PRINCIPAL": {
+      "account": null,
+      "declared": false,
+      "identity": null,
+      "infrastructure": null,
+      "infrastructure_operator": null,
+      "note": "The graduation record names a 'decision-maker (campaign principal)' and states no identity, organisation, infrastructure or key. Distinctness from P-CAMPAIGN is not established, so it is not claimed.",
+      "organisation": null,
+      "signing_key": null,
+      "trust_domain": "undeclared"
+    }
+  },
+  "roles_document": "evidence/etp-t8/ROLES.json",
+  "schema": "openssl-rs/etp-t8/assignments/1",
+  "source_identity": {
+    "branch": "staging",
+    "commit": "576e26d2d23269c1991af5d8aeef84b1e90d7ef2",
+    "worktree_clean_tracked_files": true
+  },
+  "summary": {
+    "adjudicator_distinctness_not_established": 0,
+    "assignments": 50,
+    "declared_parties": 0,
+    "external_parties": 0,
+    "independence_asserted_by": [
+      "A-ADJ-B85C"
+    ],
+    "retained_dissents": 1,
+    "same_party_adjudicator": 50
+  }
+}

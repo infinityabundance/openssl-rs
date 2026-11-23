@@ -145,6 +145,7 @@ ETP0_VERDICT_MAP = {
 VERDICT_STRENGTH = {
     "UNKNOWN": 0,
     "NOT_ESTABLISHED": 1,
+    "RISK_ACCEPTED": 1,
     "PARTIAL": 2,
     "ESTABLISHED": 3,
     "SAFE_COMPATIBLE": 4,
@@ -158,6 +159,14 @@ ABSORBING_VERDICTS = ("CONTRADICTED", "REFUTED", "WITHDRAWN", "SUPERSEDED")
 # positive assertion even when the verdict is weaker, because it claims a
 # discharged proof obligation or a verified binary refinement.
 POSITIVE_VERDICTS = frozenset({"ESTABLISHED", "SAFE_COMPATIBLE"})
+
+# ETP-T15: a claim derived from a CONTRADICTED ETP-0 verdict may be reclassified
+# only by an explicit reconciliation record owned by the reconciliation item.  The
+# new state is never a positive verdict: a reconciliation may move a contradiction
+# to a recorded risk acceptance or to a superseded record, never to ESTABLISHED,
+# PARTIAL or SAFE_COMPATIBLE.
+RECONCILIATION_OWNER = "ETP-T15"
+RECONCILABLE_STATES = frozenset({"RISK_ACCEPTED", "SUPERSEDED"})
 
 # ETP-T10 section 1c: a cell state that a positive aggregate may not summarise
 # away.  A cell that declares any of these states is a blocked row; an
@@ -1327,6 +1336,14 @@ def check_claim_laws(claim: dict, base: str) -> list[Refusal]:
             "obligations",
             "a PARTIAL verdict must record what remains open as an open obligation",
         )
+    if state == "RISK_ACCEPTED" and not open_obligations:
+        refuse(
+            "EG_RISK_ACCEPTED_WITHOUT_OBLIGATION",
+            "obligations",
+            "obligations",
+            "a RISK_ACCEPTED verdict must name the unresolved obligations the "
+            "decision accepts; an acceptance with nothing open is a positive claim",
+        )
     if state in ("UNKNOWN", "NOT_ESTABLISHED") and not open_obligations:
         refuse(
             "EG_VERDICT_MISSING_SETTLING_OBLIGATION",
@@ -1354,17 +1371,89 @@ def check_claim_laws(claim: dict, base: str) -> list[Refusal]:
                     "are identified rather than one being preferred",
                 )
 
-    # 9. Conversion may not promote a claim.
+    # 8b. A reconciliation is an explicit, bound governance record.  It may not
+    # be a free-text claim, it may not change the recorded ETP-0 verdict, and it
+    # must preserve both original parties.
+    reconciliation = claim.get("reconciliation")
+    if reconciliation is not None:
+        if not isinstance(reconciliation, dict):
+            refuse(
+                "EG_RECONCILIATION_UNBOUND",
+                "reconciliation",
+                "reconciliation",
+                "a reconciliation must be a record",
+            )
+        else:
+            problems: list[str] = []
+            if reconciliation.get("resolution_owner") != RECONCILIATION_OWNER:
+                problems.append(
+                    f"resolution_owner is {reconciliation.get('resolution_owner')!r}, "
+                    f"not {RECONCILIATION_OWNER!r}"
+                )
+            if reconciliation.get("classification") != state:
+                problems.append(
+                    f"classification {reconciliation.get('classification')!r} does not "
+                    f"match verdict state {state!r}"
+                )
+            lineage = claim.get("derived_from", {})
+            original_verdict = (
+                lineage.get("verdict") if isinstance(lineage, dict) else None
+            )
+            if reconciliation.get("original_verdict") != original_verdict:
+                problems.append(
+                    f"original_verdict {reconciliation.get('original_verdict')!r} does "
+                    f"not match the recorded ETP-0 verdict {original_verdict!r}"
+                )
+            parties = reconciliation.get("original_parties", [])
+            sources = {
+                party.get("source")
+                for party in parties
+                if isinstance(party, dict)
+            }
+            if len(sources) < 2:
+                problems.append("fewer than two distinct original parties")
+            for field in ("historical_record", "superseding_record"):
+                record = reconciliation.get(field)
+                if not isinstance(record, dict) or not isinstance(
+                    record.get("path"), str
+                ) or not isinstance(record.get("sha256"), str):
+                    problems.append(f"{field} names no path and digest")
+            if problems:
+                refuse(
+                    "EG_RECONCILIATION_UNBOUND",
+                    "reconciliation",
+                    "reconciliation",
+                    "; ".join(problems),
+                )
+
+    # 9. Conversion may not promote a claim.  The one permitted movement is an
+    # explicit ETP-T15 reconciliation of a CONTRADICTED claim to RISK_ACCEPTED or
+    # SUPERSEDED, and that record is checked above and in the tree check.
     lineage = claim.get("derived_from", {})
     if isinstance(lineage, dict) and lineage.get("verdict") in ETP0_VERDICT_MAP:
         expected = ETP0_VERDICT_MAP[lineage["verdict"]]
         if state != expected:
-            refuse(
-                "EG_DERIVED_VERDICT_MISMATCH",
-                "verdict/state",
-                "state",
-                f"ETP-0 verdict {lineage['verdict']} maps to {expected}, not {state}",
+            bound = (
+                isinstance(reconciliation, dict)
+                and state in RECONCILABLE_STATES
+                and reconciliation.get("resolution_owner") == RECONCILIATION_OWNER
+                and reconciliation.get("classification") == state
+                and reconciliation.get("original_verdict") == lineage["verdict"]
             )
+            if not bound:
+                refuse(
+                    "EG_DERIVED_VERDICT_MISMATCH",
+                    "verdict/state",
+                    "state",
+                    f"ETP-0 verdict {lineage['verdict']} maps to {expected}, not {state}",
+                )
+                if state in POSITIVE_VERDICTS:
+                    refuse(
+                        "EG_RECONCILIATION_PROMOTION",
+                        "verdict/state",
+                        "state",
+                        f"a reconciliation may not raise a CONTRADICTED claim to {state}",
+                    )
         if lineage.get("property") != property_name:
             refuse(
                 "EG_DERIVED_PROPERTY_MISMATCH",
@@ -1836,6 +1925,42 @@ def check_evidence_tree(doc: dict, repo_root: Path) -> list[Refusal]:
                         f"'{path}' hashes to {actual}, not the recorded {digest}",
                     )
                 )
+        reconciliation = claim.get("reconciliation")
+        if isinstance(reconciliation, dict):
+            for field in ("historical_record", "superseding_record"):
+                record = reconciliation.get(field)
+                if not isinstance(record, dict):
+                    continue
+                path = record.get("path")
+                digest = record.get("sha256")
+                if not isinstance(path, str) or not isinstance(digest, str):
+                    continue
+                target = repo_root / path
+                actual = (
+                    hashlib.sha256(target.read_bytes()).hexdigest()
+                    if target.is_file()
+                    else None
+                )
+                if actual is None:
+                    refusals.append(
+                        Refusal(
+                            "EG_RECONCILIATION_UNBOUND",
+                            f"$.claims/{c_index}/reconciliation/{field}",
+                            "path",
+                            f"the reconciliation record '{path}' is absent; a "
+                            "reconciliation must name bytes that exist",
+                        )
+                    )
+                elif actual != digest:
+                    refusals.append(
+                        Refusal(
+                            "EG_RECONCILIATION_UNBOUND",
+                            f"$.claims/{c_index}/reconciliation/{field}",
+                            "sha256",
+                            f"the reconciliation record '{path}' hashes to {actual}, "
+                            f"not the recorded {digest}",
+                        )
+                    )
         for o_index, obligation in enumerate(claim.get("obligations", [])):
             if not isinstance(obligation, dict):
                 continue
@@ -1980,7 +2105,7 @@ def _meet_verdicts(states: list[str]) -> str:
             return absorbing
     if not states:
         raise AlgebraError("a conjunction needs at least one member")
-    return min(states, key=lambda state: VERDICT_STRENGTH.get(state, -1))
+    return min(states, key=lambda state: (VERDICT_STRENGTH.get(state, -1), state))
 
 
 def conjoin(claims: list[dict]) -> dict:

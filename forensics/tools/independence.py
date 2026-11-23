@@ -74,6 +74,7 @@ VERDICT_RANK = {
     "REFUTED": 0,
     "CONTRADICTED": 0,
     "NOT_ESTABLISHED": 1,
+    "RISK_ACCEPTED": 1,
     "SUPERSEDED": 1,
     "PARTIAL": 2,
     "ESTABLISHED": 3,
@@ -1163,11 +1164,19 @@ def _same(parties_doc: dict, assignment: dict, left: str, right: str) -> dict:
     return sameness(a, b) if a is not None and b is not None else {}
 
 
-def seed(repo_root: Path, generated_utc: str) -> dict:
-    claims_doc = load_json_strict(repo_root / "evidence" / "etp" / "claims.json")
+def seed(
+    repo_root: Path,
+    generated_utc: str,
+    graduation_path: Path | None = None,
+    claims_path: Path | None = None,
+) -> dict:
+    claims_doc = load_json_strict(
+        claims_path or repo_root / "evidence" / "etp" / "claims.json"
+    )
     b85c = load_json_strict(repo_root / "evidence" / "b85c-adjudication.json")
     graduation = load_json_strict(
-        repo_root / "evidence" / "SAFE-COMPATIBLE-openssh-b85c.json"
+        graduation_path
+        or repo_root / "evidence" / "SAFE-COMPATIBLE-openssh-b85c.json"
     )
 
     parties = {
@@ -1313,20 +1322,37 @@ def seed(repo_root: Path, generated_utc: str) -> dict:
         "identity": None,
         "declared": False,
     }
+    asserted = (
+        graduation.get("verdict", {}).get("value")
+        or graduation.get("classification", {}).get("state")
+        or "SAFE_COMPATIBLE"
+    )
+    risk_accepted = asserted == "RISK_ACCEPTED"
     release = {
         "id": "A-REL-OPENSSH-B85C",
         "artefact": "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
-        "class": "SAFE_COMPATIBLE_RELEASE",
-        "asserted_verdict": graduation.get("verdict", {}).get("value", "SAFE_COMPATIBLE"),
+        "class": "ORDINARY_CLAIM" if risk_accepted else "SAFE_COMPATIBLE_RELEASE",
+        "asserted_verdict": asserted,
         "claimed_independence": False,
-        "independence_kind": "RELEASE",
-        "independence_required": ["adjudicator", "independent_reproducer", "release_authority"],
+        "independence_kind": "NONE" if risk_accepted else "RELEASE",
+        "independence_required": [] if risk_accepted else [
+            "adjudicator", "independent_reproducer", "release_authority"
+        ],
         "filled": release_filled,
         "same_party": "NOT_ESTABLISHED",
         "sameness": {},
         "reviewers": [],
         "reproduction": {"claimed_independent": False},
-        "finding": "The record itself states that the graduation is a principal-decided risk acceptance, not an independent acceptance. The release authority declares no identity, organisation, infrastructure or key.",
+        "finding": (
+            "ETP-T15 reclassification: the record is a principal risk acceptance "
+            "(RISK_ACCEPTED), not a SAFE_COMPATIBLE graduation. It asserts no "
+            "independence and requires no distinct party; the absence of an "
+            "independent acceptance is recorded, not repaired."
+            if risk_accepted else
+            "The record itself states that the graduation is a principal-decided "
+            "risk acceptance, not an independent acceptance. The release authority "
+            "declares no identity, organisation, infrastructure or key."
+        ),
     }
     release["sameness"] = {
         "author|adjudicator": _same(context, release, "author", "adjudicator"),

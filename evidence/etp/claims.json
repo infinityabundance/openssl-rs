@@ -594,12 +594,12 @@
         {
           "id": "OBL-GAP-001",
           "statement": "contradiction: The seal states that artifacts/phase18/COURTS.json records five courts, all_pass true, summary pass 5 of 5 and empty pending_courts. The tracked file at S records all_pass false, summary pass 4 / fail 1, with HOSTILE-BOUNDARY-REGISTER failing on 56 unsafe-footprint bound violations (for example bn 1170 -> 1357, evp 8029 -> 8798, ssl 3503 -> 4407).",
-          "state": "OPEN",
+          "state": "DISCHARGED",
           "blocks": [
             "verdict",
             "evidence"
           ],
-          "settled_by": "Not applicable: the disagreement is direct. A future seal must name the commit and date of the registry it describes.",
+          "settled_by": "ETP-T15: docs/PHASE-18-HARDENING-SEAL-ERRATUM.md records the tracked registry values; the seal prose is the wrong side.",
           "evidence": [
             "EV-01"
           ]
@@ -607,12 +607,12 @@
         {
           "id": "OBL-GAP-002",
           "statement": "contradiction: The seal states the obligation ledger records owned 5, implemented 5, deferred 0, open_in_this_stratum 0. The tracked ledger records owned 5, implemented 4, open_in_this_stratum 1, with hostile-boundary-register in state open and measurement_state not_measured.",
-          "state": "OPEN",
+          "state": "DISCHARGED",
           "blocks": [
             "verdict",
             "evidence"
           ],
-          "settled_by": "Not applicable: the counts disagree in the tracked files.",
+          "settled_by": "ETP-T15: docs/PHASE-18-HARDENING-SEAL-ERRATUM.md records the tracked obligation counts; the seal prose is the wrong side.",
           "evidence": [
             "EV-02"
           ]
@@ -620,21 +620,21 @@
         {
           "id": "OBL-GAP-030",
           "statement": "assumption_not_stated: The seal states court results as all_pass true without naming the commit or date of the registry it describes. The statement is therefore read as current even though the tracked registry has since drifted to all_pass false. The temporal premise is unstated.",
-          "state": "OPEN",
+          "state": "DISCHARGED",
           "blocks": [
             "verdict"
           ],
-          "settled_by": "Bind every seal statement to the commit and digest of the registry it describes, and mark it historical when the registry moves.",
+          "settled_by": "ETP-T15: the erratum binds the seal values to their date and marks them historical; the tracked registry is the current record.",
           "evidence": []
         },
         {
           "id": "OBL-T15-RESOLUTION",
           "statement": "The two sides of this contradiction are preserved; resolution is a governance act owned by ETP-T15 and may not be recorded as a preference.",
-          "state": "OPEN",
+          "state": "DISCHARGED",
           "blocks": [
             "verdict"
           ],
-          "settled_by": "docs/ETP-TODO.md item ETP-T15, recorded as distinct provenance records",
+          "settled_by": "evidence/etp-t15/RECONCILIATION.json",
           "evidence": [
             "EV-01",
             "EV-02",
@@ -684,11 +684,14 @@
         "at": null
       },
       "verdict": {
-        "state": "CONTRADICTED",
-        "basis": "artifacts/phase18/COURTS.json at S records all_pass false, summary pass 4 / fail 1, with HOSTILE-BOUNDARY-REGISTER failing on 56 unsafe-footprint bounds. forensics/phase18-obligations.json at S records implemented 4 and open_in_this_stratum 1 (hostile-boundary-register, state open, measurement not_measured)."
+        "state": "SUPERSEDED",
+        "basis": "SUPERSEDED by ETP-T15: the tracked registry at S records all_pass false, four pass and one fail (HOSTILE-BOUNDARY-REGISTER), and the obligation ledger records implemented 4 with one open. The seal prose is the wrong side; the tracked measurement stands. The claim is retained as the record of the contradiction and is superseded by docs/PHASE-18-HARDENING-SEAL-ERRATUM.md and evidence/etp-t15/RECONCILIATION.json."
       },
-      "contradiction": {
-        "parties": [
+      "reconciliation": {
+        "resolution_owner": "ETP-T15",
+        "classification": "SUPERSEDED",
+        "original_verdict": "CONTRADICTED",
+        "original_parties": [
           {
             "id": "seal-prose",
             "source": "docs/PHASE-18-HARDENING-SEAL.md",
@@ -708,7 +711,15 @@
             ]
           }
         ],
-        "resolution_owner": "ETP-T15"
+        "historical_record": {
+          "path": "evidence/etp-t15/history/claims.before-reconciliation.json",
+          "sha256": "65d8105b744c80ae01e76af8bf3370c478ab116c7fc9b0f16f63eea5d5c579de"
+        },
+        "superseding_record": {
+          "path": "evidence/etp-t15/RECONCILIATION.json",
+          "sha256": "b8c11c86df49c01fd480bd012c56383d9fd9a5da1c7db4f552db5200f90adfac"
+        },
+        "statement": "The seal prose is the wrong side of the contradiction: the tracked registry records all_pass false, four pass and one fail, and the obligation ledger records implemented 4 with one open. The tracked measurement stands and the prose is superseded by the erratum."
       }
     },
     {
@@ -830,12 +841,12 @@
         {
           "id": "OBL-GAP-003",
           "statement": "contradiction: The CT-PRIMITIVES threshold is stated as 110 percent in the seal's section 2, as a 50 percent floor and a 150 percent threshold in the seal's section 6, as 50 percent in the COURTS.json claim field, and as 150 percent in both the probe source (SEP_PCT 150) and the COURTS.json threshold_percent. The probe source and the machine threshold agree at 150 percent; the prose does not.",
-          "state": "OPEN",
+          "state": "DISCHARGED",
           "blocks": [
             "verdict",
             "evidence"
           ],
-          "settled_by": "Not applicable: the prose is internally inconsistent. The authoritative value is the probe source plus the generated record.",
+          "settled_by": "ETP-T15: the probe source and threshold_percent (150) are the measurement; the prose and the registry's claim field are the defect.",
           "evidence": [
             "EV-01",
             "EV-02",
@@ -845,11 +856,11 @@
         {
           "id": "OBL-T15-RESOLUTION",
           "statement": "The two sides of this contradiction are preserved; resolution is a governance act owned by ETP-T15 and may not be recorded as a preference.",
-          "state": "OPEN",
+          "state": "DISCHARGED",
           "blocks": [
             "verdict"
           ],
-          "settled_by": "docs/ETP-TODO.md item ETP-T15, recorded as distinct provenance records",
+          "settled_by": "evidence/etp-t15/RECONCILIATION.json",
           "evidence": [
             "EV-01",
             "EV-02",
@@ -899,11 +910,14 @@
         "at": null
       },
       "verdict": {
-        "state": "CONTRADICTED",
-        "basis": "courts/phase18/ct_primitives_probe.c defines SEP_PCT 150; artifacts/phase18/COURTS.json records threshold_percent 150; the seal prose is internally inconsistent (110 vs 50 vs 150). The probe source and machine record agree; the prose does not."
+        "state": "SUPERSEDED",
+        "basis": "SUPERSEDED by ETP-T15: courts/phase18/ct_primitives_probe.c defines SEP_PCT 150 and artifacts/phase18/COURTS.json records threshold_percent 150; the seal prose is internally inconsistent and the registry's own claim field still says 50 percent. The measurement is self-consistent; the prose and the descriptive field are the defect. Superseded by docs/PHASE-18-HARDENING-SEAL-ERRATUM.md and evidence/etp-t15/RECONCILIATION.json."
       },
-      "contradiction": {
-        "parties": [
+      "reconciliation": {
+        "resolution_owner": "ETP-T15",
+        "classification": "SUPERSEDED",
+        "original_verdict": "CONTRADICTED",
+        "original_parties": [
           {
             "id": "seal-prose",
             "source": "docs/PHASE-18-HARDENING-SEAL.md",
@@ -932,7 +946,15 @@
             ]
           }
         ],
-        "resolution_owner": "ETP-T15"
+        "historical_record": {
+          "path": "evidence/etp-t15/history/claims.before-reconciliation.json",
+          "sha256": "65d8105b744c80ae01e76af8bf3370c478ab116c7fc9b0f16f63eea5d5c579de"
+        },
+        "superseding_record": {
+          "path": "evidence/etp-t15/RECONCILIATION.json",
+          "sha256": "b8c11c86df49c01fd480bd012c56383d9fd9a5da1c7db4f552db5200f90adfac"
+        },
+        "statement": "The probe source and the machine threshold agree at 150 percent; the prose's 110 percent, 50 percent floor and the registry claim field's 50 percent are the wrong side. The measurement stands; the descriptive field is recorded as a record defect, not a measurement defect."
       }
     },
     {
@@ -5454,12 +5476,12 @@
         {
           "id": "OBL-GAP-004",
           "statement": "contradiction: The graduation record issues SAFE_COMPATIBLE and says every reachable obligation is discharged. The two closure receipts it cites record verdict.safe_compatible=false. The freeze it cites records the L7 replay as not_graduated. The independent adjudication it also cites records NOT ESTABLISHED. The graduation record labels its own verdict a principal-decided risk acceptance and preserves the dissent.",
-          "state": "OPEN",
+          "state": "DISCHARGED",
           "blocks": [
             "verdict",
             "evidence"
           ],
-          "settled_by": "Not applicable as an evidence question. Resolution is a governance decision: either withdraw the SAFE_COMPATIBLE label, or state a policy that a principal risk acceptance may override the \u00a77 evidence criteria, with the dissent retained.",
+          "settled_by": "ETP-T15: the SAFE_COMPATIBLE label is withdrawn by reclassifying the record as RISK_ACCEPTED; the dissent is retained.",
           "evidence": [
             "EV-01",
             "EV-02",
@@ -5534,11 +5556,11 @@
         {
           "id": "OBL-T15-RESOLUTION",
           "statement": "The two sides of this contradiction are preserved; resolution is a governance act owned by ETP-T15 and may not be recorded as a preference.",
-          "state": "OPEN",
+          "state": "DISCHARGED",
           "blocks": [
             "verdict"
           ],
-          "settled_by": "docs/ETP-TODO.md item ETP-T15, recorded as distinct provenance records",
+          "settled_by": "evidence/etp-t15/RECONCILIATION.json",
           "evidence": [
             "EV-01",
             "EV-02",
@@ -5617,11 +5639,14 @@
         "at": null
       },
       "verdict": {
-        "state": "CONTRADICTED",
-        "basis": "The claim's own cited closure receipts record verdict.safe_compatible=false; FREEZE-b85c.json records the L7 replay as not_graduated; the independent b85c adjudication (also preserved by this record) records NOT ESTABLISHED. The graduation is a principal risk acceptance, not an evidence-derived SAFE_COMPATIBLE verdict, and the record says so."
+        "state": "RISK_ACCEPTED",
+        "basis": "RISK_ACCEPTED by ETP-T15: the record no longer asserts SAFE_COMPATIBLE. Its own cited closure receipts record verdict.safe_compatible=false, the freeze records safe_compatible=false and L7 not_graduated, and the adjudication records NOT ESTABLISHED; five of seven mechanisms and all four cross-cutting obligations remain unresolved. SAFE_COMPATIBLE remains NOT_ESTABLISHED and the record is a principal decision to proceed with the accepted obligations named."
       },
-      "contradiction": {
-        "parties": [
+      "reconciliation": {
+        "resolution_owner": "ETP-T15",
+        "classification": "RISK_ACCEPTED",
+        "original_verdict": "CONTRADICTED",
+        "original_parties": [
           {
             "id": "graduation-record",
             "source": "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
@@ -5652,7 +5677,15 @@
             ]
           }
         ],
-        "resolution_owner": "ETP-T15"
+        "historical_record": {
+          "path": "evidence/etp-t15/history/claims.before-reconciliation.json",
+          "sha256": "65d8105b744c80ae01e76af8bf3370c478ab116c7fc9b0f16f63eea5d5c579de"
+        },
+        "superseding_record": {
+          "path": "evidence/etp-t15/RECONCILIATION.json",
+          "sha256": "b8c11c86df49c01fd480bd012c56383d9fd9a5da1c7db4f552db5200f90adfac"
+        },
+        "statement": "The record no longer asserts SAFE_COMPATIBLE. Its cited receipts, freeze and adjudication record that safe_compatible is not established, and five of seven mechanisms plus all four cross-cutting obligations remain unresolved. The principal decision to proceed is recorded as RISK_ACCEPTED with the accepted obligations named and the dissent preserved."
       }
     },
     {
@@ -5924,14 +5957,14 @@
         "verdict": "CONTRADICTED"
       },
       "property": "consumer-graduation",
-      "interpretation": "The campaign ledger records more than one value for the cohort SAFE_COMPATIBLE counter; the operational meaning is that the counter is not a single established fact in the tracked records.",
+      "interpretation": "At S the campaign ledger recorded more than one value for the cohort SAFE_COMPATIBLE counter; the operational meaning was that the counter was not a single established fact. After the ETP-T15 reconciliation the ledger records one section 7 counter (0/33) and one risk-accepted family (openssh), and the S disagreement is preserved in history.",
       "quantification": {
         "kind": "existential",
         "population": "33 admitted cohort families",
         "population_size": null,
         "measure": {
           "form": "ratio",
-          "value": "1/33 and 0/33 both recorded",
+          "value": "0/33 section 7 SAFE_COMPATIBLE families; 1 risk-accepted family (openssh); the S reading was 1/33 and 0/33",
           "aggregation": "forbidden"
         }
       },
@@ -6029,12 +6062,12 @@
         {
           "id": "OBL-GAP-005",
           "statement": "contradiction: One tracked JSON file records consumers.safe_compatible = 1 and safe_compatible_graduation.verdict = SAFE_COMPATIBLE, and in the same file consumers.note says SAFE_COMPATIBLE remains 0/33 and non_claims[0] says no consumer family is SAFE_COMPATIBLE and consumers remain 0/33.",
-          "state": "OPEN",
+          "state": "DISCHARGED",
           "blocks": [
             "verdict",
             "evidence"
           ],
-          "settled_by": "Not applicable: the file contradicts itself. A later ledger edit must reconcile the counter and the non-claim in one record.",
+          "settled_by": "ETP-T15: CAMPAIGN-STATUS.json now records 0/33 section 7 and 1 risk-accepted family; the previous 1/33 is preserved in its history block.",
           "evidence": [
             "EV-01"
           ]
@@ -6042,12 +6075,12 @@
         {
           "id": "OBL-GAP-006",
           "statement": "contradiction: PROGRESS.md says the cohort counter is not advanced by the b85c record. STATUS-2026-10-20.md says the counter is now 1/33, and CAMPAIGN-STATUS.json records 1. The three tracked artefacts disagree on the counter.",
-          "state": "OPEN",
+          "state": "DISCHARGED",
           "blocks": [
             "verdict",
             "evidence"
           ],
-          "settled_by": "Not applicable: the counter is a single number with three tracked statements.",
+          "settled_by": "ETP-T15: CAMPAIGN-STATUS.json, PROGRESS.md and STATUS-2026-10-20.md now agree.",
           "evidence": [
             "EV-01",
             "EV-02",
@@ -6057,11 +6090,11 @@
         {
           "id": "OBL-T15-RESOLUTION",
           "statement": "The two sides of this contradiction are preserved; resolution is a governance act owned by ETP-T15 and may not be recorded as a preference.",
-          "state": "OPEN",
+          "state": "DISCHARGED",
           "blocks": [
             "verdict"
           ],
-          "settled_by": "docs/ETP-TODO.md item ETP-T15, recorded as distinct provenance records",
+          "settled_by": "evidence/etp-t15/RECONCILIATION.json",
           "evidence": [
             "EV-01",
             "EV-02",
@@ -6110,11 +6143,14 @@
         "at": null
       },
       "verdict": {
-        "state": "CONTRADICTED",
-        "basis": "CAMPAIGN-STATUS.json records consumers.safe_compatible = 1 and safe_compatible_graduation.verdict = SAFE_COMPATIBLE, while its own consumers.note says SAFE_COMPATIBLE remains 0/33 and non_claims[0] says no consumer family is SAFE_COMPATIBLE. PROGRESS.md says the counter is not advanced. STATUS-2026-10-20.md says 1/33."
+        "state": "SUPERSEDED",
+        "basis": "SUPERSEDED by ETP-T15: the ledger now records consumers.safe_compatible = 0 (section 7) and consumers.risk_accepted = 1 for openssh, with the previous 1/33 value and note preserved in its history block and in evidence/etp-t15/history/. PROGRESS.md and STATUS-2026-10-20.md agree."
       },
-      "contradiction": {
-        "parties": [
+      "reconciliation": {
+        "resolution_owner": "ETP-T15",
+        "classification": "SUPERSEDED",
+        "original_verdict": "CONTRADICTED",
+        "original_parties": [
           {
             "id": "counter-record",
             "source": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
@@ -6136,7 +6172,15 @@
             ]
           }
         ],
-        "resolution_owner": "ETP-T15"
+        "historical_record": {
+          "path": "evidence/etp-t15/history/claims.before-reconciliation.json",
+          "sha256": "65d8105b744c80ae01e76af8bf3370c478ab116c7fc9b0f16f63eea5d5c579de"
+        },
+        "superseding_record": {
+          "path": "evidence/etp-t15/RECONCILIATION.json",
+          "sha256": "b8c11c86df49c01fd480bd012c56383d9fd9a5da1c7db4f552db5200f90adfac"
+        },
+        "statement": "The ledger self-contradiction is repaired to one value: 0/33 section 7 SAFE_COMPATIBLE families and one risk-accepted family (openssh). The previous 1/33 reading and its note are preserved in the ledger history block and in evidence/etp-t15/history/."
       }
     },
     {

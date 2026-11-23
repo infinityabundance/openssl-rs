@@ -757,14 +757,14 @@
       "source": {
         "path": "evidence/etp/claims.json",
         "span": "ETP0-CLM-004",
-        "quote": "artifacts/phase18/COURTS.json at S records all_pass false, summary pass 4 / fail 1, with HOSTILE-BOUNDARY-REGISTER failing on 56 unsafe-footprint bounds. forensics/phase18-obligations.json at S record",
+        "quote": "SUPERSEDED by ETP-T15: the tracked registry at S records all_pass false, four pass and one fail (HOSTILE-BOUNDARY-REGISTER), and the obligation ledger records implemented 4 with one open. The seal pro",
         "quote_kind": "fragment",
         "sha256": "65d8105b744c80ae01e76af8bf3370c478ab116c7fc9b0f16f63eea5d5c579de",
         "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
       },
       "record_kind": "typed_claim",
       "property": "compatibility",
-      "verdict": "CONTRADICTED",
+      "verdict": "SUPERSEDED",
       "independence": "NOT_CLAIMED",
       "authority": "ETP-1 claim inventory; the same party produced the cited evidence",
       "derived_from": {
@@ -781,14 +781,14 @@
       "source": {
         "path": "evidence/etp/claims.json",
         "span": "ETP0-CLM-005",
-        "quote": "courts/phase18/ct_primitives_probe.c defines SEP_PCT 150; artifacts/phase18/COURTS.json records threshold_percent 150; the seal prose is internally inconsistent (110 vs 50 vs 150). The probe source an",
+        "quote": "SUPERSEDED by ETP-T15: courts/phase18/ct_primitives_probe.c defines SEP_PCT 150 and artifacts/phase18/COURTS.json records threshold_percent 150; the seal prose is internally inconsistent and the regis",
         "quote_kind": "fragment",
         "sha256": "65d8105b744c80ae01e76af8bf3370c478ab116c7fc9b0f16f63eea5d5c579de",
         "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
       },
       "record_kind": "typed_claim",
       "property": "timing",
-      "verdict": "CONTRADICTED",
+      "verdict": "SUPERSEDED",
       "independence": "NOT_CLAIMED",
       "authority": "ETP-1 claim inventory; the same party produced the cited evidence",
       "derived_from": {
@@ -1381,14 +1381,14 @@
       "source": {
         "path": "evidence/etp/claims.json",
         "span": "ETP0-CLM-030",
-        "quote": "The claim's own cited closure receipts record verdict.safe_compatible=false; FREEZE-b85c.json records the L7 replay as not_graduated; the independent b85c adjudication (also preserved by this record) ",
+        "quote": "RISK_ACCEPTED by ETP-T15: the record no longer asserts SAFE_COMPATIBLE. Its own cited closure receipts record verdict.safe_compatible=false, the freeze records safe_compatible=false and L7 not_graduat",
         "quote_kind": "fragment",
         "sha256": "65d8105b744c80ae01e76af8bf3370c478ab116c7fc9b0f16f63eea5d5c579de",
         "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
       },
       "record_kind": "typed_claim",
       "property": "consumer-graduation",
-      "verdict": "CONTRADICTED",
+      "verdict": "RISK_ACCEPTED",
       "independence": "NOT_CLAIMED",
       "authority": "ETP-1 claim inventory; the same party produced the cited evidence",
       "derived_from": {
@@ -1429,14 +1429,14 @@
       "source": {
         "path": "evidence/etp/claims.json",
         "span": "ETP0-CLM-032",
-        "quote": "CAMPAIGN-STATUS.json records consumers.safe_compatible = 1 and safe_compatible_graduation.verdict = SAFE_COMPATIBLE, while its own consumers.note says SAFE_COMPATIBLE remains 0/33 and non_claims[0] sa",
+        "quote": "SUPERSEDED by ETP-T15: the ledger now records consumers.safe_compatible = 0 (section 7) and consumers.risk_accepted = 1 for openssh, with the previous 1/33 value and note preserved in its history bloc",
         "quote_kind": "fragment",
         "sha256": "65d8105b744c80ae01e76af8bf3370c478ab116c7fc9b0f16f63eea5d5c579de",
         "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
       },
       "record_kind": "typed_claim",
       "property": "consumer-graduation",
-      "verdict": "CONTRADICTED",
+      "verdict": "SUPERSEDED",
       "independence": "NOT_CLAIMED",
       "authority": "ETP-1 claim inventory; the same party produced the cited evidence",
       "derived_from": {
@@ -5542,7 +5542,7 @@
       },
       "statement": "contradiction: The seal states that artifacts/phase18/COURTS.json records five courts, all_pass true, summary pass 5 of 5 and empty pending_courts. The tracked file at S records all_pass false, summary pass 4 / fail 1, with HOSTILE-BOUNDARY-REGISTER failing on 56 unsafe-footprint bound violations (for example bn 1170 -> 1357, evp 8029 -> 8798, ssl 3503 -> 4407).",
       "state": "OPEN",
-      "settled_by": "Not applicable: the disagreement is direct. A future seal must name the commit and date of the registry it describes.",
+      "settled_by": "ETP-T15: docs/PHASE-18-HARDENING-SEAL-ERRATUM.md records the tracked registry values; the seal prose is the wrong side.",
       "blocks_release_claims": []
     },
     {
@@ -5559,7 +5559,7 @@
       },
       "statement": "contradiction: The seal states the obligation ledger records owned 5, implemented 5, deferred 0, open_in_this_stratum 0. The tracked ledger records owned 5, implemented 4, open_in_this_stratum 1, with hostile-boundary-register in state open and measurement_state not_measured.",
       "state": "OPEN",
-      "settled_by": "Not applicable: the counts disagree in the tracked files.",
+      "settled_by": "ETP-T15: docs/PHASE-18-HARDENING-SEAL-ERRATUM.md records the tracked obligation counts; the seal prose is the wrong side.",
       "blocks_release_claims": []
     },
     {
@@ -5576,7 +5576,7 @@
       },
       "statement": "contradiction: The CT-PRIMITIVES threshold is stated as 110 percent in the seal's section 2, as a 50 percent floor and a 150 percent threshold in the seal's section 6, as 50 percent in the COURTS.json claim field, and as 150 percent in both the probe source (SEP_PCT 150) and the COURTS.json threshold_percent. The probe source and the machine threshold agree at 150 percent; the prose does not.",
       "state": "OPEN",
-      "settled_by": "Not applicable: the prose is internally inconsistent. The authoritative value is the probe source plus the generated record.",
+      "settled_by": "ETP-T15: the probe source and threshold_percent (150) are the measurement; the prose and the registry's claim field are the defect.",
       "blocks_release_claims": []
     },
     {
@@ -5593,7 +5593,7 @@
       },
       "statement": "contradiction: The graduation record issues SAFE_COMPATIBLE and says every reachable obligation is discharged. The two closure receipts it cites record verdict.safe_compatible=false. The freeze it cites records the L7 replay as not_graduated. The independent adjudication it also cites records NOT ESTABLISHED. The graduation record labels its own verdict a principal-decided risk acceptance and preserves the dissent.",
       "state": "OPEN",
-      "settled_by": "Not applicable as an evidence question. Resolution is a governance decision: either withdraw the SAFE_COMPATIBLE label, or state a policy that a principal risk acceptance may override the \u00a77 evidence criteria, with the dissent retained.",
+      "settled_by": "ETP-T15: the SAFE_COMPATIBLE label is withdrawn by reclassifying the record as RISK_ACCEPTED; the dissent is retained.",
       "blocks_release_claims": [
         "REL-OPENSSH-B85C"
       ]
@@ -5612,7 +5612,7 @@
       },
       "statement": "contradiction: One tracked JSON file records consumers.safe_compatible = 1 and safe_compatible_graduation.verdict = SAFE_COMPATIBLE, and in the same file consumers.note says SAFE_COMPATIBLE remains 0/33 and non_claims[0] says no consumer family is SAFE_COMPATIBLE and consumers remain 0/33.",
       "state": "OPEN",
-      "settled_by": "Not applicable: the file contradicts itself. A later ledger edit must reconcile the counter and the non-claim in one record.",
+      "settled_by": "ETP-T15: CAMPAIGN-STATUS.json now records 0/33 section 7 and 1 risk-accepted family; the previous 1/33 is preserved in its history block.",
       "blocks_release_claims": [
         "REL-COHORT-COUNTER-1-33"
       ]
@@ -5631,7 +5631,7 @@
       },
       "statement": "contradiction: PROGRESS.md says the cohort counter is not advanced by the b85c record. STATUS-2026-10-20.md says the counter is now 1/33, and CAMPAIGN-STATUS.json records 1. The three tracked artefacts disagree on the counter.",
       "state": "OPEN",
-      "settled_by": "Not applicable: the counter is a single number with three tracked statements.",
+      "settled_by": "ETP-T15: CAMPAIGN-STATUS.json, PROGRESS.md and STATUS-2026-10-20.md now agree.",
       "blocks_release_claims": [
         "REL-COHORT-COUNTER-1-33"
       ]
@@ -6051,7 +6051,7 @@
       },
       "statement": "assumption_not_stated: The seal states court results as all_pass true without naming the commit or date of the registry it describes. The statement is therefore read as current even though the tracked registry has since drifted to all_pass false. The temporal premise is unstated.",
       "state": "OPEN",
-      "settled_by": "Bind every seal statement to the commit and digest of the registry it describes, and mark it historical when the registry moves.",
+      "settled_by": "ETP-T15: the erratum binds the seal values to their date and marks them historical; the tracked registry is the current record.",
       "blocks_release_claims": []
     },
     {
@@ -6515,7 +6515,7 @@
       },
       "statement": "The two sides of this contradiction are preserved; resolution is a governance act owned by ETP-T15 and may not be recorded as a preference.",
       "state": "OPEN",
-      "settled_by": "docs/ETP-TODO.md item ETP-T15, recorded as distinct provenance records",
+      "settled_by": "evidence/etp-t15/RECONCILIATION.json",
       "blocks_release_claims": [
         "REL-OPENSSH-B85C",
         "REL-COHORT-COUNTER-1-33"

@@ -1,0 +1,315 @@
+{
+  "schema": "openssl-rs/etp-t15/reconciliation/1",
+  "kind": "adjudication-reconciliation",
+  "item": "ETP-T15",
+  "generated_utc": "2026-11-23T00:00:00Z",
+  "source_identity": {
+    "base_commit": "576e26d2d23269c1991af5d8aeef84b1e90d7ef2",
+    "branch": "staging",
+    "worktree_clean_tracked_files": true
+  },
+  "question": "Do the OpenSSH b85c graduation and the b85c adjudication assert the same thing, and which state does their evidence support?",
+  "answer": "They are distinct records at one evidence identity. The adjudication asserts NOT ESTABLISHED for SAFE_COMPATIBLE; the graduation asserted SAFE_COMPATIBLE but described itself as a principal risk acceptance. The evidence supports NOT_ESTABLISHED for the requested property and RISK_ACCEPTED for the decision. The graduation record is reclassified to RISK_ACCEPTED; the adjudication is unchanged.",
+  "records": {
+    "graduation": {
+      "path": "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
+      "sha256_before": "41e5797d50bff7b62b25e25184f739bc3d68115396f32c4236d00a14e0301dd2",
+      "sha256_after": "dde0d37684c61e4a35e59dba0b45409232788df8b1d5aaae7fcda5968aeedc02",
+      "kind_before": "safe-compatible-graduation-record",
+      "kind_after": "risk-acceptance-record",
+      "verdict_before": "SAFE_COMPATIBLE",
+      "verdict_after": "RISK_ACCEPTED",
+      "decided_by": "decision-maker (campaign principal)",
+      "candidate_tag": "b85c",
+      "source_head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+      "freeze_sha256": "b08131b1ca7849a3e7f801b87f427774df346366344a2b24bd8207fcb847ec4e",
+      "tool_sha256": "3e86a74dbbe9095ca98ef3b8d889ec67a9447e59ef1caceecaa72152202988a1",
+      "historical_copy": "evidence/etp-t15/history/SAFE-COMPATIBLE-openssh-b85c.json",
+      "historical_copy_sha256": "41e5797d50bff7b62b25e25184f739bc3d68115396f32c4236d00a14e0301dd2",
+      "asserts_before": [
+        "verdict.value = SAFE_COMPATIBLE for ssh and sshd at b85c",
+        "all seven mechanisms SAFETY_DISCHARGED at the OpenSSH scope",
+        "a principal-decided risk acceptance over the recorded evidence, not an independent acceptance of the assurance case"
+      ],
+      "asserts_after": [
+        "classification.state = RISK_ACCEPTED; classification.safe_compatible_established = false",
+        "two mechanisms SAFETY_DISCHARGED (scoped); five NOT_ESTABLISHED at mechanism-wide grade",
+        "all four cross-cutting obligations NOT_ESTABLISHED",
+        "the accepted obligations are named; the NOT ESTABLISHED dissent is preserved"
+      ],
+      "preserved_verbatim": "the original mechanism_verdicts text is in supersedes.original_mechanism_verdicts; the original bytes are the historical copy"
+    },
+    "adjudication": {
+      "path": "evidence/b85c-adjudication.json",
+      "sha256": "24e11717aa72bf0c39425987d826df3cc59da0c4d05e4d280dc4ab99a9f4ab5d",
+      "changed": false,
+      "kind": "independent-adversarial-adjudication",
+      "candidate_tag": "b85c",
+      "head_at_adjudication": "bfa39a6c3",
+      "evidence_source_head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+      "verdict": "NOT ESTABLISHED",
+      "for": [
+        "SAFE_COMPATIBLE (ssh)",
+        "SAFE_COMPATIBLE (sshd)"
+      ],
+      "reason": "five of seven applicable mechanisms are NOT_ESTABLISHED, all four cross-cutting obligations are NOT_ESTABLISHED, both scoped discharges retain un-established caller preconditions, and the closure's 0 BLOCKED is receipt coverage that still counts rows the ledger records as reopened/BLOCKED; the freeze records safe_compatible=false and not_graduated",
+      "provenance": "head bfa39a6c3 over evidence source head 17042ccf2; freeze sha256 b08131b1",
+      "independence": {
+        "asserted_by_the_record": true,
+        "established": false,
+        "finding_source": "evidence/etp-t8/ASSIGNMENTS.json#A-ADJ-B85C.finding",
+        "finding": "no reviewer identity, organisation or key; same undeclared producing party as the source it judges; reproduction in this repository's working environment against project-produced artefacts"
+      }
+    },
+    "freeze": {
+      "path": "evidence/FREEZE-b85c.json",
+      "sha256": "b08131b1ca7849a3e7f801b87f427774df346366344a2b24bd8207fcb847ec4e",
+      "changed": false,
+      "safe_compatible_value": false,
+      "l7_replay_not_graduated": true,
+      "reason": "the criterion-3 argument is SAFETY_DISCHARGED for two mechanisms under scoped claims and NOT_ESTABLISHED for the other five; no independent SAFE_COMPATIBLE adjudication was run at b85c"
+    },
+    "row_reconciliation": {
+      "path": "evidence/b85c-row-reconciliation.json",
+      "sha256": "a684b6af66220dcc6741b35b6e45f50f23cea5f3e3a888aee4f5f0c9d963d7c4",
+      "changed": false,
+      "decisions": {
+        "reopened_discharges/0": "LEDGER_STALE",
+        "findings/0 (B54-F1)": "LEDGER_STALE",
+        "findings/2 (B55-F1)": "LEDGER_STALE"
+      },
+      "limit": "FAST plus mutation controls at S; BOUNDARY and SEAL re-adjudication NOT_RUN; the record does not establish SAFE_COMPATIBLE and does not alter the b85c verdict"
+    },
+    "campaign_status": {
+      "path": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+      "sha256_before": "abb8a6cb6ae4e430bbc8104683909664fad3dfa2dd5dcbc1f8aa69229d16606f",
+      "sha256_after": "8affeac4d2280289cda17b1716e39bc63535cd893d71642b8cda21735e314e38",
+      "graduation_verdict_before": "SAFE_COMPATIBLE",
+      "graduation_verdict_after": "RISK_ACCEPTED",
+      "consumers_safe_compatible_before": 1,
+      "consumers_safe_compatible_after": 0,
+      "consumers_risk_accepted_after": 1,
+      "historical_copy": "evidence/etp-t15/history/CAMPAIGN-STATUS.before-reconciliation.json",
+      "historical_copy_sha256": "abb8a6cb6ae4e430bbc8104683909664fad3dfa2dd5dcbc1f8aa69229d16606f"
+    },
+    "progress": {
+      "path": "forensics/memory-safety/campaign/safe-c33/PROGRESS.md",
+      "sha256_before": "4839a213dddc6f3ced22d539a878dcddf99548dc035cd560a38ebd6bec041a15",
+      "sha256_after": "adcbb62b527e1269c17658389063ba69b3b217ba3abc10737770a2d95fe6af10",
+      "historical_copy": "evidence/etp-t15/history/PROGRESS.before-reconciliation.md",
+      "historical_copy_sha256": "4839a213dddc6f3ced22d539a878dcddf99548dc035cd560a38ebd6bec041a15"
+    },
+    "status": {
+      "path": "forensics/memory-safety/campaign/safe-c33/STATUS-2026-10-20.md",
+      "sha256_before": "7c966f896b80f36d2aad665b7deec9dc9377ba301bef581b4983e1ffa18c93ff",
+      "sha256_after": "c311c25b73b27a5055a7a8aeee0110871d93ab26040a8fd8619d6f3ecbd2346d",
+      "historical_copy": "evidence/etp-t15/history/STATUS-2026-10-20.before-reconciliation.md",
+      "historical_copy_sha256": "7c966f896b80f36d2aad665b7deec9dc9377ba301bef581b4983e1ffa18c93ff"
+    },
+    "claims_before": {
+      "path": "evidence/etp-t15/history/claims.before-reconciliation.json",
+      "sha256": "65d8105b744c80ae01e76af8bf3370c478ab116c7fc9b0f16f63eea5d5c579de",
+      "claim_count": 35,
+      "note": "the pre-change typed claim set; the live evidence/etp/claims.json is superseding and is not digested here to avoid a digest cycle"
+    },
+    "erratum": {
+      "path": "docs/PHASE-18-HARDENING-SEAL-ERRATUM.md",
+      "sha256": "1e4521b86e53845b51aa7c733d75a54298a91160c8fe00a0bb7562cfe7196fd8",
+      "supersedes": "docs/PHASE-18-HARDENING-SEAL.md#court-results, #obligation-ledger, #ct-primitives-threshold",
+      "original_document_changed": false
+    },
+    "independence": {
+      "path": "evidence/etp-t15/INDEPENDENCE.json",
+      "sha256": "729f69b3d5bb5025ff637f9b2f70379bf29ae0034613e99765dc452eaa7134c0",
+      "supersedes_for_the_openssh_assignment": "evidence/etp-t8/ASSIGNMENTS.json#A-REL-OPENSSH-B85C",
+      "assignment_class_before": "SAFE_COMPATIBLE_RELEASE",
+      "assignment_class_after": "ORDINARY_CLAIM",
+      "asserted_verdict_before": "SAFE_COMPATIBLE",
+      "asserted_verdict_after": "RISK_ACCEPTED",
+      "independence_required_after": []
+    },
+    "traceability": {
+      "path": "evidence/etp-t1/TRACEABILITY.json",
+      "sha256_before": "d5920c800ad113722d0645b27af0f27e1caee9b2ac596379aa41871be7909e26",
+      "sha256_after": "8ce6881f1bc317595903c130e94b4cd150bfac2c344513a081afddf67172d7e5",
+      "historical_copy": "evidence/etp-t15/history/TRACEABILITY.before-reconciliation.json",
+      "historical_copy_sha256": "d5920c800ad113722d0645b27af0f27e1caee9b2ac596379aa41871be7909e26",
+      "change": "16 claim-node verdict/basis fields regenerated from the reconciled claim set; 361 nodes, 475 edges and 43 orphans are unchanged"
+    }
+  },
+  "classification": {
+    "definitions": {
+      "SAFE_COMPATIBLE": "the consumer family's AGENTS.md section 7 dependency closure is discharged: every applicable mechanism SAFETY_DISCHARGED, every caller precondition established, no hidden obligation, compatibility against the exact converted implementation",
+      "RISK_ACCEPTED": "an authorised principal decision to proceed while named obligations remain unresolved; it asserts no safety property and grants no graduation",
+      "NOT_ESTABLISHED": "the evidence does not justify the requested property; the unresolved obligations are named with what would settle each"
+    },
+    "applied": "RISK_ACCEPTED",
+    "property_state": "NOT_ESTABLISHED",
+    "why": [
+      "five of seven applicable mechanisms are NOT_ESTABLISHED at mechanism-wide grade: EVP_PKEY_PROVIDER, X509_VERIFY_POLICY, RAND_CMS_STORE_KEYFMT, C_ABI_CONTRACT, BIO",
+      "the two SAFETY_DISCHARGED (scoped) mechanisms retain un-established caller preconditions: SSL_SESSION retains sslconf exclusivity, RUNTIME_CONCURRENCY retains exclusive ownership",
+      "all four cross-cutting obligations are NOT_ESTABLISHED",
+      "0 BLOCKED is receipt coverage, not current adjudication; 65 REVIEW_REQUIRED discharges are still counted as discharged",
+      "the freeze the record names records safe_compatible=false and not_graduated",
+      "the record itself says the decision is a principal risk acceptance, not an independent acceptance of the assurance case"
+    ]
+  },
+  "accepted_obligations": [
+    "OBL-B85C-MECH-EVP",
+    "OBL-B85C-MECH-X509",
+    "OBL-B85C-MECH-RAND",
+    "OBL-B85C-MECH-CABI",
+    "OBL-B85C-MECH-BIO",
+    "OBL-B85C-SCOPED-SSLSESSION",
+    "OBL-B85C-SCOPED-RUNTIME",
+    "OBL-B85C-CROSSCUT",
+    "OBL-B85C-REVIEW-REQUIRED",
+    "OBL-B85C-LEDGER-STALE",
+    "OBL-B85C-INSTRUMENTS",
+    "OBL-B85C-IDENTITY",
+    "OBL-B85C-COMPAT-REUSE",
+    "OBL-B85C-EXTERNAL-ABI",
+    "OBL-B85C-DEFERRED-GATES"
+  ],
+  "claims": [
+    {
+      "id": "ETP0-CLM-004",
+      "before": "CONTRADICTED",
+      "after": "SUPERSEDED",
+      "diagnosis_class": "record-asserts-more-than-its-evidence",
+      "diagnosis": "the seal prose states all_pass true and 5 of 5 courts passing; the tracked registry records all_pass false, pass 4 / fail 1, and the obligation ledger records implemented 4 with one open. The prose is the wrong side; the measurement is not wrong.",
+      "repair": "docs/PHASE-18-HARDENING-SEAL-ERRATUM.md names the tracked values and the failing court; the claim is superseded, both original parties are preserved, and the contradiction obligations are discharged against the erratum.",
+      "measurement_wrong": false,
+      "record_wrong": true
+    },
+    {
+      "id": "ETP0-CLM-005",
+      "before": "CONTRADICTED",
+      "after": "SUPERSEDED",
+      "diagnosis_class": "record-defect-in-a-descriptive-field",
+      "diagnosis": "the seal prose states 110 percent, a 50 percent floor and 150 percent; the probe source SEP_PCT 150 and threshold_percent 150 agree. The machine record's own claim field still says 50 percent, which is a descriptive-field defect. The measurement is self-consistent.",
+      "repair": "the erratum names 150 as authoritative and records the claim-field defect; the artefact is not rewritten. The claim is superseded, both original parties preserved.",
+      "measurement_wrong": false,
+      "record_wrong": true
+    },
+    {
+      "id": "ETP0-CLM-030",
+      "before": "CONTRADICTED",
+      "after": "RISK_ACCEPTED",
+      "diagnosis_class": "record-asserts-more-than-its-evidence",
+      "diagnosis": "the graduation asserted SAFE_COMPATIBLE while its cited closure receipts record safe_compatible=false, the freeze records safe_compatible=false and not_graduated, and the adjudication records NOT ESTABLISHED.",
+      "repair": "the graduation record is reclassified to RISK_ACCEPTED with its accepted obligations named and its original bytes preserved; the claim's contradiction obligations are discharged and the five accepted obligations remain open.",
+      "measurement_wrong": false,
+      "record_wrong": true
+    },
+    {
+      "id": "ETP0-CLM-032",
+      "before": "CONTRADICTED",
+      "after": "SUPERSEDED",
+      "diagnosis_class": "record-defect-repaired-to-one-value",
+      "diagnosis": "the ledger recorded consumers.safe_compatible=1 and a SAFE_COMPATIBLE graduation while its own note and PROGRESS.md said 0/33; STATUS-2026-10-20.md said 1/33. The 1/33 reading inherited the graduation's error.",
+      "repair": "the ledger now records 0/33 section 7 and one risk-accepted family, with the previous value and note in history; PROGRESS.md and STATUS-2026-10-20.md agree. The claim is superseded.",
+      "measurement_wrong": false,
+      "record_wrong": true
+    }
+  ],
+  "cohort_counter": {
+    "before_2026_11_17": {
+      "safe_compatible": "0/33",
+      "risk_accepted": "not recorded"
+    },
+    "before_reconciliation": {
+      "safe_compatible": "1/33",
+      "family": "openssh",
+      "source": "CAMPAIGN-STATUS.json#consumers.safe_compatible"
+    },
+    "after": {
+      "safe_compatible": "0/33",
+      "risk_accepted": 1,
+      "risk_accepted_family": "openssh",
+      "source": "CAMPAIGN-STATUS.json#consumers"
+    },
+    "preserved": [
+      "evidence/etp-t15/history/CAMPAIGN-STATUS.before-reconciliation.json",
+      "CAMPAIGN-STATUS.json#consumers.safe_compatible_before_reconciliation",
+      "CAMPAIGN-STATUS.json#consumers.note_before_reconciliation",
+      "CAMPAIGN-STATUS.json#safe_compatible_graduation.history"
+    ]
+  },
+  "machinery": {
+    "claim_algebra": {
+      "tool": "forensics/tools/etp_claims.py",
+      "schema": "evidence/etp/claim.schema.json",
+      "additions": [
+        "verdict state RISK_ACCEPTED",
+        "claim field reconciliation with a bound historical record and superseding record",
+        "EG_RECONCILIATION_UNBOUND, EG_RECONCILIATION_PROMOTION, EG_RISK_ACCEPTED_WITHOUT_OBLIGATION"
+      ],
+      "permitted_movement": "a claim derived from a CONTRADICTED ETP-0 verdict may move only to RISK_ACCEPTED or SUPERSEDED, only with resolution_owner ETP-T15, the original verdict, both original parties, and digest-checked records; ESTABLISHED, PARTIAL and SAFE_COMPATIBLE are refused",
+      "observed": {
+        "valid": true,
+        "refusal_count": 0,
+        "claims": 35,
+        "conjoin": "SUPERSEDED",
+        "conjoin_weakest": [
+          "ETP0-CLM-004",
+          "ETP0-CLM-005",
+          "ETP0-CLM-032",
+          "ETP0-CLM-033"
+        ],
+        "test_suite": "forensics/tools/tests: 525 tests, 0 failures"
+      }
+    },
+    "release_gate": {
+      "tool": "forensics/tools/release_gate.py",
+      "before_refusals": [
+        "RG_CLAIM_CONTRADICTED ETP0-CLM-004",
+        "RG_CLAIM_CONTRADICTED ETP0-CLM-005",
+        "RG_CLAIM_CONTRADICTED ETP0-CLM-030",
+        "RG_CLAIM_CONTRADICTED ETP0-CLM-032"
+      ],
+      "after": {
+        "exit": 1,
+        "refusal_count": 31,
+        "by_rule": {
+          "RG_CLAIM_UNCERTIFIABLE_EVIDENCE": 19,
+          "RG_CLAIM_HISTORICAL_EVIDENCE": 11,
+          "RG_PACKAGE_MISSING": 1
+        },
+        "rg_claim_contradicted": 0,
+        "self_test": "16 cases, 0 failures, including the repaired risk-accepted positive control and the SAFE_COMPATIBLE and reconciliation-promotion refusals"
+      }
+    },
+    "independence": {
+      "tool": "forensics/tools/independence.py",
+      "record": "evidence/etp-t15/INDEPENDENCE.json",
+      "observed": {
+        "validate": "PASS, 50 assignments, 0 structural refusals",
+        "check": "REFUSED, 8 findings, all on A-ADJ-B85C; 0 findings on A-REL-OPENSSH-B85C",
+        "default_record_check": "REFUSED, 13 findings on the historical ETP-T8 record, which still asserts SAFE_COMPATIBLE_RELEASE for A-REL-OPENSSH-B85C"
+      }
+    },
+    "closure_discipline": {
+      "tool": "forensics/tools/closure_discipline.py",
+      "observed": {
+        "aggregate_refusals": [],
+        "live_record": "reported_overall_state FAIL; the five NOT_ESTABLISHED mechanisms and the dissent are visible blocked rows; accepted",
+        "historical_record": "reported_overall_state PASS; CD_AGGREGATE_PASS_HIDES_BLOCKED_ROW still fires"
+      }
+    }
+  },
+  "two_direction_demonstration": {
+    "repaired_record_passes": "the validator accepts the 35-claim document with the four bound reconciliations (valid true, 0 refusals); the release gate emits no RG_CLAIM_CONTRADICTED for the four claims and reduces from 35 to 31 refusals, all of which are other artefacts",
+    "old_assertion_refused": "evidence/etp5/probes/p1-openssh-graduation-promotion.json still types the promotion as SAFE_COMPATIBLE and is refused with EG_GRADUATED_WITH_OPEN_OBLIGATION, EG_GRADUATED_WITHOUT_CLOSURE, EG_SAFE_COMPATIBLE_EXCLUSION_FAILS_BAR and a digest mismatch against the superseded bytes; a reconciliation used to raise a CONTRADICTED claim is refused with EG_RECONCILIATION_PROMOTION; and release_gate.py --claims evidence/etp-t15/history/claims.before-reconciliation.json still emits the four RG_CLAIM_CONTRADICTED refusals for -004, -005, -030 and -032",
+    "closure_discipline": "the live record reports FAIL and is accepted; the historical SAFE_COMPATIBLE bytes still produce CD_AGGREGATE_PASS_HIDES_BLOCKED_ROW",
+    "independence": "the risk-acceptance assignment produces no independence finding; the adjudication's unsupported independence assertion is still refused (8 findings, all A-ADJ-B85C)"
+  },
+  "non_claims": [
+    "this reconciliation does not establish SAFE_COMPATIBLE for any family, any mechanism discharge, any compatibility result or any cryptographic result",
+    "it does not re-run the b85c closure, the L7 workloads or any instrument",
+    "it does not establish the adjudication's independence; it records that the independence is not established",
+    "it does not make the Phase-18 failing court pass or close the open contract unit",
+    "it does not repair the artifacts/phase18/COURTS.json claim field; that defect is recorded",
+    "RISK_ACCEPTED is not a pass and is not a graduation; the release gate still refuses SAFE_COMPATIBLE without the section 7 closure"
+  ]
+}

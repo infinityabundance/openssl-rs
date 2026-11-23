@@ -823,29 +823,43 @@ class TypedClaims(unittest.TestCase):
         cls.document = etp_claims.load_json(CLAIMS_PATH)
         cls.etp0 = etp_claims.load_json(REPO_ROOT / "evidence/etp0/CLAIMS.json")
 
-    def test_every_etp0_claim_is_typed_without_a_verdict_change(self) -> None:
+    def test_every_etp0_claim_is_typed_without_a_silent_verdict_change(self) -> None:
         typed = {claim["id"]: claim for claim in self.document["claims"]}
         self.assertEqual(len(typed), len(self.etp0["claims"]))
         for original in self.etp0["claims"]:
             claim = typed[original["id"]]
             self.assertEqual(claim["property"], original["property"])
-            self.assertEqual(
-                claim["verdict"]["state"],
-                etp_claims.ETP0_VERDICT_MAP[original["verdict"]["state"]],
-            )
+            expected = etp_claims.ETP0_VERDICT_MAP[original["verdict"]["state"]]
+            if claim["verdict"]["state"] == expected:
+                continue
+            # The only permitted movement is an explicit ETP-T15 reconciliation
+            # of a CONTRADICTED claim to RISK_ACCEPTED or SUPERSEDED.
+            reconciliation = claim["reconciliation"]
+            self.assertEqual(reconciliation["resolution_owner"], "ETP-T15")
+            self.assertEqual(reconciliation["original_verdict"], original["verdict"]["state"])
+            self.assertEqual(reconciliation["classification"], claim["verdict"]["state"])
+            self.assertIn(claim["verdict"]["state"], {"RISK_ACCEPTED", "SUPERSEDED"})
 
-    def test_four_contradictions_keep_both_sides(self) -> None:
-        contradicted = [
+    def test_the_four_reconciliations_keep_both_sides(self) -> None:
+        reconciled = [
             claim
             for claim in self.document["claims"]
-            if claim["verdict"]["state"] == "CONTRADICTED"
+            if "reconciliation" in claim
         ]
-        self.assertEqual(len(contradicted), 4)
-        for claim in contradicted:
-            parties = claim["contradiction"]["parties"]
+        self.assertEqual(
+            sorted(claim["id"] for claim in reconciled),
+            ["ETP0-CLM-004", "ETP0-CLM-005", "ETP0-CLM-030", "ETP0-CLM-032"],
+        )
+        self.assertEqual(
+            [claim for claim in self.document["claims"]
+             if claim["verdict"]["state"] == "CONTRADICTED"],
+            [],
+        )
+        for claim in reconciled:
+            parties = claim["reconciliation"]["original_parties"]
             self.assertGreaterEqual(len(parties), 2)
             self.assertGreaterEqual(len({party["source"] for party in parties}), 2)
-            self.assertEqual(claim["contradiction"]["resolution_owner"], "ETP-T15")
+            self.assertEqual(claim["reconciliation"]["resolution_owner"], "ETP-T15")
 
     def test_committed_claims_validate_against_schema_and_tree(self) -> None:
         found = etp_claims.validate_document(
@@ -1437,6 +1451,113 @@ class TypedMeasureControls(unittest.TestCase):
                 for conflict in conflicts
             ),
             conflicts,
+        )
+
+
+class ReconciliationControls(unittest.TestCase):
+    """ETP-T15: a CONTRADICTED claim moves only through a bound reconciliation."""
+
+    def _claim(self, state: str = "RISK_ACCEPTED", obligation: bool = True) -> dict:
+        claim = base_claim()
+        claim["id"] = "ETP0-CLM-030"
+        claim["derived_from"] = {
+            "document": "evidence/etp0/CLAIMS.json",
+            "id": "ETP0-CLM-030",
+            "property": "memory-safety",
+            "verdict": "CONTRADICTED",
+        }
+        claim["verdict"] = {
+            "state": state,
+            "basis": "the record was reconciled to what its evidence supports",
+        }
+        claim["reconciliation"] = {
+            "resolution_owner": "ETP-T15",
+            "classification": state,
+            "original_verdict": "CONTRADICTED",
+            "original_parties": [
+                {
+                    "id": "party-a",
+                    "source": "docs/a.md",
+                    "assertion": "the first side asserted a pass",
+                    "asserted_verdict": "ESTABLISHED",
+                    "evidence": ["docs/a.md"],
+                },
+                {
+                    "id": "party-b",
+                    "source": "docs/b.md",
+                    "assertion": "the second side asserted a failure",
+                    "asserted_verdict": "REFUTED",
+                    "evidence": ["docs/b.md"],
+                },
+            ],
+            "historical_record": {"path": "docs/a.md", "sha256": "0" * 64},
+            "superseding_record": {"path": "docs/b.md", "sha256": "0" * 64},
+            "statement": "the first side is the wrong side and the record is superseded",
+        }
+        if obligation:
+            claim["obligations"] = [
+                {
+                    "id": "OBL-ACCEPTED",
+                    "statement": "the unresolved obligation the decision accepts",
+                    "state": "OPEN",
+                    "blocks": ["verdict"],
+                    "settled_by": "the mechanism discharge",
+                    "evidence": ["EV-01"],
+                }
+            ]
+        else:
+            claim["obligations"] = []
+        return claim
+
+    def test_bound_risk_acceptance_is_accepted(self) -> None:
+        self.assertEqual(refusals(base_document(self._claim())), [])
+
+    def test_risk_acceptance_without_an_obligation_is_refused(self) -> None:
+        assert_rule(
+            self,
+            base_document(self._claim(obligation=False)),
+            "EG_RISK_ACCEPTED_WITHOUT_OBLIGATION",
+            "obligations",
+        )
+
+    def test_reconciliation_cannot_raise_a_contradiction_to_a_positive(self) -> None:
+        claim = self._claim(state="ESTABLISHED")
+        claim["modality"] = "TESTED"
+        assert_rule(
+            self,
+            base_document(claim),
+            "EG_RECONCILIATION_PROMOTION",
+            "verdict/state",
+        )
+
+    def test_reconciliation_with_a_foreign_owner_is_refused(self) -> None:
+        claim = self._claim()
+        claim["reconciliation"]["resolution_owner"] = "SOMEONE-ELSE"
+        assert_rule(
+            self,
+            base_document(claim),
+            "EG_RECONCILIATION_UNBOUND",
+            "reconciliation",
+        )
+
+    def test_reconciliation_classification_must_match_the_verdict(self) -> None:
+        claim = self._claim()
+        claim["reconciliation"]["classification"] = "SUPERSEDED"
+        assert_rule(
+            self,
+            base_document(claim),
+            "EG_RECONCILIATION_UNBOUND",
+            "reconciliation",
+        )
+
+    def test_unreconciled_verdict_change_is_still_refused(self) -> None:
+        claim = self._claim()
+        del claim["reconciliation"]
+        assert_rule(
+            self,
+            base_document(claim),
+            "EG_DERIVED_VERDICT_MISMATCH",
+            "verdict/state",
         )
 
 

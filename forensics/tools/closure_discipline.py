@@ -904,9 +904,16 @@ def _aggregate_freezes() -> dict:
                       "safe_compatible.value", rows)
 
 
-def _aggregate_graduation() -> dict:
-    """A real aggregate that reports a pass while containing a not-established row."""
-    path = REPO_ROOT / "evidence" / "SAFE-COMPATIBLE-openssh-b85c.json"
+def _aggregate_graduation(path: Path | None = None,
+                         name: str = "safe-compatible-openssh-b85c") -> dict:
+    """A graduation/risk-acceptance aggregate and its visible dissent.
+
+    The live record is a risk acceptance and reports FAIL, so it is accepted.
+    The historical SAFE_COMPATIBLE bytes are audited separately as a control; a
+    record that reports PASS while carrying the NOT_ESTABLISHED dissent is
+    refused by ``_aggregate``.
+    """
+    path = path or REPO_ROOT / "evidence" / "SAFE-COMPATIBLE-openssh-b85c.json"
     doc = _load(path)
     rows = []
     verdict = doc.get("verdict") or {}
@@ -923,15 +930,15 @@ def _aggregate_graduation() -> dict:
         })
     mechanisms = doc.get("mechanism_verdicts") or {}
     if isinstance(mechanisms, dict):
-        for name, value in sorted(mechanisms.items()):
+        for mechanism_name, value in sorted(mechanisms.items()):
             if isinstance(value, dict):
                 value = value.get("state") or value.get("verdict")
             if isinstance(value, str) and value in BLOCKED_STATES:
                 rows.append({
-                    "id": f"mechanism[{name}]",
+                    "id": f"mechanism[{mechanism_name}]",
                     "state": value,
                     "blocked": True,
-                    "locator": f"mechanism_verdicts[{name}]",
+                    "locator": f"mechanism_verdicts[{mechanism_name}]",
                 })
     elif isinstance(mechanisms, list):
         for index, entry in enumerate(mechanisms):
@@ -962,7 +969,7 @@ def _aggregate_graduation() -> dict:
             "locator": "retraction.status",
             "detail": withdrawn_claim[:300],
         })
-    return _aggregate("safe-compatible-openssh-b85c", path, doc, overall,
+    return _aggregate(name, path, doc, overall,
                       "verdict.value", rows)
 
 

@@ -139,10 +139,14 @@ POSITIVE_VERDICTS = {"ESTABLISHED", "SAFE_COMPATIBLE"}
 GRADUATED_MODALITIES = {"PROOF_OBLIGATIONS_DISCHARGED", "BINARY_REFINEMENT_VERIFIED"}
 
 # Claim states whose required evidence is not examined for freshness. A claim
-# that is already refused is named once, and a `NOT_ESTABLISHED` claim asserts
-# that the property is not established, so its evidence supports no positive
-# conclusion for the release to withhold.
-NON_ASSERTIVE_CLAIM_STATES = set(FORBIDDING_VERDICTS) | {"SUPERSEDED", "NOT_ESTABLISHED"}
+# that is already refused is named once, a `NOT_ESTABLISHED` claim asserts that
+# the property is not established, and a `RISK_ACCEPTED` claim asserts a
+# governance decision rather than a property of the artefact. None of them can
+# support a positive conclusion for the release to withhold.  A `SAFE_COMPATIBLE`
+# verdict is not in this set and is still examined.
+NON_ASSERTIVE_CLAIM_STATES = set(FORBIDDING_VERDICTS) | {
+    "SUPERSEDED", "NOT_ESTABLISHED", "RISK_ACCEPTED"
+}
 
 # The identity-triage classes that may not support a current claim.
 TRIAGE_CLASSES = ("DERIVED", "DECLARED", "HISTORICAL", "UNCERTIFIABLE")
@@ -679,6 +683,15 @@ def self_test() -> int:
         if not hit:
             failures.append(f"{name}: expected {rule}, got {[r.rule for r in results.refusals]}")
 
+    def expect_detail(name: str, results: Results, rule: str, needle: str) -> None:
+        hit = any(r.rule == rule and needle in r.detail for r in results.refusals)
+        cases.append((name, f"{rule} naming {needle}"))
+        if not hit:
+            failures.append(
+                f"{name}: expected {rule} naming {needle}, got "
+                f"{[(r.rule, r.detail[:80]) for r in results.refusals]}"
+            )
+
     with tempfile.TemporaryDirectory(prefix="release-gate-self-test-") as temporary:
         tmp = Path(temporary)
         document = json.loads(CLAIMS.read_text(encoding="utf-8"))
@@ -713,7 +726,75 @@ def self_test() -> int:
             "RG_CLAIM_CONTRADICTED",
         )
 
-        # A positive verdict whose cited evidence the artefact declares withdrawn.
+        # The repaired record is accepted, and a SAFE_COMPATIBLE assertion over the
+        # same b85c record is still refused by the algebra.  This is the
+        # two-direction control ETP-T15 requires: accepting a RISK_ACCEPTED record
+        # is not accepting a SAFE_COMPATIBLE one.
+        repaired = json.loads(json.dumps(document))
+        repaired_claim = next(
+            claim for claim in repaired["claims"]
+            if claim["id"] == "ETP0-CLM-030"
+        )
+        repaired_path = tmp / "claims-repaired.json"
+        repaired_path.write_text(json.dumps(repaired), encoding="utf-8")
+        repaired_results = check_claims(ROOT, repaired_path, CLAIM_SCHEMA, False)
+        cases.append(("repaired risk-accepted claim (positive control)", "no claim refusal"))
+        if any(r.rule.startswith("RG_CLAIM_") for r in repaired_results.refusals):
+            failures.append(
+                "repaired risk-accepted claim (positive control): unexpected claim refusals "
+                f"{[r.rule for r in repaired_results.refusals]}"
+            )
+        promoted = json.loads(json.dumps(document))
+        promoted_claim = next(
+            claim for claim in promoted["claims"]
+            if claim["id"] == "ETP0-CLM-030"
+        )
+        promoted_claim["verdict"] = {
+            "state": "SAFE_COMPATIBLE",
+            "basis": "self-test fixture: assert the withdrawn graduation as a graduated property",
+        }
+        promoted_claim.pop("reconciliation", None)
+        promoted_claim["closure"] = {
+            "dependencies": ["evidence/closure-ssh-b85c.json"],
+            "unresolved_dependencies": ["closure-ssh-b85c: verdict.safe_compatible=false"],
+            "complete": False,
+        }
+        promoted_path = tmp / "claims-promoted.json"
+        promoted_path.write_text(json.dumps(promoted), encoding="utf-8")
+        expect_detail(
+            "safe-compatible assertion over the withdrawn graduation",
+            check_claims(ROOT, promoted_path, CLAIM_SCHEMA, False),
+            "RG_CLAIMS_INVALID",
+            "EG_GRADUATED_WITH_OPEN_OBLIGATION",
+        )
+
+        # A claim that is derived from a CONTRADICTED ETP-0 verdict may not be
+        # promoted; only a bound ETP-T15 reconciliation to RISK_ACCEPTED or
+        # SUPERSEDED is admitted, and the positive direction is refused.
+        promoted_with_reconciliation = json.loads(json.dumps(document))
+        promoted_claim = next(
+            claim for claim in promoted_with_reconciliation["claims"]
+            if claim["id"] == "ETP0-CLM-030"
+        )
+        promoted_claim["verdict"] = {
+            "state": "SAFE_COMPATIBLE",
+            "basis": "self-test fixture: reconciliation used to raise a contradiction",
+        }
+        promoted_claim["closure"] = {
+            "dependencies": ["evidence/closure-ssh-b85c.json"],
+            "unresolved_dependencies": [],
+            "complete": True,
+        }
+        promoted_recon_path = tmp / "claims-promoted-reconciliation.json"
+        promoted_recon_path.write_text(
+            json.dumps(promoted_with_reconciliation), encoding="utf-8"
+        )
+        expect_detail(
+            "reconciliation used as a promotion",
+            check_claims(ROOT, promoted_recon_path, CLAIM_SCHEMA, False),
+            "RG_CLAIMS_INVALID",
+            "EG_RECONCILIATION_PROMOTION",
+        )
         withdrawn = json.loads(json.dumps(document))
         for claim in withdrawn["claims"]:
             if claim["verdict"]["state"] == "ESTABLISHED" and claim.get("evidence"):

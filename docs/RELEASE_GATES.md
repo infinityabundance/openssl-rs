@@ -232,7 +232,13 @@ A release candidate passes only when all six items pass:
    triage marks `UNCERTIFIABLE` (`RG_CLAIM_UNCERTIFIABLE_EVIDENCE`) or
    `HISTORICAL` (`RG_CLAIM_HISTORICAL_EVIDENCE`). Both rules name the artefact;
    a `PARTIAL` claim is a current assertion and is included, while a claim
-   already refused by its verdict is named once;
+   already refused by its verdict is named once. A `RISK_ACCEPTED` claim (an
+   authorised principal decision to proceed with named unresolved obligations)
+   is recorded but does not satisfy the claim set as a positive result; a
+   `SAFE_COMPATIBLE` verdict without the §7 closure is still refused by the
+   algebra (`EG_GRADUATED_WITH_OPEN_OBLIGATION`,
+   `EG_GRADUATED_WITHOUT_CLOSURE`), and a reconciliation may not raise a
+   contradicted claim to it (`EG_RECONCILIATION_PROMOTION`);
 2b. **identity triage** — `evidence/etp-t9/IDENTITY-TRIAGE.json` is present and
    bound to the committed dependency registry. An absent triage is
    `RG_TRIAGE_MISSING`; one bound to another registry, with a class outside the

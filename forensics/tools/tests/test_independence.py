@@ -516,8 +516,27 @@ class PopulationAndIdentity(unittest.TestCase):
         self.assertEqual(ind.summarize(copy.deepcopy(COMMITTED)), COMMITTED["summary"])
 
     def test_seed_reproduces_the_committed_record_byte_for_byte(self) -> None:
-        seeded = ind.seed(REPO_ROOT, COMMITTED["generated_utc"])
+        seeded = ind.seed(
+            REPO_ROOT,
+            COMMITTED["generated_utc"],
+            REPO_ROOT / "evidence/etp-t15/history/SAFE-COMPATIBLE-openssh-b85c.json",
+            REPO_ROOT / "evidence/etp-t15/history/claims.before-reconciliation.json",
+        )
         self.assertEqual(ind.dump_json(seeded), ind.dump_json(COMMITTED))
+
+    def test_seed_from_the_live_record_is_a_risk_acceptance(self) -> None:
+        seeded = ind.seed(REPO_ROOT, COMMITTED["generated_utc"])
+        release = next(
+            item for item in seeded["assignments"]
+            if item["id"] == "A-REL-OPENSSH-B85C"
+        )
+        self.assertEqual(release["asserted_verdict"], "RISK_ACCEPTED")
+        self.assertEqual(release["class"], "ORDINARY_CLAIM")
+        self.assertEqual(release["independence_required"], [])
+        self.assertEqual(
+            seeded["aggregate"]["per_assignment"]["A-REL-OPENSSH-B85C"]["verdict"],
+            "NOT_ESTABLISHED",
+        )
         with tempfile.TemporaryDirectory() as directory:
             first = Path(directory) / "first.json"
             second = Path(directory) / "second.json"
