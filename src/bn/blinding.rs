@@ -189,6 +189,20 @@ impl Drop for TempBn {
     }
 }
 
+/// Allocate one temporary `BIGNUM`, honouring the test-only allocation-failure injection.
+///
+/// The injection is `#[cfg(test)]`-only and thread-local; in a release build this is exactly
+/// `BN_new()`. A `NULL` answer is a normal fallible-allocation result that every caller below
+/// already translates into a refusal before any publication.
+fn temp_bn_new() -> *mut BigNum {
+    #[cfg(test)]
+    if test_hooks::take_bn_alloc_failure() {
+        return core::ptr::null_mut();
+    }
+    // SAFETY: `BN_new` takes no pointers.
+    unsafe { BN_new() }
+}
+
 /// Publish `src` into the member `slot` points at.
 ///
 /// The old value (when there is one) is swapped into `src` and cleansed. The
@@ -628,8 +642,8 @@ pub unsafe extern "C" fn BN_BLINDING_update(b: *mut Blinding, ctx: *mut BnCtx) -
                 // answers `b` for a non-null `b` and so cannot be used here.
                 ok = create_param_impl(bp, core::ptr::null(), None, core::ptr::null_mut(), ctx);
             } else if ((*bp).flags & BN_BLINDING_NO_UPDATE) == 0 {
-                let mut sq = TempBn::new(BN_new());
-                let mut inv_sq = TempBn::new(BN_new());
+                let mut sq = TempBn::new(temp_bn_new());
+                let mut inv_sq = TempBn::new(temp_bn_new());
                 if sq.get().is_null() || inv_sq.get().is_null() {
                     ok = false;
                 } else {
@@ -921,8 +935,8 @@ unsafe fn create_param_impl(
     // SAFETY: every pointer read below is null-or-live per this function's
     // contract, and every write is to a member of `ret` this frame may mutate.
     unsafe {
-        let mut a = TempBn::new(BN_new());
-        let mut ai = TempBn::new(BN_new());
+        let mut a = TempBn::new(temp_bn_new());
+        let mut ai = TempBn::new(temp_bn_new());
         if a.get().is_null() || ai.get().is_null() {
             return false;
         }
@@ -931,6 +945,10 @@ unsafe fn create_param_impl(
         // supplied one, otherwise the context's existing exponent.
         let mut new_e = TempBn::new(core::ptr::null_mut());
         if !e.is_null() {
+            #[cfg(test)]
+            if test_hooks::take_bn_alloc_failure() {
+                return false;
+            }
             new_e = TempBn::new(BN_dup(e));
             if new_e.get().is_null() {
                 return false;
@@ -1030,6 +1048,7 @@ pub(crate) mod test_hooks {
     std::thread_local! {
         static BETWEEN_SQUARES: Cell<bool> = const { Cell::new(false) };
         static AFTER_DRAW: Cell<bool> = const { Cell::new(false) };
+        static BN_ALLOC_FAILURES: Cell<usize> = const { Cell::new(0) };
     }
 
     /// Disarms the hook when the test leaves scope, including on a panic.
@@ -1039,7 +1058,29 @@ pub(crate) mod test_hooks {
         fn drop(&mut self) {
             BETWEEN_SQUARES.with(|f| f.set(false));
             AFTER_DRAW.with(|f| f.set(false));
+            BN_ALLOC_FAILURES.with(|f| f.set(0));
         }
+    }
+
+    /// Make the next `n` temporary-`BIGNUM` allocations answer `NULL`, so a test can show
+    /// that the blinding object is unchanged on each new failure site. The guard clears any
+    /// unspent failures when it leaves scope, including on a panic.
+    pub(crate) fn fail_next_bn_allocations(n: usize) -> Armed {
+        BN_ALLOC_FAILURES.with(|f| f.set(n));
+        Armed
+    }
+
+    /// Consume one pending temporary-allocation failure, if any.
+    pub(crate) fn take_bn_alloc_failure() -> bool {
+        BN_ALLOC_FAILURES.with(|f| {
+            let pending = f.get();
+            if pending == 0 {
+                false
+            } else {
+                f.set(pending - 1);
+                true
+            }
+        })
     }
 
     /// Panic between the inverse square and the factor square in
@@ -1614,6 +1655,145 @@ mod tests {
         assert_eq!(unsafe { BN_BLINDING_update(b, ctx) }, 1);
 
         // SAFETY: all four were allocated in this test.
+        unsafe {
+            BN_BLINDING_free(b);
+            BN_CTX_free(ctx);
+            BN_free(keep);
+            BN_free(expect);
+            BN_free(d);
+            BN_free(e);
+            BN_free(m);
+        }
+    }
+
+    /// Snapshot the three members a failed update or re-creation must leave alone.
+    ///
+    /// # Safety
+    /// `b` is a live `BN_BLINDING` whose `a`, `ai` and `e` are either NULL or live.
+    unsafe fn snapshot_members(b: *mut Blinding) -> (*mut BigNum, *mut BigNum, *mut BigNum, c_int) {
+        // SAFETY: `b` is live per this helper's contract; `BN_dup` accepts NULL.
+        unsafe {
+            (
+                BN_dup((*b).a),
+                BN_dup((*b).ai),
+                BN_dup((*b).e),
+                (*b).counter,
+            )
+        }
+    }
+
+    /// Compare a snapshot with the live members.
+    ///
+    /// # Safety
+    /// `b` is live and the three snapshots are NULL or live.
+    unsafe fn members_equal(
+        b: *mut Blinding,
+        a: *const BigNum,
+        ai: *const BigNum,
+        e: *const BigNum,
+        counter: c_int,
+    ) -> bool {
+        // SAFETY: `b` is live and `BN_cmp` accepts NULL on either side.
+        unsafe {
+            BN_cmp((*b).a, a) == 0
+                && BN_cmp((*b).ai, ai) == 0
+                && BN_cmp((*b).e, e) == 0
+                && (*b).counter == counter
+        }
+    }
+
+    /// **Allocation failure at each new temporary site leaves the blinding unchanged.**
+    ///
+    /// The failure-atomic repairs add two temporary `BIGNUM`s to `BN_BLINDING_update`
+    /// and make `BN_BLINDING_create_param` allocate its factor, inverse and exponent
+    /// duplicate before publishing any of them. Each site is forced to fail in turn;
+    /// the call answers its documented failure value, every member (including the
+    /// counter) is the value it had before, and a caller-shaped round trip still
+    /// cancels.
+    #[test]
+    fn a_temporary_allocation_failure_leaves_the_blinding_unchanged() {
+        let _guard = crate::test_support::lock_global_state();
+        let m = hex(MODULUS);
+        let e = hex("010001");
+        let d = hex(PRIVATE_EXPONENT);
+        let expect = hex("00");
+        let keep = hex("123456789abcdef0fedcba9876543210");
+        // SAFETY: `BN_CTX_new` takes no pointers.
+        let ctx = unsafe { BN_CTX_new() };
+        // SAFETY: every argument is live.
+        let b = unsafe {
+            BN_BLINDING_create_param(
+                core::ptr::null_mut(),
+                e,
+                m,
+                ctx,
+                None,
+                core::ptr::null_mut(),
+            )
+        };
+        assert!(!b.is_null());
+        // SAFETY: all four are live.
+        unsafe { assert_eq!(BN_mod_exp(expect, keep, d, m, ctx), 1) };
+
+        // `BN_BLINDING_update`'s square arm allocates `sq` and then `inv_sq`.
+        for fail_at in 1..=2 {
+            // SAFETY: `b` is live.
+            let (a0, ai0, e0, counter0) = unsafe { snapshot_members(b) };
+            let hook = test_hooks::fail_next_bn_allocations(fail_at);
+            // SAFETY: `b` and `ctx` are live; the square arm is the one taken because
+            // a fresh context's counter is -1 and the factors are present.
+            let rc = unsafe { BN_BLINDING_update(b, ctx) };
+            drop(hook);
+            assert_eq!(rc, 0, "update answers 0 for failure site {fail_at}");
+            assert!(
+                // SAFETY: `b` is live and the snapshots are NULL or live.
+                unsafe { members_equal(b, a0, ai0, e0, counter0) },
+                "update failure site {fail_at} left the context unchanged"
+            );
+            // SAFETY: every pointer is live.
+            assert!(unsafe { round_trip_cancels(b, m, d, ctx, keep, expect) });
+            // SAFETY: the three snapshots were allocated above.
+            unsafe {
+                BN_free(a0);
+                BN_free(ai0);
+                BN_free(e0);
+            }
+        }
+
+        // `BN_BLINDING_create_param` allocates `a`, `ai` and the exponent duplicate.
+        for fail_at in 1..=3 {
+            // SAFETY: `b` is live.
+            let (a0, ai0, e0, counter0) = unsafe { snapshot_members(b) };
+            let hook = test_hooks::fail_next_bn_allocations(fail_at);
+            // SAFETY: `b`, `e` and `ctx` are live; `m` is not read on the `b != NULL` arm.
+            let ret = unsafe {
+                BN_BLINDING_create_param(
+                    b,
+                    e,
+                    core::ptr::null_mut(),
+                    ctx,
+                    None,
+                    core::ptr::null_mut(),
+                )
+            };
+            drop(hook);
+            assert_eq!(ret, b, "create_param answers the caller's context");
+            assert!(
+                // SAFETY: `b` is live and the snapshots are NULL or live.
+                unsafe { members_equal(b, a0, ai0, e0, counter0) },
+                "create_param failure site {fail_at} left the context unchanged"
+            );
+            // SAFETY: every pointer is live.
+            assert!(unsafe { round_trip_cancels(b, m, d, ctx, keep, expect) });
+            // SAFETY: the three snapshots were allocated above.
+            unsafe {
+                BN_free(a0);
+                BN_free(ai0);
+                BN_free(e0);
+            }
+        }
+
+        // SAFETY: every pointer was allocated in this test.
         unsafe {
             BN_BLINDING_free(b);
             BN_CTX_free(ctx);

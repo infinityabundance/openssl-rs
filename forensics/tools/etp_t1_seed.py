@@ -209,8 +209,8 @@ node(
     {
         "path": "evidence/haz-15/observables.json",
         "span": "finding_prefix/finding_postfix",
-        "quote": "the external-key oracle is demonstrated on both implementations before the "
-                 "correction and is absent from the corrected candidate",
+        "quote": "the content oracle is removed on the return-sign, buffer and error-queue "
+                 "axes, while the returned length remains a distinguishing channel",
         "quote_kind": "fragment",
         "sha256": hashlib.sha256(_HAZ15_EVIDENCE.read_bytes()).hexdigest(),
         "bound_commit": "478bf17ec1aa9022a784009a999a10e4eb4c07c4",
@@ -219,8 +219,9 @@ node(
     },
     kind="differential_receipt",
     present=True,
-    quality="four ciphertexts against the candidate and the pinned authority; return value, "
-            "output bytes and error queue only, no timing measurement",
+    quality="four ciphertexts against the candidate and the pinned authority, plus a "
+            "64-block length population; return value, output bytes, error queue and length "
+            "only, no timing measurement",
 )
 
 # ---------------------------------------------------------------- requirements
@@ -657,10 +658,13 @@ for oid, item, statement, settled, impls, blocks in QUEUE_OBLIGATIONS:
 ETP_T2_OBLIGATIONS = [
     ("OBL-RSA-EXTKEY-ORACLE", "ETP-T2 HAZ-15",
      "The authority's external-key PKCS#1 v1.5 substitution is a padding oracle. The candidate "
-     "corrects it (implicit rejection with the KDK derived from the decrypted block) and records "
-     "a deliberate divergence from the authority (D-RSA-EXTKEY-ORACLE-1).",
-     "An independent adjudication of evidence/haz-15/observables.json at the candidate that "
-     "lands the correction, and a consumer replay of the divergence.",
+     "keeps the implicit-rejection arm and keys the synthetic answer with private CRT material "
+     "or a per-key RNG secret (the earlier decrypted-block hash is withdrawn as "
+     "attacker-computable); the returned length still distinguishes the classes, so the hazard "
+     "is only partially mitigated (D-RSA-EXTKEY-ORACLE-1).",
+     "Independent adjudication of evidence/haz-15/{observables.json,KDK-CORRECTION.md} at the "
+     "candidate that lands the correction, a consumer replay of the divergence, and a "
+     "resolution of the returned-length channel.",
      ["REL-OPENSSH-B85C"], ["IMP-RSA"]),
     ("OBL-PANIC-ATOMICITY", "ETP-T2 HAZ-16",
      "guard_ffi prevents a panic from unwinding into C. Three stateful security-relevant "

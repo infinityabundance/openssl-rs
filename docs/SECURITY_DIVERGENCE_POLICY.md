@@ -2070,20 +2070,37 @@ D334's state, when the column was recorded as a NULL rather than resolved.
   `evidence/haz-15/observables.json` records it for the pinned authority DSO.
 - **Crate:** keeps `RSA_PKCS1_PADDING` and takes
   `ossl_rsa_padding_check_PKCS1_type_2`. When the key holds `d`, the KDK comes from the existing
-  `derive_kdk`; when it does not, `derive_external_kdk` computes SHA-256 over the decrypted block.
-  The block is secret (the attacker cannot compute `c^d mod n`), deterministic for one ciphertext,
-  and different for a different ciphertext, so the synthetic answer is unpredictable and a
-  repeated query of one ciphertext answers the same bytes. Valid and invalid padding then answer
-  the same observable set: a positive return, bytes in the output buffer, an empty error queue.
+  `derive_kdk`. When it does not, `derive_external_kdk` keys the PRF with private key material:
+  `SHA-256(KEY_LABEL || p || q)` when the object holds the CRT primes, otherwise a 32-byte secret
+  drawn with `RAND_priv_bytes` at first use and stored against the object. RNG or allocation
+  failure is the defined refusal, never a fallback to a publicly-derivable value. Every **new**
+  derivation is domain-separated by its own label; the `d`-present path keeps the authority's own
+  label-free construction so the internal-key synthetic bytes stay byte-identical. **The earlier
+  SHA-256(decrypted block) construction is
+  withdrawn:** for an attacker-chosen block `m` and `c = m^e mod n` the attacker knows `m`, so the
+  hash — and the synthetic answer it keyed — is attacker-computable, which does not establish the
+  keyed pseudorandomness implicit rejection needs. Valid and invalid padding answer a positive
+  return, bytes in the output buffer and an empty error queue; the returned **length** is still a
+  channel (see below).
 - **Reason:** `AGENTS.md` §17 — a known vulnerability mechanism is eliminated and the
   compatibility consequence recorded, not imitated; §8 — a faithful port of a security defect is
-  not a compatibility result. The differential harness shows the old observable set rather than
-  inferring it, and the two unit tests pin the correction.
+  not a compatibility result. The first correction's argument was rejected on review and is
+  retracted rather than reworded (`evidence/haz-15/KDK-CORRECTION.md`); the differential harness
+  and the unit tests pin the observable set, and the length population is measured rather than
+  assumed absent.
 - **Compatibility consequence:** an application that relied on distinguishing an invalid
-  external-key PKCS#1 v1.5 padding from a valid one can no longer do so: the invalid block now
-  returns a positive length and a synthetic message, and no error is left on the queue. This is
-  the behaviour the internal-key path has had since implicit rejection was introduced; the two
-  paths now agree. An application that genuinely needs the refusal can pass the documented
+  external-key PKCS#1 v1.5 padding from a valid one can no longer do so **through the return sign,
+  the output-buffer state or the error queue**: the invalid block now returns a positive length
+  and a synthetic message, and no error is left on the queue. This is the behaviour the
+  internal-key path has had since implicit rejection was introduced. The **returned length** is
+  not made uniform: 64 invalid blocks on the pinned 2048-bit key answered 58 distinct synthetic
+  lengths and none of the valid 8/16/32/48 lengths, so an application that exposes the returned
+  length — a TLS server expecting a 48-byte pre-master secret, for example — still has a
+  distinguisher. That is a finding, not a pass; it is recorded in
+  `evidence/haz-15/KDK-CORRECTION.md` and it is why `HAZ-15` is `CLAIMED_NO_EVIDENCE`, not
+  discharged. The generic check cannot fix it without changing the API's length contract; the
+  authority's own answer for TLS is the fixed-length `ossl_rsa_padding_check_PKCS1_type_2_TLS`.
+  An application that genuinely needs the refusal can pass the documented
   `RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING` selector (`include/openssl/rsa.h:204`, value 8), which
   still selects the refusing check, so the authority's behaviour remains available as an explicit
   opt-in. Every other selector, the private-encrypt and public-decrypt signature paths, the length
@@ -2092,10 +2109,15 @@ D334's state, when the column was recorded as a NULL rather than resolved.
   from the authority's for a reason unrelated to this divergence (the authority's `goto err`
   skips the trailing padding record; the candidate's `break` does not). That difference predates
   this correction, is independent of padding validity, and is recorded in
-  `evidence/haz-15/REPORT.md` without being repaired here.
-- **Evidence:** `evidence/haz-15/REPORT.md` and `evidence/haz-15/observables.json` (four
-  ciphertexts, candidate before and after, pinned authority); the harness
-  `forensics/haz15/haz15_harness.c`; and the tests
-  `rsa::ossl::tests::external_key_pkcs1_decryption_does_not_distinguish_padding` (fails on the
-  authority's behaviour) and `rsa::ossl::tests::internal_key_pkcs1_decryption_is_unchanged`.
+  `evidence/haz-15/REPORT.md` without being repaired here. The returned length is also unchanged:
+  it is the generic check's own synthetic length, and it is the remaining channel.
+- **Evidence:** `evidence/haz-15/KDK-CORRECTION.md` (the retracted argument, the new construction,
+  the length population), `evidence/haz-15/REPORT.md` and `evidence/haz-15/observables.json` (four
+  ciphertexts, candidate before and after, pinned authority, plus the length population); the
+  harness `forensics/haz15/haz15_harness.c`; and the tests
+  `rsa::ossl::tests::the_external_synthetic_answer_is_not_attacker_computable` (fails on the
+  withdrawn construction), `the_public_only_key_gets_a_secret_that_is_not_the_public_hash`,
+  `the_external_length_channel_is_measured`,
+  `external_key_pkcs1_decryption_does_not_distinguish_padding` and
+  `internal_key_pkcs1_decryption_is_unchanged`.
 - **Trigger:** none planned: permanent, deliberate safety divergence.

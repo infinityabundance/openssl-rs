@@ -65,9 +65,11 @@
 //! * **`rsa_ossl_private_decrypt` computes the KDK *after* unblinding and *before* the padding
 //!   check**, which is what makes the implicit rejection's synthetic message a function of the
 //!   private exponent and the ciphertext rather than of the blinding. **For an external key the
-//!   KDK is derived from the decrypted block instead**, because the library does not hold the
-//!   private exponent; that is the one deliberate divergence from the authority on this path and
-//!   it is recorded in `docs/SECURITY_DIVERGENCE_POLICY.md` (`D-RSA-EXTKEY-ORACLE-1`).
+//!   KDK is derived from private key material and the ciphertext** — from the CRT primes when the
+//!   object holds them, otherwise from a per-key random secret established at first use. The
+//!   earlier revision hashed the decrypted block, which is attacker-computable for a
+//!   ciphertext the attacker constructed; that construction is withdrawn. The divergence from the
+//!   authority is recorded in `docs/SECURITY_DIVERGENCE_POLICY.md` (`D-RSA-EXTKEY-ORACLE-1`).
 //! ## What is deliberately not here
 //!
 //! * **`rsa_ossl_s390x_mod_exp`** (`:1198-1206`) is inside `#ifdef S390X_MOD_EXP`, which is not
@@ -100,6 +102,8 @@ use core::ptr;
 use core::sync::atomic::AtomicUsize;
 use core::sync::atomic::{AtomicPtr, Ordering};
 
+use std::sync::Mutex;
+
 use crate::bn::arith::{
     BN_add, BN_cmp, BN_div, BN_mod_add, BN_mod_inverse, BN_mul, BN_sub, BN_ucmp,
 };
@@ -116,7 +120,7 @@ use crate::bn::mont::{
     BN_MONT_CTX_free, BN_MONT_CTX_set_locked, BN_from_montgomery, BN_mod_exp_mont,
     BN_mod_exp_mont_consttime_x2, BN_mod_mul_montgomery, BN_to_montgomery,
 };
-use crate::digest::sha2::SHA256_DIGEST_LENGTH;
+use crate::digest::sha2::{SHA256, SHA256_DIGEST_LENGTH};
 use crate::evp::digest::{EVP_Digest, EVP_MD_fetch, EVP_MD_free, EvpMd};
 use crate::evp::pkey_ctx::{
     RSA_NO_PADDING, RSA_PKCS1_OAEP_PADDING, RSA_PKCS1_PADDING, RSA_X931_PADDING,
@@ -124,10 +128,12 @@ use crate::evp::pkey_ctx::{
 use crate::mac::hmac::{
     HMAC_CTX_free, HMAC_CTX_new, HMAC_Final, HMAC_Init_ex, HMAC_Update, HmacCtx,
 };
+use crate::rand::rand_lib::RAND_priv_bytes;
 use crate::runtime::constant_time::constant_time_msb_u32;
 use crate::runtime::err::err_sites;
 use crate::runtime::err::{err_clear_last_constant_time, raise_site};
 use crate::runtime::owned_buf::OwnedBuf;
+use crate::runtime::secret::{SecretArray, SecretBuf};
 use crate::runtime::sparse_array::{
     ossl_sa_doall_arg, ossl_sa_free, ossl_sa_get, ossl_sa_new, ossl_sa_set, OpenSslSa, OsslUintMax,
 };
@@ -148,6 +154,7 @@ use super::{
     RSA_padding_check_PKCS1_type_2, RSA_padding_check_X931,
 };
 use super::{Rsa, RsaMethod};
+use crate::runtime::mem::cleanse;
 use crate::runtime::mem_coords::SeamFile;
 
 /// The allocation-tracking `file` argument for this unit's allocations.
@@ -210,7 +217,7 @@ const OPENSSL_RSA_MAX_PUBEXP_BITS: c_int = 64;
 /// the caller that passes it. The authority also *substitutes* it for `RSA_PKCS1_PADDING` when the
 /// key is external; this crate does not, because that substitution is the padding oracle recorded
 /// as HAZ-15. An external key now takes the same implicit-rejection arm as an internal one, with
-/// the KDK derived from the decrypted block.
+/// the KDK derived from private key material and the ciphertext (see [`derive_external_kdk`]).
 ///
 /// It is declared here rather than beside the other seven in `src/evp/pkey_ctx.rs` because this
 /// file is its only reader in the crate: the ctrl-string map and the providers never name it.
@@ -1267,6 +1274,10 @@ unsafe fn derive_kdk(
         // The authority's `err:` label.
         HMAC_CTX_free(hmac);
         EVP_MD_free(md);
+        // `d_hash` is `SHA-256(d)`: a value from which the KDK is keyed. The authority leaves it
+        // on the stack; this crate wipes it on every exit (a safety improvement, not an
+        // observable change).
+        cleanse(d_hash.as_mut_ptr(), d_hash.len());
         ret
     }
 }
@@ -1275,45 +1286,265 @@ unsafe fn derive_kdk(
 // `crypto/rsa/rsa_ossl.c:527-800` — the two decryption entry points
 // ---------------------------------------------------------------------------------------------
 
-/// The external-key KDK: SHA-256 over the decrypted block.
+/// Domain-separation label for the CRT-derived PRF key (`SHA-256(label || p || q)`).
+const EXT_KDK_KEY_LABEL: &[u8] = b"openssl-rs/rsa/ext-kdk/crt-key/v1";
+/// Domain-separation label for the PRF itself (`HMAC(key, label || ciphertext)`).
+const EXT_KDK_MAC_LABEL: &[u8] = b"openssl-rs/rsa/ext-kdk/ciphertext/v1";
+/// Domain-separation label for the per-object random-secret PRF. Distinct from the CRT label so a
+/// random secret and a CRT-derived key can never be used under the same derivation.
+const EXT_KDK_RANDOM_MAC_LABEL: &[u8] = b"openssl-rs/rsa/ext-kdk/random-ciphertext/v1";
+/// The secret width: one SHA-256 output.
+const EXT_KDK_SECRET_LEN: usize = SHA256_DIGEST_LENGTH as usize;
+
+/// The external-key KDK: a PRF, keyed by secret material, over the ciphertext.
 ///
-/// [`derive_kdk`] needs `d`; a key with `RSA_FLAG_EXT_PKEY` does not hold it. The decrypted block
-/// `m = c^d mod n` is secret (the attacker cannot compute it), deterministic for a given ciphertext,
-/// and different for a different ciphertext, which is what the implicit rejection needs: a repeated
-/// query of one ciphertext answers the same synthetic bytes, and a different ciphertext answers
-/// different ones. The KDK is used only as the HMAC key of [`ossl_rsa_prf`], so a 32-byte hash is
-/// the required shape.
+/// [`derive_kdk`] needs `d`; a key with `RSA_FLAG_EXT_PKEY` does not hold it. The synthetic
+/// message must nevertheless be **unpredictable to an attacker who knows the ciphertext and the
+/// public key**, and deterministic for one ciphertext, which is what the implicit rejection needs.
+/// The previous revision keyed the PRF with `SHA-256(decrypted block)`. That value is not secret
+/// for a ciphertext the attacker constructed (`c = m^e mod n` returns the known `m`), so the
+/// attacker could compute the synthetic answer and recover the padding-validity distinction. The
+/// construction is therefore replaced, in this order:
+///
+/// 1. **Private CRT material.** When the object holds `p` and `q`, the PRF key is
+///    `SHA-256(KEY_LABEL || p || q)`. Both primes are private to the key holder and never leave
+///    the object, so the attacker cannot compute the key. The derivation is deterministic for the
+///    key material, so the same ciphertext answers the same bytes even across two `RSA` objects
+///    built from that material.
+/// 2. **A per-key random secret.** A key that holds no private material at all (the
+///    engine-backed `(n, e)` shape) has nothing secret to derive from. At first use a 32-byte
+///    secret is drawn with [`RAND_priv_bytes`] and stored against the object; the PRF key is that
+///    secret. RNG failure and allocation failure answer the defined error (a zero return, which
+///    the caller turns into the ordinary refusal) — there is **no** fallback to a
+///    publicly-derivable value. The secret is owned by the side table, cleansed when the entry is
+///    released, and released when the `RSA` object is destroyed. Two objects built from the same
+///    public-only material therefore receive independent secrets; the synthetic answer is
+///    deterministic per object and ciphertext, not across objects. That residual is recorded in
+///    `evidence/haz-15/KDK-CORRECTION.md` rather than hidden.
+///
+/// Every derivation is domain-separated by a label kept distinct from the padding check's own
+/// `"message"`/`"length"` labels, and the KDK is used for nothing except [`ossl_rsa_prf`].
 ///
 /// # Safety
-/// `block` is readable for `num` bytes; `kdk` is writable for `SHA256_DIGEST_LENGTH` bytes.
+/// `rsa` is a live object; `from` is readable for `flen` bytes; `kdk` is writable for
+/// `SHA256_DIGEST_LENGTH` bytes.
 unsafe fn derive_external_kdk(
-    libctx: *mut c_void,
-    block: *const c_uchar,
-    num: c_int,
+    rsa: *mut Rsa,
+    from: *const c_uchar,
+    flen: c_int,
     kdk: *mut c_uchar,
 ) -> c_int {
-    // SAFETY: the caller's contract.
+    // SAFETY: `rsa` and its fields are live per this function's `# Safety` section.
     unsafe {
-        let md = EVP_MD_fetch(libctx, c"sha256".as_ptr(), ptr::null());
-        if md.is_null() {
+        if flen < 0 {
             return 0;
         }
-        // SAFETY: `block` is readable for `num` bytes and `kdk` is writable for the digest length,
-        // both per this function's `# Safety` section; `md` is the live fetched digest.
-        let ok = EVP_Digest(
-            block.cast::<c_void>(),
-            num as usize,
+        if !(*rsa).p.is_null() && !(*rsa).q.is_null() {
+            return if derive_crt_kdk(rsa, from, flen, kdk) {
+                1
+            } else {
+                0
+            };
+        }
+        let Some(secret) = per_key_ext_kdk_secret(rsa) else {
+            return 0;
+        };
+        if hmac_sha256_kdf(
+            (*rsa).libctx,
+            secret.as_ptr(),
+            EXT_KDK_SECRET_LEN,
+            EXT_KDK_RANDOM_MAC_LABEL,
+            from,
+            flen as usize,
             kdk,
-            ptr::null_mut(),
-            md,
-            ptr::null_mut(),
-        ) > 0;
-        // SAFETY: `md` is this call's fetched digest and nothing else holds it.
-        EVP_MD_free(md);
-        if ok {
+        ) {
             1
         } else {
             0
+        }
+    }
+}
+
+/// The PRF key derived once from the CRT primes: `SHA-256(KEY_LABEL || p || q)`.
+///
+/// The two primes are written at their own widths, so the length is unambiguous without a
+/// separate encoding. The concatenation is held in a [`SecretBuf`] and cleansed on every exit;
+/// the resulting key is a stack [`SecretArray`], likewise cleansed.
+///
+/// # Safety
+/// `rsa` is live and holds non-NULL `p` and `q`; `from` is readable for `flen` bytes; `kdk` is
+/// writable for `SHA256_DIGEST_LENGTH` bytes.
+unsafe fn derive_crt_kdk(
+    rsa: *mut Rsa,
+    from: *const c_uchar,
+    flen: c_int,
+    kdk: *mut c_uchar,
+) -> bool {
+    // SAFETY: `rsa` is live per this function's `# Safety` section.
+    unsafe {
+        let p = (*rsa).p;
+        let q = (*rsa).q;
+        let p_len = bn_num_bytes(p);
+        let q_len = bn_num_bytes(q);
+        if p_len <= 0 || q_len <= 0 {
+            return false;
+        }
+        let total = EXT_KDK_KEY_LABEL.len() + p_len as usize + q_len as usize;
+        let Some(mut material) = SecretBuf::<u8>::try_zeroed(total) else {
+            return false;
+        };
+        material[..EXT_KDK_KEY_LABEL.len()].copy_from_slice(EXT_KDK_KEY_LABEL);
+        let p_at = EXT_KDK_KEY_LABEL.len();
+        let q_at = p_at + p_len as usize;
+        if BN_bn2binpad(p, material[p_at..].as_mut_ptr(), p_len) != p_len
+            || BN_bn2binpad(q, material[q_at..].as_mut_ptr(), q_len) != q_len
+        {
+            return false;
+        }
+
+        let mut key = SecretArray::<EXT_KDK_SECRET_LEN>::new();
+        // SAFETY: `material` is readable for `total` bytes and `key` is writable for the digest
+        // length; the output is checked by the caller's use of the KDK only.
+        SHA256(material.as_ptr(), total, key.as_mut_ptr());
+
+        hmac_sha256_kdf(
+            (*rsa).libctx,
+            key.as_ptr(),
+            EXT_KDK_SECRET_LEN,
+            EXT_KDK_MAC_LABEL,
+            from,
+            flen as usize,
+            kdk,
+        )
+    }
+}
+
+/// HMAC-SHA-256 over `label || data`, keyed by `key`.
+///
+/// The two updates are separate so the label cannot be confused with the first bytes of a
+/// ciphertext. Every handle is released on every exit; a failure answers `false` and leaves `out`
+/// unspecified, which the caller treats as no KDK at all.
+///
+/// # Safety
+/// `key` is readable for `key_len` bytes; `data` is readable for `data_len` bytes; `out` is
+/// writable for `SHA256_DIGEST_LENGTH` bytes.
+unsafe fn hmac_sha256_kdf(
+    libctx: *mut c_void,
+    key: *const c_uchar,
+    key_len: usize,
+    label: &[u8],
+    data: *const c_uchar,
+    data_len: usize,
+    out: *mut c_uchar,
+) -> bool {
+    // SAFETY: the caller's contract; the handles below are NULL until created and are released
+    // together at the end of this function.
+    unsafe {
+        let hmac = HMAC_CTX_new();
+        if hmac.is_null() {
+            return false;
+        }
+        let md = EVP_MD_fetch(libctx, c"sha256".as_ptr(), ptr::null());
+        if md.is_null() {
+            HMAC_CTX_free(hmac);
+            return false;
+        }
+        let mut ok = HMAC_Init_ex(
+            hmac,
+            key.cast::<c_void>(),
+            key_len as c_int,
+            md,
+            ptr::null_mut(),
+        ) > 0
+            && HMAC_Update(hmac, label.as_ptr(), label.len()) > 0
+            && HMAC_Update(hmac, data, data_len) > 0;
+        if ok {
+            let mut md_len: c_uint = SHA256_DIGEST_LENGTH;
+            ok = HMAC_Final(hmac, out, ptr::addr_of_mut!(md_len)) > 0;
+        }
+        HMAC_CTX_free(hmac);
+        EVP_MD_free(md);
+        ok
+    }
+}
+
+/// One per-key secret and the object it belongs to.
+///
+/// The key is the `RSA` pointer's address, which is stable for the object's lifetime and is
+/// removed by [`forget_ext_kdk_secret`] when the object is destroyed. The secret is a
+/// [`SecretBuf`], so releasing the entry wipes the whole allocation.
+struct ExtKdkSecret {
+    rsa: usize,
+    secret: SecretBuf<u8>,
+}
+
+/// The per-object secret store for external keys with no private material.
+///
+/// This is a side table rather than an `Rsa` field on purpose: `Rsa` is a `#[repr(C)]`
+/// transcription of the authority's `struct rsa_st` whose size and offsets are asserted, and the
+/// hard constraint on this correction is that those layouts are preserved. The table adds no
+/// field to any exported or measured object.
+static EXT_KDK_SECRETS: Mutex<Vec<ExtKdkSecret>> = Mutex::new(Vec::new());
+
+/// Take the store's lock, recovering from a poisoned lock rather than making every later
+/// decryption fail. The vectors are only ever pushed to or removed from under the lock, so a
+/// caught panic cannot leave an inconsistent element behind.
+fn lock_ext_kdk_secrets() -> std::sync::MutexGuard<'static, Vec<ExtKdkSecret>> {
+    match EXT_KDK_SECRETS.lock() {
+        Ok(guard) => guard,
+        Err(poisoned) => poisoned.into_inner(),
+    }
+}
+
+/// The first-use secret for an `RSA` with no `d`, `p` or `q`.
+///
+/// A miss draws 32 bytes with [`RAND_priv_bytes`] while the store is locked, so two threads that
+/// miss together install one secret and both receive it; a repeated call for the same object is a
+/// copy out of the stored secret, not a new draw. Allocation failure, an exhausted RNG or a
+/// poisoned store all answer `None`, and the caller refuses the operation rather than falling back
+/// to a publicly-derivable value.
+fn per_key_ext_kdk_secret(rsa: *mut Rsa) -> Option<SecretArray<EXT_KDK_SECRET_LEN>> {
+    let key = rsa as usize;
+    let mut store = lock_ext_kdk_secrets();
+    let mut out = SecretArray::<EXT_KDK_SECRET_LEN>::new();
+    if let Some(entry) = store.iter().find(|entry| entry.rsa == key) {
+        out.as_mut_slice().copy_from_slice(&entry.secret[..]);
+        return Some(out);
+    }
+
+    let mut fresh = SecretBuf::<u8>::try_zeroed(EXT_KDK_SECRET_LEN)?;
+    // SAFETY: `fresh` is writable for `EXT_KDK_SECRET_LEN` bytes and the call is this crate's
+    // `RAND_priv_bytes`, whose contract is the authority's.
+    if unsafe { RAND_priv_bytes(fresh.as_mut_ptr(), EXT_KDK_SECRET_LEN as c_int) } <= 0 {
+        return None;
+    }
+    store.try_reserve(1).ok()?;
+    out.as_mut_slice().copy_from_slice(&fresh);
+    store.push(ExtKdkSecret {
+        rsa: key,
+        secret: fresh,
+    });
+    Some(out)
+}
+
+/// Release the per-object secret when the `RSA` object is destroyed.
+///
+/// Removal is unconditional and happens under the store's lock, so an address reused by a later
+/// allocation cannot observe a stale secret. Dropping the entry cleanses the `SecretBuf` before
+/// its allocation is released.
+///
+/// # Safety
+/// `rsa` is the address of an object whose last reference is being released; it is read only as
+/// an integer and never dereferenced.
+pub(crate) fn forget_ext_kdk_secret(rsa: *mut Rsa) {
+    let key = rsa as usize;
+    let mut store = lock_ext_kdk_secrets();
+    let mut i = 0;
+    while i < store.len() {
+        if store[i].rsa == key {
+            store.swap_remove(i);
+        } else {
+            i += 1;
         }
     }
 }
@@ -1527,14 +1758,15 @@ unsafe extern "C" fn rsa_ossl_private_decrypt(
                 }
                 RSA_PKCS1_PADDING => {
                     /*
-                     * An external key does not hold `d`, so the KDK above was not derived. The
-                     * decrypted block is secret and deterministic for this ciphertext, which is
-                     * exactly the property the synthetic answer needs. Deriving the KDK from it
-                     * keeps the external-key arm's observable set identical to the internal
-                     * key's: a positive return, the synthetic bytes, and no error on the queue.
+                     * An external key does not hold `d`, so the KDK above was not derived. Derive
+                     * it from private key material and the ciphertext: the CRT primes when the
+                     * object holds them, otherwise a per-key secret drawn at first use. A hash of
+                     * the decrypted block is *not* used — for an attacker-chosen block that value
+                     * is public, which makes the synthetic answer predictable and restores the
+                     * padding oracle (see `evidence/haz-15/KDK-CORRECTION.md`).
                      */
                     if (*rsa).d.is_null()
-                        && derive_external_kdk((*rsa).libctx, buf, num, kdk.as_mut_ptr()) == 0
+                        && derive_external_kdk(rsa, from, flen, kdk.as_mut_ptr()) == 0
                     {
                         break 'body;
                     }
@@ -1574,6 +1806,10 @@ unsafe extern "C" fn rsa_ossl_private_decrypt(
         // after `r` is evaluated, at the authority's own cleansing site.
         BN_CTX_end(ctx);
         BN_CTX_free(ctx);
+        // The KDK is derived from secret key material; wipe the stack copy on every exit. The
+        // authority leaves it; this crate does not (a safety improvement, not an observable
+        // change).
+        cleanse(kdk.as_mut_ptr(), kdk.len());
         r
     }
 }
@@ -3119,6 +3355,441 @@ mod tests {
             RSA_free(ext);
             RSA_free(full);
             BN_free(e);
+        }
+    }
+
+    /// Build an external-shape copy of `full`: `n`, `e`, `p`, `q`, `dmp1`, `dmq1`, `iqmp`, no
+    /// `d`, and `RSA_FLAG_EXT_PKEY`. Used by the tests that need the shape with private CRT
+    /// material but no private exponent.
+    ///
+    /// # Safety
+    /// `full` is a live `RSA` holding a complete key.
+    #[cfg(test)]
+    unsafe fn external_shape_with_crt(full: *mut Rsa) -> *mut Rsa {
+        use crate::bn::bignum::BN_dup;
+        use crate::rsa::object::{
+            RSA_get0_crt_params, RSA_get0_factors, RSA_get0_key, RSA_new, RSA_set0_crt_params,
+            RSA_set0_factors, RSA_set0_key, RSA_set_flags, RSA_size,
+        };
+
+        // SAFETY: `full` is live; every borrowed pointer lives until the duplicate is made.
+        unsafe {
+            let (mut n, mut e, mut _d) = (ptr::null(), ptr::null(), ptr::null());
+            RSA_get0_key(full, &mut n, &mut e, &mut _d);
+            let (mut p, mut q) = (ptr::null(), ptr::null());
+            RSA_get0_factors(full, &mut p, &mut q);
+            let (mut dmp1, mut dmq1, mut iqmp) = (ptr::null(), ptr::null(), ptr::null());
+            RSA_get0_crt_params(full, &mut dmp1, &mut dmq1, &mut iqmp);
+
+            let ext = RSA_new();
+            assert!(!ext.is_null());
+            assert_eq!(RSA_set0_key(ext, BN_dup(n), BN_dup(e), ptr::null_mut()), 1);
+            assert_eq!(RSA_set0_factors(ext, BN_dup(p), BN_dup(q)), 1);
+            assert_eq!(
+                RSA_set0_crt_params(ext, BN_dup(dmp1), BN_dup(dmq1), BN_dup(iqmp)),
+                1
+            );
+            RSA_set_flags(ext, RSA_FLAG_EXT_PKEY);
+            assert!(
+                (*ext).d.is_null(),
+                "the external shape holds no private exponent"
+            );
+            assert!(RSA_size(ext) > 0);
+            ext
+        }
+    }
+
+    /// **The synthetic answer is not the withdrawn attacker-computable construction.**
+    ///
+    /// For an attacker-chosen block `m` with deliberately invalid padding, the attacker forms
+    /// `c = m^e mod n` and knows `m`. The withdrawn revision keyed the PRF with `SHA-256(m)`, so
+    /// the returned message was exactly `ossl_rsa_padding_check_PKCS1_type_2(..., SHA-256(m))`.
+    /// This test computes that prediction from public data and requires the candidate not to
+    /// return it. On the withdrawn construction the two agree and the test fails.
+    ///
+    /// It also pins the two properties the implicit rejection still needs: the answer is
+    /// deterministic for one ciphertext, and a second query of the same ciphertext returns the
+    /// same bytes.
+    #[test]
+    fn the_external_synthetic_answer_is_not_attacker_computable() {
+        use crate::rsa::gen::RSA_generate_key_ex;
+        use crate::rsa::object::{RSA_free, RSA_new, RSA_private_decrypt, RSA_size};
+        use crate::runtime::err::{ERR_clear_error, ERR_peek_error};
+
+        // SAFETY: every object and buffer is created and released here.
+        unsafe {
+            let e = BN_new();
+            assert_eq!(BN_set_word(e, 65537), 1);
+            let full = RSA_new();
+            assert_eq!(RSA_generate_key_ex(full, 1024, e, ptr::null_mut()), 1);
+            let ext = external_shape_with_crt(full);
+            let num = RSA_size(ext) as usize;
+
+            // A block the attacker chose, with the wrong block type: invalid padding.
+            let mut block = vec![0u8; num];
+            block[0] = 0x00;
+            block[1] = 0x03;
+            for byte in block.iter_mut().skip(2) {
+                *byte = 0x5a;
+            }
+            let ct = ciphertext_for_block(ext, &block);
+
+            let mut out_a = vec![0u8; num];
+            ERR_clear_error();
+            let r_a = RSA_private_decrypt(
+                num as c_int,
+                ct.as_ptr(),
+                out_a.as_mut_ptr(),
+                ext,
+                RSA_PKCS1_PADDING,
+            );
+            assert!(r_a > 0);
+            assert_eq!(ERR_peek_error(), 0);
+
+            // Deterministic for one ciphertext and one key.
+            let mut out_b = vec![0u8; num];
+            assert_eq!(
+                RSA_private_decrypt(
+                    num as c_int,
+                    ct.as_ptr(),
+                    out_b.as_mut_ptr(),
+                    ext,
+                    RSA_PKCS1_PADDING,
+                ),
+                r_a
+            );
+            assert_eq!(out_a[..r_a as usize], out_b[..r_a as usize]);
+
+            // The withdrawn prediction: the padding check keyed by SHA-256 of the block the
+            // attacker knows, over the same decrypted block.
+            let mut old_kdk = [0u8; SHA256_DIGEST_LENGTH as usize];
+            SHA256(block.as_ptr(), num, old_kdk.as_mut_ptr());
+            let mut old_out = vec![0u8; num];
+            let old_ret = ossl_rsa_padding_check_PKCS1_type_2(
+                ptr::null_mut(),
+                old_out.as_mut_ptr(),
+                num as c_int,
+                block.as_ptr(),
+                num as c_int,
+                num as c_int,
+                old_kdk.as_mut_ptr(),
+            );
+            assert!(old_ret > 0, "the attacker computes a synthetic message");
+            let common = (r_a as usize).min(old_ret as usize);
+            assert!(
+                r_a != old_ret || out_a[..common] != old_out[..common],
+                "the returned message must not be the SHA-256(block)-keyed synthetic one"
+            );
+
+            RSA_free(ext);
+            RSA_free(full);
+            BN_free(e);
+        }
+    }
+
+    /// **The per-object secret path for a key with no private material.**
+    ///
+    /// A public-only `(n, e)` object has nothing private to derive from. The first use draws a
+    /// 32-byte secret, the second use of the same object answers the same KDK, the KDK is not
+    /// `SHA-256(ciphertext)`, a second object with the same public material answers a different
+    /// KDK (the recorded residual), and releasing the object's entry makes the next draw fresh.
+    /// An allocation failure at the secret's allocation answers the defined refusal, not a
+    /// fallback: `derive_external_kdk` returns 0.
+    #[test]
+    fn the_public_only_key_gets_a_secret_that_is_not_the_public_hash() {
+        // SAFETY: every BIGNUM is created and released here; the objects are stack fixtures whose
+        // side-table entries are explicitly released with `forget_ext_kdk_secret`.
+        unsafe {
+            let mut first = super::super::mp::zeroed_rsa();
+            let mut second = super::super::mp::zeroed_rsa();
+            assert!(first.p.is_null() && first.q.is_null());
+            assert!(second.p.is_null() && second.q.is_null());
+
+            let ct = [0x11u8, 0x22, 0x33, 0x44];
+            let mut kdk_a = [0u8; SHA256_DIGEST_LENGTH as usize];
+            let mut kdk_b = [0u8; SHA256_DIGEST_LENGTH as usize];
+            let mut kdk_c = [0u8; SHA256_DIGEST_LENGTH as usize];
+
+            assert_eq!(
+                derive_external_kdk(
+                    &mut first,
+                    ct.as_ptr(),
+                    ct.len() as c_int,
+                    kdk_a.as_mut_ptr()
+                ),
+                1
+            );
+            assert_eq!(
+                derive_external_kdk(
+                    &mut first,
+                    ct.as_ptr(),
+                    ct.len() as c_int,
+                    kdk_b.as_mut_ptr()
+                ),
+                1
+            );
+            assert_eq!(kdk_a, kdk_b, "one object, one ciphertext: one KDK");
+
+            let mut public_hash = [0u8; SHA256_DIGEST_LENGTH as usize];
+            SHA256(ct.as_ptr(), ct.len(), public_hash.as_mut_ptr());
+            assert_ne!(kdk_a, public_hash, "the KDK is not a hash of public data");
+
+            assert_eq!(
+                derive_external_kdk(
+                    &mut second,
+                    ct.as_ptr(),
+                    ct.len() as c_int,
+                    kdk_c.as_mut_ptr()
+                ),
+                1
+            );
+            assert_ne!(
+                kdk_a, kdk_c,
+                "two public-only objects hold independent per-object secrets"
+            );
+
+            // Releasing the entry wipes it; a later use of the same object starts again.
+            forget_ext_kdk_secret(&mut first);
+            let mut kdk_d = [0u8; SHA256_DIGEST_LENGTH as usize];
+            assert_eq!(
+                derive_external_kdk(
+                    &mut first,
+                    ct.as_ptr(),
+                    ct.len() as c_int,
+                    kdk_d.as_mut_ptr()
+                ),
+                1
+            );
+            assert_ne!(kdk_a, kdk_d, "the released secret is not reused");
+
+            // An allocation failure in the secret's allocation is the defined refusal. A fresh
+            // object is used so the draw (not a copy of an existing entry) is the step that runs.
+            let mut third = super::super::mp::zeroed_rsa();
+            let mut kdk_failed = [0u8; SHA256_DIGEST_LENGTH as usize];
+            let guard = crate::runtime::alloc::test_fail::fail_after(0);
+            let refused = derive_external_kdk(
+                &mut third,
+                ct.as_ptr(),
+                ct.len() as c_int,
+                kdk_failed.as_mut_ptr(),
+            );
+            drop(guard);
+            assert_eq!(
+                refused, 0,
+                "allocation failure is a refusal, not a fallback"
+            );
+            assert_eq!(
+                refused, 0,
+                "allocation failure is a refusal, not a fallback"
+            );
+
+            forget_ext_kdk_secret(&mut first);
+            forget_ext_kdk_secret(&mut third);
+            forget_ext_kdk_secret(&mut second);
+        }
+    }
+
+    /// One hex field of the pinned 2048-bit RSA vector, read from the tracked JSON.
+    ///
+    /// The population below must be reproducible, so it uses the same fixed key as the
+    /// differential harness (`forensics/etp5_crypto/vectors/rsa_key.json`) rather than a key
+    /// generated anew on each run.
+    #[cfg(test)]
+    #[allow(clippy::expect_used, clippy::panic)] // a test fixture: a malformed tracked vector must fail the test
+    fn pinned_vector_hex(field: &str) -> String {
+        let path = concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/forensics/etp5_crypto/vectors/rsa_key.json"
+        );
+        let text = std::fs::read_to_string(path).expect("the pinned RSA vector must be readable");
+        let needle = format!("\"{field}\": \"");
+        let start = text
+            .find(&needle)
+            .unwrap_or_else(|| panic!("field {field} absent from the pinned vector"))
+            + needle.len();
+        let rest = &text[start..];
+        let end = rest.find('"').expect("unterminated hex string");
+        rest[..end].to_string()
+    }
+
+    /// A `BIGNUM` from a hex string; the caller owns the result.
+    ///
+    /// # Safety
+    /// Takes no pointers; the returned value is released with `BN_free`.
+    #[cfg(test)]
+    unsafe fn bn_from_hex(hex: &str) -> *mut BigNum {
+        use crate::bn::bignum::BN_hex2bn;
+        use crate::runtime::mem::CRYPTO_free;
+
+        let c = crate::bn::bignum::dup_cstring(hex);
+        let mut p: *mut BigNum = ptr::null_mut();
+        // SAFETY: `p` is this frame's slot and `c` is NUL-terminated and live.
+        unsafe {
+            assert!(BN_hex2bn(&mut p, c) > 0);
+            CRYPTO_free(c.cast(), ptr::null(), 0);
+        }
+        p
+    }
+
+    /// **The returned length is observable and it distinguishes the two classes.**
+    ///
+    /// A valid block answers its message length; an invalid block answers the implicit
+    /// rejection's synthetic length, which is drawn from the KDK and spans the room the modulus
+    /// leaves for a message. Protocol-relevant message lengths (16, 32 and 48) are included on
+    /// the same fixed 2048-bit key the differential harness uses, so the numbers are
+    /// reproducible. Every call must still answer a positive length with an empty error queue —
+    /// that is the property the correction establishes — and the table is printed so the length
+    /// channel is reported rather than assumed absent. If the populations separate, that is a
+    /// finding, not a pass; it is recorded in `evidence/haz-15/KDK-CORRECTION.md`.
+    #[test]
+    fn the_external_length_channel_is_measured() {
+        use crate::rsa::object::{
+            RSA_free, RSA_new, RSA_private_decrypt, RSA_set0_crt_params, RSA_set0_factors,
+            RSA_set0_key, RSA_set_flags, RSA_size,
+        };
+        use crate::rsa::RSA_padding_add_PKCS1_type_2;
+        use crate::runtime::err::{ERR_clear_error, ERR_peek_error};
+
+        // SAFETY: every object and buffer is created and released here; the pinned key's
+        // components are owned by `ext` after the `set0` calls.
+        unsafe {
+            let ext = RSA_new();
+            assert!(!ext.is_null());
+            assert_eq!(
+                RSA_set0_key(
+                    ext,
+                    bn_from_hex(&pinned_vector_hex("n")),
+                    bn_from_hex("010001"),
+                    ptr::null_mut()
+                ),
+                1
+            );
+            assert_eq!(
+                RSA_set0_factors(
+                    ext,
+                    bn_from_hex(&pinned_vector_hex("p")),
+                    bn_from_hex(&pinned_vector_hex("q"))
+                ),
+                1
+            );
+            assert_eq!(
+                RSA_set0_crt_params(
+                    ext,
+                    bn_from_hex(&pinned_vector_hex("dmp1")),
+                    bn_from_hex(&pinned_vector_hex("dmq1")),
+                    bn_from_hex(&pinned_vector_hex("iqmp"))
+                ),
+                1
+            );
+            RSA_set_flags(ext, RSA_FLAG_EXT_PKEY);
+            assert!((*ext).d.is_null());
+            let num = RSA_size(ext) as usize;
+            assert_eq!(num, 256, "the pinned vector is 2048-bit");
+
+            let mut valid_lengths = Vec::new();
+            for msg_len in [8usize, 16, 32, 48] {
+                let msg = vec![0x42u8; msg_len];
+                let mut block = vec![0u8; num];
+                assert_eq!(
+                    RSA_padding_add_PKCS1_type_2(
+                        block.as_mut_ptr(),
+                        num as c_int,
+                        msg.as_ptr(),
+                        msg_len as c_int
+                    ),
+                    1
+                );
+                let ct = ciphertext_for_block(ext, &block);
+                let mut out = vec![0u8; num];
+                ERR_clear_error();
+                let ret = RSA_private_decrypt(
+                    num as c_int,
+                    ct.as_ptr(),
+                    out.as_mut_ptr(),
+                    ext,
+                    RSA_PKCS1_PADDING,
+                );
+                assert_eq!(ret, msg_len as c_int, "a valid block answers its length");
+                assert_eq!(&out[..msg_len], &msg[..]);
+                assert_eq!(ERR_peek_error(), 0);
+                valid_lengths.push(ret);
+            }
+
+            // 64 distinct invalid blocks: wrong type, a short padding string, no separator, and
+            // a block that does not start with 00. Every one is attacker-chosen and fully known.
+            let mut invalid_lengths = Vec::new();
+            for i in 0..64usize {
+                let mut block = vec![0u8; num];
+                let tweak = (i as u8).wrapping_mul(37) | 1;
+                match i % 4 {
+                    0 => {
+                        block[1] = 0x03;
+                        for byte in block.iter_mut().skip(2) {
+                            *byte = tweak;
+                        }
+                    }
+                    1 => {
+                        block[1] = 0x02;
+                        for byte in block.iter_mut().skip(2) {
+                            *byte = 0x11;
+                        }
+                        block[2] = tweak;
+                        block[3] = 0x00;
+                    }
+                    2 => {
+                        block[1] = 0x02;
+                        for byte in block.iter_mut().skip(2) {
+                            *byte = 0x22;
+                        }
+                        block[2] = tweak;
+                    }
+                    _ => {
+                        block[0] = 0x01;
+                        block[1] = 0x02;
+                        for byte in block.iter_mut().skip(2) {
+                            *byte = 0x33;
+                        }
+                        block[2] = tweak;
+                    }
+                }
+                let ct = ciphertext_for_block(ext, &block);
+                let mut out = vec![0u8; num];
+                ERR_clear_error();
+                let ret = RSA_private_decrypt(
+                    num as c_int,
+                    ct.as_ptr(),
+                    out.as_mut_ptr(),
+                    ext,
+                    RSA_PKCS1_PADDING,
+                );
+                assert!(ret > 0, "invalid block {i} is answered");
+                assert_eq!(ERR_peek_error(), 0, "invalid block {i} leaves no error");
+                invalid_lengths.push(ret);
+            }
+
+            let matching: Vec<usize> = invalid_lengths
+                .iter()
+                .filter(|len| valid_lengths.contains(len))
+                .map(|len| *len as usize)
+                .collect();
+            let mut distinct = invalid_lengths.clone();
+            distinct.sort_unstable();
+            distinct.dedup();
+            println!(
+                "HAZ15LENGTH valid={valid_lengths:?} invalid={invalid_lengths:?} \
+                 distinct_invalid_lengths={} invalid_equal_to_a_valid_length={matching:?}",
+                distinct.len()
+            );
+            // The synthetic lengths are drawn from the KDK and are not a constant; but they are
+            // not the valid lengths either, which is the finding the evidence file records.
+            assert!(
+                invalid_lengths
+                    .iter()
+                    .any(|len| !valid_lengths.contains(len)),
+                "the synthetic population is not the valid population"
+            );
+
+            RSA_free(ext);
         }
     }
 

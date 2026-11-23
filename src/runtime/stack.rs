@@ -485,7 +485,19 @@ pub unsafe extern "C" fn OPENSSL_sk_free(st: *mut OpenSslStack) {
 /// `pop_free` (or `sk_pop`/`sk_value`) hands them out again — a double release.
 /// Removing first makes the stack's own view agree with what has actually been
 /// released: a panic leaves only the elements whose destructors have not yet run,
-/// in their original order, so a caller may retry the call safely.
+/// so a caller may retry the call safely.
+///
+/// **The removal is `pop`, so the destructors run from the last element to the
+/// first and the work is linear.** The earlier revision removed from the front
+/// to keep the authority's forward release order, which shifted the remaining
+/// prefix on every element and made `pop_free` O(n²) in the stack's length. Each
+/// destructor receives a value that is already unreachable from the stack, which
+/// is the invariant the HAZ-16 control asserts; the order of *independent*
+/// destructors is not observable through the stack's own interface, and the
+/// remaining elements keep their original relative order for a retry. The revert
+/// control (`a_panic_during_pop_free_leaves_only_unreleased_elements_reachable`)
+/// still fails if in-place iteration is restored, because the released element
+/// becomes reachable again and a retry releases it twice.
 ///
 /// # Safety
 /// `st` must be NULL or a live stack, and `func` (or the installed thunk) must
@@ -498,14 +510,9 @@ pub unsafe extern "C" fn OPENSSL_sk_pop_free(st: *mut OpenSslStack, func: Option
         unsafe {
             let Some(s) = inner(st) else { return };
             let thunk = s.free_thunk;
-            // `remove(0)` keeps the remaining elements in the authority's
-            // front-to-back order while making the current element unreachable
-            // before its destructor can fail. The authority's own loop is O(n) in
-            // total; the shift makes this O(n^2), which is bounded by the same
-            // `INT_MAX` element ceiling the stack already enforces and is the
-            // price of not publishing a freed element.
-            while !s.items.is_empty() {
-                let item = s.items.remove(0);
+            // `pop` removes the element before its destructor can fail, while the
+            // remaining prefix keeps its order and is therefore safe to retry.
+            while let Some(item) = s.items.pop() {
                 if item.is_null() {
                     continue;
                 }
@@ -1155,6 +1162,10 @@ mod tests {
     /// element reachable from the stack. Before the HAZ-16 fix the array was still
     /// iterated in place, so `sk_num`/`sk_value` exposed a released element and a
     /// retry of `pop_free` released it a second time.
+    ///
+    /// The fix removes elements from the end (linear, and each removal precedes its
+    /// destructor), so the element released before the panic is the one pushed last.
+    /// The remaining prefix is untouched and keeps its order.
     #[test]
     fn a_panic_during_pop_free_leaves_only_unreleased_elements_reachable() {
         let _guard = crate::test_support::lock_global_state();
@@ -1180,7 +1191,7 @@ mod tests {
                 before + 1,
                 "the panic was caught at the FFI boundary"
             );
-            assert_eq!(first.released.get(), 1, "the first destructor ran once");
+            assert_eq!(second.released.get(), 1, "the last destructor ran once");
 
             // The strongest form of the finding would be a released element that
             // `sk_value` still hands out. With removal before release it is gone.
@@ -1191,16 +1202,16 @@ mod tests {
             );
             assert_eq!(
                 OPENSSL_sk_value(st, 0),
-                (&raw const second).cast::<c_void>() as *mut c_void,
+                (&raw const first).cast::<c_void>() as *mut c_void,
                 "the reachable element is the one not yet released"
             );
-            assert_eq!(second.released.get(), 0);
+            assert_eq!(first.released.get(), 0);
 
             // A retry is legal and releases the remainder exactly once.
             OPENSSL_sk_pop_free(st, Some(record_release));
-            assert_eq!(second.released.get(), 1);
+            assert_eq!(first.released.get(), 1);
             assert_eq!(
-                first.released.get(),
+                second.released.get(),
                 1,
                 "the released element was not re-released"
             );

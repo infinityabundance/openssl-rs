@@ -213,7 +213,9 @@ use crate::rsa::mp::{
     multip_info_free_ex_thunk, multip_info_free_thunk, ossl_rsa_multip_calc_product,
     ossl_rsa_multip_cap, ossl_rsa_multip_info_free, ossl_rsa_multip_info_new,
 };
-use crate::rsa::ossl::{ossl_rsa_alloc_blinding, ossl_rsa_free_blinding, RSA_get_default_method};
+use crate::rsa::ossl::{
+    forget_ext_kdk_secret, ossl_rsa_alloc_blinding, ossl_rsa_free_blinding, RSA_get_default_method,
+};
 use crate::rsa::{Rsa, RsaMethod, RsaPrimeInfo, RsaPssParams, RsaPssParams30};
 use crate::runtime::bio::owned::{CtxDestroy, RawCtx};
 use crate::runtime::err::{err_sites, raise_site};
@@ -604,6 +606,11 @@ unsafe impl CtxDestroy for Rsa {
     const LINE_FREE: c_int = LINE;
 
     unsafe fn destroy_body(ptr: *mut Rsa) {
+        // Release any per-object external-key KDK secret before anything else. It is a side-table
+        // entry keyed by this object's address; leaving it behind would let a later allocation at
+        // the same address inherit a previous key's secret.
+        forget_ext_kdk_secret(ptr);
+
         // The authority's `if (r->meth != NULL && r->meth->finish != NULL)`.
         // SAFETY: `ptr` is a live object per the trait contract and this is its last reference.
         let meth = unsafe { (*ptr).meth };

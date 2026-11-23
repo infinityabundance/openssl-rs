@@ -67,7 +67,7 @@
   },
   "hazard_register": {
     "path": "evidence/etp-t2/HAZARDS.json",
-    "sha256": "351c5c86ea583c1ce469eae5daa144b8a3b4ce62bad820ad907642a890d398f5",
+    "sha256": "e8b556d093bfe7b5972fb917dc136714c60bb2206a9842bbe66797bd34a795f4",
     "settling_method": "sha256 of the register file the graph projects; the register is the ETP-T2 deliverable and the graph projects its hazard entries"
   },
   "tool": {
@@ -1560,15 +1560,15 @@
       "source": {
         "path": "evidence/haz-15/observables.json",
         "span": "finding_prefix/finding_postfix",
-        "quote": "the external-key oracle is demonstrated on both implementations before the correction and is absent from the corrected candidate",
+        "quote": "the content oracle is removed on the return-sign, buffer and error-queue axes, while the returned length remains a distinguishing channel",
         "quote_kind": "fragment",
-        "sha256": "0501742b995a6806c2c05418d6b3c25de21caf95fa2da853a634a62f55418ee4",
+        "sha256": "c14a59a5e6551bd7f3703d1cf315174c9d92f82c6d99fd0ebaf35df71e9267eb",
         "bound_commit": "478bf17ec1aa9022a784009a999a10e4eb4c07c4",
         "settling_method": "re-run with the bound commit set to the commit that contains this path"
       },
       "kind": "differential_receipt",
       "present": true,
-      "quality": "four ciphertexts against the candidate and the pinned authority; return value, output bytes and error queue only, no timing measurement"
+      "quality": "four ciphertexts against the candidate and the pinned authority, plus a 64-block length population; return value, output bytes, error queue and length only, no timing measurement"
     },
     {
       "id": "EVD-B85C-ADJUDICATION",
@@ -3817,7 +3817,7 @@
         "sha256": "3d5eded77e1346550dd6d94432038710659ecf7ea8fd22629d13db67d63e77ff",
         "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
       },
-      "characterization": "The authority substitutes RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING for a key with RSA_FLAG_EXT_PKEY, so a refusal distinguishes padding validity. The candidate keeps the implicit-rejection arm and derives the KDK from the decrypted block when the key holds no private exponent; the substitution is not reproduced (D-RSA-EXTKEY-ORACLE-1).",
+      "characterization": "The authority substitutes RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING for a key with RSA_FLAG_EXT_PKEY, so a refusal distinguishes padding validity. The candidate keeps the implicit-rejection arm and derives the KDK from private key material and the ciphertext (the CRT primes, or a per-key RNG secret when the object holds no private material); the withdrawn SHA-256(decrypted block) key was attacker-computable and is retracted. The returned length remains a distinguishable channel, so the hazard is only partially mitigated (D-RSA-EXTKEY-ORACLE-1, evidence/haz-15/KDK-CORRECTION.md).",
       "scope": {
         "api_family": "rsa",
         "input_class": "adversarial_contract_valid",
@@ -3833,11 +3833,10 @@
       ],
       "memory_safe_claim": true,
       "barrier": {
-        "state": "EVIDENCED",
-        "control": "The external-key PKCS#1 v1.5 arm takes the implicit-rejection check; when the key holds no private exponent the KDK is derived from the decrypted block (SHA-256), so valid and invalid padding answer a positive length, bytes in the output buffer and an empty error queue. The explicit RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING selector still opts out.",
-        "evidence": [
-          "EV-HAZ-15-DIFFERENTIAL"
-        ]
+        "state": "CLAIMED_NO_EVIDENCE",
+        "control": "The content oracle is removed: the external-key PKCS#1 v1.5 arm takes the implicit-rejection check, the synthetic answer is keyed by private CRT material or a per-key RNG secret rather than by an attacker-computable hash, and valid and invalid padding answer bytes with no error. The returned length is not removed: 64 invalid blocks on the pinned 2048-bit key answered 58 distinct synthetic lengths, none equal to the valid 8/16/32/48 lengths, so an application that observes the length still distinguishes the classes. The explicit RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING selector still opts out.",
+        "evidence": [],
+        "would_close": "A construction whose returned length is also indistinguishable for the protocol-relevant message lengths (or a documented, enforced use of the fixed-length TLS check), plus independent adjudication and a consumer replay."
       },
       "affected_release_claims": [
         "REL-OPENSSH-B85C"
@@ -5617,14 +5616,14 @@
       "source": {
         "path": "docs/ETP-TODO.md",
         "span": "row ETP-T2",
-        "quote": "The authority's external-key PKCS#1 v1.5 substitution is a padding oracle. The candidate corrects it (implicit rejection with the KDK derived from the decrypted block) and records a deliberate divergence from the authority (D-RSA-EXTKEY-ORACLE-1).",
+        "quote": "The authority's external-key PKCS#1 v1.5 substitution is a padding oracle. The candidate keeps the implicit-rejection arm and keys the synthetic answer with private CRT material or a per-key RNG secret (the earlier decrypted-block hash is withdrawn as attacker-computable); the returned length still distinguishes the classes, so the hazard is only partially mitigated (D-RSA-EXTKEY-ORACLE-1).",
         "quote_kind": "paraphrase",
         "sha256": "59bad5736455912733d3a62ed11564cf67015e275ea3d884081d7e620db6b676",
         "bound_commit": "21bea318819a56f641b3aa2f25027216b97a1c4d"
       },
-      "statement": "The authority's external-key PKCS#1 v1.5 substitution is a padding oracle. The candidate corrects it (implicit rejection with the KDK derived from the decrypted block) and records a deliberate divergence from the authority (D-RSA-EXTKEY-ORACLE-1).",
+      "statement": "The authority's external-key PKCS#1 v1.5 substitution is a padding oracle. The candidate keeps the implicit-rejection arm and keys the synthetic answer with private CRT material or a per-key RNG secret (the earlier decrypted-block hash is withdrawn as attacker-computable); the returned length still distinguishes the classes, so the hazard is only partially mitigated (D-RSA-EXTKEY-ORACLE-1).",
       "state": "OPEN",
-      "settled_by": "An independent adjudication of evidence/haz-15/observables.json at the candidate that lands the correction, and a consumer replay of the divergence.",
+      "settled_by": "Independent adjudication of evidence/haz-15/{observables.json,KDK-CORRECTION.md} at the candidate that lands the correction, a consumer replay of the divergence, and a resolution of the returned-length channel.",
       "blocks_release_claims": [
         "REL-OPENSSH-B85C"
       ]

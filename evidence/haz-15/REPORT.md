@@ -1,9 +1,62 @@
 # HAZ-15 — external-key PKCS#1 v1.5 padding oracle
 
-Status: `CORRECTED`, with the divergence recorded as `D-RSA-EXTKEY-ORACLE-1`.
-The finding is a **demonstrated difference in the observable set on a
-contract-valid input**, not an exploit: plaintext disclosure additionally
-requires the application preconditions in section 5.
+Status: **partially corrected, not eliminated.** The direct observable
+distinction was removed on the tested return-sign / output-buffer / error-queue
+axes, but the initial KDK justification was invalid and is retracted below, and
+the returned **length** remains a distinguisher. The hazard is
+`CLAIMED_NO_EVIDENCE` in the register, not `EVIDENCED`. The finding is a
+**demonstrated difference in the observable set on a contract-valid input**, not
+an exploit: plaintext disclosure additionally requires the application
+preconditions in section 5.
+
+## 0. Correction to the KDK argument (2026-11-22)
+
+Sections 1–9 are the original finding and its first repair. They are retained as
+the record; this section supersedes the part of section 6 that justified the
+synthetic-message secrecy.
+
+**The withdrawn argument.** The first repair keyed the implicit-rejection PRF
+with `SHA-256(decrypted block)`, arguing that the block is secret because the
+attacker cannot compute `c^d mod n`. That argument is invalid. RSA encryption is
+public: for an attacker-chosen representative `m` the attacker computes
+`c = m^e mod n` and the private operation returns `m`. The attacker therefore
+knows the decrypted block — and `SHA-256(m)` — for every ciphertext the attacker
+constructed, and can compute the synthetic answer the repair returns. The
+construction does not establish the keyed pseudorandomness implicit rejection
+requires.
+
+**Why that is an oracle.** The returned message for an invalid block is a
+function of attacker-known data, so an attacker can predict it and compare it
+with the answer for a chosen `m`, recovering exactly the padding-validity
+distinction the repair was meant to remove. The test
+`rsa::ossl::tests::the_external_synthetic_answer_is_not_attacker_computable`
+computes the withdrawn construction's answer and compares it with the returned
+message; it fails when the withdrawn construction is restored (observed
+`the returned message must not be the SHA-256(block)-keyed synthetic one`).
+
+**The replacement.** `src/rsa/ossl.rs` now derives the KDK from private key
+material and the ciphertext, with explicit domain separation:
+
+1. when the object holds `d`, the authority's own `derive_kdk` is unchanged;
+2. when it holds `p` and `q` but no `d`, the PRF key is
+   `SHA-256("openssl-rs/rsa/ext-kdk/crt-key/v1" || p || q)` and the KDK is
+   `HMAC-SHA-256(key, "openssl-rs/rsa/ext-kdk/ciphertext/v1" || ciphertext)`;
+3. when it holds no private material at all (the engine-backed `(n, e)` shape),
+   a 32-byte secret is drawn with `RAND_priv_bytes` at first use, stored against
+   the object, cleansed when the object is destroyed, and used as the HMAC key
+   with the same label. RNG or allocation failure is the defined refusal; there
+   is no fallback to a publicly-derivable value.
+
+**The remaining channel.** The generic check still returns the implicit
+rejection's synthetic *length*. On the pinned 2048-bit key, valid messages of
+8/16/32/48 bytes return those lengths, while 64 invalid blocks returned 58
+distinct synthetic lengths and none of the four valid lengths. An application
+that exposes the returned length — a TLS server expecting a 48-byte pre-master
+secret, for example — therefore still has a distinguisher. The authority's own
+answer for TLS is the fixed-length `ossl_rsa_padding_check_PKCS1_type_2_TLS`;
+the generic check cannot make the length uniform without changing its contract.
+This is a finding, not a pass. Full detail, ownership rules and gate output are
+in `evidence/haz-15/KDK-CORRECTION.md`.
 
 ## 1. Identity and venue
 
@@ -145,7 +198,7 @@ to the peer remain exposed unless they use OAEP or a uniform failure response.
 The correction removes the library's contribution; it cannot remove an
 application's.
 
-## 6. Decision and correction
+## 6. Decision and correction (superseded in part by section 0)
 
 Per `AGENTS.md` §17, a demonstrated known-vulnerability mechanism is eliminated,
 not reproduced. The change in `src/rsa/ossl.rs`:
@@ -154,11 +207,14 @@ not reproduced. The change in `src/rsa/ossl.rs`:
   `RSA_PKCS1_PADDING` and takes `ossl_rsa_padding_check_PKCS1_type_2`;
 - `derive_kdk` runs only when `d` is present;
 - when `d` is absent, `derive_external_kdk` computes SHA-256 over the decrypted
-  block, which is secret (the attacker cannot compute `c^d mod n`),
+  block, which ~~is secret (the attacker cannot compute `c^d mod n`),~~
   deterministic for one ciphertext and different for a different ciphertext. The
-  synthetic answer is therefore unpredictable and a repeated query of one
+  synthetic answer is therefore ~~unpredictable~~ and a repeated query of one
   ciphertext answers the same bytes; per-call randomness would itself be a
-  distinguisher.
+  distinguisher. **This justification is withdrawn by section 0:** the block is
+  attacker-known for a constructed ciphertext, so the synthetic answer is
+  attacker-computable. The KDK now comes from private key material or a per-key
+  RNG secret, and the returned length remains a channel.
 - the explicit `RSA_PKCS1_NO_IMPLICIT_REJECT_PADDING` selector still selects the
   refusing check, so the authority's behaviour remains available as an opt-in.
 
@@ -240,14 +296,23 @@ tests and no test is removed or newly ignored.
 
 - **No timing measurement.** The rows are return value, output bytes and
   error-queue contents. A timing oracle is not excluded by this evidence.
-- **The synthetic message's secrecy is an argument, not a proof.** It rests on
-  the decrypted block being secret and on SHA-256 being one-way. No constant-time
-  or leakage test was run on the new hash.
+- **The synthetic message's secrecy is an argument, not a proof.** ~~It rests on
+  the decrypted block being secret and on SHA-256 being one-way.~~ Section 0
+  withdraws that argument. The replacement rests on the CRT primes or a per-key
+  RNG secret being secret and HMAC-SHA-256 being a PRF. No constant-time or
+  leakage test was run on the new derivation.
+- **The returned length is a channel.** The 64-block population in section 0
+  separates the classes by length; no fixed-length mitigation was added to the
+  generic check.
 - **No independent adjudication.** The report and the correction share an
-  author. `HAZ-15`'s register barrier is `EVIDENCED` in the register's mechanical
-  sense (it cites `EV-HAZ-15-DIFFERENTIAL`); it is not `SAFETY_DISCHARGED`, and
-  the evidence identity settles only at the commit that adds
-  `evidence/haz-15/observables.json`.
+  author. `HAZ-15`'s register barrier is `CLAIMED_NO_EVIDENCE` after section 0
+  (the length channel blocks an `EVIDENCED` barrier and the withdrawal blocks
+  reliance on the original receipt); it is not `SAFETY_DISCHARGED`.
+- **The public-only shape is a residual.** A key with no `d`, `p` or `q` gets a
+  per-object RNG secret. Two objects built from the same public-only material
+  therefore answer different synthetic messages for the same ciphertext; an
+  application that reconstructs the key object per query loses the
+  per-ciphertext determinism. That is recorded rather than hidden.
 - **The external-key shape is a stand-in.** It uses the CRT parameters with `d`
   removed and the flag set, not a real `ENGINE`/neverbleed remote operation.
 - **No consumer replay.** No TLS server or XML-encryption consumer was run

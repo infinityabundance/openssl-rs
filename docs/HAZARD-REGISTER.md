@@ -38,7 +38,7 @@ this register and mutually exclusive for a single input value.
 | family | entry points in scope | class 1 (legal) | class 2 (adversarial, contract-valid) | class 3 (contract violation) |
 |---|---|---|---|---|
 | `bn` | `BN_mod_exp_mont_consttime`, `BN_mod_exp_mont`, `BN_MONT_CTX_set_locked`, `BN_div`, `BN_mod_inverse`, `BN_CTX_get`, `BN_rand_range` | Live BIGNUM; odd non-zero modulus where required; NULL only where permitted. Checked allocation arithmetic; defined refusal of an even or zero modulus; fallible arithmetic returning 0. | Hostile peer key or attacker-chosen ciphertext as a BIGNUM; caller-chosen public width. Defined result or refusal; a prepared-domain mismatch is refused, not silently used. | Freed or aliased BIGNUM; `BN_CTX` outside start/end; width inconsistent with the buffer. `UB_NOT_CLAIMED_SAFE`. Some NULL tests return 0 by authority parity; the rest is an unchecked C contract. |
-| `rsa` | `RSA_private_encrypt`, `RSA_private_decrypt`, `RSA_sign`, `RSA_blinding_on`, `RSA_blinding_off`, `RSA_set_method` | Well-formed key; documented padding; message no longer than the modulus; output buffer of `RSA_size`. Blinding on by default; implicit rejection for an internal key; defined error on failure. | Attacker-chosen ciphertext up to the modulus, hostile signature, or padding probe. The ciphertext is reduced and the padding check attempted; the external-key path has no implicit rejection (`HAZ-15`). | Freed key; concurrent method or key mutation; short output buffer; `flen` beyond the input. `UB_NOT_CLAIMED_SAFE`; the pointer contract is the authority's and is not enforced. |
+| `rsa` | `RSA_private_encrypt`, `RSA_private_decrypt`, `RSA_sign`, `RSA_blinding_on`, `RSA_blinding_off`, `RSA_set_method` | Well-formed key; documented padding; message no longer than the modulus; output buffer of `RSA_size`. Blinding on by default; implicit rejection for an internal key; defined error on failure. | Attacker-chosen ciphertext up to the modulus, hostile signature, or padding probe. The ciphertext is reduced and the padding check attempted; the external-key path takes the implicit-rejection arm with a secret-keyed KDK, but its returned length remains a channel (`HAZ-15`). | Freed key; concurrent method or key mutation; short output buffer; `flen` beyond the input. `UB_NOT_CLAIMED_SAFE`; the pointer contract is the authority's and is not enforced. |
 | `ec` | `ECDSA_do_sign`, `ECDSA_sign_setup`, `ECDSA_do_verify`, `EC_KEY_set_method` | Live key on a signing-capable curve; digest; documented `nonce_type`. A secure scalar for `k`; zero rejection; a defined error when the deterministic arm is unavailable. | Attacker-chosen digest or message; hostile peer point; hostile signature. The group method validates the point; verification is a defined result. | Freed key or group; a point from another group; a nonce buffer of the wrong size. `UB_NOT_CLAIMED_SAFE`. |
 | `evp` | `EVP_DigestVerifyFinal`, `EVP_DigestVerify`, `EVP_PKEY_verify`, `EVP_CipherUpdate`, `EVP_CipherFinal_ex`, `EVP_CIPHER_fetch` | Initialised context; documented parameter order and lengths; the return value read as documented. A defined return and error; IV uniqueness is the caller's documented obligation and is not enforced. | Hostile ciphertext, tag or AAD; malformed parameters; malformed certificate handed to a decoder. Authentication failure or a defined error; no plaintext claimed for a failed tag. | Reused context where reset is required; freed context; lying output length; overlapping input/output where forbidden; non-zero test of a return that can be `-1`. `UB_NOT_CLAIMED_SAFE` or `DEFERRED_CRYPTOGRAPHIC_FAILURE` per hazard. |
 | `bio` | `BIO_set_callback_ex`, `BIO_read`, `BIO_write`, `BIO_ctrl`, `BIO_free`, `BIO_debug_callback_ex` | Live BIO; documented callback protocol; `cb_arg` NULL or a `BIO *`. The callback runs before and after the method; a non-positive pre-call result vetoes the operation. | Hostile stream contents; callback behaviour from an untrusted application layer. A defined return; the library does not sandbox the callback. | `cb_arg` that is not a `BIO *`; a callback that frees the BIO it runs on; a freed BIO. `UB_NOT_CLAIMED_SAFE`; the cast and the write through it are deliberate authority parity. |
@@ -98,7 +98,7 @@ the difference:
 | `HAZ-12` | Allocation arithmetic overflows on an attacker-controlled length | `runtime_mem` | class 2 | class 2 | `CLAIMED_NO_EVIDENCE` |
 | `HAZ-13` | Allocator hook re-enters the error subsystem | `runtime_mem` | class 3 | class 3 | `CLAIMED_NO_EVIDENCE` |
 | `HAZ-14` | Verify callback mutates state the walk is reading | `x509` | class 3 | class 3 | `CLAIMED_NO_EVIDENCE` |
-| `HAZ-15` | External-key PKCS#1 v1.5 decryption where the authority has no implicit rejection | `rsa` | class 2 | class 2 | **`EVIDENCED`** |
+| `HAZ-15` | External-key PKCS#1 v1.5 decryption where the authority has no implicit rejection | `rsa` | class 2 | class 2 | `CLAIMED_NO_EVIDENCE` |
 | `HAZ-16` | Panic at the FFI boundary leaves partially mutated state | `runtime_mem` | class 2 | class 2 | `CLAIMED_NO_EVIDENCE` |
 | `HAZ-17` | Hostile certificate exhausts stack, time or memory | `x509` | class 2 | class 2 | `CLAIMED_NO_EVIDENCE` |
 | `HAZ-18` | Consumer confuses a verification error with a valid signature | `evp` | class 3 | class 3 | **`BARRIER_ABSENT`** |
@@ -106,12 +106,14 @@ the difference:
 | `HAZ-20` | BIO callback writes through a non-BIO `cb_arg` | `bio` | class 3 | class 3 | **`BARRIER_ABSENT`** |
 
 Counts: 20 hazards; 8 legal-triggered, 8 class-2-triggered, 7 class-3-triggered;
-17 `CLAIMED_NO_EVIDENCE`, 2 `BARRIER_ABSENT`, 1 `EVIDENCED`. The one evidenced
-barrier is `HAZ-15`: the external-key PKCS#1 v1.5 arm takes the implicit-rejection
-check and derives the KDK from the decrypted block, so the refusal is no longer
-observable. The receipt is `evidence/haz-15/observables.json`; its evidence
-identity settles at the commit that adds it (a declared class-8 orphan until then),
-and an independent adjudication is still required before the obligation closes.
+18 `CLAIMED_NO_EVIDENCE`, 2 `BARRIER_ABSENT`, 0 `EVIDENCED`. No barrier is
+`EVIDENCED`. `HAZ-15` is `CLAIMED_NO_EVIDENCE`: the external-key PKCS#1 v1.5
+arm takes the implicit-rejection check and keys the synthetic answer with
+private CRT material or a per-key RNG secret, so the content distinction is
+removed; the returned length still distinguishes valid from invalid padding
+(`evidence/haz-15/KDK-CORRECTION.md`), so the hazard is only partially mitigated
+and the evidence cannot support an `EVIDENCED` barrier. An independent
+adjudication is still required before the obligation closes.
 
 **HAZ-16 progress.** The barrier is no longer absent, but it is also not
 claimed complete. A reproducible enumeration found 823 `guard_ffi`-wrapped
@@ -177,9 +179,10 @@ TE-3 = OR(
 The GCM leaf names `ossl_gcm_stream_update`; uniqueness is a caller obligation
 the library documents and does not enforce (`FMEA-22`). The `HAZ-15` leaf names
 the authority's mechanism: on the corrected candidate the external-key arm takes
-the implicit-rejection check, so the refusal that made the oracle observable is
-gone (`D-RSA-EXTKEY-ORACLE-1`). The leaf stays in the tree because it is the
-mechanism a regression would reintroduce.
+the implicit-rejection check and keys the synthetic answer with secret key
+material, so the content refusal that made the oracle observable is gone
+(`D-RSA-EXTKEY-ORACLE-1`); the returned length remains a channel. The leaf stays
+in the tree because it is the mechanism a regression would reintroduce.
 
 ### TE-4 — memory corruption from a class-1 or class-2 input
 
@@ -262,7 +265,7 @@ but has no receipt (`CLAIMED_NO_EVIDENCE`), and an absent control (`NONE`).
 | FMEA-12 | `rsa_ossl_private_encrypt` | blinding disabled | TE-1, TE-7 | HIGH | default-on blinding | NONE | CLAIMED_NO_EVIDENCE | no timing court |
 | FMEA-13 | `rsa_get_blinding` | blinding cannot be built | TE-1 | MEDIUM | operation fails | NONE | CLAIMED_NO_EVIDENCE | source-only |
 | FMEA-14 | CRT tail | non-congruent result | TE-2, TE-6 | CRITICAL | re-exponentiate and fallback | NONE | CLAIMED_NO_EVIDENCE | no fault-injection receipt |
-| FMEA-15 | external-key decryption | authority substitutes the refusing check | TE-3 | CRITICAL | implicit rejection; KDK from the decrypted block | EV-HAZ-15-DIFFERENTIAL | EVIDENCED | no timing measure, no independent adjudication |
+| FMEA-15 | external-key decryption | authority substitutes the refusing check | TE-3 | CRITICAL | implicit rejection with a secret-keyed KDK | NONE | CLAIMED_NO_EVIDENCE | returned length distinguishes; no timing measure, no independent adjudication |
 | FMEA-16 | `BN_BLINDING` release | `BN_free`, not cleansed | TE-1 | MEDIUM | none | NONE | NONE | `OBL-T11-RESIDUAL` |
 | FMEA-17 | RSA recombination | factor shape observable | TE-7 | HIGH | none | NONE | NONE | `OBL-T6-RESIDUAL` |
 | FMEA-18 | `ecdsa_sign_setup` | biased/repeated `k` | TE-1 | CRITICAL | secure scalar, zero rejection, deterministic arm refuses | NONE | CLAIMED_NO_EVIDENCE | no nonce court; D333 open |
@@ -319,7 +322,7 @@ reentrancy edge of `AGENTS.md` §21.
 | UCA-02 | CS-API | invoke an application callback holding a reference into a stack or extension | the callback releases, replaces or mutates that object | dangling view | HAZ-06 | x509 snapshot; no BIO or extension-content barrier |
 | UCA-03 | CS-ALLOC | call the installed hook while ERR holds the thread's state | the hook calls the ERR API on the same thread | second mutable borrow | HAZ-13 | B34 guard fails closed |
 | UCA-04 | CS-KERNEL | exponentiate with blinding disabled | the application disabled blinding or it could not be built | timing channel | HAZ-08 | default-on only |
-| UCA-05 | CS-KERNEL | return the v1.5 padding verdict for an external key | the key has `RSA_FLAG_EXT_PKEY` | padding oracle | HAZ-15 | implicit rejection; KDK from the decrypted block (`D-RSA-EXTKEY-ORACLE-1`) |
+| UCA-05 | CS-KERNEL | return the v1.5 padding verdict for an external key | the key has `RSA_FLAG_EXT_PKEY` | padding oracle | HAZ-15 | implicit rejection with a secret-keyed KDK; the returned length remains a channel (`D-RSA-EXTKEY-ORACLE-1`) |
 | UCA-06 | CS-KERNEL | return a prepared-domain result | the context belongs to another modulus | silent wrong result | HAZ-10 | `context_matches` |
 | UCA-07 | CS-KERNEL | return a CRT result | a fault occurs in one CRT half | faulty signature | HAZ-09 | congruence check + fallback |
 | UCA-08 | CS-API | catch a panic and return the failure value | the operation already mutated a context | half-applied state | HAZ-16 | non-unwinding plus the three failure-atomic repairs; the rest of the surface is unclassified |
@@ -400,11 +403,13 @@ application decrypts attacker-submitted v1.5 ciphertexts and reports success or
 failure.
 Steps: submit a modified ciphertext; observe the refusal; iterate to recover the
 plaintext (Bleichenbacher/ROBOT).
-Barrier: implicit rejection on the external-key path, evidenced by
-`EV-HAZ-15-DIFFERENTIAL` (`D-RSA-EXTKEY-ORACLE-1`). Residual:
-`OBL-RSA-EXTKEY-ORACLE` stays open because the receipt is self-authored; an
-independent adjudication and a consumer replay are still required, and the
-obligation still blocks the b85c graduation until they exist.
+Barrier: implicit rejection on the external-key path with a secret-keyed KDK
+(`D-RSA-EXTKEY-ORACLE-1`); the content distinction is removed, but the returned
+length still separates valid from invalid padding. Residual:
+`OBL-RSA-EXTKEY-ORACLE` stays open because the length channel remains and the
+receipt is self-authored; an independent adjudication and a consumer replay are
+still required, and the obligation still blocks the b85c graduation until they
+exist.
 
 ## 8. Register integration with the T1 graph
 
@@ -430,7 +435,7 @@ ETP-T2 adds the following nodes and edges to the T1 seed:
 |---|---|
 | `REQ-CORR-01` | "a cryptographic result is correct or the operation fails"; the existing requirement set had no node for correctness, so `HAZ-10` and `HAZ-18` would have had no requirement to motivate |
 | `IMP-BN-MONT` (+ file artefact) | `src/bn/mont.rs` is the mechanism behind `HAZ-10` and had no implementation node |
-| `OBL-RSA-EXTKEY-ORACLE` | `HAZ-15`'s barrier is now evidenced by `EV-HAZ-15-DIFFERENTIAL`; the obligation stays open for an independent adjudication and the consumer replay, and still blocks `REL-OPENSSH-B85C` |
+| `OBL-RSA-EXTKEY-ORACLE` | `HAZ-15` has no evidenced barrier: the content oracle is corrected, but the returned length remains a channel; the obligation stays open for an independent adjudication and the consumer replay, and still blocks `REL-OPENSSH-B85C` |
 | `OBL-PANIC-ATOMICITY` | `HAZ-16` has no barrier; the obligation blocks `REL-OPENSSH-B85C` |
 | `OBL-VERIFY-RETURN-POLARITY` | `HAZ-18` has no barrier; the obligation is recorded without a release block because no in-scope consumer is shown to mishandle the return |
 | `REQ-CORR-01` in the b85c scope | a `SAFE_COMPATIBLE` graduation that does not include correctness is not a safety claim |

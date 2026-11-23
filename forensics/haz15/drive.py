@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -44,6 +45,53 @@ def sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+_LENGTH_LINE = re.compile(
+    r"HAZ15LENGTH valid=\[(?P<valid>[^\]]*)\] invalid=\[(?P<invalid>[^\]]*)\] "
+    r"distinct_invalid_lengths=(?P<distinct>\d+) "
+    r"invalid_equal_to_a_valid_length=\[(?P<matching>[^\]]*)\]"
+)
+
+
+def _ints(text: str) -> list[int]:
+    return [int(part.strip()) for part in text.split(",") if part.strip()]
+
+
+def read_length_population(log: Path) -> dict:
+    """Parse the population line emitted by the length-channel unit test.
+
+    The test uses the pinned 2048-bit vector key, so the numbers are reproducible;
+    this function deliberately records the *observed* lists rather than recomputing
+    them.
+    """
+    for line in log.read_text(encoding="utf-8").splitlines():
+        match = _LENGTH_LINE.search(line)
+        if match is None:
+            continue
+        valid = _ints(match.group("valid"))
+        invalid = _ints(match.group("invalid"))
+        matching = _ints(match.group("matching"))
+        return {
+            "source": (
+                "cargo test --lib -- --nocapture "
+                "rsa::ossl::tests::the_external_length_channel_is_measured"
+            ),
+            "key": "forensics/etp5_crypto/vectors/rsa_key.json (2048-bit, external shape)",
+            "valid": valid,
+            "invalid": invalid,
+            "distinct_invalid_lengths": int(match.group("distinct")),
+            "invalid_equal_to_a_valid_length": matching,
+            "classification": (
+                "the returned length distinguishes the two classes. Every one of the "
+                "%d invalid blocks answered a length outside the valid set (collisions "
+                "with a valid length: %d). The generic PKCS#1 v1.5 check cannot make "
+                "the length uniform without changing its contract; this is a residual "
+                "finding, not a pass."
+                % (len(invalid), len(matching))
+            ),
+        }
+    raise SystemExit(f"{log}: no HAZ15LENGTH line found")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--pre", type=Path, required=True)
@@ -53,6 +101,12 @@ def main() -> int:
     parser.add_argument("--postfix-dso", type=Path, required=True)
     parser.add_argument("--head", required=True)
     parser.add_argument("--out", type=Path, required=True)
+    parser.add_argument(
+        "--lengths-log",
+        type=Path,
+        default=None,
+        help="captured output of rsa::ossl::tests::the_external_length_channel_is_measured",
+    )
     args = parser.parse_args()
 
     pre_authority = read_rows(args.pre / "authority.jsonl", "authority")
@@ -111,11 +165,12 @@ def main() -> int:
                 "dso_sha256": sha256(args.authority_dso),
             },
             "candidate_prefix": {
-                "description": "release build of HEAD before the correction",
+                "description": "release build of HEAD before the KDK correction",
                 "dso_sha256": sha256(args.prefix_dso),
             },
             "candidate_postfix": {
-                "description": "release build of HEAD plus the src/rsa/ossl.rs correction",
+                "description": "release build of HEAD plus the KDK correction and the "
+                               "two engineering-cost repairs",
                 "dso_sha256": sha256(args.postfix_dso),
             },
         },
@@ -160,11 +215,17 @@ def main() -> int:
         "finding_postfix": {
             "external_valid_vs_bad_type": distinguishes(postfix_ext_valid, postfix_ext_bad),
             "external_valid_vs_short_ps": distinguishes(postfix_ext_valid, postfix_ext_short),
+            "returned_length_distinguishes": (
+                postfix_ext_valid["ret"] != postfix_ext_bad["ret"]
+                or postfix_ext_valid["ret"] != postfix_ext_short["ret"]
+            ),
             "internal_valid_unchanged": same(prefix_int_valid, postfix_int_valid),
             "detail": (
                 "external valid: ret %d; external bad_type: ret %d; external short_ps: "
                 "ret %d; all three leave the error queue empty and write the output "
-                "buffer. Only the padding-valid case returns the submitted message."
+                "buffer. The sign, buffer and queue axes therefore do not distinguish; "
+                "the returned length does. Only the padding-valid case returns the "
+                "submitted message."
                 % (
                     postfix_ext_valid["ret"],
                     postfix_ext_bad["ret"],
@@ -196,6 +257,9 @@ def main() -> int:
             "synthetic bytes; the claim is about the observable policy, not the value.",
         ],
     }
+
+    if args.lengths_log is not None:
+        record["length_population"] = read_length_population(args.lengths_log)
 
     args.out.write_text(json.dumps(record, indent=2) + "\n", encoding="utf-8")
     print(f"wrote {args.out} ({len(rows)} rows)")
