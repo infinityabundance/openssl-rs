@@ -1,0 +1,417 @@
+{
+  "schema": "openssl-rs/etp-t7/erasure-audit/1",
+  "generated": "2026-11-23T06:06:00Z",
+  "candidate": {
+    "commit": "0eddfe839f552a6e22a8cf375ec308c8bf7c478b",
+    "branch": "staging"
+  },
+  "secrets_register": "evidence/etp-t7/SECRETS.json",
+  "scope": "The secret-bearing owners classified in SECRETS.json. Release and cleansing are treated as separate obligations: a release that runs is not a cleansing that ran.",
+  "summary": {
+    "findings_by_class": {
+      "FREED_WITHOUT_CLEANSING": 4,
+      "LENGTH_ONLY_CLEANSE": 1,
+      "FAILURE_PATH_WITHOUT_CLEANSING": 1,
+      "LOST_CLEAR_FREE_ARM": 1
+    },
+    "findings_by_severity": {
+      "HIGH": 1,
+      "MEDIUM": 5,
+      "LOW": 1
+    },
+    "clear_free_arms_checked": 15,
+    "clear_free_arms_lost": 1,
+    "findings": 7,
+    "repaired": 0
+  },
+  "findings": [
+    {
+      "id": "ERA-01",
+      "class": "FREED_WITHOUT_CLEANSING",
+      "severity": "HIGH",
+      "source": {
+        "path": "src/ssl/ssl_lib.rs",
+        "line": 3728,
+        "symbol": "CtxDestroy for Ssl",
+        "token": "impl CtxDestroy for Ssl"
+      },
+      "item": "TLS 1.3 and TLS 1.2 connection-level key schedule and record keys",
+      "secrets": [
+        "TLS13-EARLY",
+        "TLS13-MASTER",
+        "TLS13-TRAFFIC",
+        "TLS-RECORD-KEYS",
+        "TLS12-MASTER",
+        "TLS12-KEYBLOCK"
+      ],
+      "impact": "The connection block is released with a plain CRYPTO_free after destroy_body. The inline early/handshake/master/traffic secrets, psk_secret, enc_key/dec_key, tls12_master_secret and tls12_key_block are not wiped. A later allocation from the same heap region can read live TLS key material.",
+      "authority_behaviour": "OpenSSL's SSL_free releases the connection without cleansing these inline fields; the session object's master_key is cleansed separately. The residue is authority-faithful but is a known secret-residue mechanism that AGENTS.md section 5 does not permit reproducing silently.",
+      "evidence": {
+        "kind": "source-audit",
+        "reference": "src/ssl/ssl_lib.rs:3728-3800 and the Ssl field declarations at :2185-:2250",
+        "result": "RESIDUE_CONFIRMED"
+      },
+      "repair": "Cleanse the inline schedule fields (early_secret, handshake_secret, master_secret, client/server handshake and application traffic secrets, resumption_master_secret, psk_secret, enc_key/dec_key, enc_iv/dec_iv, tls12_master_secret, tls12_key_block) in destroy_body before the block release, or adopt a cleansing release for the connection block with a measured extent equal to size_of::<Ssl>().",
+      "repaired": false
+    },
+    {
+      "id": "ERA-02",
+      "class": "LOST_CLEAR_FREE_ARM",
+      "severity": "MEDIUM",
+      "source": {
+        "path": "src/apps/mac.rs",
+        "line": 262,
+        "symbol": "apps::mac::OwnedBuf",
+        "token": "OwnedBuf::new(BUFSIZE"
+      },
+      "item": "apps/mac scratch input and MAC output buffer",
+      "secrets": [
+        "APPS-MAC-SCRATCH"
+      ],
+      "impact": "The recorded arm is the authority's OPENSSL_clear_free(buf, BUFSIZE) at apps/mac.c:228-239. The converted buffer is owned by OwnedBuf whose Drop is a plain CRYPTO_free, and no explicit cleanse runs. The last input chunk and the MAC output remain in the released block.",
+      "authority_behaviour": "The authority's clear_free arm was not preserved; this is a conversion regression, not an authority behaviour.",
+      "evidence": {
+        "kind": "source-audit",
+        "reference": "src/apps/mac.rs:259-263 allocates with OwnedBuf::new; src/apps/mac.rs:119-128 Drop uses CRYPTO_free; src/apps/mac.rs:511 names the authority's clear_free arm",
+        "result": "ARM_LOST"
+      },
+      "repair": "Construct buf with the cleansing release (or call OPENSSL_cleanse(buf.as_ptr(), BUFSIZE) before drop) so the authority's OPENSSL_clear_free arm is preserved at the same allocation and release coordinates.",
+      "repaired": false
+    },
+    {
+      "id": "ERA-03",
+      "class": "FREED_WITHOUT_CLEANSING",
+      "severity": "MEDIUM",
+      "source": {
+        "path": "src/asn1/x_pkey.rs",
+        "line": 105,
+        "symbol": "X509_Pkey destroy_body",
+        "token": "key_data.cast::<c_void>()"
+      },
+      "item": "X509_PKEY decrypted private-key data",
+      "secrets": [
+        "X509-KEYDATA"
+      ],
+      "impact": "When key_free is set, key_data is the decrypted private-key buffer. destroy_body releases it with CRYPTO_free and no cleanse, so the private key survives in freed heap memory.",
+      "authority_behaviour": "X509_PKEY_free uses a plain OPENSSL_free at the same site; the residue is authority-faithful.",
+      "evidence": {
+        "kind": "source-audit",
+        "reference": "src/asn1/x_pkey.rs:96-107",
+        "result": "RESIDUE_CONFIRMED"
+      },
+      "repair": "Cleanse key_data over its recorded allocation extent before the CRYPTO_free, or release it with CRYPTO_clear_free at the same site. The allocation extent must be recorded, because the record carries no length field of its own.",
+      "repaired": false
+    },
+    {
+      "id": "ERA-04",
+      "class": "FAILURE_PATH_WITHOUT_CLEANSING",
+      "severity": "MEDIUM",
+      "source": {
+        "path": "src/evp/pkey_ctx.rs",
+        "line": 4559,
+        "symbol": "ctrl_params_translate",
+        "token": "CRYPTO_free((*ctx).allocated_buf"
+      },
+      "item": "Translated BIGNUM payload on the BN_bn2nativepad failure path",
+      "secrets": [
+        "PKEY-FAILFREE"
+      ],
+      "impact": "allocated_buf is sized from BN_num_bits(p2) and filled by BN_bn2nativepad. When that call fails after a partial write, the block is released with a plain CRYPTO_free, leaving the partially written secret bytes in freed memory.",
+      "authority_behaviour": "The authority uses the same plain OPENSSL_free; the failure-path residue is authority-faithful.",
+      "evidence": {
+        "kind": "source-audit",
+        "reference": "src/evp/pkey_ctx.rs:4547-4561",
+        "result": "RESIDUE_CONFIRMED"
+      },
+      "repair": "Cleanse buflen bytes before the failure-path free, and record the cleanse extent as buflen. This is a failure-path-only change.",
+      "repaired": false
+    },
+    {
+      "id": "ERA-05",
+      "class": "FREED_WITHOUT_CLEANSING",
+      "severity": "MEDIUM",
+      "source": {
+        "path": "src/evp/pkey_ctx.rs",
+        "line": 3597,
+        "symbol": "cleanup_translation_ctx",
+        "token": "CRYPTO_free(allocated"
+      },
+      "item": "Translated BIGNUM payload at translation cleanup",
+      "secrets": [
+        "PKEY-CLEANUP"
+      ],
+      "impact": "On the normal cleanup path, allocated_buf still holds the BIGNUM bytes that were handed to the provider. It is released with a plain CRYPTO_free without a cleanse.",
+      "authority_behaviour": "The authority's cleanup_translation_ctx uses the same plain OPENSSL_free; the residue is authority-faithful.",
+      "evidence": {
+        "kind": "source-audit",
+        "reference": "src/evp/pkey_ctx.rs:3581-3601",
+        "result": "RESIDUE_CONFIRMED"
+      },
+      "repair": "Cleanse buflen bytes before this release. The context carries buflen, so the extent is available without a new field.",
+      "repaired": false
+    },
+    {
+      "id": "ERA-06",
+      "class": "FREED_WITHOUT_CLEANSING",
+      "severity": "MEDIUM",
+      "source": {
+        "path": "src/bn/blinding.rs",
+        "line": 301,
+        "symbol": "BN_BLINDING_free",
+        "token": "BN_free((*self.ptr).a)"
+      },
+      "item": "RSA blinding factors a and ai",
+      "secrets": [
+        "RSA-BLINDING"
+      ],
+      "impact": "BN_BLINDING_free releases a and ai with BN_free. BN_free cleanses only when BN_FLG_SECURE is set, and these factors do not set it, so the blinding values that hide the RSA private operation survive in freed limb allocations.",
+      "authority_behaviour": "The authority's BN_BLINDING_free also uses BN_free; the residue is authority-faithful.",
+      "evidence": {
+        "kind": "source-audit",
+        "reference": "src/bn/blinding.rs:294-305; src/bn/bignum.rs:647-665",
+        "result": "RESIDUE_CONFIRMED"
+      },
+      "repair": "Release a and ai with BN_clear_free (or set BN_FLG_SECURE on them at creation) so the limb storage is wiped over capacity. e is public and mod_ is public; neither needs the change.",
+      "repaired": false
+    },
+    {
+      "id": "ERA-07",
+      "class": "LENGTH_ONLY_CLEANSE",
+      "severity": "LOW",
+      "source": {
+        "path": "src/asn1/string.rs",
+        "line": 332,
+        "symbol": "ASN1_STRING_clear_free",
+        "token": "fn ASN1_STRING_clear_free"
+      },
+      "item": "ASN1_STRING data cleanse extent",
+      "secrets": [
+        "ASN1-EXTENT"
+      ],
+      "impact": "ASN1_STRING_clear_free cleanses length bytes, not the allocation extent. ASN1_STRING_set allocates len+1, and ASN1_STRING_length_set can shrink a string after a longer secret was written, so bytes between the new length and the old length remain in the allocation that is released. The NUL terminator at data[length] is a zero byte and is not a leak by itself.",
+      "authority_behaviour": "The authority cleanses length bytes too; the extent gap is authority-faithful.",
+      "evidence": {
+        "kind": "source-audit",
+        "reference": "src/asn1/string.rs:248-295 (set allocates len+1), :332-345 (clear_free cleanses length), :456-468 (length_set)",
+        "result": "RESIDUE_POSSIBLE"
+      },
+      "repair": "Cleanse the allocation extent (the size recorded by the last set/resize) rather than the current length, or cleanse length+1 and document that a shrink is the only way residue can remain. The allocation extent is not stored in the string today, so this needs an explicit extent record.",
+      "repaired": false
+    }
+  ],
+  "survived_clear_free_arms": [
+    {
+      "id": "CLEANSING-OWNER-GENERIC",
+      "source": {
+        "path": "src/runtime/owned_buf.rs",
+        "line": 738,
+        "symbol": "CLEANSING-OWNER-GENERIC",
+        "token": "CRYPTO_clear_free(self.ptr"
+      },
+      "note": "Cleansing release present"
+    },
+    {
+      "id": "BN-RAND-BUF",
+      "source": {
+        "path": "src/bn/rand.rs",
+        "line": 203,
+        "symbol": "BN-RAND-BUF",
+        "token": "CRYPTO_clear_free(self.ptr"
+      },
+      "note": "Cleansing release present"
+    },
+    {
+      "id": "ASN1-SIGN-IN",
+      "source": {
+        "path": "src/asn1/a_sign.rs",
+        "line": 204,
+        "symbol": "ASN1-SIGN-IN",
+        "token": "new_cleansed_at"
+      },
+      "note": "Cleansing release present"
+    },
+    {
+      "id": "CMS-ASN1-HELPER",
+      "source": {
+        "path": "src/cms/cms_asn1.rs",
+        "line": 820,
+        "symbol": "CMS-ASN1-HELPER",
+        "token": "fn OPENSSL_clear_free"
+      },
+      "note": "Cleansing release present"
+    },
+    {
+      "id": "CMS-CONTENT-KEY",
+      "source": {
+        "path": "src/cms/cms_enc.rs",
+        "line": 583,
+        "symbol": "CMS-CONTENT-KEY",
+        "token": "new_cleansed_released"
+      },
+      "note": "Cleansing release present"
+    },
+    {
+      "id": "CMS-PASSWORD",
+      "source": {
+        "path": "src/cms/cms_pwri.rs",
+        "line": 144,
+        "symbol": "CMS-PASSWORD",
+        "token": "OPENSSL_clear_free((*pwri).pass"
+      },
+      "note": "Cleansing release present"
+    },
+    {
+      "id": "ARGON2-SECRET",
+      "source": {
+        "path": "src/provider/kdf.rs",
+        "line": 11443,
+        "symbol": "ARGON2-SECRET",
+        "token": "CRYPTO_clear_free((*ctx).secret"
+      },
+      "note": "Cleansing release present"
+    },
+    {
+      "id": "ARGON2-PWD",
+      "source": {
+        "path": "src/provider/kdf.rs",
+        "line": 11220,
+        "symbol": "ARGON2-PWD",
+        "token": "CRYPTO_clear_free((*ctx).pwd"
+      },
+      "note": "Cleansing release present"
+    },
+    {
+      "id": "APPS-KDF-DKM",
+      "source": {
+        "path": "src/apps/kdf.rs",
+        "line": 384,
+        "symbol": "APPS-KDF-DKM",
+        "token": "new_cleansed_at"
+      },
+      "note": "Cleansing release present"
+    },
+    {
+      "id": "ECX-PRIVATE-KEY",
+      "source": {
+        "path": "src/ec/ecx_backend.rs",
+        "line": 295,
+        "symbol": "ECX-PRIVATE-KEY",
+        "token": "CRYPTO_secure_clear_free"
+      },
+      "note": "Cleansing release present"
+    },
+    {
+      "id": "ECDH-SECRET-FAILURE",
+      "source": {
+        "path": "src/ec/ecdh_ossl.rs",
+        "line": 111,
+        "symbol": "ECDH-SECRET-FAILURE",
+        "token": "CRYPTO_clear_free(self.ptr"
+      },
+      "note": "Cleansing release present"
+    },
+    {
+      "id": "HPKE-KEM-TAIL",
+      "source": {
+        "path": "src/hpke/mod.rs",
+        "line": 1197,
+        "symbol": "HPKE-KEM-TAIL",
+        "token": "fn cleanse_kem_tail"
+      },
+      "note": "Cleansing release present"
+    },
+    {
+      "id": "DECODE-DER-PRIVATE",
+      "source": {
+        "path": "src/provider/decode_der2key.rs",
+        "line": 539,
+        "symbol": "DECODE-DER-PRIVATE",
+        "token": "unsafe fn cleanse_der"
+      },
+      "note": "Cleansing release present"
+    },
+    {
+      "id": "DECODE-EPKI-PRIVATE",
+      "source": {
+        "path": "src/provider/decode_epki2pki.rs",
+        "line": 458,
+        "symbol": "DECODE-EPKI-PRIVATE",
+        "token": "so cleanse them before the plain release"
+      },
+      "note": "Cleansing release present"
+    },
+    {
+      "id": "PKCS12-FAILURE-PATHS",
+      "source": {
+        "path": "src/pkcs12/p12_decr.rs",
+        "line": 206,
+        "symbol": "PKCS12-FAILURE-PATHS",
+        "token": "failure-path improvement"
+      },
+      "note": "Cleansing release present"
+    }
+  ],
+  "observations": [
+    {
+      "id": "OBS-01",
+      "source": {
+        "path": "src/cms/cms_kari.rs",
+        "line": 496,
+        "symbol": "DerivedKek",
+        "token": "impl Drop for DerivedKek"
+      },
+      "observation": "DerivedKek cleanses len bytes of a zero-initialised EVP_MAX_KEY_LENGTH array. The tail beyond the reported derivation length is never written by this frame, so the prefix cleanse leaves no secret residue. No repair is needed; a future reuse of the array would change that."
+    },
+    {
+      "id": "OBS-02",
+      "source": {
+        "path": "src/evp/cipher_ctx.rs",
+        "line": 410,
+        "symbol": "EVP_CIPHER_CTX_free",
+        "token": "CRYPTO_free(cipher_data"
+      },
+      "observation": "The legacy cipher_data block is cleansed over cipher_data_size when that size is non-zero before the plain free. A non-NULL block with a zero ctx_size would be freed without a cleanse; a zero-size allocation holds no secret bytes."
+    },
+    {
+      "id": "OBS-03",
+      "source": {
+        "path": "src/pkcs12/p12_decr.rs",
+        "line": 206,
+        "symbol": "PKCS12_pbe_crypt",
+        "token": "failure-path improvement"
+      },
+      "observation": "Failure paths cleanse the output block; the success path returns the decrypted plaintext to the caller. That handoff is the declassification boundary and the caller owns the block."
+    },
+    {
+      "id": "OBS-04",
+      "source": {
+        "path": "src/ssl/ssl_sess.rs",
+        "line": 556,
+        "symbol": "SslSession::master_key",
+        "token": "master_key.as_mut_ptr"
+      },
+      "observation": "SSL_SESSION_free's destroy_body wipes master_key over TLS13_MAX_RESUMPTION_PSK_LENGTH and session_id over SSL_MAX_SSL_SESSION_ID_LENGTH before releasing the session block. The session object does not share ERA-01's gap."
+    },
+    {
+      "id": "OBS-05",
+      "source": {
+        "path": "src/runtime/secret.rs",
+        "line": 319,
+        "symbol": "cleanse_allocation",
+        "token": "fn cleanse_allocation"
+      },
+      "observation": "SecretBuf and the limb storage cleanse the allocation capacity, not the initialised prefix. These are the two places where the capacity question is answered mechanically; the other owners in the register use exact-length or fixed-array extents."
+    }
+  ],
+  "not_checked": [
+    "Runtime freed-memory inspection (an allocator hook that reads after release) was not run; every finding above is a source audit.",
+    "Provider dispatch state, ENGINE state and async fibre storage were outside the admitted surfaces.",
+    "ASan, Miri and Valgrind do not report residual bytes in released memory by default, so their absence is not evidence of cleansing.",
+    "The audit does not decide whether an authority-faithful residue should be conserved for compatibility or diverged from for safety; it records the mechanism and the repair."
+  ],
+  "non_claims": [
+    "No buffer is claimed cleansed because a release ran.",
+    "A HIGH severity is not a proof of exploitability; it is the confidentiality consequence if the residue is read.",
+    "The audit does not repair anything and does not promote any erasure obligation to discharged."
+  ]
+}

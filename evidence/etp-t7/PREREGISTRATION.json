@@ -1,0 +1,357 @@
+{
+  "schema": "openssl-rs/etp-t7/preregistration/1",
+  "generated": "2026-11-23T05:59:42Z",
+  "item": "ETP-T7",
+  "candidate": {
+    "commit": "0eddfe839f552a6e22a8cf375ec308c8bf7c478b",
+    "branch": "staging",
+    "note": "The preregistration is written before the prospective run. Its SHA-256 is quoted by the run receipt, and the checker refuses a receipt that does not match it."
+  },
+  "template": {
+    "purpose": "Fix the measurement plan before data exists, so that a later reading cannot select a favourable geometry, statistic, control or exclusion after seeing the result.",
+    "required_fields": [
+      "id",
+      "status",
+      "receipt_adapter",
+      "hypotheses",
+      "workloads",
+      "instrument",
+      "candidate",
+      "geometry",
+      "statistic",
+      "multiple_comparisons",
+      "controls",
+      "exclusion_rules",
+      "exclusion_rule_ids",
+      "stopping_conditions",
+      "null_result_meaning",
+      "claim_scope"
+    ],
+    "field_rules": {
+      "status": "PROSPECTIVE when registered before execution, RECONSTRUCTED_POST_HOC when derived from an existing receipt; a reconstructed instance never supports a constant-time claim.",
+      "hypotheses": "One object per hypothesis, each with id, statement and expected outcome.",
+      "workloads": "One object per mode, naming its input classes and operand population.",
+      "instrument": "name, harness path, harness source digest, pinned upstream commit, admissible use and not-its-use list.",
+      "candidate": "The measured artefact digest known at registration, plus the scope note.",
+      "geometry": "per_batch, max_batches, runs, pin and family_size. No value may change after the run.",
+      "statistic": "The exact test, thresholds and the meaning of every verdict state.",
+      "multiple_comparisons": "The declared family and the correction procedure.",
+      "controls": "A positive control that must fire and a negative control that must stay quiet.",
+      "exclusion_rules": "Rules fixed before the run. A post-run change is a refusal.",
+      "stopping_conditions": "The only permitted reasons to stop early.",
+      "null_result_meaning": "What a null result does and does not establish.",
+      "claim_scope": "Artefact, target, profile and whether the result generalises to the release artefact."
+    }
+  },
+  "instances": [
+    {
+      "id": "ETP-T7-DUDECT-INSTRUMENT-CONTROLS-1",
+      "status": "PROSPECTIVE",
+      "receipt_adapter": "native_v1",
+      "registered_at": "2026-11-23T05:59:42Z",
+      "hypotheses": [
+        {
+          "id": "H1",
+          "statement": "The deliberately early-exiting comparison (cmpnaive) separates the two input classes at the registered geometry.",
+          "expected": "state 0 (DUDECT_LEAKAGE_FOUND) within the registered batch budget"
+        },
+        {
+          "id": "H2",
+          "statement": "The constant-time reference comparison (cmpcmp) does not separate the two input classes at the registered geometry.",
+          "expected": "state 1 (DUDECT_NO_LEAKAGE_EVIDENCE_YET) after the full batch budget"
+        },
+        {
+          "id": "H0",
+          "statement": "If either control leaves its registered direction, the instrument or the geometry is not admitted and the run establishes nothing.",
+          "expected": "INSTRUMENT_CONTROL_FAILED"
+        }
+      ],
+      "workloads": [
+        {
+          "id": "cmpnaive",
+          "kind": "positive control",
+          "input_classes": [
+            "two 4096-byte buffers differing at the first byte",
+            "two 4096-byte buffers differing at the last byte"
+          ],
+          "operand_population": "the harness's two fixed comparison pairs; no secret input",
+          "why": "an early-exit comparison must turn the mismatch position into a timing difference"
+        },
+        {
+          "id": "cmpcmp",
+          "kind": "negative control",
+          "input_classes": [
+            "two 4096-byte buffers differing at the first byte",
+            "two 4096-byte buffers differing at the last byte"
+          ],
+          "operand_population": "the same two pairs as cmpnaive",
+          "why": "CRYPTO_memcmp accumulates over the whole length and is the reference for a quiet result"
+        }
+      ],
+      "instrument": {
+        "name": "dudect",
+        "harness": "courts/phase18/timing/dudect_bn.c",
+        "harness_sha256": "bd898fd22b998b6b9e22a64d2bdd5ee42a5d9d7dc4a08a9df6a9e2ba01dd5a7b",
+        "header": "courts/phase18/timing/third_party/dudect/dudect.h",
+        "header_sha256": "3fb3b2bd7f9e17ae34b7c92518c1311c67342c56facc80da925d85f121b649da",
+        "pinned_commit": "dc269651fb2567e46755cfb2a13d3875592968b5",
+        "admissible_use": "separating the two registered input classes by timing, at the registered geometry, on the recorded artefact",
+        "not_its_use": [
+          "a constant-time proof for any mechanism",
+          "microarchitectural leakage that the statistical test does not exercise",
+          "a result for a different artefact or build profile",
+          "a result for a mode that was not run"
+        ]
+      },
+      "candidate": {
+        "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+        "libcrypto_sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+        "scope_note": "This run is an instrument-control measurement. It is not a constant-time claim about the AES, BN, ECDSA or RSA mechanisms, and the artefact identity is the on-disk DSO, not a source-to-binary correspondence."
+      },
+      "geometry": {
+        "per_batch": 10000,
+        "max_batches": 3,
+        "runs": 1,
+        "pin": "taskset -c 1",
+        "chunk_size": 1,
+        "family_size": 2
+      },
+      "statistic": {
+        "test": "Welch t (two-sided), computed by the pinned dudect harness per batch",
+        "per_batch_threshold": 10,
+        "batch_count_threshold": 500,
+        "verdict_states": {
+          "0": "DUDECT_LEAKAGE_FOUND",
+          "1": "DUDECT_NO_LEAKAGE_EVIDENCE_YET"
+        },
+        "state_0_meaning": "leakage detected between the compared classes at this geometry",
+        "state_1_meaning": "absence of evidence at this geometry; never a proof of constant-time behaviour"
+      },
+      "multiple_comparisons": {
+        "family": [
+          "cmpnaive",
+          "cmpcmp"
+        ],
+        "procedure": "The two modes are directional controls, not competing hypotheses. A Bonferroni threshold of 0.05/2 would be applied to any p-value read from the batch maxima; no such p-value is promoted to a claim.",
+        "note": "The family is fixed at two modes. Adding a mode after the run is a refusal."
+      },
+      "controls": {
+        "positive": "cmpnaive",
+        "negative": "cmpcmp",
+        "expected": {
+          "cmpnaive": "state 0 within the batch budget",
+          "cmpcmp": "state 1 after the batch budget"
+        },
+        "instrument_failure": "A positive control that stays quiet, or a negative control that fires, invalidates the run. A control is not evidence if the harness does not report it."
+      },
+      "exclusion_rules": [
+        "No measurement is removed after the run.",
+        "A failed operation rejects its measurement; a mode that reports a failed operation is not admitted.",
+        "No value-based trimming, winsorising or batch replacement is permitted.",
+        "The mode set, per-batch count and batch budget are fixed; no mode may be added after the run.",
+        "A run that cannot establish its artefact identity is refused, not reported as a pass."
+      ],
+      "exclusion_rule_ids": [
+        "EX-1",
+        "EX-2",
+        "EX-3",
+        "EX-4",
+        "EX-5"
+      ],
+      "stopping_conditions": [
+        "Stop a mode when the harness reports DUDECT_LEAKAGE_FOUND (state 0).",
+        "Stop a mode after max_batches when state remains 1.",
+        "Abort the run on a build failure, a harness error, or a missing control.",
+        "Abort the run when the loaded DSO digest differs from the registered digest."
+      ],
+      "null_result_meaning": {
+        "means": "No statistically detectable timing class was observed between the registered input classes of that mode at the registered geometry.",
+        "does_not_mean": [
+          "constant-time behaviour",
+          "absence of microarchitectural leakage",
+          "a statement about a different artefact, build profile or CPU",
+          "a statement about any mechanism the mode did not measure"
+        ]
+      },
+      "claim_scope": {
+        "artefact": "libcrypto.so.3 loaded through the dudect C harness",
+        "target": "x86_64-unknown-linux-gnu in the court container",
+        "profile": "the on-disk artefacts/phase2 build",
+        "generalises_to_release": false
+      },
+      "require_harness_identity": true
+    },
+    {
+      "id": "ETP-T7-DUDECT-LEGACY-RECONSTRUCTED",
+      "status": "RECONSTRUCTED_POST_HOC",
+      "receipt_adapter": "dudect_modes_v1",
+      "registered_at": null,
+      "receipt_path": "courts/phase18/timing/RECEIPT-dudect-modes.json",
+      "reconstruction_note": "This instance is derived from a receipt that already exists in the tree. It records what the executed geometry was; it is not evidence of prospective registration and it is not used to support any constant-time claim. It exists so that the recorded geometry can be checked against the recorded numbers rather than restated from prose.",
+      "hypotheses": [
+        {
+          "id": "L-H1",
+          "statement": "The variable-time inversion mode separates its two input classes.",
+          "expected": "state 0"
+        },
+        {
+          "id": "L-H2",
+          "statement": "The flagged equal-length inversion mode does not separate its two input classes at this geometry.",
+          "expected": "state 1"
+        },
+        {
+          "id": "L-H3",
+          "statement": "The positive comparison control separates its two input classes and the constant-time control does not.",
+          "expected": "cmpnaive state 0, cmpcmp state 1"
+        }
+      ],
+      "workloads": [
+        {
+          "id": "modexp",
+          "kind": "measurement",
+          "input_classes": [
+            "two fixed exponents at the same public width"
+          ],
+          "operand_population": "the harness's fixed 2048-bit operands"
+        },
+        {
+          "id": "inverse_vt",
+          "kind": "measurement and control",
+          "input_classes": [
+            "unflagged inversion, operands of different bit length"
+          ],
+          "operand_population": "2^200+1 and 2^254-3"
+        },
+        {
+          "id": "inverse_ct",
+          "kind": "measurement",
+          "input_classes": [
+            "flagged inversion, equal-length operands, differing value"
+          ],
+          "operand_population": "2^254-3 and 2^254-5"
+        },
+        {
+          "id": "inverse_ct_len",
+          "kind": "measurement",
+          "input_classes": [
+            "flagged inversion, operands of different bit length"
+          ],
+          "operand_population": "2^200+1 and 2^254-3"
+        },
+        {
+          "id": "inverse_ec",
+          "kind": "measurement",
+          "input_classes": [
+            "flagged inversion modulo the P-256 order"
+          ],
+          "operand_population": "n-3 and n-5"
+        },
+        {
+          "id": "cmpcmp",
+          "kind": "negative control",
+          "input_classes": [
+            "two 4096-byte buffers differing at the first byte",
+            "two 4096-byte buffers differing at the last byte"
+          ],
+          "operand_population": "the harness's fixed comparison pairs"
+        },
+        {
+          "id": "cmpnaive",
+          "kind": "positive control",
+          "input_classes": [
+            "two 4096-byte buffers differing at the first byte",
+            "two 4096-byte buffers differing at the last byte"
+          ],
+          "operand_population": "the harness's fixed comparison pairs"
+        }
+      ],
+      "instrument": {
+        "name": "dudect",
+        "harness": "courts/phase18/timing/dudect_bn.c",
+        "header": "courts/phase18/timing/third_party/dudect/dudect.h",
+        "pinned_commit": "dc269651fb2567e46755cfb2a13d3875592968b5",
+        "admissible_use": "checking the recorded geometry against the recorded numbers",
+        "not_its_use": [
+          "a constant-time proof",
+          "retroactive preregistration",
+          "a result for a different artefact"
+        ]
+      },
+      "candidate": {
+        "libcrypto_sha256": "a67305b1dcb297b19a12078caf55cb6ad2acdf3dfb332b89c97ee7e1f1d4db34",
+        "scope_note": "The digest is the one recorded by the receipt. The receipt also records build-id 7cdf5b9c090a242f3e86e543ffc4534ce7803c3f and the court venue."
+      },
+      "geometry": {
+        "per_batch": 20000,
+        "max_batches": 3,
+        "runs": 1,
+        "pin": "taskset -c 1",
+        "chunk_size": 1,
+        "family_size": 7
+      },
+      "statistic": {
+        "test": "Welch t (two-sided), computed by the pinned dudect harness per batch",
+        "per_batch_threshold": 10,
+        "batch_count_threshold": 500,
+        "verdict_states": {
+          "0": "DUDECT_LEAKAGE_FOUND",
+          "1": "DUDECT_NO_LEAKAGE_EVIDENCE_YET"
+        },
+        "state_0_meaning": "leakage detected between the compared classes at this geometry",
+        "state_1_meaning": "absence of evidence at this geometry; never a proof of constant-time behaviour"
+      },
+      "multiple_comparisons": {
+        "family": [
+          "modexp",
+          "inverse_vt",
+          "inverse_ct",
+          "inverse_ct_len",
+          "inverse_ec",
+          "cmpcmp",
+          "cmpnaive"
+        ],
+        "procedure": "The receipt reports per-mode maxima and states; no p-value is promoted to a claim.",
+        "note": "The family is fixed at seven modes."
+      },
+      "controls": {
+        "positive": "cmpnaive",
+        "negative": "cmpcmp",
+        "expected": {
+          "cmpnaive": "state 0",
+          "cmpcmp": "state 1"
+        },
+        "instrument_failure": "A quiet positive control or a firing negative control invalidates the reconstructed reading."
+      },
+      "exclusion_rules": [
+        "No measurement is removed after the run.",
+        "No value-based trimming or replacement.",
+        "The mode set and per-batch count are those of the recorded receipt."
+      ],
+      "exclusion_rule_ids": [
+        "LEX-1",
+        "LEX-2",
+        "LEX-3"
+      ],
+      "stopping_conditions": [
+        "Stop a mode at state 0.",
+        "Stop a mode after max_batches when state remains 1."
+      ],
+      "null_result_meaning": {
+        "means": "No statistically detectable timing class was observed at the recorded geometry.",
+        "does_not_mean": [
+          "constant-time behaviour",
+          "absence of microarchitectural leakage",
+          "a prospective preregistration"
+        ]
+      },
+      "claim_scope": {
+        "artefact": "the receipt's libcrypto.so.3",
+        "target": "the receipt's court venue",
+        "profile": "the receipt's build",
+        "generalises_to_release": false
+      },
+      "require_harness_identity": false,
+      "missing_identity_note": "The legacy receipt records the loaded DSO digest and build-id but not the dudect harness binary digest. That gap is recorded, not repaired."
+    }
+  ]
+}

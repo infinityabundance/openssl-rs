@@ -1,0 +1,93 @@
+{
+  "schema": "openssl-rs/etp-t7/dudect-run/1",
+  "instance_id": "ETP-T7-DUDECT-INSTRUMENT-CONTROLS-1",
+  "preregistration": "evidence/etp-t7/PREREGISTRATION.json",
+  "preregistration_sha256": "d28964cc44411a43327afd8cc80d34d13eb936bc9fab523f21dbb3d3cba3120e",
+  "generated": "2026-11-23T06:02:30Z",
+  "candidate": {
+    "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+    "libcrypto_sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+    "loaded_from": "/work/artifacts/phase2/install/lib/libcrypto.so.3",
+    "resolution": "ldd /tmp/dudect_etp7 reports libcrypto.so.3 => /work/artifacts/phase2/install/lib/libcrypto.so.3 and the on-disk digest is the one above",
+    "source_identity": "UNKNOWN: the artefact is the on-disk artefacts/phase2 build; no source-to-binary correspondence is claimed for it"
+  },
+  "harness": {
+    "source": "courts/phase18/timing/dudect_bn.c",
+    "source_sha256": "bd898fd22b998b6b9e22a64d2bdd5ee42a5d9d7dc4a08a9df6a9e2ba01dd5a7b",
+    "header": "courts/phase18/timing/third_party/dudect/dudect.h",
+    "header_sha256": "3fb3b2bd7f9e17ae34b7c92518c1311c67342c56facc80da925d85f121b649da",
+    "binary": "/tmp/dudect_etp7",
+    "binary_sha256": "627882a8991350897dceb492daf4d634534f48e4a8269db7499ef89836f242e7",
+    "pinned_commit": "dc269651fb2567e46755cfb2a13d3875592968b5",
+    "compiler": "cc (Debian 12.2.0-14+deb12u1) 12.2.0",
+    "build": "cc -O2 -g -D_GNU_SOURCE -I courts/phase18/timing/third_party/dudect -I artifacts/phase2/install/include courts/phase18/timing/dudect_bn.c -L artifacts/phase2/install/lib -lcrypto -lm -Wl,-rpath,/work/artifacts/phase2/install/lib -o /tmp/dudect_etp7"
+  },
+  "venue": {
+    "court": "openssl-rs-court-tools:1",
+    "memory_cap": "6g/6g",
+    "pin": "taskset -c 1",
+    "nproc_in_container": 30,
+    "host_available_gib_before_run": 27,
+    "note": "The host available reading was taken immediately before the run; it was at or above the 24 GiB line in AGENTS.md section 6.1."
+  },
+  "geometry": {
+    "per_batch": 10000,
+    "max_batches": 3,
+    "runs": 1,
+    "chunk_size": 1
+  },
+  "modes": {
+    "cmpcmp": {
+      "role": "negative control",
+      "total_measurements": 30000,
+      "batches_run": 3,
+      "state": 1,
+      "state_name": "DUDECT_NO_LEAKAGE_EVIDENCE_YET",
+      "exit": 1,
+      "max_abs_t": 0.98,
+      "max_abs_tau": 0.00694,
+      "transcript": {
+        "stdout": "evidence/etp-t7/logs/dudect-cmpcmp.out",
+        "stdout_sha256": "bb7f1d5ee1fc40129d24a98052bca39be4857a395a62bff8e765c76684e48c54",
+        "stderr": "evidence/etp-t7/logs/dudect-cmpcmp.err",
+        "stderr_sha256": "354994cb34d022db8d59c698e06504463b544b56e2a5ff08aa1b69113bb69df7"
+      }
+    },
+    "cmpnaive": {
+      "role": "positive control",
+      "total_measurements": 30000,
+      "batches_run": 3,
+      "state": 0,
+      "state_name": "DUDECT_LEAKAGE_FOUND",
+      "exit": 0,
+      "max_abs_t": 208.01,
+      "max_abs_tau": 1.47,
+      "transcript": {
+        "stdout": "evidence/etp-t7/logs/dudect-cmpnaive.out",
+        "stdout_sha256": "c9b7e7610106203f2cd380b0a9d90f905e89c63ff6e7ae811e19ff6013757cfe",
+        "stderr": "evidence/etp-t7/logs/dudect-cmpnaive.err",
+        "stderr_sha256": "c78d25f09e74691b6a07a1c28f3d142c61b381314d3ec9f27ca4243650ccad8b"
+      }
+    }
+  },
+  "controls_observed": {
+    "positive_fired": true,
+    "negative_quiet": true,
+    "statement": "cmpnaive left its registered direction (state 0) and cmpcmp stayed in its registered direction (state 1, absence of evidence at this geometry)."
+  },
+  "deviations": [
+    {
+      "id": "DEV-1",
+      "what": "The preregistered stopping condition said to stop a mode when the harness reports state 0. The pinned harness runs the full batch budget and reports the state after it, so cmpnaive executed three batches rather than stopping at one.",
+      "effect": "No measurement was added, removed or replaced. The realised geometry (3 batches of 10000 measurements for both modes) is inside the registered budget and matches the preregistration's per_batch and max_batches. The stopping-condition wording was inaccurate about the pinned harness; it is recorded here and the preregistration is not amended after the run."
+    }
+  ],
+  "verdict": "INSTRUMENT_CONTROLS_PASS",
+  "verdict_scope": "The positive control fired and the negative control stayed quiet at the registered geometry. This qualifies the dudect instrument for control duty at this geometry; it is not a constant-time result for any mechanism.",
+  "non_claims": [
+    "cmpcmp state 1 is absence of evidence at this geometry, not proof of constant-time behaviour.",
+    "The run does not measure AES S-box lookups, BN ladders, ECDSA signing, RSA CRT, TLS key schedules or any erasure property.",
+    "The DSO digest binds the on-disk artefact; it is not a source-to-binary correspondence.",
+    "The result does not generalise from this court container to another CPU, target or build profile."
+  ]
+}

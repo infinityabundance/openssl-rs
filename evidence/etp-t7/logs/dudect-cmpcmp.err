@@ -1,0 +1,2 @@
+dudect.executed mode=cmpcmp per_batch=10000 batches_run=3 total_measurements=30000
+dudect.done mode=cmpcmp batches=3 state=1
