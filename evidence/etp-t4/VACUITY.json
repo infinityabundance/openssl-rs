@@ -47,8 +47,8 @@
    "status": "CITED_BY_CALLER",
    "scope": "caller_cites_contract",
    "detail": "7 production caller(s) cite a contract; citation is not proof",
-   "production_callers": 21,
-   "test_callers": 94,
+   "production_callers": 25,
+   "test_callers": 96,
    "witness": "lexical_call_witness"
   },
   {
@@ -154,8 +154,8 @@
    "symbol": "from_raw",
    "status": "CITED_BY_CALLER",
    "scope": "caller_cites_contract",
-   "detail": "298 production caller(s) cite a contract; citation is not proof",
-   "production_callers": 298,
+   "detail": "299 production caller(s) cite a contract; citation is not proof",
+   "production_callers": 299,
    "test_callers": 18,
    "witness": "lexical_call_witness"
   },
@@ -202,9 +202,9 @@
    "symbol": "take",
    "status": "CITED_BY_CALLER",
    "scope": "caller_cites_contract",
-   "detail": "251 production caller(s) cite a contract; citation is not proof",
-   "production_callers": 317,
-   "test_callers": 82,
+   "detail": "257 production caller(s) cite a contract; citation is not proof",
+   "production_callers": 328,
+   "test_callers": 83,
    "witness": "lexical_call_witness"
   },
   {
@@ -1198,8 +1198,8 @@
    "symbol": "from_raw",
    "status": "CITED_BY_CALLER",
    "scope": "caller_cites_contract",
-   "detail": "298 production caller(s) cite a contract; citation is not proof",
-   "production_callers": 298,
+   "detail": "299 production caller(s) cite a contract; citation is not proof",
+   "production_callers": 299,
    "test_callers": 18,
    "witness": "lexical_call_witness"
   },
@@ -1462,9 +1462,9 @@
    "symbol": "take",
    "status": "CITED_BY_CALLER",
    "scope": "caller_cites_contract",
-   "detail": "251 production caller(s) cite a contract; citation is not proof",
-   "production_callers": 317,
-   "test_callers": 82,
+   "detail": "257 production caller(s) cite a contract; citation is not proof",
+   "production_callers": 328,
+   "test_callers": 83,
    "witness": "lexical_call_witness"
   },
   {
@@ -2854,9 +2854,9 @@
    "symbol": "new",
    "status": "CITED_BY_CALLER",
    "scope": "caller_cites_contract",
-   "detail": "834 production caller(s) cite a contract; citation is not proof",
-   "production_callers": 1673,
-   "test_callers": 863,
+   "detail": "841 production caller(s) cite a contract; citation is not proof",
+   "production_callers": 1696,
+   "test_callers": 925,
    "witness": "lexical_call_witness"
   },
   {
@@ -3046,9 +3046,9 @@
    "symbol": "take",
    "status": "CITED_BY_CALLER",
    "scope": "caller_cites_contract",
-   "detail": "251 production caller(s) cite a contract; citation is not proof",
-   "production_callers": 317,
-   "test_callers": 82,
+   "detail": "257 production caller(s) cite a contract; citation is not proof",
+   "production_callers": 328,
+   "test_callers": 83,
    "witness": "lexical_call_witness"
   },
   {
@@ -4312,9 +4312,9 @@
    "witness": "lexical_call_witness"
   },
   {
-   "site": "us-4afdb40417099c4c",
+   "site": "us-c1d9bd46a0df198e",
    "path": "src/rsa/object.rs",
-   "line": 355,
+   "line": 357,
    "symbol": "rsa_new_intern",
    "status": "CITED_BY_CALLER",
    "scope": "caller_cites_contract",
@@ -4324,9 +4324,9 @@
    "witness": "lexical_call_witness"
   },
   {
-   "site": "us-9042c7cd98a409f6",
+   "site": "us-bb45fdd7fd0d0d5b",
    "path": "src/rsa/ossl.rs",
-   "line": 486,
+   "line": 506,
    "symbol": "ossl_rsa_set_thread_bn_blinding",
    "status": "CITED_BY_CALLER",
    "scope": "caller_cites_contract",
@@ -4426,9 +4426,9 @@
    "symbol": "take",
    "status": "CITED_BY_CALLER",
    "scope": "caller_cites_contract",
-   "detail": "251 production caller(s) cite a contract; citation is not proof",
-   "production_callers": 317,
-   "test_callers": 82,
+   "detail": "257 production caller(s) cite a contract; citation is not proof",
+   "production_callers": 328,
+   "test_callers": 83,
    "witness": "lexical_call_witness"
   },
   {
@@ -6082,9 +6082,9 @@
    "symbol": "new",
    "status": "CITED_BY_CALLER",
    "scope": "caller_cites_contract",
-   "detail": "834 production caller(s) cite a contract; citation is not proof",
-   "production_callers": 1673,
-   "test_callers": 863,
+   "detail": "841 production caller(s) cite a contract; citation is not proof",
+   "production_callers": 1696,
+   "test_callers": 925,
    "witness": "lexical_call_witness"
   },
   {
@@ -6250,9 +6250,9 @@
    "symbol": "take",
    "status": "CITED_BY_CALLER",
    "scope": "caller_cites_contract",
-   "detail": "251 production caller(s) cite a contract; citation is not proof",
-   "production_callers": 317,
-   "test_callers": 82,
+   "detail": "257 production caller(s) cite a contract; citation is not proof",
+   "production_callers": 328,
+   "test_callers": 83,
    "witness": "lexical_call_witness"
   },
   {
@@ -9556,9 +9556,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-c7cebc5e70c84648",
+   "site": "us-6155dde6bd1019fd",
    "path": "src/bn/blinding.rs",
-   "line": 381,
+   "line": 463,
    "symbol": "BN_BLINDING_invert_ex",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -9568,9 +9568,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-b7cbdb544c95a1b7",
+   "site": "us-d49507a64df60b00",
    "path": "src/bn/blinding.rs",
-   "line": 770,
+   "line": 903,
    "symbol": "BN_BLINDING_create_param",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23236,9 +23236,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-10bb75807921d530",
+   "site": "us-e5fcb002860c8158",
    "path": "src/rsa/mod.rs",
-   "line": 427,
+   "line": 431,
    "symbol": "RSA_meth_new",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23248,9 +23248,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-c06dda1034569ded",
+   "site": "us-6b6a69e783373bab",
    "path": "src/rsa/mod.rs",
-   "line": 451,
+   "line": 455,
    "symbol": "RSA_meth_free",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23260,9 +23260,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-fed28ed637ab95a0",
+   "site": "us-bd744f2bd92bfb24",
    "path": "src/rsa/mod.rs",
-   "line": 472,
+   "line": 476,
    "symbol": "RSA_meth_dup",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23272,9 +23272,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-ea5eadc4ec546ce8",
+   "site": "us-eb7f56e8533cf573",
    "path": "src/rsa/mod.rs",
-   "line": 495,
+   "line": 499,
    "symbol": "RSA_meth_get0_name",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23284,9 +23284,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-42a20d868e280af8",
+   "site": "us-1ccdc5bbb9db50ac",
    "path": "src/rsa/mod.rs",
-   "line": 508,
+   "line": 512,
    "symbol": "RSA_meth_set1_name",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23296,9 +23296,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-a2ca5e4eadc66e14",
+   "site": "us-53ee9d6d08daddb9",
    "path": "src/rsa/mod.rs",
-   "line": 527,
+   "line": 531,
    "symbol": "RSA_meth_get_flags",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23308,9 +23308,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-79d0bfce557f1d1c",
+   "site": "us-fbee705f027a1889",
    "path": "src/rsa/mod.rs",
-   "line": 537,
+   "line": 541,
    "symbol": "RSA_meth_set_flags",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23320,9 +23320,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-f7b0ed030d5a888a",
+   "site": "us-1c536c7968acc802",
    "path": "src/rsa/mod.rs",
-   "line": 550,
+   "line": 554,
    "symbol": "RSA_meth_get0_app_data",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23332,9 +23332,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-d64632ecbbf34b2d",
+   "site": "us-f6d7fac494fdf155",
    "path": "src/rsa/mod.rs",
-   "line": 565,
+   "line": 569,
    "symbol": "RSA_meth_set0_app_data",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23344,9 +23344,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-73f12670cb2836a2",
+   "site": "us-c0c8c551d579cd04",
    "path": "src/rsa/mod.rs",
-   "line": 578,
+   "line": 582,
    "symbol": "RSA_meth_get_pub_enc",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23356,9 +23356,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-aecb14c8157dc1f4",
+   "site": "us-2bb709cb54391cb7",
    "path": "src/rsa/mod.rs",
-   "line": 591,
+   "line": 595,
    "symbol": "RSA_meth_set_pub_enc",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23368,9 +23368,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-6edb75ad65948f23",
+   "site": "us-c704149d923da5c6",
    "path": "src/rsa/mod.rs",
-   "line": 604,
+   "line": 608,
    "symbol": "RSA_meth_get_pub_dec",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23380,9 +23380,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-c8af6f8f5caaefd3",
+   "site": "us-2078706c228acecf",
    "path": "src/rsa/mod.rs",
-   "line": 617,
+   "line": 621,
    "symbol": "RSA_meth_set_pub_dec",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23392,9 +23392,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-fcda5160f2b9247b",
+   "site": "us-684e287de2e44cbe",
    "path": "src/rsa/mod.rs",
-   "line": 630,
+   "line": 634,
    "symbol": "RSA_meth_get_priv_enc",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23404,9 +23404,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-f9884f45f2c8e0ed",
+   "site": "us-ea96a1b595ccca3f",
    "path": "src/rsa/mod.rs",
-   "line": 643,
+   "line": 647,
    "symbol": "RSA_meth_set_priv_enc",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23416,9 +23416,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-1bbe8c0faf42bbe2",
+   "site": "us-af517c68444912e9",
    "path": "src/rsa/mod.rs",
-   "line": 656,
+   "line": 660,
    "symbol": "RSA_meth_get_priv_dec",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23428,9 +23428,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-dad093d59c5e2942",
+   "site": "us-9bbb844e14280cd0",
    "path": "src/rsa/mod.rs",
-   "line": 669,
+   "line": 673,
    "symbol": "RSA_meth_set_priv_dec",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23440,9 +23440,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-f71886610d5ff221",
+   "site": "us-8ceeeaf52bb14020",
    "path": "src/rsa/mod.rs",
-   "line": 682,
+   "line": 686,
    "symbol": "RSA_meth_get_mod_exp",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23452,9 +23452,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-ea1a57227fc7f52b",
+   "site": "us-c8a45d13b3bdfe91",
    "path": "src/rsa/mod.rs",
-   "line": 695,
+   "line": 699,
    "symbol": "RSA_meth_set_mod_exp",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23464,9 +23464,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-b45eec0a2a7070d3",
+   "site": "us-c78ab8adaa900795",
    "path": "src/rsa/mod.rs",
-   "line": 708,
+   "line": 712,
    "symbol": "RSA_meth_get_bn_mod_exp",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23476,9 +23476,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-ca95d9af0d429e8e",
+   "site": "us-d71f0b0d91c47fd3",
    "path": "src/rsa/mod.rs",
-   "line": 721,
+   "line": 725,
    "symbol": "RSA_meth_set_bn_mod_exp",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23488,9 +23488,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-3c5590460cd9c915",
+   "site": "us-12f671977b20fcc4",
    "path": "src/rsa/mod.rs",
-   "line": 734,
+   "line": 738,
    "symbol": "RSA_meth_get_init",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23500,9 +23500,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-0f03f393961b5d23",
+   "site": "us-8449cd0524e9396a",
    "path": "src/rsa/mod.rs",
-   "line": 747,
+   "line": 751,
    "symbol": "RSA_meth_set_init",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23512,9 +23512,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-4f2d5b01c72da0d6",
+   "site": "us-96f4dc2ab6f8dc27",
    "path": "src/rsa/mod.rs",
-   "line": 760,
+   "line": 764,
    "symbol": "RSA_meth_get_finish",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23524,9 +23524,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-7d28097dd370ca82",
+   "site": "us-e57315c5d1bdac06",
    "path": "src/rsa/mod.rs",
-   "line": 773,
+   "line": 777,
    "symbol": "RSA_meth_set_finish",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23536,9 +23536,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-939322670237a6b6",
+   "site": "us-9e91a68a1e95251b",
    "path": "src/rsa/mod.rs",
-   "line": 786,
+   "line": 790,
    "symbol": "RSA_meth_get_sign",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23548,9 +23548,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-ced5b94ea957d306",
+   "site": "us-643366bb01c5e752",
    "path": "src/rsa/mod.rs",
-   "line": 796,
+   "line": 800,
    "symbol": "RSA_meth_set_sign",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23560,9 +23560,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-ca80138a73093f85",
+   "site": "us-8248f2dfe4ec1933",
    "path": "src/rsa/mod.rs",
-   "line": 809,
+   "line": 813,
    "symbol": "RSA_meth_get_verify",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23572,9 +23572,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-2b10f4d5e1a40038",
+   "site": "us-187fb7305adfefae",
    "path": "src/rsa/mod.rs",
-   "line": 822,
+   "line": 826,
    "symbol": "RSA_meth_set_verify",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23584,9 +23584,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-743cc0b442e0fc13",
+   "site": "us-becdc96628c54b47",
    "path": "src/rsa/mod.rs",
-   "line": 835,
+   "line": 839,
    "symbol": "RSA_meth_get_keygen",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23596,9 +23596,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-c7e69a07bd8b0942",
+   "site": "us-7048112f8da23389",
    "path": "src/rsa/mod.rs",
-   "line": 848,
+   "line": 852,
    "symbol": "RSA_meth_set_keygen",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23608,9 +23608,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-49b12bfce98bb681",
+   "site": "us-27b13a87788d84d4",
    "path": "src/rsa/mod.rs",
-   "line": 863,
+   "line": 867,
    "symbol": "RSA_meth_get_multi_prime_keygen",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23620,9 +23620,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-7f4d1bcdf32aba6d",
+   "site": "us-78842864114fc48e",
    "path": "src/rsa/mod.rs",
-   "line": 876,
+   "line": 880,
    "symbol": "RSA_meth_set_multi_prime_keygen",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23632,9 +23632,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-c4f9ec8da1e1c383",
+   "site": "us-9635854099371b67",
    "path": "src/rsa/mod.rs",
-   "line": 944,
+   "line": 948,
    "symbol": "RSA_padding_add_none",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23644,9 +23644,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-6eea28545f010de8",
+   "site": "us-55fd32842f1038a2",
    "path": "src/rsa/mod.rs",
-   "line": 983,
+   "line": 987,
    "symbol": "RSA_padding_check_none",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23656,9 +23656,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-12f30e112f62bcb1",
+   "site": "us-50ff8cea01305608",
    "path": "src/rsa/mod.rs",
-   "line": 1018,
+   "line": 1022,
    "symbol": "RSA_padding_add_X931",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23668,9 +23668,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-e289787ffbc62101",
+   "site": "us-088d1665186fea2a",
    "path": "src/rsa/mod.rs",
-   "line": 1072,
+   "line": 1076,
    "symbol": "RSA_padding_check_X931",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23680,9 +23680,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-e036bdae6f6281c9",
+   "site": "us-43fddaa759fb3cac",
    "path": "src/rsa/mod.rs",
-   "line": 1167,
+   "line": 1171,
    "symbol": "RSA_padding_add_PKCS1_type_1",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23692,9 +23692,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-fc13c70911dc326d",
+   "site": "us-3b5c2521bfe48051",
    "path": "src/rsa/mod.rs",
-   "line": 1214,
+   "line": 1218,
    "symbol": "RSA_padding_check_PKCS1_type_1",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23704,9 +23704,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-98f37be04eb800ab",
+   "site": "us-80aadfb742fca2af",
    "path": "src/rsa/mod.rs",
-   "line": 1299,
+   "line": 1303,
    "symbol": "PKCS1_MGF1",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23716,9 +23716,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-4a0195fc444bed00",
+   "site": "us-54187ef65f7aadd9",
    "path": "src/rsa/mod.rs",
-   "line": 1396,
+   "line": 1400,
    "symbol": "RSA_padding_check_PKCS1_OAEP",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23728,9 +23728,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-ae23a67de4eb7d05",
+   "site": "us-946af66eaafdf0d4",
    "path": "src/rsa/mod.rs",
-   "line": 1462,
+   "line": 1466,
    "symbol": "RSA_padding_check_PKCS1_OAEP_mgf1",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23740,9 +23740,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-1fec535adc4288f3",
+   "site": "us-6d30121360a0de25",
    "path": "src/rsa/mod.rs",
-   "line": 1810,
+   "line": 1814,
    "symbol": "RSA_padding_add_PKCS1_type_2",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23752,9 +23752,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-9fb9af7c2928c79c",
+   "site": "us-17637001e240d2c5",
    "path": "src/rsa/mod.rs",
-   "line": 1847,
+   "line": 1851,
    "symbol": "RSA_padding_check_PKCS1_type_2",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23764,9 +23764,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-f8df58314639b461",
+   "site": "us-29f3a81d875d4aed",
    "path": "src/rsa/mod.rs",
-   "line": 2671,
+   "line": 2675,
    "symbol": "RSA_padding_add_PKCS1_OAEP",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23776,9 +23776,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-e7ca657c0ca1eeb9",
+   "site": "us-400ca433d8c4761c",
    "path": "src/rsa/mod.rs",
-   "line": 2709,
+   "line": 2713,
    "symbol": "RSA_padding_add_PKCS1_OAEP_mgf1",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23788,9 +23788,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-29f0ef6c0c7ad2b6",
+   "site": "us-fa178c93156af7c9",
    "path": "src/rsa/mod.rs",
-   "line": 2792,
+   "line": 2796,
    "symbol": "RSA_X931_derive_ex",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23800,9 +23800,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-b752c1ccf896ee9b",
+   "site": "us-fad5d86808bde888",
    "path": "src/rsa/mod.rs",
-   "line": 2956,
+   "line": 2960,
    "symbol": "RSA_X931_generate_key_ex",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23812,9 +23812,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-581d9755abf68a85",
+   "site": "us-75956bb9434f9276",
    "path": "src/rsa/mod.rs",
-   "line": 3404,
+   "line": 3408,
    "symbol": "RSA_check_key_ex",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23824,9 +23824,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-335593689bfa11ac",
+   "site": "us-9ed319be95c1e7bf",
    "path": "src/rsa/mod.rs",
-   "line": 3418,
+   "line": 3422,
    "symbol": "RSA_check_key",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23836,9 +23836,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-9ac5ab6a334139ef",
+   "site": "us-f1e0542814c7038a",
    "path": "src/rsa/object.rs",
-   "line": 564,
+   "line": 566,
    "symbol": "RSA_new_method",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23848,9 +23848,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-9a80ce4f5921867c",
+   "site": "us-f06b6bde690fc189",
    "path": "src/rsa/object.rs",
-   "line": 737,
+   "line": 744,
    "symbol": "RSA_up_ref",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23860,9 +23860,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-2552710a305f9005",
+   "site": "us-e2041a1006202092",
    "path": "src/rsa/object.rs",
-   "line": 1020,
+   "line": 1027,
    "symbol": "RSA_set0_key",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23872,9 +23872,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-24fddbddc5d8a61a",
+   "site": "us-6f2d1dd4517ae0ec",
    "path": "src/rsa/object.rs",
-   "line": 1172,
+   "line": 1179,
    "symbol": "RSA_set0_multi_prime_params",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23884,9 +23884,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-88907e748b0470eb",
+   "site": "us-d88a555008f08a5c",
    "path": "src/rsa/object.rs",
-   "line": 1271,
+   "line": 1278,
    "symbol": "RSA_get0_key",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23896,9 +23896,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-4497dc7ca34d3e94",
+   "site": "us-8d2ad88dfc203fcc",
    "path": "src/rsa/object.rs",
-   "line": 1295,
+   "line": 1302,
    "symbol": "RSA_get0_factors",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23908,9 +23908,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-b7a1ce6a0f8638a5",
+   "site": "us-c96d4ec4a9fecd82",
    "path": "src/rsa/object.rs",
-   "line": 1349,
+   "line": 1356,
    "symbol": "RSA_get0_multi_prime_factors",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23920,9 +23920,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-fda818b915d19be6",
+   "site": "us-ec3a5c8aacaca93b",
    "path": "src/rsa/object.rs",
-   "line": 1370,
+   "line": 1377,
    "symbol": "RSA_get0_crt_params",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23932,9 +23932,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-86de3d739a8032b1",
+   "site": "us-4c58fb755b1bca7c",
    "path": "src/rsa/object.rs",
-   "line": 1411,
+   "line": 1418,
    "symbol": "RSA_get0_multi_prime_crt_params",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23944,9 +23944,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-f4ef0e28a405f40a",
+   "site": "us-8e581603c6e69f45",
    "path": "src/rsa/object.rs",
-   "line": 2063,
+   "line": 2070,
    "symbol": "RSA_public_encrypt",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23956,9 +23956,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-7edc32cf49de902e",
+   "site": "us-bfb29f6992f8b066",
    "path": "src/rsa/object.rs",
-   "line": 2088,
+   "line": 2095,
    "symbol": "RSA_private_encrypt",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23968,9 +23968,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-58f2530f0702c097",
+   "site": "us-8647a4dca560c204",
    "path": "src/rsa/object.rs",
-   "line": 2113,
+   "line": 2120,
    "symbol": "RSA_private_decrypt",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23980,9 +23980,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-282811578d7c2b2d",
+   "site": "us-8fc4a5204e601036",
    "path": "src/rsa/object.rs",
-   "line": 2138,
+   "line": 2145,
    "symbol": "RSA_public_decrypt",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -23992,9 +23992,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-b0967ac73c24b428",
+   "site": "us-c31abc6e5c8ab431",
    "path": "src/rsa/object.rs",
-   "line": 2917,
+   "line": 2924,
    "symbol": "engine_test_sign",
    "status": "CALLER_OBLIGATION_UNESTABLISHED",
    "scope": "unsafe_fn_without_contract",
@@ -24004,9 +24004,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-67212a2d1aef2b1e",
+   "site": "us-6e26d136cf61c0f3",
    "path": "src/rsa/object.rs",
-   "line": 2937,
+   "line": 2944,
    "symbol": "engine_test_priv_enc",
    "status": "CALLER_OBLIGATION_UNESTABLISHED",
    "scope": "unsafe_fn_without_contract",
@@ -24016,13 +24016,37 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-3c074481b14ad9fe",
+   "site": "us-b1abb1e76f4eb698",
    "path": "src/rsa/ossl.rs",
-   "line": 661,
+   "line": 681,
    "symbol": "RSA_setup_blinding",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
    "detail": "the obligation is delegated to the documented C ABI caller",
+   "production_callers": 0,
+   "test_callers": 0,
+   "witness": "lexical_contract_witness"
+  },
+  {
+   "site": "us-40d1b72d4d2a88ab",
+   "path": "src/rsa/ossl.rs",
+   "line": 3177,
+   "symbol": "default_rng_bytes",
+   "status": "CALLER_OBLIGATION_UNESTABLISHED",
+   "scope": "unsafe_fn_without_contract",
+   "detail": "the block cites a caller obligation, but its unsafe fn states no contract",
+   "production_callers": 0,
+   "test_callers": 0,
+   "witness": "lexical_contract_witness"
+  },
+  {
+   "site": "us-b3797b9ef9def3c7",
+   "path": "src/rsa/ossl.rs",
+   "line": 3203,
+   "symbol": "scripted_bytes",
+   "status": "CALLER_OBLIGATION_UNESTABLISHED",
+   "scope": "unsafe_fn_without_contract",
+   "detail": "the block cites a caller obligation, but its unsafe fn states no contract",
    "production_callers": 0,
    "test_callers": 0,
    "witness": "lexical_contract_witness"
@@ -26500,7 +26524,7 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-3e0e94900b77db0c",
+   "site": "us-94c279ea4c69cb60",
    "path": "src/runtime/stack.rs",
    "line": 471,
    "symbol": "OPENSSL_sk_free",
@@ -26512,9 +26536,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-37c9c881633e2f75",
+   "site": "us-98ed5c15a80a3d39",
    "path": "src/runtime/stack.rs",
-   "line": 487,
+   "line": 523,
    "symbol": "OPENSSL_sk_pop_free",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -26524,9 +26548,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-427d03a2337e0d3a",
+   "site": "us-d0023ca07d1c0080",
    "path": "src/runtime/stack.rs",
-   "line": 564,
+   "line": 623,
    "symbol": "OPENSSL_sk_set",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -26536,9 +26560,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-9d3a2e78aaa917f2",
+   "site": "us-bf238b027e6fbc6c",
    "path": "src/runtime/stack.rs",
-   "line": 811,
+   "line": 987,
    "symbol": "OPENSSL_sk_sort",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -26548,9 +26572,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-dc1e5e3947bacb57",
+   "site": "us-80b08b8bf9eb33a2",
    "path": "src/runtime/stack.rs",
-   "line": 867,
+   "line": 1043,
    "symbol": "OPENSSL_sk_set_cmp_func",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -26560,9 +26584,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-592d17f0fe6ff12e",
+   "site": "us-62e9826875a4a200",
    "path": "src/runtime/stack.rs",
-   "line": 899,
+   "line": 1075,
    "symbol": "OPENSSL_sk_find",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -26572,9 +26596,9 @@
    "witness": "lexical_contract_witness"
   },
   {
-   "site": "us-8a62bc19fd0447a1",
+   "site": "us-d0313bd725d8398e",
    "path": "src/runtime/stack.rs",
-   "line": 1002,
+   "line": 1178,
    "symbol": "OPENSSL_sk_deep_copy",
    "status": "EXTERNAL_CALLER_CONTRACT",
    "scope": "abi_export_contract",
@@ -34992,8 +35016,8 @@
   "vacuous_precondition": 472,
   "safe_api_escape": 211,
   "no_production_caller": 261,
-  "caller_obligation_unestablished": 34,
-  "unsafe_fn_without_contract": 34,
+  "caller_obligation_unestablished": 36,
+  "unsafe_fn_without_contract": 36,
   "external_caller_contract": 2069,
   "implementer_obligation": 17,
   "cited_by_caller": 322,

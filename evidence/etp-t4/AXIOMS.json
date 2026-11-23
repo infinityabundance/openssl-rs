@@ -4,7 +4,7 @@
  "item": "ETP-T4 of docs/ETP-TODO.md",
  "identity": {
   "scanner": "forensics/tools/unsafe_obligations.py",
-  "scanner_sha256": "7b17d4c2b49b8584a0bf7dbfaf98fe84d359e82256a5d01b208675dd1592f3c0",
+  "scanner_sha256": "443634a38f50d2563e1abdb2352ae0c8171ad03a06b05e058cf637392e5bf6ad",
   "heuristic": true
  },
  "vocabularies": {
@@ -350,18 +350,18 @@
   }
  ],
  "suppressions": {
-  "total": 1983,
+  "total": 1999,
   "by_lint": {
    "dead_code": 703,
    "non_snake_case": 460,
    "clippy::too_many_arguments": 240,
    "non_upper_case_globals": 174,
-   "clippy::panic": 77,
+   "clippy::panic": 89,
    "unused_assignments": 53,
    "unreachable_pub": 51,
    "clippy::never_loop": 47,
-   "clippy::unwrap_used": 41,
-   "clippy::expect_used": 39,
+   "clippy::unwrap_used": 42,
+   "clippy::expect_used": 41,
    "private_interfaces": 13,
    "clippy::needless_range_loop": 12,
    "non_camel_case_types": 11,
@@ -384,6 +384,7 @@
    "clippy::enum_variant_names": 1,
    "clippy::should_implement_trait": 1,
    "clippy::too_many_lines": 1,
+   "clippy::vec_box": 1,
    "irrefutable_let_patterns": 1,
    "unused_variables": 1
   },
@@ -1195,6 +1196,18 @@
    {
     "path": "src/bn/bignum.rs",
     "line": 257,
+    "attribute": "allow",
+    "lints": "clippy::panic"
+   },
+   {
+    "path": "src/bn/blinding.rs",
+    "line": 1101,
+    "attribute": "allow",
+    "lints": "clippy::panic"
+   },
+   {
+    "path": "src/bn/blinding.rs",
+    "line": 1108,
     "attribute": "allow",
     "lints": "clippy::panic"
    },
@@ -8688,49 +8701,49 @@
    },
    {
     "path": "src/rsa/mod.rs",
-    "line": 132,
+    "line": 136,
     "attribute": "allow",
     "lints": "dead_code"
    },
    {
     "path": "src/rsa/mod.rs",
-    "line": 1731,
+    "line": 1735,
     "attribute": "allow",
     "lints": "non_snake_case"
    },
    {
     "path": "src/rsa/mod.rs",
-    "line": 2164,
+    "line": 2168,
     "attribute": "allow",
     "lints": "non_snake_case"
    },
    {
     "path": "src/rsa/mod.rs",
-    "line": 2354,
+    "line": 2358,
     "attribute": "allow",
     "lints": "non_snake_case"
    },
    {
     "path": "src/rsa/mod.rs",
-    "line": 2355,
+    "line": 2359,
     "attribute": "allow",
     "lints": "clippy::too_many_arguments"
    },
    {
     "path": "src/rsa/mod.rs",
-    "line": 2490,
+    "line": 2494,
     "attribute": "allow",
     "lints": "non_snake_case"
    },
    {
     "path": "src/rsa/mod.rs",
-    "line": 2491,
+    "line": 2495,
     "attribute": "allow",
     "lints": "clippy::too_many_arguments"
    },
    {
     "path": "src/rsa/mod.rs",
-    "line": 2775,
+    "line": 2779,
     "attribute": "allow",
     "lints": "clippy::too_many_arguments"
    },
@@ -8796,99 +8809,177 @@
    },
    {
     "path": "src/rsa/object.rs",
-    "line": 263,
+    "line": 265,
     "attribute": "allow",
     "lints": "dead_code"
    },
    {
     "path": "src/rsa/object.rs",
-    "line": 266,
+    "line": 268,
     "attribute": "allow",
     "lints": "dead_code"
    },
    {
     "path": "src/rsa/object.rs",
-    "line": 286,
+    "line": 288,
     "attribute": "allow",
     "lints": "dead_code"
    },
    {
     "path": "src/rsa/object.rs",
-    "line": 289,
+    "line": 291,
     "attribute": "allow",
     "lints": "dead_code"
    },
    {
     "path": "src/rsa/object.rs",
-    "line": 292,
+    "line": 294,
     "attribute": "allow",
     "lints": "dead_code"
    },
    {
     "path": "src/rsa/object.rs",
-    "line": 295,
+    "line": 297,
     "attribute": "allow",
     "lints": "dead_code"
    },
    {
     "path": "src/rsa/object.rs",
-    "line": 584,
+    "line": 586,
     "attribute": "allow",
     "lints": "dead_code"
    },
    {
     "path": "src/rsa/object.rs",
-    "line": 768,
+    "line": 775,
     "attribute": "allow",
     "lints": "dead_code"
    },
    {
     "path": "src/rsa/object.rs",
-    "line": 1534,
+    "line": 1541,
     "attribute": "allow",
     "lints": "dead_code"
    },
    {
     "path": "src/rsa/object.rs",
-    "line": 1557,
+    "line": 1564,
     "attribute": "allow",
     "lints": "dead_code"
    },
    {
     "path": "src/rsa/object.rs",
-    "line": 1653,
+    "line": 1660,
     "attribute": "allow",
     "lints": "dead_code"
    },
    {
     "path": "src/rsa/object.rs",
-    "line": 1838,
+    "line": 1845,
     "attribute": "allow",
     "lints": "dead_code"
    },
    {
     "path": "src/rsa/object.rs",
-    "line": 1900,
+    "line": 1907,
     "attribute": "allow",
     "lints": "dead_code"
    },
    {
     "path": "src/rsa/ossl.rs",
-    "line": 158,
+    "line": 176,
     "attribute": "allow",
     "lints": "dead_code"
    },
    {
     "path": "src/rsa/ossl.rs",
-    "line": 169,
+    "line": 187,
     "attribute": "allow",
     "lints": "dead_code"
    },
    {
     "path": "src/rsa/ossl.rs",
-    "line": 314,
+    "line": 334,
     "attribute": "allow",
     "lints": "unpredictable_function_pointer_comparisons"
+   },
+   {
+    "path": "src/rsa/ossl.rs",
+    "line": 1543,
+    "attribute": "allow",
+    "lints": "clippy::vec_box"
+   },
+   {
+    "path": "src/rsa/ossl.rs",
+    "line": 1735,
+    "attribute": "allow",
+    "lints": "clippy::panic"
+   },
+   {
+    "path": "src/rsa/ossl.rs",
+    "line": 3325,
+    "attribute": "allow",
+    "lints": "clippy::panic"
+   },
+   {
+    "path": "src/rsa/ossl.rs",
+    "line": 4282,
+    "attribute": "allow",
+    "lints": "clippy::expect_used, clippy::panic"
+   },
+   {
+    "path": "src/rsa/ossl.rs",
+    "line": 4958,
+    "attribute": "allow",
+    "lints": "clippy::panic"
+   },
+   {
+    "path": "src/rsa/ossl.rs",
+    "line": 5042,
+    "attribute": "allow",
+    "lints": "clippy::panic"
+   },
+   {
+    "path": "src/rsa/ossl.rs",
+    "line": 5117,
+    "attribute": "allow",
+    "lints": "clippy::panic"
+   },
+   {
+    "path": "src/rsa/ossl.rs",
+    "line": 5274,
+    "attribute": "allow",
+    "lints": "clippy::panic"
+   },
+   {
+    "path": "src/rsa/ossl.rs",
+    "line": 5354,
+    "attribute": "allow",
+    "lints": "clippy::panic"
+   },
+   {
+    "path": "src/rsa/ossl.rs",
+    "line": 5441,
+    "attribute": "allow",
+    "lints": "clippy::panic"
+   },
+   {
+    "path": "src/rsa/ossl.rs",
+    "line": 5635,
+    "attribute": "allow",
+    "lints": "clippy::expect_used"
+   },
+   {
+    "path": "src/rsa/ossl.rs",
+    "line": 5688,
+    "attribute": "allow",
+    "lints": "clippy::panic"
+   },
+   {
+    "path": "src/rsa/ossl.rs",
+    "line": 5758,
+    "attribute": "allow",
+    "lints": "clippy::unwrap_used"
    },
    {
     "path": "src/rsa/pmeth.rs",
@@ -9606,7 +9697,13 @@
    },
    {
     "path": "src/runtime/stack.rs",
-    "line": 1062,
+    "line": 710,
+    "attribute": "allow",
+    "lints": "clippy::panic"
+   },
+   {
+    "path": "src/runtime/stack.rs",
+    "line": 1238,
     "attribute": "allow",
     "lints": "clippy::unwrap_used"
    },
@@ -12425,7 +12522,12 @@
    },
    {
     "path": "src/bn/blinding.rs",
-    "line": 854,
+    "line": 1044,
+    "module": "test_hooks"
+   },
+   {
+    "path": "src/bn/blinding.rs",
+    "line": 1116,
     "module": "tests"
    },
    {
@@ -13970,7 +14072,7 @@
    },
    {
     "path": "src/rsa/mod.rs",
-    "line": 3421,
+    "line": 3425,
     "module": "tests"
    },
    {
@@ -13985,12 +14087,17 @@
    },
    {
     "path": "src/rsa/object.rs",
-    "line": 2194,
+    "line": 2201,
     "module": "tests"
    },
    {
     "path": "src/rsa/ossl.rs",
-    "line": 2343,
+    "line": 1695,
+    "module": "ext_kdk_hooks"
+   },
+   {
+    "path": "src/rsa/ossl.rs",
+    "line": 3053,
     "module": "tests"
    },
    {
@@ -14400,12 +14507,12 @@
    },
    {
     "path": "src/runtime/stack.rs",
-    "line": 608,
+    "line": 667,
     "module": "test_hooks"
    },
    {
     "path": "src/runtime/stack.rs",
-    "line": 1058,
+    "line": 1234,
     "module": "tests"
    },
    {
@@ -15042,8 +15149,8 @@
    "AX-OS-SYSCALL",
    "AX-SUPPRESSION-SCOPE"
   ],
-  "suppressions": 1983,
-  "test_modules": 548
+  "suppressions": 1999,
+  "test_modules": 550
  },
  "non_claims": [
   "An axiom is a stated premise, not a verified fact; its status says what checks exist, not that it is true.",

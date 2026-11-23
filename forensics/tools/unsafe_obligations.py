@@ -1556,6 +1556,33 @@ def decode_sites(block: dict[str, Any]) -> list[dict[str, Any]]:
     return out
 
 
+def _git(*args: str) -> str | None:
+    """Return stripped git output, or None when git is absent or refuses."""
+    try:
+        result = subprocess.run(
+            ["git", "-c", "safe.directory=*", "-C", str(REPO_ROOT), *args],
+            capture_output=True, text=True, check=False,
+        )
+    except OSError:
+        return None
+    if result.returncode != 0:
+        return None
+    return result.stdout.strip()
+
+
+def _worktree_state() -> str:
+    """Describe the scanned source tree honestly; git identity is provenance, not a binding."""
+    changed = _git("status", "--porcelain", "--", "src")
+    if changed is None:
+        return "git unavailable; the source tree digest is the live binding"
+    if changed:
+        return "src had uncommitted changes at the scan: " + " ".join(changed.splitlines())
+    return (
+        "src unchanged at the scan; the evidence files are regenerated in the working "
+        "tree before the evidence commit"
+    )
+
+
 def build_inventory() -> dict[str, Any]:
     scanner = Scanner()
     scanner.build()
@@ -1634,10 +1661,9 @@ def build_inventory() -> dict[str, Any]:
         "kind": "unsafe-site-obligation-inventory",
         "item": "ETP-T4 of docs/ETP-TODO.md",
         "identity": {
-            "commit": "07b776d688fdd1dcc4e315661894c30e623aed9e",
-            "branch": "staging",
-            "worktree_state": "src unchanged at the scan; the ETP-T4 evidence files are "
-                               "untracked until the evidence commit",
+            "commit": _git("rev-parse", "HEAD") or "UNRECORDED",
+            "branch": _git("rev-parse", "--abbrev-ref", "HEAD") or "UNRECORDED",
+            "worktree_state": _worktree_state(),
             "source_tree_sha256": scanner.source_hash,
             "source_files": len(scanner.files),
             "source_lines": scanner.total_lines,
