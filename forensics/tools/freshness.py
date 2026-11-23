@@ -100,6 +100,8 @@ INSTRUMENTS = REPO_ROOT / "evidence" / "etp3" / "instruments.json"
 
 SCHEMA = "openssl-rs/etp/freshness-dependencies/1"
 HISTORY_SCHEMA = "openssl-rs/etp/freshness-history/1"
+TRIAGE_SCHEMA = "openssl-rs/etp/identity-triage/1"
+TRIAGE_PATH = REPO_ROOT / "evidence" / "etp-t9" / "IDENTITY-TRIAGE.json"
 
 # ---------------------------------------------------------------------------
 # The model's fixed vocabulary
@@ -231,6 +233,104 @@ LINE_COMMENT = {".rs": "//", ".c": "//", ".h": "//"}
 
 HEX = re.compile(r"^[0-9a-f]{7,40}$")
 BACKTICK_PATH = re.compile(r"`((?:src|docs|evidence|courts|artifacts|forensics|docker)/[A-Za-z0-9_./-]+)`")
+
+# ---------------------------------------------------------------------------
+# Identity triage (ETP-T9 follow-up)
+# ---------------------------------------------------------------------------
+
+# Every artefact the registry records without an identity is triaged once. The
+# triage is a *declared* overlay, not a derivation performed at check time: the
+# classifier below records why each artefact is treated as it is, and `check`
+# consumes the committed record. A class is a statement about what can be
+# established, never a grade.
+#
+#   DERIVED       an identity established by a recorded rule (a digest-bound
+#                 freeze record, or a harness input read from the tree)
+#   DECLARED      the artefact names the tree it was taken at in a structured or
+#                 narrow prose field, and that commit resolves
+#   HISTORICAL    the artefact is a record of a past moment; its identity is the
+#                 commit it was introduced at (or the tree it itself declares)
+#                 and it may not be cited as current evidence
+#   UNCERTIFIABLE no identity can be established or honestly declared
+TRIAGE_CLASSES = ("DERIVED", "DECLARED", "HISTORICAL", "UNCERTIFIABLE")
+
+# Field paths that name the tree an artefact was taken at. These are exact
+# paths, not leaf names: `source.working_tree.repository_head` in a freeze record
+# names the instrument's tree, not the measured candidate, and must not be read
+# as this artefact's identity. An exact set can miss a declaration (which is
+# conservative) but cannot invent one.
+TRIAGE_IDENTITY_FIELDS = (
+    "head",
+    "head_at_start",
+    "identity.head",
+    "identity.source.head",
+    "identity.analysis_candidate",
+    "source.head",
+    "candidate.head",
+    "candidate_identity.source_head",
+    "source_identity.head",
+    "source_identity.repository_head",
+    "source_identity.repository_head_start",
+    "repository_head_at_measurement",
+    "analysis_candidate",
+    "source_candidate",
+)
+
+# A tracked harness input is not a measurement: its truth is that these bytes are
+# in the tree, so the tree it is read from is its identity. The rule is
+# definitional and labelled `heuristic` in the record, because it does not claim
+# the input was used in any run.
+TRIAGE_INPUT_PREFIXES = ("courts/", "forensics/tools/")
+TRIAGE_INPUT_SUFFIXES = (".c", ".h", ".sh", ".py", ".pem", ".txt")
+
+# A narrow prose declaration: "frozen inventory at `67ae7f8e9`". The window is
+# bounded and the phrase is required, so ordinary prose cannot become an
+# identity. The commit must still resolve and be an ancestor of the tree.
+TRIAGE_FROZEN_AT = re.compile(r"(?i)\bfrozen\b[^.]{0,80}?\bat\s+([0-9a-f]{7,40})\b")
+TRIAGE_SUPERSEDED = re.compile(r"(?i)\bsuperseded\b")
+TRIAGE_CANDIDATE_NAME = re.compile(r"^openssl-rs\s+\d+\.\d+\.\d+")
+TRIAGE_BUILD_OUTPUT = re.compile(r"\.(?:so|a)$|\.so\.\d+$")
+
+# The closed set of reasons an artefact can be UNCERTIFIABLE, each with what
+# would make it certifiable. A cause outside this set is a refusal.
+TRIAGE_CAUSES = {
+    "U1": (
+        "multi-commit-no-declaration",
+        "the artefact was modified in more than one commit and names no tree; a declared identity commit, "
+        "or a single-commit history, would make it certifiable",
+    ),
+    "U2": (
+        "candidate-name-only",
+        "the artefact names a candidate version, not a tree; a commit field, or a tracked mapping from the "
+        "candidate name to the tree measured, would make it certifiable",
+    ),
+    "U3": (
+        "declared-identity-unresolvable",
+        "the declared commit does not resolve to an ancestor of this tree; a resolving commit would make it "
+        "certifiable",
+    ),
+    "U4": (
+        "ambiguous-own-identity",
+        "the artefact declares more than one tree and does not certify them equivalent; one tree, or a check "
+        "that they are source-equivalent, would make it certifiable",
+    ),
+    "U5": (
+        "uncheckable-source-binding",
+        "the source-root digest has no recorded rule and the freeze record it names cannot be read from the "
+        "tree; a non-null hash rule and a tracked, digest-matching freeze record would make it certifiable",
+    ),
+    "U6": (
+        "build-output-no-identity",
+        "a build output names no source tree; a build-identity record naming the source commit and the output "
+        "digest would make it certifiable",
+    ),
+    "U7": (
+        "self-qualified-declaration",
+        "the declared tree is qualified by a dirty worktree, so the artefact does not claim to correspond to "
+        "it; a clean-tree declaration, or the base commit plus the patch digest, would make it certifiable",
+    ),
+}
+TRIAGE_CAUSE_CODES = tuple(TRIAGE_CAUSES)
 
 
 # ---------------------------------------------------------------------------
@@ -408,6 +508,36 @@ class Git:
             value = result.stdout.decode().strip() if result.returncode == 0 else ""
             self._last[key] = value or None
         return self._last[key]
+
+    def commits_touching(self, commit: str, path: str) -> int:
+        """How many commits at or before `commit` changed `path`.
+
+        One means the path has been introduced and never modified, so its bytes
+        at `commit` are exactly its bytes at the introduced commit. More than
+        one means no single moment explains the current bytes.
+        """
+        result = self.run("rev-list", "--count", commit, "--", path)
+        value = result.stdout.decode().strip() if result.returncode == 0 else "0"
+        try:
+            return int(value)
+        except ValueError:
+            return 0
+
+    def introducing_commit(self, commit: str, path: str) -> str | None:
+        """The commit at or before `commit` that added `path`, or None."""
+        result = self.run("log", "--diff-filter=A", "--format=%H", commit, "--", path)
+        if result.returncode != 0:
+            return None
+        found = result.stdout.decode().split()
+        return found[-1] if found else None
+
+    def commit_time(self, commit: str) -> int:
+        """Committer date, for a deterministic order between two identities."""
+        result = self.run("show", "-s", "--format=%ct", commit)
+        try:
+            return int(result.stdout.decode().strip())
+        except ValueError:
+            return 0
 
     def diff_hunks(self, base: str, head: str, path: str) -> list[str] | None:
         """Added and removed lines for one path, or None when the diff fails."""
@@ -1089,6 +1219,480 @@ def derive(repo: Git, commit: str) -> dict[str, Any]:
 
 
 # ---------------------------------------------------------------------------
+# Identity triage
+# ---------------------------------------------------------------------------
+
+
+def _triage_declared(repo: Git, head: str, document: Any) -> list[dict[str, str]]:
+    """Own-identity declarations whose commit resolves as an ancestor.
+
+    Only exact field paths in `TRIAGE_IDENTITY_FIELDS` are read. A value that
+    does not resolve, or resolves outside this tree's history, is not an identity
+    of this artefact: it is reported by the caller as uncertifiable, never
+    silently dropped.
+    """
+    found: list[dict[str, str]] = []
+    if not isinstance(document, (dict, list)):
+        return found
+    for field_path, value in _walks(document):
+        if field_path not in TRIAGE_IDENTITY_FIELDS:
+            continue
+        if not isinstance(value, str) or not HEX.match(value.strip()):
+            continue
+        commit = repo.resolve(value.strip())
+        if commit is None or not repo.is_ancestor(commit, head):
+            continue
+        found.append({"field": field_path, "value": value.strip(), "commit": commit})
+    return found
+
+
+def _triage_qualifier(document: Any) -> str | None:
+    """Why a declared tree is disqualified by the artefact's own fields.
+
+    A declaration of a commit is not a declaration of a tree when the same
+    record says the measured worktree was dirty and does not certify the
+    build-relevant paths clean. `build_relevant_clean: true` is accepted as that
+    certification, because it is the field the campaign records for exactly that
+    purpose.
+    """
+    if not isinstance(document, dict):
+        return None
+    for field_path, value in _walks(document):
+        leaf = field_path.split(".")[-1].split("[")[0]
+        if leaf == "build_relevant_clean" and value is False:
+            return f"{field_path} is false"
+        if leaf == "build_relevant_status" and isinstance(value, str) and value.strip():
+            return f"{field_path} records a modified build-relevant path"
+    for field_path, value in _walks(document):
+        if field_path.split(".")[-1].split("[")[0] != "worktree":
+            continue
+        if not isinstance(value, str) or "dirty" not in value.lower():
+            continue
+        parent = ".".join(field_path.rsplit(".", 1)[:-1])
+        certified = any(
+            other.split(".")[-1] == "build_relevant_clean" and flag is True
+            for other, flag in _walks(document)
+            if other.rsplit(".", 1)[0] == parent
+        )
+        if not certified:
+            return f"{field_path} records a dirty worktree"
+    return None
+
+
+def _triage_freeze(repo: Git, commit: str, document: Any) -> tuple[dict[str, str] | None, str | None]:
+    """Follow a digest-bound `freeze` field to the tree its record declares.
+
+    The derivation is mechanical and checkable: the named record must be tracked
+    at `commit`, its blob digest must equal the recorded `freeze_sha256`, and it
+    must declare exactly one own identity. Returns (identity, failure reason).
+    """
+    if not isinstance(document, dict):
+        return None, None
+    target = document.get("freeze")
+    recorded = document.get("freeze_sha256")
+    if not isinstance(target, str) or not target:
+        return None, None
+    if not isinstance(recorded, str) or not re.fullmatch(r"[0-9a-f]{64}", recorded):
+        return None, f"the freeze field names {target!r} without a recorded digest"
+    if not repo.exists(commit, target):
+        return None, f"the freeze record {target!r} is not tracked at {commit[:12]}"
+    digest = repo.digest(commit, target)
+    if digest != recorded:
+        return None, f"the freeze record {target!r} is {digest}, not the recorded {recorded}"
+    text = repo.text(commit, target)
+    try:
+        record = json.loads(text) if text is not None else None
+    except json.JSONDecodeError:
+        record = None
+    if record is None:
+        return None, f"the freeze record {target!r} is not readable JSON"
+    declared = _triage_declared(repo, commit, record)
+    commits = sorted({item["commit"] for item in declared})
+    if len(commits) != 1:
+        return None, (
+            f"the freeze record {target!r} declares {len(commits)} distinct tree(s), not one"
+            if commits
+            else f"the freeze record {target!r} declares no tree"
+        )
+    return {
+        "field": f"freeze:{target}",
+        "commit": commits[0],
+        "all": sorted({item["field"] for item in declared}),
+    }, None
+
+
+def _triage_superseded(document: Any, text: str | None) -> bool:
+    if isinstance(document, dict) and document.get("superseded") is True:
+        return True
+    if text:
+        return bool(TRIAGE_SUPERSEDED.search("\n".join(text.splitlines()[:40])))
+    return False
+
+
+def _triage_candidate_name(document: Any) -> str | None:
+    if not isinstance(document, (dict, list)):
+        return None
+    for field_path, value in _walks(document):
+        if field_path.split(".")[-1].split("[")[0] != "candidate_identity":
+            continue
+        if isinstance(value, str) and TRIAGE_CANDIDATE_NAME.match(value.strip()):
+            return value.strip()
+    return None
+
+
+def _triage_prose_frozen_at(repo: Git, head: str, text: str | None) -> str | None:
+    if not text:
+        return None
+    prose = "\n".join(text.splitlines()[:80])
+    matches = [
+        repo.resolve(item)
+        for item in TRIAGE_FROZEN_AT.findall(re.sub(r"[>`]", " ", prose))
+    ]
+    for commit in matches:
+        if commit is not None and repo.is_ancestor(commit, head):
+            return commit
+    return None
+
+
+def _triage_record(path: str) -> dict[str, Any]:
+    return {
+        "path": path,
+        "class": "",
+        "rule": "",
+        "field": None,
+        "identity": None,
+        "ambiguous": False,
+        "heuristic": False,
+        "cause": None,
+        "cause_name": None,
+        "reason": "",
+        "certifiable_if": None,
+    }
+
+
+def _uncertifiable(record: dict[str, Any], code: str, detail: str = "") -> dict[str, Any]:
+    name, certifiable = TRIAGE_CAUSES[code]
+    record["class"] = "UNCERTIFIABLE"
+    record["rule"] = code
+    record["cause"] = code
+    record["cause_name"] = name
+    record["reason"] = detail or name
+    record["certifiable_if"] = certifiable
+    return record
+
+
+def triage_one(repo: Git, commit: str, path: str) -> dict[str, Any]:
+    """Classify one artefact that the registry records without an identity."""
+    record = _triage_record(path)
+    text = repo.text(commit, path)
+    document: Any = None
+    if path.endswith(".json") and text is not None:
+        try:
+            document = json.loads(text)
+        except json.JSONDecodeError:
+            document = None
+    declared = _triage_declared(repo, commit, document)
+    qualifier = _triage_qualifier(document)
+    freeze, freeze_failure = _triage_freeze(repo, commit, document)
+    superseded = _triage_superseded(document, text)
+
+    if declared:
+        commits = sorted({item["commit"] for item in declared})
+        if qualifier:
+            return _uncertifiable(record, "U7", f"{qualifier}; the declared tree is not the tree measured")
+        # Several declared trees are recorded. The earliest is adopted because
+        # evaluating a wider range can only over-invalidate; the others stay
+        # visible in `identity.all`.
+        chosen = sorted(commits, key=lambda item: (repo.commit_time(item), item))[0]
+        record["identity"] = {
+            "commit": chosen,
+            "all": [dict(item) for item in sorted(declared, key=lambda item: (item["field"], item["commit"]))],
+            "source": "declared",
+        }
+        record["field"] = ",".join(sorted({item["field"] for item in declared}))
+        record["ambiguous"] = len(commits) > 1
+        record["rule"] = "declared-identity-field"
+        record["reason"] = (
+            "the artefact names the tree it was taken at in "
+            + record["field"]
+            + (" (superseded: read as history)" if superseded else "")
+        )
+        record["class"] = "HISTORICAL" if superseded else "DECLARED"
+        return record
+
+    if freeze is not None:
+        record["identity"] = {
+            "commit": freeze["commit"],
+            "all": [{"field": freeze["field"], "commit": freeze["commit"], "declared": freeze["all"]}],
+            "source": "derived",
+        }
+        record["field"] = freeze["field"]
+        record["rule"] = "digest-bound-freeze-record"
+        record["reason"] = (
+            "the freeze field names "
+            + freeze["field"].split(":", 1)[1]
+            + ", whose recorded digest matches and which declares one tree"
+        )
+        record["class"] = "HISTORICAL" if superseded else "DERIVED"
+        return record
+
+    if path.endswith(".md"):
+        frozen_at = _triage_prose_frozen_at(repo, commit, text)
+        if frozen_at is not None:
+            record["identity"] = {"commit": frozen_at, "all": [], "source": "declared"}
+            record["field"] = "prose:frozen at"
+            record["rule"] = "declared-prose-frozen-at"
+            record["reason"] = "the artefact states that it is a frozen record at a named commit"
+            record["class"] = "HISTORICAL"
+            return record
+
+    if path.startswith(TRIAGE_INPUT_PREFIXES) and path.endswith(TRIAGE_INPUT_SUFFIXES) or path.endswith(
+        ".schema.json"
+    ):
+        record["identity"] = {"commit": commit, "all": [], "source": "derived"}
+        record["rule"] = "tracked-input-at-head"
+        record["heuristic"] = True
+        record["reason"] = (
+            "a tracked harness input or schema is read from the tree that contains it; the identity is the "
+            "tree the registry was recorded at, and a later change to its bytes is FR_EVIDENCE_SUPERSEDED"
+        )
+        record["class"] = "DERIVED"
+        return record
+
+    candidate = _triage_candidate_name(document)
+    if candidate:
+        return _uncertifiable(
+            record,
+            "U2",
+            f"the only declared identity is the candidate name {candidate!r}, and the repository binds that "
+            "name to more than one tree, so it does not determine a commit",
+        )
+
+    if TRIAGE_BUILD_OUTPUT.search(path):
+        return _uncertifiable(record, "U6", "a build output carries an embedded binary, not the tree that produced it")
+
+    root_hash = document.get("source_root_hash") if isinstance(document, dict) else None
+    root_rule = document.get("source_root_hash_rule") if isinstance(document, dict) else None
+    if (root_hash is not None and root_rule is None) or freeze_failure:
+        detail = "; ".join(
+            item
+            for item in (
+                "source_root_hash is recorded with source_root_hash_rule null"
+                if root_hash is not None and root_rule is None
+                else None,
+                freeze_failure,
+            )
+            if item
+        )
+        return _uncertifiable(record, "U5", detail)
+
+    count = repo.commits_touching(commit, path)
+    if count == 1:
+        introduced = repo.introducing_commit(commit, path)
+        if introduced is not None:
+            record["identity"] = {"commit": introduced, "all": [], "source": "introduced"}
+            record["rule"] = "introduced-at-single-commit"
+            record["reason"] = (
+                "the artefact was introduced in one commit and never modified, so its bytes are exactly the "
+                "bytes at that commit; it is a record of that moment, not of the current tree"
+            )
+            record["class"] = "HISTORICAL"
+            return record
+
+    return _uncertifiable(
+        record,
+        "U1",
+        f"the artefact was changed in {count} commits and names no tree, so no single moment explains its "
+        "current bytes",
+    )
+
+
+def triage(repo: Git, registry: dict[str, Any], commit: str) -> dict[str, Any]:
+    """Derive the identity triage for every artefact the registry leaves unbound."""
+    paths = [
+        str(item.get("path"))
+        for item in registry.get("artefacts", [])
+        if isinstance(item, dict) and (item.get("identity") or {}).get("commit") is None
+    ]
+    records = [triage_one(repo, commit, path) for path in sorted(paths)]
+    counts = {name: 0 for name in TRIAGE_CLASSES}
+    causes: dict[str, int] = {}
+    for record in records:
+        counts[record["class"]] = counts.get(record["class"], 0) + 1
+        if record["class"] == "UNCERTIFIABLE":
+            causes[record["cause"]] = causes.get(record["cause"], 0) + 1
+    counts["total"] = len(records)
+    return {
+        "schema": TRIAGE_SCHEMA,
+        "kind": "evidence-identity-triage",
+        "item": "ETP-T9",
+        "registry": "evidence/etp-t9/DEPENDENCIES.json",
+        "registry_recorded_at_commit": registry.get("recorded_at_commit"),
+        "recorded_at_commit": commit,
+        "classes": list(TRIAGE_CLASSES),
+        "causes": {code: {"name": name, "certifiable_if": certifiable} for code, (name, certifiable) in TRIAGE_CAUSES.items()},
+        "identity_fields": list(TRIAGE_IDENTITY_FIELDS),
+        "input_rule": {
+            "prefixes": list(TRIAGE_INPUT_PREFIXES),
+            "suffixes": list(TRIAGE_INPUT_SUFFIXES),
+            "note": "a tracked harness input or schema is read from the tree that contains it; this rule is definitional, not a measurement identity",
+        },
+        "counts": {**counts, "uncertifiable_by_cause": dict(sorted(causes.items()))},
+        "artefacts": records,
+    }
+
+
+def triage_index(document: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    return {
+        str(item.get("path")): item
+        for item in document.get("artefacts", [])
+        if isinstance(item, dict) and isinstance(item.get("path"), str)
+    }
+
+
+def validate_triage(
+    document: dict[str, Any], registry: dict[str, Any], repo: Git | None = None
+) -> list[Refusal]:
+    """Structural validation of the triage record against the registry it binds.
+
+    The triage must cover exactly the artefacts the registry leaves unbound. A
+    missing or extra record is stale, not merely a note: a triage that silently
+    stops covering an artefact would leave that artefact unclassified.
+    """
+    findings: list[Refusal] = []
+    if not isinstance(document, dict) or document.get("schema") != TRIAGE_SCHEMA:
+        return [Refusal("FR_TRIAGE_SCHEMA", "$", f"schema must be {TRIAGE_SCHEMA!r}")]
+    if document.get("registry_recorded_at_commit") != registry.get("recorded_at_commit"):
+        findings.append(
+            Refusal(
+                "FR_TRIAGE_STALE",
+                "$",
+                f"the triage binds registry {document.get('registry_recorded_at_commit')!r}, the registry records "
+                f"{registry.get('recorded_at_commit')!r}",
+            )
+        )
+    records = [item for item in document.get("artefacts", []) if isinstance(item, dict)]
+    expected = {
+        str(item.get("path"))
+        for item in registry.get("artefacts", [])
+        if isinstance(item, dict) and (item.get("identity") or {}).get("commit") is None
+    }
+    seen: set[str] = set()
+    for item in records:
+        path = item.get("path")
+        if not isinstance(path, str) or not path:
+            findings.append(Refusal("FR_TRIAGE_SCHEMA", "$.artefacts", "a triage record must name a path"))
+            continue
+        if path in seen:
+            findings.append(Refusal("FR_TRIAGE_SCHEMA", path, "the triage records this path twice"))
+        seen.add(path)
+        cls = item.get("class")
+        if cls not in TRIAGE_CLASSES:
+            findings.append(Refusal("FR_TRIAGE_SCHEMA", path, f"class {cls!r} is not one of {list(TRIAGE_CLASSES)}"))
+            continue
+        if cls == "UNCERTIFIABLE":
+            cause = item.get("cause")
+            if cause not in TRIAGE_CAUSES:
+                findings.append(
+                    Refusal("FR_TRIAGE_SCHEMA", path, f"cause {cause!r} is not one of {list(TRIAGE_CAUSES)}")
+                )
+            if not isinstance(item.get("reason"), str) or not item["reason"].strip():
+                findings.append(Refusal("FR_TRIAGE_SCHEMA", path, "an uncertifiable record must state its reason"))
+            if item.get("identity") is not None:
+                findings.append(
+                    Refusal("FR_TRIAGE_SCHEMA", path, "an uncertifiable record may not carry an identity")
+                )
+            continue
+        identity = item.get("identity")
+        commit = identity.get("commit") if isinstance(identity, dict) else None
+        if not isinstance(commit, str) or not HEX.match(commit):
+            findings.append(Refusal("FR_TRIAGE_SCHEMA", path, f"{cls} must name an identity commit"))
+        elif repo is not None and repo.resolve(commit) is None:
+            findings.append(Refusal("FR_TRIAGE_SCHEMA", path, f"identity commit {commit!r} does not resolve"))
+        if not isinstance(item.get("rule"), str) or not item["rule"].strip():
+            findings.append(Refusal("FR_TRIAGE_SCHEMA", path, f"{cls} must name the rule it was derived by"))
+    missing = sorted(expected - seen)
+    extra = sorted(seen - expected)
+    if missing:
+        findings.append(
+            Refusal("FR_TRIAGE_STALE", missing[0], f"{len(missing)} unbound artefact(s) are not triaged: {', '.join(missing[:8])}")
+        )
+    if extra:
+        findings.append(
+            Refusal("FR_TRIAGE_STALE", extra[0], f"{len(extra)} triaged artefact(s) are not unbound in the registry: {', '.join(extra[:8])}")
+        )
+    counts = {name: 0 for name in TRIAGE_CLASSES}
+    for item in records:
+        if item.get("class") in counts:
+            counts[item["class"]] += 1
+    reported = document.get("counts") or {}
+    for name, value in counts.items():
+        if reported.get(name) != value:
+            findings.append(
+                Refusal("FR_TRIAGE_SCHEMA", "$", f"counts.{name} is {reported.get(name)!r}, the records give {value}")
+            )
+    return sorted(set(findings), key=lambda item: (item.rule, item.where, item.detail))
+
+
+def triaged_registry(registry: dict[str, Any], index: dict[str, dict[str, Any]]) -> dict[str, Any]:
+    """The registry with triage identities and annotations applied, copied.
+
+    The caller's registry is never mutated: the committed registry stays the
+    derivation record, and the triage stays the declared overlay on top of it.
+    """
+    document = json.loads(json.dumps(registry))
+    for artefact in document.get("artefacts", []):
+        if not isinstance(artefact, dict):
+            continue
+        record = index.get(str(artefact.get("path")))
+        if record is None:
+            continue
+        cls = record.get("class")
+        identity = record.get("identity") if isinstance(record.get("identity"), dict) else None
+        current = artefact.get("identity") if isinstance(artefact.get("identity"), dict) else {}
+        if cls in ("DECLARED", "DERIVED", "HISTORICAL") and identity and current.get("commit") is None:
+            artefact["identity"] = {
+                "commit": identity.get("commit"),
+                "kind": "triage-" + str(cls).lower(),
+                "ambiguous": bool(record.get("ambiguous")),
+                "all": identity.get("all", []),
+                "upstream": [],
+                "note": "identity triage: " + str(record.get("rule")),
+            }
+        artefact["triage"] = {
+            "class": cls,
+            "rule": record.get("rule"),
+            "cause": record.get("cause"),
+            "reason": record.get("reason"),
+        }
+    return document
+
+
+def _triage_history_cited(index: dict[str, dict[str, Any]], claims_doc: dict[str, Any]) -> list[dict[str, str]]:
+    """Current claims that cite an artefact the triage declares historical."""
+    findings: list[dict[str, str]] = []
+    for claim in claims_doc.get("claims", []):
+        if not isinstance(claim, dict):
+            continue
+        if claim.get("verdict", {}).get("state") in NON_CURRENT_VERDICTS:
+            continue
+        for entry in claim.get("evidence", []):
+            if not isinstance(entry, dict):
+                continue
+            record = index.get(str(entry.get("path")))
+            if record is not None and record.get("class") == "HISTORICAL":
+                findings.append(
+                    {
+                        "claim": str(claim.get("id")),
+                        "path": str(entry.get("path")),
+                        "rule": str(record.get("rule")),
+                        "identity": str((record.get("identity") or {}).get("commit")),
+                    }
+                )
+    return sorted(findings, key=lambda item: (item["claim"], item["path"]))
+
+
+# ---------------------------------------------------------------------------
 # The invalidation engine
 # ---------------------------------------------------------------------------
 
@@ -1396,6 +2000,7 @@ def evaluate(
     base: str | None,
     head: str,
     full_records: bool = False,
+    triage: dict[str, dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Evaluate a change set against the registry.
 
@@ -1403,7 +2008,14 @@ def evaluate(
     argument that establishes non-impact: every dependency was evaluated, none
     matched, and every dependency's identity resolved. Anything else is reported
     by name, so a dependent can be inspected rather than assumed.
+
+    `triage` is the identity-triage index. It is an overlay, not a derivation:
+    it supplies the identity the committed registry could not read, excludes a
+    historical artefact from current claims, and makes an uncertifiable one
+    `UNRESOLVED` rather than `UNAFFECTED`.
     """
+    if triage:
+        registry = triaged_registry(registry, triage)
     declarations = {
         item["artefact"]: item
         for item in registry.get("declarations", [])
@@ -1511,6 +2123,22 @@ def evaluate(
                 )
             )
             continue
+        triage_record = artefact.get("triage") or {}
+        if triage_record.get("class") == "HISTORICAL":
+            outcomes.append(
+                Outcome(
+                    path,
+                    "HISTORY",
+                    None,
+                    None,
+                    "identity triage "
+                    + str(triage_record.get("rule"))
+                    + " at "
+                    + str((artefact.get("identity") or {}).get("commit"))
+                    + "; excluded from current claims",
+                )
+            )
+            continue
         if path in invalidated:
             dependency, match = invalidated[path]
             if declaration is not None and declaration.get("kind") == "PRESERVATION":
@@ -1559,6 +2187,20 @@ def evaluate(
                 if direct.get(path, (None, None))[0] is None:
                     rule, detail = "FR_DEPENDENCY_UNRESOLVED", str(unresolved.get(path))
                 outcomes.append(Outcome(path, "INVALIDATED", rule, dependency, detail))
+            continue
+        if triage_record.get("class") == "UNCERTIFIABLE":
+            outcomes.append(
+                Outcome(
+                    path,
+                    "UNRESOLVED",
+                    "FR_IDENTITY_UNCERTIFIABLE",
+                    {"kind": "uncertifiable", "id": path, "cause": triage_record.get("cause")},
+                    "identity triage: "
+                    + str(triage_record.get("cause"))
+                    + "; "
+                    + str(triage_record.get("reason")),
+                )
+            )
             continue
         if not artefact.get("depends_on") and artefact.get("identity", {}).get("commit") is None:
             outcomes.append(
@@ -1646,6 +2288,13 @@ def evaluate(
                 old.append(f"evidence {path!r} has an unresolved dependency identity")
             elif outcome is not None and outcome.verdict == "UNMODELLED":
                 old.append(f"evidence {path!r} has no modelled dependency")
+            triage_record = (triage or {}).get(path) or {}
+            if triage_record.get("class") == "HISTORICAL":
+                old.append(f"evidence {path!r} is historical by identity triage ({triage_record.get('rule')})")
+            elif triage_record.get("class") == "UNCERTIFIABLE":
+                old.append(
+                    f"evidence {path!r} is uncertifiable by identity triage ({triage_record.get('cause')})"
+                )
             if not repo.exists(head, path):
                 old.append(f"evidence {path!r} is already absent at {head[:12]}")
         if claim_id in algebra["invalidated"]:
@@ -1765,6 +2414,7 @@ def evaluate(
             ),
             "preexisting": preexisting,
             "history_cited_as_current": [item.as_dict() for item in _history_cited_as_current(registry, claims_doc)],
+            "triage_history_cited_as_current": _triage_history_cited(triage or {}, claims_doc),
             "verdicts": dict(sorted(verdicts.items())),
         },
         "refusals": [item.as_dict() for item in refusals],
@@ -1942,6 +2592,13 @@ def _load_registry(path: Path) -> dict[str, Any]:
     return document
 
 
+def _load_triage(path: Path) -> dict[str, Any]:
+    document = load_json(path)
+    if not isinstance(document, dict):
+        raise JsonError("the identity triage must be a JSON object")
+    return document
+
+
 def _change_set(args: argparse.Namespace, repo: Git) -> tuple[list[dict[str, str]], str | None, str] | None:
     if args.paths or args.paths_file:
         paths = list(args.paths or [])
@@ -1974,7 +2631,28 @@ def mode_check(args: argparse.Namespace) -> int:
         print(json.dumps({"status": "REFUSED", "reason": "cannot resolve HEAD"}, sort_keys=True))
         return 1
 
-    structural = validate_registry(repo, registry, head)
+    triage_document: dict[str, Any] | None = None
+    triage_findings: list[Refusal] = []
+    triage_path = Path(args.triage).resolve() if args.triage else TRIAGE_PATH
+    if triage_path.is_file():
+        try:
+            triage_document = _load_triage(triage_path)
+        except JsonError as exc:
+            triage_findings.append(Refusal("FR_TRIAGE_SCHEMA", str(triage_path), str(exc)))
+    else:
+        triage_findings.append(
+            Refusal(
+                "FR_TRIAGE_MISSING",
+                str(triage_path),
+                "the identity triage is required: an artefact with no identity cannot be certified current, "
+                "so an absent triage is a refusal rather than a note",
+            )
+        )
+    if triage_document is not None:
+        triage_findings.extend(validate_triage(triage_document, registry, repo))
+    index = triage_index(triage_document) if triage_document is not None else {}
+
+    structural = validate_registry(repo, registry, head) + triage_findings
     if structural:
         print(
             json.dumps(
@@ -1987,33 +2665,131 @@ def mode_check(args: argparse.Namespace) -> int:
 
     tree_mode = not args.base and not args.paths and not args.paths_file
     if tree_mode:
-        result = _tree_sweep(repo, registry, claims_doc, head)
+        result = _tree_sweep(repo, registry, claims_doc, head, triage=index)
     else:
         computed = _change_set(args, repo)
         if computed is None:
             print(json.dumps({"status": "REFUSED", "reason": "cannot resolve the change-set range"}, sort_keys=True))
             return 1
         changed, base, resolved_head = computed
-        result = evaluate(repo, registry, claims_doc, changed, base, resolved_head)
+        result = evaluate(repo, registry, claims_doc, changed, base, resolved_head, triage=index)
         result["mode"] = "check"
+        result["triage"] = {
+            "applied": bool(index),
+            "counts": dict(sorted((triage_document or {}).get("counts", {}).items()))
+            if triage_document is not None
+            else {},
+            "uncertifiable_evidence": sorted(
+                {
+                    str(entry.get("path"))
+                    for claim in claims_doc.get("claims", [])
+                    if isinstance(claim, dict)
+                    for entry in claim.get("evidence", [])
+                    if isinstance(entry, dict) and (index.get(str(entry.get("path"))) or {}).get("class") == "UNCERTIFIABLE"
+                }
+            ),
+        }
 
+    result["triage_record"] = (
+        {
+            "path": _repo_relative(repo, triage_path),
+            "recorded_at_commit": triage_document.get("recorded_at_commit"),
+            "counts": triage_document.get("counts"),
+        }
+        if triage_document is not None
+        else None
+    )
     result["structural_refusals"] = [item.as_dict() for item in structural]
     print(dump_json(result))
     return 0 if result.get("status") == "PASS" else 1
 
 
-def _tree_sweep(repo: Git, registry: dict[str, Any], claims_doc: dict[str, Any], head: str) -> dict[str, Any]:
+def mode_triage(args: argparse.Namespace) -> int:
+    """Record or verify the identity triage of every unbound artefact."""
+    repo = Git(Path(args.repo).resolve())
+    try:
+        registry = _load_registry(Path(args.registry))
+    except JsonError as exc:
+        print(json.dumps({"status": "REFUSED", "reason": str(exc)}, sort_keys=True))
+        return 1
+    at = repo.resolve(args.at or str(registry.get("recorded_at_commit") or "HEAD"))
+    if at is None:
+        print(json.dumps({"status": "REFUSED", "reason": "cannot resolve the derivation commit"}, sort_keys=True))
+        return 1
+    document = triage(repo, registry, at)
+    findings = validate_triage(document, registry, repo)
+    if findings:
+        print(
+            json.dumps(
+                {"status": "REFUSED", "triage_refusals": [item.as_dict() for item in findings]},
+                sort_keys=True,
+                indent=2,
+            )
+        )
+        return 1
+    rendered = dump_json(document)
+    target = Path(args.out).resolve()
+    if args.write:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(rendered, encoding="utf-8")
+        print(
+            json.dumps(
+                {
+                    "status": "WRITTEN",
+                    "out": _repo_relative(repo, target),
+                    "at": at,
+                    "counts": document["counts"],
+                },
+                sort_keys=True,
+            )
+        )
+        return 0
+    committed = target.read_text(encoding="utf-8") if target.exists() else None
+    if committed != rendered:
+        print(
+            json.dumps(
+                {
+                    "status": "REFUSED",
+                    "reason": "the committed triage differs from the derived one",
+                    "counts": document["counts"],
+                },
+                sort_keys=True,
+            )
+        )
+        return 1
+    print(json.dumps({"status": "PASS", "counts": document["counts"]}, sort_keys=True))
+    return 0
+
+
+def _tree_sweep(
+    repo: Git,
+    registry: dict[str, Any],
+    claims_doc: dict[str, Any],
+    head: str,
+    triage: dict[str, dict[str, Any]] | None = None,
+) -> dict[str, Any]:
     """Is each artefact still true of the tree it names?
 
     Freshness is the same invalidation engine applied to
     `<artefact identity commit>..HEAD`. An artefact with no resolvable identity
     commit inherits one from a single upstream artefact, and is unresolved when
     even that fails: the tool does not invent an identity to avoid a refusal.
+
+    With a triage index, a declared or derived identity is used, a historical
+    artefact is excluded from current claims, and an uncertifiable one is
+    `UNRESOLVED` with `FR_IDENTITY_UNCERTIFIABLE` rather than merely noted.
     """
+    if triage:
+        registry = triaged_registry(registry, triage)
     artefacts = [item for item in registry.get("artefacts", []) if isinstance(item, dict)]
     by_path = {str(item.get("path")): item for item in artefacts}
 
     def base_for(artefact: dict[str, Any], seen: set[str]) -> tuple[str | None, str]:
+        if (artefact.get("triage") or {}).get("class") == "UNCERTIFIABLE":
+            # An uncertifiable artefact is not given an identity by inheritance:
+            # a tree inherited from a neighbour would certify the very artefact
+            # the triage says cannot be certified. It stays unresolved.
+            return None, "uncertifiable"
         identity = artefact.get("identity", {})
         commit = identity.get("commit")
         if isinstance(commit, str) and repo.resolve(commit) is not None:
@@ -2072,6 +2848,27 @@ def _tree_sweep(repo: Git, registry: dict[str, Any], claims_doc: dict[str, Any],
         current_digest = repo.digest(head, path)
         superseded = current_digest is not None and current_digest != artefact.get("sha256")
         if base is None:
+            triage_record = artefact.get("triage") or {}
+            if triage_record.get("class") == "UNCERTIFIABLE":
+                records.append(
+                    {
+                        "path": path,
+                        "verdict": "UNRESOLVED",
+                        "rule": "FR_IDENTITY_UNCERTIFIABLE",
+                        "argument": (
+                            "identity triage "
+                            + str(triage_record.get("cause"))
+                            + ": "
+                            + str(triage_record.get("reason"))
+                            + "; the artefact cannot be certified current"
+                        ),
+                        "claims": artefact.get("claim_ids", []),
+                        "superseded": superseded,
+                        "modelled_dependencies": modelled,
+                        "absent_dependencies": absent,
+                    }
+                )
+                continue
             records.append(
                 {
                     "path": path,
@@ -2093,7 +2890,10 @@ def _tree_sweep(repo: Git, registry: dict[str, Any], claims_doc: dict[str, Any],
         # The whole registry is evaluated, not only this artefact: an upstream
         # artefact that is absent or unmodelled makes this one unresolved, and a
         # one-artefact view could not see that edge.
-        outcome = evaluate(repo, registry, {"claims": []}, changed, base, head, True)
+        # The registry already carries the triage identities and annotations,
+        # so the per-artefact evaluation is not asked to apply the overlay a
+        # second time.
+        outcome = evaluate(repo, registry, {"claims": []}, changed, base, head, True, triage=None)
         record = next(
             (item for item in outcome["artefacts"]["records"] if item.get("path") == path),
             None,
@@ -2118,7 +2918,7 @@ def _tree_sweep(repo: Git, registry: dict[str, Any], claims_doc: dict[str, Any],
     # they cite, exactly as in change-set mode.
     claim_base = claims_doc.get("source_identity", {}).get("commit")
     claim_changed = repo.changed(claim_base, head) if isinstance(claim_base, str) and repo.resolve(claim_base) else []
-    claim_eval = evaluate(repo, registry, claims_doc, claim_changed, claim_base or head, head)
+    claim_eval = evaluate(repo, registry, claims_doc, claim_changed, claim_base or head, head, triage=triage)
 
     counts: dict[str, int] = {}
     for record in records:
@@ -2151,6 +2951,16 @@ def _tree_sweep(repo: Git, registry: dict[str, Any], claims_doc: dict[str, Any],
     claim_refusals = [item for item in claim_eval["refusals"] if item["rule"].startswith("FR_CLAIM")]
     refusals.extend(Refusal(item["rule"], item["where"], item["detail"]) for item in claim_refusals)
     refusals.extend(_history_cited_as_current(registry, claims_doc))
+    triage_history = _triage_history_cited(triage or {}, claims_doc)
+    for item in triage_history:
+        refusals.append(
+            Refusal(
+                "FR_HISTORY_CITED_AS_CURRENT",
+                item["claim"],
+                f"cites {item['path']!r}, which identity triage declares history "
+                f"({item['rule']} at {item['identity']})",
+            )
+        )
     claim_verdicts = claim_eval["claims"].get("verdicts", {})
     for claim_id, reasons in sorted(claim_eval["claims"].get("preexisting", {}).items()):
         if claim_verdicts.get(claim_id) in NON_CURRENT_VERDICTS:
@@ -2164,6 +2974,12 @@ def _tree_sweep(repo: Git, registry: dict[str, Any], claims_doc: dict[str, Any],
         )
     refusals = sorted(set(refusals), key=lambda item: (item.rule, item.where, item.detail))
 
+    triage_counts: dict[str, int] = {}
+    for artefact in artefacts:
+        record = artefact.get("triage") or {}
+        if record:
+            key = str(record.get("class"))
+            triage_counts[key] = triage_counts.get(key, 0) + 1
     return {
         "mode": "check-tree",
         "base": "per-artefact identity",
@@ -2173,6 +2989,14 @@ def _tree_sweep(repo: Git, registry: dict[str, Any], claims_doc: dict[str, Any],
             "by_verdict": dict(sorted(counts.items())),
             "records": sorted(records, key=lambda item: item["path"]),
             "stale_cited_by_a_claim": sorted(record["path"] for record in cited_stale),
+        },
+        "triage": {
+            "applied": bool(triage),
+            "counts": dict(sorted(triage_counts.items())),
+            "uncertifiable": sorted(
+                path for path, item in (triage or {}).items() if item.get("class") == "UNCERTIFIABLE"
+            ),
+            "historical_cited_as_current": triage_history,
         },
         "claims": claim_eval["claims"],
         "refusals": [item.as_dict() for item in refusals],
@@ -2234,9 +3058,20 @@ def _runs_record(repo: Git, args: argparse.Namespace) -> int:
         document = load_json(path)
         registry = _load_registry(Path(args.registry))
         claims_doc = load_json(Path(args.claims))
+        triage_document = _load_triage(Path(args.triage).resolve() if args.triage else TRIAGE_PATH)
     except JsonError as exc:
         print(json.dumps({"status": "REFUSED", "reason": str(exc)}, sort_keys=True))
         return 1
+    triage_findings = validate_triage(triage_document, registry, repo)
+    if triage_findings:
+        print(
+            json.dumps(
+                {"status": "REFUSED", "triage_refusals": [item.as_dict() for item in triage_findings]},
+                sort_keys=True,
+            )
+        )
+        return 1
+    index = triage_index(triage_document)
     runs = document.get("runs", []) if isinstance(document, dict) else []
     if not runs:
         print(json.dumps({"status": "REFUSED", "reason": "no runs declared"}, sort_keys=True))
@@ -2263,7 +3098,7 @@ def _runs_record(repo: Git, args: argparse.Namespace) -> int:
             print(json.dumps({"status": "REFUSED", "reason": f"cannot resolve run {run.get('name')!r}"}, sort_keys=True))
             return 1
         changed = repo.changed(base, head)
-        result = evaluate(repo, registry, claims_doc, changed, base, head)
+        result = evaluate(repo, registry, claims_doc, changed, base, head, triage=index)
         derived.append(
             {
                 "name": run.get("name"),
@@ -2311,6 +3146,7 @@ def main(argv: list[str]) -> int:
         command = sub.add_parser(name)
         command.add_argument("--registry", default=str(REGISTRY))
         command.add_argument("--claims", default=str(CLAIMS))
+        command.add_argument("--triage", default=str(TRIAGE_PATH))
         command.add_argument("--repo", default=str(REPO_ROOT))
         command.add_argument("--base")
         command.add_argument("--head")
@@ -2320,6 +3156,13 @@ def main(argv: list[str]) -> int:
             command.add_argument("--runs")
             command.add_argument("--write", action="store_true")
 
+    triage_command = sub.add_parser("triage")
+    triage_command.add_argument("--registry", default=str(REGISTRY))
+    triage_command.add_argument("--repo", default=str(REPO_ROOT))
+    triage_command.add_argument("--at", default=None, help="derive at the registry's commit by default")
+    triage_command.add_argument("--out", default=str(TRIAGE_PATH))
+    triage_command.add_argument("--write", action="store_true")
+
     args = parser.parse_args(argv)
     if args.command == "record":
         return mode_record(args)
@@ -2327,6 +3170,8 @@ def main(argv: list[str]) -> int:
         return mode_check(args)
     if args.command == "diff":
         return mode_diff(args)
+    if args.command == "triage":
+        return mode_triage(args)
     parser.print_help()
     return 2
 

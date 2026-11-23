@@ -351,3 +351,72 @@ evidence was modified.
 The seven stale receipts are **not** edited. Their states are reported here; a
 new record supersedes them, and rewriting the originals would destroy the
 history this item exists to preserve.
+
+---
+
+## 13. Addendum — identity triage (2026-11-23)
+
+This addendum is appended; sections 1-12 above are unchanged.
+
+**The gap.** Section 1.4 of `docs/EVIDENCE-FRESHNESS.md` records 231 artefacts
+with no identity, and the tree sweep refuses each with `FR_IDENTITY_UNKNOWN`.
+That refusal was not decisive. In change-set mode an artefact with modelled
+dependencies was still reported `UNAFFECTED`, and the release gate read only the
+claim document, so a claim resting on an unbound artefact could pass. The count
+was recorded; nothing depended on it.
+
+**What was added.** `forensics/tools/freshness.py triage` derives a class for
+each of the 231 and records it in `evidence/etp-t9/IDENTITY-TRIAGE.json`
+(schema `openssl-rs/etp/identity-triage/1`), bound to the registry's commit
+`26c127262`. The class is `DERIVED` (a recorded derivation rule), `DECLARED`
+(the artefact names a resolving tree in a named field), `HISTORICAL` (a record of
+one moment, not citable as current) or `UNCERTIFIABLE` (no identity can be
+established or honestly declared, with a cause and what would make it
+certifiable). `check` loads the triage as a declared overlay: a `DECLARED` or
+`DERIVED` identity is used; a `HISTORICAL` artefact is `HISTORY` and a current
+claim citing it is refused; an `UNCERTIFIABLE` artefact is `UNRESOLVED` with
+`FR_IDENTITY_UNCERTIFIABLE` in both modes and does not inherit an identity from
+an upstream record. `forensics/tools/release_gate.py` makes the triage a required
+item and refuses a current claim whose evidence is `UNCERTIFIABLE`
+(`RG_CLAIM_UNCERTIFIABLE_EVIDENCE`) or `HISTORICAL`
+(`RG_CLAIM_HISTORICAL_EVIDENCE`), naming the artefact.
+
+**Result.** 13 `DECLARED`, 21 `DERIVED`, 79 `HISTORICAL`, **118
+`UNCERTIFIABLE`** (87 `U1` multi-commit, 9 `U2` candidate-name-only, 18 `U5`
+uncheckable source binding, 2 `U6` build output, 2 `U7` self-qualified
+declaration). Tree sweep: 81 `HISTORY`, 92 `INVALIDATED`, 31 `UNAFFECTED`, 127
+`UNRESOLVED`; 265 refusals. `HISTORY-RUNS.json` was regenerated with the triage
+applied and re-derives byte-for-byte; the evidence-only run still passes with no
+refusal. The gate's claim item returns 34 refusals on 35 claims: 4 pre-existing
+`CONTRADICTED`, 19 `RG_CLAIM_UNCERTIFIABLE_EVIDENCE` and 11
+`RG_CLAIM_HISTORICAL_EVIDENCE`, affecting 20 distinct current claims. The
+release gate is now **red on claims that previously passed**, and that is the
+intended consequence: `ETP0-CLM-034` (the Phase-25 seal, named only by candidate
+version) and `ETP0-CLM-029` (a frozen inventory its own header declares
+superseded) cannot be cited as current evidence.
+
+**Controls.** `forensics/tools/tests/test_freshness.py` gains ten controls (one
+per class, determinism, four malformed/stale-triage refusals, uncertifiable not
+`UNAFFECTED`, historical not citable, declared identity resolved, non-mutation).
+A new `forensics/tools/tests/test_release_gate.py` has ten controls (one per
+new refusal, both positive controls, missing/stale binding).
+`release_gate.py --self-test` is 13/13.
+
+**Not closed.** The 118 `UNCERTIFIABLE` artefacts remain so; the full residual,
+by cause and with the claims affected, is in
+`evidence/etp-t9/IDENTITY-TRIAGE.md` §4, §6 and §7. Three further registry-bound
+artefacts carry an identity that is not a commit of this repository (a rustc
+commit, a pinned dudect commit, and a non-resolving value); they are outside the
+231 by the registry's own count and remain a registry-extraction defect. No
+identity was declared that the artefact does not support: where a freeze record
+was untracked or digest-mismatched, the artefact is `UNCERTIFIABLE` rather than
+bound to the digest it names.
+
+Files touched by this addendum: `docs/EVIDENCE-FRESHNESS.md`,
+`docs/ETP-TODO.md`, `docs/RELEASE_GATES.md`,
+`evidence/etp-t9/IDENTITY-TRIAGE.json`, `evidence/etp-t9/IDENTITY-TRIAGE.md`,
+`evidence/etp-t9/HISTORY-RUNS.json`, `evidence/etp-t9/RECEIPT.md`,
+`forensics/tools/freshness.py`, `forensics/tools/release_gate.py`,
+`forensics/tools/tests/test_freshness.py`,
+`forensics/tools/tests/test_release_gate.py`. No `src/`, `docker/` or other
+item's evidence was modified.

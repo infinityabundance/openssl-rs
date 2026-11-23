@@ -108,6 +108,8 @@ artefact's own structured fields in a fixed precedence order
 At `26c127262`: 77 artefacts carry a structured identity, 23 a prose identity,
 and **231 name no identity at all**. That last figure is the ETP-0 finding stated
 as a number: most of the tree's evidence does not say what it is evidence about.
+Those 231 are triaged once into `DERIVED`, `DECLARED`, `HISTORICAL` or
+`UNCERTIFIABLE` (§7); the registry itself is not rewritten.
 
 ### 1.5 Derived and declared
 
@@ -394,8 +396,51 @@ The engine does **not** establish:
   the set reasons about semantics;
 - that a claim's population is complete, or that an artefact not in the
   population is irrelevant;
-- freshness for an artefact that names no identity. That is reported as
-  unresolved, which is a refusal to certify, not a pass.
+- freshness for an artefact that remains `UNCERTIFIABLE` after identity triage
+  (§7). That is reported as unresolved, which is a refusal to certify, not a
+  pass; a `DECLARED` or `DERIVED` identity is the artefact's own statement and
+  is checked only for resolvability, not for truth.
 
 A path named in prose is not a dependency, a source-level argument is not a
 proof, and an absent test is not evidence of non-impact.
+
+---
+
+## 7. Identity triage (follow-up, 2026-11-23)
+
+`freshness.py triage` derives a class for every artefact the registry leaves
+unbound and writes `evidence/etp-t9/IDENTITY-TRIAGE.json`, bound to the
+registry's `recorded_at_commit`. The classes are closed:
+
+| class | meaning | identity |
+|---|---|---|
+| `DECLARED` | the artefact names the tree it was taken at in a named field | that commit, if it resolves |
+| `DERIVED` | a recorded derivation rule establishes the tree | a digest-bound freeze record, or the registry's tree for a tracked harness input |
+| `HISTORICAL` | a record of one moment | the commit it was introduced at, or the frozen commit it declares |
+| `UNCERTIFIABLE` | no identity can be established or honestly declared | none; the record carries a cause and what would make it certifiable |
+
+`check` loads the document as an overlay (`triaged_registry`), never mutating
+the committed registry:
+
+- a `DECLARED` or `DERIVED` identity is used in place of the missing one;
+- a `HISTORICAL` artefact is `HISTORY`, is excluded from current claims, and a
+  current claim citing it is refused (`FR_HISTORY_CITED_AS_CURRENT`);
+- an `UNCERTIFIABLE` artefact is `UNRESOLVED` with `FR_IDENTITY_UNCERTIFIABLE`
+  in both change-set and tree mode, and inherits no identity from an upstream
+  artefact. In change-set mode this is a pre-existing condition (§2.5): it does
+  not gate the change set, but the artefact is not `UNAFFECTED` and a claim
+  citing it is not `verified_current`.
+
+The triage is a required item: an absent document is `FR_TRIAGE_MISSING`; one
+bound to another registry, missing a required record, carrying a class outside
+the set, or reporting counts that disagree with its records is `FR_TRIAGE_STALE`
+or `FR_TRIAGE_SCHEMA`. `release_gate.py` consumes the same document and refuses
+a current claim whose required evidence is `UNCERTIFIABLE`
+(`RG_CLAIM_UNCERTIFIABLE_EVIDENCE`) or `HISTORICAL`
+(`RG_CLAIM_HISTORICAL_EVIDENCE`), naming the artefact.
+
+The triage does not establish that a declared identity was the tree a
+measurement used, that a derived freeze record was honest, or that a
+`UNCERTIFIABLE` artefact is irrelevant. It establishes only which artefacts can
+be certified current at all, and refuses the rest by name. The measured
+population at `26c127262` is in `evidence/etp-t9/IDENTITY-TRIAGE.md`.

@@ -1,0 +1,3642 @@
+{
+  "schema": "openssl-rs/etp/identity-triage/1",
+  "kind": "evidence-identity-triage",
+  "item": "ETP-T9",
+  "registry": "evidence/etp-t9/DEPENDENCIES.json",
+  "registry_recorded_at_commit": "26c12726283c84185540844f5e150db22038d05e",
+  "recorded_at_commit": "26c12726283c84185540844f5e150db22038d05e",
+  "classes": [
+    "DERIVED",
+    "DECLARED",
+    "HISTORICAL",
+    "UNCERTIFIABLE"
+  ],
+  "causes": {
+    "U1": {
+      "name": "multi-commit-no-declaration",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    "U2": {
+      "name": "candidate-name-only",
+      "certifiable_if": "the artefact names a candidate version, not a tree; a commit field, or a tracked mapping from the candidate name to the tree measured, would make it certifiable"
+    },
+    "U3": {
+      "name": "declared-identity-unresolvable",
+      "certifiable_if": "the declared commit does not resolve to an ancestor of this tree; a resolving commit would make it certifiable"
+    },
+    "U4": {
+      "name": "ambiguous-own-identity",
+      "certifiable_if": "the artefact declares more than one tree and does not certify them equivalent; one tree, or a check that they are source-equivalent, would make it certifiable"
+    },
+    "U5": {
+      "name": "uncheckable-source-binding",
+      "certifiable_if": "the source-root digest has no recorded rule and the freeze record it names cannot be read from the tree; a non-null hash rule and a tracked, digest-matching freeze record would make it certifiable"
+    },
+    "U6": {
+      "name": "build-output-no-identity",
+      "certifiable_if": "a build output names no source tree; a build-identity record naming the source commit and the output digest would make it certifiable"
+    },
+    "U7": {
+      "name": "self-qualified-declaration",
+      "certifiable_if": "the declared tree is qualified by a dirty worktree, so the artefact does not claim to correspond to it; a clean-tree declaration, or the base commit plus the patch digest, would make it certifiable"
+    }
+  },
+  "identity_fields": [
+    "head",
+    "head_at_start",
+    "identity.head",
+    "identity.source.head",
+    "identity.analysis_candidate",
+    "source.head",
+    "candidate.head",
+    "candidate_identity.source_head",
+    "source_identity.head",
+    "source_identity.repository_head",
+    "source_identity.repository_head_start",
+    "repository_head_at_measurement",
+    "analysis_candidate",
+    "source_candidate"
+  ],
+  "input_rule": {
+    "prefixes": [
+      "courts/",
+      "forensics/tools/"
+    ],
+    "suffixes": [
+      ".c",
+      ".h",
+      ".sh",
+      ".py",
+      ".pem",
+      ".txt"
+    ],
+    "note": "a tracked harness input or schema is read from the tree that contains it; this rule is definitional, not a measurement identity"
+  },
+  "counts": {
+    "DERIVED": 21,
+    "DECLARED": 13,
+    "HISTORICAL": 79,
+    "UNCERTIFIABLE": 118,
+    "total": 231,
+    "uncertifiable_by_cause": {
+      "U1": 87,
+      "U2": 9,
+      "U5": 18,
+      "U6": 2,
+      "U7": 2
+    }
+  },
+  "artefacts": [
+    {
+      "path": "artifacts/phase10/COURTS.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 34 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase11/COURTS.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 15 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase12/COURTS.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 14 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase13/COURTS.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 13 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase14/COURTS.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 11 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase15/COURTS.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "632bf72718c590dd7ca77a51c571338e53b05bfb",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "artifacts/phase16/COURTS.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 10 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase17/COURTS.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 31 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase18/COURTS.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 23 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase18/asan-downstream.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "a9317be0d44063ce9f3df9a2d4e586ed5f29e503",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "artifacts/phase18/asan.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 3 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase18/fuzz-hostile-corpus.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "47325f8825f0c393b9c9e047c2eb8dff65e48674",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "artifacts/phase18/hostile-boundary-register.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase18/miri-tcb.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "e4e57e651bd5cc6e5abccd71c5144655725723b9",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "artifacts/phase18/unsafe-bounds.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "47325f8825f0c393b9c9e047c2eb8dff65e48674",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "artifacts/phase18/unsafe-instruments.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 5 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase19/COURTS.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 9 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase19/performance-boundary-register.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 3 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase2/COURTS.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 3 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase2/SHELL_MANIFEST.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 239 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase2/courts/ABI-CONSTANTS.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "14756fc5fdd049c3f8eaa77d34d8edc91c62b959",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "artifacts/phase2/courts/ABI-DYNAMIC.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 3 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase2/courts/ABI-INSTALL-LAYOUT.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "14756fc5fdd049c3f8eaa77d34d8edc91c62b959",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "artifacts/phase2/courts/ABI-LAYOUT.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "5cf48dd4c1622266f2fa4528ad2a8c02772b0c1f",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "artifacts/phase2/courts/ABI-LINK.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "5cf48dd4c1622266f2fa4528ad2a8c02772b0c1f",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "artifacts/phase2/courts/ABI-LOAD.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "5cf48dd4c1622266f2fa4528ad2a8c02772b0c1f",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "artifacts/phase2/courts/ABI-MATRIX.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "14756fc5fdd049c3f8eaa77d34d8edc91c62b959",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "artifacts/phase2/courts/ABI-SUBSTITUTION.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 24 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase2/courts/ABI-SYMBOL.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase2/courts/ABI-VERSION.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "5cf48dd4c1622266f2fa4528ad2a8c02772b0c1f",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "artifacts/phase2/courts/libcrypto-contamination.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 25 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "class": "UNCERTIFIABLE",
+      "rule": "U6",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U6",
+      "cause_name": "build-output-no-identity",
+      "reason": "a build output carries an embedded binary, not the tree that produced it",
+      "certifiable_if": "a build output names no source tree; a build-identity record naming the source commit and the output digest would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase2/install/lib/libssl.so.3",
+      "class": "UNCERTIFIABLE",
+      "rule": "U6",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U6",
+      "cause_name": "build-output-no-identity",
+      "reason": "a build output carries an embedded binary, not the tree that produced it",
+      "certifiable_if": "a build output names no source tree; a build-identity record naming the source commit and the output digest would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase20/COURTS.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 56 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase20/custodian-boundary-register.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 5 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase21/COURTS.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 52 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase21/maintenance-boundary-register.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "eba597b5f0927b8e98ad54fd6b8bfc45a37b4604",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "artifacts/phase22/COURTS.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 11 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase23/COURTS.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 62 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase25/cve-replay/index.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U2",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U2",
+      "cause_name": "candidate-name-only",
+      "reason": "the only declared identity is the candidate name 'openssl-rs 0.0.27 (reconstructing openssl-3.6.4-production)', and the repository binds that name to more than one tree, so it does not determine a commit",
+      "certifiable_if": "the artefact names a candidate version, not a tree; a commit field, or a tracked mapping from the candidate name to the tree measured, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase25/cve-replay/replays/CVE-2023-0286.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U2",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U2",
+      "cause_name": "candidate-name-only",
+      "reason": "the only declared identity is the candidate name 'openssl-rs 0.0.27 (reconstructing openssl-3.6.4-production)', and the repository binds that name to more than one tree, so it does not determine a commit",
+      "certifiable_if": "the artefact names a candidate version, not a tree; a commit field, or a tracked mapping from the candidate name to the tree measured, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase25/cve-replay/replays/CVE-2024-0727.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U2",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U2",
+      "cause_name": "candidate-name-only",
+      "reason": "the only declared identity is the candidate name 'openssl-rs 0.0.27 (reconstructing openssl-3.6.4-production)', and the repository binds that name to more than one tree, so it does not determine a commit",
+      "certifiable_if": "the artefact names a candidate version, not a tree; a commit field, or a tracked mapping from the candidate name to the tree measured, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase25/cve-replay/replays/CVE-2024-9143.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U2",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U2",
+      "cause_name": "candidate-name-only",
+      "reason": "the only declared identity is the candidate name 'openssl-rs 0.0.27 (reconstructing openssl-3.6.4-production)', and the repository binds that name to more than one tree, so it does not determine a commit",
+      "certifiable_if": "the artefact names a candidate version, not a tree; a commit field, or a tracked mapping from the candidate name to the tree measured, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase25/cve-replay/replays/CVE-2025-15467.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U2",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U2",
+      "cause_name": "candidate-name-only",
+      "reason": "the only declared identity is the candidate name 'openssl-rs 0.0.27 (reconstructing openssl-3.6.4-production)', and the repository binds that name to more than one tree, so it does not determine a commit",
+      "certifiable_if": "the artefact names a candidate version, not a tree; a commit field, or a tracked mapping from the candidate name to the tree measured, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase25/cve-replay/replays/CVE-2026-34180.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U2",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U2",
+      "cause_name": "candidate-name-only",
+      "reason": "the only declared identity is the candidate name 'openssl-rs 0.0.27 (reconstructing openssl-3.6.4-production)', and the repository binds that name to more than one tree, so it does not determine a commit",
+      "certifiable_if": "the artefact names a candidate version, not a tree; a commit field, or a tracked mapping from the candidate name to the tree measured, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase25/cve-replay/replays/CVE-2026-63072.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U2",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U2",
+      "cause_name": "candidate-name-only",
+      "reason": "the only declared identity is the candidate name 'openssl-rs 0.0.27 (reconstructing openssl-3.6.4-production)', and the repository binds that name to more than one tree, so it does not determine a commit",
+      "certifiable_if": "the artefact names a candidate version, not a tree; a commit field, or a tracked mapping from the candidate name to the tree measured, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase25/cve-replay/replays/CVE-2026-84782.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U2",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U2",
+      "cause_name": "candidate-name-only",
+      "reason": "the only declared identity is the candidate name 'openssl-rs 0.0.27 (reconstructing openssl-3.6.4-production)', and the repository binds that name to more than one tree, so it does not determine a commit",
+      "certifiable_if": "the artefact names a candidate version, not a tree; a commit field, or a tracked mapping from the candidate name to the tree measured, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase25/historical-cves.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 12 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase25/kani.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 5 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase25/mechanisms.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 11 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase25/phase18-fuzz-crosswalk.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 15 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase25/red-team.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 11 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase25/regeneration.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 4 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase25/summary.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U2",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U2",
+      "cause_name": "candidate-name-only",
+      "reason": "the only declared identity is the candidate name 'openssl-rs 0.0.27 (reconstructing openssl-3.6.4-production)', and the repository binds that name to more than one tree, so it does not determine a commit",
+      "certifiable_if": "the artefact names a candidate version, not a tree; a commit field, or a tracked mapping from the candidate name to the tree measured, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase25/tsan.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 6 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase25/unsafe-reduction.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 31 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase3/COURTS.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 7 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase3/courts/RT-ERR.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase3/courts/RT-EXDATA.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 3 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase3/courts/RT-LHASH.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 4 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase3/courts/RT-MEM-DEFAULT.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "f80cf4a5a815fcae92208697a28e4381ae6e581c",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "artifacts/phase3/courts/RT-MEM-INSTALL.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "f80cf4a5a815fcae92208697a28e4381ae6e581c",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "artifacts/phase3/courts/RT-MEM.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 4 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase3/courts/RT-RUNTIME-EXT.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "ca0368f78ea64a2497401f21b5da56cf04653f9c",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "artifacts/phase3/courts/RT-RUNTIME-REF.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "8c5ef0c14c1072d7fcb208ab477127a9c0bb8e08",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "artifacts/phase3/courts/RT-SECURE.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 3 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase3/courts/RT-STACK.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase3/courts/RT-THREAD.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 3 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase4/COURTS.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 19 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase4/courts/RT-BIO-ADDR.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 3 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase4/courts/RT-BIO-COMP.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase4/courts/RT-BIO-CONF-REF.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "8c5ef0c14c1072d7fcb208ab477127a9c0bb8e08",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "artifacts/phase4/courts/RT-BIO-CONN.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "c73c443a00873c90a54cfcfea489c2d3a3fd6858",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "artifacts/phase4/courts/RT-BIO-DEBUG.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 11 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase4/courts/RT-BIO-DGRAM-PAIR.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase4/courts/RT-BIO-DGRAM.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase4/courts/RT-BIO-FILE.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase4/courts/RT-BIO-FILTER.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 3 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase4/courts/RT-BIO-PAIR.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase4/courts/RT-BIO-PRINT.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase4/courts/RT-BIO-RESOLVE.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase4/courts/RT-BIO-SOCK.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase4/courts/RT-BIO.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase4/courts/RT-COMP.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "073ae7c6518830d57fef3858de6b0762b95de12c",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "artifacts/phase4/courts/RT-CONF.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "865dba3602bb32c0135ea9adfd00434b1cb119ed",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "artifacts/phase4/courts/RT-ERR-BIO.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase4/courts/RT-OBJ-STREAM.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase5/COURTS.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 23 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase6/COURTS.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 20 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/phase7/COURTS.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 35 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "artifacts/probe-hygiene.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 255 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "courts/layout/README.md",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 10 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "courts/phase17/downstream/README.md",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "courts/phase17/downstream/curl/EVIDENCE.md",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 12 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "courts/phase17/downstream/git/EVIDENCE.md",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 11 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "courts/phase17/downstream/haproxy/EVIDENCE.md",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 11 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "courts/phase17/downstream/nginx/EVIDENCE.md",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 12 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "courts/phase17/downstream/openssh/EVIDENCE.md",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 12 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "courts/phase17/downstream/openssh/cve-2026-123158/README.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "b95b7814cb6e845728aeca9a6fd5975b823df85c",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase17/downstream/python/EVIDENCE.md",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 12 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "courts/phase17/downstream/schema/downstream-result.schema.json",
+      "class": "DERIVED",
+      "rule": "tracked-input-at-head",
+      "field": null,
+      "identity": {
+        "commit": "26c12726283c84185540844f5e150db22038d05e",
+        "all": [],
+        "source": "derived"
+      },
+      "ambiguous": false,
+      "heuristic": true,
+      "cause": null,
+      "cause_name": null,
+      "reason": "a tracked harness input or schema is read from the tree that contains it; the identity is the tree the registry was recorded at, and a later change to its bytes is FR_EVIDENCE_SUPERSEDED",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/ct_primitives_probe.c",
+      "class": "DERIVED",
+      "rule": "tracked-input-at-head",
+      "field": null,
+      "identity": {
+        "commit": "26c12726283c84185540844f5e150db22038d05e",
+        "all": [],
+        "source": "derived"
+      },
+      "ambiguous": false,
+      "heuristic": true,
+      "cause": null,
+      "cause_name": null,
+      "reason": "a tracked harness input or schema is read from the tree that contains it; the identity is the tree the registry was recorded at, and a later change to its bytes is FR_EVIDENCE_SUPERSEDED",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/fixtures/rsa-ct-hi.pem",
+      "class": "DERIVED",
+      "rule": "tracked-input-at-head",
+      "field": null,
+      "identity": {
+        "commit": "26c12726283c84185540844f5e150db22038d05e",
+        "all": [],
+        "source": "derived"
+      },
+      "ambiguous": false,
+      "heuristic": true,
+      "cause": null,
+      "cause_name": null,
+      "reason": "a tracked harness input or schema is read from the tree that contains it; the identity is the tree the registry was recorded at, and a later change to its bytes is FR_EVIDENCE_SUPERSEDED",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/fixtures/rsa-ct-lo.pem",
+      "class": "DERIVED",
+      "rule": "tracked-input-at-head",
+      "field": null,
+      "identity": {
+        "commit": "26c12726283c84185540844f5e150db22038d05e",
+        "all": [],
+        "source": "derived"
+      },
+      "ambiguous": false,
+      "heuristic": true,
+      "cause": null,
+      "cause_name": null,
+      "reason": "a tracked harness input or schema is read from the tree that contains it; the identity is the tree the registry was recorded at, and a later change to its bytes is FR_EVIDENCE_SUPERSEDED",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/interop/MANIFEST-o11-A.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 4 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "courts/phase18/interop/MANIFEST-o11-B.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 4 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "courts/phase18/interop/MANIFEST.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "courts/phase18/interop/RECEIPT-o10.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "63fca4cc4e5bff3342c8c5d3add5672090d92a26",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/interop/RECEIPT-o12.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "1bb9f25936b8d1fc0fa0ee71bb7c70da6aab7734",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/interop/RECEIPT-o2.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "courts/phase18/interop/RECEIPT-o3.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "5c5788aa876646fcb7a51d43ceb46237af30cbd4",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/interop/RECEIPT-o4.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "courts/phase18/interop/RECEIPT-o5.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "066b350e3a470d169ad4c7cc09b58bb6e1c2ffaa",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/interop/RECEIPT-o6.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "dd0bee3a7e4177e56168b0720339958aed6239b6",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/interop/RECEIPT-o7-AA.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 3 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "courts/phase18/interop/RECEIPT-o7-AB.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 3 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "courts/phase18/interop/RECEIPT-o7-BA.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 4 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "courts/phase18/interop/RECEIPT-o7-BB.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "courts/phase18/interop/RECEIPT-o7.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 3 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "courts/phase18/interop/RECEIPT-o8.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "4da8b738a2167a9c56baafca153e98ba30357500",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/interop/RECEIPT-o9.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "d5c4e9c500a754699817f764c2d4dd449bd4cbd0",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/interop/build_tools.sh",
+      "class": "DERIVED",
+      "rule": "tracked-input-at-head",
+      "field": null,
+      "identity": {
+        "commit": "26c12726283c84185540844f5e150db22038d05e",
+        "all": [],
+        "source": "derived"
+      },
+      "ambiguous": false,
+      "heuristic": true,
+      "cause": null,
+      "cause_name": null,
+      "reason": "a tracked harness input or schema is read from the tree that contains it; the identity is the tree the registry was recorded at, and a later change to its bytes is FR_EVIDENCE_SUPERSEDED",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/interop/build_trees.sh",
+      "class": "DERIVED",
+      "rule": "tracked-input-at-head",
+      "field": null,
+      "identity": {
+        "commit": "26c12726283c84185540844f5e150db22038d05e",
+        "all": [],
+        "source": "derived"
+      },
+      "ambiguous": false,
+      "heuristic": true,
+      "cause": null,
+      "cause_name": null,
+      "reason": "a tracked harness input or schema is read from the tree that contains it; the identity is the tree the registry was recorded at, and a later change to its bytes is FR_EVIDENCE_SUPERSEDED",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/interop/cell.sh",
+      "class": "DERIVED",
+      "rule": "tracked-input-at-head",
+      "field": null,
+      "identity": {
+        "commit": "26c12726283c84185540844f5e150db22038d05e",
+        "all": [],
+        "source": "derived"
+      },
+      "ambiguous": false,
+      "heuristic": true,
+      "cause": null,
+      "cause_name": null,
+      "reason": "a tracked harness input or schema is read from the tree that contains it; the identity is the tree the registry was recorded at, and a later change to its bytes is FR_EVIDENCE_SUPERSEDED",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/interop/logs/INDEX.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 4 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "courts/phase18/interop/manifest.py",
+      "class": "DERIVED",
+      "rule": "tracked-input-at-head",
+      "field": null,
+      "identity": {
+        "commit": "26c12726283c84185540844f5e150db22038d05e",
+        "all": [],
+        "source": "derived"
+      },
+      "ambiguous": false,
+      "heuristic": true,
+      "cause": null,
+      "cause_name": null,
+      "reason": "a tracked harness input or schema is read from the tree that contains it; the identity is the tree the registry was recorded at, and a later change to its bytes is FR_EVIDENCE_SUPERSEDED",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/interop/map_probe.c",
+      "class": "DERIVED",
+      "rule": "tracked-input-at-head",
+      "field": null,
+      "identity": {
+        "commit": "26c12726283c84185540844f5e150db22038d05e",
+        "all": [],
+        "source": "derived"
+      },
+      "ambiguous": false,
+      "heuristic": true,
+      "cause": null,
+      "cause_name": null,
+      "reason": "a tracked harness input or schema is read from the tree that contains it; the identity is the tree the registry was recorded at, and a later change to its bytes is FR_EVIDENCE_SUPERSEDED",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/interop/negative_controls.sh",
+      "class": "DERIVED",
+      "rule": "tracked-input-at-head",
+      "field": null,
+      "identity": {
+        "commit": "26c12726283c84185540844f5e150db22038d05e",
+        "all": [],
+        "source": "derived"
+      },
+      "ambiguous": false,
+      "heuristic": true,
+      "cause": null,
+      "cause_name": null,
+      "reason": "a tracked harness input or schema is read from the tree that contains it; the identity is the tree the registry was recorded at, and a later change to its bytes is FR_EVIDENCE_SUPERSEDED",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/interop/summarize_tests.py",
+      "class": "DERIVED",
+      "rule": "tracked-input-at-head",
+      "field": null,
+      "identity": {
+        "commit": "26c12726283c84185540844f5e150db22038d05e",
+        "all": [],
+        "source": "derived"
+      },
+      "ambiguous": false,
+      "heuristic": true,
+      "cause": null,
+      "cause_name": null,
+      "reason": "a tracked harness input or schema is read from the tree that contains it; the identity is the tree the registry was recorded at, and a later change to its bytes is FR_EVIDENCE_SUPERSEDED",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/interop/verify_detection.sh",
+      "class": "DERIVED",
+      "rule": "tracked-input-at-head",
+      "field": null,
+      "identity": {
+        "commit": "26c12726283c84185540844f5e150db22038d05e",
+        "all": [],
+        "source": "derived"
+      },
+      "ambiguous": false,
+      "heuristic": true,
+      "cause": null,
+      "cause_name": null,
+      "reason": "a tracked harness input or schema is read from the tree that contains it; the identity is the tree the registry was recorded at, and a later change to its bytes is FR_EVIDENCE_SUPERSEDED",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/interop/verify_pins.py",
+      "class": "DERIVED",
+      "rule": "tracked-input-at-head",
+      "field": null,
+      "identity": {
+        "commit": "26c12726283c84185540844f5e150db22038d05e",
+        "all": [],
+        "source": "derived"
+      },
+      "ambiguous": false,
+      "heuristic": true,
+      "cause": null,
+      "cause_name": null,
+      "reason": "a tracked harness input or schema is read from the tree that contains it; the identity is the tree the registry was recorded at, and a later change to its bytes is FR_EVIDENCE_SUPERSEDED",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/interop/verify_runtime_identity.sh",
+      "class": "DERIVED",
+      "rule": "tracked-input-at-head",
+      "field": null,
+      "identity": {
+        "commit": "26c12726283c84185540844f5e150db22038d05e",
+        "all": [],
+        "source": "derived"
+      },
+      "ambiguous": false,
+      "heuristic": true,
+      "cause": null,
+      "cause_name": null,
+      "reason": "a tracked harness input or schema is read from the tree that contains it; the identity is the tree the registry was recorded at, and a later change to its bytes is FR_EVIDENCE_SUPERSEDED",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/timing/README.md",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 7 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "courts/phase18/timing/RECEIPT-dudect-modes.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "4e4bc55a4c0cb9bf8b4678b469e2814061c88a8e",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/timing/RECEIPT-timing-unified.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "99ab0d04254b3588c9786f63ebf8a2af59d64109",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase18/timing/run_bench_api.sh",
+      "class": "DERIVED",
+      "rule": "tracked-input-at-head",
+      "field": null,
+      "identity": {
+        "commit": "26c12726283c84185540844f5e150db22038d05e",
+        "all": [],
+        "source": "derived"
+      },
+      "ambiguous": false,
+      "heuristic": true,
+      "cause": null,
+      "cause_name": null,
+      "reason": "a tracked harness input or schema is read from the tree that contains it; the identity is the tree the registry was recorded at, and a later change to its bytes is FR_EVIDENCE_SUPERSEDED",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase8/ct_expectations.txt",
+      "class": "DERIVED",
+      "rule": "tracked-input-at-head",
+      "field": null,
+      "identity": {
+        "commit": "26c12726283c84185540844f5e150db22038d05e",
+        "all": [],
+        "source": "derived"
+      },
+      "ambiguous": false,
+      "heuristic": true,
+      "cause": null,
+      "cause_name": null,
+      "reason": "a tracked harness input or schema is read from the tree that contains it; the identity is the tree the registry was recorded at, and a later change to its bytes is FR_EVIDENCE_SUPERSEDED",
+      "certifiable_if": null
+    },
+    {
+      "path": "courts/phase8/ssl3_cbc_expectations.txt",
+      "class": "DERIVED",
+      "rule": "tracked-input-at-head",
+      "field": null,
+      "identity": {
+        "commit": "26c12726283c84185540844f5e150db22038d05e",
+        "all": [],
+        "source": "derived"
+      },
+      "ambiguous": false,
+      "heuristic": true,
+      "cause": null,
+      "cause_name": null,
+      "reason": "a tracked harness input or schema is read from the tree that contains it; the identity is the tree the registry was recorded at, and a later change to its bytes is FR_EVIDENCE_SUPERSEDED",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/b78-l7-replay.json",
+      "class": "DECLARED",
+      "rule": "declared-identity-field",
+      "field": "repository_head_at_measurement",
+      "identity": {
+        "commit": "5628e8d6710e49b8348ce6085345c75809a4cdad",
+        "all": [
+          {
+            "field": "repository_head_at_measurement",
+            "value": "5628e8d6710e49b8348ce6085345c75809a4cdad",
+            "commit": "5628e8d6710e49b8348ce6085345c75809a4cdad"
+          }
+        ],
+        "source": "declared"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact names the tree it was taken at in repository_head_at_measurement",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/b80-tsan-freelock.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "5b4a2a42a5987a92b16327c38f87e5efa68053f4",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/b81-review-x509-surface.json",
+      "class": "DECLARED",
+      "rule": "declared-identity-field",
+      "field": "candidate.head",
+      "identity": {
+        "commit": "2ee194228ea29e78d8f04a017f3e2f85eeff6dd2",
+        "all": [
+          {
+            "field": "candidate.head",
+            "value": "2ee194228ea29e78d8f04a017f3e2f85eeff6dd2",
+            "commit": "2ee194228ea29e78d8f04a017f3e2f85eeff6dd2"
+          }
+        ],
+        "source": "declared"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact names the tree it was taken at in candidate.head",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/b84-l4-binding.json",
+      "class": "DECLARED",
+      "rule": "declared-identity-field",
+      "field": "head",
+      "identity": {
+        "commit": "79a09f778c4dfa1f79f1fd6320bec1dd9bac9146",
+        "all": [
+          {
+            "field": "head",
+            "value": "79a09f778c4dfa1f79f1fd6320bec1dd9bac9146",
+            "commit": "79a09f778c4dfa1f79f1fd6320bec1dd9bac9146"
+          }
+        ],
+        "source": "declared"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact names the tree it was taken at in head",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/b85-l4-binding.json",
+      "class": "DECLARED",
+      "rule": "declared-identity-field",
+      "field": "head",
+      "identity": {
+        "commit": "2170f55b4cec0afcf7c4349de97935cb7b8a1b82",
+        "all": [
+          {
+            "field": "head",
+            "value": "2170f55b4cec0afcf7c4349de97935cb7b8a1b82",
+            "commit": "2170f55b4cec0afcf7c4349de97935cb7b8a1b82"
+          }
+        ],
+        "source": "declared"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact names the tree it was taken at in head",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/b85c-row-reconciliation.json",
+      "class": "DECLARED",
+      "rule": "declared-identity-field",
+      "field": "source_candidate",
+      "identity": {
+        "commit": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+        "all": [
+          {
+            "field": "source_candidate",
+            "value": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+            "commit": "17042ccf29bc39df638c63e69d3be6c6f965eef7"
+          }
+        ],
+        "source": "declared"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact names the tree it was taken at in source_candidate",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/element7-curl-049-closed-method-tables.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "bb9c3227f4f27eb25bd84c08d467bc8c10e34b36",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/element7-curl-049-closedset-receipt.json",
+      "class": "DECLARED",
+      "rule": "declared-identity-field",
+      "field": "source_identity.repository_head_start",
+      "identity": {
+        "commit": "377e66a85048526a509ad50589451cf14d8ae4fe",
+        "all": [
+          {
+            "field": "source_identity.repository_head_start",
+            "value": "377e66a85048526a509ad50589451cf14d8ae4fe",
+            "commit": "377e66a85048526a509ad50589451cf14d8ae4fe"
+          }
+        ],
+        "source": "declared"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact names the tree it was taken at in source_identity.repository_head_start",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/element7-curl-049-dso-and-method-table-contracts.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "9c973305b128ee79c1cd2e85a7ff31ef8e289a89",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/element7-curl-049-proved-empty-gate.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "50ac592e2b724ed6ead87ca44de21ea2e11d449c",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/element7-curl-049-rest-receipt.json",
+      "class": "DECLARED",
+      "rule": "declared-identity-field",
+      "field": "source_identity.repository_head_start",
+      "identity": {
+        "commit": "230d2a13e9836d3d6298e554df8d5a3e211e917e",
+        "all": [
+          {
+            "field": "source_identity.repository_head_start",
+            "value": "230d2a13e9836d3d6298e554df8d5a3e211e917e",
+            "commit": "230d2a13e9836d3d6298e554df8d5a3e211e917e"
+          }
+        ],
+        "source": "declared"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact names the tree it was taken at in source_identity.repository_head_start",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/element7-curl-049-s1-got-slot.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "c16793fe05040c20a07f1f43b43d0f257f6a9e12",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp-t1/RECEIPT.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "6da02233f94152b865c9d02cdcfe5adeb34952e7",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp-t2/HAZARDS.json",
+      "class": "DECLARED",
+      "rule": "declared-identity-field",
+      "field": "identity.analysis_candidate",
+      "identity": {
+        "commit": "6da02233f94152b865c9d02cdcfe5adeb34952e7",
+        "all": [
+          {
+            "field": "identity.analysis_candidate",
+            "value": "6da02233f94152b865c9d02cdcfe5adeb34952e7",
+            "commit": "6da02233f94152b865c9d02cdcfe5adeb34952e7"
+          }
+        ],
+        "source": "declared"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact names the tree it was taken at in identity.analysis_candidate",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp-t2/RECEIPT.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "794a7c5491e6095992744f1ab624f5183ca3457d",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp-t3/REFINEMENT.json",
+      "class": "DECLARED",
+      "rule": "declared-identity-field",
+      "field": "source_identity.head",
+      "identity": {
+        "commit": "794a7c5491e6095992744f1ab624f5183ca3457d",
+        "all": [
+          {
+            "field": "source_identity.head",
+            "value": "794a7c5491e6095992744f1ab624f5183ca3457d",
+            "commit": "794a7c5491e6095992744f1ab624f5183ca3457d"
+          }
+        ],
+        "source": "declared"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact names the tree it was taken at in source_identity.head",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp-t3/SPECIFICATIONS.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "07b776d688fdd1dcc4e315661894c30e623aed9e",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp-t3/controls/spec-internal-identifier.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "07b776d688fdd1dcc4e315661894c30e623aed9e",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp-t3/controls/spec-justified-exemption.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "07b776d688fdd1dcc4e315661894c30e623aed9e",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp-t3/controls/spec-no-level.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "07b776d688fdd1dcc4e315661894c30e623aed9e",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp-t3/controls/spec-stale-exemption.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "07b776d688fdd1dcc4e315661894c30e623aed9e",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp-t3/controls/spec-unjustified-exemption.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "07b776d688fdd1dcc4e315661894c30e623aed9e",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp-t3/controls/spec-unknown-level.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "07b776d688fdd1dcc4e315661894c30e623aed9e",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp-t4/AXIOMS.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "fe852d8e5d9f911ffa939cc8438bb3062ab75712",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp-t4/RECEIPT.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "fe852d8e5d9f911ffa939cc8438bb3062ab75712",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp-t5/RECEIPT.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "478bf17ec1aa9022a784009a999a10e4eb4c07c4",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp-t6/.probe.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "a4cf2601a38fcfc883c56df30f495e41345eacd7",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp-t6/TCB.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "a4cf2601a38fcfc883c56df30f495e41345eacd7",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp-t7/DUDECT-ETP-T7.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "bf8c6437128b2d3ab0bf76d76aa5b529532de84f",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp-t7/RECEIPT.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "bf8c6437128b2d3ab0bf76d76aa5b529532de84f",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp-t8/RECEIPT.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "100ba5352a34fdfd6f0f40c8ae4ba81bd2fc39b1",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp/INTEGRITY-HARDENING.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "15b3b0e7a359eb592d5e0ef31ede39dbe4814964",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp/OMISSION-RESISTANCE.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "3951f0f5eef630d36fc5f8ffc3a49087ec6e3920",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp/claim.schema.json",
+      "class": "DERIVED",
+      "rule": "tracked-input-at-head",
+      "field": null,
+      "identity": {
+        "commit": "26c12726283c84185540844f5e150db22038d05e",
+        "all": [],
+        "source": "derived"
+      },
+      "ambiguous": false,
+      "heuristic": true,
+      "cause": null,
+      "cause_name": null,
+      "reason": "a tracked harness input or schema is read from the tree that contains it; the identity is the tree the registry was recorded at, and a later change to its bytes is FR_EVIDENCE_SUPERSEDED",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp/omission/REVALIDATION.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "3951f0f5eef630d36fc5f8ffc3a49087ec6e3920",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp0/TRUST-GAPS.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "f93766a621530ce05d4061b48fa48211abff1363",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp3/HARDENING-2.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "6443ff94c911f335c2f9a41dc20b5db217b73f88",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp3/instruments.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 3 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "evidence/etp4/VERIFICATION-RECEIPT.md",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "evidence/etp4/results.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "db5033610c9afb730381dcd913d829f73e523ace",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp5/IDENTITY.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "8af8870f14a0fefc76f6a353d2eb26d562e928f4",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp5/PROBE-RESULTS.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "8af8870f14a0fefc76f6a353d2eb26d562e928f4",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp5/REEXECUTION-MANIFEST-o7-BA.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "8af8870f14a0fefc76f6a353d2eb26d562e928f4",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp5/REEXECUTION-MANIFEST-o7-BB.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "8af8870f14a0fefc76f6a353d2eb26d562e928f4",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp5/REEXECUTION-RECEIPT-o7-BA.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "8af8870f14a0fefc76f6a353d2eb26d562e928f4",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp5/REEXECUTION-RECEIPT-o7-BB.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "8af8870f14a0fefc76f6a353d2eb26d562e928f4",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp5/REEXECUTION.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "8af8870f14a0fefc76f6a353d2eb26d562e928f4",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp5/logs/etp5-cell-BA.mapping.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "8af8870f14a0fefc76f6a353d2eb26d562e928f4",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/etp5/logs/etp5-cell-BB.mapping.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "8af8870f14a0fefc76f6a353d2eb26d562e928f4",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/haz-15/CALLBACK-CONTRACT.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "0eddfe839f552a6e22a8cf375ec308c8bf7c478b",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/haz-15/KDK-CORRECTION.md",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "evidence/haz-15/REENTRANCY-AND-LENGTH.md",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 3 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "evidence/haz-15/REPORT.md",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 3 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "evidence/haz-15/STATE-MACHINE.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "0eddfe839f552a6e22a8cf375ec308c8bf7c478b",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/haz-15/observables.json",
+      "class": "DECLARED",
+      "rule": "declared-identity-field",
+      "field": "identity.head",
+      "identity": {
+        "commit": "5750ac15008e6537b9cf12800b4351b7171f6a9b",
+        "all": [
+          {
+            "field": "identity.head",
+            "value": "5750ac15008e6537b9cf12800b4351b7171f6a9b",
+            "commit": "5750ac15008e6537b9cf12800b4351b7171f6a9b"
+          }
+        ],
+        "source": "declared"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact names the tree it was taken at in identity.head",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/haz-16/CLASSIFICATION.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U7",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U7",
+      "cause_name": "self-qualified-declaration",
+      "reason": "identity.worktree records a dirty worktree; the declared tree is not the tree measured",
+      "certifiable_if": "the declared tree is qualified by a dirty worktree, so the artefact does not claim to correspond to it; a clean-tree declaration, or the base commit plus the patch digest, would make it certifiable"
+    },
+    {
+      "path": "evidence/haz-16/RECEIPT.md",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "evidence/haz-16/STACK-ORDER.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "0cd5dbf7342b2f3861f0a96c8cd0f02ea9ec44da",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/l7-replay-049.json",
+      "class": "DECLARED",
+      "rule": "declared-identity-field",
+      "field": "repository_head_at_measurement",
+      "identity": {
+        "commit": "8eaefe6268a1a45f4d6839af32a521cfffccdb03",
+        "all": [
+          {
+            "field": "repository_head_at_measurement",
+            "value": "8eaefe6268a1a45f4d6839af32a521cfffccdb03",
+            "commit": "8eaefe6268a1a45f4d6839af32a521cfffccdb03"
+          }
+        ],
+        "source": "declared"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact names the tree it was taken at in repository_head_at_measurement",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-0/build-identity.json",
+      "class": "DECLARED",
+      "rule": "declared-identity-field",
+      "field": "source.head",
+      "identity": {
+        "commit": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
+        "all": [
+          {
+            "field": "source.head",
+            "value": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
+            "commit": "c9a0fdd58429ef13ca9b25ddccbc84a832787277"
+          }
+        ],
+        "source": "declared"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact names the tree it was taken at in source.head",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-0/preregistration.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "91ac573c0a8e1bc11371718e5f2a6022c55c9535",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-0/results.json",
+      "class": "DECLARED",
+      "rule": "declared-identity-field",
+      "field": "identity.source.head",
+      "identity": {
+        "commit": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
+        "all": [
+          {
+            "field": "identity.source.head",
+            "value": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
+            "commit": "c9a0fdd58429ef13ca9b25ddccbc84a832787277"
+          }
+        ],
+        "source": "declared"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact names the tree it was taken at in identity.source.head",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-0/venue.txt",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "91ac573c0a8e1bc11371718e5f2a6022c55c9535",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/RECEIPT.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "a3f7b277cf09ea2cb28c853fded090580f3e80cd",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/STOP-REPAIR-RECEIPT.md",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "3c43f87af2d5f3438526258ee5428a71bef1434a",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/control-before/results.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "a3f7b277cf09ea2cb28c853fded090580f3e80cd",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/ctgrind/summary.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U7",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U7",
+      "cause_name": "self-qualified-declaration",
+      "reason": "source.worktree records a dirty worktree; the declared tree is not the tree measured",
+      "certifiable_if": "the declared tree is qualified by a dirty worktree, so the artefact does not claim to correspond to it; a clean-tree declaration, or the base commit plus the patch digest, would make it certifiable"
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/results.json",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "a3f7b277cf09ea2cb28c853fded090580f3e80cd",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/performance-frontier/campaigns/PFP-1/performance/venue.txt",
+      "class": "HISTORICAL",
+      "rule": "introduced-at-single-commit",
+      "field": null,
+      "identity": {
+        "commit": "a3f7b277cf09ea2cb28c853fded090580f3e80cd",
+        "all": [],
+        "source": "introduced"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact was introduced in one commit and never modified, so its bytes are exactly the bytes at that commit; it is a record of that moment, not of the current tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/ssh-artifact-ledger-b78.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U5",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U5",
+      "cause_name": "uncheckable-source-binding",
+      "reason": "source_root_hash is recorded with source_root_hash_rule null; the freeze record 'court/freeze-b78/FREEZE-b78.json' is 56d7903aa684c15cdc4d050502237191aeb5a7d97b71f359325e1b2951880ff5, not the recorded 65fa0fee174758acf8818a6c8d92e66e49ae6a4e9bd6d95b677d2c0cf0058d14",
+      "certifiable_if": "the source-root digest has no recorded rule and the freeze record it names cannot be read from the tree; a non-null hash rule and a tracked, digest-matching freeze record would make it certifiable"
+    },
+    {
+      "path": "evidence/ssh-artifact-ledger-b79.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U5",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U5",
+      "cause_name": "uncheckable-source-binding",
+      "reason": "source_root_hash is recorded with source_root_hash_rule null; the freeze record 'court/freeze-b79/FREEZE-b79.json' is 37e3ff2e662339a28d3939aef4209e28d0d8dacdfbb596f3b0db5f90e30e12a5, not the recorded 36ce16a9bbcf7022fb1ac5e8bf11202c0f4bd0ffd234f3904392753d48a1c731",
+      "certifiable_if": "the source-root digest has no recorded rule and the freeze record it names cannot be read from the tree; a non-null hash rule and a tracked, digest-matching freeze record would make it certifiable"
+    },
+    {
+      "path": "evidence/ssh-artifact-ledger-b80.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U5",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U5",
+      "cause_name": "uncheckable-source-binding",
+      "reason": "source_root_hash is recorded with source_root_hash_rule null; the freeze record 'court/freeze-b80/FREEZE-b80.json' is not tracked at 26c12726283c",
+      "certifiable_if": "the source-root digest has no recorded rule and the freeze record it names cannot be read from the tree; a non-null hash rule and a tracked, digest-matching freeze record would make it certifiable"
+    },
+    {
+      "path": "evidence/ssh-artifact-ledger-b81.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U5",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U5",
+      "cause_name": "uncheckable-source-binding",
+      "reason": "source_root_hash is recorded with source_root_hash_rule null; the freeze record 'court/freeze-b81/FREEZE-b81.json' is not tracked at 26c12726283c",
+      "certifiable_if": "the source-root digest has no recorded rule and the freeze record it names cannot be read from the tree; a non-null hash rule and a tracked, digest-matching freeze record would make it certifiable"
+    },
+    {
+      "path": "evidence/ssh-artifact-ledger-b82.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U5",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U5",
+      "cause_name": "uncheckable-source-binding",
+      "reason": "source_root_hash is recorded with source_root_hash_rule null; the freeze record 'court/freeze-b82/FREEZE-b82.json' is not tracked at 26c12726283c",
+      "certifiable_if": "the source-root digest has no recorded rule and the freeze record it names cannot be read from the tree; a non-null hash rule and a tracked, digest-matching freeze record would make it certifiable"
+    },
+    {
+      "path": "evidence/ssh-artifact-ledger-b83.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U5",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U5",
+      "cause_name": "uncheckable-source-binding",
+      "reason": "source_root_hash is recorded with source_root_hash_rule null; the freeze record 'court/freeze-b83/FREEZE-b83.json' is not tracked at 26c12726283c",
+      "certifiable_if": "the source-root digest has no recorded rule and the freeze record it names cannot be read from the tree; a non-null hash rule and a tracked, digest-matching freeze record would make it certifiable"
+    },
+    {
+      "path": "evidence/ssh-artifact-ledger-b84.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U5",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U5",
+      "cause_name": "uncheckable-source-binding",
+      "reason": "source_root_hash is recorded with source_root_hash_rule null; the freeze record 'court/freeze-b84/FREEZE-b84.json' is not tracked at 26c12726283c",
+      "certifiable_if": "the source-root digest has no recorded rule and the freeze record it names cannot be read from the tree; a non-null hash rule and a tracked, digest-matching freeze record would make it certifiable"
+    },
+    {
+      "path": "evidence/ssh-artifact-ledger-b85.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U5",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U5",
+      "cause_name": "uncheckable-source-binding",
+      "reason": "source_root_hash is recorded with source_root_hash_rule null; the freeze record 'court/freeze-b85/FREEZE-b85.json' is not tracked at 26c12726283c",
+      "certifiable_if": "the source-root digest has no recorded rule and the freeze record it names cannot be read from the tree; a non-null hash rule and a tracked, digest-matching freeze record would make it certifiable"
+    },
+    {
+      "path": "evidence/ssh-artifact-ledger-b85c.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U5",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U5",
+      "cause_name": "uncheckable-source-binding",
+      "reason": "source_root_hash is recorded with source_root_hash_rule null; the freeze record 'evidence/FREEZE-b85c.json' is b08131b1ca7849a3e7f801b87f427774df346366344a2b24bd8207fcb847ec4e, not the recorded 63169cd1df9fe58a8e70b8629e39ec0b66ff89019fe7f8b81292df57924e2159",
+      "certifiable_if": "the source-root digest has no recorded rule and the freeze record it names cannot be read from the tree; a non-null hash rule and a tracked, digest-matching freeze record would make it certifiable"
+    },
+    {
+      "path": "evidence/sshd-artifact-ledger-b76.json",
+      "class": "DERIVED",
+      "rule": "digest-bound-freeze-record",
+      "field": "freeze:court/freeze-b76/FREEZE-b76.json",
+      "identity": {
+        "commit": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+        "all": [
+          {
+            "field": "freeze:court/freeze-b76/FREEZE-b76.json",
+            "commit": "0238c6e4adbc7ed85a42be68b6fb965e139bd93e",
+            "declared": [
+              "candidate_identity.source_head",
+              "source.head"
+            ]
+          }
+        ],
+        "source": "derived"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the freeze field names court/freeze-b76/FREEZE-b76.json, whose recorded digest matches and which declares one tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "evidence/sshd-artifact-ledger-b78.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U5",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U5",
+      "cause_name": "uncheckable-source-binding",
+      "reason": "source_root_hash is recorded with source_root_hash_rule null; the freeze record 'court/freeze-b78/FREEZE-b78.json' is 56d7903aa684c15cdc4d050502237191aeb5a7d97b71f359325e1b2951880ff5, not the recorded 65fa0fee174758acf8818a6c8d92e66e49ae6a4e9bd6d95b677d2c0cf0058d14",
+      "certifiable_if": "the source-root digest has no recorded rule and the freeze record it names cannot be read from the tree; a non-null hash rule and a tracked, digest-matching freeze record would make it certifiable"
+    },
+    {
+      "path": "evidence/sshd-artifact-ledger-b79.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U5",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U5",
+      "cause_name": "uncheckable-source-binding",
+      "reason": "source_root_hash is recorded with source_root_hash_rule null; the freeze record 'court/freeze-b79/FREEZE-b79.json' is 37e3ff2e662339a28d3939aef4209e28d0d8dacdfbb596f3b0db5f90e30e12a5, not the recorded 36ce16a9bbcf7022fb1ac5e8bf11202c0f4bd0ffd234f3904392753d48a1c731",
+      "certifiable_if": "the source-root digest has no recorded rule and the freeze record it names cannot be read from the tree; a non-null hash rule and a tracked, digest-matching freeze record would make it certifiable"
+    },
+    {
+      "path": "evidence/sshd-artifact-ledger-b80.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U5",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U5",
+      "cause_name": "uncheckable-source-binding",
+      "reason": "source_root_hash is recorded with source_root_hash_rule null; the freeze record 'court/freeze-b80/FREEZE-b80.json' is not tracked at 26c12726283c",
+      "certifiable_if": "the source-root digest has no recorded rule and the freeze record it names cannot be read from the tree; a non-null hash rule and a tracked, digest-matching freeze record would make it certifiable"
+    },
+    {
+      "path": "evidence/sshd-artifact-ledger-b81.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U5",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U5",
+      "cause_name": "uncheckable-source-binding",
+      "reason": "source_root_hash is recorded with source_root_hash_rule null; the freeze record 'court/freeze-b81/FREEZE-b81.json' is not tracked at 26c12726283c",
+      "certifiable_if": "the source-root digest has no recorded rule and the freeze record it names cannot be read from the tree; a non-null hash rule and a tracked, digest-matching freeze record would make it certifiable"
+    },
+    {
+      "path": "evidence/sshd-artifact-ledger-b82.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U5",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U5",
+      "cause_name": "uncheckable-source-binding",
+      "reason": "source_root_hash is recorded with source_root_hash_rule null; the freeze record 'court/freeze-b82/FREEZE-b82.json' is not tracked at 26c12726283c",
+      "certifiable_if": "the source-root digest has no recorded rule and the freeze record it names cannot be read from the tree; a non-null hash rule and a tracked, digest-matching freeze record would make it certifiable"
+    },
+    {
+      "path": "evidence/sshd-artifact-ledger-b83.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U5",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U5",
+      "cause_name": "uncheckable-source-binding",
+      "reason": "source_root_hash is recorded with source_root_hash_rule null; the freeze record 'court/freeze-b83/FREEZE-b83.json' is not tracked at 26c12726283c",
+      "certifiable_if": "the source-root digest has no recorded rule and the freeze record it names cannot be read from the tree; a non-null hash rule and a tracked, digest-matching freeze record would make it certifiable"
+    },
+    {
+      "path": "evidence/sshd-artifact-ledger-b84.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U5",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U5",
+      "cause_name": "uncheckable-source-binding",
+      "reason": "source_root_hash is recorded with source_root_hash_rule null; the freeze record 'court/freeze-b84/FREEZE-b84.json' is not tracked at 26c12726283c",
+      "certifiable_if": "the source-root digest has no recorded rule and the freeze record it names cannot be read from the tree; a non-null hash rule and a tracked, digest-matching freeze record would make it certifiable"
+    },
+    {
+      "path": "evidence/sshd-artifact-ledger-b85.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U5",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U5",
+      "cause_name": "uncheckable-source-binding",
+      "reason": "source_root_hash is recorded with source_root_hash_rule null; the freeze record 'court/freeze-b85/FREEZE-b85.json' is not tracked at 26c12726283c",
+      "certifiable_if": "the source-root digest has no recorded rule and the freeze record it names cannot be read from the tree; a non-null hash rule and a tracked, digest-matching freeze record would make it certifiable"
+    },
+    {
+      "path": "evidence/sshd-artifact-ledger-b85c.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U5",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U5",
+      "cause_name": "uncheckable-source-binding",
+      "reason": "source_root_hash is recorded with source_root_hash_rule null; the freeze record 'evidence/FREEZE-b85c.json' is b08131b1ca7849a3e7f801b87f427774df346366344a2b24bd8207fcb847ec4e, not the recorded 63169cd1df9fe58a8e70b8629e39ec0b66ff89019fe7f8b81292df57924e2159",
+      "certifiable_if": "the source-root digest has no recorded rule and the freeze record it names cannot be read from the tree; a non-null hash rule and a tracked, digest-matching freeze record would make it certifiable"
+    },
+    {
+      "path": "evidence/sshd-artifact-ledger.json",
+      "class": "DERIVED",
+      "rule": "digest-bound-freeze-record",
+      "field": "freeze:court/freeze-b73/FREEZE-b73.json",
+      "identity": {
+        "commit": "15bebabc90e1c4a8f0cb496813030c1415891f7c",
+        "all": [
+          {
+            "field": "freeze:court/freeze-b73/FREEZE-b73.json",
+            "commit": "15bebabc90e1c4a8f0cb496813030c1415891f7c",
+            "declared": [
+              "candidate_identity.source_head",
+              "source.head"
+            ]
+          }
+        ],
+        "source": "derived"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the freeze field names court/freeze-b73/FREEZE-b73.json, whose recorded digest matches and which declares one tree",
+      "certifiable_if": null
+    },
+    {
+      "path": "forensics/downstream/runtime-functional-atlas.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 72 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "forensics/memory-safety/campaign/safe-c33/CLOSURE.md",
+      "class": "HISTORICAL",
+      "rule": "declared-prose-frozen-at",
+      "field": "prose:frozen at",
+      "identity": {
+        "commit": "67ae7f8e9f3381ce0dac1dae9a23bfa3937bec34",
+        "all": [],
+        "source": "declared"
+      },
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": null,
+      "cause_name": null,
+      "reason": "the artefact states that it is a frozen record at a named commit",
+      "certifiable_if": null
+    },
+    {
+      "path": "forensics/phase18-obligations.json",
+      "class": "UNCERTIFIABLE",
+      "rule": "U1",
+      "field": null,
+      "identity": null,
+      "ambiguous": false,
+      "heuristic": false,
+      "cause": "U1",
+      "cause_name": "multi-commit-no-declaration",
+      "reason": "the artefact was changed in 22 commits and names no tree, so no single moment explains its current bytes",
+      "certifiable_if": "the artefact was modified in more than one commit and names no tree; a declared identity commit, or a single-commit history, would make it certifiable"
+    },
+    {
+      "path": "forensics/tools/build_reproducibility.sh",
+      "class": "DERIVED",
+      "rule": "tracked-input-at-head",
+      "field": null,
+      "identity": {
+        "commit": "26c12726283c84185540844f5e150db22038d05e",
+        "all": [],
+        "source": "derived"
+      },
+      "ambiguous": false,
+      "heuristic": true,
+      "cause": null,
+      "cause_name": null,
+      "reason": "a tracked harness input or schema is read from the tree that contains it; the identity is the tree the registry was recorded at, and a later change to its bytes is FR_EVIDENCE_SUPERSEDED",
+      "certifiable_if": null
+    }
+  ]
+}

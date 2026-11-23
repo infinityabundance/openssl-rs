@@ -18,6 +18,15 @@ one refused item refuses the release.
                             * a positive verdict over evidence whose declared
                               state is `WITHDRAWN`, `REFUTED` or
                               `NOT_ESTABLISHED`;
+                            * a current claim whose required evidence the
+                              identity triage marks `UNCERTIFIABLE`
+                              (`RG_CLAIM_UNCERTIFIABLE_EVIDENCE`) or
+                              `HISTORICAL` (`RG_CLAIM_HISTORICAL_EVIDENCE`),
+                              naming the artefact;
+  2b. identity triage     `evidence/etp-t9/IDENTITY-TRIAGE.json` is present and
+                          bound to the committed dependency registry. An absent
+                          triage is `RG_TRIAGE_MISSING`, a triage for another
+                          registry is `RG_TRIAGE_STALE`;
   3. receipts             `courts/phase18/interop/check_receipts.py` holds over
                           the interop evidence (rules R1-R5);
   4. instruments          `forensics/tools/instrument_qualify.py check` holds:
@@ -102,6 +111,8 @@ EXIT_USAGE = 2
 CLAIMS = ROOT / "evidence/etp/claims.json"
 CLAIM_SCHEMA = ROOT / "evidence/etp/claim.schema.json"
 CLAIM_TOOL = ROOT / "forensics/tools/etp_claims.py"
+DEPENDENCY_REGISTRY = ROOT / "evidence/etp-t9/DEPENDENCIES.json"
+IDENTITY_TRIAGE = ROOT / "evidence/etp-t9/IDENTITY-TRIAGE.json"
 RECEIPT_TOOL = ROOT / "courts/phase18/interop/check_receipts.py"
 INTEROP_DIR = ROOT / "courts/phase18/interop"
 INSTRUMENT_TOOL = ROOT / "forensics/tools/instrument_qualify.py"
@@ -126,6 +137,16 @@ NON_CURRENT_EVIDENCE = {"WITHDRAWN", "REFUTED", "NOT_ESTABLISHED"}
 POSITIVE_VERDICTS = {"ESTABLISHED", "SAFE_COMPATIBLE"}
 
 GRADUATED_MODALITIES = {"PROOF_OBLIGATIONS_DISCHARGED", "BINARY_REFINEMENT_VERIFIED"}
+
+# Claim states whose required evidence is not examined for freshness. A claim
+# that is already refused is named once, and a `NOT_ESTABLISHED` claim asserts
+# that the property is not established, so its evidence supports no positive
+# conclusion for the release to withhold.
+NON_ASSERTIVE_CLAIM_STATES = set(FORBIDDING_VERDICTS) | {"SUPERSEDED", "NOT_ESTABLISHED"}
+
+# The identity-triage classes that may not support a current claim.
+TRIAGE_CLASSES = ("DERIVED", "DECLARED", "HISTORICAL", "UNCERTIFIABLE")
+TRIAGE_SCHEMA = "openssl-rs/etp/identity-triage/1"
 
 # One line per refused item is the contract; a checker that emits thousands of
 # lines is still one refused item, so the detail is compacted to a bounded
@@ -222,7 +243,9 @@ def _claim_verdict(claim: dict) -> str:
     return str(verdict.get("state", "UNKNOWN"))
 
 
-def scan_claims(document: dict, graduation_requested: bool) -> tuple[list[Refusal], list[str]]:
+def scan_claims(
+    document: dict, graduation_requested: bool, triage: dict[str, dict] | None = None
+) -> tuple[list[Refusal], list[str]]:
     """The release rules over claim states, independent of schema validation."""
     refusals: list[Refusal] = []
     recorded: list[str] = []
@@ -263,6 +286,33 @@ def scan_claims(document: dict, graduation_requested: bool) -> tuple[list[Refusa
                         f"declared state is {value} ({declared.get('artefact', '?')} "
                         f"@{declared.get('revision', '?')})",
                     ))
+
+        # The identity triage decides whether the evidence a current claim
+        # requires can be certified current at all. Both rules name the artefact:
+        # the refusal is about that artefact, not about the claim's topic.
+        if triage and state not in NON_ASSERTIVE_CLAIM_STATES:
+            seen: set[str] = set()
+            for record in claim.get("evidence") or []:
+                path = record.get("path") if isinstance(record, dict) else None
+                if not isinstance(path, str) or path in seen:
+                    continue
+                seen.add(path)
+                entry = triage.get(path) or {}
+                if entry.get("class") == "UNCERTIFIABLE":
+                    refusals.append(Refusal(
+                        "RG_CLAIM_UNCERTIFIABLE_EVIDENCE",
+                        f"{ident}/{path}",
+                        f"claim {ident} ({state}) requires {path}, which has no certifiable identity: "
+                        f"{entry.get('cause')} {entry.get('cause_name')} -- {entry.get('reason')}",
+                    ))
+                elif entry.get("class") == "HISTORICAL":
+                    commit = (entry.get("identity") or {}).get("commit", "?")
+                    refusals.append(Refusal(
+                        "RG_CLAIM_HISTORICAL_EVIDENCE",
+                        f"{ident}/{path}",
+                        f"claim {ident} ({state}) requires {path}, which is a record of "
+                        f"{entry.get('rule')} at {commit} and may not be cited as current evidence",
+                    ))
     return refusals, recorded
 
 
@@ -272,6 +322,7 @@ def check_claims(
     schema: Path,
     graduation_requested: bool,
     timeout: int = 900,
+    triage: dict[str, dict] | None = None,
 ) -> Results:
     refusals: list[Refusal] = []
     recorded: list[str] = []
@@ -313,7 +364,7 @@ def check_claims(
         refusals.append(Refusal("RG_CLAIMS_UNREADABLE", str(claims), str(exc)))
         return Results(refusals, recorded)
 
-    rule_refusals, rule_recorded = scan_claims(document, graduation_requested)
+    rule_refusals, rule_recorded = scan_claims(document, graduation_requested, triage)
     refusals.extend(rule_refusals)
     recorded.extend(rule_recorded)
 
@@ -338,6 +389,66 @@ def check_claims(
     if identity.get("commit"):
         recorded.append(f"claim source identity: {identity['commit']}")
     return Results(refusals, recorded)
+
+
+# ---------------------------------------------------------------------------
+# 2b. Identity triage
+# ---------------------------------------------------------------------------
+def load_triage(path: Path, registry: Path) -> tuple[dict[str, dict] | None, list[Refusal]]:
+    """Load the identity triage and check that it is bound to the registry.
+
+    The triage is a required item: an artefact with no certifiable identity
+    cannot support a current claim, and an absent triage would silently restore
+    the permissive behaviour this item exists to remove. A record that binds a
+    different registry is stale, and a class outside the closed set is refused
+    rather than treated as non-blocking.
+    """
+    if not path.is_file():
+        return None, [Refusal(
+            "RG_TRIAGE_MISSING", str(path),
+            "the identity triage is required; an artefact with no certifiable identity cannot support a "
+            "current claim, so an absent triage is a refusal rather than a skip",
+        )]
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return None, [Refusal("RG_TRIAGE_MISSING", str(path), f"the identity triage is unreadable: {exc}")]
+    if not isinstance(document, dict) or document.get("schema") != TRIAGE_SCHEMA:
+        return None, [Refusal("RG_TRIAGE_STALE", str(path), f"schema must be {TRIAGE_SCHEMA!r}")]
+    try:
+        binding = json.loads(registry.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        return None, [Refusal("RG_TRIAGE_STALE", str(path), f"the dependency registry is unreadable: {exc}")]
+    if document.get("registry_recorded_at_commit") != binding.get("recorded_at_commit"):
+        return None, [Refusal(
+            "RG_TRIAGE_STALE", str(path),
+            f"the triage binds registry {document.get('registry_recorded_at_commit')!r}; the committed "
+            f"registry records {binding.get('recorded_at_commit')!r}",
+        )]
+    records = document.get("artefacts")
+    if not isinstance(records, list) or not records:
+        return None, [Refusal("RG_TRIAGE_STALE", str(path), "the triage records no artefact")]
+    index: dict[str, dict] = {}
+    for item in records:
+        if not isinstance(item, dict) or not isinstance(item.get("path"), str):
+            return None, [Refusal("RG_TRIAGE_STALE", str(path), "a triage record names no path")]
+        if item.get("path") in index:
+            return None, [Refusal("RG_TRIAGE_STALE", str(path), f"{item['path']} is triaged twice")]
+        if item.get("class") not in TRIAGE_CLASSES:
+            return None, [Refusal(
+                "RG_TRIAGE_STALE", str(path),
+                f"{item['path']}: class {item.get('class')!r} is not one of {list(TRIAGE_CLASSES)}",
+            )]
+        index[item["path"]] = item
+    counts = document.get("counts") or {}
+    for name in TRIAGE_CLASSES:
+        actual = sum(1 for item in records if item.get("class") == name)
+        if counts.get(name) != actual:
+            return None, [Refusal(
+                "RG_TRIAGE_STALE", str(path),
+                f"counts.{name} records {counts.get(name)!r}; the records give {actual}",
+            )]
+    return index, []
 
 
 # ---------------------------------------------------------------------------
@@ -508,7 +619,19 @@ def evaluate(args: argparse.Namespace) -> Results:
 
     claims = Path(args.claims).resolve() if args.claims else CLAIMS
     schema = Path(args.schema).resolve() if args.schema else CLAIM_SCHEMA
-    result = check_claims(root, claims, schema, args.graduation)
+    registry = Path(args.dependency_registry).resolve() if args.dependency_registry else DEPENDENCY_REGISTRY
+    triage_path = Path(args.triage).resolve() if args.triage else IDENTITY_TRIAGE
+    triage_index, triage_refusals = load_triage(triage_path, registry)
+    refusals.extend(triage_refusals)
+    if triage_index is not None:
+        counts = {name: sum(1 for item in triage_index.values() if item.get("class") == name)
+                  for name in TRIAGE_CLASSES}
+        recorded.append(
+            f"identity triage {triage_path.name}: "
+            + ", ".join(f"{counts[name]} {name}" for name in TRIAGE_CLASSES)
+            + f"; {counts['UNCERTIFIABLE']} artefact(s) cannot support a claim"
+        )
+    result = check_claims(root, claims, schema, args.graduation, triage=triage_index)
     refusals.extend(result.refusals)
     recorded.extend(result.recorded)
 
@@ -538,12 +661,14 @@ def self_test() -> int:
 
     The fixtures are constructed in a temporary directory from the committed
     claim document, so the test does not depend on the current verdicts being
-    either green or red.  Receipt, instrumentation and package controls call the
-    real checkers; the documentation control drives the gate's adapter with a
-    checker that reports a stale claim, because `docs_consistency.py` binds its
-    repository root at import and cannot be pointed at a fixture tree.  The real
-    documentation checker is also run as a positive control, which is what shows
-    the adapter is connected to it.
+    either green or red.  The identity-triage controls use a three-record fixture
+    triage, so the uncertifiable and historical rules are proven without
+    depending on the committed classes.  Receipt, instrumentation and package
+    controls call the real checkers; the documentation control drives the gate's
+    adapter with a checker that reports a stale claim, because
+    `docs_consistency.py` binds its repository root at import and cannot be
+    pointed at a fixture tree.  The real documentation checker is also run as a
+    positive control, which is what shows the adapter is connected to it.
     """
     failures: list[str] = []
     cases: list[tuple[str, str]] = []
@@ -606,6 +731,62 @@ def self_test() -> int:
             check_claims(ROOT, withdrawn_path, CLAIM_SCHEMA, False),
             "RG_CLAIM_WITHDRAWN_EVIDENCE",
         )
+
+        # The identity triage: an uncertifiable dependency refuses, a historical
+        # dependency refuses with its own rule, and a derived dependency is the
+        # positive control that neither rule fires without cause.
+        triage_document = {
+            "schema": TRIAGE_SCHEMA,
+            "registry_recorded_at_commit": "fixture",
+            "counts": {"DERIVED": 1, "DECLARED": 0, "HISTORICAL": 1, "UNCERTIFIABLE": 1, "total": 3},
+            "artefacts": [
+                {"path": "docs/NON_CLAIMS.md", "class": "UNCERTIFIABLE", "cause": "U1",
+                 "cause_name": "multi-commit-no-declaration", "reason": "self-test fixture"},
+                {"path": "docs/RELEASE_GATES.md", "class": "HISTORICAL",
+                 "rule": "introduced-at-single-commit", "identity": {"commit": "0" * 40}},
+                {"path": "evidence/fixture-derived.json", "class": "DERIVED",
+                 "rule": "tracked-input-at-head", "identity": {"commit": "0" * 40}},
+            ],
+        }
+        triage_index = {item["path"]: item for item in triage_document["artefacts"]}
+
+        def triage_claim(path: str) -> dict:
+            return {
+                "claims": [
+                    {
+                        "id": "SELFTEST-TRIAGE",
+                        "verdict": {"state": "PARTIAL"},
+                        "evidence": [{"id": "EV-1", "path": path}],
+                    }
+                ]
+            }
+
+        expect(
+            "uncertifiable dependency",
+            Results(*scan_claims(triage_claim("docs/NON_CLAIMS.md"), False, triage_index)),
+            "RG_CLAIM_UNCERTIFIABLE_EVIDENCE",
+        )
+        expect(
+            "historical dependency",
+            Results(*scan_claims(triage_claim("docs/RELEASE_GATES.md"), False, triage_index)),
+            "RG_CLAIM_HISTORICAL_EVIDENCE",
+        )
+        derived = scan_claims(triage_claim("evidence/fixture-derived.json"), False, triage_index)
+        cases.append(("derived dependency (positive control)", "no refusal"))
+        if derived[0]:
+            failures.append(
+                "derived dependency (positive control): unexpected refusals "
+                f"{[item.rule for item in derived[0]]}"
+            )
+
+        def triage_results(path: Path) -> Results:
+            _, refusals = load_triage(path, DEPENDENCY_REGISTRY)
+            return Results(refusals, [])
+
+        expect("missing identity triage", triage_results(tmp / "absent-triage.json"), "RG_TRIAGE_MISSING")
+        stale_triage = tmp / "stale-triage.json"
+        stale_triage.write_text(json.dumps(triage_document), encoding="utf-8")
+        expect("stale identity triage", triage_results(stale_triage), "RG_TRIAGE_STALE")
 
         # A receipt that does not parse.
         receipts = tmp / "receipts"
@@ -676,6 +857,10 @@ def main(argv: list[str]) -> int:
                         help="refuse a dirty tracked worktree (the release procedure uses this)")
     parser.add_argument("--claims", default=None, help="claim document (default evidence/etp/claims.json)")
     parser.add_argument("--schema", default=None, help="claim schema (default evidence/etp/claim.schema.json)")
+    parser.add_argument("--triage", default=None,
+                        help="identity triage (default evidence/etp-t9/IDENTITY-TRIAGE.json)")
+    parser.add_argument("--dependency-registry", default=None,
+                        help="dependency registry the triage must bind (default evidence/etp-t9/DEPENDENCIES.json)")
     parser.add_argument("--graduation", action="store_true",
                         help="a graduation is requested, so NOT_ESTABLISHED members refuse")
     parser.add_argument("--interop-dir", default=None,

@@ -228,7 +228,17 @@ A release candidate passes only when all six items pass:
    and no claim is `CONTRADICTED`, `REFUTED`, or `WITHDRAWN`; no claim is
    `NOT_ESTABLISHED` while a graduation is requested; and no positive verdict
    rests on evidence whose declared state is `WITHDRAWN`, `REFUTED` or
-   `NOT_ESTABLISHED`;
+   `NOT_ESTABLISHED`; and no current claim requires evidence that the identity
+   triage marks `UNCERTIFIABLE` (`RG_CLAIM_UNCERTIFIABLE_EVIDENCE`) or
+   `HISTORICAL` (`RG_CLAIM_HISTORICAL_EVIDENCE`). Both rules name the artefact;
+   a `PARTIAL` claim is a current assertion and is included, while a claim
+   already refused by its verdict is named once;
+2b. **identity triage** — `evidence/etp-t9/IDENTITY-TRIAGE.json` is present and
+   bound to the committed dependency registry. An absent triage is
+   `RG_TRIAGE_MISSING`; one bound to another registry, with a class outside the
+   closed set, or with counts that disagree with its records is
+   `RG_TRIAGE_STALE`. The triage's derivation and residual are described in
+   `evidence/etp-t9/IDENTITY-TRIAGE.md` and `docs/EVIDENCE-FRESHNESS.md` §7;
 3. **interop receipts** — `courts/phase18/interop/check_receipts.py` holds over
    the evidence (rules R1–R5);
 4. **instrument register** — `forensics/tools/instrument_qualify.py check`
@@ -251,6 +261,8 @@ per refused item naming the rule and the artefact, and exits `1`:
 
 ```
 REFUSED RG_CLAIM_CONTRADICTED ETP0-CLM-004: verdict CONTRADICTED -- <basis>
+REFUSED RG_CLAIM_UNCERTIFIABLE_EVIDENCE ETP0-CLM-034/artifacts/phase25/summary.json: ...
+REFUSED RG_CLAIM_HISTORICAL_EVIDENCE ETP0-CLM-029/forensics/.../CLOSURE.md: ...
 REFUSED RG_PACKAGE_MISSING -: no --package was supplied; ...
 ```
 
@@ -259,11 +271,12 @@ The gate's real output on the tree that introduced it is recorded verbatim in
 to `CONTRADICTED`; that refusal is the gate working, not a defect in it.
 
 `--self-test` proves the gate refuses each failure class it claims to cover: a
-contradicted claim, a positive verdict over withdrawn evidence, a failing
+contradicted claim, a positive verdict over withdrawn evidence, an uncertifiable
+dependency, a historical dependency, a missing triage, a stale triage, a failing
 receipt, an invalid register, a missing package, a failing package verifier and a
-documentation inconsistency, plus a positive control that runs the real
-documentation checker. The self-test calls the real checkers on constructed
-fixtures; it does not assert against the current evidence state.
+documentation inconsistency, plus positive controls for a derived dependency and
+the real documentation checker. The self-test calls the real checkers on
+constructed fixtures; it does not assert against the current evidence state.
 
 ### Release policy
 

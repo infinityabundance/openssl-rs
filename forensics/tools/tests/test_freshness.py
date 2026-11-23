@@ -753,6 +753,156 @@ class FreshnessControls(unittest.TestCase):
         self.assertEqual(record["depends_on"], [], "a prose mention must not become an authority")
 
 
+class IdentityTriageControls(unittest.TestCase):
+    """The follow-up control set: every unclassified artefact gets a class.
+
+    The controls cover each of the four classes on a real (if tiny) Git
+    history, the structural refusals of a malformed or stale triage, and the
+    two ways the triage changes a verdict: an uncertifiable artefact is never
+    `UNAFFECTED`, and a historical one is never current evidence.
+    """
+
+    def setUp(self) -> None:
+        self.fx = Fixture()
+
+    def tearDown(self) -> None:
+        self.fx.close()
+
+    def build(self) -> tuple[dict[str, Any], dict[str, Any]]:
+        """A tree with one artefact per triage class, and its registry."""
+        self.fx.write("evidence/declared.json", json.dumps({"head": self.fx.base}))
+        self.fx.write("evidence/receipt.json", json.dumps({"kind": "receipt", "result": "pass"}))
+        self.fx.write("evidence/rolling.json", json.dumps({"kind": "record", "n": 1}))
+        self.fx.write("courts/probe.c", "int main(void) { return 0; }\n")
+        self.fx.commit("add one artefact per class")
+        self.fx.write("evidence/rolling.json", json.dumps({"kind": "record", "n": 2}))
+        head = self.fx.commit("revise the rolling record")
+        artefacts = [
+            artefact(self.fx, "evidence/declared.json", [{"kind": "path", "id": "src/unit.rs"}]),
+            artefact(self.fx, "evidence/receipt.json", []),
+            artefact(self.fx, "evidence/rolling.json", []),
+            artefact(self.fx, "courts/probe.c", []),
+        ]
+        document = freshness.triage(self.fx.git, registry(artefacts), head)
+        by_path = {item["path"]: item for item in document["artefacts"]}
+        return document, by_path
+
+    def test_each_class_is_derived_from_the_tree(self) -> None:
+        document, by_path = self.build()
+        self.assertEqual(by_path["evidence/declared.json"]["class"], "DECLARED")
+        self.assertEqual(by_path["evidence/declared.json"]["field"], "head")
+        self.assertEqual(by_path["evidence/declared.json"]["identity"]["commit"], self.fx.base)
+        self.assertEqual(by_path["evidence/receipt.json"]["class"], "HISTORICAL")
+        self.assertEqual(by_path["evidence/rolling.json"]["class"], "UNCERTIFIABLE")
+        self.assertEqual(by_path["evidence/rolling.json"]["cause"], "U1")
+        self.assertEqual(by_path["courts/probe.c"]["class"], "DERIVED")
+        self.assertTrue(by_path["courts/probe.c"]["heuristic"])
+        self.assertEqual(document["counts"]["total"], 4)
+        self.assertEqual(document["counts"]["DECLARED"], 1)
+
+    def test_triage_is_byte_identical(self) -> None:
+        document, _ = self.build()
+        head = self.fx.git.head() or ""
+        artefacts = [
+            artefact(self.fx, path, [])
+            for path in ("evidence/declared.json", "evidence/receipt.json", "evidence/rolling.json", "courts/probe.c")
+        ]
+        first = freshness.dump_json(freshness.triage(self.fx.git, registry(artefacts), head))
+        second = freshness.dump_json(freshness.triage(self.fx.git, registry(artefacts), head))
+        self.assertEqual(first, second)
+        self.assertEqual(document["schema"], freshness.TRIAGE_SCHEMA)
+
+    def test_validate_refuses_a_missing_record(self) -> None:
+        document, _ = self.build()
+        trimmed = json.loads(json.dumps(document))
+        trimmed["artefacts"] = [item for item in trimmed["artefacts"] if item["path"] != "evidence/rolling.json"]
+        findings = freshness.validate_triage(trimmed, self.triage_registry(document), self.fx.git)
+        self.assertIn("FR_TRIAGE_STALE", [item.rule for item in findings])
+
+    def test_validate_refuses_an_unknown_class(self) -> None:
+        document, _ = self.build()
+        altered = json.loads(json.dumps(document))
+        altered["artefacts"][0]["class"] = "PROBABLY"
+        findings = freshness.validate_triage(altered, self.triage_registry(document), self.fx.git)
+        self.assertIn("FR_TRIAGE_SCHEMA", [item.rule for item in findings])
+
+    def test_validate_refuses_an_unresolvable_identity(self) -> None:
+        document, _ = self.build()
+        altered = json.loads(json.dumps(document))
+        for item in altered["artefacts"]:
+            if item["class"] == "DECLARED":
+                item["identity"]["commit"] = "deadbeef"
+        findings = freshness.validate_triage(altered, self.triage_registry(document), self.fx.git)
+        self.assertIn("FR_TRIAGE_SCHEMA", [item.rule for item in findings])
+
+    def test_validate_refuses_a_triage_bound_to_another_registry(self) -> None:
+        document, _ = self.build()
+        altered = json.loads(json.dumps(document))
+        altered["registry_recorded_at_commit"] = "0" * 40
+        findings = freshness.validate_triage(altered, self.triage_registry(document), self.fx.git)
+        self.assertIn("FR_TRIAGE_STALE", [item.rule for item in findings])
+
+    def triage_registry(self, document: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "recorded_at_commit": document["registry_recorded_at_commit"],
+            "artefacts": [
+                {"path": item["path"], "identity": {"commit": None}} for item in document["artefacts"]
+            ],
+        }
+
+    def test_uncertifiable_is_not_reported_unaffected(self) -> None:
+        document, _ = self.build()
+        index = freshness.triage_index(document)
+        artefacts = [
+            artefact(self.fx, "evidence/rolling.json", [{"kind": "path", "id": "src/other.rs"}])
+        ]
+        payload = freshness._tree_sweep(
+            self.fx.git, registry(artefacts), {"claims": []}, self.fx.git.head() or "", triage=index
+        )
+        self.assertIn("FR_IDENTITY_UNCERTIFIABLE", rules(payload))
+        record = payload["artefacts"]["records"][0]
+        self.assertEqual(record["verdict"], "UNRESOLVED")
+        self.assertIn("U1", record["argument"])
+        self.assertEqual(payload["triage"]["counts"]["UNCERTIFIABLE"], 1)
+
+    def test_historical_is_not_citable_as_current(self) -> None:
+        document, _ = self.build()
+        index = freshness.triage_index(document)
+        artefacts = [artefact(self.fx, "evidence/receipt.json", [])]
+        claims = [claim("C-1", evidence=["evidence/receipt.json"])]
+        payload = freshness._tree_sweep(
+            self.fx.git, registry(artefacts), {"claims": claims}, self.fx.git.head() or "", triage=index
+        )
+        self.assertIn("FR_HISTORY_CITED_AS_CURRENT", rules(payload))
+        record = payload["artefacts"]["records"][0]
+        self.assertEqual(record["verdict"], "HISTORY")
+        self.assertTrue(payload["triage"]["historical_cited_as_current"])
+
+    def test_declared_identity_resolves_in_the_tree(self) -> None:
+        document, _ = self.build()
+        index = freshness.triage_index(document)
+        artefacts = [
+            artefact(self.fx, "evidence/declared.json", [{"kind": "path", "id": "src/unit.rs"}])
+        ]
+        payload = freshness._tree_sweep(
+            self.fx.git, registry(artefacts), {"claims": []}, self.fx.git.head() or "", triage=index
+        )
+        self.assertNotIn("FR_IDENTITY_UNKNOWN", rules(payload))
+        record = payload["artefacts"]["records"][0]
+        self.assertEqual(record["identity_source"], "own")
+        self.assertEqual(record["identity_commit"], self.fx.base)
+
+    def test_triaged_registry_does_not_mutate_its_input(self) -> None:
+        document, _ = self.build()
+        index = freshness.triage_index(document)
+        artefacts = [artefact(self.fx, "evidence/declared.json", [])]
+        original = registry(artefacts)
+        before = freshness.dump_json(original)
+        effective = freshness.triaged_registry(original, index)
+        self.assertEqual(freshness.dump_json(original), before)
+        self.assertEqual(effective["artefacts"][0]["identity"]["commit"], self.fx.base)
+
+
 class RegistryShape(unittest.TestCase):
     """The committed registry must satisfy the same structural rules."""
 
