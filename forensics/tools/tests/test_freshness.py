@@ -256,6 +256,42 @@ class FreshnessControls(unittest.TestCase):
         self.assertEqual(verdict_of(payload, "evidence/a.json"), "UNAFFECTED")
         self.assertEqual(payload["refusals"], [])
 
+    def test_comment_only_change_to_a_concerned_file_invalidates_without_an_argument(self) -> None:
+        # The dependency model matches paths, not diffs. A comment-only change to
+        # a file the artefact names is indistinguishable from a behaviour change,
+        # so the model must invalidate. Only a preservation argument can carry it.
+        head = self.change_unit_comment_only()
+        payload = self.evaluate(
+            [artefact(self.fx, "evidence/a.json", [{"kind": "path", "id": "src/unit.rs"}])],
+            head=head,
+        )
+        self.assertEqual(verdict_of(payload, "evidence/a.json"), "INVALIDATED")
+        self.assertIn("FR_EVIDENCE_INVALIDATED", rules(payload))
+
+    # -- 2b. a preservation argument may not omit a touched dependency -------
+
+    def test_comment_only_argument_must_account_for_every_touched_dependency(self) -> None:
+        head = self.change_unit_code()
+        # The artefact depends on both files; the change touches unit.rs; the
+        # argument concerns only other.rs. The omitted dependency is unaccounted.
+        declaration = self.preservation(concerned_paths=["src/other.rs"])
+        payload = self.evaluate(
+            [
+                artefact(
+                    self.fx,
+                    "evidence/a.json",
+                    [
+                        {"kind": "path", "id": "src/unit.rs"},
+                        {"kind": "path", "id": "src/other.rs"},
+                    ],
+                )
+            ],
+            [declaration],
+            head=head,
+        )
+        self.assertIn("FR_PRESERVATION_INCOMPLETE", rules(payload))
+        self.assertEqual(verdict_of(payload, "evidence/a.json"), "INVALIDATED")
+
     # -- 3. an unprovable non-impact invalidates ------------------------
 
     def test_unprovable_preservation_is_refused(self) -> None:
@@ -494,6 +530,90 @@ class FreshnessControls(unittest.TestCase):
         payload = self.evaluate(artefacts, head=head)
         self.assertEqual(verdict_of(payload, "evidence/b.json"), "UNAFFECTED")
 
+    def test_upstream_evidence_with_no_modelled_dependency_is_unresolved(self) -> None:
+        # Re-using an artefact the model cannot evaluate must not produce
+        # UNAFFECTED: nothing about it was shown to be unaffected.
+        head = self.change_other_comment_only()
+        artefacts = [
+            artefact(self.fx, "evidence/a.json", []),
+            artefact(self.fx, "evidence/b.json", [{"kind": "upstream_evidence", "id": "evidence/a.json"}]),
+        ]
+        payload = self.evaluate(artefacts, head=head)
+        self.assertEqual(verdict_of(payload, "evidence/b.json"), "UNRESOLVED")
+        record = next(item for item in payload["artefacts"]["records"] if item["path"] == "evidence/b.json")
+        self.assertEqual(record["rule"], "FR_DEPENDENCY_UNRESOLVED")
+        self.assertEqual(payload["refusals"], [], "a pre-existing unresolved upstream does not gate a change set")
+
+    def test_upstream_declared_history_is_not_current(self) -> None:
+        base = self.fx.base
+        head = self.change_other_comment_only()
+        declarations = [
+            {"artefact": "evidence/a.json", "kind": "HISTORY", "identity": {"commit": base}, "basis": "historical"}
+        ]
+        artefacts = [
+            artefact(self.fx, "evidence/a.json", [{"kind": "path", "id": "src/unit.rs"}], identity=base),
+            artefact(self.fx, "evidence/b.json", [{"kind": "upstream_evidence", "id": "evidence/a.json"}]),
+        ]
+        payload = self.evaluate(artefacts, declarations, head=head)
+        self.assertEqual(verdict_of(payload, "evidence/b.json"), "UNRESOLVED")
+        tree = freshness._tree_sweep(self.fx.git, registry(artefacts, declarations), {"claims": []}, head)
+        self.assertIn("FR_DEPENDENCY_UNRESOLVED", rules(tree))
+
+    # -- change-caused and pre-existing reasons are kept apart -------------
+
+    def test_a_change_to_unmodelled_evidence_is_change_caused(self) -> None:
+        self.fx.write("evidence/b.json", '{\n  "kind": "receipt",\n  "rev": 2\n}\n')
+        head = self.fx.commit("modify an unmodelled evidence file")
+        payload = self.evaluate(
+            [artefact(self.fx, "evidence/b.json", [])],
+            claims=[claim("C-1", evidence=["evidence/b.json"])],
+            head=head,
+        )
+        finding = next(item for item in payload["claims"]["findings"] if item["id"] == "C-1")
+        self.assertTrue(any("this change set changes evidence" in reason for reason in finding["reasons"]))
+        self.assertNotIn("C-1", payload["claims"]["preexisting"])
+        self.assertNotIn("C-1", payload["claims"]["verified_current"])
+        self.assertIn("FR_CLAIM_EVIDENCE_STALE", rules(payload))
+
+    def test_preexisting_unresolved_evidence_is_reported_separately(self) -> None:
+        head = self.change_other_comment_only()
+        artefacts = [
+            artefact(
+                self.fx,
+                "evidence/a.json",
+                [{"kind": "path", "id": "court/tmp/never-tracked.log", "present": False}],
+            )
+        ]
+        claims = [claim("C-1", evidence=["evidence/a.json"])]
+        payload = self.evaluate(artefacts, claims=claims, head=head)
+        self.assertNotIn("FR_CLAIM_EVIDENCE_STALE", rules(payload))
+        self.assertIn("C-1", payload["claims"]["preexisting"])
+        self.assertNotIn("C-1", payload["claims"]["verified_current"])
+        self.assertIn("C-1", payload["claims"]["not_verified_current"])
+        tree = freshness._tree_sweep(self.fx.git, registry(artefacts), {"claims": claims}, head)
+        self.assertIn("FR_CLAIM_EVIDENCE_STALE", rules(tree))
+
+    def test_a_claim_carries_both_a_change_caused_and_a_preexisting_reason(self) -> None:
+        self.fx.write("evidence/b.json", '{\n  "kind": "receipt",\n  "rev": 2\n}\n')
+        head = self.fx.commit("modify one evidence file")
+        artefacts = [
+            artefact(
+                self.fx,
+                "evidence/a.json",
+                [{"kind": "path", "id": "court/tmp/never-tracked.log", "present": False}],
+            ),
+            artefact(self.fx, "evidence/b.json", []),
+        ]
+        payload = self.evaluate(
+            artefacts,
+            claims=[claim("C-1", evidence=["evidence/a.json", "evidence/b.json"])],
+            head=head,
+        )
+        finding = next(item for item in payload["claims"]["findings"] if item["id"] == "C-1")
+        self.assertTrue(any("changes evidence" in reason for reason in finding["reasons"]))
+        self.assertIn("C-1", payload["claims"]["preexisting"])
+        self.assertIn("FR_CLAIM_EVIDENCE_STALE", rules(payload))
+
     # -- 8. determinism --------------------------------------------------
 
     def test_output_is_byte_identical(self) -> None:
@@ -556,6 +676,24 @@ class FreshnessControls(unittest.TestCase):
             self.fx.git, registry(artefacts), {"claims": []}, self.fx.git.head() or ""
         )
         self.assertIn("FR_IDENTITY_UNKNOWN", rules(payload))
+
+    def test_tree_sweep_exposes_an_absent_dependency_even_without_an_identity(self) -> None:
+        # The ETP-0 `evidence_not_reconstructable` class is a cited input that
+        # is not in the tree. It must be visible in the record even when the
+        # artefact names no identity and the verdict is FR_IDENTITY_UNKNOWN.
+        artefacts = [
+            artefact(
+                self.fx,
+                "evidence/a.json",
+                [{"kind": "path", "id": "court/tmp/never-tracked.log", "present": False}],
+            )
+        ]
+        payload = freshness._tree_sweep(
+            self.fx.git, registry(artefacts), {"claims": []}, self.fx.git.head() or ""
+        )
+        record = next(item for item in payload["artefacts"]["records"] if item["path"] == "evidence/a.json")
+        self.assertEqual(record["absent_dependencies"], ["court/tmp/never-tracked.log"])
+        self.assertEqual(record["modelled_dependencies"], 1)
 
     def test_artefact_with_no_dependency_is_not_reported_unaffected(self) -> None:
         payload = self.evaluate([artefact(self.fx, "evidence/a.json", [])])
@@ -635,6 +773,8 @@ class RegistryShape(unittest.TestCase):
             self.skipTest("history record not recorded")
         document = freshness.load_json(path)
         self.assertEqual(document["schema"], freshness.HISTORY_SCHEMA)
+        self.assertFalse(Path(document["registry"]).is_absolute(), "the record must not embed the checkout path")
+        self.assertEqual(document["registry_sha256"], sha256_of(Path(freshness.REGISTRY)))
         names = [run["name"] for run in document["runs"]]
         self.assertIn("evidence-only-change", names)
         only_evidence = next(run for run in document["runs"] if run["name"] == "evidence-only-change")

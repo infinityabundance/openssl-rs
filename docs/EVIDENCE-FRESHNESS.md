@@ -77,10 +77,13 @@ cites, subject to:
 Every exclusion is written into the registry with its reason, so the omitted
 population is visible rather than implied.
 
-At `100ba5352` the population is **331 artefacts** carrying **5,183 dependency
+At `26c127262` the population is **331 artefacts** carrying **5,183 dependency
 edges** — 3,880 `path`, 570 `source_tree`, 570 `venue`, 103 `upstream_evidence`,
-48 `verification_tool`, 12 `instrument` — and 387 advisory citations. 226 paths
-are excluded, 189 of them for the size bound.
+48 `verification_tool`, 12 `instrument` — and 387 advisory citations. 228 paths
+are excluded: 189 for the size bound, 25 raw campaign payloads, fixtures or
+generated probe sources, 12 normative documents cited as claim or traceability
+inputs, and 2 files of this item's own registry. The registry names the commit it
+was derived at, so a reader can re-derive it.
 
 ### 1.4 Identity
 
@@ -102,7 +105,7 @@ artefact's own structured fields in a fixed precedence order
   recorded as `provenance` with the rule stated: a provenance commit is an upper
   bound on when a file was written, never the tree it was measured on.
 
-At `100ba5352`: 77 artefacts carry a structured identity, 23 a prose identity,
+At `26c127262`: 77 artefacts carry a structured identity, 23 a prose identity,
 and **231 name no identity at all**. That last figure is the ETP-0 finding stated
 as a number: most of the tree's evidence does not say what it is evidence about.
 
@@ -114,7 +117,9 @@ as a number: most of the tree's evidence does not say what it is evidence about.
 | identity, ambiguity, provenance | derived from the artefact's own fields and from Git |
 | dependencies | derived from structured path/tool/instrument fields, the citing claims' `scope.locations` and `invalidation.depends_on`, traceability evidence nodes, and the instrument register |
 | build-input and venue closures | derived from the artefact's declared identity: an artefact that names a tree depends on the whole crate input closure |
+| absent citations | derived: every structured path the tree does not contain is recorded with `present: false` and exposed as `absent_dependencies` in the tree sweep |
 | advisory citations | derived from prose backticks; recorded, never an authority |
+| the history record's registry binding | derived: the registry path is repo-relative and its SHA-256 is recorded |
 | population exclusions | declared, one reason each |
 | carry-forward declarations (`HISTORY`, `PRESERVATION`) | declared, validated, and refused when malformed |
 | the preservation procedures | declared in this document and implemented in the tool |
@@ -148,15 +153,22 @@ treated as incorporating the change: it falls through to the conservative path.
 The same rule is applied to claims through their `identity.source.commit`.
 
 This matters: without it a mid-history commit appears to invalidate every later
-receipt, which is noise that hides the real finding.
+receipt, which is noise that hides the real finding. The tree sweep applies one
+change set per artefact, from that artefact's own identity to the scanned head.
+Because it evaluates the whole registry over that range, an upstream artefact
+whose own identity is later than the dependent's is assessed over the dependent's
+wider range; that can over-invalidate, never under-invalidate, and an
+over-invalidated artefact is reported stale rather than certified.
 
 ### 2.3 Transitivity
 
 Two propagation paths, kept distinct in the output:
 
-- **evidence**: an artefact whose `upstream_evidence` is invalidated, unresolved
-  or absent is invalidated (`FR_EVIDENCE_TRANSITIVE`), and the relation is
-  transitive.
+- **evidence**: an artefact whose `upstream_evidence` is invalidated, unresolved,
+  absent, unmodelled or declared explicit history is invalidated or unresolved,
+  and the relation is transitive. A dependent that re-uses an artefact the model
+  cannot evaluate, or one excluded as history, is never reported `UNAFFECTED`:
+  nothing about it was shown to be current.
 - **claims**: the claim algebra's own invalidation edges
   (`forensics/tools/etp_claims.py`, imported by path — never reimplemented). The
   changed paths, their ancestor directories and the invalidated artefact paths
@@ -175,18 +187,44 @@ A dependency is **unresolved** when it cannot be evaluated:
 - an artefact with neither a declared identity nor a modelled dependency.
 
 An unresolved artefact is never reported as unaffected. In change-set mode it is
-counted and listed; in the tree sweep it is refused (`FR_IDENTITY_UNKNOWN`). The
-engine does not infer that a dependency it cannot see is unchanged.
+counted and listed but does not gate, because it is a pre-existing property of
+the artefact; in the tree sweep it is refused (`FR_IDENTITY_UNKNOWN` or
+`FR_DEPENDENCY_UNRESOLVED`). The engine does not infer that a dependency it cannot
+see is unchanged.
+
+The tree-sweep record also names the absent citations directly:
+`absent_dependencies` lists every structured path with `present: false`, and
+`modelled_dependencies` gives the size of the edge set. That field is what makes
+the ETP-0 `evidence_not_reconstructable` class visible for an artefact that names
+no identity, where the verdict alone would be only `FR_IDENTITY_UNKNOWN`. At
+`26c127262` **55 artefacts** carry **341 absent-citation edges** over **298
+distinct paths**; 124 of those paths are under `court/tmp/`.
 
 ### 2.5 Two scopes, kept apart
 
-Change-set mode answers only what *this* change set caused. A pre-existing gap —
-an artefact that never named an identity, a file that was already absent, a
-history declaration that a current claim still cites — is reported in
-`claims.preexisting` or `claims.history_cited_as_current` and does not gate. The
-tree sweep is where those gate, because they are properties of the tree rather
-than of the change. Without this split an unrelated commit would be blamed for
-every existing gap.
+Change-set mode answers only what *this* change set caused.
+
+A **change-caused** reason gates a current claim:
+
+- a dependency of the evidence moved in the change set;
+- the claim algebra invalidates the claim from the change set;
+- the change set modifies or removes a path the claim cites as evidence;
+- a dependency claim is invalidated and propagates over the claim edges.
+
+A **pre-existing** condition is reported in `claims.preexisting` and does not
+gate a change set: an artefact that never named an identity, a dependency that
+was already unresolved, a file that was already absent, or an artefact with no
+modelled dependency. A history declaration that a current claim still cites is
+reported in `claims.history_cited_as_current`. The tree sweep is where those
+gate, because they are properties of the tree rather than of the change. Without
+this split an unrelated commit would be blamed for every existing gap.
+
+The separation is explicit in the output. `verified_current` names only current
+claims with neither a change-caused finding nor a pre-existing reason;
+`not_verified_current` names every current-claim candidate that has one of
+either. A pre-existing failure is therefore not silently counted as current, and
+a modified evidence file is a change-caused reason even when the artefact also
+has a pre-existing gap.
 
 ### 2.6 Refusing a claim presented as current
 
@@ -195,8 +233,10 @@ A claim whose verdict is not `WITHDRAWN`, `SUPERSEDED`, `REFUTED` or
 refused (`FR_CLAIM_EVIDENCE_STALE`) when:
 
 - the claim algebra invalidates it from the change set;
-- evidence it cites is invalidated by this change set; or
-- this change set removes evidence it cites.
+- evidence it cites is invalidated by this change set;
+- this change set modifies or removes evidence it cites. A modified file is a
+  change-caused reason, not a pre-existing one: its bytes at the head are not the
+  bytes the claim cited.
 
 `PARTIAL` claims are included: a partial verdict is still a current assertion.
 Claims already withdrawn, superseded, refuted or contradicted are reported as
@@ -237,6 +277,15 @@ both checked against the change set: an argument that assumes away a touched
 file is refused (`FR_PRESERVATION_TOUCHED`). The argument's own evidence must be
 tracked at the head and match its recorded digest
 (`FR_PRESERVATION_UNEVIDENCED`).
+
+A touched dependency the argument does not mention is unaccounted for and is
+refused (`FR_PRESERVATION_INCOMPLETE`). For `comment_only` every touched
+dependency must be named in `concerned_paths`, and every touched concern must be
+a language in the admitted line-comment set; for
+`instrument_register_unchanged` no touched dependency may lie outside the
+instrument register. `narrowed_scope_untouched` and `blob_identical` carry a
+wider declared premise — the concern is asserted to be the complete set — and are
+not given that coverage guard; their limits are stated in the table.
 
 The procedure is a member of a closed set and is **executed**, not read:
 
@@ -283,28 +332,37 @@ from the current registry.
 
 ---
 
-## 5. What the engine reports at `100ba5352`
+## 5. What the engine reports at `26c127262`
 
 Not a summary of anything; each figure is a list in the output that can be read.
 
 | | |
 |---|---|
-| tree sweep | 331 artefacts: **85 stale**, 2 explicit history, 15 unaffected, **229 unresolved** |
-| tree sweep refusals | 335: 85 `FR_CARRY_FORWARD_UNDECLARED`, 229 `FR_IDENTITY_UNKNOWN`, 17 `FR_CLAIM_EVIDENCE_STALE`, 4 `FR_HISTORY_CITED_AS_CURRENT` |
+| tree sweep | 331 artefacts: **90 stale**, 2 explicit history, 10 unaffected, **229 unresolved** |
+| tree sweep refusals | 340: 90 `FR_CARRY_FORWARD_UNDECLARED`, 229 `FR_IDENTITY_UNKNOWN`, 17 `FR_CLAIM_EVIDENCE_STALE`, 4 `FR_HISTORY_CITED_AS_CURRENT` |
 | stale and cited by a claim | 50 artefacts |
-| claim findings | 12 claims, of which the current-verdict subset is refused |
-| source change (`0eddfe839`) | 97 artefacts invalidated, 8 claims refused, 102 refusals |
-| tool change (`3951f0f5e`) | 15 artefacts invalidated, 3 claims refused, 18 refusals |
+| claim findings | 12 claims, of which the current-verdict subset is refused; `not_verified_current` names 15 current-claim candidates |
+| stale receipts | 7 `RECEIPT` artefacts, each by a `source_tree` edge (`src` or `Cargo.lock`) |
+| source change (`0eddfe839`) | 97 artefacts invalidated, 8 claim findings of which 5 are current and refused, 102 refusals |
+| tool change (`3951f0f5e`) | 15 artefacts invalidated, 3 claim findings all current and refused, 18 refusals |
 | evidence-only change (`8a697aa7e`) | nothing invalidated, no refusal |
-| tool-control change (`3ddab71a8`) | 2 artefacts invalidated, 0 claims, 2 refusals |
+| tool-control change (`3ddab71a8`) | 2 artefacts invalidated, 0 claim findings, 2 refusals |
 
-Every one of the eight `evidence_not_reconstructable` gaps and six of the eight
-`identity_mismatch` gaps of `evidence/etp0/TRUST-GAPS.json` are reproduced
-mechanically by these runs. `ETP0-GAP-018` (two build-B digests read as one
-build) and `ETP0-GAP-022` (two wrong field values) are not freshness questions:
-they ask whether two identities are the same and whether a field says the right
-thing, which this engine does not decide. `evidence/etp-t9/RECEIPT.md` carries
-the per-gap mapping.
+The engine does **not** reproduce all eight `evidence_not_reconstructable` gaps as
+their own conditions, and it does not decide the `identity_mismatch` class.
+Six of the eight have a mechanical witness in the registry: `009`, `010` and
+`037` through an absent structured citation of `court/tmp/t20/NOTES.md`,
+`artifacts/phase2/libcrypto.so.3` and `artifacts/phase2/shell/libcrypto.shell.rs`;
+`011` through O9's absent `/tmp/o9-*.log`; `012` through the absent
+`court/freeze-b85*` generators; and `008` in aggregate through 124 absent
+`court/tmp/` paths (its three named artefacts are outside the population). `013`
+and `014` are not reproduced: their inputs are named only in prose, so the engine
+reports `FR_IDENTITY_UNKNOWN` rather than the gap's condition. For the eight
+`identity_mismatch` gaps, `018`, `020`, `023` and `025` are surfaced as
+`UNRESOLVED` — the precondition of a mismatch, not the mismatch itself; `019` and
+`024` are represented only by declared `HISTORY` records derived from the gaps;
+`021` is outside the population; and `022` is a field-value defect, not a
+freshness question. `evidence/etp-t9/RECEIPT.md` carries the per-gap mapping.
 
 ---
 
@@ -318,8 +376,15 @@ The engine does **not** establish:
   correct;
 - that the dependency model is complete. A missing dependency makes the engine
   under-invalidate, and the model is a reviewable declaration for exactly that
-  reason. The measured shape of that incompleteness is in the counts: 229
-  artefacts name no identity and 112 have no modelled dependency;
+  reason. The measured shape of that incompleteness is in the counts: 231
+  artefacts name no identity, 112 have no modelled dependency, and 55 carry 341
+  absent-citation edges;
+- that the tree sweep is free of false stales. It evaluates one change set per
+  artefact from that artefact's identity to the scanned head, and evaluates the
+  whole registry over that range, so an upstream whose identity is later than the
+  dependent's is assessed over the dependent's wider range. That can
+  over-invalidate, never under-invalidate; an over-invalidated artefact is
+  reported stale rather than certified;
 - that an instrument is sensitive to the defect it claims to detect (ETP-3), or
   that a tool version is qualified for a use;
 - that two different identities are the same source or the same binary. The

@@ -378,17 +378,6 @@ class Git:
         if key in self._diffs:
             return self._diffs[key]
         result = self.run("diff", "--name-status", "--no-renames", base, head)
-
-    def changed(self, base: str, head: str) -> list[dict[str, str]]:
-        """Paths that differ between two commits. A rename is a delete plus an add.
-
-        A rename is deliberately not followed: the same path at both ends is the
-        only shape from which non-impact can be concluded mechanically.
-        """
-        key = (base, head)
-        if key in self._diffs:
-            return self._diffs[key]
-        result = self.run("diff", "--name-status", "--no-renames", base, head)
         rows: list[dict[str, str]] = []
         if result.returncode == 0:
             for line in result.stdout.decode("utf-8", "surrogateescape").splitlines():
@@ -1193,6 +1182,15 @@ def _preservation_check(
         for item in dependencies
         if item.get("kind") in DEPENDENCY_KINDS and isinstance(item.get("id"), str)
     }
+    dependency_candidates: list[str] = []
+    for item in dependencies:
+        for key in ("id", "paths", "controls"):
+            value = item.get(key)
+            if isinstance(value, str):
+                dependency_candidates.append(value)
+            elif isinstance(value, list):
+                dependency_candidates.extend(entry for entry in value if isinstance(entry, str))
+    declared_paths.update(dependency_candidates)
     for item in list(concerned) + list(assumed):
         if not isinstance(item, str):
             return Refusal("FR_PRESERVATION_INCOMPLETE", where, "every path in the argument must be a string")
@@ -1213,7 +1211,30 @@ def _preservation_check(
                     f"the argument assumes {item!r} unchanged, but the change set touches {path!r}",
                 )
 
+    # A preservation argument is about this artefact's own inputs. A touched
+    # dependency that the argument does not mention is unaccounted for, and an
+    # unaccounted change is not non-impact: the procedures below prove a
+    # property of the paths they are given, never of the paths they omit.
+    dependency_candidates = sorted(set(dependency_candidates))
+
+    def covers(item: str, path: str) -> bool:
+        return path_within(item, path) or path_within(path, item)
+
+    touched_dependencies = [
+        path for path in touched if any(covers(dependency, path) for dependency in dependency_candidates)
+    ]
+
+    def named_in(entries: list[Any], path: str) -> bool:
+        return any(isinstance(entry, str) and covers(entry, path) for entry in entries)
+
     if procedure == "comment_only":
+        uncovered = [path for path in touched_dependencies if not named_in(concerned, path)]
+        if uncovered:
+            return Refusal(
+                "FR_PRESERVATION_INCOMPLETE",
+                where,
+                f"the argument does not account for touched dependency {uncovered[0]!r}",
+            )
         admitted = [item for item in concerned if Path(item).suffix in LINE_COMMENT]
         if not admitted:
             return Refusal(
@@ -1221,6 +1242,15 @@ def _preservation_check(
                 where,
                 "comment_only admits only " + ", ".join(sorted(LINE_COMMENT)) + " under its stated preconditions",
             )
+        for item in concerned:
+            if not any(covers(item, path) for path in touched_dependencies):
+                continue
+            if Path(item).suffix not in LINE_COMMENT:
+                return Refusal(
+                    "FR_PRESERVATION_UNDECIDABLE",
+                    where,
+                    f"{item!r} is a touched concern outside " + ", ".join(sorted(LINE_COMMENT)),
+                )
         for item in admitted:
             marker = LINE_COMMENT[Path(item).suffix]
             for revision in (base, head):
@@ -1260,6 +1290,16 @@ def _preservation_check(
         return None
 
     if procedure == "instrument_register_unchanged":
+        register = "evidence/etp3/instruments.json"
+        uncovered = [
+            path for path in touched_dependencies if path != register and not covers(register, path)
+        ]
+        if uncovered:
+            return Refusal(
+                "FR_PRESERVATION_INCOMPLETE",
+                where,
+                f"the register procedure does not account for touched dependency {uncovered[0]!r}",
+            )
         if repo.digest(base, "evidence/etp3/instruments.json") != repo.digest(head, "evidence/etp3/instruments.json"):
             return Refusal(
                 "FR_PRESERVATION_FAILED",
@@ -1401,6 +1441,39 @@ def evaluate(
             if isinstance(dependency, dict) and dependency.get("kind") == "upstream_evidence":
                 dependents.setdefault(str(dependency.get("id")), []).append(str(path))
 
+    # A re-used artefact that cannot be shown current is not current, even when
+    # this change set did not itself invalidate it. An upstream that is absent,
+    # unmodelled or unresolved makes the dependent *unresolved*: reporting it
+    # UNAFFECTED would infer non-impact from a dependency that was never
+    # evaluated, which is the one inference this model forbids. Unresolved is
+    # pre-existing, so it is reported separately and does not gate a change set.
+    not_current: dict[str, str] = {}
+    for node in sorted(dependents):
+        source = by_path.get(node)
+        if source is None:
+            not_current[node] = f"upstream evidence {node!r} is not modelled by the registry"
+            continue
+        if not repo.exists(head, node):
+            not_current[node] = f"upstream evidence {node!r} is absent at {head[:12]}"
+        elif node in declarations and declarations[node].get("kind") == "HISTORY":
+            # A re-used artefact declared explicit history is not current
+            # evidence, whatever its bytes say. Excluding it from claims while
+            # letting another artefact re-use it would leave the exclusion half
+            # enforced.
+            not_current[node] = f"upstream evidence {node!r} is declared explicit history"
+        elif node in postdating:
+            continue
+        elif node in unresolved:
+            not_current[node] = f"upstream evidence {node!r} is unresolved: {unresolved[node]}"
+        elif not source.get("depends_on") and source.get("identity", {}).get("commit") is None:
+            not_current[node] = f"upstream evidence {node!r} models no dependency and names no identity"
+    for upstream, upstream_dependents in sorted(dependents.items()):
+        for dependent in sorted(upstream_dependents):
+            if dependent in direct or dependent in unresolved:
+                continue
+            if upstream in not_current:
+                unresolved[dependent] = not_current[upstream]
+
     invalidated = dict(direct)
     frontier = sorted(invalidated)
     while frontier:
@@ -1415,8 +1488,11 @@ def evaluate(
                 {"path": node, "status": "upstream", "via": source.get("path", node)},
             )
             frontier.append(dependent)
-    for path in unresolved:
-        invalidated.setdefault(path, ({"kind": "unresolved", "id": path}, {"path": path, "status": "unresolved"}))
+    for path, reason in unresolved.items():
+        invalidated.setdefault(
+            path,
+            ({"kind": "unresolved", "id": path}, {"path": path, "status": "unresolved", "reason": reason}),
+        )
 
     outcomes: list[Outcome] = []
     for artefact in artefacts:
@@ -1459,7 +1535,13 @@ def evaluate(
                 continue
             if dependency.get("kind") == "unresolved":
                 outcomes.append(
-                    Outcome(path, "UNRESOLVED", "FR_DEPENDENCY_UNRESOLVED", dependency, str(match.get("status")))
+                    Outcome(
+                        path,
+                        "UNRESOLVED",
+                        "FR_DEPENDENCY_UNRESOLVED",
+                        dependency,
+                        str(match.get("reason") or match.get("status")),
+                    )
                 )
             elif dependency.get("kind") == "upstream_evidence":
                 outcomes.append(
@@ -1530,7 +1612,7 @@ def evaluate(
     stale_paths = {item.path for item in outcomes if item.verdict == "INVALIDATED"}
     tokens = token_closure([row["path"] for row in changed] + sorted(stale_paths))
     algebra = clock.invalidated_claims(candidates, tokens)
-    changed_paths = {row["path"] for row in changed}
+    changed_paths = {row["path"]: row["status"] for row in changed}
 
     claim_findings: list[dict[str, Any]] = []
     claim_refusals: list[Refusal] = []
@@ -1548,18 +1630,24 @@ def evaluate(
             if isinstance(entry, dict) and isinstance(entry.get("path"), str)
         ]
         for path in sorted(set(cited)):
+            # A change to the evidence itself is caused by this change set.
+            # It must be the change-caused reason, never a pre-existing one:
+            # the artefact's bytes at head are not the bytes the claim cited.
+            if path in changed_paths:
+                if repo.exists(head, path):
+                    reasons.append(f"this change set changes evidence {path!r}")
+                else:
+                    reasons.append(f"this change set removes evidence {path!r}")
+                continue
             outcome = by_outcome.get(path)
             if outcome is not None and outcome.verdict == "INVALIDATED":
                 reasons.append(f"evidence {path!r} is invalidated by this change set")
-            if outcome is not None and outcome.verdict == "UNRESOLVED":
+            elif outcome is not None and outcome.verdict == "UNRESOLVED":
                 old.append(f"evidence {path!r} has an unresolved dependency identity")
-            if outcome is not None and outcome.verdict == "UNMODELLED":
+            elif outcome is not None and outcome.verdict == "UNMODELLED":
                 old.append(f"evidence {path!r} has no modelled dependency")
             if not repo.exists(head, path):
-                if path in changed_paths:
-                    reasons.append(f"this change set removes evidence {path!r}")
-                else:
-                    old.append(f"evidence {path!r} is already absent at {head[:12]}")
+                old.append(f"evidence {path!r} is already absent at {head[:12]}")
         if claim_id in algebra["invalidated"]:
             reasons.append("the claim algebra invalidates it from the change set")
         for dependent in claim.get("invalidation", {}).get("depends_on", []):
@@ -1656,7 +1744,18 @@ def evaluate(
                 for claim in claims
                 if claim.get("verdict", {}).get("state") not in NON_CURRENT_VERDICTS
                 and str(claim.get("id")) not in {item["id"] for item in claim_findings}
+                and str(claim.get("id")) not in preexisting
                 and id(claim) in candidate_ids
+            ),
+            "not_verified_current": sorted(
+                str(claim.get("id"))
+                for claim in claims
+                if claim.get("verdict", {}).get("state") not in NON_CURRENT_VERDICTS
+                and id(claim) in candidate_ids
+                and (
+                    str(claim.get("id")) in preexisting
+                    or str(claim.get("id")) in {item["id"] for item in claim_findings}
+                )
             ),
             "incorporates_the_change": sorted(
                 str(claim.get("id")) for claim in claims if id(claim) not in candidate_ids
@@ -1941,9 +2040,21 @@ def _tree_sweep(repo: Git, registry: dict[str, Any], claims_doc: dict[str, Any],
         return None, "none" if not resolved else "ambiguous"
 
     records: list[dict[str, Any]] = []
+
+    def absent_dependencies(artefact: dict[str, Any]) -> list[str]:
+        return sorted(
+            {
+                str(dependency.get("id"))
+                for dependency in artefact.get("depends_on", [])
+                if isinstance(dependency, dict) and dependency.get("present") is False
+            }
+        )
+
     for artefact in artefacts:
         path = str(artefact.get("path"))
         base, how = base_for(artefact, set())
+        absent = absent_dependencies(artefact)
+        modelled = len(artefact.get("depends_on", []))
         if not repo.exists(head, path):
             records.append(
                 {
@@ -1953,6 +2064,8 @@ def _tree_sweep(repo: Git, registry: dict[str, Any], claims_doc: dict[str, Any],
                     "argument": f"the registry records this artefact but it is absent at {head[:12]}",
                     "claims": artefact.get("claim_ids", []),
                     "superseded": True,
+                    "modelled_dependencies": modelled,
+                    "absent_dependencies": absent,
                 }
             )
             continue
@@ -1971,17 +2084,34 @@ def _tree_sweep(repo: Git, registry: dict[str, Any], claims_doc: dict[str, Any],
                     ),
                     "claims": artefact.get("claim_ids", []),
                     "superseded": superseded,
+                    "modelled_dependencies": modelled,
+                    "absent_dependencies": absent,
                 }
             )
             continue
         changed = repo.changed(base, head)
-        outcome = evaluate(repo, {**registry, "artefacts": [artefact]}, {"claims": []}, changed, base, head, True)
-        record = outcome["artefacts"]["records"][0]
+        # The whole registry is evaluated, not only this artefact: an upstream
+        # artefact that is absent or unmodelled makes this one unresolved, and a
+        # one-artefact view could not see that edge.
+        outcome = evaluate(repo, registry, {"claims": []}, changed, base, head, True)
+        record = next(
+            (item for item in outcome["artefacts"]["records"] if item.get("path") == path),
+            None,
+        )
+        if record is None:  # pragma: no cover - evaluate always records every artefact
+            record = {
+                "path": path,
+                "verdict": "UNRESOLVED",
+                "rule": "FR_DEPENDENCY_UNRESOLVED",
+                "argument": "the invalidation engine produced no record for this artefact",
+            }
         record["identity_commit"] = base
         record["identity_source"] = how
         record["claims"] = artefact.get("claim_ids", [])
         record["changed_since"] = len(changed)
         record["superseded"] = superseded
+        record["modelled_dependencies"] = modelled
+        record["absent_dependencies"] = absent
         records.append(record)
 
     # Claims are swept against their own identity, and against the artefacts
@@ -2082,6 +2212,21 @@ def mode_diff(args: argparse.Namespace) -> int:
     return 0
 
 
+def _repo_relative(repo: Git, path: Path) -> str:
+    """A path relative to the repository root when it lies inside it.
+
+    The history record must not embed the checkout location: the same record is
+    re-derived from a clean checkout, from the court's ``/work`` mount and from
+    a developer working tree, and a recorded absolute path would make those
+    derivations differ for a reason that has nothing to do with the evidence.
+    """
+    resolved = path.resolve()
+    try:
+        return str(resolved.relative_to(repo.repo))
+    except ValueError:
+        return str(resolved)
+
+
 def _runs_record(repo: Git, args: argparse.Namespace) -> int:
     """Re-derive the results of a committed multi-range history record."""
     path = Path(args.runs).resolve()
@@ -2136,7 +2281,8 @@ def _runs_record(repo: Git, args: argparse.Namespace) -> int:
         "schema": HISTORY_SCHEMA,
         "kind": "evidence-freshness-history",
         "item": "ETP-T9",
-        "registry": str(Path(args.registry)),
+        "registry": _repo_relative(repo, Path(args.registry)),
+        "registry_sha256": sha256_bytes(Path(args.registry).read_bytes()),
         "runs": derived,
     }
     rendered = dump_json(payload)

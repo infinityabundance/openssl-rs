@@ -2,7 +2,7 @@
   "schema": "openssl-rs/etp/freshness-dependencies/1",
   "kind": "evidence-dependency-registry",
   "item": "ETP-T9",
-  "recorded_at_commit": "100ba5352a34fdfd6f0f40c8ae4ba81bd2fc39b1",
+  "recorded_at_commit": "26c12726283c84185540844f5e150db22038d05e",
   "model": {
     "dependency_kinds": [
       "source_tree",
@@ -73,7 +73,7 @@
     "bound_to_a_tree": 100,
     "dependencies": 5183,
     "citations": 387,
-    "excluded": 226
+    "excluded": 228
   },
   "excluded": [
     {
@@ -651,6 +651,14 @@
     {
       "path": "evidence/etp-t4/VACUITY.json",
       "reason": "larger than the 512 KiB artefact bound"
+    },
+    {
+      "path": "evidence/etp-t9/DEPENDENCIES.json",
+      "reason": "this item's own registry and receipt; a dependency model cannot contain itself"
+    },
+    {
+      "path": "evidence/etp-t9/HISTORY-RUNS.json",
+      "reason": "this item's own registry and receipt; a dependency model cannot contain itself"
     },
     {
       "path": "evidence/etp5/probes/p1-openssh-graduation-promotion.json",
