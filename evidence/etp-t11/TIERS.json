@@ -1,0 +1,1413 @@
+{
+  "schema": "openssl-rs/etp/scheduling/1",
+  "mode": "report",
+  "item": "ETP-T11",
+  "purpose": "the minimum tier each real change set requires, the evidence that tier requires, and which of it is satisfied, NOT_RUN, FAILED, REFUSED or BLOCKED",
+  "change_sets": [
+    {
+      "id": "cs-abi-shell",
+      "purpose": "5cf48dd4c: the Phase-2 shell, including the exported-symbol version script",
+      "base": "0340b573db77e86494c1d23af34b5d8bd7ab9f01",
+      "head": "5cf48dd4c1622266f2fa4528ad2a8c02772b0c1f",
+      "count": 28,
+      "tier": "SEAL",
+      "rule": "SC_RULE_EXPORTED_ABI",
+      "why": "the exported-symbol version script defines the ABI every consumer links against; a consumer measurement is only meaningful against the exact artefact it was taken from",
+      "deciding_paths": [
+        "artifacts/phase2/libcrypto.ld"
+      ],
+      "deciding_omitted": 0,
+      "by_class": [
+        {
+          "rule": "SC_RULE_DOCS",
+          "tier": "FAST",
+          "why": "documentation; the documentation-consistency check is the focused check",
+          "class": "docs",
+          "count": 1,
+          "paths": [
+            "docs/DECISIONS.md"
+          ],
+          "omitted": 0
+        },
+        {
+          "rule": "SC_RULE_EVIDENCE_ONLY",
+          "tier": "FAST",
+          "why": "a receipt or atlas that no candidate build reads; it does not invalidate a candidate, so the cheap gate is the right one",
+          "class": "evidence",
+          "count": 21,
+          "paths": [
+            "artifacts/phase2/COURTS.json",
+            "artifacts/phase2/SHELL_MANIFEST.json",
+            "artifacts/phase2/courts/ABI-LAYOUT.json",
+            "artifacts/phase2/courts/ABI-LINK.json",
+            "artifacts/phase2/courts/ABI-LOAD.json",
+            "artifacts/phase2/courts/ABI-SYMBOL.json",
+            "artifacts/phase2/courts/ABI-VERSION.json",
+            "artifacts/phase2/courts/layout_probe",
+            "artifacts/phase2/courts/layout_probe.c",
+            "artifacts/phase2/courts/libcrypto-contamination.json",
+            "artifacts/phase2/courts/link_probe",
+            "artifacts/phase2/courts/link_probe.c",
+            "artifacts/phase2/courts/load_probe",
+            "artifacts/phase2/courts/load_probe.c",
+            "artifacts/phase2/courts/load_probe_libcrypto",
+            "artifacts/phase2/courts/load_probe_libcrypto.c",
+            "artifacts/phase2/courts/load_probe_libssl",
+            "artifacts/phase2/courts/load_probe_libssl.c",
+            "artifacts/phase2/libssl.ld",
+            "artifacts/phase2/pkgconfig/libcrypto.pc",
+            "artifacts/phase2/pkgconfig/libssl.pc"
+          ],
+          "omitted": 0
+        },
+        {
+          "rule": "SC_RULE_EXPORTED_ABI",
+          "tier": "SEAL",
+          "why": "the exported-symbol version script defines the ABI every consumer links against; a consumer measurement is only meaningful against the exact artefact it was taken from",
+          "class": "build",
+          "count": 1,
+          "paths": [
+            "artifacts/phase2/libcrypto.ld"
+          ],
+          "omitted": 0
+        },
+        {
+          "rule": "SC_RULE_SOURCE",
+          "tier": "BATCH",
+          "why": "crate source changes the artefact, which requires the full suite and the affected courts before an integration checkpoint",
+          "class": "source",
+          "count": 1,
+          "paths": [
+            "src/status.rs"
+          ],
+          "omitted": 0
+        },
+        {
+          "rule": "SC_RULE_TOOL",
+          "tier": "BATCH",
+          "why": "a tool that derives or checks evidence: its own tests and the evidence it produced are invalidated",
+          "class": "tool",
+          "count": 3,
+          "paths": [
+            "forensics/tools/build_phase2.sh",
+            "forensics/tools/phase2_courts.py",
+            "forensics/tools/phase2_shell.py"
+          ],
+          "omitted": 0
+        },
+        {
+          "rule": "SC_RULE_UNCLASSIFIED",
+          "tier": "BATCH",
+          "why": "an unclassified path is treated as an input, never as documentation: guessing 'docs' is how an input stops being scheduled",
+          "class": "other",
+          "count": 1,
+          "paths": [
+            ".gitignore"
+          ],
+          "omitted": 0
+        }
+      ],
+      "required": [
+        {
+          "check": "FAST_CLIPPY",
+          "from_tier": "FAST",
+          "requirement": "a clippy check of the touched targets"
+        },
+        {
+          "check": "FAST_FMT",
+          "from_tier": "FAST",
+          "requirement": "cargo fmt --all -- --check"
+        },
+        {
+          "check": "FAST_FOCUSED_TESTS",
+          "from_tier": "FAST",
+          "requirement": "name-filtered tests for the changed units"
+        },
+        {
+          "check": "FAST_STRUCTURAL_GUARDS",
+          "from_tier": "FAST",
+          "requirement": "structural guards: allocator seam at the authority's size/file/line, #[repr(C)] layouts, exported symbols, unsafe lint attributes and a SAFETY contract for every new unsafe operation"
+        },
+        {
+          "check": "BATCH_AFFECTED_COURTS",
+          "from_tier": "BATCH",
+          "requirement": "the affected compatibility courts"
+        },
+        {
+          "check": "BATCH_AFFECTED_PROBES",
+          "from_tier": "BATCH",
+          "requirement": "the affected adversarial probes"
+        },
+        {
+          "check": "BATCH_CLIPPY",
+          "from_tier": "BATCH",
+          "requirement": "cargo clippy --all-targets -- -D warnings"
+        },
+        {
+          "check": "BATCH_RECEIPT",
+          "from_tier": "BATCH",
+          "requirement": "a compact receipt committed with the batch"
+        },
+        {
+          "check": "BATCH_SUITE_PARALLEL",
+          "from_tier": "BATCH",
+          "requirement": "the full library suite with --test-threads=4"
+        },
+        {
+          "check": "BATCH_SUITE_SERIAL",
+          "from_tier": "BATCH",
+          "requirement": "the full library suite, serially"
+        },
+        {
+          "check": "BOUNDARY_AUTHORITY_DIFFERENTIAL",
+          "from_tier": "BOUNDARY",
+          "requirement": "an authority differential for every changed semantic"
+        },
+        {
+          "check": "BOUNDARY_INDEPENDENT_AUDIT",
+          "from_tier": "BOUNDARY",
+          "requirement": "an independent caller and dependency-closure audit"
+        },
+        {
+          "check": "BOUNDARY_MODEL_CONTROLS",
+          "from_tier": "BOUNDARY",
+          "requirement": "targeted model controls (Miri/Loom/mutation) on the changed boundary"
+        },
+        {
+          "check": "BOUNDARY_NEGATIVE_CONTROL",
+          "from_tier": "BOUNDARY",
+          "requirement": "a negative control showing the instrument fires"
+        },
+        {
+          "check": "BOUNDARY_REVIEWER_INDEPENDENCE",
+          "from_tier": "BOUNDARY",
+          "requirement": "a reviewer that is not the author"
+        },
+        {
+          "check": "BOUNDARY_SANITIZER_CONTROLS",
+          "from_tier": "BOUNDARY",
+          "requirement": "targeted sanitizer controls (ASan/TSan) on the changed boundary"
+        },
+        {
+          "check": "SEAL_DEPENDENCY_CLOSURE",
+          "from_tier": "SEAL",
+          "requirement": "the full applicable dependency closure"
+        },
+        {
+          "check": "SEAL_FORENSIC_REGENERATION",
+          "from_tier": "SEAL",
+          "requirement": "full forensic regeneration"
+        },
+        {
+          "check": "SEAL_HELD_OUT_COMPAT",
+          "from_tier": "SEAL",
+          "requirement": "held-out and broad compatibility and cryptographic assurance against the exact candidate"
+        },
+        {
+          "check": "SEAL_INDEPENDENT_REVIEW",
+          "from_tier": "SEAL",
+          "requirement": "independent review of the claim and its evidence"
+        },
+        {
+          "check": "SEAL_PROBE_SUITE",
+          "from_tier": "SEAL",
+          "requirement": "the complete probe suite"
+        },
+        {
+          "check": "SEAL_REPRODUCIBILITY",
+          "from_tier": "SEAL",
+          "requirement": "a reproducible rebuild from the frozen source candidate"
+        }
+      ],
+      "rows": [
+        {
+          "run": "run-phase2-abi",
+          "check": "BOUNDARY_AUTHORITY_DIFFERENTIAL",
+          "evidence": [
+            "artifacts/phase2/COURTS.json",
+            "artifacts/phase2/SHELL_MANIFEST.json"
+          ],
+          "state": "REFUSED",
+          "detail": "a SATISFIED declaration needs a complete applicability identity; [{\"detail\":\"an applicability identity is a JSON object\",\"rule\":\"SC_IDENTITY_NOT_OBJECT\"}]"
+        },
+        {
+          "run": "run-phase2-seal-open",
+          "check": "SEAL_DEPENDENCY_CLOSURE",
+          "evidence": [
+            "artifacts/phase2/COURTS.json"
+          ],
+          "state": "NOT_RUN",
+          "detail": "The change set's only recorded evidence is the Phase-2 ABI court set. None of the SEAL obligations is recorded, and the exported-symbol script is what makes this change set SEAL."
+        },
+        {
+          "run": "run-phase2-seal-open",
+          "check": "SEAL_PROBE_SUITE",
+          "evidence": [
+            "artifacts/phase2/COURTS.json"
+          ],
+          "state": "NOT_RUN",
+          "detail": "The change set's only recorded evidence is the Phase-2 ABI court set. None of the SEAL obligations is recorded, and the exported-symbol script is what makes this change set SEAL."
+        },
+        {
+          "run": "run-phase2-seal-open",
+          "check": "SEAL_FORENSIC_REGENERATION",
+          "evidence": [
+            "artifacts/phase2/COURTS.json"
+          ],
+          "state": "NOT_RUN",
+          "detail": "The change set's only recorded evidence is the Phase-2 ABI court set. None of the SEAL obligations is recorded, and the exported-symbol script is what makes this change set SEAL."
+        },
+        {
+          "run": "run-phase2-seal-open",
+          "check": "SEAL_HELD_OUT_COMPAT",
+          "evidence": [
+            "artifacts/phase2/COURTS.json"
+          ],
+          "state": "NOT_RUN",
+          "detail": "The change set's only recorded evidence is the Phase-2 ABI court set. None of the SEAL obligations is recorded, and the exported-symbol script is what makes this change set SEAL."
+        },
+        {
+          "run": "run-phase2-seal-open",
+          "check": "SEAL_INDEPENDENT_REVIEW",
+          "evidence": [
+            "artifacts/phase2/COURTS.json"
+          ],
+          "state": "NOT_RUN",
+          "detail": "The change set's only recorded evidence is the Phase-2 ABI court set. None of the SEAL obligations is recorded, and the exported-symbol script is what makes this change set SEAL."
+        },
+        {
+          "run": "run-phase2-seal-open",
+          "check": "SEAL_REPRODUCIBILITY",
+          "evidence": [
+            "artifacts/phase2/COURTS.json"
+          ],
+          "state": "NOT_RUN",
+          "detail": "The change set's only recorded evidence is the Phase-2 ABI court set. None of the SEAL obligations is recorded, and the exported-symbol script is what makes this change set SEAL."
+        }
+      ],
+      "aggregate": {
+        "status": "REFUSED",
+        "counts": {
+          "SATISFIED": 0,
+          "NOT_RUN": 21,
+          "FAILED": 0,
+          "REFUSED": 1,
+          "BLOCKED": 0
+        },
+        "checks": {
+          "FAST_CLIPPY": "NOT_RUN",
+          "FAST_FMT": "NOT_RUN",
+          "FAST_FOCUSED_TESTS": "NOT_RUN",
+          "FAST_STRUCTURAL_GUARDS": "NOT_RUN",
+          "BATCH_AFFECTED_COURTS": "NOT_RUN",
+          "BATCH_AFFECTED_PROBES": "NOT_RUN",
+          "BATCH_CLIPPY": "NOT_RUN",
+          "BATCH_RECEIPT": "NOT_RUN",
+          "BATCH_SUITE_PARALLEL": "NOT_RUN",
+          "BATCH_SUITE_SERIAL": "NOT_RUN",
+          "BOUNDARY_AUTHORITY_DIFFERENTIAL": "REFUSED",
+          "BOUNDARY_INDEPENDENT_AUDIT": "NOT_RUN",
+          "BOUNDARY_MODEL_CONTROLS": "NOT_RUN",
+          "BOUNDARY_NEGATIVE_CONTROL": "NOT_RUN",
+          "BOUNDARY_REVIEWER_INDEPENDENCE": "NOT_RUN",
+          "BOUNDARY_SANITIZER_CONTROLS": "NOT_RUN",
+          "SEAL_DEPENDENCY_CLOSURE": "NOT_RUN",
+          "SEAL_FORENSIC_REGENERATION": "NOT_RUN",
+          "SEAL_HELD_OUT_COMPAT": "NOT_RUN",
+          "SEAL_INDEPENDENT_REVIEW": "NOT_RUN",
+          "SEAL_PROBE_SUITE": "NOT_RUN",
+          "SEAL_REPRODUCIBILITY": "NOT_RUN"
+        },
+        "blocked": [],
+        "not_satisfied": [
+          "BATCH_AFFECTED_COURTS",
+          "BATCH_AFFECTED_PROBES",
+          "BATCH_CLIPPY",
+          "BATCH_RECEIPT",
+          "BATCH_SUITE_PARALLEL",
+          "BATCH_SUITE_SERIAL",
+          "BOUNDARY_AUTHORITY_DIFFERENTIAL",
+          "BOUNDARY_INDEPENDENT_AUDIT",
+          "BOUNDARY_MODEL_CONTROLS",
+          "BOUNDARY_NEGATIVE_CONTROL",
+          "BOUNDARY_REVIEWER_INDEPENDENCE",
+          "BOUNDARY_SANITIZER_CONTROLS",
+          "FAST_CLIPPY",
+          "FAST_FMT",
+          "FAST_FOCUSED_TESTS",
+          "FAST_STRUCTURAL_GUARDS",
+          "SEAL_DEPENDENCY_CLOSURE",
+          "SEAL_FORENSIC_REGENERATION",
+          "SEAL_HELD_OUT_COMPAT",
+          "SEAL_INDEPENDENT_REVIEW",
+          "SEAL_PROBE_SUITE",
+          "SEAL_REPRODUCIBILITY"
+        ]
+      }
+    },
+    {
+      "id": "cs-docs-performance",
+      "purpose": "c9a0fdd58: three documents added, no build input, no source, no tool",
+      "base": "cbff7159c509b593602aa62f7233009c1044f004",
+      "head": "c9a0fdd58429ef13ca9b25ddccbc84a832787277",
+      "count": 3,
+      "tier": "FAST",
+      "rule": "SC_RULE_DOCS",
+      "why": "documentation; the documentation-consistency check is the focused check",
+      "deciding_paths": [
+        "docs/ETP-TODO.md",
+        "docs/PERFORMANCE-FRONTIER-TODO.md",
+        "docs/PERFORMANCE-FRONTIER.md"
+      ],
+      "deciding_omitted": 0,
+      "by_class": [
+        {
+          "rule": "SC_RULE_DOCS",
+          "tier": "FAST",
+          "why": "documentation; the documentation-consistency check is the focused check",
+          "class": "docs",
+          "count": 3,
+          "paths": [
+            "docs/ETP-TODO.md",
+            "docs/PERFORMANCE-FRONTIER-TODO.md",
+            "docs/PERFORMANCE-FRONTIER.md"
+          ],
+          "omitted": 0
+        }
+      ],
+      "required": [
+        {
+          "check": "FAST_CLIPPY",
+          "from_tier": "FAST",
+          "requirement": "a clippy check of the touched targets"
+        },
+        {
+          "check": "FAST_FMT",
+          "from_tier": "FAST",
+          "requirement": "cargo fmt --all -- --check"
+        },
+        {
+          "check": "FAST_FOCUSED_TESTS",
+          "from_tier": "FAST",
+          "requirement": "name-filtered tests for the changed units"
+        },
+        {
+          "check": "FAST_STRUCTURAL_GUARDS",
+          "from_tier": "FAST",
+          "requirement": "structural guards: allocator seam at the authority's size/file/line, #[repr(C)] layouts, exported symbols, unsafe lint attributes and a SAFETY contract for every new unsafe operation"
+        }
+      ],
+      "rows": [],
+      "aggregate": {
+        "status": "NOT_RUN",
+        "counts": {
+          "SATISFIED": 0,
+          "NOT_RUN": 4,
+          "FAILED": 0,
+          "REFUSED": 0,
+          "BLOCKED": 0
+        },
+        "checks": {
+          "FAST_CLIPPY": "NOT_RUN",
+          "FAST_FMT": "NOT_RUN",
+          "FAST_FOCUSED_TESTS": "NOT_RUN",
+          "FAST_STRUCTURAL_GUARDS": "NOT_RUN"
+        },
+        "blocked": [],
+        "not_satisfied": [
+          "FAST_CLIPPY",
+          "FAST_FMT",
+          "FAST_FOCUSED_TESTS",
+          "FAST_STRUCTURAL_GUARDS"
+        ]
+      }
+    },
+    {
+      "id": "cs-etp-t10",
+      "purpose": "6ab177626: closure-discipline and claim-algebra tools, their controls, evidence and documents",
+      "base": "7e70b667f107c0f2f1dd297dfa6f7c285934d3e3",
+      "head": "6ab177626fcd6506aba760314f9a25ddad80e86e",
+      "count": 14,
+      "tier": "BATCH",
+      "rule": "SC_RULE_TOOL",
+      "why": "a tool that derives or checks evidence: its own tests and the evidence it produced are invalidated",
+      "deciding_paths": [
+        "forensics/tools/closure_discipline.py",
+        "forensics/tools/etp_claims.py",
+        "forensics/tools/etp_t1_seed.py",
+        "forensics/tools/tests/test_closure_discipline.py",
+        "forensics/tools/tests/test_etp_claims.py",
+        "forensics/tools/tests/test_traceability.py"
+      ],
+      "deciding_omitted": 0,
+      "by_class": [
+        {
+          "rule": "SC_RULE_DOCS",
+          "tier": "FAST",
+          "why": "documentation; the documentation-consistency check is the focused check",
+          "class": "docs",
+          "count": 3,
+          "paths": [
+            "docs/CLOSURE-DISCIPLINE.md",
+            "docs/ETP-CLAIM-ALGEBRA.md",
+            "docs/ETP-TODO.md"
+          ],
+          "omitted": 0
+        },
+        {
+          "rule": "SC_RULE_EVIDENCE_ONLY",
+          "tier": "FAST",
+          "why": "a receipt or atlas that no candidate build reads; it does not invalidate a candidate, so the cheap gate is the right one",
+          "class": "evidence",
+          "count": 5,
+          "paths": [
+            "evidence/etp-t1/TRACEABILITY.json",
+            "evidence/etp-t10/AGGREGATES.json",
+            "evidence/etp-t10/EXCLUSIONS.json",
+            "evidence/etp-t10/OPAQUE-OPERATIONS.json",
+            "evidence/etp-t10/RECEIPT.md"
+          ],
+          "omitted": 0
+        },
+        {
+          "rule": "SC_RULE_TOOL",
+          "tier": "BATCH",
+          "why": "a tool that derives or checks evidence: its own tests and the evidence it produced are invalidated",
+          "class": "tool",
+          "count": 6,
+          "paths": [
+            "forensics/tools/closure_discipline.py",
+            "forensics/tools/etp_claims.py",
+            "forensics/tools/etp_t1_seed.py",
+            "forensics/tools/tests/test_closure_discipline.py",
+            "forensics/tools/tests/test_etp_claims.py",
+            "forensics/tools/tests/test_traceability.py"
+          ],
+          "omitted": 0
+        }
+      ],
+      "required": [
+        {
+          "check": "FAST_CLIPPY",
+          "from_tier": "FAST",
+          "requirement": "a clippy check of the touched targets"
+        },
+        {
+          "check": "FAST_FMT",
+          "from_tier": "FAST",
+          "requirement": "cargo fmt --all -- --check"
+        },
+        {
+          "check": "FAST_FOCUSED_TESTS",
+          "from_tier": "FAST",
+          "requirement": "name-filtered tests for the changed units"
+        },
+        {
+          "check": "FAST_STRUCTURAL_GUARDS",
+          "from_tier": "FAST",
+          "requirement": "structural guards: allocator seam at the authority's size/file/line, #[repr(C)] layouts, exported symbols, unsafe lint attributes and a SAFETY contract for every new unsafe operation"
+        },
+        {
+          "check": "BATCH_AFFECTED_COURTS",
+          "from_tier": "BATCH",
+          "requirement": "the affected compatibility courts"
+        },
+        {
+          "check": "BATCH_AFFECTED_PROBES",
+          "from_tier": "BATCH",
+          "requirement": "the affected adversarial probes"
+        },
+        {
+          "check": "BATCH_CLIPPY",
+          "from_tier": "BATCH",
+          "requirement": "cargo clippy --all-targets -- -D warnings"
+        },
+        {
+          "check": "BATCH_RECEIPT",
+          "from_tier": "BATCH",
+          "requirement": "a compact receipt committed with the batch"
+        },
+        {
+          "check": "BATCH_SUITE_PARALLEL",
+          "from_tier": "BATCH",
+          "requirement": "the full library suite with --test-threads=4"
+        },
+        {
+          "check": "BATCH_SUITE_SERIAL",
+          "from_tier": "BATCH",
+          "requirement": "the full library suite, serially"
+        }
+      ],
+      "rows": [
+        {
+          "run": "run-etp-t10-focused",
+          "check": "FAST_FOCUSED_TESTS",
+          "evidence": [
+            "evidence/etp-t10/RECEIPT.md"
+          ],
+          "state": "REFUSED",
+          "detail": "a SATISFIED declaration needs a complete applicability identity; [{\"detail\":\"an applicability identity is a JSON object\",\"rule\":\"SC_IDENTITY_NOT_OBJECT\"}]"
+        },
+        {
+          "run": "run-etp-t10-focused",
+          "check": "BATCH_RECEIPT",
+          "evidence": [
+            "evidence/etp-t10/RECEIPT.md"
+          ],
+          "state": "REFUSED",
+          "detail": "a SATISFIED declaration needs a complete applicability identity; [{\"detail\":\"an applicability identity is a JSON object\",\"rule\":\"SC_IDENTITY_NOT_OBJECT\"}]"
+        }
+      ],
+      "aggregate": {
+        "status": "REFUSED",
+        "counts": {
+          "SATISFIED": 0,
+          "NOT_RUN": 8,
+          "FAILED": 0,
+          "REFUSED": 2,
+          "BLOCKED": 0
+        },
+        "checks": {
+          "FAST_CLIPPY": "NOT_RUN",
+          "FAST_FMT": "NOT_RUN",
+          "FAST_FOCUSED_TESTS": "REFUSED",
+          "FAST_STRUCTURAL_GUARDS": "NOT_RUN",
+          "BATCH_AFFECTED_COURTS": "NOT_RUN",
+          "BATCH_AFFECTED_PROBES": "NOT_RUN",
+          "BATCH_CLIPPY": "NOT_RUN",
+          "BATCH_RECEIPT": "REFUSED",
+          "BATCH_SUITE_PARALLEL": "NOT_RUN",
+          "BATCH_SUITE_SERIAL": "NOT_RUN"
+        },
+        "blocked": [],
+        "not_satisfied": [
+          "BATCH_AFFECTED_COURTS",
+          "BATCH_AFFECTED_PROBES",
+          "BATCH_CLIPPY",
+          "BATCH_RECEIPT",
+          "BATCH_SUITE_PARALLEL",
+          "BATCH_SUITE_SERIAL",
+          "FAST_CLIPPY",
+          "FAST_FMT",
+          "FAST_FOCUSED_TESTS",
+          "FAST_STRUCTURAL_GUARDS"
+        ]
+      }
+    },
+    {
+      "id": "cs-source-callback",
+      "purpose": "0eddfe839: RSA and stack source, including the shared OPENSSL_sk_* stack",
+      "base": "618f5e6ec6913fc41abb0c791c924bc55b6ed4df",
+      "head": "0eddfe839f552a6e22a8cf375ec308c8bf7c478b",
+      "count": 8,
+      "tier": "BOUNDARY",
+      "rule": "SC_RULE_SHARED_MECHANISM",
+      "why": "a reusable ownership or unsafe abstraction that other mechanisms depend on; its contract, not only its code, is what changed",
+      "deciding_paths": [
+        "src/runtime/stack.rs"
+      ],
+      "deciding_omitted": 0,
+      "by_class": [
+        {
+          "rule": "SC_RULE_DOCS",
+          "tier": "FAST",
+          "why": "documentation; the documentation-consistency check is the focused check",
+          "class": "docs",
+          "count": 1,
+          "paths": [
+            "docs/HAZARD-REGISTER.md"
+          ],
+          "omitted": 0
+        },
+        {
+          "rule": "SC_RULE_EVIDENCE_ONLY",
+          "tier": "FAST",
+          "why": "a receipt or atlas that no candidate build reads; it does not invalidate a candidate, so the cheap gate is the right one",
+          "class": "evidence",
+          "count": 3,
+          "paths": [
+            "evidence/haz-15/CALLBACK-CONTRACT.md",
+            "evidence/haz-15/REENTRANCY-AND-LENGTH.md",
+            "evidence/haz-15/STATE-MACHINE.md"
+          ],
+          "omitted": 0
+        },
+        {
+          "rule": "SC_RULE_SHARED_MECHANISM",
+          "tier": "BOUNDARY",
+          "why": "a reusable ownership or unsafe abstraction that other mechanisms depend on; its contract, not only its code, is what changed",
+          "class": "shared_mechanism",
+          "count": 1,
+          "paths": [
+            "src/runtime/stack.rs"
+          ],
+          "omitted": 0
+        },
+        {
+          "rule": "SC_RULE_SOURCE",
+          "tier": "BATCH",
+          "why": "crate source changes the artefact, which requires the full suite and the affected courts before an integration checkpoint",
+          "class": "source",
+          "count": 3,
+          "paths": [
+            "src/rsa/ext_kdk_model.rs",
+            "src/rsa/mod.rs",
+            "src/rsa/ossl.rs"
+          ],
+          "omitted": 0
+        }
+      ],
+      "required": [
+        {
+          "check": "FAST_CLIPPY",
+          "from_tier": "FAST",
+          "requirement": "a clippy check of the touched targets"
+        },
+        {
+          "check": "FAST_FMT",
+          "from_tier": "FAST",
+          "requirement": "cargo fmt --all -- --check"
+        },
+        {
+          "check": "FAST_FOCUSED_TESTS",
+          "from_tier": "FAST",
+          "requirement": "name-filtered tests for the changed units"
+        },
+        {
+          "check": "FAST_STRUCTURAL_GUARDS",
+          "from_tier": "FAST",
+          "requirement": "structural guards: allocator seam at the authority's size/file/line, #[repr(C)] layouts, exported symbols, unsafe lint attributes and a SAFETY contract for every new unsafe operation"
+        },
+        {
+          "check": "BATCH_AFFECTED_COURTS",
+          "from_tier": "BATCH",
+          "requirement": "the affected compatibility courts"
+        },
+        {
+          "check": "BATCH_AFFECTED_PROBES",
+          "from_tier": "BATCH",
+          "requirement": "the affected adversarial probes"
+        },
+        {
+          "check": "BATCH_CLIPPY",
+          "from_tier": "BATCH",
+          "requirement": "cargo clippy --all-targets -- -D warnings"
+        },
+        {
+          "check": "BATCH_RECEIPT",
+          "from_tier": "BATCH",
+          "requirement": "a compact receipt committed with the batch"
+        },
+        {
+          "check": "BATCH_SUITE_PARALLEL",
+          "from_tier": "BATCH",
+          "requirement": "the full library suite with --test-threads=4"
+        },
+        {
+          "check": "BATCH_SUITE_SERIAL",
+          "from_tier": "BATCH",
+          "requirement": "the full library suite, serially"
+        },
+        {
+          "check": "BOUNDARY_AUTHORITY_DIFFERENTIAL",
+          "from_tier": "BOUNDARY",
+          "requirement": "an authority differential for every changed semantic"
+        },
+        {
+          "check": "BOUNDARY_INDEPENDENT_AUDIT",
+          "from_tier": "BOUNDARY",
+          "requirement": "an independent caller and dependency-closure audit"
+        },
+        {
+          "check": "BOUNDARY_MODEL_CONTROLS",
+          "from_tier": "BOUNDARY",
+          "requirement": "targeted model controls (Miri/Loom/mutation) on the changed boundary"
+        },
+        {
+          "check": "BOUNDARY_NEGATIVE_CONTROL",
+          "from_tier": "BOUNDARY",
+          "requirement": "a negative control showing the instrument fires"
+        },
+        {
+          "check": "BOUNDARY_REVIEWER_INDEPENDENCE",
+          "from_tier": "BOUNDARY",
+          "requirement": "a reviewer that is not the author"
+        },
+        {
+          "check": "BOUNDARY_SANITIZER_CONTROLS",
+          "from_tier": "BOUNDARY",
+          "requirement": "targeted sanitizer controls (ASan/TSan) on the changed boundary"
+        }
+      ],
+      "rows": [
+        {
+          "run": "run-haz-15-gate",
+          "check": "FAST_FMT",
+          "evidence": [
+            "evidence/haz-15/CALLBACK-CONTRACT.md",
+            "evidence/haz-15/STATE-MACHINE.md"
+          ],
+          "state": "REFUSED",
+          "detail": "a SATISFIED declaration needs a complete applicability identity; [{\"detail\":\"an applicability identity is a JSON object\",\"rule\":\"SC_IDENTITY_NOT_OBJECT\"}]"
+        },
+        {
+          "run": "run-haz-15-gate",
+          "check": "FAST_CLIPPY",
+          "evidence": [
+            "evidence/haz-15/CALLBACK-CONTRACT.md",
+            "evidence/haz-15/STATE-MACHINE.md"
+          ],
+          "state": "REFUSED",
+          "detail": "a SATISFIED declaration needs a complete applicability identity; [{\"detail\":\"an applicability identity is a JSON object\",\"rule\":\"SC_IDENTITY_NOT_OBJECT\"}]"
+        },
+        {
+          "run": "run-haz-15-gate",
+          "check": "BATCH_CLIPPY",
+          "evidence": [
+            "evidence/haz-15/CALLBACK-CONTRACT.md",
+            "evidence/haz-15/STATE-MACHINE.md"
+          ],
+          "state": "REFUSED",
+          "detail": "a SATISFIED declaration needs a complete applicability identity; [{\"detail\":\"an applicability identity is a JSON object\",\"rule\":\"SC_IDENTITY_NOT_OBJECT\"}]"
+        },
+        {
+          "run": "run-haz-15-gate",
+          "check": "FAST_FOCUSED_TESTS",
+          "evidence": [
+            "evidence/haz-15/CALLBACK-CONTRACT.md",
+            "evidence/haz-15/STATE-MACHINE.md"
+          ],
+          "state": "REFUSED",
+          "detail": "a SATISFIED declaration needs a complete applicability identity; [{\"detail\":\"an applicability identity is a JSON object\",\"rule\":\"SC_IDENTITY_NOT_OBJECT\"}]"
+        },
+        {
+          "run": "run-haz-15-gate",
+          "check": "BATCH_SUITE_SERIAL",
+          "evidence": [
+            "evidence/haz-15/CALLBACK-CONTRACT.md",
+            "evidence/haz-15/STATE-MACHINE.md"
+          ],
+          "state": "REFUSED",
+          "detail": "a SATISFIED declaration needs a complete applicability identity; [{\"detail\":\"an applicability identity is a JSON object\",\"rule\":\"SC_IDENTITY_NOT_OBJECT\"}]"
+        },
+        {
+          "run": "run-haz-15-gate",
+          "check": "BATCH_RECEIPT",
+          "evidence": [
+            "evidence/haz-15/CALLBACK-CONTRACT.md",
+            "evidence/haz-15/STATE-MACHINE.md"
+          ],
+          "state": "REFUSED",
+          "detail": "a SATISFIED declaration needs a complete applicability identity; [{\"detail\":\"an applicability identity is a JSON object\",\"rule\":\"SC_IDENTITY_NOT_OBJECT\"}]"
+        },
+        {
+          "run": "run-haz-15-open",
+          "check": "BOUNDARY_MODEL_CONTROLS",
+          "evidence": [
+            "evidence/haz-15/CALLBACK-CONTRACT.md"
+          ],
+          "state": "NOT_RUN",
+          "detail": "Section 8 states that no sanitizer, Miri or Loom run covers `OPENSSL_sk_pop_free`, the store or the re-entrancy controls, and that HAZ-16's differential probe was not re-run against this tree. The controls it does record demonstrate allowed and refused callback classes; none is a test-only canary of a defect class, so the negative-control requirement is not met either. The record itself says NOT_RUN."
+        },
+        {
+          "run": "run-haz-15-open",
+          "check": "BOUNDARY_SANITIZER_CONTROLS",
+          "evidence": [
+            "evidence/haz-15/CALLBACK-CONTRACT.md"
+          ],
+          "state": "NOT_RUN",
+          "detail": "Section 8 states that no sanitizer, Miri or Loom run covers `OPENSSL_sk_pop_free`, the store or the re-entrancy controls, and that HAZ-16's differential probe was not re-run against this tree. The controls it does record demonstrate allowed and refused callback classes; none is a test-only canary of a defect class, so the negative-control requirement is not met either. The record itself says NOT_RUN."
+        },
+        {
+          "run": "run-haz-15-open",
+          "check": "BOUNDARY_AUTHORITY_DIFFERENTIAL",
+          "evidence": [
+            "evidence/haz-15/CALLBACK-CONTRACT.md"
+          ],
+          "state": "NOT_RUN",
+          "detail": "Section 8 states that no sanitizer, Miri or Loom run covers `OPENSSL_sk_pop_free`, the store or the re-entrancy controls, and that HAZ-16's differential probe was not re-run against this tree. The controls it does record demonstrate allowed and refused callback classes; none is a test-only canary of a defect class, so the negative-control requirement is not met either. The record itself says NOT_RUN."
+        },
+        {
+          "run": "run-haz-15-open",
+          "check": "BOUNDARY_NEGATIVE_CONTROL",
+          "evidence": [
+            "evidence/haz-15/CALLBACK-CONTRACT.md"
+          ],
+          "state": "NOT_RUN",
+          "detail": "Section 8 states that no sanitizer, Miri or Loom run covers `OPENSSL_sk_pop_free`, the store or the re-entrancy controls, and that HAZ-16's differential probe was not re-run against this tree. The controls it does record demonstrate allowed and refused callback classes; none is a test-only canary of a defect class, so the negative-control requirement is not met either. The record itself says NOT_RUN."
+        },
+        {
+          "run": "run-haz-15-open",
+          "check": "BOUNDARY_INDEPENDENT_AUDIT",
+          "evidence": [
+            "evidence/haz-15/CALLBACK-CONTRACT.md"
+          ],
+          "state": "NOT_RUN",
+          "detail": "Section 8 states that no sanitizer, Miri or Loom run covers `OPENSSL_sk_pop_free`, the store or the re-entrancy controls, and that HAZ-16's differential probe was not re-run against this tree. The controls it does record demonstrate allowed and refused callback classes; none is a test-only canary of a defect class, so the negative-control requirement is not met either. The record itself says NOT_RUN."
+        },
+        {
+          "run": "run-haz-15-open",
+          "check": "BOUNDARY_REVIEWER_INDEPENDENCE",
+          "evidence": [
+            "evidence/haz-15/CALLBACK-CONTRACT.md"
+          ],
+          "state": "NOT_RUN",
+          "detail": "Section 8 states that no sanitizer, Miri or Loom run covers `OPENSSL_sk_pop_free`, the store or the re-entrancy controls, and that HAZ-16's differential probe was not re-run against this tree. The controls it does record demonstrate allowed and refused callback classes; none is a test-only canary of a defect class, so the negative-control requirement is not met either. The record itself says NOT_RUN."
+        }
+      ],
+      "aggregate": {
+        "status": "REFUSED",
+        "counts": {
+          "SATISFIED": 0,
+          "NOT_RUN": 10,
+          "FAILED": 0,
+          "REFUSED": 6,
+          "BLOCKED": 0
+        },
+        "checks": {
+          "FAST_CLIPPY": "REFUSED",
+          "FAST_FMT": "REFUSED",
+          "FAST_FOCUSED_TESTS": "REFUSED",
+          "FAST_STRUCTURAL_GUARDS": "NOT_RUN",
+          "BATCH_AFFECTED_COURTS": "NOT_RUN",
+          "BATCH_AFFECTED_PROBES": "NOT_RUN",
+          "BATCH_CLIPPY": "REFUSED",
+          "BATCH_RECEIPT": "REFUSED",
+          "BATCH_SUITE_PARALLEL": "NOT_RUN",
+          "BATCH_SUITE_SERIAL": "REFUSED",
+          "BOUNDARY_AUTHORITY_DIFFERENTIAL": "NOT_RUN",
+          "BOUNDARY_INDEPENDENT_AUDIT": "NOT_RUN",
+          "BOUNDARY_MODEL_CONTROLS": "NOT_RUN",
+          "BOUNDARY_NEGATIVE_CONTROL": "NOT_RUN",
+          "BOUNDARY_REVIEWER_INDEPENDENCE": "NOT_RUN",
+          "BOUNDARY_SANITIZER_CONTROLS": "NOT_RUN"
+        },
+        "blocked": [],
+        "not_satisfied": [
+          "BATCH_AFFECTED_COURTS",
+          "BATCH_AFFECTED_PROBES",
+          "BATCH_CLIPPY",
+          "BATCH_RECEIPT",
+          "BATCH_SUITE_PARALLEL",
+          "BATCH_SUITE_SERIAL",
+          "BOUNDARY_AUTHORITY_DIFFERENTIAL",
+          "BOUNDARY_INDEPENDENT_AUDIT",
+          "BOUNDARY_MODEL_CONTROLS",
+          "BOUNDARY_NEGATIVE_CONTROL",
+          "BOUNDARY_REVIEWER_INDEPENDENCE",
+          "BOUNDARY_SANITIZER_CONTROLS",
+          "FAST_CLIPPY",
+          "FAST_FMT",
+          "FAST_FOCUSED_TESTS",
+          "FAST_STRUCTURAL_GUARDS"
+        ]
+      }
+    },
+    {
+      "id": "cs-source-ffi-atomicity",
+      "purpose": "5750ac150: BN blinding and stack source, with FFI failure atomicity evidence",
+      "base": "5d38094cc5696cf80ea685692c92bc4c7b56fb5a",
+      "head": "5750ac15008e6537b9cf12800b4351b7171f6a9b",
+      "count": 12,
+      "tier": "BOUNDARY",
+      "rule": "SC_RULE_SHARED_MECHANISM",
+      "why": "a reusable ownership or unsafe abstraction that other mechanisms depend on; its contract, not only its code, is what changed",
+      "deciding_paths": [
+        "src/runtime/stack.rs"
+      ],
+      "deciding_omitted": 0,
+      "by_class": [
+        {
+          "rule": "SC_RULE_DOCS",
+          "tier": "FAST",
+          "why": "documentation; the documentation-consistency check is the focused check",
+          "class": "docs",
+          "count": 3,
+          "paths": [
+            "docs/ETP-TODO.md",
+            "docs/FFI-FAILURE-ATOMICITY.md",
+            "docs/HAZARD-REGISTER.md"
+          ],
+          "omitted": 0
+        },
+        {
+          "rule": "SC_RULE_EVIDENCE_ONLY",
+          "tier": "FAST",
+          "why": "a receipt or atlas that no candidate build reads; it does not invalidate a candidate, so the cheap gate is the right one",
+          "class": "evidence",
+          "count": 6,
+          "paths": [
+            "evidence/etp-t1/TRACEABILITY.json",
+            "evidence/etp-t2/HAZARDS.json",
+            "evidence/haz-16/CLASSIFICATION.json",
+            "evidence/haz-16/RECEIPT.md",
+            "evidence/haz-16/build_classification.py",
+            "evidence/haz-16/enumerate_ffi_mutation.py"
+          ],
+          "omitted": 0
+        },
+        {
+          "rule": "SC_RULE_SHARED_MECHANISM",
+          "tier": "BOUNDARY",
+          "why": "a reusable ownership or unsafe abstraction that other mechanisms depend on; its contract, not only its code, is what changed",
+          "class": "shared_mechanism",
+          "count": 1,
+          "paths": [
+            "src/runtime/stack.rs"
+          ],
+          "omitted": 0
+        },
+        {
+          "rule": "SC_RULE_SOURCE",
+          "tier": "BATCH",
+          "why": "crate source changes the artefact, which requires the full suite and the affected courts before an integration checkpoint",
+          "class": "source",
+          "count": 1,
+          "paths": [
+            "src/bn/blinding.rs"
+          ],
+          "omitted": 0
+        },
+        {
+          "rule": "SC_RULE_TOOL",
+          "tier": "BATCH",
+          "why": "a tool that derives or checks evidence: its own tests and the evidence it produced are invalidated",
+          "class": "tool",
+          "count": 1,
+          "paths": [
+            "forensics/tools/etp_t1_seed.py"
+          ],
+          "omitted": 0
+        }
+      ],
+      "required": [
+        {
+          "check": "FAST_CLIPPY",
+          "from_tier": "FAST",
+          "requirement": "a clippy check of the touched targets"
+        },
+        {
+          "check": "FAST_FMT",
+          "from_tier": "FAST",
+          "requirement": "cargo fmt --all -- --check"
+        },
+        {
+          "check": "FAST_FOCUSED_TESTS",
+          "from_tier": "FAST",
+          "requirement": "name-filtered tests for the changed units"
+        },
+        {
+          "check": "FAST_STRUCTURAL_GUARDS",
+          "from_tier": "FAST",
+          "requirement": "structural guards: allocator seam at the authority's size/file/line, #[repr(C)] layouts, exported symbols, unsafe lint attributes and a SAFETY contract for every new unsafe operation"
+        },
+        {
+          "check": "BATCH_AFFECTED_COURTS",
+          "from_tier": "BATCH",
+          "requirement": "the affected compatibility courts"
+        },
+        {
+          "check": "BATCH_AFFECTED_PROBES",
+          "from_tier": "BATCH",
+          "requirement": "the affected adversarial probes"
+        },
+        {
+          "check": "BATCH_CLIPPY",
+          "from_tier": "BATCH",
+          "requirement": "cargo clippy --all-targets -- -D warnings"
+        },
+        {
+          "check": "BATCH_RECEIPT",
+          "from_tier": "BATCH",
+          "requirement": "a compact receipt committed with the batch"
+        },
+        {
+          "check": "BATCH_SUITE_PARALLEL",
+          "from_tier": "BATCH",
+          "requirement": "the full library suite with --test-threads=4"
+        },
+        {
+          "check": "BATCH_SUITE_SERIAL",
+          "from_tier": "BATCH",
+          "requirement": "the full library suite, serially"
+        },
+        {
+          "check": "BOUNDARY_AUTHORITY_DIFFERENTIAL",
+          "from_tier": "BOUNDARY",
+          "requirement": "an authority differential for every changed semantic"
+        },
+        {
+          "check": "BOUNDARY_INDEPENDENT_AUDIT",
+          "from_tier": "BOUNDARY",
+          "requirement": "an independent caller and dependency-closure audit"
+        },
+        {
+          "check": "BOUNDARY_MODEL_CONTROLS",
+          "from_tier": "BOUNDARY",
+          "requirement": "targeted model controls (Miri/Loom/mutation) on the changed boundary"
+        },
+        {
+          "check": "BOUNDARY_NEGATIVE_CONTROL",
+          "from_tier": "BOUNDARY",
+          "requirement": "a negative control showing the instrument fires"
+        },
+        {
+          "check": "BOUNDARY_REVIEWER_INDEPENDENCE",
+          "from_tier": "BOUNDARY",
+          "requirement": "a reviewer that is not the author"
+        },
+        {
+          "check": "BOUNDARY_SANITIZER_CONTROLS",
+          "from_tier": "BOUNDARY",
+          "requirement": "targeted sanitizer controls (ASan/TSan) on the changed boundary"
+        }
+      ],
+      "rows": [
+        {
+          "run": "run-haz-16-controls",
+          "check": "BOUNDARY_NEGATIVE_CONTROL",
+          "evidence": [
+            "evidence/haz-16/RECEIPT.md"
+          ],
+          "state": "REFUSED",
+          "detail": "a SATISFIED declaration needs a complete applicability identity; [{\"detail\":\"an applicability identity is a JSON object\",\"rule\":\"SC_IDENTITY_NOT_OBJECT\"}]"
+        },
+        {
+          "run": "run-haz-16-gate",
+          "check": "FAST_FMT",
+          "evidence": [
+            "evidence/haz-16/CLASSIFICATION.json",
+            "evidence/haz-16/RECEIPT.md"
+          ],
+          "state": "REFUSED",
+          "detail": "a SATISFIED declaration needs a complete applicability identity; [{\"detail\":\"an applicability identity is a JSON object\",\"rule\":\"SC_IDENTITY_NOT_OBJECT\"}]"
+        },
+        {
+          "run": "run-haz-16-gate",
+          "check": "FAST_CLIPPY",
+          "evidence": [
+            "evidence/haz-16/CLASSIFICATION.json",
+            "evidence/haz-16/RECEIPT.md"
+          ],
+          "state": "REFUSED",
+          "detail": "a SATISFIED declaration needs a complete applicability identity; [{\"detail\":\"an applicability identity is a JSON object\",\"rule\":\"SC_IDENTITY_NOT_OBJECT\"}]"
+        },
+        {
+          "run": "run-haz-16-gate",
+          "check": "BATCH_CLIPPY",
+          "evidence": [
+            "evidence/haz-16/CLASSIFICATION.json",
+            "evidence/haz-16/RECEIPT.md"
+          ],
+          "state": "REFUSED",
+          "detail": "a SATISFIED declaration needs a complete applicability identity; [{\"detail\":\"an applicability identity is a JSON object\",\"rule\":\"SC_IDENTITY_NOT_OBJECT\"}]"
+        },
+        {
+          "run": "run-haz-16-gate",
+          "check": "FAST_FOCUSED_TESTS",
+          "evidence": [
+            "evidence/haz-16/CLASSIFICATION.json",
+            "evidence/haz-16/RECEIPT.md"
+          ],
+          "state": "REFUSED",
+          "detail": "a SATISFIED declaration needs a complete applicability identity; [{\"detail\":\"an applicability identity is a JSON object\",\"rule\":\"SC_IDENTITY_NOT_OBJECT\"}]"
+        },
+        {
+          "run": "run-haz-16-gate",
+          "check": "BATCH_SUITE_SERIAL",
+          "evidence": [
+            "evidence/haz-16/CLASSIFICATION.json",
+            "evidence/haz-16/RECEIPT.md"
+          ],
+          "state": "REFUSED",
+          "detail": "a SATISFIED declaration needs a complete applicability identity; [{\"detail\":\"an applicability identity is a JSON object\",\"rule\":\"SC_IDENTITY_NOT_OBJECT\"}]"
+        },
+        {
+          "run": "run-haz-16-gate",
+          "check": "BATCH_SUITE_PARALLEL",
+          "evidence": [
+            "evidence/haz-16/CLASSIFICATION.json",
+            "evidence/haz-16/RECEIPT.md"
+          ],
+          "state": "REFUSED",
+          "detail": "a SATISFIED declaration needs a complete applicability identity; [{\"detail\":\"an applicability identity is a JSON object\",\"rule\":\"SC_IDENTITY_NOT_OBJECT\"}]"
+        },
+        {
+          "run": "run-haz-16-gate",
+          "check": "BATCH_RECEIPT",
+          "evidence": [
+            "evidence/haz-16/CLASSIFICATION.json",
+            "evidence/haz-16/RECEIPT.md"
+          ],
+          "state": "REFUSED",
+          "detail": "a SATISFIED declaration needs a complete applicability identity; [{\"detail\":\"an applicability identity is a JSON object\",\"rule\":\"SC_IDENTITY_NOT_OBJECT\"}]"
+        },
+        {
+          "run": "run-haz-16-open",
+          "check": "BOUNDARY_MODEL_CONTROLS",
+          "evidence": [
+            "evidence/haz-16/RECEIPT.md"
+          ],
+          "state": "NOT_RUN",
+          "detail": "The receipt's open items name a Miri run over the repaired blinding and stack paths and an independent review; neither is recorded. No sanitizer run and no authority differential is recorded for this change set."
+        },
+        {
+          "run": "run-haz-16-open",
+          "check": "BOUNDARY_SANITIZER_CONTROLS",
+          "evidence": [
+            "evidence/haz-16/RECEIPT.md"
+          ],
+          "state": "NOT_RUN",
+          "detail": "The receipt's open items name a Miri run over the repaired blinding and stack paths and an independent review; neither is recorded. No sanitizer run and no authority differential is recorded for this change set."
+        },
+        {
+          "run": "run-haz-16-open",
+          "check": "BOUNDARY_AUTHORITY_DIFFERENTIAL",
+          "evidence": [
+            "evidence/haz-16/RECEIPT.md"
+          ],
+          "state": "NOT_RUN",
+          "detail": "The receipt's open items name a Miri run over the repaired blinding and stack paths and an independent review; neither is recorded. No sanitizer run and no authority differential is recorded for this change set."
+        },
+        {
+          "run": "run-haz-16-open",
+          "check": "BOUNDARY_INDEPENDENT_AUDIT",
+          "evidence": [
+            "evidence/haz-16/RECEIPT.md"
+          ],
+          "state": "NOT_RUN",
+          "detail": "The receipt's open items name a Miri run over the repaired blinding and stack paths and an independent review; neither is recorded. No sanitizer run and no authority differential is recorded for this change set."
+        },
+        {
+          "run": "run-haz-16-open",
+          "check": "BOUNDARY_REVIEWER_INDEPENDENCE",
+          "evidence": [
+            "evidence/haz-16/RECEIPT.md"
+          ],
+          "state": "NOT_RUN",
+          "detail": "The receipt's open items name a Miri run over the repaired blinding and stack paths and an independent review; neither is recorded. No sanitizer run and no authority differential is recorded for this change set."
+        }
+      ],
+      "aggregate": {
+        "status": "REFUSED",
+        "counts": {
+          "SATISFIED": 0,
+          "NOT_RUN": 8,
+          "FAILED": 0,
+          "REFUSED": 8,
+          "BLOCKED": 0
+        },
+        "checks": {
+          "FAST_CLIPPY": "REFUSED",
+          "FAST_FMT": "REFUSED",
+          "FAST_FOCUSED_TESTS": "REFUSED",
+          "FAST_STRUCTURAL_GUARDS": "NOT_RUN",
+          "BATCH_AFFECTED_COURTS": "NOT_RUN",
+          "BATCH_AFFECTED_PROBES": "NOT_RUN",
+          "BATCH_CLIPPY": "REFUSED",
+          "BATCH_RECEIPT": "REFUSED",
+          "BATCH_SUITE_PARALLEL": "REFUSED",
+          "BATCH_SUITE_SERIAL": "REFUSED",
+          "BOUNDARY_AUTHORITY_DIFFERENTIAL": "NOT_RUN",
+          "BOUNDARY_INDEPENDENT_AUDIT": "NOT_RUN",
+          "BOUNDARY_MODEL_CONTROLS": "NOT_RUN",
+          "BOUNDARY_NEGATIVE_CONTROL": "REFUSED",
+          "BOUNDARY_REVIEWER_INDEPENDENCE": "NOT_RUN",
+          "BOUNDARY_SANITIZER_CONTROLS": "NOT_RUN"
+        },
+        "blocked": [],
+        "not_satisfied": [
+          "BATCH_AFFECTED_COURTS",
+          "BATCH_AFFECTED_PROBES",
+          "BATCH_CLIPPY",
+          "BATCH_RECEIPT",
+          "BATCH_SUITE_PARALLEL",
+          "BATCH_SUITE_SERIAL",
+          "BOUNDARY_AUTHORITY_DIFFERENTIAL",
+          "BOUNDARY_INDEPENDENT_AUDIT",
+          "BOUNDARY_MODEL_CONTROLS",
+          "BOUNDARY_NEGATIVE_CONTROL",
+          "BOUNDARY_REVIEWER_INDEPENDENCE",
+          "BOUNDARY_SANITIZER_CONTROLS",
+          "FAST_CLIPPY",
+          "FAST_FMT",
+          "FAST_FOCUSED_TESTS",
+          "FAST_STRUCTURAL_GUARDS"
+        ]
+      }
+    },
+    {
+      "id": "cs-tool-freshness",
+      "purpose": "87d0868ef: the freshness tool, its controls, a receipt and a document",
+      "base": "26c12726283c84185540844f5e150db22038d05e",
+      "head": "87d0868ef4d3f1a9d0686bd367e790105a820e03",
+      "count": 7,
+      "tier": "BATCH",
+      "rule": "SC_RULE_TOOL",
+      "why": "a tool that derives or checks evidence: its own tests and the evidence it produced are invalidated",
+      "deciding_paths": [
+        "forensics/tools/freshness.py",
+        "forensics/tools/tests/test_freshness.py"
+      ],
+      "deciding_omitted": 0,
+      "by_class": [
+        {
+          "rule": "SC_RULE_DOCS",
+          "tier": "FAST",
+          "why": "documentation; the documentation-consistency check is the focused check",
+          "class": "docs",
+          "count": 2,
+          "paths": [
+            "docs/ETP-TODO.md",
+            "docs/EVIDENCE-FRESHNESS.md"
+          ],
+          "omitted": 0
+        },
+        {
+          "rule": "SC_RULE_EVIDENCE_ONLY",
+          "tier": "FAST",
+          "why": "a receipt or atlas that no candidate build reads; it does not invalidate a candidate, so the cheap gate is the right one",
+          "class": "evidence",
+          "count": 3,
+          "paths": [
+            "evidence/etp-t9/DEPENDENCIES.json",
+            "evidence/etp-t9/HISTORY-RUNS.json",
+            "evidence/etp-t9/RECEIPT.md"
+          ],
+          "omitted": 0
+        },
+        {
+          "rule": "SC_RULE_TOOL",
+          "tier": "BATCH",
+          "why": "a tool that derives or checks evidence: its own tests and the evidence it produced are invalidated",
+          "class": "tool",
+          "count": 2,
+          "paths": [
+            "forensics/tools/freshness.py",
+            "forensics/tools/tests/test_freshness.py"
+          ],
+          "omitted": 0
+        }
+      ],
+      "required": [
+        {
+          "check": "FAST_CLIPPY",
+          "from_tier": "FAST",
+          "requirement": "a clippy check of the touched targets"
+        },
+        {
+          "check": "FAST_FMT",
+          "from_tier": "FAST",
+          "requirement": "cargo fmt --all -- --check"
+        },
+        {
+          "check": "FAST_FOCUSED_TESTS",
+          "from_tier": "FAST",
+          "requirement": "name-filtered tests for the changed units"
+        },
+        {
+          "check": "FAST_STRUCTURAL_GUARDS",
+          "from_tier": "FAST",
+          "requirement": "structural guards: allocator seam at the authority's size/file/line, #[repr(C)] layouts, exported symbols, unsafe lint attributes and a SAFETY contract for every new unsafe operation"
+        },
+        {
+          "check": "BATCH_AFFECTED_COURTS",
+          "from_tier": "BATCH",
+          "requirement": "the affected compatibility courts"
+        },
+        {
+          "check": "BATCH_AFFECTED_PROBES",
+          "from_tier": "BATCH",
+          "requirement": "the affected adversarial probes"
+        },
+        {
+          "check": "BATCH_CLIPPY",
+          "from_tier": "BATCH",
+          "requirement": "cargo clippy --all-targets -- -D warnings"
+        },
+        {
+          "check": "BATCH_RECEIPT",
+          "from_tier": "BATCH",
+          "requirement": "a compact receipt committed with the batch"
+        },
+        {
+          "check": "BATCH_SUITE_PARALLEL",
+          "from_tier": "BATCH",
+          "requirement": "the full library suite with --test-threads=4"
+        },
+        {
+          "check": "BATCH_SUITE_SERIAL",
+          "from_tier": "BATCH",
+          "requirement": "the full library suite, serially"
+        }
+      ],
+      "rows": [
+        {
+          "run": "run-etp-t9-focused",
+          "check": "FAST_FOCUSED_TESTS",
+          "evidence": [
+            "evidence/etp-t9/RECEIPT.md"
+          ],
+          "state": "REFUSED",
+          "detail": "a SATISFIED declaration needs a complete applicability identity; [{\"detail\":\"an applicability identity is a JSON object\",\"rule\":\"SC_IDENTITY_NOT_OBJECT\"}]"
+        },
+        {
+          "run": "run-etp-t9-focused",
+          "check": "BATCH_RECEIPT",
+          "evidence": [
+            "evidence/etp-t9/RECEIPT.md"
+          ],
+          "state": "REFUSED",
+          "detail": "a SATISFIED declaration needs a complete applicability identity; [{\"detail\":\"an applicability identity is a JSON object\",\"rule\":\"SC_IDENTITY_NOT_OBJECT\"}]"
+        }
+      ],
+      "aggregate": {
+        "status": "REFUSED",
+        "counts": {
+          "SATISFIED": 0,
+          "NOT_RUN": 8,
+          "FAILED": 0,
+          "REFUSED": 2,
+          "BLOCKED": 0
+        },
+        "checks": {
+          "FAST_CLIPPY": "NOT_RUN",
+          "FAST_FMT": "NOT_RUN",
+          "FAST_FOCUSED_TESTS": "REFUSED",
+          "FAST_STRUCTURAL_GUARDS": "NOT_RUN",
+          "BATCH_AFFECTED_COURTS": "NOT_RUN",
+          "BATCH_AFFECTED_PROBES": "NOT_RUN",
+          "BATCH_CLIPPY": "NOT_RUN",
+          "BATCH_RECEIPT": "REFUSED",
+          "BATCH_SUITE_PARALLEL": "NOT_RUN",
+          "BATCH_SUITE_SERIAL": "NOT_RUN"
+        },
+        "blocked": [],
+        "not_satisfied": [
+          "BATCH_AFFECTED_COURTS",
+          "BATCH_AFFECTED_PROBES",
+          "BATCH_CLIPPY",
+          "BATCH_RECEIPT",
+          "BATCH_SUITE_PARALLEL",
+          "BATCH_SUITE_SERIAL",
+          "FAST_CLIPPY",
+          "FAST_FMT",
+          "FAST_FOCUSED_TESTS",
+          "FAST_STRUCTURAL_GUARDS"
+        ]
+      }
+    }
+  ],
+  "totals": {
+    "change_sets": 6,
+    "requirements": 78,
+    "by_state": {
+      "SATISFIED": 0,
+      "NOT_RUN": 59,
+      "FAILED": 0,
+      "REFUSED": 19,
+      "BLOCKED": 0
+    }
+  },
+  "status": "REFUSED"
+}

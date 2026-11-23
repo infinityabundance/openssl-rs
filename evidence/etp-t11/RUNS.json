@@ -1,0 +1,378 @@
+{
+  "schema": "openssl-rs/etp/scheduling-runs/1",
+  "item": "ETP-T11",
+  "purpose": "the evidence each change set actually records, as declarations the policy can either admit or refuse. A declaration is admitted only from a cache entry bound to a complete applicability identity; a prose receipt is not a result.",
+  "runs": [
+    {
+      "id": "run-etp-t9-focused",
+      "checks": [
+        "FAST_FOCUSED_TESTS",
+        "BATCH_RECEIPT"
+      ],
+      "change_sets": [
+        "cs-tool-freshness"
+      ],
+      "status": "SATISFIED",
+      "identity": null,
+      "evidence": [
+        "evidence/etp-t9/RECEIPT.md"
+      ],
+      "note": "Section 6 records `python3 forensics/tools/tests/test_freshness.py` as 41/41 OK and the receipt itself is committed. Section 1 names source 26c127262 (the change set's base, not its head 87d0868ef) and quotes the tool and test digests, but records no source tree, instrument configuration, target profile or exact test population."
+    },
+    {
+      "id": "run-etp-t10-focused",
+      "checks": [
+        "FAST_FOCUSED_TESTS",
+        "BATCH_RECEIPT"
+      ],
+      "change_sets": [
+        "cs-etp-t10"
+      ],
+      "status": "SATISFIED",
+      "identity": null,
+      "evidence": [
+        "evidence/etp-t10/RECEIPT.md"
+      ],
+      "note": "Records 23, 85 and 30 passing tests over three tool test files plus a discovery run of 396 tests with 3 pre-existing failures named in section 8, and the receipt is committed. The identity it records is 7e70b667f (the base), and it carries no source tree, instrument configuration, target profile or exact population."
+    },
+    {
+      "id": "run-haz-15-gate",
+      "checks": [
+        "FAST_FMT",
+        "FAST_CLIPPY",
+        "BATCH_CLIPPY",
+        "FAST_FOCUSED_TESTS",
+        "BATCH_SUITE_SERIAL",
+        "BATCH_RECEIPT"
+      ],
+      "change_sets": [
+        "cs-source-callback"
+      ],
+      "status": "SATISFIED",
+      "identity": null,
+      "evidence": [
+        "evidence/haz-15/CALLBACK-CONTRACT.md",
+        "evidence/haz-15/STATE-MACHINE.md"
+      ],
+      "note": "Section 7 records fmt, clippy, the focused re-entrancy controls and two full-suite runs, and names the court and its cap. The two full-suite runs do not record a second test mode, so BATCH_SUITE_PARALLEL is not claimed here; no tool digests, instrument configuration, target profile or exact population are recorded."
+    },
+    {
+      "id": "run-haz-15-open",
+      "checks": [
+        "BOUNDARY_MODEL_CONTROLS",
+        "BOUNDARY_SANITIZER_CONTROLS",
+        "BOUNDARY_AUTHORITY_DIFFERENTIAL",
+        "BOUNDARY_NEGATIVE_CONTROL",
+        "BOUNDARY_INDEPENDENT_AUDIT",
+        "BOUNDARY_REVIEWER_INDEPENDENCE"
+      ],
+      "change_sets": [
+        "cs-source-callback"
+      ],
+      "status": "NOT_RUN",
+      "evidence": [
+        "evidence/haz-15/CALLBACK-CONTRACT.md"
+      ],
+      "note": "Section 8 states that no sanitizer, Miri or Loom run covers `OPENSSL_sk_pop_free`, the store or the re-entrancy controls, and that HAZ-16's differential probe was not re-run against this tree. The controls it does record demonstrate allowed and refused callback classes; none is a test-only canary of a defect class, so the negative-control requirement is not met either. The record itself says NOT_RUN."
+    },
+    {
+      "id": "run-haz-16-gate",
+      "checks": [
+        "FAST_FMT",
+        "FAST_CLIPPY",
+        "BATCH_CLIPPY",
+        "FAST_FOCUSED_TESTS",
+        "BATCH_SUITE_SERIAL",
+        "BATCH_SUITE_PARALLEL",
+        "BATCH_RECEIPT"
+      ],
+      "change_sets": [
+        "cs-source-ffi-atomicity"
+      ],
+      "status": "SATISFIED",
+      "identity": null,
+      "evidence": [
+        "evidence/haz-16/RECEIPT.md",
+        "evidence/haz-16/CLASSIFICATION.json"
+      ],
+      "note": "Records fmt, `clippy --all-targets -- -D warnings`, the five added tests and both full-suite modes: 2430 passed, 0 failed, 54 ignored, at `--test-threads=1` and `--test-threads=4`. It names the base 5d38094cc and the court, and no tool digests, instrument configuration, target profile or exact test population."
+    },
+    {
+      "id": "run-haz-16-controls",
+      "checks": [
+        "BOUNDARY_NEGATIVE_CONTROL"
+      ],
+      "change_sets": [
+        "cs-source-ffi-atomicity"
+      ],
+      "status": "SATISFIED",
+      "identity": null,
+      "evidence": [
+        "evidence/haz-16/RECEIPT.md"
+      ],
+      "note": "Records four verbatim revert-control failures: each regression test fails when its repair is reverted, which is the detector-fires property the negative-control requirement names. The record still carries no applicability identity."
+    },
+    {
+      "id": "run-haz-16-open",
+      "checks": [
+        "BOUNDARY_MODEL_CONTROLS",
+        "BOUNDARY_SANITIZER_CONTROLS",
+        "BOUNDARY_AUTHORITY_DIFFERENTIAL",
+        "BOUNDARY_INDEPENDENT_AUDIT",
+        "BOUNDARY_REVIEWER_INDEPENDENCE"
+      ],
+      "change_sets": [
+        "cs-source-ffi-atomicity"
+      ],
+      "status": "NOT_RUN",
+      "evidence": [
+        "evidence/haz-16/RECEIPT.md"
+      ],
+      "note": "The receipt's open items name a Miri run over the repaired blinding and stack paths and an independent review; neither is recorded. No sanitizer run and no authority differential is recorded for this change set."
+    },
+    {
+      "id": "run-phase2-abi",
+      "checks": [
+        "BOUNDARY_AUTHORITY_DIFFERENTIAL"
+      ],
+      "change_sets": [
+        "cs-abi-shell"
+      ],
+      "status": "SATISFIED",
+      "identity": null,
+      "evidence": [
+        "artifacts/phase2/COURTS.json",
+        "artifacts/phase2/SHELL_MANIFEST.json"
+      ],
+      "note": "Six ABI courts (symbol, version, dynamic, layout, link, load) report pass against openssl-3.6.4-production. The record carries no source commit, tool digest, instrument configuration, target profile or population, and it covers the ABI surface only."
+    },
+    {
+      "id": "run-phase2-seal-open",
+      "checks": [
+        "SEAL_DEPENDENCY_CLOSURE",
+        "SEAL_PROBE_SUITE",
+        "SEAL_FORENSIC_REGENERATION",
+        "SEAL_HELD_OUT_COMPAT",
+        "SEAL_INDEPENDENT_REVIEW",
+        "SEAL_REPRODUCIBILITY"
+      ],
+      "change_sets": [
+        "cs-abi-shell"
+      ],
+      "status": "NOT_RUN",
+      "evidence": [
+        "artifacts/phase2/COURTS.json"
+      ],
+      "note": "The change set's only recorded evidence is the Phase-2 ABI court set. None of the SEAL obligations is recorded, and the exported-symbol script is what makes this change set SEAL."
+    }
+  ],
+  "controls": [
+    {
+      "control": "store-a-passing-result",
+      "command": [
+        "cache-put",
+        "--check",
+        "FAST_FMT",
+        "--result",
+        "PASS"
+      ],
+      "exit": 0,
+      "status": "STORED",
+      "result": "PASS",
+      "exhausted": [],
+      "expected_exit": 0,
+      "expected_status": "STORED",
+      "agrees": true,
+      "simulated": true,
+      "note": "a complete identity and an in-bounds observation are stored"
+    },
+    {
+      "control": "reuse-on-identical-identity",
+      "command": [
+        "cache-get",
+        "--check",
+        "FAST_FMT"
+      ],
+      "exit": 0,
+      "status": "HIT",
+      "result": "PASS",
+      "exhausted": [],
+      "expected_exit": 0,
+      "expected_status": "HIT",
+      "agrees": true,
+      "simulated": true,
+      "note": "the same five identity fields reuse the stored PASS"
+    },
+    {
+      "control": "refuse-on-changed-tool-changed",
+      "command": [
+        "cache-get",
+        "--check",
+        "FAST_FMT",
+        "--identity",
+        "court/tmp/etp11/tool-changed.json"
+      ],
+      "exit": 3,
+      "status": "MISS",
+      "result": null,
+      "exhausted": [],
+      "expected_exit": 3,
+      "expected_status": "MISS",
+      "agrees": true,
+      "simulated": true,
+      "note": "a changed tool is a different subject; the result is recomputed, not reused"
+    },
+    {
+      "control": "refuse-on-changed-population-changed",
+      "command": [
+        "cache-get",
+        "--check",
+        "FAST_FMT",
+        "--identity",
+        "court/tmp/etp11/population-changed.json"
+      ],
+      "exit": 3,
+      "status": "MISS",
+      "result": null,
+      "exhausted": [],
+      "expected_exit": 3,
+      "expected_status": "MISS",
+      "agrees": true,
+      "simulated": true,
+      "note": "a changed population is a different subject; the result is recomputed, not reused"
+    },
+    {
+      "control": "refuse-on-changed-profile-changed",
+      "command": [
+        "cache-get",
+        "--check",
+        "FAST_FMT",
+        "--identity",
+        "court/tmp/etp11/profile-changed.json"
+      ],
+      "exit": 3,
+      "status": "MISS",
+      "result": null,
+      "exhausted": [],
+      "expected_exit": 3,
+      "expected_status": "MISS",
+      "agrees": true,
+      "simulated": true,
+      "note": "a changed profile is a different subject; the result is recomputed, not reused"
+    },
+    {
+      "control": "refuse-on-changed-instrument-changed",
+      "command": [
+        "cache-get",
+        "--check",
+        "FAST_FMT",
+        "--identity",
+        "court/tmp/etp11/instrument-changed.json"
+      ],
+      "exit": 3,
+      "status": "MISS",
+      "result": null,
+      "exhausted": [],
+      "expected_exit": 3,
+      "expected_status": "MISS",
+      "agrees": true,
+      "simulated": true,
+      "note": "a changed instrument configuration is a different subject; the result is recomputed, not reused"
+    },
+    {
+      "control": "refuse-on-changed-source-changed",
+      "command": [
+        "cache-get",
+        "--check",
+        "FAST_FMT",
+        "--identity",
+        "court/tmp/etp11/source-changed.json"
+      ],
+      "exit": 3,
+      "status": "MISS",
+      "result": null,
+      "exhausted": [],
+      "expected_exit": 3,
+      "expected_status": "MISS",
+      "agrees": true,
+      "simulated": true,
+      "note": "a changed source commit is a different subject; the result is recomputed, not reused"
+    },
+    {
+      "control": "refuse-on-incomplete-identity",
+      "command": [
+        "cache-get",
+        "--check",
+        "FAST_FMT",
+        "--identity",
+        "incomplete.json"
+      ],
+      "exit": 2,
+      "status": "REFUSED",
+      "result": null,
+      "exhausted": [],
+      "expected_exit": 2,
+      "expected_status": "REFUSED",
+      "agrees": true,
+      "simulated": true,
+      "note": "an identity missing a field is refused outright, not looked up"
+    },
+    {
+      "control": "store-simulated-exhaustion",
+      "command": [
+        "cache-put",
+        "--check",
+        "BATCH_SUITE_PARALLEL",
+        "--result",
+        "BLOCKED"
+      ],
+      "exit": 0,
+      "status": "STORED",
+      "result": "BLOCKED",
+      "exhausted": [],
+      "expected_exit": 0,
+      "expected_status": "STORED",
+      "agrees": true,
+      "simulated": true,
+      "note": "an exhaustion with a bound and an observed value is recorded as BLOCKED"
+    },
+    {
+      "control": "exhaustion-is-blocked-not-pass",
+      "command": [
+        "cache-get",
+        "--check",
+        "BATCH_SUITE_PARALLEL"
+      ],
+      "exit": 4,
+      "status": "HIT",
+      "result": "BLOCKED",
+      "exhausted": [
+        "memory_mib"
+      ],
+      "expected_exit": 4,
+      "expected_status": "HIT",
+      "agrees": true,
+      "simulated": true,
+      "note": "the cached result is BLOCKED and the exit code is 4; it is never a pass"
+    },
+    {
+      "control": "refuse-pass-after-bound",
+      "command": [
+        "cache-put",
+        "--check",
+        "BATCH_SUITE_SERIAL",
+        "--result",
+        "PASS"
+      ],
+      "exit": 2,
+      "status": "REFUSED",
+      "result": null,
+      "exhausted": [],
+      "expected_exit": 2,
+      "expected_status": "REFUSED",
+      "agrees": true,
+      "simulated": true,
+      "note": "a run that exceeded its bound cannot be recorded as PASS"
+    }
+  ]
+}

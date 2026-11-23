@@ -1,0 +1,43 @@
+{
+  "schema": "openssl-rs/etp/scheduling-change-sets/1",
+  "item": "ETP-T11",
+  "purpose": "real change sets from this repository, each frozen as a base/head pair; the report derives the required tier from the change and compares it with the recorded evidence",
+  "change_sets": [
+    {
+      "id": "cs-docs-performance",
+      "purpose": "c9a0fdd58: three documents added, no build input, no source, no tool",
+      "base": "cbff7159c",
+      "head": "c9a0fdd58"
+    },
+    {
+      "id": "cs-tool-freshness",
+      "purpose": "87d0868ef: the freshness tool, its controls, a receipt and a document",
+      "base": "26c127262",
+      "head": "87d0868ef"
+    },
+    {
+      "id": "cs-etp-t10",
+      "purpose": "6ab177626: closure-discipline and claim-algebra tools, their controls, evidence and documents",
+      "base": "7e70b667f",
+      "head": "6ab177626"
+    },
+    {
+      "id": "cs-source-callback",
+      "purpose": "0eddfe839: RSA and stack source, including the shared OPENSSL_sk_* stack",
+      "base": "618f5e6ec",
+      "head": "0eddfe839"
+    },
+    {
+      "id": "cs-source-ffi-atomicity",
+      "purpose": "5750ac150: BN blinding and stack source, with FFI failure atomicity evidence",
+      "base": "5d38094cc",
+      "head": "5750ac150"
+    },
+    {
+      "id": "cs-abi-shell",
+      "purpose": "5cf48dd4c: the Phase-2 shell, including the exported-symbol version script",
+      "base": "0340b573d",
+      "head": "5cf48dd4c"
+    }
+  ]
+}
