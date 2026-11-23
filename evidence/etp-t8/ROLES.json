@@ -1,0 +1,300 @@
+{
+  "schema": "openssl-rs/etp-t8/roles/1",
+  "kind": "independence-role-definitions",
+  "generated_utc": "2026-11-23T00:00:00Z",
+  "source_identity": {
+    "commit": "bf8c6437128b2d3ab0bf76d76aa5b529532de84f",
+    "branch": "staging",
+    "worktree_clean_tracked_files": true
+  },
+  "external_independence_present": false,
+  "statement": "No role in this record is filled by a party outside the project. The production party declares no identity, account, organisation, infrastructure or signing key. Every assertion of independence in the existing evidence is therefore refused, and no existing claim is upgraded by this record.",
+  "sameness_levels": [
+    {
+      "id": "same_agent",
+      "description": "The two roles are performed by one agent: the same declared identity, the same account, or the same undeclared producing party.",
+      "independence_consequence": "Fails every independence requirement. A different role label is not a different agent.",
+      "satisfied_today": true
+    },
+    {
+      "id": "same_organisation",
+      "description": "The two roles belong to one organisation, or neither declares an organisation so that distinct organisations are not established.",
+      "independence_consequence": "Fails a trust-domain requirement; absence of a declaration is never read as difference.",
+      "satisfied_today": true
+    },
+    {
+      "id": "same_infrastructure",
+      "description": "The two roles run on one infrastructure operator: the same working environment, the same court image, or two URLs under one operator.",
+      "independence_consequence": "Fails a trust-domain requirement even when the identity strings differ.",
+      "satisfied_today": true
+    },
+    {
+      "id": "same_key",
+      "description": "The two roles sign with one key, or neither declares a key so that key distinctness is not established.",
+      "independence_consequence": "Fails a trust-domain requirement; an undeclared key is not a distinct key.",
+      "satisfied_today": null
+    }
+  ],
+  "roles": [
+    {
+      "id": "author",
+      "name": "Author",
+      "may_assert": [
+        "the claim proposition, its interpretation, quantification, scope and threat model",
+        "the assumptions the claim depends on",
+        "an exclusion argument and its claimed procedure"
+      ],
+      "may_sign": [
+        "the claim document",
+        "the assumption register",
+        "the exclusion argument"
+      ],
+      "must_be_distinct_from": {
+        "SAFETY_DISCHARGED": ["adjudicator"],
+        "SAFE_COMPATIBLE_RELEASE": ["adjudicator", "independent_reproducer", "release_authority"],
+        "INDEPENDENT_ADJUDICATION": ["adjudicator", "independent_reproducer"]
+      },
+      "note": "The author may also be the proof producer or evidence producer; those overlaps are recorded but do not by themselves refuse the claim."
+    },
+    {
+      "id": "proof_producer",
+      "name": "Proof producer",
+      "may_assert": [
+        "that a proof object establishes a stated property under stated axioms",
+        "the proof checker, axioms and admitted results"
+      ],
+      "may_sign": [
+        "the proof artefact",
+        "the axiom and admitted-result register"
+      ],
+      "must_be_distinct_from": {
+        "SAFETY_DISCHARGED": ["adjudicator"],
+        "SAFE_COMPATIBLE_RELEASE": ["adjudicator"]
+      },
+      "note": "A proof is evidence about a model, not a verdict about the candidate. The adjudicator may not be the proof producer for a discharge."
+    },
+    {
+      "id": "instrument_author",
+      "name": "Instrument author",
+      "may_assert": [
+        "what the instrument measures and does not measure",
+        "the instrument's qualification record and known limits"
+      ],
+      "may_sign": [
+        "the instrument source",
+        "the instrument qualification record"
+      ],
+      "must_be_distinct_from": {
+        "SAFETY_DISCHARGED": ["adjudicator"],
+        "SAFE_COMPATIBLE_RELEASE": ["adjudicator"]
+      },
+      "note": "The instrument author may be the evidence producer. The adjudicator may not adjudicate an instrument the adjudicator wrote."
+    },
+    {
+      "id": "evidence_producer",
+      "name": "Evidence producer",
+      "may_assert": [
+        "the measured result, its artefact identity and its digest binding",
+        "the environment and invocation in which the result was produced"
+      ],
+      "may_sign": [
+        "the evidence artefact",
+        "the run log",
+        "the environment record"
+      ],
+      "must_be_distinct_from": {
+        "SAFETY_DISCHARGED": ["adjudicator"],
+        "SAFE_COMPATIBLE_RELEASE": ["adjudicator", "independent_reproducer"],
+        "INDEPENDENT_ADJUDICATION": ["adjudicator", "independent_reproducer"]
+      },
+      "note": "An evidence producer who also adjudicates is the same agent accepting its own run."
+    },
+    {
+      "id": "adjudicator",
+      "name": "Adjudicator",
+      "may_assert": [
+        "the verdict for a named claim at a named candidate identity",
+        "which obligations are discharged, retained or newly introduced"
+      ],
+      "may_sign": [
+        "the adjudication record",
+        "the verdict row"
+      ],
+      "must_be_distinct_from": {
+        "SAFETY_DISCHARGED": ["author", "proof_producer", "instrument_author", "evidence_producer"],
+        "SAFE_COMPATIBLE_RELEASE": ["author", "evidence_producer", "release_authority"],
+        "INDEPENDENT_ADJUDICATION": ["author", "evidence_producer"]
+      },
+      "note": "Distinctness is required at same_agent for the high claim classes. For an independent adjudication the adjudicator must be a different agent, not a different role label."
+    },
+    {
+      "id": "reviewer",
+      "name": "Reviewer",
+      "may_assert": [
+        "that a stated procedure was applied to a stated obligation and result",
+        "the reviewer's identity, role and the review artefact"
+      ],
+      "may_sign": [
+        "the review record",
+        "the exclusion witness"
+      ],
+      "must_be_distinct_from": {
+        "SAFETY_DISCHARGED": ["author", "evidence_producer"],
+        "SAFE_COMPATIBLE_RELEASE": ["author", "evidence_producer"],
+        "INDEPENDENT_ADJUDICATION": ["author", "evidence_producer"]
+      },
+      "note": "This is the ETP-1 exclusion-witness reviewer. The witness checker already refuses a reviewer whose declared role or identity equals the claim author's."
+    },
+    {
+      "id": "independent_reproducer",
+      "name": "Independent reproducer",
+      "may_assert": [
+        "that a rebuild from the frozen package in the reproducer's own trust domain reproduced the stated observables",
+        "the reproducer's environment, inputs and result digests"
+      ],
+      "may_sign": [
+        "the reproduction record",
+        "the environment and input manifest"
+      ],
+      "must_be_distinct_from": {
+        "SAFE_COMPATIBLE_RELEASE": ["author", "evidence_producer"],
+        "INDEPENDENT_ADJUDICATION": ["author", "evidence_producer"]
+      },
+      "note": "Requires difference at all four sameness levels. A second account, a second URL under one operator, a second directory in this repository, or a rebuild that consumes a project-produced artefact is not a different trust domain."
+    },
+    {
+      "id": "release_authority",
+      "name": "Release authority",
+      "may_assert": [
+        "the release or graduation decision and the risks it accepts",
+        "the scope and the named residuals of the decision"
+      ],
+      "may_sign": [
+        "the release record",
+        "the graduation record"
+      ],
+      "must_be_distinct_from": {
+        "SAFE_COMPATIBLE_RELEASE": ["author", "evidence_producer", "adjudicator"],
+        "RELEASE_DECISION": ["author", "evidence_producer"]
+      },
+      "note": "A release decision may accept risk, but it may not present that acceptance as an independent assurance verdict."
+    },
+    {
+      "id": "revocation_authority",
+      "name": "Revocation authority",
+      "may_assert": [
+        "that a claim is withdrawn, superseded or revoked, and the reason",
+        "the effective time and the replacement claim"
+      ],
+      "may_sign": [
+        "the revocation record"
+      ],
+      "must_be_distinct_from": {
+        "SAFE_COMPATIBLE_RELEASE": ["author"],
+        "RELEASE_DECISION": ["author"]
+      },
+      "note": "A party may not revoke its own claim in a way that erases the record; revocation preserves the revoked claim and its dissent."
+    }
+  ],
+  "claim_classes": [
+    {
+      "id": "ORDINARY_CLAIM",
+      "description": "A documentary or measured claim that does not assert independence.",
+      "required_distinct": []
+    },
+    {
+      "id": "SAFETY_DISCHARGED",
+      "description": "A reusable unsafe boundary whose obligations are declared discharged.",
+      "required_distinct": [
+        {"roles": ["adjudicator", "author"], "must_differ_at": ["same_agent"]},
+        {"roles": ["adjudicator", "evidence_producer"], "must_differ_at": ["same_agent"]},
+        {"roles": ["adjudicator", "instrument_author"], "must_differ_at": ["same_agent"]}
+      ]
+    },
+    {
+      "id": "SAFE_COMPATIBLE_RELEASE",
+      "description": "A consumer-family graduation or release decision.",
+      "required_distinct": [
+        {"roles": ["adjudicator", "author"], "must_differ_at": ["same_agent"]},
+        {"roles": ["adjudicator", "evidence_producer"], "must_differ_at": ["same_agent"]},
+        {"roles": ["independent_reproducer", "author"], "must_differ_at": ["same_agent", "same_organisation", "same_infrastructure", "same_key"]},
+        {"roles": ["independent_reproducer", "evidence_producer"], "must_differ_at": ["same_agent", "same_organisation", "same_infrastructure", "same_key"]},
+        {"roles": ["release_authority", "author"], "must_differ_at": ["same_agent"]},
+        {"roles": ["release_authority", "adjudicator"], "must_differ_at": ["same_agent"]}
+      ]
+    },
+    {
+      "id": "INDEPENDENT_ADJUDICATION",
+      "description": "An adjudication that asserts independence from the claim it judges.",
+      "required_distinct": [
+        {"roles": ["adjudicator", "author"], "must_differ_at": ["same_agent"]},
+        {"roles": ["adjudicator", "evidence_producer"], "must_differ_at": ["same_agent"]},
+        {"roles": ["independent_reproducer", "author"], "must_differ_at": ["same_agent", "same_organisation", "same_infrastructure", "same_key"]}
+      ]
+    },
+    {
+      "id": "RELEASE_DECISION",
+      "description": "A release-gate decision that is not a SAFE_COMPATIBLE graduation.",
+      "required_distinct": [
+        {"roles": ["release_authority", "author"], "must_differ_at": ["same_agent"]}
+      ]
+    }
+  ],
+  "rules": [
+    {
+      "id": "IND_REVIEW_UNSUPPORTED",
+      "refuses": "a claim that asserts independent review with no reviewer identity, role or artefact",
+      "fields": ["claimed_independence", "reviewers[*].identity", "reviewers[*].role", "reviewers[*].artefact"]
+    },
+    {
+      "id": "IND_ADJUDICATOR_IS_AUTHOR",
+      "refuses": "an adjudicator not distinct from the author where the claim class requires independence",
+      "fields": ["filled.adjudicator.party", "filled.author.party"]
+    },
+    {
+      "id": "IND_REVIEWERS_ALIASED",
+      "refuses": "two reviewers with the same identity, account or signing key",
+      "fields": ["reviewers[*].identity", "reviewers[*].account", "reviewers[*].signing_key"]
+    },
+    {
+      "id": "IND_THRESHOLD_ALIASED",
+      "refuses": "a distinct-party threshold met only by aliases of one party, including one account under two names and one infrastructure operator under two URLs",
+      "fields": ["threshold.required_distinct_parties", "threshold.satisfied_by"]
+    },
+    {
+      "id": "IND_REPRODUCER_CONTAMINATED",
+      "refuses": "an independent-reproduction claim whose reproducer used this repository's working environment or a project-produced artefact instead of a rebuild from the frozen package",
+      "fields": ["reproduction.used_project_working_environment", "reproduction.used_project_produced_artefact", "reproduction.rebuilt_from_frozen_package"]
+    },
+    {
+      "id": "IND_DISSENT_DROPPED",
+      "refuses": "a retained dissent that is absent from the aggregate, or an aggregate better than a retained dissent",
+      "fields": ["dissents[*].retained", "aggregate.included_dissents", "aggregate.per_assignment"]
+    }
+  ],
+  "distinctness_requirements": {
+    "adjudicator_versus_author": {
+      "claim_classes": ["SAFETY_DISCHARGED", "SAFE_COMPATIBLE_RELEASE", "INDEPENDENT_ADJUDICATION"],
+      "must_differ_at": ["same_agent"],
+      "statement": "For a SAFE_COMPATIBLE graduation, a SAFETY_DISCHARGED verdict, or an independent adjudication, the adjudicator must not be the author."
+    },
+    "reproducer_versus_project": {
+      "claim_classes": ["SAFE_COMPATIBLE_RELEASE", "INDEPENDENT_ADJUDICATION"],
+      "must_differ_at": ["same_agent", "same_organisation", "same_infrastructure", "same_key"],
+      "statement": "The reproducer must be a different trust domain, not merely a different name. All four sameness levels must be established as different."
+    },
+    "release_authority_versus_adjudicator": {
+      "claim_classes": ["SAFE_COMPATIBLE_RELEASE"],
+      "must_differ_at": ["same_agent"],
+      "statement": "The release decision may accept risk, but the party deciding the release is not the party that adjudicated the claim."
+    }
+  },
+  "non_claims": [
+    "A distinct role label is not a distinct party.",
+    "A distinct identity string is not a distinct organisation, infrastructure or key.",
+    "Two builds in one environment are two executions, not two trust domains.",
+    "An independent reference implementation written by the author is model diversity, not reviewer independence.",
+    "A clean-room replay in this repository is self-reproduction, not external reproduction.",
+    "This record does not create, and must not be read as creating, any external reviewer, organisation or key."
+  ]
+}
