@@ -1,0 +1,794 @@
+{
+ "baseCommit": "5015b6239",
+ "components": [
+  {
+   "adopted": true,
+   "artefact": {
+    "digest": "sha256:3af252cd59adea029eea7ff325dee8adb65074e45d0c03aaa6c083eb2461e8a6",
+    "digestNullReason": null,
+    "kind": "release-asset",
+    "name": "rekor-server-aws (linux/amd64)"
+   },
+   "id": "rekor-tiles-v2.4.2",
+   "kind": "release",
+   "name": "sigstore/rekor-tiles",
+   "notes": "this is the tag whose linux/amd64 rekor-server-aws asset digest §B.3.2 records; the digest is for the AWS build, not for the POSIX-backend server B1 intends to run, so B1 must record a fresh digest at admission",
+   "presence": {
+    "binary": "rekor-server",
+    "checkedBy": "command-v-rekor-server",
+    "executable": false,
+    "installed": false,
+    "pinned": true
+   },
+   "releaseDate": "2026-11-10",
+   "role": [
+    "log"
+   ],
+   "serviceClaim": false,
+   "source": {
+    "clause": "B.3.2",
+    "line": 113,
+    "path": "docs/ETP-ADDENDUM-B.md"
+   },
+   "supportedFeatures": [
+    {
+     "clause": "B.3.2",
+     "feature": "latest; reverts identity-log `extraData` to `string:string` and a hex context digest — a **breaking** change confined to identity-serve mode"
+    }
+   ],
+   "unsupportedFeatures": [
+    {
+     "clause": "B.26",
+     "feature": "identity-serve mode and the identity-based transparency API",
+     "reason": "the implementation labels the identity-transparency mode experimental and subject to breaking change; §B.26 keeps it off the production track"
+    }
+   ],
+   "upstreamCommit": "a30bd31",
+   "version": "v2.4.2"
+  },
+  {
+   "adopted": false,
+   "artefact": {
+    "digest": null,
+    "digestNullReason": "§B.3.2 records no release-asset digest for this tag; no tracked record in this tree carries one",
+    "kind": "release-tag",
+    "name": "sigstore/rekor-tiles v2.4.1"
+   },
+   "id": "rekor-tiles-v2.4.1",
+   "kind": "release",
+   "name": "sigstore/rekor-tiles",
+   "presence": {
+    "binary": "rekor-server",
+    "checkedBy": "command-v-rekor-server",
+    "executable": false,
+    "installed": false,
+    "pinned": true
+   },
+   "releaseDate": "2026-10-30",
+   "role": [
+    "log"
+   ],
+   "serviceClaim": false,
+   "source": {
+    "clause": "B.3.2",
+    "line": 114,
+    "path": "docs/ETP-ADDENDUM-B.md"
+   },
+   "supportedFeatures": [],
+   "unsupportedFeatures": [
+    {
+     "clause": "B.26",
+     "feature": "ML-DSA Tink keyset support in the upstream Sigstore library",
+     "reason": "upstream-library support is not an admitted checkpoint mechanism here; §B.26 keeps ML-DSA on the research track"
+    },
+    {
+     "clause": "B.5",
+     "feature": "ML-DSA Tink keyset support in the upstream Sigstore library",
+     "reason": "this tag is recorded as baseline history; §B.5 admits a specific reviewed client and server profile"
+    }
+   ],
+   "upstreamCommit": "14044fd",
+   "version": "v2.4.1"
+  },
+  {
+   "adopted": false,
+   "artefact": {
+    "digest": null,
+    "digestNullReason": "§B.3.2 records no release-asset digest for this tag; no tracked record in this tree carries one",
+    "kind": "release-tag",
+    "name": "sigstore/rekor-tiles v2.4.0"
+   },
+   "id": "rekor-tiles-v2.4.0",
+   "kind": "release",
+   "name": "sigstore/rekor-tiles",
+   "presence": {
+    "binary": "rekor-server",
+    "checkedBy": "command-v-rekor-server",
+    "executable": false,
+    "installed": false,
+    "pinned": true
+   },
+   "releaseDate": "2026-10-26",
+   "role": [
+    "log"
+   ],
+   "serviceClaim": false,
+   "source": {
+    "clause": "B.3.2",
+    "line": 115,
+    "path": "docs/ETP-ADDENDUM-B.md"
+   },
+   "supportedFeatures": [],
+   "unsupportedFeatures": [
+    {
+     "clause": "B.5",
+     "feature": "the new leaf type",
+     "reason": "§B.5 admits a specific reviewed profile; the v2.4.0 leaf type is not that profile"
+    },
+    {
+     "clause": "B.26",
+     "feature": "ML-DSA signatures and the identity-based transparency API",
+     "reason": "the clause records ML-DSA as explicitly experimental and the identity mode as subject to breaking change"
+    },
+    {
+     "clause": "B.5",
+     "feature": "pure Ed25519 in hashedrekord",
+     "reason": "§B.5 excludes pure Ed25519 in hashedrekord for the admitted v2.4.x profile"
+    },
+    {
+     "clause": "B.5",
+     "feature": "new leaf type and ML-DSA signatures, explicitly **experimental**; identity-based transparency API and `serve-identity`; pure Ed25519 rejected in `hashedrekord`; signature algorithms restricted",
+     "reason": "this tag is recorded as baseline history; §B.5 admits a specific reviewed client and server profile"
+    }
+   ],
+   "upstreamCommit": "16bc64c",
+   "version": "v2.4.0"
+  },
+  {
+   "adopted": true,
+   "artefact": {
+    "digest": null,
+    "digestNullReason": "§B.3.2 records no release-asset digest for this tag; no tracked record in this tree carries one",
+    "kind": "release-tag",
+    "name": "sigstore/rekor-tiles v2.3.0"
+   },
+   "id": "rekor-tiles-v2.3.0",
+   "kind": "release",
+   "name": "sigstore/rekor-tiles",
+   "presence": {
+    "binary": "rekor-server",
+    "checkedBy": "command-v-rekor-server",
+    "executable": false,
+    "installed": false,
+    "pinned": true
+   },
+   "releaseDate": "2026-06-10",
+   "role": [
+    "log"
+   ],
+   "serviceClaim": false,
+   "source": {
+    "clause": "B.3.2",
+    "line": 116,
+    "path": "docs/ETP-ADDENDUM-B.md"
+   },
+   "supportedFeatures": [
+    {
+     "clause": "B.3.2",
+     "feature": "**DSSE entry type dropped**; all Sigstore SDKs upload DSSE as `hashedrekord`"
+    }
+   ],
+   "unsupportedFeatures": [
+    {
+     "clause": "B.5",
+     "feature": "a dedicated DSSE log entry type",
+     "reason": "§B.5 forbids implementation against examples that describe a dedicated DSSE log entry"
+    }
+   ],
+   "upstreamCommit": "fa390b1",
+   "version": "v2.3.0"
+  },
+  {
+   "adopted": false,
+   "artefact": {
+    "digest": null,
+    "digestNullReason": "§B.3.2 records no release-asset digest for this tag; no tracked record in this tree carries one",
+    "kind": "release-tag",
+    "name": "sigstore/rekor-tiles v2.2.1"
+   },
+   "id": "rekor-tiles-v2.2.1",
+   "kind": "release",
+   "name": "sigstore/rekor-tiles",
+   "presence": {
+    "binary": "rekor-server",
+    "checkedBy": "command-v-rekor-server",
+    "executable": false,
+    "installed": false,
+    "pinned": true
+   },
+   "releaseDate": "2026-02-19",
+   "role": [
+    "log"
+   ],
+   "serviceClaim": false,
+   "source": {
+    "clause": "B.3.2",
+    "line": 117,
+    "path": "docs/ETP-ADDENDUM-B.md"
+   },
+   "supportedFeatures": [],
+   "unsupportedFeatures": [
+    {
+     "clause": "B.5",
+     "feature": "the v2.2.1 tag as this project's admitted profile",
+     "reason": "§B.5 admits a specific reviewed profile; this tag is recorded as baseline history"
+    },
+    {
+     "clause": "B.5",
+     "feature": "large-leaf corruption fix; signature and verifier limits",
+     "reason": "this tag is recorded as baseline history; §B.5 admits a specific reviewed client and server profile"
+    }
+   ],
+   "upstreamCommit": "e028746",
+   "version": "v2.2.1"
+  },
+  {
+   "adopted": false,
+   "artefact": {
+    "digest": null,
+    "digestNullReason": "§B.3.2 records no release-asset digest for this tag; no tracked record in this tree carries one",
+    "kind": "release-tag",
+    "name": "sigstore/rekor-tiles v2.2.0"
+   },
+   "id": "rekor-tiles-v2.2.0",
+   "kind": "release",
+   "name": "sigstore/rekor-tiles",
+   "presence": {
+    "binary": "rekor-server",
+    "checkedBy": "command-v-rekor-server",
+    "executable": false,
+    "installed": false,
+    "pinned": true
+   },
+   "releaseDate": "2026-02-06",
+   "role": [
+    "log"
+   ],
+   "serviceClaim": false,
+   "source": {
+    "clause": "B.3.2",
+    "line": 118,
+    "path": "docs/ETP-ADDENDUM-B.md"
+   },
+   "supportedFeatures": [],
+   "unsupportedFeatures": [
+    {
+     "clause": "B.3.2",
+     "feature": "the AWS backend and the GCP CloudSQL + GCS backend",
+     "reason": "§B.3.2 records the POSIX backend at v2.1.0 as the backend this project uses; the cloud backends are not admitted"
+    },
+    {
+     "clause": "B.5",
+     "feature": "AWS backend; GCP CloudSQL + GCS backend",
+     "reason": "this tag is recorded as baseline history; §B.5 admits a specific reviewed client and server profile"
+    }
+   ],
+   "upstreamCommit": "d76764d",
+   "version": "v2.2.0"
+  },
+  {
+   "adopted": true,
+   "artefact": {
+    "digest": null,
+    "digestNullReason": "§B.3.2 records no release-asset digest for this tag; no tracked record in this tree carries one",
+    "kind": "release-tag",
+    "name": "sigstore/rekor-tiles v2.1.0"
+   },
+   "id": "rekor-tiles-v2.1.0",
+   "kind": "release",
+   "name": "sigstore/rekor-tiles",
+   "notes": "the POSIX storage backend is the one §B.3.2 records for local and CI instances",
+   "presence": {
+    "binary": "rekor-server",
+    "checkedBy": "command-v-rekor-server",
+    "executable": false,
+    "installed": false,
+    "pinned": true
+   },
+   "releaseDate": "2026-01-16",
+   "role": [
+    "log"
+   ],
+   "serviceClaim": false,
+   "source": {
+    "clause": "B.3.2",
+    "line": 119,
+    "path": "docs/ETP-ADDENDUM-B.md"
+   },
+   "supportedFeatures": [
+    {
+     "clause": "B.3.2",
+     "feature": "**POSIX storage backend** — the backend this project uses for local and CI instances"
+    }
+   ],
+   "unsupportedFeatures": [
+    {
+     "clause": "B.3.2",
+     "feature": "the cloud storage backends recorded at v2.2.0",
+     "reason": "§B.3.2 records POSIX as the backend this project uses for local and CI instances"
+    }
+   ],
+   "upstreamCommit": "69bc24a",
+   "version": "v2.1.0"
+  },
+  {
+   "adopted": false,
+   "artefact": {
+    "digest": null,
+    "digestNullReason": "§B.3.2 records no release-asset digest for this tag; no tracked record in this tree carries one",
+    "kind": "release-tag",
+    "name": "sigstore/rekor-tiles v2.0.1"
+   },
+   "id": "rekor-tiles-v2.0.1",
+   "kind": "release",
+   "name": "sigstore/rekor-tiles",
+   "notes": "witnessing is enabled in the tag; no witness exists in this tree",
+   "presence": {
+    "binary": "rekor-server",
+    "checkedBy": "command-v-rekor-server",
+    "executable": false,
+    "installed": false,
+    "pinned": true
+   },
+   "releaseDate": "2025-11-10",
+   "role": [
+    "log"
+   ],
+   "serviceClaim": false,
+   "source": {
+    "clause": "B.3.2",
+    "line": 120,
+    "path": "docs/ETP-ADDENDUM-B.md"
+   },
+   "supportedFeatures": [],
+   "unsupportedFeatures": [
+    {
+     "clause": "B.11",
+     "feature": "log witnessing as a working capability",
+     "reason": "the tag enables witnessing; §B.11 records that no independent witness is available here, so the capability is pending"
+    },
+    {
+     "clause": "B.5",
+     "feature": "**log witnessing enabled**",
+     "reason": "this tag is recorded as baseline history; §B.5 admits a specific reviewed client and server profile"
+    }
+   ],
+   "upstreamCommit": "266d249",
+   "version": "v2.0.1"
+  },
+  {
+   "adopted": false,
+   "artefact": {
+    "digest": null,
+    "digestNullReason": "§B.3.2 records no release-asset digest for this tag; no tracked record in this tree carries one",
+    "kind": "release-tag",
+    "name": "sigstore/rekor-tiles v2.0.0"
+   },
+   "id": "rekor-tiles-v2.0.0",
+   "kind": "release",
+   "name": "sigstore/rekor-tiles",
+   "presence": {
+    "binary": "rekor-server",
+    "checkedBy": "command-v-rekor-server",
+    "executable": false,
+    "installed": false,
+    "pinned": true
+   },
+   "releaseDate": "2025-10-10",
+   "role": [
+    "log"
+   ],
+   "serviceClaim": false,
+   "source": {
+    "clause": "B.3.2",
+    "line": 121,
+    "path": "docs/ETP-ADDENDUM-B.md"
+   },
+   "supportedFeatures": [],
+   "unsupportedFeatures": [
+    {
+     "clause": "B.5",
+     "feature": "the v2.0.0 tag as this project's admitted profile",
+     "reason": "§B.5 admits a specific reviewed profile; this tag is recorded as baseline history"
+    },
+    {
+     "clause": "B.5",
+     "feature": "tile-backed redesigned log",
+     "reason": "this tag is recorded as baseline history; §B.5 admits a specific reviewed client and server profile"
+    }
+   ],
+   "upstreamCommit": "f231500",
+   "version": "v2.0.0"
+  },
+  {
+   "adopted": true,
+   "artefact": {
+    "digest": null,
+    "digestNullReason": "§B.3.2 records the specification version and version date, not a document digest; no tracked record in this tree carries a digest for this specification",
+    "kind": "specification",
+    "name": "c2sp.org/tlog-tiles"
+   },
+   "id": "c2sp-tlog-tiles-v1.0.0",
+   "kind": "specification",
+   "name": "c2sp.org/tlog-tiles",
+   "presence": {
+    "binary": "rekor-server",
+    "checkedBy": "command-v-rekor-server",
+    "executable": false,
+    "installed": false,
+    "pinned": true
+   },
+   "releaseDate": "2026-10-07",
+   "role": [
+    "log"
+   ],
+   "serviceClaim": false,
+   "source": {
+    "clause": "B.3.2",
+    "line": null,
+    "path": "docs/ETP-ADDENDUM-B.md"
+   },
+   "supportedFeatures": [
+    {
+     "clause": "B.3.2",
+     "feature": "static resource layout"
+    },
+    {
+     "clause": "B.3.2",
+     "feature": "tile geometry"
+    },
+    {
+     "clause": "B.3.2",
+     "feature": "entry bundles"
+    },
+    {
+     "clause": "B.3.2",
+     "feature": "pruning"
+    }
+   ],
+   "unsupportedFeatures": [
+    {
+     "clause": "B.3.2",
+     "feature": "serving checkpoint, tile or bundle resources through an HTTP redirect",
+     "reason": "the clause requires that resources must not serve redirects; a redirecting mirror is not an admitted log"
+    }
+   ],
+   "upstreamCommit": null,
+   "upstreamCommitNullReason": "§B.3.2 records a specification version and version date; a specification has no upstream commit and none is recorded",
+   "version": "v1.0.0"
+  },
+  {
+   "adopted": true,
+   "artefact": {
+    "digest": null,
+    "digestNullReason": "§B.3.2 records the specification version and version date, not a document digest; no tracked record in this tree carries a digest for this specification",
+    "kind": "specification",
+    "name": "c2sp.org/tlog-checkpoint"
+   },
+   "id": "c2sp-tlog-checkpoint-v1.1.0",
+   "kind": "specification",
+   "name": "c2sp.org/tlog-checkpoint",
+   "presence": {
+    "binary": "rekor-server",
+    "checkedBy": "command-v-rekor-server",
+    "executable": false,
+    "installed": false,
+    "pinned": true
+   },
+   "releaseDate": "2026-10-07",
+   "role": [
+    "checkpoint"
+   ],
+   "serviceClaim": false,
+   "source": {
+    "clause": "B.3.2",
+    "line": null,
+    "path": "docs/ETP-ADDENDUM-B.md"
+   },
+   "supportedFeatures": [
+    {
+     "clause": "B.3.2",
+     "feature": "the checkpoint body"
+    },
+    {
+     "clause": "B.3.2",
+     "feature": "note signature algorithms"
+    }
+   ],
+   "unsupportedFeatures": [
+    {
+     "clause": "B.26",
+     "feature": "ML-DSA-44 checkpoint cosignatures in production",
+     "reason": "C2SP recommends ML-DSA-44; the implementation labels the mode experimental and §B.26 records the deliberate divergence"
+    }
+   ],
+   "upstreamCommit": null,
+   "upstreamCommitNullReason": "§B.3.2 records a specification version and version date; a specification has no upstream commit and none is recorded",
+   "version": "v1.1.0"
+  },
+  {
+   "adopted": true,
+   "artefact": {
+    "digest": null,
+    "digestNullReason": "§B.3.2 records the specification version and version date, not a document digest; no tracked record in this tree carries a digest for this specification",
+    "kind": "specification",
+    "name": "c2sp.org/tlog-cosignature"
+   },
+   "id": "c2sp-tlog-cosignature-v1.1.0",
+   "kind": "specification",
+   "name": "c2sp.org/tlog-cosignature",
+   "presence": {
+    "binary": "rekor-server",
+    "checkedBy": "command-v-rekor-server",
+    "executable": false,
+    "installed": false,
+    "pinned": true
+   },
+   "releaseDate": "2026-10-07",
+   "role": [
+    "cosignature"
+   ],
+   "serviceClaim": false,
+   "source": {
+    "clause": "B.3.2",
+    "line": null,
+    "path": "docs/ETP-ADDENDUM-B.md"
+   },
+   "supportedFeatures": [
+    {
+     "clause": "B.3.2",
+     "feature": "checkpoint and subtree cosignature inputs"
+    },
+    {
+     "clause": "B.3.2",
+     "feature": "monotonicity of checkpoint cosignatures"
+    }
+   ],
+   "unsupportedFeatures": [
+    {
+     "clause": "B.11",
+     "feature": "interoperable witness cosignatures over checkpoints",
+     "reason": "no independent witness set or cosignature producer exists here; §B.11 requires the witness-dependent property to be marked pending"
+    }
+   ],
+   "upstreamCommit": null,
+   "upstreamCommitNullReason": "§B.3.2 records a specification version and version date; a specification has no upstream commit and none is recorded",
+   "version": "v1.1.0"
+  },
+  {
+   "adopted": true,
+   "artefact": {
+    "digest": null,
+    "digestNullReason": "the change is a protocol behaviour of the v2.3.0 tag; §B.3.2 records no release-asset digest for that tag",
+    "kind": "change",
+    "name": "entry representation at sigstore/rekor-tiles v2.3.0"
+   },
+   "id": "dsse-entry-type-change-v2.3.0",
+   "kind": "change",
+   "name": "DSSE entry type removed; DSSE published as hashedrekord",
+   "notes": "the protocol-required digest is the one the admitted client computes from the exact DSSE envelope, not the envelope JSON, the payload alone or an unrelated manifest hash (§B.3.3, §B.5)",
+   "presence": {
+    "binary": "rekor-server",
+    "checkedBy": "command-v-rekor-server",
+    "executable": false,
+    "installed": false,
+    "pinned": true
+   },
+   "releaseDate": "2026-06-10",
+   "role": [
+    "log"
+   ],
+   "serviceClaim": false,
+   "source": {
+    "clause": "B.3.2",
+    "line": 116,
+    "path": "docs/ETP-ADDENDUM-B.md"
+   },
+   "supportedFeatures": [
+    {
+     "clause": "B.3.3",
+     "feature": "DSSE statements are published as hashedrekord"
+    },
+    {
+     "clause": "B.3.3",
+     "feature": "one supported entry representation since v2.3.0"
+    }
+   ],
+   "unsupportedFeatures": [
+    {
+     "clause": "B.5",
+     "feature": "a dedicated DSSE log entry type",
+     "reason": "§B.5 forbids implementation against examples that describe a dedicated DSSE log entry"
+    }
+   ],
+   "upstreamCommit": "fa390b1",
+   "version": "v2.3.0"
+  },
+  {
+   "adopted": false,
+   "artefact": {
+    "digest": null,
+    "digestNullReason": "a signature algorithm is not a released artefact and §B.3.2 records no digest for it; no tracked record carries one",
+    "kind": "mechanism",
+    "name": "ML-DSA-44 checkpoint cosignature"
+   },
+   "id": "ml-dsa-44",
+   "kind": "mechanism",
+   "name": "ML-DSA-44 checkpoint cosignature",
+   "notes": "a C2SP recommendation, not an admitted production mechanism",
+   "presence": {
+    "binary": "rekor-server",
+    "checkedBy": "command-v-rekor-server",
+    "executable": false,
+    "installed": false,
+    "pinned": true
+   },
+   "releaseDate": null,
+   "releaseDateNullReason": "ML-DSA-44 is an algorithm the pinned checkpoint specification recommends and the implementation exposes experimentally; §B.3.2 records it under specification and release versions, not as an artefact with its own release date",
+   "role": [
+    "cosignature",
+    "checkpoint"
+   ],
+   "serviceClaim": false,
+   "source": {
+    "clause": "B.3.3",
+    "line": 168,
+    "path": "docs/ETP-ADDENDUM-B.md"
+   },
+   "supportedFeatures": [
+    {
+     "clause": "B.3.3",
+     "feature": "ML-DSA-44 checkpoint cosignatures are recommended by C2SP for new deployments"
+    }
+   ],
+   "unsupportedFeatures": [
+    {
+     "clause": "B.26",
+     "feature": "production admission of ML-DSA-44",
+     "reason": "the implementation labels the mechanism experimental; §B.26 admits it only on the research track"
+    }
+   ],
+   "upstreamCommit": null,
+   "upstreamCommitNullReason": "no implementation commit is recorded for the algorithm; §B.3.2 records the specification version and the experimental tag",
+   "version": "ML-DSA-44"
+  },
+  {
+   "adopted": false,
+   "artefact": {
+    "digest": null,
+    "digestNullReason": "the inspection recorded an advertised endpoint, not an artefact; no digest is recorded and none is invented",
+    "kind": "finding",
+    "name": "the Rekor endpoint advertised by the default signing configuration"
+   },
+   "id": "sigstore-signing-config-v1-endpoint",
+   "kind": "finding",
+   "name": "Sigstore signing_config (Rekor service metadata)",
+   "notes": "recorded from §B.3.3; this item has no network access and did not repeat the inspection",
+   "observedDate": "2026-10-22",
+   "presence": {
+    "binary": "cosign",
+    "checkedBy": "command-v-cosign",
+    "executable": false,
+    "installed": false,
+    "pinned": false
+   },
+   "releaseDate": null,
+   "releaseDateNullReason": "the signing_config is service metadata, not a release",
+   "role": [
+    "client"
+   ],
+   "serviceClaim": false,
+   "source": {
+    "clause": "B.3.3",
+    "line": 176,
+    "path": "docs/ETP-ADDENDUM-B.md"
+   },
+   "supportedFeatures": [
+    {
+     "clause": "B.3.3",
+     "feature": "a Rekor v1 endpoint"
+    }
+   ],
+   "unsupportedFeatures": [
+    {
+     "clause": "B.3.3",
+     "feature": "a Rekor v2 endpoint through the default signing configuration",
+     "reason": "the inspected signing_config advertised a v1 endpoint; installing a recent client does not activate a v2 log"
+    }
+   ],
+   "upstreamCommit": null,
+   "upstreamCommitNullReason": "no upstream commit is recorded for the inspection",
+   "version": null,
+   "versionNullReason": "§B.3.3 records the inspection date (2026-10-22) but not the client build that produced the signing_config; no client version is recorded and none is inferred"
+  }
+ ],
+ "item": "B0",
+ "model": "b0/v1",
+ "presenceCheck": {
+  "checks": [
+   {
+    "command": "command -v rekor-server",
+    "date": "2026-11-24",
+    "id": "command-v-rekor-server",
+    "note": "the server binary is not on the PATH of the host or of the court container",
+    "result": "absent"
+   },
+   {
+    "command": "command -v rekor-cli",
+    "date": "2026-11-24",
+    "id": "command-v-rekor-cli",
+    "note": "no Rekor client is installed",
+    "result": "absent"
+   },
+   {
+    "command": "command -v rekor-tiles",
+    "date": "2026-11-24",
+    "id": "command-v-rekor-tiles",
+    "note": "the reference implementation is not installed",
+    "result": "absent"
+   },
+   {
+    "command": "command -v cosign",
+    "date": "2026-11-24",
+    "id": "command-v-cosign",
+    "note": "no Sigstore client is installed",
+    "result": "absent"
+   },
+   {
+    "command": "command -v sigstore",
+    "date": "2026-11-24",
+    "id": "command-v-sigstore",
+    "note": "no Sigstore CLI is installed",
+    "result": "absent"
+   },
+   {
+    "command": "command -v tsget",
+    "date": "2026-11-24",
+    "id": "command-v-tsget",
+    "note": "no RFC 3161 client helper is installed; the openssl CLI is present but no TSA endpoint or root is configured",
+    "result": "absent"
+   },
+   {
+    "command": "command -v openssl",
+    "date": "2026-11-24",
+    "id": "command-v-openssl",
+    "note": "the openssl CLI is present; it is not a transparency service and no TSA is configured",
+    "result": "/usr/bin/openssl"
+   },
+   {
+    "command": "git grep -Iln rekor -- . ':!docs' ':!court'",
+    "date": "2026-11-24",
+    "id": "tracked-path-search",
+    "note": "the only mentions of the transparency stack are the addendum, the queue and the Sigstore profile",
+    "result": "record:no tracked path outside docs/ registers a Rekor endpoint, log key or witness"
+   }
+  ],
+  "date": "2026-11-24",
+  "method": "command -v on the host and in the court container, plus a tracked-path search; no component is installed or started"
+ },
+ "recordedAt": "2026-11-24",
+ "schema": "openssl-rs/b0/registry/1",
+ "serviceReachable": false,
+ "source": {
+  "addendum": "docs/ETP-ADDENDUM-B.md",
+  "freeze": "evidence/a17/FREEZE-forward.json",
+  "note": "every version, date, commit and digest below is read from the cited addendum clause; nothing is fetched"
+ },
+ "summary": {
+  "components": 15,
+  "executable": 0,
+  "installed": 0,
+  "pinned": 14,
+  "servicesReachable": 0
+ }
+}

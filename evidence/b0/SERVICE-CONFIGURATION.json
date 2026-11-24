@@ -1,0 +1,577 @@
+{
+ "baseCommit": "5015b6239",
+ "claimsMade": [
+  {
+   "claim": "a Rekor v2 transparency service is reachable from this tree",
+   "established": false,
+   "evidence": null,
+   "id": "CLM-01",
+   "kind": "service",
+   "reason": "no endpoint, log key or server binary exists; §B.3.3 records that the inspected signing_config advertised a v1 endpoint"
+  },
+  {
+   "claim": "a pinned rekor-tiles version is installed here",
+   "established": false,
+   "evidence": null,
+   "id": "CLM-02",
+   "kind": "service",
+   "reason": "command -v finds rekor-server, rekor-cli and rekor-tiles absent; no tracked binary exists"
+  },
+  {
+   "claim": "an admitted log key exists here",
+   "established": false,
+   "evidence": null,
+   "id": "CLM-03",
+   "kind": "service",
+   "reason": "evidence/a16/INVENTORY.json records 0 transparency logs and 0 log keys"
+  },
+  {
+   "claim": "a checkpoint cosignature can be produced or verified here",
+   "established": false,
+   "evidence": null,
+   "id": "CLM-04",
+   "kind": "service",
+   "reason": "no checkpoint resource, log key or cosignature implementation exists; the offline validator records SB_REFUSED_LOG_KEY_ABSENT"
+  },
+  {
+   "claim": "an independent witness set exists",
+   "established": false,
+   "evidence": null,
+   "id": "CLM-05",
+   "kind": "service",
+   "reason": "evidence/a12/TRUST-ROOTS.json records 0 external roots; witnessSet has 0 operators and 0 keys"
+  },
+  {
+   "claim": "an RFC 3161 timestamp authority is admitted",
+   "established": false,
+   "evidence": null,
+   "id": "CLM-06",
+   "kind": "service",
+   "reason": "evidence/a16/INVENTORY.json records 0 timestamp roots and no TSA is configured"
+  },
+  {
+   "claim": "a public Rekor endpoint is configured",
+   "established": false,
+   "evidence": null,
+   "id": "CLM-07",
+   "kind": "service",
+   "reason": "no tracked record names an endpoint; this item has no network access"
+  },
+  {
+   "claim": "an envelope in this tree is independently verified",
+   "established": false,
+   "evidence": "evidence/a12/VERIFICATION.json",
+   "id": "CLM-08",
+   "kind": "implementation",
+   "reason": "0 of 4 envelopes are independently verified; 4 are self-issued under the A10 test-only HMAC key"
+  },
+  {
+   "claim": "the DSSE/PAE module exists and refuses 13 named wrong conclusions",
+   "established": true,
+   "evidence": "docs/DSSE-PAE.md",
+   "id": "CLM-09",
+   "kind": "implementation",
+   "reason": "forensics/tools/dsse.py and its 13 controls; 4 envelopes"
+  },
+  {
+   "claim": "the in-toto statement module exists and refuses 12 named wrong conclusions",
+   "established": true,
+   "evidence": "docs/INTOTO-STATEMENTS.md",
+   "id": "CLM-10",
+   "kind": "implementation",
+   "reason": "forensics/tools/intoto.py and its 12 controls; 4 statements"
+  },
+  {
+   "claim": "the offline Sigstore bundle validator exists and there are 0 bundles",
+   "established": true,
+   "evidence": "docs/SIGSTORE-BUNDLES.md",
+   "id": "CLM-11",
+   "kind": "implementation",
+   "reason": "forensics/tools/sigstore_bundle.py, 23 refusal codes, 0 bundles"
+  },
+  {
+   "claim": "the key lifecycle evaluator exists and records 0 repositories",
+   "established": true,
+   "evidence": "docs/KEY-LIFECYCLE.md",
+   "id": "CLM-12",
+   "kind": "implementation",
+   "reason": "forensics/tools/key_lifecycle.py, 21 refusal codes plus TK_NOT_RUN, 0 repositories"
+  },
+  {
+   "claim": "every version in the registry is pinned by §B.3.2 and the recorded digest is the one §B.3.2 records",
+   "established": true,
+   "evidence": "docs/ETP-ADDENDUM-B.md",
+   "id": "CLM-13",
+   "kind": "record",
+   "reason": "registry evidence/b0/REGISTRY.json; protocol_audit.py refuses a version or digest that is not in its cited clause"
+  },
+  {
+   "claim": "signing_config advertised a v1 endpoint on 2026-10-22",
+   "established": false,
+   "evidence": "docs/ETP-ADDENDUM-B.md",
+   "id": "CLM-14",
+   "kind": "record",
+   "reason": "recorded by §B.3.3 from an upstream inspection; this item has no network access and did not repeat it"
+  }
+ ],
+ "clientSupport": [
+  {
+   "doc": "docs/INTOTO-STATEMENTS.md",
+   "evidence": "evidence/a9/STATEMENTS.json",
+   "item": "A9",
+   "limits": [
+    "a statement is not a signature, a proof, a verification or an admission",
+    "no SLSA predicate type is used; no genuine SLSA statement exists",
+    "no multi-subject statement is emitted against a real record"
+   ],
+   "module": "forensics/tools/intoto.py",
+   "observed": [
+    {
+     "equals": 4,
+     "path": "evidence/a9/STATEMENTS.json",
+     "pointer": "totals/statements"
+    },
+    {
+     "equals": 12,
+     "path": "evidence/a9/STATEMENTS.json",
+     "pointer": "totals/codes"
+    }
+   ],
+   "refusalCodes": [
+    "IT_REFUSED_TYPE",
+    "IT_REFUSED_MISSING_SUBJECT",
+    "IT_REFUSED_SUBJECT_ABSENT",
+    "IT_REFUSED_SUBJECT_DIGEST_FORM",
+    "IT_REFUSED_SUBJECT_DIGEST_MISMATCH",
+    "IT_REFUSED_DUPLICATE_SUBJECT",
+    "IT_REFUSED_PREDICATE_TYPE",
+    "IT_REFUSED_PREDICATE_FIELD",
+    "IT_REFUSED_CLAIM_UPGRADE",
+    "IT_REFUSED_RECORD_ABSENT",
+    "IT_REFUSED_RECORD_INADMISSIBLE",
+    "IT_REFUSED_STATEMENT_MUTATED"
+   ],
+   "refusalPrefix": "IT_REFUSED_",
+   "state": "IMPLEMENTED_WITH_LIMITS",
+   "supports": "in-toto Statement v1 emission and verification, computed subject digests and record-bound predicates"
+  },
+  {
+   "doc": "docs/DSSE-PAE.md",
+   "evidence": "evidence/a10/ENVELOPES.json",
+   "item": "A10",
+   "limits": [
+    "the signer and verifier are caller-supplied; the module makes no trust decision",
+    "the four real envelopes use a test-only HMAC-SHA256 key",
+    "no signature primitive is implemented"
+   ],
+   "module": "forensics/tools/dsse.py",
+   "observed": [
+    {
+     "equals": 4,
+     "path": "evidence/a10/ENVELOPES.json",
+     "pointer": "counts/envelopes"
+    },
+    {
+     "equals": 13,
+     "path": "evidence/a10/ENVELOPES.json",
+     "pointer": "counts/refusalCodes"
+    }
+   ],
+   "refusalCodes": [
+    "DS_REFUSED_ENVELOPE_INVALID",
+    "DS_REFUSED_DUPLICATE_KEY",
+    "DS_REFUSED_PAYLOAD_TYPE_MISSING",
+    "DS_REFUSED_PAYLOAD_TYPE_MISMATCH",
+    "DS_REFUSED_BASE64_NONCANONICAL",
+    "DS_REFUSED_PAYLOAD_ABSENT",
+    "DS_REFUSED_SIGNATURES_ABSENT",
+    "DS_REFUSED_SIGNATURE_INVALID",
+    "DS_REFUSED_PAE_RESERIALISED",
+    "DS_REFUSED_PAE_LENGTH",
+    "DS_REFUSED_PAYLOAD_NOT_STATEMENT",
+    "DS_REFUSED_TRAILING_BYTES",
+    "DS_REFUSED_OBJECT_SUPPLIED"
+   ],
+   "refusalPrefix": "DS_REFUSED_",
+   "state": "IMPLEMENTED_WITH_LIMITS",
+   "supports": "DSSE v1 envelope framing and the exact PAE over received bytes"
+  },
+  {
+   "doc": "docs/PARSER-HARDENING.md",
+   "evidence": "evidence/a11/SCAN.json",
+   "item": "A11",
+   "limits": [
+    "it hardens the evidence reader, not the Rust or C parsers",
+    "a population record is frozen per candidate; growth is reported, not absorbed"
+   ],
+   "module": "forensics/tools/harden.py",
+   "observed": [
+    {
+     "equals": 211,
+     "path": "evidence/a11/SCAN.json",
+     "pointer": "summary/strictOk"
+    },
+    {
+     "equals": 386,
+     "path": "evidence/a11/SCAN.json",
+     "pointer": "summary/files"
+    },
+    {
+     "equals": 0,
+     "path": "evidence/a11/SCAN.json",
+     "pointer": "summary/refused"
+    }
+   ],
+   "refusalCodes": [
+    "PH_REFUSED_ENCODING",
+    "PH_REFUSED_BOM",
+    "PH_REFUSED_DUPLICATE_KEY",
+    "PH_REFUSED_DEPTH",
+    "PH_REFUSED_SIZE",
+    "PH_REFUSED_NONFINITE",
+    "PH_REFUSED_TRAILING_DATA",
+    "PH_REFUSED_INTEGER_RANGE",
+    "PH_REFUSED_NUMBER_FORM",
+    "PH_REFUSED_LONE_SURROGATE",
+    "PH_REFUSED_CONTROL_CHARACTER",
+    "PH_REFUSED_KEY_NOT_TEXT",
+    "PH_REFUSED_SYNTAX"
+   ],
+   "refusalPrefix": "PH_REFUSED_",
+   "state": "IMPLEMENTED_WITH_LIMITS",
+   "supports": "one strict JSON reader for received evidence, with a differential against a permissive reference"
+  },
+  {
+   "doc": "docs/INDEPENDENT-VERIFICATION.md",
+   "evidence": "evidence/a12/VERIFICATION.json",
+   "item": "A12",
+   "limits": [
+    "the result is 0 of 4 envelopes independently verified and 4 self-issued",
+    "no external trust root exists; the only recorded root is the A10 test-only HMAC key",
+    "no signature primitive is implemented; a caller-supplied verifier decides"
+   ],
+   "module": "forensics/tools/independent_verify.py",
+   "observed": [
+    {
+     "equals": 0,
+     "path": "evidence/a12/VERIFICATION.json",
+     "pointer": "counts/independentlyVerified"
+    },
+    {
+     "equals": 4,
+     "path": "evidence/a12/VERIFICATION.json",
+     "pointer": "counts/envelopes"
+    },
+    {
+     "equals": 4,
+     "path": "evidence/a12/VERIFICATION.json",
+     "pointer": "counts/SELF_ISSUED"
+    }
+   ],
+   "refusalCodes": [
+    "IV_REFUSED_ENVELOPE",
+    "IV_REFUSED_KEY_FROM_ENVELOPE",
+    "IV_REFUSED_SYMMETRIC",
+    "IV_REFUSED_CANDIDATE_TRUST_ROOT",
+    "IV_REFUSED_TRUST_ROOT_UNRECORDED",
+    "IV_REFUSED_TRUST_ROOT_DIGEST_MISMATCH",
+    "IV_REFUSED_SAME_DOMAIN",
+    "IV_REFUSED_SELF_ISSUED",
+    "IV_REFUSED_SIGNATURE",
+    "IV_REFUSED_PAYLOAD_NOT_SUBJECT",
+    "IV_REFUSED_SUBJECT_ABSENT",
+    "IV_REFUSED_SUBJECT_MISMATCH",
+    "IV_REFUSED_NO_PUBLIC_VERIFIER",
+    "IV_REFUSED_TRUST_ROOT_STALE",
+    "IV_REFUSED_MULTIPLE_ROOTS"
+   ],
+   "refusalPrefix": "IV_REFUSED_",
+   "state": "IMPLEMENTED_WITH_LIMITS",
+   "supports": "the independent-verification decision: policy-selected external root, nine checks and four distinct outcomes"
+  },
+  {
+   "doc": "docs/SIGSTORE-BUNDLES.md",
+   "evidence": "evidence/a16/INVENTORY.json",
+   "item": "A16",
+   "limits": [
+    "0 Sigstore bundles, 0 transparency logs and 0 certificates exist here",
+    "the log key, CA root and TSA root are supplied by policy and are not in the bundle or this tree",
+    "the validator implements no signature primitive and contacts no network"
+   ],
+   "module": "forensics/tools/sigstore_bundle.py",
+   "observed": [
+    {
+     "equals": 0,
+     "path": "evidence/a16/INVENTORY.json",
+     "pointer": "bundles"
+    },
+    {
+     "equals": 0,
+     "path": "evidence/a16/INVENTORY.json",
+     "pointer": "certificates"
+    },
+    {
+     "equals": 0,
+     "path": "evidence/a16/INVENTORY.json",
+     "pointer": "transparencyLogs"
+    }
+   ],
+   "refusalCodes": [
+    "SB_REFUSED_MEDIATYPE",
+    "SB_REFUSED_VERSION",
+    "SB_REFUSED_BUNDLE_INVALID",
+    "SB_REFUSED_DUPLICATE_KEY",
+    "SB_REFUSED_MATERIAL",
+    "SB_REFUSED_CERT_CHAIN",
+    "SB_REFUSED_CERT_ROOT_ABSENT",
+    "SB_REFUSED_EXPIRED_CERT",
+    "SB_REFUSED_ISSUER_MISMATCH",
+    "SB_REFUSED_IDENTITY_MISMATCH",
+    "SB_REFUSED_PAYLOAD_DIGEST",
+    "SB_REFUSED_TLOG_ABSENT",
+    "SB_REFUSED_TLOG_KIND",
+    "SB_REFUSED_INTEGRATED_TIME",
+    "SB_REFUSED_INCLUSION_PROOF",
+    "SB_REFUSED_LOG_KEY_ABSENT",
+    "SB_REFUSED_TIMESTAMP_ABSENT",
+    "SB_REFUSED_TIMESTAMP_ROOT_ABSENT",
+    "SB_REFUSED_TIMESTAMP_INVALID",
+    "SB_REFUSED_SIGNATURE",
+    "SB_REFUSED_POLICY_ABSENT",
+    "SB_REFUSED_NETWORK_OR_CLIENT",
+    "SB_REFUSED_INPUT_ABSENT"
+   ],
+   "refusalPrefix": "SB_REFUSED_",
+   "state": "IMPLEMENTED_WITH_LIMITS",
+   "supports": "an offline Sigstore bundle v0.3 profile validator with explicit trust-root and freshness assumptions"
+  },
+  {
+   "doc": "docs/KEY-LIFECYCLE.md",
+   "evidence": "evidence/a18/INVENTORY.json",
+   "item": "A18",
+   "limits": [
+    "0 repositories; every role and the stale-release check are NOT_RUN with TK_NOT_RUN",
+    "the signature model is a structural digest, not cryptography",
+    "one symmetric test-only key, with no expiry, revocation record, metadata version or delegation"
+   ],
+   "module": "forensics/tools/key_lifecycle.py",
+   "observed": [
+    {
+     "equals": 0,
+     "path": "evidence/a18/INVENTORY.json",
+     "pointer": "repositories"
+    },
+    {
+     "equals": 1,
+     "path": "evidence/a18/INVENTORY.json",
+     "pointer": "keyCount"
+    },
+    {
+     "equals": 0,
+     "path": "evidence/a18/INVENTORY.json",
+     "pointer": "revocationRecords"
+    }
+   ],
+   "refusalCodes": [
+    "TK_REFUSED_REPOSITORY_INVALID",
+    "TK_REFUSED_ROOT_ROLLBACK",
+    "TK_REFUSED_ROOT_ROTATION_UNSIGNED_BY_OLD",
+    "TK_REFUSED_TARGETS_ROLLBACK",
+    "TK_REFUSED_SNAPSHOT_ROLLBACK",
+    "TK_REFUSED_TIMESTAMP_ROLLBACK",
+    "TK_REFUSED_SNAPSHOT_HASH_MISMATCH",
+    "TK_REFUSED_TARGETS_HASH_MISMATCH",
+    "TK_REFUSED_EXPIRED_METADATA",
+    "TK_REFUSED_FREEZE",
+    "TK_REFUSED_KEY_EXPIRED",
+    "TK_REFUSED_KEY_NOT_YET_VALID",
+    "TK_REFUSED_KEY_REVOKED",
+    "TK_REFUSED_UNKNOWN_KEY",
+    "TK_REFUSED_ROLE_KEY_MISMATCH",
+    "TK_REFUSED_METADATA_THRESHOLD",
+    "TK_REFUSED_DELEGATION_UNKNOWN",
+    "TK_REFUSED_DELEGATION_EXPIRED",
+    "TK_REFUSED_DELEGATION_HASH_MISMATCH",
+    "TK_REFUSED_STALE_RELEASE",
+    "TK_REFUSED_SIGNATURE"
+   ],
+   "refusalPrefix": "TK_REFUSED_",
+   "state": "IMPLEMENTED_WITH_LIMITS",
+   "supports": "a TUF-principles evaluator for rotation, delegation, expiry, revocation, anti-rollback, anti-freeze and stale releases"
+  }
+ ],
+ "item": "B0",
+ "model": "b0/v1",
+ "nonClaims": [
+  "a registry entry is not a deployment and a pinned version is not an admitted service",
+  "this item runs no Rekor, no witness, no timestamp authority and no Sigstore client",
+  "no network access was used; nothing was fetched, installed or started",
+  "the signing_config finding is recorded from §B.3.3, not re-observed here",
+  "the presence observations are dated 2026-11-24 and are not a live guarantee",
+  "0 of 4 envelopes are independently verified; SELF_ISSUED is not a pass",
+  "the registry does not establish that any version is current or free of security advisories; §B.5 requires a recheck at admission"
+ ],
+ "observed": {
+  "bundles": 0,
+  "clientSupport": 6,
+  "envelopes": 4,
+  "independentlyVerified": "0/4",
+  "repositories": 0,
+  "statements": 4
+ },
+ "recordedAt": "2026-11-24",
+ "schema": "openssl-rs/b0/service-configuration/1",
+ "serviceConfigurationFinding": {
+  "clause": "B.3.3",
+  "finding": "The Sigstore signing_config inspected on 2026-10-22 still advertised a Rekor v1 endpoint. A client version does not imply a v2 service, and installing a recent client does not activate a v2 log.",
+  "id": "SCF-1",
+  "observedDate": "2026-10-22",
+  "recordedIn": "docs/ETP-ADDENDUM-B.md B.3.3 item 2",
+  "state": "RECORDED",
+  "verifiedHere": false,
+  "whatItMeansForB1": "B1 may not assume a v2 endpoint exists. It must deploy and pin its own POSIX-backed Rekor v2 instance (§B.21), read the service metadata it actually uses (§B.10), and refuse a v1 fallback. A local slice cannot inherit a v2 endpoint from the client."
+ },
+ "sources": {
+  "addendum": "docs/ETP-ADDENDUM-B.md",
+  "freeze": "evidence/a17/FREEZE-forward.json",
+  "modules": [
+   "forensics/tools/intoto.py",
+   "forensics/tools/dsse.py",
+   "forensics/tools/harden.py",
+   "forensics/tools/independent_verify.py",
+   "forensics/tools/sigstore_bundle.py",
+   "forensics/tools/key_lifecycle.py"
+  ],
+  "note": "the modules are the support that is actually present; the addendum is the register of what is pinned; the two are separate statements and neither implies a service"
+ },
+ "tensions": [
+  {
+   "clause": "B.3.3",
+   "consequence": "post-quantum checkpoint cosignatures stay on the research track (§B.26); no production cosignature claim may cite the C2SP recommendation as an available mechanism, and B1 uses the classical signature path only.",
+   "id": "T1",
+   "resolved": false,
+   "tension": "ML-DSA-44 is recommended by C2SP for new deployments and is labelled experimental by the implementation."
+  },
+  {
+   "clause": "B.3.3",
+   "consequence": "B1 cannot inherit a v2 endpoint and B4 must read authenticated SigningConfig and TrustedRoot metadata (§B.10); any record that infers a v2 service from a client version is refused.",
+   "id": "T2",
+   "resolved": false,
+   "tension": "Service configuration is not implied by client version: the inspected signing_config advertised a v1 endpoint."
+  },
+  {
+   "clause": "B.3.3",
+   "consequence": "B1 must derive the hashedrekord digest from the exact DSSE envelope as the admitted client does (§B.5); the envelope JSON, the payload alone and an unrelated manifest hash are not substitutes, and A10's PAE is framing, not the log-entry digest.",
+   "id": "T3",
+   "resolved": false,
+   "tension": "Older documentation describes a dedicated DSSE entry type; since v2.3.0 one representation is supported and DSSE is published as hashedrekord."
+  }
+ ],
+ "trustAssumptions": [
+  {
+   "assumption": "a pinned rekor-tiles server binary matching a recorded digest is installed and runs with the POSIX backend and a log key this project controls",
+   "id": "TA-B1",
+   "item": "B1",
+   "observed": "registry evidence/b0/REGISTRY.json records 0 installed and 0 executable; the only recorded digest is the v2.4.2 rekor-server-aws asset, not the POSIX-profile server",
+   "record": "evidence/a16/INVENTORY.json",
+   "state": "UNMET",
+   "wouldEstablish": "B1 records the digest of the exact server artefact it installs and a checkpoint signed by its own log key"
+  },
+  {
+   "assumption": "an admitted RFC 3161 timestamp authority with a trusted root and a verifier",
+   "id": "TA-B2",
+   "item": "B2",
+   "observed": "0 certificates and no timestamp-authority root",
+   "record": "evidence/a16/INVENTORY.json",
+   "state": "UNMET",
+   "wouldEstablish": "B2 integrates a TSA token and verifies it offline under an admitted root"
+  },
+  {
+   "assumption": "an authenticated signer for campaign opening and closure that is not the producer",
+   "id": "TA-B3",
+   "item": "B3",
+   "observed": "0 of 4 envelopes independently verified; 4 self-issued",
+   "record": "evidence/a12/VERIFICATION.json",
+   "state": "UNMET",
+   "wouldEstablish": "a policy-selected external key verifies the opening and closing statements"
+  },
+  {
+   "assumption": "an admitted public-good Rekor v2 endpoint with authenticated SigningConfig and TrustedRoot metadata",
+   "id": "TA-B4",
+   "item": "B4",
+   "observed": "no endpoint is recorded; the inspected signing_config advertised v1",
+   "record": "docs/ETP-ADDENDUM-B.md",
+   "state": "UNMET",
+   "wouldEstablish": "B4 reads authenticated service metadata and publishes to the admitted profile"
+  },
+  {
+   "assumption": "a witness set of independent operators with a quorum and persistent checkpoint state",
+   "id": "TA-B5",
+   "item": "B5",
+   "observed": "0 external roots, 0 witness operators, no persistence",
+   "record": "evidence/a12/TRUST-ROOTS.json",
+   "state": "UNMET",
+   "wouldEstablish": "B5 admits independently operated witnesses and verifies their cosignatures"
+  },
+  {
+   "assumption": "an independent archive with content-addressed retrieval and a current-state revocation authority",
+   "id": "TA-B6",
+   "item": "B6",
+   "observed": "0 repositories and 0 revocation records",
+   "record": "evidence/a18/INVENTORY.json",
+   "state": "UNMET",
+   "wouldEstablish": "B6 demonstrates offline reconstruction and a withdrawn claim refused by current-state policy"
+  }
+ ],
+ "witnesses": {
+  "classes": [
+   {
+    "available": false,
+    "checkedBy": "command-v-rekor-server",
+    "id": "log-key",
+    "observed": "bundles 0, transparencyLogs 0, certificates 0; no log key in the frozen population",
+    "primitive": "the admitted log's public key that verifies a checkpoint signature",
+    "record": "evidence/a16/INVENTORY.json"
+   },
+   {
+    "available": false,
+    "checkedBy": "command-v-rekor-server",
+    "id": "checkpoint-cosignature",
+    "observed": "no checkpoint resource exists; the offline validator records SB_REFUSED_LOG_KEY_ABSENT",
+    "primitive": "a checkpoint cosignature over (origin, size, hash) from an admitted cosigner",
+    "record": "evidence/a16/INVENTORY.json"
+   },
+   {
+    "available": false,
+    "checkedBy": "command-v-cosign",
+    "id": "witness-set",
+    "observed": "counts.externalRoots 0; one symmetric same-party root",
+    "primitive": "a set of independent witness keys in distinct administrative domains with a quorum",
+    "record": "evidence/a12/TRUST-ROOTS.json"
+   },
+   {
+    "available": false,
+    "checkedBy": "command-v-tsget",
+    "id": "rfc3161-tsa",
+    "observed": "no timestamp-authority root exists; every timestamp check is NOT_RUN",
+    "primitive": "an admitted RFC 3161 timestamp authority with a trusted root and a verifier",
+    "record": "evidence/a16/INVENTORY.json"
+   },
+   {
+    "available": false,
+    "checkedBy": "command-v-rekor-cli",
+    "id": "public-rekor-endpoint",
+    "observed": "no endpoint is recorded; §B.3.3 records that signing_config advertised a v1 endpoint",
+    "primitive": "an authenticated public Rekor v2 endpoint with SigningConfig and TrustedRoot",
+    "record": "docs/ETP-ADDENDUM-B.md"
+   }
+  ],
+  "witnessSet": {
+   "independent": false,
+   "keys": 0,
+   "note": "no witness exists at any n; no quorum is admitted",
+   "operators": 0,
+   "quorum": null
+  }
+ }
+}
