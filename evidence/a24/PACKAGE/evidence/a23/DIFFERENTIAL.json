@@ -1,0 +1,157 @@
+{
+  "baseCommit": "7c2b5f25fe55e6302b942ed124f4fbec5aff8888",
+  "code": "VF_OK",
+  "compared": 75607,
+  "disagreements": 0,
+  "document": "docs/VERIFIER-FORMALISATION.md",
+  "domains": [
+    {
+      "compared": 585,
+      "declaredSize": 585,
+      "disagreements": [],
+      "exhaustive": true,
+      "id": "decision-small",
+      "note": "4**n state vectors x 2**n required masks for n = 0..3",
+      "rules": [
+        "VF-R1",
+        "VF-R2",
+        "VF-R3",
+        "VF-R4",
+        "VF-R5"
+      ],
+      "subject": "the decision function over 0..3 obligations, every state vector and every required mask"
+    },
+    {
+      "compared": 65536,
+      "declaredSize": 65536,
+      "disagreements": [],
+      "exhaustive": true,
+      "id": "decision-policy",
+      "note": "4**8 = 65,536 is the whole state space of an eight-obligation decision function",
+      "rules": [
+        "VF-R2",
+        "VF-R5",
+        "VF-R6",
+        "VF-R7"
+      ],
+      "subject": "the decision function over the real policy's shape: 8 obligations, all required, canonical order"
+    },
+    {
+      "compared": 9100,
+      "declaredSize": 9100,
+      "disagreements": [],
+      "exhaustive": false,
+      "id": "threshold",
+      "note": "a declared finite model: multisets of 0..4 approvals over 12 archetypes",
+      "rules": [
+        "VF-R8"
+      ],
+      "subject": "k-of-n over 12 approval archetypes against two inventories (three distinct establishments, and one aliased), k in 1..min(3, available)"
+    },
+    {
+      "compared": 386,
+      "declaredSize": 386,
+      "disagreements": [],
+      "exhaustive": false,
+      "id": "correction",
+      "note": "a declared finite model: the cycle witnesses are unsatisfiable under the digest rule, so they are observations as well as cases",
+      "observations": [
+        {
+          "appendPath": false,
+          "appendPathCode": "CR_REFUSED_PREDECESSOR_MISMATCH",
+          "chain": [
+            {
+              "kind": "correct",
+              "link": "bad",
+              "original": "preserved",
+              "predecessor": 1,
+              "subject": "S1"
+            },
+            {
+              "kind": "correct",
+              "link": "bad",
+              "original": "preserved",
+              "predecessor": 0,
+              "subject": "S1"
+            }
+          ],
+          "reference": false,
+          "referenceRule": "VF-C4",
+          "revalidated": false,
+          "revalidatedCode": "CR_REFUSED_PREDECESSOR_MISMATCH"
+        },
+        {
+          "appendPath": false,
+          "appendPathCode": "CR_REFUSED_PREDECESSOR_MISMATCH",
+          "chain": [
+            {
+              "kind": "correct",
+              "link": "bad",
+              "original": "preserved",
+              "predecessor": 0,
+              "subject": "S1"
+            }
+          ],
+          "reference": false,
+          "referenceRule": "VF-C4",
+          "revalidated": false,
+          "revalidatedCode": "CR_REFUSED_PREDECESSOR_MISMATCH"
+        },
+        {
+          "appendPath": false,
+          "appendPathCode": "CR_REFUSED_PREDECESSOR_MISMATCH",
+          "chain": [
+            {
+              "kind": "correct",
+              "link": "bad",
+              "original": "preserved",
+              "predecessor": 2,
+              "subject": "S1"
+            },
+            {
+              "kind": "correct",
+              "link": "bad",
+              "original": "preserved",
+              "predecessor": 0,
+              "subject": "S1"
+            },
+            {
+              "kind": "correct",
+              "link": "bad",
+              "original": "preserved",
+              "predecessor": 1,
+              "subject": "S1"
+            }
+          ],
+          "reference": false,
+          "referenceRule": "VF-C4",
+          "revalidated": false,
+          "revalidatedCode": "CR_REFUSED_PREDECESSOR_MISMATCH"
+        }
+      ],
+      "rules": [
+        "VF-R9",
+        "VF-C1",
+        "VF-C2",
+        "VF-C3",
+        "VF-C4",
+        "VF-C5",
+        "VF-C6",
+        "VF-C7",
+        "VF-C8"
+      ],
+      "subject": "chains of length 0..3 over two subjects, earlier-only predecessors, with intact/bad digests and preserved/modified originals, plus 3 cycles"
+    }
+  ],
+  "reference": {
+    "correction": "forensics/tools/verifier_formalisation.py:reference_chain_admissible",
+    "decision": "forensics/tools/verifier_formalisation.py:reference_decide",
+    "importsImplementation": false,
+    "threshold": "forensics/tools/verifier_formalisation.py:reference_threshold_count"
+  },
+  "schema": "openssl-rs/a23/differential/1",
+  "tool": {
+    "path": "forensics/tools/verifier_formalisation.py",
+    "sha256": "6dff4ddb2f67423015c7d22388d06320d869069cd3971bc6574e482d25bfbbde"
+  }
+}

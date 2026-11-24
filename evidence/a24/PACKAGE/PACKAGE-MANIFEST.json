@@ -1,0 +1,193 @@
+{
+  "candidate": {
+    "commit": "b19869e224d2610656bbc22321d4734b21875dae",
+    "recordedAt": "2026-11-24"
+  },
+  "declarations": {
+    "absolutePaths": false,
+    "externalToolchain": "none beyond the declared interpreter",
+    "network": false,
+    "privateState": "none",
+    "untrackedFiles": false
+  },
+  "entryPoint": "verify.py",
+  "entryShell": "verify.sh",
+  "exactCommands": [
+    "python3 verify.py",
+    "sh verify.sh",
+    "python3 verify.py --records <fresh records directory>"
+  ],
+  "excluded": [
+    {
+      "path": "forensics/tools/adversarial_qualification.py",
+      "reason": "E1-E3 do not run on constructed inputs: harness_binsec_verdicts and harness_binsec_population execute courts/phase18/timing/binsec_checkct.sh with bash and call compile_elf, and harness_branch_audit calls require_tool('objdump') and compile_asm; compile_elf and compile_asm call require_tool('cc'). A package containing this tool would depend on a shell, a C compiler and binutils, which are outside the declared Python-only minimum.",
+      "rule": "R1-no-external-program"
+    },
+    {
+      "path": "courts/phase18/timing/binsec_checkct.sh",
+      "reason": "the E1/E2 instrument is a shell script that invokes the BINSEC and Z3 stand-ins",
+      "rule": "R1-no-external-program"
+    },
+    {
+      "path": "courts/phase18/timing/binary_branch_audit.py",
+      "reason": "the E3 instrument invokes objdump and is measured against compiled shared objects",
+      "rule": "R1-no-external-program"
+    },
+    {
+      "path": "courts/phase18/timing/third_party/dudect/dudect.h",
+      "reason": "the E4 timing experiment compiles a C harness; no Rust or C build is in this package",
+      "rule": "R1-no-external-program"
+    },
+    {
+      "path": "evidence/etp-t7/DUDECT-ETP-T7.json",
+      "reason": "E4 reads a recorded timing receipt; the receipt is evidence about a run this package cannot re-execute",
+      "rule": "R2-no-unproduced-evidence"
+    },
+    {
+      "path": "forensics/tools/etp6_package.py",
+      "reason": "the ETP-6 builder calls git, rustc/cargo and the court container; it cannot run in the declared minimum environment",
+      "rule": "R1-no-external-program"
+    },
+    {
+      "path": "docker/",
+      "reason": "the court launcher is out of scope for conversion items and needs Docker",
+      "rule": "R3-no-court"
+    },
+    {
+      "path": "src/",
+      "reason": "no Rust source is needed: the packaged verifier reads JSON records and Python modules only",
+      "rule": "R4-no-rust-build"
+    },
+    {
+      "path": "evidence/* (other than evidence/a23)",
+      "reason": "an evidence record is packaged only when a packaged verifier reads it; a record added without its reader would imply a check that does not run",
+      "rule": "R2-no-unproduced-evidence"
+    }
+  ],
+  "exclusionRule": "A file is packaged only when every input it reads is in the package and every program it executes is the declared Python interpreter. A file that needs the court container, the Rust toolchain, a C compiler, binutils, a shell script, a network service or private state is excluded and named with the reason it cannot run offline.",
+  "externalStatus": "EXTERNAL_REVIEW_PENDING",
+  "kind": "external-verification-package",
+  "members": [
+    {
+      "bytes": 940,
+      "path": "PIPELINE.json",
+      "role": "generated-pipeline",
+      "sha256": "4a045caf7c4afc232a5244541f3d03d471d2ca188c402ac8379a6ed882703f01"
+    },
+    {
+      "bytes": 2133,
+      "path": "README.md",
+      "role": "generated-readme",
+      "sha256": "0d1712d87101069caa556186e50dc356b1a440da5c25717ef7623836875ac327"
+    },
+    {
+      "bytes": 3158,
+      "path": "evidence/a23/CONTROLS.json",
+      "role": "expected-record",
+      "sha256": "d85218be1557c1df2bc4f5142e9576160372a054e2fd6a9980f5d3fd24b92045"
+    },
+    {
+      "bytes": 4761,
+      "path": "evidence/a23/DIFFERENTIAL.json",
+      "role": "expected-record",
+      "sha256": "517752afb584014564017ab136fdd4464c902a19fd71dd0d9e234b5dd89e03ef"
+    },
+    {
+      "bytes": 2380,
+      "path": "evidence/a23/PROPERTIES.json",
+      "role": "expected-record",
+      "sha256": "c3ac6e6da43647a61301455000e594e415fb8928094c925a735e7b30e466dabd"
+    },
+    {
+      "bytes": 9189,
+      "path": "evidence/a23/SPEC.json",
+      "role": "expected-input",
+      "sha256": "6a9a7b59b6c8253db07e07ec009c8bf7693af1e81ebce5a5364e79e7a025e886"
+    },
+    {
+      "bytes": 16117,
+      "path": "evidence/a23/build_evidence.py",
+      "role": "producer",
+      "sha256": "9c82631b837e2c00b44744f90deb1b5ca09c5ee378e11c2ec51abf1d950ea082"
+    },
+    {
+      "bytes": 36371,
+      "path": "forensics/tools/authorisation.py",
+      "role": "verifier-dependency",
+      "sha256": "9907fc3d7e34debcac79dbad826029878765b51e992e77619785df6b1d9acdfd"
+    },
+    {
+      "bytes": 54260,
+      "path": "forensics/tools/corrections.py",
+      "role": "verifier-dependency",
+      "sha256": "2c24c57e327726e1b912579d3a0a953ddd410d8b69c753afd3881d13c53850bb"
+    },
+    {
+      "bytes": 33088,
+      "path": "forensics/tools/dsse.py",
+      "role": "verifier-dependency",
+      "sha256": "0a701eca4087215c0d0166076a0158b82a8e32c14d67ae38e397090720dd83b9"
+    },
+    {
+      "bytes": 85517,
+      "path": "forensics/tools/policy_engine.py",
+      "role": "verifier-dependency",
+      "sha256": "f4dcdf2e86317be3eb1fc40860912098ea3599fb460b5716ad38e5ec01ccbbf4"
+    },
+    {
+      "bytes": 46707,
+      "path": "forensics/tools/thresholds.py",
+      "role": "verifier-dependency",
+      "sha256": "3e61d249997441dd6acd28a98b2ae782f8d573dee86fde05765b14088818c67c"
+    },
+    {
+      "bytes": 69543,
+      "path": "forensics/tools/verifier_formalisation.py",
+      "role": "verifier",
+      "sha256": "6dff4ddb2f67423015c7d22388d06320d869069cd3971bc6574e482d25bfbbde"
+    },
+    {
+      "bytes": 5022,
+      "path": "verify.py",
+      "role": "generated-entry-point",
+      "sha256": "2c5295488657cbb66b96887ae66349430d7ca271ca91634f4473e7fa6079bb36"
+    },
+    {
+      "bytes": 337,
+      "path": "verify.sh",
+      "role": "generated-entry-point-shell",
+      "sha256": "1bee8adfed549dfaba9da198a3fadbce2b6208aee214d8fcbd313b17fe0c00d9"
+    }
+  ],
+  "minimumInterpreter": "3.11",
+  "outcomes": [
+    "PACKAGE_VERIFIED_IN_VENUE",
+    "PACKAGE_UNVERIFIED",
+    "PACKAGE_INVALID",
+    "EXTERNAL_REVIEW_PENDING"
+  ],
+  "packageDigest": "d74ff6c9dff30acc7f854141d7639a575f07a097eaddf88856083a9ada7f61d6",
+  "packageId": "openssl-rs-a24-a23-admission",
+  "records": [
+    "SPEC.json",
+    "DIFFERENTIAL.json",
+    "PROPERTIES.json",
+    "CONTROLS.json"
+  ],
+  "refusalCodes": {
+    "EV_REFUSED_ABSOLUTE_PATH": "a path is absolute, contains a parent traversal, or is a symlink that resolves outside the tree",
+    "EV_REFUSED_ENTRYPOINT_FAILED": "the entry point exits nonzero or raises before writing its records",
+    "EV_REFUSED_EXTERNAL_NOT_RUN": "an external run is claimed but no party outside this project has produced a verdict",
+    "EV_REFUSED_MANIFEST_MISMATCH": "a member's bytes do not match its recorded size and SHA-256, or a produced record is not byte-identical to the expected record",
+    "EV_REFUSED_MISSING_INPUT": "a declared input is absent at build time, or a manifest-declared member is absent at verification time",
+    "EV_REFUSED_NETWORK": "a member imports a network client, or the entry point loads one at run time",
+    "EV_REFUSED_PACKAGE_MUTATED": "the package directory contains a file the manifest does not name, or the manifest body no longer matches its own digest",
+    "EV_REFUSED_PRIVATE_STATE": "a member or the package metadata names court/tmp, a private scratch path or an environment token",
+    "EV_REFUSED_REPRODUCIBLE": "two runs of the entry point in fresh directories produce different output or different records",
+    "EV_REFUSED_UNDECLARED_DEPENDENCY": "the entry point opens a file outside the package and outside the interpreter's own library, or a build path is outside the declared set",
+    "EV_REFUSED_UNDECLARED_TOOL": "a member imports or calls a program (subprocess, ctypes, a shell), or the interpreter is below the declared minimum",
+    "EV_REFUSED_UNTRACKED_INPUT": "a declared input is not tracked by Git at the named candidate"
+  },
+  "schema": "openssl-rs/a24/external-package-manifest/1",
+  "strippedEnvironmentCommand": "env -i PATH=<directory containing python3> HOME=<fresh dir> TMPDIR=<fresh dir> python3 verify.py"
+}

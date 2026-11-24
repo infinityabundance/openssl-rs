@@ -1,0 +1,116 @@
+{
+  "candidate": {
+    "commit": "b19869e224d2610656bbc22321d4734b21875dae",
+    "recordedAt": "2026-11-24"
+  },
+  "checks": [
+    {
+      "id": "manifest-body",
+      "result": "PASS"
+    },
+    {
+      "id": "member-set",
+      "result": "PASS"
+    },
+    {
+      "id": "member-digests",
+      "result": "PASS"
+    },
+    {
+      "id": "private-state",
+      "result": "PASS"
+    },
+    {
+      "id": "no-network",
+      "result": "PASS"
+    },
+    {
+      "id": "no-external-program",
+      "result": "PASS"
+    },
+    {
+      "id": "entry-point",
+      "result": "PASS"
+    },
+    {
+      "id": "no-outside-read",
+      "result": "PASS"
+    },
+    {
+      "id": "reproducible",
+      "result": "PASS"
+    },
+    {
+      "id": "records-match",
+      "result": "PASS"
+    }
+  ],
+  "codes": [
+    "EV_OK"
+  ],
+  "entryIsolation": [
+    "-I",
+    "-S",
+    "-B"
+  ],
+  "entryPoint": "verify.py",
+  "entryPointRuns": 2,
+  "exitStatus": 0,
+  "externalPartyRan": false,
+  "externalStatus": "EXTERNAL_REVIEW_PENDING",
+  "inVenueCommand": "python3 forensics/tools/package_external.py verify evidence/a24/PACKAGE",
+  "interpreter": "3.11.2",
+  "isExternal": false,
+  "item": "A24",
+  "minimumInterpreter": "3.11",
+  "notExternal": true,
+  "outcome": "PACKAGE_VERIFIED_IN_VENUE",
+  "package": "evidence/a24/PACKAGE",
+  "packageDigest": "d74ff6c9dff30acc7f854141d7639a575f07a097eaddf88856083a9ada7f61d6",
+  "producer": {
+    "path": "evidence/a24/build_evidence.py",
+    "sha256": "c1bc880374eca1461a6fa1600ddae4f35f6576ed3af0f5c5ca84696b3889fc25"
+  },
+  "records": [
+    {
+      "equal": true,
+      "expectedSha256": "6a9a7b59b6c8253db07e07ec009c8bf7693af1e81ebce5a5364e79e7a025e886",
+      "producedSha256": "6a9a7b59b6c8253db07e07ec009c8bf7693af1e81ebce5a5364e79e7a025e886",
+      "record": "SPEC.json"
+    },
+    {
+      "equal": true,
+      "expectedSha256": "517752afb584014564017ab136fdd4464c902a19fd71dd0d9e234b5dd89e03ef",
+      "producedSha256": "517752afb584014564017ab136fdd4464c902a19fd71dd0d9e234b5dd89e03ef",
+      "record": "DIFFERENTIAL.json"
+    },
+    {
+      "equal": true,
+      "expectedSha256": "c3ac6e6da43647a61301455000e594e415fb8928094c925a735e7b30e466dabd",
+      "producedSha256": "c3ac6e6da43647a61301455000e594e415fb8928094c925a735e7b30e466dabd",
+      "record": "PROPERTIES.json"
+    },
+    {
+      "equal": true,
+      "expectedSha256": "d85218be1557c1df2bc4f5142e9576160372a054e2fd6a9980f5d3fd24b92045",
+      "producedSha256": "d85218be1557c1df2bc4f5142e9576160372a054e2fd6a9980f5d3fd24b92045",
+      "record": "CONTROLS.json"
+    }
+  ],
+  "recordsCompared": 4,
+  "schema": "openssl-rs/a24/run/1",
+  "strippedEnvironment": {
+    "home": "<fresh temporary directory>",
+    "inheritedVariables": false,
+    "path": "/usr/bin",
+    "pathEntries": 1,
+    "pythonpath": null,
+    "stripped": true,
+    "tmpdir": "<fresh temporary directory>"
+  },
+  "venue": "in-venue: this project's own machine and container; not external",
+  "verifier": {
+    "path": "forensics/tools/package_external.py",
+    "sha256": "31a44e5cdce42b9eb6280b491fd286989a8135a505e1738d3a449d4e8caed930"
+  }
+}

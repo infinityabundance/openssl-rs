@@ -1,0 +1,172 @@
+{
+  "candidate": {
+    "commit": "b19869e224d2610656bbc22321d4734b21875dae",
+    "recordedAt": "2026-11-24"
+  },
+  "code": "EV_OK",
+  "codesCovered": [
+    "EV_REFUSED_ABSOLUTE_PATH",
+    "EV_REFUSED_ENTRYPOINT_FAILED",
+    "EV_REFUSED_EXTERNAL_NOT_RUN",
+    "EV_REFUSED_MANIFEST_MISMATCH",
+    "EV_REFUSED_MISSING_INPUT",
+    "EV_REFUSED_NETWORK",
+    "EV_REFUSED_PACKAGE_MUTATED",
+    "EV_REFUSED_PRIVATE_STATE",
+    "EV_REFUSED_REPRODUCIBLE",
+    "EV_REFUSED_UNDECLARED_DEPENDENCY",
+    "EV_REFUSED_UNDECLARED_TOOL",
+    "EV_REFUSED_UNTRACKED_INPUT"
+  ],
+  "controlCount": 16,
+  "controls": [
+    {
+      "controlOnly": true,
+      "detail": "a package that only works on the producing machine is refused before it runs",
+      "expectedCode": "EV_REFUSED_PRIVATE_STATE",
+      "fixture": "a well-formed package with one member naming court/tmp",
+      "id": "private-state-reference",
+      "observation": "notes/NOTES.md names 'court/tmp' (a court scratch path)",
+      "observedCode": "EV_REFUSED_PRIVATE_STATE"
+    },
+    {
+      "controlOnly": true,
+      "detail": "an absent input is refused, never skipped",
+      "expectedCode": "EV_REFUSED_MISSING_INPUT",
+      "fixture": "build(['evidence/a23/ABSENT.json']) with that path declared",
+      "id": "missing-build-input",
+      "observation": "'evidence/a23/ABSENT.json' does not exist as a file",
+      "observedCode": "EV_REFUSED_MISSING_INPUT"
+    },
+    {
+      "controlOnly": true,
+      "detail": "a member is a relative path inside the tree or it is not packaged",
+      "expectedCode": "EV_REFUSED_ABSOLUTE_PATH",
+      "fixture": "build(['/etc/passwd']) with that absolute path declared",
+      "id": "absolute-path-input",
+      "observation": "'/etc/passwd' is absolute",
+      "observedCode": "EV_REFUSED_ABSOLUTE_PATH"
+    },
+    {
+      "controlOnly": true,
+      "detail": "the structural import scan refuses before the entry point runs",
+      "expectedCode": "EV_REFUSED_NETWORK",
+      "fixture": "a package with a member importing socket",
+      "id": "network-import",
+      "observation": "helper/net.py imports 'socket'",
+      "observedCode": "EV_REFUSED_NETWORK"
+    },
+    {
+      "controlOnly": true,
+      "detail": "a package that runs another program depends on an undeclared toolchain",
+      "expectedCode": "EV_REFUSED_UNDECLARED_TOOL",
+      "fixture": "a package with a member importing subprocess",
+      "id": "subprocess-import",
+      "observation": "helper/tool.py imports 'subprocess'",
+      "observedCode": "EV_REFUSED_UNDECLARED_TOOL"
+    },
+    {
+      "controlOnly": true,
+      "detail": "the audit hook records the open and the verifier refuses",
+      "expectedCode": "EV_REFUSED_UNDECLARED_DEPENDENCY",
+      "fixture": "a package whose entry point reads a file outside the package",
+      "id": "outside-package-read",
+      "observation": "run 1 opened '/etc/hostname', which is outside the package",
+      "observedCode": "EV_REFUSED_UNDECLARED_DEPENDENCY"
+    },
+    {
+      "controlOnly": true,
+      "detail": "a member cannot arrive by being adjacent to the tree",
+      "expectedCode": "EV_REFUSED_UNDECLARED_DEPENDENCY",
+      "fixture": "build(['docs/ETP-TODO.md']) with the default declared set",
+      "id": "undeclared-build-path",
+      "observation": "'docs/ETP-TODO.md' is not in the declared input set",
+      "observedCode": "EV_REFUSED_UNDECLARED_DEPENDENCY"
+    },
+    {
+      "controlOnly": true,
+      "detail": "the digest check fails before any execution",
+      "expectedCode": "EV_REFUSED_MANIFEST_MISMATCH",
+      "fixture": "a package whose SPEC.json gained one byte after the manifest was written",
+      "id": "member-digest-mismatch",
+      "observation": "evidence/a23/SPEC.json does not match its recorded size and SHA-256",
+      "observedCode": "EV_REFUSED_MANIFEST_MISMATCH"
+    },
+    {
+      "controlOnly": true,
+      "detail": "the produced record is compared byte-for-byte, so a mis-reporting entry point fails",
+      "expectedCode": "EV_REFUSED_MANIFEST_MISMATCH",
+      "fixture": "a package whose entry point produces a SPEC.json that differs from the expected record",
+      "id": "produced-record-mismatch",
+      "observation": "the produced SPEC.json is not the record the package binds",
+      "observedCode": "EV_REFUSED_MANIFEST_MISMATCH"
+    },
+    {
+      "controlOnly": true,
+      "detail": "two runs in fresh directories are compared; a one-shot result is refused",
+      "expectedCode": "EV_REFUSED_REPRODUCIBLE",
+      "fixture": "a package whose entry point writes random bytes into every record",
+      "id": "non-reproducible-entrypoint",
+      "observation": "two runs produced different output",
+      "observedCode": "EV_REFUSED_REPRODUCIBLE"
+    },
+    {
+      "controlOnly": true,
+      "detail": "the candidate contains tracked files; an untracked input is not part of it",
+      "expectedCode": "EV_REFUSED_UNTRACKED_INPUT",
+      "fixture": "a temporary repository with one added file and one untracked file",
+      "id": "untracked-input",
+      "observation": "'untracked.py' is not tracked by Git",
+      "observedCode": "EV_REFUSED_UNTRACKED_INPUT"
+    },
+    {
+      "controlOnly": true,
+      "detail": "the member set is compared with the manifest in both directions",
+      "expectedCode": "EV_REFUSED_PACKAGE_MUTATED",
+      "fixture": "a well-formed package plus one undeclared file",
+      "id": "whole-package-mutation",
+      "observation": "1 file(s) present but not declared, first 'extra.txt'",
+      "observedCode": "EV_REFUSED_PACKAGE_MUTATED"
+    },
+    {
+      "controlOnly": true,
+      "detail": "the manifest is bound by its own digest, so a silent edit is visible",
+      "expectedCode": "EV_REFUSED_PACKAGE_MUTATED",
+      "fixture": "a package whose manifest recordedAt was edited without re-deriving its digest",
+      "id": "manifest-body-tamper",
+      "observation": "the manifest body no longer matches its recorded digest",
+      "observedCode": "EV_REFUSED_PACKAGE_MUTATED"
+    },
+    {
+      "controlOnly": true,
+      "detail": "an in-venue run is never reported as external reproduction",
+      "expectedCode": "EV_REFUSED_EXTERNAL_NOT_RUN",
+      "fixture": "a valid package verified with claim='external' and no external record",
+      "id": "claimed-external-run",
+      "observation": "no party outside this project has produced a verdict for this package; an in-venue run is not external reproduction",
+      "observedCode": "EV_REFUSED_EXTERNAL_NOT_RUN"
+    },
+    {
+      "controlOnly": true,
+      "detail": "a crash is an observation, not a pass",
+      "expectedCode": "EV_REFUSED_ENTRYPOINT_FAILED",
+      "fixture": "a package whose entry point exits 1",
+      "id": "failing-entrypoint",
+      "observation": "run 1 exited 0 (entry 1):",
+      "observedCode": "EV_REFUSED_ENTRYPOINT_FAILED"
+    },
+    {
+      "controlOnly": true,
+      "detail": "the positive control: the real package verifies with no refusal",
+      "expectedCode": "EV_OK",
+      "fixture": "evidence/a24/PACKAGE as produced by this file",
+      "id": "real-package-verified",
+      "observation": "no refusal fired",
+      "observedCode": "EV_OK"
+    }
+  ],
+  "coversEveryCode": true,
+  "item": "A24",
+  "positiveControl": "real-package-verified",
+  "schema": "openssl-rs/a24/controls/1"
+}

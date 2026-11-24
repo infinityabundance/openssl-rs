@@ -1,0 +1,37 @@
+{
+  "articles": {
+    "1": "the claim is the in-venue outcome, not external reproduction",
+    "2": "the evidence is bound to this package digest and interpreter",
+    "5": "no external party has an independent trust domain here"
+  },
+  "candidate": {
+    "commit": "b19869e224d2610656bbc22321d4734b21875dae",
+    "recordedAt": "2026-11-24"
+  },
+  "evidenceTheExternalPartyMustPublish": [
+    "the exact package digest it received and the digest of every record it produced",
+    "the interpreter identity and operating system it used",
+    "the command line and the stripped or unstripped environment it ran under",
+    "its own signed verdict naming the outcome and any refusal code it observed"
+  ],
+  "externalPartyRan": false,
+  "externalStatus": "EXTERNAL_REVIEW_PENDING",
+  "inVenueOutcome": "PACKAGE_VERIFIED_IN_VENUE",
+  "inVenueRunIsNotExternal": true,
+  "isPass": false,
+  "item": "A24",
+  "package": "evidence/a24/PACKAGE",
+  "packageDigest": "d74ff6c9dff30acc7f854141d7639a575f07a097eaddf88856083a9ada7f61d6",
+  "refusalIfClaimed": "EV_REFUSED_EXTERNAL_NOT_RUN",
+  "schema": "openssl-rs/a24/status/1",
+  "whatThisRecordDoesNotEstablish": [
+    "that a claim in the A23 records is true",
+    "that the A23 differential is a machine-checked proof",
+    "that any party outside this project has run the package"
+  ],
+  "whatWouldCountAsExternalReproduction": [
+    "a party outside this project unpacks the package in its own environment, with no access to this checkout, and runs the declared command",
+    "that party reports the package digest, the interpreter version, the command it ran, the four record digests and the exit status",
+    "that party's verdict is signed by an identity in a trust domain distinct from this project's (Earned Trust Article 5), and the record names that domain and how it was established"
+  ]
+}

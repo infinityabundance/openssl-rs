@@ -1,0 +1,24 @@
+{
+  "externalStatus": "EXTERNAL_REVIEW_PENDING",
+  "records": [
+    "SPEC.json",
+    "DIFFERENTIAL.json",
+    "PROPERTIES.json",
+    "CONTROLS.json"
+  ],
+  "schema": "openssl-rs/a24/pipeline/1",
+  "steps": [
+    {
+      "command": "<interpreter> -I -S -B evidence/a23/build_evidence.py --out <fresh records directory>",
+      "doesNotEstablish": "that the differential is a proof, or that any record is true",
+      "establishes": "the packaged producer recomputes the specification, the differential, the properties and the controls from the packaged inputs",
+      "id": "produce"
+    },
+    {
+      "command": "byte comparison of each produced record with the packaged expected record",
+      "doesNotEstablish": "that the packaged records are the latest ones, or that an external party reproduced them",
+      "establishes": "the produced records are byte-identical to the records the manifest binds",
+      "id": "compare"
+    }
+  ]
+}

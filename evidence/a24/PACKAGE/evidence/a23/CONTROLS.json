@@ -1,0 +1,87 @@
+{
+  "baseCommit": "7c2b5f25fe55e6302b942ed124f4fbec5aff8888",
+  "code": "VF_OK",
+  "codesCovered": [
+    "VF_REFUSED_DISAGREEMENT",
+    "VF_REFUSED_DOMAIN_INCOMPLETE",
+    "VF_REFUSED_ENUMERATION_TRUNCATED",
+    "VF_REFUSED_PROPERTY_VIOLATED",
+    "VF_REFUSED_REFERENCE_IMPORTS_IMPLEMENTATION",
+    "VF_REFUSED_SPEC_ABSENT",
+    "VF_REFUSED_UNSPECIFIED_RULE"
+  ],
+  "controls": [
+    {
+      "controlOnly": true,
+      "detail": "a reference that reads UNKNOWN as MET admits a vector the engine denies",
+      "expectedCode": "VF_REFUSED_DISAGREEMENT",
+      "id": "wrong-reference-unknown-as-met",
+      "observedCode": "VF_REFUSED_DISAGREEMENT"
+    },
+    {
+      "controlOnly": true,
+      "detail": "a reference that reads NOT_APPLICABLE as MET admits a required-inapplicable vector",
+      "expectedCode": "VF_REFUSED_DISAGREEMENT",
+      "id": "wrong-reference-not-applicable-as-met",
+      "observedCode": "VF_REFUSED_DISAGREEMENT"
+    },
+    {
+      "controlOnly": true,
+      "detail": "a count by label reads two aliases of one establishment as two domains",
+      "expectedCode": "VF_REFUSED_DISAGREEMENT",
+      "id": "wrong-threshold-ignores-aliases",
+      "observedCode": "VF_REFUSED_DISAGREEMENT"
+    },
+    {
+      "controlOnly": true,
+      "detail": "a chain rule that ignores the predecessor digest admits a modified chain",
+      "expectedCode": "VF_REFUSED_DISAGREEMENT",
+      "id": "wrong-chain-ignores-digest",
+      "observedCode": "VF_REFUSED_DISAGREEMENT"
+    },
+    {
+      "controlOnly": true,
+      "detail": "a claimed size of 3 for a 16-vector state space is refused",
+      "expectedCode": "VF_REFUSED_DOMAIN_INCOMPLETE",
+      "id": "domain-incomplete",
+      "observedCode": "VF_REFUSED_DOMAIN_INCOMPLETE"
+    },
+    {
+      "controlOnly": true,
+      "detail": "a bounded enumeration is refused rather than reported with the full size",
+      "expectedCode": "VF_REFUSED_ENUMERATION_TRUNCATED",
+      "id": "enumeration-truncated",
+      "observedCode": "VF_REFUSED_ENUMERATION_TRUNCATED"
+    },
+    {
+      "controlOnly": true,
+      "detail": "a reference whose globals resolve policy_engine is refused",
+      "expectedCode": "VF_REFUSED_REFERENCE_IMPORTS_IMPLEMENTATION",
+      "id": "reference-imports-implementation",
+      "observedCode": "VF_REFUSED_REFERENCE_IMPORTS_IMPLEMENTATION"
+    },
+    {
+      "controlOnly": true,
+      "detail": "the wrong reference violates VF-P4 (UNKNOWN never admits)",
+      "expectedCode": "VF_REFUSED_PROPERTY_VIOLATED",
+      "id": "property-violated",
+      "observedCode": "VF_REFUSED_PROPERTY_VIOLATED"
+    },
+    {
+      "controlOnly": true,
+      "detail": "a missing specification is refused, not defaulted",
+      "expectedCode": "VF_REFUSED_SPEC_ABSENT",
+      "id": "spec-absent",
+      "observedCode": "VF_REFUSED_SPEC_ABSENT"
+    },
+    {
+      "controlOnly": true,
+      "detail": "a state outside the specification is refused rather than decided",
+      "expectedCode": "VF_REFUSED_UNSPECIFIED_RULE",
+      "id": "unspecified-rule",
+      "observedCode": "VF_REFUSED_UNSPECIFIED_RULE"
+    }
+  ],
+  "coversEveryCode": true,
+  "schema": "openssl-rs/a23/controls/1"
+}
