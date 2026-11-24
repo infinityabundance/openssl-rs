@@ -1,0 +1,181 @@
+{
+ "candidate": {
+  "distinctCount": 6,
+  "mixed": true,
+  "perRun": [
+   {
+    "candidate": {
+     "evidence_source_head": "17042ccf29bc39df638c63e69d3be6c6f965eef7",
+     "freeze_sha256": "b08131b1ca7849a3e7f801b87f427774df346366344a2b24bd8207fcb847ec4e",
+     "head_at_adjudication": "bfa39a6c3",
+     "source_content_commit": "5edca576b569b4a7bd6acfb09b77938ee555c147",
+     "src_content_sha256": "bc6815c2120e4c440af264b22280fc379d30176e8e5d2f5ee3f3d466364a7a22"
+    },
+    "run": 0
+   },
+   {
+    "candidate": {
+     "branch": "stage/p25/b75-ocsp",
+     "head_at_review": "fc1a1e8df",
+     "source_candidate": "17042ccf29bc39df638c63e69d3be6c6f965eef7"
+    },
+    "run": 1
+   },
+   {
+    "candidate": {
+     "branch": "staging",
+     "libcrypto_so_3_sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+     "libssl_so_3_sha256": "648f8caecda245d2186813fb67ceadedd798b9ce609c8b041a84f195946c5f68",
+     "repository_head": "17e45eec1a48a7a5e1679e1d29ee69451e9d59a1"
+    },
+    "run": 2
+   },
+   {
+    "candidate": {
+     "branch": "staging",
+     "commit": "246e30580f909c047eeb04a93a06f9bd05dc65f3",
+     "scanner": "forensics/tools/unsafe_obligations.py",
+     "scanner_sha256": "443634a38f50d2563e1abdb2352ae0c8171ad03a06b05e058cf637392e5bf6ad",
+     "source_tree_sha256": "ef8678c53feb9ec59e8cc61c6a0b636ae59aeb01b6dbe482ebc463932ae2ed1d"
+    },
+    "run": 3
+   },
+   {
+    "candidate": {
+     "branch": "staging",
+     "commit": "0eddfe839f552a6e22a8cf375ec308c8bf7c478b"
+    },
+    "run": 4
+   },
+   {
+    "candidate": {
+     "branch": "staging",
+     "libcrypto_build_id": "592a81d4ae5e7e02bfc635ff8bcd4fbdde37de70",
+     "libcrypto_sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+     "source_head": "18d12e1d5f5ff2faea22c81ee6351bc39add1b60"
+    },
+    "run": 5
+   }
+  ],
+  "runCount": 6,
+  "token": "dea0f4228962fc342930e0a45dc50d3b12a9962cef0c4510bc47be89db7a5b92"
+ },
+ "kind": "code-scanning-export-manifest",
+ "limit": 5000,
+ "nonClaims": [
+  "a shard is a subset, not a census; only this manifest states the population",
+  "an upload to any code-scanning service is not performed here and is not evidence",
+  "a result's presence is not a verdict on the code; A1 owns the projection",
+  "the copied run.properties.a1 projection describes the parent run, not the shard"
+ ],
+ "parent": {
+  "bytes": 13651450,
+  "identitiesDigest": "1c3b64ca5e1f694f1950f199281d7e61b95e3258128985c470c54f5e21ad5777",
+  "path": "evidence/a1/SARIF.json",
+  "resultCount": 4245,
+  "runCount": 6,
+  "runs": [
+   {
+    "index": 0,
+    "results": 17
+   },
+   {
+    "index": 1,
+    "results": 4
+   },
+   {
+    "index": 2,
+    "results": 211
+   },
+   {
+    "index": 3,
+    "results": 3953
+   },
+   {
+    "index": 4,
+    "results": 51
+   },
+   {
+    "index": 5,
+    "results": 9
+   }
+  ],
+  "sha256": "5c0cfee62512deb08cc12f95624be64865d3e544473bae80d9aca0ab36ce7852",
+  "tool": {
+   "runs": [
+    {
+     "name": "openssl-rs-sarif-adapter",
+     "semanticVersion": "1.0.0",
+     "version": "1.0.0"
+    },
+    {
+     "name": "openssl-rs-sarif-adapter",
+     "semanticVersion": "1.0.0",
+     "version": "1.0.0"
+    },
+    {
+     "name": "openssl-rs-sarif-adapter",
+     "semanticVersion": "1.0.0",
+     "version": "1.0.0"
+    },
+    {
+     "name": "openssl-rs-sarif-adapter",
+     "semanticVersion": "1.0.0",
+     "version": "1.0.0"
+    },
+    {
+     "name": "openssl-rs-sarif-adapter",
+     "semanticVersion": "1.0.0",
+     "version": "1.0.0"
+    },
+    {
+     "name": "openssl-rs-sarif-adapter",
+     "semanticVersion": "1.0.0",
+     "version": "1.0.0"
+    }
+   ],
+   "uniform": true
+  }
+ },
+ "schema": "openssl-rs/a8/code-scanning-export/1",
+ "shardCount": 1,
+ "shardFiles": [
+  "SHARD-000.sarif"
+ ],
+ "shards": [
+  {
+   "bytes": 8699144,
+   "file": "SHARD-000.sarif",
+   "firstResult": 0,
+   "index": 0,
+   "lastResult": 4244,
+   "resultCount": 4245,
+   "runIndices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "sha256": "b16d376ae0b2fa5483650f8019eada15102fcae580b0a46419b13e7ee98450ed"
+  }
+ ],
+ "tool": {
+  "dependency": "none: no API client, no network call, no token, no upload",
+  "name": "openssl-rs-code-scanning-export",
+  "path": "forensics/tools/code_scanning_export.py",
+  "sha256": "6021b64ad74a3bddc7fa05b76db113338f44d919b328e6046f00896180954658",
+  "version": "1.0.0"
+ },
+ "union": {
+  "distinctIdentities": 4245,
+  "duplicates": 0,
+  "equalsParent": true,
+  "extra": 0,
+  "identitiesDigest": "1c3b64ca5e1f694f1950f199281d7e61b95e3258128985c470c54f5e21ad5777",
+  "missing": 0,
+  "parentResultCount": 4245,
+  "shardResultCount": 4245
+ }
+}

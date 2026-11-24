@@ -1,0 +1,186 @@
+{
+ "codes": {
+  "EX_REFUSED_ABSOLUTE_PATH": {
+   "condition": "a parent URI, a shard URI, a shard file name or a manifest parent path is absolute",
+   "prevents": "that a host path is read as a portable artefact reference, and that a shard file is taken from outside the export directory"
+  },
+  "EX_REFUSED_ARTIFACT_DROPPED": {
+   "condition": "a result names an artifact URI the shard's `artifacts` table omits or changed",
+   "prevents": "that a location is resolvable when its artifact entry is absent, and that an index still points at the artifact it claims"
+  },
+  "EX_REFUSED_CANDIDATE_UNRECORDED": {
+   "condition": "the parent, a shard or the manifest records no candidate, or a different one",
+   "prevents": "that a result is bound to the candidate it was emitted at when the identity is absent or has moved"
+  },
+  "EX_REFUSED_DIGEST_MISMATCH": {
+   "condition": "a shard's bytes do not hash to the digest the manifest records",
+   "prevents": "that the analysed shard is the emitted shard, so evidence from one file is not reused for another"
+  },
+  "EX_REFUSED_MANIFEST_ABSENT": {
+   "condition": "no manifest was supplied or it cannot be read",
+   "prevents": "that a set of shard files is an export: without the manifest there is no statement of the population and no union check"
+  },
+  "EX_REFUSED_MANIFEST_SHARD_MISSING": {
+   "condition": "the manifest and the shard set disagree about which shards exist",
+   "prevents": "that the files on disk and the results the manifest accounts for are the same set"
+  },
+  "EX_REFUSED_NETWORK_OR_CREDENTIAL": {
+   "condition": "the export module imports a network client, reads a credential, or uploads",
+   "prevents": "that the export depends on a service, a token or a network call; the export is a local transformation and must remain one"
+  },
+  "EX_REFUSED_ORDER_CHANGED": {
+   "condition": "a shard's result order is not the parent order restricted to it",
+   "prevents": "that a reordered shard is a faithful subset; order is the only positional check against the parent's own emission order"
+  },
+  "EX_REFUSED_OUTPUT_NOT_EMPTY": {
+   "condition": "the output directory is not empty and `--force` was not given",
+   "prevents": "that an unrelated directory is overwritten in the belief that it is this export's output"
+  },
+  "EX_REFUSED_OVERSIZE_SHARD": {
+   "condition": "a shard holds more results than the export limit (5,000)",
+   "prevents": "that a file the service would truncate is a complete shard, so an ingestion-side cut is read as a shard that held nothing more"
+  },
+  "EX_REFUSED_PARENT_SHAPE": {
+   "condition": "the parent is unreadable, malformed, or internally inconsistent",
+   "prevents": "that a shape this tool does not understand is exported as if it were the A1 profile"
+  },
+  "EX_REFUSED_RULE_DROPPED": {
+   "condition": "a result names a rule the shard's `rules` table omits or changed",
+   "prevents": "that a self-contained log exists when its rule descriptions are absent, which leaves `ruleId` readable but its meaning unstated"
+  },
+  "EX_REFUSED_SHARD_AS_CENSUS": {
+   "condition": "a shard carries a completeness or census property",
+   "prevents": "that one shard is the population, which would make every other shard and the manifest look like duplicates or noise"
+  },
+  "EX_REFUSED_TOOL_DROPPED": {
+   "condition": "a shard run's tool identity is not the parent run's",
+   "prevents": "that a result produced by a different producer is evidence from this parent"
+  },
+  "EX_REFUSED_UNION_DUPLICATE": {
+   "condition": "the union holds an exact identity more than once",
+   "prevents": "that a repeated result is two results, which would inflate the population and hide a missing one"
+  },
+  "EX_REFUSED_UNION_INCOMPLETE": {
+   "condition": "a parent result identity is missing from the union of the shards",
+   "prevents": "that the shards together hold the parent population when a result was dropped or never emitted"
+  },
+  "EX_REFUSED_UNSUPPORTED_VERSION": {
+   "condition": "the parent, a shard or the manifest is not the supported version",
+   "prevents": "that a different format is read with this export's rules; a 2.2 or a later manifest is not this manifest"
+  }
+ },
+ "controls": [
+  {
+   "code": "EX_REFUSED_OVERSIZE_SHARD",
+   "control": "oversize-shard",
+   "note": "5,001 results in one shard against the 5,000 limit",
+   "observed": "EX_REFUSED_OVERSIZE_SHARD"
+  },
+  {
+   "code": "EX_REFUSED_SHARD_AS_CENSUS",
+   "control": "shard-as-census",
+   "note": "properties.shard.census is present",
+   "observed": "EX_REFUSED_SHARD_AS_CENSUS"
+  },
+  {
+   "code": "EX_REFUSED_MANIFEST_ABSENT",
+   "control": "manifest-absent",
+   "note": "no manifest object",
+   "observed": "EX_REFUSED_MANIFEST_ABSENT"
+  },
+  {
+   "code": "EX_REFUSED_MANIFEST_SHARD_MISSING",
+   "control": "manifest-shard-missing",
+   "note": "the manifest names two shards; one is supplied",
+   "observed": "EX_REFUSED_MANIFEST_SHARD_MISSING"
+  },
+  {
+   "code": "EX_REFUSED_UNION_INCOMPLETE",
+   "control": "union-incomplete",
+   "note": "one result removed from shard 0",
+   "observed": "EX_REFUSED_UNION_INCOMPLETE"
+  },
+  {
+   "code": "EX_REFUSED_UNION_DUPLICATE",
+   "control": "union-duplicate",
+   "note": "the first result of shard 1 is present twice",
+   "observed": "EX_REFUSED_UNION_DUPLICATE"
+  },
+  {
+   "code": "EX_REFUSED_ORDER_CHANGED",
+   "control": "order-changed",
+   "note": "two results in shard 0 swapped",
+   "observed": "EX_REFUSED_ORDER_CHANGED"
+  },
+  {
+   "code": "EX_REFUSED_DIGEST_MISMATCH",
+   "control": "digest-mismatch",
+   "note": "one manifest digest changed",
+   "observed": "EX_REFUSED_DIGEST_MISMATCH"
+  },
+  {
+   "code": "EX_REFUSED_TOOL_DROPPED",
+   "control": "tool-dropped",
+   "note": "shard 0 names a different tool",
+   "observed": "EX_REFUSED_TOOL_DROPPED"
+  },
+  {
+   "code": "EX_REFUSED_RULE_DROPPED",
+   "control": "rule-dropped",
+   "note": "a used rule removed from shard 0",
+   "observed": "EX_REFUSED_RULE_DROPPED"
+  },
+  {
+   "code": "EX_REFUSED_ARTIFACT_DROPPED",
+   "control": "artifact-dropped",
+   "note": "a referenced artifact removed from shard 0",
+   "observed": "EX_REFUSED_ARTIFACT_DROPPED"
+  },
+  {
+   "code": "EX_REFUSED_CANDIDATE_UNRECORDED",
+   "control": "candidate-unrecorded",
+   "note": "shard 0 carries a candidate that is not the parent's",
+   "observed": "EX_REFUSED_CANDIDATE_UNRECORDED"
+  },
+  {
+   "code": "EX_REFUSED_ABSOLUTE_PATH",
+   "control": "absolute-path",
+   "note": "one artifact URI is a host path",
+   "observed": "EX_REFUSED_ABSOLUTE_PATH"
+  },
+  {
+   "code": "EX_REFUSED_UNSUPPORTED_VERSION",
+   "control": "unsupported-version",
+   "note": "one shard claims SARIF 2.2.0",
+   "observed": "EX_REFUSED_UNSUPPORTED_VERSION"
+  },
+  {
+   "code": "EX_REFUSED_PARENT_SHAPE",
+   "control": "parent-shape",
+   "note": "a run repeats a rule id",
+   "observed": "EX_REFUSED_PARENT_SHAPE"
+  },
+  {
+   "code": "EX_REFUSED_NETWORK_OR_CREDENTIAL",
+   "control": "network-or-credential",
+   "note": "a source that imports a network client and reads a token",
+   "observed": "EX_REFUSED_NETWORK_OR_CREDENTIAL",
+   "realModule": "clean"
+  },
+  {
+   "code": "EX_REFUSED_OUTPUT_NOT_EMPTY",
+   "control": "output-not-empty",
+   "note": "a non-empty directory without --force",
+   "observed": "EX_REFUSED_OUTPUT_NOT_EMPTY"
+  }
+ ],
+ "kind": "code-scanning-export-controls",
+ "realModule": "no network client, no credential read, no upload",
+ "schema": "openssl-rs/a8/code-scanning-controls/1",
+ "tool": {
+  "name": "openssl-rs-code-scanning-export",
+  "path": "forensics/tools/code_scanning_export.py",
+  "sha256": "6021b64ad74a3bddc7fa05b76db113338f44d919b328e6046f00896180954658",
+  "version": "1.0.0"
+ }
+}
