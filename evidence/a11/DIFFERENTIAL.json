@@ -1,0 +1,680 @@
+{
+  "cases": {
+    "bom": {
+      "description": "a UTF-8 BOM is stripped by a permissive utf-8-sig reader and refused by the strict reader",
+      "pair": {
+        "crossNumberChangeOrder": "left=first, right=second",
+        "crossNumberChanges": [],
+        "distinctBytes": true,
+        "first": {
+          "acceptedOnlyByPermissive": true,
+          "acceptedOnlyByStrict": false,
+          "agree": false,
+          "bytes": 10,
+          "duplicateKeyCollapsed": false,
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "{\"a\":1}",
+            "canonicalSha256": "015abd7f5cc57a2dd94b7590f04ad8084273905ee33ec5cebeae62276a97f862",
+            "duplicateKeys": [],
+            "status": "ACCEPTED",
+            "type": "object"
+          },
+          "sha256": "e3170108e7583c4ad52e05763a606c1dceef76c81a8e1503dde511b5ca764f81",
+          "strict": {
+            "code": "PH_REFUSED_BOM",
+            "message": "the input begins with the byte-order mark efbbbf",
+            "status": "REFUSED"
+          }
+        },
+        "firstSha256": "e3170108e7583c4ad52e05763a606c1dceef76c81a8e1503dde511b5ca764f81",
+        "permissiveCanonical": "{\"a\":1}",
+        "samePermissiveCanonical": true,
+        "samePermissiveValue": true,
+        "second": {
+          "acceptedOnlyByPermissive": false,
+          "acceptedOnlyByStrict": false,
+          "agree": true,
+          "bytes": 7,
+          "duplicateKeyCollapsed": false,
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "{\"a\":1}",
+            "canonicalSha256": "015abd7f5cc57a2dd94b7590f04ad8084273905ee33ec5cebeae62276a97f862",
+            "duplicateKeys": [],
+            "status": "ACCEPTED",
+            "type": "object"
+          },
+          "sha256": "015abd7f5cc57a2dd94b7590f04ad8084273905ee33ec5cebeae62276a97f862",
+          "strict": {
+            "code": "PH_OK",
+            "status": "ACCEPTED",
+            "type": "object"
+          }
+        },
+        "secondSha256": "015abd7f5cc57a2dd94b7590f04ad8084273905ee33ec5cebeae62276a97f862"
+      },
+      "parameters": {
+        "integer_bits": 64,
+        "max_bytes": 4194304,
+        "max_depth": 64
+      }
+    },
+    "controlCharacter": {
+      "description": "a raw control character in a string is accepted by a strict=False reader and refused by this reader",
+      "variants": [
+        {
+          "acceptedOnlyByPermissive": true,
+          "acceptedOnlyByStrict": false,
+          "agree": false,
+          "bytes": 11,
+          "duplicateKeyCollapsed": false,
+          "label": "raw-newline",
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "{\"a\":\"x\\ny\"}",
+            "canonicalSha256": "2cde7d89bb8d29e17ab3d2232d50d175723835439ab3a0552b316d652aeb9527",
+            "duplicateKeys": [],
+            "status": "ACCEPTED",
+            "type": "object"
+          },
+          "sha256": "e50518e5f4ff267b8dabe5cdbc33ea2e00e7a17ab56617325390c4d33c1c1867",
+          "strict": {
+            "code": "PH_REFUSED_CONTROL_CHARACTER",
+            "message": "U+000A is a raw control character in a string, not an escape",
+            "status": "REFUSED"
+          }
+        },
+        {
+          "acceptedOnlyByPermissive": true,
+          "acceptedOnlyByStrict": false,
+          "agree": false,
+          "bytes": 11,
+          "duplicateKeyCollapsed": false,
+          "label": "raw-nul",
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "{\"a\":\"x\\u0000y\"}",
+            "canonicalSha256": "2535d3551d8ae821e2f53df23f636e22c48839e94d359eeb47195053102aaa4b",
+            "duplicateKeys": [],
+            "status": "ACCEPTED",
+            "type": "object"
+          },
+          "sha256": "4307def92dd3d18345170870092e087fc343f07d24100c7ec9265a9db1a80ea0",
+          "strict": {
+            "code": "PH_REFUSED_CONTROL_CHARACTER",
+            "message": "U+0000 is a raw control character in a string, not an escape",
+            "status": "REFUSED"
+          }
+        }
+      ]
+    },
+    "depth": {
+      "description": "a document at max_depth=64 is accepted and one level deeper is refused",
+      "pair": {
+        "crossNumberChangeOrder": "left=first, right=second",
+        "crossNumberChanges": [],
+        "distinctBytes": true,
+        "first": {
+          "acceptedOnlyByPermissive": false,
+          "acceptedOnlyByStrict": false,
+          "agree": true,
+          "bytes": 129,
+          "duplicateKeyCollapsed": false,
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[1]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]",
+            "canonicalSha256": "36127fd491fb6253bca865d070b1c735abaf9d9b4d8a225ea3392e9c36ad193a",
+            "duplicateKeys": [],
+            "status": "ACCEPTED",
+            "type": "array"
+          },
+          "sha256": "36127fd491fb6253bca865d070b1c735abaf9d9b4d8a225ea3392e9c36ad193a",
+          "strict": {
+            "code": "PH_OK",
+            "status": "ACCEPTED",
+            "type": "array"
+          }
+        },
+        "firstSha256": "36127fd491fb6253bca865d070b1c735abaf9d9b4d8a225ea3392e9c36ad193a",
+        "permissiveCanonical": null,
+        "samePermissiveCanonical": false,
+        "samePermissiveValue": false,
+        "second": {
+          "acceptedOnlyByPermissive": true,
+          "acceptedOnlyByStrict": false,
+          "agree": false,
+          "bytes": 131,
+          "duplicateKeyCollapsed": false,
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[[1]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]]",
+            "canonicalSha256": "de4118efdc6a1875b801f85af62b3b9856fd01de9a3cdf4927d0371d82e5cacb",
+            "duplicateKeys": [],
+            "status": "ACCEPTED",
+            "type": "array"
+          },
+          "sha256": "de4118efdc6a1875b801f85af62b3b9856fd01de9a3cdf4927d0371d82e5cacb",
+          "strict": {
+            "code": "PH_REFUSED_DEPTH",
+            "message": "an array at depth 65 exceeds max_depth=64",
+            "status": "REFUSED"
+          }
+        },
+        "secondSha256": "de4118efdc6a1875b801f85af62b3b9856fd01de9a3cdf4927d0371d82e5cacb"
+      },
+      "parameters": {
+        "integer_bits": 64,
+        "max_bytes": 4194304,
+        "max_depth": 64
+      }
+    },
+    "duplicateKey": {
+      "description": "two distinct byte strings: a document that repeats a key, and the document the permissive reader collapses it to",
+      "pair": {
+        "crossNumberChangeOrder": "left=first, right=second",
+        "crossNumberChanges": [],
+        "distinctBytes": true,
+        "first": {
+          "acceptedOnlyByPermissive": true,
+          "acceptedOnlyByStrict": false,
+          "agree": false,
+          "bytes": 13,
+          "duplicateKeyCollapsed": true,
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "{\"a\":2}",
+            "canonicalSha256": "7e8059f495589fcd981232cc11d00b00da3802c01d688fa1cf1f6bed6e5bb33c",
+            "duplicateKeys": [
+              "a"
+            ],
+            "status": "ACCEPTED",
+            "type": "object"
+          },
+          "sha256": "1c53ee0df7b12fd4d65b976120c7fa6b847dc41dffd7f0331c3237a1ceab1756",
+          "strict": {
+            "code": "PH_REFUSED_DUPLICATE_KEY",
+            "message": "the object repeats the key 'a'; a later value would silently replace the earlier one",
+            "status": "REFUSED"
+          }
+        },
+        "firstSha256": "1c53ee0df7b12fd4d65b976120c7fa6b847dc41dffd7f0331c3237a1ceab1756",
+        "permissiveCanonical": "{\"a\":2}",
+        "samePermissiveCanonical": true,
+        "samePermissiveValue": true,
+        "second": {
+          "acceptedOnlyByPermissive": false,
+          "acceptedOnlyByStrict": false,
+          "agree": true,
+          "bytes": 7,
+          "duplicateKeyCollapsed": false,
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "{\"a\":2}",
+            "canonicalSha256": "7e8059f495589fcd981232cc11d00b00da3802c01d688fa1cf1f6bed6e5bb33c",
+            "duplicateKeys": [],
+            "status": "ACCEPTED",
+            "type": "object"
+          },
+          "sha256": "7e8059f495589fcd981232cc11d00b00da3802c01d688fa1cf1f6bed6e5bb33c",
+          "strict": {
+            "code": "PH_OK",
+            "status": "ACCEPTED",
+            "type": "object"
+          }
+        },
+        "secondSha256": "7e8059f495589fcd981232cc11d00b00da3802c01d688fa1cf1f6bed6e5bb33c"
+      },
+      "parameters": {
+        "integer_bits": 64,
+        "max_bytes": 4194304,
+        "max_depth": 64
+      }
+    },
+    "integerVsFloat": {
+      "description": "the same numeric quantity written as an integer and as a float parses to two values equal under == but of different type; the strict reader preserves the distinction and the differential records the type move",
+      "pair": {
+        "crossNumberChangeOrder": "left=first, right=second",
+        "crossNumberChanges": [
+          {
+            "kind": "type",
+            "left": "integer:1",
+            "path": "$.n",
+            "right": "number:1.0"
+          }
+        ],
+        "distinctBytes": true,
+        "first": {
+          "acceptedOnlyByPermissive": false,
+          "acceptedOnlyByStrict": false,
+          "agree": true,
+          "bytes": 7,
+          "duplicateKeyCollapsed": false,
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "{\"n\":1}",
+            "canonicalSha256": "2bfd14f43d17fc7cea24e0917a8879b4b2f880b8baeec1b9d90fbaad655e71bd",
+            "duplicateKeys": [],
+            "status": "ACCEPTED",
+            "type": "object"
+          },
+          "sha256": "2bfd14f43d17fc7cea24e0917a8879b4b2f880b8baeec1b9d90fbaad655e71bd",
+          "strict": {
+            "code": "PH_OK",
+            "status": "ACCEPTED",
+            "type": "object"
+          }
+        },
+        "firstSha256": "2bfd14f43d17fc7cea24e0917a8879b4b2f880b8baeec1b9d90fbaad655e71bd",
+        "permissiveCanonical": null,
+        "samePermissiveCanonical": false,
+        "samePermissiveValue": false,
+        "second": {
+          "acceptedOnlyByPermissive": false,
+          "acceptedOnlyByStrict": false,
+          "agree": true,
+          "bytes": 9,
+          "duplicateKeyCollapsed": false,
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "{\"n\":1.0}",
+            "canonicalSha256": "3b6b06ecd1c968c8e738e0f11c4bb361fca80a9a694de22fe66a05286afbd081",
+            "duplicateKeys": [],
+            "status": "ACCEPTED",
+            "type": "object"
+          },
+          "sha256": "3b6b06ecd1c968c8e738e0f11c4bb361fca80a9a694de22fe66a05286afbd081",
+          "strict": {
+            "code": "PH_OK",
+            "status": "ACCEPTED",
+            "type": "object"
+          }
+        },
+        "secondSha256": "3b6b06ecd1c968c8e738e0f11c4bb361fca80a9a694de22fe66a05286afbd081"
+      },
+      "parameters": {
+        "integer_bits": 64,
+        "max_bytes": 4194304,
+        "max_depth": 64
+      }
+    },
+    "loneSurrogate": {
+      "description": "an unpaired high-surrogate escape is a str in the permissive reader and refused by the strict reader",
+      "pair": {
+        "crossNumberChangeOrder": "left=first, right=second",
+        "crossNumberChanges": [],
+        "distinctBytes": true,
+        "first": {
+          "acceptedOnlyByPermissive": true,
+          "acceptedOnlyByStrict": false,
+          "agree": false,
+          "bytes": 8,
+          "duplicateKeyCollapsed": false,
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "\"\\ud800\"",
+            "canonicalSha256": "8c0c59dd0d275aadcd462a5fe12eb352cbdfeaf961eae4f85a4660521df7d2f5",
+            "duplicateKeys": [],
+            "status": "ACCEPTED",
+            "type": "string"
+          },
+          "sha256": "8c0c59dd0d275aadcd462a5fe12eb352cbdfeaf961eae4f85a4660521df7d2f5",
+          "strict": {
+            "code": "PH_REFUSED_LONE_SURROGATE",
+            "message": "the high surrogate U+D800 is not followed by a low surrogate",
+            "status": "REFUSED"
+          }
+        },
+        "firstSha256": "8c0c59dd0d275aadcd462a5fe12eb352cbdfeaf961eae4f85a4660521df7d2f5",
+        "permissiveCanonical": null,
+        "samePermissiveCanonical": false,
+        "samePermissiveValue": false,
+        "second": {
+          "acceptedOnlyByPermissive": false,
+          "acceptedOnlyByStrict": false,
+          "agree": true,
+          "bytes": 4,
+          "duplicateKeyCollapsed": false,
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "\"ok\"",
+            "canonicalSha256": "c48b5b1a9776c84602de2306d7903a7241158a5077e7a8519af75c33441b8334",
+            "duplicateKeys": [],
+            "status": "ACCEPTED",
+            "type": "string"
+          },
+          "sha256": "c48b5b1a9776c84602de2306d7903a7241158a5077e7a8519af75c33441b8334",
+          "strict": {
+            "code": "PH_OK",
+            "status": "ACCEPTED",
+            "type": "string"
+          }
+        },
+        "secondSha256": "c48b5b1a9776c84602de2306d7903a7241158a5077e7a8519af75c33441b8334"
+      },
+      "parameters": {
+        "integer_bits": 64,
+        "max_bytes": 4194304,
+        "max_depth": 64
+      }
+    },
+    "nonFinite": {
+      "description": "NaN is accepted by the permissive reader; the strict reader refuses it",
+      "pair": {
+        "crossNumberChangeOrder": "left=first, right=second",
+        "crossNumberChanges": [
+          {
+            "kind": "type",
+            "left": "number:nan",
+            "path": "$.n",
+            "right": "integer:0"
+          }
+        ],
+        "distinctBytes": true,
+        "first": {
+          "acceptedOnlyByPermissive": true,
+          "acceptedOnlyByStrict": false,
+          "agree": false,
+          "bytes": 9,
+          "duplicateKeyCollapsed": false,
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "{\"n\":NaN}",
+            "canonicalSha256": "df38c4379aa2b6d4a7151668f11c6cdf75dc52f52588502956377adddf9e1a26",
+            "duplicateKeys": [],
+            "status": "ACCEPTED",
+            "type": "object"
+          },
+          "sha256": "df38c4379aa2b6d4a7151668f11c6cdf75dc52f52588502956377adddf9e1a26",
+          "strict": {
+            "code": "PH_REFUSED_NONFINITE",
+            "message": "'N' does not begin a JSON value",
+            "status": "REFUSED"
+          }
+        },
+        "firstSha256": "df38c4379aa2b6d4a7151668f11c6cdf75dc52f52588502956377adddf9e1a26",
+        "permissiveCanonical": null,
+        "samePermissiveCanonical": false,
+        "samePermissiveValue": false,
+        "second": {
+          "acceptedOnlyByPermissive": false,
+          "acceptedOnlyByStrict": false,
+          "agree": true,
+          "bytes": 7,
+          "duplicateKeyCollapsed": false,
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "{\"n\":0}",
+            "canonicalSha256": "f3013f933b9fb80ab6d995e7ad9da36f683837ba1d81e950c943d40111eac2f0",
+            "duplicateKeys": [],
+            "status": "ACCEPTED",
+            "type": "object"
+          },
+          "sha256": "f3013f933b9fb80ab6d995e7ad9da36f683837ba1d81e950c943d40111eac2f0",
+          "strict": {
+            "code": "PH_OK",
+            "status": "ACCEPTED",
+            "type": "object"
+          }
+        },
+        "secondSha256": "f3013f933b9fb80ab6d995e7ad9da36f683837ba1d81e950c943d40111eac2f0"
+      },
+      "parameters": {
+        "integer_bits": 64,
+        "max_bytes": 4194304,
+        "max_depth": 64
+      }
+    },
+    "nonFiniteVariants": {
+      "description": "the other non-finite spellings the permissive reader accepts, and a finite literal that overflows to infinity in a double",
+      "variants": [
+        {
+          "acceptedOnlyByPermissive": true,
+          "acceptedOnlyByStrict": false,
+          "agree": false,
+          "bytes": 9,
+          "duplicateKeyCollapsed": false,
+          "label": "NaN",
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "{\"n\":NaN}",
+            "canonicalSha256": "df38c4379aa2b6d4a7151668f11c6cdf75dc52f52588502956377adddf9e1a26",
+            "duplicateKeys": [],
+            "status": "ACCEPTED",
+            "type": "object"
+          },
+          "sha256": "df38c4379aa2b6d4a7151668f11c6cdf75dc52f52588502956377adddf9e1a26",
+          "strict": {
+            "code": "PH_REFUSED_NONFINITE",
+            "message": "'N' does not begin a JSON value",
+            "status": "REFUSED"
+          }
+        },
+        {
+          "acceptedOnlyByPermissive": true,
+          "acceptedOnlyByStrict": false,
+          "agree": false,
+          "bytes": 14,
+          "duplicateKeyCollapsed": false,
+          "label": "Infinity",
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "{\"n\":Infinity}",
+            "canonicalSha256": "118b2cab78badb9e6239321a230c158b3f31bd401885e17dfedbf341a04d99ef",
+            "duplicateKeys": [],
+            "status": "ACCEPTED",
+            "type": "object"
+          },
+          "sha256": "118b2cab78badb9e6239321a230c158b3f31bd401885e17dfedbf341a04d99ef",
+          "strict": {
+            "code": "PH_REFUSED_NONFINITE",
+            "message": "'I' does not begin a JSON value",
+            "status": "REFUSED"
+          }
+        },
+        {
+          "acceptedOnlyByPermissive": true,
+          "acceptedOnlyByStrict": false,
+          "agree": false,
+          "bytes": 15,
+          "duplicateKeyCollapsed": false,
+          "label": "negative-Infinity",
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "{\"n\":-Infinity}",
+            "canonicalSha256": "405a026b3e3a03f012eb42469abe07a1dbda346f618d28309b027e0a24462049",
+            "duplicateKeys": [],
+            "status": "ACCEPTED",
+            "type": "object"
+          },
+          "sha256": "405a026b3e3a03f012eb42469abe07a1dbda346f618d28309b027e0a24462049",
+          "strict": {
+            "code": "PH_REFUSED_NONFINITE",
+            "message": "-Infinity is not a JSON number",
+            "status": "REFUSED"
+          }
+        },
+        {
+          "acceptedOnlyByPermissive": true,
+          "acceptedOnlyByStrict": false,
+          "agree": false,
+          "bytes": 11,
+          "duplicateKeyCollapsed": false,
+          "label": "overflow-to-infinity",
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "{\"n\":Infinity}",
+            "canonicalSha256": "118b2cab78badb9e6239321a230c158b3f31bd401885e17dfedbf341a04d99ef",
+            "duplicateKeys": [],
+            "status": "ACCEPTED",
+            "type": "object"
+          },
+          "sha256": "99450423054b8646b3dc4c0bc12384edb68977ec153e96189686618fafdc584c",
+          "strict": {
+            "code": "PH_REFUSED_NONFINITE",
+            "message": "1e400 overflows to a non-finite double",
+            "status": "REFUSED"
+          }
+        }
+      ]
+    },
+    "numberForm": {
+      "description": "two distinct byte strings: -0 loses its sign to an integer reader, so the permissive reader returns the same object as 0",
+      "pair": {
+        "crossNumberChangeOrder": "left=first, right=second",
+        "crossNumberChanges": [],
+        "distinctBytes": true,
+        "first": {
+          "acceptedOnlyByPermissive": true,
+          "acceptedOnlyByStrict": false,
+          "agree": false,
+          "bytes": 8,
+          "duplicateKeyCollapsed": false,
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "{\"n\":0}",
+            "canonicalSha256": "f3013f933b9fb80ab6d995e7ad9da36f683837ba1d81e950c943d40111eac2f0",
+            "duplicateKeys": [],
+            "status": "ACCEPTED",
+            "type": "object"
+          },
+          "sha256": "d54829e5b2d6e184fe2005d0b3ee73c1931163e1c1fd461a7449c9f7255ea2d2",
+          "strict": {
+            "code": "PH_REFUSED_NUMBER_FORM",
+            "message": "-0 is not the canonical form of the integer zero",
+            "status": "REFUSED"
+          }
+        },
+        "firstSha256": "d54829e5b2d6e184fe2005d0b3ee73c1931163e1c1fd461a7449c9f7255ea2d2",
+        "permissiveCanonical": "{\"n\":0}",
+        "samePermissiveCanonical": true,
+        "samePermissiveValue": true,
+        "second": {
+          "acceptedOnlyByPermissive": false,
+          "acceptedOnlyByStrict": false,
+          "agree": true,
+          "bytes": 7,
+          "duplicateKeyCollapsed": false,
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "{\"n\":0}",
+            "canonicalSha256": "f3013f933b9fb80ab6d995e7ad9da36f683837ba1d81e950c943d40111eac2f0",
+            "duplicateKeys": [],
+            "status": "ACCEPTED",
+            "type": "object"
+          },
+          "sha256": "f3013f933b9fb80ab6d995e7ad9da36f683837ba1d81e950c943d40111eac2f0",
+          "strict": {
+            "code": "PH_OK",
+            "status": "ACCEPTED",
+            "type": "object"
+          }
+        },
+        "secondSha256": "f3013f933b9fb80ab6d995e7ad9da36f683837ba1d81e950c943d40111eac2f0"
+      },
+      "parameters": {
+        "integer_bits": 64,
+        "max_bytes": 4194304,
+        "max_depth": 64
+      }
+    },
+    "trailingData": {
+      "description": "a second document after the first is ignored by a permissive reader and refused by the strict reader",
+      "pair": {
+        "crossNumberChangeOrder": "left=first, right=second",
+        "crossNumberChanges": [],
+        "distinctBytes": true,
+        "first": {
+          "acceptedOnlyByPermissive": true,
+          "acceptedOnlyByStrict": false,
+          "agree": false,
+          "bytes": 14,
+          "duplicateKeyCollapsed": false,
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "{\"a\":1}",
+            "canonicalSha256": "015abd7f5cc57a2dd94b7590f04ad8084273905ee33ec5cebeae62276a97f862",
+            "duplicateKeys": [],
+            "status": "ACCEPTED",
+            "type": "object"
+          },
+          "sha256": "dad3c0d0a4f2e21f5ca84ada2e897b9246b8a01aff36a0909a7ed0dd5d9774e6",
+          "strict": {
+            "code": "PH_REFUSED_TRAILING_DATA",
+            "message": "7 byte(s) after the top-level value",
+            "status": "REFUSED"
+          }
+        },
+        "firstSha256": "dad3c0d0a4f2e21f5ca84ada2e897b9246b8a01aff36a0909a7ed0dd5d9774e6",
+        "permissiveCanonical": "{\"a\":1}",
+        "samePermissiveCanonical": true,
+        "samePermissiveValue": true,
+        "second": {
+          "acceptedOnlyByPermissive": false,
+          "acceptedOnlyByStrict": false,
+          "agree": true,
+          "bytes": 7,
+          "duplicateKeyCollapsed": false,
+          "numberChangeOrder": "left=strict, right=permissive",
+          "numberChanges": [],
+          "permissive": {
+            "canonical": "{\"a\":1}",
+            "canonicalSha256": "015abd7f5cc57a2dd94b7590f04ad8084273905ee33ec5cebeae62276a97f862",
+            "duplicateKeys": [],
+            "status": "ACCEPTED",
+            "type": "object"
+          },
+          "sha256": "015abd7f5cc57a2dd94b7590f04ad8084273905ee33ec5cebeae62276a97f862",
+          "strict": {
+            "code": "PH_OK",
+            "status": "ACCEPTED",
+            "type": "object"
+          }
+        },
+        "secondSha256": "015abd7f5cc57a2dd94b7590f04ad8084273905ee33ec5cebeae62276a97f862"
+      },
+      "parameters": {
+        "integer_bits": 64,
+        "max_bytes": 4194304,
+        "max_depth": 64
+      }
+    }
+  },
+  "decisiveCase": "duplicateKey",
+  "decisiveClaim": "two distinct byte strings have distinct SHA-256 digests and the permissive reader returns one value for both; the strict reader refuses the first with PH_REFUSED_DUPLICATE_KEY",
+  "readers": {
+    "permissive": "harden.loads_permissive",
+    "permissiveBehaviour": "utf-8-sig decode; raw_decode ignoring trailing bytes; default parse_constant accepting NaN/Infinity; no duplicate-key hook; strict=False; unbounded integers and double floats",
+    "strict": "harden.loads"
+  },
+  "schema": "openssl-rs/a11/differential/1",
+  "sourceIdentity": {
+    "baseCommit": "f1c1a535d",
+    "tool": {
+      "bytes": 40810,
+      "path": "forensics/tools/harden.py",
+      "sha256": "9069b5168a83d612b138434a1ae2536dfd632cd85ae021b063fbb64909f3ac4c"
+    }
+  }
+}

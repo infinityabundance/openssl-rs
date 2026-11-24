@@ -1,0 +1,408 @@
+{
+  "codes": {
+    "PH_REFUSED_BOM": {
+      "condition": "the input begins with a UTF-8, UTF-16 or UTF-32 byte-order mark",
+      "prevents": "that a BOM is accepted by one reader and treated as document content or rejected by another, so two readings of one file disagree about the first key or fail differently"
+    },
+    "PH_REFUSED_CONTROL_CHARACTER": {
+      "condition": "a string contains a raw character below U+0020",
+      "prevents": "that an unescaped newline or NUL is read as string content, so a record's text and the bytes that carry it are read differently"
+    },
+    "PH_REFUSED_DEPTH": {
+      "condition": "containers are nested more deeply than max_depth",
+      "prevents": "that a deeply nested input consumes the reader's stack and its behaviour depends on the interpreter's recursion limit"
+    },
+    "PH_REFUSED_DUPLICATE_KEY": {
+      "condition": "an object repeats a key at any depth",
+      "prevents": "that two distinct documents collapse to one value, so the later value silently replaces the one a record was read as"
+    },
+    "PH_REFUSED_ENCODING": {
+      "condition": "the input bytes are not valid UTF-8",
+      "prevents": "that a reader's fallback encoding turns the same bytes into a different string, so an identity digest over the bytes and the text the rule was applied to disagree"
+    },
+    "PH_REFUSED_INTEGER_RANGE": {
+      "condition": "an integer's magnitude does not fit integer_bits",
+      "prevents": "that an integer is exact in one reader and rounded to a double or silently truncated in another"
+    },
+    "PH_REFUSED_KEY_NOT_TEXT": {
+      "condition": "an object member name is not a JSON string",
+      "prevents": "that a non-text key (a number, a bare word) is read as an object key by a reader that coerces it"
+    },
+    "PH_REFUSED_LONE_SURROGATE": {
+      "condition": "an escape encodes a high or low surrogate that is not paired",
+      "prevents": "that a string Python holds as an unpaired surrogate is emitted to a UTF-8 sink, where it fails or is replaced by a different character"
+    },
+    "PH_REFUSED_NONFINITE": {
+      "condition": "a NaN or Infinity literal, or a number that overflows to infinity",
+      "prevents": "that a value that is not JSON, or a finite literal whose value became infinite, is read as a number"
+    },
+    "PH_REFUSED_NUMBER_FORM": {
+      "condition": "a number is not in the canonical form this reader writes: a leading zero, a leading plus, -0, a missing fraction digit, or a bare .5",
+      "prevents": "that one value has several accepted spellings, so two byte strings parse to one number and a rewrite is invisible"
+    },
+    "PH_REFUSED_SIZE": {
+      "condition": "the input is larger than max_bytes",
+      "prevents": "that a huge record is read in full before anything decides whether it is admissible, turning a reader into a memory denial-of-service"
+    },
+    "PH_REFUSED_SYNTAX": {
+      "condition": "the input is not JSON at all",
+      "prevents": "that an empty, truncated or malformed document is read as an empty or partial value"
+    },
+    "PH_REFUSED_TRAILING_DATA": {
+      "condition": "non-whitespace bytes follow the top-level value",
+      "prevents": "that a second document appended to a record is ignored while the first is read and reported"
+    }
+  },
+  "controls": [
+    {
+      "code": "PH_REFUSED_ENCODING",
+      "condition": "the input bytes are not valid UTF-8",
+      "control": "encoding",
+      "inputBytes": 9,
+      "inputHex": "7b2261223a22ff227d",
+      "inputSha256": "dc2222acf0a31b9e965c6577a25c70f729766e07124482731257cb4bca738af7",
+      "parameters": {
+        "integer_bits": 64,
+        "max_bytes": 4194304,
+        "max_depth": 64
+      },
+      "permissiveResult": {
+        "duplicateKeys": [],
+        "error": "UnicodeDecodeError",
+        "message": "'utf-8' codec can't decode byte 0xff in position 6: invalid start byte",
+        "status": "REFUSED"
+      },
+      "prevents": "that a reader's fallback encoding turns the same bytes into a different string, so an identity digest over the bytes and the text the rule was applied to disagree",
+      "strictResult": {
+        "code": "PH_REFUSED_ENCODING",
+        "message": "the input is not UTF-8: 'utf-8' codec can't decode byte 0xff in position 6: invalid start byte",
+        "status": "REFUSED"
+      }
+    },
+    {
+      "code": "PH_REFUSED_BOM",
+      "condition": "the input begins with a UTF-8, UTF-16 or UTF-32 byte-order mark",
+      "control": "bom",
+      "inputBytes": 10,
+      "inputHex": "efbbbf7b2261223a317d",
+      "inputSha256": "e3170108e7583c4ad52e05763a606c1dceef76c81a8e1503dde511b5ca764f81",
+      "parameters": {
+        "integer_bits": 64,
+        "max_bytes": 4194304,
+        "max_depth": 64
+      },
+      "permissiveResult": {
+        "canonical": "{\"a\":1}",
+        "canonicalSha256": "015abd7f5cc57a2dd94b7590f04ad8084273905ee33ec5cebeae62276a97f862",
+        "duplicateKeys": [],
+        "status": "ACCEPTED",
+        "type": "object"
+      },
+      "prevents": "that a BOM is accepted by one reader and treated as document content or rejected by another, so two readings of one file disagree about the first key or fail differently",
+      "strictResult": {
+        "code": "PH_REFUSED_BOM",
+        "message": "the input begins with the byte-order mark efbbbf",
+        "status": "REFUSED"
+      }
+    },
+    {
+      "code": "PH_REFUSED_DUPLICATE_KEY",
+      "condition": "an object repeats a key at any depth",
+      "control": "duplicate-key",
+      "inputBytes": 13,
+      "inputHex": "7b2261223a312c2261223a327d",
+      "inputSha256": "1c53ee0df7b12fd4d65b976120c7fa6b847dc41dffd7f0331c3237a1ceab1756",
+      "parameters": {
+        "integer_bits": 64,
+        "max_bytes": 4194304,
+        "max_depth": 64
+      },
+      "permissiveResult": {
+        "canonical": "{\"a\":2}",
+        "canonicalSha256": "7e8059f495589fcd981232cc11d00b00da3802c01d688fa1cf1f6bed6e5bb33c",
+        "duplicateKeys": [
+          "a"
+        ],
+        "status": "ACCEPTED",
+        "type": "object"
+      },
+      "prevents": "that two distinct documents collapse to one value, so the later value silently replaces the one a record was read as",
+      "strictResult": {
+        "code": "PH_REFUSED_DUPLICATE_KEY",
+        "message": "the object repeats the key 'a'; a later value would silently replace the earlier one",
+        "status": "REFUSED"
+      }
+    },
+    {
+      "code": "PH_REFUSED_DEPTH",
+      "condition": "containers are nested more deeply than max_depth",
+      "control": "depth",
+      "inputBytes": 9,
+      "inputHex": "5b5b5b5b315d5d5d5d",
+      "inputSha256": "b6bb89c1950785438bc131b5a5e8eddcf7cf7057d39f295b23fca052d768a50c",
+      "parameters": {
+        "integer_bits": 64,
+        "max_bytes": 4194304,
+        "max_depth": 3
+      },
+      "permissiveResult": {
+        "canonical": "[[[[1]]]]",
+        "canonicalSha256": "b6bb89c1950785438bc131b5a5e8eddcf7cf7057d39f295b23fca052d768a50c",
+        "duplicateKeys": [],
+        "status": "ACCEPTED",
+        "type": "array"
+      },
+      "prevents": "that a deeply nested input consumes the reader's stack and its behaviour depends on the interpreter's recursion limit",
+      "strictResult": {
+        "code": "PH_REFUSED_DEPTH",
+        "message": "an array at depth 4 exceeds max_depth=3",
+        "status": "REFUSED"
+      }
+    },
+    {
+      "code": "PH_REFUSED_SIZE",
+      "condition": "the input is larger than max_bytes",
+      "control": "size",
+      "inputBytes": 9,
+      "inputHex": "5b312c322c332c345d",
+      "inputSha256": "f6bd10506e9a4daed7c03eda2f2fde54be3bd58eee49dab471c18a888ffbdb6f",
+      "parameters": {
+        "integer_bits": 64,
+        "max_bytes": 8,
+        "max_depth": 64
+      },
+      "permissiveResult": {
+        "canonical": "[1,2,3,4]",
+        "canonicalSha256": "f6bd10506e9a4daed7c03eda2f2fde54be3bd58eee49dab471c18a888ffbdb6f",
+        "duplicateKeys": [],
+        "status": "ACCEPTED",
+        "type": "array"
+      },
+      "prevents": "that a huge record is read in full before anything decides whether it is admissible, turning a reader into a memory denial-of-service",
+      "strictResult": {
+        "code": "PH_REFUSED_SIZE",
+        "message": "9 bytes exceeds max_bytes=8",
+        "status": "REFUSED"
+      }
+    },
+    {
+      "code": "PH_REFUSED_NONFINITE",
+      "condition": "a NaN or Infinity literal, or a number that overflows to infinity",
+      "control": "nonfinite",
+      "inputBytes": 9,
+      "inputHex": "7b2261223a4e614e7d",
+      "inputSha256": "0ce896293703c00486a61416514acc94d2919f4bd42141dedcca7ddfb97ec422",
+      "parameters": {
+        "integer_bits": 64,
+        "max_bytes": 4194304,
+        "max_depth": 64
+      },
+      "permissiveResult": {
+        "canonical": "{\"a\":NaN}",
+        "canonicalSha256": "0ce896293703c00486a61416514acc94d2919f4bd42141dedcca7ddfb97ec422",
+        "duplicateKeys": [],
+        "status": "ACCEPTED",
+        "type": "object"
+      },
+      "prevents": "that a value that is not JSON, or a finite literal whose value became infinite, is read as a number",
+      "strictResult": {
+        "code": "PH_REFUSED_NONFINITE",
+        "message": "'N' does not begin a JSON value",
+        "status": "REFUSED"
+      }
+    },
+    {
+      "code": "PH_REFUSED_TRAILING_DATA",
+      "condition": "non-whitespace bytes follow the top-level value",
+      "control": "trailing-data",
+      "inputBytes": 14,
+      "inputHex": "7b2261223a317d7b2262223a327d",
+      "inputSha256": "dad3c0d0a4f2e21f5ca84ada2e897b9246b8a01aff36a0909a7ed0dd5d9774e6",
+      "parameters": {
+        "integer_bits": 64,
+        "max_bytes": 4194304,
+        "max_depth": 64
+      },
+      "permissiveResult": {
+        "canonical": "{\"a\":1}",
+        "canonicalSha256": "015abd7f5cc57a2dd94b7590f04ad8084273905ee33ec5cebeae62276a97f862",
+        "duplicateKeys": [],
+        "status": "ACCEPTED",
+        "type": "object"
+      },
+      "prevents": "that a second document appended to a record is ignored while the first is read and reported",
+      "strictResult": {
+        "code": "PH_REFUSED_TRAILING_DATA",
+        "message": "7 byte(s) after the top-level value",
+        "status": "REFUSED"
+      }
+    },
+    {
+      "code": "PH_REFUSED_INTEGER_RANGE",
+      "condition": "an integer's magnitude does not fit integer_bits",
+      "control": "integer-range",
+      "inputBytes": 20,
+      "inputHex": "3138343436373434303733373039353531363136",
+      "inputSha256": "8b292fc2d32f1fd491784610c61b90dc4632a6e4add19261eca4c3979e4ea6d2",
+      "parameters": {
+        "integer_bits": 64,
+        "max_bytes": 4194304,
+        "max_depth": 64
+      },
+      "permissiveResult": {
+        "canonical": "18446744073709551616",
+        "canonicalSha256": "8b292fc2d32f1fd491784610c61b90dc4632a6e4add19261eca4c3979e4ea6d2",
+        "duplicateKeys": [],
+        "status": "ACCEPTED",
+        "type": "integer"
+      },
+      "prevents": "that an integer is exact in one reader and rounded to a double or silently truncated in another",
+      "strictResult": {
+        "code": "PH_REFUSED_INTEGER_RANGE",
+        "message": "18446744073709551616 does not fit integer_bits=64 (the magnitude must be below 2**integer_bits)",
+        "status": "REFUSED"
+      }
+    },
+    {
+      "code": "PH_REFUSED_NUMBER_FORM",
+      "condition": "a number is not in the canonical form this reader writes: a leading zero, a leading plus, -0, a missing fraction digit, or a bare .5",
+      "control": "number-form",
+      "inputBytes": 2,
+      "inputHex": "2d30",
+      "inputSha256": "ed79f26d03f412bde3db206601a698e0bb451bea9e3cc25289636ac17ea74b0a",
+      "parameters": {
+        "integer_bits": 64,
+        "max_bytes": 4194304,
+        "max_depth": 64
+      },
+      "permissiveResult": {
+        "canonical": "0",
+        "canonicalSha256": "5feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9",
+        "duplicateKeys": [],
+        "status": "ACCEPTED",
+        "type": "integer"
+      },
+      "prevents": "that one value has several accepted spellings, so two byte strings parse to one number and a rewrite is invisible",
+      "strictResult": {
+        "code": "PH_REFUSED_NUMBER_FORM",
+        "message": "-0 is not the canonical form of the integer zero",
+        "status": "REFUSED"
+      }
+    },
+    {
+      "code": "PH_REFUSED_LONE_SURROGATE",
+      "condition": "an escape encodes a high or low surrogate that is not paired",
+      "control": "lone-surrogate",
+      "inputBytes": 8,
+      "inputHex": "225c756438303022",
+      "inputSha256": "8c0c59dd0d275aadcd462a5fe12eb352cbdfeaf961eae4f85a4660521df7d2f5",
+      "parameters": {
+        "integer_bits": 64,
+        "max_bytes": 4194304,
+        "max_depth": 64
+      },
+      "permissiveResult": {
+        "canonical": "\"\\ud800\"",
+        "canonicalSha256": "8c0c59dd0d275aadcd462a5fe12eb352cbdfeaf961eae4f85a4660521df7d2f5",
+        "duplicateKeys": [],
+        "status": "ACCEPTED",
+        "type": "string"
+      },
+      "prevents": "that a string Python holds as an unpaired surrogate is emitted to a UTF-8 sink, where it fails or is replaced by a different character",
+      "strictResult": {
+        "code": "PH_REFUSED_LONE_SURROGATE",
+        "message": "the high surrogate U+D800 is not followed by a low surrogate",
+        "status": "REFUSED"
+      }
+    },
+    {
+      "code": "PH_REFUSED_CONTROL_CHARACTER",
+      "condition": "a string contains a raw character below U+0020",
+      "control": "control-character",
+      "inputBytes": 11,
+      "inputHex": "7b2261223a22780a79227d",
+      "inputSha256": "e50518e5f4ff267b8dabe5cdbc33ea2e00e7a17ab56617325390c4d33c1c1867",
+      "parameters": {
+        "integer_bits": 64,
+        "max_bytes": 4194304,
+        "max_depth": 64
+      },
+      "permissiveResult": {
+        "canonical": "{\"a\":\"x\\ny\"}",
+        "canonicalSha256": "2cde7d89bb8d29e17ab3d2232d50d175723835439ab3a0552b316d652aeb9527",
+        "duplicateKeys": [],
+        "status": "ACCEPTED",
+        "type": "object"
+      },
+      "prevents": "that an unescaped newline or NUL is read as string content, so a record's text and the bytes that carry it are read differently",
+      "strictResult": {
+        "code": "PH_REFUSED_CONTROL_CHARACTER",
+        "message": "U+000A is a raw control character in a string, not an escape",
+        "status": "REFUSED"
+      }
+    },
+    {
+      "code": "PH_REFUSED_KEY_NOT_TEXT",
+      "condition": "an object member name is not a JSON string",
+      "control": "key-not-text",
+      "inputBytes": 5,
+      "inputHex": "7b313a327d",
+      "inputSha256": "f1d881702c53d1b618117fe64a13a6985cd49192f5ffe28081cb567d6a8eeaad",
+      "parameters": {
+        "integer_bits": 64,
+        "max_bytes": 4194304,
+        "max_depth": 64
+      },
+      "permissiveResult": {
+        "duplicateKeys": [],
+        "error": "JSONDecodeError",
+        "message": "Expecting property name enclosed in double quotes: line 1 column 2 (char 1)",
+        "status": "REFUSED"
+      },
+      "prevents": "that a non-text key (a number, a bare word) is read as an object key by a reader that coerces it",
+      "strictResult": {
+        "code": "PH_REFUSED_KEY_NOT_TEXT",
+        "message": "an object member name must be a JSON string",
+        "status": "REFUSED"
+      }
+    },
+    {
+      "code": "PH_REFUSED_SYNTAX",
+      "condition": "the input is not JSON at all",
+      "control": "syntax",
+      "inputBytes": 6,
+      "inputHex": "7b2261223a7d",
+      "inputSha256": "6eb96aa0de9598c69117c7341dc4431affee0b3bfcb07cbf3c3641f25111e7e3",
+      "parameters": {
+        "integer_bits": 64,
+        "max_bytes": 4194304,
+        "max_depth": 64
+      },
+      "permissiveResult": {
+        "duplicateKeys": [],
+        "error": "JSONDecodeError",
+        "message": "Expecting value: line 1 column 6 (char 5)",
+        "status": "REFUSED"
+      },
+      "prevents": "that an empty, truncated or malformed document is read as an empty or partial value",
+      "strictResult": {
+        "code": "PH_REFUSED_SYNTAX",
+        "message": "'}' does not begin a JSON value",
+        "status": "REFUSED"
+      }
+    }
+  ],
+  "schema": "openssl-rs/a11/controls/1",
+  "sourceIdentity": {
+    "baseCommit": "f1c1a535d",
+    "tool": {
+      "bytes": 40810,
+      "path": "forensics/tools/harden.py",
+      "sha256": "9069b5168a83d612b138434a1ae2536dfd632cd85ae021b063fbb64909f3ac4c"
+    }
+  },
+  "summary": {
+    "codes": 13,
+    "controls": 13
+  }
+}
