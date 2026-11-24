@@ -1,0 +1,334 @@
+{
+  "schema": "openssl-rs/timing-bn-findings/1",
+  "kind": "candidate-only timing/leakage findings for two BN primitives",
+  "generated_utc": "2026-11-21T00:26:27Z",
+  "candidate": {
+    "source_head": "18d12e1d5f5ff2faea22c81ee6351bc39add1b60",
+    "branch": "staging",
+    "worktree": "clean at dispatch; no src/, Cargo.toml or Cargo.lock change in this batch",
+    "libcrypto": {
+      "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+      "size": 16863992,
+      "build_id": "592a81d4ae5e7e02bfc635ff8bcd4fbdde37de70",
+      "elf": "ELF 64-bit LSB shared object, x86-64, with debug_info, not stripped"
+    },
+    "consumers": {
+      "ssh": {
+        "path": "court/tmp/openssh-closure/client-b86/openssh-9.9p1/ssh",
+        "sha256": "c7fe11e19137dc1f17670c72867c54477fa36ac538e44524840305d94f165032",
+        "runpath": "/work/artifacts/phase2/install/lib",
+        "needed": ["libcrypto.so.3", "libz.so.1", "libc.so.6"]
+      },
+      "sshd": {
+        "path": "court/tmp/openssh-closure/server-b86/openssh-9.9p1/sshd",
+        "sha256": "763bd027f393ad06250b86ad9f44d68a05fcf5cd09c5ab99129b4147135179dd",
+        "runpath": "/work/artifacts/phase2/install/lib",
+        "needed": ["libcrypto.so.3", "libc.so.6"]
+      }
+    },
+    "identity_note": "evidence/baseline-20261120.json records its closure receipts against libcrypto 06b5f338... (b85c candidate) and the symbols at 0x536ff0 / 0x2771f0. That is NOT this install. The current install is fd25cc9e..., and in it BN_mod_exp_mont_consttime is at 0x26b160 and BN_mod_inverse at 0x3cf4a0. Every reachability and instrument result below is bound to fd25cc9e... and to the b86 ssh/sshd binaries that link it. The b85c addresses were not reused."
+  },
+  "primitives": {
+    "BN_mod_exp_mont_consttime": {
+      "libcrypto_offset": "0x26b160",
+      "size": 1389,
+      "dynsym_name": "BN_mod_exp_mont_consttime@@OPENSSL_3.0.0",
+      "got_slot": "0x899010 (R_X86_64_GLOB_DAT)"
+    },
+    "BN_mod_inverse": {
+      "libcrypto_offset": "0x3cf4a0",
+      "size": 1137,
+      "dynsym_name": "BN_mod_inverse@@OPENSSL_3.0.0",
+      "got_slot": "0x896880 (R_X86_64_GLOB_DAT)"
+    }
+  },
+  "phase18_screen": {
+    "source": "evidence/baseline-20261120.json (sha256 dc0a24b46b1ee54a45933b1adc8a92dd82194c18a1a76aa99e0019d5a33699a8)",
+    "instrument": "CT-PRIMITIVES, 320 samples/class after 32 warmups, ratio of per-class minimum batch times, 'separated' above 150 percent",
+    "bn-modexp": {"ratio": 2.0, "min_cycles": 132948, "max_cycles": 265844, "class": "separated"},
+    "bn-inverse": {"ratio": 4.769, "min_cycles": 1748, "max_cycles": 8336, "class": "separated"},
+    "status": "screen only. It establishes a work separation at this resolution; it does not identify the mechanism and is not by itself leakage evidence."
+  },
+  "reachability": {
+    "question": "is either symbol on a path from an actual ssh/sshd-reachable entry, or only in the static upper bound?",
+    "method": {
+      "binary": "artifacts/phase2/install/lib/libcrypto.so.3 (sha256 fd25cc9e...)",
+      "symbols": "full .symtab FUNC ranges (readelf -sW); 10427 function nodes with outgoing direct/GOT edges in the resulting graph",
+      "disassembly": "objdump -d -j .text -j .plt -j .plt.got",
+      "direct_edges": "call/jmp with a resolved immediate target; PLT stubs resolved to their in-DSO definition",
+      "got_edges": "call/jmp *off(%rip) whose slot carries R_X86_64_GLOB_DAT or R_X86_64_JUMP_SLOT, resolved to the relocation symbol",
+      "unresolved_indirect": "register/object-field indirect transfers (method tables, function pointers); these are the may-bound edges, not counted as direct",
+      "roots": "all undefined dynamic symbols of ssh and sshd that are defined in libcrypto's .dynsym; 180 roots (some imported names are aliases, e.g. EC_POINT_get_affine_coordinates_GFp resolves to the dynsym alias EC_POINT_get_affine_coordinates)",
+      "edge_counts": {"direct": 20102, "got": 25563, "indirect_unresolved": 45372, "external": 1005},
+      "forward_closure_direct_plus_got": 715,
+      "dynamic_trace": "none in this batch; this is a static call-path result",
+      "limits": "static may-bound analysis. An unresolved indirect site is recorded as unresolved, never as a direct edge. Provider dispatch (EVP_SIGNATURE / keymgmt) is not enumerated here. Function-level reachability is not a safety or timing result."
+    },
+    "BN_mod_exp_mont_consttime": {
+      "verdict": "NOT REACHABLE by direct or GOT call path from any ssh/sshd import",
+      "path": null,
+      "direct_call_sites_in_libcrypto": 0,
+      "lea_or_address_taken_sites": 0,
+      "got_call_sites_in_libcrypto": 6,
+      "callers_of_the_6_got_sites": [
+        {"caller": "BN_mod_exp_mont_consttime_x2", "sites": ["0x26b6ea", "0x26b70b"], "in_closure": false},
+        {"caller": "openssl_rs::rsa::ossl::rsa_ossl_mod_exp", "sites": ["0x34cac3", "0x34cae2"], "in_closure": false},
+        {"caller": "ossl_ec_group_do_inverse_ord", "sites": ["0x3fb893"], "in_closure": false},
+        {"caller": "openssl_rs::bn::exp::bn_mod_exp_mont_fixed_top", "sites": ["0x479600"], "in_closure": false}
+      ],
+      "may_bound": [
+        {
+          "route": "ECDSA sign and verify",
+          "status": "MAY_BOUND (indirect); provider segment not resolved this batch",
+          "path": [
+            "EVP_DigestSign / EVP_DigestSignInit [imported root; OpenSSH ssh-ecdsa.c uses sshkey_pkey_digest_sign]",
+            "provider signature dispatch [indirect EVP_SIGNATURE; NOT_RESOLVED]",
+            "ossl_ecdsa_sign [OPENSSL_EC_KEY_METHOD+0x50; table base 0x89b068; EC_KEY_OpenSSL returns it, EC_KEY_METHOD_get_sign is imported]",
+            "ossl_ecdsa_sign_sig [stored at OPENSSL_EC_KEY_METHOD+0x60; its body loads eckey->group->meth[0x180] and tail-calls it, i.e. ossl_ecdsa_simple_sign_sig]",
+            "ossl_ecdsa_simple_sign_sig [EC_METHOD+0x180; tables: NIST 0x81c8c0, MONT 0x81c5b0, SIMPLE 0x7bbe60]",
+            "ecdsa_sign_setup [direct call from simple_sign_sig]",
+            "ossl_ec_group_do_inverse_ord [indirect via global function-pointer slot 0x896988]",
+            "BN_mod_exp_mont_consttime [GOT 0x899010, site 0x3fb893]"
+          ],
+          "verify_variant": "ossl_ecdsa_simple_verify_sig also calls the same slot 0x896988 (site 0x3fc73e)",
+          "evidence": "RELATIVE relocations: 0x89b0b8->ossl_ecdsa_sign, 0x89b0c8->ossl_ecdsa_sign_sig; EC_METHOD +0x180 -> ossl_ecdsa_simple_sign_sig in all three GFp method tables; 0x896988->ossl_ec_group_do_inverse_ord; disassembly of ossl_ecdsa_sign_sig (0x3fc000: mov 0x18(%r8); mov (%rax); mov 0x180(%rax); jmp *%rax)"
+        },
+        {
+          "route": "RSA CRT modular exponentiation",
+          "status": "MAY_BOUND (indirect) and NOT imported; provider route to the legacy method NOT_RESOLVED",
+          "path": [
+            "RSA private operation (RSA_private_encrypt/decrypt are not imported by ssh/sshd)",
+            "rsa_ossl_private_encrypt / rsa_ossl_private_decrypt [loads 0x28(%meth) and calls it]",
+            "rsa_ossl_mod_exp [RSAS_PKCS1_OSSL_METH+0x28; table base 0x8a0da0]",
+            "BN_mod_exp_mont_consttime [GOT sites 0x34cac3, 0x34cae2]"
+          ],
+          "evidence": "RELATIVE relocation 0x8a0dc8->0x34c5d0 (rsa_ossl_mod_exp) inside RSAS_PKCS1_OSSL_METH; 0x34e619 mov 0x28(%rax),%rax; 0x34e62f call *%rax"
+        },
+        {
+          "route": "bn_mod_exp_mont_fixed_top",
+          "status": "DEAD INTERNAL ALIAS, contributes no path",
+          "evidence": "0x479600 is a 6-byte thunk: jmp *GOT[0x899010] (BN_mod_exp_mont_consttime). No call/jmp in the DSO targets 0x479600 (only its own header line mentions the address)."
+        }
+      ],
+      "excluded_by_direct_evidence": {
+        "route": "Diffie-Hellman exponentiation (the L7-executed finite-field path)",
+        "finding": "DH reaches BN_mod_exp_mont, not the named consttime symbol",
+        "path": [
+          "DH_compute_key [imported root; 0x1ec500] -> dh->meth->compute_key [indirect, 0x1ec51a call *%rax]",
+          "DH_generate_key [imported root; 0x1ec660] -> dh->meth->generate_key [indirect, 0x1ec670 jmp *%rax]",
+          "DH_OSSL method table 0x89b980: +0x10 ossl_dh_compute_key, +0x18 dh_bn_mod_exp",
+          "ossl_dh_compute_key 0x201cc0 -> call *0x18(%meth) [site 0x201e3e]",
+          "dh_bn_mod_exp 0x201a40 -> jmp *GOT[0x8973b0] = BN_mod_exp_mont 0x26abf0 (variable-time entry)"
+        ],
+        "important_nuance": "BN_mod_exp_mont (0x26abf0) and BN_mod_exp_mont_consttime (0x26b160) have the same direct callee set: openssl_rs::bn::arith::mod_exp_core, drop glue, raise_site, memcpy. So the DH path does execute the same core, just not the named consttime symbol. See ctgrind: that core branches on the secret exponent."
+      }
+    },
+    "BN_mod_inverse": {
+      "verdict": "NOT REACHABLE by direct or GOT call path from any ssh/sshd import",
+      "path": null,
+      "direct_call_sites_in_libcrypto": 0,
+      "lea_or_address_taken_sites": 0,
+      "got_call_sites_in_libcrypto": 20,
+      "callers_of_the_20_got_sites": [
+        {"caller": "openssl_rs::ec::smpl::ossl_ec_GFp_simple_field_inv", "sites": 1},
+        {"caller": "openssl_rs::dsa::ossl::dsa_do_verify", "sites": 1},
+        {"caller": "openssl_rs::dsa::ossl::ossl_dsa_do_sign_int", "sites": 1},
+        {"caller": "RSA_X931_derive_ex", "sites": 2},
+        {"caller": "RSA_generate_multi_prime_key", "sites": 3},
+        {"caller": "openssl_rs::rsa::rsa_validate_keypair_multiprime", "sites": 2},
+        {"caller": "openssl_rs::rsa::gen::ossl_rsa_multiprime_derive", "sites": 3},
+        {"caller": "openssl_rs::rsa::sp800_56b::ossl_rsa_sp800_56b_derive_params_from_pq", "sites": 2},
+        {"caller": "RSA_setup_blinding", "sites": 1},
+        {"caller": "BN_X931_derive_prime_ex", "sites": 2},
+        {"caller": "openssl_rs::bn::rsa_fips186_4::ossl_bn_rsa_fips186_4_gen_prob_primes", "sites": 2}
+      ],
+      "may_bound": [
+        {
+          "route": "EC affine conversion (P-256 uses EC_GFp_nist_method)",
+          "status": "MAY_BOUND via resolved EC_METHOD table offsets; driven by imported roots",
+          "path": [
+            "EC_POINT_point2oct [imported root] and EC_POINT_get_affine_coordinates [imported root, dynsym alias of _GFp]",
+            "group->meth->point_get_affine_coordinates [EC_METHOD+0x80; EC_POINT_get_affine_coordinates_GFp: 0x3d786e mov 0x80(%rax),%rbp ... 0x3d7914 jmp *%rax; point2oct: 0x3d87ea mov 0x80(%rsi),%r13 ... call *%r13]",
+            "ossl_ec_GFp_simple_point_get_affine_coordinates [EC_METHOD+0x80 for NIST/MONT/SIMPLE]",
+            "group->meth->field_inv [EC_METHOD+0x110; 0x17632d mov 0x110(%r14),%rax; 0x176361 call *%rax]",
+            "ossl_ec_GFp_simple_field_inv [EC_GFP_NIST_METHOD+0x110 and EC_GFP_SIMPLE_METHOD+0x110]",
+            "BN_mod_inverse [GOT 0x896880, site 0x1739c0]"
+          ],
+          "counter_note": "EC_GFP_MONT_METHOD+0x110 is ossl_ec_GFp_mont_field_inv, which calls BN_mod_exp_mont (0x3718f2), not BN_mod_inverse; the inverse route is the NIST/SIMPLE method tables."
+        },
+        {
+          "route": "RSA key generation and key validation",
+          "status": "MAY_BOUND via provider keymgmt dispatch; segment NOT_RESOLVED",
+          "path": [
+            "EVP_PKEY_keygen / EVP_PKEY_keygen_init [imported roots; ssh-rsa.c / ssh-ecdsa.c key generation]",
+            "provider keymgmt dispatch [indirect; NOT_RESOLVED]",
+            "RSA_generate_multi_prime_key / ossl_rsa_multiprime_derive / ossl_rsa_sp800_56b_derive_params_from_pq / ossl_bn_rsa_fips186_4_gen_prob_primes",
+            "BN_mod_inverse [GOT 0x896880]"
+          ],
+          "keygen_answer": "yes for RSA key generation: it is on a may-bound path from an imported root. For EC, ossl_ec_key_simple_generate_key is not among the BN_mod_inverse callers, so EC private-key generation itself is not shown to call BN_mod_inverse; EC public-key affine conversion (above) is."
+        },
+        {
+          "route": "DSA sign/verify",
+          "status": "MAY_BOUND only through EVP/provider dispatch; DSA_sign is not imported",
+          "path": ["EVP_DigestSign/Verify [root]", "provider DSA signature dispatch [indirect; NOT_RESOLVED]", "dsa_do_sign / dsa_do_verify", "BN_mod_inverse"]
+        },
+        {
+          "route": "RSA blinding",
+          "status": "MAY_BOUND behind RSA_METHOD; RSA_blinding_on itself does not call it",
+          "path": ["rsa_ossl_mod_exp [RSA_METHOD+0x28]", "RSA_setup_blinding [0x333b7f GOT site]", "BN_mod_inverse"],
+          "note": "RSA_blinding_on (0x16edc0) is a 0x1a-byte flag setter and makes no call."
+        }
+      ]
+    },
+    "summary": {
+      "direct_or_got_path": "NONE for either symbol",
+      "may_bound_indirect_path": "YES for both, through method-table / provider dispatch; the only resolved, imported-root-driven route that does not need provider resolution is EC affine conversion (EC_POINT_point2oct / EC_POINT_get_affine_coordinates -> EC_METHOD+0x80 -> EC_METHOD+0x110 -> BN_mod_inverse).",
+      "baseline_agreement": "consistent with the baseline's 'static may-bound only' record, now with intermediate functions and dispatch offsets."
+    }
+  },
+  "ctgrind": {
+    "technique": "ctgrind (stock valgrind memcheck + VALGRIND_MAKE_MEM_UNDEFINED). Operands are the Phase-18 probe's. Secret limbs are marked undefined AFTER construction via a layout mirror verified from the candidate: d at +0x8, top at +0x10 (BN_num_bits 0x4f9030/0x4f9034). Only d[0..top) is tainted; the pointer and top stay defined, so BN_bin2bn / bn_correct_top artefacts are avoided.",
+    "harness": "court/tmp/timing/ct_bn.c (sha256 4a28cf997effb4a50c34c1c7c9105dcfc5d992ddf7b7fd27c07d9e967c0bb48f)",
+    "compile": "clang 14.0.6 -std=c11 -O1 -g -D_GNU_SOURCE -I artifacts/phase2/install/include -L artifacts/phase2/install/lib -lcrypto",
+    "run": "valgrind-3.19.0 --tool=memcheck --track-origins=yes --num-callers=25 --error-limit=no, LD_LIBRARY_PATH=artifacts/phase2/install/lib",
+    "BN_mod_exp_mont_consttime": {
+      "errors": 771,
+      "contexts": 9,
+      "kinds": {"conditional_branch": 9, "address_dependent_use": 0, "conditional_move": 0},
+      "function": "openssl_rs::bn::arith::mod_exp_core (0x3e6860, size 0x482), called by BN_mod_exp_mont_consttime",
+      "sites": [
+        {"offset": "0x3e68bd", "instr": "je"},
+        {"offset": "0x3e68e5", "instr": "jb"},
+        {"offset": "0x3e68ee", "instr": "je"},
+        {"offset": "0x3e699d", "instr": "je"},
+        {"offset": "0x3e69c2", "instr": "jb"},
+        {"offset": "0x3e69cb", "instr": "je"},
+        {"offset": "0x3e69f8", "instr": "je"},
+        {"offset": "0x3e6a17", "instr": "jae"},
+        {"offset": "0x3e6abb", "instr": "jae"}
+      ],
+      "source_interpretation": "src/bn/arith.rs mod_exp_core is a square-and-multiply loop: `if limbs::bit(pd, i) { acc = rem(mul(acc, base), md) }` plus length/bounds checks. The branch on the exponent bit is value-dependent. memcheck cannot separate the bit test from the bit-length/bounds branches because the whole limb array is tainted, so the count of value-dependent sites is at least the loop's bit branch and at most all nine.",
+      "file_line": "NOT AVAILABLE. The DSO's .debug_line has 644 CUs (DWARF4) and none maps into mod_exp_core: 0 decoded rows in 0x3e6xxx; `bn/arith.rs` occurs once at file offset 0x6659e7, which is in .rodata (0x621000-0x6b57a3), not .debug_line. addr2line resolves the function name from .symtab but returns ??:0 for the line. DSO offsets and function names are reported instead; no line number is invented.",
+      "log": "court/tmp/timing/vg2.modexp.log (sha256 c6deb47e1ea6f341f88773e13d33dde25922fb4e198cea015a6c4b577a42fe57)"
+    },
+    "BN_mod_inverse": {
+      "errors": 620,
+      "contexts": 209,
+      "kinds": {"conditional_branch": 171, "address_dependent_use": 38, "conditional_move": 0},
+      "by_function": {
+        "openssl_rs::bn::limbs::div_rem": {"branch": 61, "address": 20},
+        "unattributed (address outside a sized FUNC symbol)": {"branch": 31, "address": 0},
+        "openssl_rs::bn::limbs::mod_inverse": {"branch": 14, "address": 3},
+        "openssl_rs::bn::limbs::shl": {"branch": 13, "address": 5},
+        "openssl_rs::bn::limbs::mul": {"branch": 11, "address": 2},
+        "openssl_rs::bn::limbs::shr": {"branch": 7, "address": 3},
+        "openssl_rs::bn::limbs::sub": {"branch": 6, "address": 0},
+        "openssl_rs::bn::limbs::div_rem_small": {"branch": 4, "address": 1},
+        "allocator (RawVec::finish_grow / __rdl_alloc / __rdl_realloc / __rdl_alloc_zeroed / malloc / calloc / realloc)": {"branch": 28, "address": 0},
+        "compiler_builtins::int::specialized_div_rem::u128_div_rem (__udivti3)": {"branch": 2, "address": 0},
+        "BN_mod_inverse itself": {"branch": 1, "address": 0}
+      },
+      "representative_sites": [
+        {"offset": "0x2008ce", "function": "limbs::div_rem", "kind": "branch", "instr": "je"},
+        {"offset": "0x200906", "function": "limbs::div_rem", "kind": "address", "instr": "mov"},
+        {"offset": "0x1ff1f4", "function": "limbs::mod_inverse", "kind": "branch", "instr": "je"},
+        {"offset": "0x1ff249", "function": "limbs::mod_inverse", "kind": "address", "instr": "cmpq"},
+        {"offset": "0x2002c8", "function": "limbs::shl", "kind": "branch", "instr": "je"},
+        {"offset": "0x2004ee", "function": "limbs::shr", "kind": "branch", "instr": "jbe"},
+        {"offset": "0x1fffee", "function": "limbs::mul", "kind": "branch", "instr": "je"},
+        {"offset": "0x2006c6", "function": "limbs::sub", "kind": "branch", "instr": "je"},
+        {"offset": "0x1ff7c8", "function": "limbs::div_rem_small", "kind": "branch", "instr": "je"},
+        {"offset": "0x160ed8", "function": "RawVecInner::finish_grow", "kind": "branch", "instr": "je"},
+        {"offset": "0x3cf6b6", "function": "BN_mod_inverse", "kind": "branch", "instr": "jne"}
+      ],
+      "source_interpretation": "src/bn likely implements the inverse through limbs::mod_inverse with division/remainder, shifts, multiply and subtract. The secret operand drives loop bounds, limb lengths and therefore allocation sizes and memmove lengths. The address-dependent contexts ('Use of uninitialised value of size 8') are secret-derived memory addressing inside div_rem/shl/shr/mul/mod_inverse, not merely taken/not-taken branches.",
+      "file_line": "NOT AVAILABLE for the same reason as above; DSO offsets and function names are reported.",
+      "log": "court/tmp/timing/vg2.inverse.log (sha256 0fb26a7abfe19c6d88b699202a15d5c4210f53a53c5161ba1ac12c15072dacab)"
+    }
+  },
+  "dudect": {
+    "instrument": {
+      "source": "/opt/dudect (github.com/oreparaz/dudect)",
+      "commit": "dc269651fb2567e46755cfb2a13d3875592968b5",
+      "header": "/opt/dudect/src/dudect.h",
+      "thresholds": {"moderate_t": 10, "bananas_t": 500},
+      "min_measurements": 10000
+    },
+    "harness": "court/tmp/timing/dudect_bn.c (sha256 8cc751d8a0b66553c5a5e23f80d79434b65ef7d10eb47fd8c07c7158b774a749)",
+    "compile": "clang 14.0.6 -std=c11 -O2 -g -I /opt/dudect/src -I artifacts/phase2/install/include -lcrypto -lm",
+    "geometry": {
+      "classes": "class 0 / class 1 chosen uniformly per measurement by dudect's randombit(); input is one class byte",
+      "chunk_size": 1,
+      "number_measurements_per_batch": 20000,
+      "batches": "2 for the primitives (dudect stops on a leak verdict at the 2nd batch); 3 for the controls",
+      "measurements_in_max_t_test": "~20000 (0.02 M printed by dudect; ~10000 per class)",
+      "cpu": "taskset -c 1 (one CPU, inside the court cgroup)",
+      "clock": "rdtsc with mfence (dudect cpucycles)",
+      "repeats": "4 independent runs per primitive; 3 per control (first control run printed two accumulating reports)"
+    },
+    "BN_mod_exp_mont_consttime": {
+      "t_values": [3855.37, 2463.90, 3261.82, 3697.82],
+      "verdict": "LEAKAGE_DETECTED",
+      "dudect_text": "Definitely not constant time (max t > 500) in every run",
+      "consistency": "consistent with ctgrind: 9 secret-dependent branch sites in mod_exp_core"
+    },
+    "BN_mod_inverse": {
+      "t_values": [1156.56, 596.42, 693.46, 616.83],
+      "verdict": "LEAKAGE_DETECTED",
+      "dudect_text": "Definitely not constant time (max t > 500) in every run",
+      "consistency": "consistent with ctgrind: 209 secret-dependent branch/address contexts"
+    }
+  },
+  "controls": {
+    "ctgrind_negative": {
+      "what": "CRYPTO_memcmp over 2 x 4096 bytes with one buffer marked undefined; mismatch at the last byte",
+      "result": "0 errors from 0 contexts",
+      "reading": "the taint propagates and memcheck stays silent on a constant-time comparison"
+    },
+    "ctgrind_positive": {
+      "what": "deliberately early-exiting byte comparison over the same buffers, one buffer marked undefined",
+      "result": "4096 errors from 1 context; the flagged site is the loop branch at ct_bn.c:148",
+      "reading": "the instrument fires on a known branch-on-secret comparison"
+    },
+    "dudect_negative": {
+      "what": "CRYPTO_memcmp, mismatch at first vs last byte, 32 comparisons per sample",
+      "t_values": [0.83, 1.74, 1.93, 2.29],
+      "verdict": "NO_LEAKAGE_DETECTED_AT_STATED_SENSITIVITY"
+    },
+    "dudect_positive": {
+      "what": "deliberately leaky early-exit comparison, same buffers, 32 comparisons per sample",
+      "t_values": [3774.04, 7011.20, 1046136.75],
+      "verdict": "LEAKAGE_DETECTED"
+    },
+    "control_reading": "both controls behave as required: the negative control stays below dudect's t=10 threshold, the positive control is detected by both ctgrind and dudect. This validates the instruments; it does not by itself prove constant time for the negative control."
+  },
+  "instruments": {
+    "valgrind": "3.19.0 (stock Debian, memcheck; client requests from /usr/include/valgrind/memcheck.h)",
+    "dudect": "dc269651fb2567e46755cfb2a13d3875592968b5 (built into the tools image)",
+    "clang": "Debian clang 14.0.6",
+    "binutils": "GNU objdump/addr2line 2.40",
+    "binsec": "0.11.3 (installed in the tools image; not used in this batch)",
+    "court_image": "openssl-rs-court-tools:1",
+    "court_caps": "CAP_PERFMON present; cgroup memory 16 GiB for this run; one heavy command at a time"
+  },
+  "not_run": [
+    "provider dispatch resolution (EVP_SIGNATURE for ECDSA, keymgmt for RSA keygen) to concrete function pointers",
+    "dynamic execution trace / L7 replay binding either may-bound route to an observed ssh/sshd operation",
+    "file:line mapping for the two primitives (the DSO carries no .debug_line rows for the openssl_rs crate)",
+    "BINSEC symbolic timing / path feasibility",
+    "Miri, ASan, Loom, mutation controls",
+    "dudect over the higher-level RSA-private / DH / EC operations",
+    "authority differential (no authority timing claim is made)"
+  ],
+  "non_claims": [
+    "A dudect t-statistic is not an attack, not a wall-clock claim and not a remote-timing claim; it is a distribution difference at the stated geometry and threshold.",
+    "A low t-statistic is not a proof of constant time. The control's low t only validates the instrument at this sensitivity.",
+    "ctgrind observes data-flow-dependent branches and address uses only. It does not observe cache behaviour, speculation, port contention or any microarchitectural effect, and it says nothing about data that was not marked undefined.",
+    "The Phase-18 2.000x / 4.769x ratios are a bounded work-independence screen, not evidence of the leakage mechanism; the mechanism is the mod_exp_core branch set and the inverse's division/shift work.",
+    "The reachability result is static. 'Not reachable by direct/GOT edges' is not 'not reachable in any execution'; the may-bound routes are recorded, and the provider segments were not resolved.",
+    "The absence of an ssh/sshd import of either symbol is consistent with the baseline and does not by itself establish unreachability.",
+    "The DH path executing mod_exp_core through BN_mod_exp_mont is not a safety or timing result; it is a shared-implementation observation.",
+    "No claim is made about any other primitive (RSA-private, EC scalar mul, AEAD tag, HKDF) in this batch."
+  ]
+}

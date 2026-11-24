@@ -1,0 +1,1038 @@
+{
+  "export": {
+    "path": "evidence/a1/SARIF.json",
+    "results": 4245,
+    "runs": 6,
+    "sha256": "5c0cfee62512deb08cc12f95624be64865d3e544473bae80d9aca0ab36ce7852"
+  },
+  "not_claims": [
+    "Reconciliation is not completeness admission (A5).",
+    "Reconciliation is not suppression governance (A6).",
+    "A member that is present is not a member that is correct, justified or current; presence is all the reconciliation establishes."
+  ],
+  "preservation": {
+    "path": "evidence/a2/PRESERVATION.json",
+    "sha256": "e505d926fcf3eb60e610e7bd8c2835ddc152630f1a4bdd3c1ff351c2e0c19343"
+  },
+  "purpose": "for each export run, the native population enumerated from the native record compared member-by-member with the members the export emitted, with the difference named in both directions",
+  "rules": {
+    "coverage": "covers_population is true only when every finding block is a census of its declared population; a declared bound preserves the omission as TRUNCATED_BOUNDED and still refuses coverage",
+    "member": "a native member is a locator into the native record; the export's member is the locator carried at properties.a1.native.locator; a nested locator attaches to its enclosing member and is counted as an attached result, not as a member",
+    "missing_in_each_direction": "native minus export is `unidentified` (counted, not listed) plus `unaccounted` (listed, and refused); export minus native is `fabricated` (listed, and refused)"
+  },
+  "runs": [
+    {
+      "blocks": [
+        {
+          "aggregate_results": 0,
+          "attached_results": 0,
+          "bound": null,
+          "coverage": "CENSUS",
+          "covers_population": true,
+          "declared": 7,
+          "declared_sources": [
+            {
+              "locator": "len(item4_mechanisms.per_mechanism)",
+              "value": 7
+            }
+          ],
+          "enumerated": 7,
+          "exported_members": 7,
+          "exported_results": 7,
+          "fabricated": [],
+          "members_listed": true,
+          "members_not_enumerated": 0,
+          "name": "mechanisms",
+          "not_projected_declared": null,
+          "role": "finding",
+          "unaccounted": [],
+          "unidentified": 0
+        },
+        {
+          "aggregate_results": 0,
+          "attached_results": 0,
+          "bound": null,
+          "coverage": "RECORD_CONDITION",
+          "covers_population": true,
+          "declared": 1,
+          "declared_sources": [
+            {
+              "locator": "item4_mechanisms.cross_cutting",
+              "value": 1
+            }
+          ],
+          "enumerated": 1,
+          "exported_members": 1,
+          "exported_results": 1,
+          "fabricated": [],
+          "members_listed": true,
+          "members_not_enumerated": 0,
+          "name": "cross_cutting",
+          "not_projected_declared": null,
+          "role": "record_condition",
+          "unaccounted": [],
+          "unidentified": 0
+        },
+        {
+          "aggregate_results": 0,
+          "attached_results": 0,
+          "bound": null,
+          "coverage": "CENSUS",
+          "covers_population": true,
+          "declared": 8,
+          "declared_sources": [
+            {
+              "locator": "len(ordered_refutations)",
+              "value": 8
+            }
+          ],
+          "enumerated": 8,
+          "exported_members": 8,
+          "exported_results": 8,
+          "fabricated": [],
+          "members_listed": true,
+          "members_not_enumerated": 0,
+          "name": "refutations",
+          "not_projected_declared": null,
+          "role": "finding",
+          "unaccounted": [],
+          "unidentified": 0
+        },
+        {
+          "aggregate_results": 0,
+          "attached_results": 0,
+          "bound": null,
+          "coverage": "RECORD_CONDITION",
+          "covers_population": true,
+          "declared": 1,
+          "declared_sources": [
+            {
+              "locator": "verdict",
+              "value": 1
+            }
+          ],
+          "enumerated": 1,
+          "exported_members": 1,
+          "exported_results": 1,
+          "fabricated": [],
+          "members_listed": true,
+          "members_not_enumerated": 0,
+          "name": "verdict",
+          "not_projected_declared": null,
+          "role": "record_condition",
+          "unaccounted": [],
+          "unidentified": 0
+        },
+        {
+          "aggregate_results": 0,
+          "attached_results": 0,
+          "bound": null,
+          "coverage": "DECLARED_SCOPE",
+          "covers_population": false,
+          "declared": 5,
+          "declared_sources": [
+            {
+              "locator": "len(item1_..item5_)",
+              "value": 5
+            }
+          ],
+          "enumerated": 5,
+          "exported_members": 0,
+          "exported_results": 0,
+          "fabricated": [],
+          "members_listed": false,
+          "members_not_enumerated": 0,
+          "name": "ordered_items",
+          "not_projected_declared": 5,
+          "role": "declared_scope",
+          "unaccounted": [],
+          "unidentified": 0
+        },
+        {
+          "aggregate_results": 0,
+          "attached_results": 0,
+          "bound": null,
+          "coverage": "DECLARED_SCOPE",
+          "covers_population": false,
+          "declared": 3,
+          "declared_sources": [
+            {
+              "locator": "len(non_claims)",
+              "value": 3
+            }
+          ],
+          "enumerated": 0,
+          "exported_members": 0,
+          "exported_results": 0,
+          "fabricated": [],
+          "members_listed": false,
+          "members_not_enumerated": 3,
+          "name": "non_claims",
+          "not_projected_declared": 3,
+          "role": "declared_scope",
+          "unaccounted": [],
+          "unidentified": 0
+        }
+      ],
+      "certification_refusal": "PRESERVATION_REFUSED_MISSING_INVOCATION_AND_INSTRUMENT",
+      "certified": false,
+      "coverage": {
+        "claim": "ADMITTED",
+        "covers_population": true,
+        "reason": null
+      },
+      "declared_projection": {
+        "A1-ADJUDICATION-CROSS-CUTTING": 1,
+        "A1-ADJUDICATION-MECHANISM": 7,
+        "A1-ADJUDICATION-REFUTATION": 8,
+        "A1-ADJUDICATION-VERDICT": 1
+      },
+      "difference": {
+        "declared_populations_without_member_rows": [],
+        "declared_scope_members_not_emitted": 8,
+        "export_members_absent_from_native": 0,
+        "native_members_outside_export": 0,
+        "unaccounted_members": 0,
+        "unidentified_finding_members": 0
+      },
+      "digest_match": true,
+      "emitted_by_rule": {
+        "A1-ADJUDICATION-CROSS-CUTTING": 1,
+        "A1-ADJUDICATION-MECHANISM": 7,
+        "A1-ADJUDICATION-REFUTATION": 8,
+        "A1-ADJUDICATION-VERDICT": 1
+      },
+      "emitted_results": 17,
+      "export_declares_not_projected": [
+        {
+          "block": "item1..item5",
+          "count": 5,
+          "reason": "prose summaries that restate the structured per-mechanism and refutation rows; assigning them a level would require interpretation the record does not supply"
+        },
+        {
+          "block": "non_claims",
+          "count": 3,
+          "reason": "carried verbatim at run.properties.a1.nativeNonClaims"
+        }
+      ],
+      "export_native_population": {
+        "mechanisms": 7,
+        "ordered_items": 5,
+        "ordered_refutations": 8
+      },
+      "export_run_index": 0,
+      "export_run_sha256": "24e11717aa72bf0c39425987d826df3cc59da0c4d05e4d280dc4ab99a9f4ab5d",
+      "preserved_sha256": "24e11717aa72bf0c39425987d826df3cc59da0c4d05e4d280dc4ab99a9f4ab5d",
+      "projection_consistent": true,
+      "record": "evidence/b85c-adjudication.json"
+    },
+    {
+      "blocks": [
+        {
+          "aggregate_results": 0,
+          "attached_results": 0,
+          "bound": null,
+          "coverage": "CENSUS",
+          "covers_population": true,
+          "declared": 3,
+          "declared_sources": [
+            {
+              "locator": "len(rows)",
+              "value": 3
+            }
+          ],
+          "enumerated": 3,
+          "exported_members": 3,
+          "exported_results": 3,
+          "fabricated": [],
+          "members_listed": true,
+          "members_not_enumerated": 0,
+          "name": "rows",
+          "not_projected_declared": null,
+          "role": "finding",
+          "unaccounted": [],
+          "unidentified": 0
+        },
+        {
+          "aggregate_results": 0,
+          "attached_results": 0,
+          "bound": null,
+          "coverage": "RECORD_CONDITION",
+          "covers_population": true,
+          "declared": 1,
+          "declared_sources": [
+            {
+              "locator": "limits",
+              "value": 1
+            }
+          ],
+          "enumerated": 1,
+          "exported_members": 1,
+          "exported_results": 1,
+          "fabricated": [],
+          "members_listed": true,
+          "members_not_enumerated": 0,
+          "name": "limits",
+          "not_projected_declared": null,
+          "role": "record_condition",
+          "unaccounted": [],
+          "unidentified": 0
+        },
+        {
+          "aggregate_results": 0,
+          "attached_results": 0,
+          "bound": null,
+          "coverage": "DECLARED_SCOPE",
+          "covers_population": false,
+          "declared": 3,
+          "declared_sources": [
+            {
+              "locator": "len(conflict, cross_check, closure_evidence_quality_note)",
+              "value": 3
+            }
+          ],
+          "enumerated": 3,
+          "exported_members": 0,
+          "exported_results": 0,
+          "fabricated": [],
+          "members_listed": false,
+          "members_not_enumerated": 0,
+          "name": "narrative",
+          "not_projected_declared": 3,
+          "role": "declared_scope",
+          "unaccounted": [],
+          "unidentified": 0
+        }
+      ],
+      "certification_refusal": "PRESERVATION_REFUSED_MISSING_INVOCATION_AND_INSTRUMENT",
+      "certified": false,
+      "coverage": {
+        "claim": "ADMITTED",
+        "covers_population": true,
+        "reason": null
+      },
+      "declared_projection": {
+        "A1-RECONCILIATION-LIMIT": 1,
+        "A1-RECONCILIATION-ROW": 3
+      },
+      "difference": {
+        "declared_populations_without_member_rows": [],
+        "declared_scope_members_not_emitted": 3,
+        "export_members_absent_from_native": 0,
+        "native_members_outside_export": 0,
+        "unaccounted_members": 0,
+        "unidentified_finding_members": 0
+      },
+      "digest_match": true,
+      "emitted_by_rule": {
+        "A1-RECONCILIATION-LIMIT": 1,
+        "A1-RECONCILIATION-ROW": 3
+      },
+      "emitted_results": 4,
+      "export_declares_not_projected": [
+        {
+          "block": "conflict / cross_check / closure_evidence_quality_note",
+          "count": 3,
+          "reason": "reviewer narrative around the reconciled rows; not finding rows"
+        }
+      ],
+      "export_native_population": {
+        "rows": 3
+      },
+      "export_run_index": 1,
+      "export_run_sha256": "a684b6af66220dcc6741b35b6e45f50f23cea5f3e3a888aee4f5f0c9d963d7c4",
+      "preserved_sha256": "a684b6af66220dcc6741b35b6e45f50f23cea5f3e3a888aee4f5f0c9d963d7c4",
+      "projection_consistent": true,
+      "record": "evidence/b85c-row-reconciliation.json"
+    },
+    {
+      "blocks": [
+        {
+          "aggregate_results": 0,
+          "attached_results": 1,
+          "bound": null,
+          "coverage": "CENSUS",
+          "covers_population": true,
+          "declared": 7,
+          "declared_sources": [
+            {
+              "locator": "counts.reachable_production_obligations",
+              "value": 7
+            },
+            {
+              "locator": "len(obligations)",
+              "value": 7
+            }
+          ],
+          "enumerated": 7,
+          "exported_members": 7,
+          "exported_results": 8,
+          "fabricated": [],
+          "members_listed": true,
+          "members_not_enumerated": 0,
+          "name": "obligations",
+          "not_projected_declared": null,
+          "role": "finding",
+          "unaccounted": [],
+          "unidentified": 0
+        },
+        {
+          "aggregate_results": 1,
+          "attached_results": 0,
+          "bound": {
+            "kind": "truncation",
+            "members_recorded": false,
+            "omitted": 249,
+            "population": 449,
+            "sample": 200,
+            "selection_rule": "the reachable unresolved indirect-site population is sorted by (dso name, function start address, call-site address) and the first 200 members are embedded in this receipt; the sort order is the whole selection, so no other filter, weight or randomness enters it and the embedded list is a prefix of the population -- never a census and never a sample drawn to be representative. The whole population is written to the --edge-records JSONL sidecar",
+            "source": "precision.residual_sites_bound",
+            "what_was_not_examined": "249 members of the reachable unresolved population are counted but not listed: the omitted members are written to the --edge-records JSONL sidecar and are not identified in this receipt, which names their count"
+          },
+          "coverage": "TRUNCATED_BOUNDED",
+          "covers_population": false,
+          "declared": 449,
+          "declared_sources": [
+            {
+              "locator": "precision.residual_sites_bound.population_size",
+              "value": 449
+            },
+            {
+              "locator": "precision.totals.reachable_unresolved_sites",
+              "value": 449
+            }
+          ],
+          "enumerated": 200,
+          "exported_members": 200,
+          "exported_results": 201,
+          "fabricated": [],
+          "members_listed": true,
+          "members_not_enumerated": 249,
+          "name": "residual_sites",
+          "not_projected_declared": null,
+          "role": "finding",
+          "unaccounted": [],
+          "unidentified": 249
+        },
+        {
+          "aggregate_results": 0,
+          "attached_results": 0,
+          "bound": null,
+          "coverage": "RECORD_CONDITION",
+          "covers_population": true,
+          "declared": 1,
+          "declared_sources": [
+            {
+              "locator": "verdict",
+              "value": 1
+            }
+          ],
+          "enumerated": 1,
+          "exported_members": 1,
+          "exported_results": 1,
+          "fabricated": [],
+          "members_listed": true,
+          "members_not_enumerated": 0,
+          "name": "verdict",
+          "not_projected_declared": null,
+          "role": "record_condition",
+          "unaccounted": [],
+          "unidentified": 0
+        },
+        {
+          "aggregate_results": 0,
+          "attached_results": 0,
+          "bound": null,
+          "coverage": "RECORD_CONDITION",
+          "covers_population": true,
+          "declared": 1,
+          "declared_sources": [
+            {
+              "locator": "precision.predicate_element_7",
+              "value": 1
+            }
+          ],
+          "enumerated": 1,
+          "exported_members": 1,
+          "exported_results": 1,
+          "fabricated": [],
+          "members_listed": true,
+          "members_not_enumerated": 0,
+          "name": "predicate_element_7",
+          "not_projected_declared": null,
+          "role": "record_condition",
+          "unaccounted": [],
+          "unidentified": 0
+        },
+        {
+          "aggregate_results": 0,
+          "attached_results": 0,
+          "bound": null,
+          "coverage": "CENSUS",
+          "covers_population": true,
+          "declared": 0,
+          "declared_sources": [
+            {
+              "locator": "len(refusals)",
+              "value": 0
+            }
+          ],
+          "enumerated": 0,
+          "exported_members": 0,
+          "exported_results": 0,
+          "fabricated": [],
+          "members_listed": true,
+          "members_not_enumerated": 0,
+          "name": "refusals",
+          "not_projected_declared": null,
+          "role": "finding",
+          "unaccounted": [],
+          "unidentified": 0
+        }
+      ],
+      "certification_refusal": null,
+      "certified": true,
+      "coverage": {
+        "claim": "REFUSED",
+        "covers_population": false,
+        "reason": "at least one finding block is not a census of its declared population: the reconciliation names the unidentified or unaccounted members in the block rows"
+      },
+      "declared_projection": {
+        "A1-CLOSURE-VERDICT": 1,
+        "A1-ELEMENT7-PREDICATE": 1,
+        "A1-ISA-BINARY-UNRESOLVED": 200,
+        "A1-ISA-POPULATION-TRUNCATED": 1,
+        "A1-OBLIGATION-DISCHARGED": 7,
+        "A1-OBLIGATION-DISPOSITION-SUPERSEDED": 1
+      },
+      "difference": {
+        "declared_populations_without_member_rows": [],
+        "declared_scope_members_not_emitted": 0,
+        "export_members_absent_from_native": 0,
+        "native_members_outside_export": 249,
+        "unaccounted_members": 0,
+        "unidentified_finding_members": 249
+      },
+      "digest_match": true,
+      "emitted_by_rule": {
+        "A1-CLOSURE-VERDICT": 1,
+        "A1-ELEMENT7-PREDICATE": 1,
+        "A1-ISA-BINARY-UNRESOLVED": 200,
+        "A1-ISA-POPULATION-TRUNCATED": 1,
+        "A1-OBLIGATION-DISCHARGED": 7,
+        "A1-OBLIGATION-DISPOSITION-SUPERSEDED": 1
+      },
+      "emitted_results": 211,
+      "export_declares_not_projected": [
+        {
+          "block": "edge_provenance",
+          "count": null,
+          "reason": "admissibility chain of the graph records; not findings"
+        },
+        {
+          "block": "graph",
+          "count": null,
+          "reason": "upper-bound call-graph measurement; not a finding population"
+        },
+        {
+          "block": "non_claims",
+          "count": 8,
+          "reason": "carried verbatim at run.properties.a1.nativeNonClaims"
+        },
+        {
+          "block": "precision.witness blocks",
+          "count": 19,
+          "reason": "witness rows for already-bounded sites; a separate population"
+        }
+      ],
+      "export_native_population": {
+        "obligations": 7,
+        "refusals": 0,
+        "residual_sites_population": 449,
+        "residual_sites_sample": 200
+      },
+      "export_run_index": 2,
+      "export_run_sha256": "b72193072780e9a425e7e93be8c0c15849d06c758b9e71f226cafb4992388c62",
+      "preserved_sha256": "b72193072780e9a425e7e93be8c0c15849d06c758b9e71f226cafb4992388c62",
+      "projection_consistent": true,
+      "record": "evidence/closure-curl-049.json"
+    },
+    {
+      "blocks": [
+        {
+          "aggregate_results": 0,
+          "attached_results": 0,
+          "bound": null,
+          "coverage": "CENSUS",
+          "covers_population": true,
+          "declared": 1036,
+          "declared_sources": [
+            {
+              "locator": "summary.contract_absent",
+              "value": 1036
+            },
+            {
+              "locator": "len(sites.rows where contract_state == 'absent')",
+              "value": 1036
+            }
+          ],
+          "enumerated": 1036,
+          "exported_members": 1036,
+          "exported_results": 1036,
+          "fabricated": [],
+          "members_listed": true,
+          "members_not_enumerated": 0,
+          "name": "contract_absent_sites",
+          "not_projected_declared": null,
+          "role": "finding",
+          "unaccounted": [],
+          "unidentified": 0
+        },
+        {
+          "aggregate_results": 0,
+          "attached_results": 0,
+          "bound": null,
+          "coverage": "CENSUS",
+          "covers_population": true,
+          "declared": 2916,
+          "declared_sources": [
+            {
+              "locator": "len(vacuity.findings)",
+              "value": 2916
+            },
+            {
+              "locator": "sum(vacuity.summary status counts)",
+              "value": 2916
+            }
+          ],
+          "enumerated": 2916,
+          "exported_members": 2916,
+          "exported_results": 2916,
+          "fabricated": [],
+          "members_listed": true,
+          "members_not_enumerated": 0,
+          "name": "vacuity_findings",
+          "not_projected_declared": null,
+          "role": "finding",
+          "unaccounted": [],
+          "unidentified": 0
+        },
+        {
+          "aggregate_results": 1,
+          "attached_results": 0,
+          "bound": {
+            "kind": "aggregate_only",
+            "members_recorded": false,
+            "omitted": 1999,
+            "population": 1999,
+            "sample": 0,
+            "selection_rule": "by_lint partitions the total into lint classes; no member row exists at any finer granularity",
+            "source": "suppressions",
+            "what_was_not_examined": "the identity, path, line and lint of each of the 1999 suppressions is not recorded; only a per-lint count is present"
+          },
+          "coverage": "AGGREGATE_ONLY",
+          "covers_population": false,
+          "declared": 1999,
+          "declared_sources": [
+            {
+              "locator": "suppressions.total",
+              "value": 1999
+            },
+            {
+              "locator": "sum(suppressions.by_lint)",
+              "value": 1999
+            }
+          ],
+          "enumerated": 0,
+          "exported_members": 0,
+          "exported_results": 1,
+          "fabricated": [],
+          "members_listed": false,
+          "members_not_enumerated": 1999,
+          "name": "suppressions",
+          "not_projected_declared": null,
+          "role": "aggregate_only",
+          "unaccounted": [],
+          "unidentified": 0
+        },
+        {
+          "aggregate_results": 0,
+          "attached_results": 0,
+          "bound": null,
+          "coverage": "CENSUS_DECLARED_NOT_PROJECTED",
+          "covers_population": false,
+          "declared": 62297,
+          "declared_sources": [
+            {
+              "locator": "summary.sites",
+              "value": 62297
+            },
+            {
+              "locator": "len(sites.rows)",
+              "value": 62297
+            }
+          ],
+          "enumerated": 62297,
+          "exported_members": 0,
+          "exported_results": 0,
+          "fabricated": [],
+          "members_listed": true,
+          "members_not_enumerated": 0,
+          "name": "sites_census",
+          "not_projected_declared": 62297,
+          "role": "census",
+          "unaccounted": [],
+          "unidentified": 0
+        },
+        {
+          "aggregate_results": 0,
+          "attached_results": 0,
+          "bound": null,
+          "coverage": "DECLARED_SCOPE",
+          "covers_population": false,
+          "declared": 767,
+          "declared_sources": [
+            {
+              "locator": "len(operations.rows)",
+              "value": 767
+            }
+          ],
+          "enumerated": 767,
+          "exported_members": 0,
+          "exported_results": 0,
+          "fabricated": [],
+          "members_listed": false,
+          "members_not_enumerated": 0,
+          "name": "operations",
+          "not_projected_declared": 767,
+          "role": "declared_scope",
+          "unaccounted": [],
+          "unidentified": 0
+        },
+        {
+          "aggregate_results": 0,
+          "attached_results": 0,
+          "bound": null,
+          "coverage": "DECLARED_SCOPE",
+          "covers_population": false,
+          "declared": 29223,
+          "declared_sources": [
+            {
+              "locator": "len(contracts.entries)",
+              "value": 29223
+            }
+          ],
+          "enumerated": 29223,
+          "exported_members": 0,
+          "exported_results": 0,
+          "fabricated": [],
+          "members_listed": false,
+          "members_not_enumerated": 0,
+          "name": "contracts",
+          "not_projected_declared": 29223,
+          "role": "declared_scope",
+          "unaccounted": [],
+          "unidentified": 0
+        },
+        {
+          "aggregate_results": 0,
+          "attached_results": 0,
+          "bound": null,
+          "coverage": "DECLARED_SCOPE",
+          "covers_population": false,
+          "declared": 54,
+          "declared_sources": [
+            {
+              "locator": "summary.ignored_tests",
+              "value": 54
+            }
+          ],
+          "enumerated": 0,
+          "exported_members": 0,
+          "exported_results": 0,
+          "fabricated": [],
+          "members_listed": false,
+          "members_not_enumerated": 54,
+          "name": "ignored_tests",
+          "not_projected_declared": 54,
+          "role": "declared_scope",
+          "unaccounted": [],
+          "unidentified": 0
+        }
+      ],
+      "certification_refusal": null,
+      "certified": true,
+      "coverage": {
+        "claim": "REFUSED",
+        "covers_population": false,
+        "reason": "a declared population has no member rows, so the export cannot cover it: suppressions (1999 members, none recorded)"
+      },
+      "declared_projection": {
+        "A1-UNSAFE-CONTRACT-ABSENT": 1036,
+        "A1-UNSAFE-OBLIGATION-DELEGATED": 2391,
+        "A1-UNSAFE-OBLIGATION-UNESTABLISHED": 36,
+        "A1-UNSAFE-OBLIGATION-VACUOUS": 489,
+        "A1-UNSAFE-SUPPRESSION-MEMBERS-ABSENT": 1
+      },
+      "difference": {
+        "declared_populations_without_member_rows": [
+          {
+            "declared": 1999,
+            "name": "suppressions"
+          }
+        ],
+        "declared_scope_members_not_emitted": 92341,
+        "export_members_absent_from_native": 0,
+        "native_members_outside_export": 0,
+        "unaccounted_members": 0,
+        "unidentified_finding_members": 0
+      },
+      "digest_match": true,
+      "emitted_by_rule": {
+        "A1-UNSAFE-CONTRACT-ABSENT": 1036,
+        "A1-UNSAFE-OBLIGATION-DELEGATED": 2391,
+        "A1-UNSAFE-OBLIGATION-UNESTABLISHED": 36,
+        "A1-UNSAFE-OBLIGATION-VACUOUS": 489,
+        "A1-UNSAFE-SUPPRESSION-MEMBERS-ABSENT": 1
+      },
+      "emitted_results": 3953,
+      "export_declares_not_projected": [
+        {
+          "block": "assertions.ignored",
+          "count": 54,
+          "reason": "ignored-test census; suppression governance is A6"
+        },
+        {
+          "block": "contracts.entries",
+          "count": 29223,
+          "reason": "contract text dictionary referenced by row prefix; not findings"
+        },
+        {
+          "block": "operations.rows",
+          "count": 767,
+          "reason": "named raw-operation rows; a separate population"
+        },
+        {
+          "block": "sites.rows",
+          "count": 62297,
+          "reason": "lexical unsafe-site census, not a finding population; the projected unsafe-boundary populations are vacuity.findings and the contract_state=absent rows"
+        }
+      ],
+      "export_native_population": {
+        "contract_absent": 1036,
+        "sites": 62297,
+        "suppressions": 1999,
+        "vacuity_findings": 2916
+      },
+      "export_run_index": 3,
+      "export_run_sha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da",
+      "preserved_sha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da",
+      "projection_consistent": true,
+      "record": "evidence/etp-t4/SAFETY-SITES.json"
+    },
+    {
+      "blocks": [
+        {
+          "aggregate_results": 0,
+          "attached_results": 0,
+          "bound": null,
+          "coverage": "CENSUS",
+          "covers_population": true,
+          "declared": 51,
+          "declared_sources": [
+            {
+              "locator": "sum(counts)",
+              "value": 51
+            },
+            {
+              "locator": "len(entries)",
+              "value": 51
+            }
+          ],
+          "enumerated": 51,
+          "exported_members": 51,
+          "exported_results": 51,
+          "fabricated": [],
+          "members_listed": true,
+          "members_not_enumerated": 0,
+          "name": "entries",
+          "not_projected_declared": null,
+          "role": "finding",
+          "unaccounted": [],
+          "unidentified": 0
+        }
+      ],
+      "certification_refusal": "PRESERVATION_REFUSED_MISSING_INVOCATION_AND_INSTRUMENT",
+      "certified": false,
+      "coverage": {
+        "claim": "ADMITTED",
+        "covers_population": true,
+        "reason": null
+      },
+      "declared_projection": {
+        "A1-SECRET-CLASSIFICATION-RECORDED": 7,
+        "A1-SECRET-CLEANSING-UNMET": 12,
+        "A1-SECRET-CONTROL-NO-EVIDENCE": 6,
+        "A1-SECRET-EVIDENCE-CONTRACT-ONLY": 20,
+        "A1-SECRET-LEAKAGE-REPORTED": 6
+      },
+      "difference": {
+        "declared_populations_without_member_rows": [],
+        "declared_scope_members_not_emitted": 0,
+        "export_members_absent_from_native": 0,
+        "native_members_outside_export": 0,
+        "unaccounted_members": 0,
+        "unidentified_finding_members": 0
+      },
+      "digest_match": true,
+      "emitted_by_rule": {
+        "A1-SECRET-CLASSIFICATION-RECORDED": 7,
+        "A1-SECRET-CLEANSING-UNMET": 12,
+        "A1-SECRET-CONTROL-NO-EVIDENCE": 6,
+        "A1-SECRET-EVIDENCE-CONTRACT-ONLY": 20,
+        "A1-SECRET-LEAKAGE-REPORTED": 6
+      },
+      "emitted_results": 51,
+      "export_declares_not_projected": [
+        {
+          "block": "non_claims",
+          "count": 4,
+          "reason": "carried verbatim at run.properties.a1.nativeNonClaims"
+        }
+      ],
+      "export_native_population": {
+        "counts": {
+          "CLEANSING_REQUIRED": 5,
+          "DECLASSIFICATION_BOUNDARY": 5,
+          "PUBLIC_DATA": 3,
+          "SECRET_DATA": 29,
+          "SECRET_DEPENDENT_CONTROL": 9
+        },
+        "entries": 51
+      },
+      "export_run_index": 4,
+      "export_run_sha256": "b6f30fa86e2767efc9eb861faedbf099749a4b1288c7d2705ed2f29e01cf67a1",
+      "preserved_sha256": "b6f30fa86e2767efc9eb861faedbf099749a4b1288c7d2705ed2f29e01cf67a1",
+      "projection_consistent": true,
+      "record": "evidence/etp-t7/SECRETS.json"
+    },
+    {
+      "blocks": [
+        {
+          "aggregate_results": 0,
+          "attached_results": 0,
+          "bound": null,
+          "coverage": "CENSUS",
+          "covers_population": true,
+          "declared": 2,
+          "declared_sources": [
+            {
+              "locator": "len(primitives)",
+              "value": 2
+            }
+          ],
+          "enumerated": 2,
+          "exported_members": 2,
+          "exported_results": 2,
+          "fabricated": [],
+          "members_listed": true,
+          "members_not_enumerated": 0,
+          "name": "primitives",
+          "not_projected_declared": null,
+          "role": "finding",
+          "unaccounted": [],
+          "unidentified": 0
+        },
+        {
+          "aggregate_results": 0,
+          "attached_results": 0,
+          "bound": null,
+          "coverage": "CENSUS",
+          "covers_population": true,
+          "declared": 7,
+          "declared_sources": [
+            {
+              "locator": "len(not_run)",
+              "value": 7
+            }
+          ],
+          "enumerated": 7,
+          "exported_members": 7,
+          "exported_results": 7,
+          "fabricated": [],
+          "members_listed": true,
+          "members_not_enumerated": 0,
+          "name": "not_run",
+          "not_projected_declared": null,
+          "role": "finding",
+          "unaccounted": [],
+          "unidentified": 0
+        }
+      ],
+      "certification_refusal": null,
+      "certified": true,
+      "coverage": {
+        "claim": "ADMITTED",
+        "covers_population": true,
+        "reason": null
+      },
+      "declared_projection": {
+        "A1-TIMING-LEAKAGE-DETECTED": 2,
+        "A1-TIMING-NOT-RUN": 7
+      },
+      "difference": {
+        "declared_populations_without_member_rows": [],
+        "declared_scope_members_not_emitted": 0,
+        "export_members_absent_from_native": 0,
+        "native_members_outside_export": 0,
+        "unaccounted_members": 0,
+        "unidentified_finding_members": 0
+      },
+      "digest_match": true,
+      "emitted_by_rule": {
+        "A1-TIMING-LEAKAGE-DETECTED": 2,
+        "A1-TIMING-NOT-RUN": 7
+      },
+      "emitted_results": 9,
+      "export_declares_not_projected": [
+        {
+          "block": "controls",
+          "count": 5,
+          "reason": "instrument negative/positive controls; not findings"
+        },
+        {
+          "block": "reachability",
+          "count": 5,
+          "reason": "static may-bound reachability measurement; not a finding population"
+        }
+      ],
+      "export_native_population": {
+        "not_run": 7,
+        "primitives": 2
+      },
+      "export_run_index": 5,
+      "export_run_sha256": "7289fbce2dabe40be92538c916736dba7c4d5250c1fae6e12767580daad8696c",
+      "preserved_sha256": "7289fbce2dabe40be92538c916736dba7c4d5250c1fae6e12767580daad8696c",
+      "projection_consistent": true,
+      "record": "evidence/timing-bn-findings.json"
+    }
+  ],
+  "schema": "openssl-rs/etp-a2/reconciliation/v1",
+  "summary": {
+    "coverage_claims_refused": 2,
+    "exported_members_matched": 4242,
+    "fabricated": 0,
+    "native_members_enumerated": 96537,
+    "results": 4245,
+    "results_reconciled": 4245,
+    "runs": 6,
+    "runs_certified": 3,
+    "runs_refused": 3,
+    "unaccounted": 0,
+    "unidentified": 249
+  },
+  "tool": {
+    "path": "forensics/tools/evidence_preservation.py",
+    "sha256": "199dd2053d2fdc514eceef81228c869768a1191995146ac43991556796e22086"
+  }
+}
