@@ -28,6 +28,12 @@ What this module does
   `not_baselines` rather than forced into the model.
 * `build_deltas(baselines)` computes the real deltas and records a `NO_BASELINE`
   entry for every area that has no second population at a second identity.
+* `source_identity(repo_root, commit=..., inputs=...)` makes the recorded
+  identity an explicit input: the commit the population was measured at plus the
+  SHA-256 of every file the producer read. `audited_reads` collects that
+  inventory, and `verify_input_digests` refuses (`BL_REFUSED_INPUT_DIGEST_MISMATCH`)
+  when a rebuild reads different bytes, so a record is reproducible at the
+  evidence commit and stale inputs are still caught.
 * `build_controls(baselines)` builds one in-memory control per refusal code. A
   control proves the refusal fires; it is not a source change and not a defect
   report.
@@ -52,9 +58,10 @@ import json
 import re
 import subprocess
 import sys
+from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Iterable, Mapping
+from typing import Any, Iterable, Iterator, Mapping
 
 MODEL_ID = "a7/v1"
 BASELINES_SCHEMA = "openssl-rs/a7/baselines/1"
@@ -173,6 +180,22 @@ R_AGGREGATE_AS_MEMBERS = "BL_REFUSED_AGGREGATE_AS_MEMBERS"
 R_NO_BASELINE = "BL_REFUSED_NO_BASELINE"
 R_IDENTITY_UNSTABLE = "BL_REFUSED_IDENTITY_UNSTABLE"
 
+# A producer-level refusal, not a delta disposition: it guards the identity of a
+# record, so it is registered separately from the 11 delta codes above. A delta
+# refusal says why a member is absent; this code says the bytes being read are
+# not the bytes the record measured.
+R_INPUT_DIGEST_MISMATCH = "BL_REFUSED_INPUT_DIGEST_MISMATCH"
+
+RECORD_REFUSALS = {
+    R_INPUT_DIGEST_MISMATCH: (
+        "an input the producer reads no longer hashes to the digest the record "
+        "names, an input the record names is no longer read, or an input is read "
+        "that the record does not name",
+        "that a rebuild at the recorded identity measured the same bytes; a record "
+        "whose inputs changed is not a reproduction (Article 2)",
+    ),
+}
+
 # code -> (the condition it refuses, the wrong conclusion it prevents)
 REFUSALS = {
     R_ABSENCE_AS_RESOLUTION: (
@@ -284,15 +307,105 @@ class Refusal(Exception):
         return f"{self.code}: {self.detail}"
 
 
+# --------------------------------------------------------------------------
+# Input audit. A recorded identity is the commit *and* the digest of every file
+# the producer read. The audit is off unless a producer turns it on, so the CLI
+# and the controls are unchanged.
+# --------------------------------------------------------------------------
+
+_READ_INPUTS: dict[str, str] | None = None
+_READ_ROOT: Path | None = None
+
+
+def _note_input(path: Path, digest: str) -> None:
+    """Record one file the producer read, keyed by its repo-relative path."""
+    if _READ_INPUTS is None:
+        return
+    candidate = Path(path)
+    try:
+        candidate = candidate.resolve()
+    except OSError:
+        pass
+    if _READ_ROOT is not None:
+        try:
+            key = candidate.relative_to(_READ_ROOT).as_posix()
+        except ValueError:
+            key = candidate.as_posix()
+    else:
+        key = candidate.as_posix()
+    previous = _READ_INPUTS.get(key)
+    if previous is not None and previous != digest:
+        raise Refusal(
+            R_INPUT_DIGEST_MISMATCH,
+            f"{key}: read twice with different digests ({previous}, {digest})",
+        )
+    _READ_INPUTS[key] = digest
+
+
+@contextmanager
+def audited_reads(repo_root: Path = REPO_ROOT) -> Iterator[dict[str, str]]:
+    """Collect the path and SHA-256 of every file read inside the block."""
+    global _READ_INPUTS, _READ_ROOT
+    previous = (_READ_INPUTS, _READ_ROOT)
+    _READ_INPUTS = {}
+    try:
+        _READ_ROOT = Path(repo_root).resolve()
+    except OSError:
+        _READ_ROOT = Path(repo_root)
+    try:
+        yield _READ_INPUTS
+    finally:
+        _READ_INPUTS, _READ_ROOT = previous
+
+
+def verify_input_digests(
+    recorded: Iterable[Mapping[str, Any]], observed: Mapping[str, str]
+) -> None:
+    """Refuse when the inputs read are not the inputs the record names."""
+    recorded_map = {
+        str(item["path"]): str(item["sha256"])
+        for item in recorded
+        if item.get("path") and item.get("sha256")
+    }
+    if not recorded_map:
+        # A record that names no inputs predates the inventory. The producer is
+        # establishing it, not reproducing it; every later run is verified.
+        return
+    problems: list[str] = []
+    for path in sorted(set(recorded_map) | set(observed)):
+        recorded_digest = recorded_map.get(path)
+        observed_digest = observed.get(path)
+        if recorded_digest is None:
+            problems.append(
+                f"{path}: read now but not named by the record ({observed_digest})"
+            )
+        elif observed_digest is None:
+            problems.append(
+                f"{path}: named by the record but no longer read ({recorded_digest})"
+            )
+        elif recorded_digest != observed_digest:
+            problems.append(
+                f"{path}: recorded {recorded_digest}, observed {observed_digest}"
+            )
+    if problems:
+        raise Refusal(
+            R_INPUT_DIGEST_MISMATCH,
+            "the producer reads bytes the record does not name; refusing to write "
+            "a reproduction: " + "; ".join(problems),
+        )
+
+
 def digest_bytes(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
 def digest_file(path: Path) -> str | None:
     try:
-        return digest_bytes(Path(path).read_bytes())
+        digest = digest_bytes(Path(path).read_bytes())
     except OSError:
         return None
+    _note_input(Path(path), digest)
+    return digest
 
 
 def canonical_json(value: Any) -> str:
@@ -1110,8 +1223,15 @@ def explain(delta_result: DeltaResult, identity: str) -> list[DispositionRecord]
 
 def _read_json(path: Path) -> Any:
     try:
-        return json.loads(Path(path).read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+        data = Path(path).read_bytes()
+    except OSError as exc:
+        raise Refusal(
+            R_NO_BASELINE, f"{path}: the record is not readable JSON ({exc})"
+        ) from exc
+    _note_input(Path(path), digest_bytes(data))
+    try:
+        return json.loads(data.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise Refusal(
             R_NO_BASELINE, f"{path}: the record is not readable JSON ({exc})"
         ) from exc
@@ -2598,18 +2718,39 @@ def _git(repo_root: Path, *args: str) -> str:
     return completed.stdout.decode("utf-8", "replace").strip()
 
 
-def source_identity(repo_root: Path) -> dict[str, Any]:
+def source_identity(
+    repo_root: Path,
+    *,
+    commit: str | None = None,
+    inputs: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """The identity a record was measured at, as an explicit input.
+
+    `commit` is supplied by the producer, not read live: a record that carries a
+    commit token must be reproducible at the commit that carries it, so the token
+    is the identity the population was measured at, not the checkout that ran the
+    producer. `branch` is deliberately absent: it is worktree state, not a
+    property of the measured source, and recording it would make the record
+    depend on how a verifier checked it out. `asOf` is derived from the measured
+    commit, so it is stable across checkouts. `inputs` names every file the
+    producer read, by repo-relative path and SHA-256.
+    """
+    token = commit or _git(repo_root, "rev-parse", "HEAD") or "unknown"
+    resolved = _git(repo_root, "rev-parse", "--verify", f"{token}^{{commit}}") or token
     return {
-        "commit": _git(repo_root, "rev-parse", "HEAD") or "unknown",
-        "branch": _git(repo_root, "rev-parse", "--abbrev-ref", "HEAD") or "unknown",
-        "asOf": _git(repo_root, "show", "-s", "--format=%cs", "HEAD") or "unknown",
+        "commit": resolved,
+        "asOf": _git(repo_root, "show", "-s", "--format=%cs", resolved) or "unknown",
+        "inputs": [
+            {"path": path, "sha256": digest}
+            for path, digest in sorted((inputs or {}).items())
+        ],
     }
 
 
 def baselines_document(
     baselines: Iterable[Baseline],
     not_baselines: Iterable[Mapping[str, Any]],
-    repo_root: Path,
+    identity: Mapping[str, Any],
 ) -> dict[str, Any]:
     rows = list(baselines)
     states: dict[str, int] = {}
@@ -2625,7 +2766,7 @@ def baselines_document(
             "scope; a delta between two baselines is the only place a resolution "
             "may be claimed"
         ),
-        "sourceIdentity": source_identity(repo_root),
+        "sourceIdentity": dict(identity),
         "rule": (
             "only RESOLVED requires a COMPLETE later population, an unchanged tool "
             "identity, an absent identity, no exclusion or suppression, and a "
@@ -2646,7 +2787,7 @@ def baselines_document(
 def delta_document(
     deltas: Iterable[DeltaResult],
     no_baseline: Iterable[Mapping[str, Any]],
-    repo_root: Path,
+    identity: Mapping[str, Any],
 ) -> dict[str, Any]:
     rows = list(deltas)
     disposition_totals = {disposition: 0 for disposition in DISPOSITIONS}
@@ -2663,7 +2804,7 @@ def delta_document(
             "the per-identity disposition of every before-member, and the areas for "
             "which no second population exists"
         ),
-        "sourceIdentity": source_identity(repo_root),
+        "sourceIdentity": dict(identity),
         "deltas": [result.as_dict() for result in rows],
         "noBaseline": [dict(item) for item in no_baseline],
         "totals": {
@@ -2679,14 +2820,14 @@ def delta_document(
 
 
 def controls_document(
-    controls: Iterable[Mapping[str, Any]], repo_root: Path
+    controls: Iterable[Mapping[str, Any]], identity: Mapping[str, Any]
 ) -> dict[str, Any]:
     rows = [dict(item) for item in controls]
     return {
         "schema": CONTROLS_SCHEMA,
         "model": MODEL_ID,
         "purpose": "one in-memory control per refusal code; a control proves the refusal fires",
-        "sourceIdentity": source_identity(repo_root),
+        "sourceIdentity": dict(identity),
         "controls": rows,
         "totals": {
             "controls": len(rows),

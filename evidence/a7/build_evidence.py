@@ -8,12 +8,20 @@ baseline set and the expected disposition shape of each real delta are design
 expectations and are asserted, but no count is: a count that cannot be derived
 from its record stops the producer with a refusal instead of being written.
 
-Re-running the producer at one source identity reproduces the three files
-byte-for-byte. It does not regenerate the records it reads.
+The source identity is an explicit input. `--source-commit` names the commit the
+population was measured at; when the record already exists its `sourceIdentity`
+defaults to the recorded value, so re-running at the evidence commit reproduces
+the three files byte-for-byte. The record also names the SHA-256 of every file
+the producer read. If a rebuild reads different bytes, the producer refuses with
+`BL_REFUSED_INPUT_DIGEST_MISMATCH` rather than writing a record that no longer
+describes its inputs.
+
+It does not regenerate the records it reads.
 
 Usage:
     python3 evidence/a7/build_evidence.py
     python3 evidence/a7/build_evidence.py --out DIR
+    python3 evidence/a7/build_evidence.py --source-commit <commit>
 
 SPDX-License-Identifier: Apache-2.0
 """
@@ -21,6 +29,7 @@ SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from collections import Counter
 from pathlib import Path
@@ -103,8 +112,53 @@ def _check_delta_members(
                 raise AssertionError(f"{result.id}: unknown refusal code {code}")
 
 
-def build(repo_root: Path) -> dict[str, str]:
-    """Return the three evidence documents keyed by file name."""
+def _recorded_identity(repo_root: Path) -> dict[str, object] | None:
+    """The identity the committed record states, or None when there is no record."""
+    path = Path(repo_root) / "evidence" / "a7" / "BASELINES.json"
+    if not path.is_file():
+        return None
+    try:
+        document = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise bl.Refusal(
+            bl.R_INPUT_DIGEST_MISMATCH,
+            f"{path}: the recorded source identity is unreadable ({exc})",
+        ) from exc
+    identity = document.get("sourceIdentity")
+    if not isinstance(identity, dict):
+        raise bl.Refusal(
+            bl.R_INPUT_DIGEST_MISMATCH,
+            f"{path}: the record states no sourceIdentity",
+        )
+    return identity
+
+
+def build(
+    repo_root: Path, *, source_commit: str | None = None
+) -> dict[str, str]:
+    """Return the three evidence documents keyed by file name.
+
+    `source_commit` is the identity the population was measured at. When it is
+    absent the producer reuses the recorded value, so a run at the evidence
+    commit reproduces the record instead of recording a new checkout.
+    """
+    recorded = _recorded_identity(repo_root)
+    recorded_commit = (recorded or {}).get("commit")
+    commit = source_commit or (
+        recorded_commit if isinstance(recorded_commit, str) and recorded_commit else None
+    )
+
+    with bl.audited_reads(repo_root) as inputs:
+        documents = _build_with_identity(repo_root, inputs, commit)
+
+    if recorded is not None:
+        bl.verify_input_digests(recorded.get("inputs") or [], inputs)
+    return documents
+
+
+def _build_with_identity(
+    repo_root: Path, inputs: dict[str, str], commit: str | None
+) -> dict[str, str]:
     baselines, not_baselines = bl.build_baselines(repo_root)
     observed_ids = {baseline.id for baseline in baselines}
     if observed_ids != EXPECTED_BASELINES:
@@ -151,9 +205,10 @@ def build(repo_root: Path) -> dict[str, str]:
             "is required"
         )
 
-    baselines_doc = bl.baselines_document(baselines, not_baselines, repo_root)
-    delta_doc = bl.delta_document(deltas, no_baseline, repo_root)
-    controls_doc = bl.controls_document(controls, repo_root)
+    identity = bl.source_identity(repo_root, commit=commit, inputs=inputs)
+    baselines_doc = bl.baselines_document(baselines, not_baselines, identity)
+    delta_doc = bl.delta_document(deltas, no_baseline, identity)
+    controls_doc = bl.controls_document(controls, identity)
 
     if baselines_doc["totals"]["baselines"] != len(baselines):
         raise AssertionError("the baseline total does not match the rows")
@@ -173,10 +228,18 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--out", type=Path, default=OUT_DIR)
     parser.add_argument("--repo-root", type=Path, default=REPO_ROOT)
+    parser.add_argument(
+        "--source-commit",
+        default=None,
+        help=(
+            "the commit the population was measured at; defaults to the value the "
+            "existing record states"
+        ),
+    )
     args = parser.parse_args(argv)
 
     try:
-        documents = build(args.repo_root)
+        documents = build(args.repo_root, source_commit=args.source_commit)
     except bl.Refusal as refusal:
         print(str(refusal), file=sys.stderr)
         return 2
@@ -187,6 +250,12 @@ def main(argv: list[str] | None = None) -> int:
     args.out.mkdir(parents=True, exist_ok=True)
     for name, text in documents.items():
         (args.out / name).write_text(text, encoding="utf-8")
+
+    identity = json.loads(documents["BASELINES.json"])["sourceIdentity"]
+    print(
+        f"source={identity['commit']} asOf={identity['asOf']} "
+        f"inputs={len(identity['inputs'])}"
+    )
 
     baselines, not_baselines = bl.build_baselines(args.repo_root)
     deltas, no_baseline = bl.build_deltas(baselines, args.repo_root)

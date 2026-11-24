@@ -271,3 +271,103 @@ fixed; `UNKNOWN` is not a pass. An aggregate is not a census, and a `NO_BASELINE
 area is not a clean area. The A1 artefact's six per-run candidates are not one
 candidate. No record read here was edited, and no refusal code, disposition or
 admission state was relaxed.
+
+## 11. Correction appended: the source identity was a moving value
+
+**A8 found this, not A7.** A8's whole-tools run reported `Ran 939 tests` and
+`FAILED (failures=1)`:
+
+```
+FAIL: test_the_committed_records_match_a_fresh_build (test_baseline.ProducerTests)
+```
+
+### 11.1 The old value and the cause
+
+The three records stated
+
+```json
+"sourceIdentity": {
+  "asOf": "2026-11-24",
+  "branch": "staging",
+  "commit": "1efd02cbd1401c4cffb854b906c021915df94386"
+}
+```
+
+`1efd02cbd…` was the live `HEAD` at the moment the producer ran: the measured
+source candidate `S`. The record is carried by the evidence commit `E`
+(`9f79f5066` at A8's run, and later). The producer read the token with
+`git rev-parse HEAD`, so rebuilding at `E` necessarily recorded `E`'s token and
+the committed bytes could never be reproduced at the commit that carries them.
+This is the two-identity confusion Article 22 exists to prevent: `S` (what was
+measured) was conflated with `E` (where the receipt lives). The defect was in
+`baseline.py`'s `source_identity()` and in the producer, not in any baseline
+member, count or disposition.
+
+### 11.2 The new contract
+
+The source identity is now an explicit input, and the record names the bytes it
+measured:
+
+```json
+"sourceIdentity": {
+  "asOf": "2026-11-24",
+  "commit": "1efd02cbd1401c4cffb854b906c021915df94386",
+  "inputs": [ { "path": "evidence/a1/SARIF.json", "sha256": "5c0cfee6…" }, … ]
+}
+```
+
+* `commit` is supplied. `build_evidence.py --source-commit <token>` is the
+  explicit argument; when it is absent and a record exists, the default is the
+  value the record states, never a live reading. `asOf` is derived from that
+  commit, so it is stable across checkouts. `branch` was removed: it is worktree
+  state, not a property of the measured source, and it made the record depend on
+  how a verifier checked it out.
+* `inputs` is the audit of every file the producer read while composing the
+  evidence set: **16 files**, each by repo-relative path and full-length
+  SHA-256. The audit covers both `_read_json` and every direct `digest_file`
+  call, so scanner records and the producer scripts the record names are not
+  missed.
+* `verify_input_digests` refuses with
+  **`BL_REFUSED_INPUT_DIGEST_MISMATCH`** when a recorded input hashes to a
+  different digest, when a recorded input is no longer read, or when a new input
+  is read that the record does not name. A record with no inventory is the
+  bootstrap run that establishes one; every later run is verified. This is the
+  property that would have caught the stale identity, so it is enforced, not
+  documented.
+
+The verifier test now runs the producer **at `HEAD`, with the identity the
+record states**, as an external verifier would:
+`--source-commit 1efd02cbd1401c4cffb854b906c021915df94386`. It no longer depends
+on the worktree being at `S`, and it is not skipped on a later or dirty worktree.
+
+### 11.3 Regenerated records
+
+All three records were regenerated at `HEAD` with the recorded `S` identity.
+Their measured content is **identical except for `sourceIdentity`** (verified by
+parsing both sides and comparing every other field), and all three are
+byte-identical under both the default run and the explicit-argument run.
+
+| record | old SHA-256 | new SHA-256 |
+|---|---|---|
+| `BASELINES.json` | `f2d6e37928a6fd05fa295a06cb54bd64a495336ab0af0a66403bcdbfbb0fe188` | `2a5a3f863c1ddf7775d0f524e7b36feb9f01a22a6c6569eff1d3c93081ae1cab` |
+| `DELTA.json` | `c676780ccde5bfdfb53f9aa3410be7c3feb6466cce3f904efab5f632b5d9dbb2` | `0444a879bf4a0ddf5c50cffba7f51a5834b0fc4a1702d5190815de1f4470c8cf` |
+| `CONTROLS.json` | `ae80106059df8cdf703116850869ede86e9713a43a08d919f91f49794c7a03e2` | `0b5f7a0473e9e84aeec37e0aff17452ac5fad73e2d2fc270a633aea1d886f771` |
+
+No baseline member, delta record, disposition, count or control changed:
+`BASELINES.json` remains 16 baselines (10 enumerated, 6 aggregate, 75,208
+declared members/counts), `DELTA.json` remains 4 deltas over 4,596 records with
+4,577 `STILL_PRESENT`, 15 `MOVED`, 2 `NEW`, 2 `UNSCANNED_ABSENT` and 0
+`RESOLVED`, and `CONTROLS.json` remains 11 controls over the 11 delta codes. The
+new code is a producer-level record refusal, deliberately not added to the
+delta-code registry (`REFUSALS`) or to the document's 11-code table.
+
+### 11.4 Preservation
+
+Sections 1–10 above are unchanged, including the old identity in §1 and the
+reproduction claim in §7. This section is appended so the record shows what was
+believed, what was measured, and why the identity representation changed.
+`docs/BASELINE-DISPOSITION.md` was inspected: its §11 sentence states only that
+re-running at one source identity reproduces the bytes, which remains true under
+the new contract (the identity is now supplied rather than read). It contains no
+statement about the `sourceIdentity` fields that is now wrong, so it was left
+unedited. No `src/`, `docker/`, `AGENTS.md` or A8 file was touched.

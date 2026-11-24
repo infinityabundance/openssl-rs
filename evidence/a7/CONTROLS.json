@@ -72,8 +72,73 @@
  "schema": "openssl-rs/a7/controls/1",
  "sourceIdentity": {
   "asOf": "2026-11-24",
-  "branch": "staging",
-  "commit": "1efd02cbd1401c4cffb854b906c021915df94386"
+  "commit": "1efd02cbd1401c4cffb854b906c021915df94386",
+  "inputs": [
+   {
+    "path": "evidence/a1/SARIF.json",
+    "sha256": "5c0cfee62512deb08cc12f95624be64865d3e544473bae80d9aca0ab36ce7852"
+   },
+   {
+    "path": "evidence/a3/COLLISIONS.json",
+    "sha256": "00c15ef4f0dc8b2903cf5576006dbd09e41eb664d7404a0b514a55a02ce9e1ad"
+   },
+   {
+    "path": "evidence/a3/MIGRATION.json",
+    "sha256": "01d5571e7cc66b476b0f416f360532b3699ff3caaf24511c3e4ae3d6f8d329f8"
+   },
+   {
+    "path": "evidence/a5/ADMISSION.json",
+    "sha256": "d4871ec97ae3a27b8ec820896e292429e44b4db4d11d2671a69b9dc0230ddc0a"
+   },
+   {
+    "path": "evidence/a6/SUPPRESSIONS.json",
+    "sha256": "236dc220d651bdb1f8519f189afa3bc9af78db7e28b0bd4f2c21a856694d8e4e"
+   },
+   {
+    "path": "evidence/closure-curl-049.json",
+    "sha256": "b72193072780e9a425e7e93be8c0c15849d06c758b9e71f226cafb4992388c62"
+   },
+   {
+    "path": "evidence/closure-ssh-b50-baseline.json",
+    "sha256": "dd74c260a5108c3c5300d15c1ffd1b17ecc9750ce94e199b12dddd5a253057de"
+   },
+   {
+    "path": "evidence/closure-ssh-b50.json",
+    "sha256": "d43e7dd8deb283aa2348b71926514c676a8bb40cbf484ea4bfe46f588c6fe1be"
+   },
+   {
+    "path": "evidence/etp-t10/EXCLUSIONS.json",
+    "sha256": "791c699d3c3f60e5dee0f26563573a988411ad6854a319286b9cc34719e48f90"
+   },
+   {
+    "path": "evidence/etp-t15/apply_claims.py",
+    "sha256": "37fed307a1d118690588396575c7d859022bdac3e2949769393628d5622cc803"
+   },
+   {
+    "path": "evidence/etp-t15/history/claims.before-reconciliation.json",
+    "sha256": "65d8105b744c80ae01e76af8bf3370c478ab116c7fc9b0f16f63eea5d5c579de"
+   },
+   {
+    "path": "evidence/etp-t4/SAFETY-SITES.json",
+    "sha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da"
+   },
+   {
+    "path": "evidence/etp/claims.json",
+    "sha256": "2968ffd6976f19bd701c58636b51cceed192e42c928dd2116217449a7b85a1bb"
+   },
+   {
+    "path": "evidence/haz-15/observables.json",
+    "sha256": "e035ccc4381abf5c3838342ff69b95f22facdda3be1e1ccb72742772ed994b6b"
+   },
+   {
+    "path": "evidence/haz-16/CLASSIFICATION.json",
+    "sha256": "85942983564b19d4161425677ce47eee9500cf6a59ed5e1abf8adeb1cf43f34d"
+   },
+   {
+    "path": "evidence/haz-16/enumerate_ffi_mutation.py",
+    "sha256": "1cdc6a48fab294fec548d394e196b958cd93a40bcdd5e85fd3259c0697fa2e6e"
+   }
+  ]
  },
  "totals": {
   "codes": 11,

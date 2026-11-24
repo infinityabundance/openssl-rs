@@ -577,11 +577,23 @@ class AdmitTests(unittest.TestCase):
         self.assertTrue(report["problems"])
 
 
+def _recorded_identity() -> dict:
+    return json.loads(BASELINES.read_text(encoding="utf-8"))["sourceIdentity"]
+
+
 class ProducerTests(unittest.TestCase):
     def test_the_producer_is_deterministic(self) -> None:
+        commit = _recorded_identity()["commit"]
         with tempfile.TemporaryDirectory() as first:
             completed = subprocess.run(
-                [sys.executable, str(PRODUCER), "--out", first],
+                [
+                    sys.executable,
+                    str(PRODUCER),
+                    "--out",
+                    first,
+                    "--source-commit",
+                    commit,
+                ],
                 capture_output=True,
                 text=True,
                 check=False,
@@ -593,7 +605,14 @@ class ProducerTests(unittest.TestCase):
             }
         with tempfile.TemporaryDirectory() as second:
             completed = subprocess.run(
-                [sys.executable, str(PRODUCER), "--out", second],
+                [
+                    sys.executable,
+                    str(PRODUCER),
+                    "--out",
+                    second,
+                    "--source-commit",
+                    commit,
+                ],
                 capture_output=True,
                 text=True,
                 check=False,
@@ -603,9 +622,19 @@ class ProducerTests(unittest.TestCase):
                 self.assertEqual(value, (Path(second) / name).read_bytes(), name)
 
     def test_the_committed_records_match_a_fresh_build(self) -> None:
+        # The verifier supplies the identity the record states. It must not be the
+        # live HEAD, or a record carried by commit E could never be reproduced at E.
+        commit = _recorded_identity()["commit"]
         with tempfile.TemporaryDirectory() as out:
             completed = subprocess.run(
-                [sys.executable, str(PRODUCER), "--out", out],
+                [
+                    sys.executable,
+                    str(PRODUCER),
+                    "--out",
+                    out,
+                    "--source-commit",
+                    commit,
+                ],
                 capture_output=True,
                 text=True,
                 check=False,
@@ -617,6 +646,84 @@ class ProducerTests(unittest.TestCase):
                     (A7 / name).read_bytes(),
                     name,
                 )
+
+
+class InputIdentityTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.identity = _recorded_identity()
+        cls.inputs = cls.identity["inputs"]
+
+    def test_the_identity_names_the_commit_and_every_input_digest(self) -> None:
+        self.assertNotIn("branch", self.identity)
+        self.assertTrue(self.inputs)
+        for item in self.inputs:
+            self.assertEqual(
+                hashlib.sha256((REPO_ROOT / item["path"]).read_bytes()).hexdigest(),
+                item["sha256"],
+                item["path"],
+            )
+        # The population is read from records; the inventory must name them.
+        self.assertTrue(
+            any(item["path"].endswith("SARIF.json") for item in self.inputs)
+        )
+
+    def test_the_commit_token_is_the_argument_not_the_checkout(self) -> None:
+        # Recording HEAD here would make the record irreproducible at the commit
+        # that carries it; the identity is a function of its explicit argument.
+        observed = bl.source_identity(
+            REPO_ROOT,
+            commit=self.identity["commit"],
+            inputs={item["path"]: item["sha256"] for item in self.inputs},
+        )
+        self.assertEqual(observed, self.identity)
+
+    def test_a_changed_input_stops_the_rebuild_with_a_named_code(self) -> None:
+        changed = "evidence/a5/ADMISSION.json"
+        self.assertIn(changed, {item["path"] for item in self.inputs})
+        with tempfile.TemporaryDirectory() as root:
+            mirror = Path(root)
+            for item in self.inputs:
+                destination = mirror / item["path"]
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_bytes((REPO_ROOT / item["path"]).read_bytes())
+            record = mirror / "evidence" / "a7" / "BASELINES.json"
+            record.parent.mkdir(parents=True, exist_ok=True)
+            record.write_bytes(BASELINES.read_bytes())
+            target = mirror / changed
+            target.write_bytes(target.read_bytes() + b"\n")
+            with tempfile.TemporaryDirectory() as out:
+                completed = subprocess.run(
+                    [
+                        sys.executable,
+                        str(PRODUCER),
+                        "--repo-root",
+                        str(mirror),
+                        "--out",
+                        out,
+                        "--source-commit",
+                        self.identity["commit"],
+                    ],
+                    capture_output=True,
+                    text=True,
+                    check=False,
+                )
+        self.assertEqual(
+            completed.returncode, 2, completed.stdout + completed.stderr
+        )
+        self.assertIn(bl.R_INPUT_DIGEST_MISMATCH, completed.stderr)
+        self.assertIn(changed, completed.stderr)
+
+    def test_the_verifier_refuses_a_stale_digest(self) -> None:
+        recorded = [{"path": "evidence/x.json", "sha256": "a" * 64}]
+        with self.assertRaises(bl.Refusal) as caught:
+            bl.verify_input_digests(recorded, {"evidence/x.json": "b" * 64})
+        self.assertEqual(caught.exception.code, bl.R_INPUT_DIGEST_MISMATCH)
+        self.assertIn("recorded", str(caught.exception))
+
+    def test_a_record_without_an_inventory_is_bootstrapped_not_verified(self) -> None:
+        # The first run establishes the inventory; every later run verifies it.
+        bl.verify_input_digests([], {"evidence/x.json": "b" * 64})
 
 
 class CommandLineTests(unittest.TestCase):
