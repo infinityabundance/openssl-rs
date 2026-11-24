@@ -30,13 +30,16 @@ TOOLS = REPO / "forensics/tools"
 sys.path.insert(0, str(TOOLS))
 
 import sigstore_bundle as sb  # noqa: E402
+import harden as h  # noqa: E402
 
 EVIDENCE = REPO / "evidence/a16"
 BUILDER_PATH = EVIDENCE / "build_evidence.py"
+INVENTORY = EVIDENCE / "INVENTORY.json"
 TOOL = TOOLS / "sigstore_bundle.py"
 DOCUMENT = REPO / "docs/SIGSTORE-BUNDLES.md"
 FULL_COMMIT = "67187c39ee5b5e6d2f66136829295c44096ddd08"
 SHORT_COMMIT = "67187c39e"
+POPULATION_SELF = "evidence/a16/INVENTORY.json"
 
 
 def load_json(path: Path) -> Any:
@@ -475,6 +478,161 @@ class DeterminismAndRecords(unittest.TestCase):
         self.assertEqual(record["profile"], sb.bundle_profile())
 
 
+class FrozenPopulation(unittest.TestCase):
+    """The population is a declared member list, not a live count.
+
+    A17's six new records made the live ``evidence/**/*.json`` count 413 while the
+    committed record said 407, so the record no longer reproduced.  The population
+    is now the tracked evidence JSON at the declared candidate, bound to a digest
+    per member; later files are ``NEW_SINCE_RECORD`` and never change the count.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.record = load_json(INVENTORY)
+        cls.population = cls.record["population"]
+        cls.members = cls.population["members"]
+        cls.certificates = cls.record["certificatePopulation"]["members"]
+
+    def test_the_population_is_bound_to_a_declared_candidate(self) -> None:
+        self.assertEqual(self.population["binding"], h.POPULATION_FROZEN)
+        self.assertEqual(self.population["frozenAtCandidate"], FULL_COMMIT)
+        self.assertEqual(self.population["files"], len(self.members))
+        self.assertEqual(self.record["populationFiles"], len(self.members))
+        self.assertEqual(
+            self.record["certificatePopulation"]["binding"], h.POPULATION_FROZEN
+        )
+        self.assertEqual(self.record["certificateFiles"], len(self.certificates))
+
+    def test_every_member_is_an_explicit_path_and_digest(self) -> None:
+        paths = [member["path"] for member in self.members]
+        self.assertEqual(paths, sorted(paths))
+        self.assertEqual(len(set(paths)), len(paths))
+        for member in self.members:
+            self.assertRegex(member["sha256"], r"^[0-9a-f]{64}$")
+            self.assertIsInstance(member["bytes"], int)
+        self.assertNotIn(POPULATION_SELF, paths)
+
+    def test_the_frozen_population_reproduces_at_this_tree(self) -> None:
+        current = sb.verify_population(self.members)
+        self.assertEqual(
+            [(row["path"], row["sha256"]) for row in current],
+            [(member["path"], member["sha256"]) for member in self.members],
+        )
+
+    def test_the_frozen_population_is_the_candidate_population(self) -> None:
+        builder = load_builder()
+        paths, certificate_paths = builder.candidate_population(FULL_COMMIT)
+        self.assertEqual([member["path"] for member in self.members], paths)
+        self.assertEqual(sb.freeze_population(paths), self.members)
+        self.assertEqual(
+            [member["path"] for member in self.certificates], certificate_paths
+        )
+
+    def test_growth_is_reported_and_never_absorbed(self) -> None:
+        growth = sb.growth_report(self.members, self.certificates)
+        member_paths = {member["path"] for member in self.members}
+        self.assertTrue(growth, "the tree has grown since the candidate")
+        for entry in growth:
+            self.assertNotIn(entry["path"], member_paths)
+            self.assertEqual(entry["result"], h.RESULT_NEW_SINCE_RECORD)
+            self.assertRegex(entry["sha256"], r"^[0-9a-f]{64}$")
+        self.assertEqual(self.record["populationFiles"], len(self.members))
+
+    def test_a_new_bundle_after_the_freeze_is_new_since_record(self) -> None:
+        builder = load_builder()
+        with tempfile.TemporaryDirectory() as directory:
+            mirror = Path(directory) / "mirror"
+            (mirror / "evidence").mkdir(parents=True)
+            (mirror / "evidence/OLD.json").write_bytes(b'{"a": 1}\n')
+            bundle_path = "evidence/NEW.sigstore.json"
+            bundle_bytes = builder.encode(builder.base_document())
+            (mirror / bundle_path).write_bytes(bundle_bytes)
+            members = sb.freeze_population(["evidence/OLD.json"], repo_root=mirror)
+            live = ["evidence/OLD.json", bundle_path]
+            frozen_record = sb.inventory(
+                members, (), frozen_at_candidate="control-only", repo_root=mirror
+            )
+            self.assertEqual(frozen_record["bundles"], 0)
+            self.assertEqual(frozen_record["populationFiles"], 1)
+            growth = sb.growth_report(
+                members, (), repo_root=mirror, live_paths=live
+            )
+            self.assertEqual([entry["path"] for entry in growth], [bundle_path])
+            entry = growth[0]
+            self.assertEqual(entry["result"], h.RESULT_NEW_SINCE_RECORD)
+            self.assertEqual(
+                entry["sha256"], hashlib.sha256(bundle_bytes).hexdigest()
+            )
+            refrozen = sb.freeze_population(live, repo_root=mirror)
+            refrozen_record = sb.inventory(
+                refrozen, (), frozen_at_candidate="control-only", repo_root=mirror
+            )
+            self.assertEqual(refrozen_record["bundles"], 1)
+
+    def test_a_changed_member_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            mirror = Path(directory)
+            (mirror / "evidence").mkdir()
+            member = mirror / "evidence/ONE.json"
+            member.write_bytes(b'{"a": 1}\n')
+            members = sb.freeze_population(["evidence/ONE.json"], repo_root=mirror)
+            member.write_bytes(b'{"a": 2}\n')
+            with self.assertRaises(h.Refusal) as caught:
+                sb.verify_population(members, repo_root=mirror)
+            self.assertEqual(caught.exception.code, h.PH_REFUSED_POPULATION_DRIFT)
+
+    def test_a_removed_member_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            mirror = Path(directory)
+            (mirror / "evidence").mkdir()
+            (mirror / "evidence/ONE.json").write_bytes(b'{"a": 1}\n')
+            members = sb.freeze_population(["evidence/ONE.json"], repo_root=mirror)
+            (mirror / "evidence/ONE.json").unlink()
+            with self.assertRaises(h.Refusal) as caught:
+                sb.verify_population(members, repo_root=mirror)
+            self.assertEqual(caught.exception.code, h.PH_REFUSED_POPULATION_DRIFT)
+
+    def test_a_record_without_a_frozen_population_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            record = Path(directory) / "INVENTORY.json"
+            record.write_bytes(json.dumps({"populationFiles": 3}).encode("utf-8"))
+            with self.assertRaises(h.Refusal) as caught:
+                sb.declared_population(record)
+            self.assertEqual(caught.exception.code, h.PH_REFUSED_POPULATION_DRIFT)
+            self.assertIn("live glob", caught.exception.message)
+
+    def test_the_producer_refuses_to_invent_a_population_from_the_tree(self) -> None:
+        builder = load_builder()
+        with tempfile.TemporaryDirectory() as directory:
+            original = builder.A16
+            builder.A16 = Path(directory)
+            try:
+                with self.assertRaises(SystemExit) as caught:
+                    builder._declared_population(None)
+            finally:
+                builder.A16 = original
+            self.assertIn("live glob", str(caught.exception))
+
+    def test_the_inventory_command_reports_growth_separately(self) -> None:
+        result = subprocess.run(
+            [sys.executable, str(TOOL), "inventory"],
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            env={"PYTHONDONTWRITEBYTECODE": "1"},
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("bundles=0", result.stdout)
+        self.assertIn(
+            f"population={self.record['populationFiles']} files", result.stdout
+        )
+        self.assertIn(h.RESULT_NEW_SINCE_RECORD, result.stderr)
+        self.assertIn(
+            f"files={self.record['populationFiles']}", result.stderr
+        )
+
+
 class DocumentSynchronisation(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -513,6 +671,12 @@ class DocumentSynchronisation(unittest.TestCase):
 
     def test_the_document_has_a_not_run_section(self) -> None:
         self.assertIn("## `NOT_RUN`", self.text)
+
+    def test_the_document_states_the_frozen_population_contract(self) -> None:
+        self.assertIn("frozen member list", self.text)
+        self.assertIn(h.RESULT_NEW_SINCE_RECORD, self.text)
+        self.assertIn("re-freeze", self.text)
+        self.assertIn("not a live glob", self.text)
 
 
 if __name__ == "__main__":

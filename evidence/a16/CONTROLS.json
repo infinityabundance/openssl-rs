@@ -4336,7 +4336,7 @@
     "item": "A16",
     "tool": {
       "path": "forensics/tools/sigstore_bundle.py",
-      "sha256": "972e7333713807f2573aa8d8fb1efd40ebe7bbb5c5a2b69ba74593a3e7696d80"
+      "sha256": "8bbd9ebd4d288360f7a8f2e29b1ef84ff9b927e4c7e285129869113ef90ac778"
     }
   },
   "summary": {

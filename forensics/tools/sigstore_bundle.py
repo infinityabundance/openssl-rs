@@ -68,12 +68,13 @@ from __future__ import annotations
 
 import argparse
 import ast
+import fnmatch
 import hashlib
 import json
 import sys
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Iterable, Mapping
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TOOLS = Path(__file__).resolve().parent
@@ -86,7 +87,7 @@ TOOL_PATH = "forensics/tools/sigstore_bundle.py"
 MODEL_ID = "a16/v1"
 REPORT_SCHEMA = "openssl-rs/a16/bundle-validation/1"
 PROFILE_SCHEMA = "openssl-rs/a16/bundle-profile/1"
-INVENTORY_SCHEMA = "openssl-rs/a16/bundle-inventory/1"
+INVENTORY_SCHEMA = "openssl-rs/a16/bundle-inventory/2"
 CONTROLS_SCHEMA = "openssl-rs/a16/controls/1"
 
 MEDIA_TYPE_V03 = "application/vnd.dev.sigstore.bundle.v0.3+json"
@@ -1740,9 +1741,21 @@ def module_source() -> str:
 
 # ---------------------------------------------------------------------------
 # The real inventory.  There is no bundle in the tree; this says so.
+#
+# The population is *frozen*.  It is the explicit member list of tracked
+# evidence JSON that existed at the declared candidate, each member bound to
+# its sha256, and it is read from the record (``evidence/a16/INVENTORY.json``),
+# never from a live glob.  The earlier version counted a live glob, which
+# included this item's own records and every later item's, so the committed
+# count stopped reproducing the moment another item added evidence.  A glob
+# match that is not a member is now reported as ``NEW_SINCE_RECORD`` with its
+# digest and counted separately; it never enlarges the recorded population, and
+# a changed or removed member is refused with ``PH_REFUSED_POPULATION_DRIFT``.
+# The machinery is ``harden``'s, imported rather than reimplemented.
 # ---------------------------------------------------------------------------
 
 INVENTORY_GLOBS = ("evidence/**/*.json",)
+POPULATION_GLOB = "evidence/*.json"  # fnmatch form of INVENTORY_GLOBS; '*' crosses '/'
 CERTIFICATE_GLOBS = (
     "evidence/**/*.pem",
     "evidence/**/*.crt",
@@ -1750,36 +1763,208 @@ CERTIFICATE_GLOBS = (
     "evidence/**/*.p7b",
     "evidence/**/*.p12",
 )
+CERTIFICATE_GLOBS_FNMATCH = (
+    "evidence/*.pem",
+    "evidence/*.crt",
+    "evidence/*.der",
+    "evidence/*.p7b",
+    "evidence/*.p12",
+)
 A10_ENVELOPE_DIR = "evidence/a10/ENVELOPES"
+INVENTORY_RECORD = REPO_ROOT / "evidence/a16/INVENTORY.json"
+POPULATION_SELF = "evidence/a16/INVENTORY.json"
+POPULATION_BINDING = harden.POPULATION_FROZEN
 
 
-def _glob_paths(patterns: tuple[str, ...]) -> list[Path]:
-    found: set[Path] = set()
-    for pattern in patterns:
-        for path in REPO_ROOT.glob(pattern):
-            if path.is_file():
-                found.add(path)
-    return sorted(found)
+def _refuse_population(message: str) -> None:
+    """Refuse with harden's stable population-drift code, never with a pass."""
+    raise harden.Refusal(harden.PH_REFUSED_POPULATION_DRIFT, message)
 
 
-def inventory() -> dict[str, Any]:
-    """Measure the bundle population.  A bundle is a *file* whose top level is one.
+def freeze_population(
+    paths: Iterable[str], *, repo_root: Path | str = REPO_ROOT
+) -> list[dict[str, Any]]:
+    """Bind an explicit path list to the bytes at this tree.
 
-    A control-only document that embeds synthetic bundles (this item's
-    ``CONTROLS.json``) is not a bundle and is reported as such.  The A10
-    envelopes are self-issued DSSE, not Sigstore bundles, and are counted
-    separately.
+    This is :func:`harden.freeze_population`; it returns the member list a record
+    stores instead of a count, sorted by path.  It is called only to create or
+    replace a declared population, never to reproduce one.
     """
-    population = _glob_paths(INVENTORY_GLOBS)
+    if POPULATION_SELF in set(paths):
+        _refuse_population(
+            f"{POPULATION_SELF} cannot be a member of its own population: "
+            "its bytes would have to contain their own digest"
+        )
+    return harden.freeze_population(sorted(paths), repo_root=repo_root)
+
+
+def verify_population(
+    members: Iterable[dict[str, Any]], *, repo_root: Path | str = REPO_ROOT
+) -> list[dict[str, Any]]:
+    """Re-hash every declared member at this tree.
+
+    The population and its count come from the member list only.  A changed,
+    removed or malformed member is refused with ``PH_REFUSED_POPULATION_DRIFT``;
+    a file that matches the glob but is not a member cannot enlarge the answer
+    (see :func:`growth_report`).
+    """
+    declared = list(members)
+    paths = [member["path"] for member in declared]
+    if len(set(paths)) != len(paths):
+        _refuse_population("the declared population repeats a path")
+    for member in declared:
+        if not isinstance(member.get("sha256"), str) or len(member["sha256"]) != 64:
+            _refuse_population(f"a declared member has no sha256: {member.get('path')!r}")
+    current = {
+        row["path"]: row
+        for row in harden.freeze_population(paths, repo_root=repo_root)
+    }
+    for member in declared:
+        row = current[member["path"]]
+        if row["sha256"] != member["sha256"]:
+            _refuse_population(
+                f"changed: {row['path']}: sha256 {row['sha256']} != declared "
+                f"{member['sha256']}"
+            )
+    return sorted(current.values(), key=lambda row: row["path"])
+
+
+def declared_population(path: Path | str = INVENTORY_RECORD) -> dict[str, Any]:
+    """The frozen population the record declares; a live glob is not a substitute.
+
+    The record is the declared candidate.  If it has no ``population`` block
+    bound ``FROZEN`` there is nothing to reproduce, and inventing the population
+    from the tree now is exactly the defect this binds away.
+    """
+    try:
+        raw = Path(path).read_bytes()
+    except OSError as error:
+        _refuse_population(f"{path}: the declared population record is unreadable: {error}")
+    try:
+        document = harden.loads(raw)
+    except harden.Refusal as refusal:
+        _refuse_population(
+            f"{path}: the declared population record is not strictly readable: "
+            f"{refusal.code}"
+        )
+    if not isinstance(document, dict):
+        _refuse_population(f"{path}: the declared population record is not an object")
+    population = document.get("population")
+    if not isinstance(population, dict) or population.get("binding") != POPULATION_BINDING:
+        _refuse_population(
+            f"{path}: no population is declared {POPULATION_BINDING}; a live glob is "
+            "not a substitute for a declared candidate"
+        )
+    members = population.get("members")
+    if not isinstance(members, list) or not members:
+        _refuse_population(f"{path}: the frozen population has no member list")
+    certificates = document.get("certificatePopulation")
+    certificate_members = (
+        certificates.get("members") if isinstance(certificates, dict) else None
+    )
+    if not isinstance(certificate_members, list):
+        _refuse_population(f"{path}: the certificate population has no member list")
+    return {
+        "frozenAtCandidate": population.get("frozenAtCandidate"),
+        "members": members,
+        "certificateMembers": certificate_members,
+    }
+
+
+def _growth(
+    patterns: tuple[str, ...],
+    members: Iterable[dict[str, Any]],
+    *,
+    repo_root: Path | str,
+    live_paths: Iterable[str] | None,
+) -> list[dict[str, Any]]:
+    members = list(members)
+    if live_paths is not None:
+        live = [
+            path
+            for path in live_paths
+            if any(fnmatch.fnmatchcase(path, pattern) for pattern in patterns)
+        ]
+        entries: list[dict[str, Any]] = []
+        for pattern in patterns:
+            entries.extend(
+                harden.population_growth(
+                    members,
+                    glob=pattern,
+                    repo_root=repo_root,
+                    excluded_prefixes=(),
+                    live_paths=live,
+                )
+            )
+        return entries
+    entries = []
+    for pattern in patterns:
+        entries.extend(
+            harden.population_growth(
+                members, glob=pattern, repo_root=repo_root, excluded_prefixes=()
+            )
+        )
+    return entries
+
+
+def growth_report(
+    members: Iterable[dict[str, Any]],
+    certificate_members: Iterable[dict[str, Any]] = (),
+    *,
+    repo_root: Path | str = REPO_ROOT,
+    live_paths: Iterable[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Glob matches that are not frozen members, as ``NEW_SINCE_RECORD``.
+
+    Each entry carries its path, digest and size and is counted separately: the
+    frozen population and its recorded count are unchanged.  Nothing is excluded
+    from this report, so a file in any directory (including this item's own) is
+    visible.  A member that has left the live population is refused rather than
+    absorbed.
+    """
+    entries = _growth(
+        (POPULATION_GLOB,), members, repo_root=repo_root, live_paths=live_paths
+    )
+    entries.extend(
+        _growth(
+            CERTIFICATE_GLOBS_FNMATCH,
+            certificate_members,
+            repo_root=repo_root,
+            live_paths=live_paths,
+        )
+    )
+    unique: dict[str, dict[str, Any]] = {}
+    for entry in entries:
+        unique.setdefault(entry["path"], entry)
+    return [unique[path] for path in sorted(unique)]
+
+
+def inventory(
+    members: Iterable[dict[str, Any]],
+    certificate_members: Iterable[dict[str, Any]] = (),
+    *,
+    frozen_at_candidate: str | None = None,
+    repo_root: Path | str = REPO_ROOT,
+) -> dict[str, Any]:
+    """Measure the frozen population.  A bundle is a *file* whose top level is one.
+
+    Only members are read.  A control-only document that embeds synthetic
+    bundles is not a bundle and is reported as a candidate file; the A10
+    envelopes are self-issued DSSE, not Sigstore bundles, and are counted
+    separately from the frozen member paths.
+    """
+    root = Path(repo_root)
+    population = verify_population(members, repo_root=root)
+    certificate_population = verify_population(certificate_members, repo_root=root)
     candidate_files: list[dict[str, Any]] = []
     bundle_files: list[dict[str, Any]] = []
     logs: set[str] = set()
     certificates = 0
-    for path in population:
-        data = path.read_bytes()
+    for row in population:
+        relative = row["path"]
+        data = (root / relative).read_bytes()
         if SIGSTORE_BUNDLE_PREFIX.encode("ascii") not in data:
             continue
-        relative = str(path.relative_to(REPO_ROOT))
         try:
             document = harden.loads(data)
         except harden.Refusal as refusal:
@@ -1817,14 +2002,57 @@ def inventory() -> dict[str, Any]:
                     ),
                 }
             )
-    envelopes = sorted((REPO_ROOT / A10_ENVELOPE_DIR).glob("*.json"))
+    envelopes = [
+        row["path"]
+        for row in population
+        if row["path"].startswith(f"{A10_ENVELOPE_DIR}/")
+        and row["path"].endswith(".json")
+    ]
     return {
         "schema": INVENTORY_SCHEMA,
         "model": MODEL_ID,
         "populationGlob": list(INVENTORY_GLOBS),
+        "population": {
+            "binding": POPULATION_BINDING,
+            "glob": POPULATION_GLOB,
+            "globSemantics": (
+                "tracked files matched with fnmatch.fnmatchcase; '*' matches "
+                "across '/', so this covers evidence/**/*.json"
+            ),
+            "basis": (
+                "the explicit member list below, declared at the candidate; not "
+                "a live glob"
+            ),
+            "frozenAtCandidate": frozen_at_candidate,
+            "files": len(population),
+            "members": [
+                {"path": row["path"], "sha256": row["sha256"], "bytes": row["bytes"]}
+                for row in population
+            ],
+            "growthPolicy": (
+                "a verification re-hashes every member and reports a glob match "
+                "that is not a member as NEW_SINCE_RECORD, counted separately; "
+                "growth never changes this count, and a removed or changed member "
+                "is refused with PH_REFUSED_POPULATION_DRIFT"
+            ),
+        },
         "populationFiles": len(population),
         "certificateGlob": list(CERTIFICATE_GLOBS),
-        "certificateFiles": len(_glob_paths(CERTIFICATE_GLOBS)),
+        "certificatePopulation": {
+            "binding": POPULATION_BINDING,
+            "glob": list(CERTIFICATE_GLOBS_FNMATCH),
+            "basis": (
+                "the explicit member list below, declared at the candidate; not "
+                "a live glob"
+            ),
+            "frozenAtCandidate": frozen_at_candidate,
+            "files": len(certificate_population),
+            "members": [
+                {"path": row["path"], "sha256": row["sha256"], "bytes": row["bytes"]}
+                for row in certificate_population
+            ],
+        },
+        "certificateFiles": len(certificate_population),
         "bundles": len(bundle_files),
         "transparencyLogs": len(logs),
         "certificates": certificates,
@@ -1838,9 +2066,11 @@ def inventory() -> dict[str, Any]:
         ),
         "explanation": (
             "No Sigstore bundle, transparency-log public key, CA root or "
-            "timestamp-authority root exists in this tree.  The measured counts "
-            "are 0 bundles, 0 log keys and 0 certificates; that is the honest "
-            "result, not an omission."
+            "timestamp-authority root exists in the population frozen at the "
+            "declared candidate.  The measured counts are 0 bundles, 0 log keys "
+            "and 0 certificates; that is the honest result, not an omission.  A "
+            "record added since the candidate is NEW_SINCE_RECORD and requires an "
+            "explicit re-freeze and a fresh inventory before it can be counted."
         ),
     }
 
@@ -1898,7 +2128,22 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_OK
 
     if parsed.command == "inventory":
-        measured = inventory()
+        try:
+            declared = declared_population()
+            measured = inventory(
+                declared["members"],
+                declared["certificateMembers"],
+                frozen_at_candidate=declared["frozenAtCandidate"],
+            )
+            growth = growth_report(
+                declared["members"], declared["certificateMembers"]
+            )
+        except harden.Refusal as refusal:
+            print(
+                f"{refusal.code}: {refusal.message} outcome={OUTCOME_NOT_RUN}",
+                file=sys.stderr,
+            )
+            return EXIT_REFUSED
         print(json.dumps(measured, indent=2, sort_keys=True))
         print(
             f"inventory: code={CODE_OK} outcome={OUTCOME_NOT_RUN} "
@@ -1906,6 +2151,17 @@ def main(argv: list[str] | None = None) -> int:
             f"transparencyLogs={measured['transparencyLogs']} "
             f"certificates={measured['certificates']} "
             f"population={measured['populationFiles']} files"
+        )
+        for entry in growth:
+            print(
+                f"growth: result={entry['result']} path={entry['path']} "
+                f"sha256={entry['sha256']} bytes={entry['bytes']}",
+                file=sys.stderr,
+            )
+        print(
+            f"population: binding={measured['population']['binding']} "
+            f"files={measured['populationFiles']} growth={len(growth)}",
+            file=sys.stderr,
         )
         return EXIT_OK
 

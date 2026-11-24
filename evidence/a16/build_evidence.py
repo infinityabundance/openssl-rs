@@ -22,6 +22,16 @@ Two runs are byte-identical.  Nothing reads the clock; the times are literals.
 
 Usage:
     python3 evidence/a16/build_evidence.py [--out DIR] [--source-commit SHA]
+    python3 evidence/a16/build_evidence.py --freeze-population CANDIDATE
+
+The population is never read from a live glob.  ``INVENTORY.json`` declares an
+explicit ``{path, sha256}`` member list frozen at a candidate commit, and this
+producer reproduces that list.  ``--freeze-population CANDIDATE`` is the one
+explicit act that replaces it: it takes the tracked evidence JSON and
+certificate files that existed at ``CANDIDATE`` (verifying that none of them has
+changed since), so a record added later is ``NEW_SINCE_RECORD`` rather than
+silently included.  A new bundle therefore needs a re-freeze and a fresh
+inventory; it is not absorbed.
 
 SPDX-License-Identifier: Apache-2.0
 """
@@ -32,6 +42,7 @@ import argparse
 import base64
 import hashlib
 import json
+import subprocess
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -42,6 +53,7 @@ TOOLS = REPO_ROOT / "forensics/tools"
 A16 = REPO_ROOT / "evidence/a16"
 sys.path.insert(0, str(TOOLS))
 
+import harden as h  # noqa: E402
 import sigstore_bundle as sb  # noqa: E402
 
 BASE_COMMIT = "67187c39ee5b5e6d2f66136829295c44096ddd08"
@@ -50,6 +62,7 @@ ITEM = "A16"
 AS_OF = "2026-11-24"
 TOOL_PATH = "forensics/tools/sigstore_bundle.py"
 DELEGATED_TOOLS = ("forensics/tools/harden.py", "forensics/tools/dsse.py")
+CERTIFICATE_SUFFIXES = (".pem", ".crt", ".der", ".p7b", ".p12")
 
 # The certificate validity window and the log's integratedTime are literals, so
 # two runs and two machines agree.  The window is inclusive at both ends.
@@ -766,8 +779,13 @@ def source_identity(source_commit: str) -> dict[str, Any]:
     }
 
 
-def build(source_commit: str) -> dict[str, Any]:
-    measured = sb.inventory()
+def build(source_commit: str, population: dict[str, Any] | None = None) -> dict[str, Any]:
+    declared = population if population is not None else _declared_population(None)
+    measured = sb.inventory(
+        declared["members"],
+        declared["certificateMembers"],
+        frozen_at_candidate=declared["frozenAtCandidate"],
+    )
     measured.update(
         {
             "schema": sb.INVENTORY_SCHEMA,
@@ -830,19 +848,151 @@ def _dump(value: Any) -> bytes:
     )
 
 
+def _git(*arguments: str) -> bytes:
+    result = subprocess.run(
+        ["git", "-c", "safe.directory=*", "-C", str(REPO_ROOT), *arguments],
+        capture_output=True,
+        check=False,
+    )
+    if result.returncode != 0:
+        raise SystemExit(
+            f"git {' '.join(arguments)} failed: "
+            f"{result.stderr.decode('utf-8', 'replace').strip()}"
+        )
+    return result.stdout
+
+
+def _tree_blobs(commit: str) -> dict[str, str]:
+    """The blob oid of every file under ``evidence/`` at a commit."""
+    rows: dict[str, str] = {}
+    for entry in _git("ls-tree", "-r", "-z", commit, "--", "evidence").split(b"\x00"):
+        if not entry:
+            continue
+        meta, path = entry.split(b"\t", 1)
+        _mode, kind, oid = meta.split(b" ")
+        if kind != b"blob":
+            continue
+        rows[path.decode("utf-8")] = oid.decode("ascii")
+    return rows
+
+
+def candidate_population(commit: str) -> tuple[list[str], list[str]]:
+    """The evidence JSON and certificate files that existed at ``commit``.
+
+    The member's bytes at this tree must still be the candidate's bytes; a
+    member that changed or was removed since cannot be frozen at this candidate.
+    The inventory record itself is refused: it cannot contain its own digest.
+    """
+    candidate = _tree_blobs(commit)
+    present = _tree_blobs("HEAD")
+    json_paths = sorted(path for path in candidate if path.endswith(".json"))
+    certificate_paths = sorted(
+        path for path in candidate if path.endswith(CERTIFICATE_SUFFIXES)
+    )
+    if not json_paths:
+        raise SystemExit(f"the candidate {commit} has no evidence JSON to freeze")
+    if sb.POPULATION_SELF in json_paths:
+        raise SystemExit(
+            f"{sb.POPULATION_SELF} is in the candidate population and cannot be a "
+            "member of its own population"
+        )
+    for relative in json_paths + certificate_paths:
+        if present.get(relative) != candidate[relative]:
+            raise SystemExit(
+                f"{relative}: changed or removed since the declared candidate "
+                f"{commit}; freeze at the candidate's tree, not at this one"
+            )
+    return json_paths, certificate_paths
+
+
+def _shown(path: Path) -> str:
+    try:
+        return str(path.relative_to(REPO_ROOT))
+    except ValueError:
+        return str(path)
+
+
+def _declared_population(freeze_candidate: str | None) -> dict[str, Any]:
+    """The population to reproduce, or the one an explicit re-freeze creates.
+
+    The committed record is the declared candidate.  A live glob is not a
+    substitute for it in either branch.
+    """
+    if freeze_candidate is not None:
+        paths, certificate_paths = candidate_population(freeze_candidate)
+        return {
+            "frozenAtCandidate": freeze_candidate,
+            "members": sb.freeze_population(paths),
+            "certificateMembers": sb.freeze_population(certificate_paths),
+        }
+    record = A16 / "INVENTORY.json"
+    if not record.is_file():
+        raise SystemExit(
+            f"{_shown(record)} is the declared population and is "
+            "missing; a live glob is not a substitute (re-freeze with "
+            "--freeze-population CANDIDATE)"
+        )
+    document = json.loads(record.read_text(encoding="utf-8"))
+    population = document.get("population") if isinstance(document, dict) else None
+    if not isinstance(population, dict) or population.get("binding") != sb.POPULATION_BINDING:
+        raise SystemExit(
+            f"{_shown(record)} declares no frozen population; a "
+            "live glob is not a substitute (re-freeze with --freeze-population "
+            "CANDIDATE)"
+        )
+    members = population.get("members")
+    certificates = document.get("certificatePopulation")
+    certificate_members = (
+        certificates.get("members") if isinstance(certificates, dict) else None
+    )
+    if not isinstance(members, list) or not members or not isinstance(certificate_members, list):
+        raise SystemExit(
+            f"{_shown(record)} has no usable member list; re-freeze "
+            "with --freeze-population CANDIDATE"
+        )
+    return {
+        "frozenAtCandidate": population.get("frozenAtCandidate"),
+        "members": members,
+        "certificateMembers": certificate_members,
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--out", default=str(A16))
     parser.add_argument("--source-commit", default=None)
+    parser.add_argument(
+        "--freeze-population",
+        metavar="CANDIDATE",
+        default=None,
+        help=(
+            "explicitly replace the frozen population with the evidence files "
+            "that existed at CANDIDATE; growth is never absorbed implicitly"
+        ),
+    )
     args = parser.parse_args(argv)
     source_commit = args.source_commit or BASE_COMMIT
-    records = build(source_commit)
+    try:
+        declared = _declared_population(args.freeze_population)
+        records = build(source_commit, declared)
+        growth = sb.growth_report(
+            declared["members"], declared["certificateMembers"]
+        )
+    except h.Refusal as refusal:
+        print(f"{refusal.code}: {refusal.message}", file=sys.stderr)
+        return 1
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
     for name, value in records.items():
         (out / name).write_bytes(_dump(value))
     inventory_record = records["INVENTORY.json"]
     controls_record = records["CONTROLS.json"]
+    for entry in growth:
+        print(
+            f"growth: result={entry['result']} path={entry['path']} "
+            f"sha256={entry['sha256']} bytes={entry['bytes']}",
+            file=sys.stderr,
+        )
     print(
         f"a16: bundles={inventory_record['bundles']} "
         f"logs={inventory_record['transparencyLogs']} "
@@ -851,7 +1001,9 @@ def main(argv: list[str] | None = None) -> int:
         f"codes={controls_record['summary']['codesCovered']} "
         f"boundaries={controls_record['summary']['boundaryCases']} "
         f"positive={controls_record['positive']['observed']['outcome']} "
-        f"commit={source_commit[:9]}"
+        f"commit={source_commit[:9]} "
+        f"population={inventory_record['population']['binding']} "
+        f"files={inventory_record['populationFiles']} growth={len(growth)}"
     )
     return 0
 

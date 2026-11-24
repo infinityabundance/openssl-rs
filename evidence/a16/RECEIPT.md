@@ -246,3 +246,115 @@ live `HEAD`.
   call: forbidden structurally and not attempted.
 * Independent review, a BOUNDARY audit, a SEAL, and the Rust suite (`src/` was
   not modified, so no rebuild and no `cargo test` is claimed).
+
+## 11. Correction — the population was bound to a live glob (found by A17)
+
+**Found by A17.** A17's whole-suite run reported `Ran 1403 tests` /
+`FAILED (failures=1)`:
+
+```
+FAIL: test_two_runs_are_byte_identical_and_match_committed
+(test_sigstore_bundle.DeterminismAndRecords)
+AssertionError: ... "populationFiles": 413 ... != ... "populationFiles": 407 ...
+: committed differs: INVENTORY.json
+```
+
+A17 recorded it as an A16 record repair and did not edit it. This section is that
+repair. Nothing above is rewritten.
+
+### What was wrong
+
+`INVENTORY.json` recorded `populationFiles: 407`, read from the **live glob**
+`evidence/**/*.json`. A17's six new records made the live count 413, so the
+committed record stopped reproducing at HEAD. This is the same defect class as
+the two already repaired in A11 (a live glob presented as a fixed population) and
+the A7 defect (a live `HEAD` presented as an identity): a record bound to a
+moving measurement.
+
+The old 407 was itself the wrong population. It was the 404 evidence JSON files
+at the declared candidate `67187c39e` plus this item's own three records
+(`INVENTORY.json`, `PROFILE.json`, `CONTROLS.json`), which were added after that
+candidate. A record cannot contain its own sha256, so `INVENTORY.json` can never
+be a member of its own population.
+
+### The new contract
+
+* The population is an **explicit frozen member list**: the 404 tracked
+  `evidence/**/*.json` files that existed at `67187c39e`, each recorded as
+  `{path, sha256, bytes}` and re-hashed on every verification
+  (`population.members`, `population.binding: "FROZEN"`,
+  `population.frozenAtCandidate`). `populationFiles` is the length of that list
+  (`404`), not a count of the glob.
+* The certificate globs are frozen the same way
+  (`certificatePopulation.members`, empty at the candidate);
+  `certificateFiles` is that list's length (`0`).
+* The A10 envelope count is now read from the frozen members
+  (`a10Envelopes: 4`) instead of from a live directory listing.
+* A file matching the glob that is not a member is reported as
+  **`NEW_SINCE_RECORD`** with its path, sha256 and size, counted separately. The
+  recorded count is unchanged. At this commit that report is the three A16
+  records and A17's six records (nine files) — printed by
+  `sigstore_bundle.py inventory` and by the producer on stderr, never stored in
+  the record, so the record still reproduces at later commits.
+* A **new bundle would appear as `NEW_SINCE_RECORD`** and would require an
+  explicit re-freeze and a fresh inventory before it could be counted; it is not
+  silently included. The producer re-freezes only with
+  `--freeze-population CANDIDATE`, which enumerates that candidate's tree and
+  refuses if any member's bytes changed since (`PH_REFUSED_POPULATION_DRIFT`).
+* A changed or removed member is refused with `PH_REFUSED_POPULATION_DRIFT`
+  (`harden`'s stable population-drift code). No `SB_REFUSED_*` code was added,
+  removed or relaxed.
+* The machinery is `harden.freeze_population`, `harden.population_growth`,
+  `harden.Refusal`, `harden.POPULATION_FROZEN`, `harden.RESULT_NEW_SINCE_RECORD`
+  and `harden.PH_REFUSED_POPULATION_DRIFT`, imported. **`harden.py` was not
+  modified.**
+* The inventory schema is bumped to `openssl-rs/a16/bundle-inventory/2`; the
+  record shape changed. `PROFILE.json` and `CONTROLS.json` change only in
+  `sourceIdentity.tool.sha256` (one line each): the 27 control-only fixtures, the
+  23 codes and the four boundary cases are unchanged.
+
+### Old and new identity
+
+| quantity | old | new |
+|---|---|---|
+| `INVENTORY.json` sha256 | `b6c06350098bda9227f58defc873b4676113cd54bceb89f4cb82497d18021bf1` | `a7e200603059828c113ad0704cd3a4b9a6e89feae5cbbd5b8b7e5dbbf03916c2` |
+| population representation | live glob `evidence/**/*.json` | explicit 404-member `{path, sha256, bytes}` list |
+| `populationFiles` | 407 (live) | **404** (frozen at `67187c39e`) |
+| `certificateFiles` | 0 (live) | 0 (frozen empty member list) |
+| bundles / logs / certificates | 0 / 0 / 0 | 0 / 0 / 0 |
+| growth | absorbed into the count | 9 `NEW_SINCE_RECORD`, counted separately |
+
+### Gates actually run (all in the reused 6 GiB `openssl-rs-court` container)
+
+| gate | observed |
+|---|---|
+| `free -g` (host, before the work) | `Mem: 45 21 21 0 3 24` (available **24** GiB); `Swap: 45 37 8` |
+| focused | `python3 -m unittest forensics.tools.tests.test_sigstore_bundle` → `Ran 51 tests`, `OK` (was 39) |
+| whole tools suite | `python3 -m unittest discover -s forensics/tools/tests` → `Ran 1415 tests in 233.925s`, `OK`, `closure discipline self-test: 7 control groups passed` (parent 1403 with the one failure; 1403 + 12 new = 1415, none removed, newly skipped or newly ignored) |
+| producer, two runs | `python3 evidence/a16/build_evidence.py --out /tmp/a16a` and `/tmp/a16b` → `a16: ... commit=67187c39e population=FROZEN files=404 growth=9` twice |
+| byte identity | `cmp` → `identical: INVENTORY.json (run1=run2=committed)`, same for `PROFILE.json` and `CONTROLS.json` |
+| growth control | nine `growth: result=NEW_SINCE_RECORD path=... sha256=... bytes=...` lines; `population: binding=FROZEN files=404 growth=9` — the count stayed 404 |
+| JSON well-formedness | `python3 -m json.tool` → `json.tool ok` for all three records |
+| documentation | `python3 forensics/tools/docs_consistency.py` → `ok: 20 hand-written claim(s) agree with their generated sources; the earned-trust constitution is wired`, exit 0 |
+| specification guard | `python3 forensics/tools/spec_guard.py check` → `10 registered specification(s), 5 recorded known nonconformance(s), 6 level(s); 0 unclassified, 0 unjustified exemptions`, exit 0 |
+| `harden.py` | not modified (still `f05d7fe9be3933332a69f43ee3fab26f7c764a8f20ce556d295683fea7824023`) |
+
+`docs/SIGSTORE-BUNDLES.md` §7 stated the population as a live glob ("every
+`evidence/**/*.json` file"); it now states the frozen member list, names
+`NEW_SINCE_RECORD`, and says a new bundle needs a re-freeze and a fresh
+inventory. No other document was touched.
+
+### Obligations retained
+
+* **Any change to a member invalidates this record** until an explicit
+  re-freeze: the population covers other items' evidence records, so editing one
+  is refused as `PH_REFUSED_POPULATION_DRIFT` rather than silently absorbed.
+  That refusal is the intended signal, not a defect.
+* **`INVENTORY.json` appears in its own growth report** (it matches the glob and
+  cannot be a member). That is expected; the report is a live projection and is
+  not stored, so the record's bytes do not depend on it.
+* **The growth list is the only place a post-candidate bundle is visible.**
+  `bundles: 0` speaks for the frozen population, not for the current tree; the
+  document says so. Re-freezing is a deliberate act with its own diff.
+* No independent review of this correction; the author of the change is not an
+  independent adjudicator of it.

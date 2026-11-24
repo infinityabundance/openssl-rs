@@ -209,19 +209,33 @@ timestamp, and are not counted as any.
 | 0 certificates | 0 |
 | A10 self-issued DSSE envelopes (not bundled) | 4 |
 
-The scan population is every `evidence/**/*.json` file; a file is a bundle only
-when its **top level** carries a Sigstore bundle media type. Two files mention
-the media type and are not bundles: `evidence/a16/PROFILE.json` (the profile
-constant) and `evidence/a16/CONTROLS.json` (the synthetic fixtures). They are
-listed as candidate files with their top-level media type recorded as absent,
-not silently dropped.
+The population is a **frozen member list**, not a live glob:
+`evidence/a16/INVENTORY.json` records the tracked `evidence/**/*.json` files that
+existed at the declared candidate `67187c39e…`, each bound to its `sha256`, and
+`populationFiles` is that list's length. A file that matches the glob but is not
+a member is reported as `NEW_SINCE_RECORD` with its path and digest, counted
+separately; it never changes the recorded count, and a changed or removed member
+is refused with `PH_REFUSED_POPULATION_DRIFT`. The certificate globs are frozen
+the same way (empty at that candidate). **A new bundle would appear this way**: it
+would be `NEW_SINCE_RECORD` until an explicit re-freeze and a fresh inventory
+counted it, so a bundle added after this record cannot be silently included in
+the `0` above.
+
+A file is a bundle only when its **top level** carries a Sigstore bundle media
+type. `evidence/a16/PROFILE.json` (the profile constant) and
+`evidence/a16/CONTROLS.json` (the synthetic fixtures) mention the media type and
+are not bundles; they are this item's own records, added after the declared
+candidate, so they appear in the growth report rather than in the population.
 
 This is the honest result. There is no Sigstore bundle to verify, no log public
 key, no CA root and no timestamp-authority root. Every real `validate`
 invocation is therefore `NOT_RUN`, and `NOT_RUN` is never a pass.
 
-- Enforced by `test_the_real_inventory_is_zero`, `test_every_control_is_control_only`
-  and `test_the_committed_records_match_a_fresh_build`.
+- Enforced by `test_the_real_inventory_is_zero`, `test_every_control_is_control_only`,
+  `test_two_runs_are_byte_identical_and_match_committed` and the
+  `FrozenPopulation` controls `test_the_frozen_population_reproduces_at_this_tree`,
+  `test_growth_is_reported_and_never_absorbed` and
+  `test_a_new_bundle_after_the_freeze_is_new_since_record`.
 - Enforced by `SB_REFUSED_INPUT_ABSENT` and `test_an_absent_path_is_not_run`.
 
 ## 8. The controls
