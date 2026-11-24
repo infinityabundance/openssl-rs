@@ -7,6 +7,16 @@ committed; the six uncommitted paths it reports are the ETP-7 edits to
 `forensics/tools/release_gate.py` and the new `evidence/etp7/`. No `src/` file,
 campaign raw data or another item's evidence was changed.
 
+**Record status (2026-11-23).** This receipt records two identities, and they
+are not interchangeable. §1–§8 describe the item and the gate as they were at
+HEAD `8a697aa7e`. The verbatim transcript in §3 and the table in §5 are that
+run; they are **superseded** and are preserved unedited as history. §9 records
+the same gate at candidate `2d31a23fb`, where the claim set conjoins to
+`SUPERSEDED` with 37 open obligations and where the refusals are identity-triage
+and package refusals, not the four `RG_CLAIM_CONTRADICTED` items. A reader who
+needs the current result reads §9; a reader who needs the run that introduced the
+gate reads §3.
+
 **Venue:** `openssl-rs-court-tools:1`, existing container, 8 GiB memory cap,
 8 CPUs. Host `free -g` before the first command: total 45, used 17, free 20,
 available 28 GiB (the section 6.1 guard requires at least 24 GiB). Every
@@ -90,6 +100,10 @@ the same decision for retention. `--self-test` is the negative-control suite.
 ---
 
 ## 3. The gate's actual output on this tree
+
+**Superseded (A0-F06, 2026-11-23).** The command and output below are the run
+at `8a697aa7e`. The numbers in them are not edited: they record what the gate
+produced at that identity. The live run is §9.
 
 Package: built from HEAD by
 `python3 forensics/tools/etp6_package.py --out /tmp/etp6-drift-check`, unpacked
@@ -205,6 +219,10 @@ to it.
 
 ## 5. Everything executed here
 
+**Recorded at `8a697aa7e`.** The table below is the run at the identity in the
+header, at which the claim set conjoined to `CONTRADICTED` with 42 open
+obligations. It is history; §9 records the run at `2d31a23fb`.
+
 All in `openssl-rs-court-tools:1`; the container's 8 GiB cap was already applied.
 
 | command | result |
@@ -313,3 +331,164 @@ Until it is applied, the Python gates run only when invoked by hand and the
 release gate stays a manual step, which is the gap recorded in §7. Applying the
 patch requires a credential with `workflow` scope; the resulting workflow must
 then be executed and its first run recorded here.
+
+---
+
+## 9. Re-run at `2d31a23fb` (2026-11-23, A0-F06)
+
+**Why this section exists.** §3 and §5 are the run at `8a697aa7e` and are
+superseded; this section records the same gate at the repaired candidate, with
+the claim-set bytes it read, so that a reader does not have to choose between two
+undated transcripts. Nothing in §3 or §5 is edited.
+
+**Candidate:** branch `staging`, HEAD `2d31a23fb25f52ab4c443212d34cd05ded715185`,
+2026-11-23. The run is taken on the working tree that carries the A0 repairs
+(`F01`, `F06`, `F10`); the gate counts the uncommitted paths itself. Those twelve
+paths are:
+
+```
+?? evidence/a0/REPAIRS-2.md
+ M docs/ETP-TODO.md
+ M docs/EVIDENCE-AUDIT.md
+ M docs/RELEASE_GATES.md
+ M evidence/closure-curl-049.json
+ M evidence/etp7/RECEIPT.md
+ M evidence/etp-t6/CLAIM-MATRIX.json
+ M forensics/STATUS.md
+ M forensics/tools/closure_discipline.py
+ M forensics/tools/consumer_closure.py
+ M forensics/tools/render_status.py
+ M forensics/tools/tests/test_closure_discipline.py
+```
+
+`evidence/etp/claims.json` is **not** among them: the claim document is the same
+bytes ETP-T15 left, and this repair changes no claim. The receipt itself is one
+of the twelve, at the state that precedes this section (the section was appended
+after the run). The `validate` output below names the document by its court
+path, because that is the path the command printed.
+
+**The claim-set bytes each transcript read.** This is the binding §3 lacked:
+
+| run | `evidence/etp/claims.json` sha256 |
+|---|---|
+| §3, at `8a697aa7e` | `65d8105b744c80ae01e76af8bf3370c478ab116c7fc9b0f16f63eea5d5c579de` |
+| §9, at `2d31a23fb` | `2968ffd6976f19bd701c58636b51cceed192e42c928dd2116217449a7b85a1bb` |
+
+The digests differ because ETP-T15 rewrote the claim set between the two runs
+(four verdicts reclassified, five obligations discharged). The claim source
+identity the gate prints is unchanged in both runs (`S = 9372bb28b`): the claims
+remain bound to the frozen source, and the repaired candidate is a later tree,
+which is the identity question `AGENTS.md` §22 keeps separate.
+
+**Command, verbatim:**
+
+```
+python3 forensics/tools/release_gate.py
+```
+
+**Output, verbatim (exit 1):**
+
+```
+release-gate: candidate 2d31a23fb25f52ab4c443212d34cd05ded715185; 12 uncommitted path(s) (tracked or untracked; ignored paths excluded)
+release-gate: identity triage IDENTITY-TRIAGE.json: 21 DERIVED, 13 DECLARED, 79 HISTORICAL, 118 UNCERTIFIABLE; 118 artefact(s) cannot support a claim
+release-gate: claim ETP0-CLM-004: verdict SUPERSEDED (recorded, not a release block)
+release-gate: claim ETP0-CLM-005: verdict SUPERSEDED (recorded, not a release block)
+release-gate: claim ETP0-CLM-032: verdict SUPERSEDED (recorded, not a release block)
+release-gate: claim ETP0-CLM-033: verdict SUPERSEDED (recorded, not a release block)
+release-gate: claim conjunction: SUPERSEDED
+release-gate: claim source identity: 9372bb28b2fbe2f71cf2aa2ab501414d45e87d42
+release-gate: receipt  RECEIPT-o10.json             live
+release-gate: receipt  RECEIPT-o12.json             live
+release-gate: receipt  RECEIPT-o2.json              live
+release-gate: receipt  RECEIPT-o3.json              live
+release-gate: receipt  RECEIPT-o4.json              live
+release-gate: receipt  RECEIPT-o5.json              live
+release-gate: receipt  RECEIPT-o6.json              live
+release-gate: receipt  RECEIPT-o7-AA.json           live
+release-gate: receipt  RECEIPT-o7-AB.json           live
+release-gate: receipt  RECEIPT-o7-BA.json           live
+release-gate: receipt  RECEIPT-o7-BB.json           live
+release-gate: receipt  RECEIPT-o7.json              live
+release-gate: receipt  RECEIPT-o8.json              live
+release-gate: receipt  RECEIPT-o9.json              live
+release-gate: manifest MANIFEST-o11-A.json          log=present
+release-gate: manifest MANIFEST-o11-B.json          log=present
+release-gate: receipts=14 manifests=2 problems=0
+release-gate: QUALIFICATION ok: every requested control passed and matched the register
+release-gate: [docs-consistency] ok: 20 hand-written claim(s) agree with their generated sources; the earned-trust constitution is wired
+REFUSED RG_CLAIM_UNCERTIFIABLE_EVIDENCE ETP0-CLM-006/artifacts/phase18/COURTS.json: claim ETP0-CLM-006 (ESTABLISHED) requires artifacts/phase18/COURTS.json, which has no certifiable identity: U1 multi-commit-no-declaration -- the artefact was changed in 23 commits and names no tree, so no single moment explains its current bytes
+REFUSED RG_CLAIM_UNCERTIFIABLE_EVIDENCE ETP0-CLM-007/forensics/phase18-obligations.json: claim ETP0-CLM-007 (ESTABLISHED) requires forensics/phase18-obligations.json, which has no certifiable identity: U1 multi-commit-no-declaration -- the artefact was changed in 22 commits and names no tree, so no single moment explains its current bytes
+REFUSED RG_CLAIM_HISTORICAL_EVIDENCE ETP0-CLM-011/courts/phase18/timing/RECEIPT-timing-unified.json: claim ETP0-CLM-011 (PARTIAL) requires courts/phase18/timing/RECEIPT-timing-unified.json, which is a record of introduced-at-single-commit at 99ab0d04254b3588c9786f63ebf8a2af59d64109 and may not be cited as current evidence
+REFUSED RG_CLAIM_HISTORICAL_EVIDENCE ETP0-CLM-011/courts/phase18/timing/RECEIPT-dudect-modes.json: claim ETP0-CLM-011 (PARTIAL) requires courts/phase18/timing/RECEIPT-dudect-modes.json, which is a record of introduced-at-single-commit at 4e4bc55a4c0cb9bf8b4678b469e2814061c88a8e and may not be cited as current evidence
+REFUSED RG_CLAIM_UNCERTIFIABLE_EVIDENCE ETP0-CLM-015/courts/phase18/interop/MANIFEST.json: claim ETP0-CLM-015 (PARTIAL) requires courts/phase18/interop/MANIFEST.json, which has no certifiable identity: U1 multi-commit-no-declaration -- the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes
+REFUSED RG_CLAIM_UNCERTIFIABLE_EVIDENCE ETP0-CLM-015/courts/phase18/interop/RECEIPT-o2.json: claim ETP0-CLM-015 (PARTIAL) requires courts/phase18/interop/RECEIPT-o2.json, which has no certifiable identity: U1 multi-commit-no-declaration -- the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes
+REFUSED RG_CLAIM_HISTORICAL_EVIDENCE ETP0-CLM-016/courts/phase18/interop/RECEIPT-o3.json: claim ETP0-CLM-016 (PARTIAL) requires courts/phase18/interop/RECEIPT-o3.json, which is a record of introduced-at-single-commit at 5c5788aa876646fcb7a51d43ceb46237af30cbd4 and may not be cited as current evidence
+REFUSED RG_CLAIM_UNCERTIFIABLE_EVIDENCE ETP0-CLM-017/courts/phase18/interop/RECEIPT-o4.json: claim ETP0-CLM-017 (PARTIAL) requires courts/phase18/interop/RECEIPT-o4.json, which has no certifiable identity: U1 multi-commit-no-declaration -- the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes
+REFUSED RG_CLAIM_HISTORICAL_EVIDENCE ETP0-CLM-018/courts/phase18/interop/RECEIPT-o5.json: claim ETP0-CLM-018 (ESTABLISHED) requires courts/phase18/interop/RECEIPT-o5.json, which is a record of introduced-at-single-commit at 066b350e3a470d169ad4c7cc09b58bb6e1c2ffaa and may not be cited as current evidence
+REFUSED RG_CLAIM_HISTORICAL_EVIDENCE ETP0-CLM-019/courts/phase18/interop/RECEIPT-o6.json: claim ETP0-CLM-019 (ESTABLISHED) requires courts/phase18/interop/RECEIPT-o6.json, which is a record of introduced-at-single-commit at dd0bee3a7e4177e56168b0720339958aed6239b6 and may not be cited as current evidence
+REFUSED RG_CLAIM_UNCERTIFIABLE_EVIDENCE ETP0-CLM-020/courts/phase18/interop/RECEIPT-o7.json: claim ETP0-CLM-020 (ESTABLISHED) requires courts/phase18/interop/RECEIPT-o7.json, which has no certifiable identity: U1 multi-commit-no-declaration -- the artefact was changed in 3 commits and names no tree, so no single moment explains its current bytes
+REFUSED RG_CLAIM_UNCERTIFIABLE_EVIDENCE ETP0-CLM-020/courts/phase18/interop/RECEIPT-o7-AA.json: claim ETP0-CLM-020 (ESTABLISHED) requires courts/phase18/interop/RECEIPT-o7-AA.json, which has no certifiable identity: U1 multi-commit-no-declaration -- the artefact was changed in 3 commits and names no tree, so no single moment explains its current bytes
+REFUSED RG_CLAIM_UNCERTIFIABLE_EVIDENCE ETP0-CLM-020/courts/phase18/interop/RECEIPT-o7-AB.json: claim ETP0-CLM-020 (ESTABLISHED) requires courts/phase18/interop/RECEIPT-o7-AB.json, which has no certifiable identity: U1 multi-commit-no-declaration -- the artefact was changed in 3 commits and names no tree, so no single moment explains its current bytes
+REFUSED RG_CLAIM_UNCERTIFIABLE_EVIDENCE ETP0-CLM-020/courts/phase18/interop/RECEIPT-o7-BA.json: claim ETP0-CLM-020 (ESTABLISHED) requires courts/phase18/interop/RECEIPT-o7-BA.json, which has no certifiable identity: U1 multi-commit-no-declaration -- the artefact was changed in 4 commits and names no tree, so no single moment explains its current bytes
+REFUSED RG_CLAIM_UNCERTIFIABLE_EVIDENCE ETP0-CLM-020/courts/phase18/interop/RECEIPT-o7-BB.json: claim ETP0-CLM-020 (ESTABLISHED) requires courts/phase18/interop/RECEIPT-o7-BB.json, which has no certifiable identity: U1 multi-commit-no-declaration -- the artefact was changed in 2 commits and names no tree, so no single moment explains its current bytes
+REFUSED RG_CLAIM_UNCERTIFIABLE_EVIDENCE ETP0-CLM-021/courts/phase18/interop/RECEIPT-o7.json: claim ETP0-CLM-021 (ESTABLISHED) requires courts/phase18/interop/RECEIPT-o7.json, which has no certifiable identity: U1 multi-commit-no-declaration -- the artefact was changed in 3 commits and names no tree, so no single moment explains its current bytes
+REFUSED RG_CLAIM_HISTORICAL_EVIDENCE ETP0-CLM-022/courts/phase18/interop/RECEIPT-o8.json: claim ETP0-CLM-022 (PARTIAL) requires courts/phase18/interop/RECEIPT-o8.json, which is a record of introduced-at-single-commit at 4da8b738a2167a9c56baafca153e98ba30357500 and may not be cited as current evidence
+REFUSED RG_CLAIM_HISTORICAL_EVIDENCE ETP0-CLM-023/courts/phase18/interop/RECEIPT-o9.json: claim ETP0-CLM-023 (PARTIAL) requires courts/phase18/interop/RECEIPT-o9.json, which is a record of introduced-at-single-commit at d5c4e9c500a754699817f764c2d4dd449bd4cbd0 and may not be cited as current evidence
+REFUSED RG_CLAIM_UNCERTIFIABLE_EVIDENCE ETP0-CLM-023/courts/phase18/interop/MANIFEST-o11-A.json: claim ETP0-CLM-023 (PARTIAL) requires courts/phase18/interop/MANIFEST-o11-A.json, which has no certifiable identity: U1 multi-commit-no-declaration -- the artefact was changed in 4 commits and names no tree, so no single moment explains its current bytes
+REFUSED RG_CLAIM_UNCERTIFIABLE_EVIDENCE ETP0-CLM-023/courts/phase18/interop/MANIFEST-o11-B.json: claim ETP0-CLM-023 (PARTIAL) requires courts/phase18/interop/MANIFEST-o11-B.json, which has no certifiable identity: U1 multi-commit-no-declaration -- the artefact was changed in 4 commits and names no tree, so no single moment explains its current bytes
+REFUSED RG_CLAIM_HISTORICAL_EVIDENCE ETP0-CLM-024/courts/phase18/interop/RECEIPT-o10.json: claim ETP0-CLM-024 (ESTABLISHED) requires courts/phase18/interop/RECEIPT-o10.json, which is a record of introduced-at-single-commit at 63fca4cc4e5bff3342c8c5d3add5672090d92a26 and may not be cited as current evidence
+REFUSED RG_CLAIM_UNCERTIFIABLE_EVIDENCE ETP0-CLM-025/courts/phase18/interop/MANIFEST-o11-A.json: claim ETP0-CLM-025 (ESTABLISHED) requires courts/phase18/interop/MANIFEST-o11-A.json, which has no certifiable identity: U1 multi-commit-no-declaration -- the artefact was changed in 4 commits and names no tree, so no single moment explains its current bytes
+REFUSED RG_CLAIM_UNCERTIFIABLE_EVIDENCE ETP0-CLM-025/courts/phase18/interop/MANIFEST-o11-B.json: claim ETP0-CLM-025 (ESTABLISHED) requires courts/phase18/interop/MANIFEST-o11-B.json, which has no certifiable identity: U1 multi-commit-no-declaration -- the artefact was changed in 4 commits and names no tree, so no single moment explains its current bytes
+REFUSED RG_CLAIM_HISTORICAL_EVIDENCE ETP0-CLM-026/courts/phase18/interop/RECEIPT-o12.json: claim ETP0-CLM-026 (ESTABLISHED) requires courts/phase18/interop/RECEIPT-o12.json, which is a record of introduced-at-single-commit at 1bb9f25936b8d1fc0fa0ee71bb7c70da6aab7734 and may not be cited as current evidence
+REFUSED RG_CLAIM_HISTORICAL_EVIDENCE ETP0-CLM-027/courts/phase18/interop/RECEIPT-o12.json: claim ETP0-CLM-027 (ESTABLISHED) requires courts/phase18/interop/RECEIPT-o12.json, which is a record of introduced-at-single-commit at 1bb9f25936b8d1fc0fa0ee71bb7c70da6aab7734 and may not be cited as current evidence
+REFUSED RG_CLAIM_UNCERTIFIABLE_EVIDENCE ETP0-CLM-028/forensics/downstream/runtime-functional-atlas.json: claim ETP0-CLM-028 (PARTIAL) requires forensics/downstream/runtime-functional-atlas.json, which has no certifiable identity: U1 multi-commit-no-declaration -- the artefact was changed in 72 commits and names no tree, so no single moment explains its current bytes
+REFUSED RG_CLAIM_HISTORICAL_EVIDENCE ETP0-CLM-029/forensics/memory-safety/campaign/safe-c33/CLOSURE.md: claim ETP0-CLM-029 (ESTABLISHED) requires forensics/memory-safety/campaign/safe-c33/CLOSURE.md, which is a record of declared-prose-frozen-at at 67ae7f8e9f3381ce0dac1dae9a23bfa3937bec34 and may not be cited as current evidence
+REFUSED RG_CLAIM_UNCERTIFIABLE_EVIDENCE ETP0-CLM-034/artifacts/phase25/summary.json: claim ETP0-CLM-034 (ESTABLISHED) requires artifacts/phase25/summary.json, which has no certifiable identity: U2 candidate-name-only -- the only declared identity is the candidate name 'openssl-rs 0.0.27 (reconstructing openssl-3.6.4-production)', and the repository binds that name to more than one tree, so it does not determine a commit
+REFUSED RG_CLAIM_UNCERTIFIABLE_EVIDENCE ETP0-CLM-035/artifacts/phase2/install/lib/libcrypto.so.3: claim ETP0-CLM-035 (PARTIAL) requires artifacts/phase2/install/lib/libcrypto.so.3, which has no certifiable identity: U6 build-output-no-identity -- a build output carries an embedded binary, not the tree that produced it
+REFUSED RG_CLAIM_UNCERTIFIABLE_EVIDENCE ETP0-CLM-035/artifacts/phase2/install/lib/libssl.so.3: claim ETP0-CLM-035 (PARTIAL) requires artifacts/phase2/install/lib/libssl.so.3, which has no certifiable identity: U6 build-output-no-identity -- a build output carries an embedded binary, not the tree that produced it
+REFUSED RG_PACKAGE_MISSING -: no --package was supplied; the ETP-6 external-package verifier is a required release item, so an absent package is a refusal
+release-gate: REFUSED (31 item(s))
+```
+
+**The claim algebra beside the gate.** `python3 forensics/tools/etp_claims.py
+validate` prints
+`{"claims":35,"document":"/work/evidence/etp/claims.json","refusal_count":0,"refusals":[],"refusals_by_rule":{},"valid":true}`
+and exits 0. `python3 forensics/tools/etp_claims.py conjoin` returns a document
+whose scalars and list lengths are `verdict: SUPERSEDED`, `blocked_by`: 33,
+`obligations`: 37, `members`: 35, `weakest`: 4. The full document — every member
+and every obligation — is reproduced by that command and is not transcribed
+here; this paragraph is a summary, not a transcript.
+
+**What changed between the two runs, and what did not.**
+
+| item | §3, `8a697aa7e` | §9, `2d31a23fb` |
+|---|---|---|
+| claim conjunction | `CONTRADICTED` | `SUPERSEDED` |
+| blocked members | 33 | 33 |
+| open obligations | 42 | 37 |
+| claim refusals | 4 `RG_CLAIM_CONTRADICTED` | 19 `RG_CLAIM_UNCERTIFIABLE_EVIDENCE` and 11 `RG_CLAIM_HISTORICAL_EVIDENCE` |
+| package item | `RG_PACKAGE_MISSING` (no `--package`) | `RG_PACKAGE_MISSING` (no `--package`) |
+| refused items | 5 | 31 |
+| interop receipts | 14 receipts, 2 manifests, 0 problems | 14 receipts, 2 manifests, 0 problems |
+| instrument register | ok, every requested control passed | ok, every requested control passed |
+| documentation | 20 hand-written claims agree | 20 hand-written claims agree |
+
+The conjunction moved off `CONTRADICTED` because ETP-T15 reclassified the four
+contradicted claims (`-004`, `-005` and `-032` to `SUPERSEDED`, `-030` to
+`RISK_ACCEPTED`) and discharged five obligations. It did not move because this
+repair resolved anything, and `SUPERSEDED` is not a pass. The gate refuses
+**more** items at this candidate than it did at `8a697aa7e` — thirty-one against
+five — because the identity-triage item did not exist when §3 was recorded and it
+now refuses claims whose evidence has no certifiable identity. The release
+decision is the last line: exit 1, 31 refusals.
+
+**Not run here:** GitHub Actions (unchanged from §6), `cargo` of any kind (no
+`src/` change), and the ETP-6 package item (no package was built for this
+candidate, so the item is `RG_PACKAGE_MISSING` rather than a package result). The
+ETP-T10 evidence has **not** been re-emitted at this candidate, so the
+`consumer-curl` step of `verify.py` reports the repaired closure receipt as a
+digest mismatch against the identity ETP-T10 audited; that report is true, and
+its remedy is
+`python3 forensics/tools/closure_discipline.py emit --commit <commit containing the repair>`,
+which cannot run before the repair is committed. Record:
+`evidence/a0/REPAIRS-2.md`.

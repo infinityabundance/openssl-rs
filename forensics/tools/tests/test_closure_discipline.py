@@ -8,7 +8,10 @@ The audit makes three claims that need independent controls:
 * an opaque operation is scoped only when its contract states an assumption, a
   scope and a falsifier, otherwise it is listed as unscoped;
 * an aggregate that reports a pass while containing a blocked row is refused,
-  and the refusal is not softened when the blocked row is a recorded dissent.
+  and the refusal is not softened when the blocked row is a recorded dissent;
+* an embedded per-site residual list shorter than its recorded population is a
+  sample, and is admitted only when the record declares its sample size, its
+  population and the rule that selected it (A0-F01).
 
 A determinism control requires two builds of the real documents to be byte
 identical, and a reproduction control requires the committed evidence to match
@@ -21,8 +24,11 @@ Run inside the court:
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -114,6 +120,157 @@ class ExclusionBarControls(unittest.TestCase):
             unrecorded[0]["bar"]["disposition"], cd.DISPOSITION_ASSERTION)
         self.assertFalse(
             audit["target_drop_sample"]["complete"])
+
+
+def sample_receipt(*, listed: int, population: int, bound=None) -> dict:
+    """A receipt whose residual-site list is `listed` of `population` rows."""
+    precision: dict = {
+        "totals": {"reachable_unresolved_sites": population},
+        "residual_sites": [{"dso": "libcrypto.so.3", "function": "0x%x" % i,
+                            "call_site": "0x%x" % (i + 1),
+                            "reason": "r", "class": "field", "text": "t"}
+                           for i in range(listed)],
+    }
+    if bound is not None:
+        precision["residual_sites_bound"] = bound
+    return {"family": "synthetic", "precision": precision}
+
+
+class ResidualSampleBoundControls(unittest.TestCase):
+    """A truncated residual list is admissible only when it declares its bound.
+
+    The defect (A0-F01) is a 200-row list beside a 449-site total with nothing
+    saying which is which, so every control below is about whether the record
+    states its own sample size, population and selection rule.
+    """
+
+    def test_an_unbounded_sample_is_refused(self) -> None:
+        result = cd.residual_sample_bound(
+            sample_receipt(listed=200, population=449))
+        self.assertTrue(result["is_sample"])
+        self.assertFalse(result["bound_declared"])
+        self.assertEqual(result["status"], "TRUNCATED_UNBOUNDED")
+        self.assertTrue(result["refused"])
+        self.assertIn("CD_RESIDUAL_SAMPLE_UNBOUNDED",
+                      [r["code"] for r in result["refusals"]])
+
+    def test_a_declared_sample_is_not_refused(self) -> None:
+        bound = {
+            "schema": cd.SAMPLE_BOUND_SCHEMA,
+            "status": "TRUNCATED_BOUNDED",
+            "sample_size": 200,
+            "population_size": 449,
+            "omitted_members": 249,
+            "selection_rule": {"rule": "first 200 of a sorted population"},
+        }
+        result = cd.residual_sample_bound(
+            sample_receipt(listed=200, population=449, bound=bound))
+        self.assertTrue(result["is_sample"])
+        self.assertTrue(result["bound_declared"])
+        self.assertEqual(result["status"], "TRUNCATED_BOUNDED")
+        self.assertEqual(result["refusals"], [])
+
+    def test_a_complete_list_needs_no_bound(self) -> None:
+        result = cd.residual_sample_bound(
+            sample_receipt(listed=152, population=152))
+        self.assertFalse(result["is_sample"])
+        self.assertEqual(result["status"], "COMPLETE")
+        self.assertEqual(result["refusals"], [])
+
+    def test_a_bound_that_disagrees_with_the_record_is_refused(self) -> None:
+        bound = {
+            "status": "TRUNCATED_BOUNDED",
+            "sample_size": 200,
+            "population_size": 450,
+            "omitted_members": 249,
+            "selection_rule": {"rule": "first 200 of a sorted population"},
+        }
+        result = cd.residual_sample_bound(
+            sample_receipt(listed=200, population=449, bound=bound))
+        self.assertTrue(result["refused"])
+        self.assertIn("CD_RESIDUAL_SAMPLE_MISMATCH",
+                      [r["code"] for r in result["refusals"]])
+
+    def test_a_complete_status_on_a_truncated_list_is_refused(self) -> None:
+        bound = {
+            "status": "COMPLETE",
+            "sample_size": 200,
+            "population_size": 449,
+            "omitted_members": 249,
+            "selection_rule": {"rule": "first 200 of a sorted population"},
+        }
+        result = cd.residual_sample_bound(
+            sample_receipt(listed=200, population=449, bound=bound))
+        self.assertTrue(result["refused"])
+        self.assertIn("CD_RESIDUAL_SAMPLE_MISMATCH",
+                      [r["code"] for r in result["refusals"]])
+
+    def test_a_bound_without_a_selection_rule_is_refused(self) -> None:
+        bound = {
+            "status": "TRUNCATED_BOUNDED",
+            "sample_size": 200,
+            "population_size": 449,
+            "omitted_members": 249,
+        }
+        result = cd.residual_sample_bound(
+            sample_receipt(listed=200, population=449, bound=bound))
+        self.assertTrue(result["refused"])
+        self.assertIn("CD_RESIDUAL_SAMPLE_RULE_MISSING",
+                      [r["code"] for r in result["refusals"]])
+
+    def test_unknown_rule_needs_the_method_that_would_establish_it(self) -> None:
+        bare = {
+            "status": "TRUNCATED_BOUNDED",
+            "sample_size": 200,
+            "population_size": 449,
+            "omitted_members": 249,
+            "selection_rule": {"rule": "UNKNOWN"},
+        }
+        result = cd.residual_sample_bound(
+            sample_receipt(listed=200, population=449, bound=bare))
+        self.assertTrue(result["refused"])
+        self.assertIn("CD_RESIDUAL_SAMPLE_RULE_MISSING",
+                      [r["code"] for r in result["refusals"]])
+
+        named = dict(bare, status="TRUNCATED_UNBOUNDED", selection_rule={
+            "rule": "UNKNOWN",
+            "method_that_would_establish": "re-read the generator's cap",
+        })
+        result = cd.residual_sample_bound(
+            sample_receipt(listed=200, population=449, bound=named))
+        self.assertFalse(result["refused"], result["refusals"])
+        self.assertEqual(result["status"], "TRUNCATED_UNBOUNDED")
+
+    def test_no_population_means_no_bound_is_required(self) -> None:
+        receipt = {"precision": {"residual_sites": [{"dso": "d"}]}}
+        result = cd.residual_sample_bound(receipt)
+        self.assertFalse(result["is_sample"])
+        self.assertEqual(result["refusals"], [])
+
+    def test_the_audit_refuses_an_unbounded_receipt_on_the_command_line(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "receipt.json"
+            path.write_text(json.dumps(
+                sample_receipt(listed=200, population=449)), encoding="utf-8")
+            out, err = io.StringIO(), io.StringIO()
+            with contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                status = cd.main(["audit", "--receipt", str(path)])
+        self.assertEqual(status, 1)
+        self.assertIn("CD_RESIDUAL_SAMPLE_UNBOUNDED", err.getvalue())
+
+    def test_the_committed_curl_record_declares_its_bound(self) -> None:
+        path = cd.REPO_ROOT / "evidence" / "closure-curl-049.json"
+        receipt = json.loads(path.read_text(encoding="utf-8"))
+        result = cd.residual_sample_bound(receipt)
+        self.assertTrue(result["is_sample"])
+        self.assertEqual(result["status"], "TRUNCATED_BOUNDED")
+        self.assertEqual(result["refusals"], [])
+        bound = receipt["precision"]["residual_sites_bound"]
+        self.assertEqual(bound["sample_size"], len(
+            receipt["precision"]["residual_sites"]))
+        self.assertEqual(
+            bound["population_size"],
+            receipt["precision"]["totals"]["reachable_unresolved_sites"])
 
 
 class OpaqueContractControls(unittest.TestCase):

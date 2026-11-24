@@ -273,8 +273,17 @@ REFUSED RG_PACKAGE_MISSING -: no --package was supplied; ...
 ```
 
 The gate's real output on the tree that introduced it is recorded verbatim in
-`evidence/etp7/RECEIPT.md`. It refuses, because the committed claim set conjoins
-to `CONTRADICTED`; that refusal is the gate working, not a defect in it.
+`evidence/etp7/RECEIPT.md` §3; that run, at `8a697aa7e`, refused four
+`RG_CLAIM_CONTRADICTED` items because the claim set then conjoined to
+`CONTRADICTED`. It is history. At candidate `2d31a23fb` the same claim set
+conjoins to `SUPERSEDED` (33 blocked members, 37 open obligations) and the gate
+refuses 31 items: 19 `RG_CLAIM_UNCERTIFIABLE_EVIDENCE`, 11
+`RG_CLAIM_HISTORICAL_EVIDENCE` and `RG_PACKAGE_MISSING`. The current refusal is
+about the identity of the evidence the claims cite, not about a contradicted
+claim, and `evidence/etp/claims.json` is unchanged between the two runs. Both
+runs are recorded verbatim in that receipt (§3 at `8a697aa7e`, §9 at
+`2d31a23fb`). Either way the refusal is the gate working, not a defect in it,
+and neither run is a pass.
 
 `--self-test` proves the gate refuses each failure class it claims to cover: a
 contradicted claim, a positive verdict over withdrawn evidence, an uncertifiable

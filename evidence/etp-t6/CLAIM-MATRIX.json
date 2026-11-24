@@ -205,7 +205,7 @@
       "artefact": {"id": "A-INSTALL-CURL-DSO", "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9", "build_id": "592a81d4ae5e7e02bfc635ff8bcd4fbdde37de70"},
       "instrument": "consumer-closure", "instrument_registered": false,
       "instrument_note": "The consumer-closure tool is not in the ETP-3 instrument register; it measures reachability, not safety.",
-      "evidence": {"path": "evidence/closure-curl-049.json", "sha256": "6aedaa4ee6691ba3d09a4c4f655a8001b35252fa4206f30584d87effe748ca16", "target": "x86_64-unknown-linux-gnu", "profile": "release"},
+      "evidence": {"path": "evidence/closure-curl-049.json", "sha256": "b72193072780e9a425e7e93be8c0c15849d06c758b9e71f226cafb4992388c62", "target": "x86_64-unknown-linux-gnu", "profile": "release"},
       "asserted": true, "status": "SCOPED_OBSERVATION",
       "does_not_establish": ["SAFE_COMPATIBLE or any safety graduation", "that a discharged obligation makes the site's precondition true", "Pre(c) => P for every reachable call site"]
     },

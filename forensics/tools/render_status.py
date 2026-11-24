@@ -104,6 +104,13 @@ def _runtime_functional() -> dict | None:
     then looked up in `body.runs`: a family the atlas does not list at
     `L7-functional` is not counted, so the rendered cohort figure can only be the
     atlas's own answer, never a copied campaign claim.
+
+    A cohort total is a mixture of identities whenever the atlas carries
+    committed rows forward from a superseded candidate: a row whose
+    `reused_from_candidate_identity` is present was not re-measured at the atlas
+    candidate. The partition is computed here from the per-row marker, never from
+    a campaign summary, so the rendered figure distinguishes the families measured
+    at the atlas candidate from the families carried forward (A0-F10).
     """
     atlas = load(DOWNSTREAM_ATLAS)
     body = (atlas or {}).get("body") or {}
@@ -116,24 +123,64 @@ def _runtime_functional() -> dict | None:
 
     membership = ((load(CAMPAIGN_STATUS) or {}).get("consumers") or {}).get("l7_families") or []
     levels: dict[str, object] = {}
+    measured: set[str] = set()
+    carried: set[str] = set()
+    carried_identities: set[str] = set()
+    measured_rows = 0
+    carried_rows = 0
     for run in body.get("runs") or []:
         if run.get("subject") != "candidate":
             continue
         name = run.get("canonical_name")
         if name in membership:
             levels[name] = run.get("level")
+        if name not in membership or run.get("level") != "L7-functional":
+            continue
+        reuse = run.get("reused_from_candidate_identity") or {}
+        if reuse:
+            carried.add(name)
+            carried_rows += 1
+            identity = reuse.get("libcrypto_so_3_sha256")
+            if isinstance(identity, str):
+                carried_identities.add(identity)
+        else:
+            measured.add(name)
+            measured_rows += 1
 
+    reuse_block = body.get("evidence_reuse") or {}
+    atlas_identity = (body.get("candidate_identity") or {}).get("libcrypto_so_3_sha256")
     figures: dict[str, object] = {
         "families": counts.get("p1000"),
         "candidate": candidate,
         "authority": authority,
+        "candidate_identity": atlas_identity,
     }
     if membership and len(levels) == len(membership):
         figures["cohort"] = {
             "total": len(membership),
             "at_l7": sum(1 for level in levels.values() if level == "L7-functional"),
+            "measured_at_candidate": {
+                "families": len(measured),
+                "rows": measured_rows,
+                "names": sorted(measured),
+            },
+            "carried_forward": {
+                "families": len(carried),
+                "rows": carried_rows,
+                "identities": sorted(carried_identities),
+            },
+            "evidence_reuse": {
+                "candidate_identity_match": reuse_block.get("candidate_identity_match"),
+                "mode": reuse_block.get("mode"),
+                "families_reused": reuse_block.get("families_reused"),
+            },
         }
     return figures
+
+
+def _identity_short(digest: object) -> str:
+    """The 8-character digest prefix used to name an identity in prose."""
+    return f"`{digest[:8]}\u2026`" if isinstance(digest, str) and digest else "an unrecorded identity"
 
 
 def _downstream_sentence(figures: dict | None, frozen: tuple[int, int]) -> str:
@@ -156,6 +203,22 @@ def _downstream_sentence(figures: dict | None, frozen: tuple[int, int]) -> str:
         sentence += (f" the {cohort['total']}-family Safe-33 cohort is "
                      f"{cohort['at_l7']}/{cohort['total']} at `L7-functional` (levels "
                      "from `body.runs`, membership `CAMPAIGN-STATUS.json` `consumers`);")
+        measured = cohort.get("measured_at_candidate") or {}
+        carried = cohort.get("carried_forward") or {}
+        if carried.get("families"):
+            identities = carried.get("identities") or []
+            sentence += (
+                f" that cohort figure is a mixture of identities: "
+                f"{measured.get('families', 0)} of its {cohort['total']} families carry a "
+                "candidate row with no `reused_from_candidate_identity` marker and are "
+                f"measured at the atlas candidate {_identity_short(figures.get('candidate_identity'))}, "
+                f"while {carried['families']} families carry the marker naming "
+                + (", ".join(_identity_short(i) for i in identities) if identities
+                   else "an unrecorded identity")
+                + " and are carried forward, not re-measured;"
+                f" `body.evidence_reuse.candidate_identity_match` reads "
+                f"{str((cohort.get('evidence_reuse') or {}).get('candidate_identity_match')).lower()},"
+                " so the total is a mixture and not a count at one identity;")
     else:
         sentence += (" the atlas carries no cohort membership and no cohort verdict is "
                      "rendered from it;")
@@ -439,6 +502,13 @@ def main() -> int:
             L.append("**superseded**. It is shown below only as provenance for the sentence")
             L.append("above; the current plane is the runtime-functional atlas.")
             L.append("")
+            L.append("A row carried forward from a superseded candidate is a record, not a")
+            L.append("measurement at the atlas candidate, so the current plane is rendered as")
+            L.append("three rows: the total, the families measured at the atlas candidate and the")
+            L.append("families carried forward with the identity they name. The split is read")
+            L.append("from the per-row `reused_from_candidate_identity` marker in `body.runs`,")
+            L.append("never from an aggregate (A0-F10).")
+            L.append("")
             L.append("| plane | functional candidate runs | p1000 cohort `DROP_IN_PASS` "
                      "families | source |")
             L.append("|---|---|---|---|")
@@ -450,12 +520,51 @@ def main() -> int:
                          "`forensics/downstream/runtime-functional-atlas.json` is absent |")
             else:
                 cohort = runtime.get("cohort")
-                cohort_cell = (f"{cohort['at_l7']}/{cohort['total']} at `L7-functional`"
-                               if cohort else "not carried by the atlas")
-                L.append(f"| current | {runtime['candidate']['functional']} "
-                         f"| {cohort_cell} "
-                         "| `forensics/downstream/runtime-functional-atlas.json` "
-                         "(`body.counts.by_subject`, `body.runs`) |")
+                measured = (cohort or {}).get("measured_at_candidate") or {}
+                carried = (cohort or {}).get("carried_forward") or {}
+                atlas_ident = _identity_short(runtime.get("candidate_identity"))
+                if cohort and carried.get("families"):
+                    reuse = cohort.get("evidence_reuse") or {}
+                    identities = ", ".join(
+                        _identity_short(i) for i in carried.get("identities") or []
+                    ) or "an unrecorded identity"
+                    runs = runtime["candidate"]["functional"]
+                    L.append(
+                        f"| current (mixed identity) | {runs} "
+                        f"| {cohort['at_l7']}/{cohort['total']} at `L7-functional`, of which "
+                        f"{measured.get('families', 0)}/{cohort['total']} measured at the atlas "
+                        f"candidate and {carried['families']}/{cohort['total']} carried forward "
+                        "| `forensics/downstream/runtime-functional-atlas.json` "
+                        "(`body.counts.by_subject`, `body.runs`) |")
+                    L.append(
+                        f"| of which measured at the atlas candidate {atlas_ident} | {runs} "
+                        f"| {measured.get('families', 0)}/{cohort['total']} at `L7-functional` "
+                        f"({measured.get('rows', 0)} candidate row(s), none carrying "
+                        "`reused_from_candidate_identity`) "
+                        "| `body.runs`: candidate rows with no reuse marker |")
+                    L.append(
+                        f"| of which carried forward from {identities} | {runs} "
+                        f"| {carried['families']}/{cohort['total']} at `L7-functional` "
+                        f"({carried.get('rows', 0)} candidate row(s)), not re-measured at "
+                        f"{atlas_ident} "
+                        "| `body.runs`: candidate rows carrying "
+                        "`reused_from_candidate_identity`; `body.evidence_reuse` "
+                        f"(`candidate_identity_match: "
+                        f"{str(reuse.get('candidate_identity_match')).lower()}`, mode "
+                        f"`{reuse.get('mode')}`) |")
+                    L.append(
+                        "| previous rendering (historical, **superseded** 2026-11-23 by the "
+                        f"A0-F10 repair) | {runs} | 33/33 at `L7-functional` "
+                        "| this row's previous text, preserved verbatim; it stated neither "
+                        "the identity mixture nor the carried-forward population, so it read "
+                        "as a count at one candidate. Record: `evidence/a0/REPAIRS-2.md` |")
+                else:
+                    cohort_cell = (f"{cohort['at_l7']}/{cohort['total']} at `L7-functional`"
+                                   if cohort else "not carried by the atlas")
+                    L.append(f"| current | {runtime['candidate']['functional']} "
+                             f"| {cohort_cell} "
+                             "| `forensics/downstream/runtime-functional-atlas.json` "
+                             "(`body.counts.by_subject`, `body.runs`) |")
             L.append("")
         by_phase: dict[int, list[dict]] = {}
         for row in ledger_body.get("deferred", []):

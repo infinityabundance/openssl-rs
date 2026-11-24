@@ -24739,6 +24739,23 @@
         "text": "call   *0x18(%r9)"
       }
     ],
+    "residual_sites_bound": {
+      "schema": "openssl-rs/campaign/safe-c33/residual-site-bound/v1",
+      "record": "precision.residual_sites",
+      "status": "TRUNCATED_BOUNDED",
+      "sample_size": 200,
+      "population_size": 449,
+      "omitted_members": 249,
+      "bound": "residual_sites is a prefix of the population, not a census; the cap is named in selection_rule and the omitted members are counted here",
+      "omitted_members_recorded": false,
+      "omitted_members_note": "the omitted members are written to the --edge-records JSONL sidecar and are not identified in this receipt, which names their count",
+      "selection_rule": {
+        "rule": "the reachable unresolved indirect-site population is sorted by (dso name, function start address, call-site address) and the first 200 members are embedded in this receipt; the sort order is the whole selection, so no other filter, weight or randomness enters it and the embedded list is a prefix of the population -- never a census and never a sample drawn to be representative. The whole population is written to the --edge-records JSONL sidecar",
+        "locator": "forensics/tools/consumer_closure.py: RESIDUAL_SITE_RECORD_LIMIT",
+        "rerunnable": true,
+        "requires": "the candidate DSOs named in candidate_identity and forensics/tools/consumer_closure.py; --element7-only prints the whole population without writing a receipt"
+      }
+    },
     "static_table_instance": {
       "schema": "openssl-rs/consumer-closure/static-table-instance/v1",
       "rule": "field-sensitive key (object type, pointer-slot offset, member offset); the base object is the function's declared context parameter, proven through the entry register, whole-register copies or a frame spill whose every reaching store is the same parameter (branches are never unioned); the effective table type is the declared pointer-field type or a source cast of that field to a decidable repr(C) layout; every scalar store to the slot in the dispatch table's constructor cohort must write a declared static instance of that type; every member read must be an in-image function start; a partial instance set or a mutable table refuses the site rather than unioning it",

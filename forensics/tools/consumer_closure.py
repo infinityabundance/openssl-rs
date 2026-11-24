@@ -31759,6 +31759,68 @@ REACHABILITY_ORACLE_SCHEMA = (
     "openssl-rs/campaign/safe-c33/reachability-oracle/v1")
 REACHABILITY_BASES = frozenset({"final-upper-bound", "pre-closure-direct"})
 EDGE_RECORD_SAMPLE_DEFAULT = 500
+
+# The per-site residual list embedded in a closure receipt is a render sample:
+# the population is recorded in `precision.totals` and the whole population is
+# written to the `--edge-records` JSONL sidecar. `precision.residual_sites`
+# carries `residual_sites_bound` beside it, because a 200-row list next to a
+# 449-site total is a sample, and a reader who is not told so can only read it as
+# a census (A0-F01). The other sampled lists in this tool already declare a
+# truncation flag; this one now declares its population, its sample size and the
+# rule that produced the sample.
+RESIDUAL_SITE_RECORD_LIMIT = 200
+RESIDUAL_SITE_BOUND_SCHEMA = "openssl-rs/campaign/safe-c33/residual-site-bound/v1"
+RESIDUAL_SITE_SELECTION_RULE = (
+    "the reachable unresolved indirect-site population is sorted by (dso name, "
+    "function start address, call-site address) and the first "
+    f"{RESIDUAL_SITE_RECORD_LIMIT} members are embedded in this receipt; the sort "
+    "order is the whole selection, so no other filter, weight or randomness "
+    "enters it and the embedded list is a prefix of the population -- never a "
+    "census and never a sample drawn to be representative. The whole population "
+    "is written to the --edge-records JSONL sidecar")
+
+
+def residual_sites_bound(population: int, sample: int) -> dict:
+    """Describe `precision.residual_sites` as a sample of a population.
+
+    A record whose embedded list is shorter than its population must state the
+    sample size, the population size and the rule that selected the sample, so
+    that the bound is readable from the record and cannot be mistaken for a
+    census.  The omitted members are counted, not named: naming them would be a
+    second, larger embedded list, and the identities live in the sidecar.
+    """
+    omitted = population - sample
+    return {
+        "schema": RESIDUAL_SITE_BOUND_SCHEMA,
+        "record": "precision.residual_sites",
+        "status": "TRUNCATED_BOUNDED" if omitted > 0 else "COMPLETE",
+        "sample_size": sample,
+        "population_size": population,
+        "omitted_members": omitted,
+        "bound": (
+            "residual_sites is a prefix of the population, not a census; the cap "
+            "is named in selection_rule and the omitted members are counted here"
+            if omitted > 0 else
+            "residual_sites is the whole population; no cap applied"),
+        "omitted_members_recorded": False,
+        "omitted_members_note": (
+            "the omitted members are written to the --edge-records JSONL sidecar "
+            "and are not identified in this receipt, which names their count"
+            if omitted > 0 else
+            "no member is omitted"),
+        "selection_rule": {
+            "rule": RESIDUAL_SITE_SELECTION_RULE,
+            "locator": ("forensics/tools/consumer_closure.py: "
+                        "RESIDUAL_SITE_RECORD_LIMIT"),
+            "rerunnable": True,
+            "requires": (
+                "the candidate DSOs named in candidate_identity and "
+                "forensics/tools/consumer_closure.py; --element7-only prints the "
+                "whole population without writing a receipt"),
+        },
+    }
+
+
 EDGE_DEFECT_RENDER_LIMIT = 200
 EDGE_AUDIT_RENDER_LIMIT = 2000
 
@@ -40262,7 +40324,12 @@ def build_receipt(args) -> dict:
                  "call_site": hex(s.get("addr", 0)),
                  "reason": s["reason"],
                  "class": s["class"], "text": s["text"][:160]}
-                for d, f, s in closure["reachable_residual_sites"][:200]],
+                for d, f, s in closure["reachable_residual_sites"][
+                    :RESIDUAL_SITE_RECORD_LIMIT]],
+            "residual_sites_bound": residual_sites_bound(
+                len(closure["reachable_residual_sites"]),
+                min(len(closure["reachable_residual_sites"]),
+                    RESIDUAL_SITE_RECORD_LIMIT)),
             "static_table_instance": {
                 "schema": S1_WITNESS_SCHEMA,
                 "rule": (

@@ -40,6 +40,15 @@ The exclusion bar (five requirements)
 A row missing any requirement fails the bar.  The output is the *count* of
 rows that fail; no row is dropped to make a closure look complete.
 
+Embedded sample bound (A0-F01)
+------------------------------
+A per-site residual list shorter than the population it is drawn from is a
+sample, not a census.  ``precision.residual_sites_bound`` must state the sample
+size, the population size and the selection rule that produced the sample; a
+record carrying the shorter list without that block is refused with
+``CD_RESIDUAL_SAMPLE_UNBOUNDED``.  Declaring the bound does not close the omitted
+members: the failing row for the unrecorded remainder still fires.
+
 Aggregation rule
 ----------------
 A summary may not be stronger than its members.  An aggregate document that
@@ -635,6 +644,113 @@ def _coverage_rows(receipt, consumer) -> list:
     return rows
 
 
+# --------------------------------------------------------------------------- #
+# embedded residual-site sample bound (A0-F01)
+# --------------------------------------------------------------------------- #
+
+SAMPLE_BOUND_SCHEMA = "openssl-rs/etp-t10/residual-site-sample-bound/1"
+SAMPLE_BOUND_STATUSES = ("COMPLETE", "TRUNCATED_BOUNDED", "TRUNCATED_UNBOUNDED")
+
+
+def residual_sample_bound(receipt: dict) -> dict:
+    """Whether an embedded residual-site list declares that it is a sample.
+
+    A list shorter than the population it is drawn from is a sample, and a sample
+    is admissible only when the record states its own size, the population size
+    and the rule that selected it.  Without those fields a reader cannot tell a
+    prefix from a census, which is the A0-F01 defect: 200 per-site rows beside a
+    449-site total reads as 200 unresolved sites with the rest closed.
+
+    A complete list needs no bound.  A sample whose record carries no bound is
+    refused as ``CD_RESIDUAL_SAMPLE_UNBOUNDED``; a bound whose numbers disagree
+    with the record, or that names no selection rule, is refused as
+    ``CD_RESIDUAL_SAMPLE_MISMATCH`` or ``CD_RESIDUAL_SAMPLE_RULE_MISSING``.  A
+    record that cannot establish its selection rule states
+    ``TRUNCATED_UNBOUNDED`` and, because the rule is then ``UNKNOWN``, must name
+    the method that would establish it.
+    """
+    precision = receipt.get("precision") or {}
+    sites = precision.get("residual_sites")
+    totals = precision.get("totals") or {}
+    population = totals.get("reachable_unresolved_sites")
+    result = {
+        "schema": SAMPLE_BOUND_SCHEMA,
+        "embedded_members": len(sites) if isinstance(sites, list) else None,
+        "population_size": population if isinstance(population, int) else None,
+        "is_sample": False,
+        "bound_declared": isinstance(precision.get("residual_sites_bound"), dict),
+        "status": None,
+        "refused": False,
+        "refusals": [],
+    }
+    if not isinstance(sites, list) or not isinstance(population, int):
+        return result
+    if len(sites) >= population:
+        result["status"] = "COMPLETE"
+        return result
+
+    result["is_sample"] = True
+
+    def refuse(code: str, detail: str, source: str) -> None:
+        result["refusals"].append({"code": code, "detail": detail,
+                                   "source": source})
+        result["refused"] = True
+
+    bound = precision.get("residual_sites_bound")
+    if not isinstance(bound, dict):
+        result["status"] = "TRUNCATED_UNBOUNDED"
+        refuse(
+            "CD_RESIDUAL_SAMPLE_UNBOUNDED",
+            f"precision.residual_sites holds {len(sites)} member(s) against "
+            f"precision.totals.reachable_unresolved_sites = {population}, and "
+            "precision.residual_sites_bound is absent: the record does not state "
+            "that the list is a sample, its selection rule or the population it "
+            "is drawn from",
+            "precision.residual_sites against precision.totals")
+        return result
+
+    status = bound.get("status")
+    result["status"] = status if status in SAMPLE_BOUND_STATUSES else None
+    if status not in ("TRUNCATED_BOUNDED", "TRUNCATED_UNBOUNDED"):
+        refuse(
+            "CD_RESIDUAL_SAMPLE_MISMATCH",
+            f"precision.residual_sites_bound.status is {status!r}; a list shorter "
+            "than its population must read 'TRUNCATED_BOUNDED' or "
+            "'TRUNCATED_UNBOUNDED'",
+            "precision.residual_sites_bound.status")
+    for key, expected in (("sample_size", len(sites)),
+                          ("population_size", population),
+                          ("omitted_members", population - len(sites))):
+        if bound.get(key) != expected:
+            refuse(
+                "CD_RESIDUAL_SAMPLE_MISMATCH",
+                f"precision.residual_sites_bound.{key} is {bound.get(key)!r}; the "
+                f"record's own members and totals give {expected}",
+                f"precision.residual_sites_bound.{key}")
+
+    rule = bound.get("selection_rule")
+    stated = rule if isinstance(rule, str) else (
+        rule.get("rule") if isinstance(rule, dict) else None)
+    stated = stated.strip() if isinstance(stated, str) else ""
+    if not stated:
+        refuse(
+            "CD_RESIDUAL_SAMPLE_RULE_MISSING",
+            "precision.residual_sites_bound.selection_rule states no rule, so the "
+            "sample cannot be re-derived",
+            "precision.residual_sites_bound.selection_rule")
+    elif stated == "UNKNOWN":
+        method = (rule.get("method_that_would_establish")
+                  if isinstance(rule, dict) else None)
+        if not (isinstance(method, str) and method.strip()):
+            refuse(
+                "CD_RESIDUAL_SAMPLE_RULE_MISSING",
+                "precision.residual_sites_bound.selection_rule reads 'UNKNOWN' and "
+                "names no method that would establish the rule",
+                "precision.residual_sites_bound.selection_rule")
+    result["refused"] = bool(result["refusals"])
+    return result
+
+
 def _analysis_rows(receipt, consumer) -> list:
     rows = []
     limits = (receipt.get("graph") or {}).get("limits") or []
@@ -703,6 +819,7 @@ def audit_receipt_dict(receipt: dict, *, consumer: str, commit=None,
         "failing_ids": [r["id"] for r in failing],
         "categories": categories,
         "target_drop_sample": sampled_target_drops,
+        "sample_bound": residual_sample_bound(receipt),
         "candidate_identity": identity,
         "candidate_install": install,
         "inventory_availability": inventory,
@@ -1508,7 +1625,12 @@ def main(argv=None) -> int:
         result = audit_receipt_path(
             Path(args.receipt), consumer=args.consumer, commit=args.commit)
         _emit(result)
-        return 0 if result["exclusions_failing"] == 0 else 1
+        bound = result.get("sample_bound") or {}
+        for refusal in bound.get("refusals") or []:
+            print(f"REFUSED {refusal['code']} {refusal['source']}: "
+                  f"{refusal['detail']}", file=sys.stderr)
+        return 0 if (result["exclusions_failing"] == 0
+                     and not bound.get("refusals")) else 1
 
     if args.command == "aggregate":
         aggregates = audit_aggregates()
@@ -1540,6 +1662,12 @@ def main(argv=None) -> int:
         commit = args.commit or _check_commit(REPO_ROOT)
         exclusions_doc, opaque_doc = build_documents(commit)
         aggregates = audit_aggregates()
+        sample_bounds = {
+            consumer: residual_sample_bound(_load(REPO_ROOT / rel))
+            for consumer, rel in RECEIPTS}
+        sample_bound_refusals = {
+            consumer: bound["refusals"]
+            for consumer, bound in sample_bounds.items() if bound["refusals"]}
         summary = {
             "commit": commit,
             "exclusion_rows": exclusions_doc["exclusion_rows"],
@@ -1550,10 +1678,19 @@ def main(argv=None) -> int:
             "opaque_unscoped_rows": opaque_doc["totals"]["unscoped_contract_rows"],
             "opaque_unscoped_sites": opaque_doc["totals"]["unscoped_contract_sites"],
             "aggregate_refusals": aggregates["refusals"],
+            "sample_bound_status_by_consumer": {
+                consumer: bound["status"]
+                for consumer, bound in sample_bounds.items()},
+            "sample_bound_refusals": sample_bound_refusals,
         }
+        for consumer, refusals in sample_bound_refusals.items():
+            for refusal in refusals:
+                print(f"REFUSED {refusal['code']} {consumer}:{refusal['source']}: "
+                      f"{refusal['detail']}", file=sys.stderr)
         _emit(summary)
         return 0 if (exclusions_doc["exclusions_failing"] == 0
-                     and aggregates["refusal_count"] == 0) else 1
+                     and aggregates["refusal_count"] == 0
+                     and not sample_bound_refusals) else 1
 
     parser.print_help()
     return 2
