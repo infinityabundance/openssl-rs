@@ -1,0 +1,47 @@
+{
+  "asOf": "2026-11-24",
+  "candidate": {
+    "domain": "openssl-rs",
+    "evidenceRoot": "evidence/a10",
+    "root": "."
+  },
+  "counts": {
+    "externalRoots": 0,
+    "roots": 1,
+    "symmetricRoots": 1
+  },
+  "externalRoots": [],
+  "externalRootsNote": "The inventory records no external root. This is the measured state, not an omission: the only recorded root is the A10 test-only HMAC-SHA256 key, which is symmetric and same-party and therefore cannot establish independence.",
+  "item": "A12",
+  "policy": {
+    "asOf": "2026-11-24",
+    "candidateDomain": "openssl-rs",
+    "candidateEvidenceRoot": "evidence/a10",
+    "candidateRoot": ".",
+    "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+    "maxRootAgeDays": 365,
+    "producerDomain": "openssl-rs"
+  },
+  "producer": {
+    "domain": "openssl-rs",
+    "note": "the A10 envelopes were produced inside this candidate"
+  },
+  "roots": [
+    {
+      "algorithm": "hmac-sha256",
+      "independenceBasis": "none: the key is derived from a fixed public seed recorded inside the candidate tree; the signer and the verifier hold the same secret, so the verifier could have produced the signature",
+      "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+      "provenance": {
+        "path": "evidence/a10/ENVELOPES.json",
+        "sha256": "3eb66119fcde6922d2337013fdd30f8ecdb69fdbf2cb095420fefd98ec43a075"
+      },
+      "publicMaterial": null,
+      "recordedAt": "2026-11-24",
+      "selfIssued": true,
+      "symmetric": true,
+      "trustDomain": "same-party"
+    }
+  ],
+  "samePartyNote": "The single root is recorded with trustDomain 'same-party' and symmetric: true so that the refusal is visible in the inventory itself.",
+  "schema": "openssl-rs/a12/trust-roots/1"
+}

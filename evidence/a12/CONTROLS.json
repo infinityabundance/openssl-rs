@@ -1,0 +1,171 @@
+{
+  "asOf": "2026-11-24",
+  "codes": 15,
+  "controlCount": 15,
+  "controls": [
+    {
+      "code": "IV_REFUSED_ENVELOPE",
+      "codes": [
+        "IV_REFUSED_ENVELOPE"
+      ],
+      "control": "envelope-invalid",
+      "outcome": "UNVERIFIED",
+      "wrongConclusion": "that a malformed, re-serialised or non-attestation envelope is read as the envelope that was signed"
+    },
+    {
+      "code": "IV_REFUSED_KEY_FROM_ENVELOPE",
+      "codes": [
+        "IV_REFUSED_KEY_FROM_ENVELOPE"
+      ],
+      "control": "key-from-envelope",
+      "outcome": "UNVERIFIED",
+      "wrongConclusion": "that the envelope chooses its own trust root: a signer cannot nominate the key that will judge it"
+    },
+    {
+      "code": "IV_REFUSED_SYMMETRIC",
+      "codes": [
+        "IV_REFUSED_SYMMETRIC",
+        "IV_REFUSED_SIGNATURE"
+      ],
+      "control": "symmetric-root",
+      "outcome": "SELF_ISSUED",
+      "wrongConclusion": "that a verifier holding the signer's secret reports independence: it could have produced the signature itself"
+    },
+    {
+      "code": "IV_REFUSED_CANDIDATE_TRUST_ROOT",
+      "codes": [
+        "IV_REFUSED_CANDIDATE_TRUST_ROOT"
+      ],
+      "control": "candidate-trust-root",
+      "outcome": "SELF_ISSUED",
+      "wrongConclusion": "that the candidate supplies the key, the seed or the record that authorises itself"
+    },
+    {
+      "code": "IV_REFUSED_TRUST_ROOT_UNRECORDED",
+      "codes": [
+        "IV_REFUSED_TRUST_ROOT_UNRECORDED"
+      ],
+      "control": "trust-root-unrecorded",
+      "outcome": "UNVERIFIED",
+      "wrongConclusion": "that a key is trusted because it appears in an envelope without a recorded origin"
+    },
+    {
+      "code": "IV_REFUSED_TRUST_ROOT_DIGEST_MISMATCH",
+      "codes": [
+        "IV_REFUSED_TRUST_ROOT_DIGEST_MISMATCH"
+      ],
+      "control": "trust-root-digest-mismatch",
+      "outcome": "UNVERIFIED",
+      "wrongConclusion": "that a changed key record is read as the record that established the root"
+    },
+    {
+      "code": "IV_REFUSED_SAME_DOMAIN",
+      "codes": [
+        "IV_REFUSED_SAME_DOMAIN"
+      ],
+      "control": "same-domain",
+      "outcome": "SELF_ISSUED",
+      "wrongConclusion": "that a root inside the producing party is reported as an external trust domain"
+    },
+    {
+      "code": "IV_REFUSED_SELF_ISSUED",
+      "codes": [
+        "IV_REFUSED_SELF_ISSUED"
+      ],
+      "control": "self-issued-basis",
+      "outcome": "SELF_ISSUED",
+      "wrongConclusion": "that a self-signed claim is counted as a third-party verification"
+    },
+    {
+      "code": "IV_REFUSED_SIGNATURE",
+      "codes": [
+        "IV_REFUSED_SIGNATURE"
+      ],
+      "control": "signature-invalid",
+      "outcome": "UNVERIFIED",
+      "wrongConclusion": "that a signature by another key, or over different bytes, is accepted as the selected root's signature"
+    },
+    {
+      "code": "IV_REFUSED_PAYLOAD_NOT_SUBJECT",
+      "codes": [
+        "IV_REFUSED_PAYLOAD_NOT_SUBJECT"
+      ],
+      "control": "payload-not-subject",
+      "outcome": "UNVERIFIED",
+      "wrongConclusion": "that an attestation about different bytes is read as an attestation about the artefact under test"
+    },
+    {
+      "code": "IV_REFUSED_SUBJECT_ABSENT",
+      "codes": [
+        "IV_REFUSED_SUBJECT_ABSENT"
+      ],
+      "control": "subject-absent",
+      "outcome": "UNVERIFIED",
+      "wrongConclusion": "that a missing artefact is treated as matching an absent digest"
+    },
+    {
+      "code": "IV_REFUSED_SUBJECT_MISMATCH",
+      "codes": [
+        "IV_REFUSED_SUBJECT_MISMATCH"
+      ],
+      "control": "subject-mismatch",
+      "outcome": "UNVERIFIED",
+      "wrongConclusion": "that a statement about one artefact is read as a statement about another"
+    },
+    {
+      "code": "IV_REFUSED_NO_PUBLIC_VERIFIER",
+      "codes": [
+        "IV_REFUSED_NO_PUBLIC_VERIFIER"
+      ],
+      "control": "no-public-verifier",
+      "outcome": "NOT_RUN",
+      "wrongConclusion": "that this module invents a signature primitive, or that an unchecked signature is reported as verified"
+    },
+    {
+      "code": "IV_REFUSED_TRUST_ROOT_STALE",
+      "codes": [
+        "IV_REFUSED_TRUST_ROOT_STALE"
+      ],
+      "control": "trust-root-stale",
+      "outcome": "UNVERIFIED",
+      "wrongConclusion": "that an expired root is read as current"
+    },
+    {
+      "code": "IV_REFUSED_MULTIPLE_ROOTS",
+      "codes": [
+        "IV_REFUSED_MULTIPLE_ROOTS"
+      ],
+      "control": "multiple-roots",
+      "outcome": "UNVERIFIED",
+      "wrongConclusion": "that one keyid resolves to two keys and the reader chooses one"
+    }
+  ],
+  "item": "A12",
+  "positiveControl": {
+    "codes": [],
+    "control": "stub-verifier-public-key",
+    "doesNotEstablish": [
+      "a real independent party: the verifier is a test stub",
+      "a signature primitive: none is implemented by this tool",
+      "that any real envelope in the tree is independently verified",
+      "a trust domain outside this project"
+    ],
+    "establishes": [
+      "the decision procedure: policy-selected keyid, public-root refusal checks, PAE verification through the caller, and subject re-hashing",
+      "that the outcome state INDEPENDENTLY_VERIFIED is reachable when a caller supplies a verifier for a distinct public-key root"
+    ],
+    "independentlyVerified": true,
+    "label": "control-only",
+    "outcome": "INDEPENDENTLY_VERIFIED",
+    "root": {
+      "algorithm": "control-only-stub-public-key",
+      "independenceBasis": "control fixture: a separate stub key selected by the recorded policy",
+      "keyid": "control-only:public-key:stub",
+      "symmetric": false,
+      "trustDomain": "external-control"
+    },
+    "verifier": "a caller-supplied stub that accepts only the control key and the control signature"
+  },
+  "positiveControlNote": "The positive control is control-only. It proves the decision procedure can reach INDEPENDENTLY_VERIFIED under a caller-supplied verifier and a distinct public-key root. It does not establish a real independent party, and it is excluded from the real aggregate of 0 independently verified envelopes.",
+  "schema": "openssl-rs/a12/controls/1"
+}

@@ -1,0 +1,448 @@
+{
+  "aggregate": {
+    "envelopes": 4,
+    "independentlyVerified": 0,
+    "notRun": 0,
+    "selfIssued": 4,
+    "statement": "0 of 4 envelopes are independently verified. Each is an A10 test-only HMAC-SHA256 envelope whose root is symmetric, recorded inside the candidate tree and self-issued. A symmetric signature cannot establish independence, so SELF_ISSUED is the correct output, not a defect to repair.",
+    "unverified": 0
+  },
+  "asOf": "2026-11-24",
+  "counts": {
+    "INDEPENDENTLY_VERIFIED": 0,
+    "NOT_RUN": 0,
+    "SELF_ISSUED": 4,
+    "UNVERIFIED": 0,
+    "envelopes": 4,
+    "independentlyVerified": 0
+  },
+  "independentlyVerified": 0,
+  "item": "A12",
+  "policy": {
+    "keyidSelectedBy": "policy",
+    "producerVerifiedItsOwnEnvelopes": true
+  },
+  "schema": "openssl-rs/a12/verification/1",
+  "sourceIdentity": {
+    "baseCommit": "1d571da35",
+    "inventory": {
+      "path": "TRUST-ROOTS.json",
+      "sha256": "4314cc4aff9c23d9ac1ea844bb86cd965bfb6e6a729bf7c81d58fee6fb81586b"
+    },
+    "tool": {
+      "bytes": 42829,
+      "path": "forensics/tools/independent_verify.py",
+      "sha256": "b1db14278b9d80a1e1b37f61d9007204c81ea254e17d130deb13839eb531a384"
+    }
+  },
+  "verifications": [
+    {
+      "artefact": "evidence/a1/SARIF.json",
+      "artefactSha256": "5c0cfee62512deb08cc12f95624be64865d3e544473bae80d9aca0ab36ce7852",
+      "checks": [
+        {
+          "check": 1,
+          "name": "trust root selected by the policy",
+          "status": "PASS"
+        },
+        {
+          "check": 2,
+          "code": "IV_REFUSED_SYMMETRIC",
+          "detail": "the verifier would hold the signer's secret",
+          "name": "root is public, not symmetric",
+          "status": "REFUSED"
+        },
+        {
+          "check": 3,
+          "code": "IV_REFUSED_CANDIDATE_TRUST_ROOT",
+          "detail": "evidence/a10/ENVELOPES.json is inside .",
+          "name": "root provenance is outside the candidate tree",
+          "status": "REFUSED"
+        },
+        {
+          "check": 4,
+          "name": "trust root recorded exactly once",
+          "status": "PASS"
+        },
+        {
+          "check": 4,
+          "name": "root provenance digest matches",
+          "status": "PASS"
+        },
+        {
+          "check": 4,
+          "name": "root is fresh",
+          "status": "PASS"
+        },
+        {
+          "check": 5,
+          "name": "root is in a distinct trust domain",
+          "status": "PASS"
+        },
+        {
+          "check": 6,
+          "code": "IV_REFUSED_SELF_ISSUED",
+          "detail": "the root's independence basis is absent or self-issued",
+          "name": "root records a non-self-issued basis",
+          "status": "REFUSED"
+        },
+        {
+          "check": 7,
+          "name": "signature over the received PAE",
+          "status": "PASS"
+        },
+        {
+          "check": 8,
+          "name": "payload denotes the artefact's bytes",
+          "status": "PASS"
+        },
+        {
+          "check": 9,
+          "name": "statement names the artefact under test",
+          "status": "PASS"
+        }
+      ],
+      "codes": [
+        "IV_REFUSED_SYMMETRIC",
+        "IV_REFUSED_CANDIDATE_TRUST_ROOT",
+        "IV_REFUSED_SELF_ISSUED"
+      ],
+      "envelope": "evidence/a10/ENVELOPES/a1-sarif.json",
+      "envelopeSha256": "8b0aa7989f43e11a7a6773469ea5a423219fd291a09f5a1a66e48e0d4dee84cd",
+      "independentlyVerified": false,
+      "keyid": {
+        "envelopeKeyids": [
+          "test-only:hmac-sha256:8e10a5a15d233d54"
+        ],
+        "policyKeyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+        "selectedBy": "policy"
+      },
+      "name": "a1-sarif",
+      "outcome": "SELF_ISSUED",
+      "payloadSha256": "d53bc4eb66f71bab7227fb9e590d151287a1d64b4446f8dd84b94ca8fef26329",
+      "root": {
+        "algorithm": "hmac-sha256",
+        "independenceBasis": "none: the key is derived from a fixed public seed recorded inside the candidate tree; the signer and the verifier hold the same secret, so the verifier could have produced the signature",
+        "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+        "provenance": {
+          "path": "evidence/a10/ENVELOPES.json",
+          "sha256": "3eb66119fcde6922d2337013fdd30f8ecdb69fdbf2cb095420fefd98ec43a075"
+        },
+        "publicMaterial": null,
+        "recordedAt": "2026-11-24",
+        "selfIssued": true,
+        "symmetric": true,
+        "trustDomain": "same-party"
+      },
+      "signatureChecked": true,
+      "statement": "evidence/a9/STATEMENTS/a1-sarif.json",
+      "statementSha256": "d53bc4eb66f71bab7227fb9e590d151287a1d64b4446f8dd84b94ca8fef26329"
+    },
+    {
+      "artefact": "evidence/a5/ADMISSION.json",
+      "artefactSha256": "d4871ec97ae3a27b8ec820896e292429e44b4db4d11d2671a69b9dc0230ddc0a",
+      "checks": [
+        {
+          "check": 1,
+          "name": "trust root selected by the policy",
+          "status": "PASS"
+        },
+        {
+          "check": 2,
+          "code": "IV_REFUSED_SYMMETRIC",
+          "detail": "the verifier would hold the signer's secret",
+          "name": "root is public, not symmetric",
+          "status": "REFUSED"
+        },
+        {
+          "check": 3,
+          "code": "IV_REFUSED_CANDIDATE_TRUST_ROOT",
+          "detail": "evidence/a10/ENVELOPES.json is inside .",
+          "name": "root provenance is outside the candidate tree",
+          "status": "REFUSED"
+        },
+        {
+          "check": 4,
+          "name": "trust root recorded exactly once",
+          "status": "PASS"
+        },
+        {
+          "check": 4,
+          "name": "root provenance digest matches",
+          "status": "PASS"
+        },
+        {
+          "check": 4,
+          "name": "root is fresh",
+          "status": "PASS"
+        },
+        {
+          "check": 5,
+          "name": "root is in a distinct trust domain",
+          "status": "PASS"
+        },
+        {
+          "check": 6,
+          "code": "IV_REFUSED_SELF_ISSUED",
+          "detail": "the root's independence basis is absent or self-issued",
+          "name": "root records a non-self-issued basis",
+          "status": "REFUSED"
+        },
+        {
+          "check": 7,
+          "name": "signature over the received PAE",
+          "status": "PASS"
+        },
+        {
+          "check": 8,
+          "name": "payload denotes the artefact's bytes",
+          "status": "PASS"
+        },
+        {
+          "check": 9,
+          "name": "statement names the artefact under test",
+          "status": "PASS"
+        }
+      ],
+      "codes": [
+        "IV_REFUSED_SYMMETRIC",
+        "IV_REFUSED_CANDIDATE_TRUST_ROOT",
+        "IV_REFUSED_SELF_ISSUED"
+      ],
+      "envelope": "evidence/a10/ENVELOPES/a5-admission.json",
+      "envelopeSha256": "8f9144f20d9a6e8ce04dabe03ce701741149f2f5e2c59a5ec92721244d3ea93e",
+      "independentlyVerified": false,
+      "keyid": {
+        "envelopeKeyids": [
+          "test-only:hmac-sha256:8e10a5a15d233d54"
+        ],
+        "policyKeyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+        "selectedBy": "policy"
+      },
+      "name": "a5-admission",
+      "outcome": "SELF_ISSUED",
+      "payloadSha256": "d17bb4c990893dc61ee06687a78b6c1b9a91b772e9dbefe233d1fa8b6c21e45f",
+      "root": {
+        "algorithm": "hmac-sha256",
+        "independenceBasis": "none: the key is derived from a fixed public seed recorded inside the candidate tree; the signer and the verifier hold the same secret, so the verifier could have produced the signature",
+        "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+        "provenance": {
+          "path": "evidence/a10/ENVELOPES.json",
+          "sha256": "3eb66119fcde6922d2337013fdd30f8ecdb69fdbf2cb095420fefd98ec43a075"
+        },
+        "publicMaterial": null,
+        "recordedAt": "2026-11-24",
+        "selfIssued": true,
+        "symmetric": true,
+        "trustDomain": "same-party"
+      },
+      "signatureChecked": true,
+      "statement": "evidence/a9/STATEMENTS/a5-admission.json",
+      "statementSha256": "d17bb4c990893dc61ee06687a78b6c1b9a91b772e9dbefe233d1fa8b6c21e45f"
+    },
+    {
+      "artefact": "evidence/a7/DELTA.json",
+      "artefactSha256": "0444a879bf4a0ddf5c50cffba7f51a5834b0fc4a1702d5190815de1f4470c8cf",
+      "checks": [
+        {
+          "check": 1,
+          "name": "trust root selected by the policy",
+          "status": "PASS"
+        },
+        {
+          "check": 2,
+          "code": "IV_REFUSED_SYMMETRIC",
+          "detail": "the verifier would hold the signer's secret",
+          "name": "root is public, not symmetric",
+          "status": "REFUSED"
+        },
+        {
+          "check": 3,
+          "code": "IV_REFUSED_CANDIDATE_TRUST_ROOT",
+          "detail": "evidence/a10/ENVELOPES.json is inside .",
+          "name": "root provenance is outside the candidate tree",
+          "status": "REFUSED"
+        },
+        {
+          "check": 4,
+          "name": "trust root recorded exactly once",
+          "status": "PASS"
+        },
+        {
+          "check": 4,
+          "name": "root provenance digest matches",
+          "status": "PASS"
+        },
+        {
+          "check": 4,
+          "name": "root is fresh",
+          "status": "PASS"
+        },
+        {
+          "check": 5,
+          "name": "root is in a distinct trust domain",
+          "status": "PASS"
+        },
+        {
+          "check": 6,
+          "code": "IV_REFUSED_SELF_ISSUED",
+          "detail": "the root's independence basis is absent or self-issued",
+          "name": "root records a non-self-issued basis",
+          "status": "REFUSED"
+        },
+        {
+          "check": 7,
+          "name": "signature over the received PAE",
+          "status": "PASS"
+        },
+        {
+          "check": 8,
+          "name": "payload denotes the artefact's bytes",
+          "status": "PASS"
+        },
+        {
+          "check": 9,
+          "name": "statement names the artefact under test",
+          "status": "PASS"
+        }
+      ],
+      "codes": [
+        "IV_REFUSED_SYMMETRIC",
+        "IV_REFUSED_CANDIDATE_TRUST_ROOT",
+        "IV_REFUSED_SELF_ISSUED"
+      ],
+      "envelope": "evidence/a10/ENVELOPES/a7-delta.json",
+      "envelopeSha256": "068ea1274eae816129be016ec4a043e92d9e2353029bbb88b4436f7cdecb3385",
+      "independentlyVerified": false,
+      "keyid": {
+        "envelopeKeyids": [
+          "test-only:hmac-sha256:8e10a5a15d233d54"
+        ],
+        "policyKeyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+        "selectedBy": "policy"
+      },
+      "name": "a7-delta",
+      "outcome": "SELF_ISSUED",
+      "payloadSha256": "d4dfa5a3b374ffc4382964dcac61e8a785cfe7f833cbe5c7731a210c0fe7fba8",
+      "root": {
+        "algorithm": "hmac-sha256",
+        "independenceBasis": "none: the key is derived from a fixed public seed recorded inside the candidate tree; the signer and the verifier hold the same secret, so the verifier could have produced the signature",
+        "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+        "provenance": {
+          "path": "evidence/a10/ENVELOPES.json",
+          "sha256": "3eb66119fcde6922d2337013fdd30f8ecdb69fdbf2cb095420fefd98ec43a075"
+        },
+        "publicMaterial": null,
+        "recordedAt": "2026-11-24",
+        "selfIssued": true,
+        "symmetric": true,
+        "trustDomain": "same-party"
+      },
+      "signatureChecked": true,
+      "statement": "evidence/a9/STATEMENTS/a7-delta.json",
+      "statementSha256": "d4dfa5a3b374ffc4382964dcac61e8a785cfe7f833cbe5c7731a210c0fe7fba8"
+    },
+    {
+      "artefact": "evidence/a8/SHARD-000.sarif",
+      "artefactSha256": "b16d376ae0b2fa5483650f8019eada15102fcae580b0a46419b13e7ee98450ed",
+      "checks": [
+        {
+          "check": 1,
+          "name": "trust root selected by the policy",
+          "status": "PASS"
+        },
+        {
+          "check": 2,
+          "code": "IV_REFUSED_SYMMETRIC",
+          "detail": "the verifier would hold the signer's secret",
+          "name": "root is public, not symmetric",
+          "status": "REFUSED"
+        },
+        {
+          "check": 3,
+          "code": "IV_REFUSED_CANDIDATE_TRUST_ROOT",
+          "detail": "evidence/a10/ENVELOPES.json is inside .",
+          "name": "root provenance is outside the candidate tree",
+          "status": "REFUSED"
+        },
+        {
+          "check": 4,
+          "name": "trust root recorded exactly once",
+          "status": "PASS"
+        },
+        {
+          "check": 4,
+          "name": "root provenance digest matches",
+          "status": "PASS"
+        },
+        {
+          "check": 4,
+          "name": "root is fresh",
+          "status": "PASS"
+        },
+        {
+          "check": 5,
+          "name": "root is in a distinct trust domain",
+          "status": "PASS"
+        },
+        {
+          "check": 6,
+          "code": "IV_REFUSED_SELF_ISSUED",
+          "detail": "the root's independence basis is absent or self-issued",
+          "name": "root records a non-self-issued basis",
+          "status": "REFUSED"
+        },
+        {
+          "check": 7,
+          "name": "signature over the received PAE",
+          "status": "PASS"
+        },
+        {
+          "check": 8,
+          "name": "payload denotes the artefact's bytes",
+          "status": "PASS"
+        },
+        {
+          "check": 9,
+          "name": "statement names the artefact under test",
+          "status": "PASS"
+        }
+      ],
+      "codes": [
+        "IV_REFUSED_SYMMETRIC",
+        "IV_REFUSED_CANDIDATE_TRUST_ROOT",
+        "IV_REFUSED_SELF_ISSUED"
+      ],
+      "envelope": "evidence/a10/ENVELOPES/a8-shard-000.json",
+      "envelopeSha256": "5bf418cc5b014d985199ce9e17cde859647303327f6bbd111279d3ed299503a9",
+      "independentlyVerified": false,
+      "keyid": {
+        "envelopeKeyids": [
+          "test-only:hmac-sha256:8e10a5a15d233d54"
+        ],
+        "policyKeyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+        "selectedBy": "policy"
+      },
+      "name": "a8-shard-000",
+      "outcome": "SELF_ISSUED",
+      "payloadSha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582",
+      "root": {
+        "algorithm": "hmac-sha256",
+        "independenceBasis": "none: the key is derived from a fixed public seed recorded inside the candidate tree; the signer and the verifier hold the same secret, so the verifier could have produced the signature",
+        "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+        "provenance": {
+          "path": "evidence/a10/ENVELOPES.json",
+          "sha256": "3eb66119fcde6922d2337013fdd30f8ecdb69fdbf2cb095420fefd98ec43a075"
+        },
+        "publicMaterial": null,
+        "recordedAt": "2026-11-24",
+        "selfIssued": true,
+        "symmetric": true,
+        "trustDomain": "same-party"
+      },
+      "signatureChecked": true,
+      "statement": "evidence/a9/STATEMENTS/a8-shard-000.json",
+      "statementSha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582"
+    }
+  ]
+}
