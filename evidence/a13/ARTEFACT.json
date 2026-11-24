@@ -1,0 +1,209 @@
+{
+  "asOf": "2026-11-24",
+  "axis": "artefact",
+  "counts": {
+    "buildProducts": 1,
+    "differs": 0,
+    "evidenceArtefacts": 4,
+    "notRebuilt": 5,
+    "reproducible": 0,
+    "subjects": 5,
+    "unknown": 0
+  },
+  "doesNotEstablish": [
+    "that any subject is reproducible; the state is NOT_REBUILT for every subject",
+    "that a stable recorded digest is a rebuild; a digest is not a build",
+    "that the DSO's recorded digest was regenerated in this batch",
+    "any relationship between artefact reproducibility and the signature axis in SIGNATURE.json"
+  ],
+  "establishes": [
+    "each of the four A1/A5/A7/A8 evidence artefacts has a recorded SHA-256, computed from its bytes",
+    "the DSO behind the A4 observations is present at the recorded digest",
+    "no subject has a completed rebuild record"
+  ],
+  "item": "A13",
+  "note": "Every subject is ARTEFACT_NOT_REBUILT. The four evidence artefacts have no rebuild record at all; the DSO has a recorded rebuild whose outcome is NOT_RUN. A recorded digest is an identity, not a reproduction. No build-reproducibility claim is made.",
+  "schema": "openssl-rs/a13/artefact/1",
+  "sourceIdentity": {
+    "asOf": "2026-11-24",
+    "baseCommit": "6b33f1caa",
+    "inputs": [
+      {
+        "bytes": 13651450,
+        "path": "evidence/a1/SARIF.json",
+        "sha256": "5c0cfee62512deb08cc12f95624be64865d3e544473bae80d9aca0ab36ce7852"
+      },
+      {
+        "bytes": 5120,
+        "path": "evidence/a5/ADMISSION.json",
+        "sha256": "d4871ec97ae3a27b8ec820896e292429e44b4db4d11d2671a69b9dc0230ddc0a"
+      },
+      {
+        "bytes": 2347127,
+        "path": "evidence/a7/DELTA.json",
+        "sha256": "0444a879bf4a0ddf5c50cffba7f51a5834b0fc4a1702d5190815de1f4470c8cf"
+      },
+      {
+        "bytes": 8699144,
+        "path": "evidence/a8/SHARD-000.sarif",
+        "sha256": "b16d376ae0b2fa5483650f8019eada15102fcae580b0a46419b13e7ee98450ed"
+      },
+      {
+        "bytes": 16863992,
+        "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+        "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9"
+      },
+      {
+        "bytes": 37172,
+        "path": "evidence/a4/INSTANCES.json",
+        "sha256": "4887d605e822d67be878dc967d455958c5ab42625ad2ec26e9c52355219f584f"
+      },
+      {
+        "bytes": 50642,
+        "path": "evidence/etp-t12/RUN.json",
+        "sha256": "e199607d575710c65215ed33735fbeaab49935c5bbb25139a21540b8f55ea91f"
+      },
+      {
+        "bytes": 16198,
+        "path": "evidence/gate-reliability/RECEIPT.md",
+        "sha256": "c051be4a89d95d235877ccad9f07abc8b77a0a414e54a87bc37a9e0b3b971689"
+      }
+    ],
+    "tool": {
+      "bytes": 40087,
+      "path": "forensics/tools/reproducibility.py",
+      "sha256": "8596c971800bbdec256137441e72bcdf2ebeaccfc87ddd54356e1afd47dacc06"
+    }
+  },
+  "subjects": [
+    {
+      "code": "SR_REFUSED_REBUILD_NOT_RUN",
+      "detail": "no rebuild record exists for this subject",
+      "name": "a1-sarif",
+      "reason": "no rebuild record",
+      "rebuild": null,
+      "reproducibilityClaimed": false,
+      "state": "ARTEFACT_NOT_REBUILT",
+      "subject": {
+        "bytes": 13651450,
+        "kind": "evidence-artefact",
+        "name": "a1-sarif",
+        "path": "evidence/a1/SARIF.json",
+        "sha256": "5c0cfee62512deb08cc12f95624be64865d3e544473bae80d9aca0ab36ce7852"
+      }
+    },
+    {
+      "code": "SR_REFUSED_REBUILD_NOT_RUN",
+      "detail": "no rebuild record exists for this subject",
+      "name": "a5-admission",
+      "reason": "no rebuild record",
+      "rebuild": null,
+      "reproducibilityClaimed": false,
+      "state": "ARTEFACT_NOT_REBUILT",
+      "subject": {
+        "bytes": 5120,
+        "kind": "evidence-artefact",
+        "name": "a5-admission",
+        "path": "evidence/a5/ADMISSION.json",
+        "sha256": "d4871ec97ae3a27b8ec820896e292429e44b4db4d11d2671a69b9dc0230ddc0a"
+      }
+    },
+    {
+      "code": "SR_REFUSED_REBUILD_NOT_RUN",
+      "detail": "no rebuild record exists for this subject",
+      "name": "a7-delta",
+      "reason": "no rebuild record",
+      "rebuild": null,
+      "reproducibilityClaimed": false,
+      "state": "ARTEFACT_NOT_REBUILT",
+      "subject": {
+        "bytes": 2347127,
+        "kind": "evidence-artefact",
+        "name": "a7-delta",
+        "path": "evidence/a7/DELTA.json",
+        "sha256": "0444a879bf4a0ddf5c50cffba7f51a5834b0fc4a1702d5190815de1f4470c8cf"
+      }
+    },
+    {
+      "code": "SR_REFUSED_REBUILD_NOT_RUN",
+      "detail": "no rebuild record exists for this subject",
+      "name": "a8-shard-000",
+      "reason": "no rebuild record",
+      "rebuild": null,
+      "reproducibilityClaimed": false,
+      "state": "ARTEFACT_NOT_REBUILT",
+      "subject": {
+        "bytes": 8699144,
+        "kind": "evidence-artefact",
+        "name": "a8-shard-000",
+        "path": "evidence/a8/SHARD-000.sarif",
+        "sha256": "b16d376ae0b2fa5483650f8019eada15102fcae580b0a46419b13e7ee98450ed"
+      }
+    },
+    {
+      "code": "SR_REFUSED_REBUILD_NOT_RUN",
+      "detail": "the recorded rebuild outcome is NOT_RUN",
+      "name": "a4-libcrypto-dso",
+      "reason": "the recorded rebuild step is NOT_RUN because MemAvailable 22 GiB is below the 24 GiB floor AGENTS.md section 6.1 requires before a build; the court is capped at 6 GiB, and when the full rebuild is attempted in that court it exits 101 (build_reproducibility.sh exited 101; recorded in evidence/gate-reliability/RECEIPT.md)",
+      "rebuild": {
+        "attemptedInCourt": {
+          "detail": "build_reproducibility.sh exited 101 in the 6 GiB court; the attempt did not produce a build to compare",
+          "exit": 101,
+          "outcome": "NOT_RUN",
+          "record": {
+            "bytes": 16198,
+            "path": "evidence/gate-reliability/RECEIPT.md",
+            "sha256": "c051be4a89d95d235877ccad9f07abc8b77a0a414e54a87bc37a9e0b3b971689"
+          }
+        },
+        "inputs": {
+          "candidateCommit": "6c174518e9cc38eb5f036ea9071c9be25e35e98a",
+          "cargoLock": {
+            "path": "Cargo.lock",
+            "sha256": "95e8fd837792b69a69798c3884dfc4000bee28d87c58fd3bf4cd5f597e62c2d9"
+          },
+          "command": "bash forensics/tools/build_reproducibility.sh --out /court/repro --clean",
+          "court": {
+            "image": "openssl-rs-court-tools:1",
+            "memory": "6442450944 (6 GiB)",
+            "memoryBytes": 6442450944,
+            "name": "openssl-rs-court"
+          },
+          "rustToolchain": {
+            "path": "rust-toolchain.toml",
+            "sha256": "51b89aac2174179a4470434e6666f9f54d52309005332324154cdeeb1f66dd58"
+          },
+          "tool": {
+            "path": "forensics/tools/build_reproducibility.sh",
+            "sha256": "914002c0ede77fabb2759b01f0278ee1f03e88355539be105ef23a7dc35be984"
+          }
+        },
+        "method": "rebuild",
+        "outcome": "NOT_RUN",
+        "reason": "the recorded rebuild step is NOT_RUN because MemAvailable 22 GiB is below the 24 GiB floor AGENTS.md section 6.1 requires before a build; the court is capped at 6 GiB, and when the full rebuild is attempted in that court it exits 101 (build_reproducibility.sh exited 101; recorded in evidence/gate-reliability/RECEIPT.md)",
+        "record": {
+          "bytes": 50642,
+          "path": "evidence/etp-t12/RUN.json",
+          "sha256": "e199607d575710c65215ed33735fbeaab49935c5bbb25139a21540b8f55ea91f"
+        },
+        "subjectSha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9"
+      },
+      "reproducibilityClaimed": false,
+      "state": "ARTEFACT_NOT_REBUILT",
+      "subject": {
+        "bytes": 16863992,
+        "kind": "build-product",
+        "name": "a4-libcrypto-dso",
+        "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+        "present": true,
+        "recordedDigestSource": {
+          "bytes": 37172,
+          "path": "evidence/a4/INSTANCES.json",
+          "sha256": "4887d605e822d67be878dc967d455958c5ab42625ad2ec26e9c52355219f584f"
+        },
+        "recordedSha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+        "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9"
+      }
+    }
+  ]
+}

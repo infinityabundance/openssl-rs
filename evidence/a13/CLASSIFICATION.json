@@ -1,0 +1,217 @@
+{
+  "asOf": "2026-11-24",
+  "combinationRegistry": {
+    "STABLE_SIGNATURE__NOT_REBUILT_ARTEFACT": {
+      "artefact": "ARTEFACT_NOT_REBUILT",
+      "prohibited": [
+        "SR_REFUSED_ARTEFACT_AS_SIGNATURE",
+        "SR_REFUSED_DETERMINISTIC_SCHEME_AS_INDEPENDENCE",
+        "SR_REFUSED_ENVELOPE_DIGEST_AS_BUILD_DIGEST",
+        "SR_REFUSED_REBUILD_NOT_RUN",
+        "SR_REFUSED_SIGNATURE_AS_ARTEFACT"
+      ],
+      "signature": "SIGNATURE_STABLE"
+    },
+    "STABLE_SIGNATURE__REPRODUCIBLE_ARTEFACT": {
+      "artefact": "ARTEFACT_REPRODUCIBLE",
+      "prohibited": [
+        "SR_REFUSED_ARTEFACT_AS_SIGNATURE",
+        "SR_REFUSED_DETERMINISTIC_SCHEME_AS_INDEPENDENCE",
+        "SR_REFUSED_ENVELOPE_DIGEST_AS_BUILD_DIGEST",
+        "SR_REFUSED_SIGNATURE_AS_ARTEFACT"
+      ],
+      "signature": "SIGNATURE_STABLE"
+    },
+    "VARYING_SIGNATURE__NOT_REBUILT_ARTEFACT": {
+      "artefact": "ARTEFACT_NOT_REBUILT",
+      "prohibited": [
+        "SR_REFUSED_ARTEFACT_AS_SIGNATURE",
+        "SR_REFUSED_ENVELOPE_DIGEST_AS_BUILD_DIGEST",
+        "SR_REFUSED_NONDETERMINISTIC_AS_FAILURE",
+        "SR_REFUSED_REBUILD_NOT_RUN",
+        "SR_REFUSED_SIGNATURE_AS_ARTEFACT"
+      ],
+      "signature": "SIGNATURE_VARIES"
+    },
+    "VARYING_SIGNATURE__REPRODUCIBLE_ARTEFACT": {
+      "artefact": "ARTEFACT_REPRODUCIBLE",
+      "prohibited": [
+        "SR_REFUSED_ARTEFACT_AS_SIGNATURE",
+        "SR_REFUSED_ENVELOPE_DIGEST_AS_BUILD_DIGEST",
+        "SR_REFUSED_NONDETERMINISTIC_AS_FAILURE",
+        "SR_REFUSED_SIGNATURE_AS_ARTEFACT"
+      ],
+      "signature": "SIGNATURE_VARIES"
+    }
+  },
+  "counts": {
+    "combinationsObserved": 1,
+    "observed": [
+      "STABLE_SIGNATURE__NOT_REBUILT_ARTEFACT"
+    ],
+    "pairs": 4,
+    "unpaired": 1
+  },
+  "item": "A13",
+  "note": "All four real pairs are STABLE_SIGNATURE__NOT_REBUILT_ARTEFACT: the HMAC signature repeats and no subject has a rebuild. This licenses no build-reproducibility claim and no independence claim.",
+  "pairs": [
+    {
+      "artefact": {
+        "code": "SR_REFUSED_REBUILD_NOT_RUN",
+        "state": "ARTEFACT_NOT_REBUILT"
+      },
+      "codes": [
+        "SR_REFUSED_ARTEFACT_AS_SIGNATURE",
+        "SR_REFUSED_DETERMINISTIC_SCHEME_AS_INDEPENDENCE",
+        "SR_REFUSED_ENVELOPE_DIGEST_AS_BUILD_DIGEST",
+        "SR_REFUSED_REBUILD_NOT_RUN",
+        "SR_REFUSED_SEED_AS_KEY",
+        "SR_REFUSED_SIGNATURE_AS_ARTEFACT"
+      ],
+      "combination": "STABLE_SIGNATURE__NOT_REBUILT_ARTEFACT",
+      "name": "a1-sarif",
+      "permitted": "the signer repeated its signature byte-for-byte; the artefact has no rebuild record, so no build-reproducibility claim is available",
+      "prohibited": [
+        "SR_REFUSED_SIGNATURE_AS_ARTEFACT",
+        "SR_REFUSED_ARTEFACT_AS_SIGNATURE",
+        "SR_REFUSED_ENVELOPE_DIGEST_AS_BUILD_DIGEST",
+        "SR_REFUSED_DETERMINISTIC_SCHEME_AS_INDEPENDENCE",
+        "SR_REFUSED_SEED_AS_KEY",
+        "SR_REFUSED_REBUILD_NOT_RUN"
+      ],
+      "signature": {
+        "code": "SR_OK",
+        "scheme": "hmac-sha256",
+        "state": "SIGNATURE_STABLE"
+      }
+    },
+    {
+      "artefact": {
+        "code": "SR_REFUSED_REBUILD_NOT_RUN",
+        "state": "ARTEFACT_NOT_REBUILT"
+      },
+      "codes": [
+        "SR_REFUSED_ARTEFACT_AS_SIGNATURE",
+        "SR_REFUSED_DETERMINISTIC_SCHEME_AS_INDEPENDENCE",
+        "SR_REFUSED_ENVELOPE_DIGEST_AS_BUILD_DIGEST",
+        "SR_REFUSED_REBUILD_NOT_RUN",
+        "SR_REFUSED_SEED_AS_KEY",
+        "SR_REFUSED_SIGNATURE_AS_ARTEFACT"
+      ],
+      "combination": "STABLE_SIGNATURE__NOT_REBUILT_ARTEFACT",
+      "name": "a5-admission",
+      "permitted": "the signer repeated its signature byte-for-byte; the artefact has no rebuild record, so no build-reproducibility claim is available",
+      "prohibited": [
+        "SR_REFUSED_SIGNATURE_AS_ARTEFACT",
+        "SR_REFUSED_ARTEFACT_AS_SIGNATURE",
+        "SR_REFUSED_ENVELOPE_DIGEST_AS_BUILD_DIGEST",
+        "SR_REFUSED_DETERMINISTIC_SCHEME_AS_INDEPENDENCE",
+        "SR_REFUSED_SEED_AS_KEY",
+        "SR_REFUSED_REBUILD_NOT_RUN"
+      ],
+      "signature": {
+        "code": "SR_OK",
+        "scheme": "hmac-sha256",
+        "state": "SIGNATURE_STABLE"
+      }
+    },
+    {
+      "artefact": {
+        "code": "SR_REFUSED_REBUILD_NOT_RUN",
+        "state": "ARTEFACT_NOT_REBUILT"
+      },
+      "codes": [
+        "SR_REFUSED_ARTEFACT_AS_SIGNATURE",
+        "SR_REFUSED_DETERMINISTIC_SCHEME_AS_INDEPENDENCE",
+        "SR_REFUSED_ENVELOPE_DIGEST_AS_BUILD_DIGEST",
+        "SR_REFUSED_REBUILD_NOT_RUN",
+        "SR_REFUSED_SEED_AS_KEY",
+        "SR_REFUSED_SIGNATURE_AS_ARTEFACT"
+      ],
+      "combination": "STABLE_SIGNATURE__NOT_REBUILT_ARTEFACT",
+      "name": "a7-delta",
+      "permitted": "the signer repeated its signature byte-for-byte; the artefact has no rebuild record, so no build-reproducibility claim is available",
+      "prohibited": [
+        "SR_REFUSED_SIGNATURE_AS_ARTEFACT",
+        "SR_REFUSED_ARTEFACT_AS_SIGNATURE",
+        "SR_REFUSED_ENVELOPE_DIGEST_AS_BUILD_DIGEST",
+        "SR_REFUSED_DETERMINISTIC_SCHEME_AS_INDEPENDENCE",
+        "SR_REFUSED_SEED_AS_KEY",
+        "SR_REFUSED_REBUILD_NOT_RUN"
+      ],
+      "signature": {
+        "code": "SR_OK",
+        "scheme": "hmac-sha256",
+        "state": "SIGNATURE_STABLE"
+      }
+    },
+    {
+      "artefact": {
+        "code": "SR_REFUSED_REBUILD_NOT_RUN",
+        "state": "ARTEFACT_NOT_REBUILT"
+      },
+      "codes": [
+        "SR_REFUSED_ARTEFACT_AS_SIGNATURE",
+        "SR_REFUSED_DETERMINISTIC_SCHEME_AS_INDEPENDENCE",
+        "SR_REFUSED_ENVELOPE_DIGEST_AS_BUILD_DIGEST",
+        "SR_REFUSED_REBUILD_NOT_RUN",
+        "SR_REFUSED_SEED_AS_KEY",
+        "SR_REFUSED_SIGNATURE_AS_ARTEFACT"
+      ],
+      "combination": "STABLE_SIGNATURE__NOT_REBUILT_ARTEFACT",
+      "name": "a8-shard-000",
+      "permitted": "the signer repeated its signature byte-for-byte; the artefact has no rebuild record, so no build-reproducibility claim is available",
+      "prohibited": [
+        "SR_REFUSED_SIGNATURE_AS_ARTEFACT",
+        "SR_REFUSED_ARTEFACT_AS_SIGNATURE",
+        "SR_REFUSED_ENVELOPE_DIGEST_AS_BUILD_DIGEST",
+        "SR_REFUSED_DETERMINISTIC_SCHEME_AS_INDEPENDENCE",
+        "SR_REFUSED_SEED_AS_KEY",
+        "SR_REFUSED_REBUILD_NOT_RUN"
+      ],
+      "signature": {
+        "code": "SR_OK",
+        "scheme": "hmac-sha256",
+        "state": "SIGNATURE_STABLE"
+      }
+    }
+  ],
+  "rule": "the signature axis and the artefact axis are separate measurements. Each pair names the combination and the inference a consumer may not draw from it.",
+  "schema": "openssl-rs/a13/classification/1",
+  "sourceIdentity": {
+    "asOf": "2026-11-24",
+    "baseCommit": "6b33f1caa",
+    "inputs": [
+      {
+        "bytes": 13048,
+        "path": "evidence/a13/SIGNATURE.json",
+        "sha256": "a1e393647140e197cc9cf9e832e7f445b61c553cb25e4253d3533d8098b2b629"
+      },
+      {
+        "bytes": 8217,
+        "path": "evidence/a13/ARTEFACT.json",
+        "sha256": "955ad355c9c345ff535e37f22aae76af4dad8d74d58a834d409f85ef49460f0b"
+      }
+    ],
+    "tool": {
+      "bytes": 40087,
+      "path": "forensics/tools/reproducibility.py",
+      "sha256": "8596c971800bbdec256137441e72bcdf2ebeaccfc87ddd54356e1afd47dacc06"
+    }
+  },
+  "unpaired": [
+    {
+      "artefact": {
+        "code": "SR_REFUSED_REBUILD_NOT_RUN",
+        "state": "ARTEFACT_NOT_REBUILT"
+      },
+      "combination": "UNPAIRED",
+      "name": "a4-libcrypto-dso",
+      "note": "the DSO is a build product, not one of the four signed statements; its artefact axis is NOT_REBUILT and it is not given a signature-axis reading",
+      "prohibited": [
+        "SR_REFUSED_REBUILD_NOT_RUN"
+      ],
+      "signature": null
+    }
+  ]
+}

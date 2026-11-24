@@ -1,0 +1,170 @@
+{
+  "asOf": "2026-11-24",
+  "codes": 14,
+  "controlCount": 14,
+  "controls": [
+    {
+      "code": "SR_REFUSED_ARTEFACT_AS_SIGNATURE",
+      "control": "artefact-as-signature",
+      "detail": "classify(varying signature, reproducible artefact) names the inference as prohibited",
+      "fired": true,
+      "mechanism": "classify.prohibited",
+      "state": "VARYING_SIGNATURE__REPRODUCIBLE_ARTEFACT"
+    },
+    {
+      "code": "SR_REFUSED_ATTEMPTS_INSUFFICIENT",
+      "control": "attempts-insufficient",
+      "detail": "one attempt is not a repetition",
+      "fired": true,
+      "mechanism": "signature_evidence",
+      "state": "SIGNATURE_UNKNOWN"
+    },
+    {
+      "code": "SR_REFUSED_ATTEMPT_MALFORMED",
+      "control": "attempt-malformed",
+      "detail": "an attempt carries no decodable signature",
+      "fired": true,
+      "mechanism": "signature_evidence",
+      "state": "SIGNATURE_UNKNOWN"
+    },
+    {
+      "code": "SR_REFUSED_DETERMINISTIC_SCHEME_AS_INDEPENDENCE",
+      "control": "deterministic-scheme-as-independence",
+      "detail": "classify with a deterministic scheme names independence as prohibited",
+      "fired": true,
+      "mechanism": "classify.prohibited",
+      "state": "STABLE_SIGNATURE__REPRODUCIBLE_ARTEFACT"
+    },
+    {
+      "code": "SR_REFUSED_DETERMINISTIC_VARIED",
+      "control": "deterministic-varied",
+      "detail": "a deterministic scheme produced two different signatures over the same inputs",
+      "fired": true,
+      "mechanism": "signature_evidence",
+      "state": "SIGNATURE_VARIES"
+    },
+    {
+      "code": "SR_REFUSED_ENVELOPE_DIGEST_AS_BUILD_DIGEST",
+      "control": "envelope-digest-as-build-digest",
+      "detail": "an envelope record is offered as a build subject",
+      "fired": true,
+      "mechanism": "artefact_evidence",
+      "state": "ARTEFACT_UNKNOWN"
+    },
+    {
+      "code": "SR_REFUSED_INPUTS_UNSTATED",
+      "control": "inputs-unstated",
+      "detail": "the two attempts record different inputs",
+      "fired": true,
+      "mechanism": "signature_evidence",
+      "state": "SIGNATURE_UNKNOWN"
+    },
+    {
+      "code": "SR_REFUSED_NONCE_REUSE",
+      "control": "nonce-reuse",
+      "detail": "the synthetic randomised pair repeated its signature and nonce",
+      "fired": true,
+      "mechanism": "signature_evidence",
+      "state": "SIGNATURE_NONCE_REUSED"
+    },
+    {
+      "code": "SR_REFUSED_NONDETERMINISTIC_AS_FAILURE",
+      "control": "nondeterministic-as-failure",
+      "detail": "classify with a randomised scheme names 'varying is a failure' as prohibited",
+      "fired": true,
+      "mechanism": "classify.prohibited",
+      "state": "VARYING_SIGNATURE__REPRODUCIBLE_ARTEFACT"
+    },
+    {
+      "code": "SR_REFUSED_REBUILD_NOT_RUN",
+      "control": "rebuild-not-run",
+      "detail": "no rebuild record is supplied",
+      "fired": true,
+      "mechanism": "artefact_evidence",
+      "state": "ARTEFACT_NOT_REBUILT"
+    },
+    {
+      "code": "SR_REFUSED_REPLAY_AS_REPRODUCTION",
+      "control": "replay-as-reproduction",
+      "detail": "the rebuild record describes a replay",
+      "fired": true,
+      "mechanism": "artefact_evidence",
+      "state": "ARTEFACT_NOT_REBUILT"
+    },
+    {
+      "code": "SR_REFUSED_SCHEME_UNRECORDED",
+      "control": "scheme-unrecorded",
+      "detail": "the scheme is absent from the registry",
+      "fired": true,
+      "mechanism": "signature_evidence",
+      "state": "SIGNATURE_UNKNOWN"
+    },
+    {
+      "code": "SR_REFUSED_SEED_AS_KEY",
+      "control": "seed-as-key",
+      "detail": "an attempt records a raw seed as the signing key",
+      "fired": true,
+      "mechanism": "signature_evidence",
+      "state": "SIGNATURE_UNKNOWN"
+    },
+    {
+      "code": "SR_REFUSED_SIGNATURE_AS_ARTEFACT",
+      "control": "signature-as-artefact",
+      "detail": "classify(stable signature, reproducible artefact) names the inference as prohibited",
+      "fired": true,
+      "mechanism": "classify.prohibited",
+      "state": "STABLE_SIGNATURE__REPRODUCIBLE_ARTEFACT"
+    }
+  ],
+  "item": "A13",
+  "note": "The randomised-varying control is accepted, not a failure. The randomised-repeating control is refused as SR_REFUSED_NONCE_REUSE. The synthetic reproducible artefact is control-only: no real subject in ARTEFACT.json is reproducible.",
+  "positiveControls": [
+    {
+      "accepted": true,
+      "control": "deterministic-stable",
+      "detail": "a deterministic scheme signing the same inputs twice is byte-stable and is not refused",
+      "state": "SIGNATURE_STABLE"
+    },
+    {
+      "accepted": true,
+      "control": "randomised-varies",
+      "detail": "a synthetic randomised-scheme pair varies and is accepted; varying is not a failure",
+      "state": "SIGNATURE_VARIES"
+    },
+    {
+      "accepted": true,
+      "control": "artefact-reproducible-synthetic",
+      "controlOnly": true,
+      "detail": "a synthetic rebuild record with two equal build digests reaches ARTEFACT_REPRODUCIBLE; this is a control and not a real rebuild",
+      "state": "ARTEFACT_REPRODUCIBLE"
+    },
+    {
+      "accepted": true,
+      "combinations": [
+        "STABLE_SIGNATURE__NOT_REBUILT_ARTEFACT",
+        "STABLE_SIGNATURE__REPRODUCIBLE_ARTEFACT",
+        "VARYING_SIGNATURE__NOT_REBUILT_ARTEFACT",
+        "VARYING_SIGNATURE__REPRODUCIBLE_ARTEFACT"
+      ],
+      "control": "four-combinations",
+      "detail": "each of the four combinations is reachable from synthetic evidence and carries its prohibited inference"
+    }
+  ],
+  "schema": "openssl-rs/a13/controls/1",
+  "sourceIdentity": {
+    "asOf": "2026-11-24",
+    "baseCommit": "6b33f1caa",
+    "inputs": [
+      {
+        "bytes": 40087,
+        "path": "forensics/tools/reproducibility.py",
+        "sha256": "8596c971800bbdec256137441e72bcdf2ebeaccfc87ddd54356e1afd47dacc06"
+      }
+    ],
+    "tool": {
+      "bytes": 40087,
+      "path": "forensics/tools/reproducibility.py",
+      "sha256": "8596c971800bbdec256137441e72bcdf2ebeaccfc87ddd54356e1afd47dacc06"
+    }
+  }
+}

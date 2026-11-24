@@ -1,0 +1,289 @@
+{
+  "asOf": "2026-11-24",
+  "axis": "signature",
+  "counts": {
+    "attemptsPerSignature": 2,
+    "nonceReused": 0,
+    "signatures": 4,
+    "stable": 4,
+    "unknown": 0,
+    "varies": 0
+  },
+  "doesNotEstablish": [
+    "anything about whether any artefact can be rebuilt; that is the artefact axis in ARTEFACT.json",
+    "authenticity: the key is derived from a fixed public test seed",
+    "independence: HMAC is symmetric, so the verifier holds the same secret (A12)",
+    "identity, authorisation or transparency (A14-A17)",
+    "a production signature scheme or a production key"
+  ],
+  "establishes": [
+    "the four real A10 envelopes are byte-identical when the same key is applied twice to the same A9 statement bytes",
+    "HMAC-SHA256 is a deterministic function of (key, message)",
+    "the fixed public test seed reproduces the same test key"
+  ],
+  "item": "A13",
+  "keyKind": "derived-test-key",
+  "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+  "note": "Repeating the same envelope byte-for-byte is a property of HMAC-SHA256 and of the fixed test seed. It says nothing about the build. The signature axis is SIGNATURE_STABLE 4/4; the artefact axis is measured separately and is ARTEFACT_NOT_REBUILT for every subject.",
+  "payloadType": "application/vnd.in-toto+json",
+  "schema": "openssl-rs/a13/signature/1",
+  "scheme": "hmac-sha256",
+  "schemeRecord": {
+    "deterministic": true,
+    "name": "hmac-sha256",
+    "note": "HMAC is a deterministic function of (key, message). It is symmetric: the verifier holds the signing key, so it can never establish independence (A12).",
+    "randomised": false,
+    "repeat": "byte-equality",
+    "symmetric": true
+  },
+  "seedHex": "6f70656e73736c2d72732f6131302f746573742d6f6e6c792d686d61632d7368613235362d736565642f7631",
+  "signatures": [
+    {
+      "a10Envelope": "evidence/a10/ENVELOPES/a1-sarif.json",
+      "a10EnvelopeSha256": "8b0aa7989f43e11a7a6773469ea5a423219fd291a09f5a1a66e48e0d4dee84cd",
+      "attempts": [
+        {
+          "attempt": 1,
+          "envelopeSha256": "8b0aa7989f43e11a7a6773469ea5a423219fd291a09f5a1a66e48e0d4dee84cd",
+          "inputs": {
+            "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+            "payloadSha256": "d53bc4eb66f71bab7227fb9e590d151287a1d64b4446f8dd84b94ca8fef26329",
+            "payloadType": "application/vnd.in-toto+json",
+            "scheme": "hmac-sha256"
+          },
+          "signature": "NWxZZXrMdL51Dk2frNs/rsQxoBOhvKft/TJV89SgRU0=",
+          "signatureSha256": "63ddc7b1a5da678e7536861f8189f302a25086ed971f2656cd50e6bcaf3ab800"
+        },
+        {
+          "attempt": 2,
+          "envelopeSha256": "8b0aa7989f43e11a7a6773469ea5a423219fd291a09f5a1a66e48e0d4dee84cd",
+          "inputs": {
+            "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+            "payloadSha256": "d53bc4eb66f71bab7227fb9e590d151287a1d64b4446f8dd84b94ca8fef26329",
+            "payloadType": "application/vnd.in-toto+json",
+            "scheme": "hmac-sha256"
+          },
+          "signature": "NWxZZXrMdL51Dk2frNs/rsQxoBOhvKft/TJV89SgRU0=",
+          "signatureSha256": "63ddc7b1a5da678e7536861f8189f302a25086ed971f2656cd50e6bcaf3ab800"
+        }
+      ],
+      "code": "SR_OK",
+      "detail": "the deterministic scheme produced byte-identical signatures over the same inputs",
+      "keyKind": "derived-test-key",
+      "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+      "name": "a1-sarif",
+      "payloadSha256": "d53bc4eb66f71bab7227fb9e590d151287a1d64b4446f8dd84b94ca8fef26329",
+      "payloadType": "application/vnd.in-toto+json",
+      "scheme": "hmac-sha256",
+      "schemeRecord": {
+        "deterministic": true,
+        "name": "hmac-sha256",
+        "note": "HMAC is a deterministic function of (key, message). It is symmetric: the verifier holds the signing key, so it can never establish independence (A12).",
+        "randomised": false,
+        "repeat": "byte-equality",
+        "symmetric": true
+      },
+      "seedHex": "6f70656e73736c2d72732f6131302f746573742d6f6e6c792d686d61632d7368613235362d736565642f7631",
+      "state": "SIGNATURE_STABLE",
+      "statement": "evidence/a9/STATEMENTS/a1-sarif.json"
+    },
+    {
+      "a10Envelope": "evidence/a10/ENVELOPES/a5-admission.json",
+      "a10EnvelopeSha256": "8f9144f20d9a6e8ce04dabe03ce701741149f2f5e2c59a5ec92721244d3ea93e",
+      "attempts": [
+        {
+          "attempt": 1,
+          "envelopeSha256": "8f9144f20d9a6e8ce04dabe03ce701741149f2f5e2c59a5ec92721244d3ea93e",
+          "inputs": {
+            "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+            "payloadSha256": "d17bb4c990893dc61ee06687a78b6c1b9a91b772e9dbefe233d1fa8b6c21e45f",
+            "payloadType": "application/vnd.in-toto+json",
+            "scheme": "hmac-sha256"
+          },
+          "signature": "hc5iG1uFdxNShi/xT1GZcPVPRX1xK7/g8xKT3adwKNU=",
+          "signatureSha256": "293f9767992c793f21248546423d3627007ff39a5fbade7a4b805721fbc6d3c8"
+        },
+        {
+          "attempt": 2,
+          "envelopeSha256": "8f9144f20d9a6e8ce04dabe03ce701741149f2f5e2c59a5ec92721244d3ea93e",
+          "inputs": {
+            "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+            "payloadSha256": "d17bb4c990893dc61ee06687a78b6c1b9a91b772e9dbefe233d1fa8b6c21e45f",
+            "payloadType": "application/vnd.in-toto+json",
+            "scheme": "hmac-sha256"
+          },
+          "signature": "hc5iG1uFdxNShi/xT1GZcPVPRX1xK7/g8xKT3adwKNU=",
+          "signatureSha256": "293f9767992c793f21248546423d3627007ff39a5fbade7a4b805721fbc6d3c8"
+        }
+      ],
+      "code": "SR_OK",
+      "detail": "the deterministic scheme produced byte-identical signatures over the same inputs",
+      "keyKind": "derived-test-key",
+      "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+      "name": "a5-admission",
+      "payloadSha256": "d17bb4c990893dc61ee06687a78b6c1b9a91b772e9dbefe233d1fa8b6c21e45f",
+      "payloadType": "application/vnd.in-toto+json",
+      "scheme": "hmac-sha256",
+      "schemeRecord": {
+        "deterministic": true,
+        "name": "hmac-sha256",
+        "note": "HMAC is a deterministic function of (key, message). It is symmetric: the verifier holds the signing key, so it can never establish independence (A12).",
+        "randomised": false,
+        "repeat": "byte-equality",
+        "symmetric": true
+      },
+      "seedHex": "6f70656e73736c2d72732f6131302f746573742d6f6e6c792d686d61632d7368613235362d736565642f7631",
+      "state": "SIGNATURE_STABLE",
+      "statement": "evidence/a9/STATEMENTS/a5-admission.json"
+    },
+    {
+      "a10Envelope": "evidence/a10/ENVELOPES/a7-delta.json",
+      "a10EnvelopeSha256": "068ea1274eae816129be016ec4a043e92d9e2353029bbb88b4436f7cdecb3385",
+      "attempts": [
+        {
+          "attempt": 1,
+          "envelopeSha256": "068ea1274eae816129be016ec4a043e92d9e2353029bbb88b4436f7cdecb3385",
+          "inputs": {
+            "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+            "payloadSha256": "d4dfa5a3b374ffc4382964dcac61e8a785cfe7f833cbe5c7731a210c0fe7fba8",
+            "payloadType": "application/vnd.in-toto+json",
+            "scheme": "hmac-sha256"
+          },
+          "signature": "ZoVQEZhz6W7J5OpwWKDflG1ApXDIyO/UOssGUmsG0Ck=",
+          "signatureSha256": "b803d70de254f38d615f089e6f6c064368d91fcb9445fd44e6ca875ca2e45836"
+        },
+        {
+          "attempt": 2,
+          "envelopeSha256": "068ea1274eae816129be016ec4a043e92d9e2353029bbb88b4436f7cdecb3385",
+          "inputs": {
+            "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+            "payloadSha256": "d4dfa5a3b374ffc4382964dcac61e8a785cfe7f833cbe5c7731a210c0fe7fba8",
+            "payloadType": "application/vnd.in-toto+json",
+            "scheme": "hmac-sha256"
+          },
+          "signature": "ZoVQEZhz6W7J5OpwWKDflG1ApXDIyO/UOssGUmsG0Ck=",
+          "signatureSha256": "b803d70de254f38d615f089e6f6c064368d91fcb9445fd44e6ca875ca2e45836"
+        }
+      ],
+      "code": "SR_OK",
+      "detail": "the deterministic scheme produced byte-identical signatures over the same inputs",
+      "keyKind": "derived-test-key",
+      "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+      "name": "a7-delta",
+      "payloadSha256": "d4dfa5a3b374ffc4382964dcac61e8a785cfe7f833cbe5c7731a210c0fe7fba8",
+      "payloadType": "application/vnd.in-toto+json",
+      "scheme": "hmac-sha256",
+      "schemeRecord": {
+        "deterministic": true,
+        "name": "hmac-sha256",
+        "note": "HMAC is a deterministic function of (key, message). It is symmetric: the verifier holds the signing key, so it can never establish independence (A12).",
+        "randomised": false,
+        "repeat": "byte-equality",
+        "symmetric": true
+      },
+      "seedHex": "6f70656e73736c2d72732f6131302f746573742d6f6e6c792d686d61632d7368613235362d736565642f7631",
+      "state": "SIGNATURE_STABLE",
+      "statement": "evidence/a9/STATEMENTS/a7-delta.json"
+    },
+    {
+      "a10Envelope": "evidence/a10/ENVELOPES/a8-shard-000.json",
+      "a10EnvelopeSha256": "5bf418cc5b014d985199ce9e17cde859647303327f6bbd111279d3ed299503a9",
+      "attempts": [
+        {
+          "attempt": 1,
+          "envelopeSha256": "5bf418cc5b014d985199ce9e17cde859647303327f6bbd111279d3ed299503a9",
+          "inputs": {
+            "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+            "payloadSha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582",
+            "payloadType": "application/vnd.in-toto+json",
+            "scheme": "hmac-sha256"
+          },
+          "signature": "rHnNe6v45b3kvKojJeYEE+FNtQ7kuGONPwtXUNzrniU=",
+          "signatureSha256": "e0ecbe3c74913378b93788e807c7428d8a777b8d579d2af6891ee9e1b38799c5"
+        },
+        {
+          "attempt": 2,
+          "envelopeSha256": "5bf418cc5b014d985199ce9e17cde859647303327f6bbd111279d3ed299503a9",
+          "inputs": {
+            "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+            "payloadSha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582",
+            "payloadType": "application/vnd.in-toto+json",
+            "scheme": "hmac-sha256"
+          },
+          "signature": "rHnNe6v45b3kvKojJeYEE+FNtQ7kuGONPwtXUNzrniU=",
+          "signatureSha256": "e0ecbe3c74913378b93788e807c7428d8a777b8d579d2af6891ee9e1b38799c5"
+        }
+      ],
+      "code": "SR_OK",
+      "detail": "the deterministic scheme produced byte-identical signatures over the same inputs",
+      "keyKind": "derived-test-key",
+      "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+      "name": "a8-shard-000",
+      "payloadSha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582",
+      "payloadType": "application/vnd.in-toto+json",
+      "scheme": "hmac-sha256",
+      "schemeRecord": {
+        "deterministic": true,
+        "name": "hmac-sha256",
+        "note": "HMAC is a deterministic function of (key, message). It is symmetric: the verifier holds the signing key, so it can never establish independence (A12).",
+        "randomised": false,
+        "repeat": "byte-equality",
+        "symmetric": true
+      },
+      "seedHex": "6f70656e73736c2d72732f6131302f746573742d6f6e6c792d686d61632d7368613235362d736565642f7631",
+      "state": "SIGNATURE_STABLE",
+      "statement": "evidence/a9/STATEMENTS/a8-shard-000.json"
+    }
+  ],
+  "sourceIdentity": {
+    "asOf": "2026-11-24",
+    "baseCommit": "6b33f1caa",
+    "inputs": [
+      {
+        "bytes": 910,
+        "path": "evidence/a10/ENVELOPES/a1-sarif.json",
+        "sha256": "8b0aa7989f43e11a7a6773469ea5a423219fd291a09f5a1a66e48e0d4dee84cd"
+      },
+      {
+        "bytes": 882,
+        "path": "evidence/a10/ENVELOPES/a5-admission.json",
+        "sha256": "8f9144f20d9a6e8ce04dabe03ce701741149f2f5e2c59a5ec92721244d3ea93e"
+      },
+      {
+        "bytes": 1074,
+        "path": "evidence/a10/ENVELOPES/a7-delta.json",
+        "sha256": "068ea1274eae816129be016ec4a043e92d9e2353029bbb88b4436f7cdecb3385"
+      },
+      {
+        "bytes": 1130,
+        "path": "evidence/a10/ENVELOPES/a8-shard-000.json",
+        "sha256": "5bf418cc5b014d985199ce9e17cde859647303327f6bbd111279d3ed299503a9"
+      },
+      {
+        "bytes": 549,
+        "path": "evidence/a9/STATEMENTS/a1-sarif.json",
+        "sha256": "d53bc4eb66f71bab7227fb9e590d151287a1d64b4446f8dd84b94ca8fef26329"
+      },
+      {
+        "bytes": 528,
+        "path": "evidence/a9/STATEMENTS/a5-admission.json",
+        "sha256": "d17bb4c990893dc61ee06687a78b6c1b9a91b772e9dbefe233d1fa8b6c21e45f"
+      },
+      {
+        "bytes": 672,
+        "path": "evidence/a9/STATEMENTS/a7-delta.json",
+        "sha256": "d4dfa5a3b374ffc4382964dcac61e8a785cfe7f833cbe5c7731a210c0fe7fba8"
+      },
+      {
+        "bytes": 714,
+        "path": "evidence/a9/STATEMENTS/a8-shard-000.json",
+        "sha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582"
+      }
+    ],
+    "tool": {
+      "bytes": 40087,
+      "path": "forensics/tools/reproducibility.py",
+      "sha256": "8596c971800bbdec256137441e72bcdf2ebeaccfc87ddd54356e1afd47dacc06"
+    }
+  }
+}
