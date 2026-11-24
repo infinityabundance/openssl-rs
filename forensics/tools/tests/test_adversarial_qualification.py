@@ -5,10 +5,13 @@ One control per refusal code; the canary detection for each of the eight
 experiments; that ``NOT_RUN`` never counts as a qualification; that an
 unstable harness is refused rather than summarised; the recorded behaviour of
 the BINSEC mixed transcript in full; the reported coverage basis of the branch
-audit and the reported timing thresholds; the permissive consumers of the
-instrument register; the SARIF half that refuses and the half that does not;
-determinism of the producer across two invocations and against the committed
-bytes; the command line's exit codes; and document synchronisation.
+audit and the reported timing thresholds; both repaired register consumers
+refusing the duplicate key with the observed code; the SARIF halves that refuse
+and the live emission that is accepted; determinism of the producer across two
+invocations and against the committed bytes; the command line's exit codes; and
+document synchronisation. The verdicts are asserted per experiment from the
+recorded measurement, so a regression that turns a ``QUALIFIED`` into a
+``DEFECT`` fails the suite rather than reading as a clean summary.
 
 A control mutates a synthetic experiment or a temporary copy of a record. It is
 not a source change and not a repair: a control that fires proves the refusal
@@ -233,28 +236,42 @@ class NotRunNeverQualifies(unittest.TestCase):
 
 
 class TheEightResults(unittest.TestCase):
-    def test_the_producer_exits_nonzero_when_the_qualification_is_not_clean(self) -> None:
+    def test_the_producer_exit_status_describes_the_recorded_verdicts(self) -> None:
         # The records are written either way; the status describes the evidence.
-        self.assertEqual(BASELINE["rc_first"], 1)
-        self.assertEqual(BASELINE["rc_second"], 1)
+        # Deriving it from the summary means a regression that records a defect
+        # but still exits 0 (or the reverse) is caught.
+        totals = BASELINE["results"]["summary"]
+        expected = 0 if totals["allQualified"] else 1
+        self.assertEqual(BASELINE["rc_first"], expected)
+        self.assertEqual(BASELINE["rc_second"], expected)
 
-    def test_the_recorded_summary_counts(self) -> None:
+    def test_every_experiment_reports_its_observed_verdict(self) -> None:
+        # The actual verdict of each experiment, not a single clean flag. A
+        # regression that turns one QUALIFIED into DEFECT or PARTIAL fails here.
+        entries = _by_id(BASELINE["results"])
+        for identifier in aq.REQUIRED_EXPERIMENTS:
+            with self.subTest(experiment=identifier):
+                self.assertEqual(entries[identifier]["verdict"], aq.VERDICT_QUALIFIED)
+                self.assertEqual(
+                    entries[identifier]["refusedWitnesses"],
+                    entries[identifier]["rejectedWitnesses"],
+                )
+                self.assertEqual(entries[identifier]["codes"], [])
+
+    def test_the_recorded_summary_is_recomputed_from_the_verdicts(self) -> None:
+        entries = _by_id(BASELINE["results"])
+        verdicts = [entries[identifier]["verdict"] for identifier in aq.REQUIRED_EXPERIMENTS]
         totals = BASELINE["results"]["summary"]
         self.assertEqual(totals["experiments"], 8)
-        self.assertEqual(totals["qualified"], 6)
-        self.assertEqual(totals["defect"], 1)
-        self.assertEqual(totals["partial"], 1)
-        self.assertEqual(totals["notRun"], 0)
-        self.assertFalse(totals["allQualified"])
-
-    def test_the_defect_and_the_partial_are_named(self) -> None:
-        entries = _by_id(BASELINE["results"])
-        self.assertEqual(entries["E5"]["verdict"], aq.VERDICT_DEFECT)
-        self.assertEqual(entries["E6"]["verdict"], aq.VERDICT_PARTIAL)
-        self.assertIn(aq.AQ_DEFECT_FOUND, entries["E5"]["codes"])
-        self.assertIn(aq.AQ_DEFECT_FOUND, entries["E6"]["codes"])
-        self.assertEqual(entries["E5"]["refusedWitnesses"], 0)
-        self.assertEqual(entries["E6"]["refusedWitnesses"], 1)
+        self.assertEqual(totals["qualified"], verdicts.count(aq.VERDICT_QUALIFIED))
+        self.assertEqual(totals["defect"], verdicts.count(aq.VERDICT_DEFECT))
+        self.assertEqual(totals["partial"], verdicts.count(aq.VERDICT_PARTIAL))
+        self.assertEqual(totals["notRun"], verdicts.count(aq.VERDICT_NOT_RUN))
+        self.assertEqual(
+            totals["allQualified"],
+            all(verdict == aq.VERDICT_QUALIFIED for verdict in verdicts),
+        )
+        self.assertEqual(totals["codes"], [])
 
     def test_every_experiment_canary_is_detected(self) -> None:
         self.assertTrue(BASELINE["controls"]["allCanariesDetected"])
@@ -300,39 +317,63 @@ class TheEightResults(unittest.TestCase):
                 self.assertEqual(counts["total_measurements"], 30000)
                 self.assertEqual(counts["batches_run"], 3)
 
-    def test_the_permissive_consumers_of_the_register_are_named(self) -> None:
+    def test_both_register_consumers_refuse_the_duplicate_key(self) -> None:
         reported = _by_id(BASELINE["results"])["E7"]["reported"]
-        self.assertEqual(reported["permissive_consumer_count"], 2)
+        self.assertEqual(reported["permissive_consumer_count"], 0)
+        self.assertEqual(reported["permissive_consumers"], [])
+        probes = {probe["path"]: probe for probe in reported["consumer_probes"]}
         self.assertEqual(
-            reported["permissive_consumers"],
+            sorted(probes),
             ["forensics/tools/etp_t1_seed.py", "forensics/tools/freshness.py"],
         )
-        self.assertIn("plain json.loads", reported["finding"])
+        for path, probe in probes.items():
+            with self.subTest(consumer=path):
+                self.assertEqual(probe["exit"], 1)
+                self.assertTrue(probe["refusalObserved"], probe)
+        self.assertIn("historical", reported["finding"])
+        self.assertIn("PH_REFUSED_DUPLICATE_KEY", reported["finding"])
         loaders = {entry["path"]: entry["loader"] for entry in reported["consumers"]}
         self.assertEqual(loaders["forensics/tools/instrument_qualify.py"], "strict")
-        self.assertEqual(loaders["forensics/tools/etp_t1_seed.py"], "permissive")
-        self.assertEqual(loaders["forensics/tools/freshness.py"], "permissive")
+        self.assertEqual(loaders["forensics/tools/etp_t1_seed.py"], "strict")
+        self.assertEqual(loaders["forensics/tools/freshness.py"], "strict")
+        entry = _by_id(BASELINE["results"])["E7"]
+        for case in ("duplicate-key-etp-t1-seed", "duplicate-key-freshness"):
+            observation = _observation(entry, case)
+            self.assertEqual(observation["exit"], 1)
+            self.assertIn("PH_REFUSED_DUPLICATE_KEY", observation["output"])
 
-    def test_the_sarif_native_half_refuses_and_the_emission_half_does_not(self) -> None:
+    def test_the_sarif_native_and_emission_halves_both_refuse(self) -> None:
         entry = _by_id(BASELINE["results"])["E6"]
         native = _observation(entry, "native-population-mismatch")
         emission = _observation(entry, "emission-result-count-mismatch")
-        self.assertEqual(native["exit"], 1)
-        self.assertIn("SARIF_REFUSED_POPULATION_MISMATCH", native["output"])
-        self.assertEqual(emission["exit"], 0)
-        self.assertIn("AQ_ACCEPTED", emission["output"])
+        for observation in (native, emission):
+            with self.subTest(case=observation["case"]):
+                self.assertEqual(observation["exit"], 1)
+                self.assertIn("SARIF_REFUSED_POPULATION_MISMATCH", observation["output"])
         shape = entry["reported"]["emission_shape"]
         self.assertEqual(shape["results_before"], shape["results_after"] + 1)
+        self.assertIn("refuses", entry["reported"]["emission_population"])
 
-    def test_the_ctgrind_experiment_refused_none_of_its_three_cases(self) -> None:
+    def test_the_ctgrind_experiment_refuses_all_three_cases(self) -> None:
         entry = _by_id(BASELINE["results"])["E5"]
         refused = {
-            item["case"]: item["exit"]
+            item["case"]: (item["exit"], item["output"])
             for item in entry["observations"]
             if item["kind"] == "rejected"
         }
-        self.assertEqual(refused, {"empty-log": 0, "unrelated-log-only": 0,
-                                   "candidate-identity-mismatch": 0})
+        self.assertEqual(sorted(refused), ["candidate-identity-mismatch", "empty-log",
+                                           "unrelated-log-only"])
+        self.assertEqual(refused["empty-log"][0], 3)
+        self.assertIn("CT_SUMMARY_EMPTY_LOG", refused["empty-log"][1])
+        self.assertEqual(refused["unrelated-log-only"][0], 4)
+        self.assertIn("CT_SUMMARY_UNRELATED_LOG", refused["unrelated-log-only"][1])
+        self.assertEqual(refused["candidate-identity-mismatch"][0], 1)
+        self.assertIn("CTGRIND_BINARY_IDENTITY_MISMATCH",
+                      refused["candidate-identity-mismatch"][1])
+        reported = entry["reported"]
+        self.assertIn("expected identity", reported["identity_binding"])
+        self.assertIn("presence-only", reported["residual"])
+        self.assertIn("fixture", reported["identity_expectation"]["scope"])
 
 
 class Determinism(unittest.TestCase):
@@ -384,13 +425,20 @@ class CommandLine(unittest.TestCase):
             code = aq.main(argv)
         return code, out.getvalue() + err.getvalue()
 
-    def test_run_prints_every_experiment_and_exits_nonzero(self) -> None:
+    def test_run_prints_every_experiment_and_exits_with_the_summary(self) -> None:
         code, output = self._run(["run", "--runs", "1"])
-        self.assertEqual(code, aq.EXIT_REFUSED)
+        totals = BASELINE["results"]["summary"]
+        expected = aq.EXIT_OK if totals["allQualified"] else aq.EXIT_REFUSED
+        self.assertEqual(code, expected)
         for identifier in aq.REQUIRED_EXPERIMENTS:
             self.assertIn(f"aq: {identifier} ", output)
-        self.assertIn("allQualified=false", output)
-        self.assertIn("codes=AQ_DEFECT_FOUND", output)
+        self.assertIn(
+            f"allQualified={str(totals['allQualified']).lower()}", output
+        )
+        if totals["allQualified"]:
+            self.assertIn("codes=NONE", output)
+        else:
+            self.assertIn("codes=AQ_DEFECT_FOUND", output)
 
     def test_only_is_a_diagnostic_not_a_qualification(self) -> None:
         code, output = self._run(["run", "--only", "E1", "--runs", "1"])
@@ -472,14 +520,20 @@ class DocumentSynchronisation(unittest.TestCase):
         self.assertEqual(len(rows), 8)
         for line in rows:
             identifier = re.match(r"^\| `(E[1-8])`", line).group(1)
+            cells = [cell.strip() for cell in line.strip().strip("|").split("|")]
             with self.subTest(experiment=identifier):
-                self.assertIn(entries[identifier]["verdict"], line)
+                self.assertEqual(len(cells), 5, line)
+                self.assertEqual(cells[3].strip("`"), entries[identifier]["verdict"])
 
-    def test_the_document_names_the_two_findings_and_their_owners(self) -> None:
+    def test_the_document_preserves_the_before_and_records_the_after(self) -> None:
+        # The historical findings and their owners stay readable; the repair is
+        # recorded beside them, not substituted for them.
         self.assertIn("**Owning item: ETP-T7**", self.text)
         self.assertIn("**Owning item: A1**", self.text)
         self.assertIn("Queued obligation", self.text)
         self.assertIn("**This is not a clean qualification**", self.text)
+        self.assertIn("after repair (`e4029e0d5`)", self.text)
+        self.assertIn("**This is a clean qualification after repair**", self.text)
 
     def test_the_document_states_the_canary_rule(self) -> None:
         self.assertIn("accept_any", self.text)

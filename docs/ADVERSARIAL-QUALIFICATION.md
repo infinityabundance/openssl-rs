@@ -144,19 +144,23 @@ correct, complete, or produced by a sound implementation.
 
 ## 4. The eight experiments and their results
 
-| id | instrument | verdict | canary |
-|---|---|---|---|
-| `E1` | `courts/phase18/timing/binsec_checkct.sh` | `QUALIFIED` | detected |
-| `E2` | `courts/phase18/timing/binsec_checkct.sh` | `QUALIFIED` | detected |
-| `E3` | `courts/phase18/timing/binary_branch_audit.py` | `QUALIFIED` | detected |
-| `E4` | `forensics/tools/preregistration_check.py` | `QUALIFIED` | detected |
-| `E5` | `courts/phase18/timing/summarize_ct.py`, `forensics/tools/side_channel_erasure.py` | `DEFECT` | detected |
-| `E6` | `forensics/tools/sarif_adapter.py` | `PARTIAL` | detected |
-| `E7` | `forensics/tools/instrument_qualify.py`, `forensics/tools/policy_engine.py` | `QUALIFIED` | detected |
-| `E8` | `forensics/tools/policy_engine.py`, `forensics/tools/omission.py` | `QUALIFIED` | detected |
+| id | instrument | verdict (`6e64e644c`) | verdict after repair (`e4029e0d5`) | canary |
+|---|---|---|---|---|
+| `E1` | `courts/phase18/timing/binsec_checkct.sh` | `QUALIFIED` | `QUALIFIED` | detected |
+| `E2` | `courts/phase18/timing/binsec_checkct.sh` | `QUALIFIED` | `QUALIFIED` | detected |
+| `E3` | `courts/phase18/timing/binary_branch_audit.py` | `QUALIFIED` | `QUALIFIED` | detected |
+| `E4` | `forensics/tools/preregistration_check.py` | `QUALIFIED` | `QUALIFIED` | detected |
+| `E5` | `courts/phase18/timing/summarize_ct.py`, `forensics/tools/side_channel_erasure.py` | `DEFECT` | `QUALIFIED` | detected |
+| `E6` | `forensics/tools/sarif_adapter.py` | `PARTIAL` | `QUALIFIED` | detected |
+| `E7` | `forensics/tools/instrument_qualify.py`, `forensics/tools/policy_engine.py` | `QUALIFIED` | `QUALIFIED` | detected |
+| `E8` | `forensics/tools/policy_engine.py`, `forensics/tools/omission.py` | `QUALIFIED` | `QUALIFIED` | detected |
 
-Six qualified, one defect, one partial. **This is not a clean qualification**
-and the record does not present it as one.
+**Before repair (`6e64e644c`):** six qualified, one defect, one partial.
+**This is not a clean qualification** and the original record did not present it
+as one. **After repair (`e4029e0d5`):** eight qualified, the summary is
+recomputed from the eight verdicts, and **This is a clean qualification after repair**.
+The before column is kept; the after column is what the refreshed
+record measures. The residual limitations are named in §5.1 and §7.
 
 ### E1 — BINSEC conflicting verdicts (`QUALIFIED`, 3/3)
 
@@ -286,6 +290,19 @@ log of a clean run — either the summariser refuses an empty log, or the eviden
 record states that zero contexts is not a clean result and requires the
 executed-case identity.*
 
+**After repair (`e4029e0d5`) — `QUALIFIED` 3/3.** The summariser now has an
+outcome contract: the empty log exits **3** with `CT_SUMMARY_EMPTY_LOG`, the
+log with only unrelated memcheck lines exits **4** with
+`CT_SUMMARY_UNRELATED_LOG`, and neither prints counts. Rule 2 compares a
+`binary_identity` with an expected identity when the caller supplies one and
+refuses a mismatch with `CTGRIND_BINARY_IDENTITY_MISMATCH`; A22 supplies the
+fixture `sha256:aa…` against a claim recording `sha256:de…`, so the mismatch
+exits **1**. The canary still detects the absent-field claim
+(`CTGRIND_WITHOUT_HARNESS_IDENTITY_TAINT`). **Residual:** the witness supplies
+an expected identity, but no production caller was shown to supply one and no
+candidate binary was built. Without one, rule 2 remains presence-only; that
+limitation is recorded, not counted as a pass.
+
 ### E6 — SARIF population mismatch (`PARTIAL`, 1/2)
 
 | input | expected | observed |
@@ -307,6 +324,14 @@ repaired here.** Queued obligation: *`validate_emission` must refuse an emission
 whose result count, `projection.projectedTotal` and summed
 `projection.projected` disagree with each other and with the record's declared
 finding population, with a population-mismatch code.*
+
+**After repair (`e4029e0d5`) — `QUALIFIED` 2/2.** `validate_emission` refuses a
+result count that disagrees with `projection.projectedTotal`, with the per-rule
+tallies, with the level counts, or with the native population, using
+`SARIF_REFUSED_POPULATION_MISMATCH`. The one-result-short emission (17 declared,
+16 present) now exits **1**. The live native record (51 findings) and the live
+emission still validate; the A22 fixture emission is 17 results in one run,
+while the real A1 emission is 4,245 results in 6 runs.
 
 ### E7 — Strict parser versus a permissive consumer (`QUALIFIED`, 6/6)
 
@@ -333,11 +358,26 @@ fed to both strict readers in the tree:
 | `forensics/tools/intoto.py` | A9 | `byte-identity` | binds the register as a subject digest; does not parse |
 | `forensics/tools/verify.py` | ETP-0 | `byte-identity` | binds the register by digest |
 
-The consumer list is checked at run time: a recorded witness line that has gone,
-or a file that mentions the register and is not classified, is
+The consumer list is checked at run time: a classified consumer file that is
+absent, or a file that mentions the register and is not classified, is
 `AQ_REFUSED_WITNESS_ABSENT` (`test_every_named_instrument_exists` covers the
 instrument paths; the consumer-list check is in `harness_strict_reader`). The
 finding is recorded, not repaired: the owning items are **ETP-T1** and **A7**.
+
+That table is the classification at `6e64e644c`. **After repair
+(`e4029e0d5`)** the two permissive consumers are strict, and the witness is the
+observed refusal rather than the presence of a source line:
+
+| consumer | item | loader after repair | behavioural witness |
+|---|---|---|---|
+| `forensics/tools/etp_t1_seed.py` | ETP-T1 | `strict` (`load_instruments` → `harden.loads`) | `--instruments <duplicate>` exits 1 with `PH_REFUSED_DUPLICATE_KEY` |
+| `forensics/tools/freshness.py` | A7 | `strict` (`_instrument_entries` → `harden.loads`) | the duplicate-key document raises `JsonError` carrying `PH_REFUSED_DUPLICATE_KEY`, exit 1 |
+
+Both probes are recorded as rejected witnesses in `RESULTS.json`
+(`duplicate-key-etp-t1-seed`, `duplicate-key-freshness`), so E7 is `QUALIFIED`
+8/8 on the refreshed candidate. The earlier finding is historical: a legitimate
+repair changed the old `json.loads` lines, and a witness bound to source text
+would have made the record non-reproducible.
 
 ### E8 — Policy and omission (`QUALIFIED`, 4/4)
 
@@ -365,10 +405,11 @@ not a defect of the strict reader but of its consumers. None was repaired here.
 | `validate_emission` accepts an emission whose result count disagrees with the record and with `projection.projectedTotal` | E6 `PARTIAL` | A1 | the emission is refused when its result count, its stated total and the record population disagree |
 | two consumers read the instrument register with plain `json.loads` | E7 finding (experiment `QUALIFIED`) | ETP-T1, A7 | the consumers use the strict reader, or record why a duplicate-key register is acceptable to them |
 
-**Old and new behaviour, preserved.** No instrument was edited by A22, so there
-is no old/new pair to record for them: the "old" behaviour is the behaviour
-described above, observed on candidate `6e64e644c`. Development corrections
-inside A22 itself, before any record was produced:
+**Old and new behaviour, preserved.** No instrument was edited by A22 when this
+record was first produced, so there is no old/new pair to record for them: the
+"old" behaviour is the behaviour described above, observed on candidate
+`6e64e644c`. Development corrections inside A22 itself, before any record was
+produced:
 
 * **The first record lost the write order.** `run()` concatenated `stdout` then
   `stderr`, so the BINSEC transcript appeared before the wrapper's header and
@@ -387,6 +428,19 @@ inside A22 itself, before any record was produced:
   digested in normalised form; the policy digest, which is what the refusal is
   about, is left exactly as printed.
 
+### 5.1 After repair (`e4029e0d5`)
+
+The three events in the table were repaired at `e4029e0d5` (record:
+`evidence/defects/e5-e6/RECEIPT.md`): the ctgrind summariser has an outcome
+contract, rule 2 compares a supplied expected identity, the SARIF adapter
+refuses a count-mismatched emission, and both register consumers use the strict
+loader. Re-measured at that candidate, the eight verdicts are `QUALIFIED`:
+E5 3/3, E6 2/2, E7 8/8, and the summary is **8 qualified / 0 defect / 0 partial
+/ 0 not-run**. The old verdicts (`E5 DEFECT 0/3`, `E6 PARTIAL 1/2`, summary
+6 qualified / 1 defect / 1 partial) and the findings above are kept as the
+historical record; they are not erased. The old and new record digests are in
+`evidence/a22/RECEIPT.md` §11.
+
 ---
 
 ## 6. The refusal table
@@ -402,7 +456,7 @@ because it is reachable by two different wrong inputs
 | `AQ_REFUSED_NO_CANARY` | an experiment declares no accepted witness, or its canary names no detection reference | `no-canary` | `test_no_canary_is_refused` |
 | `AQ_REFUSED_NOT_RUN_AS_QUALIFIED` | `assert_all_qualified` is given a `NOT_RUN` result | `not-run-as-qualified` | `test_not_run_is_refused_by_assert_all_qualified` |
 | `AQ_REFUSED_EXPECTED_ABSENT` | a rejected witness declares no expected exit status or code | `expected-absent` | `test_expected_absent_is_refused` |
-| `AQ_REFUSED_WITNESS_ABSENT` | a declared witness produced no observation, or a recorded witness line has gone from the tree | `witness-absent` | `test_witness_absent_is_refused` |
+| `AQ_REFUSED_WITNESS_ABSENT` | a declared witness produced no observation, or a classified register consumer file is absent | `witness-absent` | `test_witness_absent_is_refused` |
 | `AQ_REFUSED_UNSTABLE` | two runs of one experiment over identical inputs disagree | `unstable` | `test_unstable_harness_is_refused` |
 | `AQ_REFUSED_CANARY_NOT_DETECTED` | the strict detector did not report `DEFECT` on the role-flipped accepted input, the weak detector did not report `QUALIFIED`, or the strict detector missed the detection reference | `canary-not-detected` | `test_canary_not_detected_is_refused` |
 | `AQ_DEFECT_FOUND` | an experiment's verdict is `DEFECT` or `PARTIAL` | `defect-found` | `test_defect_found_is_named` |
@@ -449,6 +503,15 @@ The matching positive statements are the ones made: E5 and E6 returned success
 on the inputs the item names. That is a defect in those instruments, held open
 in §5, not repaired here.
 
+**After repair (`e4029e0d5`).** On the refreshed candidate the eight experiments
+all refused their inputs, and the records name `e4029e0d5`. What the
+qualification establishes is restated for that candidate: the eight instruments
+refused these inputs, the harness can tell a refusal from an acceptance, and the
+records are byte-reproducible. It still does not establish soundness, a real
+solver verdict, a real timing measurement, a real memcheck run, or independence
+of the author. The E5 identity witness uses a fixture expected identity; no
+production caller was shown to supply one, and no candidate binary was built.
+
 ---
 
 ## 8. `NOT_RUN`
@@ -456,20 +519,24 @@ in §5, not repaired here.
 Nothing in the eight experiments is `NOT_RUN` on this candidate: `cc`, `objdump`,
 `bash`, `python3`, the tool binaries behind `E1`–`E8` and the candidate DSO were
 all available in the court, and the recorded summary is
-`notRun=0` (`test_the_recorded_summary_counts`).
+`notRun=0` (`test_the_recorded_summary_is_recomputed_from_the_verdicts`).
 
 The following are **not** run and are not claimed:
 
 * the real BINSEC solver, Z3, the dudect harness, valgrind/ctgrind and a SARIF
   consumer outside this tree (§7);
-* a repair of the `E5` and `E6` defects, and the consumer migration named by
-  `E7` — other items own those instruments (§5);
+* *(before repair)* a repair of the `E5` and `E6` defects, and the consumer
+  migration named by `E7` — those are now repaired at `e4029e0d5`, but no
+  production caller of the E5 expected identity and no real ctgrind/memcheck
+  run is claimed;
 * a BOUNDARY audit (independent caller/dependency-closure review of another
   item's instrument) and a SEAL;
 * the Rust suite: no Rust source was modified, so no build and no `cargo test`
   is claimed;
 * an independent reviewer or adjudicator;
-* evidence about any candidate other than `6e64e644c`.
+* evidence about any candidate other than `e4029e0d5`; the earlier record at
+  `6e64e644c` is preserved by its verdicts and digests in
+  `evidence/a22/RECEIPT.md` §11, not by the refreshed records.
 
 ---
 
@@ -482,7 +549,10 @@ The following are **not** run and are not claimed:
 | each experiment carries a canary that discriminates | `AQ_REFUSED_CANARY_NOT_DETECTED`; `test_every_experiment_canary_is_detected` |
 | a `NOT_RUN` is never a qualification | `AQ_REFUSED_NOT_RUN_AS_QUALIFIED`; `test_not_run_is_refused_by_assert_all_qualified` |
 | two runs must agree | `AQ_REFUSED_UNSTABLE`; `test_unstable_harness_is_refused` |
-| a defect is named, not averaged | `AQ_DEFECT_FOUND`; `test_the_defect_and_the_partial_are_named` |
+| a defect is named, not averaged | `AQ_DEFECT_FOUND`; `test_every_experiment_reports_its_observed_verdict` |
+| the ctgrind cases refuse | `test_the_ctgrind_experiment_refuses_all_three_cases` |
+| the SARIF population halves both refuse | `test_the_sarif_native_and_emission_halves_both_refuse` |
+| both repaired consumers refuse the duplicate key | `test_both_register_consumers_refuse_the_duplicate_key` |
 | every refusal code has a control | `test_every_code_has_a_control`; `CONTROLS.json` → `coversEveryCode` |
 | the records are the measured bytes | `test_the_committed_records_are_the_live_records` |
 | the design equals the measurement | `test_the_design_witnesses_equal_the_observed_witnesses` |

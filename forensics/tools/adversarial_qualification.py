@@ -106,9 +106,11 @@ TOOL_PATH = "forensics/tools/adversarial_qualification.py"
 #: The worktree HEAD this item was measured on. Recording the constant, rather
 #: than the live HEAD, is what lets the producer re-run byte-identically after
 #: the orchestrator commits the item: the evidence is bound to the candidate it
-#: measured, not to whatever commit happens to be checked out later.
-BASE_COMMIT = "6e64e644c"
-BASE_COMMIT_LONG = "6e64e644ced49bf5d969e0eb56ab51f8f4f2c4fc"
+#: measured, not to whatever commit happens to be checked out later. The refresh
+#: after the E5/E6/E7 repairs re-measured the eight experiments at the repair
+#: commit; the earlier record named ``6e64e644c``.
+BASE_COMMIT = "e4029e0d5"
+BASE_COMMIT_LONG = "e4029e0d5c4300bb097e1241c0bab34b069c9da6"
 
 EXIT_OK = 0
 EXIT_REFUSED = 1
@@ -162,8 +164,8 @@ REFUSALS: dict[str, dict[str, str]] = {
                     "failure would look like",
     },
     AQ_REFUSED_WITNESS_ABSENT: {
-        "condition": "a declared witness produced no observation, or a witness that "
-                     "names a line in the tree no longer finds that line",
+        "condition": "a declared witness produced no observation, or a classified "
+                     "register consumer file is absent",
         "prevents": "that a removed witness, or a consumer list that has drifted, "
                     "silently shrinks the experiment",
     },
@@ -476,11 +478,16 @@ OMISSION_PLAN = {
 }
 
 #: Consumers of the instrument register, classified by how they read it.
-#: ``permissive`` means the bytes are parsed by ``json.loads`` with no
-#: duplicate-key hook, so ``{"a":1,"a":2}`` reads as ``{"a":2}``. Each entry
-#: names the line that is checked at run time; a changed line is
-#: ``AQ_REFUSED_WITNESS_ABSENT``, because a consumer list that has drifted is
-#: not the list that was measured.
+#: ``permissive`` used to mean the bytes are parsed by ``json.loads`` with no
+#: duplicate-key hook, so ``{"a":1,"a":2}`` reads as ``{"a":2}``. The two
+#: consumers that did so are repaired: each now reads the register with
+#: ``harden.loads`` and refuses a duplicate key with ``PH_REFUSED_DUPLICATE_KEY``.
+#: A consumer's witness is now the observed refusal of the duplicate-key
+#: document, not the presence of a source line: a legitimate repair changed the
+#: old lines and made a text-bound witness non-reproducible. The ``probe``
+#: field names the behaviour that is run; ``shared-loader`` and
+#: ``byte-identity`` consumers are classified but are exercised through the
+#: strict reader (``instrument_qualify``) or not parsed at all.
 REGISTER_CONSUMERS = [
     {
         "path": "forensics/tools/instrument_qualify.py",
@@ -488,7 +495,7 @@ REGISTER_CONSUMERS = [
         "loader": "strict",
         "reason": "load_json_strict: object_pairs_hook rejects a duplicate key, "
                   "non-finite numbers and a BOM",
-        "witness": ("def load_json_strict(path: Path):",),
+        "probe": {"mode": "shared-loader", "entry": "instrument_qualify.load_json_strict"},
     },
     {
         "path": "forensics/tools/etp6_verify.py",
@@ -496,7 +503,7 @@ REGISTER_CONSUMERS = [
         "loader": "strict",
         "reason": "delegates to instrument_qualify.load_registry, which is "
                   "load_json_strict",
-        "witness": ("document = iq.load_registry(registry)",),
+        "probe": {"mode": "shared-loader", "entry": "etp6_verify -> instrument_qualify.load_registry"},
     },
     {
         "path": "forensics/tools/release_gate.py",
@@ -504,23 +511,25 @@ REGISTER_CONSUMERS = [
         "loader": "strict",
         "reason": "runs `instrument_qualify.py check --registry`, so the parser is "
                   "the strict one",
-        "witness": ('[PYTHON, str(INSTRUMENT_TOOL), mode, "--registry", str(registry)]',),
+        "probe": {"mode": "shared-loader", "entry": "release_gate -> instrument_qualify.py check"},
     },
     {
         "path": "forensics/tools/etp_t1_seed.py",
         "item": "ETP-T1",
-        "loader": "permissive",
-        "reason": "plain json.loads of the register bytes: a duplicate key is "
-                  "accepted, and the last value wins",
-        "witness": ('instruments = json.loads((REPO / "evidence/etp3/instruments.json").read_text())',),
+        "loader": "strict",
+        "reason": "load_instruments uses harden.loads, which refuses a duplicate "
+                  "key, a BOM, trailing data and non-finite numbers",
+        "probe": {"mode": "cli", "entry": "etp_t1_seed --instruments",
+                  "refusal": "PH_REFUSED_DUPLICATE_KEY"},
     },
     {
         "path": "forensics/tools/freshness.py",
         "item": "A7",
-        "loader": "permissive",
-        "reason": "plain json.loads of the register text: a duplicate key is "
-                  "accepted, and the last value wins",
-        "witness": ('text = repo.text(commit, "evidence/etp3/instruments.json")', "document = json.loads(text)"),
+        "loader": "strict",
+        "reason": "_instrument_entries uses harden.loads and raises JsonError on a "
+                  "refusal, so a duplicate key no longer resolves last-wins",
+        "probe": {"mode": "function", "entry": "freshness._instrument_entries",
+                  "refusal": "PH_REFUSED_DUPLICATE_KEY"},
     },
     {
         "path": "forensics/tools/intoto.py",
@@ -528,14 +537,14 @@ REGISTER_CONSUMERS = [
         "loader": "byte-identity",
         "reason": "names the register as a subject and hashes its bytes; it does "
                   "not parse it, so a parse-level difference is not observed here",
-        "witness": ('instruments = "evidence/etp3/instruments.json"',),
+        "probe": {"mode": "byte-identity", "entry": "digest only"},
     },
     {
         "path": "forensics/tools/verify.py",
         "item": "ETP-0",
         "loader": "byte-identity",
         "reason": "binds the register by digest only",
-        "witness": ('identity=("evidence/etp3/instruments.json",),',),
+        "probe": {"mode": "byte-identity", "entry": "digest only"},
     },
 ]
 
@@ -1010,12 +1019,19 @@ import side_channel_erasure as se  # noqa: E402
 claim = json.loads(Path(sys.argv[2]).read_text())
 secrets = json.loads(Path(sys.argv[3]).read_text())
 prereg = json.loads(Path(sys.argv[4]).read_text())
-refusals = se.check_claim(claim, secrets, prereg)
+expected = None if sys.argv[5] == "-" else sys.argv[5]
+refusals = se.check_claim(claim, secrets, prereg, expected_binary_identity=expected)
 for code, detail in refusals:
     print(f"{code}: {detail}", file=sys.stderr)
 print("AQ_ACCEPTED" if not refusals else "AQ_REFUSED")
 raise SystemExit(1 if refusals else 0)
 '''
+
+#: The identity A22 supplies as the artefact under test for the mismatch
+#: witness. It is a fixture, not the identity of a built binary: the experiment
+#: proves that a supplied expectation is compared, not that a production caller
+#: supplies one. ``E5_CLAIM_MISMATCHED`` records a different identity.
+E5_EXPECTED_IDENTITY = "sha256:" + "aa" * 32
 
 E5_CLAIM_MISMATCHED = {
     "id": "AQ-CT-IDENTITY",
@@ -1094,7 +1110,8 @@ def harness_ctgrind(tmp: Path, canon: Canon) -> tuple[list[Observation], dict]:
             expectation=expectation,
         )
 
-    def claim(path: Path, case: str, kind: str, expectation: dict) -> Observation:
+    def claim(path: Path, case: str, kind: str, expectation: dict,
+              expected: str | None = None) -> Observation:
         return _observe(
             canon,
             case=case,
@@ -1103,27 +1120,42 @@ def harness_ctgrind(tmp: Path, canon: Canon) -> tuple[list[Observation], dict]:
             argv=[
                 sys.executable, str(driver), str(REPO_ROOT / "forensics/tools"),
                 str(path), str(REPO_ROOT / SECRETS), str(REPO_ROOT / PREREG),
+                expected if expected is not None else "-",
             ],
             env=None,
             expectation=expectation,
         )
 
     observations = [
-        summarize(empty, "empty-log", "rejected", _expectation("nonzero", "any-refusal")),
+        summarize(empty, "empty-log", "rejected",
+                  _expectation([3], "CT_SUMMARY_EMPTY_LOG")),
         summarize(unrelated, "unrelated-log-only", "rejected",
-                  _expectation("nonzero", "any-refusal")),
+                  _expectation([4], "CT_SUMMARY_UNRELATED_LOG")),
         claim(mismatched, "candidate-identity-mismatch", "rejected",
-              _expectation("nonzero", "any-refusal")),
+              _expectation([1], "CTGRIND_BINARY_IDENTITY_MISMATCH"),
+              expected=E5_EXPECTED_IDENTITY),
         summarize(finding, "log-with-a-finding", "accepted", _expectation([0], None)),
         claim(no_identity, "missing-identity-detection-reference", "detection",
               _expectation([1], "CTGRIND_WITHOUT_HARNESS_IDENTITY_TAINT")),
     ]
     return observations, {
-        "summarizer_contract": f"{SUMMARIZE_CT} prints counts and exits 0; it has no "
-                               "exit-status contract of its own",
-        "identity_binding": "no tool in the tree compares a ctgrind log's binary with "
-                            "a recorded candidate; side_channel_erasure checks that a "
-                            "`binary_identity` field is present, not that it matches",
+        "summarizer_contract": f"{SUMMARIZE_CT} now has an outcome contract: 0 is a "
+                               "parsed, non-empty report; 3 empty, 4 unrelated or "
+                               "zero-context, 5 malformed, 6 unreadable; no counts "
+                               "are printed on a refusal",
+        "identity_binding": "side_channel_erasure.check_claim compares the recorded "
+                            "binary_identity with an expected identity when one is "
+                            "supplied, and refuses a mismatch with "
+                            "CTGRIND_BINARY_IDENTITY_MISMATCH",
+        "identity_expectation": {
+            "supplied": E5_EXPECTED_IDENTITY,
+            "claim": E5_CLAIM_MISMATCHED["evidence"]["binary_identity"],
+            "scope": "the expected identity is an A22 fixture, not a digest of a "
+                     "built candidate binary",
+        },
+        "residual": "with no expected identity supplied, rule 2 remains presence-only: "
+                    "A22's mismatch witness supplies one, but no production caller was "
+                    "shown to supply it and no candidate binary was built",
         "detection_reference": "the claim with no `binary_identity` at all is refused "
                                "CTGRIND_WITHOUT_HARNESS_IDENTITY_TAINT, which shows the "
                                "same adjudicator does refuse when a field is absent",
@@ -1218,7 +1250,7 @@ def harness_sarif(tmp: Path, canon: Canon) -> tuple[list[Observation], dict]:
         one("native-population-mismatch", "rejected", "native-record", mirror,
             _expectation([1], "SARIF_REFUSED_POPULATION_MISMATCH")),
         one("emission-result-count-mismatch", "rejected", "emission", truncated,
-            _expectation("nonzero", "any-refusal")),
+            _expectation([1], "SARIF_REFUSED_POPULATION_MISMATCH")),
         one("live-record-accepted", "accepted", "native-record", REPO_ROOT,
             _expectation([0], None)),
         one("live-emission-accepted", "accepted", "emission", emission,
@@ -1227,10 +1259,10 @@ def harness_sarif(tmp: Path, canon: Canon) -> tuple[list[Observation], dict]:
     return observations, {
         "record_population": "the projection refuses a record whose declared counts "
                              "do not equal its entries (SARIF_REFUSED_POPULATION_MISMATCH)",
-        "emission_population": "validate_emission does not compare the emission's "
-                               "result count with the record population, so a dropped "
-                               "result leaves projection.projectedTotal disagreeing "
-                               "with run.results and the document is accepted",
+        "emission_population": "validate_emission refuses an emission whose result "
+                               "count disagrees with projection.projectedTotal, with "
+                               "the per-rule tallies, with the level counts, or with "
+                               "the native population (SARIF_REFUSED_POPULATION_MISMATCH)",
         "emission_shape": {
             "run": 0,
             "declared_projectedTotal": declared,
@@ -1242,7 +1274,9 @@ def harness_sarif(tmp: Path, canon: Canon) -> tuple[list[Observation], dict]:
 
 
 E7_DRIVER = '''#!/usr/bin/env python3
-"""A thin adapter over the two strict readers. The refusal codes are theirs."""
+"""A thin adapter over the two strict readers and the repaired register
+consumer. The refusal codes are theirs; the adapter only maps an exception to
+an exit status."""
 import sys
 from pathlib import Path
 
@@ -1255,8 +1289,23 @@ which = sys.argv[3]
 try:
     if which == "instrument-qualify":
         iq.load_json_strict(path)
-    else:
+    elif which == "policy-engine":
         pe.parse_json(path.read_bytes())
+    elif which == "freshness":
+        import freshness  # noqa: E402
+
+        class _Repo:
+            def text(self, commit, relative):
+                return path.read_text(encoding="utf-8")
+
+        try:
+            freshness._instrument_entries(_Repo(), "0" * 40)
+        except freshness.JsonError as error:
+            print(str(error), file=sys.stderr)
+            raise SystemExit(1)
+    else:
+        print(f"AQ_USAGE: unknown consumer {which!r}", file=sys.stderr)
+        raise SystemExit(2)
 except iq.Refusal as refusal:
     print(refusal.code, file=sys.stderr)
     raise SystemExit(1)
@@ -1278,6 +1327,8 @@ E7_INPUTS = {
 def harness_strict_reader(tmp: Path, canon: Canon) -> tuple[list[Observation], dict]:
     _require(INSTRUMENT_QUALIFY)
     _require(POLICY_ENGINE)
+    _require("forensics/tools/etp_t1_seed.py")
+    _require("forensics/tools/freshness.py")
     driver = write_executable(tmp / "aq-e7-strict.py", E7_DRIVER)
     paths: dict[str, Path] = {}
     for name, data in E7_INPUTS.items():
@@ -1290,33 +1341,28 @@ def harness_strict_reader(tmp: Path, canon: Canon) -> tuple[list[Observation], d
         consumer_path = REPO_ROOT / entry["path"]
         if not consumer_path.is_file():
             raise Refusal(AQ_REFUSED_WITNESS_ABSENT, f"{entry['path']} does not exist")
-        text = consumer_path.read_text(encoding="utf-8")
-        for witness in entry["witness"]:
-            if witness not in text:
-                raise Refusal(
-                    AQ_REFUSED_WITNESS_ABSENT,
-                    f"{entry['path']}: recorded witness line has gone: {witness!r}",
-                )
         consumers.append(
             {
                 "path": entry["path"],
                 "item": entry["item"],
                 "loader": entry["loader"],
                 "reason": entry["reason"],
-                "witness": list(entry["witness"]),
+                "probe": dict(entry["probe"]),
             }
         )
 
     tree = sorted(
         path.relative_to(REPO_ROOT).as_posix()
         for path in (REPO_ROOT / "forensics/tools").glob("*.py")
-        if "evidence/etp3/instruments.json" in path.read_text(encoding="utf-8")
+        if path.relative_to(REPO_ROOT).as_posix() != TOOL_PATH
+        and "evidence/etp3/instruments.json" in path.read_text(encoding="utf-8")
     )
     classified = sorted(entry["path"] for entry in REGISTER_CONSUMERS)
-    if [item for item in tree if item in classified] != classified:
+    unclassified = [item for item in tree if item not in classified]
+    if unclassified:
         raise Refusal(
             AQ_REFUSED_WITNESS_ABSENT,
-            f"a register consumer the list does not classify: {sorted(set(classified) - set(tree))}",
+            f"a register consumer the list does not classify: {unclassified}",
         )
 
     source = _input_ref(
@@ -1336,6 +1382,28 @@ def harness_strict_reader(tmp: Path, canon: Canon) -> tuple[list[Observation], d
             expectation=expectation,
         )
 
+    # The two consumers that used to parse the register permissively are
+    # witnessed by behaviour: run each one's own loader over the duplicate-key
+    # document and require the refusal code. The seed's CLI is used so its
+    # graph output goes to <tmp> rather than the worktree.
+    seed_observation = _observe(
+        canon,
+        case="duplicate-key-etp-t1-seed",
+        kind="rejected",
+        input_ref=source,
+        argv=[
+            sys.executable, str(REPO_ROOT / "forensics/tools/etp_t1_seed.py"),
+            "--instruments", str(paths["duplicate-key"]),
+            "--output", str(tmp / "etp-t1-graph.json"),
+        ],
+        env=None,
+        expectation=_expectation([1], "PH_REFUSED_DUPLICATE_KEY"),
+    )
+    freshness_observation = one(
+        "duplicate-key-freshness", "rejected", "freshness", "duplicate-key",
+        _expectation([1], "PH_REFUSED_DUPLICATE_KEY"),
+    )
+
     observations = [
         one("duplicate-key-instrument", "rejected", "instrument-qualify", "duplicate-key",
             _expectation([1], "IQ_JSON_DUPLICATE_KEY")),
@@ -1349,23 +1417,45 @@ def harness_strict_reader(tmp: Path, canon: Canon) -> tuple[list[Observation], d
             _expectation([1], "PE_JSON_REFUSED")),
         one("trailing-data-policy", "rejected", "policy-engine", "trailing-data",
             _expectation([1], "PE_JSON_REFUSED")),
+        seed_observation,
+        freshness_observation,
         one("well-formed-instrument", "accepted", "instrument-qualify", "well-formed",
             _expectation([0], None)),
         one("well-formed-policy", "accepted", "policy-engine", "well-formed",
             _expectation([0], None)),
     ]
-    permissive = [entry for entry in consumers if entry["loader"] == "permissive"]
+    consumer_probes = [
+        {
+            "path": "forensics/tools/etp_t1_seed.py",
+            "case": seed_observation.case,
+            "exit": seed_observation.exit,
+            "refusalObserved": strict_detects(seed_observation),
+        },
+        {
+            "path": "forensics/tools/freshness.py",
+            "case": freshness_observation.case,
+            "exit": freshness_observation.exit,
+            "refusalObserved": strict_detects(freshness_observation),
+        },
+    ]
+    accepted_by = [probe["path"] for probe in consumer_probes if probe["exit"] == 0]
     return observations, {
         "consumers": consumers,
-        "permissive_consumer_count": len(permissive),
-        "permissive_consumers": [entry["path"] for entry in permissive],
+        "consumer_probes": consumer_probes,
+        "permissive_consumer_count": len(accepted_by),
+        "permissive_consumers": accepted_by,
         "finding": (
-            "two tracked consumers read the instrument register with plain json.loads, "
-            "so a register with two values for one key is read two ways: the strict "
-            "reader refuses it and these consumers take the last value"
-            if permissive
-            else "no tracked consumer uses the permissive reader"
+            "the duplicate-key document is still accepted by: " + ", ".join(accepted_by)
+            if accepted_by
+            else "no tracked consumer accepts the duplicate-key document: both "
+                 "etp_t1_seed.load_instruments and freshness._instrument_entries now "
+                 "refuse it with PH_REFUSED_DUPLICATE_KEY. The earlier finding that "
+                 "those two consumers read the register with plain json.loads is "
+                 "historical (repaired in e4029e0d5)."
         ),
+        "history": "on 6e64e644c etp_t1_seed.py (ETP-T1) and freshness.py (A7) read "
+                   "the register with plain json.loads; both now read it with "
+                   "harden.loads and refuse a duplicate key",
         "scope": "the duplicate-key input is the A11 pair {\"a\":1,\"a\":2}",
     }
 
@@ -1586,12 +1676,18 @@ EXPERIMENTS: list[ExperimentSpec] = [
         hypothesis="A ctgrind result with zero contexts is indistinguishable from a run "
                    "that produced no memcheck output at all, and a claim whose "
                    "binary identity differs from the recorded one must not be admitted.",
-        expected="the ctgrind evidence path refuses an empty-but-successful log, a log "
-                 "with only unrelated output, and a candidate-identity mismatch",
+        expected="the ctgrind evidence path refuses an empty log "
+                 "(CT_SUMMARY_EMPTY_LOG), a log with only unrelated output "
+                 "(CT_SUMMARY_UNRELATED_LOG), and a candidate-identity mismatch when "
+                 "an expected identity is supplied "
+                 "(CTGRIND_BINARY_IDENTITY_MISMATCH)",
         harness=harness_ctgrind,
         canary_accepted="log-with-a-finding",
         canary_detection="missing-identity-detection-reference",
-        notes="this is the experiment the item expects to be able to fail",
+        notes="this is the experiment the item expected to be able to fail; it now "
+              "refuses all three. A22 supplies a fixture expected identity, so the "
+              "mismatch is witnessed; the residual is that a caller which supplies "
+              "no identity is still presence-only, and no candidate binary was built",
     ),
     ExperimentSpec(
         id="E6",
@@ -1604,8 +1700,8 @@ EXPERIMENTS: list[ExperimentSpec] = [
         harness=harness_sarif,
         canary_accepted="live-emission-accepted",
         canary_detection="native-population-mismatch",
-        notes="the native-record half is the check the adapter implements; the "
-              "emission half is the check the item asks for",
+        notes="the native-record half and the emission half are both implemented; "
+              "the live emission is accepted, the one-result-short emission is refused",
     ),
     ExperimentSpec(
         id="E7",
@@ -1614,12 +1710,16 @@ EXPERIMENTS: list[ExperimentSpec] = [
         hypothesis="A duplicate key, a byte-order mark and trailing data each have no "
                    "single meaning, so a strict reader refuses them while json.loads "
                    "accepts the first by keeping the last value.",
-        expected="both strict readers refuse all three inputs; the consumers of the "
-                 "register that still use the permissive reader are named",
+        expected="both strict readers refuse all three inputs; both repaired "
+                 "register consumers refuse the duplicate-key document with "
+                 "PH_REFUSED_DUPLICATE_KEY, and a finding is recorded only if a "
+                 "consumer still accepts it",
         harness=harness_strict_reader,
         canary_accepted="well-formed-instrument",
         canary_detection="duplicate-key-instrument",
-        notes="the duplicate-key input is the A11 pair {\"a\":1,\"a\":2}",
+        notes="the duplicate-key input is the A11 pair {\"a\":1,\"a\":2}; the two "
+              "consumers are witnessed by running their own loader, not by the "
+              "presence of a source line",
     ),
     ExperimentSpec(
         id="E8",
@@ -2269,10 +2369,11 @@ def _declared_witnesses(spec: ExperimentSpec) -> list[tuple[str, str, dict]]:
             ("recorded-receipt-accepted", "accepted", _expectation([0], None)),
         ],
         "E5": [
-            ("empty-log", "rejected", _expectation("nonzero", "any-refusal")),
-            ("unrelated-log-only", "rejected", _expectation("nonzero", "any-refusal")),
+            ("empty-log", "rejected", _expectation([3], "CT_SUMMARY_EMPTY_LOG")),
+            ("unrelated-log-only", "rejected",
+             _expectation([4], "CT_SUMMARY_UNRELATED_LOG")),
             ("candidate-identity-mismatch", "rejected",
-             _expectation("nonzero", "any-refusal")),
+             _expectation([1], "CTGRIND_BINARY_IDENTITY_MISMATCH")),
             ("log-with-a-finding", "accepted", _expectation([0], None)),
             ("missing-identity-detection-reference", "detection",
              _expectation([1], "CTGRIND_WITHOUT_HARNESS_IDENTITY_TAINT")),
@@ -2281,7 +2382,7 @@ def _declared_witnesses(spec: ExperimentSpec) -> list[tuple[str, str, dict]]:
             ("native-population-mismatch", "rejected",
              _expectation([1], "SARIF_REFUSED_POPULATION_MISMATCH")),
             ("emission-result-count-mismatch", "rejected",
-             _expectation("nonzero", "any-refusal")),
+             _expectation([1], "SARIF_REFUSED_POPULATION_MISMATCH")),
             ("live-record-accepted", "accepted", _expectation([0], None)),
             ("live-emission-accepted", "accepted", _expectation([0], None)),
         ],
@@ -2294,6 +2395,10 @@ def _declared_witnesses(spec: ExperimentSpec) -> list[tuple[str, str, dict]]:
             ("duplicate-key-policy", "rejected", _expectation([1], "PE_JSON_REFUSED")),
             ("bom-policy", "rejected", _expectation([1], "PE_JSON_REFUSED")),
             ("trailing-data-policy", "rejected", _expectation([1], "PE_JSON_REFUSED")),
+            ("duplicate-key-etp-t1-seed", "rejected",
+             _expectation([1], "PH_REFUSED_DUPLICATE_KEY")),
+            ("duplicate-key-freshness", "rejected",
+             _expectation([1], "PH_REFUSED_DUPLICATE_KEY")),
             ("well-formed-instrument", "accepted", _expectation([0], None)),
             ("well-formed-policy", "accepted", _expectation([0], None)),
         ],

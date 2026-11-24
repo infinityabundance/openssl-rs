@@ -329,3 +329,133 @@ claim any of those members.
 
 No other path was modified. `docs/ETP-TODO.md` differs in exactly one row
 (A22); `git diff --stat` reports one insertion and one deletion for that file.
+
+---
+
+## 11. Correction: refresh after the E5/E6/E7 repairs (2026-11-24)
+
+This section is appended. Sections 1–10 are the record as produced at
+`6e64e644c` and are **not** edited: the old verdicts, the old findings and the
+old digests stay readable.
+
+### 11.1 Why the record was refreshed
+
+Commit `e4029e0d5` repaired the three defects A22 found (record:
+`evidence/defects/e5-e6/RECEIPT.md`): the ctgrind summariser gained an outcome
+contract, `side_channel_erasure` compares a supplied expected binary identity,
+the SARIF adapter refuses a count-mismatched emission, and both register
+consumers use the strict loader.
+
+That repair invalidated A22's **E7 witness**, not its instruments. E7 asserted
+that two source lines existed:
+
+* `instruments = json.loads((REPO / "evidence/etp3/instruments.json").read_text())`
+  in `forensics/tools/etp_t1_seed.py`;
+* `text = repo.text(commit, "evidence/etp3/instruments.json")` and
+  `document = json.loads(text)` in `forensics/tools/freshness.py`.
+
+The repair replaced those lines with `harden.loads`, so the producer refused
+`AQ_REFUSED_WITNESS_ABSENT` and wrote nothing. The whole tools discovery then
+reported **0 failures and 1 error**, `setUpModule (test_adversarial_qualification)`
+→ `FileNotFoundError: EXPERIMENTS.json`. Binding a witness to source text that a
+legitimate repair changes makes the record non-reproducible; that is a defect in
+A22's witness design, not in the repaired tools.
+
+### 11.2 What changed in the refresh
+
+* Every witness is now an **observed outcome** (exit status, named code, printed
+  verdict), never the presence of a source line.
+* E7 runs `etp_t1_seed.py --instruments <duplicate-key> --output <tmp>` and
+  `freshness._instrument_entries` over the same bytes. Both are required to exit
+  1 with `PH_REFUSED_DUPLICATE_KEY`; the experiment reports a finding only if a
+  consumer still accepts the document. The old finding is now historical.
+* E5 supplies a fixture expected identity (`sha256:aa…`) to the claim driver, so
+  the mismatch is witnessed (`CTGRIND_BINARY_IDENTITY_MISMATCH`). The residual
+  is recorded: with no supplied identity, rule 2 is still presence-only, and no
+  candidate binary was built.
+* E5/E6 expectations name the exact codes rather than ``any-refusal``.
+* The records were re-measured at `e4029e0d5`; `BASE_COMMIT` now names that
+  candidate.
+
+### 11.3 Old and new verdicts
+
+| id | old (`6e64e644c`) | after repair (`e4029e0d5`) | refused |
+|---|---|---|---|
+| E1 | `QUALIFIED` | `QUALIFIED` | 3/3 |
+| E2 | `QUALIFIED` | `QUALIFIED` | 3/3 |
+| E3 | `QUALIFIED` | `QUALIFIED` | 5/5 |
+| E4 | `QUALIFIED` | `QUALIFIED` | 3/3 |
+| E5 | `DEFECT` 0/3 | `QUALIFIED` | 3/3 |
+| E6 | `PARTIAL` 1/2 | `QUALIFIED` | 2/2 |
+| E7 | `QUALIFIED` 6/6 | `QUALIFIED` | 8/8 |
+| E8 | `QUALIFIED` | `QUALIFIED` | 4/4 |
+
+* Old summary: 8 experiments, **6 qualified / 1 defect / 1 partial**, 0
+  not-run, `allQualified=false`, `codes=AQ_DEFECT_FOUND`; producer exit **1**.
+* New summary: 8 experiments, **8 qualified / 0 defect / 0 partial / 0 not-run**,
+  `allQualified=true`, `codes=NONE`; producer exit **0**.
+
+The new summary is recomputed from the eight verdicts; it is not asserted
+independently of them. `test_every_experiment_reports_its_observed_verdict`
+asserts each verdict, so a future `QUALIFIED` → `DEFECT` regression fails the
+suite even if a summary were forced clean.
+
+### 11.4 What was preserved
+
+* The old verdicts, the old finding table and the old `E5 0/3`, `E6 1/2`, `E7
+  6/6` counts remain in `docs/ADVERSARIAL-QUALIFICATION.md` and in this receipt.
+* The document's §4 table now has a before column and a dated **after repair
+  (`e4029e0d5`)** column; the before column is unchanged.
+* The refusal codes, the canary rule (8/8 detected) and the 10 controls are
+  unchanged; no test was removed, skipped, ignored or weakened.
+* `evidence/a22/build_evidence.py` is unchanged (`c4b5487c…`).
+
+### 11.5 Old and new digests (SHA-256, full)
+
+| file | old (`6e64e644c`) | new (`e4029e0d5`) |
+|---|---|---|
+| `forensics/tools/adversarial_qualification.py` | `d23d20abc8c8d14ca140cc0ee3287522c7aa8a9ce52ed36765d110167e6dbb13` | `35eff911c472d380d4cb36666cc99903e2c9fcf806e054c51e50fd51175ac52d` |
+| `forensics/tools/tests/test_adversarial_qualification.py` | `7c54eb043dff535a124489e40be2173699d8b95f194c34b052ebfbe19130ee6d` | `270310fb0ce45872ef8629777764c5a4203dab54ff77939f5274ed660d5218c6` |
+| `docs/ADVERSARIAL-QUALIFICATION.md` | `d247573ce90df6b48adfb0159221f164ad08e23007ac3d5109a667eb4b505733` | `8879b54e9b14028eb61aaadb38e554330c39ed9f12e5c79180f327ea04a962db` |
+| `evidence/a22/build_evidence.py` | `c4b5487c5f2bd3b3f13dbe903d34d4c805f828cefe03704cb923b90254dd6dc3` | unchanged |
+| `evidence/a22/EXPERIMENTS.json` | `ce7f6677ea7c29d4b96690e5c9d5763f7688257ab2e9473026d765ecf3e33a18` | `253ffce418f6fe675cc2d89a2cce9b1b617711294fbc88de8105943a15d5bafe` |
+| `evidence/a22/RESULTS.json` | `45098707995813c060aa802e585e5e7e0cbba66b82980408f3dbd16ca68c5dbe` | `976ecee77d13e5ab11ae78426c0cff3835a5de4bc25d2dcbbc2a035ca768ddde` |
+| `evidence/a22/CONTROLS.json` | `8494d1f857a49d6b7bfd95d46eeb25a7c43cd8a45997adec402c1b588705c683` | `8c9009cc09e56eb1cba1f8f7894ad955c5886091af33b29422ee2767e3f7cb2a` |
+
+The three new records are byte-identical across two producer runs
+(`evidence/a22` vs `--out /tmp/a22-twice`).
+
+### 11.6 Gates at the refresh
+
+All commands ran in the reused `openssl-rs-court` container
+(`openssl-rs-court-tools:1`, `HostConfig.Memory` and `MemorySwap` both
+`6442450944`, running), one at a time; no Rust build.
+
+| gate | observed |
+|---|---|
+| `free -g` | `Mem: 45 31 10 0 5 14` (available **14** GiB); `Swap: 45 38 6`; below the 24 GiB build floor, so no build and no new court |
+| focused A22 | `Ran 46 tests in 13.515s`; `OK` |
+| whole discovery | `Ran 1680 tests in 257.796s`; `OK`; 0 failures, 0 errors. The parent reported 1,634 with 1 error; before the error 1,652. `e4029e0d5` adds 28 focused tests (1,652 + 28 = 1,680); A22 remains 46, none removed or newly ignored |
+| producer, twice | exit **0** both times; `qualified=8 defect=0 partial=0 notRun=0 allQualified=true codes=NONE controls=10 codesCovered=8/8 canariesDetected=8/8` |
+| record byte-identity | `identical EXPERIMENTS.json`, `identical RESULTS.json`, `identical CONTROLS.json` |
+| `adversarial_qualification.py run` | exit **0**; eight `QUALIFIED refused=…/… canary=detected codes=NONE` lines; `allQualified=true` |
+| `adversarial_qualification.py canary` | exit **0**; `aq: canary experiments=8 detected=8` |
+| `docs_consistency.py` | exit **0**; `ok: 20 hand-written claim(s) … the earned-trust constitution is wired` |
+| `spec_guard.py check` | exit **0**; `10 registered specification(s), 5 recorded known nonconformance(s), 6 level(s); 0 unclassified, 0 unjustified exemptions` |
+
+### 11.7 Residual limitations
+
+* **E5's identity witness supplies an expected identity that A22 made up**
+  (`sha256:aa…`). It proves the adjudicator compares a supplied expectation; it
+  does not prove a production caller supplies one, and no candidate binary was
+  built. Without one, rule 2 remains presence-only.
+* **The E7 finding is historical, not erased.** Both consumers now refuse the
+  duplicate-key document, but the old permissive text and its owners (ETP-T1,
+  A7) remain in the document and in this receipt.
+* **The fixture substitutions are unchanged.** E1/E2 still use stand-in BINSEC
+  and Z3; E3 still uses two `objdump` shims; E4 still has no dudect run; E5
+  still has no memcheck run; no SARIF consumer outside the tree ran.
+* **The author is still the adjudicator.** No independent reviewer ran this
+  refresh (`AGENTS.md` §15).
+* **The refresh is uncommitted here.** This subagent did not commit or push; the
+  orchestrator commits and verifies it.

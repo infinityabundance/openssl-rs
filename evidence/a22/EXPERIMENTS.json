@@ -1,6 +1,6 @@
 {
-  "baseCommit": "6e64e644c",
-  "baseCommitLong": "6e64e644ced49bf5d969e0eb56ab51f8f4f2c4fc",
+  "baseCommit": "e4029e0d5",
+  "baseCommitLong": "e4029e0d5c4300bb097e1241c0bab34b069c9da6",
   "canaryRule": "every experiment runs the same harness twice: once with the strict detector, once with a deliberately weak detector that accepts any observation. A harness that cannot report DEFECT on an input the instrument accepted is not measuring anything.",
   "experiments": [
     {
@@ -271,41 +271,47 @@
         "detection": "missing-identity-detection-reference",
         "rule": "the strict detector must report DEFECT on the accepted input and QUALIFIED on the detection reference; the weak detector (accept_any) must report QUALIFIED on the accepted input"
       },
-      "expected": "the ctgrind evidence path refuses an empty-but-successful log, a log with only unrelated output, and a candidate-identity mismatch",
+      "expected": "the ctgrind evidence path refuses an empty log (CT_SUMMARY_EMPTY_LOG), a log with only unrelated output (CT_SUMMARY_UNRELATED_LOG), and a candidate-identity mismatch when an expected identity is supplied (CTGRIND_BINARY_IDENTITY_MISMATCH)",
       "hypothesis": "A ctgrind result with zero contexts is indistinguishable from a run that produced no memcheck output at all, and a claim whose binary identity differs from the recorded one must not be admitted.",
       "id": "E5",
       "instrumentSha256": {
-        "courts/phase18/timing/summarize_ct.py": "eea73f4a4976b9bdfc29eef3703329a782369297b1cedd5ada228db64b68e190",
-        "forensics/tools/side_channel_erasure.py": "9476b386d268be0597bc47701aca8c058094bc05dd6ac9695898a81ddd3b8aad"
+        "courts/phase18/timing/summarize_ct.py": "aaf0fdd6cf158f2b8f9362dc8dfece413d1d45a51c11bddb3f623ffbe4231609",
+        "forensics/tools/side_channel_erasure.py": "5e158c333ec70752e6537257eef33ed1dc65e2f020e2f7fe24017c6a4f8dadc4"
       },
       "instruments": [
         "courts/phase18/timing/summarize_ct.py",
         "forensics/tools/side_channel_erasure.py"
       ],
-      "notes": "this is the experiment the item expects to be able to fail",
+      "notes": "this is the experiment the item expected to be able to fail; it now refuses all three. A22 supplies a fixture expected identity, so the mismatch is witnessed; the residual is that a caller which supplies no identity is still presence-only, and no candidate binary was built",
       "title": "ctgrind: no errors because nothing ran",
       "witnesses": [
         {
           "case": "empty-log",
           "expectation": {
-            "code": "any-refusal",
-            "exit": "nonzero"
+            "code": "CT_SUMMARY_EMPTY_LOG",
+            "exit": [
+              3
+            ]
           },
           "kind": "rejected"
         },
         {
           "case": "unrelated-log-only",
           "expectation": {
-            "code": "any-refusal",
-            "exit": "nonzero"
+            "code": "CT_SUMMARY_UNRELATED_LOG",
+            "exit": [
+              4
+            ]
           },
           "kind": "rejected"
         },
         {
           "case": "candidate-identity-mismatch",
           "expectation": {
-            "code": "any-refusal",
-            "exit": "nonzero"
+            "code": "CTGRIND_BINARY_IDENTITY_MISMATCH",
+            "exit": [
+              1
+            ]
           },
           "kind": "rejected"
         },
@@ -341,12 +347,12 @@
       "hypothesis": "A native record whose declared population disagrees with its own entries, and an emission whose result count disagrees with the record, each make the projection's population statement false.",
       "id": "E6",
       "instrumentSha256": {
-        "forensics/tools/sarif_adapter.py": "dc9a8e9e277af59b490e663b738bb427aaf922e6de61f2a0b196b6818cc6e3d7"
+        "forensics/tools/sarif_adapter.py": "f6695b877b42e245bbb029cc9e2dcca78c1b5fda4fb52a5e568daffe0a93c118"
       },
       "instruments": [
         "forensics/tools/sarif_adapter.py"
       ],
-      "notes": "the native-record half is the check the adapter implements; the emission half is the check the item asks for",
+      "notes": "the native-record half and the emission half are both implemented; the live emission is accepted, the one-result-short emission is refused",
       "title": "SARIF: population mismatch",
       "witnesses": [
         {
@@ -362,8 +368,10 @@
         {
           "case": "emission-result-count-mismatch",
           "expectation": {
-            "code": "any-refusal",
-            "exit": "nonzero"
+            "code": "SARIF_REFUSED_POPULATION_MISMATCH",
+            "exit": [
+              1
+            ]
           },
           "kind": "rejected"
         },
@@ -395,7 +403,7 @@
         "detection": "duplicate-key-instrument",
         "rule": "the strict detector must report DEFECT on the accepted input and QUALIFIED on the detection reference; the weak detector (accept_any) must report QUALIFIED on the accepted input"
       },
-      "expected": "both strict readers refuse all three inputs; the consumers of the register that still use the permissive reader are named",
+      "expected": "both strict readers refuse all three inputs; both repaired register consumers refuse the duplicate-key document with PH_REFUSED_DUPLICATE_KEY, and a finding is recorded only if a consumer still accepts it",
       "hypothesis": "A duplicate key, a byte-order mark and trailing data each have no single meaning, so a strict reader refuses them while json.loads accepts the first by keeping the last value.",
       "id": "E7",
       "instrumentSha256": {
@@ -406,7 +414,7 @@
         "forensics/tools/instrument_qualify.py",
         "forensics/tools/policy_engine.py"
       ],
-      "notes": "the duplicate-key input is the A11 pair {\"a\":1,\"a\":2}",
+      "notes": "the duplicate-key input is the A11 pair {\"a\":1,\"a\":2}; the two consumers are witnessed by running their own loader, not by the presence of a source line",
       "title": "Strict parser versus a permissive consumer",
       "witnesses": [
         {
@@ -463,6 +471,26 @@
           "case": "trailing-data-policy",
           "expectation": {
             "code": "PE_JSON_REFUSED",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "duplicate-key-etp-t1-seed",
+          "expectation": {
+            "code": "PH_REFUSED_DUPLICATE_KEY",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "duplicate-key-freshness",
+          "expectation": {
+            "code": "PH_REFUSED_DUPLICATE_KEY",
             "exit": [
               1
             ]
@@ -605,7 +633,7 @@
       "prevents": "that a single favourable run is quoted as the experiment's result; an unstable measurement is not a measurement"
     },
     "AQ_REFUSED_WITNESS_ABSENT": {
-      "condition": "a declared witness produced no observation, or a witness that names a line in the tree no longer finds that line",
+      "condition": "a declared witness produced no observation, or a classified register consumer file is absent",
       "prevents": "that a removed witness, or a consumer list that has drifted, silently shrinks the experiment"
     }
   },
@@ -622,6 +650,6 @@
   "schema": "openssl-rs/a22/experiments/1",
   "tool": {
     "path": "forensics/tools/adversarial_qualification.py",
-    "sha256": "d23d20abc8c8d14ca140cc0ee3287522c7aa8a9ce52ed36765d110167e6dbb13"
+    "sha256": "35eff911c472d380d4cb36666cc99903e2c9fcf806e054c51e50fd51175ac52d"
   }
 }

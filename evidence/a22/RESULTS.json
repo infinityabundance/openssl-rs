@@ -1,6 +1,6 @@
 {
-  "baseCommit": "6e64e644c",
-  "baseCommitLong": "6e64e644ced49bf5d969e0eb56ab51f8f4f2c4fc",
+  "baseCommit": "e4029e0d5",
+  "baseCommitLong": "e4029e0d5c4300bb097e1241c0bab34b069c9da6",
   "canaryRule": "strict detector on the accepted input must be DEFECT, the weak detector on the same input must be QUALIFIED, and the strict detector on the detection reference must be QUALIFIED",
   "detail": "measured",
   "experiments": [
@@ -804,29 +804,29 @@
           }
         ]
       },
-      "codes": [
-        "AQ_DEFECT_FOUND"
-      ],
-      "expected": "the ctgrind evidence path refuses an empty-but-successful log, a log with only unrelated output, and a candidate-identity mismatch",
+      "codes": [],
+      "expected": "the ctgrind evidence path refuses an empty log (CT_SUMMARY_EMPTY_LOG), a log with only unrelated output (CT_SUMMARY_UNRELATED_LOG), and a candidate-identity mismatch when an expected identity is supplied (CTGRIND_BINARY_IDENTITY_MISMATCH)",
       "hypothesis": "A ctgrind result with zero contexts is indistinguishable from a run that produced no memcheck output at all, and a claim whose binary identity differs from the recorded one must not be admitted.",
       "id": "E5",
       "instrumentSha256": {
-        "courts/phase18/timing/summarize_ct.py": "eea73f4a4976b9bdfc29eef3703329a782369297b1cedd5ada228db64b68e190",
-        "forensics/tools/side_channel_erasure.py": "9476b386d268be0597bc47701aca8c058094bc05dd6ac9695898a81ddd3b8aad"
+        "courts/phase18/timing/summarize_ct.py": "aaf0fdd6cf158f2b8f9362dc8dfece413d1d45a51c11bddb3f623ffbe4231609",
+        "forensics/tools/side_channel_erasure.py": "5e158c333ec70752e6537257eef33ed1dc65e2f020e2f7fe24017c6a4f8dadc4"
       },
       "instruments": [
         "courts/phase18/timing/summarize_ct.py",
         "forensics/tools/side_channel_erasure.py"
       ],
-      "notes": "this is the experiment the item expects to be able to fail",
+      "notes": "this is the experiment the item expected to be able to fail; it now refuses all three. A22 supplies a fixture expected identity, so the mismatch is witnessed; the residual is that a caller which supplies no identity is still presence-only, and no candidate binary was built",
       "observations": [
         {
           "case": "empty-log",
           "command": "python3 <repo>/courts/phase18/timing/summarize_ct.py 0 <tmp>/aq-empty.log",
-          "exit": 0,
+          "exit": 3,
           "expected": {
-            "code": "any-refusal",
-            "exit": "nonzero"
+            "code": "CT_SUMMARY_EMPTY_LOG",
+            "exit": [
+              3
+            ]
           },
           "input": {
             "description": "two valgrind logs, one log with a finding, and two ctgrind claims",
@@ -840,20 +840,22 @@
               "unrelated_log"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "35b8bb444833575ccb6c5ae7d26ed2098f50f491a5b93e83ff8b01d43aebc887"
+            "sha256": "d1a5f15f606e5714cd2164ffe0e38df8d4d804905eba61689dd0ecb303cedeb9"
           },
           "kind": "rejected",
-          "output": "total contexts: 0\n\n-- first 12 distinct stacks --\n",
-          "outputSha256": "15b874814d9032c4a31e6107f20060ce3cec28a5e719cec467f36987765038af",
+          "output": "CT_SUMMARY_EMPTY_LOG: <tmp>/aq-empty.log has no content: an empty log is not a clean run\n",
+          "outputSha256": "0c7c2b8ddd37e08e79948eccd6a78ba7788af267dc78ab2f706e73e8432dd491",
           "outputTruncated": false
         },
         {
           "case": "unrelated-log-only",
           "command": "python3 <repo>/courts/phase18/timing/summarize_ct.py 0 <tmp>/aq-unrelated.log",
-          "exit": 0,
+          "exit": 4,
           "expected": {
-            "code": "any-refusal",
-            "exit": "nonzero"
+            "code": "CT_SUMMARY_UNRELATED_LOG",
+            "exit": [
+              4
+            ]
           },
           "input": {
             "description": "two valgrind logs, one log with a finding, and two ctgrind claims",
@@ -867,20 +869,22 @@
               "unrelated_log"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "35b8bb444833575ccb6c5ae7d26ed2098f50f491a5b93e83ff8b01d43aebc887"
+            "sha256": "d1a5f15f606e5714cd2164ffe0e38df8d4d804905eba61689dd0ecb303cedeb9"
           },
           "kind": "rejected",
-          "output": "total contexts: 0\n\n-- first 12 distinct stacks --\n",
-          "outputSha256": "15b874814d9032c4a31e6107f20060ce3cec28a5e719cec467f36987765038af",
+          "output": "CT_SUMMARY_UNRELATED_LOG: <tmp>/aq-unrelated.log contains no memcheck uninitialised-value context; it is not a ctgrind finding report, and a zero-context run is not distinguishable from one that did not execute\n",
+          "outputSha256": "0b727578aadb74570beb40af3390846ea44d60f647f8dbe04f2bbdbdbe1e298a",
           "outputTruncated": false
         },
         {
           "case": "candidate-identity-mismatch",
-          "command": "python3 <tmp>/aq-e5-claim.py <repo>/forensics/tools <tmp>/aq-claim-mismatched.json <repo>/evidence/etp-t7/SECRETS.json <repo>/evidence/etp-t7/PREREGISTRATION.json",
-          "exit": 0,
+          "command": "python3 <tmp>/aq-e5-claim.py <repo>/forensics/tools <tmp>/aq-claim-mismatched.json <repo>/evidence/etp-t7/SECRETS.json <repo>/evidence/etp-t7/PREREGISTRATION.json sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "exit": 1,
           "expected": {
-            "code": "any-refusal",
-            "exit": "nonzero"
+            "code": "CTGRIND_BINARY_IDENTITY_MISMATCH",
+            "exit": [
+              1
+            ]
           },
           "input": {
             "description": "two valgrind logs, one log with a finding, and two ctgrind claims",
@@ -894,11 +898,11 @@
               "unrelated_log"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "35b8bb444833575ccb6c5ae7d26ed2098f50f491a5b93e83ff8b01d43aebc887"
+            "sha256": "d1a5f15f606e5714cd2164ffe0e38df8d4d804905eba61689dd0ecb303cedeb9"
           },
           "kind": "rejected",
-          "output": "AQ_ACCEPTED\n",
-          "outputSha256": "cdf70f30d84bdad5a7a86c0d025f7f9e95cc59654706c69304909904b1f8d46c",
+          "output": "CTGRIND_BINARY_IDENTITY_MISMATCH: AQ-CT-IDENTITY: recorded binary_identity 'sha256:dededededededededededededededededededededededededededededededede' does not match the artefact under test 'sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'\nAQ_REFUSED\n",
+          "outputSha256": "4393a647946b411a24dad42664627dd761252041f051286cb5f277efb5c56489",
           "outputTruncated": false
         },
         {
@@ -923,7 +927,7 @@
               "unrelated_log"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "35b8bb444833575ccb6c5ae7d26ed2098f50f491a5b93e83ff8b01d43aebc887"
+            "sha256": "d1a5f15f606e5714cd2164ffe0e38df8d4d804905eba61689dd0ecb303cedeb9"
           },
           "kind": "accepted",
           "output": "total contexts: 1\n   1  Conditional jump or move depends o ?  mont_mul_into\n\n-- first 12 distinct stacks --\n[Conditional jump or move depen] ?\n    mont_mul_into <- caller\n",
@@ -932,7 +936,7 @@
         },
         {
           "case": "missing-identity-detection-reference",
-          "command": "python3 <tmp>/aq-e5-claim.py <repo>/forensics/tools <tmp>/aq-claim-no-identity.json <repo>/evidence/etp-t7/SECRETS.json <repo>/evidence/etp-t7/PREREGISTRATION.json",
+          "command": "python3 <tmp>/aq-e5-claim.py <repo>/forensics/tools <tmp>/aq-claim-no-identity.json <repo>/evidence/etp-t7/SECRETS.json <repo>/evidence/etp-t7/PREREGISTRATION.json -",
           "exit": 1,
           "expected": {
             "code": "CTGRIND_WITHOUT_HARNESS_IDENTITY_TAINT",
@@ -952,7 +956,7 @@
               "unrelated_log"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "35b8bb444833575ccb6c5ae7d26ed2098f50f491a5b93e83ff8b01d43aebc887"
+            "sha256": "d1a5f15f606e5714cd2164ffe0e38df8d4d804905eba61689dd0ecb303cedeb9"
           },
           "kind": "detection",
           "output": "CTGRIND_WITHOUT_HARNESS_IDENTITY_TAINT: AQ-CT-NO-IDENTITY: ctgrind claim without binary_identity\nAQ_REFUSED\n",
@@ -960,16 +964,22 @@
           "outputTruncated": false
         }
       ],
-      "reason": "the instrument returned success on: empty-log, unrelated-log-only, candidate-identity-mismatch",
-      "refusedWitnesses": 0,
+      "reason": "every rejected witness produced its named refusal",
+      "refusedWitnesses": 3,
       "rejectedWitnesses": 3,
       "reported": {
         "detection_reference": "the claim with no `binary_identity` at all is refused CTGRIND_WITHOUT_HARNESS_IDENTITY_TAINT, which shows the same adjudicator does refuse when a field is absent",
-        "identity_binding": "no tool in the tree compares a ctgrind log's binary with a recorded candidate; side_channel_erasure checks that a `binary_identity` field is present, not that it matches",
-        "summarizer_contract": "courts/phase18/timing/summarize_ct.py prints counts and exits 0; it has no exit-status contract of its own"
+        "identity_binding": "side_channel_erasure.check_claim compares the recorded binary_identity with an expected identity when one is supplied, and refuses a mismatch with CTGRIND_BINARY_IDENTITY_MISMATCH",
+        "identity_expectation": {
+          "claim": "sha256:dededededededededededededededededededededededededededededededede",
+          "scope": "the expected identity is an A22 fixture, not a digest of a built candidate binary",
+          "supplied": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        "residual": "with no expected identity supplied, rule 2 remains presence-only: A22's mismatch witness supplies one, but no production caller was shown to supply it and no candidate binary was built",
+        "summarizer_contract": "courts/phase18/timing/summarize_ct.py now has an outcome contract: 0 is a parsed, non-empty report; 3 empty, 4 unrelated or zero-context, 5 malformed, 6 unreadable; no counts are printed on a refusal"
       },
       "title": "ctgrind: no errors because nothing ran",
-      "verdict": "DEFECT"
+      "verdict": "QUALIFIED"
     },
     {
       "canary": {
@@ -1003,19 +1013,17 @@
           }
         ]
       },
-      "codes": [
-        "AQ_DEFECT_FOUND"
-      ],
+      "codes": [],
       "expected": "the adapter refuses both with SARIF_REFUSED_POPULATION_MISMATCH",
       "hypothesis": "A native record whose declared population disagrees with its own entries, and an emission whose result count disagrees with the record, each make the projection's population statement false.",
       "id": "E6",
       "instrumentSha256": {
-        "forensics/tools/sarif_adapter.py": "dc9a8e9e277af59b490e663b738bb427aaf922e6de61f2a0b196b6818cc6e3d7"
+        "forensics/tools/sarif_adapter.py": "f6695b877b42e245bbb029cc9e2dcca78c1b5fda4fb52a5e568daffe0a93c118"
       },
       "instruments": [
         "forensics/tools/sarif_adapter.py"
       ],
-      "notes": "the native-record half is the check the adapter implements; the emission half is the check the item asks for",
+      "notes": "the native-record half and the emission half are both implemented; the live emission is accepted, the one-result-short emission is refused",
       "observations": [
         {
           "case": "native-population-mismatch",
@@ -1037,7 +1045,7 @@
               "short_emission"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "401576fb066bcae77d6a8f1e8b5c9b226852580371ec6fcdc30d898857128af1"
+            "sha256": "a835533d07ba6ddd0e357995086191297b4d01d9c56dddca83386ab329bf929f"
           },
           "kind": "rejected",
           "output": "SARIF_REFUSED_POPULATION_MISMATCH: evidence/etp-t7/SECRETS.json: counts sum 52 != 51 entries\n",
@@ -1047,10 +1055,12 @@
         {
           "case": "emission-result-count-mismatch",
           "command": "python3 <tmp>/aq-e6-sarif.py <repo>/forensics/tools emission <tmp>/aq-emission-short.json",
-          "exit": 0,
+          "exit": 1,
           "expected": {
-            "code": "any-refusal",
-            "exit": "nonzero"
+            "code": "SARIF_REFUSED_POPULATION_MISMATCH",
+            "exit": [
+              1
+            ]
           },
           "input": {
             "description": "a native record whose declared population exceeds its entries, the live emission, and the same emission with one result removed",
@@ -1062,11 +1072,11 @@
               "short_emission"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "401576fb066bcae77d6a8f1e8b5c9b226852580371ec6fcdc30d898857128af1"
+            "sha256": "a835533d07ba6ddd0e357995086191297b4d01d9c56dddca83386ab329bf929f"
           },
           "kind": "rejected",
-          "output": "AQ_ACCEPTED results=16\n",
-          "outputSha256": "43782f03447d9b14752268553d842fcca6e008764803ed76c32ef7d81928dcd3",
+          "output": "SARIF_REFUSED_POPULATION_MISMATCH: runs[0]: projection.projectedTotal is 17 but run.results has 16\n",
+          "outputSha256": "cae53c42f92f133d7d128fbaa8b697e3b9022b41bbe5a2bd99cb9a35607dcb53",
           "outputTruncated": false
         },
         {
@@ -1089,7 +1099,7 @@
               "short_emission"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "401576fb066bcae77d6a8f1e8b5c9b226852580371ec6fcdc30d898857128af1"
+            "sha256": "a835533d07ba6ddd0e357995086191297b4d01d9c56dddca83386ab329bf929f"
           },
           "kind": "accepted",
           "output": "AQ_ACCEPTED findings=51\n",
@@ -1116,7 +1126,7 @@
               "short_emission"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "401576fb066bcae77d6a8f1e8b5c9b226852580371ec6fcdc30d898857128af1"
+            "sha256": "a835533d07ba6ddd0e357995086191297b4d01d9c56dddca83386ab329bf929f"
           },
           "kind": "accepted",
           "output": "AQ_ACCEPTED results=17\n",
@@ -1124,11 +1134,11 @@
           "outputTruncated": false
         }
       ],
-      "reason": "refused 1 of 2; accepted: emission-result-count-mismatch",
-      "refusedWitnesses": 1,
+      "reason": "every rejected witness produced its named refusal",
+      "refusedWitnesses": 2,
       "rejectedWitnesses": 2,
       "reported": {
-        "emission_population": "validate_emission does not compare the emission's result count with the record population, so a dropped result leaves projection.projectedTotal disagreeing with run.results and the document is accepted",
+        "emission_population": "validate_emission refuses an emission whose result count disagrees with projection.projectedTotal, with the per-rule tallies, with the level counts, or with the native population (SARIF_REFUSED_POPULATION_MISMATCH)",
         "emission_shape": {
           "declared_projectedTotal": 17,
           "results_after": 16,
@@ -1139,7 +1149,7 @@
         "substitution": "no SARIF consumer ran; the adapter's own checks were called"
       },
       "title": "SARIF: population mismatch",
-      "verdict": "PARTIAL"
+      "verdict": "QUALIFIED"
     },
     {
       "canary": {
@@ -1174,7 +1184,7 @@
         ]
       },
       "codes": [],
-      "expected": "both strict readers refuse all three inputs; the consumers of the register that still use the permissive reader are named",
+      "expected": "both strict readers refuse all three inputs; both repaired register consumers refuse the duplicate-key document with PH_REFUSED_DUPLICATE_KEY, and a finding is recorded only if a consumer still accepts it",
       "hypothesis": "A duplicate key, a byte-order mark and trailing data each have no single meaning, so a strict reader refuses them while json.loads accepts the first by keeping the last value.",
       "id": "E7",
       "instrumentSha256": {
@@ -1185,7 +1195,7 @@
         "forensics/tools/instrument_qualify.py",
         "forensics/tools/policy_engine.py"
       ],
-      "notes": "the duplicate-key input is the A11 pair {\"a\":1,\"a\":2}",
+      "notes": "the duplicate-key input is the A11 pair {\"a\":1,\"a\":2}; the two consumers are witnessed by running their own loader, not by the presence of a source line",
       "observations": [
         {
           "case": "duplicate-key-instrument",
@@ -1208,7 +1218,7 @@
               "well-formed"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "a440aaf8accc6a4070fa5c7efca22bfd07f71c7e800c8007a270bd0e8793d9cd"
+            "sha256": "ef409ed90fbed66cb7a932b27a29bab4fdfc41e333b0d61871e55a817ac83ce4"
           },
           "kind": "rejected",
           "output": "IQ_JSON_DUPLICATE_KEY\n",
@@ -1236,7 +1246,7 @@
               "well-formed"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "a440aaf8accc6a4070fa5c7efca22bfd07f71c7e800c8007a270bd0e8793d9cd"
+            "sha256": "ef409ed90fbed66cb7a932b27a29bab4fdfc41e333b0d61871e55a817ac83ce4"
           },
           "kind": "rejected",
           "output": "IQ_REGISTRY_UNREADABLE\n",
@@ -1264,7 +1274,7 @@
               "well-formed"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "a440aaf8accc6a4070fa5c7efca22bfd07f71c7e800c8007a270bd0e8793d9cd"
+            "sha256": "ef409ed90fbed66cb7a932b27a29bab4fdfc41e333b0d61871e55a817ac83ce4"
           },
           "kind": "rejected",
           "output": "IQ_REGISTRY_UNREADABLE\n",
@@ -1292,7 +1302,7 @@
               "well-formed"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "a440aaf8accc6a4070fa5c7efca22bfd07f71c7e800c8007a270bd0e8793d9cd"
+            "sha256": "ef409ed90fbed66cb7a932b27a29bab4fdfc41e333b0d61871e55a817ac83ce4"
           },
           "kind": "rejected",
           "output": "PE_JSON_REFUSED: duplicate object key 'a'\n",
@@ -1320,7 +1330,7 @@
               "well-formed"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "a440aaf8accc6a4070fa5c7efca22bfd07f71c7e800c8007a270bd0e8793d9cd"
+            "sha256": "ef409ed90fbed66cb7a932b27a29bab4fdfc41e333b0d61871e55a817ac83ce4"
           },
           "kind": "rejected",
           "output": "PE_JSON_REFUSED: Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)\n",
@@ -1348,11 +1358,67 @@
               "well-formed"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "a440aaf8accc6a4070fa5c7efca22bfd07f71c7e800c8007a270bd0e8793d9cd"
+            "sha256": "ef409ed90fbed66cb7a932b27a29bab4fdfc41e333b0d61871e55a817ac83ce4"
           },
           "kind": "rejected",
           "output": "PE_JSON_REFUSED: Extra data: line 2 column 1 (char 8)\n",
           "outputSha256": "45f55d54ab951b312d0d47d60fae967e9462ef5421b3b94804bc8b093f9d1de7",
+          "outputTruncated": false
+        },
+        {
+          "case": "duplicate-key-etp-t1-seed",
+          "command": "python3 <repo>/forensics/tools/etp_t1_seed.py --instruments <tmp>/aq-duplicate-key.json --output <tmp>/etp-t1-graph.json",
+          "exit": 1,
+          "expected": {
+            "code": "PH_REFUSED_DUPLICATE_KEY",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "three malformed JSON documents, one well-formed document and the adapter",
+            "kind": "generated",
+            "parts": [
+              "bom",
+              "driver",
+              "duplicate-key",
+              "trailing-data",
+              "well-formed"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "ef409ed90fbed66cb7a932b27a29bab4fdfc41e333b0d61871e55a817ac83ce4"
+          },
+          "kind": "rejected",
+          "output": "PH_REFUSED_DUPLICATE_KEY: the object repeats the key 'a'; a later value would silently replace the earlier one\n",
+          "outputSha256": "cd34007f05f71c9915626c83d03722cdc4a911bd2d6fa306e2c7aa5253bd12dd",
+          "outputTruncated": false
+        },
+        {
+          "case": "duplicate-key-freshness",
+          "command": "python3 <tmp>/aq-e7-strict.py <repo>/forensics/tools <tmp>/aq-duplicate-key.json freshness",
+          "exit": 1,
+          "expected": {
+            "code": "PH_REFUSED_DUPLICATE_KEY",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "three malformed JSON documents, one well-formed document and the adapter",
+            "kind": "generated",
+            "parts": [
+              "bom",
+              "driver",
+              "duplicate-key",
+              "trailing-data",
+              "well-formed"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "ef409ed90fbed66cb7a932b27a29bab4fdfc41e333b0d61871e55a817ac83ce4"
+          },
+          "kind": "rejected",
+          "output": "evidence/etp3/instruments.json at 000000000000: PH_REFUSED_DUPLICATE_KEY: the object repeats the key 'a'; a later value would silently replace the earlier one\n",
+          "outputSha256": "cac9b89f14b7fc7c2a085a99aacb1ccad829df45b245d83ac7bc79e9d96d6c42",
           "outputTruncated": false
         },
         {
@@ -1376,7 +1442,7 @@
               "well-formed"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "a440aaf8accc6a4070fa5c7efca22bfd07f71c7e800c8007a270bd0e8793d9cd"
+            "sha256": "ef409ed90fbed66cb7a932b27a29bab4fdfc41e333b0d61871e55a817ac83ce4"
           },
           "kind": "accepted",
           "output": "AQ_ACCEPTED\n",
@@ -1404,7 +1470,7 @@
               "well-formed"
             ],
             "producedBy": "forensics/tools/adversarial_qualification.py",
-            "sha256": "a440aaf8accc6a4070fa5c7efca22bfd07f71c7e800c8007a270bd0e8793d9cd"
+            "sha256": "ef409ed90fbed66cb7a932b27a29bab4fdfc41e333b0d61871e55a817ac83ce4"
           },
           "kind": "accepted",
           "output": "AQ_ACCEPTED\n",
@@ -1413,81 +1479,101 @@
         }
       ],
       "reason": "every rejected witness produced its named refusal",
-      "refusedWitnesses": 6,
-      "rejectedWitnesses": 6,
+      "refusedWitnesses": 8,
+      "rejectedWitnesses": 8,
       "reported": {
+        "consumer_probes": [
+          {
+            "case": "duplicate-key-etp-t1-seed",
+            "exit": 1,
+            "path": "forensics/tools/etp_t1_seed.py",
+            "refusalObserved": true
+          },
+          {
+            "case": "duplicate-key-freshness",
+            "exit": 1,
+            "path": "forensics/tools/freshness.py",
+            "refusalObserved": true
+          }
+        ],
         "consumers": [
           {
             "item": "ETP-3",
             "loader": "strict",
             "path": "forensics/tools/instrument_qualify.py",
-            "reason": "load_json_strict: object_pairs_hook rejects a duplicate key, non-finite numbers and a BOM",
-            "witness": [
-              "def load_json_strict(path: Path):"
-            ]
+            "probe": {
+              "entry": "instrument_qualify.load_json_strict",
+              "mode": "shared-loader"
+            },
+            "reason": "load_json_strict: object_pairs_hook rejects a duplicate key, non-finite numbers and a BOM"
           },
           {
             "item": "ETP-6",
             "loader": "strict",
             "path": "forensics/tools/etp6_verify.py",
-            "reason": "delegates to instrument_qualify.load_registry, which is load_json_strict",
-            "witness": [
-              "document = iq.load_registry(registry)"
-            ]
+            "probe": {
+              "entry": "etp6_verify -> instrument_qualify.load_registry",
+              "mode": "shared-loader"
+            },
+            "reason": "delegates to instrument_qualify.load_registry, which is load_json_strict"
           },
           {
             "item": "release gate (item 4)",
             "loader": "strict",
             "path": "forensics/tools/release_gate.py",
-            "reason": "runs `instrument_qualify.py check --registry`, so the parser is the strict one",
-            "witness": [
-              "[PYTHON, str(INSTRUMENT_TOOL), mode, \"--registry\", str(registry)]"
-            ]
+            "probe": {
+              "entry": "release_gate -> instrument_qualify.py check",
+              "mode": "shared-loader"
+            },
+            "reason": "runs `instrument_qualify.py check --registry`, so the parser is the strict one"
           },
           {
             "item": "ETP-T1",
-            "loader": "permissive",
+            "loader": "strict",
             "path": "forensics/tools/etp_t1_seed.py",
-            "reason": "plain json.loads of the register bytes: a duplicate key is accepted, and the last value wins",
-            "witness": [
-              "instruments = json.loads((REPO / \"evidence/etp3/instruments.json\").read_text())"
-            ]
+            "probe": {
+              "entry": "etp_t1_seed --instruments",
+              "mode": "cli",
+              "refusal": "PH_REFUSED_DUPLICATE_KEY"
+            },
+            "reason": "load_instruments uses harden.loads, which refuses a duplicate key, a BOM, trailing data and non-finite numbers"
           },
           {
             "item": "A7",
-            "loader": "permissive",
+            "loader": "strict",
             "path": "forensics/tools/freshness.py",
-            "reason": "plain json.loads of the register text: a duplicate key is accepted, and the last value wins",
-            "witness": [
-              "text = repo.text(commit, \"evidence/etp3/instruments.json\")",
-              "document = json.loads(text)"
-            ]
+            "probe": {
+              "entry": "freshness._instrument_entries",
+              "mode": "function",
+              "refusal": "PH_REFUSED_DUPLICATE_KEY"
+            },
+            "reason": "_instrument_entries uses harden.loads and raises JsonError on a refusal, so a duplicate key no longer resolves last-wins"
           },
           {
             "item": "A9",
             "loader": "byte-identity",
             "path": "forensics/tools/intoto.py",
-            "reason": "names the register as a subject and hashes its bytes; it does not parse it, so a parse-level difference is not observed here",
-            "witness": [
-              "instruments = \"evidence/etp3/instruments.json\""
-            ]
+            "probe": {
+              "entry": "digest only",
+              "mode": "byte-identity"
+            },
+            "reason": "names the register as a subject and hashes its bytes; it does not parse it, so a parse-level difference is not observed here"
           },
           {
             "item": "ETP-0",
             "loader": "byte-identity",
             "path": "forensics/tools/verify.py",
-            "reason": "binds the register by digest only",
-            "witness": [
-              "identity=(\"evidence/etp3/instruments.json\",),"
-            ]
+            "probe": {
+              "entry": "digest only",
+              "mode": "byte-identity"
+            },
+            "reason": "binds the register by digest only"
           }
         ],
-        "finding": "two tracked consumers read the instrument register with plain json.loads, so a register with two values for one key is read two ways: the strict reader refuses it and these consumers take the last value",
-        "permissive_consumer_count": 2,
-        "permissive_consumers": [
-          "forensics/tools/etp_t1_seed.py",
-          "forensics/tools/freshness.py"
-        ],
+        "finding": "no tracked consumer accepts the duplicate-key document: both etp_t1_seed.load_instruments and freshness._instrument_entries now refuse it with PH_REFUSED_DUPLICATE_KEY. The earlier finding that those two consumers read the register with plain json.loads is historical (repaired in e4029e0d5).",
+        "history": "on 6e64e644c etp_t1_seed.py (ETP-T1) and freshness.py (A7) read the register with plain json.loads; both now read it with harden.loads and refuse a duplicate key",
+        "permissive_consumer_count": 0,
+        "permissive_consumers": [],
         "scope": "the duplicate-key input is the A11 pair {\"a\":1,\"a\":2}"
       },
       "title": "Strict parser versus a permissive consumer",
@@ -1751,18 +1837,16 @@
   "runs": 2,
   "schema": "openssl-rs/a22/results/1",
   "summary": {
-    "allQualified": false,
-    "codes": [
-      "AQ_DEFECT_FOUND"
-    ],
-    "defect": 1,
+    "allQualified": true,
+    "codes": [],
+    "defect": 0,
     "experiments": 8,
     "notRun": 0,
-    "partial": 1,
-    "qualified": 6
+    "partial": 0,
+    "qualified": 8
   },
   "tool": {
     "path": "forensics/tools/adversarial_qualification.py",
-    "sha256": "d23d20abc8c8d14ca140cc0ee3287522c7aa8a9ce52ed36765d110167e6dbb13"
+    "sha256": "35eff911c472d380d4cb36666cc99903e2c9fcf806e054c51e50fd51175ac52d"
   }
 }
