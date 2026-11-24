@@ -9,7 +9,7 @@
     {
       "kind": "option",
       "name": "--json",
-      "summary": "emit the machine-readable document instead of the text report; no effect on the discovery commands",
+      "summary": "emit the machine-readable document: the run document for a step run or `all`, and the listing document for `list` or `--list`; `--explain` and `--help` print text",
       "takesValue": false
     },
     {
@@ -1204,8 +1204,7 @@
         "git"
       ],
       "privateState": [
-        "court",
-        "artifacts/phase2/install"
+        "court"
       ],
       "replacement": null,
       "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
@@ -1271,8 +1270,7 @@
         "git"
       ],
       "privateState": [
-        "court",
-        "artifacts/phase2/install"
+        "court"
       ],
       "replacement": null,
       "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
@@ -1338,8 +1336,7 @@
         "git"
       ],
       "privateState": [
-        "court",
-        "artifacts/phase2/install"
+        "court"
       ],
       "replacement": null,
       "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
@@ -1429,7 +1426,6 @@
         "rustc"
       ],
       "privateState": [
-        "artifacts/phase2/install",
         "court",
         "forensics/authorities/prefix"
       ],
@@ -1469,11 +1465,15 @@
       "invocation": [
         "--list"
       ],
-      "jsonFields": [],
-      "jsonForm": "none",
+      "jsonFields": [
+        "commands",
+        "interface",
+        "schema"
+      ],
+      "jsonForm": "document",
       "kind": "discovery",
       "name": "list",
-      "notes": "the only accepted form is the `--list` flag; the bare word `list` is refused (recorded as discrepancy D1), and `--json` has no effect on this output (D2)",
+      "notes": "accepted as the `list` subcommand and as the `--list` flag; a bare invocation is refused (exit 2). `--json` emits the listing document (A25 D1 and D2 repaired)",
       "prerequisites": [
         "python"
       ],
@@ -1534,8 +1534,8 @@
   "declaredAtCommit": "a9bcb5480",
   "determinismRule": {
     "enforcedBy": "PV_REFUSED_UNSTABLE_OUTPUT",
-    "knownGap": "D5: the top-level `private_state` entry counts are live `git status` readings and are inside the compared record",
-    "rule": "two runs of a command emit the same deterministic record; the declared `environment` block is an input and is not compared"
+    "knownGap": null,
+    "rule": "two runs of a command emit the same deterministic record; the declared `environment` and `private_state` blocks are inputs, required to be present and populated, and are not compared"
   },
   "discovery": {
     "explain": {
@@ -1556,16 +1556,24 @@
       "command": "authority",
       "environmentDeclaration": "environment-input",
       "environmentKey": "environment",
-      "note": "`authority` without --network is NOT_RUN, which still emits a complete document and exits 1; it therefore costs nothing and depends on no candidate state"
+      "note": "`authority` without --network is NOT_RUN, which still emits a complete document and exits 1; it therefore costs nothing and depends on no candidate state",
+      "privateStateDeclaration": "private-state-input",
+      "privateStateKey": "private_state"
     },
     "listJson": {
       "argv": [
         "--list",
         "--json"
       ],
-      "emitsJson": false,
-      "format": "tsv",
-      "note": "`--json` is accepted and has no effect on the listing; the listing stays tab-separated"
+      "emitsJson": true,
+      "fields": [
+        "commands",
+        "interface",
+        "schema"
+      ],
+      "format": "json",
+      "note": "`--json` is honoured on the listing: `--list --json` and `list --json` emit the listing document (A25 D2 repaired)",
+      "schema": "openssl-rs/verify-listing/1"
     },
     "listing": {
       "argv": [
@@ -1659,13 +1667,21 @@
       "code": 2,
       "id": "explain-unknown",
       "note": "explaining an undeclared command is refused"
+    },
+    {
+      "argv": [
+        "list"
+      ],
+      "code": 0,
+      "id": "list-subcommand",
+      "note": "the discovery command as a real subcommand; exercises the repaired D1 dispatch and exits 0"
     }
   ],
   "interface": "ETP-T12",
   "privateStateRule": {
     "enforcedBy": "PV_REFUSED_PRIVATE_STATE",
-    "knownGap": "D4: `artifacts/phase2/install` is declared private by the consumer commands but is outside the interface's audited root set, so its presence can never be reported",
-    "rule": "the surface reads no private state; each command declares the gitignored roots its own delegate may read, and the document reports which of them exist and how many untracked or ignored entries each holds. Presence is never evidence"
+    "knownGap": null,
+    "rule": "the surface reads no private state; each command declares the gitignored roots its own delegate may read, and the document reports which of those roots exist and how many untracked or ignored entries each holds. The audited root set is the interface's known roots plus every declared read, so a declared path cannot lie outside presence reporting. Presence is never evidence"
   },
   "schemaVersion": "openssl-rs/public-surface/1",
   "stabilityRule": {

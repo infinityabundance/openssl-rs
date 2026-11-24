@@ -7,7 +7,7 @@ exist. The first clean-checkout run is **red**: 8 of 19 steps pass, 9 fail, 2 ar
 `evidence/etp-t12/RUN.json`.
 
 **Entry point:** `forensics/tools/verify.py` (Python 3.11 standard library only).
-**Controls:** `forensics/tools/tests/test_verify.py` (37 tests, `unittest`).
+**Controls:** `forensics/tools/tests/test_verify.py` (46 tests, `unittest`).
 **Item:** ETP-T12 of `docs/ETP-TODO.md`.
 
 Nothing in this document is a claim that a red step is a defect. Each verdict is
@@ -38,6 +38,7 @@ a second interface.
 ```
 python3 forensics/tools/verify.py <subcommand> [--json] [--network] [--explain] [--list]
 python3 forensics/tools/verify.py all [--json]
+python3 forensics/tools/verify.py list [--json]
 ```
 
 | exit | meaning |
@@ -49,25 +50,27 @@ python3 forensics/tools/verify.py all [--json]
 `NOT_RUN` is never a pass and never exits 0. A single optional step is gated on
 itself, so `verify authority` cannot report `NOT_RUN` and exit 0.
 
-`--json` (on a step run or on `all`; `--list` and `--explain` print their
-text regardless, because they are discovery commands rather than step runs)
-emits one sorted, timestamp-free document: per step `name`, `status`,
+`--json` (on a step run, on `all`, or on the listing: `list` and `--list` emit
+the listing document `openssl-rs/verify-listing/1`; `--explain` and `--help`
+print their text regardless, because they are discovery commands without a
+document) emits one sorted, timestamp-free document: per step `name`, `status`,
 `reason` (empty when `PASS` is explained by `pass_reason`; a named cause
 otherwise), `evidence_identity` (path and SHA-256, or `absent`), `tool_digest`,
 `prerequisites` (each requirement, whether it was available and why),
 `private_state_declared` and `private_state_present`, and every command with its
 exit status and the normalised tail of its output. The document also carries an
 `environment` block with the live readings the run observed (`MemAvailable`, the
-derived court cap, the court) and marks it as an environment input; the block is
-recorded, not compared, and the byte-identity claim is about the rest of the
-record. Two runs over the same checkout with the same inputs are byte-identical
-in everything except that declared block and the `private_state` entry counts,
-which are live readings of the working tree's untracked or ignored entries and
-not of the checkout (A25 D5).
+derived court cap, the court) and a `private_state` block with the live counts
+of untracked or ignored entries under each audited root; each is marked as an
+input, recorded not compared, and the byte-identity claim is about the rest of
+the record. A run that omits either declared input, or leaves it unpopulated, is
+refused.
 
-`--list` names every subcommand and whether it is in `all`. `--explain [name]`
-prints the prerequisites, establishment and non-claim of one step or all of them,
-so the interface documents itself.
+`--list` names every subcommand and whether it is in `all`; `list` is the same
+listing as a real subcommand (`verify.py list` exits 0), so the help text's name,
+the surface's name and the accepted form agree. `--explain [name]` prints the
+prerequisites, establishment and non-claim of one step or all of them, so the
+interface documents itself.
 
 ## 3. Subcommands
 
@@ -123,10 +126,13 @@ They are additions to the queue's list, not substitutes for it.
 
 No prerequisite is satisfied by the working tree's private state: a private path
 is either declared by the step and reported as present, or absent and reported as
-absent. `court/` is reported precisely — its tracked files as `tracked_files`,
-its untracked or ignored entries as `private_entries` — so the 278 tracked files
-present in a clean checkout are not presented as private content, and a private
-census is not presented as checkout content.
+absent. The audited set is the interface's known roots plus every root a step
+declares, so a declared read cannot lie outside presence reporting. `court/` is
+reported precisely — its tracked files as `tracked_files`, its untracked or
+ignored entries as `private_entries` — so the 278 tracked files present in a
+clean checkout are not presented as private content, and a private census is not
+presented as checkout content. `artifacts/phase2/install` is Git-tracked (155
+files), so it is checkout content and is declared by no step as private.
 
 No step needs a private key. Signing, publication and release authority are
 outside this interface; `release_gate.py` remains the separate release decision.
@@ -152,7 +158,10 @@ No timestamp is written. Every list is sorted on a documented key. `tmpdir` is
 recorded as `<tmp>`; the checkout path, temporary paths and elapsed times are
 normalised out of captured output before it enters the document. Two `--json`
 runs of `all` over the same checkout were compared with `cmp` and are
-byte-identical (receipt §6).
+byte-identical (receipt §6). The `environment` and `private_state` blocks are
+declared inputs: each is required to be present and populated, and neither is
+compared, so a run that observes a different availability or a different
+untracked population still reproduces the deterministic record.
 
 ## 7. The clean-checkout demonstration
 
@@ -177,13 +186,16 @@ the clean one.
 
 ## 8. Controls
 
-The interface's own controls are `forensics/tools/tests/test_verify.py` (37
+The interface's own controls are `forensics/tools/tests/test_verify.py` (46
 tests): missing tool → `NOT_RUN`; non-zero → `FAIL`; timeout → `BLOCKED`; offline
 network step → `NOT_RUN` with the reason; absent and drifted receipt → `FAIL`;
-private path reported when present; `all` non-zero and every non-passing step
-named; two `--json` runs byte-identical; unknown subcommand → exit 2. Six of them
-run the real command line in a throwaway tree of stub delegates, so the exit
-contract and the serialisation are exercised end to end.
+private path reported when present; every declared private read inside the
+audited set; `list` accepted as a subcommand and the listing document emitted
+under `--json`; `all` non-zero and every non-passing step named; two `--json`
+runs byte-identical; an absent, undeclared or unpopulated `private_state`
+refused; unknown subcommand → exit 2. Several of them run the real command line
+in a throwaway tree of stub delegates, so the exit contract and the
+serialisation are exercised end to end.
 
 The interface's controls are not the instruments' controls. Whether an
 independent instrument is sensitive to the defect it claims to detect is the

@@ -684,6 +684,11 @@ def verify(surface: dict, verifier: Path, *, root: Path | None = None,
     # -- the JSON document ------------------------------------------------
     json_spec = (surface.get("discovery") or {}).get("jsonProbe") or {}
     environment_key = json_spec.get("environmentKey") or "environment"
+    # A second live reading the surface declares as an input is excluded from the
+    # comparison for the same reason as `environment`: two runs need not reproduce
+    # it, but each run must declare and populate it.
+    private_state_key = json_spec.get("privateStateKey")
+    input_keys = (private_state_key,) if private_state_key else ()
     json_command = json_spec.get("command")
     documents = observed.json_documents.get(str(json_command)) or []
     for entry in entries:
@@ -737,12 +742,23 @@ def verify(surface: dict, verifier: Path, *, root: Path | None = None,
                    f"{name}: the document does not declare {environment_key!r} as "
                    f"{json_spec.get('environmentDeclaration')!r}, so the determinism "
                    f"claim has no scope")
+        if private_state_key:
+            private_state = first.get(private_state_key)
+            if not isinstance(private_state, dict) or \
+                    private_state.get("declared") != json_spec.get(
+                        "privateStateDeclaration"):
+                refuse("PV_REFUSED_UNSTABLE_OUTPUT",
+                       f"{name}: the document does not declare {private_state_key!r} as "
+                       f"{json_spec.get('privateStateDeclaration')!r}, so the determinism "
+                       f"claim has no scope")
         details = []
         for index in range(1, len(documents)):
-            if canonical(_projection(documents[0], environment_key)) != \
-                    canonical(_projection(documents[index], environment_key)):
-                differing = _differing_paths(_projection(documents[0], environment_key),
-                                             _projection(documents[index], environment_key))
+            if canonical(_projection(documents[0], environment_key, *input_keys)) != \
+                    canonical(_projection(documents[index], environment_key, *input_keys)):
+                differing = _differing_paths(_projection(documents[0], environment_key,
+                                                        *input_keys),
+                                             _projection(documents[index], environment_key,
+                                                         *input_keys))
                 refuse("PV_REFUSED_UNSTABLE_OUTPUT",
                        f"{name}: two runs differ at "
                        f"{', '.join(differing[:6]) or '<document>'}")
@@ -831,10 +847,12 @@ def _plausible_document(value: Any) -> bool:
     return isinstance(value, dict) and bool(value)
 
 
-def _projection(document: Any, environment_key: str) -> Any:
+def _projection(document: Any, environment_key: str, *input_keys: str) -> Any:
+    """``document`` without the live input blocks the surface declares."""
     if not isinstance(document, dict):
         return document
-    return {key: value for key, value in document.items() if key != environment_key}
+    excluded = {environment_key, *input_keys}
+    return {key: value for key, value in document.items() if key not in excluded}
 
 
 def _first_line_difference(first: str, second: str) -> str:

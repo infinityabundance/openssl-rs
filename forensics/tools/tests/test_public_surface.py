@@ -60,7 +60,12 @@ DOCUMENT = {
     "interface": "ETP-T12",
     "invocation": {"network": False, "steps": ["authority"], "tmpdir": "<tmp>"},
     "non_passing": ["authority"],
-    "private_state": {"present": []},
+    "private_state": {
+        "declared": "private-state-input",
+        "known_roots": {"court": {"exists": False, "tracked_files": 0,
+                                 "private_entries": 0}},
+        "present": [],
+    },
     "root": "<root>",
     "schema": "openssl-rs/verify/1",
     "status": "FAIL",
@@ -96,6 +101,17 @@ def _stub_config(*, listing=None, help_text=None, explain_text=None,
     listing = base["listing"] if listing is None else listing
     help_text = base["help"] if help_text is None else help_text
     explain_text = base["explain"] if explain_text is None else explain_text
+    # The listing honours `--json` (D2), so the stub emits the listing document for
+    # that form and the tab-separated rows for the plain form.
+    listing_document = json.dumps({
+        "schema": "openssl-rs/verify-listing/1",
+        "interface": "ETP-T12",
+        "commands": [
+            {"name": row["name"], "role": row["role"],
+             "in_all": row["in_all"] == "in all"}
+            for row in ps.parse_listing(listing)
+        ],
+    }, indent=2, sort_keys=True) + "\n"
     document = DOCUMENT if document is None else document
     if vary:
         document = copy.deepcopy(document)
@@ -104,8 +120,11 @@ def _stub_config(*, listing=None, help_text=None, explain_text=None,
     text = json.dumps(document, indent=2, sort_keys=True) + "\n"
     return {"responses": {
         json.dumps(["--list"]): {"stdout": listing, "exit": exits.get("list", 0)},
-        json.dumps(["--list", "--json"]): {"stdout": listing,
+        json.dumps(["list"]): {"stdout": listing, "exit": exits.get("list", 0)},
+        json.dumps(["--list", "--json"]): {"stdout": listing_document,
                                            "exit": exits.get("list", 0)},
+        json.dumps(["list", "--json"]): {"stdout": listing_document,
+                                          "exit": exits.get("list", 0)},
         json.dumps(["--help"]): {"stdout": help_text, "exit": 0},
         json.dumps(["--explain"]): {"stdout": explain_text, "exit": 0},
         json.dumps(["--explain", "all"]): {"stdout": explain_text, "exit": 0},
@@ -195,15 +214,23 @@ class SurfaceMatchesExecutable(_Base):
                                     f"nor basis")
 
     def test_two_listing_runs_are_byte_identical(self) -> None:
+        # D2 repaired: `--json` is honoured on the listing, so this probe emits the
+        # listing document.  The byte-identity claim is unchanged; the assertions
+        # that recorded the old TSV behaviour are preserved in
+        # evidence/defects/d1-d5/RECEIPT.md.
         first = subprocess.run([sys.executable, str(VERIFIER), "--list", "--json"],
                                cwd=str(ROOT), capture_output=True, text=True)
         second = subprocess.run([sys.executable, str(VERIFIER), "--list", "--json"],
                                 cwd=str(ROOT), capture_output=True, text=True)
         self.assertEqual(first.stdout, second.stdout)
         self.assertEqual(first.returncode, 0)
-        self.assertFalse(ps._is_json_object(first.stdout),
-                         "the listing is TSV; the surface declares no document here")
-        self.assertIn("\t", first.stdout)
+        document = json.loads(first.stdout)
+        self.assertIsInstance(document, dict,
+                              "the listing document is one JSON object")
+        self.assertEqual(document["schema"], "openssl-rs/verify-listing/1")
+        listed = {row["name"] for row in ps.parse_listing(self.listing)}
+        emitted = {row["name"] for row in document["commands"]}
+        self.assertEqual(emitted, listed)
 
     def test_the_json_fields_are_exactly_the_declared_set(self) -> None:
         declaration = surface()
@@ -214,9 +241,20 @@ class SurfaceMatchesExecutable(_Base):
         declared = next(entry for entry in declaration["commands"]
                         if entry["name"] == probe["command"])
         self.assertEqual(sorted(document), sorted(declared["jsonFields"]))
+        # The step and aggregate commands emit the run document, so they declare the
+        # same fields.  The listing is its own schema (D2), checked against what it
+        # actually emits rather than assumed to share the run document's shape.
         for entry in declaration["commands"]:
-            if entry["jsonForm"] == "document":
+            if entry["jsonForm"] == "document" and entry["kind"] in ("step", "aggregate"):
                 self.assertEqual(entry["jsonFields"], declared["jsonFields"])
+        listing = next(entry for entry in declaration["commands"]
+                       if entry["name"] == "list")
+        self.assertEqual(listing["jsonForm"], "document")
+        listing_run = subprocess.run(
+            [sys.executable, str(VERIFIER), *listing["invocation"], "--json"],
+            cwd=str(ROOT), capture_output=True, text=True)
+        listing_document = json.loads(listing_run.stdout)
+        self.assertEqual(sorted(listing_document), sorted(listing["jsonFields"]))
 
     def test_help_arguments_and_prerequisites_match_the_surface(self) -> None:
         declaration = surface()
@@ -517,9 +555,14 @@ class Documentation(unittest.TestCase):
                       "document**", self.contract)
 
     def test_the_descriptive_document_no_longer_carries_the_stale_count(self) -> None:
-        # D6: the figure was 19; it is a corrected record, not a claim to keep.
+        # D6: the figure was 19.  It is a live quantity, so compare it with the count
+        # the loader actually executes rather than with a literal that goes stale
+        # whenever a control is added.
+        executed = unittest.defaultTestLoader.discover(
+            str(ROOT / "forensics" / "tools" / "tests"),
+            pattern="test_verify.py").countTestCases()
         self.assertNotIn("19 tests", self.descriptive)
-        self.assertIn("37 tests", self.descriptive)
+        self.assertIn(f"{executed} tests", self.descriptive)
 
     def test_the_descriptive_document_names_the_flag_form(self) -> None:
         # D1: the table said `list`, which the executable refuses.

@@ -228,6 +228,23 @@ class StepDecisionControls(unittest.TestCase):
         finally:
             shutil.rmtree(root, ignore_errors=True)
 
+    def test_every_declared_private_root_is_audited(self) -> None:
+        # D4: a step's declared private read must be inside the set presence
+        # reporting audits, or `private_state_present` can never name it.
+        audited = set(verify.audited_private_roots(REPO))
+        table = verify.steps_for(REPO)
+        for step in table.values():
+            for path in step.reads_gitignored:
+                self.assertIn(path, audited,
+                              f"{step.name} declares {path}, which presence reporting "
+                              "does not audit")
+        # `artifacts/phase2/install` is Git-tracked checkout content, so declaring it
+        # private was the defect, not a missing audit root.
+        for name in ("consumer-curl", "consumer-ssh", "consumer-sshd"):
+            self.assertNotIn("artifacts/phase2/install", table[name].reads_gitignored)
+        tracked = verify._tracked_files(REPO, "artifacts/phase2/install")
+        self.assertTrue(tracked, "artifacts/phase2/install is expected to be Git-tracked")
+
     def test_private_state_is_reported(self) -> None:
         root = Path(tempfile.mkdtemp(prefix="verify-private-"))
         try:
@@ -334,6 +351,34 @@ class EndToEndControls(unittest.TestCase):
             self.assertIn(name, names)
         code, explanation = self.fixture.run("--explain", "authority", expect=0)
         self.assertIn("needs the network", explanation)
+
+    def test_list_is_a_real_subcommand(self) -> None:
+        # D1: the help text, the refusal message and the surface all name `list`, so
+        # the executable must accept it.  It is the flag form's equivalent.
+        code, listing = self.fixture.run("list", expect=0)
+        _, flag = self.fixture.run("--list", expect=0)
+        self.assertEqual(listing, flag)
+        names = {line.split("\t")[0] for line in listing.splitlines() if "\t" in line}
+        for name in verify.QUEUE_STEPS:
+            self.assertIn(name, names)
+
+    def test_a_bare_invocation_is_still_refused(self) -> None:
+        code, output = self.fixture.run(expect=2)
+        self.assertIn("no subcommand", output)
+
+    def test_list_json_emits_the_listing_document(self) -> None:
+        # D2: a flag the listing accepts must not be ignored.
+        code, output = self.fixture.run("--list", "--json", expect=0)
+        document = json.loads(output)
+        self.assertEqual(document["schema"], verify.LISTING_SCHEMA)
+        self.assertEqual(sorted(document), ["commands", "interface", "schema"])
+        self.assertEqual(len(document["commands"]),
+                         len(verify.known_steps(self.fixture.root)))
+        commands = {row["name"]: row for row in document["commands"]}
+        self.assertTrue(commands["manifest"]["in_all"])
+        self.assertFalse(commands["authority"]["in_all"])
+        _, subcommand = self.fixture.run("list", "--json", expect=0)
+        self.assertEqual(output, subcommand)
 
     def test_missing_tool_is_not_run_end_to_end(self) -> None:
         (self.fixture.root / "forensics" / "tools" / "freshness.py").unlink()
@@ -501,6 +546,41 @@ class DeterminismControls(unittest.TestCase):
         self.assertFalse(ok)
         self.assertIn(verify.DETERMINISM_CODE, message)
         self.assertIn("declares no", message)
+
+    def test_private_state_block_is_declared_and_populated(self) -> None:
+        document = json.loads(self.first)
+        block = document[verify.PRIVATE_STATE_KEY]
+        self.assertEqual(block["declared"], verify.PRIVATE_STATE_DECLARATION)
+        self.assertTrue(block["known_roots"], "the audit names no root")
+        self.assertIsInstance(block["present"], list)
+        self.assertNotIn(verify.PRIVATE_STATE_KEY, verify.deterministic_projection(document))
+
+    def test_a_different_private_state_does_not_break_the_claim(self) -> None:
+        # D5: the entry counts are a live reading, declared as an input, so a run
+        # that observed a different population must still agree on the record.
+        document = json.loads(self.first)
+        block = document[verify.PRIVATE_STATE_KEY]
+        block["present"] = ["court"]
+        for entry in block["known_roots"].values():
+            entry["private_entries"] = entry.get("private_entries", 0) + 7
+        ok, message = verify.compare_deterministic(
+            self.first, json.dumps(document, indent=2, sort_keys=True))
+        self.assertTrue(ok, message)
+
+    def test_absent_private_state_fires(self) -> None:
+        def inject(document: dict) -> None:
+            del document[verify.PRIVATE_STATE_KEY]
+        self._assert_fires(inject, "declares no")
+
+    def test_undeclared_private_state_fires(self) -> None:
+        def inject(document: dict) -> None:
+            document[verify.PRIVATE_STATE_KEY]["declared"] = "environment-input"
+        self._assert_fires(inject, "private-state input")
+
+    def test_an_unpopulated_private_state_is_refused(self) -> None:
+        def inject(document: dict) -> None:
+            document[verify.PRIVATE_STATE_KEY]["known_roots"] = {}
+        self._assert_fires(inject, "no audited roots")
 
     def test_a_floor_decision_without_a_reading_is_refused(self) -> None:
         def inject(document: dict) -> None:

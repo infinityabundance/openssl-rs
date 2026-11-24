@@ -1,6 +1,8 @@
 # The public verifier contract
 
-**Status:** declared and mechanically enforced at `a9bcb5480`. This document
+**Status:** declared and mechanically enforced at `a9bcb5480`; the D1, D2, D4
+and D5 defects recorded in §9 are repaired in the D1–D5 batch, whose old and new
+behaviour is preserved in `evidence/defects/d1-d5/RECEIPT.md`. This document
 defines what an outsider may rely on when driving `forensics/tools/verify.py`;
 `evidence/a25/SURFACE.json` (schema `openssl-rs/public-surface/1`) is the
 machine-readable declaration of the same contract, and
@@ -42,10 +44,10 @@ There are therefore two documents because they answer different questions:
 | which commands exist, what do they accept, and what do their exit codes and JSON fields promise? | this document |
 
 Where the two disagree about the interface's *shape*, this document governs and
-the disagreement is a defect: the descriptive document was written before the
-surface was declared, and its §2 and §3 still describe the interface as it
-looked then. The known differences are recorded in
-`evidence/a25/INVENTORY.json` and listed in §9 below.
+the disagreement is a defect. The descriptive document was written before the
+surface was declared, so its §2 and §3 are checked against this document rather
+than trusted; the differences recorded at A25 and their repairs are listed in
+§9 below.
 
 Neither document is read by the drift check. The check reads the **executable**.
 A document can therefore be wrong without the check noticing — which is why the
@@ -55,22 +57,25 @@ rather than trusted.
 
 ## 2. Discovering the surface
 
-Three commands, all offline, all needing nothing but a Python 3.11 interpreter:
+Three discovery invocations, all offline, all needing nothing but a Python 3.11
+interpreter:
 
 ```
 python3 forensics/tools/verify.py --list          # what exists
+python3 forensics/tools/verify.py list            # the same listing, as a subcommand
 python3 forensics/tools/verify.py --help          # what the arguments are
 python3 forensics/tools/verify.py --explain NAME  # what one command claims
 ```
 
-`--list` prints one tab-separated row per step command: `name`, `role`
+`list` and `--list` print one tab-separated row per step command: `name`, `role`
 (`required` or `optional`) and `in_all` (`in all` or `not in all`). Twenty step
 commands are listed. It is the set `all` selects, plus `authority`, which is
 optional and not selected by `all`.
 
 `--help` prints the accepted arguments. `--explain` with no name prints every
 step's block; `--explain NAME` prints one; `--explain all` prints every step's
-block, because `all` selects all of them.
+block, because `all` selects all of them. `--explain` names a step command, not a
+discovery command: `list` and `explain` print no explanation block.
 
 The declared command set is **twenty-three** entries: the twenty step commands,
 `all`, and two discovery commands (`list`, `explain`). The discovery commands are
@@ -101,7 +106,7 @@ discovery commands are how a caller finds that out.
 | `consumer-ssh` | step | yes | one consumer family's recorded closure receipt |
 | `consumer-sshd` | step | yes | one consumer family's recorded closure receipt |
 | `all` | aggregate | — | every step selected by `all`, in the listed order |
-| `list` | discovery | — | the command set, by invocation `--list` |
+| `list` | discovery | — | the command set, by the `list` subcommand or the `--list` flag |
 | `explain` | discovery | — | the self-description, by invocation `--explain` |
 
 Each command's prerequisites, delegate, establishment and non-claim are in
@@ -113,27 +118,28 @@ names, kinds and selection.
 | form | what happens |
 |---|---|
 | `verify.py NAME` | run the step command `NAME`, or `all` |
-| `verify.py --list [anything]` | print the listing, exit 0. `--list` takes precedence over `--explain` and over running a command |
+| `verify.py list [--json]` | print the listing (or, with `--json`, the listing document), exit 0; equivalent to `--list` |
+| `verify.py --list [anything]` | print the listing (or, with `--json`, the listing document), exit 0. `--list` takes precedence over `--explain` and over running a command |
 | `verify.py --explain [NAME]` | print the declaration; `--explain` takes precedence over running a command |
-| `verify.py` (no arguments) | **refused**, exit 2 |
-| `verify.py list` | **refused**, exit 2 — `list` is a flag, not a subcommand |
+| `verify.py` (no arguments) | **refused**, exit 2: a default command would make the exit status depend on a choice the caller did not make |
 
-`--json`, `--network` and `--tmp` are accepted by every form and have no effect
-on `--list` or `--explain`. `--network` is a declaration that the network is
+`--network` and `--tmp` are accepted by every form and have no effect on `--list`,
+`list` or `--explain`. `--json` emits the run document for a step run or `all`,
+and the listing document for `list`/`--list`; `--explain` and `--help` print
+their text regardless. `--network` is a declaration that the network is
 available, not a probe: a wrong declaration shows up as that step's own failure.
 
-The last two rows are defects in the executable, not parts of the contract, and
-they are queued in §9. The contract states them because a caller must not be
-surprised by them; a future release may make `verify.py list` do what the help
-text says it does, which is why this document calls it a defect rather than a
-feature.
+A25's D1 defect — `list` advertised by the help text and refused as a
+subcommand — is repaired here: the display name, the refusal message and the
+accepted form now agree. The bare invocation remains a refusal, because it is a
+separate form with no command to run.
 
 ### 2.2 Arguments
 
 | argument | takes a value | effect |
 |---|---|---|
 | `command` | yes (positional) | one declared command name, or `all` |
-| `--json` | no | emit the machine-readable document instead of the text report; only for step commands and `all` |
+| `--json` | no | emit the machine-readable document: the run document for a step command or `all`; the listing document for `list`/`--list`. `--explain` and `--help` print text |
 | `--network` | no | declare that the network is available |
 | `--explain` | no | print prerequisites, delegation, establishment and non-claims |
 | `--list` | no | print the command set |
@@ -163,10 +169,11 @@ exercise because doing so would run builds and the whole test suite. The
 declaration names the probe for every observed code; a code declared with
 neither an observation nor a basis is a defect.
 
-The observed probes are: `--list` → 0, `--help` → 0, `--explain` → 0,
-`--explain all` → 0, `authority` (offline) → 1, an unknown subcommand → 2, a
-malformed argument list → 2, and `--explain` of an unknown name → 2. All three
-codes of the contract are therefore observed without running a step.
+The observed probes are: `--list` → 0, `list` → 0, `--list --json` → 0,
+`--help` → 0, `--explain` → 0, `--explain all` → 0, `authority` (offline) → 1,
+an unknown subcommand → 2, a malformed argument list → 2, a bare invocation → 2,
+and `--explain` of an unknown name → 2. All three codes of the contract are
+therefore observed without running a step.
 
 ## 4. The JSON document
 
@@ -181,7 +188,7 @@ exactly these twelve; a missing field and an extra field are both refusals:
 | `candidate` | the checkout the run observed: commit, tree, branch, tracked-change count, untracked-change count, tracked cleanliness |
 | `root` | the checkout root the run read |
 | `invocation` | what was asked for: the network declaration, the temporary root (normalised to `<tmp>`), the selected step names |
-| `private_state` | per declared root: whether it exists, how many files Git tracks there, how many untracked or ignored entries it holds; and which roots are present |
+| `private_state` | the declared private-state input: per audited root, whether it exists, how many files Git tracks there, how many untracked or ignored entries it holds; which roots are present — see §7 |
 | `environment` | the declared environment input: `MemAvailable`, the 24 GiB floor decision, the derived court cap and its source, the court identity — see §7 |
 | `warnings` | non-fatal declaration problems observed before any step ran (for example, a recorded consumer receipt that is absent) |
 | `steps` | one record per selected step: `name`, `title`, `required`, `status`, `reason`, `establishes`, `does_not`, `prerequisites`, `evidence_identity`, `tool_digest`, `reads_gitignored`, `private_state_declared`, `private_state_present`, `checks` |
@@ -194,9 +201,16 @@ executed command's selection `index`, `argv`, `cwd`, `exit`, `status`, `detail`
 and the normalised tail of its output. Every list is sorted on a documented key
 and no timestamp is written.
 
-`--list` and `--explain` emit **no** JSON document: they print their text
+`--explain` and `--help` emit **no** JSON document: they print their text
 regardless of `--json`. Their declared field set is empty, and a document
 appearing where the contract says there is none is a refusal.
+
+`list` and `--list` honour `--json`: they emit the **listing document**, schema
+**`openssl-rs/verify-listing/1`**, whose top-level fields are exactly `schema`,
+`interface` and `commands`. Each `commands[]` row carries `name`, `role` and
+`in_all`. The document is sorted by the documented listing order and is
+byte-identical across two runs. A listing that accepted `--json` and printed
+text anyway was A25's D2 defect; it is repaired here.
 
 ## 5. Stability levels
 
@@ -231,18 +245,19 @@ compares that declaration with the executable's own `--explain` output in both
 directions: a read the executable declares and the surface does not, and a read
 the surface declares and the executable does not, are both refusals.
 
-Presence is never evidence. The document reports which declared roots exist and
+Presence is never evidence. The document reports which audited roots exist and
 how many untracked or ignored entries each holds, so a reader can see that a
 verdict was produced on a machine with a private census present — and can see
 that the verdict is not thereby a clean-checkout result. The tracked-file count
 is separate, because tracked files under a declared root are part of the
 checkout and are not private content.
 
-**Known gap (D4).** The three consumer commands declare
-`artifacts/phase2/install` as private, but the interface's audited root set names
-`artifacts/phase2/shell`, so the declared path is never counted and its presence
-can never be reported. The rule above is what the interface is supposed to do;
-the executable does not yet do it for that one path. It is queued, not hidden.
+**D4, repaired.** The three consumer commands declared
+`artifacts/phase2/install` as private, but that path is Git-tracked checkout
+content (155 tracked files, no untracked or ignored entry under it), so the
+declaration was wrong and is removed. The audited set is also derived rather than
+hand-listed: it is the interface's known roots **plus every root a step declares**,
+so a declared private read can never lie outside presence reporting.
 
 ## 7. Determinism
 
@@ -252,24 +267,21 @@ deterministic record**:
 * no timestamp, wall-clock reading, temporary path, elapsed time or checkout
   path is written into it; the temporary root is normalised to `<tmp>`;
 * every list is sorted on a documented key;
-* the declared `environment` block is an **input to the run**, not an output:
-  it records the memory availability, floor decision, derived court cap and
-  court identity the run saw. It is emitted so a verdict can name its venue, and
-  it is excluded from the comparison. Its presence and shape are still required:
-  a document that omits it, or claims a met floor with no reading, is refused.
+* the declared `environment` and `private_state` blocks are **inputs to the run**,
+  not outputs: they record the memory availability, floor decision, derived court
+  cap and court identity the run saw, and the live untracked or ignored entry
+  counts under each audited root. They are emitted so a verdict can name its
+  venue and its private-state exposure, and they are excluded from the
+  comparison. Their presence, declaration and shape are still required: a
+  document that omits either block, mis-declares it, or claims a met floor with
+  no reading, is refused.
 
 Everything else is compared, field by field, across two runs. A difference is a
 refusal that names the differing paths.
 
-**Known gap (D5).** The top-level `private_state` entry counts are live `git
-status` readings and are inside the compared record. Two runs over a checkout
-are byte-identical only while the working tree is quiescent; an untracked entry
-appearing between them changes the record. The rule that should hold — that
-every live reading is declared as an input — is not yet implemented for that
-block. It is queued, not hidden.
-
 The listing is compared too: two `--list` runs must be byte-identical, because
-the command set is the input to every other comparison.
+the command set is the input to every other comparison, and two `--list --json`
+runs must emit byte-identical listing documents.
 
 ## 8. The refusal table
 
@@ -286,7 +298,7 @@ each names the wrong conclusion it prevents.
 | `PV_REFUSED_EXIT_UNUSED` | the contract or a command declares a code that no probe observes and no command-specific basis covers | a documented exit code that cannot happen, or one that happens unobserved |
 | `PV_REFUSED_HELP_DRIFT` | `--help` names an argument the surface does not declare, the surface declares an argument `--help` does not name, or `--explain`'s prerequisites or delegates differ from the declaration | a caller reading one interface while invoking another |
 | `PV_REFUSED_JSON_FIELD` | the document lacks a declared field, carries an undeclared one, is not a document where one is declared, or is one where none is declared, or the listing's JSON behaviour changed | a consumer parsing a shape that is no longer emitted |
-| `PV_REFUSED_UNSTABLE_OUTPUT` | two runs differ in the compared record, `--list` differs between runs, or the document fails to declare its environment input | a reproducibility claim over a record that moves |
+| `PV_REFUSED_UNSTABLE_OUTPUT` | two runs differ in the compared record, `--list` or its document differs between runs, or the document fails to declare one of its live inputs (`environment`, `private_state`) | a reproducibility claim over a record that moves |
 | `PV_REFUSED_PRIVATE_STATE` | a command's declared private reads and the executable's own declaration disagree | a hidden dependency on state a clean checkout does not have |
 | `PV_REFUSED_UNVERSIONED_SCHEMA` | the surface declares no `schemaVersion` | changing a declaration without any way to tell which declaration a consumer read |
 | `PV_REFUSED_DEPRECATED_WITHOUT_REPLACEMENT` | a `deprecated` command names no successor, names itself, names an undeclared command, or names another deprecated command | removing a capability instead of migrating it |
@@ -335,16 +347,19 @@ means "no drift in the declared shape", not "no defect anywhere".
 
 | id | finding | disposition |
 |---|---|---|
-| D1 | `list` is advertised as a subcommand and refused as one; the accepted form is `--list` | tool defect, queued; the descriptive document's table row is corrected |
-| D2 | `--json` is accepted by `--list` and ignored; the listing stays TSV | tool defect, queued; both documents now name the exception |
+| D1 | `list` was advertised as a subcommand and refused as one; the accepted form was `--list` | **repaired**: `list` is a real subcommand, exits 0, and the documents name both forms; recorded in `evidence/defects/d1-d5/RECEIPT.md` |
+| D2 | `--json` was accepted by `--list` and ignored; the listing stayed TSV | **repaired**: `list`/`--list` emit the listing document (`openssl-rs/verify-listing/1`); recorded in `evidence/defects/d1-d5/RECEIPT.md` |
 | D3 | `--list` beats `--explain` beats a run; the precedence was undocumented | documented in §2.1 |
-| D4 | `artifacts/phase2/install` is declared private but is outside the audited root set, so its presence is never reported | tool defect, queued; stated in §6 |
-| D5 | the `private_state` entry counts are live readings inside the compared record | tool defect, queued; stated in §7 |
+| D4 | `artifacts/phase2/install` was declared private but is Git-tracked and outside the audited root set | **repaired**: the false declaration is removed and the audited set is derived from the declarations; recorded in `evidence/defects/d1-d5/RECEIPT.md` |
+| D5 | the `private_state` entry counts are live readings inside the compared record | **repaired**: `private_state` is a declared input alongside `environment`, required to be present and populated, and excluded from the comparison; recorded in `evidence/defects/d1-d5/RECEIPT.md` |
 | D6 | the descriptive document's `test_verify.py` count said 19; the module executes 37 | corrected, old wording preserved in the A25 receipt |
 
-Every entry's witness is re-checked by `evidence/a25/build_evidence.py`; a
-finding that stops reproducing fails the producer rather than quietly remaining
-in the record.
+Each entry's original witness was re-checked by `evidence/a25/build_evidence.py`
+at the A25 candidate. A repaired entry's witness now describes the behaviour the
+repair removed, by design: the A25 records are left unchanged, and the old/new
+pair for each repair is preserved in `evidence/defects/d1-d5/RECEIPT.md`. The
+producer therefore refuses at the repaired candidate; that refusal is recorded in
+the receipt rather than hidden by editing the record.
 
 ## 10. A worked example on a clean checkout
 
@@ -363,6 +378,20 @@ consumer-curl	required	in all
 consumer-ssh	required	in all
 consumer-sshd	required	in all
 
+$ python3 forensics/tools/verify.py list
+manifest	required	in all
+...
+
+$ python3 forensics/tools/verify.py --list --json
+{
+  "commands": [
+    {
+      "in_all": true,
+      "name": "manifest",
+      "role": "required"
+    },
+...
+
 $ python3 forensics/tools/verify.py --explain manifest
 manifest  (required; in `all`)
   needs:        git
@@ -372,7 +401,7 @@ manifest  (required; in `all`)
 
 $ python3 forensics/tools/public_surface.py verify
 public-surface: 23 declared command(s) match the executable surface; exit codes 0, 1, 2 observed; 12 JSON field(s); 13 refusal code(s) available
-public-surface: two-run determinism: listing stable; JSON document compared over 14 invocation(s)
+public-surface: two-run determinism: listing stable; JSON document compared over 15 invocation(s)
 public-surface: codes=PV_OK
 
 $ python3 forensics/tools/public_surface.py explain manifest
@@ -433,9 +462,10 @@ document records why. That is the interface working as declared.
 * External reproduction of this contract by a party in a distinct trust domain.
 * A machine-checked proof that the detector cannot miss a drift class; the
   refusal table and its controls are a finite, tested set, not a theorem.
-* Repair of D1, D2, D4 and D5. They are queued with their witnesses; this
-  item's scope is the declaration, the detector, the document and the records,
-  and it does not change `verify.py`'s behaviour.
+* Independent verification that the repaired surface holds beyond its own
+  controls. The D1, D2, D4 and D5 repairs are checked by this tool's controls and
+  the drift detector; no external party has yet driven `list`, the listing
+  document or the declared private-state input.
 * The A25 queue row's preview of extended `verify` subcommands (`sarif`,
   `envelopes`, `attestations`, `signer-roles`, `provenance`, `transparency`,
   `revocations`, `policy`, `release`, …). They are not implemented; the surface

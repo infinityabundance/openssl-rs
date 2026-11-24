@@ -18,25 +18,28 @@ What the interface guarantees
   Identity digests are computed over Git-tracked files only.
 * ``verify all`` exits non-zero when any required step is not ``PASS`` and the
   output names every non-passing step.
-* ``--json`` emits one document with two declared parts.  The *deterministic
+* ``--json`` emits one document with declared parts.  The *deterministic
   record* -- candidate identity, step order, prerequisites, evidence and tool
   digests, every check outcome, the counts and the status -- is sorted and
   timestamp-free, and two runs over the same checkout reproduce it byte for
-  byte.  The ``environment`` block records the live readings a run observed
-  (``MemAvailable``, the court cap derived from it, the court's identity): that
-  is an *input* to the run, so it is emitted and never compared by the
-  determinism control.  Each step carries the evidence identity it read and the
-  digest of the tool that produced the verdict.
+  byte.  The ``environment`` and ``private_state`` blocks record live readings
+  (``MemAvailable``, the court cap derived from it, the court's identity; the
+  untracked or ignored entry counts under each audited root): those are
+  *inputs* to the run, so they are emitted, required to be declared and
+  populated, and never compared by the determinism control.  Each step carries
+  the evidence identity it read and the digest of the tool that produced the
+  verdict.  The listing (``list`` or ``--list``) emits its own document under
+  ``--json`` rather than accepting the flag and ignoring it.
 * A step that needs the network is refused unless the run declares ``--network``.
   ``--network`` is a declaration, not a probe; a wrong declaration surfaces as
   that step's own failure.
 
 Exit contract
 -------------
-    0  every selected required step is PASS
+    0  every selected required step is PASS, or a discovery command printed
     1  at least one selected step is not PASS (for a single step: it is not PASS)
-    2  the invocation was refused before any step ran: unknown subcommand, a
-       checkout that cannot be read, or a malformed selection
+    2  the invocation was refused before any step ran: no subcommand, an unknown
+       subcommand, a checkout that cannot be read, or a malformed selection
 
 What this interface does not establish
 --------------------------------------
@@ -95,10 +98,19 @@ MEMORY_CAP_FLOOR_BYTES = 2 * 1024 ** 3
 COURT_MEM_VAR = "OPENSSL_RS_COURT_MEM"
 COURT_MEMSWAP_VAR = "OPENSSL_RS_COURT_MEMSWAP"
 
-# The live readings are declared under this key and are excluded from the record
-# two runs must reproduce.  DETERMINISM_CODE names that control's refusal.
+# The live readings are declared under these keys and are excluded from the
+# record two runs must reproduce.  DETERMINISM_CODE names that control's
+# refusal.  Both blocks are inputs: they must be present, declared and
+# populated in every run, and neither is compared across two runs.
 ENVIRONMENT_KEY = "environment"
+ENVIRONMENT_DECLARATION = "environment-input"
+PRIVATE_STATE_KEY = "private_state"
+PRIVATE_STATE_DECLARATION = "private-state-input"
+INPUT_KEYS = (ENVIRONMENT_KEY, PRIVATE_STATE_KEY)
 DETERMINISM_CODE = "E_VERIFY_DETERMINISTIC"
+
+# The listing has its own schema: it is a discovery document, not a run document.
+LISTING_SCHEMA = "openssl-rs/verify-listing/1"
 
 AUTHORITY_DSO = ("forensics/authorities/prefix/openssl-3.6.4-production/"
                  "lib/libcrypto.so.3")
@@ -483,7 +495,7 @@ def consumer_step(family: str, receipt: str) -> Step:
         needs=("python", "git"),
         tools=("forensics/tools/closure_discipline.py",),
         identity=(receipt, T10_RECORD),
-        reads_gitignored=("court", "artifacts/phase2/install"),
+        reads_gitignored=("court",),
         commands=(Command(argv=("{python}", "forensics/tools/closure_discipline.py",
                                 "audit", "--receipt", receipt)),),
         pass_reason="every exclusion row in the recorded closure receipt passes the "
@@ -784,6 +796,19 @@ def _resolved_env(network: bool, tmpdir: str) -> dict[str, str]:
     return env
 
 
+def audited_private_roots(root: Path) -> tuple[str, ...]:
+    """The roots presence reporting audits: the known roots and every declared read.
+
+    A step declares the gitignored roots its delegate may read, and the interface
+    reports presence under the audited set.  Deriving the set from the
+    declarations as well as ``PRIVATE_ROOTS`` makes it impossible to declare a
+    private read that presence reporting cannot see; the A25 D4 defect was exactly
+    that mismatch.
+    """
+    declared = {path for step in steps_for(root).values() for path in step.reads_gitignored}
+    return tuple(sorted(set(PRIVATE_ROOTS) | declared))
+
+
 def build_context(root: Path, network: bool, tmpdir: str) -> Context:
     warnings = []
     record = _load_json(root / T10_RECORD)
@@ -799,7 +824,7 @@ def build_context(root: Path, network: bool, tmpdir: str) -> Context:
         tmpdir=tmpdir,
         env=_resolved_env(network, tmpdir),
         candidate=candidate_identity(root),
-        private_state=private_state_report(root),
+        private_state=private_state_report(root, audited_private_roots(root)),
         environment=environment_report(),
         warnings=tuple(sorted(warnings)),
     )
@@ -1348,13 +1373,19 @@ def run(names: list[str], ctx: Context, execute=None) -> dict:
             "steps": names,
         },
         "private_state": {
+            # A live reading, declared as an input alongside `environment` and
+            # excluded from the record two runs must reproduce.
+            "declared": PRIVATE_STATE_DECLARATION,
             "known_roots": ctx.private_state,
             "present": list(ctx.private_present),
-            "note": "tracked_files counts Git-tracked files under a declared root and "
-                    "is part of the checkout; private_entries counts the untracked or "
-                    "ignored entries Git reports there.  This interface reads no "
-                    "gitignored content, and each step names the private paths its "
-                    "own tool may read",
+            "note": "live readings sampled once per run: inputs to the run, not "
+                    "outputs of it.  tracked_files counts Git-tracked files under a "
+                    "declared root and is part of the checkout; private_entries counts "
+                    "the untracked or ignored entries Git reports there.  This "
+                    "interface reads no gitignored content, and each step names the "
+                    "private paths its own tool may read.  Two runs of the same "
+                    "checkout need not reproduce this block, and "
+                    f"{DETERMINISM_CODE} compares the rest of the record",
         },
         # Live readings, declared as an input and excluded from the record two runs
         # must reproduce.  They are recorded because a verdict has to say which
@@ -1377,16 +1408,17 @@ def deterministic_projection(document: dict) -> dict:
     """The part of the record that two runs over identical inputs must reproduce.
 
     ``environment`` holds live readings -- ``MemAvailable``, the court cap derived
-    from it, the court's identity.  They are inputs to the run, not outputs of it,
-    so a control that claims two runs agree must not be asked to reproduce them;
-    it must instead require that the block is declared and populated
-    (``environment_declaration_problem``).  Everything else stays in the
+    from it, the court's identity -- and ``private_state`` holds the live counts of
+    untracked or ignored entries under each audited root.  Both are inputs to the
+    run, not outputs of it, so a control that claims two runs agree must not be
+    asked to reproduce them; it must instead require that each block is declared
+    and populated (``input_declaration_problem``).  Everything else stays in the
     projection -- candidate identity, step order, prerequisites, evidence and
     tool digests, every check outcome, the counts, the non-passing names and the
     status -- so a changed digest, ordering, member set or step outcome is still a
     failure.
     """
-    return {key: value for key, value in document.items() if key != ENVIRONMENT_KEY}
+    return {key: value for key, value in document.items() if key not in INPUT_KEYS}
 
 
 def deterministic_bytes(document: dict) -> str:
@@ -1401,7 +1433,7 @@ def environment_declaration_problem(document: object) -> str:
     environment = document.get(ENVIRONMENT_KEY)
     if not isinstance(environment, dict):
         return f"declares no {ENVIRONMENT_KEY!r} block"
-    if environment.get("declared") != "environment-input":
+    if environment.get("declared") != ENVIRONMENT_DECLARATION:
         return (f"does not declare its {ENVIRONMENT_KEY!r} block as an environment "
                 f"input (declared={environment.get('declared')!r})")
     required = ("mem_available_bytes", "mem_available_gib", "floor_met",
@@ -1413,6 +1445,35 @@ def environment_declaration_problem(document: object) -> str:
     if environment["mem_available_bytes"] is None and environment["floor_met"]:
         return (f"declares an {ENVIRONMENT_KEY!r} block whose floor decision rests on no "
                 "availability reading")
+    return ""
+
+
+def private_state_declaration_problem(document: object) -> str:
+    """Why ``document`` does not declare its private-state input, or ``""``."""
+    if not isinstance(document, dict):
+        return "is not one JSON object"
+    block = document.get(PRIVATE_STATE_KEY)
+    if not isinstance(block, dict):
+        return f"declares no {PRIVATE_STATE_KEY!r} block"
+    if block.get("declared") != PRIVATE_STATE_DECLARATION:
+        return (f"does not declare its {PRIVATE_STATE_KEY!r} block as a private-state "
+                f"input (declared={block.get('declared')!r})")
+    known_roots = block.get("known_roots")
+    if not isinstance(known_roots, dict) or not known_roots:
+        return (f"declares a {PRIVATE_STATE_KEY!r} block with no audited roots, so its "
+                "presence report covers nothing")
+    if not isinstance(block.get("present"), list):
+        return (f"declares a {PRIVATE_STATE_KEY!r} block with no 'present' list, so its "
+                "presence report is not populated")
+    return ""
+
+
+def input_declaration_problem(document: object) -> str:
+    """Why ``document`` does not declare each of its live inputs, or ``""``."""
+    for check in (environment_declaration_problem, private_state_declaration_problem):
+        problem = check(document)
+        if problem:
+            return problem
     return ""
 
 
@@ -1444,8 +1505,8 @@ def compare_deterministic(first_text: str, second_text: str) -> tuple[bool, str]
 
     Identical inputs must produce an identical deterministic record.  The control
     runs every time: it never skips, never retries, and decides from evidence.  A
-    run that emits no document, or one that does not declare its environment
-    input, is refused with its own reason.
+    run that emits no document, or one that does not declare each of its live
+    inputs (``environment`` and ``private_state``), is refused with its own reason.
     """
     documents: list[dict] = []
     for label, text in (("first", first_text), ("second", second_text)):
@@ -1454,7 +1515,7 @@ def compare_deterministic(first_text: str, second_text: str) -> tuple[bool, str]
         except (TypeError, ValueError) as exc:
             return False, (f"{DETERMINISM_CODE}: the {label} run did not emit one JSON "
                            f"document: {exc}")
-        problem = environment_declaration_problem(document)
+        problem = input_declaration_problem(document)
         if problem:
             return False, f"{DETERMINISM_CODE}: the {label} run {problem}"
         documents.append(document)
@@ -1468,11 +1529,15 @@ def compare_deterministic(first_text: str, second_text: str) -> tuple[bool, str]
         return False, (f"{DETERMINISM_CODE}: the deterministic record differs at "
                        f"{shown or '<document>'}")
     environment = first[ENVIRONMENT_KEY]
+    private_state = first[PRIVATE_STATE_KEY]
     return True, (f"OK: the deterministic record is identical across two runs; the "
                   f"environment is declared and records MemAvailable="
                   f"{environment['mem_available_bytes']} bytes, cap="
                   f"{environment['court_mem_cap_gib']} GiB, floor_met="
-                  f"{environment['floor_met']}, court={environment['court']!r}")
+                  f"{environment['floor_met']}, court={environment['court']!r}; "
+                  f"private_state is declared, audits "
+                  f"{len(private_state['known_roots'])} root(s) and reports "
+                  f"{len(private_state['present'])} present")
 
 
 def _environment_line(environment: dict) -> str:
@@ -1498,9 +1563,11 @@ def render_text(document: dict) -> str:
         f"root       {document['root']}",
         f"network    {'declared available' if document['invocation']['network'] else 'not declared (offline)'}",
         "environment " + _environment_line(document[ENVIRONMENT_KEY]),
-        "private    " + ("present: " + ", ".join(document["private_state"]["present"])
-                         if document["private_state"]["present"]
-                         else "no untracked or ignored entries under the declared roots"),
+        "private    " + (
+            ("present: " + ", ".join(document["private_state"]["present"]))
+            if document["private_state"]["present"] else
+            "no untracked or ignored entries under the audited roots")
+        + " (recorded, not compared)",
         "",
     ]
     width = max(len(step["name"]) for step in document["steps"])
@@ -1545,16 +1612,58 @@ def explain(table: dict[str, Step], names: list[str]) -> str:
 # ---------------------------------------------------------------------------
 
 
+def listing_rows(root: Path) -> list[dict]:
+    """The discovery rows: every runnable command, its role and its all membership."""
+    table = steps_for(root)
+    rows = []
+    for name in known_steps(root):
+        step = table[name]
+        rows.append({
+            "name": name,
+            "role": "required" if step.required else "optional",
+            "in_all": bool(step.required_for_all),
+        })
+    return rows
+
+
+def listing_document(root: Path) -> dict:
+    """The document ``list --json`` and ``--list --json`` emit.
+
+    ``--json`` is an argument of the discovery command too: a public surface that
+    accepts a flag and ignores it is the defect A25 D2 recorded.  The listing has
+    its own schema because it is a discovery document, not a run document.
+    """
+    return {"schema": LISTING_SCHEMA, "interface": INTERFACE,
+            "commands": listing_rows(root)}
+
+
+def render_listing(rows: list[dict]) -> str:
+    """The tab-separated listing: name, role, all membership, one row per command."""
+    return "".join(
+        f"{row['name']}\t{row['role']}\t"
+        f"{'in all' if row['in_all'] else 'not in all'}\n" for row in rows)
+
+
+def emit_listing(root: Path, as_json: bool) -> int:
+    """Print the listing in the requested form.  Discovery always exits 0."""
+    if as_json:
+        sys.stdout.write(json.dumps(listing_document(root), indent=2, sort_keys=True) + "\n")
+    else:
+        sys.stdout.write(render_listing(listing_rows(root)))
+    return EXIT_PASS
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=__doc__.splitlines()[0],
-        epilog="Exit 0 only when every selected step is PASS; 1 when any is not; "
-               "2 for a refused invocation.",
+        epilog="Exit 0 only when every selected step is PASS, or a discovery command "
+               "printed; 1 when any is not; 2 for a refused invocation.",
     )
     parser.add_argument("command", nargs="?",
                         help="a subcommand name, `all`, or `list`")
     parser.add_argument("--json", action="store_true",
-                        help="emit one machine-readable document")
+                        help="emit one machine-readable document (the run document, "
+                             "or the listing document for the list command)")
     parser.add_argument("--network", action="store_true",
                         help="declare that the network is available (default: offline)")
     parser.add_argument("--explain", action="store_true",
@@ -1573,13 +1682,9 @@ def main(argv: list[str] | None = None) -> int:
     root = Path(__file__).resolve().parents[2]
     table = steps_for(root)
 
+    # `--list` takes precedence over `--explain`, which takes precedence over a run.
     if args.list:
-        for name in known_steps(root):
-            step = table[name]
-            role = "required" if step.required else "optional"
-            in_all = "in all" if step.required_for_all else "not in all"
-            print(f"{name}\t{role}\t{in_all}")
-        return EXIT_PASS
+        return emit_listing(root, args.json)
 
     if args.explain:
         if args.command in (None, "all"):
@@ -1593,7 +1698,18 @@ def main(argv: list[str] | None = None) -> int:
         sys.stdout.write(explain(table, names))
         return EXIT_PASS
 
-    name = args.command or "list"
+    # `list` is a real subcommand as well as the `--list` flag; a bare invocation
+    # is still refused, because a default command would make `verify.py`'s exit
+    # status depend on a choice the caller did not make.
+    if args.command == "list":
+        return emit_listing(root, args.json)
+
+    if args.command is None:
+        print("verify: no subcommand; pass a command name, `all`, or `list` "
+              "(`--list` prints the listing)", file=sys.stderr)
+        return EXIT_USAGE
+
+    name = args.command
     if name == "all":
         names = all_steps(root)
     elif name in table:
