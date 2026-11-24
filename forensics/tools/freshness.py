@@ -90,6 +90,7 @@ from pathlib import Path
 from typing import Any, Iterable
 
 import finding_identity
+import harden
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TOOLS_DIR = Path(__file__).resolve().parent
@@ -840,14 +841,24 @@ def _tool_document(document: Any) -> dict[str, Any] | None:
 
 
 def _instrument_entries(repo: Git, commit: str) -> dict[str, dict[str, Any]]:
-    """Instrument id -> register entry, derived from the register itself."""
+    """Instrument id -> register entry, derived from the register itself.
+
+    The register is read with the strict reader: a duplicate key, a
+    byte-order mark, trailing data or a non-finite number is refused with
+    harden's own stable ``PH_REFUSED_*`` code instead of being resolved by a
+    permissive reader.  The refusal is raised as :class:`JsonError` so the
+    existing CLI refusal paths report it rather than carrying on with an
+    empty or last-wins register.
+    """
     text = repo.text(commit, "evidence/etp3/instruments.json")
     if text is None:
         return {}
     try:
-        document = json.loads(text)
-    except json.JSONDecodeError:
-        return {}
+        document = harden.loads(text.encode("utf-8"))
+    except harden.Refusal as exc:
+        raise JsonError(
+            f"evidence/etp3/instruments.json at {commit[:12]}: {exc.code}: {exc.message}"
+        ) from exc
     entries: dict[str, dict[str, Any]] = {}
     for entry in document.get("instruments", []):
         if isinstance(entry, dict) and isinstance(entry.get("id"), str):

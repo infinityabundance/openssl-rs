@@ -2076,7 +2076,10 @@ def build_document(repo_root: Path, sources: list[str] | None = None) -> dict:
         "$schema": SCHEMA_URI,
         "runs": runs,
     }
-    validate_emission(document)
+    validate_emission(
+        document,
+        native_populations={meta["record"]: len(meta["findings"]) for meta in metas},
+    )
     return document
 
 
@@ -2107,8 +2110,28 @@ def _check_uri(uri: str, where: str) -> None:
         raise Refusal(R_EMISSION, f"{where}: non-relative artifact uri {uri!r}")
 
 
-def validate_emission(document: dict) -> None:
-    """Refuse a document that violates the profile's structural rules."""
+def _counts_by(results: list, key: str) -> dict:
+    counts: dict = {}
+    for result in results:
+        value = result.get(key)
+        counts[value] = counts.get(value, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def validate_emission(document: dict, native_populations: dict[str, int] | None = None) -> None:
+    """Refuse a document that violates the profile's structural rules.
+
+    The emission's population statement is checked, not trusted.  The result
+    count must equal ``properties.a1.projection.projectedTotal``, the
+    per-rule ``projection.projected`` tallies and the per-level
+    ``levelCounts`` tallies must equal the results actually present, and when
+    the caller supplies ``native_populations`` (record path -> the number of
+    findings the native record projects) the result count must equal the
+    record's own population.  A dropped or added result therefore cannot pass
+    while its declared totals still describe the original emission.
+
+    Every population refusal uses ``SARIF_REFUSED_POPULATION_MISMATCH``.
+    """
     _walk_forbidden(document)
 
     if document.get("version") != SARIF_VERSION:
@@ -2169,6 +2192,80 @@ def validate_emission(document: dict) -> None:
         results = run.get("results")
         if not isinstance(results, list):
             raise Refusal(R_EMISSION, f"{where}: results is absent")
+        for i, result in enumerate(results):
+            if not isinstance(result, dict):
+                raise Refusal(R_EMISSION, f"{where}/results[{i}]: result is not an object")
+
+        projection = props.get("projection")
+        if not isinstance(projection, dict):
+            raise Refusal(R_EMISSION, f"{where}: properties.a1.projection is absent")
+        declared_total = projection.get("projectedTotal")
+        if isinstance(declared_total, bool) or not isinstance(declared_total, int):
+            raise Refusal(
+                R_POPULATION,
+                f"{where}: projection.projectedTotal is not an integer",
+            )
+        if declared_total != len(results):
+            raise Refusal(
+                R_POPULATION,
+                f"{where}: projection.projectedTotal is {declared_total} but "
+                f"run.results has {len(results)}",
+            )
+        projected = projection.get("projected")
+        if not isinstance(projected, dict):
+            raise Refusal(R_POPULATION, f"{where}: projection.projected is absent")
+        for key, value in projected.items():
+            if not isinstance(key, str) or isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                raise Refusal(
+                    R_EMISSION,
+                    f"{where}: projection.projected[{key!r}] is not a non-negative integer",
+                )
+        actual_rules = _counts_by(results, "ruleId")
+        declared_rules = dict(sorted(projected.items()))
+        if sum(declared_rules.values()) != len(results):
+            raise Refusal(
+                R_POPULATION,
+                f"{where}: projection.projected sums to "
+                f"{sum(declared_rules.values())} but run.results has {len(results)}",
+            )
+        if declared_rules != actual_rules:
+            raise Refusal(
+                R_POPULATION,
+                f"{where}: projection.projected {declared_rules} does not match "
+                f"the emitted results {actual_rules}",
+            )
+        level_counts = props.get("levelCounts")
+        if level_counts is not None:
+            if not isinstance(level_counts, dict):
+                raise Refusal(R_EMISSION, f"{where}: levelCounts is not an object")
+            for key, value in level_counts.items():
+                if not isinstance(key, str) or isinstance(value, bool) or not isinstance(value, int) or value < 0:
+                    raise Refusal(
+                        R_EMISSION,
+                        f"{where}: levelCounts[{key!r}] is not a non-negative integer",
+                    )
+            actual_levels = _counts_by(results, "level")
+            declared_levels = dict(sorted(level_counts.items()))
+            if declared_levels != actual_levels:
+                raise Refusal(
+                    R_POPULATION,
+                    f"{where}: levelCounts {declared_levels} does not match the "
+                    f"emitted results {actual_levels}",
+                )
+        if native_populations is not None:
+            expected_native = native_populations.get(record)
+            if isinstance(expected_native, bool) or not isinstance(expected_native, int):
+                raise Refusal(
+                    R_POPULATION,
+                    f"{where}: no native population was supplied for {record!r}",
+                )
+            if expected_native != len(results):
+                raise Refusal(
+                    R_POPULATION,
+                    f"{where}: {record} projects {expected_native} native findings "
+                    f"but the run emits {len(results)} results",
+                )
+
         for i, result in enumerate(results):
             rwhere = f"{where}/results[{i}]"
             rid = result.get("ruleId")

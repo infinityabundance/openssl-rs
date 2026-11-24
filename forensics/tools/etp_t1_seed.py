@@ -25,6 +25,7 @@ REPO = Path(__file__).resolve().parents[2]
 if str(Path(__file__).resolve().parent) not in sys.path:
     sys.path.insert(0, str(Path(__file__).resolve().parent))
 import closure_discipline  # noqa: E402  (ETP-T10 projection)
+import harden  # noqa: E402  (the strict reader for the instrument register)
 S = "21bea318819a56f641b3aa2f25027216b97a1c4d"
 # The ETP-T3 analysis candidate.  The refinement nodes cite documents and
 # evidence that exist here; the rest of the graph remains bound to S.
@@ -87,14 +88,30 @@ def worktree_src(path: str, span: str, quote: str, bound: str = T4) -> dict:
     }
 
 
-def _output_path() -> Path:
+def _cli_paths() -> tuple[Path, Path]:
     parser = argparse.ArgumentParser(add_help=False)
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT)
+    parser.add_argument(
+        "--instruments",
+        type=Path,
+        default=REPO / "evidence/etp3/instruments.json",
+        help="the instrument register to read (default: the tracked register)",
+    )
     args, _ = parser.parse_known_args()
-    return args.output
+    return args.output, args.instruments
 
 
-OUT = _output_path()
+def load_instruments(path: Path) -> dict:
+    """Read the instrument register with the strict reader.
+
+    A duplicate key, a byte-order mark, trailing data or a non-finite number is
+    refused with harden's own stable ``PH_REFUSED_*`` code rather than being
+    resolved by whichever permissive reader happens to read the register.
+    """
+    return harden.loads(path.read_bytes())
+
+
+OUT, INSTRUMENTS = _cli_paths()
 
 
 def src(path: str, span: str, quote: str, bound: str | None = None,
@@ -918,7 +935,11 @@ for eid, aid in [
     edge(eid, "assessed_by", aid, f"{aid} assesses {eid}")
 
 # ---------------------------------------------------------------- instruments
-instruments = json.loads((REPO / "evidence/etp3/instruments.json").read_text())
+try:
+    instruments = load_instruments(INSTRUMENTS)
+except harden.Refusal as exc:
+    print(f"{exc.code}: {exc.message}", file=sys.stderr)
+    raise SystemExit(1)
 INSTRUMENT_TARGETS = {
     "valgrind-ctgrind": ["REQ-SEC-02", "REQ-TIM-02"],
     "dudect": ["REQ-SEC-02"],

@@ -935,5 +935,60 @@ class RegistryShape(unittest.TestCase):
         )
 
 
+class InstrumentRegisterStrictness(unittest.TestCase):
+    """E7: the instrument register is read with the strict reader.
+
+    ``json.loads`` accepts a duplicate key (last wins), a byte-order mark and
+    trailing data; the strict reader refuses each.  These controls require
+    ``_instrument_entries`` (the consumer's real register path) to refuse them
+    with harden's stable code instead of deriving a register from them.
+    """
+
+    CASES = {
+        "duplicate-key": (
+            '{"instruments": [], "instruments": []}\n',
+            "PH_REFUSED_DUPLICATE_KEY",
+        ),
+        "bom": ('\ufeff{"instruments": []}\n', "PH_REFUSED_BOM"),
+        "trailing-data": (
+            '{"instruments": []}\n{}\n',
+            "PH_REFUSED_TRAILING_DATA",
+        ),
+        "non-finite": (
+            '{"instruments": [], "extra": NaN}\n',
+            "PH_REFUSED_NONFINITE",
+        ),
+    }
+
+    def test_well_formed_register_is_read(self) -> None:
+        fixture = Fixture()
+        self.addCleanup(fixture.close)
+        fixture.write(
+            "evidence/etp3/instruments.json",
+            '{"instruments": [{"id": "dudect", "name": "dudect"}]}\n',
+        )
+        head = fixture.commit("register")
+        entries = freshness._instrument_entries(fixture.git, head)
+        self.assertEqual(sorted(entries), ["dudect"])
+
+    def test_malformed_register_is_refused(self) -> None:
+        for name, (text, code) in self.CASES.items():
+            with self.subTest(case=name):
+                fixture = Fixture()
+                self.addCleanup(fixture.close)
+                fixture.write("evidence/etp3/instruments.json", text)
+                head = fixture.commit("malformed register")
+                with self.assertRaises(freshness.JsonError) as caught:
+                    freshness._instrument_entries(fixture.git, head)
+                self.assertIn(code, str(caught.exception))
+
+    def test_absent_register_is_not_a_refusal(self) -> None:
+        fixture = Fixture()
+        self.addCleanup(fixture.close)
+        self.assertEqual(
+            freshness._instrument_entries(fixture.git, fixture.git.head() or ""), {}
+        )
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

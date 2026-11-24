@@ -417,5 +417,49 @@ class TraceabilityControls(unittest.TestCase):
         self.assertIn("not_independent", result.stderr)
 
 
+class RegisterStrictness(unittest.TestCase):
+    """E7: the seeder reads the instrument register with the strict reader."""
+
+    CASES = {
+        "duplicate-key": (
+            b'{"instruments": [], "instruments": []}\n',
+            "PH_REFUSED_DUPLICATE_KEY",
+        ),
+        "bom": (b'\xef\xbb\xbf{"instruments": []}\n', "PH_REFUSED_BOM"),
+        "trailing-data": (
+            b'{"instruments": []}\n{}\n',
+            "PH_REFUSED_TRAILING_DATA",
+        ),
+        "non-finite": (
+            b'{"instruments": [], "extra": NaN}\n',
+            "PH_REFUSED_NONFINITE",
+        ),
+    }
+
+    def test_a_malformed_register_is_refused_before_the_graph_is_written(self) -> None:
+        for name, (payload, code) in self.CASES.items():
+            with self.subTest(case=name):
+                with tempfile.TemporaryDirectory(prefix="etp-t1-strict-") as tmp:
+                    register = Path(tmp) / "instruments.json"
+                    register.write_bytes(payload)
+                    output = Path(tmp) / "graph.json"
+                    result = subprocess.run(
+                        [
+                            sys.executable,
+                            str(SEEDER),
+                            "--instruments",
+                            str(register),
+                            "--output",
+                            str(output),
+                        ],
+                        capture_output=True,
+                        text=True,
+                        timeout=600,
+                    )
+                    self.assertNotEqual(result.returncode, 0, result.stdout)
+                    self.assertIn(code, result.stderr)
+                    self.assertFalse(output.exists(), "a refused register still wrote a graph")
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

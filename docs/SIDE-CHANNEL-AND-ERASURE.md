@@ -231,12 +231,17 @@ binary digest; that gap is recorded, not repaired.
 ## 7. Refusal rules
 
 `forensics/tools/side_channel_erasure.py check-claims` refuses a typed claim by
-name. `--self-test` runs one positive and one negative control per rule.
+name. `--self-test` runs one positive and one negative control per rule. When
+the caller supplies the artefact under test with `--artefact FILE` (the expected
+identity is derived as `sha256:<hex>`) or `--binary-identity VALUE`, a ctgrind
+claim whose recorded `binary_identity` differs from it is also refused: a
+present identity is not the identity of the binary the log came from.
 
 | rule | code | refused when | control |
 |---|---|---|---|
 | 1 | `CT_T_WITHOUT_PREREGISTERED_GEOMETRY` | a constant-time claim cites a t statistic without a preregistration id, geometry and criterion | `NC-1` refused, `PC-1` accepted |
 | 2 | `CTGRIND_WITHOUT_HARNESS_IDENTITY_TAINT` | a ctgrind claim lacks the harness, the binary identity or the tainted inputs | `NC-2` refused, `PC-2` accepted |
+| 2 | `CTGRIND_BINARY_IDENTITY_MISMATCH` | a ctgrind claim's recorded binary identity differs from the identity the caller supplies for the artefact under test | `NC-2B` refused, `PC-2` accepted against the matching identity |
 | 3 | `DEBUG_BINARY_GENERALISED_TO_RELEASE` | a debug/test artefact is generalised to the release artefact | `NC-3` refused, `PC-3` accepted |
 | 4 | `SECRET_DEPENDENT_CONTROL_WITHOUT_EVIDENCE` | a mechanism with class `SECRET_DEPENDENT_CONTROL` and evidence `NONE` is claimed constant-time or safe | `NC-4` refused (`AES-SBOX`), `PC-4` accepted |
 | 5 | `EXCLUSIONS_CHANGED_AFTER_RUN` | the exclusion set differs from the preregistration, or is marked changed after the run | `NC-5` refused, `PC-5` accepted |

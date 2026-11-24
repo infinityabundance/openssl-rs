@@ -17,6 +17,7 @@ Run inside the court:
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import subprocess
 import sys
@@ -80,6 +81,48 @@ class RefusalRules(unittest.TestCase):
                 "scope": {"artefact": "test_binary"},
             },
             sce.R2,
+        )
+
+    def _ctgrind_claim(self) -> dict:
+        return {
+            "id": "R2-IDENTITY",
+            "kind": "ctgrind_finding",
+            "statement": "Memcheck reported a tainted branch.",
+            "evidence": {
+                "kind": "ctgrind",
+                "harness": "courts/phase18/timing/ct_bn.c",
+                "binary_identity": "sha256:" + "ab" * 32,
+                "tainted_inputs": ["nonce"],
+            },
+            "scope": {"artefact": "test_binary"},
+        }
+
+    def test_r2_identity_must_equal_the_artefact_under_test(self) -> None:
+        refusals = sce.check_claim(
+            self._ctgrind_claim(),
+            self.secrets,
+            self.prereg,
+            expected_binary_identity="sha256:" + "cd" * 32,
+        )
+        self.assertIn(sce.R2_IDENTITY, [item[0] for item in refusals])
+        detail = " ".join(item[1] for item in refusals)
+        self.assertIn("ab" * 32, detail)
+        self.assertIn("cd" * 32, detail)
+
+    def test_r2_identity_matches_the_artefact_under_test(self) -> None:
+        claim = self._ctgrind_claim()
+        refusals = sce.check_claim(
+            claim,
+            self.secrets,
+            self.prereg,
+            expected_binary_identity=claim["evidence"]["binary_identity"],
+        )
+        self.assertEqual(refusals, [])
+
+    def test_r2_identity_is_not_invented_without_an_expected_value(self) -> None:
+        # Presence is still checked; identity needs a caller-supplied value.
+        self.assertEqual(
+            sce.check_claim(self._ctgrind_claim(), self.secrets, self.prereg), []
         )
 
     def test_r3_debug_binary_to_release(self) -> None:
@@ -301,6 +344,67 @@ class CommandLine(unittest.TestCase):
         result = self.run_cmd(str(CHECKER), "--self-test", "--repo-root", str(REPO_ROOT))
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("SELF-TEST PASS", result.stdout)
+
+    def test_identity_mismatch_is_refused_by_the_cli(self) -> None:
+        claim = {
+            "id": "CLI-1",
+            "kind": "ctgrind_finding",
+            "statement": "Memcheck reported a tainted branch.",
+            "evidence": {
+                "kind": "ctgrind",
+                "harness": "courts/phase18/timing/ct_bn.c",
+                "binary_identity": "sha256:" + "ab" * 32,
+                "tainted_inputs": ["nonce"],
+            },
+            "scope": {"artefact": "test_binary"},
+        }
+        with tempfile.TemporaryDirectory(prefix="etp-t7-cli-") as tmp:
+            path = Path(tmp) / "claims.json"
+            path.write_text(json.dumps({"claims": [claim]}), encoding="utf-8")
+            result = self.run_cmd(
+                str(VALIDATOR),
+                "check-claims",
+                "--repo-root",
+                str(REPO_ROOT),
+                "--claims",
+                str(path),
+                "--binary-identity",
+                "sha256:" + "cd" * 32,
+            )
+        self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+        self.assertIn(sce.R2_IDENTITY, result.stderr)
+
+    def test_artefact_option_derives_the_expected_identity(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="etp-t7-cli-") as tmp:
+            artefact_path = Path(tmp) / "candidate.bin"
+            artefact_path.write_bytes(b"a candidate binary")
+            digest = "sha256:" + hashlib.sha256("a candidate binary".encode("utf-8")).hexdigest()
+            claim = {
+                "id": "CLI-2",
+                "kind": "ctgrind_finding",
+                "statement": "Memcheck reported a tainted branch.",
+                "evidence": {
+                    "kind": "ctgrind",
+                    "harness": "courts/phase18/timing/ct_bn.c",
+                    "binary_identity": digest,
+                    "tainted_inputs": ["nonce"],
+                },
+                "scope": {"artefact": "test_binary"},
+            }
+            path = Path(tmp) / "claims.json"
+            path.write_text(json.dumps({"claims": [claim]}), encoding="utf-8")
+            result = self.run_cmd(
+                str(VALIDATOR),
+                "check-claims",
+                "--repo-root",
+                str(REPO_ROOT),
+                "--claims",
+                str(path),
+                "--artefact",
+                str(artefact_path),
+            )
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("CLAIMS ok", result.stdout)
 
 
 class TrackedFileStyle(unittest.TestCase):

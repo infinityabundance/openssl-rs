@@ -26,6 +26,7 @@ Run inside the court:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -62,6 +63,7 @@ PREREG_SCHEMA = "openssl-rs/etp-t7/preregistration/1"
 # Claim refusal codes, one per required rule.
 R1 = "CT_T_WITHOUT_PREREGISTERED_GEOMETRY"
 R2 = "CTGRIND_WITHOUT_HARNESS_IDENTITY_TAINT"
+R2_IDENTITY = "CTGRIND_BINARY_IDENTITY_MISMATCH"
 R3 = "DEBUG_BINARY_GENERALISED_TO_RELEASE"
 R4 = "SECRET_DEPENDENT_CONTROL_WITHOUT_EVIDENCE"
 R5 = "EXCLUSIONS_CHANGED_AFTER_RUN"
@@ -334,7 +336,19 @@ def check_claim(
     claim: dict,
     secrets: dict,
     prereg: dict,
+    *,
+    expected_binary_identity: str | None = None,
 ) -> list[tuple[str, str]]:
+    """Adjudicate one typed claim.
+
+    ``expected_binary_identity`` is the identity of the artefact under test as
+    the caller derived it (a digest, or ``sha256:<hex>``).  When supplied, a
+    ctgrind claim's recorded ``binary_identity`` must equal it: presence is not
+    identity.  When it is not supplied the claim is adjudicated exactly as
+    before, because this function cannot invent the identity of the binary the
+    log came from.  The CLI supplies it with ``--binary-identity`` or
+    ``--artefact``.
+    """
     refusals: list[tuple[str, str]] = []
     evidence = claim.get("evidence") or {}
     scope = claim.get("scope") or {}
@@ -363,6 +377,19 @@ def check_claim(
         if missing:
             refusals.append(
                 (R2, f"{claim.get('id')}: ctgrind claim without {', '.join(sorted(set(missing)))}")
+            )
+        recorded_identity = evidence.get("binary_identity")
+        if (
+            expected_binary_identity is not None
+            and recorded_identity
+            and recorded_identity != expected_binary_identity
+        ):
+            refusals.append(
+                (
+                    R2_IDENTITY,
+                    f"{claim.get('id')}: recorded binary_identity {recorded_identity!r} "
+                    f"does not match the artefact under test {expected_binary_identity!r}",
+                )
             )
 
     artefact = (scope.get("artefact") or "").lower()
@@ -434,10 +461,23 @@ def check_claim(
     return refusals
 
 
-def check_claims(doc: dict, secrets: dict, prereg: dict) -> list[tuple[str, str]]:
+def check_claims(
+    doc: dict,
+    secrets: dict,
+    prereg: dict,
+    *,
+    expected_binary_identity: str | None = None,
+) -> list[tuple[str, str]]:
     refusals: list[tuple[str, str]] = []
     for claim in _claims(doc):
-        refusals.extend(check_claim(claim, secrets, prereg))
+        refusals.extend(
+            check_claim(
+                claim,
+                secrets,
+                prereg,
+                expected_binary_identity=expected_binary_identity,
+            )
+        )
     return refusals
 
 
@@ -501,10 +541,32 @@ def _self_test(repo_root: Path) -> int:
         "scope": {"artefact": "test_binary"},
     }
     expect("R2 positive (harness, identity, tainted inputs)", check_claim(ctgrind_ok, secrets, prereg), None)
+    expect(
+        "R2 identity positive (recorded identity equals the artefact)",
+        check_claim(
+            ctgrind_ok,
+            secrets,
+            prereg,
+            expected_binary_identity="sha256:abc",
+        ),
+        None,
+    )
     nc2 = json.loads(json.dumps(ctgrind_ok))
     nc2["evidence"].pop("tainted_inputs")
     nc2["id"] = "NC-2"
     expect("R2 negative (ctgrind without tainted inputs)", check_claim(nc2, secrets, prereg), R2)
+    nc2b = json.loads(json.dumps(ctgrind_ok))
+    nc2b["id"] = "NC-2B"
+    expect(
+        "R2 identity negative (recorded identity differs from the artefact)",
+        check_claim(
+            nc2b,
+            secrets,
+            prereg,
+            expected_binary_identity="sha256:def",
+        ),
+        R2_IDENTITY,
+    )
 
     release_ok = {
         "id": "PC-3",
@@ -600,8 +662,33 @@ def main(argv: list[str]) -> int:
     parser.add_argument("command", nargs="?", choices=["validate", "check-claims"])
     parser.add_argument("--repo-root", default=".")
     parser.add_argument("--claims")
+    parser.add_argument(
+        "--binary-identity",
+        help="the identity of the artefact under test; a ctgrind claim's "
+             "recorded binary_identity must equal it",
+    )
+    parser.add_argument(
+        "--artefact",
+        help="derive the expected identity as sha256:<hex> of this file",
+    )
     parser.add_argument("--self-test", action="store_true")
     args = parser.parse_args(argv)
+
+    if args.binary_identity and args.artefact:
+        print(
+            "SCE_USAGE: --binary-identity and --artefact are exclusive",
+            file=sys.stderr,
+        )
+        return 2
+    expected_identity = args.binary_identity
+    if args.artefact:
+        try:
+            expected_identity = "sha256:" + hashlib.sha256(
+                Path(args.artefact).read_bytes()
+            ).hexdigest()
+        except OSError as exc:
+            print(f"SCE_UNREADABLE_ARTEFACT: {exc}", file=sys.stderr)
+            return 2
 
     repo_root = Path(args.repo_root).resolve()
     if args.self_test:
@@ -641,7 +728,12 @@ def main(argv: list[str]) -> int:
         secrets = load_json(repo_root / "evidence/etp-t7/SECRETS.json")
         prereg = load_json(repo_root / "evidence/etp-t7/PREREGISTRATION.json")
         doc = load_json(Path(args.claims))
-        refusals = check_claims(doc, secrets, prereg)
+        refusals = check_claims(
+            doc,
+            secrets,
+            prereg,
+            expected_binary_identity=expected_identity,
+        )
         for code, message in refusals:
             print(f"{code}: {message}", file=sys.stderr)
         if refusals:

@@ -703,6 +703,70 @@ class EmissionControls(unittest.TestCase):
         for rule in adapter.RULES:
             self.assertIn(rule["level"], adapter._KIND_FOR_LEVEL)
 
+    def test_a_dropped_result_is_refused(self):
+        document = build(self.root)
+        run = document["runs"][0]
+        del run["results"][0]
+        with self.assertRaises(adapter.Refusal) as caught:
+            adapter.validate_emission(document)
+        self.assertEqual(caught.exception.code, adapter.R_POPULATION)
+
+    def test_a_tampered_projected_total_is_refused(self):
+        document = build(self.root)
+        projection = document["runs"][0]["properties"]["a1"]["projection"]
+        projection["projectedTotal"] += 1
+        with self.assertRaises(adapter.Refusal) as caught:
+            adapter.validate_emission(document)
+        self.assertEqual(caught.exception.code, adapter.R_POPULATION)
+
+    def test_a_tampered_rule_tally_is_refused(self):
+        document = build(self.root)
+        run = document["runs"][0]
+        projection = run["properties"]["a1"]["projection"]
+        rule = run["results"][0]["ruleId"]
+        projection["projected"][rule] = projection["projected"][rule] + 1
+        projection["projectedTotal"] += 1
+        with self.assertRaises(adapter.Refusal) as caught:
+            adapter.validate_emission(document)
+        self.assertEqual(caught.exception.code, adapter.R_POPULATION)
+
+    def test_a_tampered_level_tally_is_refused(self):
+        document = build(self.root)
+        run = document["runs"][0]
+        level = run["results"][0]["level"]
+        run["properties"]["a1"]["levelCounts"][level] += 1
+        with self.assertRaises(adapter.Refusal) as caught:
+            adapter.validate_emission(document)
+        self.assertEqual(caught.exception.code, adapter.R_POPULATION)
+
+    def test_a_non_integer_tally_is_refused_without_a_traceback(self):
+        document = build(self.root)
+        projection = document["runs"][0]["properties"]["a1"]["projection"]
+        projection["projected"]["A1-NOT-A-RULE"] = "many"
+        with self.assertRaises(adapter.Refusal) as caught:
+            adapter.validate_emission(document)
+        self.assertEqual(caught.exception.code, adapter.R_EMISSION)
+
+    def test_a_native_population_mismatch_is_refused(self):
+        document = build(self.root)
+        populations = {
+            run["properties"]["a1"]["record"]["path"]: len(run["results"])
+            for run in document["runs"]
+        }
+        record = document["runs"][0]["properties"]["a1"]["record"]["path"]
+        populations[record] += 1
+        with self.assertRaises(adapter.Refusal) as caught:
+            adapter.validate_emission(document, native_populations=populations)
+        self.assertEqual(caught.exception.code, adapter.R_POPULATION)
+
+    def test_matching_native_populations_are_accepted(self):
+        document = build(self.root)
+        populations = {
+            run["properties"]["a1"]["record"]["path"]: len(run["results"])
+            for run in document["runs"]
+        }
+        adapter.validate_emission(document, native_populations=populations)
+
 
 class RealRecordControls(unittest.TestCase):
     """The emission over the tracked records, at the identity the receipt names."""
@@ -738,6 +802,20 @@ class RealRecordControls(unittest.TestCase):
         self.assertEqual(counts["evidence/b85c-adjudication.json"], 17)
         self.assertEqual(counts["evidence/b85c-row-reconciliation.json"], 4)
         self.assertEqual(sum(counts.values()), 4245)
+
+    def test_the_committed_emission_still_validates(self):
+        path = REPO_ROOT / "evidence/a1/SARIF.json"
+        document = json.loads(path.read_text(encoding="utf-8"))
+        adapter.validate_emission(document)
+        self.assertEqual(len(document["runs"]), 6)
+        self.assertEqual(
+            sum(len(run["results"]) for run in document["runs"]), 4245
+        )
+        for run in document["runs"]:
+            self.assertEqual(
+                run["properties"]["a1"]["projection"]["projectedTotal"],
+                len(run["results"]),
+            )
 
     def test_named_classes_are_present(self):
         for rule in (
