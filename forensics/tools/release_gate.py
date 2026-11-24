@@ -38,6 +38,11 @@ one refused item refuses the release.
                           equal the candidate the gate resolved (or an explicit
                           `--package-supersedes` identity the gate records);
   6. documentation        `forensics/tools/docs_consistency.py` holds.
+  7. role authorisation   the `release` action is `AUTHORISED` under
+                          `forensics/tools/authorisation.py`, its role record and
+                          its action policy; a refused or not-run release
+                          authorisation is `RG_AUTHORISATION_REFUSED`, and an
+                          absent tool or record is never a skip.
 
 Every item is required.  A tool that cannot be found, a package that was not
 supplied, or a checker that cannot run is a refusal with a named rule, never a
@@ -129,6 +134,9 @@ INTEROP_DIR = ROOT / "courts/phase18/interop"
 INSTRUMENT_TOOL = ROOT / "forensics/tools/instrument_qualify.py"
 INSTRUMENT_REGISTRY = ROOT / "evidence/etp3/instruments.json"
 DOCS_TOOL = ROOT / "forensics/tools/docs_consistency.py"
+AUTHORISATION_TOOL = ROOT / "forensics/tools/authorisation.py"
+AUTHORISATION_RECORD = ROOT / "evidence/a14/AUTHORISATION.json"
+AUTHORISATION_ROLES = ROOT / "evidence/a14/ROLES.json"
 
 # Verdict states that forbid a release outright.  `SUPERSEDED` is not one: the
 # claim was current and has been replaced, which is a history fact, not a
@@ -725,6 +733,76 @@ def check_docs(root: Path, timeout: int = 600, command: list[str] | None = None)
 
 
 # ---------------------------------------------------------------------------
+# 7. Role authorisation
+# ---------------------------------------------------------------------------
+def check_authorisation(
+    root: Path,
+    authorisations: Path | None = None,
+    assignments: Path | None = None,
+    timeout: int = 600,
+    command: list[str] | None = None,
+    at: str | None = None,
+) -> Results:
+    """The `release` action must be authorisation, not merely signed.
+
+    The check runs the A14 decision procedure live rather than trusting a
+    recorded verdict, and it joins the gate as one refusal row.  A refused or
+    not-run decision is `RG_AUTHORISATION_REFUSED`; an absent tool, record or
+    role document is a refusal with its own rule, because a missing role check
+    must never read as permission.
+    """
+    record = Path(authorisations).resolve() if authorisations else AUTHORISATION_RECORD
+    roles = Path(assignments).resolve() if assignments else AUTHORISATION_ROLES
+    if command is None:
+        if not AUTHORISATION_TOOL.is_file():
+            return Results([_missing_tool("RG_AUTHORISATION_TOOL_MISSING", AUTHORISATION_TOOL)], [])
+        if not record.is_file():
+            return Results([Refusal(
+                "RG_AUTHORISATION_MISSING", str(record),
+                "no A14 authorisation record; an absent role check is a refusal, not a skip",
+            )], [])
+        if not roles.is_file():
+            return Results([Refusal(
+                "RG_AUTHORISATION_ROLES_MISSING", str(roles),
+                "no A14 role record; an absent role check is a refusal, not a skip",
+            )], [])
+        command = [
+            PYTHON, str(AUTHORISATION_TOOL), "authorise", "release",
+            "--authorisations", str(record), "--assignments", str(roles), "--json",
+        ]
+        if at is not None:
+            command.extend(["--at", at])
+    run = _run(command, root, timeout)
+    payload = None
+    if run.stdout.strip():
+        try:
+            payload = json.loads(run.stdout)
+        except json.JSONDecodeError:
+            payload = None
+    if not isinstance(payload, dict) or "outcome" not in payload:
+        detail = _bounded((run.stderr or run.stdout).splitlines())
+        return Results([Refusal(
+            "RG_AUTHORISATION_ERROR", "a14/release",
+            detail[-1] if detail else f"authorisation checker exited {run.returncode} with no decision",
+        )], [])
+    outcome = str(payload.get("outcome", "UNKNOWN"))
+    codes = ",".join(payload.get("codes") or []) or "NONE"
+    face = payload.get("faceValue") or {}
+    face_codes = ",".join(face.get("codes") or []) or "NONE"
+    if outcome == "AUTHORISED" and run.returncode == 0:
+        return Results([], [f"release authorisation AUTHORISED (codes NONE; face-value codes {face_codes})"])
+    if outcome in {"REFUSED", "NOT_RUN"}:
+        return Results([Refusal(
+            "RG_AUTHORISATION_REFUSED", "a14/release",
+            f"outcome={outcome} codes={codes}; face-value codes={face_codes}",
+        )], [])
+    return Results([Refusal(
+        "RG_AUTHORISATION_ERROR", "a14/release",
+        f"authorisation checker returned outcome {outcome!r} with exit {run.returncode}",
+    )], [])
+
+
+# ---------------------------------------------------------------------------
 # Composition
 # ---------------------------------------------------------------------------
 def evaluate(args: argparse.Namespace) -> Results:
@@ -794,6 +872,14 @@ def evaluate(args: argparse.Namespace) -> Results:
     recorded.extend(result.recorded)
 
     result = check_docs(root)
+    refusals.extend(result.refusals)
+    recorded.extend(result.recorded)
+
+    result = check_authorisation(
+        root,
+        Path(args.authorisations).resolve() if getattr(args, "authorisations", None) else None,
+        Path(args.assignments).resolve() if getattr(args, "assignments", None) else None,
+    )
     refusals.extend(result.refusals)
     recorded.extend(result.recorded)
 
@@ -1175,6 +1261,10 @@ def main(argv: list[str]) -> int:
     parser.add_argument("--package-supersedes", default=None,
                         help="explicitly accept a package built for REF rather than "
                              "--candidate; the resolved identity is recorded")
+    parser.add_argument("--authorisations", default=None,
+                        help="A14 authorisation record (default evidence/a14/AUTHORISATION.json)")
+    parser.add_argument("--assignments", default=None,
+                        help="A14 role record (default evidence/a14/ROLES.json)")
     parser.add_argument("--json", action="store_true", help="emit one machine-readable decision")
     parser.add_argument("--self-test", action="store_true",
                         help="prove the gate refuses each named failure class")
@@ -1201,7 +1291,7 @@ def main(argv: list[str]) -> int:
         if results.refused():
             print(f"release-gate: REFUSED ({len(results.refusals)} item(s))")
         else:
-            print("release-gate: PASS (candidate, claims, receipts, instruments, package, docs)")
+            print("release-gate: PASS (candidate, claims, receipts, instruments, package, docs, authorisation)")
 
     return EXIT_REFUSED if results.refused() else EXIT_PASS
 

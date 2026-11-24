@@ -233,5 +233,101 @@ class PackageCandidateControls(unittest.TestCase):
         self.assertEqual([item.rule for item in results.refusals], ["RG_PACKAGE_CANDIDATE_MISMATCH"])
 
 
+class AuthorisationRow(unittest.TestCase):
+    """A14 joins the gate as one per-refusal row without altering items 1-6."""
+
+    CONTEXT = {
+        "scope": ["release:control"],
+        "evidenceProducer": "control-only-author",
+        "roleIdentities": {"producer": "control-only-author"},
+    }
+
+    def assignments(self) -> list[dict]:
+        return [
+            {"identity": "control-only-release", "party": "P-CONTROL-RELEASE",
+             "role": "release_authority", "scope": ["release:control"],
+             "grantedAt": "2026-01-01", "evidence": "control-only:release"},
+            {"identity": "control-only-adjudicator", "party": "P-CONTROL-ADJ",
+             "role": "adjudicator", "scope": ["release:control"],
+             "grantedAt": "2026-01-01", "evidence": "control-only:adj"},
+            {"identity": "control-only-author", "party": "P-CONTROL-AUTHOR",
+             "role": "producer", "scope": ["*"],
+             "grantedAt": "2026-01-01", "evidence": "control-only:producer"},
+        ]
+
+    def signatures(self) -> list[dict]:
+        return [
+            {"identity": "control-only-release", "role": "release_authority",
+             "scope": ["release:control"], "verified": True},
+            {"identity": "control-only-adjudicator", "role": "adjudicator",
+             "scope": ["release:control"], "verified": True},
+        ]
+
+    def test_refused_authorisation_is_one_refusal_row(self) -> None:
+        self.assertTrue(release_gate.AUTHORISATION_RECORD.is_file())
+        results = release_gate.check_authorisation(release_gate.ROOT, at="2026-11-24")
+        rules = [item.rule for item in results.refusals]
+        self.assertEqual(rules, ["RG_AUTHORISATION_REFUSED"])
+        self.assertIn("RA_REFUSED_", results.refusals[0].detail)
+        self.assertIn("outcome=REFUSED", results.refusals[0].detail)
+
+    def test_authorised_authorisation_is_recorded_not_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "assignments.json").write_text(
+                json.dumps({"assignments": self.assignments()}), encoding="utf-8")
+            (root / "authorisation.json").write_text(
+                json.dumps({"actions": {"release": {
+                    "context": self.CONTEXT,
+                    "recorded": {"signatures": self.signatures()},
+                }}}), encoding="utf-8")
+            results = release_gate.check_authorisation(
+                release_gate.ROOT,
+                authorisations=root / "authorisation.json",
+                assignments=root / "assignments.json",
+                at="2026-11-24",
+            )
+        self.assertEqual(results.refusals, [])
+        self.assertTrue(any("release authorisation AUTHORISED" in line
+                            for line in results.recorded), results.recorded)
+
+    def test_not_run_authorisation_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            (root / "assignments.json").write_text(
+                json.dumps({"assignments": self.assignments()}), encoding="utf-8")
+            (root / "authorisation.json").write_text(
+                json.dumps({"actions": {"release": {
+                    "context": self.CONTEXT,
+                    "recorded": {"signatures": None},
+                }}}), encoding="utf-8")
+            results = release_gate.check_authorisation(
+                release_gate.ROOT,
+                authorisations=root / "authorisation.json",
+                assignments=root / "assignments.json",
+                at="2026-11-24",
+            )
+        self.assertEqual([item.rule for item in results.refusals],
+                         ["RG_AUTHORISATION_REFUSED"])
+        self.assertIn("outcome=NOT_RUN", results.refusals[0].detail)
+
+    def test_missing_authorisation_record_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            results = release_gate.check_authorisation(
+                release_gate.ROOT,
+                authorisations=Path(temporary) / "absent.json",
+            )
+        self.assertEqual([item.rule for item in results.refusals],
+                         ["RG_AUTHORISATION_MISSING"])
+
+    def test_unparseable_authorisation_is_refused(self) -> None:
+        results = release_gate.check_authorisation(
+            release_gate.ROOT,
+            command=[sys.executable, "-c", "print('not json')"],
+        )
+        self.assertEqual([item.rule for item in results.refusals],
+                         ["RG_AUTHORISATION_ERROR"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

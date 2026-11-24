@@ -1,0 +1,952 @@
+{
+  "actions": {
+    "claim-promotion": {
+      "context": {
+        "evidenceProducer": "P-CAMPAIGN",
+        "roleIdentities": {
+          "producer": "P-CAMPAIGN"
+        },
+        "scope": [
+          "claim:openssh-b85c"
+        ]
+      },
+      "faceValue": {
+        "action": "claim-promotion",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_SELF_AUTHORISATION",
+          "RA_REFUSED_SEPARATION"
+        ],
+        "detail": [
+          "separation failed: 'P-CAMPAIGN' is the producer of the evidence ('P-CAMPAIGN') and signs its own authorisation",
+          "separation failed: adjudicator and producer are the same party ['P-PROJECT-UNDECLARED']; the adjudicator must not be the producer of the evidence being adjudicated"
+        ],
+        "label": "COUNTERFACTUAL_ROLE_ASSESSMENT",
+        "minDistinctSigners": 1,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "adjudicator"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signatures": [
+          {
+            "identity": "P-CAMPAIGN",
+            "role": "adjudicator",
+            "scope": [
+              "claim:openssh-b85c"
+            ],
+            "verificationBasis": "counterfactual: the recorded role fill is taken as if a verified signature existed; this is not a real signature and authorises nothing",
+            "verified": true
+          }
+        ],
+        "signers": 1,
+        "validSigners": [
+          {
+            "identity": "P-CAMPAIGN",
+            "role": "adjudicator",
+            "scope": [
+              "claim:openssh-b85c"
+            ]
+          }
+        ]
+      },
+      "reason": "the b85c adjudication asserts an independent promotion and is filled by the same undeclared party as the evidence it judges",
+      "record": "evidence/b85c-adjudication.json",
+      "recorded": {
+        "action": "claim-promotion",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_SIGNATURE_UNVERIFIED",
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "detail": [
+          "signature[0] identity='P-CAMPAIGN' role='adjudicator' is unverified; its role is not considered",
+          "required role(s) ['adjudicator'] have no valid signature",
+          "0 distinct signer party(ies); the action requires 1"
+        ],
+        "minDistinctSigners": 1,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "adjudicator"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signatures": [
+          {
+            "identity": "P-CAMPAIGN",
+            "role": "adjudicator",
+            "scope": [
+              "claim:openssh-b85c"
+            ],
+            "verificationBasis": "none: no authorisation signature exists. The only recorded signing root is test-only:hmac-sha256:8e10a5a15d233d54 (A10/A12), which signs A9 statements, not role authorisations.",
+            "verified": false
+          }
+        ],
+        "signers": 0,
+        "validSigners": []
+      },
+      "scope": [
+        "claim:openssh-b85c"
+      ],
+      "separationFailed": [
+        {
+          "constraint": "adjudicator != producer",
+          "evaluated": true,
+          "party": [
+            "P-PROJECT-UNDECLARED"
+          ],
+          "why": "the adjudicator must not be the producer of the evidence being adjudicated"
+        }
+      ]
+    },
+    "consumer-graduation": {
+      "context": {
+        "evidenceProducer": "P-CAMPAIGN",
+        "roleIdentities": {
+          "producer": "P-CAMPAIGN"
+        },
+        "scope": [
+          "claim:openssh-b85c"
+        ]
+      },
+      "faceValue": {
+        "action": "consumer-graduation",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_SELF_AUTHORISATION",
+          "RA_REFUSED_SEPARATION",
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "detail": [
+          "separation failed: 'P-CAMPAIGN' is the producer of the evidence ('P-CAMPAIGN') and signs its own authorisation",
+          "separation failed: adjudicator and producer are the same party ['P-PROJECT-UNDECLARED']; the adjudicator must not be the producer of the evidence being adjudicated",
+          "required role(s) ['external_reproducer'] have no valid signature",
+          "1 distinct signer party(ies); the action requires 2"
+        ],
+        "label": "COUNTERFACTUAL_ROLE_ASSESSMENT",
+        "minDistinctSigners": 2,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "adjudicator",
+          "external_reproducer"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signatures": [
+          {
+            "identity": "P-CAMPAIGN",
+            "role": "adjudicator",
+            "scope": [
+              "claim:openssh-b85c"
+            ],
+            "verificationBasis": "counterfactual: the recorded role fill is taken as if a verified signature existed; this is not a real signature and authorises nothing",
+            "verified": true
+          }
+        ],
+        "signers": 1,
+        "validSigners": [
+          {
+            "identity": "P-CAMPAIGN",
+            "role": "adjudicator",
+            "scope": [
+              "claim:openssh-b85c"
+            ]
+          }
+        ]
+      },
+      "reason": "the graduation record fills adjudicator at P-CAMPAIGN and records the independent reproducer as ABSENT",
+      "record": "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
+      "recorded": {
+        "action": "consumer-graduation",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_SIGNATURE_UNVERIFIED",
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "detail": [
+          "signature[0] identity='P-CAMPAIGN' role='adjudicator' is unverified; its role is not considered",
+          "required role(s) ['adjudicator', 'external_reproducer'] have no valid signature",
+          "0 distinct signer party(ies); the action requires 2"
+        ],
+        "minDistinctSigners": 2,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "adjudicator",
+          "external_reproducer"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signatures": [
+          {
+            "identity": "P-CAMPAIGN",
+            "role": "adjudicator",
+            "scope": [
+              "claim:openssh-b85c"
+            ],
+            "verificationBasis": "none: no authorisation signature exists. The only recorded signing root is test-only:hmac-sha256:8e10a5a15d233d54 (A10/A12), which signs A9 statements, not role authorisations.",
+            "verified": false
+          }
+        ],
+        "signers": 0,
+        "validSigners": []
+      },
+      "scope": [
+        "claim:openssh-b85c"
+      ],
+      "separationFailed": [
+        {
+          "constraint": "adjudicator != producer",
+          "evaluated": true,
+          "party": [
+            "P-PROJECT-UNDECLARED"
+          ],
+          "why": "the adjudicator must not be the producer of the evidence being adjudicated"
+        },
+        {
+          "constraint": "external_reproducer != producer",
+          "evaluated": true,
+          "party": [
+            "P-PROJECT-UNDECLARED"
+          ],
+          "why": "an external reproduction must not consume the producing party's own run"
+        },
+        {
+          "constraint": "adjudicator != external_reproducer",
+          "evaluated": true,
+          "party": [
+            "P-PROJECT-UNDECLARED"
+          ],
+          "why": "the adjudicator and the external reproducer are two signatures, not one"
+        }
+      ]
+    },
+    "evidence-correction": {
+      "context": {
+        "evidenceProducer": "P-CAMPAIGN",
+        "roleIdentities": {
+          "producer": "P-CAMPAIGN"
+        },
+        "scope": [
+          "evidence:a14"
+        ]
+      },
+      "faceValue": {
+        "action": "evidence-correction",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_ROLE_NOT_ASSIGNED",
+          "RA_REFUSED_WRONG_ROLE",
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "detail": [
+          "signature[0] identity='P-CAMPAIGN' role='producer': the action requires ['maintainer'], so a valid 'producer' signature is the wrong role",
+          "signature[1] identity='P-CAMPAIGN' role='maintainer': identity 'P-CAMPAIGN' has no recorded assignment of 'maintainer'",
+          "required role(s) ['maintainer'] have no valid signature",
+          "0 distinct signer party(ies); the action requires 1"
+        ],
+        "label": "COUNTERFACTUAL_ROLE_ASSESSMENT",
+        "minDistinctSigners": 1,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "maintainer"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signatures": [
+          {
+            "identity": "P-CAMPAIGN",
+            "role": "producer",
+            "scope": [
+              "evidence:a14"
+            ],
+            "verificationBasis": "counterfactual: the recorded role fill is taken as if a verified signature existed; this is not a real signature and authorises nothing",
+            "verified": true
+          },
+          {
+            "identity": "P-CAMPAIGN",
+            "role": "maintainer",
+            "scope": [
+              "evidence:a14"
+            ],
+            "verificationBasis": "counterfactual: the recorded role fill is taken as if a verified signature existed; this is not a real signature and authorises nothing",
+            "verified": true
+          }
+        ],
+        "signers": 0,
+        "validSigners": []
+      },
+      "reason": "no maintainer is assigned; the evidence producer is P-CAMPAIGN",
+      "record": "evidence/etp-t8/ASSIGNMENTS.json",
+      "recorded": {
+        "action": "evidence-correction",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_SIGNATURE_UNVERIFIED",
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "detail": [
+          "signature[0] identity='P-CAMPAIGN' role='producer' is unverified; its role is not considered",
+          "signature[1] identity='P-CAMPAIGN' role='maintainer' is unverified; its role is not considered",
+          "required role(s) ['maintainer'] have no valid signature",
+          "0 distinct signer party(ies); the action requires 1"
+        ],
+        "minDistinctSigners": 1,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "maintainer"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signatures": [
+          {
+            "identity": "P-CAMPAIGN",
+            "role": "producer",
+            "scope": [
+              "evidence:a14"
+            ],
+            "verificationBasis": "none: no authorisation signature exists. The only recorded signing root is test-only:hmac-sha256:8e10a5a15d233d54 (A10/A12), which signs A9 statements, not role authorisations.",
+            "verified": false
+          },
+          {
+            "identity": "P-CAMPAIGN",
+            "role": "maintainer",
+            "scope": [
+              "evidence:a14"
+            ],
+            "verificationBasis": "none: no authorisation signature exists. The only recorded signing root is test-only:hmac-sha256:8e10a5a15d233d54 (A10/A12), which signs A9 statements, not role authorisations.",
+            "verified": false
+          }
+        ],
+        "signers": 0,
+        "validSigners": []
+      },
+      "scope": [
+        "evidence:a14"
+      ],
+      "separationFailed": [
+        {
+          "constraint": "maintainer != producer",
+          "evaluated": false,
+          "note": "role(s) ['maintainer'] have no recorded identity for this scope",
+          "party": [],
+          "why": "a correction must not be made solely by the producer whose evidence is corrected"
+        }
+      ]
+    },
+    "instrument-qualification": {
+      "context": {
+        "evidenceProducer": "P-CAMPAIGN",
+        "roleIdentities": {
+          "producer": "P-CAMPAIGN"
+        },
+        "scope": [
+          "instrument:etp3"
+        ]
+      },
+      "faceValue": {
+        "action": "instrument-qualification",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_ROLE_NOT_ASSIGNED",
+          "RA_REFUSED_WRONG_ROLE",
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "detail": [
+          "signature[0] identity='P-CAMPAIGN' role='producer': the action requires ['instrument_reviewer'], so a valid 'producer' signature is the wrong role",
+          "signature[1] identity='P-CAMPAIGN' role='instrument_reviewer': identity 'P-CAMPAIGN' has no recorded assignment of 'instrument_reviewer'",
+          "required role(s) ['instrument_reviewer'] have no valid signature",
+          "0 distinct signer party(ies); the action requires 1"
+        ],
+        "label": "COUNTERFACTUAL_ROLE_ASSESSMENT",
+        "minDistinctSigners": 1,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "instrument_reviewer"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signatures": [
+          {
+            "identity": "P-CAMPAIGN",
+            "role": "producer",
+            "scope": [
+              "instrument:etp3"
+            ],
+            "verificationBasis": "counterfactual: the recorded role fill is taken as if a verified signature existed; this is not a real signature and authorises nothing",
+            "verified": true
+          },
+          {
+            "identity": "P-CAMPAIGN",
+            "role": "instrument_reviewer",
+            "scope": [
+              "instrument:etp3"
+            ],
+            "verificationBasis": "counterfactual: the recorded role fill is taken as if a verified signature existed; this is not a real signature and authorises nothing",
+            "verified": true
+          }
+        ],
+        "signers": 0,
+        "validSigners": []
+      },
+      "reason": "no instrument reviewer is assigned; the instrument author is the same undeclared party as every other role",
+      "record": "evidence/etp3/instruments.json",
+      "recorded": {
+        "action": "instrument-qualification",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_SIGNATURE_UNVERIFIED",
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "detail": [
+          "signature[0] identity='P-CAMPAIGN' role='producer' is unverified; its role is not considered",
+          "signature[1] identity='P-CAMPAIGN' role='instrument_reviewer' is unverified; its role is not considered",
+          "required role(s) ['instrument_reviewer'] have no valid signature",
+          "0 distinct signer party(ies); the action requires 1"
+        ],
+        "minDistinctSigners": 1,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "instrument_reviewer"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signatures": [
+          {
+            "identity": "P-CAMPAIGN",
+            "role": "producer",
+            "scope": [
+              "instrument:etp3"
+            ],
+            "verificationBasis": "none: no authorisation signature exists. The only recorded signing root is test-only:hmac-sha256:8e10a5a15d233d54 (A10/A12), which signs A9 statements, not role authorisations.",
+            "verified": false
+          },
+          {
+            "identity": "P-CAMPAIGN",
+            "role": "instrument_reviewer",
+            "scope": [
+              "instrument:etp3"
+            ],
+            "verificationBasis": "none: no authorisation signature exists. The only recorded signing root is test-only:hmac-sha256:8e10a5a15d233d54 (A10/A12), which signs A9 statements, not role authorisations.",
+            "verified": false
+          }
+        ],
+        "signers": 0,
+        "validSigners": []
+      },
+      "scope": [
+        "instrument:etp3"
+      ],
+      "separationFailed": [
+        {
+          "constraint": "instrument_reviewer != producer",
+          "evaluated": false,
+          "note": "role(s) ['instrument_reviewer'] have no recorded identity for this scope",
+          "party": [],
+          "why": "the instrument reviewer must not be the instrument's author"
+        }
+      ]
+    },
+    "release": {
+      "context": {
+        "evidenceProducer": "P-CAMPAIGN",
+        "roleIdentities": {
+          "producer": "P-CAMPAIGN"
+        },
+        "scope": [
+          "release:openssh-b85c"
+        ]
+      },
+      "faceValue": {
+        "action": "release",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_SEPARATION",
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "detail": [
+          "separation failed: release_authority and producer are the same party ['P-PROJECT-UNDECLARED']; the release authority must not be the sole author of the release",
+          "separation failed: release_authority and adjudicator are the same party ['P-PROJECT-UNDECLARED']; a release decision and its adjudication are two signatures, not one",
+          "1 distinct signer party(ies); the action requires 2"
+        ],
+        "label": "COUNTERFACTUAL_ROLE_ASSESSMENT",
+        "minDistinctSigners": 2,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "release_authority",
+          "adjudicator"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signatures": [
+          {
+            "identity": "P-PRINCIPAL",
+            "role": "release_authority",
+            "scope": [
+              "release:openssh-b85c"
+            ],
+            "verificationBasis": "counterfactual: the recorded role fill is taken as if a verified signature existed; this is not a real signature and authorises nothing",
+            "verified": true
+          },
+          {
+            "identity": "P-CAMPAIGN",
+            "role": "adjudicator",
+            "scope": [
+              "release:openssh-b85c"
+            ],
+            "verificationBasis": "counterfactual: the recorded role fill is taken as if a verified signature existed; this is not a real signature and authorises nothing",
+            "verified": true
+          }
+        ],
+        "signers": 1,
+        "validSigners": [
+          {
+            "identity": "P-PRINCIPAL",
+            "role": "release_authority",
+            "scope": [
+              "release:openssh-b85c"
+            ]
+          },
+          {
+            "identity": "P-CAMPAIGN",
+            "role": "adjudicator",
+            "scope": [
+              "release:openssh-b85c"
+            ]
+          }
+        ]
+      },
+      "reason": "the release record fills release_authority at P-PRINCIPAL, adjudicator at P-CAMPAIGN, and names no external reproducer",
+      "record": "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
+      "recorded": {
+        "action": "release",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_SIGNATURE_UNVERIFIED",
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "detail": [
+          "signature[0] identity='P-PRINCIPAL' role='release_authority' is unverified; its role is not considered",
+          "signature[1] identity='P-CAMPAIGN' role='adjudicator' is unverified; its role is not considered",
+          "required role(s) ['release_authority', 'adjudicator'] have no valid signature",
+          "0 distinct signer party(ies); the action requires 2"
+        ],
+        "minDistinctSigners": 2,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "release_authority",
+          "adjudicator"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signatures": [
+          {
+            "identity": "P-PRINCIPAL",
+            "role": "release_authority",
+            "scope": [
+              "release:openssh-b85c"
+            ],
+            "verificationBasis": "none: no authorisation signature exists. The only recorded signing root is test-only:hmac-sha256:8e10a5a15d233d54 (A10/A12), which signs A9 statements, not role authorisations.",
+            "verified": false
+          },
+          {
+            "identity": "P-CAMPAIGN",
+            "role": "adjudicator",
+            "scope": [
+              "release:openssh-b85c"
+            ],
+            "verificationBasis": "none: no authorisation signature exists. The only recorded signing root is test-only:hmac-sha256:8e10a5a15d233d54 (A10/A12), which signs A9 statements, not role authorisations.",
+            "verified": false
+          }
+        ],
+        "signers": 0,
+        "validSigners": []
+      },
+      "scope": [
+        "release:openssh-b85c"
+      ],
+      "separationFailed": [
+        {
+          "constraint": "release_authority != producer",
+          "evaluated": true,
+          "party": [
+            "P-PROJECT-UNDECLARED"
+          ],
+          "why": "the release authority must not be the sole author of the release"
+        },
+        {
+          "constraint": "release_authority != adjudicator",
+          "evaluated": true,
+          "party": [
+            "P-PROJECT-UNDECLARED"
+          ],
+          "why": "a release decision and its adjudication are two signatures, not one"
+        }
+      ]
+    },
+    "revocation": {
+      "context": {
+        "evidenceProducer": "P-CAMPAIGN",
+        "roleIdentities": {
+          "producer": "P-CAMPAIGN"
+        },
+        "scope": [
+          "release:openssh-b85c"
+        ]
+      },
+      "faceValue": {
+        "action": "revocation",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_SELF_AUTHORISATION",
+          "RA_REFUSED_SEPARATION"
+        ],
+        "detail": [
+          "separation failed: 'P-CAMPAIGN' is the producer of the evidence ('P-CAMPAIGN') and signs its own authorisation",
+          "separation failed: revocation_authority and producer are the same party ['P-PROJECT-UNDECLARED']; a producer may not revoke its own claim in a way that erases the record"
+        ],
+        "label": "COUNTERFACTUAL_ROLE_ASSESSMENT",
+        "minDistinctSigners": 1,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "revocation_authority"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signatures": [
+          {
+            "identity": "P-CAMPAIGN",
+            "role": "revocation_authority",
+            "scope": [
+              "release:openssh-b85c"
+            ],
+            "verificationBasis": "counterfactual: the recorded role fill is taken as if a verified signature existed; this is not a real signature and authorises nothing",
+            "verified": true
+          }
+        ],
+        "signers": 1,
+        "validSigners": [
+          {
+            "identity": "P-CAMPAIGN",
+            "role": "revocation_authority",
+            "scope": [
+              "release:openssh-b85c"
+            ]
+          }
+        ]
+      },
+      "reason": "the release record fills revocation_authority at P-CAMPAIGN, the same party that produced the evidence",
+      "record": "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
+      "recorded": {
+        "action": "revocation",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_SIGNATURE_UNVERIFIED",
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "detail": [
+          "signature[0] identity='P-CAMPAIGN' role='revocation_authority' is unverified; its role is not considered",
+          "required role(s) ['revocation_authority'] have no valid signature",
+          "0 distinct signer party(ies); the action requires 1"
+        ],
+        "minDistinctSigners": 1,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "revocation_authority"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signatures": [
+          {
+            "identity": "P-CAMPAIGN",
+            "role": "revocation_authority",
+            "scope": [
+              "release:openssh-b85c"
+            ],
+            "verificationBasis": "none: no authorisation signature exists. The only recorded signing root is test-only:hmac-sha256:8e10a5a15d233d54 (A10/A12), which signs A9 statements, not role authorisations.",
+            "verified": false
+          }
+        ],
+        "signers": 0,
+        "validSigners": []
+      },
+      "scope": [
+        "release:openssh-b85c"
+      ],
+      "separationFailed": [
+        {
+          "constraint": "revocation_authority != producer",
+          "evaluated": true,
+          "party": [
+            "P-PROJECT-UNDECLARED"
+          ],
+          "why": "a producer may not revoke its own claim in a way that erases the record"
+        }
+      ]
+    }
+  },
+  "aggregate": {
+    "actions": 6,
+    "authorised": 0,
+    "faceValueAuthorised": 0,
+    "notRun": 0,
+    "note": "0 actions are authorised by the real records. Every recorded attempt is refused first at an unverified signature; taking the recorded role fills at face value, every action is still refused because every identity is the same undeclared party, required roles are unassigned, or the required separation fails.",
+    "recordedAuthorised": 0,
+    "refused": 6
+  },
+  "item": "A14",
+  "policy": {
+    "claim-promotion": {
+      "action": "claim-promotion",
+      "description": "promotion of a claim's verdict over its evidence",
+      "minDistinctSigners": 1,
+      "refusalCodes": [
+        "RA_REFUSED_SIGNATURE_UNVERIFIED",
+        "RA_REFUSED_IDENTITY_UNRECORDED",
+        "RA_REFUSED_ROLE_UNKNOWN",
+        "RA_REFUSED_ROLE_NOT_ASSIGNED",
+        "RA_REFUSED_EXPIRED",
+        "RA_REFUSED_REVOKED",
+        "RA_REFUSED_SCOPE_EXCEEDED",
+        "RA_REFUSED_WRONG_ROLE",
+        "RA_REFUSED_SELF_AUTHORISATION",
+        "RA_REFUSED_SEPARATION",
+        "RA_REFUSED_DUPLICATE_SIGNER",
+        "RA_REFUSED_INSUFFICIENT_SIGNERS",
+        "RA_REFUSED_ACTION_UNKNOWN"
+      ],
+      "requiredRoles": [
+        "adjudicator"
+      ],
+      "selfAuthorisation": true,
+      "separation": [
+        {
+          "roles": [
+            "adjudicator",
+            "producer"
+          ],
+          "why": "the adjudicator must not be the producer of the evidence being adjudicated"
+        }
+      ],
+      "status": "ACTIVE"
+    },
+    "consumer-graduation": {
+      "action": "consumer-graduation",
+      "description": "graduation of a consumer family (SAFE_COMPATIBLE)",
+      "minDistinctSigners": 2,
+      "refusalCodes": [
+        "RA_REFUSED_SIGNATURE_UNVERIFIED",
+        "RA_REFUSED_IDENTITY_UNRECORDED",
+        "RA_REFUSED_ROLE_UNKNOWN",
+        "RA_REFUSED_ROLE_NOT_ASSIGNED",
+        "RA_REFUSED_EXPIRED",
+        "RA_REFUSED_REVOKED",
+        "RA_REFUSED_SCOPE_EXCEEDED",
+        "RA_REFUSED_WRONG_ROLE",
+        "RA_REFUSED_SELF_AUTHORISATION",
+        "RA_REFUSED_SEPARATION",
+        "RA_REFUSED_DUPLICATE_SIGNER",
+        "RA_REFUSED_INSUFFICIENT_SIGNERS",
+        "RA_REFUSED_ACTION_UNKNOWN"
+      ],
+      "requiredRoles": [
+        "adjudicator",
+        "external_reproducer"
+      ],
+      "selfAuthorisation": true,
+      "separation": [
+        {
+          "roles": [
+            "adjudicator",
+            "producer"
+          ],
+          "why": "the adjudicator must not be the producer of the evidence being adjudicated"
+        },
+        {
+          "roles": [
+            "external_reproducer",
+            "producer"
+          ],
+          "why": "an external reproduction must not consume the producing party's own run"
+        },
+        {
+          "roles": [
+            "adjudicator",
+            "external_reproducer"
+          ],
+          "why": "the adjudicator and the external reproducer are two signatures, not one"
+        }
+      ],
+      "status": "ACTIVE"
+    },
+    "evidence-correction": {
+      "action": "evidence-correction",
+      "description": "correction of a recorded evidence artefact",
+      "minDistinctSigners": 1,
+      "refusalCodes": [
+        "RA_REFUSED_SIGNATURE_UNVERIFIED",
+        "RA_REFUSED_IDENTITY_UNRECORDED",
+        "RA_REFUSED_ROLE_UNKNOWN",
+        "RA_REFUSED_ROLE_NOT_ASSIGNED",
+        "RA_REFUSED_EXPIRED",
+        "RA_REFUSED_REVOKED",
+        "RA_REFUSED_SCOPE_EXCEEDED",
+        "RA_REFUSED_WRONG_ROLE",
+        "RA_REFUSED_SELF_AUTHORISATION",
+        "RA_REFUSED_SEPARATION",
+        "RA_REFUSED_DUPLICATE_SIGNER",
+        "RA_REFUSED_INSUFFICIENT_SIGNERS",
+        "RA_REFUSED_ACTION_UNKNOWN"
+      ],
+      "requiredRoles": [
+        "maintainer"
+      ],
+      "selfAuthorisation": true,
+      "separation": [
+        {
+          "roles": [
+            "maintainer",
+            "producer"
+          ],
+          "why": "a correction must not be made solely by the producer whose evidence is corrected"
+        }
+      ],
+      "status": "ACTIVE"
+    },
+    "instrument-qualification": {
+      "action": "instrument-qualification",
+      "description": "qualification or re-qualification of an instrument",
+      "minDistinctSigners": 1,
+      "refusalCodes": [
+        "RA_REFUSED_SIGNATURE_UNVERIFIED",
+        "RA_REFUSED_IDENTITY_UNRECORDED",
+        "RA_REFUSED_ROLE_UNKNOWN",
+        "RA_REFUSED_ROLE_NOT_ASSIGNED",
+        "RA_REFUSED_EXPIRED",
+        "RA_REFUSED_REVOKED",
+        "RA_REFUSED_SCOPE_EXCEEDED",
+        "RA_REFUSED_WRONG_ROLE",
+        "RA_REFUSED_SELF_AUTHORISATION",
+        "RA_REFUSED_SEPARATION",
+        "RA_REFUSED_DUPLICATE_SIGNER",
+        "RA_REFUSED_INSUFFICIENT_SIGNERS",
+        "RA_REFUSED_ACTION_UNKNOWN"
+      ],
+      "requiredRoles": [
+        "instrument_reviewer"
+      ],
+      "selfAuthorisation": false,
+      "separation": [
+        {
+          "roles": [
+            "instrument_reviewer",
+            "producer"
+          ],
+          "why": "the instrument reviewer must not be the instrument's author"
+        }
+      ],
+      "status": "ACTIVE"
+    },
+    "release": {
+      "action": "release",
+      "description": "a release or graduated release decision",
+      "minDistinctSigners": 2,
+      "refusalCodes": [
+        "RA_REFUSED_SIGNATURE_UNVERIFIED",
+        "RA_REFUSED_IDENTITY_UNRECORDED",
+        "RA_REFUSED_ROLE_UNKNOWN",
+        "RA_REFUSED_ROLE_NOT_ASSIGNED",
+        "RA_REFUSED_EXPIRED",
+        "RA_REFUSED_REVOKED",
+        "RA_REFUSED_SCOPE_EXCEEDED",
+        "RA_REFUSED_WRONG_ROLE",
+        "RA_REFUSED_SELF_AUTHORISATION",
+        "RA_REFUSED_SEPARATION",
+        "RA_REFUSED_DUPLICATE_SIGNER",
+        "RA_REFUSED_INSUFFICIENT_SIGNERS",
+        "RA_REFUSED_ACTION_UNKNOWN"
+      ],
+      "requiredRoles": [
+        "release_authority",
+        "adjudicator"
+      ],
+      "selfAuthorisation": false,
+      "separation": [
+        {
+          "roles": [
+            "release_authority",
+            "producer"
+          ],
+          "why": "the release authority must not be the sole author of the release"
+        },
+        {
+          "roles": [
+            "release_authority",
+            "adjudicator"
+          ],
+          "why": "a release decision and its adjudication are two signatures, not one"
+        }
+      ],
+      "status": "ACTIVE"
+    },
+    "revocation": {
+      "action": "revocation",
+      "description": "revocation, withdrawal or supersession of a claim",
+      "minDistinctSigners": 1,
+      "refusalCodes": [
+        "RA_REFUSED_SIGNATURE_UNVERIFIED",
+        "RA_REFUSED_IDENTITY_UNRECORDED",
+        "RA_REFUSED_ROLE_UNKNOWN",
+        "RA_REFUSED_ROLE_NOT_ASSIGNED",
+        "RA_REFUSED_EXPIRED",
+        "RA_REFUSED_REVOKED",
+        "RA_REFUSED_SCOPE_EXCEEDED",
+        "RA_REFUSED_WRONG_ROLE",
+        "RA_REFUSED_SELF_AUTHORISATION",
+        "RA_REFUSED_SEPARATION",
+        "RA_REFUSED_DUPLICATE_SIGNER",
+        "RA_REFUSED_INSUFFICIENT_SIGNERS",
+        "RA_REFUSED_ACTION_UNKNOWN"
+      ],
+      "requiredRoles": [
+        "revocation_authority"
+      ],
+      "selfAuthorisation": true,
+      "separation": [
+        {
+          "roles": [
+            "revocation_authority",
+            "producer"
+          ],
+          "why": "a producer may not revoke its own claim in a way that erases the record"
+        }
+      ],
+      "status": "ACTIVE"
+    }
+  },
+  "schema": "openssl-rs/a14/authorisation/1",
+  "sourceIdentity": {
+    "baseCommit": "4e9262bf34e937439ec92bc832b5a569b27267b8",
+    "baseCommitShort": "4e9262bf3",
+    "branch": "staging",
+    "inputs": [
+      {
+        "path": "evidence/etp-t8/ASSIGNMENTS.json",
+        "sha256": "46a46d73495b1d0691c88ef06e900c5f97e3ab2d1840fc2f0d445057850224d3"
+      },
+      {
+        "path": "evidence/etp-t8/ROLES.json",
+        "sha256": "8abef175cdae34c2da6febea068d82a68cacf88cf042fc8821b432a4cb7d3848"
+      },
+      {
+        "path": "evidence/a12/TRUST-ROOTS.json",
+        "sha256": "4314cc4aff9c23d9ac1ea844bb86cd965bfb6e6a729bf7c81d58fee6fb81586b"
+      },
+      {
+        "path": "evidence/a10/ENVELOPES.json",
+        "sha256": "3eb66119fcde6922d2337013fdd30f8ecdb69fdbf2cb095420fefd98ec43a075"
+      },
+      {
+        "path": "evidence/b85c-adjudication.json",
+        "sha256": "24e11717aa72bf0c39425987d826df3cc59da0c4d05e4d280dc4ab99a9f4ab5d"
+      },
+      {
+        "path": "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
+        "sha256": "dde0d37684c61e4a35e59dba0b45409232788df8b1d5aaae7fcda5968aeedc02"
+      }
+    ],
+    "recordedAt": "2026-11-24",
+    "tool": {
+      "path": "forensics/tools/authorisation.py",
+      "sha256": "9907fc3d7e34debcac79dbad826029878765b51e992e77619785df6b1d9acdfd"
+    }
+  }
+}

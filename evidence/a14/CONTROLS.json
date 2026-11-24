@@ -1,0 +1,1883 @@
+{
+  "controls": [
+    {
+      "action": "claim-promotion",
+      "assignments": [
+        {
+          "evidence": "control-only:control-only-alice/adjudicator",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-alice",
+          "party": "P-CONTROL-ALICE",
+          "revokedAt": null,
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-bob/release_authority",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-bob",
+          "party": "P-CONTROL-BOB",
+          "revokedAt": null,
+          "role": "release_authority",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-producer/producer",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-producer",
+          "party": "P-CONTROL-PRODUCER",
+          "revokedAt": null,
+          "role": "producer",
+          "scope": [
+            "*"
+          ]
+        }
+      ],
+      "at": "2026-11-24",
+      "code": "RA_REFUSED_ROLE_UNKNOWN",
+      "context": {
+        "evidenceProducer": "control-only-producer",
+        "roleIdentities": {
+          "producer": "control-only-producer"
+        },
+        "scope": [
+          "claim:control"
+        ]
+      },
+      "expected": {
+        "codes": [
+          "RA_REFUSED_ROLE_UNKNOWN"
+        ],
+        "forbiddenCodes": [],
+        "outcome": "REFUSED"
+      },
+      "kind": "refusal",
+      "label": "control-only",
+      "name": "role-unknown",
+      "observed": {
+        "action": "claim-promotion",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_ROLE_UNKNOWN",
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "detail": [
+          "signature[0] identity='control-only-alice' role='root': 'root' is not one of the seven roles ['maintainer', 'producer', 'instrument_reviewer', 'adjudicator', 'external_reproducer', 'release_authority', 'revocation_authority']",
+          "required role(s) ['adjudicator'] have no valid signature",
+          "0 distinct signer party(ies); the action requires 1"
+        ],
+        "minDistinctSigners": 1,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "adjudicator"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signers": 0,
+        "validSigners": []
+      },
+      "pass": true,
+      "signatures": [
+        {
+          "identity": "control-only-alice",
+          "role": "root",
+          "scope": [
+            "*"
+          ],
+          "verified": true
+        }
+      ]
+    },
+    {
+      "action": "claim-promotion",
+      "assignments": [
+        {
+          "evidence": "control-only:control-only-alice/adjudicator",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-alice",
+          "party": "P-CONTROL-ALICE",
+          "revokedAt": null,
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-bob/release_authority",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-bob",
+          "party": "P-CONTROL-BOB",
+          "revokedAt": null,
+          "role": "release_authority",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-producer/producer",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-producer",
+          "party": "P-CONTROL-PRODUCER",
+          "revokedAt": null,
+          "role": "producer",
+          "scope": [
+            "*"
+          ]
+        }
+      ],
+      "at": "2026-11-24",
+      "code": "RA_REFUSED_ROLE_NOT_ASSIGNED",
+      "context": {
+        "evidenceProducer": "control-only-producer",
+        "roleIdentities": {
+          "producer": "control-only-producer"
+        },
+        "scope": [
+          "claim:control"
+        ]
+      },
+      "expected": {
+        "codes": [
+          "RA_REFUSED_ROLE_NOT_ASSIGNED"
+        ],
+        "forbiddenCodes": [],
+        "outcome": "REFUSED"
+      },
+      "kind": "refusal",
+      "label": "control-only",
+      "name": "role-not-assigned",
+      "observed": {
+        "action": "claim-promotion",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_ROLE_NOT_ASSIGNED",
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "detail": [
+          "signature[0] identity='control-only-producer' role='adjudicator': identity 'control-only-producer' has no recorded assignment of 'adjudicator'",
+          "required role(s) ['adjudicator'] have no valid signature",
+          "0 distinct signer party(ies); the action requires 1"
+        ],
+        "minDistinctSigners": 1,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "adjudicator"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signers": 0,
+        "validSigners": []
+      },
+      "pass": true,
+      "signatures": [
+        {
+          "identity": "control-only-producer",
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ],
+          "verified": true
+        }
+      ]
+    },
+    {
+      "action": "release",
+      "assignments": [
+        {
+          "evidence": "control-only:control-only-alice/adjudicator",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-alice",
+          "party": "P-CONTROL-ALICE",
+          "revokedAt": null,
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-bob/release_authority",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-bob",
+          "party": "P-CONTROL-BOB",
+          "revokedAt": null,
+          "role": "release_authority",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-producer/producer",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-producer",
+          "party": "P-CONTROL-PRODUCER",
+          "revokedAt": null,
+          "role": "producer",
+          "scope": [
+            "*"
+          ]
+        }
+      ],
+      "at": "2026-11-24",
+      "code": "RA_REFUSED_WRONG_ROLE",
+      "context": {
+        "evidenceProducer": "control-only-producer",
+        "roleIdentities": {
+          "producer": "control-only-producer"
+        },
+        "scope": [
+          "release:control"
+        ]
+      },
+      "expected": {
+        "codes": [
+          "RA_REFUSED_WRONG_ROLE"
+        ],
+        "forbiddenCodes": [],
+        "outcome": "REFUSED"
+      },
+      "kind": "refusal",
+      "label": "control-only",
+      "name": "wrong-role",
+      "observed": {
+        "action": "release",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_WRONG_ROLE",
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "detail": [
+          "signature[0] identity='control-only-producer' role='producer': the action requires ['release_authority', 'adjudicator'], so a valid 'producer' signature is the wrong role",
+          "required role(s) ['release_authority', 'adjudicator'] have no valid signature",
+          "0 distinct signer party(ies); the action requires 2"
+        ],
+        "minDistinctSigners": 2,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "release_authority",
+          "adjudicator"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signers": 0,
+        "validSigners": []
+      },
+      "pass": true,
+      "signatures": [
+        {
+          "identity": "control-only-producer",
+          "role": "producer",
+          "scope": [
+            "*"
+          ],
+          "verified": true
+        }
+      ]
+    },
+    {
+      "action": "claim-promotion",
+      "assignments": [
+        {
+          "evidence": "control-only:control-only-alice/adjudicator",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-alice",
+          "party": "P-CONTROL-ALICE",
+          "revokedAt": null,
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-bob/release_authority",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-bob",
+          "party": "P-CONTROL-BOB",
+          "revokedAt": null,
+          "role": "release_authority",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-producer/producer",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-producer",
+          "party": "P-CONTROL-PRODUCER",
+          "revokedAt": null,
+          "role": "producer",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-producer/adjudicator",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-producer",
+          "party": "P-CONTROL-PRODUCER",
+          "revokedAt": null,
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ]
+        }
+      ],
+      "at": "2026-11-24",
+      "code": "RA_REFUSED_SELF_AUTHORISATION",
+      "context": {
+        "evidenceProducer": "control-only-producer",
+        "roleIdentities": {
+          "producer": "control-only-producer"
+        },
+        "scope": [
+          "claim:control"
+        ]
+      },
+      "expected": {
+        "codes": [
+          "RA_REFUSED_SELF_AUTHORISATION"
+        ],
+        "forbiddenCodes": [],
+        "outcome": "REFUSED"
+      },
+      "kind": "refusal",
+      "label": "control-only",
+      "name": "self-authorisation",
+      "observed": {
+        "action": "claim-promotion",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_SELF_AUTHORISATION",
+          "RA_REFUSED_SEPARATION"
+        ],
+        "detail": [
+          "separation failed: 'control-only-producer' is the producer of the evidence ('control-only-producer') and signs its own authorisation",
+          "separation failed: adjudicator and producer are the same party ['P-CONTROL-PRODUCER']; the adjudicator must not be the producer of the evidence being adjudicated"
+        ],
+        "minDistinctSigners": 1,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "adjudicator"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signers": 1,
+        "validSigners": [
+          {
+            "identity": "control-only-producer",
+            "role": "adjudicator",
+            "scope": [
+              "*"
+            ]
+          }
+        ]
+      },
+      "pass": true,
+      "signatures": [
+        {
+          "identity": "control-only-producer",
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ],
+          "verified": true
+        }
+      ]
+    },
+    {
+      "action": "instrument-qualification",
+      "assignments": [
+        {
+          "evidence": "control-only:control-only-alice/adjudicator",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-alice",
+          "party": "P-CONTROL-ALICE",
+          "revokedAt": null,
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-bob/release_authority",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-bob",
+          "party": "P-CONTROL-BOB",
+          "revokedAt": null,
+          "role": "release_authority",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-producer/producer",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-producer",
+          "party": "P-CONTROL-PRODUCER",
+          "revokedAt": null,
+          "role": "producer",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-producer/instrument_reviewer",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-producer",
+          "party": "P-CONTROL-PRODUCER",
+          "revokedAt": null,
+          "role": "instrument_reviewer",
+          "scope": [
+            "*"
+          ]
+        }
+      ],
+      "at": "2026-11-24",
+      "code": "RA_REFUSED_SEPARATION",
+      "context": {
+        "roleIdentities": {
+          "producer": "control-only-producer"
+        },
+        "scope": [
+          "instrument:control"
+        ]
+      },
+      "expected": {
+        "codes": [
+          "RA_REFUSED_SEPARATION"
+        ],
+        "forbiddenCodes": [],
+        "outcome": "REFUSED"
+      },
+      "kind": "refusal",
+      "label": "control-only",
+      "name": "separation",
+      "observed": {
+        "action": "instrument-qualification",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_SEPARATION"
+        ],
+        "detail": [
+          "separation failed: instrument_reviewer and producer are the same party ['P-CONTROL-PRODUCER']; the instrument reviewer must not be the instrument's author"
+        ],
+        "minDistinctSigners": 1,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "instrument_reviewer"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signers": 1,
+        "validSigners": [
+          {
+            "identity": "control-only-producer",
+            "role": "instrument_reviewer",
+            "scope": [
+              "*"
+            ]
+          }
+        ]
+      },
+      "pass": true,
+      "signatures": [
+        {
+          "identity": "control-only-producer",
+          "role": "instrument_reviewer",
+          "scope": [
+            "*"
+          ],
+          "verified": true
+        }
+      ]
+    },
+    {
+      "action": "claim-promotion",
+      "assignments": [
+        {
+          "evidence": "control-only:control-only-alice/adjudicator",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-alice",
+          "party": "P-CONTROL-ALICE",
+          "revokedAt": null,
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-bob/release_authority",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-bob",
+          "party": "P-CONTROL-BOB",
+          "revokedAt": null,
+          "role": "release_authority",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-producer/producer",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-producer",
+          "party": "P-CONTROL-PRODUCER",
+          "revokedAt": null,
+          "role": "producer",
+          "scope": [
+            "*"
+          ]
+        }
+      ],
+      "at": "2026-11-24",
+      "code": "RA_REFUSED_IDENTITY_UNRECORDED",
+      "context": {
+        "evidenceProducer": "control-only-producer",
+        "roleIdentities": {
+          "producer": "control-only-producer"
+        },
+        "scope": [
+          "claim:control"
+        ]
+      },
+      "expected": {
+        "codes": [
+          "RA_REFUSED_IDENTITY_UNRECORDED"
+        ],
+        "forbiddenCodes": [],
+        "outcome": "REFUSED"
+      },
+      "kind": "refusal",
+      "label": "control-only",
+      "name": "identity-unrecorded",
+      "observed": {
+        "action": "claim-promotion",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_IDENTITY_UNRECORDED",
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "detail": [
+          "signature[0] identity='control-only-mallory' role='adjudicator': no tracked record establishes identity 'control-only-mallory'",
+          "required role(s) ['adjudicator'] have no valid signature",
+          "0 distinct signer party(ies); the action requires 1"
+        ],
+        "minDistinctSigners": 1,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "adjudicator"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signers": 0,
+        "validSigners": []
+      },
+      "pass": true,
+      "signatures": [
+        {
+          "identity": "control-only-mallory",
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ],
+          "verified": true
+        }
+      ]
+    },
+    {
+      "action": "claim-promotion",
+      "assignments": [
+        {
+          "evidence": "control-only:control-only-alice/adjudicator",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-alice",
+          "party": "P-CONTROL-ALICE",
+          "revokedAt": null,
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-bob/release_authority",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-bob",
+          "party": "P-CONTROL-BOB",
+          "revokedAt": null,
+          "role": "release_authority",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-producer/producer",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-producer",
+          "party": "P-CONTROL-PRODUCER",
+          "revokedAt": null,
+          "role": "producer",
+          "scope": [
+            "*"
+          ]
+        }
+      ],
+      "at": "2026-11-24",
+      "code": "RA_REFUSED_SIGNATURE_UNVERIFIED",
+      "context": {
+        "evidenceProducer": "control-only-producer",
+        "roleIdentities": {
+          "producer": "control-only-producer"
+        },
+        "scope": [
+          "claim:control"
+        ]
+      },
+      "expected": {
+        "codes": [
+          "RA_REFUSED_SIGNATURE_UNVERIFIED"
+        ],
+        "forbiddenCodes": [
+          "RA_REFUSED_ROLE_UNKNOWN"
+        ],
+        "outcome": "REFUSED"
+      },
+      "kind": "refusal",
+      "label": "control-only",
+      "name": "signature-unverified",
+      "observed": {
+        "action": "claim-promotion",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_SIGNATURE_UNVERIFIED",
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "detail": [
+          "signature[0] identity='control-only-alice' role='root' is unverified; its role is not considered",
+          "required role(s) ['adjudicator'] have no valid signature",
+          "0 distinct signer party(ies); the action requires 1"
+        ],
+        "minDistinctSigners": 1,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "adjudicator"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signers": 0,
+        "validSigners": []
+      },
+      "pass": true,
+      "signatures": [
+        {
+          "identity": "control-only-alice",
+          "role": "root",
+          "scope": [
+            "*"
+          ],
+          "verified": false
+        }
+      ]
+    },
+    {
+      "action": "claim-promotion",
+      "assignments": [
+        {
+          "evidence": "control-only:control-only-alice/adjudicator",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-alice",
+          "party": "P-CONTROL-ALICE",
+          "revokedAt": null,
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-bob/release_authority",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-bob",
+          "party": "P-CONTROL-BOB",
+          "revokedAt": null,
+          "role": "release_authority",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-producer/producer",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-producer",
+          "party": "P-CONTROL-PRODUCER",
+          "revokedAt": null,
+          "role": "producer",
+          "scope": [
+            "*"
+          ]
+        }
+      ],
+      "at": "2026-11-24",
+      "code": "RA_REFUSED_SCOPE_EXCEEDED",
+      "context": {
+        "evidenceProducer": "control-only-producer",
+        "roleIdentities": {
+          "producer": "control-only-producer"
+        },
+        "scope": [
+          "claim:control"
+        ]
+      },
+      "expected": {
+        "codes": [
+          "RA_REFUSED_SCOPE_EXCEEDED"
+        ],
+        "forbiddenCodes": [],
+        "outcome": "REFUSED"
+      },
+      "kind": "refusal",
+      "label": "control-only",
+      "name": "scope-exceeded",
+      "observed": {
+        "action": "claim-promotion",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_SCOPE_EXCEEDED",
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "detail": [
+          "signature[0] identity='control-only-alice' role='adjudicator': signature scope ['claim:other'] does not cover action scope ['claim:control']",
+          "required role(s) ['adjudicator'] have no valid signature",
+          "0 distinct signer party(ies); the action requires 1"
+        ],
+        "minDistinctSigners": 1,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "adjudicator"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signers": 0,
+        "validSigners": []
+      },
+      "pass": true,
+      "signatures": [
+        {
+          "identity": "control-only-alice",
+          "role": "adjudicator",
+          "scope": [
+            "claim:other"
+          ],
+          "verified": true
+        }
+      ]
+    },
+    {
+      "action": "claim-promotion",
+      "assignments": [
+        {
+          "evidence": "control-only:control-only-alice/adjudicator",
+          "expiresAt": "2026-01-01",
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-alice",
+          "party": "P-CONTROL-ALICE",
+          "revokedAt": null,
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ]
+        }
+      ],
+      "at": "2026-06-01",
+      "code": "RA_REFUSED_EXPIRED",
+      "context": {
+        "evidenceProducer": "control-only-producer",
+        "roleIdentities": {
+          "producer": "control-only-producer"
+        },
+        "scope": [
+          "claim:control"
+        ]
+      },
+      "expected": {
+        "codes": [
+          "RA_REFUSED_EXPIRED"
+        ],
+        "forbiddenCodes": [],
+        "outcome": "REFUSED"
+      },
+      "kind": "refusal",
+      "label": "control-only",
+      "name": "expired",
+      "observed": {
+        "action": "claim-promotion",
+        "at": "2026-06-01",
+        "codes": [
+          "RA_REFUSED_EXPIRED",
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "detail": [
+          "signature[0] identity='control-only-alice' role='adjudicator': the 'adjudicator' assignment expired at 2026-01-01",
+          "required role(s) ['adjudicator'] have no valid signature",
+          "0 distinct signer party(ies); the action requires 1"
+        ],
+        "minDistinctSigners": 1,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "adjudicator"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signers": 0,
+        "validSigners": []
+      },
+      "pass": true,
+      "signatures": [
+        {
+          "identity": "control-only-alice",
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ],
+          "verified": true
+        }
+      ]
+    },
+    {
+      "action": "claim-promotion",
+      "assignments": [
+        {
+          "evidence": "control-only:control-only-alice/adjudicator",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-alice",
+          "party": "P-CONTROL-ALICE",
+          "revokedAt": "2026-02-01",
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ]
+        }
+      ],
+      "at": "2026-06-01",
+      "code": "RA_REFUSED_REVOKED",
+      "context": {
+        "evidenceProducer": "control-only-producer",
+        "roleIdentities": {
+          "producer": "control-only-producer"
+        },
+        "scope": [
+          "claim:control"
+        ]
+      },
+      "expected": {
+        "codes": [
+          "RA_REFUSED_REVOKED"
+        ],
+        "forbiddenCodes": [],
+        "outcome": "REFUSED"
+      },
+      "kind": "refusal",
+      "label": "control-only",
+      "name": "revoked",
+      "observed": {
+        "action": "claim-promotion",
+        "at": "2026-06-01",
+        "codes": [
+          "RA_REFUSED_REVOKED",
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "detail": [
+          "signature[0] identity='control-only-alice' role='adjudicator': the 'adjudicator' assignment was revoked at 2026-02-01",
+          "required role(s) ['adjudicator'] have no valid signature",
+          "0 distinct signer party(ies); the action requires 1"
+        ],
+        "minDistinctSigners": 1,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "adjudicator"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signers": 0,
+        "validSigners": []
+      },
+      "pass": true,
+      "signatures": [
+        {
+          "identity": "control-only-alice",
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ],
+          "verified": true
+        }
+      ]
+    },
+    {
+      "action": "release",
+      "assignments": [
+        {
+          "evidence": "control-only:control-only-alice/adjudicator",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-alice",
+          "party": "P-CONTROL-ALICE",
+          "revokedAt": null,
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-bob/release_authority",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-bob",
+          "party": "P-CONTROL-BOB",
+          "revokedAt": null,
+          "role": "release_authority",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-producer/producer",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-producer",
+          "party": "P-CONTROL-PRODUCER",
+          "revokedAt": null,
+          "role": "producer",
+          "scope": [
+            "*"
+          ]
+        }
+      ],
+      "at": "2026-11-24",
+      "code": "RA_REFUSED_INSUFFICIENT_SIGNERS",
+      "context": {
+        "evidenceProducer": "control-only-producer",
+        "roleIdentities": {
+          "producer": "control-only-producer"
+        },
+        "scope": [
+          "release:control"
+        ]
+      },
+      "expected": {
+        "codes": [
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "forbiddenCodes": [],
+        "outcome": "REFUSED"
+      },
+      "kind": "refusal",
+      "label": "control-only",
+      "name": "insufficient-signers",
+      "observed": {
+        "action": "release",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "detail": [
+          "required role(s) ['adjudicator'] have no valid signature",
+          "1 distinct signer party(ies); the action requires 2"
+        ],
+        "minDistinctSigners": 2,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "release_authority",
+          "adjudicator"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signers": 1,
+        "validSigners": [
+          {
+            "identity": "control-only-bob",
+            "role": "release_authority",
+            "scope": [
+              "*"
+            ]
+          }
+        ]
+      },
+      "pass": true,
+      "signatures": [
+        {
+          "identity": "control-only-bob",
+          "role": "release_authority",
+          "scope": [
+            "*"
+          ],
+          "verified": true
+        }
+      ]
+    },
+    {
+      "action": "release",
+      "assignments": [
+        {
+          "evidence": "control-only:control-only-alice/adjudicator",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-alice",
+          "party": "P-CONTROL-ALICE",
+          "revokedAt": null,
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-bob/release_authority",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-bob",
+          "party": "P-CONTROL-BOB",
+          "revokedAt": null,
+          "role": "release_authority",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-producer/producer",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-producer",
+          "party": "P-CONTROL-PRODUCER",
+          "revokedAt": null,
+          "role": "producer",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-alice/release_authority",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-alice",
+          "party": "P-CONTROL-ALICE",
+          "revokedAt": null,
+          "role": "release_authority",
+          "scope": [
+            "*"
+          ]
+        }
+      ],
+      "at": "2026-11-24",
+      "code": "RA_REFUSED_DUPLICATE_SIGNER",
+      "context": {
+        "evidenceProducer": "control-only-producer",
+        "roleIdentities": {
+          "producer": "control-only-producer"
+        },
+        "scope": [
+          "release:control"
+        ]
+      },
+      "expected": {
+        "codes": [
+          "RA_REFUSED_DUPLICATE_SIGNER"
+        ],
+        "forbiddenCodes": [],
+        "outcome": "REFUSED"
+      },
+      "kind": "refusal",
+      "label": "control-only",
+      "name": "duplicate-signer",
+      "observed": {
+        "action": "release",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_SEPARATION",
+          "RA_REFUSED_DUPLICATE_SIGNER",
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "detail": [
+          "separation failed: release_authority and adjudicator are the same party ['P-CONTROL-ALICE']; a release decision and its adjudication are two signatures, not one",
+          "one identity signs more than once; a repeated signature is not a second signer",
+          "1 distinct signer party(ies); the action requires 2"
+        ],
+        "minDistinctSigners": 2,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "release_authority",
+          "adjudicator"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signers": 1,
+        "validSigners": [
+          {
+            "identity": "control-only-alice",
+            "role": "release_authority",
+            "scope": [
+              "*"
+            ]
+          },
+          {
+            "identity": "control-only-alice",
+            "role": "adjudicator",
+            "scope": [
+              "*"
+            ]
+          }
+        ]
+      },
+      "pass": true,
+      "signatures": [
+        {
+          "identity": "control-only-alice",
+          "role": "release_authority",
+          "scope": [
+            "*"
+          ],
+          "verified": true
+        },
+        {
+          "identity": "control-only-alice",
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ],
+          "verified": true
+        }
+      ]
+    },
+    {
+      "action": "launch",
+      "assignments": [
+        {
+          "evidence": "control-only:control-only-alice/adjudicator",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-alice",
+          "party": "P-CONTROL-ALICE",
+          "revokedAt": null,
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-bob/release_authority",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-bob",
+          "party": "P-CONTROL-BOB",
+          "revokedAt": null,
+          "role": "release_authority",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-producer/producer",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-producer",
+          "party": "P-CONTROL-PRODUCER",
+          "revokedAt": null,
+          "role": "producer",
+          "scope": [
+            "*"
+          ]
+        }
+      ],
+      "at": "2026-11-24",
+      "code": "RA_REFUSED_ACTION_UNKNOWN",
+      "context": {},
+      "expected": {
+        "codes": [
+          "RA_REFUSED_ACTION_UNKNOWN"
+        ],
+        "forbiddenCodes": [],
+        "outcome": "REFUSED"
+      },
+      "kind": "refusal",
+      "label": "control-only",
+      "name": "action-unknown",
+      "observed": {
+        "action": "launch",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_ACTION_UNKNOWN"
+        ],
+        "detail": [
+          "no policy exists for action 'launch'; an unlisted action is not authorised by default"
+        ],
+        "minDistinctSigners": 0,
+        "outcome": "REFUSED",
+        "requiredRoles": [],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signers": 0,
+        "validSigners": []
+      },
+      "pass": true,
+      "signatures": [
+        {
+          "identity": "control-only-alice",
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ],
+          "verified": true
+        }
+      ]
+    },
+    {
+      "action": "release",
+      "assignments": [
+        {
+          "evidence": "control-only:control-only-release/release_authority",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-release",
+          "party": "P-CONTROL-RELEASE",
+          "revokedAt": null,
+          "role": "release_authority",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-adjudicator/adjudicator",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-adjudicator",
+          "party": "P-CONTROL-ADJUDICATOR",
+          "revokedAt": null,
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-author/producer",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-author",
+          "party": "P-CONTROL-AUTHOR",
+          "revokedAt": null,
+          "role": "producer",
+          "scope": [
+            "*"
+          ]
+        }
+      ],
+      "at": "2026-11-24",
+      "code": "",
+      "context": {
+        "evidenceProducer": "control-only-producer",
+        "roleIdentities": {
+          "producer": "control-only-producer"
+        },
+        "scope": [
+          "release:control"
+        ]
+      },
+      "establishes": "the decision procedure can return AUTHORISED when distinct synthetic identities hold the required roles and satisfy the separation; it is not a real authorised action",
+      "expected": {
+        "codes": [],
+        "forbiddenCodes": [],
+        "outcome": "AUTHORISED"
+      },
+      "kind": "positive",
+      "label": "control-only",
+      "name": "positive-distinct-roles",
+      "observed": {
+        "action": "release",
+        "at": "2026-11-24",
+        "codes": [],
+        "detail": [],
+        "minDistinctSigners": 2,
+        "outcome": "AUTHORISED",
+        "requiredRoles": [
+          "release_authority",
+          "adjudicator"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signers": 2,
+        "validSigners": [
+          {
+            "identity": "control-only-release",
+            "role": "release_authority",
+            "scope": [
+              "release:control"
+            ]
+          },
+          {
+            "identity": "control-only-adjudicator",
+            "role": "adjudicator",
+            "scope": [
+              "release:control"
+            ]
+          }
+        ]
+      },
+      "pass": true,
+      "signatures": [
+        {
+          "identity": "control-only-release",
+          "role": "release_authority",
+          "scope": [
+            "release:control"
+          ],
+          "verified": true
+        },
+        {
+          "identity": "control-only-adjudicator",
+          "role": "adjudicator",
+          "scope": [
+            "release:control"
+          ],
+          "verified": true
+        }
+      ]
+    },
+    {
+      "action": "release",
+      "assignments": [
+        {
+          "evidence": "control-only:control-only-release/release_authority",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-release",
+          "party": "P-CONTROL-RELEASE",
+          "revokedAt": null,
+          "role": "release_authority",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-adjudicator/adjudicator",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-adjudicator",
+          "party": "P-CONTROL-ADJUDICATOR",
+          "revokedAt": null,
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-author/producer",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-author",
+          "party": "P-CONTROL-AUTHOR",
+          "revokedAt": null,
+          "role": "producer",
+          "scope": [
+            "*"
+          ]
+        }
+      ],
+      "at": "2026-11-24",
+      "code": "",
+      "context": {
+        "evidenceProducer": "control-only-producer",
+        "roleIdentities": {
+          "producer": "control-only-producer"
+        },
+        "scope": [
+          "release:control"
+        ]
+      },
+      "establishes": "NOT_RUN is reported as an outcome and is not a pass",
+      "expected": {
+        "codes": [],
+        "forbiddenCodes": [],
+        "outcome": "NOT_RUN"
+      },
+      "kind": "not-run",
+      "label": "control-only",
+      "name": "not-run",
+      "observed": {
+        "action": "release",
+        "at": "2026-11-24",
+        "codes": [],
+        "detail": [
+          "control-only: the action was not attempted"
+        ],
+        "minDistinctSigners": 0,
+        "outcome": "NOT_RUN",
+        "requiredRoles": [],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signers": 0,
+        "validSigners": []
+      },
+      "pass": true,
+      "signatures": null
+    },
+    {
+      "action": "release",
+      "assignments": [
+        {
+          "evidence": "control-only:control-only-alias-a/release_authority",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-alias-a",
+          "party": "P-CONTROL-ONE",
+          "revokedAt": null,
+          "role": "release_authority",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-alias-b/adjudicator",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-alias-b",
+          "party": "P-CONTROL-ONE",
+          "revokedAt": null,
+          "role": "adjudicator",
+          "scope": [
+            "*"
+          ]
+        },
+        {
+          "evidence": "control-only:control-only-author/producer",
+          "expiresAt": null,
+          "grantedAt": "2026-01-01",
+          "grantedBy": {
+            "identity": null,
+            "note": "control-only fixture",
+            "recorded": false,
+            "role": null
+          },
+          "identity": "control-only-author",
+          "party": "P-CONTROL-AUTHOR",
+          "revokedAt": null,
+          "role": "producer",
+          "scope": [
+            "*"
+          ]
+        }
+      ],
+      "at": "2026-11-24",
+      "code": "",
+      "context": {
+        "evidenceProducer": "control-only-producer",
+        "roleIdentities": {
+          "producer": "control-only-producer"
+        },
+        "scope": [
+          "release:control"
+        ]
+      },
+      "establishes": "two identity tokens of one party are one signer and one side of a separation, not two",
+      "expected": {
+        "codes": [
+          "RA_REFUSED_INSUFFICIENT_SIGNERS",
+          "RA_REFUSED_SEPARATION"
+        ],
+        "forbiddenCodes": [],
+        "outcome": "REFUSED"
+      },
+      "kind": "count",
+      "label": "control-only",
+      "name": "alias-is-one-signer",
+      "observed": {
+        "action": "release",
+        "at": "2026-11-24",
+        "codes": [
+          "RA_REFUSED_SEPARATION",
+          "RA_REFUSED_INSUFFICIENT_SIGNERS"
+        ],
+        "detail": [
+          "separation failed: release_authority and adjudicator are the same party ['P-CONTROL-ONE']; a release decision and its adjudication are two signatures, not one",
+          "1 distinct signer party(ies); the action requires 2"
+        ],
+        "minDistinctSigners": 2,
+        "outcome": "REFUSED",
+        "requiredRoles": [
+          "release_authority",
+          "adjudicator"
+        ],
+        "schema": "openssl-rs/a14/authorisation-decision/1",
+        "signers": 1,
+        "validSigners": [
+          {
+            "identity": "control-only-alias-a",
+            "role": "release_authority",
+            "scope": [
+              "release:control"
+            ]
+          },
+          {
+            "identity": "control-only-alias-b",
+            "role": "adjudicator",
+            "scope": [
+              "release:control"
+            ]
+          }
+        ]
+      },
+      "pass": true,
+      "signatures": [
+        {
+          "identity": "control-only-alias-a",
+          "role": "release_authority",
+          "scope": [
+            "release:control"
+          ],
+          "verified": true
+        },
+        {
+          "identity": "control-only-alias-b",
+          "role": "adjudicator",
+          "scope": [
+            "release:control"
+          ],
+          "verified": true
+        }
+      ]
+    }
+  ],
+  "counts": {
+    "codesExercised": 13,
+    "controls": 13,
+    "countControls": 1,
+    "notRunControls": 1,
+    "positiveControls": 1,
+    "refusalCodes": 13
+  },
+  "item": "A14",
+  "label": "control-only",
+  "missingCodes": [],
+  "schema": "openssl-rs/a14/controls/1",
+  "sourceIdentity": {
+    "baseCommit": "4e9262bf34e937439ec92bc832b5a569b27267b8",
+    "baseCommitShort": "4e9262bf3",
+    "branch": "staging",
+    "inputs": [
+      {
+        "path": "evidence/etp-t8/ASSIGNMENTS.json",
+        "sha256": "46a46d73495b1d0691c88ef06e900c5f97e3ab2d1840fc2f0d445057850224d3"
+      },
+      {
+        "path": "evidence/etp-t8/ROLES.json",
+        "sha256": "8abef175cdae34c2da6febea068d82a68cacf88cf042fc8821b432a4cb7d3848"
+      },
+      {
+        "path": "evidence/a12/TRUST-ROOTS.json",
+        "sha256": "4314cc4aff9c23d9ac1ea844bb86cd965bfb6e6a729bf7c81d58fee6fb81586b"
+      },
+      {
+        "path": "evidence/a10/ENVELOPES.json",
+        "sha256": "3eb66119fcde6922d2337013fdd30f8ecdb69fdbf2cb095420fefd98ec43a075"
+      },
+      {
+        "path": "evidence/b85c-adjudication.json",
+        "sha256": "24e11717aa72bf0c39425987d826df3cc59da0c4d05e4d280dc4ab99a9f4ab5d"
+      },
+      {
+        "path": "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
+        "sha256": "dde0d37684c61e4a35e59dba0b45409232788df8b1d5aaae7fcda5968aeedc02"
+      }
+    ],
+    "recordedAt": "2026-11-24",
+    "tool": {
+      "path": "forensics/tools/authorisation.py",
+      "sha256": "9907fc3d7e34debcac79dbad826029878765b51e992e77619785df6b1d9acdfd"
+    }
+  }
+}

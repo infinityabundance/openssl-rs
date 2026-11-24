@@ -1,0 +1,244 @@
+{
+  "assignments": [
+    {
+      "declaredIdentity": false,
+      "evidence": "evidence/etp-t8/ASSIGNMENTS.json#summary (author 50/50, evidence_producer 50/50, proof_producer 15/50, instrument_author 15/50; every fill at party P-CAMPAIGN with identity null and declared false)",
+      "expiresAt": null,
+      "external": false,
+      "grantedAt": "2026-11-23",
+      "grantedBy": {
+        "identity": null,
+        "note": "no grantor identity, role, account or signing key is recorded",
+        "recorded": false,
+        "role": null
+      },
+      "identity": "P-CAMPAIGN",
+      "identityRecordedAt": "evidence/etp-t8/ASSIGNMENTS.json#parties.P-CAMPAIGN",
+      "party": "P-PROJECT-UNDECLARED",
+      "revokedAt": null,
+      "role": "producer",
+      "scope": [
+        "*"
+      ]
+    },
+    {
+      "declaredIdentity": false,
+      "evidence": "evidence/etp-t8/ASSIGNMENTS.json#summary (adjudicator 50/50, same_party_adjudicator 50; every fill at party P-CAMPAIGN with identity null and declared false)",
+      "expiresAt": null,
+      "external": false,
+      "grantedAt": "2026-11-23",
+      "grantedBy": {
+        "identity": null,
+        "note": "no grantor identity, role, account or signing key is recorded",
+        "recorded": false,
+        "role": null
+      },
+      "identity": "P-CAMPAIGN",
+      "identityRecordedAt": "evidence/etp-t8/ASSIGNMENTS.json#parties.P-CAMPAIGN",
+      "party": "P-PROJECT-UNDECLARED",
+      "revokedAt": null,
+      "role": "adjudicator",
+      "scope": [
+        "*"
+      ]
+    },
+    {
+      "declaredIdentity": false,
+      "evidence": "evidence/etp-t8/ASSIGNMENTS.json#A-ADJ-B85C/filled.independent_reproducer (party P-CAMPAIGN, identity null, declared false; the record itself states the reproduction ran in this repository's environment on project artefacts, so it is not an external reproduction)",
+      "expiresAt": null,
+      "external": false,
+      "grantedAt": "2026-11-23",
+      "grantedBy": {
+        "identity": null,
+        "note": "no grantor identity, role, account or signing key is recorded",
+        "recorded": false,
+        "role": null
+      },
+      "identity": "P-CAMPAIGN",
+      "identityRecordedAt": "evidence/etp-t8/ASSIGNMENTS.json#parties.P-CAMPAIGN",
+      "party": "P-PROJECT-UNDECLARED",
+      "revokedAt": null,
+      "role": "external_reproducer",
+      "scope": [
+        "claim:openssh-b85c"
+      ]
+    },
+    {
+      "declaredIdentity": false,
+      "evidence": "evidence/etp-t8/ASSIGNMENTS.json#A-REL-OPENSSH-B85C/filled.release_authority (party P-PRINCIPAL, identity null, declared false; T8 states its distinctness from P-CAMPAIGN is not established)",
+      "expiresAt": null,
+      "external": false,
+      "grantedAt": "2026-11-23",
+      "grantedBy": {
+        "identity": null,
+        "note": "no grantor identity, role, account or signing key is recorded",
+        "recorded": false,
+        "role": null
+      },
+      "identity": "P-PRINCIPAL",
+      "identityRecordedAt": "evidence/etp-t8/ASSIGNMENTS.json#parties.P-PRINCIPAL",
+      "party": "P-PROJECT-UNDECLARED",
+      "revokedAt": null,
+      "role": "release_authority",
+      "scope": [
+        "release:openssh-b85c"
+      ]
+    },
+    {
+      "declaredIdentity": false,
+      "evidence": "evidence/etp-t8/ASSIGNMENTS.json#A-REL-OPENSSH-B85C/filled.revocation_authority (party P-CAMPAIGN, identity null, declared false)",
+      "expiresAt": null,
+      "external": false,
+      "grantedAt": "2026-11-23",
+      "grantedBy": {
+        "identity": null,
+        "note": "no grantor identity, role, account or signing key is recorded",
+        "recorded": false,
+        "role": null
+      },
+      "identity": "P-CAMPAIGN",
+      "identityRecordedAt": "evidence/etp-t8/ASSIGNMENTS.json#parties.P-CAMPAIGN",
+      "party": "P-PROJECT-UNDECLARED",
+      "revokedAt": null,
+      "role": "revocation_authority",
+      "scope": [
+        "release:openssh-b85c"
+      ]
+    }
+  ],
+  "item": "A14",
+  "notes": [
+    "A role label is not a party: P-CAMPAIGN and P-PRINCIPAL are both undeclared and their distinctness is not established, so both map to party P-PROJECT-UNDECLARED.",
+    "No assignment records a grantor, an account, an organisation or a signing key. The field is recorded as null rather than invented.",
+    "The three roles with no assignment are recorded explicitly as none; an absent role is a refusal, not an omission."
+  ],
+  "parties": {
+    "P-CAMPAIGN": {
+      "declared": false,
+      "identity": "P-CAMPAIGN",
+      "note": "no identity string, account, organisation or signing key is declared in any artefact; the record does not invent one",
+      "party": "P-PROJECT-UNDECLARED",
+      "record": "evidence/etp-t8/ASSIGNMENTS.json#parties.P-CAMPAIGN",
+      "trustDomain": "project"
+    },
+    "P-PRINCIPAL": {
+      "declared": false,
+      "identity": "P-PRINCIPAL",
+      "note": "named only as 'decision-maker (campaign principal)'; its distinctness from P-CAMPAIGN is not established, so both are conservatively classified as one party",
+      "party": "P-PROJECT-UNDECLARED",
+      "record": "evidence/etp-t8/ASSIGNMENTS.json#parties.P-PRINCIPAL",
+      "trustDomain": "undeclared"
+    }
+  },
+  "realState": {
+    "assignments": 5,
+    "declaredIdentities": 0,
+    "externalReproducer": "none",
+    "externalTrustDomains": 0,
+    "instrumentReviewer": "none",
+    "maintainer": "none",
+    "notEstablishedAssignments": 1,
+    "onlySigningRoot": {
+      "algorithm": "hmac-sha256",
+      "external": false,
+      "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+      "purpose": "signs the A9 statements in the A10 envelopes; it is not a role-authorisation signature and establishes no identity",
+      "source": "evidence/a12/TRUST-ROOTS.json#roots[0]",
+      "symmetric": true,
+      "trustDomain": "same-party"
+    },
+    "releaseAuthority": "none",
+    "samePartyAdjudications": 50,
+    "samePartyAssignments": 49
+  },
+  "roleCoverage": [
+    {
+      "assignments": 0,
+      "reason": "no tracked record assigns a maintainer identity or party",
+      "role": "maintainer",
+      "state": "none"
+    },
+    {
+      "assignments": 1,
+      "reason": "the only fill is the undeclared party P-CAMPAIGN",
+      "role": "producer",
+      "state": "same-party only"
+    },
+    {
+      "assignments": 0,
+      "reason": "T8's 'reviewer' fill is the independent-adjudication reviewer for RV-B85C-1, not an instrument reviewer; no instrument-review assignment exists",
+      "role": "instrument_reviewer",
+      "state": "none"
+    },
+    {
+      "assignments": 1,
+      "reason": "50/50 adjudications are filled at the undeclared party P-CAMPAIGN",
+      "role": "adjudicator",
+      "state": "same-party only"
+    },
+    {
+      "assignments": 1,
+      "reason": "the only fill is party P-CAMPAIGN in this repository's environment; A12 records 0 external trust domains",
+      "role": "external_reproducer",
+      "state": "same-party only"
+    },
+    {
+      "assignments": 1,
+      "reason": "the only fill is P-PRINCIPAL, whose distinctness from P-CAMPAIGN is not established; no declared release authority exists",
+      "role": "release_authority",
+      "state": "same-party only"
+    },
+    {
+      "assignments": 1,
+      "reason": "the only fill is the undeclared party P-CAMPAIGN",
+      "role": "revocation_authority",
+      "state": "same-party only"
+    }
+  ],
+  "roleVocabulary": [
+    "maintainer",
+    "producer",
+    "instrument_reviewer",
+    "adjudicator",
+    "external_reproducer",
+    "release_authority",
+    "revocation_authority"
+  ],
+  "schema": "openssl-rs/a14/roles/1",
+  "sourceIdentity": {
+    "baseCommit": "4e9262bf34e937439ec92bc832b5a569b27267b8",
+    "baseCommitShort": "4e9262bf3",
+    "branch": "staging",
+    "inputs": [
+      {
+        "path": "evidence/etp-t8/ASSIGNMENTS.json",
+        "sha256": "46a46d73495b1d0691c88ef06e900c5f97e3ab2d1840fc2f0d445057850224d3"
+      },
+      {
+        "path": "evidence/etp-t8/ROLES.json",
+        "sha256": "8abef175cdae34c2da6febea068d82a68cacf88cf042fc8821b432a4cb7d3848"
+      },
+      {
+        "path": "evidence/a12/TRUST-ROOTS.json",
+        "sha256": "4314cc4aff9c23d9ac1ea844bb86cd965bfb6e6a729bf7c81d58fee6fb81586b"
+      },
+      {
+        "path": "evidence/a10/ENVELOPES.json",
+        "sha256": "3eb66119fcde6922d2337013fdd30f8ecdb69fdbf2cb095420fefd98ec43a075"
+      },
+      {
+        "path": "evidence/b85c-adjudication.json",
+        "sha256": "24e11717aa72bf0c39425987d826df3cc59da0c4d05e4d280dc4ab99a9f4ab5d"
+      },
+      {
+        "path": "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
+        "sha256": "dde0d37684c61e4a35e59dba0b45409232788df8b1d5aaae7fcda5968aeedc02"
+      }
+    ],
+    "recordedAt": "2026-11-24",
+    "tool": {
+      "path": "forensics/tools/authorisation.py",
+      "sha256": "9907fc3d7e34debcac79dbad826029878765b51e992e77619785df6b1d9acdfd"
+    }
+  }
+}
