@@ -1,0 +1,255 @@
+{
+  "default": "deny",
+  "digest": "a3fcce8f195216c714f7d7cca228ee4cbca001d986b8104b6d168ee9152afacf",
+  "obligations": [
+    {
+      "description": "every recorded population is admitted at a state in the A5 vocabulary, and no declaration refused as stronger than its facts keeps the state it declared; COMPLETE is not required",
+      "id": "A05.populations-admitted",
+      "predicate": {
+        "of": [
+          {
+            "allowed": [
+              "ABSENT",
+              "AGGREGATE_ONLY",
+              "COMPLETE",
+              "DEFERRED",
+              "EMPTY",
+              "SAMPLED",
+              "TRUNCATED_BOUNDED",
+              "UNKNOWN"
+            ],
+            "field": "state",
+            "op": "all-in",
+            "path": ""
+          },
+          {
+            "op": "none",
+            "path": "",
+            "where": [
+              {
+                "field": "refusal",
+                "op": "present"
+              },
+              {
+                "field": "state",
+                "op": "eq-field",
+                "other": "declared"
+              }
+            ]
+          }
+        ],
+        "op": "all"
+      },
+      "required": true,
+      "source": {
+        "locator": "/populations",
+        "record": "evidence/a5/ADMISSION.json",
+        "tool": "forensics/tools/completeness.py"
+      }
+    },
+    {
+      "description": "no suppression record that declares itself ACTIVE is admitted without member identities",
+      "id": "A06.suppression-member-identities",
+      "predicate": {
+        "op": "none",
+        "path": "",
+        "where": [
+          {
+            "field": "classification",
+            "op": "eq",
+            "value": "suppression"
+          },
+          {
+            "field": "declaredDisposition",
+            "op": "eq",
+            "value": "ACTIVE"
+          },
+          {
+            "field": "membersRecorded",
+            "op": "eq",
+            "value": false
+          }
+        ]
+      },
+      "required": true,
+      "source": {
+        "locator": "/records",
+        "record": "evidence/a6/SUPPRESSIONS.json",
+        "tool": "forensics/tools/suppression_governance.py"
+      }
+    },
+    {
+      "description": "no delta claims RESOLVED unless its own conditions were met: a refused delta records no RESOLVED disposition, and a delta recording one carries no refusal code",
+      "id": "A07.delta-resolution-conditions",
+      "predicate": {
+        "of": [
+          {
+            "op": "none",
+            "path": "",
+            "where": [
+              {
+                "field": "admitted",
+                "op": "eq",
+                "value": false
+              },
+              {
+                "field": "counts.RESOLVED",
+                "op": "gt",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "op": "none",
+            "path": "",
+            "where": [
+              {
+                "field": "codes",
+                "op": "nonempty"
+              },
+              {
+                "field": "counts.RESOLVED",
+                "op": "gt",
+                "value": 0
+              }
+            ]
+          }
+        ],
+        "op": "all"
+      },
+      "required": true,
+      "source": {
+        "locator": "/deltas",
+        "record": "evidence/a7/DELTA.json",
+        "tool": "forensics/tools/baseline.py"
+      }
+    },
+    {
+      "description": "at least one attestation is INDEPENDENTLY_VERIFIED by a verifier whose root of trust is outside the candidate",
+      "id": "A12.independent-attestation",
+      "predicate": {
+        "atLeast": 1,
+        "op": "count-at-least",
+        "path": "",
+        "where": [
+          {
+            "field": "independentlyVerified",
+            "op": "truthy"
+          }
+        ]
+      },
+      "required": true,
+      "source": {
+        "locator": "/verifications",
+        "record": "evidence/a12/VERIFICATION.json",
+        "tool": "forensics/tools/independent_verify.py"
+      }
+    },
+    {
+      "description": "the release action is AUTHORISED under the recorded role authorisation decision",
+      "id": "A14.release-authorised",
+      "predicate": {
+        "op": "eq",
+        "path": "/recorded/outcome",
+        "value": "AUTHORISED"
+      },
+      "required": true,
+      "source": {
+        "locator": "/actions/release",
+        "record": "evidence/a14/AUTHORISATION.json",
+        "tool": "forensics/tools/authorisation.py"
+      }
+    },
+    {
+      "description": "the release threshold is MET over distinct established trust domains",
+      "id": "A15.release-threshold-met",
+      "predicate": {
+        "op": "eq",
+        "path": "/outcome",
+        "value": "MET"
+      },
+      "required": true,
+      "source": {
+        "locator": "/evaluations/release",
+        "record": "evidence/a15/EVALUATION.json",
+        "tool": "forensics/tools/thresholds.py"
+      }
+    },
+    {
+      "corroboration": [
+        {
+          "locator": "",
+          "predicate": {
+            "op": "eq",
+            "path": "/state",
+            "value": "CLOSED"
+          },
+          "record": "evidence/a17/FREEZE-forward.json",
+          "tool": "forensics/tools/omission.py"
+        }
+      ],
+      "description": "the forward freeze is CLOSED and every required member is PRODUCED; the freeze record and the status record must agree about the freeze's state",
+      "fact": "A17/forward-freeze/state",
+      "id": "A17.forward-freeze-closed",
+      "predicate": {
+        "of": [
+          {
+            "op": "eq",
+            "path": "/state",
+            "value": "CLOSED"
+          },
+          {
+            "op": "eq",
+            "path": "/closed",
+            "value": true
+          }
+        ],
+        "op": "all"
+      },
+      "required": true,
+      "source": {
+        "locator": "/forwardFreeze",
+        "record": "evidence/a17/STATUS.json",
+        "tool": "forensics/tools/omission.py"
+      }
+    },
+    {
+      "description": "no retraction in the recorded scope leaves a dependent VALID",
+      "id": "A19.retraction-propagated",
+      "predicate": {
+        "op": "none",
+        "path": "",
+        "where": [
+          {
+            "field": "kind",
+            "op": "eq",
+            "value": "retract"
+          },
+          {
+            "field": "summary.valid",
+            "op": "gt",
+            "value": 0
+          }
+        ]
+      },
+      "required": true,
+      "source": {
+        "locator": "/events",
+        "record": "evidence/a19/PROPAGATION.json",
+        "tool": "forensics/tools/corrections.py"
+      }
+    }
+  ],
+  "policyId": "release-policy",
+  "provenance": {
+    "establishedBy": {
+      "identity": "P-PRINCIPAL",
+      "role": "maintainer"
+    },
+    "independentOfCandidate": false,
+    "recordedAt": "2026-11-24"
+  },
+  "schema": "openssl-rs/a20/policy/1",
+  "scores": false,
+  "version": 1
+}

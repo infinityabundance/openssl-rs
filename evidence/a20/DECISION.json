@@ -1,0 +1,290 @@
+{
+  "action": "release",
+  "candidate": {
+    "commit": "58aeb2ee01000638cc545e4cad7c9ec3b5ff9672",
+    "producedBy": {
+      "identity": "P-CAMPAIGN",
+      "locator": "/actions/release/context/evidenceProducer",
+      "record": "evidence/a14/AUTHORISATION.json"
+    }
+  },
+  "codes": [],
+  "decision": "DENY",
+  "default": "deny",
+  "met": [
+    "A05.populations-admitted",
+    "A07.delta-resolution-conditions",
+    "A19.retraction-propagated"
+  ],
+  "notApplicable": [],
+  "obligationCount": 8,
+  "obligations": [
+    {
+      "applicability": null,
+      "codes": [],
+      "corroboration": [],
+      "detail": "every constituent predicate holds",
+      "fact": null,
+      "id": "A05.populations-admitted",
+      "observed": {
+        "of": [
+          {
+            "allowed": [
+              "ABSENT",
+              "AGGREGATE_ONLY",
+              "COMPLETE",
+              "DEFERRED",
+              "EMPTY",
+              "SAMPLED",
+              "TRUNCATED_BOUNDED",
+              "UNKNOWN"
+            ],
+            "examples": [],
+            "members": 16,
+            "unreadable": 0,
+            "violations": 0
+          },
+          {
+            "examples": [],
+            "matches": 0,
+            "members": 16,
+            "unevaluable": 0,
+            "vacuous": false
+          }
+        ]
+      },
+      "recordSha256": "d4871ec97ae3a27b8ec820896e292429e44b4db4d11d2671a69b9dc0230ddc0a",
+      "required": true,
+      "source": {
+        "locator": "/populations",
+        "record": "evidence/a5/ADMISSION.json",
+        "tool": "forensics/tools/completeness.py"
+      },
+      "state": "MET",
+      "waivers": []
+    },
+    {
+      "applicability": null,
+      "codes": [],
+      "corroboration": [],
+      "detail": "8 member(s) match the forbidden condition",
+      "fact": null,
+      "id": "A06.suppression-member-identities",
+      "observed": {
+        "examples": [
+          "t3-known-nonconformance-agents-md",
+          "t4-suppressions",
+          "t4-test-modules"
+        ],
+        "matches": 8,
+        "members": 11,
+        "unevaluable": 0,
+        "vacuous": false
+      },
+      "recordSha256": "236dc220d651bdb1f8519f189afa3bc9af78db7e28b0bd4f2c21a856694d8e4e",
+      "required": true,
+      "source": {
+        "locator": "/records",
+        "record": "evidence/a6/SUPPRESSIONS.json",
+        "tool": "forensics/tools/suppression_governance.py"
+      },
+      "state": "UNMET",
+      "waivers": []
+    },
+    {
+      "applicability": null,
+      "codes": [],
+      "corroboration": [],
+      "detail": "every constituent predicate holds",
+      "fact": null,
+      "id": "A07.delta-resolution-conditions",
+      "observed": {
+        "of": [
+          {
+            "examples": [],
+            "matches": 0,
+            "members": 4,
+            "unevaluable": 0,
+            "vacuous": false
+          },
+          {
+            "examples": [],
+            "matches": 0,
+            "members": 4,
+            "unevaluable": 0,
+            "vacuous": false
+          }
+        ]
+      },
+      "recordSha256": "0444a879bf4a0ddf5c50cffba7f51a5834b0fc4a1702d5190815de1f4470c8cf",
+      "required": true,
+      "source": {
+        "locator": "/deltas",
+        "record": "evidence/a7/DELTA.json",
+        "tool": "forensics/tools/baseline.py"
+      },
+      "state": "MET",
+      "waivers": []
+    },
+    {
+      "applicability": null,
+      "codes": [],
+      "corroboration": [],
+      "detail": "0 qualifying member(s), at least 1 required",
+      "fact": null,
+      "id": "A12.independent-attestation",
+      "observed": {
+        "atLeast": 1,
+        "count": 0,
+        "examples": [],
+        "members": 4,
+        "unevaluable": 0
+      },
+      "recordSha256": "7cbdcdae7d7c5636c26b3a9f6141e6a0e345e6c8a281c926fc4b411f68991a48",
+      "required": true,
+      "source": {
+        "locator": "/verifications",
+        "record": "evidence/a12/VERIFICATION.json",
+        "tool": "forensics/tools/independent_verify.py"
+      },
+      "state": "UNMET",
+      "waivers": []
+    },
+    {
+      "applicability": null,
+      "codes": [],
+      "corroboration": [],
+      "detail": "the recorded value is not the required one",
+      "fact": null,
+      "id": "A14.release-authorised",
+      "observed": {
+        "expected": "AUTHORISED",
+        "value": "REFUSED"
+      },
+      "recordSha256": "1c1ca4fb0caa05546ba88996962c88de33cb8f2960e8e4c8291a22f68a888a1f",
+      "required": true,
+      "source": {
+        "locator": "/actions/release",
+        "record": "evidence/a14/AUTHORISATION.json",
+        "tool": "forensics/tools/authorisation.py"
+      },
+      "state": "UNMET",
+      "waivers": []
+    },
+    {
+      "applicability": null,
+      "codes": [],
+      "corroboration": [],
+      "detail": "the recorded value is not the required one",
+      "fact": null,
+      "id": "A15.release-threshold-met",
+      "observed": {
+        "expected": "MET",
+        "value": "UNREACHABLE"
+      },
+      "recordSha256": "05984f5a876061135bc180d927f564dbc6a09f733d601c8efb28616a7e53a07c",
+      "required": true,
+      "source": {
+        "locator": "/evaluations/release",
+        "record": "evidence/a15/EVALUATION.json",
+        "tool": "forensics/tools/thresholds.py"
+      },
+      "state": "UNMET",
+      "waivers": []
+    },
+    {
+      "applicability": null,
+      "codes": [],
+      "corroboration": [
+        {
+          "detail": "the recorded value is not the required one",
+          "observed": {
+            "expected": "CLOSED",
+            "value": "OPEN"
+          },
+          "recordSha256": "19b3bd00bcadd8a52332fdc944895edec8f25abd23e796c3aa4cd4d938a9e4f0",
+          "source": {
+            "locator": "",
+            "record": "evidence/a17/FREEZE-forward.json",
+            "tool": "forensics/tools/omission.py"
+          },
+          "state": "UNMET"
+        }
+      ],
+      "detail": "constituent predicate(s) 0,1 do not hold",
+      "fact": "A17/forward-freeze/state",
+      "id": "A17.forward-freeze-closed",
+      "observed": {
+        "of": [
+          {
+            "expected": "CLOSED",
+            "value": "OPEN"
+          },
+          {
+            "expected": true,
+            "value": false
+          }
+        ]
+      },
+      "recordSha256": "afffb2fd3c95477df4a326f46dbf6ca5650303509995195c0071282b8742b080",
+      "required": true,
+      "source": {
+        "locator": "/forwardFreeze",
+        "record": "evidence/a17/STATUS.json",
+        "tool": "forensics/tools/omission.py"
+      },
+      "state": "UNMET",
+      "waivers": []
+    },
+    {
+      "applicability": null,
+      "codes": [],
+      "corroboration": [],
+      "detail": "no member matches the forbidden condition",
+      "fact": null,
+      "id": "A19.retraction-propagated",
+      "observed": {
+        "examples": [],
+        "matches": 0,
+        "members": 11,
+        "unevaluable": 0,
+        "vacuous": false
+      },
+      "recordSha256": "982054f9fb76777e6672137006c0b9388bc0d8c0245eda5638859cdd3d6d78f3",
+      "required": true,
+      "source": {
+        "locator": "/events",
+        "record": "evidence/a19/PROPAGATION.json",
+        "tool": "forensics/tools/corrections.py"
+      },
+      "state": "MET",
+      "waivers": []
+    }
+  ],
+  "order": [
+    "A05.populations-admitted",
+    "A06.suppression-member-identities",
+    "A07.delta-resolution-conditions",
+    "A12.independent-attestation",
+    "A14.release-authorised",
+    "A15.release-threshold-met",
+    "A17.forward-freeze-closed",
+    "A19.retraction-propagated"
+  ],
+  "pinDigest": "68f4618f0e0dd13c080435f69a801e3d751bdeed1f895d89818ee683071aa0ba",
+  "policyDigest": "a3fcce8f195216c714f7d7cca228ee4cbca001d986b8104b6d168ee9152afacf",
+  "policyId": "release-policy",
+  "policyVersion": 1,
+  "problems": [],
+  "requiredCount": 8,
+  "schema": "openssl-rs/a20/decision/1",
+  "scores": false,
+  "unknown": [],
+  "unmet": [
+    "A06.suppression-member-identities",
+    "A12.independent-attestation",
+    "A14.release-authorised",
+    "A15.release-threshold-met",
+    "A17.forward-freeze-closed"
+  ]
+}

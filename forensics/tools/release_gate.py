@@ -48,6 +48,12 @@ one refused item refuses the release.
                           established trust domains; an unmet, unreachable or
                           not-run threshold is `RG_THRESHOLD_UNMET`, and an
                           absent tool or record is never a skip.
+  9. release policy       the pinned A20 policy is `ADMIT` under
+                          `forensics/tools/policy_engine.py`, a conjunction of
+                          obligations with denial by default; a `DENY` decision
+                          is `RG_POLICY_DENIED` naming the unmet obligations and
+                          every code, and an absent tool or record is never a
+                          skip.
 
 Every item is required.  A tool that cannot be found, a package that was not
 supplied, or a checker that cannot run is a refusal with a named rule, never a
@@ -146,6 +152,9 @@ THRESHOLD_TOOL = ROOT / "forensics/tools/thresholds.py"
 THRESHOLD_DECLARATIONS = ROOT / "evidence/a15/THRESHOLDS.json"
 THRESHOLD_APPROVALS = ROOT / "evidence/a15/APPROVALS.json"
 THRESHOLD_DOMAINS = ROOT / "evidence/a15/DOMAINS.json"
+POLICY_TOOL = ROOT / "forensics/tools/policy_engine.py"
+POLICY_RECORD = ROOT / "evidence/a20/POLICY.json"
+POLICY_PIN = ROOT / "evidence/a20/POLICY-PIN.json"
 
 # Verdict states that forbid a release outright.  `SUPERSEDED` is not one: the
 # claim was current and has been replaced, which is a history fact, not a
@@ -897,6 +906,70 @@ def check_thresholds(
 
 
 # ---------------------------------------------------------------------------
+# 9. Release policy (A20)
+# ---------------------------------------------------------------------------
+def check_policy(
+    root: Path,
+    policy: Path | None = None,
+    pin: Path | None = None,
+    timeout: int = 600,
+    command: list[str] | None = None,
+) -> Results:
+    """The pinned policy must be admitted by a conjunction of obligations.
+
+    The check runs the A20 engine live rather than trusting a recorded decision.
+    A `DENY` decision is one refusal row, ``RG_POLICY_DENIED``, carrying the
+    unmet obligations and every refusal code, because a decision that lists what
+    failed is the whole point of a conjunctive policy; an absent tool, policy or
+    pin is a refusal with its own rule, never a skip.
+    """
+    record = Path(policy).resolve() if policy else POLICY_RECORD
+    pin_path = Path(pin).resolve() if pin else POLICY_PIN
+    if command is None:
+        if not POLICY_TOOL.is_file():
+            return Results([_missing_tool("RG_POLICY_TOOL_MISSING", POLICY_TOOL)], [])
+        for label, path in (("policy", record), ("pin", pin_path)):
+            if not path.is_file():
+                return Results([Refusal(
+                    "RG_POLICY_MISSING", str(path),
+                    f"no A20 {label} record; an absent policy is a refusal, not a skip",
+                )], [])
+        command = [
+            PYTHON, str(POLICY_TOOL), "evaluate",
+            "--policy", str(record), "--pin", str(pin_path), "--json",
+        ]
+    run = _run(command, root, timeout)
+    payload = None
+    if run.stdout.strip():
+        try:
+            payload = json.loads(run.stdout)
+        except json.JSONDecodeError:
+            payload = None
+    if not isinstance(payload, dict) or "decision" not in payload:
+        detail = _bounded((run.stderr or run.stdout).splitlines())
+        return Results([Refusal(
+            "RG_POLICY_ERROR", "a20/release",
+            detail[-1] if detail else f"policy engine exited {run.returncode} with no decision",
+        )], [])
+    decision = str(payload.get("decision", "UNKNOWN"))
+    unmet = ",".join(payload.get("unmet") or []) or "NONE"
+    codes = ",".join(payload.get("codes") or []) or "NONE"
+    if decision == "ADMIT" and run.returncode == 0:
+        return Results([], [
+            f"release policy ADMIT ({payload.get('obligationCount')} obligation(s), codes {codes})"
+        ])
+    if decision == "DENY":
+        return Results([Refusal(
+            "RG_POLICY_DENIED", "a20/release",
+            f"decision=DENY unmet={unmet} codes={codes}",
+        )], [])
+    return Results([Refusal(
+        "RG_POLICY_ERROR", "a20/release",
+        f"policy engine returned decision {decision!r} with exit {run.returncode}",
+    )], [])
+
+
+# ---------------------------------------------------------------------------
 # Composition
 # ---------------------------------------------------------------------------
 def evaluate(args: argparse.Namespace) -> Results:
@@ -985,6 +1058,14 @@ def evaluate(args: argparse.Namespace) -> Results:
         if getattr(args, "threshold_approvals", None) else None,
         Path(args.threshold_domains).resolve()
         if getattr(args, "threshold_domains", None) else None,
+    )
+    refusals.extend(result.refusals)
+    recorded.extend(result.recorded)
+
+    result = check_policy(
+        root,
+        Path(args.policy_record).resolve() if getattr(args, "policy_record", None) else None,
+        Path(args.policy_pin).resolve() if getattr(args, "policy_pin", None) else None,
     )
     refusals.extend(result.refusals)
     recorded.extend(result.recorded)
@@ -1368,6 +1449,45 @@ def self_test() -> int:
             "RG_THRESHOLD_MISSING",
         )
 
+        # A20: a denied policy refuses and names the unmet obligations; an
+        # admitted policy is recorded; an unparseable result is an error and an
+        # absent record is not a skip.
+        denied_shim = (
+            "import json,sys;"
+            "print(json.dumps({'decision':'DENY','unmet':['A12.fixture'],"
+            "'codes':[],'obligationCount':1,'requiredCount':1}));"
+            "sys.exit(1)"
+        )
+        expect_detail(
+            "denied policy",
+            check_policy(ROOT, command=[PYTHON, "-c", denied_shim]),
+            "RG_POLICY_DENIED",
+            "A12.fixture",
+        )
+        admit_shim = (
+            "import json,sys;"
+            "print(json.dumps({'decision':'ADMIT','unmet':[],"
+            "'codes':[],'obligationCount':1,'requiredCount':1}));"
+            "sys.exit(0)"
+        )
+        admitted = check_policy(ROOT, command=[PYTHON, "-c", admit_shim])
+        cases.append(("admitted policy (positive control)", "no refusal"))
+        if admitted.refusals:
+            failures.append(
+                "admitted policy (positive control): unexpected refusals "
+                f"{[item.rule for item in admitted.refusals]}"
+            )
+        expect(
+            "unparseable policy decision",
+            check_policy(ROOT, command=[PYTHON, "-c", "print('not json')"]),
+            "RG_POLICY_ERROR",
+        )
+        expect(
+            "missing policy record",
+            check_policy(ROOT, policy=tmp / "absent-policy.json"),
+            "RG_POLICY_MISSING",
+        )
+
     for name, rule in cases:
         status = "ok" if not any(f.startswith(name + ":") for f in failures) else "FAIL"
         print(f"  {status:4s} {name}: expected {rule}")
@@ -1415,6 +1535,10 @@ def main(argv: list[str]) -> int:
                         help="A15 approvals (default evidence/a15/APPROVALS.json)")
     parser.add_argument("--threshold-domains", default=None,
                         help="A15 domain inventory (default evidence/a15/DOMAINS.json)")
+    parser.add_argument("--policy-record", default=None,
+                        help="A20 policy (default evidence/a20/POLICY.json)")
+    parser.add_argument("--policy-pin", default=None,
+                        help="A20 policy pin (default evidence/a20/POLICY-PIN.json)")
     parser.add_argument("--json", action="store_true", help="emit one machine-readable decision")
     parser.add_argument("--self-test", action="store_true",
                         help="prove the gate refuses each named failure class")
@@ -1442,7 +1566,7 @@ def main(argv: list[str]) -> int:
             print(f"release-gate: REFUSED ({len(results.refusals)} item(s))")
         else:
             print("release-gate: PASS (candidate, claims, receipts, instruments, "
-                  "package, docs, authorisation, thresholds)")
+                  "package, docs, authorisation, thresholds, policy)")
 
     return EXIT_REFUSED if results.refused() else EXIT_PASS
 

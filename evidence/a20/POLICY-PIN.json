@@ -1,0 +1,16 @@
+{
+  "candidate": {
+    "commit": "58aeb2ee01000638cc545e4cad7c9ec3b5ff9672",
+    "producedBy": "P-CAMPAIGN"
+  },
+  "note": "the pin records the policy's digest and the party that pinned it; it is recorded separately from the policy so that amending the policy is detectable. It lives in the candidate tree, so a writer who can amend both is not detected without an external root (A12).",
+  "pinnedAt": "2026-11-24",
+  "pinnedBy": {
+    "identity": "P-PRINCIPAL",
+    "role": "maintainer"
+  },
+  "policyDigest": "a3fcce8f195216c714f7d7cca228ee4cbca001d986b8104b6d168ee9152afacf",
+  "policyId": "release-policy",
+  "policyPath": "evidence/a20/POLICY.json",
+  "schema": "openssl-rs/a20/policy-pin/1"
+}

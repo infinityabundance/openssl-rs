@@ -372,5 +372,47 @@ class ThresholdRow(unittest.TestCase):
                          ["RG_THRESHOLD_ERROR"])
 
 
+class PolicyRow(unittest.TestCase):
+    """A20 joins the gate as one per-refusal row without altering items 1-8."""
+
+    def test_denied_policy_is_one_refusal_row_naming_the_unmet_obligations(self) -> None:
+        self.assertTrue(release_gate.POLICY_RECORD.is_file())
+        self.assertTrue(release_gate.POLICY_PIN.is_file())
+        results = release_gate.check_policy(release_gate.ROOT)
+        self.assertEqual([item.rule for item in results.refusals], ["RG_POLICY_DENIED"])
+        detail = results.refusals[0].detail
+        self.assertIn("decision=DENY", detail)
+        self.assertIn("A12.independent-attestation", detail)
+        self.assertIn("A17.forward-freeze-closed", detail)
+
+    def test_admitted_policy_is_recorded_not_refused(self) -> None:
+        shim = (
+            "import json,sys;"
+            "print(json.dumps({'decision':'ADMIT','unmet':[],'codes':[],"
+            "'obligationCount':1,'requiredCount':1}));"
+            "sys.exit(0)"
+        )
+        results = release_gate.check_policy(
+            release_gate.ROOT, command=[sys.executable, "-c", shim]
+        )
+        self.assertEqual(results.refusals, [])
+        self.assertTrue(any("release policy ADMIT" in line for line in results.recorded),
+                        results.recorded)
+
+    def test_unparseable_policy_decision_is_refused(self) -> None:
+        results = release_gate.check_policy(
+            release_gate.ROOT,
+            command=[sys.executable, "-c", "print('not json')"],
+        )
+        self.assertEqual([item.rule for item in results.refusals], ["RG_POLICY_ERROR"])
+
+    def test_missing_policy_record_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            results = release_gate.check_policy(
+                release_gate.ROOT, policy=Path(temporary) / "absent.json"
+            )
+        self.assertEqual([item.rule for item in results.refusals], ["RG_POLICY_MISSING"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

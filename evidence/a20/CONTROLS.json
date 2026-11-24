@@ -1,0 +1,346 @@
+{
+  "controls": [
+    {
+      "code": "PE_REFUSED_POLICY_INVALID",
+      "description": "a policy carrying a field outside the declared schema",
+      "established": true,
+      "extra": null,
+      "id": "policy-invalid",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "PE_REFUSED_POLICY_INVALID"
+        ],
+        "decision": "DENY",
+        "notApplicable": [],
+        "unknown": [],
+        "unmet": []
+      }
+    },
+    {
+      "code": "PE_REFUSED_PIN_INVALID",
+      "description": "a pin that records no policy digest",
+      "established": true,
+      "extra": null,
+      "id": "pin-invalid",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "PE_REFUSED_PIN_INVALID"
+        ],
+        "decision": "DENY",
+        "notApplicable": [],
+        "unknown": [],
+        "unmet": []
+      }
+    },
+    {
+      "code": "PE_REFUSED_POLICY_UNRECORDED",
+      "description": "a policy that no pin records",
+      "established": true,
+      "extra": null,
+      "id": "policy-unrecorded",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "PE_REFUSED_POLICY_UNRECORDED"
+        ],
+        "decision": "DENY",
+        "notApplicable": [],
+        "unknown": [],
+        "unmet": []
+      }
+    },
+    {
+      "code": "PE_REFUSED_POLICY_AMENDED",
+      "description": "a policy whose digest differs from the pin after an obligation was dropped",
+      "established": true,
+      "extra": null,
+      "id": "policy-amended",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "PE_REFUSED_POLICY_AMENDED"
+        ],
+        "decision": "DENY",
+        "notApplicable": [],
+        "unknown": [],
+        "unmet": []
+      }
+    },
+    {
+      "code": "PE_REFUSED_POLICY_FROM_CANDIDATE",
+      "description": "a policy established by the candidate's own producer",
+      "established": true,
+      "extra": null,
+      "id": "policy-from-candidate",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "PE_REFUSED_POLICY_FROM_CANDIDATE"
+        ],
+        "decision": "DENY",
+        "notApplicable": [],
+        "unknown": [],
+        "unmet": []
+      }
+    },
+    {
+      "code": "PE_REFUSED_CANDIDATE_UNKNOWN",
+      "description": "a candidate whose producer is unrecorded, so self-selection cannot be excluded",
+      "established": true,
+      "extra": null,
+      "id": "candidate-unknown",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "PE_REFUSED_CANDIDATE_UNKNOWN"
+        ],
+        "decision": "DENY",
+        "notApplicable": [],
+        "unknown": [],
+        "unmet": []
+      }
+    },
+    {
+      "code": "PE_REFUSED_SCORE",
+      "description": "a policy that declares itself scored",
+      "established": true,
+      "extra": null,
+      "id": "score-policy",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "PE_REFUSED_SCORE"
+        ],
+        "decision": "DENY",
+        "notApplicable": [],
+        "unknown": [],
+        "unmet": []
+      }
+    },
+    {
+      "code": "PE_REFUSED_SCORE",
+      "description": "a policy that weights one obligation against another",
+      "established": true,
+      "extra": null,
+      "id": "weighted-obligation",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "PE_REFUSED_POLICY_INVALID",
+          "PE_REFUSED_SCORE"
+        ],
+        "decision": "DENY",
+        "notApplicable": [],
+        "unknown": [],
+        "unmet": []
+      }
+    },
+    {
+      "code": "PE_REFUSED_DEFAULT_ALLOW",
+      "description": "a policy whose default is to allow",
+      "established": true,
+      "extra": null,
+      "id": "default-allow",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "PE_REFUSED_DEFAULT_ALLOW"
+        ],
+        "decision": "DENY",
+        "notApplicable": [],
+        "unknown": [],
+        "unmet": []
+      }
+    },
+    {
+      "code": "PE_REFUSED_DUPLICATE_OBLIGATION",
+      "description": "a policy that counts one obligation twice",
+      "established": true,
+      "extra": null,
+      "id": "duplicate-obligation",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "PE_REFUSED_DUPLICATE_OBLIGATION"
+        ],
+        "decision": "DENY",
+        "notApplicable": [],
+        "unknown": [],
+        "unmet": []
+      }
+    },
+    {
+      "code": "PE_REFUSED_SELF_WAIVER",
+      "description": "a policy that waives an obligation for the candidate it decides",
+      "established": true,
+      "extra": null,
+      "id": "self-waiver",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "PE_REFUSED_SELF_WAIVER"
+        ],
+        "decision": "DENY",
+        "notApplicable": [],
+        "unknown": [],
+        "unmet": [
+          "C03.waived"
+        ]
+      }
+    },
+    {
+      "code": "PE_REFUSED_OBLIGATION_UNEVALUATED",
+      "description": "an obligation whose record is absent and which is not read as MET",
+      "established": true,
+      "extra": null,
+      "id": "unevaluated-as-pass",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "PE_REFUSED_OBLIGATION_UNEVALUATED"
+        ],
+        "decision": "DENY",
+        "notApplicable": [],
+        "unknown": [
+          "C07.missing"
+        ],
+        "unmet": []
+      }
+    },
+    {
+      "code": "PE_REFUSED_OBLIGATION_UNKNOWN",
+      "description": "an obligation whose condition the record cannot decide",
+      "established": true,
+      "extra": null,
+      "id": "unknown-never-met",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "PE_REFUSED_OBLIGATION_UNKNOWN"
+        ],
+        "decision": "DENY",
+        "notApplicable": [],
+        "unknown": [
+          "C04.unknown"
+        ],
+        "unmet": []
+      }
+    },
+    {
+      "code": "PE_REFUSED_OBLIGATION_NOT_APPLICABLE",
+      "description": "a required obligation declared inapplicable, which is not a pass",
+      "established": true,
+      "extra": null,
+      "id": "required-not-applicable",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "PE_REFUSED_OBLIGATION_NOT_APPLICABLE"
+        ],
+        "decision": "DENY",
+        "notApplicable": [
+          "C05.inapplicable"
+        ],
+        "unknown": [],
+        "unmet": []
+      }
+    },
+    {
+      "code": "PE_REFUSED_CONTRADICTION",
+      "description": "two sources of one fact that disagree",
+      "established": true,
+      "extra": null,
+      "id": "contradiction",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "PE_REFUSED_CONTRADICTION"
+        ],
+        "decision": "DENY",
+        "notApplicable": [],
+        "unknown": [
+          "C06.contradiction"
+        ],
+        "unmet": []
+      }
+    },
+    {
+      "code": "PE_REFUSED_ORDER",
+      "description": "a policy whose obligations are not in canonical order",
+      "established": true,
+      "extra": null,
+      "id": "policy-order",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "PE_REFUSED_ORDER"
+        ],
+        "decision": "DENY",
+        "notApplicable": [],
+        "unknown": [],
+        "unmet": []
+      }
+    },
+    {
+      "code": "PE_REFUSED_ORDER",
+      "description": "a decision whose obligations are reordered against its policy",
+      "established": true,
+      "extra": null,
+      "id": "decision-order",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "PE_REFUSED_ORDER"
+        ],
+        "decision": "DENY",
+        "notApplicable": [],
+        "unknown": [],
+        "unmet": []
+      }
+    },
+    {
+      "code": "PE_REFUSED_NONDETERMINISTIC",
+      "description": "a decision that differs between two evaluations of the same policy",
+      "established": true,
+      "extra": null,
+      "id": "nondeterministic",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "PE_REFUSED_NONDETERMINISTIC"
+        ],
+        "decision": "DENY",
+        "notApplicable": [],
+        "unknown": [],
+        "unmet": []
+      }
+    },
+    {
+      "code": null,
+      "description": "a synthetic policy whose obligations all reach MET reaches ADMIT",
+      "established": true,
+      "extra": null,
+      "id": "positive-admit",
+      "kind": "control-only",
+      "observed": {
+        "codes": [],
+        "decision": "ADMIT",
+        "notApplicable": [],
+        "unknown": [],
+        "unmet": []
+      }
+    }
+  ],
+  "item": "A20",
+  "policy": "evidence/a20/POLICY.json",
+  "schema": "openssl-rs/a20/controls/1",
+  "totals": {
+    "admitted": 1,
+    "controls": 19,
+    "coveredCodes": 16,
+    "positives": 1,
+    "refusalCodes": 16
+  }
+}
