@@ -1,0 +1,72 @@
+{
+  "allHold": true,
+  "baseCommit": "7c2b5f25fe55e6302b942ed124f4fbec5aff8888",
+  "code": "VF_OK",
+  "domain": "4**3 = 64 state vectors x 8 required mask(s) = 512 cases",
+  "properties": [
+    {
+      "domain": "4**3 = 64 state vectors x 8 required mask(s) = 512 cases",
+      "id": "VF-P1",
+      "implementation": "PASS",
+      "reference": "PASS",
+      "result": "PASS",
+      "statement": "determinism: the same state vector twice returns the same decision",
+      "witness": null
+    },
+    {
+      "domain": "4**3 = 64 state vectors x 8 required mask(s) = 512 cases",
+      "id": "VF-P2",
+      "implementation": "PASS",
+      "reference": "PASS",
+      "result": "PASS",
+      "statement": "adding a MET obligation to an admitting vector still admits",
+      "witness": null
+    },
+    {
+      "domain": "4**3 = 64 state vectors x 8 required mask(s) = 512 cases",
+      "id": "VF-P3",
+      "implementation": "PASS",
+      "reference": "PASS",
+      "result": "PASS",
+      "statement": "adding a required UNMET obligation to any vector denies",
+      "witness": null
+    },
+    {
+      "domain": "4**3 = 64 state vectors x 8 required mask(s) = 512 cases",
+      "id": "VF-P4",
+      "implementation": "PASS",
+      "reference": "PASS",
+      "result": "PASS",
+      "statement": "UNKNOWN never admits, whether or not the obligation is required",
+      "witness": null
+    },
+    {
+      "domain": "4**3 = 64 state vectors x 8 required mask(s) = 512 cases",
+      "id": "VF-P5",
+      "implementation": "PASS",
+      "reference": "PASS",
+      "result": "PASS",
+      "statement": "NOT_APPLICABLE on a required obligation denies",
+      "witness": null
+    },
+    {
+      "domain": "4**3 = 64 state vectors x 8 required mask(s) = 512 cases",
+      "id": "VF-P6",
+      "implementation": "PASS",
+      "reference": "PASS",
+      "result": "PASS",
+      "statement": "permuting the vector and its required flags together changes no decision",
+      "witness": null
+    },
+    {
+      "domain": "4**3 = 64 state vectors x 8 required mask(s) = 512 cases",
+      "id": "VF-P7",
+      "implementation": "PASS",
+      "reference": "PASS",
+      "result": "PASS",
+      "statement": "with no obligation in UNKNOWN, a non-required obligation in MET, UNMET or NOT_APPLICABLE never changes the decision",
+      "witness": null
+    }
+  ],
+  "schema": "openssl-rs/a23/properties/1"
+}
