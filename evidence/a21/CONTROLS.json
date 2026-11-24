@@ -1,0 +1,201 @@
+{
+  "controls": [
+    {
+      "code": "AS_REFUSED_SUMMARY_AS_EVIDENCE",
+      "description": "a consumer cites the summary in place of the sources it condensed",
+      "detail": {
+        "cited": [
+          "evidence/a21/SUMMARY.json"
+        ]
+      },
+      "established": true,
+      "id": "consumer-cites-summary",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "AS_REFUSED_SUMMARY_AS_EVIDENCE"
+        ]
+      }
+    },
+    {
+      "code": "AS_REFUSED_COUNTS_MISMATCH",
+      "description": "the summary's counts are copied rather than recounted from its obligations",
+      "detail": {
+        "counts": {
+          "met": 2,
+          "notApplicable": 0,
+          "unknown": 0,
+          "unmet": 0
+        }
+      },
+      "established": true,
+      "id": "counts-disagree-with-list",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "AS_REFUSED_COUNTS_MISMATCH"
+        ]
+      }
+    },
+    {
+      "code": "AS_REFUSED_EVIDENCE_ABSENT",
+      "description": "a source the summary cites is removed from the tree",
+      "detail": {
+        "removed": "control/unmet.json"
+      },
+      "established": true,
+      "id": "source-removed",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "AS_REFUSED_EVIDENCE_ABSENT"
+        ]
+      }
+    },
+    {
+      "code": "AS_REFUSED_SOURCE_DIGEST_MISMATCH",
+      "description": "a source's bytes change after the decision and the summary",
+      "detail": {
+        "changed": "control/met.json"
+      },
+      "established": true,
+      "id": "source-bytes-changed",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "AS_REFUSED_SOURCE_DIGEST_MISMATCH"
+        ]
+      }
+    },
+    {
+      "code": "AS_REFUSED_NO_SOURCE_DIGEST",
+      "description": "an obligation names a source path with no digest",
+      "detail": {
+        "obligation": "C01.met"
+      },
+      "established": true,
+      "id": "obligation-without-digest",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "AS_REFUSED_NO_SOURCE_DIGEST"
+        ]
+      }
+    },
+    {
+      "code": "AS_REFUSED_COVERAGE_GAP",
+      "description": "an obligation declared by the policy is removed from the summary",
+      "detail": {
+        "removed": "C02.unmet"
+      },
+      "established": true,
+      "id": "obligation-removed",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "AS_REFUSED_COVERAGE_GAP"
+        ]
+      }
+    },
+    {
+      "code": "AS_REFUSED_DUPLICATE_OBLIGATION",
+      "description": "the summary records one obligation twice",
+      "detail": {
+        "obligation": "C01.met"
+      },
+      "established": true,
+      "id": "obligation-duplicated",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "AS_REFUSED_DUPLICATE_OBLIGATION"
+        ]
+      }
+    },
+    {
+      "code": "AS_REFUSED_DECISION_UPGRADED",
+      "description": "the summary records ADMIT where the decision records DENY",
+      "detail": {
+        "decision": "DENY",
+        "summary": "ADMIT"
+      },
+      "established": true,
+      "id": "decision-upgraded",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "AS_REFUSED_DECISION_UPGRADED"
+        ]
+      }
+    },
+    {
+      "code": "AS_REFUSED_OVERCLAIM",
+      "description": "the summary adds an obligation the policy does not declare",
+      "detail": {
+        "added": "C03.extra"
+      },
+      "established": true,
+      "id": "obligation-added",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "AS_REFUSED_OVERCLAIM"
+        ]
+      }
+    },
+    {
+      "code": "AS_REFUSED_NON_RECONSTRUCTIBLE",
+      "description": "a count is published with no source list to derive it from",
+      "detail": {
+        "reconstructedFrom": []
+      },
+      "established": true,
+      "id": "no-source-manifest",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "AS_REFUSED_NON_RECONSTRUCTIBLE"
+        ]
+      }
+    },
+    {
+      "code": "AS_REFUSED_SUMMARY_UNSIGNED",
+      "description": "verification is asked for and the envelope carries no signature",
+      "detail": {
+        "signatures": []
+      },
+      "established": true,
+      "id": "summary-unsigned",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "AS_REFUSED_SUMMARY_UNSIGNED"
+        ]
+      }
+    },
+    {
+      "code": "AS_REFUSED_SUMMARY_MUTATED",
+      "description": "the summary's bytes are changed after the envelope was signed",
+      "detail": {
+        "mutation": "unmet removed after signing"
+      },
+      "established": true,
+      "id": "signed-summary-mutated",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "AS_REFUSED_SUMMARY_MUTATED"
+        ]
+      }
+    }
+  ],
+  "item": "A21",
+  "schema": "openssl-rs/a21/controls/1",
+  "summary": "evidence/a21/SUMMARY.json",
+  "totals": {
+    "controls": 12,
+    "coveredCodes": 12,
+    "positives": 0,
+    "refusalCodes": 12
+  }
+}

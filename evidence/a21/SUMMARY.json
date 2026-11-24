@@ -1,0 +1,108 @@
+{
+  "counts": {
+    "met": 3,
+    "notApplicable": 0,
+    "unknown": 0,
+    "unmet": 5
+  },
+  "decision": "DENY",
+  "decisionDigest": "7f5a3cb88972ecfe7506173ee25125b9be513f74c7ccf6ed801fe73076f40495",
+  "obligations": [
+    {
+      "id": "A05.populations-admitted",
+      "sourceDigest": "d4871ec97ae3a27b8ec820896e292429e44b4db4d11d2671a69b9dc0230ddc0a",
+      "sourcePath": "evidence/a5/ADMISSION.json",
+      "state": "MET"
+    },
+    {
+      "id": "A06.suppression-member-identities",
+      "sourceDigest": "236dc220d651bdb1f8519f189afa3bc9af78db7e28b0bd4f2c21a856694d8e4e",
+      "sourcePath": "evidence/a6/SUPPRESSIONS.json",
+      "state": "UNMET"
+    },
+    {
+      "id": "A07.delta-resolution-conditions",
+      "sourceDigest": "0444a879bf4a0ddf5c50cffba7f51a5834b0fc4a1702d5190815de1f4470c8cf",
+      "sourcePath": "evidence/a7/DELTA.json",
+      "state": "MET"
+    },
+    {
+      "id": "A12.independent-attestation",
+      "sourceDigest": "7cbdcdae7d7c5636c26b3a9f6141e6a0e345e6c8a281c926fc4b411f68991a48",
+      "sourcePath": "evidence/a12/VERIFICATION.json",
+      "state": "UNMET"
+    },
+    {
+      "id": "A14.release-authorised",
+      "sourceDigest": "1c1ca4fb0caa05546ba88996962c88de33cb8f2960e8e4c8291a22f68a888a1f",
+      "sourcePath": "evidence/a14/AUTHORISATION.json",
+      "state": "UNMET"
+    },
+    {
+      "id": "A15.release-threshold-met",
+      "sourceDigest": "05984f5a876061135bc180d927f564dbc6a09f733d601c8efb28616a7e53a07c",
+      "sourcePath": "evidence/a15/EVALUATION.json",
+      "state": "UNMET"
+    },
+    {
+      "id": "A17.forward-freeze-closed",
+      "sourceDigest": "afffb2fd3c95477df4a326f46dbf6ca5650303509995195c0071282b8742b080",
+      "sourcePath": "evidence/a17/STATUS.json",
+      "state": "UNMET"
+    },
+    {
+      "id": "A19.retraction-propagated",
+      "sourceDigest": "982054f9fb76777e6672137006c0b9388bc0d8c0245eda5638859cdd3d6d78f3",
+      "sourcePath": "evidence/a19/PROPAGATION.json",
+      "state": "MET"
+    }
+  ],
+  "reconstructedFrom": [
+    {
+      "path": "evidence/a12/VERIFICATION.json",
+      "sha256": "7cbdcdae7d7c5636c26b3a9f6141e6a0e345e6c8a281c926fc4b411f68991a48"
+    },
+    {
+      "path": "evidence/a14/AUTHORISATION.json",
+      "sha256": "1c1ca4fb0caa05546ba88996962c88de33cb8f2960e8e4c8291a22f68a888a1f"
+    },
+    {
+      "path": "evidence/a15/EVALUATION.json",
+      "sha256": "05984f5a876061135bc180d927f564dbc6a09f733d601c8efb28616a7e53a07c"
+    },
+    {
+      "path": "evidence/a17/FREEZE-forward.json",
+      "sha256": "19b3bd00bcadd8a52332fdc944895edec8f25abd23e796c3aa4cd4d938a9e4f0"
+    },
+    {
+      "path": "evidence/a17/STATUS.json",
+      "sha256": "afffb2fd3c95477df4a326f46dbf6ca5650303509995195c0071282b8742b080"
+    },
+    {
+      "path": "evidence/a19/PROPAGATION.json",
+      "sha256": "982054f9fb76777e6672137006c0b9388bc0d8c0245eda5638859cdd3d6d78f3"
+    },
+    {
+      "path": "evidence/a5/ADMISSION.json",
+      "sha256": "d4871ec97ae3a27b8ec820896e292429e44b4db4d11d2671a69b9dc0230ddc0a"
+    },
+    {
+      "path": "evidence/a6/SUPPRESSIONS.json",
+      "sha256": "236dc220d651bdb1f8519f189afa3bc9af78db7e28b0bd4f2c21a856694d8e4e"
+    },
+    {
+      "path": "evidence/a7/DELTA.json",
+      "sha256": "0444a879bf4a0ddf5c50cffba7f51a5834b0fc4a1702d5190815de1f4470c8cf"
+    }
+  ],
+  "replacesEvidence": false,
+  "schema": "openssl-rs/a21/summary/1",
+  "topLevel": "summary",
+  "unmet": [
+    "A06.suppression-member-identities",
+    "A12.independent-attestation",
+    "A14.release-authorised",
+    "A15.release-threshold-met",
+    "A17.forward-freeze-closed"
+  ]
+}
