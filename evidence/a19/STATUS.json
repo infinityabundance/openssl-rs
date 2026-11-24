@@ -1,0 +1,361 @@
+{
+  "candidate": {
+    "baseCommit": "6bf8c80aa9419addc85998f21a0c3010e697c4b3",
+    "baseCommitShort": "6bf8c80aa",
+    "branch": "staging",
+    "recordedAt": "2026-11-24"
+  },
+  "finding": "all eleven subjects have a bound successor; six are CORRECTED, five are RETRACTED, and none is DISPUTED or UNKNOWN. Zero events are authenticated: seven corrections are recorded in prose only and four claim retractions are machine-readable but unsigned. The original is preserved for every subject, but for A4, gate-reliability and the 99.6% posterior the pre-correction record was never committed and only the correcting receipt preserves it.",
+  "model": "a19/v1",
+  "schema": "openssl-rs/a19/status/1",
+  "subjects": [
+    {
+      "acceptedEventId": "A19-E02",
+      "acceptedValue": {
+        "byteLength": 357,
+        "byteLengthHex": "0x165",
+        "observation": "size: 0x165",
+        "oneBytePast": 358
+      },
+      "authenticated": false,
+      "authentication": {
+        "authenticated": false,
+        "original": "prose-only",
+        "reason": "the only signer is A10's test-only HMAC-SHA256 key; A14 records no declared identity for the producer or the revocation authority, so no event is authenticated",
+        "status": "SELF_ISSUED"
+      },
+      "history": [
+        "A19-E01",
+        "A19-E02"
+      ],
+      "originalPreservation": {
+        "commit": "5f868b04f",
+        "note": "the pre-correction record was not committed; the old value 0xA5 is preserved only in the receipt",
+        "path": "evidence/a4/RECEIPT.md",
+        "section": "\u00a76",
+        "sha256": "0f35f96b7a1772e4f044e4567d1e9e703c29cc21849f4ebe1146aebad387cb8a"
+      },
+      "outcome": "CORRECTED",
+      "reasons": [],
+      "recordedAs": "prose-only",
+      "subject": "A4/L3-md32-update/byteLength",
+      "successorState": null
+    },
+    {
+      "acceptedEventId": "A19-E04",
+      "acceptedValue": {
+        "comparedFields": "every top-level field except environment",
+        "memAvailable": "sampled once into the declared environment block and excluded",
+        "refusal": "environment_declaration_problem; normalised memory echo",
+        "tmpMaterialisation": "{tmp} is substituted wherever it appears"
+      },
+      "authenticated": false,
+      "authentication": {
+        "authenticated": false,
+        "original": "prose-only",
+        "reason": "the only signer is A10's test-only HMAC-SHA256 key; A14 records no declared identity for the producer or the revocation authority, so no event is authenticated",
+        "status": "SELF_ISSUED"
+      },
+      "history": [
+        "A19-E03",
+        "A19-E04"
+      ],
+      "originalPreservation": {
+        "commit": "1efd02cbd",
+        "note": "the failing text and the before/after mechanism are preserved in the receipt; the old verify.py bytes are at 1efd02cbd^",
+        "path": "evidence/gate-reliability/RECEIPT.md",
+        "section": "\u00a73-\u00a75",
+        "sha256": "c051be4a89d95d235877ccad9f07abc8b77a0a414e54a87bc37a9e0b3b971689"
+      },
+      "outcome": "CORRECTED",
+      "reasons": [],
+      "recordedAs": "prose-only",
+      "subject": "gate-reliability/verify-deterministic-projection",
+      "successorState": null
+    },
+    {
+      "acceptedEventId": "A19-E06",
+      "acceptedValue": {
+        "asOf": "2026-11-24",
+        "commit": "1efd02cbd1401c4cffb854b906c021915df94386",
+        "inputs": "16 files by repo-relative path and full-length SHA-256",
+        "producerRead": "explicit --source-commit; the default is the recorded value",
+        "refusal": "BL_REFUSED_INPUT_DIGEST_MISMATCH"
+      },
+      "authenticated": false,
+      "authentication": {
+        "authenticated": false,
+        "original": "prose-only",
+        "reason": "the only signer is A10's test-only HMAC-SHA256 key; A14 records no declared identity for the producer or the revocation authority, so no event is authenticated",
+        "status": "SELF_ISSUED"
+      },
+      "history": [
+        "A19-E05",
+        "A19-E06"
+      ],
+      "originalPreservation": {
+        "commit": "f1c5047a5",
+        "note": "the old and new BASELINES.json digests are preserved in \u00a711.3; the old bytes are at 1efd02cbd",
+        "path": "evidence/a7/RECEIPT.md",
+        "section": "\u00a711",
+        "sha256": "8c00cd7aabe8bb1aba0c47981f581fd7aa709452d65fdee66ebd8b88a797efd5"
+      },
+      "outcome": "CORRECTED",
+      "reasons": [],
+      "recordedAs": "prose-only",
+      "subject": "A7/sourceIdentity",
+      "successorState": null
+    },
+    {
+      "acceptedEventId": "A19-E08",
+      "acceptedValue": {
+        "countSource": "the length of the member list",
+        "driftRefusal": "PH_REFUSED_POPULATION_DRIFT",
+        "files": 386,
+        "growth": "NEW_SINCE_RECORD",
+        "population": "explicit frozen 386-member {path, sha256, bytes} list",
+        "schema": "openssl-rs/a11/scan/2"
+      },
+      "authenticated": false,
+      "authentication": {
+        "authenticated": false,
+        "original": "prose-only",
+        "reason": "the only signer is A10's test-only HMAC-SHA256 key; A14 records no declared identity for the producer or the revocation authority, so no event is authenticated",
+        "status": "SELF_ISSUED"
+      },
+      "history": [
+        "A19-E07",
+        "A19-E08"
+      ],
+      "originalPreservation": {
+        "commit": "4e9262bf3",
+        "note": "the old SCAN.json digest 9cc6680f is preserved in \u00a712; the old bytes are at f1c1a535d",
+        "path": "evidence/a11/RECEIPT.md",
+        "section": "\u00a712",
+        "sha256": "a548c427f9ef5fac1a0e91b1d3612547eb834e2eb8d288e5a2d3d69b207227a4"
+      },
+      "outcome": "CORRECTED",
+      "reasons": [],
+      "recordedAs": "prose-only",
+      "subject": "A11/SCAN.json/population",
+      "successorState": null
+    },
+    {
+      "acceptedEventId": "A19-E10",
+      "acceptedValue": {
+        "countSource": "the length of the member list",
+        "driftRefusal": "PH_REFUSED_POPULATION_DRIFT",
+        "growth": "NEW_SINCE_RECORD",
+        "population": "explicit frozen 404-member {path, sha256, bytes} list",
+        "populationFiles": 404,
+        "schema": "openssl-rs/a16/bundle-inventory/2"
+      },
+      "authenticated": false,
+      "authentication": {
+        "authenticated": false,
+        "original": "prose-only",
+        "reason": "the only signer is A10's test-only HMAC-SHA256 key; A14 records no declared identity for the producer or the revocation authority, so no event is authenticated",
+        "status": "SELF_ISSUED"
+      },
+      "history": [
+        "A19-E09",
+        "A19-E10"
+      ],
+      "originalPreservation": {
+        "commit": "2e8e9aa65",
+        "note": "the old INVENTORY.json digest b6c06350 is preserved in \u00a711; the old bytes are at 67187c39e",
+        "path": "evidence/a16/RECEIPT.md",
+        "section": "\u00a711",
+        "sha256": "b0d6a67fcc9db58247eedac3686aa693be154baeff5d65ef80a8a3aabf7f73a9"
+      },
+      "outcome": "CORRECTED",
+      "reasons": [],
+      "recordedAs": "prose-only",
+      "subject": "A16/INVENTORY.json/populationFiles",
+      "successorState": null
+    },
+    {
+      "acceptedEventId": "A19-E12",
+      "acceptedValue": {
+        "construction": "SHA-256(KEY_LABEL || p || q) with the CRT primes, otherwise a 32-byte RAND_priv_bytes per-key secret",
+        "domainSeparation": true,
+        "failure": "RNG or allocation failure is the defined refusal; no publicly derivable fallback",
+        "residual": "the returned length remains a channel, measured over 2,048 invalid blocks"
+      },
+      "authenticated": false,
+      "authentication": {
+        "authenticated": false,
+        "original": "prose-only",
+        "reason": "the only signer is A10's test-only HMAC-SHA256 key; A14 records no declared identity for the producer or the revocation authority, so no event is authenticated",
+        "status": "SELF_ISSUED"
+      },
+      "history": [
+        "A19-E11",
+        "A19-E12"
+      ],
+      "originalPreservation": {
+        "commit": "c28ac7bb9",
+        "note": "the retraction is recorded in the KDK-CORRECTION document and the commit message; no signed correction event exists",
+        "path": "evidence/haz-15/KDK-CORRECTION.md",
+        "section": "the whole document",
+        "sha256": "42b61e280c7c85f04b88cea42ab863ee8e5bf5aa2a27909c16079e2f8d451c6c"
+      },
+      "outcome": "CORRECTED",
+      "reasons": [],
+      "recordedAs": "prose-only",
+      "subject": "HAZ-15/external-key-KDK",
+      "successorState": null
+    },
+    {
+      "acceptedEventId": "A19-E14",
+      "acceptedValue": null,
+      "authenticated": false,
+      "authentication": {
+        "authenticated": false,
+        "original": "prose-only",
+        "reason": "the only signer is A10's test-only HMAC-SHA256 key; A14 records no declared identity for the producer or the revocation authority, so no event is authenticated",
+        "status": "SELF_ISSUED"
+      },
+      "history": [
+        "A19-E13",
+        "A19-E14"
+      ],
+      "originalPreservation": {
+        "commit": "4cafcd0ea",
+        "note": "the earlier revision is not committed; the withdrawal and the conditional formula are preserved in \u00a75.3",
+        "path": "evidence/haz-15/REENTRANCY-AND-LENGTH.md",
+        "section": "\u00a75.3",
+        "sha256": "240165e76eae6a76b98ddaf803f73706384607aa2aaa6427dac04e48d0c1bd37"
+      },
+      "outcome": "RETRACTED",
+      "reasons": [],
+      "recordedAs": "prose-only",
+      "subject": "HAZ-15/posterior-probability-99.6",
+      "successorState": null
+    },
+    {
+      "acceptedEventId": "A19-E16",
+      "acceptedValue": null,
+      "authenticated": false,
+      "authentication": {
+        "authenticated": false,
+        "original": "machine-readable-unsigned",
+        "reason": "the only signer is A10's test-only HMAC-SHA256 key; A14 records no declared identity for the producer or the revocation authority, so no event is authenticated",
+        "status": "SELF_ISSUED"
+      },
+      "history": [
+        "A19-E15",
+        "A19-E16"
+      ],
+      "originalPreservation": {
+        "commit": "e0b727d06",
+        "note": "the original claim object is preserved byte-for-byte in the history copy; the live claims.json records the successor verdict",
+        "path": "evidence/etp-t15/history/claims.before-reconciliation.json",
+        "section": "claims[ETP0-CLM-004]",
+        "sha256": "65d8105b744c80ae01e76af8bf3370c478ab116c7fc9b0f16f63eea5d5c579de"
+      },
+      "outcome": "RETRACTED",
+      "reasons": [],
+      "recordedAs": "machine-readable-unsigned",
+      "subject": "ETP0-CLM-004/verdict",
+      "successorState": "SUPERSEDED"
+    },
+    {
+      "acceptedEventId": "A19-E18",
+      "acceptedValue": null,
+      "authenticated": false,
+      "authentication": {
+        "authenticated": false,
+        "original": "machine-readable-unsigned",
+        "reason": "the only signer is A10's test-only HMAC-SHA256 key; A14 records no declared identity for the producer or the revocation authority, so no event is authenticated",
+        "status": "SELF_ISSUED"
+      },
+      "history": [
+        "A19-E17",
+        "A19-E18"
+      ],
+      "originalPreservation": {
+        "commit": "e0b727d06",
+        "note": "the original claim object is preserved byte-for-byte in the history copy; the live claims.json records the successor verdict",
+        "path": "evidence/etp-t15/history/claims.before-reconciliation.json",
+        "section": "claims[ETP0-CLM-005]",
+        "sha256": "65d8105b744c80ae01e76af8bf3370c478ab116c7fc9b0f16f63eea5d5c579de"
+      },
+      "outcome": "RETRACTED",
+      "reasons": [],
+      "recordedAs": "machine-readable-unsigned",
+      "subject": "ETP0-CLM-005/verdict",
+      "successorState": "SUPERSEDED"
+    },
+    {
+      "acceptedEventId": "A19-E20",
+      "acceptedValue": null,
+      "authenticated": false,
+      "authentication": {
+        "authenticated": false,
+        "original": "machine-readable-unsigned",
+        "reason": "the only signer is A10's test-only HMAC-SHA256 key; A14 records no declared identity for the producer or the revocation authority, so no event is authenticated",
+        "status": "SELF_ISSUED"
+      },
+      "history": [
+        "A19-E19",
+        "A19-E20"
+      ],
+      "originalPreservation": {
+        "commit": "e0b727d06",
+        "note": "the original claim object is preserved byte-for-byte in the history copy; the live claims.json records the successor verdict",
+        "path": "evidence/etp-t15/history/claims.before-reconciliation.json",
+        "section": "claims[ETP0-CLM-030]",
+        "sha256": "65d8105b744c80ae01e76af8bf3370c478ab116c7fc9b0f16f63eea5d5c579de"
+      },
+      "outcome": "RETRACTED",
+      "reasons": [],
+      "recordedAs": "machine-readable-unsigned",
+      "subject": "ETP0-CLM-030/verdict",
+      "successorState": "RISK_ACCEPTED"
+    },
+    {
+      "acceptedEventId": "A19-E22",
+      "acceptedValue": null,
+      "authenticated": false,
+      "authentication": {
+        "authenticated": false,
+        "original": "machine-readable-unsigned",
+        "reason": "the only signer is A10's test-only HMAC-SHA256 key; A14 records no declared identity for the producer or the revocation authority, so no event is authenticated",
+        "status": "SELF_ISSUED"
+      },
+      "history": [
+        "A19-E21",
+        "A19-E22"
+      ],
+      "originalPreservation": {
+        "commit": "e0b727d06",
+        "note": "the original claim object is preserved byte-for-byte in the history copy; the live claims.json records the successor verdict",
+        "path": "evidence/etp-t15/history/claims.before-reconciliation.json",
+        "section": "claims[ETP0-CLM-032]",
+        "sha256": "65d8105b744c80ae01e76af8bf3370c478ab116c7fc9b0f16f63eea5d5c579de"
+      },
+      "outcome": "RETRACTED",
+      "reasons": [],
+      "recordedAs": "machine-readable-unsigned",
+      "subject": "ETP0-CLM-032/verdict",
+      "successorState": "SUPERSEDED"
+    }
+  ],
+  "summary": {
+    "authenticated": 0,
+    "events": 22,
+    "machineReadableUnsigned": 4,
+    "notRecorded": 0,
+    "outcomes": {
+      "CORRECTED": 6,
+      "CURRENT": 0,
+      "DISPUTED": 0,
+      "RETRACTED": 5,
+      "UNKNOWN": 0
+    },
+    "proseOnly": 7,
+    "signed": 0,
+    "subjects": 11
+  }
+}

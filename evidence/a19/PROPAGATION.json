@@ -1,0 +1,1089 @@
+{
+  "candidate": {
+    "baseCommit": "6bf8c80aa9419addc85998f21a0c3010e697c4b3",
+    "baseCommitShort": "6bf8c80aa",
+    "branch": "staging",
+    "recordedAt": "2026-11-24"
+  },
+  "codes": [],
+  "dependents": [
+    {
+      "citations": [
+        {
+          "line": 145,
+          "path": "docs/ETP-TODO.md",
+          "text": "al transcription defect found and repaired:** L3 recorded the monomorphised Md4 `update` extent as `0xA5` (165), which is the `nm` posix field `165` read as decimal instead of hexadecimal; `readelf -sW` reports 357 (0x165) and the next instanti",
+          "token": "0xA5"
+        },
+        {
+          "line": 120,
+          "path": "docs/ETP-TODO.md",
+          "text": "and still blocks `REL-OPENSSH-B85C`. **HAZ-15 KDK correction (2026-11-22, base `5750ac150`):** the `SHA-256(decrypted block)` KDK was retracted as attacker-computable; the external-key arm now keys the synthetic answer with private CRT material or a per-key RNG se",
+          "token": "SHA-256(decrypted block)"
+        },
+        {
+          "line": 160,
+          "path": "docs/ETP-TODO.md",
+          "text": "ember list (`4e9262bf3`), A16's live glob 407 \u2192 frozen 404 (`2e8e9aa65`), the RSA synthetic-answer `SHA-256(decrypted block)` \u2192 keyed derivation (`c28ac7bb9`, recorded in `evidence/haz-15/KDK-CORRECTION.md` and the commit message), the withdrawn unconditional 99.6",
+          "token": "SHA-256(decrypted block)"
+        },
+        {
+          "line": 160,
+          "path": "docs/ETP-TODO.md",
+          "text": "ecorded in `evidence/haz-15/KDK-CORRECTION.md` and the commit message), the withdrawn unconditional 99.6% posterior (`4cafcd0ea`; the conditional formula remains), and the four claims the release gate refused as `CONTRADICTED` (`ETP0-CLM-004`, `",
+          "token": "99.6%"
+        }
+      ],
+      "cites": [
+        "3546517c184012f7d5c5cdbd1caaf1f0daaefa62150554222384209510345bc9",
+        "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632",
+        "e3b7d9ebbf082a1605955ed9a9c0fd8b69872d547bf4a6adcb19d199fa42a722"
+      ],
+      "declared": "INVALIDATED",
+      "id": "docs/ETP-TODO.md",
+      "marker": "withdrawn",
+      "path": "docs/ETP-TODO.md",
+      "state": "INVALIDATED",
+      "supersededBy": [
+        "A19-E02",
+        "A19-E12",
+        "A19-E14"
+      ],
+      "supersededCites": [
+        "3546517c184012f7d5c5cdbd1caaf1f0daaefa62150554222384209510345bc9",
+        "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632",
+        "e3b7d9ebbf082a1605955ed9a9c0fd8b69872d547bf4a6adcb19d199fa42a722"
+      ]
+    },
+    {
+      "citations": [
+        {
+          "line": 460,
+          "path": "docs/LOCATION-FIDELITY.md",
+          "text": "recorded the monomorphised `update::<Md4Ctx>` extent as `0xA5`, i.e. 165 bytes,",
+          "token": "0xA5"
+        }
+      ],
+      "cites": [
+        "3546517c184012f7d5c5cdbd1caaf1f0daaefa62150554222384209510345bc9"
+      ],
+      "declared": "INVALIDATED",
+      "id": "docs/LOCATION-FIDELITY.md",
+      "marker": "old value",
+      "path": "docs/LOCATION-FIDELITY.md",
+      "state": "INVALIDATED",
+      "supersededBy": [
+        "A19-E02"
+      ],
+      "supersededCites": [
+        "3546517c184012f7d5c5cdbd1caaf1f0daaefa62150554222384209510345bc9"
+      ]
+    },
+    {
+      "citations": [
+        {
+          "line": 2079,
+          "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
+          "text": "SHA-256(decrypted block) construction is",
+          "token": "SHA-256(decrypted block)"
+        }
+      ],
+      "cites": [
+        "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+      ],
+      "declared": "INVALIDATED",
+      "id": "docs/SECURITY_DIVERGENCE_POLICY.md",
+      "marker": "withdrawn",
+      "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
+      "state": "INVALIDATED",
+      "supersededBy": [
+        "A19-E12"
+      ],
+      "supersededCites": [
+        "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+      ]
+    },
+    {
+      "citations": [
+        {
+          "line": 257,
+          "path": "evidence/a11/RECEIPT.md",
+          "text": "(`sha256 9cc6680f1845b3589034f71f2ff5751338fa23efd041fed53d43c2a806e5376e`)",
+          "token": "9cc6680f1845b3589034f71f2ff5751338fa23efd041fed53d43c2a806e5376e"
+        }
+      ],
+      "cites": [
+        "9cc6680f1845b3589034f71f2ff5751338fa23efd041fed53d43c2a806e5376e"
+      ],
+      "declared": "INVALIDATED",
+      "id": "evidence/a11/RECEIPT.md",
+      "marker": "old counts",
+      "path": "evidence/a11/RECEIPT.md",
+      "state": "INVALIDATED",
+      "supersededBy": [
+        "A19-E08"
+      ],
+      "supersededCites": [
+        "9cc6680f1845b3589034f71f2ff5751338fa23efd041fed53d43c2a806e5376e"
+      ]
+    },
+    {
+      "citations": [
+        {
+          "line": 320,
+          "path": "evidence/a16/RECEIPT.md",
+          "text": "| `INVENTORY.json` sha256 | `b6c06350098bda9227f58defc873b4676113cd54bceb89f4cb82497d18021bf1` | `a7e200603059828c113ad0704cd3a4b9a6e89feae5cbbd5b8b7e5dbbf03916c2` |",
+          "token": "b6c06350098bda9227f58defc873b4676113cd54bceb89f4cb82497d18021bf1"
+        }
+      ],
+      "cites": [
+        "b6c06350098bda9227f58defc873b4676113cd54bceb89f4cb82497d18021bf1"
+      ],
+      "declared": "INVALIDATED",
+      "id": "evidence/a16/RECEIPT.md",
+      "marker": "old and new",
+      "path": "evidence/a16/RECEIPT.md",
+      "state": "INVALIDATED",
+      "supersededBy": [
+        "A19-E10"
+      ],
+      "supersededCites": [
+        "b6c06350098bda9227f58defc873b4676113cd54bceb89f4cb82497d18021bf1"
+      ]
+    },
+    {
+      "citations": [
+        {
+          "line": 114,
+          "path": "evidence/a4/RECEIPT.md",
+          "text": "| old recorded value | `byteLength: 0xA5` (165) in the native record, and observation `size: 0xA5` |",
+          "token": "0xA5"
+        }
+      ],
+      "cites": [
+        "3546517c184012f7d5c5cdbd1caaf1f0daaefa62150554222384209510345bc9"
+      ],
+      "declared": "INVALIDATED",
+      "id": "evidence/a4/RECEIPT.md",
+      "marker": "old recorded value",
+      "path": "evidence/a4/RECEIPT.md",
+      "state": "INVALIDATED",
+      "supersededBy": [
+        "A19-E02"
+      ],
+      "supersededCites": [
+        "3546517c184012f7d5c5cdbd1caaf1f0daaefa62150554222384209510345bc9"
+      ]
+    },
+    {
+      "citations": [
+        {
+          "line": 194,
+          "path": "evidence/a7/RECEIPT.md",
+          "text": "| committed bytes | `sha256sum evidence/a7/*.json` | `f2d6e37928a6fd05fa295a06cb54bd64a495336ab0af0a66403bcdbfbb0fe188` `BASELINES.json`; `c676780ccde5bfdfb53f9aa3410be7c3feb6466cce3f904efab5f632b5d9dbb2` `DELTA.json`; `ae80106059df8cdf703116850869ede86e9713",
+          "token": "f2d6e37928a6fd05fa295a06cb54bd64a495336ab0af0a66403bcdbfbb0fe188"
+        },
+        {
+          "line": 352,
+          "path": "evidence/a7/RECEIPT.md",
+          "text": "| `BASELINES.json` | `f2d6e37928a6fd05fa295a06cb54bd64a495336ab0af0a66403bcdbfbb0fe188` | `2a5a3f863c1ddf7775d0f524e7b36feb9f01a22a6c6569eff1d3c93081ae1cab` |",
+          "token": "f2d6e37928a6fd05fa295a06cb54bd64a495336ab0af0a66403bcdbfbb0fe188"
+        }
+      ],
+      "cites": [
+        "f2d6e37928a6fd05fa295a06cb54bd64a495336ab0af0a66403bcdbfbb0fe188"
+      ],
+      "declared": "INVALIDATED",
+      "id": "evidence/a7/RECEIPT.md",
+      "marker": "old sha-256",
+      "path": "evidence/a7/RECEIPT.md",
+      "state": "INVALIDATED",
+      "supersededBy": [
+        "A19-E06"
+      ],
+      "supersededCites": [
+        "f2d6e37928a6fd05fa295a06cb54bd64a495336ab0af0a66403bcdbfbb0fe188"
+      ]
+    },
+    {
+      "citations": [
+        {
+          "line": 3820,
+          "path": "evidence/etp-controls/history/TRACEABILITY-superseded-t4-07b776d68.json",
+          "text": "iphertext (d when present, otherwise the CRT primes, otherwise a per-key RNG secret); the withdrawn SHA-256(decrypted block) key was attacker-computable and is retracted. The returned length remains a distinguishable channel: a 2,048-block population matched every",
+          "token": "SHA-256(decrypted block)"
+        }
+      ],
+      "cites": [
+        "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+      ],
+      "declared": "INVALIDATED",
+      "id": "evidence/etp-controls/history/TRACEABILITY-superseded-t4-07b776d68.json",
+      "marker": "withdrawn",
+      "path": "evidence/etp-controls/history/TRACEABILITY-superseded-t4-07b776d68.json",
+      "state": "INVALIDATED",
+      "supersededBy": [
+        "A19-E12"
+      ],
+      "supersededCites": [
+        "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+      ]
+    },
+    {
+      "citations": [
+        {
+          "line": 3852,
+          "path": "evidence/etp-t1/TRACEABILITY.json",
+          "text": "iphertext (d when present, otherwise the CRT primes, otherwise a per-key RNG secret); the withdrawn SHA-256(decrypted block) key was attacker-computable and is retracted. The returned length remains a distinguishable channel: a 2,048-block population matched every",
+          "token": "SHA-256(decrypted block)"
+        }
+      ],
+      "cites": [
+        "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+      ],
+      "declared": "INVALIDATED",
+      "id": "evidence/etp-t1/TRACEABILITY.json",
+      "marker": "withdrawn",
+      "path": "evidence/etp-t1/TRACEABILITY.json",
+      "state": "INVALIDATED",
+      "supersededBy": [
+        "A19-E12"
+      ],
+      "supersededCites": [
+        "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+      ]
+    },
+    {
+      "citations": [
+        {
+          "line": 349,
+          "path": "evidence/etp-t2/HAZARDS.json",
+          "text": "iphertext (d when present, otherwise the CRT primes, otherwise a per-key RNG secret); the withdrawn SHA-256(decrypted block) key was attacker-computable and is retracted. The returned length remains a distinguishable channel: a 2,048-block population matched every",
+          "token": "SHA-256(decrypted block)"
+        }
+      ],
+      "cites": [
+        "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+      ],
+      "declared": "INVALIDATED",
+      "id": "evidence/etp-t2/HAZARDS.json",
+      "marker": "withdrawn",
+      "path": "evidence/etp-t2/HAZARDS.json",
+      "state": "INVALIDATED",
+      "supersededBy": [
+        "A19-E12"
+      ],
+      "supersededCites": [
+        "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+      ]
+    },
+    {
+      "citations": [
+        {
+          "line": 35,
+          "path": "evidence/gate-reliability/RECEIPT.md",
+          "text": "*before** the item's files existed | 2026-11-24 | 643 tests | `failures=1`; the differing text was `MemAvailable 10 GiB` against `MemAvailable 11 GiB` |",
+          "token": "MemAvailable 10 GiB"
+        },
+        {
+          "line": 36,
+          "path": "evidence/gate-reliability/RECEIPT.md",
+          "text": "r** the item's files existed | 2026-11-24 | 701 tests | `failures=1`; the differing text was again `MemAvailable 10 GiB` against `MemAvailable 11 GiB` |",
+          "token": "MemAvailable 10 GiB"
+        }
+      ],
+      "cites": [
+        "e3631d04234c7824a6c9d5f4fa54a9c9128e602f6115afba6c8c3a76b861d4eb"
+      ],
+      "declared": "INVALIDATED",
+      "id": "evidence/gate-reliability/RECEIPT.md",
+      "marker": "the earlier",
+      "path": "evidence/gate-reliability/RECEIPT.md",
+      "state": "INVALIDATED",
+      "supersededBy": [
+        "A19-E04"
+      ],
+      "supersededCites": [
+        "e3631d04234c7824a6c9d5f4fa54a9c9128e602f6115afba6c8c3a76b861d4eb"
+      ]
+    },
+    {
+      "citations": [
+        {
+          "line": 24,
+          "path": "evidence/haz-15/KDK-CORRECTION.md",
+          "text": "The first repair set the implicit-rejection KDK to `SHA-256(decrypted block)`.",
+          "token": "SHA-256(decrypted block)"
+        }
+      ],
+      "cites": [
+        "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+      ],
+      "declared": "INVALIDATED",
+      "id": "evidence/haz-15/KDK-CORRECTION.md",
+      "marker": "retracted",
+      "path": "evidence/haz-15/KDK-CORRECTION.md",
+      "state": "INVALIDATED",
+      "supersededBy": [
+        "A19-E12"
+      ],
+      "supersededCites": [
+        "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+      ]
+    },
+    {
+      "citations": [
+        {
+          "line": 154,
+          "path": "evidence/haz-15/REENTRANCY-AND-LENGTH.md",
+          "text": "The following statements described the withdrawn `SHA-256(decrypted block)`",
+          "token": "SHA-256(decrypted block)"
+        },
+        {
+          "line": 260,
+          "path": "evidence/haz-15/REENTRANCY-AND-LENGTH.md",
+          "text": "receipt quoted `99.6%` unconditionally, which silently assumed equal priors; that",
+          "token": "99.6%"
+        }
+      ],
+      "cites": [
+        "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632",
+        "e3b7d9ebbf082a1605955ed9a9c0fd8b69872d547bf4a6adcb19d199fa42a722"
+      ],
+      "declared": "INVALIDATED",
+      "id": "evidence/haz-15/REENTRANCY-AND-LENGTH.md",
+      "marker": "withdrawn",
+      "path": "evidence/haz-15/REENTRANCY-AND-LENGTH.md",
+      "state": "INVALIDATED",
+      "supersededBy": [
+        "A19-E12",
+        "A19-E14"
+      ],
+      "supersededCites": [
+        "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632",
+        "e3b7d9ebbf082a1605955ed9a9c0fd8b69872d547bf4a6adcb19d199fa42a722"
+      ]
+    },
+    {
+      "citations": [
+        {
+          "line": 19,
+          "path": "evidence/haz-15/REPORT.md",
+          "text": "with `SHA-256(decrypted block)`, arguing that the block is secret because the",
+          "token": "SHA-256(decrypted block)"
+        }
+      ],
+      "cites": [
+        "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+      ],
+      "declared": "INVALIDATED",
+      "id": "evidence/haz-15/REPORT.md",
+      "marker": "withdrawn",
+      "path": "evidence/haz-15/REPORT.md",
+      "state": "INVALIDATED",
+      "supersededBy": [
+        "A19-E12"
+      ],
+      "supersededCites": [
+        "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+      ]
+    }
+  ],
+  "events": [
+    {
+      "dependents": [
+        {
+          "citations": [
+            {
+              "line": 145,
+              "path": "docs/ETP-TODO.md",
+              "text": "al transcription defect found and repaired:** L3 recorded the monomorphised Md4 `update` extent as `0xA5` (165), which is the `nm` posix field `165` read as decimal instead of hexadecimal; `readelf -sW` reports 357 (0x165) and the next instanti",
+              "token": "0xA5"
+            },
+            {
+              "line": 120,
+              "path": "docs/ETP-TODO.md",
+              "text": "and still blocks `REL-OPENSSH-B85C`. **HAZ-15 KDK correction (2026-11-22, base `5750ac150`):** the `SHA-256(decrypted block)` KDK was retracted as attacker-computable; the external-key arm now keys the synthetic answer with private CRT material or a per-key RNG se",
+              "token": "SHA-256(decrypted block)"
+            },
+            {
+              "line": 160,
+              "path": "docs/ETP-TODO.md",
+              "text": "ember list (`4e9262bf3`), A16's live glob 407 \u2192 frozen 404 (`2e8e9aa65`), the RSA synthetic-answer `SHA-256(decrypted block)` \u2192 keyed derivation (`c28ac7bb9`, recorded in `evidence/haz-15/KDK-CORRECTION.md` and the commit message), the withdrawn unconditional 99.6",
+              "token": "SHA-256(decrypted block)"
+            },
+            {
+              "line": 160,
+              "path": "docs/ETP-TODO.md",
+              "text": "ecorded in `evidence/haz-15/KDK-CORRECTION.md` and the commit message), the withdrawn unconditional 99.6% posterior (`4cafcd0ea`; the conditional formula remains), and the four claims the release gate refused as `CONTRADICTED` (`ETP0-CLM-004`, `",
+              "token": "99.6%"
+            }
+          ],
+          "cites": [
+            "3546517c184012f7d5c5cdbd1caaf1f0daaefa62150554222384209510345bc9",
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632",
+            "e3b7d9ebbf082a1605955ed9a9c0fd8b69872d547bf4a6adcb19d199fa42a722"
+          ],
+          "declared": "INVALIDATED",
+          "id": "docs/ETP-TODO.md",
+          "marker": "withdrawn",
+          "path": "docs/ETP-TODO.md",
+          "state": "INVALIDATED",
+          "supersededBy": [
+            "A19-E02",
+            "A19-E12",
+            "A19-E14"
+          ],
+          "supersededCites": [
+            "3546517c184012f7d5c5cdbd1caaf1f0daaefa62150554222384209510345bc9",
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632",
+            "e3b7d9ebbf082a1605955ed9a9c0fd8b69872d547bf4a6adcb19d199fa42a722"
+          ]
+        },
+        {
+          "citations": [
+            {
+              "line": 460,
+              "path": "docs/LOCATION-FIDELITY.md",
+              "text": "recorded the monomorphised `update::<Md4Ctx>` extent as `0xA5`, i.e. 165 bytes,",
+              "token": "0xA5"
+            }
+          ],
+          "cites": [
+            "3546517c184012f7d5c5cdbd1caaf1f0daaefa62150554222384209510345bc9"
+          ],
+          "declared": "INVALIDATED",
+          "id": "docs/LOCATION-FIDELITY.md",
+          "marker": "old value",
+          "path": "docs/LOCATION-FIDELITY.md",
+          "state": "INVALIDATED",
+          "supersededBy": [
+            "A19-E02"
+          ],
+          "supersededCites": [
+            "3546517c184012f7d5c5cdbd1caaf1f0daaefa62150554222384209510345bc9"
+          ]
+        },
+        {
+          "citations": [
+            {
+              "line": 114,
+              "path": "evidence/a4/RECEIPT.md",
+              "text": "| old recorded value | `byteLength: 0xA5` (165) in the native record, and observation `size: 0xA5` |",
+              "token": "0xA5"
+            }
+          ],
+          "cites": [
+            "3546517c184012f7d5c5cdbd1caaf1f0daaefa62150554222384209510345bc9"
+          ],
+          "declared": "INVALIDATED",
+          "id": "evidence/a4/RECEIPT.md",
+          "marker": "old recorded value",
+          "path": "evidence/a4/RECEIPT.md",
+          "state": "INVALIDATED",
+          "supersededBy": [
+            "A19-E02"
+          ],
+          "supersededCites": [
+            "3546517c184012f7d5c5cdbd1caaf1f0daaefa62150554222384209510345bc9"
+          ]
+        }
+      ],
+      "eventId": "A19-E02",
+      "kind": "correct",
+      "subject": "A4/L3-md32-update/byteLength",
+      "summary": {
+        "dependents": 3,
+        "invalidated": 3,
+        "valid": 0
+      },
+      "supersededDigests": [
+        "3546517c184012f7d5c5cdbd1caaf1f0daaefa62150554222384209510345bc9"
+      ]
+    },
+    {
+      "dependents": [
+        {
+          "citations": [
+            {
+              "line": 35,
+              "path": "evidence/gate-reliability/RECEIPT.md",
+              "text": "*before** the item's files existed | 2026-11-24 | 643 tests | `failures=1`; the differing text was `MemAvailable 10 GiB` against `MemAvailable 11 GiB` |",
+              "token": "MemAvailable 10 GiB"
+            },
+            {
+              "line": 36,
+              "path": "evidence/gate-reliability/RECEIPT.md",
+              "text": "r** the item's files existed | 2026-11-24 | 701 tests | `failures=1`; the differing text was again `MemAvailable 10 GiB` against `MemAvailable 11 GiB` |",
+              "token": "MemAvailable 10 GiB"
+            }
+          ],
+          "cites": [
+            "e3631d04234c7824a6c9d5f4fa54a9c9128e602f6115afba6c8c3a76b861d4eb"
+          ],
+          "declared": "INVALIDATED",
+          "id": "evidence/gate-reliability/RECEIPT.md",
+          "marker": "the earlier",
+          "path": "evidence/gate-reliability/RECEIPT.md",
+          "state": "INVALIDATED",
+          "supersededBy": [
+            "A19-E04"
+          ],
+          "supersededCites": [
+            "e3631d04234c7824a6c9d5f4fa54a9c9128e602f6115afba6c8c3a76b861d4eb"
+          ]
+        }
+      ],
+      "eventId": "A19-E04",
+      "kind": "correct",
+      "subject": "gate-reliability/verify-deterministic-projection",
+      "summary": {
+        "dependents": 1,
+        "invalidated": 1,
+        "valid": 0
+      },
+      "supersededDigests": [
+        "e3631d04234c7824a6c9d5f4fa54a9c9128e602f6115afba6c8c3a76b861d4eb",
+        "20e9e125392b5161de218d9541877a3e1a16345d532bf93c37774913632e4334"
+      ]
+    },
+    {
+      "dependents": [
+        {
+          "citations": [
+            {
+              "line": 194,
+              "path": "evidence/a7/RECEIPT.md",
+              "text": "| committed bytes | `sha256sum evidence/a7/*.json` | `f2d6e37928a6fd05fa295a06cb54bd64a495336ab0af0a66403bcdbfbb0fe188` `BASELINES.json`; `c676780ccde5bfdfb53f9aa3410be7c3feb6466cce3f904efab5f632b5d9dbb2` `DELTA.json`; `ae80106059df8cdf703116850869ede86e9713",
+              "token": "f2d6e37928a6fd05fa295a06cb54bd64a495336ab0af0a66403bcdbfbb0fe188"
+            },
+            {
+              "line": 352,
+              "path": "evidence/a7/RECEIPT.md",
+              "text": "| `BASELINES.json` | `f2d6e37928a6fd05fa295a06cb54bd64a495336ab0af0a66403bcdbfbb0fe188` | `2a5a3f863c1ddf7775d0f524e7b36feb9f01a22a6c6569eff1d3c93081ae1cab` |",
+              "token": "f2d6e37928a6fd05fa295a06cb54bd64a495336ab0af0a66403bcdbfbb0fe188"
+            }
+          ],
+          "cites": [
+            "f2d6e37928a6fd05fa295a06cb54bd64a495336ab0af0a66403bcdbfbb0fe188"
+          ],
+          "declared": "INVALIDATED",
+          "id": "evidence/a7/RECEIPT.md",
+          "marker": "old sha-256",
+          "path": "evidence/a7/RECEIPT.md",
+          "state": "INVALIDATED",
+          "supersededBy": [
+            "A19-E06"
+          ],
+          "supersededCites": [
+            "f2d6e37928a6fd05fa295a06cb54bd64a495336ab0af0a66403bcdbfbb0fe188"
+          ]
+        }
+      ],
+      "eventId": "A19-E06",
+      "kind": "correct",
+      "subject": "A7/sourceIdentity",
+      "summary": {
+        "dependents": 1,
+        "invalidated": 1,
+        "valid": 0
+      },
+      "supersededDigests": [
+        "78260448abf80cdfd66d162540b94286a7e0f834503602d85ab39fbff05299c8",
+        "f2d6e37928a6fd05fa295a06cb54bd64a495336ab0af0a66403bcdbfbb0fe188"
+      ]
+    },
+    {
+      "dependents": [
+        {
+          "citations": [
+            {
+              "line": 257,
+              "path": "evidence/a11/RECEIPT.md",
+              "text": "(`sha256 9cc6680f1845b3589034f71f2ff5751338fa23efd041fed53d43c2a806e5376e`)",
+              "token": "9cc6680f1845b3589034f71f2ff5751338fa23efd041fed53d43c2a806e5376e"
+            }
+          ],
+          "cites": [
+            "9cc6680f1845b3589034f71f2ff5751338fa23efd041fed53d43c2a806e5376e"
+          ],
+          "declared": "INVALIDATED",
+          "id": "evidence/a11/RECEIPT.md",
+          "marker": "old counts",
+          "path": "evidence/a11/RECEIPT.md",
+          "state": "INVALIDATED",
+          "supersededBy": [
+            "A19-E08"
+          ],
+          "supersededCites": [
+            "9cc6680f1845b3589034f71f2ff5751338fa23efd041fed53d43c2a806e5376e"
+          ]
+        }
+      ],
+      "eventId": "A19-E08",
+      "kind": "correct",
+      "subject": "A11/SCAN.json/population",
+      "summary": {
+        "dependents": 1,
+        "invalidated": 1,
+        "valid": 0
+      },
+      "supersededDigests": [
+        "ae8dd4103b546dffdc44866877ab215145c20d9a84e28c5b4f641a2324176384",
+        "9cc6680f1845b3589034f71f2ff5751338fa23efd041fed53d43c2a806e5376e"
+      ]
+    },
+    {
+      "dependents": [
+        {
+          "citations": [
+            {
+              "line": 320,
+              "path": "evidence/a16/RECEIPT.md",
+              "text": "| `INVENTORY.json` sha256 | `b6c06350098bda9227f58defc873b4676113cd54bceb89f4cb82497d18021bf1` | `a7e200603059828c113ad0704cd3a4b9a6e89feae5cbbd5b8b7e5dbbf03916c2` |",
+              "token": "b6c06350098bda9227f58defc873b4676113cd54bceb89f4cb82497d18021bf1"
+            }
+          ],
+          "cites": [
+            "b6c06350098bda9227f58defc873b4676113cd54bceb89f4cb82497d18021bf1"
+          ],
+          "declared": "INVALIDATED",
+          "id": "evidence/a16/RECEIPT.md",
+          "marker": "old and new",
+          "path": "evidence/a16/RECEIPT.md",
+          "state": "INVALIDATED",
+          "supersededBy": [
+            "A19-E10"
+          ],
+          "supersededCites": [
+            "b6c06350098bda9227f58defc873b4676113cd54bceb89f4cb82497d18021bf1"
+          ]
+        }
+      ],
+      "eventId": "A19-E10",
+      "kind": "correct",
+      "subject": "A16/INVENTORY.json/populationFiles",
+      "summary": {
+        "dependents": 1,
+        "invalidated": 1,
+        "valid": 0
+      },
+      "supersededDigests": [
+        "894439e444d52b3d1da7d94ef07f87f4595702b93d9bf5e80b58378ddcc5a6d2",
+        "b6c06350098bda9227f58defc873b4676113cd54bceb89f4cb82497d18021bf1"
+      ]
+    },
+    {
+      "dependents": [
+        {
+          "citations": [
+            {
+              "line": 145,
+              "path": "docs/ETP-TODO.md",
+              "text": "al transcription defect found and repaired:** L3 recorded the monomorphised Md4 `update` extent as `0xA5` (165), which is the `nm` posix field `165` read as decimal instead of hexadecimal; `readelf -sW` reports 357 (0x165) and the next instanti",
+              "token": "0xA5"
+            },
+            {
+              "line": 120,
+              "path": "docs/ETP-TODO.md",
+              "text": "and still blocks `REL-OPENSSH-B85C`. **HAZ-15 KDK correction (2026-11-22, base `5750ac150`):** the `SHA-256(decrypted block)` KDK was retracted as attacker-computable; the external-key arm now keys the synthetic answer with private CRT material or a per-key RNG se",
+              "token": "SHA-256(decrypted block)"
+            },
+            {
+              "line": 160,
+              "path": "docs/ETP-TODO.md",
+              "text": "ember list (`4e9262bf3`), A16's live glob 407 \u2192 frozen 404 (`2e8e9aa65`), the RSA synthetic-answer `SHA-256(decrypted block)` \u2192 keyed derivation (`c28ac7bb9`, recorded in `evidence/haz-15/KDK-CORRECTION.md` and the commit message), the withdrawn unconditional 99.6",
+              "token": "SHA-256(decrypted block)"
+            },
+            {
+              "line": 160,
+              "path": "docs/ETP-TODO.md",
+              "text": "ecorded in `evidence/haz-15/KDK-CORRECTION.md` and the commit message), the withdrawn unconditional 99.6% posterior (`4cafcd0ea`; the conditional formula remains), and the four claims the release gate refused as `CONTRADICTED` (`ETP0-CLM-004`, `",
+              "token": "99.6%"
+            }
+          ],
+          "cites": [
+            "3546517c184012f7d5c5cdbd1caaf1f0daaefa62150554222384209510345bc9",
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632",
+            "e3b7d9ebbf082a1605955ed9a9c0fd8b69872d547bf4a6adcb19d199fa42a722"
+          ],
+          "declared": "INVALIDATED",
+          "id": "docs/ETP-TODO.md",
+          "marker": "withdrawn",
+          "path": "docs/ETP-TODO.md",
+          "state": "INVALIDATED",
+          "supersededBy": [
+            "A19-E02",
+            "A19-E12",
+            "A19-E14"
+          ],
+          "supersededCites": [
+            "3546517c184012f7d5c5cdbd1caaf1f0daaefa62150554222384209510345bc9",
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632",
+            "e3b7d9ebbf082a1605955ed9a9c0fd8b69872d547bf4a6adcb19d199fa42a722"
+          ]
+        },
+        {
+          "citations": [
+            {
+              "line": 2079,
+              "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
+              "text": "SHA-256(decrypted block) construction is",
+              "token": "SHA-256(decrypted block)"
+            }
+          ],
+          "cites": [
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+          ],
+          "declared": "INVALIDATED",
+          "id": "docs/SECURITY_DIVERGENCE_POLICY.md",
+          "marker": "withdrawn",
+          "path": "docs/SECURITY_DIVERGENCE_POLICY.md",
+          "state": "INVALIDATED",
+          "supersededBy": [
+            "A19-E12"
+          ],
+          "supersededCites": [
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+          ]
+        },
+        {
+          "citations": [
+            {
+              "line": 3820,
+              "path": "evidence/etp-controls/history/TRACEABILITY-superseded-t4-07b776d68.json",
+              "text": "iphertext (d when present, otherwise the CRT primes, otherwise a per-key RNG secret); the withdrawn SHA-256(decrypted block) key was attacker-computable and is retracted. The returned length remains a distinguishable channel: a 2,048-block population matched every",
+              "token": "SHA-256(decrypted block)"
+            }
+          ],
+          "cites": [
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+          ],
+          "declared": "INVALIDATED",
+          "id": "evidence/etp-controls/history/TRACEABILITY-superseded-t4-07b776d68.json",
+          "marker": "withdrawn",
+          "path": "evidence/etp-controls/history/TRACEABILITY-superseded-t4-07b776d68.json",
+          "state": "INVALIDATED",
+          "supersededBy": [
+            "A19-E12"
+          ],
+          "supersededCites": [
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+          ]
+        },
+        {
+          "citations": [
+            {
+              "line": 3852,
+              "path": "evidence/etp-t1/TRACEABILITY.json",
+              "text": "iphertext (d when present, otherwise the CRT primes, otherwise a per-key RNG secret); the withdrawn SHA-256(decrypted block) key was attacker-computable and is retracted. The returned length remains a distinguishable channel: a 2,048-block population matched every",
+              "token": "SHA-256(decrypted block)"
+            }
+          ],
+          "cites": [
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+          ],
+          "declared": "INVALIDATED",
+          "id": "evidence/etp-t1/TRACEABILITY.json",
+          "marker": "withdrawn",
+          "path": "evidence/etp-t1/TRACEABILITY.json",
+          "state": "INVALIDATED",
+          "supersededBy": [
+            "A19-E12"
+          ],
+          "supersededCites": [
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+          ]
+        },
+        {
+          "citations": [
+            {
+              "line": 349,
+              "path": "evidence/etp-t2/HAZARDS.json",
+              "text": "iphertext (d when present, otherwise the CRT primes, otherwise a per-key RNG secret); the withdrawn SHA-256(decrypted block) key was attacker-computable and is retracted. The returned length remains a distinguishable channel: a 2,048-block population matched every",
+              "token": "SHA-256(decrypted block)"
+            }
+          ],
+          "cites": [
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+          ],
+          "declared": "INVALIDATED",
+          "id": "evidence/etp-t2/HAZARDS.json",
+          "marker": "withdrawn",
+          "path": "evidence/etp-t2/HAZARDS.json",
+          "state": "INVALIDATED",
+          "supersededBy": [
+            "A19-E12"
+          ],
+          "supersededCites": [
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+          ]
+        },
+        {
+          "citations": [
+            {
+              "line": 24,
+              "path": "evidence/haz-15/KDK-CORRECTION.md",
+              "text": "The first repair set the implicit-rejection KDK to `SHA-256(decrypted block)`.",
+              "token": "SHA-256(decrypted block)"
+            }
+          ],
+          "cites": [
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+          ],
+          "declared": "INVALIDATED",
+          "id": "evidence/haz-15/KDK-CORRECTION.md",
+          "marker": "retracted",
+          "path": "evidence/haz-15/KDK-CORRECTION.md",
+          "state": "INVALIDATED",
+          "supersededBy": [
+            "A19-E12"
+          ],
+          "supersededCites": [
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+          ]
+        },
+        {
+          "citations": [
+            {
+              "line": 154,
+              "path": "evidence/haz-15/REENTRANCY-AND-LENGTH.md",
+              "text": "The following statements described the withdrawn `SHA-256(decrypted block)`",
+              "token": "SHA-256(decrypted block)"
+            },
+            {
+              "line": 260,
+              "path": "evidence/haz-15/REENTRANCY-AND-LENGTH.md",
+              "text": "receipt quoted `99.6%` unconditionally, which silently assumed equal priors; that",
+              "token": "99.6%"
+            }
+          ],
+          "cites": [
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632",
+            "e3b7d9ebbf082a1605955ed9a9c0fd8b69872d547bf4a6adcb19d199fa42a722"
+          ],
+          "declared": "INVALIDATED",
+          "id": "evidence/haz-15/REENTRANCY-AND-LENGTH.md",
+          "marker": "withdrawn",
+          "path": "evidence/haz-15/REENTRANCY-AND-LENGTH.md",
+          "state": "INVALIDATED",
+          "supersededBy": [
+            "A19-E12",
+            "A19-E14"
+          ],
+          "supersededCites": [
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632",
+            "e3b7d9ebbf082a1605955ed9a9c0fd8b69872d547bf4a6adcb19d199fa42a722"
+          ]
+        },
+        {
+          "citations": [
+            {
+              "line": 19,
+              "path": "evidence/haz-15/REPORT.md",
+              "text": "with `SHA-256(decrypted block)`, arguing that the block is secret because the",
+              "token": "SHA-256(decrypted block)"
+            }
+          ],
+          "cites": [
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+          ],
+          "declared": "INVALIDATED",
+          "id": "evidence/haz-15/REPORT.md",
+          "marker": "withdrawn",
+          "path": "evidence/haz-15/REPORT.md",
+          "state": "INVALIDATED",
+          "supersededBy": [
+            "A19-E12"
+          ],
+          "supersededCites": [
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+          ]
+        }
+      ],
+      "eventId": "A19-E12",
+      "kind": "correct",
+      "subject": "HAZ-15/external-key-KDK",
+      "summary": {
+        "dependents": 8,
+        "invalidated": 8,
+        "valid": 0
+      },
+      "supersededDigests": [
+        "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632"
+      ]
+    },
+    {
+      "dependents": [
+        {
+          "citations": [
+            {
+              "line": 145,
+              "path": "docs/ETP-TODO.md",
+              "text": "al transcription defect found and repaired:** L3 recorded the monomorphised Md4 `update` extent as `0xA5` (165), which is the `nm` posix field `165` read as decimal instead of hexadecimal; `readelf -sW` reports 357 (0x165) and the next instanti",
+              "token": "0xA5"
+            },
+            {
+              "line": 120,
+              "path": "docs/ETP-TODO.md",
+              "text": "and still blocks `REL-OPENSSH-B85C`. **HAZ-15 KDK correction (2026-11-22, base `5750ac150`):** the `SHA-256(decrypted block)` KDK was retracted as attacker-computable; the external-key arm now keys the synthetic answer with private CRT material or a per-key RNG se",
+              "token": "SHA-256(decrypted block)"
+            },
+            {
+              "line": 160,
+              "path": "docs/ETP-TODO.md",
+              "text": "ember list (`4e9262bf3`), A16's live glob 407 \u2192 frozen 404 (`2e8e9aa65`), the RSA synthetic-answer `SHA-256(decrypted block)` \u2192 keyed derivation (`c28ac7bb9`, recorded in `evidence/haz-15/KDK-CORRECTION.md` and the commit message), the withdrawn unconditional 99.6",
+              "token": "SHA-256(decrypted block)"
+            },
+            {
+              "line": 160,
+              "path": "docs/ETP-TODO.md",
+              "text": "ecorded in `evidence/haz-15/KDK-CORRECTION.md` and the commit message), the withdrawn unconditional 99.6% posterior (`4cafcd0ea`; the conditional formula remains), and the four claims the release gate refused as `CONTRADICTED` (`ETP0-CLM-004`, `",
+              "token": "99.6%"
+            }
+          ],
+          "cites": [
+            "3546517c184012f7d5c5cdbd1caaf1f0daaefa62150554222384209510345bc9",
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632",
+            "e3b7d9ebbf082a1605955ed9a9c0fd8b69872d547bf4a6adcb19d199fa42a722"
+          ],
+          "declared": "INVALIDATED",
+          "id": "docs/ETP-TODO.md",
+          "marker": "withdrawn",
+          "path": "docs/ETP-TODO.md",
+          "state": "INVALIDATED",
+          "supersededBy": [
+            "A19-E02",
+            "A19-E12",
+            "A19-E14"
+          ],
+          "supersededCites": [
+            "3546517c184012f7d5c5cdbd1caaf1f0daaefa62150554222384209510345bc9",
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632",
+            "e3b7d9ebbf082a1605955ed9a9c0fd8b69872d547bf4a6adcb19d199fa42a722"
+          ]
+        },
+        {
+          "citations": [
+            {
+              "line": 154,
+              "path": "evidence/haz-15/REENTRANCY-AND-LENGTH.md",
+              "text": "The following statements described the withdrawn `SHA-256(decrypted block)`",
+              "token": "SHA-256(decrypted block)"
+            },
+            {
+              "line": 260,
+              "path": "evidence/haz-15/REENTRANCY-AND-LENGTH.md",
+              "text": "receipt quoted `99.6%` unconditionally, which silently assumed equal priors; that",
+              "token": "99.6%"
+            }
+          ],
+          "cites": [
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632",
+            "e3b7d9ebbf082a1605955ed9a9c0fd8b69872d547bf4a6adcb19d199fa42a722"
+          ],
+          "declared": "INVALIDATED",
+          "id": "evidence/haz-15/REENTRANCY-AND-LENGTH.md",
+          "marker": "withdrawn",
+          "path": "evidence/haz-15/REENTRANCY-AND-LENGTH.md",
+          "state": "INVALIDATED",
+          "supersededBy": [
+            "A19-E12",
+            "A19-E14"
+          ],
+          "supersededCites": [
+            "31d205018f93cd7a093445654117cad08a3f715b088fec0f12b7edb5e6990632",
+            "e3b7d9ebbf082a1605955ed9a9c0fd8b69872d547bf4a6adcb19d199fa42a722"
+          ]
+        }
+      ],
+      "eventId": "A19-E14",
+      "kind": "retract",
+      "subject": "HAZ-15/posterior-probability-99.6",
+      "summary": {
+        "dependents": 2,
+        "invalidated": 2,
+        "valid": 0
+      },
+      "supersededDigests": [
+        "e3b7d9ebbf082a1605955ed9a9c0fd8b69872d547bf4a6adcb19d199fa42a722"
+      ]
+    },
+    {
+      "dependents": [],
+      "eventId": "A19-E16",
+      "kind": "retract",
+      "subject": "ETP0-CLM-004/verdict",
+      "summary": {
+        "dependents": 0,
+        "invalidated": 0,
+        "valid": 0
+      },
+      "supersededDigests": [
+        "63e6c1ee48fc2aadd7518e195c220ccf1816b777db3b58ab389c73384bcf6d28"
+      ]
+    },
+    {
+      "dependents": [],
+      "eventId": "A19-E18",
+      "kind": "retract",
+      "subject": "ETP0-CLM-005/verdict",
+      "summary": {
+        "dependents": 0,
+        "invalidated": 0,
+        "valid": 0
+      },
+      "supersededDigests": [
+        "4e86a41696a9b8a9951ac21926561a469a72df521f707faaf9ae1bbc345dbd80"
+      ]
+    },
+    {
+      "dependents": [],
+      "eventId": "A19-E20",
+      "kind": "retract",
+      "subject": "ETP0-CLM-030/verdict",
+      "summary": {
+        "dependents": 0,
+        "invalidated": 0,
+        "valid": 0
+      },
+      "supersededDigests": [
+        "a826b94005dcf9f0c6264d8971badb7307779d8f578a947ff1b7afb7b13e9e25"
+      ]
+    },
+    {
+      "dependents": [],
+      "eventId": "A19-E22",
+      "kind": "retract",
+      "subject": "ETP0-CLM-032/verdict",
+      "summary": {
+        "dependents": 0,
+        "invalidated": 0,
+        "valid": 0
+      },
+      "supersededDigests": [
+        "3344bd92ecff32f9226338216fde0df83c750a9e9b466f03f868c84f028b171e"
+      ]
+    }
+  ],
+  "finding": "every real dependent that cites a superseded digest is INVALIDATED; no stale dependent and no spurious invalidation was found. The dependents are the correcting receipts and the records that quote both the old and the new value; no independent downstream record cites a superseded digest without also recording the supersession. An independent consumer that relied on the old value and never recorded the correction would not be found by a citation scan, which is a stated limit.",
+  "method": {
+    "declaredState": "INVALIDATED when the citing record carries a supersession marker (withdrawn/superseded/old value/correction/...); VALID otherwise. This is a reported classification, not a proof. Every citation is recorded so a reviewer can check it.",
+    "dependentDerivation": "derive_dependents walks evidence/, docs/, forensics/tools/ and courts/ for the superseded digests and the event's oldValue.citation; the citation line and the nearest supersession marker are recorded. No dependent list is hand-written.",
+    "supersededDigest": "a correct/retract supersedes its oldValue.digest (the exact value) and, when present, oldValue.record.sha256 (the exact record)."
+  },
+  "model": "a19/v1",
+  "schema": "openssl-rs/a19/propagation/1",
+  "sourceIdentity": {
+    "baseCommit": "6bf8c80aa9419addc85998f21a0c3010e697c4b3",
+    "item": "A19"
+  },
+  "summary": {
+    "corrections": 11,
+    "dependents": 14,
+    "invalidated": 14,
+    "spurious": 0,
+    "stale": 0,
+    "valid": 0
+  }
+}

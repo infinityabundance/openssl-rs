@@ -1,0 +1,197 @@
+{
+  "candidate": {
+    "baseCommit": "6bf8c80aa9419addc85998f21a0c3010e697c4b3",
+    "baseCommitShort": "6bf8c80aa",
+    "branch": "staging",
+    "recordedAt": "2026-11-24"
+  },
+  "controls": [
+    {
+      "code": "CR_REFUSED_EVENT_INVALID",
+      "controlOnly": true,
+      "description": "an event missing its reason is not a correction",
+      "id": "event-invalid",
+      "observed": {
+        "code": "CR_REFUSED_EVENT_INVALID",
+        "message": "reason is a non-empty string"
+      }
+    },
+    {
+      "code": "CR_REFUSED_UNBOUND_CORRECTION",
+      "controlOnly": true,
+      "description": "a correction names the predecessor id but not its digest",
+      "id": "unbound-correction",
+      "observed": {
+        "code": "CR_REFUSED_UNBOUND_CORRECTION",
+        "message": "supersedes.previousDigest is a non-empty string"
+      }
+    },
+    {
+      "code": "CR_REFUSED_PREDECESSOR_MISMATCH",
+      "controlOnly": true,
+      "description": "supersedes.previousDigest is not the stored predecessor's digest",
+      "id": "predecessor-mismatch",
+      "observed": {
+        "code": "CR_REFUSED_PREDECESSOR_MISMATCH",
+        "message": "supersedes.previousDigest is not the canonical digest of 'C1'"
+      }
+    },
+    {
+      "code": "CR_REFUSED_ORIGINAL_MISMATCH",
+      "controlOnly": true,
+      "description": "oldValue is not the predecessor's accepted value",
+      "id": "original-mismatch",
+      "observed": {
+        "code": "CR_REFUSED_ORIGINAL_MISMATCH",
+        "message": "oldValue.digest is not the predecessor's accepted value digest"
+      }
+    },
+    {
+      "code": "CR_REFUSED_HISTORY_ERASED",
+      "controlOnly": true,
+      "description": "an event edited after the log was chained is refused",
+      "id": "history-erased",
+      "observed": {
+        "code": "CR_REFUSED_HISTORY_ERASED",
+        "message": "event 0 ('C1') digest does not match the recomputed chain"
+      }
+    },
+    {
+      "code": "CR_REFUSED_FORK",
+      "controlOnly": true,
+      "description": "a second direct successor of one predecessor is a fork",
+      "id": "fork",
+      "observed": {
+        "code": "CR_REFUSED_FORK",
+        "message": "predecessor 'C1' already has successor ['C2']"
+      }
+    },
+    {
+      "code": "CR_REFUSED_CYCLE",
+      "controlOnly": true,
+      "description": "a predecessor chain that revisits an event is a cycle",
+      "id": "cycle",
+      "observed": {
+        "code": "CR_REFUSED_CYCLE",
+        "message": "the chain already cycles at 'C3'"
+      }
+    },
+    {
+      "code": "CR_REFUSED_SUBJECT_CHANGED",
+      "controlOnly": true,
+      "description": "a correction of a different subject is a new assertion",
+      "id": "subject-changed",
+      "observed": {
+        "code": "CR_REFUSED_SUBJECT_CHANGED",
+        "message": "predecessor 'C1' is about 'control-subject', not 'different-subject'; a different subject is a new assertion"
+      }
+    },
+    {
+      "code": "CR_REFUSED_RETRACTION_UNBOUND",
+      "controlOnly": true,
+      "description": "a retraction of a subject with no prior assertion is refused",
+      "id": "retraction-unbound",
+      "observed": {
+        "code": "CR_REFUSED_RETRACTION_UNBOUND",
+        "message": "subject 'never-asserted' has no prior assertion to retract"
+      }
+    },
+    {
+      "code": "CR_REFUSED_UNSIGNED",
+      "controlOnly": true,
+      "description": "an unsigned event is not a signed correction",
+      "id": "unsigned",
+      "observed": {
+        "code": "CR_REFUSED_UNSIGNED",
+        "message": "the event carries no signature"
+      }
+    },
+    {
+      "code": "CR_REFUSED_SIGNATURE",
+      "controlOnly": true,
+      "description": "a signature over different bytes is not this event's signature",
+      "id": "signature",
+      "observed": {
+        "code": "CR_REFUSED_SIGNATURE",
+        "message": "the signature covers different bytes than the canonical event"
+      }
+    },
+    {
+      "code": "CR_REFUSED_ROLE",
+      "controlOnly": true,
+      "description": "an identity with no A14 assignment cannot record the event",
+      "id": "role",
+      "observed": {
+        "code": "CR_REFUSED_ROLE",
+        "message": "identity 'P-UNASSIGNED' holds no 'producer' assignment in A14's records"
+      }
+    },
+    {
+      "code": "CR_REFUSED_ASSERTION_EXISTS",
+      "controlOnly": true,
+      "description": "a second assert for a subject is a correction, not an assertion",
+      "id": "assertion-exists",
+      "observed": {
+        "code": "CR_REFUSED_ASSERTION_EXISTS",
+        "message": "subject 'control-subject' already has an assert; a later value is a correction, not a new assertion"
+      }
+    },
+    {
+      "code": "CR_REFUSED_EVENT_ID_REUSED",
+      "controlOnly": true,
+      "description": "an eventId already in the log cannot name a second event",
+      "id": "event-id-reused",
+      "observed": {
+        "code": "CR_REFUSED_EVENT_ID_REUSED",
+        "message": "eventId 'C1' already exists"
+      }
+    },
+    {
+      "code": "CR_REFUSED_INVALIDATION_NOT_PROPAGATED",
+      "controlOnly": true,
+      "description": "a retraction leaves a dependent that cites the old value marked VALID",
+      "id": "invalidation-not-propagated",
+      "observed": {
+        "code": "CR_REFUSED_INVALIDATION_NOT_PROPAGATED",
+        "message": "stale-dependent cites ['ff3acadf3b29fc4fa59d5b9612db39960c223344122be86dfaf4075be7c50279'] and is VALID"
+      }
+    },
+    {
+      "code": "CR_REFUSED_SPURIOUS_INVALIDATION",
+      "controlOnly": true,
+      "description": "a dependent marked INVALIDATED with no superseded citation is refused",
+      "id": "spurious-invalidation",
+      "observed": {
+        "code": "CR_REFUSED_SPURIOUS_INVALIDATION",
+        "message": "spurious cites [] and is INVALIDATED"
+      }
+    }
+  ],
+  "coverage": {
+    "controls": 16,
+    "positive": 2,
+    "refusalCodes": 16
+  },
+  "model": "a19/v1",
+  "positive": [
+    {
+      "code": "CR_OK",
+      "controlOnly": true,
+      "description": "the same retraction with the dependent INVALIDATED is accepted",
+      "id": "retraction-propagates",
+      "observed": {
+        "code": "CR_OK"
+      }
+    },
+    {
+      "code": "CR_OK",
+      "controlOnly": true,
+      "description": "assert -> correct -> correct verifies and the accepted event is CORRECTED",
+      "id": "positive-chain",
+      "observed": {
+        "code": "CR_OK"
+      }
+    }
+  ],
+  "schema": "openssl-rs/a19/controls/1"
+}
