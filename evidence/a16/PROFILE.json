@@ -1,0 +1,188 @@
+{
+  "asOf": "2026-11-24",
+  "item": "A16",
+  "profile": {
+    "fields": [
+      {
+        "cannotEstablish": "that the bundle was produced by any particular tool",
+        "checkedBy": "SB_REFUSED_MEDIATYPE",
+        "offlineCheckable": true,
+        "path": "mediaType",
+        "required": true,
+        "type": "string"
+      },
+      {
+        "cannotEstablish": "that the signing material belongs to the expected party",
+        "checkedBy": "SB_REFUSED_MATERIAL",
+        "offlineCheckable": true,
+        "path": "verificationMaterial",
+        "required": true,
+        "type": "object"
+      },
+      {
+        "cannotEstablish": "that any certificate is signed by a trusted CA",
+        "checkedBy": "SB_REFUSED_CERT_CHAIN",
+        "offlineCheckable": true,
+        "path": "verificationMaterial.x509CertificateChain.certificates[].rawBytes",
+        "required": true,
+        "type": "list of canonical base64 DER certificates"
+      },
+      {
+        "cannotEstablish": "that the certificate was not revoked after issue",
+        "checkedBy": "SB_REFUSED_EXPIRED_CERT",
+        "offlineCheckable": true,
+        "path": "certificate.validity",
+        "required": true,
+        "type": "notBefore <= integratedTime <= notAfter"
+      },
+      {
+        "cannotEstablish": "that the issuer actually issued this certificate until cert_verify accepts the path",
+        "checkedBy": "SB_REFUSED_ISSUER_MISMATCH",
+        "offlineCheckable": true,
+        "path": "certificate.issuer",
+        "required": true,
+        "type": "string, policy compared"
+      },
+      {
+        "cannotEstablish": "that the workload actually controls the identity until cert_verify accepts the path",
+        "checkedBy": "SB_REFUSED_IDENTITY_MISMATCH",
+        "offlineCheckable": true,
+        "path": "certificate.subjectAltName",
+        "required": true,
+        "type": "SAN identity, policy compared"
+      },
+      {
+        "cannotEstablish": "that the payload is true, only that its bytes are the artefact's bytes",
+        "checkedBy": "SB_REFUSED_PAYLOAD_DIGEST",
+        "offlineCheckable": true,
+        "path": "dsseEnvelope.payload",
+        "required": true,
+        "type": "canonical base64 bytes"
+      },
+      {
+        "cannotEstablish": "that the signature verifies without a signature verifier",
+        "checkedBy": "SB_REFUSED_SIGNATURE",
+        "offlineCheckable": "caller-supplied only",
+        "path": "dsseEnvelope.signatures[].sig",
+        "required": true,
+        "type": "canonical base64 signature over the DSSE PAE"
+      },
+      {
+        "cannotEstablish": "that the log is honest or append-only",
+        "checkedBy": "SB_REFUSED_TLOG_ABSENT",
+        "offlineCheckable": true,
+        "path": "verificationMaterial.tlogEntries[]",
+        "required": true,
+        "type": "non-empty list"
+      },
+      {
+        "cannotEstablish": "that the entry body is the envelope in this bundle",
+        "checkedBy": "SB_REFUSED_TLOG_KIND",
+        "offlineCheckable": true,
+        "path": "tlogEntries[].kindVersion",
+        "required": true,
+        "type": "{kind: dsse, version: 0.0.1}"
+      },
+      {
+        "cannotEstablish": "that the log assigned the index or time",
+        "checkedBy": "SB_REFUSED_INTEGRATED_TIME",
+        "offlineCheckable": true,
+        "path": "tlogEntries[].logIndex and .integratedTime",
+        "required": true,
+        "type": "non-negative integers; proof index agrees"
+      },
+      {
+        "cannotEstablish": "that the proof is valid without the log public key",
+        "checkedBy": "SB_REFUSED_INCLUSION_PROOF",
+        "offlineCheckable": true,
+        "path": "tlogEntries[].inclusionPromise | .inclusionProof",
+        "required": true,
+        "type": "one of the two, structurally valid"
+      },
+      {
+        "cannotEstablish": "that the timestamp authority signed it without the TSA root",
+        "checkedBy": "SB_REFUSED_TIMESTAMP_ABSENT",
+        "offlineCheckable": true,
+        "path": "verificationMaterial.timestampVerificationData.rfc3161Timestamps[]",
+        "required": true,
+        "type": "non-empty list of signed timestamps"
+      }
+    ],
+    "freshness": {
+      "cannotCheckOffline": "whether the log's integratedTime is earlier than a later revocation",
+      "certificateWindow": "inclusive: notBefore <= integratedTime <= notAfter",
+      "integratedTime": "from the tlog entry, used to place the certificate validity window",
+      "liveClock": "not consulted; a bundle is judged at its integratedTime, not at the validator's clock",
+      "timestamp": "required by this profile; its own verification is NOT_RUN without a TSA root"
+    },
+    "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+    "model": "a16/v1",
+    "nonClaims": [
+      "BUNDLE_VERIFIED_OFFLINE is not a judgement that the log or the CA is trustworthy",
+      "BUNDLE_VERIFIED_OFFLINE does not mean the payload is true",
+      "no bundle exists in this tree, so no real bundle is verified"
+    ],
+    "outcomes": [
+      "BUNDLE_VERIFIED_OFFLINE",
+      "BUNDLE_INVALID",
+      "BUNDLE_UNVERIFIABLE_OFFLINE",
+      "NOT_RUN"
+    ],
+    "refusedVersionBehaviour": "v0.1 and v0.2 use a different shape and a versioned media type; they are refused with SB_REFUSED_VERSION rather than read with v0.3 names",
+    "refusedVersions": [
+      "v0.1",
+      "v0.2"
+    ],
+    "schema": "openssl-rs/a16/bundle-profile/1",
+    "supportedVersions": [
+      "v0.3"
+    ],
+    "trustRoots": {
+      "caRoot": {
+        "absentCode": "SB_REFUSED_CERT_ROOT_ABSENT",
+        "cannotCheckOffline": "revocation (OCSP/CRL), name constraints across a real path, and whether the CA is trustworthy",
+        "presentInTree": false,
+        "suppliedBy": "policy.caRoots, verified by the caller's cert_verify"
+      },
+      "expectedIssuerAndIdentity": {
+        "absentCode": "SB_REFUSED_POLICY_ABSENT",
+        "cannotCheckOffline": "that the expected identity is the one the policy writer intended",
+        "presentInTree": false,
+        "suppliedBy": "policy.expectedIssuer and policy.expectedIdentity"
+      },
+      "logPublicKey": {
+        "absentCode": "SB_REFUSED_LOG_KEY_ABSENT",
+        "cannotCheckOffline": "whether the log is append-only, honest or globally consistent",
+        "presentInTree": false,
+        "suppliedBy": "policy.logKey, verified by the caller's log_verify"
+      },
+      "timestampAuthorityRoot": {
+        "absentCode": "SB_REFUSED_TIMESTAMP_ROOT_ABSENT",
+        "cannotCheckOffline": "whether the TSA's clock was correct at signing time",
+        "presentInTree": false,
+        "suppliedBy": "policy.timestampRoots, verified by the caller's timestamp_verify"
+      }
+    }
+  },
+  "schema": "openssl-rs/a16/bundle-profile/1",
+  "sourceIdentity": {
+    "asOf": "2026-11-24",
+    "baseCommit": "67187c39ee5b5e6d2f66136829295c44096ddd08",
+    "baseCommitShort": "67187c39e",
+    "delegatedTools": [
+      {
+        "path": "forensics/tools/harden.py",
+        "sha256": "f05d7fe9be3933332a69f43ee3fab26f7c764a8f20ce556d295683fea7824023"
+      },
+      {
+        "path": "forensics/tools/dsse.py",
+        "sha256": "0a701eca4087215c0d0166076a0158b82a8e32c14d67ae38e397090720dd83b9"
+      }
+    ],
+    "item": "A16",
+    "tool": {
+      "path": "forensics/tools/sigstore_bundle.py",
+      "sha256": "972e7333713807f2573aa8d8fb1efd40ebe7bbb5c5a2b69ba74593a3e7696d80"
+    }
+  }
+}

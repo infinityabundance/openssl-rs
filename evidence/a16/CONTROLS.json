@@ -1,0 +1,4348 @@
+{
+  "asOf": "2026-11-24",
+  "boundaries": [
+    {
+      "controlOnly": true,
+      "expected": {
+        "outcome": "BUNDLE_VERIFIED_OFFLINE"
+      },
+      "id": "at-not-before",
+      "integratedTime": 1767225600,
+      "notAfter": 1798675200,
+      "notBefore": 1767225600,
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": null,
+            "detail": "1 transparency entr(ies) present",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-kind",
+            "code": null,
+            "detail": "every entry is dsse/0.0.1",
+            "status": "pass"
+          },
+          {
+            "check": "integrated-time",
+            "code": null,
+            "detail": "logIndex/integratedTime are consistent: [1767225600]",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-window",
+            "code": null,
+            "detail": "every integratedTime is inside the certificate validity window",
+            "status": "pass"
+          },
+          {
+            "check": "issuer-policy",
+            "code": null,
+            "detail": "the certificate's issuer equals the policy",
+            "status": "pass"
+          },
+          {
+            "check": "identity-policy",
+            "code": null,
+            "detail": "the SAN contains 'control-only.example'",
+            "status": "pass"
+          },
+          {
+            "check": "payload-digest",
+            "code": null,
+            "detail": "the payload bytes are the artefact bytes",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-present",
+            "code": null,
+            "detail": "every entry carries an inclusion promise or a structurally valid proof",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-verified",
+            "code": null,
+            "detail": "the supplied log verifier accepted every entry",
+            "status": "pass"
+          },
+          {
+            "check": "dsse-signature",
+            "code": null,
+            "detail": "the supplied signature verifier accepted the envelope",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-path",
+            "code": null,
+            "detail": "the supplied certificate verifier accepted the chain",
+            "status": "pass"
+          },
+          {
+            "check": "timestamp-present",
+            "code": null,
+            "detail": "1 RFC 3161 timestamp(s) present",
+            "status": "pass"
+          },
+          {
+            "check": "timestamp-verified",
+            "code": null,
+            "detail": "the supplied timestamp verifier accepted every timestamp",
+            "status": "pass"
+          }
+        ],
+        "codes": [],
+        "outcome": "BUNDLE_VERIFIED_OFFLINE"
+      }
+    },
+    {
+      "controlOnly": true,
+      "expected": {
+        "outcome": "BUNDLE_INVALID"
+      },
+      "id": "one-second-before-not-before",
+      "integratedTime": 1767225599,
+      "notAfter": 1798675200,
+      "notBefore": 1767225600,
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": null,
+            "detail": "1 transparency entr(ies) present",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-kind",
+            "code": null,
+            "detail": "every entry is dsse/0.0.1",
+            "status": "pass"
+          },
+          {
+            "check": "integrated-time",
+            "code": null,
+            "detail": "logIndex/integratedTime are consistent: [1767225599]",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-window",
+            "code": "SB_REFUSED_EXPIRED_CERT",
+            "detail": "the certificate is not yet valid: integratedTime 2025-12-31T23:59:59Z precedes notBefore 2026-01-01T00:00:00Z",
+            "status": "fail"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_EXPIRED_CERT"
+        ],
+        "outcome": "BUNDLE_INVALID"
+      }
+    },
+    {
+      "controlOnly": true,
+      "expected": {
+        "outcome": "BUNDLE_VERIFIED_OFFLINE"
+      },
+      "id": "at-not-after",
+      "integratedTime": 1798675200,
+      "notAfter": 1798675200,
+      "notBefore": 1767225600,
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": null,
+            "detail": "1 transparency entr(ies) present",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-kind",
+            "code": null,
+            "detail": "every entry is dsse/0.0.1",
+            "status": "pass"
+          },
+          {
+            "check": "integrated-time",
+            "code": null,
+            "detail": "logIndex/integratedTime are consistent: [1798675200]",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-window",
+            "code": null,
+            "detail": "every integratedTime is inside the certificate validity window",
+            "status": "pass"
+          },
+          {
+            "check": "issuer-policy",
+            "code": null,
+            "detail": "the certificate's issuer equals the policy",
+            "status": "pass"
+          },
+          {
+            "check": "identity-policy",
+            "code": null,
+            "detail": "the SAN contains 'control-only.example'",
+            "status": "pass"
+          },
+          {
+            "check": "payload-digest",
+            "code": null,
+            "detail": "the payload bytes are the artefact bytes",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-present",
+            "code": null,
+            "detail": "every entry carries an inclusion promise or a structurally valid proof",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-verified",
+            "code": null,
+            "detail": "the supplied log verifier accepted every entry",
+            "status": "pass"
+          },
+          {
+            "check": "dsse-signature",
+            "code": null,
+            "detail": "the supplied signature verifier accepted the envelope",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-path",
+            "code": null,
+            "detail": "the supplied certificate verifier accepted the chain",
+            "status": "pass"
+          },
+          {
+            "check": "timestamp-present",
+            "code": null,
+            "detail": "1 RFC 3161 timestamp(s) present",
+            "status": "pass"
+          },
+          {
+            "check": "timestamp-verified",
+            "code": null,
+            "detail": "the supplied timestamp verifier accepted every timestamp",
+            "status": "pass"
+          }
+        ],
+        "codes": [],
+        "outcome": "BUNDLE_VERIFIED_OFFLINE"
+      }
+    },
+    {
+      "controlOnly": true,
+      "expected": {
+        "outcome": "BUNDLE_INVALID"
+      },
+      "id": "one-second-after-not-after",
+      "integratedTime": 1798675201,
+      "notAfter": 1798675200,
+      "notBefore": 1767225600,
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": null,
+            "detail": "1 transparency entr(ies) present",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-kind",
+            "code": null,
+            "detail": "every entry is dsse/0.0.1",
+            "status": "pass"
+          },
+          {
+            "check": "integrated-time",
+            "code": null,
+            "detail": "logIndex/integratedTime are consistent: [1798675201]",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-window",
+            "code": "SB_REFUSED_EXPIRED_CERT",
+            "detail": "the certificate is expired: integratedTime 2026-12-31T00:00:01Z is after notAfter 2026-12-31T00:00:00Z",
+            "status": "fail"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_EXPIRED_CERT"
+        ],
+        "outcome": "BUNDLE_INVALID"
+      }
+    }
+  ],
+  "controls": [
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/json",
+        "verificationMaterial": {
+          "timestampVerificationData": {
+            "rfc3161Timestamps": [
+              {
+                "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+              }
+            ]
+          },
+          "tlogEntries": [
+            {
+              "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+              "inclusionProof": {
+                "checkpoint": {
+                  "envelope": "control-only checkpoint\n"
+                },
+                "hashes": [
+                  "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+                ],
+                "logIndex": 4242,
+                "rootHash": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                "treeSize": 4243
+              },
+              "integratedTime": 1780272000,
+              "kindVersion": {
+                "kind": "dsse",
+                "version": "0.0.1"
+              },
+              "logId": {
+                "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+              },
+              "logIndex": 4242
+            }
+          ],
+          "x509CertificateChain": {
+            "certificates": [
+              {
+                "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+              }
+            ]
+          }
+        }
+      },
+      "bundleBytesSha256": "40ddb87624dd0312863402f8f47b3c9730ba734d4ab179d88bbea7d35a18d87e",
+      "code": "SB_REFUSED_MEDIATYPE",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_MEDIATYPE",
+        "outcome": null
+      },
+      "id": "media-type",
+      "note": "an ordinary JSON object is not a Sigstore bundle",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": "SB_REFUSED_MEDIATYPE",
+            "detail": "mediaType 'application/json' names no Sigstore bundle profile",
+            "status": "fail"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_MEDIATYPE"
+        ],
+        "outcome": "BUNDLE_INVALID"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        },
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "cert_verify": "accept",
+        "log_verify": "accept",
+        "signature_verify": "accept",
+        "timestamp_verify": "accept"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.2+json",
+        "verificationMaterial": {
+          "timestampVerificationData": {
+            "rfc3161Timestamps": [
+              {
+                "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+              }
+            ]
+          },
+          "tlogEntries": [
+            {
+              "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+              "inclusionProof": {
+                "checkpoint": {
+                  "envelope": "control-only checkpoint\n"
+                },
+                "hashes": [
+                  "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+                ],
+                "logIndex": 4242,
+                "rootHash": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                "treeSize": 4243
+              },
+              "integratedTime": 1780272000,
+              "kindVersion": {
+                "kind": "dsse",
+                "version": "0.0.1"
+              },
+              "logId": {
+                "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+              },
+              "logIndex": 4242
+            }
+          ],
+          "x509CertificateChain": {
+            "certificates": [
+              {
+                "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+              }
+            ]
+          }
+        }
+      },
+      "bundleBytesSha256": "c87e8038be373acd09197f9da9d466810ad642144715c528a0d92f03be5cd64d",
+      "code": "SB_REFUSED_VERSION",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_VERSION",
+        "outcome": null
+      },
+      "id": "version-v0.2",
+      "note": "the v0.2 shape is not validated here; it is refused, not guessed",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": "SB_REFUSED_VERSION",
+            "detail": "mediaType 'application/vnd.dev.sigstore.bundle.v0.2+json' is not 'application/vnd.dev.sigstore.bundle.v0.3+json'; the v0.1 and v0.2 shapes are not validated by this item and are refused as unsupported versions",
+            "status": "fail"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_VERSION"
+        ],
+        "outcome": "BUNDLE_INVALID"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        },
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "cert_verify": "accept",
+        "log_verify": "accept",
+        "signature_verify": "accept",
+        "timestamp_verify": "accept"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+        "verificationMaterial": {
+          "timestampVerificationData": {
+            "rfc3161Timestamps": [
+              {
+                "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+              }
+            ]
+          },
+          "tlogEntries": [
+            {
+              "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+              "inclusionProof": {
+                "checkpoint": {
+                  "envelope": "control-only checkpoint\n"
+                },
+                "hashes": [
+                  "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+                ],
+                "logIndex": 4242,
+                "rootHash": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                "treeSize": 4243
+              },
+              "integratedTime": 1780272000,
+              "kindVersion": {
+                "kind": "dsse",
+                "version": "0.0.1"
+              },
+              "logId": {
+                "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+              },
+              "logIndex": 4242
+            }
+          ],
+          "x509CertificateChain": {
+            "certificates": [
+              {
+                "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+              }
+            ]
+          }
+        }
+      },
+      "bundleBytesSha256": "7d5f81ea1b7b0d7cf7a43d6edb64f9ffc7dd6f26695dd2e97b9702870a0a0ba7",
+      "code": "SB_REFUSED_BUNDLE_INVALID",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_BUNDLE_INVALID",
+        "outcome": null
+      },
+      "id": "bundle-invalid-no-envelope",
+      "note": "a bundle with no DSSE envelope is not a bundle",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": "SB_REFUSED_BUNDLE_INVALID",
+            "detail": "dsseEnvelope is a JSON object",
+            "status": "fail"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_BUNDLE_INVALID"
+        ],
+        "outcome": "BUNDLE_INVALID"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        },
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "cert_verify": "accept",
+        "log_verify": "accept",
+        "signature_verify": "accept",
+        "timestamp_verify": "accept"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": null,
+      "bundleBytesSha256": "6e2cd452ca756d035a28e31d5b29f0811818e2153f24ed77e7bd2b291350a6b1",
+      "code": "SB_REFUSED_DUPLICATE_KEY",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_DUPLICATE_KEY",
+        "outcome": null
+      },
+      "id": "duplicate-key",
+      "note": "harden.loads refuses the second mediaType rather than letting it win",
+      "observed": {
+        "checks": [
+          {
+            "check": "refusal",
+            "code": "SB_REFUSED_DUPLICATE_KEY",
+            "detail": "the object repeats the key 'mediaType'; a later value would silently replace the earlier one",
+            "status": "fail"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_DUPLICATE_KEY"
+        ],
+        "outcome": "BUNDLE_INVALID"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        },
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "cert_verify": "accept",
+        "log_verify": "accept",
+        "signature_verify": "accept",
+        "timestamp_verify": "accept"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json"
+      },
+      "bundleBytesSha256": "a2e2e6bc67ceda4f96a8cce064535a38f15e497c53fde999875fa0209c163de4",
+      "code": "SB_REFUSED_MATERIAL",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_MATERIAL",
+        "outcome": null
+      },
+      "id": "material-absent",
+      "note": "no verification material means no signer",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "verification-material",
+            "code": "SB_REFUSED_MATERIAL",
+            "detail": "verificationMaterial is a JSON object",
+            "status": "fail"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_MATERIAL"
+        ],
+        "outcome": "BUNDLE_INVALID"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        },
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "cert_verify": "accept",
+        "log_verify": "accept",
+        "signature_verify": "accept",
+        "timestamp_verify": "accept"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+        "verificationMaterial": {
+          "timestampVerificationData": {
+            "rfc3161Timestamps": [
+              {
+                "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+              }
+            ]
+          },
+          "tlogEntries": [
+            {
+              "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+              "inclusionProof": {
+                "checkpoint": {
+                  "envelope": "control-only checkpoint\n"
+                },
+                "hashes": [
+                  "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+                ],
+                "logIndex": 4242,
+                "rootHash": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                "treeSize": 4243
+              },
+              "integratedTime": 1780272000,
+              "kindVersion": {
+                "kind": "dsse",
+                "version": "0.0.1"
+              },
+              "logId": {
+                "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+              },
+              "logIndex": 4242
+            }
+          ],
+          "x509CertificateChain": {
+            "certificates": []
+          }
+        }
+      },
+      "bundleBytesSha256": "f529bd65b4426b5c7daccc800322dc4ee7880af7a37db71ccf6409ee06102e12",
+      "code": "SB_REFUSED_CERT_CHAIN",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_CERT_CHAIN",
+        "outcome": null
+      },
+      "id": "cert-chain-empty",
+      "note": "an empty certificate list is not a chain",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": "SB_REFUSED_CERT_CHAIN",
+            "detail": "x509CertificateChain.certificates is a non-empty list",
+            "status": "fail"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_CERT_CHAIN"
+        ],
+        "outcome": "BUNDLE_INVALID"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        },
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "cert_verify": "accept",
+        "log_verify": "accept",
+        "signature_verify": "accept",
+        "timestamp_verify": "accept"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+        "verificationMaterial": {
+          "timestampVerificationData": {
+            "rfc3161Timestamps": [
+              {
+                "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+              }
+            ]
+          },
+          "tlogEntries": [
+            {
+              "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+              "inclusionProof": {
+                "checkpoint": {
+                  "envelope": "control-only checkpoint\n"
+                },
+                "hashes": [
+                  "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+                ],
+                "logIndex": 4242,
+                "rootHash": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                "treeSize": 4243
+              },
+              "integratedTime": 1780272000,
+              "kindVersion": {
+                "kind": "dsse",
+                "version": "0.0.1"
+              },
+              "logId": {
+                "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+              },
+              "logIndex": 4242
+            }
+          ],
+          "x509CertificateChain": {
+            "certificates": [
+              {
+                "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+              }
+            ]
+          }
+        }
+      },
+      "bundleBytesSha256": "4fbcb9421d2404883fbb62f9611edbac50a0735eb030d48a866cecb4d7f2b9c6",
+      "code": "SB_REFUSED_CERT_ROOT_ABSENT",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_CERT_ROOT_ABSENT",
+        "outcome": null
+      },
+      "id": "cert-root-absent",
+      "note": "a parsed certificate is not a verified chain",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": null,
+            "detail": "1 transparency entr(ies) present",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-kind",
+            "code": null,
+            "detail": "every entry is dsse/0.0.1",
+            "status": "pass"
+          },
+          {
+            "check": "integrated-time",
+            "code": null,
+            "detail": "logIndex/integratedTime are consistent: [1780272000]",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-window",
+            "code": null,
+            "detail": "every integratedTime is inside the certificate validity window",
+            "status": "pass"
+          },
+          {
+            "check": "issuer-policy",
+            "code": null,
+            "detail": "the certificate's issuer equals the policy",
+            "status": "pass"
+          },
+          {
+            "check": "identity-policy",
+            "code": null,
+            "detail": "the SAN contains 'control-only.example'",
+            "status": "pass"
+          },
+          {
+            "check": "payload-digest",
+            "code": null,
+            "detail": "the payload bytes are the artefact bytes",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-present",
+            "code": null,
+            "detail": "every entry carries an inclusion promise or a structurally valid proof",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-verified",
+            "code": null,
+            "detail": "the supplied log verifier accepted every entry",
+            "status": "pass"
+          },
+          {
+            "check": "dsse-signature",
+            "code": null,
+            "detail": "the supplied signature verifier accepted the envelope",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-path",
+            "code": "SB_REFUSED_CERT_ROOT_ABSENT",
+            "detail": "no CA root or certificate verifier was supplied, so the chain is NOT_RUN",
+            "status": "not-run"
+          },
+          {
+            "check": "timestamp-present",
+            "code": null,
+            "detail": "1 RFC 3161 timestamp(s) present",
+            "status": "pass"
+          },
+          {
+            "check": "timestamp-verified",
+            "code": null,
+            "detail": "the supplied timestamp verifier accepted every timestamp",
+            "status": "pass"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_CERT_ROOT_ABSENT"
+        ],
+        "outcome": "BUNDLE_UNVERIFIABLE_OFFLINE"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        },
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "log_verify": "custom",
+        "signature_verify": "custom",
+        "timestamp_verify": "custom"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+        "verificationMaterial": {
+          "timestampVerificationData": {
+            "rfc3161Timestamps": [
+              {
+                "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+              }
+            ]
+          },
+          "tlogEntries": [
+            {
+              "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+              "inclusionProof": {
+                "checkpoint": {
+                  "envelope": "control-only checkpoint\n"
+                },
+                "hashes": [
+                  "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+                ],
+                "logIndex": 4242,
+                "rootHash": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                "treeSize": 4243
+              },
+              "integratedTime": 1798675201,
+              "kindVersion": {
+                "kind": "dsse",
+                "version": "0.0.1"
+              },
+              "logId": {
+                "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+              },
+              "logIndex": 4242
+            }
+          ],
+          "x509CertificateChain": {
+            "certificates": [
+              {
+                "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+              }
+            ]
+          }
+        }
+      },
+      "bundleBytesSha256": "dc25519d09872577f78a82dbf1cc342261f466f4efe37e17f66ec7075ed0e045",
+      "code": "SB_REFUSED_EXPIRED_CERT",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_EXPIRED_CERT",
+        "outcome": null
+      },
+      "id": "certificate-expired-at-integrated-time",
+      "note": "one second after notAfter is out of the window",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": null,
+            "detail": "1 transparency entr(ies) present",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-kind",
+            "code": null,
+            "detail": "every entry is dsse/0.0.1",
+            "status": "pass"
+          },
+          {
+            "check": "integrated-time",
+            "code": null,
+            "detail": "logIndex/integratedTime are consistent: [1798675201]",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-window",
+            "code": "SB_REFUSED_EXPIRED_CERT",
+            "detail": "the certificate is expired: integratedTime 2026-12-31T00:00:01Z is after notAfter 2026-12-31T00:00:00Z",
+            "status": "fail"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_EXPIRED_CERT"
+        ],
+        "outcome": "BUNDLE_INVALID"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        },
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "cert_verify": "accept",
+        "log_verify": "accept",
+        "signature_verify": "accept",
+        "timestamp_verify": "accept"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+        "verificationMaterial": {
+          "timestampVerificationData": {
+            "rfc3161Timestamps": [
+              {
+                "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+              }
+            ]
+          },
+          "tlogEntries": [
+            {
+              "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+              "inclusionProof": {
+                "checkpoint": {
+                  "envelope": "control-only checkpoint\n"
+                },
+                "hashes": [
+                  "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+                ],
+                "logIndex": 4242,
+                "rootHash": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                "treeSize": 4243
+              },
+              "integratedTime": 1767225599,
+              "kindVersion": {
+                "kind": "dsse",
+                "version": "0.0.1"
+              },
+              "logId": {
+                "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+              },
+              "logIndex": 4242
+            }
+          ],
+          "x509CertificateChain": {
+            "certificates": [
+              {
+                "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+              }
+            ]
+          }
+        }
+      },
+      "bundleBytesSha256": "5c68d442e55c2ede7e27371e89a89170bc3a77ec26f095c29bb51649d24439e9",
+      "code": "SB_REFUSED_EXPIRED_CERT",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_EXPIRED_CERT",
+        "outcome": null
+      },
+      "id": "certificate-not-yet-valid-at-integrated-time",
+      "note": "one second before notBefore is out of the window",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": null,
+            "detail": "1 transparency entr(ies) present",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-kind",
+            "code": null,
+            "detail": "every entry is dsse/0.0.1",
+            "status": "pass"
+          },
+          {
+            "check": "integrated-time",
+            "code": null,
+            "detail": "logIndex/integratedTime are consistent: [1767225599]",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-window",
+            "code": "SB_REFUSED_EXPIRED_CERT",
+            "detail": "the certificate is not yet valid: integratedTime 2025-12-31T23:59:59Z precedes notBefore 2026-01-01T00:00:00Z",
+            "status": "fail"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_EXPIRED_CERT"
+        ],
+        "outcome": "BUNDLE_INVALID"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        },
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "cert_verify": "accept",
+        "log_verify": "accept",
+        "signature_verify": "accept",
+        "timestamp_verify": "accept"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+        "verificationMaterial": {
+          "timestampVerificationData": {
+            "rfc3161Timestamps": [
+              {
+                "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+              }
+            ]
+          },
+          "tlogEntries": [
+            {
+              "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+              "inclusionProof": {
+                "checkpoint": {
+                  "envelope": "control-only checkpoint\n"
+                },
+                "hashes": [
+                  "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+                ],
+                "logIndex": 4242,
+                "rootHash": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                "treeSize": 4243
+              },
+              "integratedTime": 1780272000,
+              "kindVersion": {
+                "kind": "dsse",
+                "version": "0.0.1"
+              },
+              "logId": {
+                "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+              },
+              "logIndex": 4242
+            }
+          ],
+          "x509CertificateChain": {
+            "certificates": [
+              {
+                "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+              }
+            ]
+          }
+        }
+      },
+      "bundleBytesSha256": "4fbcb9421d2404883fbb62f9611edbac50a0735eb030d48a866cecb4d7f2b9c6",
+      "code": "SB_REFUSED_ISSUER_MISMATCH",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_ISSUER_MISMATCH",
+        "outcome": null
+      },
+      "id": "issuer-mismatch",
+      "note": "the policy names a different issuer",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": null,
+            "detail": "1 transparency entr(ies) present",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-kind",
+            "code": null,
+            "detail": "every entry is dsse/0.0.1",
+            "status": "pass"
+          },
+          {
+            "check": "integrated-time",
+            "code": null,
+            "detail": "logIndex/integratedTime are consistent: [1780272000]",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-window",
+            "code": null,
+            "detail": "every integratedTime is inside the certificate validity window",
+            "status": "pass"
+          },
+          {
+            "check": "issuer-policy",
+            "code": "SB_REFUSED_ISSUER_MISMATCH",
+            "detail": "the certificate claims issuer 'CN=control-only signer,O=control-only', the policy expects 'CN=control-only other,O=control-only'",
+            "status": "fail"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_ISSUER_MISMATCH"
+        ],
+        "outcome": "BUNDLE_INVALID"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only other,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        },
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "cert_verify": "accept",
+        "log_verify": "accept",
+        "signature_verify": "accept",
+        "timestamp_verify": "accept"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+        "verificationMaterial": {
+          "timestampVerificationData": {
+            "rfc3161Timestamps": [
+              {
+                "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+              }
+            ]
+          },
+          "tlogEntries": [
+            {
+              "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+              "inclusionProof": {
+                "checkpoint": {
+                  "envelope": "control-only checkpoint\n"
+                },
+                "hashes": [
+                  "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+                ],
+                "logIndex": 4242,
+                "rootHash": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                "treeSize": 4243
+              },
+              "integratedTime": 1780272000,
+              "kindVersion": {
+                "kind": "dsse",
+                "version": "0.0.1"
+              },
+              "logId": {
+                "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+              },
+              "logIndex": 4242
+            }
+          ],
+          "x509CertificateChain": {
+            "certificates": [
+              {
+                "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+              }
+            ]
+          }
+        }
+      },
+      "bundleBytesSha256": "4fbcb9421d2404883fbb62f9611edbac50a0735eb030d48a866cecb4d7f2b9c6",
+      "code": "SB_REFUSED_IDENTITY_MISMATCH",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_IDENTITY_MISMATCH",
+        "outcome": null
+      },
+      "id": "identity-mismatch",
+      "note": "the policy names a SAN the certificate does not carry",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": null,
+            "detail": "1 transparency entr(ies) present",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-kind",
+            "code": null,
+            "detail": "every entry is dsse/0.0.1",
+            "status": "pass"
+          },
+          {
+            "check": "integrated-time",
+            "code": null,
+            "detail": "logIndex/integratedTime are consistent: [1780272000]",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-window",
+            "code": null,
+            "detail": "every integratedTime is inside the certificate validity window",
+            "status": "pass"
+          },
+          {
+            "check": "issuer-policy",
+            "code": null,
+            "detail": "the certificate's issuer equals the policy",
+            "status": "pass"
+          },
+          {
+            "check": "identity-policy",
+            "code": "SB_REFUSED_IDENTITY_MISMATCH",
+            "detail": "no SAN identity equals 'other.example' of type 'dns'; the certificate carries [{'type': 'dns', 'value': 'control-only.example'}]",
+            "status": "fail"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_IDENTITY_MISMATCH"
+        ],
+        "outcome": "BUNDLE_INVALID"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "other.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        },
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "cert_verify": "accept",
+        "log_verify": "accept",
+        "signature_verify": "accept",
+        "timestamp_verify": "accept"
+      }
+    },
+    {
+      "artefactSha256": "7700f3506d95b629dd7dc68427e1149eb70edccaa99e0eef3fd8796d4b7a7fb7",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+        "verificationMaterial": {
+          "timestampVerificationData": {
+            "rfc3161Timestamps": [
+              {
+                "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+              }
+            ]
+          },
+          "tlogEntries": [
+            {
+              "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+              "inclusionProof": {
+                "checkpoint": {
+                  "envelope": "control-only checkpoint\n"
+                },
+                "hashes": [
+                  "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+                ],
+                "logIndex": 4242,
+                "rootHash": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                "treeSize": 4243
+              },
+              "integratedTime": 1780272000,
+              "kindVersion": {
+                "kind": "dsse",
+                "version": "0.0.1"
+              },
+              "logId": {
+                "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+              },
+              "logIndex": 4242
+            }
+          ],
+          "x509CertificateChain": {
+            "certificates": [
+              {
+                "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+              }
+            ]
+          }
+        }
+      },
+      "bundleBytesSha256": "4fbcb9421d2404883fbb62f9611edbac50a0735eb030d48a866cecb4d7f2b9c6",
+      "code": "SB_REFUSED_PAYLOAD_DIGEST",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_PAYLOAD_DIGEST",
+        "outcome": null
+      },
+      "id": "payload-digest",
+      "note": "the payload signs one artefact, not the artefact under verification",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": null,
+            "detail": "1 transparency entr(ies) present",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-kind",
+            "code": null,
+            "detail": "every entry is dsse/0.0.1",
+            "status": "pass"
+          },
+          {
+            "check": "integrated-time",
+            "code": null,
+            "detail": "logIndex/integratedTime are consistent: [1780272000]",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-window",
+            "code": null,
+            "detail": "every integratedTime is inside the certificate validity window",
+            "status": "pass"
+          },
+          {
+            "check": "issuer-policy",
+            "code": null,
+            "detail": "the certificate's issuer equals the policy",
+            "status": "pass"
+          },
+          {
+            "check": "identity-policy",
+            "code": null,
+            "detail": "the SAN contains 'control-only.example'",
+            "status": "pass"
+          },
+          {
+            "check": "payload-digest",
+            "code": "SB_REFUSED_PAYLOAD_DIGEST",
+            "detail": "the DSSE payload digest ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f is not the artefact digest 7700f3506d95b629dd7dc68427e1149eb70edccaa99e0eef3fd8796d4b7a7fb7",
+            "status": "fail"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_PAYLOAD_DIGEST"
+        ],
+        "outcome": "BUNDLE_INVALID"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        },
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "cert_verify": "accept",
+        "log_verify": "accept",
+        "signature_verify": "accept",
+        "timestamp_verify": "accept"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+        "verificationMaterial": {
+          "timestampVerificationData": {
+            "rfc3161Timestamps": [
+              {
+                "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+              }
+            ]
+          },
+          "tlogEntries": [],
+          "x509CertificateChain": {
+            "certificates": [
+              {
+                "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+              }
+            ]
+          }
+        }
+      },
+      "bundleBytesSha256": "7bf6482da080e9035b246739d85110f8bb021e486d4082474ea172b4bf7a10f0",
+      "code": "SB_REFUSED_TLOG_ABSENT",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_TLOG_ABSENT",
+        "outcome": null
+      },
+      "id": "tlog-absent",
+      "note": "no transparency entry means no log claim",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": "SB_REFUSED_TLOG_ABSENT",
+            "detail": "verificationMaterial.tlogEntries is a non-empty list",
+            "status": "fail"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_TLOG_ABSENT"
+        ],
+        "outcome": "BUNDLE_INVALID"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        },
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "cert_verify": "accept",
+        "log_verify": "accept",
+        "signature_verify": "accept",
+        "timestamp_verify": "accept"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+        "verificationMaterial": {
+          "timestampVerificationData": {
+            "rfc3161Timestamps": [
+              {
+                "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+              }
+            ]
+          },
+          "tlogEntries": [
+            {
+              "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+              "inclusionProof": {
+                "checkpoint": {
+                  "envelope": "control-only checkpoint\n"
+                },
+                "hashes": [
+                  "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+                ],
+                "logIndex": 4242,
+                "rootHash": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                "treeSize": 4243
+              },
+              "integratedTime": 1780272000,
+              "kindVersion": {
+                "kind": "hashedrekord",
+                "version": "0.0.1"
+              },
+              "logId": {
+                "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+              },
+              "logIndex": 4242
+            }
+          ],
+          "x509CertificateChain": {
+            "certificates": [
+              {
+                "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+              }
+            ]
+          }
+        }
+      },
+      "bundleBytesSha256": "360bb66a16c4fb2cca0fe4cd0d8e46836bebc2c8f8babae207e3b70198cdfc3b",
+      "code": "SB_REFUSED_TLOG_KIND",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_TLOG_KIND",
+        "outcome": null
+      },
+      "id": "tlog-kind",
+      "note": "a hashedrekord entry is not the DSSE entry for this envelope",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": null,
+            "detail": "1 transparency entr(ies) present",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-kind",
+            "code": "SB_REFUSED_TLOG_KIND",
+            "detail": "tlogEntries[0].kindVersion is {kind: 'dsse', version: '0.0.1'}, not {'kind': 'hashedrekord', 'version': '0.0.1'}",
+            "status": "fail"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_TLOG_KIND"
+        ],
+        "outcome": "BUNDLE_INVALID"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        },
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "cert_verify": "accept",
+        "log_verify": "accept",
+        "signature_verify": "accept",
+        "timestamp_verify": "accept"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+        "verificationMaterial": {
+          "timestampVerificationData": {
+            "rfc3161Timestamps": [
+              {
+                "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+              }
+            ]
+          },
+          "tlogEntries": [
+            {
+              "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+              "inclusionProof": {
+                "checkpoint": {
+                  "envelope": "control-only checkpoint\n"
+                },
+                "hashes": [
+                  "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+                ],
+                "logIndex": 4243,
+                "rootHash": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                "treeSize": 4243
+              },
+              "integratedTime": 1780272000,
+              "kindVersion": {
+                "kind": "dsse",
+                "version": "0.0.1"
+              },
+              "logId": {
+                "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+              },
+              "logIndex": 4242
+            }
+          ],
+          "x509CertificateChain": {
+            "certificates": [
+              {
+                "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+              }
+            ]
+          }
+        }
+      },
+      "bundleBytesSha256": "87125bb2499d51233dc98e841fb3b0e16c20928245a0a7a24385266091429782",
+      "code": "SB_REFUSED_INTEGRATED_TIME",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_INTEGRATED_TIME",
+        "outcome": null
+      },
+      "id": "integrated-time-index-disagreement",
+      "note": "the proof's index disagrees with the entry's",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": null,
+            "detail": "1 transparency entr(ies) present",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-kind",
+            "code": null,
+            "detail": "every entry is dsse/0.0.1",
+            "status": "pass"
+          },
+          {
+            "check": "integrated-time",
+            "code": "SB_REFUSED_INTEGRATED_TIME",
+            "detail": "tlogEntries[0].inclusionProof.logIndex 4243 disagrees with logIndex 4242",
+            "status": "fail"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_INTEGRATED_TIME"
+        ],
+        "outcome": "BUNDLE_INVALID"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        },
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "cert_verify": "accept",
+        "log_verify": "accept",
+        "signature_verify": "accept",
+        "timestamp_verify": "accept"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+        "verificationMaterial": {
+          "timestampVerificationData": {
+            "rfc3161Timestamps": [
+              {
+                "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+              }
+            ]
+          },
+          "tlogEntries": [
+            {
+              "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+              "integratedTime": 1780272000,
+              "kindVersion": {
+                "kind": "dsse",
+                "version": "0.0.1"
+              },
+              "logId": {
+                "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+              },
+              "logIndex": 4242
+            }
+          ],
+          "x509CertificateChain": {
+            "certificates": [
+              {
+                "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+              }
+            ]
+          }
+        }
+      },
+      "bundleBytesSha256": "5874300e7129fb70ea11f875cc1ed3e175457500c10412e717d83aea7b862af8",
+      "code": "SB_REFUSED_INCLUSION_PROOF",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_INCLUSION_PROOF",
+        "outcome": null
+      },
+      "id": "inclusion-proof-absent",
+      "note": "an entry with no promise and no proof is unproven",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": null,
+            "detail": "1 transparency entr(ies) present",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-kind",
+            "code": null,
+            "detail": "every entry is dsse/0.0.1",
+            "status": "pass"
+          },
+          {
+            "check": "integrated-time",
+            "code": null,
+            "detail": "logIndex/integratedTime are consistent: [1780272000]",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-window",
+            "code": null,
+            "detail": "every integratedTime is inside the certificate validity window",
+            "status": "pass"
+          },
+          {
+            "check": "issuer-policy",
+            "code": null,
+            "detail": "the certificate's issuer equals the policy",
+            "status": "pass"
+          },
+          {
+            "check": "identity-policy",
+            "code": null,
+            "detail": "the SAN contains 'control-only.example'",
+            "status": "pass"
+          },
+          {
+            "check": "payload-digest",
+            "code": null,
+            "detail": "the payload bytes are the artefact bytes",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-present",
+            "code": "SB_REFUSED_INCLUSION_PROOF",
+            "detail": "tlogEntries[0] has neither an inclusion promise nor an inclusion proof",
+            "status": "fail"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_INCLUSION_PROOF"
+        ],
+        "outcome": "BUNDLE_INVALID"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        },
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "cert_verify": "accept",
+        "log_verify": "accept",
+        "signature_verify": "accept",
+        "timestamp_verify": "accept"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+        "verificationMaterial": {
+          "timestampVerificationData": {
+            "rfc3161Timestamps": [
+              {
+                "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+              }
+            ]
+          },
+          "tlogEntries": [
+            {
+              "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+              "inclusionProof": {
+                "checkpoint": {
+                  "envelope": "control-only checkpoint\n"
+                },
+                "hashes": [
+                  "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+                ],
+                "logIndex": 4242,
+                "rootHash": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                "treeSize": 4243
+              },
+              "integratedTime": 1780272000,
+              "kindVersion": {
+                "kind": "dsse",
+                "version": "0.0.1"
+              },
+              "logId": {
+                "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+              },
+              "logIndex": 4242
+            }
+          ],
+          "x509CertificateChain": {
+            "certificates": [
+              {
+                "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+              }
+            ]
+          }
+        }
+      },
+      "bundleBytesSha256": "4fbcb9421d2404883fbb62f9611edbac50a0735eb030d48a866cecb4d7f2b9c6",
+      "code": "SB_REFUSED_INCLUSION_PROOF",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_INCLUSION_PROOF",
+        "outcome": null
+      },
+      "id": "inclusion-proof-rejected",
+      "note": "a present proof the supplied log verifier rejects is not inclusion",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": null,
+            "detail": "1 transparency entr(ies) present",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-kind",
+            "code": null,
+            "detail": "every entry is dsse/0.0.1",
+            "status": "pass"
+          },
+          {
+            "check": "integrated-time",
+            "code": null,
+            "detail": "logIndex/integratedTime are consistent: [1780272000]",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-window",
+            "code": null,
+            "detail": "every integratedTime is inside the certificate validity window",
+            "status": "pass"
+          },
+          {
+            "check": "issuer-policy",
+            "code": null,
+            "detail": "the certificate's issuer equals the policy",
+            "status": "pass"
+          },
+          {
+            "check": "identity-policy",
+            "code": null,
+            "detail": "the SAN contains 'control-only.example'",
+            "status": "pass"
+          },
+          {
+            "check": "payload-digest",
+            "code": null,
+            "detail": "the payload bytes are the artefact bytes",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-present",
+            "code": null,
+            "detail": "every entry carries an inclusion promise or a structurally valid proof",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-verified",
+            "code": "SB_REFUSED_INCLUSION_PROOF",
+            "detail": "the supplied log verifier rejected tlogEntries[0]",
+            "status": "fail"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_INCLUSION_PROOF"
+        ],
+        "outcome": "BUNDLE_INVALID"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        },
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "cert_verify": "custom",
+        "log_verify": "custom",
+        "signature_verify": "custom",
+        "timestamp_verify": "custom"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+        "verificationMaterial": {
+          "timestampVerificationData": {
+            "rfc3161Timestamps": [
+              {
+                "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+              }
+            ]
+          },
+          "tlogEntries": [
+            {
+              "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+              "inclusionProof": {
+                "checkpoint": {
+                  "envelope": "control-only checkpoint\n"
+                },
+                "hashes": [
+                  "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+                ],
+                "logIndex": 4242,
+                "rootHash": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                "treeSize": 4243
+              },
+              "integratedTime": 1780272000,
+              "kindVersion": {
+                "kind": "dsse",
+                "version": "0.0.1"
+              },
+              "logId": {
+                "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+              },
+              "logIndex": 4242
+            }
+          ],
+          "x509CertificateChain": {
+            "certificates": [
+              {
+                "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+              }
+            ]
+          }
+        }
+      },
+      "bundleBytesSha256": "4fbcb9421d2404883fbb62f9611edbac50a0735eb030d48a866cecb4d7f2b9c6",
+      "code": "SB_REFUSED_LOG_KEY_ABSENT",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_LOG_KEY_ABSENT",
+        "outcome": null
+      },
+      "id": "log-key-absent",
+      "note": "presence of a proof is not verification of it",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": null,
+            "detail": "1 transparency entr(ies) present",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-kind",
+            "code": null,
+            "detail": "every entry is dsse/0.0.1",
+            "status": "pass"
+          },
+          {
+            "check": "integrated-time",
+            "code": null,
+            "detail": "logIndex/integratedTime are consistent: [1780272000]",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-window",
+            "code": null,
+            "detail": "every integratedTime is inside the certificate validity window",
+            "status": "pass"
+          },
+          {
+            "check": "issuer-policy",
+            "code": null,
+            "detail": "the certificate's issuer equals the policy",
+            "status": "pass"
+          },
+          {
+            "check": "identity-policy",
+            "code": null,
+            "detail": "the SAN contains 'control-only.example'",
+            "status": "pass"
+          },
+          {
+            "check": "payload-digest",
+            "code": null,
+            "detail": "the payload bytes are the artefact bytes",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-present",
+            "code": null,
+            "detail": "every entry carries an inclusion promise or a structurally valid proof",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-verified",
+            "code": "SB_REFUSED_LOG_KEY_ABSENT",
+            "detail": "no transparency-log public key was supplied by policy, so inclusion is NOT_RUN (presence is not verification)",
+            "status": "not-run"
+          },
+          {
+            "check": "dsse-signature",
+            "code": null,
+            "detail": "the supplied signature verifier accepted the envelope",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-path",
+            "code": null,
+            "detail": "the supplied certificate verifier accepted the chain",
+            "status": "pass"
+          },
+          {
+            "check": "timestamp-present",
+            "code": null,
+            "detail": "1 RFC 3161 timestamp(s) present",
+            "status": "pass"
+          },
+          {
+            "check": "timestamp-verified",
+            "code": null,
+            "detail": "the supplied timestamp verifier accepted every timestamp",
+            "status": "pass"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_LOG_KEY_ABSENT"
+        ],
+        "outcome": "BUNDLE_UNVERIFIABLE_OFFLINE"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "cert_verify": "custom",
+        "signature_verify": "custom",
+        "timestamp_verify": "custom"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+        "verificationMaterial": {
+          "tlogEntries": [
+            {
+              "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+              "inclusionProof": {
+                "checkpoint": {
+                  "envelope": "control-only checkpoint\n"
+                },
+                "hashes": [
+                  "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+                ],
+                "logIndex": 4242,
+                "rootHash": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                "treeSize": 4243
+              },
+              "integratedTime": 1780272000,
+              "kindVersion": {
+                "kind": "dsse",
+                "version": "0.0.1"
+              },
+              "logId": {
+                "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+              },
+              "logIndex": 4242
+            }
+          ],
+          "x509CertificateChain": {
+            "certificates": [
+              {
+                "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+              }
+            ]
+          }
+        }
+      },
+      "bundleBytesSha256": "7c5a2254029c404906ebcce81eba9e022b3c6fe9e72825557b79dae45ea6a9cc",
+      "code": "SB_REFUSED_TIMESTAMP_ABSENT",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_TIMESTAMP_ABSENT",
+        "outcome": null
+      },
+      "id": "timestamp-absent",
+      "note": "the profile requires a timestamp",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": null,
+            "detail": "1 transparency entr(ies) present",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-kind",
+            "code": null,
+            "detail": "every entry is dsse/0.0.1",
+            "status": "pass"
+          },
+          {
+            "check": "integrated-time",
+            "code": null,
+            "detail": "logIndex/integratedTime are consistent: [1780272000]",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-window",
+            "code": null,
+            "detail": "every integratedTime is inside the certificate validity window",
+            "status": "pass"
+          },
+          {
+            "check": "issuer-policy",
+            "code": null,
+            "detail": "the certificate's issuer equals the policy",
+            "status": "pass"
+          },
+          {
+            "check": "identity-policy",
+            "code": null,
+            "detail": "the SAN contains 'control-only.example'",
+            "status": "pass"
+          },
+          {
+            "check": "payload-digest",
+            "code": null,
+            "detail": "the payload bytes are the artefact bytes",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-present",
+            "code": null,
+            "detail": "every entry carries an inclusion promise or a structurally valid proof",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-verified",
+            "code": null,
+            "detail": "the supplied log verifier accepted every entry",
+            "status": "pass"
+          },
+          {
+            "check": "dsse-signature",
+            "code": null,
+            "detail": "the supplied signature verifier accepted the envelope",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-path",
+            "code": null,
+            "detail": "the supplied certificate verifier accepted the chain",
+            "status": "pass"
+          },
+          {
+            "check": "timestamp-present",
+            "code": "SB_REFUSED_TIMESTAMP_ABSENT",
+            "detail": "verificationMaterial.timestampVerificationData.rfc3161Timestamps is a non-empty list; this profile requires a timestamp",
+            "status": "fail"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_TIMESTAMP_ABSENT"
+        ],
+        "outcome": "BUNDLE_INVALID"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        },
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "cert_verify": "accept",
+        "log_verify": "accept",
+        "signature_verify": "accept",
+        "timestamp_verify": "accept"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+        "verificationMaterial": {
+          "timestampVerificationData": {
+            "rfc3161Timestamps": [
+              {
+                "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+              }
+            ]
+          },
+          "tlogEntries": [
+            {
+              "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+              "inclusionProof": {
+                "checkpoint": {
+                  "envelope": "control-only checkpoint\n"
+                },
+                "hashes": [
+                  "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+                ],
+                "logIndex": 4242,
+                "rootHash": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                "treeSize": 4243
+              },
+              "integratedTime": 1780272000,
+              "kindVersion": {
+                "kind": "dsse",
+                "version": "0.0.1"
+              },
+              "logId": {
+                "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+              },
+              "logIndex": 4242
+            }
+          ],
+          "x509CertificateChain": {
+            "certificates": [
+              {
+                "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+              }
+            ]
+          }
+        }
+      },
+      "bundleBytesSha256": "4fbcb9421d2404883fbb62f9611edbac50a0735eb030d48a866cecb4d7f2b9c6",
+      "code": "SB_REFUSED_TIMESTAMP_ROOT_ABSENT",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_TIMESTAMP_ROOT_ABSENT",
+        "outcome": null
+      },
+      "id": "timestamp-root-absent",
+      "note": "a timestamp is not verified without a TSA root",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": null,
+            "detail": "1 transparency entr(ies) present",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-kind",
+            "code": null,
+            "detail": "every entry is dsse/0.0.1",
+            "status": "pass"
+          },
+          {
+            "check": "integrated-time",
+            "code": null,
+            "detail": "logIndex/integratedTime are consistent: [1780272000]",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-window",
+            "code": null,
+            "detail": "every integratedTime is inside the certificate validity window",
+            "status": "pass"
+          },
+          {
+            "check": "issuer-policy",
+            "code": null,
+            "detail": "the certificate's issuer equals the policy",
+            "status": "pass"
+          },
+          {
+            "check": "identity-policy",
+            "code": null,
+            "detail": "the SAN contains 'control-only.example'",
+            "status": "pass"
+          },
+          {
+            "check": "payload-digest",
+            "code": null,
+            "detail": "the payload bytes are the artefact bytes",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-present",
+            "code": null,
+            "detail": "every entry carries an inclusion promise or a structurally valid proof",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-verified",
+            "code": null,
+            "detail": "the supplied log verifier accepted every entry",
+            "status": "pass"
+          },
+          {
+            "check": "dsse-signature",
+            "code": null,
+            "detail": "the supplied signature verifier accepted the envelope",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-path",
+            "code": null,
+            "detail": "the supplied certificate verifier accepted the chain",
+            "status": "pass"
+          },
+          {
+            "check": "timestamp-present",
+            "code": null,
+            "detail": "1 RFC 3161 timestamp(s) present",
+            "status": "pass"
+          },
+          {
+            "check": "timestamp-verified",
+            "code": "SB_REFUSED_TIMESTAMP_ROOT_ABSENT",
+            "detail": "no timestamp-authority root was supplied by policy, so the timestamp is NOT_RUN",
+            "status": "not-run"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_TIMESTAMP_ROOT_ABSENT"
+        ],
+        "outcome": "BUNDLE_UNVERIFIABLE_OFFLINE"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        }
+      },
+      "verifiers": {
+        "cert_verify": "custom",
+        "log_verify": "custom",
+        "signature_verify": "custom"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+        "verificationMaterial": {
+          "timestampVerificationData": {
+            "rfc3161Timestamps": [
+              {
+                "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+              }
+            ]
+          },
+          "tlogEntries": [
+            {
+              "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+              "inclusionProof": {
+                "checkpoint": {
+                  "envelope": "control-only checkpoint\n"
+                },
+                "hashes": [
+                  "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+                ],
+                "logIndex": 4242,
+                "rootHash": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                "treeSize": 4243
+              },
+              "integratedTime": 1780272000,
+              "kindVersion": {
+                "kind": "dsse",
+                "version": "0.0.1"
+              },
+              "logId": {
+                "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+              },
+              "logIndex": 4242
+            }
+          ],
+          "x509CertificateChain": {
+            "certificates": [
+              {
+                "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+              }
+            ]
+          }
+        }
+      },
+      "bundleBytesSha256": "4fbcb9421d2404883fbb62f9611edbac50a0735eb030d48a866cecb4d7f2b9c6",
+      "code": "SB_REFUSED_TIMESTAMP_INVALID",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_TIMESTAMP_INVALID",
+        "outcome": null
+      },
+      "id": "timestamp-rejected",
+      "note": "a timestamp the supplied verifier rejects is not freshness",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": null,
+            "detail": "1 transparency entr(ies) present",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-kind",
+            "code": null,
+            "detail": "every entry is dsse/0.0.1",
+            "status": "pass"
+          },
+          {
+            "check": "integrated-time",
+            "code": null,
+            "detail": "logIndex/integratedTime are consistent: [1780272000]",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-window",
+            "code": null,
+            "detail": "every integratedTime is inside the certificate validity window",
+            "status": "pass"
+          },
+          {
+            "check": "issuer-policy",
+            "code": null,
+            "detail": "the certificate's issuer equals the policy",
+            "status": "pass"
+          },
+          {
+            "check": "identity-policy",
+            "code": null,
+            "detail": "the SAN contains 'control-only.example'",
+            "status": "pass"
+          },
+          {
+            "check": "payload-digest",
+            "code": null,
+            "detail": "the payload bytes are the artefact bytes",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-present",
+            "code": null,
+            "detail": "every entry carries an inclusion promise or a structurally valid proof",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-verified",
+            "code": null,
+            "detail": "the supplied log verifier accepted every entry",
+            "status": "pass"
+          },
+          {
+            "check": "dsse-signature",
+            "code": null,
+            "detail": "the supplied signature verifier accepted the envelope",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-path",
+            "code": null,
+            "detail": "the supplied certificate verifier accepted the chain",
+            "status": "pass"
+          },
+          {
+            "check": "timestamp-present",
+            "code": null,
+            "detail": "1 RFC 3161 timestamp(s) present",
+            "status": "pass"
+          },
+          {
+            "check": "timestamp-verified",
+            "code": "SB_REFUSED_TIMESTAMP_INVALID",
+            "detail": "the supplied timestamp verifier rejected rfc3161Timestamps[0]",
+            "status": "fail"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_TIMESTAMP_INVALID"
+        ],
+        "outcome": "BUNDLE_INVALID"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        },
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "cert_verify": "custom",
+        "log_verify": "custom",
+        "signature_verify": "custom",
+        "timestamp_verify": "custom"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+        "verificationMaterial": {
+          "timestampVerificationData": {
+            "rfc3161Timestamps": [
+              {
+                "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+              }
+            ]
+          },
+          "tlogEntries": [
+            {
+              "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+              "inclusionProof": {
+                "checkpoint": {
+                  "envelope": "control-only checkpoint\n"
+                },
+                "hashes": [
+                  "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+                ],
+                "logIndex": 4242,
+                "rootHash": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                "treeSize": 4243
+              },
+              "integratedTime": 1780272000,
+              "kindVersion": {
+                "kind": "dsse",
+                "version": "0.0.1"
+              },
+              "logId": {
+                "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+              },
+              "logIndex": 4242
+            }
+          ],
+          "x509CertificateChain": {
+            "certificates": [
+              {
+                "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+              }
+            ]
+          }
+        }
+      },
+      "bundleBytesSha256": "4fbcb9421d2404883fbb62f9611edbac50a0735eb030d48a866cecb4d7f2b9c6",
+      "code": "SB_REFUSED_SIGNATURE",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_SIGNATURE",
+        "outcome": null
+      },
+      "id": "signature-rejected",
+      "note": "a rejected DSSE signature is not authentication",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": null,
+            "detail": "1 transparency entr(ies) present",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-kind",
+            "code": null,
+            "detail": "every entry is dsse/0.0.1",
+            "status": "pass"
+          },
+          {
+            "check": "integrated-time",
+            "code": null,
+            "detail": "logIndex/integratedTime are consistent: [1780272000]",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-window",
+            "code": null,
+            "detail": "every integratedTime is inside the certificate validity window",
+            "status": "pass"
+          },
+          {
+            "check": "issuer-policy",
+            "code": null,
+            "detail": "the certificate's issuer equals the policy",
+            "status": "pass"
+          },
+          {
+            "check": "identity-policy",
+            "code": null,
+            "detail": "the SAN contains 'control-only.example'",
+            "status": "pass"
+          },
+          {
+            "check": "payload-digest",
+            "code": null,
+            "detail": "the payload bytes are the artefact bytes",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-present",
+            "code": null,
+            "detail": "every entry carries an inclusion promise or a structurally valid proof",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-verified",
+            "code": null,
+            "detail": "the supplied log verifier accepted every entry",
+            "status": "pass"
+          },
+          {
+            "check": "dsse-signature",
+            "code": "SB_REFUSED_SIGNATURE",
+            "detail": "the embedded envelope did not verify (DS_REFUSED_SIGNATURE_INVALID: no supplied signature verifies over the PAE of the received bytes)",
+            "status": "fail"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_SIGNATURE"
+        ],
+        "outcome": "BUNDLE_INVALID"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        },
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "cert_verify": "custom",
+        "log_verify": "custom",
+        "signature_verify": "custom",
+        "timestamp_verify": "custom"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+        "verificationMaterial": {
+          "timestampVerificationData": {
+            "rfc3161Timestamps": [
+              {
+                "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+              }
+            ]
+          },
+          "tlogEntries": [
+            {
+              "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+              "inclusionProof": {
+                "checkpoint": {
+                  "envelope": "control-only checkpoint\n"
+                },
+                "hashes": [
+                  "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+                ],
+                "logIndex": 4242,
+                "rootHash": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                "treeSize": 4243
+              },
+              "integratedTime": 1780272000,
+              "kindVersion": {
+                "kind": "dsse",
+                "version": "0.0.1"
+              },
+              "logId": {
+                "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+              },
+              "logIndex": 4242
+            }
+          ],
+          "x509CertificateChain": {
+            "certificates": [
+              {
+                "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+              }
+            ]
+          }
+        }
+      },
+      "bundleBytesSha256": "4fbcb9421d2404883fbb62f9611edbac50a0735eb030d48a866cecb4d7f2b9c6",
+      "code": "SB_REFUSED_SIGNATURE",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_SIGNATURE",
+        "outcome": null
+      },
+      "id": "signature-verifier-absent",
+      "note": "no verifier means the signature is NOT_RUN, not accepted",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": null,
+            "detail": "1 transparency entr(ies) present",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-kind",
+            "code": null,
+            "detail": "every entry is dsse/0.0.1",
+            "status": "pass"
+          },
+          {
+            "check": "integrated-time",
+            "code": null,
+            "detail": "logIndex/integratedTime are consistent: [1780272000]",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-window",
+            "code": null,
+            "detail": "every integratedTime is inside the certificate validity window",
+            "status": "pass"
+          },
+          {
+            "check": "issuer-policy",
+            "code": null,
+            "detail": "the certificate's issuer equals the policy",
+            "status": "pass"
+          },
+          {
+            "check": "identity-policy",
+            "code": null,
+            "detail": "the SAN contains 'control-only.example'",
+            "status": "pass"
+          },
+          {
+            "check": "payload-digest",
+            "code": null,
+            "detail": "the payload bytes are the artefact bytes",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-present",
+            "code": null,
+            "detail": "every entry carries an inclusion promise or a structurally valid proof",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-verified",
+            "code": null,
+            "detail": "the supplied log verifier accepted every entry",
+            "status": "pass"
+          },
+          {
+            "check": "dsse-signature",
+            "code": "SB_REFUSED_SIGNATURE",
+            "detail": "no signature verifier was supplied, so the DSSE signature is NOT_RUN",
+            "status": "not-run"
+          },
+          {
+            "check": "certificate-path",
+            "code": null,
+            "detail": "the supplied certificate verifier accepted the chain",
+            "status": "pass"
+          },
+          {
+            "check": "timestamp-present",
+            "code": null,
+            "detail": "1 RFC 3161 timestamp(s) present",
+            "status": "pass"
+          },
+          {
+            "check": "timestamp-verified",
+            "code": null,
+            "detail": "the supplied timestamp verifier accepted every timestamp",
+            "status": "pass"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_SIGNATURE"
+        ],
+        "outcome": "BUNDLE_UNVERIFIABLE_OFFLINE"
+      },
+      "policy": {
+        "caRoots": [
+          {
+            "path": "control-only/root-ca.pem",
+            "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+          }
+        ],
+        "expectedIdentity": "control-only.example",
+        "expectedIssuer": "CN=control-only signer,O=control-only",
+        "identityType": "dns",
+        "logKey": {
+          "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+          "note": "control-only: no real log"
+        },
+        "timestampRoots": [
+          {
+            "path": "control-only/tsa.pem",
+            "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+          }
+        ]
+      },
+      "verifiers": {
+        "cert_verify": "custom",
+        "log_verify": "custom",
+        "timestamp_verify": "custom"
+      }
+    },
+    {
+      "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+      "bundle": {
+        "dsseEnvelope": {
+          "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+          "payloadType": "application/vnd.openssl-rs.control-only+json",
+          "signatures": [
+            {
+              "keyid": "",
+              "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+            }
+          ]
+        },
+        "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+        "verificationMaterial": {
+          "timestampVerificationData": {
+            "rfc3161Timestamps": [
+              {
+                "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+              }
+            ]
+          },
+          "tlogEntries": [
+            {
+              "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+              "inclusionProof": {
+                "checkpoint": {
+                  "envelope": "control-only checkpoint\n"
+                },
+                "hashes": [
+                  "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+                ],
+                "logIndex": 4242,
+                "rootHash": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+                "treeSize": 4243
+              },
+              "integratedTime": 1780272000,
+              "kindVersion": {
+                "kind": "dsse",
+                "version": "0.0.1"
+              },
+              "logId": {
+                "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+              },
+              "logIndex": 4242
+            }
+          ],
+          "x509CertificateChain": {
+            "certificates": [
+              {
+                "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+              }
+            ]
+          }
+        }
+      },
+      "bundleBytesSha256": "4fbcb9421d2404883fbb62f9611edbac50a0735eb030d48a866cecb4d7f2b9c6",
+      "code": "SB_REFUSED_POLICY_ABSENT",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_POLICY_ABSENT",
+        "outcome": null
+      },
+      "id": "policy-absent",
+      "note": "with no expected issuer or identity, any certificate would pass",
+      "observed": {
+        "checks": [
+          {
+            "check": "strict-json",
+            "code": null,
+            "detail": "parsed by harden.loads with duplicate-key detection",
+            "status": "pass"
+          },
+          {
+            "check": "media-type",
+            "code": null,
+            "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+            "status": "pass"
+          },
+          {
+            "check": "bundle-shape",
+            "code": null,
+            "detail": "the embedded DSSE envelope is present and shaped",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-chain",
+            "code": null,
+            "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-entry",
+            "code": null,
+            "detail": "1 transparency entr(ies) present",
+            "status": "pass"
+          },
+          {
+            "check": "tlog-kind",
+            "code": null,
+            "detail": "every entry is dsse/0.0.1",
+            "status": "pass"
+          },
+          {
+            "check": "integrated-time",
+            "code": null,
+            "detail": "logIndex/integratedTime are consistent: [1780272000]",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-window",
+            "code": null,
+            "detail": "every integratedTime is inside the certificate validity window",
+            "status": "pass"
+          },
+          {
+            "check": "issuer-policy",
+            "code": "SB_REFUSED_POLICY_ABSENT",
+            "detail": "no policy supplied an expected issuer, so the issuer is not checked",
+            "status": "not-run"
+          },
+          {
+            "check": "identity-policy",
+            "code": "SB_REFUSED_POLICY_ABSENT",
+            "detail": "no policy supplied an expected identity, so the SAN is not checked",
+            "status": "not-run"
+          },
+          {
+            "check": "payload-digest",
+            "code": null,
+            "detail": "the payload bytes are the artefact bytes",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-present",
+            "code": null,
+            "detail": "every entry carries an inclusion promise or a structurally valid proof",
+            "status": "pass"
+          },
+          {
+            "check": "inclusion-verified",
+            "code": "SB_REFUSED_LOG_KEY_ABSENT",
+            "detail": "no transparency-log public key was supplied by policy, so inclusion is NOT_RUN (presence is not verification)",
+            "status": "not-run"
+          },
+          {
+            "check": "dsse-signature",
+            "code": null,
+            "detail": "the supplied signature verifier accepted the envelope",
+            "status": "pass"
+          },
+          {
+            "check": "certificate-path",
+            "code": null,
+            "detail": "the supplied certificate verifier accepted the chain",
+            "status": "pass"
+          },
+          {
+            "check": "timestamp-present",
+            "code": null,
+            "detail": "1 RFC 3161 timestamp(s) present",
+            "status": "pass"
+          },
+          {
+            "check": "timestamp-verified",
+            "code": "SB_REFUSED_TIMESTAMP_ROOT_ABSENT",
+            "detail": "no timestamp-authority root was supplied by policy, so the timestamp is NOT_RUN",
+            "status": "not-run"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_LOG_KEY_ABSENT",
+          "SB_REFUSED_TIMESTAMP_ROOT_ABSENT",
+          "SB_REFUSED_POLICY_ABSENT"
+        ],
+        "outcome": "BUNDLE_UNVERIFIABLE_OFFLINE"
+      },
+      "policy": null,
+      "verifiers": {
+        "cert_verify": "accept",
+        "log_verify": "accept",
+        "signature_verify": "accept",
+        "timestamp_verify": "accept"
+      }
+    },
+    {
+      "artefactPath": "control-only/absent.artefact",
+      "bundle": null,
+      "bundlePath": "control-only/absent.sigstore.json",
+      "code": "SB_REFUSED_INPUT_ABSENT",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_INPUT_ABSENT",
+        "outcome": "NOT_RUN"
+      },
+      "id": "input-absent",
+      "note": "absence is NOT_RUN, never a pass",
+      "observed": {
+        "checks": [
+          {
+            "check": "input-present",
+            "code": "SB_REFUSED_INPUT_ABSENT",
+            "detail": "the bundle '/work/control-only/absent.sigstore.json' does not exist; absence is NOT_RUN",
+            "status": "not-run"
+          }
+        ],
+        "codes": [
+          "SB_REFUSED_INPUT_ABSENT"
+        ],
+        "outcome": "NOT_RUN"
+      }
+    },
+    {
+      "code": "SB_REFUSED_NETWORK_OR_CLIENT",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_NETWORK_OR_CLIENT",
+        "outcome": "STRUCTURAL"
+      },
+      "id": "network-import",
+      "kind": "source-inspection",
+      "note": "an import of a network client is refused structurally",
+      "observed": {
+        "codes": [
+          "SB_REFUSED_NETWORK_OR_CLIENT"
+        ],
+        "findings": [
+          {
+            "code": "SB_REFUSED_NETWORK_OR_CLIENT",
+            "detail": "socket",
+            "kind": "import"
+          }
+        ]
+      },
+      "source": "import socket\n"
+    },
+    {
+      "code": "SB_REFUSED_NETWORK_OR_CLIENT",
+      "controlOnly": true,
+      "expected": {
+        "code": "SB_REFUSED_NETWORK_OR_CLIENT",
+        "outcome": "STRUCTURAL"
+      },
+      "id": "sigstore-client-invocation",
+      "kind": "source-inspection",
+      "note": "a Sigstore client invocation is refused structurally",
+      "observed": {
+        "codes": [
+          "SB_REFUSED_NETWORK_OR_CLIENT"
+        ],
+        "findings": [
+          {
+            "code": "SB_REFUSED_NETWORK_OR_CLIENT",
+            "detail": "subprocess",
+            "kind": "import"
+          },
+          {
+            "code": "SB_REFUSED_NETWORK_OR_CLIENT",
+            "detail": "cosign",
+            "kind": "client"
+          }
+        ]
+      },
+      "source": "import subprocess\nsubprocess.run(['cosign', 'verify'])\n"
+    }
+  ],
+  "item": "A16",
+  "note": "Every fixture is control-only and is excluded from the real inventory. The positive control establishes the decision procedure under stub verifiers; it is not a real signing event, a real log, a real CA or an automated build provenance.",
+  "positive": {
+    "artefactSha256": "ac1f6de1129f4bbfea16c2f3e124fe9900e855af9564a77304ec431880d3853f",
+    "bundle": {
+      "dsseEnvelope": {
+        "payload": "b3BlbnNzbC1ycy9hMTYgY29udHJvbC1vbmx5IGFydGVmYWN0IHBheWxvYWQK",
+        "payloadType": "application/vnd.openssl-rs.control-only+json",
+        "signatures": [
+          {
+            "keyid": "",
+            "sig": "ZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZmZg=="
+          }
+        ]
+      },
+      "mediaType": "application/vnd.dev.sigstore.bundle.v0.3+json",
+      "verificationMaterial": {
+        "timestampVerificationData": {
+          "rfc3161Timestamps": [
+            {
+              "signedTimestamp": "REREREREREREREREREREREREREREREREREREREREREQ="
+            }
+          ]
+        },
+        "tlogEntries": [
+          {
+            "canonicalizedBody": "Y29udHJvbC1vbmx5IGNhbm9uaWNhbGl6ZWQgYm9keQ==",
+            "inclusionProof": {
+              "checkpoint": {
+                "envelope": "control-only checkpoint\n"
+              },
+              "hashes": [
+                "MzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzMzM="
+              ],
+              "logIndex": 4242,
+              "rootHash": "IiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiIiI=",
+              "treeSize": 4243
+            },
+            "integratedTime": 1780272000,
+            "kindVersion": {
+              "kind": "dsse",
+              "version": "0.0.1"
+            },
+            "logId": {
+              "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk="
+            },
+            "logIndex": 4242
+          }
+        ],
+        "x509CertificateChain": {
+          "certificates": [
+            {
+              "rawBytes": "MIIBfjCCASOgAwIBAgICChYwCgYIKoZIzj0EAwIwNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MB4XDTI2MDEwMTAwMDAwMFoXDTI2MTIzMTAwMDAwMFowNTEcMBoGA1UEAwwTY29udHJvbC1vbmx5IHNpZ25lcjEVMBMGA1UECgwMY29udHJvbC1vbmx5MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEEREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREREaMjMCEwHwYDVR0RBBgwFoIUY29udHJvbC1vbmx5LmV4YW1wbGUwCgYIKoZIzj0EAwIDSQBVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVU="
+            }
+          ]
+        }
+      }
+    },
+    "code": null,
+    "controlOnly": true,
+    "expected": {
+      "code": "SB_OK",
+      "outcome": "BUNDLE_VERIFIED_OFFLINE"
+    },
+    "id": "positive-structurally-complete",
+    "note": "reaches BUNDLE_VERIFIED_OFFLINE only with stub cert_verify, signature_verify, log_verify and timestamp_verify callables; it establishes the decision procedure, not a real signing event, not a real log and not an automated build provenance",
+    "observed": {
+      "checks": [
+        {
+          "check": "strict-json",
+          "code": null,
+          "detail": "parsed by harden.loads with duplicate-key detection",
+          "status": "pass"
+        },
+        {
+          "check": "media-type",
+          "code": null,
+          "detail": "application/vnd.dev.sigstore.bundle.v0.3+json",
+          "status": "pass"
+        },
+        {
+          "check": "bundle-shape",
+          "code": null,
+          "detail": "the embedded DSSE envelope is present and shaped",
+          "status": "pass"
+        },
+        {
+          "check": "certificate-chain",
+          "code": null,
+          "detail": "1 certificate(s); the claimed window is 2026-01-01T00:00:00Z..2026-12-31T00:00:00Z",
+          "status": "pass"
+        },
+        {
+          "check": "tlog-entry",
+          "code": null,
+          "detail": "1 transparency entr(ies) present",
+          "status": "pass"
+        },
+        {
+          "check": "tlog-kind",
+          "code": null,
+          "detail": "every entry is dsse/0.0.1",
+          "status": "pass"
+        },
+        {
+          "check": "integrated-time",
+          "code": null,
+          "detail": "logIndex/integratedTime are consistent: [1780272000]",
+          "status": "pass"
+        },
+        {
+          "check": "certificate-window",
+          "code": null,
+          "detail": "every integratedTime is inside the certificate validity window",
+          "status": "pass"
+        },
+        {
+          "check": "issuer-policy",
+          "code": null,
+          "detail": "the certificate's issuer equals the policy",
+          "status": "pass"
+        },
+        {
+          "check": "identity-policy",
+          "code": null,
+          "detail": "the SAN contains 'control-only.example'",
+          "status": "pass"
+        },
+        {
+          "check": "payload-digest",
+          "code": null,
+          "detail": "the payload bytes are the artefact bytes",
+          "status": "pass"
+        },
+        {
+          "check": "inclusion-present",
+          "code": null,
+          "detail": "every entry carries an inclusion promise or a structurally valid proof",
+          "status": "pass"
+        },
+        {
+          "check": "inclusion-verified",
+          "code": null,
+          "detail": "the supplied log verifier accepted every entry",
+          "status": "pass"
+        },
+        {
+          "check": "dsse-signature",
+          "code": null,
+          "detail": "the supplied signature verifier accepted the envelope",
+          "status": "pass"
+        },
+        {
+          "check": "certificate-path",
+          "code": null,
+          "detail": "the supplied certificate verifier accepted the chain",
+          "status": "pass"
+        },
+        {
+          "check": "timestamp-present",
+          "code": null,
+          "detail": "1 RFC 3161 timestamp(s) present",
+          "status": "pass"
+        },
+        {
+          "check": "timestamp-verified",
+          "code": null,
+          "detail": "the supplied timestamp verifier accepted every timestamp",
+          "status": "pass"
+        }
+      ],
+      "codes": [],
+      "outcome": "BUNDLE_VERIFIED_OFFLINE"
+    },
+    "policy": {
+      "caRoots": [
+        {
+          "path": "control-only/root-ca.pem",
+          "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+        }
+      ],
+      "expectedIdentity": "control-only.example",
+      "expectedIssuer": "CN=control-only signer,O=control-only",
+      "identityType": "dns",
+      "logKey": {
+        "keyId": "Y29udHJvbC1vbmx5LWxvZy1rZXk=",
+        "note": "control-only: no real log"
+      },
+      "timestampRoots": [
+        {
+          "path": "control-only/tsa.pem",
+          "sha256": "2222222222222222222222222222222222222222222222222222222222222222"
+        }
+      ]
+    },
+    "verifiers": {
+      "cert_verify": "accept",
+      "log_verify": "accept",
+      "signature_verify": "accept",
+      "timestamp_verify": "accept"
+    }
+  },
+  "schema": "openssl-rs/a16/controls/1",
+  "sourceIdentity": {
+    "asOf": "2026-11-24",
+    "baseCommit": "67187c39ee5b5e6d2f66136829295c44096ddd08",
+    "baseCommitShort": "67187c39e",
+    "delegatedTools": [
+      {
+        "path": "forensics/tools/harden.py",
+        "sha256": "f05d7fe9be3933332a69f43ee3fab26f7c764a8f20ce556d295683fea7824023"
+      },
+      {
+        "path": "forensics/tools/dsse.py",
+        "sha256": "0a701eca4087215c0d0166076a0158b82a8e32c14d67ae38e397090720dd83b9"
+      }
+    ],
+    "item": "A16",
+    "tool": {
+      "path": "forensics/tools/sigstore_bundle.py",
+      "sha256": "972e7333713807f2573aa8d8fb1efd40ebe7bbb5c5a2b69ba74593a3e7696d80"
+    }
+  },
+  "summary": {
+    "boundaryCases": 4,
+    "codesCovered": 23,
+    "controls": 27,
+    "positiveVerified": true
+  }
+}

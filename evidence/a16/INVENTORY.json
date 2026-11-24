@@ -1,0 +1,57 @@
+{
+  "a10EnvelopeNote": "the A10 envelopes are self-issued DSSE signed by a fixed public test key; they are not Sigstore bundles, carry no certificate, no transparency entry and no timestamp, and are not counted as any",
+  "a10Envelopes": 4,
+  "asOf": "2026-11-24",
+  "bundleFiles": [],
+  "bundles": 0,
+  "candidateFiles": [
+    {
+      "path": "evidence/a16/CONTROLS.json",
+      "reason": "the media type appears in this document, but its top level is not a bundle: it is a profile or a control-only fixture",
+      "topLevelMediaType": null
+    },
+    {
+      "path": "evidence/a16/PROFILE.json",
+      "reason": "the media type appears in this document, but its top level is not a bundle: it is a profile or a control-only fixture",
+      "topLevelMediaType": null
+    }
+  ],
+  "certificateFiles": 0,
+  "certificateGlob": [
+    "evidence/**/*.pem",
+    "evidence/**/*.crt",
+    "evidence/**/*.der",
+    "evidence/**/*.p7b",
+    "evidence/**/*.p12"
+  ],
+  "certificates": 0,
+  "explanation": "No Sigstore bundle, transparency-log public key, CA root or timestamp-authority root exists in this tree.  The measured counts are 0 bundles, 0 log keys and 0 certificates; that is the honest result, not an omission.",
+  "item": "A16",
+  "model": "a16/v1",
+  "populationFiles": 407,
+  "populationGlob": [
+    "evidence/**/*.json"
+  ],
+  "schema": "openssl-rs/a16/bundle-inventory/1",
+  "sourceIdentity": {
+    "asOf": "2026-11-24",
+    "baseCommit": "67187c39ee5b5e6d2f66136829295c44096ddd08",
+    "baseCommitShort": "67187c39e",
+    "delegatedTools": [
+      {
+        "path": "forensics/tools/harden.py",
+        "sha256": "f05d7fe9be3933332a69f43ee3fab26f7c764a8f20ce556d295683fea7824023"
+      },
+      {
+        "path": "forensics/tools/dsse.py",
+        "sha256": "0a701eca4087215c0d0166076a0158b82a8e32c14d67ae38e397090720dd83b9"
+      }
+    ],
+    "item": "A16",
+    "tool": {
+      "path": "forensics/tools/sigstore_bundle.py",
+      "sha256": "972e7333713807f2573aa8d8fb1efd40ebe7bbb5c5a2b69ba74593a3e7696d80"
+    }
+  },
+  "transparencyLogs": 0
+}
