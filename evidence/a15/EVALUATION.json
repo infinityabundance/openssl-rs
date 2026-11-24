@@ -1,0 +1,202 @@
+{
+  "aggregate": {
+    "availableDomains": 0,
+    "distinctDomains": 0,
+    "met": 0,
+    "notRun": 0,
+    "realApprovals": 0,
+    "thresholds": 4,
+    "unmet": 0,
+    "unreachable": 4
+  },
+  "approvals": [],
+  "asOf": "2026-11-24",
+  "candidate": "b099cd599b6728a7b7686a76b515ff0b67a7acc1",
+  "evaluations": {
+    "claim-promotion": {
+      "aliases": [],
+      "approvals": [],
+      "at": "2026-11-24",
+      "availableDomains": 0,
+      "codes": [
+        "TH_REFUSED_THRESHOLD_UNREACHABLE"
+      ],
+      "detail": [
+        "0 established external domain(s) exist and the threshold is k=1; no set of approvals could meet it"
+      ],
+      "distinctDomains": 0,
+      "groups": [],
+      "outcome": "UNREACHABLE",
+      "schema": "openssl-rs/a15/threshold-evaluation/1",
+      "threshold": {
+        "action": "claim-promotion",
+        "artefactDigest": "2968ffd6976f19bd701c58636b51cceed192e42c928dd2116217449a7b85a1bb",
+        "declaredAt": "2026-11-24",
+        "declaredBy": {
+          "evidence": "evidence/a14/ROLES.json#P-CAMPAIGN/producer",
+          "identity": "P-CAMPAIGN",
+          "independent": false,
+          "note": "declared by the project's undeclared producer party. A14 records maintainer: none, so no maintainer declared it; the declaration is same-party and is not evidence of an independent policy.",
+          "role": "producer"
+        },
+        "distinctDomains": true,
+        "id": "claim-promotion",
+        "k": 1,
+        "n": 2,
+        "requiredRoles": [
+          "adjudicator"
+        ]
+      },
+      "thresholdId": "claim-promotion"
+    },
+    "consumer-graduation": {
+      "aliases": [],
+      "approvals": [],
+      "at": "2026-11-24",
+      "availableDomains": 0,
+      "codes": [
+        "TH_REFUSED_THRESHOLD_UNREACHABLE"
+      ],
+      "detail": [
+        "0 established external domain(s) exist and the threshold is k=2; no set of approvals could meet it"
+      ],
+      "distinctDomains": 0,
+      "groups": [],
+      "outcome": "UNREACHABLE",
+      "schema": "openssl-rs/a15/threshold-evaluation/1",
+      "threshold": {
+        "action": "consumer-graduation",
+        "artefactDigest": "dde0d37684c61e4a35e59dba0b45409232788df8b1d5aaae7fcda5968aeedc02",
+        "declaredAt": "2026-11-24",
+        "declaredBy": {
+          "evidence": "evidence/a14/ROLES.json#P-CAMPAIGN/producer",
+          "identity": "P-CAMPAIGN",
+          "independent": false,
+          "note": "declared by the project's undeclared producer party. A14 records maintainer: none, so no maintainer declared it; the declaration is same-party and is not evidence of an independent policy.",
+          "role": "producer"
+        },
+        "distinctDomains": true,
+        "id": "consumer-graduation",
+        "k": 2,
+        "n": 3,
+        "requiredRoles": [
+          "adjudicator",
+          "external_reproducer"
+        ]
+      },
+      "thresholdId": "consumer-graduation"
+    },
+    "instrument-qualification": {
+      "aliases": [],
+      "approvals": [],
+      "at": "2026-11-24",
+      "availableDomains": 0,
+      "codes": [
+        "TH_REFUSED_THRESHOLD_UNREACHABLE"
+      ],
+      "detail": [
+        "0 established external domain(s) exist and the threshold is k=1; no set of approvals could meet it"
+      ],
+      "distinctDomains": 0,
+      "groups": [],
+      "outcome": "UNREACHABLE",
+      "schema": "openssl-rs/a15/threshold-evaluation/1",
+      "threshold": {
+        "action": "instrument-qualification",
+        "artefactDigest": "2f937a190cd87e71a4fc5fc1d7fa6faa206bb5ef5af6fa9093192ead8a6a38f4",
+        "declaredAt": "2026-11-24",
+        "declaredBy": {
+          "evidence": "evidence/a14/ROLES.json#P-CAMPAIGN/producer",
+          "identity": "P-CAMPAIGN",
+          "independent": false,
+          "note": "declared by the project's undeclared producer party. A14 records maintainer: none, so no maintainer declared it; the declaration is same-party and is not evidence of an independent policy.",
+          "role": "producer"
+        },
+        "distinctDomains": true,
+        "id": "instrument-qualification",
+        "k": 1,
+        "n": 2,
+        "requiredRoles": [
+          "instrument_reviewer"
+        ]
+      },
+      "thresholdId": "instrument-qualification"
+    },
+    "release": {
+      "aliases": [],
+      "approvals": [],
+      "at": "2026-11-24",
+      "availableDomains": 0,
+      "codes": [
+        "TH_REFUSED_THRESHOLD_UNREACHABLE"
+      ],
+      "detail": [
+        "0 established external domain(s) exist and the threshold is k=2; no set of approvals could meet it"
+      ],
+      "distinctDomains": 0,
+      "groups": [],
+      "outcome": "UNREACHABLE",
+      "schema": "openssl-rs/a15/threshold-evaluation/1",
+      "threshold": {
+        "action": "release",
+        "artefactDigest": "2968ffd6976f19bd701c58636b51cceed192e42c928dd2116217449a7b85a1bb",
+        "declaredAt": "2026-11-24",
+        "declaredBy": {
+          "evidence": "evidence/a14/ROLES.json#P-CAMPAIGN/producer",
+          "identity": "P-CAMPAIGN",
+          "independent": false,
+          "note": "declared by the project's undeclared producer party. A14 records maintainer: none, so no maintainer declared it; the declaration is same-party and is not evidence of an independent policy.",
+          "role": "producer"
+        },
+        "distinctDomains": true,
+        "id": "release",
+        "k": 2,
+        "n": 3,
+        "requiredRoles": [
+          "release_authority",
+          "adjudicator"
+        ]
+      },
+      "thresholdId": "release"
+    }
+  },
+  "item": "A15",
+  "note": "0 external trust domains means 0 thresholds can be met. Every threshold is UNREACHABLE because fewer than k established external domains exist. This is the honest result and is not worked around.",
+  "schema": "openssl-rs/a15/threshold-evaluation/1",
+  "sourceIdentity": {
+    "baseCommit": "b099cd599b6728a7b7686a76b515ff0b67a7acc1",
+    "baseCommitShort": "b099cd599",
+    "branch": "staging",
+    "delegatedRoleTool": {
+      "path": "forensics/tools/authorisation.py",
+      "sha256": "9907fc3d7e34debcac79dbad826029878765b51e992e77619785df6b1d9acdfd"
+    },
+    "inputs": [
+      {
+        "path": "evidence/a12/TRUST-ROOTS.json",
+        "sha256": "4314cc4aff9c23d9ac1ea844bb86cd965bfb6e6a729bf7c81d58fee6fb81586b"
+      },
+      {
+        "path": "evidence/a14/ROLES.json",
+        "sha256": "54d37854b1f08398d7a475682ec4949a856aec5ed78a7889deab89b0e12b5aac"
+      },
+      {
+        "path": "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
+        "sha256": "dde0d37684c61e4a35e59dba0b45409232788df8b1d5aaae7fcda5968aeedc02"
+      },
+      {
+        "path": "evidence/etp/claims.json",
+        "sha256": "2968ffd6976f19bd701c58636b51cceed192e42c928dd2116217449a7b85a1bb"
+      },
+      {
+        "path": "evidence/etp3/instruments.json",
+        "sha256": "2f937a190cd87e71a4fc5fc1d7fa6faa206bb5ef5af6fa9093192ead8a6a38f4"
+      }
+    ],
+    "recordedAt": "2026-11-24",
+    "tool": {
+      "path": "forensics/tools/thresholds.py",
+      "sha256": "3e61d249997441dd6acd28a98b2ae782f8d573dee86fde05765b14088818c67c"
+    }
+  }
+}

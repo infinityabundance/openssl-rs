@@ -329,5 +329,48 @@ class AuthorisationRow(unittest.TestCase):
                          ["RG_AUTHORISATION_ERROR"])
 
 
+class ThresholdRow(unittest.TestCase):
+    """A15 joins the gate as one per-refusal row without altering items 1-7."""
+
+    def test_unmet_threshold_is_one_refusal_row(self) -> None:
+        self.assertTrue(release_gate.THRESHOLD_DECLARATIONS.is_file())
+        results = release_gate.check_thresholds(release_gate.ROOT, at="2026-11-24")
+        rules = [item.rule for item in results.refusals]
+        self.assertEqual(rules, ["RG_THRESHOLD_UNMET"])
+        self.assertIn("outcome=UNREACHABLE", results.refusals[0].detail)
+        self.assertIn("TH_REFUSED_THRESHOLD_UNREACHABLE", results.refusals[0].detail)
+
+    def test_met_threshold_is_recorded_not_refused(self) -> None:
+        shim = (
+            "import json,sys;"
+            "print(json.dumps({'outcome':'MET','codes':[],"
+            "'distinctDomains':2,'availableDomains':2,'threshold':{'k':2}}));"
+            "sys.exit(0)"
+        )
+        results = release_gate.check_thresholds(
+            release_gate.ROOT, command=[sys.executable, "-c", shim]
+        )
+        self.assertEqual(results.refusals, [])
+        self.assertTrue(any("threshold MET" in line for line in results.recorded),
+                        results.recorded)
+
+    def test_missing_threshold_record_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            results = release_gate.check_thresholds(
+                release_gate.ROOT,
+                declarations=Path(temporary) / "absent.json",
+            )
+        self.assertEqual([item.rule for item in results.refusals],
+                         ["RG_THRESHOLD_MISSING"])
+
+    def test_unparseable_threshold_evaluation_is_refused(self) -> None:
+        results = release_gate.check_thresholds(
+            release_gate.ROOT,
+            command=[sys.executable, "-c", "print('not json')"],
+        )
+        self.assertEqual([item.rule for item in results.refusals],
+                         ["RG_THRESHOLD_ERROR"])
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

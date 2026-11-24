@@ -43,6 +43,11 @@ one refused item refuses the release.
                           its action policy; a refused or not-run release
                           authorisation is `RG_AUTHORISATION_REFUSED`, and an
                           absent tool or record is never a skip.
+  8. thresholds           the `release` threshold is `MET` under
+                          `forensics/tools/thresholds.py` over distinct
+                          established trust domains; an unmet, unreachable or
+                          not-run threshold is `RG_THRESHOLD_UNMET`, and an
+                          absent tool or record is never a skip.
 
 Every item is required.  A tool that cannot be found, a package that was not
 supplied, or a checker that cannot run is a refusal with a named rule, never a
@@ -137,6 +142,10 @@ DOCS_TOOL = ROOT / "forensics/tools/docs_consistency.py"
 AUTHORISATION_TOOL = ROOT / "forensics/tools/authorisation.py"
 AUTHORISATION_RECORD = ROOT / "evidence/a14/AUTHORISATION.json"
 AUTHORISATION_ROLES = ROOT / "evidence/a14/ROLES.json"
+THRESHOLD_TOOL = ROOT / "forensics/tools/thresholds.py"
+THRESHOLD_DECLARATIONS = ROOT / "evidence/a15/THRESHOLDS.json"
+THRESHOLD_APPROVALS = ROOT / "evidence/a15/APPROVALS.json"
+THRESHOLD_DOMAINS = ROOT / "evidence/a15/DOMAINS.json"
 
 # Verdict states that forbid a release outright.  `SUPERSEDED` is not one: the
 # claim was current and has been replaced, which is a history fact, not a
@@ -803,6 +812,91 @@ def check_authorisation(
 
 
 # ---------------------------------------------------------------------------
+# 8. Trust-domain thresholds
+# ---------------------------------------------------------------------------
+def check_thresholds(
+    root: Path,
+    declarations: Path | None = None,
+    approvals: Path | None = None,
+    domains: Path | None = None,
+    roles: Path | None = None,
+    threshold: str = "release",
+    timeout: int = 600,
+    command: list[str] | None = None,
+    at: str | None = None,
+) -> Results:
+    """The `release` threshold must be MET over distinct established domains.
+
+    The check runs the A15 decision procedure live rather than trusting a
+    recorded verdict.  A threshold that is not `MET` is one refusal row,
+    ``RG_THRESHOLD_UNMET``; an absent tool or record is a refusal with its own
+    rule, because a missing threshold check must never read as permission.
+    """
+    declaration = Path(declarations).resolve() if declarations else THRESHOLD_DECLARATIONS
+    approvals_path = Path(approvals).resolve() if approvals else THRESHOLD_APPROVALS
+    domains_path = Path(domains).resolve() if domains else THRESHOLD_DOMAINS
+    roles_path = Path(roles).resolve() if roles else AUTHORISATION_ROLES
+    if command is None:
+        if not THRESHOLD_TOOL.is_file():
+            return Results([_missing_tool("RG_THRESHOLD_TOOL_MISSING", THRESHOLD_TOOL)], [])
+        for label, path in (
+            ("declaration", declaration),
+            ("approvals", approvals_path),
+            ("domains", domains_path),
+        ):
+            if not path.is_file():
+                return Results([Refusal(
+                    "RG_THRESHOLD_MISSING", str(path),
+                    f"no A15 {label} record; an absent threshold check is a "
+                    "refusal, not a skip",
+                )], [])
+        if not roles_path.is_file():
+            return Results([Refusal(
+                "RG_THRESHOLD_ROLES_MISSING", str(roles_path),
+                "no A14 role record; the threshold role check is a refusal, not a skip",
+            )], [])
+        command = [
+            PYTHON, str(THRESHOLD_TOOL), "evaluate", threshold,
+            "--thresholds", str(declaration), "--approvals", str(approvals_path),
+            "--domains", str(domains_path), "--roles", str(roles_path), "--json",
+        ]
+        if at is not None:
+            command.extend(["--at", at])
+    run = _run(command, root, timeout)
+    payload = None
+    if run.stdout.strip():
+        try:
+            payload = json.loads(run.stdout)
+        except json.JSONDecodeError:
+            payload = None
+    if not isinstance(payload, dict) or "outcome" not in payload:
+        detail = _bounded((run.stderr or run.stdout).splitlines())
+        return Results([Refusal(
+            "RG_THRESHOLD_ERROR", f"a15/{threshold}",
+            detail[-1] if detail else f"threshold checker exited {run.returncode} with no decision",
+        )], [])
+    outcome = str(payload.get("outcome", "UNKNOWN"))
+    codes = ",".join(payload.get("codes") or []) or "NONE"
+    distinct = payload.get("distinctDomains", 0)
+    available = payload.get("availableDomains", 0)
+    k = (payload.get("threshold") or {}).get("k")
+    if outcome == "MET" and run.returncode == 0:
+        return Results([], [
+            f"{threshold} threshold MET (k={k} distinctDomains={distinct} codes {codes})"
+        ])
+    if outcome in {"UNMET", "UNREACHABLE", "NOT_RUN"}:
+        return Results([Refusal(
+            "RG_THRESHOLD_UNMET", f"a15/{threshold}",
+            f"outcome={outcome} codes={codes} distinctDomains={distinct} "
+            f"availableDomains={available}",
+        )], [])
+    return Results([Refusal(
+        "RG_THRESHOLD_ERROR", f"a15/{threshold}",
+        f"threshold checker returned outcome {outcome!r} with exit {run.returncode}",
+    )], [])
+
+
+# ---------------------------------------------------------------------------
 # Composition
 # ---------------------------------------------------------------------------
 def evaluate(args: argparse.Namespace) -> Results:
@@ -879,6 +973,18 @@ def evaluate(args: argparse.Namespace) -> Results:
         root,
         Path(args.authorisations).resolve() if getattr(args, "authorisations", None) else None,
         Path(args.assignments).resolve() if getattr(args, "assignments", None) else None,
+    )
+    refusals.extend(result.refusals)
+    recorded.extend(result.recorded)
+
+    result = check_thresholds(
+        root,
+        Path(args.threshold_declarations).resolve()
+        if getattr(args, "threshold_declarations", None) else None,
+        Path(args.threshold_approvals).resolve()
+        if getattr(args, "threshold_approvals", None) else None,
+        Path(args.threshold_domains).resolve()
+        if getattr(args, "threshold_domains", None) else None,
     )
     refusals.extend(result.refusals)
     recorded.extend(result.recorded)
@@ -1224,6 +1330,44 @@ def self_test() -> int:
                     f"unexpected refusals {[r.rule for r in real_docs.refusals]}"
                 )
 
+        # A15: an unmet threshold refuses, a MET threshold is recorded, an
+        # unparseable result is an error and an absent record is not a skip.
+        unmet_shim = (
+            "import json,sys;"
+            "print(json.dumps({'outcome':'UNREACHABLE',"
+            "'codes':['TH_REFUSED_THRESHOLD_UNREACHABLE'],"
+            "'distinctDomains':0,'availableDomains':0,'threshold':{'k':2}}));"
+            "sys.exit(1)"
+        )
+        expect(
+            "unmet threshold",
+            check_thresholds(ROOT, command=[PYTHON, "-c", unmet_shim]),
+            "RG_THRESHOLD_UNMET",
+        )
+        met_shim = (
+            "import json,sys;"
+            "print(json.dumps({'outcome':'MET','codes':[],"
+            "'distinctDomains':2,'availableDomains':2,'threshold':{'k':2}}));"
+            "sys.exit(0)"
+        )
+        met = check_thresholds(ROOT, command=[PYTHON, "-c", met_shim])
+        cases.append(("met threshold (positive control)", "no refusal"))
+        if met.refusals:
+            failures.append(
+                "met threshold (positive control): unexpected refusals "
+                f"{[item.rule for item in met.refusals]}"
+            )
+        expect(
+            "unparseable threshold evaluation",
+            check_thresholds(ROOT, command=[PYTHON, "-c", "print('not json')"]),
+            "RG_THRESHOLD_ERROR",
+        )
+        expect(
+            "missing threshold record",
+            check_thresholds(ROOT, declarations=tmp / "absent-threshold.json"),
+            "RG_THRESHOLD_MISSING",
+        )
+
     for name, rule in cases:
         status = "ok" if not any(f.startswith(name + ":") for f in failures) else "FAIL"
         print(f"  {status:4s} {name}: expected {rule}")
@@ -1265,6 +1409,12 @@ def main(argv: list[str]) -> int:
                         help="A14 authorisation record (default evidence/a14/AUTHORISATION.json)")
     parser.add_argument("--assignments", default=None,
                         help="A14 role record (default evidence/a14/ROLES.json)")
+    parser.add_argument("--threshold-declarations", default=None,
+                        help="A15 threshold declarations (default evidence/a15/THRESHOLDS.json)")
+    parser.add_argument("--threshold-approvals", default=None,
+                        help="A15 approvals (default evidence/a15/APPROVALS.json)")
+    parser.add_argument("--threshold-domains", default=None,
+                        help="A15 domain inventory (default evidence/a15/DOMAINS.json)")
     parser.add_argument("--json", action="store_true", help="emit one machine-readable decision")
     parser.add_argument("--self-test", action="store_true",
                         help="prove the gate refuses each named failure class")
@@ -1291,7 +1441,8 @@ def main(argv: list[str]) -> int:
         if results.refused():
             print(f"release-gate: REFUSED ({len(results.refusals)} item(s))")
         else:
-            print("release-gate: PASS (candidate, claims, receipts, instruments, package, docs, authorisation)")
+            print("release-gate: PASS (candidate, claims, receipts, instruments, "
+                  "package, docs, authorisation, thresholds)")
 
     return EXIT_REFUSED if results.refused() else EXIT_PASS
 
