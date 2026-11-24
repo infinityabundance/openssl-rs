@@ -53,6 +53,13 @@ Usage
     python3 forensics/tools/omission.py sign <reconciliation> <out>
     python3 forensics/tools/omission.py verify <freeze> <reconciliation> <envelope>
         [--observed FILE | --observe-dir DIR] [--recorded-at TS]
+    python3 forensics/tools/omission.py status --live
+        [--freeze FILE] [--root DIR] [--json]
+
+``status --live`` is the only command that reads the present tree. It reports how
+many of a freeze's members exist *now*, labels the result ``state=LIVE``, prints
+it and writes nothing. A live count is a measurement at the moment of reading,
+not a record: it must never be committed in place of the freeze-time state.
 
 Exit status: 0 when the requested operation produced a well-formed result
 (including a closure that records ``MISSING`` members, which is the point), 1 for
@@ -93,6 +100,11 @@ STATES = (STATE_PRODUCED, STATE_MISSING, STATE_UNREADABLE, STATE_DIGEST_MISMATCH
 
 STATE_OPEN = "OPEN"
 STATE_FROZEN = "FROZEN"
+
+#: The marker a live reading carries. ``LIVE`` is deliberately not a closure
+#: state: a live count never closes, passes or edits a frozen population.
+MARK_LIVE = "LIVE"
+LIVE_SCHEMA = "openssl-rs/a17/live-view/1"
 
 EXIT_OK = 0
 EXIT_REFUSED = 1
@@ -1179,6 +1191,55 @@ def verify(
 
 
 # ---------------------------------------------------------------------------
+# The live view (an observation, never a record).
+# ---------------------------------------------------------------------------
+
+
+def live_view(
+    freeze_manifest: Any,
+    *,
+    root: str | Path | None = None,
+) -> dict[str, Any]:
+    """Report how many frozen members exist *now*, against ``root``.
+
+    This is a live reading of the tree, not the freeze-time state and not a
+    closure. It writes nothing, and a caller must not commit its result as a
+    record: presence moves whenever later work lands, which is exactly why the
+    committed status records ``presentAtFreeze`` instead. The returned document
+    carries ``state: LIVE`` so a machine-readable copy is distinguishable from
+    ``STATUS.json`` at a glance.
+    """
+    document = validate_freeze(freeze_manifest)
+    base = REPO_ROOT if root is None else Path(root)
+    present: list[str] = []
+    missing: list[str] = []
+    for member in document["members"]:
+        if (base / member["path"]).is_file():
+            present.append(member["id"])
+        else:
+            missing.append(member["id"])
+    return {
+        "schema": LIVE_SCHEMA,
+        "state": MARK_LIVE,
+        "liveView": True,
+        "record": False,
+        "freeze": document["id"],
+        "freezeDigest": document["digest"],
+        "freezeState": document.get("state", STATE_FROZEN),
+        "memberCount": document["memberCount"],
+        "present": len(present),
+        "missing": len(missing),
+        "presentIds": present,
+        "missingIds": missing,
+        "note": (
+            "a live reading of the tree at the moment it was read; it is not the "
+            "freeze-time state, it is not a closure, and it must not be committed "
+            "in place of one"
+        ),
+    }
+
+
+# ---------------------------------------------------------------------------
 # Command line.
 # ---------------------------------------------------------------------------
 
@@ -1313,11 +1374,50 @@ def _command_verify(argv: Sequence[str]) -> int:
     return EXIT_OK
 
 
+def _command_status(argv: Sequence[str]) -> int:
+    parser = argparse.ArgumentParser(prog="omission.py status")
+    parser.add_argument(
+        "--live",
+        action="store_true",
+        help="report present/missing members in the tree as it is now",
+    )
+    parser.add_argument(
+        "--freeze", default="evidence/a17/FREEZE-forward.json"
+    )
+    parser.add_argument("--root", default=None)
+    parser.add_argument("--json", action="store_true")
+    args = parser.parse_args(argv)
+    if not args.live:
+        print(
+            "omission: code=OM_USAGE detail=status requires --live; the "
+            "freeze-time state is evidence/a17/STATUS.json, which this command "
+            "never rewrites"
+        )
+        return EXIT_USAGE
+    freeze_path = Path(args.freeze)
+    if not freeze_path.is_absolute():
+        freeze_path = REPO_ROOT / freeze_path
+    raw_freeze = _read_bytes(
+        str(freeze_path), "the freeze manifest", OM_REFUSED_FREEZE_ABSENT
+    )
+    document = live_view(raw_freeze, root=args.root)
+    if args.json:
+        print(json.dumps(document, indent=2, sort_keys=True))
+    else:
+        print(
+            f"omission: state={document['state']} freeze={args.freeze} "
+            f"freezeState={document['freezeState']} "
+            f"members={document['memberCount']} present={document['present']} "
+            f"missing={document['missing']}"
+        )
+    return EXIT_OK
+
+
 def main(argv: list[str] | None = None) -> int:
     arguments = list(sys.argv[1:] if argv is None else argv)
     if not arguments:
         print(
-            "omission: code=OM_USAGE detail=freeze|close|sign|verify is required"
+            "omission: code=OM_USAGE detail=freeze|close|sign|verify|status is required"
         )
         return EXIT_USAGE
     command, rest = arguments[0], arguments[1:]
@@ -1326,6 +1426,7 @@ def main(argv: list[str] | None = None) -> int:
         "close": _command_close,
         "sign": _command_sign,
         "verify": _command_verify,
+        "status": _command_status,
     }
     handler = handlers.get(command)
     if handler is None:

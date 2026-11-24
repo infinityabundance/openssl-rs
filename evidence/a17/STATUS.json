@@ -12,7 +12,7 @@
       "envelope": "evidence/a17/RECONCILIATION-a15.envelope.json",
       "expected": 5,
       "freeze": "evidence/a17/FREEZE-a15.json",
-      "freezeDigest": "bcee46e0b7605e2b9cd706d9aba1d04da803d2d3e7d146ddea932e1ab3c8ba70",
+      "freezeDigest": "54aa6970d2cb9eb5c0f9e817e3120ef57c952ba63fd772b0e360c19eeeefd083",
       "id": "a15-closed-cycle",
       "kind": "CLOSED",
       "label": "real closed cycle (backward): freeze, re-run, close, sign, verify",
@@ -30,20 +30,26 @@
       "closed": false,
       "expected": 20,
       "freeze": "evidence/a17/FREEZE-forward.json",
+      "freezeCandidate": "731b066e261ebc64cf8acb909df18d23b9b11883",
       "id": "forward-open-freeze",
       "kind": "OPEN",
       "label": "real forward freeze (forward): declared before the work exists",
-      "missingToday": 20,
-      "note": "NOT CLOSED. A missing member today is expected: these items are TODO. This freeze is the mechanism that will detect a future omission; it is not evidence that any of these items is done.",
-      "presentToday": 0,
+      "memberCount": 20,
+      "missingAtFreeze": 20,
+      "note": "NOT CLOSED. presentAtFreeze/missingAtFreeze are the state at the freeze candidate, not today's tree: these items are TODO and the record does not move when one of them lands. The current tree is reported only by `omission.py status --live`, which writes nothing. This freeze is the mechanism that will detect a future omission; it is not evidence that any of these items is done.",
+      "presentAtFreeze": 0,
       "reconciliation": null,
       "state": "OPEN"
     }
   ],
   "forwardFreeze": {
     "closed": false,
-    "members": 20,
+    "freezeCandidate": "731b066e261ebc64cf8acb909df18d23b9b11883",
+    "liveView": "omission.py status --live (printed, never recorded here)",
+    "memberCount": 20,
+    "missingAtFreeze": 20,
     "path": "evidence/a17/FREEZE-forward.json",
+    "presentAtFreeze": 0,
     "reconciliation": null,
     "state": "OPEN"
   },
@@ -62,7 +68,7 @@
     "recordedAt": "2026-11-24",
     "tool": {
       "path": "forensics/tools/omission.py",
-      "sha256": "82ac0a2373bb198b1ab3de8c07087f6ad316243d71f64a7fca5940c8e5f48e9c"
+      "sha256": "05ce4754d088f14ae13e0bbfc04973fd6fe564807b63d73c247fb9271b20cfd8"
     }
   }
 }

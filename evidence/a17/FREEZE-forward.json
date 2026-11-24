@@ -5,7 +5,7 @@
     "branch": "staging",
     "recordedAt": "2026-11-24"
   },
-  "digest": "ffed28b53e7b828fe1aa6055d9aaadd37afe54ab5daf3b1ba983a10491cf5e0f",
+  "digest": "c0efae5886746d3a42300fb5ad9c532b1215993fd87f2168ac0256cb1ca3ceb8",
   "frozenAt": "2026-11-24T00:20:00Z",
   "id": "forward-open-freeze",
   "kind": "freeze",
@@ -154,7 +154,7 @@
   ],
   "producedBy": {
     "path": "forensics/tools/omission.py",
-    "sha256": "82ac0a2373bb198b1ab3de8c07087f6ad316243d71f64a7fca5940c8e5f48e9c"
+    "sha256": "05ce4754d088f14ae13e0bbfc04973fd6fe564807b63d73c247fb9271b20cfd8"
   },
   "recordedAt": "2026-11-24T00:20:00Z",
   "schema": "openssl-rs/a17/freeze/1",

@@ -213,3 +213,86 @@ All commands ran in the reused `openssl-rs-court` container, one at a time.
   bookkeeping, not a measurement.
 * Independent review, a BOUNDARY audit, a SEAL, and the Rust suite (`src/` was
   not modified, so no rebuild and no `cargo test` is claimed).
+
+## 11. Correction — the status record is bound to the freeze, not the present
+
+**Found by A19.** At the A17 candidate the record was correct; it stopped
+reproducing when later work landed. This section preserves the old value and
+records the repair; it does not rewrite §§1-10.
+
+**The old value.** `STATUS.json` recorded
+`cycles[forward-open-freeze].presentToday: 0` and `missingToday: 20`, and the
+`forwardFreeze` block carried no freeze-time count. Its digest was
+`8fc514d24829eec50189272ff7001fac4adae6f172f44a58ecdf369bdfa334f5`.
+
+**The failing test.** A19's whole-tools run, `python3 -m unittest discover -s
+forensics/tools/tests`, reported 1,515 tests with 1 failure:
+
+```
+FAIL: test_two_runs_and_the_committed_bytes_are_identical (test_omission.Determinism)
+  presentToday: 2 / missingToday: 18  !=  presentToday: 0 / missingToday: 20
+```
+
+**The cause.** `build_evidence.py` computed `present_today` by stat-ing the
+forward members in the tree. Once `evidence/a18/RECEIPT.md` and
+`evidence/a19/RECEIPT.md` existed, a fresh run measured 2 present / 18 missing
+and no longer reproduced the committed 0 / 20. The record was a **live
+measurement stored as a frozen record**, so it moved whenever the tree moved.
+This is the fourth instance of the class: A7's live `HEAD`, A11's live glob,
+A16's live glob, and now A17's live count.
+
+**The new contract.** `STATUS.json` records the state **at the freeze
+candidate**, never the present tree. The forward cycle and the `forwardFreeze`
+block now carry `presentAtFreeze: 0`, `missingAtFreeze: 20`, `memberCount: 20`
+and `freezeCandidate: 731b066e261ebc64cf8acb909df18d23b9b11883`; the drifting
+`presentToday` / `missingToday` fields are gone. `presentAtFreeze: 0` is a
+checked freeze-time fact, not an assumption: `git ls-tree -r --name-only
+731b066e2 -- evidence` lists no path under `evidence/a18`-`a27` or
+`evidence/b0`-`b8`. The freeze remains `state: OPEN`, `closed: false`, with no
+reconciliation and all 20 members; **closure is a separate act that must be
+recorded**, and nothing here closes or shrinks it.
+
+**The live view is separate and labelled.** `omission.py status --live` reads
+the tree at the moment it is called, prints `state=LIVE`, and writes nothing; at
+this HEAD it reports `members=20 present=2 missing=18`. Its machine-readable form
+(`--json`) is labelled `state: LIVE`, `liveView: true`, `record: false` and is
+printed to stdout only, never committed. `status` without `--live` is a usage
+error and points at the recorded `STATUS.json`.
+
+**The reproduction control.** `LiveView.test_a_synthetic_member_moves_only_the_
+live_view` appends a synthetic `z-synthetic-receipt` member to a temporary
+mirror (never the real tree): the live view reports 21 members / 1 present / 20
+missing, while the committed `STATUS.json` contains no synthetic member and a
+fresh producer run reproduces the committed bytes exactly.
+
+**Digest, old and new.** `STATUS.json`
+`8fc514d24829eec50189272ff7001fac4adae6f172f44a58ecdf369bdfa334f5` →
+`afffb2fd3c95477df4a326f46dbf6ca5650303509995195c0071282b8742b080`. Because
+`producedBy` embeds the tool's digest and the reconciliation embeds the freeze
+digest, regenerating `omission.py` also changed the other records. Current
+digests (the §2 table records the pre-correction values and is preserved):
+
+| file | sha256 now |
+|---|---|
+| `FREEZE-a15.json` | `5e384686318fa7c3e3c3d42cd3287d56b354d136be227de4afa98d79bebea843` |
+| `FREEZE-forward.json` | `19b3bd00bcadd8a52332fdc944895edec8f25abd23e796c3aa4cd4d938a9e4f0` |
+| `RECONCILIATION-a15.json` | `e83b8e89d295c8174c8d3b45abe3268b2995b312d89f0aee3d684df154708038` |
+| `RECONCILIATION-a15.envelope.json` | `0cdb79fb600f58666053eaa914896d68851830a8fca9dc02904a9811db520aa1` |
+| `STATUS.json` | `afffb2fd3c95477df4a326f46dbf6ca5650303509995195c0071282b8742b080` |
+| `CONTROLS.json` | `9cddfc0752b6e58a5b4019a164fd80e34928ccabd95eb0843d95356adcd0cea7` (unchanged) |
+
+**What did not change.** No `OM_REFUSED_*` code, refusal rule, control or
+control expectation was modified or relaxed; the sixteen codes and seventeen
+controls are the same, and their records are byte-identical. Only the status
+binding changed.
+
+**Gates run for this correction** (reused 6 GiB `openssl-rs-court`, Python only,
+no build): `python3 -m unittest forensics/tools/tests/test_omission.py` ->
+`Ran 48 tests`, `OK`; `python3 -m unittest discover -s forensics/tools/tests` ->
+`Ran 1520 tests`, `OK` (1,515 before this repair, of which this defect was the
+only failure; 5 controls added; none removed, none newly ignored);
+`docs_consistency.py` and `spec_guard.py check` pass; `python3 -m json.tool` is
+ok on all six records; the producer run twice is byte-identical and equal to
+the committed files. **Not established:** that 0 is a complete freeze-time
+census beyond the 20 declared members, and that any live reading is a record --
+it is not, by construction.

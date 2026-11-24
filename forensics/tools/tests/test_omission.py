@@ -5,8 +5,10 @@ One control per refusal code; the reconciliation arithmetic with each term
 individually perturbed; ``UNREADABLE`` versus ``MISSING`` in both directions; a
 ``PASS`` summary over a missing member refused; a signed reconciliation whose
 bytes were mutated after signing refused; the real A15 cycle producing all five
-members with the committed digests; the forward freeze ``OPEN``; determinism;
-the command line's exit codes and printed codes; and document synchronisation.
+members with the committed digests; the forward freeze ``OPEN`` with its
+freeze-time state recorded; determinism; the live view (labelled ``LIVE``, never
+written into a record); the command line's exit codes and printed codes; and
+document synchronisation.
 
 A control mutates a synthetic freeze, artefact and reconciliation in memory or in
 a temporary directory. It is not a source change and not a defect report: a
@@ -498,6 +500,86 @@ class ForwardFreeze(unittest.TestCase):
         self.assertEqual(summary["missing"], 20)
         self.assertFalse(summary["pass"])
 
+    def test_the_status_records_the_freeze_time_state_not_the_present(self) -> None:
+        cycle = next(
+            entry
+            for entry in self.status["cycles"]
+            if entry["id"] == "forward-open-freeze"
+        )
+        self.assertEqual(cycle["presentAtFreeze"], 0)
+        self.assertEqual(cycle["missingAtFreeze"], 20)
+        self.assertEqual(cycle["memberCount"], 20)
+        self.assertEqual(cycle["freezeCandidate"], self.freeze["candidate"]["baseCommit"])
+        self.assertNotIn("presentToday", cycle)
+        self.assertNotIn("missingToday", cycle)
+        self.assertEqual(self.status["forwardFreeze"]["presentAtFreeze"], 0)
+        self.assertEqual(self.status["forwardFreeze"]["missingAtFreeze"], 20)
+        self.assertEqual(self.status["forwardFreeze"]["memberCount"], 20)
+        self.assertIn("status --live", cycle["note"])
+
+
+class LiveView(unittest.TestCase):
+    """A live count is an observation; the committed status is a record."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.freeze = load_json(EVIDENCE / "FREEZE-forward.json")
+        cls.status = load_json(EVIDENCE / "STATUS.json")
+
+    def test_the_live_view_is_labelled_live_and_reconciles(self) -> None:
+        view = om.live_view(self.freeze, root=REPO)
+        self.assertEqual(view["state"], om.MARK_LIVE)
+        self.assertTrue(view["liveView"])
+        self.assertFalse(view["record"])
+        self.assertEqual(view["memberCount"], 20)
+        self.assertEqual(view["present"] + view["missing"], 20)
+        self.assertEqual(view["present"], len(view["presentIds"]))
+        self.assertEqual(view["missing"], len(view["missingIds"]))
+        # Later items have landed, so the live tree disagrees with the frozen
+        # record. The exact number is deliberately not asserted: it moves.
+        self.assertGreaterEqual(view["present"], 1)
+
+    def test_a_synthetic_member_moves_only_the_live_view(self) -> None:
+        mirror = Path(tempfile.mkdtemp(prefix="a17-mirror-"))
+        extra = "evidence/z-synthetic/RECEIPT.md"
+        (mirror / extra).parent.mkdir(parents=True)
+        (mirror / extra).write_bytes(b"synthetic mirror member\n")
+        members = list(self.freeze["members"]) + [
+            {
+                "id": "z-synthetic-receipt",
+                "path": extra,
+                "predicate": "a synthetic member that exists only in the mirror",
+                "required": True,
+                "phase": "SYNTHETIC",
+            }
+        ]
+        synthetic = om.freeze(
+            {"id": "forward-open-freeze", "state": om.STATE_OPEN, "members": members},
+            self.freeze["frozenAt"],
+            self.freeze["candidate"],
+        )
+        view = om.live_view(synthetic, root=mirror)
+        self.assertEqual(view["state"], om.MARK_LIVE)
+        self.assertEqual(view["memberCount"], 21)
+        self.assertEqual(view["present"], 1)
+        self.assertEqual(view["missing"], 20)
+        self.assertEqual(view["presentIds"], ["z-synthetic-receipt"])
+
+        committed = (EVIDENCE / "STATUS.json").read_bytes()
+        self.assertNotIn(b"z-synthetic", committed)
+        self.assertEqual(self.status["forwardFreeze"]["memberCount"], 20)
+        self.assertEqual(self.status["forwardFreeze"]["presentAtFreeze"], 0)
+
+        output = Path(tempfile.mkdtemp(prefix="a17-status-"))
+        completed = subprocess.run(
+            [sys.executable, str(BUILDER_PATH), "--out", str(output)],
+            cwd=str(REPO),
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(completed.returncode, 0, completed.stderr)
+        self.assertEqual((output / "STATUS.json").read_bytes(), committed)
+
 
 class Determinism(unittest.TestCase):
     def test_two_runs_and_the_committed_bytes_are_identical(self) -> None:
@@ -621,6 +703,39 @@ class CommandLine(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 1)
         self.assertIn("code=OM_REFUSED_RECONCILIATION_MUTATED", result.stdout)
+
+    def test_status_live_prints_the_marker_and_writes_nothing(self) -> None:
+        before = {
+            path.name: path.read_bytes()
+            for path in EVIDENCE.iterdir()
+            if path.is_file()
+        }
+        result = self.run_tool("status", "--live")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn("state=LIVE", result.stdout)
+        self.assertIn("members=20", result.stdout)
+        self.assertIn("present=", result.stdout)
+        self.assertIn("missing=", result.stdout)
+        after = {
+            path.name: path.read_bytes()
+            for path in EVIDENCE.iterdir()
+            if path.is_file()
+        }
+        self.assertEqual(before, after)
+
+        machine = self.run_tool("status", "--live", "--json")
+        self.assertEqual(machine.returncode, 0, machine.stdout + machine.stderr)
+        document = json.loads(machine.stdout)
+        self.assertEqual(document["state"], om.MARK_LIVE)
+        self.assertTrue(document["liveView"])
+        self.assertFalse(document["record"])
+        self.assertEqual(document["memberCount"], 20)
+
+    def test_status_without_live_is_a_usage_error(self) -> None:
+        result = self.run_tool("status")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("code=OM_USAGE", result.stdout)
+        self.assertIn("STATUS.json", result.stdout)
 
     def test_no_command_is_a_usage_error(self) -> None:
         result = self.run_tool()

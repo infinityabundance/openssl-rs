@@ -188,9 +188,15 @@ remaining queue items before any of it exists:
 
 That is **20 required members**, recorded `state: OPEN`. It is **not closed**:
 there is no `RECONCILIATION-forward.json`, and `STATUS.json` records
-`closed: false`. Any member missing today is expected. This freeze is the
-mechanism that will detect a future omission; it is **not evidence that any of
-those items is done**. Closing it today reports 20 `MISSING` and pass false,
+`closed: false`, `presentAtFreeze: 0`, `missingAtFreeze: 20` and
+`memberCount: 20` at the freeze candidate. Those are **freeze-time facts, not a
+live census**: the record does not move when a later item's receipt lands, and
+closing the freeze is a separate act that must be recorded. The present tree is
+reported only by the explicitly live `omission.py status --live`, which prints
+`state=LIVE` and writes nothing; its output is never committed. Any member
+missing at freeze time is expected. This freeze is the mechanism that will
+detect a future omission; it is **not evidence that any of those items is
+done**. Closing it against an empty tree reports 20 `MISSING` and pass false,
 which is the correct reading (`ForwardFreeze`).
 
 ## 8. Refusal table

@@ -14,7 +14,10 @@ It writes six documents and nothing else:
   * ``RECONCILIATION-a15.envelope.json`` -- a DSSE envelope over the canonical
     bytes of that reconciliation, signed with A10's test-only HMAC-SHA256 key;
   * ``STATUS.json`` -- both cycles, their counts and the forward freeze's
-    ``OPEN`` state;
+    ``OPEN`` state; the forward cycle records ``presentAtFreeze`` /
+    ``missingAtFreeze`` at the freeze candidate, never the present tree (the
+    current tree is reported only by the explicitly live
+    ``omission.py status --live``);
   * ``CONTROLS.json`` -- one ``control-only`` fixture per refusal code, including
     a ``PASS`` summary over a missing member and a signed reconciliation whose
     bytes were mutated after signing.
@@ -25,7 +28,10 @@ edits A15's files.
 
 Two runs are byte-identical. Nothing reads the clock: the freeze time and the
 observation time are literals whose order records that the freeze happened
-before the re-run in this process.
+before the re-run in this process. Nothing in ``STATUS.json`` is derived from
+what exists in the tree at run time: a count of present members would move
+whenever a later item's receipt lands, so the record carries the freeze-time
+state instead.
 
 Usage:
     python3 evidence/a17/build_evidence.py [--out DIR]
@@ -129,6 +135,14 @@ FORWARD_MEMBERS = (
     ("b8-receipt", "evidence/b8/RECEIPT.md",
      "a receipt records the enforced integration and its non-claims", "B8"),
 )
+
+# At the freeze candidate none of the forward members existed: the freeze was
+# declared before the work, which is what ``state: OPEN`` records. This is a
+# freeze-time fact, not a live reading -- the producer never stats the tree for
+# it, and a later item's receipt landing does not edit this record. The present
+# tree is reported only by the explicitly live ``omission.py status --live``,
+# whose output is never committed.
+FORWARD_PRESENT_AT_FREEZE = 0
 
 
 def write_json(path: Path, document: Mapping[str, Any]) -> None:
@@ -236,12 +250,20 @@ def status_document(
     reconciliation: Mapping[str, Any],
     verified: Mapping[str, Any],
 ) -> dict[str, Any]:
-    present_today = sum(
-        1
-        for member in frozen_forward["members"]
-        if (REPO_ROOT / member["path"]).is_file()
-    )
     summary = reconciliation["summary"]
+    member_count = frozen_forward["memberCount"]
+    if FORWARD_PRESENT_AT_FREEZE != 0:
+        raise SystemExit(
+            "the forward freeze declared its population before the work, so "
+            "presentAtFreeze is 0 and missingAtFreeze is the member count"
+        )
+    missing_at_freeze = member_count - FORWARD_PRESENT_AT_FREEZE
+    expected_at_freeze = {
+        "memberCount": member_count,
+        "freezeCandidate": frozen_forward["candidate"]["baseCommit"],
+        "presentAtFreeze": FORWARD_PRESENT_AT_FREEZE,
+        "missingAtFreeze": missing_at_freeze,
+    }
     return {
         "schema": "openssl-rs/a17/status/1",
         "item": ITEM,
@@ -278,25 +300,28 @@ def status_document(
                 "kind": "OPEN",
                 "state": frozen_forward["state"],
                 "freeze": "evidence/a17/FREEZE-forward.json",
-                "expected": frozen_forward["memberCount"],
-                "presentToday": present_today,
-                "missingToday": frozen_forward["memberCount"] - present_today,
+                "expected": member_count,
+                **expected_at_freeze,
                 "closed": False,
                 "reconciliation": None,
                 "note": (
-                    "NOT CLOSED. A missing member today is expected: these items "
-                    "are TODO. This freeze is the mechanism that will detect a "
-                    "future omission; it is not evidence that any of these items "
-                    "is done."
+                    "NOT CLOSED. presentAtFreeze/missingAtFreeze are the state at "
+                    "the freeze candidate, not today's tree: these items are TODO "
+                    "and the record does not move when one of them lands. The "
+                    "current tree is reported only by `omission.py status --live`, "
+                    "which writes nothing. This freeze is the mechanism that will "
+                    "detect a future omission; it is not evidence that any of "
+                    "these items is done."
                 ),
             },
         ],
         "forwardFreeze": {
             "path": "evidence/a17/FREEZE-forward.json",
             "state": frozen_forward["state"],
-            "members": frozen_forward["memberCount"],
+            **expected_at_freeze,
             "closed": False,
             "reconciliation": None,
+            "liveView": "omission.py status --live (printed, never recorded here)",
         },
     }
 
