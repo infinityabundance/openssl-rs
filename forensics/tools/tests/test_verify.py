@@ -11,12 +11,15 @@ The interface makes claims that need controls of their own:
 * a declared private path is reported when it is present, so a verdict taken
   with private state is visible rather than silently satisfied;
 * ``all`` exits non-zero and names every non-passing step;
-* ``--json`` is byte-identical across two runs over the same checkout.
+* ``--json`` reproduces the same deterministic record across two runs over the
+  same checkout, while the live ``environment`` readings it observed are
+  declared and recorded rather than compared.
 
 Most controls drive the dispatcher with an injected executor, so they test the
-decision logic without running a delegate.  Four controls run the real command
-line in a throwaway tree whose delegates are stubs, so the exit contract, the
-selection and the serialisation are exercised end to end.
+decision logic without running a delegate.  The end-to-end controls run the real
+command line in a throwaway tree whose delegates are stubs, so the exit contract,
+the selection, the serialisation and the determinism control are exercised for
+real.
 
 Run inside the court:
 
@@ -47,6 +50,15 @@ REPO = TOOLS.parents[1]
 
 def make_context(root: Path, *, network: bool = False, tmpdir: str | None = None) -> verify.Context:
     return verify.build_context(root, network, tmpdir or tempfile.mkdtemp())
+
+
+def memory_only_step() -> verify.Step:
+    """A step whose only prerequisite is the AGENTS.md section 6.1 memory floor."""
+    return verify.Step(
+        name="memory-probe", title="probe the build floor", required=False,
+        needs=("memory:24",), tools=(), identity=(), reads_gitignored=(),
+        commands=(), pass_reason="the floor is met", establishes="nothing",
+        does_not="anything")
 
 
 class FakeExecutor:
@@ -235,6 +247,30 @@ class StepDecisionControls(unittest.TestCase):
         self.assertNotIn(str(REPO), text)
         self.assertNotIn("12.5s", text)
 
+    def test_normalisation_removes_an_echoed_memory_reading(self) -> None:
+        # build_reproducibility.sh echoes the live reading; the environment block is
+        # the declared place for it, so it is not compared as a delegate's output.
+        ctx = make_context(REPO)
+        self.assertEqual(verify.normalise("MemAvailable: 32527932 kB", ctx),
+                         "MemAvailable <observed>")
+        self.assertEqual(verify.normalise("MemAvailable 11 GiB is below the floor", ctx),
+                         "MemAvailable <observed> is below the floor")
+
+    def test_tmp_token_is_substituted_inside_an_argument(self) -> None:
+        # A literal `{tmp}` made the delegate write into the checkout, so run 2 read a
+        # different untracked count from run 1: the run changed its own input.
+        ctx = make_context(REPO)
+        executor = FakeExecutor(verify.ExecResult(exit=0))
+        step = verify.Step(
+            name="tmp-probe", title="probe the temp substitution", required=False,
+            needs=("python",), tools=(), identity=(), reads_gitignored=(),
+            commands=(verify.Command(argv=("{python}", "-c", "pass",
+                                           "--out", "{tmp}/probe")),),
+            pass_reason="", establishes="nothing", does_not="anything")
+        record = verify.run_step(step, ctx, execute=executor)
+        self.assertEqual(executor.requests[0].argv[-1], f"{ctx.tmpdir}/probe")
+        self.assertEqual(record["checks"][0]["argv"][-1], "<tmp>/probe")
+
 
 class EndToEndControls(unittest.TestCase):
     def setUp(self) -> None:
@@ -272,7 +308,13 @@ class EndToEndControls(unittest.TestCase):
     def test_json_is_byte_identical_across_two_runs(self) -> None:
         _, first = self.fixture.run("all", "--json", expect=None)
         _, second = self.fixture.run("all", "--json", expect=None)
-        self.assertEqual(first, second)
+        ok, message = verify.compare_deterministic(first, second)
+        self.assertTrue(ok, message)
+        # The live readings are still recorded, outside the compared projection.
+        environment = json.loads(first)[verify.ENVIRONMENT_KEY]
+        self.assertEqual(environment["declared"], "environment-input")
+        self.assertIsInstance(environment["mem_available_bytes"], int)
+        self.assertIn("court", environment)
 
     def test_single_optional_step_cannot_exit_zero_while_not_pass(self) -> None:
         code, output = self.fixture.run("authority", "--json")
@@ -308,6 +350,178 @@ class EndToEndControls(unittest.TestCase):
         step = document["steps"][0]
         self.assertEqual(step["status"], "FAIL")
         self.assertIn("digest", step["reason"])
+
+
+class MemoryFloorControls(unittest.TestCase):
+    """The AGENTS.md section 6.1 floor: the decision is recorded, the reading is an input."""
+
+    def test_environment_records_availability_floor_and_cap(self) -> None:
+        for gib, floor_met in ((10, False), (23, False), (24, True), (31, True)):
+            with self.subTest(available_gib=gib):
+                with mock.patch.object(verify, "_mem_available_bytes",
+                                       return_value=gib * 1024 ** 3):
+                    environment = make_context(REPO).environment
+                self.assertEqual(environment["declared"], "environment-input")
+                self.assertEqual(environment["mem_available_bytes"], gib * 1024 ** 3)
+                self.assertEqual(environment["floor_gib"], 24)
+                self.assertEqual(environment["floor_met"], floor_met)
+                self.assertTrue(environment["court"])
+                if floor_met:
+                    self.assertEqual(environment["court_mem_cap_gib"], 8.0)
+                    self.assertIn("min(8 GiB", environment["court_cap_source"])
+                else:
+                    self.assertIsNone(environment["court_mem_cap_gib"])
+                    self.assertIn("not derived", environment["court_cap_source"])
+
+    def test_memory_prerequisite_text_does_not_carry_the_reading(self) -> None:
+        # The A4 observation: two runs below the floor differed only in the rounded
+        # "MemAvailable N GiB" text.  The step's own record must be a function of the
+        # decision, so the same decision over different readings records the same text.
+        records = []
+        for gib in (10, 11):
+            with mock.patch.object(verify, "_mem_available_bytes",
+                                   return_value=gib * 1024 ** 3):
+                ctx = make_context(REPO)
+            record = verify.run_step(memory_only_step(), ctx, execute=FakeExecutor())
+            self.assertEqual(ctx.environment["mem_available_bytes"], gib * 1024 ** 3)
+            self.assertFalse(ctx.environment["floor_met"])
+            records.append(json.dumps(record, indent=2, sort_keys=True))
+        self.assertEqual(records[0], records[1])
+        self.assertEqual(json.loads(records[0])["status"], "NOT_RUN")
+        self.assertNotIn("10 GiB", records[0])
+        self.assertNotIn("11 GiB", records[0])
+        self.assertIn("environment", records[0])
+
+    def test_met_floor_text_names_the_environment_not_a_reading(self) -> None:
+        with mock.patch.object(verify, "_mem_available_bytes",
+                               return_value=31 * 1024 ** 3):
+            ctx = make_context(REPO)
+        ok, detail = verify.check_need("memory:24", ctx)
+        self.assertTrue(ok)
+        self.assertIn("24 GiB floor", detail)
+        self.assertNotIn("31 GiB", detail)
+
+    def test_unreadable_meminfo_is_not_run(self) -> None:
+        with mock.patch.object(verify, "_mem_available_bytes", return_value=None):
+            ctx = make_context(REPO)
+        ok, detail = verify.check_need("memory:24", ctx)
+        self.assertFalse(ok)
+        self.assertIn("could not be read", detail)
+        self.assertIsNone(ctx.environment["court_mem_cap_gib"])
+
+
+class DeterminismControls(unittest.TestCase):
+    """What the determinism control compares, requires, and still catches."""
+
+    def setUp(self) -> None:
+        self.fixture = Fixture()
+        _, first = self.fixture.run("all", "--json", expect=None)
+        _, second = self.fixture.run("all", "--json", expect=None)
+        self.first, self.second = first, second
+
+    def tearDown(self) -> None:
+        self.fixture.close()
+
+    def _inject(self, mutate) -> str:
+        document = json.loads(self.first)
+        mutate(document)
+        return json.dumps(document, indent=2, sort_keys=True)
+
+    def _assert_fires(self, mutate, *expected: str) -> str:
+        ok, message = verify.compare_deterministic(self.first, self._inject(mutate))
+        self.assertFalse(ok, message)
+        self.assertIn(verify.DETERMINISM_CODE, message)
+        for fragment in expected:
+            self.assertIn(fragment, message)
+        return message
+
+    def test_two_runs_agree_on_the_deterministic_record(self) -> None:
+        ok, message = verify.compare_deterministic(self.first, self.second)
+        self.assertTrue(ok, message)
+        self.assertIn("identical", message)
+
+    def test_environment_block_is_declared_and_populated(self) -> None:
+        document = json.loads(self.first)
+        environment = document[verify.ENVIRONMENT_KEY]
+        self.assertEqual(environment["declared"], "environment-input")
+        for field in ("mem_available_bytes", "mem_available_gib", "floor_met",
+                      "court_mem_cap_gib", "court_cap_source", "court"):
+            self.assertIn(field, environment, field)
+        self.assertNotIn(verify.ENVIRONMENT_KEY, verify.deterministic_projection(document))
+
+    def test_a_different_availability_does_not_break_the_claim(self) -> None:
+        # The reading is an input, so two runs that observed different availability
+        # must still agree on the deterministic record.
+        document = json.loads(self.first)
+        environment = document[verify.ENVIRONMENT_KEY]
+        moved = environment["mem_available_bytes"] + 1024 ** 4
+        environment["mem_available_bytes"] = moved
+        environment["mem_available_gib"] = round(moved / 1024 ** 3, 2)
+        environment["court_mem_cap_gib"] = 2.0
+        ok, message = verify.compare_deterministic(
+            self.first, json.dumps(document, indent=2, sort_keys=True))
+        self.assertTrue(ok, message)
+
+    def test_control_fires_on_a_live_reading_in_the_projection(self) -> None:
+        def inject(document: dict) -> None:
+            step = next(entry for entry in document["steps"] if entry["prerequisites"])
+            step["prerequisites"].append({"requirement": "memory:24", "available": True,
+                                          "detail": "MemAvailable 11 GiB"})
+        message = self._assert_fires(inject, "prerequisites")
+        self.assertIn("differs at", message)
+
+    def test_control_fires_on_a_changed_digest(self) -> None:
+        def inject(document: dict) -> None:
+            document["steps"][0]["tool_digest"][0]["sha256"] = "0" * 64
+        self._assert_fires(inject, "tool_digest")
+
+    def test_control_fires_on_a_changed_ordering(self) -> None:
+        def reorder_steps(document: dict) -> None:
+            document["steps"].reverse()
+        self._assert_fires(reorder_steps, "steps[0].")
+
+        def reorder_selection(document: dict) -> None:
+            document["invocation"]["steps"].reverse()
+        self._assert_fires(reorder_selection, "invocation.steps[0]")
+
+    def test_control_fires_on_a_changed_member_set(self) -> None:
+        def inject(document: dict) -> None:
+            document["steps"].pop()
+        self._assert_fires(inject, "steps[len")
+
+    def test_control_fires_on_a_changed_step_outcome(self) -> None:
+        def inject(document: dict) -> None:
+            document["steps"][0]["status"] = "FAIL"
+        self._assert_fires(inject, "steps[0].status")
+
+    def test_undeclared_environment_fires(self) -> None:
+        def inject(document: dict) -> None:
+            del document[verify.ENVIRONMENT_KEY]
+        ok, message = verify.compare_deterministic(self.first, self._inject(inject))
+        self.assertFalse(ok)
+        self.assertIn(verify.DETERMINISM_CODE, message)
+        self.assertIn("declares no", message)
+
+    def test_a_floor_decision_without_a_reading_is_refused(self) -> None:
+        def inject(document: dict) -> None:
+            environment = document[verify.ENVIRONMENT_KEY]
+            environment["mem_available_bytes"] = None
+            environment["floor_met"] = True
+        ok, message = verify.compare_deterministic(self.first, self._inject(inject))
+        self.assertFalse(ok)
+        self.assertIn("rests on no", message)
+
+    def test_a_run_that_emits_no_document_is_refused(self) -> None:
+        ok, message = verify.compare_deterministic(self.first, "not one document")
+        self.assertFalse(ok)
+        self.assertIn(verify.DETERMINISM_CODE, message)
+
+    def test_text_output_records_the_environment(self) -> None:
+        document = verify.run(["manifest"], make_context(self.fixture.root))
+        text = verify.render_text(document)
+        self.assertIn("environment", text)
+        self.assertIn("MemAvailable", text)
+        self.assertIn("not compared", text)
 
 
 if __name__ == "__main__":

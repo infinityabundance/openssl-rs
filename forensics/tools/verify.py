@@ -18,9 +18,15 @@ What the interface guarantees
   Identity digests are computed over Git-tracked files only.
 * ``verify all`` exits non-zero when any required step is not ``PASS`` and the
   output names every non-passing step.
-* ``--json`` emits one document, sorted and timestamp-free, so two runs over the
-  same checkout produce byte-identical output.  Each step carries the evidence
-  identity it read and the digest of the tool that produced the verdict.
+* ``--json`` emits one document with two declared parts.  The *deterministic
+  record* -- candidate identity, step order, prerequisites, evidence and tool
+  digests, every check outcome, the counts and the status -- is sorted and
+  timestamp-free, and two runs over the same checkout reproduce it byte for
+  byte.  The ``environment`` block records the live readings a run observed
+  (``MemAvailable``, the court cap derived from it, the court's identity): that
+  is an *input* to the run, so it is emitted and never compared by the
+  determinism control.  Each step carries the evidence identity it read and the
+  digest of the tool that produced the verdict.
 * A step that needs the network is refused unless the run declares ``--network``.
   ``--network`` is a declaration, not a probe; a wrong declaration surfaces as
   that step's own failure.
@@ -81,6 +87,18 @@ PRIVATE_ROOTS = (
 )
 
 MEMORY_FLOOR_BYTES = 24 * 1024 ** 3  # AGENTS.md section 6.1
+# The court cap section 6.1 derives from *available* memory rather than total:
+# min(8 GiB, available - 16 GiB) with a 2 GiB floor, and no build below the floor.
+MEMORY_CAP_MAX_BYTES = 8 * 1024 ** 3
+MEMORY_CAP_HEADROOM_BYTES = 16 * 1024 ** 3
+MEMORY_CAP_FLOOR_BYTES = 2 * 1024 ** 3
+COURT_MEM_VAR = "OPENSSL_RS_COURT_MEM"
+COURT_MEMSWAP_VAR = "OPENSSL_RS_COURT_MEMSWAP"
+
+# The live readings are declared under this key and are excluded from the record
+# two runs must reproduce.  DETERMINISM_CODE names that control's refusal.
+ENVIRONMENT_KEY = "environment"
+DETERMINISM_CODE = "E_VERIFY_DETERMINISTIC"
 
 AUTHORITY_DSO = ("forensics/authorities/prefix/openssl-3.6.4-production/"
                  "lib/libcrypto.so.3")
@@ -504,6 +522,7 @@ class Context:
     env: dict[str, str]
     candidate: dict
     private_state: dict[str, dict]
+    environment: dict
     warnings: tuple[str, ...] = ()
 
     @property
@@ -687,6 +706,69 @@ def _mem_available_bytes() -> int | None:
     return int(match.group(1)) * 1024 if match else None
 
 
+def _court_cap(available: int) -> int:
+    """The cap AGENTS.md section 6.1 derives: min(8 GiB, available - 16 GiB), floor 2 GiB."""
+    return max(MEMORY_CAP_FLOOR_BYTES,
+               min(MEMORY_CAP_MAX_BYTES, available - MEMORY_CAP_HEADROOM_BYTES))
+
+
+def environment_report() -> dict:
+    """The live environment this run observed, recorded as an *input*.
+
+    These readings are emitted because a verdict taken under a particular
+    availability, court cap and venue has to say which ones it used.  They are
+    not outputs of the run: two runs of the same checkout can observe different
+    ``MemAvailable``, and the round-to-GiB text that used to be copied into a
+    step's prerequisites made the determinism control fail for a reason that had
+    nothing to do with the tool.  The block is therefore declared here, sampled
+    once per run, and excluded from the record two runs must reproduce (see
+    ``deterministic_projection``).
+    """
+    available = _mem_available_bytes()
+    report: dict = {
+        "declared": "environment-input",
+        "note": "live readings sampled once per run: inputs to the run, not outputs "
+                "of it.  Two runs of the same checkout need not reproduce this "
+                f"block, and {DETERMINISM_CODE} compares the rest of the record.",
+        "sampled_from": "/proc/meminfo MemAvailable",
+        "floor_bytes": MEMORY_FLOOR_BYTES,
+        "floor_gib": MEMORY_FLOOR_BYTES // 1024 ** 3,
+    }
+    if available is None:
+        report.update({
+            "mem_available_bytes": None,
+            "mem_available_gib": None,
+            "floor_met": False,
+            "court_mem_cap_gib": None,
+            "court_cap_source": "undetermined: MemAvailable could not be read, so no "
+                                "build starts",
+        })
+    else:
+        floor_met = available >= MEMORY_FLOOR_BYTES
+        cap = _court_cap(available) if floor_met else None
+        report.update({
+            "mem_available_bytes": available,
+            "mem_available_gib": round(available / 1024 ** 3, 2),
+            "floor_met": floor_met,
+            "court_mem_cap_gib": None if cap is None else round(cap / 1024 ** 3, 2),
+            "court_cap_source": (
+                "derived from MemAvailable per AGENTS.md section 6.1: "
+                "min(8 GiB, available - 16 GiB), floor 2 GiB" if cap is not None else
+                "not derived: MemAvailable is below the 24 GiB floor, so no build "
+                "starts"),
+        })
+    inside = Path("/.dockerenv").exists()
+    report.update({
+        "court": ("docker/openssl-rs-court.sh (inside the court container)" if inside
+                  else "not inside the court container (docker/openssl-rs-court.sh is "
+                       "required before a build)"),
+        "court_present": inside,
+        "court_mem_declared": os.environ.get(COURT_MEM_VAR) or None,
+        "court_memswap_declared": os.environ.get(COURT_MEMSWAP_VAR) or None,
+    })
+    return report
+
+
 def _resolved_env(network: bool, tmpdir: str) -> dict[str, str]:
     env = dict(os.environ)
     env["PYTHONDONTWRITEBYTECODE"] = "1"
@@ -718,6 +800,7 @@ def build_context(root: Path, network: bool, tmpdir: str) -> Context:
         env=_resolved_env(network, tmpdir),
         candidate=candidate_identity(root),
         private_state=private_state_report(root),
+        environment=environment_report(),
         warnings=tuple(sorted(warnings)),
     )
 
@@ -750,13 +833,21 @@ def check_need(need: str, ctx: Context) -> tuple[bool, str]:
         return ok, ("running inside a container" if ok else
                     "this step must run inside docker/openssl-rs-court.sh")
     if need == "memory:24":
-        observed = _mem_available_bytes()
+        # The reading is recorded once per run in the environment block.  The step's
+        # own text must be a function of the *decision* only: a rounded live value
+        # here would make two otherwise identical runs differ in the record that is
+        # supposed to be reproducible.
+        observed = ctx.environment.get("mem_available_bytes")
         if observed is None:
-            return False, "MemAvailable could not be read, so no build is started"
+            return False, ("MemAvailable could not be read, so no build is started "
+                           "(the observation is recorded in `environment`)")
         if observed < MEMORY_FLOOR_BYTES:
-            return False, (f"MemAvailable {observed / 1024 ** 3:.0f} GiB is below the "
-                           f"24 GiB floor AGENTS.md section 6.1 requires before a build")
-        return True, f"MemAvailable {observed / 1024 ** 3:.0f} GiB"
+            return False, ("MemAvailable is below the 24 GiB floor AGENTS.md section 6.1 "
+                           "requires before a build; no build is started (the reading "
+                           "is recorded in `environment` as mem_available_bytes)")
+        return True, ("MemAvailable meets the 24 GiB floor AGENTS.md section 6.1 "
+                      "requires before a build (the reading is recorded in "
+                      "`environment` as mem_available_bytes)")
     if need == "authority-prefix":
         ok = (ctx.root / AUTHORITY_DSO).is_file()
         return ok, (AUTHORITY_DSO if ok else
@@ -859,6 +950,11 @@ def normalise(text: str, ctx: Context) -> str:
     text = text.replace(ctx.tmpdir, "<tmp>")
     text = re.sub(r"/tmp/[^\s\"']*", "<tmp>", text)
     text = re.sub(r"\b\d+\.\d+\s*s\b", "<elapsed>", text)
+    # A delegate may echo the live memory reading it saw (build_reproducibility.sh
+    # prints MemAvailable before it builds).  The environment block is the declared
+    # place for that reading, so the echo is redacted instead of being sampled live
+    # into the record two runs must reproduce.
+    text = re.sub(r"MemAvailable:?\s+\d+\s+(?:kB|GiB)", "MemAvailable <observed>", text)
     return text
 
 
@@ -1109,10 +1205,12 @@ def _materialise(argv: tuple[str, ...], ctx: Context) -> tuple[str, ...]:
     for item in argv:
         if item == "{python}":
             resolved.append(sys.executable or "python3")
-        elif item == "{tmp}":
-            resolved.append(ctx.tmpdir)
         else:
-            resolved.append(item)
+            # {tmp} appears inside longer arguments (``--out {tmp}/repro``), so it is
+            # substituted wherever it occurs.  Passing the literal token instead made
+            # the delegate write into the checkout, which changes the untracked count
+            # the next run reads -- a run mutating its own input.
+            resolved.append(item.replace("{tmp}", ctx.tmpdir))
     return tuple(resolved)
 
 
@@ -1179,7 +1277,9 @@ def run_step(step: Step, ctx: Context, execute=None) -> dict:
                       else "the command could not be started")
         result = {
             "index": index,
-            "argv": _display(argv),
+            # The temp root is an input, so the record keeps the command's shape, not
+            # this run's random path (the same redaction `invocation.tmpdir` uses).
+            "argv": [normalise(item, ctx) for item in _display(argv)],
             "cwd": command.cwd or ".",
             "exit": outcome.exit,
             "status": status,
@@ -1256,12 +1356,134 @@ def run(names: list[str], ctx: Context, execute=None) -> dict:
                     "gitignored content, and each step names the private paths its "
                     "own tool may read",
         },
+        # Live readings, declared as an input and excluded from the record two runs
+        # must reproduce.  They are recorded because a verdict has to say which
+        # environment produced it.
+        ENVIRONMENT_KEY: ctx.environment,
         "warnings": list(ctx.warnings),
         "steps": steps,
         "counts": {"selected": len(steps), "by_status": counts},
         "non_passing": [step["name"] for step in steps if step["status"] != "PASS"],
         "status": "FAIL" if failed_required else "PASS",
     }
+
+
+# ---------------------------------------------------------------------------
+# determinism: what two runs must reproduce, and what they must still record
+# ---------------------------------------------------------------------------
+
+
+def deterministic_projection(document: dict) -> dict:
+    """The part of the record that two runs over identical inputs must reproduce.
+
+    ``environment`` holds live readings -- ``MemAvailable``, the court cap derived
+    from it, the court's identity.  They are inputs to the run, not outputs of it,
+    so a control that claims two runs agree must not be asked to reproduce them;
+    it must instead require that the block is declared and populated
+    (``environment_declaration_problem``).  Everything else stays in the
+    projection -- candidate identity, step order, prerequisites, evidence and
+    tool digests, every check outcome, the counts, the non-passing names and the
+    status -- so a changed digest, ordering, member set or step outcome is still a
+    failure.
+    """
+    return {key: value for key, value in document.items() if key != ENVIRONMENT_KEY}
+
+
+def deterministic_bytes(document: dict) -> str:
+    """Canonical serialisation of the projection, using the emitter's own settings."""
+    return json.dumps(deterministic_projection(document), indent=2, sort_keys=True)
+
+
+def environment_declaration_problem(document: object) -> str:
+    """Why ``document`` does not declare its environment input, or ``""``."""
+    if not isinstance(document, dict):
+        return "is not one JSON object"
+    environment = document.get(ENVIRONMENT_KEY)
+    if not isinstance(environment, dict):
+        return f"declares no {ENVIRONMENT_KEY!r} block"
+    if environment.get("declared") != "environment-input":
+        return (f"does not declare its {ENVIRONMENT_KEY!r} block as an environment "
+                f"input (declared={environment.get('declared')!r})")
+    required = ("mem_available_bytes", "mem_available_gib", "floor_met",
+                "court_mem_cap_gib", "court_cap_source", "court")
+    missing = [name for name in required if name not in environment]
+    if missing:
+        return (f"declares an {ENVIRONMENT_KEY!r} block missing "
+                f"{', '.join(repr(name) for name in missing)}")
+    if environment["mem_available_bytes"] is None and environment["floor_met"]:
+        return (f"declares an {ENVIRONMENT_KEY!r} block whose floor decision rests on no "
+                "availability reading")
+    return ""
+
+
+def _paths_that_differ(first, second, prefix: str = "") -> list[str]:
+    """Name every position at which two parsed records differ."""
+    if type(first) is not type(second):
+        return [prefix or "<document>"]
+    if isinstance(first, dict):
+        paths: list[str] = []
+        for key in sorted(set(first) | set(second)):
+            child = f"{prefix}.{key}" if prefix else str(key)
+            if key not in first or key not in second:
+                paths.append(child)
+            else:
+                paths.extend(_paths_that_differ(first[key], second[key], child))
+        return paths
+    if isinstance(first, list):
+        paths = []
+        if len(first) != len(second):
+            paths.append(f"{prefix or '<document>'}[len {len(first)} != {len(second)}]")
+        for index, (left, right) in enumerate(zip(first, second)):
+            paths.extend(_paths_that_differ(left, right, f"{prefix}[{index}]"))
+        return paths
+    return [] if first == second else [prefix or "<document>"]
+
+
+def compare_deterministic(first_text: str, second_text: str) -> tuple[bool, str]:
+    """Decide the determinism claim from the two runs' output, with a named verdict.
+
+    Identical inputs must produce an identical deterministic record.  The control
+    runs every time: it never skips, never retries, and decides from evidence.  A
+    run that emits no document, or one that does not declare its environment
+    input, is refused with its own reason.
+    """
+    documents: list[dict] = []
+    for label, text in (("first", first_text), ("second", second_text)):
+        try:
+            document = json.loads(text)
+        except (TypeError, ValueError) as exc:
+            return False, (f"{DETERMINISM_CODE}: the {label} run did not emit one JSON "
+                           f"document: {exc}")
+        problem = environment_declaration_problem(document)
+        if problem:
+            return False, f"{DETERMINISM_CODE}: the {label} run {problem}"
+        documents.append(document)
+    first, second = documents
+    if deterministic_bytes(first) != deterministic_bytes(second):
+        differing = _paths_that_differ(deterministic_projection(first),
+                                       deterministic_projection(second))
+        shown = ", ".join(differing[:6])
+        if len(differing) > 6:
+            shown += f" (+{len(differing) - 6} more)"
+        return False, (f"{DETERMINISM_CODE}: the deterministic record differs at "
+                       f"{shown or '<document>'}")
+    environment = first[ENVIRONMENT_KEY]
+    return True, (f"OK: the deterministic record is identical across two runs; the "
+                  f"environment is declared and records MemAvailable="
+                  f"{environment['mem_available_bytes']} bytes, cap="
+                  f"{environment['court_mem_cap_gib']} GiB, floor_met="
+                  f"{environment['floor_met']}, court={environment['court']!r}")
+
+
+def _environment_line(environment: dict) -> str:
+    """One human-readable line for the recorded environment input."""
+    available = environment.get("mem_available_bytes")
+    availability = ("MemAvailable unreadable" if available is None else
+                    f"MemAvailable {environment.get('mem_available_gib')} GiB")
+    cap = environment.get("court_mem_cap_gib")
+    cap_text = "court cap not derived" if cap is None else f"court cap {cap} GiB"
+    return (f"{availability}, {cap_text}, floor_met={environment.get('floor_met')}, "
+            f"{environment.get('court')} (recorded, not compared)")
 
 
 def render_text(document: dict) -> str:
@@ -1275,6 +1497,7 @@ def render_text(document: dict) -> str:
         f"untracked={candidate.get('untracked_changes', 'UNKNOWN')}",
         f"root       {document['root']}",
         f"network    {'declared available' if document['invocation']['network'] else 'not declared (offline)'}",
+        "environment " + _environment_line(document[ENVIRONMENT_KEY]),
         "private    " + ("present: " + ", ".join(document["private_state"]["present"])
                          if document["private_state"]["present"]
                          else "no untracked or ignored entries under the declared roots"),

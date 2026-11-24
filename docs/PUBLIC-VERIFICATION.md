@@ -54,8 +54,12 @@ itself, so `verify authority` cannot report `NOT_RUN` and exit 0.
 otherwise), `evidence_identity` (path and SHA-256, or `absent`), `tool_digest`,
 `prerequisites` (each requirement, whether it was available and why),
 `private_state_declared` and `private_state_present`, and every command with its
-exit status and the normalised tail of its output. Two runs over the same
-checkout are byte-identical.
+exit status and the normalised tail of its output. The document also carries an
+`environment` block with the live readings the run observed (`MemAvailable`, the
+derived court cap, the court) and marks it as an environment input; the block is
+recorded, not compared, and the byte-identity claim is about the rest of the
+record. Two runs over the same checkout with the same inputs are byte-identical
+in everything except that declared block.
 
 `--list` names every subcommand and whether it is in `all`. `--explain [name]`
 prints the prerequisites, establishment and non-claim of one step or all of them,
@@ -108,7 +112,7 @@ They are additions to the queue's list, not substitutes for it.
 | `git` | `shutil.which` | the step is `NOT_RUN` naming the missing program |
 | `bash`, `rustc`, `cargo`, `cc` | `shutil.which` | `NOT_RUN` |
 | the court | `/.dockerenv` | `NOT_RUN`, naming `docker/openssl-rs-court.sh` |
-| 24 GiB available | `MemAvailable` in `/proc/meminfo` | `NOT_RUN` with the observed value and the AGENTS.md §6.1 floor; **no build is started** |
+| 24 GiB available | `MemAvailable` in `/proc/meminfo` | `NOT_RUN` with the AGENTS.md §6.1 floor; **no build is started**. The observed value is recorded in the document's `environment` block (`mem_available_gib`, `mem_available_bytes`) and the prerequisite records the floor decision, not the magnitude |
 | the authority prefix | `forensics/authorities/prefix/…/libcrypto.so.3` | `NOT_RUN`, naming the gitignored path |
 | the network | the `--network` declaration | `NOT_RUN`; `--network` is a declaration, not a probe |
 | the delegate itself | a file at the declared path | `NOT_RUN`, naming the tool |
