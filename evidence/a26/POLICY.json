@@ -1,0 +1,54 @@
+{
+  "schema": "openssl-rs/verification-economics/policy/1",
+  "item": "A26",
+  "candidate": "46f3857722e1a79c0756e7d1b495782aac259687",
+  "candidateShort": "46f385772",
+  "candidateDetail": "base 46f3857722e1a79c0756e7d1b495782aac259687 plus the A26 working tree (docs/VERIFICATION-ECONOMICS.md, forensics/tools/verification_economics.py, forensics/tools/tests/test_verification_economics.py, evidence/a26/)",
+  "units": {
+    "wallSeconds": "s",
+    "cpuSeconds": "s",
+    "peakRssMiB": "MiB",
+    "artefactsBytes": "bytes"
+  },
+  "budget": {
+    "FAST": {
+      "wallSeconds": 120.0,
+      "cpuSeconds": 120.0,
+      "peakRssMiB": 512.0,
+      "artefactsBytes": 1048576
+    },
+    "BATCH": {
+      "wallSeconds": 1800.0,
+      "cpuSeconds": 1800.0,
+      "peakRssMiB": 2048.0,
+      "artefactsBytes": 67108864
+    },
+    "BOUNDARY": {
+      "wallSeconds": 600.0,
+      "cpuSeconds": 600.0,
+      "peakRssMiB": 2048.0,
+      "artefactsBytes": 33554432
+    },
+    "SEAL": {
+      "wallSeconds": 7200.0,
+      "cpuSeconds": 7200.0,
+      "peakRssMiB": 4096.0,
+      "artefactsBytes": 4294967296
+    },
+    "EXTERNAL": {
+      "wallSeconds": 3600.0,
+      "cpuSeconds": 3600.0,
+      "peakRssMiB": 2048.0,
+      "artefactsBytes": 1073741824
+    },
+    "TOTAL": {
+      "wallSeconds": 10800.0,
+      "cpuSeconds": 10800.0,
+      "peakRssMiB": 4096.0,
+      "artefactsBytes": 4294967296
+    }
+  },
+  "waivers": {},
+  "budgetBasis": "Declared before the measurements were taken, with headroom rather than a fitted value: FAST is two minutes; BATCH is thirty minutes, about twice the observed full tools discovery, so a slower machine or a larger suite does not silently become a failure of the budget; BOUNDARY is ten minutes; SEAL is two hours for the whole verify suite including a rebuild; EXTERNAL is one hour for a party outside this project. The TOTAL is three hours. No waiver is declared, and none can be granted: no authority records one.",
+  "note": "peakRssMiB is a maximum per tier, wallSeconds, cpuSeconds and artefactsBytes are sums."
+}

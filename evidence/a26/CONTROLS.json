@@ -1,0 +1,161 @@
+{
+  "codes": [
+    "EC_REFUSED_BUDGET_OVER",
+    "EC_REFUSED_CACHE_UNBOUND",
+    "EC_REFUSED_EXTRAPOLATION",
+    "EC_REFUSED_MACHINE_UNSTATED",
+    "EC_REFUSED_NOT_RUN_AS_ZERO",
+    "EC_REFUSED_RECORD_INVALID",
+    "EC_REFUSED_SKIP_AS_SAVING",
+    "EC_REFUSED_STALE_MEASUREMENT",
+    "EC_REFUSED_UNCITED_COST",
+    "EC_REFUSED_UNIT_MISMATCH",
+    "EC_REFUSED_USAGE",
+    "EC_REFUSED_WAIVER_AS_AUTHORITY",
+    "EC_REFUSED_WAIVER_UNRECORDED"
+  ],
+  "controlOnly": true,
+  "controls": [
+    {
+      "code": "EC_REFUSED_MACHINE_UNSTATED",
+      "controlOnly": true,
+      "detail": "a record whose machine is empty; a cost from an unstated machine is refused",
+      "id": "machine-unstated",
+      "matched": true,
+      "observed": [
+        "EC_REFUSED_MACHINE_UNSTATED"
+      ]
+    },
+    {
+      "code": "EC_REFUSED_UNCITED_COST",
+      "controlOnly": true,
+      "detail": "no numeric reading and no citation; the figure is an assertion",
+      "id": "uncited-cost",
+      "matched": true,
+      "observed": [
+        "EC_REFUSED_UNCITED_COST"
+      ]
+    },
+    {
+      "code": "EC_REFUSED_UNIT_MISMATCH",
+      "controlOnly": true,
+      "detail": "wallSeconds declared in milliseconds; the field is seconds",
+      "id": "unit-mismatch",
+      "matched": true,
+      "observed": [
+        "EC_REFUSED_UNIT_MISMATCH"
+      ]
+    },
+    {
+      "code": "EC_REFUSED_SKIP_AS_SAVING",
+      "controlOnly": true,
+      "detail": "a required check skipped because it costs time",
+      "id": "skip-as-saving",
+      "matched": true,
+      "observed": [
+        "EC_REFUSED_SKIP_AS_SAVING"
+      ]
+    },
+    {
+      "code": "EC_REFUSED_CACHE_UNBOUND",
+      "controlOnly": true,
+      "detail": "reuse naming a source but no tool, instrument, target or population",
+      "id": "cache-unbound",
+      "matched": true,
+      "observed": [
+        "EC_REFUSED_CACHE_UNBOUND"
+      ]
+    },
+    {
+      "code": "EC_REFUSED_EXTRAPOLATION",
+      "controlOnly": true,
+      "detail": "a derived figure with one measured point; one point is not a curve",
+      "id": "single-point-extrapolation",
+      "matched": true,
+      "observed": [
+        "EC_REFUSED_EXTRAPOLATION"
+      ]
+    },
+    {
+      "code": "EC_REFUSED_BUDGET_OVER",
+      "controlOnly": true,
+      "detail": "a BATCH tier over its declared wall budget with no recorded waiver",
+      "id": "budget-over",
+      "matched": true,
+      "observed": [
+        "EC_REFUSED_BUDGET_OVER"
+      ]
+    },
+    {
+      "code": "EC_REFUSED_WAIVER_UNRECORDED",
+      "controlOnly": true,
+      "detail": "an over-budget tier whose waiver is not recorded",
+      "id": "waiver-unrecorded",
+      "matched": true,
+      "observed": [
+        "EC_REFUSED_WAIVER_UNRECORDED"
+      ]
+    },
+    {
+      "code": "EC_REFUSED_WAIVER_AS_AUTHORITY",
+      "controlOnly": true,
+      "detail": "a waiver naming an authority, presented as permission",
+      "id": "waiver-as-authority",
+      "matched": true,
+      "observed": [
+        "EC_REFUSED_WAIVER_AS_AUTHORITY"
+      ]
+    },
+    {
+      "code": "EC_REFUSED_NOT_RUN_AS_ZERO",
+      "controlOnly": true,
+      "detail": "a NOT_RUN recorded with zero cost; a not-run is not a measured zero",
+      "id": "not-run-as-zero",
+      "matched": true,
+      "observed": [
+        "EC_REFUSED_NOT_RUN_AS_ZERO"
+      ]
+    },
+    {
+      "code": "EC_REFUSED_STALE_MEASUREMENT",
+      "controlOnly": true,
+      "detail": "a cost measured at another candidate presented for this one",
+      "id": "stale-measurement",
+      "matched": true,
+      "observed": [
+        "EC_REFUSED_STALE_MEASUREMENT"
+      ]
+    },
+    {
+      "code": "EC_REFUSED_RECORD_INVALID",
+      "controlOnly": true,
+      "detail": "a record whose tier is not in the closed vocabulary",
+      "id": "record-invalid",
+      "matched": true,
+      "observed": [
+        "EC_REFUSED_RECORD_INVALID"
+      ]
+    },
+    {
+      "code": "EC_REFUSED_USAGE",
+      "controlOnly": true,
+      "detail": "the tool invoked with an unknown command; it refuses and prints its code",
+      "id": "malformed-invocation",
+      "matched": true,
+      "observed": [
+        "EC_REFUSED_USAGE"
+      ]
+    }
+  ],
+  "coversEveryCode": true,
+  "failing": [],
+  "producer": {
+    "path": "evidence/a26/build_evidence.py",
+    "sha256": "1bdd21fb4a5eaca00096f0ff034271ced9b0fa10a16842e11d2b53a4e5d9c757",
+    "tool": {
+      "path": "forensics/tools/verification_economics.py",
+      "sha256": "6741a13e0ae2886656de5559587c1f14f9d1f60f88f725ebd6d0cecb2ad57f1e"
+    }
+  },
+  "schema": "openssl-rs/verification-economics/controls/1"
+}

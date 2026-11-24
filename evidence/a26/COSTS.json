@@ -1,0 +1,448 @@
+{
+  "candidate": "46f3857722e1a79c0756e7d1b495782aac259687",
+  "codes": [
+    "EC_OK"
+  ],
+  "producer": {
+    "path": "evidence/a26/build_evidence.py",
+    "sha256": "1bdd21fb4a5eaca00096f0ff034271ced9b0fa10a16842e11d2b53a4e5d9c757",
+    "tool": {
+      "path": "forensics/tools/verification_economics.py",
+      "sha256": "6741a13e0ae2886656de5559587c1f14f9d1f60f88f725ebd6d0cecb2ad57f1e"
+    }
+  },
+  "records": [
+    {
+      "artefactsBytes": 0,
+      "candidate": "46f3857722e1a79c0756e7d1b495782aac259687",
+      "citedBy": [
+        "forensics/tools/docs_consistency.py",
+        "forensics/tools/earned_trust.py"
+      ],
+      "command": "/usr/bin/python3 forensics/tools/docs_consistency.py",
+      "cpuSeconds": 0.040735,
+      "exitStatus": 0,
+      "machine": {
+        "cores": 8,
+        "courtMemCapGiB": 6.0,
+        "cpuQuota": "800000 100000",
+        "hostCpuModel": null,
+        "identifier": "openssl-rs-court-tools:1 (container 21d94f6315a4)",
+        "inContainer": true,
+        "interpreter": "CPython 3.11.2",
+        "memGiB": 6.0,
+        "note": "the venue is the container; memGiB and courtMemCapGiB are its cgroup memory ceiling and cores is its cpu.max quota. A host CPU model is not read and is not recorded"
+      },
+      "measuredAt": "2026-11-24T20:11:25Z",
+      "method": "forensics/tools/docs_consistency.py",
+      "peakRssMiB": 21.578,
+      "status": "MEASURED",
+      "step": "docs-consistency",
+      "tier": "FAST",
+      "timedOut": false,
+      "unavailable": {},
+      "units": {
+        "artefactsBytes": "bytes",
+        "cpuSeconds": "s",
+        "peakRssMiB": "MiB",
+        "wallSeconds": "s"
+      },
+      "wallSeconds": 0.060638
+    },
+    {
+      "artefactsBytes": 0,
+      "candidate": "46f3857722e1a79c0756e7d1b495782aac259687",
+      "citedBy": [
+        "forensics/tools/spec_guard.py",
+        "evidence/etp-t3/SPECIFICATIONS.json"
+      ],
+      "command": "/usr/bin/python3 forensics/tools/spec_guard.py check",
+      "cpuSeconds": 0.655551,
+      "exitStatus": 0,
+      "machine": {
+        "cores": 8,
+        "courtMemCapGiB": 6.0,
+        "cpuQuota": "800000 100000",
+        "hostCpuModel": null,
+        "identifier": "openssl-rs-court-tools:1 (container 21d94f6315a4)",
+        "inContainer": true,
+        "interpreter": "CPython 3.11.2",
+        "memGiB": 6.0,
+        "note": "the venue is the container; memGiB and courtMemCapGiB are its cgroup memory ceiling and cores is its cpu.max quota. A host CPU model is not read and is not recorded"
+      },
+      "measuredAt": "2026-11-24T20:11:25Z",
+      "method": "forensics/tools/spec_guard.py check",
+      "peakRssMiB": 27.246,
+      "status": "MEASURED",
+      "step": "spec-guard-check",
+      "tier": "FAST",
+      "timedOut": false,
+      "unavailable": {},
+      "units": {
+        "artefactsBytes": "bytes",
+        "cpuSeconds": "s",
+        "peakRssMiB": "MiB",
+        "wallSeconds": "s"
+      },
+      "wallSeconds": 0.663781
+    },
+    {
+      "artefactsBytes": 0,
+      "candidate": "46f3857722e1a79c0756e7d1b495782aac259687",
+      "citedBy": [
+        "forensics/tools/verifier_formalisation.py"
+      ],
+      "command": "/usr/bin/python3 forensics/tools/verifier_formalisation.py differential",
+      "cpuSeconds": 19.948726,
+      "exitStatus": 0,
+      "machine": {
+        "cores": 8,
+        "courtMemCapGiB": 6.0,
+        "cpuQuota": "800000 100000",
+        "hostCpuModel": null,
+        "identifier": "openssl-rs-court-tools:1 (container 21d94f6315a4)",
+        "inContainer": true,
+        "interpreter": "CPython 3.11.2",
+        "memGiB": 6.0,
+        "note": "the venue is the container; memGiB and courtMemCapGiB are its cgroup memory ceiling and cores is its cpu.max quota. A host CPU model is not read and is not recorded"
+      },
+      "measuredAt": "2026-11-24T20:11:45Z",
+      "method": "forensics/tools/verifier_formalisation.py differential",
+      "peakRssMiB": 22.793,
+      "status": "MEASURED",
+      "step": "a23-differential",
+      "tier": "BATCH",
+      "timedOut": false,
+      "unavailable": {},
+      "units": {
+        "artefactsBytes": "bytes",
+        "cpuSeconds": "s",
+        "peakRssMiB": "MiB",
+        "wallSeconds": "s"
+      },
+      "wallSeconds": 19.981104
+    },
+    {
+      "artefactsBytes": 8703751,
+      "candidate": "46f3857722e1a79c0756e7d1b495782aac259687",
+      "citedBy": [
+        "forensics/tools/code_scanning_export.py",
+        "evidence/a1/SARIF.json"
+      ],
+      "command": "/usr/bin/python3 forensics/tools/code_scanning_export.py emit /tmp/a26-a8-export",
+      "cpuSeconds": 0.368553,
+      "exitStatus": 0,
+      "machine": {
+        "cores": 8,
+        "courtMemCapGiB": 6.0,
+        "cpuQuota": "800000 100000",
+        "hostCpuModel": null,
+        "identifier": "openssl-rs-court-tools:1 (container 21d94f6315a4)",
+        "inContainer": true,
+        "interpreter": "CPython 3.11.2",
+        "memGiB": 6.0,
+        "note": "the venue is the container; memGiB and courtMemCapGiB are its cgroup memory ceiling and cores is its cpu.max quota. A host CPU model is not read and is not recorded"
+      },
+      "measuredAt": "2026-11-24T20:12:50Z",
+      "method": "forensics/tools/code_scanning_export.py emit",
+      "peakRssMiB": 94.766,
+      "status": "MEASURED",
+      "step": "a8-export",
+      "tier": "BATCH",
+      "timedOut": false,
+      "unavailable": {},
+      "units": {
+        "artefactsBytes": "bytes",
+        "cpuSeconds": "s",
+        "peakRssMiB": "MiB",
+        "wallSeconds": "s"
+      },
+      "wallSeconds": 0.382215
+    },
+    {
+      "artefactsBytes": 0,
+      "candidate": "46f3857722e1a79c0756e7d1b495782aac259687",
+      "citedBy": [
+        "forensics/tools/code_scanning_export.py",
+        "evidence/a8/MANIFEST.json",
+        "evidence/a8/SHARD-000.sarif"
+      ],
+      "command": "/usr/bin/python3 forensics/tools/code_scanning_export.py verify /tmp/a26-a8-export",
+      "cpuSeconds": 0.140973,
+      "exitStatus": 0,
+      "machine": {
+        "cores": 8,
+        "courtMemCapGiB": 6.0,
+        "cpuQuota": "800000 100000",
+        "hostCpuModel": null,
+        "identifier": "openssl-rs-court-tools:1 (container 21d94f6315a4)",
+        "inContainer": true,
+        "interpreter": "CPython 3.11.2",
+        "memGiB": 6.0,
+        "note": "the venue is the container; memGiB and courtMemCapGiB are its cgroup memory ceiling and cores is its cpu.max quota. A host CPU model is not read and is not recorded"
+      },
+      "measuredAt": "2026-11-24T20:12:51Z",
+      "method": "forensics/tools/code_scanning_export.py verify",
+      "peakRssMiB": 105.137,
+      "status": "MEASURED",
+      "step": "a8-export-verify",
+      "tier": "BATCH",
+      "timedOut": false,
+      "unavailable": {},
+      "units": {
+        "artefactsBytes": "bytes",
+        "cpuSeconds": "s",
+        "peakRssMiB": "MiB",
+        "wallSeconds": "s"
+      },
+      "wallSeconds": 0.161081
+    },
+    {
+      "artefactsBytes": null,
+      "candidate": "46f3857722e1a79c0756e7d1b495782aac259687",
+      "citedBy": [
+        "AGENTS.md#6.1",
+        "forensics/tools/verify.py"
+      ],
+      "cpuSeconds": null,
+      "machine": {
+        "cores": 8,
+        "courtMemCapGiB": 6.0,
+        "cpuQuota": "800000 100000",
+        "hostCpuModel": null,
+        "identifier": "openssl-rs-court-tools:1 (container 21d94f6315a4)",
+        "inContainer": true,
+        "interpreter": "CPython 3.11.2",
+        "memGiB": 6.0,
+        "note": "the venue is the container; memGiB and courtMemCapGiB are its cgroup memory ceiling and cores is its cpu.max quota. A host CPU model is not read and is not recorded"
+      },
+      "measuredAt": null,
+      "method": "decision: the 24 GiB floor and the 6 GiB court",
+      "notRunReason": "the Rust library suite requires a build; available memory is below the 24 GiB floor AGENTS.md 6.1 sets before a build and the court cap is 6 GiB",
+      "peakRssMiB": null,
+      "status": "NOT_RUN",
+      "step": "rust-library-suite",
+      "tier": "BATCH",
+      "unavailable": {
+        "artefactsBytes": "the check did not run, so it produced no artefact",
+        "cpuSeconds": "the check did not run, so it has no cost",
+        "peakRssMiB": "the check did not run, so it has no cost",
+        "wallSeconds": "the check did not run, so it has no cost"
+      },
+      "units": {
+        "artefactsBytes": "bytes",
+        "cpuSeconds": "s",
+        "peakRssMiB": "MiB",
+        "wallSeconds": "s"
+      },
+      "wallSeconds": null
+    },
+    {
+      "artefactsBytes": 0,
+      "candidate": "46f3857722e1a79c0756e7d1b495782aac259687",
+      "citedBy": [
+        "forensics/tools/tests",
+        "docs/PUBLIC-VERIFICATION.md"
+      ],
+      "command": "/usr/bin/python3 -m unittest discover -s forensics/tools/tests",
+      "cpuSeconds": 425.771105,
+      "exitStatus": 0,
+      "machine": {
+        "cores": 8,
+        "courtMemCapGiB": 6.0,
+        "cpuQuota": "800000 100000",
+        "hostCpuModel": null,
+        "identifier": "openssl-rs-court-tools:1 (container 21d94f6315a4)",
+        "inContainer": true,
+        "interpreter": "CPython 3.11.2",
+        "memGiB": 6.0,
+        "note": "the venue is the container; memGiB and courtMemCapGiB are its cgroup memory ceiling and cores is its cpu.max quota. A host CPU model is not read and is not recorded"
+      },
+      "measuredAt": "2026-11-24T20:20:55Z",
+      "method": "python3 -m unittest discover -s forensics/tools/tests",
+      "peakRssMiB": 289.82,
+      "status": "MEASURED",
+      "step": "tools-discovery",
+      "tier": "BATCH",
+      "timedOut": false,
+      "unavailable": {},
+      "units": {
+        "artefactsBytes": "bytes",
+        "cpuSeconds": "s",
+        "peakRssMiB": "MiB",
+        "wallSeconds": "s"
+      },
+      "wallSeconds": 425.062713
+    },
+    {
+      "artefactsBytes": 0,
+      "candidate": "46f3857722e1a79c0756e7d1b495782aac259687",
+      "citedBy": [
+        "forensics/tools/adversarial_qualification.py",
+        "docs/ADVERSARIAL-QUALIFICATION.md"
+      ],
+      "command": "/usr/bin/python3 forensics/tools/adversarial_qualification.py run",
+      "cpuSeconds": 4.552989,
+      "exitStatus": 0,
+      "machine": {
+        "cores": 8,
+        "courtMemCapGiB": 6.0,
+        "cpuQuota": "800000 100000",
+        "hostCpuModel": null,
+        "identifier": "openssl-rs-court-tools:1 (container 21d94f6315a4)",
+        "inContainer": true,
+        "interpreter": "CPython 3.11.2",
+        "memGiB": 6.0,
+        "note": "the venue is the container; memGiB and courtMemCapGiB are its cgroup memory ceiling and cores is its cpu.max quota. A host CPU model is not read and is not recorded"
+      },
+      "measuredAt": "2026-11-24T20:12:38Z",
+      "method": "forensics/tools/adversarial_qualification.py run",
+      "peakRssMiB": 149.031,
+      "status": "MEASURED",
+      "step": "a22-qualification-run",
+      "tier": "BOUNDARY",
+      "timedOut": false,
+      "unavailable": {},
+      "units": {
+        "artefactsBytes": "bytes",
+        "cpuSeconds": "s",
+        "peakRssMiB": "MiB",
+        "wallSeconds": "s"
+      },
+      "wallSeconds": 4.465221
+    },
+    {
+      "artefactsBytes": 0,
+      "candidate": "46f3857722e1a79c0756e7d1b495782aac259687",
+      "citedBy": [
+        "forensics/tools/package_external.py",
+        "evidence/a24/PACKAGE",
+        "evidence/a24/RUN.json"
+      ],
+      "command": "/usr/bin/python3 forensics/tools/package_external.py verify evidence/a24/PACKAGE",
+      "cpuSeconds": 47.70758,
+      "exitStatus": 0,
+      "machine": {
+        "cores": 8,
+        "courtMemCapGiB": 6.0,
+        "cpuQuota": "800000 100000",
+        "hostCpuModel": null,
+        "identifier": "openssl-rs-court-tools:1 (container 21d94f6315a4)",
+        "inContainer": true,
+        "interpreter": "CPython 3.11.2",
+        "memGiB": 6.0,
+        "note": "the venue is the container; memGiB and courtMemCapGiB are its cgroup memory ceiling and cores is its cpu.max quota. A host CPU model is not read and is not recorded"
+      },
+      "measuredAt": "2026-11-24T20:12:34Z",
+      "method": "forensics/tools/package_external.py verify evidence/a24/PACKAGE",
+      "peakRssMiB": 28.285,
+      "status": "MEASURED",
+      "step": "a24-package-verify",
+      "tier": "BOUNDARY",
+      "timedOut": false,
+      "unavailable": {},
+      "units": {
+        "artefactsBytes": "bytes",
+        "cpuSeconds": "s",
+        "peakRssMiB": "MiB",
+        "wallSeconds": "s"
+      },
+      "wallSeconds": 47.79811
+    },
+    {
+      "artefactsBytes": null,
+      "candidate": "46f3857722e1a79c0756e7d1b495782aac259687",
+      "citedBy": [
+        "docs/PUBLIC-VERIFIER.md",
+        "AGENTS.md#6.1"
+      ],
+      "cpuSeconds": null,
+      "machine": {
+        "cores": 8,
+        "courtMemCapGiB": 6.0,
+        "cpuQuota": "800000 100000",
+        "hostCpuModel": null,
+        "identifier": "openssl-rs-court-tools:1 (container 21d94f6315a4)",
+        "inContainer": true,
+        "interpreter": "CPython 3.11.2",
+        "memGiB": 6.0,
+        "note": "the venue is the container; memGiB and courtMemCapGiB are its cgroup memory ceiling and cores is its cpu.max quota. A host CPU model is not read and is not recorded"
+      },
+      "measuredAt": null,
+      "method": "decision: the 24 GiB floor and the 6 GiB court",
+      "notRunReason": "verify all includes rebuild and differential, which require a Rust build; free -g reported available below the 24 GiB floor and the court cap is 6 GiB, so no build was started",
+      "peakRssMiB": null,
+      "status": "NOT_RUN",
+      "step": "verify-all",
+      "tier": "SEAL",
+      "unavailable": {
+        "artefactsBytes": "the check did not run, so it produced no artefact",
+        "cpuSeconds": "the check did not run, so it has no cost",
+        "peakRssMiB": "the check did not run, so it has no cost",
+        "wallSeconds": "the check did not run, so it has no cost"
+      },
+      "units": {
+        "artefactsBytes": "bytes",
+        "cpuSeconds": "s",
+        "peakRssMiB": "MiB",
+        "wallSeconds": "s"
+      },
+      "wallSeconds": null
+    },
+    {
+      "artefactsBytes": null,
+      "candidate": "46f3857722e1a79c0756e7d1b495782aac259687",
+      "citedBy": [
+        "evidence/a24/STATUS.json",
+        "evidence/a24/RUN.json"
+      ],
+      "cpuSeconds": null,
+      "machine": {
+        "cores": 8,
+        "courtMemCapGiB": 6.0,
+        "cpuQuota": "800000 100000",
+        "hostCpuModel": null,
+        "identifier": "openssl-rs-court-tools:1 (container 21d94f6315a4)",
+        "inContainer": true,
+        "interpreter": "CPython 3.11.2",
+        "memGiB": 6.0,
+        "note": "the venue is the container; memGiB and courtMemCapGiB are its cgroup memory ceiling and cores is its cpu.max quota. A host CPU model is not read and is not recorded"
+      },
+      "measuredAt": null,
+      "method": "decision: A24 external status",
+      "notRunReason": "no party outside this project has run the A24 package; A24 records EXTERNAL_REVIEW_PENDING",
+      "peakRssMiB": null,
+      "status": "NOT_RUN",
+      "step": "external-reproduction",
+      "tier": "EXTERNAL",
+      "unavailable": {
+        "artefactsBytes": "the check did not run, so it produced no artefact",
+        "cpuSeconds": "the check did not run, so it has no cost",
+        "peakRssMiB": "the check did not run, so it has no cost",
+        "wallSeconds": "the check did not run, so it has no cost"
+      },
+      "units": {
+        "artefactsBytes": "bytes",
+        "cpuSeconds": "s",
+        "peakRssMiB": "MiB",
+        "wallSeconds": "s"
+      },
+      "wallSeconds": null
+    }
+  ],
+  "schema": "openssl-rs/verification-economics/costs/1",
+  "totals": {
+    "artefactsBytes": 8703751,
+    "cpuSeconds": 499.186212,
+    "measuredSteps": 8,
+    "notRunSteps": 3,
+    "peakRssMiB": 289.82,
+    "wallSeconds": 498.574863
+  },
+  "units": {
+    "artefactsBytes": "bytes",
+    "cpuSeconds": "s",
+    "peakRssMiB": "MiB",
+    "wallSeconds": "s"
+  }
+}

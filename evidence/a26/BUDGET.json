@@ -1,0 +1,177 @@
+{
+  "candidate": "46f3857722e1a79c0756e7d1b495782aac259687",
+  "codes": [
+    "EC_OK"
+  ],
+  "declaredBudget": {
+    "BATCH": {
+      "artefactsBytes": 67108864,
+      "cpuSeconds": 1800.0,
+      "peakRssMiB": 2048.0,
+      "wallSeconds": 1800.0
+    },
+    "BOUNDARY": {
+      "artefactsBytes": 33554432,
+      "cpuSeconds": 600.0,
+      "peakRssMiB": 2048.0,
+      "wallSeconds": 600.0
+    },
+    "EXTERNAL": {
+      "artefactsBytes": 1073741824,
+      "cpuSeconds": 3600.0,
+      "peakRssMiB": 2048.0,
+      "wallSeconds": 3600.0
+    },
+    "FAST": {
+      "artefactsBytes": 1048576,
+      "cpuSeconds": 120.0,
+      "peakRssMiB": 512.0,
+      "wallSeconds": 120.0
+    },
+    "SEAL": {
+      "artefactsBytes": 4294967296,
+      "cpuSeconds": 7200.0,
+      "peakRssMiB": 4096.0,
+      "wallSeconds": 7200.0
+    },
+    "TOTAL": {
+      "artefactsBytes": 4294967296,
+      "cpuSeconds": 10800.0,
+      "peakRssMiB": 4096.0,
+      "wallSeconds": 10800.0
+    }
+  },
+  "overall": "UNDER",
+  "producer": {
+    "path": "evidence/a26/build_evidence.py",
+    "sha256": "1bdd21fb4a5eaca00096f0ff034271ced9b0fa10a16842e11d2b53a4e5d9c757",
+    "tool": {
+      "path": "forensics/tools/verification_economics.py",
+      "sha256": "6741a13e0ae2886656de5559587c1f14f9d1f60f88f725ebd6d0cecb2ad57f1e"
+    }
+  },
+  "refusals": [],
+  "schema": "openssl-rs/verification-economics/budget/1",
+  "tiers": {
+    "BATCH": {
+      "declaredBudget": {
+        "artefactsBytes": 67108864,
+        "cpuSeconds": 1800.0,
+        "peakRssMiB": 2048.0,
+        "wallSeconds": 1800.0
+      },
+      "excess": {},
+      "measured": {
+        "artefactsBytes": 8703751,
+        "cpuSeconds": 446.229357,
+        "measuredSteps": 4,
+        "notRunSteps": 1,
+        "peakRssMiB": 289.82,
+        "wallSeconds": 445.587113
+      },
+      "status": "UNDER",
+      "waiver": null
+    },
+    "BOUNDARY": {
+      "declaredBudget": {
+        "artefactsBytes": 33554432,
+        "cpuSeconds": 600.0,
+        "peakRssMiB": 2048.0,
+        "wallSeconds": 600.0
+      },
+      "excess": {},
+      "measured": {
+        "artefactsBytes": 0,
+        "cpuSeconds": 52.260569,
+        "measuredSteps": 2,
+        "notRunSteps": 0,
+        "peakRssMiB": 149.031,
+        "wallSeconds": 52.263331
+      },
+      "status": "UNDER",
+      "waiver": null
+    },
+    "EXTERNAL": {
+      "declaredBudget": {
+        "artefactsBytes": 1073741824,
+        "cpuSeconds": 3600.0,
+        "peakRssMiB": 2048.0,
+        "wallSeconds": 3600.0
+      },
+      "excess": {},
+      "measured": {
+        "artefactsBytes": 0,
+        "cpuSeconds": 0,
+        "measuredSteps": 0,
+        "notRunSteps": 1,
+        "peakRssMiB": 0.0,
+        "wallSeconds": 0
+      },
+      "status": "UNDER",
+      "waiver": null
+    },
+    "FAST": {
+      "declaredBudget": {
+        "artefactsBytes": 1048576,
+        "cpuSeconds": 120.0,
+        "peakRssMiB": 512.0,
+        "wallSeconds": 120.0
+      },
+      "excess": {},
+      "measured": {
+        "artefactsBytes": 0,
+        "cpuSeconds": 0.696286,
+        "measuredSteps": 2,
+        "notRunSteps": 0,
+        "peakRssMiB": 27.246,
+        "wallSeconds": 0.724419
+      },
+      "status": "UNDER",
+      "waiver": null
+    },
+    "SEAL": {
+      "declaredBudget": {
+        "artefactsBytes": 4294967296,
+        "cpuSeconds": 7200.0,
+        "peakRssMiB": 4096.0,
+        "wallSeconds": 7200.0
+      },
+      "excess": {},
+      "measured": {
+        "artefactsBytes": 0,
+        "cpuSeconds": 0,
+        "measuredSteps": 0,
+        "notRunSteps": 1,
+        "peakRssMiB": 0.0,
+        "wallSeconds": 0
+      },
+      "status": "UNDER",
+      "waiver": null
+    },
+    "TOTAL": {
+      "declaredBudget": {
+        "artefactsBytes": 4294967296,
+        "cpuSeconds": 10800.0,
+        "peakRssMiB": 4096.0,
+        "wallSeconds": 10800.0
+      },
+      "excess": {},
+      "measured": {
+        "artefactsBytes": 8703751,
+        "cpuSeconds": 499.186212,
+        "measuredSteps": 8,
+        "notRunSteps": 3,
+        "peakRssMiB": 289.82,
+        "wallSeconds": 498.574863
+      },
+      "status": "UNDER",
+      "waiver": null
+    }
+  },
+  "units": {
+    "artefactsBytes": "bytes",
+    "cpuSeconds": "s",
+    "peakRssMiB": "MiB",
+    "wallSeconds": "s"
+  }
+}
