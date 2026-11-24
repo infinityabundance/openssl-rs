@@ -345,21 +345,30 @@ means "no drift in the declared shape", not "no defect anywhere".
 
 ## 9. Known defects and their disposition
 
-| id | finding | disposition |
-|---|---|---|
-| D1 | `list` was advertised as a subcommand and refused as one; the accepted form was `--list` | **repaired**: `list` is a real subcommand, exits 0, and the documents name both forms; recorded in `evidence/defects/d1-d5/RECEIPT.md` |
-| D2 | `--json` was accepted by `--list` and ignored; the listing stayed TSV | **repaired**: `list`/`--list` emit the listing document (`openssl-rs/verify-listing/1`); recorded in `evidence/defects/d1-d5/RECEIPT.md` |
-| D3 | `--list` beats `--explain` beats a run; the precedence was undocumented | documented in §2.1 |
-| D4 | `artifacts/phase2/install` was declared private but is Git-tracked and outside the audited root set | **repaired**: the false declaration is removed and the audited set is derived from the declarations; recorded in `evidence/defects/d1-d5/RECEIPT.md` |
-| D5 | the `private_state` entry counts are live readings inside the compared record | **repaired**: `private_state` is a declared input alongside `environment`, required to be present and populated, and excluded from the comparison; recorded in `evidence/defects/d1-d5/RECEIPT.md` |
-| D6 | the descriptive document's `test_verify.py` count said 19; the module executes 37 | corrected, old wording preserved in the A25 receipt |
+Every entry is historical. The behaviour and the witness that observed it at
+`a9bcb5480` are preserved, and each entry records where the defect now stands.
 
-Each entry's original witness was re-checked by `evidence/a25/build_evidence.py`
-at the A25 candidate. A repaired entry's witness now describes the behaviour the
-repair removed, by design: the A25 records are left unchanged, and the old/new
-pair for each repair is preserved in `evidence/defects/d1-d5/RECEIPT.md`. The
-producer therefore refuses at the repaired candidate; that refusal is recorded in
-the receipt rather than hidden by editing the record.
+| id | finding | disposition | repaired at |
+|---|---|---|---|
+| D1 | `list` was advertised as a subcommand and refused as one; the accepted form was `--list` | **repaired**: `list` is a real subcommand, exits 0, and the documents name both forms; recorded in `evidence/defects/d1-d5/RECEIPT.md` | `f2ec25379` |
+| D2 | `--json` was accepted by `--list` and ignored; the listing stayed TSV | **repaired**: `list`/`--list` emit the listing document (`openssl-rs/verify-listing/1`); recorded in `evidence/defects/d1-d5/RECEIPT.md` | `f2ec25379` |
+| D3 | `--list` beats `--explain` beats a run; the precedence was undocumented | documented in §2.1 | — |
+| D4 | `artifacts/phase2/install` was declared private but is Git-tracked and outside the audited root set | **repaired**: the false declaration is removed and the audited set is derived from the declarations; recorded in `evidence/defects/d1-d5/RECEIPT.md` | `f2ec25379` |
+| D5 | the `private_state` entry counts are live readings inside the compared record | **repaired**: `private_state` is a declared input alongside `environment`, required to be present and populated, and excluded from the comparison; recorded in `evidence/defects/d1-d5/RECEIPT.md` | `f2ec25379` |
+| D6 | the descriptive document's `test_verify.py` count was stale | corrected to the count the loader executes; old wording preserved in the A25 receipt | — |
+| D7 | `--json` is accepted by `--explain` and `--help` and ignored; they print text | documented: the contract states the exception (§2.1, §2.2, §4) and the surface declares `explain` as `jsonForm: none`, so the declaration and the executable agree; the executable's own `--help` sentence names only the listing exception, and that is recorded, not hidden | — |
+
+Each entry is carried in `evidence/a25/INVENTORY.json` with two witness sets.
+The `historicalWitness` records the behaviour observed at `a9bcb5480` and is
+expected **not** to reproduce at the repaired candidate; the live `witness`
+records what holds now and must reproduce. The producer
+(`evidence/a25/build_evidence.py`) fails if a live witness stops reproducing or
+if a historical witness starts reproducing again, because the latter means a
+repair has regressed. D1, D2, D4 and D5 were repaired at `f2ec25379`; D3 and D6
+were documentation corrections; D7 was found while re-deriving this record and is
+documented rather than repaired. The old/new pair for every repair is also in
+`evidence/defects/d1-d5/RECEIPT.md`, and the A25 records' own correction (old and
+new digests, cause, candidate) is in `evidence/a25/RECEIPT.md`.
 
 ## 10. A worked example on a clean checkout
 

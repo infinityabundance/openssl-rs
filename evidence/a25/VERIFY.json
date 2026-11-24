@@ -6,7 +6,7 @@
     },
     {
       "check": "discovery",
-      "detail": "14 invocation(s); listing exit=0; help exit=0; explain exit=0"
+      "detail": "15 invocation(s); listing exit=0; help exit=0; explain exit=0"
     },
     {
       "check": "commands",
@@ -92,7 +92,6 @@
       ],
       "prerequisitesObserved": [],
       "privateStateDeclared": [
-        "artifacts/phase2/install",
         "court",
         "forensics/authorities/prefix"
       ],
@@ -320,11 +319,9 @@
         "python"
       ],
       "privateStateDeclared": [
-        "artifacts/phase2/install",
         "court"
       ],
       "privateStateObserved": [
-        "artifacts/phase2/install",
         "court"
       ],
       "recognised": true,
@@ -370,11 +367,9 @@
         "python"
       ],
       "privateStateDeclared": [
-        "artifacts/phase2/install",
         "court"
       ],
       "privateStateObserved": [
-        "artifacts/phase2/install",
         "court"
       ],
       "recognised": true,
@@ -420,11 +415,9 @@
         "python"
       ],
       "privateStateDeclared": [
-        "artifacts/phase2/install",
         "court"
       ],
       "privateStateObserved": [
-        "artifacts/phase2/install",
         "court"
       ],
       "recognised": true,
@@ -808,8 +801,8 @@
       "invocation": [
         "--list"
       ],
-      "jsonFieldsDeclared": 0,
-      "jsonForm": "none",
+      "jsonFieldsDeclared": 3,
+      "jsonForm": "document",
       "kind": "discovery",
       "prerequisitesDeclared": [
         "python"
@@ -1090,9 +1083,19 @@
       "stabilitySupported": true
     }
   },
+  "declaredAtCommit": "f2ec25379e3ba8f663a93aedf514bcb1fd9cb674",
+  "declaredAtCommitShort": "f2ec25379",
+  "declaredSources": {
+    "forensics/tools/public_surface.py": {
+      "sha256": "b21c03ff71093ff34a2bfdde14853baf031b4cf49f2b41ccc1c0ea292bb51022"
+    },
+    "forensics/tools/verify.py": {
+      "sha256": "1d7d6f6a1debc1d7fa09f2eb3f30228249f75d06557498ca6c1a80e9cf8381f7"
+    }
+  },
   "detector": {
     "path": "forensics/tools/public_surface.py",
-    "sha256": "a5b54814cf0bad654e1c081eaf0153f2e9579f6ac59f1dfd177613759acdd95b"
+    "sha256": "b21c03ff71093ff34a2bfdde14853baf031b4cf49f2b41ccc1c0ea292bb51022"
   },
   "findings": [],
   "observed": {
@@ -1101,7 +1104,8 @@
         "explain",
         "explain-all",
         "help",
-        "list"
+        "list",
+        "list-subcommand"
       ],
       "1": [
         "authority-offline"
@@ -1212,6 +1216,13 @@
       },
       {
         "argv": [
+          "list"
+        ],
+        "exit": 0,
+        "what": "probe:list-subcommand"
+      },
+      {
+        "argv": [
           "authority",
           "--json"
         ],
@@ -1241,14 +1252,14 @@
       "steps",
       "warnings"
     ],
-    "listJsonEmitsJson": false,
+    "listJsonEmitsJson": true,
     "listingStable": true,
     "steps": 20
   },
   "ok": true,
   "producer": {
     "path": "evidence/a25/build_evidence.py",
-    "sha256": "e241cda138ce1092a6f84d4efc3cf783bf714d3f37ea861e1982ca5638eda073"
+    "sha256": "3983ccc04919b9360e837ee3523e874e99e32a8538ac08227b5531ef333778e3"
   },
   "schema": "openssl-rs/public-surface/verdict/1",
   "surface": {
@@ -1258,6 +1269,6 @@
   },
   "verifier": {
     "path": "forensics/tools/verify.py",
-    "sha256": "17a9f2ae75614eaff52dd0bd833e30af05721e53a957e6209f68f1fa3fed4fc3"
+    "sha256": "1d7d6f6a1debc1d7fa09f2eb3f30228249f75d06557498ca6c1a80e9cf8381f7"
   }
 }

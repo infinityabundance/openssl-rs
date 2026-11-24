@@ -1360,7 +1360,6 @@
           "python"
         ],
         "private": [
-          "artifacts/phase2/install",
           "court"
         ]
       },
@@ -1369,7 +1368,6 @@
         "python"
       ],
       "privateState": [
-        "artifacts/phase2/install",
         "court"
       ],
       "stability": "stable"
@@ -1441,7 +1439,6 @@
           "python"
         ],
         "private": [
-          "artifacts/phase2/install",
           "court"
         ]
       },
@@ -1450,7 +1447,6 @@
         "python"
       ],
       "privateState": [
-        "artifacts/phase2/install",
         "court"
       ],
       "stability": "stable"
@@ -1522,7 +1518,6 @@
           "python"
         ],
         "private": [
-          "artifacts/phase2/install",
           "court"
         ]
       },
@@ -1531,7 +1526,6 @@
         "python"
       ],
       "privateState": [
-        "artifacts/phase2/install",
         "court"
       ],
       "stability": "stable"
@@ -1623,7 +1617,6 @@
         "rustc"
       ],
       "privateState": [
-        "artifacts/phase2/install",
         "court",
         "forensics/authorities/prefix"
       ],
@@ -1656,7 +1649,11 @@
       "invocation": [
         "--list"
       ],
-      "jsonFields": [],
+      "jsonFields": [
+        "commands",
+        "interface",
+        "schema"
+      ],
       "kind": "discovery",
       "listed": false,
       "name": "list",
@@ -1727,9 +1724,19 @@
     "explainBlocks": 20,
     "listedSteps": 20
   },
+  "declaredAtCommit": "f2ec25379e3ba8f663a93aedf514bcb1fd9cb674",
+  "declaredAtCommitShort": "f2ec25379",
+  "declaredSources": {
+    "forensics/tools/public_surface.py": {
+      "sha256": "b21c03ff71093ff34a2bfdde14853baf031b4cf49f2b41ccc1c0ea292bb51022"
+    },
+    "forensics/tools/verify.py": {
+      "sha256": "1d7d6f6a1debc1d7fa09f2eb3f30228249f75d06557498ca6c1a80e9cf8381f7"
+    }
+  },
   "detector": {
     "path": "forensics/tools/public_surface.py",
-    "sha256": "a5b54814cf0bad654e1c081eaf0153f2e9579f6ac59f1dfd177613759acdd95b"
+    "sha256": "b21c03ff71093ff34a2bfdde14853baf031b4cf49f2b41ccc1c0ea292bb51022"
   },
   "discovery": {
     "helpAdvertisedNames": [
@@ -1835,6 +1842,13 @@
       },
       {
         "argv": [
+          "list"
+        ],
+        "exit": 0,
+        "what": "probe:list-subcommand"
+      },
+      {
+        "argv": [
           "authority",
           "--json"
         ],
@@ -1850,7 +1864,7 @@
         "what": "json-probe"
       }
     ],
-    "listJsonEmitsJson": false,
+    "listJsonEmitsJson": true,
     "listingColumns": [
       "name",
       "role",
@@ -1860,14 +1874,10 @@
   },
   "discrepancies": [
     {
-      "class": "TOOL_DEFECT_QUEUED",
-      "documentEffect": "docs/PUBLIC-VERIFICATION.md's subcommand table row is corrected from `list` to `--list` (old wording kept in the A25 receipt)",
-      "id": "D1",
-      "queued": "make `list` a real subcommand, or remove it from the help and the refusal message; a flag and a subcommand of the same name is a trap",
-      "statement": "`--help` calls the positional value 'a subcommand name, `all`, or `list`', the unknown-subcommand message lists `list` among the known names, and `main` writes `name = args.command or \"list\"`; but no dispatch branch accepts `list`, so `verify.py list` and a bare `verify.py` both print \"unknown subcommand 'list'\" and exit 2. The only accepted form is the `--list` flag, and that is the form the surface declares.",
-      "surfaceEffect": "command `list` declares `invocation: [\"--list\"]`; the bare word is never claimed",
-      "title": "`list` is advertised as a subcommand and is refused as one",
-      "witness": [
+      "class": "TOOL_DEFECT_REPAIRED",
+      "documentEffect": "docs/PUBLIC-VERIFIER.md \u00a72.1 states the repaired dispatch; \u00a79 records it as repaired",
+      "foundAt": "a9bcb54808eddfc11f7ab10215894e3c1064b21c",
+      "historicalWitness": [
         {
           "argv": [
             "list"
@@ -1875,25 +1885,76 @@
           "contains": "unknown subcommand 'list'",
           "expectedExit": 2,
           "kind": "exit",
-          "observedExit": 2,
-          "observedHead": "verify: unknown subcommand 'list'; known: manifest, rebuild, proofs, differential, instruments, controls, receipts, clai",
-          "reproduced": true
+          "observedAt": "a9bcb54808eddfc11f7ab10215894e3c1064b21c",
+          "observedExit": 0,
+          "observedHead": "manifest\trequired\tin all",
+          "reproduced": false,
+          "supersededAt": "f2ec25379e3ba8f663a93aedf514bcb1fd9cb674"
         },
         {
           "argv": [],
           "contains": "unknown subcommand 'list'",
           "expectedExit": 2,
           "kind": "exit",
+          "observedAt": "a9bcb54808eddfc11f7ab10215894e3c1064b21c",
           "observedExit": 2,
-          "observedHead": "verify: unknown subcommand 'list'; known: manifest, rebuild, proofs, differential, instruments, controls, receipts, clai",
+          "observedHead": "verify: no subcommand; pass a command name, `all`, or `list` (`--list` prints the listing)",
+          "reproduced": false,
+          "supersededAt": "f2ec25379e3ba8f663a93aedf514bcb1fd9cb674"
+        },
+        {
+          "absent": [],
+          "contains": [
+            "args.command or \"list\""
+          ],
+          "kind": "source",
+          "missingFromSource": [
+            "args.command or \"list\""
+          ],
+          "observedAt": "a9bcb54808eddfc11f7ab10215894e3c1064b21c",
+          "path": "forensics/tools/verify.py",
+          "reproduced": false,
+          "supersededAt": "f2ec25379e3ba8f663a93aedf514bcb1fd9cb674",
+          "unexpectedlyPresent": []
+        }
+      ],
+      "id": "D1",
+      "oldBehaviour": "`verify.py list` -> exit 2, `unknown subcommand 'list'`; a bare `verify.py` -> exit 2 with the same message; source carried `args.command or \"list\"`.",
+      "queued": null,
+      "repair": "`list` is a real subcommand routed through `emit_listing` and exits 0; the `args.command or \"list\"` default is replaced by an explicit `None` refusal whose message names the accepted forms. Repaired in the D1-D5 batch at f2ec25379 (evidence/defects/d1-d5/RECEIPT.md).",
+      "repairedAt": "f2ec25379e3ba8f663a93aedf514bcb1fd9cb674",
+      "repairedAtShort": "f2ec25379",
+      "statement": "At a9bcb5480 `--help` called the positional value 'a subcommand name, `all`, or `list`', the unknown-subcommand message listed `list` among the known names, and `main` wrote `name = args.command or \"list\"`; but no dispatch branch accepted `list`, so `verify.py list` and a bare `verify.py` both printed \"unknown subcommand 'list'\" and exited 2. The only accepted form was the `--list` flag.",
+      "status": "repaired",
+      "surfaceEffect": "command `list` declares `invocation: [\"--list\"]` and the `list` subcommand probe; the bare word is refused",
+      "title": "`list` was advertised as a subcommand and refused as one",
+      "witness": [
+        {
+          "argv": [
+            "list"
+          ],
+          "contains": "manifest\trequired\tin all",
+          "expectedExit": 0,
+          "kind": "exit",
+          "observedExit": 0,
+          "observedHead": "manifest\trequired\tin all",
+          "reproduced": true
+        },
+        {
+          "argv": [],
+          "contains": "no subcommand",
+          "expectedExit": 2,
+          "kind": "exit",
+          "observedExit": 2,
+          "observedHead": "verify: no subcommand; pass a command name, `all`, or `list` (`--list` prints the listing)",
           "reproduced": true
         },
         {
           "absent": [
-            "elif name == \"list\""
+            "args.command or \"list\""
           ],
           "contains": [
-            "args.command or \"list\""
+            "args.command == \"list\""
           ],
           "kind": "source",
           "missingFromSource": [],
@@ -1904,13 +1965,43 @@
       ]
     },
     {
-      "class": "TOOL_DEFECT_QUEUED_DOCUMENTED",
-      "documentEffect": "a clause naming the exception is added to the descriptive document's `--json` paragraph (old wording kept in the A25 receipt)",
+      "class": "TOOL_DEFECT_REPAIRED",
+      "documentEffect": "docs/PUBLIC-VERIFIER.md \u00a74 documents the listing document; \u00a79 records the repair",
+      "foundAt": "a9bcb54808eddfc11f7ab10215894e3c1064b21c",
+      "historicalWitness": [
+        {
+          "kind": "shape",
+          "observation": "`--list --json` emits tab-separated text, not a JSON object",
+          "observedAt": "a9bcb54808eddfc11f7ab10215894e3c1064b21c",
+          "reproduced": false,
+          "supersededAt": "f2ec25379e3ba8f663a93aedf514bcb1fd9cb674"
+        },
+        {
+          "absent": [
+            "LISTING_SCHEMA"
+          ],
+          "contains": [],
+          "kind": "source",
+          "missingFromSource": [],
+          "observedAt": "a9bcb54808eddfc11f7ab10215894e3c1064b21c",
+          "path": "forensics/tools/verify.py",
+          "reproduced": false,
+          "supersededAt": "f2ec25379e3ba8f663a93aedf514bcb1fd9cb674",
+          "unexpectedlyPresent": [
+            "LISTING_SCHEMA"
+          ]
+        }
+      ],
       "id": "D2",
-      "queued": "either honour `--json` on the discovery commands or reject the combination; a silently ignored flag is not a public argument",
-      "statement": "`verify.py --list --json` prints the tab-separated listing and exits 0; it does not emit a JSON document, because the listing branch returns before serialisation. The help text describes `--json` as 'emit one machine-readable document' without an exception, and the descriptive document repeated that sentence. The surface declares the observed behaviour: the listing is TSV and only step runs emit a document.",
-      "surfaceEffect": "`list`/`explain` declare `jsonForm: none`; the discovery block records `emitsJson: false`",
-      "title": "`--json` is accepted by the discovery commands and ignored",
+      "oldBehaviour": "`--list --json` -> exit 0 with TSV, not a JSON object; `verify.py` contained no `LISTING_SCHEMA`.",
+      "queued": null,
+      "repair": "`listing_rows`, `listing_document`, `render_listing` and `emit_listing` emit the listing document when `--json` is set, in both the `list` and `--list` forms. Repaired in the D1-D5 batch at f2ec25379.",
+      "repairedAt": "f2ec25379e3ba8f663a93aedf514bcb1fd9cb674",
+      "repairedAtShort": "f2ec25379",
+      "statement": "At a9bcb5480 `verify.py --list --json` printed the tab-separated listing and exited 0; no JSON document was emitted, because the listing branch returned before serialisation. The help text described `--json` as 'emit one machine-readable document' with no exception.",
+      "status": "repaired",
+      "surfaceEffect": "`list` declares `jsonForm: document` with the listing document's three fields; the discovery block records `emitsJson: true` and the schema",
+      "title": "`--json` was accepted by the discovery listing and ignored",
       "witness": [
         {
           "argv": [
@@ -1921,18 +2012,30 @@
           "expectedExit": 0,
           "kind": "exit",
           "observedExit": 0,
-          "observedHead": "manifest\trequired\tin all",
+          "observedHead": "{",
           "reproduced": true
         },
         {
-          "kind": "shape",
-          "observation": "`--list --json` emits tab-separated text, not a JSON object",
-          "reproduced": true
+          "argv": [
+            "--list",
+            "--json"
+          ],
+          "fields": [
+            "commands",
+            "interface",
+            "schema"
+          ],
+          "kind": "listing-document",
+          "observedExit": 0,
+          "reproduced": true,
+          "schema": "openssl-rs/verify-listing/1",
+          "subcommandIdentical": true
         },
         {
           "absent": [],
           "contains": [
-            "if args.list:"
+            "LISTING_SCHEMA",
+            "def emit_listing"
           ],
           "kind": "source",
           "missingFromSource": [],
@@ -1944,12 +2047,19 @@
     },
     {
       "class": "DOCUMENTED_HERE",
-      "documentEffect": "docs/PUBLIC-VERIFIER.md states the precedence rule",
+      "documentEffect": "docs/PUBLIC-VERIFIER.md \u00a72.1 states the precedence rule; \u00a79 records it as documented",
+      "foundAt": "a9bcb54808eddfc11f7ab10215894e3c1064b21c",
+      "historicalWitness": [],
       "id": "D3",
+      "oldBehaviour": "the precedence existed but no document stated it.",
       "queued": null,
+      "repair": "documented as part of the contract (docs/PUBLIC-VERIFIER.md \u00a72.1); no executable change was needed or made.",
+      "repairedAt": null,
+      "repairedAtShort": null,
       "statement": "`--list` takes precedence over `--explain`, which takes precedence over running the named command; `--json`, `--network` and `--tmp` have no effect on `--list` or `--explain`. The behaviour is stable and defensible, but it was in no document, so a caller could not tell which output to expect from `--list --explain`.",
+      "status": "documented",
       "surfaceEffect": "the precedence is part of the documented contract",
-      "title": "the argument precedence among the discovery commands is undocumented",
+      "title": "the argument precedence among the discovery commands was undocumented",
       "witness": [
         {
           "argv": [
@@ -1967,155 +2077,299 @@
           "kind": "shape",
           "observation": "`--list --explain` prints the listing, not the explanation blocks",
           "reproduced": true
+        },
+        {
+          "absent": [],
+          "contains": [
+            "takes precedence over `--explain`"
+          ],
+          "kind": "source",
+          "missingFromSource": [],
+          "path": "docs/PUBLIC-VERIFIER.md",
+          "reproduced": true,
+          "unexpectedlyPresent": []
         }
       ]
     },
     {
-      "class": "TOOL_DEFECT_QUEUED",
-      "documentEffect": "the descriptive document's claim that a declared private path is reported present or absent is left unedited: the defect is the tool's, not the prose's",
-      "id": "D4",
-      "queued": "add `artifacts/phase2/install` to the audited root set, or stop declaring it private; then re-derive the presence fields",
-      "statement": "The three consumer commands declare `artifacts/phase2/install` as a private path, but the interface's audited root set names `artifacts/phase2/shell` instead. The declared path is therefore never counted, so `private_state_present` can never report it and the document's `known_roots` block omits it. A declared private read that presence-reporting cannot see is an under-report, not a declaration.",
-      "surfaceEffect": "the declaration is transcribed exactly; the surface does not hide the interface's own declaration",
-      "title": "a declared private root is outside the audited root set",
-      "witness": [
+      "class": "TOOL_DEFECT_REPAIRED",
+      "documentEffect": "docs/PUBLIC-VERIFIER.md \u00a76 states the derived audited set; \u00a79 records the repair",
+      "foundAt": "a9bcb54808eddfc11f7ab10215894e3c1064b21c",
+      "historicalWitness": [
         {
-          "absent": [
-            "artifacts/phase2/install"
+          "expected": [
+            "artifacts/phase2/install",
+            "court"
           ],
-          "contains": [
-            "artifacts/phase2/shell"
+          "kind": "surface-private",
+          "observed": [
+            "court"
           ],
-          "end": ")",
-          "extracted": true,
-          "kind": "block",
-          "missingFromBlock": [],
-          "path": "forensics/tools/verify.py",
-          "reproduced": true,
-          "start": "PRIVATE_ROOTS = (",
-          "unexpectedlyPresent": []
+          "observedAt": "a9bcb54808eddfc11f7ab10215894e3c1064b21c",
+          "reproduced": false,
+          "step": "consumer-curl",
+          "supersededAt": "f2ec25379e3ba8f663a93aedf514bcb1fd9cb674"
         },
         {
-          "absent": true,
+          "argv": [
+            "--explain"
+          ],
+          "expected": [
+            "artifacts/phase2/install",
+            "court"
+          ],
+          "kind": "explain-private",
+          "observed": [
+            "court"
+          ],
+          "observedAt": "a9bcb54808eddfc11f7ab10215894e3c1064b21c",
+          "reproduced": false,
+          "step": "consumer-curl",
+          "supersededAt": "f2ec25379e3ba8f663a93aedf514bcb1fd9cb674"
+        }
+      ],
+      "id": "D4",
+      "oldBehaviour": "`--explain consumer-curl` printed `private: court, artifacts/phase2/install`; the audited set omitted `install`.",
+      "queued": null,
+      "repair": "the declaration is removed, because all 155 files under `artifacts/phase2/install` are Git-tracked checkout content with no untracked or ignored entry; and `audited_private_roots()` now derives the audited set from the known roots plus every declared read. Repaired in the D1-D5 batch at f2ec25379.",
+      "repairedAt": "f2ec25379e3ba8f663a93aedf514bcb1fd9cb674",
+      "repairedAtShort": "f2ec25379",
+      "statement": "At a9bcb5480 the three consumer commands declared `artifacts/phase2/install` as a private path, but the interface's audited root set named `artifacts/phase2/shell` instead. The declared path was therefore never counted, so presence-reporting could never report it. A declared private read that presence reporting cannot see is an under-report, not a declaration.",
+      "status": "repaired",
+      "surfaceEffect": "the consumer commands declare `court` only; the private-state rule names the derived audited set and no known gap",
+      "title": "a declared private root was outside the audited root set",
+      "witness": [
+        {
+          "argv": [
+            "--explain"
+          ],
+          "expected": [
+            "court"
+          ],
+          "kind": "explain-private",
+          "observed": [
+            "court"
+          ],
+          "reproduced": true,
+          "step": "consumer-curl"
+        },
+        {
           "argv": [
             "authority",
             "--json"
           ],
-          "key": "artifacts/phase2/install",
-          "kind": "json-absent",
-          "observedKeys": [
+          "auditedRoots": [
             "artifacts/phase2/shell",
             "court",
             "forensics/authorities/downloads",
             "forensics/authorities/prefix",
             "target"
           ],
-          "pointer": [
-            "private_state",
-            "known_roots"
+          "declaredReads": [
+            "court",
+            "forensics/authorities/downloads",
+            "forensics/authorities/prefix"
           ],
+          "kind": "declared-reads-audited",
+          "missingFromAudit": [],
           "reproduced": true
         },
         {
-          "argv": [
-            "--explain",
-            "consumer-curl"
+          "expected": [
+            "court"
           ],
-          "contains": "artifacts/phase2/install",
-          "expectedExit": 0,
-          "kind": "exit",
-          "observedExit": 0,
-          "observedHead": "consumer-curl  (required; in `all`)",
-          "reproduced": true
+          "kind": "surface-private",
+          "observed": [
+            "court"
+          ],
+          "reproduced": true,
+          "step": "consumer-curl"
         }
       ]
     },
     {
-      "class": "TOOL_DEFECT_QUEUED_DOCUMENTED",
-      "documentEffect": "one clause is added to the descriptive document's determinism paragraph (old wording kept in the A25 receipt)",
-      "id": "D5",
-      "queued": "declare the private-state readings as an environment input, or project them out of the compared record",
-      "statement": "The `environment` block is declared as an input and excluded from the two-run comparison, but `private_state` is a separate top-level block computed from `git status` and is inside the compared record. Two runs over the same checkout therefore differ if an untracked or ignored entry appears between them, and the published sentence excluded only the `environment` block.",
-      "surfaceEffect": "the determinism rule is declared with its exact scope and this gap named",
-      "title": "live private-state readings sit inside the deterministic record",
-      "witness": [
+      "class": "TOOL_DEFECT_REPAIRED",
+      "documentEffect": "docs/PUBLIC-VERIFIER.md \u00a77 states both inputs; \u00a79 records the repair",
+      "foundAt": "a9bcb54808eddfc11f7ab10215894e3c1064b21c",
+      "historicalWitness": [
         {
-          "absent": [],
-          "contains": [
-            "private_entries",
-            "\"status\", \"--porcelain\""
-          ],
-          "end": "    return report\n",
-          "extracted": true,
-          "kind": "block",
-          "missingFromBlock": [],
-          "path": "forensics/tools/verify.py",
-          "reproduced": true,
-          "start": "def private_state_report(",
-          "unexpectedlyPresent": []
-        },
-        {
-          "absent": true,
+          "absent": false,
           "argv": [
             "authority",
             "--json"
           ],
-          "key": "private_state",
+          "key": "declared",
           "kind": "json-absent",
+          "observedAt": "a9bcb54808eddfc11f7ab10215894e3c1064b21c",
           "observedKeys": [
-            "court",
-            "court_cap_source",
-            "court_mem_cap_gib",
-            "court_mem_declared",
-            "court_memswap_declared",
-            "court_present",
             "declared",
-            "floor_bytes",
-            "floor_gib",
-            "floor_met",
-            "mem_available_bytes",
-            "mem_available_gib",
+            "known_roots",
             "note",
-            "sampled_from"
+            "present"
           ],
           "pointer": [
-            "environment"
+            "private_state"
+          ],
+          "reproduced": false,
+          "supersededAt": "f2ec25379e3ba8f663a93aedf514bcb1fd9cb674"
+        },
+        {
+          "absent": [
+            "INPUT_KEYS"
+          ],
+          "contains": [],
+          "kind": "source",
+          "missingFromSource": [],
+          "observedAt": "a9bcb54808eddfc11f7ab10215894e3c1064b21c",
+          "path": "forensics/tools/verify.py",
+          "reproduced": false,
+          "supersededAt": "f2ec25379e3ba8f663a93aedf514bcb1fd9cb674",
+          "unexpectedlyPresent": [
+            "INPUT_KEYS"
+          ]
+        }
+      ],
+      "id": "D5",
+      "oldBehaviour": "`private_state` carried no `declared` marker; `verify.py` had no `INPUT_KEYS`; the block was compared between runs.",
+      "queued": null,
+      "repair": "`private_state` is declared as `private-state-input`, required to be present and populated, and excluded from the compared projection alongside `environment`; the detector refuses a document that does not declare it. Repaired in the D1-D5 batch at f2ec25379.",
+      "repairedAt": "f2ec25379e3ba8f663a93aedf514bcb1fd9cb674",
+      "repairedAtShort": "f2ec25379",
+      "statement": "At a9bcb5480 the `environment` block was declared as an input and excluded from the two-run comparison, but `private_state` was a separate top-level block computed from `git status` and was inside the compared record. Two runs over the same checkout therefore differed if an untracked or ignored entry appeared between them, and the published sentence excluded only `environment`.",
+      "status": "repaired",
+      "surfaceEffect": "the determinism rule names both inputs and clears `knownGap`",
+      "title": "live private-state readings sat inside the deterministic record",
+      "witness": [
+        {
+          "argv": [
+            "authority",
+            "--json"
+          ],
+          "expected": "private-state-input",
+          "key": "declared",
+          "kind": "json-value",
+          "observed": "private-state-input",
+          "pointer": [
+            "private_state"
           ],
           "reproduced": true
         },
         {
+          "absent": [],
+          "contains": [
+            "INPUT_KEYS",
+            "PRIVATE_STATE_DECLARATION"
+          ],
+          "kind": "source",
+          "missingFromSource": [],
+          "path": "forensics/tools/verify.py",
+          "reproduced": true,
+          "unexpectedlyPresent": []
+        },
+        {
           "kind": "shape",
-          "observation": "the document carries `private_state` at top level, outside the declared `environment` input block",
+          "observation": "the surface's determinism rule names both declared inputs and records no known gap",
           "reproduced": true
         }
       ]
     },
     {
       "class": "DOCUMENT_DEFECT_CORRECTED",
-      "documentEffect": "both mentions are corrected to 37; the old wording is preserved in the A25 receipt",
+      "documentEffect": "both mentions are corrected; the old wording is preserved in evidence/a25/RECEIPT.md",
+      "foundAt": "a9bcb54808eddfc11f7ab10215894e3c1064b21c",
+      "historicalWitness": [],
       "id": "D6",
+      "oldBehaviour": "the document said '19 tests' in two places.",
       "queued": null,
-      "statement": "docs/PUBLIC-VERIFICATION.md said `test_verify.py` holds 19 tests in two places. The module currently executes 37. The figure is a live quantity in a descriptive document that no generator corrects, which is exactly the drift the document was written to warn about.",
+      "repair": "the figure is derived from the loader by the producer and by test_the_descriptive_document_no_longer_carries_the_stale_count; the document states the executed count.",
+      "repairedAt": null,
+      "repairedAtShort": null,
+      "statement": "docs/PUBLIC-VERIFICATION.md said `test_verify.py` holds 19 tests in two places while the module executed 37. The figure is a live quantity in a descriptive document that no generator corrects.",
+      "status": "corrected",
       "surfaceEffect": "none",
       "title": "the descriptive document's test count was stale",
       "witness": [
         {
-          "expected": 37,
-          "kind": "test-count",
+          "claim": "46 tests",
+          "containsClaim": true,
+          "executed": 46,
+          "kind": "test-count-document",
           "module": "forensics.tools.tests.test_verify",
-          "observed": 37,
+          "path": "docs/PUBLIC-VERIFICATION.md",
+          "reproduced": true,
+          "staleClaimPresent": false
+        }
+      ]
+    },
+    {
+      "class": "TOOL_BEHAVIOUR_DOCUMENTED",
+      "documentEffect": "the contract already states the exception; \u00a79 records D7 as documented and names the help-text gap",
+      "foundAt": "f2ec25379e3ba8f663a93aedf514bcb1fd9cb674",
+      "historicalWitness": [],
+      "id": "D7",
+      "oldBehaviour": "not recorded by A25, which named the listing only.",
+      "queued": "either make `--help`'s `--json` sentence name the `--explain`/`--help` exception, or honour `--json` there; a silently ignored flag is not a public argument",
+      "repair": "none in this refresh: the behaviour is documented in the contract, and changing `--help` prose would change `verify.py`, which this record only measures. Recorded, not hidden.",
+      "repairedAt": null,
+      "repairedAtShort": null,
+      "statement": "Found while re-deriving this record. D2 repaired the listing, but `verify.py --explain --json` and `verify.py --help --json` still accept `--json` and print text, emitting no document. The contract states that exception (PUBLIC-VERIFIER.md \u00a72.1, \u00a72.2 and \u00a74) and the surface declares `explain` as `jsonForm: none`, so the declaration and the executable agree; the executable's own `--help` sentence does not name the exception, and an outside caller reading only `--help` would expect a document.",
+      "status": "documented",
+      "surfaceEffect": "`explain` keeps `jsonForm: none`; the declaration is accurate about the executable",
+      "title": "`--json` is accepted by `--explain` and `--help` and ignored",
+      "witness": [
+        {
+          "argv": [
+            "--explain",
+            "--json"
+          ],
+          "contains": null,
+          "expectedExit": 0,
+          "kind": "exit",
+          "observedExit": 0,
+          "observedHead": "manifest  (required; in `all`)",
           "reproduced": true
         },
         {
-          "absent": [
-            "19 tests"
+          "kind": "shape",
+          "observation": "`--explain --json` prints the explanation text and emits no JSON document",
+          "reproduced": true
+        },
+        {
+          "argv": [
+            "--help",
+            "--json"
           ],
+          "contains": null,
+          "expectedExit": 0,
+          "kind": "exit",
+          "observedExit": 0,
+          "observedHead": "usage: verify.py [-h] [--json] [--network] [--explain] [--list] [--tmp TMP]",
+          "reproduced": true
+        },
+        {
+          "kind": "shape",
+          "observation": "`--help --json` prints usage and emits no document",
+          "reproduced": true
+        },
+        {
+          "absent": [],
           "contains": [
-            "37 tests"
+            "the listing document for the list command"
+          ],
+          "kind": "source",
+          "missingFromSource": [],
+          "path": "forensics/tools/verify.py",
+          "reproduced": true,
+          "unexpectedlyPresent": []
+        },
+        {
+          "absent": [],
+          "contains": [
+            "`--explain` and `--help` print"
           ],
           "kind": "text",
           "missingFromText": [],
-          "path": "docs/PUBLIC-VERIFICATION.md",
+          "path": "docs/PUBLIC-VERIFIER.md",
           "reproduced": true,
           "unexpectedlyPresent": []
         }
@@ -2133,7 +2387,8 @@
         "explain",
         "explain-all",
         "help",
-        "list"
+        "list",
+        "list-subcommand"
       ],
       "1": [
         "authority-offline"
@@ -2207,6 +2462,16 @@
         "stderr_head": "",
         "stdout_head": "manifest\trequired\tin all"
       },
+      "list-subcommand": {
+        "argv": [
+          "list"
+        ],
+        "declared": 0,
+        "exit": 0,
+        "started": true,
+        "stderr_head": "",
+        "stdout_head": "manifest\trequired\tin all"
+      },
       "malformed-arguments": {
         "argv": [
           "--tmp"
@@ -2251,13 +2516,13 @@
   ],
   "producer": {
     "path": "evidence/a25/build_evidence.py",
-    "sha256": "e241cda138ce1092a6f84d4efc3cf783bf714d3f37ea861e1982ca5638eda073"
+    "sha256": "3983ccc04919b9360e837ee3523e874e99e32a8538ac08227b5531ef333778e3"
   },
   "schema": "openssl-rs/public-surface/inventory/1",
   "structuralProblems": [],
   "surfaceSchemaVersion": "openssl-rs/public-surface/1",
   "verifier": {
     "path": "forensics/tools/verify.py",
-    "sha256": "17a9f2ae75614eaff52dd0bd833e30af05721e53a957e6209f68f1fa3fed4fc3"
+    "sha256": "1d7d6f6a1debc1d7fa09f2eb3f30228249f75d06557498ca6c1a80e9cf8381f7"
   }
 }

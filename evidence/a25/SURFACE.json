@@ -27,7 +27,7 @@
     {
       "kind": "option",
       "name": "--list",
-      "summary": "print the command set as tab-separated name, role and all-membership; takes precedence over every other argument",
+      "summary": "print the command set as tab-separated name, role and all-membership (or, with `--json`, the listing document); takes precedence over every other argument",
       "takesValue": false
     },
     {
@@ -1518,7 +1518,7 @@
       "jsonForm": "none",
       "kind": "discovery",
       "name": "explain",
-      "notes": "`--json` has no effect on this output",
+      "notes": "`--json` has no effect on this output (D7: accepted and ignored; the contract states it, the `--help` sentence does not)",
       "prerequisites": [
         "python"
       ],
@@ -1531,7 +1531,16 @@
     }
   ],
   "declaredAt": "2026-11-24",
-  "declaredAtCommit": "a9bcb5480",
+  "declaredAtCommit": "f2ec25379e3ba8f663a93aedf514bcb1fd9cb674",
+  "declaredAtCommitShort": "f2ec25379",
+  "declaredSources": {
+    "forensics/tools/public_surface.py": {
+      "sha256": "b21c03ff71093ff34a2bfdde14853baf031b4cf49f2b41ccc1c0ea292bb51022"
+    },
+    "forensics/tools/verify.py": {
+      "sha256": "1d7d6f6a1debc1d7fa09f2eb3f30228249f75d06557498ca6c1a80e9cf8381f7"
+    }
+  },
   "determinismRule": {
     "enforcedBy": "PV_REFUSED_UNSTABLE_OUTPUT",
     "knownGap": null,

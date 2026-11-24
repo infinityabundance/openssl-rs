@@ -15,8 +15,25 @@ The producer is the authority for the bytes: it embeds the declaration, measures
 the executable, runs the controls and writes sorted JSON.  Re-running it on the
 same checkout reproduces every file byte for byte.  It exits 1 when the real
 comparison refuses, when a control does not produce exactly its declared code,
-or when a recorded discrepancy no longer reproduces -- a stale finding is a
+or when a live discrepancy witness no longer reproduces -- a stale finding is a
 failure of the record, not a pass.
+
+``declaredAtCommit`` is an explicit input, never the live ``HEAD``.  It defaults
+to the value already in ``SURFACE.json`` when one exists, and ``--declared-at
+COMMIT`` re-declares it.  The declaration also records the SHA-256 of the two
+sources it is about (``DECLARED_SOURCES``).  If either source moves, the record
+refuses with a named code instead of reproducing bytes that now describe a
+different executable; the refusal codes are ``A25_REFUSED_DECLARED_SOURCE_MOVED``
+(a recorded declaration no longer matches the measured tool),
+``A25_REFUSED_DECLARED_AT_UNKNOWN`` (the named commit is not in this repository)
+and ``A25_REFUSED_DECLARED_AT_MISMATCH`` (the named commit does not contain the
+measured tool).  A refusal exits 3 and writes nothing.
+
+Discrepancies are historical where they have been repaired: each entry keeps the
+old behaviour and the old witness (``observedAt`` the A25 candidate, expected
+**not** to reproduce now), and carries a live witness for the repaired
+behaviour, which must reproduce.  A historical witness that starts reproducing
+again is a regression and fails the producer.
 
 Control stubs are test-only fixtures.  They imitate the real verifier's text so
 that every check except the one under test succeeds; they are written into a
@@ -30,6 +47,7 @@ SPDX-License-Identifier: Apache-2.0
 
 from __future__ import annotations
 
+import argparse
 import copy
 import hashlib
 import json
@@ -45,9 +63,28 @@ sys.path.insert(0, str(ROOT / "forensics" / "tools"))
 import public_surface as ps  # noqa: E402
 
 EVIDENCE = ROOT / "evidence" / "a25"
+SURFACE_PATH = EVIDENCE / "SURFACE.json"
 VERIFIER = ROOT / "forensics" / "tools" / "verify.py"
-BASE_COMMIT = "a9bcb54808eddfc11f7ab10215894e3c1064b21c"
-BASE_SHORT = "a9bcb5480"
+
+# The declaration is *about* these two files.  If either changes, the record must
+# refuse rather than reproduce bytes that describe a different executable.  The
+# producer itself is deliberately absent: its digest is written into the records,
+# and a declaration cannot be bound to the bytes of the program that writes it.
+DECLARED_SOURCES = [
+    "forensics/tools/public_surface.py",
+    "forensics/tools/verify.py",
+]
+
+# Historical facts, not live readings: the candidate at which A25 first declared
+# the surface, and the date of that declaration.  Neither is re-derived from HEAD.
+OLD_COMMIT = "a9bcb54808eddfc11f7ab10215894e3c1064b21c"
+OLD_SHORT = "a9bcb5480"
+DEFAULT_DECLARED_AT = "2026-11-24"
+
+REFUSED_SOURCE_MOVED = "A25_REFUSED_DECLARED_SOURCE_MOVED"
+REFUSED_COMMIT_UNKNOWN = "A25_REFUSED_DECLARED_AT_UNKNOWN"
+REFUSED_COMMIT_MISMATCH = "A25_REFUSED_DECLARED_AT_MISMATCH"
+EXIT_REFUSED_DECLARATION = 3
 
 JSON_FIELDS = [
     "candidate", "counts", "environment", "interface", "invocation",
@@ -55,7 +92,10 @@ JSON_FIELDS = [
     "warnings",
 ]
 
-SINCE = "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480"
+SINCE = ("2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480")
+# `since` names when the stability level began (the A25 declaration).  It is a
+# historical token and is not rewritten when the record is re-derived at a later
+# candidate: `declaredAtCommit` names that candidate.
 
 EVIDENCE_PATHS = ["forensics/tools/verify.py", "docs/PUBLIC-VERIFIER.md"]
 
@@ -63,8 +103,9 @@ ARGUMENTS = [
     {"name": "command", "kind": "positional", "takesValue": False,
      "summary": "one declared command name, or `all`; a bare invocation is refused"},
     {"name": "--json", "kind": "option", "takesValue": False,
-     "summary": "emit the machine-readable document instead of the text report; "
-                "no effect on the discovery commands"},
+     "summary": "emit the machine-readable document: the run document for a step "
+                "run or `all`, and the listing document for `list` or `--list`; "
+                "`--explain` and `--help` print text"},
     {"name": "--network", "kind": "option", "takesValue": False,
      "summary": "declare that the network is available; a declaration, not a probe"},
     {"name": "--explain", "kind": "option", "takesValue": False,
@@ -72,7 +113,8 @@ ARGUMENTS = [
                 "takes precedence over running a command"},
     {"name": "--list", "kind": "option", "takesValue": False,
      "summary": "print the command set as tab-separated name, role and "
-                "all-membership; takes precedence over every other argument"},
+                "all-membership (or, with `--json`, the listing document); takes "
+                "precedence over every other argument"},
     {"name": "--tmp", "kind": "option", "takesValue": True, "metavar": "TMP",
      "summary": "use this directory as the temporary root instead of a fresh one"},
     {"name": "--help", "kind": "option", "takesValue": False, "aliases": ["-h"],
@@ -95,14 +137,20 @@ EXIT_CONTRACT = {
 DISCOVERY = {
     "listing": {"argv": ["--list"], "format": "tsv",
                 "columns": ["name", "role", "in_all"]},
-    "listJson": {"argv": ["--list", "--json"], "format": "tsv", "emitsJson": False,
-                 "note": "`--json` is accepted and has no effect on the listing; "
-                         "the listing stays tab-separated"},
+    "listJson": {"argv": ["--list", "--json"], "format": "json",
+                 "emitsJson": True,
+                 "schema": "openssl-rs/verify-listing/1",
+                 "fields": ["commands", "interface", "schema"],
+                 "note": "`--json` is honoured on the listing: `--list --json` "
+                         "and `list --json` emit the listing document (A25 D2 "
+                         "repaired)"},
     "help": {"argv": ["--help"]},
     "explain": {"argv": ["--explain"]},
     "jsonProbe": {"command": "authority", "argv": ["authority", "--json"],
                   "environmentKey": "environment",
                   "environmentDeclaration": "environment-input",
+                  "privateStateKey": "private_state",
+                  "privateStateDeclaration": "private-state-input",
                   "note": "`authority` without --network is NOT_RUN, which still "
                           "emits a complete document and exits 1; it therefore "
                           "costs nothing and depends on no candidate state"},
@@ -129,6 +177,9 @@ EXIT_PROBES = [
      "note": "an option missing its value is refused by the parser"},
     {"id": "explain-unknown", "argv": ["--explain", "nosuch-command"], "code": 2,
      "note": "explaining an undeclared command is refused"},
+    {"id": "list-subcommand", "argv": ["list"], "code": 0,
+     "note": "the discovery command as a real subcommand; exercises the repaired "
+             "D1 dispatch and exits 0"},
 ]
 
 SUPPORT_TESTS = [
@@ -194,14 +245,11 @@ STEPS = [
      ["python", "network"], ["forensics/tools/authority_acquire.py"],
      ["forensics/authorities/downloads", "forensics/authorities/prefix"]),
     ("consumer-curl", "audit one consumer family's recorded closure receipt",
-     ["python", "git"], ["forensics/tools/closure_discipline.py"],
-     ["court", "artifacts/phase2/install"]),
+     ["python", "git"], ["forensics/tools/closure_discipline.py"], ["court"]),
     ("consumer-ssh", "audit one consumer family's recorded closure receipt",
-     ["python", "git"], ["forensics/tools/closure_discipline.py"],
-     ["court", "artifacts/phase2/install"]),
+     ["python", "git"], ["forensics/tools/closure_discipline.py"], ["court"]),
     ("consumer-sshd", "audit one consumer family's recorded closure receipt",
-     ["python", "git"], ["forensics/tools/closure_discipline.py"],
-     ["court", "artifacts/phase2/install"]),
+     ["python", "git"], ["forensics/tools/closure_discipline.py"], ["court"]),
 ]
 
 ALL_DELEGATES = sorted({delegate for _name, _summary, _needs, delegates, _private
@@ -228,8 +276,13 @@ def _steps_exits(name: str) -> list[dict]:
     ]
 
 
-def build_surface() -> dict:
-    """The declaration.  Authored here, then checked against the executable."""
+def build_surface(declaration: dict) -> dict:
+    """The declaration.  Authored here, then checked against the executable.
+
+    ``declaration`` carries the explicit identity this record is derived at:
+    ``commit``, ``commitShort``, ``date`` and the ``sources`` digests.  Nothing in
+    the document is read from the live ``HEAD``.
+    """
     commands: list[dict] = []
     for name, summary, needs, delegates, private in STEPS:
         commands.append({
@@ -260,8 +313,7 @@ def build_surface() -> dict:
                       "--tmp", "--help"],
         "prerequisites": ALL_PREREQUISITES,
         "delegatesTo": ALL_DELEGATES,
-        "privateState": ["artifacts/phase2/install", "court",
-                         "forensics/authorities/prefix"],
+        "privateState": ["court", "forensics/authorities/prefix"],
         "exitCodes": [
             {"code": 0, "meaning": "every selected required step is PASS",
              "basis": "`all` runs nineteen steps, including builds and the whole "
@@ -299,15 +351,15 @@ def build_surface() -> dict:
             {"code": 2, "meaning": "the invocation was malformed",
              "observedBy": "malformed-arguments"},
         ],
-        "jsonForm": "none",
-        "jsonFields": [],
+        "jsonForm": "document",
+        "jsonFields": ["commands", "interface", "schema"],
         "stability": "stable",
         "since": SINCE,
         "evidence": list(EVIDENCE_PATHS),
         "replacement": None,
-        "notes": "the only accepted form is the `--list` flag; the bare word `list` "
-                 "is refused (recorded as discrepancy D1), and `--json` has no "
-                 "effect on this output (D2)",
+        "notes": "accepted as the `list` subcommand and as the `--list` flag; a "
+                 "bare invocation is refused (exit 2). `--json` emits the "
+                 "listing document (A25 D1 and D2 repaired)",
     })
     commands.append({
         "name": "explain",
@@ -333,14 +385,17 @@ def build_surface() -> dict:
         "since": SINCE,
         "evidence": list(EVIDENCE_PATHS),
         "replacement": None,
-        "notes": "`--json` has no effect on this output",
+        "notes": "`--json` has no effect on this output (D7: accepted and "
+                 "ignored; the contract states it, the `--help` sentence does not)",
     })
     return {
         "schemaVersion": ps.SCHEMA,
         "interface": "ETP-T12",
         "verifier": "forensics/tools/verify.py",
-        "declaredAt": "2026-11-24",
-        "declaredAtCommit": BASE_SHORT,
+        "declaredAt": declaration["date"],
+        "declaredAtCommit": declaration["commit"],
+        "declaredAtCommitShort": declaration["commitShort"],
+        "declaredSources": declaration["sources"],
         "exitCodeContract": EXIT_CONTRACT,
         "discovery": DISCOVERY,
         "exitCodeProbes": EXIT_PROBES,
@@ -350,19 +405,20 @@ def build_surface() -> dict:
         "privateStateRule": {
             "rule": "the surface reads no private state; each command declares the "
                     "gitignored roots its own delegate may read, and the document "
-                    "reports which of them exist and how many untracked or ignored "
-                    "entries each holds. Presence is never evidence",
+                    "reports which of those roots exist and how many untracked or "
+                    "ignored entries each holds. The audited root set is the "
+                    "interface's known roots plus every declared read, so a "
+                    "declared path cannot lie outside presence reporting. Presence "
+                    "is never evidence",
             "enforcedBy": "PV_REFUSED_PRIVATE_STATE",
-            "knownGap": "D4: `artifacts/phase2/install` is declared private by the "
-                        "consumer commands but is outside the interface's audited "
-                        "root set, so its presence can never be reported",
+            "knownGap": None,
         },
         "determinismRule": {
             "rule": "two runs of a command emit the same deterministic record; the "
-                    "declared `environment` block is an input and is not compared",
+                    "declared `environment` and `private_state` blocks are inputs, "
+                    "required to be present and populated, and are not compared",
             "enforcedBy": "PV_REFUSED_UNSTABLE_OUTPUT",
-            "knownGap": "D5: the top-level `private_state` entry counts are live "
-                        "`git status` readings and are inside the compared record",
+            "knownGap": None,
         },
         "stabilityRule": {
             "levels": {
@@ -408,21 +464,6 @@ def witness_source(path: str, contains: list[str], absent: list[str]) -> dict:
             "reproduced": not missing and not unexpected}
 
 
-def witness_block(path: str, start: str, end: str, contains: list[str],
-                  absent: list[str]) -> dict:
-    """Check a statement inside one named region of a file, not the whole file."""
-    text = (ROOT / path).read_text(encoding="utf-8")
-    begin = text.find(start)
-    finish = text.find(end, begin + len(start)) if begin >= 0 else -1
-    block = text[begin:finish + len(end)] if begin >= 0 and finish >= 0 else ""
-    missing = [item for item in contains if item not in block]
-    unexpected = [item for item in absent if item in block]
-    return {"kind": "block", "path": path, "start": start, "end": end,
-            "contains": contains, "absent": absent, "extracted": bool(block),
-            "missingFromBlock": missing, "unexpectedlyPresent": unexpected,
-            "reproduced": bool(block) and not missing and not unexpected}
-
-
 def witness_json_absent(argv: list[str], pointer: list[str], key: str) -> dict:
     run = _probe(argv)
     try:
@@ -448,191 +489,385 @@ def witness_text(path: str, contains: list[str], absent: list[str]) -> dict:
             "reproduced": not missing and not unexpected}
 
 
-def witness_test_count(module: str, expected: int) -> dict:
-    """The number of tests the loader actually executes for one module.
-
-    ``discover`` over the containing directory is used rather than importing the
-    module by dotted name, so the count is the runner's own count and does not
-    depend on which package roots happen to be importable.
-    """
-    directory = ROOT / Path(*module.split(".")[:-1])
-    suite = unittest.defaultTestLoader.discover(str(directory),
-                                                pattern=f"{module.split('.')[-1]}.py")
-    observed = suite.countTestCases()
-    return {"kind": "test-count", "module": module, "expected": expected,
-            "observed": observed, "reproduced": observed == expected}
-
-
 def witness_shape(observation: str, holds: bool) -> dict:
     return {"kind": "shape", "observation": observation, "reproduced": bool(holds)}
 
 
-def build_discrepancies() -> list[dict]:
+def witness_explain_private(step: str, expected: list[str]) -> dict:
+    """One command's declared private roots, as the executable itself prints them."""
+    blocks = ps.parse_explain(_probe(["--explain"]).stdout)
+    observed = sorted(blocks.get(step, {}).get("private") or [])
+    return {"kind": "explain-private", "argv": ["--explain"], "step": step,
+            "expected": sorted(expected), "observed": observed,
+            "reproduced": observed == sorted(expected)}
+
+
+def witness_declared_reads_audited(surface: dict) -> dict:
+    """Every private read the surface declares is inside the audited root set."""
+    document = json.loads(_probe(["authority", "--json"]).stdout)
+    known = set((document.get("private_state") or {}).get("known_roots") or {})
+    declared = sorted({root for entry in surface["commands"]
+                       for root in entry.get("privateState") or []})
+    missing = [root for root in declared if root not in known]
+    return {"kind": "declared-reads-audited", "argv": ["authority", "--json"],
+            "declaredReads": declared, "auditedRoots": sorted(known),
+            "missingFromAudit": missing, "reproduced": not missing}
+
+
+def witness_json_value(argv: list[str], pointer: list[str], key: str,
+                       expected: object) -> dict:
+    run = _probe(argv)
+    try:
+        node: object = json.loads(run.stdout)
+        for part in pointer:
+            node = node[part]  # type: ignore[index]
+        observed = node.get(key) if isinstance(node, dict) else None
+    except (TypeError, ValueError, KeyError):
+        observed = None
+    return {"kind": "json-value", "argv": list(argv), "pointer": pointer,
+            "key": key, "expected": expected, "observed": observed,
+            "reproduced": observed == expected}
+
+
+def witness_listing_document() -> dict:
+    """The listing document: its schema, its fields, and both accepted forms."""
+    flag = _probe(["--list", "--json"])
+    word = _probe(["list", "--json"])
+    try:
+        document = json.loads(flag.stdout)
+    except ValueError:
+        document = None
+    fields = sorted(document) if isinstance(document, dict) else []
+    schema = document.get("schema") if isinstance(document, dict) else None
+    return {"kind": "listing-document", "argv": ["--list", "--json"],
+            "fields": fields, "schema": schema,
+            "subcommandIdentical": flag.stdout == word.stdout,
+            "observedExit": flag.exit,
+            "reproduced": (fields == ["commands", "interface", "schema"]
+                           and schema == "openssl-rs/verify-listing/1"
+                           and flag.stdout == word.stdout and flag.exit == 0)}
+
+
+def witness_surface_private(surface: dict, step: str, expected: list[str]) -> dict:
+    entry = next((item for item in surface["commands"] if item["name"] == step), None)
+    observed = sorted((entry or {}).get("privateState") or [])
+    return {"kind": "surface-private", "step": step,
+            "expected": sorted(expected), "observed": observed,
+            "reproduced": observed == sorted(expected)}
+
+
+def witness_test_count_matches_document(module: str, path: str) -> dict:
+    """The figure a descriptive document states for a module is the executed count."""
+    directory = ROOT / Path(*module.split(".")[:-1])
+    suite = unittest.defaultTestLoader.discover(str(directory),
+                                                pattern=f"{module.split('.')[-1]}.py")
+    executed = suite.countTestCases()
+    text = (ROOT / path).read_text(encoding="utf-8")
+    claim = f"{executed} tests"
+    return {"kind": "test-count-document", "module": module, "path": path,
+            "executed": executed, "claim": claim,
+            "containsClaim": claim in text, "staleClaimPresent": "19 tests" in text,
+            "reproduced": claim in text and "19 tests" not in text}
+
+
+def build_discrepancies(surface: dict, declaration: dict) -> list[dict]:
     """What reading the source found that a shape comparison cannot see.
 
-    Every entry carries a witness, and the producer refuses to write the record
-    when a witness no longer reproduces.  A finding that has quietly stopped
-    being true is a stale record, not a pass.
+    A discrepancy is *historical* once it has been repaired or documented.  Each
+    entry keeps the behaviour that was observed at ``OLD_COMMIT`` and the witness
+    that observed it, marked ``historicalWitness`` and ``observedAt``.  A
+    historical witness is expected **not** to reproduce at this candidate: if it
+    does, the repair has regressed and the producer fails.  Each entry also
+    carries a live ``witness`` for the behaviour that holds now, which must
+    reproduce; a witness that stops reproducing is a stale record, not a pass.
     """
     listing_json = _probe(["--list", "--json"]).stdout
     list_explain = _probe(["--list", "--explain"]).stdout
-    authority_document = json.loads(_probe(["authority", "--json"]).stdout)
+    explain_json = _probe(["--explain", "--json"])
+    help_json = _probe(["--help", "--json"])
+    repaired = {"repairedAt": declaration["commit"],
+                "repairedAtShort": declaration["commitShort"]}
     return [
         {
             "id": "D1",
-            "title": "`list` is advertised as a subcommand and is refused as one",
-            "class": "TOOL_DEFECT_QUEUED",
+            "title": "`list` was advertised as a subcommand and refused as one",
+            "class": "TOOL_DEFECT_REPAIRED",
+            "status": "repaired",
+            "foundAt": OLD_COMMIT,
+            **repaired,
             "statement":
-                "`--help` calls the positional value 'a subcommand name, `all`, or "
-                "`list`', the unknown-subcommand message lists `list` among the known "
-                "names, and `main` writes `name = args.command or \"list\"`; but no "
-                "dispatch branch accepts `list`, so `verify.py list` and a bare "
-                "`verify.py` both print \"unknown subcommand 'list'\" and exit 2. "
-                "The only accepted form is the `--list` flag, and that is the form "
-                "the surface declares.",
+                "At a9bcb5480 `--help` called the positional value 'a subcommand "
+                "name, `all`, or `list`', the unknown-subcommand message listed "
+                "`list` among the known names, and `main` wrote `name = "
+                "args.command or \"list\"`; but no dispatch branch accepted "
+                "`list`, so `verify.py list` and a bare `verify.py` both printed "
+                "\"unknown subcommand 'list'\" and exited 2. The only accepted "
+                "form was the `--list` flag.",
+            "oldBehaviour": "`verify.py list` -> exit 2, `unknown subcommand "
+                            "'list'`; a bare `verify.py` -> exit 2 with the same "
+                            "message; source carried `args.command or \"list\"`.",
+            "repair": "`list` is a real subcommand routed through `emit_listing` "
+                      "and exits 0; the `args.command or \"list\"` default is "
+                      "replaced by an explicit `None` refusal whose message names "
+                      "the accepted forms. Repaired in the D1-D5 batch at "
+                      f"{declaration['commitShort']} "
+                      "(evidence/defects/d1-d5/RECEIPT.md).",
             "witness": [
-                witness_exit(["list"], 2, "unknown subcommand 'list'"),
-                witness_exit([], 2, "unknown subcommand 'list'"),
+                witness_exit(["list"], 0, "manifest\trequired\tin all"),
+                witness_exit([], 2, "no subcommand"),
                 witness_source("forensics/tools/verify.py",
-                               ["args.command or \"list\""],
-                               ["elif name == \"list\""]),
+                               ["args.command == \"list\""],
+                               ["args.command or \"list\""]),
             ],
-            "surfaceEffect": "command `list` declares `invocation: [\"--list\"]`; the "
-                             "bare word is never claimed",
-            "documentEffect": "docs/PUBLIC-VERIFICATION.md's subcommand table row is "
-                              "corrected from `list` to `--list` (old wording kept in "
-                              "the A25 receipt)",
-            "queued": "make `list` a real subcommand, or remove it from the help and "
-                      "the refusal message; a flag and a subcommand of the same name "
-                      "is a trap",
+            "historicalWitness": [
+                {**witness_exit(["list"], 2, "unknown subcommand 'list'"),
+                 "observedAt": OLD_COMMIT, "supersededAt": declaration["commit"]},
+                {**witness_exit([], 2, "unknown subcommand 'list'"),
+                 "observedAt": OLD_COMMIT, "supersededAt": declaration["commit"]},
+                {**witness_source("forensics/tools/verify.py",
+                                  ["args.command or \"list\""], []),
+                 "observedAt": OLD_COMMIT, "supersededAt": declaration["commit"]},
+            ],
+            "surfaceEffect": "command `list` declares `invocation: [\"--list\"]` and "
+                             "the `list` subcommand probe; the bare word is refused",
+            "documentEffect": "docs/PUBLIC-VERIFIER.md §2.1 states the repaired "
+                              "dispatch; §9 records it as repaired",
+            "queued": None,
         },
         {
             "id": "D2",
-            "title": "`--json` is accepted by the discovery commands and ignored",
-            "class": "TOOL_DEFECT_QUEUED_DOCUMENTED",
+            "title": "`--json` was accepted by the discovery listing and ignored",
+            "class": "TOOL_DEFECT_REPAIRED",
+            "status": "repaired",
+            "foundAt": OLD_COMMIT,
+            **repaired,
             "statement":
-                "`verify.py --list --json` prints the tab-separated listing and exits "
-                "0; it does not emit a JSON document, because the listing branch "
-                "returns before serialisation. The help text describes `--json` as "
-                "'emit one machine-readable document' without an exception, and the "
-                "descriptive document repeated that sentence. The surface declares "
-                "the observed behaviour: the listing is TSV and only step runs emit "
-                "a document.",
+                "At a9bcb5480 `verify.py --list --json` printed the tab-separated "
+                "listing and exited 0; no JSON document was emitted, because the "
+                "listing branch returned before serialisation. The help text "
+                "described `--json` as 'emit one machine-readable document' with "
+                "no exception.",
+            "oldBehaviour": "`--list --json` -> exit 0 with TSV, not a JSON object; "
+                            "`verify.py` contained no `LISTING_SCHEMA`.",
+            "repair": "`listing_rows`, `listing_document`, `render_listing` and "
+                      "`emit_listing` emit the listing document when `--json` is "
+                      "set, in both the `list` and `--list` forms. Repaired in the "
+                      "D1-D5 batch at " f"{declaration['commitShort']}.",
             "witness": [
                 witness_exit(["--list", "--json"], 0),
-                witness_shape("`--list --json` emits tab-separated text, not a JSON "
-                              "object",
-                              (not ps._is_json_object(listing_json))
-                              and "\t" in listing_json),
+                witness_listing_document(),
                 witness_source("forensics/tools/verify.py",
-                               ["if args.list:"], []),
+                               ["LISTING_SCHEMA", "def emit_listing"], []),
             ],
-            "surfaceEffect": "`list`/`explain` declare `jsonForm: none`; the discovery "
-                             "block records `emitsJson: false`",
-            "documentEffect": "a clause naming the exception is added to the "
-                              "descriptive document's `--json` paragraph (old wording "
-                              "kept in the A25 receipt)",
-            "queued": "either honour `--json` on the discovery commands or reject the "
-                      "combination; a silently ignored flag is not a public argument",
+            "historicalWitness": [
+                {**witness_shape("`--list --json` emits tab-separated text, not a "
+                                  "JSON object",
+                                  (not ps._is_json_object(listing_json))
+                                  and "\t" in listing_json),
+                 "observedAt": OLD_COMMIT, "supersededAt": declaration["commit"]},
+                {**witness_source("forensics/tools/verify.py", [],
+                                  ["LISTING_SCHEMA"]),
+                 "observedAt": OLD_COMMIT, "supersededAt": declaration["commit"]},
+            ],
+            "surfaceEffect": "`list` declares `jsonForm: document` with the listing "
+                             "document's three fields; the discovery block records "
+                             "`emitsJson: true` and the schema",
+            "documentEffect": "docs/PUBLIC-VERIFIER.md §4 documents the listing "
+                              "document; §9 records the repair",
+            "queued": None,
         },
         {
             "id": "D3",
-            "title": "the argument precedence among the discovery commands is "
+            "title": "the argument precedence among the discovery commands was "
                      "undocumented",
             "class": "DOCUMENTED_HERE",
+            "status": "documented",
+            "foundAt": OLD_COMMIT,
+            "repairedAt": None,
+            "repairedAtShort": None,
             "statement":
                 "`--list` takes precedence over `--explain`, which takes precedence "
                 "over running the named command; `--json`, `--network` and `--tmp` "
                 "have no effect on `--list` or `--explain`. The behaviour is stable "
                 "and defensible, but it was in no document, so a caller could not "
                 "tell which output to expect from `--list --explain`.",
+            "oldBehaviour": "the precedence existed but no document stated it.",
+            "repair": "documented as part of the contract (docs/PUBLIC-VERIFIER.md "
+                      "§2.1); no executable change was needed or made.",
             "witness": [
                 witness_exit(["--list", "--explain"], 0),
                 witness_shape("`--list --explain` prints the listing, not the "
                               "explanation blocks",
                               "\t" in list_explain and "needs:" not in list_explain),
+                witness_source("docs/PUBLIC-VERIFIER.md",
+                               ["takes precedence over `--explain`"], []),
             ],
+            "historicalWitness": [],
             "surfaceEffect": "the precedence is part of the documented contract",
-            "documentEffect": "docs/PUBLIC-VERIFIER.md states the precedence rule",
+            "documentEffect": "docs/PUBLIC-VERIFIER.md §2.1 states the precedence "
+                              "rule; §9 records it as documented",
             "queued": None,
         },
         {
             "id": "D4",
-            "title": "a declared private root is outside the audited root set",
-            "class": "TOOL_DEFECT_QUEUED",
+            "title": "a declared private root was outside the audited root set",
+            "class": "TOOL_DEFECT_REPAIRED",
+            "status": "repaired",
+            "foundAt": OLD_COMMIT,
+            **repaired,
             "statement":
-                "The three consumer commands declare `artifacts/phase2/install` as a "
-                "private path, but the interface's audited root set names "
-                "`artifacts/phase2/shell` instead. The declared path is therefore "
-                "never counted, so `private_state_present` can never report it and "
-                "the document's `known_roots` block omits it. A declared private read "
-                "that presence-reporting cannot see is an under-report, not a "
-                "declaration.",
+                "At a9bcb5480 the three consumer commands declared "
+                "`artifacts/phase2/install` as a private path, but the interface's "
+                "audited root set named `artifacts/phase2/shell` instead. The "
+                "declared path was therefore never counted, so presence-reporting "
+                "could never report it. A declared private read that presence "
+                "reporting cannot see is an under-report, not a declaration.",
+            "oldBehaviour": "`--explain consumer-curl` printed `private: court, "
+                            "artifacts/phase2/install`; the audited set omitted "
+                            "`install`.",
+            "repair": "the declaration is removed, because all 155 files under "
+                      "`artifacts/phase2/install` are Git-tracked checkout content "
+                      "with no untracked or ignored entry; and "
+                      "`audited_private_roots()` now derives the audited set from "
+                      "the known roots plus every declared read. Repaired in the "
+                      "D1-D5 batch at " f"{declaration['commitShort']}.",
             "witness": [
-                witness_block("forensics/tools/verify.py", "PRIVATE_ROOTS = (", ")",
-                              ["artifacts/phase2/shell"],
-                              ["artifacts/phase2/install"]),
-                witness_json_absent(["authority", "--json"],
-                                    ["private_state", "known_roots"],
-                                    "artifacts/phase2/install"),
-                witness_exit(["--explain", "consumer-curl"], 0,
-                             "artifacts/phase2/install"),
+                witness_explain_private("consumer-curl", ["court"]),
+                witness_declared_reads_audited(surface),
+                witness_surface_private(surface, "consumer-curl", ["court"]),
             ],
-            "surfaceEffect": "the declaration is transcribed exactly; the surface does "
-                             "not hide the interface's own declaration",
-            "documentEffect": "the descriptive document's claim that a declared "
-                              "private path is reported present or absent is left "
-                              "unedited: the defect is the tool's, not the prose's",
-            "queued": "add `artifacts/phase2/install` to the audited root set, or stop "
-                      "declaring it private; then re-derive the presence fields",
+            "historicalWitness": [
+                {**witness_surface_private(surface, "consumer-curl",
+                                           ["artifacts/phase2/install", "court"]),
+                 "observedAt": OLD_COMMIT, "supersededAt": declaration["commit"]},
+                {**witness_explain_private("consumer-curl",
+                                           ["artifacts/phase2/install", "court"]),
+                 "observedAt": OLD_COMMIT, "supersededAt": declaration["commit"]},
+            ],
+            "surfaceEffect": "the consumer commands declare `court` only; the "
+                             "private-state rule names the derived audited set and "
+                             "no known gap",
+            "documentEffect": "docs/PUBLIC-VERIFIER.md §6 states the derived "
+                              "audited set; §9 records the repair",
+            "queued": None,
         },
         {
             "id": "D5",
-            "title": "live private-state readings sit inside the deterministic record",
-            "class": "TOOL_DEFECT_QUEUED_DOCUMENTED",
+            "title": "live private-state readings sat inside the deterministic "
+                     "record",
+            "class": "TOOL_DEFECT_REPAIRED",
+            "status": "repaired",
+            "foundAt": OLD_COMMIT,
+            **repaired,
             "statement":
-                "The `environment` block is declared as an input and excluded from the "
-                "two-run comparison, but `private_state` is a separate top-level block "
-                "computed from `git status` and is inside the compared record. Two "
-                "runs over the same checkout therefore differ if an untracked or "
-                "ignored entry appears between them, and the published sentence "
-                "excluded only the `environment` block.",
+                "At a9bcb5480 the `environment` block was declared as an input and "
+                "excluded from the two-run comparison, but `private_state` was a "
+                "separate top-level block computed from `git status` and was inside "
+                "the compared record. Two runs over the same checkout therefore "
+                "differed if an untracked or ignored entry appeared between them, "
+                "and the published sentence excluded only `environment`.",
+            "oldBehaviour": "`private_state` carried no `declared` marker; "
+                            "`verify.py` had no `INPUT_KEYS`; the block was "
+                            "compared between runs.",
+            "repair": "`private_state` is declared as `private-state-input`, "
+                      "required to be present and populated, and excluded from the "
+                      "compared projection alongside `environment`; the detector "
+                      "refuses a document that does not declare it. Repaired in the "
+                      "D1-D5 batch at " f"{declaration['commitShort']}.",
             "witness": [
-                witness_block("forensics/tools/verify.py",
-                              "def private_state_report(", "    return report\n",
-                              ["private_entries", "\"status\", \"--porcelain\""], []),
-                witness_json_absent(["authority", "--json"], ["environment"],
-                                    "private_state"),
-                witness_shape("the document carries `private_state` at top level, "
-                              "outside the declared `environment` input block",
-                              "private_state" in authority_document),
+                witness_json_value(["authority", "--json"], ["private_state"],
+                                   "declared", "private-state-input"),
+                witness_source("forensics/tools/verify.py",
+                               ["INPUT_KEYS", "PRIVATE_STATE_DECLARATION"], []),
+                witness_shape("the surface's determinism rule names both declared "
+                              "inputs and records no known gap",
+                              surface["determinismRule"]["knownGap"] is None
+                              and "private_state" in surface["determinismRule"]["rule"]),
             ],
-            "surfaceEffect": "the determinism rule is declared with its exact scope and "
-                             "this gap named",
-            "documentEffect": "one clause is added to the descriptive document's "
-                              "determinism paragraph (old wording kept in the A25 "
-                              "receipt)",
-            "queued": "declare the private-state readings as an environment input, or "
-                      "project them out of the compared record",
+            "historicalWitness": [
+                {**witness_json_absent(["authority", "--json"], ["private_state"],
+                                       "declared"),
+                 "observedAt": OLD_COMMIT, "supersededAt": declaration["commit"]},
+                {**witness_source("forensics/tools/verify.py", [], ["INPUT_KEYS"]),
+                 "observedAt": OLD_COMMIT, "supersededAt": declaration["commit"]},
+            ],
+            "surfaceEffect": "the determinism rule names both inputs and clears "
+                             "`knownGap`",
+            "documentEffect": "docs/PUBLIC-VERIFIER.md §7 states both inputs; §9 "
+                              "records the repair",
+            "queued": None,
         },
         {
             "id": "D6",
             "title": "the descriptive document's test count was stale",
             "class": "DOCUMENT_DEFECT_CORRECTED",
+            "status": "corrected",
+            "foundAt": OLD_COMMIT,
+            "repairedAt": None,
+            "repairedAtShort": None,
             "statement":
                 "docs/PUBLIC-VERIFICATION.md said `test_verify.py` holds 19 tests in "
-                "two places. The module currently executes 37. The figure is a live "
-                "quantity in a descriptive document that no generator corrects, which "
-                "is exactly the drift the document was written to warn about.",
+                "two places while the module executed 37. The figure is a live "
+                "quantity in a descriptive document that no generator corrects.",
+            "oldBehaviour": "the document said '19 tests' in two places.",
+            "repair": "the figure is derived from the loader by the producer and by "
+                      "test_the_descriptive_document_no_longer_carries_the_stale_count; "
+                      "the document states the executed count.",
             "witness": [
-                witness_test_count("forensics.tools.tests.test_verify", 37),
-                witness_text("docs/PUBLIC-VERIFICATION.md", ["37 tests"],
-                             ["19 tests"]),
+                witness_test_count_matches_document(
+                    "forensics.tools.tests.test_verify",
+                    "docs/PUBLIC-VERIFICATION.md"),
             ],
+            "historicalWitness": [],
             "surfaceEffect": "none",
-            "documentEffect": "both mentions are corrected to 37; the old wording is "
-                              "preserved in the A25 receipt",
+            "documentEffect": "both mentions are corrected; the old wording is "
+                              "preserved in evidence/a25/RECEIPT.md",
             "queued": None,
+        },
+        {
+            "id": "D7",
+            "title": "`--json` is accepted by `--explain` and `--help` and ignored",
+            "class": "TOOL_BEHAVIOUR_DOCUMENTED",
+            "status": "documented",
+            "foundAt": declaration["commit"],
+            "repairedAt": None,
+            "repairedAtShort": None,
+            "statement":
+                "Found while re-deriving this record. D2 repaired the listing, but "
+                "`verify.py --explain --json` and `verify.py --help --json` still "
+                "accept `--json` and print text, emitting no document. The contract "
+                "states that exception (PUBLIC-VERIFIER.md §2.1, §2.2 and §4) and "
+                "the surface declares `explain` as `jsonForm: none`, so the "
+                "declaration and the executable agree; the executable's own "
+                "`--help` sentence does not name the exception, and an outside "
+                "caller reading only `--help` would expect a document.",
+            "oldBehaviour": "not recorded by A25, which named the listing only.",
+            "repair": "none in this refresh: the behaviour is documented in the "
+                      "contract, and changing `--help` prose would change "
+                      "`verify.py`, which this record only measures. Recorded, not "
+                      "hidden.",
+            "witness": [
+                witness_exit(["--explain", "--json"], 0),
+                witness_shape("`--explain --json` prints the explanation text and "
+                              "emits no JSON document",
+                              not ps._is_json_object(explain_json.stdout)
+                              and explain_json.stdout.startswith("manifest")),
+                witness_exit(["--help", "--json"], 0),
+                witness_shape("`--help --json` prints usage and emits no document",
+                              not ps._is_json_object(help_json.combined)),
+                witness_source("forensics/tools/verify.py",
+                               ["the listing document for the list command"], []),
+                witness_text("docs/PUBLIC-VERIFIER.md",
+                             ["`--explain` and `--help` print"], []),
+            ],
+            "historicalWitness": [],
+            "surfaceEffect": "`explain` keeps `jsonForm: none`; the declaration is "
+                             "accurate about the executable",
+            "documentEffect": "the contract already states the exception; §9 records "
+                              "D7 as documented and names the help-text gap",
+            "queued": "either make `--help`'s `--json` sentence name the "
+                      "`--explain`/`--help` exception, or honour `--json` there; "
+                      "a silently ignored flag is not a public argument",
         },
     ]
 
@@ -673,13 +908,29 @@ FAITHFUL_DOCUMENT = {
     "interface": "ETP-T12",
     "invocation": {"network": False, "steps": ["authority"], "tmpdir": "<tmp>"},
     "non_passing": ["authority"],
-    "private_state": {"present": []},
+    "private_state": {
+        "declared": "private-state-input",
+        "known_roots": {"court": {"exists": False, "tracked_files": 0,
+                                   "private_entries": 0}},
+        "present": [],
+    },
     "root": "<root>",
     "schema": "openssl-rs/verify/1",
     "status": "FAIL",
     "steps": [],
     "warnings": [],
 }
+
+
+def _listing_document(listing: str) -> str:
+    """The listing document that imitates the real verifier's `--json` form."""
+    return json.dumps({
+        "schema": "openssl-rs/verify-listing/1",
+        "interface": "ETP-T12",
+        "commands": [{"name": row["name"], "role": row["role"],
+                      "in_all": row["in_all"] == "in all"}
+                     for row in ps.parse_listing(listing)],
+    }, indent=2, sort_keys=True) + "\n"
 
 _BASE: dict | None = None
 
@@ -712,8 +963,12 @@ def stub_config(*, listing: str | None = None, help_text: str | None = None,
     text = json.dumps(document, indent=2, sort_keys=True) + "\n"
     responses = {
         json.dumps(["--list"]): {"stdout": listing, "exit": exits.get("list", 0)},
-        json.dumps(["--list", "--json"]): {"stdout": listing,
+        json.dumps(["list"]): {"stdout": listing,
+                               "exit": exits.get("list-subcommand", 0)},
+        json.dumps(["--list", "--json"]): {"stdout": _listing_document(listing),
                                            "exit": exits.get("list", 0)},
+        json.dumps(["list", "--json"]): {"stdout": _listing_document(listing),
+                                         "exit": exits.get("list-subcommand", 0)},
         json.dumps(["--help"]): {"stdout": help_text, "exit": 0},
         json.dumps(["--explain"]): {"stdout": explain_text, "exit": 0},
         json.dumps(["--explain", "all"]): {"stdout": explain_text, "exit": 0},
@@ -910,32 +1165,157 @@ def _digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _stamp(document: dict) -> dict:
-    """Bind a record to the bytes of the two tools that produced it."""
+def _stamp(document: dict, declaration: dict) -> dict:
+    """Bind a record to the declaration identity and to the tools that produced it."""
     document["producer"] = {"path": "evidence/a25/build_evidence.py",
                             "sha256": _digest(Path(__file__))}
     document["detector"] = {"path": "forensics/tools/public_surface.py",
                             "sha256": _digest(Path(ps.__file__))}
+    document["declaredAtCommit"] = declaration["commit"]
+    document["declaredAtCommitShort"] = declaration["commitShort"]
+    document["declaredSources"] = declaration["sources"]
     return document
 
 
-def main() -> int:
-    surface = build_surface()
-    EVIDENCE.mkdir(parents=True, exist_ok=True)
-    _write(EVIDENCE / "SURFACE.json", surface)
+# ---------------------------------------------------------------------------
+# the declared-commit input and its freeze checks
+# ---------------------------------------------------------------------------
 
-    discrepancies = build_discrepancies()
+
+def _git_bytes(*argv: str) -> subprocess.CompletedProcess:
+    return subprocess.run(["git", "--no-optional-locks", *argv], cwd=str(ROOT),
+                          capture_output=True)
+
+
+def _resolve_commit(value: str) -> str | None:
+    run = _git_bytes("rev-parse", "--verify", "--quiet", f"{value}^{{commit}}")
+    if run.returncode != 0:
+        return None
+    return run.stdout.decode("utf-8", "replace").strip() or None
+
+
+def _working_sources() -> dict[str, dict]:
+    return {path: {"sha256": _digest(ROOT / path)} for path in DECLARED_SOURCES}
+
+
+def _commit_sources(commit: str) -> dict[str, dict] | None:
+    """The declared sources as the named commit carries them, or None."""
+    sources: dict[str, dict] = {}
+    for path in DECLARED_SOURCES:
+        run = _git_bytes("show", f"{commit}:{path}")
+        if run.returncode != 0:
+            return None
+        sources[path] = {"sha256": hashlib.sha256(run.stdout).hexdigest()}
+    return sources
+
+
+def _recorded_surface() -> dict | None:
+    if not SURFACE_PATH.exists():
+        return None
+    try:
+        document = json.loads(SURFACE_PATH.read_text(encoding="utf-8"))
+    except ValueError:
+        return None
+    return document if isinstance(document, dict) else None
+
+
+def resolve_declaration(requested: str | None) -> tuple[dict | None, dict | None]:
+    """Resolve the declared candidate, or refuse with a named code.
+
+    The default is the commit already in the record when one exists, never the
+    live HEAD.  ``--declared-at`` re-declares explicitly.  A record may only be
+    reproduced when the sources it was declared against are still the measured
+    sources; a re-declaration may only name a commit that carries them.
+    """
+    record = _recorded_surface()
+    recorded_commit = (record or {}).get("declaredAtCommit")
+    recorded_sources = (record or {}).get("declaredSources") or {}
+    target = requested or (recorded_commit if isinstance(recorded_commit, str) else None)
+    if target is None:
+        run = _git_bytes("rev-parse", "HEAD")
+        target = run.stdout.decode("utf-8", "replace").strip()
+    commit = _resolve_commit(target)
+    if commit is None:
+        return None, {
+            "code": REFUSED_COMMIT_UNKNOWN,
+            "detail": (f"the declared candidate {target!r} is not a commit in this "
+                       f"repository; a record cannot be bound to a commit that does "
+                       f"not exist"),
+        }
+    working = _working_sources()
+    if isinstance(recorded_commit, str) and _resolve_commit(recorded_commit) == commit:
+        moved = [path for path in DECLARED_SOURCES
+                 if (recorded_sources.get(path) or {}).get("sha256")
+                 != working[path]["sha256"]]
+        if moved:
+            detail = "; ".join(
+                f"{path}: recorded "
+                f"{(recorded_sources.get(path) or {}).get('sha256')} != measured "
+                f"{working[path]['sha256']}" for path in moved)
+            return None, {
+                "code": REFUSED_SOURCE_MOVED,
+                "detail": (f"the record declares itself at {commit[:9]} but a source "
+                           f"it is about has changed: {detail}. Re-declare with "
+                           f"--declared-at <commit> once the tool is committed"),
+            }
+    else:
+        in_commit = _commit_sources(commit)
+        if in_commit is None:
+            return None, {
+                "code": REFUSED_COMMIT_MISMATCH,
+                "detail": (f"commit {commit[:9]} does not carry the declared sources "
+                           f"{DECLARED_SOURCES}"),
+            }
+        different = [path for path in DECLARED_SOURCES
+                     if in_commit[path]["sha256"] != working[path]["sha256"]]
+        if different:
+            detail = "; ".join(f"{path}: commit has {in_commit[path]['sha256']} "
+                               f"but the measured file is "
+                               f"{working[path]['sha256']}" for path in different)
+            return None, {
+                "code": REFUSED_COMMIT_MISMATCH,
+                "detail": (f"the declaration cannot be made at {commit[:9]}: it does "
+                           f"not contain the measured source(s): {detail}"),
+            }
+    date = (record or {}).get("declaredAt")
+    if not isinstance(date, str) or not date.strip():
+        date = DEFAULT_DECLARED_AT
+    return {"commit": commit, "commitShort": commit[:9], "date": date,
+            "sources": working}, None
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(
+        description="Deterministic producer of the A25 public-surface records.")
+    parser.add_argument(
+        "--declared-at", default=None, metavar="COMMIT",
+        help="the candidate this record is declared at; defaults to the value "
+             "already in SURFACE.json (re-declare explicitly when a declared "
+             "source changes)")
+    args = parser.parse_args(argv)
+
+    declaration, refusal = resolve_declaration(args.declared_at)
+    if refusal is not None:
+        print(f"a25: refused codes={refusal['code']}")
+        print(f"  {refusal['detail']}")
+        return EXIT_REFUSED_DECLARATION
+    assert declaration is not None
+
+    surface = build_surface(declaration)
+    EVIDENCE.mkdir(parents=True, exist_ok=True)
+    _write(SURFACE_PATH, surface)
+
+    discrepancies = build_discrepancies(surface, declaration)
     inventory = ps.inventory(surface, VERIFIER, root=ROOT,
                              discrepancies=discrepancies)
-    _write(EVIDENCE / "INVENTORY.json", _stamp(inventory))
+    _write(EVIDENCE / "INVENTORY.json", _stamp(inventory, declaration))
 
     verdict = ps.verify(surface, VERIFIER, root=ROOT)
-    _write(EVIDENCE / "VERIFY.json", _stamp(verdict))
+    _write(EVIDENCE / "VERIFY.json", _stamp(verdict, declaration))
 
     controls = build_controls(surface)
     _write(EVIDENCE / "CONTROLS.json", _stamp({
         "schema": "openssl-rs/public-surface/controls/1",
-        "candidate": {"commit": BASE_COMMIT, "short": BASE_SHORT},
         "note": "every row is control-only: a test-only stub or an in-memory "
                 "mutation of the declaration, never a shipped configuration",
         "controls": controls,
@@ -945,31 +1325,39 @@ def main() -> int:
             "codes": sorted(ps.CODES),
             "failing": len([row for row in controls if not row["matches"]]),
         },
-    }))
+    }, declaration))
 
-    reproduced = [w for entry in discrepancies for w in entry["witness"]
-                  if not w["reproduced"]]
+    live = [w for entry in discrepancies for w in entry["witness"]
+            if not w["reproduced"]]
+    regressed = [w for entry in discrepancies
+                 for w in entry.get("historicalWitness") or [] if w["reproduced"]]
     failing = [row["id"] for row in controls if not row["matches"]]
     codes = sorted({finding["code"] for finding in verdict["findings"]})
-    print(f"a25: base={BASE_SHORT} commands={len(surface['commands'])} "
+    repaired = len([entry for entry in discrepancies
+                    if entry["status"] == "repaired"])
+    print(f"a25: declared-at={declaration['commitShort']} "
+          f"commands={len(surface['commands'])} "
           f"steps={inventory['counts']['listedSteps']} "
           f"json-fields={inventory['counts']['declaredJsonFields']} "
-          f"discrepancies={len(discrepancies)} "
+          f"discrepancies={len(discrepancies)} repaired={repaired} "
           f"control-codes={len(ps.CODES)} "
           f"controls={len(controls)} failing={len(failing)} "
-          f"witnesses-not-reproduced={len(reproduced)} "
+          f"witnesses-not-reproduced={len(live)} regressed-repairs={len(regressed)} "
           f"verify={','.join(codes) or 'PV_OK'}")
     if codes:
         for finding in verdict["findings"]:
             print(f"  {finding['code']}: {finding['detail']}")
-    for witness in reproduced:
+    for witness in live:
         print(f"  STALE WITNESS: {witness.get('kind')} "
-              f"{witness.get('argv') or witness.get('path')}")
+              f"{witness.get('argv') or witness.get('path') or witness.get('step')}")
+    for witness in regressed:
+        print(f"  REPAIR REGRESSED: {witness.get('kind')} "
+              f"{witness.get('argv') or witness.get('path') or witness.get('step')}")
     for identifier in failing:
         row = next(item for item in controls if item["id"] == identifier)
         print(f"  CONTROL FAILED: {identifier}: expected {row['expectedCodes']} "
               f"observed {row['observedCodes']}")
-    ok = not codes and not failing and not reproduced
+    ok = not codes and not failing and not live and not regressed
     return 0 if ok else 1
 
 

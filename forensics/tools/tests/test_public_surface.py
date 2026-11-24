@@ -570,16 +570,44 @@ class Documentation(unittest.TestCase):
         self.assertNotIn("| `list` | `python3` |", self.descriptive)
 
     def test_every_recorded_discrepancy_still_reproduces(self) -> None:
+        # Before the record was refreshed this control asserted
+        #   self.assertEqual([entry["id"] for entry in inventory["discrepancies"]],
+        #                    ["D1", "D2", "D3", "D4", "D5", "D6"])
+        # and that *every* witness reproduced.  At the repaired candidate the record
+        # is historical: D1/D2/D4/D5 are repaired, D3/D6 are documentation
+        # corrections, D7 was found while re-deriving, and a historical witness is
+        # expected NOT to reproduce.  The old expectation is quoted in
+        # evidence/a25/RECEIPT.md; this asserts the newly observed fact.
         inventory = json.loads((ROOT / "evidence" / "a25" / "INVENTORY.json")
                                .read_text(encoding="utf-8"))
-        self.assertEqual([entry["id"] for entry in inventory["discrepancies"]],
+        entries = inventory["discrepancies"]
+        self.assertEqual([entry["id"] for entry in entries[:6]],
                          ["D1", "D2", "D3", "D4", "D5", "D6"])
-        for entry in inventory["discrepancies"]:
+        self.assertEqual(len({entry["id"] for entry in entries}), len(entries),
+                         "a discrepancy id is recorded twice")
+        repaired = {"D1", "D2", "D4", "D5"}
+        for entry in entries:
+            self.assertIn(entry["status"], ("repaired", "documented", "corrected"),
+                          entry["id"])
             self.assertTrue(entry["witness"], entry["id"])
             for witness in entry["witness"]:
                 self.assertTrue(witness["reproduced"],
-                                f"{entry['id']} witness no longer reproduces: "
+                                f"{entry['id']} live witness no longer reproduces: "
                                 f"{witness}")
+            for witness in entry.get("historicalWitness") or []:
+                self.assertFalse(witness["reproduced"],
+                                 f"{entry['id']} historical witness reproduces "
+                                 f"again -- the repair has regressed: {witness}")
+                self.assertEqual(witness["observedAt"], entry["foundAt"])
+                self.assertTrue(witness["observedAt"].startswith("a9bcb5480"),
+                                entry["id"])
+            if entry["id"] in repaired:
+                self.assertEqual(entry["status"], "repaired", entry["id"])
+                self.assertEqual(entry["repairedAtShort"], "f2ec25379", entry["id"])
+                self.assertNotEqual(entry["repairedAt"], entry["foundAt"])
+                self.assertTrue(entry["historicalWitness"],
+                                f"{entry['id']} must preserve its old witness")
+                self.assertIsNone(entry["queued"], entry["id"])
 
 
 if __name__ == "__main__":

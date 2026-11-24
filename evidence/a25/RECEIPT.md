@@ -341,3 +341,239 @@ receipt claims no other member.
 No other path was modified. `docs/ETP-TODO.md` differs in exactly one row (A25),
 and `docs/PUBLIC-VERIFICATION.md` in the five edits for four findings enumerated
 in §6.
+
+---
+
+## 11. Correction — the records re-derived at `f2ec25379`
+
+**Appended 2026-11-24. Sections 1–10 above are preserved unedited**: they are the
+record of what was established at `a9bcb5480`. This section supersedes their
+digests and their statement that four defects are "queued", and records the
+re-derivation performed after the repairs landed.
+
+### 11.1 Base and cause
+
+| field | value |
+|---|---|
+| branch / HEAD at the start of the refresh | `staging` / `f2ec25379e3ba8f663a93aedf514bcb1fd9cb674` ("repair: make the discovery commands and the declared inputs do what they say") |
+| worktree | clean (`git --no-pager status --porcelain` printed nothing) |
+| `free -g` before the refresh | `Mem: 45 32 7 0 6 13` (available **13** GiB); `Swap: 45 40 4` |
+| `free -g` before the suite | `Mem: 45 32 6 0 6 12` (available **12** GiB); `Swap: 45 40 4` |
+| court | the already-running `openssl-rs-court`, image `openssl-rs-court-tools:1`, `HostConfig.Memory` = `MemorySwap` = `6442450944` (6 GiB), status `running`; reused, not restarted; Python **3.11.2** |
+| heavy commands | one at a time; no Rust build (none was needed and available memory is below the 24 GiB floor) |
+
+A new court was not started: the derived cap `min(8, available − 16)` is negative
+and below the 2 GiB floor, so §6.1's rule is to reuse the capped court, which is
+what every command in this section did.
+
+**Cause.** A25 declared the surface and measured it at `a9bcb5480`. The D1–D5
+batch (`evidence/defects/d1-d5/RECEIPT.md`) then repaired four tool defects in
+`verify.py`, changed `public_surface.py` to match, and hand-edited
+`SURFACE.json` so the gate would still pass — but it deliberately did not
+regenerate the other three records and did not run the producer. The result was
+exactly the defect class A25 exists to catch, in A25's own records:
+
+* `INVENTORY.json` still asserted that `list` was refused and that
+  `--list --json` was TSV, and its D1–D5 witnesses no longer reproduced;
+* `VERIFY.json` recorded the same pre-repair observations;
+* `build_evidence.py` still *authored* the pre-repair declaration (`list`
+  `jsonForm: none`, the `artifacts/phase2/install` private declaration, the D4
+  and D5 `knownGap` clauses, `listJson.emitsJson: false`) and its control stubs
+  imitated the pre-repair verifier, so re-running it would have rewritten
+  `SURFACE.json` back to the defective declaration; and
+* `declaredAtCommit` was `a9bcb5480`, a value the producer could not relate to
+  the measured sources at all.
+
+### 11.2 What the refresh changed
+
+`evidence/a25/build_evidence.py` is now the single source of the declaration and
+the records. It gained an explicit declaration identity instead of a constant or
+a live `HEAD`:
+
+* `--declared-at COMMIT`, defaulting to the `declaredAtCommit` already in
+  `SURFACE.json` when a record exists (and to `HEAD` only when there is no
+  record). The reproduction path never reads `HEAD`.
+* `declaredSources`: the SHA-256 of `forensics/tools/verify.py` and
+  `forensics/tools/public_surface.py`, the two files the declaration is *about*.
+  The producer itself is deliberately not one of them: its digest is written
+  into the records, and a declaration cannot be bound to the bytes of the
+  program that writes it.
+* Three named refusals, each of which writes nothing and exits 3:
+  `A25_REFUSED_DECLARED_SOURCE_MOVED` (a recorded declaration no longer matches
+  the measured source), `A25_REFUSED_DECLARED_AT_UNKNOWN` (the named commit is
+  not in the repository) and `A25_REFUSED_DECLARED_AT_MISMATCH` (the named
+  commit does not carry the measured source).
+
+The declaration itself was re-derived from the executable, not copied from the
+old records: `list`/`--list` declare the listing document
+(`openssl-rs/verify-listing/1`, fields `commands`/`interface`/`schema`), the
+consumer commands declare `court` only, the audited-root rule is the derived
+set, the determinism rule names both declared inputs and records no known gap,
+and a ninth exit probe (`list-subcommand`) observes the repaired dispatch.
+
+The records were regenerated, and the discrepancy list became historical: D1,
+D2, D4 and D5 are `status: repaired` at `f2ec25379` and carry both the old
+behaviour with its witness (`historicalWitness`, `observedAt` `a9bcb5480`,
+expected **not** to reproduce) and a live witness for the repaired behaviour
+(which must reproduce). D3 and D6 remain documentation corrections. One new
+discrepancy was found while re-deriving:
+
+* **D7 — `--json` is accepted by `--explain` and `--help` and ignored.** D2
+  repaired the listing only. `verify.py --explain --json` and
+  `verify.py --help --json` exit 0 and print text. The contract states the
+  exception (§2.1, §2.2, §4) and the surface declares `explain` as
+  `jsonForm: none`, so the declaration and the executable agree; the
+  executable's own `--help` sentence names only the listing exception, so a
+  caller reading only `--help` would expect a document. Recorded and queued
+  against that prose; not repaired here, because changing it means changing
+  `verify.py`, which this record measures.
+
+### 11.3 Old records, old digests, new digests
+
+SHA-256, full. "A25" is the state §1–§2 above describe; "intermediate" is what
+the D1–D5 batch left (only `SURFACE.json` was edited by hand; the other three
+records were untouched and therefore still carried the A25 digests, which is why
+they no longer described the executable).
+
+| file | A25 (old) | intermediate (stale) | new (`f2ec25379`) |
+|---|---|---|---|
+| `SURFACE.json` | `ffca67d057b05000691aef50b4edf900e284cc5d6c22e92ec866eb8931f57352` | `34c5ec0c1a4bb36d92277cfbbeccea8154fe5211258b22a21eb0475ebc6de4cb` | `c523876b1e11521f746b92c2554b84d32a315ff2b877dceb7732d6d74f95067e` |
+| `INVENTORY.json` | `ad29b43909589977135ef29160a461a182c2a20446ea2a9a3adc0efb80fd67ca` | same as A25 (untouched) | `7a540848a08b60d65d69b1dfded0d66fedb0e37e9f75d83fc2cd260fdf9ab926` |
+| `VERIFY.json` | `031abfff606fdb469c053fcca3b1a3737537c9f082dd6d070fa63f634ca5cb53` | same as A25 (untouched) | `2731fe494c694451ddeb69e9c2c8ffcc0bae63d1cf6d6f2343c7d755627916c2` |
+| `CONTROLS.json` | `bc0dbf36afc8190e4065158855600dc524663b54391df947abe024a158ea613c` | same as A25 (untouched) | `025b5b76e4e71c9a09ed83649837e600271f704b40bf79187f5185d82a6e15b6` |
+| `build_evidence.py` | `e241cda138ce1092a6f84d4efc3cf783bf714d3f37ea861e1982ca5638eda073` | same as A25 (untouched) | `3983ccc04919b9360e837ee3523e874e99e32a8538ac08227b5531ef333778e3` |
+
+The two sources the declaration is about, unchanged by this refresh and bound
+into `declaredSources`:
+
+| source | sha256 |
+|---|---|
+| `forensics/tools/verify.py` | `1d7d6f6a1debc1d7fa09f2eb3f30228249f75d06557498ca6c1a80e9cf8381f7` |
+| `forensics/tools/public_surface.py` | `b21c03ff71093ff34a2bfdde14853baf031b4cf49f2b41ccc1c0ea292bb51022` |
+
+### 11.4 D1, D2, D4 and D5 — before and after, as re-derived
+
+| id | before (`a9bcb5480`, as recorded by A25) | after (`f2ec25379`, observed now) |
+|---|---|---|
+| D1 | `verify.py list` → exit 2, `unknown subcommand 'list'`; bare `verify.py` → exit 2, same message | `verify.py list` → exit 0, listing; bare `verify.py` → exit 2, `verify: no subcommand; pass a command name, \`all\`, or \`list\` (\`--list\` prints the listing)` |
+| D2 | `--list --json` → exit 0, TSV head `manifest\trequired\tin all`; `verify.py` had no `LISTING_SCHEMA` | `--list --json` and `list --json` → exit 0, JSON object with fields `commands`, `interface`, `schema`, 20 rows; the two forms byte-identical |
+| D4 | `--explain consumer-curl` printed `private:      court, artifacts/phase2/install`; `known_roots` omitted `install` | `--explain consumer-curl` prints `private:      court`; every declared read is inside `private_state.known_roots`; `install` is 155 Git-tracked files with no untracked or ignored entry and is no longer claimed private |
+| D5 | `private_state` had no `declared` key and sat inside the compared record | `private_state.declared == "private-state-input"`, `known_roots` non-empty, excluded from the two-run projection alongside `environment`; `INPUT_KEYS` exists in `verify.py` |
+
+The old expectations are preserved in `INVENTORY.json` as `historicalWitness`
+entries, and the producer now **fails** if any of them reproduces again (a
+regression), as well as if a live witness stops reproducing.
+
+### 11.5 The control fixtures were stale, and said so
+
+The first producer run at this candidate refused: `faithful-stub` observed
+`PV_REFUSED_EXIT_UNDEFINED`, `PV_REFUSED_JSON_FIELD` and
+`PV_REFUSED_UNSTABLE_OUTPUT` instead of no finding, and every other control
+carried those three extra codes — fourteen failing rows. That is the correct
+behaviour of a control that asserts its exact code set: the stub still imitated
+the pre-repair verifier (no `list` probe response, a TSV `--list --json`, and a
+`private_state` with no `declared` marker). The fixtures were updated to imitate
+the repaired verifier (`list` and `list --json` responses; a listing document
+derived from the same rows; a declared, populated private-state input), and all
+15 rows then observed exactly their declared code. No control's *expected* code
+set was changed.
+
+### 11.6 The test that asserted the stale record
+
+`forensics/tools/tests/test_public_surface.py` contained one control that
+asserted the old record as a live fact. It was corrected to assert the newly
+observed fact — one live witness set that reproduces, one historical set that
+must not, and the four repairs naming `f2ec25379`. The old expectation, quoted
+verbatim:
+
+```python
+        self.assertEqual([entry["id"] for entry in inventory["discrepancies"]],
+                         ["D1", "D2", "D3", "D4", "D5", "D6"])
+        for entry in inventory["discrepancies"]:
+            self.assertTrue(entry["witness"], entry["id"])
+            for witness in entry["witness"]:
+                self.assertTrue(witness["reproduced"],
+                                f"{entry['id']} witness no longer reproduces: "
+                                f"{witness}")
+```
+
+This is not a weakened check: the new assertion rejects a stale live witness, a
+regressed repair, a historical witness recorded against the wrong candidate, a
+repair that names its own discovery candidate, and a repair with no preserved
+old witness. No test was removed, skipped or newly ignored; the file is still
+39 controls.
+
+### 11.7 Gates at the refreshed candidate
+
+All commands ran in the reused 6 GiB court, one at a time.
+
+| gate | command | exact result |
+|---|---|---|
+| memory | `free -g` | `Mem: 45 32 7 0 6 13` (available 13 GiB), `Swap: 45 40 4`; before the suite `Mem: 45 32 6 0 6 12` (12 GiB) |
+| court | `docker inspect openssl-rs-court` / `status` | `6442450944 6442450944 running`; `memory.max 6442450944`, `oom=1 oom_kill=1` (historical); reused, no build |
+| focused controls | `python3 -m unittest forensics/tools/tests/test_public_surface.py` | `Ran 39 tests in 9.392s` / `OK` |
+| whole tools suite | `CARGO_BUILD_JOBS=4 python3 -m unittest discover -s forensics/tools/tests` | `Ran 1843 tests in 422.237s` / `OK` / `closure discipline self-test: 7 control groups passed`; 1,843 = the parent's 1,843, none removed, none newly ignored |
+| producer, run A | `python3 evidence/a25/build_evidence.py --declared-at f2ec25379e3ba8f663a93aedf514bcb1fd9cb674` | `a25: declared-at=f2ec25379 commands=23 steps=20 json-fields=12 discrepancies=7 repaired=4 control-codes=13 controls=15 failing=0 witnesses-not-reproduced=0 regressed-repairs=0 verify=PV_OK`; exit 0 |
+| producer, run B | `python3 evidence/a25/build_evidence.py` (default `--declared-at` from the record) | the same line; exit 0; `diff` of the four digests: `A==B byte-identical` |
+| refusal: unknown commit | `python3 evidence/a25/build_evidence.py --declared-at 0000…0000` | `a25: refused codes=A25_REFUSED_DECLARED_AT_UNKNOWN`; exit 3; records byte-identical before/after |
+| refusal: commit without the measured source | `python3 evidence/a25/build_evidence.py --declared-at a9bcb5480` | `a25: refused codes=A25_REFUSED_DECLARED_AT_MISMATCH` / `commit a9bcb5480 does not carry the declared sources [...]`; exit 3; records untouched |
+| refusal: source moved | one comment appended to `verify.py`, then the default run; file restored | `a25: refused codes=A25_REFUSED_DECLARED_SOURCE_MOVED` … `recorded 1d7d6f6a… != measured 3126c9ed…`; exit 3; records untouched; `git status --porcelain -- forensics/tools/verify.py` empty after restore |
+| surface check | `python3 forensics/tools/public_surface.py verify` | `public-surface: 23 declared command(s) match the executable surface; exit codes 0, 1, 2 observed; 12 JSON field(s); 13 refusal code(s) available` / `public-surface: two-run determinism: listing stable; JSON document compared over 15 invocation(s)` / `public-surface: codes=PV_OK`; exit 0 |
+| JSON | `python3 -m json.tool` on the four records | `json.tool ok: SURFACE`, `INVENTORY`, `VERIFY`, `CONTROLS` |
+| documentation | `python3 forensics/tools/docs_consistency.py` | `[docs-consistency] ok: 20 hand-written claim(s) agree with their generated sources; the earned-trust constitution is wired`; exit 0 (the named Phase-7 exemption printed) |
+| specification guard | `python3 forensics/tools/spec_guard.py check` | `spec-guard: 10 registered specification(s), 5 recorded known nonconformance(s), 6 level(s); 0 unclassified, 0 unjustified exemptions`; exit 0 |
+| worktree | `git --no-pager status --porcelain` | see §11.9 |
+
+### 11.8 What was preserved, and where
+
+* **The prior receipt** — §§1–10 of this file are unedited; they remain the
+  record of the `a9bcb5480` measurement, including its now-superseded digests
+  and its "queued" descriptions of D1/D2/D4/D5.
+* **The old behaviour of every repaired defect** — `INVENTORY.json`'s
+  `historicalWitness` entries (the old argv/expected text, `observedAt`
+  `a9bcb5480`, `supersededAt` `f2ec25379`), plus `evidence/defects/d1-d5/RECEIPT.md`
+  §3–§5, which is not modified.
+* **The old document wording** — `evidence/defects/d1-d5/RECEIPT.md` §4 quotes
+  it verbatim; the contract's §9 now names the "repaired at" commit for each
+  entry instead of dropping the entry.
+* **The old test expectation** — quoted in §11.6 above.
+* **The old digests** — the table in §11.3.
+* **The descriptor of the stale record** — the intermediate `SURFACE.json`
+  digest (`34c5ec0c…`) is recorded in §11.3 so the hand-edited state is
+  distinguishable from both A25 and the refresh.
+
+### 11.9 Files changed in this refresh
+
+```
+ M docs/ETP-TODO.md                     (the A25 row, in place)
+ M docs/PUBLIC-VERIFIER.md              (§9 only: "repaired at" column, D7, the historical-witness paragraph)
+ M evidence/a25/CONTROLS.json           (regenerated)
+ M evidence/a25/INVENTORY.json          (regenerated)
+ M evidence/a25/RECEIPT.md              (this section appended)
+ M evidence/a25/SURFACE.json            (regenerated)
+ M evidence/a25/VERIFY.json             (regenerated)
+ M evidence/a25/build_evidence.py       (declaration identity, freeze refusals, historical discrepancies, updated stubs)
+ M forensics/tools/tests/test_public_surface.py (one stale assertion corrected; 39 controls unchanged)
+```
+
+No other path changed. In particular `forensics/tools/verify.py`,
+`forensics/tools/public_surface.py`, `docs/PUBLIC-VERIFICATION.md`, `src/`,
+`docker/` and `AGENTS.md` are untouched, and nothing was committed or pushed.
+
+### 11.10 Anything not established
+
+* **A run at a later commit.** No commit was made, so the literal
+  "re-run at a later commit reproduces byte-for-byte" was not executed. What was
+  established is the mechanism (the reproduction path never reads `HEAD`; it
+  uses `declaredAtCommit` from the record) and two byte-identical runs, the
+  second taking the recorded value by default. The literal case is `NOT_RUN`.
+* **Independent verification.** The same party wrote the refresh and its
+  controls. `PV_OK`, the 15 controls and the producer are a finite tested set,
+  not an independent audit (Earned Trust Articles 1, 2 and 5).
+* **D7's repair.** It is recorded and queued; the `--help` prose is unchanged
+  because changing it means changing `verify.py`.
+* **The shape check still cannot see behaviour.** It agrees with the
+  declaration; the discrepancies are the evidence that reading the source is
+  still required. `PV_OK` is not "no defect".
+* **Freshness/closure of the downstream consumer families** and the eleven
+  absent extended `verify` subcommands are unchanged obligations, as in §8.
