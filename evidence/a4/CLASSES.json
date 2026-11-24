@@ -1,0 +1,344 @@
+{
+ "a1PolicyChange": "none",
+ "classes": [
+  {
+   "id": "inline-macro-expansion",
+   "instanceIds": [
+    "L1-cmp-ctx-cb-to-ptr"
+   ],
+   "never_emit": [
+    "the macro definition line substituted for an invocation-site finding",
+    "a synthesized expansion origin or line",
+    "a column as a SARIF column"
+   ],
+   "occurrence": "present",
+   "precision": [
+    "line",
+    "symbol-only",
+    "byte-offset-in-artifact",
+    "function-offset-and-extent"
+   ],
+   "subjects": [
+    "source",
+    "binary"
+   ],
+   "title": "Inline macro expansion at an invocation site",
+   "truthful": "The span the compiler assigned to the tokens that carry the finding. A block written at the invocation belongs to the invocation line; a token written in the macro body belongs to the definition line. When the record carries an expansion origin, emit it as expansion metadata; the invocation line alone is a complete source location for an invocation-site token.",
+   "unavailable": [
+    "the expansion call stack when the record does not carry it",
+    "hygiene context",
+    "a token-level mapping between body and invocation tokens",
+    "a binary address unless the record records one"
+   ]
+  },
+  {
+   "id": "macro-rules-derive-output",
+   "instanceIds": [
+    "L2-define-new-free"
+   ],
+   "never_emit": [
+    "the definition line as each instantiation's own line",
+    "a line for each derived impl",
+    "a synthesized expansion stack",
+    "an extent over generated code the record does not measure"
+   ],
+   "occurrence": "present",
+   "precision": [
+    "definition-site",
+    "symbol-only",
+    "byte-offset-in-artifact",
+    "function-offset-and-extent"
+   ],
+   "subjects": [
+    "source",
+    "binary"
+   ],
+   "title": "macro_rules! or derive output (generated items)",
+   "truthful": "For a macro_rules! body the compiler attributes generated tokens to the definition line, with an expansion origin only where the record supplies one. Each invocation is a separate instantiation with its own generated name and no distinct source line. A derive-generated item has no source file or line of its own; the attribute's line locates the input, not the generated code.",
+   "unavailable": [
+    "a per-instantiation source line",
+    "the expansion origin when unrecorded",
+    "the location of derive-generated items",
+    "the number of instantiations unless the record counts them"
+   ]
+  },
+  {
+   "id": "monomorphised-generic",
+   "instanceIds": [
+    "L3-md32-update"
+   ],
+   "never_emit": [
+    "the generic definition line as the instance's line",
+    "a type-argument-specific line",
+    "a symbol the record does not name"
+   ],
+   "occurrence": "present",
+   "precision": [
+    "generic-definition-body",
+    "symbol-only",
+    "byte-offset-in-artifact",
+    "function-offset-and-extent"
+   ],
+   "subjects": [
+    "source",
+    "binary"
+   ],
+   "title": "Monomorphised generic instance",
+   "truthful": "For source, the generic definition line is the shared body and is not any instance's own line. For a binary finding, the mangled or demangled instantiation symbol and its offset are the location; the generic definition is background, never the instance's address.",
+   "unavailable": [
+    "a per-instantiation source line",
+    "the type arguments unless the symbol is demangled",
+    "a distinct source extent for each instance"
+   ]
+  },
+  {
+   "id": "dynamic-dispatch",
+   "instanceIds": [
+    "L4-bsearch-dyn-call"
+   ],
+   "never_emit": [
+    "the trait method's definition line as the call's location",
+    "a single resolved target the record does not establish",
+    "a call site the record does not carry"
+   ],
+   "occurrence": "present",
+   "precision": [
+    "line",
+    "call-site-offset-in-artifact",
+    "symbol-only"
+   ],
+   "subjects": [
+    "source",
+    "binary"
+   ],
+   "title": "Trait-object or dynamic dispatch call",
+   "truthful": "The call site the record carries, with the static target set it establishes. A trait method's definition is shared by every dynamic call and is not the call's location. In a binary, the containing function's offset plus the call-site offset is the whole location.",
+   "unavailable": [
+    "the runtime target unless the record resolves it",
+    "the receiver's concrete type",
+    "the callee's source line",
+    "the trait definition's applicability to this call"
+   ]
+  },
+  {
+   "id": "no-mangle-export",
+   "instanceIds": [
+    "L5-cmp-ctx-export"
+   ],
+   "never_emit": [
+    "a source line for a machine-code finding at the export",
+    "a symbol the record does not name",
+    "a definition site substituted for an address"
+   ],
+   "occurrence": "present",
+   "precision": [
+    "line",
+    "function-offset-and-extent",
+    "byte-offset-in-artifact",
+    "symbol-only"
+   ],
+   "subjects": [
+    "source",
+    "binary"
+   ],
+   "title": "#[no_mangle] C ABI export",
+   "truthful": "For source, the Rust declaration line is truthful for the export declaration. For a binary finding, the exported symbol name is the identity and the DSO plus address is the location. The export declaration line is never the address of the machine code.",
+   "unavailable": [
+    "a line or column for the machine-code occurrence",
+    "the caller, unless the record records one",
+    "the export's Rust signature in the binary beyond the symbol name"
+   ]
+  },
+  {
+   "id": "indirect-function-pointer-call",
+   "instanceIds": [
+    "L6-store-loader-closefn"
+   ],
+   "never_emit": [
+    "a line or column",
+    "one target presented as resolved when the record records a set or a contract",
+    "a definition site in place of the call-site offset"
+   ],
+   "occurrence": "present",
+   "precision": [
+    "call-site-offset-in-artifact",
+    "symbol-only"
+   ],
+   "subjects": [
+    "source",
+    "binary"
+   ],
+   "title": "Indirect call through a function pointer",
+   "truthful": "The DSO, the containing function's offset and the offset of the instruction that performs the indirect call. If the record resolves the pointer's provenance, the provenance is emitted verbatim; the callee is not a location the record establishes unless it names one.",
+   "unavailable": [
+    "the callee when unresolved",
+    "a source line for the call site",
+    "the callee's definition line",
+    "an instruction extent unless the record measures one"
+   ]
+  },
+  {
+   "id": "inlined-optimised-code",
+   "instanceIds": [
+    "L7-store-close-it",
+    "L7-compress-staged"
+   ],
+   "never_emit": [
+    "an inlined result presented with a distinct call site",
+    "a symbol that does not exist",
+    "a call-site offset that is not an instruction boundary",
+    "the callee's source line as the binary location"
+   ],
+   "occurrence": "present",
+   "precision": [
+    "function-offset-and-extent",
+    "byte-offset-in-artifact",
+    "line"
+   ],
+   "subjects": [
+    "source",
+    "binary"
+   ],
+   "title": "Inlined function in optimised code",
+   "truthful": "The enclosing out-of-line symbol and the offset of the inlined code inside it. The inlined body has no symbol and no call site of its own. A source line for the body is truthful as source text; it does not become a binary location.",
+   "unavailable": [
+    "a symbol for the inlined function",
+    "a distinct call site",
+    "the boundary between inlined body and caller",
+    "a per-copy source line from the binary"
+   ]
+  },
+  {
+   "id": "binary-symbol-only",
+   "instanceIds": [
+    "L8-bn-mod-inverse"
+   ],
+   "never_emit": [
+    "a source location presented as the binary finding's location",
+    "a call site the record does not carry",
+    "a reachability claim derived from symbol presence"
+   ],
+   "occurrence": "present",
+   "precision": [
+    "symbol-only",
+    "function-offset-and-extent",
+    "byte-offset-in-artifact"
+   ],
+   "subjects": [
+    "binary"
+   ],
+   "title": "Function reached only through a binary symbol",
+   "truthful": "The DSO, the exported symbol name and the address or byte offset the record carries. Where the record also carries an extent, emit both lengths equally. A source definition may be cited as background but is not the binary occurrence's location, and symbol presence establishes no reachability.",
+   "unavailable": [
+    "a source line for the binary occurrence",
+    "the call path",
+    "reachability from an entry point, which symbol presence does not establish",
+    "an extent when the record records none"
+   ]
+  }
+ ],
+ "model": "a4/v1",
+ "refusals": [
+  {
+   "code": "LF_REFUSED_UNKNOWN_CLASS",
+   "consequence": "that the record's class has no rule, so any location it carries might be the truthful one",
+   "description": "the class is not one of the eight registered location classes"
+  },
+  {
+   "code": "LF_REFUSED_MISSING_SUBJECT",
+   "consequence": "that a location was verified when no subject was verified",
+   "description": "the record names neither a source path nor a binary artefact"
+  },
+  {
+   "code": "LF_REFUSED_MISSING_ARTIFACT_DIGEST",
+   "consequence": "that the bytes examined are the candidate's bytes (Article 2)",
+   "description": "a binary finding names no artefact digest"
+  },
+  {
+   "code": "LF_REFUSED_MISSING_SYMBOL",
+   "consequence": "that a symbol location exists when the record names none",
+   "description": "a symbol-only finding names no symbol"
+  },
+  {
+   "code": "LF_REFUSED_MISSING_ADDRESS",
+   "consequence": "that a machine-code location exists when none was recorded",
+   "description": "a binary finding records neither an address nor a byte offset"
+  },
+  {
+   "code": "LF_REFUSED_FABRICATED_LINE",
+   "consequence": "that the defect is at a line no native record identifies, so a reader may review, patch or suppress the wrong code, or conclude the finding is absent because that line does not exist",
+   "description": "the emitted line is not the line the native record carries"
+  },
+  {
+   "code": "LF_REFUSED_DEFINITION_AS_INSTANCE",
+   "consequence": "that each instantiation has its own line at the shared definition, so a per-instance defect is reported at a line that only contains the shared body, and fixing that line is read as fixing one instance",
+   "description": "a definition site (macro body, generic body) is presented as an instantiation's own location"
+  },
+  {
+   "code": "LF_REFUSED_MACHINE_CODE_LINE",
+   "consequence": "that the emitted instruction has a source line, when the record records an address only; a reader would mark up a source line the compiler may not have emitted the instruction from, particularly after inlining",
+   "description": "a machine-code finding carries a source line"
+  },
+  {
+   "code": "LF_REFUSED_COLUMN_NOT_EMITTED",
+   "consequence": "a token-level precision the record does not state, with an unstated unit",
+   "description": "a column is emitted as a SARIF column"
+  },
+  {
+   "code": "LF_REFUSED_UNRECORDED_EXTENT",
+   "consequence": "that the tool observed the whole range, statement or symbol, so a diff, suppression or patch is scoped to bytes nobody examined",
+   "description": "an end line, column, offset, length or byte extent not present in the native record is emitted"
+  },
+  {
+   "code": "LF_REFUSED_FILE_NOT_IN_CANDIDATE",
+   "consequence": "that the finding applies to this candidate, when the record came from another candidate or a path that no longer exists (Article 2)",
+   "description": "the location names a file the candidate identity does not contain"
+  },
+  {
+   "code": "LF_REFUSED_INLINED_CALL_SITE",
+   "consequence": "that a call exists in the binary, so a breakpoint, patch or suppression is placed where no instruction calls the inlined body, and a fix at the reported call site does not change the inlined code",
+   "description": "an inlined finding is presented as if it had a distinct call site or callee symbol"
+  },
+  {
+   "code": "LF_REFUSED_UNRECORDED_CALL_SITE",
+   "consequence": "that the dispatch's location is known when only its target set or its containing function is known",
+   "description": "a dynamic or indirect call has no recorded call-site offset"
+  },
+  {
+   "code": "LF_REFUSED_FABRICATED_CALL_SITE",
+   "consequence": "that the instruction at an invented offset is the dispatch, so the wrong instruction is read as the call",
+   "description": "the emitted call-site offset is not the one the record carries"
+  },
+  {
+   "code": "LF_REFUSED_FABRICATED_ADDRESS",
+   "consequence": "that a resolved target was observed when the record establishes no such target",
+   "description": "the emitted address is not the address the record carries"
+  },
+  {
+   "code": "LF_REFUSED_FABRICATED_SYMBOL",
+   "consequence": "that the binary has that symbol and that the finding is inside it",
+   "description": "a symbol name is emitted although the record names none"
+  },
+  {
+   "code": "LF_REFUSED_RECORD_CONDITION_WITH_LOCATION",
+   "consequence": "that the condition is a property of a file or instruction, when it is a property of the record, so a reader hunts for code that carries no defect",
+   "description": "a record-level condition is given a code location"
+  },
+  {
+   "code": "LF_REFUSED_EMISSION_INVALID",
+   "consequence": "that the emission is the projection of the record when it is not",
+   "description": "the emission differs from the one the record supports in a way no narrower refusal names"
+  },
+  {
+   "code": "LF_REFUSED_INSTANCE",
+   "consequence": "that the instance supports the rule it is cited for",
+   "description": "a recorded A4 instance failed its own projection or control"
+  },
+  {
+   "code": "LF_REFUSED_PROVENANCE",
+   "consequence": "that the instance is bound to the native record it names",
+   "description": "the tracked provenance an instance cites cannot be read or does not carry the expected native fields"
+  }
+ ],
+ "schema": "openssl-rs/a4/classes/1"
+}

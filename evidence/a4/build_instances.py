@@ -282,7 +282,7 @@ INSTANCES = [
             "native": {
                 "address": 0x1B4D20,
                 "byteOffset": 0x1B4D20,
-                "byteLength": 0xA5,
+                "byteLength": 0x165,
                 "extentRecorded": True,
                 "addressKind": "function",
                 "symbol": "openssl_rs::digest::md32::update::<openssl_rs::digest::md4::Md4Ctx>",
@@ -302,7 +302,7 @@ INSTANCES = [
             ),
             pointer(TIMING, "/candidate/libcrypto/sha256", expectEquals=LIB_DIGEST),
         ],
-        [symbol("openssl_rs::digest::md32::update::<openssl_rs::digest::md4::Md4Ctx>", 0x1B4D20, 0xA5)],
+        [symbol("openssl_rs::digest::md32::update::<openssl_rs::digest::md4::Md4Ctx>", 0x1B4D20, 0x165)],
         [
             {
                 "op": "set",
@@ -314,7 +314,7 @@ INSTANCES = [
             {
                 "op": "set",
                 "path": "location.physicalLocation.region.byteLength",
-                "value": 0xA6,
+                "value": 0x166,
                 "refusal": lf.R_UNRECORDED_EXTENT,
                 "why": "an extent one byte past the recorded symbol size",
             },

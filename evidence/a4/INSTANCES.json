@@ -1,0 +1,1219 @@
+{
+ "candidate": {
+  "libcrypto": {
+   "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+   "uri": "libcrypto.so.3"
+  },
+  "source": {
+   "src/asn1/string.rs": "aa296aec145b4a2765e169c27023343e9285867b1d1eadb296ee33a189754b95",
+   "src/cmp/cmp_ctx.rs": "e2204d97a4262493f1c04f8ff730c7ddde83252b9c1540763dfbe206e7a72622",
+   "src/digest/md32.rs": "4c341ed948cb857a3d413025fbf1cdb175c879f5955cd02d34806a4be19c773f",
+   "src/runtime/bsearch.rs": "c46513a1b026360accc8f44c992528a1567621f1becd3d081cad380644562990",
+   "src/store/store_lib.rs": "6ab12b897dda1291a34f8ab4a13e67c1356d902d26f9d66f0a792a7d5c57f4d0"
+  }
+ },
+ "classes": [
+  "inline-macro-expansion",
+  "macro-rules-derive-output",
+  "monomorphised-generic",
+  "dynamic-dispatch",
+  "no-mangle-export",
+  "indirect-function-pointer-call",
+  "inlined-optimised-code",
+  "binary-symbol-only"
+ ],
+ "instances": [
+  {
+   "class": "inline-macro-expansion",
+   "emitted": {
+    "class": "inline-macro-expansion",
+    "limitations": [
+     "the recorded column is preserved as a native field and is not emitted as a SARIF column; its unit is the recorded one"
+    ],
+    "location": {
+     "physicalLocation": {
+      "artifactLocation": {
+       "uri": "src/cmp/cmp_ctx.rs"
+      },
+      "region": {
+       "startLine": 759
+      }
+     }
+    },
+    "precision": "line",
+    "properties": {
+     "column": 5,
+     "columnUnit": "not-recorded",
+     "expansionOrigin": "cb_to_ptr!",
+     "expansionOriginRecorded": true,
+     "extentRecorded": false,
+     "instantiationLineRecorded": true,
+     "lineInfoAvailable": true,
+     "locationPrecision": "line",
+     "nativeLineOrigin": "invocation-span",
+     "nativeSymbol": "OSSL_CMP_CTX_set_certConf_cb"
+    }
+   },
+   "id": "L1-cmp-ctx-cb-to-ptr",
+   "mutations": [
+    {
+     "op": "set",
+     "path": "location.physicalLocation.region.startLine",
+     "refusal": "LF_REFUSED_DEFINITION_AS_INSTANCE",
+     "value": 738,
+     "why": "the macro-body definition line substituted for the invocation span"
+    },
+    {
+     "op": "set",
+     "path": "location.physicalLocation.region.startLine",
+     "refusal": "LF_REFUSED_FABRICATED_LINE",
+     "value": 760,
+     "why": "a line adjacent to the record"
+    },
+    {
+     "op": "set",
+     "path": "location.physicalLocation.region.startColumn",
+     "refusal": "LF_REFUSED_COLUMN_NOT_EMITTED",
+     "value": 5,
+     "why": "the recorded column emitted as a SARIF column"
+    },
+    {
+     "op": "set",
+     "path": "location.physicalLocation.region.endLine",
+     "refusal": "LF_REFUSED_UNRECORDED_EXTENT",
+     "value": 759,
+     "why": "an end line the record does not carry"
+    }
+   ],
+   "nativeRecord": {
+    "class": "inline-macro-expansion",
+    "native": {
+     "column": 5,
+     "columnUnit": "not-recorded",
+     "definitionLine": 738,
+     "expansionOrigin": "cb_to_ptr!",
+     "line": 759,
+     "lineOrigin": "invocation-span",
+     "symbol": "OSSL_CMP_CTX_set_certConf_cb"
+    },
+    "subject": {
+     "candidateFiles": [
+      "src/cmp/cmp_ctx.rs"
+     ],
+     "kind": "source",
+     "uri": "src/cmp/cmp_ctx.rs"
+    }
+   },
+   "note": "The unsafe block is written at the invocation (cmp_ctx.rs:759); the cast belongs to the macro body (cmp_ctx.rs:738). The record carries the invocation span, so 759 is truthful and 738 is the definition site.",
+   "observations": [
+    {
+     "address": "0x27abd0",
+     "artefact": {
+      "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9"
+     },
+     "kind": "symbol",
+     "size": 119,
+     "symbol": "OSSL_CMP_CTX_set_certConf_cb"
+    }
+   ],
+   "provenance": [
+    {
+     "expect": {
+      "class": "callback_reentrancy_edge",
+      "column": 5,
+      "kind": "unsafe_block",
+      "line": 759,
+      "path": "src/cmp/cmp_ctx.rs",
+      "symbol": "OSSL_CMP_CTX_set_certConf_cb"
+     },
+     "kind": "indexed-site-row",
+     "path": "evidence/etp-t4/SAFETY-SITES.json",
+     "recordSha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da",
+     "row": 7182
+    },
+    {
+     "contains": "cb_to_ptr!(cb)",
+     "kind": "source-line",
+     "line": 759,
+     "path": "src/cmp/cmp_ctx.rs",
+     "recordSha256": "e2204d97a4262493f1c04f8ff730c7ddde83252b9c1540763dfbe206e7a72622"
+    },
+    {
+     "contains": "f as *const () as *mut c_void",
+     "kind": "source-line",
+     "line": 738,
+     "path": "src/cmp/cmp_ctx.rs",
+     "recordSha256": "e2204d97a4262493f1c04f8ff730c7ddde83252b9c1540763dfbe206e7a72622"
+    }
+   ],
+   "status": "real"
+  },
+  {
+   "class": "macro-rules-derive-output",
+   "emitted": {
+    "class": "macro-rules-derive-output",
+    "limitations": [
+     "the line is the macro definition's; the record does not carry a per-instantiation line",
+     "the recorded column is preserved as a native field and is not emitted as a SARIF column; its unit is the recorded one"
+    ],
+    "location": {
+     "physicalLocation": {
+      "artifactLocation": {
+       "uri": "src/asn1/string.rs"
+      },
+      "region": {
+       "startLine": 562
+      }
+     }
+    },
+    "precision": "definition-site",
+    "properties": {
+     "column": 13,
+     "columnUnit": "not-recorded",
+     "expansionOriginRecorded": false,
+     "extentRecorded": false,
+     "instantiationLineRecorded": false,
+     "lineInfoAvailable": true,
+     "locationPrecision": "definition-site",
+     "nativeLineOrigin": "macro-definition",
+     "nativeSymbol": "file:string"
+    }
+   },
+   "id": "L2-define-new-free",
+   "mutations": [
+    {
+     "op": "set",
+     "path": "properties.instantiationLineRecorded",
+     "refusal": "LF_REFUSED_DEFINITION_AS_INSTANCE",
+     "value": true,
+     "why": "the definition line presented as an instantiation's own line"
+    },
+    {
+     "op": "set",
+     "path": "location.physicalLocation.region.startLine",
+     "refusal": "LF_REFUSED_FABRICATED_LINE",
+     "value": 569,
+     "why": "one invocation's line substituted for the shared definition"
+    },
+    {
+     "op": "set",
+     "path": "location.physicalLocation.region.startColumn",
+     "refusal": "LF_REFUSED_COLUMN_NOT_EMITTED",
+     "value": 13,
+     "why": "the recorded column emitted as a SARIF column"
+    }
+   ],
+   "nativeRecord": {
+    "class": "macro-rules-derive-output",
+    "native": {
+     "column": 13,
+     "columnUnit": "not-recorded",
+     "line": 562,
+     "lineOrigin": "macro-definition",
+     "symbol": "file:string"
+    },
+    "subject": {
+     "candidateFiles": [
+      "src/asn1/string.rs"
+     ],
+     "kind": "source",
+     "uri": "src/asn1/string.rs"
+    }
+   },
+   "note": "One lexical row at string.rs:562 stands for every generated *_free function; the generated export ASN1_OCTET_STRING_free is a separate binary symbol with no line of its own. The class also covers derive output, but no derive-generated finding occurs in the tree.",
+   "observations": [
+    {
+     "address": "0x2680f0",
+     "artefact": {
+      "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9"
+     },
+     "kind": "symbol",
+     "size": 114,
+     "symbol": "ASN1_OCTET_STRING_free"
+    }
+   ],
+   "provenance": [
+    {
+     "expect": {
+      "class": "delegated_unsafe_contract",
+      "column": 13,
+      "kind": "unsafe_block",
+      "line": 562,
+      "path": "src/asn1/string.rs",
+      "symbol": "file:string"
+     },
+     "kind": "indexed-site-row",
+     "path": "evidence/etp-t4/SAFETY-SITES.json",
+     "recordSha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da",
+     "row": 4029
+    },
+    {
+     "contains": "macro_rules! define_new_free",
+     "kind": "source-line",
+     "line": 546,
+     "path": "src/asn1/string.rs",
+     "recordSha256": "aa296aec145b4a2765e169c27023343e9285867b1d1eadb296ee33a189754b95"
+    },
+    {
+     "contains": "define_new_free!(",
+     "kind": "source-line",
+     "line": 567,
+     "path": "src/asn1/string.rs",
+     "recordSha256": "aa296aec145b4a2765e169c27023343e9285867b1d1eadb296ee33a189754b95"
+    }
+   ],
+   "status": "real"
+  },
+  {
+   "class": "monomorphised-generic",
+   "emitted": {
+    "class": "monomorphised-generic",
+    "limitations": [
+     "the location is a byte offset in the named artefact; offsets are not stable across builds"
+    ],
+    "location": {
+     "logicalLocations": [
+      {
+       "kind": "function",
+       "name": "openssl_rs::digest::md32::update::<openssl_rs::digest::md4::Md4Ctx>"
+      }
+     ],
+     "physicalLocation": {
+      "address": {
+       "absoluteAddress": 1789216,
+       "kind": "function",
+       "length": 357,
+       "name": "openssl_rs::digest::md32::update::<openssl_rs::digest::md4::Md4Ctx>"
+      },
+      "artifactLocation": {
+       "algorithm": "sha-256",
+       "digest": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+       "digestScope": "artifact",
+       "uri": "libcrypto.so.3"
+      },
+      "region": {
+       "byteLength": 357,
+       "byteOffset": 1789216
+      }
+     }
+    },
+    "precision": "function-offset-and-extent",
+    "properties": {
+     "extentRecorded": true,
+     "instantiationLineRecorded": false,
+     "lineInfoAvailable": false,
+     "locationPrecision": "function-offset-and-extent",
+     "nativeLineOrigin": "symbol"
+    }
+   },
+   "id": "L3-md32-update",
+   "mutations": [
+    {
+     "op": "set",
+     "path": "location.physicalLocation.region.startLine",
+     "refusal": "LF_REFUSED_MACHINE_CODE_LINE",
+     "value": 118,
+     "why": "the generic definition line emitted for the machine-code instance"
+    },
+    {
+     "op": "set",
+     "path": "location.physicalLocation.region.byteLength",
+     "refusal": "LF_REFUSED_UNRECORDED_EXTENT",
+     "value": 358,
+     "why": "an extent one byte past the recorded symbol size"
+    },
+    {
+     "op": "set",
+     "path": "location.physicalLocation.address.absoluteAddress",
+     "refusal": "LF_REFUSED_FABRICATED_ADDRESS",
+     "value": 1789584,
+     "why": "the Md5 instance's address substituted for the Md4 instance"
+    },
+    {
+     "op": "set",
+     "path": "location.physicalLocation.address.name",
+     "refusal": "LF_REFUSED_FABRICATED_SYMBOL",
+     "value": "update",
+     "why": "the generic source name substituted for the mangled instance"
+    }
+   ],
+   "nativeRecord": {
+    "class": "monomorphised-generic",
+    "native": {
+     "address": 1789216,
+     "addressKind": "function",
+     "byteLength": 357,
+     "byteOffset": 1789216,
+     "extentRecorded": true,
+     "symbol": "openssl_rs::digest::md32::update::<openssl_rs::digest::md4::Md4Ctx>"
+    },
+    "subject": {
+     "algorithm": "sha-256",
+     "candidateFiles": [
+      "libcrypto.so.3"
+     ],
+     "digest": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+     "digestScope": "artifact",
+     "kind": "binary",
+     "uri": "libcrypto.so.3"
+    }
+   },
+   "note": "One source row at md32.rs:118 covers the generic body; the binary has six separate update and six finalize instantiations. The instance location is the mangled symbol and its recorded extent.",
+   "observations": [
+    {
+     "address": "0x1b4d20",
+     "artefact": {
+      "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9"
+     },
+     "kind": "symbol",
+     "size": 357,
+     "symbol": "openssl_rs::digest::md32::update::<openssl_rs::digest::md4::Md4Ctx>"
+    }
+   ],
+   "provenance": [
+    {
+     "expect": {
+      "class": "callback_reentrancy_edge",
+      "column": 12,
+      "kind": "unsafe_fn",
+      "line": 118,
+      "path": "src/digest/md32.rs",
+      "symbol": "update"
+     },
+     "kind": "indexed-site-row",
+     "path": "evidence/etp-t4/SAFETY-SITES.json",
+     "recordSha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da",
+     "row": 13997
+    },
+    {
+     "expectEquals": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+     "kind": "json-pointer",
+     "path": "evidence/timing-bn-findings.json",
+     "pointer": "/candidate/libcrypto/sha256",
+     "recordSha256": "7289fbce2dabe40be92538c916736dba7c4d5250c1fae6e12767580daad8696c"
+    }
+   ],
+   "status": "real"
+  },
+  {
+   "class": "dynamic-dispatch",
+   "emitted": {
+    "class": "dynamic-dispatch",
+    "limitations": [
+     "the location is the containing function's offset plus the call-site offset; the runtime target is not a recorded location"
+    ],
+    "location": {
+     "logicalLocations": [
+      {
+       "kind": "function",
+       "name": "openssl_rs::runtime::bsearch::ossl_bsearch"
+      }
+     ],
+     "physicalLocation": {
+      "address": {
+       "absoluteAddress": 4150496,
+       "kind": "function",
+       "name": "openssl_rs::runtime::bsearch::ossl_bsearch"
+      },
+      "artifactLocation": {
+       "algorithm": "sha-256",
+       "digest": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+       "digestScope": "artifact",
+       "uri": "libcrypto.so.3"
+      },
+      "region": {
+       "byteOffset": 4150556
+      }
+     }
+    },
+    "precision": "call-site-offset-in-artifact",
+    "properties": {
+     "callSite": 4150556,
+     "extentRecorded": false,
+     "instantiationLineRecorded": false,
+     "lineInfoAvailable": false,
+     "locationPrecision": "call-site-offset-in-artifact",
+     "nativeLineOrigin": "symbol"
+    }
+   },
+   "id": "L4-bsearch-dyn-call",
+   "mutations": [
+    {
+     "op": "set",
+     "path": "location.physicalLocation.region.startLine",
+     "refusal": "LF_REFUSED_MACHINE_CODE_LINE",
+     "value": 85,
+     "why": "the trait-object call's source line emitted for the binary call"
+    },
+    {
+     "op": "set",
+     "path": "location.physicalLocation.region.byteOffset",
+     "refusal": "LF_REFUSED_FABRICATED_CALL_SITE",
+     "value": 4150557,
+     "why": "an offset inside the call instruction"
+    },
+    {
+     "op": "delete",
+     "path": "location.physicalLocation.region.byteOffset",
+     "refusal": "LF_REFUSED_UNRECORDED_CALL_SITE",
+     "why": "the recorded call-site offset removed"
+    },
+    {
+     "op": "set",
+     "path": "location.physicalLocation.address.absoluteAddress",
+     "refusal": "LF_REFUSED_FABRICATED_ADDRESS",
+     "value": 4150497,
+     "why": "an address inside the enclosing function"
+    }
+   ],
+   "nativeRecord": {
+    "class": "dynamic-dispatch",
+    "native": {
+     "address": 4150496,
+     "addressKind": "function",
+     "callSite": 4150556,
+     "symbol": "openssl_rs::runtime::bsearch::ossl_bsearch"
+    },
+    "subject": {
+     "algorithm": "sha-256",
+     "candidateFiles": [
+      "libcrypto.so.3"
+     ],
+     "digest": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+     "digestScope": "artifact",
+     "kind": "binary",
+     "uri": "libcrypto.so.3"
+    }
+   },
+   "note": "The call at bsearch.rs:85 goes through `&mut dyn FnMut`; the emitted code loads the method pointer from 0x20(%rcx) and performs `call *%r13` at ossl_bsearch+0x3c. Reachability of this function is not claimed.",
+   "observations": [
+    {
+     "address": "0x3f54e0",
+     "artefact": {
+      "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9"
+     },
+     "kind": "symbol",
+     "size": 200,
+     "symbol": "openssl_rs::runtime::bsearch::ossl_bsearch"
+    },
+    {
+     "artefact": {
+      "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9"
+     },
+     "bytes": "41 ff d5",
+     "kind": "instruction",
+     "offset": "0x3f551c",
+     "text": "call   *%r13"
+    }
+   ],
+   "provenance": [
+    {
+     "contains": "c = cmp(i);",
+     "kind": "source-line",
+     "line": 85,
+     "path": "src/runtime/bsearch.rs",
+     "recordSha256": "c46513a1b026360accc8f44c992528a1567621f1becd3d081cad380644562990"
+    },
+    {
+     "expect": {
+      "mechanism": "object-field dispatch (callback or method pointer)"
+     },
+     "kind": "json-pointer",
+     "path": "evidence/closure-curl-049.json",
+     "pointer": "/precision/classes/field",
+     "recordSha256": "b72193072780e9a425e7e93be8c0c15849d06c758b9e71f226cafb4992388c62"
+    }
+   ],
+   "status": "real"
+  },
+  {
+   "class": "no-mangle-export",
+   "emitted": {
+    "class": "no-mangle-export",
+    "limitations": [
+     "the location is a byte offset in the named artefact; offsets are not stable across builds"
+    ],
+    "location": {
+     "logicalLocations": [
+      {
+       "kind": "function",
+       "name": "OSSL_CMP_CTX_set_certConf_cb"
+      }
+     ],
+     "physicalLocation": {
+      "address": {
+       "absoluteAddress": 2599888,
+       "kind": "function",
+       "length": 119,
+       "name": "OSSL_CMP_CTX_set_certConf_cb"
+      },
+      "artifactLocation": {
+       "algorithm": "sha-256",
+       "digest": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+       "digestScope": "artifact",
+       "uri": "libcrypto.so.3"
+      },
+      "region": {
+       "byteLength": 119,
+       "byteOffset": 2599888
+      }
+     }
+    },
+    "precision": "function-offset-and-extent",
+    "properties": {
+     "extentRecorded": true,
+     "instantiationLineRecorded": false,
+     "lineInfoAvailable": false,
+     "locationPrecision": "function-offset-and-extent",
+     "nativeLineOrigin": "symbol"
+    }
+   },
+   "id": "L5-cmp-ctx-export",
+   "mutations": [
+    {
+     "op": "set",
+     "path": "location.physicalLocation.region.startLine",
+     "refusal": "LF_REFUSED_MACHINE_CODE_LINE",
+     "value": 748,
+     "why": "the export declaration line emitted for the machine code"
+    },
+    {
+     "op": "set",
+     "path": "location.physicalLocation.region.byteLength",
+     "refusal": "LF_REFUSED_UNRECORDED_EXTENT",
+     "value": 120,
+     "why": "an extent one byte past the recorded symbol size"
+    },
+    {
+     "op": "set",
+     "path": "location.physicalLocation.address.absoluteAddress",
+     "refusal": "LF_REFUSED_FABRICATED_ADDRESS",
+     "value": 2600016,
+     "why": "the neighbouring export's address"
+    },
+    {
+     "op": "set",
+     "path": "location.physicalLocation.address.name",
+     "refusal": "LF_REFUSED_FABRICATED_SYMBOL",
+     "value": "OSSL_CMP_CTX_set_http_cb",
+     "why": "a different export's name"
+    }
+   ],
+   "nativeRecord": {
+    "class": "no-mangle-export",
+    "native": {
+     "address": 2599888,
+     "addressKind": "function",
+     "byteLength": 119,
+     "byteOffset": 2599888,
+     "extentRecorded": true,
+     "symbol": "OSSL_CMP_CTX_set_certConf_cb"
+    },
+    "subject": {
+     "algorithm": "sha-256",
+     "candidateFiles": [
+      "libcrypto.so.3"
+     ],
+     "digest": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+     "digestScope": "artifact",
+     "kind": "binary",
+     "uri": "libcrypto.so.3"
+    }
+   },
+   "note": "The export declaration is at cmp_ctx.rs:748 and the machine code is at libcrypto.so.3+0x27abd0, size 0x77. The declaration line is not the machine-code location.",
+   "observations": [
+    {
+     "address": "0x27abd0",
+     "artefact": {
+      "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9"
+     },
+     "kind": "symbol",
+     "size": 119,
+     "symbol": "OSSL_CMP_CTX_set_certConf_cb"
+    }
+   ],
+   "provenance": [
+    {
+     "expect": {
+      "class": "abi_export",
+      "column": 1,
+      "kind": "export",
+      "line": 748,
+      "path": "src/cmp/cmp_ctx.rs",
+      "symbol": "OSSL_CMP_CTX_set_certConf_cb"
+     },
+     "kind": "indexed-site-row",
+     "path": "evidence/etp-t4/SAFETY-SITES.json",
+     "recordSha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da",
+     "row": 7180
+    },
+    {
+     "contains": "#[no_mangle]",
+     "kind": "source-line",
+     "line": 748,
+     "path": "src/cmp/cmp_ctx.rs",
+     "recordSha256": "e2204d97a4262493f1c04f8ff730c7ddde83252b9c1540763dfbe206e7a72622"
+    }
+   ],
+   "status": "real"
+  },
+  {
+   "class": "indirect-function-pointer-call",
+   "emitted": {
+    "class": "indirect-function-pointer-call",
+    "limitations": [
+     "the location is the containing function's offset plus the call-site offset; the runtime target is not a recorded location"
+    ],
+    "location": {
+     "logicalLocations": [
+      {
+       "kind": "function",
+       "name": "OSSL_STORE_open_ex"
+      }
+     ],
+     "physicalLocation": {
+      "address": {
+       "absoluteAddress": 3600096,
+       "kind": "function",
+       "name": "OSSL_STORE_open_ex"
+      },
+      "artifactLocation": {
+       "algorithm": "sha-256",
+       "digest": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+       "digestScope": "artifact",
+       "uri": "libcrypto.so.3"
+      },
+      "region": {
+       "byteOffset": 3602643
+      }
+     }
+    },
+    "precision": "call-site-offset-in-artifact",
+    "properties": {
+     "callSite": 3602643,
+     "extentRecorded": false,
+     "instantiationLineRecorded": false,
+     "lineInfoAvailable": false,
+     "locationPrecision": "call-site-offset-in-artifact",
+     "nativeLineOrigin": "symbol"
+    }
+   },
+   "id": "L6-store-loader-closefn",
+   "mutations": [
+    {
+     "op": "set",
+     "path": "location.physicalLocation.region.startLine",
+     "refusal": "LF_REFUSED_MACHINE_CODE_LINE",
+     "value": 666,
+     "why": "the source call line emitted for the binary call site"
+    },
+    {
+     "op": "set",
+     "path": "location.physicalLocation.region.byteOffset",
+     "refusal": "LF_REFUSED_FABRICATED_CALL_SITE",
+     "value": 3602644,
+     "why": "an offset inside the call instruction"
+    },
+    {
+     "op": "delete",
+     "path": "location.physicalLocation.region.byteOffset",
+     "refusal": "LF_REFUSED_UNRECORDED_CALL_SITE",
+     "why": "the recorded call-site offset removed"
+    },
+    {
+     "op": "set",
+     "path": "location.physicalLocation.address.absoluteAddress",
+     "refusal": "LF_REFUSED_FABRICATED_ADDRESS",
+     "value": 3600097,
+     "why": "an address inside the enclosing function"
+    }
+   ],
+   "nativeRecord": {
+    "class": "indirect-function-pointer-call",
+    "native": {
+     "address": 3600096,
+     "addressKind": "function",
+     "callSite": 3602643,
+     "symbol": "OSSL_STORE_open_ex"
+    },
+    "subject": {
+     "algorithm": "sha-256",
+     "candidateFiles": [
+      "libcrypto.so.3"
+     ],
+     "digest": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+     "digestScope": "artifact",
+     "kind": "binary",
+     "uri": "libcrypto.so.3"
+    }
+   },
+   "note": "The closure record's residual row 109 names the DSO, the containing function 0x36eee0, the call site 0x36f8d3 and the provenance OsslStoreLoader.closefn. A1 emits exactly this location and no line.",
+   "observations": [
+    {
+     "address": "0x36eee0",
+     "artefact": {
+      "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9"
+     },
+     "kind": "symbol",
+     "size": 2695,
+     "symbol": "OSSL_STORE_open_ex"
+    },
+    {
+     "artefact": {
+      "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9"
+     },
+     "bytes": "ff d0",
+     "kind": "instruction",
+     "offset": "0x36f8d3",
+     "text": "call   *%rax"
+    }
+   ],
+   "provenance": [
+    {
+     "expect": {
+      "call_site": "0x36f8d3",
+      "class": "ABI_CONTRACT_STORE_LOADER",
+      "dso": "libcrypto.so.3",
+      "function": "0x36eee0",
+      "reason": "external ABI contract witness: OsslStoreLoader.closefn (offset 0x50)",
+      "text": "call   *%rax"
+     },
+     "kind": "json-pointer",
+     "path": "evidence/closure-curl-049.json",
+     "pointer": "/precision/residual_sites/109",
+     "recordSha256": "b72193072780e9a425e7e93be8c0c15849d06c758b9e71f226cafb4992388c62"
+    },
+    {
+     "contains": "closefn",
+     "kind": "source-line",
+     "line": 666,
+     "path": "src/store/store_lib.rs",
+     "recordSha256": "6ab12b897dda1291a34f8ab4a13e67c1356d902d26f9d66f0a792a7d5c57f4d0"
+    }
+   ],
+   "status": "real"
+  },
+  {
+   "class": "inlined-optimised-code",
+   "emitted": {
+    "class": "inlined-optimised-code",
+    "limitations": [
+     "the inlined body has no symbol and no call site; the location is the enclosing out-of-line symbol"
+    ],
+    "location": {
+     "logicalLocations": [
+      {
+       "kind": "function",
+       "name": "OSSL_STORE_open_ex"
+      }
+     ],
+     "physicalLocation": {
+      "address": {
+       "absoluteAddress": 3600096,
+       "kind": "function",
+       "length": 2695,
+       "name": "OSSL_STORE_open_ex"
+      },
+      "artifactLocation": {
+       "algorithm": "sha-256",
+       "digest": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+       "digestScope": "artifact",
+       "uri": "libcrypto.so.3"
+      },
+      "region": {
+       "byteLength": 2695,
+       "byteOffset": 3600096
+      }
+     }
+    },
+    "precision": "function-offset-and-extent",
+    "properties": {
+     "extentRecorded": true,
+     "inlinedInto": "OSSL_STORE_open_ex",
+     "instantiationLineRecorded": false,
+     "lineInfoAvailable": false,
+     "locationPrecision": "function-offset-and-extent",
+     "nativeLineOrigin": "symbol"
+    }
+   },
+   "id": "L7-store-close-it",
+   "mutations": [
+    {
+     "op": "set",
+     "path": "location.physicalLocation.callSite",
+     "refusal": "LF_REFUSED_INLINED_CALL_SITE",
+     "value": 3602643,
+     "why": "an inlined finding given a call site it does not have"
+    },
+    {
+     "op": "set",
+     "path": "properties.inlinedInto",
+     "refusal": "LF_REFUSED_INLINED_CALL_SITE",
+     "value": "ossl_store_close_it",
+     "why": "the inlined callee presented as the enclosing symbol"
+    },
+    {
+     "op": "set",
+     "path": "location.physicalLocation.region.startLine",
+     "refusal": "LF_REFUSED_MACHINE_CODE_LINE",
+     "value": 666,
+     "why": "the inlined body's source line emitted for the binary code"
+    },
+    {
+     "op": "set",
+     "path": "location.physicalLocation.region.byteLength",
+     "refusal": "LF_REFUSED_UNRECORDED_EXTENT",
+     "value": 2696,
+     "why": "an extent one byte past the enclosing symbol"
+    }
+   ],
+   "nativeRecord": {
+    "class": "inlined-optimised-code",
+    "native": {
+     "address": 3600096,
+     "addressKind": "function",
+     "byteLength": 2695,
+     "byteOffset": 3600096,
+     "extentRecorded": true,
+     "inlinedInto": "OSSL_STORE_open_ex",
+     "symbol": "OSSL_STORE_open_ex"
+    },
+    "subject": {
+     "algorithm": "sha-256",
+     "candidateFiles": [
+      "libcrypto.so.3"
+     ],
+     "digest": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+     "digestScope": "artifact",
+     "kind": "binary",
+     "uri": "libcrypto.so.3"
+    }
+   },
+   "note": "ossl_store_close_it has no symbol in the candidate DSO; its code is inside OSSL_STORE_open_ex. The closure record states the inlining and attributes the call site to the caller. No separate call site exists.",
+   "observations": [
+    {
+     "artefact": {
+      "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9"
+     },
+     "kind": "symbol-absent",
+     "symbol": "ossl_store_close_it"
+    },
+    {
+     "address": "0x36eee0",
+     "artefact": {
+      "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9"
+     },
+     "kind": "symbol",
+     "size": 2695,
+     "symbol": "OSSL_STORE_open_ex"
+    }
+   ],
+   "provenance": [
+    {
+     "expect": {
+      "class": "delegated_unsafe_contract",
+      "column": 32,
+      "kind": "unsafe_block",
+      "line": 666,
+      "path": "src/store/store_lib.rs",
+      "symbol": "ossl_store_close_it"
+     },
+     "kind": "indexed-site-row",
+     "path": "evidence/etp-t4/SAFETY-SITES.json",
+     "recordSha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da",
+     "row": 51766
+    },
+    {
+     "expectContains": "inlined callees have no out-of-line function node",
+     "kind": "json-pointer",
+     "path": "evidence/closure-ssh-b86.json",
+     "pointer": "/graph/limits/0",
+     "recordSha256": "1e63d6e8e1da54d0e00321556603249ad16efba39ede26517d947ff731cf2b04"
+    },
+    {
+     "expectContains": "the inlined `ossl_store_close_it`",
+     "kind": "json-pointer",
+     "path": "evidence/closure-ssh-b86.json",
+     "pointer": "/precision/abi_contract_bounded/external_call_sites/contracts/ABI_CONTRACT_STORE_LOADER/citation/6",
+     "recordSha256": "1e63d6e8e1da54d0e00321556603249ad16efba39ede26517d947ff731cf2b04"
+    }
+   ],
+   "status": "real"
+  },
+  {
+   "class": "inlined-optimised-code",
+   "emitted": {
+    "class": "inlined-optimised-code",
+    "limitations": [
+     "the inlined body has no symbol and no call site; the location is the enclosing out-of-line symbol"
+    ],
+    "location": {
+     "logicalLocations": [
+      {
+       "kind": "function",
+       "name": "openssl_rs::digest::md32::finalize::<openssl_rs::digest::md4::Md4Ctx>"
+      }
+     ],
+     "physicalLocation": {
+      "address": {
+       "absoluteAddress": 1791424,
+       "kind": "function",
+       "length": 269,
+       "name": "openssl_rs::digest::md32::finalize::<openssl_rs::digest::md4::Md4Ctx>"
+      },
+      "artifactLocation": {
+       "algorithm": "sha-256",
+       "digest": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+       "digestScope": "artifact",
+       "uri": "libcrypto.so.3"
+      },
+      "region": {
+       "byteLength": 269,
+       "byteOffset": 1791424
+      }
+     }
+    },
+    "precision": "function-offset-and-extent",
+    "properties": {
+     "extentRecorded": true,
+     "inlinedInto": "openssl_rs::digest::md32::finalize::<openssl_rs::digest::md4::Md4Ctx>",
+     "instantiationLineRecorded": false,
+     "lineInfoAvailable": false,
+     "locationPrecision": "function-offset-and-extent",
+     "nativeLineOrigin": "symbol"
+    }
+   },
+   "id": "L7-compress-staged",
+   "mutations": [
+    {
+     "op": "set",
+     "path": "location.physicalLocation.callSite",
+     "refusal": "LF_REFUSED_INLINED_CALL_SITE",
+     "value": 1791488,
+     "why": "an inlined generic given a call site it does not have"
+    },
+    {
+     "op": "set",
+     "path": "properties.inlinedInto",
+     "refusal": "LF_REFUSED_INLINED_CALL_SITE",
+     "value": "openssl_rs::digest::md32::compress_staged::<openssl_rs::digest::md4::Md4Ctx>",
+     "why": "a symbol that the candidate DSO does not contain"
+    },
+    {
+     "op": "set",
+     "path": "location.physicalLocation.region.startLine",
+     "refusal": "LF_REFUSED_MACHINE_CODE_LINE",
+     "value": 220,
+     "why": "the inlined body's source line emitted for the binary code"
+    }
+   ],
+   "nativeRecord": {
+    "class": "inlined-optimised-code",
+    "native": {
+     "address": 1791424,
+     "addressKind": "function",
+     "byteLength": 269,
+     "byteOffset": 1791424,
+     "extentRecorded": true,
+     "inlinedInto": "openssl_rs::digest::md32::finalize::<openssl_rs::digest::md4::Md4Ctx>",
+     "symbol": "openssl_rs::digest::md32::finalize::<openssl_rs::digest::md4::Md4Ctx>"
+    },
+    "subject": {
+     "algorithm": "sha-256",
+     "candidateFiles": [
+      "libcrypto.so.3"
+     ],
+     "digest": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+     "digestScope": "artifact",
+     "kind": "binary",
+     "uri": "libcrypto.so.3"
+    }
+   },
+   "note": "compress_staged is private and generic and has no symbol in the candidate DSO; its only callers are the finalize instantiations. Its code is located only through the enclosing finalize symbol.",
+   "observations": [
+    {
+     "artefact": {
+      "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9"
+     },
+     "kind": "symbol-absent",
+     "symbol": "compress_staged"
+    },
+    {
+     "address": "0x1b55c0",
+     "artefact": {
+      "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9"
+     },
+     "kind": "symbol",
+     "size": 269,
+     "symbol": "openssl_rs::digest::md32::finalize::<openssl_rs::digest::md4::Md4Ctx>"
+    }
+   ],
+   "provenance": [
+    {
+     "expect": {
+      "class": "callback_reentrancy_edge",
+      "column": 1,
+      "kind": "unsafe_fn",
+      "line": 220,
+      "path": "src/digest/md32.rs",
+      "symbol": "compress_staged"
+     },
+     "kind": "indexed-site-row",
+     "path": "evidence/etp-t4/SAFETY-SITES.json",
+     "recordSha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da",
+     "row": 14016
+    }
+   ],
+   "status": "real"
+  },
+  {
+   "class": "binary-symbol-only",
+   "emitted": {
+    "class": "binary-symbol-only",
+    "limitations": [
+     "the location is a byte offset in the named artefact; offsets are not stable across builds"
+    ],
+    "location": {
+     "logicalLocations": [
+      {
+       "kind": "function",
+       "name": "BN_mod_inverse"
+      }
+     ],
+     "physicalLocation": {
+      "address": {
+       "absoluteAddress": 3994784,
+       "kind": "function",
+       "length": 1137,
+       "name": "BN_mod_inverse"
+      },
+      "artifactLocation": {
+       "algorithm": "sha-256",
+       "digest": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+       "digestScope": "artifact",
+       "uri": "libcrypto.so.3"
+      },
+      "region": {
+       "byteLength": 1137,
+       "byteOffset": 3994784
+      }
+     }
+    },
+    "precision": "function-offset-and-extent",
+    "properties": {
+     "extentRecorded": true,
+     "instantiationLineRecorded": false,
+     "lineInfoAvailable": false,
+     "locationPrecision": "function-offset-and-extent",
+     "nativeLineOrigin": "symbol"
+    }
+   },
+   "id": "L8-bn-mod-inverse",
+   "mutations": [
+    {
+     "op": "set",
+     "path": "location.physicalLocation.region.startLine",
+     "refusal": "LF_REFUSED_MACHINE_CODE_LINE",
+     "value": 1,
+     "why": "a source line emitted for a machine-code finding"
+    },
+    {
+     "op": "set",
+     "path": "location.physicalLocation.region.byteLength",
+     "refusal": "LF_REFUSED_UNRECORDED_EXTENT",
+     "value": 1138,
+     "why": "an extent one byte past the recorded size"
+    },
+    {
+     "op": "set",
+     "path": "location.physicalLocation.address.absoluteAddress",
+     "refusal": "LF_REFUSED_FABRICATED_ADDRESS",
+     "value": 3994785,
+     "why": "an address inside the function"
+    },
+    {
+     "op": "set",
+     "path": "location.physicalLocation.address.name",
+     "refusal": "LF_REFUSED_FABRICATED_SYMBOL",
+     "value": "BN_mod_exp_mont_consttime",
+     "why": "another exported symbol's name"
+    }
+   ],
+   "nativeRecord": {
+    "class": "binary-symbol-only",
+    "native": {
+     "address": 3994784,
+     "addressKind": "function",
+     "byteLength": 1137,
+     "byteOffset": 3994784,
+     "extentRecorded": true,
+     "symbol": "BN_mod_inverse"
+    },
+    "subject": {
+     "algorithm": "sha-256",
+     "candidateFiles": [
+      "libcrypto.so.3"
+     ],
+     "digest": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+     "digestScope": "artifact",
+     "kind": "binary",
+     "uri": "libcrypto.so.3"
+    }
+   },
+   "note": "The tracking record names the DSO digest, the dynsym name, the offset, the size and the GOT slot. The source definition exists but is not the binary occurrence's location, and symbol presence establishes no reachability.",
+   "observations": [
+    {
+     "address": "0x3cf4a0",
+     "artefact": {
+      "path": "artifacts/phase2/install/lib/libcrypto.so.3",
+      "sha256": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9"
+     },
+     "kind": "symbol",
+     "size": 1137,
+     "symbol": "BN_mod_inverse"
+    }
+   ],
+   "provenance": [
+    {
+     "expect": {
+      "dynsym_name": "BN_mod_inverse@@OPENSSL_3.0.0",
+      "got_slot": "0x896880 (R_X86_64_GLOB_DAT)",
+      "libcrypto_offset": "0x3cf4a0",
+      "size": 1137
+     },
+     "kind": "json-pointer",
+     "path": "evidence/timing-bn-findings.json",
+     "pointer": "/primitives/BN_mod_inverse",
+     "recordSha256": "7289fbce2dabe40be92538c916736dba7c4d5250c1fae6e12767580daad8696c"
+    },
+    {
+     "expectEquals": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+     "kind": "json-pointer",
+     "path": "evidence/timing-bn-findings.json",
+     "pointer": "/candidate/libcrypto/sha256",
+     "recordSha256": "7289fbce2dabe40be92538c916736dba7c4d5250c1fae6e12767580daad8696c"
+    }
+   ],
+   "status": "real"
+  }
+ ],
+ "model": "a4/v1",
+ "nonClaims": [
+  "an instance records the truthful location rule and its native provenance; it is not a claim that the finding is true or reachable",
+  "the symbol and instruction observations are bound to the named artefact digest and are re-checked only where that artefact exists",
+  "no derive-generated finding occurs in the tree; the derive half of the macro_rules!/derive class is stated as a rule without an instance"
+ ],
+ "schema": "openssl-rs/a4/instances/1"
+}
