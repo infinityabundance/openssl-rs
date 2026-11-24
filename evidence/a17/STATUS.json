@@ -1,0 +1,68 @@
+{
+  "asOf": "2026-11-24",
+  "candidate": {
+    "baseCommit": "731b066e261ebc64cf8acb909df18d23b9b11883",
+    "baseCommitShort": "731b066e2",
+    "branch": "staging",
+    "recordedAt": "2026-11-24"
+  },
+  "cycles": [
+    {
+      "digestMismatch": 0,
+      "envelope": "evidence/a17/RECONCILIATION-a15.envelope.json",
+      "expected": 5,
+      "freeze": "evidence/a17/FREEZE-a15.json",
+      "freezeDigest": "bcee46e0b7605e2b9cd706d9aba1d04da803d2d3e7d146ddea932e1ab3c8ba70",
+      "id": "a15-closed-cycle",
+      "kind": "CLOSED",
+      "label": "real closed cycle (backward): freeze, re-run, close, sign, verify",
+      "missing": 0,
+      "note": "all five produced, zero missing, every produced digest equals the committed one; the signature is test-only and proves the bytes are unchanged, not an independent closure",
+      "pass": true,
+      "produced": 5,
+      "reconciliation": "evidence/a17/RECONCILIATION-a15.json",
+      "signer": "test-only:hmac-sha256:8e10a5a15d233d54",
+      "unexpected": 0,
+      "unreadable": 0,
+      "verified": true
+    },
+    {
+      "closed": false,
+      "expected": 20,
+      "freeze": "evidence/a17/FREEZE-forward.json",
+      "id": "forward-open-freeze",
+      "kind": "OPEN",
+      "label": "real forward freeze (forward): declared before the work exists",
+      "missingToday": 20,
+      "note": "NOT CLOSED. A missing member today is expected: these items are TODO. This freeze is the mechanism that will detect a future omission; it is not evidence that any of these items is done.",
+      "presentToday": 0,
+      "reconciliation": null,
+      "state": "OPEN"
+    }
+  ],
+  "forwardFreeze": {
+    "closed": false,
+    "members": 20,
+    "path": "evidence/a17/FREEZE-forward.json",
+    "reconciliation": null,
+    "state": "OPEN"
+  },
+  "item": "A17",
+  "schema": "openssl-rs/a17/status/1",
+  "sourceIdentity": {
+    "baseCommit": "731b066e261ebc64cf8acb909df18d23b9b11883",
+    "baseCommitShort": "731b066e2",
+    "branch": "staging",
+    "delegatedTools": [
+      {
+        "path": "forensics/tools/dsse.py",
+        "sha256": "0a701eca4087215c0d0166076a0158b82a8e32c14d67ae38e397090720dd83b9"
+      }
+    ],
+    "recordedAt": "2026-11-24",
+    "tool": {
+      "path": "forensics/tools/omission.py",
+      "sha256": "82ac0a2373bb198b1ab3de8c07087f6ad316243d71f64a7fca5940c8e5f48e9c"
+    }
+  }
+}

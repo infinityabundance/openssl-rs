@@ -1,0 +1,62 @@
+{
+  "candidate": {
+    "baseCommit": "731b066e261ebc64cf8acb909df18d23b9b11883",
+    "baseCommitShort": "731b066e2",
+    "branch": "staging",
+    "recordedAt": "2026-11-24"
+  },
+  "digest": "bcee46e0b7605e2b9cd706d9aba1d04da803d2d3e7d146ddea932e1ab3c8ba70",
+  "frozenAt": "2026-11-24T00:00:00Z",
+  "id": "a15-closed-cycle",
+  "kind": "freeze",
+  "memberCount": 5,
+  "members": [
+    {
+      "expectedDigest": "94c8497b2fc306a91b7e767479f6954fa3b5e24ad81a42f0dc653503ddfa4b12",
+      "id": "a15-approvals",
+      "path": "evidence/a15/APPROVALS.json",
+      "phase": "A15",
+      "predicate": "the committed approval population, produced by the A15 producer",
+      "required": true
+    },
+    {
+      "expectedDigest": "e27dc30c26c64ffee16c894e038e1565ee48471fdd310de7bda3b095a25f2b2f",
+      "id": "a15-domains",
+      "path": "evidence/a15/DOMAINS.json",
+      "phase": "A15",
+      "predicate": "the committed trust-domain population, produced by the A15 producer",
+      "required": true
+    },
+    {
+      "expectedDigest": "05984f5a876061135bc180d927f564dbc6a09f733d601c8efb28616a7e53a07c",
+      "id": "a15-evaluation",
+      "path": "evidence/a15/EVALUATION.json",
+      "phase": "A15",
+      "predicate": "the committed threshold evaluation, produced by the A15 producer",
+      "required": true
+    },
+    {
+      "expectedDigest": "31a2cc2b7a2d9639c99a9adb09d722f9f9f6b29944ef792c98827ac316917f85",
+      "id": "a15-thresholds",
+      "path": "evidence/a15/THRESHOLDS.json",
+      "phase": "A15",
+      "predicate": "the committed threshold declarations, produced by the A15 producer",
+      "required": true
+    },
+    {
+      "expectedDigest": "a6ff96114074ce25aedf2e8fa62cf0264289cc0ae8436f9ba4727dde975285f3",
+      "id": "a15-controls",
+      "path": "evidence/a15/CONTROLS.json",
+      "phase": "A15",
+      "predicate": "the committed control fixtures, produced by the A15 producer",
+      "required": true
+    }
+  ],
+  "producedBy": {
+    "path": "forensics/tools/omission.py",
+    "sha256": "82ac0a2373bb198b1ab3de8c07087f6ad316243d71f64a7fca5940c8e5f48e9c"
+  },
+  "recordedAt": "2026-11-24T00:00:00Z",
+  "schema": "openssl-rs/a17/freeze/1",
+  "state": "FROZEN"
+}

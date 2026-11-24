@@ -1,0 +1,229 @@
+{
+  "asOf": "2026-11-24",
+  "candidate": {
+    "baseCommit": "731b066e261ebc64cf8acb909df18d23b9b11883",
+    "baseCommitShort": "731b066e2",
+    "branch": "staging",
+    "recordedAt": "2026-11-24"
+  },
+  "controls": [
+    {
+      "code": "OM_REFUSED_FREEZE_ABSENT",
+      "controlOnly": true,
+      "id": "freeze-absent",
+      "observed": {
+        "codes": [
+          "OM_REFUSED_FREEZE_ABSENT"
+        ]
+      },
+      "prevents": "closing, or claiming to have closed, against no frozen population",
+      "purpose": "closing against no freeze"
+    },
+    {
+      "code": "OM_REFUSED_FREEZE_AFTER_EXECUTION",
+      "controlOnly": true,
+      "id": "freeze-after-execution",
+      "observed": {
+        "codes": [
+          "OM_REFUSED_FREEZE_AFTER_EXECUTION"
+        ]
+      },
+      "prevents": "choosing the expected population after seeing which artefacts succeeded",
+      "purpose": "frozenAt is later than the earliest produced artefact"
+    },
+    {
+      "code": "OM_REFUSED_FREEZE_AMENDED",
+      "controlOnly": true,
+      "id": "freeze-amended",
+      "observed": {
+        "codes": [
+          "OM_REFUSED_FREEZE_AMENDED"
+        ]
+      },
+      "prevents": "editing a freeze after execution so the population matches what was produced",
+      "purpose": "the freeze bytes no longer hash to the recorded digest"
+    },
+    {
+      "code": "OM_REFUSED_MISSING_SILENT",
+      "controlOnly": true,
+      "id": "missing-silent",
+      "observed": {
+        "codes": [
+          "OM_REFUSED_MISSING_SILENT"
+        ]
+      },
+      "prevents": "a closing summary that omits a MISSING member and reads as complete",
+      "purpose": "the closure omits the MISSING member"
+    },
+    {
+      "code": "OM_REFUSED_UNEXPECTED_UNDECLARED",
+      "controlOnly": true,
+      "id": "unexpected-undeclared",
+      "observed": {
+        "codes": [
+          "OM_REFUSED_UNEXPECTED_UNDECLARED"
+        ]
+      },
+      "prevents": "an observed artefact entering the record without being declared or reported",
+      "purpose": "an observed artefact is neither declared nor recorded as UNEXPECTED"
+    },
+    {
+      "code": "OM_REFUSED_RECONCILIATION_UNSIGNED",
+      "controlOnly": true,
+      "id": "reconciliation-unsigned",
+      "observed": {
+        "codes": [
+          "OM_REFUSED_RECONCILIATION_UNSIGNED"
+        ]
+      },
+      "prevents": "an unsigned reconciliation being read as a closed, authenticated manifest",
+      "purpose": "verification without an envelope"
+    },
+    {
+      "code": "OM_REFUSED_RECONCILIATION_MUTATED",
+      "controlOnly": true,
+      "id": "reconciliation-mutated",
+      "observed": {
+        "codes": [
+          "OM_REFUSED_RECONCILIATION_MUTATED"
+        ]
+      },
+      "prevents": "changing the reconciliation after signing and keeping the signature",
+      "purpose": "the signed bytes and the manifest differ"
+    },
+    {
+      "code": "OM_REFUSED_DUPLICATE_EXPECTED",
+      "controlOnly": true,
+      "id": "duplicate-expected",
+      "observed": {
+        "codes": [
+          "OM_REFUSED_DUPLICATE_EXPECTED"
+        ]
+      },
+      "prevents": "declaring one identity twice so one result can satisfy two requirements",
+      "purpose": "one expected identity is declared twice"
+    },
+    {
+      "code": "OM_REFUSED_DIGEST_MISMATCH",
+      "controlOnly": true,
+      "id": "digest-mismatch",
+      "observed": {
+        "codes": [
+          "OM_REFUSED_DIGEST_MISMATCH"
+        ]
+      },
+      "prevents": "a changed artefact being reported as produced while the summary passes",
+      "purpose": "a passing summary contains a DIGEST_MISMATCH member"
+    },
+    {
+      "code": "OM_REFUSED_EXIT_AS_PRODUCED",
+      "controlOnly": true,
+      "id": "exit-as-produced",
+      "observed": {
+        "codes": [
+          "OM_REFUSED_EXIT_AS_PRODUCED"
+        ]
+      },
+      "prevents": "treating a build step's exit status, or a failed exit, as the artefact",
+      "purpose": "a non-zero exit is treated as production"
+    },
+    {
+      "code": "OM_REFUSED_PASS_WITH_MISSING",
+      "controlOnly": true,
+      "id": "pass-with-missing",
+      "observed": {
+        "codes": [
+          "OM_REFUSED_PASS_WITH_MISSING"
+        ]
+      },
+      "prevents": "a PASS over a population that still has a missing required member",
+      "purpose": "a PASS summary over a MISSING required member"
+    },
+    {
+      "code": "OM_REFUSED_POPULATION_DRIFT",
+      "controlOnly": true,
+      "id": "population-drift",
+      "observed": {
+        "codes": [
+          "OM_REFUSED_POPULATION_DRIFT"
+        ]
+      },
+      "prevents": "closing against a different path or identity than the one frozen",
+      "purpose": "the observed identity differs from the frozen path"
+    },
+    {
+      "code": "OM_REFUSED_UNREADABLE_AS_ABSENT",
+      "controlOnly": true,
+      "id": "unreadable-as-absent",
+      "observed": {
+        "codes": [
+          "OM_REFUSED_UNREADABLE_AS_ABSENT"
+        ]
+      },
+      "prevents": "reporting an unreadable artefact as absent, or an absent one as unreadable",
+      "purpose": "an unreadable artefact is closed as MISSING"
+    },
+    {
+      "code": "OM_REFUSED_UNREADABLE_AS_ABSENT",
+      "controlOnly": true,
+      "id": "absent-as-unreadable",
+      "observed": {
+        "codes": [
+          "OM_REFUSED_UNREADABLE_AS_ABSENT"
+        ]
+      },
+      "prevents": "reporting an unreadable artefact as absent, or an absent one as unreadable",
+      "purpose": "an absent artefact is closed as UNREADABLE"
+    },
+    {
+      "code": "OM_REFUSED_COUNT_UNBALANCED",
+      "controlOnly": true,
+      "id": "count-unbalanced",
+      "observed": {
+        "codes": [
+          "OM_REFUSED_COUNT_UNBALANCED"
+        ]
+      },
+      "prevents": "a summary whose counts do not add up hiding an unaccounted member",
+      "purpose": "the summary's counts do not reconcile with the member rows"
+    },
+    {
+      "code": "OM_REFUSED_MANIFEST_INVALID",
+      "controlOnly": true,
+      "id": "manifest-invalid",
+      "observed": {
+        "codes": [
+          "OM_REFUSED_MANIFEST_INVALID"
+        ]
+      },
+      "prevents": "a malformed or mislabelled manifest being read as a freeze or closure",
+      "purpose": "a freeze plan with no members is not a manifest"
+    },
+    {
+      "code": "OM_REFUSED_SIGNATURE_INVALID",
+      "controlOnly": true,
+      "id": "signature-invalid",
+      "observed": {
+        "codes": [
+          "OM_REFUSED_SIGNATURE_INVALID"
+        ]
+      },
+      "prevents": "an envelope whose signature does not verify being accepted as signed",
+      "purpose": "the envelope signature does not verify"
+    }
+  ],
+  "item": "A17",
+  "note": "Every control here is control-only: a synthetic freeze, a synthetic artefact in a temporary directory and a synthetic reconciliation, all built in memory from the same code paths the real cycle uses. A control that fires proves the refusal works; it is not a defect report and not evidence that the substituted form occurs in the tree. The positive control establishes the decision procedure, not a real closure.",
+  "positive": {
+    "controlOnly": true,
+    "id": "signed-reconciliation-verifies",
+    "observed": {
+      "codes": [
+        "OM_VERIFIED"
+      ],
+      "pass": true
+    },
+    "purpose": "a well-formed signed reconciliation reaches OM_VERIFIED"
+  },
+  "schema": "openssl-rs/a17/controls/1"
+}
