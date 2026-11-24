@@ -1,0 +1,354 @@
+{
+  "asOf": "2026-11-24",
+  "controlOnlyNote": "Every repository below is a synthetic control-only fixture built in memory by this producer. A control that fires proves the refusal works; it is not a defect report and not evidence that the substituted form occurs in the tree.",
+  "controls": [
+    {
+      "code": "TK_REFUSED_REPOSITORY_INVALID",
+      "controlOnly": true,
+      "id": "repository-invalid",
+      "observed": {
+        "code": "TK_REFUSED_REPOSITORY_INVALID",
+        "codes": [
+          "TK_REFUSED_REPOSITORY_INVALID"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that a malformed metadata set is read as a repository whose properties were checked",
+      "purpose": "a metadata set missing the timestamp is not a repository"
+    },
+    {
+      "code": "TK_REFUSED_ROOT_ROLLBACK",
+      "controlOnly": true,
+      "id": "root-rollback",
+      "observed": {
+        "code": "TK_REFUSED_ROOT_ROLLBACK",
+        "codes": [
+          "TK_REFUSED_ROOT_ROLLBACK"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that an attacker restores an old root and its old keys; a root that does not move forward is a rollback, not a rotation",
+      "purpose": "a root at the accepted version is a rollback, not a rotation"
+    },
+    {
+      "code": "TK_REFUSED_ROOT_ROTATION_UNSIGNED_BY_OLD",
+      "controlOnly": true,
+      "id": "rotation-unsigned-by-old",
+      "observed": {
+        "code": "TK_REFUSED_ROOT_ROTATION_UNSIGNED_BY_OLD",
+        "codes": [
+          "TK_REFUSED_ROOT_ROTATION_UNSIGNED_BY_OLD"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that a party holding only the new root key replaces the root; the old root must authorise its own replacement",
+      "purpose": "a rotation signed by the new root alone is refused"
+    },
+    {
+      "code": "TK_REFUSED_TARGETS_ROLLBACK",
+      "controlOnly": true,
+      "id": "targets-rollback",
+      "observed": {
+        "code": "TK_REFUSED_TARGETS_ROLLBACK",
+        "codes": [
+          "TK_REFUSED_TARGETS_ROLLBACK"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that an old targets metadata set is served as current, undoing a later delegation, revocation or file removal",
+      "purpose": "a targets version decrease is refused"
+    },
+    {
+      "code": "TK_REFUSED_SNAPSHOT_ROLLBACK",
+      "controlOnly": true,
+      "id": "snapshot-rollback",
+      "observed": {
+        "code": "TK_REFUSED_SNAPSHOT_ROLLBACK",
+        "codes": [
+          "TK_REFUSED_SNAPSHOT_ROLLBACK"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that an old snapshot is served alongside newer targets, hiding the targets version that was actually accepted",
+      "purpose": "a snapshot version decrease is refused"
+    },
+    {
+      "code": "TK_REFUSED_TIMESTAMP_ROLLBACK",
+      "controlOnly": true,
+      "id": "timestamp-rollback",
+      "observed": {
+        "code": "TK_REFUSED_TIMESTAMP_ROLLBACK",
+        "codes": [
+          "TK_REFUSED_TIMESTAMP_ROLLBACK"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that an old timestamp is replayed to make the repository look fresh at an earlier snapshot",
+      "purpose": "a timestamp version decrease is refused"
+    },
+    {
+      "code": "TK_REFUSED_TARGETS_HASH_MISMATCH",
+      "controlOnly": true,
+      "id": "targets-hash-mismatch",
+      "observed": {
+        "code": "TK_REFUSED_TARGETS_HASH_MISMATCH",
+        "codes": [
+          "TK_REFUSED_TARGETS_HASH_MISMATCH"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that a snapshot vouches for different targets than the ones supplied, breaking the hash chain that makes rollback detectable",
+      "purpose": "a snapshot that vouches for different targets is refused"
+    },
+    {
+      "code": "TK_REFUSED_SNAPSHOT_HASH_MISMATCH",
+      "controlOnly": true,
+      "id": "snapshot-hash-mismatch",
+      "observed": {
+        "code": "TK_REFUSED_SNAPSHOT_HASH_MISMATCH",
+        "codes": [
+          "TK_REFUSED_SNAPSHOT_HASH_MISMATCH"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that a timestamp vouches for a different snapshot than the one supplied; freshness is bound to bytes, not to a role name",
+      "purpose": "a timestamp that vouches for a different snapshot is refused"
+    },
+    {
+      "code": "TK_REFUSED_EXPIRED_METADATA",
+      "controlOnly": true,
+      "id": "expired-metadata",
+      "observed": {
+        "code": "TK_REFUSED_EXPIRED_METADATA",
+        "codes": [
+          "TK_REFUSED_EXPIRED_METADATA"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that expired metadata is read as current; expiry is what makes an old, still-correctly-signed set stop authorising anything",
+      "purpose": "an expired timestamp is refused even though it is version-correct"
+    },
+    {
+      "code": "TK_REFUSED_FREEZE",
+      "controlOnly": true,
+      "id": "freeze",
+      "observed": {
+        "code": "TK_REFUSED_FREEZE",
+        "codes": [
+          "TK_REFUSED_FREEZE"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that an attacker stops updating the repository and serves a valid, unexpired timestamp forever; an unrefreshed repository is a freeze",
+      "purpose": "an unexpired timestamp not refreshed within the interval is a freeze"
+    },
+    {
+      "code": "TK_REFUSED_KEY_REVOKED",
+      "controlOnly": true,
+      "id": "key-revoked-verifying-signature",
+      "observed": {
+        "code": "TK_REFUSED_KEY_REVOKED",
+        "codes": [
+          "TK_REFUSED_KEY_REVOKED"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that a signature by a revoked key is accepted because it verifies; revocation is a decision about the key, not about the bytes",
+      "purpose": "a signature by a revoked key is refused although it verifies"
+    },
+    {
+      "code": "TK_REFUSED_KEY_EXPIRED",
+      "controlOnly": true,
+      "id": "key-expired",
+      "observed": {
+        "code": "TK_REFUSED_KEY_EXPIRED",
+        "codes": [
+          "TK_REFUSED_KEY_EXPIRED"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that a key past its validity window is accepted because its signature still verifies",
+      "purpose": "an expired key is refused although its signature verifies"
+    },
+    {
+      "code": "TK_REFUSED_KEY_NOT_YET_VALID",
+      "controlOnly": true,
+      "id": "key-not-yet-valid",
+      "observed": {
+        "code": "TK_REFUSED_KEY_NOT_YET_VALID",
+        "codes": [
+          "TK_REFUSED_KEY_NOT_YET_VALID"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that a key introduced for a future rotation is used before the rotation that authorises it",
+      "purpose": "a key outside its validity window is refused in both directions"
+    },
+    {
+      "code": "TK_REFUSED_UNKNOWN_KEY",
+      "controlOnly": true,
+      "id": "unknown-key",
+      "observed": {
+        "code": "TK_REFUSED_UNKNOWN_KEY",
+        "codes": [
+          "TK_REFUSED_UNKNOWN_KEY"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that an invented keyid supplies a signature the root never authorised",
+      "purpose": "a keyid no metadata declares is refused"
+    },
+    {
+      "code": "TK_REFUSED_ROLE_KEY_MISMATCH",
+      "controlOnly": true,
+      "id": "role-key-mismatch",
+      "observed": {
+        "code": "TK_REFUSED_ROLE_KEY_MISMATCH",
+        "codes": [
+          "TK_REFUSED_ROLE_KEY_MISMATCH"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that a timestamp key signs targets, or any key acts outside the one role the root assigned it",
+      "purpose": "a key the root binds to another role cannot sign targets"
+    },
+    {
+      "code": "TK_REFUSED_METADATA_THRESHOLD",
+      "controlOnly": true,
+      "id": "metadata-threshold",
+      "observed": {
+        "code": "TK_REFUSED_METADATA_THRESHOLD",
+        "codes": [
+          "TK_REFUSED_METADATA_THRESHOLD"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that one key is counted twice, or a threshold is read as met by repeated signatures from the same key",
+      "purpose": "one distinct key cannot meet a threshold of two"
+    },
+    {
+      "code": "TK_REFUSED_DELEGATION_UNKNOWN",
+      "controlOnly": true,
+      "id": "delegation-unknown",
+      "observed": {
+        "code": "TK_REFUSED_DELEGATION_UNKNOWN",
+        "codes": [
+          "TK_REFUSED_DELEGATION_UNKNOWN"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that an undeclared delegated role is trusted, or a declared one is silently absent",
+      "purpose": "targets declares a delegation that no record supplies"
+    },
+    {
+      "code": "TK_REFUSED_DELEGATION_EXPIRED",
+      "controlOnly": true,
+      "id": "delegation-expired",
+      "observed": {
+        "code": "TK_REFUSED_DELEGATION_EXPIRED",
+        "codes": [
+          "TK_REFUSED_DELEGATION_EXPIRED"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that an expired delegated role continues to authorise targets after its delegation lapsed",
+      "purpose": "an expired delegation is refused although its hash binds"
+    },
+    {
+      "code": "TK_REFUSED_DELEGATION_HASH_MISMATCH",
+      "controlOnly": true,
+      "id": "delegation-hash-mismatch",
+      "observed": {
+        "code": "TK_REFUSED_DELEGATION_HASH_MISMATCH",
+        "codes": [
+          "TK_REFUSED_DELEGATION_HASH_MISMATCH"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that a delegation is replaced with different keys or different targets while keeping the name the parent approved",
+      "purpose": "a delegation record that disagrees with the parent's digest is refused"
+    },
+    {
+      "code": "TK_REFUSED_STALE_RELEASE",
+      "controlOnly": true,
+      "id": "stale-release-version",
+      "observed": {
+        "code": "TK_REFUSED_STALE_RELEASE",
+        "codes": [
+          "TK_REFUSED_STALE_RELEASE"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that an old signature authorises a stale release after metadata moved on or the key was revoked",
+      "purpose": "a release bound to an older metadata version is refused"
+    },
+    {
+      "code": "TK_REFUSED_STALE_RELEASE",
+      "controlOnly": true,
+      "id": "stale-release-revoked-key",
+      "observed": {
+        "code": "TK_REFUSED_STALE_RELEASE",
+        "codes": [
+          "TK_REFUSED_STALE_RELEASE"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that an old signature authorises a stale release after metadata moved on or the key was revoked",
+      "purpose": "a release signed by a key revoked before its recorded time is refused"
+    },
+    {
+      "code": "TK_REFUSED_SIGNATURE",
+      "controlOnly": true,
+      "id": "signature",
+      "observed": {
+        "code": "TK_REFUSED_SIGNATURE",
+        "codes": [
+          "TK_REFUSED_SIGNATURE"
+        ],
+        "outcome": "REFUSED"
+      },
+      "prevents": "that a signature made over different bytes, or no signature at all, is counted toward a threshold",
+      "purpose": "a signature over different bytes is refused"
+    }
+  ],
+  "coverage": {
+    "controls": 22,
+    "refusalCodes": 21
+  },
+  "item": "A18",
+  "model": "a18/v1",
+  "now": "2026-11-24T00:00:00Z",
+  "positive": {
+    "controlOnly": true,
+    "id": "positive-accepted",
+    "observed": {
+      "accepted": {
+        "delegations": [
+          "control-only:delegated"
+        ],
+        "releases": [
+          "control-only:release"
+        ],
+        "rootVersion": 2,
+        "snapshotVersion": 2,
+        "targetsVersion": 2,
+        "timestampVersion": 2
+      },
+      "code": "TK_OK",
+      "outcome": "ACCEPTED"
+    },
+    "purpose": "a version-incremented, threshold-signed, unexpired repository with a hash-bound delegation reaches ACCEPTED"
+  },
+  "schema": "openssl-rs/a18/controls/1",
+  "sourceIdentity": {
+    "baseCommit": "2e8e9aa65ba60321c18f54890aa73caa200f5bd7",
+    "baseCommitShort": "2e8e9aa65",
+    "branch": "staging",
+    "item": "A18",
+    "recordedAt": "2026-11-24",
+    "tool": {
+      "path": "forensics/tools/key_lifecycle.py",
+      "sha256": "f0aa7029fdb787f2a4f794fc41089c967b19428ebd26fa75520d07c4aaba8d39"
+    }
+  }
+}

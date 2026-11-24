@@ -1,0 +1,63 @@
+{
+  "accepted": null,
+  "asOf": "2026-11-24",
+  "at": "2026-11-24T00:00:00+00:00",
+  "code": "TK_NOT_RUN",
+  "codes": [
+    "TK_NOT_RUN"
+  ],
+  "detail": [
+    "no repository exists: there is no metadata set, no key record, no version and no delegation to evaluate, so every role and the stale-release check are NOT_RUN and NOT_RUN is not a pass"
+  ],
+  "explanation": "No repository exists, so every role and the stale-release check are NOT_RUN with TK_NOT_RUN. A repository that does not exist is never ACCEPTED, and NOT_RUN is not a pass.",
+  "item": "A18",
+  "model": "a18/v1",
+  "now": "2026-11-24T00:00:00Z",
+  "outcome": "NOT_RUN",
+  "repository": "evidence/a18/REPOSITORY.json",
+  "repositoryPresent": false,
+  "roles": {
+    "delegation": {
+      "code": "TK_NOT_RUN",
+      "detail": "no repository exists: there is no metadata set, no key record, no version and no delegation to evaluate, so every role and the stale-release check are NOT_RUN and NOT_RUN is not a pass",
+      "outcome": "NOT_RUN"
+    },
+    "root": {
+      "code": "TK_NOT_RUN",
+      "detail": "no repository exists: there is no metadata set, no key record, no version and no delegation to evaluate, so every role and the stale-release check are NOT_RUN and NOT_RUN is not a pass",
+      "outcome": "NOT_RUN"
+    },
+    "snapshot": {
+      "code": "TK_NOT_RUN",
+      "detail": "no repository exists: there is no metadata set, no key record, no version and no delegation to evaluate, so every role and the stale-release check are NOT_RUN and NOT_RUN is not a pass",
+      "outcome": "NOT_RUN"
+    },
+    "targets": {
+      "code": "TK_NOT_RUN",
+      "detail": "no repository exists: there is no metadata set, no key record, no version and no delegation to evaluate, so every role and the stale-release check are NOT_RUN and NOT_RUN is not a pass",
+      "outcome": "NOT_RUN"
+    },
+    "timestamp": {
+      "code": "TK_NOT_RUN",
+      "detail": "no repository exists: there is no metadata set, no key record, no version and no delegation to evaluate, so every role and the stale-release check are NOT_RUN and NOT_RUN is not a pass",
+      "outcome": "NOT_RUN"
+    }
+  },
+  "schema": "openssl-rs/a18/key-lifecycle-evaluation/1",
+  "sourceIdentity": {
+    "baseCommit": "2e8e9aa65ba60321c18f54890aa73caa200f5bd7",
+    "baseCommitShort": "2e8e9aa65",
+    "branch": "staging",
+    "item": "A18",
+    "recordedAt": "2026-11-24",
+    "tool": {
+      "path": "forensics/tools/key_lifecycle.py",
+      "sha256": "f0aa7029fdb787f2a4f794fc41089c967b19428ebd26fa75520d07c4aaba8d39"
+    }
+  },
+  "staleRelease": {
+    "code": "TK_NOT_RUN",
+    "detail": "no repository exists: there is no metadata set, no key record, no version and no delegation to evaluate, so every role and the stale-release check are NOT_RUN and NOT_RUN is not a pass",
+    "outcome": "NOT_RUN"
+  }
+}

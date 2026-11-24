@@ -1,0 +1,54 @@
+{
+  "asOf": "2026-11-24",
+  "beforeAfterIndistinguishable": true,
+  "delegations": 0,
+  "detectable": false,
+  "expiryRecords": 0,
+  "explanation": "The measured state is one key, zero repositories, zero metadata versions, zero revocation records, zero expiry records and zero delegations. That is the honest result, not an omission: no survivability property can be evaluated against a repository that does not exist, and the absence of a second root means compromise of the one key cannot be detected or recovered from within the evidence.",
+  "finding": "The single key is a single point of compromise with no detectable recovery. There is no second root to rotate to, no revocation list to consult and no metadata version to distinguish a pre-compromise signature from a post-compromise one. A bundle or envelope signed before a hypothetical compromise is indistinguishable from one signed after it.",
+  "item": "A18",
+  "keyCount": 1,
+  "keys": [
+    {
+      "algorithm": "hmac-sha256",
+      "delegation": null,
+      "establishedBy": {
+        "path": "evidence/a12/TRUST-ROOTS.json",
+        "sha256": "4314cc4aff9c23d9ac1ea844bb86cd965bfb6e6a729bf7c81d58fee6fb81586b"
+      },
+      "expires": null,
+      "hasExpiry": false,
+      "hasRevocationRecord": false,
+      "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+      "metadataVersion": null,
+      "provenance": {
+        "path": "evidence/a10/ENVELOPES.json",
+        "sha256": "3eb66119fcde6922d2337013fdd30f8ecdb69fdbf2cb095420fefd98ec43a075"
+      },
+      "revocationRecord": null,
+      "roles": [
+        "statement-signing"
+      ],
+      "symmetric": true,
+      "trustDomain": "same-party"
+    }
+  ],
+  "metadataVersions": 0,
+  "model": "a18/v1",
+  "recoverable": false,
+  "repositories": 0,
+  "revocationRecords": 0,
+  "schema": "openssl-rs/a18/key-inventory/1",
+  "singlePointOfCompromise": true,
+  "sourceIdentity": {
+    "baseCommit": "2e8e9aa65ba60321c18f54890aa73caa200f5bd7",
+    "baseCommitShort": "2e8e9aa65",
+    "branch": "staging",
+    "item": "A18",
+    "recordedAt": "2026-11-24",
+    "tool": {
+      "path": "forensics/tools/key_lifecycle.py",
+      "sha256": "f0aa7029fdb787f2a4f794fc41089c967b19428ebd26fa75520d07c4aaba8d39"
+    }
+  }
+}
