@@ -1,0 +1,1689 @@
+{
+  "arguments": [
+    {
+      "kind": "positional",
+      "name": "command",
+      "summary": "one declared command name, or `all`; a bare invocation is refused",
+      "takesValue": false
+    },
+    {
+      "kind": "option",
+      "name": "--json",
+      "summary": "emit the machine-readable document instead of the text report; no effect on the discovery commands",
+      "takesValue": false
+    },
+    {
+      "kind": "option",
+      "name": "--network",
+      "summary": "declare that the network is available; a declaration, not a probe",
+      "takesValue": false
+    },
+    {
+      "kind": "option",
+      "name": "--explain",
+      "summary": "print the declared prerequisites, establishment and non-claims; takes precedence over running a command",
+      "takesValue": false
+    },
+    {
+      "kind": "option",
+      "name": "--list",
+      "summary": "print the command set as tab-separated name, role and all-membership; takes precedence over every other argument",
+      "takesValue": false
+    },
+    {
+      "kind": "option",
+      "metavar": "TMP",
+      "name": "--tmp",
+      "summary": "use this directory as the temporary root instead of a fresh one",
+      "takesValue": true
+    },
+    {
+      "aliases": [
+        "-h"
+      ],
+      "kind": "option",
+      "name": "--help",
+      "summary": "print the usage message and exit 0",
+      "takesValue": false
+    }
+  ],
+  "commands": [
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [
+        "forensics/tools/etp6_package.py"
+      ],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "basis": "exit 0 is the PASS status of this command's own run; the surface check does not execute step commands (cost and candidate state), so the code is declared and not observed",
+          "code": 0,
+          "meaning": "the command is PASS"
+        },
+        {
+          "basis": "exit 1 is any non-PASS status of this command's own run; the surface check does not execute step commands, so the code is declared and not observed",
+          "code": 1,
+          "meaning": "the command is not PASS: FAIL, BLOCKED or NOT_RUN"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was refused before any step ran",
+          "observedBy": "unknown-command"
+        }
+      ],
+      "invocation": [
+        "manifest"
+      ],
+      "jsonFields": [
+        "candidate",
+        "counts",
+        "environment",
+        "interface",
+        "invocation",
+        "non_passing",
+        "private_state",
+        "root",
+        "schema",
+        "status",
+        "steps",
+        "warnings"
+      ],
+      "jsonForm": "document",
+      "kind": "step",
+      "name": "manifest",
+      "prerequisites": [
+        "git"
+      ],
+      "privateState": [],
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "check the tracked ETP-6 package manifest against this commit"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [
+        "forensics/tools/build_reproducibility.sh"
+      ],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "basis": "exit 0 is the PASS status of this command's own run; the surface check does not execute step commands (cost and candidate state), so the code is declared and not observed",
+          "code": 0,
+          "meaning": "the command is PASS"
+        },
+        {
+          "basis": "exit 1 is any non-PASS status of this command's own run; the surface check does not execute step commands, so the code is declared and not observed",
+          "code": 1,
+          "meaning": "the command is not PASS: FAIL, BLOCKED or NOT_RUN"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was refused before any step ran",
+          "observedBy": "unknown-command"
+        }
+      ],
+      "invocation": [
+        "rebuild"
+      ],
+      "jsonFields": [
+        "candidate",
+        "counts",
+        "environment",
+        "interface",
+        "invocation",
+        "non_passing",
+        "private_state",
+        "root",
+        "schema",
+        "status",
+        "steps",
+        "warnings"
+      ],
+      "jsonForm": "document",
+      "kind": "step",
+      "name": "rebuild",
+      "prerequisites": [
+        "bash",
+        "rustc",
+        "cargo",
+        "court",
+        "memory:24"
+      ],
+      "privateState": [],
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "build the release library twice and compare the builds byte for byte"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [
+        "forensics/etp5_crypto/make_vectors.py",
+        "forensics/etp5_crypto/driver.py"
+      ],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "basis": "exit 0 is the PASS status of this command's own run; the surface check does not execute step commands (cost and candidate state), so the code is declared and not observed",
+          "code": 0,
+          "meaning": "the command is PASS"
+        },
+        {
+          "basis": "exit 1 is any non-PASS status of this command's own run; the surface check does not execute step commands, so the code is declared and not observed",
+          "code": 1,
+          "meaning": "the command is not PASS: FAIL, BLOCKED or NOT_RUN"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was refused before any step ran",
+          "observedBy": "unknown-command"
+        }
+      ],
+      "invocation": [
+        "proofs"
+      ],
+      "jsonFields": [
+        "candidate",
+        "counts",
+        "environment",
+        "interface",
+        "invocation",
+        "non_passing",
+        "private_state",
+        "root",
+        "schema",
+        "status",
+        "steps",
+        "warnings"
+      ],
+      "jsonForm": "document",
+      "kind": "step",
+      "name": "proofs",
+      "prerequisites": [
+        "python"
+      ],
+      "privateState": [],
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "regenerate the independent reference's vectors and run its classifier self-test"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [
+        "forensics/etp5_crypto/run_etp5.sh"
+      ],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "basis": "exit 0 is the PASS status of this command's own run; the surface check does not execute step commands (cost and candidate state), so the code is declared and not observed",
+          "code": 0,
+          "meaning": "the command is PASS"
+        },
+        {
+          "basis": "exit 1 is any non-PASS status of this command's own run; the surface check does not execute step commands, so the code is declared and not observed",
+          "code": 1,
+          "meaning": "the command is not PASS: FAIL, BLOCKED or NOT_RUN"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was refused before any step ran",
+          "observedBy": "unknown-command"
+        }
+      ],
+      "invocation": [
+        "differential"
+      ],
+      "jsonFields": [
+        "candidate",
+        "counts",
+        "environment",
+        "interface",
+        "invocation",
+        "non_passing",
+        "private_state",
+        "root",
+        "schema",
+        "status",
+        "steps",
+        "warnings"
+      ],
+      "jsonForm": "document",
+      "kind": "step",
+      "name": "differential",
+      "prerequisites": [
+        "bash",
+        "rustc",
+        "cargo",
+        "court",
+        "memory:24",
+        "authority-prefix"
+      ],
+      "privateState": [
+        "forensics/authorities/prefix",
+        "court"
+      ],
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "compare the reference, the candidate and the pinned authority on sampled populations"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [
+        "forensics/tools/instrument_qualify.py"
+      ],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "basis": "exit 0 is the PASS status of this command's own run; the surface check does not execute step commands (cost and candidate state), so the code is declared and not observed",
+          "code": 0,
+          "meaning": "the command is PASS"
+        },
+        {
+          "basis": "exit 1 is any non-PASS status of this command's own run; the surface check does not execute step commands, so the code is declared and not observed",
+          "code": 1,
+          "meaning": "the command is not PASS: FAIL, BLOCKED or NOT_RUN"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was refused before any step ran",
+          "observedBy": "unknown-command"
+        }
+      ],
+      "invocation": [
+        "instruments"
+      ],
+      "jsonFields": [
+        "candidate",
+        "counts",
+        "environment",
+        "interface",
+        "invocation",
+        "non_passing",
+        "private_state",
+        "root",
+        "schema",
+        "status",
+        "steps",
+        "warnings"
+      ],
+      "jsonForm": "document",
+      "kind": "step",
+      "name": "instruments",
+      "prerequisites": [
+        "python"
+      ],
+      "privateState": [
+        "court"
+      ],
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "check the instrument register's identities and execute its sensitivity controls"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [
+        "forensics/tools/tests"
+      ],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "basis": "exit 0 is the PASS status of this command's own run; the surface check does not execute step commands (cost and candidate state), so the code is declared and not observed",
+          "code": 0,
+          "meaning": "the command is PASS"
+        },
+        {
+          "basis": "exit 1 is any non-PASS status of this command's own run; the surface check does not execute step commands, so the code is declared and not observed",
+          "code": 1,
+          "meaning": "the command is not PASS: FAIL, BLOCKED or NOT_RUN"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was refused before any step ran",
+          "observedBy": "unknown-command"
+        }
+      ],
+      "invocation": [
+        "controls"
+      ],
+      "jsonFields": [
+        "candidate",
+        "counts",
+        "environment",
+        "interface",
+        "invocation",
+        "non_passing",
+        "private_state",
+        "root",
+        "schema",
+        "status",
+        "steps",
+        "warnings"
+      ],
+      "jsonForm": "document",
+      "kind": "step",
+      "name": "controls",
+      "prerequisites": [
+        "python"
+      ],
+      "privateState": [],
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "run the verification tools' own negative controls and refusal paths"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [
+        "courts/phase18/interop/check_receipts.py"
+      ],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "basis": "exit 0 is the PASS status of this command's own run; the surface check does not execute step commands (cost and candidate state), so the code is declared and not observed",
+          "code": 0,
+          "meaning": "the command is PASS"
+        },
+        {
+          "basis": "exit 1 is any non-PASS status of this command's own run; the surface check does not execute step commands, so the code is declared and not observed",
+          "code": 1,
+          "meaning": "the command is not PASS: FAIL, BLOCKED or NOT_RUN"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was refused before any step ran",
+          "observedBy": "unknown-command"
+        }
+      ],
+      "invocation": [
+        "receipts"
+      ],
+      "jsonFields": [
+        "candidate",
+        "counts",
+        "environment",
+        "interface",
+        "invocation",
+        "non_passing",
+        "private_state",
+        "root",
+        "schema",
+        "status",
+        "steps",
+        "warnings"
+      ],
+      "jsonForm": "document",
+      "kind": "step",
+      "name": "receipts",
+      "prerequisites": [
+        "python"
+      ],
+      "privateState": [],
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "apply rules R1-R5 to the committed interoperability receipts"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [
+        "forensics/tools/etp_claims.py"
+      ],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "basis": "exit 0 is the PASS status of this command's own run; the surface check does not execute step commands (cost and candidate state), so the code is declared and not observed",
+          "code": 0,
+          "meaning": "the command is PASS"
+        },
+        {
+          "basis": "exit 1 is any non-PASS status of this command's own run; the surface check does not execute step commands, so the code is declared and not observed",
+          "code": 1,
+          "meaning": "the command is not PASS: FAIL, BLOCKED or NOT_RUN"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was refused before any step ran",
+          "observedBy": "unknown-command"
+        }
+      ],
+      "invocation": [
+        "claims"
+      ],
+      "jsonFields": [
+        "candidate",
+        "counts",
+        "environment",
+        "interface",
+        "invocation",
+        "non_passing",
+        "private_state",
+        "root",
+        "schema",
+        "status",
+        "steps",
+        "warnings"
+      ],
+      "jsonForm": "document",
+      "kind": "step",
+      "name": "claims",
+      "prerequisites": [
+        "python",
+        "git"
+      ],
+      "privateState": [],
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "validate the committed claim set, its laws and its Git-bound digests"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [
+        "forensics/tools/freshness.py"
+      ],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "basis": "exit 0 is the PASS status of this command's own run; the surface check does not execute step commands (cost and candidate state), so the code is declared and not observed",
+          "code": 0,
+          "meaning": "the command is PASS"
+        },
+        {
+          "basis": "exit 1 is any non-PASS status of this command's own run; the surface check does not execute step commands, so the code is declared and not observed",
+          "code": 1,
+          "meaning": "the command is not PASS: FAIL, BLOCKED or NOT_RUN"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was refused before any step ran",
+          "observedBy": "unknown-command"
+        }
+      ],
+      "invocation": [
+        "freshness"
+      ],
+      "jsonFields": [
+        "candidate",
+        "counts",
+        "environment",
+        "interface",
+        "invocation",
+        "non_passing",
+        "private_state",
+        "root",
+        "schema",
+        "status",
+        "steps",
+        "warnings"
+      ],
+      "jsonForm": "document",
+      "kind": "step",
+      "name": "freshness",
+      "prerequisites": [
+        "python",
+        "git"
+      ],
+      "privateState": [],
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "check every artefact's freshness verdict and the refusal rules over them"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [
+        "forensics/tools/independence.py"
+      ],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "basis": "exit 0 is the PASS status of this command's own run; the surface check does not execute step commands (cost and candidate state), so the code is declared and not observed",
+          "code": 0,
+          "meaning": "the command is PASS"
+        },
+        {
+          "basis": "exit 1 is any non-PASS status of this command's own run; the surface check does not execute step commands, so the code is declared and not observed",
+          "code": 1,
+          "meaning": "the command is not PASS: FAIL, BLOCKED or NOT_RUN"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was refused before any step ran",
+          "observedBy": "unknown-command"
+        }
+      ],
+      "invocation": [
+        "independence"
+      ],
+      "jsonFields": [
+        "candidate",
+        "counts",
+        "environment",
+        "interface",
+        "invocation",
+        "non_passing",
+        "private_state",
+        "root",
+        "schema",
+        "status",
+        "steps",
+        "warnings"
+      ],
+      "jsonForm": "document",
+      "kind": "step",
+      "name": "independence",
+      "prerequisites": [
+        "python",
+        "git"
+      ],
+      "privateState": [],
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "check independence assignments and keep the recorded dissent"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [
+        "forensics/tools/closure_discipline.py"
+      ],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "basis": "exit 0 is the PASS status of this command's own run; the surface check does not execute step commands (cost and candidate state), so the code is declared and not observed",
+          "code": 0,
+          "meaning": "the command is PASS"
+        },
+        {
+          "basis": "exit 1 is any non-PASS status of this command's own run; the surface check does not execute step commands, so the code is declared and not observed",
+          "code": 1,
+          "meaning": "the command is not PASS: FAIL, BLOCKED or NOT_RUN"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was refused before any step ran",
+          "observedBy": "unknown-command"
+        }
+      ],
+      "invocation": [
+        "closure"
+      ],
+      "jsonFields": [
+        "candidate",
+        "counts",
+        "environment",
+        "interface",
+        "invocation",
+        "non_passing",
+        "private_state",
+        "root",
+        "schema",
+        "status",
+        "steps",
+        "warnings"
+      ],
+      "jsonForm": "document",
+      "kind": "step",
+      "name": "closure",
+      "prerequisites": [
+        "python",
+        "git"
+      ],
+      "privateState": [],
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "audit the five-requirement exclusion bar and opaque-operation scope"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [
+        "forensics/tools/scheduling.py"
+      ],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "basis": "exit 0 is the PASS status of this command's own run; the surface check does not execute step commands (cost and candidate state), so the code is declared and not observed",
+          "code": 0,
+          "meaning": "the command is PASS"
+        },
+        {
+          "basis": "exit 1 is any non-PASS status of this command's own run; the surface check does not execute step commands, so the code is declared and not observed",
+          "code": 1,
+          "meaning": "the command is not PASS: FAIL, BLOCKED or NOT_RUN"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was refused before any step ran",
+          "observedBy": "unknown-command"
+        }
+      ],
+      "invocation": [
+        "scheduling"
+      ],
+      "jsonFields": [
+        "candidate",
+        "counts",
+        "environment",
+        "interface",
+        "invocation",
+        "non_passing",
+        "private_state",
+        "root",
+        "schema",
+        "status",
+        "steps",
+        "warnings"
+      ],
+      "jsonForm": "document",
+      "kind": "step",
+      "name": "scheduling",
+      "prerequisites": [
+        "python",
+        "git"
+      ],
+      "privateState": [],
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "report the minimum verification tier each recorded change set needs"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [
+        "forensics/tools/traceability.py"
+      ],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "basis": "exit 0 is the PASS status of this command's own run; the surface check does not execute step commands (cost and candidate state), so the code is declared and not observed",
+          "code": 0,
+          "meaning": "the command is PASS"
+        },
+        {
+          "basis": "exit 1 is any non-PASS status of this command's own run; the surface check does not execute step commands, so the code is declared and not observed",
+          "code": 1,
+          "meaning": "the command is not PASS: FAIL, BLOCKED or NOT_RUN"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was refused before any step ran",
+          "observedBy": "unknown-command"
+        }
+      ],
+      "invocation": [
+        "traceability"
+      ],
+      "jsonFields": [
+        "candidate",
+        "counts",
+        "environment",
+        "interface",
+        "invocation",
+        "non_passing",
+        "private_state",
+        "root",
+        "schema",
+        "status",
+        "steps",
+        "warnings"
+      ],
+      "jsonForm": "document",
+      "kind": "step",
+      "name": "traceability",
+      "prerequisites": [
+        "python",
+        "git"
+      ],
+      "privateState": [],
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "validate the typed traceability graph and its declared orphans"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [
+        "forensics/tools/hazard_register.py"
+      ],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "basis": "exit 0 is the PASS status of this command's own run; the surface check does not execute step commands (cost and candidate state), so the code is declared and not observed",
+          "code": 0,
+          "meaning": "the command is PASS"
+        },
+        {
+          "basis": "exit 1 is any non-PASS status of this command's own run; the surface check does not execute step commands, so the code is declared and not observed",
+          "code": 1,
+          "meaning": "the command is not PASS: FAIL, BLOCKED or NOT_RUN"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was refused before any step ran",
+          "observedBy": "unknown-command"
+        }
+      ],
+      "invocation": [
+        "hazards"
+      ],
+      "jsonFields": [
+        "candidate",
+        "counts",
+        "environment",
+        "interface",
+        "invocation",
+        "non_passing",
+        "private_state",
+        "root",
+        "schema",
+        "status",
+        "steps",
+        "warnings"
+      ],
+      "jsonForm": "document",
+      "kind": "step",
+      "name": "hazards",
+      "prerequisites": [
+        "python",
+        "git"
+      ],
+      "privateState": [],
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "reconcile the hazard register with the traceability graph"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [
+        "forensics/tools/binary_assurance.py"
+      ],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "basis": "exit 0 is the PASS status of this command's own run; the surface check does not execute step commands (cost and candidate state), so the code is declared and not observed",
+          "code": 0,
+          "meaning": "the command is PASS"
+        },
+        {
+          "basis": "exit 1 is any non-PASS status of this command's own run; the surface check does not execute step commands, so the code is declared and not observed",
+          "code": 1,
+          "meaning": "the command is not PASS: FAIL, BLOCKED or NOT_RUN"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was refused before any step ran",
+          "observedBy": "unknown-command"
+        }
+      ],
+      "invocation": [
+        "binary"
+      ],
+      "jsonFields": [
+        "candidate",
+        "counts",
+        "environment",
+        "interface",
+        "invocation",
+        "non_passing",
+        "private_state",
+        "root",
+        "schema",
+        "status",
+        "steps",
+        "warnings"
+      ],
+      "jsonForm": "document",
+      "kind": "step",
+      "name": "binary",
+      "prerequisites": [
+        "python"
+      ],
+      "privateState": [],
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "check every asserted binary claim names its artefact, target and TCB"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [
+        "forensics/tools/docs_consistency.py"
+      ],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "basis": "exit 0 is the PASS status of this command's own run; the surface check does not execute step commands (cost and candidate state), so the code is declared and not observed",
+          "code": 0,
+          "meaning": "the command is PASS"
+        },
+        {
+          "basis": "exit 1 is any non-PASS status of this command's own run; the surface check does not execute step commands, so the code is declared and not observed",
+          "code": 1,
+          "meaning": "the command is not PASS: FAIL, BLOCKED or NOT_RUN"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was refused before any step ran",
+          "observedBy": "unknown-command"
+        }
+      ],
+      "invocation": [
+        "docs"
+      ],
+      "jsonFields": [
+        "candidate",
+        "counts",
+        "environment",
+        "interface",
+        "invocation",
+        "non_passing",
+        "private_state",
+        "root",
+        "schema",
+        "status",
+        "steps",
+        "warnings"
+      ],
+      "jsonForm": "document",
+      "kind": "step",
+      "name": "docs",
+      "prerequisites": [
+        "python"
+      ],
+      "privateState": [],
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "compare the documents' derived figures with the artefacts they cite"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [
+        "forensics/tools/authority_acquire.py"
+      ],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "basis": "exit 0 is the PASS status of this command's own run; the surface check does not execute step commands (cost and candidate state), so the code is declared and not observed",
+          "code": 0,
+          "meaning": "the command is PASS"
+        },
+        {
+          "code": 1,
+          "meaning": "the command is not PASS: here, NOT_RUN because the network is not declared",
+          "observedBy": "authority-offline"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was refused before any step ran",
+          "observedBy": "unknown-command"
+        }
+      ],
+      "invocation": [
+        "authority"
+      ],
+      "jsonFields": [
+        "candidate",
+        "counts",
+        "environment",
+        "interface",
+        "invocation",
+        "non_passing",
+        "private_state",
+        "root",
+        "schema",
+        "status",
+        "steps",
+        "warnings"
+      ],
+      "jsonForm": "document",
+      "kind": "step",
+      "name": "authority",
+      "prerequisites": [
+        "python",
+        "network"
+      ],
+      "privateState": [
+        "forensics/authorities/downloads",
+        "forensics/authorities/prefix"
+      ],
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "verify the local authority archives against their published digests; needs the network"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [
+        "forensics/tools/closure_discipline.py"
+      ],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "basis": "exit 0 is the PASS status of this command's own run; the surface check does not execute step commands (cost and candidate state), so the code is declared and not observed",
+          "code": 0,
+          "meaning": "the command is PASS"
+        },
+        {
+          "basis": "exit 1 is any non-PASS status of this command's own run; the surface check does not execute step commands, so the code is declared and not observed",
+          "code": 1,
+          "meaning": "the command is not PASS: FAIL, BLOCKED or NOT_RUN"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was refused before any step ran",
+          "observedBy": "unknown-command"
+        }
+      ],
+      "invocation": [
+        "consumer-curl"
+      ],
+      "jsonFields": [
+        "candidate",
+        "counts",
+        "environment",
+        "interface",
+        "invocation",
+        "non_passing",
+        "private_state",
+        "root",
+        "schema",
+        "status",
+        "steps",
+        "warnings"
+      ],
+      "jsonForm": "document",
+      "kind": "step",
+      "name": "consumer-curl",
+      "prerequisites": [
+        "python",
+        "git"
+      ],
+      "privateState": [
+        "court",
+        "artifacts/phase2/install"
+      ],
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "audit one consumer family's recorded closure receipt"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [
+        "forensics/tools/closure_discipline.py"
+      ],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "basis": "exit 0 is the PASS status of this command's own run; the surface check does not execute step commands (cost and candidate state), so the code is declared and not observed",
+          "code": 0,
+          "meaning": "the command is PASS"
+        },
+        {
+          "basis": "exit 1 is any non-PASS status of this command's own run; the surface check does not execute step commands, so the code is declared and not observed",
+          "code": 1,
+          "meaning": "the command is not PASS: FAIL, BLOCKED or NOT_RUN"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was refused before any step ran",
+          "observedBy": "unknown-command"
+        }
+      ],
+      "invocation": [
+        "consumer-ssh"
+      ],
+      "jsonFields": [
+        "candidate",
+        "counts",
+        "environment",
+        "interface",
+        "invocation",
+        "non_passing",
+        "private_state",
+        "root",
+        "schema",
+        "status",
+        "steps",
+        "warnings"
+      ],
+      "jsonForm": "document",
+      "kind": "step",
+      "name": "consumer-ssh",
+      "prerequisites": [
+        "python",
+        "git"
+      ],
+      "privateState": [
+        "court",
+        "artifacts/phase2/install"
+      ],
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "audit one consumer family's recorded closure receipt"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [
+        "forensics/tools/closure_discipline.py"
+      ],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "basis": "exit 0 is the PASS status of this command's own run; the surface check does not execute step commands (cost and candidate state), so the code is declared and not observed",
+          "code": 0,
+          "meaning": "the command is PASS"
+        },
+        {
+          "basis": "exit 1 is any non-PASS status of this command's own run; the surface check does not execute step commands, so the code is declared and not observed",
+          "code": 1,
+          "meaning": "the command is not PASS: FAIL, BLOCKED or NOT_RUN"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was refused before any step ran",
+          "observedBy": "unknown-command"
+        }
+      ],
+      "invocation": [
+        "consumer-sshd"
+      ],
+      "jsonFields": [
+        "candidate",
+        "counts",
+        "environment",
+        "interface",
+        "invocation",
+        "non_passing",
+        "private_state",
+        "root",
+        "schema",
+        "status",
+        "steps",
+        "warnings"
+      ],
+      "jsonForm": "document",
+      "kind": "step",
+      "name": "consumer-sshd",
+      "prerequisites": [
+        "python",
+        "git"
+      ],
+      "privateState": [
+        "court",
+        "artifacts/phase2/install"
+      ],
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "audit one consumer family's recorded closure receipt"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [
+        "courts/phase18/interop/check_receipts.py",
+        "forensics/etp5_crypto/driver.py",
+        "forensics/etp5_crypto/make_vectors.py",
+        "forensics/etp5_crypto/run_etp5.sh",
+        "forensics/tools/authority_acquire.py",
+        "forensics/tools/binary_assurance.py",
+        "forensics/tools/build_reproducibility.sh",
+        "forensics/tools/closure_discipline.py",
+        "forensics/tools/docs_consistency.py",
+        "forensics/tools/etp6_package.py",
+        "forensics/tools/etp_claims.py",
+        "forensics/tools/freshness.py",
+        "forensics/tools/hazard_register.py",
+        "forensics/tools/independence.py",
+        "forensics/tools/instrument_qualify.py",
+        "forensics/tools/scheduling.py",
+        "forensics/tools/tests",
+        "forensics/tools/traceability.py"
+      ],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "basis": "`all` runs nineteen steps, including builds and the whole tools suite; the surface check does not execute it, so the code is declared and not observed",
+          "code": 0,
+          "meaning": "every selected required step is PASS"
+        },
+        {
+          "basis": "as above: not executed by the surface check",
+          "code": 1,
+          "meaning": "at least one selected step is not PASS"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was refused before any step ran",
+          "observedBy": "unknown-command"
+        }
+      ],
+      "invocation": [
+        "all"
+      ],
+      "jsonFields": [
+        "candidate",
+        "counts",
+        "environment",
+        "interface",
+        "invocation",
+        "non_passing",
+        "private_state",
+        "root",
+        "schema",
+        "status",
+        "steps",
+        "warnings"
+      ],
+      "jsonForm": "document",
+      "kind": "aggregate",
+      "name": "all",
+      "notes": "`--explain` prints no block for `all`; its prerequisites and delegates are the union of the nineteen steps it selects, declared here and not printed by the executable",
+      "prerequisites": [
+        "authority-prefix",
+        "bash",
+        "cargo",
+        "court",
+        "git",
+        "memory:24",
+        "python",
+        "rustc"
+      ],
+      "privateState": [
+        "artifacts/phase2/install",
+        "court",
+        "forensics/authorities/prefix"
+      ],
+      "recognisedBy": "explain-all",
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "run every step the listing marks `in all`, in the listed order"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "code": 0,
+          "meaning": "the listing was printed",
+          "observedBy": "list"
+        },
+        {
+          "code": 2,
+          "meaning": "the invocation was malformed",
+          "observedBy": "malformed-arguments"
+        }
+      ],
+      "invocation": [
+        "--list"
+      ],
+      "jsonFields": [],
+      "jsonForm": "none",
+      "kind": "discovery",
+      "name": "list",
+      "notes": "the only accepted form is the `--list` flag; the bare word `list` is refused (recorded as discrepancy D1), and `--json` has no effect on this output (D2)",
+      "prerequisites": [
+        "python"
+      ],
+      "privateState": [],
+      "recognisedBy": "list",
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "print the command set with each command's role and whether `all` selects it"
+    },
+    {
+      "arguments": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "delegatesTo": [],
+      "evidence": [
+        "forensics/tools/verify.py",
+        "docs/PUBLIC-VERIFIER.md"
+      ],
+      "exitCodes": [
+        {
+          "code": 0,
+          "meaning": "the explanation was printed",
+          "observedBy": "explain"
+        },
+        {
+          "code": 2,
+          "meaning": "an undeclared command was named",
+          "observedBy": "explain-unknown"
+        }
+      ],
+      "invocation": [
+        "--explain"
+      ],
+      "jsonFields": [],
+      "jsonForm": "none",
+      "kind": "discovery",
+      "name": "explain",
+      "notes": "`--json` has no effect on this output",
+      "prerequisites": [
+        "python"
+      ],
+      "privateState": [],
+      "recognisedBy": "explain",
+      "replacement": null,
+      "since": "2026-11-23 (ETP-T12); this surface declared 2026-11-24 at a9bcb5480",
+      "stability": "stable",
+      "summary": "print each command's prerequisites, delegate, establishment and non-claims, so the interface documents itself"
+    }
+  ],
+  "declaredAt": "2026-11-24",
+  "declaredAtCommit": "a9bcb5480",
+  "determinismRule": {
+    "enforcedBy": "PV_REFUSED_UNSTABLE_OUTPUT",
+    "knownGap": "D5: the top-level `private_state` entry counts are live `git status` readings and are inside the compared record",
+    "rule": "two runs of a command emit the same deterministic record; the declared `environment` block is an input and is not compared"
+  },
+  "discovery": {
+    "explain": {
+      "argv": [
+        "--explain"
+      ]
+    },
+    "help": {
+      "argv": [
+        "--help"
+      ]
+    },
+    "jsonProbe": {
+      "argv": [
+        "authority",
+        "--json"
+      ],
+      "command": "authority",
+      "environmentDeclaration": "environment-input",
+      "environmentKey": "environment",
+      "note": "`authority` without --network is NOT_RUN, which still emits a complete document and exits 1; it therefore costs nothing and depends on no candidate state"
+    },
+    "listJson": {
+      "argv": [
+        "--list",
+        "--json"
+      ],
+      "emitsJson": false,
+      "format": "tsv",
+      "note": "`--json` is accepted and has no effect on the listing; the listing stays tab-separated"
+    },
+    "listing": {
+      "argv": [
+        "--list"
+      ],
+      "columns": [
+        "name",
+        "role",
+        "in_all"
+      ],
+      "format": "tsv"
+    }
+  },
+  "exitCodeContract": {
+    "0": {
+      "meaning": "every selected required step is PASS; a single requested step gates on itself and must be PASS",
+      "scope": "step commands and `all`"
+    },
+    "1": {
+      "meaning": "at least one selected step is not PASS: FAIL, BLOCKED or NOT_RUN. NOT_RUN is never a pass",
+      "scope": "step commands and `all`"
+    },
+    "2": {
+      "meaning": "the invocation was refused before any step ran: an unknown subcommand, a malformed argument list, or a surface that cannot be read",
+      "scope": "every command"
+    }
+  },
+  "exitCodeProbes": [
+    {
+      "argv": [
+        "--list"
+      ],
+      "code": 0,
+      "id": "list",
+      "note": "the discovery listing; exercises the parser and exits 0"
+    },
+    {
+      "argv": [
+        "--help"
+      ],
+      "code": 0,
+      "id": "help",
+      "note": "argparse's help path"
+    },
+    {
+      "argv": [
+        "--explain"
+      ],
+      "code": 0,
+      "id": "explain",
+      "note": "the self-description path"
+    },
+    {
+      "argv": [
+        "--explain",
+        "all"
+      ],
+      "code": 0,
+      "id": "explain-all",
+      "note": "`all` is recognised as a command token by the same special case the run path uses"
+    },
+    {
+      "argv": [
+        "authority"
+      ],
+      "code": 1,
+      "id": "authority-offline",
+      "note": "a single optional step gates on itself: with no network declared it is NOT_RUN and the run exits 1. No step executes"
+    },
+    {
+      "argv": [
+        "nosuch-command"
+      ],
+      "code": 2,
+      "id": "unknown-command",
+      "note": "an unknown subcommand is refused before any step runs"
+    },
+    {
+      "argv": [
+        "--tmp"
+      ],
+      "code": 2,
+      "id": "malformed-arguments",
+      "note": "an option missing its value is refused by the parser"
+    },
+    {
+      "argv": [
+        "--explain",
+        "nosuch-command"
+      ],
+      "code": 2,
+      "id": "explain-unknown",
+      "note": "explaining an undeclared command is refused"
+    }
+  ],
+  "interface": "ETP-T12",
+  "privateStateRule": {
+    "enforcedBy": "PV_REFUSED_PRIVATE_STATE",
+    "knownGap": "D4: `artifacts/phase2/install` is declared private by the consumer commands but is outside the interface's audited root set, so its presence can never be reported",
+    "rule": "the surface reads no private state; each command declares the gitignored roots its own delegate may read, and the document reports which of them exist and how many untracked or ignored entries each holds. Presence is never evidence"
+  },
+  "schemaVersion": "openssl-rs/public-surface/1",
+  "stabilityRule": {
+    "enforcedBy": "PV_REFUSED_STABILITY_OVERCLAIM",
+    "levels": {
+      "deprecated": "still executable; a replacement is named and removal happens at the next schema version",
+      "experimental": "may change without notice; do not program against it",
+      "stable": "the command name, arguments, exit codes and JSON fields will not change incompatibly within this schema version; a change needs a new schemaVersion and a recorded migration"
+    },
+    "supportRule": "every level needs `since` and an evidence path that exists; `stable` also needs the surface's support tests to exist in the declared test file"
+  },
+  "supportTests": [
+    "test_the_executable_inventory_matches_the_surface",
+    "test_every_declared_exit_code_is_observed_or_command_specific",
+    "test_two_listing_runs_are_byte_identical",
+    "test_the_json_fields_are_exactly_the_declared_set",
+    "test_every_refusal_code_is_documented"
+  ],
+  "supportTestsPath": "forensics/tools/tests/test_public_surface.py",
+  "verifier": "forensics/tools/verify.py"
+}

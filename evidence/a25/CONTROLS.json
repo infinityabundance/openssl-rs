@@ -1,0 +1,402 @@
+{
+  "candidate": {
+    "commit": "a9bcb54808eddfc11f7ab10215894e3c1064b21c",
+    "short": "a9bcb5480"
+  },
+  "controls": [
+    {
+      "code": null,
+      "controlOnly": true,
+      "expectedCodes": [],
+      "findings": [],
+      "id": "faithful-stub",
+      "matches": true,
+      "mutation": "no mutation: the stub repeats the real verifier's listing, help, explain and document",
+      "observedCodes": []
+    },
+    {
+      "code": "PV_REFUSED_COMMAND_UNDOCUMENTED",
+      "controlOnly": true,
+      "expectedCodes": [
+        "PV_REFUSED_COMMAND_UNDOCUMENTED"
+      ],
+      "findings": [
+        {
+          "code": "PV_REFUSED_COMMAND_UNDOCUMENTED",
+          "detail": "the executable lists the command 'surprise-step'; the surface does not declare it"
+        }
+      ],
+      "id": "undocumented-command",
+      "matches": true,
+      "mutation": "the stub lists `surprise-step`, which the surface does not declare",
+      "observedCodes": [
+        "PV_REFUSED_COMMAND_UNDOCUMENTED"
+      ]
+    },
+    {
+      "code": "PV_REFUSED_COMMAND_ABSENT",
+      "controlOnly": true,
+      "expectedCodes": [
+        "PV_REFUSED_COMMAND_ABSENT"
+      ],
+      "findings": [
+        {
+          "code": "PV_REFUSED_COMMAND_ABSENT",
+          "detail": "the surface declares the step 'sphinx'; the executable does not list it"
+        }
+      ],
+      "id": "absent-command",
+      "matches": true,
+      "mutation": "the surface declares the step `sphinx`; the stub does not list it",
+      "observedCodes": [
+        "PV_REFUSED_COMMAND_ABSENT"
+      ]
+    },
+    {
+      "code": "PV_REFUSED_EXIT_UNDEFINED",
+      "controlOnly": true,
+      "expectedCodes": [
+        "PV_REFUSED_EXIT_UNDEFINED"
+      ],
+      "findings": [
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "probe 'unknown-command' exited 7; the exit contract declares no meaning for that code"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "probe 'unknown-command' declares exit 2; it observed 7"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "manifest: declares exit 2 observed by 'unknown-command'; that probe observed 7"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "rebuild: declares exit 2 observed by 'unknown-command'; that probe observed 7"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "proofs: declares exit 2 observed by 'unknown-command'; that probe observed 7"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "differential: declares exit 2 observed by 'unknown-command'; that probe observed 7"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "instruments: declares exit 2 observed by 'unknown-command'; that probe observed 7"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "controls: declares exit 2 observed by 'unknown-command'; that probe observed 7"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "receipts: declares exit 2 observed by 'unknown-command'; that probe observed 7"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "claims: declares exit 2 observed by 'unknown-command'; that probe observed 7"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "freshness: declares exit 2 observed by 'unknown-command'; that probe observed 7"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "independence: declares exit 2 observed by 'unknown-command'; that probe observed 7"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "closure: declares exit 2 observed by 'unknown-command'; that probe observed 7"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "scheduling: declares exit 2 observed by 'unknown-command'; that probe observed 7"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "traceability: declares exit 2 observed by 'unknown-command'; that probe observed 7"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "hazards: declares exit 2 observed by 'unknown-command'; that probe observed 7"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "binary: declares exit 2 observed by 'unknown-command'; that probe observed 7"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "docs: declares exit 2 observed by 'unknown-command'; that probe observed 7"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "authority: declares exit 2 observed by 'unknown-command'; that probe observed 7"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "consumer-curl: declares exit 2 observed by 'unknown-command'; that probe observed 7"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "consumer-ssh: declares exit 2 observed by 'unknown-command'; that probe observed 7"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "consumer-sshd: declares exit 2 observed by 'unknown-command'; that probe observed 7"
+        },
+        {
+          "code": "PV_REFUSED_EXIT_UNDEFINED",
+          "detail": "all: declares exit 2 observed by 'unknown-command'; that probe observed 7"
+        }
+      ],
+      "id": "undefined-exit",
+      "matches": true,
+      "mutation": "the stub's unknown-subcommand path exits 7, which the exit contract does not define; exit 2 stays observed by two other probes",
+      "observedCodes": [
+        "PV_REFUSED_EXIT_UNDEFINED"
+      ]
+    },
+    {
+      "code": "PV_REFUSED_EXIT_UNUSED",
+      "controlOnly": true,
+      "expectedCodes": [
+        "PV_REFUSED_EXIT_UNUSED"
+      ],
+      "findings": [
+        {
+          "code": "PV_REFUSED_EXIT_UNUSED",
+          "detail": "the exit contract declares 4 ('a code nobody returns'); no probe observes it"
+        }
+      ],
+      "id": "unused-exit",
+      "matches": true,
+      "mutation": "the contract declares exit 4 and no probe produces it",
+      "observedCodes": [
+        "PV_REFUSED_EXIT_UNUSED"
+      ]
+    },
+    {
+      "code": "PV_REFUSED_HELP_DRIFT",
+      "controlOnly": true,
+      "expectedCodes": [
+        "PV_REFUSED_HELP_DRIFT"
+      ],
+      "findings": [
+        {
+          "code": "PV_REFUSED_HELP_DRIFT",
+          "detail": "`--help` names the argument --verbose; the surface does not declare it"
+        }
+      ],
+      "id": "help-drift",
+      "matches": true,
+      "mutation": "`--help` names `--verbose`, which the surface does not declare",
+      "observedCodes": [
+        "PV_REFUSED_HELP_DRIFT"
+      ]
+    },
+    {
+      "code": "PV_REFUSED_JSON_FIELD",
+      "controlOnly": true,
+      "expectedCodes": [
+        "PV_REFUSED_JSON_FIELD"
+      ],
+      "findings": [
+        {
+          "code": "PV_REFUSED_JSON_FIELD",
+          "detail": "authority: the document contains the field 'surprise'; the surface does not declare it"
+        }
+      ],
+      "id": "json-extra-field",
+      "matches": true,
+      "mutation": "the document carries the undeclared field `surprise`",
+      "observedCodes": [
+        "PV_REFUSED_JSON_FIELD"
+      ]
+    },
+    {
+      "code": "PV_REFUSED_JSON_FIELD",
+      "controlOnly": true,
+      "expectedCodes": [
+        "PV_REFUSED_JSON_FIELD"
+      ],
+      "findings": [
+        {
+          "code": "PV_REFUSED_JSON_FIELD",
+          "detail": "authority: the surface declares the field 'counts'; the document does not contain it"
+        }
+      ],
+      "id": "json-missing-field",
+      "matches": true,
+      "mutation": "the document lacks the declared field `counts`",
+      "observedCodes": [
+        "PV_REFUSED_JSON_FIELD"
+      ]
+    },
+    {
+      "code": "PV_REFUSED_UNSTABLE_OUTPUT",
+      "controlOnly": true,
+      "expectedCodes": [
+        "PV_REFUSED_UNSTABLE_OUTPUT"
+      ],
+      "findings": [
+        {
+          "code": "PV_REFUSED_UNSTABLE_OUTPUT",
+          "detail": "authority: two runs differ at counts.selected"
+        }
+      ],
+      "id": "unstable-output",
+      "matches": true,
+      "mutation": "the document's declared `counts` value carries a run counter, so two runs differ while the field set stays valid",
+      "observedCodes": [
+        "PV_REFUSED_UNSTABLE_OUTPUT"
+      ]
+    },
+    {
+      "code": "PV_REFUSED_PRIVATE_STATE",
+      "controlOnly": true,
+      "expectedCodes": [
+        "PV_REFUSED_PRIVATE_STATE"
+      ],
+      "findings": [
+        {
+          "code": "PV_REFUSED_PRIVATE_STATE",
+          "detail": "manifest: the surface declares private state []; the executable's own declaration is ['court'] -- an undeclared read is the defect this code names"
+        }
+      ],
+      "id": "undeclared-private-state",
+      "matches": true,
+      "mutation": "the stub's `manifest` block declares a private read the surface does not",
+      "observedCodes": [
+        "PV_REFUSED_PRIVATE_STATE"
+      ]
+    },
+    {
+      "code": "PV_REFUSED_UNVERSIONED_SCHEMA",
+      "controlOnly": true,
+      "expectedCodes": [
+        "PV_REFUSED_UNVERSIONED_SCHEMA"
+      ],
+      "findings": [
+        {
+          "code": "PV_REFUSED_UNVERSIONED_SCHEMA",
+          "detail": "the surface declares no `schemaVersion`; a declaration whose schema can change without a version cannot be a contract"
+        }
+      ],
+      "id": "unversioned-schema",
+      "matches": true,
+      "mutation": "the surface declares no `schemaVersion`",
+      "observedCodes": [
+        "PV_REFUSED_UNVERSIONED_SCHEMA"
+      ]
+    },
+    {
+      "code": "PV_REFUSED_DEPRECATED_WITHOUT_REPLACEMENT",
+      "controlOnly": true,
+      "expectedCodes": [
+        "PV_REFUSED_DEPRECATED_WITHOUT_REPLACEMENT"
+      ],
+      "findings": [
+        {
+          "code": "PV_REFUSED_DEPRECATED_WITHOUT_REPLACEMENT",
+          "detail": "docs: declares `deprecated` with no `replacement`; a deprecation that names no successor removes a command instead of migrating it"
+        }
+      ],
+      "id": "deprecated-without-replacement",
+      "matches": true,
+      "mutation": "`docs` is marked deprecated and names no successor",
+      "observedCodes": [
+        "PV_REFUSED_DEPRECATED_WITHOUT_REPLACEMENT"
+      ]
+    },
+    {
+      "code": "PV_REFUSED_STABILITY_OVERCLAIM",
+      "controlOnly": true,
+      "expectedCodes": [
+        "PV_REFUSED_STABILITY_OVERCLAIM"
+      ],
+      "findings": [
+        {
+          "code": "PV_REFUSED_STABILITY_OVERCLAIM",
+          "detail": "manifest: declares stable on evidence 'evidence/a25/no-such-evidence.json', which does not exist"
+        }
+      ],
+      "id": "stability-overclaim",
+      "matches": true,
+      "mutation": "`manifest` claims `stable` on an evidence path that does not exist",
+      "observedCodes": [
+        "PV_REFUSED_STABILITY_OVERCLAIM"
+      ]
+    },
+    {
+      "code": "PV_REFUSED_SURFACE_INVALID",
+      "controlOnly": true,
+      "expectedCodes": [
+        "PV_REFUSED_SURFACE_INVALID"
+      ],
+      "findings": [
+        {
+          "code": "PV_REFUSED_SURFACE_INVALID",
+          "detail": "command 'claims' is declared twice"
+        }
+      ],
+      "id": "duplicate-command",
+      "matches": true,
+      "mutation": "the surface declares `claims` twice",
+      "observedCodes": [
+        "PV_REFUSED_SURFACE_INVALID"
+      ]
+    },
+    {
+      "code": "PV_REFUSED_USAGE",
+      "controlOnly": true,
+      "expectedCodes": [
+        "PV_REFUSED_USAGE"
+      ],
+      "findings": [
+        {
+          "code": "PV_REFUSED_USAGE",
+          "detail": "public-surface: codes=PV_REFUSED_USAGE"
+        }
+      ],
+      "id": "malformed-invocation",
+      "matches": true,
+      "mutation": "the detector is invoked with an unknown action",
+      "observedCodes": [
+        "PV_REFUSED_USAGE"
+      ]
+    }
+  ],
+  "counts": {
+    "codes": [
+      "PV_REFUSED_COMMAND_ABSENT",
+      "PV_REFUSED_COMMAND_UNDOCUMENTED",
+      "PV_REFUSED_DEPRECATED_WITHOUT_REPLACEMENT",
+      "PV_REFUSED_EXIT_UNDEFINED",
+      "PV_REFUSED_EXIT_UNUSED",
+      "PV_REFUSED_HELP_DRIFT",
+      "PV_REFUSED_JSON_FIELD",
+      "PV_REFUSED_PRIVATE_STATE",
+      "PV_REFUSED_STABILITY_OVERCLAIM",
+      "PV_REFUSED_SURFACE_INVALID",
+      "PV_REFUSED_UNSTABLE_OUTPUT",
+      "PV_REFUSED_UNVERSIONED_SCHEMA",
+      "PV_REFUSED_USAGE"
+    ],
+    "codesCovered": 13,
+    "controls": 15,
+    "failing": 0
+  },
+  "detector": {
+    "path": "forensics/tools/public_surface.py",
+    "sha256": "a5b54814cf0bad654e1c081eaf0153f2e9579f6ac59f1dfd177613759acdd95b"
+  },
+  "note": "every row is control-only: a test-only stub or an in-memory mutation of the declaration, never a shipped configuration",
+  "producer": {
+    "path": "evidence/a25/build_evidence.py",
+    "sha256": "e241cda138ce1092a6f84d4efc3cf783bf714d3f37ea861e1982ca5638eda073"
+  },
+  "schema": "openssl-rs/public-surface/controls/1"
+}

@@ -7,7 +7,7 @@ exist. The first clean-checkout run is **red**: 8 of 19 steps pass, 9 fail, 2 ar
 `evidence/etp-t12/RUN.json`.
 
 **Entry point:** `forensics/tools/verify.py` (Python 3.11 standard library only).
-**Controls:** `forensics/tools/tests/test_verify.py` (19 tests, `unittest`).
+**Controls:** `forensics/tools/tests/test_verify.py` (37 tests, `unittest`).
 **Item:** ETP-T12 of `docs/ETP-TODO.md`.
 
 Nothing in this document is a claim that a red step is a defect. Each verdict is
@@ -49,7 +49,9 @@ python3 forensics/tools/verify.py all [--json]
 `NOT_RUN` is never a pass and never exits 0. A single optional step is gated on
 itself, so `verify authority` cannot report `NOT_RUN` and exit 0.
 
-`--json` emits one sorted, timestamp-free document: per step `name`, `status`,
+`--json` (on a step run or on `all`; `--list` and `--explain` print their
+text regardless, because they are discovery commands rather than step runs)
+emits one sorted, timestamp-free document: per step `name`, `status`,
 `reason` (empty when `PASS` is explained by `pass_reason`; a named cause
 otherwise), `evidence_identity` (path and SHA-256, or `absent`), `tool_digest`,
 `prerequisites` (each requirement, whether it was available and why),
@@ -59,7 +61,9 @@ exit status and the normalised tail of its output. The document also carries an
 derived court cap, the court) and marks it as an environment input; the block is
 recorded, not compared, and the byte-identity claim is about the rest of the
 record. Two runs over the same checkout with the same inputs are byte-identical
-in everything except that declared block.
+in everything except that declared block and the `private_state` entry counts,
+which are live readings of the working tree's untracked or ignored entries and
+not of the checkout (A25 D5).
 
 `--list` names every subcommand and whether it is in `all`. `--explain [name]`
 prints the prerequisites, establishment and non-claim of one step or all of them,
@@ -92,7 +96,7 @@ the three families `evidence/etp-t10/EXCLUSIONS.json` records.
 | `docs` | `python3` | `forensics/tools/docs_consistency.py` | the documents' derived figures agree with the artefacts they cite | that prose is complete, or that an exempt figure is correct |
 | `authority` | `python3`, **the network** | `forensics/tools/authority_acquire.py --all --verify-only` | the local authority archives are the ones the registry admits, by published digest | that an upstream release is trustworthy; **not part of `all`** because it needs the network |
 | `all` | the union | every step above except `authority` | the conjunction of the steps it runs, with the non-passing ones named | anything a step does not establish |
-| `list` | `python3` | — | the subcommand set and its role in `all` | — |
+| `--list` | `python3` | — | the subcommand set and its role in `all` | — |
 
 `consumer-<family>` families are `curl`, `ssh` and `sshd`, the three
 `evidence/etp-t10/EXCLUSIONS.json` records. The guard re-reads that record and
@@ -173,7 +177,7 @@ the clean one.
 
 ## 8. Controls
 
-The interface's own controls are `forensics/tools/tests/test_verify.py` (19
+The interface's own controls are `forensics/tools/tests/test_verify.py` (37
 tests): missing tool → `NOT_RUN`; non-zero → `FAIL`; timeout → `BLOCKED`; offline
 network step → `NOT_RUN` with the reason; absent and drifted receipt → `FAIL`;
 private path reported when present; `all` non-zero and every non-passing step

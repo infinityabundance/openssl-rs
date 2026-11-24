@@ -1,0 +1,1263 @@
+{
+  "checks": [
+    {
+      "check": "schema",
+      "detail": "schemaVersion=openssl-rs/public-surface/1"
+    },
+    {
+      "check": "discovery",
+      "detail": "14 invocation(s); listing exit=0; help exit=0; explain exit=0"
+    },
+    {
+      "check": "commands",
+      "detail": "20 step(s) listed, 23 declared"
+    },
+    {
+      "check": "help",
+      "detail": "7 option token(s) in `--help`"
+    },
+    {
+      "check": "explain",
+      "detail": "20 block(s) parsed"
+    },
+    {
+      "check": "exit-codes",
+      "detail": "observed 0, 1, 2"
+    },
+    {
+      "check": "json",
+      "detail": "authority: 12 field(s) observed, 2 run(s) compared, 1 repeat(s)"
+    },
+    {
+      "check": "stability",
+      "detail": "levels stable"
+    }
+  ],
+  "codes": [
+    "PV_OK"
+  ],
+  "commands": {
+    "all": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        1,
+        2
+      ],
+      "delegatesToDeclared": [
+        "courts/phase18/interop/check_receipts.py",
+        "forensics/etp5_crypto/driver.py",
+        "forensics/etp5_crypto/make_vectors.py",
+        "forensics/etp5_crypto/run_etp5.sh",
+        "forensics/tools/authority_acquire.py",
+        "forensics/tools/binary_assurance.py",
+        "forensics/tools/build_reproducibility.sh",
+        "forensics/tools/closure_discipline.py",
+        "forensics/tools/docs_consistency.py",
+        "forensics/tools/etp6_package.py",
+        "forensics/tools/etp_claims.py",
+        "forensics/tools/freshness.py",
+        "forensics/tools/hazard_register.py",
+        "forensics/tools/independence.py",
+        "forensics/tools/instrument_qualify.py",
+        "forensics/tools/scheduling.py",
+        "forensics/tools/tests",
+        "forensics/tools/traceability.py"
+      ],
+      "delegatesToObserved": [],
+      "exitContractDefined": true,
+      "invocation": [
+        "all"
+      ],
+      "jsonFieldsDeclared": 12,
+      "jsonForm": "document",
+      "kind": "aggregate",
+      "prerequisitesDeclared": [
+        "authority-prefix",
+        "bash",
+        "cargo",
+        "court",
+        "git",
+        "memory:24",
+        "python",
+        "rustc"
+      ],
+      "prerequisitesObserved": [],
+      "privateStateDeclared": [
+        "artifacts/phase2/install",
+        "court",
+        "forensics/authorities/prefix"
+      ],
+      "privateStateObserved": [],
+      "recognised": true,
+      "recognisedBy": "explain-all",
+      "recognitionExit": 0,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "authority": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        1,
+        2
+      ],
+      "delegatesToDeclared": [
+        "forensics/tools/authority_acquire.py"
+      ],
+      "delegatesToObserved": [
+        "forensics/tools/authority_acquire.py"
+      ],
+      "exitContractDefined": true,
+      "invocation": [
+        "authority"
+      ],
+      "jsonFieldsDeclared": 12,
+      "jsonForm": "document",
+      "kind": "step",
+      "prerequisitesDeclared": [
+        "network",
+        "python"
+      ],
+      "prerequisitesObserved": [
+        "network",
+        "python"
+      ],
+      "privateStateDeclared": [
+        "forensics/authorities/downloads",
+        "forensics/authorities/prefix"
+      ],
+      "privateStateObserved": [
+        "forensics/authorities/downloads",
+        "forensics/authorities/prefix"
+      ],
+      "recognised": true,
+      "recognisedBy": "--list and --explain",
+      "recognitionExit": null,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "binary": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        1,
+        2
+      ],
+      "delegatesToDeclared": [
+        "forensics/tools/binary_assurance.py"
+      ],
+      "delegatesToObserved": [
+        "forensics/tools/binary_assurance.py"
+      ],
+      "exitContractDefined": true,
+      "invocation": [
+        "binary"
+      ],
+      "jsonFieldsDeclared": 12,
+      "jsonForm": "document",
+      "kind": "step",
+      "prerequisitesDeclared": [
+        "python"
+      ],
+      "prerequisitesObserved": [
+        "python"
+      ],
+      "privateStateDeclared": [],
+      "privateStateObserved": [],
+      "recognised": true,
+      "recognisedBy": "--list and --explain",
+      "recognitionExit": null,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "claims": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        1,
+        2
+      ],
+      "delegatesToDeclared": [
+        "forensics/tools/etp_claims.py"
+      ],
+      "delegatesToObserved": [
+        "forensics/tools/etp_claims.py"
+      ],
+      "exitContractDefined": true,
+      "invocation": [
+        "claims"
+      ],
+      "jsonFieldsDeclared": 12,
+      "jsonForm": "document",
+      "kind": "step",
+      "prerequisitesDeclared": [
+        "git",
+        "python"
+      ],
+      "prerequisitesObserved": [
+        "git",
+        "python"
+      ],
+      "privateStateDeclared": [],
+      "privateStateObserved": [],
+      "recognised": true,
+      "recognisedBy": "--list and --explain",
+      "recognitionExit": null,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "closure": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        1,
+        2
+      ],
+      "delegatesToDeclared": [
+        "forensics/tools/closure_discipline.py"
+      ],
+      "delegatesToObserved": [
+        "forensics/tools/closure_discipline.py"
+      ],
+      "exitContractDefined": true,
+      "invocation": [
+        "closure"
+      ],
+      "jsonFieldsDeclared": 12,
+      "jsonForm": "document",
+      "kind": "step",
+      "prerequisitesDeclared": [
+        "git",
+        "python"
+      ],
+      "prerequisitesObserved": [
+        "git",
+        "python"
+      ],
+      "privateStateDeclared": [],
+      "privateStateObserved": [],
+      "recognised": true,
+      "recognisedBy": "--list and --explain",
+      "recognitionExit": null,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "consumer-curl": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        1,
+        2
+      ],
+      "delegatesToDeclared": [
+        "forensics/tools/closure_discipline.py"
+      ],
+      "delegatesToObserved": [
+        "forensics/tools/closure_discipline.py"
+      ],
+      "exitContractDefined": true,
+      "invocation": [
+        "consumer-curl"
+      ],
+      "jsonFieldsDeclared": 12,
+      "jsonForm": "document",
+      "kind": "step",
+      "prerequisitesDeclared": [
+        "git",
+        "python"
+      ],
+      "prerequisitesObserved": [
+        "git",
+        "python"
+      ],
+      "privateStateDeclared": [
+        "artifacts/phase2/install",
+        "court"
+      ],
+      "privateStateObserved": [
+        "artifacts/phase2/install",
+        "court"
+      ],
+      "recognised": true,
+      "recognisedBy": "--list and --explain",
+      "recognitionExit": null,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "consumer-ssh": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        1,
+        2
+      ],
+      "delegatesToDeclared": [
+        "forensics/tools/closure_discipline.py"
+      ],
+      "delegatesToObserved": [
+        "forensics/tools/closure_discipline.py"
+      ],
+      "exitContractDefined": true,
+      "invocation": [
+        "consumer-ssh"
+      ],
+      "jsonFieldsDeclared": 12,
+      "jsonForm": "document",
+      "kind": "step",
+      "prerequisitesDeclared": [
+        "git",
+        "python"
+      ],
+      "prerequisitesObserved": [
+        "git",
+        "python"
+      ],
+      "privateStateDeclared": [
+        "artifacts/phase2/install",
+        "court"
+      ],
+      "privateStateObserved": [
+        "artifacts/phase2/install",
+        "court"
+      ],
+      "recognised": true,
+      "recognisedBy": "--list and --explain",
+      "recognitionExit": null,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "consumer-sshd": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        1,
+        2
+      ],
+      "delegatesToDeclared": [
+        "forensics/tools/closure_discipline.py"
+      ],
+      "delegatesToObserved": [
+        "forensics/tools/closure_discipline.py"
+      ],
+      "exitContractDefined": true,
+      "invocation": [
+        "consumer-sshd"
+      ],
+      "jsonFieldsDeclared": 12,
+      "jsonForm": "document",
+      "kind": "step",
+      "prerequisitesDeclared": [
+        "git",
+        "python"
+      ],
+      "prerequisitesObserved": [
+        "git",
+        "python"
+      ],
+      "privateStateDeclared": [
+        "artifacts/phase2/install",
+        "court"
+      ],
+      "privateStateObserved": [
+        "artifacts/phase2/install",
+        "court"
+      ],
+      "recognised": true,
+      "recognisedBy": "--list and --explain",
+      "recognitionExit": null,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "controls": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        1,
+        2
+      ],
+      "delegatesToDeclared": [
+        "forensics/tools/tests"
+      ],
+      "delegatesToObserved": [
+        "forensics/tools/tests"
+      ],
+      "exitContractDefined": true,
+      "invocation": [
+        "controls"
+      ],
+      "jsonFieldsDeclared": 12,
+      "jsonForm": "document",
+      "kind": "step",
+      "prerequisitesDeclared": [
+        "python"
+      ],
+      "prerequisitesObserved": [
+        "python"
+      ],
+      "privateStateDeclared": [],
+      "privateStateObserved": [],
+      "recognised": true,
+      "recognisedBy": "--list and --explain",
+      "recognitionExit": null,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "differential": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        1,
+        2
+      ],
+      "delegatesToDeclared": [
+        "forensics/etp5_crypto/run_etp5.sh"
+      ],
+      "delegatesToObserved": [
+        "forensics/etp5_crypto/run_etp5.sh"
+      ],
+      "exitContractDefined": true,
+      "invocation": [
+        "differential"
+      ],
+      "jsonFieldsDeclared": 12,
+      "jsonForm": "document",
+      "kind": "step",
+      "prerequisitesDeclared": [
+        "authority-prefix",
+        "bash",
+        "cargo",
+        "court",
+        "memory:24",
+        "rustc"
+      ],
+      "prerequisitesObserved": [
+        "authority-prefix",
+        "bash",
+        "cargo",
+        "court",
+        "memory:24",
+        "rustc"
+      ],
+      "privateStateDeclared": [
+        "court",
+        "forensics/authorities/prefix"
+      ],
+      "privateStateObserved": [
+        "court",
+        "forensics/authorities/prefix"
+      ],
+      "recognised": true,
+      "recognisedBy": "--list and --explain",
+      "recognitionExit": null,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "docs": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        1,
+        2
+      ],
+      "delegatesToDeclared": [
+        "forensics/tools/docs_consistency.py"
+      ],
+      "delegatesToObserved": [
+        "forensics/tools/docs_consistency.py"
+      ],
+      "exitContractDefined": true,
+      "invocation": [
+        "docs"
+      ],
+      "jsonFieldsDeclared": 12,
+      "jsonForm": "document",
+      "kind": "step",
+      "prerequisitesDeclared": [
+        "python"
+      ],
+      "prerequisitesObserved": [
+        "python"
+      ],
+      "privateStateDeclared": [],
+      "privateStateObserved": [],
+      "recognised": true,
+      "recognisedBy": "--list and --explain",
+      "recognitionExit": null,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "explain": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        2
+      ],
+      "delegatesToDeclared": [],
+      "delegatesToObserved": [],
+      "exitContractDefined": true,
+      "invocation": [
+        "--explain"
+      ],
+      "jsonFieldsDeclared": 0,
+      "jsonForm": "none",
+      "kind": "discovery",
+      "prerequisitesDeclared": [
+        "python"
+      ],
+      "prerequisitesObserved": [],
+      "privateStateDeclared": [],
+      "privateStateObserved": [],
+      "recognised": true,
+      "recognisedBy": "explain",
+      "recognitionExit": 0,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "freshness": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        1,
+        2
+      ],
+      "delegatesToDeclared": [
+        "forensics/tools/freshness.py"
+      ],
+      "delegatesToObserved": [
+        "forensics/tools/freshness.py"
+      ],
+      "exitContractDefined": true,
+      "invocation": [
+        "freshness"
+      ],
+      "jsonFieldsDeclared": 12,
+      "jsonForm": "document",
+      "kind": "step",
+      "prerequisitesDeclared": [
+        "git",
+        "python"
+      ],
+      "prerequisitesObserved": [
+        "git",
+        "python"
+      ],
+      "privateStateDeclared": [],
+      "privateStateObserved": [],
+      "recognised": true,
+      "recognisedBy": "--list and --explain",
+      "recognitionExit": null,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "hazards": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        1,
+        2
+      ],
+      "delegatesToDeclared": [
+        "forensics/tools/hazard_register.py"
+      ],
+      "delegatesToObserved": [
+        "forensics/tools/hazard_register.py"
+      ],
+      "exitContractDefined": true,
+      "invocation": [
+        "hazards"
+      ],
+      "jsonFieldsDeclared": 12,
+      "jsonForm": "document",
+      "kind": "step",
+      "prerequisitesDeclared": [
+        "git",
+        "python"
+      ],
+      "prerequisitesObserved": [
+        "git",
+        "python"
+      ],
+      "privateStateDeclared": [],
+      "privateStateObserved": [],
+      "recognised": true,
+      "recognisedBy": "--list and --explain",
+      "recognitionExit": null,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "independence": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        1,
+        2
+      ],
+      "delegatesToDeclared": [
+        "forensics/tools/independence.py"
+      ],
+      "delegatesToObserved": [
+        "forensics/tools/independence.py"
+      ],
+      "exitContractDefined": true,
+      "invocation": [
+        "independence"
+      ],
+      "jsonFieldsDeclared": 12,
+      "jsonForm": "document",
+      "kind": "step",
+      "prerequisitesDeclared": [
+        "git",
+        "python"
+      ],
+      "prerequisitesObserved": [
+        "git",
+        "python"
+      ],
+      "privateStateDeclared": [],
+      "privateStateObserved": [],
+      "recognised": true,
+      "recognisedBy": "--list and --explain",
+      "recognitionExit": null,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "instruments": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        1,
+        2
+      ],
+      "delegatesToDeclared": [
+        "forensics/tools/instrument_qualify.py"
+      ],
+      "delegatesToObserved": [
+        "forensics/tools/instrument_qualify.py"
+      ],
+      "exitContractDefined": true,
+      "invocation": [
+        "instruments"
+      ],
+      "jsonFieldsDeclared": 12,
+      "jsonForm": "document",
+      "kind": "step",
+      "prerequisitesDeclared": [
+        "python"
+      ],
+      "prerequisitesObserved": [
+        "python"
+      ],
+      "privateStateDeclared": [
+        "court"
+      ],
+      "privateStateObserved": [
+        "court"
+      ],
+      "recognised": true,
+      "recognisedBy": "--list and --explain",
+      "recognitionExit": null,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "list": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        2
+      ],
+      "delegatesToDeclared": [],
+      "delegatesToObserved": [],
+      "exitContractDefined": true,
+      "invocation": [
+        "--list"
+      ],
+      "jsonFieldsDeclared": 0,
+      "jsonForm": "none",
+      "kind": "discovery",
+      "prerequisitesDeclared": [
+        "python"
+      ],
+      "prerequisitesObserved": [],
+      "privateStateDeclared": [],
+      "privateStateObserved": [],
+      "recognised": true,
+      "recognisedBy": "list",
+      "recognitionExit": 0,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "manifest": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        1,
+        2
+      ],
+      "delegatesToDeclared": [
+        "forensics/tools/etp6_package.py"
+      ],
+      "delegatesToObserved": [
+        "forensics/tools/etp6_package.py"
+      ],
+      "exitContractDefined": true,
+      "invocation": [
+        "manifest"
+      ],
+      "jsonFieldsDeclared": 12,
+      "jsonForm": "document",
+      "kind": "step",
+      "prerequisitesDeclared": [
+        "git"
+      ],
+      "prerequisitesObserved": [
+        "git"
+      ],
+      "privateStateDeclared": [],
+      "privateStateObserved": [],
+      "recognised": true,
+      "recognisedBy": "--list and --explain",
+      "recognitionExit": null,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "proofs": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        1,
+        2
+      ],
+      "delegatesToDeclared": [
+        "forensics/etp5_crypto/driver.py",
+        "forensics/etp5_crypto/make_vectors.py"
+      ],
+      "delegatesToObserved": [
+        "forensics/etp5_crypto/driver.py",
+        "forensics/etp5_crypto/make_vectors.py"
+      ],
+      "exitContractDefined": true,
+      "invocation": [
+        "proofs"
+      ],
+      "jsonFieldsDeclared": 12,
+      "jsonForm": "document",
+      "kind": "step",
+      "prerequisitesDeclared": [
+        "python"
+      ],
+      "prerequisitesObserved": [
+        "python"
+      ],
+      "privateStateDeclared": [],
+      "privateStateObserved": [],
+      "recognised": true,
+      "recognisedBy": "--list and --explain",
+      "recognitionExit": null,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "rebuild": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        1,
+        2
+      ],
+      "delegatesToDeclared": [
+        "forensics/tools/build_reproducibility.sh"
+      ],
+      "delegatesToObserved": [
+        "forensics/tools/build_reproducibility.sh"
+      ],
+      "exitContractDefined": true,
+      "invocation": [
+        "rebuild"
+      ],
+      "jsonFieldsDeclared": 12,
+      "jsonForm": "document",
+      "kind": "step",
+      "prerequisitesDeclared": [
+        "bash",
+        "cargo",
+        "court",
+        "memory:24",
+        "rustc"
+      ],
+      "prerequisitesObserved": [
+        "bash",
+        "cargo",
+        "court",
+        "memory:24",
+        "rustc"
+      ],
+      "privateStateDeclared": [],
+      "privateStateObserved": [],
+      "recognised": true,
+      "recognisedBy": "--list and --explain",
+      "recognitionExit": null,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "receipts": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        1,
+        2
+      ],
+      "delegatesToDeclared": [
+        "courts/phase18/interop/check_receipts.py"
+      ],
+      "delegatesToObserved": [
+        "courts/phase18/interop/check_receipts.py"
+      ],
+      "exitContractDefined": true,
+      "invocation": [
+        "receipts"
+      ],
+      "jsonFieldsDeclared": 12,
+      "jsonForm": "document",
+      "kind": "step",
+      "prerequisitesDeclared": [
+        "python"
+      ],
+      "prerequisitesObserved": [
+        "python"
+      ],
+      "privateStateDeclared": [],
+      "privateStateObserved": [],
+      "recognised": true,
+      "recognisedBy": "--list and --explain",
+      "recognitionExit": null,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "scheduling": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        1,
+        2
+      ],
+      "delegatesToDeclared": [
+        "forensics/tools/scheduling.py"
+      ],
+      "delegatesToObserved": [
+        "forensics/tools/scheduling.py"
+      ],
+      "exitContractDefined": true,
+      "invocation": [
+        "scheduling"
+      ],
+      "jsonFieldsDeclared": 12,
+      "jsonForm": "document",
+      "kind": "step",
+      "prerequisitesDeclared": [
+        "git",
+        "python"
+      ],
+      "prerequisitesObserved": [
+        "git",
+        "python"
+      ],
+      "privateStateDeclared": [],
+      "privateStateObserved": [],
+      "recognised": true,
+      "recognisedBy": "--list and --explain",
+      "recognitionExit": null,
+      "stability": "stable",
+      "stabilitySupported": true
+    },
+    "traceability": {
+      "argumentsDeclared": [
+        "command",
+        "--json",
+        "--network",
+        "--explain",
+        "--list",
+        "--tmp",
+        "--help"
+      ],
+      "declaredExitCodes": [
+        0,
+        1,
+        2
+      ],
+      "delegatesToDeclared": [
+        "forensics/tools/traceability.py"
+      ],
+      "delegatesToObserved": [
+        "forensics/tools/traceability.py"
+      ],
+      "exitContractDefined": true,
+      "invocation": [
+        "traceability"
+      ],
+      "jsonFieldsDeclared": 12,
+      "jsonForm": "document",
+      "kind": "step",
+      "prerequisitesDeclared": [
+        "git",
+        "python"
+      ],
+      "prerequisitesObserved": [
+        "git",
+        "python"
+      ],
+      "privateStateDeclared": [],
+      "privateStateObserved": [],
+      "recognised": true,
+      "recognisedBy": "--list and --explain",
+      "recognitionExit": null,
+      "stability": "stable",
+      "stabilitySupported": true
+    }
+  },
+  "detector": {
+    "path": "forensics/tools/public_surface.py",
+    "sha256": "a5b54814cf0bad654e1c081eaf0153f2e9579f6ac59f1dfd177613759acdd95b"
+  },
+  "findings": [],
+  "observed": {
+    "exitCodes": {
+      "0": [
+        "explain",
+        "explain-all",
+        "help",
+        "list"
+      ],
+      "1": [
+        "authority-offline"
+      ],
+      "2": [
+        "explain-unknown",
+        "malformed-arguments",
+        "unknown-command"
+      ]
+    },
+    "explainBlocks": 20,
+    "helpOptionTokens": [
+      "--explain",
+      "--help",
+      "--json",
+      "--list",
+      "--network",
+      "--tmp",
+      "-h"
+    ],
+    "invocations": [
+      {
+        "argv": [
+          "--list"
+        ],
+        "exit": 0,
+        "what": "listing"
+      },
+      {
+        "argv": [
+          "--list",
+          "--json"
+        ],
+        "exit": 0,
+        "what": "listing-plus-json"
+      },
+      {
+        "argv": [
+          "--help"
+        ],
+        "exit": 0,
+        "what": "help"
+      },
+      {
+        "argv": [
+          "--explain"
+        ],
+        "exit": 0,
+        "what": "explain"
+      },
+      {
+        "argv": [
+          "--list"
+        ],
+        "exit": 0,
+        "what": "probe:list"
+      },
+      {
+        "argv": [
+          "--help"
+        ],
+        "exit": 0,
+        "what": "probe:help"
+      },
+      {
+        "argv": [
+          "--explain"
+        ],
+        "exit": 0,
+        "what": "probe:explain"
+      },
+      {
+        "argv": [
+          "--explain",
+          "all"
+        ],
+        "exit": 0,
+        "what": "probe:explain-all"
+      },
+      {
+        "argv": [
+          "authority"
+        ],
+        "exit": 1,
+        "what": "probe:authority-offline"
+      },
+      {
+        "argv": [
+          "nosuch-command"
+        ],
+        "exit": 2,
+        "what": "probe:unknown-command"
+      },
+      {
+        "argv": [
+          "--tmp"
+        ],
+        "exit": 2,
+        "what": "probe:malformed-arguments"
+      },
+      {
+        "argv": [
+          "--explain",
+          "nosuch-command"
+        ],
+        "exit": 2,
+        "what": "probe:explain-unknown"
+      },
+      {
+        "argv": [
+          "authority",
+          "--json"
+        ],
+        "exit": 1,
+        "what": "json-probe"
+      },
+      {
+        "argv": [
+          "authority",
+          "--json"
+        ],
+        "exit": 1,
+        "what": "json-probe"
+      }
+    ],
+    "jsonFields": [
+      "candidate",
+      "counts",
+      "environment",
+      "interface",
+      "invocation",
+      "non_passing",
+      "private_state",
+      "root",
+      "schema",
+      "status",
+      "steps",
+      "warnings"
+    ],
+    "listJsonEmitsJson": false,
+    "listingStable": true,
+    "steps": 20
+  },
+  "ok": true,
+  "producer": {
+    "path": "evidence/a25/build_evidence.py",
+    "sha256": "e241cda138ce1092a6f84d4efc3cf783bf714d3f37ea861e1982ca5638eda073"
+  },
+  "schema": "openssl-rs/public-surface/verdict/1",
+  "surface": {
+    "commandCount": 23,
+    "interface": "ETP-T12",
+    "schemaVersion": "openssl-rs/public-surface/1"
+  },
+  "verifier": {
+    "path": "forensics/tools/verify.py",
+    "sha256": "17a9f2ae75614eaff52dd0bd833e30af05721e53a957e6209f68f1fa3fed4fc3"
+  }
+}
