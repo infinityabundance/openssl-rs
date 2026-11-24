@@ -1,0 +1,721 @@
+{
+ "model": "a5/v1",
+ "populations": [
+  {
+   "boundDeclared": false,
+   "declared": "COMPLETE",
+   "declaredBasis": "a record-set: every projected result is present and carries a distinct exact fingerprint",
+   "distinctMembers": 4245,
+   "examined": 4245,
+   "expected": 4245,
+   "id": "a1-sarif-results",
+   "kind": "record-set",
+   "locator": "/runs",
+   "membersBasis": "every result carries a distinct a1Exact/v1 fingerprint; 4245 distinct over 4245 results",
+   "membersIdentified": true,
+   "method": "each run's projectedTotal is compared with its result count and with sumMatchesPopulation; each result's a1Exact/v1 fingerprint is collected",
+   "omitted": 0,
+   "omittedMembersRecorded": true,
+   "presenceBasis": "the cited record is present in the tracked tree",
+   "present": true,
+   "record": "evidence/a1/SARIF.json",
+   "selectionDeclared": false,
+   "sources": {
+    "examined": {
+     "locator": "runs[*].results (length)",
+     "record": "evidence/a1/SARIF.json",
+     "sha256": "5c0cfee62512deb08cc12f95624be64865d3e544473bae80d9aca0ab36ce7852"
+    },
+    "expected": {
+     "locator": "runs[*].properties.a1.projection.projectedTotal",
+     "record": "evidence/a1/SARIF.json",
+     "sha256": "5c0cfee62512deb08cc12f95624be64865d3e544473bae80d9aca0ab36ce7852"
+    },
+    "omitted": {
+     "locator": "derived: expected - examined",
+     "record": "evidence/a1/SARIF.json",
+     "sha256": "5c0cfee62512deb08cc12f95624be64865d3e544473bae80d9aca0ab36ce7852"
+    }
+   },
+   "subject": "every result the A1 SARIF adapter emits, across its six runs"
+  },
+  {
+   "boundDeclared": false,
+   "declared": "COMPLETE",
+   "declaredBasis": "a census: the summary count and every row's unique id are both present",
+   "distinctMembers": 62297,
+   "examined": 62297,
+   "expected": 62297,
+   "id": "t4-unsafe-sites",
+   "kind": "census",
+   "locator": "/sites/rows",
+   "membersBasis": "62297 distinct site ids over 62297 rows",
+   "membersIdentified": true,
+   "method": "summary.sites is compared with the row count and with the distinct id set",
+   "omitted": 0,
+   "omittedMembersRecorded": true,
+   "presenceBasis": "the cited record is present in the tracked tree",
+   "present": true,
+   "record": "evidence/etp-t4/SAFETY-SITES.json",
+   "selectionDeclared": false,
+   "sources": {
+    "examined": {
+     "locator": "sites.rows (length)",
+     "record": "evidence/etp-t4/SAFETY-SITES.json",
+     "sha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da"
+    },
+    "expected": {
+     "locator": "summary.sites",
+     "record": "evidence/etp-t4/SAFETY-SITES.json",
+     "sha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da"
+    },
+    "omitted": {
+     "locator": "derived: expected - examined",
+     "record": "evidence/etp-t4/SAFETY-SITES.json",
+     "sha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da"
+    }
+   },
+   "subject": "the lexical unsafe-site census"
+  },
+  {
+   "boundDeclared": false,
+   "declared": "COMPLETE",
+   "declaredBasis": "the record presents suppressions.total with a complete per-lint partition and no member row, which a consumer reads as the whole suppression population",
+   "distinctMembers": null,
+   "examined": 0,
+   "expected": 1999,
+   "id": "t4-suppressions",
+   "kind": "enumeration",
+   "locator": "/suppressions",
+   "membersBasis": "the record carries a per-lint partition and no member row, so no suppression is identified",
+   "membersIdentified": false,
+   "method": "suppressions.total is compared with summary.suppressions and with the sum of the per-lint partition; no member row exists",
+   "omitted": 1999,
+   "omittedMembersRecorded": false,
+   "presenceBasis": "the cited record is present in the tracked tree",
+   "present": true,
+   "record": "evidence/etp-t4/SAFETY-SITES.json",
+   "selectionDeclared": false,
+   "sources": {
+    "examined": {
+     "locator": "suppressions (no member row exists)",
+     "record": "evidence/etp-t4/SAFETY-SITES.json",
+     "sha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da"
+    },
+    "expected": {
+     "locator": "suppressions.total",
+     "record": "evidence/etp-t4/SAFETY-SITES.json",
+     "sha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da"
+    },
+    "omitted": {
+     "locator": "derived: expected - examined",
+     "record": "evidence/etp-t4/SAFETY-SITES.json",
+     "sha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da"
+    }
+   },
+   "subject": "the lint suppressions reported for the scanned tree"
+  },
+  {
+   "boundDeclared": false,
+   "declared": "COMPLETE",
+   "declaredBasis": "the census lists every ignored test and the summary states the count",
+   "distinctMembers": 54,
+   "examined": 54,
+   "expected": 54,
+   "id": "t4-ignored-tests",
+   "kind": "census",
+   "locator": "/assertions/ignored",
+   "membersBasis": "each row names its path and line, and the pairs are distinct",
+   "membersIdentified": true,
+   "method": "summary.ignored_tests is compared with the row count and with the distinct path/line pairs",
+   "omitted": 0,
+   "omittedMembersRecorded": true,
+   "presenceBasis": "the cited record is present in the tracked tree",
+   "present": true,
+   "record": "evidence/etp-t4/SAFETY-SITES.json",
+   "selectionDeclared": false,
+   "sources": {
+    "examined": {
+     "locator": "assertions.ignored (length)",
+     "record": "evidence/etp-t4/SAFETY-SITES.json",
+     "sha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da"
+    },
+    "expected": {
+     "locator": "summary.ignored_tests",
+     "record": "evidence/etp-t4/SAFETY-SITES.json",
+     "sha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da"
+    },
+    "omitted": {
+     "locator": "derived: expected - examined",
+     "record": "evidence/etp-t4/SAFETY-SITES.json",
+     "sha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da"
+    }
+   },
+   "subject": "the ignored-test census"
+  },
+  {
+   "boundDeclared": false,
+   "declared": "COMPLETE",
+   "declaredBasis": "a record-set: every row is present and identified; the 744 failing rows are the rows' content, not a completeness defect",
+   "distinctMembers": 1121,
+   "examined": 1121,
+   "expected": 1121,
+   "id": "t10-closure-exclusions",
+   "kind": "record-set",
+   "locator": "/rows",
+   "membersBasis": "1121 distinct row ids; 377 rows pass the bar and 744 do not, which is the rows' content, not their completeness",
+   "membersIdentified": true,
+   "method": "exclusion_rows is compared with the row count, with passing + failing and with the category partition; every row id is collected",
+   "omitted": 0,
+   "omittedMembersRecorded": true,
+   "presenceBasis": "the cited record is present in the tracked tree",
+   "present": true,
+   "record": "evidence/etp-t10/EXCLUSIONS.json",
+   "selectionDeclared": false,
+   "sources": {
+    "examined": {
+     "locator": "rows (length)",
+     "record": "evidence/etp-t10/EXCLUSIONS.json",
+     "sha256": "791c699d3c3f60e5dee0f26563573a988411ad6854a319286b9cc34719e48f90"
+    },
+    "expected": {
+     "locator": "exclusion_rows",
+     "record": "evidence/etp-t10/EXCLUSIONS.json",
+     "sha256": "791c699d3c3f60e5dee0f26563573a988411ad6854a319286b9cc34719e48f90"
+    },
+    "omitted": {
+     "locator": "derived: expected - examined",
+     "record": "evidence/etp-t10/EXCLUSIONS.json",
+     "sha256": "791c699d3c3f60e5dee0f26563573a988411ad6854a319286b9cc34719e48f90"
+    }
+   },
+   "subject": "the closure exclusion rows audited by the closure discipline"
+  },
+  {
+   "boundDeclared": true,
+   "declared": "TRUNCATED_BOUNDED",
+   "declaredBasis": "residual_sites_bound.status is TRUNCATED_BOUNDED and the block states its cap, its omitted count and the selection rule",
+   "distinctMembers": 200,
+   "examined": 200,
+   "expected": 449,
+   "id": "curl-residual-sites",
+   "kind": "truncation",
+   "locator": "/precision/residual_sites_bound",
+   "membersBasis": "200 distinct (dso, function, call-site) keys",
+   "membersIdentified": true,
+   "method": "population_size is compared with precision.totals.reachable_unresolved_sites and with sample_size + omitted_members; sample_size is compared with the listed rows",
+   "omitted": 249,
+   "omittedMembersRecorded": false,
+   "presenceBasis": "the cited record is present in the tracked tree",
+   "present": true,
+   "record": "evidence/closure-curl-049.json",
+   "selectionDeclared": false,
+   "sources": {
+    "examined": {
+     "locator": "precision.residual_sites_bound.sample_size",
+     "record": "evidence/closure-curl-049.json",
+     "sha256": "b72193072780e9a425e7e93be8c0c15849d06c758b9e71f226cafb4992388c62"
+    },
+    "expected": {
+     "locator": "precision.residual_sites_bound.population_size",
+     "record": "evidence/closure-curl-049.json",
+     "sha256": "b72193072780e9a425e7e93be8c0c15849d06c758b9e71f226cafb4992388c62"
+    },
+    "omitted": {
+     "locator": "precision.residual_sites_bound.omitted_members",
+     "record": "evidence/closure-curl-049.json",
+     "sha256": "b72193072780e9a425e7e93be8c0c15849d06c758b9e71f226cafb4992388c62"
+    }
+   },
+   "subject": "the reachable unresolved indirect sites of the curl closure"
+  },
+  {
+   "boundDeclared": false,
+   "declared": "COMPLETE",
+   "declaredBasis": "sample_policy states that the complete population is the JSONL sidecar named by records_path",
+   "distinctMembers": null,
+   "examined": 0,
+   "expected": 103992,
+   "id": "curl-edge-records",
+   "kind": "enumeration",
+   "locator": "/edge_provenance",
+   "membersBasis": "no member row for the full population is in the receipt",
+   "membersIdentified": false,
+   "method": "edge_provenance.count is compared with precision.totals.indirect_sites; the records_path sidecar is tested for trackedness",
+   "omitted": 103992,
+   "omittedMembersRecorded": false,
+   "presenceBasis": "records_path court/tmp/v4-consumer-closure/edge-records.7dfe9b54e8a477d1.jsonl: git ls-files does not list the path, so it is untracked or gitignored and is not part of the evidence record. The bytes exist outside the tracked tree, so the member population is absent from the evidence",
+   "present": false,
+   "record": "evidence/closure-curl-049.json",
+   "selectionDeclared": false,
+   "sources": {
+    "examined": {
+     "locator": "edge_provenance (no member row in the receipt)",
+     "record": "evidence/closure-curl-049.json",
+     "sha256": "b72193072780e9a425e7e93be8c0c15849d06c758b9e71f226cafb4992388c62"
+    },
+    "expected": {
+     "locator": "edge_provenance.count",
+     "record": "evidence/closure-curl-049.json",
+     "sha256": "b72193072780e9a425e7e93be8c0c15849d06c758b9e71f226cafb4992388c62"
+    },
+    "omitted": {
+     "locator": "derived: expected - examined",
+     "record": "evidence/closure-curl-049.json",
+     "sha256": "b72193072780e9a425e7e93be8c0c15849d06c758b9e71f226cafb4992388c62"
+    }
+   },
+   "subject": "every edge record of the curl closure"
+  },
+  {
+   "boundDeclared": true,
+   "declared": "TRUNCATED_BOUNDED",
+   "declaredBasis": "records_sample_truncated is true and sample_cap is stated",
+   "distinctMembers": 500,
+   "examined": 500,
+   "expected": 2109,
+   "id": "curl-edge-sample",
+   "kind": "sample",
+   "locator": "/edge_provenance/records_sample",
+   "membersBasis": "500 distinct edge ids over 500 sampled rows",
+   "membersIdentified": true,
+   "method": "records_sample_eligible and sample_cap bound the sample; the sampled rows' edge ids are checked for distinctness",
+   "omitted": 1609,
+   "omittedMembersRecorded": false,
+   "presenceBasis": "the cited record is present in the tracked tree",
+   "present": true,
+   "record": "evidence/closure-curl-049.json",
+   "selectionDeclared": true,
+   "sources": {
+    "examined": {
+     "locator": "edge_provenance.records_sample (length)",
+     "record": "evidence/closure-curl-049.json",
+     "sha256": "b72193072780e9a425e7e93be8c0c15849d06c758b9e71f226cafb4992388c62"
+    },
+    "expected": {
+     "locator": "edge_provenance.records_sample_eligible",
+     "record": "evidence/closure-curl-049.json",
+     "sha256": "b72193072780e9a425e7e93be8c0c15849d06c758b9e71f226cafb4992388c62"
+    },
+    "omitted": {
+     "locator": "derived: expected - examined",
+     "record": "evidence/closure-curl-049.json",
+     "sha256": "b72193072780e9a425e7e93be8c0c15849d06c758b9e71f226cafb4992388c62"
+    }
+   },
+   "subject": "the bounded sample of curl edge records embedded in the receipt"
+  },
+  {
+   "boundDeclared": false,
+   "declared": "COMPLETE",
+   "declaredBasis": "sample_policy states that the complete population is the JSONL sidecar named by records_path",
+   "distinctMembers": null,
+   "examined": 0,
+   "expected": 51997,
+   "id": "ssh-edge-records",
+   "kind": "enumeration",
+   "locator": "/edge_provenance",
+   "membersBasis": "no member row for the full population is in the receipt",
+   "membersIdentified": false,
+   "method": "edge_provenance.count is compared with precision.totals.indirect_sites; the records_path sidecar is tested for trackedness",
+   "omitted": 51997,
+   "omittedMembersRecorded": false,
+   "presenceBasis": "records_path court/tmp/closure-b86-ssh/edge-records.c7fe11e19137dc1f.jsonl: git ls-files does not list the path, so it is untracked or gitignored and is not part of the evidence record. The bytes exist outside the tracked tree, so the member population is absent from the evidence",
+   "present": false,
+   "record": "evidence/closure-ssh-b86.json",
+   "selectionDeclared": false,
+   "sources": {
+    "examined": {
+     "locator": "edge_provenance (no member row in the receipt)",
+     "record": "evidence/closure-ssh-b86.json",
+     "sha256": "1e63d6e8e1da54d0e00321556603249ad16efba39ede26517d947ff731cf2b04"
+    },
+    "expected": {
+     "locator": "edge_provenance.count",
+     "record": "evidence/closure-ssh-b86.json",
+     "sha256": "1e63d6e8e1da54d0e00321556603249ad16efba39ede26517d947ff731cf2b04"
+    },
+    "omitted": {
+     "locator": "derived: expected - examined",
+     "record": "evidence/closure-ssh-b86.json",
+     "sha256": "1e63d6e8e1da54d0e00321556603249ad16efba39ede26517d947ff731cf2b04"
+    }
+   },
+   "subject": "every edge record of the OpenSSH closure"
+  },
+  {
+   "boundDeclared": true,
+   "declared": "TRUNCATED_BOUNDED",
+   "declaredBasis": "records_sample_truncated is true and sample_cap is stated",
+   "distinctMembers": 500,
+   "examined": 500,
+   "expected": 956,
+   "id": "ssh-edge-sample",
+   "kind": "sample",
+   "locator": "/edge_provenance/records_sample",
+   "membersBasis": "500 distinct edge ids over 500 sampled rows",
+   "membersIdentified": true,
+   "method": "records_sample_eligible and sample_cap bound the sample; the sampled rows' edge ids are checked for distinctness",
+   "omitted": 456,
+   "omittedMembersRecorded": false,
+   "presenceBasis": "the cited record is present in the tracked tree",
+   "present": true,
+   "record": "evidence/closure-ssh-b86.json",
+   "selectionDeclared": true,
+   "sources": {
+    "examined": {
+     "locator": "edge_provenance.records_sample (length)",
+     "record": "evidence/closure-ssh-b86.json",
+     "sha256": "1e63d6e8e1da54d0e00321556603249ad16efba39ede26517d947ff731cf2b04"
+    },
+    "expected": {
+     "locator": "edge_provenance.records_sample_eligible",
+     "record": "evidence/closure-ssh-b86.json",
+     "sha256": "1e63d6e8e1da54d0e00321556603249ad16efba39ede26517d947ff731cf2b04"
+    },
+    "omitted": {
+     "locator": "derived: expected - examined",
+     "record": "evidence/closure-ssh-b86.json",
+     "sha256": "1e63d6e8e1da54d0e00321556603249ad16efba39ede26517d947ff731cf2b04"
+    }
+   },
+   "subject": "the bounded sample of OpenSSH edge records embedded in the receipt"
+  },
+  {
+   "boundDeclared": false,
+   "declared": "DEFERRED",
+   "declaredBasis": "not_run names every analysis that was not run and claims nothing about them",
+   "distinctMembers": null,
+   "examined": 0,
+   "expected": 7,
+   "id": "timing-not-run",
+   "kind": "not-run",
+   "locator": "/not_run",
+   "membersBasis": "every not-run analysis is named in the list",
+   "membersIdentified": true,
+   "method": "every entry of not_run is read; none was run, and each entry is distinct",
+   "omitted": 7,
+   "omittedMembersRecorded": true,
+   "presenceBasis": "the cited record is present in the tracked tree",
+   "present": true,
+   "record": "evidence/timing-bn-findings.json",
+   "selectionDeclared": false,
+   "sources": {
+    "examined": {
+     "locator": "not_run: none of the analyses was run",
+     "record": "evidence/timing-bn-findings.json",
+     "sha256": "7289fbce2dabe40be92538c916736dba7c4d5250c1fae6e12767580daad8696c"
+    },
+    "expected": {
+     "locator": "not_run (length)",
+     "record": "evidence/timing-bn-findings.json",
+     "sha256": "7289fbce2dabe40be92538c916736dba7c4d5250c1fae6e12767580daad8696c"
+    },
+    "omitted": {
+     "locator": "not_run (length)",
+     "record": "evidence/timing-bn-findings.json",
+     "sha256": "7289fbce2dabe40be92538c916736dba7c4d5250c1fae6e12767580daad8696c"
+    }
+   },
+   "subject": "the timing analyses the BN record names as not run"
+  },
+  {
+   "boundDeclared": false,
+   "declared": "UNKNOWN",
+   "declaredBasis": "the manifest reports the examined count and states no expected population, so it claims no completeness",
+   "distinctMembers": 73,
+   "examined": 73,
+   "expected": "unknown",
+   "id": "o11-interop-scripts",
+   "kind": "scan",
+   "locator": "/result/counts",
+   "membersBasis": "each executed script has a per-script row; the record does not state how many scripts the suite contains",
+   "membersIdentified": true,
+   "method": "scripts_executed is compared with the per-script row count; the manifest states no expected script population",
+   "omitted": "unknown",
+   "omittedMembersRecorded": false,
+   "presenceBasis": "the cited record is present in the tracked tree",
+   "present": true,
+   "record": "courts/phase18/interop/MANIFEST-o11-A.json",
+   "selectionDeclared": true,
+   "sources": {
+    "examined": {
+     "locator": "result.counts.scripts_executed",
+     "record": "courts/phase18/interop/MANIFEST-o11-A.json",
+     "sha256": "c3530b9dbb17403ba0702f04cc653db9dce7a57f62497ceba5a93712a795fda6"
+    },
+    "expected": {
+     "locator": "result.counts: no record states a script population",
+     "record": ""
+    },
+    "omitted": {
+     "locator": "derived: unknown because no expected population is stated",
+     "record": ""
+    }
+   },
+   "subject": "the interop scripts the O11 manifest reports as executed"
+  },
+  {
+   "boundDeclared": false,
+   "declared": "COMPLETE",
+   "declaredBasis": "six runs carry status SATISFIED, which a consumer reads as six satisfied checks",
+   "distinctMembers": 6,
+   "examined": 6,
+   "expected": 6,
+   "id": "t11-satisfied-runs",
+   "kind": "record-set",
+   "locator": "/runs",
+   "membersBasis": "6 satisfied run declaration(s); every one carries identity: null, so what was examined is not identified",
+   "membersIdentified": false,
+   "method": "every run with status SATISFIED is counted; each one's identity field is read",
+   "omitted": 0,
+   "omittedMembersRecorded": true,
+   "presenceBasis": "the cited record is present in the tracked tree",
+   "present": true,
+   "record": "evidence/etp-t11/RUNS.json",
+   "selectionDeclared": false,
+   "sources": {
+    "examined": {
+     "locator": "runs[*].status == 'SATISFIED' (count)",
+     "record": "evidence/etp-t11/RUNS.json",
+     "sha256": "e74d0cae81d0e41e8eb85f410e89dcd07e9c2217afbe431b33e6c9b9aacf943f"
+    },
+    "expected": {
+     "locator": "runs[*].status == 'SATISFIED' (count)",
+     "record": "evidence/etp-t11/RUNS.json",
+     "sha256": "e74d0cae81d0e41e8eb85f410e89dcd07e9c2217afbe431b33e6c9b9aacf943f"
+    },
+    "omitted": {
+     "locator": "derived: expected - examined",
+     "record": "evidence/etp-t11/RUNS.json",
+     "sha256": "e74d0cae81d0e41e8eb85f410e89dcd07e9c2217afbe431b33e6c9b9aacf943f"
+    }
+   },
+   "subject": "the scheduling runs that declare SATISFIED"
+  },
+  {
+   "boundDeclared": false,
+   "declared": "COMPLETE",
+   "declaredBasis": "the manifest presents input_count as the verified inputs of the package",
+   "distinctMembers": 1633,
+   "examined": 1633,
+   "expected": "unknown",
+   "id": "etp6-package-inputs",
+   "kind": "enumeration",
+   "locator": "/inputs",
+   "membersBasis": "1633 distinct input paths; the record states no expected package population",
+   "membersIdentified": true,
+   "method": "input_count is compared with the input row count; the manifest states no expected package population",
+   "omitted": "unknown",
+   "omittedMembersRecorded": false,
+   "presenceBasis": "the cited record is present in the tracked tree",
+   "present": true,
+   "record": "evidence/etp6/MANIFEST.json",
+   "selectionDeclared": true,
+   "sources": {
+    "examined": {
+     "locator": "input_count",
+     "record": "evidence/etp6/MANIFEST.json",
+     "sha256": "d41a740f57719ab613b6a7f43cc8f566ab132ff599bb46b6c4860243bb76306d"
+    },
+    "expected": {
+     "locator": "input_count: no record states a package denominator",
+     "record": ""
+    },
+    "omitted": {
+     "locator": "derived: unknown because no expected population is stated",
+     "record": ""
+    }
+   },
+   "subject": "the inputs the external package manifest lists as verified"
+  },
+  {
+   "boundDeclared": true,
+   "declared": "TRUNCATED_BOUNDED",
+   "declaredBasis": "not_attempted states how many families were not attempted",
+   "distinctMembers": null,
+   "examined": 245,
+   "expected": 1000,
+   "id": "p1000-campaign-families",
+   "kind": "scan",
+   "locator": "/consumers/p1000_corpus",
+   "membersBasis": "the record states family counts; it names no per-family member list for the not-attempted remainder",
+   "membersIdentified": false,
+   "method": "families is compared with with_recipe + no_recipe; the examined count is families - not_attempted and is required to contain candidate_loaded and L7",
+   "omitted": 755,
+   "omittedMembersRecorded": false,
+   "presenceBasis": "the cited record is present in the tracked tree",
+   "present": true,
+   "record": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+   "selectionDeclared": false,
+   "sources": {
+    "examined": {
+     "locator": "consumers.p1000_corpus: families - not_attempted",
+     "record": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+     "sha256": "8affeac4d2280289cda17b1716e39bc63535cd893d71642b8cda21735e314e38"
+    },
+    "expected": {
+     "locator": "consumers.p1000_corpus.families",
+     "record": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+     "sha256": "8affeac4d2280289cda17b1716e39bc63535cd893d71642b8cda21735e314e38"
+    },
+    "omitted": {
+     "locator": "consumers.p1000_corpus.not_attempted",
+     "record": "forensics/memory-safety/campaign/safe-c33/CAMPAIGN-STATUS.json",
+     "sha256": "8affeac4d2280289cda17b1716e39bc63535cd893d71642b8cda21735e314e38"
+    }
+   },
+   "subject": "the 1000-family corpus the campaign status reports"
+  },
+  {
+   "boundDeclared": false,
+   "declared": "COMPLETE",
+   "declaredBasis": "the claim set and the ETP-0 inventory state the same identified claims",
+   "distinctMembers": 35,
+   "examined": 35,
+   "expected": 35,
+   "id": "etp-claims",
+   "kind": "record-set",
+   "locator": "/claims",
+   "membersBasis": "35 distinct claim ids, equal to the ETP-0 inventory's",
+   "membersIdentified": true,
+   "method": "the claim ids are compared with the ETP-0 claim inventory's ids",
+   "omitted": 0,
+   "omittedMembersRecorded": true,
+   "presenceBasis": "the cited record is present in the tracked tree",
+   "present": true,
+   "record": "evidence/etp/claims.json",
+   "selectionDeclared": false,
+   "sources": {
+    "examined": {
+     "locator": "claims (length)",
+     "record": "evidence/etp/claims.json",
+     "sha256": "2968ffd6976f19bd701c58636b51cceed192e42c928dd2116217449a7b85a1bb"
+    },
+    "expected": {
+     "locator": "claims (length)",
+     "record": "evidence/etp0/CLAIMS.json",
+     "sha256": "d4b68f6fbf19333c557c3056e42261ac60bbafc70562b21e5bc08872163d92c6"
+    },
+    "omitted": {
+     "locator": "derived: expected - examined",
+     "record": "evidence/etp/claims.json",
+     "sha256": "2968ffd6976f19bd701c58636b51cceed192e42c928dd2116217449a7b85a1bb"
+    }
+   },
+   "subject": "the claim set carried by the evidence registry"
+  }
+ ],
+ "purpose": "every population this project states in a tracked record, with the expected, examined and omitted counts, whether omitted members are recorded, and the record and locator that state each number",
+ "refusals": {
+  "CA_REFUSED_ABSENT_AS_EMPTY": {
+   "condition": "an absent record or input is read as a population of zero",
+   "prevents": "that a missing observation is an observation of nothing, so a tool that did not run is read as a tool that found no defect"
+  },
+  "CA_REFUSED_ABSENT_AS_OBSERVED": {
+   "condition": "an absent population is presented as complete, sampled or otherwise observed",
+   "prevents": "that members were examined when the record that would name them is not present"
+  },
+  "CA_REFUSED_COUNT_INCONSISTENT": {
+   "condition": "examined plus omitted does not equal expected, or examined exceeds expected",
+   "prevents": "that the stated parts account for the whole, when they do not add up"
+  },
+  "CA_REFUSED_DUPLICATE_MEMBER": {
+   "condition": "a census counts the same member twice",
+   "prevents": "that a population of N distinct members was examined, when fewer were"
+  },
+  "CA_REFUSED_EMPTY_AS_ABSENT": {
+   "condition": "a population that was examined and is empty is recorded as an absent one",
+   "prevents": "that the examination did not happen, which discards a real zero result and makes an empty population indistinguishable from a missing one"
+  },
+  "CA_REFUSED_EXIT_AS_COMPLETENESS": {
+   "condition": "a process exit status is used as a population or as proof that everything was examined",
+   "prevents": "that a zero exit means nothing was skipped; a harness that exits zero after skipping, truncating or stopping early is read as a complete run"
+  },
+  "CA_REFUSED_MEMBER_UNIDENTIFIED": {
+   "condition": "a count is stated but the examined members are not identified",
+   "prevents": "that the count can be audited: a member with no identity cannot be re-read, deduplicated or checked, so the count is an assertion"
+  },
+  "CA_REFUSED_OMITTED_UNRECORDED": {
+   "condition": "members are omitted and the omission is neither identified nor bounded",
+   "prevents": "that a total stands for the members, so an aggregate cannot be reviewed and the unexamined remainder cannot even be counted"
+  },
+  "CA_REFUSED_POPULATION_DRIFT": {
+   "condition": "two records state different populations for the same subject, or the live record no longer matches the declaration it produced",
+   "prevents": "that a count read at one identity applies at another; an admission outliving the bytes it read is an unverified claim"
+  },
+  "CA_REFUSED_SAMPLE_AS_CENSUS": {
+   "condition": "a declared sample is presented as a census",
+   "prevents": "that the unexamined remainder shares the sample's property; a sample licenses a statement about the sample only"
+  },
+  "CA_REFUSED_SAMPLE_WITHOUT_POPULATION": {
+   "condition": "a sample reports its examined count before any record states its expected population",
+   "prevents": "that the examined count is a fraction of something known; a numerator without a denominator is not a sample"
+  },
+  "CA_REFUSED_STATE_CONTRADICTED": {
+   "condition": "the declared state is contradicted by the recorded facts and no more specific code applies",
+   "prevents": "that a declaration is its own evidence"
+  },
+  "CA_REFUSED_STATE_UNDECLARED": {
+   "condition": "a population declaration names no admission state",
+   "prevents": "that the state can be inferred from the count, when the count is exactly what is in question"
+  },
+  "CA_REFUSED_TRUNCATION_AS_COMPLETE": {
+   "condition": "an enumeration stopped at a bound is presented as a census",
+   "prevents": "that every member was examined, when the record's own bound says how many were not"
+  },
+  "CA_REFUSED_UNKNOWN_AS_COMPLETE": {
+   "condition": "a population whose extent is unknown is presented as complete",
+   "prevents": "that an unbounded observation is a bounded one, so a result cannot be falsified by a member it never looked for"
+  },
+  "CA_REFUSED_UNRECORDED_POPULATION": {
+   "condition": "no record states the expected population, so a completeness claim has no denominator",
+   "prevents": "that a count is a census because no other number was offered; a total without a population cannot say what is missing"
+  }
+ },
+ "schema": "openssl-rs/a5/populations/1",
+ "stateMeanings": {
+  "ABSENT": {
+   "doesNotLicense": "an empty population: absence is a missing observation, not an observation of zero",
+   "licenses": "the record or the named input is not present, so nothing was examined and no member count follows"
+  },
+  "AGGREGATE_ONLY": {
+   "doesNotLicense": "a census or a sample: a number with no member row is not an examined population",
+   "licenses": "a total is stated without the identity of the members, so the count can be quoted and nothing can be reviewed or re-run from it"
+  },
+  "COMPLETE": {
+   "doesNotLicense": "nothing about the tree the population was drawn from; a complete record-set is not a complete tree, and completeness is not correctness",
+   "licenses": "every member of the declared population is present and identified, the expected count is stated by a record, examined equals it, and nothing is omitted"
+  },
+  "DEFERRED": {
+   "doesNotLicense": "any result: a named not-run analysis is a declaration of a gap, never evidence of the property it would have measured",
+   "licenses": "nothing was examined and every omitted member is named, so the gap is known exactly and is not an absence"
+  },
+  "EMPTY": {
+   "doesNotLicense": "an absent population: zero examined is a result only when a record says the expected population is zero",
+   "licenses": "the record is present and states that the population has zero members"
+  },
+  "SAMPLED": {
+   "doesNotLicense": "a census: the unexamined members are a remainder whose properties are unknown unless a bound names them",
+   "licenses": "a declared selection rule drew the examined members from a stated expected population, and the examined members are identified"
+  },
+  "TRUNCATED_BOUNDED": {
+   "doesNotLicense": "a census, and anything about the omitted members: the bound states how many were not examined, not what they would have shown",
+   "licenses": "an enumeration stopped at a stated bound or cap; the omitted remainder is counted and the selection rule is recorded"
+  },
+  "UNKNOWN": {
+   "doesNotLicense": "any count as complete, and any state stronger than itself",
+   "licenses": "the expected population is not stated, or the declaration is too weak to place it, so no completeness claim can be made"
+  }
+ },
+ "states": [
+  "COMPLETE",
+  "SAMPLED",
+  "TRUNCATED_BOUNDED",
+  "ABSENT",
+  "EMPTY",
+  "UNKNOWN",
+  "AGGREGATE_ONLY",
+  "DEFERRED"
+ ]
+}

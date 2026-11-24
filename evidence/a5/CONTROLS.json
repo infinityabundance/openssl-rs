@@ -1,0 +1,147 @@
+{
+ "controls": [
+  {
+   "base": "curl-edge-sample",
+   "expectedCode": "CA_REFUSED_SAMPLE_AS_CENSUS",
+   "id": "sample-as-census",
+   "mutation": "the declared sample's bound flag is cleared so the facts support SAMPLED, and the declaration is relabelled COMPLETE",
+   "observedCode": "CA_REFUSED_SAMPLE_AS_CENSUS"
+  },
+  {
+   "base": "curl-residual-sites",
+   "expectedCode": "CA_REFUSED_TRUNCATION_AS_COMPLETE",
+   "id": "truncation-as-complete",
+   "mutation": "a declared TRUNCATED_BOUNDED population is relabelled COMPLETE",
+   "observedCode": "CA_REFUSED_TRUNCATION_AS_COMPLETE"
+  },
+  {
+   "base": "curl-edge-records",
+   "expectedCode": "CA_REFUSED_ABSENT_AS_EMPTY",
+   "id": "absent-as-empty",
+   "mutation": "an absent population is relabelled EMPTY",
+   "observedCode": "CA_REFUSED_ABSENT_AS_EMPTY"
+  },
+  {
+   "base": "t4-ignored-tests",
+   "expectedCode": "CA_REFUSED_EMPTY_AS_ABSENT",
+   "id": "empty-as-absent",
+   "mutation": "a present population whose expected count is zero is relabelled ABSENT",
+   "observedCode": "CA_REFUSED_EMPTY_AS_ABSENT"
+  },
+  {
+   "base": "curl-edge-records",
+   "expectedCode": "CA_REFUSED_EXIT_AS_COMPLETENESS",
+   "id": "exit-as-completeness",
+   "mutation": "an exit status is supplied where a population is required",
+   "observedCode": "CA_REFUSED_EXIT_AS_COMPLETENESS"
+  },
+  {
+   "base": "t4-suppressions",
+   "expectedCode": "CA_REFUSED_OMITTED_UNRECORDED",
+   "id": "omitted-unrecorded",
+   "mutation": "a population with an unrecorded omitted remainder is relabelled COMPLETE; the real declaration already fires this code",
+   "observedCode": "CA_REFUSED_OMITTED_UNRECORDED"
+  },
+  {
+   "base": "o11-interop-scripts",
+   "expectedCode": "CA_REFUSED_UNKNOWN_AS_COMPLETE",
+   "id": "unknown-as-complete",
+   "mutation": "a population with no expected count is relabelled COMPLETE after a source is recorded for the unknown",
+   "observedCode": "CA_REFUSED_UNKNOWN_AS_COMPLETE"
+  },
+  {
+   "base": "curl-residual-sites",
+   "expectedCode": "CA_REFUSED_POPULATION_DRIFT",
+   "id": "population-drift",
+   "mutation": "a declaration's population is changed while the native record still states the original, and the declaration is re-read",
+   "observedCode": "CA_REFUSED_POPULATION_DRIFT"
+  },
+  {
+   "base": "t4-ignored-tests",
+   "expectedCode": "CA_REFUSED_COUNT_INCONSISTENT",
+   "id": "count-inconsistent-sum",
+   "mutation": "one omitted member is added without changing expected or examined",
+   "observedCode": "CA_REFUSED_COUNT_INCONSISTENT"
+  },
+  {
+   "base": "t4-ignored-tests",
+   "expectedCode": "CA_REFUSED_COUNT_INCONSISTENT",
+   "id": "count-inconsistent-exceeds",
+   "mutation": "the examined count is raised above the expected population",
+   "observedCode": "CA_REFUSED_COUNT_INCONSISTENT"
+  },
+  {
+   "base": "t4-unsafe-sites",
+   "expectedCode": "CA_REFUSED_DUPLICATE_MEMBER",
+   "id": "duplicate-member",
+   "mutation": "a census reports one fewer distinct member than examined members",
+   "observedCode": "CA_REFUSED_DUPLICATE_MEMBER"
+  },
+  {
+   "base": "t11-satisfied-runs",
+   "expectedCode": "CA_REFUSED_MEMBER_UNIDENTIFIED",
+   "id": "member-unidentified",
+   "mutation": "six SATISFIED declarations with identity: null are relabelled COMPLETE; the real declaration already fires this code",
+   "observedCode": "CA_REFUSED_MEMBER_UNIDENTIFIED"
+  },
+  {
+   "base": "curl-edge-sample",
+   "expectedCode": "CA_REFUSED_SAMPLE_WITHOUT_POPULATION",
+   "id": "sample-without-population",
+   "mutation": "a sample keeps its examined count after its expected population is removed",
+   "observedCode": "CA_REFUSED_SAMPLE_WITHOUT_POPULATION"
+  },
+  {
+   "base": "t4-unsafe-sites",
+   "expectedCode": "CA_REFUSED_STATE_UNDECLARED",
+   "id": "state-undeclared",
+   "mutation": "a declaration names no admission state",
+   "observedCode": "CA_REFUSED_STATE_UNDECLARED"
+  },
+  {
+   "base": "ssh-edge-records",
+   "expectedCode": "CA_REFUSED_ABSENT_AS_OBSERVED",
+   "id": "absent-as-observed",
+   "mutation": "an absent population is relabelled COMPLETE; the real declaration already fires this code",
+   "observedCode": "CA_REFUSED_ABSENT_AS_OBSERVED"
+  },
+  {
+   "base": "t4-unsafe-sites",
+   "expectedCode": "CA_REFUSED_STATE_CONTRADICTED",
+   "id": "absent-declared-over-present",
+   "mutation": "a present, fully enumerated census is relabelled ABSENT",
+   "observedCode": "CA_REFUSED_STATE_CONTRADICTED"
+  },
+  {
+   "base": "etp6-package-inputs",
+   "expectedCode": "CA_REFUSED_UNRECORDED_POPULATION",
+   "id": "unrecorded-population",
+   "mutation": "a count with no expected population is relabelled COMPLETE; the real declaration already fires this code",
+   "observedCode": "CA_REFUSED_UNRECORDED_POPULATION"
+  }
+ ],
+ "model": "a5/v1",
+ "purpose": "one in-memory control per refusal code, each built from a real population declaration; a control proves the refusal fires and is not a source change",
+ "schema": "openssl-rs/a5/controls/1",
+ "totals": {
+  "byCode": {
+   "CA_REFUSED_ABSENT_AS_EMPTY": 1,
+   "CA_REFUSED_ABSENT_AS_OBSERVED": 1,
+   "CA_REFUSED_COUNT_INCONSISTENT": 2,
+   "CA_REFUSED_DUPLICATE_MEMBER": 1,
+   "CA_REFUSED_EMPTY_AS_ABSENT": 1,
+   "CA_REFUSED_EXIT_AS_COMPLETENESS": 1,
+   "CA_REFUSED_MEMBER_UNIDENTIFIED": 1,
+   "CA_REFUSED_OMITTED_UNRECORDED": 1,
+   "CA_REFUSED_POPULATION_DRIFT": 1,
+   "CA_REFUSED_SAMPLE_AS_CENSUS": 1,
+   "CA_REFUSED_SAMPLE_WITHOUT_POPULATION": 1,
+   "CA_REFUSED_STATE_CONTRADICTED": 1,
+   "CA_REFUSED_STATE_UNDECLARED": 1,
+   "CA_REFUSED_TRUNCATION_AS_COMPLETE": 1,
+   "CA_REFUSED_UNKNOWN_AS_COMPLETE": 1,
+   "CA_REFUSED_UNRECORDED_POPULATION": 1
+  },
+  "controls": 17
+ }
+}

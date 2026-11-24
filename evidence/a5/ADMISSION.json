@@ -1,0 +1,188 @@
+{
+ "model": "a5/v1",
+ "populations": [
+  {
+   "declared": "COMPLETE",
+   "detail": "declared COMPLETE, facts support COMPLETE",
+   "examined": 4245,
+   "id": "a1-sarif-results",
+   "membersRecorded": true,
+   "omitted": 0,
+   "refusal": null,
+   "state": "COMPLETE"
+  },
+  {
+   "declared": "COMPLETE",
+   "detail": "declared COMPLETE, facts support COMPLETE",
+   "examined": 62297,
+   "id": "t4-unsafe-sites",
+   "membersRecorded": true,
+   "omitted": 0,
+   "refusal": null,
+   "state": "COMPLETE"
+  },
+  {
+   "declared": "COMPLETE",
+   "detail": "complete is declared but the facts support AGGREGATE_ONLY; members are omitted and the omission is neither identified nor bounded",
+   "examined": 0,
+   "id": "t4-suppressions",
+   "membersRecorded": false,
+   "omitted": 1999,
+   "refusal": "CA_REFUSED_OMITTED_UNRECORDED",
+   "state": "AGGREGATE_ONLY"
+  },
+  {
+   "declared": "COMPLETE",
+   "detail": "declared COMPLETE, facts support COMPLETE",
+   "examined": 54,
+   "id": "t4-ignored-tests",
+   "membersRecorded": true,
+   "omitted": 0,
+   "refusal": null,
+   "state": "COMPLETE"
+  },
+  {
+   "declared": "COMPLETE",
+   "detail": "declared COMPLETE, facts support COMPLETE",
+   "examined": 1121,
+   "id": "t10-closure-exclusions",
+   "membersRecorded": true,
+   "omitted": 0,
+   "refusal": null,
+   "state": "COMPLETE"
+  },
+  {
+   "declared": "TRUNCATED_BOUNDED",
+   "detail": "declared TRUNCATED_BOUNDED, facts support TRUNCATED_BOUNDED",
+   "examined": 200,
+   "id": "curl-residual-sites",
+   "membersRecorded": false,
+   "omitted": 249,
+   "refusal": null,
+   "state": "TRUNCATED_BOUNDED"
+  },
+  {
+   "declared": "COMPLETE",
+   "detail": "complete is declared but the facts support ABSENT; an absent population is presented as complete, sampled or otherwise observed",
+   "examined": 0,
+   "id": "curl-edge-records",
+   "membersRecorded": false,
+   "omitted": 103992,
+   "refusal": "CA_REFUSED_ABSENT_AS_OBSERVED",
+   "state": "ABSENT"
+  },
+  {
+   "declared": "TRUNCATED_BOUNDED",
+   "detail": "declared TRUNCATED_BOUNDED, facts support TRUNCATED_BOUNDED",
+   "examined": 500,
+   "id": "curl-edge-sample",
+   "membersRecorded": false,
+   "omitted": 1609,
+   "refusal": null,
+   "state": "TRUNCATED_BOUNDED"
+  },
+  {
+   "declared": "COMPLETE",
+   "detail": "complete is declared but the facts support ABSENT; an absent population is presented as complete, sampled or otherwise observed",
+   "examined": 0,
+   "id": "ssh-edge-records",
+   "membersRecorded": false,
+   "omitted": 51997,
+   "refusal": "CA_REFUSED_ABSENT_AS_OBSERVED",
+   "state": "ABSENT"
+  },
+  {
+   "declared": "TRUNCATED_BOUNDED",
+   "detail": "declared TRUNCATED_BOUNDED, facts support TRUNCATED_BOUNDED",
+   "examined": 500,
+   "id": "ssh-edge-sample",
+   "membersRecorded": false,
+   "omitted": 456,
+   "refusal": null,
+   "state": "TRUNCATED_BOUNDED"
+  },
+  {
+   "declared": "DEFERRED",
+   "detail": "declared DEFERRED, facts support DEFERRED",
+   "examined": 0,
+   "id": "timing-not-run",
+   "membersRecorded": true,
+   "omitted": 7,
+   "refusal": null,
+   "state": "DEFERRED"
+  },
+  {
+   "declared": "UNKNOWN",
+   "detail": "declared UNKNOWN, facts support UNKNOWN",
+   "examined": 73,
+   "id": "o11-interop-scripts",
+   "membersRecorded": false,
+   "omitted": "unknown",
+   "refusal": null,
+   "state": "UNKNOWN"
+  },
+  {
+   "declared": "COMPLETE",
+   "detail": "complete is declared but the facts support AGGREGATE_ONLY; a count is stated but the examined members are not identified",
+   "examined": 6,
+   "id": "t11-satisfied-runs",
+   "membersRecorded": true,
+   "omitted": 0,
+   "refusal": "CA_REFUSED_MEMBER_UNIDENTIFIED",
+   "state": "AGGREGATE_ONLY"
+  },
+  {
+   "declared": "COMPLETE",
+   "detail": "complete is declared but the facts support UNKNOWN; no record states the expected population, so a completeness claim has no denominator",
+   "examined": 1633,
+   "id": "etp6-package-inputs",
+   "membersRecorded": false,
+   "omitted": "unknown",
+   "refusal": "CA_REFUSED_UNRECORDED_POPULATION",
+   "state": "UNKNOWN"
+  },
+  {
+   "declared": "TRUNCATED_BOUNDED",
+   "detail": "declared TRUNCATED_BOUNDED, facts support TRUNCATED_BOUNDED",
+   "examined": 245,
+   "id": "p1000-campaign-families",
+   "membersRecorded": false,
+   "omitted": 755,
+   "refusal": null,
+   "state": "TRUNCATED_BOUNDED"
+  },
+  {
+   "declared": "COMPLETE",
+   "detail": "declared COMPLETE, facts support COMPLETE",
+   "examined": 35,
+   "id": "etp-claims",
+   "membersRecorded": true,
+   "omitted": 0,
+   "refusal": null,
+   "state": "COMPLETE"
+  }
+ ],
+ "purpose": "the state each declared population is admitted at, and the refusal code where the declaration claims more than its record supports",
+ "schema": "openssl-rs/a5/admission/1",
+ "totals": {
+  "admitted": 11,
+  "byRefusal": {
+   "CA_REFUSED_ABSENT_AS_OBSERVED": 2,
+   "CA_REFUSED_MEMBER_UNIDENTIFIED": 1,
+   "CA_REFUSED_OMITTED_UNRECORDED": 1,
+   "CA_REFUSED_UNRECORDED_POPULATION": 1
+  },
+  "byState": {
+   "ABSENT": 2,
+   "AGGREGATE_ONLY": 2,
+   "COMPLETE": 5,
+   "DEFERRED": 1,
+   "EMPTY": 0,
+   "SAMPLED": 0,
+   "TRUNCATED_BOUNDED": 4,
+   "UNKNOWN": 2
+  },
+  "populations": 16,
+  "refused": 5
+ }
+}
