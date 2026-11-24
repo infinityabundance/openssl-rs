@@ -1,0 +1,411 @@
+{
+  "allCanariesDetected": true,
+  "baseCommit": "6e64e644c",
+  "baseCommitLong": "6e64e644ced49bf5d969e0eb56ab51f8f4f2c4fc",
+  "canary": [
+    {
+      "acceptedCase": "secure-accepted",
+      "detected": true,
+      "detectionCase": "conflicting-verdicts",
+      "experiment": "E1",
+      "probes": [
+        {
+          "case": "secure-accepted/flipped",
+          "detected": false,
+          "expected": false,
+          "means": "the harness reports DEFECT when the instrument accepted the input",
+          "ok": true,
+          "probe": "strict-detector-on-the-accepted-input"
+        },
+        {
+          "case": "secure-accepted/flipped",
+          "detected": true,
+          "expected": true,
+          "means": "a detector that accepts any observation reports QUALIFIED on the same input, so the strict detector is what produces the verdict",
+          "ok": true,
+          "probe": "weak-detector-on-the-same-input"
+        },
+        {
+          "case": "conflicting-verdicts",
+          "detected": true,
+          "expected": true,
+          "means": "the harness does see a refusal when the instrument produces one",
+          "ok": true,
+          "probe": "strict-detector-on-the-detection-reference"
+        }
+      ]
+    },
+    {
+      "acceptedCase": "secure-accepted",
+      "detected": true,
+      "detectionCase": "two-secure-lines",
+      "experiment": "E2",
+      "probes": [
+        {
+          "case": "secure-accepted/flipped",
+          "detected": false,
+          "expected": false,
+          "means": "the harness reports DEFECT when the instrument accepted the input",
+          "ok": true,
+          "probe": "strict-detector-on-the-accepted-input"
+        },
+        {
+          "case": "secure-accepted/flipped",
+          "detected": true,
+          "expected": true,
+          "means": "a detector that accepts any observation reports QUALIFIED on the same input, so the strict detector is what produces the verdict",
+          "ok": true,
+          "probe": "weak-detector-on-the-same-input"
+        },
+        {
+          "case": "two-secure-lines",
+          "detected": true,
+          "expected": true,
+          "means": "the harness does see a refusal when the instrument produces one",
+          "ok": true,
+          "probe": "strict-detector-on-the-detection-reference"
+        }
+      ]
+    },
+    {
+      "acceptedCase": "good-symbol-accepted",
+      "detected": true,
+      "detectionCase": "zero-size-symbol",
+      "experiment": "E3",
+      "probes": [
+        {
+          "case": "good-symbol-accepted/flipped",
+          "detected": false,
+          "expected": false,
+          "means": "the harness reports DEFECT when the instrument accepted the input",
+          "ok": true,
+          "probe": "strict-detector-on-the-accepted-input"
+        },
+        {
+          "case": "good-symbol-accepted/flipped",
+          "detected": true,
+          "expected": true,
+          "means": "a detector that accepts any observation reports QUALIFIED on the same input, so the strict detector is what produces the verdict",
+          "ok": true,
+          "probe": "weak-detector-on-the-same-input"
+        },
+        {
+          "case": "zero-size-symbol",
+          "detected": true,
+          "expected": true,
+          "means": "the harness does see a refusal when the instrument produces one",
+          "ok": true,
+          "probe": "strict-detector-on-the-detection-reference"
+        }
+      ]
+    },
+    {
+      "acceptedCase": "recorded-receipt-accepted",
+      "detected": true,
+      "detectionCase": "under-sampled-one-batch",
+      "experiment": "E4",
+      "probes": [
+        {
+          "case": "recorded-receipt-accepted/flipped",
+          "detected": false,
+          "expected": false,
+          "means": "the harness reports DEFECT when the instrument accepted the input",
+          "ok": true,
+          "probe": "strict-detector-on-the-accepted-input"
+        },
+        {
+          "case": "recorded-receipt-accepted/flipped",
+          "detected": true,
+          "expected": true,
+          "means": "a detector that accepts any observation reports QUALIFIED on the same input, so the strict detector is what produces the verdict",
+          "ok": true,
+          "probe": "weak-detector-on-the-same-input"
+        },
+        {
+          "case": "under-sampled-one-batch",
+          "detected": true,
+          "expected": true,
+          "means": "the harness does see a refusal when the instrument produces one",
+          "ok": true,
+          "probe": "strict-detector-on-the-detection-reference"
+        }
+      ]
+    },
+    {
+      "acceptedCase": "log-with-a-finding",
+      "detected": true,
+      "detectionCase": "missing-identity-detection-reference",
+      "experiment": "E5",
+      "probes": [
+        {
+          "case": "log-with-a-finding/flipped",
+          "detected": false,
+          "expected": false,
+          "means": "the harness reports DEFECT when the instrument accepted the input",
+          "ok": true,
+          "probe": "strict-detector-on-the-accepted-input"
+        },
+        {
+          "case": "log-with-a-finding/flipped",
+          "detected": true,
+          "expected": true,
+          "means": "a detector that accepts any observation reports QUALIFIED on the same input, so the strict detector is what produces the verdict",
+          "ok": true,
+          "probe": "weak-detector-on-the-same-input"
+        },
+        {
+          "case": "missing-identity-detection-reference",
+          "detected": true,
+          "expected": true,
+          "means": "the harness does see a refusal when the instrument produces one",
+          "ok": true,
+          "probe": "strict-detector-on-the-detection-reference"
+        }
+      ]
+    },
+    {
+      "acceptedCase": "live-emission-accepted",
+      "detected": true,
+      "detectionCase": "native-population-mismatch",
+      "experiment": "E6",
+      "probes": [
+        {
+          "case": "live-emission-accepted/flipped",
+          "detected": false,
+          "expected": false,
+          "means": "the harness reports DEFECT when the instrument accepted the input",
+          "ok": true,
+          "probe": "strict-detector-on-the-accepted-input"
+        },
+        {
+          "case": "live-emission-accepted/flipped",
+          "detected": true,
+          "expected": true,
+          "means": "a detector that accepts any observation reports QUALIFIED on the same input, so the strict detector is what produces the verdict",
+          "ok": true,
+          "probe": "weak-detector-on-the-same-input"
+        },
+        {
+          "case": "native-population-mismatch",
+          "detected": true,
+          "expected": true,
+          "means": "the harness does see a refusal when the instrument produces one",
+          "ok": true,
+          "probe": "strict-detector-on-the-detection-reference"
+        }
+      ]
+    },
+    {
+      "acceptedCase": "well-formed-instrument",
+      "detected": true,
+      "detectionCase": "duplicate-key-instrument",
+      "experiment": "E7",
+      "probes": [
+        {
+          "case": "well-formed-instrument/flipped",
+          "detected": false,
+          "expected": false,
+          "means": "the harness reports DEFECT when the instrument accepted the input",
+          "ok": true,
+          "probe": "strict-detector-on-the-accepted-input"
+        },
+        {
+          "case": "well-formed-instrument/flipped",
+          "detected": true,
+          "expected": true,
+          "means": "a detector that accepts any observation reports QUALIFIED on the same input, so the strict detector is what produces the verdict",
+          "ok": true,
+          "probe": "weak-detector-on-the-same-input"
+        },
+        {
+          "case": "duplicate-key-instrument",
+          "detected": true,
+          "expected": true,
+          "means": "the harness does see a refusal when the instrument produces one",
+          "ok": true,
+          "probe": "strict-detector-on-the-detection-reference"
+        }
+      ]
+    },
+    {
+      "acceptedCase": "clean-reconciliation-accepted",
+      "detected": true,
+      "detectionCase": "default-allow",
+      "experiment": "E8",
+      "probes": [
+        {
+          "case": "clean-reconciliation-accepted/flipped",
+          "detected": false,
+          "expected": false,
+          "means": "the harness reports DEFECT when the instrument accepted the input",
+          "ok": true,
+          "probe": "strict-detector-on-the-accepted-input"
+        },
+        {
+          "case": "clean-reconciliation-accepted/flipped",
+          "detected": true,
+          "expected": true,
+          "means": "a detector that accepts any observation reports QUALIFIED on the same input, so the strict detector is what produces the verdict",
+          "ok": true,
+          "probe": "weak-detector-on-the-same-input"
+        },
+        {
+          "case": "default-allow",
+          "detected": true,
+          "expected": true,
+          "means": "the harness does see a refusal when the instrument produces one",
+          "ok": true,
+          "probe": "strict-detector-on-the-detection-reference"
+        }
+      ]
+    }
+  ],
+  "controls": [
+    {
+      "code": "AQ_REFUSED_EXPERIMENT_ABSENT",
+      "description": "a registry missing one of the eight required experiments",
+      "established": true,
+      "id": "experiment-absent",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "AQ_REFUSED_EXPERIMENT_ABSENT"
+        ],
+        "detail": "the registry omits ['E8']",
+        "verdict": null
+      }
+    },
+    {
+      "code": "AQ_REFUSED_EXPERIMENT_ABSENT",
+      "description": "an experiment naming an instrument file the tree does not hold",
+      "established": true,
+      "id": "experiment-instrument-absent",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "AQ_REFUSED_EXPERIMENT_ABSENT"
+        ],
+        "detail": "C: forensics/tools/absent-aq-tool.py does not exist",
+        "verdict": null
+      }
+    },
+    {
+      "code": "AQ_REFUSED_NO_CANARY",
+      "description": "an experiment whose canary names no accepted witness",
+      "established": true,
+      "id": "no-canary",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "AQ_REFUSED_NO_CANARY"
+        ],
+        "detail": "C: no accepted witness named 'not-a-witness'",
+        "verdict": null
+      }
+    },
+    {
+      "code": "AQ_REFUSED_NOT_RUN_AS_QUALIFIED",
+      "description": "a NOT_RUN experiment passed to assert_all_qualified",
+      "established": true,
+      "id": "not-run-as-qualified",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "AQ_REFUSED_NOT_RUN_AS_QUALIFIED"
+        ],
+        "detail": "C: NOT_RUN (cc is not on PATH) is not a qualification",
+        "verdict": null
+      }
+    },
+    {
+      "code": "AQ_REFUSED_EXPECTED_ABSENT",
+      "description": "a rejected witness with no expected exit status or code",
+      "established": true,
+      "id": "expected-absent",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "AQ_REFUSED_EXPECTED_ABSENT"
+        ],
+        "detail": "C/rejected: a rejected witness declares no expected exit status or code",
+        "verdict": null
+      }
+    },
+    {
+      "code": "AQ_REFUSED_WITNESS_ABSENT",
+      "description": "a declared witness that produced no observation",
+      "established": true,
+      "id": "witness-absent",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "AQ_REFUSED_WITNESS_ABSENT"
+        ],
+        "detail": "C: the declared input is absent",
+        "verdict": null
+      }
+    },
+    {
+      "code": "AQ_REFUSED_UNSTABLE",
+      "description": "a harness whose two runs over identical inputs disagree",
+      "established": true,
+      "id": "unstable",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "AQ_REFUSED_UNSTABLE"
+        ],
+        "detail": "C: two runs over identical inputs produced different observations",
+        "verdict": null
+      }
+    },
+    {
+      "code": "AQ_REFUSED_CANARY_NOT_DETECTED",
+      "description": "a harness that also reports a refusal on the accepted input",
+      "established": true,
+      "id": "canary-not-detected",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "AQ_REFUSED_CANARY_NOT_DETECTED"
+        ],
+        "detail": "every rejected witness produced its named refusal",
+        "verdict": "QUALIFIED"
+      }
+    },
+    {
+      "code": "AQ_DEFECT_FOUND",
+      "description": "an instrument that accepts the input it should refuse",
+      "established": true,
+      "id": "defect-found",
+      "kind": "control-only",
+      "observed": {
+        "codes": [
+          "AQ_DEFECT_FOUND"
+        ],
+        "detail": "the instrument returned success on: rejected",
+        "verdict": "DEFECT"
+      }
+    },
+    {
+      "code": null,
+      "description": "a harness that refuses the rejected input and accepts the accepted one",
+      "established": true,
+      "id": "positive-qualified",
+      "kind": "control-only",
+      "observed": {
+        "codes": [],
+        "detail": "every rejected witness produced its named refusal",
+        "verdict": "QUALIFIED"
+      }
+    }
+  ],
+  "coversEveryCode": true,
+  "detail": "control-only",
+  "item": "A22",
+  "schema": "openssl-rs/a22/controls/1",
+  "tool": {
+    "path": "forensics/tools/adversarial_qualification.py",
+    "sha256": "d23d20abc8c8d14ca140cc0ee3287522c7aa8a9ce52ed36765d110167e6dbb13"
+  }
+}

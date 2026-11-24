@@ -1,0 +1,627 @@
+{
+  "baseCommit": "6e64e644c",
+  "baseCommitLong": "6e64e644ced49bf5d969e0eb56ab51f8f4f2c4fc",
+  "canaryRule": "every experiment runs the same harness twice: once with the strict detector, once with a deliberately weak detector that accepts any observation. A harness that cannot report DEFECT on an input the instrument accepted is not measuring anything.",
+  "experiments": [
+    {
+      "canary": {
+        "accepted": "secure-accepted",
+        "detection": "conflicting-verdicts",
+        "rule": "the strict detector must report DEFECT on the accepted input and QUALIFIED on the detection reference; the weak detector (accept_any) must report QUALIFIED on the accepted input"
+      },
+      "expected": "the wrapper refuses a mixed transcript, a secure verdict with a nonzero tool status, and a verdict line with trailing text",
+      "hypothesis": "A transcript carrying both a secure and an insecure verdict cannot be resolved by the order of its lines, and a secure verdict that carries any text after it is ambiguous.",
+      "id": "E1",
+      "instrumentSha256": {
+        "courts/phase18/timing/binsec_checkct.sh": "7c437201df1dbe2d3cc25345f9e0fadfac53a5a282ef7054fb0f0f49fb5b4fcc"
+      },
+      "instruments": [
+        "courts/phase18/timing/binsec_checkct.sh"
+      ],
+      "notes": "the prior fail-open was `grep -Fq secure`, which accepted the mixed transcript; the anchored population parser is what is measured here",
+      "title": "BINSEC wrapper: conflicting verdicts",
+      "witnesses": [
+        {
+          "case": "conflicting-verdicts",
+          "expectation": {
+            "code": "mixed-verdicts",
+            "exit": [
+              6
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "secure-with-nonzero-status",
+          "expectation": {
+            "code": "secure-verdict-with-tool-status-1",
+            "exit": [
+              6
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "verdict-with-trailing-text",
+          "expectation": {
+            "code": "verdict-trailing-text",
+            "exit": [
+              3
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "secure-accepted",
+          "expectation": {
+            "code": null,
+            "exit": [
+              0
+            ]
+          },
+          "kind": "accepted"
+        }
+      ]
+    },
+    {
+      "canary": {
+        "accepted": "secure-accepted",
+        "detection": "two-secure-lines",
+        "rule": "the strict detector must report DEFECT on the accepted input and QUALIFIED on the detection reference; the weak detector (accept_any) must report QUALIFIED on the accepted input"
+      },
+      "expected": "the wrapper refuses silence, two secure lines (one of which the `secure` token is a prefix of) and a verdict line with trailing whitespace",
+      "hypothesis": "Zero verdict lines is not a verdict, and two secure lines are not one secure verdict.",
+      "id": "E2",
+      "instrumentSha256": {
+        "courts/phase18/timing/binsec_checkct.sh": "7c437201df1dbe2d3cc25345f9e0fadfac53a5a282ef7054fb0f0f49fb5b4fcc"
+      },
+      "instruments": [
+        "courts/phase18/timing/binsec_checkct.sh"
+      ],
+      "notes": "the ambiguity witness is `secure (0.030)`, whose verdict token is a prefix-compatible second secure line",
+      "title": "BINSEC wrapper: missing or duplicated verdict",
+      "witnesses": [
+        {
+          "case": "zero-verdict-lines",
+          "expectation": {
+            "code": "no-output",
+            "exit": [
+              3
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "two-secure-lines",
+          "expectation": {
+            "code": "duplicate-secure",
+            "exit": [
+              6
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "verdict-trailing-whitespace",
+          "expectation": {
+            "code": "verdict-trailing-text",
+            "exit": [
+              3
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "secure-accepted",
+          "expectation": {
+            "code": null,
+            "exit": [
+              0
+            ]
+          },
+          "kind": "accepted"
+        }
+      ]
+    },
+    {
+      "canary": {
+        "accepted": "good-symbol-accepted",
+        "detection": "zero-size-symbol",
+        "rule": "the strict detector must report DEFECT on the accepted input and QUALIFIED on the detection reference; the weak detector (accept_any) must report QUALIFIED on the accepted input"
+      },
+      "expected": "the audit refuses each with a named reason and exits nonzero",
+      "hypothesis": "An extent the symbol table does not declare, an entry the table cannot parse, an absent target and a disassembly shorter than the extent each make the audit's population invalid.",
+      "id": "E3",
+      "instrumentSha256": {
+        "courts/phase18/timing/binary_branch_audit.py": "4c4c9c8c6cfdc81be051ebd2b151b98c6f72d6a7a9b2547a53c5cb7de5230439"
+      },
+      "instruments": [
+        "courts/phase18/timing/binary_branch_audit.py"
+      ],
+      "notes": "coverage is established from decoded instruction byte lengths, not from address gaps or a maximum instruction length",
+      "title": "Binary branch audit: zero-size and malformed symbols",
+      "witnesses": [
+        {
+          "case": "zero-size-symbol",
+          "expectation": {
+            "code": "reason=zero-size",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "malformed-length-prefix",
+          "expectation": {
+            "code": "reason=missing",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "malformed-symbol-table-entry",
+          "expectation": {
+            "code": "reason=missing",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "target-absent",
+          "expectation": {
+            "code": "reason=missing",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "disassembly-shorter-than-extent",
+          "expectation": {
+            "code": "disassembly-truncated",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "good-symbol-accepted",
+          "expectation": {
+            "code": null,
+            "exit": [
+              0
+            ]
+          },
+          "kind": "accepted"
+        }
+      ]
+    },
+    {
+      "canary": {
+        "accepted": "recorded-receipt-accepted",
+        "detection": "under-sampled-one-batch",
+        "rule": "the strict detector must report DEFECT on the accepted input and QUALIFIED on the detection reference; the weak detector (accept_any) must report QUALIFIED on the accepted input"
+      },
+      "expected": "the receipt validator refuses each with its named code and exits nonzero; never a pass",
+      "hypothesis": "A run that stopped before its registered batch budget, a run whose total is not a multiple of the batch size, and a positive control that leaves its registered direction each make the receipt unable to support a timing claim.",
+      "id": "E4",
+      "instrumentSha256": {
+        "evidence/etp-t7/DUDECT-ETP-T7.json": "6f8ab3956e01947bc524bdc3ebfb764ea8269a0fb82cc9736eba6776b5c8b9b7",
+        "forensics/tools/preregistration_check.py": "39933bbfb8a2de6d602a395a12b8094da6338a6b0ecacd1c9e4b7ead7f78dee9"
+      },
+      "instruments": [
+        "forensics/tools/preregistration_check.py",
+        "evidence/etp-t7/DUDECT-ETP-T7.json"
+      ],
+      "notes": "the threshold and the sample count are reported from the pinned header and the recorded receipt, not typed into this tool",
+      "title": "Timing instrument: under-sampled or failed run",
+      "witnesses": [
+        {
+          "case": "under-sampled-one-batch",
+          "expectation": {
+            "code": "PR_EARLY_STOP_WITHOUT_LEAK",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "below-per-batch",
+          "expectation": {
+            "code": "PR_TOTAL_NOT_MULTIPLE",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "positive-control-ttest-failed",
+          "expectation": {
+            "code": "PR_POSITIVE_CONTROL_DID_NOT_FIRE",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "recorded-receipt-accepted",
+          "expectation": {
+            "code": null,
+            "exit": [
+              0
+            ]
+          },
+          "kind": "accepted"
+        }
+      ]
+    },
+    {
+      "canary": {
+        "accepted": "log-with-a-finding",
+        "detection": "missing-identity-detection-reference",
+        "rule": "the strict detector must report DEFECT on the accepted input and QUALIFIED on the detection reference; the weak detector (accept_any) must report QUALIFIED on the accepted input"
+      },
+      "expected": "the ctgrind evidence path refuses an empty-but-successful log, a log with only unrelated output, and a candidate-identity mismatch",
+      "hypothesis": "A ctgrind result with zero contexts is indistinguishable from a run that produced no memcheck output at all, and a claim whose binary identity differs from the recorded one must not be admitted.",
+      "id": "E5",
+      "instrumentSha256": {
+        "courts/phase18/timing/summarize_ct.py": "eea73f4a4976b9bdfc29eef3703329a782369297b1cedd5ada228db64b68e190",
+        "forensics/tools/side_channel_erasure.py": "9476b386d268be0597bc47701aca8c058094bc05dd6ac9695898a81ddd3b8aad"
+      },
+      "instruments": [
+        "courts/phase18/timing/summarize_ct.py",
+        "forensics/tools/side_channel_erasure.py"
+      ],
+      "notes": "this is the experiment the item expects to be able to fail",
+      "title": "ctgrind: no errors because nothing ran",
+      "witnesses": [
+        {
+          "case": "empty-log",
+          "expectation": {
+            "code": "any-refusal",
+            "exit": "nonzero"
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "unrelated-log-only",
+          "expectation": {
+            "code": "any-refusal",
+            "exit": "nonzero"
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "candidate-identity-mismatch",
+          "expectation": {
+            "code": "any-refusal",
+            "exit": "nonzero"
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "log-with-a-finding",
+          "expectation": {
+            "code": null,
+            "exit": [
+              0
+            ]
+          },
+          "kind": "accepted"
+        },
+        {
+          "case": "missing-identity-detection-reference",
+          "expectation": {
+            "code": "CTGRIND_WITHOUT_HARNESS_IDENTITY_TAINT",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "detection"
+        }
+      ]
+    },
+    {
+      "canary": {
+        "accepted": "live-emission-accepted",
+        "detection": "native-population-mismatch",
+        "rule": "the strict detector must report DEFECT on the accepted input and QUALIFIED on the detection reference; the weak detector (accept_any) must report QUALIFIED on the accepted input"
+      },
+      "expected": "the adapter refuses both with SARIF_REFUSED_POPULATION_MISMATCH",
+      "hypothesis": "A native record whose declared population disagrees with its own entries, and an emission whose result count disagrees with the record, each make the projection's population statement false.",
+      "id": "E6",
+      "instrumentSha256": {
+        "forensics/tools/sarif_adapter.py": "dc9a8e9e277af59b490e663b738bb427aaf922e6de61f2a0b196b6818cc6e3d7"
+      },
+      "instruments": [
+        "forensics/tools/sarif_adapter.py"
+      ],
+      "notes": "the native-record half is the check the adapter implements; the emission half is the check the item asks for",
+      "title": "SARIF: population mismatch",
+      "witnesses": [
+        {
+          "case": "native-population-mismatch",
+          "expectation": {
+            "code": "SARIF_REFUSED_POPULATION_MISMATCH",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "emission-result-count-mismatch",
+          "expectation": {
+            "code": "any-refusal",
+            "exit": "nonzero"
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "live-record-accepted",
+          "expectation": {
+            "code": null,
+            "exit": [
+              0
+            ]
+          },
+          "kind": "accepted"
+        },
+        {
+          "case": "live-emission-accepted",
+          "expectation": {
+            "code": null,
+            "exit": [
+              0
+            ]
+          },
+          "kind": "accepted"
+        }
+      ]
+    },
+    {
+      "canary": {
+        "accepted": "well-formed-instrument",
+        "detection": "duplicate-key-instrument",
+        "rule": "the strict detector must report DEFECT on the accepted input and QUALIFIED on the detection reference; the weak detector (accept_any) must report QUALIFIED on the accepted input"
+      },
+      "expected": "both strict readers refuse all three inputs; the consumers of the register that still use the permissive reader are named",
+      "hypothesis": "A duplicate key, a byte-order mark and trailing data each have no single meaning, so a strict reader refuses them while json.loads accepts the first by keeping the last value.",
+      "id": "E7",
+      "instrumentSha256": {
+        "forensics/tools/instrument_qualify.py": "0040c19c9baa8cfab92f72fde63184d7fe95e7949fc3027c3e2ba63ec5f5504d",
+        "forensics/tools/policy_engine.py": "f4dcdf2e86317be3eb1fc40860912098ea3599fb460b5716ad38e5ec01ccbbf4"
+      },
+      "instruments": [
+        "forensics/tools/instrument_qualify.py",
+        "forensics/tools/policy_engine.py"
+      ],
+      "notes": "the duplicate-key input is the A11 pair {\"a\":1,\"a\":2}",
+      "title": "Strict parser versus a permissive consumer",
+      "witnesses": [
+        {
+          "case": "duplicate-key-instrument",
+          "expectation": {
+            "code": "IQ_JSON_DUPLICATE_KEY",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "bom-instrument",
+          "expectation": {
+            "code": "IQ_REGISTRY_UNREADABLE",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "trailing-data-instrument",
+          "expectation": {
+            "code": "IQ_REGISTRY_UNREADABLE",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "duplicate-key-policy",
+          "expectation": {
+            "code": "PE_JSON_REFUSED",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "bom-policy",
+          "expectation": {
+            "code": "PE_JSON_REFUSED",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "trailing-data-policy",
+          "expectation": {
+            "code": "PE_JSON_REFUSED",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "well-formed-instrument",
+          "expectation": {
+            "code": null,
+            "exit": [
+              0
+            ]
+          },
+          "kind": "accepted"
+        },
+        {
+          "case": "well-formed-policy",
+          "expectation": {
+            "code": null,
+            "exit": [
+              0
+            ]
+          },
+          "kind": "accepted"
+        }
+      ]
+    },
+    {
+      "canary": {
+        "accepted": "clean-reconciliation-accepted",
+        "detection": "default-allow",
+        "rule": "the strict detector must report DEFECT on the accepted input and QUALIFIED on the detection reference; the weak detector (accept_any) must report QUALIFIED on the accepted input"
+      },
+      "expected": "each is refused with its named code: PE_REFUSED_DEFAULT_ALLOW, PE_REFUSED_SCORE, OM_REFUSED_PASS_WITH_MISSING, OM_REFUSED_RECONCILIATION_MUTATED",
+      "hypothesis": "A default-allow policy, a scored policy, a PASS over a missing member and signed bytes changed after signing each produce a conclusion the record does not support.",
+      "id": "E8",
+      "instrumentSha256": {
+        "forensics/tools/omission.py": "05ce4754d088f14ae13e0bbfc04973fd6fe564807b63d73c247fb9271b20cfd8",
+        "forensics/tools/policy_engine.py": "f4dcdf2e86317be3eb1fc40860912098ea3599fb460b5716ad38e5ec01ccbbf4"
+      },
+      "instruments": [
+        "forensics/tools/policy_engine.py",
+        "forensics/tools/omission.py"
+      ],
+      "notes": "the policy is the live A20 policy with one field changed and its digest recomputed, so the shape refusal is the one under test",
+      "title": "Policy and omission",
+      "witnesses": [
+        {
+          "case": "default-allow",
+          "expectation": {
+            "code": "PE_REFUSED_DEFAULT_ALLOW",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "policy-with-a-score",
+          "expectation": {
+            "code": "PE_REFUSED_SCORE",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "pass-over-a-missing-member",
+          "expectation": {
+            "code": "OM_REFUSED_PASS_WITH_MISSING",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "signed-bytes-mutated",
+          "expectation": {
+            "code": "OM_REFUSED_RECONCILIATION_MUTATED",
+            "exit": [
+              1
+            ]
+          },
+          "kind": "rejected"
+        },
+        {
+          "case": "clean-reconciliation-accepted",
+          "expectation": {
+            "code": null,
+            "exit": [
+              0
+            ]
+          },
+          "kind": "accepted"
+        },
+        {
+          "case": "live-policy-accepted",
+          "expectation": {
+            "code": null,
+            "exit": [
+              1
+            ]
+          },
+          "kind": "accepted"
+        }
+      ]
+    }
+  ],
+  "item": "A22",
+  "refusalCodes": {
+    "AQ_DEFECT_FOUND": {
+      "condition": "an experiment's observed verdict is ``DEFECT`` or ``PARTIAL``",
+      "prevents": "that an instrument which returned success when it should have refused is recorded as qualified, or that the finding is dropped because another experiment passed"
+    },
+    "AQ_REFUSED_CANARY_NOT_DETECTED": {
+      "condition": "the strict detector reports a refusal on an accepted input, the weak detector does not report ``QUALIFIED`` on it, or the strict detector misses the experiment's own detection reference",
+      "prevents": "that the harness verdict is produced by the harness rather than by the instrument's behaviour"
+    },
+    "AQ_REFUSED_EXPECTED_ABSENT": {
+      "condition": "a rejected witness declares no expected exit status, or no expected code and no explicit ``any-refusal`` expectation",
+      "prevents": "that an experiment cannot fail because it never said what a failure would look like"
+    },
+    "AQ_REFUSED_EXPERIMENT_ABSENT": {
+      "condition": "a required experiment id is absent from the registry, the registry names an instrument file that does not exist, or ``explain``/``--only`` names an id the registry does not have",
+      "prevents": "that seven experiments read as the eight the item requires, and that an experiment about a file the tree no longer holds counts as qualified"
+    },
+    "AQ_REFUSED_NOT_RUN_AS_QUALIFIED": {
+      "condition": "``assert_all_qualified`` is given a result whose verdict is ``NOT_RUN``",
+      "prevents": "that an unavailable instrument is reported as a qualified one; a deferred experiment is never a pass"
+    },
+    "AQ_REFUSED_NO_CANARY": {
+      "condition": "an experiment declares no accepted (canary) witness, or its canary block names no detection reference",
+      "prevents": "that a green verdict is evidence only that no test was written, because nothing shows the harness can tell a refusal from an acceptance"
+    },
+    "AQ_REFUSED_UNSTABLE": {
+      "condition": "two runs of the same experiment over the same inputs produce different observations",
+      "prevents": "that a single favourable run is quoted as the experiment's result; an unstable measurement is not a measurement"
+    },
+    "AQ_REFUSED_WITNESS_ABSENT": {
+      "condition": "a declared witness produced no observation, or a witness that names a line in the tree no longer finds that line",
+      "prevents": "that a removed witness, or a consumer list that has drifted, silently shrinks the experiment"
+    }
+  },
+  "requiredExperiments": [
+    "E1",
+    "E2",
+    "E3",
+    "E4",
+    "E5",
+    "E6",
+    "E7",
+    "E8"
+  ],
+  "schema": "openssl-rs/a22/experiments/1",
+  "tool": {
+    "path": "forensics/tools/adversarial_qualification.py",
+    "sha256": "d23d20abc8c8d14ca140cc0ee3287522c7aa8a9ce52ed36765d110167e6dbb13"
+  }
+}

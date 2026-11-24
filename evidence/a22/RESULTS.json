@@ -1,0 +1,1768 @@
+{
+  "baseCommit": "6e64e644c",
+  "baseCommitLong": "6e64e644ced49bf5d969e0eb56ab51f8f4f2c4fc",
+  "canaryRule": "strict detector on the accepted input must be DEFECT, the weak detector on the same input must be QUALIFIED, and the strict detector on the detection reference must be QUALIFIED",
+  "detail": "measured",
+  "experiments": [
+    {
+      "canary": {
+        "acceptedCase": "secure-accepted",
+        "detected": true,
+        "detectionCase": "conflicting-verdicts",
+        "probes": [
+          {
+            "case": "secure-accepted/flipped",
+            "detected": false,
+            "expected": false,
+            "means": "the harness reports DEFECT when the instrument accepted the input",
+            "ok": true,
+            "probe": "strict-detector-on-the-accepted-input"
+          },
+          {
+            "case": "secure-accepted/flipped",
+            "detected": true,
+            "expected": true,
+            "means": "a detector that accepts any observation reports QUALIFIED on the same input, so the strict detector is what produces the verdict",
+            "ok": true,
+            "probe": "weak-detector-on-the-same-input"
+          },
+          {
+            "case": "conflicting-verdicts",
+            "detected": true,
+            "expected": true,
+            "means": "the harness does see a refusal when the instrument produces one",
+            "ok": true,
+            "probe": "strict-detector-on-the-detection-reference"
+          }
+        ]
+      },
+      "codes": [],
+      "expected": "the wrapper refuses a mixed transcript, a secure verdict with a nonzero tool status, and a verdict line with trailing text",
+      "hypothesis": "A transcript carrying both a secure and an insecure verdict cannot be resolved by the order of its lines, and a secure verdict that carries any text after it is ambiguous.",
+      "id": "E1",
+      "instrumentSha256": {
+        "courts/phase18/timing/binsec_checkct.sh": "7c437201df1dbe2d3cc25345f9e0fadfac53a5a282ef7054fb0f0f49fb5b4fcc"
+      },
+      "instruments": [
+        "courts/phase18/timing/binsec_checkct.sh"
+      ],
+      "notes": "the prior fail-open was `grep -Fq secure`, which accepted the mixed transcript; the anchored population parser is what is measured here",
+      "observations": [
+        {
+          "case": "conflicting-verdicts",
+          "command": "AQ_MODE=mixed BINSEC_BIN=<tmp>/binsec-aq BINSEC_WALL_TIMEOUT=20 BINSEC_Z3=<tmp>/z3-aq bash <repo>/courts/phase18/timing/binsec_checkct.sh <tmp>/aq.cfg <tmp>/aq-tiny",
+          "exit": 6,
+          "expected": {
+            "code": "mixed-verdicts",
+            "exit": [
+              6
+            ]
+          },
+          "input": {
+            "description": "stand-in BINSEC and Z3 executables, a trivial ELF and an SSE script",
+            "kind": "generated",
+            "parts": [
+              "binsec_shim",
+              "cfg",
+              "elf",
+              "z3_shim"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "83b394928d4a590dc81d2fbd9ba0c4dedb6d70612c1f7f5ace62b84bc4c55bf9"
+          },
+          "kind": "rejected",
+          "output": "# binsec: <tool-version>\n# z3: <tool-version>\n# script: <tmp>/aq.cfg\n# binary: <tmp>/aq-tiny (70b316cbccfb14c97fd266d44d685cea6fe115b4b48cacbec4339bd3ec6a5c2d)\n# wall:   20s\n[checkct:result] Program status is : secure\n[checkct:result] Program status is : insecure\nbinsec_checkct: REFUSED target='<tmp>/aq-tiny' reason=mixed-verdicts: secure=1 insecure=1\n",
+          "outputSha256": "c00c28307344a225dbbe0d88407584dfb9586d0da7b41298bf95fe0bc970aa37",
+          "outputTruncated": false
+        },
+        {
+          "case": "secure-with-nonzero-status",
+          "command": "AQ_MODE=secure_nonzero BINSEC_BIN=<tmp>/binsec-aq BINSEC_WALL_TIMEOUT=20 BINSEC_Z3=<tmp>/z3-aq bash <repo>/courts/phase18/timing/binsec_checkct.sh <tmp>/aq.cfg <tmp>/aq-tiny",
+          "exit": 6,
+          "expected": {
+            "code": "secure-verdict-with-tool-status-1",
+            "exit": [
+              6
+            ]
+          },
+          "input": {
+            "description": "stand-in BINSEC and Z3 executables, a trivial ELF and an SSE script",
+            "kind": "generated",
+            "parts": [
+              "binsec_shim",
+              "cfg",
+              "elf",
+              "z3_shim"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "83b394928d4a590dc81d2fbd9ba0c4dedb6d70612c1f7f5ace62b84bc4c55bf9"
+          },
+          "kind": "rejected",
+          "output": "# binsec: <tool-version>\n# z3: <tool-version>\n# script: <tmp>/aq.cfg\n# binary: <tmp>/aq-tiny (70b316cbccfb14c97fd266d44d685cea6fe115b4b48cacbec4339bd3ec6a5c2d)\n# wall:   20s\n[checkct:result] Program status is : secure\nbinsec_checkct: REFUSED target='<tmp>/aq-tiny' reason=secure-verdict-with-tool-status-1: inconsistent output\n",
+          "outputSha256": "e0f961f509b95f0a357401b3fd0fb6bfbc81554a0851c44180fe7f4a22da22d1",
+          "outputTruncated": false
+        },
+        {
+          "case": "verdict-with-trailing-text",
+          "command": "AQ_MODE=trailing_text BINSEC_BIN=<tmp>/binsec-aq BINSEC_WALL_TIMEOUT=20 BINSEC_Z3=<tmp>/z3-aq bash <repo>/courts/phase18/timing/binsec_checkct.sh <tmp>/aq.cfg <tmp>/aq-tiny",
+          "exit": 3,
+          "expected": {
+            "code": "verdict-trailing-text",
+            "exit": [
+              3
+            ]
+          },
+          "input": {
+            "description": "stand-in BINSEC and Z3 executables, a trivial ELF and an SSE script",
+            "kind": "generated",
+            "parts": [
+              "binsec_shim",
+              "cfg",
+              "elf",
+              "z3_shim"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "83b394928d4a590dc81d2fbd9ba0c4dedb6d70612c1f7f5ace62b84bc4c55bf9"
+          },
+          "kind": "rejected",
+          "output": "# binsec: <tool-version>\n# z3: <tool-version>\n# script: <tmp>/aq.cfg\n# binary: <tmp>/aq-tiny (70b316cbccfb14c97fd266d44d685cea6fe115b4b48cacbec4339bd3ec6a5c2d)\n# wall:   20s\n[checkct:result] Program status is : secure (0.030) but the exploration was incomplete\nbinsec_checkct: REFUSED target='<tmp>/aq-tiny' reason=verdict-trailing-text:1-line(s): a status line carries text after the verdict\n",
+          "outputSha256": "957aea45261f39390d3758fa0ba8dd1d3913e307dc2e64a10c0618338e4ab917",
+          "outputTruncated": false
+        },
+        {
+          "case": "secure-accepted",
+          "command": "AQ_MODE=secure BINSEC_BIN=<tmp>/binsec-aq BINSEC_WALL_TIMEOUT=20 BINSEC_Z3=<tmp>/z3-aq bash <repo>/courts/phase18/timing/binsec_checkct.sh <tmp>/aq.cfg <tmp>/aq-tiny",
+          "exit": 0,
+          "expected": {
+            "code": null,
+            "exit": [
+              0
+            ]
+          },
+          "input": {
+            "description": "stand-in BINSEC and Z3 executables, a trivial ELF and an SSE script",
+            "kind": "generated",
+            "parts": [
+              "binsec_shim",
+              "cfg",
+              "elf",
+              "z3_shim"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "83b394928d4a590dc81d2fbd9ba0c4dedb6d70612c1f7f5ace62b84bc4c55bf9"
+          },
+          "kind": "accepted",
+          "output": "# binsec: <tool-version>\n# z3: <tool-version>\n# script: <tmp>/aq.cfg\n# binary: <tmp>/aq-tiny (70b316cbccfb14c97fd266d44d685cea6fe115b4b48cacbec4339bd3ec6a5c2d)\n# wall:   20s\n[checkct:result] Program status is : secure\nT16 verdict: secure\n",
+          "outputSha256": "2dc6ff598d0222ffda929fd3e84222ae23d744372b2bf54433f53238028d30ac",
+          "outputTruncated": false
+        }
+      ],
+      "reason": "every rejected witness produced its named refusal",
+      "refusedWitnesses": 3,
+      "rejectedWitnesses": 3,
+      "reported": {
+        "mixed_case": {
+          "exit": 6,
+          "reading": "the wrapper prints both BINSEC status lines, then refuses by name; it never prints `T16 verdict: ...`, so no caller can read a verdict from this run",
+          "refusal": "binsec_checkct: REFUSED target='<tmp>/aq-tiny' reason=mixed-verdicts: secure=1 insecure=1",
+          "verdict_lines": [
+            "[checkct:result] Program status is : secure",
+            "[checkct:result] Program status is : insecure"
+          ],
+          "verdict_printed": null
+        },
+        "substitution": "the BINSEC and Z3 executables are stand-ins; the wrapper's exit-status and verdict-population contract is qualified, no solver verdict was produced"
+      },
+      "title": "BINSEC wrapper: conflicting verdicts",
+      "verdict": "QUALIFIED"
+    },
+    {
+      "canary": {
+        "acceptedCase": "secure-accepted",
+        "detected": true,
+        "detectionCase": "two-secure-lines",
+        "probes": [
+          {
+            "case": "secure-accepted/flipped",
+            "detected": false,
+            "expected": false,
+            "means": "the harness reports DEFECT when the instrument accepted the input",
+            "ok": true,
+            "probe": "strict-detector-on-the-accepted-input"
+          },
+          {
+            "case": "secure-accepted/flipped",
+            "detected": true,
+            "expected": true,
+            "means": "a detector that accepts any observation reports QUALIFIED on the same input, so the strict detector is what produces the verdict",
+            "ok": true,
+            "probe": "weak-detector-on-the-same-input"
+          },
+          {
+            "case": "two-secure-lines",
+            "detected": true,
+            "expected": true,
+            "means": "the harness does see a refusal when the instrument produces one",
+            "ok": true,
+            "probe": "strict-detector-on-the-detection-reference"
+          }
+        ]
+      },
+      "codes": [],
+      "expected": "the wrapper refuses silence, two secure lines (one of which the `secure` token is a prefix of) and a verdict line with trailing whitespace",
+      "hypothesis": "Zero verdict lines is not a verdict, and two secure lines are not one secure verdict.",
+      "id": "E2",
+      "instrumentSha256": {
+        "courts/phase18/timing/binsec_checkct.sh": "7c437201df1dbe2d3cc25345f9e0fadfac53a5a282ef7054fb0f0f49fb5b4fcc"
+      },
+      "instruments": [
+        "courts/phase18/timing/binsec_checkct.sh"
+      ],
+      "notes": "the ambiguity witness is `secure (0.030)`, whose verdict token is a prefix-compatible second secure line",
+      "observations": [
+        {
+          "case": "zero-verdict-lines",
+          "command": "AQ_MODE=silent BINSEC_BIN=<tmp>/binsec-aq BINSEC_WALL_TIMEOUT=20 BINSEC_Z3=<tmp>/z3-aq bash <repo>/courts/phase18/timing/binsec_checkct.sh <tmp>/aq.cfg <tmp>/aq-tiny",
+          "exit": 3,
+          "expected": {
+            "code": "no-output",
+            "exit": [
+              3
+            ]
+          },
+          "input": {
+            "description": "stand-in BINSEC and Z3 executables, a trivial ELF and an SSE script",
+            "kind": "generated",
+            "parts": [
+              "binsec_shim",
+              "cfg",
+              "elf",
+              "z3_shim"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "83b394928d4a590dc81d2fbd9ba0c4dedb6d70612c1f7f5ace62b84bc4c55bf9"
+          },
+          "kind": "rejected",
+          "output": "# binsec: <tool-version>\n# z3: <tool-version>\n# script: <tmp>/aq.cfg\n# binary: <tmp>/aq-tiny (70b316cbccfb14c97fd266d44d685cea6fe115b4b48cacbec4339bd3ec6a5c2d)\n# wall:   20s\nbinsec_checkct: REFUSED target='<tmp>/aq-tiny' reason=no-output: binsec produced nothing on stdout or stderr (status 0)\n",
+          "outputSha256": "b5250c9317040fafba54f43dbc5d0976d441e063f49927e01c65c9aec839a612",
+          "outputTruncated": false
+        },
+        {
+          "case": "two-secure-lines",
+          "command": "AQ_MODE=timed_pair BINSEC_BIN=<tmp>/binsec-aq BINSEC_WALL_TIMEOUT=20 BINSEC_Z3=<tmp>/z3-aq bash <repo>/courts/phase18/timing/binsec_checkct.sh <tmp>/aq.cfg <tmp>/aq-tiny",
+          "exit": 6,
+          "expected": {
+            "code": "duplicate-secure",
+            "exit": [
+              6
+            ]
+          },
+          "input": {
+            "description": "stand-in BINSEC and Z3 executables, a trivial ELF and an SSE script",
+            "kind": "generated",
+            "parts": [
+              "binsec_shim",
+              "cfg",
+              "elf",
+              "z3_shim"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "83b394928d4a590dc81d2fbd9ba0c4dedb6d70612c1f7f5ace62b84bc4c55bf9"
+          },
+          "kind": "rejected",
+          "output": "# binsec: <tool-version>\n# z3: <tool-version>\n# script: <tmp>/aq.cfg\n# binary: <tmp>/aq-tiny (70b316cbccfb14c97fd266d44d685cea6fe115b4b48cacbec4339bd3ec6a5c2d)\n# wall:   20s\n[checkct:result] Program status is : secure\n[checkct:result] Program status is : secure (0.030)\nbinsec_checkct: REFUSED target='<tmp>/aq-tiny' reason=duplicate-secure: secure=2\n",
+          "outputSha256": "1fe5a208a814a84cd4e54428d3182cfaa51277062a0867728d90911d3e66d53e",
+          "outputTruncated": false
+        },
+        {
+          "case": "verdict-trailing-whitespace",
+          "command": "AQ_MODE=trailing_ws BINSEC_BIN=<tmp>/binsec-aq BINSEC_WALL_TIMEOUT=20 BINSEC_Z3=<tmp>/z3-aq bash <repo>/courts/phase18/timing/binsec_checkct.sh <tmp>/aq.cfg <tmp>/aq-tiny",
+          "exit": 3,
+          "expected": {
+            "code": "verdict-trailing-text",
+            "exit": [
+              3
+            ]
+          },
+          "input": {
+            "description": "stand-in BINSEC and Z3 executables, a trivial ELF and an SSE script",
+            "kind": "generated",
+            "parts": [
+              "binsec_shim",
+              "cfg",
+              "elf",
+              "z3_shim"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "83b394928d4a590dc81d2fbd9ba0c4dedb6d70612c1f7f5ace62b84bc4c55bf9"
+          },
+          "kind": "rejected",
+          "output": "# binsec: <tool-version>\n# z3: <tool-version>\n# script: <tmp>/aq.cfg\n# binary: <tmp>/aq-tiny (70b316cbccfb14c97fd266d44d685cea6fe115b4b48cacbec4339bd3ec6a5c2d)\n# wall:   20s\n[checkct:result] Program status is : secure \nbinsec_checkct: REFUSED target='<tmp>/aq-tiny' reason=verdict-trailing-text:1-line(s): a status line carries text after the verdict\n",
+          "outputSha256": "5278923336efe120e049b18094b2e722f9a3d49eceee0c5ab01357bd754755ef",
+          "outputTruncated": false
+        },
+        {
+          "case": "secure-accepted",
+          "command": "AQ_MODE=secure BINSEC_BIN=<tmp>/binsec-aq BINSEC_WALL_TIMEOUT=20 BINSEC_Z3=<tmp>/z3-aq bash <repo>/courts/phase18/timing/binsec_checkct.sh <tmp>/aq.cfg <tmp>/aq-tiny",
+          "exit": 0,
+          "expected": {
+            "code": null,
+            "exit": [
+              0
+            ]
+          },
+          "input": {
+            "description": "stand-in BINSEC and Z3 executables, a trivial ELF and an SSE script",
+            "kind": "generated",
+            "parts": [
+              "binsec_shim",
+              "cfg",
+              "elf",
+              "z3_shim"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "83b394928d4a590dc81d2fbd9ba0c4dedb6d70612c1f7f5ace62b84bc4c55bf9"
+          },
+          "kind": "accepted",
+          "output": "# binsec: <tool-version>\n# z3: <tool-version>\n# script: <tmp>/aq.cfg\n# binary: <tmp>/aq-tiny (70b316cbccfb14c97fd266d44d685cea6fe115b4b48cacbec4339bd3ec6a5c2d)\n# wall:   20s\n[checkct:result] Program status is : secure\nT16 verdict: secure\n",
+          "outputSha256": "2dc6ff598d0222ffda929fd3e84222ae23d744372b2bf54433f53238028d30ac",
+          "outputTruncated": false
+        }
+      ],
+      "reason": "every rejected witness produced its named refusal",
+      "refusedWitnesses": 3,
+      "rejectedWitnesses": 3,
+      "reported": {
+        "prefix_match": "the second secure line is `secure (0.030)`, for which `secure` is a prefix; the anchored grammar counts two secure verdicts and refuses the ambiguity",
+        "substitution": "stand-in BINSEC; the wrapper's grammar is qualified, not a solver"
+      },
+      "title": "BINSEC wrapper: missing or duplicated verdict",
+      "verdict": "QUALIFIED"
+    },
+    {
+      "canary": {
+        "acceptedCase": "good-symbol-accepted",
+        "detected": true,
+        "detectionCase": "zero-size-symbol",
+        "probes": [
+          {
+            "case": "good-symbol-accepted/flipped",
+            "detected": false,
+            "expected": false,
+            "means": "the harness reports DEFECT when the instrument accepted the input",
+            "ok": true,
+            "probe": "strict-detector-on-the-accepted-input"
+          },
+          {
+            "case": "good-symbol-accepted/flipped",
+            "detected": true,
+            "expected": true,
+            "means": "a detector that accepts any observation reports QUALIFIED on the same input, so the strict detector is what produces the verdict",
+            "ok": true,
+            "probe": "weak-detector-on-the-same-input"
+          },
+          {
+            "case": "zero-size-symbol",
+            "detected": true,
+            "expected": true,
+            "means": "the harness does see a refusal when the instrument produces one",
+            "ok": true,
+            "probe": "strict-detector-on-the-detection-reference"
+          }
+        ]
+      },
+      "codes": [],
+      "expected": "the audit refuses each with a named reason and exits nonzero",
+      "hypothesis": "An extent the symbol table does not declare, an entry the table cannot parse, an absent target and a disassembly shorter than the extent each make the audit's population invalid.",
+      "id": "E3",
+      "instrumentSha256": {
+        "courts/phase18/timing/binary_branch_audit.py": "4c4c9c8c6cfdc81be051ebd2b151b98c6f72d6a7a9b2547a53c5cb7de5230439"
+      },
+      "instruments": [
+        "courts/phase18/timing/binary_branch_audit.py"
+      ],
+      "notes": "coverage is established from decoded instruction byte lengths, not from address gaps or a maximum instruction length",
+      "observations": [
+        {
+          "case": "zero-size-symbol",
+          "command": "python3 <repo>/courts/phase18/timing/binary_branch_audit.py --targets-file <tmp>/aq-one.json <tmp>/aq-zero.so",
+          "exit": 1,
+          "expected": {
+            "code": "reason=zero-size",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "three shared objects built from assembly, two inventories and two objdump shims",
+            "kind": "generated",
+            "parts": [
+              "absent_manifest",
+              "good_asm",
+              "good_so",
+              "malformed_asm",
+              "malformed_shim",
+              "one_manifest",
+              "truncate_shim",
+              "zero_asm"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "ecc81a9f679000ddca1f8e9dc64c4395848db574ec68b7235310e1b303a71553"
+          },
+          "kind": "rejected",
+          "output": "REFUSED target=\"aq core\" symbol=\"audit_symbol\" reason=zero-size\nbinary_branch_audit: FAIL-CLOSED: 1 of 1 expected targets were refused; this report is not a gate result.\n# Binary branch audit \u2014 review aid, not a proof\n\n- DSO: `<tmp>/aq-zero.so`\n- SHA-256: `047c102b6e005955e4ada0b9ad51e7e885e2704eb2323df792a7198c9fc73838`\n- objdump: <tool-version>\n- Secret-dependence is NOT established here. A conditional jump is\n  listed because the compiler emitted it in the named function; the\n  reviewer maps each condition to the Rust source's secret\n  classification. BINSEC `-checkct` (T16) can establish control-flow\n  and memory-address dependence on a declared secret split; it does\n  not model microarchitectural timing.\n\n## Per-function summary\n\n| function | symbol @ offset | bytes | insns | jcc | div/idiv | cmov | setcc | jo/jno | loop | calls | cpuid |\n|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n| aq core | **zero-size** (`audit_symbol`) | | | | | | | | | | |\n\n## Coverage\n\n- expected targets: 1\n- resolved uniquely and disassembled: 0\n- failed: 1\n  - aq core (`audit_symbol`): zero-size\n\n## Divisions\n\n- none in any audited range.\n\n## Dispatch-looking direct calls in the audited ranges\n\n- none.\n\n## Whole-DSO cpuid scan\n\n- `cpuid` instructions in the DSO: **0**\n- of those inside the audited ranges: **0**\n\n## Conditional jumps, per branch\n\n`src` is the nearest preceding flag-setting instruction's operand class (mem = the flags were computed against a memory operand); `guarded` is what the fall-through window touches before the next transfer. Neither is a secret-taint result.\n\n| function | offset | jcc | src | setter | guarded | target | dir |\n|---|---:|---|---|---|---|---:|---|\n",
+          "outputSha256": "b1747da593193cc17cd876b3037a8d3559cdb9d1f4fc923f6a3bd981f01a1334",
+          "outputTruncated": false
+        },
+        {
+          "case": "malformed-length-prefix",
+          "command": "python3 <repo>/courts/phase18/timing/binary_branch_audit.py --targets-file <tmp>/aq-one.json <tmp>/aq-malformed.so",
+          "exit": 1,
+          "expected": {
+            "code": "reason=missing",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "three shared objects built from assembly, two inventories and two objdump shims",
+            "kind": "generated",
+            "parts": [
+              "absent_manifest",
+              "good_asm",
+              "good_so",
+              "malformed_asm",
+              "malformed_shim",
+              "one_manifest",
+              "truncate_shim",
+              "zero_asm"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "ecc81a9f679000ddca1f8e9dc64c4395848db574ec68b7235310e1b303a71553"
+          },
+          "kind": "rejected",
+          "output": "REFUSED target=\"aq core\" symbol=\"audit_symbol\" reason=missing\nbinary_branch_audit: FAIL-CLOSED: 1 of 1 expected targets were refused; this report is not a gate result.\n# Binary branch audit \u2014 review aid, not a proof\n\n- DSO: `<tmp>/aq-malformed.so`\n- SHA-256: `c07575026242edc14faf80e64f2a3ccde4127fe2f1d5df36f4c2315f555e1fc7`\n- objdump: <tool-version>\n- Secret-dependence is NOT established here. A conditional jump is\n  listed because the compiler emitted it in the named function; the\n  reviewer maps each condition to the Rust source's secret\n  classification. BINSEC `-checkct` (T16) can establish control-flow\n  and memory-address dependence on a declared secret split; it does\n  not model microarchitectural timing.\n\n## Per-function summary\n\n| function | symbol @ offset | bytes | insns | jcc | div/idiv | cmov | setcc | jo/jno | loop | calls | cpuid |\n|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n| aq core | **missing** (`audit_symbol`) | | | | | | | | | | |\n\n## Coverage\n\n- expected targets: 1\n- resolved uniquely and disassembled: 0\n- failed: 1\n  - aq core (`audit_symbol`): missing\n\n## Divisions\n\n- none in any audited range.\n\n## Dispatch-looking direct calls in the audited ranges\n\n- none.\n\n## Whole-DSO cpuid scan\n\n- `cpuid` instructions in the DSO: **0**\n- of those inside the audited ranges: **0**\n\n## Conditional jumps, per branch\n\n`src` is the nearest preceding flag-setting instruction's operand class (mem = the flags were computed against a memory operand); `guarded` is what the fall-through window touches before the next transfer. Neither is a secret-taint result.\n\n| function | offset | jcc | src | setter | guarded | target | dir |\n|---|---:|---|---|---|---|---:|---|\n",
+          "outputSha256": "af223b3ef217af252c9e4be9c310a710aa74a82ab16b9447e4e56dd27512ab03",
+          "outputTruncated": false
+        },
+        {
+          "case": "malformed-symbol-table-entry",
+          "command": "OBJDUMP=<tmp>/objdump-malformed python3 <repo>/courts/phase18/timing/binary_branch_audit.py --targets-file <tmp>/aq-one.json <tmp>/aq-good.so",
+          "exit": 1,
+          "expected": {
+            "code": "reason=missing",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "three shared objects built from assembly, two inventories and two objdump shims",
+            "kind": "generated",
+            "parts": [
+              "absent_manifest",
+              "good_asm",
+              "good_so",
+              "malformed_asm",
+              "malformed_shim",
+              "one_manifest",
+              "truncate_shim",
+              "zero_asm"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "ecc81a9f679000ddca1f8e9dc64c4395848db574ec68b7235310e1b303a71553"
+          },
+          "kind": "rejected",
+          "output": "REFUSED target=\"aq core\" symbol=\"audit_symbol\" reason=missing\nbinary_branch_audit: FAIL-CLOSED: 1 of 1 expected targets were refused; this report is not a gate result.\n# Binary branch audit \u2014 review aid, not a proof\n\n- DSO: `<tmp>/aq-good.so`\n- SHA-256: `3be0623d105e9429422c9bb4802d21e6017f15c6833243fad3bdb366f7ad4025`\n- objdump: <tool-version>\n- Secret-dependence is NOT established here. A conditional jump is\n  listed because the compiler emitted it in the named function; the\n  reviewer maps each condition to the Rust source's secret\n  classification. BINSEC `-checkct` (T16) can establish control-flow\n  and memory-address dependence on a declared secret split; it does\n  not model microarchitectural timing.\n\n## Per-function summary\n\n| function | symbol @ offset | bytes | insns | jcc | div/idiv | cmov | setcc | jo/jno | loop | calls | cpuid |\n|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n| aq core | **missing** (`audit_symbol`) | | | | | | | | | | |\n\n## Coverage\n\n- expected targets: 1\n- resolved uniquely and disassembled: 0\n- failed: 1\n  - aq core (`audit_symbol`): missing\n\n## Divisions\n\n- none in any audited range.\n\n## Dispatch-looking direct calls in the audited ranges\n\n- none.\n\n## Whole-DSO cpuid scan\n\n- `cpuid` instructions in the DSO: **0**\n- of those inside the audited ranges: **0**\n\n## Conditional jumps, per branch\n\n`src` is the nearest preceding flag-setting instruction's operand class (mem = the flags were computed against a memory operand); `guarded` is what the fall-through window touches before the next transfer. Neither is a secret-taint result.\n\n| function | offset | jcc | src | setter | guarded | target | dir |\n|---|---:|---|---|---|---|---:|---|\n",
+          "outputSha256": "4e14fa4c5ebc06665615cc5016431d3c9fd64fa8affd0067a3db0fff288250b5",
+          "outputTruncated": false
+        },
+        {
+          "case": "target-absent",
+          "command": "python3 <repo>/courts/phase18/timing/binary_branch_audit.py --targets-file <tmp>/aq-absent.json <tmp>/aq-good.so",
+          "exit": 1,
+          "expected": {
+            "code": "reason=missing",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "three shared objects built from assembly, two inventories and two objdump shims",
+            "kind": "generated",
+            "parts": [
+              "absent_manifest",
+              "good_asm",
+              "good_so",
+              "malformed_asm",
+              "malformed_shim",
+              "one_manifest",
+              "truncate_shim",
+              "zero_asm"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "ecc81a9f679000ddca1f8e9dc64c4395848db574ec68b7235310e1b303a71553"
+          },
+          "kind": "rejected",
+          "output": "REFUSED target=\"aq absent\" symbol=\"absent_symbol\" reason=missing\nbinary_branch_audit: FAIL-CLOSED: 1 of 1 expected targets were refused; this report is not a gate result.\n# Binary branch audit \u2014 review aid, not a proof\n\n- DSO: `<tmp>/aq-good.so`\n- SHA-256: `3be0623d105e9429422c9bb4802d21e6017f15c6833243fad3bdb366f7ad4025`\n- objdump: <tool-version>\n- Secret-dependence is NOT established here. A conditional jump is\n  listed because the compiler emitted it in the named function; the\n  reviewer maps each condition to the Rust source's secret\n  classification. BINSEC `-checkct` (T16) can establish control-flow\n  and memory-address dependence on a declared secret split; it does\n  not model microarchitectural timing.\n\n## Per-function summary\n\n| function | symbol @ offset | bytes | insns | jcc | div/idiv | cmov | setcc | jo/jno | loop | calls | cpuid |\n|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n| aq absent | **missing** (`absent_symbol`) | | | | | | | | | | |\n\n## Coverage\n\n- expected targets: 1\n- resolved uniquely and disassembled: 0\n- failed: 1\n  - aq absent (`absent_symbol`): missing\n\n## Divisions\n\n- none in any audited range.\n\n## Dispatch-looking direct calls in the audited ranges\n\n- none.\n\n## Whole-DSO cpuid scan\n\n- `cpuid` instructions in the DSO: **0**\n- of those inside the audited ranges: **0**\n\n## Conditional jumps, per branch\n\n`src` is the nearest preceding flag-setting instruction's operand class (mem = the flags were computed against a memory operand); `guarded` is what the fall-through window touches before the next transfer. Neither is a secret-taint result.\n\n| function | offset | jcc | src | setter | guarded | target | dir |\n|---|---:|---|---|---|---|---:|---|\n",
+          "outputSha256": "35623a071af7a96fb686e204e76c38a6296d4ae4a0b015437ee31f7e30ec1b1d",
+          "outputTruncated": false
+        },
+        {
+          "case": "disassembly-shorter-than-extent",
+          "command": "OBJDUMP=<tmp>/objdump-truncate python3 <repo>/courts/phase18/timing/binary_branch_audit.py --targets-file <tmp>/aq-one.json <tmp>/aq-good.so",
+          "exit": 1,
+          "expected": {
+            "code": "disassembly-truncated",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "three shared objects built from assembly, two inventories and two objdump shims",
+            "kind": "generated",
+            "parts": [
+              "absent_manifest",
+              "good_asm",
+              "good_so",
+              "malformed_asm",
+              "malformed_shim",
+              "one_manifest",
+              "truncate_shim",
+              "zero_asm"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "ecc81a9f679000ddca1f8e9dc64c4395848db574ec68b7235310e1b303a71553"
+          },
+          "kind": "rejected",
+          "output": "REFUSED target=\"aq core\" symbol=\"audit_symbol\" reason=disassembly-truncated detail=disassembly-truncated:13-bytes-undecoded\nbinary_branch_audit: FAIL-CLOSED: 1 of 1 expected targets were refused; this report is not a gate result.\n# Binary branch audit \u2014 review aid, not a proof\n\n- DSO: `<tmp>/aq-good.so`\n- SHA-256: `3be0623d105e9429422c9bb4802d21e6017f15c6833243fad3bdb366f7ad4025`\n- objdump: <tool-version>\n- Secret-dependence is NOT established here. A conditional jump is\n  listed because the compiler emitted it in the named function; the\n  reviewer maps each condition to the Rust source's secret\n  classification. BINSEC `-checkct` (T16) can establish control-flow\n  and memory-address dependence on a declared secret split; it does\n  not model microarchitectural timing.\n\n## Per-function summary\n\n| function | symbol @ offset | bytes | insns | jcc | div/idiv | cmov | setcc | jo/jno | loop | calls | cpuid |\n|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n| aq core | **disassembly-truncated** (`audit_symbol`: disassembly-truncated:13-bytes-undecoded) | | | | | | | | | | |\n\n## Coverage\n\n- expected targets: 1\n- resolved uniquely and disassembled: 0\n- failed: 1\n  - aq core (`audit_symbol`): disassembly-truncated detail: disassembly-truncated:13-bytes-undecoded\n\n## Divisions\n\n- none in any audited range.\n\n## Dispatch-looking direct calls in the audited ranges\n\n- none.\n\n## Whole-DSO cpuid scan\n\n- `cpuid` instructions in the DSO: **0**\n- of those inside the audited ranges: **0**\n\n## Conditional jumps, per branch\n\n`src` is the nearest preceding flag-setting instruction's operand class (mem = the flags were computed against a memory operand); `guarded` is what the fall-through window touches before the next transfer. Neither is a secret-taint result.\n\n| function | offset | jcc | src | setter | guarded | target | dir |\n|---|---:|---|---|---|---|---:|---|\n",
+          "outputSha256": "4bfecfdf276be13b4fff1055fa92d33352c66151a33cce34ba803d8709d45b1b",
+          "outputTruncated": false
+        },
+        {
+          "case": "good-symbol-accepted",
+          "command": "python3 <repo>/courts/phase18/timing/binary_branch_audit.py --targets-file <tmp>/aq-one.json <tmp>/aq-good.so",
+          "exit": 0,
+          "expected": {
+            "code": null,
+            "exit": [
+              0
+            ]
+          },
+          "input": {
+            "description": "three shared objects built from assembly, two inventories and two objdump shims",
+            "kind": "generated",
+            "parts": [
+              "absent_manifest",
+              "good_asm",
+              "good_so",
+              "malformed_asm",
+              "malformed_shim",
+              "one_manifest",
+              "truncate_shim",
+              "zero_asm"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "ecc81a9f679000ddca1f8e9dc64c4395848db574ec68b7235310e1b303a71553"
+          },
+          "kind": "accepted",
+          "output": "binary_branch_audit: 1 expected targets resolved uniquely with complete disassembly; candidate sha256=3be0623d105e9429422c9bb4802d21e6017f15c6833243fad3bdb366f7ad4025\n# Binary branch audit \u2014 review aid, not a proof\n\n- DSO: `<tmp>/aq-good.so`\n- SHA-256: `3be0623d105e9429422c9bb4802d21e6017f15c6833243fad3bdb366f7ad4025`\n- objdump: <tool-version>\n- Secret-dependence is NOT established here. A conditional jump is\n  listed because the compiler emitted it in the named function; the\n  reviewer maps each condition to the Rust source's secret\n  classification. BINSEC `-checkct` (T16) can establish control-flow\n  and memory-address dependence on a declared secret split; it does\n  not model microarchitectural timing.\n\n## Per-function summary\n\n| function | symbol @ offset | bytes | insns | jcc | div/idiv | cmov | setcc | jo/jno | loop | calls | cpuid |\n|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n| aq core | `_RNvNtCx_2aq12audit_symbol` @ 0x1000 | 20 | 10 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |\n\n## Coverage\n\n- expected targets: 1\n- resolved uniquely and disassembled: 1\n- failed: 0\n\n## Divisions\n\n- none in any audited range.\n\n## Dispatch-looking direct calls in the audited ranges\n\n- none.\n\n## Whole-DSO cpuid scan\n\n- `cpuid` instructions in the DSO: **0**\n- of those inside the audited ranges: **0**\n\n## Conditional jumps, per branch\n\n`src` is the nearest preceding flag-setting instruction's operand class (mem = the flags were computed against a memory operand); `guarded` is what the fall-through window touches before the next transfer. Neither is a secret-taint result.\n\n| function | offset | jcc | src | setter | guarded | target | dir |\n|---|---:|---|---|---|---|---:|---|\n| aq core | +0x7 | je | reg/arith | `0x1004: cmp $0x0,%edi` | arithmetic/control | 0x1012 | fwd |\n",
+          "outputSha256": "b1c08df4112891048e17a7d5bb5404f1fcab694c79d4d25edeb202b38582a77b",
+          "outputTruncated": false
+        }
+      ],
+      "reason": "every rejected witness produced its named refusal",
+      "refusedWitnesses": 5,
+      "rejectedWitnesses": 5,
+      "reported": {
+        "coverage_from": "decoded instruction byte lengths (`len(raw)` at courts/phase18/timing/binary_branch_audit.py:236), not an address gap and not a maximum instruction length",
+        "diagnosis": "a malformed symbol-table entry is refused as `reason=missing`; there is no separate `malformed` code, so the audit refuses without naming the malformation as such",
+        "max_insn_bytes": "`MAX_INSN_BYTES = 15` at courts/phase18/timing/binary_branch_audit.py:114 is a sanity bound on one decoded length, not the coverage test"
+      },
+      "title": "Binary branch audit: zero-size and malformed symbols",
+      "verdict": "QUALIFIED"
+    },
+    {
+      "canary": {
+        "acceptedCase": "recorded-receipt-accepted",
+        "detected": true,
+        "detectionCase": "under-sampled-one-batch",
+        "probes": [
+          {
+            "case": "recorded-receipt-accepted/flipped",
+            "detected": false,
+            "expected": false,
+            "means": "the harness reports DEFECT when the instrument accepted the input",
+            "ok": true,
+            "probe": "strict-detector-on-the-accepted-input"
+          },
+          {
+            "case": "recorded-receipt-accepted/flipped",
+            "detected": true,
+            "expected": true,
+            "means": "a detector that accepts any observation reports QUALIFIED on the same input, so the strict detector is what produces the verdict",
+            "ok": true,
+            "probe": "weak-detector-on-the-same-input"
+          },
+          {
+            "case": "under-sampled-one-batch",
+            "detected": true,
+            "expected": true,
+            "means": "the harness does see a refusal when the instrument produces one",
+            "ok": true,
+            "probe": "strict-detector-on-the-detection-reference"
+          }
+        ]
+      },
+      "codes": [],
+      "expected": "the receipt validator refuses each with its named code and exits nonzero; never a pass",
+      "hypothesis": "A run that stopped before its registered batch budget, a run whose total is not a multiple of the batch size, and a positive control that leaves its registered direction each make the receipt unable to support a timing claim.",
+      "id": "E4",
+      "instrumentSha256": {
+        "evidence/etp-t7/DUDECT-ETP-T7.json": "6f8ab3956e01947bc524bdc3ebfb764ea8269a0fb82cc9736eba6776b5c8b9b7",
+        "forensics/tools/preregistration_check.py": "39933bbfb8a2de6d602a395a12b8094da6338a6b0ecacd1c9e4b7ead7f78dee9"
+      },
+      "instruments": [
+        "forensics/tools/preregistration_check.py",
+        "evidence/etp-t7/DUDECT-ETP-T7.json"
+      ],
+      "notes": "the threshold and the sample count are reported from the pinned header and the recorded receipt, not typed into this tool",
+      "observations": [
+        {
+          "case": "under-sampled-one-batch",
+          "command": "python3 <repo>/forensics/tools/preregistration_check.py --prereg <repo>/evidence/etp-t7/PREREGISTRATION.json --instance ETP-T7-DUDECT-INSTRUMENT-CONTROLS-1 --receipt <tmp>/aq-57986f6c9169.json --repo-root <repo>",
+          "exit": 1,
+          "expected": {
+            "code": "PR_EARLY_STOP_WITHOUT_LEAK",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "the recorded dudect receipt and three mutations of it",
+            "kind": "generated",
+            "parts": [
+              "base_receipt",
+              "failed_receipt",
+              "merged_receipt",
+              "short_receipt"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "4a054bca1e426ce09af29d36314a1aa6c60af7a88c0364841d5de3e5d63262a3"
+          },
+          "kind": "rejected",
+          "output": "PR_EARLY_STOP_WITHOUT_LEAK: cmpcmp: stopped at 1 batches with state 1\n",
+          "outputSha256": "49dfe1fabdb4e5c971a8f578e5305eea4854571408a22c9fa89ab9a675a24720",
+          "outputTruncated": false
+        },
+        {
+          "case": "below-per-batch",
+          "command": "python3 <repo>/forensics/tools/preregistration_check.py --prereg <repo>/evidence/etp-t7/PREREGISTRATION.json --instance ETP-T7-DUDECT-INSTRUMENT-CONTROLS-1 --receipt <tmp>/aq-3ccf42a2dd40.json --repo-root <repo>",
+          "exit": 1,
+          "expected": {
+            "code": "PR_TOTAL_NOT_MULTIPLE",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "the recorded dudect receipt and three mutations of it",
+            "kind": "generated",
+            "parts": [
+              "base_receipt",
+              "failed_receipt",
+              "merged_receipt",
+              "short_receipt"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "4a054bca1e426ce09af29d36314a1aa6c60af7a88c0364841d5de3e5d63262a3"
+          },
+          "kind": "rejected",
+          "output": "PR_TOTAL_NOT_MULTIPLE: cmpnaive: total 5000 is not a multiple of 10000\n",
+          "outputSha256": "842d21feea78ad012cd93119e05e6c69fa30afbedf9babedcdc2db379c781a8d",
+          "outputTruncated": false
+        },
+        {
+          "case": "positive-control-ttest-failed",
+          "command": "python3 <repo>/forensics/tools/preregistration_check.py --prereg <repo>/evidence/etp-t7/PREREGISTRATION.json --instance ETP-T7-DUDECT-INSTRUMENT-CONTROLS-1 --receipt <tmp>/aq-ed3a804cfcc4.json --repo-root <repo>",
+          "exit": 1,
+          "expected": {
+            "code": "PR_POSITIVE_CONTROL_DID_NOT_FIRE",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "the recorded dudect receipt and three mutations of it",
+            "kind": "generated",
+            "parts": [
+              "base_receipt",
+              "failed_receipt",
+              "merged_receipt",
+              "short_receipt"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "4a054bca1e426ce09af29d36314a1aa6c60af7a88c0364841d5de3e5d63262a3"
+          },
+          "kind": "rejected",
+          "output": "PR_POSITIVE_CONTROL_DID_NOT_FIRE: cmpnaive: state 1, expected 0\n",
+          "outputSha256": "b00d2619dce6d054556b8099196276291f2178d5480119cb086b7853bb1f02b9",
+          "outputTruncated": false
+        },
+        {
+          "case": "recorded-receipt-accepted",
+          "command": "python3 <repo>/forensics/tools/preregistration_check.py --prereg <repo>/evidence/etp-t7/PREREGISTRATION.json --instance ETP-T7-DUDECT-INSTRUMENT-CONTROLS-1 --receipt <repo>/evidence/etp-t7/DUDECT-ETP-T7.json --repo-root <repo>",
+          "exit": 0,
+          "expected": {
+            "code": null,
+            "exit": [
+              0
+            ]
+          },
+          "input": {
+            "description": "the recorded dudect receipt and three mutations of it",
+            "kind": "generated",
+            "parts": [
+              "base_receipt",
+              "failed_receipt",
+              "merged_receipt",
+              "short_receipt"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "4a054bca1e426ce09af29d36314a1aa6c60af7a88c0364841d5de3e5d63262a3"
+          },
+          "kind": "accepted",
+          "output": "PREREG_CHECK ok instance=ETP-T7-DUDECT-INSTRUMENT-CONTROLS-1\n",
+          "outputSha256": "118c61edb1b2c75684e81a51d5b0e5039fee4d58633e5983c1990997ca179bd8",
+          "outputTruncated": false
+        }
+      ],
+      "reason": "every rejected witness produced its named refusal",
+      "refusedWitnesses": 3,
+      "rejectedWitnesses": 3,
+      "reported": {
+        "declared_geometry": {
+          "max_batches": 3,
+          "per_batch": 10000,
+          "runs": 1
+        },
+        "sample_counts_used": {
+          "cmpcmp": {
+            "batch_size": 10000,
+            "batches_run": 3,
+            "max_abs_t": 0.98,
+            "state": 1,
+            "total_measurements": 30000
+          },
+          "cmpnaive": {
+            "batch_size": 10000,
+            "batches_run": 3,
+            "max_abs_t": 208.01,
+            "state": 0,
+            "total_measurements": 30000
+          }
+        },
+        "substitution": "the dudect harness and the real candidate DSO did not run; the evidence validator is qualified on the recorded receipt and on mutations of it",
+        "thresholds": {
+          "enough_measurements": 10000,
+          "source": "courts/phase18/timing/third_party/dudect/dudect.h",
+          "t_threshold_bananas": 500,
+          "t_threshold_moderate": 10
+        }
+      },
+      "title": "Timing instrument: under-sampled or failed run",
+      "verdict": "QUALIFIED"
+    },
+    {
+      "canary": {
+        "acceptedCase": "log-with-a-finding",
+        "detected": true,
+        "detectionCase": "missing-identity-detection-reference",
+        "probes": [
+          {
+            "case": "log-with-a-finding/flipped",
+            "detected": false,
+            "expected": false,
+            "means": "the harness reports DEFECT when the instrument accepted the input",
+            "ok": true,
+            "probe": "strict-detector-on-the-accepted-input"
+          },
+          {
+            "case": "log-with-a-finding/flipped",
+            "detected": true,
+            "expected": true,
+            "means": "a detector that accepts any observation reports QUALIFIED on the same input, so the strict detector is what produces the verdict",
+            "ok": true,
+            "probe": "weak-detector-on-the-same-input"
+          },
+          {
+            "case": "missing-identity-detection-reference",
+            "detected": true,
+            "expected": true,
+            "means": "the harness does see a refusal when the instrument produces one",
+            "ok": true,
+            "probe": "strict-detector-on-the-detection-reference"
+          }
+        ]
+      },
+      "codes": [
+        "AQ_DEFECT_FOUND"
+      ],
+      "expected": "the ctgrind evidence path refuses an empty-but-successful log, a log with only unrelated output, and a candidate-identity mismatch",
+      "hypothesis": "A ctgrind result with zero contexts is indistinguishable from a run that produced no memcheck output at all, and a claim whose binary identity differs from the recorded one must not be admitted.",
+      "id": "E5",
+      "instrumentSha256": {
+        "courts/phase18/timing/summarize_ct.py": "eea73f4a4976b9bdfc29eef3703329a782369297b1cedd5ada228db64b68e190",
+        "forensics/tools/side_channel_erasure.py": "9476b386d268be0597bc47701aca8c058094bc05dd6ac9695898a81ddd3b8aad"
+      },
+      "instruments": [
+        "courts/phase18/timing/summarize_ct.py",
+        "forensics/tools/side_channel_erasure.py"
+      ],
+      "notes": "this is the experiment the item expects to be able to fail",
+      "observations": [
+        {
+          "case": "empty-log",
+          "command": "python3 <repo>/courts/phase18/timing/summarize_ct.py 0 <tmp>/aq-empty.log",
+          "exit": 0,
+          "expected": {
+            "code": "any-refusal",
+            "exit": "nonzero"
+          },
+          "input": {
+            "description": "two valgrind logs, one log with a finding, and two ctgrind claims",
+            "kind": "generated",
+            "parts": [
+              "claim_driver",
+              "claim_mismatched",
+              "claim_no_identity",
+              "empty_log",
+              "finding_log",
+              "unrelated_log"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "35b8bb444833575ccb6c5ae7d26ed2098f50f491a5b93e83ff8b01d43aebc887"
+          },
+          "kind": "rejected",
+          "output": "total contexts: 0\n\n-- first 12 distinct stacks --\n",
+          "outputSha256": "15b874814d9032c4a31e6107f20060ce3cec28a5e719cec467f36987765038af",
+          "outputTruncated": false
+        },
+        {
+          "case": "unrelated-log-only",
+          "command": "python3 <repo>/courts/phase18/timing/summarize_ct.py 0 <tmp>/aq-unrelated.log",
+          "exit": 0,
+          "expected": {
+            "code": "any-refusal",
+            "exit": "nonzero"
+          },
+          "input": {
+            "description": "two valgrind logs, one log with a finding, and two ctgrind claims",
+            "kind": "generated",
+            "parts": [
+              "claim_driver",
+              "claim_mismatched",
+              "claim_no_identity",
+              "empty_log",
+              "finding_log",
+              "unrelated_log"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "35b8bb444833575ccb6c5ae7d26ed2098f50f491a5b93e83ff8b01d43aebc887"
+          },
+          "kind": "rejected",
+          "output": "total contexts: 0\n\n-- first 12 distinct stacks --\n",
+          "outputSha256": "15b874814d9032c4a31e6107f20060ce3cec28a5e719cec467f36987765038af",
+          "outputTruncated": false
+        },
+        {
+          "case": "candidate-identity-mismatch",
+          "command": "python3 <tmp>/aq-e5-claim.py <repo>/forensics/tools <tmp>/aq-claim-mismatched.json <repo>/evidence/etp-t7/SECRETS.json <repo>/evidence/etp-t7/PREREGISTRATION.json",
+          "exit": 0,
+          "expected": {
+            "code": "any-refusal",
+            "exit": "nonzero"
+          },
+          "input": {
+            "description": "two valgrind logs, one log with a finding, and two ctgrind claims",
+            "kind": "generated",
+            "parts": [
+              "claim_driver",
+              "claim_mismatched",
+              "claim_no_identity",
+              "empty_log",
+              "finding_log",
+              "unrelated_log"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "35b8bb444833575ccb6c5ae7d26ed2098f50f491a5b93e83ff8b01d43aebc887"
+          },
+          "kind": "rejected",
+          "output": "AQ_ACCEPTED\n",
+          "outputSha256": "cdf70f30d84bdad5a7a86c0d025f7f9e95cc59654706c69304909904b1f8d46c",
+          "outputTruncated": false
+        },
+        {
+          "case": "log-with-a-finding",
+          "command": "python3 <repo>/courts/phase18/timing/summarize_ct.py 0 <tmp>/aq-finding.log",
+          "exit": 0,
+          "expected": {
+            "code": null,
+            "exit": [
+              0
+            ]
+          },
+          "input": {
+            "description": "two valgrind logs, one log with a finding, and two ctgrind claims",
+            "kind": "generated",
+            "parts": [
+              "claim_driver",
+              "claim_mismatched",
+              "claim_no_identity",
+              "empty_log",
+              "finding_log",
+              "unrelated_log"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "35b8bb444833575ccb6c5ae7d26ed2098f50f491a5b93e83ff8b01d43aebc887"
+          },
+          "kind": "accepted",
+          "output": "total contexts: 1\n   1  Conditional jump or move depends o ?  mont_mul_into\n\n-- first 12 distinct stacks --\n[Conditional jump or move depen] ?\n    mont_mul_into <- caller\n",
+          "outputSha256": "d252bb588a0f6a2bd681800078ba81339ba928811f3bb2f8a0a376a2611130f8",
+          "outputTruncated": false
+        },
+        {
+          "case": "missing-identity-detection-reference",
+          "command": "python3 <tmp>/aq-e5-claim.py <repo>/forensics/tools <tmp>/aq-claim-no-identity.json <repo>/evidence/etp-t7/SECRETS.json <repo>/evidence/etp-t7/PREREGISTRATION.json",
+          "exit": 1,
+          "expected": {
+            "code": "CTGRIND_WITHOUT_HARNESS_IDENTITY_TAINT",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "two valgrind logs, one log with a finding, and two ctgrind claims",
+            "kind": "generated",
+            "parts": [
+              "claim_driver",
+              "claim_mismatched",
+              "claim_no_identity",
+              "empty_log",
+              "finding_log",
+              "unrelated_log"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "35b8bb444833575ccb6c5ae7d26ed2098f50f491a5b93e83ff8b01d43aebc887"
+          },
+          "kind": "detection",
+          "output": "CTGRIND_WITHOUT_HARNESS_IDENTITY_TAINT: AQ-CT-NO-IDENTITY: ctgrind claim without binary_identity\nAQ_REFUSED\n",
+          "outputSha256": "738836426e73e5454ac183ee06bda27427262a74136a01d1576c2543a963d473",
+          "outputTruncated": false
+        }
+      ],
+      "reason": "the instrument returned success on: empty-log, unrelated-log-only, candidate-identity-mismatch",
+      "refusedWitnesses": 0,
+      "rejectedWitnesses": 3,
+      "reported": {
+        "detection_reference": "the claim with no `binary_identity` at all is refused CTGRIND_WITHOUT_HARNESS_IDENTITY_TAINT, which shows the same adjudicator does refuse when a field is absent",
+        "identity_binding": "no tool in the tree compares a ctgrind log's binary with a recorded candidate; side_channel_erasure checks that a `binary_identity` field is present, not that it matches",
+        "summarizer_contract": "courts/phase18/timing/summarize_ct.py prints counts and exits 0; it has no exit-status contract of its own"
+      },
+      "title": "ctgrind: no errors because nothing ran",
+      "verdict": "DEFECT"
+    },
+    {
+      "canary": {
+        "acceptedCase": "live-emission-accepted",
+        "detected": true,
+        "detectionCase": "native-population-mismatch",
+        "probes": [
+          {
+            "case": "live-emission-accepted/flipped",
+            "detected": false,
+            "expected": false,
+            "means": "the harness reports DEFECT when the instrument accepted the input",
+            "ok": true,
+            "probe": "strict-detector-on-the-accepted-input"
+          },
+          {
+            "case": "live-emission-accepted/flipped",
+            "detected": true,
+            "expected": true,
+            "means": "a detector that accepts any observation reports QUALIFIED on the same input, so the strict detector is what produces the verdict",
+            "ok": true,
+            "probe": "weak-detector-on-the-same-input"
+          },
+          {
+            "case": "native-population-mismatch",
+            "detected": true,
+            "expected": true,
+            "means": "the harness does see a refusal when the instrument produces one",
+            "ok": true,
+            "probe": "strict-detector-on-the-detection-reference"
+          }
+        ]
+      },
+      "codes": [
+        "AQ_DEFECT_FOUND"
+      ],
+      "expected": "the adapter refuses both with SARIF_REFUSED_POPULATION_MISMATCH",
+      "hypothesis": "A native record whose declared population disagrees with its own entries, and an emission whose result count disagrees with the record, each make the projection's population statement false.",
+      "id": "E6",
+      "instrumentSha256": {
+        "forensics/tools/sarif_adapter.py": "dc9a8e9e277af59b490e663b738bb427aaf922e6de61f2a0b196b6818cc6e3d7"
+      },
+      "instruments": [
+        "forensics/tools/sarif_adapter.py"
+      ],
+      "notes": "the native-record half is the check the adapter implements; the emission half is the check the item asks for",
+      "observations": [
+        {
+          "case": "native-population-mismatch",
+          "command": "python3 <tmp>/aq-e6-sarif.py <repo>/forensics/tools native-record <tmp>/mirror",
+          "exit": 1,
+          "expected": {
+            "code": "SARIF_REFUSED_POPULATION_MISMATCH",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "a native record whose declared population exceeds its entries, the live emission, and the same emission with one result removed",
+            "kind": "generated",
+            "parts": [
+              "driver",
+              "live_emission",
+              "mutated_record",
+              "short_emission"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "401576fb066bcae77d6a8f1e8b5c9b226852580371ec6fcdc30d898857128af1"
+          },
+          "kind": "rejected",
+          "output": "SARIF_REFUSED_POPULATION_MISMATCH: evidence/etp-t7/SECRETS.json: counts sum 52 != 51 entries\n",
+          "outputSha256": "45c5fb506af66e4256f08fd7cbb8be5012369027e57ccf341f8d747ab62ec0cb",
+          "outputTruncated": false
+        },
+        {
+          "case": "emission-result-count-mismatch",
+          "command": "python3 <tmp>/aq-e6-sarif.py <repo>/forensics/tools emission <tmp>/aq-emission-short.json",
+          "exit": 0,
+          "expected": {
+            "code": "any-refusal",
+            "exit": "nonzero"
+          },
+          "input": {
+            "description": "a native record whose declared population exceeds its entries, the live emission, and the same emission with one result removed",
+            "kind": "generated",
+            "parts": [
+              "driver",
+              "live_emission",
+              "mutated_record",
+              "short_emission"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "401576fb066bcae77d6a8f1e8b5c9b226852580371ec6fcdc30d898857128af1"
+          },
+          "kind": "rejected",
+          "output": "AQ_ACCEPTED results=16\n",
+          "outputSha256": "43782f03447d9b14752268553d842fcca6e008764803ed76c32ef7d81928dcd3",
+          "outputTruncated": false
+        },
+        {
+          "case": "live-record-accepted",
+          "command": "python3 <tmp>/aq-e6-sarif.py <repo>/forensics/tools native-record <repo>",
+          "exit": 0,
+          "expected": {
+            "code": null,
+            "exit": [
+              0
+            ]
+          },
+          "input": {
+            "description": "a native record whose declared population exceeds its entries, the live emission, and the same emission with one result removed",
+            "kind": "generated",
+            "parts": [
+              "driver",
+              "live_emission",
+              "mutated_record",
+              "short_emission"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "401576fb066bcae77d6a8f1e8b5c9b226852580371ec6fcdc30d898857128af1"
+          },
+          "kind": "accepted",
+          "output": "AQ_ACCEPTED findings=51\n",
+          "outputSha256": "b9bc73393c66be3e63e6cbb0443818e0a4e675f2363cda50c2ca698f454effd4",
+          "outputTruncated": false
+        },
+        {
+          "case": "live-emission-accepted",
+          "command": "python3 <tmp>/aq-e6-sarif.py <repo>/forensics/tools emission <tmp>/aq-emission.json",
+          "exit": 0,
+          "expected": {
+            "code": null,
+            "exit": [
+              0
+            ]
+          },
+          "input": {
+            "description": "a native record whose declared population exceeds its entries, the live emission, and the same emission with one result removed",
+            "kind": "generated",
+            "parts": [
+              "driver",
+              "live_emission",
+              "mutated_record",
+              "short_emission"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "401576fb066bcae77d6a8f1e8b5c9b226852580371ec6fcdc30d898857128af1"
+          },
+          "kind": "accepted",
+          "output": "AQ_ACCEPTED results=17\n",
+          "outputSha256": "8cea64c0a1a2b9f071c4e85676c82a87ef75170708441d6c7a397232837e59cd",
+          "outputTruncated": false
+        }
+      ],
+      "reason": "refused 1 of 2; accepted: emission-result-count-mismatch",
+      "refusedWitnesses": 1,
+      "rejectedWitnesses": 2,
+      "reported": {
+        "emission_population": "validate_emission does not compare the emission's result count with the record population, so a dropped result leaves projection.projectedTotal disagreeing with run.results and the document is accepted",
+        "emission_shape": {
+          "declared_projectedTotal": 17,
+          "results_after": 16,
+          "results_before": 17,
+          "run": 0
+        },
+        "record_population": "the projection refuses a record whose declared counts do not equal its entries (SARIF_REFUSED_POPULATION_MISMATCH)",
+        "substitution": "no SARIF consumer ran; the adapter's own checks were called"
+      },
+      "title": "SARIF: population mismatch",
+      "verdict": "PARTIAL"
+    },
+    {
+      "canary": {
+        "acceptedCase": "well-formed-instrument",
+        "detected": true,
+        "detectionCase": "duplicate-key-instrument",
+        "probes": [
+          {
+            "case": "well-formed-instrument/flipped",
+            "detected": false,
+            "expected": false,
+            "means": "the harness reports DEFECT when the instrument accepted the input",
+            "ok": true,
+            "probe": "strict-detector-on-the-accepted-input"
+          },
+          {
+            "case": "well-formed-instrument/flipped",
+            "detected": true,
+            "expected": true,
+            "means": "a detector that accepts any observation reports QUALIFIED on the same input, so the strict detector is what produces the verdict",
+            "ok": true,
+            "probe": "weak-detector-on-the-same-input"
+          },
+          {
+            "case": "duplicate-key-instrument",
+            "detected": true,
+            "expected": true,
+            "means": "the harness does see a refusal when the instrument produces one",
+            "ok": true,
+            "probe": "strict-detector-on-the-detection-reference"
+          }
+        ]
+      },
+      "codes": [],
+      "expected": "both strict readers refuse all three inputs; the consumers of the register that still use the permissive reader are named",
+      "hypothesis": "A duplicate key, a byte-order mark and trailing data each have no single meaning, so a strict reader refuses them while json.loads accepts the first by keeping the last value.",
+      "id": "E7",
+      "instrumentSha256": {
+        "forensics/tools/instrument_qualify.py": "0040c19c9baa8cfab92f72fde63184d7fe95e7949fc3027c3e2ba63ec5f5504d",
+        "forensics/tools/policy_engine.py": "f4dcdf2e86317be3eb1fc40860912098ea3599fb460b5716ad38e5ec01ccbbf4"
+      },
+      "instruments": [
+        "forensics/tools/instrument_qualify.py",
+        "forensics/tools/policy_engine.py"
+      ],
+      "notes": "the duplicate-key input is the A11 pair {\"a\":1,\"a\":2}",
+      "observations": [
+        {
+          "case": "duplicate-key-instrument",
+          "command": "python3 <tmp>/aq-e7-strict.py <repo>/forensics/tools <tmp>/aq-duplicate-key.json instrument-qualify",
+          "exit": 1,
+          "expected": {
+            "code": "IQ_JSON_DUPLICATE_KEY",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "three malformed JSON documents, one well-formed document and the adapter",
+            "kind": "generated",
+            "parts": [
+              "bom",
+              "driver",
+              "duplicate-key",
+              "trailing-data",
+              "well-formed"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "a440aaf8accc6a4070fa5c7efca22bfd07f71c7e800c8007a270bd0e8793d9cd"
+          },
+          "kind": "rejected",
+          "output": "IQ_JSON_DUPLICATE_KEY\n",
+          "outputSha256": "58ef1583d72631472565c1dd7ca5af1d30243629526dac78eecf6fa93b7fb33b",
+          "outputTruncated": false
+        },
+        {
+          "case": "bom-instrument",
+          "command": "python3 <tmp>/aq-e7-strict.py <repo>/forensics/tools <tmp>/aq-bom.json instrument-qualify",
+          "exit": 1,
+          "expected": {
+            "code": "IQ_REGISTRY_UNREADABLE",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "three malformed JSON documents, one well-formed document and the adapter",
+            "kind": "generated",
+            "parts": [
+              "bom",
+              "driver",
+              "duplicate-key",
+              "trailing-data",
+              "well-formed"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "a440aaf8accc6a4070fa5c7efca22bfd07f71c7e800c8007a270bd0e8793d9cd"
+          },
+          "kind": "rejected",
+          "output": "IQ_REGISTRY_UNREADABLE\n",
+          "outputSha256": "202c4ffd81b90e2aa5934439684d451efaaf73f053c6f129c394a1d8b693b55a",
+          "outputTruncated": false
+        },
+        {
+          "case": "trailing-data-instrument",
+          "command": "python3 <tmp>/aq-e7-strict.py <repo>/forensics/tools <tmp>/aq-trailing-data.json instrument-qualify",
+          "exit": 1,
+          "expected": {
+            "code": "IQ_REGISTRY_UNREADABLE",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "three malformed JSON documents, one well-formed document and the adapter",
+            "kind": "generated",
+            "parts": [
+              "bom",
+              "driver",
+              "duplicate-key",
+              "trailing-data",
+              "well-formed"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "a440aaf8accc6a4070fa5c7efca22bfd07f71c7e800c8007a270bd0e8793d9cd"
+          },
+          "kind": "rejected",
+          "output": "IQ_REGISTRY_UNREADABLE\n",
+          "outputSha256": "202c4ffd81b90e2aa5934439684d451efaaf73f053c6f129c394a1d8b693b55a",
+          "outputTruncated": false
+        },
+        {
+          "case": "duplicate-key-policy",
+          "command": "python3 <tmp>/aq-e7-strict.py <repo>/forensics/tools <tmp>/aq-duplicate-key.json policy-engine",
+          "exit": 1,
+          "expected": {
+            "code": "PE_JSON_REFUSED",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "three malformed JSON documents, one well-formed document and the adapter",
+            "kind": "generated",
+            "parts": [
+              "bom",
+              "driver",
+              "duplicate-key",
+              "trailing-data",
+              "well-formed"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "a440aaf8accc6a4070fa5c7efca22bfd07f71c7e800c8007a270bd0e8793d9cd"
+          },
+          "kind": "rejected",
+          "output": "PE_JSON_REFUSED: duplicate object key 'a'\n",
+          "outputSha256": "5501a56928550d2ead81b6c9d6c9dd02fd90807f91ec06ab4e0d68b0684f0a9e",
+          "outputTruncated": false
+        },
+        {
+          "case": "bom-policy",
+          "command": "python3 <tmp>/aq-e7-strict.py <repo>/forensics/tools <tmp>/aq-bom.json policy-engine",
+          "exit": 1,
+          "expected": {
+            "code": "PE_JSON_REFUSED",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "three malformed JSON documents, one well-formed document and the adapter",
+            "kind": "generated",
+            "parts": [
+              "bom",
+              "driver",
+              "duplicate-key",
+              "trailing-data",
+              "well-formed"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "a440aaf8accc6a4070fa5c7efca22bfd07f71c7e800c8007a270bd0e8793d9cd"
+          },
+          "kind": "rejected",
+          "output": "PE_JSON_REFUSED: Unexpected UTF-8 BOM (decode using utf-8-sig): line 1 column 1 (char 0)\n",
+          "outputSha256": "b4469c4df4a36b0686d93002cf88b69ad5fc52effe40116e3011a40d55449174",
+          "outputTruncated": false
+        },
+        {
+          "case": "trailing-data-policy",
+          "command": "python3 <tmp>/aq-e7-strict.py <repo>/forensics/tools <tmp>/aq-trailing-data.json policy-engine",
+          "exit": 1,
+          "expected": {
+            "code": "PE_JSON_REFUSED",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "three malformed JSON documents, one well-formed document and the adapter",
+            "kind": "generated",
+            "parts": [
+              "bom",
+              "driver",
+              "duplicate-key",
+              "trailing-data",
+              "well-formed"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "a440aaf8accc6a4070fa5c7efca22bfd07f71c7e800c8007a270bd0e8793d9cd"
+          },
+          "kind": "rejected",
+          "output": "PE_JSON_REFUSED: Extra data: line 2 column 1 (char 8)\n",
+          "outputSha256": "45f55d54ab951b312d0d47d60fae967e9462ef5421b3b94804bc8b093f9d1de7",
+          "outputTruncated": false
+        },
+        {
+          "case": "well-formed-instrument",
+          "command": "python3 <tmp>/aq-e7-strict.py <repo>/forensics/tools <tmp>/aq-well-formed.json instrument-qualify",
+          "exit": 0,
+          "expected": {
+            "code": null,
+            "exit": [
+              0
+            ]
+          },
+          "input": {
+            "description": "three malformed JSON documents, one well-formed document and the adapter",
+            "kind": "generated",
+            "parts": [
+              "bom",
+              "driver",
+              "duplicate-key",
+              "trailing-data",
+              "well-formed"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "a440aaf8accc6a4070fa5c7efca22bfd07f71c7e800c8007a270bd0e8793d9cd"
+          },
+          "kind": "accepted",
+          "output": "AQ_ACCEPTED\n",
+          "outputSha256": "cdf70f30d84bdad5a7a86c0d025f7f9e95cc59654706c69304909904b1f8d46c",
+          "outputTruncated": false
+        },
+        {
+          "case": "well-formed-policy",
+          "command": "python3 <tmp>/aq-e7-strict.py <repo>/forensics/tools <tmp>/aq-well-formed.json policy-engine",
+          "exit": 0,
+          "expected": {
+            "code": null,
+            "exit": [
+              0
+            ]
+          },
+          "input": {
+            "description": "three malformed JSON documents, one well-formed document and the adapter",
+            "kind": "generated",
+            "parts": [
+              "bom",
+              "driver",
+              "duplicate-key",
+              "trailing-data",
+              "well-formed"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "a440aaf8accc6a4070fa5c7efca22bfd07f71c7e800c8007a270bd0e8793d9cd"
+          },
+          "kind": "accepted",
+          "output": "AQ_ACCEPTED\n",
+          "outputSha256": "cdf70f30d84bdad5a7a86c0d025f7f9e95cc59654706c69304909904b1f8d46c",
+          "outputTruncated": false
+        }
+      ],
+      "reason": "every rejected witness produced its named refusal",
+      "refusedWitnesses": 6,
+      "rejectedWitnesses": 6,
+      "reported": {
+        "consumers": [
+          {
+            "item": "ETP-3",
+            "loader": "strict",
+            "path": "forensics/tools/instrument_qualify.py",
+            "reason": "load_json_strict: object_pairs_hook rejects a duplicate key, non-finite numbers and a BOM",
+            "witness": [
+              "def load_json_strict(path: Path):"
+            ]
+          },
+          {
+            "item": "ETP-6",
+            "loader": "strict",
+            "path": "forensics/tools/etp6_verify.py",
+            "reason": "delegates to instrument_qualify.load_registry, which is load_json_strict",
+            "witness": [
+              "document = iq.load_registry(registry)"
+            ]
+          },
+          {
+            "item": "release gate (item 4)",
+            "loader": "strict",
+            "path": "forensics/tools/release_gate.py",
+            "reason": "runs `instrument_qualify.py check --registry`, so the parser is the strict one",
+            "witness": [
+              "[PYTHON, str(INSTRUMENT_TOOL), mode, \"--registry\", str(registry)]"
+            ]
+          },
+          {
+            "item": "ETP-T1",
+            "loader": "permissive",
+            "path": "forensics/tools/etp_t1_seed.py",
+            "reason": "plain json.loads of the register bytes: a duplicate key is accepted, and the last value wins",
+            "witness": [
+              "instruments = json.loads((REPO / \"evidence/etp3/instruments.json\").read_text())"
+            ]
+          },
+          {
+            "item": "A7",
+            "loader": "permissive",
+            "path": "forensics/tools/freshness.py",
+            "reason": "plain json.loads of the register text: a duplicate key is accepted, and the last value wins",
+            "witness": [
+              "text = repo.text(commit, \"evidence/etp3/instruments.json\")",
+              "document = json.loads(text)"
+            ]
+          },
+          {
+            "item": "A9",
+            "loader": "byte-identity",
+            "path": "forensics/tools/intoto.py",
+            "reason": "names the register as a subject and hashes its bytes; it does not parse it, so a parse-level difference is not observed here",
+            "witness": [
+              "instruments = \"evidence/etp3/instruments.json\""
+            ]
+          },
+          {
+            "item": "ETP-0",
+            "loader": "byte-identity",
+            "path": "forensics/tools/verify.py",
+            "reason": "binds the register by digest only",
+            "witness": [
+              "identity=(\"evidence/etp3/instruments.json\",),"
+            ]
+          }
+        ],
+        "finding": "two tracked consumers read the instrument register with plain json.loads, so a register with two values for one key is read two ways: the strict reader refuses it and these consumers take the last value",
+        "permissive_consumer_count": 2,
+        "permissive_consumers": [
+          "forensics/tools/etp_t1_seed.py",
+          "forensics/tools/freshness.py"
+        ],
+        "scope": "the duplicate-key input is the A11 pair {\"a\":1,\"a\":2}"
+      },
+      "title": "Strict parser versus a permissive consumer",
+      "verdict": "QUALIFIED"
+    },
+    {
+      "canary": {
+        "acceptedCase": "clean-reconciliation-accepted",
+        "detected": true,
+        "detectionCase": "default-allow",
+        "probes": [
+          {
+            "case": "clean-reconciliation-accepted/flipped",
+            "detected": false,
+            "expected": false,
+            "means": "the harness reports DEFECT when the instrument accepted the input",
+            "ok": true,
+            "probe": "strict-detector-on-the-accepted-input"
+          },
+          {
+            "case": "clean-reconciliation-accepted/flipped",
+            "detected": true,
+            "expected": true,
+            "means": "a detector that accepts any observation reports QUALIFIED on the same input, so the strict detector is what produces the verdict",
+            "ok": true,
+            "probe": "weak-detector-on-the-same-input"
+          },
+          {
+            "case": "default-allow",
+            "detected": true,
+            "expected": true,
+            "means": "the harness does see a refusal when the instrument produces one",
+            "ok": true,
+            "probe": "strict-detector-on-the-detection-reference"
+          }
+        ]
+      },
+      "codes": [],
+      "expected": "each is refused with its named code: PE_REFUSED_DEFAULT_ALLOW, PE_REFUSED_SCORE, OM_REFUSED_PASS_WITH_MISSING, OM_REFUSED_RECONCILIATION_MUTATED",
+      "hypothesis": "A default-allow policy, a scored policy, a PASS over a missing member and signed bytes changed after signing each produce a conclusion the record does not support.",
+      "id": "E8",
+      "instrumentSha256": {
+        "forensics/tools/omission.py": "05ce4754d088f14ae13e0bbfc04973fd6fe564807b63d73c247fb9271b20cfd8",
+        "forensics/tools/policy_engine.py": "f4dcdf2e86317be3eb1fc40860912098ea3599fb460b5716ad38e5ec01ccbbf4"
+      },
+      "instruments": [
+        "forensics/tools/policy_engine.py",
+        "forensics/tools/omission.py"
+      ],
+      "notes": "the policy is the live A20 policy with one field changed and its digest recomputed, so the shape refusal is the one under test",
+      "observations": [
+        {
+          "case": "default-allow",
+          "command": "python3 <repo>/forensics/tools/policy_engine.py evaluate --policy <tmp>/aq-policy-default-allow.json --pin <tmp>/aq-pin-default-allow.json --candidate 58aeb2ee01000638cc545e4cad7c9ec3b5ff9672",
+          "exit": 1,
+          "expected": {
+            "code": "PE_REFUSED_DEFAULT_ALLOW",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "two mutated policies with matching pins, a frozen population, and a signed reconciliation in three forms",
+            "kind": "generated",
+            "parts": [
+              "allow_pin",
+              "allow_policy",
+              "closed",
+              "envelope",
+              "mutated",
+              "passing",
+              "plan",
+              "score_pin",
+              "score_policy"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "8c999f39f9cd0c6f28f05498628c0d3442bfc7c75eaf763f19763d4762361ee2"
+          },
+          "kind": "rejected",
+          "output": "policy: id=release-policy version=1 digest=c13e701394e79d36e236d42ab16add9714768fc905b7a71796c916d1b234c9cf default=allow scores=false pin=<pin-digest>\ndecision: DENY codes=PE_REFUSED_DEFAULT_ALLOW obligations=8 required=8 met=3 unmet=5 unknown=0 notApplicable=0\n  obligation: id=A05.populations-admitted state=MET required=true record=evidence/a5/ADMISSION.json#/populations observed={\"of\":[{\"allowed\":[\"ABSENT\",\"AGGREGATE_ONLY\",\"COMPLETE\",\"DEFERRED\",\"EMPTY\",\"SAMPLED\",\"TRUNCATED_BOUNDED\",\"UNKNOWN\"],\"examples\":[],\"members\":16,\"unreadable\":0,\"violations\":0},{\"examples\":[],\"matches\":0,\"members\":16,\"unevaluable\":0,\"vacuous\":false}]} codes=NONE\n  obligation: id=A06.suppression-member-identities state=UNMET required=true record=evidence/a6/SUPPRESSIONS.json#/records observed={\"examples\":[\"t3-known-nonconformance-agents-md\",\"t4-suppressions\",\"t4-test-modules\"],\"matches\":8,\"members\":11,\"unevaluable\":0,\"vacuous\":false} codes=NONE\n  obligation: id=A07.delta-resolution-conditions state=MET required=true record=evidence/a7/DELTA.json#/deltas observed={\"of\":[{\"examples\":[],\"matches\":0,\"members\":4,\"unevaluable\":0,\"vacuous\":false},{\"examples\":[],\"matches\":0,\"members\":4,\"unevaluable\":0,\"vacuous\":false}]} codes=NONE\n  obligation: id=A12.independent-attestation state=UNMET required=true record=evidence/a12/VERIFICATION.json#/verifications observed={\"atLeast\":1,\"count\":0,\"examples\":[],\"members\":4,\"unevaluable\":0} codes=NONE\n  obligation: id=A14.release-authorised state=UNMET required=true record=evidence/a14/AUTHORISATION.json#/actions/release observed={\"expected\":\"AUTHORISED\",\"value\":\"REFUSED\"} codes=NONE\n  obligation: id=A15.release-threshold-met state=UNMET required=true record=evidence/a15/EVALUATION.json#/evaluations/release observed={\"expected\":\"MET\",\"value\":\"UNREACHABLE\"} codes=NONE\n  obligation: id=A17.forward-freeze-closed state=UNMET required=true record=evidence/a17/STATUS.json#/forwardFreeze observed={\"of\":[{\"expected\":\"CLOSED\",\"value\":\"OPEN\"},{\"expected\":true,\"value\":false}]} codes=NONE\n  obligation: id=A19.retraction-propagated state=MET required=true record=evidence/a19/PROPAGATION.json#/events observed={\"examples\":[],\"matches\":0,\"members\":11,\"unevaluable\":0,\"vacuous\":false} codes=NONE\n  refusal: code=PE_REFUSED_DEFAULT_ALLOW detail=policy: default is 'allow'; a policy must deny by default\n  unmet: A06.suppression-member-identities,A12.independent-attestation,A14.release-authorised,A15.release-threshold-met,A17.forward-freeze-closed\n  unknown: NONE\n  notApplicable: NONE\n",
+          "outputSha256": "7ed990143137c214f03c75f5c87011620ac3f62f29f3ce2cf5702a6aa27ae43d",
+          "outputTruncated": false
+        },
+        {
+          "case": "policy-with-a-score",
+          "command": "python3 <repo>/forensics/tools/policy_engine.py evaluate --policy <tmp>/aq-policy-scores.json --pin <tmp>/aq-pin-scores.json --candidate 58aeb2ee01000638cc545e4cad7c9ec3b5ff9672",
+          "exit": 1,
+          "expected": {
+            "code": "PE_REFUSED_SCORE",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "two mutated policies with matching pins, a frozen population, and a signed reconciliation in three forms",
+            "kind": "generated",
+            "parts": [
+              "allow_pin",
+              "allow_policy",
+              "closed",
+              "envelope",
+              "mutated",
+              "passing",
+              "plan",
+              "score_pin",
+              "score_policy"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "8c999f39f9cd0c6f28f05498628c0d3442bfc7c75eaf763f19763d4762361ee2"
+          },
+          "kind": "rejected",
+          "output": "policy: id=release-policy version=1 digest=3075e76ebe627fd208da6d9555a4591ce89b089cb27ad1692b56dc991f8d8296 default=deny scores=true pin=<pin-digest>\ndecision: DENY codes=PE_REFUSED_SCORE obligations=8 required=8 met=3 unmet=5 unknown=0 notApplicable=0\n  obligation: id=A05.populations-admitted state=MET required=true record=evidence/a5/ADMISSION.json#/populations observed={\"of\":[{\"allowed\":[\"ABSENT\",\"AGGREGATE_ONLY\",\"COMPLETE\",\"DEFERRED\",\"EMPTY\",\"SAMPLED\",\"TRUNCATED_BOUNDED\",\"UNKNOWN\"],\"examples\":[],\"members\":16,\"unreadable\":0,\"violations\":0},{\"examples\":[],\"matches\":0,\"members\":16,\"unevaluable\":0,\"vacuous\":false}]} codes=NONE\n  obligation: id=A06.suppression-member-identities state=UNMET required=true record=evidence/a6/SUPPRESSIONS.json#/records observed={\"examples\":[\"t3-known-nonconformance-agents-md\",\"t4-suppressions\",\"t4-test-modules\"],\"matches\":8,\"members\":11,\"unevaluable\":0,\"vacuous\":false} codes=NONE\n  obligation: id=A07.delta-resolution-conditions state=MET required=true record=evidence/a7/DELTA.json#/deltas observed={\"of\":[{\"examples\":[],\"matches\":0,\"members\":4,\"unevaluable\":0,\"vacuous\":false},{\"examples\":[],\"matches\":0,\"members\":4,\"unevaluable\":0,\"vacuous\":false}]} codes=NONE\n  obligation: id=A12.independent-attestation state=UNMET required=true record=evidence/a12/VERIFICATION.json#/verifications observed={\"atLeast\":1,\"count\":0,\"examples\":[],\"members\":4,\"unevaluable\":0} codes=NONE\n  obligation: id=A14.release-authorised state=UNMET required=true record=evidence/a14/AUTHORISATION.json#/actions/release observed={\"expected\":\"AUTHORISED\",\"value\":\"REFUSED\"} codes=NONE\n  obligation: id=A15.release-threshold-met state=UNMET required=true record=evidence/a15/EVALUATION.json#/evaluations/release observed={\"expected\":\"MET\",\"value\":\"UNREACHABLE\"} codes=NONE\n  obligation: id=A17.forward-freeze-closed state=UNMET required=true record=evidence/a17/STATUS.json#/forwardFreeze observed={\"of\":[{\"expected\":\"CLOSED\",\"value\":\"OPEN\"},{\"expected\":true,\"value\":false}]} codes=NONE\n  obligation: id=A19.retraction-propagated state=MET required=true record=evidence/a19/PROPAGATION.json#/events observed={\"examples\":[],\"matches\":0,\"members\":11,\"unevaluable\":0,\"vacuous\":false} codes=NONE\n  refusal: code=PE_REFUSED_SCORE detail=policy: scores is True, not false\n  unmet: A06.suppression-member-identities,A12.independent-attestation,A14.release-authorised,A15.release-threshold-met,A17.forward-freeze-closed\n  unknown: NONE\n  notApplicable: NONE\n",
+          "outputSha256": "adc4bd3b4895c33d0f423be0f7c05f90ddd761e69936cbc5ba84b2d1b075c504",
+          "outputTruncated": false
+        },
+        {
+          "case": "pass-over-a-missing-member",
+          "command": "python3 <repo>/forensics/tools/omission.py verify <tmp>/aq-FREEZE.json <tmp>/aq-closure-pass.json <tmp>/aq-closure-pass.envelope.json",
+          "exit": 1,
+          "expected": {
+            "code": "OM_REFUSED_PASS_WITH_MISSING",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "two mutated policies with matching pins, a frozen population, and a signed reconciliation in three forms",
+            "kind": "generated",
+            "parts": [
+              "allow_pin",
+              "allow_policy",
+              "closed",
+              "envelope",
+              "mutated",
+              "passing",
+              "plan",
+              "score_pin",
+              "score_policy"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "8c999f39f9cd0c6f28f05498628c0d3442bfc7c75eaf763f19763d4762361ee2"
+          },
+          "kind": "rejected",
+          "output": "omission: code=OM_REFUSED_PASS_WITH_MISSING detail=the summary passes while required member(s) ['absent'] are MISSING\n",
+          "outputSha256": "1895468c32cac526b5a2e029edec48a41ce5f1b761c22f3d270957fc5af23e37",
+          "outputTruncated": false
+        },
+        {
+          "case": "signed-bytes-mutated",
+          "command": "python3 <repo>/forensics/tools/omission.py verify <tmp>/aq-FREEZE.json <tmp>/aq-closure-mutated.json <tmp>/aq-closure.envelope.json",
+          "exit": 1,
+          "expected": {
+            "code": "OM_REFUSED_RECONCILIATION_MUTATED",
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "two mutated policies with matching pins, a frozen population, and a signed reconciliation in three forms",
+            "kind": "generated",
+            "parts": [
+              "allow_pin",
+              "allow_policy",
+              "closed",
+              "envelope",
+              "mutated",
+              "passing",
+              "plan",
+              "score_pin",
+              "score_policy"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "8c999f39f9cd0c6f28f05498628c0d3442bfc7c75eaf763f19763d4762361ee2"
+          },
+          "kind": "rejected",
+          "output": "omission: code=OM_REFUSED_RECONCILIATION_MUTATED detail=the signed bytes hash to 02ff534652d359a14a79d3c233c62d69cbc91d8d612953a1e165208a300d344f, but the manifest canonicalises to 8dd59ab8dfe07b3d186dc4ed6fe7f432b2ce4bc955366c0033478df6fbdd2473; the signature is over different bytes\n",
+          "outputSha256": "9eb7848f9d08fffb5cdbc8da3ee33892eac19f60e3c623c34d4d260d02a0c4db",
+          "outputTruncated": false
+        },
+        {
+          "case": "clean-reconciliation-accepted",
+          "command": "python3 <repo>/forensics/tools/omission.py verify <tmp>/aq-FREEZE.json <tmp>/aq-closure.json <tmp>/aq-closure.envelope.json",
+          "exit": 0,
+          "expected": {
+            "code": null,
+            "exit": [
+              0
+            ]
+          },
+          "input": {
+            "description": "two mutated policies with matching pins, a frozen population, and a signed reconciliation in three forms",
+            "kind": "generated",
+            "parts": [
+              "allow_pin",
+              "allow_policy",
+              "closed",
+              "envelope",
+              "mutated",
+              "passing",
+              "plan",
+              "score_pin",
+              "score_policy"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "8c999f39f9cd0c6f28f05498628c0d3442bfc7c75eaf763f19763d4762361ee2"
+          },
+          "kind": "accepted",
+          "output": "omission: code=OM_VERIFIED keyid=test-only:hmac-sha256:8e10a5a15d233d54 expected=2 produced=1 missing=1 unreadable=0 digestMismatch=0 unexpected=0 pass=false\n",
+          "outputSha256": "fed674d472d83b20b8b583ad6855c9a7a0e958f1480ef3fd088da6280f1adc3e",
+          "outputTruncated": false
+        },
+        {
+          "case": "live-policy-accepted",
+          "command": "python3 <repo>/forensics/tools/policy_engine.py evaluate --candidate 58aeb2ee01000638cc545e4cad7c9ec3b5ff9672",
+          "exit": 1,
+          "expected": {
+            "code": null,
+            "exit": [
+              1
+            ]
+          },
+          "input": {
+            "description": "two mutated policies with matching pins, a frozen population, and a signed reconciliation in three forms",
+            "kind": "generated",
+            "parts": [
+              "allow_pin",
+              "allow_policy",
+              "closed",
+              "envelope",
+              "mutated",
+              "passing",
+              "plan",
+              "score_pin",
+              "score_policy"
+            ],
+            "producedBy": "forensics/tools/adversarial_qualification.py",
+            "sha256": "8c999f39f9cd0c6f28f05498628c0d3442bfc7c75eaf763f19763d4762361ee2"
+          },
+          "kind": "accepted",
+          "output": "policy: id=release-policy version=1 digest=a3fcce8f195216c714f7d7cca228ee4cbca001d986b8104b6d168ee9152afacf default=deny scores=false pin=<pin-digest>\ndecision: DENY codes=NONE obligations=8 required=8 met=3 unmet=5 unknown=0 notApplicable=0\n  obligation: id=A05.populations-admitted state=MET required=true record=evidence/a5/ADMISSION.json#/populations observed={\"of\":[{\"allowed\":[\"ABSENT\",\"AGGREGATE_ONLY\",\"COMPLETE\",\"DEFERRED\",\"EMPTY\",\"SAMPLED\",\"TRUNCATED_BOUNDED\",\"UNKNOWN\"],\"examples\":[],\"members\":16,\"unreadable\":0,\"violations\":0},{\"examples\":[],\"matches\":0,\"members\":16,\"unevaluable\":0,\"vacuous\":false}]} codes=NONE\n  obligation: id=A06.suppression-member-identities state=UNMET required=true record=evidence/a6/SUPPRESSIONS.json#/records observed={\"examples\":[\"t3-known-nonconformance-agents-md\",\"t4-suppressions\",\"t4-test-modules\"],\"matches\":8,\"members\":11,\"unevaluable\":0,\"vacuous\":false} codes=NONE\n  obligation: id=A07.delta-resolution-conditions state=MET required=true record=evidence/a7/DELTA.json#/deltas observed={\"of\":[{\"examples\":[],\"matches\":0,\"members\":4,\"unevaluable\":0,\"vacuous\":false},{\"examples\":[],\"matches\":0,\"members\":4,\"unevaluable\":0,\"vacuous\":false}]} codes=NONE\n  obligation: id=A12.independent-attestation state=UNMET required=true record=evidence/a12/VERIFICATION.json#/verifications observed={\"atLeast\":1,\"count\":0,\"examples\":[],\"members\":4,\"unevaluable\":0} codes=NONE\n  obligation: id=A14.release-authorised state=UNMET required=true record=evidence/a14/AUTHORISATION.json#/actions/release observed={\"expected\":\"AUTHORISED\",\"value\":\"REFUSED\"} codes=NONE\n  obligation: id=A15.release-threshold-met state=UNMET required=true record=evidence/a15/EVALUATION.json#/evaluations/release observed={\"expected\":\"MET\",\"value\":\"UNREACHABLE\"} codes=NONE\n  obligation: id=A17.forward-freeze-closed state=UNMET required=true record=evidence/a17/STATUS.json#/forwardFreeze observed={\"of\":[{\"expected\":\"CLOSED\",\"value\":\"OPEN\"},{\"expected\":true,\"value\":false}]} codes=NONE\n  obligation: id=A19.retraction-propagated state=MET required=true record=evidence/a19/PROPAGATION.json#/events observed={\"examples\":[],\"matches\":0,\"members\":11,\"unevaluable\":0,\"vacuous\":false} codes=NONE\n  unmet: A06.suppression-member-identities,A12.independent-attestation,A14.release-authorised,A15.release-threshold-met,A17.forward-freeze-closed\n  unknown: NONE\n  notApplicable: NONE\n",
+          "outputSha256": "79d1acde225ca698a033d4c01bb73fbf90c7aed28f64614f4d2ae78082e8d964",
+          "outputTruncated": false
+        }
+      ],
+      "reason": "every rejected witness produced its named refusal",
+      "refusedWitnesses": 4,
+      "rejectedWitnesses": 4,
+      "reported": {
+        "accepted_note": "the live policy evaluates to DENY with no refusal code; a denial is not a refusal code and the accepted witness requires only that no refusal code fires",
+        "omission_mutated": "verify compares the envelope payload with the canonical reconciliation bytes before checking the reconciliation",
+        "omission_pass_with_missing": "verify re-derives the summary and refuses a PASS while a required member is MISSING",
+        "pin_digest_note": "the `pin=` digest in the engine's output is recorded as <pin-digest>: the pin embeds the run's temporary policy path, so its digest is not comparable across runs. The policy digest, which is what the refusal is about, is left exactly as printed",
+        "policy_default_allow": "validate_policy refuses default != 'deny'",
+        "policy_score": "validate_policy refuses scores != false"
+      },
+      "title": "Policy and omission",
+      "verdict": "QUALIFIED"
+    }
+  ],
+  "item": "A22",
+  "runs": 2,
+  "schema": "openssl-rs/a22/results/1",
+  "summary": {
+    "allQualified": false,
+    "codes": [
+      "AQ_DEFECT_FOUND"
+    ],
+    "defect": 1,
+    "experiments": 8,
+    "notRun": 0,
+    "partial": 1,
+    "qualified": 6
+  },
+  "tool": {
+    "path": "forensics/tools/adversarial_qualification.py",
+    "sha256": "d23d20abc8c8d14ca140cc0ee3287522c7aa8a9ce52ed36765d110167e6dbb13"
+  }
+}
