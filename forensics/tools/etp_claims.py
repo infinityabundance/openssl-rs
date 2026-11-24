@@ -87,6 +87,8 @@ import sys
 from pathlib import Path
 from typing import Any, Iterable
 
+import finding_identity
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_SCHEMA = REPO_ROOT / "evidence/etp/claim.schema.json"
 DEFAULT_CLAIMS = REPO_ROOT / "evidence/etp/claims.json"
@@ -362,7 +364,7 @@ def load_json(path: Path) -> Any:
 
 
 def canonical(value: Any) -> str:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
+    return finding_identity.canonical_json(value)
 
 
 def _json_equal(left: Any, right: Any) -> bool:
@@ -1946,6 +1948,30 @@ def check_document_laws(doc: dict, *, repo_root: Path | None = None) -> list[Ref
 def check_evidence_tree(doc: dict, repo_root: Path) -> list[Refusal]:
     """Fail closed when a cited digest cannot be re-derived from the stated identity."""
     refusals: list[Refusal] = []
+
+    def require_sha256(digest: str, location: str) -> bool:
+        """The identity model names a content digest and a commit id separately.
+
+        A cited digest that is not full-length SHA-256 cannot be the bytes of the
+        cited file, so it is refused before any re-derivation is attempted. A Git
+        object id recorded in a `sha256` field is a scope confusion, not a
+        mismatch to be discovered later.
+        """
+        if finding_identity.identity_token_kind(digest) == (
+            finding_identity.ALGORITHM_SHA256
+        ):
+            return True
+        refusals.append(
+            Refusal(
+                "EG_EVIDENCE_DIGEST_FORM",
+                location,
+                "sha256",
+                f"the recorded digest {digest!r} is not a full sha-256 content "
+                "digest; a Git object id names a commit, not file bytes",
+            )
+        )
+        return False
+
     source = doc.get("source_identity", {})
     source_commit = source.get("commit") if isinstance(source, dict) else None
     for c_index, claim in enumerate(doc.get("claims", [])):
@@ -1958,6 +1984,8 @@ def check_evidence_tree(doc: dict, repo_root: Path) -> list[Refusal]:
             digest = entry.get("sha256")
             identity = entry.get("digest_identity")
             if not isinstance(path, str) or not path or not isinstance(digest, str):
+                continue
+            if not require_sha256(digest, f"$.claims/{c_index}/evidence/{e_index}"):
                 continue
             actual: str | None = None
             if identity == "S" and isinstance(source_commit, str):
@@ -1995,6 +2023,10 @@ def check_evidence_tree(doc: dict, repo_root: Path) -> list[Refusal]:
                 path = record.get("path")
                 digest = record.get("sha256")
                 if not isinstance(path, str) or not isinstance(digest, str):
+                    continue
+                if not require_sha256(
+                    digest, f"$.claims/{c_index}/reconciliation/{field}"
+                ):
                     continue
                 target = repo_root / path
                 actual = (
@@ -2037,6 +2069,12 @@ def check_evidence_tree(doc: dict, repo_root: Path) -> list[Refusal]:
                 identity = result.get("digest_identity")
                 if not isinstance(path, str) or not path or not isinstance(digest, str):
                     continue
+                location = (
+                    f"$.claims/{c_index}/obligations/{o_index}/exclusions/"
+                    f"{x_index}/witness/result"
+                )
+                if not require_sha256(digest, location):
+                    continue
                 actual: str | None = None
                 if identity == "S" and isinstance(source_commit, str):
                     actual = _git_blob_sha256(repo_root, source_commit, path)
@@ -2046,10 +2084,6 @@ def check_evidence_tree(doc: dict, repo_root: Path) -> list[Refusal]:
                         actual = hashlib.sha256(target.read_bytes()).hexdigest()
                 else:
                     continue
-                location = (
-                    f"$.claims/{c_index}/obligations/{o_index}/exclusions/"
-                    f"{x_index}/witness/result"
-                )
                 if actual is None:
                     refusals.append(
                         Refusal(

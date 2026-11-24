@@ -1,0 +1,52 @@
+{
+  "artefact": {
+    "bytes": 13651450,
+    "path": "evidence/a1/SARIF.json",
+    "producer": "the narrow SARIF adapter before the identity model was extracted",
+    "results": 4245,
+    "runs": 6,
+    "sha256": "5c0cfee62512deb08cc12f95624be64865d3e544473bae80d9aca0ab36ce7852"
+  },
+  "artefactRegenerated": false,
+  "documentDifferences": [
+    {
+      "field": "runs[*].properties.a1.adapter.sha256",
+      "new": "dc9a8e9e277af59b490e663b738bb427aaf922e6de61f2a0b196b6818cc6e3d7",
+      "old": [
+        "35614b905d18bea2090fcac9e8c86ddee08b470fd7ad0ccbca189d4a54929d5b"
+      ],
+      "why": "the adapter's own digest changed because its source changed; no fingerprint is computed over it"
+    }
+  ],
+  "fingerprintMismatchCount": 0,
+  "fingerprintsCompared": 12735,
+  "fingerprintsReproduced": 12735,
+  "generalisedModule": {
+    "path": "forensics/tools/finding_identity.py",
+    "sha256": "29e9ac46bd049392b20decb8518e64a77c31d50cbbe29dd2df72f19e7f9718b6"
+  },
+  "method": "the identity model was substituted for the adapter's private fingerprint functions, the A1 sources were re-projected in memory, and every result's three fingerprints were compared with the recorded values at the same position; the recorded artefact was read only",
+  "mismatches": [],
+  "model": "a1/v1",
+  "notes": [
+    "the committed evidence/a1/SARIF.json was not rewritten; the recorded fingerprints remain the recorded values",
+    "the adapter digest recorded in the artefact names the pre-extraction producer, which is a fact about the artefact, not a fingerprint",
+    "a mismatch in any fingerprint would be recorded here as a migration with the old value retained, not silently replaced"
+  ],
+  "oldScheme": {
+    "model": "a1/v1",
+    "producer": "forensics/tools/sarif_adapter.py",
+    "producerSha256": [
+      "35614b905d18bea2090fcac9e8c86ddee08b470fd7ad0ccbca189d4a54929d5b"
+    ]
+  },
+  "outcome": "reproduced",
+  "recordedValuesPreserved": true,
+  "resultObjectDifferences": [],
+  "runPropertyDifferencesExcludingAdapterDigest": [],
+  "schema": "openssl-rs/a3/migration/1",
+  "streamSha256New": "0156cc8e2e26b951f6ec71fed2722cbedf4d6a5a2803b23ad4aa67df1737a5f7",
+  "streamSha256Old": "0156cc8e2e26b951f6ec71fed2722cbedf4d6a5a2803b23ad4aa67df1737a5f7",
+  "streamsEqual": true,
+  "tool": "evidence/a3/build_evidence.py"
+}

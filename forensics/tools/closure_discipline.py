@@ -74,12 +74,13 @@ SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 import subprocess
 import sys
 from pathlib import Path
+
+import finding_identity
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TOOLS = Path(__file__).resolve().parent
@@ -181,17 +182,13 @@ def _git(args, repo: Path) -> subprocess.CompletedProcess[bytes]:
 
 
 def sha256_bytes(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
+    return finding_identity.digest_bytes(data)
 
 
 def file_sha256(path: Path) -> str | None:
     if not path.is_file():
         return None
-    h = hashlib.sha256()
-    with open(path, "rb") as fh:
-        for chunk in iter(lambda: fh.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
+    return finding_identity.digest_file(path)
 
 
 def blob_sha256(commit: str | None, rel_path: str, repo: Path) -> str | None:
@@ -371,7 +368,9 @@ def _production_rows(receipt, consumer, commit, repo, identity, install) -> list
     for ordinal, row in enumerate(excluded, 1):
         edge = {
             "kind": "production-operation",
-            "identity": f"{row.get('file')}:{row.get('line')}:{row.get('kind')}",
+            "identity": finding_identity.row_identity(
+                row.get("file"), row.get("line"), row.get("kind")
+            ).text,
             "file": row.get("file"),
             "line": row.get("line"),
             "operation_kind": row.get("kind"),
@@ -419,7 +418,9 @@ def _enrolment_rows(receipt, consumer, commit, repo, identity, inventory) -> lis
         file = row.get("file")
         edge = {
             "kind": "documented-enrolment",
-            "identity": f"{file}:{row.get('line')}:{row.get('kind')}",
+            "identity": finding_identity.row_identity(
+                file, row.get("line"), row.get("kind")
+            ).text,
             "file": file,
             "line": row.get("line"),
             "operation_kind": row.get("kind"),
@@ -467,7 +468,7 @@ def _target_drop_rows(receipt, consumer, commit, repo, identity, install) -> lis
             target = drop.get("target")
             edge = {
                 "kind": "indirect-target-drop",
-                "identity": f"{edge_id}#target={target}",
+                "identity": finding_identity.target_identity(edge_id, target).text,
                 "edge_id": edge_id,
                 "target": target,
                 "drop_reason": drop.get("reason"),
@@ -557,8 +558,9 @@ def _residual_rows(receipt, consumer, identity, install) -> list:
         scoped = _residual_site_scoped(site_class)
         edge = {
             "kind": "unresolved-indirect-site",
-            "identity": "%s:%s:%s" % (site.get("dso"), site.get("function"),
-                                       site.get("call_site")),
+            "identity": finding_identity.site_identity(
+                site.get("dso"), site.get("function"), site.get("call_site")
+            ).text,
             "dso": site.get("dso"),
             "function": site.get("function"),
             "call_site": site.get("call_site"),

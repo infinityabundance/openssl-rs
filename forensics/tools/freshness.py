@@ -80,7 +80,6 @@ SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 import argparse
-import hashlib
 import importlib.util
 import json
 import re
@@ -89,6 +88,8 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
+
+import finding_identity
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TOOLS_DIR = Path(__file__).resolve().parent
@@ -231,7 +232,6 @@ PRESERVATION_PROCEDURES = (
 # refuses every other language rather than guessing.
 LINE_COMMENT = {".rs": "//", ".c": "//", ".h": "//"}
 
-HEX = re.compile(r"^[0-9a-f]{7,40}$")
 BACKTICK_PATH = re.compile(r"`((?:src|docs|evidence|courts|artifacts|forensics|docker)/[A-Za-z0-9_./-]+)`")
 
 # ---------------------------------------------------------------------------
@@ -339,7 +339,7 @@ TRIAGE_CAUSE_CODES = tuple(TRIAGE_CAUSES)
 
 
 def sha256_bytes(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
+    return finding_identity.digest_bytes(data)
 
 
 def sha256_hex(text: str) -> str:
@@ -687,7 +687,7 @@ def _walks(node: Any, depth: int = 0, path: str = "") -> Iterable[tuple[str, Any
 
 def _hex_strings(value: Any) -> list[str]:
     if isinstance(value, str):
-        return [value.strip()] if HEX.match(value.strip()) else []
+        return [value.strip()] if finding_identity.is_git_identity_token(value) else []
     return []
 
 
@@ -1237,7 +1237,9 @@ def _triage_declared(repo: Git, head: str, document: Any) -> list[dict[str, str]
     for field_path, value in _walks(document):
         if field_path not in TRIAGE_IDENTITY_FIELDS:
             continue
-        if not isinstance(value, str) or not HEX.match(value.strip()):
+        if not isinstance(value, str) or not finding_identity.is_git_identity_token(
+            value
+        ):
             continue
         commit = repo.resolve(value.strip())
         if commit is None or not repo.is_ancestor(commit, head):
@@ -1605,7 +1607,9 @@ def validate_triage(
             continue
         identity = item.get("identity")
         commit = identity.get("commit") if isinstance(identity, dict) else None
-        if not isinstance(commit, str) or not HEX.match(commit):
+        if not isinstance(commit, str) or not finding_identity.is_git_identity_token(
+            commit
+        ):
             findings.append(Refusal("FR_TRIAGE_SCHEMA", path, f"{cls} must name an identity commit"))
         elif repo is not None and repo.resolve(commit) is None:
             findings.append(Refusal("FR_TRIAGE_SCHEMA", path, f"identity commit {commit!r} does not resolve"))

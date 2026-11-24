@@ -26,11 +26,12 @@ SPDX-License-Identifier: Apache-2.0
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 import sys
 from pathlib import Path
+
+import finding_identity
 
 SARIF_VERSION = "2.1.0"
 SCHEMA_URI = (
@@ -367,20 +368,20 @@ _HEX40 = re.compile(r"^[0-9a-f]{40}$")
 
 
 def _digest_algorithm(digest: str) -> str:
-    """Name the algorithm from the recorded digest's form.
+    """Name the algorithm through the project-wide identity model.
 
-    A 64-hex value is SHA-256. A 40-hex value is a Git object identifier, which
-    this project computes as SHA-1 over the object header and bytes; the profile
-    names it `sha1-git-object` rather than `sha-1` so that it is not mistaken for
-    a content digest of the file.
+    The model distinguishes a SHA-256 content digest from a Git object identifier
+    (`sha1-git-object`) so a 40-hex commit id is not read as file bytes. The
+    adapter keeps its own refusal code because that code is part of this tool's
+    published interface.
     """
-    if _HEX64.match(digest):
-        return "sha-256"
-    if _HEX40.match(digest):
-        return "sha1-git-object"
-    raise Refusal(
-        R_MISSING_ARTIFACT_DIGEST, f"artefact digest is neither sha256 nor a git object id: {digest!r}"
-    )
+    try:
+        return finding_identity.digest_algorithm(str(digest))
+    except finding_identity.IdentityRefusal as exc:
+        raise Refusal(
+            R_MISSING_ARTIFACT_DIGEST,
+            f"artefact digest is neither sha256 nor a git object id: {digest!r}",
+        ) from exc
 
 
 # --------------------------------------------------------------------------
@@ -388,20 +389,11 @@ def _digest_algorithm(digest: str) -> str:
 # --------------------------------------------------------------------------
 
 def _sha256_bytes(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
+    return finding_identity.digest_bytes(data)
 
 
 def _canonical(value) -> str:
-    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
-
-
-def _fingerprint(kind: str, *parts: str) -> str:
-    payload = "\x00".join((kind,) + tuple(parts))
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
-
-
-def _normalise_text(text: str) -> str:
-    return " ".join(text.split())
+    return finding_identity.canonical_json(value)
 
 
 def _require(mapping: dict, key: str, record: str, code: str = R_SHAPE):
@@ -455,7 +447,8 @@ def _artifact_uri(path: str) -> str:
 def finding(
     *,
     rule: str,
-    logical_key: str,
+    key_class: str,
+    key_fields: dict,
     message: str,
     level: str,
     level_basis: str,
@@ -481,6 +474,10 @@ def finding(
         raise Refusal(R_SHAPE, f"rule {rule!r} is not in the closed registry")
     if level not in _KIND_FOR_LEVEL:
         raise Refusal(R_SHAPE, f"level {level!r} is not a SARIF level")
+    try:
+        logical_key = finding_identity.logical_key(key_class, **key_fields)
+    except finding_identity.IdentityRefusal as exc:
+        raise Refusal(R_SHAPE, f"{record}: {locator}: {exc.detail}") from exc
     if subject_uri is None:
         subject_uri = record
         subject_digest = record_sha256
@@ -498,6 +495,7 @@ def finding(
     return {
         "rule": rule,
         "logical_key": logical_key,
+        "key_class": key_class,
         "message": message,
         "level": level,
         "level_basis": level_basis,
@@ -641,7 +639,8 @@ def _project_secrets(repo_root: Path) -> dict:
         findings.append(
             finding(
                 rule=rule,
-                logical_key=entry["id"],
+                key_class="register-entry",
+                key_fields={"id": entry["id"]},
                 message=message,
                 level=level,
                 level_basis=basis,
@@ -781,7 +780,8 @@ def _project_timing(repo_root: Path) -> dict:
         findings.append(
             finding(
                 rule="A1-TIMING-LEAKAGE-DETECTED",
-                logical_key=name,
+                key_class="primitive-name",
+                key_fields={"name": name},
                 message=(
                     f"{name}: ctgrind recorded {ct.get('errors')} taint errors over "
                     f"{ct.get('contexts')} contexts; dudect verdict "
@@ -833,7 +833,8 @@ def _project_timing(repo_root: Path) -> dict:
         findings.append(
             finding(
                 rule="A1-TIMING-NOT-RUN",
-                logical_key=_normalise_text(str(item)),
+                key_class="normalised-text",
+                key_fields={"text": str(item)},
                 message=f"Not run: {item}",
                 level="warning",
                 level_basis="native-not-run-list",
@@ -972,7 +973,12 @@ def _project_safety(repo_root: Path) -> dict:
         findings.append(
             finding(
                 rule=rule,
-                logical_key=f"{item['path']}::{item['symbol']}::{status}",
+                key_class="path-symbol-status",
+                key_fields={
+                    "path": item["path"],
+                    "symbol": item["symbol"],
+                    "status": status,
+                },
                 message=(
                     f"{status}: {item['detail']}. Site {item['site']} at "
                     f"{item['path']}:{item['line']} ({item['symbol']})."
@@ -1015,7 +1021,12 @@ def _project_safety(repo_root: Path) -> dict:
         findings.append(
             finding(
                 rule="A1-UNSAFE-CONTRACT-ABSENT",
-                logical_key=f"{decoded['path']}::{decoded['symbol']}::{decoded['class']}",
+                key_class="path-symbol-class",
+                key_fields={
+                    "path": decoded["path"],
+                    "symbol": decoded["symbol"],
+                    "class": decoded["class"],
+                },
                 message=(
                     f"No contract text is recorded for this {decoded['class']} site "
                     f"{decoded['symbol']} at {decoded['path']}:{decoded['line']}; "
@@ -1046,7 +1057,8 @@ def _project_safety(repo_root: Path) -> dict:
     findings.append(
         finding(
             rule="A1-UNSAFE-SUPPRESSION-MEMBERS-ABSENT",
-            logical_key="suppressions",
+            key_class="literal",
+            key_fields={"value": "suppressions"},
             message=(
                 f"The native record reports {suppressions.get('total')} suppressions "
                 "by lint and records no member row for any suppression, so no "
@@ -1184,7 +1196,8 @@ def _project_curl(repo_root: Path) -> dict:
         findings.append(
             finding(
                 rule="A1-OBLIGATION-DISCHARGED",
-                logical_key=obligation["stable_id"],
+                key_class="stable-id",
+                key_fields={"id": obligation["stable_id"]},
                 message=(
                     f"{obligation['item']} ({obligation['file']}:{obligation['line']}): "
                     f"closure status DISCHARGED under mechanism "
@@ -1238,10 +1251,12 @@ def _project_curl(repo_root: Path) -> dict:
             findings.append(
                 finding(
                     rule="A1-OBLIGATION-DISPOSITION-SUPERSEDED",
-                    logical_key=(
-                        f"{obligation['stable_id']}::{conflict.get('boundary')}"
-                        f"::{conflict.get('receipt')}"
-                    ),
+                    key_class="obligation-boundary-receipt",
+                    key_fields={
+                        "obligation": obligation["stable_id"],
+                        "boundary": conflict.get("boundary"),
+                        "receipt": conflict.get("receipt"),
+                    },
                     message=(
                         f"Superseded disposition for {obligation['id']}: boundary "
                         f"{conflict.get('boundary')} receipt {conflict.get('receipt')} "
@@ -1285,7 +1300,12 @@ def _project_curl(repo_root: Path) -> dict:
         findings.append(
             finding(
                 rule="A1-ISA-BINARY-UNRESOLVED",
-                logical_key=f"{dso}::{site['class']}::{site['reason']}",
+                key_class="dso-class-reason",
+                key_fields={
+                    "dso": dso,
+                    "class": site["class"],
+                    "reason": site["reason"],
+                },
                 message=(
                     f"Unresolved indirect transfer in {dso}: function "
                     f"{site['function']} call site {site['call_site']} "
@@ -1321,7 +1341,8 @@ def _project_curl(repo_root: Path) -> dict:
     findings.append(
         finding(
             rule="A1-ISA-POPULATION-TRUNCATED",
-            logical_key="precision.residual_sites",
+            key_class="field-path",
+            key_fields={"json_path": "precision.residual_sites"},
             message=(
                 f"precision.residual_sites records {bound.get('sample_size')} of "
                 f"{bound.get('population_size')} members; {bound.get('omitted_members')} "
@@ -1355,7 +1376,8 @@ def _project_curl(repo_root: Path) -> dict:
     findings.append(
         finding(
             rule="A1-ELEMENT7-PREDICATE",
-            logical_key="precision.predicate_element_7",
+            key_class="field-path",
+            key_fields={"json_path": "precision.predicate_element_7"},
             message=(
                 f"curl element 7 predicate: {predicate.get('status')} "
                 f"(established={predicate.get('established')}). Native basis: "
@@ -1382,7 +1404,8 @@ def _project_curl(repo_root: Path) -> dict:
     findings.append(
         finding(
             rule="A1-CLOSURE-VERDICT",
-            logical_key="verdict",
+            key_class="literal",
+            key_fields={"value": "verdict"},
             message=(
                 f"Closure verdict: {verdict.get('state')}; safe_compatible="
                 f"{verdict.get('safe_compatible')}. Native reason: "
@@ -1481,7 +1504,8 @@ def _project_adjudication(repo_root: Path) -> dict:
     findings.append(
         finding(
             rule="A1-ADJUDICATION-VERDICT",
-            logical_key="verdict",
+            key_class="literal",
+            key_fields={"value": "verdict"},
             message=(
                 f"Adjudication verdict for {', '.join(families)}: "
                 f"{verdict.get('state')}. Native reason: {verdict.get('reason')}"
@@ -1515,9 +1539,8 @@ def _project_adjudication(repo_root: Path) -> dict:
         findings.append(
             finding(
                 rule="A1-ADJUDICATION-REFUTATION",
-                logical_key="refutation::" + _sha256_bytes(
-                    _normalise_text(str(text)).encode("utf-8")
-                )[:16],
+                key_class="refutation",
+                key_fields={"text": str(text), "digest_chars": 16},
                 message=str(text),
                 level="error",
                 level_basis="native-ordered-refutation",
@@ -1550,7 +1573,8 @@ def _project_adjudication(repo_root: Path) -> dict:
         findings.append(
             finding(
                 rule="A1-ADJUDICATION-MECHANISM",
-                logical_key=f"mechanism::{name}",
+                key_class="mechanism",
+                key_fields={"name": name},
                 message=(
                     f"Mechanism {name}: {state} over {entry.get('obligations')} "
                     "obligations."
@@ -1573,7 +1597,8 @@ def _project_adjudication(repo_root: Path) -> dict:
     findings.append(
         finding(
             rule="A1-ADJUDICATION-CROSS-CUTTING",
-            logical_key="item4_mechanisms.cross_cutting",
+            key_class="field-path",
+            key_fields={"json_path": "item4_mechanisms.cross_cutting"},
             message=f"Cross-cutting obligations: {cross_cutting}",
             level="error",
             level_basis="native-cross-cutting-NOT_ESTABLISHED",
@@ -1648,7 +1673,8 @@ def _project_reconciliation(repo_root: Path) -> dict:
         findings.append(
             finding(
                 rule="A1-RECONCILIATION-ROW",
-                logical_key=f"{obligation}::{decision}",
+                key_class="obligation-decision",
+                key_fields={"obligation": obligation, "decision": decision},
                 message=(
                     f"Reconciliation row {row.get('ledger_pointer')}: obligation "
                     f"{obligation}; decision {decision}; old_state "
@@ -1690,7 +1716,8 @@ def _project_reconciliation(repo_root: Path) -> dict:
         findings.append(
             finding(
                 rule="A1-RECONCILIATION-LIMIT",
-                logical_key="limits",
+                key_class="literal",
+                key_fields={"value": "limits"},
                 message=(
                     f"Reconciliation evidence level: {evidence_level}. Native not "
                     f"claimed: {limits.get('not_claimed', '')}".rstrip()
@@ -1753,26 +1780,36 @@ def _artifact_entry(uri: str, digest: str | None, digest_scope: str, roles: list
     return entry
 
 
-def _region_key(item: dict) -> str:
-    if item["path"] is not None and item["line"] is not None:
-        return f"line={item['line']}"
-    if item["byte_offset"] is not None:
-        return f"byteOffset={item['byte_offset']};address={item['address']}"
-    return f"locator={item['locator']}"
+def _identity_for_item(item: dict) -> finding_identity.Finding:
+    """Bind a projected finding to the model's three identities."""
+    subject = item["subject"]
+    try:
+        binding = finding_identity.Binding(
+            subject["uri"], str(subject["digest"]), subject["digest_scope"]
+        )
+        region = finding_identity.Region.from_native(
+            path=item["path"],
+            line=item["line"],
+            byte_offset=item["byte_offset"],
+            address=item["address"],
+            locator=item["locator"],
+        )
+        return finding_identity.Finding(
+            rule_id=item["rule"],
+            logical_key=item["logical_key"],
+            binding=binding,
+            region=region,
+            candidate=item["candidate"],
+            key_class=item["key_class"],
+            native_locator=item["locator"],
+        )
+    except finding_identity.IdentityRefusal as exc:
+        raise Refusal(R_EMISSION, f"{item['record']}: {exc.detail}") from exc
 
 
 def _build_result(item: dict, rule_index: dict, artifact_index: dict) -> dict:
     subject = item["subject"]
-    exact = _fingerprint(
-        "a1-exact/v1",
-        item["rule"],
-        item["logical_key"],
-        subject["uri"],
-        f"{subject['digest_scope']}:{subject['digest']}",
-        _region_key(item),
-    )
-    logical = _fingerprint("a1-logical/v1", item["rule"], item["logical_key"])
-    rule_fp = _fingerprint("a1-rule/v1", item["rule"])
+    identity = _identity_for_item(item)
 
     result = {
         "ruleId": item["rule"],
@@ -1781,9 +1818,9 @@ def _build_result(item: dict, rule_index: dict, artifact_index: dict) -> dict:
         "level": item["level"],
         "message": {"text": item["message"]},
         "partialFingerprints": {
-            "a1Rule/v1": rule_fp,
-            "a1Logical/v1": logical,
-            "a1Exact/v1": exact,
+            finding_identity.WIRE_KEYS["rule"]: identity.rule_fingerprint,
+            finding_identity.WIRE_KEYS["logical"]: identity.logical_fingerprint,
+            finding_identity.WIRE_KEYS["exact"]: identity.exact_fingerprint,
         },
         "properties": {
             "a1": {
@@ -1932,19 +1969,16 @@ def _run_for(meta: dict, adapter_digest: str) -> dict:
         )
     )
 
-    collisions: dict[str, list] = {}
-    for result in results:
-        exact = result["partialFingerprints"]["a1Exact/v1"]
-        collisions.setdefault(exact, []).append(result)
+    identity_records = [identity_from_result(result) for result in results]
+    collision_report = finding_identity.collision_report(identity_records, "exact")
     collision_list = [
         {
-            "fingerprint": fingerprint,
-            "ruleId": members[0]["ruleId"],
-            "locators": [m["properties"]["a1"]["native"]["locator"] for m in members],
-            "count": len(members),
+            "fingerprint": group["fingerprint"],
+            "ruleId": group["ruleIds"][0],
+            "locators": [member["nativeLocator"] for member in group["members"]],
+            "count": group["count"],
         }
-        for fingerprint, members in sorted(collisions.items())
-        if len(members) > 1
+        for group in collision_report["groups"]
     ]
 
     rule_counts: dict[str, int] = {}
@@ -2217,18 +2251,73 @@ def validate_emission(document: dict) -> None:
 # Consumer helper
 # --------------------------------------------------------------------------
 
+def identity_from_result(result: dict) -> finding_identity.Finding:
+    """Reconstruct the model's identity from an emitted SARIF result.
+
+    The reconstruction is an integrity check, not a convenience: every recorded
+    fingerprint must equal the model's recomputation from the result's own native
+    fields, artefact binding and region. A result that fails the check is refused,
+    because a consumer may not act on a fingerprint the model does not derive.
+    """
+    a1 = ((result.get("properties") or {}).get("a1")) or {}
+    artifact = a1.get("artifact") or {}
+    native = a1.get("native") or {}
+    try:
+        binding = finding_identity.Binding(
+            str(artifact.get("uri", "")),
+            str(artifact.get("digest", "")),
+            str(artifact.get("digestScope", "")),
+        )
+        physical = ((result.get("locations") or [{}])[0]).get("physicalLocation") or {}
+        region_data = physical.get("region") or {}
+        address = (physical.get("address") or {}).get("absoluteAddress")
+        if "startLine" in region_data:
+            region = finding_identity.Region("source", line=region_data["startLine"])
+        elif "byteOffset" in region_data:
+            region = finding_identity.Region(
+                "binary", byte_offset=region_data["byteOffset"], address=address
+            )
+        else:
+            region = finding_identity.Region("record", locator=str(native["locator"]))
+        finding = finding_identity.Finding(
+            rule_id=str(result["ruleId"]),
+            logical_key=str(a1["logicalKey"]),
+            binding=binding,
+            region=region,
+            candidate=a1.get("candidate"),
+            native_locator=str(native["locator"]),
+        )
+    except (KeyError, IndexError) as exc:
+        raise Refusal(R_EMISSION, f"result is not reconstructable: {exc}") from exc
+    except finding_identity.IdentityRefusal as exc:
+        raise Refusal(R_EMISSION, f"result identity is not reconstructable: {exc.detail}") from exc
+
+    recorded = result.get("partialFingerprints") or {}
+    for wire_key, computed in finding.fingerprints.items():
+        if recorded.get(wire_key) != computed:
+            raise finding_identity.IdentityRefusal(
+                finding_identity.FI_REFUSED_RECORDED_FINGERPRINT_MISMATCH,
+                f"{result.get('ruleId')}: recorded {wire_key} does not match the "
+                "model's recomputation",
+            )
+    return finding
+
+
 def fingerprints_interchangeable(left: dict, right: dict) -> bool:
     """True only when two results are the same occurrence in the same artefact.
 
     The profile forbids treating fingerprints as interchangeable across
     artefacts: equal rule and logical identities are not enough, and equal exact
-    identities in different artefacts are impossible by construction.
+    identities in different artefacts are impossible by construction. The check
+    is made by the identity model, which also verifies that each result's recorded
+    fingerprints are the ones its own fields derive.
     """
+    left_identity = identity_from_result(left)
+    right_identity = identity_from_result(right)
     return (
-        left["partialFingerprints"] == right["partialFingerprints"]
-        and left["properties"]["a1"]["artifact"] == right["properties"]["a1"]["artifact"]
-        and left["properties"]["a1"]["candidate"]
-        == right["properties"]["a1"]["candidate"]
+        left_identity.fingerprints == right_identity.fingerprints
+        and left_identity.binding == right_identity.binding
+        and left_identity.candidate_token == right_identity.candidate_token
     )
 
 

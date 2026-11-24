@@ -225,6 +225,7 @@ alias.
 | `EG_SAFE_COMPATIBLE_EXCLUSION_FAILS_BAR` | a `SAFE_COMPATIBLE` verdict's closure receipt contains an omission that fails the independently checkable exclusion bar |
 | `EG_MEASURE_UNTYPED` | a named free-text measure is compared across two claims that share a property, scope and identity |
 | `EG_EVIDENCE_CHECK_UNAVAILABLE` | a cited digest cannot be checked and the document claims one |
+| `EG_EVIDENCE_DIGEST_FORM` | a digest recorded as a content digest is not a full sha-256; a Git object id names a commit, not file bytes (docs/FINDING-IDENTITY.md §3) |
 | `EG_INVALIDATION_CYCLE` | the claim-level invalidation graph contains a cycle |
 | `EG_UNKNOWN_CLAIM_DEPENDENCY` | a claim depends on a claim id that is absent |
 | `EG_PARTIAL_NO_OBLIGATION` | `PARTIAL` with no recorded obligation |

@@ -1,0 +1,1045 @@
+{
+  "allMatchExpectation": true,
+  "caseCount": 8,
+  "cases": [
+    {
+      "case": "moved-within-file",
+      "description": "a function is moved inside its file; the finding's own native fields are unchanged and only its line moves",
+      "variants": [
+        {
+          "after": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "b27287c2175cecaeac622ecd0caa9a2af3a24a27b6587315de76231ff9ddc572",
+              "a1Logical/v1": "29067af57e371daf058b7d1f50b16c2794f22fc028b2bf7101ecddfd5eef1576",
+              "a1Rule/v1": "8366867363a7f5e42086dd007a4f75587271228611ecc472554de0afcea9a1c0"
+            },
+            "keyClass": "register-entry",
+            "logicalKey": "SEC-1",
+            "model": "a1/v1",
+            "nativeLocator": "entries/id=SEC-1",
+            "region": "line=120",
+            "ruleId": "A1-SECRET-CLEANSING-UNMET"
+          },
+          "before": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "011e4831c721fff5ea506a7398f776ec644d45d5a8d02684e836aa988a776936",
+              "a1Logical/v1": "29067af57e371daf058b7d1f50b16c2794f22fc028b2bf7101ecddfd5eef1576",
+              "a1Rule/v1": "8366867363a7f5e42086dd007a4f75587271228611ecc472554de0afcea9a1c0"
+            },
+            "keyClass": "register-entry",
+            "logicalKey": "SEC-1",
+            "model": "a1/v1",
+            "nativeLocator": "entries/id=SEC-1",
+            "region": "line=40",
+            "ruleId": "A1-SECRET-CLEANSING-UNMET"
+          },
+          "expected": {
+            "exactPreserved": false,
+            "logicalPreserved": true,
+            "relation": "location-moved"
+          },
+          "keyClass": "register-entry",
+          "matchesExpectation": true,
+          "name": "register-keyed, location only",
+          "note": "the key is the register id, which did not move; the exact region did",
+          "observed": {
+            "exactPreserved": false,
+            "keyClass": "register-entry",
+            "logicalPreserved": true,
+            "reason": "the logical key is unchanged and the location moved within one artefact digest, so only the exact occurrence changed",
+            "relation": "location-moved"
+          }
+        },
+        {
+          "after": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "f5c917ea1ccc7eab2976bc1a17bfa6fc27137dd0ba514c8b73cbc2a447242e67",
+              "a1Logical/v1": "7a904e449a9ee0063f4d6e6c9c6fb887e51c7c3a8024ca43a9f45f340ee577fa",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/a.rs::OpenSSL_foo::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/a.rs/OpenSSL_foo",
+            "region": "line=120",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "before": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "02cf3e2a940347ee1cdcb9a6629e060039ebd22591916659bdb212041472f73a",
+              "a1Logical/v1": "7a904e449a9ee0063f4d6e6c9c6fb887e51c7c3a8024ca43a9f45f340ee577fa",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/a.rs::OpenSSL_foo::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/a.rs/OpenSSL_foo",
+            "region": "line=40",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "expected": {
+            "exactPreserved": false,
+            "logicalPreserved": true,
+            "relation": "location-moved"
+          },
+          "keyClass": "path-symbol-status",
+          "matchesExpectation": true,
+          "name": "path-keyed, location only",
+          "note": "path, symbol and status are unchanged; only the region moved",
+          "observed": {
+            "exactPreserved": false,
+            "keyClass": "path-symbol-status",
+            "logicalPreserved": true,
+            "reason": "the logical key is unchanged and the location moved within one artefact digest, so only the exact occurrence changed",
+            "relation": "location-moved"
+          }
+        },
+        {
+          "after": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "2222222222222222222222222222222222222222222222222222222222222222",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "eb9b456f6eaf826a778194b255a42a627f26f77b74f01684f2c23fb271115467",
+              "a1Logical/v1": "7a904e449a9ee0063f4d6e6c9c6fb887e51c7c3a8024ca43a9f45f340ee577fa",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/a.rs::OpenSSL_foo::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/a.rs/OpenSSL_foo",
+            "region": "line=120",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "before": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "02cf3e2a940347ee1cdcb9a6629e060039ebd22591916659bdb212041472f73a",
+              "a1Logical/v1": "7a904e449a9ee0063f4d6e6c9c6fb887e51c7c3a8024ca43a9f45f340ee577fa",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/a.rs::OpenSSL_foo::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/a.rs/OpenSSL_foo",
+            "region": "line=40",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "expected": {
+            "exactPreserved": false,
+            "logicalPreserved": true,
+            "relation": "artefact-bytes-changed"
+          },
+          "keyClass": "path-symbol-status",
+          "matchesExpectation": true,
+          "name": "path-keyed, with the file rebuilt",
+          "note": "a real move changes the file, so the source-tree digest changes too; the exact identity changes for both reasons",
+          "observed": {
+            "exactPreserved": false,
+            "keyClass": "path-symbol-status",
+            "logicalPreserved": true,
+            "reason": "the logical key is unchanged; the artefact bytes changed, so the exact occurrence at the new digest is new",
+            "relation": "artefact-bytes-changed"
+          }
+        }
+      ]
+    },
+    {
+      "case": "moved-to-another-file",
+      "description": "the function is moved from one source file to another",
+      "variants": [
+        {
+          "after": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "2222222222222222222222222222222222222222222222222222222222222222",
+              "digestScope": "source-tree",
+              "uri": "src/b.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "94dc2344123298ef5800a0cebec63de570ac52f79cab44d2f6e79ba3a2148fa2",
+              "a1Logical/v1": "29067af57e371daf058b7d1f50b16c2794f22fc028b2bf7101ecddfd5eef1576",
+              "a1Rule/v1": "8366867363a7f5e42086dd007a4f75587271228611ecc472554de0afcea9a1c0"
+            },
+            "keyClass": "register-entry",
+            "logicalKey": "SEC-1",
+            "model": "a1/v1",
+            "nativeLocator": "entries/id=SEC-1",
+            "region": "line=60",
+            "ruleId": "A1-SECRET-CLEANSING-UNMET"
+          },
+          "before": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "011e4831c721fff5ea506a7398f776ec644d45d5a8d02684e836aa988a776936",
+              "a1Logical/v1": "29067af57e371daf058b7d1f50b16c2794f22fc028b2bf7101ecddfd5eef1576",
+              "a1Rule/v1": "8366867363a7f5e42086dd007a4f75587271228611ecc472554de0afcea9a1c0"
+            },
+            "keyClass": "register-entry",
+            "logicalKey": "SEC-1",
+            "model": "a1/v1",
+            "nativeLocator": "entries/id=SEC-1",
+            "region": "line=40",
+            "ruleId": "A1-SECRET-CLEANSING-UNMET"
+          },
+          "expected": {
+            "exactPreserved": false,
+            "logicalPreserved": true,
+            "relation": "subject-changed"
+          },
+          "keyClass": "register-entry",
+          "matchesExpectation": true,
+          "name": "register-keyed",
+          "note": "the register id is unchanged, so the logical finding is the same; the subject artefact changed, so the exact occurrence is new",
+          "observed": {
+            "exactPreserved": false,
+            "keyClass": "register-entry",
+            "logicalPreserved": true,
+            "reason": "the logical key is unchanged, but the subject artefact changed, so the exact occurrence is new",
+            "relation": "subject-changed"
+          }
+        },
+        {
+          "after": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "2222222222222222222222222222222222222222222222222222222222222222",
+              "digestScope": "source-tree",
+              "uri": "src/b.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "ef7a7697818da495ece2b60d44450e72db791646d5fba2ea71299d794af9d3b3",
+              "a1Logical/v1": "a8b775b203ada69c60e5e4e42587fa998f863020ff353d18b68441a24c0f19b9",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/b.rs::OpenSSL_foo::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/b.rs/OpenSSL_foo",
+            "region": "line=60",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "before": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "02cf3e2a940347ee1cdcb9a6629e060039ebd22591916659bdb212041472f73a",
+              "a1Logical/v1": "7a904e449a9ee0063f4d6e6c9c6fb887e51c7c3a8024ca43a9f45f340ee577fa",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/a.rs::OpenSSL_foo::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/a.rs/OpenSSL_foo",
+            "region": "line=40",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "expected": {
+            "exactPreserved": false,
+            "logicalPreserved": false,
+            "relation": "logical-key-changed"
+          },
+          "keyClass": "path-symbol-status",
+          "matchesExpectation": true,
+          "name": "path-keyed",
+          "note": "path is a logical-key field, so moving the function to another file yields a new logical identity; reusing the old one is a defect",
+          "observed": {
+            "exactPreserved": false,
+            "keyClass": "path-symbol-status",
+            "logicalPreserved": false,
+            "reason": "a registered logical-key field changed value; no equivalence between the two keys is recorded, so the logical identity is new; the class 'path-symbol-status' uses a field that changed",
+            "relation": "logical-key-changed"
+          }
+        }
+      ]
+    },
+    {
+      "case": "renamed",
+      "description": "the function is renamed with its body unchanged",
+      "variants": [
+        {
+          "after": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "2222222222222222222222222222222222222222222222222222222222222222",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "e386eaf3f031fffb5d05c3ef5f8f795c6fe7bdd6cfde5a1654da83e45d1ee021",
+              "a1Logical/v1": "29067af57e371daf058b7d1f50b16c2794f22fc028b2bf7101ecddfd5eef1576",
+              "a1Rule/v1": "8366867363a7f5e42086dd007a4f75587271228611ecc472554de0afcea9a1c0"
+            },
+            "keyClass": "register-entry",
+            "logicalKey": "SEC-1",
+            "model": "a1/v1",
+            "nativeLocator": "entries/id=SEC-1",
+            "region": "line=40",
+            "ruleId": "A1-SECRET-CLEANSING-UNMET"
+          },
+          "before": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "011e4831c721fff5ea506a7398f776ec644d45d5a8d02684e836aa988a776936",
+              "a1Logical/v1": "29067af57e371daf058b7d1f50b16c2794f22fc028b2bf7101ecddfd5eef1576",
+              "a1Rule/v1": "8366867363a7f5e42086dd007a4f75587271228611ecc472554de0afcea9a1c0"
+            },
+            "keyClass": "register-entry",
+            "logicalKey": "SEC-1",
+            "model": "a1/v1",
+            "nativeLocator": "entries/id=SEC-1",
+            "region": "line=40",
+            "ruleId": "A1-SECRET-CLEANSING-UNMET"
+          },
+          "expected": {
+            "exactPreserved": false,
+            "logicalPreserved": true,
+            "relation": "artefact-bytes-changed"
+          },
+          "keyClass": "register-entry",
+          "matchesExpectation": true,
+          "name": "register-keyed",
+          "note": "the identity is the register entry id, which a rename does not change; the file bytes changed, so the exact occurrence is new",
+          "observed": {
+            "exactPreserved": false,
+            "keyClass": "register-entry",
+            "logicalPreserved": true,
+            "reason": "the logical key is unchanged; the artefact bytes changed, so the exact occurrence at the new digest is new",
+            "relation": "artefact-bytes-changed"
+          }
+        },
+        {
+          "after": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "2222222222222222222222222222222222222222222222222222222222222222",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "0c32d55dffd550006169c100376c4a96982fcd2c4c5516b6ebdf001b2bb2e1f2",
+              "a1Logical/v1": "05d438dd724a0a3d85019f2aebc0f58cd9c096fdcf328f215471a96075aa488b",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/a.rs::OpenSSL_bar::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/a.rs/OpenSSL_bar",
+            "region": "line=40",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "before": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "02cf3e2a940347ee1cdcb9a6629e060039ebd22591916659bdb212041472f73a",
+              "a1Logical/v1": "7a904e449a9ee0063f4d6e6c9c6fb887e51c7c3a8024ca43a9f45f340ee577fa",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/a.rs::OpenSSL_foo::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/a.rs/OpenSSL_foo",
+            "region": "line=40",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "expected": {
+            "exactPreserved": false,
+            "logicalPreserved": false,
+            "relation": "logical-key-changed"
+          },
+          "keyClass": "path-symbol-status",
+          "matchesExpectation": true,
+          "name": "path-keyed",
+          "note": "symbol is a logical-key field; a rename is a new logical identity, not a moved occurrence",
+          "observed": {
+            "exactPreserved": false,
+            "keyClass": "path-symbol-status",
+            "logicalPreserved": false,
+            "reason": "a registered logical-key field changed value; no equivalence between the two keys is recorded, so the logical identity is new; the class 'path-symbol-status' uses a field that changed",
+            "relation": "logical-key-changed"
+          }
+        }
+      ]
+    },
+    {
+      "case": "reformatted",
+      "description": "the file is reformatted with no semantic change; the finding's line and native fields are unchanged but the bytes are not",
+      "variants": [
+        {
+          "after": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "2222222222222222222222222222222222222222222222222222222222222222",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "41b9c0cf4727d438723678df143eb6127d83024b798076c40df84b5aa04db65c",
+              "a1Logical/v1": "7a904e449a9ee0063f4d6e6c9c6fb887e51c7c3a8024ca43a9f45f340ee577fa",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/a.rs::OpenSSL_foo::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/a.rs/OpenSSL_foo",
+            "region": "line=40",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "before": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "02cf3e2a940347ee1cdcb9a6629e060039ebd22591916659bdb212041472f73a",
+              "a1Logical/v1": "7a904e449a9ee0063f4d6e6c9c6fb887e51c7c3a8024ca43a9f45f340ee577fa",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/a.rs::OpenSSL_foo::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/a.rs/OpenSSL_foo",
+            "region": "line=40",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "expected": {
+            "exactPreserved": false,
+            "logicalPreserved": true,
+            "relation": "artefact-bytes-changed"
+          },
+          "keyClass": "path-symbol-status",
+          "matchesExpectation": true,
+          "name": "path-keyed",
+          "note": "the logical key is unchanged; a source-tree-scoped exact identity includes the tree digest, so a reformat changes it",
+          "observed": {
+            "exactPreserved": false,
+            "keyClass": "path-symbol-status",
+            "logicalPreserved": true,
+            "reason": "the logical key is unchanged; the artefact bytes changed, so the exact occurrence at the new digest is new",
+            "relation": "artefact-bytes-changed"
+          }
+        },
+        {
+          "after": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "2222222222222222222222222222222222222222222222222222222222222222",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "e386eaf3f031fffb5d05c3ef5f8f795c6fe7bdd6cfde5a1654da83e45d1ee021",
+              "a1Logical/v1": "29067af57e371daf058b7d1f50b16c2794f22fc028b2bf7101ecddfd5eef1576",
+              "a1Rule/v1": "8366867363a7f5e42086dd007a4f75587271228611ecc472554de0afcea9a1c0"
+            },
+            "keyClass": "register-entry",
+            "logicalKey": "SEC-1",
+            "model": "a1/v1",
+            "nativeLocator": "entries/id=SEC-1",
+            "region": "line=40",
+            "ruleId": "A1-SECRET-CLEANSING-UNMET"
+          },
+          "before": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "011e4831c721fff5ea506a7398f776ec644d45d5a8d02684e836aa988a776936",
+              "a1Logical/v1": "29067af57e371daf058b7d1f50b16c2794f22fc028b2bf7101ecddfd5eef1576",
+              "a1Rule/v1": "8366867363a7f5e42086dd007a4f75587271228611ecc472554de0afcea9a1c0"
+            },
+            "keyClass": "register-entry",
+            "logicalKey": "SEC-1",
+            "model": "a1/v1",
+            "nativeLocator": "entries/id=SEC-1",
+            "region": "line=40",
+            "ruleId": "A1-SECRET-CLEANSING-UNMET"
+          },
+          "expected": {
+            "exactPreserved": false,
+            "logicalPreserved": true,
+            "relation": "artefact-bytes-changed"
+          },
+          "keyClass": "register-entry",
+          "matchesExpectation": true,
+          "name": "register-keyed",
+          "note": "the register id is unchanged; the exact identity moves with the artefact bytes",
+          "observed": {
+            "exactPreserved": false,
+            "keyClass": "register-entry",
+            "logicalPreserved": true,
+            "reason": "the logical key is unchanged; the artefact bytes changed, so the exact occurrence at the new digest is new",
+            "relation": "artefact-bytes-changed"
+          }
+        }
+      ]
+    },
+    {
+      "case": "insertion-above",
+      "description": "lines are inserted above (or deleted above) the finding; the finding's own text and native fields are unchanged",
+      "variants": [
+        {
+          "after": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "f34c65b23157a5ef4a1e3ba2d87bdc8341437d1c0df1536f539c67ef9f83fdcb",
+              "a1Logical/v1": "7a904e449a9ee0063f4d6e6c9c6fb887e51c7c3a8024ca43a9f45f340ee577fa",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/a.rs::OpenSSL_foo::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/a.rs/OpenSSL_foo",
+            "region": "line=54",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "before": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "02cf3e2a940347ee1cdcb9a6629e060039ebd22591916659bdb212041472f73a",
+              "a1Logical/v1": "7a904e449a9ee0063f4d6e6c9c6fb887e51c7c3a8024ca43a9f45f340ee577fa",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/a.rs::OpenSSL_foo::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/a.rs/OpenSSL_foo",
+            "region": "line=40",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "expected": {
+            "exactPreserved": false,
+            "logicalPreserved": true,
+            "relation": "location-moved"
+          },
+          "keyClass": "path-symbol-status",
+          "matchesExpectation": true,
+          "name": "path-keyed, location only",
+          "note": "line numbers are not logical-key fields, so the logical identity is preserved while the exact identity moves",
+          "observed": {
+            "exactPreserved": false,
+            "keyClass": "path-symbol-status",
+            "logicalPreserved": true,
+            "reason": "the logical key is unchanged and the location moved within one artefact digest, so only the exact occurrence changed",
+            "relation": "location-moved"
+          }
+        },
+        {
+          "after": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "2222222222222222222222222222222222222222222222222222222222222222",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "e6e0cffea49a968e5a4eef25a01ca9578ad418094cffccb6b55d764b49bcc2cd",
+              "a1Logical/v1": "7a904e449a9ee0063f4d6e6c9c6fb887e51c7c3a8024ca43a9f45f340ee577fa",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/a.rs::OpenSSL_foo::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/a.rs/OpenSSL_foo",
+            "region": "line=54",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "before": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "02cf3e2a940347ee1cdcb9a6629e060039ebd22591916659bdb212041472f73a",
+              "a1Logical/v1": "7a904e449a9ee0063f4d6e6c9c6fb887e51c7c3a8024ca43a9f45f340ee577fa",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/a.rs::OpenSSL_foo::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/a.rs/OpenSSL_foo",
+            "region": "line=40",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "expected": {
+            "exactPreserved": false,
+            "logicalPreserved": true,
+            "relation": "artefact-bytes-changed"
+          },
+          "keyClass": "path-symbol-status",
+          "matchesExpectation": true,
+          "name": "path-keyed, with the file rebuilt",
+          "note": "in a real edit both the region and the tree digest change; the logical identity is still preserved",
+          "observed": {
+            "exactPreserved": false,
+            "keyClass": "path-symbol-status",
+            "logicalPreserved": true,
+            "reason": "the logical key is unchanged; the artefact bytes changed, so the exact occurrence at the new digest is new",
+            "relation": "artefact-bytes-changed"
+          }
+        }
+      ]
+    },
+    {
+      "case": "deletion-above",
+      "description": "lines are inserted above (or deleted above) the finding; the finding's own text and native fields are unchanged",
+      "variants": [
+        {
+          "after": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "8b41aa85b1c0e54824bfebd28d1d469e06f50b18c49532eb6e8c40925d999ca0",
+              "a1Logical/v1": "7a904e449a9ee0063f4d6e6c9c6fb887e51c7c3a8024ca43a9f45f340ee577fa",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/a.rs::OpenSSL_foo::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/a.rs/OpenSSL_foo",
+            "region": "line=26",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "before": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "02cf3e2a940347ee1cdcb9a6629e060039ebd22591916659bdb212041472f73a",
+              "a1Logical/v1": "7a904e449a9ee0063f4d6e6c9c6fb887e51c7c3a8024ca43a9f45f340ee577fa",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/a.rs::OpenSSL_foo::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/a.rs/OpenSSL_foo",
+            "region": "line=40",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "expected": {
+            "exactPreserved": false,
+            "logicalPreserved": true,
+            "relation": "location-moved"
+          },
+          "keyClass": "path-symbol-status",
+          "matchesExpectation": true,
+          "name": "path-keyed, location only",
+          "note": "line numbers are not logical-key fields, so the logical identity is preserved while the exact identity moves",
+          "observed": {
+            "exactPreserved": false,
+            "keyClass": "path-symbol-status",
+            "logicalPreserved": true,
+            "reason": "the logical key is unchanged and the location moved within one artefact digest, so only the exact occurrence changed",
+            "relation": "location-moved"
+          }
+        },
+        {
+          "after": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "2222222222222222222222222222222222222222222222222222222222222222",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "423de672ddc9cd3a48da4371228fa5242c1ae3b62a3bf78fea711bf762862747",
+              "a1Logical/v1": "7a904e449a9ee0063f4d6e6c9c6fb887e51c7c3a8024ca43a9f45f340ee577fa",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/a.rs::OpenSSL_foo::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/a.rs/OpenSSL_foo",
+            "region": "line=26",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "before": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "02cf3e2a940347ee1cdcb9a6629e060039ebd22591916659bdb212041472f73a",
+              "a1Logical/v1": "7a904e449a9ee0063f4d6e6c9c6fb887e51c7c3a8024ca43a9f45f340ee577fa",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/a.rs::OpenSSL_foo::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/a.rs/OpenSSL_foo",
+            "region": "line=40",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "expected": {
+            "exactPreserved": false,
+            "logicalPreserved": true,
+            "relation": "artefact-bytes-changed"
+          },
+          "keyClass": "path-symbol-status",
+          "matchesExpectation": true,
+          "name": "path-keyed, with the file rebuilt",
+          "note": "in a real edit both the region and the tree digest change; the logical identity is still preserved",
+          "observed": {
+            "exactPreserved": false,
+            "keyClass": "path-symbol-status",
+            "logicalPreserved": true,
+            "reason": "the logical key is unchanged; the artefact bytes changed, so the exact occurrence at the new digest is new",
+            "relation": "artefact-bytes-changed"
+          }
+        }
+      ]
+    },
+    {
+      "case": "file-split",
+      "description": "one file is split into two and the function moves to the new file",
+      "variants": [
+        {
+          "after": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "2222222222222222222222222222222222222222222222222222222222222222",
+              "digestScope": "source-tree",
+              "uri": "src/a_part.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "8052fdd258c62af6fa4601670b61cae307a5e256c3bb050e7da2f43f5b8d5a02",
+              "a1Logical/v1": "db8381aee0e1bc00ba926c073e09666d17ef0561963ae22c3692075c0dbafcb5",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/a_part.rs::OpenSSL_foo::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/a_part.rs/OpenSSL_foo",
+            "region": "line=10",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "before": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "02cf3e2a940347ee1cdcb9a6629e060039ebd22591916659bdb212041472f73a",
+              "a1Logical/v1": "7a904e449a9ee0063f4d6e6c9c6fb887e51c7c3a8024ca43a9f45f340ee577fa",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/a.rs::OpenSSL_foo::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/a.rs/OpenSSL_foo",
+            "region": "line=40",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "expected": {
+            "exactPreserved": false,
+            "logicalPreserved": false,
+            "relation": "logical-key-changed"
+          },
+          "keyClass": "path-symbol-status",
+          "matchesExpectation": true,
+          "name": "path-keyed",
+          "note": "the path changed, so a path-keyed logical identity is new; the model does not infer that the two paths hold the same code",
+          "observed": {
+            "exactPreserved": false,
+            "keyClass": "path-symbol-status",
+            "logicalPreserved": false,
+            "reason": "a registered logical-key field changed value; no equivalence between the two keys is recorded, so the logical identity is new; the class 'path-symbol-status' uses a field that changed",
+            "relation": "logical-key-changed"
+          }
+        },
+        {
+          "after": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "2222222222222222222222222222222222222222222222222222222222222222",
+              "digestScope": "source-tree",
+              "uri": "src/a_part.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "ec6df17bc6a0805e88c95b3c52b93494d862e4107ae524186fb7c15027288aa7",
+              "a1Logical/v1": "29067af57e371daf058b7d1f50b16c2794f22fc028b2bf7101ecddfd5eef1576",
+              "a1Rule/v1": "8366867363a7f5e42086dd007a4f75587271228611ecc472554de0afcea9a1c0"
+            },
+            "keyClass": "register-entry",
+            "logicalKey": "SEC-1",
+            "model": "a1/v1",
+            "nativeLocator": "entries/id=SEC-1",
+            "region": "line=10",
+            "ruleId": "A1-SECRET-CLEANSING-UNMET"
+          },
+          "before": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "011e4831c721fff5ea506a7398f776ec644d45d5a8d02684e836aa988a776936",
+              "a1Logical/v1": "29067af57e371daf058b7d1f50b16c2794f22fc028b2bf7101ecddfd5eef1576",
+              "a1Rule/v1": "8366867363a7f5e42086dd007a4f75587271228611ecc472554de0afcea9a1c0"
+            },
+            "keyClass": "register-entry",
+            "logicalKey": "SEC-1",
+            "model": "a1/v1",
+            "nativeLocator": "entries/id=SEC-1",
+            "region": "line=40",
+            "ruleId": "A1-SECRET-CLEANSING-UNMET"
+          },
+          "expected": {
+            "exactPreserved": false,
+            "logicalPreserved": true,
+            "relation": "subject-changed"
+          },
+          "keyClass": "register-entry",
+          "matchesExpectation": true,
+          "name": "register-keyed",
+          "note": "a location-independent key survives the split; only the subject binding changes",
+          "observed": {
+            "exactPreserved": false,
+            "keyClass": "register-entry",
+            "logicalPreserved": true,
+            "reason": "the logical key is unchanged, but the subject artefact changed, so the exact occurrence is new",
+            "relation": "subject-changed"
+          }
+        }
+      ]
+    },
+    {
+      "case": "file-merge",
+      "description": "two files are merged and the function moves to the merged file",
+      "variants": [
+        {
+          "after": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "2222222222222222222222222222222222222222222222222222222222222222",
+              "digestScope": "source-tree",
+              "uri": "src/merged.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "d9406cc7e66bc78e1b7ba7ce5f87cc7f6098fb5ab6c16d7538d317fe363446dc",
+              "a1Logical/v1": "01fdd2176432f813e7fb3748e164c432ad39a6f72b006523af2820c816bd7fa7",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/merged.rs::OpenSSL_foo::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/merged.rs/OpenSSL_foo",
+            "region": "line=100",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "before": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "02cf3e2a940347ee1cdcb9a6629e060039ebd22591916659bdb212041472f73a",
+              "a1Logical/v1": "7a904e449a9ee0063f4d6e6c9c6fb887e51c7c3a8024ca43a9f45f340ee577fa",
+              "a1Rule/v1": "9a75e0fd0b0c0bd229033f8f188a045c059a2df136d5ec58cb3e3bc9d55ea906"
+            },
+            "keyClass": "path-symbol-status",
+            "logicalKey": "src/a.rs::OpenSSL_foo::VACUOUS_PRECONDITION",
+            "model": "a1/v1",
+            "nativeLocator": "sites/src/a.rs/OpenSSL_foo",
+            "region": "line=40",
+            "ruleId": "A1-UNSAFE-CONTRACT-ABSENT"
+          },
+          "expected": {
+            "exactPreserved": false,
+            "logicalPreserved": false,
+            "relation": "logical-key-changed"
+          },
+          "keyClass": "path-symbol-status",
+          "matchesExpectation": true,
+          "name": "path-keyed",
+          "note": "the path changed, so a path-keyed logical identity is new",
+          "observed": {
+            "exactPreserved": false,
+            "keyClass": "path-symbol-status",
+            "logicalPreserved": false,
+            "reason": "a registered logical-key field changed value; no equivalence between the two keys is recorded, so the logical identity is new; the class 'path-symbol-status' uses a field that changed",
+            "relation": "logical-key-changed"
+          }
+        },
+        {
+          "after": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "2222222222222222222222222222222222222222222222222222222222222222",
+              "digestScope": "source-tree",
+              "uri": "src/merged.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "714ed6dd137c75bc5ef2b586c4f1bd232994ff7512940e0907ced5b49c8044f0",
+              "a1Logical/v1": "29067af57e371daf058b7d1f50b16c2794f22fc028b2bf7101ecddfd5eef1576",
+              "a1Rule/v1": "8366867363a7f5e42086dd007a4f75587271228611ecc472554de0afcea9a1c0"
+            },
+            "keyClass": "register-entry",
+            "logicalKey": "SEC-1",
+            "model": "a1/v1",
+            "nativeLocator": "entries/id=SEC-1",
+            "region": "line=100",
+            "ruleId": "A1-SECRET-CLEANSING-UNMET"
+          },
+          "before": {
+            "binding": {
+              "algorithm": "sha-256",
+              "digest": "1111111111111111111111111111111111111111111111111111111111111111",
+              "digestScope": "source-tree",
+              "uri": "src/a.rs"
+            },
+            "candidateToken": "{\"branch\":\"staging\",\"commit\":\"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa\"}",
+            "fingerprints": {
+              "a1Exact/v1": "011e4831c721fff5ea506a7398f776ec644d45d5a8d02684e836aa988a776936",
+              "a1Logical/v1": "29067af57e371daf058b7d1f50b16c2794f22fc028b2bf7101ecddfd5eef1576",
+              "a1Rule/v1": "8366867363a7f5e42086dd007a4f75587271228611ecc472554de0afcea9a1c0"
+            },
+            "keyClass": "register-entry",
+            "logicalKey": "SEC-1",
+            "model": "a1/v1",
+            "nativeLocator": "entries/id=SEC-1",
+            "region": "line=40",
+            "ruleId": "A1-SECRET-CLEANSING-UNMET"
+          },
+          "expected": {
+            "exactPreserved": false,
+            "logicalPreserved": true,
+            "relation": "subject-changed"
+          },
+          "keyClass": "register-entry",
+          "matchesExpectation": true,
+          "name": "register-keyed",
+          "note": "a location-independent key survives the merge; the exact identity is bound to the new artefact",
+          "observed": {
+            "exactPreserved": false,
+            "keyClass": "register-entry",
+            "logicalPreserved": true,
+            "reason": "the logical key is unchanged, but the subject artefact changed, so the exact occurrence is new",
+            "relation": "subject-changed"
+          }
+        }
+      ]
+    }
+  ],
+  "model": "a1/v1",
+  "rule": "a logical identity is preserved only when every field of its registered logical key is unchanged, and an exact identity only when the rule, key, artefact binding, scope, digest and region are unchanged; where preservation cannot be derived, a new identity is correct and reuse is a defect",
+  "schema": "openssl-rs/a3/code-motion/1",
+  "tool": "evidence/a3/build_evidence.py",
+  "variantCount": 17
+}
