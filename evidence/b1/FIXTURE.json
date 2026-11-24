@@ -1,0 +1,191 @@
+{
+ "admittedService": false,
+ "baseCommit": "54fb5085b",
+ "checkpoints": [
+  {
+   "noteText": "FIXTURE-1\n2\nT5HZV0VFfb7nPt/r4KxvpEdaMSvbTOBUWq/g1Aecstg=\n\n",
+   "noteTextSha256": "ed5e95b059cc5644846874773c55b4f323c854d1d6c45df5b59f8fa9be12b747",
+   "rootHash": "4f91d95745457dbee73edfebe0ac6fa4475a312bdb4ce0545aafe0d4079cb2d8",
+   "signature": {
+    "keyHash": "d2e8038d",
+    "kind": "test-only-hmac-sha256",
+    "name": "FIXTURE-1 test-only hmac-sha256",
+    "notATrustRoot": true
+   },
+   "signedNote": "FIXTURE-1\n2\nT5HZV0VFfb7nPt/r4KxvpEdaMSvbTOBUWq/g1Aecstg=\n\n— FIXTURE-1 test-only hmac-sha256 0ugDjW7WUADcgbhw/gSo71DeO4hjJPll2nC3L/7ahTJJLmR+\n",
+   "signedNoteSha256": "ea79027e61b53ac3e74a573256abced4643ecded05c192175795c8b78a809987",
+   "size": 2
+  },
+  {
+   "noteText": "FIXTURE-1\n5\nEGqObqEkl8Xw7NBl006sFcK3+d1FgRziU/cA1Q06K+I=\n\n",
+   "noteTextSha256": "30da1a8c56930c020934ae828ee20cbe57b7375093b9620a3d8f22b5161fddaa",
+   "rootHash": "106a8e6ea12497c5f0ecd065d34eac15c2b7f9dd45811ce253f700d50d3a2be2",
+   "signature": {
+    "keyHash": "d2e8038d",
+    "kind": "test-only-hmac-sha256",
+    "name": "FIXTURE-1 test-only hmac-sha256",
+    "notATrustRoot": true
+   },
+   "signedNote": "FIXTURE-1\n5\nEGqObqEkl8Xw7NBl006sFcK3+d1FgRziU/cA1Q06K+I=\n\n— FIXTURE-1 test-only hmac-sha256 0ugDjbDwi4SNbhGbe3c5tJJZup7eSlsPBiV49z+ZWE7Al2F7\n",
+   "signedNoteSha256": "88ef279694ad7b2e0106f58a86c3e6e40238c69df22429e8539317f59ac73882",
+   "size": 5
+  },
+  {
+   "noteText": "FIXTURE-1\n6\n6aitASboNMDsNP7UZFcnctPzwtNQEZgjmhpVVDJMVA8=\n\n",
+   "noteTextSha256": "a9827408015a0fd3013d9ff47c0ed7f6b513424211f0f9d1ac50bef2e2236498",
+   "rootHash": "e9a8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f",
+   "signature": {
+    "keyHash": "d2e8038d",
+    "kind": "test-only-hmac-sha256",
+    "name": "FIXTURE-1 test-only hmac-sha256",
+    "notATrustRoot": true
+   },
+   "signedNote": "FIXTURE-1\n6\n6aitASboNMDsNP7UZFcnctPzwtNQEZgjmhpVVDJMVA8=\n\n— FIXTURE-1 test-only hmac-sha256 0ugDjZ6GHhpxtKIuysDw/F9MmigIDszHiEa6a97cnCC0o9LY\n",
+   "signedNoteSha256": "b3ccfb9bbf57f481dc1afd6982dd1514d7886acf0a13f83eb7267c2b18d65c07",
+   "size": 6
+  }
+ ],
+ "construction": {
+  "clause": "RFC 6962 §2.1; docs/ETP-ADDENDUM-B.md §B.3.2",
+  "emptyRoot": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "hash": "sha256",
+  "leafHash": "SHA-256(0x00 || leaf)",
+  "nodeHash": "SHA-256(0x01 || left || right)",
+  "tileBytes": 8192,
+  "tileEntries": 256
+ },
+ "identity": "FIXTURE-1",
+ "item": "B1b",
+ "labels": [
+  "FIXTURE-1",
+  "test-only",
+  "not-rekor-tiles",
+  "no-log-key",
+  "no-witness",
+  "no-production-signature"
+ ],
+ "leaves": [
+  {
+   "bytes": 549,
+   "index": 0,
+   "kind": "real-statement",
+   "leafHash": "ff841261d4d60908e8c6ed30bdd2405bb00c76da9a1f90f56fda628e7574b21f",
+   "path": "evidence/a9/STATEMENTS/a1-sarif.json",
+   "sha256": "d53bc4eb66f71bab7227fb9e590d151287a1d64b4446f8dd84b94ca8fef26329",
+   "subjects": [
+    {
+     "bytes": 13651450,
+     "name": "evidence/a1/SARIF.json",
+     "sha256": "5c0cfee62512deb08cc12f95624be64865d3e544473bae80d9aca0ab36ce7852"
+    }
+   ]
+  },
+  {
+   "bytes": 528,
+   "index": 1,
+   "kind": "real-statement",
+   "leafHash": "d536da9987a58c8b09125097547ede293628bb92f08b251f874a18aad954984e",
+   "path": "evidence/a9/STATEMENTS/a5-admission.json",
+   "sha256": "d17bb4c990893dc61ee06687a78b6c1b9a91b772e9dbefe233d1fa8b6c21e45f",
+   "subjects": [
+    {
+     "bytes": 5120,
+     "name": "evidence/a5/ADMISSION.json",
+     "sha256": "d4871ec97ae3a27b8ec820896e292429e44b4db4d11d2671a69b9dc0230ddc0a"
+    }
+   ]
+  },
+  {
+   "bytes": 672,
+   "index": 2,
+   "kind": "real-statement",
+   "leafHash": "f5b84960eddd4adcd01b992b1fbb354964a2bc02143bbc4e14d237c1fc4c8255",
+   "path": "evidence/a9/STATEMENTS/a7-delta.json",
+   "sha256": "d4dfa5a3b374ffc4382964dcac61e8a785cfe7f833cbe5c7731a210c0fe7fba8",
+   "subjects": [
+    {
+     "bytes": 2347127,
+     "name": "evidence/a7/DELTA.json",
+     "sha256": "0444a879bf4a0ddf5c50cffba7f51a5834b0fc4a1702d5190815de1f4470c8cf"
+    }
+   ]
+  },
+  {
+   "bytes": 714,
+   "index": 3,
+   "kind": "real-statement",
+   "leafHash": "d634ef880585fd724608819941c9717ddaf3b5081508649df21b86771fdd13ad",
+   "path": "evidence/a9/STATEMENTS/a8-shard-000.json",
+   "sha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582",
+   "subjects": [
+    {
+     "bytes": 8699144,
+     "name": "evidence/a8/SHARD-000.sarif",
+     "sha256": "b16d376ae0b2fa5483650f8019eada15102fcae580b0a46419b13e7ee98450ed"
+    }
+   ]
+  },
+  {
+   "bytes": 241,
+   "index": 4,
+   "kind": "synthetic-test-only",
+   "leafHash": "de561bf7ca8874c319396dc5d80f0b8265e2e676cf60ae3125dfeae171e02fbf",
+   "path": null,
+   "sha256": "a34384713ab006233376ef6825c0b7c84c5bbf700000d92eceabdff3760fd8fe",
+   "subjects": []
+  },
+  {
+   "bytes": 241,
+   "index": 5,
+   "kind": "synthetic-test-only",
+   "leafHash": "a81042eb977546dbffae76c1e1c6831e0f0161fc1ba853d096ce8cae27784d3b",
+   "path": null,
+   "sha256": "36411778dcb4c9f6d4800f9ddb3fc46a4d1a03b7bf5a54efd6eeb71aa6ed75d8",
+   "subjects": []
+  }
+ ],
+ "nonClaims": [
+  "FIXTURE-1 is not rekor-tiles and is not an admitted service",
+  "the checkpoint signer is A10's fixed public test key, not a log key",
+  "there is no witness, no cosignature and no production signature",
+  "the two synthetic leaves are test-only and are not ETP statements",
+  "this fixture does not establish that any Rekor admission will succeed"
+ ],
+ "origin": "FIXTURE-1",
+ "recordedAt": "2026-11-24",
+ "rootHash": "e9a8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f",
+ "schema": "openssl-rs/b1/fixture/1",
+ "seed": "openssl-rs/b1/fixture-1/seed/v1",
+ "tiles": {
+  "layout": "<prefix>/tile/<L>/<N>[.p/<W>]; <prefix>/tile/entries/<N>[.p/<W>]",
+  "paths": [
+   {
+    "bytes": 192,
+    "path": "tile/0/000.p/6",
+    "sha256": "fcbc0dda0ed13004bc31ae95d8ef05773bf35e0f311666a1972b4ce7a4951891"
+   },
+   {
+    "bytes": 96,
+    "path": "tile/1/000.p/3",
+    "sha256": "e9032595905c65c753e4dd149a48fd95f0a6bda453e74c91a8aef1b02090e080"
+   },
+   {
+    "bytes": 32,
+    "path": "tile/2/000.p/1",
+    "sha256": "3abc546bfca61c77ac08fee0680b25b923b5501f21e31ceede061ebd086e6151"
+   },
+   {
+    "bytes": 2957,
+    "path": "tile/entries/000.p/6",
+    "sha256": "ab987c074e8db5b924536dd5ef61daa0bc5696b7fa4a6ac5cc2f3f5158cd92be"
+   }
+  ],
+  "prefix": "evidence/b1/fixture"
+ },
+ "treeSize": 6,
+ "verification": {
+  "entryBundlesAgreeWithLevel0Hashes": true,
+  "tilesReconstructRoot": true,
+  "treeRoot": "e9a8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f"
+ }
+}

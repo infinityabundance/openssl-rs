@@ -1,0 +1,148 @@
+{
+ "absences": [
+  "no rekor-tiles binary or POSIX server asset",
+  "no Rekor client, cosign or Sigstore client",
+  "no log key and no checkpoint signer under this project's control",
+  "no witness, no TSA and no network",
+  "no digest for the POSIX server asset (the recorded digest is the AWS asset)"
+ ],
+ "admittedService": false,
+ "baseCommit": "54fb5085b",
+ "baseCommitShort": "54fb5085b",
+ "checks": [
+  {
+   "command": "command -v rekor-server rekor-cli rekor-tiles",
+   "id": "binary-absent",
+   "recordedIn": "evidence/b0/REGISTRY.json#/presenceCheck",
+   "result": "absent"
+  },
+  {
+   "command": "command -v cosign sigstore",
+   "id": "cosign-absent",
+   "recordedIn": "evidence/b0/REGISTRY.json#/presenceCheck",
+   "result": "absent"
+  },
+  {
+   "command": "command -v tsget openssl",
+   "id": "tsa-absent",
+   "recordedIn": "evidence/b0/REGISTRY.json#/presenceCheck",
+   "result": "only /usr/bin/openssl, which is not a timestamp authority"
+  },
+  {
+   "command": "tracked-path search for a Rekor endpoint or log key",
+   "id": "endpoint-absent",
+   "recordedIn": "evidence/b0/REGISTRY.json#/presenceCheck",
+   "result": "no endpoint or log key outside docs/"
+  },
+  {
+   "command": "no network request was made by this item",
+   "id": "no-network",
+   "recordedIn": "evidence/b1/PREFLIGHT.json",
+   "result": "no service contacted, nothing fetched or installed"
+  },
+  {
+   "command": "compare the recorded digest with the POSIX server asset",
+   "id": "posix-digest-absent",
+   "recordedIn": "evidence/b0/RECEIPT.md §3",
+   "result": "the only recorded digest sha256:3af252cd…61e8a6 names the linux/amd64 rekor-server-aws asset of v2.4.2, not the POSIX build"
+  },
+  {
+   "command": "inspect the Sigstore signing_config",
+   "id": "scf-1",
+   "recordedIn": "evidence/b0/SERVICE-CONFIGURATION.json#/serviceConfigurationFinding",
+   "result": "SCF-1: the signing_config inspected 2026-10-22 advertised a Rekor v1 endpoint; a client version does not imply a v2 service"
+  }
+ ],
+ "clause": "docs/ETP-ADDENDUM-B.md §B.30 B1; §B.21; §B.31",
+ "identity": "admitted-service-slice",
+ "item": "B1a",
+ "nonClaims": [
+  "no component was downloaded, installed, started or configured",
+  "no network request was made",
+  "a pinned version is not an installed service",
+  "the planned commands are not executed and are not evidence"
+ ],
+ "plannedCommands": [
+  {
+   "command": "sha256sum <pinned-posix-rekor-server-asset>  # must equal the digest recorded for that exact asset before execution (§B.3.2)",
+   "id": "verify-posix-asset",
+   "runsWhen": "the POSIX asset digest is recorded; NOT_RUN now"
+  },
+  {
+   "command": "<pinned-rekor-server> serve --help; <pinned-client> upload --help  # read the exact API version and flags from the admitted binary, not from documentation (§B.5)",
+   "id": "read-client-api",
+   "runsWhen": "the pinned binaries exist; NOT_RUN now"
+  },
+  {
+   "command": "<pinned-rekor-server> serve --storage posix --posix.path <dir> --log.key <key> <--hostname and port read from the binary's help>",
+   "id": "start-posix-instance",
+   "runsWhen": "the binary and a log key exist; NOT_RUN now"
+  },
+  {
+   "command": "<admitted-client> upload --type hashedrekord --artifact evidence/a9/STATEMENTS/a8-shard-000.json <--signature and --public-key per the admitted profile> --rekor_server <url>",
+   "id": "submit-hashedrekord",
+   "runsWhen": "the service, client and signer exist; NOT_RUN now"
+  },
+  {
+   "command": "python3 forensics/tools/tlog.py checkpoint --file <checkpoint> --origin <origin> --key-name <key> --key-hex <hex> --log <mirror> && python3 forensics/tools/tlog.py verify-inclusion --log <mirror> --index <n> --size <n> --leaf evidence/a9/STATEMENTS/a8-shard-000.json --proof <proof> --checkpoint <checkpoint> --key-name <key> --key-hex <hex>",
+   "id": "fetch-and-verify",
+   "runsWhen": "the service publishes a checkpoint and tiles; the tlog.py invocation is exact, the service-side placeholders are read at admission"
+  }
+ ],
+ "prerequisites": [
+  {
+   "clause": "§B.21, §B.31 items 1-2",
+   "id": "TA-B1",
+   "requirement": "a pinned rekor-tiles server binary matching a recorded digest runs with the POSIX backend and a log key this project controls",
+   "state": "UNMET"
+  },
+  {
+   "clause": "§B.5, §B.3.2",
+   "id": "B0-digest-gap",
+   "requirement": "record the digest of the exact POSIX server asset installed; the AWS asset digest may not be reused as its identity",
+   "state": "UNMET"
+  },
+  {
+   "clause": "§B.10",
+   "id": "B0-service-metadata",
+   "requirement": "read the service metadata actually used and refuse a v1 fallback; a local slice cannot inherit a v2 endpoint from the client",
+   "state": "UNMET"
+  },
+  {
+   "clause": "§B.5; §B.3.3 T3",
+   "id": "B0-hashedrekord",
+   "requirement": "use the supported hashedrekord representation, with the API version read from the admitted client, and derive the digest from the exact DSSE envelope",
+   "state": "UNMET"
+  },
+  {
+   "clause": "§B.9; §B.31 item 4",
+   "id": "TA-B2",
+   "requirement": "an admitted RFC 3161 authority for trusted signing time",
+   "state": "UNMET"
+  },
+  {
+   "clause": "§B.11; §B.31 item 10",
+   "id": "TA-B5",
+   "requirement": "an independent witness set with a quorum (not present at any n)",
+   "state": "UNMET"
+  }
+ ],
+ "recordedAt": "2026-11-24",
+ "schema": "openssl-rs/b1/preflight/1",
+ "status": "NOT_RUN",
+ "whatB1WouldNeed": [
+  "a pinned POSIX-backed rekor-tiles v2 instance with the exact asset digest recorded",
+  "a log key this project controls and a signed checkpoint from it",
+  "the admitted client's hashedrekord representation and API version, read from the binary",
+  "the exact DSSE envelope digest the admitted client computes (§B.3.3 T3)",
+  "an independent witness before any independence claim is made (§B.11)",
+  "a trusted RFC 3161 timestamp for signing time (§B.9), which is B2"
+ ],
+ "whatWasRunInstead": {
+  "doesNotEstablish": "that any Rekor admission, submission or witness will succeed",
+  "establishes": "the offline verifier refuses the §B.24 corruptions",
+  "identity": "FIXTURE-1",
+  "item": "B1b",
+  "record": "evidence/b1/PUBLICATION.json"
+ }
+}

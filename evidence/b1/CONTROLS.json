@@ -1,0 +1,441 @@
+{
+ "admittedService": false,
+ "baseCommit": "54fb5085b",
+ "clause": "docs/ETP-ADDENDUM-B.md §B.24",
+ "controls": [
+  {
+   "canary": {
+    "accepted": true,
+    "observation": "with the root comparison disabled the mutated leaf is not refused",
+    "scope": "verifier"
+   },
+   "clause": "B.24 item 1",
+   "fired": true,
+   "item": 1,
+   "mutation": "flip the first byte of the published leaf before hashing it",
+   "name": "tampered Merkle leaves",
+   "refusalCode": "TL_REFUSED_PROOF",
+   "refusalMessage": "the proof reconstructs f73bbb151e60a42303adb1b72e5e859c017a04bf0ecd921b9370506a9f596030, not the authenticated root e9a8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "observation": "the named index check returns the out-of-range index when disabled",
+    "scope": "check"
+   },
+   "clause": "B.24 item 2",
+   "fired": true,
+   "item": 2,
+   "mutation": "claim leaf index 6 in a tree of size 6",
+   "name": "incorrect leaf indices (out of range)",
+   "refusalCode": "TL_REFUSED_INDEX",
+   "refusalMessage": "leaf index 6 is outside 0..5"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "observation": "with the root comparison disabled the wrong index is not refused",
+    "scope": "verifier"
+   },
+   "clause": "B.24 item 2",
+   "fired": true,
+   "item": 2,
+   "mutation": "verify the index-3 proof as if it were the proof for index 2",
+   "name": "incorrect leaf indices (wrong index in range)",
+   "refusalCode": "TL_REFUSED_PROOF",
+   "refusalMessage": "the proof reconstructs d50c29e32020b8216bb6452e927c6f8eea7763842cdffd6f557cd4bfd64d9579, not the authenticated root e9a8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "observation": "with the root comparison disabled the reordered proof is not refused",
+    "scope": "verifier"
+   },
+   "clause": "B.24 item 3",
+   "fired": true,
+   "item": 3,
+   "mutation": "swap the first two audit-path siblings",
+   "name": "incorrect sibling order",
+   "refusalCode": "TL_REFUSED_PROOF",
+   "refusalMessage": "the proof reconstructs a7a503f91b81fb4356eb9cddcc8616025f64fb3b388368a936c5b081c767f078, not the authenticated root e9a8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "observation": "with the proof-length and root checks disabled the truncated path is not refused; a shorter path cannot reconstruct the root",
+    "scope": "verifier"
+   },
+   "clause": "B.24 item 4",
+   "fired": true,
+   "item": 4,
+   "mutation": "drop the last audit-path element",
+   "name": "truncated inclusion proofs",
+   "refusalCode": "TL_REFUSED_PROOF",
+   "refusalMessage": "the proof has too few elements: 2 sibling(s) of the right edge remain unaccounted for"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "observation": "with the proof-length and root checks disabled the excess element is not refused",
+    "scope": "verifier"
+   },
+   "clause": "B.24 item 5",
+   "fired": true,
+   "item": 5,
+   "mutation": "append one zero hash to a valid audit path",
+   "name": "excess proof elements",
+   "refusalCode": "TL_REFUSED_PROOF",
+   "refusalMessage": "proof element 3 is excess for leaf 3 in size 6"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "observation": "with the recomputed-root comparison disabled the signed wrong root is not refused",
+    "scope": "verifier"
+   },
+   "clause": "B.24 item 6",
+   "fired": true,
+   "item": 6,
+   "mutation": "sign a checkpoint whose root is not the root recomputed from the tiles",
+   "name": "incorrect checkpoint roots",
+   "refusalCode": "TL_REFUSED_ROOT",
+   "refusalMessage": "the checkpoint root e8a8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f is not the root recomputed from the tiles e9a8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "disabledCall": true,
+    "nextRefusal": "TL_REFUSED_TILE",
+    "observation": "the named size check returns without refusal when disabled; the next independent refusal is TL_REFUSED_TILE for the absent leaf, so the size refusal is first and attributable",
+    "scope": "check"
+   },
+   "clause": "B.24 item 7",
+   "fired": true,
+   "item": 7,
+   "mutation": "claim tree size 7 over a store whose entry bundles prove 6 leaves",
+   "name": "incorrect checkpoint tree sizes",
+   "refusalCode": "TL_REFUSED_SIZE",
+   "refusalMessage": "the tiles provide 6 leaves, fewer than the claimed size 7"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "observation": "with signature verification disabled the forged checkpoint is not refused",
+    "scope": "verifier"
+   },
+   "clause": "B.24 item 8",
+   "fired": true,
+   "item": 8,
+   "mutation": "sign the exact body with a key other than the policy-selected test key",
+   "name": "forged checkpoint signatures",
+   "refusalCode": "TL_REFUSED_CHECKPOINT_SIGNATURE",
+   "refusalMessage": "the signature does not verify over the exact note text"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "observation": "with the origin comparison disabled the other log's checkpoint is not refused",
+    "scope": "verifier"
+   },
+   "clause": "B.24 item 9",
+   "fired": true,
+   "item": 9,
+   "mutation": "present a correctly signed checkpoint whose origin is OTHER-LOG",
+   "name": "cross-log proof substitution",
+   "refusalCode": "TL_REFUSED_ORIGIN",
+   "refusalMessage": "the checkpoint origin 'OTHER-LOG' is not the expected 'FIXTURE-1'"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "observation": "with the origin comparison disabled the other shard is not refused",
+    "scope": "verifier"
+   },
+   "clause": "B.24 item 10",
+   "fired": true,
+   "item": 10,
+   "mutation": "present the same tree under a different shard origin",
+   "name": "cross-shard proof substitution",
+   "refusalCode": "TL_REFUSED_ORIGIN",
+   "refusalMessage": "the checkpoint origin 'FIXTURE-1-shard-002' is not the expected 'FIXTURE-1'"
+  },
+  {
+   "clause": "B.24 item 11",
+   "item": 11,
+   "name": "incorrect DSSE PAE digests",
+   "requires": "the admitted client's exact hashedrekord digest derivation (§B.5, §B.3.3 T3); no log entry was produced here",
+   "status": "NOT_RUN"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "observation": "with the leaf-binding and root checks disabled the unrelated statement is not refused; the proof still cannot bind it to the root",
+    "scope": "verifier"
+   },
+   "clause": "B.24 item 12",
+   "fired": true,
+   "item": 12,
+   "mutation": "claim the published statement's index and proof with a different real statement",
+   "name": "valid log entries for unrelated attestations",
+   "refusalCode": "TL_REFUSED_INCLUSION_OF_ABSENT_LEAF",
+   "refusalMessage": "leaf 3 is not the statement whose inclusion is claimed"
+  },
+  {
+   "clause": "B.24 item 13",
+   "item": 13,
+   "name": "unsupported protocol versions",
+   "requires": "the admitted service's version negotiation (§B.5, §B.10); no service exists",
+   "status": "NOT_RUN"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "observation": "with the tile geometry check disabled the decoder returns three hashes",
+    "scope": "check"
+   },
+   "clause": "B.24 item 14",
+   "fired": true,
+   "item": 14,
+   "mutation": "a 100-byte hash tile, which is not a multiple of 32",
+   "name": "malformed tiles",
+   "refusalCode": "TL_REFUSED_TILE",
+   "refusalMessage": "a hash tile is 100 bytes, which is not a multiple of 32"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "observation": "the reordered log's own leaf at that index is a valid inclusion; the binding predicate is what refuses the published statement",
+    "scope": "check"
+   },
+   "clause": "B.24 item 15",
+   "fired": true,
+   "item": 15,
+   "mutation": "swap the published leaf with its right neighbour, rebuild the tiles and re-sign the head",
+   "name": "reordered entry bundles",
+   "refusalCode": "TL_REFUSED_INCLUSION_OF_ABSENT_LEAF",
+   "refusalMessage": "leaf 3 is not the statement whose inclusion is claimed"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "observation": "with the declared-width check disabled the four hashes are returned",
+    "scope": "check"
+   },
+   "clause": "B.24 item 16",
+   "fired": true,
+   "item": 16,
+   "mutation": "a partial hash tile declaring width 3 while carrying 4 hashes",
+   "name": "incorrect partial-tile boundaries",
+   "refusalCode": "TL_REFUSED_TILE",
+   "refusalMessage": "the hash tile carries 4 hashes, not the declared 3"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "observation": "with the root comparison disabled the corrupted mirror is not refused",
+    "scope": "verifier"
+   },
+   "clause": "B.24 item 17",
+   "fired": true,
+   "item": 17,
+   "mutation": "flip one byte in a stored hash tile the root reconstruction reads",
+   "name": "corrupted mirror data",
+   "refusalCode": "TL_REFUSED_ROOT",
+   "refusalMessage": "the tiles reconstruct ecc6f2db72fe977684ead2a3364f4e5c6fba0a17c76a010d3ef5b2c968564975, not the authenticated e9a8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "observation": "with the rollback comparison disabled the older head is not refused",
+    "scope": "verifier"
+   },
+   "clause": "B.24 item 18",
+   "fired": true,
+   "item": 18,
+   "mutation": "present the size-2 checkpoint after the size-6 head was accepted",
+   "name": "stale checkpoint replay",
+   "refusalCode": "TL_REFUSED_ROLLBACK",
+   "refusalMessage": "tree size 2 is smaller than the accepted 6: a stale checkpoint cannot replace it"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "observation": "with the split-view comparison disabled the equivocating head is not refused",
+    "scope": "verifier"
+   },
+   "clause": "B.24 item 19",
+   "fired": true,
+   "item": 19,
+   "mutation": "sign a different root for the already accepted size",
+   "name": "same-size conflicting checkpoints",
+   "refusalCode": "TL_REFUSED_SPLIT_VIEW",
+   "refusalMessage": "two checkpoints at size 6 carry different roots (eba8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f and e9a8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f): equivocation"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "observation": "with the consistency check disabled the bad proof is not refused",
+    "scope": "verifier"
+   },
+   "clause": "B.24 item 20",
+   "fired": true,
+   "item": 20,
+   "mutation": "flip the first element of the valid 5 -> 6 consistency proof",
+   "name": "invalid consistency proofs",
+   "refusalCode": "TL_REFUSED_CONSISTENCY",
+   "refusalMessage": "the proof's smaller-tree reconstruction 6c801ac44fe606aab81a4e1de7392050a8b4f3e09ce978230981775b374c5a47 is not the authenticated 106a8e6ea12497c5f0ecd065d34eac15c2b7f9dd45811ce253f700d50d3a2be2"
+  },
+  {
+   "clause": "B.24 item 21",
+   "item": 21,
+   "name": "witness-state rollback",
+   "requires": "a witness with persistent state (§B.11); no witness exists at any n",
+   "status": "NOT_RUN"
+  },
+  {
+   "clause": "B.24 item 22",
+   "item": 22,
+   "name": "duplicate witness credentials",
+   "requires": "admitted witness keys and an independence policy (§B.11, §B.21)",
+   "status": "NOT_RUN"
+  },
+  {
+   "clause": "B.24 item 23",
+   "item": 23,
+   "name": "correlated witness populations",
+   "requires": "multiple independent operators (§B.11, §B.21)",
+   "status": "NOT_RUN"
+  },
+  {
+   "clause": "B.24 item 24",
+   "item": 24,
+   "name": "incorrect timestamp imprints",
+   "requires": "an admitted RFC 3161 token (§B.9), which is B2",
+   "status": "NOT_RUN"
+  },
+  {
+   "clause": "B.24 item 25",
+   "item": 25,
+   "name": "untrusted timestamp authorities",
+   "requires": "a timestamp trust root and chain (§B.9), which is B2",
+   "status": "NOT_RUN"
+  },
+  {
+   "clause": "B.24 item 26",
+   "item": 26,
+   "name": "backdated historical submissions",
+   "requires": "a trusted signing time and a publication event (§B.9, §B.2)",
+   "status": "NOT_RUN"
+  },
+  {
+   "clause": "B.24 item 27",
+   "item": 27,
+   "name": "omitted campaign failures",
+   "requires": "a registered campaign and its closure (§B.13-B.14), which is B3",
+   "status": "NOT_RUN"
+  },
+  {
+   "clause": "B.24 item 28",
+   "item": 28,
+   "name": "missing archived evidence",
+   "requires": "a durable archive and reconstruction (§B.17), which is B6",
+   "status": "NOT_RUN"
+  },
+  {
+   "clause": "B.24 item 29",
+   "item": 29,
+   "name": "stale revocation state",
+   "requires": "a revocation authority and current-state policy (§B.19), which is B6",
+   "status": "NOT_RUN"
+  },
+  {
+   "clause": "B.24 item 30",
+   "item": 30,
+   "name": "incorrect trust-root rotation",
+   "requires": "authenticated SigningConfig and TrustedRoot metadata (§B.10), which is B4",
+   "status": "NOT_RUN"
+  },
+  {
+   "clause": "B.24 item 31",
+   "item": 31,
+   "name": "interrupted publication",
+   "requires": "a live logging service and a partial-write model (§B.23), which is B1a",
+   "status": "NOT_RUN"
+  },
+  {
+   "clause": "B.24 item 32",
+   "item": 32,
+   "name": "logging-service unavailability",
+   "requires": "a live logging service (§B.10), which is B1a",
+   "status": "NOT_RUN"
+  },
+  {
+   "clause": "B.24 item 33",
+   "item": 33,
+   "name": "ambiguous submission retries",
+   "requires": "a live submission endpoint and retry semantics (§B.5, §B.23)",
+   "status": "NOT_RUN"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "observation": "with the duplicate check disabled the second append returns an index",
+    "scope": "check"
+   },
+   "clause": "B.24 control vocabulary; B.19 correction records",
+   "fired": true,
+   "item": null,
+   "mutation": "append the published statement's exact bytes a second time",
+   "name": "duplicate leaf",
+   "refusalCode": "TL_REFUSED_DUPLICATE_LEAF",
+   "refusalMessage": "leaf d634ef880585fd724608819941c9717ddaf3b5081508649df21b86771fdd13ad is already present; the same entry would be counted twice"
+  },
+  {
+   "canary": {
+    "accepted": true,
+    "observation": "with the subject-file binding disabled the canonical mutated statement is accepted as a statement, not as a binding",
+    "scope": "check"
+   },
+   "clause": "B.6 item 10; B.24 item 12",
+   "fired": true,
+   "item": null,
+   "mutation": "change the statement's subject digest without changing the subject file",
+   "name": "subject digest binding",
+   "refusalCode": "TL_REFUSED_BINDING",
+   "refusalMessage": "the statement does not bind its subject bytes (IT_REFUSED_SUBJECT_DIGEST_MISMATCH): evidence/a8/SHARD-000.sarif: the bytes hash to b16d376ae0b2fa5483650f8019eada15102fcae580b0a46419b13e7ee98450ed, not the stated 0000000000000000000000000000000000000000000000000000000000000000"
+  }
+ ],
+ "identity": "FIXTURE-1",
+ "item": "B1b",
+ "nonClaims": [
+  "a control that fires offline does not qualify a live Rekor service",
+  "the canary disables a named check; it does not show the corrupt input is valid",
+  "no witness, timestamp or campaign control was run"
+ ],
+ "recordedAt": "2026-11-24",
+ "schema": "openssl-rs/b1/controls/1",
+ "summary": {
+  "canariesAccepted": 21,
+  "fired": 21,
+  "notRun": 15,
+  "notRunItems": [
+   11,
+   13,
+   21,
+   22,
+   23,
+   24,
+   25,
+   26,
+   27,
+   28,
+   29,
+   30,
+   31,
+   32,
+   33
+  ],
+  "runOffline": 21,
+  "total": 36
+ }
+}

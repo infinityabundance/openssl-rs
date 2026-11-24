@@ -1,0 +1,103 @@
+{
+ "admittedService": false,
+ "baseCommit": "54fb5085b",
+ "binding": {
+  "leafHash": "d634ef880585fd724608819941c9717ddaf3b5081508649df21b86771fdd13ad",
+  "leafPayloadSha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582",
+  "statementSha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582",
+  "statementToLeaf": "the leaf payload is the exact statement bytes",
+  "subjectBytesRecomputed": true,
+  "subjectDigest": "b16d376ae0b2fa5483650f8019eada15102fcae580b0a46419b13e7ee98450ed",
+  "verified": true
+ },
+ "checkpoint": {
+  "notALogKey": true,
+  "noteTextSha256": "a9827408015a0fd3013d9ff47c0ed7f6b513424211f0f9d1ac50bef2e2236498",
+  "rootHash": "e9a8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f",
+  "signatureKeyHash": "d2e8038d",
+  "signatureName": "FIXTURE-1 test-only hmac-sha256",
+  "signatureVerified": true,
+  "signedNoteSha256": "b3ccfb9bbf57f481dc1afd6982dd1514d7886acf0a13f83eb7267c2b18d65c07",
+  "size": 6,
+  "testOnly": true
+ },
+ "consistency": {
+  "chain": [
+   {
+    "from": 2,
+    "to": 5,
+    "verified": true
+   },
+   {
+    "from": 5,
+    "to": 6,
+    "verified": true
+   }
+  ],
+  "independent": [
+   {
+    "from": 2,
+    "note": "m is a power of two; the 5 -> 6 case is not",
+    "proofElements": 2,
+    "to": 6,
+    "verified": true
+   }
+  ]
+ },
+ "envelope": {
+  "bytes": 1130,
+  "note": "recorded for the hashedrekord digest discussion (§B.3.3 T3); no Rekor log entry, hashedrekord kind or admitted-client derivation was produced",
+  "paeSha256": "9e08bc6c908d7964aa05af48a8e81c7806b6835febc31e9ecf022cb9c622280f",
+  "path": "evidence/a10/ENVELOPES/a8-shard-000.json",
+  "payloadEqualsStatement": true,
+  "sha256": "5bf418cc5b014d985199ce9e17cde859647303327f6bbd111279d3ed299503a9"
+ },
+ "hashedrekordPath": {
+  "clause": "docs/ETP-ADDENDUM-B.md §B.5, §B.3.3 T3, §B.30 B1",
+  "reason": "the leaf here is the statement bytes in a fixture log, not a Rekor hashedrekord entry; no submission, log entry or integrated time exists",
+  "requires": "a pinned POSIX-backed rekor-tiles v2 instance and the admitted client's exact hashedrekord representation and API version",
+  "status": "NOT_RUN"
+ },
+ "identity": "FIXTURE-1",
+ "inclusion": {
+  "proofElements": 3,
+  "refusalCodesObservedOnValidData": [],
+  "verified": true
+ },
+ "inclusionProof": [
+  "f5b84960eddd4adcd01b992b1fbb354964a2bc02143bbc4e14d237c1fc4c8255",
+  "4f91d95745457dbee73edfebe0ac6fa4475a312bdb4ce0545aafe0d4079cb2d8",
+  "9cd027e68254ae71491bf450eaca81eeffae10ee3ce70dd23430b470e1c33be2"
+ ],
+ "item": "B1b",
+ "leaf": {
+  "index": 3,
+  "leafHash": "d634ef880585fd724608819941c9717ddaf3b5081508649df21b86771fdd13ad"
+ },
+ "nonClaims": [
+  "this is not a Rekor publication and carries no Rekor log entry",
+  "the checkpoint is signed by the test-only A10 key, not a log key",
+  "no trusted signing time exists (§B.9); no RFC 3161 token was requested",
+  "inclusion in FIXTURE-1 does not establish inclusion in any admitted log"
+ ],
+ "recordedAt": "2026-11-24",
+ "rootHash": "e9a8ad0126e834c0ec34fed464572772d3f3c2d3501198239a1a5554324c540f",
+ "schema": "openssl-rs/b1/publication/1",
+ "statement": {
+  "bytes": 714,
+  "leafHash": "d634ef880585fd724608819941c9717ddaf3b5081508649df21b86771fdd13ad",
+  "path": "evidence/a9/STATEMENTS/a8-shard-000.json",
+  "predicateType": "https://openssl-rs.invalid/attestation/sarif-emission/v1",
+  "sha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582",
+  "subjectDigestsRecomputed": true,
+  "subjects": [
+   {
+    "bytes": 8699144,
+    "name": "evidence/a8/SHARD-000.sarif",
+    "sha256": "b16d376ae0b2fa5483650f8019eada15102fcae580b0a46419b13e7ee98450ed"
+   }
+  ],
+  "type": "https://in-toto.io/Statement/v1"
+ },
+ "treeSize": 6
+}
