@@ -1,0 +1,276 @@
+{
+ "codes": {
+  "IT_REFUSED_CLAIM_UPGRADE": {
+   "condition": "the predicate asserts a state, count or identity the named record does not admit, including a stronger state of the same kind",
+   "prevents": "that a statement upgrades a record: COMPLETE over TRUNCATED_BOUNDED, RESOLVED over zero resolutions, a member census over an aggregate, a verified instrument over a RECORDED one, an ACTIVE suppression with no expiry, or an evidence identity with no digest"
+  },
+  "IT_REFUSED_DUPLICATE_SUBJECT": {
+   "condition": "two subjects have the same name",
+   "prevents": "that two different digests for one artefact are both read as its identity, with the reader choosing one"
+  },
+  "IT_REFUSED_MISSING_SUBJECT": {
+   "condition": "the statement has no subject, or a subject has no name",
+   "prevents": "that an attestation about nothing is read as an attestation about an artefact"
+  },
+  "IT_REFUSED_PREDICATE_FIELD": {
+   "condition": "a required predicate field is missing or malformed, or a forbidden field is present",
+   "prevents": "that an absent field is defaulted, or that a field the predicate is not licensed to carry smuggles a second, weaker claim"
+  },
+  "IT_REFUSED_PREDICATE_TYPE": {
+   "condition": "the predicate type is not a registered project predicate, or a SLSA predicate type is used for a statement that is not SLSA provenance",
+   "prevents": "that an unversioned or borrowed predicate type makes a project claim look like an external specification's claim"
+  },
+  "IT_REFUSED_RECORD_ABSENT": {
+   "condition": "the record a predicate would restate is not present",
+   "prevents": "that a statement is built from an absent record, which would assert a predicate with no source at all"
+  },
+  "IT_REFUSED_RECORD_INADMISSIBLE": {
+   "condition": "the source record exists but fails its own admission (A5, A6 or A7), or disagrees with the declaration it claims to record",
+   "prevents": "that a statement launders a refused declaration into an admitted one, because the envelope looks authoritative"
+  },
+  "IT_REFUSED_STATEMENT_MUTATED": {
+   "condition": "re-reading the emitted bytes does not reproduce the canonical statement this tool writes, or the document shape is not the emitted shape",
+   "prevents": "that a reordered, re-spaced or re-shaped document is verified as if it were the statement that was emitted"
+  },
+  "IT_REFUSED_SUBJECT_ABSENT": {
+   "condition": "the subject file is not present when the digest is computed",
+   "prevents": "that a missing artefact is silently skipped or hashed as empty, so a statement names a file that does not exist"
+  },
+  "IT_REFUSED_SUBJECT_DIGEST_FORM": {
+   "condition": "a subject digest names an algorithm other than sha256, or its value is not 64 lowercase hexadecimal characters",
+   "prevents": "that a Git object id, an abbreviated token or a non-hex string is read as a content digest of the bytes"
+  },
+  "IT_REFUSED_SUBJECT_DIGEST_MISMATCH": {
+   "condition": "a subject digest differs from the bytes on disk, or the predicate names a record at a digest the statement does not carry",
+   "prevents": "that a statement names an artefact it has not hashed, or carries a digest taken at another moment"
+  },
+  "IT_REFUSED_TYPE": {
+   "condition": "the document's `_type` is not https://in-toto.io/Statement/v1",
+   "prevents": "that a document of another type (a DSSE envelope, an in-toto v0.1 statement, a bare predicate) is read as a Statement v1"
+  }
+ },
+ "controls": [
+  {
+   "code": "IT_REFUSED_MISSING_SUBJECT",
+   "condition": "a statement with no subject",
+   "control": "missing-subject",
+   "detail": "a Statement v1 must name at least one subject",
+   "observed": "IT_REFUSED_MISSING_SUBJECT"
+  },
+  {
+   "code": "IT_REFUSED_SUBJECT_ABSENT",
+   "condition": "the subject file is not present",
+   "control": "absent-file",
+   "detail": "evidence/a9/absent-subject.json: the subject file is absent; a statement is not emitted for an artefact that is not present",
+   "observed": "IT_REFUSED_SUBJECT_ABSENT"
+  },
+  {
+   "code": "IT_REFUSED_SUBJECT_DIGEST_FORM",
+   "condition": "a 40-character Git object id as a content digest",
+   "control": "git-object-id",
+   "detail": "subject[0] (evidence/a1/SARIF.json): the sha256 value must be 64 lowercase hex characters; got '1efd02cbd1401c4cffb854b906c021915df94386'",
+   "observed": "IT_REFUSED_SUBJECT_DIGEST_FORM"
+  },
+  {
+   "code": "IT_REFUSED_SUBJECT_DIGEST_MISMATCH",
+   "condition": "a caller-supplied digest that disagrees with the bytes",
+   "control": "digest-mismatch",
+   "detail": "evidence/a1/SARIF.json: the bytes hash to 5c0cfee62512deb08cc12f95624be64865d3e544473bae80d9aca0ab36ce7852, not the stated 0000000000000000000000000000000000000000000000000000000000000000",
+   "observed": "IT_REFUSED_SUBJECT_DIGEST_MISMATCH"
+  },
+  {
+   "code": "IT_REFUSED_DUPLICATE_SUBJECT",
+   "condition": "one artefact named twice",
+   "control": "duplicate-subject",
+   "detail": "two subjects are named 'evidence/a1/SARIF.json'; one artefact has one digest in one statement",
+   "observed": "IT_REFUSED_DUPLICATE_SUBJECT"
+  },
+  {
+   "code": "IT_REFUSED_TYPE",
+   "condition": "a canonical document whose `_type` is not Statement v1",
+   "control": "wrong-type",
+   "detail": "_type is 'https://in-toto.io/Statement/v0.1', not 'https://in-toto.io/Statement/v1'",
+   "observed": "IT_REFUSED_TYPE"
+  },
+  {
+   "code": "IT_REFUSED_PREDICATE_TYPE",
+   "condition": "an unregistered predicate type",
+   "control": "unknown-predicate-type",
+   "detail": "https://openssl-rs.invalid/attestation/unknown/v1: not a registered predicate type; registered: https://openssl-rs.invalid/attestation/baseline-delta/v1, https://openssl-rs.invalid/attestation/instrument-qualification/v1, https://openssl-rs.invalid/attestation/population/v1, https://openssl-rs.invalid/attestation/sarif-emission/v1, https://openssl-rs.invalid/attestation/suppression/v1",
+   "observed": "IT_REFUSED_PREDICATE_TYPE"
+  },
+  {
+   "code": "IT_REFUSED_PREDICATE_FIELD",
+   "condition": "a required predicate field is absent",
+   "control": "missing-predicate-field",
+   "detail": "population: missing required field(s) ['record']; a missing field is refused, never defaulted",
+   "observed": "IT_REFUSED_PREDICATE_FIELD"
+  },
+  {
+   "code": "IT_REFUSED_CLAIM_UPGRADE",
+   "condition": "COMPLETE claimed over the TRUNCATED_BOUNDED curl residual population",
+   "control": "complete-over-truncated",
+   "detail": "the predicate states state='COMPLETE'; the record states 'TRUNCATED_BOUNDED'",
+   "observed": "IT_REFUSED_CLAIM_UPGRADE"
+  },
+  {
+   "code": "IT_REFUSED_CLAIM_UPGRADE",
+   "condition": "one RESOLVED claimed over a delta with zero resolutions",
+   "control": "resolved-over-none",
+   "detail": "the predicate states dispositions={'STILL_PRESENT': 4245, 'RESOLVED': 1, 'MOVED': 0, 'NEW': 0, 'UNSCANNED_ABSENT': 0, 'TOOL_CHANGED_ABSENT': 0, 'EXCLUDED_ABSENT': 0, 'SUPPRESSED_ABSENT': 0, 'POPULATION_SHRUNK_ABSENT': 0, 'UNKNOWN': 0}; the record states {'STILL_PRESENT': 4245, 'RESOLVED': 0, 'MOVED': 0, 'NEW': 0, 'UNSCANNED_ABSENT': 0, 'TOOL_CHANGED_ABSENT': 0, 'EXCLUDED_ABSENT': 0, 'SUPPRESSED_ABSENT': 0, 'POPULATION_SHRUNK_ABSENT': 0, 'UNKNOWN': 0}",
+   "observed": "IT_REFUSED_CLAIM_UPGRADE"
+  },
+  {
+   "code": "IT_REFUSED_CLAIM_UPGRADE",
+   "condition": "a member census claimed over the AGGREGATE_ONLY suppression total",
+   "control": "census-over-aggregate",
+   "detail": "a census is claimed over a record admitted at AGGREGATE_ONLY with membersRecorded=False; an aggregate cannot support a member census",
+   "observed": "IT_REFUSED_CLAIM_UPGRADE"
+  },
+  {
+   "code": "IT_REFUSED_CLAIM_UPGRADE",
+   "condition": "a verified instrument claimed over a RECORDED-only control",
+   "control": "verified-over-recorded",
+   "detail": "the predicate states status='PASS'; the record states 'RECORDED'",
+   "observed": "IT_REFUSED_CLAIM_UPGRADE"
+  },
+  {
+   "code": "IT_REFUSED_CLAIM_UPGRADE",
+   "condition": "an ACTIVE suppression with neither an expiry nor an unbounded claim",
+   "control": "expiry-free-suppression",
+   "detail": "the predicate states disposition='ACTIVE'; the record states 'NON_ACTIONABLE'",
+   "observed": "IT_REFUSED_CLAIM_UPGRADE"
+  },
+  {
+   "code": "IT_REFUSED_CLAIM_UPGRADE",
+   "condition": "an evidence identity that names no content digest",
+   "control": "evidence-without-digest",
+   "detail": "evidence[0] (evidence/a1/SARIF.json): the identity names no content digest, so it binds no bytes",
+   "observed": "IT_REFUSED_CLAIM_UPGRADE"
+  },
+  {
+   "code": "IT_REFUSED_RECORD_ABSENT",
+   "condition": "a predicate over a record that is not present",
+   "control": "absent-record",
+   "detail": "evidence/a9/absent-record.json: the record is absent; a statement is not built from a record that does not exist",
+   "observed": "IT_REFUSED_RECORD_ABSENT"
+  },
+  {
+   "code": "IT_REFUSED_RECORD_INADMISSIBLE",
+   "condition": "a population whose own A5 declaration was refused",
+   "control": "inadmissible-record",
+   "detail": "t4-suppressions: the declaration is refused CA_REFUSED_OMITTED_UNRECORDED; an inadmissible declaration is not attested",
+   "observed": "IT_REFUSED_RECORD_INADMISSIBLE"
+  },
+  {
+   "code": "IT_REFUSED_STATEMENT_MUTATED",
+   "condition": "one byte changed in the emitted canonical bytes",
+   "control": "mutated-statement",
+   "detail": "re-reading the emitted bytes yields a different canonical statement: the document is reordered, re-spaced or otherwise not the emitted form",
+   "observed": "IT_REFUSED_STATEMENT_MUTATED"
+  }
+ ],
+ "model": "a9/v1",
+ "predicateTypes": {
+  "https://openssl-rs.invalid/attestation/baseline-delta/v1": {
+   "carries": "the A7 disposition of one delta",
+   "forbidden": [
+    "verified",
+    "absent",
+    "complete",
+    "census"
+   ],
+   "required": [
+    "delta",
+    "dispositions",
+    "records",
+    "resolved",
+    "admitted",
+    "codes",
+    "record"
+   ]
+  },
+  "https://openssl-rs.invalid/attestation/instrument-qualification/v1": {
+   "carries": "one instrument's registered qualification status",
+   "forbidden": [
+    "resolved",
+    "absent",
+    "complete",
+    "census"
+   ],
+   "required": [
+    "instrument",
+    "status",
+    "mode",
+    "control",
+    "record"
+   ]
+  },
+  "https://openssl-rs.invalid/attestation/population/v1": {
+   "carries": "the A5 admission of one declared population",
+   "forbidden": [
+    "verified",
+    "resolved",
+    "absent",
+    "complete"
+   ],
+   "required": [
+    "population",
+    "state",
+    "declared",
+    "examined",
+    "omitted",
+    "membersRecorded",
+    "refusal",
+    "record"
+   ]
+  },
+  "https://openssl-rs.invalid/attestation/sarif-emission/v1": {
+   "carries": "the shape of one SARIF 2.1.0 log or shard",
+   "forbidden": [
+    "census",
+    "complete",
+    "suppressions",
+    "baselineState",
+    "rank",
+    "fixes"
+   ],
+   "required": [
+    "sarifVersion",
+    "schema",
+    "runs",
+    "results",
+    "subset",
+    "record"
+   ]
+  },
+  "https://openssl-rs.invalid/attestation/suppression/v1": {
+   "carries": "one A6 suppression and its disposition",
+   "forbidden": [
+    "resolved",
+    "absent",
+    "complete",
+    "census"
+   ],
+   "required": [
+    "suppression",
+    "disposition",
+    "declaredDisposition",
+    "target",
+    "authorisedScope",
+    "justification",
+    "reviewer",
+    "reviewerRecord",
+    "policyBasis",
+    "expiry",
+    "record"
+   ]
+  }
+ },
+ "schema": "openssl-rs/a9/controls/1",
+ "statementType": "https://in-toto.io/Statement/v1",
+ "tool": {
+  "path": "forensics/tools/intoto.py",
+  "sha256": "8b351964285c8b5cdf08223d3b98e3e6845b09020bbda2912e178437fbcb3d47"
+ }
+}

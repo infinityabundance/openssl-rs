@@ -1,0 +1,210 @@
+{
+ "model": "a9/v1",
+ "notAttested": [
+  {
+   "attempted": "a census over an aggregate record whose declaration is refused",
+   "code": "IT_REFUSED_RECORD_INADMISSIBLE",
+   "predicate": "population",
+   "reason": "t4-suppressions: the declaration is refused CA_REFUSED_OMITTED_UNRECORDED; an inadmissible declaration is not attested",
+   "record": "evidence/a5/ADMISSION.json",
+   "select": "t4-suppressions"
+  },
+  {
+   "attempted": "a census over an aggregate record whose declaration is refused",
+   "code": "IT_REFUSED_RECORD_INADMISSIBLE",
+   "predicate": "population",
+   "reason": "t11-satisfied-runs: the declaration is refused CA_REFUSED_MEMBER_UNIDENTIFIED; an inadmissible declaration is not attested",
+   "record": "evidence/a5/ADMISSION.json",
+   "select": "t11-satisfied-runs"
+  },
+  {
+   "attempted": "a completeness claim over the HAZ-15 population admitted UNKNOWN",
+   "code": "IT_REFUSED_CLAIM_UPGRADE",
+   "predicate": "population",
+   "reason": "o11-interop-scripts: admitted at UNKNOWN, which licenses no population statement; only the admission record can state it",
+   "record": "evidence/a5/ADMISSION.json",
+   "select": "o11-interop-scripts"
+  },
+  {
+   "attempted": "COMPLETE claimed over a TRUNCATED_BOUNDED population",
+   "code": "IT_REFUSED_CLAIM_UPGRADE",
+   "predicate": "population",
+   "reason": "the predicate states state='COMPLETE'; the record states 'TRUNCATED_BOUNDED'",
+   "record": "evidence/a5/ADMISSION.json",
+   "select": "curl-residual-sites"
+  },
+  {
+   "attempted": "a RESOLVED claim over a delta with zero resolutions",
+   "code": "IT_REFUSED_CLAIM_UPGRADE",
+   "predicate": "baseline-delta",
+   "reason": "the predicate states dispositions={'STILL_PRESENT': 4245, 'RESOLVED': 1, 'MOVED': 0, 'NEW': 0, 'UNSCANNED_ABSENT': 0, 'TOOL_CHANGED_ABSENT': 0, 'EXCLUDED_ABSENT': 0, 'SUPPRESSED_ABSENT': 0, 'POPULATION_SHRUNK_ABSENT': 0, 'UNKNOWN': 0}; the record states {'STILL_PRESENT': 4245, 'RESOLVED': 0, 'MOVED': 0, 'NEW': 0, 'UNSCANNED_ABSENT': 0, 'TOOL_CHANGED_ABSENT': 0, 'EXCLUDED_ABSENT': 0, 'SUPPRESSED_ABSENT': 0, 'POPULATION_SHRUNK_ABSENT': 0, 'UNKNOWN': 0}",
+   "record": "evidence/a7/DELTA.json",
+   "select": "a3-fingerprint-migration"
+  },
+  {
+   "attempted": "a verified instrument claim over a RECORDED-only control",
+   "code": "IT_REFUSED_CLAIM_UPGRADE",
+   "predicate": "instrument-qualification",
+   "reason": "the predicate states status='PASS'; the record states 'RECORDED'",
+   "record": "evidence/etp3/instruments.json",
+   "select": "timecop-supercop"
+  },
+  {
+   "attempted": "an ACTIVE suppression with neither an expiry nor an unbounded claim",
+   "code": "IT_REFUSED_CLAIM_UPGRADE",
+   "predicate": "suppression",
+   "reason": "the predicate states disposition='ACTIVE'; the record states 'NON_ACTIONABLE'",
+   "record": "evidence/a6/SUPPRESSIONS.json",
+   "select": "t4-suppressions"
+  }
+ ],
+ "purpose": "the in-toto Statement v1 attestations this project emits, the exact bytes each subject digest was computed from, and the attempts the records refuse",
+ "schema": "openssl-rs/a9/statements/1",
+ "sourceIdentity": {
+  "asOf": "2026-11-24",
+  "commit": "f1c5047a5",
+  "inputs": [
+   {
+    "path": "evidence/a1/SARIF.json",
+    "sha256": "5c0cfee62512deb08cc12f95624be64865d3e544473bae80d9aca0ab36ce7852"
+   },
+   {
+    "path": "evidence/a5/ADMISSION.json",
+    "sha256": "d4871ec97ae3a27b8ec820896e292429e44b4db4d11d2671a69b9dc0230ddc0a"
+   },
+   {
+    "path": "evidence/a5/POPULATIONS.json",
+    "sha256": "a166c8584510831ad6387af8b37df3797920f4b15f5e4708fe75f4a3813bc5f4"
+   },
+   {
+    "path": "evidence/a7/DELTA.json",
+    "sha256": "0444a879bf4a0ddf5c50cffba7f51a5834b0fc4a1702d5190815de1f4470c8cf"
+   },
+   {
+    "path": "evidence/a8/SHARD-000.sarif",
+    "sha256": "b16d376ae0b2fa5483650f8019eada15102fcae580b0a46419b13e7ee98450ed"
+   },
+   {
+    "path": "evidence/etp3/instruments.json",
+    "sha256": "2f937a190cd87e71a4fc5fc1d7fa6faa206bb5ef5af6fa9093192ead8a6a38f4"
+   },
+   {
+    "path": "evidence/a6/SUPPRESSIONS.json",
+    "sha256": "236dc220d651bdb1f8519f189afa3bc9af78db7e28b0bd4f2c21a856694d8e4e"
+   }
+  ]
+ },
+ "statementType": "https://in-toto.io/Statement/v1",
+ "statements": [
+  {
+   "assertedState": {
+    "results": 4245,
+    "runs": 6,
+    "subset": false
+   },
+   "digest": {
+    "sha256": "5c0cfee62512deb08cc12f95624be64865d3e544473bae80d9aca0ab36ce7852"
+   },
+   "predicateType": "https://openssl-rs.invalid/attestation/sarif-emission/v1",
+   "record": {
+    "path": "evidence/a1/SARIF.json",
+    "sha256": "5c0cfee62512deb08cc12f95624be64865d3e544473bae80d9aca0ab36ce7852"
+   },
+   "recordState": {
+    "results": 4245,
+    "runs": 6,
+    "subset": false
+   },
+   "relation": "equal",
+   "statement": "STATEMENTS/a1-sarif.json",
+   "statementSha256": "d53bc4eb66f71bab7227fb9e590d151287a1d64b4446f8dd84b94ca8fef26329",
+   "subject": "evidence/a1/SARIF.json"
+  },
+  {
+   "assertedState": {
+    "examined": 4245,
+    "omitted": 0,
+    "population": "a1-sarif-results",
+    "state": "COMPLETE"
+   },
+   "digest": {
+    "sha256": "d4871ec97ae3a27b8ec820896e292429e44b4db4d11d2671a69b9dc0230ddc0a"
+   },
+   "predicateType": "https://openssl-rs.invalid/attestation/population/v1",
+   "record": {
+    "path": "evidence/a5/ADMISSION.json",
+    "sha256": "d4871ec97ae3a27b8ec820896e292429e44b4db4d11d2671a69b9dc0230ddc0a"
+   },
+   "recordState": {
+    "examined": 4245,
+    "omitted": 0,
+    "population": "a1-sarif-results",
+    "state": "COMPLETE"
+   },
+   "relation": "equal",
+   "statement": "STATEMENTS/a5-admission.json",
+   "statementSha256": "d17bb4c990893dc61ee06687a78b6c1b9a91b772e9dbefe233d1fa8b6c21e45f",
+   "subject": "evidence/a5/ADMISSION.json"
+  },
+  {
+   "assertedState": {
+    "admitted": true,
+    "delta": "a3-fingerprint-migration",
+    "records": 4245,
+    "resolved": 0
+   },
+   "digest": {
+    "sha256": "0444a879bf4a0ddf5c50cffba7f51a5834b0fc4a1702d5190815de1f4470c8cf"
+   },
+   "predicateType": "https://openssl-rs.invalid/attestation/baseline-delta/v1",
+   "record": {
+    "path": "evidence/a7/DELTA.json",
+    "sha256": "0444a879bf4a0ddf5c50cffba7f51a5834b0fc4a1702d5190815de1f4470c8cf"
+   },
+   "recordState": {
+    "admitted": true,
+    "delta": "a3-fingerprint-migration",
+    "records": 4245,
+    "resolved": 0
+   },
+   "relation": "equal",
+   "statement": "STATEMENTS/a7-delta.json",
+   "statementSha256": "d4dfa5a3b374ffc4382964dcac61e8a785cfe7f833cbe5c7731a210c0fe7fba8",
+   "subject": "evidence/a7/DELTA.json"
+  },
+  {
+   "assertedState": {
+    "parentResultCount": 4245,
+    "results": 4245,
+    "runs": 6,
+    "subset": true
+   },
+   "digest": {
+    "sha256": "b16d376ae0b2fa5483650f8019eada15102fcae580b0a46419b13e7ee98450ed"
+   },
+   "predicateType": "https://openssl-rs.invalid/attestation/sarif-emission/v1",
+   "record": {
+    "path": "evidence/a8/SHARD-000.sarif",
+    "sha256": "b16d376ae0b2fa5483650f8019eada15102fcae580b0a46419b13e7ee98450ed"
+   },
+   "recordState": {
+    "parentResultCount": 4245,
+    "results": 4245,
+    "runs": 6,
+    "subset": true
+   },
+   "relation": "equal",
+   "statement": "STATEMENTS/a8-shard-000.json",
+   "statementSha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582",
+   "subject": "evidence/a8/SHARD-000.sarif"
+  }
+ ],
+ "totals": {
+  "codes": 12,
+  "controls": 17,
+  "notAttested": 7,
+  "predicateTypes": 3,
+  "statements": 4,
+  "subjects": 4
+ }
+}
