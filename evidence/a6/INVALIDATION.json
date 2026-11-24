@@ -1,0 +1,838 @@
+{
+ "controls": [
+  {
+   "changedIdentity": "candidate-b",
+   "disposition": "INVALIDATED",
+   "expectedStatus": "FIRED",
+   "id": "candidate-identity-change",
+   "reason": "candidate identity changed: recorded candidate-a != current candidate-b",
+   "status": "FIRED",
+   "trigger": "candidate-identity-change"
+  },
+  {
+   "changedIdentity": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+   "disposition": "INVALIDATED",
+   "expectedStatus": "FIRED",
+   "id": "source-tree-digest-change",
+   "reason": "source-tree digest changed: recorded aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa != current dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+   "status": "FIRED",
+   "trigger": "source-tree-digest-change"
+  },
+  {
+   "changedIdentity": "forensics/tools/suppression_governance.py@ee",
+   "disposition": "INVALIDATED",
+   "expectedStatus": "FIRED",
+   "id": "tool-identity-change",
+   "reason": "instrument identity changed: recorded forensics/tools/suppression_governance.py@bb != current forensics/tools/suppression_governance.py@ee",
+   "status": "FIRED",
+   "trigger": "tool-identity-change"
+  },
+  {
+   "changedIdentity": "2027-01-01",
+   "disposition": "EXPIRED",
+   "expectedStatus": "FIRED",
+   "id": "expiry",
+   "reason": "expiry passed: recorded expiresAt 2027-01-01 <= as-of 2027-06-01",
+   "status": "FIRED",
+   "trigger": "expiry"
+  },
+  {
+   "changedIdentity": "00090b9337a461c615d549f6f8f915b0b59ad6b148bf78d486ecc665442dbd37",
+   "disposition": "INVALIDATED",
+   "expectedStatus": "FIRED",
+   "id": "target-absent-from-population",
+   "reason": "target identity absent from population-without-the-target: recorded exact 00090b9337a461c615d549f6f8f915b0b59ad6b148bf78d486ecc665442dbd37",
+   "status": "FIRED",
+   "trigger": "target-absent-from-population"
+  },
+  {
+   "changedIdentity": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+   "disposition": "INVALIDATED",
+   "expectedStatus": "FIRED",
+   "id": "new-occurrence-at-logical-identity",
+   "reason": "a new exact occurrence ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff appeared at logical identity 0009337e19b3a99794505be68b09cd8ce53cea281a625c63191f255a0d22094b; the suppression targets exact 00090b9337a461c615d549f6f8f915b0b59ad6b148bf78d486ecc665442dbd37",
+   "status": "FIRED",
+   "trigger": "new-occurrence-at-logical-identity"
+  },
+  {
+   "changedIdentity": "control-policy@ff",
+   "disposition": "INVALIDATED",
+   "expectedStatus": "FIRED",
+   "id": "policy-basis-change",
+   "reason": "policy basis changed: recorded control-policy@aa != current control-policy@ff",
+   "status": "FIRED",
+   "trigger": "policy-basis-change"
+  }
+ ],
+ "currentIdentity": {
+  "asOf": "2026-11-24",
+  "candidate": "63dab01cf35a2ea7a643a67a2bf1c6b07608b0f9",
+  "detail": "the candidate whose suppressions are evaluated in this document",
+  "newOccurrenceExact": null,
+  "newOccurrenceLogical": null,
+  "policyBasis": null,
+  "sourceTree": null,
+  "tool": "forensics/tools/unsafe_obligations.py@443634a38f50d2563e1abdb2352ae0c8171ad03a06b05e058cf637392e5bf6ad"
+ },
+ "evaluation": {
+  "asOf": "2026-11-24",
+  "population": {
+   "distinctExact": 4245,
+   "distinctLogical": 4066,
+   "distinctRule": 24,
+   "exactStreamSha256": "d0a77bc03d98334c683cea4930cc221a426c733fa04d152b8f5463dc19ca9efd",
+   "expected": 4245,
+   "id": "a1-sarif-results",
+   "record": "evidence/a1/SARIF.json",
+   "recordSha256": "5c0cfee62512deb08cc12f95624be64865d3e544473bae80d9aca0ab36ce7852",
+   "results": 4245
+  },
+  "reviewerTokens": 10
+ },
+ "model": "a6/v1",
+ "purpose": "which invalidation triggers fire at the candidate under evaluation, what each suppression's disposition becomes, and a synthetic control for each trigger",
+ "records": [
+  {
+   "candidate": "246e30580f909c047eeb04a93a06f9bd05dc65f3",
+   "classification": "suppression",
+   "disposition": "INVALIDATED",
+   "expiresAt": null,
+   "id": "t4-suppressions",
+   "locator": "/suppressions",
+   "record": "evidence/etp-t4/SAFETY-SITES.json",
+   "triggers": [
+    {
+     "changedIdentity": "63dab01cf35a2ea7a643a67a2bf1c6b07608b0f9",
+     "disposition": "INVALIDATED",
+     "reason": "candidate identity changed: recorded 246e30580f909c047eeb04a93a06f9bd05dc65f3 != current 63dab01cf35a2ea7a643a67a2bf1c6b07608b0f9",
+     "status": "FIRED",
+     "trigger": "candidate-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the current source-tree digest was not recomputed",
+     "status": "NOT_RUN",
+     "trigger": "source-tree-digest-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the instrument identity is unchanged: forensics/tools/unsafe_obligations.py@443634a38f50d2563e1abdb2352ae0c8171ad03a06b05e058cf637392e5bf6ad",
+     "status": "NOT_FIRED",
+     "trigger": "tool-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no expiry is recorded, so the expiry trigger cannot fire; SG_REFUSED_NO_EXPIRY applies instead",
+     "status": "NOT_RUN",
+     "trigger": "expiry"
+    },
+    {
+     "changedIdentity": "none",
+     "disposition": "INVALIDATED",
+     "reason": "target identity absent from a1-sarif-results: the record names no target identity",
+     "status": "FIRED",
+     "trigger": "target-absent-from-population"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no logical identity is recorded, so a new occurrence at it cannot be detected",
+     "status": "NOT_RUN",
+     "trigger": "new-occurrence-at-logical-identity"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no policy-basis identity is recorded for the suppression",
+     "status": "NOT_RUN",
+     "trigger": "policy-basis-change"
+    }
+   ]
+  },
+  {
+   "candidate": "246e30580f909c047eeb04a93a06f9bd05dc65f3",
+   "classification": "suppression",
+   "disposition": "INVALIDATED",
+   "expiresAt": null,
+   "id": "t4-test-modules",
+   "locator": "/suppressions/test_modules",
+   "record": "evidence/etp-t4/SAFETY-SITES.json",
+   "triggers": [
+    {
+     "changedIdentity": "63dab01cf35a2ea7a643a67a2bf1c6b07608b0f9",
+     "disposition": "INVALIDATED",
+     "reason": "candidate identity changed: recorded 246e30580f909c047eeb04a93a06f9bd05dc65f3 != current 63dab01cf35a2ea7a643a67a2bf1c6b07608b0f9",
+     "status": "FIRED",
+     "trigger": "candidate-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the current source-tree digest was not recomputed",
+     "status": "NOT_RUN",
+     "trigger": "source-tree-digest-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the instrument identity is unchanged: forensics/tools/unsafe_obligations.py@443634a38f50d2563e1abdb2352ae0c8171ad03a06b05e058cf637392e5bf6ad",
+     "status": "NOT_FIRED",
+     "trigger": "tool-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no expiry is recorded, so the expiry trigger cannot fire; SG_REFUSED_NO_EXPIRY applies instead",
+     "status": "NOT_RUN",
+     "trigger": "expiry"
+    },
+    {
+     "changedIdentity": "none",
+     "disposition": "INVALIDATED",
+     "reason": "target identity absent from a1-sarif-results: the record names no target identity",
+     "status": "FIRED",
+     "trigger": "target-absent-from-population"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no logical identity is recorded, so a new occurrence at it cannot be detected",
+     "status": "NOT_RUN",
+     "trigger": "new-occurrence-at-logical-identity"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no policy-basis identity is recorded for the suppression",
+     "status": "NOT_RUN",
+     "trigger": "policy-basis-change"
+    }
+   ]
+  },
+  {
+   "candidate": null,
+   "classification": "suppression",
+   "disposition": "INVALIDATED",
+   "expiresAt": null,
+   "id": "t3-known-nonconformance-agents-md",
+   "locator": "/known_failures/0",
+   "record": "evidence/etp-t3/SPECIFICATIONS.json",
+   "triggers": [
+    {
+     "changedIdentity": "63dab01cf35a2ea7a643a67a2bf1c6b07608b0f9",
+     "disposition": "INVALIDATED",
+     "reason": "candidate identity changed: recorded none (unbound) != current 63dab01cf35a2ea7a643a67a2bf1c6b07608b0f9",
+     "status": "FIRED",
+     "trigger": "candidate-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the current source-tree digest was not recomputed",
+     "status": "NOT_RUN",
+     "trigger": "source-tree-digest-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no instrument identity is recorded, and the current identity names a different instrument; a comparison would be invalid",
+     "status": "NOT_RUN",
+     "trigger": "tool-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no expiry is recorded, so the expiry trigger cannot fire; SG_REFUSED_NO_EXPIRY applies instead",
+     "status": "NOT_RUN",
+     "trigger": "expiry"
+    },
+    {
+     "changedIdentity": "50581806c49dc8b5299a6f814f0a4ff5063da73fc5b9ecdedcfb2f941ade7e31",
+     "disposition": "INVALIDATED",
+     "reason": "target identity absent from a1-sarif-results: recorded rule 50581806c49dc8b5299a6f814f0a4ff5063da73fc5b9ecdedcfb2f941ade7e31",
+     "status": "FIRED",
+     "trigger": "target-absent-from-population"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no logical identity is recorded, so a new occurrence at it cannot be detected",
+     "status": "NOT_RUN",
+     "trigger": "new-occurrence-at-logical-identity"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no policy-basis identity is recorded for the suppression",
+     "status": "NOT_RUN",
+     "trigger": "policy-basis-change"
+    }
+   ]
+  },
+  {
+   "candidate": null,
+   "classification": "suppression",
+   "disposition": "INVALIDATED",
+   "expiresAt": null,
+   "id": "t3-known-nonconformance-docs-etp-todo-md",
+   "locator": "/known_failures/1",
+   "record": "evidence/etp-t3/SPECIFICATIONS.json",
+   "triggers": [
+    {
+     "changedIdentity": "63dab01cf35a2ea7a643a67a2bf1c6b07608b0f9",
+     "disposition": "INVALIDATED",
+     "reason": "candidate identity changed: recorded none (unbound) != current 63dab01cf35a2ea7a643a67a2bf1c6b07608b0f9",
+     "status": "FIRED",
+     "trigger": "candidate-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the current source-tree digest was not recomputed",
+     "status": "NOT_RUN",
+     "trigger": "source-tree-digest-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no instrument identity is recorded, and the current identity names a different instrument; a comparison would be invalid",
+     "status": "NOT_RUN",
+     "trigger": "tool-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no expiry is recorded, so the expiry trigger cannot fire; SG_REFUSED_NO_EXPIRY applies instead",
+     "status": "NOT_RUN",
+     "trigger": "expiry"
+    },
+    {
+     "changedIdentity": "50581806c49dc8b5299a6f814f0a4ff5063da73fc5b9ecdedcfb2f941ade7e31",
+     "disposition": "INVALIDATED",
+     "reason": "target identity absent from a1-sarif-results: recorded rule 50581806c49dc8b5299a6f814f0a4ff5063da73fc5b9ecdedcfb2f941ade7e31",
+     "status": "FIRED",
+     "trigger": "target-absent-from-population"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no logical identity is recorded, so a new occurrence at it cannot be detected",
+     "status": "NOT_RUN",
+     "trigger": "new-occurrence-at-logical-identity"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no policy-basis identity is recorded for the suppression",
+     "status": "NOT_RUN",
+     "trigger": "policy-basis-change"
+    }
+   ]
+  },
+  {
+   "candidate": null,
+   "classification": "suppression",
+   "disposition": "INVALIDATED",
+   "expiresAt": null,
+   "id": "t3-known-nonconformance-docs-ownership-model-md",
+   "locator": "/known_failures/2",
+   "record": "evidence/etp-t3/SPECIFICATIONS.json",
+   "triggers": [
+    {
+     "changedIdentity": "63dab01cf35a2ea7a643a67a2bf1c6b07608b0f9",
+     "disposition": "INVALIDATED",
+     "reason": "candidate identity changed: recorded none (unbound) != current 63dab01cf35a2ea7a643a67a2bf1c6b07608b0f9",
+     "status": "FIRED",
+     "trigger": "candidate-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the current source-tree digest was not recomputed",
+     "status": "NOT_RUN",
+     "trigger": "source-tree-digest-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no instrument identity is recorded, and the current identity names a different instrument; a comparison would be invalid",
+     "status": "NOT_RUN",
+     "trigger": "tool-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no expiry is recorded, so the expiry trigger cannot fire; SG_REFUSED_NO_EXPIRY applies instead",
+     "status": "NOT_RUN",
+     "trigger": "expiry"
+    },
+    {
+     "changedIdentity": "50581806c49dc8b5299a6f814f0a4ff5063da73fc5b9ecdedcfb2f941ade7e31",
+     "disposition": "INVALIDATED",
+     "reason": "target identity absent from a1-sarif-results: recorded rule 50581806c49dc8b5299a6f814f0a4ff5063da73fc5b9ecdedcfb2f941ade7e31",
+     "status": "FIRED",
+     "trigger": "target-absent-from-population"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no logical identity is recorded, so a new occurrence at it cannot be detected",
+     "status": "NOT_RUN",
+     "trigger": "new-occurrence-at-logical-identity"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no policy-basis identity is recorded for the suppression",
+     "status": "NOT_RUN",
+     "trigger": "policy-basis-change"
+    }
+   ]
+  },
+  {
+   "candidate": null,
+   "classification": "suppression",
+   "disposition": "INVALIDATED",
+   "expiresAt": null,
+   "id": "t3-known-nonconformance-docs-parity-model-md",
+   "locator": "/known_failures/3",
+   "record": "evidence/etp-t3/SPECIFICATIONS.json",
+   "triggers": [
+    {
+     "changedIdentity": "63dab01cf35a2ea7a643a67a2bf1c6b07608b0f9",
+     "disposition": "INVALIDATED",
+     "reason": "candidate identity changed: recorded none (unbound) != current 63dab01cf35a2ea7a643a67a2bf1c6b07608b0f9",
+     "status": "FIRED",
+     "trigger": "candidate-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the current source-tree digest was not recomputed",
+     "status": "NOT_RUN",
+     "trigger": "source-tree-digest-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no instrument identity is recorded, and the current identity names a different instrument; a comparison would be invalid",
+     "status": "NOT_RUN",
+     "trigger": "tool-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no expiry is recorded, so the expiry trigger cannot fire; SG_REFUSED_NO_EXPIRY applies instead",
+     "status": "NOT_RUN",
+     "trigger": "expiry"
+    },
+    {
+     "changedIdentity": "50581806c49dc8b5299a6f814f0a4ff5063da73fc5b9ecdedcfb2f941ade7e31",
+     "disposition": "INVALIDATED",
+     "reason": "target identity absent from a1-sarif-results: recorded rule 50581806c49dc8b5299a6f814f0a4ff5063da73fc5b9ecdedcfb2f941ade7e31",
+     "status": "FIRED",
+     "trigger": "target-absent-from-population"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no logical identity is recorded, so a new occurrence at it cannot be detected",
+     "status": "NOT_RUN",
+     "trigger": "new-occurrence-at-logical-identity"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no policy-basis identity is recorded for the suppression",
+     "status": "NOT_RUN",
+     "trigger": "policy-basis-change"
+    }
+   ]
+  },
+  {
+   "candidate": null,
+   "classification": "suppression",
+   "disposition": "INVALIDATED",
+   "expiresAt": null,
+   "id": "t3-known-nonconformance-docs-hazard-register-md",
+   "locator": "/known_failures/4",
+   "record": "evidence/etp-t3/SPECIFICATIONS.json",
+   "triggers": [
+    {
+     "changedIdentity": "63dab01cf35a2ea7a643a67a2bf1c6b07608b0f9",
+     "disposition": "INVALIDATED",
+     "reason": "candidate identity changed: recorded none (unbound) != current 63dab01cf35a2ea7a643a67a2bf1c6b07608b0f9",
+     "status": "FIRED",
+     "trigger": "candidate-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the current source-tree digest was not recomputed",
+     "status": "NOT_RUN",
+     "trigger": "source-tree-digest-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no instrument identity is recorded, and the current identity names a different instrument; a comparison would be invalid",
+     "status": "NOT_RUN",
+     "trigger": "tool-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no expiry is recorded, so the expiry trigger cannot fire; SG_REFUSED_NO_EXPIRY applies instead",
+     "status": "NOT_RUN",
+     "trigger": "expiry"
+    },
+    {
+     "changedIdentity": "50581806c49dc8b5299a6f814f0a4ff5063da73fc5b9ecdedcfb2f941ade7e31",
+     "disposition": "INVALIDATED",
+     "reason": "target identity absent from a1-sarif-results: recorded rule 50581806c49dc8b5299a6f814f0a4ff5063da73fc5b9ecdedcfb2f941ade7e31",
+     "status": "FIRED",
+     "trigger": "target-absent-from-population"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no logical identity is recorded, so a new occurrence at it cannot be detected",
+     "status": "NOT_RUN",
+     "trigger": "new-occurrence-at-logical-identity"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no policy-basis identity is recorded for the suppression",
+     "status": "NOT_RUN",
+     "trigger": "policy-basis-change"
+    }
+   ]
+  },
+  {
+   "candidate": "b85c",
+   "classification": "suppression",
+   "disposition": "INVALIDATED",
+   "expiresAt": null,
+   "id": "openssh-risk-acceptance-b85c",
+   "locator": "/accepted_obligations",
+   "record": "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
+   "triggers": [
+    {
+     "changedIdentity": "63dab01cf35a2ea7a643a67a2bf1c6b07608b0f9",
+     "disposition": "INVALIDATED",
+     "reason": "candidate identity changed: recorded b85c != current 63dab01cf35a2ea7a643a67a2bf1c6b07608b0f9",
+     "status": "FIRED",
+     "trigger": "candidate-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the current source-tree digest was not recomputed",
+     "status": "NOT_RUN",
+     "trigger": "source-tree-digest-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no instrument identity is recorded, and the current identity names a different instrument; a comparison would be invalid",
+     "status": "NOT_RUN",
+     "trigger": "tool-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no expiry is recorded, so the expiry trigger cannot fire; SG_REFUSED_NO_EXPIRY applies instead",
+     "status": "NOT_RUN",
+     "trigger": "expiry"
+    },
+    {
+     "changedIdentity": "none",
+     "disposition": "INVALIDATED",
+     "reason": "target identity absent from a1-sarif-results: the record names no target identity",
+     "status": "FIRED",
+     "trigger": "target-absent-from-population"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no logical identity is recorded, so a new occurrence at it cannot be detected",
+     "status": "NOT_RUN",
+     "trigger": "new-occurrence-at-logical-identity"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "no policy-basis identity is recorded for the suppression",
+     "status": "NOT_RUN",
+     "trigger": "policy-basis-change"
+    }
+   ]
+  },
+  {
+   "candidate": null,
+   "classification": "not-a-suppression",
+   "disposition": "ACTIVE",
+   "expiresAt": null,
+   "id": "t10-closure-exclusions",
+   "locator": "/rows",
+   "record": "evidence/etp-t10/EXCLUSIONS.json",
+   "triggers": [
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the record is not a suppression in this model",
+     "status": "NOT_RUN",
+     "trigger": "candidate-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the record is not a suppression in this model",
+     "status": "NOT_RUN",
+     "trigger": "source-tree-digest-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the record is not a suppression in this model",
+     "status": "NOT_RUN",
+     "trigger": "tool-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the record is not a suppression in this model",
+     "status": "NOT_RUN",
+     "trigger": "expiry"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the record is not a suppression in this model",
+     "status": "NOT_RUN",
+     "trigger": "target-absent-from-population"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the record is not a suppression in this model",
+     "status": "NOT_RUN",
+     "trigger": "new-occurrence-at-logical-identity"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the record is not a suppression in this model",
+     "status": "NOT_RUN",
+     "trigger": "policy-basis-change"
+    }
+   ]
+  },
+  {
+   "candidate": "17e45eec1a48a7a5e1679e1d29ee69451e9d59a1",
+   "classification": "not-a-suppression",
+   "disposition": "ACTIVE",
+   "expiresAt": null,
+   "id": "a1-superseded-disposition",
+   "locator": "/runs/2/results/210",
+   "record": "evidence/a1/SARIF.json",
+   "triggers": [
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the record is not a suppression in this model",
+     "status": "NOT_RUN",
+     "trigger": "candidate-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the record is not a suppression in this model",
+     "status": "NOT_RUN",
+     "trigger": "source-tree-digest-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the record is not a suppression in this model",
+     "status": "NOT_RUN",
+     "trigger": "tool-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the record is not a suppression in this model",
+     "status": "NOT_RUN",
+     "trigger": "expiry"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the record is not a suppression in this model",
+     "status": "NOT_RUN",
+     "trigger": "target-absent-from-population"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the record is not a suppression in this model",
+     "status": "NOT_RUN",
+     "trigger": "new-occurrence-at-logical-identity"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the record is not a suppression in this model",
+     "status": "NOT_RUN",
+     "trigger": "policy-basis-change"
+    }
+   ]
+  },
+  {
+   "candidate": null,
+   "classification": "control-fixture",
+   "disposition": "ACTIVE",
+   "expiresAt": null,
+   "id": "t3-spec-guard-control-fixture",
+   "locator": "/controls/0/exemptions/0",
+   "record": "evidence/etp-t3/SPECIFICATIONS.json",
+   "triggers": [
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the record is not a suppression in this model",
+     "status": "NOT_RUN",
+     "trigger": "candidate-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the record is not a suppression in this model",
+     "status": "NOT_RUN",
+     "trigger": "source-tree-digest-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the record is not a suppression in this model",
+     "status": "NOT_RUN",
+     "trigger": "tool-identity-change"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the record is not a suppression in this model",
+     "status": "NOT_RUN",
+     "trigger": "expiry"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the record is not a suppression in this model",
+     "status": "NOT_RUN",
+     "trigger": "target-absent-from-population"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the record is not a suppression in this model",
+     "status": "NOT_RUN",
+     "trigger": "new-occurrence-at-logical-identity"
+    },
+    {
+     "changedIdentity": null,
+     "disposition": "ACTIVE",
+     "reason": "the record is not a suppression in this model",
+     "status": "NOT_RUN",
+     "trigger": "policy-basis-change"
+    }
+   ]
+  }
+ ],
+ "schema": "openssl-rs/a6/invalidation/1",
+ "summary": {
+  "byTrigger": {
+   "candidate-identity-change": {
+    "FIRED": 8,
+    "NOT_FIRED": 0,
+    "NOT_RUN": 3
+   },
+   "expiry": {
+    "FIRED": 0,
+    "NOT_FIRED": 0,
+    "NOT_RUN": 11
+   },
+   "new-occurrence-at-logical-identity": {
+    "FIRED": 0,
+    "NOT_FIRED": 0,
+    "NOT_RUN": 11
+   },
+   "policy-basis-change": {
+    "FIRED": 0,
+    "NOT_FIRED": 0,
+    "NOT_RUN": 11
+   },
+   "source-tree-digest-change": {
+    "FIRED": 0,
+    "NOT_FIRED": 0,
+    "NOT_RUN": 11
+   },
+   "target-absent-from-population": {
+    "FIRED": 8,
+    "NOT_FIRED": 0,
+    "NOT_RUN": 3
+   },
+   "tool-identity-change": {
+    "FIRED": 0,
+    "NOT_FIRED": 2,
+    "NOT_RUN": 9
+   }
+  },
+  "controls": 7,
+  "controlsFired": 7,
+  "records": 11,
+  "recordsExpired": 0,
+  "recordsInvalidated": 8
+ },
+ "triggers": {
+  "candidate-identity-change": {
+   "changes": "the candidate identity the suppression was recorded against",
+   "disposition": "INVALIDATED",
+   "prevents": "an acceptance at one candidate governing another"
+  },
+  "expiry": {
+   "changes": "the suppression's recorded expiry date",
+   "disposition": "EXPIRED",
+   "prevents": "a lapsed acceptance being read as current"
+  },
+  "new-occurrence-at-logical-identity": {
+   "changes": "a new exact occurrence at the suppression's logical identity",
+   "disposition": "INVALIDATED",
+   "prevents": "one occurrence's acceptance transferring to a new occurrence of the same logical finding"
+  },
+  "policy-basis-change": {
+   "changes": "the policy basis the suppression was authorised under",
+   "disposition": "INVALIDATED",
+   "prevents": "an acceptance surviving the policy that permitted it"
+  },
+  "source-tree-digest-change": {
+   "changes": "the digest of the source tree the finding was observed in",
+   "disposition": "INVALIDATED",
+   "prevents": "a disposition surviving an edit to the tree it was made about"
+  },
+  "target-absent-from-population": {
+   "changes": "the target identity's presence in the current finding population",
+   "disposition": "INVALIDATED",
+   "prevents": "a suppression of a finding that is no longer in the population"
+  },
+  "tool-identity-change": {
+   "changes": "the identity of the tool or instrument that produced the finding",
+   "disposition": "INVALIDATED",
+   "prevents": "a disposition surviving a change to the analyser that justified it"
+  }
+ }
+}

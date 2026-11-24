@@ -1,0 +1,973 @@
+{
+ "admissions": [
+  {
+   "actionable": false,
+   "classification": "suppression",
+   "codes": [
+    "SG_REFUSED_TARGET_NOT_IN_POPULATION",
+    "SG_REFUSED_NO_MEMBER_IDENTITIES",
+    "SG_REFUSED_NO_JUSTIFICATION",
+    "SG_REFUSED_NO_REVIEWER",
+    "SG_REFUSED_NO_EXPIRY",
+    "SG_REFUSED_UNBOUNDED_SCOPE",
+    "SG_REFUSED_STALE_CANDIDATE"
+   ],
+   "declaredDisposition": "ACTIVE",
+   "detail": "t4-suppressions: NON_ACTIONABLE; no target identity is recorded; the record states no member identity; no justification is recorded; no reviewer is recorded; no expiry is recorded; the authorised scope 'rule' is broader than the target 'none'; candidate 246e30580f909c047eeb04a93a06f9bd05dc65f3 is not the candidate under evaluation 63dab01cf35a2ea7a643a67a2bf1c6b07608b0f9",
+   "disposition": "NON_ACTIONABLE",
+   "id": "t4-suppressions",
+   "memberCount": 1999
+  },
+  {
+   "actionable": false,
+   "classification": "suppression",
+   "codes": [
+    "SG_REFUSED_TARGET_NOT_IN_POPULATION",
+    "SG_REFUSED_NO_MEMBER_IDENTITIES",
+    "SG_REFUSED_NO_JUSTIFICATION",
+    "SG_REFUSED_NO_REVIEWER",
+    "SG_REFUSED_NO_EXPIRY",
+    "SG_REFUSED_UNBOUNDED_SCOPE",
+    "SG_REFUSED_STALE_CANDIDATE"
+   ],
+   "declaredDisposition": "ACTIVE",
+   "detail": "t4-test-modules: NON_ACTIONABLE; no target identity is recorded; the record states no member identity; no justification is recorded; no reviewer is recorded; no expiry is recorded; the authorised scope 'rule' is broader than the target 'none'; candidate 246e30580f909c047eeb04a93a06f9bd05dc65f3 is not the candidate under evaluation 63dab01cf35a2ea7a643a67a2bf1c6b07608b0f9",
+   "disposition": "NON_ACTIONABLE",
+   "id": "t4-test-modules",
+   "memberCount": 550
+  },
+  {
+   "actionable": false,
+   "classification": "suppression",
+   "codes": [
+    "SG_REFUSED_TARGET_NOT_IN_POPULATION",
+    "SG_REFUSED_NO_MEMBER_IDENTITIES",
+    "SG_REFUSED_NO_JUSTIFICATION",
+    "SG_REFUSED_NO_REVIEWER",
+    "SG_REFUSED_NO_EXPIRY",
+    "SG_REFUSED_STALE_CANDIDATE"
+   ],
+   "declaredDisposition": "ACTIVE",
+   "detail": "t3-known-nonconformance-agents-md: NON_ACTIONABLE; the target is not in the finding population; the record states no member identity; no justification is recorded; no reviewer is recorded; no expiry is recorded; no candidate identity is recorded, so the suppression is unbound",
+   "disposition": "NON_ACTIONABLE",
+   "id": "t3-known-nonconformance-agents-md",
+   "memberCount": 17
+  },
+  {
+   "actionable": false,
+   "classification": "suppression",
+   "codes": [
+    "SG_REFUSED_TARGET_NOT_IN_POPULATION",
+    "SG_REFUSED_NO_MEMBER_IDENTITIES",
+    "SG_REFUSED_NO_JUSTIFICATION",
+    "SG_REFUSED_NO_REVIEWER",
+    "SG_REFUSED_NO_EXPIRY",
+    "SG_REFUSED_STALE_CANDIDATE"
+   ],
+   "declaredDisposition": "ACTIVE",
+   "detail": "t3-known-nonconformance-docs-etp-todo-md: NON_ACTIONABLE; the target is not in the finding population; the record states no member identity; no justification is recorded; no reviewer is recorded; no expiry is recorded; no candidate identity is recorded, so the suppression is unbound",
+   "disposition": "NON_ACTIONABLE",
+   "id": "t3-known-nonconformance-docs-etp-todo-md",
+   "memberCount": 89
+  },
+  {
+   "actionable": false,
+   "classification": "suppression",
+   "codes": [
+    "SG_REFUSED_TARGET_NOT_IN_POPULATION",
+    "SG_REFUSED_NO_MEMBER_IDENTITIES",
+    "SG_REFUSED_NO_JUSTIFICATION",
+    "SG_REFUSED_NO_REVIEWER",
+    "SG_REFUSED_NO_EXPIRY",
+    "SG_REFUSED_STALE_CANDIDATE"
+   ],
+   "declaredDisposition": "ACTIVE",
+   "detail": "t3-known-nonconformance-docs-ownership-model-md: NON_ACTIONABLE; the target is not in the finding population; the record states no member identity; no justification is recorded; no reviewer is recorded; no expiry is recorded; no candidate identity is recorded, so the suppression is unbound",
+   "disposition": "NON_ACTIONABLE",
+   "id": "t3-known-nonconformance-docs-ownership-model-md",
+   "memberCount": 1
+  },
+  {
+   "actionable": false,
+   "classification": "suppression",
+   "codes": [
+    "SG_REFUSED_TARGET_NOT_IN_POPULATION",
+    "SG_REFUSED_NO_MEMBER_IDENTITIES",
+    "SG_REFUSED_NO_JUSTIFICATION",
+    "SG_REFUSED_NO_REVIEWER",
+    "SG_REFUSED_NO_EXPIRY",
+    "SG_REFUSED_STALE_CANDIDATE"
+   ],
+   "declaredDisposition": "ACTIVE",
+   "detail": "t3-known-nonconformance-docs-parity-model-md: NON_ACTIONABLE; the target is not in the finding population; the record states no member identity; no justification is recorded; no reviewer is recorded; no expiry is recorded; no candidate identity is recorded, so the suppression is unbound",
+   "disposition": "NON_ACTIONABLE",
+   "id": "t3-known-nonconformance-docs-parity-model-md",
+   "memberCount": 1
+  },
+  {
+   "actionable": false,
+   "classification": "suppression",
+   "codes": [
+    "SG_REFUSED_TARGET_NOT_IN_POPULATION",
+    "SG_REFUSED_NO_MEMBER_IDENTITIES",
+    "SG_REFUSED_NO_JUSTIFICATION",
+    "SG_REFUSED_NO_REVIEWER",
+    "SG_REFUSED_NO_EXPIRY",
+    "SG_REFUSED_STALE_CANDIDATE"
+   ],
+   "declaredDisposition": "ACTIVE",
+   "detail": "t3-known-nonconformance-docs-hazard-register-md: NON_ACTIONABLE; the target is not in the finding population; the record states no member identity; no justification is recorded; no reviewer is recorded; no expiry is recorded; no candidate identity is recorded, so the suppression is unbound",
+   "disposition": "NON_ACTIONABLE",
+   "id": "t3-known-nonconformance-docs-hazard-register-md",
+   "memberCount": 14
+  },
+  {
+   "actionable": false,
+   "classification": "suppression",
+   "codes": [
+    "SG_REFUSED_TARGET_NOT_IN_POPULATION",
+    "SG_REFUSED_NO_MEMBER_IDENTITIES",
+    "SG_REFUSED_UNRECORDED_REVIEWER",
+    "SG_REFUSED_NO_EXPIRY",
+    "SG_REFUSED_UNBOUNDED_SCOPE",
+    "SG_REFUSED_STALE_CANDIDATE"
+   ],
+   "declaredDisposition": "ACTIVE",
+   "detail": "openssh-risk-acceptance-b85c: NON_ACTIONABLE; no target identity is recorded; the record states no member identity; the reviewer token 'decision-maker (campaign principal)' is not established by a tracked record as a reviewer; no expiry is recorded; the authorised scope 'rule' is broader than the target 'none'; candidate b85c is not the candidate under evaluation 63dab01cf35a2ea7a643a67a2bf1c6b07608b0f9",
+   "disposition": "NON_ACTIONABLE",
+   "id": "openssh-risk-acceptance-b85c",
+   "memberCount": 15
+  },
+  {
+   "actionable": false,
+   "classification": "not-a-suppression",
+   "codes": [],
+   "declaredDisposition": "ACTIVE",
+   "detail": "not a suppression in this model: an exclusion row argues that an edge is outside the closure's conservative upper bound; it removes no finding from a population, all 1121 rows are present, and A5 admits the population as COMPLETE",
+   "disposition": "NON_ACTIONABLE",
+   "id": "t10-closure-exclusions",
+   "memberCount": 1121
+  },
+  {
+   "actionable": false,
+   "classification": "not-a-suppression",
+   "codes": [],
+   "declaredDisposition": "ACTIVE",
+   "detail": "not a suppression in this model: a superseded disposition is emitted verbatim and remains a finding; it is a disposition, not a suppression, and A1 emits no result.suppressions",
+   "disposition": "NON_ACTIONABLE",
+   "id": "a1-superseded-disposition",
+   "memberCount": 1
+  },
+  {
+   "actionable": false,
+   "classification": "control-fixture",
+   "codes": [],
+   "declaredDisposition": "ACTIVE",
+   "detail": "not a suppression in this model: a guard control fixture: it proves the exemption mechanism accepts a justified exemption and disposes of no real finding",
+   "disposition": "NON_ACTIONABLE",
+   "id": "t3-spec-guard-control-fixture",
+   "memberCount": 1
+  }
+ ],
+ "dispositionMeanings": {
+  "ACTIVE": {
+   "doesNotLicense": "that the finding is false, fixed, unreachable or safe; an ACTIVE suppression is an accepted disposition, not a result",
+   "licenses": "the suppression's recorded fields are all established and it disposes of its member findings, which remain in the population"
+  },
+  "EXPIRED": {
+   "doesNotLicense": "that the suppression never existed; the record and its history remain",
+   "licenses": "the suppression was valid until its recorded expiry and no longer authorises a disposition; the finding is still in the population"
+  },
+  "INVALIDATED": {
+   "doesNotLicense": "that the finding entered or left the population; invalidation is a disposition of the suppression, not of the finding",
+   "licenses": "a recorded trigger changed the identity the suppression was bound to; the finding is still in the population and the record states why it no longer authorises a disposition"
+  },
+  "NON_ACTIONABLE": {
+   "doesNotLicense": "that the record is absent, or that its findings are absent; the record is present and refused",
+   "licenses": "the record cannot be read as a governed suppression because a required field is missing or contradicted; the findings it names remain in the population and are unsuppressed"
+  },
+  "PENDING_REVIEW": {
+   "doesNotLicense": "a provisional acceptance; a pending suppression authorises nothing",
+   "licenses": "the record was submitted and no review has established it; the finding remains in the population and is not suppressed"
+  }
+ },
+ "dispositions": [
+  "ACTIVE",
+  "EXPIRED",
+  "INVALIDATED",
+  "NON_ACTIONABLE",
+  "PENDING_REVIEW"
+ ],
+ "model": "a6/v1",
+ "purpose": "every real suppression-shaped record, the fields it actually states, the disposition it is admitted at and the refusal codes that fire",
+ "records": [
+  {
+   "artefact": {
+    "digest": "ef8678c53feb9ec59e8cc61c6a0b636ae59aeb01b6dbe482ebc463932ae2ed1d",
+    "digestScope": "source-tree",
+    "uri": "src"
+   },
+   "authorisedScope": "rule",
+   "candidate": "246e30580f909c047eeb04a93a06f9bd05dc65f3",
+   "claimedAbsent": false,
+   "classification": "suppression",
+   "declaredDisposition": "ACTIVE",
+   "expiresAt": null,
+   "id": "t4-suppressions",
+   "invalidation": [],
+   "justification": "",
+   "locator": "/suppressions",
+   "logicalIdentity": null,
+   "memberCount": 1999,
+   "memberCountBasis": "the record states a total and a per-lint partition and no member row, so the count is an aggregate, not a census",
+   "memberIds": [],
+   "membersRecorded": false,
+   "policyBasis": "AX-SUPPRESSION-SCOPE in evidence/etp-t4/AXIOMS.json (status UNCHECKED); the axioms record's sha256 is edbf1a01a4e30c93ae1513d5b1f96a0d475ecbf1656428928720911bd73e4ee0",
+   "policyToken": null,
+   "reason": "",
+   "record": "evidence/etp-t4/SAFETY-SITES.json",
+   "recordSha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da",
+   "recordedAt": "",
+   "recordedFields": {
+    "byLint": {
+     "clippy::absurd_extreme_comparisons": 1,
+     "clippy::assertions_on_constants": 1,
+     "clippy::cast_possible_wrap": 2,
+     "clippy::collapsible_if": 4,
+     "clippy::collapsible_match": 6,
+     "clippy::enum_variant_names": 1,
+     "clippy::expect_used": 41,
+     "clippy::identity_op": 3,
+     "clippy::manual_dangling_ptr": 4,
+     "clippy::manual_div_ceil": 4,
+     "clippy::manual_range_contains": 2,
+     "clippy::module_inception": 2,
+     "clippy::needless_range_loop": 12,
+     "clippy::never_loop": 47,
+     "clippy::not_unsafe_ptr_arg_deref": 5,
+     "clippy::panic": 89,
+     "clippy::should_implement_trait": 1,
+     "clippy::too_many_arguments": 240,
+     "clippy::too_many_lines": 1,
+     "clippy::type_complexity": 9,
+     "clippy::undocumented_unsafe_blocks": 5,
+     "clippy::unwrap_used": 42,
+     "clippy::vec_box": 1,
+     "clippy::while_immutable_condition": 2,
+     "dead_code": 703,
+     "irrefutable_let_patterns": 1,
+     "non_camel_case_types": 11,
+     "non_snake_case": 460,
+     "non_upper_case_globals": 174,
+     "private_interfaces": 13,
+     "unpredictable_function_pointer_comparisons": 3,
+     "unreachable_pub": 51,
+     "unused_assignments": 53,
+     "unused_imports": 4,
+     "unused_variables": 1
+    },
+    "identity": {
+     "commit": "246e30580f909c047eeb04a93a06f9bd05dc65f3",
+     "scannerSha256": "443634a38f50d2563e1abdb2352ae0c8171ad03a06b05e058cf637392e5bf6ad",
+     "sourceTreeSha256": "ef8678c53feb9ec59e8cc61c6a0b636ae59aeb01b6dbe482ebc463932ae2ed1d"
+    },
+    "summary": {
+     "suppressions": 1999,
+     "testModules": 550
+    },
+    "total": 1999
+   },
+   "reviewer": null,
+   "reviewerRecordedIn": null,
+   "sourceTree": "ef8678c53feb9ec59e8cc61c6a0b636ae59aeb01b6dbe482ebc463932ae2ed1d",
+   "target": {
+    "identity": null,
+    "ruleId": null,
+    "scope": "none"
+   },
+   "tool": "forensics/tools/unsafe_obligations.py@443634a38f50d2563e1abdb2352ae0c8171ad03a06b05e058cf637392e5bf6ad",
+   "unbounded": false
+  },
+  {
+   "artefact": {
+    "digest": "ef8678c53feb9ec59e8cc61c6a0b636ae59aeb01b6dbe482ebc463932ae2ed1d",
+    "digestScope": "source-tree",
+    "uri": "src"
+   },
+   "authorisedScope": "rule",
+   "candidate": "246e30580f909c047eeb04a93a06f9bd05dc65f3",
+   "claimedAbsent": false,
+   "classification": "suppression",
+   "declaredDisposition": "ACTIVE",
+   "expiresAt": null,
+   "id": "t4-test-modules",
+   "invalidation": [],
+   "justification": "",
+   "locator": "/suppressions/test_modules",
+   "logicalIdentity": null,
+   "memberCount": 550,
+   "memberCountBasis": "550 module rows, each a region (path, line, module); the rows identify the scope, not the findings it keeps out of the census",
+   "memberIds": [],
+   "membersRecorded": false,
+   "policyBasis": "AX-TEST-ONLY in evidence/etp-t4/AXIOMS.json (status PARTIAL); the axioms record's sha256 is edbf1a01a4e30c93ae1513d5b1f96a0d475ecbf1656428928720911bd73e4ee0",
+   "policyToken": null,
+   "reason": "",
+   "record": "evidence/etp-t4/SAFETY-SITES.json",
+   "recordSha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da",
+   "recordedAt": "",
+   "recordedFields": {
+    "firstModule": {
+     "line": 900,
+     "module": "tests",
+     "path": "src/aes.rs"
+    },
+    "lastModule": {
+     "line": 958,
+     "module": "tests",
+     "path": "src/x509/x_x509.rs"
+    },
+    "testModules": 550
+   },
+   "reviewer": null,
+   "reviewerRecordedIn": null,
+   "sourceTree": "ef8678c53feb9ec59e8cc61c6a0b636ae59aeb01b6dbe482ebc463932ae2ed1d",
+   "target": {
+    "identity": null,
+    "ruleId": null,
+    "scope": "none"
+   },
+   "tool": "forensics/tools/unsafe_obligations.py@443634a38f50d2563e1abdb2352ae0c8171ad03a06b05e058cf637392e5bf6ad",
+   "unbounded": false
+  },
+  {
+   "artefact": {
+    "digest": "",
+    "digestScope": "artifact",
+    "uri": "AGENTS.md"
+   },
+   "authorisedScope": "rule",
+   "candidate": null,
+   "claimedAbsent": false,
+   "classification": "suppression",
+   "declaredDisposition": "ACTIVE",
+   "expiresAt": null,
+   "id": "t3-known-nonconformance-agents-md",
+   "invalidation": [],
+   "justification": "",
+   "locator": "/known_failures/0",
+   "logicalIdentity": null,
+   "memberCount": 17,
+   "memberCountBasis": "17 identifier tokens; a token is a key for the rule, not a finding identity, and it may cover many occurrences",
+   "memberIds": [],
+   "membersRecorded": false,
+   "policyBasis": "the spec_guard known-nonconformance register: a token listed here is not refused as SP_INTERNAL_IDENTIFIER; status KNOWN_NONCONFORMANCE, level L1-abstract-specification",
+   "policyToken": null,
+   "reason": "",
+   "record": "evidence/etp-t3/SPECIFICATIONS.json",
+   "recordSha256": "baad775c94c4e4630ab5ef2c296ea0a3d57c1308a3525bab6f9a323ade45bd62",
+   "recordedAt": "",
+   "recordedFields": {
+    "level": "L1-abstract-specification",
+    "path": "AGENTS.md",
+    "status": "KNOWN_NONCONFORMANCE",
+    "tokens": [
+     "CtxDestroy",
+     "OPENSSL_clear_free",
+     "OwnedBlock",
+     "OwnedBuf",
+     "OwnedCtx",
+     "OwnedNode",
+     "OwnedRaw",
+     "OwnedStr",
+     "OwnedTree",
+     "adopt_cleansed",
+     "destroy_body",
+     "from_raw",
+     "guard_ffi",
+     "new_zeroed",
+     "parent_mut",
+     "src-path",
+     "tree_levels"
+    ],
+    "wouldClose": "Restate the standing standard in terms of the observable obligations and cite the adopted constructors from a review record, or record a reviewed exemption for each named identifier."
+   },
+   "reviewer": null,
+   "reviewerRecordedIn": null,
+   "sourceTree": null,
+   "target": {
+    "identity": "50581806c49dc8b5299a6f814f0a4ff5063da73fc5b9ecdedcfb2f941ade7e31",
+    "ruleId": "SP_INTERNAL_IDENTIFIER",
+    "scope": "rule"
+   },
+   "tool": null,
+   "unbounded": false
+  },
+  {
+   "artefact": {
+    "digest": "",
+    "digestScope": "artifact",
+    "uri": "docs/ETP-TODO.md"
+   },
+   "authorisedScope": "rule",
+   "candidate": null,
+   "claimedAbsent": false,
+   "classification": "suppression",
+   "declaredDisposition": "ACTIVE",
+   "expiresAt": null,
+   "id": "t3-known-nonconformance-docs-etp-todo-md",
+   "invalidation": [],
+   "justification": "",
+   "locator": "/known_failures/1",
+   "logicalIdentity": null,
+   "memberCount": 89,
+   "memberCountBasis": "89 identifier tokens; a token is a key for the rule, not a finding identity, and it may cover many occurrences",
+   "memberIds": [],
+   "membersRecorded": false,
+   "policyBasis": "the spec_guard known-nonconformance register: a token listed here is not refused as SP_INTERNAL_IDENTIFIER; status KNOWN_NONCONFORMANCE, level L1-abstract-specification",
+   "policyToken": null,
+   "reason": "",
+   "record": "evidence/etp-t3/SPECIFICATIONS.json",
+   "recordSha256": "baad775c94c4e4630ab5ef2c296ea0a3d57c1308a3525bab6f9a323ade45bd62",
+   "recordedAt": "",
+   "recordedFields": {
+    "level": "L1-abstract-specification",
+    "path": "docs/ETP-TODO.md",
+    "status": "KNOWN_NONCONFORMANCE",
+    "tokens": [
+     "NameDb",
+     "OPENSSL_clear_free",
+     "ScalarLadderWorkspace",
+     "SecretArray",
+     "SecretBuf",
+     "SecretLimbs",
+     "SecretRef",
+     "a_forced_growth_cleanses_the_old_block_before_release",
+     "a_secret_base_remainder_is_padded_into_cleansed_storage",
+     "add_fallible",
+     "array_overflow_returns_null_and_raises",
+     "bit_len",
+     "bn_num_bits_consttime",
+     "bn_wexpand",
+     "check_crl",
+     "cleanse_now",
+     "cleanse_replaced",
+     "cleanup_is_idempotent_and_terminal",
+     "constant_time_inverse_scratch_is_cleansed_on_release",
+     "constant_time_lt_s",
+     "ctgrind_ecdsa_sign_ex_taints_nonce_inverse",
+     "ctgrind_ecdsa_sign_taints_nonce_and_key",
+     "ctgrind_store_consttime_result_length",
+     "div_rem",
+     "div_rem_ct_fallible",
+     "div_rem_fallible",
+     "div_rem_small",
+     "divide_fallible",
+     "ec_field_inverse_mod_ord",
+     "ec_method_field_is_plain",
+     "ecdsa_sign_setup",
+     "ecdsa_signing_allocation_census",
+     "etp4_reallocated_buffer_cleanses_whole_allocation",
+     "etp4_spare_capacity_cleansed_on_every_exit_path",
+     "etp4_whole_allocation_cleanse_domain",
+     "fixed_width_exponent",
+     "from_u64",
+     "from_vec",
+     "grow_cleansed",
+     "guard_ffi",
+     "lock_names",
+     "mod_add_reduced_ct",
+     "mod_add_reduced_ct_limbs",
+     "mod_exp_core",
+     "mod_exp_core_consttime_staged",
+     "mod_inverse_consttime_with_mask",
+     "mod_inverse_impl",
+     "mont_mul_fallible",
+     "mont_mul_into",
+     "mont_reduce",
+     "mont_set",
+     "mul_add_carry",
+     "mul_fallible",
+     "name_destructor_runs_outside_the_registry_lock",
+     "name_do_all_admits_reentry_and_defers_removal",
+     "new_owned_consttime",
+     "normalise_consttime",
+     "ossl_ec_GFp_mont_field_inv",
+     "ossl_ec_GFp_simple_field_inv",
+     "ossl_ec_GFp_simple_ladder_step",
+     "ossl_ec_GFp_simple_ladder_step_workspace",
+     "ossl_ec_scalar_mul_ladder",
+     "ossl_rsa_check_crt_components",
+     "ossl_rsa_check_prime_factor",
+     "ossl_rsa_check_private_exponent",
+     "ossl_rsa_multiprime_derive",
+     "pad_secret",
+     "parse_into",
+     "parts_borrowed",
+     "parts_fallible",
+     "release_cleansed",
+     "rem_fallible",
+     "reserve_cleansed",
+     "set_bit",
+     "set_len",
+     "shl_fallible",
+     "src-path",
+     "stage_fixed_width_exponent",
+     "store_consttime",
+     "sub_fallible",
+     "tally_start",
+     "tally_take",
+     "the_reallocation_control_detects_an_uncleansed_block",
+     "the_signature_satisfies_its_defining_equation",
+     "try_assign_limbs",
+     "try_boxed",
+     "try_new_owned",
+     "ui_read",
+     "with_state"
+    ],
+    "wouldClose": "Move the implementation-shaped residual statements into a review record and keep the requirement text independent of the type and function names."
+   },
+   "reviewer": null,
+   "reviewerRecordedIn": null,
+   "sourceTree": null,
+   "target": {
+    "identity": "50581806c49dc8b5299a6f814f0a4ff5063da73fc5b9ecdedcfb2f941ade7e31",
+    "ruleId": "SP_INTERNAL_IDENTIFIER",
+    "scope": "rule"
+   },
+   "tool": null,
+   "unbounded": false
+  },
+  {
+   "artefact": {
+    "digest": "",
+    "digestScope": "artifact",
+    "uri": "docs/OWNERSHIP_MODEL.md"
+   },
+   "authorisedScope": "rule",
+   "candidate": null,
+   "claimedAbsent": false,
+   "classification": "suppression",
+   "declaredDisposition": "ACTIVE",
+   "expiresAt": null,
+   "id": "t3-known-nonconformance-docs-ownership-model-md",
+   "invalidation": [],
+   "justification": "",
+   "locator": "/known_failures/2",
+   "logicalIdentity": null,
+   "memberCount": 1,
+   "memberCountBasis": "1 identifier tokens; a token is a key for the rule, not a finding identity, and it may cover many occurrences",
+   "memberIds": [],
+   "membersRecorded": false,
+   "policyBasis": "the spec_guard known-nonconformance register: a token listed here is not refused as SP_INTERNAL_IDENTIFIER; status KNOWN_NONCONFORMANCE, level L4-abi-contract",
+   "policyToken": null,
+   "reason": "",
+   "record": "evidence/etp-t3/SPECIFICATIONS.json",
+   "recordSha256": "baad775c94c4e4630ab5ef2c296ea0a3d57c1308a3525bab6f9a323ade45bd62",
+   "recordedAt": "",
+   "recordedFields": {
+    "level": "L4-abi-contract",
+    "path": "docs/OWNERSHIP_MODEL.md",
+    "status": "KNOWN_NONCONFORMANCE",
+    "tokens": [
+     "up_ref"
+    ],
+    "wouldClose": "Use the C-visible accessor convention rather than the wrapper method name, or record a reviewed exemption."
+   },
+   "reviewer": null,
+   "reviewerRecordedIn": null,
+   "sourceTree": null,
+   "target": {
+    "identity": "50581806c49dc8b5299a6f814f0a4ff5063da73fc5b9ecdedcfb2f941ade7e31",
+    "ruleId": "SP_INTERNAL_IDENTIFIER",
+    "scope": "rule"
+   },
+   "tool": null,
+   "unbounded": false
+  },
+  {
+   "artefact": {
+    "digest": "",
+    "digestScope": "artifact",
+    "uri": "docs/PARITY_MODEL.md"
+   },
+   "authorisedScope": "rule",
+   "candidate": null,
+   "claimedAbsent": false,
+   "classification": "suppression",
+   "declaredDisposition": "ACTIVE",
+   "expiresAt": null,
+   "id": "t3-known-nonconformance-docs-parity-model-md",
+   "invalidation": [],
+   "justification": "",
+   "locator": "/known_failures/3",
+   "logicalIdentity": null,
+   "memberCount": 1,
+   "memberCountBasis": "1 identifier tokens; a token is a key for the rule, not a finding identity, and it may cover many occurrences",
+   "memberIds": [],
+   "membersRecorded": false,
+   "policyBasis": "the spec_guard known-nonconformance register: a token listed here is not refused as SP_INTERNAL_IDENTIFIER; status KNOWN_NONCONFORMANCE, level L4-abi-contract",
+   "policyToken": null,
+   "reason": "",
+   "record": "evidence/etp-t3/SPECIFICATIONS.json",
+   "recordSha256": "baad775c94c4e4630ab5ef2c296ea0a3d57c1308a3525bab6f9a323ade45bd62",
+   "recordedAt": "",
+   "recordedFields": {
+    "level": "L4-abi-contract",
+    "path": "docs/PARITY_MODEL.md",
+    "status": "KNOWN_NONCONFORMANCE",
+    "tokens": [
+     "up_ref"
+    ],
+    "wouldClose": "Use the C-visible ownership convention rather than the wrapper method name, or record a reviewed exemption."
+   },
+   "reviewer": null,
+   "reviewerRecordedIn": null,
+   "sourceTree": null,
+   "target": {
+    "identity": "50581806c49dc8b5299a6f814f0a4ff5063da73fc5b9ecdedcfb2f941ade7e31",
+    "ruleId": "SP_INTERNAL_IDENTIFIER",
+    "scope": "rule"
+   },
+   "tool": null,
+   "unbounded": false
+  },
+  {
+   "artefact": {
+    "digest": "",
+    "digestScope": "artifact",
+    "uri": "docs/HAZARD-REGISTER.md"
+   },
+   "authorisedScope": "rule",
+   "candidate": null,
+   "claimedAbsent": false,
+   "classification": "suppression",
+   "declaredDisposition": "ACTIVE",
+   "expiresAt": null,
+   "id": "t3-known-nonconformance-docs-hazard-register-md",
+   "invalidation": [],
+   "justification": "",
+   "locator": "/known_failures/4",
+   "logicalIdentity": null,
+   "memberCount": 14,
+   "memberCountBasis": "14 identifier tokens; a token is a key for the rule, not a finding identity, and it may cover many occurrences",
+   "memberIds": [],
+   "membersRecorded": false,
+   "policyBasis": "the spec_guard known-nonconformance register: a token listed here is not refused as SP_INTERNAL_IDENTIFIER; status KNOWN_NONCONFORMANCE, level L1-abstract-specification",
+   "policyToken": null,
+   "reason": "",
+   "record": "evidence/etp-t3/SPECIFICATIONS.json",
+   "recordSha256": "baad775c94c4e4630ab5ef2c296ea0a3d57c1308a3525bab6f9a323ade45bd62",
+   "recordedAt": "",
+   "recordedFields": {
+    "level": "L1-abstract-specification",
+    "path": "docs/HAZARD-REGISTER.md",
+    "status": "KNOWN_NONCONFORMANCE",
+    "tokens": [
+     "ChainSnapshot",
+     "OwnedBuf",
+     "OwnedLevels",
+     "OwnedTree",
+     "SecretBuf",
+     "addr_validate_path_internal",
+     "context_matches",
+     "ecdsa_sign_setup",
+     "guard_ffi",
+     "ossl_gcm_stream_update",
+     "refuse_context",
+     "rsa_get_blinding",
+     "rsa_ossl_private_encrypt",
+     "src-path"
+    ],
+    "wouldClose": "Restate each barrier in terms of its observable control and cite the mechanism from the T1 implementation nodes, or record a reviewed exemption."
+   },
+   "reviewer": null,
+   "reviewerRecordedIn": null,
+   "sourceTree": null,
+   "target": {
+    "identity": "50581806c49dc8b5299a6f814f0a4ff5063da73fc5b9ecdedcfb2f941ade7e31",
+    "ruleId": "SP_INTERNAL_IDENTIFIER",
+    "scope": "rule"
+   },
+   "tool": null,
+   "unbounded": false
+  },
+  {
+   "artefact": null,
+   "authorisedScope": "rule",
+   "candidate": "b85c",
+   "claimedAbsent": false,
+   "classification": "suppression",
+   "declaredDisposition": "ACTIVE",
+   "expiresAt": null,
+   "id": "openssh-risk-acceptance-b85c",
+   "invalidation": [],
+   "justification": "the recorded closure, element-7 and L7 measurements at candidate b85c, read together with the independent adjudication's NOT ESTABLISHED verdict and the freeze's safe_compatible=false",
+   "locator": "/accepted_obligations",
+   "logicalIdentity": null,
+   "memberCount": 15,
+   "memberCountBasis": "15 obligation identifiers (OBL-B85C-MECH-EVP, OBL-B85C-MECH-X509, OBL-B85C-MECH-RAND...); an obligation is not a finding identity in the finding-identity model",
+   "memberIds": [],
+   "membersRecorded": false,
+   "policyBasis": "an authorised principal decision to proceed with named unresolved obligations; not an evidence-derived AGENTS.md section 7 verdict and not an independent acceptance of the assurance case",
+   "policyToken": null,
+   "reason": "",
+   "record": "evidence/SAFE-COMPATIBLE-openssh-b85c.json",
+   "recordSha256": "dde0d37684c61e4a35e59dba0b45409232788df8b1d5aaae7fcda5968aeedc02",
+   "recordedAt": "2026-11-17",
+   "recordedFields": {
+    "acceptedObligationIds": [
+     "OBL-B85C-MECH-EVP",
+     "OBL-B85C-MECH-X509",
+     "OBL-B85C-MECH-RAND",
+     "OBL-B85C-MECH-CABI",
+     "OBL-B85C-MECH-BIO",
+     "OBL-B85C-SCOPED-SSLSESSION",
+     "OBL-B85C-SCOPED-RUNTIME",
+     "OBL-B85C-CROSSCUT",
+     "OBL-B85C-REVIEW-REQUIRED",
+     "OBL-B85C-LEDGER-STALE",
+     "OBL-B85C-INSTRUMENTS",
+     "OBL-B85C-IDENTITY",
+     "OBL-B85C-COMPAT-REUSE",
+     "OBL-B85C-EXTERNAL-ABI",
+     "OBL-B85C-DEFERRED-GATES"
+    ],
+    "candidateTag": "b85c",
+    "classification": {
+     "authority": "an authorised principal decision to proceed with named unresolved obligations; not an evidence-derived AGENTS.md section 7 verdict and not an independent acceptance of the assurance case",
+     "basis": "the recorded closure, element-7 and L7 measurements at candidate b85c, read together with the independent adjudication's NOT ESTABLISHED verdict and the freeze's safe_compatible=false",
+     "decided_by": "decision-maker (campaign principal)",
+     "safe_compatible_established": false,
+     "scope": "the OpenSSH consumer closure measured at b85c, at the exact artefact digests recorded in evidence/FREEZE-b85c.json",
+     "state": "RISK_ACCEPTED"
+    },
+    "date": "2026-11-17",
+    "scope": "the OpenSSH consumer closure measured at b85c, at the exact artefact digests recorded in evidence/FREEZE-b85c.json",
+    "sourceHead": "17042ccf2",
+    "toolSha256": "3e86a74dbbe9095ca98ef3b8d889ec67a9447e59ef1caceecaa72152202988a1"
+   },
+   "reviewer": "decision-maker (campaign principal)",
+   "reviewerRecordedIn": "evidence/SAFE-COMPATIBLE-openssh-b85c.json#/classification/decided_by",
+   "sourceTree": null,
+   "target": {
+    "identity": null,
+    "ruleId": null,
+    "scope": "none"
+   },
+   "tool": null,
+   "unbounded": false
+  },
+  {
+   "artefact": null,
+   "authorisedScope": "rule",
+   "candidate": null,
+   "claimedAbsent": false,
+   "classification": "not-a-suppression",
+   "declaredDisposition": "ACTIVE",
+   "expiresAt": null,
+   "id": "t10-closure-exclusions",
+   "invalidation": [],
+   "justification": "",
+   "locator": "/rows",
+   "logicalIdentity": null,
+   "memberCount": 1121,
+   "memberCountBasis": "1121 closure-exclusion rows, each with its own id and edge identity; they are not finding identities",
+   "memberIds": [],
+   "membersRecorded": false,
+   "policyBasis": "",
+   "policyToken": null,
+   "reason": "an exclusion row argues that an edge is outside the closure's conservative upper bound; it removes no finding from a population, all 1121 rows are present, and A5 admits the population as COMPLETE",
+   "record": "evidence/etp-t10/EXCLUSIONS.json",
+   "recordSha256": "791c699d3c3f60e5dee0f26563573a988411ad6854a319286b9cc34719e48f90",
+   "recordedAt": "",
+   "recordedFields": {
+    "exclusionRows": 1121,
+    "exclusionsFailing": 744,
+    "exclusionsPassing": 377
+   },
+   "reviewer": null,
+   "reviewerRecordedIn": null,
+   "sourceTree": null,
+   "target": {
+    "identity": null,
+    "ruleId": null,
+    "scope": "none"
+   },
+   "tool": null,
+   "unbounded": false
+  },
+  {
+   "artefact": {
+    "digest": "17e45eec1a48a7a5e1679e1d29ee69451e9d59a1",
+    "digestScope": "candidate-commit",
+    "uri": "src/engine/eng_list.rs"
+   },
+   "authorisedScope": "exact",
+   "candidate": "17e45eec1a48a7a5e1679e1d29ee69451e9d59a1",
+   "claimedAbsent": false,
+   "classification": "not-a-suppression",
+   "declaredDisposition": "ACTIVE",
+   "expiresAt": null,
+   "id": "a1-superseded-disposition",
+   "invalidation": [],
+   "justification": "the native record marks this disposition superseded and A1 emits it with `superseded: true`",
+   "locator": "/runs/2/results/210",
+   "logicalIdentity": null,
+   "memberCount": 1,
+   "memberCountBasis": "one exact finding identity, emitted and marked",
+   "memberIds": [
+    "5f72da1c3ad10a00457ea7e67046bb713a4891a38a436f6b6627adaaa56df1e9"
+   ],
+   "membersRecorded": true,
+   "policyBasis": "",
+   "policyToken": null,
+   "reason": "a superseded disposition is emitted verbatim and remains a finding; it is a disposition, not a suppression, and A1 emits no result.suppressions",
+   "record": "evidence/a1/SARIF.json",
+   "recordSha256": "5c0cfee62512deb08cc12f95624be64865d3e544473bae80d9aca0ab36ce7852",
+   "recordedAt": "",
+   "recordedFields": {
+    "exactFingerprint": "5f72da1c3ad10a00457ea7e67046bb713a4891a38a436f6b6627adaaa56df1e9",
+    "ruleId": "A1-OBLIGATION-DISPOSITION-SUPERSEDED",
+    "superseded": true,
+    "supersededDisposition": "BLOCKED"
+   },
+   "reviewer": null,
+   "reviewerRecordedIn": null,
+   "sourceTree": null,
+   "target": {
+    "identity": "5f72da1c3ad10a00457ea7e67046bb713a4891a38a436f6b6627adaaa56df1e9",
+    "ruleId": null,
+    "scope": "exact"
+   },
+   "tool": null,
+   "unbounded": false
+  },
+  {
+   "artefact": null,
+   "authorisedScope": "rule",
+   "candidate": null,
+   "claimedAbsent": false,
+   "classification": "control-fixture",
+   "declaredDisposition": "ACTIVE",
+   "expiresAt": null,
+   "id": "t3-spec-guard-control-fixture",
+   "invalidation": [],
+   "justification": "the ABI contract fixes the release site, so the owner type is named",
+   "locator": "/controls/0/exemptions/0",
+   "logicalIdentity": null,
+   "memberCount": 1,
+   "memberCountBasis": "one fixture token, not a finding identity",
+   "memberIds": [],
+   "membersRecorded": false,
+   "policyBasis": "",
+   "policyToken": null,
+   "reason": "a guard control fixture: it proves the exemption mechanism accepts a justified exemption and disposes of no real finding",
+   "record": "evidence/etp-t3/SPECIFICATIONS.json",
+   "recordSha256": "baad775c94c4e4630ab5ef2c296ea0a3d57c1308a3525bab6f9a323ade45bd62",
+   "recordedAt": "794a7c549",
+   "recordedFields": {
+    "exemption": {
+     "justification": "the ABI contract fixes the release site, so the owner type is named",
+     "reviewed": "794a7c549",
+     "reviewer": "ETP-T3 adversarial review",
+     "token": "OwnedBuf"
+    },
+    "expect": []
+   },
+   "reviewer": "ETP-T3 adversarial review",
+   "reviewerRecordedIn": "evidence/etp-t3/SPECIFICATIONS.json#/controls/*/exemptions/0/reviewer",
+   "sourceTree": null,
+   "target": {
+    "identity": null,
+    "ruleId": null,
+    "scope": "none"
+   },
+   "tool": null,
+   "unbounded": false
+  }
+ ],
+ "refusals": {
+  "SG_REFUSED_COUNT_UNBALANCED": {
+   "condition": "the disposition totals do not reconcile with the finding population: a member is counted twice, a stated member count disagrees with the member list, or suppressed plus unsuppressed does not equal the population",
+   "prevents": "that the register accounts for the population when its parts do not add up"
+  },
+  "SG_REFUSED_CROSS_ARTEFACT_INHERITANCE": {
+   "condition": "a suppression is applied to a member bound to a different artefact than the one it records",
+   "prevents": "that a suppression of a finding in one artefact disposes of a finding in another; an exact identity names one binding"
+  },
+  "SG_REFUSED_EXPIRED": {
+   "condition": "the suppression's recorded expiry is at or before the evaluation date but it is presented as active",
+   "prevents": "that a lapsed suppression still authorises a disposition; an expired acceptance is history, not current state"
+  },
+  "SG_REFUSED_INVALIDATED": {
+   "condition": "the record's recorded disposition is INVALIDATED, or a recorded invalidation trigger fired",
+   "prevents": "that an invalidated suppression remains in force, or that invalidation deleted the finding or the suppression record"
+  },
+  "SG_REFUSED_LOGICAL_AS_EXACT": {
+   "condition": "a suppression whose target is a logical identity is used to authorise an exact occurrence",
+   "prevents": "that one occurrence's disposition transfers to a different occurrence of the same logical finding, including a new occurrence after code motion"
+  },
+  "SG_REFUSED_NO_EXPIRY": {
+   "condition": "the record states no expiry, or explicitly declares the suppression unbounded",
+   "prevents": "that a permanent suppression is a governed one; without an expiry the suppression never re-enters review and a stale acceptance is read as current"
+  },
+  "SG_REFUSED_NO_JUSTIFICATION": {
+   "condition": "the record states no reason the suppression is acceptable",
+   "prevents": "that a suppression is justified because it exists, and that a remediation plan (`would_close`) is a reason the present state is acceptable"
+  },
+  "SG_REFUSED_NO_MEMBER_IDENTITIES": {
+   "condition": "the record states a suppression total but records no member identity, or records member locators that are not the findings it disposes of",
+   "prevents": "that an aggregate is a census: a number with no member row cannot be reviewed, re-read, deduplicated or checked, and the suppressed findings cannot be named"
+  },
+  "SG_REFUSED_NO_REVIEWER": {
+   "condition": "the record names nobody who reviewed the suppression",
+   "prevents": "that a suppression was reviewed because it was written down; an author's own record is not a review"
+  },
+  "SG_REFUSED_STALE_CANDIDATE": {
+   "condition": "the suppression's candidate identity is not recorded, or differs from the candidate under evaluation",
+   "prevents": "that an acceptance made at one candidate governs another; a candidate change invalidates the suppression before any member is considered"
+  },
+  "SG_REFUSED_SUPPRESSION_AS_ABSENCE": {
+   "condition": "a suppressed finding is dropped from the finding population, or counted as absent because it is suppressed",
+   "prevents": "that suppressing a finding removes it; a suppression is a disposition of a finding that is still there, so removing it makes the population and the register disagree while the total appears to fall"
+  },
+  "SG_REFUSED_TARGET_NOT_IN_POPULATION": {
+   "condition": "the record names no target identity, or the target is not present in the finding population",
+   "prevents": "that a suppression targets a finding that exists; a target no population contains cannot be disposed of, and a suppression of the whole tree targets everything"
+  },
+  "SG_REFUSED_UNBOUNDED_SCOPE": {
+   "condition": "the authorised scope is broader than the identity the record targets",
+   "prevents": "that a suppression of one occurrence, or of one logical finding, authorises a rule, an artefact or a tree; the suppression then covers findings it never named"
+  },
+  "SG_REFUSED_UNRECORDED_REVIEWER": {
+   "condition": "the reviewer token is not established by any tracked record as a reviewer",
+   "prevents": "that a role description (`decision-maker`, `the principal`) is a reviewer identity; a token no record establishes cannot be checked, and an invented reviewer is a false independence claim"
+  }
+ },
+ "rule": "a suppression is a disposition of a finding that is still in the population, never an absence",
+ "schema": "openssl-rs/a6/suppressions/1",
+ "totals": {
+  "actionable": 0,
+  "byCode": {
+   "SG_REFUSED_NO_EXPIRY": 8,
+   "SG_REFUSED_NO_JUSTIFICATION": 7,
+   "SG_REFUSED_NO_MEMBER_IDENTITIES": 8,
+   "SG_REFUSED_NO_REVIEWER": 7,
+   "SG_REFUSED_STALE_CANDIDATE": 8,
+   "SG_REFUSED_TARGET_NOT_IN_POPULATION": 8,
+   "SG_REFUSED_UNBOUNDED_SCOPE": 3,
+   "SG_REFUSED_UNRECORDED_REVIEWER": 1
+  },
+  "byDisposition": {
+   "ACTIVE": 0,
+   "EXPIRED": 0,
+   "INVALIDATED": 0,
+   "NON_ACTIONABLE": 11,
+   "PENDING_REVIEW": 0
+  },
+  "membersDisposed": 0,
+  "notSuppressions": 3,
+  "records": 11,
+  "suppressions": 8
+ }
+}

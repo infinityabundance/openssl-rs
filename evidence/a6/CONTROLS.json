@@ -1,0 +1,146 @@
+{
+ "controls": [
+  {
+   "detail": "a suppressed finding is still a finding, so a population that omits it cannot be reconciled with the register",
+   "expectedCode": "SG_REFUSED_SUPPRESSION_AS_ABSENCE",
+   "id": "suppression-as-absence",
+   "kind": "reconciliation",
+   "mutation": "the population is rebuilt without the member an active suppression disposes of",
+   "observedCode": "SG_REFUSED_SUPPRESSION_AS_ABSENCE"
+  },
+  {
+   "detail": "a total with no member row is not a census",
+   "expectedCode": "SG_REFUSED_NO_MEMBER_IDENTITIES",
+   "id": "aggregate-read-as-census",
+   "kind": "admission",
+   "mutation": "members_recorded is cleared and the member list emptied while member_count is kept",
+   "observedCode": "SG_REFUSED_NO_MEMBER_IDENTITIES"
+  },
+  {
+   "detail": "a suppression is not justified because it exists",
+   "expectedCode": "SG_REFUSED_NO_JUSTIFICATION",
+   "id": "no-justification",
+   "kind": "admission",
+   "mutation": "the justification is cleared",
+   "observedCode": "SG_REFUSED_NO_JUSTIFICATION"
+  },
+  {
+   "detail": "an author's own record is not a review",
+   "expectedCode": "SG_REFUSED_NO_REVIEWER",
+   "id": "no-reviewer",
+   "kind": "admission",
+   "mutation": "the reviewer is cleared",
+   "observedCode": "SG_REFUSED_NO_REVIEWER"
+  },
+  {
+   "detail": "a token no record establishes cannot be checked",
+   "expectedCode": "SG_REFUSED_UNRECORDED_REVIEWER",
+   "id": "unrecorded-reviewer",
+   "kind": "admission",
+   "mutation": "the reviewer token is replaced by one no tracked record establishes",
+   "observedCode": "SG_REFUSED_UNRECORDED_REVIEWER"
+  },
+  {
+   "detail": "a permanent suppression is not a governed one",
+   "expectedCode": "SG_REFUSED_NO_EXPIRY",
+   "id": "no-expiry",
+   "kind": "admission",
+   "mutation": "the expiry is cleared and the suppression declares itself unbounded",
+   "observedCode": "SG_REFUSED_NO_EXPIRY"
+  },
+  {
+   "detail": "a lapsed acceptance is history, not current state",
+   "expectedCode": "SG_REFUSED_EXPIRED",
+   "id": "expired-read-as-active",
+   "kind": "admission",
+   "mutation": "the expiry is moved before the evaluation date while the record still declares ACTIVE",
+   "observedCode": "SG_REFUSED_EXPIRED"
+  },
+  {
+   "detail": "a suppression covers findings it never named",
+   "expectedCode": "SG_REFUSED_UNBOUNDED_SCOPE",
+   "id": "unbounded-scope",
+   "kind": "admission",
+   "mutation": "the authorised scope is widened to rule while the target stays an exact occurrence",
+   "observedCode": "SG_REFUSED_UNBOUNDED_SCOPE"
+  },
+  {
+   "detail": "one occurrence's disposition does not transfer to another occurrence",
+   "expectedCode": "SG_REFUSED_LOGICAL_AS_EXACT",
+   "id": "logical-as-exact",
+   "kind": "admission",
+   "mutation": "the target is a logical identity and the authorised scope is exact, so a second exact occurrence at the same logical identity would inherit it",
+   "observedCode": "SG_REFUSED_LOGICAL_AS_EXACT"
+  },
+  {
+   "detail": "an exact identity names one artefact binding",
+   "expectedCode": "SG_REFUSED_CROSS_ARTEFACT_INHERITANCE",
+   "id": "cross-artefact-inheritance",
+   "kind": "admission",
+   "mutation": "the suppression records the binding of 'src/rsa/mod.rs' and its member is bound to 'src/cmp/cmp_asn.rs'",
+   "observedCode": "SG_REFUSED_CROSS_ARTEFACT_INHERITANCE"
+  },
+  {
+   "detail": "an acceptance at one candidate does not govern another",
+   "expectedCode": "SG_REFUSED_STALE_CANDIDATE",
+   "id": "stale-candidate",
+   "kind": "admission",
+   "mutation": "the candidate under evaluation is moved and the suppression keeps its recorded candidate",
+   "observedCode": "SG_REFUSED_STALE_CANDIDATE"
+  },
+  {
+   "detail": "a target no population contains cannot be disposed of",
+   "expectedCode": "SG_REFUSED_TARGET_NOT_IN_POPULATION",
+   "id": "target-absent-from-population",
+   "kind": "admission",
+   "mutation": "the target exact identity is replaced by one the population does not contain",
+   "observedCode": "SG_REFUSED_TARGET_NOT_IN_POPULATION"
+  },
+  {
+   "detail": "an invalidated suppression is not in force",
+   "expectedCode": "SG_REFUSED_INVALIDATED",
+   "id": "invalidated-read-as-active",
+   "kind": "admission",
+   "mutation": "the record's disposition is INVALIDATED while its other fields still look active",
+   "observedCode": "SG_REFUSED_INVALIDATED"
+  },
+  {
+   "detail": "the register does not account for the population when its parts do not add up",
+   "expectedCode": "SG_REFUSED_COUNT_UNBALANCED",
+   "id": "count-unbalanced",
+   "kind": "reconciliation",
+   "mutation": "the record states two members while listing one",
+   "observedCode": "SG_REFUSED_COUNT_UNBALANCED"
+  },
+  {
+   "detail": "an acceptance does not survive the policy that permitted it, and invalidation deletes neither the finding nor the record",
+   "expectedCode": "SG_REFUSED_INVALIDATED",
+   "id": "policy-change",
+   "kind": "invalidation",
+   "mutation": "the policy basis the suppression was authorised under changes, and the trigger is applied",
+   "observedCode": "SG_REFUSED_INVALIDATED"
+  }
+ ],
+ "model": "a6/v1",
+ "purpose": "one in-memory control per refusal code, each built from a real finding population; a control proves the refusal fires and is not a source change",
+ "schema": "openssl-rs/a6/controls/1",
+ "totals": {
+  "byCode": {
+   "SG_REFUSED_COUNT_UNBALANCED": 1,
+   "SG_REFUSED_CROSS_ARTEFACT_INHERITANCE": 1,
+   "SG_REFUSED_EXPIRED": 1,
+   "SG_REFUSED_INVALIDATED": 2,
+   "SG_REFUSED_LOGICAL_AS_EXACT": 1,
+   "SG_REFUSED_NO_EXPIRY": 1,
+   "SG_REFUSED_NO_JUSTIFICATION": 1,
+   "SG_REFUSED_NO_MEMBER_IDENTITIES": 1,
+   "SG_REFUSED_NO_REVIEWER": 1,
+   "SG_REFUSED_STALE_CANDIDATE": 1,
+   "SG_REFUSED_SUPPRESSION_AS_ABSENCE": 1,
+   "SG_REFUSED_TARGET_NOT_IN_POPULATION": 1,
+   "SG_REFUSED_UNBOUNDED_SCOPE": 1,
+   "SG_REFUSED_UNRECORDED_REVIEWER": 1
+  },
+  "controls": 15
+ }
+}
