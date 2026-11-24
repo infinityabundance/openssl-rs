@@ -1,0 +1,82 @@
+{
+ "controls": [
+  {
+   "assertedDisposition": "UNKNOWN",
+   "code": "BL_REFUSED_ABSENCE_AS_RESOLUTION",
+   "detail": "the absent member is UNKNOWN and not RESOLVED",
+   "id": "absence-as-resolution"
+  },
+  {
+   "assertedDisposition": "POPULATION_SHRUNK_ABSENT",
+   "code": "BL_REFUSED_POPULATION_SHRINK",
+   "detail": "the absent member is POPULATION_SHRUNK_ABSENT",
+   "id": "population-shrink"
+  },
+  {
+   "assertedDisposition": "TOOL_CHANGED_ABSENT",
+   "code": "BL_REFUSED_TOOL_CHANGE",
+   "detail": "the absent member is TOOL_CHANGED_ABSENT",
+   "id": "tool-change"
+  },
+  {
+   "assertedDisposition": "EXCLUDED_ABSENT",
+   "code": "BL_REFUSED_EXCLUSION_AS_RESOLUTION",
+   "detail": "the absent member is EXCLUDED_ABSENT",
+   "id": "exclusion-as-resolution"
+  },
+  {
+   "assertedDisposition": "SUPPRESSED_ABSENT",
+   "code": "BL_REFUSED_SUPPRESSION_AS_RESOLUTION",
+   "detail": "the absent member is SUPPRESSED_ABSENT",
+   "id": "suppression-as-resolution"
+  },
+  {
+   "assertedDisposition": "UNSCANNED_ABSENT",
+   "code": "BL_REFUSED_PARTIAL_SCAN",
+   "detail": "the absent member is UNSCANNED_ABSENT",
+   "id": "partial-scan"
+  },
+  {
+   "assertedDisposition": "MOVED",
+   "code": "BL_REFUSED_MOVED_AS_RESOLVED",
+   "detail": "the moved member is MOVED",
+   "id": "moved-as-resolved"
+  },
+  {
+   "assertedDisposition": "UNKNOWN",
+   "code": "BL_REFUSED_CANDIDATE_UNRECORDED",
+   "detail": "the absent member is UNKNOWN because no candidate is recorded",
+   "id": "candidate-unrecorded"
+  },
+  {
+   "assertedDisposition": null,
+   "code": "BL_REFUSED_AGGREGATE_AS_MEMBERS",
+   "detail": "the delta refuses an aggregate side instead of reading a count as members",
+   "id": "aggregate-as-members"
+  },
+  {
+   "assertedDisposition": null,
+   "code": "BL_REFUSED_NO_BASELINE",
+   "detail": "the delta refuses a missing second population",
+   "id": "no-baseline"
+  },
+  {
+   "assertedDisposition": "UNKNOWN",
+   "code": "BL_REFUSED_IDENTITY_UNSTABLE",
+   "detail": "the unidentifiable member is UNKNOWN",
+   "id": "identity-unstable"
+  }
+ ],
+ "model": "a7/v1",
+ "purpose": "one in-memory control per refusal code; a control proves the refusal fires",
+ "schema": "openssl-rs/a7/controls/1",
+ "sourceIdentity": {
+  "asOf": "2026-11-24",
+  "branch": "staging",
+  "commit": "1efd02cbd1401c4cffb854b906c021915df94386"
+ },
+ "totals": {
+  "codes": 11,
+  "controls": 11
+ }
+}
