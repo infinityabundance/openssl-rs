@@ -1,0 +1,127 @@
+{
+ "counts": {
+  "controls": 13,
+  "envelopes": 4,
+  "refusalCodes": 13,
+  "statements": 4
+ },
+ "envelopes": [
+  {
+   "envelope": "ENVELOPES/a1-sarif.json",
+   "envelopeSha256": "8b0aa7989f43e11a7a6773469ea5a423219fd291a09f5a1a66e48e0d4dee84cd",
+   "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+   "name": "a1-sarif",
+   "paeSha256": "a415381b43e461f86641fad9efd6677eeb83708c64f27d4d960dcc9c01835906",
+   "payloadBytes": 549,
+   "payloadSha256": "d53bc4eb66f71bab7227fb9e590d151287a1d64b4446f8dd84b94ca8fef26329",
+   "payloadType": "application/vnd.in-toto+json",
+   "signer": "test-only HMAC-SHA256 (fixed public seed; not a trust root)",
+   "statement": "evidence/a9/STATEMENTS/a1-sarif.json",
+   "statementMatchesPayload": true,
+   "statementSha256": "d53bc4eb66f71bab7227fb9e590d151287a1d64b4446f8dd84b94ca8fef26329"
+  },
+  {
+   "envelope": "ENVELOPES/a5-admission.json",
+   "envelopeSha256": "8f9144f20d9a6e8ce04dabe03ce701741149f2f5e2c59a5ec92721244d3ea93e",
+   "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+   "name": "a5-admission",
+   "paeSha256": "8713695f2b61dbda99193efd15606c869f51d9de24b1824ec84c12b7c943806e",
+   "payloadBytes": 528,
+   "payloadSha256": "d17bb4c990893dc61ee06687a78b6c1b9a91b772e9dbefe233d1fa8b6c21e45f",
+   "payloadType": "application/vnd.in-toto+json",
+   "signer": "test-only HMAC-SHA256 (fixed public seed; not a trust root)",
+   "statement": "evidence/a9/STATEMENTS/a5-admission.json",
+   "statementMatchesPayload": true,
+   "statementSha256": "d17bb4c990893dc61ee06687a78b6c1b9a91b772e9dbefe233d1fa8b6c21e45f"
+  },
+  {
+   "envelope": "ENVELOPES/a7-delta.json",
+   "envelopeSha256": "068ea1274eae816129be016ec4a043e92d9e2353029bbb88b4436f7cdecb3385",
+   "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+   "name": "a7-delta",
+   "paeSha256": "061a6b36bd909cf1f7ef9264e245eb96c6ebee7847fd9004880409f75d4a32ca",
+   "payloadBytes": 672,
+   "payloadSha256": "d4dfa5a3b374ffc4382964dcac61e8a785cfe7f833cbe5c7731a210c0fe7fba8",
+   "payloadType": "application/vnd.in-toto+json",
+   "signer": "test-only HMAC-SHA256 (fixed public seed; not a trust root)",
+   "statement": "evidence/a9/STATEMENTS/a7-delta.json",
+   "statementMatchesPayload": true,
+   "statementSha256": "d4dfa5a3b374ffc4382964dcac61e8a785cfe7f833cbe5c7731a210c0fe7fba8"
+  },
+  {
+   "envelope": "ENVELOPES/a8-shard-000.json",
+   "envelopeSha256": "5bf418cc5b014d985199ce9e17cde859647303327f6bbd111279d3ed299503a9",
+   "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+   "name": "a8-shard-000",
+   "paeSha256": "9e08bc6c908d7964aa05af48a8e81c7806b6835febc31e9ecf022cb9c622280f",
+   "payloadBytes": 714,
+   "payloadSha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582",
+   "payloadType": "application/vnd.in-toto+json",
+   "signer": "test-only HMAC-SHA256 (fixed public seed; not a trust root)",
+   "statement": "evidence/a9/STATEMENTS/a8-shard-000.json",
+   "statementMatchesPayload": true,
+   "statementSha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582"
+  }
+ ],
+ "item": "A10",
+ "model": "a10/v1",
+ "paeVector": {
+  "bodyLength": 11,
+  "bodyText": "hello world",
+  "expectedHex": "44535345763120323920687474703a2f2f6578616d706c652e636f6d2f48656c6c6f576f726c642031312068656c6c6f20776f726c64",
+  "expectedText": "DSSEv1 29 http://example.com/HelloWorld 11 hello world",
+  "payloadType": "http://example.com/HelloWorld",
+  "sha256": "217751fac2c4f14edb2c9297fbc34abcb016ba88e74757e875ec4ac16fb6b6a1",
+  "source": "DSSE specification, Protocol Definition, Pre-Authentication Encoding example",
+  "typeLength": 29
+ },
+ "payloadType": "application/vnd.in-toto+json",
+ "schema": "openssl-rs/a10/envelopes/1",
+ "signer": {
+  "doesNotEstablish": [
+   "authenticity: the key is a fixed public test seed, not a trust root",
+   "identity: keyid is an unauthenticated hint",
+   "authorisation: role binding is A14",
+   "transparency: A17",
+   "independent cryptographic verification: A12"
+  ],
+  "establishes": [
+   "the envelope frames the exact statement bytes",
+   "the PAE is over the decoded bytes as received",
+   "a test-only HMAC-SHA256 signature verifies over that PAE"
+  ],
+  "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+  "label": "test-only HMAC-SHA256 (fixed public seed; not a trust root)",
+  "seedHex": "6f70656e73736c2d72732f6131302f746573742d6f6e6c792d686d61632d7368613235362d736565642f7631"
+ },
+ "sourceIdentity": {
+  "asOf": "2026-11-24",
+  "commit": "da021a765",
+  "inputs": [
+   {
+    "path": "evidence/a9/STATEMENTS/a1-sarif.json",
+    "sha256": "d53bc4eb66f71bab7227fb9e590d151287a1d64b4446f8dd84b94ca8fef26329"
+   },
+   {
+    "path": "evidence/a9/STATEMENTS/a5-admission.json",
+    "sha256": "d17bb4c990893dc61ee06687a78b6c1b9a91b772e9dbefe233d1fa8b6c21e45f"
+   },
+   {
+    "path": "evidence/a9/STATEMENTS/a7-delta.json",
+    "sha256": "d4dfa5a3b374ffc4382964dcac61e8a785cfe7f833cbe5c7731a210c0fe7fba8"
+   },
+   {
+    "path": "evidence/a9/STATEMENTS/a8-shard-000.json",
+    "sha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582"
+   },
+   {
+    "path": "forensics/tools/dsse.py",
+    "sha256": "0a701eca4087215c0d0166076a0158b82a8e32c14d67ae38e397090720dd83b9"
+   },
+   {
+    "path": "forensics/tools/intoto.py",
+    "sha256": "8b351964285c8b5cdf08223d3b98e3e6845b09020bbda2912e178437fbcb3d47"
+   }
+  ]
+ }
+}

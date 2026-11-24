@@ -1,0 +1,144 @@
+{
+ "codes": {
+  "DS_REFUSED_BASE64_NONCANONICAL": {
+   "condition": "the payload or a signature is not canonical standard base64: wrong alphabet, missing or excess padding, non-zero pad bits, or trailing data",
+   "prevents": "that two different encodings of the same bytes are both accepted, or that bytes are recovered from a non-canonical encoding"
+  },
+  "DS_REFUSED_DUPLICATE_KEY": {
+   "condition": "the envelope's JSON contains a duplicated object key",
+   "prevents": "that a second payloadType, payload or sig is silently discarded and a different field is the one verified"
+  },
+  "DS_REFUSED_ENVELOPE_INVALID": {
+   "condition": "the envelope is not a JSON object with exactly payloadType, payload and signatures, or a field has the wrong JSON type",
+   "prevents": "that an array, a bare payload, an unknown top-level field or a non-string field is read as a DSSE envelope"
+  },
+  "DS_REFUSED_OBJECT_SUPPLIED": {
+   "condition": "verification was given a parsed object or decoded text instead of the received bytes",
+   "prevents": "that a caller's in-memory representation, which has lost the received byte identity, is verified as those bytes"
+  },
+  "DS_REFUSED_PAE_LENGTH": {
+   "condition": "a PAE byte string declares a type or body length that does not match its bytes, or uses a non-canonical decimal",
+   "prevents": "that a PAE with a wrong length prefix is read as the concatenation it claims to be"
+  },
+  "DS_REFUSED_PAE_RESERIALISED": {
+   "condition": "the PAE body is not the decoded payload bytes, or the signature verifies only over a canonical re-encoding of the payload",
+   "prevents": "that a payload parsed and re-encoded before verification is accepted as the payload that was signed"
+  },
+  "DS_REFUSED_PAYLOAD_ABSENT": {
+   "condition": "the envelope has no payload field",
+   "prevents": "that an envelope with no payload is verified against an empty byte string"
+  },
+  "DS_REFUSED_PAYLOAD_NOT_STATEMENT": {
+   "condition": "a statement is required and the verified payload is not a structurally valid in-toto Statement v1 (A9)",
+   "prevents": "that a structurally valid envelope over arbitrary bytes is read as an in-toto attestation"
+  },
+  "DS_REFUSED_PAYLOAD_TYPE_MISMATCH": {
+   "condition": "verification is bound to an expected payload type and the received payloadType is not it",
+   "prevents": "that a payload signed under one type is verified or read as another (a generic payload read as a statement, or a statement as a generic payload)"
+  },
+  "DS_REFUSED_PAYLOAD_TYPE_MISSING": {
+   "condition": "the envelope has no payloadType field",
+   "prevents": "that a payload is verified with a default or inferred type, so the signed type boundary is lost"
+  },
+  "DS_REFUSED_SIGNATURES_ABSENT": {
+   "condition": "the envelope has no signatures field, or the list is empty",
+   "prevents": "that an unsigned payload is read as a signed one"
+  },
+  "DS_REFUSED_SIGNATURE_INVALID": {
+   "condition": "no supplied signature verifies over the PAE of the received bytes",
+   "prevents": "that a payload whose bytes, type or signature changed is accepted"
+  },
+  "DS_REFUSED_TRAILING_BYTES": {
+   "condition": "the envelope bytes carry data after the JSON value",
+   "prevents": "that a second document appended to an envelope is ignored while the first is verified"
+  }
+ },
+ "controls": [
+  {
+   "code": "DS_REFUSED_ENVELOPE_INVALID",
+   "control": "invalid-envelope",
+   "observed": "payloadType is a string",
+   "prevents": "that an array, a bare payload, an unknown top-level field or a non-string field is read as a DSSE envelope"
+  },
+  {
+   "code": "DS_REFUSED_DUPLICATE_KEY",
+   "control": "duplicate-key",
+   "observed": "the envelope repeats the key 'payloadType'; the later value would silently replace the verified one",
+   "prevents": "that a second payloadType, payload or sig is silently discarded and a different field is the one verified"
+  },
+  {
+   "code": "DS_REFUSED_PAYLOAD_TYPE_MISSING",
+   "control": "missing-payload-type",
+   "observed": "the envelope has no payloadType",
+   "prevents": "that a payload is verified with a default or inferred type, so the signed type boundary is lost"
+  },
+  {
+   "code": "DS_REFUSED_PAYLOAD_TYPE_MISMATCH",
+   "control": "type-mismatch",
+   "observed": "the envelope declares 'application/vnd.in-toto+json', but verification is bound to 'application/vnd.example.other+json'",
+   "prevents": "that a payload signed under one type is verified or read as another (a generic payload read as a statement, or a statement as a generic payload)"
+  },
+  {
+   "code": "DS_REFUSED_BASE64_NONCANONICAL",
+   "control": "noncanonical-base64",
+   "observed": "payload: the length is not a multiple of four, so the padding is not canonical",
+   "prevents": "that two different encodings of the same bytes are both accepted, or that bytes are recovered from a non-canonical encoding"
+  },
+  {
+   "code": "DS_REFUSED_PAYLOAD_ABSENT",
+   "control": "missing-payload",
+   "observed": "the envelope has no payload",
+   "prevents": "that an envelope with no payload is verified against an empty byte string"
+  },
+  {
+   "code": "DS_REFUSED_SIGNATURES_ABSENT",
+   "control": "missing-signatures",
+   "observed": "the envelope has no signatures field",
+   "prevents": "that an unsigned payload is read as a signed one"
+  },
+  {
+   "code": "DS_REFUSED_SIGNATURE_INVALID",
+   "control": "bad-signature",
+   "observed": "no supplied signature verifies over the PAE of the received bytes",
+   "prevents": "that a payload whose bytes, type or signature changed is accepted"
+  },
+  {
+   "code": "DS_REFUSED_PAE_RESERIALISED",
+   "control": "reserialised-payload",
+   "observed": "a signature verifies only over a canonical re-encoding of the payload, not over the received bytes: the payload was re-serialised before verification",
+   "prevents": "that a payload parsed and re-encoded before verification is accepted as the payload that was signed"
+  },
+  {
+   "code": "DS_REFUSED_PAE_LENGTH",
+   "control": "wrong-pae-length",
+   "observed": "the PAE declares a 12-byte body but fewer bytes remain",
+   "prevents": "that a PAE with a wrong length prefix is read as the concatenation it claims to be"
+  },
+  {
+   "code": "DS_REFUSED_PAYLOAD_NOT_STATEMENT",
+   "control": "payload-not-statement",
+   "observed": "the verified payload is not an in-toto Statement v1 (IT_REFUSED_STATEMENT_MUTATED): re-reading the emitted bytes yields a different canonical statement: the document is reordered, re-spaced or otherwise not the emitted form",
+   "prevents": "that a structurally valid envelope over arbitrary bytes is read as an in-toto attestation"
+  },
+  {
+   "code": "DS_REFUSED_TRAILING_BYTES",
+   "control": "trailing-bytes",
+   "observed": "the envelope carries 15 character(s) after the JSON value",
+   "prevents": "that a second document appended to an envelope is ignored while the first is verified"
+  },
+  {
+   "code": "DS_REFUSED_OBJECT_SUPPLIED",
+   "control": "object-supplied",
+   "observed": "verification takes the received bytes, not dict: a parsed or decoded value has lost the received byte identity",
+   "prevents": "that a caller's in-memory representation, which has lost the received byte identity, is verified as those bytes"
+  }
+ ],
+ "counts": {
+  "codes": 13,
+  "controls": 13,
+  "fired": 13
+ },
+ "item": "A10",
+ "model": "a10/v1",
+ "schema": "openssl-rs/a10/controls/1"
+}
