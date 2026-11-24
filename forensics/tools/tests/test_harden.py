@@ -318,11 +318,23 @@ class ScanTests(unittest.TestCase):
 
     def test_the_recorded_scan_covers_the_population(self) -> None:
         document = _load(SCAN)
-        self.assertEqual(document["population"]["glob"], h.SCAN_GLOB)
-        paths = h.tracked_files(h.SCAN_GLOB)
-        self.assertEqual(document["population"]["files"], len(paths))
-        self.assertEqual(document["summary"]["files"], len(paths))
-        self.assertEqual(len(document["results"]), len(paths))
+        population = document["population"]
+        self.assertEqual(population["binding"], h.POPULATION_FROZEN)
+        self.assertEqual(population["glob"], h.SCAN_GLOB)
+        members = population["members"]
+        self.assertEqual(population["files"], len(members))
+        self.assertEqual(document["summary"]["files"], len(members))
+        self.assertEqual(len(document["results"]), len(members))
+        self.assertEqual(
+            [row["path"] for row in document["results"]],
+            [member["path"] for member in members],
+        )
+        for member in members:
+            with self.subTest(path=member["path"]):
+                self.assertEqual(set(member), {"path", "sha256", "bytes"})
+                self.assertEqual(len(member["sha256"]), 64)
+                int(member["sha256"], 16)
+                self.assertGreaterEqual(member["bytes"], 0)
         self.assertEqual(document["summary"]["refused"], 0)
         self.assertEqual(
             document["summary"]["strictOk"], document["summary"]["examined"]
@@ -336,12 +348,120 @@ class ScanTests(unittest.TestCase):
         for row in document["results"]:
             with self.subTest(path=row["path"]):
                 self.assertIn(row["result"], ("STRICT_OK", "SKIPPED_SIZE"))
+                self.assertEqual(len(row["sha256"]), 64)
 
     def test_the_recorded_scan_parameters_are_the_defaults(self) -> None:
         parameters = _load(SCAN)["parameters"]
         self.assertEqual(parameters["max_bytes"], h.DEFAULT_MAX_BYTES)
         self.assertEqual(parameters["max_depth"], h.DEFAULT_MAX_DEPTH)
         self.assertEqual(parameters["integer_bits"], h.DEFAULT_INTEGER_BITS)
+
+    def test_the_frozen_record_reproduces_at_head(self) -> None:
+        document = _load(SCAN)
+        result = h.verify_record(document)
+        self.assertTrue(
+            result["matchesRecord"],
+            "the rebuilt results differ from the frozen record",
+        )
+        members = document["population"]["members"]
+        self.assertEqual(result["population"], len(members))
+        self.assertEqual(result["population"], document["population"]["files"])
+        self.assertEqual(result["summary"], document["summary"])
+        self.assertEqual(result["results"], document["results"])
+        frozen = {member["path"] for member in members}
+        for entry in result["newSinceRecord"]:
+            with self.subTest(path=entry["path"]):
+                self.assertNotIn(entry["path"], frozen)
+                self.assertEqual(entry["result"], h.RESULT_NEW_SINCE_RECORD)
+                self.assertEqual(len(entry["sha256"]), 64)
+
+    @staticmethod
+    def _mirror_record(root: Path, names: tuple[str, ...]) -> tuple[dict, list[str]]:
+        """A small temporary mirror of the tree, frozen through the tool."""
+        (root / "evidence").mkdir(parents=True)
+        for name in names:
+            (root / "evidence" / name).write_bytes(b'{"x":1}')
+        paths = [f"evidence/{name}" for name in names]
+        members = h.freeze_population(paths, repo_root=root)
+        rebuilt = h.scan_frozen_population(members, repo_root=root)
+        document = {
+            "schema": "openssl-rs/a11/scan/2",
+            "population": {
+                "binding": h.POPULATION_FROZEN,
+                "glob": "evidence/*.json",
+                "excludedPrefixes": [],
+                "members": members,
+                "files": len(members),
+            },
+            "parameters": rebuilt["parameters"],
+            "summary": {
+                key: rebuilt[key]
+                for key in (
+                    "files",
+                    "examined",
+                    "strictOk",
+                    "skippedSize",
+                    "skippedOther",
+                    "refused",
+                )
+            },
+            "results": rebuilt["results"],
+        }
+        return document, paths
+
+    def test_growth_after_the_freeze_is_reported_not_absorbed(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "mirror"
+            document, paths = self._mirror_record(root, ("a.json", "b.json"))
+            before = h.verify_record(document, repo_root=root, live_paths=paths)
+            self.assertEqual(before["newSinceRecord"], [])
+            # Append a synthetic JSON file to the mirror, never to the real tree.
+            (root / "evidence" / "c.json").write_bytes(b'{"c":3}')
+            after = h.verify_record(
+                document,
+                repo_root=root,
+                live_paths=paths + ["evidence/c.json"],
+            )
+        self.assertEqual(after["population"], 2)
+        self.assertEqual(after["summary"], document["summary"])
+        self.assertEqual(after["results"], document["results"])
+        self.assertEqual(
+            [entry["path"] for entry in after["newSinceRecord"]],
+            ["evidence/c.json"],
+        )
+        entry = after["newSinceRecord"][0]
+        self.assertEqual(entry["result"], h.RESULT_NEW_SINCE_RECORD)
+        self.assertEqual(entry["sha256"], h.sha256_bytes(b'{"c":3}'))
+        self.assertEqual(entry["bytes"], 7)
+
+    def test_a_changed_or_removed_member_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "mirror"
+            document, paths = self._mirror_record(root, ("a.json", "b.json"))
+            (root / "evidence" / "a.json").write_bytes(b"[1]")
+            with self.assertRaises(h.Refusal) as changed:
+                h.verify_record(document, repo_root=root, live_paths=paths)
+            self.assertEqual(
+                changed.exception.code, h.PH_REFUSED_POPULATION_DRIFT
+            )
+            (root / "evidence" / "a.json").write_bytes(b'{"x":1}')
+            (root / "evidence" / "b.json").unlink()
+            with self.assertRaises(h.Refusal) as removed:
+                h.verify_record(
+                    document, repo_root=root, live_paths=["evidence/a.json"]
+                )
+            self.assertEqual(
+                removed.exception.code, h.PH_REFUSED_POPULATION_DRIFT
+            )
+
+    def test_a_live_population_is_labelled_and_not_comparable(self) -> None:
+        document = {
+            "schema": "openssl-rs/a11/scan/2",
+            "population": {"binding": h.POPULATION_LIVE, "glob": h.SCAN_GLOB},
+        }
+        with self.assertRaises(h.Refusal) as raised:
+            h.verify_record(document, live_paths=[])
+        self.assertEqual(raised.exception.code, h.PH_REFUSED_POPULATION_DRIFT)
 
 
 class CommandLine(unittest.TestCase):
@@ -388,15 +508,32 @@ class CommandLine(unittest.TestCase):
 
     def test_scan_prints_the_code_and_the_counts(self) -> None:
         result = subprocess.run(
-            [sys.executable, str(TOOL), "scan", h.SCAN_GLOB],
+            [sys.executable, str(TOOL), "scan", "--live", h.SCAN_GLOB],
             capture_output=True,
             text=True,
             cwd=REPO_ROOT,
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn(h.CODE_OK, result.stdout)
-        self.assertIn(f"files={_load(SCAN)['population']['files']}", result.stdout)
+        self.assertIn(f"population={h.POPULATION_LIVE}", result.stdout)
+        self.assertIn("files=", result.stdout)
         self.assertIn("refused=0", result.stdout)
+
+    def test_the_frozen_scan_reports_growth_at_the_frozen_count(self) -> None:
+        result = subprocess.run(
+            [sys.executable, str(TOOL), "scan", "--frozen", str(SCAN)],
+            capture_output=True,
+            text=True,
+            cwd=REPO_ROOT,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(f"population={h.POPULATION_FROZEN}", result.stdout)
+        self.assertIn(
+            f"files={_load(SCAN)['population']['files']}", result.stdout
+        )
+        self.assertIn("newSinceRecord=", result.stdout)
+        for line in result.stderr.splitlines():
+            self.assertIn(h.RESULT_NEW_SINCE_RECORD, line)
 
     def test_usage_errors_exit_two_and_print_a_code(self) -> None:
         for argv in (

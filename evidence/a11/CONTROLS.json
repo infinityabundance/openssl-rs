@@ -396,9 +396,9 @@
   "sourceIdentity": {
     "baseCommit": "f1c1a535d",
     "tool": {
-      "bytes": 40810,
+      "bytes": 54477,
       "path": "forensics/tools/harden.py",
-      "sha256": "9069b5168a83d612b138434a1ae2536dfd632cd85ae021b063fbb64909f3ac4c"
+      "sha256": "f05d7fe9be3933332a69f43ee3fab26f7c764a8f20ce556d295683fea7824023"
     }
   },
   "summary": {

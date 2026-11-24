@@ -36,9 +36,11 @@ BASE_COMMIT = "f1c1a535d"
 EVIDENCE = REPO_ROOT / "evidence" / "a11"
 TOOL_RELATIVE = "forensics/tools/harden.py"
 
-SCAN_SCHEMA = "openssl-rs/a11/scan/1"
+SCAN_SCHEMA = "openssl-rs/a11/scan/2"
 DIFFERENTIAL_SCHEMA = "openssl-rs/a11/differential/1"
 CONTROLS_SCHEMA = "openssl-rs/a11/controls/1"
+
+SCAN_RECORD = EVIDENCE / "SCAN.json"
 
 
 def sha256_bytes(data: bytes) -> str:
@@ -62,10 +64,45 @@ def write_json(path: Path, document: dict) -> None:
 # ---------------------------------------------------------------------------
 
 
+def _seed_members() -> list[dict]:
+    """The frozen population, read from the record and never from a live glob.
+
+    The record is the declared candidate.  Once it carries ``population.members``
+    those exact members are reused.  On the correction run that replaced the old
+    live-glob record, the population is named only by ``results``; those paths are
+    the population declared at the candidate, so they seed the frozen members and
+    every digest they already carried is checked against the bytes now.
+    """
+    if not SCAN_RECORD.is_file():
+        raise SystemExit(
+            f"{SCAN_RECORD.relative_to(REPO_ROOT)} is the declared population and is "
+            "missing; a live glob is not a substitute"
+        )
+    document = json.loads(SCAN_RECORD.read_text(encoding="utf-8"))
+    population = document.get("population", {})
+    members = population.get("members")
+    if population.get("binding") == h.POPULATION_FROZEN and isinstance(members, list):
+        return members
+    results = document.get("results")
+    if not isinstance(results, list) or not results:
+        raise SystemExit(
+            f"{SCAN_RECORD.relative_to(REPO_ROOT)} names no population to freeze"
+        )
+    frozen = h.freeze_population(row["path"] for row in results)
+    by_path = {member["path"]: member for member in frozen}
+    for row in results:
+        recorded = row.get("sha256")
+        if recorded is not None and by_path[row["path"]]["sha256"] != recorded:
+            raise SystemExit(
+                f"population member changed since it was declared: {row['path']}"
+            )
+    return frozen
+
+
 def build_scan(source_commit: str) -> dict:
-    paths = h.tracked_files(h.SCAN_GLOB)
-    result = h.scan(paths)
-    if result["files"] != len(paths):
+    members = _seed_members()
+    result = h.scan_frozen_population(members)
+    if result["files"] != len(members):
         raise AssertionError("the scan did not account for every population member")
     for row in result["results"]:
         if row["result"] not in ("STRICT_OK", "SKIPPED_SIZE"):
@@ -81,18 +118,30 @@ def build_scan(source_commit: str) -> dict:
             "tool": tool_identity(),
         },
         "population": {
+            "binding": h.POPULATION_FROZEN,
             "glob": h.SCAN_GLOB,
             "globSemantics": (
                 "tracked files matched with fnmatch.fnmatchcase; '*' matches "
                 "across '/'"
             ),
-            "basis": "git ls-files",
+            "basis": (
+                "the explicit member list below, declared at the candidate; not "
+                "a live glob"
+            ),
             "excludedPrefixes": list(h.SCAN_EXCLUDED_PREFIXES),
             "excludedReason": (
                 "the records this item emits are excluded so the scan cannot "
                 "depend on its own bytes"
             ),
-            "files": result["files"],
+            "frozenAtCandidate": source_commit,
+            "files": len(members),
+            "members": members,
+            "growthPolicy": (
+                "a later verification re-hashes every member and reports a glob "
+                "match that is not a member as NEW_SINCE_RECORD, counted "
+                "separately; growth never changes this count, and a removed or "
+                "changed member is refused with PH_REFUSED_POPULATION_DRIFT"
+            ),
         },
         "parameters": result["parameters"],
         "summary": {
@@ -405,7 +454,8 @@ def main(argv: list[str] | None = None) -> int:
     write_json(output / "CONTROLS.json", controls)
 
     print(
-        f"a11: files={scan['population']['files']} "
+        f"a11: population={scan['population']['binding']} "
+        f"files={scan['population']['files']} "
         f"examined={scan['summary']['examined']} "
         f"strictOk={scan['summary']['strictOk']} "
         f"skippedSize={scan['summary']['skippedSize']} "

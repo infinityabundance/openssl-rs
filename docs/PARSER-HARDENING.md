@@ -157,15 +157,27 @@ that the strict reader refuses them.
 
 ## 4. The scan population and its result
 
-The scan is over **tracked JSON evidence**: the glob is `evidence/*.json`,
-matched with `fnmatch.fnmatchcase` against `git ls-files`, so `*` matches across
-`/` and the pattern covers the subtree. The records this item emits
-(`evidence/a11/`) are excluded, so the scan cannot depend on its own bytes; the
-exclusion is named in `evidence/a11/SCAN.json`.
+The scan population was discovered over **tracked JSON evidence** at the
+declared candidate: the glob is `evidence/*.json`, matched with
+`fnmatch.fnmatchcase` against `git ls-files`, so `*` matches across `/` and the
+pattern covers the subtree. The records this item emits (`evidence/a11/`) are
+excluded, so the scan cannot depend on its own bytes; the exclusion is named in
+`evidence/a11/SCAN.json`.
+
+The population is **frozen as an explicit member list**, not stored as a glob
+count. `evidence/a11/SCAN.json` records `{path, sha256, bytes}` for every member
+declared at the candidate; rebuilding it re-hashes each member and reproduces
+the per-file results and the count. A member whose bytes changed, or that no
+longer exists, is refused with `PH_REFUSED_POPULATION_DRIFT` — a
+record-verification code, distinct from the reader's 13 input refusals. Growth is
+reported, not absorbed: a file that matches the glob now but is not a member is
+reported `NEW_SINCE_RECORD` with its digest, counted separately, and the frozen
+count is unchanged. A live scan remains available as `harden.py scan --live`, but
+its result says `population: LIVE` and is not comparable to a frozen record.
 
 | quantity | measured |
 |---|---:|
-| tracked files matched | **386** |
+| frozen population members | **386** |
 | examined (at or below 4 MiB) | **211** |
 | `STRICT_OK` | **211** |
 | `SKIPPED_SIZE` (reported, not omitted) | **175** |
@@ -175,11 +187,11 @@ exclusion is named in `evidence/a11/SCAN.json`.
 Every examined record parses `STRICT_OK`; no tracked evidence record is refused
 at this bound. The 175 skipped files are the large records (the population is
 about 2.15 GB; the largest single file is 15,629,485 bytes). They are reported
-`SKIPPED_SIZE` with their size and are not read, because reading them into a
+`SKIPPED_SIZE` with their size and are not parsed, because reading them into a
 pure-Python parser would be the denial-of-service surface this item exists to
-bound. `evidence/a11/SCAN.json` records one row per population member with its
-path, size, `STRICT_OK` or `SKIPPED_SIZE`, and the SHA-256 of every examined
-file.
+bound; they are streamed in 1 MiB chunks only to bind their digest.
+`evidence/a11/SCAN.json` records one row per frozen member with its path, size,
+`STRICT_OK` or `SKIPPED_SIZE`, and the SHA-256 of every member.
 
 The scan does not follow a symlink and does not read outside the repository
 root; such a path is reported `SKIPPED_SYMLINK` or `SKIPPED_OUTSIDE`. Enforced by

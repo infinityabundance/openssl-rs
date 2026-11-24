@@ -240,3 +240,65 @@ to every JSON evidence record and provides the measured differential; it does
 not change `dsse.py`, `intoto.py` or any item's records. A clean scan says these
 bytes are read by this reader; it does not say the records are true, current or
 complete, and it does not upgrade any other item's claim.
+
+## 12. Correction (2026-11-24): the population is frozen, not a live glob
+
+**A13 found this defect.** Running the whole tools suite at `6b33f1caa`/`cfb27c6eb`
+produced `Ran 1202 tests` / `FAILED (failures=3)`, all three in `test_harden`:
+
+| test | failure |
+|---|---|
+| `test_the_recorded_scan_covers_the_population` | `AssertionError: 386 != 389` |
+| `test_scan_prints_the_code_and_the_counts` | `AssertionError: 'files=386' not found in 'scan: … files=389 examined=214 …'` |
+| `test_the_producer_is_deterministic_and_matches_the_committed_bytes` | the producer regenerated 389 rows where the committed bytes said 386 |
+
+**The old counts** were 386 files / 211 examined / 211 `STRICT_OK` / 175
+`SKIPPED_SIZE`, and they were correct when measured. The old `SCAN.json`
+(`sha256 9cc6680f1845b3589034f71f2ff5751338fa23efd041fed53d43c2a806e5376e`)
+stored the population as the live glob `evidence/*.json` over `git ls-files`
+plus a fixed `files: 386`. Every item that added a JSON record under `evidence/`
+changed the glob's answer while the record still claimed 386, so the record was
+valid only at the commit that produced it. This is Article 22's defect class: a
+record bound to a moving measurement.
+
+**The new contract.** The population is an explicit frozen member list of
+`{path, sha256, bytes}` entries, declared at the candidate (`f1c1a535d`). A
+rebuild reads that list, re-hashes each member, reproduces the per-file results
+and the count, and never consults a live glob. A removed or changed member is
+refused with `PH_REFUSED_POPULATION_DRIFT` (a record-verification code kept out
+of the reader's 13 input refusals and their one-per-code controls, which are
+unchanged). Growth is reported, not absorbed: a glob match that is not a member
+is reported `NEW_SINCE_RECORD` with its path and digest, counted separately, and
+the frozen count is unchanged. A live scan is still available (`scan --live`)
+but its result is labelled `population: LIVE` and `verify_record` refuses to
+compare it to a frozen record.
+
+**The new frozen population** is the same 386 members, now bound by digest; its
+count is **386 files / 211 examined / 211 `STRICT_OK` / 175 `SKIPPED_SIZE` / 0
+refused**. The 175 skipped members now carry a digest too (`bytes` was the only
+binding before); hashing streams in 1 MiB chunks and never parses a member above
+the bound. The new `SCAN.json` is
+`sha256 0307db34a7cbb3e253462b4b0a3ead946b3d698a6a65e8f78ec02da163cb5b5a`
+(`schema openssl-rs/a11/scan/2`). At the correction commit the live glob matches
+393 files, so verification reports the 7 records A12 and A13 landed
+(`evidence/a12/{CONTROLS,TRUST-ROOTS,VERIFICATION}.json` and
+`evidence/a13/{ARTEFACT,CLASSIFICATION,CONTROLS,SIGNATURE}.json`) as
+`NEW_SINCE_RECORD`; the frozen count stays 386, and `SCAN.json` does not absorb
+them, so it remains byte-stable as later items land.
+
+**What changed.** `forensics/tools/harden.py` gained `freeze_population`,
+`scan_frozen_population`, `population_growth`, `verify_record`, `hash_file` and
+the `scan --live` / `scan --frozen RECORD` modes; `evidence/a11/build_evidence.py`
+now seeds the frozen member list from the record (never from a live glob) and
+emits `schema …/scan/2`; `forensics/tools/tests/test_harden.py` gained five
+controls (frozen coverage, reproduction at `HEAD`, the growth control on a
+temporary mirror, the changed/removed refusal, and the LIVE label) and was not
+relaxed; `docs/PARSER-HARDENING.md` §4 states the frozen-population contract. The
+reader, its 13 codes, the 13 controls, `DIFFERENTIAL.json` and the differential
+cases were not changed in substance (only the recorded tool digest moved).
+
+**Not established here.** This correction re-binds the population; it does not
+examine the 175 above-bound members, and it does not upgrade the item to
+`SAFETY_DISCHARGED` or any consumer to `SAFE_COMPATIBLE`. The `A11` row in
+`docs/ETP-TODO.md` still quotes the live 386 figure; that file is outside this
+correction's write scope and is recorded as a follow-up, not silently edited.

@@ -48,7 +48,15 @@ Usage
 -----
     python3 forensics/tools/harden.py parse <path>
     python3 forensics/tools/harden.py differential <path>
-    python3 forensics/tools/harden.py scan 'evidence/*.json'
+    python3 forensics/tools/harden.py scan --live 'evidence/*.json'
+    python3 forensics/tools/harden.py scan --frozen evidence/a11/SCAN.json
+
+``scan --live`` reports the current glob and labels the result ``population:
+LIVE``; it is a measurement of the tree now and is not comparable to a frozen
+record.  ``scan --frozen`` rebuilds a record's explicit member list, re-hashing
+every member, and reports a glob match that is not a member as
+``NEW_SINCE_RECORD`` with the frozen count unchanged.  A removed or changed
+member is refused with ``PH_REFUSED_POPULATION_DRIFT``.
 
 Exit status: 0 for an accepted parse / a scan with no refusal, 1 for a refusal,
 2 for a usage or I/O error.  The code is always printed.
@@ -106,6 +114,26 @@ DEFAULT_INTEGER_BITS = 64
 # be reproducible once committed.
 SCAN_GLOB = "evidence/*.json"
 SCAN_EXCLUDED_PREFIXES = ("evidence/a11/",)
+
+# The population a record covers is frozen as an explicit member list, not as
+# "whatever the glob matches now".  A record was once produced from a live glob
+# and presented as fixed, so every item that added JSON evidence silently
+# changed the population while the record still claimed the old count.  The
+# count is now bound to a member list; a live glob remains available but is
+# labelled ``population: LIVE`` and is refused by the frozen-record verifier.
+POPULATION_FROZEN = "FROZEN"
+POPULATION_LIVE = "LIVE"
+RESULT_NEW_SINCE_RECORD = "NEW_SINCE_RECORD"
+
+# This is a record-verification refusal, not one of the 13 reader refusals in
+# ``REFUSALS``: it is raised while rebuilding a frozen population, never by
+# ``loads`` on an input.  Keeping it out of ``REFUSALS`` preserves the reader's
+# 13 codes and their one-per-code controls.
+PH_REFUSED_POPULATION_DRIFT = "PH_REFUSED_POPULATION_DRIFT"
+
+# A frozen member is re-hashed in bounded chunks so binding a large record to its
+# digest does not turn the whole file into one allocation.
+HASH_CHUNK_BYTES = 1024 * 1024
 
 REFUSALS: dict[str, dict[str, str]] = {
     PH_REFUSED_ENCODING: {
@@ -989,6 +1017,275 @@ def scan(
 
 
 # ---------------------------------------------------------------------------
+# The frozen population.
+# ---------------------------------------------------------------------------
+
+
+def hash_file(absolute: Path) -> tuple[str, int]:
+    """Return ``(sha256, bytes)`` for a file, read in bounded chunks.
+
+    Hashing streams the bytes; it does not build a parse tree, so binding a record
+    larger than ``max_bytes`` to its digest is not the denial-of-service surface
+    the parser bound exists for.
+    """
+    digest = hashlib.sha256()
+    total = 0
+    with absolute.open("rb") as handle:
+        while True:
+            chunk = handle.read(HASH_CHUNK_BYTES)
+            if not chunk:
+                break
+            digest.update(chunk)
+            total += len(chunk)
+    return digest.hexdigest(), total
+
+
+def freeze_population(
+    paths: Iterable[str],
+    *,
+    repo_root: Path | str = REPO_ROOT,
+) -> list[dict[str, Any]]:
+    """Bind every population member to its digest and size at this tree.
+
+    The result is the explicit member list a record stores instead of a bare
+    glob count: ``[{"path", "sha256", "bytes"}, ...]``, sorted by path.
+    """
+    root = Path(repo_root)
+    members: list[dict[str, Any]] = []
+    for relative in sorted(paths):
+        absolute = root / relative
+        if absolute.is_symlink() or not _inside(root, absolute):
+            _fail(
+                PH_REFUSED_POPULATION_DRIFT,
+                f"{relative}: not a regular file inside {root}",
+            )
+        try:
+            digest, size = hash_file(absolute)
+        except OSError as error:
+            _fail(PH_REFUSED_POPULATION_DRIFT, f"{relative}: {error}")
+            raise AssertionError("unreachable")  # pragma: no cover
+        members.append({"path": relative, "sha256": digest, "bytes": size})
+    return members
+
+
+def scan_frozen_population(
+    members: Iterable[dict[str, Any]],
+    *,
+    max_bytes: int = DEFAULT_MAX_BYTES,
+    max_depth: int = DEFAULT_MAX_DEPTH,
+    integer_bits: int = DEFAULT_INTEGER_BITS,
+    repo_root: Path | str = REPO_ROOT,
+) -> dict[str, Any]:
+    """Rebuild the per-file results from a frozen member list.
+
+    Every member is re-hashed and compared with its frozen digest.  A member that
+    is missing, is no longer a regular file inside ``repo_root``, or whose bytes
+    changed is refused with ``PH_REFUSED_POPULATION_DRIFT``; that refusal is a
+    record-verification result, not one of the reader's 13 input refusals.  The
+    population and its count come from the frozen list only, so a file that now
+    matches the glob but is not a member cannot enlarge it (see
+    :func:`population_growth`).
+    """
+    root = Path(repo_root)
+    rows: list[dict[str, Any]] = []
+    examined = 0
+    skipped_size = 0
+    skipped_other = 0
+    refused = 0
+    for member in members:
+        relative = member["path"]
+        frozen_digest = member["sha256"]
+        absolute = root / relative
+        row: dict[str, Any] = {"path": relative}
+        if absolute.is_symlink() or not _inside(root, absolute):
+            _fail(
+                PH_REFUSED_POPULATION_DRIFT,
+                f"{relative}: a frozen member is no longer a regular file",
+            )
+        try:
+            digest, size = hash_file(absolute)
+        except OSError as error:
+            _fail(PH_REFUSED_POPULATION_DRIFT, f"removed: {relative}: {error}")
+            raise AssertionError("unreachable")  # pragma: no cover
+        if digest != frozen_digest:
+            _fail(
+                PH_REFUSED_POPULATION_DRIFT,
+                f"changed: {relative}: sha256 {digest} != frozen {frozen_digest}",
+            )
+        row["bytes"] = size
+        row["sha256"] = digest
+        if size > max_bytes:
+            row.update({"result": "SKIPPED_SIZE", "code": CODE_OK})
+            skipped_size += 1
+            rows.append(row)
+            continue
+        try:
+            raw = absolute.read_bytes()
+        except OSError as error:
+            _fail(PH_REFUSED_POPULATION_DRIFT, f"removed: {relative}: {error}")
+            raise AssertionError("unreachable")  # pragma: no cover
+        examined += 1
+        try:
+            value = loads(
+                raw,
+                max_bytes=max_bytes,
+                max_depth=max_depth,
+                integer_bits=integer_bits,
+            )
+        except Refusal as refusal:
+            refused += 1
+            row.update(
+                {
+                    "result": refusal.code,
+                    "code": refusal.code,
+                    "message": refusal.message,
+                }
+            )
+        else:
+            row.update(
+                {"result": "STRICT_OK", "code": CODE_OK, "type": _type_name(value)}
+            )
+        rows.append(row)
+    return {
+        "parameters": {
+            "max_bytes": max_bytes,
+            "max_depth": max_depth,
+            "integer_bits": integer_bits,
+        },
+        "files": len(rows),
+        "examined": examined,
+        "skippedSize": skipped_size,
+        "skippedOther": skipped_other,
+        "refused": refused,
+        "strictOk": examined - refused,
+        "results": rows,
+    }
+
+
+def population_growth(
+    members: Iterable[dict[str, Any]],
+    *,
+    glob: str = SCAN_GLOB,
+    repo_root: Path | str = REPO_ROOT,
+    excluded_prefixes: Iterable[str] = SCAN_EXCLUDED_PREFIXES,
+    live_paths: Iterable[str] | None = None,
+) -> list[dict[str, Any]]:
+    """Files that match ``glob`` now but are not in the frozen member list.
+
+    Each is reported as ``NEW_SINCE_RECORD`` with its digest and size and is
+    counted separately; the frozen population and its count are unchanged.  A
+    frozen member that has left the live population is a removal and is refused
+    rather than absorbed.
+
+    ``live_paths`` overrides live-population discovery; a control uses it to
+    verify a temporary mirror of the tree instead of the real one.
+    """
+    root = Path(repo_root)
+    frozen = [member["path"] for member in members]
+    frozen_set = set(frozen)
+    if len(frozen_set) != len(frozen):
+        _fail(PH_REFUSED_POPULATION_DRIFT, "the frozen population repeats a path")
+    if live_paths is None:
+        live = tracked_files(
+            glob, repo_root=repo_root, excluded_prefixes=excluded_prefixes
+        )
+    else:
+        live = sorted(live_paths)
+    live_set = set(live)
+    removed = [path for path in frozen if path not in live_set]
+    if removed:
+        shown = ", ".join(removed[:5])
+        if len(removed) > 5:
+            shown += f" (+{len(removed) - 5} more)"
+        _fail(PH_REFUSED_POPULATION_DRIFT, f"removed since the record: {shown}")
+    entries: list[dict[str, Any]] = []
+    for relative in sorted(live_set - frozen_set):
+        absolute = root / relative
+        if absolute.is_symlink() or not _inside(root, absolute):
+            _fail(
+                PH_REFUSED_POPULATION_DRIFT,
+                f"{relative}: not a regular file inside {root}",
+            )
+        try:
+            digest, size = hash_file(absolute)
+        except OSError as error:
+            _fail(PH_REFUSED_POPULATION_DRIFT, f"{relative}: {error}")
+            raise AssertionError("unreachable")  # pragma: no cover
+        entries.append(
+            {
+                "path": relative,
+                "sha256": digest,
+                "bytes": size,
+                "result": RESULT_NEW_SINCE_RECORD,
+            }
+        )
+    return entries
+
+
+def verify_record(
+    record: dict[str, Any],
+    *,
+    repo_root: Path | str = REPO_ROOT,
+    live_paths: Iterable[str] | None = None,
+) -> dict[str, Any]:
+    """Reproduce a frozen scan record at this tree and report growth separately.
+
+    A record that does not declare ``population.binding == "FROZEN"`` is refused:
+    a live scan is a measurement of the current glob and is not comparable to a
+    frozen record.  ``matchesRecord`` compares the rebuilt results and summary
+    with the recorded ones; it is never compared against a live count.
+    """
+    population = record.get("population")
+    if not isinstance(population, dict) or population.get("binding") != POPULATION_FROZEN:
+        _fail(
+            PH_REFUSED_POPULATION_DRIFT,
+            "the record does not declare population: FROZEN, so it is not comparable",
+        )
+    members = population.get("members")
+    if not isinstance(members, list):
+        _fail(PH_REFUSED_POPULATION_DRIFT, "the frozen record has no member list")
+    parameters = record.get("parameters") or {}
+    rebuilt = scan_frozen_population(
+        members,
+        max_bytes=parameters.get("max_bytes", DEFAULT_MAX_BYTES),
+        max_depth=parameters.get("max_depth", DEFAULT_MAX_DEPTH),
+        integer_bits=parameters.get("integer_bits", DEFAULT_INTEGER_BITS),
+        repo_root=repo_root,
+    )
+    growth = population_growth(
+        members,
+        glob=population.get("glob", SCAN_GLOB),
+        repo_root=repo_root,
+        excluded_prefixes=tuple(
+            population.get("excludedPrefixes", SCAN_EXCLUDED_PREFIXES)
+        ),
+        live_paths=live_paths,
+    )
+    summary = {
+        key: rebuilt[key]
+        for key in (
+            "files",
+            "examined",
+            "strictOk",
+            "skippedSize",
+            "skippedOther",
+            "refused",
+        )
+    }
+    matches = rebuilt["results"] == record.get("results") and summary == record.get(
+        "summary"
+    )
+    return {
+        "population": len(members),
+        "parameters": rebuilt["parameters"],
+        "summary": summary,
+        "results": rebuilt["results"],
+        "newSinceRecord": growth,
+        "matchesRecord": matches,
+    }
+
+
+# ---------------------------------------------------------------------------
 # Command line.
 # ---------------------------------------------------------------------------
 
@@ -1037,7 +1334,67 @@ def _command_differential(arguments: argparse.Namespace) -> int:
     return 0 if code == CODE_OK else 1
 
 
+def _print_scan_refusals(rows: Iterable[dict[str, Any]]) -> None:
+    for row in rows:
+        if row["result"] != "STRICT_OK" and row["result"] != "SKIPPED_SIZE":
+            print(
+                f"scan: {row['path']} {row['result']} "
+                f"{(row.get('message') or '')}".rstrip(),
+                file=sys.stderr,
+            )
+
+
 def _command_scan(arguments: argparse.Namespace) -> int:
+    if arguments.frozen:
+        raw = _read_path(arguments.frozen)
+        try:
+            record = loads(
+                raw,
+                max_bytes=arguments.max_bytes,
+                max_depth=arguments.max_depth,
+                integer_bits=arguments.integer_bits,
+            )
+        except Refusal as refusal:
+            print(f"scan: code={refusal.code} {refusal.message}", file=sys.stderr)
+            return 1
+        try:
+            result = verify_record(record)
+        except Refusal as refusal:
+            print(f"scan: code={refusal.code} {refusal.message}", file=sys.stderr)
+            return 1
+        _print_scan_refusals(result["results"])
+        for entry in result["newSinceRecord"]:
+            print(
+                f"scan: {entry['path']} {RESULT_NEW_SINCE_RECORD} "
+                f"sha256={entry['sha256']} bytes={entry['bytes']}",
+                file=sys.stderr,
+            )
+        summary = result["summary"]
+        codes = [
+            row["result"]
+            for row in result["results"]
+            if row["result"] not in ("STRICT_OK", "SKIPPED_SIZE")
+        ]
+        if codes:
+            code = codes[0]
+        elif not result["matchesRecord"]:
+            code = PH_REFUSED_POPULATION_DRIFT
+        else:
+            code = CODE_OK
+        print(
+            f"scan: code={code} population={POPULATION_FROZEN} "
+            f"glob={record['population']['glob']} files={result['population']} "
+            f"examined={summary['examined']} strictOk={summary['strictOk']} "
+            f"skippedSize={summary['skippedSize']} refused={summary['refused']} "
+            f"newSinceRecord={len(result['newSinceRecord'])}"
+        )
+        return 0 if code == CODE_OK else 1
+    if not arguments.glob:
+        print(
+            f"scan: code={CODE_USAGE} a glob or --frozen RECORD is required",
+            file=sys.stderr,
+        )
+        return 2
     paths = tracked_files(arguments.glob)
     result = scan(
         paths,
@@ -1045,16 +1402,11 @@ def _command_scan(arguments: argparse.Namespace) -> int:
         max_depth=arguments.max_depth,
         integer_bits=arguments.integer_bits,
     )
-    for row in result["results"]:
-        if row["result"] != "STRICT_OK" and row["result"] != "SKIPPED_SIZE":
-            print(
-                f"scan: {row['path']} {row['result']} "
-                f"{(row.get('message') or '')}".rstrip(),
-                file=sys.stderr,
-            )
+    _print_scan_refusals(result["results"])
     print(
         f"scan: code={CODE_OK if result['refused'] == 0 else 'PH_REFUSED_SCAN'} "
-        f"glob={arguments.glob} files={result['files']} "
+        f"population={POPULATION_LIVE} glob={arguments.glob} "
+        f"files={result['files']} "
         f"examined={result['examined']} strictOk={result['strictOk']} "
         f"skippedSize={result['skippedSize']} refused={result['refused']}"
     )
@@ -1088,8 +1440,20 @@ def main(argv: list[str] | None = None) -> int:
     )
     differential_command.add_argument("path")
     _add_bounds(differential_command)
-    scan_command = commands.add_parser("scan", help="scan tracked files under a glob")
-    scan_command.add_argument("glob")
+    scan_command = commands.add_parser(
+        "scan", help="scan tracked files under a glob, or verify a frozen record"
+    )
+    scan_command.add_argument("glob", nargs="?")
+    scan_command.add_argument(
+        "--live",
+        action="store_true",
+        help="report the current glob as population: LIVE (not a frozen record)",
+    )
+    scan_command.add_argument(
+        "--frozen",
+        metavar="RECORD",
+        help="rebuild and verify a frozen SCAN record, reporting growth separately",
+    )
     _add_bounds(scan_command)
     arguments = parser.parse_args(argv)
 
