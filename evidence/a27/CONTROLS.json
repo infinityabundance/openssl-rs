@@ -1,0 +1,170 @@
+{
+ "codesCovered": [
+  "VS_REFUSED_ADMIT_WITHOUT_ROOT",
+  "VS_REFUSED_ARTEFACT_UNBOUND",
+  "VS_REFUSED_OUTPUT_MISSING",
+  "VS_REFUSED_STAGE_OVERCLAIM",
+  "VS_REFUSED_STAGE_SKIPPED",
+  "VS_REFUSED_STOP_NOT_RECORDED",
+  "VS_REFUSED_SUMMARY_AS_EVIDENCE",
+  "VS_REFUSED_TRACE_BROKEN",
+  "VS_REFUSED_USAGE"
+ ],
+ "codesMissing": [],
+ "controlOnly": true,
+ "controls": [
+  {
+   "code": "VS_REFUSED_TRACE_BROKEN",
+   "controlOnly": true,
+   "expectedCode": "VS_REFUSED_TRACE_BROKEN",
+   "fired": true,
+   "id": "trace-broken",
+   "mutated": "A7's output digest is replaced, so A8's input no longer equals it",
+   "observedCodes": [
+    "VS_REFUSED_TRACE_BROKEN"
+   ]
+  },
+  {
+   "code": "VS_REFUSED_STAGE_SKIPPED",
+   "controlOnly": true,
+   "expectedCode": "VS_REFUSED_STAGE_SKIPPED",
+   "fired": true,
+   "id": "stage-skipped",
+   "mutated": "A6 is removed from the trace entirely",
+   "observedCodes": [
+    "VS_REFUSED_STAGE_SKIPPED"
+   ]
+  },
+  {
+   "code": "VS_REFUSED_OUTPUT_MISSING",
+   "controlOnly": true,
+   "expectedCode": "VS_REFUSED_OUTPUT_MISSING",
+   "fired": true,
+   "id": "output-missing",
+   "mutated": "A9 reports PASS but produces no output digest",
+   "observedCodes": [
+    "VS_REFUSED_OUTPUT_MISSING"
+   ]
+  },
+  {
+   "code": "VS_REFUSED_STAGE_OVERCLAIM",
+   "controlOnly": true,
+   "expectedCode": "VS_REFUSED_STAGE_OVERCLAIM",
+   "fired": true,
+   "id": "stage-overclaim",
+   "mutated": "A9's asserted result count is one more than its record state",
+   "observedCodes": [
+    "VS_REFUSED_STAGE_OVERCLAIM"
+   ]
+  },
+  {
+   "code": "VS_REFUSED_ADMIT_WITHOUT_ROOT",
+   "controlOnly": true,
+   "expectedCode": "VS_REFUSED_ADMIT_WITHOUT_ROOT",
+   "fired": true,
+   "id": "admit-without-root",
+   "mutated": "the trace is completed to A20 with ADMIT while A12 records zero independent verifications",
+   "observedCodes": [
+    "VS_REFUSED_ADMIT_WITHOUT_ROOT"
+   ]
+  },
+  {
+   "code": "VS_REFUSED_SUMMARY_AS_EVIDENCE",
+   "controlOnly": true,
+   "expectedCode": "VS_REFUSED_SUMMARY_AS_EVIDENCE",
+   "fired": true,
+   "id": "summary-as-evidence",
+   "mutated": "A12 cites the A21 summary as the record it verified instead of the verification record",
+   "observedCodes": [
+    "VS_REFUSED_SUMMARY_AS_EVIDENCE"
+   ]
+  },
+  {
+   "code": "VS_REFUSED_STOP_NOT_RECORDED",
+   "controlOnly": true,
+   "expectedCode": "VS_REFUSED_STOP_NOT_RECORDED",
+   "fired": true,
+   "id": "stop-unrecorded",
+   "mutated": "A12 is recorded as a STOP with no establishing record",
+   "observedCodes": [
+    "VS_REFUSED_STOP_NOT_RECORDED"
+   ]
+  },
+  {
+   "code": "VS_REFUSED_ARTEFACT_UNBOUND",
+   "controlOnly": true,
+   "expectedCode": "VS_REFUSED_ARTEFACT_UNBOUND",
+   "fired": true,
+   "id": "artefact-unbound",
+   "mutated": "the declared exact identity is a digest no result carries",
+   "observedCodes": [
+    "VS_REFUSED_ARTEFACT_UNBOUND"
+   ]
+  },
+  {
+   "code": "VS_REFUSED_USAGE",
+   "controlOnly": true,
+   "expectedCode": "VS_REFUSED_USAGE",
+   "fired": true,
+   "id": "malformed-invocation",
+   "mutated": "the command line names no known command",
+   "observedCodes": [
+    "VS_REFUSED_USAGE"
+   ]
+  }
+ ],
+ "coversEveryCode": true,
+ "failing": [],
+ "invocationCodes": [
+  "VS_REFUSED_USAGE"
+ ],
+ "model": "a27/v1",
+ "note": "Each row mutates an in-memory trace or an in-memory record, or an invocation, and asserts the exact code that fires. No row changes a committed record, and a control is not evidence that a stage is correct.",
+ "positiveControls": [
+  {
+   "controlOnly": true,
+   "expects": "no validation code",
+   "fired": true,
+   "id": "real-trace-validates",
+   "observedCodes": []
+  },
+  {
+   "controlOnly": true,
+   "expects": "no VS_REFUSED_STOP_NOT_RECORDED",
+   "fired": true,
+   "id": "real-stop-is-recorded",
+   "observedCodes": []
+  },
+  {
+   "controlOnly": true,
+   "expects": "every stage appears exactly once",
+   "fired": true,
+   "id": "real-chain-has-no-omission",
+   "observedCodes": []
+  }
+ ],
+ "producedBy": {
+  "path": "evidence/a27/build_evidence.py",
+  "sha256": "6271e7a88d5aff90bf864db961d17d13d037f5d751f5bf68333025194f834f8e",
+  "tool": {
+   "path": "forensics/tools/vertical_slice.py",
+   "sha256": "46da8ddaa7c2410643ec34fa9ed651f2da0f56e9d1bde629d3d29a01733751ac"
+  }
+ },
+ "refusalCodes": [
+  "VS_REFUSED_TRACE_BROKEN",
+  "VS_REFUSED_STAGE_SKIPPED",
+  "VS_REFUSED_OUTPUT_MISSING",
+  "VS_REFUSED_ARTEFACT_UNBOUND",
+  "VS_REFUSED_STAGE_OVERCLAIM",
+  "VS_REFUSED_ADMIT_WITHOUT_ROOT",
+  "VS_REFUSED_SUMMARY_AS_EVIDENCE",
+  "VS_REFUSED_STOP_NOT_RECORDED"
+ ],
+ "schema": "openssl-rs/a27/controls/1",
+ "slice": "evidence/a27/SLICE.json",
+ "sliceSha256": "10c3b1965372d6ff26460f3f7e69cc358d3e9ee56b5413de6bed4a17abdc000c",
+ "stopCodes": [
+  "VS_STOP_NO_INDEPENDENT_VERIFICATION"
+ ]
+}

@@ -1,0 +1,106 @@
+{
+ "artefact": "a1-run3-result-2390",
+ "consequence": "No stage after A12 has an independent verification to consume. The release cannot be authorised, thresholded, bundled, key-lifecycle-checked, corrected, omission-closed, decided or summarised on this chain. The committed A20 decision denies; this slice records that record and does not re-evaluate it.",
+ "model": "a27/v1",
+ "notReached": [
+  {
+   "after": "A12",
+   "afterCode": "VS_STOP_NO_INDEPENDENT_VERIFICATION",
+   "item": "authorisation",
+   "reason": "the chain stopped at A12 (VS_STOP_NO_INDEPENDENT_VERIFICATION); A14 was not executed",
+   "stage": "A14"
+  },
+  {
+   "after": "A12",
+   "afterCode": "VS_STOP_NO_INDEPENDENT_VERIFICATION",
+   "item": "threshold",
+   "reason": "the chain stopped at A12 (VS_STOP_NO_INDEPENDENT_VERIFICATION); A15 was not executed",
+   "stage": "A15"
+  },
+  {
+   "after": "A12",
+   "afterCode": "VS_STOP_NO_INDEPENDENT_VERIFICATION",
+   "item": "Sigstore bundle",
+   "reason": "the chain stopped at A12 (VS_STOP_NO_INDEPENDENT_VERIFICATION); A16 was not executed",
+   "stage": "A16"
+  },
+  {
+   "after": "A12",
+   "afterCode": "VS_STOP_NO_INDEPENDENT_VERIFICATION",
+   "item": "key lifecycle",
+   "reason": "the chain stopped at A12 (VS_STOP_NO_INDEPENDENT_VERIFICATION); A18 was not executed",
+   "stage": "A18"
+  },
+  {
+   "after": "A12",
+   "afterCode": "VS_STOP_NO_INDEPENDENT_VERIFICATION",
+   "item": "correction status",
+   "reason": "the chain stopped at A12 (VS_STOP_NO_INDEPENDENT_VERIFICATION); A19 was not executed",
+   "stage": "A19"
+  },
+  {
+   "after": "A12",
+   "afterCode": "VS_STOP_NO_INDEPENDENT_VERIFICATION",
+   "item": "omission closure",
+   "reason": "the chain stopped at A12 (VS_STOP_NO_INDEPENDENT_VERIFICATION); A17 was not executed",
+   "stage": "A17"
+  },
+  {
+   "after": "A12",
+   "afterCode": "VS_STOP_NO_INDEPENDENT_VERIFICATION",
+   "item": "policy",
+   "reason": "the chain stopped at A12 (VS_STOP_NO_INDEPENDENT_VERIFICATION); A20 was not executed",
+   "stage": "A20"
+  },
+  {
+   "after": "A12",
+   "afterCode": "VS_STOP_NO_INDEPENDENT_VERIFICATION",
+   "item": "summary",
+   "reason": "the chain stopped at A12 (VS_STOP_NO_INDEPENDENT_VERIFICATION); A21 was not executed",
+   "stage": "A21"
+  }
+ ],
+ "notReachedCount": 8,
+ "producedBy": {
+  "path": "evidence/a27/build_evidence.py",
+  "sha256": "6271e7a88d5aff90bf864db961d17d13d037f5d751f5bf68333025194f834f8e",
+  "tool": {
+   "path": "forensics/tools/vertical_slice.py",
+   "sha256": "46da8ddaa7c2410643ec34fa9ed651f2da0f56e9d1bde629d3d29a01733751ac"
+  }
+ },
+ "refusals": [],
+ "schema": "openssl-rs/a27/stops/1",
+ "slice": "evidence/a27/SLICE.json",
+ "sliceSha256": "10c3b1965372d6ff26460f3f7e69cc358d3e9ee56b5413de6bed4a17abdc000c",
+ "stopCount": 1,
+ "stops": [
+  {
+   "code": "VS_STOP_NO_INDEPENDENT_VERIFICATION",
+   "establishedBy": {
+    "locator": "/verifications[name=a8-shard-000]",
+    "observed": {
+     "codes": [
+      "IV_REFUSED_SYMMETRIC",
+      "IV_REFUSED_CANDIDATE_TRUST_ROOT",
+      "IV_REFUSED_SELF_ISSUED"
+     ],
+     "envelopes": 4,
+     "independentlyVerified": false,
+     "independentlyVerifiedEnvelopes": 0,
+     "outcome": "SELF_ISSUED"
+    },
+    "record": "evidence/a12/VERIFICATION.json",
+    "sha256": "7cbdcdae7d7c5636c26b3a9f6141e6a0e345e6c8a281c926fc4b411f68991a48"
+   },
+   "outcome": "SELF_ISSUED",
+   "stage": "A12",
+   "summary": "SELF_ISSUED: 0 of 4 envelopes are independently verified"
+  }
+ ],
+ "terminal": {
+  "code": "VS_STOP_NO_INDEPENDENT_VERIFICATION",
+  "stage": "A12",
+  "status": "STOP"
+ }
+}

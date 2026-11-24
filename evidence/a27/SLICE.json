@@ -1,0 +1,1050 @@
+{
+ "artefact": {
+  "a4Instance": "L3-md32-update",
+  "binding": {
+   "digest": "ef8678c53feb9ec59e8cc61c6a0b636ae59aeb01b6dbe482ebc463932ae2ed1d",
+   "digestScope": "source-tree",
+   "uri": "src/digest/md32.rs"
+  },
+  "bindingDigest": "43861048faad6c87657982fa554b2315af8569e9324532e36eed7575247efd35",
+  "candidate": {
+   "branch": "staging",
+   "commit": "246e30580f909c047eeb04a93a06f9bd05dc65f3",
+   "scanner": "forensics/tools/unsafe_obligations.py",
+   "scanner_sha256": "443634a38f50d2563e1abdb2352ae0c8171ad03a06b05e058cf637392e5bf6ad",
+   "source_tree_sha256": "ef8678c53feb9ec59e8cc61c6a0b636ae59aeb01b6dbe482ebc463932ae2ed1d"
+  },
+  "exact": "9387bcba07a02821e3b0190b1a414ab266de6b50c16bf788faf34e70218898b1",
+  "fingerprints": {
+   "a1Exact/v1": "9387bcba07a02821e3b0190b1a414ab266de6b50c16bf788faf34e70218898b1",
+   "a1Logical/v1": "d423fed03da544cf95e80d07dd9db33156bfa030fda634bf2fa025e5211513e3",
+   "a1Rule/v1": "a85943c7f0f99e379153074145963b9a1a994f3815bf479e55cd40575659cdf2"
+  },
+  "id": "a1-run3-result-2390",
+  "kind": "sarif-result",
+  "label": "the A1 finding A1-UNSAFE-OBLIGATION-DELEGATED at md32.rs:118 (symbol update)",
+  "logical": "d423fed03da544cf95e80d07dd9db33156bfa030fda634bf2fa025e5211513e3",
+  "logicalKey": "src/digest/md32.rs::update::CITED_BY_CALLER",
+  "nativeLocator": "vacuity.findings[65]",
+  "population": "a1-sarif-results",
+  "region": {
+   "key": "line=118",
+   "kind": "source",
+   "line": 118
+  },
+  "rule": "a85943c7f0f99e379153074145963b9a1a994f3815bf479e55cd40575659cdf2",
+  "ruleId": "A1-UNSAFE-OBLIGATION-DELEGATED",
+  "shardMembership": {
+   "resultIndex": 2390,
+   "run": 3,
+   "shard": "evidence/a8/SHARD-000.sarif",
+   "shardIndex": 0
+  },
+  "source": {
+   "record": "evidence/a1/SARIF.json",
+   "resultIndex": 2390,
+   "run": 3,
+   "sha256": "5c0cfee62512deb08cc12f95624be64865d3e544473bae80d9aca0ab36ce7852"
+  },
+  "symbol": "update",
+  "why": "It has a recorded exact identity (A1), a recorded location rule (A4 L3-md32-update locates the same path, line and symbol), a containing population with identified members (A5 a1-sarif-results, COMPLETE, 4245 distinct), a delta disposition (A7 STILL_PRESENT) and a shard membership at the same run and result index (A8). No stage had to be given a different artefact to make it consume one."
+ },
+ "candidate": {
+  "baseCommit": "e3bed067cf9a28786952152fb2e55883c6405a22",
+  "baseCommitShort": "e3bed067c",
+  "branch": "staging",
+  "recordedAt": "2026-11-24"
+ },
+ "chain": [
+  {
+   "consumes": "the artefact binding (exact occurrence identity)",
+   "contract": "the recorded fingerprints are recomputed from the recorded fields",
+   "item": "finding identity",
+   "produces": "the identity record: rule, logical and exact fingerprints",
+   "reads": [
+    "evidence/a1/SARIF.json"
+   ],
+   "stage": "A3",
+   "tool": "forensics/tools/finding_identity.py"
+  },
+  {
+   "consumes": "the identity record (A3 output)",
+   "contract": "the instance locates the same path, line and symbol; no precision is added",
+   "item": "location fidelity",
+   "produces": "the location rule this site supports, and its limitations",
+   "reads": [
+    "evidence/a4/INSTANCES.json",
+    "evidence/etp-t4/SAFETY-SITES.json"
+   ],
+   "stage": "A4",
+   "tool": "forensics/tools/location_fidelity.py"
+  },
+  {
+   "consumes": "the location record (A4 output)",
+   "contract": "the population is admitted at the state its facts support and the member is present",
+   "item": "population admission",
+   "produces": "the admission state of the containing population and the member's presence",
+   "reads": [
+    "evidence/a5/POPULATIONS.json",
+    "evidence/a5/ADMISSION.json",
+    "evidence/a1/SARIF.json"
+   ],
+   "stage": "A5",
+   "tool": "forensics/tools/completeness.py"
+  },
+  {
+   "consumes": "the population admission (A5 output)",
+   "contract": "only an actionable record naming this identity disposes of it",
+   "item": "suppression disposition",
+   "produces": "the disposition of this finding: suppressed or not, with the register's refusals",
+   "reads": [
+    "evidence/a6/SUPPRESSIONS.json"
+   ],
+   "stage": "A6",
+   "tool": "forensics/tools/suppression_governance.py"
+  },
+  {
+   "consumes": "the suppression disposition (A6 output)",
+   "contract": "the disposition is the one the delta records and no resolution is claimed",
+   "item": "baseline delta",
+   "produces": "the per-identity delta disposition and what the delta actually compares",
+   "reads": [
+    "evidence/a7/DELTA.json",
+    "evidence/a7/BASELINES.json"
+   ],
+   "stage": "A7",
+   "tool": "forensics/tools/baseline.py"
+  },
+  {
+   "consumes": "the delta disposition (A7 output)",
+   "contract": "the shard is a subset whose union equals the parent and the member is present",
+   "item": "export shard and union",
+   "produces": "the shard artefact digest and the member's coordinates in it",
+   "reads": [
+    "evidence/a8/MANIFEST.json",
+    "evidence/a8/SHARD-000.sarif"
+   ],
+   "stage": "A8",
+   "tool": "forensics/tools/code_scanning_export.py"
+  },
+  {
+   "consumes": "the shard digest (A8 output)",
+   "contract": "the statement names the shard at the digest its bytes have and asserts no more than it records",
+   "item": "in-toto statement",
+   "produces": "the statement digest over that shard",
+   "reads": [
+    "evidence/a9/STATEMENTS.json",
+    "evidence/a9/STATEMENTS/a8-shard-000.json"
+   ],
+   "stage": "A9",
+   "tool": "forensics/tools/intoto.py"
+  },
+  {
+   "consumes": "the statement digest (A9 output)",
+   "contract": "the envelope payload is the statement's bytes and the PAE is recomputed from them",
+   "item": "DSSE envelope",
+   "produces": "the envelope digest over that statement",
+   "reads": [
+    "evidence/a10/ENVELOPES.json",
+    "evidence/a10/ENVELOPES/a8-shard-000.json"
+   ],
+   "stage": "A10",
+   "tool": "forensics/tools/dsse.py"
+  },
+  {
+   "consumes": "the envelope digest (A10 output)",
+   "contract": "the outcome is the one recorded for this envelope and the aggregate agrees with it",
+   "item": "independent verification",
+   "produces": "the verification outcome for that envelope",
+   "reads": [
+    "evidence/a12/VERIFICATION.json"
+   ],
+   "stage": "A12",
+   "tool": "forensics/tools/independent_verify.py"
+  },
+  {
+   "consumes": "an independent verification outcome (A12 output)",
+   "contract": "not implemented in this slice: no per-artefact action consumes this member",
+   "item": "authorisation",
+   "produces": "a role authorisation decision",
+   "reads": [
+    "evidence/a14/AUTHORISATION.json"
+   ],
+   "stage": "A14",
+   "tool": "forensics/tools/authorisation.py"
+  },
+  {
+   "consumes": "the authorisation decision (A14 output)",
+   "contract": "not implemented in this slice",
+   "item": "threshold",
+   "produces": "a distinct-trust-domain threshold evaluation",
+   "reads": [
+    "evidence/a15/EVALUATION.json"
+   ],
+   "stage": "A15",
+   "tool": "forensics/tools/thresholds.py"
+  },
+  {
+   "consumes": "the threshold evaluation (A15 output)",
+   "contract": "not implemented in this slice",
+   "item": "Sigstore bundle",
+   "produces": "an offline bundle validation",
+   "reads": [
+    "evidence/a16/INVENTORY.json"
+   ],
+   "stage": "A16",
+   "tool": "forensics/tools/sigstore_bundle.py"
+  },
+  {
+   "consumes": "the bundle validation (A16 output)",
+   "contract": "not implemented in this slice",
+   "item": "key lifecycle",
+   "produces": "a key-survivability evaluation",
+   "reads": [
+    "evidence/a18/INVENTORY.json"
+   ],
+   "stage": "A18",
+   "tool": "forensics/tools/key_lifecycle.py"
+  },
+  {
+   "consumes": "the key-lifecycle evaluation (A18 output)",
+   "contract": "not implemented in this slice",
+   "item": "correction status",
+   "produces": "the correction status of the records consumed",
+   "reads": [
+    "evidence/a19/PROPAGATION.json"
+   ],
+   "stage": "A19",
+   "tool": "forensics/tools/corrections.py"
+  },
+  {
+   "consumes": "the correction status (A19 output)",
+   "contract": "not implemented in this slice",
+   "item": "omission closure",
+   "produces": "the omission and forward-freeze closure",
+   "reads": [
+    "evidence/a17/STATUS.json",
+    "evidence/a17/FREEZE-forward.json"
+   ],
+   "stage": "A17",
+   "tool": "forensics/tools/omission.py"
+  },
+  {
+   "consumes": "the omission closure (A17 output)",
+   "contract": "not implemented in this slice",
+   "item": "policy",
+   "produces": "the policy decision",
+   "reads": [
+    "evidence/a20/POLICY.json",
+    "evidence/a20/DECISION.json"
+   ],
+   "stage": "A20",
+   "tool": "forensics/tools/policy_engine.py"
+  },
+  {
+   "consumes": "the policy decision (A20 output)",
+   "contract": "not implemented in this slice; a summary is never another stage's evidence",
+   "item": "summary",
+   "produces": "a reconstructible summary",
+   "reads": [
+    "evidence/a21/SUMMARY.json"
+   ],
+   "stage": "A21",
+   "tool": "forensics/tools/verification_summary.py"
+  }
+ ],
+ "counts": {
+  "codes": 0,
+  "notReached": 8,
+  "passed": 8,
+  "refused": 0,
+  "stages": 17,
+  "stopped": 1
+ },
+ "model": "a27/v1",
+ "nonClaims": [
+  "a slice connects stages; it does not establish that any stage's claim is true",
+  "the A20 counterfactual is the committed decision read, not a re-evaluation at this candidate",
+  "the post-stop stages are recorded by their own items and were not consumed here",
+  "SELF_ISSUED is not a pass, and zero independent verifications is not repaired by relabelling it",
+  "the artefact is one member of a mixed-candidate population; nothing here is a census",
+  "a recorded stop is a valid completion of this slice, not a pass of the release"
+ ],
+ "producedBy": {
+  "path": "evidence/a27/build_evidence.py",
+  "sha256": "6271e7a88d5aff90bf864db961d17d13d037f5d751f5bf68333025194f834f8e",
+  "tool": {
+   "path": "forensics/tools/vertical_slice.py",
+   "sha256": "46da8ddaa7c2410643ec34fa9ed651f2da0f56e9d1bde629d3d29a01733751ac"
+  }
+ },
+ "schema": "openssl-rs/a27/slice/1",
+ "stop": {
+  "code": "VS_STOP_NO_INDEPENDENT_VERIFICATION",
+  "detail": {
+   "aggregate": {
+    "envelopes": 4,
+    "independentlyVerified": 0,
+    "notRun": 0,
+    "selfIssued": 4,
+    "statement": "0 of 4 envelopes are independently verified. Each is an A10 test-only HMAC-SHA256 envelope whose root is symmetric, recorded inside the candidate tree and self-issued. A symmetric signature cannot establish independence, so SELF_ISSUED is the correct output, not a defect to repair."
+   },
+   "root": {
+    "algorithm": "hmac-sha256",
+    "independenceBasis": "none: the key is derived from a fixed public seed recorded inside the candidate tree; the signer and the verifier hold the same secret, so the verifier could have produced the signature",
+    "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+    "selfIssued": true,
+    "symmetric": true,
+    "trustDomain": "same-party"
+   },
+   "seam": "SELF_ISSUED is the honest outcome: the verifier holds the signer's secret and every root is inside the candidate. No external party vouched for these bytes, so the chain has no independent root to authorise and stops here.",
+   "summary": "SELF_ISSUED: 0 of 4 envelopes are independently verified"
+  },
+  "establishedBy": {
+   "locator": "/verifications[name=a8-shard-000]",
+   "observed": {
+    "codes": [
+     "IV_REFUSED_SYMMETRIC",
+     "IV_REFUSED_CANDIDATE_TRUST_ROOT",
+     "IV_REFUSED_SELF_ISSUED"
+    ],
+    "envelopes": 4,
+    "independentlyVerified": false,
+    "independentlyVerifiedEnvelopes": 0,
+    "outcome": "SELF_ISSUED"
+   },
+   "record": "evidence/a12/VERIFICATION.json",
+   "sha256": "7cbdcdae7d7c5636c26b3a9f6141e6a0e345e6c8a281c926fc4b411f68991a48"
+  },
+  "outcome": "SELF_ISSUED",
+  "stage": "A12"
+ },
+ "trace": [
+  {
+   "codes": [],
+   "detail": {
+    "artefact": "a1-run3-result-2390",
+    "asserts": "identity",
+    "binding": {
+     "algorithm": "sha-256",
+     "digest": "ef8678c53feb9ec59e8cc61c6a0b636ae59aeb01b6dbe482ebc463932ae2ed1d",
+     "digestScope": "source-tree",
+     "uri": "src/digest/md32.rs"
+    },
+    "consumes": "43861048faad6c87657982fa554b2315af8569e9324532e36eed7575247efd35",
+    "fingerprints": {
+     "a1Exact/v1": "9387bcba07a02821e3b0190b1a414ab266de6b50c16bf788faf34e70218898b1",
+     "a1Logical/v1": "d423fed03da544cf95e80d07dd9db33156bfa030fda634bf2fa025e5211513e3",
+     "a1Rule/v1": "a85943c7f0f99e379153074145963b9a1a994f3815bf479e55cd40575659cdf2"
+    },
+    "logicalKey": "src/digest/md32.rs::update::CITED_BY_CALLER",
+    "nativeLocator": "vacuity.findings[65]",
+    "provenance": {
+     "record": "evidence/etp-t4/SAFETY-SITES.json",
+     "rehashed": true,
+     "sha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da"
+    },
+    "region": "line=118",
+    "ruleId": "A1-UNSAFE-OBLIGATION-DELEGATED",
+    "source": {
+     "record": "evidence/a1/SARIF.json",
+     "recordSha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da",
+     "resultIndex": 2390,
+     "run": 3,
+     "sha256": "5c0cfee62512deb08cc12f95624be64865d3e544473bae80d9aca0ab36ce7852"
+    },
+    "summary": "identity 9387bcba07a0 recomputed from the recorded fields"
+   },
+   "inputDigest": "43861048faad6c87657982fa554b2315af8569e9324532e36eed7575247efd35",
+   "item": "finding identity",
+   "outputDigest": "11d5a576c51f9999f92565266ae50530592ff3faee28bf331734df28ea8210ff",
+   "reads": [
+    "evidence/a1/SARIF.json"
+   ],
+   "stage": "A3",
+   "status": "PASS",
+   "tool": "forensics/tools/finding_identity.py"
+  },
+  {
+   "codes": [],
+   "detail": {
+    "addsSourcePrecision": false,
+    "asserts": "location",
+    "class": "monomorphised-generic",
+    "consumes": "11d5a576c51f9999f92565266ae50530592ff3faee28bf331734df28ea8210ff",
+    "emitted": {
+     "logicalLocations": [
+      {
+       "kind": "function",
+       "name": "openssl_rs::digest::md32::update::<openssl_rs::digest::md4::Md4Ctx>"
+      }
+     ],
+     "physicalLocation": {
+      "address": {
+       "absoluteAddress": 1789216,
+       "kind": "function",
+       "length": 357,
+       "name": "openssl_rs::digest::md32::update::<openssl_rs::digest::md4::Md4Ctx>"
+      },
+      "artifactLocation": {
+       "algorithm": "sha-256",
+       "digest": "fd25cc9e6424ea79aaaff05df22b3f6e1d46aa22d5666cfe7589dce95ffd88a9",
+       "digestScope": "artifact",
+       "uri": "libcrypto.so.3"
+      },
+      "region": {
+       "byteLength": 357,
+       "byteOffset": 1789216
+      }
+     }
+    },
+    "findingLocation": {
+     "key": "line=118",
+     "kind": "source",
+     "line": 118
+    },
+    "instance": "L3-md32-update",
+    "joint": {
+     "class": "callback_reentrancy_edge",
+     "column": 12,
+     "kind": "unsafe_fn",
+     "line": 118,
+     "path": "src/digest/md32.rs",
+     "symbol": "update"
+    },
+    "limitations": [
+     "the location is a byte offset in the named artefact; offsets are not stable across builds"
+    ],
+    "precision": "function-offset-and-extent",
+    "seam": "A4 locates the site's machine-code instance; the finding's own location stays the source line A1 records. The two are joined by path, line and symbol, not by identity, so A4 adds a location rule and no source precision.",
+    "source": {
+     "provenanceRecord": "evidence/etp-t4/SAFETY-SITES.json",
+     "provenanceRow": 13997,
+     "provenanceSha256": "7fb1ef96b7b7b36b9d49ae7283743b51ec9db6170bbde74074a6af0a8856e7da",
+     "record": "evidence/a4/INSTANCES.json",
+     "sha256": "4887d605e822d67be878dc967d455958c5ab42625ad2ec26e9c52355219f584f"
+    },
+    "summary": "line-only at md32.rs:118 for the finding; function-offset-and-extent for the site's machine-code instance"
+   },
+   "inputDigest": "11d5a576c51f9999f92565266ae50530592ff3faee28bf331734df28ea8210ff",
+   "item": "location fidelity",
+   "outputDigest": "18414f7d1cc5cc84125bc1082958a332fc6f912d88002ae6dcc3891143f4c696",
+   "reads": [
+    "evidence/a4/INSTANCES.json",
+    "evidence/etp-t4/SAFETY-SITES.json"
+   ],
+   "stage": "A4",
+   "status": "PASS",
+   "tool": "forensics/tools/location_fidelity.py"
+  },
+  {
+   "codes": [],
+   "detail": {
+    "alsoRecorded": {
+     "detail": "complete is declared but the facts support AGGREGATE_ONLY; members are omitted and the omission is neither identified nor bounded",
+     "id": "t4-suppressions",
+     "refusal": "CA_REFUSED_OMITTED_UNRECORDED",
+     "state": "AGGREGATE_ONLY"
+    },
+    "asserts": "population",
+    "consumes": "18414f7d1cc5cc84125bc1082958a332fc6f912d88002ae6dcc3891143f4c696",
+    "membership": {
+     "basis": "distinct a1Exact/v1 over the cited record",
+     "derivedDistinct": 4245,
+     "member": "9387bcba07a02821e3b0190b1a414ab266de6b50c16bf788faf34e70218898b1",
+     "present": true
+    },
+    "population": {
+     "declared": "COMPLETE",
+     "distinctMembers": 4245,
+     "examined": 4245,
+     "expected": 4245,
+     "id": "a1-sarif-results",
+     "kind": "record-set",
+     "membersBasis": "every result carries a distinct a1Exact/v1 fingerprint; 4245 distinct over 4245 results",
+     "membersRecorded": true,
+     "omitted": 0,
+     "present": true,
+     "state": "COMPLETE"
+    },
+    "seam": "The finding's population is the A1 emission, admitted COMPLETE. The record the finding cites as provenance also carries a suppression population (t4-suppressions) that A5 admits only AGGREGATE_ONLY. The two populations are different, and only the first contains this member.",
+    "source": {
+     "admission": "evidence/a5/ADMISSION.json",
+     "admissionSha256": "d4871ec97ae3a27b8ec820896e292429e44b4db4d11d2671a69b9dc0230ddc0a",
+     "memberRecord": "evidence/a1/SARIF.json",
+     "memberRecordSha256": "5c0cfee62512deb08cc12f95624be64865d3e544473bae80d9aca0ab36ce7852",
+     "populations": "evidence/a5/POPULATIONS.json",
+     "populationsSha256": "a166c8584510831ad6387af8b37df3797920f4b15f5e4708fe75f4a3813bc5f4"
+    },
+    "summary": "member of a1-sarif-results (COMPLETE, 4245 examined, 0 omitted)"
+   },
+   "inputDigest": "18414f7d1cc5cc84125bc1082958a332fc6f912d88002ae6dcc3891143f4c696",
+   "item": "population admission",
+   "outputDigest": "8640c9a13a98e8047517d7fb1b40328e9c70c4d9d36ab3445dffcd76a0f2fd94",
+   "reads": [
+    "evidence/a5/POPULATIONS.json",
+    "evidence/a5/ADMISSION.json",
+    "evidence/a1/SARIF.json"
+   ],
+   "stage": "A5",
+   "status": "PASS",
+   "tool": "forensics/tools/completeness.py"
+  },
+  {
+   "codes": [],
+   "detail": {
+    "actionableRecords": 0,
+    "asserts": "disposition",
+    "codes": [],
+    "consumes": "8640c9a13a98e8047517d7fb1b40328e9c70c4d9d36ab3445dffcd76a0f2fd94",
+    "disposition": "NOT_SUPPRESSED",
+    "findingCandidate": "246e30580f909c047eeb04a93a06f9bd05dc65f3",
+    "matchedRecords": [],
+    "membersDisposed": 0,
+    "observedRefusalCounts": {
+     "SG_REFUSED_NO_EXPIRY": 8,
+     "SG_REFUSED_NO_JUSTIFICATION": 7,
+     "SG_REFUSED_NO_MEMBER_IDENTITIES": 8,
+     "SG_REFUSED_NO_REVIEWER": 7,
+     "SG_REFUSED_STALE_CANDIDATE": 8,
+     "SG_REFUSED_TARGET_NOT_IN_POPULATION": 8,
+     "SG_REFUSED_UNBOUNDED_SCOPE": 3,
+     "SG_REFUSED_UNRECORDED_REVIEWER": 1
+    },
+    "recordsConsidered": 11,
+    "registerBoundToFindingCandidate": true,
+    "registerCandidates": [
+     "17e45eec1a48a7a5e1679e1d29ee69451e9d59a1",
+     "246e30580f909c047eeb04a93a06f9bd05dc65f3",
+     "b85c"
+    ],
+    "seam": "The suppression register is recorded at the finding's candidate, but its admissions were evaluated against a later candidate and every candidate-bound record is refused stale (SG_REFUSED_STALE_CANDIDATE). No record is actionable, so no record disposes of this finding.",
+    "source": {
+     "membersDisposed": 0,
+     "record": "evidence/a6/SUPPRESSIONS.json",
+     "sha256": "236dc220d651bdb1f8519f189afa3bc9af78db7e28b0bd4f2c21a856694d8e4e"
+    },
+    "summary": "no actionable suppression record names this finding; 0 members disposed"
+   },
+   "inputDigest": "8640c9a13a98e8047517d7fb1b40328e9c70c4d9d36ab3445dffcd76a0f2fd94",
+   "item": "suppression disposition",
+   "outputDigest": "a9be1da7de07cf00c45459db3ef5d73fd0f8860452cd77923b949abd08649ddd",
+   "reads": [
+    "evidence/a6/SUPPRESSIONS.json"
+   ],
+   "stage": "A6",
+   "status": "PASS",
+   "tool": "forensics/tools/suppression_governance.py"
+  },
+  {
+   "codes": [],
+   "detail": {
+    "afterTool": {
+     "digest": "29e9ac46bd049392b20decb8518e64a77c31d50cbbe29dd2df72f19e7f9718b6",
+     "note": "the generalised identity module recorded by A3 MIGRATION",
+     "path": "forensics/tools/finding_identity.py",
+     "recorded": true
+    },
+    "asserts": "delta",
+    "baselineComparison": false,
+    "beforeTool": {
+     "digest": [
+      "35614b905d18bea2090fcac9e8c86ddee08b470fd7ad0ccbca189d4a54929d5b"
+     ],
+     "note": "the pre-extraction SARIF adapter recorded by A3 MIGRATION",
+     "path": "forensics/tools/sarif_adapter.py",
+     "recorded": true
+    },
+    "consumes": "a9be1da7de07cf00c45459db3ef5d73fd0f8860452cd77923b949abd08649ddd",
+    "counts": {
+     "EXCLUDED_ABSENT": 0,
+     "MOVED": 0,
+     "NEW": 0,
+     "POPULATION_SHRUNK_ABSENT": 0,
+     "RESOLVED": 0,
+     "STILL_PRESENT": 4245,
+     "SUPPRESSED_ABSENT": 0,
+     "TOOL_CHANGED_ABSENT": 0,
+     "UNKNOWN": 0,
+     "UNSCANNED_ABSENT": 0
+    },
+    "delta": {
+     "admitted": true,
+     "after": "a1-fingerprints-model",
+     "before": "a1-sarif-results"
+    },
+    "disposition": "STILL_PRESENT",
+    "label": "run=3;rule=A1-UNSAFE-OBLIGATION-DELEGATED;key=src/digest/md32.rs::update::CITED_BY_CALLER",
+    "noSecondPopulation": {
+     "code": "BL_REFUSED_NO_BASELINE",
+     "id": "a1-sarif-results/no-second-population",
+     "reason": "the A1 artefact records one emission over six runs; no second scan of the same six scopes at a later candidate is recorded, so no before/after finding delta exists"
+    },
+    "reason": "the exact identity is present in both populations",
+    "seam": "The delta compares the pre-extraction SARIF projection with the generalised identity model over the same A1 emission. STILL_PRESENT therefore means the two identity models agree on this member; it is not a before/after code-change baseline, and A7 itself records that no second population for this area exists.",
+    "source": {
+     "baselines": "evidence/a7/BASELINES.json",
+     "baselinesSha256": "2a5a3f863c1ddf7775d0f524e7b36feb9f01a22a6c6569eff1d3c93081ae1cab",
+     "record": "evidence/a7/DELTA.json",
+     "sha256": "0444a879bf4a0ddf5c50cffba7f51a5834b0fc4a1702d5190815de1f4470c8cf"
+    },
+    "summary": "STILL_PRESENT between two projections of one emission, not between two scans at different candidates"
+   },
+   "inputDigest": "a9be1da7de07cf00c45459db3ef5d73fd0f8860452cd77923b949abd08649ddd",
+   "item": "baseline delta",
+   "outputDigest": "ec18d9220518a0a6aa15cbd3d26cbdaf5abb26be23521cf501bc984d7d4a20b6",
+   "reads": [
+    "evidence/a7/DELTA.json",
+    "evidence/a7/BASELINES.json"
+   ],
+   "stage": "A7",
+   "status": "PASS",
+   "tool": "forensics/tools/baseline.py"
+  },
+  {
+   "codes": [],
+   "detail": {
+    "asserts": "shard",
+    "consumes": "ec18d9220518a0a6aa15cbd3d26cbdaf5abb26be23521cf501bc984d7d4a20b6",
+    "limit": 5000,
+    "manifestSha256": "b6ad2185c12ff2edb3e514462edceafe0eb15a6c96149407dc0d54515b261065",
+    "member": {
+     "exact": "9387bcba07a02821e3b0190b1a414ab266de6b50c16bf788faf34e70218898b1",
+     "resultIndex": 2390,
+     "run": 3,
+     "sameCoordinatesAsParent": true
+    },
+    "parent": {
+     "path": "evidence/a1/SARIF.json",
+     "resultCount": 4245,
+     "sha256": "5c0cfee62512deb08cc12f95624be64865d3e544473bae80d9aca0ab36ce7852"
+    },
+    "seam": "The shard is a single file covering all 4245 results, so membership is the whole population and the coordinates are the parent's. A multi-shard export would make this member addressable only through the manifest, not by coordinates.",
+    "shard": {
+     "index": 0,
+     "path": "evidence/a8/SHARD-000.sarif",
+     "resultCount": 4245,
+     "runIndices": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+     ],
+     "sha256": "b16d376ae0b2fa5483650f8019eada15102fcae580b0a46419b13e7ee98450ed"
+    },
+    "summary": "member 3/2390 of SHARD-000.sarif (b16d376ae0b2); union equals the parent",
+    "union": {
+     "distinctIdentities": 4245,
+     "duplicates": 0,
+     "equalsParent": true,
+     "extra": 0,
+     "identitiesDigest": "1c3b64ca5e1f694f1950f199281d7e61b95e3258128985c470c54f5e21ad5777",
+     "missing": 0,
+     "parentResultCount": 4245,
+     "shardResultCount": 4245
+    }
+   },
+   "inputDigest": "ec18d9220518a0a6aa15cbd3d26cbdaf5abb26be23521cf501bc984d7d4a20b6",
+   "item": "export shard and union",
+   "outputDigest": "b16d376ae0b2fa5483650f8019eada15102fcae580b0a46419b13e7ee98450ed",
+   "reads": [
+    "evidence/a8/MANIFEST.json",
+    "evidence/a8/SHARD-000.sarif"
+   ],
+   "stage": "A8",
+   "status": "PASS",
+   "tool": "forensics/tools/code_scanning_export.py"
+  },
+  {
+   "codes": [],
+   "detail": {
+    "assertedState": {
+     "parentResultCount": 4245,
+     "results": 4245,
+     "runs": 6,
+     "subset": true
+    },
+    "asserts": "statement",
+    "consumes": "b16d376ae0b2fa5483650f8019eada15102fcae580b0a46419b13e7ee98450ed",
+    "indexSha256": "4ef85aae588a1547041f414025713b4ede879b447396f8bcc469202a57fa087f",
+    "predicateType": "https://openssl-rs.invalid/attestation/sarif-emission/v1",
+    "recordState": {
+     "parentResultCount": 4245,
+     "results": 4245,
+     "runs": 6,
+     "subset": true
+    },
+    "relation": "equal",
+    "seam": "The statement is about the shard, not about this member. The member's identity is carried only inside the shard's bytes; from A8 onward the chain is per-record. The digest link is exact, but the granularity changes here.",
+    "statement": "evidence/a9/STATEMENTS/a8-shard-000.json",
+    "statementSha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582",
+    "subject": "evidence/a8/SHARD-000.sarif",
+    "subset": true,
+    "summary": "statement ea67963abf16 over the shard; asserted state equals the recorded state"
+   },
+   "inputDigest": "b16d376ae0b2fa5483650f8019eada15102fcae580b0a46419b13e7ee98450ed",
+   "item": "in-toto statement",
+   "outputDigest": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582",
+   "reads": [
+    "evidence/a9/STATEMENTS.json",
+    "evidence/a9/STATEMENTS/a8-shard-000.json"
+   ],
+   "stage": "A9",
+   "status": "PASS",
+   "tool": "forensics/tools/intoto.py"
+  },
+  {
+   "codes": [],
+   "detail": {
+    "asserts": "envelope",
+    "consumes": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582",
+    "envelope": "evidence/a10/ENVELOPES/a8-shard-000.json",
+    "envelopeSha256": "5bf418cc5b014d985199ce9e17cde859647303327f6bbd111279d3ed299503a9",
+    "indexSha256": "3eb66119fcde6922d2337013fdd30f8ecdb69fdbf2cb095420fefd98ec43a075",
+    "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+    "paeSha256": "9e08bc6c908d7964aa05af48a8e81c7806b6835febc31e9ecf022cb9c622280f",
+    "payloadBytes": 714,
+    "payloadSha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582",
+    "payloadType": "application/vnd.in-toto+json",
+    "seam": "This stage proves framing and PAE, not authenticity: the keyid is an unauthenticated hint and the signature is A12's check.",
+    "signatureCheckedBy": "A12 check 7 (the signature is not re-verified here)",
+    "summary": "envelope 5bf418cc5b01 frames the statement bytes; PAE recomputed"
+   },
+   "inputDigest": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582",
+   "item": "DSSE envelope",
+   "outputDigest": "5bf418cc5b014d985199ce9e17cde859647303327f6bbd111279d3ed299503a9",
+   "reads": [
+    "evidence/a10/ENVELOPES.json",
+    "evidence/a10/ENVELOPES/a8-shard-000.json"
+   ],
+   "stage": "A10",
+   "status": "PASS",
+   "tool": "forensics/tools/dsse.py"
+  },
+  {
+   "codes": [
+    "IV_REFUSED_SYMMETRIC",
+    "IV_REFUSED_CANDIDATE_TRUST_ROOT",
+    "IV_REFUSED_SELF_ISSUED",
+    "VS_STOP_NO_INDEPENDENT_VERIFICATION"
+   ],
+   "detail": {
+    "aggregate": {
+     "envelopes": 4,
+     "independentlyVerified": 0,
+     "notRun": 0,
+     "selfIssued": 4,
+     "statement": "0 of 4 envelopes are independently verified. Each is an A10 test-only HMAC-SHA256 envelope whose root is symmetric, recorded inside the candidate tree and self-issued. A symmetric signature cannot establish independence, so SELF_ISSUED is the correct output, not a defect to repair."
+    },
+    "asserts": "verification",
+    "checks": [
+     {
+      "check": 1,
+      "name": "trust root selected by the policy",
+      "status": "PASS"
+     },
+     {
+      "check": 2,
+      "code": "IV_REFUSED_SYMMETRIC",
+      "detail": "the verifier would hold the signer's secret",
+      "name": "root is public, not symmetric",
+      "status": "REFUSED"
+     },
+     {
+      "check": 3,
+      "code": "IV_REFUSED_CANDIDATE_TRUST_ROOT",
+      "detail": "evidence/a10/ENVELOPES.json is inside .",
+      "name": "root provenance is outside the candidate tree",
+      "status": "REFUSED"
+     },
+     {
+      "check": 4,
+      "name": "trust root recorded exactly once",
+      "status": "PASS"
+     },
+     {
+      "check": 4,
+      "name": "root provenance digest matches",
+      "status": "PASS"
+     },
+     {
+      "check": 4,
+      "name": "root is fresh",
+      "status": "PASS"
+     },
+     {
+      "check": 5,
+      "name": "root is in a distinct trust domain",
+      "status": "PASS"
+     },
+     {
+      "check": 6,
+      "code": "IV_REFUSED_SELF_ISSUED",
+      "detail": "the root's independence basis is absent or self-issued",
+      "name": "root records a non-self-issued basis",
+      "status": "REFUSED"
+     },
+     {
+      "check": 7,
+      "name": "signature over the received PAE",
+      "status": "PASS"
+     },
+     {
+      "check": 8,
+      "name": "payload denotes the artefact's bytes",
+      "status": "PASS"
+     },
+     {
+      "check": 9,
+      "name": "statement names the artefact under test",
+      "status": "PASS"
+     }
+    ],
+    "codes": [
+     "IV_REFUSED_SYMMETRIC",
+     "IV_REFUSED_CANDIDATE_TRUST_ROOT",
+     "IV_REFUSED_SELF_ISSUED"
+    ],
+    "consumes": "5bf418cc5b014d985199ce9e17cde859647303327f6bbd111279d3ed299503a9",
+    "envelope": "evidence/a10/ENVELOPES/a8-shard-000.json",
+    "envelopeSha256": "5bf418cc5b014d985199ce9e17cde859647303327f6bbd111279d3ed299503a9",
+    "establishedBy": {
+     "locator": "/verifications[name=a8-shard-000]",
+     "observed": {
+      "codes": [
+       "IV_REFUSED_SYMMETRIC",
+       "IV_REFUSED_CANDIDATE_TRUST_ROOT",
+       "IV_REFUSED_SELF_ISSUED"
+      ],
+      "envelopes": 4,
+      "independentlyVerified": false,
+      "independentlyVerifiedEnvelopes": 0,
+      "outcome": "SELF_ISSUED"
+     },
+     "record": "evidence/a12/VERIFICATION.json",
+     "sha256": "7cbdcdae7d7c5636c26b3a9f6141e6a0e345e6c8a281c926fc4b411f68991a48"
+    },
+    "independentlyVerified": false,
+    "outcome": "SELF_ISSUED",
+    "root": {
+     "algorithm": "hmac-sha256",
+     "independenceBasis": "none: the key is derived from a fixed public seed recorded inside the candidate tree; the signer and the verifier hold the same secret, so the verifier could have produced the signature",
+     "keyid": "test-only:hmac-sha256:8e10a5a15d233d54",
+     "selfIssued": true,
+     "symmetric": true,
+     "trustDomain": "same-party"
+    },
+    "seam": "SELF_ISSUED is the honest outcome: the verifier holds the signer's secret and every root is inside the candidate. No external party vouched for these bytes, so the chain has no independent root to authorise and stops here.",
+    "source": {
+     "locator": "/verifications[name=a8-shard-000]",
+     "record": "evidence/a12/VERIFICATION.json",
+     "sha256": "7cbdcdae7d7c5636c26b3a9f6141e6a0e345e6c8a281c926fc4b411f68991a48"
+    },
+    "statementSha256": "ea67963abf16e9b1e33a86d0eec5e35354f3a890497055867e942eac41d22582",
+    "stopCode": "VS_STOP_NO_INDEPENDENT_VERIFICATION",
+    "summary": "SELF_ISSUED: 0 of 4 envelopes are independently verified"
+   },
+   "inputDigest": "5bf418cc5b014d985199ce9e17cde859647303327f6bbd111279d3ed299503a9",
+   "item": "independent verification",
+   "outputDigest": "b857ff11c75062378980aba84b07aa1da4c01ef5bf40cb66747eb67d7ac21192",
+   "reads": [
+    "evidence/a12/VERIFICATION.json"
+   ],
+   "stage": "A12",
+   "status": "STOP",
+   "tool": "forensics/tools/independent_verify.py"
+  },
+  {
+   "codes": [],
+   "detail": {
+    "after": "A12",
+    "afterCode": "VS_STOP_NO_INDEPENDENT_VERIFICATION",
+    "reason": "the chain stopped at A12 (VS_STOP_NO_INDEPENDENT_VERIFICATION); A14 was not executed"
+   },
+   "inputDigest": "b857ff11c75062378980aba84b07aa1da4c01ef5bf40cb66747eb67d7ac21192",
+   "item": "authorisation",
+   "outputDigest": null,
+   "reads": [
+    "evidence/a14/AUTHORISATION.json"
+   ],
+   "stage": "A14",
+   "status": "NOT_REACHED",
+   "tool": "forensics/tools/authorisation.py"
+  },
+  {
+   "codes": [],
+   "detail": {
+    "after": "A12",
+    "afterCode": "VS_STOP_NO_INDEPENDENT_VERIFICATION",
+    "reason": "the chain stopped at A12 (VS_STOP_NO_INDEPENDENT_VERIFICATION); A15 was not executed"
+   },
+   "inputDigest": "b857ff11c75062378980aba84b07aa1da4c01ef5bf40cb66747eb67d7ac21192",
+   "item": "threshold",
+   "outputDigest": null,
+   "reads": [
+    "evidence/a15/EVALUATION.json"
+   ],
+   "stage": "A15",
+   "status": "NOT_REACHED",
+   "tool": "forensics/tools/thresholds.py"
+  },
+  {
+   "codes": [],
+   "detail": {
+    "after": "A12",
+    "afterCode": "VS_STOP_NO_INDEPENDENT_VERIFICATION",
+    "reason": "the chain stopped at A12 (VS_STOP_NO_INDEPENDENT_VERIFICATION); A16 was not executed"
+   },
+   "inputDigest": "b857ff11c75062378980aba84b07aa1da4c01ef5bf40cb66747eb67d7ac21192",
+   "item": "Sigstore bundle",
+   "outputDigest": null,
+   "reads": [
+    "evidence/a16/INVENTORY.json"
+   ],
+   "stage": "A16",
+   "status": "NOT_REACHED",
+   "tool": "forensics/tools/sigstore_bundle.py"
+  },
+  {
+   "codes": [],
+   "detail": {
+    "after": "A12",
+    "afterCode": "VS_STOP_NO_INDEPENDENT_VERIFICATION",
+    "reason": "the chain stopped at A12 (VS_STOP_NO_INDEPENDENT_VERIFICATION); A18 was not executed"
+   },
+   "inputDigest": "b857ff11c75062378980aba84b07aa1da4c01ef5bf40cb66747eb67d7ac21192",
+   "item": "key lifecycle",
+   "outputDigest": null,
+   "reads": [
+    "evidence/a18/INVENTORY.json"
+   ],
+   "stage": "A18",
+   "status": "NOT_REACHED",
+   "tool": "forensics/tools/key_lifecycle.py"
+  },
+  {
+   "codes": [],
+   "detail": {
+    "after": "A12",
+    "afterCode": "VS_STOP_NO_INDEPENDENT_VERIFICATION",
+    "reason": "the chain stopped at A12 (VS_STOP_NO_INDEPENDENT_VERIFICATION); A19 was not executed"
+   },
+   "inputDigest": "b857ff11c75062378980aba84b07aa1da4c01ef5bf40cb66747eb67d7ac21192",
+   "item": "correction status",
+   "outputDigest": null,
+   "reads": [
+    "evidence/a19/PROPAGATION.json"
+   ],
+   "stage": "A19",
+   "status": "NOT_REACHED",
+   "tool": "forensics/tools/corrections.py"
+  },
+  {
+   "codes": [],
+   "detail": {
+    "after": "A12",
+    "afterCode": "VS_STOP_NO_INDEPENDENT_VERIFICATION",
+    "reason": "the chain stopped at A12 (VS_STOP_NO_INDEPENDENT_VERIFICATION); A17 was not executed"
+   },
+   "inputDigest": "b857ff11c75062378980aba84b07aa1da4c01ef5bf40cb66747eb67d7ac21192",
+   "item": "omission closure",
+   "outputDigest": null,
+   "reads": [
+    "evidence/a17/STATUS.json",
+    "evidence/a17/FREEZE-forward.json"
+   ],
+   "stage": "A17",
+   "status": "NOT_REACHED",
+   "tool": "forensics/tools/omission.py"
+  },
+  {
+   "codes": [],
+   "detail": {
+    "after": "A12",
+    "afterCode": "VS_STOP_NO_INDEPENDENT_VERIFICATION",
+    "reason": "the chain stopped at A12 (VS_STOP_NO_INDEPENDENT_VERIFICATION); A20 was not executed"
+   },
+   "inputDigest": "b857ff11c75062378980aba84b07aa1da4c01ef5bf40cb66747eb67d7ac21192",
+   "item": "policy",
+   "outputDigest": null,
+   "reads": [
+    "evidence/a20/POLICY.json",
+    "evidence/a20/DECISION.json"
+   ],
+   "stage": "A20",
+   "status": "NOT_REACHED",
+   "tool": "forensics/tools/policy_engine.py"
+  },
+  {
+   "codes": [],
+   "detail": {
+    "after": "A12",
+    "afterCode": "VS_STOP_NO_INDEPENDENT_VERIFICATION",
+    "reason": "the chain stopped at A12 (VS_STOP_NO_INDEPENDENT_VERIFICATION); A21 was not executed"
+   },
+   "inputDigest": "b857ff11c75062378980aba84b07aa1da4c01ef5bf40cb66747eb67d7ac21192",
+   "item": "summary",
+   "outputDigest": null,
+   "reads": [
+    "evidence/a21/SUMMARY.json"
+   ],
+   "stage": "A21",
+   "status": "NOT_REACHED",
+   "tool": "forensics/tools/verification_summary.py"
+  }
+ ],
+ "wouldBe": {
+  "policy": {
+   "action": "release",
+   "attestation": {
+    "detail": "0 qualifying member(s), at least 1 required",
+    "observed": {
+     "atLeast": 1,
+     "count": 0,
+     "examples": [],
+     "members": 4,
+     "unevaluable": 0
+    },
+    "recordSha256": "7cbdcdae7d7c5636c26b3a9f6141e6a0e345e6c8a281c926fc4b411f68991a48",
+    "state": "UNMET"
+   },
+   "candidate": {
+    "commit": "58aeb2ee01000638cc545e4cad7c9ec3b5ff9672",
+    "producedBy": {
+     "identity": "P-CAMPAIGN",
+     "locator": "/actions/release/context/evidenceProducer",
+     "record": "evidence/a14/AUTHORISATION.json"
+    }
+   },
+   "decision": "DENY",
+   "default": "deny",
+   "evaluatedByThisSlice": false,
+   "met": [
+    "A05.populations-admitted",
+    "A07.delta-resolution-conditions",
+    "A19.retraction-propagated"
+   ],
+   "notApplicable": [],
+   "note": "The A20 decision is the record's own decision at the record's own candidate. This slice reads it and checks that it names the same source records; it does not re-evaluate the policy at the slice's base commit.",
+   "obligationCount": 8,
+   "policyId": "release-policy",
+   "policyRecord": "evidence/a20/POLICY.json",
+   "policySha256": "2575ca0edc5d861baee9668ca647fc04addd06508ec0ad31bfed925ccb0ce15c",
+   "policyVersion": 1,
+   "record": "evidence/a20/DECISION.json",
+   "sha256": "7f5a3cb88972ecfe7506173ee25125b9be513f74c7ccf6ed801fe73076f40495",
+   "sourceRecordsMatchCurrentTree": true,
+   "sourceRecordsMismatched": [],
+   "unknown": [],
+   "unmet": [
+    "A06.suppression-member-identities",
+    "A12.independent-attestation",
+    "A14.release-authorised",
+    "A15.release-threshold-met",
+    "A17.forward-freeze-closed"
+   ]
+  }
+ }
+}
