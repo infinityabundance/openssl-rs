@@ -1,7 +1,7 @@
 {
   "candidate": {
-    "baseCommit": "6bf8c80aa9419addc85998f21a0c3010e697c4b3",
-    "baseCommitShort": "6bf8c80aa",
+    "baseCommit": "ed2143d5ac6c2266dcba60dad65be2572dc4c03f",
+    "baseCommitShort": "ed2143d5a",
     "branch": "staging",
     "recordedAt": "2026-11-24"
   },
@@ -1075,7 +1075,7 @@
   "model": "a19/v1",
   "schema": "openssl-rs/a19/propagation/1",
   "sourceIdentity": {
-    "baseCommit": "6bf8c80aa9419addc85998f21a0c3010e697c4b3",
+    "baseCommit": "ed2143d5ac6c2266dcba60dad65be2572dc4c03f",
     "item": "A19"
   },
   "summary": {

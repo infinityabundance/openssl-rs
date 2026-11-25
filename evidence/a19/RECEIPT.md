@@ -326,3 +326,56 @@ would have failed if the record had been left at the old input digests.
 still proves bytes unchanged since signing, not an independent recorder; a
 reconstruction of a prose or unsigned record is still not an assertion by the
 party it describes.
+
+## 14. Correction (2026-11-25): the identity moves to C7 after the A7 repair
+
+**Cause.** Commit `9193603682cf` ("A7 and B8: repair two records that did not
+match what their checks observe") rewrote `evidence/a7/RECEIPT.md`
+(`8c00cd7a…` → `9adb6775…`) and `evidence/a7/BASELINES.json` (`2a5a3f86…` →
+`a57a2766…`). A19 records `evidence/a7/RECEIPT.md` as
+`sourceIdentity.inputs[2]`, and this batch regenerates the record at candidate
+`ed2143d5a…` (C7), so `sourceIdentity.baseCommit` moved with it. The envelope was
+re-derived over the new canonical bytes; it was not hand-edited.
+
+**Old and new.**
+
+| field | old | new |
+|---|---|---|
+| `sourceIdentity.baseCommit` | `6bf8c80aa9419addc85998f21a0c3010e697c4b3` | `ed2143d5ac6c2266dcba60dad65be2572dc4c03f` |
+| `sourceIdentity.baseCommitShort` | `6bf8c80aa` | `ed2143d5a` |
+| `sourceIdentity.inputs[2].sha256` (`evidence/a7/RECEIPT.md`) | `8c00cd7aabe8bb1aba0c47981f581fd7aa709452d65fdee66ebd8b88a797efd5` | `9adb6775e0f4e4f9b7ab6cca240de342b6250572606403c06bdf3a9373c2b01d` |
+| `EVENTS.json` | `e362777c4825ec76bd38572d9aabaaea9a969a3dbe2dd4ac61b3b58ef330f5c4` | `7df3ca2774ad17b823b995c6ae5ea4b79673f55b1ea4f8b73f3fe08fe305ac63` |
+| `PROPAGATION.json` | `982054f9fb76777e6672137006c0b9388bc0d8c0245eda5638859cdd3d6d78f3` | `892be6ef2d394e7724f29563cb993778d844f90349c6325a0f195279e5003278` |
+| `STATUS.json` | `fcc465dbccc74f2dbc34b12aef1392899e49b740fd3585f0f065d1b1a62439bb` | `6c732e50b8b7cdda21477a761c1169c93280c5715c2b0015fe37cea620957a97` |
+| `CONTROLS.json` | `a3f5c76d26f7b458b26f623d82d4bca82e09f7827c7e3b5cf12be33d15944960` | `039666052b4b8d0591f026a2836df22384d35b2bbbce71e3efb0f7fec6120f79` |
+
+The change is confined to each record's `candidate.baseCommit` /
+`candidate.baseCommitShort` (all four carry the candidate), the two
+`sourceIdentity` fields and the input digest, plus `EVENTS.json`'s
+`logEnvelope.payload` and `logEnvelope.signatures[0].sig`
+(`0yaDApNytI15yeqrZSeecHpzuy+QQWp3+PhIRY0DhKQ=` →
+`NS623OleyqNP+wG9P9Q7/DNuGnUFBWSXBUEDSodKBoA=`). Every event, event signature,
+`logDigest`, the 22 events, 14 dependents and 16 controls are unchanged.
+
+**Preserved as history.** `A7_OLD_DIGEST` `f2d6e379…` and `A7_NEW_DIGEST`
+`2a5a3f86…` (the A7 values as they stood at `f1c5047a5`) and the
+`A7/sourceIdentity` preservation `sha256` `8c00cd7a…` are event history and were
+not rewritten. Only the machine-read `sourceIdentity` and the changed input's
+digest moved. The later `a57a2766…` BASELINES value belongs to A7's own record;
+A19 does not restate it as its own observation.
+
+**Signing identity.** Unchanged: the existing A10 test-only HMAC-SHA256 signer,
+keyid `test-only:hmac-sha256:8e10a5a15d233d54`, derived from the fixed public
+`TEST_ONLY_SEED` in `forensics/tools/dsse.py`. No new key or signer was
+introduced. `forensics/tools/corrections.py verify` reports `code=CR_OK`.
+
+**Failing tests.** Before this correction,
+`test_corrections.Determinism.test_two_runs_are_byte_identical_and_match_committed`
+failed on the `evidence/a7/RECEIPT.md` input digest. Because `PROPAGATION.json`
+moved with the candidate, the A20 decision's `A19.retraction-propagated`
+obligation (which pinned `982054f9…`) and A11's frozen population now name
+superseded A19 bytes. Those are the next links, not repairs made here.
+
+**Retained.** The log is still `SELF_ISSUED` and unauthenticated, with zero
+independent verifications; the signature still proves only bytes unchanged
+since signing.
