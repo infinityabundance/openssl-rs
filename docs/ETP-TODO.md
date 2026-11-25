@@ -350,3 +350,22 @@ dimensions, and no unsafe site, hazard barrier, consumer family or claim changes
 state. They supply evidence a verdict may cite; they do not supply a verdict.
 Every external anchor and every untested tool is recorded as `UNVERIFIED` with a
 named settling method, and no admission test was run.
+
+**FRC-8 status (2026-11-25, base `7bcf7bef`).** The DO-178C objective matrix
+exists for the declared non-airborne library context
+`CTX-FRC8-NONAIRBORNE-LIBRARY`: `evidence/frc8/DO178C-MATRIX.json`,
+`docs/DO178C-CONFORMANCE.md`, `forensics/tools/do178c_matrix.py` and
+`forensics/tools/tests/test_do178c_matrix.py`. It records 14 objectives with
+**0 satisfied, 5 `PARTIAL`, 7 `NOT_SATISFIED` and 2 `UNVERIFIED`**, plus 12
+missing items (planning, requirement baseline, requirements-based tests,
+structural coverage, system safety assessment, tool qualification, target
+execution, configuration index, independent review, formal-methods
+justification, target timing and problem reporting). Every exact DO-178C
+objective identifier and wording is `UNVERIFIED` because DO-178C, AC 20-115D,
+DO-330 and DO-333 were not read, and every row's held independence is
+`SAME_PARTY_ONLY` against the 50/50 same-party, 0-external independence record.
+The matrix states that **objective satisfaction is not certification**, assigns
+no DO-178C level and no DAL, and **upgrades no ETP verdict**: it reads ETP-T1,
+ETP-T3, ETP-T4, ETP-T5, ETP-T6, ETP-T7, ETP-T9, ETP-T11 and ETP-T15 evidence
+and changes no claim, unsafe site, hazard barrier, consumer family or refinement
+edge. It supplies evidence a verdict may cite; it does not supply a verdict.

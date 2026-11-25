@@ -1,0 +1,703 @@
+{
+  "assurance_level": null,
+  "base_commit": "7bcf7befa249b32f85e10d09b7795f7a891617fa",
+  "certification_claimed": false,
+  "dal_claimed": false,
+  "independence_record": {
+    "assignments": 50,
+    "declared_parties": 0,
+    "external_parties": 0,
+    "path": "evidence/etp-t15/INDEPENDENCE.json",
+    "same_party_adjudicator": 50,
+    "statement": "Every recorded adjudication is same-party: all 50 assignments have an adjudicator from the author's party, no party outside the project is declared, and the one asserted independence was refused. No objective row records independence as held."
+  },
+  "item": "FRC-8 of docs/FRC-TODO.md",
+  "kind": "do178c-objective-conformance-matrix",
+  "missing_items": [
+    {
+      "id": "MI-PLANNING",
+      "item": "Configuration-specific assurance, development and verification plans",
+      "settling_method": "Write and review a plan for the declared context, naming the lifecycle, the verification methods and the configuration index; bind it to a date and a reviewer.",
+      "why_required": "The programme states a queue and a set of gates, not a plan for a declared system. DO-178C planning objectives begin from a plan for a configuration."
+    },
+    {
+      "id": "MI-REQUIREMENT-BASELINE",
+      "item": "High-level and low-level requirements with unambiguous acceptance criteria",
+      "settling_method": "Establish an HLR and LLR baseline from normative sources, with acceptance criteria per requirement, and register it in the traceability graph.",
+      "why_required": "ETP-T1 records 21 requirement nodes and 0 specification nodes; no negotiated requirement baseline exists for the declared context."
+    },
+    {
+      "id": "MI-REQUIREMENTS-BASED-TESTS",
+      "item": "Verification cases derived from the requirements, not from the source",
+      "settling_method": "Derive a verification case per requirement, execute it at a bound identity, and record the requirement-to-case-to-result trace.",
+      "why_required": "ETP-T11 records 78 requirements with 0 SATISFIED, 59 NOT_RUN and 19 REFUSED. The existing tests and the ETP-T5 differential court were not derived from a requirement baseline."
+    },
+    {
+      "id": "MI-STRUCTURAL-COVERAGE",
+      "item": "MC/DC and object-code coverage where the declared level requires it",
+      "settling_method": "Select the required structural coverage for the declared level, name the instrument, the decision population and the measured result, and run it at the exact artefact.",
+      "why_required": "No MC/DC or object-code coverage record exists. The traceability document states that MC/DC is not measured anywhere and is not claimed."
+    },
+    {
+      "id": "MI-SYSTEM-SAFETY-ASSESSMENT",
+      "item": "A system safety assessment and the DAL it would assign",
+      "settling_method": "Declare a system context with airborne applicability, perform the safety assessment, and record the assigned level. This matrix does not do that.",
+      "why_required": "No system safety assessment exists and no DAL is assigned. The declared context is non-airborne, so this item is named as absent rather than borrowed from another system."
+    },
+    {
+      "id": "MI-TOOL-QUALIFICATION",
+      "item": "DO-330 assessment for every tool whose output the argument depends on",
+      "settling_method": "For each tool the argument depends on, record its intended use, qualification basis, version, digest, positive and negative controls, and a DO-330 assessment at the pinned toolchain.",
+      "why_required": "The instrument register is explicitly not a DO-330 qualification, and FRC-0 records 15 candidate provers with 0 admitted because none was tested against the pinned compiler."
+    },
+    {
+      "id": "MI-TARGET-EXECUTION",
+      "item": "Verification executed on the declared target hardware",
+      "settling_method": "Declare the target hardware and build identity, execute the verification suite there, and bind each result to the target artefact digest.",
+      "why_required": "Every cited record was produced on x86_64-unknown-linux-gnu on the development host or in the court container. No target hardware is declared and no cross-target execution exists."
+    },
+    {
+      "id": "MI-CONFIGURATION-INDEX",
+      "item": "A complete configuration index for the declared context",
+      "settling_method": "Build a configuration index from source and toolchain through every executed artefact, with a digest per input, and record the uncertifiable items as gaps rather than defaults.",
+      "why_required": "ETP-2 records byte-identical builds at one host, image, toolchain and target, and ETP-T9 classifies 118 of 231 evidence items as UNCERTIFIABLE. No complete index binds every input and artefact of the declared context."
+    },
+    {
+      "id": "MI-INDEPENDENT-REVIEW",
+      "item": "Independent review and quality assurance by a distinct trust domain",
+      "settling_method": "Name a party outside the project with its own infrastructure and signing identity, have it review the work products, and record the review artefact and its distinctness evidence.",
+      "why_required": "The independence record has 50 assignments, all 50 adjudicated by the author's party, 0 declared parties and 0 external parties; the one asserted independence was refused."
+    },
+    {
+      "id": "MI-FORMAL-METHODS-JUSTIFICATION",
+      "item": "A DO-333 justification, its assumptions and its proof artefacts",
+      "settling_method": "Write the DO-333 justification for each formal method used, state its assumptions and TCB, and bind each proof artefact to the exact source and binary identity.",
+      "why_required": "No proof artefact exists. ETP-T3 records no discharged refinement edge and FRC-0 records no admitted prover. A bounded test is not a formal result."
+    },
+    {
+      "id": "MI-TARGET-TIMING",
+      "item": "Bounded execution, deadline analysis and worst-case execution time",
+      "settling_method": "Declare the execution-time budget, measure the bound on the target, and record the analysis with its assumptions and its uncovered paths.",
+      "why_required": "No execution-time bound, deadline or WCET analysis exists. A constant-time instrument result is not a WCET result, and the court venue has no PMU."
+    },
+    {
+      "id": "MI-PROBLEM-REPORTING",
+      "item": "Problem reporting and change control under a governing plan",
+      "settling_method": "Establish a problem-report process, bind each change to its impact analysis, and record the change decision and its verification at the new identity.",
+      "why_required": "ETP-T11 records 6 change sets with 0 SATISFIED and status REFUSED. There is machine-readable impact analysis, but no problem-reporting process under a DO-178C plan and no selective proof invalidation because no proof exists."
+    }
+  ],
+  "non_claim": {
+    "statement": "Objective satisfaction is not certification. This matrix establishes only which of the programme's section 6 objectives are unmet, partly met or unverified in the declared context. It records no certification, no DO-178C level and no development assurance level, and no row may be cited as a certification result.",
+    "what_this_does_not_establish": [
+      "certification, an airworthiness finding or an approval of any kind",
+      "a DO-178C level or a development assurance level (DAL)",
+      "that the cited evidence is sufficient for the objective it is attached to",
+      "that any objective identifier or wording matches DO-178C: every exact identifier is UNVERIFIED because the standard was not read",
+      "that the declared context is sufficient for any certification basis"
+    ],
+    "what_this_establishes": "which objectives of the programme's section 6 have supporting evidence in this repository today, and which required items are absent"
+  },
+  "objective_satisfaction_only": true,
+  "objectives": [
+    {
+      "area": "planning",
+      "basis": "The programme states a queue, gates and a non-claim discipline; it is not a plan for a declared system and names no lifecycle, method or reviewer. No plan artefact exists.",
+      "blocked_by": [
+        "MI-PLANNING",
+        "MI-SYSTEM-SAFETY-ASSESSMENT"
+      ],
+      "evidence": [
+        {
+          "check": "the programme's section 6 planning row and section 4 queue, read as a statement of work rather than a plan",
+          "kind": "RECORD",
+          "path": "docs/FORMAL-REFINEMENT-CERTIFICATION.md"
+        },
+        {
+          "check": "the FRC-8 acceptance criterion, which requires the declared context this row now supplies",
+          "kind": "RECORD",
+          "path": "docs/FRC-TODO.md"
+        }
+      ],
+      "id": "DO8-PLANNING",
+      "independence_held": {
+        "distinct_from_author": false,
+        "external_parties": 0,
+        "state": "SAME_PARTY_ONLY",
+        "trust_domain": null,
+        "witness": "evidence/etp-t15/INDEPENDENCE.json"
+      },
+      "normative_objective_ids": "UNVERIFIED",
+      "normative_settling_method": "Read the DO-178C objective tables (A-1 to A-10), AC 20-115D, DO-330 and DO-333 at their published revisions, record the objective identifiers, exact wording and independence attributes for the declared context, and update this row with the reading and its date. This session read none of them.",
+      "required_independence": {
+        "basis": "The programme's section 6 does not state this objective's independence attribute, and the DO-178C objective tables were not read. Nothing about the required independence is established.",
+        "settling_method": "Read the objective's independence attribute in the DO-178C objective tables at the published revision, record the table, the objective number and its independence attribute, and compare it with evidence/etp-t15/INDEPENDENCE.json.",
+        "state": "UNVERIFIED"
+      },
+      "settling_method": null,
+      "status": "NOT_SATISFIED",
+      "substance": "Configuration-specific assurance, development and verification plans.",
+      "substance_source": "docs/FORMAL-REFINEMENT-CERTIFICATION.md section 6"
+    },
+    {
+      "area": "high-level requirements",
+      "basis": "ETP-T1's traceability graph holds 21 requirement nodes and 7 hazard nodes with typed edges, but 0 specification nodes and no negotiated baseline for the declared context. Project requirements are not HLRs with a safety assessment behind them.",
+      "blocked_by": [
+        "MI-REQUIREMENT-BASELINE",
+        "MI-SYSTEM-SAFETY-ASSESSMENT"
+      ],
+      "evidence": [
+        {
+          "check": "node counts: 21 requirement, 0 specification, 7 hazard",
+          "kind": "RECORD",
+          "path": "evidence/etp-t1/TRACEABILITY.json"
+        },
+        {
+          "check": "the traceability description and its stated coverage limits",
+          "kind": "RECORD",
+          "path": "docs/REQUIREMENTS-TRACEABILITY.md"
+        }
+      ],
+      "id": "DO8-HLR",
+      "independence_held": {
+        "distinct_from_author": false,
+        "external_parties": 0,
+        "state": "SAME_PARTY_ONLY",
+        "trust_domain": null,
+        "witness": "evidence/etp-t15/INDEPENDENCE.json"
+      },
+      "normative_objective_ids": "UNVERIFIED",
+      "normative_settling_method": "Read the DO-178C objective tables (A-1 to A-10), AC 20-115D, DO-330 and DO-333 at their published revisions, record the objective identifiers, exact wording and independence attributes for the declared context, and update this row with the reading and its date. This session read none of them.",
+      "required_independence": {
+        "basis": "The programme's section 6 does not state this objective's independence attribute, and the DO-178C objective tables were not read. Nothing about the required independence is established.",
+        "settling_method": "Read the objective's independence attribute in the DO-178C objective tables at the published revision, record the table, the objective number and its independence attribute, and compare it with evidence/etp-t15/INDEPENDENCE.json.",
+        "state": "UNVERIFIED"
+      },
+      "settling_method": null,
+      "status": "PARTIAL",
+      "substance": "Externally observable functional and safety requirements.",
+      "substance_source": "docs/FORMAL-REFINEMENT-CERTIFICATION.md section 6"
+    },
+    {
+      "area": "low-level requirements",
+      "basis": "ETP-T1 records 78 open obligation nodes, not a low-level requirement baseline with acceptance criteria, and ETP-T11 binds 78 requirements with 0 satisfied. No LLR set exists for the declared context.",
+      "blocked_by": [
+        "MI-REQUIREMENT-BASELINE"
+      ],
+      "evidence": [
+        {
+          "check": "the 78 obligation nodes and the graph's zero specification nodes",
+          "kind": "RECORD",
+          "path": "evidence/etp-t1/TRACEABILITY.json"
+        },
+        {
+          "check": "totals: 78 requirements, 0 SATISFIED, 59 NOT_RUN, 19 REFUSED",
+          "kind": "RECORD",
+          "path": "evidence/etp-t11/TIERS.json"
+        }
+      ],
+      "id": "DO8-LLR",
+      "independence_held": {
+        "distinct_from_author": false,
+        "external_parties": 0,
+        "state": "SAME_PARTY_ONLY",
+        "trust_domain": null,
+        "witness": "evidence/etp-t15/INDEPENDENCE.json"
+      },
+      "normative_objective_ids": "UNVERIFIED",
+      "normative_settling_method": "Read the DO-178C objective tables (A-1 to A-10), AC 20-115D, DO-330 and DO-333 at their published revisions, record the objective identifiers, exact wording and independence attributes for the declared context, and update this row with the reading and its date. This session read none of them.",
+      "required_independence": {
+        "basis": "The programme's section 6 does not state this objective's independence attribute, and the DO-178C objective tables were not read. Nothing about the required independence is established.",
+        "settling_method": "Read the objective's independence attribute in the DO-178C objective tables at the published revision, record the table, the objective number and its independence attribute, and compare it with evidence/etp-t15/INDEPENDENCE.json.",
+        "state": "UNVERIFIED"
+      },
+      "settling_method": null,
+      "status": "NOT_SATISFIED",
+      "substance": "Traceable implementation obligations with unambiguous acceptance criteria.",
+      "substance_source": "docs/FORMAL-REFINEMENT-CERTIFICATION.md section 6"
+    },
+    {
+      "area": "architecture",
+      "basis": "ETP-T3 records six refinement levels and five edges, all NONE or PARTIAL with 0 discharged. ETP-T4 inventories 51,703 unsafe sites as boundary-unconfined. The architecture is documented; its boundaries are not verified and no failure-propagation analysis exists.",
+      "blocked_by": [
+        "MI-FORMAL-METHODS-JUSTIFICATION",
+        "MI-INDEPENDENT-REVIEW"
+      ],
+      "evidence": [
+        {
+          "check": "levels and edges: 0 DISCHARGED; four of five edges NONE or PARTIAL",
+          "kind": "RECORD",
+          "path": "evidence/etp-t3/REFINEMENT.json"
+        },
+        {
+          "check": "summary.boundary_unconfined = 51703",
+          "kind": "RECORD",
+          "path": "evidence/etp-t4/SAFETY-SITES.json"
+        }
+      ],
+      "id": "DO8-ARCH",
+      "independence_held": {
+        "distinct_from_author": false,
+        "external_parties": 0,
+        "state": "SAME_PARTY_ONLY",
+        "trust_domain": null,
+        "witness": "evidence/etp-t15/INDEPENDENCE.json"
+      },
+      "normative_objective_ids": "UNVERIFIED",
+      "normative_settling_method": "Read the DO-178C objective tables (A-1 to A-10), AC 20-115D, DO-330 and DO-333 at their published revisions, record the objective identifiers, exact wording and independence attributes for the declared context, and update this row with the reading and its date. This session read none of them.",
+      "required_independence": {
+        "basis": "The programme's section 6 does not state this objective's independence attribute, and the DO-178C objective tables were not read. Nothing about the required independence is established.",
+        "settling_method": "Read the objective's independence attribute in the DO-178C objective tables at the published revision, record the table, the objective number and its independence attribute, and compare it with evidence/etp-t15/INDEPENDENCE.json.",
+        "state": "UNVERIFIED"
+      },
+      "settling_method": null,
+      "status": "PARTIAL",
+      "substance": "Verified boundaries, partitioning, dependency and failure-propagation analysis.",
+      "substance_source": "docs/FORMAL-REFINEMENT-CERTIFICATION.md section 6"
+    },
+    {
+      "area": "requirements-based verification",
+      "basis": "ETP-T11 records 0 of 78 requirements satisfied (59 NOT_RUN, 19 REFUSED). The ETP-T5 differential court reached AGREEMENT on P-256 and RSA cases, but it was derived from an executable reference and a population, not from a requirement baseline.",
+      "blocked_by": [
+        "MI-REQUIREMENTS-BASED-TESTS",
+        "MI-REQUIREMENT-BASELINE"
+      ],
+      "evidence": [
+        {
+          "check": "totals.by_state: SATISFIED 0, NOT_RUN 59, REFUSED 19",
+          "kind": "RECORD",
+          "path": "evidence/etp-t11/TIERS.json"
+        },
+        {
+          "check": "status = AGREEMENT; differences.counts_by_class is empty",
+          "kind": "RECORD",
+          "path": "evidence/etp-t5/RESULTS.json"
+        }
+      ],
+      "id": "DO8-REQVER",
+      "independence_held": {
+        "distinct_from_author": false,
+        "external_parties": 0,
+        "state": "SAME_PARTY_ONLY",
+        "trust_domain": null,
+        "witness": "evidence/etp-t15/INDEPENDENCE.json"
+      },
+      "normative_objective_ids": "UNVERIFIED",
+      "normative_settling_method": "Read the DO-178C objective tables (A-1 to A-10), AC 20-115D, DO-330 and DO-333 at their published revisions, record the objective identifiers, exact wording and independence attributes for the declared context, and update this row with the reading and its date. This session read none of them.",
+      "required_independence": {
+        "basis": "The programme's section 6 does not state this objective's independence attribute, and the DO-178C objective tables were not read. Nothing about the required independence is established.",
+        "settling_method": "Read the objective's independence attribute in the DO-178C objective tables at the published revision, record the table, the objective number and its independence attribute, and compare it with evidence/etp-t15/INDEPENDENCE.json.",
+        "state": "UNVERIFIED"
+      },
+      "settling_method": null,
+      "status": "NOT_SATISFIED",
+      "substance": "Tests and formal analyses derived from requirements, not from the source.",
+      "substance_source": "docs/FORMAL-REFINEMENT-CERTIFICATION.md section 6"
+    },
+    {
+      "area": "structural coverage",
+      "basis": "No MC/DC or object-code coverage record exists. The traceability document states that MC/DC is not measured anywhere in ETP-T1 and is not claimed, and that a release claim citing it would have to name the instrument, population and measured result.",
+      "blocked_by": [
+        "MI-STRUCTURAL-COVERAGE"
+      ],
+      "evidence": [
+        {
+          "check": "section 8: 'MC/DC is not measured anywhere in this item, and it is not claimed.'",
+          "kind": "RECORD",
+          "path": "docs/REQUIREMENTS-TRACEABILITY.md"
+        }
+      ],
+      "id": "DO8-COVERAGE",
+      "independence_held": {
+        "distinct_from_author": false,
+        "external_parties": 0,
+        "state": "SAME_PARTY_ONLY",
+        "trust_domain": null,
+        "witness": "evidence/etp-t15/INDEPENDENCE.json"
+      },
+      "normative_objective_ids": "UNVERIFIED",
+      "normative_settling_method": "Read the DO-178C objective tables (A-1 to A-10), AC 20-115D, DO-330 and DO-333 at their published revisions, record the objective identifiers, exact wording and independence attributes for the declared context, and update this row with the reading and its date. This session read none of them.",
+      "required_independence": {
+        "basis": "The programme's section 6 does not state this objective's independence attribute, and the DO-178C objective tables were not read. Nothing about the required independence is established.",
+        "settling_method": "Read the objective's independence attribute in the DO-178C objective tables at the published revision, record the table, the objective number and its independence attribute, and compare it with evidence/etp-t15/INDEPENDENCE.json.",
+        "state": "UNVERIFIED"
+      },
+      "settling_method": null,
+      "status": "NOT_SATISFIED",
+      "substance": "MC/DC and object-code coverage where required.",
+      "substance_source": "docs/FORMAL-REFINEMENT-CERTIFICATION.md section 6"
+    },
+    {
+      "area": "robustness",
+      "basis": "Failure atomicity and parser hardening are documented, and ETP-T7 audits 15 clear-free arms with 7 findings of which 0 are repaired and 1 is HIGH. Resource exhaustion and environmental faults are not analysed, and the unrepaired findings are not a defined failure behaviour.",
+      "blocked_by": [
+        "MI-SYSTEM-SAFETY-ASSESSMENT",
+        "MI-TARGET-EXECUTION"
+      ],
+      "evidence": [
+        {
+          "check": "summary: findings 7, repaired 0, findings_by_severity.HIGH 1, clear_free_arms_lost 1",
+          "kind": "RECORD",
+          "path": "evidence/etp-t7/ERASURE-AUDIT.json"
+        },
+        {
+          "check": "the documented failure-atomicity rules for the FFI boundary",
+          "kind": "RECORD",
+          "path": "docs/FFI-FAILURE-ATOMICITY.md"
+        },
+        {
+          "check": "the documented parser-hardening rules",
+          "kind": "RECORD",
+          "path": "docs/PARSER-HARDENING.md"
+        }
+      ],
+      "id": "DO8-ROBUST",
+      "independence_held": {
+        "distinct_from_author": false,
+        "external_parties": 0,
+        "state": "SAME_PARTY_ONLY",
+        "trust_domain": null,
+        "witness": "evidence/etp-t15/INDEPENDENCE.json"
+      },
+      "normative_objective_ids": "UNVERIFIED",
+      "normative_settling_method": "Read the DO-178C objective tables (A-1 to A-10), AC 20-115D, DO-330 and DO-333 at their published revisions, record the objective identifiers, exact wording and independence attributes for the declared context, and update this row with the reading and its date. This session read none of them.",
+      "required_independence": {
+        "basis": "The programme's section 6 does not state this objective's independence attribute, and the DO-178C objective tables were not read. Nothing about the required independence is established.",
+        "settling_method": "Read the objective's independence attribute in the DO-178C objective tables at the published revision, record the table, the objective number and its independence attribute, and compare it with evidence/etp-t15/INDEPENDENCE.json.",
+        "state": "UNVERIFIED"
+      },
+      "settling_method": null,
+      "status": "PARTIAL",
+      "substance": "Defined failure behaviour, resource exhaustion and environmental faults.",
+      "substance_source": "docs/FORMAL-REFINEMENT-CERTIFICATION.md section 6"
+    },
+    {
+      "area": "configuration management",
+      "basis": "ETP-2 records two independently initialised release builds as ALL_IDENTICAL at one host, image, toolchain and target, and ETP-T6 records the toolchain components with digests. No complete configuration index covers the declared context, and ETP-T9 classifies 118 of 231 evidence items as UNCERTIFIABLE.",
+      "blocked_by": [
+        "MI-CONFIGURATION-INDEX",
+        "MI-TARGET-EXECUTION"
+      ],
+      "evidence": [
+        {
+          "check": "comparison_outcome = ALL_IDENTICAL at one host and target",
+          "kind": "RECORD",
+          "path": "evidence/etp2/reproducibility.json"
+        },
+        {
+          "check": "components with digests; target_triple = x86_64-unknown-linux-gnu",
+          "kind": "RECORD",
+          "path": "evidence/etp-t6/TCB.json"
+        },
+        {
+          "check": "counts: 118 UNCERTIFIABLE of 231 evidence items",
+          "kind": "RECORD",
+          "path": "evidence/etp-t9/IDENTITY-TRIAGE.json"
+        }
+      ],
+      "id": "DO8-CM",
+      "independence_held": {
+        "distinct_from_author": false,
+        "external_parties": 0,
+        "state": "SAME_PARTY_ONLY",
+        "trust_domain": null,
+        "witness": "evidence/etp-t15/INDEPENDENCE.json"
+      },
+      "normative_objective_ids": "UNVERIFIED",
+      "normative_settling_method": "Read the DO-178C objective tables (A-1 to A-10), AC 20-115D, DO-330 and DO-333 at their published revisions, record the objective identifiers, exact wording and independence attributes for the declared context, and update this row with the reading and its date. This session read none of them.",
+      "required_independence": {
+        "basis": "The programme's section 6 does not state this objective's independence attribute, and the DO-178C objective tables were not read. Nothing about the required independence is established.",
+        "settling_method": "Read the objective's independence attribute in the DO-178C objective tables at the published revision, record the table, the objective number and its independence attribute, and compare it with evidence/etp-t15/INDEPENDENCE.json.",
+        "state": "UNVERIFIED"
+      },
+      "settling_method": null,
+      "status": "PARTIAL",
+      "substance": "Exact source, toolchain, build and verified-artefact identities.",
+      "substance_source": "docs/FORMAL-REFINEMENT-CERTIFICATION.md section 6"
+    },
+    {
+      "area": "quality assurance",
+      "basis": "The release gate and the documentation checks exist, but independence is the substance of this objective and it is absent: 50 of 50 recorded assignments have an adjudicator from the author's party, 0 parties are declared, 0 are external, and the one asserted independence was refused. The release gate also refuses this candidate.",
+      "blocked_by": [
+        "MI-INDEPENDENT-REVIEW"
+      ],
+      "evidence": [
+        {
+          "check": "summary: assignments 50, same_party_adjudicator 50, declared_parties 0, external_parties 0",
+          "kind": "RECORD",
+          "path": "evidence/etp-t15/INDEPENDENCE.json"
+        },
+        {
+          "check": "the release-gate run and its recorded refusals at 2d31a23fb",
+          "kind": "RECORD",
+          "path": "evidence/etp7/RECEIPT.md"
+        },
+        {
+          "check": "the governing release-gate list",
+          "kind": "RECORD",
+          "path": "docs/RELEASE_GATES.md"
+        }
+      ],
+      "id": "DO8-QA",
+      "independence_held": {
+        "distinct_from_author": false,
+        "external_parties": 0,
+        "state": "SAME_PARTY_ONLY",
+        "trust_domain": null,
+        "witness": "evidence/etp-t15/INDEPENDENCE.json"
+      },
+      "normative_objective_ids": "UNVERIFIED",
+      "normative_settling_method": "Read the DO-178C objective tables (A-1 to A-10), AC 20-115D, DO-330 and DO-333 at their published revisions, record the objective identifiers, exact wording and independence attributes for the declared context, and update this row with the reading and its date. This session read none of them.",
+      "required_independence": {
+        "basis": "the programme's section 6 requires independent checks for quality assurance",
+        "settling_method": "Read the objective's independence attribute in the DO-178C objective tables at the published revision, record the table, the objective number and its independence attribute, and compare it with evidence/etp-t15/INDEPENDENCE.json.",
+        "state": "INDEPENDENT_REQUIRED"
+      },
+      "settling_method": null,
+      "status": "NOT_SATISFIED",
+      "substance": "Independent checks against the governing process.",
+      "substance_source": "docs/FORMAL-REFINEMENT-CERTIFICATION.md section 6"
+    },
+    {
+      "area": "tool qualification",
+      "basis": "The instrument register qualifies 11 instruments for their own controls (9 PASS, 2 RECORDED) and says the result is not a security result and not a DO-330 qualification. FRC-0 records 15 candidate provers with 0 admitted. No tool has a DO-330 assessment.",
+      "blocked_by": [
+        "MI-TOOL-QUALIFICATION"
+      ],
+      "evidence": [
+        {
+          "check": "the instrument register, including section 0's statement that qualification is not a security result",
+          "kind": "RECORD",
+          "path": "docs/INSTRUMENT-QUALIFICATION.md"
+        },
+        {
+          "check": "11 instruments; 9 sensitivity controls PASS and 2 RECORDED",
+          "kind": "RECORD",
+          "path": "evidence/etp3/instruments.json"
+        },
+        {
+          "check": "15 tools, 0 ADMITTED, 15 REFUSED",
+          "kind": "RECORD",
+          "path": "forensics/frc/TOOLS.json"
+        }
+      ],
+      "id": "DO8-TOOL",
+      "independence_held": {
+        "distinct_from_author": false,
+        "external_parties": 0,
+        "state": "SAME_PARTY_ONLY",
+        "trust_domain": null,
+        "witness": "evidence/etp-t15/INDEPENDENCE.json"
+      },
+      "normative_objective_ids": "UNVERIFIED",
+      "normative_settling_method": "Read the DO-178C objective tables (A-1 to A-10), AC 20-115D, DO-330 and DO-333 at their published revisions, record the objective identifiers, exact wording and independence attributes for the declared context, and update this row with the reading and its date. This session read none of them.",
+      "required_independence": {
+        "basis": "The programme's section 6 does not state this objective's independence attribute, and the DO-178C objective tables were not read. Nothing about the required independence is established.",
+        "settling_method": "Read the objective's independence attribute in the DO-178C objective tables at the published revision, record the table, the objective number and its independence attribute, and compare it with evidence/etp-t15/INDEPENDENCE.json.",
+        "state": "UNVERIFIED"
+      },
+      "settling_method": null,
+      "status": "NOT_SATISFIED",
+      "substance": "DO-330 assessment for the tools whose output the argument depends on.",
+      "substance_source": "docs/FORMAL-REFINEMENT-CERTIFICATION.md section 6"
+    },
+    {
+      "area": "formal methods",
+      "basis": "No proof artefact exists. ETP-4 records bounded tests and no prover proof; the Kani run uses a non-pinned compiler and is not citable. ETP-T3 records 0 discharged refinement edges and FRC-0 records 0 admitted provers.",
+      "blocked_by": [
+        "MI-FORMAL-METHODS-JUSTIFICATION",
+        "MI-TOOL-QUALIFICATION"
+      ],
+      "evidence": [
+        {
+          "check": "bounded cleansing and REDC observations; no prover proof",
+          "kind": "RECORD",
+          "path": "evidence/etp4/VERIFICATION-RECEIPT.md"
+        },
+        {
+          "check": "no edge is DISCHARGED",
+          "kind": "RECORD",
+          "path": "evidence/etp-t3/REFINEMENT.json"
+        },
+        {
+          "check": "15 tools, 0 ADMITTED",
+          "kind": "RECORD",
+          "path": "forensics/frc/TOOLS.json"
+        }
+      ],
+      "id": "DO8-FORMAL",
+      "independence_held": {
+        "distinct_from_author": false,
+        "external_parties": 0,
+        "state": "SAME_PARTY_ONLY",
+        "trust_domain": null,
+        "witness": "evidence/etp-t15/INDEPENDENCE.json"
+      },
+      "normative_objective_ids": "UNVERIFIED",
+      "normative_settling_method": "Read the DO-178C objective tables (A-1 to A-10), AC 20-115D, DO-330 and DO-333 at their published revisions, record the objective identifiers, exact wording and independence attributes for the declared context, and update this row with the reading and its date. This session read none of them.",
+      "required_independence": {
+        "basis": "The programme's section 6 does not state this objective's independence attribute, and the DO-178C objective tables were not read. Nothing about the required independence is established.",
+        "settling_method": "Read the objective's independence attribute in the DO-178C objective tables at the published revision, record the table, the objective number and its independence attribute, and compare it with evidence/etp-t15/INDEPENDENCE.json.",
+        "state": "UNVERIFIED"
+      },
+      "settling_method": null,
+      "status": "NOT_SATISFIED",
+      "substance": "DO-333 justification, assumptions and proof artefacts.",
+      "substance_source": "docs/FORMAL-REFINEMENT-CERTIFICATION.md section 6"
+    },
+    {
+      "area": "change control",
+      "basis": "ETP-T11 records 6 change sets with machine-readable impact analysis, but 0 requirements are SATISFIED and the tier report is REFUSED. Selective proof invalidation cannot exist while no proof exists; ETP-T9 records 118 of 231 evidence items as UNCERTIFIABLE.",
+      "blocked_by": [
+        "MI-CONFIGURATION-INDEX",
+        "MI-PROBLEM-REPORTING"
+      ],
+      "evidence": [
+        {
+          "check": "change_sets 6, totals.by_state.SATISFIED 0, status REFUSED",
+          "kind": "RECORD",
+          "path": "evidence/etp-t11/TIERS.json"
+        },
+        {
+          "check": "counts: 118 UNCERTIFIABLE of 231",
+          "kind": "RECORD",
+          "path": "evidence/etp-t9/IDENTITY-TRIAGE.json"
+        }
+      ],
+      "id": "DO8-CHANGE",
+      "independence_held": {
+        "distinct_from_author": false,
+        "external_parties": 0,
+        "state": "SAME_PARTY_ONLY",
+        "trust_domain": null,
+        "witness": "evidence/etp-t15/INDEPENDENCE.json"
+      },
+      "normative_objective_ids": "UNVERIFIED",
+      "normative_settling_method": "Read the DO-178C objective tables (A-1 to A-10), AC 20-115D, DO-330 and DO-333 at their published revisions, record the objective identifiers, exact wording and independence attributes for the declared context, and update this row with the reading and its date. This session read none of them.",
+      "required_independence": {
+        "basis": "The programme's section 6 does not state this objective's independence attribute, and the DO-178C objective tables were not read. Nothing about the required independence is established.",
+        "settling_method": "Read the objective's independence attribute in the DO-178C objective tables at the published revision, record the table, the objective number and its independence attribute, and compare it with evidence/etp-t15/INDEPENDENCE.json.",
+        "state": "UNVERIFIED"
+      },
+      "settling_method": null,
+      "status": "PARTIAL",
+      "substance": "Machine-readable impact analysis and selective proof invalidation.",
+      "substance_source": "docs/FORMAL-REFINEMENT-CERTIFICATION.md section 6"
+    },
+    {
+      "area": "target-hardware validation",
+      "basis": "No target hardware is declared in the context and every cited record is x86_64-unknown-linux-gnu. Whether this objective applies, and what its normative wording is, was not read; the row records the absence and the reading that would settle it.",
+      "blocked_by": [
+        "MI-TARGET-EXECUTION",
+        "MI-TARGET-TIMING"
+      ],
+      "evidence": [
+        {
+          "check": "one target, x86_64-unknown-linux-gnu; no cross-target claim",
+          "kind": "RECORD",
+          "path": "evidence/etp-t6/CLAIM-MATRIX.json"
+        }
+      ],
+      "id": "DO8-TARGET-VALIDATION",
+      "independence_held": {
+        "distinct_from_author": false,
+        "external_parties": 0,
+        "state": "SAME_PARTY_ONLY",
+        "trust_domain": null,
+        "witness": "evidence/etp-t15/INDEPENDENCE.json"
+      },
+      "normative_objective_ids": "UNVERIFIED",
+      "normative_settling_method": "Read the DO-178C objective tables (A-1 to A-10), AC 20-115D, DO-330 and DO-333 at their published revisions, record the objective identifiers, exact wording and independence attributes for the declared context, and update this row with the reading and its date. This session read none of them.",
+      "required_independence": {
+        "basis": "The programme's section 6 does not state this objective's independence attribute, and the DO-178C objective tables were not read. Nothing about the required independence is established.",
+        "settling_method": "Read the objective's independence attribute in the DO-178C objective tables at the published revision, record the table, the objective number and its independence attribute, and compare it with evidence/etp-t15/INDEPENDENCE.json.",
+        "state": "UNVERIFIED"
+      },
+      "settling_method": "Declare whether a target hardware is in scope, then read the target-validation objective and execute the verification on that target at a bound artefact digest.",
+      "status": "UNVERIFIED",
+      "substance": "Verification executed on the declared target hardware.",
+      "substance_source": "docs/FORMAL-REFINEMENT-CERTIFICATION.md section 6, paragraph after the assurance table"
+    },
+    {
+      "area": "bounded execution and WCET",
+      "basis": "No execution-time bound, deadline or WCET analysis exists. The instrument register's venue has no PMU and its timing rows are SCOPED_OBSERVATION. The normative wording and applicability of an execution-time objective were not read.",
+      "blocked_by": [
+        "MI-TARGET-TIMING"
+      ],
+      "evidence": [
+        {
+          "check": "venue limitations: no hardware PMU; timing rows are SCOPED_OBSERVATION",
+          "kind": "RECORD",
+          "path": "docs/INSTRUMENT-QUALIFICATION.md"
+        }
+      ],
+      "id": "DO8-BOUNDED-EXECUTION",
+      "independence_held": {
+        "distinct_from_author": false,
+        "external_parties": 0,
+        "state": "SAME_PARTY_ONLY",
+        "trust_domain": null,
+        "witness": "evidence/etp-t15/INDEPENDENCE.json"
+      },
+      "normative_objective_ids": "UNVERIFIED",
+      "normative_settling_method": "Read the DO-178C objective tables (A-1 to A-10), AC 20-115D, DO-330 and DO-333 at their published revisions, record the objective identifiers, exact wording and independence attributes for the declared context, and update this row with the reading and its date. This session read none of them.",
+      "required_independence": {
+        "basis": "The programme's section 6 does not state this objective's independence attribute, and the DO-178C objective tables were not read. Nothing about the required independence is established.",
+        "settling_method": "Read the objective's independence attribute in the DO-178C objective tables at the published revision, record the table, the objective number and its independence attribute, and compare it with evidence/etp-t15/INDEPENDENCE.json.",
+        "state": "UNVERIFIED"
+      },
+      "settling_method": "Declare the execution-time budget and the worst-case path, read the applicable objective, and measure the bound on the declared target with its assumptions recorded.",
+      "status": "UNVERIFIED",
+      "substance": "Bounded execution, deadline analysis and worst-case execution time.",
+      "substance_source": "docs/FORMAL-REFINEMENT-CERTIFICATION.md section 6, paragraph after the assurance table"
+    }
+  ],
+  "programme": "docs/FORMAL-REFINEMENT-CERTIFICATION.md",
+  "recorded_at": "2026-11-25",
+  "schema": "openssl-rs/frc8/do178c-matrix/1",
+  "status_vocabulary": [
+    "SATISFIED_WITH_EVIDENCE",
+    "PARTIAL",
+    "NOT_SATISFIED",
+    "UNVERIFIED"
+  ],
+  "system_context": {
+    "evidence_basis": "Every record the matrix cites was produced on the development host or in the court container for x86_64-unknown-linux-gnu; nothing in this repository is bound to an airborne target, an airborne environment or a DAL.",
+    "excludes": [
+      {
+        "category": "TARGET_HARDWARE",
+        "exclusion": "No airborne, embedded or production target hardware is in scope; every cited record is from x86_64-unknown-linux-gnu on the development host or in the court container.",
+        "id": "XCE-TARGET-HARDWARE"
+      },
+      {
+        "category": "AIRBORNE_APPLICABILITY",
+        "exclusion": "No aircraft, engine or spacecraft installation, environment or lifecycle is claimed; DO-178C is used here as a checklist of objectives, not as an invoked certification basis.",
+        "id": "XCE-AIRBORNE"
+      },
+      {
+        "category": "DAL",
+        "exclusion": "No development assurance level is assigned, proposed or claimed, including DAL A, B, C, D and E.",
+        "id": "XCE-DAL"
+      },
+      {
+        "category": "CERTIFICATION_CONSEQUENCE",
+        "exclusion": "No airworthiness finding, approval, compliance statement or system-level safety result follows from this matrix, and none is claimed.",
+        "id": "XCE-CERTIFICATION"
+      },
+      {
+        "category": "WORST_CASE_EXECUTION",
+        "exclusion": "Bounded execution, deadline analysis and worst-case execution time are excluded; a constant-time instrument result is not a WCET result.",
+        "id": "XCE-WCET"
+      },
+      {
+        "category": "ENVIRONMENTAL_QUALIFICATION",
+        "exclusion": "Environmental qualification, including temperature, vibration, radiation and electromagnetic effects, is excluded.",
+        "id": "XCE-ENVIRONMENT"
+      }
+    ],
+    "id": "CTX-FRC8-NONAIRBORNE-LIBRARY",
+    "product": "the libcrypto-compatible shared library built from this repository for x86_64-unknown-linux-gnu in the release profile",
+    "scope_choice_not_compliance": true,
+    "statement": "The software item is the libcrypto-compatible shared library built from this repository for the x86_64-unknown-linux-gnu target in the release profile, considered as a standalone library under its declared C ABI on the development host and in the court container. The context assigns no aircraft, engine or spacecraft function, no system safety assessment, no development assurance level and no target hardware."
+  }
+}
