@@ -72,8 +72,8 @@ import sigstore_bundle as sb  # noqa: E402
 # every member digest is read from its tree.  A later build-relevant change to
 # the generator or the tool invalidates that binding and requires a new
 # candidate, not an edit here alone.
-BASE_COMMIT = "2dc0b37da07c661597d28199f550a38b4e1a03c7"
-BASE_COMMIT_SHORT = "2dc0b37da"
+BASE_COMMIT = "38f179275913adbb320eeba698759f8086a95d36"
+BASE_COMMIT_SHORT = "38f179275"
 RECORD_PATHS = (
     "evidence/a16/INVENTORY.json",
     "evidence/a16/PROFILE.json",

@@ -17,7 +17,7 @@
     "basis": "the explicit member list below, declared at the candidate; not a live glob",
     "binding": "FROZEN",
     "files": 0,
-    "frozenAtCandidate": "2dc0b37da07c661597d28199f550a38b4e1a03c7",
+    "frozenAtCandidate": "38f179275913adbb320eeba698759f8086a95d36",
     "glob": [
       "evidence/*.pem",
       "evidence/*.crt",
@@ -44,7 +44,7 @@
       "result": "NEW_SINCE_RECORD"
     },
     "files": 510,
-    "frozenAtCandidate": "2dc0b37da07c661597d28199f550a38b4e1a03c7",
+    "frozenAtCandidate": "38f179275913adbb320eeba698759f8086a95d36",
     "glob": "evidence/*.json",
     "globSemantics": "tracked files matched with fnmatch.fnmatchcase; '*' matches across '/', so this covers evidence/**/*.json",
     "growthPolicy": "a verification re-hashes every member and reports a glob match that is not a member as NEW_SINCE_RECORD, counted separately; growth never changes this count, and a removed or changed member is refused with PH_REFUSED_POPULATION_DRIFT",
@@ -305,17 +305,17 @@
       {
         "bytes": 13570,
         "path": "evidence/a22/CONTROLS.json",
-        "sha256": "40e0df959e2a08909bcfc5c3411629b6f5c494d507884ab88b957a9b155dbbf2"
+        "sha256": "a8aa6ff6c53c61dd678f09ea205af7327ef4569fa249346a7064564d1b367e97"
       },
       {
         "bytes": 23029,
         "path": "evidence/a22/EXPERIMENTS.json",
-        "sha256": "df72d2e090e76766f6aacc4c2ce0dd9b233305d2929d547b1893e04c4c863ce6"
+        "sha256": "b8a31717f7da05c9c8cd5bfeaca4c3736d312bfe3693dfe29a23ddbea4c0bb9e"
       },
       {
         "bytes": 99096,
         "path": "evidence/a22/RESULTS.json",
-        "sha256": "db49003319376aa633aea9898fb9599097ae6f496ec5f6ff661cb547dfba7a1c"
+        "sha256": "07d5fecd617fd88bb4a60c785a9f33432beed34a1cb899ade89ac9b224a5e46e"
       },
       {
         "bytes": 3158,
@@ -630,7 +630,7 @@
       {
         "bytes": 42921,
         "path": "evidence/b3/CAMPAIGNS.json",
-        "sha256": "763ec8471daa48e72e1058ae410397eb7798064bc8329e838dc80373df877fba"
+        "sha256": "5ecc7a04ddd3f54629254d4db9d504b036b90c33524da3d4662dcc2d34feaab5"
       },
       {
         "bytes": 7111,
@@ -2728,6 +2728,26 @@
             "sha256": "16eefb89393cd7fb02efe29c165c33acc78e2c5af9255dca1fa7d5ef4160a809"
           }
         ]
+      },
+      {
+        "files": 510,
+        "frozenAtCandidate": "2dc0b37da07c661597d28199f550a38b4e1a03c7",
+        "memberCount": 510,
+        "reason": "an explicit re-freeze replaced the prior population at a new candidate; the prior freeze, member count and record digests are preserved here rather than silently overwritten.",
+        "recordDigests": [
+          {
+            "path": "evidence/a16/INVENTORY.json",
+            "sha256": "241f877723d2128281b73966f9937ee6df8f479aa6a881adaabf6541d40beaa8"
+          },
+          {
+            "path": "evidence/a16/PROFILE.json",
+            "sha256": "bd269d5bb53ff4623721e6429c7757996db4c1f03fc13c2d46bdba87800cd187"
+          },
+          {
+            "path": "evidence/a16/CONTROLS.json",
+            "sha256": "ee6c1004e6a21f2cc38e2e6dd9bcef79a6c406da7bd16f5d57765a7a0c3aa49b"
+          }
+        ]
       }
     ]
   },
@@ -2738,8 +2758,8 @@
   "schema": "openssl-rs/a16/bundle-inventory/2",
   "sourceIdentity": {
     "asOf": "2026-11-24",
-    "baseCommit": "2dc0b37da07c661597d28199f550a38b4e1a03c7",
-    "baseCommitShort": "2dc0b37da",
+    "baseCommit": "38f179275913adbb320eeba698759f8086a95d36",
+    "baseCommitShort": "38f179275",
     "delegatedTools": [
       {
         "path": "forensics/tools/harden.py",
