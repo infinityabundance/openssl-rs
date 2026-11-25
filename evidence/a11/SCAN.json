@@ -12,7 +12,7 @@
     ],
     "excludedReason": "the records this item emits are excluded so the scan cannot depend on its own bytes",
     "files": 506,
-    "frozenAtCandidate": "e94c7fdf127d2f2290f7f7c248924a4d6755add6",
+    "frozenAtCandidate": "902b4660ab1807f08a4f8f796db79ad4322b90d4",
     "glob": "evidence/*.json",
     "globSemantics": "tracked files matched with fnmatch.fnmatchcase; '*' matches across '/'",
     "growthPolicy": "a later verification re-hashes every member and reports a glob match that is not a member as NEW_SINCE_RECORD, counted separately; growth never changes this count, and a removed or changed member is refused with PH_REFUSED_POPULATION_DRIFT",
@@ -150,17 +150,17 @@
       {
         "bytes": 152186,
         "path": "evidence/a16/CONTROLS.json",
-        "sha256": "30f35ee8e36f5b2b6c4a0cb694e61e6edd61d1500b20ca7d4e929fb2ad6c54be"
+        "sha256": "25cf9a4dcf5c0f89e4a7f6af8861bb02590e4ed683a2cfd099cdf3108387a0d4"
       },
       {
-        "bytes": 96560,
+        "bytes": 97424,
         "path": "evidence/a16/INVENTORY.json",
-        "sha256": "58dfa28417861c246521052a0c88739103c7a3eb096793185a8472dbfb302146"
+        "sha256": "2b3e078e0e50f69b7a0388737437f54b820e8092df73150c328b7228c1330435"
       },
       {
         "bytes": 7391,
         "path": "evidence/a16/PROFILE.json",
-        "sha256": "99bdf9d6f19fdb81b4c8f0a7e30deb318561583a10f9811830d5eeb9c60e257f"
+        "sha256": "035dda96de9c6a5482608572dc5d4aabf939684f7dfb95fa5c680b607e600bcd"
       },
       {
         "bytes": 7359,
@@ -475,7 +475,7 @@
       {
         "bytes": 3854490,
         "path": "evidence/a7/BASELINES.json",
-        "sha256": "2a5a3f863c1ddf7775d0f524e7b36feb9f01a22a6c6569eff1d3c93081ae1cab"
+        "sha256": "a57a2766046ff4123e39bce62b3baa75fde758790aac09520657550f76986ca5"
       },
       {
         "bytes": 4606,
@@ -913,9 +913,9 @@
         "sha256": "a57026329b3171dfadfb194829f3d8706f3a72197544924b5d099705912152f4"
       },
       {
-        "bytes": 1890,
+        "bytes": 1891,
         "path": "evidence/b8/PENDING.json",
-        "sha256": "ee07aa60d10b69a16fceac2f8322128e8d480f6b2d1df52e91736fa5ffa7b88b"
+        "sha256": "63581cd161831246836e2e3da3464d0a88551bc7bf8e6ea23a33174e2f60c5f5"
       },
       {
         "bytes": 1030,
@@ -2762,15 +2762,15 @@
       "code": "PH_OK",
       "path": "evidence/a16/CONTROLS.json",
       "result": "STRICT_OK",
-      "sha256": "30f35ee8e36f5b2b6c4a0cb694e61e6edd61d1500b20ca7d4e929fb2ad6c54be",
+      "sha256": "25cf9a4dcf5c0f89e4a7f6af8861bb02590e4ed683a2cfd099cdf3108387a0d4",
       "type": "object"
     },
     {
-      "bytes": 96560,
+      "bytes": 97424,
       "code": "PH_OK",
       "path": "evidence/a16/INVENTORY.json",
       "result": "STRICT_OK",
-      "sha256": "58dfa28417861c246521052a0c88739103c7a3eb096793185a8472dbfb302146",
+      "sha256": "2b3e078e0e50f69b7a0388737437f54b820e8092df73150c328b7228c1330435",
       "type": "object"
     },
     {
@@ -2778,7 +2778,7 @@
       "code": "PH_OK",
       "path": "evidence/a16/PROFILE.json",
       "result": "STRICT_OK",
-      "sha256": "99bdf9d6f19fdb81b4c8f0a7e30deb318561583a10f9811830d5eeb9c60e257f",
+      "sha256": "035dda96de9c6a5482608572dc5d4aabf939684f7dfb95fa5c680b607e600bcd",
       "type": "object"
     },
     {
@@ -3282,7 +3282,7 @@
       "code": "PH_OK",
       "path": "evidence/a7/BASELINES.json",
       "result": "STRICT_OK",
-      "sha256": "2a5a3f863c1ddf7775d0f524e7b36feb9f01a22a6c6569eff1d3c93081ae1cab",
+      "sha256": "a57a2766046ff4123e39bce62b3baa75fde758790aac09520657550f76986ca5",
       "type": "object"
     },
     {
@@ -3982,11 +3982,11 @@
       "type": "object"
     },
     {
-      "bytes": 1890,
+      "bytes": 1891,
       "code": "PH_OK",
       "path": "evidence/b8/PENDING.json",
       "result": "STRICT_OK",
-      "sha256": "ee07aa60d10b69a16fceac2f8322128e8d480f6b2d1df52e91736fa5ffa7b88b",
+      "sha256": "63581cd161831246836e2e3da3464d0a88551bc7bf8e6ea23a33174e2f60c5f5",
       "type": "object"
     },
     {
@@ -6426,7 +6426,7 @@
   ],
   "schema": "openssl-rs/a11/scan/2",
   "sourceIdentity": {
-    "baseCommit": "e94c7fdf127d2f2290f7f7c248924a4d6755add6",
+    "baseCommit": "902b4660ab1807f08a4f8f796db79ad4322b90d4",
     "tool": {
       "bytes": 54477,
       "path": "forensics/tools/harden.py",
