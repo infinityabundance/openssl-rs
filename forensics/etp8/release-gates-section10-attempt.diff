@@ -1,0 +1,15 @@
+diff --git a/docs/RELEASE_GATES.md b/docs/RELEASE_GATES.md
+index 94a461e07..1ab8df686 100644
+--- a/docs/RELEASE_GATES.md
++++ b/docs/RELEASE_GATES.md
+@@ -347,6 +347,10 @@ not covered by an item that merely mentions the same subject.
+ | `gate-4` — instrument register (`release_gate.py` item 4) | Article 3, Article 8 | the register is absent or invalid (`RG_INSTRUMENT_REGISTRY_MISSING`, `RG_INSTRUMENT`); an executable control fails; a `RECORDED` control is presented as a pass; an instrument entry states no soundness limits, scope, failure modes or disclaimer |
+ | `gate-5` — external package (`release_gate.py` item 5) | Article 2 | no package was supplied (`RG_PACKAGE_MISSING`), the package cannot be unpacked or verified (`RG_PACKAGE_INVALID`), or its own `verify.sh` fails (`RG_PACKAGE`) |
+ | `gate-6` — documentation consistency (`release_gate.py` item 6) | none | a hand-written document contradicts generated evidence (`RG_DOCS`), and — through `forensics/tools/docs_consistency.py` — a constitution that cites an article that does not exist, an article with no enforcement and no declaration of that, a rule identifier absent from the tool it credits, or a gate section that does not name every uncovered article (`ET_*` rules) |
++| `gate-7` — role authorisation (`release_gate.py` item 7) | none | the release action is refused, not run, or signed by too few distinct signers (`RG_AUTHORISATION_REFUSED`); the constitution's articles name no authorisation condition, so this item evidences none of them |
++| `gate-8` — thresholds (`release_gate.py` item 8) | none | the release threshold is unmet or unreachable over distinct trust domains (`RG_THRESHOLD_UNMET`); no article names a threshold, so this item evidences none of them |
++| `gate-9` — release policy (`release_gate.py` item 9) | none | the pinned A20 policy denies the release or cannot be evaluated (`RG_POLICY_DENIED`); no article names a policy obligation, so this item evidences none of them |
++| `gate-10` — transparency enforcement (`release_gate.py` item 10) | none | a transparency claim outruns the B4 record, the schema does not define its field, the non-claims are absent, or a gate item or checked code has disappeared (`CE_REFUSED_*`, `RG_TRANSPARENCY_TOOL_MISSING`, `RG_TRANSPARENCY_ERROR`); the articles name no transparency-publication condition, so this item evidences none of them |
+ 
+ `gate-6` is the meta-item: it refuses a broken or miscited mapping. It does not
+ evidence any article's substance, so it covers no article.

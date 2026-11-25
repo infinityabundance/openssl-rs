@@ -311,6 +311,9 @@
         "reproduction": {
           "$ref": "#/$defs/reproduction"
         },
+        "transparency": {
+          "$ref": "#/$defs/transparency"
+        },
         "verdict": {
           "$ref": "#/$defs/verdict"
         },
@@ -409,6 +412,30 @@
                 }
               }
             }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "authority": {
+                "properties": {
+                  "kind": {
+                    "const": "public-transparency-log"
+                  }
+                },
+                "required": [
+                  "kind"
+                ]
+              }
+            },
+            "required": [
+              "authority"
+            ]
+          },
+          "then": {
+            "required": [
+              "transparency"
+            ]
           }
         }
       ]
@@ -708,6 +735,80 @@
         }
       }
     },
+    "transparency": {
+      "type": "object",
+      "description": "Optional transparency-state assertion (B8). The object is closed: every field is a fixed enumeration, a digest or a timestamp. There is no free text, so a claim cannot assert more about publication or admission than the state and the bound digests name. A NOT_ADMITTED record asserts that no service, statement or bundle is bound.",
+      "additionalProperties": false,
+      "required": [
+        "state"
+      ],
+      "properties": {
+        "state": {
+          "enum": [
+            "NOT_ADMITTED",
+            "ADMITTED",
+            "PUBLISHED"
+          ]
+        },
+        "profile": {
+          "description": "The admitted profile token; a fixed enumeration, never free text.",
+          "enum": [
+            "public-good-rekor-v2"
+          ]
+        },
+        "statementDigest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "bundleDigest": {
+          "$ref": "#/$defs/sha256"
+        },
+        "publishedAt": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "ADMITTED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "required": [
+              "profile",
+              "statementDigest",
+              "bundleDigest"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "state": {
+                "const": "PUBLISHED"
+              }
+            },
+            "required": [
+              "state"
+            ]
+          },
+          "then": {
+            "required": [
+              "profile",
+              "statementDigest",
+              "bundleDigest",
+              "publishedAt"
+            ]
+          }
+        }
+      ]
+    },
     "identity": {
       "type": "object",
       "additionalProperties": false,
@@ -868,6 +969,7 @@
             "machine-record",
             "normative-standard",
             "source-tree",
+            "public-transparency-log",
             "none"
           ]
         },

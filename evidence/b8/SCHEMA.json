@@ -1,0 +1,51 @@
+{
+ "additionalProperties": false,
+ "baseCommit": "69cccd242",
+ "definition": "$defs/transparency",
+ "fields": [
+  "bundleDigest",
+  "profile",
+  "publishedAt",
+  "state",
+  "statementDigest"
+ ],
+ "freeText": false,
+ "item": "B8",
+ "path": "evidence/etp/claim.schema.json",
+ "population": {
+  "absenceCheck": "VACUOUS",
+  "byState": {},
+  "carrying": 0,
+  "claims": 35,
+  "claimsRewritten": 0,
+  "note": "no committed claim carries the field, so the schema's absence requirement has no subject today. The check is vacuous, not a pass; no claim was rewritten to populate it."
+ },
+ "profileEnum": [
+  "public-good-rekor-v2"
+ ],
+ "requiredWhen": {
+  "authority.kind": "public-transparency-log"
+ },
+ "schema": "openssl-rs/b8/schema/1",
+ "stateEnum": [
+  "NOT_ADMITTED",
+  "ADMITTED",
+  "PUBLISHED"
+ ],
+ "stateRequirements": {
+  "ADMITTED": [
+   "profile",
+   "statementDigest",
+   "bundleDigest"
+  ],
+  "NOT_ADMITTED": [
+   "state"
+  ],
+  "PUBLISHED": [
+   "profile",
+   "statementDigest",
+   "bundleDigest",
+   "publishedAt"
+  ]
+ }
+}

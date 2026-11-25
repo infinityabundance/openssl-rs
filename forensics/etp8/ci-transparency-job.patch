@@ -1,0 +1,40 @@
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -124,6 +124,37 @@
+       - name: Run adversarial probes (one process per probe)
+         run: bash scripts/adv-probe.sh
+ 
++  transparency:
++    # B8: the transparency enforcement gate. Item 10 of the release gate is
++    # cheap and reads only committed records, so it runs on every push beside
++    # the other assurance gates. See docs/CONTINUOUS-ENFORCEMENT.md.
++    #
++    # The job runs the checker and the gate self-test rather than a full
++    # release gate: the other items legitimately refuse in a venue with no
++    # package, instrument or release authorisation, and masking those refusals
++    # to obtain a green item 10 would be the silent skip this item exists to
++    # prevent.
++    name: transparency enforcement (B8 item 10)
++    runs-on: ubuntu-latest
++    timeout-minutes: 10
++    steps:
++      - uses: actions/checkout@v4
++        with:
++          fetch-depth: 0
++
++      # The gate item itself: every CE_* refusal is a failing step.
++      - name: Transparency enforcement
++        run: python3 forensics/tools/continuous_enforcement.py check
++
++      # One control per refusal code, including the honest NOT_ADMITTED claim.
++      - name: Transparency controls
++        run: python3 forensics/tools/continuous_enforcement.py controls
++
++      # The release gate's own self-test now includes the transparency cases;
++      # it proves the adapter is connected to the real tool.
++      - name: Release gate self-test (including item 10)
++        run: python3 forensics/tools/release_gate.py --self-test
++
+   static:
+     name: static gates (build, tests, determinism, no-regression)
+     runs-on: ubuntu-latest

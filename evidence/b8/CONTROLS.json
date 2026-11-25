@@ -1,0 +1,89 @@
+{
+ "code": "CE_OK",
+ "codesCovered": [
+  "CE_OK",
+  "CE_REFUSED_ENFORCEMENT_REGRESSION",
+  "CE_REFUSED_NONCLAIMS_ABSENT",
+  "CE_REFUSED_PROFILE_ABSENT",
+  "CE_REFUSED_PROFILE_NOT_ADMITTED",
+  "CE_REFUSED_PUBLICATION_CLAIM",
+  "CE_REFUSED_REGISTRY_STALE",
+  "CE_REFUSED_SCHEMA_FIELD_ABSENT",
+  "CE_REFUSED_UNBOUND_CLAIM",
+  "CE_REFUSED_USAGE"
+ ],
+ "controls": [
+  {
+   "controlOnly": true,
+   "detail": "the B0 registry path does not exist",
+   "expectedCode": "CE_REFUSED_PROFILE_ABSENT",
+   "id": "profile-absent",
+   "observedCode": "CE_REFUSED_PROFILE_ABSENT"
+  },
+  {
+   "controlOnly": true,
+   "detail": "the newest release version is replaced by v9.9.9, which no clause names",
+   "expectedCode": "CE_REFUSED_REGISTRY_STALE",
+   "id": "registry-stale",
+   "observedCode": "CE_REFUSED_REGISTRY_STALE"
+  },
+  {
+   "controlOnly": true,
+   "detail": "a claim asserts PUBLISHED while B4 records published=0",
+   "expectedCode": "CE_REFUSED_PUBLICATION_CLAIM",
+   "id": "publication-claim",
+   "observedCode": "CE_REFUSED_PUBLICATION_CLAIM"
+  },
+  {
+   "controlOnly": true,
+   "detail": "a claim asserts ADMITTED while B4 records admittedService=false",
+   "expectedCode": "CE_REFUSED_PROFILE_NOT_ADMITTED",
+   "id": "profile-not-admitted",
+   "observedCode": "CE_REFUSED_PROFILE_NOT_ADMITTED"
+  },
+  {
+   "controlOnly": true,
+   "detail": "a claim uses state MAYBE and an undefined note field",
+   "expectedCode": "CE_REFUSED_SCHEMA_FIELD_ABSENT",
+   "id": "schema-field-absent",
+   "observedCode": "CE_REFUSED_SCHEMA_FIELD_ABSENT"
+  },
+  {
+   "controlOnly": true,
+   "detail": "an ADMITTED claim names no statement or bundle digest",
+   "expectedCode": "CE_REFUSED_UNBOUND_CLAIM",
+   "id": "unbound-claim",
+   "observedCode": "CE_REFUSED_UNBOUND_CLAIM"
+  },
+  {
+   "controlOnly": true,
+   "detail": "the public non-claims document path does not exist",
+   "expectedCode": "CE_REFUSED_NONCLAIMS_ABSENT",
+   "id": "nonclaims-absent",
+   "observedCode": "CE_REFUSED_NONCLAIMS_ABSENT"
+  },
+  {
+   "controlOnly": true,
+   "detail": "the check_transparency definition is renamed, so item 10 has disappeared",
+   "expectedCode": "CE_REFUSED_ENFORCEMENT_REGRESSION",
+   "id": "enforcement-regression",
+   "observedCode": "CE_REFUSED_ENFORCEMENT_REGRESSION"
+  },
+  {
+   "controlOnly": true,
+   "detail": "a claim honestly records NOT_ADMITTED and adds no refusal (1 claim carries the field)",
+   "expectedCode": "CE_OK",
+   "id": "not-admitted-honest",
+   "observedCode": "CE_OK"
+  },
+  {
+   "controlOnly": true,
+   "detail": "--not-a-flag is a usage error and exits 2 with CE_REFUSED_USAGE",
+   "expectedCode": "CE_REFUSED_USAGE",
+   "id": "usage",
+   "observedCode": "CE_REFUSED_USAGE"
+  }
+ ],
+ "coversEveryCode": true,
+ "schema": "openssl-rs/b8/controls/1"
+}

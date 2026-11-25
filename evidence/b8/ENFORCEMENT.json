@@ -1,0 +1,173 @@
+{
+ "baseCommit": "69cccd242",
+ "digests": {
+  "document": "de0218489b8fda951724be5e3050d0df877256623d06b4441e465d962e83a482",
+  "gate": "cc9d0dd24ac6ccd16ad8be4d557c8cb3c6f2248cf3cc67c7c176bd659db7127b",
+  "nonClaims": "7c8f1caf85ac2edd76f146bf0a03effdaa17c785e7903cfec9c131987ad6d204",
+  "schema": "3064ccbfbb887eebfc32856eadfb8224f4127524e4e59188f0e0c09493aaec72",
+  "tool": "d64063271d798cd261c2b586e7f905abff19c478d4577f85e4b284aa99a5871a"
+ },
+ "document": "docs/CONTINUOUS-ENFORCEMENT.md",
+ "gate": "forensics/tools/release_gate.py",
+ "gateItem": {
+  "docstringItem": "10. transparency",
+  "function": "check_transparency",
+  "number": 10,
+  "required": true,
+  "wiredIn": "release_gate.py evaluate() after item 9"
+ },
+ "gateItems": [
+  {
+   "id": "1",
+   "label": "candidate identity",
+   "symbol": "resolve_candidate"
+  },
+  {
+   "id": "2",
+   "label": "claim set",
+   "symbol": "check_claims"
+  },
+  {
+   "id": "2b",
+   "label": "identity triage",
+   "symbol": "load_triage"
+  },
+  {
+   "id": "3",
+   "label": "interop receipts",
+   "symbol": "check_receipts"
+  },
+  {
+   "id": "4",
+   "label": "instrument register",
+   "symbol": "check_instruments"
+  },
+  {
+   "id": "5",
+   "label": "external package",
+   "symbol": "check_package"
+  },
+  {
+   "id": "6",
+   "label": "documentation consistency",
+   "symbol": "check_docs"
+  },
+  {
+   "id": "7",
+   "label": "role authorisation",
+   "symbol": "check_authorisation"
+  },
+  {
+   "id": "8",
+   "label": "thresholds",
+   "symbol": "check_thresholds"
+  },
+  {
+   "id": "9",
+   "label": "release policy",
+   "symbol": "check_policy"
+  },
+  {
+   "id": "10",
+   "label": "transparency enforcement",
+   "symbol": "check_transparency"
+  }
+ ],
+ "item": "B8",
+ "positiveCode": "CE_OK",
+ "refusalCodes": [
+  "CE_REFUSED_PROFILE_ABSENT",
+  "CE_REFUSED_REGISTRY_STALE",
+  "CE_REFUSED_PUBLICATION_CLAIM",
+  "CE_REFUSED_PROFILE_NOT_ADMITTED",
+  "CE_REFUSED_SCHEMA_FIELD_ABSENT",
+  "CE_REFUSED_UNBOUND_CLAIM",
+  "CE_REFUSED_NONCLAIMS_ABSENT",
+  "CE_REFUSED_ENFORCEMENT_REGRESSION",
+  "CE_REFUSED_USAGE"
+ ],
+ "refusalCounts": {
+  "after": {
+   "byRule": {
+    "RG_AUTHORISATION_REFUSED": 1,
+    "RG_CLAIM_HISTORICAL_EVIDENCE": 11,
+    "RG_CLAIM_UNCERTIFIABLE_EVIDENCE": 19,
+    "RG_INSTRUMENT": 1,
+    "RG_PACKAGE_MISSING": 1,
+    "RG_POLICY_DENIED": 1,
+    "RG_THRESHOLD_UNMET": 1
+   },
+   "derivedFrom": "before + item 10's measured findings",
+   "note": "the full gate was also re-run at the working tree and its output is recorded in evidence/b8/RECEIPT.md; this record reports the observed before count plus the item-10 delta rather than claiming a second full observation it did not make",
+   "total": 35
+  },
+  "before": {
+   "byRule": {
+    "RG_AUTHORISATION_REFUSED": 1,
+    "RG_CLAIM_HISTORICAL_EVIDENCE": 11,
+    "RG_CLAIM_UNCERTIFIABLE_EVIDENCE": 19,
+    "RG_INSTRUMENT": 1,
+    "RG_PACKAGE_MISSING": 1,
+    "RG_POLICY_DENIED": 1,
+    "RG_THRESHOLD_UNMET": 1
+   },
+   "note": "observed at 69cccd242 with item 10 absent; 35, not the expected 34, because this venue has no valgrind and item 4 refuses valgrind-ctgrind with rc=127",
+   "observedAt": "69cccd242",
+   "total": 35
+  },
+  "transparencyItem": {
+   "codes": [],
+   "findings": 0,
+   "population": {
+    "byState": {},
+    "claimCount": 35,
+    "claimsWithTransparency": 0,
+    "refusalCount": 0,
+    "requiredBy": "public-transparency-log"
+   }
+  }
+ },
+ "refusals": {
+  "CE_REFUSED_ENFORCEMENT_REGRESSION": "a gate item, the transparency wiring, the enforcement record, its document or a previously checked refusal code has disappeared",
+  "CE_REFUSED_NONCLAIMS_ABSENT": "the public non-claims document is absent or does not name the unestablished properties it exists to state",
+  "CE_REFUSED_PROFILE_ABSENT": "the B0 registry or the B4 publication record is absent or unreadable, so the admitted profile cannot be stated",
+  "CE_REFUSED_PROFILE_NOT_ADMITTED": "a claim asserts admission while the B4 record says admittedService: false",
+  "CE_REFUSED_PUBLICATION_CLAIM": "a claim asserts publication while the B4 record says published: 0",
+  "CE_REFUSED_REGISTRY_STALE": "the registry contradicts itself, or a version it declares is not in the addendum clause it cites",
+  "CE_REFUSED_SCHEMA_FIELD_ABSENT": "a claim carries a transparency field the schema does not define, a value outside the closed enum, or omits the field where it is required",
+  "CE_REFUSED_UNBOUND_CLAIM": "an ADMITTED or PUBLISHED claim names no statement and bundle digest bound by SHA-256",
+  "CE_REFUSED_USAGE": "the command line was used incorrectly"
+ },
+ "schema": "openssl-rs/b8/enforcement/1",
+ "tool": "forensics/tools/continuous_enforcement.py",
+ "wiring": {
+  "agents": {
+   "path": "forensics/etp8/agents-patch.diff",
+   "state": "PENDING_MAINTAINER_APPLICATION"
+  },
+  "ci": {
+   "path": "forensics/etp8/ci-transparency-job.patch",
+   "state": "PENDING_CREDENTIAL"
+  },
+  "claimSchema": {
+   "field": "$defs/transparency",
+   "path": "evidence/etp/claim.schema.json",
+   "requiredWhen": {
+    "authority.kind": "public-transparency-log"
+   }
+  },
+  "enforcementRecord": {
+   "path": "evidence/b8/ENFORCEMENT.json"
+  },
+  "nonClaims": {
+   "checkedBy": "CE_REFUSED_NONCLAIMS_ABSENT",
+   "path": "docs/TRANSPARENCY-NON-CLAIMS.md"
+  },
+  "releaseGate": {
+   "function": "check_transparency",
+   "item": 10,
+   "path": "forensics/tools/release_gate.py",
+   "toolInvocation": "continuous_enforcement.py check --json"
+  }
+ }
+}

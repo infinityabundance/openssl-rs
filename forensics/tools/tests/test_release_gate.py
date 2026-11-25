@@ -329,6 +329,77 @@ class AuthorisationRow(unittest.TestCase):
                          ["RG_AUTHORISATION_ERROR"])
 
 
+class TransparencyRow(unittest.TestCase):
+    """B8 joins the gate as one item without altering items 1-9."""
+
+    DIGEST = "a" * 64
+
+    def claims(self, state: str, **extra: object) -> Path:
+        block: dict = {"state": state}
+        block.update(extra)
+        directory = tempfile.mkdtemp(prefix="release-gate-transparency-")
+        path = Path(directory) / "claims.json"
+        path.write_text(
+            json.dumps({
+                "claims": [{
+                    "id": "B8-GATE-TEST",
+                    "authority": {"kind": "repository-policy"},
+                    "transparency": block,
+                }]
+            }),
+            encoding="utf-8",
+        )
+        return path
+
+    def test_publication_claim_is_refused(self) -> None:
+        path = self.claims(
+            "PUBLISHED",
+            profile="public-good-rekor-v2",
+            statementDigest=self.DIGEST,
+            bundleDigest=self.DIGEST,
+            publishedAt="2026-11-24T00:00:00Z",
+        )
+        results = release_gate.check_transparency(release_gate.ROOT, claims=path)
+        self.assertIn("CE_REFUSED_PUBLICATION_CLAIM",
+                      [item.rule for item in results.refusals])
+
+    def test_honest_not_admitted_is_recorded_not_refused(self) -> None:
+        path = self.claims("NOT_ADMITTED", profile="public-good-rekor-v2")
+        results = release_gate.check_transparency(release_gate.ROOT, claims=path)
+        self.assertEqual(results.refusals, [])
+        self.assertTrue(any("transparency enforcement" in line for line in results.recorded),
+                        results.recorded)
+
+    def test_missing_registry_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            results = release_gate.check_transparency(
+                release_gate.ROOT, registry=Path(temporary) / "absent.json"
+            )
+        self.assertIn("CE_REFUSED_PROFILE_ABSENT",
+                      [item.rule for item in results.refusals])
+
+    def test_missing_nonclaims_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            results = release_gate.check_transparency(
+                release_gate.ROOT, nonclaims=Path(temporary) / "absent.md"
+            )
+        self.assertIn("CE_REFUSED_NONCLAIMS_ABSENT",
+                      [item.rule for item in results.refusals])
+
+    def test_enforcement_regression_is_refused(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            gate = Path(temporary) / "gate-without-item-10.py"
+            gate.write_text(
+                Path(release_gate.__file__).read_text(encoding="utf-8").replace(
+                    "def check_transparency(", "def transparency_removed("
+                ),
+                encoding="utf-8",
+            )
+            results = release_gate.check_transparency(release_gate.ROOT, gate=gate)
+        self.assertIn("CE_REFUSED_ENFORCEMENT_REGRESSION",
+                      [item.rule for item in results.refusals])
+
+
 class ThresholdRow(unittest.TestCase):
     """A15 joins the gate as one per-refusal row without altering items 1-7."""
 

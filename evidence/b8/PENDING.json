@@ -1,0 +1,35 @@
+{
+ "applications": [
+  {
+   "appliesToWorkingTree": true,
+   "id": "agents-continuous-enforcement",
+   "path": "forensics/etp8/agents-patch.diff",
+   "reason": "AGENTS.md is the user's standing document; a conversion batch does not edit it.",
+   "sha256": "ae74dcc1b73847447f26af7ab0a03da386a64c0ca36981fd3742126cf5b722eb",
+   "state": "PENDING_MAINTAINER_APPLICATION",
+   "target": "AGENTS.md"
+  },
+  {
+   "appliesToWorkingTree": true,
+   "id": "ci-transparency-job",
+   "path": "forensics/etp8/ci-transparency-job.patch",
+   "reason": "the credential that pushes this branch is an OAuth app without the workflow scope, and GitHub refuses a workflow update from such a token, as recorded for forensics/etp7/ci-assurance-job.patch.",
+   "sha256": "885fa58044022741c03a72d7b9629c43a20176cb2a46fca39ac8a8af898888e5",
+   "state": "PENDING_CREDENTIAL",
+   "target": ".github/workflows/ci.yml"
+  },
+  {
+   "appliesToWorkingTree": true,
+   "checkerOutput": "docs/RELEASE_GATES.md: ET_GATE_ITEM_DRIFT the gate table lists ['gate-1', 'gate-10', 'gate-2', 'gate-2b', 'gate-3', 'gate-4', 'gate-5', 'gate-6', 'gate-7', 'gate-8', 'gate-9'] but the record registers ['gate-1', 'gate-2', 'gate-2b', 'gate-3', 'gate-4', 'gate-5', 'gate-6']",
+   "id": "release-gates-section10",
+   "path": "forensics/etp8/release-gates-section10-attempt.diff",
+   "reason": "forensics/tools/earned_trust.py refused the mapping with ET_GATE_ITEM_DRIFT because evidence/etp-t14/ARTICLES.json registers gate-1..gate-6 only; editing that record is outside this item's write scope, and the checker was not weakened. The edit was reverted with `git checkout`.",
+   "sha256": "792b252e1bb896592219e1c98ad36c59e25545bec2aade93c6122babb414b17b",
+   "state": "PENDING_MAINTAINER_APPLICATION",
+   "target": "docs/RELEASE_GATES.md section 10"
+  }
+ ],
+ "baseCommit": "69cccd242",
+ "item": "B8",
+ "schema": "openssl-rs/b8/pending/1"
+}

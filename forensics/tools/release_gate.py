@@ -54,6 +54,16 @@ one refused item refuses the release.
                           is `RG_POLICY_DENIED` naming the unmet obligations and
                           every code, and an absent tool or record is never a
                           skip.
+ 10. transparency         `forensics/tools/continuous_enforcement.py check`
+                          holds: the B0 registry and B4 publication record are
+                          present and agree with the addendum, no claim asserts
+                          publication or admission the B4 record contradicts,
+                          every `transparency` field is defined by the schema and
+                          bound by digest, the public non-claims are written, and
+                          no gate item or previously checked transparency code
+                          has disappeared.  Each refusal is reported with the
+                          tool's `CE_REFUSED_*` code, and an absent tool is
+                          `RG_TRANSPARENCY_TOOL_MISSING`, never a skip.
 
 Every item is required.  A tool that cannot be found, a package that was not
 supplied, or a checker that cannot run is a refusal with a named rule, never a
@@ -155,6 +165,15 @@ THRESHOLD_DOMAINS = ROOT / "evidence/a15/DOMAINS.json"
 POLICY_TOOL = ROOT / "forensics/tools/policy_engine.py"
 POLICY_RECORD = ROOT / "evidence/a20/POLICY.json"
 POLICY_PIN = ROOT / "evidence/a20/POLICY-PIN.json"
+TRANSPARENCY_TOOL = ROOT / "forensics/tools/continuous_enforcement.py"
+TRANSPARENCY_REGISTRY = ROOT / "evidence/b0/REGISTRY.json"
+TRANSPARENCY_PUBLICATION = ROOT / "evidence/b4/PUBLICATION.json"
+TRANSPARENCY_CLAIMS = ROOT / "evidence/etp/claims.json"
+TRANSPARENCY_SCHEMA = ROOT / "evidence/etp/claim.schema.json"
+TRANSPARENCY_NONCLAIMS = ROOT / "docs/TRANSPARENCY-NON-CLAIMS.md"
+TRANSPARENCY_GATE = ROOT / "forensics/tools/release_gate.py"
+TRANSPARENCY_ENFORCEMENT = ROOT / "evidence/b8/ENFORCEMENT.json"
+TRANSPARENCY_DOCUMENT = ROOT / "docs/CONTINUOUS-ENFORCEMENT.md"
 
 # Verdict states that forbid a release outright.  `SUPERSEDED` is not one: the
 # claim was current and has been replaced, which is a history fact, not a
@@ -970,6 +989,79 @@ def check_policy(
 
 
 # ---------------------------------------------------------------------------
+# 10. Transparency enforcement (B8)
+# ---------------------------------------------------------------------------
+def check_transparency(
+    root: Path,
+    registry: Path | None = None,
+    publication: Path | None = None,
+    claims: Path | None = None,
+    schema: Path | None = None,
+    nonclaims: Path | None = None,
+    gate: Path | None = None,
+    enforcement: Path | None = None,
+    document: Path | None = None,
+    timeout: int = 300,
+    command: list[str] | None = None,
+) -> Results:
+    """The admitted transparency profile must still be enforced.
+
+    The check runs ``continuous_enforcement.py`` live.  Its refusals already
+    carry stable ``CE_REFUSED_*`` codes, so each one is one gate refusal row
+    naming the artefact; the gate adds only the two rules for the tool itself
+    (absent and unparseable).  An absent enforcement record, a removed gate item
+    and a non-claims document that stopped naming an unestablished property are
+    therefore release refusals, not documentation drift.
+    """
+    if command is None:
+        if not TRANSPARENCY_TOOL.is_file():
+            return Results([_missing_tool("RG_TRANSPARENCY_TOOL_MISSING", TRANSPARENCY_TOOL)], [])
+        command = [
+            PYTHON, str(TRANSPARENCY_TOOL), "check", "--json",
+            "--registry", str(registry or TRANSPARENCY_REGISTRY),
+            "--publication", str(publication or TRANSPARENCY_PUBLICATION),
+            "--claims", str(claims or TRANSPARENCY_CLAIMS),
+            "--schema", str(schema or TRANSPARENCY_SCHEMA),
+            "--nonclaims", str(nonclaims or TRANSPARENCY_NONCLAIMS),
+            "--gate", str(gate or TRANSPARENCY_GATE),
+            "--enforcement", str(enforcement or TRANSPARENCY_ENFORCEMENT),
+            "--document", str(document or TRANSPARENCY_DOCUMENT),
+        ]
+    run = _run(command, root, timeout)
+    payload = None
+    if run.stdout.strip():
+        try:
+            payload = json.loads(run.stdout)
+        except json.JSONDecodeError:
+            payload = None
+    if not isinstance(payload, dict) or not isinstance(payload.get("refusals"), list):
+        detail = _bounded((run.stderr or run.stdout).splitlines())
+        return Results([Refusal(
+            "RG_TRANSPARENCY_ERROR", "b8/enforcement",
+            detail[-1] if detail else f"transparency checker exited {run.returncode} with no decision",
+        )], [])
+    refusals = [
+        Refusal(
+            str(row.get("code", "CE_REFUSED_USAGE")),
+            str(row.get("artefact", "-")),
+            str(row.get("detail", "-")),
+        )
+        for row in payload["refusals"]
+        if isinstance(row, dict)
+    ]
+    population = payload.get("population") if isinstance(payload.get("population"), dict) else {}
+    recorded = []
+    if not refusals:
+        recorded.append(
+            "transparency enforcement: "
+            f"{population.get('claimCount', 0)} claim(s) checked, "
+            f"{population.get('claimsWithTransparency', 0)} carry a transparency field, "
+            "no refusal"
+        )
+    return Results(refusals, recorded)
+
+
+# ---------------------------------------------------------------------------
 # Composition
 # ---------------------------------------------------------------------------
 def evaluate(args: argparse.Namespace) -> Results:
@@ -1067,6 +1159,10 @@ def evaluate(args: argparse.Namespace) -> Results:
         Path(args.policy_record).resolve() if getattr(args, "policy_record", None) else None,
         Path(args.policy_pin).resolve() if getattr(args, "policy_pin", None) else None,
     )
+    refusals.extend(result.refusals)
+    recorded.extend(result.recorded)
+
+    result = check_transparency(root)
     refusals.extend(result.refusals)
     recorded.extend(result.recorded)
 
@@ -1488,6 +1584,74 @@ def self_test() -> int:
             "RG_POLICY_MISSING",
         )
 
+        # B8: the transparency item runs the real checker. One case proves it
+        # refuses an assertion the B4 record contradicts; the positive control
+        # proves it does not refuse an honest NOT_ADMITTED record. The other
+        # rules are exercised one per code in test_continuous_enforcement.py.
+        digest = "a" * 64
+
+        def transparency_claim(state: str, **extra: object) -> dict:
+            block: dict = {"state": state}
+            block.update(extra)
+            return {
+                "claims": [
+                    {
+                        "id": "B8-SELFTEST",
+                        "authority": {"kind": "repository-policy"},
+                        "transparency": block,
+                    }
+                ]
+            }
+
+        published_claim = tmp / "claims-transparency-published.json"
+        published_claim.write_text(json.dumps(transparency_claim(
+            "PUBLISHED",
+            profile="public-good-rekor-v2",
+            statementDigest=digest,
+            bundleDigest=digest,
+            publishedAt="2026-11-24T00:00:00Z",
+        )), encoding="utf-8")
+        expect(
+            "transparency publication claim",
+            check_transparency(ROOT, claims=published_claim),
+            "CE_REFUSED_PUBLICATION_CLAIM",
+        )
+
+        honest_claim = tmp / "claims-transparency-not-admitted.json"
+        honest_claim.write_text(json.dumps(transparency_claim(
+            "NOT_ADMITTED", profile="public-good-rekor-v2"
+        )), encoding="utf-8")
+        honest_results = check_transparency(ROOT, claims=honest_claim)
+        cases.append(("honest not-admitted transparency claim (positive control)", "no refusal"))
+        if honest_results.refusals:
+            failures.append(
+                "honest not-admitted transparency claim (positive control): "
+                f"unexpected refusals {[item.rule for item in honest_results.refusals]}"
+            )
+
+        expect(
+            "missing transparency registry",
+            check_transparency(ROOT, registry=tmp / "absent-registry.json"),
+            "CE_REFUSED_PROFILE_ABSENT",
+        )
+        expect(
+            "missing public non-claims",
+            check_transparency(ROOT, nonclaims=tmp / "absent-non-claims.md"),
+            "CE_REFUSED_NONCLAIMS_ABSENT",
+        )
+        removed_gate = tmp / "release-gate-without-item-10.py"
+        removed_gate.write_text(
+            Path(__file__).resolve().read_text(encoding="utf-8").replace(
+                "def check_transparency(", "def transparency_removed("
+            ),
+            encoding="utf-8",
+        )
+        expect(
+            "transparency enforcement regression",
+            check_transparency(ROOT, gate=removed_gate),
+            "CE_REFUSED_ENFORCEMENT_REGRESSION",
+        )
+
     for name, rule in cases:
         status = "ok" if not any(f.startswith(name + ":") for f in failures) else "FAIL"
         print(f"  {status:4s} {name}: expected {rule}")
@@ -1566,7 +1730,7 @@ def main(argv: list[str]) -> int:
             print(f"release-gate: REFUSED ({len(results.refusals)} item(s))")
         else:
             print("release-gate: PASS (candidate, claims, receipts, instruments, "
-                  "package, docs, authorisation, thresholds, policy)")
+                  "package, docs, authorisation, thresholds, policy, transparency)")
 
     return EXIT_REFUSED if results.refused() else EXIT_PASS
 

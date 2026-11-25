@@ -1,0 +1,56 @@
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -738,3 +738,53 @@
+ `forensics/tools/docs_consistency.py` (release-gate item 6); it refuses an
+ article citation that names no article, an article with no enforcement and no
+ declaration of that, and a gate mention of an article no gate item covers.
++
++---
++
++## 24. Continuous transparency enforcement (additive, 2026-11-24)
++
++`docs/CONTINUOUS-ENFORCEMENT.md` is the normative rule that the transparency
++policy cannot regress silently. It is not a claim that transparency was
++achieved; it is the rule that a transparency claim cannot outrun its evidence.
++
++**The enforcement points are named, and each refuses.** The rule is enforced by
++`forensics/tools/release_gate.py` item 10 (`check_transparency`), which calls
++`forensics/tools/continuous_enforcement.py` and maps each refusal to one gate
++row. The codes are `CE_REFUSED_PROFILE_ABSENT`, `CE_REFUSED_REGISTRY_STALE`,
++`CE_REFUSED_PUBLICATION_CLAIM`, `CE_REFUSED_PROFILE_NOT_ADMITTED`,
++`CE_REFUSED_SCHEMA_FIELD_ABSENT`, `CE_REFUSED_UNBOUND_CLAIM`,
++`CE_REFUSED_NONCLAIMS_ABSENT` and `CE_REFUSED_ENFORCEMENT_REGRESSION`. Every one
++has a control in `evidence/b8/CONTROLS.json` and a test in
++`forensics/tools/tests/test_continuous_enforcement.py`.
++
++**The claim schema carries a closed field.** `evidence/etp/claim.schema.json`
++defines an optional `transparency` object with a closed state enum
++(`NOT_ADMITTED`, `ADMITTED`, `PUBLISHED`), a closed profile enum, two SHA-256
++digests and an RFC 3339 timestamp. There is no free text. A claim whose
++`authority.kind` is `public-transparency-log` must carry the field. No committed
++claim carries it today, so the absence check is vacuous: record that, do not
++report it as coverage.
++
++**The public non-claims are mandatory.** `docs/TRANSPARENCY-NON-CLAIMS.md`
++states, with the record that shows each, that there is no admitted Rekor
++service, no witness, no trusted timestamp, no publication and no independent
++reproduction. The requirement is §B.29's SEAL and EXTERNAL rows. Deleting a row
++is a refused release, not a documentation edit.
++
++**The enforcement itself is checked.** A gate item that disappears, item 10
++losing its wiring, the enforcement record or the normative document going
++missing, or a previously checked refusal code no longer being named is
++`CE_REFUSED_ENFORCEMENT_REGRESSION`. The rule is a tripwire for the ordinary
++single-edit regression, not tamper-proofing against a coordinated removal.
++
++**Two applications are pending, not done.** `forensics/etp8/agents-patch.diff`
++(this section) is `PENDING_MAINTAINER_APPLICATION` because this file is the
++user's standing document. `forensics/etp8/ci-transparency-job.patch` is
++`PENDING_CREDENTIAL` because the pushing credential lacks the `workflow` scope.
++Until they are applied, item 10 runs in the release gate and the tools suite,
++not on every push.
++
++**What it does not establish.** A passing item 10 does not establish
++publication, admission, witnessing, timestamping, archival or independent
++reproduction, and does not show that the profile conforms to any external
++standard. Those are `NOT_RUN` in `docs/CONTINUOUS-ENFORCEMENT.md` §9.
