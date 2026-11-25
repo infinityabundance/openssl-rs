@@ -8,7 +8,7 @@
         {
           "adds": [],
           "at": "2026-11-24T07:44:49-05:00",
-          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
           "reason": "a17: freeze what must exist before execution and close against it [commit 8185577eb]",
           "removes": [],
           "supersedes": [
@@ -18,7 +18,7 @@
         {
           "adds": [],
           "at": "2026-11-24T08:17:47-05:00",
-          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
           "reason": "a18: an old signature never authorises a stale release [commit 6bf8c80aa]",
           "removes": [],
           "supersedes": [
@@ -28,7 +28,7 @@
         {
           "adds": [],
           "at": "2026-11-24T08:42:45-05:00",
-          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
           "reason": "a19: a correction is bound to the original it supersedes [commit 8c23f4571]",
           "removes": [],
           "supersedes": [
@@ -38,7 +38,7 @@
         {
           "adds": [],
           "at": "2026-11-24T09:31:32-05:00",
-          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
           "reason": "a20: a conjunction of obligations, denied by default [commit ad49d33f2]",
           "removes": [],
           "supersedes": [
@@ -48,7 +48,7 @@
         {
           "adds": [],
           "at": "2026-11-24T09:47:33-05:00",
-          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
           "reason": "a21: a summary never replaces the evidence it condenses [commit 6e64e644c]",
           "removes": [],
           "supersedes": [
@@ -58,7 +58,7 @@
         {
           "adds": [],
           "at": "2026-11-24T10:23:59-05:00",
-          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
           "reason": "a22: eight instruments asked to fail, and two did [commit d3050312f]",
           "removes": [],
           "supersedes": [
@@ -68,7 +68,7 @@
         {
           "adds": [],
           "at": "2026-11-24T11:20:19-05:00",
-          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
           "reason": "a22: re-measure the eight after the repair, and bind witnesses to behaviour [commit 7c2b5f25f]",
           "removes": [],
           "supersedes": [
@@ -78,7 +78,7 @@
         {
           "adds": [],
           "at": "2026-11-24T12:01:46-05:00",
-          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
           "reason": "a23: write the rules down, then check the code against them [commit b19869e22]",
           "removes": [],
           "supersedes": [
@@ -88,7 +88,7 @@
         {
           "adds": [],
           "at": "2026-11-24T13:33:35-05:00",
-          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
           "reason": "a24: a package an outsider can run, and an honest external status [commit a9bcb5480]",
           "removes": [],
           "supersedes": [
@@ -98,7 +98,7 @@
         {
           "adds": [],
           "at": "2026-11-24T14:26:52-05:00",
-          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
           "reason": "a25: the documented surface and the executable surface must agree [commit 0ea00ac4d]",
           "removes": [],
           "supersedes": [
@@ -108,7 +108,7 @@
         {
           "adds": [],
           "at": "2026-11-24T15:06:02-05:00",
-          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
           "reason": "a25: re-derive the surface after the repair and freeze its identity [commit 46f385772]",
           "removes": [],
           "supersedes": [
@@ -118,7 +118,7 @@
         {
           "adds": [],
           "at": "2026-11-24T15:37:53-05:00",
-          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
           "reason": "a26: measure the cost, state the machine, and never skip to save it [commit e3bed067c]",
           "removes": [],
           "supersedes": [
@@ -128,7 +128,7 @@
         {
           "adds": [],
           "at": "2026-11-24T16:22:31-05:00",
-          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
           "reason": "a27: take one finding through every stage, and stop where it stops [commit 5015b6239]",
           "removes": [],
           "supersedes": [
@@ -138,7 +138,7 @@
         {
           "adds": [],
           "at": "2026-11-24T16:39:50-05:00",
-          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
           "reason": "b0: a pinned version is not an admitted service [commit 54fb5085b]",
           "removes": [],
           "supersedes": [
@@ -148,7 +148,7 @@
         {
           "adds": [],
           "at": "2026-11-24T17:10:08-05:00",
-          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
           "reason": "b1: a fixture can prove the verifier, not the service [commit ebc539869]",
           "removes": [],
           "supersedes": [
@@ -158,7 +158,7 @@
         {
           "adds": [],
           "at": "2026-11-24T19:50:57-05:00",
-          "by": "openssl-rs <dev@openssl-rs.invalid>",
+          "by": "infinityabundance <rdebeer.infinityabundance@gmail.com>",
           "reason": "b2: nine times, one imprint verifier, and no trusted clock [commit 1155843e6]",
           "removes": [],
           "supersedes": [
