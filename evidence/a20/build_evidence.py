@@ -31,7 +31,7 @@ sys.path.insert(0, str(TOOLS))
 import policy_engine as pe  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
-BASE_COMMIT = "f34e429f13aa3cc1566e1ecebc185a466765f321"
+BASE_COMMIT = "a1c3fa61b4c225ea002e321e0ab50937253101e0"
 POLICY_ID = "release-policy"
 POLICY_PATH = "evidence/a20/POLICY.json"
 UPSTREAM = "P-CAMPAIGN"

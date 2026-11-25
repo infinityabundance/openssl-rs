@@ -330,3 +330,61 @@ decision digest that A27 will bind). `test_corrections` stays 51/51 OK;
 (`7f5a3cb8…`) and the old A19 `PROPAGATION.json` digest; `docs/VERIFICATION-SUMMARIES.md`
 and `docs/VERTICAL-SLICE.md` quote them, and A11/A16's frozen populations name
 `7f5a3cb8…`. Those are the next links, not repairs made here.
+
+## 14. Correction (2026-11-25): rebind the decision to C21 after the A19 re-freeze
+
+**Cause.** A19 was re-frozen at `a1c3fa61b4c2` (C21) because the C20 ETP-7
+transcript correction moved `evidence/etp7/RECEIPT.md`; that re-freeze also moved
+`evidence/a19/PROPAGATION.json` from `892be6ef…` to `bc476f73…`. The producer
+records each obligation's source digest, so `A19.retraction-propagated` had to be
+rebound; the candidate moved to C21 in the same regeneration. The records were
+re-derived by the producer, not hand-edited.
+
+**Old and new.**
+
+| field | old | new |
+|---|---|---|
+| `candidate.commit` (`DECISION.json`, `POLICY-PIN.json`) | `f34e429f13aa3cc1566e1ecebc185a466765f321` | `a1c3fa61b4c225ea002e321e0ab50937253101e0` |
+| `DECISION.obligations[A19.retraction-propagated].recordSha256` | `892be6ef2d394e7724f29563cb993778d844f90349c6325a0f195279e5003278` | `bc476f73e4d6ca9b3bd97b430c59c9dc60be973b43ed9db234060f0402de4dab` |
+| `DECISION.pinDigest` | `a0dd033f67a8a45665bee0569ae728c9c00e975bd3ba2d7e9a1169ebdbb0fa2f` | `db643bba63cdfe997b1bfdd55301c0dfc33baf9eac7ad3d7ed3f38d53e3d698b` |
+| `POLICY-PIN.json` | `a4e6e5268080ec0603a48ca777b1a5dd1261540d5a270e8d6caa72ca0fd3d58e` | `54bd7da35a80b5d6ddd821b12731d362fbe779a4067fd6b19cc57e08b73b1c51` |
+| `DECISION.json` | `f4aebf28f8e79f0a50704df4f39e9332d670433055d007936c4588af91b3044e` | `af85267933550ffd0886f8c9c641db308a4a1d1cd1bf1dfb3cfe54ea34720e95` |
+| `POLICY.json` | `2575ca0e…` | byte-identical |
+| `CONTROLS.json` | `e310ea2b…` | byte-identical |
+
+**Outcome unchanged.** The decision is still `DENY`, `codes=NONE`,
+`met=3 unmet=5 unknown=0 notApplicable=0`, with the same unmet set
+(`A06`, `A12`, `A14`, `A15`, `A17`); every obligation's `state`, `observed` block
+and `detail` is identical. `POLICY.json` is byte-identical, so no obligation was
+added, removed, softened or re-predicated, and no decision was made more
+permissive. The only changed leaves in `DECISION.json` are `candidate.commit`,
+the one `recordSha256` and `pinDigest`; the other seven obligations and the A17
+corroborating record (`evidence/a17/FREEZE-forward.json`, `19b3bd00…`) still
+match their live bytes.
+
+**Preserved as history.** The record digests in §2 and the C8 candidate in §13
+remain the earlier batches' record; §14 supersedes them by naming the old and
+new values rather than overwriting the history. The prior `recordSha256`
+`892be6ef…` and prior `pinDigest` `a0dd033f…` are recorded above.
+
+**Gates.** `python3 evidence/a20/build_evidence.py` reproduces the committed
+bytes and prints `decision=DENY codes=NONE met=3 unmet=5 unknown=0
+notApplicable=0 candidate=a1c3fa61b`; `policy_engine.py evaluate` exits 1 (DENY),
+`verify-pin` and `verify-decision` exit 0 with `code=PE_OK`;
+`test_policy_engine` is 40/40 OK and `test_corrections` stays 51/51 OK.
+`test_verification_summary` is red (42 tests, 9 failures + 5 errors) because the
+committed summary cites the old decision digest `f4aebf28…`;
+`test_vertical_slice` is red only on the committed-slice comparison (51 tests, 1
+failure) because its `wouldBe.policy` names the old decision digest and
+candidate; the A7 `baselinesSha256` is already `a57a2766…`, so it is not part of
+this drift. `test_harden` (69 tests, 2 failures + 1 error) and
+`test_sigstore_bundle` (58 tests, 3 failures + 1 error) are red on the A11/A16
+frozen populations, whose first changed member is
+`evidence/a19/CONTROLS.json` and whose complete drift set also includes this
+`DECISION.json` and `POLICY-PIN.json`. `spec_guard.py check` and
+`docs_consistency.py` exit 0.
+
+**Downstream.** `evidence/a21/SUMMARY.json` cites the old decision
+`f4aebf28…` and the old A19 `PROPAGATION.json` `892be6ef…`; `evidence/a27/SLICE.json`
+names the old decision and candidate; A11/A16's frozen populations name the old
+A19 and A20 records. Those are the next links, not repairs made here.

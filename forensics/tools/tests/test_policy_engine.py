@@ -30,7 +30,7 @@ EVIDENCE = REPO / "evidence/a20"
 BUILDER = EVIDENCE / "build_evidence.py"
 DOCUMENT = REPO / "docs/POLICY-ENGINE.md"
 POLICY_PATH = "evidence/a20/POLICY.json"
-BASE_COMMIT = "f34e429f13aa3cc1566e1ecebc185a466765f321"
+BASE_COMMIT = "a1c3fa61b4c225ea002e321e0ab50937253101e0"
 
 CLOSED = {"facts": {"state": "CLOSED"}}
 OPEN = {"facts": {"state": "OPEN"}}

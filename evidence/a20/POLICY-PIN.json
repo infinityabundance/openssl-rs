@@ -1,6 +1,6 @@
 {
   "candidate": {
-    "commit": "f34e429f13aa3cc1566e1ecebc185a466765f321",
+    "commit": "a1c3fa61b4c225ea002e321e0ab50937253101e0",
     "producedBy": "P-CAMPAIGN"
   },
   "note": "the pin records the policy's digest and the party that pinned it; it is recorded separately from the policy so that amending the policy is detectable. It lives in the candidate tree, so a writer who can amend both is not detected without an external root (A12).",
