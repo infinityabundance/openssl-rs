@@ -394,7 +394,7 @@
   ],
   "schema": "openssl-rs/a11/controls/1",
   "sourceIdentity": {
-    "baseCommit": "902b4660ab1807f08a4f8f796db79ad4322b90d4",
+    "baseCommit": "26e98445fc031066446a3190e329dca41d0da5d8",
     "tool": {
       "bytes": 54477,
       "path": "forensics/tools/harden.py",
