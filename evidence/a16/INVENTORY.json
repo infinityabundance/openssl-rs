@@ -4,18 +4,7 @@
   "asOf": "2026-11-24",
   "bundleFiles": [],
   "bundles": 0,
-  "candidateFiles": [
-    {
-      "path": "evidence/a16/CONTROLS.json",
-      "reason": "the media type appears in this document, but its top level is not a bundle: it is a profile or a control-only fixture",
-      "topLevelMediaType": null
-    },
-    {
-      "path": "evidence/a16/PROFILE.json",
-      "reason": "the media type appears in this document, but its top level is not a bundle: it is a profile or a control-only fixture",
-      "topLevelMediaType": null
-    }
-  ],
+  "candidateFiles": [],
   "certificateFiles": 0,
   "certificateGlob": [
     "evidence/**/*.pem",
@@ -28,7 +17,7 @@
     "basis": "the explicit member list below, declared at the candidate; not a live glob",
     "binding": "FROZEN",
     "files": 0,
-    "frozenAtCandidate": "b26552e21a7465405ad542edeaef7b9104c0298d",
+    "frozenAtCandidate": "e03653ddb913ab84a573800776901b6164487c74",
     "glob": [
       "evidence/*.pem",
       "evidence/*.crt",
@@ -54,11 +43,19 @@
       "reason": "mutual digest binding: A11's scan population is every tracked evidence JSON and therefore contains this item's records, so this population cannot also contain A11's three records without a digest cycle. A11 absorbs this item's records; these three are declared excluded here and are reported NEW_SINCE_RECORD by growth_report, never absorbed into the frozen count.",
       "result": "NEW_SINCE_RECORD"
     },
-    "files": 505,
-    "frozenAtCandidate": "b26552e21a7465405ad542edeaef7b9104c0298d",
+    "files": 503,
+    "frozenAtCandidate": "e03653ddb913ab84a573800776901b6164487c74",
     "glob": "evidence/*.json",
     "globSemantics": "tracked files matched with fnmatch.fnmatchcase; '*' matches across '/', so this covers evidence/**/*.json",
     "growthPolicy": "a verification re-hashes every member and reports a glob match that is not a member as NEW_SINCE_RECORD, counted separately; growth never changes this count, and a removed or changed member is refused with PH_REFUSED_POPULATION_DRIFT",
+    "identityExcluded": {
+      "paths": [
+        "evidence/a16/INVENTORY.json",
+        "evidence/a16/PROFILE.json",
+        "evidence/a16/CONTROLS.json"
+      ],
+      "reason": "each of these records embeds sourceIdentity.baseCommit, so a member digest would depend on the commit hash that depends on the record's bytes: a commit-hash fixed point. They are excluded by identity, not by the declared cut, which remains exactly the three A11 records."
+    },
     "members": [
       {
         "bytes": 189306,
@@ -189,16 +186,6 @@
         "bytes": 5316,
         "path": "evidence/a15/THRESHOLDS.json",
         "sha256": "31a2cc2b7a2d9639c99a9adb09d722f9f9f6b29944ef792c98827ac316917f85"
-      },
-      {
-        "bytes": 152170,
-        "path": "evidence/a16/CONTROLS.json",
-        "sha256": "e6f092061132ed55ee4ca744fc6fe6f4cc0a6958ba4b109eef8373ef095e9517"
-      },
-      {
-        "bytes": 7391,
-        "path": "evidence/a16/PROFILE.json",
-        "sha256": "b25e987798b4acb29028637a6b6052fd8566f7d11b3f066c6ed1cc1c0efff2f5"
       },
       {
         "bytes": 7359,
@@ -1826,9 +1813,9 @@
         "sha256": "1baf5088c1bf2aa6d320225f4c1a3dabdc094b516bc55ee5799b8f40dafc25a7"
       },
       {
-        "bytes": 12189,
+        "bytes": 13074,
         "path": "evidence/etp-t14/ARTICLES.json",
-        "sha256": "2b89f1b1550843fd65bafb1f454b9ed46f002fda58fc10a1507e8859f9eeb2c2"
+        "sha256": "339560a956b2b465a7c8b770c87395aa7602239ecedd6020b7350da36513b026"
       },
       {
         "bytes": 109584,
@@ -2585,17 +2572,39 @@
         "path": "evidence/timing-tools-inventory.json",
         "sha256": "00c68634247427d8f33204e8e6429f3a920b757025f24bcab38ccf024f70ec76"
       }
+    ],
+    "superseded": [
+      {
+        "files": 505,
+        "frozenAtCandidate": "b26552e21a7465405ad542edeaef7b9104c0298d",
+        "memberCount": 505,
+        "reason": "the prior freeze listed evidence/a16/CONTROLS.json, evidence/a16/PROFILE.json as members; each embeds sourceIdentity.baseCommit, so a population frozen at that commit cannot also contain the record's own bytes (a commit-hash fixed point). This item's own records are now excluded by identity, not by the declared cut, and the population is re-frozen at the candidate's blobs.",
+        "recordDigests": [
+          {
+            "path": "evidence/a16/INVENTORY.json",
+            "sha256": "9b364ed7d9a8e97aa18202b9c2d64ffeb28eaeeece6e6c888c7868722772f3e8"
+          },
+          {
+            "path": "evidence/a16/PROFILE.json",
+            "sha256": "b25e987798b4acb29028637a6b6052fd8566f7d11b3f066c6ed1cc1c0efff2f5"
+          },
+          {
+            "path": "evidence/a16/CONTROLS.json",
+            "sha256": "e6f092061132ed55ee4ca744fc6fe6f4cc0a6958ba4b109eef8373ef095e9517"
+          }
+        ]
+      }
     ]
   },
-  "populationFiles": 505,
+  "populationFiles": 503,
   "populationGlob": [
     "evidence/**/*.json"
   ],
   "schema": "openssl-rs/a16/bundle-inventory/2",
   "sourceIdentity": {
     "asOf": "2026-11-24",
-    "baseCommit": "b26552e21a7465405ad542edeaef7b9104c0298d",
-    "baseCommitShort": "b26552e21",
+    "baseCommit": "e03653ddb913ab84a573800776901b6164487c74",
+    "baseCommitShort": "e03653ddb",
     "delegatedTools": [
       {
         "path": "forensics/tools/harden.py",
@@ -2609,7 +2618,7 @@
     "item": "A16",
     "tool": {
       "path": "forensics/tools/sigstore_bundle.py",
-      "sha256": "05a43e25fa2bacbe2b6da138c06d273ad8c8cf8c737c4a36aec1687213d7412f"
+      "sha256": "91d93f1dde456af174e9d63354375122d76a51d66ffd1aecee7d037deee54282"
     }
   },
   "transparencyLogs": 0

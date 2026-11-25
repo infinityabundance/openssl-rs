@@ -1,7 +1,7 @@
 # Sigstore bundles — A16
 
 Status: normative. Delivered by item A16 of `docs/ETP-TODO.md`, re-frozen at
-candidate `b26552e21a7465405ad542edeaef7b9104c0298d` (`staging`). The implementation is
+candidate `e03653ddb913ab84a573800776901b6164487c74` (`staging`). The implementation is
 `forensics/tools/sigstore_bundle.py`; the records are
 `evidence/a16/INVENTORY.json`, `evidence/a16/PROFILE.json` and
 `evidence/a16/CONTROLS.json`; the deterministic producer is
@@ -213,10 +213,12 @@ The population is a **frozen member list**, not a live glob:
 `evidence/a16/INVENTORY.json` records the tracked `evidence/**/*.json` files that
 existed at the declared candidate, each bound to its `sha256` read from that
 candidate's blobs (never the working tree), and `populationFiles` is the list's
-length. The committed record is still the pre-change freeze at
-`b26552e21a7465405ad542edeaef7b9104c0298d` (**505** members); the regenerated
-record at the commit that carries the identity-exclusion contract has **503**,
-because this item's own records are no longer members.
+length. The record is frozen at
+`e03653ddb913ab84a573800776901b6164487c74` (**503** members). This item's three own
+records are not members: the record declares them separately as
+`identityExcluded`, outside the declared cut. The freeze the record supersedes
+(`b26552e21a7465405ad542edeaef7b9104c0298d`, 505 members) is preserved inside it
+with that freeze's record digests, rather than overwritten.
 
 This item's three records — `INVENTORY.json`, `PROFILE.json` and
 `CONTROLS.json` — are outside the population **by identity**: each embeds

@@ -167,8 +167,8 @@
   "schema": "openssl-rs/a16/bundle-profile/1",
   "sourceIdentity": {
     "asOf": "2026-11-24",
-    "baseCommit": "b26552e21a7465405ad542edeaef7b9104c0298d",
-    "baseCommitShort": "b26552e21",
+    "baseCommit": "e03653ddb913ab84a573800776901b6164487c74",
+    "baseCommitShort": "e03653ddb",
     "delegatedTools": [
       {
         "path": "forensics/tools/harden.py",
@@ -182,7 +182,7 @@
     "item": "A16",
     "tool": {
       "path": "forensics/tools/sigstore_bundle.py",
-      "sha256": "05a43e25fa2bacbe2b6da138c06d273ad8c8cf8c737c4a36aec1687213d7412f"
+      "sha256": "91d93f1dde456af174e9d63354375122d76a51d66ffd1aecee7d037deee54282"
     }
   }
 }

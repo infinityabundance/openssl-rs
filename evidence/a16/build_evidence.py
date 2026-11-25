@@ -66,14 +66,14 @@ sys.path.insert(0, str(TOOLS))
 import harden as h  # noqa: E402
 import sigstore_bundle as sb  # noqa: E402
 
-# The record's declared default candidate.  The code in this batch reads the
-# candidate's blobs, but the records themselves have not been regenerated yet.
-# The next batch must set this (and ``BASE_COMMIT_SHORT``) to the commit that
-# carries this code, because the regenerated ``sourceIdentity.baseCommit`` and
-# ``population.frozenAtCandidate`` must name that commit and every member digest
-# is read from its tree.
-BASE_COMMIT = "b26552e21a7465405ad542edeaef7b9104c0298d"
-BASE_COMMIT_SHORT = "b26552e21"
+# The record's declared default candidate: the commit that carries the
+# identity-exclusion contract and the candidate-blob reader.  The records name
+# it as ``sourceIdentity.baseCommit`` and ``population.frozenAtCandidate``, and
+# every member digest is read from its tree.  A later build-relevant change to
+# the generator or the tool invalidates that binding and requires a new
+# candidate, not an edit here alone.
+BASE_COMMIT = "e03653ddb913ab84a573800776901b6164487c74"
+BASE_COMMIT_SHORT = "e03653ddb"
 RECORD_PATHS = (
     "evidence/a16/INVENTORY.json",
     "evidence/a16/PROFILE.json",

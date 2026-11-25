@@ -37,13 +37,13 @@ BUILDER_PATH = EVIDENCE / "build_evidence.py"
 INVENTORY = EVIDENCE / "INVENTORY.json"
 TOOL = TOOLS / "sigstore_bundle.py"
 DOCUMENT = REPO / "docs/SIGSTORE-BUNDLES.md"
-# The current records are still frozen at b26552e21.  The next batch regenerates
-# them from the commit that carries the candidate-blob generator and must set
-# these two constants to that commit's full and nine-character hashes: the new
-# records declare ``baseCommit == frozenAtCandidate == that commit`` and every
-# member digest is read from its tree.
-FULL_COMMIT = "b26552e21a7465405ad542edeaef7b9104c0298d"
-SHORT_COMMIT = "b26552e21"
+# The records are frozen at the commit that carries the identity-exclusion
+# contract.  These two constants name that candidate as its full and
+# nine-character hashes: every record declares ``baseCommit ==
+# frozenAtCandidate == that commit`` and every member digest is read from its
+# tree.
+FULL_COMMIT = "e03653ddb913ab84a573800776901b6164487c74"
+SHORT_COMMIT = "e03653ddb"
 POPULATION_SELF = "evidence/a16/INVENTORY.json"
 
 
@@ -663,15 +663,19 @@ class FrozenPopulation(unittest.TestCase):
         self.assertIn("evidence/a16/PROFILE.json", caught.exception.message)
 
         # A record that re-admits the record as a member is unsatisfiable: it is
-        # refused by the record gate, naming the re-admitted path.
+        # refused by the record gate, naming the re-admitted path.  The profile
+        # record is not a member of the current population, so the re-admitted
+        # row is built from the record's own bytes; the gate refuses on the
+        # identity before any digest is compared.
         record = dict(self.record)
         population = dict(record["population"])
         members = [dict(member) for member in population["members"]]
-        profile = next(
-            member
-            for member in self.members
-            if member["path"] == "evidence/a16/PROFILE.json"
-        )
+        profile_bytes = (EVIDENCE / "PROFILE.json").read_bytes()
+        profile = {
+            "path": "evidence/a16/PROFILE.json",
+            "sha256": hashlib.sha256(profile_bytes).hexdigest(),
+            "bytes": len(profile_bytes),
+        }
         members.append(dict(profile))
         population["members"] = members
         population["files"] = len(members)
